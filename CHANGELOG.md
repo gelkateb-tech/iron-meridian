@@ -246,3 +246,9 @@
   - Spoils of Peace, Grand Alliance, Field Marshal, War Chest
   - Airborne, Eyes in the Sky, Blue-Water Navy, Long Arm, Decapitation
   - Still Standing, Victor, Mk IV
+
+## Round 34 — Accessibility and save slots
+- Colour-blind palette (Settings): swaps every nation's colour for a 15-colour set built on the Okabe–Ito colour-blind-safe palette. It recolours borders, fills, sprites, charts and the minimap live, and switches back cleanly.
+- Text size: 90%, 100%, 115% or 130%. This scales the top bar, side panel, dialogs, toasts and tutorial card without changing the map.
+- Reduced motion: no screen shake, far fewer smoke and dust particles, and no UI transitions.
+- Save slots: three manual slots in Settings beside the automatic save, each showing nation, date and scenario. Load a slot at any time to jump back.

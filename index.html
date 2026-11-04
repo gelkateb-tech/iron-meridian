@@ -141,6 +141,8 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .armylist button{display:flex; justify-content:space-between; text-align:left; font-size:12.5px; padding:6px 9px}
 .muted{color:var(--muted)}
 .small{font-size:12px}
+.slots{display:grid;gap:6px;margin-bottom:8px}.slot{display:flex;gap:8px;align-items:center;padding:6px 9px;background:rgba(255,255,255,.03);border-radius:4px}.slot>span{flex:1}
+html.reduced *{transition:none!important;animation:none!important}
 .achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:10px}.ach{display:flex;flex-direction:column;gap:2px;padding:6px 9px;border-radius:4px;background:rgba(255,255,255,.03);opacity:.55}.ach.on{opacity:1;background:rgba(226,162,61,.1);border-left:3px solid var(--accent)}.legend{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
 .cmd{display:flex;gap:8px;align-items:center;padding:6px 8px;margin:6px 0;border:1px solid rgba(226,162,61,.35);border-radius:4px;background:rgba(226,162,61,.06)}.cmd .ins{color:var(--accent);font-size:13px;letter-spacing:-1px;min-width:34px;text-align:center}.cmd>div{flex:1}
 .away{list-style:none;padding:0;margin:0 0 10px;display:grid;gap:4px;font-size:13px}.away li{padding:4px 8px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03)}.away li.bad{border-left-color:var(--danger)}.away li.good{border-left-color:var(--ok)}.away time{opacity:.6;margin-right:6px;font-family:var(--mono,monospace);font-size:11px}
@@ -588,9 +590,14 @@ const W = WORLD.W, H = WORLD.H;
 const K = 0.25;                       // combat damage per hour factor
 const HOURS_PER_SEC = [0, 2, 4, 8, 16];   // by speed setting
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
-const SET = {vol:0.35, toasts:'all', fx:'high', paper:true};
+const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full'};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
-const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} };
+const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} applySet(); };
+// colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
+const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
+function applyPalette(){ if (!S || !S.nations) return; for (const N of S.nations){ if (!N.color0) N.color0 = N.color; N.color = SET.cb ? CB_PAL[N.id % CB_PAL.length] : N.color0; } geoDirty = true; layerKey = ''; }
+function applySet(){ const z = (SET.ui || 100)/100; for (const sel0 of ['header', '#side', '#modal', '#toasts', '#tut']){ const el = document.querySelector(sel0); if (el) el.style.zoom = z === 1 ? '' : z; }
+  document.documentElement.classList.toggle('reduced', SET.motion === 'reduced'); if (typeof S !== 'undefined' && S) applyPalette(); }
 const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
 const WIN_SHARE = 0.25;               // share of land provinces needed to win
@@ -862,7 +869,7 @@ function newGame(seed, pick){
       for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) { addArmy(n.id, P.id, {inf:2}); S.bld[P.id].fort = 1; } }
   }
   for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; }
-  S.own0 = S.owner.slice();
+  S.own0 = S.owner.slice(); if (SET.cb) applyPalette();
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL) addArmy(NEUTRAL, P.id, {inf: P.city ? 5 + Math.floor(rng()*4) : 2 + Math.floor(rng()*2)});
   log(`${S.nations[PLAYER].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   buildGeometry();
@@ -874,7 +881,7 @@ function restore(data){
   if (!G) G = loadWorld();
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.bt = {}; S.speed = 0; S.started = true;
-  useScenario(S.scn || 'world'); DAY_LIMIT = S.len || 120;
+  useScenario(S.scn || 'world'); DAY_LIMIT = S.len || 120; if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette();
   resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
@@ -898,6 +905,8 @@ function awayHTML(R){ const sg = v => (v >= 0 ? '+' : '') + fmt(v);
     <dl class="kv"><dt>Provinces</dt><dd style="color:${R.dp >= 0 ? 'var(--ok)' : 'var(--danger)'}">${sg(R.dp)}</dd><dt>Units</dt><dd>${sg(R.du)}</dd><dt>Treasury</dt><dd>${sg(R.dc)}M</dd></dl>
     ${R.ev.length ? `<div class="eyebrow">Key dispatches</div><ul class="away">${R.ev.map(e => `<li class="${e.kind}"><time>D${dayOf(e.h)}</time> ${e.text}</li>`).join('')}</ul>` : '<p class="muted">A quiet stretch: nothing major happened.</p>'}
     <div class="row"><button class="btn primary" data-act="resume">Take command</button></div>`; }
+const SLOT_KEY = i => 'iron-meridian-slot-' + i;
+function slotMeta(i){ try { const raw = localStorage.getItem(SLOT_KEY(i)); if (!raw) return null; const d = JSON.parse(raw); return {name:d.nations[0].name, date:clockStr(d.hour), scn:(SCENARIOS[d.scn || 'world'] || SCENARIOS.world).name}; } catch (e) { return null; } }
 function loadSaved(){ try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
 function clearSave(){ try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
 
@@ -1027,7 +1036,7 @@ const SMOKE = q => puffSprite((q && q.v) || 0, true), SMOKEL = q => puffSprite((
 const FIRE = () => softSprite('fire', 'rgba(255,245,200,1)', 'rgba(255,150,40,.75)', 'rgba(200,40,0,0)');
 const GLOW = () => softSprite('glow', 'rgba(255,240,190,1)', 'rgba(255,200,90,.5)', 'rgba(255,150,40,0)');
 function emit(kind, wx, wy, opt = {}){
-  if (SET.fx === 'low' && (kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris') && Math.random() < 0.6) return;
+  if ((SET.fx === 'low' || SET.motion === 'reduced') && (kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris') && Math.random() < (SET.motion === 'reduced' ? 0.8 : 0.6)) return;
   if (PART.length > (SET.fx === 'low' ? 300 : 900)) PART.splice(0, 100);
   const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, ring:500}[kind] || 800);
   PART.push({kind, wx, wy, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6, spin:(Math.random() - 0.5)*0.6, v:(Math.random()*4) | 0});
@@ -1821,7 +1830,7 @@ function missilePos(m){
   return {x:A.x + (B.x - A.x)*t, y:A.y + (B.y - A.y)*t - Math.sin(t*Math.PI)*arc, t, arc, A, B};
 }
 let shakeUntil = 0, shakeAmp = 0;
-function shake(amp, ms){ shakeAmp = Math.max(shakeAmp, amp); shakeUntil = Math.max(shakeUntil, performance.now() + ms); }
+function shake(amp, ms){ if (SET.motion === 'reduced') return; shakeAmp = Math.max(shakeAmp, amp); shakeUntil = Math.max(shakeUntil, performance.now() + ms); }
 
 /* ---------------- Occupation unrest ---------------- */
 const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
@@ -3130,6 +3139,10 @@ function settingsHTML(){
     <div class="eyebrow">Sound volume</div><div class="row" style="align-items:center"><input type="range" id="volume" min="0" max="100" value="${Math.round(SET.vol*100)}" style="flex:1"><span class="small muted">${Math.round(SET.vol*100)}%</span></div>
     <div class="eyebrow">Pop-up alerts</div><div class="row">${opt('toasts', 'all', 'All')}${opt('toasts', 'bad', 'Threats only')}${opt('toasts', 'none', 'None')}</div>
     <div class="eyebrow">Effects quality</div><div class="row">${opt('fx', 'high', 'High')}${opt('fx', 'low', 'Low (faster)')}</div>
+    <div class="eyebrow">Accessibility</div><div class="row">${opt('cb', false, 'Standard colours')}${opt('cb', true, 'Colour-blind palette')}</div>
+    <div class="row">${[90, 100, 115, 130].map(v => `<button class="btn ${(SET.ui || 100) === v ? 'primary' : ''}" data-act="set-ui" data-v="${v}">Text ${v}%</button>`).join('')}</div>
+    <div class="row">${opt('motion', 'full', 'Full motion')}${opt('motion', 'reduced', 'Reduced motion (no shake, fewer particles)')}</div>
+    <div class="eyebrow">Save slots</div><div class="slots">${[1, 2, 3].map(i => { const m = slotMeta(i); return `<div class="slot"><span><b>Slot ${i}</b> <span class="small muted">${m ? `${m.name} · ${m.date} · ${m.scn}` : 'Empty'}</span></span><button class="btn" data-act="slot-save" data-v="${i}" ${S && S.started && !S.over ? '' : 'disabled'}>Save</button><button class="btn" data-act="slot-load" data-v="${i}" ${m ? '' : 'disabled'}>Load</button></div>`; }).join('')}</div>
     <div class="eyebrow">Daily newspaper</div><div class="row">${opt('paper', true, 'Show at dawn')}${opt('paper', false, 'Only in Dispatches')}</div>
     <p class="small muted">Keys: Space pause · 1–4 speed · P production · R research · D diplomacy · S statistics · N newspaper · O settings · V map mode · M sound · H home · Ctrl+4…9 save group.</p>
     <div class="row"><button class="btn primary" data-act="resume">Done</button><button class="btn" data-act="tut-start">Replay tutorial</button></div>`;
@@ -3479,6 +3492,9 @@ document.addEventListener('click', e => {
     case 'cmd-off': if (a){ const c = cmdOf(a); if (c) c.army = null; a.cmd = null; renderSide(true); } break;
     case 'replay-open': openModal(replayHTML(), 'replay'); setTimeout(replayStart, 30); break;
     case 'rp-play': if (REPLAY){ if (REPLAY.day >= REPLAY.n){ REPLAY.day = 0; } REPLAY.playing = !REPLAY.playing; b.textContent = REPLAY.playing ? 'Pause' : 'Play'; } break;
+    case 'set-ui': SET.ui = +b.dataset.v; saveSet(); openModal(settingsHTML(), 'settings'); break;
+    case 'slot-save': { try { localStorage.setItem(SLOT_KEY(+b.dataset.v), JSON.stringify(serialize())); toast(`Saved to slot ${b.dataset.v}.`, 'good', null); } catch (e) { toast('Could not save: browser storage is full or blocked.', 'bad', null); } openModal(settingsHTML(), 'settings'); break; }
+    case 'slot-load': { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY(+b.dataset.v))); if (d && restore(d)){ applyPalette(); geoDirty = true; save(); closeModal(); clearSel(); goHome(); toast(`Loaded slot ${b.dataset.v}: ${S.nations[PLAYER].name}, ${clockStr(S.hour)}.`, 'good', null); } else toast('That save could not be loaded.', 'bad', null); } catch (e) { toast('That save could not be loaded.', 'bad', null); } break; }
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
@@ -3643,7 +3659,7 @@ function start(data){
   let resumed = false;
   if (data && data.state && restore(data.state)){ resumed = true; const R = catchUp(); if (R) setTimeout(() => { geoDirty = true; save(); openModal(awayHTML(R), 'paper'); }, 300); }
   if (!resumed) newGame((Math.random()*2**31) | 0, pickSel);
-  resize(); if (resumed && data.view) Object.assign(view, data.view); else goHome();
+  resize(); applySet(); if (resumed && data.view) Object.assign(view, data.view); else goHome();
   new ResizeObserver(() => resize()).observe(cv);
   renderSide(true);
   if (!resumed){ if (saved && saved.v === 4 && !saved.over) showBriefing(true, true); else showPicker(); }
