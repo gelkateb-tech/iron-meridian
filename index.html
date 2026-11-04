@@ -580,14 +580,16 @@ const WORLD_POWERS = [
 const PW = n => WORLD_POWERS.find(p => p.name === n);
 const SCENARIOS = {
   world:{name:'World War', desc:'Fifteen powers across the whole globe.', powers:WORLD_POWERS, caps:5, box:null, extra:90},
-  europe:{name:'European Theatre', desc:'Eight powers fight for Europe and its rim.', caps:4, extra:40, box:L => (L.lon >= -25 && L.lon <= 60 && L.lat >= 33 && L.lat <= 72),
+  europe:{name:'European Theatre', desc:'Eight powers fight for Europe and its rim.', caps:4, extra:45, box:L => (L.lon >= -25 && L.lon <= 60 && L.lat >= 33 && L.lat <= 72),
     powers:[PW('United Kingdom'), PW('France'), PW('Germany'), {name:'Italy', country:'Italy', color:'#3fae5a'}, {name:'Spain', country:'Spain', color:'#d9a03a'}, {name:'Poland', country:'Poland', color:'#d8566e'}, PW('Turkey'), PW('Russia')]},
-  pacific:{name:'Pacific Rim', desc:'Eight powers contest the Pacific and East Asia.', caps:4, extra:40, box:L => ((L.lon >= 70 || L.lon <= -95) && L.lat >= -48 && L.lat <= 66),
+  pacific:{name:'Pacific Rim', desc:'Eight powers contest the Pacific and East Asia.', caps:4, extra:45, box:L => ((L.lon >= 70 || L.lon <= -95) && L.lat >= -48 && L.lat <= 66),
     powers:[PW('United States'), PW('China'), PW('Japan'), PW('Australia'), PW('India'), PW('Russia'), {name:'Indonesia', country:'Indonesia', color:'#c8323c'}, {name:'Mexico', country:'Mexico', color:'#3fae5a'}]},
 };
 let POWERS = WORLD_POWERS, SCN = 'world';
-function useScenario(k){ SCN = SCENARIOS[k] ? k : 'world'; POWERS = SCENARIOS[SCN].powers; WIN_CAPS = SCENARIOS[SCN].caps; scnLandCache = null; }
-let scnLandCache = null;
+function useScenario(k){ SCN = SCENARIOS[k] ? k : 'world'; POWERS = SCENARIOS[SCN].powers; WIN_CAPS = SCENARIOS[SCN].caps; scnLandCache = null; scnInCache = null; }
+let scnLandCache = null, scnInCache = null;
+function inScn(p){ if (!scnInCache || scnInCache.S !== SCN){ const box = SCENARIOS[SCN].box; scnInCache = {S:SCN, a:G.P.map(P => !P.sea && (!box || box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})))}; } return scnInCache.a[p]; }
+const landHeld = n => { let c = 0; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] === n && inScn(p)) c++; return c; };
 function scnLand(){ if (scnLandCache) return scnLandCache; const box = SCENARIOS[SCN].box; if (!box) return (scnLandCache = G.landCount);
   return (scnLandCache = G.P.filter(P => !P.sea && box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})).length); }
 const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
@@ -877,7 +879,7 @@ function newGame(seed, pick){
     if (n.small){ S.bld[n.capital].fort = 1; addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
       for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) { addArmy(n.id, P.id, {inf:2}); S.bld[P.id].fort = 1; } }
   }
-  for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; }
+  for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; n.prov0In = landHeld(n.id); }
   S.own0 = S.owner.slice(); if (SET.cb) applyPalette();
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL) addArmy(NEUTRAL, P.id, {inf: P.city ? 5 + Math.floor(rng()*4) : 2 + Math.floor(rng()*2)});
   log(`${S.nations[PLAYER].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
@@ -1619,7 +1621,7 @@ function diploDay(){
       let best = -1, bs = 0; const myP = natPower(n);
       for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || inGrace(m)) continue;
         if (opinion(n, m) >= 0 || myP < 1.1*natPower(m)) continue;
-        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = (cnt + 5)/(natPower(m) + 10)*(m === PLAYER ? 1.1 : 1);
+        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = (cnt + 5)/(natPower(m) + 10)*(m === PLAYER ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1);
         if (sc > bs){ bs = sc; best = m; } }
       if (best >= 0){ if (natPower(n) > 1.6*natPower(best) && opinion(n, best) < -25 && rng() < 0.35) surpriseWar(n, best); else declareWar(n, best); }
     }
@@ -2235,17 +2237,18 @@ function checkNation(n, by = NEUTRAL){
   }
 }
 function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
-const landNeed = n => Math.max(Math.ceil(scnLand()*WIN_SHARE), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra);
+const landNeed = n => SCN === 'world' ? Math.max(Math.ceil(scnLand()*WIN_SHARE), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra)
+  : Math.max(Math.ceil(scnLand()*0.4), (S.nations[n].prov0In ?? S.nations[n].prov0 ?? 0) + SCENARIOS[SCN].extra);
 const growth = n => score(n) - (S.nations[n].score0 || 0);
 const capsHeld = n => S.nations.filter(N => S.owner[N.cap0] === n).length;
 function checkEnd(){
   if (S.over) return;
-  const mine = S.owner.filter(o => o === PLAYER).length;
+  const mine = landHeld(PLAYER);
   if (!S.nations[PLAYER].alive) S.over = 'lose';
   else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= landNeed(PLAYER) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
-  else if ((B => B && (B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0) >= Math.ceil(landNeed(PLAYER)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(PLAYER))){ S.over = 'win'; S.overReason = 'coalition'; }
+  else if ((B => B && (B.members.reduce((s0, m) => s0 + landHeld(m), 0) >= Math.ceil(landNeed(PLAYER)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(PLAYER))){ S.over = 'win'; S.overReason = 'coalition'; }
   else if (S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
-  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (S.owner.filter(o => o === n.id).length >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
+  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
     else { const RB = blocs().find(B => !B.members.includes(PLAYER) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3)); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
   if (S.over){ setSpeed(0); save(); showEnd(); }
 }
@@ -3154,8 +3157,8 @@ function renderSide(force){
       const tipTxt = `${R.name}: ${fmt(v)}${R.unit}${R.k !== 'cash' ? ' / ' + fmt(stockCap(PLAYER)) + ' storage' : ''}&#10;Production +${fmt(inc.gross[R.k])}/day&#10;Upkeep -${fmt(inc.upkeep[R.k])}/day${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? '&#10;SHORTAGE' : ''}`;
       return `<div class="chip res-${R.k} ${short ? 'short' : ''} ${flashes[RES.indexOf(R)]}" title="${tipTxt}">${icon(R.k)}<span class="lbl">${R.name}</span><b>${R.pre}${fmt(v)}${R.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></div>`; }).join(''));
   document.documentElement.style.setProperty('--you', N.color);
-  setHTML($('clock'), `<b>${clockStr(S.hour)}</b><span class="vic" title="Victory: hold ${landNeed(PLAYER)} provinces, or ${WIN_CAPS} starting capitals, or have the most growth when day ${DAY_LIMIT} ends">${S.owner.filter(o => o === PLAYER).length}/${landNeed(PLAYER)} land · ${capsHeld(PLAYER)}/${WIN_CAPS} capitals · day ${Math.floor(S.hour/24) + 1}/${DAY_LIMIT}</span>`);
-  { const mine = S.owner.filter(o => o === PLAYER).length, pl = mine/landNeed(PLAYER), pc = capsHeld(PLAYER)/WIN_CAPS, best = Math.max(pl, pc);
+  setHTML($('clock'), `<b>${clockStr(S.hour)}</b><span class="vic" title="Victory: hold ${landNeed(PLAYER)} provinces, or ${WIN_CAPS} starting capitals, or have the most growth when day ${DAY_LIMIT} ends">${landHeld(PLAYER)}/${landNeed(PLAYER)} ${SCN === 'world' ? 'land' : 'theatre land'} · ${capsHeld(PLAYER)}/${WIN_CAPS} capitals · day ${Math.floor(S.hour/24) + 1}/${DAY_LIMIT}</span>`);
+  { const mine = landHeld(PLAYER), pl = mine/landNeed(PLAYER), pc = capsHeld(PLAYER)/WIN_CAPS, best = Math.max(pl, pc);
     setHTML($('vbar'), `<span>Victory ${Math.round(Math.min(1, best)*100)}% · ${pl >= pc ? `${mine}/${landNeed(PLAYER)} prov` : `${capsHeld(PLAYER)}/${WIN_CAPS} capitals`}</span><span class="tr"><i style="width:${Math.min(100, best*100)}%"></i></span>`); }
   $('seedlbl').textContent = '';
   for (let i = 0; i < 5; i++) $('sp' + i).setAttribute('aria-pressed', String(S.speed === i));
