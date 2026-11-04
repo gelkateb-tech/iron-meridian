@@ -8,7 +8,7 @@ const path = require('path');
 const topojson = require('topojson-client');
 const d3 = require('d3-geo');
 const world = require('world-atlas/countries-50m.json');
-const { State } = require('country-state-city');
+const { State, City } = require('country-state-city');
 
 const W = 200, H = 105;
 const LON0 = -169;                         // left edge of the map (Pacific split)
@@ -104,35 +104,57 @@ for (const ct of CITIES){
 const prov = new Int16Array(N).fill(-1);
 const provinces = [];   // {name, country, city, cap, cells:[]}
 const compass = (from, to) => { const A = cube(from), B = cube(to); const dx = (B[0] + B[1]/2) - (A[0] + A[1]/2), dy = B[1] - A[1]; return Math.abs(dx) > Math.abs(dy)*1.2 ? (dx > 0 ? 'East' : 'West') : (dy > 0 ? 'South' : 'North'); };
-const TARGET = 15;
+// population proxy: number of known towns per cell (148k places), smoothed over neighbours
+const dens0 = new Float32Array(N);
+const townAt = new Array(N).fill(null);
+for (const c of City.getAllCities()){ const cell = lonLatToCell(+c.longitude, +c.latitude); if (cell >= 0 && cellCountry[cell] >= 0){ dens0[cell] += 1; if (!townAt[cell] && c.name.length <= 16 && /^[A-Za-z' .-]+$/.test(c.name)) townAt[cell] = c.name; } }
+const dens = new Float32Array(N); for (let i = 0; i < N; i++){ let sum = dens0[i], n = 1; for (let d = 0; d < 6; d++){ const m = nbr(i, d); if (m >= 0){ sum += dens0[m]*0.5; n += 0.5; } } dens[i] = sum/n; }
+// province spacing: ~2 cells in dense lands, up to 7 in empty ones
+const spacing = c => Math.max(2, Math.min(7, 6.6 - 1.5*Math.log(1 + dens[c])));
 for (let k = 0; k < feats.length; k++){
   const cells = countryCells[k]; if (!cells.length) continue;
-  const target = Math.max(1, Math.round(cells.length/TARGET));
   const seeds = [];  // {cell, name, city, cap}
   const farEnough = (c, minD) => seeds.every(s => hexDist(s.cell, c) >= minD);
-  for (const ct of CITIES) if (ct.cell >= 0 && cellCountry[ct.cell] === k && farEnough(ct.cell, 3)) seeds.push({ cell: ct.cell, city: ct.name, cap: ct.cap });
+  for (const ct of CITIES) if (ct.cell >= 0 && cellCountry[ct.cell] === k && farEnough(ct.cell, Math.min(3, spacing(ct.cell)))) seeds.push({ cell: ct.cell, city: ct.name, cap: ct.cap });
   const regs = regionsByCountry[k].slice();
-  // name city seeds after nearest region
   const nearestRegion = c => { let best = null, bd = 1e9; for (const s of regs){ const d = hexDist(s.cell, c); if (d < bd){ bd = d; best = s; } } return best; };
-  // farthest-point over regions, then random cells
-  const minDist = c => seeds.reduce((m, s) => Math.min(m, hexDist(s.cell, c)), 1e9);
-  while (seeds.length < target){
-    let pool = regs.filter(s => farEnough(s.cell, 3)).map(s => s.cell);
-    if (!pool.length) pool = cells.filter(c => farEnough(c, 3));
-    if (!pool.length) break;
-    let best = pool[0], bv = -1;
-    for (const c of pool){ const v = (seeds.length ? minDist(c) : rnd()) + rnd()*0.3; if (v > bv){ bv = v; best = c; } }
-    seeds.push({ cell: best });
-  }
+  // densest places first, each needing its local spacing from every seed
+  const order = cells.slice().sort((a, b) => (dens[b] + rnd()*0.8) - (dens[a] + rnd()*0.8));
+  for (const c of order){ const r = spacing(c); if (seeds.every(s => hexDist(s.cell, c) >= Math.max(r, Math.min(3, spacing(s.cell))))) seeds.push({ cell: c }); }
   if (!seeds.length) seeds.push({ cell: cells[Math.floor(cells.length/2)] });
+  // every playable country gets enough provinces to manoeuvre: fill farthest-point to ~1 per 14 cells
+  const meanD = cells.reduce((a, c) => a + dens[c], 0)/cells.length;
+  const minSeeds = Math.min(Math.floor(cells.length/3), Math.max(2, Math.round(Math.sqrt(cells.length)*0.8*Math.min(1, 0.2 + meanD*3))));
+  while (seeds.length < minSeeds){
+    let best = -1, bv = 2; for (const c of cells){ const v = seeds.reduce((m, sd) => Math.min(m, hexDist(sd.cell, c)), 1e9) + rnd()*0.3; if (v > bv){ bv = v; best = c; } }
+    if (best < 0) break; seeds.push({ cell: best });
+  }
   const base = provinces.length;
   const usedNames = new Map();
-  seeds.forEach((s, i) => {
-    const reg = nearestRegion(s.cell);
+  const PRE = ['Upper', 'Lower', 'Central', 'Greater', 'Inner', 'Outer', 'Coastal', 'Highland'];
+  const uniq = (name, cell) => {
+    if (!usedNames.has(name)) return name;
+    const alt = `${compass(usedNames.get(name), cell)} ${name.replace(/^(North|South|East|West) /, '')}`; if (!usedNames.has(alt)) return alt;
+    for (const pre of PRE){ const a = `${pre} ${name.replace(/^(North|South|East|West) /, '')}`; if (!usedNames.has(a)) return a; }
+    let bt = null, bd = 1e9; for (let i = 0; i < N; i++) if (townAt[i] && cellCountry[i] === k && !usedNames.has(townAt[i])){ const d = hexDist(i, cell); if (d < bd){ bd = d; bt = townAt[i]; } }
+    if (bt) return bt;
+    for (const suf of ['Reach', 'March', 'Frontier', 'Expanse', 'Wilds', 'Steppe']){ const a = `${name} ${suf}`; if (!usedNames.has(a)) return a; }
+    return `${name} ${usedNames.size}`;
+  };
+  // seeds with a real city take names first; others prefer the nearest region not yet used
+  const order2 = seeds.map((s, i) => i).sort((a, b) => (seeds[b].city ? 1 : 0) - (seeds[a].city ? 1 : 0));
+  const named = new Array(seeds.length);
+  for (const i of order2){
+    const s = seeds[i];
+    let reg = null, bd = 1e9; for (const r of regs){ if (usedNames.has(r.name)) continue; const d = hexDist(r.cell, s.cell); if (d < bd){ bd = d; reg = r; } }
+    if (!reg || bd > 5){ reg = nearestRegion(s.cell); }
     let name = reg ? reg.name : countries[k].name;
-    if (reg && hexDist(reg.cell, s.cell) > 4) name = `${compass(reg.cell, s.cell)} ${reg.name}`;
-    if (usedNames.has(name)){ const first = usedNames.get(name); const alt = `${compass(first, s.cell)} ${name}`; name = usedNames.has(alt) ? `${name} ${usedNames.size}` : alt; }
-    usedNames.set(name, s.cell);
+    if (reg && hexDist(reg.cell, s.cell) > 5 && !usedNames.has(name)) name = name; 
+    name = uniq(name, s.cell);
+    usedNames.set(name, s.cell); named[i] = name;
+  }
+  seeds.forEach((s, i) => {
+    const name = named[i];
     provinces.push({ name, country: k, city: s.city || null, cap: !!s.cap, cells: [] });
     prov[s.cell] = base + i;
   });
@@ -147,8 +169,11 @@ for (let k = 0; k < feats.length; k++){
   for (const c of cells) if (prov[c] < 0){
     const comp = [c]; prov[c] = -2;
     for (let h = 0; h < comp.length; h++) for (let d = 0; d < 6; d++){ const m = nbr(comp[h], d); if (m >= 0 && cellCountry[m] === k && prov[m] === -1){ prov[m] = -2; comp.push(m); } }
+    // small islands join the nearest province of the same country instead of becoming "Name 17"
+    if (comp.length < 5 && seeds.length){ let bs = -1, bd = 1e9; seeds.forEach((sd, si) => { const d = hexDist(sd.cell, c); if (d < bd){ bd = d; bs = si; } });
+      if (bd <= 10){ for (const m of comp) prov[m] = base + bs; continue; } }
     const reg = nearestRegion(c);
-    let name = reg ? reg.name : countries[k].name; if (usedNames.has(name)) name = name + ' Islands'; if (usedNames.has(name)) name = name + ' ' + usedNames.size;
+    let name = reg ? reg.name : countries[k].name; if (usedNames.has(name)) name = name + ' Isles'; name = uniq(name, c);
     usedNames.set(name, c);
     const city = CITIES.find(ct => comp.includes(ct.cell));
     provinces.push({ name, country: k, city: city ? city.name : null, cap: city ? city.cap : false, cells: [] });

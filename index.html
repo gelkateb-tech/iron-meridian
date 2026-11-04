@@ -527,7 +527,7 @@ const WIN_SHARE = 0.25;               // share of land provinces needed to win
 const WIN_CAPS = 5;                   // or hold this many of the 15 starting capitals
 const DAY_LIMIT = 120;                // or have the top score when this day ends
 const CAP_MIN = 2;                    // ground units needed to capture
-const SAVE_KEY = 'iron-meridian-save-v3';
+const SAVE_KEY = 'iron-meridian-save-v4';
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
 const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 
@@ -756,14 +756,18 @@ function newGame(seed, pick){
     G.P[capital].city = true;
     return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, food:120, mp:80, short:{}, alive:true, capital, tech:{}, research:null};
   });
-  S = {v:3, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
+  S = {v:4, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations};
   for (const n of S.nations){
-    n.cap0 = n.capital; n.small = S.owner.filter(o => o === n.id).length <= 5;
+    const np = S.owner.filter(o => o === n.id).length;
+    n.cap0 = n.capital; n.small = np <= 10;
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 200/Math.max(1, income(n.id).gross.cash)));
     S.bld[n.capital].fac = 1;
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
+    // compact powers (Germany, Japan, Britain...) start with a denser, dug-in home army
+    if (n.small){ S.bld[n.capital].fort = 1; addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
+      for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) { addArmy(n.id, P.id, {inf:2}); S.bld[P.id].fort = 1; } }
   }
   for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; }
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL) addArmy(NEUTRAL, P.id, {inf: P.city ? 5 + Math.floor(rng()*4) : 2 + Math.floor(rng()*2)});
@@ -773,7 +777,7 @@ function newGame(seed, pick){
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(JSON.stringify({...S, battles:[]})); }
 function restore(data){
-  if (!data || data.v !== 3 || typeof data.seed !== 'number') return false;
+  if (!data || data.v !== 4 || typeof data.seed !== 'number') return false;
   if (!G) G = loadWorld();
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.speed = 0; S.started = true;
@@ -2939,7 +2943,7 @@ function start(data){
   resize(); if (resumed && data.view) Object.assign(view, data.view); else goHome();
   new ResizeObserver(() => resize()).observe(cv);
   renderSide(true);
-  if (!resumed){ if (saved && saved.v === 3 && !saved.over) showBriefing(true, true); else showPicker(); }
+  if (!resumed){ if (saved && saved.v === 4 && !saved.over) showBriefing(true, true); else showPicker(); }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderSide(true));
   booted = true;
   if (window.U3D && window.__BAKE) U3D.warmup();
