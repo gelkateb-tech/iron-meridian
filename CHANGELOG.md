@@ -86,3 +86,13 @@
   - Finishing the tutorial deselects your army.
   - Forces that arrive where another of your idle forces stands merge into it automatically. Merge forces shows how many forces it will combine, or why it is unavailable.
   - War warnings count enemy armies up to 3 provinces from your border. A new early warning fires when a neighbour masses more than 1.4× your border strength, and a wartime alert flags idle cities while money sits unspent.
+
+## Round 17 — Command tools: named formations, Armies screen, stances, waypoints
+- Every force now has a formation name based on its main unit type and numbered per nation: "1st Infantry Division", "3rd Armored Division", "2nd Fleet", "5th Air Wing". Names appear in the force panel, dispatches ("3rd Armored Division broke at Hesse"), enemy losses ("Russia 2nd Mechanized Division destroyed") and the province army list. Click a name to rename the force.
+- Armies screen (A, or Armies in the top bar): every force with location and destination, unit mix, health and morale, status, supply and stance, with Select to jump to it. It also shows how many forces are idle.
+- Standing orders (stances) per ground force:
+  - **Hold** (default) stays put.
+  - **Defend** reacts to enemies inside your land within 3 provinces when it can win, then returns to its post.
+  - **Preserve** falls back to the nearest city of yours once health drops below 40%.
+- Waypoints: with a force or group selected and moving, shift-click more provinces to chain legs onto its route.
+- Press **.** (or Tab) to jump to the next idle force.
