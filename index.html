@@ -46,6 +46,19 @@ header{display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px}
 .chip .d{font-size:11px; color:var(--ok)}
 .chip .d.neg{color:var(--danger)}
 .chip.you{align-items:center; border-color:var(--you); box-shadow:0 0 0 1px var(--you) inset}
+.chip{align-items:center}
+.chip svg{flex:none}
+.res-cash svg{color:#d9c47a} .res-oil svg{color:#9aa6b0} .res-metal svg{color:#a9b4bd} .res-food svg{color:#9cc46a} .res-mp svg{color:#d6b28e}
+.chip.short{border-color:var(--danger); box-shadow:0 0 0 1px var(--danger) inset}
+.chip.short b{color:var(--danger)}
+.res .chip:not(.you) .lbl{display:none}
+@media (min-width: 1680px){ .res .chip:not(.you) .lbl{display:inline} }
+.bld{display:grid; grid-template-columns:1fr auto; gap:3px 8px; align-items:center; font-size:12.5px; padding:6px 0; border-top:1px solid var(--line)}
+.bld:first-child{border-top:0}
+.bld .nm{font-weight:600}
+.bld .ds{grid-column:1 / -1; color:var(--muted); font-size:11.5px; line-height:1.35}
+.bld .lv{font-family:var(--mono); font-size:11px; color:var(--muted)}
+.bld .btn{font-size:11.5px; padding:5px 8px; white-space:nowrap}
 .spacer{flex:1}
 .clock{font-family:var(--mono); font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
 .clock b{color:var(--fg); font-weight:600}
@@ -97,16 +110,32 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .status.battle{border-left-color:var(--danger)}
 .status.move{border-left-color:var(--accent)}
 .status.cap{border-left-color:var(--ok)}
+.odds{margin-top:6px; padding:5px 8px; border-radius:3px; font-size:12px; line-height:1.35}
+.odds.good{background:rgba(116,194,122,.14); color:#a8dcab} .odds.even{background:rgba(226,162,61,.14); color:#f0c77e} .odds.bad{background:rgba(224,87,79,.16); color:#f2a29c}
+.dot{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(226,162,61,0)}}
+.steps{display:flex; flex-direction:column; gap:4px; font-size:12.5px}
+.steps div{display:flex; gap:8px; align-items:baseline}
+.steps i{font-style:normal; font-family:var(--mono); width:16px; flex:none; color:var(--muted)}
+.steps .done{color:var(--muted); text-decoration:line-through}
+.steps .done i{color:var(--ok); text-decoration:none}
+.nudge{font-size:12.5px; padding:6px 9px; border-radius:4px; background:rgba(226,162,61,.12); border-left:3px solid var(--accent)}
 .sw{display:inline-block; width:10px; height:10px; border-radius:2px; flex:none}
 .nations{display:flex; flex-direction:column; gap:5px}
 .nat{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:8px; font-size:13px}
 .nat .n{font-family:var(--mono); font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; text-align:right; min-width:3ch}
 .nat.dead{opacity:.4; text-decoration:line-through}
 .nat.you{font-weight:600}
-.log{display:flex; flex-direction:column; gap:5px; font-size:12.5px; max-height:220px; overflow:auto}
-.log div{display:grid; grid-template-columns:auto 1fr; gap:8px; min-width:0}
+.log{display:flex; flex-direction:column; gap:4px; font-size:12.5px; max-height:240px; overflow:auto}
+.log .ev{display:grid; grid-template-columns:auto 1fr; gap:8px; min-width:0; text-align:left; padding:5px 8px; border:0; border-left:3px solid var(--line); border-radius:3px; background:var(--panel-2); font-size:12.5px; line-height:1.35; cursor:default}
+.log button.ev{cursor:pointer}
+.log button.ev:hover{background:#1c282d}
+.log .ev.good{border-left-color:var(--ok)} .log .ev.bad{border-left-color:var(--danger)} .log .ev.info{border-left-color:var(--accent)}
 .log time{font-family:var(--mono); font-size:11px; color:var(--muted); padding-top:1px}
-.log .good{color:var(--ok)} .log .bad{color:var(--danger)}
+#toasts{position:absolute; top:10px; right:10px; display:flex; flex-direction:column; gap:6px; width:min(300px, calc(100% - 20px)); pointer-events:none; z-index:4}
+.toast{pointer-events:auto; text-align:left; padding:8px 11px; border-radius:4px; border:1px solid var(--line); border-left:4px solid var(--accent); background:rgba(16,23,26,.95); font-size:12.5px; line-height:1.35; box-shadow:0 8px 20px rgba(0,0,0,.4); animation:tin .25s ease-out}
+.toast.bad{border-left-color:var(--danger)} .toast.good{border-left-color:var(--ok)}
+@keyframes tin{from{opacity:0; transform:translateY(-6px)} to{opacity:1; transform:none}}
 .armylist{display:flex; flex-direction:column; gap:4px}
 .armylist button{display:flex; justify-content:space-between; text-align:left; font-size:12.5px; padding:6px 9px}
 .muted{color:var(--muted)}
@@ -139,6 +168,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .pick{display:flex; flex-direction:column; align-items:flex-start; gap:3px; text-align:left; padding:9px 10px; border-left:4px solid var(--c)}
 .pick b{font-size:14px}
 .pick span{font-family:var(--mono); font-size:11px; color:var(--muted)}
+.sheet.mid > .row:last-child{position:sticky; bottom:-22px; background:var(--panel); padding:10px 0; margin:0; border-top:1px solid var(--line)}
 .pick[aria-pressed="true"]{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; border-left-color:var(--c)}
 .diff{font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:1px 5px; border-radius:3px; background:var(--panel)}
 
@@ -185,6 +215,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
       <canvas id="map" aria-label="World map"></canvas>
       <div id="hint"></div>
       <div id="tip" hidden></div>
+      <div id="toasts" aria-live="polite"></div>
       <div class="mapctl">
         <button class="btn" id="zin" data-act="zin" aria-label="Zoom in">+</button>
         <button class="btn" id="zout" data-act="zout" aria-label="Zoom out">−</button>
@@ -216,17 +247,39 @@ const WORLD = window.WORLD;
 
 /* ---------------- Rules ---------------- */
 const UNITS = {
-  inf:  {name:'Infantry',   short:'INF', cost:25, oil:0,  mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:0.5},
-  tank: {name:'Armor',      short:'ARM', cost:55, oil:6,  mp:12, atk:6, def:4, hp:14, spd:6,  build:48, upk:1.5},
-  art:  {name:'Artillery',  short:'ART', cost:45, oil:3,  mp:10, atk:7, def:1, hp:8,  spd:3,  build:48, upk:1},
-  jet:  {name:'Strike Jet', short:'AIR', cost:90, oil:12, mp:6,  atk:8, def:3, hp:9,  spd:18, build:72, upk:3},
+  inf:  {name:'Infantry',   short:'INF', cost:25, oil:0,  metal:0,  mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, food:1,   fuel:0, req:null},
+  tank: {name:'Armor',      short:'ARM', cost:45, oil:6,  metal:15, mp:12, atk:6, def:4, hp:14, spd:6,  build:48, upk:3, food:1,   fuel:1, req:'fac'},
+  art:  {name:'Artillery',  short:'ART', cost:40, oil:3,  metal:10, mp:10, atk:7, def:1, hp:8,  spd:3,  build:48, upk:2, food:1,   fuel:0, req:'fac'},
+  jet:  {name:'Strike Jet', short:'AIR', cost:80, oil:12, metal:20, mp:6,  atk:8, def:3, hp:9,  spd:18, build:72, upk:6, food:0.5, fuel:2, req:'air'},
 };
+const RES = [
+  {k:'cash',  name:'Money',    unit:'M', pre:'$'},
+  {k:'oil',   name:'Oil',      unit:'',  pre:''},
+  {k:'metal', name:'Metal',    unit:'',  pre:''},
+  {k:'food',  name:'Food',     unit:'',  pre:''},
+  {k:'mp',    name:'Manpower', unit:'k', pre:''},
+];
+const ICONS = {
+  cash: '<path d="M2 4.5h12v7H2z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.9" fill="currentColor"/>',
+  oil: '<path d="M8 1.8C6 5 4.2 7.2 4.2 9.6a3.8 3.8 0 0 0 7.6 0C11.8 7.2 10 5 8 1.8z" fill="currentColor"/>',
+  metal: '<path d="M1.8 11.5l2.2-5h8l2.2 5z" fill="currentColor"/><path d="M5 6.5l1-2h4l1 2" fill="none" stroke="currentColor" stroke-width="1.2"/>',
+  food: '<path d="M8 14V5" stroke="currentColor" stroke-width="1.3"/><ellipse cx="6" cy="5.5" rx="1.6" ry="2.6" transform="rotate(-25 6 5.5)" fill="currentColor"/><ellipse cx="10" cy="5.5" rx="1.6" ry="2.6" transform="rotate(25 10 5.5)" fill="currentColor"/><ellipse cx="8" cy="3" rx="1.4" ry="2.2" fill="currentColor"/>',
+  mp: '<circle cx="8" cy="4.6" r="2.4" fill="currentColor"/><path d="M3 14c0-3.2 2.2-5.2 5-5.2s5 2 5 5.2z" fill="currentColor"/>',
+};
+const icon = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 16 16" aria-hidden="true">${ICONS[k]}</svg>`;
 const UT = Object.keys(UNITS);
-const SEA_SPEED = 7;                  // hexes/day for embarked ground units
+const SEA_SPEED = 5;                  // hexes/day for embarked ground units
 const BUILD = {
-  f: {name:'Factory', cost:80, desc:'+75% cash from this city', cityOnly:true},
-  w: {name:'Fortifications', cost:50, desc:'Defenders here take 33% less damage', cityOnly:false},
+  fac:  {name:'Arms Factory',      max:3, cost:60, metal:20, days:3, where:'city', desc:'Needed for Armor and Artillery. Each level: +20% money here, units train 20% faster.'},
+  air:  {name:'Airbase',           max:1, cost:90, metal:30, days:4, where:'city', desc:'Needed for Strike Jets (with Jet Engines research).'},
+  ref:  {name:'Refinery',          max:2, cost:50, metal:15, days:3, where:'oil',  desc:'+60% oil from this field per level.'},
+  fdy:  {name:'Foundry',           max:2, cost:50, metal:10, days:3, where:'any',  desc:'+3 metal per level (+5 on ore deposits).'},
+  farm: {name:'Farms',             max:2, cost:30, metal:0,  days:2, where:'any',  desc:'+3 food per level.'},
+  rec:  {name:'Recruiting Office', max:1, cost:30, metal:0,  days:2, where:'any',  desc:'+3 manpower per day.'},
+  fort: {name:'Fortifications',    max:3, cost:40, metal:15, days:2, where:'any',  desc:'Defenders here take 20% less damage per level.'},
 };
+const BK = Object.keys(BUILD);
+const ROMAN = ['', 'I', 'II', 'III'];
 const TECH = [
   {id:'inf1',  branch:'Infantry',  name:'Ceramic Body Armor',   cost:60,  days:3, req:null,    desc:'Infantry defense +1',                  fx:{inf:{def:1}}},
   {id:'inf2',  branch:'Infantry',  name:'Mechanized Infantry',  cost:110, days:5, req:'inf1',  desc:'Infantry attack +1 and speed +1',      fx:{inf:{atk:1, spd:1}}},
@@ -273,7 +326,10 @@ const K = 0.25;                       // combat damage per hour factor
 const HOURS_PER_SEC = [0, 2, 4, 8];   // by speed setting
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
 const WIN_SHARE = 0.4;                // share of land provinces needed to win
-const SAVE_KEY = 'iron-meridian-save-v2';
+const WIN_CAPS = 8;                   // or hold this many of the 15 starting capitals
+const DAY_LIMIT = 120;                // or have the top score when this day ends
+const CAP_MIN = 2;                    // ground units needed to capture
+const SAVE_KEY = 'iron-meridian-save-v3';
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
 const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 
@@ -332,7 +388,8 @@ function loadWorld(){
   for (const p of P){ if (p.sea) continue;
     const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0;
     const gulf = p.lat > 12 && p.lat < 38 && lon > 35 && lon < 62, arctic = p.lat > 58, sahara = p.lat > 18 && p.lat < 34 && lon > -10 && lon < 35;
-    p.oil = r() < (gulf ? 0.6 : arctic ? 0.22 : sahara ? 0.3 : 0.12); }
+    p.oil = r() < (gulf ? 0.6 : arctic ? 0.22 : sahara ? 0.3 : 0.12);
+    p.ore = r() < (arctic ? 0.35 : 0.22); }
   const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
   const landCount = P.filter(p => !p.sea).length;
   return {prov, P, countries, landCount};
@@ -417,11 +474,14 @@ function newGame(seed, pick){
     for (const id of provs) owner[id] = k;
     const capital = provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
     G.P[capital].city = true;
-    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:200, oil:30, mp:80, alive:true, capital, tech:{}, research:null};
+    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, food:120, mp:80, short:{}, alive:true, capital, tech:{}, research:null};
   });
-  S = {v:2, seed, hour:0, speed:0, owner, bld:G.P.map(() => ({f:0, w:0})), queue:G.P.map(() => []),
+  S = {v:3, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations};
   for (const n of S.nations){
+    n.cap0 = n.capital; n.small = S.owner.filter(o => o === n.id).length <= 5;
+    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 200/Math.max(1, income(n.id).gross.cash)));
+    S.bld[n.capital].fac = 1;
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
   }
@@ -429,9 +489,10 @@ function newGame(seed, pick){
   log(`${S.nations[PLAYER].name} mobilizes. Fourteen rival powers are moving too.`, '');
   buildGeometry();
 }
+function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(JSON.stringify({...S, battles:[]})); }
 function restore(data){
-  if (!data || data.v !== 2 || typeof data.seed !== 'number') return false;
+  if (!data || data.v !== 3 || typeof data.seed !== 'number') return false;
   if (!G) G = loadWorld();
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.speed = 0;
@@ -449,11 +510,18 @@ function addArmy(owner, at, units){
   S.armies.push(a); return a;
 }
 const has = (n, id) => n >= 0 && !!(S.nations[n].tech && S.nations[n].tech[id]);
-function st(o, t, k){ let v = UNITS[t][k]; if (o >= 0){ const T = S.nations[o].tech || {}; for (const id in T){ const fx = TECH_BY[id] && TECH_BY[id].fx[t]; if (fx && fx[k]) v += fx[k]; } } return v; }
+function st(o, t, k){ let v = UNITS[t][k]; if (o >= 0){ const N = S.nations[o], T = N.tech || {}; for (const id in T){ const fx = TECH_BY[id] && TECH_BY[id].fx[t]; if (fx && fx[k]) v += fx[k]; }
+    const sh = N.short || {};
+    if (sh.oil && UNITS[t].fuel){ if (k === 'atk') v *= 0.7; if (k === 'spd') v *= 0.6; }
+    if (sh.food && k === 'atk') v *= 0.8; }
+  return v; }
 const unlocked = (n, t) => t !== 'jet' || has(n, 'air1');
+const bldOk = (p, t) => !UNITS[t].req || S.bld[p][UNITS[t].req] > 0;
 function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.alive && !N.research && !has(n, id) && (!T.req || has(n, T.req)) && N.cash >= T.cost; }
-function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.research = {id, h:T.days*24}; return true; }
-const buildCost = (n, k) => k === 'w' && has(n, 'log2') ? BUILD[k].cost/2 : BUILD[k].cost;
+function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.research = {id, h:T.days*24}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
+const nextLvl = (p, k) => S.bld[p][k] + 1;
+function buildCost(n, k, lvl){ const B = BUILD[k], m = Math.pow(1.6, lvl - 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), h:B.days*24}; }
+function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil)); }
 const count = a => UT.reduce((s, t) => s + a.u[t], 0);
 const ground = a => a.u.inf + a.u.tank + a.u.art > 0;
 const armyHP = a => UT.reduce((s, t) => s + a.u[t]*UNITS[t].hp, 0);
@@ -469,33 +537,50 @@ const placeOwner = p => G.P[p].sea ? 'Open sea' : S.owner[p] === NEUTRAL ? `${G.
 const isCapital = p => S.nations.some(n => n.alive && n.capital === p && S.owner[p] === n.id);
 const dayOf = h => Math.floor(h/24) + 1;
 const colorOf = o => o >= 0 ? S.nations[o].color : '#7d7a6c';
-function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if (S.log.length > 80) S.log.length = 80; }
+function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if (S.log.length > 80) S.log.length = 80; if (kind && booted) toast(text, kind, p); }
+let booted = false;
+function toast(text, kind, p){
+  const box = document.getElementById('toasts'); if (!box) return;
+  const el = document.createElement('button'); el.className = 'toast ' + kind; el.textContent = text;
+  if (p != null){ el.dataset.act = 'goto'; el.dataset.id = p; }
+  box.prepend(el); while (box.children.length > 4) box.lastChild.remove();
+  setTimeout(() => el.remove(), 4500);
+}
 function stationaryAt(p){ return S.armies.filter(a => a.at === p && a.to === null); }
 function enemiesAt(p, owner){ return S.armies.some(a => a.at === p && a.to === null && a.owner !== owner && count(a) > 0); }
 function index(){ const by = G.P.map(() => []); for (const a of S.armies) if (a.to === null) by[a.at].push(a); return by; }
 
+const graceFor = o => o >= 0 && S.nations[o].small ? 24*14 : GRACE_H;
+const inGrace = o => o >= 0 && S.hour < graceFor(o);
 const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
-function provYield(p){ const P = G.P[p], f = occFactor(p); return {cash:(P.city ? 16 : 4)*(S.bld[p].f ? 1.75 : 1)*f, oil:(P.oil ? 5 : 0)*f, mp:(P.city ? 5 : 1)*f}; }
+function provYield(p){ const P = G.P[p], f = occFactor(p), b = S.bld[p];
+  return {cash:(P.city ? 12 : 3)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 4 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
+    food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 5 : 1) + 3*b.rec)*f}; }
 function income(n){
-  let cash = 0, oil = 0, mp = 0, upk = 0, provs = 0;
+  const g = {cash:0, oil:0, metal:0, food:0, mp:0}, u = {cash:0, oil:0, metal:0, food:0, mp:0}; let provs = 0;
+  const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*7 ? 0.75 : 1;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
-    cash += y.cash; oil += y.oil + (S.nations[n].capital === p ? 3 : 0); mp += y.mp; }
+    const m = (S.home[p] === n ? boost : 1)*capHit;
+    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ g.oil += 3; g.metal += 3; g.food += 3; } }
   const eff = Math.min(1.6, 60/(30 + provs));          // administration: large empires run less efficiently
-  cash *= eff; oil *= eff; mp *= eff;
-  for (const a of S.armies) if (a.owner === n) for (const t of UT) upk += a.u[t]*UNITS[t].upk*2;
-  if (has(n, 'eco1')) cash *= 1.2; if (has(n, 'eco2')) mp *= 1.4; if (has(n, 'eco3')) oil *= 1.5;
-  return {cash, oil, mp, upk, eff};
+  for (const k in g) g[k] *= eff;
+  if (has(n, 'eco1')) g.cash *= 1.2; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;
+  for (const a of S.armies) if (a.owner === n) for (const t of UT){ u.cash += a.u[t]*UNITS[t].upk; u.food += a.u[t]*UNITS[t].food; u.oil += a.u[t]*UNITS[t].fuel; }
+  const net = {}; for (const k in g) net[k] = g[k] - u[k];
+  return {gross:g, upkeep:u, net, eff, cash:g.cash, upk:u.cash};
 }
-function canAfford(n, t){ const N = S.nations[n], U = UNITS[t]; return unlocked(n, t) && N.cash >= U.cost && N.oil >= U.oil && N.mp >= U.mp; }
+function canAfford(n, t){ const N = S.nations[n], U = UNITS[t]; return unlocked(n, t) && N.cash >= U.cost && N.oil >= U.oil && N.metal >= U.metal && N.mp >= U.mp; }
+const canRecruit = (n, p, t) => S.owner[p] === n && G.P[p].city && bldOk(p, t) && canAfford(n, t);
 function recruit(n, p, t){
-  if (S.owner[p] !== n || !G.P[p].city || !canAfford(n, t)) return false;
-  const N = S.nations[n], U = UNITS[t]; N.cash -= U.cost; N.oil -= U.oil; N.mp -= U.mp;
-  S.queue[p].push({t, h:U.build}); return true;
+  if (!canRecruit(n, p, t)) return false;
+  const N = S.nations[n], U = UNITS[t]; N.cash -= U.cost; N.oil -= U.oil; N.metal -= U.metal; N.mp -= U.mp;
+  if (n === PLAYER) (S.tut || (S.tut = {})).recruit = true;
+  const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac)); S.queue[p].push({t, h, h0:h}); return true;
 }
 function build(n, p, k){
-  const B = BUILD[k], N = S.nations[n], c = buildCost(n, k);
-  if (S.owner[p] !== n || S.bld[p][k] || N.cash < c || (B.cityOnly && !G.P[p].city)) return false;
-  N.cash -= c; S.bld[p][k] = 1; return true;
+  const B = BUILD[k], N = S.nations[n], lvl = nextLvl(p, k), c = buildCost(n, k, lvl);
+  if (S.owner[p] !== n || S.cons[p] || lvl > B.max || !canBuildHere(p, k) || N.cash < c.cash || N.metal < c.metal) return false;
+  N.cash -= c.cash; N.metal -= c.metal; S.cons[p] = {k, lvl, h:c.h, h0:c.h}; return true;
 }
 function spawn(n, p, t){
   let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0);
@@ -538,7 +623,7 @@ function canProceed(a){
   if (!G.P[a.at].sea && S.owner[a.at] !== a.owner && ground(a)) return false;
   return true;
 }
-function capNeed(p, by = NEUTRAL){ const P = G.P[p]; return (8 + (P.city ? 8 : 0) + (isCapital(p) ? 8 : 0))*(S.bld[p].w ? 1.5 : 1)*(has(by, 'log2') ? 0.7 : 1); }
+function capNeed(p, by = NEUTRAL){ const P = G.P[p]; return (16 + (P.city ? 16 : 0) + (isCapital(p) ? 16 : 0))*(1 + 0.25*S.bld[p].fort)*(has(by, 'log2') ? 0.7 : 1)*(S.home && S.home[p] === by ? 0.5 : 1); }
 function etaHours(a, path = a.path){
   if (a.to === null && !path.length) return 0;
   let h = 0, from = a.at;
@@ -548,12 +633,17 @@ function etaHours(a, path = a.path){
 }
 
 /* ---------------- Simulation ---------------- */
+function alarm(){ if (S.speed > 1){ S.speed = 1; } }
 function tick(){
   S.hour++;
   // production
   for (let p = 0; p < G.P.length; p++){ const q = S.queue[p]; if (!q.length) continue;
     if (S.owner[p] < 0){ q.length = 0; continue; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t); if (S.owner[p] === PLAYER) log(`${UNITS[it.t].name} ready in ${G.P[p].name}.`, '', p); } }
+  // construction
+  for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (!c) continue;
+    if (S.owner[p] < 0){ S.cons[p] = null; continue; }
+    if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (S.owner[p] === PLAYER) log(`${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
   // research
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.research = null;
@@ -562,7 +652,7 @@ function tick(){
   for (const a of S.armies){
     if (a.to === null && a.path.length && canProceed(a)){ a.to = a.path.shift(); a.t = 0; a.forced = false; }
     if (a.to !== null){ a.t += 1/legHours(a, a.at, a.to);
-      if (a.t >= 1){ a.at = a.to; a.to = null; a.t = 0; } }
+      if (a.t >= 1){ if (G.P[a.at].sea && !G.P[a.to].sea) a.landed = S.hour; a.at = a.to; a.to = null; a.t = 0; } }
   }
   // combat
   const prevBattles = new Set(S.battles); S.battles = [];
@@ -573,18 +663,22 @@ function tick(){
     if (sides.size < 2) continue;
     S.battles.push(p);
     const owners = [...sides.keys()];
-    if (!prevBattles.has(p) && owners.includes(PLAYER)) log(`Battle at ${G.P[p].name} against ${owners.filter(o => o !== PLAYER).map(nationName).join(', ')}.`, 'bad', p);
+    if (!prevBattles.has(p) && owners.includes(PLAYER)){
+      const foes = owners.filter(o => o !== PLAYER).map(nationName).join(', ');
+      if (S.owner[p] === PLAYER){ log(`${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(); }
+      else log(`Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
+    }
     const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
     const dmg = new Map();
     for (const o of owners){
-      let atk = 0; for (const a of sides.get(o)) for (const t of UT) atk += a.u[t]*st(o, t, 'atk');
+      let atk = 0; for (const a of sides.get(o)){ const m = a.landed != null && S.hour - a.landed < 24 ? 0.67 : 1; for (const t of UT) atk += a.u[t]*st(o, t, 'atk')*m; }
       atk *= K*(0.8 + rng()*0.4);
       const foes = owners.filter(e => e !== o), tot = foes.reduce((s, e) => s + hp.get(e), 0);
       for (const e of foes) dmg.set(e, (dmg.get(e) || 0) + atk*hp.get(e)/tot);
     }
     for (const o of owners){
       let d = dmg.get(o) || 0;
-      if (o === S.owner[p]){ d /= 1.25; if (S.bld[p].w) d /= 1.5; }
+      if (o === S.owner[p]){ d /= 1.25; d *= Math.pow(0.8, S.bld[p].fort); }
       if (has(o, 'log3')) d *= 0.85;
       const tot = hp.get(o);
       for (const a of sides.get(o)) hurt(a, d*armyHP(a)/tot*(G.P[p].sea && ground(a) ? 1.5 : 1));
@@ -603,9 +697,10 @@ function tick(){
     const list = by[p], owners = new Set(list.map(a => a.owner));
     if (owners.size === 1){
       const O = list[0].owner;
-      const graceBlock = S.hour < GRACE_H && O !== PLAYER && S.owner[p] >= 0;
-      if (O !== S.owner[p] && O !== NEUTRAL && !graceBlock && list.some(ground)){
-        if (!S.cap[p] || S.cap[p].by !== O) S.cap[p] = {by:O, h:0};
+      const graceBlock = O !== PLAYER && inGrace(S.owner[p]);
+      const groundN = list.reduce((s, a) => s + a.u.inf + a.u.tank + a.u.art, 0);
+      if (O !== S.owner[p] && O !== NEUTRAL && !graceBlock && groundN >= CAP_MIN){
+        if (!S.cap[p] || S.cap[p].by !== O){ S.cap[p] = {by:O, h:0}; if (S.owner[p] === PLAYER){ log(`${nationName(O)} is occupying ${G.P[p].cityName || G.P[p].name}. Retake it before the capture completes.`, 'bad', p); alarm(); } }
         if (++S.cap[p].h >= capNeed(p, O)) capture(p, O);
       } else S.cap[p] = null;
     } else if (owners.size === 0) S.cap[p] = null;
@@ -623,48 +718,60 @@ function hurt(a, d){
 }
 function capture(p, O){
   const prev = S.owner[p], wasCap = isCapital(p);
-  S.owner[p] = O; S.cap[p] = null; S.queue[p] = []; S.bld[p].w = 0;
+  S.owner[p] = O; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1);
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
   rebuildOwnerGeo();
   const nm = G.P[p].name;
+  if (O === PLAYER) (S.tut || (S.tut = {})).capture = true;
   if (O === PLAYER) log(`You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.`, 'good', p);
   else if (prev === PLAYER) log(`${nationName(O)} captured ${nm}.`, 'bad', p);
   else if (wasCap) log(`${nationName(O)} took ${nm}, capital of ${nationName(prev)}.`, '', p);
-  if (prev >= 0) checkNation(prev);
+  if (prev >= 0) checkNation(prev, O);
   checkEnd();
 }
-function checkNation(n){
+function checkNation(n, by = NEUTRAL){
   const N = S.nations[n]; if (!N.alive) return;
   const cities = G.P.filter(p => S.owner[p.id] === n && p.city);
   if (!cities.length){
     N.alive = false;
-    for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.owner[p] = NEUTRAL; S.queue[p] = []; addArmy(NEUTRAL, p, {inf:2}); }
+    const annex = by >= 0 && S.nations[by].alive;
+    for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
+      if (annex){ S.owner[p] = by; S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
     removeEmpty(); rebuildOwnerGeo();
-    log(n === PLAYER ? `${N.name} has fallen.` : `${N.name} has collapsed. Its land is now independent.`, n === PLAYER ? 'bad' : 'good');
+    log(n === PLAYER ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, n === PLAYER ? 'bad' : by === PLAYER ? 'good' : 'info');
   } else if (S.owner[N.capital] !== n){
-    N.capital = cities[0].id;
-    log(`${N.name} moved its capital to ${cities[0].cityName || cities[0].name}.`, '', cities[0].id);
+    const home = cities.filter(c => S.home[c.id] === n);
+    const nc = (home.length ? home : cities)[0];
+    N.capital = nc.id; N.capHit = S.hour; nc.city = true;
+    log(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 25% for 7 days.`, n === PLAYER ? 'bad' : 'info', nc.id);
   }
 }
+function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
+const capsHeld = n => S.nations.filter(N => S.owner[N.cap0] === n).length;
 function checkEnd(){
   if (S.over) return;
   const mine = S.owner.filter(o => o === PLAYER).length;
   if (!S.nations[PLAYER].alive) S.over = 'lose';
-  else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= Math.ceil(G.landCount*WIN_SHARE)) S.over = 'win';
+  else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= Math.ceil(G.landCount*WIN_SHARE) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
+  else if (S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => score(b.id) - score(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
+  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (S.owner.filter(o => o === n.id).length >= Math.ceil(G.landCount*WIN_SHARE) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; } }
   if (S.over){ setSpeed(0); save(); showEnd(); }
 }
 function daily(){
-  for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id);
-    N.cash = Math.max(0, N.cash + inc.cash - inc.upk); N.oil += inc.oil; N.mp += inc.mp; }
+  for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id), was = N.short || {};
+    N.short = {};
+    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = v; }
+    if (N.id === PLAYER){ for (const k of ['food', 'oil', 'cash']) if (N.short[k] && !was[k]) log(k === 'food' ? 'Food shortage: your troops fight 20% worse until food income is positive.' : k === 'oil' ? 'Oil shortage: Armor and Strike Jets are slowed and weakened.' : 'Treasury empty: upkeep is unpaid.', 'bad'); } }
+  checkEnd();
   save();
 }
 
 /* ---------------- AI ---------------- */
 function defPower(p, n){
   let d = 0; for (const a of stationaryAt(p)) if (a.owner !== n) d += power(a);
-  if (S.owner[p] !== n){ d *= 1.25; if (S.bld[p].w) d *= 1.5; }
+  if (S.owner[p] !== n){ d *= 1.25/Math.pow(0.8, S.bld[p].fort); }
   return d;
 }
 function threatNear(p, n){ return G.P[p].nbs.some(v => S.armies.some(a => a.at === v && a.owner !== n && a.owner !== NEUTRAL && count(a) > 0)); }
@@ -678,14 +785,23 @@ function aiTurn(n){
   }
   const inc = income(n), provs = S.owner.filter(o => o === n).length;
   const units = S.armies.reduce((s, a) => s + (a.owner === n ? count(a) : 0), 0) + S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.length : 0), 0);
-  const canGrow = inc.cash - inc.upk > 8 && units < 10 + 6*Math.sqrt(provs);
+  const canGrow = inc.net.cash > 4 && inc.net.food > -2 && inc.upkeep.cash < inc.gross.cash*0.75;
+  // economy buildings: one new project per turn, where it is needed most
+  { const need = inc.net.food < 4 ? 'farm' : inc.net.metal < 4 && N.metal < 80 ? 'fdy' : inc.net.oil < 3 ? 'ref' : inc.net.mp < 5 && N.mp < 60 ? 'rec' : null;
+    if (need && N.cash > 90){ for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, need) || S.bld[p][need] >= BUILD[need].max) continue;
+      if (need === 'fdy' && !G.P[p].ore && rng() < 0.6) continue; if (build(n, p, need)) break; } } }
   for (let p = 0; p < G.P.length; p++){
     if (S.owner[p] !== n || !G.P[p].city) continue;
-    if (!S.bld[p].f && N.cash > 220 && rng() < 0.4) build(n, p, 'f');
-    if (p === N.capital && !S.bld[p].w && threatNear(p, n) && N.cash > 60) build(n, p, 'w');
-    if (S.queue[p].length < 1 && canGrow){
+    if (!S.cons[p]){
+      if (p === N.capital && threatNear(p, n) && S.bld[p].fort < 2) build(n, p, 'fort');
+      else if (!S.bld[p].fac && N.cash > 110) build(n, p, 'fac');
+      else if (p === N.capital && has(n, 'air1') && !S.bld[p].air && N.cash > 140) build(n, p, 'air');
+      else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
+    }
+    if (S.queue[p].length < 2 && canGrow){
       const r = rng(); let t = 'inf';
-      if (has(n, 'air1') && N.oil >= 12 && N.cash > 240 && r < 0.2) t = 'jet'; else if (N.oil >= 6 && r < 0.45) t = 'tank'; else if (N.oil >= 3 && r < 0.65) t = 'art';
+      if (r < 0.2 && bldOk(p, 'jet') && unlocked(n, 'jet')) t = 'jet'; else if (r < 0.5 && bldOk(p, 'tank')) t = 'tank'; else if (r < 0.68 && bldOk(p, 'art')) t = 'art';
+      if (!canAfford(n, t)) t = 'inf';
       if (canAfford(n, t) && N.cash >= UNITS[t].cost + 15) recruit(n, p, t);
     }
   }
@@ -703,14 +819,15 @@ function aiTurn(n){
     for (let h = 0; h < q.length; h++){ const u = q[h], du = dist.get(u); if (du >= 7) continue;
       for (const v of G.P[u].nbs){ if (dist.has(v)) continue; const step = G.P[v].sea ? 2 : 1; dist.set(v, du + step); q.push(v);
         if (G.P[v].sea || S.owner[v] === n || targeted.has(v)) continue;
-        if (S.owner[v] >= 0 && S.hour < GRACE_H) continue;
+        if (inGrace(S.owner[v])) continue;
+        if (S.owner[v] >= 0 && pw < 40 && S.home[v] !== n) continue;
         if (pw < defPower(v, n)*1.3 + 4) continue;
-        let val = G.P[v].city ? 3 : 1; if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3;
+        let val = G.P[v].city ? 3 : 1; if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
         if (S.owner[v] === PLAYER && S.hour > 24*15) val *= 1.1;
         const sc = val/(1 + (du + step)*0.7); if (sc > bestScore){ bestScore = sc; best = v; } } }
     if (best < 0) continue;
     if (a.at === N.capital && a.u.inf >= 4){ addArmy(n, a.at, {inf:2}); a.u.inf -= 2; }
-    a.path = S.hour < GRACE_H ? findPath(a.at, best, v => G.P[v].sea || S.owner[v] === n || S.owner[v] === NEUTRAL) : findPath(a.at, best);
+    a.path = findPath(a.at, best, v => G.P[v].sea || S.owner[v] === n || S.owner[v] === NEUTRAL || !inGrace(S.owner[v]));
     if (!a.path.length) continue;
     targeted.add(best);
   }
@@ -735,8 +852,13 @@ const minScale = () => Math.min(cw/WORLD_W, ch/WORLD_H)*0.9;
 function fit(){ const s = Math.min(cw/WORLD_W, ch/WORLD_H)*0.98; view.s = s; view.x = (cw - WORLD_W*s)/2; view.y = (ch - WORLD_H*s)/2; }
 function centerOn(x, y, s = view.s){ view.s = s; view.x = cw/2 - x*s; view.y = ch/2 - y*s; }
 function goHome(){
-  const N = S.nations[PLAYER], P = G.P[N.alive ? N.capital : 0];
-  centerOn(P.x, P.y, Math.min(5, Math.max(minScale()*4, 0.55)));
+  const N = S.nations[PLAYER];
+  if (!N.alive){ fit(); return; }
+  const set = new Set(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === PLAYER){ set.add(p); for (const q of G.P[p].nbs) if (!G.P[q].sea) set.add(q); }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of set){ const P = G.P[p]; x0 = Math.min(x0, P.x); y0 = Math.min(y0, P.y); x1 = Math.max(x1, P.x); y1 = Math.max(y1, P.y); }
+  const pad = 60, s = Math.max(minScale(), Math.min(2.2, Math.min(cw/(x1 - x0 + pad*2), ch/(y1 - y0 + pad*2))));
+  const C = G.P[N.capital]; centerOn((x0 + x1)/2*0.5 + C.x*0.5, (y0 + y1)/2*0.5 + C.y*0.5, s);
 }
 function zoomAt(f, sx, sy){
   const ns = Math.max(minScale(), Math.min(view.s*f, 5));
@@ -835,7 +957,7 @@ function draw(now){
     if (cap && hexPx >= 2){ star(x, y + 9*k, 6*k); ctx.fillStyle = '#f3ead2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b1012'; ctx.stroke(); }
     else if (P.city && showCity){ ctx.fillStyle = '#f3ead2'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1.2; ctx.fillRect(x - 3*k, y + 6*k, 6*k, 6*k); ctx.strokeRect(x - 3*k, y + 6*k, 6*k, 6*k); }
     if (P.oil && hexPx >= 8){ const ox = x + (P.city || cap ? 10*k : 0), oy = y + 9*k; ctx.beginPath(); ctx.arc(ox, oy + 1.2*k, 2.8*k, 0, Math.PI*2); ctx.moveTo(ox - 2.4*k, oy); ctx.lineTo(ox, oy - 4.2*k); ctx.lineTo(ox + 2.4*k, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
-    if (S.bld[p].w && hexPx >= 6){ ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y + 9*k, 10*k, Math.PI*0.15, Math.PI*0.85); ctx.stroke(); }
+    if (S.bld[p].fort && hexPx >= 6){ ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y + 9*k, 10*k, Math.PI*0.15, Math.PI*0.85); ctx.stroke(); }
     const label = showNames ? (P.city ? P.cityName : P.name) : (P.city && hexPx >= 8) || (cap && hexPx >= 4) ? P.cityName : '';
     if (label){ ctx.font = `${cap ? 600 : 500} ${cap ? 12 : 11}px ${BODY}`; ctx.textBaseline = 'top';
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(label, x, y + 16*k); ctx.fillStyle = '#ece6d4'; ctx.fillText(label, x, y + 16*k); ctx.textBaseline = 'middle'; }
@@ -984,7 +1106,8 @@ function tipShow(x, y){
   const P = G.P[p], vis = visibleSet(), here = stationaryAt(p).filter(a => armyVisible(a, vis));
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
   let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted"><span class="sw" style="background:${P.sea ? '#28414a' : colorOf(S.owner[p])};vertical-align:-1px"></span> ${placeOwner(p)}</div>`;
-  if (!P.sea){ const y = provYield(p); h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.oil ? ' · Oil' : ''}</span><span>$${Math.round(y.cash)} · ${y.oil} oil</span></div>`; }
+  if (!P.sea){ const y = provYield(p); h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.oil ? ' · Oil' : ''}${P.ore ? ' · Ore' : ''}</span><span>${yieldStr(y)}</span></div>`;
+    const bl = BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')); if (bl.length && S.owner[p] === PLAYER) h += `<div class="r"><span>Built</span><span>${bl.join(', ')}</span></div>`; }
   if (foes.length) h += `<div class="r"><span>Hostile</span><span>${foes.reduce((s, a) => s + count(a), 0)} units · ${Math.round(foes.reduce((s, a) => s + power(a), 0))} str</span></div>`;
   else if (!P.sea && S.owner[p] !== PLAYER && !vis.has(p)) h += `<div class="r"><span>Garrison</span><span>Unknown (fog)</span></div>`;
   if (mine.length) h += `<div class="r"><span>Yours</span><span>${mine.reduce((s, a) => s + count(a), 0)} units</span></div>`;
@@ -999,18 +1122,19 @@ function tipShow(x, y){
 /* ---------------- Side panel ---------------- */
 const $ = id => document.getElementById(id);
 const fmt = n => Math.floor(n).toLocaleString('en-US');
+const yieldStr = y => ['cash', 'oil', 'metal', 'food', 'mp'].filter(k => y[k] >= 0.5).map(k => `${k === 'cash' ? '$' : ''}${Math.round(y[k])}${k === 'cash' ? '' : ' ' + (k === 'mp' ? 'mp' : k)}`).join(' · ') || '—';
 const comp = a => UT.filter(t => a.u[t]).map(t => `<span class="tag">${a.u[t]} ${UNITS[t].short}</span>`).join('');
 const clockStr = h => `Day ${dayOf(h)} · ${String(h % 24).padStart(2, '0')}:00`;
 let lastSig = {};
 function setHTML(el, html){ if (lastSig[el.id] !== html){ lastSig[el.id] = html; el.innerHTML = html; } }
 function renderSide(force){
   if (force) lastSig = {};
-  const N = S.nations[PLAYER], inc = income(PLAYER), net = inc.cash - inc.upk;
+  const N = S.nations[PLAYER], inc = income(PLAYER);
   setHTML($('res'),
-    `<div class="chip you" title="Your nation"><span class="sw" style="background:${N.color}"></span><span class="lbl">Playing as</span><b>${N.name}</b></div>` +
-    `<div class="chip"><span class="lbl">Cash</span><b>$${fmt(N.cash)}M</b><span class="d ${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : ''}${fmt(net)}/d</span></div>` +
-    `<div class="chip"><span class="lbl">Oil</span><b>${fmt(N.oil)}</b><span class="d">+${fmt(inc.oil)}/d</span></div>` +
-    `<div class="chip"><span class="lbl">Manpower</span><b>${fmt(N.mp)}k</b><span class="d">+${fmt(inc.mp)}/d</span></div>`);
+    `<div class="chip you" title="Your nation"><span class="sw" style="background:${N.color}"></span><b>${N.name}</b></div>` +
+    RES.map(R => { const v = N[R.k], d = inc.net[R.k], short = N.short && N.short[R.k];
+      const tipTxt = `${R.name}: ${fmt(v)}${R.unit}&#10;Production +${fmt(inc.gross[R.k])}/day&#10;Upkeep -${fmt(inc.upkeep[R.k])}/day${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? '&#10;SHORTAGE' : ''}`;
+      return `<div class="chip res-${R.k} ${short ? 'short' : ''}" title="${tipTxt}">${icon(R.k)}<span class="lbl">${R.name}</span><b>${R.pre}${fmt(v)}${R.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></div>`; }).join(''));
   document.documentElement.style.setProperty('--you', N.color);
   setHTML($('clock'), `<b>${clockStr(S.hour)}</b>`);
   $('seedlbl').textContent = '';
@@ -1019,8 +1143,8 @@ function renderSide(force){
   const order = S.nations.slice().sort((a, b) => (b.alive - a.alive) || counts[b.id] - counts[a.id]);
   const need = Math.ceil(G.landCount*WIN_SHARE);
   setHTML($('nations'), order.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}"><span class="sw" style="background:${n.color}"></span><span>${n.name}${n.id === PLAYER ? ' (you)' : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to victory">${Math.round(counts[n.id]/need*100)}%</span></div>`).join('') +
-    `<div class="muted small">Hold ${need} of ${G.landCount} land provinces, or outlast every rival power, to win.</div>`);
-  setHTML($('log'), S.log.slice(0, 30).map(e => `<div><time>D${dayOf(e.h)}</time><span class="${e.kind}">${e.text}</span></div>`).join(''));
+    `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Your score ${score(PLAYER)}, leader ${Math.max(...S.nations.filter(n => n.alive).map(n => score(n.id)))}.</div>`);
+  setHTML($('log'), S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="goto" data-id="${e.p}" title="Show on map"><time>D${dayOf(e.h)}</time><span>${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
   if (modalKind === 'research' && !$('modal').hidden){
     setHTML($('sheet'), researchHTML());
@@ -1033,6 +1157,12 @@ function renderSide(force){
   if (a) hint = sel.target !== null ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap empty map or press Esc to deselect.` : 'Tap a province or sea zone to plan a route. Press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
   setHTML($('hint'), hint);
+}
+function checklist(){
+  const T = S.tut || (S.tut = {});
+  if (T.recruit && T.capture && T.research) return '';
+  const row = (done, txt) => `<div class="${done ? 'done' : ''}"><i>${done ? '✓' : '○'}</i><span>${txt}</span></div>`;
+  return `<div class="eyebrow">First steps</div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Capture an independent neighbour: tap your counter, then the target twice')}${row(T.research, 'Start a research project (R)')}</div>`;
 }
 function researchLine(){
   const N = S.nations[PLAYER], R = N.research, done = Object.keys(N.tech).length;
@@ -1069,7 +1199,9 @@ function ctxHTML(){
   const N = S.nations[PLAYER], mine = S.armies.filter(a => a.owner === PLAYER);
   return `<div class="eyebrow">Command</div><h2>${N.name}</h2>
     <div class="sub"><span class="sw" style="background:${N.color};vertical-align:-1px"></span> Your nation · Capital: ${G.P[N.capital].cityName || G.P[N.capital].name} <button class="btn" data-act="home" style="padding:2px 7px;font-size:12px;margin-left:4px">Show me</button></div>
+    ${checklist()}
     ${researchLine()}
+    ${N.cash > 300 && S.queue.every((q, p) => S.owner[p] !== PLAYER || !q.length) ? `<div class="nudge">You have $${fmt(N.cash)}M and nothing in training. Money only wins wars once it is spent. <button class="btn" data-act="prov" data-id="${N.capital}" style="padding:2px 7px;font-size:12px">Recruit in ${G.P[N.capital].cityName}</button></div>` : ''}
     <p class="small muted" style="margin:0;line-height:1.5">Tap a province to inspect it or recruit in your cities. Tap one of your counters to command that force. Forces cross water by embarking from coastal provinces.</p>
     <div class="armylist">${mine.slice(0, 40).map(a => `<button data-act="army" data-id="${a.id}"><span>${G.P[a.to !== null ? a.to : a.at].name}</span><span class="muted">${count(a)} units · ${statusText(a).short}</span></button>`).join('') || '<span class="muted small">You have no forces in the field.</span>'}</div>`;
 }
@@ -1083,6 +1215,17 @@ function statusText(a){
   if (S.owner[a.at] !== a.owner && !ground(a)) return {cls:'', short:'airborne', long:'Air units cannot capture ground. Add ground units.'};
   return {cls:'', short:'holding', long:`Holding ${P[a.at].name}`};
 }
+function odds(a, t, foes){
+  if (!foes.length) return Infinity;
+  let d = foes.reduce((s, b) => s + power(b), 0);
+  if (S.owner[t] >= 0 || S.owner[t] === NEUTRAL){ d *= 1.25/Math.pow(0.8, S.bld[t].fort || 0); }
+  return power(a)/Math.max(1, d);
+}
+function oddsHTML(a, t, foes){
+  if (!foes.length) return G.P[t].sea || S.owner[t] === PLAYER ? '' : `<br><span class="small">No defenders seen${visibleSet().has(t) ? '' : ' (fog: there may be some)'}.</span>`;
+  const r = odds(a, t, foes), cls = r >= 1.5 ? 'good' : r >= 0.9 ? 'even' : 'bad', label = r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even fight' : 'Likely defeat';
+  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(power(a))} vs their ${Math.round(foes.reduce((s, b) => s + power(b), 0))} strength${S.bld[t].fort ? ' + fortifications' : ''} (defenders get +25% on home soil)</div>`;
+}
 function armyHTML(a){
   const st0 = statusText(a), here = a.to === null ? S.armies.filter(b => b.owner === PLAYER && b.at === a.at && b.to === null) : [a];
   const enemies = a.to === null ? stationaryAt(a.at).filter(b => b.owner !== PLAYER) : [];
@@ -1092,8 +1235,8 @@ function armyHTML(a){
     const ok = targetPath && targetPath.length;
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned route</div>
       <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath)} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}` : ' · no route'}
-      ${foes.length ? `<br><span class="small">Known defenders: ${Math.round(foes.reduce((s, b) => s + power(b), 0))} strength vs your ${Math.round(power(a))}</span>` : ''}</div>
-      <div class="row"><button class="btn primary" data-act="send" ${ok ? '' : 'disabled'}>Send force here</button>
+      ${oddsHTML(a, t, foes)}</div>
+      <div class="row"><button class="btn primary" data-act="send" ${ok ? '' : 'disabled'}>${odds(a, t, foes) < 0.9 ? 'Attack anyway' : 'Send force here'}</button>
       <button class="btn" data-act="prov" data-id="${t}" ${G.P[t].sea ? 'disabled' : ''}>View province</button>
       <button class="btn" data-act="untarget">Cancel route</button></div>`;
   }
@@ -1106,7 +1249,7 @@ function armyHTML(a){
       <button class="btn" data-act="split" ${count(a) < 2 ? 'disabled' : ''}>Split in half</button>
       <button class="btn" data-act="merge" ${here.length < 2 ? 'disabled' : ''}>Merge forces here</button>
       <button class="btn" data-act="stop" ${!a.path.length ? 'disabled' : ''}>Halt</button>
-      <button class="btn" data-act="prov" data-id="${a.to !== null ? a.to : a.at}" ${G.P[a.to !== null ? a.to : a.at].sea ? 'disabled' : ''}>Province</button>
+      <button class="btn" data-act="prov" data-id="${a.to !== null ? a.to : a.at}" ${G.P[a.to !== null ? a.to : a.at].sea ? 'disabled' : ''}>${a.to === null && S.owner[a.at] === PLAYER ? (G.P[a.at].city ? 'Recruit / build here' : 'Build here') : 'Province'}</button>
       <button class="btn" data-act="clear">Deselect</button>
     </div>
     ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span>Force of ${count(b)}</span><span class="muted">${UT.filter(t => b.u[t]).map(t => b.u[t] + ' ' + UNITS[t].short).join(' · ')}</span></button>`).join('')}</div>` : ''}`;
@@ -1118,10 +1261,10 @@ function provHTML(p){
   const own = here.filter(a => a.owner === PLAYER), foe = here.filter(a => a.owner !== PLAYER);
   const foeKnown = foe.filter(a => armyVisible(a, vis));
   const y = provYield(p);
-  let html = `<div class="eyebrow">${kind}${P.oil ? ' · Oil field' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>
+  let html = `<div class="eyebrow">${kind}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>
     <div class="sub">${P.city ? P.name + ' · ' : ''}<span class="sw" style="background:${colorOf(o)};vertical-align:-1px"></span> ${placeOwner(p)}</div>
-    <dl class="kv"><dt>Daily yield</dt><dd>$${fmt(y.cash)}M · ${y.oil + (o >= 0 && S.nations[o].capital === p ? 3 : 0)} oil · ${y.mp}k</dd>
-    <dt>Buildings</dt><dd>${[S.bld[p].f ? 'Factory' : '', S.bld[p].w ? 'Fortified' : ''].filter(Boolean).join(', ') || 'None'}</dd>
+    <dl class="kv"><dt>Daily yield</dt><dd>${yieldStr(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
+    <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(', ') || 'None'}</dd>
     <dt>Capture time</dt><dd>${Math.round(capNeed(p, PLAYER))} h</dd>
     <dt>Garrison</dt><dd>${foe.length && !foeKnown.length ? 'Unknown' : foeKnown.length ? foeKnown.reduce((s, a) => s + count(a), 0) + ' hostile units' : mine ? (own.length ? own.reduce((s, a) => s + count(a), 0) + ' of yours' : 'Empty') : 'None seen'}</dd></dl>`;
   if (S.cap[p]) html += `<div class="status cap">${nationName(S.cap[p].by)} capturing: ${Math.round(S.cap[p].h/capNeed(p, S.cap[p].by)*100)}%</div>`;
@@ -1129,14 +1272,21 @@ function provHTML(p){
   if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span>Your force of ${count(a)}</span><span class="muted">Command</span></button>`).join('')}</div>`;
   if (mine && P.city){
     html += `<div class="eyebrow">Recruit</div><div class="units">${UT.map(t => { const U = UNITS[t];
-      const lock = !unlocked(PLAYER, t);
-      return `<button class="btn unit" data-act="recruit" data-t="${t}" ${canAfford(PLAYER, t) ? '' : 'disabled'}><span class="nm">${U.name}</span><span class="cost">${lock ? 'Research Jet Engines first' : `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''} · ${U.mp}k`}</span><span class="st">ATK ${st(PLAYER, t, 'atk')} DEF ${st(PLAYER, t, 'def')} SPD ${st(PLAYER, t, 'spd')} · ${U.build/24}d</span></button>`; }).join('')}</div>`;
+      const why = !unlocked(PLAYER, t) ? 'Research Jet Engines' : !bldOk(p, t) ? `Needs ${BUILD[U.req].name}` : '';
+      const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac));
+      return `<button class="btn unit" data-act="recruit" data-t="${t}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k`}</span><span class="st">ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; }).join('')}</div>`;
     const q = S.queue[p];
-    if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${UNITS[it.t].name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/UNITS[it.t].build)*100)}%"></i></div>` : ''}`).join('')}</div>`;
+    if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${UNITS[it.t].name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || UNITS[it.t].build))*100)}%"></i></div>` : ''}`).join('')}</div>`;
   }
   if (mine){
-    html += `<div class="row">${Object.entries(BUILD).filter(([k, B]) => !B.cityOnly || P.city).map(([k, B]) =>
-      `<button class="btn" data-act="build" data-k="${k}" title="${B.desc}" ${S.bld[p][k] || N.cash < buildCost(PLAYER, k) ? 'disabled' : ''}>${S.bld[p][k] ? B.name + ' built' : `Build ${B.name.toLowerCase()} · $${buildCost(PLAYER, k)}M`}</button>`).join('')}</div>`;
+    const c = S.cons[p];
+    html += `<div class="eyebrow">Construction</div>`;
+    if (c) html += `<div class="queue"><div class="qi"><span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><span class="muted">${c.h} h left</span></div><div class="bar"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></div></div>`;
+    html += `<div>${BK.filter(k => canBuildHere(p, k)).map(k => { const B = BUILD[k], lv = S.bld[p][k], nl = lv + 1, cc = buildCost(PLAYER, k, nl);
+      const maxed = lv >= B.max, ok = !maxed && !c && N.cash >= cc.cash && N.metal >= cc.metal;
+      return `<div class="bld"><span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] : 'Built') : ''}</span></span>
+        ${maxed ? '<span class="lv">Max</span>' : `<button class="btn" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'}>${lv ? 'Upgrade' : 'Build'} · $${cc.cash}M${cc.metal ? ' · ' + cc.metal + ' metal' : ''} · ${B.days}d</button>`}
+        <span class="ds">${B.desc}</span></div>`; }).join('')}</div>`;
   } else if (!own.length) html += `<p class="small muted" style="margin:0">Select one of your forces, then tap this province to attack it.</p>`;
   html += `<div class="row"><button class="btn" data-act="clear">Close</button></div>`;
   return html;
@@ -1148,6 +1298,7 @@ document.addEventListener('click', e => {
   switch (act){
     case 'army': selectArmy(+b.dataset.id); { const x = armyById(+b.dataset.id); if (x){ const [wx, wy] = armyPos(x); const [sx, sy] = toScreen(wx, wy); if (sx < 0 || sy < 0 || sx > cw || sy > ch) centerOn(wx, wy); } } break;
     case 'prov': selectProv(+b.dataset.id); break;
+    case 'goto': { const P = G.P[+b.dataset.id]; centerOn(P.x, P.y, Math.max(view.s, 1.1)); if (!P.sea) selectProv(P.id); break; }
     case 'clear': clearSel(); break;
     case 'send': if (a) sendToTarget(a); break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
@@ -1183,7 +1334,8 @@ document.addEventListener('keydown', e => {
 function setSpeed(s){ if (S.over && s) return; if (s && !$('modal').hidden) return; S.speed = s; renderSide(); }
 
 /* ---------------- Modal ---------------- */
-let modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'United States');
+let modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
+const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 function openModal(html, kind = ''){ modalKind = kind; if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' wide' : kind === 'picker' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (S) renderSide(); }
 function closeModal(){ $('modal').hidden = true; modalKind = ''; renderSide(true); }
 function rules(){ return `<ul>
@@ -1199,7 +1351,7 @@ function provCount(pi){ const ci = powerCountry(POWERS[pi]); return ci >= 0 ? G.
 function showPicker(){
   if (!G) G = loadWorld();
   const cards = POWERS.map((P0, i) => { const n = provCount(i), cities = (G.countries[powerCountry(P0)]?.provs || []).filter(id => G.P[id].city).length;
-    const diff = n >= 40 ? 'Easy' : n >= 12 ? 'Normal' : 'Hard';
+    const diff = DIFF[P0.name] || 'Hard';
     return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}"><b>${P0.name}</b><span>${n} provinces · ${cities} cities</span><span class="diff">${diff}</span></button>`}; })
     .sort((a, b) => b.n - a.n).map(c => c.html).join('');
   openModal(`<div class="eyebrow">New campaign</div><h1>Choose your nation</h1>
@@ -1219,7 +1371,9 @@ function showBriefing(first, hasSave){
 function showEnd(){
   const win = S.over === 'win', mine = S.owner.filter(o => o === PLAYER).length;
   openModal(`<div class="eyebrow">${clockStr(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1>
-    <p>${win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`}</p>
+    <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} finishes with the top score (${score(PLAYER)}).` : `${S.nations[PLAYER].name} scored ${score(PLAYER)}, behind the leader.`}` : ''}
+    ${S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
+    ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? ` You had $${fmt(S.nations[PLAYER].cash)}M unspent: next time, turn money into troops and research early.` : ''}</p>
     <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="resume">View the map</button></div>`);
 }
 
@@ -1242,11 +1396,12 @@ function start(data){
   resize(); if (resumed && data.view) Object.assign(view, data.view); else goHome();
   new ResizeObserver(() => resize()).observe(cv);
   renderSide(true);
-  if (!resumed){ if (saved && saved.v === 2 && !saved.over) showBriefing(true, true); else showPicker(); }
+  if (!resumed){ if (saved && saved.v === 3 && !saved.over) showBriefing(true, true); else showPicker(); }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderSide(true));
+  booted = true;
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p)};
+if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id)};
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
