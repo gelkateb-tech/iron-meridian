@@ -110,3 +110,9 @@
 - Less clutter at mid zoom: below 30 px per hex, independents and powers at peace with you are small badges in their colour. Only your forces, your enemies and anything in battle get full sprites. Fortifications are a small shield beside the city instead of an arc under the armies.
 - Lighting: a warm dusk band along the day/night line, a slightly deeper night, and units keep their nation colour at night. Muzzle flashes are roughly half their previous size.
 - The "massing troops" warning now ignores starting garrisons. It fires only from day 3, when a neighbour's border force grows by 20% or more.
+
+## Round 20 — Real coastlines, rivers and highways
+- Real coastlines: the terrain texture and land mask are now baked from Natural Earth land polygons at almost twice the previous resolution, instead of from smoothed 180 km hex cells. Britain, Ireland, Denmark, Italy, Scandinavia, the Baltic, Japan and every other coast have their true shapes. Nation borders, province edges and fills are clipped to the coastline, so they never bulge into the sea as round bubbles.
+- Rivers: 685 major rivers from Natural Earth are drawn on the map, thicker for great rivers (Rhine, Danube, Volga, Mississippi, Nile and others) and appearing progressively as you zoom in.
+- River lines matter in combat: 482 province borders that run along a river are river lines (for example Baden-Württemberg and Haut-Rhin on the Rhine, or Kyiv and Gomel on the Dnieper). Forces attacking across one fight at −20%. The odds chip warns about it, and the province panel lists the river lines.
+- Highways: major roads are drawn at close zoom. 481 neighbouring province pairs are linked by highways, and ground forces move 35% faster along them. The province panel shows how many highway links a province has.

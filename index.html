@@ -386,7 +386,8 @@ details.more summary::-webkit-details-marker{display:none}
 <div id="modal" hidden><div class="sheet" id="sheet"></div></div>
 
 <script src="world.js"></script>
-<script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script>'); }</script>
+<script src="lines.js"></script>
+<script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script>'); }</script>
 <script src="units3d.js"></script>
 <script>
 (() => {
@@ -594,7 +595,16 @@ function loadWorld(){
   }
   for (let i = 0; i < N; i++){ if (prov[i] < 0) continue; for (let d = 0; d < 6; d++){ const m = nbr(i, d);
     if (m >= 0 && prov[m] >= 0 && prov[m] !== prov[i]){ const a = P[prov[i]], b = prov[m]; if (!a.nb.has(b)) a.nb.set(b, Math.max(1, hexDist(a.cc, P[b].cc))); } } }
-  for (const p of P){ p.nbs = [...p.nb.keys()]; p.coast = !p.sea && p.nbs.some(v => P[v].sea); }
+  for (const p of P){ p.nbs = [...p.nb.keys()]; p.coast = !p.sea && p.nbs.some(v => P[v].sea); p.river = new Set(); p.road = new Set(); }
+  // rivers and roads (Natural Earth): river lines between provinces, road links between neighbours, drawable paths
+  const lines = {rivers:[new Path2D(), new Path2D(), new Path2D()], roads:new Path2D()};
+  if (window.LINES){ const L = window.LINES;
+    for (const [a, b] of L.riverPairs) if (P[a] && P[b] && P[a].nb.has(b)){ P[a].river.add(b); P[b].river.add(a); }
+    for (const [a, b] of L.roadPairs) if (P[a] && P[b] && P[a].nb.has(b)){ P[a].road.add(b); P[b].road.add(a); }
+    const toW = (fx, fy) => [OX + HS*SQ3*fx/20, OY + HS*1.5*fy/20];
+    const add = (path, arr) => { for (let i = 1; i < arr.length; i += 2){ const [x, y] = toW(arr[i], arr[i + 1]); if (i === 1) path.moveTo(x, y); else path.lineTo(x, y); } };
+    for (const R of L.rivers) add(lines.rivers[R[0] <= 2 ? 0 : R[0] <= 4 ? 1 : 2], R);
+    for (const R of L.roads) add(lines.roads, R); }
   // oil fields: deserts and seas known for crude, by latitude band and region, deterministic
   const r = mulberry(7);
   for (const p of P){ if (p.sea) continue;
@@ -612,6 +622,7 @@ function loadWorld(){
     const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = tr();
     p.terrain = p.city && r < 0.7 ? 'urban' : MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; }
   const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
+  loadWorld.lines = lines;
   const landCount = P.filter(p => !p.sea).length;
   return {prov, P, countries, landCount};
 }
@@ -688,7 +699,7 @@ function buildTerrain(){
   if (G.terrain) return G.terrain;
   if (PRE.terrain && PRE.mask){ const mkc = im => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); return c; };
     G.landMask = mkc(PRE.mask); return (G.terrain = mkc(PRE.terrain)); }
-  const TS = 0.45, w = Math.ceil(WORLD_W*TS), h = Math.ceil(WORLD_H*TS);
+  const TS = window.LANDPOLY ? 0.8 : 0.45, w = Math.ceil(WORLD_W*TS), h = Math.ceil(WORLD_H*TS);
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const mk = document.createElement('canvas'); mk.width = w; mk.height = h;
   // per-cell fields
@@ -716,12 +727,21 @@ function buildTerrain(){
       acc0 += k ? v*fy : v*(1 - fy); }
     return acc0;
   }
+  // real coastlines (bake only): Natural Earth land rings in grid units ×40, plus a small disc at every land province so none vanish
+  let RLA = null;
+  if (window.LANDPOLY){ const rc = document.createElement('canvas'); rc.width = w; rc.height = h; const g = rc.getContext('2d');
+    g.setTransform(TS*HS*SQ3/40, 0, 0, TS*HS*1.5/40, TS*OX, TS*OY); g.beginPath();
+    for (const off of [-W*40, 0, W*40]) for (const R of window.LANDPOLY){ g.moveTo(R[0] + off, R[1]); for (let i = 2; i < R.length; i += 2) g.lineTo(R[i] + off, R[i + 1]); g.closePath(); }
+    g.fillStyle = '#fff'; g.fill('evenodd');
+    g.setTransform(TS, 0, 0, TS, 0, 0); for (const P of G.P){ if (P.sea) continue; g.beginPath(); g.arc(P.x, P.y, HS*(P.city ? 0.5 : 0.32), 0, Math.PI*2); g.fill(); }
+    const bc = document.createElement('canvas'); bc.width = w; bc.height = h; const bg = bc.getContext('2d'); bg.filter = 'blur(1.2px)'; bg.drawImage(rc, 0, 0);
+    const d = bg.getImageData(0, 0, w, h).data; RLA = new Float32Array(w*h); for (let i = 0; i < w*h; i++) RLA[i] = d[i*4 + 3]/255; }
   const img = new ImageData(w, h), px = img.data, E = new Float32Array(w*h), L = new Float32Array(w*h);
   const mimg = new ImageData(w, h), mpx = mimg.data;
   for (let y = 0; y < h; y++){ const wy = y/TS;
     for (let x = 0; x < w; x++){ const wx = x/TS, o = y*w + x;
       const nA = n1(wx*0.018, wy*0.018), nB = n2(wx*0.055, wy*0.055), nC = n3(wx*0.16, wy*0.16), fbm = nA*0.55 + nB*0.3 + nC*0.15;
-      const land = sample(landF, wx, wy) + (fbm - 0.5)*0.42;
+      const land = RLA ? RLA[o]*0.9 + sample(landF, wx, wy)*0.1 + (fbm - 0.5)*0.12 : sample(landF, wx, wy) + (fbm - 0.5)*0.42;
       L[o] = land;
       const el = Math.max(0, sample(elevF, wx, wy));
       E[o] = el*(0.45 + 0.9*nB + 0.35*nC) + nC*0.05;
@@ -854,7 +874,7 @@ const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t)
 const power = a => UT.reduce((s, t) => s + a.u[t]*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*UNITS[t].hp/10, 0)*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1);
 const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1);
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) && ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);
-const legHours = (a, from, to) => G.P[from].nb.get(to)*24/(legSpeed(a, from, to)*(G.P[to].sea || !ground(a) ? 1 : terr(to).spd));
+const legHours = (a, from, to) => G.P[from].nb.get(to)*24/(legSpeed(a, from, to)*(G.P[to].sea || !ground(a) ? 1 : terr(to).spd*(G.P[from].road.has(to) ? 1.35 : 1)));
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
 const armyById = id => S.armies.find(a => a.id === id);
 const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;
@@ -1700,7 +1720,7 @@ function tick(){
       const nU = sides.get(o).reduce((s0, a) => s0 + count(a), 0), dirs = dirsOf(sides.get(o), p, o), F = sideFront(p, dirs);
       const r = r0*frontScale(nU, F)*flankF(dirs);
       const bs = B.s[o] || (B.s[o] = {peak:0, lost:{}, dirs:0, hp:[]}); bs.peak = Math.max(bs.peak, nU); bs.dirs = Math.max(bs.dirs, dirs); bs.F = F; bs.n = nU;
-      for (const a of sides.get(o)){ const m = a.landed != null && S.hour - a.landed < 24 ? 0.67 : 1;
+      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? 0.67 : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? 0.8 : 1);
         const mf = moraleF(a);
         const tm = G.P[p].sea || o === S.owner[p] ? 1 : terr(p).armor;
         for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(UNITS[t].cls === 'armored' ? tm : 1); for (const k of CLASSES) av[k] += base*mult(t, k); } }
@@ -2293,16 +2313,25 @@ function renderLayer(vis){
   // clip to the real coastline, then soften the hex steps between provinces
   c.globalCompositeOperation = 'destination-in'; c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over';
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.filter = `blur(${Math.max(0.6, Math.min(5, 0.9*view.s*dpr))}px)`; base.drawImage(flc, 0, 0); base.restore();
-  c = base;
+  // sea-zone hints and rivers/roads on the base layer
+  c = base; c.lineJoin = 'round'; c.lineCap = 'round';
+  if (hexPx >= 9){ c.strokeStyle = 'rgba(140,180,190,0.06)'; c.lineWidth = 0.8*px; c.setLineDash([4*px, 6*px]); c.stroke(GEO.seaEdges); c.setLineDash([]); }
+  { const LN = loadWorld.lines; if (LN){
+    if (hexPx >= 14){ c.strokeStyle = 'rgba(20,16,10,.45)'; c.lineWidth = 2.6*px; c.stroke(LN.roads); c.strokeStyle = 'rgba(214,196,150,.5)'; c.lineWidth = 1.1*px; c.stroke(LN.roads); }
+    const RW = [[3.5, 2.6, 2], [2.4, 1.8, 6], [1.5, 1.1, 10]];
+    for (let i = 0; i < 3; i++){ if (hexPx < RW[i][2]) continue; const z = Math.min(1.6, Math.max(0.7, hexPx/18));
+      c.strokeStyle = 'rgba(8,24,34,.5)'; c.lineWidth = (RW[i][0] + 1)*z*px; c.stroke(LN.rivers[i]); c.strokeStyle = 'rgba(92,150,178,.85)'; c.lineWidth = RW[i][1]*z*px; c.stroke(LN.rivers[i]); } } }
+  // borders are drawn on the overlay and clipped to the real coastline, so they never bulge into the sea
+  c = flc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, flc.width, flc.height); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   c.lineJoin = 'round'; c.lineCap = 'round';
   if (hexPx >= 5){ c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = 0.9*px; c.stroke(GEO.provEdges); }
-  if (hexPx >= 9){ c.strokeStyle = 'rgba(140,180,190,0.06)'; c.lineWidth = 0.8*px; c.setLineDash([4*px, 6*px]); c.stroke(GEO.seaEdges); c.setLineDash([]); }
   c.strokeStyle = 'rgba(200,205,190,0.22)'; c.lineWidth = Math.max(0.6*px, 0.9); c.stroke(GEO.countryEdges);
-  c.strokeStyle = 'rgba(3,8,10,.55)'; c.lineWidth = Math.max(0.8*px, 0.8); c.stroke(GEO.coast);
   for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive) continue;
     c.strokeStyle = 'rgba(3,6,8,0.9)'; c.lineWidth = 3.6*px; c.stroke(GEO.nation[n]);
     c.strokeStyle = S.nations[n].color; c.lineWidth = (n === PLAYER ? 2.4 : 1.8)*px; c.stroke(GEO.nation[n]); }
   if (S.nations[PLAYER].alive){ c.strokeStyle = 'rgba(255,250,235,0.85)'; c.lineWidth = 1*px; c.stroke(GEO.mine); }
+  c.globalCompositeOperation = 'destination-in'; c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over';
+  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, 0, 0); base.restore();
 }
 function draw(now){
   clampView();
@@ -2890,7 +2919,8 @@ function oddsParts(a, t, foes, dirs = 1){
   const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b), 0);
   let d = raw*frontScale(fn, F)*(G.P[t].sea ? 1 : terr(t).def);
   if (S.owner[t] >= 0 || S.owner[t] === NEUTRAL){ d *= 1.25/Math.pow(0.8, S.bld[t].fort || 0); }
-  return {mine:power(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs), theirs:d, raw};
+  const pv = sel.army === a.id && targetPath && targetPath.length > 1 ? targetPath[targetPath.length - 2] : (a.to ?? a.at), river = !G.P[t].sea && G.P[t].river.has(pv) && S.owner[t] !== a.owner;
+  return {mine:power(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs)*(river ? 0.8 : 1), theirs:d, raw, river};
 }
 function odds(a, t, foes, dirs = 1){
   if (!foes.length) return Infinity;
@@ -2902,7 +2932,7 @@ function oddsHTML(a, t, foes){
   const T0 = G.P[t].sea ? null : terr(t);
   const F = frontage(t), extra = count(a) > F ? `<br><span class="small">Only ${F} of your ${count(a)} units fit this front; the rest fight at 25%. Attack from a second province to widen it.</span>` : '';
   const op = oddsParts(a, t, foes);
-  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}${T0 && T0.armor < 1 ? `; armor ${Math.round((1 - T0.armor)*100)}% weaker here` : ''})${extra}</div>`;
+  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}${T0 && T0.armor < 1 ? `; armor ${Math.round((1 - T0.armor)*100)}% weaker here` : ''}${op.river ? '; you attack across a river: −20%' : ''})${extra}</div>`;
 }
 function unitRows(a){
   return `<div class="urows">${UT.filter(t => a.u[t]).map(t => { const U = UNITS[t], max = a.u[t]*U.hp, cur = Math.max(0, max - a.w[t]), f = cur/max;
@@ -2973,7 +3003,7 @@ function provHTML(p){
   const own = here.filter(a => a.owner === PLAYER), foe = here.filter(a => a.owner !== PLAYER);
   const foeKnown = foe.filter(a => armyVisible(a, vis));
   const y = provYield(p);
-  let html = `<div class="eyebrow">${kind} · ${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>
+  let html = `<div class="eyebrow">${kind} · ${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || P.road.size) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (attackers −20%)` : ''}${P.river.size && P.road.size ? ' · ' : ''}${P.road.size ? `Highway to ${P.road.size} neighbour${P.road.size > 1 ? 's' : ''} (+35% speed)` : ''}</div>` : ''}
     <div class="sub">${P.city ? P.name + ' · ' : ''}<span class="sw" style="background:${colorOf(o)};vertical-align:-1px"></span> ${placeOwner(p)}</div>
     <dl class="kv"><dt>Daily yield</dt><dd>${yieldStr(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(', ') || 'None'}</dd>
