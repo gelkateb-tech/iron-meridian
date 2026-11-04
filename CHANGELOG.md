@@ -124,3 +124,23 @@
   - **Bastion**: forces defending their own home provinces take 15% less damage, fortifications build twice as fast, and army upkeep is 10% lower.
 - Unit Marks II–IV: a new Unit upgrades section under Research. Engineering runs in parallel with research, one upgrade at a time. Each Mark raises attack and defense for every unit of that type you have or build: Mk II +12%, Mk III +25%, Mk IV +40%. Costs and time rise with each Mark. Forces show their Mark beside each unit ("Rifle Corps Mk II ×6"), and AI powers upgrade their most-used unit types too.
 - Recruit cards show doctrine-adjusted prices.
+
+## Round 22 — Veteran review: real flanking, mobilisation, victory tracker
+- Multi-direction attacks now work as intended:
+  - Your forces only auto-merge on your own or allied ground, never inside a province they are assaulting.
+  - When stacks do merge, each one's approach direction is kept.
+  - Directions are counted from live stacks only (empty stacks no longer inflate the count).
+  - The odds chip counts every other force you have already ordered to the same target: "Attacking from 3 directions: front 32 units, +30% attack".
+  - The AI's flanking halves are no longer merged back inside enemy provinces.
+- Mobilisation policy (Production screen): Peacetime, Partial (+40% manpower, −6% cash income) or Total (+80% manpower, −12% cash). The strain shows as up to 15% or 30% unrest at home.
+- The wartime idle-cities alert names the real bottleneck: low manpower or metal, rather than telling you to spend money you can't use.
+- Wars bite harder: losing your capital now cuts income by 40% for 14 days (was 25% for 7 days).
+- Victory tracker under the clock: provinces held against the target, capitals held out of 5, and the day out of 120.
+- Occupation settles down:
+  - A conquered province garrisoned by 2+ units for 10 days becomes integrated, and its unrest stays below 30%.
+  - You get a warning when a province passes 50% unrest, before it revolts.
+- Air power: strikes deliver twice the firepower. Jets built while their wing is out on a mission join it when it lands, instead of forming a separate one-plane wing.
+- Fixes:
+  - Battles you left after inflicting heavier losses are reported as "ended", not "lost".
+  - The dawn newspaper pops up only for news that concerns you or a fallen nation.
+  - Compact powers get a 21-day early grace period (was 14).
