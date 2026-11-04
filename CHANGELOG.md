@@ -301,3 +301,17 @@
 - New pace, by request: at 1× one real minute is four game minutes. A game hour takes 15 seconds, a game day 6 minutes, and a 120-day campaign about 12 hours of play. 2×, 4× and 8× are multiples of that (8, 16 and 32 game minutes per real minute), and the speed buttons' tooltips say so. Before, 1× ran a game day in 12 seconds.
 - Persistent campaigns keep running at the same 1× pace while you are away, with up to 30 days of catch-up.
 - Aircraft now follow the simulated flight exactly at the slower pace, catching up if behind, and their bombs land when they actually reach the target.
+
+## Round 42 — Animated city buildings
+- Every building now appears in its city on the map once you zoom in (about 18 px per hex), arranged around the city marker, growing with zoom and drawn under the troops:
+  - **Arms Factory**: sawtooth-roofed works with one chimney per level, each puffing smoke.
+  - **Airbase**: an angled runway with centreline marks, a hangar and a spinning radar. Runway lights come on at night.
+  - **Refinery**: storage tanks and a flare stack with a flickering flame.
+  - **Foundry**: a furnace door that pulses with an orange glow.
+  - **Farms**: striped crop fields (more per level) and a turning windmill.
+  - **Recruiting Office**: a barracks with a flag in the owner's colour waving on its pole.
+  - **Fortifications**: wall segments with towers ringing the city, wider with each level.
+  - **Missile Silo**: a striped hatch with a blinking red warning light.
+  - **Naval Yard**: a dock, slipway and a slowly swinging harbour crane.
+  - **Under construction**: scaffolding that rises as work progresses, a slewing tower crane, a gold progress ring and drifting dust.
+- At night, building windows light up warm yellow.
