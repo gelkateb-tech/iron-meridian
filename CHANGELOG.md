@@ -238,3 +238,11 @@
 - Commanders gain experience from the damage their force deals in battle. They are promoted from Colonel to General to Marshal, and each rank multiplies the trait. Promotions are announced in the dispatches.
 - Assign a free commander to a force or relieve them from the force panel. Merging forces keeps the commander. When a led force is destroyed, its commander has an even chance of capture or escape.
 - Forces with a commander show a gold ★ on their strength badge, and the Armies screen lists commanders with their rank stars. AI powers appoint and assign commanders too.
+
+## Round 33 — Campaign replay and achievements
+- Campaign replay: every day's territorial changes are recorded compactly in the save. "Watch replay" (on the end screen and in Statistics) plays the whole war on a world map: conquests spread day by day, with play/pause, a scrubber, and a live leaderboard of the eight largest powers.
+- Achievements: 15 to unlock, kept across campaigns in your browser. A toast and a fanfare announce each one, and they're listed in Statistics and on the end screen:
+  - First Blood, Hammer and Anvil (win attacking from 3+ directions), Blitzkrieg (5 provinces in a day)
+  - Spoils of Peace, Grand Alliance, Field Marshal, War Chest
+  - Airborne, Eyes in the Sky, Blue-Water Navy, Long Arm, Decapitation
+  - Still Standing, Victor, Mk IV
