@@ -53,7 +53,7 @@ header{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px}
 .chip.short{border-color:var(--danger); box-shadow:0 0 0 1px var(--danger) inset}
 .chip.short b{color:var(--danger)}
 .res .chip:not(.you) .lbl{display:none}
-@media (min-width: 1680px){ .res .chip:not(.you) .lbl{display:inline} }
+@media (min-width: 1440px){ .res .chip:not(.you) .lbl{display:inline} }
 .bld{display:grid; grid-template-columns:1fr auto; gap:3px 8px; align-items:center; font-size:12.5px; padding:6px 0; border-top:1px solid var(--line)}
 .bld:first-child{border-top:0}
 .bld .nm{font-weight:600}
@@ -302,11 +302,11 @@ const WORLD = window.WORLD;
 /* ---------------- Rules ---------------- */
 const UNITS = {
   inf:  {name:'Rifle Corps',       short:'RIF', cls:'soft',    cost:25, oil:0,  metal:0,  mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, food:1,   fuel:0,   req:null,          tech:null,  role:'Cheap line infantry. Holds ground, captures.'},
-  at:   {name:'Lancer Team',       short:'LAN', cls:'soft',    cost:35, oil:0,  metal:6,  mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, food:1,   fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{armored:2.0}, role:'Anti-tank infantry: double damage to armor.'},
-  art:  {name:'Hammer Battery',    short:'HAM', cls:'soft',    cost:40, oil:3,  metal:10, mp:10, atk:7, def:1, hp:8,  spd:3,  build:48, upk:2, food:1,   fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{soft:1.4}, role:'Artillery: shreds infantry, fragile.'},
+  at:   {name:'Lancer Team',       short:'LAN', cls:'soft',    cost:35, oil:0,  metal:6,  mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, food:1,   fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{armored:3.0}, role:'Anti-tank infantry: triple damage to armor.'},
+  art:  {name:'Hammer Battery',    short:'HAM', cls:'soft',    cost:40, oil:3,  metal:10, mp:10, atk:7, def:2, hp:8,  spd:3,  build:48, upk:2, food:1,   fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{soft:1.4}, role:'Artillery: shreds infantry, fragile.'},
   sam:  {name:'Skywall SAM',       short:'SAM', cls:'soft',    cost:50, oil:2,  metal:15, mp:8,  atk:5, def:2, hp:8,  spd:4,  build:48, upk:2, food:0.5, fuel:0,   req:{b:'fac', l:2}, tech:null,  vs:{air:3.0, soft:0.3, armored:0.3}, role:'Air defense: triple damage to aircraft.'},
   ifv:  {name:'Courser IFV',       short:'IFV', cls:'armored', cost:35, oil:4,  metal:10, mp:10, atk:4, def:4, hp:12, spd:7,  build:36, upk:2, food:1,   fuel:0.5, req:{b:'fac', l:1}, tech:'inf2', role:'Fast armored infantry carrier.'},
-  tank: {name:'Bastion MBT',       short:'MBT', cls:'armored', cost:45, oil:6,  metal:15, mp:12, atk:6, def:4, hp:14, spd:6,  build:48, upk:3, food:1,   fuel:1,   req:{b:'fac', l:1}, tech:null,  role:'Main battle tank: strong all-rounder.'},
+  tank: {name:'Bastion MBT',       short:'MBT', cls:'armored', cost:45, oil:6,  metal:15, mp:12, atk:6, def:4, hp:14, spd:6,  build:48, upk:3, food:1,   fuel:2,   req:{b:'fac', l:1}, tech:null,  role:'Main battle tank: strong all-rounder.'},
   jet:  {name:'Kestrel Striker',   short:'STK', cls:'air',     cost:80, oil:12, metal:20, mp:6,  atk:8, def:3, hp:9,  spd:18, build:72, upk:6, food:0.5, fuel:2,   req:{b:'air', l:1}, tech:'air1', vs:{armored:1.6}, role:'Strike jet: hunts armor. Cannot capture.'},
   int:  {name:'Talon Interceptor', short:'INT', cls:'air',     cost:70, oil:10, metal:15, mp:5,  atk:6, def:4, hp:9,  spd:20, build:60, upk:5, food:0.5, fuel:2,   req:{b:'air', l:1}, tech:'air1', vs:{air:2.0, soft:0.4, armored:0.4}, role:'Fighter: double damage to aircraft.'},
 };
@@ -331,8 +331,8 @@ const icon = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 16 
 const UT = Object.keys(UNITS);
 const SEA_SPEED = 5;                  // hexes/day for embarked ground units
 const BUILD = {
-  fac:  {name:'Arms Factory',      max:3, cost:60, metal:20, days:3, where:'city', desc:'Needed for Armor and Artillery. Each level: +20% money here, units train 20% faster.'},
-  air:  {name:'Airbase',           max:1, cost:90, metal:30, days:4, where:'city', desc:'Needed for Strike Jets (with Jet Engines research).'},
+  fac:  {name:'Arms Factory',      max:3, cost:60, metal:20, days:3, where:'city', desc:'Level I unlocks Lancers, Hammer artillery, Bastion tanks and Courser IFVs; level II unlocks Skywall SAMs. Each level: +20% money here, units train 20% faster.'},
+  air:  {name:'Airbase',           max:1, cost:90, metal:30, days:4, where:'city', desc:'Needed for Kestrel Strikers and Talon Interceptors (with Jet Engines research).'},
   ref:  {name:'Refinery',          max:2, cost:50, metal:15, days:3, where:'oil',  desc:'+60% oil from this field per level.'},
   fdy:  {name:'Foundry',           max:2, cost:50, metal:10, days:3, where:'any',  desc:'+3 metal per level (+5 on ore deposits).'},
   farm: {name:'Farms',             max:2, cost:30, metal:0,  days:2, where:'any',  desc:'+3 food per level.'},
@@ -343,16 +343,16 @@ const BK = Object.keys(BUILD);
 const ROMAN = ['', 'I', 'II', 'III'];
 const TECH = [
   {id:'inf1',  branch:'Infantry',  name:'Ceramic Body Armor',   cost:60,  days:3, req:null,    desc:'Infantry defense +1',                  fx:{inf:{def:1}}},
-  {id:'inf2',  branch:'Infantry',  name:'Mechanized Infantry',  cost:110, days:5, req:'inf1',  desc:'Infantry attack +1 and speed +1',      fx:{inf:{atk:1, spd:1}}},
+  {id:'inf2',  branch:'Infantry',  name:'Mechanized Infantry',  cost:110, days:5, req:'inf1',  desc:'Infantry attack +2 and speed +1',      fx:{inf:{atk:2, spd:1}, at:{atk:1}}},
   {id:'inf3',  branch:'Infantry',  name:'Special Forces',       cost:180, days:7, req:'inf2',  desc:'Infantry attack +1 and defense +1',    fx:{inf:{atk:1, def:1}}},
   {id:'tank1', branch:'Armor',     name:'Composite Armor',      cost:90,  days:4, req:null,    desc:'Armor defense +2',                     fx:{tank:{def:2}}},
-  {id:'tank2', branch:'Armor',     name:'Smoothbore Main Gun',  cost:150, days:6, req:'tank1', desc:'Armor attack +2',                      fx:{tank:{atk:2}}},
+  {id:'tank2', branch:'Armor',     name:'Smoothbore Main Gun',  cost:150, days:6, req:'tank1', desc:'Armor attack +3, IFV attack +2',       fx:{tank:{atk:3}, ifv:{atk:2}}},
   {id:'tank3', branch:'Armor',     name:'Turbine Engines',      cost:200, days:7, req:'tank2', desc:'Armor speed +2 and attack +1',         fx:{tank:{spd:2, atk:1}}},
   {id:'art1',  branch:'Artillery', name:'Counter-Battery Radar',cost:80,  days:4, req:null,    desc:'Artillery attack +2',                  fx:{art:{atk:2}}},
-  {id:'art2',  branch:'Artillery', name:'Rocket Artillery',     cost:150, days:6, req:'art1',  desc:'Artillery attack +3 and defense +1',   fx:{art:{atk:3, def:1}}},
+  {id:'art2',  branch:'Artillery', name:'Rocket Artillery',     cost:150, days:6, req:'art1',  desc:'Artillery attack +3 and defense +2',   fx:{art:{atk:3, def:2}}},
   {id:'art3',  branch:'Artillery', name:'Guided Shells',        cost:210, days:8, req:'art2',  desc:'Artillery attack +2 and speed +1',     fx:{art:{atk:2, spd:1}}},
-  {id:'air1',  branch:'Air',       name:'Jet Engines',          cost:120, days:5, req:null,    desc:'Unlocks Strike Jets',                  fx:{}},
-  {id:'air2',  branch:'Air',       name:'Precision Munitions',  cost:180, days:6, req:'air1',  desc:'Strike Jet attack +3',                 fx:{jet:{atk:3}}},
+  {id:'air1',  branch:'Air',       name:'Jet Engines',          cost:120, days:5, req:null,    desc:'Unlocks Kestrel Strikers and Talon Interceptors',                  fx:{}},
+  {id:'air2',  branch:'Air',       name:'Precision Munitions',  cost:180, days:6, req:'air1',  desc:'Jet attack +3 (Strikers and Interceptors)', fx:{jet:{atk:3}, int:{atk:3}}},
   {id:'air3',  branch:'Air',       name:'Stealth Airframes',    cost:260, days:8, req:'air2',  desc:'Strike Jet defense +3',                fx:{jet:{def:3}}},
   {id:'eco1',  branch:'Economy',   name:'Industrial Automation',cost:100, days:4, req:null,    desc:'All cash income +20%',                 fx:{}},
   {id:'eco2',  branch:'Economy',   name:'National Service',     cost:110, days:5, req:'eco1',  desc:'Manpower income +40%',                 fx:{}},
@@ -361,6 +361,7 @@ const TECH = [
   {id:'log2',  branch:'Logistics', name:'Combat Engineers',     cost:130, days:5, req:'log1',  desc:'Capture 30% faster; forts cost half',  fx:{}},
   {id:'log3',  branch:'Logistics', name:'Field Hospitals',      cost:170, days:7, req:'log2',  desc:'Your forces take 15% less damage',     fx:{}},
 ];
+for (const t of TECH){ const tier = t.req ? (TECH.find(x => x.id === t.req).req ? 3 : 2) : 1; t.tier = tier; t.cost = Math.round(t.cost*0.6); t.metal = [0, 40, 60, 100][tier]; t.oil = [0, 0, 30, 60][tier]; }
 const TECH_BY = Object.fromEntries(TECH.map(t => [t.id, t]));
 const BRANCHES = [...new Set(TECH.map(t => t.branch))];
 const POWERS = [
@@ -387,8 +388,8 @@ const W = WORLD.W, H = WORLD.H;
 const K = 0.25;                       // combat damage per hour factor
 const HOURS_PER_SEC = [0, 2, 4, 8];   // by speed setting
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
-const WIN_SHARE = 0.4;                // share of land provinces needed to win
-const WIN_CAPS = 8;                   // or hold this many of the 15 starting capitals
+const WIN_SHARE = 0.25;               // share of land provinces needed to win
+const WIN_CAPS = 5;                   // or hold this many of the 15 starting capitals
 const DAY_LIMIT = 120;                // or have the top score when this day ends
 const CAP_MIN = 2;                    // ground units needed to capture
 const SAVE_KEY = 'iron-meridian-save-v3';
@@ -552,6 +553,7 @@ function newGame(seed, pick){
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
   }
+  for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; }
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL) addArmy(NEUTRAL, P.id, {inf: P.city ? 5 + Math.floor(rng()*4) : 2 + Math.floor(rng()*2)});
   log(`${S.nations[PLAYER].name} mobilizes. Fourteen rival powers are moving too.`, '');
   buildGeometry();
@@ -587,8 +589,8 @@ function st(o, t, k){ let v = UNITS[t][k]; if (o >= 0){ const N = S.nations[o], 
 const unlocked = (n, t) => !UNITS[t].tech || has(n, UNITS[t].tech);
 const bldOk = (p, t) => !UNITS[t].req || S.bld[p][UNITS[t].req.b] >= UNITS[t].req.l;
 const reqText = (p, t, n = PLAYER) => { const U = UNITS[t]; return !unlocked(n, t) ? `Research ${TECH_BY[U.tech].name}` : !bldOk(p, t) ? `Needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''; };
-function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.alive && !N.research && !has(n, id) && (!T.req || has(n, T.req)) && N.cash >= T.cost; }
-function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.research = {id, h:T.days*24}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
+function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.alive && !N.research && !has(n, id) && (!T.req || has(n, T.req)) && N.cash >= T.cost && N.metal >= T.metal && N.oil >= T.oil; }
+function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.metal -= T.metal; N.oil -= T.oil; N.research = {id, h:T.days*24}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 function buildCost(n, k, lvl){ const B = BUILD[k], m = Math.pow(1.6, lvl - 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), h:B.days*24}; }
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil)); }
@@ -627,13 +629,14 @@ const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.ho
 function provYield(p){ const P = G.P[p], f = occFactor(p), b = S.bld[p];
   return {cash:(P.city ? 12 : 3)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 4 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
     food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 5 : 1) + 3*b.rec)*f}; }
+const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
 function income(n){
   const g = {cash:0, oil:0, metal:0, food:0, mp:0}, u = {cash:0, oil:0, metal:0, food:0, mp:0}; let provs = 0;
   const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*7 ? 0.75 : 1;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
     const m = (S.home[p] === n ? boost : 1)*capHit;
     for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ g.oil += 3; g.metal += 3; g.food += 3; } }
-  const eff = Math.min(1.6, 60/(30 + provs));          // administration: large empires run less efficiently
+  const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
   for (const k in g) g[k] *= eff;
   if (has(n, 'eco1')) g.cash *= 1.2; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;
   if (S.rel){ const tired = warsOf(n).filter(m => S.hour - rel(n, m).since > 240).length; g.cash *= 1 - Math.min(0.2, 0.05*tired); }
@@ -685,7 +688,7 @@ function findPath(a, b, ok = null){
   if (prev[b] < 0) return [];
   const path = []; for (let v = b; v !== a; v = prev[v]) path.push(v); return path.reverse();
 }
-const pathFor = (a, from, to) => findPath(from, to, v => canEnter(a.owner, v));
+const pathFor = (a, from, to) => canEnter(a.owner, to) ? findPath(from, to, v => canEnter(a.owner, v)) : [];
 function orderMove(a, target){
   if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target); }
   else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
@@ -739,12 +742,16 @@ const opinion = (a, b) => Math.max(-100, Math.min(100, opinionParts(a, b).reduce
 function setRel(a, b, st, days = null){
   const prev = rel(a, b).st;
   S.rel[rkey(a, b)] = {st, since:S.hour, until:days ? S.hour + days*24 : null}; relVer++;
+  if (a === PLAYER || b === PLAYER) S.offers = S.offers.filter(o => o.from !== (a === PLAYER ? b : a));
   if ((prev === 'war' || prev === 'pass' || prev === 'ally') && !['war', 'pass', 'ally'].includes(st)){ evict(a, b); evict(b, a); }
   visCache = null;
 }
 function evict(n, host){
   // forces of n standing in host's land go to their nearest own province
-  for (const a of S.armies){ if (a.owner !== n || a.to !== null) continue; if (S.owner[a.at] !== host) continue;
+  for (let p = 0; p < G.P.length; p++) if (S.cap[p] && S.cap[p].by === n && S.owner[p] === host) S.cap[p] = null;
+  for (const a of S.armies){ if (a.owner !== n) continue;
+    if (a.to !== null){ if (S.owner[a.to] === host){ a.to = null; a.t = 0; } else if (S.owner[a.at] !== host) continue; }
+    if (S.owner[a.at] !== host) continue;
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
     if (dest >= 0){ a.at = dest; a.path = []; } else for (const t of UT) a.u[t] = 0; }
@@ -754,13 +761,13 @@ function declareWar(a, b){
   if (a === b || atWar(a, b) || S.decl.some(d => d.by === a && d.to === b)) return false;
   const r = rel(a, b);
   if (r.st === 'truce') return false;
-  if (r.st === 'nap' || r.st === 'ally' || r.st === 'pass') S.nations[a].breaker = S.hour;
+  if (r.st === 'nap' || r.st === 'ally' || r.st === 'pass' || (r.st === 'peace' && r.afterTruce && S.hour - r.since < 20*24)) S.nations[a].breaker = S.hour;
   S.decl.push({by:a, to:b, at:S.hour + 24}); relVer++;
   addMem(b, a, -50);
   for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b && opinion(c.id, b) >= 25) addMem(c.id, a, -15);
   if (b === PLAYER){ log(`${S.nations[a].name} has declared war on you! Hostilities begin in 24 hours.`, 'bad', S.nations[a].capital); alarm(); }
   else if (a === PLAYER) log(`You declared war on ${S.nations[b].name}. Hostilities begin in 24 hours.`, 'info', S.nations[b].capital);
-  else if (S.hour > 0) log(`${S.nations[a].name} declared war on ${S.nations[b].name}.`, '', null);
+  else if (S.hour > 0 && (borders(PLAYER, a) || borders(PLAYER, b) || rel(PLAYER, a).st === 'ally' || rel(PLAYER, b).st === 'ally')) log(`${S.nations[a].name} declared war on ${S.nations[b].name}.`, '', null);
   return true;
 }
 function acceptOffer(ai, from, kind){
@@ -781,7 +788,7 @@ function acceptOffer(ai, from, kind){
     const common = S.nations.some(c => c.alive && c.id !== ai && c.id !== from && atWar(ai, c.id) && atWar(from, c.id));
     if (!common) return {ok:false, why:'no common enemy'};
     if (score(from) > 2*score(ai)) return {ok:false, why:'they fear your size'};
-    return op >= 50 ? {ok:true, why:`opinion ${Math.round(op)}`} : {ok:false, why:`opinion ${Math.round(op)}, needs 50`};
+    return op >= 35 ? {ok:true, why:`opinion ${Math.round(op)}`} : {ok:false, why:`opinion ${Math.round(op)}, needs 35`};
   }
   return {ok:false, why:''};
 }
@@ -792,24 +799,33 @@ function applyDeal(a, b, kind){
   else if (kind === 'ally') setRel(a, b, 'ally');
   const word = {peace:'signed a 10-day truce', nap:'signed a non-aggression pact', pass:'agreed on right of passage', ally:'formed an alliance'}[kind];
   if (a === PLAYER || b === PLAYER) log(`${S.nations[a === PLAYER ? b : a].name} and you ${word}.`, 'good', null);
-  else if (kind === 'ally' || kind === 'peace') log(`${S.nations[a].name} and ${S.nations[b].name} ${word}.`, '', null);
+  else if (kind === 'ally' || ((kind === 'peace') && (borders(PLAYER, a) || borders(PLAYER, b)))) log(`${S.nations[a].name} and ${S.nations[b].name} ${word}.`, '', null);
 }
 function diploHour(){
   for (let i = S.decl.length - 1; i >= 0; i--){ const d = S.decl[i]; if (S.hour < d.at) continue; S.decl.splice(i, 1);
     if (!S.nations[d.by].alive || !S.nations[d.to].alive) continue;
     setRel(d.by, d.to, 'war');
-    for (const al of alliesOf(d.to)) if (al !== d.by && opinion(al, d.to) >= 30 && !atWar(al, d.by)){ setRel(al, d.by, 'war'); log(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[d.by].name}.`, al === PLAYER ? 'info' : d.by === PLAYER ? 'bad' : '', null); } }
+    for (const al of alliesOf(d.to)){ if (al === d.by || atWar(al, d.by) || ['truce', 'ally', 'nap', 'pass'].includes(rel(al, d.by).st)) continue;
+      if (al === PLAYER){ log(`Your ally ${S.nations[d.to].name} is under attack by ${S.nations[d.by].name}. You may join the war from Diplomacy.`, 'info', null); continue; }
+      if (opinion(al, d.to) < 30) continue;
+      setRel(al, d.by, 'war'); log(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[d.by].name}.`, d.by === PLAYER ? 'bad' : '', null); } }
   for (const k in S.rel){ const r = S.rel[k]; if (r.until == null || S.hour < r.until) continue;
-    if (r.st === 'truce'){ r.st = 'peace'; r.until = null; } else if (r.st === 'nap') r.until = S.hour + 20*24; }
+    if (r.st === 'truce'){ r.st = 'peace'; r.until = null; r.since = S.hour; r.afterTruce = true; } else if (r.st === 'nap') r.until = S.hour + 20*24; }
   S.offers = S.offers.filter(o => o.exp > S.hour && S.nations[o.from].alive);
 }
 function diploDay(){
   for (const a in S.mem) for (const b in S.mem[a]){ const v = S.mem[a][b]; S.mem[a][b] = v > 0 ? Math.max(0, v - 1) : Math.min(0, v + 1); }
+  // treaties and shared wars build trust between AIs over time
+  for (const A of S.nations){ if (!A.ai || !A.alive) continue; for (const B of S.nations){ if (B.id === A.id || !B.alive) continue;
+    const r = rel(A.id, B.id).st; let d = 0; if (r === 'nap' || r === 'pass') d += 2; if (r === 'ally') d += 2;
+    if (S.nations.some(c => c.alive && c.id !== A.id && c.id !== B.id && atWar(A.id, c.id) && atWar(B.id, c.id))) d += 3;
+    if (d) addMem(A.id, B.id, Math.min(d, 60 - mem(A.id, B.id) > 0 ? d : 0)); } }
   const day = S.hour/24;
   for (const N of S.nations){ if (!N.ai || !N.alive) continue; const n = N.id, wars = warsOf(n);
     // peace with the weakest enemy when stretched, or after a long war
     for (const m of wars){ const age = (S.hour - rel(n, m).since)/24;
-      if (!((wars.length >= 2 && natPower(m) === Math.min(...wars.map(natPower))) || age > 20 || natPower(n) < 0.7*natPower(m))) continue;
+      if (age < 5 || !((wars.length >= 2 && natPower(m) === Math.min(...wars.map(natPower))) || age > 20 || natPower(n) < 0.7*natPower(m))) continue;
+      if (!acceptOffer(n, m, 'peace').ok) continue;
       if (m === PLAYER) offerPlayer(n, 'peace');
       else if (acceptOffer(m, n, 'peace').ok){ applyDeal(n, m, 'peace'); break; } }
     // declare war
@@ -825,7 +841,7 @@ function diploDay(){
     // treaties
     if (rng() < 0.12){ const nbs = S.nations.filter(M => M.alive && M.id !== n && borders(n, M.id) && rel(n, M.id).st === 'peace' && opinion(n, M.id) >= 0);
       const M = nbs[Math.floor(rng()*nbs.length)]; if (M){ if (M.id === PLAYER) offerPlayer(n, 'nap'); else if (acceptOffer(M.id, n, 'nap').ok) applyDeal(n, M.id, 'nap'); } }
-    if (rng() < 0.06 && alliesOf(n).length < 2){ const c = S.nations.filter(M => M.alive && M.id !== n && rel(n, M.id).st !== 'ally' && !atWar(n, M.id) && opinion(n, M.id) >= 40 && acceptOffer(n, M.id, 'ally').ok);
+    if (rng() < 0.06 && alliesOf(n).length < 2){ const c = S.nations.filter(M => M.alive && M.id !== n && rel(n, M.id).st !== 'ally' && !atWar(n, M.id) && opinion(n, M.id) >= 35 && acceptOffer(n, M.id, 'ally').ok);
       const M = c[0]; if (M){ if (M.id === PLAYER) offerPlayer(n, 'ally'); else if (acceptOffer(M.id, n, 'ally').ok) applyDeal(n, M.id, 'ally'); } }
   }
 }
@@ -843,6 +859,8 @@ function tick(){
   // production
   for (let p = 0; p < G.P.length; p++){ const q = S.queue[p]; if (!q.length) continue;
     if (S.owner[p] < 0){ q.length = 0; continue; }
+    const lines = 1 + S.bld[p].fac;            // each Arms Factory level adds a training line
+    for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
       if (S.owner[p] === PLAYER){ log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
         if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])) log(`Repeat production paused in ${G.P[p].cityName}: not enough resources for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } }
@@ -959,20 +977,23 @@ function checkNation(n, by = NEUTRAL){
   }
 }
 function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
+const landNeed = n => Math.max(Math.ceil(G.landCount*WIN_SHARE), (S.nations[n].prov0 || 0) + 60);
+const growth = n => score(n) - (S.nations[n].score0 || 0);
 const capsHeld = n => S.nations.filter(N => S.owner[N.cap0] === n).length;
 function checkEnd(){
   if (S.over) return;
   const mine = S.owner.filter(o => o === PLAYER).length;
   if (!S.nations[PLAYER].alive) S.over = 'lose';
-  else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= Math.ceil(G.landCount*WIN_SHARE) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
-  else if (S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => score(b.id) - score(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
-  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (S.owner.filter(o => o === n.id).length >= Math.ceil(G.landCount*WIN_SHARE) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; } }
+  else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= landNeed(PLAYER) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
+  else if (S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
+  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (S.owner.filter(o => o === n.id).length >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; } }
   if (S.over){ setSpeed(0); save(); showEnd(); }
 }
 function daily(){
   for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id), was = N.short || {};
     N.short = {};
-    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = v; }
+    const cap = stockCap(N.id);
+    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(cap, v); }
     if (N.id === PLAYER){ for (const k of ['food', 'oil', 'cash']) if (N.short[k] && !was[k]) log(k === 'food' ? 'Food shortage: your troops fight 20% worse until food income is positive.' : k === 'oil' ? 'Oil shortage: Armor and Strike Jets are slowed and weakened.' : 'Treasury empty: upkeep is unpaid.', 'bad'); } }
   checkEnd();
   save();
@@ -1017,7 +1038,7 @@ function aiTurn(n){
     if (!S.cons[p]){
       if (p === N.capital && threatNear(p, n) && S.bld[p].fort < 2) build(n, p, 'fort');
       else if (!S.bld[p].fac && N.cash > 110) build(n, p, 'fac');
-      else if (p === N.capital && has(n, 'air1') && !S.bld[p].air && N.cash > 140) build(n, p, 'air');
+      else if (has(n, 'air1') && !S.bld[p].air && N.cash > 140 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air).length < 2) build(n, p, 'air');
       else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
     }
     if (S.queue[p].length < 2 && canGrow){
@@ -1032,19 +1053,27 @@ function aiTurn(n){
   removeEmpty();
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
   for (const a of idle.values()){
-    if (count(a) === 0 || enemiesAt(a.at, n) || G.P[a.at].sea || S.owner[a.at] !== n) continue;
+    if (count(a) === 0 || enemiesAt(a.at, n)) continue;
+    if (G.P[a.at].sea || (S.owner[a.at] !== n && !atWar(n, S.owner[a.at]))){
+      // stranded at sea or in land it may not fight in: head to the nearest own province
+      const seen = new Set([a.at]), q = [a.at]; let dest = -1;
+      for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v) || !canEnter(n, v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
+      if (dest >= 0) a.path = pathFor(a, a.at, dest);
+      continue;
+    }
+    if (S.owner[a.at] !== n) continue;
     if (a.at === N.capital && threatNear(a.at, n)) continue;
     let pw = power(a); if (pw < 14) continue;
-    const dist = new Map([[a.at, 0]]), q = [a.at];
+    const dist = new Map([[a.at, 0]]), q = [a.at], maxD = warsOf(n).length ? 10 : 7;
     let best = -1, bestScore = 0;
-    for (let h = 0; h < q.length; h++){ const u = q[h], du = dist.get(u); if (du >= 7) continue;
+    for (let h = 0; h < q.length; h++){ const u = q[h], du = dist.get(u); if (du >= maxD) continue;
       for (const v of G.P[u].nbs){ if (dist.has(v)) continue; const step = G.P[v].sea ? 2 : 1; dist.set(v, du + step); q.push(v);
         if (G.P[v].sea || S.owner[v] === n || targeted.has(v)) continue;
         if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
-        if (S.owner[v] >= 0 && pw < 40 && S.home[v] !== n) continue;
+        if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
         if (pw < defPower(v, n)*1.3 + 4) continue;
         let val = G.P[v].city ? 3 : 1; if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
-        if (S.owner[v] === PLAYER && S.hour > 24*15) val *= 1.1;
+        if (S.owner[v] >= 0 && atWar(n, S.owner[v])) val *= 1.6;
         const sc = val/(1 + (du + step)*0.7); if (sc > bestScore){ bestScore = sc; best = v; } } }
     if (best < 0) continue;
     if (a.at === N.capital && a.u.inf >= 4){ addArmy(n, a.at, {inf:2}); a.u.inf -= 2; }
@@ -1343,7 +1372,7 @@ function tap(x, y){
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (a){
     if (a.to === null && p === a.at){ selectProv(p); return; }
-    if (sel.target === p){ sendToTarget(a); return; }
+    if (sel.target === p){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet()) && atWar(PLAYER, b.owner)); if (odds(a, p, foes) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
     setTarget(a, p); return;
   }
   selectProv(p);
@@ -1351,7 +1380,7 @@ function tap(x, y){
 function setTarget(a, p){ sel.target = p; targetPath = pathFor(a, a.to !== null ? a.to : a.at, p); hoverPath = null; renderSide(true); }
 function sendToTarget(a){ if (sel.target !== null) orderMove(a, sel.target); sel.target = null; targetPath = null; renderSide(true); }
 function selectArmy(id){ sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
-function selectProv(p){ sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
+function selectProv(p){ sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 function clearSel(){ sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 
 /* ---------------- Tooltip ---------------- */
@@ -1389,7 +1418,7 @@ function renderSide(force){
   setHTML($('res'),
     `<div class="chip you" title="Your nation"><span class="sw" style="background:${N.color}"></span><b>${N.name}</b></div>` +
     RES.map(R => { const v = N[R.k], d = inc.net[R.k], short = N.short && N.short[R.k];
-      const tipTxt = `${R.name}: ${fmt(v)}${R.unit}&#10;Production +${fmt(inc.gross[R.k])}/day&#10;Upkeep -${fmt(inc.upkeep[R.k])}/day${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? '&#10;SHORTAGE' : ''}`;
+      const tipTxt = `${R.name}: ${fmt(v)}${R.unit}${R.k !== 'cash' ? ' / ' + fmt(stockCap(PLAYER)) + ' storage' : ''}&#10;Production +${fmt(inc.gross[R.k])}/day&#10;Upkeep -${fmt(inc.upkeep[R.k])}/day${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? '&#10;SHORTAGE' : ''}`;
       return `<div class="chip res-${R.k} ${short ? 'short' : ''}" title="${tipTxt}">${icon(R.k)}<span class="lbl">${R.name}</span><b>${R.pre}${fmt(v)}${R.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></div>`; }).join(''));
   document.documentElement.style.setProperty('--you', N.color);
   setHTML($('clock'), `<b>${clockStr(S.hour)}</b>`);
@@ -1397,9 +1426,9 @@ function renderSide(force){
   for (let i = 0; i < 4; i++) $('sp' + i).setAttribute('aria-pressed', String(S.speed === i));
   const counts = S.nations.map(n => S.owner.filter(o => o === n.id).length);
   const order = S.nations.slice().sort((a, b) => (b.alive - a.alive) || counts[b.id] - counts[a.id]);
-  const need = Math.ceil(G.landCount*WIN_SHARE);
-  setHTML($('nations'), order.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}"><span class="sw" style="background:${n.color}"></span><span>${n.name}${n.id === PLAYER ? ' (you)' : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to victory">${Math.round(counts[n.id]/need*100)}%</span></div>`).join('') +
-    `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Your score ${score(PLAYER)}, leader ${Math.max(...S.nations.filter(n => n.alive).map(n => score(n.id)))}.</div>`);
+  const need = landNeed(PLAYER);
+  setHTML($('nations'), order.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}"><span class="sw" style="background:${n.color}"></span><span>${n.name}${n.id === PLAYER ? ' (you)' : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to the land victory target (${landNeed(n.id)} provinces)">${Math.round(counts[n.id]/landNeed(n.id)*100)}%</span></div>`).join('') +
+    `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Day-${DAY_LIMIT} score is growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
   setHTML($('log'), S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="goto" data-id="${e.p}" title="Show on map"><time>D${dayOf(e.h)}</time><span>${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
   if (modalKind === 'research' && !$('modal').hidden){
@@ -1422,13 +1451,13 @@ function checklist(){
   const T = S.tut || (S.tut = {});
   if (T.recruit && T.capture && T.research) return '';
   const row = (done, txt) => `<div class="${done ? 'done' : ''}"><i>${done ? '✓' : '○'}</i><span>${txt}</span></div>`;
-  return `<div class="eyebrow">First steps</div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Capture an independent neighbour: tap your counter, then the target twice')}${row(T.research, 'Start a research project (R)')}</div>`;
+  return `<div class="eyebrow">First steps</div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Merge forces into one stack, then capture a weak independent neighbour (look for a Favourable odds chip)')}${row(T.research, 'Start a research project (R)')}</div>`;
 }
 function prodHTML(){
   const N = S.nations[PLAYER], cities = G.P.filter(P => S.owner[P.id] === PLAYER && P.city).sort((a, b) => (b.id === N.capital) - (a.id === N.capital) || a.cityName.localeCompare(b.cityName));
   const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p];
     const qtxt = q.length ? `${UNITS[q[0].t].name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || UNITS[q[0].t].build))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
-    const btns = UT.filter(t => bldOk(p, t) && unlocked(PLAYER, t)).map(t => `<button class="btn" data-act="qrec" data-p="${p}" data-t="${t}" title="${UNITS[t].name}: $${UNITS[t].cost}M${UNITS[t].metal ? ', ' + UNITS[t].metal + ' metal' : ''}${UNITS[t].oil ? ', ' + UNITS[t].oil + ' oil' : ''}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>+${UNITS[t].short}</button>`).join('');
+    const btns = UT.filter(t => bldOk(p, t) && unlocked(PLAYER, t)).map(t => `<button class="btn" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="${UNITS[t].name}: $${UNITS[t].cost}M${UNITS[t].metal ? ', ' + UNITS[t].metal + ' metal' : ''}${UNITS[t].oil ? ', ' + UNITS[t].oil + ' oil' : ''}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>+${UNITS[t].short}</button>`).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td><b>${P.cityName}</b>${p === N.capital ? ' ★' : ''}<div class="small muted">${BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name.split(' ')[0] + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q">${qtxt}</td><td class="q">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '—'}</td>
@@ -1438,7 +1467,7 @@ function prodHTML(){
   const idle = cities.filter(P => !S.queue[P.id].length).length;
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} cities</div><h1>Production</h1></div>
     <div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
-    <p class="small muted">${idle ? `${idle} ${idle === 1 ? 'city is' : 'cities are'} idle. ` : ''}Click +UNIT to queue a unit in that city. Repeat keeps training the last unit queued there while you can afford it.</p>
+    <p class="small muted">${idle ? `${idle} ${idle === 1 ? 'city is' : 'cities are'} idle. ` : ''}Click +UNIT to queue a unit (shift-click queues 5). Each Arms Factory level adds a parallel training line. Repeat keeps training the last unit queued there while you can afford it.</p>
     <div class="tblwrap"><table class="ptab"><thead><tr><th>City</th><th>Training</th><th>Construction</th><th>Queue a unit</th><th></th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="muted">You hold no cities.</td></tr>'}</tbody></table></div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
@@ -1469,7 +1498,7 @@ function diploHTML(){
       <div class="nm"><b>${N.name}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength} military${wars.length ? ' · at war with ' + wars.join(', ') : ''}</span></div>
       <div><span class="rel" style="background:${REL_COLOR[r.st]}">${REL[r.st]}${left}</span><div class="opbar" title="${tipTxt}"><i style="left:${opL}%;width:${opW}%;background:${op >= 0 ? 'var(--ok)' : 'var(--danger)'}"></i></div><span class="small muted">Opinion of you: ${op > 0 ? '+' : ''}${Math.round(op)}</span></div>
       <div class="dacts">${acts}${hint ? `<span class="hint">${hint}</span>` : ''}</div></div>`};
-  }).sort((a, b) => (b.war - a.war) || a.op - b.op).map(x => x.html).join('');
+  }).map(x => x.html).join('');
   return `<div class="rhead"><div><div class="eyebrow">${S.nations[me].name} · Foreign affairs</div><h1>Diplomacy</h1></div>
     <button class="btn" data-act="relmode">${relMode ? 'Hide' : 'Show'} relations on map</button></div>
     <p class="small muted">Powers at peace cannot enter each other's land. War starts 24 hours after a declaration. Independent countries can always be attacked. Hover an opinion bar for the reasons; buttons marked ✕ would likely be refused.</p>
@@ -1498,7 +1527,7 @@ function researchHTML(){
       if (done) foot = `<span class="tstate">✓ Researched</span>`;
       else if (active) foot = `<div class="bar"><i id="rbar"></i></div><span class="tstate" id="rleft"></span>`;
       else if (!ready) foot = `<span class="tstate">Requires ${TECH_BY[T.req].name}</span>`;
-      else foot = `<button class="btn ${canResearch(PLAYER, T.id) ? 'primary' : ''}" data-act="research" data-id="${T.id}" ${canResearch(PLAYER, T.id) ? '' : 'disabled'}>${R ? 'Another project is running' : `Research · $${T.cost}M · ${T.days}d`}</button>`;
+      else foot = `<button class="btn ${canResearch(PLAYER, T.id) ? 'primary' : ''}" data-act="research" data-id="${T.id}" ${canResearch(PLAYER, T.id) ? '' : 'disabled'}>${R ? 'Another project is running' : `Research · $${T.cost}M · ${T.metal} metal${T.oil ? ' · ' + T.oil + ' oil' : ''} · ${T.days}d`}</button>`;
       h += `<div class="tnode ${cls}"><span class="tier">Tier ${i + 1}</span><b>${T.name}</b><span class="tdesc">${T.desc}</span>${foot}</div>`;
     });
     h += `</div>`;
@@ -1587,8 +1616,9 @@ function provHTML(p){
     html += `<div class="eyebrow">Recruit</div><div class="units">${UT.map(t => { const U = UNITS[t];
       const why = reqText(p, t);
       const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac));
-      return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k`}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; }).join('')}</div>`;
+      return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k`}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; }).join('')}</div>`;
     const q = S.queue[p];
+    html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (Arms Factory adds more). Shift-click a card to queue 5.</div>`;
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${UNITS[it.t].name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || UNITS[it.t].build))*100)}%"></i></div>` : ''}`).join('')}</div>`;
   }
@@ -1620,7 +1650,8 @@ document.addEventListener('click', e => {
     case 'split': if (a){ const nb = splitArmy(a); if (nb) selectArmy(nb.id); } break;
     case 'merge': if (a && a.to === null){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null) merge(a, b2); removeEmpty(); renderSide(true); } break;
     case 'stop': if (a){ a.path = []; renderSide(true); } break;
-    case 'recruit': if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
+    case 'recruit': if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
+      if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
     case 'build': if (sel.prov !== null && build(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
     case 'zin': zoomAt(1.4, cw/2, ch/2); break;
     case 'zout': zoomAt(1/1.4, cw/2, ch/2); break;
@@ -1630,13 +1661,13 @@ document.addEventListener('click', e => {
     case 'research-open': openModal(researchHTML(), 'research'); break;
     case 'diplo-open': openModal(diploHTML(), 'diplo'); break;
     case 'prod-open': openModal(prodHTML(), 'prod'); break;
-    case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
+    case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, p, t); if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
     case 'repeat': { const p = +b.dataset.p; S.repeat = S.repeat || {}; if (b.checked) S.repeat[p] = (S.lastUnit && S.lastUnit[p]) || (S.queue[p][0] && S.queue[p][0].t) || 'inf'; else delete S.repeat[p]; renderSide(true); break; }
     case 'relmode': relMode = !relMode; renderSide(true); break;
     case 'declare': declareWar(PLAYER, +b.dataset.id); renderSide(true); break;
     case 'propose': { const m = +b.dataset.id, k = b.dataset.k, r = acceptOffer(m, PLAYER, k); if (r.ok) applyDeal(PLAYER, m, k); else { log(`${S.nations[m].name} refused: ${r.why}.`, 'info', null); addMem(m, PLAYER, -2); } renderSide(true); break; }
     case 'gift': { const m = +b.dataset.id; if (S.nations[PLAYER].cash >= 50){ S.nations[PLAYER].cash -= 50; addMem(m, PLAYER, 5); log(`You sent $50M in aid to ${S.nations[m].name}.`, '', null); } renderSide(true); break; }
-    case 'offer-yes': case 'offer-no': { const o = S.offers.find(x => x.id === +b.dataset.id); if (o){ S.offers = S.offers.filter(x => x !== o); if (act === 'offer-yes') applyDeal(o.from, PLAYER, o.kind); else addMem(o.from, PLAYER, -5); } renderSide(true); break; }
+    case 'offer-yes': case 'offer-no': { const o = S.offers.find(x => x.id === +b.dataset.id); if (o){ S.offers = S.offers.filter(x => x !== o); if (act === 'offer-yes'){ const war = atWar(o.from, PLAYER); if ((o.kind === 'peace') === war) applyDeal(o.from, PLAYER, o.kind); else log('That offer no longer applies.', 'info', null); } else addMem(o.from, PLAYER, -5); } renderSide(true); break; }
     case 'research': if (startResearch(PLAYER, b.dataset.id)) renderSide(true); break;
     case 'pick': pickSel = +b.dataset.p; showPicker(); break;
     case 'begin': clearSave(); newGame((Math.random()*2**31) | 0, pickSel); S.started = true; save(); clearSel(); showBriefing(true, false); break;
@@ -1671,7 +1702,7 @@ function rules(){ return `<ul>
   <li><b>Move</b> by tapping one of your counters, then a province or sea zone to plan the route. Tap it again, or press Send, to march. Troops embark automatically to cross water.</li>
   <li><b>Capture</b> by parking ground units in a province with no defenders. Cities and capitals take longer. Air units can fight but cannot capture.</li>
   <li><b>Battles</b> run hour by hour. Defenders on their own soil take less damage, troops at sea take more.</li>
-  <li><b>Unit classes</b>: soft (infantry), armored and air. Lancers and Strikers beat armor, SAMs and Interceptors beat aircraft, artillery beats infantry. Hover a unit card for its role.</li>
+  <li><b>Unit classes</b>: soft (infantry), armored and air. Lancers (3× vs armor) and Strikers beat armor, SAMs and Interceptors beat aircraft, artillery beats infantry. Hover a unit card for its role.</li>
   <li><b>Research</b> new technology from the Research button (or press R). Jets need Jet Engines; IFVs need Mechanized Infantry.</li>
   <li>The darker, hatched land is under fog of war: you only see enemy troops next to your land or your forces.</li>
   <li><b>Diplomacy</b> (D): every power starts at peace, and powers at peace cannot enter each other's land. Declare war, sign pacts and alliances, answer offers. Rivals may declare war on you from day 8.</li>
@@ -1692,7 +1723,7 @@ function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
   openModal(`<div class="eyebrow">Campaign briefing</div><h1>Iron Meridian</h1>
     ${sv ? `<p class="nudge">Saved campaign: <b>${me.name}</b>, day ${dayOf(sv.hour)}.</p>` : ''}
-    <p>You command <b style="color:${me.color}">${me.name}</b>, one of fifteen powers in a world at war. Take independent land, out-produce your rivals and hold ${Math.ceil(G.landCount*WIN_SHARE)} of ${G.landCount} land provinces.</p>
+    <p>You command <b style="color:${me.color}">${me.name}</b>, one of fifteen powers in a world at war. Take independent land, out-produce your rivals and hold ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals.</p>
     ${rules()}
     <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–3 set speed, P production, R research, D diplomacy, V relations map, H home. Progress saves in this browser each game day.</p>
     <div class="row">${first
@@ -1702,7 +1733,7 @@ function showBriefing(first, hasSave){
 function showEnd(){
   const win = S.over === 'win', mine = S.owner.filter(o => o === PLAYER).length;
   openModal(`<div class="eyebrow">${clockStr(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1>
-    <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} finishes with the top score (${score(PLAYER)}).` : `${S.nations[PLAYER].name} scored ${score(PLAYER)}, behind the leader.`}` : ''}
+    <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} grew the most (+${growth(PLAYER)} score).` : `${S.nations[PLAYER].name} grew ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, behind the leader.`}` : ''}
     ${S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
     ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? ` You had $${fmt(S.nations[PLAYER].cash)}M unspent: next time, turn money into troops and research early.` : ''}</p>
     <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="resume">View the map</button></div>`);
