@@ -830,18 +830,28 @@ function softSprite(key, inner, mid, outer){
   if (SPR[key]) return SPR[key]; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
   const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, inner); gr.addColorStop(0.45, mid); gr.addColorStop(1, outer); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return (SPR[key] = c);
 }
-const SMOKE = () => softSprite('smoke', 'rgba(70,68,64,.75)', 'rgba(60,58,55,.4)', 'rgba(50,50,48,0)');
-const SMOKEL = () => softSprite('smokel', 'rgba(170,165,152,.55)', 'rgba(150,145,135,.25)', 'rgba(140,135,125,0)');
+function puffSprite(i, dark){
+  const key = 'puff' + i + (dark ? 'd' : 'l'); if (SPR[key]) return SPR[key];
+  const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), rr = mulberry(500 + i*17 + (dark ? 3 : 0));
+  for (let k = 0; k < 14; k++){ const ang = rr()*Math.PI*2, d = rr()*20, x = 48 + Math.cos(ang)*d, y = 48 + Math.sin(ang)*d*0.85, r = 12 + rr()*16;
+    const gr = g.createRadialGradient(x - r*0.25, y - r*0.3, r*0.1, x, y, r);
+    if (dark){ gr.addColorStop(0, 'rgba(112,106,98,.55)'); gr.addColorStop(0.6, 'rgba(70,66,62,.35)'); gr.addColorStop(1, 'rgba(60,58,55,0)'); }
+    else { gr.addColorStop(0, 'rgba(196,188,174,.5)'); gr.addColorStop(0.6, 'rgba(150,144,134,.28)'); gr.addColorStop(1, 'rgba(130,125,118,0)'); }
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill(); }
+  return (SPR[key] = c);
+}
+const SMOKE = q => puffSprite((q && q.v) || 0, true), SMOKEL = q => puffSprite((q && q.v) || 0, false);
 const FIRE = () => softSprite('fire', 'rgba(255,245,200,1)', 'rgba(255,150,40,.75)', 'rgba(200,40,0,0)');
 const GLOW = () => softSprite('glow', 'rgba(255,240,190,1)', 'rgba(255,200,90,.5)', 'rgba(255,150,40,0)');
 function emit(kind, wx, wy, opt = {}){
   if (PART.length > 900) PART.splice(0, 100);
   const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, ring:500}[kind] || 800);
-  PART.push({kind, wx, wy, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6});
+  PART.push({kind, wx, wy, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6, spin:(Math.random() - 0.5)*0.6, v:(Math.random()*4) | 0});
 }
 function explode(wx, wy, big = 1){
   emit('flash', wx, wy, {s0:28*big, s1:10, life:140});
-  emit('ring', wx, wy, {s0:4, s1:46*big, life:450});
+  for (let i = 0; i < 8; i++) emit('dust', wx, wy, {vx:(Math.random() - 0.5)*140*big, vy:-(2 + Math.random()*6), s0:6, s1:30*big, life:1400});
+  if (booted){ SCORCH.push({wx, wy, r:6 + 6*big, t0:performance.now()}); if (SCORCH.length > 60) SCORCH.shift(); }
   for (let i = 0; i < 5*big; i++) emit('fire', wx, wy, {vx:(Math.random() - 0.5)*60*big, vy:-(10 + Math.random()*40)*big, s0:10*big, s1:3, life:420 + Math.random()*260});
   for (let i = 0; i < 4*big; i++) emit('smoke', wx, wy, {vx:(Math.random() - 0.5)*20, vy:-(6 + Math.random()*14), s0:10*big, s1:(30 + Math.random()*16)*big, life:2200 + Math.random()*1400});
   for (let i = 0; i < 6*big; i++) emit('debris', wx, wy, {vx:(Math.random() - 0.5)*110*big, vy:-(40 + Math.random()*70)*big, s0:1.6, s1:1.2, life:700 + Math.random()*400});
@@ -851,6 +861,10 @@ let lastPart = 0;
 function drawParticles(now){
   const dt = Math.min(0.1, (now - (lastPart || now))/1000); lastPart = now;
   const kz = Math.max(0.6, Math.min(2, view.s*HS/12));
+  // scorch marks on the ground fade over 20 s
+  for (let i = SCORCH.length - 1; i >= 0; i--){ const sc0 = SCORCH[i], age = now - sc0.t0; if (age > 20000){ SCORCH.splice(i, 1); continue; }
+    const [x, y] = toScreen(sc0.wx, sc0.wy), r = sc0.r*kz; ctx.globalAlpha = 0.5*(1 - age/20000); ctx.fillStyle = '#16120e'; ctx.beginPath(); ctx.ellipse(x, y, r, r*0.5, 0, 0, Math.PI*2); ctx.fill(); }
+  ctx.globalAlpha = 1;
   // wrecks: smoke columns and flicker for a while after a force dies
   for (let i = WRECKS.length - 1; i >= 0; i--){ const w = WRECKS[i]; if (now - w.t0 > 26000){ WRECKS.splice(i, 1); continue; }
     if (Math.random() < dt*6){ emit('smoke', w.wx, w.wy, {ox:(Math.random() - 0.5)*10, vx:4 + Math.random()*6, vy:-(10 + Math.random()*10), s0:6, s1:34, life:3600}); }
@@ -863,22 +877,27 @@ function drawParticles(now){
     if (pr.kind === 'tracer'){ const x2 = fx0 + (tx0 - fx0)*Math.max(0, k - 0.18), y2 = fy0 + (ty0 - fy0)*Math.max(0, k - 0.18); ctx.strokeStyle = 'rgba(255,225,140,.9)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x, y); ctx.stroke(); }
     else { if (pr.kind === 'missile' && now - pr.last > 30){ pr.last = now; const [wx, wy] = screenToWorld(x, y); emit('smokel', wx, wy, {vx:(Math.random() - 0.5)*4, vy:-2, s0:4, s1:14, life:1300}); }
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(GLOW(), x - 6, y - 6, 12, 12); ctx.restore(); ctx.fillStyle = '#fff2c8'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI*2); ctx.fill(); } }
+  // muzzle stars (60 ms)
+  for (let i = MUZZ.length - 1; i >= 0; i--){ const m0 = MUZZ[i], age = now - m0.t0; if (age > 70){ MUZZ.splice(i, 1); continue; }
+    const [x, y] = toScreen(m0.wx, m0.wy), L0 = 10*m0.big*kz; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(m0.ang); ctx.fillStyle = 'rgba(255,226,150,.95)';
+    for (const [a0, len] of [[0, 1], [0.7, 0.55], [-0.7, 0.55]]){ ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0 - 0.12)*L0*len, Math.sin(a0 - 0.12)*L0*len); ctx.lineTo(Math.cos(a0)*L0*len*1.4, Math.sin(a0)*L0*len*1.4); ctx.lineTo(Math.cos(a0 + 0.12)*L0*len, Math.sin(a0 + 0.12)*L0*len); ctx.closePath(); ctx.fill(); }
+    ctx.restore(); }
   // particles
   for (let i = PART.length - 1; i >= 0; i--){ const q = PART[i]; q.t += dt*1000; if (q.t >= q.life){ PART.splice(i, 1); continue; }
     const k = q.t/q.life; q.ox += q.vx*dt; q.oy += q.vy*dt;
     if (q.kind === 'debris'){ q.vy += 220*dt; } else if (q.kind === 'smoke' || q.kind === 'smokel'){ q.vx *= 0.99; q.vy *= 0.985; }
     const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
-    if (q.kind === 'smoke' || q.kind === 'smokel'){ ctx.globalAlpha = (q.kind === 'smoke' ? 0.85 : 0.7)*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.drawImage(q.kind === 'smoke' ? SMOKE() : SMOKEL(), x - sz, y - sz, sz*2, sz*2); }
+    if (q.kind === 'smoke' || q.kind === 'smokel'){ ctx.globalAlpha = 0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
     else if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k; ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
     else if (q.kind === 'ring'){ ctx.globalAlpha = 0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
     else if (q.kind === 'spark' || q.kind === 'debris'){ ctx.globalAlpha = 1 - k; ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
-    else if (q.kind === 'dust'){ ctx.globalAlpha = 0.35*(1 - k); ctx.drawImage(SMOKEL(), x - sz, y - sz, sz*2, sz*2); }
+    else if (q.kind === 'dust'){ ctx.globalAlpha = 0.32*(k < 0.1 ? k/0.1 : 1 - k); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot); ctx.scale(1, 0.6); ctx.drawImage(puffSprite(q.v, false), -sz, -sz, sz*2, sz*2); ctx.restore(); }
   }
   ctx.globalAlpha = 1;
 }
 // fire events for a fighting cluster (called from the unit drawing loop)
-const lastVolley = new Map();
+const lastVolley = new Map(), lastDust = new Map(), SCORCH = [], MUZZ = [];
 function volley(c, main, ang, now, hpx){
   const a = c.list[0], seed = a.id % 13, period = 650 + (seed*977 % 600), cyc = Math.floor((now + seed*131)/period);
   if (lastVolley.get(a.id) === cyc) return; lastVolley.set(a.id, cyc);
@@ -886,7 +905,9 @@ function volley(c, main, ang, now, hpx){
   const mx = c.x + Math.cos(ang)*hpx*0.42, my = c.y - hpx*0.18 + Math.sin(ang)*hpx*0.12;
   const from = screenToWorld(mx, my), spread = () => [(Math.random() - 0.5)*24, (Math.random() - 0.5)*12];
   const tgt = () => { const [dx, dy] = spread(); return screenToWorld(c.enemy[0] + dx, c.enemy[1] + dy); };
-  emit('flash', from[0], from[1], {s0:main === 'art' || main === 'tank' ? 18 : 9, s1:4, life:110});
+  emit('flash', from[0], from[1], {s0:main === 'art' || main === 'tank' ? 18 : 9, s1:4, life:90});
+  MUZZ.push({wx:from[0], wy:from[1], ang, big:main === 'art' || main === 'tank' || UNITS[main].cls === 'naval' ? 1.6 : 0.8, t0:now});
+  if (main === 'art' || main === 'tank'){ for (let i = 0; i < 4; i++) emit('dust', from[0], from[1], {oy:hpx*0.12, vx:(Math.random() - 0.5)*70, vy:-2, s0:6, s1:24, life:1200}); }
   if (main === 'inf' || main === 'at' || main === 'ifv'){ for (let i = 0; i < 3; i++) shoot('tracer', from, tgt(), {dur:160 + Math.random()*120});
     if (main === 'at'){ shoot('missile', from, tgt(), {dur:520, arc:6, big:0.6}); emit('smokel', from[0], from[1], {ox:-Math.cos(ang)*10, vx:-Math.cos(ang)*30, vy:-4, s0:6, s1:18, life:900}); } }
   else if (main === 'tank'){ shoot('shell', from, tgt(), {dur:200, arc:2, big:0.8}); emit('smokel', from[0], from[1], {vx:Math.cos(ang)*10, vy:-8, s0:6, s1:22, life:1400}); }
@@ -897,7 +918,7 @@ function volley(c, main, ang, now, hpx){
 // ---- day / night ----
 let NIGHT = null;
 function nightTexture(){ if (NIGHT) return NIGHT; const c = document.createElement('canvas'); c.width = 720; c.height = 1; const g = c.getContext('2d'), id = g.createImageData(720, 1);
-  for (let i = 0; i < 720; i++){ const ang = (i/720)*Math.PI*2, d = Math.cos(ang); const a = Math.max(0, Math.min(1, (-d + 0.08)/0.3)); id.data[i*4] = 4; id.data[i*4 + 1] = 10; id.data[i*4 + 2] = 26; id.data[i*4 + 3] = Math.round(a*120); }
+  for (let i = 0; i < 720; i++){ const ang = (i/720)*Math.PI*2, d = Math.cos(ang); const a = Math.max(0, Math.min(1, (-d + 0.08)/0.3)); id.data[i*4] = 4; id.data[i*4 + 1] = 10; id.data[i*4 + 2] = 26; id.data[i*4 + 3] = Math.round(a*165); }
   g.putImageData(id, 0, 0); return (NIGHT = c); }
 function sunLon(){ return ((12 - (S.hour % 24) - (performance.now() % 1000)*0) * 15 + 540) % 360 - 180; }
 function drawNight(){
@@ -1807,10 +1828,11 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   const fs = s*1.35;
   if ((types[1] || stack) && !(window.U3D && U3D.has(main) && (!types[1] || U3D.has(types[1])))){ ctx.save(); ctx.globalAlpha = 0.9; unitFigure(types[1] || main, x - 15*fs*dir, y - 8*fs, fs*0.72, shade(color, -0.12), now, moving, fighting, dir, seed + 3, 2); ctx.restore(); }
   const use3d = window.U3D && U3D.has(main) && (!types[1] || U3D.has(types[1] || main));
-  if (use3d){ const hpx = ({inf:52, at:52, art:60, sam:62, ifv:58, tank:62, jet:58, int:58, frig:70, sub:70, crui:76})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
-    const fr = (main === 'inf' || main === 'at') ? (moving ? Math.floor(now/85 + seed) % 8 : 0) : fighting ? ((ph => ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0)(shotPhase(seed, now))) : 0;
-    if (types[1]){ const h2 = hpx*0.7; U3D.draw(ctx, types[1], color, x - 15*fs*dir, y - 7*fs, h2, ang3, 0); }
-    U3D.draw(ctx, main, color, x + shake, y + 2*s, hpx, ang3, fr);
+  if (use3d){ const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:74, sub:66, crui:80})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
+    const fr = (main === 'inf' || main === 'at') ? (moving ? Math.floor(now/85 + seed) % 8 : 0) : fighting ? ((ph => main === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : main === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
+    if (types[1]){ const h2 = hpx*0.72; U3D.draw(ctx, types[1], color, x - 16*fs*dir, y - 7*fs, h2, ang3, 0, night); }
+    U3D.draw(ctx, main, color, x + shake*0.4, y + 2*s, hpx, ang3, fr, night);
+    if (moving && UNITS[main].cls !== 'naval' && counter.dust) counter.dust(main, ang3, hpx);
     if (fighting && counter.vol) counter.vol(main, ang3, hpx);
   } else unitFigure(main, x + shake, y, fs, color, now, moving, fighting, dir, seed, a ? a.u[main] : n);
   // strength badge (pill) with health and morale bars
@@ -1983,6 +2005,7 @@ function draw(now){
     else { const foe = S.battles.includes(c.at); if (foe){ const others = clusters.filter(o => o.at === c.at && o !== c && !o.air && atWar(o.owner, c.owner)); if (others.length){ dir = others[0].x < c.x ? -1 : 1; c.enemy = [others[0].x, others[0].y]; counter.ang = Math.atan2(others[0].y - c.y, others[0].x - c.x); } } }
     const fighting = !c.moving && !c.air && S.battles.includes(c.at);
     counter.vol = (main, ang, hpx) => volley(c, main, ang, now, hpx);
+    counter.dust = (main, ang, hpx) => { const key = c.list[0].id, lt = lastDust.get(key) || 0; if (now - lt < 130) return; lastDust.set(key, now); const [wx, wy] = screenToWorld(c.x - Math.cos(ang)*hpx*0.32, c.y + hpx*0.05 - Math.sin(ang)*hpx*0.1); emit('dust', wx, wy, {vx:-Math.cos(ang)*8 + (Math.random() - 0.5)*6, vy:-3 - Math.random()*4, s0:5, s1:22, life:1600}); };
     const r = counter(c.x, c.y, lead, c.n, colorOf(c.owner), c.list.some(a => a.id === sel.army || sel.group.includes(a.id)), c.moving, k, c.list.length > 1, fighting, dir, now);
     hits.push({...r, ids:c.list.map(a => a.id), cx:c.x, cy:c.y, spread:c.list.some(a => a.at !== c.at)});
   }
@@ -1996,7 +2019,7 @@ function draw(now){
     for (let i = 0; i < nPl; i++){ const off = [[0, 0], [-11, 9], [-11, -9]][i]; const ox = Math.cos(ang)*off[0]*sc - Math.sin(ang)*off[1]*sc, oy = Math.sin(ang)*off[0]*sc + Math.cos(ang)*off[1]*sc;
       const px0 = x + ox, py0 = y + oy + bob, g2 = ctx.createLinearGradient(px0, py0, px0 - Math.cos(ang)*60, py0 - Math.sin(ang)*60);
       g2.addColorStop(0, 'rgba(235,240,245,.5)'); g2.addColorStop(1, 'rgba(235,240,245,0)'); ctx.strokeStyle = g2; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(px0 - Math.cos(ang)*8*sc, py0 - Math.sin(ang)*8*sc); ctx.lineTo(px0 - Math.cos(ang)*60, py0 - Math.sin(ang)*60); ctx.stroke();
-      if (window.U3D && U3D.has(kind)){ const hp3 = 46*sc; ctx.save(); ctx.globalAlpha = 0.28; ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 7, py0 + 14, hp3, ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3, ang, 0);
+      if (window.U3D && U3D.has(kind)){ const hp3 = 48*sc, burn = a.fly.ph === 'out' && a.fly.kind === 'strike' || a.fly.ph === 'over' ? 1 : 0; ctx.save(); ctx.globalAlpha = 0.28; ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 7, py0 + 14, hp3, ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3, ang, burn, isNight(a.fly.tgt));
         if (Math.random() < 0.25){ const [wx, wy] = screenToWorld(px0 - Math.cos(ang)*hp3*0.4, py0 - Math.sin(ang)*hp3*0.4); emit('fire', wx, wy, {vx:-Math.cos(ang)*20, vy:-Math.sin(ang)*20, s0:4, s1:1, life:160}); } }
       else { ctx.save(); ctx.globalAlpha = 0.3; jetSprite(px0 + 6, py0 + 12, sc*0.9, '#000000', ang, kind); ctx.restore(); jetSprite(px0, py0, sc*0.9, col, ang, kind); } }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreen(T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(a.fly.ph === 'back' ? toScreen(B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }
