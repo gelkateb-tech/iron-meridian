@@ -83,9 +83,22 @@ for (const ct of CITIES) ct.cell = snapLand(lonLatToCell(ct.lon, ct.lat));
 // ---- 3. region names
 const CLEAN = [/^(London Borough of|Royal Borough of|Metropolitan Borough of|County Borough of) /i, / (Prefecture|Province|Region|Governorate|District|Council|Borough|County|Municipality|Department|Oblast|Krai|Autonomous Okrug|Autonomous Region|Autonomous Oblast|Republic|State|Territory)$/i, /^(Province|Region|Governorate|State|Republic) of /i, /^City of /i];
 const cleanName = n => { let s = n; for (let k = 0; k < 2; k++) for (const re of CLEAN) s = s.replace(re, ''); return s.trim() || n; };
-const regions = State.getAllStates().filter(s => s.latitude && s.longitude).map(s => ({ name: cleanName(s.name), cell: lonLatToCell(+s.longitude, +s.latitude) })).filter(s => s.cell >= 0 && cellCountry[s.cell] >= 0);
+const allStates = State.getAllStates().filter(s => s.latitude && s.longitude);
+const regions0 = allStates.map(s => ({ name: cleanName(s.name), code: s.countryCode, cell: lonLatToCell(+s.longitude, +s.latitude) })).filter(s => s.cell >= 0 && cellCountry[s.cell] >= 0);
+// each map country's ISO code = the most common code among regions landing in it; drop regions with mismatched codes (bad source coordinates)
+const featCode = feats.map((f, k) => { const c = {}; for (const s of regions0) if (cellCountry[s.cell] === k) c[s.code] = (c[s.code] || 0) + 1; let b = null, bn = 0; for (const x in c) if (c[x] > bn){ bn = c[x]; b = x; } return b; });
+const regions = regions0.filter(s => featCode[cellCountry[s.cell]] === s.code);
 const regionsByCountry = feats.map(() => []);
 for (const s of regions) regionsByCountry[cellCountry[s.cell]].push(s);
+// put each city in its own country: its country is that of the nearest region point
+for (const ct of CITIES){
+  let best = null, bd = 1e9; for (const s of allStates){ const d = (+s.latitude - ct.lat)**2 + ((+s.longitude - ct.lon)*Math.cos(ct.lat*Math.PI/180))**2; if (d < bd){ bd = d; best = s; } }
+  const code = best && best.countryCode, c0 = lonLatToCell(ct.lon, ct.lat);
+  if (!code || c0 < 0) continue;
+  if (ct.cell >= 0 && featCode[cellCountry[ct.cell]] === code) continue;
+  let pick = -1, pd = 4; for (let i = 0; i < N; i++) if (cellCountry[i] >= 0 && featCode[cellCountry[i]] === code){ const d = hexDist(i, c0); if (d < pd){ pd = d; pick = i; } }
+  if (pick >= 0) ct.cell = pick;
+}
 
 // ---- 4. provinces per country
 const prov = new Int16Array(N).fill(-1);
