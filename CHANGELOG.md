@@ -252,3 +252,8 @@
 - Text size: 90%, 100%, 115% or 130%. This scales the top bar, side panel, dialogs, toasts and tutorial card without changing the map.
 - Reduced motion: no screen shake, far fewer smoke and dust particles, and no UI transitions.
 - Save slots: three manual slots in Settings beside the automatic save, each showing nation, date and scenario. Load a slot at any time to jump back.
+
+## Round 35 — Soundscape
+- Positional battle audio: each volley fired on screen plays its own synthesized shot, panned left or right by where it happens and louder as you zoom in. Rifle cracks, tank-gun thumps and artillery or naval booms each have their own low-frequency punch.
+- Ambience beds that follow the camera: a distant rumble from the front when battles are on screen (panned towards them), wind that rises as a storm passes over the view, surf when you look out to sea, and a jet-engine drone while aircraft fly overhead. All beds quieten while paused.
+- Generative score: a slow minor-key synth pad that changes chords every few seconds. When you are at war it drops into a darker progression with a low pulse beat. It can be turned off in Settings (Music) while keeping effects and ambience.

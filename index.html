@@ -590,7 +590,7 @@ const W = WORLD.W, H = WORLD.H;
 const K = 0.25;                       // combat damage per hour factor
 const HOURS_PER_SEC = [0, 2, 4, 8, 16];   // by speed setting
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
-const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full'};
+const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full', music:true};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
 const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} applySet(); };
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
@@ -1013,6 +1013,41 @@ const SFX = {
   win: () => { [392, 523.2, 659.3, 784].forEach((f, i) => tone(f, 0.9, 'sawtooth', 0.06, i*0.12)); },
 };
 let lastSfx = {};
+/* ---- soundscape: positional battle audio, ambience beds, generative score ---- */
+let NBUF = null;
+function noiseBuf(){ const c = audio(); if (!c) return null; if (NBUF) return NBUF; const len = c.sampleRate*2, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0); let last = 0; for (let i = 0; i < len; i++){ const w = Math.random()*2 - 1; last = (last + 0.02*w)/1.02; d[i] = last*3.5; } return (NBUF = b); }
+// a looping filtered-noise bed whose gain we steer every frame (wind, surf, distant front)
+function bed(freq, type = 'lowpass', q = 0.7){ const c = audio(); if (!c) return null; const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), pan = c.createStereoPanner ? c.createStereoPanner() : null;
+  src.buffer = noiseBuf(); src.loop = true; f.type = type; f.frequency.value = freq; f.Q.value = q; g.gain.value = 0; src.connect(f); f.connect(g); (pan ? (g.connect(pan), pan) : g).connect(master); src.start(); return {f, g, pan}; }
+// one positional shot: pan by screen x, quieter when far or zoomed out
+function shotAt(sx, kind){ const c = audio(); if (!c || muted || !master) return; const t = c.currentTime, pan = c.createStereoPanner ? c.createStereoPanner() : null, g = c.createGain(), zoom = Math.min(1, view.s*HS/40);
+  const vol = (kind === 'art' ? 0.22 : kind === 'tank' ? 0.16 : 0.07)*(0.35 + 0.65*zoom); if (pan) pan.pan.value = Math.max(-1, Math.min(1, (sx/cw)*2 - 1));
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'art' ? 1.1 : kind === 'tank' ? 0.6 : 0.12));
+  const src = c.createBufferSource(), f = c.createBiquadFilter(); src.buffer = noiseBuf(); f.type = 'lowpass'; f.frequency.value = kind === 'art' ? 260 : kind === 'tank' ? 420 : 2400;
+  src.connect(f); f.connect(g); (pan ? (g.connect(pan), pan) : g).connect(master); src.start(t, Math.random()*1.5, kind === 'art' ? 1.2 : 0.7);
+  if (kind !== 'inf'){ const o = c.createOscillator(), og = c.createGain(); o.frequency.setValueAtTime(kind === 'art' ? 55 : 80, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.5); og.gain.setValueAtTime(vol*1.4, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.6); o.connect(og); (pan ? (og.connect(pan), pan) : og).connect(master); o.start(t); o.stop(t + 0.7); } }
+let AMB = null, MUS = null;
+function ambience(now){ if (muted || !AC || !booted || !S) return; if (!AMB){ AMB = {wind:bed(500, 'bandpass', 0.5), surf:bed(380, 'lowpass', 0.8), front:bed(120, 'lowpass', 0.9), jets:bed(1400, 'bandpass', 2)}; }
+  const t = AC.currentTime, ease = (n, v) => { if (n && n.g) n.g.gain.setTargetAtTime(v, t, 0.6); };
+  // what is on screen
+  const cx = cw/2, cy = ch/2, hexPx = view.s*HS; let seaFrac = 0, k = 0;
+  for (let i = 0; i < 9; i++){ const p = provAt(cw*(0.2 + 0.3*(i % 3)), ch*(0.2 + 0.3*Math.floor(i/3))); if (p >= 0){ k++; if (G.P[p].sea) seaFrac++; } } seaFrac = k ? seaFrac/k : 0;
+  let storm = 0; for (const w of (S.storms || [])){ const [sx, sy] = toScreen(w.x, w.y), d = Math.hypot(sx - cx, sy - cy)/Math.max(cw, ch); storm = Math.max(storm, Math.max(0, 1 - d*1.6)*Math.min(1, w.r*view.s/200)); }
+  let fight = 0, fx = 0; for (const p of S.battles){ const [sx, sy] = toScreen(G.P[p].x, G.P[p].y); if (sx < -50 || sy < -50 || sx > cw + 50 || sy > ch + 50) continue; fight += 1; fx += sx; }
+  let jets = 0; for (const a of S.armies){ if (!a.fly || !a.air) continue; const [sx, sy] = toScreen(...wingPos(a)); if (sx > 0 && sy > 0 && sx < cw && sy < ch) jets++; }
+  const zoomV = Math.min(1, hexPx/30), running = S.speed > 0 ? 1 : 0.35;
+  ease(AMB.wind, (0.02 + storm*0.16)*running); if (AMB.wind) AMB.wind.f.frequency.setTargetAtTime(400 + storm*500, t, 1);
+  ease(AMB.surf, seaFrac*0.07*(0.4 + 0.6*zoomV)*running);
+  ease(AMB.front, Math.min(0.22, fight*0.06)*(0.4 + 0.6*zoomV)*running); if (AMB.front && AMB.front.pan && fight) AMB.front.pan.pan.setTargetAtTime(Math.max(-0.8, Math.min(0.8, (fx/fight/cw)*2 - 1)), t, 0.5);
+  ease(AMB.jets, Math.min(0.08, jets*0.03)*running);
+  musicTick(now); }
+// generative score: a slow minor pad; at war it gains a low pulse
+function musicTick(now){ if (SET.music === false || !AC) return; if (!MUS){ MUS = {next:0, step:0}; } if (AC.currentTime < MUS.next) return;
+  const war = warsOf(PLAYER).length > 0, roots = war ? [110, 98, 87.3, 98] : [130.8, 110, 116.5, 98], r = roots[MUS.step % 4], ch0 = [1, 1.2, 1.5, 2], t0 = AC.currentTime, dur = 7.5;
+  for (const m of ch0){ const o = AC.createOscillator(), g = AC.createGain(), f = AC.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = r*m*(1 + (Math.random() - 0.5)*0.004); f.type = 'lowpass'; f.frequency.value = war ? 700 : 520;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.012, t0 + 2.5); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(f); f.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.1); }
+  if (war) for (let i = 0; i < 8; i++){ const o = AC.createOscillator(), g = AC.createGain(), tt = t0 + i*0.9; o.type = 'sine'; o.frequency.value = r/2; g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(0.05, tt + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.5); o.connect(g); g.connect(master); o.start(tt); o.stop(tt + 0.6); }
+  MUS.step++; MUS.next = t0 + dur - 1.5; }
 function sfx(name){ if (muted || !booted) return; const now = performance.now(); if (lastSfx[name] && now - lastSfx[name] < 400) return; lastSfx[name] = now; try { SFX[name] && SFX[name](); } catch (e) {} }
 document.addEventListener('pointerdown', () => { if (!muted) audio(); if (AC && AC.state === 'suspended') AC.resume(); }, {capture:true});
 const FX = [];
@@ -1104,6 +1139,7 @@ function volley(c, main, ang, now, hpx, fx1, fy1){
   const from = screenToWorld(mx, my), spread = () => [(Math.random() - 0.5)*24, (Math.random() - 0.5)*12];
   const tgt = () => { const [dx, dy] = spread(); return screenToWorld(c.enemy[0] + dx, c.enemy[1] + dy); };
   emit('flash', from[0], from[1], {s0:main === 'art' || main === 'tank' ? 10 : 5, s1:3, life:80});
+  if (!muted && AC && (shotAt.n = (shotAt.n || 0) + 1) && now - (shotAt.last || 0) > 70){ shotAt.last = now; shotAt(mx, main === 'art' || UNITS[main].cls === 'naval' ? 'art' : main === 'tank' || main === 'sam' ? 'tank' : 'inf'); }
   MUZZ.push({wx:from[0], wy:from[1], ang, big:main === 'art' || main === 'tank' || UNITS[main].cls === 'naval' ? 0.9 : 0.45, t0:now});
   if (main === 'art' || main === 'tank'){ for (let i = 0; i < 4; i++) emit('dust', from[0], from[1], {oy:hpx*0.12, vx:(Math.random() - 0.5)*70, vy:-2, s0:6, s1:24, life:1200}); }
   if (main === 'inf' || main === 'at' || main === 'ifv'){ for (let i = 0; i < 3; i++) shoot('tracer', from, tgt(), {dur:160 + Math.random()*120});
@@ -3139,6 +3175,7 @@ function settingsHTML(){
     <div class="eyebrow">Sound volume</div><div class="row" style="align-items:center"><input type="range" id="volume" min="0" max="100" value="${Math.round(SET.vol*100)}" style="flex:1"><span class="small muted">${Math.round(SET.vol*100)}%</span></div>
     <div class="eyebrow">Pop-up alerts</div><div class="row">${opt('toasts', 'all', 'All')}${opt('toasts', 'bad', 'Threats only')}${opt('toasts', 'none', 'None')}</div>
     <div class="eyebrow">Effects quality</div><div class="row">${opt('fx', 'high', 'High')}${opt('fx', 'low', 'Low (faster)')}</div>
+    <div class="eyebrow">Music</div><div class="row">${opt('music', true, 'Ambient score on')}${opt('music', false, 'Off (effects and ambience only)')}</div>
     <div class="eyebrow">Accessibility</div><div class="row">${opt('cb', false, 'Standard colours')}${opt('cb', true, 'Colour-blind palette')}</div>
     <div class="row">${[90, 100, 115, 130].map(v => `<button class="btn ${(SET.ui || 100) === v ? 'primary' : ''}" data-act="set-ui" data-v="${v}">Text ${v}%</button>`).join('')}</div>
     <div class="row">${opt('motion', 'full', 'Full motion')}${opt('motion', 'reduced', 'Reduced motion (no shake, fewer particles)')}</div>
@@ -3648,7 +3685,7 @@ let last = 0, acc = 0, uiAcc = 0;
 function frame(now){
   const dt = Math.min(0.25, (now - (last || now))/1000); last = now;
   if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; while (acc >= 1 && n < 8){ tick(); acc -= 1; n++; } if (n >= 8) acc = 0; }
-  uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; renderSide(); tutTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
+  uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; try { ambience(now); } catch (e) {} renderSide(); tutTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
   draw(now);
   requestAnimationFrame(frame);
 }
@@ -3668,7 +3705,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p)};
+if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p)};
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
