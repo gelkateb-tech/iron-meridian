@@ -74,3 +74,15 @@
 - Province names: provinces take the name of the nearest unused state or region, then a compass or Upper/Lower/Central prefix, then the nearest real town, so "Greenland 1–19" and "Iowa 41" are gone. Tiny islands join the nearest province of their country instead of becoming their own province.
 - Fairer starts for compact powers (10 provinces or fewer): a fortified capital, an extra field army with armour and artillery, and dug-in garrisons on land borders. An idle Germany now survives to day 120 in most test campaigns.
 - The terrain texture and land mask were rebaked for the new map. Saves moved to a new format, so campaigns from earlier versions won't load.
+
+## Round 16 — Frontage, flanking, battle reports, new-player fixes
+- Combat frontage: only so many units fit on a front (14 on open ground, 8 in mountains, 10 in cities, 18 at sea). Units beyond that wait in reserve and fight at 25%, so doom stacks soak damage but don't win faster. The odds chip warns when your force is too big for the front.
+- Multi-direction attacks: forces attacking a province from different neighbouring provinces (or from the sea) widen the front by half per extra direction and gain +15% attack each, up to +45%. The AI now splits oversized stacks and sends half around to a second side.
+- Battle reports: every battle you fight ends with a dispatch ("Battle of Tamaulipas won after 28 h: you lost 4 units, they lost 24"). Click it to open a report with an hour-by-hour strength chart, peak sizes, units lost by type, frontage and flank bonuses. A province in battle shows a live summary: hours elapsed, units engaged versus in reserve, directions and losses.
+- From the new-player review:
+  - The odds chip shows the defenders' effective strength after home-soil, terrain and fort bonuses, so it no longer says "Likely defeat · your 34 vs their 30".
+  - The tutorial's attack step rings the weakest independent province your army can actually beat. If none is close, it lets you tap Next instead of stalling.
+  - Tapping the capital's troops in step 3 counts as tapping the capital. On phones the tutorial card docks at the top and says "panel below".
+  - Finishing the tutorial deselects your army.
+  - Forces that arrive where another of your idle forces stands merge into it automatically. Merge forces shows how many forces it will combine, or why it is unavailable.
+  - War warnings count enemy armies up to 3 provinces from your border. A new early warning fires when a neighbour masses more than 1.4× your border strength, and a wartime alert flags idle cities while money sits unspent.
