@@ -144,3 +144,9 @@
   - Battles you left after inflicting heavier losses are reported as "ended", not "lost".
   - The dawn newspaper pops up only for news that concerns you or a fallen nation.
   - Compact powers get a 21-day early grace period (was 14).
+
+## Round 23 — Coalitions and peace conferences
+- Coalitions: powers linked by alliances form named blocs such as the Northern Compact or the Meridian Accord, up to 4 members, led by the strongest. Each coalition names a common enemy (the power fighting most of its members). Members' AIs focus their offensives on that enemy, and members at peace with it may join the war.
+- Coordinated offensives: if you belong to a coalition led by an AI, the leader periodically asks you to attack a specific enemy province within 48 h ("Russia asks you to attack Kharkiv"). The request shows in the Command panel with a Show button. Fight there or take it to earn $150M and goodwill with every partner; ignoring it costs opinion.
+- Shared victory: a coalition wins together by holding 8 starting capitals or 1.8× the land victory target. Rival coalitions can win too, so watch them in Diplomacy's new Coalitions panel (members, leader, common enemy, provinces and capitals held). Members of the same coalition like each other more, and nations may now hold three alliances.
+- Peace conferences: peace treaties now hand every province each side occupies to it for good. Ceded provinces become home provinces, so they stop gathering unrest and can't revolt back. Peace offers spell out the terms ("France cedes Alsace, Lorraine to you"), and AI-to-AI treaties redraw the map too. In a test campaign, 45 provinces changed hands by treaty by day 80.

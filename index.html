@@ -141,6 +141,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .armylist button{display:flex; justify-content:space-between; text-align:left; font-size:12.5px; padding:6px 9px}
 .muted{color:var(--muted)}
 .small{font-size:12px}
+.blocs{display:grid;gap:6px;margin-bottom:8px}.bloc{display:flex;flex-direction:column;gap:2px;padding:6px 10px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03);border-radius:4px}.bloc.mine{border-left-color:var(--accent)}.bloc i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 6px;vertical-align:baseline}
 .clock .vic{display:block;font-size:10.5px;opacity:.7;font-weight:500;white-space:nowrap}@media (max-width:820px){.clock .vic{display:none}}
 .docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:10px}.btn.doc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;white-space:normal;padding:8px 10px}.btn.doc span{font-size:12px;opacity:.85}.marks{display:grid;gap:4px;margin-bottom:10px}.mrow{display:grid;grid-template-columns:22px 150px 120px 1fr;align-items:center;gap:8px;padding:4px 6px;background:rgba(255,255,255,.03);border-radius:4px}.mrow svg{width:20px;height:20px}.mrow .btn{justify-self:start}@media (max-width:600px){.mrow{grid-template-columns:22px 1fr}.mrow .mk,.mrow .btn,.mrow>span.small{grid-column:2}}.mk i{font-style:normal;font-size:11px;padding:1px 5px;margin-right:2px;border:1px solid rgba(255,255,255,.18);border-radius:3px;opacity:.45}.mk i.on{opacity:1;background:rgba(226,162,61,.25);border-color:var(--accent)}.mkb{font-size:10.5px;padding:0 4px;border:1px solid var(--accent);border-radius:3px;color:var(--accent)}
 .acomp span{display:inline-flex;align-items:center;gap:2px;margin-right:6px;font-size:12px}.acomp svg{width:16px;height:16px}.aname{cursor:pointer}select[data-act=stance]{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:3px 6px;font:inherit;font-size:12.5px}.tag{font-size:11.5px;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.07)}.tag.battle{background:rgba(224,87,79,.25)}.tag.move{background:rgba(226,162,61,.2)}
@@ -1247,6 +1248,7 @@ function opinionParts(a, b){
   if (borders(a, b)) parts.push(['Shares a border', -5]);
   const r = rel(a, b).st; if (r === 'ally') parts.push(['Allies', 30]); if (r === 'nap' || r === 'pass') parts.push(['Treaty', 10]); if (r === 'war') parts.push(['At war', -30]);
   if (S.nations.some(c => c.alive && c.id !== a && c.id !== b && atWar(a, c.id) && atWar(b, c.id))) parts.push(['Common enemy', 20]);
+  if (r !== 'ally' && S.blocReg && Object.values(S.blocReg).some(R => R.members && R.members.includes(a) && R.members.includes(b))) parts.push(['Same coalition', 10]);
   const N = S.nations[b]; if (N.breaker != null && S.hour - N.breaker < 50*24) parts.push(['Treaty breaker', -Math.round(25*(1 - (S.hour - N.breaker)/(50*24)))]);
   if (score(b) > 1.5*score(a) && score(b) > 40) parts.push(['Fears its power', -15]);
   return parts;
@@ -1297,7 +1299,8 @@ function acceptOffer(ai, from, kind){
   if (kind === 'nap') return op >= (wars.length ? -20 : 0) ? {ok:true, why:`opinion ${Math.round(op)}`} : {ok:false, why:`opinion ${Math.round(op)}, needs ${wars.length ? -20 : 0}`};
   if (kind === 'pass') return op >= 25 ? {ok:true, why:`opinion ${Math.round(op)}`} : {ok:false, why:`opinion ${Math.round(op)}, needs 25`};
   if (kind === 'ally'){
-    if (alliesOf(ai).length >= 2 || alliesOf(from).length >= 2) return {ok:false, why:'too many allies'};
+    if (alliesOf(ai).length >= 3 || alliesOf(from).length >= 3) return {ok:false, why:'too many allies'};
+    { const Ba = blocOf(ai), Bf = blocOf(from); if (Ba !== Bf && (Ba ? Ba.members.length : 1) + (Bf ? Bf.members.length : 1) > 4) return {ok:false, why:'their coalition is full (4 members)'}; }
     const common = S.nations.some(c => c.alive && c.id !== ai && c.id !== from && atWar(ai, c.id) && atWar(from, c.id));
     if (!common) return {ok:false, why:'no common enemy'};
     if (score(from) > 2*score(ai)) return {ok:false, why:'they fear your size'};
@@ -1307,8 +1310,14 @@ function acceptOffer(ai, from, kind){
 }
 const tribute = m => Math.round(Math.max(100, 0.15*S.nations[PLAYER].cash + 3*G.P.filter(P => S.owner[P.id] === m).length)/10)*10;
 const tributeOk = m => atWar(m, PLAYER) && (S.hour - rel(m, PLAYER).since)/24 >= 2 && natPower(m) < 2.5*Math.max(1, natPower(PLAYER));
+// provinces each side holds of the other's home land: these change hands for good when peace is signed
+function warTerms(a, b){ const toA = [], toB = []; for (const P of G.P){ if (P.sea) continue; if (S.home[P.id] === b && S.owner[P.id] === a) toA.push(P.id); else if (S.home[P.id] === a && S.owner[P.id] === b) toB.push(P.id); } return {toA, toB}; }
+function cede(list, to){ for (const p of list){ S.home[p] = to; if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = Math.min(unrestOf(p), 10); } if (list.length) geoDirty = true; }
+const termsText = (a, b, T) => { const nm = id => G.P[id].cityName || G.P[id].name, part = (lst, from, to) => lst.length ? `${S.nations[from].name} cedes ${lst.slice(0, 3).map(nm).join(', ')}${lst.length > 3 ? ` and ${lst.length - 3} more` : ''} to ${to === PLAYER ? 'you' : S.nations[to].name}` : '';
+  return [part(T.toA, b, a), part(T.toB, a, b)].filter(Boolean).join('; ') || 'No land changes hands'; };
 function applyDeal(a, b, kind){
-  if (kind === 'peace'){ setRel(a, b, 'truce', 10); if (a === PLAYER || b === PLAYER) (S.tut || (S.tut = {})).survived = true; }
+  if (kind === 'peace'){ const T = warTerms(a, b); setRel(a, b, 'truce', 10); cede(T.toA, a); cede(T.toB, b); if (a === PLAYER || b === PLAYER) (S.tut || (S.tut = {})).survived = true;
+    if (T.toA.length + T.toB.length && (a === PLAYER || b === PLAYER || borders(PLAYER, a) || borders(PLAYER, b))) log(`Peace conference between ${S.nations[a].name} and ${S.nations[b].name}: ${termsText(a, b, T)}.`, a === PLAYER || b === PLAYER ? 'good' : '', null); }
   else if (kind === 'nap') setRel(a, b, 'nap', 20);
   else if (kind === 'pass') setRel(a, b, 'pass');
   else if (kind === 'ally') setRel(a, b, 'ally');
@@ -1328,6 +1337,37 @@ function diploHour(){
     if (r.st === 'truce'){ r.st = 'peace'; r.until = null; r.since = S.hour; r.afterTruce = true; } else if (r.st === 'nap'){ r.st = 'peace'; r.until = null; r.since = S.hour; const [x, y] = k.split(',').map(Number); if (x === PLAYER || y === PLAYER) log(`Your non-aggression pact with ${S.nations[x === PLAYER ? y : x].name} has expired.`, 'info', null); } }
   S.offers = S.offers.filter(o => o.exp > S.hour && S.nations[o.from].alive);
 }
+const BLOC_NAMES = ['Northern Compact', 'Meridian Accord', 'Atlantic Concord', 'Eastern Covenant', 'Southern League', 'Pacific Charter', 'Continental Pact', 'Iron Concord'];
+// coalitions: groups of 2+ powers linked by alliances, led by the strongest member, with a common enemy
+function blocs(){ const seen = new Set(), out = [];
+  for (const N of S.nations){ if (!N.alive || seen.has(N.id) || !alliesOf(N.id).length) continue; const comp = [N.id]; seen.add(N.id);
+    for (let i = 0; i < comp.length; i++) for (const m of alliesOf(comp[i])) if (!seen.has(m)){ seen.add(m); comp.push(m); }
+    if (comp.length >= 2) out.push(comp.sort((a, b) => a - b)); }
+  const reg = S.blocReg || (S.blocReg = {});
+  return out.map(m => { const leader = m.slice().sort((a, b) => score(b) - score(a))[0];
+    let id = Object.keys(reg).find(k => reg[k].members.some(x => m.includes(x)) && !out.some(o => o !== m && reg[k].members.every(x => o.includes(x))));
+    if (!id){ const used = new Set(Object.values(reg).map(r => r.name)); id = 'b' + (Object.keys(reg).length + 1); reg[id] = {name:BLOC_NAMES.find(nm => !used.has(nm)) || `Coalition ${Object.keys(reg).length + 1}`}; if (m.includes(PLAYER) || S.hour > 0) log(`${m.map(x => S.nations[x].name).join(', ')} form the ${reg[id].name}.`, m.includes(PLAYER) ? 'good' : 'info', null); }
+    reg[id].members = m; reg[id].leader = leader; return {id, name:reg[id].name, members:m, leader, focus:reg[id].focus ?? null}; }); }
+const blocOf = n => blocs().find(b => b.members.includes(n)) || null;
+function blocDay(){ const reg = S.blocReg || (S.blocReg = {}), day = Math.floor(S.hour/24);
+  for (const B of blocs()){ const R = reg[B.id];
+    // the leader names a common enemy: the power at war with most members, else the weakest bordering rival
+    const cnt = new Map(); for (const m of B.members) for (const e of warsOf(m)) if (!B.members.includes(e)) cnt.set(e, (cnt.get(e) || 0) + 1);
+    let focus = [...cnt.entries()].sort((x, y) => y[1] - x[1] || natPower(x[0]) - natPower(y[0]))[0]?.[0] ?? null;
+    if (focus !== R.focus){ R.focus = focus; if (focus != null && B.members.includes(PLAYER)) log(`The ${B.name} names ${S.nations[focus].name} as its common enemy.`, 'info', S.nations[focus].capital); }
+    if (focus == null) continue;
+    for (const m of B.members){ if (m === PLAYER || atWar(m, focus) || S.decl.some(d => d.by === m && d.to === focus) || ['truce', 'nap', 'ally'].includes(rel(m, focus).st) || rng() > 0.25) continue; declareWar(m, focus); }
+    // the AI leader asks you for a coordinated offensive
+    if (B.members.includes(PLAYER) && B.leader !== PLAYER && (!S.req || S.req.until < S.hour) && (!R.lastReq || day - R.lastReq >= 4) && atWar(PLAYER, focus)){
+      const near = G.P.filter(P => !P.sea && S.owner[P.id] === focus && P.nbs.some(v => S.owner[v] === PLAYER)).sort((x, y) => (y.city ? 1 : 0) - (x.city ? 1 : 0));
+      if (near.length){ const tP = near[0]; R.lastReq = day; S.req = {from:B.leader, p:tP.id, until:S.hour + 48, bloc:B.id};
+        log(`${S.nations[B.leader].name} asks you to attack ${tP.cityName || tP.name} within 48 h as part of a ${B.name} offensive. Reward: $150M and goodwill.`, 'info', tP.id); } } }
+  if (S.req && S.hour >= S.req.until){ const q = S.req; S.req = null; if (S.nations[q.from].alive){ addMem(q.from, PLAYER, -10); log(`You did not join the offensive on ${G.P[q.p].cityName || G.P[q.p].name}: ${S.nations[q.from].name} is disappointed.`, 'bad', null); } }
+}
+function reqHour(){ const q = S.req; if (!q) return;
+  const fought = S.battles.includes(q.p) && S.armies.some(a => a.owner === PLAYER && a.at === q.p);
+  if (S.owner[q.p] === PLAYER || fought){ S.req = null; S.nations[PLAYER].cash += 150; const B = blocOf(PLAYER); for (const m of (B ? B.members : [q.from])) if (m !== PLAYER) addMem(m, PLAYER, 10);
+    log(`Offensive on ${G.P[q.p].cityName || G.P[q.p].name} joined: $150M from ${S.nations[q.from].name}, and your coalition partners trust you more.`, 'good', q.p); } }
 function diploDay(){
   for (const a in S.mem) for (const b in S.mem[a]){ const v = S.mem[a][b]; S.mem[a][b] = v > 0 ? Math.max(0, v - 1) : Math.min(0, v + 1); }
   // treaties and shared wars build trust between AIs over time
@@ -1335,6 +1375,7 @@ function diploDay(){
     const r = rel(A.id, B.id).st; let d = 0; if (r === 'nap' || r === 'pass') d += 2; if (r === 'ally') d += 2;
     if (S.nations.some(c => c.alive && c.id !== A.id && c.id !== B.id && atWar(A.id, c.id) && atWar(B.id, c.id))) d += 3;
     if (d) addMem(A.id, B.id, Math.min(d, 60 - mem(A.id, B.id) > 0 ? d : 0)); } }
+  blocDay();
   const day = S.hour/24;
   for (const N of S.nations){ if (!N.ai || !N.alive) continue; const n = N.id, wars = warsOf(n);
     // peace with the weakest enemy when stretched, or after a long war
@@ -1356,7 +1397,7 @@ function diploDay(){
     // treaties
     if (rng() < 0.12){ const nbs = S.nations.filter(M => M.alive && M.id !== n && borders(n, M.id) && rel(n, M.id).st === 'peace' && opinion(n, M.id) >= 0);
       const M = nbs[Math.floor(rng()*nbs.length)]; if (M){ if (M.id === PLAYER) offerPlayer(n, 'nap'); else if (acceptOffer(M.id, n, 'nap').ok) applyDeal(n, M.id, 'nap'); } }
-    if (rng() < 0.06 && alliesOf(n).length < 2){ const c = S.nations.filter(M => M.alive && M.id !== n && rel(n, M.id).st !== 'ally' && !atWar(n, M.id) && opinion(n, M.id) >= 35 && acceptOffer(n, M.id, 'ally').ok);
+    if (rng() < 0.07 && alliesOf(n).length < 3){ const c = S.nations.filter(M => M.alive && M.id !== n && rel(n, M.id).st !== 'ally' && !atWar(n, M.id) && opinion(n, M.id) >= 35 && acceptOffer(n, M.id, 'ally').ok);
       const M = c[0]; if (M){ if (M.id === PLAYER) offerPlayer(n, 'ally'); else if (acceptOffer(M.id, n, 'ally').ok) applyDeal(n, M.id, 'ally'); } }
   }
 }
@@ -1708,7 +1749,7 @@ function tick(){
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
-  diploHour();
+  diploHour(); reqHour();
   airTick();
   missileTick();
   spyHour();
@@ -1894,8 +1935,10 @@ function checkEnd(){
   const mine = S.owner.filter(o => o === PLAYER).length;
   if (!S.nations[PLAYER].alive) S.over = 'lose';
   else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= landNeed(PLAYER) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
+  else if ((B => B && (B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0) >= Math.ceil(landNeed(PLAYER)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(PLAYER))){ S.over = 'win'; S.overReason = 'coalition'; }
   else if (S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
-  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (S.owner.filter(o => o === n.id).length >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; } }
+  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (S.owner.filter(o => o === n.id).length >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
+    else { const RB = blocs().find(B => !B.members.includes(PLAYER) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3)); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
   if (S.over){ setSpeed(0); save(); showEnd(); }
 }
 let lastRes = null;
@@ -1995,6 +2038,7 @@ function aiFleet(a, n){
       if (G.P[v].nbs.some(x => !G.P[x].sea && S.owner[x] >= 0 && atWar(n, S.owner[x]))){ best = v; break; } } }
   if (best >= 0 && best !== a.at) a.path = pathFor(a, a.at, best);
 }
+const focusOf = n => { const R = S.blocReg && Object.values(S.blocReg).find(R => R.members && R.members.includes(n)); return R ? R.focus : null; };
 function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
   if (!N.research){
@@ -2056,7 +2100,7 @@ function aiTurn(n){
         if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
         if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
         if (pw < defPower(v, n)*1.3 + 4) continue;
-        let val = G.P[v].city ? 3 : 1; if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
+        let val = (G.P[v].city ? 3 : 1)*(S.owner[v] >= 0 && focusOf(n) === S.owner[v] ? 1.8 : 1); if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
         if (S.owner[v] >= 0 && atWar(n, S.owner[v])) val *= 1.6;
         const sc = val/(1 + (du + step)*0.7); if (sc > bestScore){ bestScore = sc; best = v; } } }
     if (best < 0) continue;
@@ -2844,7 +2888,7 @@ function settingsHTML(){
 }
 function diploHTML(){
   const me = PLAYER, myP = natPower(me);
-  const offers = S.offers.map(o => `<div class="offer"><span><b style="color:${S.nations[o.from].color}">${S.nations[o.from].name}</b> proposes ${{peace:'peace (10-day truce)', nap:'a non-aggression pact', pass:'right of passage', ally:'an alliance'}[o.kind]}. Expires in ${o.exp - S.hour} h.</span><button class="btn primary" data-act="offer-yes" data-id="${o.id}">Accept</button><button class="btn" data-act="offer-no" data-id="${o.id}">Decline</button></div>`).join('');
+  const offers = S.offers.map(o => `<div class="offer"><span><b style="color:${S.nations[o.from].color}">${S.nations[o.from].name}</b> proposes ${{peace:'peace (10-day truce)', nap:'a non-aggression pact', pass:'right of passage', ally:'an alliance'}[o.kind]}${o.kind === 'peace' ? `. Terms: ${termsText(PLAYER, o.from, warTerms(PLAYER, o.from))}` : ''}. Expires in ${o.exp - S.hour} h.</span><button class="btn primary" data-act="offer-yes" data-id="${o.id}">Accept</button><button class="btn" data-act="offer-no" data-id="${o.id}">Decline</button></div>`).join('');
   const incoming = S.decl.filter(d => d.to === me).map(d => `<div class="offer" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)"><span><b>${S.nations[d.by].name}</b> has declared war on you. Fighting starts in ${d.at - S.hour} h.</span></div>`).join('');
   const rows = S.nations.filter(N => N.id !== me && N.alive).map(N => {
     const r = rel(me, N.id), op = opinion(N.id, me), parts = opinionParts(N.id, me), pend = S.decl.find(d => (d.by === me && d.to === N.id) || (d.by === N.id && d.to === me));
@@ -2882,7 +2926,7 @@ function diploHTML(){
   return `<div class="rhead"><div><div class="eyebrow">${S.nations[me].name} · Foreign affairs</div><h1>Diplomacy</h1></div>
     <button class="btn" data-act="relmode">${relMode ? 'Hide' : 'Show'} relations on map</button></div>
     <p class="small muted">Powers at peace cannot enter each other's land. War starts 24 hours after a declaration. Independent countries can always be attacked. Hover an opinion bar for the reasons; buttons marked ✕ would likely be refused.</p>
-    ${incoming}${offers}<div class="dip">${rowsHTML}</div>
+    ${incoming}${offers}${(BL => BL.length ? `<div class="eyebrow" style="margin-top:6px">Coalitions</div><div class="blocs">${BL.map(B => `<div class="bloc${B.members.includes(me) ? ' mine' : ''}"><b>${B.name}</b><span>${B.members.map(m => `<i style="background:${S.nations[m].color}"></i>${S.nations[m].name}${m === B.leader ? ' ★' : ''}`).join(' ')}</span><span class="small muted">${B.focus != null ? `Common enemy: ${S.nations[B.focus].name}` : 'No common enemy yet'} · ${B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0)} provinces · ${B.members.reduce((s0, m) => s0 + capsHeld(m), 0)} capitals</span></div>`).join('')}</div><p class="small muted">A coalition wins together by holding ${WIN_CAPS + 3} starting capitals or ${Math.ceil(landNeed(me)*1.8)} provinces. Peace treaties hand every province a side occupies to it for good.</p>` : '')(blocs())}<div class="dip">${rowsHTML}</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
 function researchLine(){
@@ -2924,7 +2968,8 @@ function ctxHTML(){
   if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return sel.group.length > 1 ? groupHTML() : a.air ? wingHTML(a) : armyHTML(a); }
   if (sel.prov !== null) return provHTML(sel.prov);
   const N = S.nations[PLAYER], mine = S.armies.filter(a => a.owner === PLAYER);
-  return `<div class="eyebrow">Command</div><h2>${N.name}</h2>
+  const RQ = S.req && S.req.until > S.hour ? `<div class="status move" style="border-left-color:var(--accent)"><b>Coalition request</b>: ${S.nations[S.req.from].name} asks you to attack <b>${G.P[S.req.p].cityName || G.P[S.req.p].name}</b> within ${S.req.until - S.hour} h. Reward $150M. <button class="btn" data-act="goto" data-id="${S.req.p}" style="padding:2px 7px;font-size:12px">Show</button></div>` : '';
+  return `<div class="eyebrow">Command</div><h2>${N.name}</h2>${RQ}
     <div class="sub"><span class="sw" style="background:${N.color};vertical-align:-1px"></span> Your nation · Capital: ${G.P[N.capital].cityName || G.P[N.capital].name} <button class="btn" data-act="home" style="padding:2px 7px;font-size:12px;margin-left:4px">Show me</button></div>
     ${checklist()}
     ${researchLine()}
@@ -3271,7 +3316,7 @@ function showEnd(){
   const win = S.over === 'win', mine = S.owner.filter(o => o === PLAYER).length;
   openModal(`<div class="eyebrow">${clockStr(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1>
     <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} grew the most (+${growth(PLAYER)} score).` : `${S.nations[PLAYER].name} grew ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, behind the leader.`}` : ''}
-    ${S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
+    ${S.overReason === 'coalition' ? `Your coalition${blocOf(PLAYER) ? `, the ${blocOf(PLAYER).name},` : ''} dominates the world together.` : S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
     ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? (N0 => { const short = [['mp', 20, 'manpower'], ['metal', 15, 'metal'], ['oil', 10, 'oil'], ['food', 10, 'food']].find(([k, lim]) => N0[k] < lim); return short ? ` You had $${fmt(N0.cash)}M but ran out of ${short[2]}: build ${short[0] === 'mp' ? 'Recruiting Offices' : short[0] === 'metal' ? 'Foundries' : short[0] === 'oil' ? 'Refineries' : 'Farms'} early and capture provinces that produce it.` : ` You had $${fmt(N0.cash)}M unspent: next time, turn money into troops and research early.`; })(S.nations[PLAYER]) : ''}</p>
     ${(() => { const st0 = S.stats || {}; return `<div class="statgrid">${[['Days', dayOf(S.hour)], ['Provinces taken', st0.taken || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Units lost', st0.unitsLost || 0], ['Peak army', st0.peakArmy || 0], ['Best rank', st0.bestRank ? '#' + st0.bestRank : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>${st0.bigBattle ? `<p class="small muted">Biggest battle: ${st0.bigBattle} units at ${st0.bigBattleAt} on day ${st0.bigBattleDay}.</p>` : ''}${chartSVG(0, 'Score over the campaign')}`; })()}
     <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="stats-open">Full statistics</button><button class="btn" data-act="resume">View the map</button></div>`, 'end');
