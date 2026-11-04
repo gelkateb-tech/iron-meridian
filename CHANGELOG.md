@@ -269,3 +269,9 @@
   - When a power formally declares war on you, you can strike first at any time.
   - AI powers with a big advantage and a grudge sometimes launch surprise attacks too.
 - Relation names follow the genre's terms: Right of Way (passage), Shared Intel alliance, Ceasefire (truce).
+
+## Round 37 — Ranged fire, right-click orders, pursuit
+- Ranged artillery: idle forces with Hammer Batteries automatically shell enemy forces in neighbouring provinces every hour, without moving in or taking return fire, as ranged units do in the genre. You see shells arc across the border, rolled-up damage numbers on the target and a dispatch. The force panel has Fire at will / Hold fire controls, and AI artillery shells your border stacks too. Bombardment deals roughly a quarter of a full assault's damage, is reduced by fortifications, and trains Artillerist commanders.
+- Right-click orders (desktop): with a force selected, right-click a province to move or attack at once, or right-click an enemy force to pursue it. Left-click still plans a route first, and a second click sends it.
+- Attack an enemy force: click an enemy counter with your force selected and your force pursues it, re-routing every hour as it moves ("Pursuing France 2nd Armored Division").
+- Fixed "from 1 directions" in the coordinated-assault dispatch.

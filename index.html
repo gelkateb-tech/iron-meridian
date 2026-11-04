@@ -2044,6 +2044,7 @@ function tick(){
     if (into){ merge(into, a); if (sel.army === a.id){ sel.army = into.id; } if (sel.group) sel.group = sel.group.map(id => id === a.id ? into.id : id); }
   }
   if (S.hour % 2 === 0) stanceHour();
+  rangedHour(); chaseHour();
   // combat
   if (S.hour - supHour >= 6 || !SUP){ computeSupply(); computeBlockade(); }
   const prevBattles = new Set(S.battles); S.battles = [];
@@ -2159,6 +2160,26 @@ function reportHTML(R){
     <p class="small muted">Tip: only ${R.front} units fit on this front. Attacking from several neighbouring provinces widens the front by half per extra direction and adds 15% attack each.</p>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="goto" data-id="${R.p}">Show on map</button></div>`;
 }
+function rangedHour(){
+  for (const a of S.armies){ if (a.owner < 0 || !a.u.art || a.air || a.fly || a.to !== null || G.P[a.at].sea || S.battles.includes(a.at) || a.fire === 'hold') continue;
+    let best = -1, bp = 0; for (const v of G.P[a.at].nbs){ if (G.P[v].sea) continue; const foes = stationaryAt(v).filter(b => b.owner >= 0 && atWar(a.owner, b.owner)); const pw = foes.reduce((s0, b) => s0 + power(b), 0); if (pw > bp){ bp = pw; best = v; } }
+    if (best < 0) continue;
+    const foes = stationaryAt(best).filter(b => b.owner >= 0 && atWar(a.owner, b.owner)), tot = foes.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
+    const av = {soft:0, armored:0, air:0, naval:0}, base = a.u.art*st(a.owner, 'art', 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4);
+    for (const k of CLASSES) av[k] = base*mult('art', k);
+    for (const b of foes){ const h0 = effHP(b), u0 = count(b); hurt(b, av, (b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort) : 1)/tot); const lost = Math.max(0, h0 - effHP(b));
+      if (lost >= 0.5 && booted && (a.owner === PLAYER || b.owner === PLAYER || visibleSet().has(best))) fx('dmg', best, {owner:b.owner, val:lost, text:`−${Math.round(lost)}`, color:b.owner === PLAYER ? '#ff8f86' : shade(colorOf(b.owner), 0.35)});
+      if (u0 - count(b) > 0 && (a.owner === PLAYER || b.owner === PLAYER)) bump(a.owner === PLAYER ? 'unitsKilled' : 'unitsLost', u0 - count(b)); }
+    cmdXP(a, base*0.4);
+    if (booted && (a.owner === PLAYER || visibleSet().has(a.at))){ const A = G.P[a.at], B = G.P[best]; for (let i = 0; i < Math.min(4, a.u.art); i++) setTimeout(() => shoot('shell', [A.x + (Math.random() - 0.5)*6, A.y], [B.x + (Math.random() - 0.5)*14, B.y + (Math.random() - 0.5)*8], {dur:1000, arc:50, big:1.1}), i*180); }
+    if (!a.lastFireLog || S.hour - a.lastFireLog > 12){ a.lastFireLog = S.hour; if (a.owner === PLAYER) log(`${armyName(a)} is shelling enemy forces in ${G.P[best].cityName || G.P[best].name}.`, 'info', best); }
+  }
+  removeEmpty(); }
+function chaseHour(){ for (const a of S.armies){ if (a.chase == null) continue; const e = armyById(a.chase);
+    if (!e || !count(e) || !atWar(a.owner, e.owner) && !(sel.surprise && a.owner === PLAYER)){ a.chase = null; continue; }
+    const dest = e.to ?? e.at, last = a.path.length ? a.path[a.path.length - 1] : a.to;
+    if ((a.at === e.at && a.to === null) || dest === last) continue;
+    const pth = pathFor(a, a.to ?? a.at, dest); if (pth.length) a.path = pth; } }
 function hurt(a, d, f){
   // d: damage per defender class for the whole side; each unit type takes its HP share of its class's value
   for (const t of UT){ const n = a.u[t]; if (!n) continue;
@@ -2343,7 +2364,7 @@ function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = ne
   const atStage = S.armies.filter(a => a.owner === n && !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a));
   const massed = atStage.reduce((s0, a) => s0 + power(a), 0), need = defPower(plan.tgt, n)*1.5 + 10;
   if (massed >= need){ for (const a of atStage){ orderMove(a, plan.tgt); used.add(a); } plan.launched = S.hour;
-    if (S.owner[plan.tgt] === PLAYER) log(`${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${new Set(atStage.map(a => a.at)).size} directions!`, 'bad', plan.tgt);
+    if (S.owner[plan.tgt] === PLAYER) log(`${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${(n0 => n0 + (n0 === 1 ? ' direction' : ' directions'))(new Set(atStage.map(a => a.at)).size)}!`, 'bad', plan.tgt);
     return used; }
   let i = 0; for (const a of idle){ if (used.has(a) || stage.includes(a.at) || power(a) < 14 || (a.at === N.capital && threatNear(a.at, n))) continue;
     const st = stage[i++ % stage.length], d = hexDist(G.P[a.at].cc, G.P[st].cc); if (d > 14) continue;
@@ -2949,6 +2970,9 @@ function endPointer(e){
   pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) drag = null;
 }
 cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('contextmenu', e => { e.preventDefault(); if (sel.army === null) return; const [x, y] = localXY(e), a = armyById(sel.army); if (!a) return;
+  for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
+  const p = provAt(x, y); if (p < 0) return; if (a.to === null && p === a.at && !a.air) return; setTarget(a, p); if ((a.air && airCheck(a, p).ok) || (targetPath && targetPath.length)) sendToTarget(a); renderSide(true); });
 cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag = null; pinch = null; });
 cv.addEventListener('pointerleave', () => { hoverProv = -1; hoverPath = null; mouse = null; tipHide(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = localXY(e); zoomAt(Math.exp(-e.deltaY*0.0015), x, y); tipHide(); }, {passive:false});
@@ -2972,6 +2996,8 @@ function tap(x, y, shift = false){
         } else selectArmy(own[0].id, shift);
         return;
       }
+      const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0);
+      if (foe && sel.army !== null){ const a = armyById(sel.army); if (a && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; renderSide(true); return; } }
       break;
     } }
   const p = provAt(x, y);
@@ -3008,7 +3034,7 @@ function setRally(city, p){
   else { S.rally[city] = p; toast(`New units from ${G.P[city].cityName} will march to ${G.P[p].cityName || G.P[p].name}.`, 'info', p); }
   sel.prov = city; renderSide(true);
 }
-function setTarget(a, p){ sel.target = p; sel.surprise = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
+function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
@@ -3049,7 +3075,8 @@ function armiesHTML(){
     <div class="tblwrap"><table class="ptab"><thead><tr><th>Force</th><th>Units</th><th>Health</th><th>Status</th><th>Stance</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="muted">You have no forces.</td></tr>'}</tbody></table></div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${idle ? '<button class="btn" data-act="next-idle">Next idle force</button>' : ''}</div>`;
 }
-function sendToTarget(a){ if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a); }); return; }
+function sendToTarget(a){ if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }
+  if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a); }); return; }
   if (sel.target !== null){ const g = groupArmies(); let ok = 0; for (const x of g){ if (x.air){ if (orderAir(x, sel.target)) ok++; } else { orderMove(x, sel.target); if (x.path.length || x.to !== null) ok++; } } if (ok) sfx('order'); if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); } sel.target = null; targetPath = null; renderSide(true); }
 function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
@@ -3226,7 +3253,7 @@ function settingsHTML(){
     <div class="row">${opt('motion', 'full', 'Full motion')}${opt('motion', 'reduced', 'Reduced motion (no shake, fewer particles)')}</div>
     <div class="eyebrow">Save slots</div><div class="slots">${[1, 2, 3].map(i => { const m = slotMeta(i); return `<div class="slot"><span><b>Slot ${i}</b> <span class="small muted">${m ? `${m.name} · ${m.date} · ${m.scn}` : 'Empty'}</span></span><button class="btn" data-act="slot-save" data-v="${i}" ${S && S.started && !S.over ? '' : 'disabled'}>Save</button><button class="btn" data-act="slot-load" data-v="${i}" ${m ? '' : 'disabled'}>Load</button></div>`; }).join('')}</div>
     <div class="eyebrow">Daily newspaper</div><div class="row">${opt('paper', true, 'Show at dawn')}${opt('paper', false, 'Only in Dispatches')}</div>
-    <p class="small muted">Keys: Space pause · 1–4 speed · P production · R research · D diplomacy · S statistics · N newspaper · O settings · V map mode · M sound · H home · Ctrl+4…9 save group.</p>
+    <p class="small muted">Mouse: left-click selects, a second click on the same target sends; right-click with a force selected moves or attacks at once; click an enemy force to pursue it. Keys: Space pause · 1–4 speed · P production · R research · D diplomacy · S statistics · N newspaper · O settings · V map mode · M sound · H home · Ctrl+4…9 save group.</p>
     <div class="row"><button class="btn primary" data-act="resume">Done</button><button class="btn" data-act="tut-start">Replay tutorial</button></div>`;
 }
 function diploHTML(){
@@ -3466,6 +3493,8 @@ function armyHTML(a){
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
     ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div><button class="btn" data-act="cmd-off" style="padding:2px 7px;font-size:12px">Relieve</button></div>`
       : (free => `<div class="row" style="align-items:center"><span class="small muted">Commander</span>${free.length ? free.map(f => `<button class="btn" data-act="cmd-on" data-id="${f.id}" title="${TRAITS[f.trait].desc}" style="padding:3px 8px;font-size:12px">${TRAITS[f.trait].icon} ${f.name}</button>`).join('') : ''}${cmdList(PLAYER).length < CMD_MAX ? `<button class="btn" data-act="cmd-new" ${S.nations[PLAYER].cash >= CMD_COST ? '' : 'disabled'} style="padding:3px 8px;font-size:12px" title="Appoint a new commander with a random trait (max ${CMD_MAX})">Appoint · $${CMD_COST}M</button>` : ''}</div>`)(cmdList(PLAYER).filter(f => f.army == null)))(cmdOf(a))}
+    ${a.u.art ? `<div class="row" style="align-items:center"><span class="small muted">Artillery</span><button class="btn ${a.fire !== 'hold' ? 'primary' : ''}" data-act="fire" data-v="free" style="padding:3px 9px;font-size:12px" title="Shell enemy forces in neighbouring provinces every hour">Fire at will</button><button class="btn ${a.fire === 'hold' ? 'primary' : ''}" data-act="fire" data-v="hold" style="padding:3px 9px;font-size:12px">Hold fire</button></div>` : ''}
+    ${a.chase != null && armyById(a.chase) ? `<div class="status move">Pursuing ${armyLabel(armyById(a.chase))}</div>` : ''}
     ${a.air || shipsOnly(a) ? '' : `<div class="row" style="align-items:center"><span class="small muted">Stance</span>${Object.entries(STANCES).map(([k, v]) => `<button class="btn ${(a.stance || 'hold') === k ? 'primary' : ''}" data-act="stance-set" data-k="${k}" title="${v[1]}" style="padding:3px 9px;font-size:12px">${v[0]}</button>`).join('')}</div>`}
     <div class="row">
       ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE} hexes away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
@@ -3579,6 +3608,7 @@ document.addEventListener('click', e => {
     case 'slot-load': { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY(+b.dataset.v))); if (d && restore(d)){ applyPalette(); geoDirty = true; save(); closeModal(); clearSel(); goHome(); toast(`Loaded slot ${b.dataset.v}: ${S.nations[PLAYER].name}, ${clockStr(S.hour)}.`, 'good', null); } else toast('That save could not be loaded.', 'bad', null); } catch (e) { toast('That save could not be loaded.', 'bad', null); } break; }
     case 'surprise-go': { const ps = pendingSurprise; pendingSurprise = null; closeModal(); if (ps) ps.go(); renderSide(true); break; }
     case 'surprise-cancel': pendingSurprise = null; closeModal(); if (sel.army !== null){ sel.target = null; targetPath = null; sel.surprise = null; } renderSide(true); break;
+    case 'fire': if (a){ a.fire = b.dataset.v; renderSide(true); } break;
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
