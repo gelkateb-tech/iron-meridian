@@ -82,6 +82,10 @@ main{min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 336px; gap:
 #cmdbar .cb i{font-style:normal; font-size:17px; line-height:18px} #cmdbar .cb kbd{font:500 9px var(--mono,monospace); opacity:.55}
 #cmdbar .sep{width:1px; background:rgba(255,255,255,.12); margin:4px 2px}
 #map.aiming{cursor:crosshair}
+#chooser{position:absolute; z-index:7; min-width:210px; max-width:280px; padding:8px; border-radius:8px; background:rgba(14,20,23,.97); border:1px solid rgba(255,255,255,.16); box-shadow:0 10px 30px rgba(0,0,0,.55); display:flex; flex-direction:column; gap:4px}
+#chooser .ct{font:600 11px var(--mono,monospace); letter-spacing:.06em; text-transform:uppercase; opacity:.6; padding:0 4px 2px}
+#chooser button{display:flex; align-items:center; gap:8px; text-align:left; padding:7px 9px; border-radius:6px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:var(--ink,#e8e4d8); font:500 13px var(--body,sans-serif); cursor:pointer}
+#chooser button:hover{background:rgba(226,162,61,.16); border-color:var(--accent)} #chooser button i{font-style:normal; width:18px; text-align:center} #chooser button span.small{margin-left:auto; opacity:.7}
 #mapwrap:has(#cmdbar:not([hidden])) #hint{bottom:88px}
 @media (max-width:820px){ #mapwrap:has(#cmdbar:not([hidden])) #hint{bottom:auto} #cmdbar{bottom:44px; gap:2px; padding:4px; max-width:calc(100% - 16px); overflow-x:auto} #cmdbar .cb{min-width:46px; font-size:9.5px} #cmdbar .cb kbd{display:none} }
 #mini{position:absolute; right:10px; bottom:10px; width:240px; height:126px; border:1px solid var(--line); border-radius:4px; background:#05090b; cursor:pointer; touch-action:none; box-shadow:0 6px 20px rgba(0,0,0,.5)}
@@ -369,6 +373,7 @@ details.more summary::-webkit-details-marker{display:none}
       <canvas id="map" aria-label="World map"></canvas>
       <div id="hint"></div>
       <div id="cmdbar" hidden></div>
+      <div id="chooser" hidden role="dialog" aria-label="Select city or troops"></div>
       <div id="tip" hidden></div>
       <div id="toasts" aria-live="polite"></div>
       <div id="tut" hidden></div>
@@ -3041,8 +3046,8 @@ cv.addEventListener('pointermove', e => {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, {x, y});
   if (pinch && pointers.size === 2){ const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zoomAt(pinch.s*(d/pinch.d)/view.s, (a.x + b.x)/2, (a.y + b.y)/2); return; }
   if (boxSel){ boxSel.x1 = x; boxSel.y1 = y; showBox(); return; }
-  if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > 6) drag.moved = true; if (drag.moved){ view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
-  if (e.pointerType === 'mouse'){ mouse = {x, y}; const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
+  if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > 6) drag.moved = true; if (drag.moved){ closeChooser(); view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
+  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
 });
 function endPointer(e){
   const [x, y] = localXY(e);
@@ -3064,7 +3069,19 @@ mini.addEventListener('pointerdown', e => { miniDrag = true; mini.setPointerCapt
 mini.addEventListener('pointermove', e => { if (miniDrag) miniJump(e); });
 mini.addEventListener('pointerup', () => { miniDrag = false; });
 
+// clicking a city where your troops stand asks what you meant: the city or one of the forces
+function closeChooser(){ const el = $('chooser'); if (el && !el.hidden){ el.hidden = true; el.innerHTML = ''; } }
+function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a => a.owner === PLAYER), el = $('chooser'); if (!el) return false;
+  const nm = P.cityName || P.name;
+  el.innerHTML = `<div class="ct">${nm}</div><button data-act="choose-prov" data-id="${p}"><i>🏙</i>City · ${nm}<span class="small">${S.owner[p] === PLAYER ? 'recruit, build' : 'details'}</span></button>`
+    + own.map(a => `<button data-act="choose-army" data-id="${a.id}"><i>${a.air ? '✈' : shipsOnly(a) ? '⚓' : '⚔'}</i>${armyName(a)}<span class="small">${count(a)} units</span></button>`).join('');
+  el.hidden = false; tipHide(); const w = 240, h = 46 + own.length*38; el.style.left = Math.max(8, Math.min(cw - w - 8, x + 12)) + 'px'; el.style.top = Math.max(8, Math.min(ch - h - 8, y - 20)) + 'px'; return true; }
 function tap(x, y, shift = false){
+  closeChooser();
+  if (!cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null){
+    let p = -1; for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const a0 = h.ids.map(armyById).find(Boolean); if (a0 && !a0.fly && a0.to === null) p = a0.at; break; } }
+    if (p < 0) p = provAt(x, y);
+    if (p >= 0 && !G.P[p].sea && G.P[p].city && stationaryAt(p).some(a => a.owner === PLAYER) && openChooser(p, x, y)) return; }
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
       const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast('No route there.', 'bad', null); renderSide(true); } } return; }
@@ -3299,9 +3316,9 @@ let TUT = null;
 const TUT_STEPS = [
   {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b> (the star).`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Resources', d:() => 'Money, oil, metal, food and manpower are produced every day by your provinces. Units and buildings cost them; armies eat food and burn oil.', el:'#res', next:true},
-  {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
+  {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map, then choose <b>City</b> in the little menu.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Recruit', d:() => `In the panel ${innerWidth < 760 ? 'below the map' : 'on the right'}, tap a unit card (a Rifle Corps is cheap) to queue it. Units train over a day or two.`, el:'#ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
-  {t:'Select your army', d:() => 'Now tap the troops standing in your capital (the soldiers and their number badge).', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
+  {t:'Select your army', d:() => 'Now tap your capital again and choose one of your forces in the menu (or tap the soldiers and their number badge).', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
   {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
@@ -3708,6 +3725,8 @@ document.addEventListener('click', e => {
     case 'cm-attack': cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); break;
     case 'cm-delay': if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } break;
     case 'cm-stance': if (a){ const ks = Object.keys(STANCES); a.stance = ks[(ks.indexOf(a.stance || 'hold') + 1) % ks.length]; a.home = null; toast(`${armyName(a)}: ${STANCES[a.stance][0]}. ${STANCES[a.stance][1]}`, 'info', null); renderSide(true); } break;
+    case 'choose-prov': closeChooser(); selectProv(+b.dataset.id); break;
+    case 'choose-army': closeChooser(); selectArmy(+b.dataset.id); break;
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
@@ -3764,6 +3783,7 @@ document.addEventListener('keydown', e => { INCC.v = -1;
   else if (/^[4-9]$/.test(e.key)){ S.groups = S.groups || {};
     if (e.ctrlKey || e.metaKey){ e.preventDefault(); const g = groupArmies().map(a => a.id); if (sel.army !== null && g.length){ S.groups[e.key] = g; toast(`Group ${e.key} saved (${g.length} force${g.length > 1 ? 's' : ''}).`, 'info', null); } }
     else { const ids = (S.groups[e.key] || []).filter(id => armyById(id)); if (ids.length){ sel.prov = null; sel.target = null; sel.army = ids[0]; sel.group = ids.length > 1 ? ids : []; const [wx, wy] = armyPos(armyById(ids[0])); centerOn(wx, wy); renderSide(true); } } }
+  else if (e.key === 'Escape' && $('chooser') && !$('chooser').hidden){ closeChooser(); }
   else if (e.key === 'Escape' && cmdMode){ cmdMode = null; renderSide(true); }
   else if (e.key === 'Escape'){ if (!$('modal').hidden){ if (S && S.started && !S.over && modalKind !== 'picker-first') closeModal(); } else clearSel(); }
   else if (e.key === 'h' || e.key === 'H') goHome();

@@ -315,3 +315,7 @@
   - **Naval Yard**: a dock, slipway and a slowly swinging harbour crane.
   - **Under construction**: scaffolding that rises as work progresses, a slewing tower crane, a gold progress ring and drifting dust.
 - At night, building windows light up warm yellow.
+
+## Round 43 — City or troops?
+- Clicking a city where your forces stand (on the city or on its troops) opens a small menu at the click point: City (recruit, build, details) or any of the forces stationed there, each with its formation name and unit count. Pick one to select it; Esc, panning or clicking elsewhere closes the menu. Once a force is selected, clicks plan routes as before.
+- The tutorial's capital and army steps mention the menu.
