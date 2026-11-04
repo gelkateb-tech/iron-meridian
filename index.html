@@ -268,7 +268,7 @@ details.more summary::-webkit-details-marker{display:none}
   #resbtn, #dipbtn, #helpbtn{padding:5px 7px; font-size:12px}
   .long{display:none} .short{display:inline}
   .seg button{padding:5px 6px}
-  #hint{font-size:11.5px; padding:4px 8px; top:6px}
+  #hint{font-size:11.5px; padding:4px 8px; top:6px; bottom:auto}
 }
 @media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important} }
 </style>
@@ -379,8 +379,9 @@ const BUILD = {
 };
 const BK = Object.keys(BUILD);
 const ROMAN = ['', 'I', 'II', 'III'];
-let tab = 'cmd', seenLog = 0, showAllPowers = false;
-function setTab(t){ tab = t; document.querySelectorAll('[data-pane]').forEach(el => el.hidden = el.dataset.pane !== t); document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); if (t === 'log' && S) seenLog = S.log.length; const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
+let tab = 'cmd', seenLog = 0, showAllPowers = false, lockedOpen = false, seenHour = -1;
+document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('locked')) lockedOpen = e.target.open; }, true);
+function setTab(t){ tab = t; document.querySelectorAll('[data-pane]').forEach(el => el.hidden = el.dataset.pane !== t); document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); if (t === 'log' && S) seenHour = S.hour; const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
 const TECH = [
   {id:'inf1',  branch:'Infantry',  name:'Ceramic Body Armor',   cost:60,  days:3, req:null,    desc:'Infantry defense +1',                  fx:{inf:{def:1}}},
   {id:'inf2',  branch:'Infantry',  name:'Mechanized Infantry',  cost:110, days:5, req:'inf1',  desc:'Infantry attack +2 and speed +1',      fx:{inf:{atk:2, spd:1}, at:{atk:1}}},
@@ -573,8 +574,10 @@ function buildMini(){
 /* ---------------- State ---------------- */
 let G = null, S = null;
 const powerCountry = p => WORLD.countries.indexOf(p.country);
+function resetCaches(){ SUP = null; supHour = -1; BLOCK = new Set(); seenHour = -1; FX.length = 0; visCache = null; borderCache = null; lastRes = null; }
 function newGame(seed, pick){
   if (!G) G = loadWorld();
+  resetCaches();
   const order = [pick, ...POWERS.map((_, i) => i).filter(i => i !== pick)];
   const owner = G.P.map(p => p.sea ? SEA : NEUTRAL);
   const nations = order.map((pi, k) => {
@@ -605,6 +608,7 @@ function restore(data){
   if (!G) G = loadWorld();
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.speed = 0; S.started = true;
+  resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || [];
@@ -941,8 +945,8 @@ function armyUpkeep(prevBattles){
       for (const t of UT) if (a.u[t]) a.w[t] = Math.max(0, a.w[t] - a.u[t]*UNITS[t].hp*r/24);
       a.m += 2; if (here && prevBattles.has(a.at)) a.m += 10; }
     else { for (const t of UT){ if (!a.u[t]) continue; a.w[t] += a.u[t]*UNITS[t].hp*0.04/24; while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; } if (!a.u[t]) a.w[t] = 0; }
-      a.m -= 1; }
-    if (N.short && N.short.food) a.m -= 0.5;
+      if (a.m > 30) a.m = Math.max(30, a.m - 1); }
+    if (N.short && N.short.food && a.m > 30) a.m = Math.max(30, a.m - 0.5);
     a.m = Math.max(0, Math.min(100, a.m));
     // broken morale: retreat to the nearest supplied own province, or surrender
     const limit = here && S.owner[a.at] === a.owner && G.P[a.at].city ? 15 : 25;
@@ -953,7 +957,7 @@ function armyUpkeep(prevBattles){
           if (S.owner[v] === a.owner && SUP[a.owner] && SUP[a.owner][v] && !S.battles.includes(v)){ dest = v; break; } q.push([v, du + 1]); } }
       if (dest >= 0){ a.path = pathFor(a, a.at, dest); a.forced = true; a.retreating = true;
         if (a.owner === PLAYER) log(`Your force at ${G.P[a.at].name} broke and is retreating to ${G.P[dest].name}.`, 'bad', a.at); }
-      else if (!supplied(a) && a.m < 10){ if (a.owner === PLAYER) log(`Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
+      else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (a.owner === PLAYER) log(`Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
     }
     if (!inBattle && a.retreating && a.m >= 40) a.retreating = false;
   }
@@ -1559,7 +1563,9 @@ function renderSide(force){
   const N = S.nations[PLAYER], inc = income(PLAYER);
   const nowRes = RES.map(R => Math.floor(N[R.k]));
   const flashes = lastRes ? RES.map((R, i) => nowRes[i] > lastRes[i] + 0.5 ? 'flashg' : nowRes[i] < lastRes[i] - 0.5 ? 'flashr' : '') : RES.map(() => '');
-  const dayNow = Math.floor(S.hour/24); if (!renderSide.day || renderSide.day !== dayNow){ renderSide.day = dayNow; lastRes = nowRes; } else flashes.fill('');
+  const dayNow = Math.floor(S.hour/24), tnow = performance.now();
+  if (renderSide.day !== dayNow){ renderSide.day = dayNow; renderSide.flash = flashes.slice(); renderSide.flashT = tnow; lastRes = nowRes; }
+  for (let i = 0; i < flashes.length; i++) flashes[i] = renderSide.flash && tnow - renderSide.flashT < 950 ? renderSide.flash[i] : '';
   setHTML($('res'),
     `<div class="chip you" title="Your nation"><span class="sw" style="background:${N.color}"></span><b>${N.name}</b></div>` +
     RES.map(R => { const v = N[R.k], d = inc.net[R.k], short = N.short && N.short[R.k];
@@ -1578,8 +1584,8 @@ function renderSide(force){
     `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Day-${DAY_LIMIT} score is growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
   setHTML($('log'), S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="goto" data-id="${e.p}" title="Show on map"><time>D${dayOf(e.h)}</time><span>${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
-  { const unseen = Math.max(0, S.log.filter(e => e.kind === 'bad' || e.kind === 'good').length - (seenLog ? S.log.slice(S.log.length - seenLog).filter(e => e.kind === 'bad' || e.kind === 'good').length : 0));
-    if (tab === 'log') seenLog = S.log.length; const lb = $('logbadge'); const n = tab === 'log' ? 0 : Math.min(9, S.log.length - seenLog); lb.hidden = n <= 0; lb.textContent = n; void unseen; }
+  { if (tab === 'log') seenHour = S.hour; const n = tab === 'log' ? 0 : S.log.filter(e => e.h > seenHour && (e.kind === 'bad' || e.kind === 'good')).length;
+    const lb = $('logbadge'); lb.hidden = n <= 0; lb.textContent = n > 9 ? '9+' : n; }
   if (modalKind === 'research' && !$('modal').hidden){
     setHTML($('sheet'), researchHTML());
     const R = N.research, bar = document.getElementById('rbar'), left = document.getElementById('rleft');
@@ -1645,7 +1651,7 @@ function diploHTML(){
     acts += `<button class="btn" data-act="gift" data-id="${N.id}" ${S.nations[me].cash >= 50 ? '' : 'disabled'} title="Improves their opinion of you by 5">Gift $50M</button>`;
     // one primary action up front, the rest behind More
     { const tmp = document.createElement('div'); tmp.innerHTML = acts; const bs = [...tmp.querySelectorAll('button')];
-      const prim = bs.find(x => x.classList.contains('primary')) || bs.find(x => x.dataset.k === 'peace') || bs[0];
+      const prim = bs.find(x => x.classList.contains('primary')) || bs.find(x => x.dataset.k === 'peace') || bs.find(x => x.dataset.act !== 'declare') || bs[0];
       bs.forEach(x => { if (x !== prim) x.classList.remove('primary'); });
       acts = (prim ? prim.outerHTML : '') + (bs.length > 1 ? `<details class="more"><summary class="btn">More ▾</summary><div class="morebox">${bs.filter(x => x !== prim).map(x => x.outerHTML).join('')}</div></details>` : ''); }
     return {op, war:r.st === 'war' || !!pend, nb:borders(me, N.id), html:`<div class="drow" style="--c:${N.color}">
@@ -1775,7 +1781,7 @@ function provHTML(p){
       const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac));
       return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k`}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; };
     const open = UT.filter(t => !reqText(p, t)), locked = UT.filter(t => reqText(p, t));
-    html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked"><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
+    html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
     html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (Arms Factory adds more). Shift-click a card to queue 5.</div>`;
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
@@ -1826,7 +1832,7 @@ document.addEventListener('click', e => {
     case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, p, t); if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
     case 'repeat': { const p = +b.dataset.p; S.repeat = S.repeat || {}; if (b.checked) S.repeat[p] = (S.lastUnit && S.lastUnit[p]) || (S.queue[p][0] && S.queue[p][0].t) || 'inf'; else delete S.repeat[p]; renderSide(true); break; }
     case 'relmode': relMode = !relMode; renderSide(true); break;
-    case 'declare': declareWar(PLAYER, +b.dataset.id); renderSide(true); break;
+    case 'declare': { const m = +b.dataset.id; if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = 'Confirm war?'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = 'Declare war'; } }, 3000); return; } declareWar(PLAYER, m); renderSide(true); break; }
     case 'propose': { const m = +b.dataset.id, k = b.dataset.k, r = acceptOffer(m, PLAYER, k); if (r.ok) applyDeal(PLAYER, m, k); else { log(`${S.nations[m].name} refused: ${r.why}.`, 'info', null); addMem(m, PLAYER, -2); } renderSide(true); break; }
     case 'gift': { const m = +b.dataset.id; if (S.nations[PLAYER].cash >= 50){ S.nations[PLAYER].cash -= 50; addMem(m, PLAYER, 5); log(`You sent $50M in aid to ${S.nations[m].name}.`, '', null); } renderSide(true); break; }
     case 'offer-yes': case 'offer-no': { const o = S.offers.find(x => x.id === +b.dataset.id); if (o){ S.offers = S.offers.filter(x => x !== o); if (act === 'offer-yes'){ const war = atWar(o.from, PLAYER); if ((o.kind === 'peace') === war) applyDeal(o.from, PLAYER, o.kind); else log('That offer no longer applies.', 'info', null); } else addMem(o.from, PLAYER, -5); } renderSide(true); break; }
