@@ -257,3 +257,15 @@
 - Positional battle audio: each volley fired on screen plays its own synthesized shot, panned left or right by where it happens and louder as you zoom in. Rifle cracks, tank-gun thumps and artillery or naval booms each have their own low-frequency punch.
 - Ambience beds that follow the camera: a distant rumble from the front when battles are on screen (panned towards them), wind that rises as a storm passes over the view, surf when you look out to sea, and a jet-engine drone while aircraft fly overhead. All beds quieten while paused.
 - Generative score: a slow minor-key synth pad that changes chords every few seconds. When you are at war it drops into a darker progression with a low pulse beat. It can be turned off in Settings (Music) while keeping effects and ambience.
+
+## Round 36 — Player feedback: daylight, calmer weather, surprise attacks
+- Lighting follows the game clock where you are looking: the whole view brightens to clear daylight at local noon, warms at dawn and dusk, and darkens to deep blue at night. It is computed from the sun's real position (with the season) at the centre of the screen. This replaces the half-world shadow that left the map looking dark most of the time. City lights and unit night shading follow the same light.
+- Calmer weather and effects: rain streaks, falling snow, lightning flashes and the glowing light pools under fires are gone. Clouds are softer and more transparent, and city lights are a small warm glow instead of big halos.
+- Surprise attacks, in the style of the genre's border rules:
+  - Formal declaration (Diplomacy): war begins after 24 hours, with no reputation penalty.
+  - Surprise attack: order a force into a nation you are at peace with (or a strike on it) and the route is allowed. The panel warns "⚠ This route crosses into France: sending it declares war", and the button turns red ("Attack (declares war)").
+  - Sending it opens a Declare war? dialog with Continue: declare war and Cancel move. It lists the consequences: the victim's opinion −60, other nations' opinion of you drops, treaty breaking, and allies who may join.
+  - Continuing starts the war immediately, with no 24-hour wait.
+  - When a power formally declares war on you, you can strike first at any time.
+  - AI powers with a big advantage and a grudge sometimes launch surprise attacks too.
+- Relation names follow the genre's terms: Right of Way (passage), Shared Intel alliance, Ceasefire (truce).

@@ -1121,7 +1121,7 @@ function drawParticles(now){
     const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
     if (q.kind === 'smoke' || q.kind === 'smokel'){ ctx.globalAlpha = 0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
-    else if ((q.kind === 'fire' || q.kind === 'flash') && nightAtX(q.wx ?? 0) > 0.3 && k < 0.6){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18*(1 - k)*nightAtX(q.wx ?? 0); ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.restore(); }
+    else if (false){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18*(1 - k)*nightAtX(q.wx ?? 0); ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.restore(); }
     if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k; ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
     else if (q.kind === 'ring'){ ctx.globalAlpha = 0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
     else if (q.kind === 'spark' || q.kind === 'debris'){ ctx.globalAlpha = 1 - k; ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
@@ -1177,12 +1177,10 @@ function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex 
     for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if ((cx + w.r)*view.s + view.x < -50 || (cx - w.r)*view.s + view.x > cw + 50) continue;
       for (let i = 0; i < 9; i++){ const a = w.seed + i*2.39, rr = w.r*(0.15 + 0.55*((i*0.37 + w.seed) % 1)), px = cx + Math.cos(a)*rr + Math.sin(now/9000 + i)*3, py = y0 + Math.sin(a)*rr*0.6, sz = w.r*(0.55 + 0.35*((i*0.61) % 1));
         ctx.globalAlpha = 0.14*fade; ctx.drawImage(tex[6 + i % 3], px - sz + 10, py - sz*0.6 + 14, sz*2, sz*1.2);           // shadow on the ground
-        ctx.globalAlpha = (w.kind === 'blizzard' ? 0.62 : 0.5)*fade*(hexPx > 30 ? 0.55 : 1); ctx.drawImage(tex[(w.kind === 'storm' ? 3 : 0) + i % 3], px - sz, py - sz*0.6, sz*2, sz*1.2); }
-      // lightning in storms
-      if (w.kind === 'storm' && Math.sin(now/170 + w.seed*7) > 0.985){ ctx.globalAlpha = 0.5*fade; ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(GLOW(), cx - w.r*0.5, y0 - w.r*0.35, w.r, w.r*0.7); ctx.globalCompositeOperation = 'source-over'; } } }
+        ctx.globalAlpha = (w.kind === 'blizzard' ? 0.42 : 0.34)*fade*(hexPx > 30 ? 0.5 : 1); ctx.drawImage(tex[(w.kind === 'storm' ? 3 : 0) + i % 3], px - sz, py - sz*0.6, sz*2, sz*1.2); }
+    } }
   ctx.restore();
-  // rain / snowfall streaks at close zoom inside storms
-  if (hexPx < 16) return; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
+  return; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
   for (const w of S.storms){ const [sx, sy] = toScreen(w.x + w.vx*live, w.y + w.vy*live), R = w.r*view.s; if (sx + R < 0 || sx - R > cw || sy + R < 0 || sy - R > ch) continue;
     const n = Math.min(160, Math.round(R*0.5)), snow = w.kind === 'blizzard';
     ctx.strokeStyle = snow ? 'rgba(240,244,250,.75)' : 'rgba(185,205,225,.35)'; ctx.fillStyle = 'rgba(240,244,250,.8)'; ctx.beginPath();
@@ -1191,7 +1189,21 @@ function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex 
       if (snow){ ctx.moveTo(x + 1.4, y); ctx.arc(x, y, 1.4, 0, Math.PI*2); } else { ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 11); } }
     if (snow) ctx.fill(); else ctx.stroke(); }
   ctx.restore(); }
-function drawNight(){
+// daylight at the centre of the view: 1 at full day, 0 at full night, tw = dawn/dusk strength
+let VL = {k:'', day:1, tw:0};
+function viewLight(){ const live = S.speed && !S.over ? acc : 0, hr = S.hour + live, key = Math.round(hr*20) + ':' + Math.round(view.x/40) + ':' + Math.round(view.y/40) + ':' + view.s.toFixed(2); if (VL.k === key) return VL;
+  const [wx, wy] = screenToWorld(cw/2, ch/2), lon = WORLD.lon0 + (((wx - OX)/(HS*SQ3) + 0.5)/W)*360, row = Math.max(0, Math.min(H - 1, Math.round((wy - OY)/(HS*1.5)))), lat = cellLat(row*W)*Math.PI/180;
+  const sl = ((12 - (hr % 24))*15 + 540) % 360 - 180, doy = (Math.floor(hr/24) + 318) % 365, dec = -23.44*Math.cos(2*Math.PI*(doy + 10)/365)*Math.PI/180;
+  const sinEl = Math.sin(lat)*Math.sin(dec) + Math.cos(lat)*Math.cos(dec)*Math.cos((lon - sl)*Math.PI/180);
+  const day = Math.max(0, Math.min(1, (sinEl + 0.1)/0.28)), tw = Math.max(0, 1 - Math.abs(sinEl - 0.02)/0.14);
+  return (VL = {k:key, day:day*day*(3 - 2*day), tw}); }
+function drawNight(){ const L = viewLight();
+  ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (L.day > 0.02){ ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(255,250,236,${(0.55*L.day).toFixed(3)})`; ctx.fillRect(0, 0, cw, ch); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = `rgba(255,244,220,${(0.07*L.day).toFixed(3)})`; ctx.fillRect(0, 0, cw, ch); }
+  if (L.tw > 0.02){ ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(255,128,60,${(0.35*L.tw).toFixed(3)})`; ctx.fillRect(0, 0, cw, ch); }
+  if (L.day < 0.98){ ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(5,11,28,${(0.6*(1 - L.day)).toFixed(3)})`; ctx.fillRect(0, 0, cw, ch); }
+  ctx.restore(); }
+function drawNightWorld(){
   // texture x maps to (lon - sunLon); world x maps linearly to longitude
   const tex = nightTexture(), lonAt = x => WORLD.lon0 + ((x - OX)/(HS*SQ3) + 0.5)/W*360;
   const live = S.speed && !S.over ? acc : 0, sl = ((12 - ((S.hour + live) % 24))*15 + 540) % 360 - 180;
@@ -1203,10 +1215,12 @@ function drawNight(){
 }
 // 0 by day, 1 deep at night, for a world x coordinate (used for light pools)
 let NAX = {h:-1, v:null};
-function nightAtX(wx){ const hb = Math.floor((S.hour + (S.speed && !S.over ? acc : 0))*4); if (NAX.h !== hb){ NAX = {h:hb, v:new Float32Array(64)}; const live = hb/4, sl = ((12 - (live % 24))*15 + 540) % 360 - 180;
+function nightAtX(wx){ return 1 - viewLight().day; }
+function nightAtX0(wx){ const hb = Math.floor((S.hour + (S.speed && !S.over ? acc : 0))*4); if (NAX.h !== hb){ NAX = {h:hb, v:new Float32Array(64)}; const live = hb/4, sl = ((12 - (live % 24))*15 + 540) % 360 - 180;
     for (let i = 0; i < 64; i++){ const lon = WORLD.lon0 + (i + 0.5)/64*360, c = Math.cos((lon - sl)*Math.PI/180); NAX.v[i] = Math.max(0, Math.min(1, (-c + 0.05)/0.35)); } }
   const i = Math.floor(((wx - OX)/(HS*SQ3*W))*64); return NAX.v[((i % 64) + 64) % 64]; }
-function isNight(p){ const live = S.speed && !S.over ? acc : 0, sl = ((12 - ((S.hour + live) % 24))*15 + 540) % 360 - 180, lon = WORLD.lon0 + ((G.P[p].cc % W) + 0.5)/W*360; return Math.cos((lon - sl)*Math.PI/180) < -0.12; }
+function isNight(p){ return viewLight().day < 0.35; }
+function isNight0(p){ const live = S.speed && !S.over ? acc : 0, sl = ((12 - ((S.hour + live) % 24))*15 + 540) % 360 - 180, lon = WORLD.lon0 + ((G.P[p].cc % W) + 0.5)/W*360; return Math.cos((lon - sl)*Math.PI/180) < -0.12; }
 function fx(type, p, extra = {}){ if (!booted) return;
   if (type === 'dmg' && extra.owner != null && extra.val != null){ const now = performance.now(), f0 = FX.find(f => f.type === 'dmg' && f.p === p && f.owner === extra.owner && now - f.t0 < 1000 && now - (f.born || f.t0) < 3500);
     if (f0){ f0.val += extra.val; f0.text = `−${Math.round(f0.val)}`; f0.t0 = now - 120; return; } }
@@ -1391,7 +1405,7 @@ function etaHours(a, path = a.path){
 }
 
 /* ---------------- Diplomacy ---------------- */
-const REL = {war:'At war', truce:'Truce', peace:'Peace', nap:'Non-aggression', pass:'Passage', ally:'Alliance'};
+const REL = {war:'At war', truce:'Ceasefire', peace:'Peace', nap:'Non-aggression', pass:'Right of Way', ally:'Shared Intel alliance'};
 const REL_COLOR = {war:'#e0574f', truce:'#c9a14a', peace:'#7d8a86', nap:'#6f95b8', pass:'#4fb3a6', ally:'#74c27a'};
 const rkey = (a, b) => a < b ? a + ',' + b : b + ',' + a;
 function rel(a, b){ if (a === b) return {st:'self'}; if (a < 0 || b < 0) return {st:'war'}; const k = rkey(a, b); return S.rel[k] || (S.rel[k] = {st:'peace', since:0, until:null}); }
@@ -1450,6 +1464,33 @@ function evict(n, host){
     if (dest >= 0){ a.at = dest; a.to = null; a.t = 0; a.path = []; } else for (const t of UT) a.u[t] = 0; }
   removeEmpty();
 }
+// crossing a peaceful border or striking a nation you are not at war with starts the war at once
+function surpriseWar(a, b){ if (a === b || atWar(a, b)) return;
+  const r = rel(a, b).st; if (['nap', 'ally', 'pass', 'truce'].includes(r)) S.nations[a].breaker = S.hour;
+  S.decl = S.decl.filter(d => !((d.by === a && d.to === b) || (d.by === b && d.to === a)));
+  setRel(a, b, 'war'); addMem(b, a, -60);
+  for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b) addMem(c.id, a, opinion(c.id, b) >= 0 ? -20 : -8);
+  for (const al of alliesOf(b)){ if (al === a || atWar(al, a) || ['truce', 'nap', 'pass'].includes(rel(al, a).st)) continue;
+    if (al === PLAYER){ log(`Your ally ${S.nations[b].name} was attacked by ${S.nations[a].name} without warning. You may join the war from Diplomacy.`, 'info', null); continue; }
+    if (opinion(al, b) >= 30){ setRel(al, a, 'war'); log(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[a].name}.`, a === PLAYER ? 'bad' : '', null); } }
+  if (b === PLAYER){ log(`${S.nations[a].name} launched a surprise attack on you! You are at war.`, 'bad', S.nations[a].capital); alarm(); if (booted && !S.over) setTimeout(() => warWarning(a), 0); }
+  else if (a === PLAYER) log(`Surprise attack: you are now at war with ${S.nations[b].name}. Other nations think less of you.`, 'bad', S.nations[b].capital);
+  else if (borders(PLAYER, a) || borders(PLAYER, b)) log(`${S.nations[a].name} launched a surprise attack on ${S.nations[b].name}.`, '', null);
+  relVer++; }
+// a route that ignores peace borders, and the nations it would violate
+function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].sea || S.owner[v] !== SEA) && (!so || portOk(a.owner, v) || G.P[v].sea);
+  const pth = findPath(from, to, ok); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
+  return {pth, viol}; }
+let pendingSurprise = null;
+function confirmSurprise(viol, go){ pendingSurprise = {viol, go};
+  const names = viol.map(n => `<b style="color:${S.nations[n].color}">${S.nations[n].name}</b>`).join(' and '), tr = viol.filter(n => ['nap', 'ally', 'pass', 'truce'].includes(rel(PLAYER, n).st));
+  openModal(`<div class="eyebrow">Border crossing</div><h1>Declare war?</h1>
+    <p>This move enters the territory of ${names}. Continuing will <b>declare war immediately</b>: a surprise attack, with no 24-hour warning.</p>
+    <ul class="small" style="margin:0 0 10px 18px;line-height:1.6"><li>${viol.map(n => S.nations[n].name).join(' and ')} will see you as an aggressor (opinion −60); other nations think less of you too.</li>
+      ${tr.length ? `<li style="color:var(--danger)">You have a treaty with ${tr.map(n => S.nations[n].name).join(', ')}: breaking it marks you as a treaty breaker.</li>` : ''}
+      ${viol.flatMap(n => alliesOf(n)).filter(x => x !== PLAYER).length ? `<li>Their allies (${[...new Set(viol.flatMap(n => alliesOf(n)).filter(x => x !== PLAYER))].map(x => S.nations[x].name).join(', ')}) may join against you.</li>` : ''}
+      <li>A formal declaration from Diplomacy avoids the surprise penalty but gives them 24 hours to prepare.</li></ul>
+    <div class="row"><button class="btn war" data-act="surprise-go">Continue: declare war</button><button class="btn primary" data-act="surprise-cancel">Cancel move</button></div>`, 'surprise'); }
 function declareWar(a, b){
   if (a === b || atWar(a, b) || S.decl.some(d => d.by === a && d.to === b)) return false;
   const r = rel(a, b);
@@ -1458,8 +1499,8 @@ function declareWar(a, b){
   S.decl.push({by:a, to:b, at:S.hour + 24}); relVer++;
   addMem(b, a, -50);
   for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b && opinion(c.id, b) >= 25) addMem(c.id, a, -15);
-  if (b === PLAYER){ log(`${S.nations[a].name} has declared war on you! Hostilities begin in 24 hours.`, 'bad', S.nations[a].capital); alarm(); if (booted && !S.over) setTimeout(() => warWarning(a), 0); }
-  else if (a === PLAYER) log(`You declared war on ${S.nations[b].name}. Hostilities begin in 24 hours.`, 'info', S.nations[b].capital);
+  if (b === PLAYER){ log(`${S.nations[a].name} has formally declared war on you: their attack can begin in 24 hours. You may strike first at any time.`, 'bad', S.nations[a].capital); alarm(); if (booted && !S.over) setTimeout(() => warWarning(a), 0); }
+  else if (a === PLAYER) log(`You formally declared war on ${S.nations[b].name}: war begins in 24 hours, without the surprise-attack penalty.`, 'info', S.nations[b].capital);
   else if (S.hour > 0 && (borders(PLAYER, a) || borders(PLAYER, b) || rel(PLAYER, a).st === 'ally' || rel(PLAYER, b).st === 'ally')) log(`${S.nations[a].name} declared war on ${S.nations[b].name}.`, '', null);
   return true;
 }
@@ -1570,7 +1611,7 @@ function diploDay(){
         if (opinion(n, m) >= 0 || myP < 1.1*natPower(m)) continue;
         const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = (cnt + 5)/(natPower(m) + 10)*(m === PLAYER ? 1.1 : 1);
         if (sc > bs){ bs = sc; best = m; } }
-      if (best >= 0) declareWar(n, best);
+      if (best >= 0){ if (natPower(n) > 1.6*natPower(best) && opinion(n, best) < -25 && rng() < 0.35) surpriseWar(n, best); else declareWar(n, best); }
     }
     // treaties
     if (rng() < 0.12){ const nbs = S.nations.filter(M => M.alive && M.id !== n && borders(n, M.id) && rel(n, M.id).st === 'peace' && opinion(n, M.id) >= 0);
@@ -1687,7 +1728,7 @@ function airCheck(a, p){
   if (p === a.air.base && isStriker(a) && !stationaryAt(p).some(b => atWar(a.owner, b.owner))) return {ok:false, why:'That is its home airbase.'};
   if (d > r) return {ok:false, why:`Out of range: ${d} hexes, this wing reaches ${r}.`};
   const k = airMissionKind(a, p), o = S.owner[p];
-  if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o)) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
+  if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o) && !(a.owner === PLAYER && sel.surprise && sel.surprise.includes(o))) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
   return {ok:true, kind:k, d, hours:Math.max(1, Math.ceil(d/AIR_SPEED))};
 }
 function orderAir(a, p){
@@ -2737,7 +2778,7 @@ function draw(now){
     if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
     const cap = isCapital(p), dim = vis.has(p) ? 1 : 0.55;
     ctx.globalAlpha = dim;
-    if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 10)*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(GLOW(), x - gr, y + 9*kl - gr, gr*2, gr*2); ctx.globalAlpha = 0.18; ctx.drawImage(GLOW(), x - gr*2.4, y + 9*kl - gr*1.6, gr*4.8, gr*3.2); ctx.restore(); }
+    if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 10)*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; ctx.drawImage(GLOW(), x - gr*0.7, y + 9*kl - gr*0.7, gr*1.4, gr*1.4); ctx.restore(); }
     if (cap && hexPx >= 2){ star(x, y + 9*kl, 6*kl); ctx.fillStyle = '#f3ead2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b1012'; ctx.stroke(); }
     else if (P.city && showCity){ ctx.fillStyle = '#f3ead2'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1.2; ctx.fillRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); ctx.strokeRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); }
     if (P.oil && hexPx >= 8){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
@@ -2967,7 +3008,10 @@ function setRally(city, p){
   else { S.rally[city] = p; toast(`New units from ${G.P[city].cityName} will march to ${G.P[p].cityName || G.P[p].name}.`, 'info', p); }
   sel.prov = city; renderSide(true);
 }
-function setTarget(a, p){ sel.target = p; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p); hoverPath = null; renderSide(true); }
+function setTarget(a, p){ sel.target = p; sel.surprise = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
+  if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
+  if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
+  hoverPath = null; renderSide(true); }
 const groupArmies = () => (sel.group.length ? sel.group : [sel.army]).map(armyById).filter(Boolean);
 const STANCES = {hold:['Hold', 'Stays where you put it.'], defend:['Defend', 'Marches to fight enemies that enter your land within 3 provinces, then returns.'], retreat:['Preserve', 'Falls back to the nearest city of yours when health drops below 40%.']};
 function stanceHour(){
@@ -3005,7 +3049,8 @@ function armiesHTML(){
     <div class="tblwrap"><table class="ptab"><thead><tr><th>Force</th><th>Units</th><th>Health</th><th>Status</th><th>Stance</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="muted">You have no forces.</td></tr>'}</tbody></table></div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${idle ? '<button class="btn" data-act="next-idle">Next idle force</button>' : ''}</div>`;
 }
-function sendToTarget(a){ if (sel.target !== null){ const g = groupArmies(); let ok = 0; for (const x of g){ if (x.air){ if (orderAir(x, sel.target)) ok++; } else { orderMove(x, sel.target); if (x.path.length || x.to !== null) ok++; } } if (ok) sfx('order'); if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); } sel.target = null; targetPath = null; renderSide(true); }
+function sendToTarget(a){ if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a); }); return; }
+  if (sel.target !== null){ const g = groupArmies(); let ok = 0; for (const x of g){ if (x.air){ if (orderAir(x, sel.target)) ok++; } else { orderMove(x, sel.target); if (x.path.length || x.to !== null) ok++; } } if (ok) sfx('order'); if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); } sel.target = null; targetPath = null; renderSide(true); }
 function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
   sel.group = []; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
@@ -3408,9 +3453,9 @@ function armyHTML(a){
     const t = sel.target, foes = stationaryAt(t).filter(b => b.owner !== PLAYER && armyVisible(b, visibleSet()));
     const ok = targetPath && targetPath.length;
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned route</div>
-      <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath)} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}` : !canEnter(PLAYER, t) ? `<br><span class="small">You are at ${REL[rel(PLAYER, S.owner[t]).st].toLowerCase()} with ${nationName(S.owner[t])}. Declare war in Diplomacy (D) to attack.</span>` : ' · no route'}
+      <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath)} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}` : !canEnter(PLAYER, t) ? `<br><span class="small">You are at ${REL[rel(PLAYER, S.owner[t]).st].toLowerCase()} with ${nationName(S.owner[t])}. Declare war in Diplomacy (D) to attack.</span>` : ' · no route'}${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? `<div class="small" style="color:var(--danger);margin-top:4px">⚠ This route crosses into ${sel.surprise.filter(n => !atWar(PLAYER, n)).map(nationName).join(' and ')}: sending it declares war (surprise attack).</div>` : ''}
       ${oddsHTML(a, t, foes)}</div>
-      <div class="row"><button class="btn primary" data-act="send" ${ok ? '' : 'disabled'}>${odds(a, t, foes) < 0.9 ? 'Attack anyway' : 'Send force here'}</button>
+      <div class="row"><button class="btn ${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'war' : 'primary'}" data-act="send" ${ok ? '' : 'disabled'}>${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'Attack (declares war)' : odds(a, t, foes) < 0.9 ? 'Attack anyway' : 'Send force here'}</button>
       <button class="btn" data-act="prov" data-id="${t}" ${G.P[t].sea ? 'disabled' : ''}>View province</button>
       <button class="btn" data-act="untarget">Cancel route</button></div>`;
   }
@@ -3532,6 +3577,8 @@ document.addEventListener('click', e => {
     case 'set-ui': SET.ui = +b.dataset.v; saveSet(); openModal(settingsHTML(), 'settings'); break;
     case 'slot-save': { try { localStorage.setItem(SLOT_KEY(+b.dataset.v), JSON.stringify(serialize())); toast(`Saved to slot ${b.dataset.v}.`, 'good', null); } catch (e) { toast('Could not save: browser storage is full or blocked.', 'bad', null); } openModal(settingsHTML(), 'settings'); break; }
     case 'slot-load': { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY(+b.dataset.v))); if (d && restore(d)){ applyPalette(); geoDirty = true; save(); closeModal(); clearSel(); goHome(); toast(`Loaded slot ${b.dataset.v}: ${S.nations[PLAYER].name}, ${clockStr(S.hour)}.`, 'good', null); } else toast('That save could not be loaded.', 'bad', null); } catch (e) { toast('That save could not be loaded.', 'bad', null); } break; }
+    case 'surprise-go': { const ps = pendingSurprise; pendingSurprise = null; closeModal(); if (ps) ps.go(); renderSide(true); break; }
+    case 'surprise-cancel': pendingSurprise = null; closeModal(); if (sel.army !== null){ sel.target = null; targetPath = null; sel.surprise = null; } renderSide(true); break;
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
