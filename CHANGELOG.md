@@ -183,3 +183,11 @@
 - Scale: ships are about 30% smaller (a frigate is no longer bigger than Denmark) and jets about 20% smaller.
 - Muzzle flashes are a 45 ms glow and a narrow cone instead of a white three-pronged star.
 - Embarked troops at sea are drawn as a transport ship, not as soldiers standing on the water.
+
+## Round 27 — Gunships, drones and paratroopers
+- New Airmobile research branch with three new unit types:
+  - **Kite Recon Drone**: a cheap unarmed wing with an 18-hex range. Send it to any province and it reveals that area through the fog for 2 days, reporting how many foreign units it spotted.
+  - **Wasp Gunship**: an attack helicopter wing with a short 6-hex range. It hits armour (2.2×) and infantry (1.3×) hard and is nearly harmless to aircraft.
+  - **Falcon Paratroopers**: elite infantry trained at airbase cities. An idle paratrooper force in a province with your airbase gets an Air drop button. Tap a drop zone up to 9 hexes away (a range ring shows) and a transport flies them in. They land with −10 morale, and enemy air defence at the drop zone shoots down up to 60% of them.
+- New 3D models baked to sprites: the gunship (tandem canopy, stub-wing rocket pods, tail rotor, and a four-blade main rotor whose 4 animation frames spin in flight) and the drone (long straight wings, V-tail, sensor ball, pusher prop). Paratroopers in transit show as a transport aircraft with a "▼ N" troop count.
+- New formation names: Airborne Brigade, Gunship Squadron, Recon Squadron. AI powers research and field the new units too.

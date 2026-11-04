@@ -411,6 +411,9 @@ const UNITS = {
   frig: {name:'Gannet Frigate',    short:'FRG', cls:'naval',   cost:60, oil:6,  metal:18, mp:6,  atk:4, def:5, hp:14, spd:9,  build:60, upk:3, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{air:1.8, soft:0.5, armored:0.4}, role:'Escort: protects troop convoys, shoots down aircraft.'},
   sub:  {name:'Moray Submarine',   short:'SUB', cls:'naval',   cost:55, oil:4,  metal:15, mp:5,  atk:6, def:2, hp:9,  spd:8,  build:60, upk:2, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else.'},
   crui: {name:'Tempest Cruiser',   short:'CRU', cls:'naval',   cost:75, oil:10, metal:30, mp:8,  atk:7, def:6, hp:20, spd:7,  build:96, upk:5, food:0.5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
+  heli: {name:'Wasp Gunship',      short:'GUN', cls:'air',     cost:65, oil:8,  metal:15, mp:6,  atk:7, def:4, hp:10, spd:12, build:54, upk:4, food:0.5, fuel:1.5, req:{b:'air', l:1}, tech:'heli1', vs:{armored:2.2, soft:1.3, air:0.3, naval:0.5}, role:'Attack helicopter: short range (6 hexes), tears through armor and infantry.'},
+  drone:{name:'Kite Recon Drone',  short:'DRN', cls:'air',     cost:30, oil:2,  metal:8,  mp:1,  atk:0.5, def:1, hp:4, spd:16, build:30, upk:1, food:0,   fuel:0.5, req:{b:'air', l:1}, tech:'drone1', vs:{soft:0.2, armored:0.2, air:0.1, naval:0.1}, role:'Unarmed: flies to any province in range and reveals the area through the fog for 2 days.'},
+  para: {name:'Falcon Paratroopers',short:'PAR', cls:'soft',   cost:40, oil:0,  metal:4,  mp:10, atk:4, def:3, hp:10, spd:4,  build:36, upk:1.5, food:1,  fuel:0,   req:{b:'air', l:1}, tech:'para1', role:'Elite infantry. From a province with your airbase, can be air-dropped up to 9 hexes away.'},
 };
 const MISSILES = {
   cm: {name:'Cruise Missile',    short:'CM', cost:70,  oil:10, metal:20, build:36, range:28, speed:9,  power:7,  tech:'msl1', desc:'Flies low and fast. Devastates the forces in one province.'},
@@ -434,6 +437,9 @@ const ICONS = {
   mp: '<circle cx="8" cy="4.6" r="2.4" fill="currentColor"/><path d="M3 14c0-3.2 2.2-5.2 5-5.2s5 2 5 5.2z" fill="currentColor"/>',
 };
 const USVG = {
+  heli: '<rect x="3" y="2" width="22" height="1.2" rx=".6"/><path d="M13 3.2h1v2h-1z"/><path d="M6 7c3-1.6 8-1.8 11-.6l2 1H26v1.6h-6l-2 .8c-3 1.2-8 1-11-.4z"/><path d="M8 11h9v1H8z"/>',
+  drone: '<path d="M2 7h24v1.4H2z"/><path d="M12 4.5c1.5-.4 3-.4 4.5 0l.5 6h-5.5z"/><path d="M11 11l-3 3h2l2.5-2.4zM17.5 11l3 3h-2L16 11.6z"/>',
+  para: '<path d="M4 6c3-5 17-5 20 0z"/><path d="M5 6l8 4M23 6l-8 4M14 6v4" stroke="currentColor" stroke-width=".7" fill="none"/><circle cx="14" cy="11.3" r="1.4"/><path d="M13 12.8h2l.6 3h-3.2z"/>',
   inf: '<circle cx="9" cy="3.5" r="2"/><path d="M8 6h2.4l1 4.5 2.6 4.5h-1.8L10 11l-1.6 4H6.6L8 10.5z"/><path d="M7 7.5l9-2" stroke="currentColor" stroke-width="1.1" fill="none"/><circle cx="17" cy="3.5" r="2"/><path d="M16 6h2.4l1 4.5 2.6 4.5h-1.8L18 11l-1.6 4h-1.8L16 10.5z"/>',
   at: '<circle cx="11" cy="3.5" r="2"/><path d="M10 6h2.4l1 4.5 2.6 4.5h-1.8L12 11l-1.6 4H8.6L10 10.5z"/><rect x="4" y="5" width="16" height="2.4" rx="1"/>',
   art: '<path d="M5 12l8-3 1 2-8 3z"/><path d="M11 9l13-6 .8 1.6-13 6z"/><circle cx="9" cy="13" r="2.6"/><circle cx="15" cy="13" r="2.6"/>',
@@ -450,7 +456,7 @@ const unitSVG = t => `<svg width="28" height="16" viewBox="0 0 28 16" fill="curr
 const icon = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 16 16" aria-hidden="true">${ICONS[k]}</svg>`;
 const UT = Object.keys(UNITS);
 const AIR_SPEED = 2.5;                // hexes per hour for aircraft on missions
-const AIR_RANGE = {jet:16, int:12};   // mission radius in hexes from the home airbase
+const AIR_RANGE = {jet:16, int:12, heli:6, drone:18};   // mission radius in hexes from the home airbase
 const STRIKE = 8;                     // a strike delivers this many combat-hours of firepower
 const TERRAIN = {
   plains:   {name:'Plains',   def:1.00, armor:1.00, spd:1.00, col:'#5c6b3e'},
@@ -514,6 +520,9 @@ const TECH = [
   {id:'msl1',  branch:'Strategic', name:'Cruise Missiles',      cost:160, days:6, req:null,    desc:'Missile Silos can build Cruise Missiles', fx:{}},
   {id:'msl2',  branch:'Strategic', name:'Ballistic Missiles',   cost:240, days:8, req:'msl1',  desc:'Silos can build Ballistic Missiles',   fx:{}},
   {id:'msl3',  branch:'Strategic', name:'Anti-Missile Shield',  cost:220, days:7, req:'msl2',  desc:'Your SAMs and Frigates intercept missiles twice as well', fx:{}},
+  {id:'drone1', branch:'Airmobile', name:'Unmanned Recon',      cost:90,  days:4, req:null,     desc:'Unlocks Kite Recon Drones (reveal any area in range for 2 days)', fx:{}},
+  {id:'heli1',  branch:'Airmobile', name:'Rotary Wing',         cost:150, days:6, req:'drone1', desc:'Unlocks Wasp Gunships: short-range attack helicopters that shred armor', fx:{}},
+  {id:'para1',  branch:'Airmobile', name:'Airborne Forces',     cost:190, days:7, req:'heli1',  desc:'Unlocks Falcon Paratroopers, air-dropped behind enemy lines', fx:{}},
 ];
 for (const t of TECH){ const tier = t.req ? (TECH.find(x => x.id === t.req).req ? 3 : 2) : 1; t.tier = tier; t.cost = Math.round(t.cost*0.6); t.metal = [0, 40, 60, 100][tier]; t.oil = [0, 0, 30, 60][tier]; }
 const TECH_BY = Object.fromEntries(TECH.map(t => [t.id, t]));
@@ -889,10 +898,10 @@ function addArmy(owner, at, units){
 const has = (n, id) => n >= 0 && !!(S.nations[n].tech && S.nations[n].tech[id]);
 // formation names: "3rd Armored Division", "2nd Fleet", "5th Air Wing" (numbered per nation and kind)
 const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
-const KIND_NAME = {inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla'};
+const KIND_NAME = {inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'Recon Squadron', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla'};
 function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
-  let k = a.air ? 'air' : shipsOnly(a) ? (a.u.sub === count(a) ? 'sub' : 'sea') : null;
-  if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
+  let k = a.air ? (a.u.heli ? 'heli' : a.u.drone ? 'drone' : 'air') : shipsOnly(a) ? (a.u.sub === count(a) ? 'sub' : 'sea') : null;
+  if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
   a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
 const armyLabel = a => a.owner === PLAYER ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
@@ -1523,7 +1532,8 @@ function armyUpkeep(prevBattles){
 
 /* ---------------- Air power ---------------- */
 const wingRange = a => Math.min(...UT.filter(t => a.u[t] && UNITS[t].cls === 'air').map(t => AIR_RANGE[t] || 12), 99);
-const isStriker = a => a.u.jet > 0;
+const isStriker = a => a.u.jet > 0 || a.u.heli > 0;
+const isDrone = a => a.u.drone > 0 && UT.every(t => t === 'drone' || !a.u[t]);
 function nearestAirbase(n, from){
   let best = -1, bd = 1e9; for (const P of G.P){ if (S.owner[P.id] !== n || !S.bld[P.id].air) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
   if (best < 0) for (const P of G.P){ if (S.owner[P.id] !== n || !P.city) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
@@ -1538,6 +1548,7 @@ function fixWings(){
   removeEmpty();
 }
 function airMissionKind(a, p){
+  if (isDrone(a)) return S.owner[p] === a.owner && S.bld[p].air && p !== a.air.base ? 'rebase' : 'recon';
   const o = S.owner[p], hostile = stationaryAt(p).some(b => atWar(a.owner, b.owner) && count(b) > 0);
   if (hostile) return isStriker(a) ? 'strike' : 'patrol';
   if (o === a.owner && S.bld[p].air && p !== a.air.base) return 'rebase';
@@ -1581,6 +1592,23 @@ function orderAir(a, p){
   a.fly = {tgt:p, kind:c.kind, ph:'out', t:0, hrs:0}; return true;
 }
 const VW = new Map(), STRIKEQ = new Map(), VW_SPEED = 70;     // world units per real second at 1x
+const PARA_RANGE = 9;
+const paraOnly = a => a && !a.air && count(a) > 0 && a.u.para === count(a);
+function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:false, why:'Only an idle force of Paratroopers can be air-dropped.'};
+  if (!S.bld[a.at].air || S.owner[a.at] !== a.owner) return {ok:false, why:'Paratroopers take off from a province with your airbase.'};
+  if (G.P[p].sea) return {ok:false, why:'Cannot drop into the sea.'};
+  const d = hexDist(G.P[a.at].cc, G.P[p].cc); if (d > PARA_RANGE) return {ok:false, why:`Out of range: ${d} hexes, drops reach ${PARA_RANGE}.`};
+  if (S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p])) return {ok:false, why:`You are not at war with ${nationName(S.owner[p])}.`};
+  if (stormAt(p) || stormAt(a.at)) return {ok:false, why:'Grounded by a storm.'};
+  return {ok:true, d, hours:Math.max(1, Math.ceil(d/AIR_SPEED))}; }
+function orderDrop(a, p){ const c = canDrop(a, p); if (!c.ok){ if (a.owner === PLAYER) toast(c.why, 'bad', null); return false; } a.fly = {kind:'drop', from:a.at, tgt:p, t:0, dt:AIR_SPEED/Math.max(1, c.d)}; a.path = []; if (a.owner === PLAYER) sfx('order'); return true; }
+function dropTick(){ for (const a of S.armies){ const f = a.fly; if (!f || f.kind !== 'drop') continue; f.t += f.dt; if (f.t < 1) continue;
+    const p = f.tgt, sams = stationaryAt(p).filter(b => atWar(a.owner, b.owner)).reduce((s0, b) => s0 + (b.u.sam || 0), 0), lossF = Math.min(0.6, sams*0.15);
+    if (lossF > 0) for (const t of UT) if (a.u[t]){ const k = Math.round(a.u[t]*lossF); a.u[t] -= k; }
+    a.fly = null; a.from = f.from; a.froms = [f.from]; a.at = p; a.to = null; a.m = Math.max(0, (a.m ?? 80) - 10); a.lastAt = null;
+    if (booted && (a.owner === PLAYER || visibleSet().has(p))){ const P = G.P[p]; for (let i = 0; i < 7; i++) emit('smoke', P.x + (Math.random() - 0.5)*18, P.y - 14 - Math.random()*8, {vy:3, s0:5, s1:7, life:1500}); }
+    if (a.owner === PLAYER) log(`Paratroopers landed at ${G.P[p].cityName || G.P[p].name}${lossF > 0 ? `, losing ${Math.round(lossF*100)}% to air defences` : ''}.`, lossF > 0.3 ? 'bad' : 'good', p); }
+  removeEmpty(); }
 function wingVis(a, now, dt){
   const f = a.fly; let v = VW.get(a.id);
   if (f && (!v || v.stage === 'done' || v.tgt !== f.tgt || v.mid !== f.mid)){ const B = G.P[a.air.base]; v = {x:v && v.stage !== 'done' ? v.x : B.x, y:v && v.stage !== 'done' ? v.y : B.y, stage:'out', tgt:f.tgt, base:a.air.base, kind:f.kind, mid:f.mid, tOver:0}; VW.set(a.id, v); }
@@ -1614,6 +1642,7 @@ function sideAV(armies, owner, scale){
 }
 function resolveStrike(a, p){
   const o = a.owner, defs = stationaryAt(p).filter(b => atWar(o, b.owner) && count(b) > 0);
+  if (isDrone(a)) return;
   const vis = o === PLAYER || visibleSet().has(p);
   // enemy fighters patrolling the target intercept first
   const cap = S.armies.filter(b => b.fly && b.fly.ph === 'patrol' && b.fly.tgt === p && atWar(o, b.owner));
@@ -1643,6 +1672,9 @@ function airTick(){
     if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
         if (f.kind === 'rebase'){ a.air.base = f.tgt; a.at = f.tgt; a.fly = null; a.air.cd = 2; continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
+        else if (f.kind === 'recon'){ S.reveal = S.reveal || {}; const seen = new Set([f.tgt]); let fr = [f.tgt]; for (let d = 0; d < 2; d++){ const nx = []; for (const u of fr) for (const v of G.P[u].nbs) if (!seen.has(v)){ seen.add(v); nx.push(v); } fr = nx; }
+          for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + 48); visCache = null; f.ph = 'over'; f.hrs = 2; f.t = 0;
+          if (a.owner === PLAYER){ const foes = [...seen].reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== PLAYER).reduce((s1, b) => s1 + count(b), 0), 0); log(`Drone over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${seen.size} provinces revealed for 2 days, ${foes} foreign units spotted.`, 'info', f.tgt); } }
         else { f.ph = 'patrol'; f.hrs = 12; f.t = 0; } } }
     else if (f.ph === 'patrol' || f.ph === 'over'){ if (--f.hrs <= 0){ f.ph = 'back'; f.t = 0; } }
     else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; a.at = nb; } } } }
@@ -1840,7 +1872,7 @@ function tick(){
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
-  diploHour(); reqHour(); weatherHour();
+  diploHour(); reqHour(); weatherHour(); dropTick();
   airTick();
   missileTick();
   spyHour();
@@ -2255,6 +2287,7 @@ function visibleSet(){
 function armyVisible(a, vis){ return a.owner === PLAYER || a.owner === NEUTRAL || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
 function armyPos(a){
   if (a.air) return wingPos(a);
+  if (a.fly && a.fly.kind === 'drop'){ const A = G.P[a.fly.from], B = G.P[a.fly.tgt], t = Math.min(1, a.fly.t + (S.speed && !S.over ? acc : 0)*a.fly.dt); return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t]; }
   const A = G.P[a.at]; if (a.to === null) return [A.x, A.y];
   const B = G.P[a.to], live = S.speed && !S.over ? acc : 0, t = Math.min(1, a.t + live/legHours(a, a.at, a.to));
   return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t];
@@ -2651,15 +2684,21 @@ function draw(now){
   const dtV = Math.min(0.1, (now - (draw.lastT || now))/1000); draw.lastT = now;
   for (const a of S.armies){ if (!a.air || !count(a)) continue; const v = wingVis(a, now, dtV); if (!v || (!armyVisible(a, vis) && !vis.has(v.tgt))) continue;
     const [x, y] = toScreen(v.x, v.y), T = G.P[v.tgt], B = G.P[a.air.base], ang = v.ang ?? 0, phB = v.stage === 'back', alt = v.alt ?? 1;
-    const col = colorOf(a.owner), kind = a.u.jet >= a.u.int ? 'jet' : 'int', nPl = Math.min(3, count(a)), sc = Math.max(0.9, Math.min(k, 2.2))*1.1, bob = Math.sin(now/300 + a.id)*1.5*alt;
+    const col = colorOf(a.owner), kind = a.u.heli ? 'heli' : a.u.drone ? 'drone' : a.u.jet >= a.u.int ? 'jet' : 'int', nPl = Math.min(3, count(a)), sc = Math.max(0.9, Math.min(k, 2.2))*1.1, bob = Math.sin(now/300 + a.id)*1.5*alt;
     for (let i = 0; i < nPl; i++){ const off = [[0, 0], [-9, 7], [-9, -7]][i]; const ox = Math.cos(ang)*off[0]*sc - Math.sin(ang)*off[1]*sc, oy = Math.sin(ang)*off[0]*sc + Math.cos(ang)*off[1]*sc;
       const px0 = x + ox, py0 = y + oy + bob, g2 = ctx.createLinearGradient(px0, py0, px0 - Math.cos(ang)*60, py0 - Math.sin(ang)*60);
       g2.addColorStop(0, 'rgba(235,240,245,.5)'); g2.addColorStop(1, 'rgba(235,240,245,0)'); ctx.strokeStyle = g2; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(px0 - Math.cos(ang)*8*sc, py0 - Math.sin(ang)*8*sc); ctx.lineTo(px0 - Math.cos(ang)*60, py0 - Math.sin(ang)*60); ctx.stroke();
-      if (window.U3D && U3D.has(kind)){ const hp3 = 22*sc*(0.8 + 0.2*alt), burn = v.stage === 'out' && v.kind === 'strike' || v.stage === 'over' ? 1 : 0; ctx.save(); ctx.globalAlpha = 0.22 + 0.1*(1 - alt); ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 3 + 9*alt, py0 + 4 + 22*alt, hp3*(1 - 0.15*alt), ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3, ang, burn, isNight(v.tgt));
+      if (window.U3D && U3D.has(kind)){ const hp3 = 22*sc*(0.8 + 0.2*alt), burn = v.stage === 'out' && v.kind === 'strike' || v.stage === 'over' ? 1 : 0; ctx.save(); ctx.globalAlpha = 0.22 + 0.1*(1 - alt); ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 3 + 9*alt, py0 + 4 + 22*alt, hp3*(1 - 0.15*alt), ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3*(kind === 'drone' ? 0.8 : 1), ang, kind === 'heli' ? Math.floor(now/30 + i) % 4 : burn, isNight(v.tgt));
         if (Math.random() < 0.25){ const [wx, wy] = screenToWorld(px0 - Math.cos(ang)*hp3*0.4, py0 - Math.sin(ang)*hp3*0.4); emit('fire', wx, wy, {vx:-Math.cos(ang)*20, vy:-Math.sin(ang)*20, s0:4, s1:1, life:160}); } }
       else { ctx.save(); ctx.globalAlpha = 0.3; jetSprite(px0 + 6, py0 + 12, sc*0.9, '#000000', ang, kind); ctx.restore(); jetSprite(px0, py0, sc*0.9, col, ang, kind); } }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreen(T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(phB ? toScreen(B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }
     ctx.font = `700 ${Math.round(10*sc)}px ${MONO}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2eee2'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(count(a), x, y + 16*sc); ctx.fillText(count(a), x, y + 16*sc);
+    if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
+  for (const a of S.armies){ if (!a.fly || a.fly.kind !== 'drop' || (!armyVisible(a, vis) && a.owner !== PLAYER)) continue;
+    const [wx, wy] = armyPos(a), [x, y] = toScreen(wx, wy), B = G.P[a.fly.tgt], A = G.P[a.fly.from], ang = Math.atan2(B.y - A.y, B.x - A.x), sc = Math.max(0.9, Math.min(k, 2.2));
+    if (window.U3D && U3D.has('int')){ ctx.save(); ctx.globalAlpha = 0.25; ctx.filter = 'brightness(0)'; U3D.draw(ctx, 'int', colorOf(a.owner), x + 8, y + 18, 30*sc, ang, 0); ctx.restore(); U3D.draw(ctx, 'int', colorOf(a.owner), x, y, 30*sc, ang, 0); }
+    else jetSprite(x, y, sc, colorOf(a.owner), ang, 'int');
+    ctx.font = `700 ${Math.round(10*sc)}px ${MONO}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2eee2'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText('▼ ' + count(a), x, y + 18*sc); ctx.fillText('▼ ' + count(a), x, y + 18*sc);
     if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
   drawParticles(now);
   // missiles in flight: exhaust glow, body and smoke trail; aiming ring
@@ -2672,6 +2711,7 @@ function draw(now){
   if (aimMsl){ const F = G.P[aimMsl.from], [fx1, fy1] = toScreen(F.x, F.y), rr = MISSILES[aimMsl.k].range*HS*SQ3*view.s;
     ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(224,87,79,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(fx1, fy1, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(224,87,79,.04)'; ctx.fill(); ctx.restore(); }
   drawSelPaths();
+  if (dropFor !== null){ const d0 = armyById(dropFor); if (d0){ const [bx, by] = toScreen(G.P[d0.at].x, G.P[d0.at].y), rr = PARA_RANGE*HS*SQ3*view.s; ctx.save(); ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(226,162,61,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(226,162,61,.05)'; ctx.fill(); ctx.restore(); } }
   drawFX(now);
   tutDraw(now);
   drawMini();
@@ -2746,6 +2786,7 @@ function tap(x, y, shift = false){
     } }
   const p = provAt(x, y);
   if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
+  if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
   if (p < 0 || (G.P[p].sea && sel.army === null)){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (a){
@@ -3185,6 +3226,7 @@ function armyHTML(a){
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
     ${a.air || shipsOnly(a) ? '' : `<div class="row" style="align-items:center"><span class="small muted">Stance</span>${Object.entries(STANCES).map(([k, v]) => `<button class="btn ${(a.stance || 'hold') === k ? 'primary' : ''}" data-act="stance-set" data-k="${k}" title="${v[1]}" style="padding:3px 9px;font-size:12px">${v[0]}</button>`).join('')}</div>`}
     <div class="row">
+      ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE} hexes away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
       <button class="btn" data-act="split" ${count(a) < 2 ? 'disabled' : ''}>Split in half</button>
       <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one."`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
       <button class="btn" data-act="stop" ${!a.path.length ? 'disabled' : ''}>Halt</button>
@@ -3267,6 +3309,7 @@ document.addEventListener('click', e => {
     case 'clear': clearSel(); break;
     case 'send': if (a) sendToTarget(a); break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
+    case 'drop': if (a){ dropFor = dropFor === a.id ? null : a.id; if (dropFor !== null) toast(`Tap a drop zone up to ${PARA_RANGE} hexes away.`, 'info', null); renderSide(true); } break;
     case 'split': if (a){ const nb = splitArmy(a); if (nb) selectArmy(nb.id); } break;
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty(); renderSide(true); } break;
     case 'stop': if (a){ a.path = []; renderSide(true); } break;
@@ -3327,7 +3370,7 @@ document.addEventListener('click', e => {
 });
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod', 'stats', 'settings', 'paper'].includes(modalKind)) closeModal(); });
 document.addEventListener('input', e => { if (e.target.id === 'volume'){ SET.vol = +e.target.value/100; saveSet(); if (master && !muted) master.gain.value = SET.vol; const sp = e.target.nextElementSibling; if (sp) sp.textContent = e.target.value + '%'; } });
-let renaming = null;
+let renaming = null, dropFor = null;
 document.addEventListener('focusout', e => { if (e.target.classList && e.target.classList.contains('rn')) setTimeout(() => { if (renaming !== null){ renaming = null; renderSide(true); } }, 0); });
 document.addEventListener('change', e => { const el = e.target;
   if (el && el.classList && el.classList.contains('rn')){ const a = armyById(+el.dataset.id), v = el.value.trim().slice(0, 32).replace(/[<>&"]/g, ''); if (a && v) a.nm = v; renaming = null; el.blur(); renderSide(true); return; } if (el && el.dataset && el.dataset.act === 'stance'){ const a = armyById(+el.dataset.id); if (a){ a.stance = el.value; a.home = null; toast(`${armyName(a)}: ${STANCES[el.value][0]}. ${STANCES[el.value][1]}`, 'info', null); renderSide(true); } } });
