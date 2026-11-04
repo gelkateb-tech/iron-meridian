@@ -5,11 +5,15 @@
 (function(){
   'use strict';
   const T = window.THREE;
-  if (!T){ window.U3D = null; return; }
+  const META = {inf:{dirs:8, frames:8}, at:{dirs:8, frames:8}, tank:{dirs:8, frames:6}, ifv:{dirs:8, frames:2}, art:{dirs:8, frames:4}, sam:{dirs:8, frames:2},
+                jet:{dirs:16, frames:2, air:true}, int:{dirs:16, frames:2, air:true}, frig:{dirs:16, frames:1, sea:true}, sub:{dirs:16, frames:1, sea:true}, crui:{dirs:16, frames:1, sea:true}};
+  const BAKE_SZ = 136;
+  const SZ = window.__BAKE ? BAKE_SZ : ((window.devicePixelRatio || 1) > 1.3 && (window.innerWidth || 1000) > 820 ? 136 : 112);   // pixels per frame
+  const cache = {};
+  let buildFn = null;
+  if (T) (function(){
   let renderer;
-  try { renderer = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); }
-  catch (e){ window.U3D = null; return; }
-  const SZ = (window.devicePixelRatio || 1) > 1.3 ? 136 : 112;         // pixels per frame
+  try { renderer = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); } catch (e){ return; }
   renderer.setPixelRatio(1); renderer.setSize(SZ, SZ); renderer.setClearColor(0x000000, 0);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
   if (T.sRGBEncoding) renderer.outputEncoding = T.sRGBEncoding;
@@ -199,7 +203,6 @@
     if (type === 'sam'){ const l = g.getObjectByName('gun'); if (l) l.rotation.x = frame ? -0.75 : -0.55; }
     const fl = g.getObjectByName('flame'); if (fl) fl.visible = frame === 1;
   }
-  const cache = {};
   function build(type){
     if (cache[type]) return cache[type];
     const spec = SPEC[type], model = BUILDERS[type]();
@@ -228,35 +231,49 @@
     mc.putImageData(id, 0, 0);
     return (cache[type] = {base, mask, dirs, frames, air:!!model.air, sea:!!model.sea});
   }
+  buildFn = build;
+  })();
   function mixCol(hex, base, t){ const A = parseInt(hex.slice(1), 16), B = parseInt(base.slice(1), 16); const m = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${m(16)},${m(8)},${m(0)})`; }
-  const tinted = {};
-  function tint(type, color, night){
-    const k = type + color + (night ? 'n' : ''); if (tinted[k]) return tinted[k];
-    const a = build(type), c = document.createElement('canvas'); c.width = a.base.width; c.height = a.base.height;
+  const tinted = new Map(); let scratch = null;
+  function tint(type, color){
+    const k = type + color; if (tinted.has(k)){ const v = tinted.get(k); tinted.delete(k); tinted.set(k, v); return v; }
+    const a = cache[type], c = document.createElement('canvas'); c.width = a.base.width; c.height = a.base.height;
     const x = c.getContext('2d');
     // military finish: nation colour blended into olive drab (ground) or grey (sea/air), then brightened to undo the multiply
     let col = color;
     if (color[0] === '#') col = a.sea ? mixCol(color, '#8c9499', 0.25) : a.air ? mixCol(color, '#8a9298', 0.55) : mixCol(color, '#6f7652', 0.55);
-    const cc = document.createElement('canvas'); cc.width = c.width; cc.height = c.height; const cx = cc.getContext('2d');
+    if (!scratch) scratch = document.createElement('canvas'); const cc = scratch; if (cc.width < c.width || cc.height < c.height){ cc.width = Math.max(cc.width, c.width); cc.height = Math.max(cc.height, c.height); } const cx = cc.getContext('2d'); cx.globalCompositeOperation = 'source-over'; cx.clearRect(0, 0, cc.width, cc.height);
     cx.drawImage(a.mask, 0, 0); cx.globalCompositeOperation = 'source-in'; cx.fillStyle = col; cx.fillRect(0, 0, c.width, c.height);
-    x.drawImage(a.base, 0, 0); x.globalCompositeOperation = 'multiply'; x.drawImage(cc, 0, 0);
-    x.globalCompositeOperation = 'soft-light'; x.globalAlpha = 0.35; x.drawImage(cc, 0, 0); x.globalAlpha = 1;
-    if (night){ x.globalCompositeOperation = 'multiply'; x.fillStyle = 'rgb(158,166,196)'; x.fillRect(0, 0, c.width, c.height); }
+    x.drawImage(a.base, 0, 0); x.globalCompositeOperation = 'multiply'; x.drawImage(cc, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
+    x.globalCompositeOperation = 'soft-light'; x.globalAlpha = 0.35; x.drawImage(cc, 0, 0, c.width, c.height, 0, 0, c.width, c.height); x.globalAlpha = 1;
     x.globalCompositeOperation = 'destination-in'; x.drawImage(a.base, 0, 0);
-    return (tinted[k] = c);
+    tinted.set(k, c); while (tinted.size > 36) tinted.delete(tinted.keys().next().value);
+    return c;
+  }
+  const shadowSheets = {};
+  function nightSheet(type){ if (shadowSheets[type]) return shadowSheets[type]; const a = cache[type], c = document.createElement('canvas'); c.width = a.base.width; c.height = a.base.height; const x = c.getContext('2d'); x.drawImage(a.base, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#0a1426'; x.fillRect(0, 0, c.width, c.height); return (shadowSheets[type] = c); }
+  function loadImg(src){ return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
+  async function loadBaked(dir){
+    const types = Object.keys(META);
+    await Promise.all(types.map(async t => { const [b, m] = await Promise.all([loadImg(dir + t + '.png'), loadImg(dir + t + '_m.png')]); const meta = META[t], sc = SZ/BAKE_SZ;
+      const mk = im => { const c = document.createElement('canvas'); c.width = Math.round(im.width*sc); c.height = Math.round(im.height*sc); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height); return c; };
+      cache[t] = {base:mk(b), mask:mk(m), dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea}; }));
+    return true;
   }
   const queue = ['inf', 'tank', 'at', 'art', 'ifv', 'sam', 'jet', 'int', 'frig', 'sub', 'crui'];
   let warm = false;
-  function warmup(){ if (warm) return; warm = true; let i = 0; const step = () => { if (i >= queue.length) return; try { build(queue[i++]); } catch (e) { i++; } setTimeout(step, 30); }; setTimeout(step, 50); }
+  function warmup(){ if (warm || !buildFn) return; warm = true; let i = 0; const step = () => { if (i >= queue.length) return; try { if (!cache[queue[i]]) buildFn(queue[i]); i++; } catch (e) { i++; } setTimeout(step, 30); }; setTimeout(step, 50); }
   window.U3D = {
-    SZ, has: type => !!cache[type], warmup,
+    SZ, has: type => !!cache[type], warmup, loadBaked, canRender: () => !!buildFn,
+    exportAtlas(type){ if (!cache[type] && buildFn) buildFn(type); const a = cache[type]; return a ? {base:a.base.toDataURL('image/png'), mask:a.mask.toDataURL('image/png')} : null; },
     // draw a unit sprite centred on (x, y) at on-screen height h; ang in radians (screen space)
     draw(ctx, type, color, x, y, h, ang, frame = 0, night = false){
       const a = cache[type]; if (!a) return false;
-      const sheet = tint(type, color, night);
+      const sheet = tint(type, color);
       const d = Math.round(((ang % (Math.PI*2)) + Math.PI*2) % (Math.PI*2)/(Math.PI*2)*a.dirs) % a.dirs, f = Math.max(0, Math.min(a.frames - 1, frame | 0));
       const q = ctx.imageSmoothingQuality; ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(sheet, f*SZ, d*SZ, SZ, SZ, x - h/2, y - h*0.62, h, h);
+      if (night){ const ga = ctx.globalAlpha; ctx.globalAlpha = ga*0.42; ctx.drawImage(nightSheet(type), f*SZ, d*SZ, SZ, SZ, x - h/2, y - h*0.62, h, h); ctx.globalAlpha = ga; }
       ctx.imageSmoothingQuality = q;
       return true;
     },

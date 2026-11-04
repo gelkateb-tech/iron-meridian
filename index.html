@@ -362,7 +362,7 @@ details.more summary::-webkit-details-marker{display:none}
 <div id="modal" hidden><div class="sheet" id="sheet"></div></div>
 
 <script src="world.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script>'); }</script>
 <script src="units3d.js"></script>
 <script>
 (() => {
@@ -622,7 +622,7 @@ function buildGeometry(){
       else segPush(sProv, i, d);
     }
   }
-  const outline = outS.map(a => smoothPath(a)), provEdges = smoothPath(sProv), seaEdges = smoothPath(sSea, 1), coast = smoothPath(sCoast), countryEdges = smoothPath(sCountry);
+  const outline = new Proxy([], {get:(arr, k) => { if (typeof k !== 'string' || !/^\d+$/.test(k)) return arr[k]; return arr[k] || (arr[k] = smoothPath(outS[+k])); }}), provEdges = smoothPath(sProv), seaEdges = smoothPath(sSea, 1), coast = smoothPath(sCoast), countryEdges = smoothPath(sCountry);
   GEO = {fill, outline, provEdges, seaEdges, coast, countryEdges, nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas')};
   rebuildOwnerGeo();
 }
@@ -647,6 +647,8 @@ function rebuildOwnerGeo(){
 function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
 function buildTerrain(){
   if (G.terrain) return G.terrain;
+  if (PRE.terrain && PRE.mask){ const mkc = im => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); return c; };
+    G.landMask = mkc(PRE.mask); return (G.terrain = mkc(PRE.terrain)); }
   const TS = 0.45, w = Math.ceil(WORLD_W*TS), h = Math.ceil(WORLD_H*TS);
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const mk = document.createElement('canvas'); mk.width = w; mk.height = h;
@@ -714,6 +716,7 @@ function buildMini(){
 
 /* ---------------- State ---------------- */
 let G = null, S = null;
+const PRE = {};
 const powerCountry = p => WORLD.countries.indexOf(p.country);
 function resetCaches(){ SUP = null; supHour = -1; BLOCK = new Set(); seenHour = -1; FX.length = 0; visCache = null; borderCache = null; lastRes = null; }
 function newGame(seed, pick){
@@ -1933,20 +1936,24 @@ function clampView(){
   view.x = ww < cw ? Math.min(Math.max(view.x, -ww/2), cw - ww/2) : Math.min(m, Math.max(cw - ww - m, view.x));
   view.y = wh < ch ? Math.min(Math.max(view.y, -wh/2), ch - wh/2) : Math.min(m, Math.max(ch - wh - m, view.y));
 }
-let layer = null, layerKey = '', geoDirty = false, relVer = 0;
+let layer = null, layerKey = '', geoDirty = false, relVer = 0, lastPanT = 0;
 function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; } return P.box; }
+const LM = 0.35;                                        // layer margin, as a share of the viewport on each side
 function renderLayer(vis){
   if (!layer) layer = document.createElement('canvas');
-  if (layer.width !== cv.width || layer.height !== cv.height){ layer.width = cv.width; layer.height = cv.height; }
+  const mx = Math.round(cw*LM), my = Math.round(ch*LM), lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
+  if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
+  layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s;
+  const ox = view.x + mx, oy = view.y + my;
   let c = layer.getContext('2d'); const px = 1/view.s, hexPx = view.s*HS;
-  c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#060c0f'; c.fillRect(0, 0, cw, ch);
-  c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
+  c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#060c0f'; c.fillRect(0, 0, cw + 2*mx, ch + 2*my);
+  c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   c.imageSmoothingEnabled = true; c.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
-  const vx0 = -view.x/view.s, vy0 = -view.y/view.s, vx1 = (cw - view.x)/view.s, vy1 = (ch - view.y)/view.s;
+  const vx0 = -ox/view.s, vy0 = -oy/view.s, vx1 = (cw + 2*mx - ox)/view.s, vy1 = (ch + 2*my - oy)/view.s;
   const onScreen = P => { const b = provBox(P); return b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1; };
   const hp = hatchPattern(c); if (hp.setTransform) hp.setTransform(new DOMMatrix([px, 0, 0, px, 0, 0]));
   const base = c; if (!layer.fl) layer.fl = document.createElement('canvas'); const flc = layer.fl; if (flc.width !== layer.width || flc.height !== layer.height){ flc.width = layer.width; flc.height = layer.height; }
-  c = flc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, flc.width, flc.height); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
+  c = flc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, flc.width, flc.height); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
     if (mapMode === 'terrain'){ c.fillStyle = rgba(TERRAIN[P.terrain || 'plains'].col, 0.55); c.fill(GEO.fill[p]); }
     else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p]); }
@@ -1973,9 +1980,12 @@ function draw(now){
   if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; } else if (cv.style.transform){ cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS;
-  const key = [view.s, view.x, view.y, cw, ch, dpr, geoVer, vis.key, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : 0].join('|');
-  if (key !== layerKey){ layerKey = key; renderLayer(vis); }
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(layer, 0, 0);
+  const key = [view.s, cw, ch, dpr, geoVer, vis.key, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : 0].join('|');
+  const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
+  const offEdge = !layer || Math.abs(dxv) > layer.mx*0.9 || Math.abs(dyv) > layer.my*0.9;
+  if (key !== layerKey || offEdge || (!panning && (dxv || dyv) && now - (lastPanT || 0) > 140)){ layerKey = key; renderLayer(vis); }
+  if (panning || dxv || dyv) lastPanT = panning ? now : lastPanT;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(layer, Math.round((view.x - layer.vx - layer.mx)*dpr), Math.round((view.y - layer.vy - layer.my)*dpr));
   ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   if (hoverProv >= 0 && hoverProv !== sel.prov && !G.P[hoverProv].sea){ ctx.strokeStyle = 'rgba(255,248,230,0.55)'; ctx.lineWidth = 1.6*px; ctx.stroke(GEO.outline[hoverProv]); }
@@ -2734,13 +2744,21 @@ function start(data){
   if (!resumed){ if (saved && saved.v === 3 && !saved.over) showBriefing(true, true); else showPicker(); }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderSide(true));
   booted = true;
-  if (window.U3D) U3D.warmup();
+  if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
 if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), setTarget: (id, p) => setTarget(armyById(id), p)};
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
-if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+function preload(){
+  if (window.__BAKE) return Promise.resolve();
+  const img = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  const tasks = [img('assets/terrain.webp').then(im => PRE.terrain = im), img('assets/landmask.png').then(im => PRE.mask = im)];
+  if (window.U3D && U3D.loadBaked) tasks.push(U3D.loadBaked('assets/units/').catch(() => { if (U3D.canRender()) U3D.warmup(); }));
+  return Promise.race([Promise.all(tasks), new Promise(r => setTimeout(r, 6000))]);
+}
+const boot = data => preload().then(() => start(data));
+if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
 })();
 </script>

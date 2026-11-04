@@ -8,4 +8,5 @@ for f in "$ROOT"/*.js; do [ -e "$f" ] && cp "$f" "$ROOT/.test/"; done
 # offline tests: use a local copy of three.js instead of the CDN
 THREE_LOCAL=/tmp/claude-0/-home-user/7fd07611-91e4-5b00-ba43-06c622a65904/scratchpad/build/node_modules/three/build/three.min.js
 if [ -f "$THREE_LOCAL" ]; then cp "$THREE_LOCAL" "$ROOT/.test/three.min.js"; sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js#three.min.js#' "$ROOT/.test/page.html"; fi
+[ -d "$ROOT/assets" ] && rm -rf "$ROOT/.test/assets" && cp -r "$ROOT/assets" "$ROOT/.test/assets"
 echo "$ROOT/.test/page.html"
