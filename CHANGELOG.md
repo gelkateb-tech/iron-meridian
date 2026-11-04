@@ -319,3 +319,16 @@
 ## Round 43 — City or troops?
 - Clicking a city where your forces stand (on the city or on its troops) opens a small menu at the click point: City (recruit, build, details) or any of the forces stationed there, each with its formation name and unit count. Pick one to select it; Esc, panning or clicking elsewhere closes the menu. Once a force is selected, clicks plan routes as before.
 - The tutorial's capital and army steps mention the menu.
+
+## Round 44 — Real fog of war, aircraft spotting, UAVs and satellites
+- Stricter fog of war:
+  - Your provinces reveal only themselves. Cities and airbases carry radar that also covers the neighbouring provinces.
+  - Ground forces and fleets see their own province and the next one around. Shared Intel allies share their vision.
+  - Every other army, including independent garrisons, is hidden under the fog until something of yours spots it.
+- Aircraft spot enemies: strikers, gunships and interceptors in flight reveal the provinces around them as they fly. Patrolling wings and UAVs watch everything within two provinces.
+- UAVs: the drone is now the **Kite Recon UAV**. It flies to any province within 18 hexes and loiters there for 12 hours, watching everything within two provinces live. The area stays revealed for 12 hours after it leaves, and a dispatch reports how many foreign units it saw.
+- Reconnaissance satellites (new Strategic research, after Cruise Missiles):
+  - Launch up to 3 from a missile silo or your capital for $250M each.
+  - Each follows a looping ground track that crosses the whole map once per game day. Everything inside its footprint (roughly 1,400 km across) is revealed as it passes.
+  - On the map you see the satellite with its solar panels and a blinking beacon. Your own also show a dashed scanning footprint and their track.
+  - AI powers launch satellites too, and theirs appear in the sky with a red beacon.

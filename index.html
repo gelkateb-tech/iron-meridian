@@ -431,7 +431,7 @@ const UNITS = {
   crui: {name:'Tempest Cruiser',   short:'CRU', cls:'naval',   cost:75, oil:10, metal:30, mp:8,  atk:7, def:6, hp:20, spd:7,  build:96, upk:5, food:0.5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
   carr: {name:'Albatross Carrier', short:'CVN', cls:'naval',   cost:140, oil:14, metal:45, mp:10, atk:3, def:6, hp:26, spd:6, build:120, upk:7, food:1, fuel:2, req:{b:'yard', l:2}, tech:'nav2', vs:{air:1.4, soft:0.4, armored:0.3, naval:0.6}, role:'Mobile airbase: air wings can base on it and strike far from home. Weak alone; escort it.'},
   heli: {name:'Wasp Gunship',      short:'GUN', cls:'air',     cost:65, oil:8,  metal:15, mp:6,  atk:7, def:4, hp:10, spd:12, build:54, upk:4, food:0.5, fuel:1.5, req:{b:'air', l:1}, tech:'heli1', vs:{armored:2.2, soft:1.3, air:0.3, naval:0.5}, role:'Attack helicopter: short range (6 hexes), tears through armor and infantry.'},
-  drone:{name:'Kite Recon Drone',  short:'DRN', cls:'air',     cost:30, oil:2,  metal:8,  mp:1,  atk:0.5, def:1, hp:4, spd:16, build:30, upk:1, food:0,   fuel:0.5, req:{b:'air', l:1}, tech:'drone1', vs:{soft:0.2, armored:0.2, air:0.1, naval:0.1}, role:'Unarmed: flies to any province in range and reveals the area through the fog for 2 days.'},
+  drone:{name:'Kite Recon UAV',    short:'DRN', cls:'air',     cost:30, oil:2,  metal:8,  mp:1,  atk:0.5, def:1, hp:4, spd:16, build:30, upk:1, food:0,   fuel:0.5, req:{b:'air', l:1}, tech:'drone1', vs:{soft:0.2, armored:0.2, air:0.1, naval:0.1}, role:'Unarmed UAV: flies to any province in range and loiters 12 hours, watching everything within 2 provinces live; the area stays revealed 12 h after it leaves.'},
   para: {name:'Falcon Paratroopers',short:'PAR', cls:'soft',   cost:40, oil:0,  metal:4,  mp:10, atk:4, def:3, hp:10, spd:4,  build:36, upk:1.5, food:1,  fuel:0,   req:{b:'air', l:1}, tech:'para1', role:'Elite infantry. From a province with your airbase, can be air-dropped up to 9 hexes away.'},
 };
 const MISSILES = {
@@ -540,10 +540,11 @@ const TECH = [
   {id:'msl1',  branch:'Strategic', name:'Cruise Missiles',      cost:160, days:6, req:null,    desc:'Missile Silos can build Cruise Missiles', fx:{}},
   {id:'msl2',  branch:'Strategic', name:'Ballistic Missiles',   cost:240, days:8, req:'msl1',  desc:'Silos can build Ballistic Missiles',   fx:{}},
   {id:'msl3',  branch:'Strategic', name:'Anti-Missile Shield',  cost:220, days:7, req:'msl2',  desc:'Your SAMs and Frigates intercept missiles twice as well', fx:{}},
+  {id:'sat1',  branch:'Strategic', name:'Reconnaissance Satellites', cost:200, days:6, req:'msl1', desc:'Launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day, revealing a wide swath', fx:{}},
   {id:'nav1',  branch:'Naval',     name:'Naval Gunnery',       cost:90,  days:4, req:null,    desc:'Frigates +1 attack, Cruisers +2 attack', fx:{frig:{atk:1}, crui:{atk:2}}},
   {id:'nav2',  branch:'Naval',     name:'Carrier Aviation',    cost:170, days:7, req:'nav1',  desc:'Unlocks Albatross Carriers (Naval Yard II): mobile airbases at sea', fx:{}},
   {id:'nav3',  branch:'Naval',     name:'Amphibious Doctrine', cost:190, days:7, req:'nav2',  desc:'Troops landing from the sea fight at 90% instead of 67% on their first day', fx:{}},
-  {id:'drone1', branch:'Airmobile', name:'Unmanned Recon',      cost:90,  days:4, req:null,     desc:'Unlocks Kite Recon Drones (reveal any area in range for 2 days)', fx:{}},
+  {id:'drone1', branch:'Airmobile', name:'Unmanned Recon',      cost:90,  days:4, req:null,     desc:'Unlocks Kite Recon UAVs: loiter over any area in range and watch it live', fx:{}},
   {id:'heli1',  branch:'Airmobile', name:'Rotary Wing',         cost:150, days:6, req:'drone1', desc:'Unlocks Wasp Gunships: short-range attack helicopters that shred armor', fx:{}},
   {id:'para1',  branch:'Airmobile', name:'Airborne Forces',     cost:190, days:7, req:'heli1',  desc:'Unlocks Falcon Paratroopers, air-dropped behind enemy lines', fx:{}},
 ];
@@ -1839,8 +1840,8 @@ function airTick(){
           if (a.owner === PLAYER && cv) log(`${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
         else if (f.kind === 'recon'){ S.reveal = S.reveal || {}; const seen = new Set([f.tgt]); let fr = [f.tgt]; for (let d = 0; d < 2; d++){ const nx = []; for (const u of fr) for (const v of G.P[u].nbs) if (!seen.has(v)){ seen.add(v); nx.push(v); } fr = nx; }
-          for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + 48); visCache = null; f.ph = 'over'; f.hrs = 2; f.t = 0;
-          if (a.owner === PLAYER){ const foes = [...seen].reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== PLAYER).reduce((s1, b) => s1 + count(b), 0), 0); log(`Drone over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${seen.size} provinces revealed for 2 days, ${foes} foreign units spotted.`, 'info', f.tgt); } }
+          for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + 24); visCache = null; f.ph = 'over'; f.hrs = 12; f.t = 0;
+          if (a.owner === PLAYER){ const foes = [...seen].reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== PLAYER).reduce((s1, b) => s1 + count(b), 0), 0); log(`UAV over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: watching ${seen.size} provinces for 12 h, ${foes} foreign units spotted.`, 'info', f.tgt); } }
         else { f.ph = 'patrol'; f.hrs = 12; f.t = 0; } } }
     else if (f.ph === 'patrol' || f.ph === 'over'){ if (--f.hrs <= 0){ f.ph = 'back'; f.t = 0; } }
     else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (a.air.car != null){ a.at = a.air.base; } else if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; a.at = nb; } } } }
@@ -2292,6 +2293,7 @@ function recordStats(){
 const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
   marketDay();
+  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }
   for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
     const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
   for (const c of (S.cmds || [])){ if (!c.alive || c.army == null) continue; const a = armyById(c.army); if (!a || a.cmd !== c.id) c.army = null; }
@@ -2508,13 +2510,42 @@ function visibleSet(){
   if (visCache) return visCache;
   const v = new Set();
   const al = new Set([PLAYER, ...alliesOf(PLAYER)]);
-  for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])){ v.add(p); for (const q of G.P[p].nbs) v.add(q); }
+  const ring = (p0, r) => { let fr = [p0]; v.add(p0); for (let d = 0; d < r; d++){ const nx = []; for (const u of fr) for (const q of G.P[u].nbs) if (!v.has(q)){ v.add(q); nx.push(q); } fr = nx; } };
+  // your land shows itself; cities and airbases carry radar that also covers the neighbouring provinces
+  for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])){ v.add(p); if (G.P[p].city || S.bld[p].air) for (const q of G.P[p].nbs) v.add(q); }
   if (S.reveal) for (const k in S.reveal) if (S.reveal[k] > S.hour) v.add(+k);
-  for (const a of S.armies) if (al.has(a.owner)){ v.add(a.at); for (const q of G.P[a.at].nbs) v.add(q); if (a.to !== null) v.add(a.to); }
+  for (const a of S.armies){ if (!al.has(a.owner)) continue;
+    if (a.fly){ const [wx, wy] = armyPos(a), c = worldToCell(wx, wy), p0 = c >= 0 ? G.prov[c] : -1; if (p0 >= 0) ring(p0, (isDrone(a) || a.fly.ph === 'patrol' || a.fly.ph === 'over' && a.fly.kind === 'recon') ? 2 : 1); continue; }   // aircraft spot what they fly over
+    if (a.air) continue;
+    v.add(a.at); for (const q of G.P[a.at].nbs) v.add(q); if (a.to !== null) v.add(a.to); }
+  for (const st of (S.sats || [])) if (al.has(st.owner)) for (const p0 of satSwath(st)) v.add(p0);
   let h = v.size; for (const p of v) h = (h*31 + p) | 0; v.key = h;
   return (visCache = v);
 }
-function armyVisible(a, vis){ return a.owner === PLAYER || a.owner === NEUTRAL || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
+// satellites: a sinusoidal ground track crossing the map once per game day; the footprint reveals everything under it
+const SAT_MAX = 3, SAT_COST = 250, SAT_R = 78;
+function satPos(st, hr = S.hour + (S.speed && !S.over ? acc : 0)){ const u = ((st.ph + (hr - st.h0)/24) % 1 + 1) % 1, x = u*WORLD_W, y = WORLD_H*0.5 + Math.sin(u*Math.PI*2*st.k + st.ph*6)*WORLD_H*st.amp; return [x, Math.max(OY, Math.min(WORLD_H - OY, y))]; }
+function satSwath(st){ if (st.cache && st.cache.h === S.hour) return st.cache.a; const [x, y] = satPos(st, S.hour), a = [];
+  for (const P of G.P){ let dx = Math.abs(P.x - x); dx = Math.min(dx, WORLD_W - dx); if (dx < SAT_R && Math.abs(P.y - y) < SAT_R*0.8 && dx*dx + ((P.y - y)/0.8)**2 < SAT_R*SAT_R) a.push(P.id); }
+  st.cache = {h:S.hour, a}; return a; }
+function launchSat(n, p){ const N = S.nations[n]; S.sats = S.sats || []; if (!has(n, 'sat1') || S.sats.filter(x => x.owner === n).length >= SAT_MAX || N.cash < SAT_COST || S.owner[p] !== n || !(S.bld[p].silo || p === N.capital)) return false;
+  N.cash -= SAT_COST; S.sats.push({id:S.nid++, owner:n, ph:rng(), amp:0.18 + rng()*0.2, k:1 + Math.floor(rng()*2), h0:S.hour}); visCache = null;
+  if (n === PLAYER){ log('Reconnaissance satellite launched: it sweeps the globe once a day, revealing everything beneath its track.', 'good', p); sfx('launch'); if (booted){ const P = G.P[p]; for (let i = 0; i < 6; i++) emit('smokel', P.x, P.y, {vx:(Math.random() - 0.5)*10, vy:-20 - Math.random()*10, s0:6, s1:24, life:2600}); } }
+  return true; }
+function drawSats(now){ if (!S.sats || !S.sats.length) return; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  for (const st of S.sats){ const [wx, wy] = satPos(st), mine = st.owner === PLAYER || (st.owner >= 0 && rel(PLAYER, st.owner).st === 'ally'), col = colorOf(st.owner);
+    for (const off of [-WORLD_W, 0, WORLD_W]){ const [x, y] = toScreen(wx + off, wy); if (x < -120 || x > cw + 120 || y < -120 || y > ch + 120) continue;
+      if (mine){ ctx.strokeStyle = 'rgba(140,210,255,.45)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(x, y, SAT_R*view.s, SAT_R*0.8*view.s, 0, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(140,210,255,.05)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(140,210,255,.25)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = -12; i <= 12; i++){ const [tx, ty] = satPos(st, S.hour + i*0.5), [sx, sy] = toScreen(tx + off + (Math.abs(tx - wx) > WORLD_W/2 ? (tx < wx ? WORLD_W : -WORLD_W) : 0), ty); if (i === -12) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy); } ctx.stroke(); }
+      // the satellite: body, solar panels, blinking beacon
+      const sc = 1.8, a0 = now/2000 + st.id; ctx.save(); ctx.translate(x, y - 6); ctx.rotate(Math.sin(a0)*0.2);
+      ctx.fillStyle = '#4a6c94'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 0.8; for (const sx of [-1, 1]){ ctx.fillRect(sx*5*sc - (sx < 0 ? 9*sc : 0), -2.6*sc, 9*sc, 5.2*sc); ctx.strokeRect(sx*5*sc - (sx < 0 ? 9*sc : 0), -2.6*sc, 9*sc, 5.2*sc); }
+      ctx.fillStyle = '#d8d4c6'; ctx.fillRect(-4*sc, -3.6*sc, 8*sc, 7.2*sc); ctx.fillStyle = col; ctx.fillRect(-4*sc, -0.8*sc, 8*sc, 1.6*sc);
+      if (Math.floor(now/500 + st.id) % 2 === 0){ ctx.fillStyle = mine ? '#8fe0ff' : '#ff6a5a'; ctx.beginPath(); ctx.arc(0, -4.6*sc, 1.2*sc, 0, Math.PI*2); ctx.fill(); }
+      ctx.restore(); } }
+  ctx.restore(); }
+function armyVisible(a, vis){ return a.owner === PLAYER || (a.owner >= 0 && friendly(PLAYER, a.owner) && rel(PLAYER, a.owner).st === 'ally') || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
 function armyPos(a){
   if (a.air) return wingPos(a);
   if (a.fly && a.fly.kind === 'drop'){ const A = G.P[a.fly.from], B = G.P[a.fly.tgt], t = Math.min(1, a.fly.t + (S.speed && !S.over ? acc : 0)*a.fly.dt); return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t]; }
@@ -3007,6 +3038,7 @@ function draw(now){
     if (m.owner !== PLAYER && (S.owner[m.to] === PLAYER)){ const [tx, ty] = toScreen(B.x, B.y); ctx.save(); ctx.strokeStyle = `rgba(224,87,79,${0.5 + 0.4*Math.sin(now/120)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tx, ty, 16, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
   if (aimMsl){ const F = G.P[aimMsl.from], [fx1, fy1] = toScreen(F.x, F.y), rr = MISSILES[aimMsl.k].range*HS*SQ3*view.s;
     ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(224,87,79,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(fx1, fy1, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(224,87,79,.04)'; ctx.fill(); ctx.restore(); }
+  drawSats(now);
   drawSelPaths();
   if (dropFor !== null){ const d0 = armyById(dropFor); if (d0){ const [bx, by] = toScreen(G.P[d0.at].x, G.P[d0.at].y), rr = PARA_RANGE*HS*SQ3*view.s; ctx.save(); ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(226,162,61,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(226,162,61,.05)'; ctx.fill(); ctx.restore(); } }
   drawFX(now);
@@ -3511,12 +3543,12 @@ function replayStart(){ const cv0 = document.getElementById('replay'); if (!cv0 
 const ACH = {
   firstblood:['First Blood', 'Win a battle.'], flanker:['Hammer and Anvil', 'Win a battle attacking from 3 or more directions.'], blitz:['Blitzkrieg', 'Capture 5 provinces in a single day.'],
   peace:['Spoils of Peace', 'Sign a peace treaty that cedes land to you.'], coalition:['Grand Alliance', 'Belong to a coalition.'], marshal:['Field Marshal', 'Promote a commander to Marshal.'],
-  tycoon:['War Chest', 'Hold $3,000M at once.'], airborne:['Airborne', 'Land paratroopers.'], eyes:['Eyes in the Sky', 'Scout with a recon drone.'], carrier:['Blue-Water Navy', 'Land an air wing on a carrier.'],
+  tycoon:['War Chest', 'Hold $3,000M at once.'], airborne:['Airborne', 'Land paratroopers.'], eyes:['Eyes in the Sky', 'Scout with a recon UAV.'], carrier:['Blue-Water Navy', 'Land an air wing on a carrier.'],
   missile:['Long Arm', 'Hit a target with a missile.'], capital:['Decapitation', 'Capture an enemy capital.'], survivor:['Still Standing', 'Reach the final day of a campaign.'], victory:['Victor', 'Win a campaign.'], mark4:['Mk IV', 'Upgrade a unit type to Mark IV.'],
 };
 let ACHS = (() => { try { return JSON.parse(localStorage.getItem('iron-meridian-ach') || '{}'); } catch (e) { return {}; } })();
 function unlock(k){ if (ACHS[k] || !ACH[k]) return; ACHS[k] = Date.now(); try { localStorage.setItem('iron-meridian-ach', JSON.stringify(ACHS)); } catch (e) {} if (booted){ toast(`Achievement unlocked: ${ACH[k][0]}. ${ACH[k][1]}`, 'good', null); sfx('research'); } }
-function achLog(text){ if (/^Battle of .* won/.test(text)) unlock('firstblood'); if (/promoted to Marshal/.test(text) && text.length) unlock('marshal'); if (/Paratroopers landed/.test(text)) unlock('airborne'); if (/^Drone over/.test(text)) unlock('eyes');
+function achLog(text){ if (/^Battle of .* won/.test(text)) unlock('firstblood'); if (/promoted to Marshal/.test(text) && text.length) unlock('marshal'); if (/Paratroopers landed/.test(text)) unlock('airborne'); if (/^UAV over/.test(text)) unlock('eyes');
   if (/landed on .*Carrier|landed on .*: it now strikes/.test(text)) unlock('carrier'); if (/^Peace conference.* to you/.test(text)) unlock('peace'); if (/^You captured .*, capital of/.test(text)) unlock('capital'); if (/Missile hit/.test(text)) unlock('missile'); if (/to Mk IV/.test(text)) unlock('mark4'); }
 function achDaily(){ if (!S.nations[PLAYER].alive) return; if (S.nations[PLAYER].cash >= 3000) unlock('tycoon'); if (typeof blocOf === 'function' && blocOf(PLAYER)) unlock('coalition');
   const st0 = S.stats || {}, tk = st0.taken || 0; if (tk - (S.achTaken ?? tk) >= 5) unlock('blitz'); S.achTaken = tk; if (Math.floor(S.hour/24) >= DAY_LIMIT - 1) unlock('survivor'); }
@@ -3654,6 +3686,8 @@ function provHTML(p){
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
   }
+  if (mine && (S.bld[p].silo || p === S.nations[PLAYER].capital) && has(PLAYER, 'sat1')){ const nS = (S.sats || []).filter(x => x.owner === PLAYER).length;
+    html += `<div class="eyebrow">Space · ${nS}/${SAT_MAX} satellites</div><div class="row"><button class="btn ${S.nations[PLAYER].cash >= SAT_COST && nS < SAT_MAX ? 'primary' : ''}" data-act="sat" data-id="${p}" ${S.nations[PLAYER].cash >= SAT_COST && nS < SAT_MAX ? '' : 'disabled'} title="Each satellite sweeps the whole globe once a day, revealing a wide swath beneath it">Launch reconnaissance satellite · $${SAT_COST}M</button></div>`; }
   if (mine && S.bld[p].silo){ const st = mstock(p);
     html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.entries(MISSILES).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm">${M0.name} <b class="cost">×${st[k]}</b></span><span class="cost">${has(PLAYER, M0.tech) ? `$${M0.cost}M · ${M0.oil} oil · ${M0.metal} metal · ${M0.build/24}d · range ${M0.range}` : 'Research ' + TECH_BY[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`; }
   if (mine){
@@ -3727,6 +3761,7 @@ document.addEventListener('click', e => {
     case 'cm-stance': if (a){ const ks = Object.keys(STANCES); a.stance = ks[(ks.indexOf(a.stance || 'hold') + 1) % ks.length]; a.home = null; toast(`${armyName(a)}: ${STANCES[a.stance][0]}. ${STANCES[a.stance][1]}`, 'info', null); renderSide(true); } break;
     case 'choose-prov': closeChooser(); selectProv(+b.dataset.id); break;
     case 'choose-army': closeChooser(); selectArmy(+b.dataset.id); break;
+    case 'sat': if (launchSat(PLAYER, +b.dataset.id)) renderSide(true); break;
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
@@ -3908,7 +3943,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p)};
+if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p)};
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
