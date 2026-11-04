@@ -171,3 +171,15 @@
 - Campaign length: 60, 120 or 240 days.
 - Persistent mode: like the genre's always-on servers, the war keeps running while you're away, at one game day per real hour, with up to 14 days of catch-up. When you return you get a "While you were away" special edition of the Herald: days passed, provinces, units and treasury gained or lost, and the key dispatches. Your forces keep following their stances meanwhile. Classic mode (time only runs while you play) stays the default.
 - Saves remember the scenario, length and mode.
+
+## Round 26 — A clearer battlefield (art review)
+- Only what matters gets models:
+  - Independents and powers at peace with you stay as small badges up to close zoom.
+  - Past that they get a single small figure instead of a full formation.
+  - Your forces, your enemies and anything in battle are drawn as formations.
+- Formations fit their province: spacing and figure size are clamped to the province's size. The two sides of a battle are placed on either side of the province, facing each other as two lines instead of a carpet of overlapping figures.
+- Day and night follow the real sun: the night shadow is computed per latitude with the seasonal solar declination, so the line between day and night curves and polar nights are longer in winter. Twilight is a wide, soft warm band instead of a hard stripe, and night is deeper. Units keep more night shading while keeping their nation colour.
+- Air strike damage appears when the bombers actually arrive over the target, and rolls up with the battle numbers in the same format. Missile hits that do no damage no longer print "−0 HP".
+- Scale: ships are about 30% smaller (a frigate is no longer bigger than Denmark) and jets about 20% smaller.
+- Muzzle flashes are a 45 ms glow and a narrow cone instead of a white three-pronged star.
+- Embarked troops at sea are drawn as a transport ship, not as soldiers standing on the water.
