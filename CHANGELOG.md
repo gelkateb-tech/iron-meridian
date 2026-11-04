@@ -227,3 +227,14 @@
   - **Amphibious Doctrine**: troops landing from the sea fight at 90% instead of 67% on their first day ashore.
 - Albatross Carrier, a mobile airbase. Select an air wing and tap a sea zone holding one of your carriers to rebase onto it. The wing then sails with the carrier, and its range ring and strikes are measured from wherever the carrier is, so you can project air power across oceans. If the carrier is sunk, its wings divert to the nearest airbase in reach or are lost. The carrier itself is weak in a fight (strong only against aircraft), so escort it with frigates.
 - New 3D carrier model, baked to sprites: an angled flight deck with a landing strip, a starboard island in nation colours, and parked aircraft on deck. Carrier formations are named "Carrier Group".
+
+## Round 32 — Commanders
+- Appoint up to 3 commanders ($80M each) from any ground force's panel. Each gets a generated name and one trait:
+  - **Blitz**: +15% speed, +10% attack when attacking.
+  - **Shield**: −12% damage taken when defending.
+  - **Artillerist**: artillery and SAMs +20% attack.
+  - **Logistician**: no attrition when cut off, heals 50% faster.
+  - **Siegemaster**: captures provinces 25% faster.
+- Commanders gain experience from the damage their force deals in battle. They are promoted from Colonel to General to Marshal, and each rank multiplies the trait. Promotions are announced in the dispatches.
+- Assign a free commander to a force or relieve them from the force panel. Merging forces keeps the commander. When a led force is destroyed, its commander has an even chance of capture or escape.
+- Forces with a commander show a gold ★ on their strength badge, and the Armies screen lists commanders with their rank stars. AI powers appoint and assign commanders too.

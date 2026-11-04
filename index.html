@@ -141,6 +141,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .armylist button{display:flex; justify-content:space-between; text-align:left; font-size:12.5px; padding:6px 9px}
 .muted{color:var(--muted)}
 .small{font-size:12px}
+.cmd{display:flex;gap:8px;align-items:center;padding:6px 8px;margin:6px 0;border:1px solid rgba(226,162,61,.35);border-radius:4px;background:rgba(226,162,61,.06)}.cmd .ins{color:var(--accent);font-size:13px;letter-spacing:-1px;min-width:34px;text-align:center}.cmd>div{flex:1}
 .away{list-style:none;padding:0;margin:0 0 10px;display:grid;gap:4px;font-size:13px}.away li{padding:4px 8px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03)}.away li.bad{border-left-color:var(--danger)}.away li.good{border-left-color:var(--ok)}.away time{opacity:.6;margin-right:6px;font-family:var(--mono,monospace);font-size:11px}
 .blocs{display:grid;gap:6px;margin-bottom:8px}.bloc{display:flex;flex-direction:column;gap:2px;padding:6px 10px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03);border-radius:4px}.bloc.mine{border-left-color:var(--accent)}.bloc i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 6px;vertical-align:baseline}
 .clock .vic{display:block;font-size:10.5px;opacity:.7;font-weight:500;white-space:nowrap}@media (max-width:820px){.clock .vic{font-size:9px;letter-spacing:-.2px}}
@@ -946,7 +947,28 @@ const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t)
 // remaining strength against the force's recent peak (units lost count, not just wounds)
 const strengthFrac = a => { const cur = effHP(a), pk = Math.max(a.peak || 0, cur); return pk ? cur/pk : 0; };
 const power = a => UT.reduce((s, t) => s + a.u[t]*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*UNITS[t].hp/10, 0)*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1);
-const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1);
+const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1)*(1 + 0.15*cmdF(a, 'blitz'));
+/* ---------------- Commanders ---------------- */
+const TRAITS = {
+  blitz:{name:'Blitz', icon:'»', desc:'+15% speed; +10% attack when attacking (×rank)'},
+  shield:{name:'Shield', icon:'◆', desc:'Takes 12% less damage when defending (×rank)'},
+  gunner:{name:'Artillerist', icon:'✦', desc:'Artillery and SAMs +20% attack (×rank)'},
+  supply:{name:'Logistician', icon:'✚', desc:'No attrition when cut off; heals 50% faster (×rank)'},
+  siege:{name:'Siegemaster', icon:'▲', desc:'Captures provinces 25% faster (×rank)'},
+};
+const CMD_FIRST = ['Adair', 'Bram', 'Calla', 'Dorian', 'Elin', 'Farah', 'Galen', 'Hana', 'Ilya', 'Juno', 'Kasimir', 'Lena', 'Marek', 'Nadia', 'Oren', 'Petra', 'Quinn', 'Rhea', 'Soren', 'Talia', 'Udo', 'Vera', 'Wren', 'Yara', 'Zane'];
+const CMD_LAST = ['Ashford', 'Brandt', 'Corvin', 'Dahl', 'Ekwall', 'Ferro', 'Garrow', 'Hale', 'Ivers', 'Jasko', 'Kell', 'Lorne', 'Marlow', 'Noor', 'Orlov', 'Pryce', 'Quist', 'Rook', 'Sabre', 'Thorne', 'Ulric', 'Voss', 'Wilde', 'Yates', 'Zorin'];
+const CMD_COST = 80, CMD_MAX = 3, RANKS = ['', 'Colonel', 'General', 'Marshal'];
+function cmdList(n){ return (S.cmds || (S.cmds = [])).filter(c => c.owner === n && c.alive); }
+function newCommander(n){ const r = () => rng(), t = Object.keys(TRAITS)[Math.floor(r()*5)], c = {id:S.nid++, owner:n, name:`${CMD_FIRST[Math.floor(r()*CMD_FIRST.length)]} ${CMD_LAST[Math.floor(r()*CMD_LAST.length)]}`, trait:t, rank:1, xp:0, alive:true, army:null};
+  (S.cmds || (S.cmds = [])).push(c); return c; }
+const cmdOf = a => a && a.cmd != null && S.cmds ? S.cmds.find(c => c.id === a.cmd && c.alive) || null : null;
+const cmdF = (a, t) => { const c = cmdOf(a); return c && c.trait === t ? c.rank : 0; };
+function cmdLost(a){ const c = cmdOf(a); if (!c) return; c.army = null; a.cmd = null;
+  if (rng() < 0.5){ c.alive = false; if (a.owner === PLAYER) log(`${RANKS[c.rank]} ${c.name} was captured when ${armyName(a)} was destroyed.`, 'bad', a.at); }
+  else if (a.owner === PLAYER) log(`${RANKS[c.rank]} ${c.name} escaped when ${armyName(a)} was destroyed and awaits a new command.`, 'info', S.nations[PLAYER].capital); }
+function cmdXP(a, dealt){ const c = cmdOf(a); if (!c || dealt <= 0) return; c.xp += dealt; const need = [0, 200, 600, 1e9][c.rank];
+  if (c.xp >= need && c.rank < 3){ c.rank++; if (a.owner === PLAYER) log(`${c.name} promoted to ${RANKS[c.rank]}: the ${TRAITS[c.trait].name} trait is now ${c.rank}× as strong.`, 'good', a.at); } }
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) && ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);
 const legHours = (a, from, to) => G.P[from].nb.get(to)*24/(legSpeed(a, from, to)*(G.P[to].sea || !ground(a) ? 1 : terr(to).spd*(G.P[from].road.has(to) ? 1.35 : 1)*weatherSpd(to)));
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
@@ -1272,7 +1294,7 @@ function spawn(n, p, t){
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp)/(h0 + UNITS[t].hp) : 80;
   a.u[t]++;
 }
-function merge(into, from){ if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
+function merge(into, from){ if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
 function splitArmy(a){
   if (count(a) < 2) return null;
   const b = addArmy(a.owner, a.at, {}); b.to = a.to; b.t = a.t; b.path = a.path.slice(); b.m = a.m; b.stance = a.stance; b.from = a.from; b.froms = a.froms ? a.froms.slice() : undefined; b.landed = a.landed; b.peak = a.peak ? a.peak/2 : undefined; if (a.peak) a.peak /= 2;
@@ -1539,7 +1561,7 @@ function armyUpkeep(prevBattles){
   for (const a of S.armies){ if (a.owner < 0 || !count(a) || a.fly) continue;
     const N = S.nations[a.owner], here = a.to === null, inBattle = here && S.battles.includes(a.at);
     if (inBattle){ const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m -= 1 + 40*lost; }
-    else if (supplied(a)){ const own = here && S.owner[a.at] === a.owner, r = own && S.bld[a.at].yard && shipsN(a) ? 0.4 : own && G.P[a.at].city ? 0.25 : 0.10;
+    else if (supplied(a) || cmdF(a, 'supply')){ const own = here && S.owner[a.at] === a.owner, r = (own && S.bld[a.at].yard && shipsN(a) ? 0.4 : own && G.P[a.at].city ? 0.25 : 0.10)*(1 + 0.5*cmdF(a, 'supply'));
       for (const t of UT) if (a.u[t]) a.w[t] = Math.max(0, a.w[t] - a.u[t]*UNITS[t].hp*r/24);
       a.m += 2; if (here && prevBattles.has(a.at)) a.m += 10; }
     else { for (const t of UT){ if (!a.u[t]) continue; a.w[t] += a.u[t]*UNITS[t].hp*0.04/24; while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; } if (!a.u[t]) a.w[t] = 0; }
@@ -1964,7 +1986,8 @@ function tick(){
       for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? (has(o, 'nav3') ? 0.9 : 0.67) : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? 0.8 : 1)*sznA;
         const mf = moraleF(a);
         const tm = G.P[p].sea || o === S.owner[p] ? 1 : terr(p).armor;
-        for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(UNITS[t].cls === 'armored' ? tm : 1); for (const k of CLASSES) av[k] += base*mult(t, k); } }
+        const cB = o !== S.owner[p] ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner');
+        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(UNITS[t].cls === 'armored' ? tm : 1)*cB*(t === 'art' || t === 'sam' ? cG : 1); a._dealt0 += base; for (const k of CLASSES) av[k] += base*mult(t, k); } }
       // shore bombardment: this side's ships in adjacent sea zones add half their firepower to coastal land battles
       if (!G.P[p].sea && G.P[p].coast) for (const sz of G.P[p].nbs){ if (!G.P[sz].sea) continue;
         for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null) continue;
@@ -1980,7 +2003,7 @@ function tick(){
       const d = dmg.get(o), tot = hp.get(o);
       const escorted = G.P[p].sea && sides.get(o).some(b => shipsN(b) > 0);
       const bs = B.s[o];
-      for (const a of sides.get(o)){ const u0 = {...a.u}; hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot); for (const t of UT) if (u0[t] > a.u[t]) bs.lost[t] = (bs.lost[t] || 0) + u0[t] - a.u[t]; }
+      for (const a of sides.get(o)){ const u0 = {...a.u}; hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot*(o === S.owner[p] ? 1 - 0.12*cmdF(a, 'shield') : 1)); cmdXP(a, (a._dealt0 || 0)*0.5); for (const t of UT) if (u0[t] > a.u[t]) bs.lost[t] = (bs.lost[t] || 0) + u0[t] - a.u[t]; }
       bs.hp.push(Math.round(sides.get(o).reduce((s0, a) => s0 + armyHP(a), 0))); if (bs.hp.length > 96) bs.hp.shift();
     }
     { const showFx = owners.includes(PLAYER) || visibleSet().has(p);
@@ -1990,6 +2013,7 @@ function tick(){
     if (playerThere){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const st0 = S.stats || (S.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
     if (playerThere) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(a.owner === PLAYER ? 'unitsLost' : 'unitsKilled', lost); }
     for (const a of list) if (count(a) === 0 && (playerThere || visibleSet().has(p))){ fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); explode(P.x, P.y, 1.4); } }
+    for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
     for (const a of list) if (count(a) === 0 && playerThere){
       if (a.owner === PLAYER) log(`${armyName(a)} was destroyed at ${G.P[p].name}.`, 'bad', p);
       else log(`${armyLabel(a)} destroyed at ${G.P[p].name}.`, 'good', p);
@@ -2010,7 +2034,7 @@ function tick(){
       const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
       if (O !== NEUTRAL && gN >= CAP_MIN){
         if (!S.cap[p] || S.cap[p].by !== O){ S.cap[p] = {by:O, h:0}; if (S.owner[p] === PLAYER){ log(`${nationName(O)} is occupying ${G.P[p].cityName || G.P[p].name}. Retake it before the capture completes.`, 'bad', p); alarm(); } }
-        if (++S.cap[p].h >= capNeed(p, O)) capture(p, O);
+        S.cap[p].h += 1 + 0.25*Math.max(0, ...list.filter(a => a.owner === O).map(a => cmdF(a, 'siege'))); if (S.cap[p].h >= capNeed(p, O)) capture(p, O);
       } else S.cap[p] = null;
     } else if (owners.size === 0) S.cap[p] = null;
   }
@@ -2136,6 +2160,9 @@ function recordStats(){
 const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
   marketDay();
+  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
+    const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
+  for (const c of (S.cmds || [])){ if (!c.alive || c.army == null) continue; const a = armyById(c.army); if (!a || a.cmd !== c.id) c.army = null; }
   for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.eng || N.cash < 300 || rng() > 0.4) continue;
     const tot = {}; for (const a of S.armies) if (a.owner === N.id) for (const t of UT) tot[t] = (tot[t] || 0) + a.u[t];
     const t = UT.filter(t => tot[t] && markOf(N.id, t) < 4).sort((x, y) => tot[y]*UNITS[y].cost - tot[x]*UNITS[x].cost)[0]; if (t) startUpgrade(N.id, t); }
@@ -2553,6 +2580,7 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   const bw = Math.max(16*ps, ctx.measureText(label).width + 8*ps), bh = 11*ps, bx = x - bw/2, by = form ? Math.max(form.y1, y) + 3*ps : y + 4*s;
   roundRect(ctx, bx, by, bw, bh, bh/2); ctx.fillStyle = 'rgba(8,12,14,.92)'; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = color; ctx.stroke();
   ctx.fillStyle = '#f2eee2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, by + bh/2 + 0.5);
+  if (counter.list && counter.list.some(cmdOf)){ ctx.fillStyle = '#e2a23d'; ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.fillText('★', bx - 4*ps, by + bh/2); }
   const hf = Math.max(0, Math.min(1, a ? healthFrac(a) : 1)), barW = Math.max(bw, 22*ps), bx2 = x - barW/2, by2 = by + bh + 1.5*ps;
   const HB = 3.5*ps; let shown = hf;
   if (a){ const d = HPD.get(a.id); if (!d || hf > d.v + 0.001){ HPD.set(a.id, {v:hf, t:now}); } else if (hf < d.v - 0.001){ if (!d.from){ d.from = d.v; d.t = now; } const k2 = Math.min(1, (now - d.t)/600); shown = d.from + (hf - d.from)*k2; if (k2 >= 1){ d.v = hf; d.from = null; } } }
@@ -2917,7 +2945,7 @@ function armiesHTML(){
   const idle = idleArmies().length, tot = L.reduce((s0, a) => s0 + count(a), 0);
   const rows = L.map(a => { const st0 = statusText(a), hp = Math.round(Math.min(healthFrac(a), a.air ? 1 : strengthFrac(a))*100), dest = a.path.length ? a.path[a.path.length - 1] : a.to;
     const comp = UT.filter(t => a.u[t]).map(t => `<span title="${UNITS[t].name}">${unitSVG(t)}${a.u[t]}</span>`).join('');
-    return `<tr><td><b>${armyName(a)}</b><div class="small muted">${G.P[a.at].cityName || G.P[a.at].name}${dest != null && dest !== a.at ? ` → ${G.P[dest].cityName || G.P[dest].name}` : ''}</div></td>
+    return `<tr><td><b>${armyName(a)}</b>${cmdOf(a) ? ` <span class="small" style="color:var(--accent)">${'★'.repeat(cmdOf(a).rank)} ${cmdOf(a).name}</span>` : ''}<div class="small muted">${G.P[a.at].cityName || G.P[a.at].name}${dest != null && dest !== a.at ? ` → ${G.P[dest].cityName || G.P[dest].name}` : ''}</div></td>
       <td class="acomp">${comp}</td><td><div class="bar" style="width:60px"><i style="width:${hp}%;background:${hp > 60 ? 'var(--ok)' : hp > 30 ? 'var(--accent)' : 'var(--danger)'}"></i></div><span class="small">${hp}% · M${Math.round(a.m ?? 80)}</span></td>
       <td><span class="tag ${st0.cls}">${st0.short}</span>${supplied(a) ? '' : ' <span class="small" style="color:var(--danger)">cut off</span>'}</td>
       <td>${a.air || shipsOnly(a) ? '<span class="small muted">—</span>' : `<select data-act="stance" data-id="${a.id}">${Object.entries(STANCES).map(([k, v]) => `<option value="${k}" ${(a.stance || 'hold') === k ? 'selected' : ''} title="${v[1]}">${v[0]}</option>`).join('')}</select>`}</td>
@@ -3296,6 +3324,8 @@ function armyHTML(a){
     <div class="status ${st0.cls}">${st0.long}</div>
     <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${Math.round(landSpeed(a)*KM_HEX/10)*10} km/day</dd>
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
+    ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div><button class="btn" data-act="cmd-off" style="padding:2px 7px;font-size:12px">Relieve</button></div>`
+      : (free => `<div class="row" style="align-items:center"><span class="small muted">Commander</span>${free.length ? free.map(f => `<button class="btn" data-act="cmd-on" data-id="${f.id}" title="${TRAITS[f.trait].desc}" style="padding:3px 8px;font-size:12px">${TRAITS[f.trait].icon} ${f.name}</button>`).join('') : ''}${cmdList(PLAYER).length < CMD_MAX ? `<button class="btn" data-act="cmd-new" ${S.nations[PLAYER].cash >= CMD_COST ? '' : 'disabled'} style="padding:3px 8px;font-size:12px" title="Appoint a new commander with a random trait (max ${CMD_MAX})">Appoint · $${CMD_COST}M</button>` : ''}</div>`)(cmdList(PLAYER).filter(f => f.army == null)))(cmdOf(a))}
     ${a.air || shipsOnly(a) ? '' : `<div class="row" style="align-items:center"><span class="small muted">Stance</span>${Object.entries(STANCES).map(([k, v]) => `<button class="btn ${(a.stance || 'hold') === k ? 'primary' : ''}" data-act="stance-set" data-k="${k}" title="${v[1]}" style="padding:3px 9px;font-size:12px">${v[0]}</button>`).join('')}</div>`}
     <div class="row">
       ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE} hexes away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
@@ -3399,6 +3429,9 @@ document.addEventListener('click', e => {
     case 'armies-open': openModal(armiesHTML(), 'armies'); break;
     case 'army-go': { const a = armyById(+b.dataset.id); if (a){ closeModal(); const P = G.P[a.at]; centerOn(P.x, P.y, Math.max(view.s, 1.6)); selectArmy(a.id); } break; }
     case 'mob': S.nations[PLAYER].mob = +b.dataset.v; setHTML($('sheet'), prodHTML()); renderSide(true); break;
+    case 'cmd-new': if (S.nations[PLAYER].cash >= CMD_COST && cmdList(PLAYER).length < CMD_MAX){ S.nations[PLAYER].cash -= CMD_COST; const c = newCommander(PLAYER); if (a && !a.air && a.cmd == null){ a.cmd = c.id; c.army = a.id; } log(`${c.name} appointed (${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc}).`, 'good', null); renderSide(true); } break;
+    case 'cmd-on': if (a){ const c = (S.cmds || []).find(x => x.id === +b.dataset.id); if (c){ const old = cmdOf(a); if (old) old.army = null; a.cmd = c.id; c.army = a.id; renderSide(true); } } break;
+    case 'cmd-off': if (a){ const c = cmdOf(a); if (c) c.army = null; a.cmd = null; renderSide(true); } break;
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
