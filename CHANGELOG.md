@@ -275,3 +275,15 @@
 - Right-click orders (desktop): with a force selected, right-click a province to move or attack at once, or right-click an enemy force to pursue it. Left-click still plans a route first, and a second click sends it.
 - Attack an enemy force: click an enemy counter with your force selected and your force pursues it, re-routing every hour as it moves ("Pursuing France 2nd Armored Division").
 - Fixed "from 1 directions" in the coordinated-assault dispatch.
+
+## Round 38 — Command bar
+- Selecting a force opens a command bar of large icon buttons at the bottom of the map:
+  - **Move (M)**: tap a destination and the force goes at once.
+  - **Attack (K)**: tap an enemy force to pursue it, or a province to assault.
+  - **Delay (L)**: wait 3, 6 or 12 hours before moving off, to synchronise attacks from several directions. The button counts down ("Wait 3h").
+  - **Split**, **Merge**, **Halt (X)**.
+  - **Stance**: click to cycle Hold, Defend and Preserve.
+  - **Air drop**, for paratroopers.
+  - **Close (Esc)**.
+  - Air wings get Strike, Patrol or Scout, plus Rebase.
+- While a command is armed, the cursor becomes a crosshair, a hint explains what to tap, and Esc cancels. On phones the bar sits above the zoom buttons and scrolls sideways if needed. M only toggles sound when no force is selected.
