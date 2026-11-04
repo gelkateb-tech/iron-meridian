@@ -152,7 +152,7 @@
 - Peace conferences: peace treaties now hand every province each side occupies to it for good. Ceded provinces become home provinces, so they stop gathering unrest and can't revolt back. Peace offers spell out the terms ("France cedes Alsace, Lorraine to you"), and AI-to-AI treaties redraw the map too. In a test campaign, 45 provinces changed hands by treaty by day 80.
 
 ## Round 24 — Weather and seasons
-- A real calendar: the campaign opens on 1 March, and the clock shows the date ("14 Nov · 06:00").
+- A real calendar: the campaign opens on 15 November and a 120-day game runs through the northern winter into the March thaw. The clock shows the date ("14 Dec · 06:00").
 - Seasons by latitude:
   - **Northern winter** (December–February; November and March in the far north): snow covers high latitudes and mountains. Movement there is 30% slower and attackers fight 15% worse.
   - **Spring thaw** (March–April, 44°–62°): mud slows movement by 25% and attackers by 5%.

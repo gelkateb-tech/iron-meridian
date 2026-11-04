@@ -1505,9 +1505,9 @@ function airMissionKind(a, p){
   return 'patrol';
 }
 /* ---------------- Weather and seasons ---------------- */
-// the campaign opens on 1 March; northern winters are Dec–Feb, spring thaw (mud) Mar–Apr, the south is reversed
+// the campaign opens on 15 November and runs through the northern winter into the thaw; northern winters are Dec–Feb, spring thaw (mud) Mar–Apr, the south is reversed
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], MDAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-function calDate(h){ let d = (Math.floor(h/24) + 59) % 365, m = 0; while (d >= MDAYS[m]){ d -= MDAYS[m]; m++; } return {m, d:d + 1}; }
+function calDate(h){ let d = (Math.floor(h/24) + 318) % 365, m = 0; while (d >= MDAYS[m]){ d -= MDAYS[m]; m++; } return {m, d:d + 1}; }
 function season(p){ const P = G.P[p]; if (P.sea) return null; const lat = P.lat, m = calDate(S.hour).m, south = lat < 0, mm = south ? (m + 6) % 12 : m, al = Math.abs(lat);
   if (al > 38 && (mm === 11 || mm <= 1) && (al > 46 || P.terrain === 'mountain')) return 'snow';
   if (al > 58 && (mm === 10 || mm === 2)) return 'snow';
