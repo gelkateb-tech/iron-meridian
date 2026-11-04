@@ -898,7 +898,7 @@ const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t)
 const power = a => UT.reduce((s, t) => s + a.u[t]*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*UNITS[t].hp/10, 0)*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1);
 const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1);
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) && ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);
-const legHours = (a, from, to) => G.P[from].nb.get(to)*24/(legSpeed(a, from, to)*(G.P[to].sea || !ground(a) ? 1 : terr(to).spd*(G.P[from].road.has(to) ? 1.35 : 1)));
+const legHours = (a, from, to) => G.P[from].nb.get(to)*24/(legSpeed(a, from, to)*(G.P[to].sea || !ground(a) ? 1 : terr(to).spd*(G.P[from].road.has(to) ? 1.35 : 1)*weatherSpd(to)));
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
 const armyById = id => S.armies.find(a => a.id === id);
 const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;
@@ -1032,6 +1032,34 @@ function nightTexture(){ if (NIGHT) return NIGHT; const c = document.createEleme
     id.data[i*4] = Math.round(4 + (1 - a)*tw*120); id.data[i*4 + 1] = Math.round(10 + (1 - a)*tw*46); id.data[i*4 + 2] = Math.round(26 - (1 - a)*tw*14); id.data[i*4 + 3] = Math.round(Math.max(a*108, tw*(1 - a)*46)); }
   g.putImageData(id, 0, 0); return (NIGHT = c); }
 function sunLon(){ return ((12 - (S.hour % 24) - (performance.now() % 1000)*0) * 15 + 540) % 360 - 180; }
+let CLOUDS = null;
+function cloudTex(){ if (CLOUDS) return CLOUDS; const out = []; for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), n = makeNoise(mulberry(900 + k)), id = g.createImageData(128, 128);
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++){ const dx = (x - 64)/64, dy = (y - 64)/64, r = Math.sqrt(dx*dx + dy*dy), v = n(x*0.05, y*0.05)*0.6 + n(x*0.13, y*0.13)*0.4, a = Math.max(0, Math.min(1, (1 - r*1.15)*1.6 + (v - 0.55)*1.8));
+      const o = (y*128 + x)*4, sh = 205 + v*45; id.data[o] = sh; id.data[o + 1] = sh; id.data[o + 2] = sh + 8; id.data[o + 3] = a*235; }
+    g.putImageData(id, 0, 0); out.push(c); }
+  for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0.6)'; g.drawImage(out[k], 0, 0); out.push(c); }
+  for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0)'; g.drawImage(out[k], 0, 0); out.push(c); }
+  return (CLOUDS = out); }
+function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS, live = S.speed && !S.over ? acc : 0;
+  ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
+  for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12);
+    for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if ((cx + w.r)*view.s + view.x < -50 || (cx - w.r)*view.s + view.x > cw + 50) continue;
+      for (let i = 0; i < 9; i++){ const a = w.seed + i*2.39, rr = w.r*(0.15 + 0.55*((i*0.37 + w.seed) % 1)), px = cx + Math.cos(a)*rr + Math.sin(now/9000 + i)*3, py = y0 + Math.sin(a)*rr*0.6, sz = w.r*(0.55 + 0.35*((i*0.61) % 1));
+        ctx.globalAlpha = 0.14*fade; ctx.drawImage(tex[6 + i % 3], px - sz + 10, py - sz*0.6 + 14, sz*2, sz*1.2);           // shadow on the ground
+        ctx.globalAlpha = (w.kind === 'blizzard' ? 0.62 : 0.5)*fade*(hexPx > 30 ? 0.55 : 1); ctx.drawImage(tex[(w.kind === 'storm' ? 3 : 0) + i % 3], px - sz, py - sz*0.6, sz*2, sz*1.2); }
+      // lightning in storms
+      if (w.kind === 'storm' && Math.sin(now/170 + w.seed*7) > 0.985){ ctx.globalAlpha = 0.5*fade; ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(GLOW(), cx - w.r*0.5, y0 - w.r*0.35, w.r, w.r*0.7); ctx.globalCompositeOperation = 'source-over'; } } }
+  ctx.restore();
+  // rain / snowfall streaks at close zoom inside storms
+  if (hexPx < 16) return; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
+  for (const w of S.storms){ const [sx, sy] = toScreen(w.x + w.vx*live, w.y + w.vy*live), R = w.r*view.s; if (sx + R < 0 || sx - R > cw || sy + R < 0 || sy - R > ch) continue;
+    const n = Math.min(160, Math.round(R*0.5)), snow = w.kind === 'blizzard';
+    ctx.strokeStyle = snow ? 'rgba(240,244,250,.75)' : 'rgba(185,205,225,.35)'; ctx.fillStyle = 'rgba(240,244,250,.8)'; ctx.beginPath();
+    for (let i = 0; i < n; i++){ const r1 = ((i*7919 + w.seed*13) % 1000)/1000, r2 = ((i*104729 + w.seed*7) % 1000)/1000, sp = snow ? 0.04 : 0.6, fy = (r2 + now*sp/1000) % 1;
+      const x = sx + (r1 - 0.5)*2*R + (snow ? Math.sin(now/600 + i)*6 : 0), y = sy - R*0.6 + fy*R*1.2; if (((x - sx)/R)**2 + ((y - sy)/(R*0.62))**2 > 1) continue;
+      if (snow){ ctx.moveTo(x + 1.4, y); ctx.arc(x, y, 1.4, 0, Math.PI*2); } else { ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 11); } }
+    if (snow) ctx.fill(); else ctx.stroke(); }
+  ctx.restore(); }
 function drawNight(){
   // texture x maps to (lon - sunLon); world x maps linearly to longitude
   const tex = nightTexture(), lonAt = x => WORLD.lon0 + ((x - OX)/(HS*SQ3) + 0.5)/W*360;
@@ -1476,7 +1504,27 @@ function airMissionKind(a, p){
   if (isStriker(a)) return 'strike';
   return 'patrol';
 }
+/* ---------------- Weather and seasons ---------------- */
+// the campaign opens on 1 March; northern winters are Dec–Feb, spring thaw (mud) Mar–Apr, the south is reversed
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], MDAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+function calDate(h){ let d = (Math.floor(h/24) + 59) % 365, m = 0; while (d >= MDAYS[m]){ d -= MDAYS[m]; m++; } return {m, d:d + 1}; }
+function season(p){ const P = G.P[p]; if (P.sea) return null; const lat = P.lat, m = calDate(S.hour).m, south = lat < 0, mm = south ? (m + 6) % 12 : m, al = Math.abs(lat);
+  if (al > 38 && (mm === 11 || mm <= 1) && (al > 46 || P.terrain === 'mountain')) return 'snow';
+  if (al > 58 && (mm === 10 || mm === 2)) return 'snow';
+  if (al > 44 && al < 62 && (mm === 2 || mm === 3) && P.terrain !== 'mountain' && P.terrain !== 'desert') return 'mud';
+  return null; }
+const SEASON_FX = {snow:{name:'Winter snow', spd:0.7, atk:0.85, tip:'−30% speed, attackers −15%'}, mud:{name:'Spring thaw (mud)', spd:0.75, atk:0.95, tip:'−25% speed, attackers −5%'}};
+// storm systems drift across the map: they ground aircraft and slow movement
+function stormAt(p){ const P = G.P[p]; for (const w of (S.storms || [])){ if ((P.x - w.x)**2 + ((P.y - w.y)*1.6)**2 < w.r*w.r) return w; } return null; }
+function weatherSpd(p){ const sz = season(p), w = stormAt(p); return (sz ? SEASON_FX[sz].spd : 1)*(w ? 0.8 : 1); }
+function weatherHour(){ S.storms = S.storms || [];
+  for (const w of S.storms){ w.x += w.vx; w.y += w.vy; w.life--; if (w.x > WORLD_W + 40) w.x -= WORLD_W; if (w.x < -40) w.x += WORLD_W; }
+  S.storms = S.storms.filter(w => w.life > 0 && w.y > -30 && w.y < WORLD_H + 30);
+  while (S.storms.length < 7){ const y = OY + rng()*(WORLD_H - 2*OY), lat = Math.abs(cellLat(Math.max(0, Math.min(W*H - 1, Math.round((y - OY)/(HS*1.5))*W)))), west = lat > 30;
+    const sz = season(G.P.find(P => !P.sea && Math.abs(P.y - y) < 20)?.id ?? 0);
+    S.storms.push({id:S.nid++, x:rng()*WORLD_W, y, r:40 + rng()*55, vx:(west ? 1 : -1)*(1.6 + rng()*1.8), vy:(rng() - 0.5)*0.6, life:48 + Math.floor(rng()*96), kind:lat > 45 && sz === 'snow' ? 'blizzard' : 'storm', seed:rng()*1000}); } }
 function airCheck(a, p){
+  { const w = stormAt(p) || stormAt(a.air.base); if (w && !a.fly) return {ok:false, why:`Grounded: ${w.kind === 'blizzard' ? 'a blizzard' : 'a storm'} over ${stormAt(p) ? (G.P[p].cityName || G.P[p].name) : 'the airbase'}. Wait for it to pass.`}; }
   const d = Math.max(p === a.air.base ? 0 : 1, hexDist(G.P[a.air.base].cc, G.P[p].cc)), r = wingRange(a);
   if (a.fly) return {ok:false, why:'This wing is already on a mission.'};
   if ((a.air.cd || 0) > 0) return {ok:false, why:`Rearming: ready in ${a.air.cd} h.`};
@@ -1549,6 +1597,7 @@ function airTick(){
   for (const a of S.armies){ if (!a.air || !count(a)) continue;
     if (!a.fly){ if (a.air.cd > 0) a.air.cd--; if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; a.at = nb; } continue; }
     const f = a.fly, B = G.P[a.air.base], T = G.P[f.tgt], dist = Math.max(1, hexDist(B.cc, T.cc)), dt = AIR_SPEED/dist;
+    if (f.ph === 'out' && f.kind === 'strike' && stormAt(f.tgt)){ f.ph = 'back'; f.t = Math.max(0, 1 - f.t); if (a.owner === PLAYER) log(`Strike on ${G.P[f.tgt].cityName || G.P[f.tgt].name} aborted: a storm closed in over the target.`, 'info', f.tgt); continue; }
     if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
         if (f.kind === 'rebase'){ a.air.base = f.tgt; a.at = f.tgt; a.fly = null; a.air.cd = 2; continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
@@ -1749,7 +1798,7 @@ function tick(){
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
-  diploHour(); reqHour();
+  diploHour(); reqHour(); weatherHour();
   airTick();
   missileTick();
   spyHour();
@@ -1798,7 +1847,8 @@ function tick(){
       const nU = sides.get(o).reduce((s0, a) => s0 + count(a), 0), dirs = dirsOf(sides.get(o), p, o), F = sideFront(p, dirs);
       const r = r0*frontScale(nU, F)*flankF(dirs);
       const bs = B.s[o] || (B.s[o] = {peak:0, lost:{}, dirs:0, hp:[]}); bs.peak = Math.max(bs.peak, nU); bs.dirs = Math.max(bs.dirs, dirs); bs.dcur = dirs; bs.F = F; bs.n = nU;
-      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? 0.67 : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? 0.8 : 1);
+      const sznA = o !== S.owner[p] && season(p) ? SEASON_FX[season(p)].atk : 1;
+      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? 0.67 : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? 0.8 : 1)*sznA;
         const mf = moraleF(a);
         const tm = G.P[p].sea || o === S.owner[p] ? 1 : terr(p).armor;
         for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(UNITS[t].cls === 'armored' ? tm : 1); for (const k of CLASSES) av[k] += base*mult(t, k); } }
@@ -2396,6 +2446,7 @@ function renderLayer(vis){
     else if (mapMode === 'resources'){ const y = provYield(p), top = ['oil', 'metal', 'food', 'mp', 'cash'].sort((k1, k2) => (y[k2]/({cash:12, oil:5, metal:4, food:3, mp:2})[k2]) - (y[k1]/({cash:12, oil:5, metal:4, food:3, mp:2})[k1]))[0];
       c.fillStyle = {oil:'rgba(40,40,44,.75)', metal:'rgba(140,155,170,.6)', food:'rgba(120,180,80,.5)', mp:'rgba(200,160,120,.5)', cash:'rgba(220,190,90,.55)'}[top]; c.fill(GEO.fill[p]); }
     else if (o >= 0){ c.fillStyle = relMode ? (o === PLAYER ? rgba(S.nations[o].color, 0.45) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5)) : rgba(S.nations[o].color, o === PLAYER ? 0.4 : 0.34); c.fill(GEO.fill[p]); }
+    { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p]); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p]); } }
     if (!vis.has(p)){ c.fillStyle = 'rgba(3,6,8,0.5)'; c.fill(GEO.fill[p]); c.fillStyle = hp; c.fill(GEO.fill[p]); } }
   // clip to the real coastline, then soften the hex steps between provinces
   c.globalCompositeOperation = 'destination-in'; c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over';
@@ -2425,7 +2476,7 @@ function draw(now){
   if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; } else if (cv.style.transform){ cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS;
-  const key = [view.s, cw, ch, dpr, geoVer, vis.key, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' ? Math.floor(S.hour/24) : 0].join('|');
+  const key = [view.s, cw, ch, dpr, geoVer, vis.key, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' ? Math.floor(S.hour/24) : 0].join('|');
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   const offEdge = !layer || Math.abs(dxv) > layer.mx*0.9 || Math.abs(dyv) > layer.my*0.9;
   if (key !== layerKey || offEdge || (!panning && (dxv || dyv) && now - (lastPanT || 0) > 140)){ layerKey = key; renderLayer(vis); }
@@ -2438,6 +2489,7 @@ function draw(now){
     ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(GEO.outline[sel.target]); ctx.setLineDash([]); }
   if (sel.prov !== null){ ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.4*px; ctx.stroke(GEO.outline[sel.prov]); }
   drawNight();
+  drawWeather(now);
 
   // ---- screen space
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -2730,6 +2782,7 @@ function tipShow(x, y){
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
   let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted"><span class="sw" style="background:${P.sea ? '#28414a' : colorOf(S.owner[p])};vertical-align:-1px"></span> ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p); h += `<div class="r"><span>${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}${T0.spd < 1 ? ' · slow' : ''}</span></div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.oil ? ' · Oil' : ''}${P.ore ? ' · Ore' : ''}</span><span>${yieldStr(y)}</span></div>`;
+    { const sz = season(p), w = stormAt(p); if (sz || w) h += `<div class="r"><span>Weather</span><span>${[sz ? `${SEASON_FX[sz].name} (${SEASON_FX[sz].tip})` : '', w ? `${w.kind === 'blizzard' ? 'Blizzard' : 'Storm'} (air grounded, −20% speed)` : ''].filter(Boolean).join(' · ')}</span></div>`; }
     if (unrestOf(p) > 10) h += `<div class="r"><span>Unrest</span><span style="color:${unrestOf(p) > 60 ? 'var(--danger)' : 'var(--accent)'}">${Math.round(unrestOf(p))}%</span></div>`;
     const bl = BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')); if (bl.length && S.owner[p] === PLAYER) h += `<div class="r"><span>Built</span><span>${bl.join(', ')}</span></div>`; }
   if (foes.length) h += `<div class="r"><span>Hostile</span><span>${foes.reduce((s, a) => s + count(a), 0)} units · ${Math.round(foes.reduce((s, a) => s + power(a), 0))} str</span></div>`;
@@ -2748,7 +2801,7 @@ const $ = id => document.getElementById(id);
 const fmt = n => Math.floor(n).toLocaleString('en-US');
 const yieldStr = y => ['cash', 'oil', 'metal', 'food', 'mp'].filter(k => y[k] >= 0.5).map(k => `${k === 'cash' ? '$' : ''}${Math.round(y[k])}${k === 'cash' ? '' : ' ' + (k === 'mp' ? 'mp' : k)}`).join(' · ') || '—';
 const comp = a => UT.filter(t => a.u[t]).map(t => `<span class="tag">${a.u[t]} ${UNITS[t].short}</span>`).join('');
-const clockStr = h => `Day ${dayOf(h)} · ${String(h % 24).padStart(2, '0')}:00`;
+const clockStr = h => { const c = calDate(h); return `${c.d} ${MONTHS[c.m]} · ${String(h % 24).padStart(2, '0')}:00`; };
 let lastSig = {};
 function setHTML(el, html){ const ae = document.activeElement; if (ae && (ae.tagName === 'SELECT' || (ae.classList && ae.classList.contains('rn'))) && el.contains(ae)) return; if (lastSig[el.id] !== html){ lastSig[el.id] = html; el.innerHTML = html; } }
 function renderSide(force){
@@ -3027,7 +3080,7 @@ function oddsHTML(a, t, foes){
   const T0 = G.P[t].sea ? null : terr(t);
   const F = frontage(t), extra = count(a) > F ? `<br><span class="small">Only ${F} of your ${count(a)} units fit this front; the rest fight at 25%. Attack from a second province to widen it.</span>` : '';
   const op = oddsParts(a, t, foes);
-  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}${T0 && T0.armor < 1 ? `; armor ${Math.round((1 - T0.armor)*100)}% weaker here` : ''}${op.river ? '; you attack across a river: −20%' : ''})${op.dirs > 1 ? `<br><span class="small">Attacking from ${op.dirs} directions with your other ordered forces: front ${sideFront(t, op.dirs)} units, +${Math.round((flankF(op.dirs) - 1)*100)}% attack.</span>` : ''}${extra}</div>`;
+  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}${T0 && T0.armor < 1 ? `; armor ${Math.round((1 - T0.armor)*100)}% weaker here` : ''}${op.river ? '; you attack across a river: −20%' : ''}${season(t) ? `; ${SEASON_FX[season(t)].name.toLowerCase()}: attackers ${SEASON_FX[season(t)].atk < 0.9 ? '−15%' : '−5%'}` : ''})${op.dirs > 1 ? `<br><span class="small">Attacking from ${op.dirs} directions with your other ordered forces: front ${sideFront(t, op.dirs)} units, +${Math.round((flankF(op.dirs) - 1)*100)}% attack.</span>` : ''}${extra}</div>`;
 }
 function unitRows(a){
   return `<div class="urows">${UT.filter(t => a.u[t]).map(t => { const U = UNITS[t], max = a.u[t]*U.hp, cur = Math.max(0, max - a.w[t]), f = cur/max;

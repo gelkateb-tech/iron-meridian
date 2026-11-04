@@ -150,3 +150,14 @@
 - Coordinated offensives: if you belong to a coalition led by an AI, the leader periodically asks you to attack a specific enemy province within 48 h ("Russia asks you to attack Kharkiv"). The request shows in the Command panel with a Show button. Fight there or take it to earn $150M and goodwill with every partner; ignoring it costs opinion.
 - Shared victory: a coalition wins together by holding 8 starting capitals or 1.8× the land victory target. Rival coalitions can win too, so watch them in Diplomacy's new Coalitions panel (members, leader, common enemy, provinces and capitals held). Members of the same coalition like each other more, and nations may now hold three alliances.
 - Peace conferences: peace treaties now hand every province each side occupies to it for good. Ceded provinces become home provinces, so they stop gathering unrest and can't revolt back. Peace offers spell out the terms ("France cedes Alsace, Lorraine to you"), and AI-to-AI treaties redraw the map too. In a test campaign, 45 provinces changed hands by treaty by day 80.
+
+## Round 24 — Weather and seasons
+- A real calendar: the campaign opens on 1 March, and the clock shows the date ("14 Nov · 06:00").
+- Seasons by latitude:
+  - **Northern winter** (December–February; November and March in the far north): snow covers high latitudes and mountains. Movement there is 30% slower and attackers fight 15% worse.
+  - **Spring thaw** (March–April, 44°–62°): mud slows movement by 25% and attackers by 5%.
+  - The southern hemisphere runs six months offset.
+  - Snow-covered provinces turn white on the map and mud provinces brown, both changing month by month.
+- Storm systems: about seven storms and blizzards drift across the world, west to east in the mid-latitudes and east to west in the tropics. They slow movement by 20% and ground aircraft. Wings can't launch from or to a province under a storm, and a strike heading into a storm that closes over its target turns back.
+- Weather visuals: drifting procedural clouds that cast shadows on the ground, darker thunderheads with lightning flashes, and at close zoom falling rain streaks or snowflakes.
+- Province tooltips and the odds chip show the weather and seasonal penalties.
