@@ -1155,8 +1155,8 @@ function trade(n, k, qty){ const N = S.nations[n], M = mkt();
   if (qty > 0){ qty = Math.min(qty, Math.floor(stockCap(n) - N[k]), Math.floor(N.cash/buyPrice(n, k))); if (qty <= 0) return 0; N.cash -= qty*buyPrice(n, k); N[k] += qty; }
   else { qty = -Math.min(-qty, Math.floor(N[k])); if (qty >= 0) return 0; N.cash += -qty*sellPrice(n, k); N[k] += qty; }
   M.press[k] += qty/1500; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k]*(1 + qty/4000))); return qty; }
-function marketDay(){ const M = mkt();
-  for (const k of MKT_K){ let sup = 0, dem = 0; for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id); sup += inc.gross[k]; dem += inc.upkeep[k]; }
+function marketDay(){ const M = mkt(), incs = S.nations.map(N => N.alive ? income(N.id) : null);
+  for (const k of MKT_K){ let sup = 0, dem = 0; for (const inc of incs){ if (!inc) continue; sup += inc.gross[k]; dem += inc.upkeep[k]; }
     const ratio = dem/Math.max(1, sup), target = MKT_BASE[k]*Math.max(0.7, Math.min(2.6, 0.6 + 1.0*ratio + 4*M.press[k]));
     M.prev[k] = M.p[k]; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k] + (target - M.p[k])*0.2 + M.p[k]*(rng() - 0.5)*0.06));
     M.press[k] *= 0.7; M.hist[k].push(+M.p[k].toFixed(2)); if (M.hist[k].length > 60) M.hist[k].shift(); }
@@ -1508,7 +1508,9 @@ function airMissionKind(a, p){
 // the campaign opens on 15 November and runs through the northern winter into the thaw; northern winters are Dec–Feb, spring thaw (mud) Mar–Apr, the south is reversed
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], MDAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 function calDate(h){ let d = (Math.floor(h/24) + 318) % 365, m = 0; while (d >= MDAYS[m]){ d -= MDAYS[m]; m++; } return {m, d:d + 1}; }
-function season(p){ const P = G.P[p]; if (P.sea) return null; const lat = P.lat, m = calDate(S.hour).m, south = lat < 0, mm = south ? (m + 6) % 12 : m, al = Math.abs(lat);
+let SZC = {d:-1, S:null, a:null};
+function season(p){ const d = Math.floor(S.hour/24); if (SZC.d !== d || SZC.S !== S){ SZC = {d, S, a:G.P.map(P => season0(P.id))}; } return SZC.a[p]; }
+function season0(p){ const P = G.P[p]; if (P.sea) return null; const lat = P.lat, m = calDate(S.hour).m, south = lat < 0, mm = south ? (m + 6) % 12 : m, al = Math.abs(lat);
   if (al > 38 && (mm === 11 || mm <= 1) && (al > 46 || P.terrain === 'mountain')) return 'snow';
   if (al > 58 && (mm === 10 || mm === 2)) return 'snow';
   if (al > 44 && al < 62 && (mm === 2 || mm === 3) && P.terrain !== 'mountain' && P.terrain !== 'desert') return 'mud';

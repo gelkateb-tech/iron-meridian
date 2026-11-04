@@ -160,4 +160,4 @@
   - Snow-covered provinces turn white on the map and mud provinces brown, both changing month by month.
 - Storm systems: about seven storms and blizzards drift across the world, west to east in the mid-latitudes and east to west in the tropics. They slow movement by 20% and ground aircraft. Wings can't launch from or to a province under a storm, and a strike heading into a storm that closes over its target turns back.
 - Weather visuals: drifting procedural clouds that cast shadows on the ground, darker thunderheads with lightning flashes, and at close zoom falling rain streaks or snowflakes.
-- Province tooltips and the odds chip show the weather and seasonal penalties.
+- Province tooltips and the odds chip show the weather and seasonal penalties. Seasons are cached per day and the market computes each nation's income once per dawn, so the simulation runs faster than before this round.
