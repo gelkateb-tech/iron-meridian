@@ -102,3 +102,11 @@
 - AI powers trade too: they buy whatever they run short of when they have cash, and sell surpluses near their storage cap.
 - Embargoes: powers at war with you, or with very low opinion of you, may impose an embargo. Each one worsens your buy and sell prices by 15% (up to three). They lift embargoes once relations recover. You can embargo or lift embargoes from Diplomacy (−15 or +5 opinion), and the panel notes who embargoes you.
 - The top bar switches to short labels (Prod, Mkt, Army, Tech, Diplo) on screens under 1560 px wide.
+
+## Round 19 — Visual overhaul: formations, visible air strikes, cleaner map
+- Close-zoom formations: zoom in past about 36 px per hex and each force is drawn as a formation of up to 10 animated figures, roughly one per two units, with its actual mix. Armour leads, infantry fills the middle ranks, artillery and air defence sit at the back. Formations face their heading or the enemy, march as two-wide columns, and lean forward in battle, with each figure walking and firing on its own rhythm. When units die, figures drop out and leave a fading dark wreck and smoke. Units keep growing up to 3× as you zoom instead of stopping at 2×, while city icons and labels stay compact.
+- Air strikes you can watch: a presentation layer flies each wing out at a visible speed, orbits the target, and only bombs on arrival (a string of explosions and smoke). It holds there briefly, then flies home. Aircraft are smaller (no longer bigger than tanks), climb and descend near their base, and their shadows grow with altitude.
+- Damage numbers roll up: hourly losses per side accumulate into one counting-up number beside that side's force, instead of separate numbers printed on top of each other and the province names.
+- Less clutter at mid zoom: below 30 px per hex, independents and powers at peace with you are small badges in their colour. Only your forces, your enemies and anything in battle get full sprites. Fortifications are a small shield beside the city instead of an arc under the armies.
+- Lighting: a warm dusk band along the day/night line, a slightly deeper night, and units keep their nation colour at night. Muzzle flashes are roughly half their previous size.
+- The "massing troops" warning now ignores starting garrisons. It fires only from day 3, when a neighbour's border force grows by 20% or more.
