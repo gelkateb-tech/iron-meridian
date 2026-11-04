@@ -160,6 +160,13 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .chart svg{width:100%; height:auto; display:block}
 .legend2{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:11px; color:var(--muted); margin-top:4px}
 .legend2 i{display:inline-block; width:10px; height:3px; margin-right:4px; vertical-align:middle}
+/* Unit rows */
+.urows{display:flex; flex-direction:column; gap:5px}
+.urow{display:grid; grid-template-columns:30px 1fr 70px auto; align-items:center; gap:8px; font-size:12.5px}
+.urow svg{color:var(--fg)} .urow .un b{font-family:var(--mono); font-weight:600}
+.uhp{height:5px; border-radius:3px; background:#24323a; overflow:hidden} .uhp i{display:block; height:100%}
+.unum{font-family:var(--mono); font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+.unit .nm{display:flex; align-items:center; gap:6px}
 /* Side tabs */
 .tabs{position:sticky; top:0; z-index:2; display:grid; grid-template-columns:repeat(3, 1fr); gap:0; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:var(--panel); flex:none}
 .tabs button{border:0; border-radius:0; background:var(--panel); color:var(--muted); font-size:12.5px; font-weight:600; letter-spacing:.04em; padding:9px 6px; display:flex; align-items:center; justify-content:center; gap:6px}
@@ -384,8 +391,25 @@ const ICONS = {
   food: '<path d="M8 14V5" stroke="currentColor" stroke-width="1.3"/><ellipse cx="6" cy="5.5" rx="1.6" ry="2.6" transform="rotate(-25 6 5.5)" fill="currentColor"/><ellipse cx="10" cy="5.5" rx="1.6" ry="2.6" transform="rotate(25 10 5.5)" fill="currentColor"/><ellipse cx="8" cy="3" rx="1.4" ry="2.2" fill="currentColor"/>',
   mp: '<circle cx="8" cy="4.6" r="2.4" fill="currentColor"/><path d="M3 14c0-3.2 2.2-5.2 5-5.2s5 2 5 5.2z" fill="currentColor"/>',
 };
+const USVG = {
+  inf: '<circle cx="9" cy="3.5" r="2"/><path d="M8 6h2.4l1 4.5 2.6 4.5h-1.8L10 11l-1.6 4H6.6L8 10.5z"/><path d="M7 7.5l9-2" stroke="currentColor" stroke-width="1.1" fill="none"/><circle cx="17" cy="3.5" r="2"/><path d="M16 6h2.4l1 4.5 2.6 4.5h-1.8L18 11l-1.6 4h-1.8L16 10.5z"/>',
+  at: '<circle cx="11" cy="3.5" r="2"/><path d="M10 6h2.4l1 4.5 2.6 4.5h-1.8L12 11l-1.6 4H8.6L10 10.5z"/><rect x="4" y="5" width="16" height="2.4" rx="1"/>',
+  art: '<path d="M5 12l8-3 1 2-8 3z"/><path d="M11 9l13-6 .8 1.6-13 6z"/><circle cx="9" cy="13" r="2.6"/><circle cx="15" cy="13" r="2.6"/>',
+  sam: '<rect x="3" y="9" width="13" height="3.5"/><rect x="16" y="6" width="6" height="6.5"/><circle cx="6" cy="14" r="1.8"/><circle cx="12" cy="14" r="1.8"/><circle cx="19" cy="14" r="1.8"/><path d="M5 8l8-6.5M7.5 8.5l8-6.5" stroke="currentColor" stroke-width="1.6"/>',
+  ifv: '<path d="M3 9h20l2 3H4z"/><rect x="10" y="5.5" width="6" height="3.5"/><path d="M16 7h6" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="13" r="1.8"/><circle cx="11.5" cy="13" r="1.8"/><circle cx="16" cy="13" r="1.8"/><circle cx="20.5" cy="13" r="1.8"/>',
+  tank: '<rect x="2" y="10" width="24" height="5" rx="2.5"/><path d="M4 10h19l2-3H6z"/><ellipse cx="13" cy="5.5" rx="5.5" ry="2.8"/><path d="M16 5h10" stroke="currentColor" stroke-width="1.6"/>',
+  jet: '<path d="M27 8l-10-1.5L12 1h-2l2 5.5H6L3.5 4H2l1 4-1 4h1.5L6 9.5h6L10 15h2l5-5.5z"/>',
+  int: '<path d="M27 8L13 6.5 9 1H7.5l1.5 5.5L4 7 2 5v6l2-2 5 .5L7.5 15H9l4-5.5z"/>',
+  frig: '<path d="M27 8c-3-3-7-3.5-24-3v6c17 .5 21 0 24-3z"/><rect x="10" y="6" width="7" height="4" fill="#0b1012" opacity=".35"/>',
+  sub: '<ellipse cx="14" cy="9" rx="12" ry="2.6"/><rect x="11" y="4.5" width="4" height="3.5"/>',
+  crui: '<path d="M27.5 8c-3.5-3.5-8-4-25.5-3.6v7.2C19.5 12 24 11.5 27.5 8z"/><circle cx="21" cy="8" r="1.6" fill="#0b1012" opacity=".4"/><circle cx="6" cy="8" r="1.6" fill="#0b1012" opacity=".4"/>',
+};
+const unitSVG = t => `<svg width="28" height="16" viewBox="0 0 28 16" fill="currentColor" aria-hidden="true">${USVG[t] || ''}</svg>`;
 const icon = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 16 16" aria-hidden="true">${ICONS[k]}</svg>`;
 const UT = Object.keys(UNITS);
+const AIR_SPEED = 2.5;                // hexes per hour for aircraft on missions
+const AIR_RANGE = {jet:16, int:12};   // mission radius in hexes from the home airbase
+const STRIKE = 4;                     // a strike delivers this many combat-hours of firepower
 const SEA_SPEED = 5;                  // hexes/day for embarked ground units
 const BUILD = {
   fac:  {name:'Arms Factory',      max:3, cost:60, metal:20, days:3, where:'city', desc:'Level I unlocks Lancers, Hammer artillery, Bastion tanks and Courser IFVs; level II unlocks Skywall SAMs. Each level: +20% money here, units train 20% faster.'},
@@ -629,6 +653,7 @@ function restore(data){
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.speed = 0; S.started = true;
   resetCaches();
+  fixWings();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || [];
@@ -710,10 +735,10 @@ let lastSfx = {};
 function sfx(name){ if (muted || !booted) return; const now = performance.now(); if (lastSfx[name] && now - lastSfx[name] < 400) return; lastSfx[name] = now; try { SFX[name] && SFX[name](); } catch (e) {} }
 document.addEventListener('pointerdown', () => { if (!muted) audio(); if (AC && AC.state === 'suspended') AC.resume(); }, {capture:true});
 const FX = [];
-function fx(type, p, extra = {}){ if (booted) FX.push({type, p, t0:performance.now(), ...extra}); if (FX.length > 40) FX.shift(); }
+function fx(type, p, extra = {}){ if (!booted) return; if (type === 'dmg' || type === 'hits'){ const now = performance.now(); if (FX.some(f => f.type === type && f.p === p && now - f.t0 < 280 && (f.dx || 0) === (extra.dx || 0))) return; } FX.push({type, p, t0:performance.now(), ...extra}); if (FX.length > 90) FX.shift(); }
 function drawFX(now){
   for (let i = FX.length - 1; i >= 0; i--){ const f = FX[i], age = now - f.t0, P = G.P[f.p];
-    const dur = f.type === 'cap' ? 1400 : f.type === 'ready' ? 900 : 1100; if (age > dur){ FX.splice(i, 1); continue; }
+    const dur = f.type === 'cap' ? 1400 : f.type === 'ready' ? 900 : f.type === 'dmg' ? 1300 : f.type === 'hits' ? 700 : f.type === 'strike' ? 1000 : 1100; if (age > dur){ FX.splice(i, 1); continue; }
     const k = Math.max(0, age/dur), [x, y] = toScreen(P.x, P.y);
     if (f.type === 'cap'){
       ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.globalAlpha = (1 - k)*0.9;
@@ -722,6 +747,20 @@ function drawFX(now){
       const ty = y - 30 - k*26; ctx.strokeText(f.text, x, ty); ctx.fillStyle = f.good ? '#a8dcab' : '#f2a29c'; ctx.fillText(f.text, x, ty); ctx.restore();
     } else if (f.type === 'ready'){
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y - 8, 10 + k*22, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+    } else if (f.type === 'dmg'){
+      ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k)*1.6); ctx.font = `800 ${Math.round(14 + (1 - k)*3)}px ${MONO}`; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.9)';
+      const tx = x + (f.dx || 0), ty = y + (f.dy || -30) - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
+    } else if (f.type === 'hits'){
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let j = 0; j < 5; j++){ const r0 = ((f.seed*(j + 1)*9301 + 49297) % 233280)/233280, r1 = ((f.seed*(j + 3)*7919 + 104729) % 233280)/233280;
+        const px2 = x + (r0 - 0.5)*44, py2 = y - 6 + (r1 - 0.5)*24, kk = Math.min(1, Math.max(0, (k - j*0.12)/0.5)); if (kk <= 0 || kk >= 1) continue;
+        ctx.globalAlpha = 1 - kk; ctx.fillStyle = kk < 0.3 ? '#fff1c4' : '#ff9a4a'; ctx.beginPath(); ctx.arc(px2, py2, 2 + kk*7, 0, Math.PI*2); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.35*(1 - k); ctx.fillStyle = '#3a3a36'; ctx.beginPath(); ctx.arc(x + Math.sin(f.seed)*10, y - 18 - k*14, 6 + k*10, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    } else if (f.type === 'strike'){
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let j = 0; j < 7; j++){ const ang = j*0.9 + 0.3, rr = 8 + j*3, kk = Math.min(1, Math.max(0, (k - j*0.07)/0.6)); if (kk <= 0 || kk >= 1) continue;
+        ctx.globalAlpha = 1 - kk; ctx.fillStyle = kk < 0.35 ? '#fff4d0' : '#ff8a3a'; ctx.beginPath(); ctx.arc(x + Math.cos(ang)*rr, y - 4 + Math.sin(ang)*rr*0.5, 3 + kk*9, 0, Math.PI*2); ctx.fill(); }
+      ctx.restore();
     } else if (f.type === 'boom'){
       ctx.save(); ctx.globalAlpha = (1 - k)*0.8; ctx.fillStyle = '#ffb08a'; ctx.beginPath(); ctx.arc(x, y - 24, 6 + k*20, 0, Math.PI*2); ctx.fill(); ctx.restore();
     } } }
@@ -734,9 +773,9 @@ function toast(text, kind, p){
   box.prepend(el); while (box.children.length > 2) box.lastChild.remove();
   setTimeout(() => el.remove(), 4500);
 }
-function stationaryAt(p){ return S.armies.filter(a => a.at === p && a.to === null); }
-function enemiesAt(p, owner){ return S.armies.some(a => a.at === p && a.to === null && atWar(a.owner, owner) && count(a) > 0); }
-function index(){ const by = G.P.map(() => []); for (const a of S.armies) if (a.to === null) by[a.at].push(a); return by; }
+function stationaryAt(p){ return S.armies.filter(a => a.at === p && a.to === null && !a.fly); }
+function enemiesAt(p, owner){ return S.armies.some(a => a.at === p && a.to === null && !a.fly && atWar(a.owner, owner) && count(a) > 0); }
+function index(){ const by = G.P.map(() => []); for (const a of S.armies) if (a.to === null && !a.fly) by[a.at].push(a); return by; }
 
 const graceFor = o => o >= 0 && S.nations[o].small ? 24*14 : GRACE_H;
 const inGrace = o => o >= 0 && S.hour < graceFor(o);
@@ -775,8 +814,9 @@ function build(n, p, k){
   N.cash -= c.cash; N.metal -= c.metal; S.cons[p] = {k, lvl, h:c.h, h0:c.h}; return true;
 }
 function spawn(n, p, t){
-  let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0);
-  if (!a) a = addArmy(n, p, {});
+  const air = UNITS[t].cls === 'air';
+  let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air));
+  if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp)/(h0 + UNITS[t].hp) : 80;
   a.u[t]++;
 }
@@ -992,7 +1032,7 @@ const supplied = a => a.owner < 0 || (SUP && SUP[a.owner] ? !!SUP[a.owner][a.at]
 const moraleF = a => a.owner < 0 ? 1 : (0.5 + 0.5*(a.m ?? 80)/100)*(supplied(a) ? 1 : 0.85);
 const effHP = a => UT.reduce((s0, t) => s0 + a.u[t]*UNITS[t].hp - a.w[t], 0);
 function armyUpkeep(prevBattles){
-  for (const a of S.armies){ if (a.owner < 0 || !count(a)) continue;
+  for (const a of S.armies){ if (a.owner < 0 || !count(a) || a.fly) continue;
     const N = S.nations[a.owner], here = a.to === null, inBattle = here && S.battles.includes(a.at);
     if (inBattle){ const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m -= 1 + 40*lost; }
     else if (supplied(a)){ const own = here && S.owner[a.at] === a.owner, r = own && S.bld[a.at].yard && shipsN(a) ? 0.4 : own && G.P[a.at].city ? 0.25 : 0.10;
@@ -1018,6 +1058,107 @@ function armyUpkeep(prevBattles){
   removeEmpty();
 }
 
+/* ---------------- Air power ---------------- */
+const wingRange = a => Math.min(...UT.filter(t => a.u[t] && UNITS[t].cls === 'air').map(t => AIR_RANGE[t] || 12), 99);
+const isStriker = a => a.u.jet > 0;
+function nearestAirbase(n, from){
+  let best = -1, bd = 1e9; for (const P of G.P){ if (S.owner[P.id] !== n || !S.bld[P.id].air) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
+  if (best < 0) for (const P of G.P){ if (S.owner[P.id] !== n || !P.city) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
+  return best;
+}
+function fixWings(){
+  for (const a of S.armies.slice()){ if (a.owner < 0) continue;
+    const airN = UT.reduce((s0, t) => s0 + (UNITS[t].cls === 'air' ? a.u[t] : 0), 0);
+    if (a.air || !airN) continue;
+    const base = nearestAirbase(a.owner, a.at); const w = addArmy(a.owner, base >= 0 ? base : a.at, {}); w.air = {base:w.at, cd:0};
+    for (const t of UT) if (UNITS[t].cls === 'air'){ w.u[t] = a.u[t]; w.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } w.m = a.m; }
+  removeEmpty();
+}
+function airMissionKind(a, p){
+  const o = S.owner[p];
+  if (o === a.owner && S.bld[p].air && p !== a.air.base) return 'rebase';
+  if (isStriker(a)) return 'strike';
+  return 'patrol';
+}
+function airCheck(a, p){
+  const d = hexDist(G.P[a.air.base].cc, G.P[p].cc), r = wingRange(a);
+  if (a.fly) return {ok:false, why:'This wing is already on a mission.'};
+  if ((a.air.cd || 0) > 0) return {ok:false, why:`Rearming: ready in ${a.air.cd} h.`};
+  if (p === a.air.base) return {ok:false, why:'That is its home airbase.'};
+  if (d > r) return {ok:false, why:`Out of range: ${d} hexes, this wing reaches ${r}.`};
+  const k = airMissionKind(a, p), o = S.owner[p];
+  if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o)) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
+  return {ok:true, kind:k, d, hours:Math.ceil(d/AIR_SPEED)};
+}
+function orderAir(a, p){
+  const c = airCheck(a, p); if (!c.ok){ if (a.owner === PLAYER) toast(c.why, 'bad', null); return false; }
+  a.fly = {tgt:p, kind:c.kind, ph:'out', t:0, hrs:0}; return true;
+}
+function wingPos(a){
+  const B = G.P[a.air.base]; if (!a.fly) return [B.x + 16, B.y - 6];
+  const T = G.P[a.fly.tgt], f = a.fly, live = S.speed && !S.over ? (typeof acc === 'number' ? acc : 0) : 0;
+  const dist = Math.max(1, hexDist(B.cc, T.cc)), dt = AIR_SPEED/dist;
+  if (f.ph === 'out'){ const t = Math.min(1, f.t + live*dt); return [B.x + (T.x - B.x)*t, B.y + (T.y - B.y)*t]; }
+  if (f.ph === 'back'){ const t = Math.min(1, f.t + live*dt); return [T.x + (B.x - T.x)*t, T.y + (B.y - T.y)*t]; }
+  const ang = performance.now()/700 + a.id; return [T.x + Math.cos(ang)*22, T.y + Math.sin(ang)*12];
+}
+function sideAV(armies, owner, scale){
+  const av = {soft:0, armored:0, air:0, naval:0};
+  for (const a of armies){ const mf = moraleF(a); for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(owner, t, 'atk')*K*scale*mf; for (const k of CLASSES) av[k] += base*mult(t, k); } }
+  return av;
+}
+function resolveStrike(a, p){
+  const o = a.owner, defs = stationaryAt(p).filter(b => atWar(o, b.owner) && count(b) > 0);
+  const vis = o === PLAYER || visibleSet().has(p);
+  // enemy fighters patrolling the target intercept first
+  const cap = S.armies.filter(b => b.fly && b.fly.ph === 'patrol' && b.fly.tgt === p && atWar(o, b.owner));
+  if (cap.length){ const mine = effHP(a), theirs = cap.reduce((s0, b) => s0 + effHP(b), 0);
+    const va = sideAV([a], o, 2*(0.8 + rng()*0.4)), vb = cap.reduce((acc0, b) => { const v = sideAV([b], b.owner, 2*(0.8 + rng()*0.4)); for (const k of CLASSES) acc0[k] += v[k]; return acc0; }, {soft:0, armored:0, air:0, naval:0});
+    hurt(a, vb, 1/Math.max(1, mine)); for (const b of cap) hurt(b, va, 1/Math.max(1, theirs));
+    if (vis) fx('dmg', p, {text:'dogfight', color:'#f3ead2', dy:-34}); }
+  if (!count(a)) return;
+  if (!defs.length){ if (o === PLAYER) log(`Strike on ${G.P[p].cityName || G.P[p].name} found no targets.`, 'info', p); return; }
+  const hpBefore = defs.map(effHP), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), myBefore = count(a);
+  const av = sideAV([a], o, STRIKE*(0.8 + rng()*0.4)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
+  for (const b of defs){ let f = 1/tot; if (b.owner === S.owner[p]) f *= Math.pow(0.8, S.bld[p].fort); hurt(b, av, f); }
+  // air defence fires back
+  const aa = sideAV(defs, defs[0].owner, 2*(0.8 + rng()*0.4)); hurt(a, {soft:0, armored:0, naval:0, air:aa.air}, 1/Math.max(1, effHP(a)));
+  const dealt = Math.round(hpBefore.reduce((s0, h, i) => s0 + h - effHP(defs[i]), 0)), killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), lost = myBefore - count(a);
+  if (vis){ fx('strike', p); fx('dmg', p, {text:`−${dealt} HP`, color:'#ffb27a', dy:-26}); }
+  if (o === PLAYER){ log(`Air strike on ${G.P[p].cityName || G.P[p].name}: ${dealt} damage${killed ? `, ${killed} enemy unit${killed > 1 ? 's' : ''} destroyed` : ''}${lost ? `, ${lost} aircraft lost` : ''}.`, killed || dealt > 20 ? 'good' : 'info', p); sfx('battle'); bump('unitsKilled', killed); bump('unitsLost', lost); }
+  else if (defs.some(b => b.owner === PLAYER)){ log(`${nationName(o)} air strike hit your forces at ${G.P[p].cityName || G.P[p].name} (${dealt} damage${killed ? `, ${killed} units lost` : ''}).`, 'bad', p); bump('unitsLost', killed); }
+  removeEmpty();
+}
+function airTick(){
+  for (const a of S.armies){ if (!a.air || !count(a)) continue;
+    if (!a.fly){ if (a.air.cd > 0) a.air.cd--; if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; a.at = nb; } continue; }
+    const f = a.fly, B = G.P[a.air.base], T = G.P[f.tgt], dist = Math.max(1, hexDist(B.cc, T.cc)), dt = AIR_SPEED/dist;
+    if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
+        if (f.kind === 'rebase'){ a.air.base = f.tgt; a.at = f.tgt; a.fly = null; a.air.cd = 2; continue; }
+        if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'back'; f.t = 0; }
+        else { f.ph = 'patrol'; f.hrs = 12; f.t = 0; } } }
+    else if (f.ph === 'patrol'){ if (--f.hrs <= 0){ f.ph = 'back'; f.t = 0; } }
+    else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; a.at = nb; } } } }
+  }
+  removeEmpty();
+}
+function aiAir(n){
+  for (const a of S.armies){ if (a.owner !== n || !a.air || a.fly || (a.air.cd || 0) > 0 || healthFrac(a) < 0.5 || !count(a)) continue;
+    const r = wingRange(a), B = G.P[a.air.base];
+    if (isStriker(a)){ let best = -1, bs = 0;
+      for (const [pid, list] of provPowers()){ if (hexDist(B.cc, G.P[pid].cc) > r) continue; let sc = 0;
+        for (const [o, pw] of list) if (o >= 0 && atWar(n, o)) sc += pw*(o === PLAYER ? 1.1 : 1);
+        if (S.owner[pid] === n) sc *= 1.5;              // enemies on our soil first
+        if (sc > bs){ bs = sc; best = pid; } }
+      if (best >= 0 && bs > 8) orderAir(a, best);
+    } else { let best = -1, bs = 0;
+      for (const P of G.P){ if (S.owner[P.id] !== n || P.sea || hexDist(B.cc, P.cc) > r) continue;
+        const sc = (S.battles.includes(P.id) ? 3 : 0) + P.nbs.filter(v => S.owner[v] >= 0 && atWar(n, S.owner[v])).length*(P.city ? 2 : 1);
+        if (sc > bs){ bs = sc; best = P.id; } }
+      if (best >= 0 && bs >= 2 && best !== a.air.base) orderAir(a, best); }
+  }
+}
+
 /* ---------------- Simulation ---------------- */
 function alarm(){ if (S.speed > 1){ S.speed = 1; } sfx('alarm'); }
 let tickVer = 0;
@@ -1040,8 +1181,10 @@ function tick(){
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
   diploHour();
+  airTick();
   // movement
   for (const a of S.armies){
+    if (a.air){ a.path = []; continue; }
     if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (a.owner === PLAYER) log(`Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
@@ -1089,6 +1232,9 @@ function tick(){
       const escorted = G.P[p].sea && sides.get(o).some(b => shipsN(b) > 0);
       for (const a of sides.get(o)) hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot);
     }
+    { const showFx = owners.includes(PLAYER) || visibleSet().has(p);
+      if (showFx) owners.forEach((o, i) => { const lost = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*44, dy:-30}); });
+      if (showFx) fx('hits', p, {seed:Math.random()*1000}); }
     const playerThere = owners.includes(PLAYER);
     if (playerThere){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const st0 = S.stats || (S.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
     if (playerThere) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(a.owner === PLAYER ? 'unitsLost' : 'unitsKilled', lost); }
@@ -1116,7 +1262,7 @@ function tick(){
     } else if (owners.size === 0) S.cap[p] = null;
   }
   if (S.hour % 24 === 0){ diploDay(); daily(); }
-  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0) aiTurn(n);
+  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ aiTurn(n); aiAir(n); }
   visCache = null;
 }
 function hurt(a, d, f){
@@ -1216,7 +1362,7 @@ function enemyMix0(n){
   const tot = m.soft + m.armored + m.air + m.naval || 1; return {soft:m.soft/tot, armored:m.armored/tot, air:m.air/tot, naval:m.naval/tot};
 }
 function aiPickUnit(n, p){
-  const mix = enemyMix(n), w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*mix.air, ifv:1.2, tank:2.2, jet:1 + 3*mix.armored, int:0.3 + 6*mix.air, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
+  const mix = enemyMix(n), w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*mix.air, ifv:1.2, tank:2.2, jet:2.6 + 3*mix.armored, int:1.2 + 6*mix.air, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
   { let ships = 0, all = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); all += count(a); } if (ships > all*0.2){ w.frig = w.sub = w.crui = 0; } }
   const opts = UT.filter(t => bldOk(p, t) && unlocked(n, t));
   let tot = opts.reduce((s, t) => s + w[t], 0), r = rng()*tot;
@@ -1263,12 +1409,13 @@ function aiTurn(n){
     }
   }
   const idle = new Map();
-  for (const a of S.armies){ if (a.owner !== n || a.to !== null || a.path.length) continue;
+  for (const a of S.armies){ if (a.owner !== n || a.to !== null || a.path.length || a.air) continue;
     if (idle.has(a.at)) merge(idle.get(a.at), a); else idle.set(a.at, a); }
   removeEmpty();
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
   for (const a of idle.values()){
     if (count(a) === 0 || enemiesAt(a.at, n)) continue;
+    if (a.air) continue;
     if (shipsOnly(a)){ aiFleet(a, n); continue; }
     if (G.P[a.at].sea || (S.owner[a.at] !== n && !atWar(n, S.owner[a.at]))){
       // stranded at sea or in land it may not fight in: head to the nearest own province
@@ -1343,8 +1490,10 @@ function visibleSet(){
 }
 function armyVisible(a, vis){ return a.owner === PLAYER || a.owner === NEUTRAL || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
 function armyPos(a){
+  if (a.air) return wingPos(a);
   const A = G.P[a.at]; if (a.to === null) return [A.x, A.y];
-  const B = G.P[a.to]; return [A.x + (B.x - A.x)*a.t, A.y + (B.y - A.y)*a.t];
+  const B = G.P[a.to], live = S.speed && !S.over ? acc : 0, t = Math.min(1, a.t + live/legHours(a, a.at, a.to));
+  return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t];
 }
 function roundRect(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 function star(x, y, R){ ctx.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? R*0.45 : R, a = -Math.PI/2 + i*Math.PI/5; ctx.lineTo(x + r*Math.cos(a), y + r*Math.sin(a)); } ctx.closePath(); }
@@ -1373,23 +1522,102 @@ function glyph(x, y, t, s){
     if (t === 'sub'){ ctx.beginPath(); ctx.moveTo(x - w*0.42, y + h*0.35); ctx.lineTo(x + w*0.42, y + h*0.35); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(x, y - h*0.05); ctx.lineTo(x, y - h*0.38); ctx.stroke(); } }
   else { chev(0); ctx.stroke(); }
 }
-function counter(x, y, a, n, color, selected, moving, s, stack = false){
-  s = Math.max(0.9, s); const label = String(n);
-  ctx.font = `600 ${Math.round(11*s)}px ${MONO}`;
-  const w = Math.round(19*s + ctx.measureText(label).width + 8*s), h = Math.round(20*s), bx = Math.round(x - w/2), by = Math.round(y - h/2);
-  if (stack){ for (let i = 2; i >= 1; i--){ roundRect(ctx, bx + i*3, by - i*3, w, h, 3); ctx.fillStyle = mixHex('#11181a', color, 0.2); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.stroke(); } }
-  if (selected){ ctx.save(); ctx.shadowColor = '#e2a23d'; ctx.shadowBlur = 12; roundRect(ctx, bx - 3, by - 3, w + 6, h + 6, 4); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.restore(); }
-  roundRect(ctx, bx, by, w, h, 3); ctx.fillStyle = mixHex('#11181a', color, 0.35); ctx.fill();
-  ctx.save(); roundRect(ctx, bx, by, w, h, 3); ctx.clip(); ctx.fillStyle = color; ctx.fillRect(bx, by, w, 4*s);
-  const hf = Math.max(0, Math.min(1, a ? healthFrac(a) : 1)); ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(bx, by + h - 2.5*s, w, 2.5*s);
-  ctx.fillStyle = hf > 0.6 ? '#74c27a' : hf > 0.3 ? '#e2a23d' : '#e0574f'; ctx.fillRect(bx, by + h - 2.5*s, w*hf, 2.5*s);
-  if (a && a.owner >= 0){ ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(bx, by + h - 4.8*s, w, 2*s); ctx.fillStyle = '#6fb0e8'; ctx.fillRect(bx, by + h - 4.8*s, w*(a.m ?? 80)/100, 2*s); }
+function shade(hex, f){ const n = parseInt(hex.slice(1), 16); const c = sh => Math.max(0, Math.min(255, Math.round(((n >> sh) & 255)*(1 + f)))); return `rgb(${c(16)},${c(8)},${c(0)})`; }
+const DARK = '#0b1012';
+function seg2(pts, w, col){ ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.lineWidth = w + 1.6; ctx.strokeStyle = DARK; ctx.stroke(); ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke(); }
+function blob(path, fill){ ctx.fillStyle = fill; ctx.fill(path); ctx.lineWidth = 1.3; ctx.strokeStyle = DARK; ctx.stroke(path); }
+function flash(x, y, s, now, seed){ if (((now/90 + seed*7) % 9) > 1.2) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffd27a'; ctx.beginPath(); for (let i = 0; i < 8; i++){ const r = i % 2 ? 1.5*s : 4.2*s, a = i*Math.PI/4; ctx.lineTo(x + r*Math.cos(a), y + r*Math.sin(a)); } ctx.fill(); ctx.restore(); }
+function soldier(x, y, s, col, phase, walk, kind){
+  const sw = walk ? Math.sin(phase)*1 : 0, hipY = y - 5*s, shY = y - 9.6*s;
+  seg2([x, hipY, x + 3.2*s*sw, y], 1.7*s, shade(col, -0.35)); seg2([x, hipY, x - 3.2*s*sw, y], 1.7*s, shade(col, -0.45));
+  seg2([x, hipY, x + 0.4*s, shY], 2.6*s, col);
+  if (kind === 'at'){ seg2([x - 4.5*s, shY - 1.6*s, x + 5*s, shY - 1.6*s], 2.6*s, '#4b5a3a'); }
+  else seg2([x - 1.2*s, y - 7.4*s, x + 6*s, y - 9.6*s], 1*s, '#22282a');
+  seg2([x + 0.4*s, shY, x + 3.2*s, y - 7.8*s], 1.3*s, shade(col, -0.2));
+  ctx.beginPath(); ctx.arc(x + 0.5*s, y - 12.6*s, 2.2*s, 0, Math.PI*2); ctx.fillStyle = '#d8c3a2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = DARK; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + 0.5*s, y - 13*s, 2.5*s, Math.PI, 0); ctx.fillStyle = shade(col, -0.25); ctx.fill(); ctx.stroke();
+}
+function tankSprite(x, y, s, col, phase, moving, fighting, now, seed, ifv){
+  const L = ifv ? 17 : 22, Hh = ifv ? 6 : 4.5;
+  const tr = new Path2D(); roundRect({beginPath(){}, moveTo:(...a) => tr.moveTo(...a), arcTo:(...a) => tr.arcTo(...a), closePath:() => tr.closePath()}, x - L/2*s, y - 3*s, L*s, 5*s, 2.5*s);
+  blob(tr, '#1d211e');
+  if (!ifv){ ctx.save(); ctx.setLineDash([1.6*s, 1.8*s]); ctx.lineDashOffset = moving ? -phase*2*s : 0; ctx.strokeStyle = '#6b6f66'; ctx.lineWidth = 1.2*s; ctx.beginPath(); ctx.moveTo(x - (L/2 - 2)*s, y + 1.9*s); ctx.lineTo(x + (L/2 - 2)*s, y + 1.9*s); ctx.stroke(); ctx.restore(); }
+  else for (let i = 0; i < 4; i++){ ctx.beginPath(); ctx.arc(x + (-6 + i*4)*s, y + 0.2*s, 1.7*s, 0, Math.PI*2); ctx.fillStyle = '#3a3e38'; ctx.fill(); ctx.strokeStyle = DARK; ctx.lineWidth = 1; ctx.stroke(); }
+  const hull = new Path2D(); hull.moveTo(x - (L/2 - 1)*s, y - 3*s); hull.lineTo(x + (L/2 - 2)*s, y - 3*s); hull.lineTo(x + L/2*s, y - (3 + Hh*0.6)*s); hull.lineTo(x - (L/2 - 2)*s, y - (3 + Hh)*s); hull.closePath(); blob(hull, shade(col, -0.1));
+  const ty = y - (3 + Hh)*s, recoil = fighting ? Math.max(0, Math.sin(now/110 + seed))*2*s : 0;
+  if (!ifv){ seg2([x + 2*s, ty - 2.5*s, x + 14*s - recoil, ty - 3*s], 1.6*s, '#2b302c'); const tu = new Path2D(); tu.ellipse(x - 1*s, ty - 2*s, 5.5*s, 3*s, 0, 0, Math.PI*2); blob(tu, col); if (fighting) flash(x + 15*s, ty - 3*s, s, now, seed); }
+  else { seg2([x, ty - 1.6*s, x + 8*s, ty - 2.2*s], 1*s, '#2b302c'); const tu = new Path2D(); tu.rect(x - 3.5*s, ty - 3.4*s, 6*s, 3*s); blob(tu, col); if (fighting) flash(x + 9*s, ty - 2.2*s, s*0.7, now, seed); }
+}
+function artySprite(x, y, s, col, fighting, now, seed){
+  const rec = fighting ? Math.max(0, Math.sin(now/140 + seed))*2.5*s : 0;
+  seg2([x - 9*s, y, x + 2*s, y - 3*s], 1.8*s, shade(col, -0.3));
+  seg2([x, y - 4*s, x + 11*s - rec, y - 11*s + rec*0.6], 2.2*s, '#2b302c');
+  const sh = new Path2D(); sh.moveTo(x - 3*s, y - 2*s); sh.lineTo(x + 4*s, y - 7*s); sh.lineTo(x + 5*s, y - 3*s); sh.lineTo(x + 1*s, y); sh.closePath(); blob(sh, col);
+  for (const dx of [-2.5, 3]){ ctx.beginPath(); ctx.arc(x + dx*s, y + 0.5*s, 2.8*s, 0, Math.PI*2); ctx.fillStyle = '#2a2d29'; ctx.fill(); ctx.strokeStyle = DARK; ctx.lineWidth = 1.2; ctx.stroke(); }
+  if (fighting) flash(x + 12*s, y - 12*s, s, now, seed);
+}
+function samSprite(x, y, s, col, fighting, now, seed){
+  for (const dx of [-6, -1, 5]){ ctx.beginPath(); ctx.arc(x + dx*s, y + 0.5*s, 2*s, 0, Math.PI*2); ctx.fillStyle = '#2a2d29'; ctx.fill(); ctx.strokeStyle = DARK; ctx.lineWidth = 1; ctx.stroke(); }
+  const bed = new Path2D(); bed.rect(x - 9*s, y - 4*s, 13*s, 3.5*s); blob(bed, shade(col, -0.15));
+  const cab = new Path2D(); cab.rect(x + 4*s, y - 7*s, 5*s, 6.5*s); blob(cab, col);
+  for (const o of [0, 2.4]) seg2([x - 7*s, y - (5 + o)*s, x + 1*s, y - (12 + o)*s], 1.7*s, '#e6e0cf');
+  if (fighting && ((now/120 + seed) % 7) < 1){ ctx.save(); ctx.strokeStyle = 'rgba(255,240,200,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 2*s, y - 13*s); ctx.lineTo(x + 10*s, y - 26*s); ctx.stroke(); ctx.restore(); }
+}
+function jetSprite(x, y, s, col, ang, kind){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  const b = new Path2D();
+  if (kind === 'int'){ b.moveTo(13*s, 0); b.lineTo(-2*s, 1.8*s); b.lineTo(-7*s, 9*s); b.lineTo(-9*s, 9*s); b.lineTo(-8*s, 2*s); b.lineTo(-11*s, 3.5*s); b.lineTo(-11*s, -3.5*s); b.lineTo(-8*s, -2*s); b.lineTo(-9*s, -9*s); b.lineTo(-7*s, -9*s); b.lineTo(-2*s, -1.8*s); b.closePath(); }
+  else { b.moveTo(13*s, 0); b.lineTo(3*s, 1.6*s); b.lineTo(-3*s, 10*s); b.lineTo(-6*s, 10*s); b.lineTo(-4*s, 2*s); b.lineTo(-9*s, 2*s); b.lineTo(-12*s, 5*s); b.lineTo(-12*s, -5*s); b.lineTo(-9*s, -2*s); b.lineTo(-4*s, -2*s); b.lineTo(-6*s, -10*s); b.lineTo(-3*s, -10*s); b.lineTo(3*s, -1.6*s); b.closePath(); }
+  ctx.fillStyle = col; ctx.fill(b); ctx.lineWidth = 1.2; ctx.strokeStyle = DARK; ctx.stroke(b);
+  ctx.fillStyle = '#9fc6dc'; ctx.beginPath(); ctx.ellipse(6*s, 0, 2.2*s, 0.9*s, 0, 0, Math.PI*2); ctx.fill();
   ctx.restore();
-  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.9)'; roundRect(ctx, bx - .5, by - .5, w + 1, h + 1, 3.5); ctx.stroke();
-  if (a && a.owner === PLAYER && !supplied(a)){ ctx.setLineDash([3, 2]); ctx.strokeStyle = '#e0574f'; ctx.lineWidth = 1.5; roundRect(ctx, bx - 3, by - 3, w + 6, h + 6, 4); ctx.stroke(); ctx.setLineDash([]); } ctx.lineWidth = 1.6; ctx.strokeStyle = color; roundRect(ctx, bx + 1, by + 1, w - 2, h - 2, 2.5); ctx.stroke();
-  glyph(bx + 10.5*s, by + h/2 + 0.5*s, a ? dominant(a) : 'inf', s);
-  ctx.fillStyle = '#f2eee2'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(label, bx + 19*s, by + h/2 + 1*s);
-  return {x:bx - 3, y:by - 3, w:w + 6, h:h + 6};
+}
+function shipSprite(x, y, s, col, ang, kind, moving, now){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  const k = kind === 'crui' ? 1.25 : 1;
+  if (moving){ ctx.strokeStyle = 'rgba(220,235,240,.45)'; ctx.lineWidth = 1.2; const w0 = (now/80) % 6; for (const side of [-1, 1]){ ctx.beginPath(); ctx.moveTo(-11*s*k, side*2*s); ctx.lineTo(-(22 + w0)*s*k, side*(6 + w0*0.5)*s); ctx.stroke(); } }
+  const h = new Path2D();
+  if (kind === 'sub'){ h.ellipse(0, 0, 12*s, 2.4*s, 0, 0, Math.PI*2); }
+  else { h.moveTo(14*s*k, 0); h.quadraticCurveTo(6*s*k, 4*s*k, -11*s*k, 3.2*s*k); h.lineTo(-11*s*k, -3.2*s*k); h.quadraticCurveTo(6*s*k, -4*s*k, 14*s*k, 0); h.closePath(); }
+  ctx.fillStyle = shade(col, -0.15); ctx.fill(h); ctx.lineWidth = 1.2; ctx.strokeStyle = DARK; ctx.stroke(h);
+  ctx.fillStyle = shade(col, 0.25);
+  if (kind === 'sub'){ ctx.fillRect(-1.5*s, -1.2*s, 4*s, 2.4*s); }
+  else { ctx.fillRect(-4*s*k, -1.8*s*k, 7*s*k, 3.6*s*k); ctx.beginPath(); ctx.arc(8*s*k, 0, 1.6*s*k, 0, Math.PI*2); ctx.fill(); if (kind === 'crui'){ ctx.beginPath(); ctx.arc(-8*s*k, 0, 1.6*s*k, 0, Math.PI*2); ctx.fill(); } }
+  ctx.restore();
+}
+function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
+  const phase = now/95 + seed;
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.translate(-x, -y);
+  if (t === 'inf' || t === 'at'){ const m = Math.min(3, Math.max(1, n)); for (let i = 0; i < m; i++){ const ox = (i - (m - 1)/2)*7*s, oy = (i % 2)*1.5*s; soldier(x + ox, y + oy, s, col, phase + i*1.7, moving, t); if (fighting && t === 'inf') flash(x + ox + 7*s, y + oy - 10*s, s*0.6, now, seed + i); } }
+  else if (t === 'tank' || t === 'ifv') tankSprite(x, y, s, col, phase, moving, fighting, now, seed, t === 'ifv');
+  else if (t === 'art') artySprite(x, y, s, col, fighting, now, seed);
+  else if (t === 'sam') samSprite(x, y, s, col, fighting, now, seed);
+  else if (t === 'jet' || t === 'int') jetSprite(x, y - 6*s, s, col, 0, t);
+  else shipSprite(x, y - 2*s, s, col, 0, t, moving, now);
+  ctx.restore();
+}
+function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting = false, dir = 1, now = performance.now()){
+  s = Math.max(0.75, s);
+  const types = a ? UT.filter(t => a.u[t]).sort((p1, p2) => a.u[p2]*UNITS[p2].hp - a.u[p1]*UNITS[p1].hp) : ['inf'];
+  const main = types[0] || 'inf', seed = a ? a.id % 13 : 0;
+  // ground shadow / selection ring
+  ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 17*s, 4.5*s, 0, 0, Math.PI*2); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill();
+  if (selected){ ctx.save(); ctx.shadowColor = '#e2a23d'; ctx.shadowBlur = 10; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 17*s, 5.5*s, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
+  if (a && a.owner === PLAYER && !supplied(a)){ ctx.save(); ctx.setLineDash([3, 2]); ctx.strokeStyle = '#e0574f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 16*s, 5*s, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
+  const shake = fighting ? Math.sin(now/45 + seed)*0.8 : 0;
+  const fs = s*1.35;
+  if (types[1] || stack){ ctx.save(); ctx.globalAlpha = 0.85; unitFigure(types[1] || main, x - 10*fs*dir, y - 5*fs, fs*0.72, shade(color, -0.12), now, moving, fighting, dir, seed + 3, 2); ctx.restore(); }
+  unitFigure(main, x + shake, y, fs, color, now, moving, fighting, dir, seed, a ? a.u[main] : n);
+  // strength badge (pill) with health and morale bars
+  const label = String(n); ctx.font = `700 ${Math.round(10*s)}px ${MONO}`;
+  const bw = Math.max(16*s, ctx.measureText(label).width + 8*s), bh = 11*s, bx = x - bw/2, by = y + 4*s;
+  roundRect(ctx, bx, by, bw, bh, bh/2); ctx.fillStyle = 'rgba(8,12,14,.92)'; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = color; ctx.stroke();
+  ctx.fillStyle = '#f2eee2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, by + bh/2 + 0.5);
+  const hf = Math.max(0, Math.min(1, a ? healthFrac(a) : 1)), barW = Math.max(bw, 22*s), bx2 = x - barW/2, by2 = by + bh + 1.5*s;
+  ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(bx2 - 0.5, by2 - 0.5, barW + 1, (a && a.owner >= 0 ? 4.6 : 2.6)*s + 1);
+  ctx.fillStyle = hf > 0.6 ? '#74c27a' : hf > 0.3 ? '#e2a23d' : '#e0574f'; ctx.fillRect(bx2, by2, barW*hf, 2.2*s);
+  if (a && a.owner >= 0){ ctx.fillStyle = '#6fb0e8'; ctx.fillRect(bx2, by2 + 2.6*s, barW*(a.m ?? 80)/100, 1.8*s); }
+  return {x:x - 22*s, y:y - 26*s, w:44*s, h:by2 + 6*s - (y - 26*s)};
 }
 let MONO = 'IBM Plex Mono, monospace', BODY = 'Barlow, sans-serif', DISPLAY = 'Impact, sans-serif';
 function clampView(){
@@ -1481,7 +1709,7 @@ function draw(now){
         ctx.fillStyle = '#081014'; ctx.fillText(t, x, cy + 14*k + 23); } } }
   // battles: pulsing red burst
   for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue;
-    const [x, y] = toScreen(G.P[p].x, G.P[p].y), R = (13 + pulse*4)*k, cy = y - 24*k;
+    const [x, y] = toScreen(G.P[p].x, G.P[p].y), R = (9 + pulse*3)*k, cy = y - 46*k;
     ctx.beginPath(); for (let i = 0; i < 16; i++){ const r = i % 2 ? R*0.5 : R, a = i*Math.PI/8; ctx.lineTo(x + r*Math.cos(a), cy + r*Math.sin(a)); } ctx.closePath();
     ctx.fillStyle = `rgba(224,87,79,${0.55 + pulse*0.3})`; ctx.fill(); ctx.strokeStyle = '#2a0c0a'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.strokeStyle = '#fff1ec'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(x - 4*k, cy - 4*k); ctx.lineTo(x + 4*k, cy + 4*k); ctx.moveTo(x + 4*k, cy - 4*k); ctx.lineTo(x - 4*k, cy + 4*k); ctx.stroke(); }
@@ -1493,35 +1721,58 @@ function draw(now){
     ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(now/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
     const last = path[path.length - 1], [lx, ly] = toScreen(G.P[last].x, G.P[last].y); ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
   for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null)) drawPath(a, a.path.length ? a.path : [a.to], 'rgba(226,162,61,0.35)', 1.6);
-  const drawSelPaths = () => { if (!sa) return; if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3);
+  const drawSelPaths = () => { if (!sa) return;
+    if (sa.air){ const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS*SQ3*view.s;
+      ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(111,176,232,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(111,176,232,.05)'; ctx.fill(); ctx.restore();
+      if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target);
+        ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
+        ctx.font = `600 11px ${MONO}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
+        roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
+      return; } if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3);
     if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3); routeChip(sa, sel.target, targetPath); }
     else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   // counters (clustered per owner at low zoom)
   hits = [];
   const showNeutral = hexPx >= 11, items = [];
   for (const a of S.armies){ if (!armyVisible(a, vis)) continue; if (a.owner === NEUTRAL && !showNeutral && !vis.has(a.at)) continue;
+    if (a.fly) continue;
     const [wx, wy] = armyPos(a), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
-    items.push({a, x, y:y - 8*k, owner:a.owner, moving:a.to !== null}); }
+    items.push({a, x, y:y - 2*k, owner:a.owner, moving:a.to !== null, air:!!a.air}); }
   const clusters = [];
   const R2 = (hexPx >= 10 ? 0 : 26)**2;
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
-    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && ((c.at === it.a.at) || (c.x - it.x)**2 + (c.y - it.y)**2 < R2));
+    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at) || (c.x - it.x)**2 + (c.y - it.y)**2 < R2));
     if (it.moving) c = null;
     if (c){ c.list.push(it.a); c.n += count(it.a); }
-    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.a.at, moving:it.moving, list:[it.a], n:count(it.a)});
+    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.a.at, moving:it.moving, air:it.air, list:[it.a], n:count(it.a)});
   }
   const perProv = new Map();
-  for (const c of clusters){ if (c.moving) continue; const key = c.at; if (!perProv.has(key)) perProv.set(key, []); perProv.get(key).push(c); }
-  for (const cs of perProv.values()){ cs.sort((a, b) => (a.owner === PLAYER ? -1 : 0) - (b.owner === PLAYER ? -1 : 0)); cs.forEach((c, i) => { c.x += (i - (cs.length - 1)/2)*34*k; }); }
+  for (const c of clusters){ if (c.moving || c.air) continue; const key = c.at; if (!perProv.has(key)) perProv.set(key, []); perProv.get(key).push(c); }
+  for (const cs of perProv.values()){ cs.sort((a, b) => (a.owner === PLAYER ? -1 : 0) - (b.owner === PLAYER ? -1 : 0)); cs.forEach((c, i) => { c.x += (i - (cs.length - 1)/2)*50*k; }); }
   clusters.sort((a, b) => (a.owner === PLAYER) - (b.owner === PLAYER));
   for (const c of clusters){
     const lead = c.list.reduce((b, a) => count(a) > count(b) ? a : b, c.list[0]);
-    if (c.moving){ const a = c.list[0], B = G.P[a.path.length && a.to === null ? a.path[0] : a.to ?? a.at]; const [tx, ty] = toScreen(B.x, B.y); const ang = Math.atan2(ty - (c.y + 8*k), tx - c.x);
-      ctx.save(); ctx.translate(c.x + Math.cos(ang)*22*k, c.y + Math.sin(ang)*22*k); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(6*k, 0); ctx.lineTo(-3*k, -5*k); ctx.lineTo(-3*k, 5*k); ctx.closePath(); ctx.fillStyle = colorOf(c.owner); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
-    const r = counter(c.x, c.y, lead, c.n, colorOf(c.owner), c.list.some(a => a.id === sel.army), c.moving, k, c.list.length > 1);
+    let dir = 1;
+    if (c.moving){ const a = c.list[0], B = G.P[a.path.length && a.to === null ? a.path[0] : a.to ?? a.at]; const [tx] = toScreen(B.x, B.y); dir = tx < c.x ? -1 : 1; }
+    else { const foe = S.battles.includes(c.at); if (foe){ const others = clusters.filter(o => o.at === c.at && o !== c); if (others.length) dir = others[0].x < c.x ? -1 : 1; } }
+    const fighting = !c.moving && !c.air && S.battles.includes(c.at);
+    const r = counter(c.x, c.y, lead, c.n, colorOf(c.owner), c.list.some(a => a.id === sel.army), c.moving, k, c.list.length > 1, fighting, dir, now);
     hits.push({...r, ids:c.list.map(a => a.id), cx:c.x, cy:c.y, spread:c.list.some(a => a.at !== c.at)});
   }
+  // aircraft in flight: formation of jets with contrails
+  for (const a of S.armies){ if (!a.fly || !count(a) || !armyVisible(a, vis) && !vis.has(a.fly.tgt)) continue;
+    const [wx, wy] = wingPos(a), [x, y] = toScreen(wx, wy), T = G.P[a.fly.tgt], B = G.P[a.air.base];
+    let ang;
+    if (a.fly.ph === 'patrol'){ const t0 = performance.now()/700 + a.id; ang = t0 + Math.PI/2; }
+    else { const [fx0, fy0] = a.fly.ph === 'out' ? [B.x, B.y] : [T.x, T.y], [tx0, ty0] = a.fly.ph === 'out' ? [T.x, T.y] : [B.x, B.y]; ang = Math.atan2(ty0 - fy0, tx0 - fx0); }
+    const col = colorOf(a.owner), kind = a.u.jet >= a.u.int ? 'jet' : 'int', nPl = Math.min(3, count(a)), sc = Math.max(0.8, k);
+    ctx.save(); ctx.strokeStyle = 'rgba(235,240,245,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(ang)*40*sc, y - Math.sin(ang)*40*sc); ctx.stroke(); ctx.restore();
+    for (let i = 0; i < nPl; i++){ const off = [[0, 0], [-9, 8], [-9, -8]][i]; const ox = Math.cos(ang)*off[0]*sc - Math.sin(ang)*off[1]*sc, oy = Math.sin(ang)*off[0]*sc + Math.cos(ang)*off[1]*sc;
+      jetSprite(x + ox, y + oy, sc*0.9, col, ang, kind); }
+    if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreen(T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(a.fly.ph === 'back' ? toScreen(B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }
+    ctx.font = `700 ${Math.round(10*sc)}px ${MONO}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2eee2'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(count(a), x, y + 16*sc); ctx.fillText(count(a), x, y + 16*sc);
+    if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
   drawSelPaths();
   drawFX(now);
   drawMini();
@@ -1558,7 +1809,7 @@ cv.addEventListener('pointermove', e => {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, {x, y});
   if (pinch && pointers.size === 2){ const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zoomAt(pinch.s*(d/pinch.d)/view.s, (a.x + b.x)/2, (a.y + b.y)/2); return; }
   if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > 6) drag.moved = true; if (drag.moved){ view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
-  if (e.pointerType === 'mouse'){ mouse = {x, y}; const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
+  if (e.pointerType === 'mouse'){ mouse = {x, y}; const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
 });
 function endPointer(e){
   const [x, y] = localXY(e);
@@ -1595,13 +1846,14 @@ function tap(x, y){
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (a){
     if (a.to === null && p === a.at){ selectProv(p); return; }
+    if (sel.target === p && a.air){ sendToTarget(a); return; }
     if (sel.target === p){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet()) && atWar(PLAYER, b.owner)); if (odds(a, p, foes) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
     setTarget(a, p); return;
   }
   selectProv(p);
 }
-function setTarget(a, p){ sel.target = p; targetPath = pathFor(a, a.to !== null ? a.to : a.at, p); hoverPath = null; renderSide(true); }
-function sendToTarget(a){ if (sel.target !== null){ orderMove(a, sel.target); sfx('order'); } sel.target = null; targetPath = null; renderSide(true); }
+function setTarget(a, p){ sel.target = p; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p); hoverPath = null; renderSide(true); }
+function sendToTarget(a){ if (sel.target !== null){ if (a.air){ if (orderAir(a, sel.target)) sfx('order'); } else { orderMove(a, sel.target); sfx('order'); } } sel.target = null; targetPath = null; renderSide(true); }
 function selectArmy(id){ if (tab !== 'cmd') setTab('cmd'); sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 function clearSel(){ sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
@@ -1783,7 +2035,7 @@ function researchHTML(){
   return h + `</div><div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
 function ctxHTML(){
-  if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return armyHTML(a); }
+  if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return a.air ? wingHTML(a) : armyHTML(a); }
   if (sel.prov !== null) return provHTML(sel.prov);
   const N = S.nations[PLAYER], mine = S.armies.filter(a => a.owner === PLAYER);
   return `<div class="eyebrow">Command</div><h2>${N.name}</h2>
@@ -1837,6 +2089,26 @@ function oddsHTML(a, t, foes){
   const r = odds(a, t, foes), cls = r >= 1.5 ? 'good' : r >= 0.9 ? 'even' : 'bad', label = r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even fight' : 'Likely defeat';
   return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(power(a))} vs their ${Math.round(foes.reduce((s, b) => s + power(b), 0))} strength${S.bld[t].fort ? ' + fortifications' : ''} (defenders get +25% on home soil)</div>`;
 }
+function unitRows(a){
+  return `<div class="urows">${UT.filter(t => a.u[t]).map(t => { const U = UNITS[t], max = a.u[t]*U.hp, cur = Math.max(0, max - a.w[t]), f = cur/max;
+    return `<div class="urow" title="${U.role}">${unitSVG(t)}<span class="un">${U.name} <b>×${a.u[t]}</b></span><span class="uhp"><i style="width:${Math.round(f*100)}%;background:${f > 0.6 ? 'var(--ok)' : f > 0.3 ? 'var(--accent)' : 'var(--danger)'}"></i></span><span class="unum">${Math.round(cur)}/${max} HP</span></div>`; }).join('')}</div>`;
+}
+function wingHTML(a){
+  const f = a.fly, B = G.P[a.air.base];
+  const status = !f ? ((a.air.cd || 0) > 0 ? `Rearming at ${B.cityName || B.name}: ready in ${a.air.cd} h` : `Ready at ${B.cityName || B.name}`)
+    : f.ph === 'out' ? `${f.kind === 'strike' ? 'Striking' : f.kind === 'patrol' ? 'Flying to patrol' : 'Rebasing to'} ${G.P[f.tgt].cityName || G.P[f.tgt].name}` : f.ph === 'patrol' ? `Patrolling ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left` : `Returning to ${B.cityName || B.name}`;
+  let plan = '';
+  if (sel.target !== null){ const c = airCheck(a, sel.target);
+    plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned mission</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br>
+      <span class="small">${c.ok ? (c.kind === 'strike' ? `Strike: fly out ${c.hours} h, hit everything hostile there with ${STRIKE}× firepower, then return and rearm 6 h. Air defence (SAMs, Interceptors, Frigates) fires back.` : c.kind === 'patrol' ? `Patrol for 12 h: intercepts enemy air strikes on this province.` : `Move this wing to the airbase here.`) : c.why}</span></div>
+      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? 'Launch strike' : c.kind === 'patrol' ? 'Start patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
+  return `<div class="eyebrow">Air wing</div><h2>${count(a)} aircraft</h2>${plan}
+    <div class="status ${f ? 'move' : ''}">${status}</div>
+    ${unitRows(a)}
+    <dl class="kv"><dt>Range</dt><dd>${wingRange(a)} hexes from base</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
+    <p class="small muted" style="margin:0">Tap a province inside the blue range ring to plan a mission. Strikers attack and come back; Interceptors patrol and shoot down enemy strikes; tapping one of your airbases rebases the wing.</p>
+    <div class="row"><button class="btn" data-act="clear">Deselect</button></div>`;
+}
 function armyHTML(a){
   const st0 = statusText(a), here = a.to === null ? S.armies.filter(b => b.owner === PLAYER && b.at === a.at && b.to === null) : [a];
   const enemies = a.to === null ? stationaryAt(a.at).filter(b => b.owner !== PLAYER) : [];
@@ -1852,7 +2124,7 @@ function armyHTML(a){
       <button class="btn" data-act="untarget">Cancel route</button></div>`;
   }
   return `<div class="eyebrow">Your force</div><h2>${count(a)} units</h2>${plan}
-    <div class="comp">${comp(a)}</div>
+    ${unitRows(a)}
     <div class="status ${st0.cls}">${st0.long}</div>
     <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${landSpeed(a).toFixed(1).replace('.0', '')} hexes/day</dd>
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
@@ -1887,7 +2159,7 @@ function provHTML(p){
     const card = t => { const U = UNITS[t];
       const why = reqText(p, t);
       const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac));
-      return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k · −${U.food} food/d`}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; };
+      return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${unitSVG(t)}${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k · −${U.food} food/d`}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; };
     const open = UT.filter(t => !reqText(p, t)), locked = UT.filter(t => reqText(p, t));
     { const nf = income(PLAYER).net.food; if (nf < 3) html += `<div class="nudge" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)">Food ${nf < 0 ? 'deficit' : 'margin'} ${Math.round(nf)}/day: every unit eats food. ${canBuildHere(p, 'farm') && S.bld[p].farm < BUILD.farm.max && !S.cons[p] ? `<button class="btn" data-act="build" data-k="farm" style="padding:2px 7px;font-size:12px">Build Farms here</button>` : 'Build Farms in your provinces.'}</div>`; }
     html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
@@ -1926,7 +2198,7 @@ document.addEventListener('click', e => {
     case 'send': if (a) sendToTarget(a); break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
     case 'split': if (a){ const nb = splitArmy(a); if (nb) selectArmy(nb.id); } break;
-    case 'merge': if (a && a.to === null){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null) merge(a, b2); removeEmpty(); renderSide(true); } break;
+    case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty(); renderSide(true); } break;
     case 'stop': if (a){ a.path = []; renderSide(true); } break;
     case 'recruit': if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
       if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
@@ -1986,6 +2258,7 @@ function rules(){ return `<ul>
   <li><b>Capture</b> by parking ground units in a province with no defenders. Cities and capitals take longer. Air units can fight but cannot capture.</li>
   <li><b>Battles</b> run hour by hour. Defenders on their own soil take less damage, troops at sea take more. The blue bar under a counter is morale: armies that break retreat.</li>
   <li><b>Supply</b> reaches 8 hexes from your cities. Supplied troops heal (fastest in cities); troops cut off lose strength every day and get a red dashed outline.</li>
+  <li><b>Air power</b>: aircraft live in air wings at your airbases. Select a wing, tap a target inside its range ring: Strikers fly out, hit everything hostile there and return to rearm; Interceptors patrol a province and shoot down enemy strikes.</li>
   <li><b>Unit classes</b>: soft (infantry), armored and air. Lancers (3× vs armor) and Strikers beat armor, SAMs and Interceptors beat aircraft, artillery beats infantry. Hover a unit card for its role.</li>
   <li><b>Navy</b>: build a Naval Yard in a coastal city for Frigates, Submarines and Cruisers. Ships stay at sea or in friendly ports, escort troops crossing water (they take less damage), blockade enemy coasts and bombard coastal battles.</li>
   <li><b>Research</b> new technology from the Research button (or press R). Jets need Jet Engines; IFVs need Mechanized Infantry.</li>
