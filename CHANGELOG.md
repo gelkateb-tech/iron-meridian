@@ -219,3 +219,11 @@
 - Concentrated, multi-direction offensives: once the massed forces reach 1.5× the defenders' strength, every staged force attacks at once from its own side, exploiting the frontage and flanking rules. You get a dispatch when one is aimed at you ("France launches a coordinated assault on Cologne from 3 directions!"). Plans are re-evaluated after 8 days or once the objective falls.
 - Front defence: before attacking, the AI sends its nearest idle reserves to any border province facing an enemy stack it can't hold, and keeps its capital garrison when threatened.
 - Effect in 120-day test campaigns: about 35% more territory changes hands, three or four powers fall instead of one, and coalitions can now win outright.
+
+## Round 31 — Carriers and a naval research branch
+- New Naval research branch:
+  - **Naval Gunnery**: Frigates +1 attack, Cruisers +2.
+  - **Carrier Aviation**: unlocks the Albatross Carrier at a level II Naval Yard.
+  - **Amphibious Doctrine**: troops landing from the sea fight at 90% instead of 67% on their first day ashore.
+- Albatross Carrier, a mobile airbase. Select an air wing and tap a sea zone holding one of your carriers to rebase onto it. The wing then sails with the carrier, and its range ring and strikes are measured from wherever the carrier is, so you can project air power across oceans. If the carrier is sunk, its wings divert to the nearest airbase in reach or are lost. The carrier itself is weak in a fight (strong only against aircraft), so escort it with frigates.
+- New 3D carrier model, baked to sprites: an angled flight deck with a landing strip, a starboard island in nation colours, and parked aircraft on deck. Carrier formations are named "Carrier Group".

@@ -411,6 +411,7 @@ const UNITS = {
   frig: {name:'Gannet Frigate',    short:'FRG', cls:'naval',   cost:60, oil:6,  metal:18, mp:6,  atk:4, def:5, hp:14, spd:9,  build:60, upk:3, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{air:1.8, soft:0.5, armored:0.4}, role:'Escort: protects troop convoys, shoots down aircraft.'},
   sub:  {name:'Moray Submarine',   short:'SUB', cls:'naval',   cost:55, oil:4,  metal:15, mp:5,  atk:6, def:2, hp:9,  spd:8,  build:60, upk:2, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else.'},
   crui: {name:'Tempest Cruiser',   short:'CRU', cls:'naval',   cost:75, oil:10, metal:30, mp:8,  atk:7, def:6, hp:20, spd:7,  build:96, upk:5, food:0.5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
+  carr: {name:'Albatross Carrier', short:'CVN', cls:'naval',   cost:140, oil:14, metal:45, mp:10, atk:3, def:6, hp:26, spd:6, build:120, upk:7, food:1, fuel:2, req:{b:'yard', l:2}, tech:'nav2', vs:{air:1.4, soft:0.4, armored:0.3, naval:0.6}, role:'Mobile airbase: air wings can base on it and strike far from home. Weak alone; escort it.'},
   heli: {name:'Wasp Gunship',      short:'GUN', cls:'air',     cost:65, oil:8,  metal:15, mp:6,  atk:7, def:4, hp:10, spd:12, build:54, upk:4, food:0.5, fuel:1.5, req:{b:'air', l:1}, tech:'heli1', vs:{armored:2.2, soft:1.3, air:0.3, naval:0.5}, role:'Attack helicopter: short range (6 hexes), tears through armor and infantry.'},
   drone:{name:'Kite Recon Drone',  short:'DRN', cls:'air',     cost:30, oil:2,  metal:8,  mp:1,  atk:0.5, def:1, hp:4, spd:16, build:30, upk:1, food:0,   fuel:0.5, req:{b:'air', l:1}, tech:'drone1', vs:{soft:0.2, armored:0.2, air:0.1, naval:0.1}, role:'Unarmed: flies to any province in range and reveals the area through the fog for 2 days.'},
   para: {name:'Falcon Paratroopers',short:'PAR', cls:'soft',   cost:40, oil:0,  metal:4,  mp:10, atk:4, def:3, hp:10, spd:4,  build:36, upk:1.5, food:1,  fuel:0,   req:{b:'air', l:1}, tech:'para1', role:'Elite infantry. From a province with your airbase, can be air-dropped up to 9 hexes away.'},
@@ -437,6 +438,7 @@ const ICONS = {
   mp: '<circle cx="8" cy="4.6" r="2.4" fill="currentColor"/><path d="M3 14c0-3.2 2.2-5.2 5-5.2s5 2 5 5.2z" fill="currentColor"/>',
 };
 const USVG = {
+  carr: '<path d="M1 9h26l-3 4H4z"/><path d="M3 7.6h22v1.4H3z"/><rect x="17" y="3.5" width="3" height="4"/><path d="M6 6.6l3-.9 3 .9z"/>',
   heli: '<rect x="3" y="2" width="22" height="1.2" rx=".6"/><path d="M13 3.2h1v2h-1z"/><path d="M6 7c3-1.6 8-1.8 11-.6l2 1H26v1.6h-6l-2 .8c-3 1.2-8 1-11-.4z"/><path d="M8 11h9v1H8z"/>',
   drone: '<path d="M2 7h24v1.4H2z"/><path d="M12 4.5c1.5-.4 3-.4 4.5 0l.5 6h-5.5z"/><path d="M11 11l-3 3h2l2.5-2.4zM17.5 11l3 3h-2L16 11.6z"/>',
   para: '<path d="M4 6c3-5 17-5 20 0z"/><path d="M5 6l8 4M23 6l-8 4M14 6v4" stroke="currentColor" stroke-width=".7" fill="none"/><circle cx="14" cy="11.3" r="1.4"/><path d="M13 12.8h2l.6 3h-3.2z"/>',
@@ -520,6 +522,9 @@ const TECH = [
   {id:'msl1',  branch:'Strategic', name:'Cruise Missiles',      cost:160, days:6, req:null,    desc:'Missile Silos can build Cruise Missiles', fx:{}},
   {id:'msl2',  branch:'Strategic', name:'Ballistic Missiles',   cost:240, days:8, req:'msl1',  desc:'Silos can build Ballistic Missiles',   fx:{}},
   {id:'msl3',  branch:'Strategic', name:'Anti-Missile Shield',  cost:220, days:7, req:'msl2',  desc:'Your SAMs and Frigates intercept missiles twice as well', fx:{}},
+  {id:'nav1',  branch:'Naval',     name:'Naval Gunnery',       cost:90,  days:4, req:null,    desc:'Frigates +1 attack, Cruisers +2 attack', fx:{frig:{atk:1}, crui:{atk:2}}},
+  {id:'nav2',  branch:'Naval',     name:'Carrier Aviation',    cost:170, days:7, req:'nav1',  desc:'Unlocks Albatross Carriers (Naval Yard II): mobile airbases at sea', fx:{}},
+  {id:'nav3',  branch:'Naval',     name:'Amphibious Doctrine', cost:190, days:7, req:'nav2',  desc:'Troops landing from the sea fight at 90% instead of 67% on their first day', fx:{}},
   {id:'drone1', branch:'Airmobile', name:'Unmanned Recon',      cost:90,  days:4, req:null,     desc:'Unlocks Kite Recon Drones (reveal any area in range for 2 days)', fx:{}},
   {id:'heli1',  branch:'Airmobile', name:'Rotary Wing',         cost:150, days:6, req:'drone1', desc:'Unlocks Wasp Gunships: short-range attack helicopters that shred armor', fx:{}},
   {id:'para1',  branch:'Airmobile', name:'Airborne Forces',     cost:190, days:7, req:'heli1',  desc:'Unlocks Falcon Paratroopers, air-dropped behind enemy lines', fx:{}},
@@ -901,9 +906,9 @@ function addArmy(owner, at, units){
 const has = (n, id) => n >= 0 && !!(S.nations[n].tech && S.nations[n].tech[id]);
 // formation names: "3rd Armored Division", "2nd Fleet", "5th Air Wing" (numbered per nation and kind)
 const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
-const KIND_NAME = {inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'Recon Squadron', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla'};
+const KIND_NAME = {inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'Recon Squadron', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
 function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
-  let k = a.air ? (a.u.heli ? 'heli' : a.u.drone ? 'drone' : 'air') : shipsOnly(a) ? (a.u.sub === count(a) ? 'sub' : 'sea') : null;
+  let k = a.air ? (a.u.heli ? 'heli' : a.u.drone ? 'drone' : 'air') : shipsOnly(a) ? (a.u.carr ? 'carr' : a.u.sub === count(a) ? 'sub' : 'sea') : null;
   if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
   a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
@@ -1574,7 +1579,9 @@ function fixWings(){
     for (const t of UT) if (UNITS[t].cls === 'air'){ w.u[t] = a.u[t]; w.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } w.m = a.m; }
   removeEmpty();
 }
+const carrierAt = (n, p) => S.armies.find(b => b.owner === n && b.at === p && b.to === null && b.u.carr > 0) || null;
 function airMissionKind(a, p){
+  if (G.P[p].sea && carrierAt(a.owner, p)) return 'rebase';
   if (isDrone(a)) return S.owner[p] === a.owner && S.bld[p].air && p !== a.air.base ? 'rebase' : 'recon';
   const o = S.owner[p], hostile = stationaryAt(p).some(b => atWar(a.owner, b.owner) && count(b) > 0);
   if (hostile) return isStriker(a) ? 'strike' : 'patrol';
@@ -1693,18 +1700,21 @@ function resolveStrike(a, p){
 }
 function airTick(){
   for (const a of S.armies){ if (!a.air || !count(a)) continue;
-    if (!a.fly){ if (a.air.cd > 0) a.air.cd--; if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; a.at = nb; } continue; }
+    if (a.air.car != null){ const cv = armyById(a.air.car); if (cv && cv.u.carr > 0){ if (!a.fly){ a.air.base = cv.at; a.at = cv.at; } else a.air.base = cv.to ?? cv.at; continue; }
+      a.air.car = null; const nb = nearestAirbase(a.owner, a.at); if (nb >= 0){ a.air.base = nb; if (!a.fly) a.at = nb; if (a.owner === PLAYER) log(`${armyName(a)} lost its carrier and diverted to ${G.P[nb].cityName || G.P[nb].name}.`, 'bad', nb); } else for (const t of UT) a.u[t] = 0; }
+    if (!a.fly){ if (a.air.cd > 0) a.air.cd--; if (!G.P[a.air.base].sea && S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; a.at = nb; } continue; }
     const f = a.fly, B = G.P[a.air.base], T = G.P[f.tgt], dist = Math.max(1, hexDist(B.cc, T.cc)), dt = AIR_SPEED/dist;
     if (f.ph === 'out' && f.kind === 'strike' && stormAt(f.tgt)){ f.ph = 'back'; f.t = Math.max(0, 1 - f.t); if (a.owner === PLAYER) log(`Strike on ${G.P[f.tgt].cityName || G.P[f.tgt].name} aborted: a storm closed in over the target.`, 'info', f.tgt); continue; }
     if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
-        if (f.kind === 'rebase'){ a.air.base = f.tgt; a.at = f.tgt; a.fly = null; a.air.cd = 2; continue; }
+        if (f.kind === 'rebase'){ const cv = G.P[f.tgt].sea ? carrierAt(a.owner, f.tgt) : null; if (G.P[f.tgt].sea && !cv){ f.ph = 'back'; f.t = 0; continue; } a.air.base = f.tgt; a.at = f.tgt; a.air.car = cv ? cv.id : null; a.fly = null; a.air.cd = 2;
+          if (a.owner === PLAYER && cv) log(`${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
         else if (f.kind === 'recon'){ S.reveal = S.reveal || {}; const seen = new Set([f.tgt]); let fr = [f.tgt]; for (let d = 0; d < 2; d++){ const nx = []; for (const u of fr) for (const v of G.P[u].nbs) if (!seen.has(v)){ seen.add(v); nx.push(v); } fr = nx; }
           for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + 48); visCache = null; f.ph = 'over'; f.hrs = 2; f.t = 0;
           if (a.owner === PLAYER){ const foes = [...seen].reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== PLAYER).reduce((s1, b) => s1 + count(b), 0), 0); log(`Drone over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${seen.size} provinces revealed for 2 days, ${foes} foreign units spotted.`, 'info', f.tgt); } }
         else { f.ph = 'patrol'; f.hrs = 12; f.t = 0; } } }
     else if (f.ph === 'patrol' || f.ph === 'over'){ if (--f.hrs <= 0){ f.ph = 'back'; f.t = 0; } }
-    else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; a.at = nb; } } } }
+    else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (a.air.car != null){ a.at = a.air.base; } else if (S.owner[a.air.base] !== a.owner){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; a.at = nb; } } } }
   }
   removeEmpty();
 }
@@ -1951,7 +1961,7 @@ function tick(){
       const r = r0*frontScale(nU, F)*flankF(dirs);
       const bs = B.s[o] || (B.s[o] = {peak:0, lost:{}, dirs:0, hp:[]}); bs.peak = Math.max(bs.peak, nU); bs.dirs = Math.max(bs.dirs, dirs); bs.dcur = dirs; bs.F = F; bs.n = nU;
       const sznA = o !== S.owner[p] && season(p) ? SEASON_FX[season(p)].atk : 1;
-      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? 0.67 : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? 0.8 : 1)*sznA;
+      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? (has(o, 'nav3') ? 0.9 : 0.67) : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? 0.8 : 1)*sznA;
         const mf = moraleF(a);
         const tm = G.P[p].sea || o === S.owner[p] ? 1 : terr(p).armor;
         for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(UNITS[t].cls === 'armored' ? tm : 1); for (const k of CLASSES) av[k] += base*mult(t, k); } }
@@ -2530,7 +2540,7 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
       if (fighting && counter.vol) counter.vol(fr.t, ang3, hpx, fr.x, fr.y); }
   } catch (e) { form = null; }
   if (form) use3d = false;
-  if (use3d && !form) try { const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:54, sub:46, crui:60})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
+  if (use3d && !form) try { const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:54, sub:46, crui:60, carr:70})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
     const fr = (main === 'inf' || main === 'at') ? (moving ? Math.floor(now/85 + seed) % 8 : 0) : fighting ? ((ph => main === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : main === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
     if (types[1]){ const h2 = hpx*0.72; U3D.draw(ctx, types[1], color, x - 16*fs*dir, y - 7*fs, h2, ang3, 0, night); }
     U3D.draw(ctx, main, color, x + shake*0.4, y + 2*s, hpx, ang3, fr, night);
