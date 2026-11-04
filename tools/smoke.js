@@ -23,7 +23,7 @@ const path = require('path');
   const simMs = Date.now() - t1;
   const modalText = await p.evaluate(() => { const m = document.getElementById('modal'); const t = m.hidden ? '' : m.innerText.slice(0, 160); m.hidden = true; return t; });
   res.modal = modalText;
-  await p.click('#zfit'); await p.waitForTimeout(300);
+  await p.waitForTimeout(150); await p.evaluate(() => { document.getElementById('modal').hidden = true; }); await p.click('#zfit', { force: true }); await p.waitForTimeout(300);
   await p.screenshot({ path: out + '/smoke-world.png' });
   console.log(JSON.stringify({ loadMs, hasPicker, fps, simMs, msPerDay: Math.round(simMs/days), ...res }, null, 1));
   console.log('ERRORS', errs.length ? errs : 'none');

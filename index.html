@@ -756,7 +756,7 @@ function newGame(seed, pick){
     return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, food:120, mp:80, short:{}, alive:true, capital, tech:{}, research:null};
   });
   S = {v:3, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
-       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations};
+       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations};
   for (const n of S.nations){
     n.cap0 = n.capital; n.small = S.owner.filter(o => o === n.id).length <= 5;
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 200/Math.max(1, income(n.id).gross.cash)));
@@ -779,7 +779,7 @@ function restore(data){
   resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
-  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || [];
+  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
   fixWings();
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; G.P[N.capital].city = true; }
   buildGeometry();
@@ -1019,7 +1019,7 @@ const inGrace = o => o >= 0 && S.hour < graceFor(o);
 const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
 let BLOCK = new Set();
 function computeBlockade(){ BLOCK = new Set(); for (const a of S.armies){ if (a.to !== null || !G.P[a.at].sea || !shipsN(a) || a.owner < 0) continue; for (const v of G.P[a.at].nbs){ const o = S.owner[v]; if (!G.P[v].sea && o >= 0 && atWar(a.owner, o)) BLOCK.add(v); } } }
-function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1), b = S.bld[p];
+function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(1 - unrestOf(p)/200), b = S.bld[p];
   return {cash:(P.city ? 12 : 3)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
     food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 2 : 0.5) + 3*b.rec)*f}; }
 const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
@@ -1464,6 +1464,84 @@ function missilePos(m){
 let shakeUntil = 0, shakeAmp = 0;
 function shake(amp, ms){ shakeAmp = Math.max(shakeAmp, amp); shakeUntil = Math.max(shakeUntil, performance.now() + ms); }
 
+/* ---------------- Occupation unrest ---------------- */
+const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
+function unrestDay(){
+  S.unrest = S.unrest || G.P.map(() => 0);
+  for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const o = S.owner[p], home = S.home[p];
+    if (o < 0 || home === o){ S.unrest[p] = Math.max(0, unrestOf(p) - 4); continue; }
+    const garrison = S.armies.reduce((s0, a) => s0 + (a.owner === o && a.at === p && a.to === null && !a.fly ? groundN(a) : 0), 0);
+    const homeAlive = home >= 0 && S.nations[home].alive, d = (homeAlive ? 5 : 3) + (G.P[p].city ? 2 : 0) - Math.min(9, garrison*1.5);
+    S.unrest[p] = Math.max(0, Math.min(100, unrestOf(p) + d));
+    if (S.unrest[p] > 60 && rng() < (S.unrest[p] - 60)/160 && !S.armies.some(a => a.rebel && a.at === p)){
+      const r = addArmy(NEUTRAL, p, {inf:2 + Math.floor(rng()*3) + (G.P[p].city ? 2 : 0)}); r.rebel = true; S.unrest[p] -= 20;
+      if (o === PLAYER) log(`Partisans rose up in ${G.P[p].cityName || G.P[p].name}! Garrison or pacify occupied land to prevent revolts.`, 'bad', p);
+    } }
+}
+function rebelHour(){
+  // partisans holding a province alone for a day hand it back to its original nation (or independence)
+  for (const a of S.armies){ if (!a.rebel || !count(a) || a.to !== null) continue; const p = a.at;
+    if (S.armies.some(b => b !== a && b.at === p && b.to === null && !b.fly && b.owner === S.owner[p] && count(b))){ a.hold = 0; continue; }
+    if (++a.hold < 24) continue;
+    const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
+    S.owner[p] = to; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoDirty = true; for (const t of UT) a.u[t] = 0;
+    if (to >= 0) addArmy(to, p, {inf:2});
+    if (prev === PLAYER) log(`${G.P[p].cityName || G.P[p].name} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}.`, 'bad', p);
+    else if (to === PLAYER) log(`Partisans liberated ${G.P[p].cityName || G.P[p].name} for you!`, 'good', p);
+    if (prev >= 0) checkNation(prev);
+  }
+  removeEmpty();
+}
+
+/* ---------------- Espionage ---------------- */
+const SPY_OPS = {
+  recon:   {name:'Reconnaissance', cost:20,  base:0.85, desc:'Reveals the province and its neighbours for 3 days.'},
+  sabotage:{name:'Sabotage',       cost:40,  base:0.55, desc:'Destroys one building level (or halts construction).'},
+  incite:  {name:'Incite unrest',  cost:35,  base:0.65, desc:'+35 unrest in occupied land; may spark a revolt.'},
+  steal:   {name:'Steal technology', cost:60, base:0.35, desc:'Takes one technology the owner has and you lack.'},
+};
+const agentsOf = n => (S.spies || []).filter(a => a.owner === n);
+const idleAgents = n => agentsOf(n).filter(a => !a.op);
+function trainAgent(n){ const N = S.nations[n]; if (N.cash < 60 || agentsOf(n).length >= 5) return false; N.cash -= 60; (S.spies || (S.spies = [])).push({id:S.nid++, owner:n, op:null}); return true; }
+function spyChance(n, p, op){ const o = S.owner[p]; const counter = o >= 0 ? idleAgents(o).length*0.08 : 0; return Math.max(0.1, SPY_OPS[op].base - counter); }
+function spyCheck(n, p, op){
+  const O = SPY_OPS[op], o = S.owner[p], N = S.nations[n];
+  if (!idleAgents(n).length) return {ok:false, why:'No idle agents. Train one in your capital (Intel).'};
+  if (o === n) return {ok:false, why:'That is your own province.'};
+  if (G.P[p].sea) return {ok:false, why:'Agents work on land.'};
+  if (N.cash < O.cost) return {ok:false, why:`Needs $${O.cost}M.`};
+  if (op === 'incite' && (o < 0 || S.home[p] === o)) return {ok:false, why:'Only occupied land can be incited.'};
+  if (op === 'steal' && (o < 0 || !Object.keys(S.nations[o].tech).some(t => !has(n, t)))) return {ok:false, why:'They have no technology you lack.'};
+  if (op === 'sabotage' && !BK.some(k => S.bld[p][k]) && !S.cons[p]) return {ok:false, why:'Nothing to sabotage there.'};
+  return {ok:true, chance:spyChance(n, p, op)};
+}
+function startSpy(n, p, op){ const c = spyCheck(n, p, op); if (!c.ok){ if (n === PLAYER) toast(c.why, 'bad', null); return false; }
+  const ag = idleAgents(n)[0]; S.nations[n].cash -= SPY_OPS[op].cost; ag.op = {k:op, p, h:24};
+  if (n === PLAYER) log(`Agent dispatched to ${G.P[p].cityName || G.P[p].name}: ${SPY_OPS[op].name} (${Math.round(c.chance*100)}% chance, 24 h).`, 'info', p); return true; }
+function spyHour(){
+  for (const ag of (S.spies || [])){ if (!ag.op || --ag.op.h > 0) continue;
+    const {k, p} = ag.op, n = ag.owner, o = S.owner[p], where = G.P[p].cityName || G.P[p].name; ag.op = null;
+    if (!S.nations[n].alive){ continue; }
+    if (rng() > spyChance(n, p, k)){ S.spies = S.spies.filter(x => x !== ag); if (o >= 0) addMem(o, n, -20);
+      if (n === PLAYER) log(`Your agent was caught in ${where}${o >= 0 ? ` by ${S.nations[o].name} (relations −20)` : ''}.`, 'bad', p);
+      else if (o === PLAYER) log(`Counter-intelligence caught a ${S.nations[n].name} agent in ${where}.`, 'good', p); continue; }
+    let res = '';
+    if (k === 'recon'){ S.reveal = S.reveal || {}; for (const v of [p, ...G.P[p].nbs]) S.reveal[v] = S.hour + 72; visCache = null; res = 'the area is revealed for 3 days'; }
+    else if (k === 'sabotage'){ if (S.cons[p]){ S.cons[p] = null; res = 'construction destroyed'; } else { const ks = BK.filter(b => S.bld[p][b]); const b = ks[Math.floor(rng()*ks.length)]; if (b){ S.bld[p][b]--; res = `${BUILD[b].name} damaged`; } } }
+    else if (k === 'incite'){ S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = Math.min(100, unrestOf(p) + 35); res = `unrest now ${Math.round(S.unrest[p])}%`; }
+    else if (k === 'steal' && o >= 0){ const ts = Object.keys(S.nations[o].tech).filter(t => !has(n, t) && (!TECH_BY[t].req || has(n, TECH_BY[t].req))); const t = ts[Math.floor(rng()*ts.length)]; if (t){ S.nations[n].tech[t] = 1; S.nations[n].tv = (S.nations[n].tv || 0) + 1; res = `${TECH_BY[t].name} acquired`; } else res = 'nothing usable found'; }
+    if (n === PLAYER) log(`${SPY_OPS[k].name} in ${where} succeeded: ${res}.`, 'good', p);
+    else if (o === PLAYER && k !== 'recon') log(`Enemy agents struck ${where}: ${res}.`, 'bad', p);
+  }
+}
+function aiSpies(n){
+  const N = S.nations[n]; if (agentsOf(n).length < 2 && N.cash > 220 && rng() < 0.3) trainAgent(n);
+  const wars = warsOf(n); if (!wars.length || !idleAgents(n).length || rng() > 0.4) return;
+  const m = wars[Math.floor(rng()*wars.length)], provs = G.P.filter(P => S.owner[P.id] === m && !P.sea); if (!provs.length) return;
+  const P = provs[Math.floor(rng()*provs.length)], op = S.home[P.id] !== m ? 'incite' : BK.some(k => S.bld[P.id][k]) ? 'sabotage' : 'steal';
+  startSpy(n, P.id, op);
+}
+
 /* ---------------- Simulation ---------------- */
 function alarm(){ if (S.speed > 1){ S.speed = 1; } sfx('alarm'); }
 let tickVer = 0;
@@ -1489,6 +1567,8 @@ function tick(){
   diploHour();
   airTick();
   missileTick();
+  spyHour();
+  rebelHour();
   // movement
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
@@ -1571,7 +1651,7 @@ function tick(){
     } else if (owners.size === 0) S.cap[p] = null;
   }
   if (S.hour % 24 === 0){ diploDay(); daily(); }
-  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); }
+  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
   visCache = null;
 }
 function hurt(a, d, f){
@@ -1587,6 +1667,7 @@ function capture(p, O){
   S.owner[p] = O; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1);
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
+  S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = S.home[p] === O ? 0 : Math.max(unrestOf(p), G.P[p].city ? 30 : 15);
   geoDirty = true;
   const nm = G.P[p].name;
   if (O === PLAYER){ (S.tut || (S.tut = {})).capture = true; bump('taken'); sfx('capture'); }
@@ -1665,6 +1746,7 @@ function daily(){
     const cap = stockCap(N.id);
     for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(cap, v); }
     if (N.id === PLAYER){ for (const k of ['food', 'oil', 'cash']) if (N.short[k] && !was[k]) log(k === 'food' ? 'Food shortage: your troops fight 20% worse until food income is positive.' : k === 'oil' ? 'Oil shortage: Armor and Strike Jets are slowed and weakened.' : 'Treasury empty: upkeep is unpaid.', 'bad'); } }
+  unrestDay();
   recordStats();
   makePaper();
   checkEnd();
@@ -1785,7 +1867,7 @@ const cv = document.getElementById('map'), ctx = cv.getContext('2d');
 const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
 const view = {s:1, x:0, y:0};
 let dpr = 1, cw = 0, ch = 0, hits = [], hoverProv = -1, hoverPath = null, visCache = null, mouse = null, relMode = false, mapMode = 'political';
-const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources']];
+const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources'], ['stability', 'Stability']];
 const sel = {army:null, prov:null, target:null, group:[]};
 let boxSel = null, rallyFor = null, aimMsl = null;
 let targetPath = null;
@@ -1819,6 +1901,7 @@ function visibleSet(){
   const v = new Set();
   const al = new Set([PLAYER, ...alliesOf(PLAYER)]);
   for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])){ v.add(p); for (const q of G.P[p].nbs) v.add(q); }
+  if (S.reveal) for (const k in S.reveal) if (S.reveal[k] > S.hour) v.add(+k);
   for (const a of S.armies) if (al.has(a.owner)){ v.add(a.at); for (const q of G.P[a.at].nbs) v.add(q); if (a.to !== null) v.add(a.to); }
   let h = v.size; for (const p of v) h = (h*31 + p) | 0; v.key = h;
   return (visCache = v);
@@ -2004,6 +2087,7 @@ function renderLayer(vis){
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
     if (mapMode === 'terrain'){ c.fillStyle = rgba(TERRAIN[P.terrain || 'plains'].col, 0.55); c.fill(GEO.fill[p]); }
     else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p]); }
+    else if (mapMode === 'stability'){ const u = unrestOf(p); c.fillStyle = o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'; c.fill(GEO.fill[p]); }
     else if (mapMode === 'resources'){ const y = provYield(p), top = ['oil', 'metal', 'food', 'mp', 'cash'].sort((k1, k2) => (y[k2]/({cash:12, oil:5, metal:4, food:3, mp:2})[k2]) - (y[k1]/({cash:12, oil:5, metal:4, food:3, mp:2})[k1]))[0];
       c.fillStyle = {oil:'rgba(40,40,44,.75)', metal:'rgba(140,155,170,.6)', food:'rgba(120,180,80,.5)', mp:'rgba(200,160,120,.5)', cash:'rgba(220,190,90,.55)'}[top]; c.fill(GEO.fill[p]); }
     else if (o >= 0){ c.fillStyle = relMode ? (o === PLAYER ? rgba(S.nations[o].color, 0.45) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5)) : rgba(S.nations[o].color, o === PLAYER ? 0.4 : 0.34); c.fill(GEO.fill[p]); }
@@ -2027,7 +2111,7 @@ function draw(now){
   if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; } else if (cv.style.transform){ cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS;
-  const key = [view.s, cw, ch, dpr, geoVer, vis.key, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : 0].join('|');
+  const key = [view.s, cw, ch, dpr, geoVer, vis.key, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' ? Math.floor(S.hour/24) : 0].join('|');
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   const offEdge = !layer || Math.abs(dxv) > layer.mx*0.9 || Math.abs(dyv) > layer.my*0.9;
   if (key !== layerKey || offEdge || (!panning && (dxv || dyv) && now - (lastPanT || 0) > 140)){ layerKey = key; renderLayer(vis); }
@@ -2293,6 +2377,7 @@ function tipShow(x, y){
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
   let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted"><span class="sw" style="background:${P.sea ? '#28414a' : colorOf(S.owner[p])};vertical-align:-1px"></span> ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p); h += `<div class="r"><span>${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}${T0.spd < 1 ? ' · slow' : ''}</span></div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.oil ? ' · Oil' : ''}${P.ore ? ' · Ore' : ''}</span><span>${yieldStr(y)}</span></div>`;
+    if (unrestOf(p) > 10) h += `<div class="r"><span>Unrest</span><span style="color:${unrestOf(p) > 60 ? 'var(--danger)' : 'var(--accent)'}">${Math.round(unrestOf(p))}%</span></div>`;
     const bl = BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')); if (bl.length && S.owner[p] === PLAYER) h += `<div class="r"><span>Built</span><span>${bl.join(', ')}</span></div>`; }
   if (foes.length) h += `<div class="r"><span>Hostile</span><span>${foes.reduce((s, a) => s + count(a), 0)} units · ${Math.round(foes.reduce((s, a) => s + power(a), 0))} str</span></div>`;
   else if (!P.sea && S.owner[p] !== PLAYER && !vis.has(p)) h += `<div class="r"><span>Garrison</span><span>Unknown (fog)</span></div>`;
@@ -2512,6 +2597,7 @@ function ctxHTML(){
     <div class="sub"><span class="sw" style="background:${N.color};vertical-align:-1px"></span> Your nation · Capital: ${G.P[N.capital].cityName || G.P[N.capital].name} <button class="btn" data-act="home" style="padding:2px 7px;font-size:12px;margin-left:4px">Show me</button></div>
     ${checklist()}
     ${researchLine()}
+    <div class="status" style="border-left-color:#8a7ad8">Intelligence: ${agentsOf(PLAYER).length}/5 agents (${idleAgents(PLAYER).length} idle) <button class="btn" data-act="train-agent" ${S.nations[PLAYER].cash >= 60 && agentsOf(PLAYER).length < 5 ? '' : 'disabled'} style="padding:2px 7px;font-size:12px;margin-left:4px">Train agent · $60M</button><div class="small muted" style="margin-top:3px">Open any foreign province to send an agent on a mission.</div></div>
     ${N.cash > 300 && S.queue.every((q, p) => S.owner[p] !== PLAYER || !q.length) ? `<div class="nudge">You have $${fmt(N.cash)}M and nothing in training. Money only wins wars once it is spent. <button class="btn" data-act="prov" data-id="${N.capital}" style="padding:2px 7px;font-size:12px">Recruit in ${G.P[N.capital].cityName}</button></div>` : ''}
     <p class="small muted" style="margin:0;line-height:1.5">Tap a province to inspect it or recruit in your cities. Tap one of your counters to command that force. Forces cross water by embarking from coastal provinces.</p>
     <div class="armylist">${mine.slice(0, 40).map(a => `<button data-act="army" data-id="${a.id}"><span>${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span><span class="muted">${count(a)} units · ${statusText(a).short}</span></button>`).join('') || '<span class="muted small">You have no forces in the field.</span>'}</div>`;
@@ -2635,6 +2721,9 @@ function provHTML(p){
     <dt>Capture time</dt><dd>${Math.round(capNeed(p, PLAYER))} h</dd>
     <dt>Garrison</dt><dd>${foe.length && !foeKnown.length ? 'Unknown' : foeKnown.length ? foeKnown.reduce((s, a) => s + count(a), 0) + ' hostile units' : mine ? (own.length ? own.reduce((s, a) => s + count(a), 0) + ' of yours' : 'Empty') : 'None seen'}</dd></dl>`;
   if (o >= 0 && o !== PLAYER){ const r = rel(PLAYER, o); html += `<div class="status" style="border-left-color:${REL_COLOR[r.st]}">${REL[r.st]} with ${nationName(o)}${r.st === 'war' ? '' : '. Declare war in Diplomacy to attack.'} <button class="btn" data-act="diplo-open" style="padding:2px 7px;font-size:12px">Diplomacy</button></div>`; }
+  if (!P.sea && (o === PLAYER && unrestOf(p) > 0 || o !== PLAYER && unrestOf(p) > 20)){ const u = Math.round(unrestOf(p));
+    html += `<div class="status" style="border-left-color:${u > 60 ? 'var(--danger)' : u > 30 ? 'var(--accent)' : 'var(--ok)'}">Unrest ${u}%${u > 60 ? ' · revolt risk' : ''} · output −${Math.round(u/2)}% <div class="bar" style="margin-top:4px"><i style="width:${u}%;background:${u > 60 ? 'var(--danger)' : 'var(--accent)'}"></i></div>${o === PLAYER ? `<div class="row" style="margin-top:6px"><button class="btn" data-act="pacify" data-id="${p}" ${S.nations[PLAYER].cash >= 40 ? '' : 'disabled'} style="padding:3px 8px;font-size:12px">Pacify · $40M (−25%)</button><span class="small muted">Garrisons lower unrest every day.</span></div>` : ''}</div>`; }
+  if (!P.sea && o !== PLAYER){ html += `<div class="eyebrow">Intelligence · ${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}</div><div class="row">${Object.entries(SPY_OPS).map(([k, O]) => { const c = spyCheck(PLAYER, p, k); return `<button class="btn" data-act="spy" data-k="${k}" data-id="${p}" ${c.ok ? '' : 'disabled'} title="${O.desc}${c.ok ? ` ${Math.round(c.chance*100)}% chance.` : ' ' + c.why}" style="padding:4px 8px;font-size:11.5px">${O.name} · $${O.cost}M</button>`; }).join('')}</div>`; }
   if (S.cap[p]) html += `<div class="status cap">${nationName(S.cap[p].by)} capturing: ${Math.round(S.cap[p].h/capNeed(p, S.cap[p].by)*100)}%</div>`;
   if (S.battles.includes(p)) html += `<div class="status battle">Battle in progress</div>`;
   if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
@@ -2678,6 +2767,9 @@ document.addEventListener('click', e => {
     case 'army': selectArmy(+b.dataset.id); { const x = armyById(+b.dataset.id); if (x){ const [wx, wy] = armyPos(x); const [sx, sy] = toScreen(wx, wy); if (sx < 0 || sy < 0 || sx > cw || sy > ch) centerOn(wx, wy); } } break;
     case 'prov': selectProv(+b.dataset.id); break;
     case 'tab': setTab(b.dataset.tab); renderSide(); break;
+    case 'pacify': { const pp = +b.dataset.id; if (S.nations[PLAYER].cash >= 40){ S.nations[PLAYER].cash -= 40; S.unrest[pp] = Math.max(0, unrestOf(pp) - 25); } renderSide(true); break; }
+    case 'spy': startSpy(PLAYER, +b.dataset.id, b.dataset.k); renderSide(true); break;
+    case 'train-agent': if (trainAgent(PLAYER)) log('A new intelligence agent is ready.', 'good', null); renderSide(true); break;
     case 'msl-build': if (sel.prov !== null && buildMissile(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
     case 'msl-aim': if (sel.prov !== null){ aimMsl = {from:sel.prov, k:b.dataset.k}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}.`, 'info', null); renderSide(true); } break;
     case 'rally': rallyFor = +b.dataset.id; toast('Tap the province new units should march to (tap the city itself to clear).', 'info', null); break;
@@ -2767,6 +2859,8 @@ function rules(){ return `<ul>
   <li><b>Capture</b> by parking ground units in a province with no defenders. Cities and capitals take longer. Air units can fight but cannot capture.</li>
   <li><b>Battles</b> run hour by hour. Defenders on their own soil take less damage, troops at sea take more. The blue bar under a counter is morale: armies that break retreat.</li>
   <li><b>Supply</b> reaches 8 hexes from your cities. Supplied troops heal (fastest in cities); troops cut off lose strength every day and get a red dashed outline.</li>
+  <li><b>Occupation</b>: conquered land grows unrest unless garrisoned; unrest cuts output and above 60% partisans rise up and can return the province to its old owner. Pacify it for money or keep troops there (Stability map mode).</li>
+  <li><b>Intelligence</b>: train up to 5 agents ($60M) and send them from any foreign province on reconnaissance, sabotage, inciting unrest or stealing technology. Failed agents are lost and sour relations.</li>
   <li><b>Strategic missiles</b>: research the Strategic branch, build a Missile Silo in a city, produce Cruise or Ballistic Missiles there and launch them at any province in range. SAMs and Frigates near the target can intercept them.</li>
   <li><b>Air power</b>: aircraft live in air wings at your airbases. Select a wing, tap a target inside its range ring: Strikers fly out, hit everything hostile there and return to rearm; Interceptors patrol a province and shoot down enemy strikes.</li>
   <li><b>Unit classes</b>: soft (infantry), armored and air. Lancers (3× vs armor) and Strikers beat armor, SAMs and Interceptors beat aircraft, artillery beats infantry. Hover a unit card for its role.</li>
