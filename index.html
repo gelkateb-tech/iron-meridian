@@ -164,6 +164,18 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 @media (max-width: 900px){ .tree{grid-template-columns:repeat(3, minmax(0,1fr))} }
 @media (max-width: 560px){ .tree{grid-template-columns:repeat(2, minmax(0,1fr))} }
 
+/* Production overview */
+.ptab{width:100%; border-collapse:collapse; font-size:12.5px}
+.ptab th{text-align:left; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--line)}
+.ptab td{padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:middle}
+.ptab td b{font-size:13px}
+.ptab .q{font-family:var(--mono); font-size:11.5px; color:var(--muted); min-width:150px}
+.ptab .q .bar{margin-top:4px; width:140px}
+.ub{display:flex; flex-wrap:wrap; gap:4px}
+.ub .btn{padding:4px 7px; font-family:var(--mono); font-size:11px}
+.rep{display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); white-space:nowrap}
+.tblwrap{overflow-x:auto}
+
 /* Diplomacy */
 #dipbtn{display:flex; align-items:center; gap:7px}
 .badge{min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--danger); color:#fff; font-family:var(--mono); font-size:11px; font-weight:600; display:inline-flex; align-items:center; justify-content:center}
@@ -247,6 +259,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
       <button id="sp3" data-speed="3" aria-pressed="false" title="Fastest (3)">4×</button>
     </div>
     <button class="btn" id="resbtn" data-act="research-open" title="Research tree (R)"><span class="long">Research</span><span class="short">Tech</span><span class="dot" id="resdot" title="No research running"></span></button>
+    <button class="btn" id="prodbtn" data-act="prod-open" title="Production overview (P)"><span class="long">Production</span><span class="short">Prod</span></button>
     <button class="btn" id="dipbtn" data-act="diplo-open" title="Diplomacy (D)"><span class="long">Diplomacy</span><span class="short">Diplo</span><span class="badge" id="dipbadge" hidden></span></button>
     <button class="btn" id="helpbtn" data-act="help" title="How to play">?</button>
   </header>
@@ -830,7 +843,9 @@ function tick(){
   // production
   for (let p = 0; p < G.P.length; p++){ const q = S.queue[p]; if (!q.length) continue;
     if (S.owner[p] < 0){ q.length = 0; continue; }
-    if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t); if (S.owner[p] === PLAYER) log(`${UNITS[it.t].name} ready in ${G.P[p].name}.`, '', p); } }
+    if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
+      if (S.owner[p] === PLAYER){ log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
+        if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])) log(`Repeat production paused in ${G.P[p].cityName}: not enough resources for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } }
   // construction
   for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (!c) continue;
     if (S.owner[p] < 0){ S.cons[p] = null; continue; }
@@ -1394,6 +1409,7 @@ function renderSide(force){
   }
   $('resdot').hidden = !!N.research || !N.alive;
   if (modalKind === 'diplo' && !$('modal').hidden) setHTML($('sheet'), diploHTML());
+  if (modalKind === 'prod' && !$('modal').hidden) setHTML($('sheet'), prodHTML());
   const nOff = S.offers.length + S.decl.filter(d => d.to === PLAYER).length; $('dipbadge').hidden = !nOff; $('dipbadge').textContent = nOff;
   $('zrel').setAttribute('aria-pressed', String(relMode));
   let hint = '';
@@ -1407,6 +1423,24 @@ function checklist(){
   if (T.recruit && T.capture && T.research) return '';
   const row = (done, txt) => `<div class="${done ? 'done' : ''}"><i>${done ? '✓' : '○'}</i><span>${txt}</span></div>`;
   return `<div class="eyebrow">First steps</div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Capture an independent neighbour: tap your counter, then the target twice')}${row(T.research, 'Start a research project (R)')}</div>`;
+}
+function prodHTML(){
+  const N = S.nations[PLAYER], cities = G.P.filter(P => S.owner[P.id] === PLAYER && P.city).sort((a, b) => (b.id === N.capital) - (a.id === N.capital) || a.cityName.localeCompare(b.cityName));
+  const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p];
+    const qtxt = q.length ? `${UNITS[q[0].t].name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || UNITS[q[0].t].build))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
+    const btns = UT.filter(t => bldOk(p, t) && unlocked(PLAYER, t)).map(t => `<button class="btn" data-act="qrec" data-p="${p}" data-t="${t}" title="${UNITS[t].name}: $${UNITS[t].cost}M${UNITS[t].metal ? ', ' + UNITS[t].metal + ' metal' : ''}${UNITS[t].oil ? ', ' + UNITS[t].oil + ' oil' : ''}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>+${UNITS[t].short}</button>`).join('');
+    const rp = S.repeat && S.repeat[p];
+    return `<tr><td><b>${P.cityName}</b>${p === N.capital ? ' ★' : ''}<div class="small muted">${BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name.split(' ')[0] + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
+      <td class="q">${qtxt}</td><td class="q">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '—'}</td>
+      <td><div class="ub">${btns}</div></td>
+      <td><label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${rp ? 'checked' : ''}> Repeat${rp ? ' ' + UNITS[rp].short : ''}</label></td>
+      <td><button class="btn" data-act="goto" data-id="${p}" style="padding:4px 7px;font-size:11.5px">Open</button></td></tr>`; }).join('');
+  const idle = cities.filter(P => !S.queue[P.id].length).length;
+  return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} cities</div><h1>Production</h1></div>
+    <div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
+    <p class="small muted">${idle ? `${idle} ${idle === 1 ? 'city is' : 'cities are'} idle. ` : ''}Click +UNIT to queue a unit in that city. Repeat keeps training the last unit queued there while you can afford it.</p>
+    <div class="tblwrap"><table class="ptab"><thead><tr><th>City</th><th>Training</th><th>Construction</th><th>Queue a unit</th><th></th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="muted">You hold no cities.</td></tr>'}</tbody></table></div>
+    <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
 function diploHTML(){
   const me = PLAYER, myP = natPower(me);
@@ -1555,6 +1589,7 @@ function provHTML(p){
       const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac));
       return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k`}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; }).join('')}</div>`;
     const q = S.queue[p];
+    html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${UNITS[it.t].name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || UNITS[it.t].build))*100)}%"></i></div>` : ''}`).join('')}</div>`;
   }
   if (mine){
@@ -1572,19 +1607,20 @@ function provHTML(p){
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act],[data-speed]'); if (!b || b.disabled) return;
+  if (b.tagName === 'LABEL') return;
   if (b.dataset.speed !== undefined){ setSpeed(+b.dataset.speed); return; }
   const act = b.dataset.act, a = sel.army !== null ? armyById(sel.army) : null;
   switch (act){
     case 'army': selectArmy(+b.dataset.id); { const x = armyById(+b.dataset.id); if (x){ const [wx, wy] = armyPos(x); const [sx, sy] = toScreen(wx, wy); if (sx < 0 || sy < 0 || sx > cw || sy > ch) centerOn(wx, wy); } } break;
     case 'prov': selectProv(+b.dataset.id); break;
-    case 'goto': { const P = G.P[+b.dataset.id]; centerOn(P.x, P.y, Math.max(view.s, 1.1)); if (!P.sea) selectProv(P.id); break; }
+    case 'goto': { if (!$('modal').hidden) closeModal(); const P = G.P[+b.dataset.id]; centerOn(P.x, P.y, Math.max(view.s, 1.1)); if (!P.sea) selectProv(P.id); break; }
     case 'clear': clearSel(); break;
     case 'send': if (a) sendToTarget(a); break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
     case 'split': if (a){ const nb = splitArmy(a); if (nb) selectArmy(nb.id); } break;
     case 'merge': if (a && a.to === null){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null) merge(a, b2); removeEmpty(); renderSide(true); } break;
     case 'stop': if (a){ a.path = []; renderSide(true); } break;
-    case 'recruit': if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)) renderSide(true); break;
+    case 'recruit': if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
     case 'build': if (sel.prov !== null && build(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
     case 'zin': zoomAt(1.4, cw/2, ch/2); break;
     case 'zout': zoomAt(1/1.4, cw/2, ch/2); break;
@@ -1593,6 +1629,9 @@ document.addEventListener('click', e => {
     case 'help': showBriefing(false); break;
     case 'research-open': openModal(researchHTML(), 'research'); break;
     case 'diplo-open': openModal(diploHTML(), 'diplo'); break;
+    case 'prod-open': openModal(prodHTML(), 'prod'); break;
+    case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
+    case 'repeat': { const p = +b.dataset.p; S.repeat = S.repeat || {}; if (b.checked) S.repeat[p] = (S.lastUnit && S.lastUnit[p]) || (S.queue[p][0] && S.queue[p][0].t) || 'inf'; else delete S.repeat[p]; renderSide(true); break; }
     case 'relmode': relMode = !relMode; renderSide(true); break;
     case 'declare': declareWar(PLAYER, +b.dataset.id); renderSide(true); break;
     case 'propose': { const m = +b.dataset.id, k = b.dataset.k, r = acceptOffer(m, PLAYER, k); if (r.ok) applyDeal(PLAYER, m, k); else { log(`${S.nations[m].name} refused: ${r.why}.`, 'info', null); addMem(m, PLAYER, -2); } renderSide(true); break; }
@@ -1607,7 +1646,7 @@ document.addEventListener('click', e => {
     case 'newgame': showPicker(); break;
   }
 });
-$('modal').addEventListener('click', e => { if (e.target.id === 'modal' && (modalKind === 'research' || modalKind === 'diplo')) closeModal(); });
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod'].includes(modalKind)) closeModal(); });
 document.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input,textarea')) return;
   if (e.code === 'Space'){ e.preventDefault(); setSpeed(S.speed ? 0 : 1); }
@@ -1616,6 +1655,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'h' || e.key === 'H') goHome();
   else if (e.key === 'd' || e.key === 'D'){ if (modalKind === 'diplo') closeModal(); else if ($('modal').hidden) openModal(diploHTML(), 'diplo'); }
   else if (e.key === 'v' || e.key === 'V'){ relMode = !relMode; renderSide(true); }
+  else if (e.key === 'p' || e.key === 'P'){ if (modalKind === 'prod') closeModal(); else if ($('modal').hidden) openModal(prodHTML(), 'prod'); }
   else if (e.key === 'r' || e.key === 'R'){ if (modalKind === 'research') closeModal(); else if ($('modal').hidden) openModal(researchHTML(), 'research'); }
 });
 function setSpeed(s){ if (S.over && s) return; if (s && !$('modal').hidden) return; S.speed = s; renderSide(); }
@@ -1624,7 +1664,7 @@ function setSpeed(s){ if (S.over && s) return; if (s && !$('modal').hidden) retu
 let modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
-function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' ? ' wide' : kind === 'picker' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
+function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' || kind === 'prod' ? ' wide' : kind === 'picker' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
 function closeModal(restore = true){ $('modal').hidden = true; modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
 function rules(){ return `<ul>
   <li><b>Recruit</b> in your cities (squares and your capital star). Units cost cash, oil and manpower, and take days to train.</li>
@@ -1654,7 +1694,7 @@ function showBriefing(first, hasSave){
     ${sv ? `<p class="nudge">Saved campaign: <b>${me.name}</b>, day ${dayOf(sv.hour)}.</p>` : ''}
     <p>You command <b style="color:${me.color}">${me.name}</b>, one of fifteen powers in a world at war. Take independent land, out-produce your rivals and hold ${Math.ceil(G.landCount*WIN_SHARE)} of ${G.landCount} land provinces.</p>
     ${rules()}
-    <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–3 set speed, R research, D diplomacy, V relations map, H home. Progress saves in this browser each game day.</p>
+    <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–3 set speed, P production, R research, D diplomacy, V relations map, H home. Progress saves in this browser each game day.</p>
     <div class="row">${first
       ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start">Start campaign</button>`)
       : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign…</button>`}</div>`);
