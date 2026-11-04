@@ -291,3 +291,8 @@
 ## Round 39 — Scenario balance
 - Theatre victory counts only provinces inside the theatre. Before, an AI could "win Europe" by day 26 thanks to its Middle Eastern land (Turkey), or win the Pacific with Siberia (Russia). Theatre victory now needs 40% of the theatre's land, or your starting theatre provinces plus 45. The victory tracker shows "theatre land" in those scenarios, and coalition land counts the same way.
 - The AI's preference for attacking the human player now scales with difficulty: Recruit 0.55×, Regular 0.8×, Veteran 1.05×, Elite 1.3× (previously always 1.1×). In 120-day simulations of every scenario, theatre games no longer end early, several AI powers fall in Europe, and even an idle player survives well over a month.
+
+## Round 40 — Final polish and soak test
+- The briefing and rules now explain formal declarations versus surprise attacks, the command bar (Move, Attack, Delay, Split, Merge, Halt, stance), right-click orders and automatic artillery fire, and fronts (frontage, flanking, rivers, highways, winter and mud).
+- The tutorial's "Send it" step mentions the command bar and right-click. The keyboard reference lists M, K, L and X.
+- Soak test: full campaigns in all three scenarios (World War 120 days, European Theatre, Pacific Rim) ran with no script errors, no invalid or negative stockpiles, and no frozen armies. Save files stay under 400 KB.
