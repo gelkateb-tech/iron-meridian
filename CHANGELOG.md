@@ -161,3 +161,13 @@
 - Storm systems: about seven storms and blizzards drift across the world, west to east in the mid-latitudes and east to west in the tropics. They slow movement by 20% and ground aircraft. Wings can't launch from or to a province under a storm, and a strike heading into a storm that closes over its target turns back.
 - Weather visuals: drifting procedural clouds that cast shadows on the ground, darker thunderheads with lightning flashes, and at close zoom falling rain streaks or snowflakes.
 - Province tooltips and the odds chip show the weather and seasonal penalties. Seasons are cached per day and the market computes each nation's income once per dawn, so the simulation runs faster than before this round.
+
+## Round 25 — Scenarios, campaign length, persistent mode
+- Scenarios in the nation picker:
+  - **World War**: the original 15 powers.
+  - **European Theatre**: the United Kingdom, France, Germany, Italy, Spain, Poland, Turkey and Russia.
+  - **Pacific Rim**: the United States, China, Japan, Australia, India, Russia, Indonesia and Mexico.
+  - Theatre scenarios count only land inside their region towards the victory target and need 4 starting capitals instead of 5. Texts adapt to the number of powers.
+- Campaign length: 60, 120 or 240 days.
+- Persistent mode: like the genre's always-on servers, the war keeps running while you're away, at one game day per real hour, with up to 14 days of catch-up. When you return you get a "While you were away" special edition of the Herald: days passed, provinces, units and treasury gained or lost, and the key dispatches. Your forces keep following their stances meanwhile. Classic mode (time only runs while you play) stays the default.
+- Saves remember the scenario, length and mode.
