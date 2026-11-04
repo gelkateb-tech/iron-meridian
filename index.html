@@ -646,11 +646,18 @@ function addArmy(owner, at, units){
   S.armies.push(a); return a;
 }
 const has = (n, id) => n >= 0 && !!(S.nations[n].tech && S.nations[n].tech[id]);
-function st(o, t, k){ let v = UNITS[t][k]; if (o >= 0){ const N = S.nations[o], T = N.tech || {}; for (const id in T){ const fx = TECH_BY[id] && TECH_BY[id].fx[t]; if (fx && fx[k]) v += fx[k]; }
-    const sh = N.short || {};
-    if (sh.oil && UNITS[t].fuel){ if (k === 'atk') v *= 0.7; if (k === 'spd') v *= 0.6; }
-    if (sh.food && k === 'atk') v *= 0.8; }
-  return v; }
+const STC = [];
+function st(o, t, k){
+  if (o < 0) return UNITS[t][k];
+  const N = S.nations[o], T = N.tech || {}, sh = N.short || {}, key = (N.tv || 0)*4 + (sh.oil ? 2 : 0) + (sh.food ? 1 : 0);
+  let c = STC[o];
+  if (!c || c.key !== key || c.S !== S){ c = STC[o] = {key, S, v:{}};
+    for (const u of UT){ const r = {}; for (const kk of ['atk', 'def', 'spd', 'hp']){ let v = UNITS[u][kk];
+        for (const id in T){ const fx = TECH_BY[id] && TECH_BY[id].fx[u]; if (fx && fx[kk]) v += fx[kk]; }
+        if (sh.oil && UNITS[u].fuel){ if (kk === 'atk') v *= 0.7; if (kk === 'spd') v *= 0.6; }
+        if (sh.food && kk === 'atk') v *= 0.8; r[kk] = v; } c.v[u] = r; } }
+  return c.v[t][k];
+}
 const unlocked = (n, t) => !UNITS[t].tech || has(n, UNITS[t].tech);
 const bldOk = (p, t) => !UNITS[t].req || S.bld[p][UNITS[t].req.b] >= UNITS[t].req.l;
 const reqText = (p, t, n = PLAYER) => { const U = UNITS[t]; return !unlocked(n, t) ? `Research ${TECH_BY[U.tech].name}` : !bldOk(p, t) ? `Needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''; };
@@ -829,7 +836,8 @@ const friendly = (a, b) => a === b || (a >= 0 && b >= 0 && ['pass', 'ally'].incl
 const canEnter = (n, v) => G.P[v].sea || S.owner[v] === n || S.owner[v] < 0 || atWar(n, S.owner[v]) || friendly(n, S.owner[v]);
 const warsOf = n => S.nations.filter(m => m.alive && m.id !== n && atWar(n, m.id)).map(m => m.id);
 const alliesOf = n => S.nations.filter(m => m.alive && m.id !== n && rel(n, m.id).st === 'ally').map(m => m.id);
-const natPower = n => S.armies.reduce((s0, a) => s0 + (a.owner === n ? power(a) : 0), 0);
+let NPC = {v:-1, a:null};
+const natPower = n => { if (NPC.v !== tickVer || NPC.S !== S){ const arr = new Float64Array(S.nations.length); for (const a of S.armies) if (a.owner >= 0) arr[a.owner] += power(a); NPC = {v:tickVer, S, a:arr}; } return NPC.a[n]; };
 let borderCache = null;
 function borders(a, b){
   if (!borderCache || borderCache.h !== S.hour){ const set = new Set();
@@ -1012,8 +1020,9 @@ function armyUpkeep(prevBattles){
 
 /* ---------------- Simulation ---------------- */
 function alarm(){ if (S.speed > 1){ S.speed = 1; } sfx('alarm'); }
+let tickVer = 0;
 function tick(){
-  S.hour++;
+  S.hour++; tickVer++;
   // production
   for (let p = 0; p < G.P.length; p++){ const q = S.queue[p]; if (!q.length) continue;
     if (S.owner[p] < 0){ q.length = 0; continue; }
@@ -1028,7 +1037,7 @@ function tick(){
     if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (S.owner[p] === PLAYER) log(`${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
   // research
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
-    if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.research = null;
+    if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
   diploHour();
   // movement
@@ -1188,13 +1197,20 @@ function daily(){
 }
 
 /* ---------------- AI ---------------- */
+let PPC = {v:-1, m:null};
+function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S){ const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a)]); } PPC = {v:tickVer, S, m}; } return PPC.m; }
 function defPower(p, n){
-  let d = 0; for (const a of stationaryAt(p)) if (a.owner !== n) d += power(a);
+  let d = 0; for (const [o, pw] of (provPowers().get(p) || [])) if (o !== n) d += pw;
   if (S.owner[p] !== n){ d *= 1.25/Math.pow(0.8, S.bld[p].fort); }
   return d;
 }
 function threatNear(p, n){ return G.P[p].nbs.some(v => S.armies.some(a => a.at === v && a.owner >= 0 && atWar(n, a.owner) && count(a) > 0)); }
+const EMC = {};
 function enemyMix(n){
+  const ck = EMC[n]; if (ck && ck.v === tickVer && ck.S === S) return ck.r;
+  const r = enemyMix0(n); EMC[n] = {v:tickVer, S, r}; return r;
+}
+function enemyMix0(n){
   const m = {soft:0, armored:0, air:0, naval:0};
   for (const a of S.armies){ if (a.owner < 0 || !atWar(n, a.owner)) continue; for (const t of UT) m[UNITS[t].cls] += a.u[t]*UNITS[t].hp; }
   const tot = m.soft + m.armored + m.air + m.naval || 1; return {soft:m.soft/tot, armored:m.armored/tot, air:m.air/tot, naval:m.naval/tot};
@@ -1668,6 +1684,7 @@ function renderSide(force){
   setHTML($('hint'), hint);
 }
 function checklist(){
+  const row = (done, txt) => `<div class="${done ? 'done' : ''}"><i>${done ? '✓' : '○'}</i><span>${txt}</span></div>`;
   const T = S.tut || (S.tut = {});
   if (T.hide) return '';
   if (T.recruit && T.capture && T.research){
@@ -1675,7 +1692,6 @@ function checklist(){
     if (grown >= 5 && farms && wars) return '';
     return `<div class="eyebrow" style="display:flex;justify-content:space-between">Next objectives <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(grown >= 5, `Grow by 5 provinces (${Math.max(0, grown)}/5)`)}${row(farms, 'Build Farms to feed a bigger army')}${row(wars, 'Survive a war: end one with a truce or peace')}</div>`;
   }
-  const row = (done, txt) => `<div class="${done ? 'done' : ''}"><i>${done ? '✓' : '○'}</i><span>${txt}</span></div>`;
   return `<div class="eyebrow" style="display:flex;justify-content:space-between">First steps <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Merge forces into one stack, then capture a weak independent neighbour (look for a Favourable odds chip)')}${row(T.research, 'Start a research project (R)')}</div>`;
 }
 function prodHTML(){
