@@ -116,3 +116,11 @@
 - Rivers: 685 major rivers from Natural Earth are drawn on the map, thicker for great rivers (Rhine, Danube, Volga, Mississippi, Nile and others) and appearing progressively as you zoom in.
 - River lines matter in combat: 482 province borders that run along a river are river lines (for example Baden-Württemberg and Haut-Rhin on the Rhine, or Kyiv and Gomel on the Dnieper). Forces attacking across one fight at −20%. The odds chip warns about it, and the province panel lists the river lines.
 - Highways: major roads are drawn at close zoom. 481 neighbouring province pairs are linked by highways, and ground forces move 35% faster along them. The province panel shows how many highway links a province has.
+
+## Round 21 — Doctrines and unit Marks
+- Doctrines, chosen in the nation picker; every AI power gets one too:
+  - **Precision**: units attack 10% harder and research runs 15% faster, but every unit costs 15% more.
+  - **Mass**: units cost 15% less and train 25% faster, but attack 5% weaker.
+  - **Bastion**: forces defending their own home provinces take 15% less damage, fortifications build twice as fast, and army upkeep is 10% lower.
+- Unit Marks II–IV: a new Unit upgrades section under Research. Engineering runs in parallel with research, one upgrade at a time. Each Mark raises attack and defense for every unit of that type you have or build: Mk II +12%, Mk III +25%, Mk IV +40%. Costs and time rise with each Mark. Forces show their Mark beside each unit ("Rifle Corps Mk II ×6"), and AI powers upgrade their most-used unit types too.
+- Recruit cards show doctrine-adjusted prices.

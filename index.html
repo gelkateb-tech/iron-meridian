@@ -141,6 +141,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .armylist button{display:flex; justify-content:space-between; text-align:left; font-size:12.5px; padding:6px 9px}
 .muted{color:var(--muted)}
 .small{font-size:12px}
+.docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:10px}.btn.doc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;white-space:normal;padding:8px 10px}.btn.doc span{font-size:12px;opacity:.85}.marks{display:grid;gap:4px;margin-bottom:10px}.mrow{display:grid;grid-template-columns:22px 150px 120px 1fr;align-items:center;gap:8px;padding:4px 6px;background:rgba(255,255,255,.03);border-radius:4px}.mrow svg{width:20px;height:20px}.mrow .btn{justify-self:start}@media (max-width:600px){.mrow{grid-template-columns:22px 1fr}.mrow .mk,.mrow .btn,.mrow>span.small{grid-column:2}}.mk i{font-style:normal;font-size:11px;padding:1px 5px;margin-right:2px;border:1px solid rgba(255,255,255,.18);border-radius:3px;opacity:.45}.mk i.on{opacity:1;background:rgba(226,162,61,.25);border-color:var(--accent)}.mkb{font-size:10.5px;padding:0 4px;border:1px solid var(--accent);border-radius:3px;color:var(--accent)}
 .acomp span{display:inline-flex;align-items:center;gap:2px;margin-right:6px;font-size:12px}.acomp svg{width:16px;height:16px}.aname{cursor:pointer}select[data-act=stance]{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:3px 6px;font:inherit;font-size:12.5px}.tag{font-size:11.5px;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.07)}.tag.battle{background:rgba(224,87,79,.25)}.tag.move{background:rgba(226,162,61,.2)}
 .rep-side{padding:6px 10px;margin:6px 0;background:rgba(255,255,255,.04);border-radius:4px}.rep-lost{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:13px}.rep-lost span{display:inline-flex;align-items:center;gap:4px}.rep-lost svg{width:18px;height:18px}.rep-chart{width:100%;height:auto;background:rgba(0,0,0,.25);border-radius:4px;margin:6px 0}
 
@@ -479,7 +480,7 @@ const BUILD = {
   yard: {name:'Naval Yard',        max:2, cost:80, metal:25, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here.'},
 };
 const BK = Object.keys(BUILD);
-const ROMAN = ['', 'I', 'II', 'III'];
+const ROMAN = ['', 'I', 'II', 'III', 'IV'];
 let tab = 'cmd', seenLog = 0, showAllPowers = false, lockedOpen = false, seenHour = -1;
 document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('locked')) lockedOpen = e.target.open; }, true);
 function setTab(t){ tab = t; document.querySelectorAll('[data-pane]').forEach(el => el.hidden = el.dataset.pane !== t); document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); if (t === 'log' && S) seenHour = S.hour; const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
@@ -508,6 +509,20 @@ const TECH = [
 ];
 for (const t of TECH){ const tier = t.req ? (TECH.find(x => x.id === t.req).req ? 3 : 2) : 1; t.tier = tier; t.cost = Math.round(t.cost*0.6); t.metal = [0, 40, 60, 100][tier]; t.oil = [0, 0, 30, 60][tier]; }
 const TECH_BY = Object.fromEntries(TECH.map(t => [t.id, t]));
+// national doctrines, chosen at the start of a campaign
+const DOCTRINES = {
+  precision:{name:'Precision', tag:'Fewer, better forces', desc:'Units attack 10% harder and research runs 15% faster, but every unit costs 15% more.', atk:1.10, def:1, cost:1.15, build:1, res:0.85},
+  mass:{name:'Mass', tag:'Numbers win wars', desc:'Units cost 15% less and train 25% faster, but attack 5% weaker.', atk:0.95, def:1, cost:0.85, build:0.75, res:1},
+  bastion:{name:'Bastion', tag:'Hold every inch', desc:'Forces defending your own provinces take 15% less damage, fortifications build twice as fast, and upkeep is 10% lower.', atk:1, def:1, cost:1, build:1, res:1, home:0.85, fort:0.5, upk:0.9},
+};
+const docOf = n => n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] || null : null;
+// unit Marks: each unit type can be upgraded to Mk II, III and IV (+12% attack and defense per mark)
+const MARK_F = [1, 1, 1.12, 1.25, 1.4];
+const markOf = (n, t) => n >= 0 && S.nations[n] && S.nations[n].mk ? S.nations[n].mk[t] || 1 : 1;
+const markCost = (t, m) => ({cash:Math.round(UNITS[t].cost*1.6*m), metal:12*m + (UNITS[t].metal || 0)*m, days:1 + m});
+function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1; return {cash:Math.round(U.cost*f), oil:U.oil, metal:Math.round(U.metal*f), mp:U.mp}; }
+function canUpgrade(n, t){ const N = S.nations[n], m = markOf(n, t) + 1; if (m > 4 || N.eng || !unlocked(n, t)) return false; const c = markCost(t, m); return N.cash >= c.cash && N.metal >= c.metal; }
+function startUpgrade(n, t){ if (!canUpgrade(n, t)) return false; const N = S.nations[n], m = markOf(n, t) + 1, c = markCost(t, m); N.cash -= c.cash; N.metal -= c.metal; N.eng = {t, m, h:c.days*24, h0:c.days*24}; return true; }
 const BRANCHES = [...new Set(TECH.map(t => t.branch))];
 const POWERS = [
   {name:'United States',  country:'United States of America', color:'#3f7fe0'},
@@ -788,7 +803,7 @@ function newGame(seed, pick){
     for (const id of provs) owner[id] = k;
     const capital = provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
     G.P[capital].city = true;
-    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, food:120, mp:80, short:{}, alive:true, capital, tech:{}, research:null};
+    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, food:120, mp:80, short:{}, alive:true, capital, tech:{}, research:null, mk:{}, eng:null, doc:k === PLAYER ? (newGame.doc || 'precision') : ['precision', 'mass', 'bastion'][(seed + k*7) % 3]};
   });
   S = {v:4, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations};
@@ -852,14 +867,16 @@ function st(o, t, k){
     for (const u of UT){ const r = {}; for (const kk of ['atk', 'def', 'spd', 'hp']){ let v = UNITS[u][kk];
         for (const id in T){ const fx = TECH_BY[id] && TECH_BY[id].fx[u]; if (fx && fx[kk]) v += fx[kk]; }
         if (sh.oil && UNITS[u].fuel){ if (kk === 'atk') v *= 0.7; if (kk === 'spd') v *= 0.6; }
-        if (sh.food && kk === 'atk') v *= 0.8; r[kk] = v; } c.v[u] = r; } }
+        if (sh.food && kk === 'atk') v *= 0.8;
+        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[(N.mk && N.mk[u]) || 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }
+        r[kk] = v; } c.v[u] = r; } }
   return c.v[t][k];
 }
 const unlocked = (n, t) => !UNITS[t].tech || has(n, UNITS[t].tech);
 const bldOk = (p, t) => !UNITS[t].req || S.bld[p][UNITS[t].req.b] >= UNITS[t].req.l;
 const reqText = (p, t, n = PLAYER) => { const U = UNITS[t]; return !unlocked(n, t) ? `Research ${TECH_BY[U.tech].name}` : !bldOk(p, t) ? `Needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''; };
 function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.alive && !N.research && !has(n, id) && (!T.req || has(n, T.req)) && N.cash >= T.cost && N.metal >= T.metal && N.oil >= T.oil; }
-function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.metal -= T.metal; N.oil -= T.oil; N.research = {id, h:T.days*24}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
+function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.metal -= T.metal; N.oil -= T.oil; N.research = {id, h:Math.round(T.days*24*(docOf(n) ? docOf(n).res : 1))}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 function buildCost(n, k, lvl){ const B = BUILD[k], m = Math.pow(1.6, lvl - 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), h:B.days*24}; }
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast)); }
@@ -1087,6 +1104,7 @@ function income(n){
   if (n !== PLAYER && S.diff){ const dm = diffOf().inc; for (const k in g) g[k] *= dm; }
   if (S.rel){ const tired = warsOf(n).filter(m => S.hour - rel(n, m).since > 240).length; g.cash *= 1 - Math.min(0.2, 0.05*tired); }
   for (const a of S.armies) if (a.owner === n) for (const t of UT){ u.cash += a.u[t]*UNITS[t].upk; u.food += a.u[t]*UNITS[t].food; u.oil += a.u[t]*UNITS[t].fuel; }
+  { const dd = n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] : null; if (dd && dd.upk) u.cash *= dd.upk; }
   const net = {}; for (const k in g) net[k] = g[k] - u[k];
   return {gross:g, upkeep:u, net, eff, cash:g.cash, upk:u.cash};
 }
@@ -1127,18 +1145,18 @@ function marketHTML(){ const M = mkt(), N = S.nations[PLAYER], inc = income(PLAY
     ${emb.length ? `<div class="status battle">Embargoed by ${emb.map(m => m.name).join(', ')}: prices ${Math.round(sanctionF(PLAYER)*100)}% worse for you.</div>` : ''}
     <div class="tblwrap"><table class="ptab"><thead><tr><th>Resource</th><th>Price per unit</th><th>Last 60 days</th><th>Trade</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
-function canAfford(n, t){ const N = S.nations[n], U = UNITS[t]; return unlocked(n, t) && N.cash >= U.cost && N.oil >= U.oil && N.metal >= U.metal && N.mp >= U.mp; }
+function canAfford(n, t){ const N = S.nations[n], c = ucost(n, t); return unlocked(n, t) && N.cash >= c.cash && N.oil >= c.oil && N.metal >= c.metal && N.mp >= c.mp; }
 const canRecruit = (n, p, t) => S.owner[p] === n && G.P[p].city && bldOk(p, t) && canAfford(n, t);
 function recruit(n, p, t){
   if (!canRecruit(n, p, t)) return false;
-  const N = S.nations[n], U = UNITS[t]; N.cash -= U.cost; N.oil -= U.oil; N.metal -= U.metal; N.mp -= U.mp;
+  const N = S.nations[n], U = UNITS[t], c = ucost(n, t), d = docOf(n); N.cash -= c.cash; N.oil -= c.oil; N.metal -= c.metal; N.mp -= c.mp;
   if (n === PLAYER) (S.tut || (S.tut = {})).recruit = true;
-  const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac)); S.queue[p].push({t, h, h0:h}); return true;
+  const h = Math.max(1, Math.round(U.build*(1 - 0.2*S.bld[p].fac)*(d ? d.build : 1))); S.queue[p].push({t, h, h0:h}); return true;
 }
 function build(n, p, k){
   const B = BUILD[k], N = S.nations[n], lvl = nextLvl(p, k), c = buildCost(n, k, lvl);
   if (S.owner[p] !== n || S.cons[p] || lvl > B.max || !canBuildHere(p, k) || N.cash < c.cash || N.metal < c.metal) return false;
-  N.cash -= c.cash; N.metal -= c.metal; S.cons[p] = {k, lvl, h:c.h, h0:c.h}; return true;
+  N.cash -= c.cash; N.metal -= c.metal; const fh = k === 'fort' && docOf(n) && docOf(n).fort ? Math.max(1, Math.round(c.h*docOf(n).fort)) : c.h; S.cons[p] = {k, lvl, h:fh, h0:fh}; return true;
 }
 function spawn(n, p, t){
   const air = UNITS[t].cls === 'air';
@@ -1668,6 +1686,10 @@ function tick(){
   for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (!c) continue;
     if (S.owner[p] < 0){ S.cons[p] = null; continue; }
     if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (S.owner[p] === PLAYER) log(`${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
+  // unit upgrades (one at a time, parallel to research)
+  for (const N of S.nations){ if (!N.alive || !N.eng) continue;
+    if (--N.eng.h <= 0){ const {t, m} = N.eng; (N.mk || (N.mk = {}))[t] = m; N.tv = (N.tv || 0) + 1; N.eng = null;
+      if (N.id === PLAYER){ log(`${UNITS[t].name} upgraded to Mk ${ROMAN[m]}: +${Math.round((MARK_F[m] - 1)*100)}% attack and defense for every one you field.`, 'good'); sfx('research'); } } }
   // research
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
@@ -1733,7 +1755,7 @@ function tick(){
     }
     for (const o of owners){
       let f = 1;
-      if (o === S.owner[p]){ f /= 1.25; f *= Math.pow(0.8, S.bld[p].fort); }
+      if (o === S.owner[p]){ f /= 1.25; f *= Math.pow(0.8, S.bld[p].fort); const dd = docOf(o); if (dd && dd.home && S.home[p] === o) f *= dd.home; }
       if (!G.P[p].sea && (o === S.owner[p] || (S.owner[p] < 0 && o < 0))) f /= terr(p).def;
       if (has(o, 'log3')) f *= 0.85;
       const d = dmg.get(o), tot = hp.get(o);
@@ -1892,6 +1914,9 @@ function recordStats(){
 const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
   marketDay();
+  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.eng || N.cash < 300 || rng() > 0.4) continue;
+    const tot = {}; for (const a of S.armies) if (a.owner === N.id) for (const t of UT) tot[t] = (tot[t] || 0) + a.u[t];
+    const t = UT.filter(t => tot[t] && markOf(N.id, t) < 4).sort((x, y) => tot[y]*UNITS[y].cost - tot[x]*UNITS[x].cost)[0]; if (t) startUpgrade(N.id, t); }
   if (S.nations[PLAYER].alive){ const W = S.warn || (S.warn = {}), day = dayOf(S.hour);
     const border = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== PLAYER));
     const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === PLAYER || x.air || !S.nations[x.owner].alive) continue; const r = rel(PLAYER, x.owner).st; if (r === 'ally') continue;
@@ -2868,7 +2893,13 @@ function researchHTML(){
     });
     h += `</div>`;
   }
-  return h + `</div><div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
+  const E = N.eng, D = docOf(PLAYER);
+  h += `</div><div class="eyebrow" style="margin-top:14px">Unit upgrades · Marks I–IV${D ? ` · Doctrine: ${D.name}` : ''}</div>
+    <p class="small muted">Engineering runs in parallel with research, one upgrade at a time. Each Mark adds 12% attack and defense to every unit of that type you have or build (Mk II +12%, Mk III +25%, Mk IV +40%).${D ? ` ${D.desc}` : ''}</p>
+    <div class="marks">${UT.filter(t => unlocked(PLAYER, t)).map(t => { const m = markOf(PLAYER, t), nx = m + 1, c = nx <= 4 ? markCost(t, nx) : null, act = E && E.t === t;
+      return `<div class="mrow">${unitSVG(t)}<b>${UNITS[t].name}</b><span class="mk">${[1, 2, 3, 4].map(i => `<i class="${i <= m ? 'on' : ''}">${ROMAN[i]}</i>`).join('')}</span>
+        ${act ? `<span class="small">Mk ${ROMAN[E.m]} in ${Math.ceil(E.h/24)} d</span>` : c ? `<button class="btn ${canUpgrade(PLAYER, t) ? 'primary' : ''}" data-act="upgrade" data-t="${t}" ${canUpgrade(PLAYER, t) ? '' : 'disabled'} style="padding:3px 8px;font-size:12px" title="${E ? 'Another upgrade is running' : ''}">Mk ${ROMAN[nx]} · $${c.cash}M · ${c.metal} metal · ${c.days} d</button>` : '<span class="small muted">Fully upgraded</span>'}</div>`; }).join('')}</div>`;
+  return h + `<div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
 function ctxHTML(){
   if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return sel.group.length > 1 ? groupHTML() : a.air ? wingHTML(a) : armyHTML(a); }
@@ -2936,7 +2967,7 @@ function oddsHTML(a, t, foes){
 }
 function unitRows(a){
   return `<div class="urows">${UT.filter(t => a.u[t]).map(t => { const U = UNITS[t], max = a.u[t]*U.hp, cur = Math.max(0, max - a.w[t]), f = cur/max;
-    return `<div class="urow" title="${U.role}">${unitSVG(t)}<span class="un">${U.name} <b>×${a.u[t]}</b></span><span class="uhp"><i style="width:${Math.round(f*100)}%;background:${f > 0.6 ? 'var(--ok)' : f > 0.3 ? 'var(--accent)' : 'var(--danger)'}"></i></span><span class="unum">${Math.round(cur)}/${max} HP</span></div>`; }).join('')}</div>`;
+    return `<div class="urow" title="${U.role}">${unitSVG(t)}<span class="un">${U.name}${markOf(a.owner, t) > 1 ? ` <span class="mkb">Mk ${ROMAN[markOf(a.owner, t)]}</span>` : ''} <b>×${a.u[t]}</b></span><span class="uhp"><i style="width:${Math.round(f*100)}%;background:${f > 0.6 ? 'var(--ok)' : f > 0.3 ? 'var(--accent)' : 'var(--danger)'}"></i></span><span class="unum">${Math.round(cur)}/${max} HP</span></div>`; }).join('')}</div>`;
 }
 function groupHTML(){
   const g = groupArmies(); sel.group = g.map(a => a.id); if (g.length < 2) return armyHTML(g[0]);
@@ -3022,7 +3053,7 @@ function provHTML(p){
     const card = t => { const U = UNITS[t];
       const why = reqText(p, t);
       const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac));
-      return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${unitSVG(t)}${U.name}</span><span class="cost">${why || `$${U.cost}M${U.oil ? ` · ${U.oil} oil` : ''}${U.metal ? ` · ${U.metal} metal` : ''} · ${U.mp}k · −${U.food} food/d`}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; };
+      return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${unitSVG(t)}${U.name}</span><span class="cost">${why || (c0 => `$${c0.cash}M${c0.oil ? ` · ${c0.oil} oil` : ''}${c0.metal ? ` · ${c0.metal} metal` : ''} · ${c0.mp}k · −${U.food} food/d`)(ucost(PLAYER, t))}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; };
     const open = UT.filter(t => !reqText(p, t)), locked = UT.filter(t => reqText(p, t));
     { const nf = income(PLAYER).net.food; if (nf < 3) html += `<div class="nudge" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)">Food ${nf < 0 ? 'deficit' : 'margin'} ${Math.round(nf)}/day: every unit eats food. ${canBuildHere(p, 'farm') && S.bld[p].farm < BUILD.farm.max && !S.cons[p] ? `<button class="btn" data-act="build" data-k="farm" style="padding:2px 7px;font-size:12px">Build Farms here</button>` : 'Build Farms in your provinces.'}</div>`; }
     html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
@@ -3114,7 +3145,9 @@ document.addEventListener('click', e => {
     case 'research': if (startResearch(PLAYER, b.dataset.id)) renderSide(true); break;
     case 'pick': pickSel = +b.dataset.p; showPicker(); break;
     case 'pickdiff': pickDiff = b.dataset.k; showPicker(); break;
-    case 'begin': clearSave(); newGame((Math.random()*2**31) | 0, pickSel); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); break;
+    case 'pickdoc': pickDoc = b.dataset.k; showPicker(); break;
+    case 'upgrade': if (startUpgrade(PLAYER, b.dataset.t)){ toast(`Upgrading ${UNITS[b.dataset.t].name} to Mk ${ROMAN[S.nations[PLAYER].eng.m]}.`, 'info', null); } openModal(researchHTML(), 'research'); renderSide(true); break;
+    case 'begin': clearSave(); newGame.doc = pickDoc; newGame((Math.random()*2**31) | 0, pickSel); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); break;
     case 'start': closeModal(false); goHome(); setSpeed(1); break;
     case 'start-tut': closeModal(false); goHome(); setSpeed(0); tutStart(); break;
     case 'resume': closeModal(); break;
@@ -3152,7 +3185,7 @@ document.addEventListener('keydown', e => {
 function setSpeed(s){ if (S.over && s) return; if (s && !$('modal').hidden) return; S.speed = s; renderSide(); }
 
 /* ---------------- Modal ---------------- */
-let pickDiff = 'regular', modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
+let pickDiff = 'regular', pickDoc = 'precision', modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' || kind === 'stats' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
@@ -3186,6 +3219,7 @@ function showPicker(){
     <p>Fifteen powers fight for the world. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>
     <div class="picks">${cards}</div>
     <div class="eyebrow">AI difficulty</div><div class="row">${DIFFS.map(d => `<button class="btn ${pickDiff === d.k ? 'primary' : ''}" data-act="pickdiff" data-k="${d.k}">${d.name}</button>`).join('')}</div>
+    <div class="eyebrow">Doctrine</div><div class="docs">${Object.entries(DOCTRINES).map(([k, D]) => `<button class="btn doc ${pickDoc === k ? 'primary' : ''}" data-act="pickdoc" data-k="${k}" aria-pressed="${pickDoc === k}"><b>${D.name}</b><span>${D.tag}</span><span class="small">${D.desc}</span></button>`).join('')}</div>
     <div class="row"><button class="btn primary" data-act="begin">Lead ${POWERS[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}</div>`, 'picker');
 }
 function showBriefing(first, hasSave){
