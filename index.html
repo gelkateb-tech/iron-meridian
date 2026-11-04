@@ -348,10 +348,10 @@ details.more summary::-webkit-details-marker{display:none}
     <div class="clock" id="clock"></div>
     <div class="seg" id="speed" role="group" aria-label="Game speed">
       <button id="sp0" data-speed="0" aria-pressed="true" title="Pause (Space)">❚❚</button>
-      <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)">1×</button>
-      <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)">2×</button>
-      <button id="sp3" data-speed="3" aria-pressed="false" title="Fast (3)">4×</button>
-      <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest (4)">8×</button>
+      <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1): 1 real minute = 4 game minutes, a game day every 6 minutes">1×</button>
+      <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2): 1 real minute = 8 game minutes">2×</button>
+      <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3): 1 real minute = 16 game minutes">4×</button>
+      <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest (4): 1 real minute = 32 game minutes">8×</button>
     </div>
     <div class="mgroup">
     <button class="btn" id="prodbtn" data-act="prod-open" title="Production overview (P)"><span class="long">Production</span><span class="short">Prod</span></button>
@@ -599,7 +599,7 @@ function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.sli
 const HS = 12, SQ3 = Math.sqrt(3);
 const W = WORLD.W, H = WORLD.H;
 const K = 0.25;                       // combat damage per hour factor
-const HOURS_PER_SEC = [0, 2, 4, 8, 16];   // by speed setting
+const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game minutes (a game hour every 15 s)
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
 const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full', music:true};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
@@ -903,9 +903,9 @@ function restore(data){
   return true;
 }
 function save(){ if (!S || !S.started) return; S.savedAt = Date.now(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(serialize())); } catch (e) {} }
-// persistent campaigns keep running while you are away: one game day per real hour, up to 14 days of catch-up
+// persistent campaigns keep running while you are away at the 1x pace (4 game minutes per real minute), up to 30 days of catch-up
 function catchUp(){ if (!S || !S.persist || !S.savedAt || S.over) return null;
-  const hrs = Math.min(14*24, Math.floor((Date.now() - S.savedAt)/3600000*24)); if (hrs < 1) return null;
+  const hrs = Math.min(30*24, Math.floor((Date.now() - S.savedAt)/1000*HOURS_PER_SEC[1])); if (hrs < 1) return null;
   const h0 = S.hour, p0 = S.owner.filter(o => o === PLAYER).length, u0 = S.armies.filter(a => a.owner === PLAYER).reduce((s0, a) => s0 + count(a), 0), c0 = S.nations[PLAYER].cash;
   const wasBooted = booted; booted = false; for (let i = 0; i < hrs && !S.over; i++) tick(); booted = wasBooted;
   const ev = S.log.filter(e => e.h > h0 && (e.kind === 'bad' || e.kind === 'good')).slice(0, 12);
@@ -1771,11 +1771,13 @@ function wingVis(a, now, dt){
   if (!v || v.stage === 'done') return null;
   const T = G.P[v.tgt], B = G.P[a.air.base], spd = VW_SPEED*Math.sqrt(Math.max(1, S.speed || 1))*dt;
   const go = (tx, ty) => { const dx = tx - v.x, dy = ty - v.y, d = Math.hypot(dx, dy); if (d <= spd){ v.x = tx; v.y = ty; return true; } v.x += dx/d*spd; v.y += dy/d*spd; v.ang = Math.atan2(dy, dx); return false; };
-  if (v.stage === 'out'){ if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; return null; } v.stage = 'over'; v.tOver = now;
-      const q = STRIKEQ.get(a.id); if (q){ STRIKEQ.delete(a.id); strikeFX(q.p, v); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } } }
-  else if (v.stage === 'over'){ const t0 = now/450 + a.id, R = 16; v.x = T.x + Math.cos(t0)*R; v.y = T.y + Math.sin(t0)*R*0.55; v.ang = t0 + Math.PI/2;
-    const simDone = !f || f.ph === 'back' || f.tgt !== v.tgt; if (simDone && now - v.tOver > (v.kind === 'strike' ? 1500 : 600)) v.stage = 'back'; }
-  else if (v.stage === 'back'){ if (go(B.x, B.y)){ v.stage = 'done'; return null; } }
+  const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); strikeFX(q.p, v); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
+  if (v.stage === 'out'){ const simOut = f && f.ph === 'out' && f.tgt === v.tgt;
+    if (simOut){ const [wx, wy] = wingPos(a); go(wx, wy); }                    // follow the simulated flight, catching up if behind
+    else if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; return null; } v.stage = 'over'; v.tOver = now; } }
+  else if (v.stage === 'over'){ const t0 = now/900 + a.id, R = 16; v.x = T.x + Math.cos(t0)*R; v.y = T.y + Math.sin(t0)*R*0.55; v.ang = t0 + Math.PI/2; strikeNow();
+    const simDone = !f || f.ph === 'back' || f.tgt !== v.tgt; if (simDone && now - v.tOver > (v.kind === 'strike' ? 1500 : 600) && !STRIKEQ.has(a.id)) v.stage = 'back'; }
+  else if (v.stage === 'back'){ if (f && f.ph === 'back'){ const [wx, wy] = wingPos(a); go(wx, wy); } else if (go(B.x, B.y)){ v.stage = 'done'; return null; } }
   const dB = Math.hypot(v.x - B.x, v.y - B.y), dT = Math.hypot(v.x - T.x, v.y - T.y);
   v.alt = v.stage === 'over' ? 1 : Math.min(1, (v.stage === 'out' ? dB : Math.min(dB, dT + 30))/30);
   return v;
@@ -3754,7 +3756,7 @@ function showPicker(){
     <p>${cap1(NUMW[POWERS.length])} powers fight${SCN === 'world' ? ' for the world' : ''}. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>
     <div class="picks">${cards}</div>
     <div class="eyebrow">AI difficulty</div><div class="row">${DIFFS.map(d => `<button class="btn ${pickDiff === d.k ? 'primary' : ''}" data-act="pickdiff" data-k="${d.k}">${d.name}</button>`).join('')}</div>
-    <div class="eyebrow">Campaign length and mode</div><div class="row">${[60, 120, 240].map(d => `<button class="btn ${pickLen === d ? 'primary' : ''}" data-act="picklen" data-v="${d}">${d} days</button>`).join('')}<span style="width:12px"></span><button class="btn ${!pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="0" title="Time only runs while you play.">Classic</button><button class="btn ${pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="1" title="The war keeps going while you are away: one game day per real hour, up to 14 days of catch-up when you return.">Persistent</button></div>
+    <div class="eyebrow">Campaign length and mode</div><div class="row">${[60, 120, 240].map(d => `<button class="btn ${pickLen === d ? 'primary' : ''}" data-act="picklen" data-v="${d}">${d} days</button>`).join('')}<span style="width:12px"></span><button class="btn ${!pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="0" title="Time only runs while you play.">Classic</button><button class="btn ${pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="1" title="The war keeps going while you are away at the normal pace (4 game minutes per real minute), up to 30 days of catch-up when you return.">Persistent</button></div>
     <div class="eyebrow">Doctrine</div><div class="docs">${Object.entries(DOCTRINES).map(([k, D]) => `<button class="btn doc ${pickDoc === k ? 'primary' : ''}" data-act="pickdoc" data-k="${k}" aria-pressed="${pickDoc === k}"><b>${D.name}</b><span>${D.tag}</span><span class="small">${D.desc}</span></button>`).join('')}</div>
     <div class="row"><button class="btn primary" data-act="begin">Lead ${POWERS[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}</div>`, 'picker');
 }

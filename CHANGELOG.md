@@ -296,3 +296,8 @@
 - The briefing and rules now explain formal declarations versus surprise attacks, the command bar (Move, Attack, Delay, Split, Merge, Halt, stance), right-click orders and automatic artillery fire, and fronts (frontage, flanking, rivers, highways, winter and mud).
 - The tutorial's "Send it" step mentions the command bar and right-click. The keyboard reference lists M, K, L and X.
 - Soak test: full campaigns in all three scenarios (World War 120 days, European Theatre, Pacific Rim) ran with no script errors, no invalid or negative stockpiles, and no frozen armies. Save files stay under 400 KB.
+
+## Round 41 — Slower game clock
+- New pace, by request: at 1× one real minute is four game minutes. A game hour takes 15 seconds, a game day 6 minutes, and a 120-day campaign about 12 hours of play. 2×, 4× and 8× are multiples of that (8, 16 and 32 game minutes per real minute), and the speed buttons' tooltips say so. Before, 1× ran a game day in 12 seconds.
+- Persistent campaigns keep running at the same 1× pace while you are away, with up to 30 days of catch-up.
+- Aircraft now follow the simulated flight exactly at the slower pace, catching up if behind, and their bombs land when they actually reach the target.
