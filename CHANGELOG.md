@@ -207,3 +207,9 @@
 - The victory tracker shows on phones, in a compact size.
 - Battle report links can no longer open the wrong battle.
 - Performance: each nation's income is computed once per game hour instead of on every call.
+
+## Round 29 — Light and water
+- Coasts: the baked terrain gains a wide shallow-water shelf. The sea brightens towards the coast over a broad blurred band from the real coastline, so coasts read as shelves of turquoise shallows rather than flat navy against land.
+- Mountains: ridged noise adds sharp peaks and valleys to mountain ranges in the hill-shading, so the Alps, Rockies or Himalaya read as ranges instead of a soft smear at close zoom.
+- Night lighting: fires and explosions cast warm light pools on the ground at night, scaled by how dark it is at that longitude. Cities glow with a bright core and a wider halo, larger for capitals.
+- Projectiles: shells and missiles fly as short bright streaks along their arc instead of glowing orange balls.

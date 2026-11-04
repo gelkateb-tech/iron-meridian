@@ -765,7 +765,7 @@ function buildTerrain(){
   // fill sea cells' colours with nearest land colour so blends at the coast are not grey
   for (let pass = 0; pass < 2; pass++) for (let i = 0; i < N; i++){ if (landF[i] || cR[i]) continue; let n = 0, r = 0, g = 0, b = 0;
     for (let d = 0; d < 6; d++){ const m = nbr(i, d); if (m >= 0 && cR[m]){ r += cR[m]; g += cG[m]; b += cB[m]; n++; } } if (n){ cR[i] = r/n; cG[i] = g/n; cB[i] = b/n; } }
-  const n1 = makeNoise(mulberry(101)), n2 = makeNoise(mulberry(202)), n3 = makeNoise(mulberry(303));
+  const n1 = makeNoise(mulberry(101)), n2 = makeNoise(mulberry(202)), n3 = makeNoise(mulberry(303)), n4 = makeNoise(mulberry(404));
   const rowStep = 1.5*HS, colStep = HS*SQ3;
   function sample(F, wx, wy){
     const cy = (wy - OY)/rowStep; let r0 = Math.floor(cy); const fy = cy - r0;
@@ -776,14 +776,16 @@ function buildTerrain(){
     return acc0;
   }
   // real coastlines (bake only): Natural Earth land rings in grid units ×40, plus a small disc at every land province so none vanish
-  let RLA = null;
+  let RLA = null, RLB = null;
   if (window.LANDPOLY){ const rc = document.createElement('canvas'); rc.width = w; rc.height = h; const g = rc.getContext('2d');
     g.setTransform(TS*HS*SQ3/40, 0, 0, TS*HS*1.5/40, TS*OX, TS*OY); g.beginPath();
     for (const off of [-W*40, 0, W*40]) for (const R of window.LANDPOLY){ g.moveTo(R[0] + off, R[1]); for (let i = 2; i < R.length; i += 2) g.lineTo(R[i] + off, R[i + 1]); g.closePath(); }
     g.fillStyle = '#fff'; g.fill('evenodd');
     g.setTransform(TS, 0, 0, TS, 0, 0); for (const P of G.P){ if (P.sea) continue; g.beginPath(); g.arc(P.x, P.y, HS*(P.city ? 0.5 : 0.32), 0, Math.PI*2); g.fill(); }
     const bc = document.createElement('canvas'); bc.width = w; bc.height = h; const bg = bc.getContext('2d'); bg.filter = 'blur(1.2px)'; bg.drawImage(rc, 0, 0);
-    const d = bg.getImageData(0, 0, w, h).data; RLA = new Float32Array(w*h); for (let i = 0; i < w*h; i++) RLA[i] = d[i*4 + 3]/255; }
+    const d = bg.getImageData(0, 0, w, h).data; RLA = new Float32Array(w*h); for (let i = 0; i < w*h; i++) RLA[i] = d[i*4 + 3]/255;
+    const sc2 = document.createElement('canvas'); sc2.width = w; sc2.height = h; const sg = sc2.getContext('2d'); sg.filter = 'blur(9px)'; sg.drawImage(rc, 0, 0);
+    const d2 = sg.getImageData(0, 0, w, h).data; RLB = new Float32Array(w*h); for (let i = 0; i < w*h; i++) RLB[i] = d2[i*4 + 3]/255; }
   const img = new ImageData(w, h), px = img.data, E = new Float32Array(w*h), L = new Float32Array(w*h);
   const mimg = new ImageData(w, h), mpx = mimg.data;
   for (let y = 0; y < h; y++){ const wy = y/TS;
@@ -792,12 +794,13 @@ function buildTerrain(){
       const land = RLA ? RLA[o]*0.9 + sample(landF, wx, wy)*0.1 + (fbm - 0.5)*0.12 : sample(landF, wx, wy) + (fbm - 0.5)*0.42;
       L[o] = land;
       const el = Math.max(0, sample(elevF, wx, wy));
-      E[o] = el*(0.45 + 0.9*nB + 0.35*nC) + nC*0.05;
+      const rg = el > 0.6 ? Math.pow(1 - Math.abs(2*n4(wx*0.07, wy*0.07) - 1), 2)*0.9 + Math.pow(1 - Math.abs(2*n4(wx*0.19 + 7, wy*0.19) - 1), 2)*0.35 : 0;   // ridged peaks in mountains
+      E[o] = el*(0.45 + 0.9*nB + 0.35*nC) + nC*0.05 + rg*el;
       if (land > 0.5){
         const v = 0.86 + (fbm - 0.5)*0.32;
         px[o*4] = sample(cR, wx, wy)*v; px[o*4 + 1] = sample(cG, wx, wy)*v; px[o*4 + 2] = sample(cB, wx, wy)*v;
       } else {
-        const depth = Math.max(0, Math.min(1, land/0.5)), sh = depth*depth, wave = (nC - 0.5)*6;
+        const depth = Math.max(0, Math.min(1, RLB ? Math.max(land/0.5*0.6, RLB[o]*1.15) : land/0.5)), sh = depth*depth, wave = (nC - 0.5)*6;
         px[o*4] = 7 + 17*sh + wave*0.4; px[o*4 + 1] = 20 + 44*sh + wave; px[o*4 + 2] = 30 + 46*sh + wave;
       }
       px[o*4 + 3] = 255;
@@ -1028,7 +1031,9 @@ function drawParticles(now){
     const x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*pr.arc*kz;
     if (pr.kind === 'tracer'){ const x2 = fx0 + (tx0 - fx0)*Math.max(0, k - 0.18), y2 = fy0 + (ty0 - fy0)*Math.max(0, k - 0.18); ctx.strokeStyle = 'rgba(255,225,140,.9)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x, y); ctx.stroke(); }
     else { if (pr.kind === 'missile' && now - pr.last > 30){ pr.last = now; const [wx, wy] = screenToWorld(x, y); emit('smokel', wx, wy, {vx:(Math.random() - 0.5)*4, vy:-2, s0:4, s1:14, life:1300}); }
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(GLOW(), x - 6, y - 6, 12, 12); ctx.restore(); ctx.fillStyle = '#fff2c8'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI*2); ctx.fill(); } }
+      const kb = Math.max(0, k - 0.07), xb = fx0 + (tx0 - fx0)*kb, yb = fy0 + (ty0 - fy0)*kb - Math.sin(kb*Math.PI)*pr.arc*kz;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = pr.kind === 'missile' ? 'rgba(255,190,120,.9)' : 'rgba(255,236,190,.95)'; ctx.lineWidth = pr.kind === 'missile' ? 1.6 : 1.2; ctx.beginPath(); ctx.moveTo(xb, yb); ctx.lineTo(x, y); ctx.stroke();
+      ctx.globalAlpha = 0.6; ctx.drawImage(GLOW(), x - 4, y - 4, 8, 8); ctx.restore(); } }
   // muzzle stars (60 ms)
   for (let i = MUZZ.length - 1; i >= 0; i--){ const m0 = MUZZ[i], age = now - m0.t0; if (age > 45){ MUZZ.splice(i, 1); continue; }
     { const [x, y] = toScreen(m0.wx, m0.wy), L0 = 9*m0.big*kz, k3 = 1 - age/45; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k3; ctx.drawImage(GLOW(), x - L0, y - L0, L0*2, L0*2);
@@ -1043,7 +1048,8 @@ function drawParticles(now){
     const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
     if (q.kind === 'smoke' || q.kind === 'smokel'){ ctx.globalAlpha = 0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
-    else if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k; ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
+    else if ((q.kind === 'fire' || q.kind === 'flash') && nightAtX(q.wx ?? 0) > 0.3 && k < 0.6){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18*(1 - k)*nightAtX(q.wx ?? 0); ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.restore(); }
+    if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k; ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
     else if (q.kind === 'ring'){ ctx.globalAlpha = 0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
     else if (q.kind === 'spark' || q.kind === 'debris'){ ctx.globalAlpha = 1 - k; ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
     else if (q.kind === 'dust'){ ctx.globalAlpha = 0.32*(k < 0.1 ? k/0.1 : 1 - k); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot); ctx.scale(1, 0.6); ctx.drawImage(puffSprite(q.v, false), -sz, -sz, sz*2, sz*2); ctx.restore(); }
@@ -1121,6 +1127,11 @@ function drawNight(){
   for (let k2 = -2; k2 <= 1; k2++) ctx.drawImage(tex, start + k2*360*wpd, OY - HS*0.75, 360*wpd, HS*1.5*H);
   ctx.restore(); void lonAt;
 }
+// 0 by day, 1 deep at night, for a world x coordinate (used for light pools)
+let NAX = {h:-1, v:null};
+function nightAtX(wx){ const hb = Math.floor((S.hour + (S.speed && !S.over ? acc : 0))*4); if (NAX.h !== hb){ NAX = {h:hb, v:new Float32Array(64)}; const live = hb/4, sl = ((12 - (live % 24))*15 + 540) % 360 - 180;
+    for (let i = 0; i < 64; i++){ const lon = WORLD.lon0 + (i + 0.5)/64*360, c = Math.cos((lon - sl)*Math.PI/180); NAX.v[i] = Math.max(0, Math.min(1, (-c + 0.05)/0.35)); } }
+  const i = Math.floor(((wx - OX)/(HS*SQ3*W))*64); return NAX.v[((i % 64) + 64) % 64]; }
 function isNight(p){ const live = S.speed && !S.over ? acc : 0, sl = ((12 - ((S.hour + live) % 24))*15 + 540) % 360 - 180, lon = WORLD.lon0 + ((G.P[p].cc % W) + 0.5)/W*360; return Math.cos((lon - sl)*Math.PI/180) < -0.12; }
 function fx(type, p, extra = {}){ if (!booted) return;
   if (type === 'dmg' && extra.owner != null && extra.val != null){ const now = performance.now(), f0 = FX.find(f => f.type === 'dmg' && f.p === p && f.owner === extra.owner && now - f.t0 < 1000 && now - (f.born || f.t0) < 3500);
@@ -2607,7 +2618,7 @@ function draw(now){
     if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
     const cap = isCapital(p), dim = vis.has(p) ? 1 : 0.55;
     ctx.globalAlpha = dim;
-    if (P.city && hexPx >= 2.5 && isNight(p)){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55; ctx.drawImage(GLOW(), x - 9*kl, y + 9*kl - 9*kl, 18*kl, 18*kl); ctx.restore(); }
+    if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 10)*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5; ctx.drawImage(GLOW(), x - gr, y + 9*kl - gr, gr*2, gr*2); ctx.globalAlpha = 0.18; ctx.drawImage(GLOW(), x - gr*2.4, y + 9*kl - gr*1.6, gr*4.8, gr*3.2); ctx.restore(); }
     if (cap && hexPx >= 2){ star(x, y + 9*kl, 6*kl); ctx.fillStyle = '#f3ead2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b1012'; ctx.stroke(); }
     else if (P.city && showCity){ ctx.fillStyle = '#f3ead2'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1.2; ctx.fillRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); ctx.strokeRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); }
     if (P.oil && hexPx >= 8){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
