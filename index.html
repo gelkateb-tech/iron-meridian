@@ -309,6 +309,7 @@ details.more summary::-webkit-details-marker{display:none}
 @media (max-width: 1500px){ header .brand{font-size:19px} }
 @media (max-width: 1700px){ header .brand{display:none} }
 .chip{white-space:nowrap}
+@media (max-width: 1560px){ :is(#prodbtn, #mktbtn, #armbtn, #resbtn, #dipbtn) .long{display:none} :is(#prodbtn, #mktbtn, #armbtn, #resbtn, #dipbtn) .short{display:inline} }
 @media (max-width: 480px){
   header{gap:6px}
   header .spacer{display:none}
@@ -338,6 +339,7 @@ details.more summary::-webkit-details-marker{display:none}
     </div>
     <div class="mgroup">
     <button class="btn" id="prodbtn" data-act="prod-open" title="Production overview (P)"><span class="long">Production</span><span class="short">Prod</span></button>
+    <button class="btn" id="mktbtn" data-act="market-open" title="World market: buy and sell oil, metal and food (T)"><span class="long">Market</span><span class="short">Mkt</span></button>
     <button class="btn" id="armbtn" data-act="armies-open" title="All your forces, stances and idle units (A)"><span class="long">Armies</span><span class="short">Army</span></button>
     <button class="btn" id="resbtn" data-act="research-open" title="Research tree (R)"><span class="long">Research</span><span class="short">Tech</span><span class="dot" id="resdot" title="No research running"></span></button>
     <button class="btn" id="dipbtn" data-act="diplo-open" title="Diplomacy (D)"><span class="long">Diplomacy</span><span class="short">Diplo</span><span class="badge" id="dipbadge" hidden></span></button>
@@ -1064,6 +1066,43 @@ function income(n){
   const net = {}; for (const k in g) net[k] = g[k] - u[k];
   return {gross:g, upkeep:u, net, eff, cash:g.cash, upk:u.cash};
 }
+/* ---------------- World market ---------------- */
+const MKT_BASE = {oil:3.2, metal:2.4, food:1.3}, MKT_K = ['oil', 'metal', 'food'];
+function mkt(){ if (!S.mkt){ S.mkt = {p:{...MKT_BASE}, prev:{...MKT_BASE}, hist:{oil:[], metal:[], food:[]}, press:{oil:0, metal:0, food:0}, emb:{}}; } return S.mkt; }
+const embargoes = n => S.nations.filter(m => m.alive && m.id !== n && mkt().emb[m.id + '>' + n]).length;
+const sanctionF = n => Math.min(3, embargoes(n))*0.15;
+const buyPrice = (n, k) => mkt().p[k]*1.1*(1 + sanctionF(n));
+const sellPrice = (n, k) => mkt().p[k]*0.9*(1 - sanctionF(n));
+function trade(n, k, qty){ const N = S.nations[n], M = mkt();
+  if (qty > 0){ qty = Math.min(qty, Math.floor(stockCap(n) - N[k]), Math.floor(N.cash/buyPrice(n, k))); if (qty <= 0) return 0; N.cash -= qty*buyPrice(n, k); N[k] += qty; }
+  else { qty = -Math.min(-qty, Math.floor(N[k])); if (qty >= 0) return 0; N.cash += -qty*sellPrice(n, k); N[k] += qty; }
+  M.press[k] += qty/1500; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k]*(1 + qty/4000))); return qty; }
+function marketDay(){ const M = mkt();
+  for (const k of MKT_K){ let sup = 0, dem = 0; for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id); sup += inc.gross[k]; dem += inc.upkeep[k]; }
+    const ratio = dem/Math.max(1, sup), target = MKT_BASE[k]*Math.max(0.7, Math.min(2.6, 0.6 + 1.0*ratio + 4*M.press[k]));
+    M.prev[k] = M.p[k]; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k] + (target - M.p[k])*0.2 + M.p[k]*(rng() - 0.5)*0.06));
+    M.press[k] *= 0.7; M.hist[k].push(+M.p[k].toFixed(2)); if (M.hist[k].length > 60) M.hist[k].shift(); }
+  // AI trading and sanctions
+  for (const N of S.nations){ if (!N.alive || N.id === PLAYER) continue; const cap = stockCap(N.id);
+    for (const k of MKT_K){ if (N[k] < 35 && N.cash > 260) trade(N.id, k, Math.min(60, Math.floor((N.cash - 200)/buyPrice(N.id, k))));
+      else if (N[k] > cap*0.85 && N.cash < 500) trade(N.id, k, -Math.floor(N[k] - cap*0.6)); }
+    for (const O of S.nations){ if (!O.alive || O.id === N.id) continue; const key = N.id + '>' + O.id, op = opinion(N.id, O.id), war = atWar(N.id, O.id);
+      if (!M.emb[key] && (op < -45 || war) && rng() < 0.25){ M.emb[key] = S.hour; if (O.id === PLAYER) log(`${N.name} imposes an embargo on you: your market prices worsen by 15% per embargo (${embargoes(PLAYER)} now).`, 'bad', null); }
+      else if (M.emb[key] && op > -20 && !war && rng() < 0.2){ delete M.emb[key]; if (O.id === PLAYER) log(`${N.name} lifts its embargo on you.`, 'good', null); } } }
+}
+const spark = (h, w = 120, ht = 28, col = 'var(--accent)') => { if (h.length < 2) return `<svg width="${w}" height="${ht}"></svg>`; const mn = Math.min(...h), mx = Math.max(...h), r = mx - mn || 1;
+  return `<svg width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}" aria-hidden="true"><polyline fill="none" stroke="${col}" stroke-width="1.6" points="${h.map((v, i) => `${(i/(h.length - 1)*(w - 2) + 1).toFixed(1)},${(ht - 2 - (v - mn)/r*(ht - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
+function marketHTML(){ const M = mkt(), N = S.nations[PLAYER], inc = income(PLAYER), cap = stockCap(PLAYER), emb = S.nations.filter(m => m.alive && M.emb[m.id + '>' + PLAYER]);
+  const rows = MKT_K.map(k => { const R = RES.find(r => r.k === k), pr = M.p[k], d = pr - M.prev[k], bp = buyPrice(PLAYER, k), sp = sellPrice(PLAYER, k);
+    const b = q => `<button class="btn" data-act="trade" data-k="${k}" data-q="${q}" ${q > 0 ? (N.cash >= bp*q && N[k] + q <= cap ? '' : 'disabled') : (N[k] >= -q ? '' : 'disabled')} title="${q > 0 ? `Buy ${q} for $${fmt(bp*q)}M` : `Sell ${-q} for $${fmt(sp*-q)}M`}" style="padding:3px 8px;font-size:12px">${q > 0 ? 'Buy' : 'Sell'} ${Math.abs(q)}</button>`;
+    return `<tr><td>${icon(k)} <b>${R.name}</b><div class="small muted">${fmt(N[k])} / ${fmt(cap)} · ${inc.net[k] >= 0 ? '+' : ''}${fmt(inc.net[k])}/day</div></td>
+      <td><b>$${pr.toFixed(2)}M</b> <span style="color:${d > 0.005 ? 'var(--danger)' : d < -0.005 ? 'var(--ok)' : 'var(--muted)'}">${d > 0.005 ? '▲' : d < -0.005 ? '▼' : '•'}${Math.abs(d/M.prev[k]*100).toFixed(1)}%</span><div class="small muted">buy $${bp.toFixed(2)} · sell $${sp.toFixed(2)}</div></td>
+      <td>${spark(M.hist[k])}</td><td><div class="row" style="gap:4px;flex-wrap:nowrap">${b(10)}${b(50)}${b(-10)}${b(-50)}</div></td></tr>`; }).join('');
+  return `<div class="rhead"><div><div class="eyebrow">World market · day ${dayOf(S.hour)}</div><h1>Market</h1></div><div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
+    <p class="small muted">Prices follow world supply and demand, updated every dawn: wars that burn oil drive oil up, and big trades move prices too. Buying costs 10% over the market price, selling earns 10% under it. Each power embargoing you worsens both by 15%.</p>
+    ${emb.length ? `<div class="status battle">Embargoed by ${emb.map(m => m.name).join(', ')}: prices ${Math.round(sanctionF(PLAYER)*100)}% worse for you.</div>` : ''}
+    <div class="tblwrap"><table class="ptab"><thead><tr><th>Resource</th><th>Price per unit</th><th>Last 60 days</th><th>Trade</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
 function canAfford(n, t){ const N = S.nations[n], U = UNITS[t]; return unlocked(n, t) && N.cash >= U.cost && N.oil >= U.oil && N.metal >= U.metal && N.mp >= U.mp; }
 const canRecruit = (n, p, t) => S.owner[p] === n && G.P[p].city && bldOk(p, t) && canAfford(n, t);
 function recruit(n, p, t){
@@ -1809,6 +1848,7 @@ function recordStats(){
 }
 const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
+  marketDay();
   if (S.nations[PLAYER].alive){ const W = S.warn || (S.warn = {}), day = dayOf(S.hour);
     const border = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== PLAYER));
     const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === PLAYER || x.air || !S.nations[x.owner].alive) continue; const r = rel(PLAYER, x.owner).st; if (r === 'ally') continue;
@@ -2561,6 +2601,7 @@ function renderSide(force){
   if (modalKind === 'diplo' && !$('modal').hidden) setHTML($('sheet'), diploHTML());
   if (modalKind === 'prod' && !$('modal').hidden) setHTML($('sheet'), prodHTML());
   if (modalKind === 'armies' && !$('modal').hidden) setHTML($('sheet'), armiesHTML());
+  if (modalKind === 'market' && !$('modal').hidden) setHTML($('sheet'), marketHTML());
   if (modalKind === 'stats' && !$('modal').hidden) setHTML($('sheet'), statsHTML());
   const nOff = S.offers.length + S.decl.filter(d => d.to === PLAYER).length; $('dipbadge').hidden = !nOff; $('dipbadge').textContent = nOff;
   relMode = mapMode === 'relations'; $('zrel').setAttribute('aria-pressed', String(relMode));
@@ -2678,6 +2719,8 @@ function diploHTML(){
       if (r.st === 'truce') hint = 'Truce: war cannot be declared until it ends.';
     }
     acts += `<button class="btn" data-act="gift" data-id="${N.id}" ${S.nations[me].cash >= 50 ? '' : 'disabled'} title="Improves their opinion of you by 5">Gift $50M</button>`;
+    { const e = mkt().emb[me + '>' + N.id]; acts += `<button class="btn" data-act="embargo" data-id="${N.id}" title="${e ? 'Lift the embargo: +5 opinion' : 'Their market prices worsen 15%; −15 opinion with them'}">${e ? 'Lift embargo' : 'Embargo'}</button>`; }
+    if (mkt().emb[N.id + '>' + me]) hint = (hint ? hint + ' ' : '') + 'They embargo you.';
     // one primary action up front, the rest behind More
     { const tmp = document.createElement('div'); tmp.innerHTML = acts; const bs = [...tmp.querySelectorAll('button')];
       const prim = bs.find(x => x.classList.contains('primary')) || bs.find(x => x.dataset.k === 'peace') || bs.find(x => x.dataset.act !== 'declare') || bs[0];
@@ -2960,6 +3003,9 @@ document.addEventListener('click', e => {
     case 'declare': { const m = +b.dataset.id; if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = 'Confirm war?'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = 'Declare war'; } }, 3000); return; } declareWar(PLAYER, m); renderSide(true); break; }
     case 'propose': { const m = +b.dataset.id, k = b.dataset.k, r = acceptOffer(m, PLAYER, k); if (r.ok) applyDeal(PLAYER, m, k); else { log(`${S.nations[m].name} refused: ${r.why}.`, 'info', null); addMem(m, PLAYER, -2); } renderSide(true); break; }
     case 'tribute': { const m = +b.dataset.id, tr = tribute(m); if (S.nations[PLAYER].cash >= tr){ if (tributeOk(m)){ S.nations[PLAYER].cash -= tr; S.nations[m].cash += tr; applyDeal(PLAYER, m, 'peace'); } else log(`${S.nations[m].name} refused your tribute: they think they can take more by force.`, 'info', null); } renderSide(true); break; }
+    case 'trade': { const k = b.dataset.k, q = +b.dataset.q, done = trade(PLAYER, k, q); if (done){ toast(`${done > 0 ? 'Bought' : 'Sold'} ${Math.abs(done)} ${k}.`, 'info', null); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'market-open': openModal(marketHTML(), 'market'); break;
+    case 'embargo': { const m = +b.dataset.id, key = PLAYER + '>' + m; if (mkt().emb[key]){ delete mkt().emb[key]; addMem(m, PLAYER, 5); log(`You lifted your embargo on ${S.nations[m].name}.`, '', null); } else { mkt().emb[key] = S.hour; addMem(m, PLAYER, -15); log(`You imposed an embargo on ${S.nations[m].name}.`, '', null); } setHTML($('sheet'), diploHTML()); break; }
     case 'gift': { const m = +b.dataset.id; if (S.nations[PLAYER].cash >= 50){ S.nations[PLAYER].cash -= 50; addMem(m, PLAYER, 5); log(`You sent $50M in aid to ${S.nations[m].name}.`, '', null); } renderSide(true); break; }
     case 'offer-yes': case 'offer-no': { const o = S.offers.find(x => x.id === +b.dataset.id); if (o){ S.offers = S.offers.filter(x => x !== o); if (act === 'offer-yes'){ const war = atWar(o.from, PLAYER); if ((o.kind === 'peace') === war) applyDeal(o.from, PLAYER, o.kind); else log('That offer no longer applies.', 'info', null); } else addMem(o.from, PLAYER, -5); } renderSide(true); break; }
     case 'research': if (startResearch(PLAYER, b.dataset.id)) renderSide(true); break;
@@ -2994,6 +3040,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'v' || e.key === 'V'){ const i = MODES.findIndex(m => m[0] === mapMode); mapMode = MODES[(i + 1) % MODES.length][0]; renderSide(true); }
   else if (e.key === 's' || e.key === 'S'){ if (modalKind === 'stats') closeModal(); else if ($('modal').hidden) openModal(statsHTML(), 'stats'); }
   else if (e.key === 'm' || e.key === 'M'){ setMuted(!muted); renderSide(true); }
+  else if (e.key === 't' || e.key === 'T'){ if (modalKind === 'market') closeModal(); else if ($('modal').hidden) openModal(marketHTML(), 'market'); }
   else if (e.key === 'a' || e.key === 'A'){ if (modalKind === 'armies') closeModal(); else if ($('modal').hidden) openModal(armiesHTML(), 'armies'); }
   else if (e.key === '.' || e.key === 'Tab'){ if ($('modal').hidden){ e.preventDefault(); nextIdle(); } }
   else if (e.key === 'p' || e.key === 'P'){ if (modalKind === 'prod') closeModal(); else if ($('modal').hidden) openModal(prodHTML(), 'prod'); }
@@ -3005,7 +3052,7 @@ function setSpeed(s){ if (S.over && s) return; if (s && !$('modal').hidden) retu
 let pickDiff = 'regular', modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
-function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' || kind === 'stats' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
+function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' || kind === 'stats' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
 function closeModal(restore = true){ $('modal').hidden = true; modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
 function rules(){ return `<ul>
   <li><b>Recruit</b> in your cities (squares and your capital star). Units cost cash, oil and manpower, and take days to train.</li>

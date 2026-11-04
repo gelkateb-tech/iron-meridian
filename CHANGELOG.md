@@ -96,3 +96,9 @@
   - **Preserve** falls back to the nearest city of yours once health drops below 40%.
 - Waypoints: with a force or group selected and moving, shift-click more provinces to chain legs onto its route.
 - Press **.** (or Tab) to jump to the next idle force.
+
+## Round 18 — World market and embargoes
+- World market (T, or Market in the top bar): buy and sell oil, metal and food in lots of 10 or 50. Prices are recalculated every dawn from total world production against total consumption: wars that burn fuel push oil up, big trades move prices immediately, and pressure fades over a few days. Each resource shows its price, the day's change, buy and sell prices (10% spread) and a 60-day price chart.
+- AI powers trade too: they buy whatever they run short of when they have cash, and sell surpluses near their storage cap.
+- Embargoes: powers at war with you, or with very low opinion of you, may impose an embargo. Each one worsens your buy and sell prices by 15% (up to three). They lift embargoes once relations recover. You can embargo or lift embargoes from Diplomacy (−15 or +5 opinion), and the panel notes who embargoes you.
+- The top bar switches to short labels (Prod, Mkt, Army, Tech, Diplo) on screens under 1560 px wide.
