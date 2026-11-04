@@ -213,3 +213,9 @@
 - Mountains: ridged noise adds sharp peaks and valleys to mountain ranges in the hill-shading, so the Alps, Rockies or Himalaya read as ranges instead of a soft smear at close zoom.
 - Night lighting: fires and explosions cast warm light pools on the ground at night, scaled by how dark it is at that longitude. Cities glow with a bright core and a wider halo, larger for capitals.
 - Projectiles: shells and missiles fly as short bright streaks along their arc instead of glowing orange balls.
+
+## Round 30 — AI strategy layer
+- Operational plans: each AI power at war picks one objective in its main enemy's land, preferring the coalition's common enemy. Objectives are weighted towards capitals, cities and oil, and towards targets it can reach from several of its own provinces. It then gathers forces in the neighbouring provinces instead of trickling armies in one by one.
+- Concentrated, multi-direction offensives: once the massed forces reach 1.5× the defenders' strength, every staged force attacks at once from its own side, exploiting the frontage and flanking rules. You get a dispatch when one is aimed at you ("France launches a coordinated assault on Cologne from 3 directions!"). Plans are re-evaluated after 8 days or once the objective falls.
+- Front defence: before attacking, the AI sends its nearest idle reserves to any border province facing an enemy stack it can't hold, and keeps its capital garrison when threatened.
+- Effect in 120-day test campaigns: about 35% more territory changes hands, three or four powers fall instead of one, and coalitions can now win outright.

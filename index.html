@@ -2193,6 +2193,35 @@ function aiFleet(a, n){
   if (best >= 0 && best !== a.at) a.path = pathFor(a, a.at, best);
 }
 const focusOf = n => { const R = S.blocReg && Object.values(S.blocReg).find(R => R.members && R.members.includes(n)); return R ? R.focus : null; };
+// pick one offensive objective against the main enemy and the own provinces next to it to gather in
+function aiPlan(n){ const P0 = (S.plans || (S.plans = {}))[n];
+  if (P0 && S.owner[P0.tgt] !== n && atWar(n, S.owner[P0.tgt] ?? -1) && S.hour - P0.made < 24*8) return P0;
+  const wars = warsOf(n); if (!wars.length){ delete S.plans[n]; return null; }
+  const foe = focusOf(n) != null && wars.includes(focusOf(n)) ? focusOf(n) : wars.slice().sort((x, y) => natPower(x) - natPower(y))[0];
+  let best = null, bv = 0;
+  for (const P of G.P){ if (P.sea || S.owner[P.id] !== foe) continue; const stage = P.nbs.filter(v => S.owner[v] === n && !G.P[v].sea); if (!stage.length) continue;
+    const v = (P.city ? 3 : 1) + (isCapital(P.id) ? 4 : 0) + (P.oil ? 1 : 0) + stage.length*0.6, dp = defPower(P.id, n), sc = v/(8 + dp); if (sc > bv){ bv = sc; best = {tgt:P.id, stage, foe, made:S.hour}; } }
+  if (best) S.plans[n] = best; else delete S.plans[n]; return best; }
+function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = new Set();
+  // 1. front defence: send the nearest idle reserve to an own border province that faces a much stronger enemy stack
+  for (const P of G.P){ if (P.sea || S.owner[P.id] !== n) continue; let threat = 0; for (const v of P.nbs){ if (S.owner[v] >= 0 && atWar(n, S.owner[v])) threat += stationaryAt(v).filter(b => b.owner === S.owner[v]).reduce((s0, b) => s0 + power(b), 0); }
+    if (threat < 20) continue; const here = stationaryAt(P.id).filter(b => b.owner === n).reduce((s0, b) => s0 + power(b), 0) + S.armies.filter(b => b.owner === n && b.path.length && b.path[b.path.length - 1] === P.id).reduce((s0, b) => s0 + power(b), 0);
+    if (here >= threat*0.8) continue;
+    let pick = null, bd = 1e9; for (const a of idle){ if (used.has(a) || a.at === P.id || a.at === N.capital && threatNear(a.at, n) || power(a) < 10) continue; const d = hexDist(G.P[a.at].cc, P.cc); if (d < bd && d <= 8){ bd = d; pick = a; } }
+    if (pick){ const pth = pathFor(pick, pick.at, P.id); if (pth.length){ pick.path = pth; used.add(pick); } } }
+  if (!plan) return used;
+  // 2. gather at the staging provinces, then strike together from every side once strong enough
+  const stage = plan.stage.filter(v => S.owner[v] === n); if (!stage.length){ delete S.plans[n]; return used; }
+  const atStage = S.armies.filter(a => a.owner === n && !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a));
+  const massed = atStage.reduce((s0, a) => s0 + power(a), 0), need = defPower(plan.tgt, n)*1.5 + 10;
+  if (massed >= need){ for (const a of atStage){ orderMove(a, plan.tgt); used.add(a); } plan.launched = S.hour;
+    if (S.owner[plan.tgt] === PLAYER) log(`${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${new Set(atStage.map(a => a.at)).size} directions!`, 'bad', plan.tgt);
+    return used; }
+  let i = 0; for (const a of idle){ if (used.has(a) || stage.includes(a.at) || power(a) < 14 || (a.at === N.capital && threatNear(a.at, n))) continue;
+    const st = stage[i++ % stage.length], d = hexDist(G.P[a.at].cc, G.P[st].cc); if (d > 14) continue;
+    const pth = pathFor(a, a.at, st); if (pth.length){ a.path = pth; used.add(a); } }
+  for (const a of atStage) used.add(a);       // forces already in position wait for the rest
+  return used; }
 function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
   if (!N.research){
@@ -2231,7 +2260,9 @@ function aiTurn(n){
     if (idle.has(a.at)) merge(idle.get(a.at), a); else idle.set(a.at, a); }
   removeEmpty();
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
+  const planned = aiOperate(n, [...idle.values()].filter(a => count(a) && !a.air && !shipsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   for (const a of idle.values()){
+    if (planned.has(a)) continue;
     if (count(a) === 0 || enemiesAt(a.at, n)) continue;
     if (a.air) continue;
     if (shipsOnly(a)){ aiFleet(a, n); continue; }
