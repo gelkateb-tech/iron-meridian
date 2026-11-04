@@ -451,6 +451,7 @@ const TERRAIN = {
 };
 const terr = p => TERRAIN[G.P[p].terrain] || TERRAIN.plains;
 const SEA_SPEED = 5;                  // hexes/day for embarked ground units
+const KM_HEX = 180;                   // one map hex is roughly 180 km
 const BUILD = {
   fac:  {name:'Arms Factory',      max:3, cost:60, metal:20, days:3, where:'city', desc:'Level I unlocks Lancers, Hammer artillery, Bastion tanks and Courser IFVs; level II unlocks Skywall SAMs. Each level: +20% money here, units train 20% faster.'},
   air:  {name:'Airbase',           max:1, cost:90, metal:30, days:4, where:'city', desc:'Needed for Kestrel Strikers and Talon Interceptors (with Jet Engines research).'},
@@ -956,7 +957,7 @@ function volley(c, main, ang, now, hpx){
 // ---- day / night ----
 let NIGHT = null;
 function nightTexture(){ if (NIGHT) return NIGHT; const c = document.createElement('canvas'); c.width = 720; c.height = 1; const g = c.getContext('2d'), id = g.createImageData(720, 1);
-  for (let i = 0; i < 720; i++){ const ang = (i/720)*Math.PI*2, d = Math.cos(ang); const a = Math.max(0, Math.min(1, (-d + 0.08)/0.3)); id.data[i*4] = 4; id.data[i*4 + 1] = 10; id.data[i*4 + 2] = 26; id.data[i*4 + 3] = Math.round(a*165); }
+  for (let i = 0; i < 720; i++){ const ang = (i/720)*Math.PI*2, d = Math.cos(ang); const a = Math.max(0, Math.min(1, (-d + 0.08)/0.3)); id.data[i*4] = 4; id.data[i*4 + 1] = 10; id.data[i*4 + 2] = 26; id.data[i*4 + 3] = Math.round(a*92); }
   g.putImageData(id, 0, 0); return (NIGHT = c); }
 function sunLon(){ return ((12 - (S.hour % 24) - (performance.now() % 1000)*0) * 15 + 540) % 360 - 180; }
 function drawNight(){
@@ -2027,6 +2028,8 @@ function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
 }
 function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting = false, dir = 1, now = performance.now()){
   s = Math.max(0.75, s);
+  if (a && a.owner === NEUTRAL && view.s*HS < 22 && !fighting){ const r = 7.5*s; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = a.rebel ? 'rgba(120,30,26,.92)' : 'rgba(40,42,38,.88)'; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = a.rebel ? '#e0574f' : '#9a978a'; ctx.stroke();
+    ctx.font = `700 ${Math.round(9*s)}px ${MONO}`; ctx.fillStyle = '#e8e4d8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(n), x, y + 0.5); return {x:x - r, y:y - r, w:2*r, h:2*r}; }
   const types = a ? UT.filter(t => a.u[t]).sort((p1, p2) => a.u[p2]*UNITS[p2].hp - a.u[p1]*UNITS[p1].hp) : ['inf'];
   const main = types[0] || 'inf', seed = a ? a.id % 13 : 0;
   // ground shadow / selection ring
@@ -2675,7 +2678,7 @@ function wingHTML(a){
   return `<div class="eyebrow">Air wing</div><h2>${count(a)} aircraft</h2>${plan}
     <div class="status ${f ? 'move' : ''}">${status}</div>
     ${unitRows(a)}
-    <dl class="kv"><dt>Range</dt><dd>${wingRange(a)} hexes from base</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
+    <dl class="kv"><dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
     <p class="small muted" style="margin:0">Tap a province inside the blue range ring to plan a mission. Strikers attack and come back; Interceptors patrol and shoot down enemy strikes; tapping one of your airbases rebases the wing.</p>
     <div class="row"><button class="btn" data-act="clear">Deselect</button></div>`;
 }
@@ -2696,7 +2699,7 @@ function armyHTML(a){
   return `<div class="eyebrow">Your force</div><h2>${count(a)} units</h2>${plan}
     ${unitRows(a)}
     <div class="status ${st0.cls}">${st0.long}</div>
-    <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${landSpeed(a).toFixed(1).replace('.0', '')} hexes/day</dd>
+    <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${Math.round(landSpeed(a)*KM_HEX/10)*10} km/day</dd>
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
     <div class="row">
       <button class="btn" data-act="split" ${count(a) < 2 ? 'disabled' : ''}>Split in half</button>
@@ -2911,7 +2914,7 @@ function showEnd(){
   openModal(`<div class="eyebrow">${clockStr(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1>
     <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} grew the most (+${growth(PLAYER)} score).` : `${S.nations[PLAYER].name} grew ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, behind the leader.`}` : ''}
     ${S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
-    ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? ` You had $${fmt(S.nations[PLAYER].cash)}M unspent: next time, turn money into troops and research early.` : ''}</p>
+    ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? (N0 => { const short = [['mp', 20, 'manpower'], ['metal', 15, 'metal'], ['oil', 10, 'oil'], ['food', 10, 'food']].find(([k, lim]) => N0[k] < lim); return short ? ` You had $${fmt(N0.cash)}M but ran out of ${short[2]}: build ${short[0] === 'mp' ? 'Recruiting Offices' : short[0] === 'metal' ? 'Foundries' : short[0] === 'oil' ? 'Refineries' : 'Farms'} early and capture provinces that produce it.` : ` You had $${fmt(N0.cash)}M unspent: next time, turn money into troops and research early.`; })(S.nations[PLAYER]) : ''}</p>
     ${(() => { const st0 = S.stats || {}; return `<div class="statgrid">${[['Days', dayOf(S.hour)], ['Provinces taken', st0.taken || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Units lost', st0.unitsLost || 0], ['Peak army', st0.peakArmy || 0], ['Best rank', st0.bestRank ? '#' + st0.bestRank : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>${st0.bigBattle ? `<p class="small muted">Biggest battle: ${st0.bigBattle} units at ${st0.bigBattleAt} on day ${st0.bigBattleDay}.</p>` : ''}${chartSVG(0, 'Score over the campaign')}`; })()}
     <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="stats-open">Full statistics</button><button class="btn" data-act="resume">View the map</button></div>`, 'end');
   sfx(win ? 'win' : 'lose');
