@@ -173,6 +173,21 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .modes button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); font-weight:600}
 #selbox{position:absolute; border:1px dashed var(--accent); background:rgba(226,162,61,.08); pointer-events:none; z-index:3}
 @media (max-width: 700px){ .modes{top:auto; bottom:52px; right:8px} .modes button{padding:4px 6px; font-size:10.5px} }
+/* Newspaper */
+.paper{background:#e9e3d2; color:#1e1b16; padding:18px 20px; border-radius:3px; font-family:Georgia, 'Times New Roman', serif; box-shadow:inset 0 0 40px rgba(120,100,60,.25)}
+.paper .mast{font-family:var(--display); font-weight:800; font-size:34px; letter-spacing:.06em; text-transform:uppercase; text-align:center; border-bottom:3px double #1e1b16; padding-bottom:6px}
+.paper .pline{display:flex; justify-content:space-between; font-size:11px; letter-spacing:.08em; text-transform:uppercase; border-bottom:1px solid #1e1b16; padding:4px 0; margin-bottom:10px}
+.paper h3{font-size:24px; line-height:1.15; margin:6px 0 10px}
+.paper ul{margin:0 0 12px; padding-left:18px; line-height:1.45; font-size:14px}
+.paper .standings{display:flex; flex-wrap:wrap; gap:6px 14px; border-top:1px solid #1e1b16; padding-top:8px; font-size:12px; font-family:var(--mono)}
+.paper .standings i{display:inline-block; width:9px; height:9px; margin-right:4px; vertical-align:-1px}
+/* Tutorial */
+#tut{position:absolute; left:56px; bottom:12px; z-index:6; width:min(360px, calc(100% - 70px)); background:rgba(16,23,26,.97); border:1px solid var(--accent); border-radius:6px; padding:12px 14px; box-shadow:0 10px 30px rgba(0,0,0,.5); display:flex; flex-direction:column; gap:8px}
+#tut b{font-family:var(--display); font-size:18px; letter-spacing:.04em; text-transform:uppercase}
+#tut p{margin:0; font-size:13px; line-height:1.45}
+#tut .tp{font-family:var(--mono); font-size:11px; color:var(--muted)}
+.tut-hi{outline:2px solid var(--accent) !important; outline-offset:2px; animation:tutp 1.2s ease-in-out infinite}
+@keyframes tutp{50%{outline-color:rgba(226,162,61,.25)}}
 /* Side tabs */
 .tabs{position:sticky; top:0; z-index:2; display:grid; grid-template-columns:repeat(3, 1fr); gap:0; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:var(--panel); flex:none}
 .tabs button{border:0; border-radius:0; background:var(--panel); color:var(--muted); font-size:12.5px; font-weight:600; letter-spacing:.04em; padding:9px 6px; display:flex; align-items:center; justify-content:center; gap:6px}
@@ -315,12 +330,14 @@ details.more summary::-webkit-details-marker{display:none}
       <button id="sp0" data-speed="0" aria-pressed="true" title="Pause (Space)">❚❚</button>
       <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)">1×</button>
       <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)">2×</button>
-      <button id="sp3" data-speed="3" aria-pressed="false" title="Fastest (3)">4×</button>
+      <button id="sp3" data-speed="3" aria-pressed="false" title="Fast (3)">4×</button>
+      <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest (4)">8×</button>
     </div>
     <div class="mgroup">
     <button class="btn" id="prodbtn" data-act="prod-open" title="Production overview (P)"><span class="long">Production</span><span class="short">Prod</span></button>
     <button class="btn" id="resbtn" data-act="research-open" title="Research tree (R)"><span class="long">Research</span><span class="short">Tech</span><span class="dot" id="resdot" title="No research running"></span></button>
     <button class="btn" id="dipbtn" data-act="diplo-open" title="Diplomacy (D)"><span class="long">Diplomacy</span><span class="short">Diplo</span><span class="badge" id="dipbadge" hidden></span></button>
+    <button class="btn" id="setbtn" data-act="settings-open" title="Settings (O)">⚙</button>
     <button class="btn" id="mutebtn" data-act="mute" title="Sound on/off (M)" aria-pressed="false">♪</button>
     <button class="btn" id="helpbtn" data-act="help" title="How to play">?</button>
     </div>
@@ -331,6 +348,7 @@ details.more summary::-webkit-details-marker{display:none}
       <div id="hint"></div>
       <div id="tip" hidden></div>
       <div id="toasts" aria-live="polite"></div>
+      <div id="tut" hidden></div>
       <div class="mapctl">
         <button class="btn" id="zin" data-act="zin" aria-label="Zoom in">+</button>
         <button class="btn" id="zout" data-act="zout" aria-label="Zoom out">−</button>
@@ -497,7 +515,12 @@ function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.sli
 const HS = 12, SQ3 = Math.sqrt(3);
 const W = WORLD.W, H = WORLD.H;
 const K = 0.25;                       // combat damage per hour factor
-const HOURS_PER_SEC = [0, 2, 4, 8];   // by speed setting
+const HOURS_PER_SEC = [0, 2, 4, 8, 16];   // by speed setting
+const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
+const SET = {vol:0.35, toasts:'all', fx:'high', paper:true};
+try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
+const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} };
+const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
 const WIN_SHARE = 0.25;               // share of land provinces needed to win
 const WIN_CAPS = 5;                   // or hold this many of the 15 starting capitals
@@ -594,7 +617,8 @@ function smoothPath(arr, iters = 2){
     extend(true); extend(false);
     const closed = pts.length > 2 && key(...pts[0]) === key(...pts[pts.length - 1]);
     // remove the hex zig-zag: neighbour-averaging passes (endpoints of open chains stay put)
-    for (let it = 0; it < 4; it++){ const m = pts.length, q = pts.map(pp => pp.slice());
+    const passes = pts.length < 10 ? 0 : pts.length < 18 ? 1 : pts.length < 30 ? 2 : 3;
+    for (let it = 0; it < passes; it++){ const m = pts.length, q = pts.map(pp => pp.slice());
       for (let i = 0; i < m; i++){ const prev = i > 0 ? pts[i - 1] : closed ? pts[m - 2] : null, next = i < m - 1 ? pts[i + 1] : closed ? pts[1] : null;
         if (!prev || !next) continue; q[i] = [(prev[0] + 2*pts[i][0] + next[0])/4, (prev[1] + 2*pts[i][1] + next[1])/4]; }
       if (closed) q[m - 1] = q[0]; pts = q; }
@@ -812,8 +836,8 @@ const dayOf = h => Math.floor(h/24) + 1;
 const colorOf = o => o >= 0 ? S.nations[o].color : '#7d7a6c';
 let AC = null, master = null, muted = false;
 try { muted = localStorage.getItem('iron-meridian-muted') === '1'; } catch (e) {}
-function audio(){ if (AC || muted) return AC; try { AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = 0.35; master.connect(AC.destination); } catch (e) { AC = null; } return AC; }
-function setMuted(v){ muted = v; try { localStorage.setItem('iron-meridian-muted', v ? '1' : '0'); } catch (e) {} if (master) master.gain.value = v ? 0 : 0.35; if (!v) audio(); }
+function audio(){ if (AC || muted) return AC; try { AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = SET.vol; master.connect(AC.destination); } catch (e) { AC = null; } return AC; }
+function setMuted(v){ muted = v; try { localStorage.setItem('iron-meridian-muted', v ? '1' : '0'); } catch (e) {} if (master) master.gain.value = v ? 0 : SET.vol; if (!v) audio(); }
 function tone(f, d, type = 'sine', g = 0.3, when = 0, slide = 0){ const c = audio(); if (!c || muted) return; const t = c.currentTime + when, o = c.createOscillator(), v = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, f*slide), t + d);
   v.gain.setValueAtTime(0.0001, t); v.gain.exponentialRampToValueAtTime(g, t + 0.01); v.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(v); v.connect(master); o.start(t); o.stop(t + d + 0.05); }
@@ -857,7 +881,8 @@ const SMOKE = q => puffSprite((q && q.v) || 0, true), SMOKEL = q => puffSprite((
 const FIRE = () => softSprite('fire', 'rgba(255,245,200,1)', 'rgba(255,150,40,.75)', 'rgba(200,40,0,0)');
 const GLOW = () => softSprite('glow', 'rgba(255,240,190,1)', 'rgba(255,200,90,.5)', 'rgba(255,150,40,0)');
 function emit(kind, wx, wy, opt = {}){
-  if (PART.length > 900) PART.splice(0, 100);
+  if (SET.fx === 'low' && (kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris') && Math.random() < 0.6) return;
+  if (PART.length > (SET.fx === 'low' ? 300 : 900)) PART.splice(0, 100);
   const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, ring:500}[kind] || 800);
   PART.push({kind, wx, wy, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6, spin:(Math.random() - 0.5)*0.6, v:(Math.random()*4) | 0});
 }
@@ -939,7 +964,7 @@ function drawNight(){
   const tex = nightTexture(), lonAt = x => WORLD.lon0 + ((x - OX)/(HS*SQ3) + 0.5)/W*360;
   const live = S.speed && !S.over ? acc : 0, sl = ((12 - ((S.hour + live) % 24))*15 + 540) % 360 - 180;
   const x0w = OX - HS*SQ3*0.5, wpd = HS*SQ3*W/360;          // world units per degree
-  const start = x0w + (((sl - WORLD.lon0) % 360) + 360) % 360*wpd - 180*wpd;
+  const start = x0w + (((sl + 180 - WORLD.lon0) % 360) + 360) % 360*wpd - 180*wpd;
   ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.imageSmoothingEnabled = true;
   for (let k2 = -2; k2 <= 1; k2++) ctx.drawImage(tex, start + k2*360*wpd, 0, 360*wpd, WORLD_H);
   ctx.restore(); void lonAt;
@@ -976,7 +1001,7 @@ function drawFX(now){
     } else if (f.type === 'boom'){
       ctx.save(); ctx.globalAlpha = (1 - k)*0.8; ctx.fillStyle = '#ffb08a'; ctx.beginPath(); ctx.arc(x, y - 24, 6 + k*20, 0, Math.PI*2); ctx.fill(); ctx.restore();
     } } }
-function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if (S.log.length > 80) S.log.length = 80; if (kind && booted) toast(text, kind, p); }
+function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if (S.log.length > 80) S.log.length = 80; if (kind && booted && SET.toasts !== 'none' && (SET.toasts === 'all' || kind === 'bad')) toast(text, kind, p); }
 let booted = false;
 function toast(text, kind, p){
   const box = document.getElementById('toasts'); if (!box) return;
@@ -1007,6 +1032,7 @@ function income(n){
   const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
   for (const k in g) g[k] *= eff;
   if (has(n, 'eco1')) g.cash *= 1.2; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;
+  if (n !== PLAYER && S.diff){ const dm = diffOf().inc; for (const k in g) g[k] *= dm; }
   if (S.rel){ const tired = warsOf(n).filter(m => S.hour - rel(n, m).since > 240).length; g.cash *= 1 - Math.min(0.2, 0.05*tired); }
   for (const a of S.armies) if (a.owner === n) for (const t of UT){ u.cash += a.u[t]*UNITS[t].upk; u.food += a.u[t]*UNITS[t].food; u.oil += a.u[t]*UNITS[t].fuel; }
   const net = {}; for (const k in g) net[k] = g[k] - u[k];
@@ -1204,7 +1230,7 @@ function diploDay(){
       else if (acceptOffer(m, n, 'peace').ok){ applyDeal(n, m, 'peace'); break; } }
     // declare war
     const pending = S.decl.some(d => d.by === n);
-    if (day >= 8 && warsOf(n).length <= 1 && !pending && rng() < 0.22){
+    if (day >= 8 && warsOf(n).length <= 1 && !pending && rng() < 0.22*diffOf().war){
       let best = -1, bs = 0; const myP = natPower(n);
       for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || inGrace(m)) continue;
         if (opinion(n, m) >= 0 || myP < 1.1*natPower(m)) continue;
@@ -1605,6 +1631,24 @@ function checkEnd(){
   if (S.over){ setSpeed(0); save(); showEnd(); }
 }
 let lastRes = null;
+function makePaper(){
+  // summarise the last 24 hours of dispatches into a front page
+  const day = Math.floor(S.hour/24), from = S.hour - 24, ev = S.log.filter(e => e.h > from && e.h <= S.hour);
+  const score0 = e => /has fallen|collapsed|capital/.test(e.text) ? 9 : /declared war on you|attacks|Missile warning/.test(e.text) ? 8 : /declared war/.test(e.text) ? 6 : /alliance|truce|pact/.test(e.text) ? 5 : /captured|took/.test(e.text) ? 4 : /strike|Missile|hit/.test(e.text) ? 4 : /Battle/.test(e.text) ? 3 : 1;
+  const top = ev.slice().sort((a, b) => score0(b) - score0(a));
+  const st0 = S.stats || {}, rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id));
+  S.papers = S.papers || []; const paper = {day, head:top[0] ? top[0].text : `Quiet day on the fronts. ${S.nations[PLAYER].name} holds ${S.owner.filter(o => o === PLAYER).length} provinces.`, items:top.slice(1, 5).map(e => e.text), rank:rank.slice(0, 5).map(N => [N.name, score(N.id), N.color]), big:top[0] ? score0(top[0]) : 0};
+  S.papers.unshift(paper); if (S.papers.length > 10) S.papers.length = 10;
+  if (SET.paper && paper.big >= 6 && booted && $('modal').hidden && S.started) setTimeout(() => { if ($('modal').hidden) showPaper(false); }, 50);
+  void st0;
+}
+function paperHTML(pp){
+  if (!pp) return '<p class="muted">The first edition prints at dawn on day 2.</p>';
+  return `<div class="paper"><div class="mast">The Meridian Herald</div><div class="pline"><span>Day ${pp.day + 1}</span><span>Morning edition</span><span>${S.nations[PLAYER].name} edition</span></div>
+    <h3>${pp.head}</h3>${pp.items.length ? `<ul>${pp.items.map(t => `<li>${t}</li>`).join('')}</ul>` : ''}
+    <div class="standings">${pp.rank.map(([n, sc, c], i) => `<span><i style="background:${c}"></i>${i + 1}. ${n} <b>${sc}</b></span>`).join('')}</div></div>`;
+}
+function showPaper(manual){ openModal(`${paperHTML((S.papers || [])[0])}<div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${manual ? '' : '<button class="btn" data-act="set" data-k="paper" data-v="false">Stop showing at dawn</button>'}</div>`, 'paper'); }
 function recordStats(){
   const day = Math.floor(S.hour/24);
   S.hist = S.hist || [];
@@ -1622,6 +1666,7 @@ function daily(){
     for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(cap, v); }
     if (N.id === PLAYER){ for (const k of ['food', 'oil', 'cash']) if (N.short[k] && !was[k]) log(k === 'food' ? 'Food shortage: your troops fight 20% worse until food income is positive.' : k === 'oil' ? 'Oil shortage: Armor and Strike Jets are slowed and weakened.' : 'Treasury empty: upkeep is unpaid.', 'bad'); } }
   recordStats();
+  makePaper();
   checkEnd();
   save();
 }
@@ -1908,14 +1953,15 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   const shake = fighting ? Math.sin(now/45 + seed)*0.8 : 0;
   const fs = s*1.35;
   if ((types[1] || stack) && !(window.U3D && U3D.has(main) && (!types[1] || U3D.has(types[1])))){ ctx.save(); ctx.globalAlpha = 0.9; unitFigure(types[1] || main, x - 15*fs*dir, y - 8*fs, fs*0.72, shade(color, -0.12), now, moving, fighting, dir, seed + 3, 2); ctx.restore(); }
-  const use3d = window.U3D && U3D.has(main) && (!types[1] || U3D.has(types[1] || main));
-  if (use3d){ const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:74, sub:66, crui:80})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
+  let use3d = window.U3D && U3D.has(main) && (!types[1] || U3D.has(types[1] || main));
+  if (use3d) try { const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:74, sub:66, crui:80})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
     const fr = (main === 'inf' || main === 'at') ? (moving ? Math.floor(now/85 + seed) % 8 : 0) : fighting ? ((ph => main === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : main === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
     if (types[1]){ const h2 = hpx*0.72; U3D.draw(ctx, types[1], color, x - 16*fs*dir, y - 7*fs, h2, ang3, 0, night); }
     U3D.draw(ctx, main, color, x + shake*0.4, y + 2*s, hpx, ang3, fr, night);
     if (moving && UNITS[main].cls !== 'naval' && counter.dust) counter.dust(main, ang3, hpx);
     if (fighting && counter.vol) counter.vol(main, ang3, hpx);
-  } else unitFigure(main, x + shake, y, fs, color, now, moving, fighting, dir, seed, a ? a.u[main] : n);
+  } catch (e) { use3d = false; }
+  if (!use3d) unitFigure(main, x + shake, y, fs, color, now, moving, fighting, dir, seed, a ? a.u[main] : n);
   // strength badge (pill) with health and morale bars
   const label = String(n); ctx.font = `700 ${Math.round(10*s)}px ${MONO}`;
   const bw = Math.max(16*s, ctx.measureText(label).width + 8*s), bh = 11*s, bx = x - bw/2, by = y + 4*s;
@@ -1928,7 +1974,8 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   if (shown > hf){ ctx.fillStyle = '#f4f1e6'; ctx.fillRect(bx2 + barW*hf, by2, barW*(shown - hf), HB); }
   ctx.fillStyle = hf > 0.6 ? '#74c27a' : hf > 0.3 ? '#e2a23d' : '#e0574f'; ctx.fillRect(bx2, by2, barW*hf, HB);
   if (a && a.owner >= 0){ ctx.fillStyle = '#6fb0e8'; ctx.fillRect(bx2, by2 + HB + 0.6*s, barW*(a.m ?? 80)/100, 1.8*s); }
-  return {x:x - 22*s, y:y - 26*s, w:44*s, h:by2 + 6*s - (y - 26*s)};
+  const ext2 = types[1] ? 16*fs + 26*s : 0, left = dir > 0 ? x - 22*s - ext2 : x - 22*s, right = dir > 0 ? x + 22*s : x + 22*s + ext2;
+  return {x:left, y:y - 34*s, w:right - left, h:by2 + 6*s - (y - 34*s)};
 }
 let MONO = 'IBM Plex Mono, monospace', BODY = 'Barlow, sans-serif', DISPLAY = 'Impact, sans-serif';
 function clampView(){
@@ -2127,6 +2174,7 @@ function draw(now){
     ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(224,87,79,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(fx1, fy1, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(224,87,79,.04)'; ctx.fill(); ctx.restore(); }
   drawSelPaths();
   drawFX(now);
+  tutDraw(now);
   drawMini();
 }
 function routeChip(a, t, path){
@@ -2283,7 +2331,7 @@ function renderSide(force){
   { const mine = S.owner.filter(o => o === PLAYER).length, pl = mine/landNeed(PLAYER), pc = capsHeld(PLAYER)/WIN_CAPS, best = Math.max(pl, pc);
     setHTML($('vbar'), `<span>Victory ${Math.round(Math.min(1, best)*100)}% · ${pl >= pc ? `${mine}/${landNeed(PLAYER)} prov` : `${capsHeld(PLAYER)}/${WIN_CAPS} capitals`}</span><span class="tr"><i style="width:${Math.min(100, best*100)}%"></i></span>`); }
   $('seedlbl').textContent = '';
-  for (let i = 0; i < 4; i++) $('sp' + i).setAttribute('aria-pressed', String(S.speed === i));
+  for (let i = 0; i < 5; i++) $('sp' + i).setAttribute('aria-pressed', String(S.speed === i));
   const counts = S.nations.map(n => S.owner.filter(o => o === n.id).length);
   const order = S.nations.slice().sort((a, b) => (b.alive - a.alive) || counts[b.id] - counts[a.id]);
   const need = landNeed(PLAYER);
@@ -2291,7 +2339,7 @@ function renderSide(force){
   setHTML($('nations'), shown.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}"><span class="sw" style="background:${n.color}"></span><span>${n.name}${n.id === PLAYER ? ' (you)' : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to the land victory target (${landNeed(n.id)} provinces)">${Math.round(counts[n.id]/landNeed(n.id)*100)}%</span></div>`).join('') +
     `<div class="row">${showAllPowers ? '' : `<button class="btn" data-act="allpow" style="font-size:12px;padding:4px 8px">Show all ${order.length}</button>`}<button class="btn" data-act="stats-open" style="font-size:12px;padding:4px 8px">World statistics (S)</button></div>` +
     `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Day-${DAY_LIMIT} score is growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
-  setHTML($('log'), S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="goto" data-id="${e.p}" title="Show on map"><time>D${dayOf(e.h)}</time><span>${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></div>`).join(''));
+  setHTML($('log'), ((S.papers && S.papers[0]) ? `<button class="ev info" data-act="paper-open" style="grid-template-columns:1fr"><span><b>The Meridian Herald · Day ${S.papers[0].day + 1}</b><br><span class="muted">${S.papers[0].head}</span></span></button>` : '') + S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="goto" data-id="${e.p}" title="Show on map"><time>D${dayOf(e.h)}</time><span>${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
   { if (tab === 'log') seenHour = S.hour; const n = tab === 'log' ? 0 : S.log.filter(e => e.h > seenHour && (e.kind === 'bad' || e.kind === 'good')).length;
     const lb = $('logbadge'); lb.hidden = n <= 0; lb.textContent = n > 9 ? '9+' : n; }
@@ -2345,6 +2393,46 @@ function prodHTML(){
     <p class="small muted">${idle ? `${idle} ${idle === 1 ? 'city is' : 'cities are'} idle. ` : ''}Click +UNIT to queue a unit (shift-click queues 5). Each Arms Factory level adds a parallel training line. Repeat keeps training the last unit queued there while you can afford it.</p>
     <div class="tblwrap"><table class="ptab"><thead><tr><th>City</th><th>Training</th><th>Construction</th><th>Queue a unit</th><th></th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="muted">You hold no cities.</td></tr>'}</tbody></table></div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
+}
+let TUT = null;
+const TUT_STEPS = [
+  {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b> (the star).`, map:() => S.nations[PLAYER].capital, next:true},
+  {t:'Resources', d:() => 'Money, oil, metal, food and manpower are produced every day by your provinces. Units and buildings cost them; armies eat food and burn oil.', el:'#res', next:true},
+  {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map (not the troops standing on it, tap the land around them).`, map:() => S.nations[PLAYER].capital, done:() => sel.prov === S.nations[PLAYER].capital},
+  {t:'Recruit', d:() => 'In the panel on the right, tap a unit card (a Rifle Corps is cheap) to queue it. Units train over a day or two.', el:'#ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
+  {t:'Select your army', d:() => 'Now tap the troops standing in your capital (the soldiers and their number badge).', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
+  {t:'Plan an attack', d:() => 'Tap a neighbouring grey (independent) province. A dashed route appears with an odds chip: green Favourable means you should win.', map:() => { const a = sel.army !== null && armyById(sel.army); if (!a) return null; return G.P[a.at].nbs.find(v => !G.P[v].sea && S.owner[v] === NEUTRAL) ?? null; }, done:() => sel.target !== null},
+  {t:'Send it', d:() => 'Tap the same province again, or press the yellow button in the panel, to march. Avoid attacks marked Likely defeat: merge more units first.', el:'#ctx', done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
+  {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
+  {t:'Research', d:() => 'Open Research (top bar or R) and start a project. Jet Engines unlocks aircraft; Industrial Automation boosts money.', el:'#resbtn', done:() => !!S.nations[PLAYER].research},
+  {t:'You are ready', d:() => 'Production (P) lists every city. Diplomacy (D) handles war and peace. Map modes (top right) show terrain and supply. The Meridian Herald arrives at dawn. Good luck, commander.', el:'.mgroup', next:true, last:true},
+];
+function tutStart(){ TUT = {i:0}; S.tut = S.tut || {}; S.tut.hide = true; tutRender(); }
+function tutEnd(){ TUT = null; document.querySelectorAll('.tut-hi').forEach(e => e.classList.remove('tut-hi')); $('tut').hidden = true; try { localStorage.setItem('iron-meridian-tutorial', 'done'); } catch (e) {} }
+function tutNext(force){ if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (st.last && force){ tutEnd(); return; } TUT.i = Math.min(TUT_STEPS.length - 1, TUT.i + 1); tutRender(); }
+function tutRender(){
+  if (!TUT) return; const st = TUT_STEPS[TUT.i];
+  document.querySelectorAll('.tut-hi').forEach(e => e.classList.remove('tut-hi')); if (st.el){ const el = document.querySelector(st.el); if (el) el.classList.add('tut-hi'); }
+  const tEl = $('tut'); tEl.hidden = false;
+  tEl.innerHTML = `<span class="tp">Tutorial · step ${TUT.i + 1} of ${TUT_STEPS.length}</span><b>${st.t}</b><p>${st.d()}</p><div class="row">${st.next ? `<button class="btn primary" data-act="tut-next">${st.last ? 'Finish' : 'Next'}</button>` : '<span class="small muted">Waiting for you…</span>'}<button class="btn" data-act="tut-end">Skip tutorial</button></div>`;
+  if (st.map){ const p = st.map(); if (p != null){ const P = G.P[p], [sx, sy] = toScreen(P.x, P.y); if (view.s < 1.1 || sx < 60 || sy < 60 || sx > cw - 60 || sy > ch - 60) centerOn(P.x, P.y, Math.max(view.s, 1.4)); } }
+}
+function tutTick(){ if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (st.done && st.done()){ TUT.i++; if (TUT.i >= TUT_STEPS.length){ tutEnd(); return; } tutRender(); } }
+function tutDraw(now){
+  if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (!st.map) return; const p = st.map(); if (p == null) return;
+  const P = G.P[p], [x, y] = toScreen(P.x, P.y), r = 26 + Math.sin(now/220)*5;
+  ctx.save(); ctx.strokeStyle = 'rgba(226,162,61,.95)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -now/30; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+}
+function settingsHTML(){
+  const opt = (k, v, label) => `<button class="btn ${SET[k] === v ? 'primary' : ''}" data-act="set" data-k="${k}" data-v="${v}">${label}</button>`;
+  return `<div class="eyebrow">Iron Meridian</div><h1>Settings</h1>
+    <div class="eyebrow">AI difficulty (this campaign)</div><div class="row">${DIFFS.map(d => `<button class="btn ${diffOf().k === d.k ? 'primary' : ''}" data-act="diff" data-k="${d.k}" title="AI income ×${d.inc}, war appetite ×${d.war}">${d.name}</button>`).join('')}</div>
+    <div class="eyebrow">Sound volume</div><div class="row" style="align-items:center"><input type="range" id="volume" min="0" max="100" value="${Math.round(SET.vol*100)}" style="flex:1"><span class="small muted">${Math.round(SET.vol*100)}%</span></div>
+    <div class="eyebrow">Pop-up alerts</div><div class="row">${opt('toasts', 'all', 'All')}${opt('toasts', 'bad', 'Threats only')}${opt('toasts', 'none', 'None')}</div>
+    <div class="eyebrow">Effects quality</div><div class="row">${opt('fx', 'high', 'High')}${opt('fx', 'low', 'Low (faster)')}</div>
+    <div class="eyebrow">Daily newspaper</div><div class="row">${opt('paper', true, 'Show at dawn')}${opt('paper', false, 'Only in Dispatches')}</div>
+    <p class="small muted">Keys: Space pause · 1–4 speed · P production · R research · D diplomacy · S statistics · N newspaper · O settings · V map mode · M sound · H home · Ctrl+4…9 save group.</p>
+    <div class="row"><button class="btn primary" data-act="resume">Done</button><button class="btn" data-act="tut-start">Replay tutorial</button></div>`;
 }
 function diploHTML(){
   const me = PLAYER, myP = natPower(me);
@@ -2615,6 +2703,13 @@ document.addEventListener('click', e => {
     case 'diplo-open': openModal(diploHTML(), 'diplo'); break;
     case 'prod-open': openModal(prodHTML(), 'prod'); break;
     case 'stats-open': openModal(statsHTML(), 'stats'); break;
+    case 'settings-open': openModal(settingsHTML(), 'settings'); break;
+    case 'set': { const k = b.dataset.k, v = b.dataset.v === 'true' ? true : b.dataset.v === 'false' ? false : b.dataset.v; SET[k] = v; saveSet(); openModal(settingsHTML(), 'settings'); break; }
+    case 'diff': S.diff = b.dataset.k; openModal(settingsHTML(), 'settings'); break;
+    case 'paper-open': showPaper(true); break;
+    case 'tut-start': closeModal(false); tutStart(); break;
+    case 'tut-next': tutNext(true); break;
+    case 'tut-end': tutEnd(); break;
     case 'mute': setMuted(!muted); renderSide(true); break;
     case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, p, t); if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
     case 'repeat': { const p = +b.dataset.p; S.repeat = S.repeat || {}; if (b.checked) S.repeat[p] = (S.lastUnit && S.lastUnit[p]) || (S.queue[p][0] && S.queue[p][0].t) || 'inf'; else delete S.repeat[p]; renderSide(true); break; }
@@ -2627,18 +2722,23 @@ document.addEventListener('click', e => {
     case 'offer-yes': case 'offer-no': { const o = S.offers.find(x => x.id === +b.dataset.id); if (o){ S.offers = S.offers.filter(x => x !== o); if (act === 'offer-yes'){ const war = atWar(o.from, PLAYER); if ((o.kind === 'peace') === war) applyDeal(o.from, PLAYER, o.kind); else log('That offer no longer applies.', 'info', null); } else addMem(o.from, PLAYER, -5); } renderSide(true); break; }
     case 'research': if (startResearch(PLAYER, b.dataset.id)) renderSide(true); break;
     case 'pick': pickSel = +b.dataset.p; showPicker(); break;
-    case 'begin': clearSave(); newGame((Math.random()*2**31) | 0, pickSel); S.started = true; save(); clearSel(); showBriefing(true, false); break;
+    case 'pickdiff': pickDiff = b.dataset.k; showPicker(); break;
+    case 'begin': clearSave(); newGame((Math.random()*2**31) | 0, pickSel); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); break;
     case 'start': closeModal(false); goHome(); setSpeed(1); break;
+    case 'start-tut': closeModal(false); goHome(); setSpeed(0); tutStart(); break;
     case 'resume': closeModal(); break;
     case 'continue': { const d = loadSaved(); if (d && restore(d)){ clearSel(); } closeModal(); goHome(); setSpeed(1); break; }
     case 'newgame': showPicker(); break;
   }
 });
-$('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod', 'stats'].includes(modalKind)) closeModal(); });
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod', 'stats', 'settings', 'paper'].includes(modalKind)) closeModal(); });
+document.addEventListener('input', e => { if (e.target.id === 'volume'){ SET.vol = +e.target.value/100; saveSet(); if (master && !muted) master.gain.value = SET.vol; const sp = e.target.nextElementSibling; if (sp) sp.textContent = e.target.value + '%'; } });
 document.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input,textarea')) return;
   if (e.code === 'Space'){ e.preventDefault(); setSpeed(S.speed ? 0 : 1); }
   else if (e.key === '1' || e.key === '2' || e.key === '3') setSpeed(+e.key);
+  else if (e.key === 'o' || e.key === 'O'){ if (modalKind === 'settings') closeModal(); else if ($('modal').hidden) openModal(settingsHTML(), 'settings'); }
+  else if (e.key === 'n' || e.key === 'N'){ if (modalKind === 'paper') closeModal(); else if ($('modal').hidden) showPaper(true); }
   else if (/^[4-9]$/.test(e.key)){ S.groups = S.groups || {};
     if (e.ctrlKey || e.metaKey){ e.preventDefault(); const g = groupArmies().map(a => a.id); if (sel.army !== null && g.length){ S.groups[e.key] = g; toast(`Group ${e.key} saved (${g.length} force${g.length > 1 ? 's' : ''}).`, 'info', null); } }
     else { const ids = (S.groups[e.key] || []).filter(id => armyById(id)); if (ids.length){ sel.prov = null; sel.target = null; sel.army = ids[0]; sel.group = ids.length > 1 ? ids : []; const [wx, wy] = armyPos(armyById(ids[0])); centerOn(wx, wy); renderSide(true); } } }
@@ -2654,7 +2754,7 @@ document.addEventListener('keydown', e => {
 function setSpeed(s){ if (S.over && s) return; if (s && !$('modal').hidden) return; S.speed = s; renderSide(); }
 
 /* ---------------- Modal ---------------- */
-let modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
+let pickDiff = 'regular', modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' || kind === 'stats' ? ' wide' : kind === 'picker' || kind === 'prod' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
@@ -2685,6 +2785,7 @@ function showPicker(){
   openModal(`<div class="eyebrow">New campaign</div><h1>Choose your nation</h1>
     <p>Fifteen powers fight for the world. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>
     <div class="picks">${cards}</div>
+    <div class="eyebrow">AI difficulty</div><div class="row">${DIFFS.map(d => `<button class="btn ${pickDiff === d.k ? 'primary' : ''}" data-act="pickdiff" data-k="${d.k}">${d.name}</button>`).join('')}</div>
     <div class="row"><button class="btn primary" data-act="begin">Lead ${POWERS[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}</div>`, 'picker');
 }
 function showBriefing(first, hasSave){
@@ -2693,9 +2794,9 @@ function showBriefing(first, hasSave){
     ${sv ? `<p class="nudge">Saved campaign: <b>${me.name}</b>, day ${dayOf(sv.hour)}.</p>` : ''}
     <p>You command <b style="color:${me.color}">${me.name}</b>, one of fifteen powers in a world at war. Take independent land, out-produce your rivals and hold ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals.</p>
     ${rules()}
-    <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–3 set speed, P production, R research, D diplomacy, S statistics, V relations map, M sound, H home. Progress saves in this browser each game day.</p>
+    <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–4 set speed, P production, R research, D diplomacy, S statistics, N newspaper, O settings, V map mode, M sound, H home. Progress saves in this browser each game day.</p>
     <div class="row">${first
-      ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start">Start campaign</button>`)
+      ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start-tut">Start with tutorial</button><button class="btn" data-act="start">Start without</button>`)
       : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign…</button>`}</div>`);
 }
 function warWarning(a){
@@ -2727,7 +2828,7 @@ let last = 0, acc = 0, uiAcc = 0;
 function frame(now){
   const dt = Math.min(0.25, (now - (last || now))/1000); last = now;
   if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; while (acc >= 1 && n < 8){ tick(); acc -= 1; n++; } if (n >= 8) acc = 0; }
-  uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; renderSide(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
+  uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; renderSide(); tutTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
   draw(now);
   requestAnimationFrame(frame);
 }
