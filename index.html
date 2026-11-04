@@ -143,7 +143,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .small{font-size:12px}
 .away{list-style:none;padding:0;margin:0 0 10px;display:grid;gap:4px;font-size:13px}.away li{padding:4px 8px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03)}.away li.bad{border-left-color:var(--danger)}.away li.good{border-left-color:var(--ok)}.away time{opacity:.6;margin-right:6px;font-family:var(--mono,monospace);font-size:11px}
 .blocs{display:grid;gap:6px;margin-bottom:8px}.bloc{display:flex;flex-direction:column;gap:2px;padding:6px 10px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03);border-radius:4px}.bloc.mine{border-left-color:var(--accent)}.bloc i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 6px;vertical-align:baseline}
-.clock .vic{display:block;font-size:10.5px;opacity:.7;font-weight:500;white-space:nowrap}@media (max-width:820px){.clock .vic{display:none}}
+.clock .vic{display:block;font-size:10.5px;opacity:.7;font-weight:500;white-space:nowrap}@media (max-width:820px){.clock .vic{font-size:9px;letter-spacing:-.2px}}
 .docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:10px}.btn.doc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;white-space:normal;padding:8px 10px}.btn.doc span{font-size:12px;opacity:.85}.marks{display:grid;gap:4px;margin-bottom:10px}.mrow{display:grid;grid-template-columns:22px 150px 120px 1fr;align-items:center;gap:8px;padding:4px 6px;background:rgba(255,255,255,.03);border-radius:4px}.mrow svg{width:20px;height:20px}.mrow .btn{justify-self:start}@media (max-width:600px){.mrow{grid-template-columns:22px 1fr}.mrow .mk,.mrow .btn,.mrow>span.small{grid-column:2}}.mk i{font-style:normal;font-size:11px;padding:1px 5px;margin-right:2px;border:1px solid rgba(255,255,255,.18);border-radius:3px;opacity:.45}.mk i.on{opacity:1;background:rgba(226,162,61,.25);border-color:var(--accent)}.mkb{font-size:10.5px;padding:0 4px;border:1px solid var(--accent);border-radius:3px;color:var(--accent)}
 .acomp span{display:inline-flex;align-items:center;gap:2px;margin-right:6px;font-size:12px}.acomp svg{width:16px;height:16px}.aname{cursor:pointer}select[data-act=stance]{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:3px 6px;font:inherit;font-size:12.5px}.tag{font-size:11.5px;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.07)}.tag.battle{background:rgba(224,87,79,.25)}.tag.move{background:rgba(226,162,61,.2)}
 .rep-side{padding:6px 10px;margin:6px 0;background:rgba(255,255,255,.04);border-radius:4px}.rep-lost{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:13px}.rep-lost span{display:inline-flex;align-items:center;gap:4px}.rep-lost svg{width:18px;height:18px}.rep-chart{width:100%;height:auto;background:rgba(0,0,0,.25);border-radius:4px;margin:6px 0}
@@ -923,7 +923,7 @@ const unlocked = (n, t) => !UNITS[t].tech || has(n, UNITS[t].tech);
 const bldOk = (p, t) => !UNITS[t].req || S.bld[p][UNITS[t].req.b] >= UNITS[t].req.l;
 const reqText = (p, t, n = PLAYER) => { const U = UNITS[t]; return !unlocked(n, t) ? `Research ${TECH_BY[U.tech].name}` : !bldOk(p, t) ? `Needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''; };
 function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.alive && !N.research && !has(n, id) && (!T.req || has(n, T.req)) && N.cash >= T.cost && N.metal >= T.metal && N.oil >= T.oil; }
-function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.metal -= T.metal; N.oil -= T.oil; N.research = {id, h:Math.round(T.days*24*(docOf(n) ? docOf(n).res : 1))}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
+function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.metal -= T.metal; N.oil -= T.oil; N.research = {id, h:Math.round(T.days*24*(docOf(n) ? docOf(n).res : 1))}; N.research.h0 = N.research.h; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 function buildCost(n, k, lvl){ const B = BUILD[k], m = Math.pow(1.6, lvl - 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), h:B.days*24}; }
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast)); }
@@ -935,6 +935,8 @@ const portOk = (n, v) => G.P[v].sea || (G.P[v].coast && (S.owner[v] === n || fri
 const ground = a => groundN(a) > 0;
 const armyHP = a => UT.reduce((s, t) => s + a.u[t]*UNITS[t].hp, 0);
 const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t) => s + a.w[t], 0)/hp : 0; };
+// remaining strength against the force's recent peak (units lost count, not just wounds)
+const strengthFrac = a => { const cur = effHP(a), pk = Math.max(a.peak || 0, cur); return pk ? cur/pk : 0; };
 const power = a => UT.reduce((s, t) => s + a.u[t]*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*UNITS[t].hp/10, 0)*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1);
 const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1);
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) && ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);
@@ -1176,7 +1178,9 @@ function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 :
   return {cash:(P.city ? 12 : 3)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
     food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 2 : 0.5) + 3*b.rec)*f}; }
 const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
-function income(n){
+let INCC = {v:-1, S:null, m:[]};
+function income(n){ if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
+function income0(n){
   const g = {cash:0, oil:0, metal:0, food:0, mp:0}, u = {cash:0, oil:0, metal:0, food:0, mp:0}; let provs = 0;
   const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
@@ -1255,12 +1259,15 @@ function spawn(n, p, t){
 function merge(into, from){ if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
 function splitArmy(a){
   if (count(a) < 2) return null;
-  const b = addArmy(a.owner, a.at, {}); b.to = a.to; b.t = a.t; b.path = a.path.slice(); b.m = a.m; b.stance = a.stance;
+  const b = addArmy(a.owner, a.at, {}); b.to = a.to; b.t = a.t; b.path = a.path.slice(); b.m = a.m; b.stance = a.stance; b.from = a.from; b.froms = a.froms ? a.froms.slice() : undefined; b.landed = a.landed; b.peak = a.peak ? a.peak/2 : undefined; if (a.peak) a.peak /= 2;
   for (const t of UT){ const k = Math.floor(a.u[t]/2); a.u[t] -= k; b.u[t] += k; }
   if (count(b) === 0){ for (const t of UT) if (a.u[t] > 1 || (a.u[t] && count(a) > 1)){ a.u[t]--; b.u[t]++; break; } }
   return b;
 }
-function removeEmpty(){ S.armies = S.armies.filter(a => count(a) > 0); }
+function removeEmpty(){
+  for (const a of S.armies){ if (count(a) > 0 || !a.air || !a.air.pend) continue; const pend = a.air.pend; a.air.pend = null; const base = S.owner[a.air.base] === a.owner ? a.air.base : nearestAirbase(a.owner, a.air.base); if (base < 0) continue;
+    const w = addArmy(a.owner, base, {}); w.air = {base, cd:0}; for (const t in pend) w.u[t] = pend[t]; }
+  S.armies = S.armies.filter(a => count(a) > 0); }
 
 /* binary-heap Dijkstra over the province + sea-zone graph */
 function findPath(a, b, ok = null){
@@ -1338,6 +1345,15 @@ function setRel(a, b, st, days = null){
   if ((prev === 'war' || prev === 'pass' || prev === 'ally') && !['war', 'pass', 'ally'].includes(st)){ evict(a, b); evict(b, a); }
   visCache = null;
 }
+// a force left standing in land it may not be in (peace, or too small to capture) walks to its nearest own province
+function sendHome(a){ const seen = new Set([a.at]), q = [a.at]; let dest = -1;
+  for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === a.owner){ dest = v; break; } q.push(v); }
+  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (pth.length){ a.path = pth; a.forced = true; return true; } a.at = dest; a.path = []; return true; } return false; }
+function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.path.length || !count(a) || G.P[a.at].sea) continue;
+    const o = S.owner[a.at]; if (o === a.owner) continue;
+    const peaceful = o >= 0 && !atWar(a.owner, o) && !['pass', 'ally'].includes(rel(a.owner, o).st);
+    const tooSmall = a.owner !== PLAYER && groundN(a) < CAP_MIN && !S.battles.includes(a.at) && !S.armies.some(b => b !== a && b.owner === a.owner && b.at === a.at);
+    if (peaceful || tooSmall) sendHome(a); } }
 function evict(n, host){
   // forces of n standing in host's land go to their nearest own province
   for (let p = 0; p < G.P.length; p++) if (S.cap[p] && S.cap[p].by === n && S.owner[p] === host) S.cap[p] = null;
@@ -1346,7 +1362,7 @@ function evict(n, host){
     if (S.owner[a.at] !== host) continue;
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-    if (dest >= 0){ a.at = dest; a.path = []; } else for (const t of UT) a.u[t] = 0; }
+    if (dest >= 0){ a.at = dest; a.to = null; a.t = 0; a.path = []; } else for (const t of UT) a.u[t] = 0; }
   removeEmpty();
 }
 function declareWar(a, b){
@@ -1872,7 +1888,7 @@ function tick(){
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
-  diploHour(); reqHour(); weatherHour(); dropTick();
+  diploHour(); reqHour(); weatherHour(); dropTick(); if (S.hour % 6 === 0) strandedHour();
   airTick();
   missileTick();
   spyHour();
@@ -1883,7 +1899,9 @@ function tick(){
     if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (a.owner === PLAYER) log(`Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
+    if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
     if (a.to === null && a.path.length && canProceed(a)){ a.to = a.path.shift(); a.t = 0; a.forced = false; }
+    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.to = null; a.t = 0; a.path = []; if (a.owner === PLAYER) log(`${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
     if (a.to !== null){ a.t += 1/legHours(a, a.at, a.to);
       if (a.t >= 1){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; } }
   }
@@ -1964,7 +1982,8 @@ function tick(){
   for (let p = 0; p < by.length; p++){
     if (G.P[p].sea) continue;
     const list = by[p], owners = new Set(list.map(a => a.owner));
-    const hostileToOwner = [...owners].filter(o => o !== S.owner[p] && atWar(o, S.owner[p]));
+    let hostileToOwner = [...owners].filter(o => o !== S.owner[p] && atWar(o, S.owner[p]));
+    if (hostileToOwner.length > 1 && !hostileToOwner.some(x => hostileToOwner.some(y => x !== y && atWar(x, y)))){ const sz = o => list.filter(a => a.owner === o).reduce((s0, a) => s0 + groundN(a), 0); hostileToOwner = [hostileToOwner.sort((x, y) => sz(y) - sz(x))[0]]; }
     if (owners.size >= 1 && hostileToOwner.length === 1 && ![...owners].some(o => o !== hostileToOwner[0] && atWar(o, hostileToOwner[0]))){
       const O = hostileToOwner[0];
       const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
@@ -1989,7 +2008,7 @@ function endBattle(p){
   (S.reports || (S.reports = [])).unshift(R); if (S.reports.length > 20) S.reports.length = 20;
   const nm = G.P[p].cityName || G.P[p].name, hrs = S.hour - B.h0;
   log(`Battle of ${nm} ${res === 'win' ? 'won' : res === 'loss' ? 'lost' : 'ended'} after ${hrs} h: you lost ${mine} unit${mine === 1 ? '' : 's'}, they lost ${theirs}. Click for the report.`, res === 'win' ? 'good' : res === 'loss' ? 'bad' : 'info', p);
-  S.log[0].rep = S.hour*1000 + p;  R.id = S.log[0].rep;
+  S.log[0].rep = S.hour*10000 + p;  R.id = S.log[0].rep;
 }
 function reportHTML(R){
   const nm = G.P[R.p].cityName || G.P[R.p].name, os = Object.keys(R.s).map(Number).sort((a, b) => (a === PLAYER ? -1 : 0) - (b === PLAYER ? -1 : 0));
@@ -2047,7 +2066,7 @@ function checkNation(n, by = NEUTRAL){
     const nc = (home.length ? home : cities)[0];
     N.capital = nc.id; N.capHit = S.hour; nc.city = true;
     for (const a of S.armies) if (a.owner === n) a.m = Math.max(0, (a.m ?? 80) - 15);
-    log(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 25% for 7 days.`, n === PLAYER ? 'bad' : 'info', nc.id);
+    log(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 40% for 14 days.`, n === PLAYER ? 'bad' : 'info', nc.id);
   }
 }
 function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
@@ -2822,9 +2841,10 @@ function setTarget(a, p){ sel.target = p; targetPath = a.air ? [] : pathFor(a, a
 const groupArmies = () => (sel.group.length ? sel.group : [sel.army]).map(armyById).filter(Boolean);
 const STANCES = {hold:['Hold', 'Stays where you put it.'], defend:['Defend', 'Marches to fight enemies that enter your land within 3 provinces, then returns.'], retreat:['Preserve', 'Falls back to the nearest city of yours when health drops below 40%.']};
 function stanceHour(){
+  for (const a of S.armies){ if (a.owner === PLAYER && !a.air){ const cur = effHP(a); a.peak = Math.max(cur, S.battles.includes(a.at) ? (a.peak || cur) : (a.peak || cur)*0.996); } }
   for (const a of S.armies){ if (a.owner !== PLAYER || a.air || !a.stance || a.stance === 'hold' || !count(a) || shipsOnly(a)) continue;
     const idle = a.to === null && !a.path.length, inBattle = S.battles.includes(a.at);
-    if (a.stance === 'retreat' && healthFrac(a) < 0.4 && (inBattle || S.owner[a.at] !== PLAYER || !G.P[a.at].city)){
+    if (a.stance === 'retreat' && strengthFrac(a) < 0.4 && (inBattle || S.owner[a.at] !== PLAYER || !G.P[a.at].city)){
       let best = -1, bd = 1e9; for (const P of G.P){ if (S.owner[P.id] !== PLAYER || !P.city || P.id === a.at || S.battles.includes(P.id)) continue; const d = Math.hypot(P.x - G.P[a.at].x, P.y - G.P[a.at].y); if (d < bd){ bd = d; best = P.id; } }
       if (best >= 0 && (a.path.length === 0 || a.path[a.path.length - 1] !== best)){ const pth = pathFor(a, a.to !== null ? a.to : a.at, best); if (pth.length){ a.path = pth; a.forced = true; a.home = null; log(`${armyName(a)} is falling back to ${G.P[best].cityName || G.P[best].name} to recover.`, 'info', best); } } continue; }
     if (a.stance === 'defend' && idle && !inBattle){
@@ -2843,7 +2863,7 @@ function nextIdle(){ const L = idleArmies(); if (!L.length){ toast('Every force 
 function armiesHTML(){
   const L = S.armies.filter(a => a.owner === PLAYER && count(a)).sort((x, y) => (x.air ? 2 : shipsOnly(x) ? 1 : 0) - (y.air ? 2 : shipsOnly(y) ? 1 : 0) || power(y) - power(x));
   const idle = idleArmies().length, tot = L.reduce((s0, a) => s0 + count(a), 0);
-  const rows = L.map(a => { const st0 = statusText(a), hp = Math.round(healthFrac(a)*100), dest = a.path.length ? a.path[a.path.length - 1] : a.to;
+  const rows = L.map(a => { const st0 = statusText(a), hp = Math.round(Math.min(healthFrac(a), a.air ? 1 : strengthFrac(a))*100), dest = a.path.length ? a.path[a.path.length - 1] : a.to;
     const comp = UT.filter(t => a.u[t]).map(t => `<span title="${UNITS[t].name}">${unitSVG(t)}${a.u[t]}</span>`).join('');
     return `<tr><td><b>${armyName(a)}</b><div class="small muted">${G.P[a.at].cityName || G.P[a.at].name}${dest != null && dest !== a.at ? ` → ${G.P[dest].cityName || G.P[dest].name}` : ''}</div></td>
       <td class="acomp">${comp}</td><td><div class="bar" style="width:60px"><i style="width:${hp}%;background:${hp > 60 ? 'var(--ok)' : hp > 30 ? 'var(--accent)' : 'var(--danger)'}"></i></div><span class="small">${hp}% · M${Math.round(a.m ?? 80)}</span></td>
@@ -2927,7 +2947,7 @@ function renderSide(force){
   if (modalKind === 'research' && !$('modal').hidden){
     setHTML($('sheet'), researchHTML());
     const R = N.research, bar = document.getElementById('rbar'), left = document.getElementById('rleft');
-    if (R && bar){ bar.style.width = Math.round((1 - R.h/(TECH_BY[R.id].days*24))*100) + '%'; left.textContent = `${R.h} h left`; }
+    if (R && bar){ bar.style.width = Math.round((1 - R.h/(R.h0 || TECH_BY[R.id].days*24))*100) + '%'; left.textContent = `${R.h} h left`; }
   }
   $('resdot').hidden = !!N.research || !N.alive;
   if (modalKind === 'diplo' && !$('modal').hidden) setHTML($('sheet'), diploHTML());
@@ -3074,7 +3094,7 @@ function diploHTML(){
 }
 function researchLine(){
   const N = S.nations[PLAYER], R = N.research, done = Object.keys(N.tech).length;
-  if (R){ const T = TECH_BY[R.id], f = 1 - R.h/(T.days*24);
+  if (R){ const T = TECH_BY[R.id], f = 1 - R.h/(R.h0 || T.days*24);
     return `<div class="status move"><div class="qi"><span>Researching ${T.name}</span><span class="muted">${R.h} h</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.round(f*100)}%"></i></div></div>
       <div class="row"><button class="btn" data-act="research-open">Research tree · ${done}/${TECH.length}</button></div>`; }
   return `<div class="status"><b>No research running.</b> Pick a project to improve your units and economy.</div>
@@ -3155,10 +3175,10 @@ function statusText(a){
 }
 function oddsParts(a, t, foes, dirs = plannedDirs(a, t)){
   const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b), 0);
-  let d = raw*frontScale(fn, F)*(G.P[t].sea ? 1 : terr(t).def);
-  if (S.owner[t] >= 0 || S.owner[t] === NEUTRAL){ d *= 1.25/Math.pow(0.8, S.bld[t].fort || 0); }
+  const defOwn = foes.some(b => b.owner === S.owner[t]), ownBonus = (G.P[t].sea ? 1 : terr(t).def)*1.25/Math.pow(0.8, S.bld[t].fort || 0);
+  let d = raw*frontScale(fn, F)*(defOwn ? ownBonus : 1);
   const pv = sel.army === a.id && targetPath && targetPath.length > 1 ? targetPath[targetPath.length - 2] : (a.to ?? a.at), river = !G.P[t].sea && G.P[t].river.has(pv) && S.owner[t] !== a.owner;
-  return {mine:power(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs)*(river ? 0.8 : 1), theirs:d, raw, river, dirs};
+  return {mine:power(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs)*(river ? 0.8 : 1)*(S.owner[t] === a.owner ? ownBonus : 1), theirs:d, raw, river, dirs, defOwn};
 }
 function odds(a, t, foes, dirs){
   if (!foes.length) return Infinity;
@@ -3170,7 +3190,7 @@ function oddsHTML(a, t, foes){
   const T0 = G.P[t].sea ? null : terr(t);
   const F = frontage(t), extra = count(a) > F ? `<br><span class="small">Only ${F} of your ${count(a)} units fit this front; the rest fight at 25%. Attack from a second province to widen it.</span>` : '';
   const op = oddsParts(a, t, foes);
-  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}${T0 && T0.armor < 1 ? `; armor ${Math.round((1 - T0.armor)*100)}% weaker here` : ''}${op.river ? '; you attack across a river: −20%' : ''}${season(t) ? `; ${SEASON_FX[season(t)].name.toLowerCase()}: attackers ${SEASON_FX[season(t)].atk < 0.9 ? '−15%' : '−5%'}` : ''})${op.dirs > 1 ? `<br><span class="small">Attacking from ${op.dirs} directions with your other ordered forces: front ${sideFront(t, op.dirs)} units, +${Math.round((flankF(op.dirs) - 1)*100)}% attack.</span>` : ''}${extra}</div>`;
+  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${op.defOwn ? `${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}` : S.owner[t] === a.owner ? '; the defence bonuses here are yours' : ''}${T0 && T0.armor < 1 ? `; armor ${Math.round((1 - T0.armor)*100)}% weaker here` : ''}${op.river ? '; you attack across a river: −20%' : ''}${season(t) ? `; ${SEASON_FX[season(t)].name.toLowerCase()}: attackers ${SEASON_FX[season(t)].atk < 0.9 ? '−15%' : '−5%'}` : ''})${op.dirs > 1 ? `<br><span class="small">Attacking from ${op.dirs} directions with your other ordered forces: front ${sideFront(t, op.dirs)} units, +${Math.round((flankF(op.dirs) - 1)*100)}% attack.</span>` : ''}${extra}</div>`;
 }
 function unitRows(a){
   return `<div class="urows">${UT.filter(t => a.u[t]).map(t => { const U = UNITS[t], max = a.u[t]*U.hp, cur = Math.max(0, max - a.w[t]), f = cur/max;
@@ -3260,7 +3280,7 @@ function provHTML(p){
   if (mine && P.city){
     const card = t => { const U = UNITS[t];
       const why = reqText(p, t);
-      const h = Math.round(U.build*(1 - 0.2*S.bld[p].fac));
+      const h = Math.max(1, Math.round(U.build*(1 - 0.2*S.bld[p].fac)*(docOf(PLAYER) ? docOf(PLAYER).build : 1)));
       return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${unitSVG(t)}${U.name}</span><span class="cost">${why || (c0 => `$${c0.cash}M${c0.oil ? ` · ${c0.oil} oil` : ''}${c0.metal ? ` · ${c0.metal} metal` : ''} · ${c0.mp}k · −${U.food} food/d`)(ucost(PLAYER, t))}</span><span class="st">${U.cls.toUpperCase()} · ATK ${Math.round(st(PLAYER, t, 'atk'))} DEF ${st(PLAYER, t, 'def')} SPD ${+st(PLAYER, t, 'spd').toFixed(1)} · ${+(h/24).toFixed(1)}d</span></button>`; };
     const open = UT.filter(t => !reqText(p, t)), locked = UT.filter(t => reqText(p, t));
     { const nf = income(PLAYER).net.food; if (nf < 3) html += `<div class="nudge" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)">Food ${nf < 0 ? 'deficit' : 'margin'} ${Math.round(nf)}/day: every unit eats food. ${canBuildHere(p, 'farm') && S.bld[p].farm < BUILD.farm.max && !S.cons[p] ? `<button class="btn" data-act="build" data-k="farm" style="padding:2px 7px;font-size:12px">Build Farms here</button>` : 'Build Farms in your provinces.'}</div>`; }
@@ -3287,7 +3307,7 @@ function provHTML(p){
   return html;
 }
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act],[data-speed]'); if (!b || b.disabled) return;
+  const b = e.target.closest('[data-act],[data-speed]'); if (!b || b.disabled) return; INCC.v = -1;
   if (b.tagName === 'LABEL') return;
   if (b.dataset.act !== 'mute') sfx('click');
   if (b.dataset.speed !== undefined){ setSpeed(+b.dataset.speed); return; }
@@ -3374,7 +3394,7 @@ let renaming = null, dropFor = null;
 document.addEventListener('focusout', e => { if (e.target.classList && e.target.classList.contains('rn')) setTimeout(() => { if (renaming !== null){ renaming = null; renderSide(true); } }, 0); });
 document.addEventListener('change', e => { const el = e.target;
   if (el && el.classList && el.classList.contains('rn')){ const a = armyById(+el.dataset.id), v = el.value.trim().slice(0, 32).replace(/[<>&"]/g, ''); if (a && v) a.nm = v; renaming = null; el.blur(); renderSide(true); return; } if (el && el.dataset && el.dataset.act === 'stance'){ const a = armyById(+el.dataset.id); if (a){ a.stance = el.value; a.home = null; toast(`${armyName(a)}: ${STANCES[el.value][0]}. ${STANCES[el.value][1]}`, 'info', null); renderSide(true); } } });
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', e => { INCC.v = -1;
   if (e.target.closest && e.target.closest('input,textarea')) return;
   if (e.code === 'Space'){ e.preventDefault(); setSpeed(S.speed ? 0 : 1); }
   else if (e.key === '1' || e.key === '2' || e.key === '3') setSpeed(+e.key);

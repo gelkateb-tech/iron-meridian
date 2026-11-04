@@ -191,3 +191,19 @@
   - **Falcon Paratroopers**: elite infantry trained at airbase cities. An idle paratrooper force in a province with your airbase gets an Air drop button. Tap a drop zone up to 9 hexes away (a range ring shows) and a transport flies them in. They land with −10 morale, and enemy air defence at the drop zone shoots down up to 60% of them.
 - New 3D models baked to sprites: the gunship (tandem canopy, stub-wing rocket pods, tail rotor, and a four-blade main rotor whose 4 animation frames spin in flight) and the drone (long straight wings, V-tail, sensor ball, pusher prop). Paratroopers in transit show as a transport aircraft with a "▼ N" troop count.
 - New formation names: Airborne Brigade, Gunship Squadron, Recon Squadron. AI powers research and field the new units too.
+
+## Round 28 — QA round: eleven bugs fixed
+- Armies no longer freeze after peace. An army mid-march when peace evicted it ended with a corrupt "NaN h" route and never moved again. Eviction now stops the leg cleanly, and any route that went stale (for example after a retreat) is re-planned from where the army actually stands. This dropped from 166 army-days with a frozen timer to 0 in a 70-day test.
+- Arriving forces re-check entry rights, so an army whose destination changed hands mid-march to a power it is at peace with turns back instead of standing in that land. Every 6 hours, forces left in land they may not be in, and AI forces too small to capture where they stand, walk back to their nearest own province.
+- No more capture deadlocks: when two powers that are not at war with each other both stand in an independent province, the larger force takes it instead of both waiting forever.
+- The Preserve stance works: it now measures remaining strength against the force's recent peak (lost units count, not only wounds). The Armies screen health bar uses the same measure.
+- The odds chip gives home-soil, fortification and terrain bonuses to whoever owns the province. Counter-attacking an invader in your own province now shows the bonuses on your side, and the Defend stance reacts to such invaders.
+- Splitting a force keeps its river-crossing, landing and approach state, so splitting no longer dodges those penalties.
+- Jets built while their wing is out and then lost no longer vanish: they form a new wing at the airbase.
+- Corrected texts and bars:
+  - The capital-loss message says −40% for 14 days.
+  - The research bar matches doctrine-adjusted durations.
+  - Recruit cards show Mass doctrine's faster training times.
+- The victory tracker shows on phones, in a compact size.
+- Battle report links can no longer open the wrong battle.
+- Performance: each nation's income is computed once per game hour instead of on every call.
