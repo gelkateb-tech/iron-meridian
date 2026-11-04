@@ -53,7 +53,7 @@ header{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px}
 .chip.short{border-color:var(--danger); box-shadow:0 0 0 1px var(--danger) inset}
 .chip.short b{color:var(--danger)}
 .res .chip:not(.you) .lbl{display:none}
-@media (min-width: 1440px){ .res .chip:not(.you) .lbl{display:inline} }
+@media (min-width: 1800px){ .res .chip:not(.you) .lbl{display:inline} }
 .bld{display:grid; grid-template-columns:1fr auto; gap:3px 8px; align-items:center; font-size:12.5px; padding:6px 0; border-top:1px solid var(--line)}
 .bld:first-child{border-top:0}
 .bld .nm{font-weight:600}
@@ -145,7 +145,21 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .vbar{display:flex; flex-direction:column; gap:3px; min-width:110px; font-family:var(--mono); font-size:10.5px; color:var(--muted)}
 .vbar .tr{height:5px; border-radius:3px; background:#24323a; overflow:hidden}
 .vbar .tr i{display:block; height:100%; background:var(--accent)}
-@media (max-width: 1100px){ .vbar{display:none} }
+@media (max-width: 1700px){ .vbar{display:none} }
+/* Stats */
+.statgrid{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px}
+.statgrid div{display:flex; flex-direction:column; gap:2px; padding:9px 11px; border:1px solid var(--line); border-radius:5px; background:var(--panel-2)}
+.statgrid b{font-family:var(--mono); font-size:18px; font-variant-numeric:tabular-nums}
+.statgrid span{font-size:11px; color:var(--muted); letter-spacing:.04em}
+.stab td{font-family:var(--mono); font-size:12px; font-variant-numeric:tabular-nums}
+.stab td:nth-child(2){font-family:var(--body); font-size:13px}
+.stab tr.me td{background:rgba(226,162,61,.08)} .stab tr.dead td{opacity:.45}
+.charts{display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px}
+.chart{margin:0; padding:10px; border:1px solid var(--line); border-radius:5px; background:var(--panel-2); min-width:0}
+.chart figcaption{font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:4px}
+.chart svg{width:100%; height:auto; display:block}
+.legend2{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:11px; color:var(--muted); margin-top:4px}
+.legend2 i{display:inline-block; width:10px; height:3px; margin-right:4px; vertical-align:middle}
 /* Side tabs */
 .tabs{position:sticky; top:0; z-index:2; display:grid; grid-template-columns:repeat(3, 1fr); gap:0; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:var(--panel); flex:none}
 .tabs button{border:0; border-radius:0; background:var(--panel); color:var(--muted); font-size:12.5px; font-weight:600; letter-spacing:.04em; padding:9px 6px; display:flex; align-items:center; justify-content:center; gap:6px}
@@ -262,7 +276,7 @@ details.more summary::-webkit-details-marker{display:none}
   .sheet h1{font-size:34px}
 }
 @media (max-width: 1500px){ header .brand{font-size:19px} }
-@media (max-width: 1440px){ header .brand{display:none} }
+@media (max-width: 1700px){ header .brand{display:none} }
 .chip{white-space:nowrap}
 @media (max-width: 480px){
   header{gap:6px}
@@ -294,8 +308,9 @@ details.more summary::-webkit-details-marker{display:none}
     <button class="btn" id="prodbtn" data-act="prod-open" title="Production overview (P)"><span class="long">Production</span><span class="short">Prod</span></button>
     <button class="btn" id="resbtn" data-act="research-open" title="Research tree (R)"><span class="long">Research</span><span class="short">Tech</span><span class="dot" id="resdot" title="No research running"></span></button>
     <button class="btn" id="dipbtn" data-act="diplo-open" title="Diplomacy (D)"><span class="long">Diplomacy</span><span class="short">Diplo</span><span class="badge" id="dipbadge" hidden></span></button>
-    </div>
+    <button class="btn" id="mutebtn" data-act="mute" title="Sound on/off (M)" aria-pressed="false">♪</button>
     <button class="btn" id="helpbtn" data-act="help" title="How to play">?</button>
+    </div>
   </header>
   <main>
     <div id="mapwrap">
@@ -663,6 +678,30 @@ const placeOwner = p => G.P[p].sea ? 'Open sea' : S.owner[p] === NEUTRAL ? `${G.
 const isCapital = p => S.nations.some(n => n.alive && n.capital === p && S.owner[p] === n.id);
 const dayOf = h => Math.floor(h/24) + 1;
 const colorOf = o => o >= 0 ? S.nations[o].color : '#7d7a6c';
+let AC = null, master = null, muted = false;
+try { muted = localStorage.getItem('iron-meridian-muted') === '1'; } catch (e) {}
+function audio(){ if (AC || muted) return AC; try { AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = 0.35; master.connect(AC.destination); } catch (e) { AC = null; } return AC; }
+function setMuted(v){ muted = v; try { localStorage.setItem('iron-meridian-muted', v ? '1' : '0'); } catch (e) {} if (master) master.gain.value = v ? 0 : 0.35; if (!v) audio(); }
+function tone(f, d, type = 'sine', g = 0.3, when = 0, slide = 0){ const c = audio(); if (!c || muted) return; const t = c.currentTime + when, o = c.createOscillator(), v = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, f*slide), t + d);
+  v.gain.setValueAtTime(0.0001, t); v.gain.exponentialRampToValueAtTime(g, t + 0.01); v.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(v); v.connect(master); o.start(t); o.stop(t + d + 0.05); }
+function noise(d, g = 0.4, freq = 400, when = 0){ const c = audio(); if (!c || muted) return; const t = c.currentTime + when, len = Math.ceil(c.sampleRate*d), buf = c.createBuffer(1, len, c.sampleRate), ch0 = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch0[i] = (Math.random()*2 - 1)*Math.pow(1 - i/len, 2);
+  const src = c.createBufferSource(), f = c.createBiquadFilter(), v = c.createGain(); src.buffer = buf; f.type = 'lowpass'; f.frequency.value = freq; v.gain.value = g; src.connect(f); f.connect(v); v.connect(master); src.start(t); }
+const SFX = {
+  click: () => tone(1800, 0.03, 'square', 0.05),
+  order: () => { tone(520, 0.06, 'triangle', 0.12); tone(780, 0.08, 'triangle', 0.1, 0.05); },
+  battle: () => { noise(0.5, 0.6, 220); noise(0.35, 0.4, 600, 0.12); tone(70, 0.4, 'sine', 0.3, 0, 0.5); },
+  capture: () => { [261.6, 329.6, 392].forEach((f, i) => tone(f, 0.7, 'sawtooth', 0.07, i*0.04)); tone(523.2, 0.9, 'triangle', 0.08, 0.15); },
+  lose: () => { tone(196, 0.5, 'sawtooth', 0.08); tone(155.6, 0.8, 'sawtooth', 0.08, 0.25); },
+  alarm: () => { for (let i = 0; i < 3; i++){ tone(660, 0.16, 'square', 0.08, i*0.34); tone(440, 0.16, 'square', 0.08, i*0.34 + 0.17); } },
+  ready: () => { tone(880, 0.12, 'sine', 0.1); tone(1320, 0.18, 'sine', 0.08, 0.08); },
+  research: () => { [523.2, 659.3, 784, 1046.5].forEach((f, i) => tone(f, 0.25, 'sine', 0.08, i*0.08)); },
+  win: () => { [392, 523.2, 659.3, 784].forEach((f, i) => tone(f, 0.9, 'sawtooth', 0.06, i*0.12)); },
+};
+let lastSfx = {};
+function sfx(name){ if (muted || !booted) return; const now = performance.now(); if (lastSfx[name] && now - lastSfx[name] < 400) return; lastSfx[name] = now; try { SFX[name] && SFX[name](); } catch (e) {} }
+document.addEventListener('pointerdown', () => { if (!muted) audio(); if (AC && AC.state === 'suspended') AC.resume(); }, {capture:true});
 const FX = [];
 function fx(type, p, extra = {}){ if (booted) FX.push({type, p, t0:performance.now(), ...extra}); if (FX.length > 40) FX.shift(); }
 function drawFX(now){
@@ -972,7 +1011,7 @@ function armyUpkeep(prevBattles){
 }
 
 /* ---------------- Simulation ---------------- */
-function alarm(){ if (S.speed > 1){ S.speed = 1; } }
+function alarm(){ if (S.speed > 1){ S.speed = 1; } sfx('alarm'); }
 function tick(){
   S.hour++;
   // production
@@ -981,7 +1020,7 @@ function tick(){
     const lines = 1 + S.bld[p].fac;            // each Arms Factory level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
-      if (S.owner[p] === PLAYER){ fx('ready', p); log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
+      if (S.owner[p] === PLAYER){ fx('ready', p); sfx('ready'); log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
         if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])) log(`Repeat production paused in ${G.P[p].cityName}: not enough resources for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } }
   // construction
   for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (!c) continue;
@@ -990,7 +1029,7 @@ function tick(){
   // research
   for (const N of S.nations){ if (!N.alive || !N.research) continue;
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.research = null;
-      if (N.id === PLAYER) log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); } }
+      if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
   diploHour();
   // movement
   for (const a of S.armies){
@@ -1004,7 +1043,7 @@ function tick(){
   // combat
   if (S.hour - supHour >= 6 || !SUP){ computeSupply(); computeBlockade(); }
   const prevBattles = new Set(S.battles); S.battles = [];
-  for (const a of S.armies) a._h = effHP(a);
+  for (const a of S.armies){ a._h = effHP(a); a._n0 = count(a); }
   let by = index();
   for (let p = 0; p < by.length; p++){
     const list = by[p]; if (list.length < 2) continue;
@@ -1017,6 +1056,7 @@ function tick(){
       const foes = owners.filter(o => o !== PLAYER).map(nationName).join(', ');
       if (S.owner[p] === PLAYER){ log(`${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(); }
       else log(`Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
+      sfx('battle');
     }
     const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
     const dmg = new Map(owners.map(o => [o, {soft:0, armored:0, air:0, naval:0}]));
@@ -1041,6 +1081,8 @@ function tick(){
       for (const a of sides.get(o)) hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot);
     }
     const playerThere = owners.includes(PLAYER);
+    if (playerThere){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const st0 = S.stats || (S.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
+    if (playerThere) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(a.owner === PLAYER ? 'unitsLost' : 'unitsKilled', lost); }
     for (const a of list) if (count(a) === 0 && (playerThere || visibleSet().has(p))) fx('boom', p);
     for (const a of list) if (count(a) === 0 && playerThere){
       if (a.owner === PLAYER) log(`Your force was destroyed at ${G.P[p].name}.`, 'bad', p);
@@ -1083,7 +1125,8 @@ function capture(p, O){
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
   geoDirty = true;
   const nm = G.P[p].name;
-  if (O === PLAYER) (S.tut || (S.tut = {})).capture = true;
+  if (O === PLAYER){ (S.tut || (S.tut = {})).capture = true; bump('taken'); sfx('capture'); }
+  if (prev === PLAYER){ bump('lost'); sfx('lose'); }
   if (O === PLAYER) log(`You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.`, 'good', p);
   else if (prev === PLAYER) log(`${nationName(O)} captured ${nm}.`, 'bad', p);
   else if (wasCap) log(`${nationName(O)} took ${nm}, capital of ${nationName(prev)}.`, '', p);
@@ -1123,12 +1166,23 @@ function checkEnd(){
   if (S.over){ setSpeed(0); save(); showEnd(); }
 }
 let lastRes = null;
+function recordStats(){
+  const day = Math.floor(S.hour/24);
+  S.hist = S.hist || [];
+  S.hist.push({d:day, n:S.nations.map(N => N.alive ? [score(N.id), S.owner.filter(o => o === N.id).length, Math.round(natPower(N.id)), Math.round(income(N.id).net.cash)] : null)});
+  if (S.hist.length > 200) S.hist.shift();
+  const st0 = S.stats || (S.stats = {}); st0.peakArmy = Math.max(st0.peakArmy || 0, Math.round(natPower(PLAYER)));
+  const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id)).findIndex(N => N.id === PLAYER) + 1;
+  if (rank && (!st0.bestRank || rank < st0.bestRank)){ st0.bestRank = rank; st0.bestRankDay = day + 1; }
+}
+const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
   for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id), was = N.short || {};
     N.short = {};
     const cap = stockCap(N.id);
     for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(cap, v); }
     if (N.id === PLAYER){ for (const k of ['food', 'oil', 'cash']) if (N.short[k] && !was[k]) log(k === 'food' ? 'Food shortage: your troops fight 20% worse until food income is positive.' : k === 'oil' ? 'Oil shortage: Armor and Strike Jets are slowed and weakened.' : 'Treasury empty: upkeep is unpaid.', 'bad'); } }
+  recordStats();
   checkEnd();
   save();
 }
@@ -1531,7 +1585,7 @@ function tap(x, y){
   selectProv(p);
 }
 function setTarget(a, p){ sel.target = p; targetPath = pathFor(a, a.to !== null ? a.to : a.at, p); hoverPath = null; renderSide(true); }
-function sendToTarget(a){ if (sel.target !== null) orderMove(a, sel.target); sel.target = null; targetPath = null; renderSide(true); }
+function sendToTarget(a){ if (sel.target !== null){ orderMove(a, sel.target); sfx('order'); } sel.target = null; targetPath = null; renderSide(true); }
 function selectArmy(id){ if (tab !== 'cmd') setTab('cmd'); sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 function clearSel(){ sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
@@ -1589,7 +1643,7 @@ function renderSide(force){
   const need = landNeed(PLAYER);
   const shown = showAllPowers ? order : order.filter((n, i) => i < 6 || n.id === PLAYER);
   setHTML($('nations'), shown.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}"><span class="sw" style="background:${n.color}"></span><span>${n.name}${n.id === PLAYER ? ' (you)' : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to the land victory target (${landNeed(n.id)} provinces)">${Math.round(counts[n.id]/landNeed(n.id)*100)}%</span></div>`).join('') +
-    (showAllPowers ? '' : `<button class="btn" data-act="allpow" style="font-size:12px;padding:4px 8px">Show all ${order.length} powers</button>`) +
+    `<div class="row">${showAllPowers ? '' : `<button class="btn" data-act="allpow" style="font-size:12px;padding:4px 8px">Show all ${order.length}</button>`}<button class="btn" data-act="stats-open" style="font-size:12px;padding:4px 8px">World statistics (S)</button></div>` +
     `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Day-${DAY_LIMIT} score is growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
   setHTML($('log'), S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="goto" data-id="${e.p}" title="Show on map"><time>D${dayOf(e.h)}</time><span>${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
@@ -1603,8 +1657,10 @@ function renderSide(force){
   $('resdot').hidden = !!N.research || !N.alive;
   if (modalKind === 'diplo' && !$('modal').hidden) setHTML($('sheet'), diploHTML());
   if (modalKind === 'prod' && !$('modal').hidden) setHTML($('sheet'), prodHTML());
+  if (modalKind === 'stats' && !$('modal').hidden) setHTML($('sheet'), statsHTML());
   const nOff = S.offers.length + S.decl.filter(d => d.to === PLAYER).length; $('dipbadge').hidden = !nOff; $('dipbadge').textContent = nOff;
   $('zrel').setAttribute('aria-pressed', String(relMode));
+  $('mutebtn').setAttribute('aria-pressed', String(!muted)); $('mutebtn').style.opacity = muted ? 0.45 : 1; $('mutebtn').title = muted ? 'Sound is off (M)' : 'Sound is on (M)';
   let hint = '';
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (a) hint = sel.target !== null ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap empty map or press Esc to deselect.` : 'Tap a province or sea zone to plan a route. Press Esc to deselect.';
@@ -1722,6 +1778,28 @@ function ctxHTML(){
     <p class="small muted" style="margin:0;line-height:1.5">Tap a province to inspect it or recruit in your cities. Tap one of your counters to command that force. Forces cross water by embarking from coastal provinces.</p>
     <div class="armylist">${mine.slice(0, 40).map(a => `<button data-act="army" data-id="${a.id}"><span>${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span><span class="muted">${count(a)} units · ${statusText(a).short}</span></button>`).join('') || '<span class="muted small">You have no forces in the field.</span>'}</div>`;
 }
+function chartSVG(idx, title){
+  const H0 = S.hist || []; if (H0.length < 2) return `<div class="small muted">Charts appear after day 2.</div>`;
+  const w = 520, h = 150, pad = 28, ids = S.nations.filter(N => N.alive || N.id === PLAYER).sort((a, b) => ((H0[H0.length - 1].n[b.id] || [0])[idx] || 0) - ((H0[H0.length - 1].n[a.id] || [0])[idx] || 0)).slice(0, 6).map(N => N.id);
+  if (!ids.includes(PLAYER)) ids.push(PLAYER);
+  let max = 1; for (const r of H0) for (const id of ids) if (r.n[id]) max = Math.max(max, r.n[id][idx]);
+  const x = i => pad + (w - pad - 8)*i/(H0.length - 1), y = v => h - 18 - (h - 30)*v/max;
+  const lines = ids.map(id => { const pts = H0.map((r, i) => r.n[id] ? `${x(i).toFixed(1)},${y(r.n[id][idx]).toFixed(1)}` : null).filter(Boolean).join(' ');
+    return `<polyline points="${pts}" fill="none" stroke="${S.nations[id].color}" stroke-width="${id === PLAYER ? 2.6 : 1.5}" ${id === PLAYER ? '' : 'stroke-opacity=".8"'}/>`; }).join('');
+  const grid = [0, 0.5, 1].map(f => `<line x1="${pad}" x2="${w - 8}" y1="${y(max*f)}" y2="${y(max*f)}" stroke="var(--line)"/><text x="${pad - 4}" y="${y(max*f) + 3}" text-anchor="end" font-size="9" fill="var(--muted)">${Math.round(max*f)}</text>`).join('');
+  return `<figure class="chart"><figcaption>${title}</figcaption><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${title} over time">${grid}<text x="${pad}" y="${h - 4}" font-size="9" fill="var(--muted)">Day ${H0[0].d + 1}</text><text x="${w - 8}" y="${h - 4}" font-size="9" fill="var(--muted)" text-anchor="end">Day ${H0[H0.length - 1].d + 1}</text>${lines}</svg>
+    <div class="legend2">${ids.map(id => `<span><i style="background:${S.nations[id].color}"></i>${S.nations[id].name}</span>`).join('')}</div></figure>`;
+}
+function statsHTML(){
+  const st0 = S.stats || {}, rows = S.nations.slice().sort((a, b) => (b.alive - a.alive) || score(b.id) - score(a.id)).map((N, i) => {
+    const prov = S.owner.filter(o => o === N.id).length;
+    return `<tr class="${N.id === PLAYER ? 'me' : ''} ${N.alive ? '' : 'dead'}"><td>${N.alive ? i + 1 : '—'}</td><td><span class="sw" style="background:${N.color}"></span> ${N.name}${N.id === PLAYER ? ' (you)' : ''}</td><td>${score(N.id)}</td><td>${growth(N.id) >= 0 ? '+' : ''}${growth(N.id)}</td><td>${prov}</td><td>${capsHeld(N.id)}</td><td>${N.alive ? Math.round(natPower(N.id)) : 0}</td><td>${N.alive ? Object.keys(N.tech).length : '—'}</td><td>${N.alive ? warsOf(N.id).length : '—'}</td></tr>`; }).join('');
+  return `<div class="rhead"><div><div class="eyebrow">${clockStr(S.hour)}</div><h1>World statistics</h1></div></div>
+    <div class="statgrid">${[['Provinces taken', st0.taken || 0], ['Provinces lost', st0.lost || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Your units lost', st0.unitsLost || 0], ['Peak army strength', st0.peakArmy || 0], ['Best rank', st0.bestRank ? `#${st0.bestRank} (day ${st0.bestRankDay})` : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>
+    <div class="tblwrap"><table class="ptab stab"><thead><tr><th>#</th><th>Power</th><th>Score</th><th>Growth</th><th>Prov.</th><th>Capitals</th><th>Military</th><th>Techs</th><th>Wars</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="charts">${chartSVG(0, 'Score')}${chartSVG(2, 'Military strength')}</div>
+    <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
+}
 function statusText(a){
   const P = G.P;
   if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${P[a.at].name}`};
@@ -1818,6 +1896,7 @@ function provHTML(p){
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act],[data-speed]'); if (!b || b.disabled) return;
   if (b.tagName === 'LABEL') return;
+  if (b.dataset.act !== 'mute') sfx('click');
   if (b.dataset.speed !== undefined){ setSpeed(+b.dataset.speed); return; }
   const act = b.dataset.act, a = sel.army !== null ? armyById(sel.army) : null;
   switch (act){
@@ -1844,6 +1923,8 @@ document.addEventListener('click', e => {
     case 'research-open': openModal(researchHTML(), 'research'); break;
     case 'diplo-open': openModal(diploHTML(), 'diplo'); break;
     case 'prod-open': openModal(prodHTML(), 'prod'); break;
+    case 'stats-open': openModal(statsHTML(), 'stats'); break;
+    case 'mute': setMuted(!muted); renderSide(true); break;
     case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, p, t); if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
     case 'repeat': { const p = +b.dataset.p; S.repeat = S.repeat || {}; if (b.checked) S.repeat[p] = (S.lastUnit && S.lastUnit[p]) || (S.queue[p][0] && S.queue[p][0].t) || 'inf'; else delete S.repeat[p]; renderSide(true); break; }
     case 'relmode': relMode = !relMode; renderSide(true); break;
@@ -1861,7 +1942,7 @@ document.addEventListener('click', e => {
     case 'newgame': showPicker(); break;
   }
 });
-$('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod'].includes(modalKind)) closeModal(); });
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod', 'stats'].includes(modalKind)) closeModal(); });
 document.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input,textarea')) return;
   if (e.code === 'Space'){ e.preventDefault(); setSpeed(S.speed ? 0 : 1); }
@@ -1870,6 +1951,8 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'h' || e.key === 'H') goHome();
   else if (e.key === 'd' || e.key === 'D'){ if (modalKind === 'diplo') closeModal(); else if ($('modal').hidden) openModal(diploHTML(), 'diplo'); }
   else if (e.key === 'v' || e.key === 'V'){ relMode = !relMode; renderSide(true); }
+  else if (e.key === 's' || e.key === 'S'){ if (modalKind === 'stats') closeModal(); else if ($('modal').hidden) openModal(statsHTML(), 'stats'); }
+  else if (e.key === 'm' || e.key === 'M'){ setMuted(!muted); renderSide(true); }
   else if (e.key === 'p' || e.key === 'P'){ if (modalKind === 'prod') closeModal(); else if ($('modal').hidden) openModal(prodHTML(), 'prod'); }
   else if (e.key === 'r' || e.key === 'R'){ if (modalKind === 'research') closeModal(); else if ($('modal').hidden) openModal(researchHTML(), 'research'); }
 });
@@ -1879,7 +1962,7 @@ function setSpeed(s){ if (S.over && s) return; if (s && !$('modal').hidden) retu
 let modalKind = '', pickSel = POWERS.findIndex(p => p.name === 'Brazil');
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
-function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' ? ' wide' : kind === 'picker' || kind === 'prod' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
+function openModal(html, kind = ''){ modalKind = kind; if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' || kind === 'diplo' || kind === 'stats' ? ' wide' : kind === 'picker' || kind === 'prod' ? ' mid' : ''); $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = 0; if (S) renderSide(); }
 function closeModal(restore = true){ $('modal').hidden = true; modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
 function rules(){ return `<ul>
   <li><b>Recruit</b> in your cities (squares and your capital star). Units cost cash, oil and manpower, and take days to train.</li>
@@ -1911,7 +1994,7 @@ function showBriefing(first, hasSave){
     ${sv ? `<p class="nudge">Saved campaign: <b>${me.name}</b>, day ${dayOf(sv.hour)}.</p>` : ''}
     <p>You command <b style="color:${me.color}">${me.name}</b>, one of fifteen powers in a world at war. Take independent land, out-produce your rivals and hold ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals.</p>
     ${rules()}
-    <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–3 set speed, P production, R research, D diplomacy, V relations map, H home. Progress saves in this browser each game day.</p>
+    <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–3 set speed, P production, R research, D diplomacy, S statistics, V relations map, M sound, H home. Progress saves in this browser each game day.</p>
     <div class="row">${first
       ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start">Start campaign</button>`)
       : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign…</button>`}</div>`);
@@ -1935,7 +2018,9 @@ function showEnd(){
     <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} grew the most (+${growth(PLAYER)} score).` : `${S.nations[PLAYER].name} grew ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, behind the leader.`}` : ''}
     ${S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
     ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? ` You had $${fmt(S.nations[PLAYER].cash)}M unspent: next time, turn money into troops and research early.` : ''}</p>
-    <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="resume">View the map</button></div>`);
+    ${(() => { const st0 = S.stats || {}; return `<div class="statgrid">${[['Days', dayOf(S.hour)], ['Provinces taken', st0.taken || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Units lost', st0.unitsLost || 0], ['Peak army', st0.peakArmy || 0], ['Best rank', st0.bestRank ? '#' + st0.bestRank : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>${st0.bigBattle ? `<p class="small muted">Biggest battle: ${st0.bigBattle} units at ${st0.bigBattleAt} on day ${st0.bigBattleDay}.</p>` : ''}${chartSVG(0, 'Score over the campaign')}`; })()}
+    <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="stats-open">Full statistics</button><button class="btn" data-act="resume">View the map</button></div>`, 'end');
+  sfx(win ? 'win' : 'lose');
 }
 
 /* ---------------- Loop & boot ---------------- */
