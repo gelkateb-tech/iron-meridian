@@ -342,10 +342,13 @@ const UNITS = {
   ifv:  {name:'Courser IFV',       short:'IFV', cls:'armored', cost:35, oil:4,  metal:10, mp:10, atk:4, def:4, hp:12, spd:7,  build:36, upk:2, food:1,   fuel:0.5, req:{b:'fac', l:1}, tech:'inf2', role:'Fast armored infantry carrier.'},
   tank: {name:'Bastion MBT',       short:'MBT', cls:'armored', cost:45, oil:6,  metal:15, mp:12, atk:6, def:4, hp:14, spd:6,  build:48, upk:3, food:1,   fuel:2,   req:{b:'fac', l:1}, tech:null,  role:'Main battle tank: strong all-rounder.'},
   jet:  {name:'Kestrel Striker',   short:'STK', cls:'air',     cost:80, oil:12, metal:20, mp:6,  atk:8, def:3, hp:9,  spd:18, build:72, upk:6, food:0.5, fuel:2,   req:{b:'air', l:1}, tech:'air1', vs:{armored:1.6}, role:'Strike jet: hunts armor. Cannot capture.'},
-  int:  {name:'Talon Interceptor', short:'INT', cls:'air',     cost:70, oil:10, metal:15, mp:5,  atk:6, def:4, hp:9,  spd:20, build:60, upk:5, food:0.5, fuel:2,   req:{b:'air', l:1}, tech:'air1', vs:{air:2.0, soft:0.4, armored:0.4}, role:'Fighter: double damage to aircraft.'},
+  int:  {name:'Talon Interceptor', short:'INT', cls:'air',     cost:70, oil:10, metal:15, mp:5,  atk:6, def:4, hp:9,  spd:20, build:60, upk:5, food:0.5, fuel:2,   req:{b:'air', l:1}, tech:'air1', vs:{air:2.0, soft:0.4, armored:0.4, naval:0.6}, role:'Fighter: double damage to aircraft.'},
+  frig: {name:'Gannet Frigate',    short:'FRG', cls:'naval',   cost:60, oil:6,  metal:18, mp:6,  atk:4, def:5, hp:14, spd:9,  build:60, upk:3, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{air:1.8, soft:0.5, armored:0.4}, role:'Escort: protects troop convoys, shoots down aircraft.'},
+  sub:  {name:'Moray Submarine',   short:'SUB', cls:'naval',   cost:55, oil:4,  metal:15, mp:5,  atk:6, def:2, hp:9,  spd:8,  build:60, upk:2, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else.'},
+  crui: {name:'Tempest Cruiser',   short:'CRU', cls:'naval',   cost:95, oil:10, metal:30, mp:8,  atk:7, def:6, hp:20, spd:7,  build:96, upk:5, food:0.5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
 };
-const CLASSES = ['soft', 'armored', 'air'];
-const CLASS_M = {soft:{soft:1.0, armored:0.5, air:0.2}, armored:{soft:1.2, armored:1.0, air:0.2}, air:{soft:1.2, armored:1.3, air:1.0}};
+const CLASSES = ['soft', 'armored', 'air', 'naval'];
+const CLASS_M = {soft:{soft:1.0, armored:0.5, air:0.2, naval:0.2}, armored:{soft:1.2, armored:1.0, air:0.2, naval:0.3}, air:{soft:1.2, armored:1.3, air:1.0, naval:1.0}, naval:{soft:0.8, armored:0.6, air:0.6, naval:1.0}};
 const mult = (t, k) => (UNITS[t].vs && UNITS[t].vs[k] != null) ? UNITS[t].vs[k] : CLASS_M[UNITS[t].cls][k];
 const RES = [
   {k:'cash',  name:'Money',    unit:'M', pre:'$'},
@@ -372,6 +375,7 @@ const BUILD = {
   farm: {name:'Farms',             max:2, cost:30, metal:0,  days:2, where:'any',  desc:'+3 food per level.'},
   rec:  {name:'Recruiting Office', max:1, cost:30, metal:0,  days:2, where:'any',  desc:'+3 manpower per day.'},
   fort: {name:'Fortifications',    max:3, cost:40, metal:15, days:2, where:'any',  desc:'Defenders here take 20% less damage per level.'},
+  yard: {name:'Naval Yard',        max:2, cost:80, metal:25, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here.'},
 };
 const BK = Object.keys(BUILD);
 const ROMAN = ['', 'I', 'II', 'III'];
@@ -602,6 +606,7 @@ function restore(data){
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.speed = 0; S.started = true;
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
+  for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || [];
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; G.P[N.capital].city = true; }
   buildGeometry();
@@ -629,15 +634,18 @@ function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.a
 function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.metal -= T.metal; N.oil -= T.oil; N.research = {id, h:T.days*24}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 function buildCost(n, k, lvl){ const B = BUILD[k], m = Math.pow(1.6, lvl - 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), h:B.days*24}; }
-function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil)); }
+function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast)); }
 const count = a => UT.reduce((s, t) => s + a.u[t], 0);
-const groundN = a => UT.reduce((s, t) => s + (UNITS[t].cls !== 'air' ? a.u[t] : 0), 0);
+const groundN = a => UT.reduce((s, t) => s + (UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? a.u[t] : 0), 0);
+const shipsN = a => UT.reduce((s, t) => s + (UNITS[t].cls === 'naval' ? a.u[t] : 0), 0);
+const shipsOnly = a => shipsN(a) > 0 && shipsN(a) === count(a);
+const portOk = (n, v) => G.P[v].sea || (G.P[v].coast && (S.owner[v] === n || friendly(n, S.owner[v])));
 const ground = a => groundN(a) > 0;
 const armyHP = a => UT.reduce((s, t) => s + a.u[t]*UNITS[t].hp, 0);
 const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t) => s + a.w[t], 0)/hp : 0; };
 const power = a => UT.reduce((s, t) => s + a.u[t]*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*UNITS[t].hp/10, 0)*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1);
 const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1);
-const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) && ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1) : landSpeed(a);
+const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) && ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);
 const legHours = (a, from, to) => G.P[from].nb.get(to)*24/legSpeed(a, from, to);
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
 const armyById = id => S.armies.find(a => a.id === id);
@@ -678,7 +686,9 @@ function index(){ const by = G.P.map(() => []); for (const a of S.armies) if (a.
 const graceFor = o => o >= 0 && S.nations[o].small ? 24*14 : GRACE_H;
 const inGrace = o => o >= 0 && S.hour < graceFor(o);
 const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
-function provYield(p){ const P = G.P[p], f = occFactor(p), b = S.bld[p];
+let BLOCK = new Set();
+function computeBlockade(){ BLOCK = new Set(); for (const a of S.armies){ if (a.to !== null || !G.P[a.at].sea || !shipsN(a) || a.owner < 0) continue; for (const v of G.P[a.at].nbs){ const o = S.owner[v]; if (!G.P[v].sea && o >= 0 && atWar(a.owner, o)) BLOCK.add(v); } } }
+function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1), b = S.bld[p];
   return {cash:(P.city ? 12 : 3)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 4 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
     food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 5 : 1) + 3*b.rec)*f}; }
 const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
@@ -741,7 +751,7 @@ function findPath(a, b, ok = null){
   if (prev[b] < 0) return [];
   const path = []; for (let v = b; v !== a; v = prev[v]) path.push(v); return path.reverse();
 }
-const pathFor = (a, from, to) => canEnter(a.owner, to) ? findPath(from, to, v => canEnter(a.owner, v)) : [];
+const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a.owner, v) && (!so || portOk(a.owner, v)); return ok(to) ? findPath(from, to, ok) : []; };
 function orderMove(a, target){
   if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target); }
   else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
@@ -927,7 +937,7 @@ function armyUpkeep(prevBattles){
   for (const a of S.armies){ if (a.owner < 0 || !count(a)) continue;
     const N = S.nations[a.owner], here = a.to === null, inBattle = here && S.battles.includes(a.at);
     if (inBattle){ const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m -= 1 + 40*lost; }
-    else if (supplied(a)){ const own = here && S.owner[a.at] === a.owner, r = own && G.P[a.at].city ? 0.25 : 0.10;
+    else if (supplied(a)){ const own = here && S.owner[a.at] === a.owner, r = own && S.bld[a.at].yard && shipsN(a) ? 0.4 : own && G.P[a.at].city ? 0.25 : 0.10;
       for (const t of UT) if (a.u[t]) a.w[t] = Math.max(0, a.w[t] - a.u[t]*UNITS[t].hp*r/24);
       a.m += 2; if (here && prevBattles.has(a.at)) a.m += 10; }
     else { for (const t of UT){ if (!a.u[t]) continue; a.w[t] += a.u[t]*UNITS[t].hp*0.04/24; while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; } if (!a.u[t]) a.w[t] = 0; }
@@ -974,12 +984,14 @@ function tick(){
   // movement
   for (const a of S.armies){
     if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (a.owner === PLAYER) log(`Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
+    if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
+      const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
     if (a.to === null && a.path.length && canProceed(a)){ a.to = a.path.shift(); a.t = 0; a.forced = false; }
     if (a.to !== null){ a.t += 1/legHours(a, a.at, a.to);
       if (a.t >= 1){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.at = a.to; a.to = null; a.t = 0; } }
   }
   // combat
-  if (S.hour - supHour >= 6 || !SUP) computeSupply();
+  if (S.hour - supHour >= 6 || !SUP){ computeSupply(); computeBlockade(); }
   const prevBattles = new Set(S.battles); S.battles = [];
   for (const a of S.armies) a._h = effHP(a);
   let by = index();
@@ -996,12 +1008,16 @@ function tick(){
       else log(`Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
     }
     const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
-    const dmg = new Map(owners.map(o => [o, {soft:0, armored:0, air:0}]));
+    const dmg = new Map(owners.map(o => [o, {soft:0, armored:0, air:0, naval:0}]));
     for (const o of owners){
-      const av = {soft:0, armored:0, air:0}, r = K*(0.8 + rng()*0.4);
+      const av = {soft:0, armored:0, air:0, naval:0}, r = K*(0.8 + rng()*0.4);
       for (const a of sides.get(o)){ const m = a.landed != null && S.hour - a.landed < 24 ? 0.67 : 1;
         const mf = moraleF(a);
         for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf; for (const k of CLASSES) av[k] += base*mult(t, k); } }
+      // shore bombardment: this side's ships in adjacent sea zones add half their firepower to coastal land battles
+      if (!G.P[p].sea && G.P[p].coast) for (const sz of G.P[p].nbs){ if (!G.P[sz].sea) continue;
+        for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null) continue;
+          for (const t of UT){ if (!a.u[t] || UNITS[t].cls !== 'naval') continue; const base = 0.5*a.u[t]*st(o, t, 'atk')*r*moraleF(a); for (const k of CLASSES) av[k] += base*mult(t, k); } } }
       const foes = owners.filter(e => atWar(o, e)), tot = foes.reduce((s, e) => s + hp.get(e), 0);
       for (const e of foes){ const d = dmg.get(e); for (const k of CLASSES) d[k] += av[k]*hp.get(e)/tot; }
     }
@@ -1010,7 +1026,8 @@ function tick(){
       if (o === S.owner[p]){ f /= 1.25; f *= Math.pow(0.8, S.bld[p].fort); }
       if (has(o, 'log3')) f *= 0.85;
       const d = dmg.get(o), tot = hp.get(o);
-      for (const a of sides.get(o)) hurt(a, d, f*(G.P[p].sea && ground(a) ? 1.5 : 1)/tot);
+      const escorted = G.P[p].sea && sides.get(o).some(b => shipsN(b) > 0);
+      for (const a of sides.get(o)) hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot);
     }
     const playerThere = owners.includes(PLAYER);
     for (const a of list) if (count(a) === 0 && (playerThere || visibleSet().has(p))) fx('boom', p);
@@ -1113,16 +1130,26 @@ function defPower(p, n){
 }
 function threatNear(p, n){ return G.P[p].nbs.some(v => S.armies.some(a => a.at === v && a.owner >= 0 && atWar(n, a.owner) && count(a) > 0)); }
 function enemyMix(n){
-  const m = {soft:0, armored:0, air:0};
+  const m = {soft:0, armored:0, air:0, naval:0};
   for (const a of S.armies){ if (a.owner < 0 || !atWar(n, a.owner)) continue; for (const t of UT) m[UNITS[t].cls] += a.u[t]*UNITS[t].hp; }
-  const tot = m.soft + m.armored + m.air || 1; return {soft:m.soft/tot, armored:m.armored/tot, air:m.air/tot};
+  const tot = m.soft + m.armored + m.air + m.naval || 1; return {soft:m.soft/tot, armored:m.armored/tot, air:m.air/tot, naval:m.naval/tot};
 }
 function aiPickUnit(n, p){
-  const mix = enemyMix(n), w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*mix.air, ifv:1.2, tank:2.2, jet:1 + 3*mix.armored, int:0.3 + 6*mix.air};
+  const mix = enemyMix(n), w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*mix.air, ifv:1.2, tank:2.2, jet:1 + 3*mix.armored, int:0.3 + 6*mix.air, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
+  { let ships = 0, all = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); all += count(a); } if (ships > all*0.2){ w.frig = w.sub = w.crui = 0; } }
   const opts = UT.filter(t => bldOk(p, t) && unlocked(n, t));
   let tot = opts.reduce((s, t) => s + w[t], 0), r = rng()*tot;
   for (const t of opts){ r -= w[t]; if (r <= 0) return t; }
   return 'inf';
+}
+function aiFleet(a, n){
+  // damaged fleets go home to a yard; healthy ones patrol a sea zone next to an enemy coast
+  if (healthFrac(a) < 0.5){ const y = G.P.find(P => S.owner[P.id] === n && S.bld[P.id].yard); if (y && a.at !== y.id) a.path = pathFor(a, a.at, y.id); return; }
+  const seen = new Map([[a.at, 0]]), q = [a.at]; let best = -1;
+  for (let h = 0; h < q.length && best < 0; h++){ const u = q[h], du = seen.get(u); if (du >= 8) continue;
+    for (const v of G.P[u].nbs){ if (seen.has(v) || !G.P[v].sea) continue; seen.set(v, du + 1); q.push(v);
+      if (G.P[v].nbs.some(x => !G.P[x].sea && S.owner[x] >= 0 && atWar(n, S.owner[x]))){ best = v; break; } } }
+  if (best >= 0 && best !== a.at) a.path = pathFor(a, a.at, best);
 }
 function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
@@ -1145,6 +1172,7 @@ function aiTurn(n){
       if (p === N.capital && threatNear(p, n) && S.bld[p].fort < 2) build(n, p, 'fort');
       else if (!S.bld[p].fac && N.cash > 110) build(n, p, 'fac');
       else if (has(n, 'air1') && !S.bld[p].air && N.cash > 140 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air).length < 2) build(n, p, 'air');
+      else if (canBuildHere(p, 'yard') && !S.bld[p].yard && S.bld[p].fac && N.cash > 170 && !G.P.some(P => S.owner[P.id] === n && S.bld[P.id].yard) && rng() < 0.3) build(n, p, 'yard');
       else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
     }
     if (S.queue[p].length < 2 && canGrow){
@@ -1160,6 +1188,7 @@ function aiTurn(n){
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
   for (const a of idle.values()){
     if (count(a) === 0 || enemiesAt(a.at, n)) continue;
+    if (shipsOnly(a)){ aiFleet(a, n); continue; }
     if (G.P[a.at].sea || (S.owner[a.at] !== n && !atWar(n, S.owner[a.at]))){
       // stranded at sea or in land it may not fight in: head to the nearest own province
       const seen = new Set([a.at]), q = [a.at]; let dest = -1;
@@ -1259,6 +1288,8 @@ function glyph(x, y, t, s){
   else if (t === 'ifv'){ X(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, y, w*0.3, h*0.26, 0, 0, Math.PI*2); ctx.stroke(); }
   else if (t === 'tank'){ ctx.ellipse(x, y, w*0.32, h*0.28, 0, 0, Math.PI*2); ctx.stroke(); }
   else if (t === 'int'){ chev(-1.5*s); chev(1.5*s); ctx.stroke(); }
+  else if (UNITS[t] && UNITS[t].cls === 'naval'){ ctx.moveTo(x - w*0.42, y - h*0.05); ctx.lineTo(x + w*0.42, y - h*0.05); ctx.lineTo(x + w*0.28, y + h*0.32); ctx.lineTo(x - w*0.28, y + h*0.32); ctx.closePath(); ctx.stroke();
+    if (t === 'sub'){ ctx.beginPath(); ctx.moveTo(x - w*0.42, y + h*0.35); ctx.lineTo(x + w*0.42, y + h*0.35); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(x, y - h*0.05); ctx.lineTo(x, y - h*0.38); ctx.stroke(); } }
   else { chev(0); ctx.stroke(); }
 }
 function counter(x, y, a, n, color, selected, moving, s, stack = false){
@@ -1736,6 +1767,7 @@ function provHTML(p){
   if (o >= 0 && o !== PLAYER){ const r = rel(PLAYER, o); html += `<div class="status" style="border-left-color:${REL_COLOR[r.st]}">${REL[r.st]} with ${nationName(o)}${r.st === 'war' ? '' : '. Declare war in Diplomacy to attack.'} <button class="btn" data-act="diplo-open" style="padding:2px 7px;font-size:12px">Diplomacy</button></div>`; }
   if (S.cap[p]) html += `<div class="status cap">${nationName(S.cap[p].by)} capturing: ${Math.round(S.cap[p].h/capNeed(p, S.cap[p].by)*100)}%</div>`;
   if (S.battles.includes(p)) html += `<div class="status battle">Battle in progress</div>`;
+  if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
   if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span>Your force of ${count(a)}</span><span class="muted">Command</span></button>`).join('')}</div>`;
   if (mine && P.city){
     const card = t => { const U = UNITS[t];
@@ -1834,6 +1866,7 @@ function rules(){ return `<ul>
   <li><b>Battles</b> run hour by hour. Defenders on their own soil take less damage, troops at sea take more. The blue bar under a counter is morale: armies that break retreat.</li>
   <li><b>Supply</b> reaches 8 hexes from your cities. Supplied troops heal (fastest in cities); troops cut off lose strength every day and get a red dashed outline.</li>
   <li><b>Unit classes</b>: soft (infantry), armored and air. Lancers (3× vs armor) and Strikers beat armor, SAMs and Interceptors beat aircraft, artillery beats infantry. Hover a unit card for its role.</li>
+  <li><b>Navy</b>: build a Naval Yard in a coastal city for Frigates, Submarines and Cruisers. Ships stay at sea or in friendly ports, escort troops crossing water (they take less damage), blockade enemy coasts and bombard coastal battles.</li>
   <li><b>Research</b> new technology from the Research button (or press R). Jets need Jet Engines; IFVs need Mechanized Infantry.</li>
   <li>The darker, hatched land is under fog of war: you only see enemy troops next to your land or your forces.</li>
   <li><b>Diplomacy</b> (D): every power starts at peace, and powers at peace cannot enter each other's land. Declare war, sign pacts and alliances, answer offers. Rivals may declare war on you from day 8.</li>
