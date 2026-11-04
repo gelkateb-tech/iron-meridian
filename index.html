@@ -199,7 +199,7 @@ kbd{font-family:var(--mono); font-size:10px; color:var(--muted); border:1px soli
 #resbtn{display:flex; align-items:center; gap:7px}
 .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px rgba(226,162,61,.2)}
 .rhead{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:10px}
-.tree{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:14px}
+.tree{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:12px}
 .branch{display:flex; flex-direction:column; gap:14px; min-width:0}
 .tnode{position:relative; display:flex; flex-direction:column; gap:5px; padding:10px; border:1px solid var(--line); border-radius:5px; background:var(--panel-2); min-height:132px}
 .tnode + .tnode::before{content:""; position:absolute; left:50%; top:-15px; width:2px; height:14px; background:var(--line)}
@@ -383,6 +383,10 @@ const UNITS = {
   sub:  {name:'Moray Submarine',   short:'SUB', cls:'naval',   cost:55, oil:4,  metal:15, mp:5,  atk:6, def:2, hp:9,  spd:8,  build:60, upk:2, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else.'},
   crui: {name:'Tempest Cruiser',   short:'CRU', cls:'naval',   cost:75, oil:10, metal:30, mp:8,  atk:7, def:6, hp:20, spd:7,  build:96, upk:5, food:0.5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
 };
+const MISSILES = {
+  cm: {name:'Cruise Missile',    short:'CM', cost:70,  oil:10, metal:20, build:36, range:28, speed:9,  power:7,  tech:'msl1', desc:'Flies low and fast. Devastates the forces in one province.'},
+  bm: {name:'Ballistic Missile', short:'BM', cost:160, oil:20, metal:50, build:72, range:90, speed:22, power:16, tech:'msl2', desc:'Climbs into space and falls on its target: massive damage, wrecks a building, shakes morale.'},
+};
 const CLASSES = ['soft', 'armored', 'air', 'naval'];
 const CLASS_M = {soft:{soft:1.0, armored:0.5, air:0.2, naval:0.2}, armored:{soft:1.2, armored:1.0, air:0.2, naval:0.3}, air:{soft:1.2, armored:1.3, air:1.0, naval:1.0}, naval:{soft:0.8, armored:0.6, air:0.6, naval:1.0}};
 const mult = (t, k) => (UNITS[t].vs && UNITS[t].vs[k] != null) ? UNITS[t].vs[k] : CLASS_M[UNITS[t].cls][k];
@@ -437,6 +441,7 @@ const BUILD = {
   farm: {name:'Farms',             max:2, cost:30, metal:0,  days:2, where:'any',  desc:'+3 food per level.'},
   rec:  {name:'Recruiting Office', max:1, cost:30, metal:0,  days:2, where:'any',  desc:'+3 manpower per day.'},
   fort: {name:'Fortifications',    max:3, cost:40, metal:15, days:2, where:'any',  desc:'Defenders here take 20% less damage per level.'},
+  silo: {name:'Missile Silo',      max:1, cost:150, metal:60, days:5, where:'city', desc:'Builds and stores cruise and ballistic missiles (needs Strategic research).'},
   yard: {name:'Naval Yard',        max:2, cost:80, metal:25, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here.'},
 };
 const BK = Object.keys(BUILD);
@@ -463,6 +468,9 @@ const TECH = [
   {id:'log1',  branch:'Logistics', name:'Motorized Supply',     cost:110, days:4, req:null,    desc:'All forces move 20% faster',           fx:{}},
   {id:'log2',  branch:'Logistics', name:'Combat Engineers',     cost:130, days:5, req:'log1',  desc:'Capture 30% faster; forts cost half',  fx:{}},
   {id:'log3',  branch:'Logistics', name:'Field Hospitals',      cost:170, days:7, req:'log2',  desc:'Your forces take 15% less damage',     fx:{}},
+  {id:'msl1',  branch:'Strategic', name:'Cruise Missiles',      cost:160, days:6, req:null,    desc:'Missile Silos can build Cruise Missiles', fx:{}},
+  {id:'msl2',  branch:'Strategic', name:'Ballistic Missiles',   cost:240, days:8, req:'msl1',  desc:'Silos can build Ballistic Missiles',   fx:{}},
+  {id:'msl3',  branch:'Strategic', name:'Anti-Missile Shield',  cost:220, days:7, req:'msl2',  desc:'Your SAMs and Frigates intercept missiles twice as well', fx:{}},
 ];
 for (const t of TECH){ const tier = t.req ? (TECH.find(x => x.id === t.req).req ? 3 : 2) : 1; t.tier = tier; t.cost = Math.round(t.cost*0.6); t.metal = [0, 40, 60, 100][tier]; t.oil = [0, 0, 30, 60][tier]; }
 const TECH_BY = Object.fromEntries(TECH.map(t => [t.id, t]));
@@ -744,7 +752,7 @@ function restore(data){
   resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
-  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || [];
+  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || [];
   fixWings();
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; G.P[N.capital].city = true; }
   buildGeometry();
@@ -779,7 +787,7 @@ function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.a
 function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; N.cash -= T.cost; N.metal -= T.metal; N.oil -= T.oil; N.research = {id, h:T.days*24}; if (n === PLAYER) (S.tut || (S.tut = {})).research = true; return true; }
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 function buildCost(n, k, lvl){ const B = BUILD[k], m = Math.pow(1.6, lvl - 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), h:B.days*24}; }
-function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast)); }
+function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast)); }
 const count = a => UT.reduce((s, t) => s + (a.u[t] || 0), 0);
 const groundN = a => UT.reduce((s, t) => s + (UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? a.u[t] : 0), 0);
 const shipsN = a => UT.reduce((s, t) => s + (UNITS[t].cls === 'naval' ? a.u[t] : 0), 0);
@@ -818,6 +826,8 @@ const SFX = {
   alarm: () => { for (let i = 0; i < 3; i++){ tone(660, 0.16, 'square', 0.08, i*0.34); tone(440, 0.16, 'square', 0.08, i*0.34 + 0.17); } },
   ready: () => { tone(880, 0.12, 'sine', 0.1); tone(1320, 0.18, 'sine', 0.08, 0.08); },
   research: () => { [523.2, 659.3, 784, 1046.5].forEach((f, i) => tone(f, 0.25, 'sine', 0.08, i*0.08)); },
+  launch: () => { noise(1.4, 0.35, 900); tone(90, 1.2, 'sawtooth', 0.06, 0, 1.8); },
+  boom: () => { noise(1.6, 0.9, 160); tone(48, 1.4, 'sine', 0.4, 0, 0.4); noise(0.8, 0.4, 900, 0.1); },
   win: () => { [392, 523.2, 659.3, 784].forEach((f, i) => tone(f, 0.9, 'sawtooth', 0.06, i*0.12)); },
 };
 let lastSfx = {};
@@ -853,7 +863,7 @@ function explode(wx, wy, big = 1){
   for (let i = 0; i < 8; i++) emit('dust', wx, wy, {vx:(Math.random() - 0.5)*140*big, vy:-(2 + Math.random()*6), s0:6, s1:30*big, life:1400});
   if (booted){ SCORCH.push({wx, wy, r:6 + 6*big, t0:performance.now()}); if (SCORCH.length > 60) SCORCH.shift(); }
   for (let i = 0; i < 5*big; i++) emit('fire', wx, wy, {vx:(Math.random() - 0.5)*60*big, vy:-(10 + Math.random()*40)*big, s0:10*big, s1:3, life:420 + Math.random()*260});
-  for (let i = 0; i < 4*big; i++) emit('smoke', wx, wy, {vx:(Math.random() - 0.5)*20, vy:-(6 + Math.random()*14), s0:10*big, s1:(30 + Math.random()*16)*big, life:2200 + Math.random()*1400});
+  const sb = Math.min(big, 1.4); for (let i = 0; i < Math.round(5*big); i++) emit('smoke', wx, wy, {ox:(Math.random() - 0.5)*14*sb, vx:(Math.random() - 0.5)*26, vy:-(6 + Math.random()*16), s0:7*sb, s1:(20 + Math.random()*14)*sb, life:2000 + Math.random()*1600});
   for (let i = 0; i < 6*big; i++) emit('debris', wx, wy, {vx:(Math.random() - 0.5)*110*big, vy:-(40 + Math.random()*70)*big, s0:1.6, s1:1.2, life:700 + Math.random()*400});
 }
 function shoot(kind, from, to, opt = {}){ if (PROJ.length > 160) PROJ.shift(); PROJ.push({kind, from, to, t0:performance.now(), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0}); }
@@ -1361,6 +1371,70 @@ function aiAir(n){
   }
 }
 
+/* ---------------- Strategic missiles ---------------- */
+const mstock = p => (S.mstock || (S.mstock = {}))[p] || (S.mstock[p] = {cm:0, bm:0});
+function canBuildMissile(n, p, k){ const M0 = MISSILES[k], N = S.nations[n]; return S.owner[p] === n && S.bld[p].silo > 0 && has(n, M0.tech) && N.cash >= M0.cost && N.oil >= M0.oil && N.metal >= M0.metal; }
+function buildMissile(n, p, k){ if (!canBuildMissile(n, p, k)) return false; const M0 = MISSILES[k], N = S.nations[n]; N.cash -= M0.cost; N.oil -= M0.oil; N.metal -= M0.metal; S.queue[p].push({t:k, h:M0.build, h0:M0.build, msl:true}); return true; }
+function missileCheck(n, from, to, k){
+  const M0 = MISSILES[k], d = hexDist(G.P[from].cc, G.P[to].cc), o = S.owner[to];
+  if (!mstock(from)[k]) return {ok:false, why:`No ${M0.name}s stored here.`};
+  if (d > M0.range) return {ok:false, why:`Out of range: ${d} hexes (max ${M0.range}).`};
+  if (G.P[to].sea && !stationaryAt(to).some(b => atWar(n, b.owner))) return {ok:false, why:'No targets at sea there.'};
+  if (o >= 0 && o !== n && !atWar(n, o)) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
+  if (o === n && !stationaryAt(to).some(b => atWar(n, b.owner))) return {ok:false, why:'No enemies there.'};
+  return {ok:true, d, hours:Math.max(k === 'bm' ? 4 : 2, Math.ceil(d/M0.speed))};
+}
+function launchMissile(n, from, to, k){
+  const c = missileCheck(n, from, to, k); if (!c.ok){ if (n === PLAYER) toast(c.why, 'bad', null); return false; }
+  mstock(from)[k]--; (S.inflight || (S.inflight = [])).push({id:S.nid++, owner:n, k, from, to, t:0, dt:1/c.hours});
+  const o = S.owner[to];
+  if (n === PLAYER) log(`${MISSILES[k].name} launched from ${G.P[from].cityName} at ${G.P[to].cityName || G.P[to].name}. Impact in ${c.hours} h.`, 'info', to);
+  else if (o === PLAYER || stationaryAt(to).some(b => b.owner === PLAYER)){ log(`Missile warning: ${nationName(n)} launched a ${MISSILES[k].name} at ${G.P[to].cityName || G.P[to].name}! Impact in ${c.hours} h.`, 'bad', to); alarm(); }
+  sfx('launch'); return true;
+}
+function interceptChance(m){
+  // SAMs and Frigates in or next to the target can shoot the missile down
+  let sams = 0; const near = [m.to, ...G.P[m.to].nbs];
+  for (const a of S.armies){ if (a.to !== null || a.fly || !near.includes(a.at) || !atWar(a.owner, m.owner)) continue; const def = (a.u.sam || 0) + 0.6*(a.u.frig || 0); sams += def*(has(a.owner, 'msl3') ? 2 : 1)*(a.at === m.to ? 1 : 0.5); }
+  const per = m.k === 'cm' ? 0.12 : 0.05; return Math.min(0.85, 1 - Math.pow(1 - per, sams));
+}
+function missileTick(){
+  if (!S.inflight || !S.inflight.length) return;
+  for (let i = S.inflight.length - 1; i >= 0; i--){ const m = S.inflight[i]; m.t += m.dt; if (m.t < 1) continue; S.inflight.splice(i, 1); missileImpact(m); }
+}
+function missileImpact(m){
+  const P = G.P[m.to], vis = m.owner === PLAYER || visibleSet().has(m.to) || S.owner[m.to] === PLAYER;
+  if (rng() < interceptChance(m)){
+    if (vis && booted){ const [ix, iy] = [P.x, P.y - 40]; for (let j = 0; j < 2; j++) explode(ix + (Math.random() - 0.5)*10, iy, 0.9); }
+    if (m.owner === PLAYER) log(`Your ${MISSILES[m.k].name} was intercepted over ${P.cityName || P.name}.`, 'info', m.to);
+    else if (S.owner[m.to] === PLAYER) log(`Air defences intercepted an enemy ${MISSILES[m.k].name} over ${P.cityName || P.name}.`, 'good', m.to);
+    return; }
+  const M0 = MISSILES[m.k], defs = stationaryAt(m.to).filter(b => atWar(m.owner, b.owner) && count(b) > 0), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), hpBefore = defs.reduce((s0, b) => s0 + effHP(b), 0);
+  if (defs.length){ const tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1, f0 = K*M0.power*(0.85 + rng()*0.3)*12;
+    const av = {soft:f0*1.2, armored:f0, air:f0*0.4, naval:f0*0.9}; for (const b of defs){ hurt(b, av, 1/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }
+  let wrecked = '';
+  if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)]; S.bld[m.to][k]--; wrecked = BUILD[k].name; } }
+  const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
+  if (vis && booted){ const big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) setTimeout(() => explode(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, big*(0.7 + Math.random()*0.4)), j*120);
+    WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); fx('dmg', m.to, {text:`−${dealt} HP`, color:'#ffb27a', dy:-62}); shake(m.k === 'bm' ? 9 : 5, m.k === 'bm' ? 900 : 500); sfx('boom'); }
+  const where = P.cityName || P.name;
+  if (m.owner === PLAYER){ log(`${M0.name} hit ${where}: ${dealt} damage${killed ? `, ${killed} units destroyed` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'good', m.to); bump('unitsKilled', killed); }
+  else if (S.owner[m.to] === PLAYER || defs.some(b => b.owner === PLAYER)){ log(`Enemy ${M0.name} struck ${where}: ${dealt} damage${killed ? `, ${killed} units lost` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'bad', m.to); bump('unitsLost', killed); }
+}
+function aiMissiles(n){
+  for (const [ps, st] of Object.entries(S.mstock || {})){ const p = +ps; if (S.owner[p] !== n) continue;
+    for (const k of ['bm', 'cm']){ if (!st[k]) continue; let best = -1, bs = 0;
+      for (const [pid, list] of provPowers()){ let sc = 0; for (const [o, pw] of list) if (o >= 0 && o !== n && atWar(n, o)) sc += pw*(o === PLAYER ? 1.1 : 1); if (sc < (k === 'bm' ? 60 : 30)) continue; if (!missileCheck(n, p, pid, k).ok) continue; if (sc > bs){ bs = sc; best = pid; } }
+      if (best >= 0) launchMissile(n, p, best, k); } }
+}
+function missilePos(m){
+  const A = G.P[m.from], B = G.P[m.to], live = S.speed && !S.over ? acc : 0, t = Math.min(1, m.t + live*m.dt), d = Math.hypot(B.x - A.x, B.y - A.y);
+  const arc = m.k === 'bm' ? Math.min(420, d*0.35) : Math.min(28, d*0.04);
+  return {x:A.x + (B.x - A.x)*t, y:A.y + (B.y - A.y)*t - Math.sin(t*Math.PI)*arc, t, arc, A, B};
+}
+let shakeUntil = 0, shakeAmp = 0;
+function shake(amp, ms){ shakeAmp = Math.max(shakeAmp, amp); shakeUntil = Math.max(shakeUntil, performance.now() + ms); }
+
 /* ---------------- Simulation ---------------- */
 function alarm(){ if (S.speed > 1){ S.speed = 1; } sfx('alarm'); }
 let tickVer = 0;
@@ -1371,6 +1445,7 @@ function tick(){
     if (S.owner[p] < 0){ q.length = 0; continue; }
     const lines = 1 + S.bld[p].fac;            // each Arms Factory level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
+    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (S.owner[p] === PLAYER){ log(`${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fx('ready', p); sfx('ready'); } } continue; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
       if (S.owner[p] === PLAYER){ fx('ready', p); sfx('ready'); log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
         if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])) log(`Repeat production paused in ${G.P[p].cityName}: not enough resources for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } }
@@ -1384,6 +1459,7 @@ function tick(){
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
   diploHour();
   airTick();
+  missileTick();
   // movement
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
@@ -1466,7 +1542,7 @@ function tick(){
     } else if (owners.size === 0) S.cap[p] = null;
   }
   if (S.hour % 24 === 0){ diploDay(); daily(); }
-  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ aiTurn(n); aiAir(n); }
+  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); }
   visCache = null;
 }
 function hurt(a, d, f){
@@ -1605,10 +1681,12 @@ function aiTurn(n){
       if (p === N.capital && threatNear(p, n) && S.bld[p].fort < 2) build(n, p, 'fort');
       else if (!S.bld[p].fac && N.cash > 110) build(n, p, 'fac');
       else if (has(n, 'air1') && !S.bld[p].air && N.cash > 140 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air).length < 2) build(n, p, 'air');
+      else if (has(n, 'msl1') && p === N.capital && !S.bld[p].silo && N.cash > 260 && rng() < 0.3) build(n, p, 'silo');
       else if (canBuildHere(p, 'yard') && !S.bld[p].yard && S.bld[p].fac && N.cash > 170 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].yard).length < 2 && rng() < 0.3) build(n, p, 'yard');
       else if (S.bld[p].yard === 1 && N.cash > 220 && rng() < 0.2 && !G.P.some(P => S.owner[P.id] === n && S.bld[P.id].yard >= 2)) build(n, p, 'yard');
       else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
     }
+    if (S.bld[p].silo && S.queue[p].length < 2 && N.cash > 320 && rng() < 0.25){ const k = has(n, 'msl2') && rng() < 0.4 ? 'bm' : 'cm'; if (mstock(p)[k] < 3) buildMissile(n, p, k); }
     if (S.queue[p].length < 2 && canGrow){
       let t = aiPickUnit(n, p);
       if (!canAfford(n, t)) t = 'inf';
@@ -1661,7 +1739,7 @@ const view = {s:1, x:0, y:0};
 let dpr = 1, cw = 0, ch = 0, hits = [], hoverProv = -1, hoverPath = null, visCache = null, mouse = null, relMode = false, mapMode = 'political';
 const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources']];
 const sel = {army:null, prov:null, target:null, group:[]};
-let boxSel = null, rallyFor = null;
+let boxSel = null, rallyFor = null, aimMsl = null;
 let targetPath = null;
 function rgba(hex, a){ const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
 function resize(){
@@ -1892,6 +1970,7 @@ function renderLayer(vis){
 }
 function draw(now){
   clampView();
+  if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; } else if (cv.style.transform){ cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS;
   const key = [view.s, view.x, view.y, cw, ch, dpr, geoVer, vis.key, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : 0].join('|');
@@ -1926,6 +2005,7 @@ function draw(now){
     if (cap && hexPx >= 2){ star(x, y + 9*k, 6*k); ctx.fillStyle = '#f3ead2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b1012'; ctx.stroke(); }
     else if (P.city && showCity){ ctx.fillStyle = '#f3ead2'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1.2; ctx.fillRect(x - 3*k, y + 6*k, 6*k, 6*k); ctx.strokeRect(x - 3*k, y + 6*k, 6*k, 6*k); }
     if (P.oil && hexPx >= 8){ const ox = x + (P.city || cap ? 10*k : 0), oy = y + 9*k; ctx.beginPath(); ctx.arc(ox, oy + 1.2*k, 2.8*k, 0, Math.PI*2); ctx.moveTo(ox - 2.4*k, oy); ctx.lineTo(ox, oy - 4.2*k); ctx.lineTo(ox + 2.4*k, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (S.bld[p].silo && hexPx >= 4){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*k, y + 14*k); ctx.lineTo(x - 9*k, y + 4*k); ctx.lineTo(x - 6*k, y + 14*k); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     if (S.bld[p].fort && hexPx >= 6){ ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y + 9*k, 10*k, Math.PI*0.15, Math.PI*0.85); ctx.stroke(); }
     const label = showNames ? (P.city ? P.cityName : P.name) : (P.city && hexPx >= 8) || (cap && hexPx >= 4) ? P.cityName : '';
     if (label){ ctx.font = `${cap ? 600 : 500} ${cap ? 12 : 11}px ${BODY}`; ctx.textBaseline = 'top';
@@ -2026,6 +2106,15 @@ function draw(now){
     ctx.font = `700 ${Math.round(10*sc)}px ${MONO}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2eee2'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(count(a), x, y + 16*sc); ctx.fillText(count(a), x, y + 16*sc);
     if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
   drawParticles(now);
+  // missiles in flight: exhaust glow, body and smoke trail; aiming ring
+  for (const m of (S.inflight || [])){ const q0 = missilePos(m), [x, y] = toScreen(q0.x, q0.y), A = q0.A, B = q0.B, eps = 0.02, t2 = Math.min(1, q0.t + eps);
+    const nx = A.x + (B.x - A.x)*t2, ny = A.y + (B.y - A.y)*t2 - Math.sin(t2*Math.PI)*q0.arc, [x2, y2] = toScreen(nx, ny), ang = Math.atan2(y2 - y, x2 - x);
+    if (Math.random() < 0.7) emit('smokel', q0.x, q0.y, {vx:(Math.random() - 0.5)*6, vy:-1, s0:m.k === 'bm' ? 6 : 4, s1:m.k === 'bm' ? 26 : 16, life:m.k === 'bm' ? 2600 : 1600});
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(GLOW(), -22, -9, 22, 18); ctx.globalCompositeOperation = 'source-over';
+    const L0 = m.k === 'bm' ? 16 : 11; ctx.fillStyle = '#e8e4da'; ctx.strokeStyle = '#1a1c1b'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L0/2, 0); ctx.lineTo(-L0/2, -2.2); ctx.lineTo(-L0/2, 2.2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+    if (m.owner !== PLAYER && (S.owner[m.to] === PLAYER)){ const [tx, ty] = toScreen(B.x, B.y); ctx.save(); ctx.strokeStyle = `rgba(224,87,79,${0.5 + 0.4*Math.sin(now/120)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tx, ty, 16, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
+  if (aimMsl){ const F = G.P[aimMsl.from], [fx1, fy1] = toScreen(F.x, F.y), rr = MISSILES[aimMsl.k].range*HS*SQ3*view.s;
+    ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(224,87,79,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(fx1, fy1, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(224,87,79,.04)'; ctx.fill(); ctx.restore(); }
   drawSelPaths();
   drawFX(now);
   drawMini();
@@ -2099,6 +2188,7 @@ function tap(x, y, shift = false){
       break;
     } }
   const p = provAt(x, y);
+  if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
   if (p < 0 || (G.P[p].sea && sel.army === null)){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (a){
@@ -2132,8 +2222,9 @@ function sendToTarget(a){ if (sel.target !== null){ const g = groupArmies(); let
 function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
   sel.group = []; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
-function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.group = []; if (rallyFor !== null){ setRally(rallyFor, p); return; } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
-function clearSel(){ sel.group = []; rallyFor = null; sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
+function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.group = []; if (rallyFor !== null){ setRally(rallyFor, p); return; }
+  if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
+function clearSel(){ sel.group = []; rallyFor = null; aimMsl = null; sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 
 /* ---------------- Tooltip ---------------- */
 const tip = document.getElementById('tip');
@@ -2209,7 +2300,8 @@ function renderSide(force){
   $('mutebtn').setAttribute('aria-pressed', String(!muted)); $('mutebtn').style.opacity = muted ? 0.45 : 1; $('mutebtn').title = muted ? 'Sound is off (M)' : 'Sound is on (M)';
   let hint = '';
   const a = sel.army !== null ? armyById(sel.army) : null;
-  if (rallyFor !== null) hint = `Tap where units trained in ${G.P[rallyFor].cityName} should gather.`;
+  if (aimMsl) hint = `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${MISSILES[aimMsl.k].range} hexes). Esc to cancel.`;
+  else if (rallyFor !== null) hint = `Tap where units trained in ${G.P[rallyFor].cityName} should gather.`;
   else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Tap a province inside the blue ring to plan an air mission.';
   else if (a) hint = sel.target !== null ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap empty map or press Esc to deselect.` : 'Tap a province or sea zone to plan a route. Press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
@@ -2229,7 +2321,7 @@ function checklist(){
 function prodHTML(){
   const N = S.nations[PLAYER], cities = G.P.filter(P => S.owner[P.id] === PLAYER && P.city).sort((a, b) => (b.id === N.capital) - (a.id === N.capital) || a.cityName.localeCompare(b.cityName));
   const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p];
-    const qtxt = q.length ? `${UNITS[q[0].t].name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || UNITS[q[0].t].build))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
+    const qtxt = q.length ? `${(UNITS[q[0].t] || MISSILES[q[0].t]).name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || 24))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
     const btns = UT.filter(t => bldOk(p, t) && unlocked(PLAYER, t)).map(t => `<button class="btn" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="${UNITS[t].name}: $${UNITS[t].cost}M${UNITS[t].metal ? ', ' + UNITS[t].metal + ' metal' : ''}${UNITS[t].oil ? ', ' + UNITS[t].oil + ' oil' : ''}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>+${UNITS[t].short}</button>`).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td><b>${P.cityName}</b>${p === N.capital ? ' ★' : ''}<div class="small muted">${BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name.split(' ')[0] + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
@@ -2461,8 +2553,10 @@ function provHTML(p){
     html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (Arms Factory adds more). Shift-click a card to queue 5.</div>`;
     html += `<div class="row"><button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px">${S.rally && S.rally[p] != null ? 'Rally: ' + (G.P[S.rally[p]].cityName || G.P[S.rally[p]].name) + ' (change)' : 'Set rally point'}</button></div>`;
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
-    if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${UNITS[it.t].name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || UNITS[it.t].build))*100)}%"></i></div>` : ''}`).join('')}</div>`;
+    if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
   }
+  if (mine && S.bld[p].silo){ const st = mstock(p);
+    html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.entries(MISSILES).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm">${M0.name} <b class="cost">×${st[k]}</b></span><span class="cost">${has(PLAYER, M0.tech) ? `$${M0.cost}M · ${M0.oil} oil · ${M0.metal} metal · ${M0.build/24}d · range ${M0.range}` : 'Research ' + TECH_BY[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`; }
   if (mine){
     const c = S.cons[p];
     html += `<div class="eyebrow">Construction</div>`;
@@ -2486,6 +2580,8 @@ document.addEventListener('click', e => {
     case 'army': selectArmy(+b.dataset.id); { const x = armyById(+b.dataset.id); if (x){ const [wx, wy] = armyPos(x); const [sx, sy] = toScreen(wx, wy); if (sx < 0 || sy < 0 || sx > cw || sy > ch) centerOn(wx, wy); } } break;
     case 'prov': selectProv(+b.dataset.id); break;
     case 'tab': setTab(b.dataset.tab); renderSide(); break;
+    case 'msl-build': if (sel.prov !== null && buildMissile(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
+    case 'msl-aim': if (sel.prov !== null){ aimMsl = {from:sel.prov, k:b.dataset.k}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}.`, 'info', null); renderSide(true); } break;
     case 'rally': rallyFor = +b.dataset.id; toast('Tap the province new units should march to (tap the city itself to clear).', 'info', null); break;
     case 'gsel': sel.army = +b.dataset.id; renderSide(true); break;
     case 'hidesteps': (S.tut || (S.tut = {})).hide = true; renderSide(true); break;
@@ -2561,6 +2657,7 @@ function rules(){ return `<ul>
   <li><b>Capture</b> by parking ground units in a province with no defenders. Cities and capitals take longer. Air units can fight but cannot capture.</li>
   <li><b>Battles</b> run hour by hour. Defenders on their own soil take less damage, troops at sea take more. The blue bar under a counter is morale: armies that break retreat.</li>
   <li><b>Supply</b> reaches 8 hexes from your cities. Supplied troops heal (fastest in cities); troops cut off lose strength every day and get a red dashed outline.</li>
+  <li><b>Strategic missiles</b>: research the Strategic branch, build a Missile Silo in a city, produce Cruise or Ballistic Missiles there and launch them at any province in range. SAMs and Frigates near the target can intercept them.</li>
   <li><b>Air power</b>: aircraft live in air wings at your airbases. Select a wing, tap a target inside its range ring: Strikers fly out, hit everything hostile there and return to rearm; Interceptors patrol a province and shoot down enemy strikes.</li>
   <li><b>Unit classes</b>: soft (infantry), armored and air. Lancers (3× vs armor) and Strikers beat armor, SAMs and Interceptors beat aircraft, artillery beats infantry. Hover a unit card for its role.</li>
   <li><b>Navy</b>: build a Naval Yard in a coastal city for Frigates, Submarines and Cruisers. Ships stay at sea or in friendly ports, escort troops crossing water (they take less damage), blockade enemy coasts and bombard coastal battles.</li>
