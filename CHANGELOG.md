@@ -355,3 +355,12 @@
 ## Round 46 — Who am I buying from?
 - The market's top section is now labelled "Anonymous exchange (no nation)", and trades there say no nation is involved. Each resource row shows the cheapest offer from a nation: its flag, name, quantity, price and a Buy button. Enemy sellers are highlighted red with an ENEMY tag and a hover warning.
 - Every purchase from a nation names the seller, in the toast and in the dispatches ("Bought 10 metal from France for $22M"). Buying from an enemy is flagged as such.
+
+## Round 47 — A market of real listings, with private coalition trades
+- The anonymous exchange is gone. The market shows only what nations list:
+  - **Sell offers**: you buy and your money goes to the seller.
+  - **Buy offers**: you sell to the nation that asked, and it pays you.
+  - If nobody has listed anything, the section says "No nation is selling/buying right now". A new campaign starts empty, and offers appear as nations build surpluses or run short.
+- AI nations trade only through these listings: they post sell offers from surpluses and buy offers when short, and fill each other's offers (never between nations at war). No hidden trades remain.
+- You can post sell offers (goods are held) or buy offers (money is held) for 3 days. AI nations fill them when the price suits them. Embargoing nations won't trade with you.
+- Private coalition channel: the only hidden trades are inside a coalition. Coalition members can post "Coalition only" listings, marked 🔒 COALITION, which only that coalition's members can see and fill. You get a checkbox for this when you're in a coalition.
