@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
   await p.goto('file://' + path.join(root, '.test', 'page.html') + '?bake'); await p.waitForFunction(() => window.__im && window.__im.G && window.__im.G.terrain, null, { timeout: 60000 });
   const save = (rel, dataUrl) => { fs.writeFileSync(path.join(out, rel), Buffer.from(dataUrl.split(',')[1], 'base64')); };
   save('terrain.webp', await p.evaluate(() => window.__im.G.terrain.toDataURL('image/webp', 0.9)));
-  save('landmask.png', await p.evaluate(() => window.__im.G.landMask.toDataURL('image/png')));
+  save('landmask.png', await p.evaluate(() => { const m = window.__im.G.landMask, c = document.createElement('canvas'); c.width = Math.round(m.width/2); c.height = Math.round(m.height/2); const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(m, 0, 0, c.width, c.height); return c.toDataURL('image/png'); }));
   for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'jet', 'int', 'frig', 'sub', 'crui', 'heli', 'drone', 'carr', 'mlrs', 'spec']){
     const a = await p.evaluate(tt => window.U3D.exportAtlas(tt), t); if (!a){ errs.push('no atlas ' + t); continue; }
     save(`units/${t}.png`, a.base); save(`units/${t}_m.png`, a.mask); }

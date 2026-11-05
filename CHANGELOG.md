@@ -426,3 +426,8 @@
 - Front lines: your borders with every power you're at war with are drawn as a glowing red line with marching dashes, so active fronts stand out at any zoom.
 - Fortifications are a small star fort (one bastion ring per level, with the level number) beside the city, in place of a ring of wall segments that spilled across neighbouring provinces on the finer map.
 - City buildings shrink to fit small provinces instead of overlapping their neighbours.
+
+## Round 57 / v1 — Polish round 1 (audited, fixed, verified)
+- Smooth map: the cached map layer re-renders far less and much faster (single overlay pass, bucketed border paths, cheaper fog, a soft-light grain instead of per-province detail). Panning in the test browser went from 3–4 fps to 26–39 fps. Terrain is baked at 1.5× resolution.
+- Operational counter plates: below close zoom, every stack is a compact plate (owner tab, unit glyph, strength, health and morale bars, status marks for selected, fighting, moving and cut off) instead of oversized sprites and overlapping badges. Stacks sit above city markers, and tapping a marker always picks that city.
+- Real day/night: a terminator with a twilight band and per-province night replaces the single screen-wide tint. The top bar is one 52 px command bar: labelled resources, a victory-progress line, speed controls and icon buttons.
