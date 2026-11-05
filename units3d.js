@@ -272,7 +272,7 @@
     const spec = SPEC[type], model = BUILDERS[type]();
     const {dirs, frames} = spec, base = document.createElement('canvas'), mask = document.createElement('canvas');
     base.width = mask.width = SZ*frames; base.height = mask.height = SZ*dirs;
-    const bc = base.getContext('2d'), mc = mask.getContext('2d');
+    const bc = base.getContext('2d'), mc = mask.getContext('2d', {willReadFrequently:true});
     scene.add(model.g); ground.visible = !model.air;
     const half = model.ext; cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half; cam.updateProjectionMatrix();
     const dist = 60, el = model.air ? 1.3 : 0.8;

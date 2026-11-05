@@ -133,6 +133,8 @@ def save_rgba(arr, name, size=256, trim=True, q=84):
 
 UNITS = ['infantry', 'special-forces', 'tank', 'light-armor', 'artillery', 'rocket-artillery', 'anti-air', 'missile-launcher', 'supply-truck',
          'jet', 'bomber', 'attack-heli', 'transport-heli', 'drone', 'corvette', 'destroyer', 'submarine', 'carrier']
+# V3 air (promised art; the game draws code stand-ins until these exist): skipped quietly when the source file is not there yet
+UNITS += ['heavy-bomber', 'naval-patrol', 'awacs', 'air-superiority', 'swarm-drone', 'strike-drone', 'anti-drone', 'cargo-ship', 'uav-recon', 'uav-armed']
 BUILD = {'city': ['city', 'city-2', 'city-3', 'city-4', 'city-5'], 'airfield': ['airfield', 'airfield-2', 'airfield-3', 'airfield-4', 'airfield-5'],
          'missile-silo': ['missile-silo', 'missile-silo-2', 'missile-silo-3', 'missile-silo-4', 'missile-silo-5'],
          'military-base': ['military-base-%d' % i for i in range(1, 6)], 'naval-port': ['naval-port-%d' % i for i in range(1, 6)]}
@@ -142,6 +144,8 @@ def want(n): return not only or n in only
 
 ROT = {'corvette': -90}   # every unit faces up (bow / nose at the top)
 for u in UNITS:
+    if want(u) and not os.path.exists(os.path.join(SRC, u + '.webp')):
+        print('skip (no source yet):', u); continue
     if want(u) and u in ROT: save_rgba(np.asarray(Image.fromarray(cutout(load(u + '.webp')), 'RGBA').rotate(ROT[u], expand=True)), 'u-' + u + '.webp', 256); continue
     if want(u): save_rgba(chroma_cut(load(u + '.webp')) if u in ('infantry', 'special-forces') else cutout(load(u + '.webp')), 'u-' + u + '.webp', 256)
 for k, files in BUILD.items():
@@ -162,4 +166,13 @@ if want('earth'):
 if want('menu'):
     m = Image.open(os.path.join(SRC, 'menu-background.webp')).convert('RGB'); m.resize((1920, round(1920*m.height/m.width)), Image.LANCZOS).save(os.path.join(OUT, 'menu-background.webp'), 'WEBP', quality=80, method=6)
     t = Image.open(os.path.join(SRC, 'panel-texture.webp')).convert('RGB'); t.resize((1024, round(1024*t.height/t.width)), Image.LANCZOS).save(os.path.join(OUT, 'panel-texture.webp'), 'WEBP', quality=78, method=6)
+# tell the game which promised V3 pictures now exist (it draws code stand-ins for the rest and never requests a missing file)
+import re
+V3 = ['u-' + u for u in ['heavy-bomber', 'naval-patrol', 'awacs', 'air-superiority', 'swarm-drone', 'strike-drone', 'anti-drone', 'cargo-ship', 'uav-recon', 'uav-armed']]
+have = [n for n in V3 if os.path.exists(os.path.join(OUT, n + '.webp'))]
+idx = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT))), 'index.html')
+if os.path.exists(idx):
+    src = open(idx, encoding='utf-8').read()
+    new = re.sub(r"const ART_SUPPLIED = \[[^\]]*\];", 'const ART_SUPPLIED = [' + ', '.join("'%s'" % n for n in have) + '];', src, count=1)
+    if new != src: open(idx, 'w', encoding='utf-8').write(new); print('index.html: ART_SUPPLIED =', have)
 print('ok')

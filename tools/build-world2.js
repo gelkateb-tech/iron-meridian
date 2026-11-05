@@ -1,6 +1,8 @@
 // Builds world.js from real administrative borders: Natural Earth admin-1 states and provinces (1:10m, public domain)
 // rasterized onto a fine hex grid (600 x 313 cells, ~65 km). Tiny regions are merged into neighbours, large ones are
 // split along population (Natural Earth populated places) into provinces named after their main town.
+// Terrain (v3): province field [5] = p plains, f forest, m mountain, d desert, t tundra, h hills, w marsh/wetland, s snow/ice, from Natural Earth geography regions
+// plus known wetlands, uplands and ice by box (section 2c); .test/terrcells.js keeps the per-cell codes 0-7 for tools/bake-assets.js. Terrain never changes province ids or cells.
 // Sea zones are generated over open water. Cities and capitals come from the curated list in build-world.js.
 // usage: NODE_PATH=<dir with node_modules> node tools/build-world2.js <ne_10m_admin_1.geojson> <ne_10m_populated_places_simple.geojson> <ne_10m_geography_regions_polys.geojson>
 'use strict';
@@ -80,7 +82,7 @@ for (const p of PP.slice().sort((a, b) => b.pop - a.pop)) if (p.cell >= 0 && cel
 
 // ---- 2b. terrain per cell: real mountain ranges, deserts and tundra (Natural Earth geography regions), forests by biome
 const GEO = process.argv[4] ? JSON.parse(fs.readFileSync(process.argv[4])).features : [];
-const cellT = new Uint8Array(N);   // 0 plains 1 forest 2 mountain 3 desert 4 tundra
+const cellT = new Uint8Array(N);   // 0 plains 1 forest 2 mountain 3 desert 4 tundra (5 hills 6 marsh 7 snow/ice added in 2c)
 for (const f of GEO){ const k = f.properties.FEATURECLA, t = k === 'Range/mtn' ? 2 : k === 'Desert' ? 3 : k === 'Tundra' ? 4 : 0; if (t && f.geometry) rasterize(f.geometry, i => { if (cellT[i] !== 2) cellT[i] = t; }); }
 { const g = new Float32Array(64*64), r0 = mulberry(77); for (let i = 0; i < g.length; i++) g[i] = r0();
   const at = (x, y) => g[((y & 63)*64) + (x & 63)], sm = t => t*t*(3 - 2*t), noise = (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = sm(x - x0), fy = sm(y - y0), a = at(x0, y0), b = at(x0 + 1, y0), c = at(x0, y0 + 1), d = at(x0 + 1, y0 + 1); return a + (b - a)*fx + (c - a)*fy + (a - b - c + d)*fx*fy; };
@@ -89,7 +91,52 @@ for (const f of GEO){ const k = f.properties.FEATURECLA, t = k === 'Range/mtn' ?
   for (let i = 0; i < N; i++){ if (cellReg[i] < 0) continue; const [lon, lat] = cellLonLat(i), c = i % W, r = (i / W) | 0, nz = noise(c/(5*GS), r/(5*GS))*0.7 + noise(c/(1.6*GS) + 9, r/(1.6*GS))*0.3;
     if (cellT[i] === 2 || cellT[i] === 3) continue;
     if (Math.abs(lat) > 66 || cellT[i] === 4 || (Math.abs(lat) > 62 && nz < 0.55)){ cellT[i] = 4; continue; }
-    cellT[i] = (FOR.some(b => BOX(lon, lat, ...b)) ? nz > 0.32 : nz > 0.72) ? 1 : 0; } }
+    cellT[i] = (FOR.some(b => BOX(lon, lat, ...b)) ? nz > 0.32 : nz > 0.72) ? 1 : 0; }
+  // ---- 2c. (v3) hills, marsh/wetland and snow/ice on top of the base biomes. Cell codes: 0 plains 1 forest 2 mountain 3 desert 4 tundra 5 hills 6 marsh 7 snow/ice
+  const NZ = new Float32Array(N); for (let i = 0; i < N; i++){ const c = i % W, r = (i / W) | 0; NZ[i] = noise(c/(5*GS), r/(5*GS))*0.7 + noise(c/(1.6*GS) + 9, r/(1.6*GS))*0.3; }
+  const LL = i => { const [lon, lat] = cellLonLat(i); return [lon, lat]; };
+  const inBox = (i, b) => { const [lon, lat] = LL(i); return BOX(lon, lat, b[0], b[1], b[2], b[3]); };
+  // hills: plateaus, uplands and foothills from Natural Earth; flat giants are skipped, broad uplands only where the noise rises
+  const HILL_SKIP = new Set(['Iberian Peninsula', 'Western Plateau', 'Grande Sertão Veredas National Park', 'Antarctic Plateau', 'American Highland', 'Hollick-Kenyon Plateau', 'Rockefeller Plateau', 'Talos Dome', 'Dome C', 'Dome A', 'Dome F', 'Tibetan Plateau', 'Mato Grosso Plateau', 'Selva']);
+  const HILL_THIN = new Set(['Brazilian Highlands', 'Central Siberian Plateau', 'Mongolian Plateau', 'Deccan Plateau', 'Kazakh Uplands', 'Mexican Plateau', 'Laurentian Upland', 'Great Karoo', 'Karoo', 'Central Russian Upland', 'Volga Upland', 'Dnieper Upland', 'Katanga Plateau', 'Libyan Plateau', 'Western Plateau']);
+  const toHill = (i, thr, desertOk) => { if (cellReg[i] < 0) return; const t = cellT[i], z = NZ[i];
+    if (t === 0 ? z > thr : t === 1 ? z > Math.max(thr, 0.65) : t === 4 ? z > Math.max(thr, 0.42) : t === 3 && desertOk ? z > Math.max(thr, 0.45) : false) cellT[i] = 5; };
+  for (const f of GEO){ const k = f.properties.FEATURECLA, nm = f.properties.NAME_EN || f.properties.NAME || ''; if (!f.geometry || (k !== 'Plateau' && k !== 'Foothills') || HILL_SKIP.has(nm)) continue;
+    const thin = HILL_THIN.has(nm); rasterize(f.geometry, i => toHill(i, thin ? 0.5 : 0.2, !thin)); }
+  // known uplands Natural Earth does not outline: [lon0, lon1, lat0, lat1, noise threshold, desert too]
+  const HILLS = [[28.5, 41.5, 37.2, 40.6, 0.15, 1], [40, 46.5, 38, 41.2, 0.15, 1], [44.5, 62, 29.5, 38.3, 0.3, 1], [61.5, 71, 31, 37, 0.25, 1], [-6, -3, 56.4, 58.6, 0.2, 0], [19, 26.5, 41, 44.6, 0.35, 0],
+    [12, 17.5, 48.6, 50.8, 0.4, 0], [6.8, 12, 49.8, 51.6, 0.45, 0], [-6.5, -1.2, 38.6, 42.6, 0.45, 0], [29, 38.5, -9, 1.5, 0.5, 0], [105, 121, 22.5, 30, 0.45, 0], [126.4, 129.6, 35, 41.5, 0.25, 0],
+    [-4.5, 3, 43.5, 46.2, 0.3, 0], [-84, -77, 35, 41.5, 0.3, 0], [36, 43.5, 7.5, 14.5, 0.2, 0], [42, 45, 13, 20, 0.35, 1], [33, 36.5, 31, 36.5, 0.35, 1], [-104, -98, 17, 21.5, 0.3, 0], [101, 106, 15, 21, 0.4, 0]];
+  for (let i = 0; i < N; i++){ if (cellReg[i] < 0) continue; for (const b of HILLS) if (inBox(i, b)){ toHill(i, b[4], !!b[5]); break; } }
+  // foothills: two cells around every mountain range
+  { const dm = new Uint8Array(N).fill(9); let fr = []; for (let i = 0; i < N; i++) if (cellT[i] === 2){ dm[i] = 0; fr.push(i); }
+    for (let d0 = 1; d0 <= 2; d0++){ const nx = []; for (const c of fr) for (let d = 0; d < 6; d++){ const m = nbr(c, d); if (m >= 0 && dm[m] > d0){ dm[m] = d0; nx.push(m); } } fr = nx; }
+    for (let i = 0; i < N; i++) if (dm[i] >= 1 && dm[i] <= 2) toHill(i, dm[i] === 1 ? 0.35 : 0.55, true); }
+  // the Nile valley and delta and the Saharan/Arabian belt are farmland or desert, not forest
+  for (let i = 0; i < N; i++) if (cellT[i] === 1 && inBox(i, [-18, 60, 15, 35])) cellT[i] = 0;
+  // marsh: Natural Earth wetlands and deltas plus the great wetlands by outline box [lon0, lon1, lat0, lat1, noise threshold]
+  const toMarsh = (i, thr) => { if (cellReg[i] < 0 || cellT[i] === 2 || NZ[i] < thr) return; cellT[i] = 6; };
+  for (const f of GEO){ const k = f.properties.FEATURECLA, nm = f.properties.NAME_EN || f.properties.NAME || ''; if (!f.geometry || (k !== 'Wetlands' && k !== 'Delta') || nm === 'Nile Delta' || nm === 'Enugu Nigeria') continue;
+    rasterize(f.geometry, i => toMarsh(i, 0.12)); }
+  const MARSH = [[-58.6, -55.4, -20.6, -16, 0.18], [-58.2, -56.2, -29, -27.5, 0.3], [29.4, 32.8, 5.6, 9.9, 0.12], [21.8, 24.2, -20.3, -18.4, 0.05], [23.3, 30.6, 51.1, 52.7, 0.22],
+    [70, 84, 55.4, 60, 0.32], [64, 87, 60, 63.6, 0.55], [45.6, 48, 30.3, 32.1, 0.05], [-81.7, -80.2, 25, 27, 0.05], [88, 90.4, 21.4, 22.7, 0.05], [-95, -79, 50.6, 57.6, 0.33],
+    [-5.6, -3, 13.8, 16.3, 0.3], [16, 20, -1.6, 2.3, 0.45], [-91.5, -89, 29, 30.6, 0.2]];
+  for (let i = 0; i < N; i++){ if (cellReg[i] < 0) continue; for (const b of MARSH) if (inBox(i, b)){ toMarsh(i, b[4]); break; } }
+  // snow and ice: the Greenland ice sheet, the polar islands, the Taymyr, ice fields and the high ranges above the treeline
+  { const coastD = new Uint8Array(N).fill(9); let fr = []; for (let i = 0; i < N; i++) if (cellReg[i] < 0){ coastD[i] = 0; fr.push(i); }
+    for (let d0 = 1; d0 <= 3; d0++){ const nx = []; for (const c of fr) for (let d = 0; d < 6; d++){ const m = nbr(c, d); if (m >= 0 && coastD[m] > d0){ coastD[m] = d0; nx.push(m); } } fr = nx; }
+    const GRL = countryIdx.get('Greenland'), CAN = countryIdx.get('Canada');
+    const ICE = [[-19.6, -15.2, 64, 65, 0], [-74.6, -72.4, -51.6, -46.3, 0], [79, 97.5, 30.2, 36, 0.12]];   // Vatnajokull, Patagonian ice fields, Tibet core (Changtang)
+    const HIGH = [[77, 96, 27.3, 31, 0.22], [70.5, 78, 34.8, 39.5, 0.25], [80, 99, 35, 37.5, 0.35], [6.5, 13.6, 45.7, 47.2, 0.36], [40.5, 47, 42.4, 43.6, 0.3], [75, 87, 41, 44, 0.5],
+      [-72, -66, -28, -14, 0.55], [-154, -136, 59.4, 63.6, 0.32], [68.5, 72, 34.8, 37, 0.45], [-71, -69, -34.5, -32, 0.3]];
+    for (let i = 0; i < N; i++){ if (cellReg[i] < 0) continue; const [lon, lat] = LL(i), co = cellCountry[i], z = NZ[i];
+      let s = co === GRL && coastD[i] >= 2;
+      if (!s && lat >= 70.5 && (co === CAN || BOX(lon, lat, 10, 35, 74, 90) || BOX(lon, lat, 51, 69, 70.5, 90) || BOX(lon, lat, 135, 160, 73.5, 90) || lon > 178 || lon < -176)) s = true;
+      if (!s && BOX(lon, lat, 88, 113, 73, 90)) s = true;
+      if (!s) for (const b of ICE) if (BOX(lon, lat, b[0], b[1], b[2], b[3]) && z >= b[4]){ s = true; break; }
+      if (!s && cellT[i] === 2) for (const b of HIGH) if (BOX(lon, lat, b[0], b[1], b[2], b[3]) && z >= b[4]){ s = true; break; }
+      if (s) cellT[i] = 7; } }
+}
 
 const geoName = new Array(N).fill(null); { const OKC = new Set(['Island', 'Pen/cape', 'Range/mtn', 'Plateau', 'Basin', 'Plain', 'Desert', 'Peninsula', 'Lowland', 'Delta', 'Valley', 'Wetlands', 'Tundra', 'Depression', 'Foothills', 'Coast', 'Island group']);
   const list = GEO.filter(f => f.geometry && OKC.has(f.properties.FEATURECLA) && f.properties.NAME_EN && f.properties.NAME_EN.length <= 22).map(f => { const cells = []; rasterize(f.geometry, i => cells.push(i)); return { name: f.properties.NAME_EN.replace(/^(The) /, ''), cells }; }).filter(g => g.cells.length);
@@ -255,8 +302,10 @@ for (const p of finalP){ if (p.sea){ p.pop = 0; continue; } let urb = 0, rur = 0
   let kn = 0, km = 0; for (const [c, w] of tot){ const m = POPM[countryNames[c]]; if (m){ kn += m*1e6; km += w; } } const k0 = kn/km;
   for (const p of finalP){ if (p.sea) continue; const m = POPM[countryNames[p.country]], t = tot.get(p.country); p.pop = Math.round((m ? m*1e6*p.w/t : p.w*k0)/1000); } }
 
-for (const p of finalP){ if (p.sea) continue; const h = [0, 0, 0, 0, 0]; for (const c of p.cells) h[cellT[c]]++; const n = p.cells.length;
-  p.terr = h[2] >= n*0.4 ? 'm' : h[3] >= n*0.5 ? 'd' : h[4] >= n*0.5 ? 't' : h[1] >= n*0.45 ? 'f' : h[2] + h[3] > n*0.6 ? (h[2] > h[3] ? 'm' : 'd') : 'p'; }
+for (const p of finalP){ if (p.sea) continue; const h = [0, 0, 0, 0, 0, 0, 0, 0]; for (const c of p.cells) h[cellT[c]]++; const n = p.cells.length, hi = h[2] + h[7];
+  // province codes: p plains, f forest, m mountain, d desert, t tundra, h hills, w marsh/wetland, s snow/arctic
+  p.terr = h[7] >= n*0.5 ? 's' : hi >= n*0.4 ? (h[7] > h[2]*1.5 ? 's' : 'm') : h[3] >= n*0.5 ? 'd' : h[4] + h[7] >= n*0.5 ? (h[7] > h[4] ? 's' : 't') : h[6] >= n*0.4 ? 'w' : h[1] >= n*0.45 ? 'f'
+    : h[5] >= n*0.4 || h[5] + hi >= n*0.5 ? 'h' : hi + h[3] > n*0.6 ? (hi > h[3] ? 'm' : 'd') : h[5] + h[3] > n*0.6 ? 'h' : 'p'; }
 fs.mkdirSync(path.join(__dirname, '..', '.test'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, '..', '.test', 'terrcells.js'), 'window.TERRCELLS = ' + JSON.stringify(Array.from(cellT).join('')) + ';\n');   // bake-only: per-cell terrain for the texture
 
