@@ -417,7 +417,7 @@ details.more summary::-webkit-details-marker{display:none}
 
 <script src="world.js"></script>
 <script src="lines.js"></script>
-<script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script>'); }</script>
+<script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script><script src="terrcells.js"><\/script>'); }</script>
 <script src="units3d.js"></script>
 <script>
 (() => {
@@ -614,8 +614,7 @@ const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'ei
 const cap1 = w => w[0].toUpperCase() + w.slice(1);
 const NEUTRAL = -1, SEA = -2, PLAYER = 0;
 function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16); const ch2 = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${ch2(16)},${ch2(8)},${ch2(0)})`; }
-const HS = 12, SQ3 = Math.sqrt(3);
-const W = WORLD.W, H = WORLD.H;
+const W = WORLD.W, H = WORLD.H, GS = WORLD.GS || 1, HS0 = 12, HS = HS0/GS, SQ3 = Math.sqrt(3);   // GS: cells per old map hex
 const K = 0.25;                       // combat damage per hour factor
 const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game minutes (a game hour every 15 s)
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
@@ -633,7 +632,7 @@ const WIN_SHARE = 0.25;               // share of land provinces needed to win
 let WIN_CAPS = 5;                     // or hold this many starting capitals (5 of 15; 4 of 8 in theatre scenarios)
 let DAY_LIMIT = 120;                  // or have the top score when this day ends (60 / 120 / 240)
 const CAP_MIN = 2;                    // ground units needed to capture
-const SAVE_KEY = 'iron-meridian-save-v4';
+const SAVE_KEY = 'iron-meridian-save-v5';
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
 const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 
@@ -654,7 +653,7 @@ const NB_EVEN = [[1,0],[0,-1],[-1,-1],[-1,0],[-1,1],[0,1]];
 const NB_ODD  = [[1,0],[1,-1],[0,-1],[-1,0],[0,1],[1,1]];
 function nbr(i, d){ const c = i % W, r = (i / W) | 0, o = (r & 1) ? NB_ODD[d] : NB_EVEN[d]; const nc = c + o[0], nr = r + o[1]; return (nc < 0 || nr < 0 || nc >= W || nr >= H) ? -1 : idx(nc, nr); }
 function cube(i){ const c = i % W, r = (i / W) | 0, q = c - (r - (r & 1)) / 2; return [q, r, -q - r]; }
-function hexDist(a, b){ const A = cube(a), B = cube(b); return Math.max(Math.abs(A[0]-B[0]), Math.abs(A[1]-B[1]), Math.abs(A[2]-B[2])); }
+function hexDist(a, b){ const A = cube(a), B = cube(b); return Math.max(Math.abs(A[0]-B[0]), Math.abs(A[1]-B[1]), Math.abs(A[2]-B[2]))/GS; }
 function cellCenter(i){ const c = i % W, r = (i / W) | 0; return [OX + HS*SQ3*(c + 0.5*(r & 1)), OY + HS*1.5*r]; }
 function corner(cx, cy, k, rad = HS){ const a = Math.PI/180*(60*k + 30); return [cx + rad*Math.cos(a), cy + rad*Math.sin(a)]; }
 function worldToCell(x, y){
@@ -674,8 +673,8 @@ const cellLat = i => invMiller(YMAX - (((i / W) | 0)/(H - 1))*(YMAX - YMIN));
 
 /* ---------------- World map ---------------- */
 function loadWorld(){
-  const N = W*H, prov = new Int16Array(N);
-  for (let i = 0; i < N; i++){ const s = WORLD.cells.substr(i*2, 2); prov[i] = s === '..' ? -1 : parseInt(s, 36); }
+  const N = W*H, prov = WORLD.prov || new Int16Array(N);
+  if (!WORLD.prov) for (let i = 0; i < N; i++){ const s = WORLD.cells.substr(i*2, 2); prov[i] = s === '..' ? -1 : parseInt(s, 36); }
   const P = WORLD.provinces.map((d, k) => ({id:k, name:d[0], country:d[1], sea:d[1] < 0, city:!!(d[2] & 1), capFlag:!!(d[2] & 2), cityName:d[3], cells:[], nb:new Map()}));
   for (let i = 0; i < N; i++) if (prov[i] >= 0) P[prov[i]].cells.push(i);
   for (const p of P){
@@ -685,7 +684,7 @@ function loadWorld(){
     p.cc = bc; [p.x, p.y] = cellCenter(bc); p.lat = cellLat(bc);
   }
   for (let i = 0; i < N; i++){ if (prov[i] < 0) continue; for (let d = 0; d < 6; d++){ const m = nbr(i, d);
-    if (m >= 0 && prov[m] >= 0 && prov[m] !== prov[i]){ const a = P[prov[i]], b = prov[m]; if (!a.nb.has(b)) a.nb.set(b, Math.max(1, hexDist(a.cc, P[b].cc))); } } }
+    if (m >= 0 && prov[m] >= 0 && prov[m] !== prov[i]){ const a = P[prov[i]], b = prov[m]; if (!a.nb.has(b)) a.nb.set(b, Math.max(GS > 1 ? 0.35 : 1, hexDist(a.cc, P[b].cc))); } } }
   for (const p of P){ p.nbs = [...p.nb.keys()]; p.coast = !p.sea && p.nbs.some(v => P[v].sea); p.river = new Set(); p.road = new Set(); }
   // rivers and roads (Natural Earth): river lines between provinces, road links between neighbours, drawable paths
   const lines = {rivers:[new Path2D(), new Path2D(), new Path2D()], roads:new Path2D()};
@@ -708,24 +707,26 @@ function loadWorld(){
   const MTN = [[70, 103, 27, 40], [-80, -65, -55, 10], [-125, -104, 32, 60], [5, 17, 44, 48], [38, 50, 40, 44], [56, 62, 50, 68], [44, 62, 27, 38], [35, 42, 5, 15], [-8, 10, 30, 36], [5, 20, 59, 70], [30, 44, 37, 41], [66, 80, 35, 45], [-110, -97, 17, 28], [140, 180, 55, 70], [96, 110, 22, 30]];
   const FOR = [[-75, -45, -15, 5], [10, 30, -5, 5], [95, 125, -8, 20], [-130, -60, 50, 64], [30, 140, 52, 64], [10, 30, 58, 66], [-90, -70, 30, 45], [125, 140, 30, 45]];
   const DES = [[-15, 35, 16, 32], [35, 58, 15, 30], [90, 115, 38, 46], [118, 145, -32, -20], [15, 27, -28, -20], [-118, -104, 30, 37], [-72, -68, -28, -18], [55, 70, 36, 45], [58, 75, 24, 30]];
-  const tr = mulberry(23);
+  const tr = mulberry(23), TCODE = {p:'plains', f:'forest', m:'mountain', d:'desert', t:'tundra'};
   for (const p of P){ if (p.sea) continue;
-    const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = tr();
+    const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = tr(), d5 = WORLD.provinces[p.id][5];
+    if (d5){ p.terrain = p.city && r < 0.85 ? 'urban' : TCODE[d5] || 'plains'; continue; }
     p.terrain = p.city && r < 0.7 ? 'urban' : MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; }
   // population (millions): known towns, area and terrain, cities and capitals; dense river plains of South and East Asia weighted up
-  const TF = {plains:1, forest:0.6, mountain:0.5, desert:0.22, tundra:0.1, urban:1.4};
+  const TF = {plains:1, forest:0.6, mountain:0.5, desert:0.22, tundra:0.1, urban:1.4}, POPK = 1;
   for (const p of P){ if (p.sea){ p.pop0 = 0; continue; } const d = WORLD.provinces[p.id], towns = d[4] || 0, lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180;
     const asia = lon > 65 && lon < 125 && p.lat > 5 && p.lat < 42 ? 3.2 : lon > -20 && lon < 50 && p.lat > -35 && p.lat < 15 ? 1.6 : 1;
     const al = Math.abs(p.lat), latF = al > 64 ? 0.04 : al > 56 ? 0.3 : al > 48 ? 0.75 : 1;
+    if (WORLD.v >= 2){ p.pop0 = +(d[4]/1000*POPK).toFixed(3); continue; }
     p.pop0 = +((0.07*p.cells.length*(TF[p.terrain] || 1)*asia*asia*latF + 0.34*Math.sqrt(towns)*asia*latF + (p.city ? 2.4*asia : 0) + (p.capFlag ? 3.5 : 0))).toFixed(2); }
   const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
   loadWorld.lines = lines;
-  const landCount = P.filter(p => !p.sea).length;
-  return {prov, P, countries, landCount};
+  const landCount = P.filter(p => !p.sea).length, PF = Math.min(1, 740/landCount);   // PF: per-province base yields shrink as provinces get smaller
+  return {prov, P, countries, landCount, PF};
 }
 
 /* ---------------- Map geometry (Path2D) ---------------- */
-let GEO = null;
+let GEO = null, SEAL = null;
 function hexPath(path, i, rad = HS){ const [cx, cy] = cellCenter(i); for (let k = 0; k < 6; k++){ const [x, y] = corner(cx, cy, k, rad); k ? path.lineTo(x, y) : path.moveTo(x, y); } path.closePath(); }
 function edge(path, i, d){ const [cx, cy] = cellCenter(i), a = (5 - d + 6) % 6, b = (6 - d) % 6; const [x1, y1] = corner(cx, cy, a), [x2, y2] = corner(cx, cy, b); path.moveTo(x1, y1); path.lineTo(x2, y2); }
 function segPush(arr, i, d){ const [cx, cy] = cellCenter(i), a = (5 - d + 6) % 6, b = (6 - d) % 6; const p1 = corner(cx, cy, a), p2 = corner(cx, cy, b); arr.push(p1[0], p1[1], p2[0], p2[1]); }
@@ -752,42 +753,77 @@ function smoothPath(arr, iters = 2){
   }
   return path;
 }
-function buildGeometry(){
-  const fill = G.P.map(() => new Path2D()), outS = G.P.map(() => []);
-  const sProv = [], sSea = [], sCoast = [], sCountry = [];
-  for (let i = 0; i < W*H; i++){
-    const p = G.prov[i]; if (p < 0) continue; const P = G.P[p];
-    if (!P.sea) hexPath(fill[p], i, HS + 0.6);
-    for (let d = 0; d < 6; d++){
-      const m = nbr(i, d), q = m >= 0 ? G.prov[m] : -1;
-      if (q !== p) segPush(outS[p], i, d);
-      if (q < 0 || q === p || d >= 3) continue;
-      const Q = G.P[q];
-      if (P.sea !== Q.sea) segPush(sCoast, i, d);
-      else if (P.sea) segPush(sSea, i, d);
-      else if (P.country !== Q.country) segPush(sCountry, i, d);
-      else segPush(sProv, i, d);
-    }
+// Border topology: every stretch of border between two provinces is one chain, smoothed once and shared by both sides,
+// so fills, province lines, country lines and nation borders all follow exactly the same curve.
+function buildChains(){
+  const KEY = (x, y) => Math.round(x*4)*20000 + Math.round(y*4), NP = G.P.length + 1, pairs = new Map();
+  for (let i = 0; i < W*H; i++){ const p = G.prov[i]; if (p < 0) continue;
+    for (let d = 0; d < 6; d++){ const m = nbr(i, d), q = m >= 0 ? G.prov[m] : -1; if (q === p || (q >= 0 && m < i)) continue;
+      const lo = Math.min(p, q) + 1, hi = Math.max(p, q) + 1, k = lo*NP + hi; let arr = pairs.get(k); if (!arr) pairs.set(k, arr = []); segPush(arr, i, d); } }
+  const chains = [];
+  for (const [k, arr] of pairs){ const a = Math.floor(k/NP) - 1, b = k % NP - 1, n = arr.length/4, adj = new Map(), used = new Uint8Array(n);
+    for (let s0 = 0; s0 < n; s0++) for (let e = 0; e < 2; e++){ const kk = KEY(arr[s0*4 + e*2], arr[s0*4 + e*2 + 1]); let l = adj.get(kk); if (!l) adj.set(kk, l = []); l.push(s0); }
+    const walk = (s0, fromKey) => { const pts = []; let cur = s0, key = fromKey;
+      for (;;){ used[cur] = 1; const x1 = arr[cur*4], y1 = arr[cur*4 + 1], x2 = arr[cur*4 + 2], y2 = arr[cur*4 + 3], k1 = KEY(x1, y1);
+        const [ax, ay, bx, by] = k1 === key ? [x1, y1, x2, y2] : [x2, y2, x1, y1]; if (!pts.length) pts.push([ax, ay]); pts.push([bx, by]); key = KEY(bx, by);
+        const nx = (adj.get(key) || []).find(t => !used[t]); if (nx === undefined) break; cur = nx; } return pts; };
+    // open chains start at a vertex used once (a junction with a third province); what remains are closed loops
+    for (const [kk, l] of adj) if (l.length === 1 && !used[l[0]]) chains.push({a, b, pts:walk(l[0], kk)});
+    for (let s0 = 0; s0 < n; s0++) if (!used[s0]) chains.push({a, b, pts:walk(s0, KEY(arr[s0*4], arr[s0*4 + 1]))});
   }
-  const outline = new Proxy([], {get:(arr, k) => { if (typeof k !== 'string' || !/^\d+$/.test(k)) return arr[k]; return arr[k] || (arr[k] = smoothPath(outS[+k])); }}), provEdges = smoothPath(sProv), seaEdges = smoothPath(sSea, 1), coast = smoothPath(sCoast), countryEdges = smoothPath(sCountry);
-  GEO = {fill, outline, provEdges, seaEdges, coast, countryEdges, nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas')};
+  for (const c of chains){ let pts = c.pts; const m0 = pts.length; c.k0 = KEY(...pts[0]); c.k1 = KEY(...pts[m0 - 1]); c.closed = m0 > 2 && c.k0 === c.k1;
+    // neighbour averaging removes the hex zig-zag, Chaikin rounds what is left; open chains keep their junction ends fixed
+    const passes = m0 < 4 ? 1 : m0 < 10 ? 2 : 3;
+    for (let it = 0; it < passes; it++){ const m = pts.length, q = pts.map(pp => pp.slice());
+      for (let i = 0; i < m; i++){ const prev = i > 0 ? pts[i - 1] : c.closed ? pts[m - 2] : null, next = i < m - 1 ? pts[i + 1] : c.closed ? pts[1] : null; if (!prev || !next) continue;
+        q[i] = [(prev[0] + 2*pts[i][0] + next[0])/4, (prev[1] + 2*pts[i][1] + next[1])/4]; }
+      if (c.closed) q[m - 1] = q[0]; pts = q; }
+    for (let it = 0; it < 2; it++){ const q = [], m = pts.length; if (!c.closed) q.push(pts[0]);
+      for (let i = 0; i < m - 1; i++){ const p0 = pts[i], p1 = pts[i + 1]; q.push([p0[0]*0.75 + p1[0]*0.25, p0[1]*0.75 + p1[1]*0.25], [p0[0]*0.25 + p1[0]*0.75, p0[1]*0.25 + p1[1]*0.75]); }
+      if (!c.closed) q.push(pts[m - 1]); else q.push(q[0]); pts = q; }
+    c.pts = pts; }
+  return chains;
+}
+const chainTo = (path, c, rev = false, move = true) => { const P = c.pts, n = P.length; for (let i = 0; i < n; i++){ const q = P[rev ? n - 1 - i : i]; if (i === 0 && move) path.moveTo(q[0], q[1]); else path.lineTo(q[0], q[1]); } };
+function chainsPath(list){ const path = new Path2D(); for (const c of list) chainTo(path, c); return path; }
+// a province's outline: its chains joined end to end into closed rings
+function ringPath(p){ const list = GEO.byProv[p] || [], path = new Path2D(), open = [];
+  for (const c of list){ if (c.closed){ chainTo(path, c); path.closePath(); } else open.push(c); }
+  const at = new Map(); open.forEach((c, i) => { for (const k of [c.k0, c.k1]){ let l = at.get(k); if (!l) at.set(k, l = []); l.push(i); } });
+  const used = new Uint8Array(open.length);
+  for (let s0 = 0; s0 < open.length; s0++){ if (used[s0]) continue; used[s0] = 1; const start = open[s0].k0; chainTo(path, open[s0]); let end = open[s0].k1;
+    for (let guard = 0; end !== start && guard < open.length; guard++){ const nx = (at.get(end) || []).find(i => !used[i]); if (nx === undefined) break; used[nx] = 1; const c = open[nx], rev = c.k1 === end; chainTo(path, c, rev, false); end = rev ? c.k0 : c.k1; }
+    path.closePath(); }
+  return path; }
+function buildGeometry(){
+  const chains = buildChains(), byProv = G.P.map(() => []);
+  for (const c of chains){ if (c.a >= 0) byProv[c.a].push(c); if (c.b >= 0 && c.b !== c.a) byProv[c.b].push(c); }
+  const land = v => v >= 0 && !G.P[v].sea;
+  const provL = [], seaL = [], coastL = [], countryL = [];
+  for (const c of chains){ if (c.a < 0 || c.b < 0) continue; const A = G.P[c.a], B = G.P[c.b];
+    if (A.sea !== B.sea) coastL.push(c); else if (A.sea) seaL.push(c); else if (A.country !== B.country) countryL.push(c); else provL.push(c); }
+  const lazy = make => new Proxy([], {get:(arr, k) => { if (typeof k !== 'string' || !/^\d+$/.test(k)) return arr[k]; return arr[k] || (arr[k] = make(+k)); }});
+  const outline = lazy(p => ringPath(p));
+  GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land};
   rebuildOwnerGeo();
 }
 let geoVer = 0;
 function rebuildOwnerGeo(){
   geoVer++;
-  const per = S.nations.map(() => []), mineS = [];
-  for (let i = 0; i < W*H; i++){ const p = G.prov[i]; if (p < 0 || G.P[p].sea) continue; const o = S.owner[p]; if (o < 0) continue;
-    for (let d = 0; d < 6; d++){ const m = nbr(i, d), q = m >= 0 ? G.prov[m] : -1;
-      if (q >= 0 && !G.P[q].sea && S.owner[q] === o) continue;
-      segPush(per[o], i, d); if (o === PLAYER) segPush(mineS, i, d); } }
-  GEO.nation = per.map(a => smoothPath(a)); GEO.mine = smoothPath(mineS);
+  const per = S.nations.map(() => []), mineL = [], own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
+  for (const c of GEO.chains){ const oa = own(c.a), ob = own(c.b); if (oa === ob) continue;
+    if (oa >= 0) per[oa].push(c); if (ob >= 0) per[ob].push(c); if (oa === PLAYER || ob === PLAYER) mineL.push(c); }
+  GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL);
   const anchor = list => { let x = 0, y = 0, c = 0, best = -1, bd = Infinity;
     for (const id of list){ const P = G.P[id]; x += P.x*P.cells.length; y += P.y*P.cells.length; c += P.cells.length; }
     if (!c) return null; x /= c; y /= c;
     for (const id of list){ const P = G.P[id], d = (P.x - x)**2 + (P.y - y)**2; if (d < bd){ bd = d; best = id; } }
     return {x:G.P[best].x, y:G.P[best].y, cells:c}; };
-  GEO.labels = S.nations.map(n => n.alive ? anchor(G.P.filter(P => S.owner[P.id] === n.id).map(P => P.id)) : null);
+  const mainland = n => { const seen = new Set(); let best = []; let bc = 0;
+    for (const P of G.P){ if (S.owner[P.id] !== n || seen.has(P.id)) continue; const comp = [P.id]; seen.add(P.id); let c = 0;
+      for (let i = 0; i < comp.length; i++){ c += G.P[comp[i]].cells.length; for (const v of G.P[comp[i]].nbs) if (!seen.has(v) && S.owner[v] === n){ seen.add(v); comp.push(v); } }
+      if (c > bc){ bc = c; best = comp; } } return best; };
+  GEO.labels = S.nations.map(n => n.alive ? anchor(mainland(n.id)) : null);
   GEO.clabels = G.countries.map(c => { const free = c.provs.filter(id => S.owner[id] === NEUTRAL); return free.length ? {...anchor(free), name:c.name} : null; });
   buildMini();
 }
@@ -803,8 +839,9 @@ function buildTerrain(){
   const N = W*H, landF = new Float32Array(N), elevF = new Float32Array(N), cR = new Float32Array(N), cG = new Float32Array(N), cB = new Float32Array(N);
   const BIOME = {plains:[92, 104, 62], forest:[50, 72, 44], mountain:[110, 101, 88], desert:[172, 146, 98], tundra:[136, 140, 132], urban:[104, 102, 94]};
   const ELEV = {plains:0.16, forest:0.28, mountain:1.0, desert:0.24, tundra:0.34, urban:0.14};
+  const TC = window.TERRCELLS, TN = ['plains', 'forest', 'mountain', 'desert', 'tundra'];
   for (let i = 0; i < N; i++){ const p = G.prov[i]; if (p < 0 || G.P[p].sea){ landF[i] = 0; elevF[i] = -0.2; continue; }
-    const P = G.P[p], t = P.terrain || 'plains', lat = Math.abs(cellLat(i));
+    const P = G.P[p], t = TC ? (P.terrain === 'urban' && i === P.cc ? 'urban' : TN[+TC[i]] || 'plains') : P.terrain || 'plains', lat = Math.abs(cellLat(i));
     let col = BIOME[t].slice();
     if (t === 'plains'){ col = lat < 18 ? [104, 110, 60] : lat < 32 ? [132, 122, 82] : lat > 52 ? [96, 104, 78] : col; }
     if (t === 'forest'){ col = lat < 15 ? [36, 68, 38] : lat > 50 ? [46, 62, 48] : col; }
@@ -869,8 +906,10 @@ function buildTerrain(){
 function buildMini(){
   const m = GEO.mini; m.width = W*2; m.height = H*2; const c = m.getContext('2d');
   c.fillStyle = '#071014'; c.fillRect(0, 0, m.width, m.height);
-  for (let i = 0; i < W*H; i++){ const p = G.prov[i]; if (p < 0 || G.P[p].sea) continue; const o = S.owner[p];
-    c.fillStyle = o >= 0 ? S.nations[o].color : '#3a403a'; const r = (i / W) | 0; c.fillRect((i % W)*2 + (r & 1), r*2, 2, 2); }
+  const img = c.getImageData(0, 0, m.width, m.height), px = img.data, rgbOf = S.nations.map(N => [1, 3, 5].map(k => parseInt(N.color.slice(k, k + 2), 16))), neu = [58, 64, 58];
+  for (let i = 0; i < W*H; i++){ const p = G.prov[i]; if (p < 0 || G.P[p].sea) continue; const o = S.owner[p], col = o >= 0 ? rgbOf[o] : neu, r = (i / W) | 0, x0 = (i % W)*2 + (r & 1);
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++){ const x = x0 + dx; if (x >= m.width) continue; const o4 = ((r*2 + dy)*m.width + x)*4; px[o4] = col[0]; px[o4 + 1] = col[1]; px[o4 + 2] = col[2]; px[o4 + 3] = 255; } }
+  c.putImageData(img, 0, 0);
 }
 
 /* ---------------- State ---------------- */
@@ -894,7 +933,7 @@ function newGame(seed, pick){
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations};
   for (const n of S.nations){
     const np = S.owner.filter(o => o === n.id).length;
-    n.cap0 = n.capital; n.small = np <= 10;
+    n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 200/Math.max(1, income(n.id).gross.cash)));
     S.bld[n.capital].fac = 1;
     addArmy(n.id, n.capital, {inf:4, tank:1});
@@ -905,7 +944,7 @@ function newGame(seed, pick){
   }
   for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; n.prov0In = landHeld(n.id); }
   S.own0 = S.owner.slice(); if (SET.cb) applyPalette();
-  for (const P of G.P) if (S.owner[P.id] === NEUTRAL) addArmy(NEUTRAL, P.id, {inf: P.city ? 5 + Math.floor(rng()*4) : 2 + Math.floor(rng()*2)});
+  for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
   log(`${S.nations[PLAYER].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   buildGeometry();
 }
@@ -1060,7 +1099,7 @@ function noiseBuf(){ const c = audio(); if (!c) return null; if (NBUF) return NB
 function bed(freq, type = 'lowpass', q = 0.7){ const c = audio(); if (!c) return null; const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), pan = c.createStereoPanner ? c.createStereoPanner() : null;
   src.buffer = noiseBuf(); src.loop = true; f.type = type; f.frequency.value = freq; f.Q.value = q; g.gain.value = 0; src.connect(f); f.connect(g); (pan ? (g.connect(pan), pan) : g).connect(master); src.start(); return {f, g, pan}; }
 // one positional shot: pan by screen x, quieter when far or zoomed out
-function shotAt(sx, kind){ const c = audio(); if (!c || muted || !master) return; const t = c.currentTime, pan = c.createStereoPanner ? c.createStereoPanner() : null, g = c.createGain(), zoom = Math.min(1, view.s*HS/40);
+function shotAt(sx, kind){ const c = audio(); if (!c || muted || !master) return; const t = c.currentTime, pan = c.createStereoPanner ? c.createStereoPanner() : null, g = c.createGain(), zoom = Math.min(1, view.s*HS0/40);
   const vol = (kind === 'art' ? 0.22 : kind === 'tank' ? 0.16 : 0.07)*(0.35 + 0.65*zoom); if (pan) pan.pan.value = Math.max(-1, Math.min(1, (sx/cw)*2 - 1));
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'art' ? 1.1 : kind === 'tank' ? 0.6 : 0.12));
   const src = c.createBufferSource(), f = c.createBiquadFilter(); src.buffer = noiseBuf(); f.type = 'lowpass'; f.frequency.value = kind === 'art' ? 260 : kind === 'tank' ? 420 : 2400;
@@ -1070,7 +1109,7 @@ let AMB = null, MUS = null;
 function ambience(now){ if (muted || !AC || !booted || !S) return; if (!AMB){ AMB = {wind:bed(500, 'bandpass', 0.5), surf:bed(380, 'lowpass', 0.8), front:bed(120, 'lowpass', 0.9), jets:bed(1400, 'bandpass', 2)}; }
   const t = AC.currentTime, ease = (n, v) => { if (n && n.g) n.g.gain.setTargetAtTime(v, t, 0.6); };
   // what is on screen
-  const cx = cw/2, cy = ch/2, hexPx = view.s*HS; let seaFrac = 0, k = 0;
+  const cx = cw/2, cy = ch/2, hexPx = view.s*HS0; let seaFrac = 0, k = 0;
   for (let i = 0; i < 9; i++){ const p = provAt(cw*(0.2 + 0.3*(i % 3)), ch*(0.2 + 0.3*Math.floor(i/3))); if (p >= 0){ k++; if (G.P[p].sea) seaFrac++; } } seaFrac = k ? seaFrac/k : 0;
   let storm = 0; for (const w of (S.storms || [])){ const [sx, sy] = toScreen(w.x, w.y), d = Math.hypot(sx - cx, sy - cy)/Math.max(cw, ch); storm = Math.max(storm, Math.max(0, 1 - d*1.6)*Math.min(1, w.r*view.s/200)); }
   let fight = 0, fx = 0; for (const p of S.battles){ const [sx, sy] = toScreen(G.P[p].x, G.P[p].y); if (sx < -50 || sy < -50 || sx > cw + 50 || sy > ch + 50) continue; fight += 1; fx += sx; }
@@ -1128,7 +1167,7 @@ function shoot(kind, from, to, opt = {}){ if (PROJ.length > 160) PROJ.shift(); P
 let lastPart = 0;
 function drawParticles(now){
   const dt = Math.min(0.1, (now - (lastPart || now))/1000); lastPart = now;
-  const kz = Math.max(0.6, Math.min(2, view.s*HS/12));
+  const kz = Math.max(0.6, Math.min(2, view.s*HS0/12));
   // scorch marks on the ground fade over 20 s
   for (let i = SCORCH.length - 1; i >= 0; i--){ const sc0 = SCORCH[i], age = now - sc0.t0; if (age > 20000){ SCORCH.splice(i, 1); continue; }
     const [x, y] = toScreen(sc0.wx, sc0.wy), r = sc0.r*kz; ctx.globalAlpha = 0.5*(1 - age/20000); ctx.fillStyle = '#16120e'; ctx.beginPath(); ctx.ellipse(x, y, r, r*0.5, 0, 0, Math.PI*2); ctx.fill(); }
@@ -1211,7 +1250,7 @@ function cloudTex(){ if (CLOUDS) return CLOUDS; const out = []; for (let k = 0; 
   for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0.6)'; g.drawImage(out[k], 0, 0); out.push(c); }
   for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0)'; g.drawImage(out[k], 0, 0); out.push(c); }
   return (CLOUDS = out); }
-function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS, live = S.speed && !S.over ? acc : 0;
+function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0;
   ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12);
     for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if ((cx + w.r)*view.s + view.x < -50 || (cx - w.r)*view.s + view.x > cw + 50) continue;
@@ -1271,14 +1310,14 @@ function drawFX(now){
     const k = Math.max(0, age/dur), [x, y] = toScreen(P.x, P.y);
     if (f.type === 'cap'){
       ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.globalAlpha = (1 - k)*0.9;
-      ctx.fillStyle = rgba(f.color, 0.55*(1 - k)); ctx.fill(GEO.fill[f.p]); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3/view.s; ctx.stroke(GEO.outline[f.p]); ctx.restore();
+      ctx.fillStyle = rgba(f.color, 0.55*(1 - k)); ctx.fill(GEO.fill[f.p], 'evenodd'); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3/view.s; ctx.stroke(GEO.outline[f.p]); ctx.restore();
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.font = `700 13px ${BODY}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)';
       const ty = y - 30 - k*26; ctx.strokeText(f.text, x, ty); ctx.fillStyle = f.good ? '#a8dcab' : '#f2a29c'; ctx.fillText(f.text, x, ty); ctx.restore();
     } else if (f.type === 'ready'){
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y - 8, 10 + k*22, 0, Math.PI*2); ctx.stroke(); ctx.restore();
     } else if (f.type === 'dmg'){
       ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k)*1.6); ctx.font = `800 ${Math.round(14 + (1 - k)*3)}px ${MONO}`; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.9)';
-      const kz = Math.min(2, zoomK(view.s*HS)), cp = f.owner != null && CLPOS.get(f.p + ':' + f.owner), [ax, ay] = cp ? toScreen(cp[0], cp[1]) : [x + (f.dx || 0)*kz, y], tx = ax + (cp ? 22*kz : 0), ty = ay + (cp ? -34 : (f.dy || -30))*kz - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
+      const kz = Math.min(2, zoomK(view.s*HS0)), cp = f.owner != null && CLPOS.get(f.p + ':' + f.owner), [ax, ay] = cp ? toScreen(cp[0], cp[1]) : [x + (f.dx || 0)*kz, y], tx = ax + (cp ? 22*kz : 0), ty = ay + (cp ? -34 : (f.dy || -30))*kz - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
     } else if (f.type === 'hits'){
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (let j = 0; j < 5; j++){ const r0 = ((f.seed*(j + 1)*9301 + 49297) % 233280)/233280, r1 = ((f.seed*(j + 3)*7919 + 104729) % 233280)/233280;
@@ -1318,8 +1357,10 @@ const dmgOf = p => (S.dmg && S.dmg[p]) || 0;
 const moraleOf = p => Math.max(0, Math.min(100, 100 - unrestOf(p) - dmgOf(p)));
 function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012)); }
 function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(0.45 + 0.55*moraleOf(p)/100)*(CONVOY_LOST.has(p) ? 0 : 1), b = S.bld[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75);
-  return {cash:((P.city ? 8.5 : 1.8) + 0.9*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
-    food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 1.2 : 0.25) + 0.22*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
+  const pf = G.PF;
+  return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5*pf : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3*pf : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
+    food:((P.city ? 1 : (Math.abs(P.lat) < 55 ? 3 : 1)*pf) + 3*b.farm)*f, mp:((P.city ? 1.2 : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
+const ECO = GS > 1 ? {cash:0.68, mp:0.16} : {cash:0.9, mp:0.22};
 // ---- convoys: provinces cut off by land from the capital ship their output home; enemy warships on the route sink it
 let CONVOY_LOST = new Set();
 function homeComponent(n){ const N = S.nations[n], seen = new Set([N.capital]), q = [N.capital];
@@ -1342,7 +1383,7 @@ function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length) return; con
   for (const c of S.convoys){ const r = c.route, dur = 12, tt = (S.hour + live - c.t0)/dur; if (tt < 0 || tt > 1) continue;
     let pos = tt*(r.length - 1); if (c.raidAt >= 0 && pos >= c.raidAt){ if (!c.boom && booted && vis.has(r[c.raidAt])){ c.boom = true; const P = G.P[r[c.raidAt]]; explode(P.x, P.y, 1.2); emit('smoke', P.x, P.y, {vy:-6, s0:6, s1:26, life:3000}); } continue; }
     const i = Math.min(r.length - 2, Math.floor(pos)), f = pos - i, A = G.P[r[i]], B = G.P[r[i + 1]]; if (!vis.has(r[i]) && !vis.has(r[i + 1]) && c.owner !== PLAYER) continue;
-    const wx = A.x + (B.x - A.x)*f, wy = A.y + (B.y - A.y)*f, [x, y] = toScreen(wx, wy), ang = Math.atan2(B.y - A.y, B.x - A.x), k0 = Math.max(0.8, Math.min(2, view.s*HS/14));
+    const wx = A.x + (B.x - A.x)*f, wy = A.y + (B.y - A.y)*f, [x, y] = toScreen(wx, wy), ang = Math.atan2(B.y - A.y, B.x - A.x), k0 = Math.max(0.8, Math.min(2, view.s*HS0/14));
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(220,235,240,.35)'; ctx.beginPath(); ctx.moveTo(-6*k0, 0); ctx.lineTo(-18*k0, -3*k0); ctx.lineTo(-18*k0, 3*k0); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#5a5e60'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8*k0, 0); ctx.lineTo(4*k0, -2.6*k0); ctx.lineTo(-7*k0, -2.6*k0); ctx.lineTo(-7*k0, 2.6*k0); ctx.lineTo(4*k0, 2.6*k0); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = colorOf(c.owner); ctx.fillRect(-5*k0, -1.6*k0, 3*k0, 3.2*k0); ctx.fillStyle = '#b8a06a'; ctx.fillRect(-1*k0, -1.6*k0, 3.5*k0, 3.2*k0); ctx.restore(); } }
@@ -1494,20 +1535,26 @@ function removeEmpty(){
     const w = addArmy(a.owner, base, {}); w.air = {base, cd:0}; for (const t in pend) w.u[t] = pend[t]; }
   S.armies = S.armies.filter(a => count(a) > 0); }
 
-/* binary-heap Dijkstra over the province + sea-zone graph */
+/* binary-heap A* over the province + sea-zone graph (straight-line distance in old hexes never overestimates a route) */
+let FP = null;
 function findPath(a, b, ok = null){
   if (a === b) return [];
-  const n = G.P.length, d = new Float64Array(n).fill(Infinity), prev = new Int32Array(n).fill(-1);
-  const hk = [], hv = [];
-  const push = (k, v) => { hk.push(k); hv.push(v); let i = hk.length - 1; while (i > 0){ const p = (i - 1) >> 1; if (hk[p] <= hk[i]) break; [hk[p], hk[i]] = [hk[i], hk[p]]; [hv[p], hv[i]] = [hv[i], hv[p]]; i = p; } };
-  const pop = () => { const k = hk[0], v = hv[0], lk = hk.pop(), lv = hv.pop(); if (hk.length){ hk[0] = lk; hv[0] = lv; let i = 0;
-      for (;;){ const l = 2*i + 1, r = l + 1; let m = i; if (l < hk.length && hk[l] < hk[m]) m = l; if (r < hk.length && hk[r] < hk[m]) m = r; if (m === i) break; [hk[m], hk[i]] = [hk[i], hk[m]]; [hv[m], hv[i]] = [hv[i], hv[m]]; i = m; } } return [k, v]; };
-  d[a] = 0; push(0, a);
-  while (hk.length){ const [du, u] = pop(); if (du > d[u]) continue; if (u === b) break;
-    for (const [v, w0] of G.P[u].nb){ if (ok && v !== b && !ok(v)) continue;
-      const w = (G.P[u].sea || G.P[v].sea) ? w0*1.6 : w0;      // sea legs are slower, prefer land
-      if (du + w < d[v]){ d[v] = du + w; prev[v] = u; push(d[v], v); } } }
-  if (prev[b] < 0) return [];
+  const n = G.P.length;
+  if (!FP || FP.G !== G){ FP = {G, d:new Float64Array(n), prev:new Int32Array(n), gen:new Uint32Array(n), g:0, hk:new Float64Array(1 << 16), hv:new Int32Array(1 << 16),
+    adj:G.P.map(P => Int32Array.from(P.nb.keys())), w:G.P.map(P => Float64Array.from([...P.nb].map(([v, w0]) => (P.sea || G.P[v].sea) ? w0*1.6 : w0)))}; }   // sea legs are slower, prefer land
+  const d = FP.d, prev = FP.prev, gen = FP.gen, g = ++FP.g, B = G.P[b], inv = 1/(HS0*SQ3);
+  let hk = FP.hk, hv = FP.hv, hn = 0;
+  const push = (k, v) => { if (hn === hk.length){ const k2 = new Float64Array(hn*2), v2 = new Int32Array(hn*2); k2.set(hk); v2.set(hv); hk = FP.hk = k2; hv = FP.hv = v2; }
+    let i = hn++; while (i > 0){ const p = (i - 1) >> 1; if (hk[p] <= k) break; hk[i] = hk[p]; hv[i] = hv[p]; i = p; } hk[i] = k; hv[i] = v; };
+  const pop = () => { const v = hv[0]; hn--; if (hn > 0){ const lk = hk[hn], lv = hv[hn]; let i = 0;
+      for (;;){ const l = 2*i + 1, r = l + 1; let m = -1, mk = lk; if (l < hn && hk[l] < mk){ m = l; mk = hk[l]; } if (r < hn && hk[r] < mk){ m = r; mk = hk[r]; } if (m < 0) break; hk[i] = hk[m]; hv[i] = hv[m]; i = m; } hk[i] = lk; hv[i] = lv; } return v; };
+  const h = v => { const P = G.P[v]; return Math.hypot(P.x - B.x, P.y - B.y)*inv; };
+  gen[a] = g; d[a] = 0; prev[a] = -1; push(h(a), a);
+  let found = false;
+  while (hn){ const u = pop(); if (u === b){ found = true; break; } const du = d[u], A = FP.adj[u], Wt = FP.w[u];
+    for (let j = 0; j < A.length; j++){ const v = A[j]; if (ok && v !== b && !ok(v)) continue;
+      const nd = du + Wt[j]; if (gen[v] !== g || nd < d[v]){ gen[v] = g; d[v] = nd; prev[v] = u; push(nd + h(v), v); } } }
+  if (!found) return [];
   const path = []; for (let v = b; v !== a; v = prev[v]) path.push(v); return path.reverse();
 }
 const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a.owner, v) && (!so || portOk(a.owner, v)); return ok(to) ? findPath(from, to, ok) : []; };
@@ -1770,7 +1817,7 @@ function chatDay(){ for (const N of S.nations){ if (!N.alive || N.id === PLAYER 
     else if (op >= 10 && rng() < 0.5) aiProposeTrade(n); } }
 // a deal: {give:{cash,oil,metal,food,provs:[],treaty:[]}, get:{...}} from the player's point of view
 const emptySide = () => ({cash:0, oil:0, metal:0, food:0, provs:[], treaty:[]});
-function provValue(p, holder){ const P = G.P[p]; return (P.city ? 90 : 28) + (P.oil ? 30 : 0) + (P.ore ? 12 : 0) + (isCapital(p) ? 1e6 : 0) + P.cells.length*2; }
+function provValue(p, holder){ const P = G.P[p]; return (P.city ? 90 : 28) + (P.oil ? 30 : 0) + (P.ore ? 12 : 0) + (isCapital(p) ? 1e6 : 0) + P.cells.length*2/(GS*GS); }
 function dealValueFor(ai, D){ // value of the deal to the AI: what it receives minus what it gives
   const M = mkt(), res = side => side.cash + side.oil*M.p.oil + side.metal*M.p.metal + side.food*M.p.food;
   let v = res(D.give) - res(D.get)*1.05;
@@ -1847,7 +1894,7 @@ function offerPlayer(from, kind){
 }
 
 /* ---------------- Supply & morale ---------------- */
-const SUPPLY_RANGE = 8;
+const SUPPLY_RANGE = 8, LEG = GS > 1 ? 3.33 : 1;   // LEG: a supply step is one province of the old map (~3.3 hexes, ~600 km)
 let SUP = null, supHour = -1;
 function computeSupply(){
   SUP = S.nations.map(() => null);
@@ -1857,7 +1904,7 @@ function computeSupply(){
     // small graph: repeated relaxation by layers (costs 1 on land, 2 at sea)
     for (let h = 0; h < q.length; h++){ const u = q[h]; if (d[u] > SUPPLY_RANGE) continue; sup[u] = 1;
       if (!G.P[u].sea && !own(u)) continue;              // supply reaches one step into foreign land, no further
-      for (const v of G.P[u].nbs){ const c = d[u] + (G.P[v].sea ? 2 : 1); if (c < d[v] && c <= SUPPLY_RANGE){ d[v] = c; q.push(v); } } }
+      for (const [v, w] of G.P[u].nb){ const c = d[u] + (G.P[v].sea ? 2 : 1)*w/LEG; if (c < d[v] - 1e-6 && c <= SUPPLY_RANGE){ d[v] = c; q.push(v); } } }
     SUP[n] = sup; }
   supHour = S.hour;
 }
@@ -1945,7 +1992,7 @@ function airCheck(a, p){
   if (a.fly) return {ok:false, why:'This wing is already on a mission.'};
   if ((a.air.cd || 0) > 0) return {ok:false, why:`Rearming: ready in ${a.air.cd} h.`};
   if (p === a.air.base && isStriker(a) && !stationaryAt(p).some(b => atWar(a.owner, b.owner))) return {ok:false, why:'That is its home airbase.'};
-  if (d > r) return {ok:false, why:`Out of range: ${d} hexes, this wing reaches ${r}.`};
+  if (d > r) return {ok:false, why:`Out of range: ${Math.round(d*KM_HEX/10)*10} km, this wing reaches ${r*KM_HEX} km.`};
   const k = airMissionKind(a, p), o = S.owner[p];
   if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o) && !(a.owner === PLAYER && sel.surprise && sel.surprise.includes(o))) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
   return {ok:true, kind:k, d, hours:Math.max(1, Math.ceil(d/AIR_SPEED))};
@@ -1960,7 +2007,7 @@ const paraOnly = a => a && !a.air && count(a) > 0 && a.u.para === count(a);
 function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:false, why:'Only an idle force of Paratroopers can be air-dropped.'};
   if (!S.bld[a.at].air || S.owner[a.at] !== a.owner) return {ok:false, why:'Paratroopers take off from a province with your airbase.'};
   if (G.P[p].sea) return {ok:false, why:'Cannot drop into the sea.'};
-  const d = hexDist(G.P[a.at].cc, G.P[p].cc); if (d > PARA_RANGE) return {ok:false, why:`Out of range: ${d} hexes, drops reach ${PARA_RANGE}.`};
+  const d = hexDist(G.P[a.at].cc, G.P[p].cc); if (d > PARA_RANGE) return {ok:false, why:`Out of range: ${Math.round(d*KM_HEX/10)*10} km, drops reach ${PARA_RANGE*KM_HEX} km.`};
   if (S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p])) return {ok:false, why:`You are not at war with ${nationName(S.owner[p])}.`};
   if (stormAt(p) || stormAt(a.at)) return {ok:false, why:'Grounded by a storm.'};
   return {ok:true, d, hours:Math.max(1, Math.ceil(d/AIR_SPEED))}; }
@@ -2073,7 +2120,7 @@ function buildMissile(n, p, k){ if (!canBuildMissile(n, p, k)) return false; con
 function missileCheck(n, from, to, k){
   const M0 = MISSILES[k], d = hexDist(G.P[from].cc, G.P[to].cc), o = S.owner[to];
   if (!mstock(from)[k]) return {ok:false, why:`No ${M0.name}s stored here.`};
-  if (d > M0.range) return {ok:false, why:`Out of range: ${d} hexes (max ${M0.range}).`};
+  if (d > M0.range) return {ok:false, why:`Out of range: ${Math.round(d*KM_HEX/10)*10} km (max ${M0.range*KM_HEX} km).`};
   if (G.P[to].sea && !stationaryAt(to).some(b => atWar(n, b.owner))) return {ok:false, why:'No targets at sea there.'};
   if (o >= 0 && o !== n && !atWar(n, o)) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
   if (o === n && !stationaryAt(to).some(b => atWar(n, b.owner))) return {ok:false, why:'No enemies there.'};
@@ -2709,7 +2756,8 @@ function centerOn(x, y, s = view.s){ view.s = s; view.x = cw/2 - x*s; view.y = c
 function goHome(){
   const N = S.nations[PLAYER];
   if (!N.alive){ fit(); return; }
-  const set = new Set(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === PLAYER){ set.add(p); for (const q of G.P[p].nbs) if (!G.P[q].sea) set.add(q); }
+  const C0 = G.P[N.capital], far = WORLD_W*0.2;   // far-flung islands (Hawaii, the Aleutians, overseas departments) do not zoom the home view out
+  const set = new Set(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === PLAYER && Math.hypot(G.P[p].x - C0.x, G.P[p].y - C0.y) < far){ set.add(p); for (const q of G.P[p].nbs) if (!G.P[q].sea) set.add(q); }
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of set){ const P = G.P[p]; x0 = Math.min(x0, P.x); y0 = Math.min(y0, P.y); x1 = Math.max(x1, P.x); y1 = Math.max(y1, P.y); }
   const pad = 60, s = Math.max(minScale(), Math.min(2.2, Math.min(cw/(x1 - x0 + pad*2), ch/(y1 - y0 + pad*2))));
@@ -2720,18 +2768,23 @@ function zoomAt(f, sx, sy){
   const k = ns/view.s; view.x = sx - (sx - view.x)*k; view.y = sy - (sy - view.y)*k; view.s = ns;
 }
 const toScreen = (x, y) => [x*view.s + view.x, y*view.s + view.y];
+// provinces whose centre lies within r old hexes of p's centre (always including direct neighbours), cached
+const NEARC = new Map();
+function nearList(p, r){ const key = p*64 + Math.round(r*4); let l = NEARC.get(key); if (l) return l; const P0 = G.P[p], R = r*HS0*SQ3, seen = new Set([p]), q = [p];
+  for (let i = 0; i < q.length; i++) for (const v of G.P[q[i]].nbs){ if (seen.has(v)) continue; const P = G.P[v]; if (q[i] === p || Math.hypot(P.x - P0.x, P.y - P0.y) <= R){ seen.add(v); q.push(v); } }
+  l = [...seen]; NEARC.set(key, l); return l; }
 function visibleSet(){
   if (visCache) return visCache;
   const v = new Set();
   const al = new Set([PLAYER, ...alliesOf(PLAYER)]);
-  const ring = (p0, r) => { let fr = [p0]; v.add(p0); for (let d = 0; d < r; d++){ const nx = []; for (const u of fr) for (const q of G.P[u].nbs) if (!v.has(q)){ v.add(q); nx.push(q); } fr = nx; } };
-  // your land shows itself; cities and airbases carry radar that also covers the neighbouring provinces
-  for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])){ v.add(p); if (G.P[p].city || S.bld[p].air) for (const q of G.P[p].nbs) v.add(q); }
+  const ring = (p0, r) => { for (const q of nearList(p0, r*LEG)) v.add(q); };
+  // your land shows itself; cities and airbases carry radar that also covers the surrounding provinces
+  for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])){ v.add(p); if (G.P[p].city || S.bld[p].air) for (const q of nearList(p, LEG)) v.add(q); }
   if (S.reveal) for (const k in S.reveal) if (S.reveal[k] > S.hour) v.add(+k);
   for (const a of S.armies){ if (!al.has(a.owner)) continue;
     if (a.fly){ const [wx, wy] = armyPos(a), c = worldToCell(wx, wy), p0 = c >= 0 ? G.prov[c] : -1; if (p0 >= 0) ring(p0, (isDrone(a) || a.fly.ph === 'patrol' || a.fly.ph === 'over' && a.fly.kind === 'recon') ? 2 : 1); continue; }   // aircraft spot what they fly over
     if (a.air) continue;
-    v.add(a.at); for (const q of G.P[a.at].nbs) v.add(q); if (a.to !== null) v.add(a.to); }
+    for (const q of nearList(a.at, 0.8*LEG)) v.add(q); if (a.to !== null) v.add(a.to); }
   for (const st of (S.sats || [])) if (al.has(st.owner)) for (const p0 of satSwath(st)) v.add(p0);
   let h = v.size; for (const p of v) h = (h*31 + p) | 0; v.key = h;
   return (visCache = v);
@@ -2926,7 +2979,7 @@ function drawFallen(now){ for (let i = FALL.length - 1; i >= 0; i--){ const f = 
 const BSLOT = [[-24, 6], [24, 6], [-34, -6], [34, -6], [-20, -18], [20, -18], [-40, 16], [40, 16], [0, -26]];
 const lastSmoke = new Map();
 function drawBuildings(now, kl, vis){
-  const hexPx = view.s*HS; if (hexPx < 18) return; const u = Math.max(1, Math.min(3.4, hexPx/16)), night = isNight(0);
+  const hexPx = view.s*HS0; if (hexPx < 18) return; const u = Math.max(1, Math.min(3.4, hexPx/16)), night = isNight(0);
   ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !vis.has(p)) continue; const B = S.bld[p], cons = S.cons[p];
     const list = BK.filter(k => B[k] > 0 && k !== 'fort'); if (!list.length && !cons && !B.fort) continue;
@@ -2991,7 +3044,7 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   s = Math.max(0.75, s);
   // level of detail: below hexPx 30, forces that don't concern you (independents, powers at peace) are small badges
   const quiet = a && a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner));
-  const minor = quiet && view.s*HS < FORM_PX;
+  const minor = quiet && view.s*HS0 < FORM_PX;
   if (quiet && !minor) s = Math.max(0.75, s*0.6);
   if (minor){ const r = 7.5*s, neu = a.owner === NEUTRAL; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = a.rebel ? 'rgba(120,30,26,.92)' : neu ? 'rgba(40,42,38,.88)' : 'rgba(14,20,22,.9)'; ctx.fill(); ctx.lineWidth = neu ? 1.3 : 2; ctx.strokeStyle = a.rebel ? '#e0574f' : neu ? '#9a978a' : color; ctx.stroke();
     ctx.font = `700 ${Math.round(9*s)}px ${MONO}`; ctx.fillStyle = '#e8e4d8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(n), x, y + 0.5); return {x:x - r, y:y - r, w:2*r, h:2*r}; }
@@ -2999,7 +3052,7 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   if (a && G.P[a.at].sea && !shipsN(a) && !a.air) types = ['frig'];          // embarked: troops ride a transport
   const main = types[0] || 'inf', seed = a ? a.id % 13 : 0;
   // ground shadow / selection ring (formations draw per-figure shadows and ring their own extent)
-  const formMode = window.U3D && U3D.has(main) && view.s*HS >= FORM_PX && UNITS[main].cls !== 'air' && !quiet;
+  const formMode = window.U3D && U3D.has(main) && view.s*HS0 >= FORM_PX && UNITS[main].cls !== 'air' && !quiet;
   if (!formMode){ ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 17*s, 4.5*s, 0, 0, Math.PI*2); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill(); }
   if (selected && !formMode){ ctx.save(); ctx.shadowColor = '#e2a23d'; ctx.shadowBlur = 10; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 17*s, 5.5*s, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
   if (a && a.owner === PLAYER && !supplied(a) && !formMode){ ctx.save(); ctx.setLineDash([3, 2]); ctx.strokeStyle = '#e0574f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 16*s, 5*s, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
@@ -3058,7 +3111,7 @@ function renderLayer(vis){
   if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
   layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s;
   const ox = view.x + mx, oy = view.y + my;
-  let c = layer.getContext('2d'); const px = 1/view.s, hexPx = view.s*HS;
+  let c = layer.getContext('2d'); const px = 1/view.s, hexPx = view.s*HS0;
   c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#060c0f'; c.fillRect(0, 0, cw + 2*mx, ch + 2*my);
   c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   c.imageSmoothingEnabled = true; c.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
@@ -3068,17 +3121,17 @@ function renderLayer(vis){
   const base = c; if (!layer.fl) layer.fl = document.createElement('canvas'); const flc = layer.fl; if (flc.width !== layer.width || flc.height !== layer.height){ flc.width = layer.width; flc.height = layer.height; }
   c = flc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, flc.width, flc.height); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
-    if (mapMode === 'terrain'){ c.fillStyle = rgba(TERRAIN[P.terrain || 'plains'].col, 0.55); c.fill(GEO.fill[p]); }
-    else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p]); }
-    else if (mapMode === 'stability'){ const u = unrestOf(p); c.fillStyle = o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'; c.fill(GEO.fill[p]); }
+    if (mapMode === 'terrain'){ c.fillStyle = rgba(TERRAIN[P.terrain || 'plains'].col, 0.55); c.fill(GEO.fill[p], 'evenodd'); }
+    else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p], 'evenodd'); }
+    else if (mapMode === 'stability'){ const u = unrestOf(p); c.fillStyle = o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'; c.fill(GEO.fill[p], 'evenodd'); }
     else if (mapMode === 'resources'){ const y = provYield(p), top = ['oil', 'metal', 'food', 'mp', 'cash'].sort((k1, k2) => (y[k2]/({cash:12, oil:5, metal:4, food:3, mp:2})[k2]) - (y[k1]/({cash:12, oil:5, metal:4, food:3, mp:2})[k1]))[0];
-      c.fillStyle = {oil:'rgba(40,40,44,.75)', metal:'rgba(140,155,170,.6)', food:'rgba(120,180,80,.5)', mp:'rgba(200,160,120,.5)', cash:'rgba(220,190,90,.55)'}[top]; c.fill(GEO.fill[p]); }
-    else if (o >= 0){ c.fillStyle = relMode ? (o === PLAYER ? rgba(S.nations[o].color, 0.45) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5)) : rgba(S.nations[o].color, o === PLAYER ? 0.4 : 0.34); c.fill(GEO.fill[p]); }
-    { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p]); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p]); } }
-    if (!vis.has(p)){ c.fillStyle = 'rgba(3,6,8,0.5)'; c.fill(GEO.fill[p]); c.fillStyle = hp; c.fill(GEO.fill[p]); } }
+      c.fillStyle = {oil:'rgba(40,40,44,.75)', metal:'rgba(140,155,170,.6)', food:'rgba(120,180,80,.5)', mp:'rgba(200,160,120,.5)', cash:'rgba(220,190,90,.55)'}[top]; c.fill(GEO.fill[p], 'evenodd'); }
+    else if (o >= 0){ c.fillStyle = relMode ? (o === PLAYER ? rgba(S.nations[o].color, 0.45) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5)) : rgba(S.nations[o].color, o === PLAYER ? 0.4 : 0.34); c.fill(GEO.fill[p], 'evenodd'); }
+    { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p], 'evenodd'); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }
+    if (!vis.has(p)){ c.fillStyle = 'rgba(3,6,8,0.5)'; c.fill(GEO.fill[p], 'evenodd'); c.fillStyle = hp; c.fill(GEO.fill[p], 'evenodd'); } }
   // clip to the real coastline, then soften the hex steps between provinces
   c.globalCompositeOperation = 'destination-in'; c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over';
-  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.filter = `blur(${Math.max(0.6, Math.min(5, 0.9*view.s*dpr))}px)`; base.drawImage(flc, 0, 0); base.restore();
+  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.filter = `blur(${Math.max(0.5, Math.min(4, (GS > 1 ? 0.12 : 0.075)*HS*view.s*dpr))}px)`; base.drawImage(flc, 0, 0); base.restore();
   // sea-zone hints and rivers/roads on the base layer
   c = base; c.lineJoin = 'round'; c.lineCap = 'round';
   if (hexPx >= 9){ c.strokeStyle = 'rgba(140,180,190,0.06)'; c.lineWidth = 0.8*px; c.setLineDash([4*px, 6*px]); c.stroke(GEO.seaEdges); c.setLineDash([]); }
@@ -3090,7 +3143,8 @@ function renderLayer(vis){
   // borders are drawn on the overlay and clipped to the real coastline, so they never bulge into the sea
   c = flc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, flc.width, flc.height); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   c.lineJoin = 'round'; c.lineCap = 'round';
-  if (hexPx >= 5){ c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = 0.9*px; c.stroke(GEO.provEdges); }
+  if (hexPx >= 3){ const z = Math.min(1, (hexPx - 3)/9); c.strokeStyle = `rgba(0,0,0,${0.25 + 0.2*z})`; c.lineWidth = (0.8 + 0.6*z)*px; c.stroke(GEO.provEdges);
+    if (hexPx >= 8){ c.strokeStyle = `rgba(236,230,212,${0.1*z})`; c.lineWidth = 0.6*px; c.stroke(GEO.provEdges); } }
   c.strokeStyle = 'rgba(200,205,190,0.22)'; c.lineWidth = Math.max(0.6*px, 0.9); c.stroke(GEO.countryEdges);
   for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive) continue;
     c.strokeStyle = 'rgba(3,6,8,0.9)'; c.lineWidth = 3.6*px; c.stroke(GEO.nation[n]);
@@ -3103,7 +3157,7 @@ function draw(now){
   clampView();
   if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; } else if (cv.style.transform){ cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
-  const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS;
+  const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS0;
   const key = [view.s, cw, ch, dpr, geoVer, vis.key, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' ? Math.floor(S.hour/24) : 0].join('|');
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   const offEdge = !layer || Math.abs(dxv) > layer.mx*0.9 || Math.abs(dyv) > layer.my*0.9;
@@ -3113,7 +3167,7 @@ function draw(now){
   ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   if (hoverProv >= 0 && hoverProv !== sel.prov && !G.P[hoverProv].sea){ ctx.strokeStyle = 'rgba(255,248,230,0.55)'; ctx.lineWidth = 1.6*px; ctx.stroke(GEO.outline[hoverProv]); }
-  if (sel.target !== null){ const o = S.owner[sel.target]; if (!G.P[sel.target].sea && o !== PLAYER && (o < 0 || atWar(PLAYER, o))){ ctx.fillStyle = 'rgba(224,87,79,0.2)'; ctx.fill(GEO.fill[sel.target]); }
+  if (sel.target !== null){ const o = S.owner[sel.target]; if (!G.P[sel.target].sea && o !== PLAYER && (o < 0 || atWar(PLAYER, o))){ ctx.fillStyle = 'rgba(224,87,79,0.2)'; ctx.fill(GEO.fill[sel.target], 'evenodd'); }
     ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(GEO.outline[sel.target]); ctx.setLineDash([]); }
   if (sel.prov !== null){ ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.4*px; ctx.stroke(GEO.outline[sel.prov]); }
   drawNight();
@@ -3129,7 +3183,12 @@ function draw(now){
     for (const L of GEO.clabels){ if (!L || L.cells < 6) continue; const [x, y] = toScreen(L.x, L.y); if (x < -60 || y < -20 || x > cw + 60 || y > ch + 20) continue;
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.7)'; ctx.strokeText(L.name.toUpperCase(), x, y); ctx.fillStyle = 'rgba(200,198,184,.55)'; ctx.fillText(L.name.toUpperCase(), x, y); } }
   if (showSea){ ctx.font = `italic 500 11px ${BODY}`; ctx.fillStyle = 'rgba(150,185,195,.38)';
-    for (const P of G.P){ if (!P.sea || P.cells.length < 20) continue; const [x, y] = toScreen(P.x, P.y); if (x < -80 || y < -20 || x > cw + 80 || y > ch + 20) continue; ctx.fillText(P.name, x, y); } }
+    const placed = [];   // one label per sea name nearby, biggest zones first, never overlapping
+    for (const P of SEAL || (SEAL = G.P.filter(q => q.sea && q.cells.length >= 20*GS*GS).sort((a, b) => b.cells.length - a.cells.length))){ const [x, y] = toScreen(P.x, P.y); if (x < -80 || y < -20 || x > cw + 80 || y > ch + 20) continue;
+      const nm = P.name.replace(/ [IVXL]+$/, ''), w = ctx.measureText(nm).width + 16;
+      if (placed.some(q => (Math.abs(q.x - x) < (q.w + w)/2 && Math.abs(q.y - y) < 18) || (q.nm === nm && Math.hypot(q.x - x, q.y - y) < 260))) continue;
+      placed.push({x, y, w, nm}); ctx.fillText(nm, x, y); } }
+  const labs = [];
   for (let p = 0; p < G.P.length; p++){
     const P = G.P[p]; if (P.sea) continue;
     const [x, y] = toScreen(P.x, P.y);
@@ -3139,16 +3198,21 @@ function draw(now){
     if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 10)*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; ctx.drawImage(GLOW(), x - gr*0.7, y + 9*kl - gr*0.7, gr*1.4, gr*1.4); ctx.restore(); }
     if (cap && hexPx >= 2){ star(x, y + 9*kl, 6*kl); ctx.fillStyle = '#f3ead2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b1012'; ctx.stroke(); }
     else if (P.city && showCity){ ctx.fillStyle = '#f3ead2'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1.2; ctx.fillRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); ctx.strokeRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); }
-    if (P.oil && hexPx >= 8){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 14){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
     if (S.bld[p].silo && hexPx >= 4){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     if (S.bld[p].fort && hexPx >= 6){ const fx2 = x - 10*kl, fy2 = y + 9*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
-    const label = showNames ? (P.city ? P.cityName : P.name) : (P.city && hexPx >= 8) || (cap && hexPx >= 4) ? P.cityName : '';
-    if (label){ ctx.font = `${cap ? 600 : 500} ${cap ? 12 : 11}px ${BODY}`; ctx.textBaseline = 'top';
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(label, x, y + 27*kl); ctx.fillStyle = '#ece6d4'; ctx.fillText(label, x, y + 27*kl); ctx.textBaseline = 'middle'; }
+    { const Rpx = Math.sqrt(P.cells.length)*HS*view.s, label = cap && hexPx >= 4 ? P.cityName : P.city && hexPx >= 8 ? P.cityName : hexPx >= 9 && Rpx >= 16 ? P.name : '';
+      if (label) labs.push({t:label, x, y:y + (P.city ? 27*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, a:dim}); }
     ctx.globalAlpha = 1;
     const c = S.cap[p];
     if (c){ const f = Math.min(1, c.h/capNeed(p, c.by)); ctx.beginPath(); ctx.arc(x, y, 15*kl, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.lineWidth = 3; ctx.strokeStyle = S.nations[c.by].color; ctx.stroke(); }
   }
+  // place labels: highest rank first, skip any that would overlap one already placed
+  { labs.sort((a, b) => b.pri - a.pri); const boxes = []; ctx.textBaseline = 'top';
+    for (const L of labs){ const f = L.cap ? 12 : L.city ? 11 : 10; ctx.font = `${L.cap ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
+      if (boxes.some(q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) continue; boxes.push(b);
+      ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, L.x, y0); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, L.x, y0); }
+    ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   drawBuildings(now, kl, vis);
   // power names
   if (!showNames) GEO.labels.forEach((L, n) => { if (!L || !S.nations[n].alive) return;
@@ -3187,7 +3251,7 @@ function draw(now){
     const [lx, ly] = lastPt; ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
   for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null)) drawPath(a, a.path.length ? a.path : [a.to], 'rgba(226,162,61,0.35)', 1.6);
   const drawSelPaths = () => { if (!sa) return;
-    if (sa.air){ const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS*SQ3*view.s;
+    if (sa.air){ const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS0*SQ3*view.s;
       ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(111,176,232,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(111,176,232,.05)'; ctx.fill(); ctx.restore();
       if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target);
         ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
@@ -3260,11 +3324,11 @@ function draw(now){
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(GLOW(), -22, -9, 22, 18); ctx.globalCompositeOperation = 'source-over';
     const L0 = m.k === 'bm' ? 16 : 11; ctx.fillStyle = '#e8e4da'; ctx.strokeStyle = '#1a1c1b'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L0/2, 0); ctx.lineTo(-L0/2, -2.2); ctx.lineTo(-L0/2, 2.2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     if (m.owner !== PLAYER && (S.owner[m.to] === PLAYER)){ const [tx, ty] = toScreen(B.x, B.y); ctx.save(); ctx.strokeStyle = `rgba(224,87,79,${0.5 + 0.4*Math.sin(now/120)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tx, ty, 16, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
-  if (aimMsl){ const F = G.P[aimMsl.from], [fx1, fy1] = toScreen(F.x, F.y), rr = MISSILES[aimMsl.k].range*HS*SQ3*view.s;
+  if (aimMsl){ const F = G.P[aimMsl.from], [fx1, fy1] = toScreen(F.x, F.y), rr = MISSILES[aimMsl.k].range*HS0*SQ3*view.s;
     ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(224,87,79,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(fx1, fy1, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(224,87,79,.04)'; ctx.fill(); ctx.restore(); }
   drawSats(now);
   drawSelPaths();
-  if (dropFor !== null){ const d0 = armyById(dropFor); if (d0){ const [bx, by] = toScreen(G.P[d0.at].x, G.P[d0.at].y), rr = PARA_RANGE*HS*SQ3*view.s; ctx.save(); ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(226,162,61,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(226,162,61,.05)'; ctx.fill(); ctx.restore(); } }
+  if (dropFor !== null){ const d0 = armyById(dropFor); if (d0){ const [bx, by] = toScreen(G.P[d0.at].x, G.P[d0.at].y), rr = PARA_RANGE*HS0*SQ3*view.s; ctx.save(); ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(226,162,61,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(226,162,61,.05)'; ctx.fill(); ctx.restore(); } }
   drawFX(now);
   tutDraw(now);
   drawMini();
@@ -3537,7 +3601,7 @@ function renderSide(force){
   $('mutebtn').setAttribute('aria-pressed', String(!muted)); $('mutebtn').style.opacity = muted ? 0.45 : 1; $('mutebtn').title = muted ? 'Sound is off (M)' : 'Sound is on (M)';
   let hint = '';
   const a = sel.army !== null ? armyById(sel.army) : null;
-  if (aimMsl) hint = `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${MISSILES[aimMsl.k].range} hexes). Esc to cancel.`;
+  if (aimMsl) hint = `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${MISSILES[aimMsl.k].range*KM_HEX} km). Esc to cancel.`;
   else if (rallyFor !== null) hint = `Tap where units trained in ${G.P[rallyFor].cityName} should gather.`;
   else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Tap a province inside the blue ring to plan an air mission.';
   else if (a) hint = sel.target !== null ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap empty map or press Esc to deselect.` : 'Tap a province or sea zone to plan a route. Press Esc to deselect.';
@@ -3873,7 +3937,7 @@ function armyHTML(a){
     ${a.chase != null && armyById(a.chase) ? `<div class="status move">Pursuing ${armyLabel(armyById(a.chase))}</div>` : ''}
     ${a.air || shipsOnly(a) ? '' : `<div class="row" style="align-items:center"><span class="small muted">Stance</span>${Object.entries(STANCES).map(([k, v]) => `<button class="btn ${(a.stance || 'hold') === k ? 'primary' : ''}" data-act="stance-set" data-k="${k}" title="${v[1]}" style="padding:3px 9px;font-size:12px">${v[0]}</button>`).join('')}</div>`}
     <div class="row">
-      ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE} hexes away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
+      ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE*KM_HEX} km away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
       <button class="btn" data-act="split" ${count(a) < 2 ? 'disabled' : ''}>Split in half</button>
       <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one."`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
       <button class="btn" data-act="stop" ${!a.path.length ? 'disabled' : ''}>Halt</button>
@@ -3958,7 +4022,7 @@ document.addEventListener('click', e => {
     case 'clear': clearSel(); break;
     case 'send': if (a) sendToTarget(a); break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
-    case 'drop': if (a){ dropFor = dropFor === a.id ? null : a.id; if (dropFor !== null) toast(`Tap a drop zone up to ${PARA_RANGE} hexes away.`, 'info', null); renderSide(true); } break;
+    case 'drop': if (a){ dropFor = dropFor === a.id ? null : a.id; if (dropFor !== null) toast(`Tap a drop zone up to ${PARA_RANGE*KM_HEX} km away.`, 'info', null); renderSide(true); } break;
     case 'split': if (a){ const nb = splitArmy(a); if (nb) selectArmy(nb.id); } break;
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty(); renderSide(true); } break;
     case 'stop': if (a){ a.path = []; renderSide(true); } break;
@@ -4110,7 +4174,7 @@ function rules(){ return `<ul>
   <li><b>Move</b> by tapping one of your counters, then a province or sea zone to plan the route. Tap it again, or press Send, to march. Troops embark automatically to cross water.</li>
   <li><b>Capture</b> by parking ground units in a province with no defenders. Cities and capitals take longer. Air units can fight but cannot capture.</li>
   <li><b>Battles</b> run hour by hour. Defenders on their own soil take less damage, troops at sea take more. The blue bar under a counter is morale: armies that break retreat.</li>
-  <li><b>Supply</b> reaches 8 hexes from your cities. Supplied troops heal (fastest in cities); troops cut off lose strength every day and get a red dashed outline.</li>
+  <li><b>Supply</b> reaches about 4,800 km over land from your cities (half that across sea). Supplied troops heal (fastest in cities); troops cut off lose strength every day and get a red dashed outline.</li>
   <li><b>Occupation</b>: conquered land grows unrest unless garrisoned; unrest cuts output and above 60% partisans rise up and can return the province to its old owner. Pacify it for money or keep troops there (Stability map mode).</li>
   <li><b>Intelligence</b>: train up to 5 agents ($60M) and send them from any foreign province on reconnaissance, sabotage, inciting unrest or stealing technology. Failed agents are lost and sour relations.</li>
   <li><b>Strategic missiles</b>: research the Strategic branch, build a Missile Silo in a city, produce Cruise or Ballistic Missiles there and launch them at any province in range. SAMs and Frigates near the target can intercept them.</li>

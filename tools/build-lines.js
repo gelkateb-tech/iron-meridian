@@ -6,7 +6,7 @@ global.window = {}; require(path.join(__dirname, '..', 'world.js')); const WD = 
 const W = WD.W, H = WD.H, LON0 = WD.lon0;
 const miller = lat => 1.25*Math.log(Math.tan(Math.PI/4 + 0.4*lat*Math.PI/180));
 const YMAX = miller(WD.latN), YMIN = miller(WD.latS);
-const prov = new Int32Array(W*H); for (let i = 0; i < W*H; i++){ const s = WD.cells.substr(i*2, 2); prov[i] = s === '..' ? -1 : parseInt(s, 36); }
+const prov = WD.prov;
 const land = p => p >= 0 && WD.provinces[p][1] >= 0;
 // continuous grid coordinates: fx along the row (already including the odd-row shift), fy = row
 const proj = (lon, lat) => [((lon - LON0 + 720) % 360)/360*W - 0.5, (YMAX - miller(Math.max(WD.latS, Math.min(WD.latN, lat))))/(YMAX - YMIN)*(H - 1)];
@@ -24,8 +24,8 @@ function lines(fc, filter, tol){ const out = []; for (const f of fc.features){ i
       if (cur.length > 1) out.push({p:simplify(cur, tol), r:f.properties.scalerank}); } }
   return out; }
 const rivFC = JSON.parse(fs.readFileSync(process.argv[2])), roadFC = JSON.parse(fs.readFileSync(process.argv[3]));
-const rivers = lines(rivFC, p => p.featurecla !== 'Lake Centerline' && p.scalerank <= 6, 0.12);
-const roads = lines(roadFC, p => (p.type === 'Major Highway' && p.scalerank <= 5) || (p.type === 'Road' && p.scalerank <= 3), 0.5);
+const rivers = lines(rivFC, p => p.featurecla !== 'Lake Centerline' && p.scalerank <= 6, 0.07*(WD.GS || 1));
+const roads = lines(roadFC, p => (p.type === 'Major Highway' && p.scalerank <= 5) || (p.type === 'Road' && p.scalerank <= 3), 0.3*(WD.GS || 1));
 // sample each line every 0.2 cells
 const walk = (L, cb) => { for (let i = 1; i < L.length; i++){ const [x0, y0] = L[i - 1], [x1, y1] = L[i], n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)/0.2)); for (let k = 0; k < n; k++){ const t = k/n; cb(x0 + (x1 - x0)*t, y0 + (y1 - y0)*t); } } };
 // rivers as barriers: a river running alongside the border of two provinces (not just flowing from one into the other)
