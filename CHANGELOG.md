@@ -351,3 +351,7 @@
   - Offers from nations at war with you are highlighted red with an ENEMY tag. Hovering says "This offer is made by an enemy: Russia. Buying from them funds their war."
   - You can post your own offers for 3 days (the goods are held until sold or returned), and AI nations buy them when they are short and your price is fair.
 - Flags are original designs generated from each nation's colour (bands, crosses, chevrons and emblems), not real-world flag designs.
+
+## Round 46 — Who am I buying from?
+- The market's top section is now labelled "Anonymous exchange (no nation)", and trades there say no nation is involved. Each resource row shows the cheapest offer from a nation: its flag, name, quantity, price and a Buy button. Enemy sellers are highlighted red with an ENEMY tag and a hover warning.
+- Every purchase from a nation names the seller, in the toast and in the dispatches ("Bought 10 metal from France for $22M"). Buying from an enemy is flagged as such.
