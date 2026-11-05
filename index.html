@@ -820,7 +820,10 @@ function buildGeometry(){
   GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land, coastV:coastPath()};
   rebuildOwnerGeo();
 }
-let geoVer = 0;
+let geoVer = 0, FRONT = {k:'', p:null};
+function frontPath(){ if (!GEO || !GEO.chains || !S.nations[PLAYER].alive) return null; const foes = S.nations.filter(N => N.id !== PLAYER && N.alive && atWar(PLAYER, N.id)).map(N => N.id); if (!foes.length) return null;
+  const k = geoVer + '|' + foes.join(','); if (FRONT.k === k) return FRONT.p; const fs = new Set(foes), own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
+  FRONT = {k, p:chainsPath(GEO.chains.filter(c => { const oa = own(c.a), ob = own(c.b); return (oa === PLAYER && fs.has(ob)) || (ob === PLAYER && fs.has(oa)); }))}; return FRONT.p; }
 function rebuildOwnerGeo(){
   geoVer++;
   const per = S.nations.map(() => []), mineL = [], own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
@@ -2997,14 +3000,19 @@ function drawBuildings(now, kl, vis){
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !vis.has(p)) continue; const B = S.bld[p], cons = S.cons[p];
     const list = BK.filter(k => B[k] > 0 && k !== 'fort'); if (!list.length && !cons && !B.fort) continue;
     const [x, y0] = toScreen(P.x, P.y); if (x < -80 || y0 < -80 || x > cw + 80 || y0 > ch + 80) continue; const y = y0 + 9*kl, col = colorOf(S.owner[p]);
-    if (B.fort) fortWalls(x, y, u, B.fort);
+    const R = Math.sqrt(P.cells.length)*HS*view.s*0.62, us = Math.min(u, Math.max(0.55, R/44));   // buildings fit inside the province
+    if (B.fort) fortWalls(x - 16*us, y + 10*us, us, B.fort, col);
     const items = list.map(k => ({k, lvl:B[k]})); if (cons) items.push({k:'cons', lvl:cons.lvl, c:cons});
-    items.forEach((it, i) => { const sl = BSLOT[i % BSLOT.length], bx = x + sl[0]*u, by = y + sl[1]*u; drawBld(it, bx, by, u, now, p, col, night); }); }
+    items.forEach((it, i) => { const sl = BSLOT[i % BSLOT.length], bx = x + sl[0]*us, by = y + sl[1]*us; drawBld(it, bx, by, us, now, p, col, night); }); }
   ctx.restore(); }
-function fortWalls(x, y, u, lvl){ ctx.strokeStyle = 'rgba(30,32,30,.85)'; ctx.lineWidth = 3.2*u*0.5 + 1; const r = (24 + lvl*3)*u;
-  ctx.beginPath(); for (let i = 0; i < 8; i++){ const a0 = i*Math.PI/4 + 0.12, a1 = a0 + Math.PI/4 - 0.3; ctx.moveTo(x + Math.cos(a0)*r, y + Math.sin(a0)*r*0.55); ctx.lineTo(x + Math.cos(a1)*r, y + Math.sin(a1)*r*0.55); } ctx.stroke();
-  ctx.strokeStyle = 'rgba(176,170,152,.9)'; ctx.lineWidth = 1.4*u; ctx.stroke();
-  ctx.fillStyle = 'rgba(150,145,130,.95)'; for (let i = 0; i < 8; i++){ const a = i*Math.PI/4 + 0.12, tx = x + Math.cos(a)*r, ty = y + Math.sin(a)*r*0.55; ctx.fillRect(tx - 1.6*u, ty - 2.6*u, 3.2*u, 3.2*u); } }
+// fortifications: a small star fort (bastions per level) beside the city instead of a ring of walls across the province
+function fortWalls(x, y, u, lvl, col){ const r = (7 + lvl*1.6)*u, n = 5;
+  ctx.beginPath(); for (let i = 0; i < n*2; i++){ const a = -Math.PI/2 + i*Math.PI/n, rr = i % 2 ? r*0.62 : r; ctx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr*0.62); } ctx.closePath();
+  ctx.fillStyle = 'rgba(20,22,20,.55)'; ctx.save(); ctx.translate(1.5*u, 2*u); ctx.fill(); ctx.restore();
+  ctx.fillStyle = '#8f8a7a'; ctx.fill(); ctx.lineWidth = 1.2*u; ctx.strokeStyle = 'rgba(30,32,30,.9)'; ctx.stroke();
+  ctx.beginPath(); for (let i = 0; i < n*2; i++){ const a = -Math.PI/2 + i*Math.PI/n, rr = (i % 2 ? r*0.62 : r)*0.62; ctx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr*0.62); } ctx.closePath(); ctx.fillStyle = '#5d6b55'; ctx.fill();
+  ctx.lineWidth = 1*u; ctx.strokeStyle = col || '#b0aa98'; ctx.stroke();
+  ctx.fillStyle = '#e8e2cf'; ctx.font = `700 ${Math.round(6*u + 3)}px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ROMAN[lvl] || lvl, x, y); }
 function box3(x, y, w, h, d, top, side){ ctx.fillStyle = side; ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w + d, y - d*0.6); ctx.lineTo(x + w + d, y - h - d*0.6); ctx.lineTo(x + w, y - h); ctx.closePath(); ctx.fill();
   ctx.fillStyle = top; ctx.beginPath(); ctx.moveTo(x, y - h); ctx.lineTo(x + w, y - h); ctx.lineTo(x + w + d, y - h - d*0.6); ctx.lineTo(x + d, y - h - d*0.6); ctx.closePath(); ctx.fill(); }
 function drawBld(it, x, y, u, now, p, col, night){ const k = it.k, t = now/1000;
@@ -3201,6 +3209,10 @@ function draw(now){
   if (sel.target !== null){ const o = S.owner[sel.target]; if (!G.P[sel.target].sea && o !== PLAYER && (o < 0 || atWar(PLAYER, o))){ ctx.fillStyle = 'rgba(224,87,79,0.2)'; ctx.fill(GEO.fill[sel.target], 'evenodd'); }
     ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(GEO.outline[sel.target]); ctx.setLineDash([]); }
   if (sel.prov !== null){ ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.4*px; ctx.stroke(GEO.outline[sel.prov]); }
+  // front lines: your borders with powers you are at war with, as a glowing marching line
+  { const F = frontPath(); if (F){ const z = Math.min(1.6, Math.max(0.7, hexPx/14)); ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(224,87,79,0.22)'; ctx.lineWidth = 9*z*px; ctx.stroke(F); ctx.strokeStyle = 'rgba(40,6,4,0.8)'; ctx.lineWidth = 3.4*z*px; ctx.stroke(F);
+      ctx.setLineDash([7*z*px, 5*z*px]); ctx.lineDashOffset = -((now/70) % 12)*z*px; ctx.strokeStyle = '#ff6a4d'; ctx.lineWidth = 2*z*px; ctx.stroke(F); ctx.restore(); } }
   drawNight();
   drawWeather(now);
 

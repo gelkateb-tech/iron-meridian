@@ -421,3 +421,8 @@
 - Cities are drawn as round markers sized by population: regular cities, large cities (2.5 million+) and megacities (8 million+, with a dark core). Each has a ring in the holder's colour, so you can see who owns a city at a glance.
 - Capitals get a bigger star on a dark disc ringed in the owner's colour.
 - City names scale with size (megacities bold), sit closer to their marker and win label space over smaller towns. Night glow grows with population.
+
+## Round 56 — Visual round 5: front lines and compact forts
+- Front lines: your borders with every power you're at war with are drawn as a glowing red line with marching dashes, so active fronts stand out at any zoom.
+- Fortifications are a small star fort (one bastion ring per level, with the level number) beside the city, in place of a ring of wall segments that spilled across neighbouring provinces on the finer map.
+- City buildings shrink to fit small provinces instead of overlapping their neighbours.
