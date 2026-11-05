@@ -68,8 +68,8 @@ header .brand{display:none}
 .bld .ds{grid-column:1 / -1; color:var(--muted); font-size:11.5px; line-height:1.35}
 .bld .lv{font-family:var(--mono); font-size:11px; color:var(--muted)}
 .bld .btn{font-size:11.5px; padding:5px 8px; white-space:nowrap}
-.bi{--bs:22px; display:inline-block; flex:none; width:var(--bs); height:var(--bs); background:var(--bi) center / contain no-repeat; vertical-align:middle; margin:-3px 6px -3px 0; filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
-.bi.dim{opacity:.45; filter:grayscale(.85)}
+.bi{--bs:22px; display:inline-block; flex:none; width:var(--bs); height:var(--bs); border-radius:calc(var(--bs)*.18); background:var(--bi) center / 128% no-repeat, radial-gradient(circle at 50% 45%, #46503f, #262d27 72%); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.55); vertical-align:middle; margin:-3px 6px -3px 0; image-rendering:auto}
+.bi.dim{opacity:.5; filter:grayscale(.85)}
 .bl{display:flex; justify-content:flex-end; align-items:center; white-space:nowrap; min-height:22px}
 .bh{display:flex; align-items:center}
 .bh .bi{margin:-2px 8px -2px 0} .bh .lv{display:block}
@@ -189,6 +189,11 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .armylist button{display:flex; justify-content:space-between; text-align:left; font-size:12.5px; padding:6px 9px}
 .muted{color:var(--muted)}
 .small{font-size:12px}
+.flg{display:inline-block; position:relative; flex:none; vertical-align:-2px; margin-right:1px; border-radius:1.5px; background-image:url(assets/art/flags.webp); background-repeat:no-repeat; image-rendering:auto; box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.45)}
+.flg::after{content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 42%, rgba(0,0,0,.1)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.flg.fb{background-image:none} .toast .flg{margin-right:7px; vertical-align:-2px} .ev .flg{margin-right:5px; vertical-align:-1px} .flg.big{border-radius:2.5px; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.55)}
+.bmark{display:inline-flex; vertical-align:-3px; margin-left:3px} .bbadge{display:inline-flex; align-items:center; gap:7px; margin-left:8px; font:600 13px var(--body, inherit); text-transform:none; color:var(--muted); letter-spacing:.02em}
+.bloch{display:flex; align-items:center; gap:10px; margin:2px 0 8px} .bloch .flg{vertical-align:-2px}
 .flag{vertical-align:-3px;border-radius:2px;flex:none} .etag{font:700 9.5px var(--mono,monospace);color:#fff;background:var(--danger);padding:1px 4px;border-radius:3px;margin-left:4px}
 .ptab.book tr.enemy td{background:rgba(224,87,79,.16)} .ptab.book tr.priv td{background:rgba(111,176,232,.10)} .ptag{font:700 9.5px var(--mono,monospace);color:#cfe8ff;background:rgba(111,176,232,.3);padding:1px 4px;border-radius:3px;margin-left:4px} .bestoff{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:3px 6px;border-radius:4px} .bestoff.enemy{background:rgba(224,87,79,.16);box-shadow:inset 3px 0 0 var(--danger)} .ptab.book tr.enemy td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 .chatbox{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px;margin:8px 0;background:rgba(0,0,0,.25);border-radius:6px}
@@ -202,7 +207,7 @@ html.reduced *{transition:none!important;animation:none!important}
 .achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:10px}.ach{display:flex;flex-direction:column;gap:2px;padding:6px 9px;border-radius:4px;background:rgba(255,255,255,.03);opacity:.55}.ach.on{opacity:1;background:rgba(226,162,61,.1);border-left:3px solid var(--accent)}.legend{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
 .cmd{display:flex;gap:8px;align-items:center;padding:6px 8px;margin:6px 0;border:1px solid rgba(226,162,61,.35);border-radius:4px;background:rgba(226,162,61,.06)}.cmd .ins{color:var(--accent);font-size:13px;letter-spacing:-1px;min-width:34px;text-align:center}.cmd>div{flex:1}
 .away{list-style:none;padding:0;margin:0 0 10px;display:grid;gap:4px;font-size:13px}.away li{padding:4px 8px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03)}.away li.bad{border-left-color:var(--danger)}.away li.good{border-left-color:var(--ok)}.away time{opacity:.6;margin-right:6px;font-family:var(--mono,monospace);font-size:11px}
-.blocs{display:grid;gap:6px;margin-bottom:8px}.bloc{display:flex;flex-direction:column;gap:2px;padding:6px 10px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03);border-radius:4px}.bloc.mine{border-left-color:var(--accent)}.bloc i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 6px;vertical-align:baseline}
+.blocs{display:grid;gap:6px;margin-bottom:8px}.bloc .bt{display:flex;flex-direction:column;gap:3px;min-width:0}.bloc .bmem{display:flex;flex-wrap:wrap;gap:4px 12px}.bloc{display:flex;flex-direction:row;align-items:center;gap:12px;padding:6px 10px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03);border-radius:4px}.bloc.mine{border-left-color:var(--accent)}.bloc > .emb{margin:2px}
 @media (max-width:820px){.clock .vic{font-size:9px;letter-spacing:.02em}}
 .docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:10px}.btn.doc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;white-space:normal;padding:8px 10px}.btn.doc span{font-size:12px;opacity:.85}.marks{display:grid;gap:4px;margin-bottom:10px}.mrow{display:grid;grid-template-columns:22px 150px 120px 1fr;align-items:center;gap:8px;padding:4px 6px;background:rgba(255,255,255,.03);border-radius:4px}.mrow svg{width:20px;height:20px}.mrow .btn{justify-self:start}@media (max-width:600px){.mrow{grid-template-columns:22px 1fr}.mrow .mk,.mrow .btn,.mrow>span.small{grid-column:2}}.mk i{font-style:normal;font-size:11px;padding:1px 5px;margin-right:2px;border:1px solid rgba(255,255,255,.18);border-radius:3px;opacity:.45}.mk i.on{opacity:1;background:rgba(226,162,61,.25);border-color:var(--accent)}.mkb{font-size:10.5px;padding:0 4px;border:1px solid var(--accent);border-radius:3px;color:var(--accent)}
 .acomp span{display:inline-flex;align-items:center;gap:2px;margin-right:6px;font-size:12px}.acomp svg{width:16px;height:16px}.aname{cursor:pointer}select[data-act=stance]{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:3px 6px;font:inherit;font-size:12.5px}.tag{font-size:11.5px;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.07)}.tag.battle{background:rgba(224,87,79,.25)}.tag.move{background:rgba(226,162,61,.2)}
@@ -406,7 +411,7 @@ details.more summary::-webkit-details-marker{display:none}
 
 /* Nation picker */
 .picks{display:grid; grid-template-columns:repeat(auto-fill, minmax(196px, 1fr)); gap:8px}
-.pick{display:flex; flex-direction:row; align-items:center; gap:10px; text-align:left; padding:8px 10px 8px 8px; border-left:4px solid var(--c); min-width:0}
+.pick{display:flex; flex-direction:row; align-items:center; gap:12px; text-align:left; padding:8px 10px 8px 9px; border-left:3px solid var(--c); min-width:0}
 .pick .pt{display:flex; flex-direction:column; align-items:flex-start; gap:3px; min-width:0}
 .pick b{font-size:14px}
 .pick .pt > span{font-family:var(--mono); font-size:11px; color:var(--muted)}
@@ -465,18 +470,18 @@ details.more summary::-webkit-details-marker{display:none}
 }
 @media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important} }
 
-/* Faction emblems (assets/art/emblem-*.webp) on a dark disc with the power's colour as the ring */
+/* Coalition emblems (assets/art/emblem-*.webp) on a dark disc with a gilded ring */
 .emb{--es:24px; display:inline-block; position:relative; flex:none; width:var(--es); height:var(--es); border-radius:50%; vertical-align:middle; font-style:normal;
   background:radial-gradient(circle at 50% 38%, #26333a, #0a0f12 72%); box-shadow:0 0 0 max(1.5px, calc(var(--es)*.055)) var(--c, #8b9a97), 0 1px 4px rgba(0,0,0,.6)}
 .emb::after{content:""; position:absolute; inset:7%; background:center / contain no-repeat}
 .emb.sm::after{filter:brightness(1.3) contrast(1.15)}
 .emb.bear::after{background-image:url(assets/art/emblem-bear.webp)} .emb.eagle::after{background-image:url(assets/art/emblem-eagle.webp)}
 .emb.lion::after{background-image:url(assets/art/emblem-lion.webp)} .emb.star::after{background-image:url(assets/art/emblem-star.webp)}
-.chip.you .emb{margin-left:1px}
-.nat .emb{margin:0 2px}
-.drow .nm b .emb{margin-right:6px; vertical-align:-6px}
+.chip.you .flg{margin-left:4px}
+.nat .flg{margin:0 2px} .nat{min-height:22px} .nat .bmark{vertical-align:middle; margin:-2px 0 -2px 4px}
+.drow .nm b .flg{margin-right:3px; vertical-align:-3px}
 .endhead{display:flex; align-items:center; gap:18px}
-.endhead .emb{margin:4px}
+.endhead .flg{margin:4px}
 /* Logo: the full title on the menu and in the briefing */
 .logo{margin:0; display:inline-flex; align-self:flex-start; flex-direction:column; gap:5px; font-family:var(--display); text-transform:uppercase; line-height:.9}
 .logo .l1{font-weight:800; font-size:44px; letter-spacing:.08em; color:#efe9da; text-shadow:0 2px 0 rgba(0,0,0,.5)}
@@ -684,7 +689,7 @@ const STANDIN = (() => {
 })();
 const ART = (() => {
   const BASE = 'assets/art/', L5 = k => [1, 2, 3, 4, 5].map(i => `b-${k}-${i}`);
-  const FIRST = ['menu-background', 'panel-texture', 'emblem-bear', 'emblem-eagle', 'emblem-lion', 'emblem-star'];   // needed by the first screen
+  const FIRST = ['menu-background', 'panel-texture', 'flags', 'emblem-bear', 'emblem-eagle', 'emblem-lion', 'emblem-star'];   // needed by the first screen
   const REST = ['u-infantry', 'u-special-forces', 'u-tank', 'u-light-armor', 'u-artillery', 'u-rocket-artillery', 'u-anti-air', 'u-missile-launcher', 'u-supply-truck',
     'u-jet', 'u-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
     ...L5('city'), ...L5('military-base'), ...L5('naval-port'), ...L5('airfield'), ...L5('missile-silo'), 'fx-explosion', 'fx-smoke', 'fx-crater'];
@@ -743,14 +748,66 @@ const ART = (() => {
     cache.set(key, c); return c;
   }
   const url = name => { name = rn(name); if (!stand.has(name)) return BASE + name + '.webp'; let u = durl.get(name); if (!u){ try { u = imgs.get(name).toDataURL('image/png'); } catch (e) { u = ''; } durl.set(name, u); } return u; };
-  return {img:name => imgs.get(rn(name)) || null, ready:name => imgs.has(name), failed:name => failed.has(name), standIn:name => stand.has(rn(name)), load, sprite, first, rest, url, OPT};
+  return {img:name => imgs.get(rn(name)) || null, ready:name => imgs.has(name), failed:name => failed.has(name), standIn:name => stand.has(rn(name)), load, sprite, scaled, first, rest, url, OPT};
 })();
-// faction emblems: every power has one of four crests; its colour is the ring around it
-const EMBLEM = {Russia:'bear', Canada:'bear', 'United States':'eagle', Germany:'eagle', France:'eagle', Egypt:'eagle', Italy:'eagle', Poland:'eagle', Mexico:'eagle',
-  'United Kingdom':'lion', India:'lion', Iran:'lion', 'South Africa':'lion', Japan:'lion', Spain:'lion', China:'star', Turkey:'star', Brazil:'star', Australia:'star', Indonesia:'star'};
-const emblemOf = name => EMBLEM[name] || 'star';
-// HTML badge; returns fb (fallback markup) when the emblem image is missing
-const embHTML = (name, color, px = 24, fb = '') => ART.ready('emblem-' + emblemOf(name)) ? `<i class="emb ${emblemOf(name)}${px <= 32 ? ' sm' : ''}" style="--es:${px}px;--c:${color}" title="${name}" aria-hidden="true"></i>` : fb;
+// coalition emblems: every coalition (bloc) carries one of four crests, stable by its id (b1 eagle, b2 bear, b3 lion, b4 star, b5 eagle...)
+const BLOC_EMB = ['eagle', 'bear', 'lion', 'star'];
+const blocEmblem = id => BLOC_EMB[((parseInt(String(id).replace(/\D/g, ''), 10) || 1) - 1) % 4];
+const BLOC_RING = '#c9a54e';   // gilded ring: coalition crests are not tied to one member's colour
+// HTML crest for a coalition; fb (fallback markup) when the emblem image is missing
+const blocEmbHTML = (id, px = 24, title = '', fb = '') => { const e = blocEmblem(id); return ART.ready('emblem-' + e) ? `<i class="emb ${e}${px <= 32 ? ' sm' : ''}" style="--es:${px}px;--c:${BLOC_RING}"${title ? ` title="${title}"` : ''} aria-hidden="true"></i>` : fb; };
+
+/* ---- national flags: real flags (flag-icons, MIT) rasterised by tools/build-flags.js into assets/art/flags.webp:
+   16 columns of 96x72 cells, in the order of FLAG_NAMES (Natural Earth country names, sorted; see assets/art/flags.json) ---- */
+const FLAG_NAMES = ["Afghanistan","Albania","Algeria","American Samoa","Angola","Antigua and Barbuda","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahamas","Bangladesh","Belarus","Belgium","Belize","Benin","Bhutan","Bolivia","Bosnia and Herz.","Botswana","Brazil","Bulgaria","Burkina Faso","Burundi","Cambodia","Cameroon","Canada","Cape Verde","Central African Rep.","Chad","Chile","China","Colombia","Comoros","Congo","Cook Islands","Costa Rica","Côte d'Ivoire","Croatia","Cuba","Cyprus","Czechia","Dem. Rep. Congo","Denmark","Djibouti","Dominican Rep.","Ecuador","Egypt","El Salvador","Eq. Guinea","Eritrea","Estonia","Eswatini","Ethiopia","Falkland Islands","Federated States of Micronesia","Fiji","Finland","Fr. S. Antarctic Lands","France","French Polynesia","Gabon","Gambia","Georgia","Germany","Ghana","Greece","Greenland","Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Honduras","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kosovo","Kuwait","Kyrgyzstan","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Lithuania","Macedonia","Madagascar","Malawi","Malaysia","Maldives","Mali","Mauritania","Mauritius","Mexico","Moldova","Mongolia","Montenegro","Morocco","Mozambique","Myanmar","Namibia","Nepal","Netherlands","New Caledonia","New Zealand","Nicaragua","Niger","Nigeria","North Korea","Northern Mariana Islands","Norway","Oman","Pakistan","Palau","Palestine","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Rwanda","S. Sudan","Saint Helena","Saint Lucia","Samoa","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Slovakia","Slovenia","Solomon Islands","Somalia","Somaliland","South Africa","South Georgia and the Islands","South Korea","Spain","Sri Lanka","Sudan","Suriname","Sweden","Switzerland","Syria","Taiwan","Tajikistan","Tanzania","Thailand","Timor-Leste","Togo","Tonga","Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Turks and Caicos Islands","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States Minor Outlying Islands","United States of America","United States Virgin Islands","Uruguay","Uzbekistan","Vanuatu","Venezuela","Vietnam","W. Sahara","Yemen","Zambia","Zimbabwe"];
+const FLAG_COLS = 16, FLAG_CW = 96, FLAG_CH = 72, FLAG_ROWS = Math.ceil(FLAG_NAMES.length/FLAG_COLS), FLAGI = new Map(FLAG_NAMES.map((n, i) => [n, i]));
+// country of a power name ('United States' -> 'United States of America'), over every scenario's powers
+const powerCountryOf = name => { for (const L of [WORLD_POWERS, ...Object.values(SCENARIOS).map(c => c.powers)]){ const P0 = L.find(q => q.name === name); if (P0) return P0.country; } return null; };
+// a nation id (>= 0) or a country / power name -> atlas index (-1: none)
+function flagIdx(n){ if (n == null || n === NEUTRAL || n === SEA) return -1; let c = n;
+  if (typeof n === 'number'){ const N = S && S.nations[n]; if (!N) return -1; c = N.country || N.name; }
+  const i = FLAGI.get(c); if (i != null) return i; const pc = powerCountryOf(c); return pc != null && FLAGI.has(pc) ? FLAGI.get(pc) : -1; }
+const flagColor = n => typeof n === 'number' && n >= 0 && S && S.nations[n] ? S.nations[n].color : '#6f6c62';
+// HTML flag of h css px height (4:3), a background-position sprite from the atlas; a colour square only when the atlas failed to load
+function flagHTML(n, h = 15, cls = ''){ h = Math.round(h); const w = Math.round(h*4/3), i = flagIdx(n);
+  if (i < 0 || ART.failed('flags')) return `<i class="flg fb ${cls}" style="width:${w}px;height:${h}px;background-color:${flagColor(n)}" aria-hidden="true"></i>`;
+  return `<i class="flg ${cls}" style="width:${w}px;height:${h}px;background-size:${FLAG_COLS*w}px ${FLAG_ROWS*h}px;background-position:${-(i % FLAG_COLS)*w}px ${-Math.floor(i/FLAG_COLS)*h}px" aria-hidden="true"></i>`; }
+const flagSVG = (n, w = 24, h = 16) => flagHTML(n, h);   // the old code-drawn flags are gone: every caller now gets the real flag
+// the flag of whoever holds a province: the power, else the independent country's own flag (sea: a sea-blue square)
+const provFlagHTML = (p, h = 12) => G.P[p].sea ? `<span class="sw" style="background:#28414a;vertical-align:-1px"></span>` : flagHTML(S.owner[p] >= 0 ? S.owner[p] : G.countries[G.P[p].country].name, h);
+// the first power named in a message (for toasts and the event log)
+function textFlag(text, h = 13){ if (!S || !text) return ''; let best = -1, at = 1e9;
+  for (const N of S.nations){ const k = text.indexOf(N.name); if (k >= 0 && k < at && !/[A-Za-z]/.test(text[k + N.name.length] || '')){ at = k; best = N.id; } }
+  return best >= 0 ? flagHTML(best, h) : ''; }
+// canvas flags for the map: the atlas cell scaled once (high quality) to the device size, then cached
+const FLAGC = new Map();
+function flagCell(i, wpx, hpx){ const im = ART.img('flags'); if (!im || i < 0) return null; const key = i + '|' + wpx + 'x' + hpx; let c = FLAGC.get(key); if (c) return c;
+  if (FLAGC.size > 400) FLAGC.clear();
+  const src = document.createElement('canvas'); src.width = FLAG_CW; src.height = FLAG_CH; src.getContext('2d').drawImage(im, (i % FLAG_COLS)*FLAG_CW, Math.floor(i/FLAG_COLS)*FLAG_CH, FLAG_CW, FLAG_CH, 0, 0, FLAG_CW, FLAG_CH);
+  c = wpx === FLAG_CW && hpx === FLAG_CH ? src : ART.scaled(src, wpx, hpx); FLAGC.set(key, c); return c; }
+// a flag pin for capitals: the flag flying from a thin pole, a gentle wave (shaded folds) and a soft shadow, drawn once per size.
+// returns {c, w, h, ax, ay}: canvas in device px, its css size, and the pole foot (anchor) in css px from the top-left
+function flagPin(i, fh, dpr){ const key = 'pin|' + i + '|' + fh + '|' + dpr; let P = FLAGC.get(key); if (P) return P;
+  const FH = Math.round(fh*dpr), FW = Math.round(fh*4/3*dpr), cell = flagCell(i, FW, FH); if (!cell) return null;
+  const amp = Math.max(1, FH*0.07), pad = Math.ceil(3*dpr), poleW = Math.max(1.5, 1.6*dpr), poleH = Math.round(FH*2.05), fin = Math.max(2, 1.9*dpr);
+  // waving cloth: columns displaced on a sine growing away from the pole, then light/dark folds
+  const cloth = document.createElement('canvas'); cloth.width = FW; cloth.height = Math.ceil(FH + amp*2 + 2); const g1 = cloth.getContext('2d');
+  const off = x => Math.sin(x/FW*Math.PI*1.7 + 0.35)*amp*(0.25 + 0.75*x/FW);
+  for (let x = 0; x < FW; x++) g1.drawImage(cell, x, 0, 1, FH, x, amp + 1 + off(x), 1, FH);
+  g1.globalCompositeOperation = 'source-atop';
+  for (let x = 0; x < FW; x++){ const sl = Math.cos(x/FW*Math.PI*1.7 + 0.35)*(0.25 + 0.75*x/FW); g1.fillStyle = sl > 0 ? `rgba(255,255,255,${(sl*0.22).toFixed(3)})` : `rgba(0,0,0,${(-sl*0.3).toFixed(3)})`; g1.fillRect(x, 0, 1, cloth.height); }
+  g1.fillStyle = 'rgba(0,0,0,.25)'; g1.fillRect(0, 0, Math.max(1, dpr*0.8), cloth.height);   // hem at the pole
+  const c = document.createElement('canvas'); c.width = Math.ceil(pad*2 + poleW + FW); c.height = Math.ceil(pad*2 + poleH + fin); const g = c.getContext('2d');
+  const px0 = pad + poleW/2, top = pad + fin, foot = top + poleH;
+  // ground shadow at the foot
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(px0 + 1.5*dpr, foot - 0.5*dpr, 3*dpr, 1.2*dpr, 0, 0, Math.PI*2); g.fill();
+  g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 2.5*dpr; g.shadowOffsetX = 1.2*dpr; g.shadowOffsetY = 1.5*dpr;
+  g.drawImage(cloth, px0 + poleW/2, top + fin*0.2 - amp - 1);
+  const pg = g.createLinearGradient(px0 - poleW/2, 0, px0 + poleW/2, 0); pg.addColorStop(0, '#c9ccc8'); pg.addColorStop(0.5, '#7d8486'); pg.addColorStop(1, '#3a4043');
+  g.fillStyle = pg; g.fillRect(px0 - poleW/2, top, poleW, poleH);
+  const fg = g.createRadialGradient(px0 - fin*0.3, top - fin*0.3, 0, px0, top, fin); fg.addColorStop(0, '#fff2bf'); fg.addColorStop(1, '#a8812e');
+  g.fillStyle = fg; g.beginPath(); g.arc(px0, top, fin, 0, Math.PI*2); g.fill(); g.restore();
+  P = {c, w:c.width/dpr, h:c.height/dpr, ax:px0/dpr, ay:foot/dpr, fx:(px0 + poleW/2)/dpr, fy:(top - amp)/dpr, fw:FW/dpr, fh:(FH + amp*2)/dpr}; FLAGC.set(key, P); return P; }
 const LOGO = '<h1 class="logo"><span class="l1">Iron Meridian</span><span class="vh">: </span><span class="l2">World War III</span></h1>';
 
 /* ---------------- Rules ---------------- */
@@ -1272,13 +1329,43 @@ function ringPath(p){ const list = GEO.byProv[p] || [], path = new Path2D(), ope
   return path; }
 // close-zoom land grain: one cached tileable grey value-noise tile (mid-grey = neutral under 'soft-light'), drawn once per layer render
 let GRAIN = null;
+// a mid-grey tile turned into black/white with alpha (|v - 128| sets the alpha), so it can be drawn with plain source-over (the soft-light blend is slow in software)
+function signedTile(cv0, k = 1){ const g = cv0.getContext('2d'), im = g.getImageData(0, 0, cv0.width, cv0.height), d = im.data;
+  for (let o = 0; o < d.length; o += 4){ const v = d[o] - 128, a = Math.min(255, Math.abs(v)*2*k); d[o] = d[o + 1] = d[o + 2] = v < 0 ? 0 : 255; d[o + 3] = a; }
+  const out = document.createElement('canvas'); out.width = cv0.width; out.height = cv0.height; out.getContext('2d').putImageData(im, 0, 0); return out; }
 function grainPattern(ctx0){ if (GRAIN) return GRAIN; const N = 256, cv0 = document.createElement('canvas'); cv0.width = cv0.height = N; const g = cv0.getContext('2d'), im = g.createImageData(N, N);
   const per = (seed, P) => { const r = mulberry(seed), t = new Float32Array(P*P); for (let i = 0; i < t.length; i++) t[i] = r(); const sm = q => q*q*(3 - 2*q);
     return (x, y) => { const fx = x/N*P, fy = y/N*P, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = sm(fx - x0), ty = sm(fy - y0), at = (u, v) => t[((v % P + P) % P)*P + ((u % P + P) % P)];
       const a = at(x0, y0), b = at(x0 + 1, y0), c = at(x0, y0 + 1), d = at(x0 + 1, y0 + 1); return a + (b - a)*tx + (c - a)*ty + (a - b - c + d)*tx*ty; }; };
   const n1 = per(21, 16), n2 = per(22, 64);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ const v = Math.max(100, Math.min(155, 128 + (n1(x, y) - 0.5)*44 + (n2(x, y) - 0.5)*40)), o = (y*N + x)*4; im.data[o] = im.data[o + 1] = im.data[o + 2] = v; im.data[o + 3] = 255; }
-  g.putImageData(im, 0, 0); GRAIN = ctx0.createPattern(cv0, 'repeat'); if (GRAIN.setTransform) GRAIN.setTransform(new DOMMatrix().scale(0.25)); return GRAIN; }
+  g.putImageData(im, 0, 0); GRAIN = ctx0.createPattern(cv0, 'repeat'); if (GRAIN.setTransform) GRAIN.setTransform(new DOMMatrix().scale(0.25));
+  GRAIN.fine = ctx0.createPattern(signedTile(cv0, 0.5), 'repeat'); if (GRAIN.fine.setTransform) GRAIN.fine.setTransform(new DOMMatrix().rotate(37).scale(0.07)); return GRAIN; }
+// close-zoom ground cover: two cached tileable tiles (built grey, drawn as black/white alpha) per province by its terrain, so owned land reads as
+// farmland (a patchwork of parcels with hedgerows and copses) or forest canopy instead of a smooth smear; mid-grey is neutral
+let GROUND = null;
+function groundPatterns(ctx0){ if (GROUND) return GROUND; const N = 256, rnd = mulberry(77);
+  const tile = () => { const cv0 = document.createElement('canvas'); cv0.width = cv0.height = N; const g = cv0.getContext('2d'); g.fillStyle = 'rgb(128,128,128)'; g.fillRect(0, 0, N, N); return [cv0, g]; };
+  const wrap = (g, f) => { for (const dx of [-N, 0, N]) for (const dy of [-N, 0, N]){ g.save(); g.translate(dx, dy); f(); g.restore(); } };
+  // farmland: a jittered grid of parcels in two field systems (rotated), each a slightly different tone, dark hedgerow seams, a few copses
+  const [fc, fg] = tile(); const parcels = [];
+  for (const [ang, cell, x0, y0, x1, y1] of [[0.12, 22, 0, 0, N, N/2 + 30], [-0.35, 18, 0, N/2 - 10, N, N]]){
+    for (let gy = -2*cell; gy < N + 2*cell; gy += cell) for (let gx = -2*cell; gx < N + 2*cell; gx += cell*(1.2 + rnd()*0.9)){
+      const w = cell*(1.1 + rnd()*0.9), h = cell*(0.75 + rnd()*0.5), cx = gx + w/2, cy = gy + h/2;
+      if (cy < y0 - cell || cy > y1 + cell) continue; parcels.push([cx, cy, w, h, ang + (rnd() - 0.5)*0.08, 128 + (rnd() - 0.5)*64 + (rnd() < 0.18 ? 22 : 0)]); } }
+  wrap(fg, () => { for (const [cx, cy, w, h, a, v] of parcels){ fg.save(); fg.translate(cx, cy); fg.rotate(a); fg.fillStyle = `rgb(${v|0},${v|0},${v|0})`; fg.fillRect(-w/2, -h/2, w, h);
+    fg.strokeStyle = 'rgba(52,52,52,.6)'; fg.lineWidth = 1.2; fg.strokeRect(-w/2, -h/2, w, h); fg.restore(); } });
+  const copses = []; for (let i = 0; i < 26; i++) copses.push([rnd()*N, rnd()*N, 2 + rnd()*5]);
+  wrap(fg, () => { for (const [x, y, r] of copses){ for (let k = 0; k < 5; k++){ fg.beginPath(); fg.arc(x + (rnd() - 0.5)*r*2, y + (rnd() - 0.5)*r*2, r*(0.4 + rnd()*0.5), 0, Math.PI*2); fg.fillStyle = 'rgba(44,44,44,.55)'; fg.fill(); } } });
+  // forest canopy: many overlapping dark crowns with lit tops and a few clearings
+  const [tc, tg] = tile(); const crowns = []; for (let i = 0; i < 900; i++) crowns.push([rnd()*N, rnd()*N, 2 + rnd()*3.2, rnd()]);
+  const clear = []; for (let i = 0; i < 5; i++) clear.push([rnd()*N, rnd()*N, 8 + rnd()*12]);
+  wrap(tg, () => { for (const [x, y, r] of clear){ tg.beginPath(); tg.ellipse(x, y, r, r*0.7, rnd(), 0, Math.PI*2); tg.fillStyle = 'rgb(150,150,150)'; tg.fill(); }
+    for (const [x, y, r, t] of crowns){ tg.beginPath(); tg.arc(x + r*0.35, y + r*0.4, r, 0, Math.PI*2); tg.fillStyle = 'rgba(40,40,40,.6)'; tg.fill();
+      tg.beginPath(); tg.arc(x, y, r*0.85, 0, Math.PI*2); tg.fillStyle = `rgba(${165 + t*40|0},${165 + t*40|0},${165 + t*40|0},.55)`; tg.fill(); } });
+  const pat = cv0 => { const h = document.createElement('canvas'); h.width = h.height = N/2; const hg = h.getContext('2d'); hg.imageSmoothingQuality = 'high'; hg.drawImage(cv0, 0, 0, N/2, N/2);   // half size: about 1:1 on screen close up, cheap to sample
+    const q = ctx0.createPattern(signedTile(h, 0.8), 'repeat'); if (q.setTransform) q.setTransform(new DOMMatrix().scale(0.17)); return q; };
+  return (GROUND = {fields:pat(fc), forest:pat(tc)}); }
 function coastPath(){ if (!window.COAST) return null; const path = new Path2D(), sx = HS*SQ3, sy = HS*1.5;
   for (const R of window.COAST){ let x = 0, y = 0, x0 = Infinity, x1 = -Infinity; const pts = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const fx = x/10, fy = y/10; pts.push(fx, fy); if (fx < x0) x0 = fx; if (fx > x1) x1 = fx; }
     for (const off of [-W, 0, W]){ if (off < 0 && x1 < W) continue; if (off > 0 && x0 >= 0) continue; if (off === 0 && (x1 < 0 || x0 >= W)) continue;
@@ -1340,12 +1427,15 @@ function buildTerrain(){
     if (t === 'forest'){ col = lat < 15 ? [36, 68, 38] : lat > 50 ? [46, 62, 48] : col; }
     if (t === 'hills'){ col = lat < 18 ? [106, 108, 64] : lat < 34 ? [140, 126, 84] : lat > 52 ? [102, 102, 80] : col; }
     if (t === 'marsh'){ col = lat > 50 ? [64, 68, 50] : col; MF[i] = 1; }
-    let snow = t === 'snow' ? 0 : lat > 64 ? Math.min(1, (lat - 64)/8) : 0; if (t === 'mountain' && lat > 30) snow = Math.max(snow, Math.min(0.85, (lat - 30)/25 + 0.25)); if (t === 'tundra') snow = Math.max(snow, 0.35);
+    let snow = t === 'snow' ? 0 : lat > 64 ? Math.min(1, (lat - 64)/8) : 0; if (t === 'mountain' && lat > 42) snow = Math.max(snow, Math.min(0.6, (lat - 42)/26)); if (t === 'tundra') snow = Math.max(snow, 0.35);
     col = col.map((v, k) => v + ([224, 226, 228][k] - v)*snow);
     landF[i] = 1; elevF[i] = t === 'snow' && lat > 58 ? 0.5 : ELEV[t]; cR[i] = col[0]; cG[i] = col[1]; cB[i] = col[2]; }
   // fill sea cells' colours with nearest land colour so blends at the coast are not grey
   for (let pass = 0; pass < 2; pass++) for (let i = 0; i < N; i++){ if (landF[i] || cR[i]) continue; let n = 0, r = 0, g = 0, b = 0;
     for (let d = 0; d < 6; d++){ const m = nbr(i, d); if (m >= 0 && cR[m]){ r += cR[m]; g += cG[m]; b += cB[m]; n++; } } if (n){ cR[i] = r/n; cG[i] = g/n; cB[i] = b/n; } }
+  // soften the elevation between cells (one neighbour-average pass over land) so ranges rise through foothills instead of a one-cell cliff
+  for (let pass = 0; pass < 1; pass++){ const E0 = elevF.slice(); for (let i = 0; i < N; i++){ if (!landF[i]) continue; let s = 0, n = 0;
+    for (let d = 0; d < 6; d++){ const m = nbr(i, d); if (m >= 0 && landF[m]){ s += E0[m]; n++; } } if (n) elevF[i] = E0[i]*0.5 + s/n*0.5; } }
   const n1 = makeNoise(mulberry(101)), n2 = makeNoise(mulberry(202)), n3 = makeNoise(mulberry(303)), n4 = makeNoise(mulberry(404)), n5 = makeNoise(mulberry(505));
   const rowStep = 1.5*HS, colStep = HS*SQ3;
   function sample(F, wx, wy){
@@ -1369,17 +1459,18 @@ function buildTerrain(){
     const d2 = sg.getImageData(0, 0, w, h).data; RLB = new Float32Array(w*h); for (let i = 0; i < w*h; i++) RLB[i] = d2[i*4 + 3]/255; }
   const img = new ImageData(w, h), px = img.data, E = new Float32Array(w*h), L = new Float32Array(w*h);
   const mimg = new ImageData(w, h), mpx = mimg.data;
-  for (let y = 0; y < h; y++){ const wy = y/TS;
+  for (let y = 0; y < h; y++){ const wy = y/TS, lat0 = cellLat(Math.min(H - 1, Math.max(0, Math.round((wy - OY)/rowStep)))*W);
     for (let x = 0; x < w; x++){ const wx = x/TS, o = y*w + x;
       const nA = n1(wx*0.018, wy*0.018), nB = n2(wx*0.055, wy*0.055), nC = n3(wx*0.16, wy*0.16), fbm = nA*0.55 + nB*0.3 + nC*0.15;
       const land = RLA ? RLA[o]*0.9 + sample(landF, wx, wy)*0.1 + (fbm - 0.5)*0.12 : sample(landF, wx, wy) + (fbm - 0.5)*0.42;
       L[o] = land;
-      const el = Math.max(0, sample(elevF, wx, wy));
-      const rg = el > 0.6 ? Math.pow(1 - Math.abs(2*n4(wx*0.07, wy*0.07) - 1), 2)*0.9 + Math.pow(1 - Math.abs(2*n4(wx*0.19 + 7, wy*0.19) - 1), 2)*0.35 : 0;   // ridged peaks in mountains
+      const wq = colStep*1.15, qx = wx + (n1(wx*0.031 + 17.3, wy*0.031) - 0.5)*2*wq + (nC - 0.5)*wq*0.6, qy = wy + (n2(wx*0.031, wy*0.031 + 23.9) - 0.5)*2*wq + (nB - 0.5)*wq*0.6;
+      const el = Math.max(0, sample(elevF, qx, qy));
+      const rg = el > 0.36 ? Math.min(1, (el - 0.36)/0.3)*(Math.pow(1 - Math.abs(2*n4(qx*0.06, qy*0.06) - 1), 2)*0.7 + Math.pow(1 - Math.abs(2*n4(qx*0.17 + 7, qy*0.17) - 1), 2)*0.32 + Math.pow(1 - Math.abs(2*n3(qx*0.43 + 3, qy*0.43) - 1), 2)*0.14) : 0;   // ridged peaks in mountains
       E[o] = el*(0.45 + 0.9*nB + 0.35*nC) + nC*0.05 + rg*el;
       if (land > 0.5){
-        const v = 0.86 + (fbm - 0.5)*0.32;
-        px[o*4] = sample(cR, wx, wy)*v; px[o*4 + 1] = sample(cG, wx, wy)*v; px[o*4 + 2] = sample(cB, wx, wy)*v;
+        const v = 0.86 + (fbm - 0.5)*0.32, pk = el > 0.45 ? Math.max(0, Math.min(1, (rg - 0.6)*2.2))*Math.min(1, (el - 0.45)*3)*Math.max(0.15, Math.min(1, (Math.abs(lat0) - 22)/22))*0.7 : 0;   // snow on the high ridges
+        px[o*4] = (sample(cR, qx, qy)*v)*(1 - pk) + 226*pk; px[o*4 + 1] = (sample(cG, qx, qy)*v)*(1 - pk) + 228*pk; px[o*4 + 2] = (sample(cB, qx, qy)*v)*(1 - pk) + 230*pk;
         // marsh: standing water speckle (pools and channels) over the dark reed beds
         const mw = sample(MF, wx, wy); if (mw > 0.25){ const sp = n5(wx*0.26, wy*0.26)*0.75 + nC*0.25, k = Math.max(0, Math.min(1, (sp - 0.58 + 0.14*mw)/0.05))*Math.min(1, (mw - 0.25)/0.35);
           if (k > 0){ px[o*4] += (40 - px[o*4])*k*0.85; px[o*4 + 1] += (66 - px[o*4 + 1])*k*0.85; px[o*4 + 2] += (78 - px[o*4 + 2])*k*0.85; } }
@@ -1392,7 +1483,7 @@ function buildTerrain(){
     } }
   // hill shading (light from the north-west) and coastline surf
   for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++){ const o = y*w + x;
-    if (L[o] > 0.5){ const dzx = E[o + 1] - E[o - 1], dzy = E[o + w] - E[o - w]; let sh = 1 + (-dzx - dzy)*2.2; sh = Math.max(0.55, Math.min(1.45, sh));
+    if (L[o] > 0.5){ const dzx = E[o + 1] - E[o - 1], dzy = E[o + w] - E[o - w]; let sh = 1 + (-dzx - dzy)*1.7; sh = Math.max(0.62, Math.min(1.3, sh));
       const dark = 0.84; px[o*4] *= sh*dark; px[o*4 + 1] *= sh*dark; px[o*4 + 2] *= sh*dark;
       if (L[o] < 0.535){ const k = 1 - (L[o] - 0.5)/0.035; px[o*4] += 26*k; px[o*4 + 1] += 24*k; px[o*4 + 2] += 18*k; } }
     else if (L[o] > 0.47){ const k = (L[o] - 0.47)/0.03; px[o*4] += 30*k; px[o*4 + 1] += 40*k; px[o*4 + 2] += 42*k; } }
@@ -2071,7 +2162,7 @@ function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if
 let booted = false;
 function toast(text, kind, p){
   const box = document.getElementById('toasts'); if (!box) return;
-  const el = document.createElement('button'); el.className = 'toast ' + kind; el.textContent = text;
+  const el = document.createElement('button'); el.className = 'toast ' + kind; el.textContent = text; const fl = textFlag(text, 13); if (fl) el.insertAdjacentHTML('afterbegin', fl);
   if (p != null){ el.dataset.act = 'goto'; el.dataset.id = p; }
   box.prepend(el); while (box.children.length > 2) box.lastChild.remove();
   setTimeout(() => el.remove(), 4500);
@@ -2548,16 +2639,6 @@ function marketDay(){ const M = mkt(), incs = S.nations.map(N => N.alive ? incom
 }
 const spark = (h, w = 120, ht = 28, col = 'var(--accent)') => { if (h.length < 2) return `<svg width="${w}" height="${ht}"></svg>`; const mn = Math.min(...h), mx = Math.max(...h), r = mx - mn || 1;
   return `<svg width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}" aria-hidden="true"><polyline fill="none" stroke="${col}" stroke-width="1.6" points="${h.map((v, i) => `${(i/(h.length - 1)*(w - 2) + 1).toFixed(1)},${(ht - 2 - (v - mn)/r*(ht - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
-/* ---- original procedural flags (no real-world flag designs): pattern and emblem derived from the nation's id and colour ---- */
-function flagSVG(n, w = 24, h = 16){ if (n < 0) return `<svg width="${w}" height="${h}" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#6f6c62"/></svg>`;
-  const N = S.nations[n], c = N.color, dark = shade(c, -0.45), light = mixHex(c, '#f2eee2', 0.72), t = (n*7 + (N.power || 0)*3) % 5;
-  const em = ((n*5) % 3 === 0) ? `<path d="M12 4.4l1 2.3 2.5.2-1.9 1.6.6 2.4L12 9.6l-2.2 1.3.6-2.4-1.9-1.6 2.5-.2z" fill="${light}"/>` : ((n*5) % 3 === 1) ? `<circle cx="12" cy="8" r="2.6" fill="${light}"/>` : `<path d="M12 4.6l3 3.4-3 3.4-3-3.4z" fill="${light}"/>`;
-  const body = t === 0 ? `<rect width="24" height="16" fill="${c}"/><rect y="5.33" width="24" height="5.34" fill="${light}"/><rect y="10.67" width="24" height="5.33" fill="${dark}"/>`
-    : t === 1 ? `<rect width="24" height="16" fill="${light}"/><rect width="8" height="16" fill="${c}"/><rect x="16" width="8" height="16" fill="${dark}"/>`
-    : t === 2 ? `<rect width="24" height="16" fill="${c}"/><rect x="7" width="3" height="16" fill="${light}"/><rect y="6.5" width="24" height="3" fill="${light}"/>`
-    : t === 3 ? `<rect width="24" height="16" fill="${dark}"/><path d="M0 0L11 8 0 16z" fill="${c}"/><rect x="11" y="6.6" width="13" height="2.8" fill="${light}"/>`
-    : `<rect width="24" height="16" fill="${c}"/><path d="M0 16L24 0v5L7.5 16z" fill="${light}"/>`;
-  return `<svg class="flag" width="${w}" height="${h}" viewBox="0 0 24 16" aria-hidden="true">${body}${t !== 2 && t !== 4 ? em : ''}<rect width="24" height="16" fill="none" stroke="rgba(0,0,0,.45)" stroke-width=".8"/></svg>`; }
 /* ---- market: only what nations list. Sell offers (goods held) and buy offers (money held); nothing else ---- */
 const isBid = o => o.type === 'buy';
 // coalition-only listings are the one private channel: only members of that coalition see and fill them
@@ -2614,7 +2695,7 @@ function bookHTML(){ const all = (S.book || []).filter(o => canSee(o, PLAYER)), 
 function marketHTML(){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), emb = S.nations.filter(m => m.alive && mkt().emb[m.id + '>' + PLAYER]);
   return `<div class="rhead"><div><div class="eyebrow">Open market · day ${dayOf(S.hour)}</div><h1>Market</h1></div><div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
     <p class="small muted">Nations list what they want to sell or buy. Trades happen only between nations: your money goes to the seller, and selling pays you. Offers from nations at war with you are marked red. Stocks: ${MKT_K.map(k => `${icon(k)} ${fmt(N[k])}/${fmt(cap)}`).join(' · ')}</p>
-    ${emb.length ? `<div class="status battle">Embargoed by ${emb.map(m => m.name).join(', ')}: they will not trade with you.</div>` : ''}
+    ${emb.length ? `<div class="status battle">Embargoed by ${emb.map(m => flagHTML(m.id, 11) + ' ' + m.name).join(', ')}: they will not trade with you.</div>` : ''}
     ${bookHTML()}
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
 function canAfford(n, t){ const N = S.nations[n], c = ucost(n, t); return unlocked(n, t) && N.cash >= c.cash && N.oil >= c.oil && N.metal >= c.metal && N.mp >= c.mp; }
@@ -3054,7 +3135,7 @@ function aiProposeTrade(n){ if (S.offers.some(o => o.from === n)) return; const 
 let DEAL = null, NATV = null;
 function nationHTML(n){ const N = S.nations[n], r = rel(PLAYER, n), L = chatLog(n); if (S.unread) S.unread[n] = 0; NATV = n; if (!DEAL || DEAL.n !== n) DEAL = {n, give:emptySide(), get:emptySide()};
   const tab = NATV_TAB;
-  const chat = `<div class="chatbox" id="chatbox">${L.length ? L.map(m => `<div class="msg ${m.from === PLAYER ? 'me' : ''}"><span class="small muted">${m.from === PLAYER ? 'You' : N.name} · ${clockStr(m.h)}</span><div>${m.text.replace(/[<>&]/g, '')}</div></div>`).join('') : '<p class="small muted">No messages yet. Say hello, or use a quick message below.</p>'}</div>
+  const chat = `<div class="chatbox" id="chatbox">${L.length ? L.map(m => `<div class="msg ${m.from === PLAYER ? 'me' : ''}"><span class="small muted">${flagHTML(m.from === PLAYER ? PLAYER : n, 11)} ${m.from === PLAYER ? 'You' : N.name} · ${clockStr(m.h)}</span><div>${m.text.replace(/[<>&]/g, '')}</div></div>`).join('') : '<p class="small muted">No messages yet. Say hello, or use a quick message below.</p>'}</div>
     <div class="row" style="flex-wrap:wrap;gap:4px">${[['Hello', 'Hello.'], ['Propose peace', 'We propose peace.'], ['Ask Right of Way', 'May we have right of way through your land?'], ['Propose alliance', 'Join us in an alliance.'], ['Ask for help', 'Help us attack our enemy.'], ['Threaten', 'Back down, or else.']].map(([l, tx]) => `<button class="btn" data-act="chat-quick" data-t="${tx}" style="padding:3px 8px;font-size:12px">${l}</button>`).join('')}</div>
     <div class="row"><input id="chatin" class="rn2" maxlength="160" placeholder="Write to ${N.name}…" style="flex:1"><button class="btn primary" data-act="chat-send">Send</button></div>`;
   const D = DEAL, M = mkt(), provList = (owner, side) => { const cand = G.P.filter(P => !P.sea && S.owner[P.id] === owner && !isCapital(P.id) && (owner === PLAYER ? P.nbs.some(q => S.owner[q] === n) || true : visibleSet().has(P.id) || P.nbs.some(q => S.owner[q] === PLAYER))).slice(0, 60);
@@ -3063,12 +3144,12 @@ function nationHTML(n){ const N = S.nations[n], r = rel(PLAYER, n), L = chatLog(
   const resIn = side => ['cash', 'oil', 'metal', 'food'].map(k => `<label class="dealres">${icon(k)}<input type="number" min="0" step="${k === 'cash' ? 10 : 5}" data-act="deal-res" data-side="${side}" data-k="${k}" value="${D[side][k] || 0}"></label>`).join('');
   const tr = side => ['peace', 'pass', 'nap', 'ally'].filter(k => k !== 'peace' || atWar(PLAYER, n)).map(k => `<label class="small"><input type="checkbox" data-act="deal-tr" data-side="${side}" data-k="${k}" ${D[side].treaty.includes(k) ? 'checked' : ''}> ${({peace:'Peace', pass:'Right of Way', nap:'Non-aggression', ally:'Alliance'})[k]}</label>`).join(' ');
   const v = dealValueFor(n, D), why = dealOK(n, D);
-  const trade = `<div class="dealgrid"><div><div class="eyebrow">You give</div>${resIn('give')}${provList(PLAYER, 'give')}<div class="trrow">${tr('give')}</div></div>
-      <div><div class="eyebrow">${N.name} gives</div>${resIn('get')}${provList(n, 'get')}<div class="trrow">${tr('get')}</div></div></div>
+  const trade = `<div class="dealgrid"><div><div class="eyebrow">${flagHTML(PLAYER, 11)} You give</div>${resIn('give')}${provList(PLAYER, 'give')}<div class="trrow">${tr('give')}</div></div>
+      <div><div class="eyebrow">${flagHTML(n, 11)} ${N.name} gives</div>${resIn('get')}${provList(n, 'get')}<div class="trrow">${tr('get')}</div></div></div>
     <div class="status ${why ? 'battle' : v >= 10 ? '' : 'move'}">${why ? `Not possible: ${why}.` : v >= 10 ? `${N.name} would likely accept.` : `${N.name} would likely refuse: they want about $${fmt(Math.ceil((10 - v)/10)*10)}M more value.`}</div>
     <div class="row"><button class="btn primary" data-act="deal-send" ${why ? 'disabled' : ''}>Send proposal</button><button class="btn" data-act="deal-clear">Clear</button></div>`;
-  return `<div class="rhead"><div><div class="eyebrow">${REL[r.st]} · opinion ${Math.round(opinion(n, PLAYER))}</div><h1 style="display:flex;align-items:center;gap:10px">${embHTML(N.name, N.color, 44)}${flagSVG(n, 36, 24)} ${N.name}</h1></div><button class="btn" data-act="diplo-open">Back to Diplomacy</button></div>
-    <div class="tabs2"><button class="btn ${tab === 'chat' ? 'primary' : ''}" data-act="nat-tab" data-k="chat">Messages</button><button class="btn ${tab === 'trade' ? 'primary' : ''}" data-act="nat-tab" data-k="trade">Trade deal</button>${sameBloc(n) ? `<button class="btn ${tab === 'give' ? 'primary' : ''}" data-act="nat-tab" data-k="give">Give (coalition)</button>` : ''}</div>
+  return `<div class="rhead"><div><div class="eyebrow">${REL[r.st]} · opinion ${Math.round(opinion(n, PLAYER))}</div><h1 style="display:flex;align-items:center;gap:10px">${flagHTML(n, 34, 'big')} ${N.name}${(B => B ? ` <span class="bbadge" title="Member of the ${B.name}">${blocEmbHTML(B.id, 26)}${B.name}</span>` : '')(blocOf(n))}</h1></div><button class="btn" data-act="diplo-open">Back to Diplomacy</button></div>
+    <div class="tabs2"><button class="btn ${tab === 'chat' ? 'primary' : ''}" data-act="nat-tab" data-k="chat">Messages</button><button class="btn ${tab === 'trade' ? 'primary' : ''}" data-act="nat-tab" data-k="trade">Trade deal</button>${sameBloc(n) ? `<button class="btn ${tab === 'give' ? 'primary' : ''}" data-act="nat-tab" data-k="give">${blocEmbHTML(blocIdOf(n), 18)} Give (coalition)</button>` : ''}</div>
     ${tab === 'give' && sameBloc(n) ? giftHTML(n) : tab === 'trade' ? trade : chat}`; }
 let NATV_TAB = 'chat';
 const sameBloc = n => { blocs(); const a = blocIdOf(PLAYER); return !!a && n !== PLAYER && a === blocIdOf(n); };   // fresh: alliances can break mid-day
@@ -3077,7 +3158,7 @@ const giftRoom = (n, k) => k === 'cash' ? 1e9 : Math.max(0, Math.floor(stockCap(
 let GIFT = null;
 function giftHTML(n){ const N = S.nations[n]; if (!GIFT || GIFT.n !== n) GIFT = {n, cash:0, oil:0, metal:0, food:0, mp:0, provs:[]};
   const me = S.nations[PLAYER], G0 = GIFT, cand = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && !isCapital(P.id) && !G0.provs.includes(P.id)).slice(0, 80);
-  return `<p class="small muted">Coalition partners send each other resources directly: free, arriving at once, with nothing asked in return and nothing through the market. You have ${GIFT_K.map(k => `${icon(k)} ${fmt(me[k])}`).join(' · ')}. ${N.name} can still store ${['oil', 'metal', 'food', 'mp'].map(k => `${icon(k)} ${fmt(giftRoom(n, k))}`).join(' · ')}.</p>
+  return `<div class="bloch">${blocEmbHTML(blocIdOf(n), 30)}<b>${(blocOf(n) || {}).name || 'Coalition'}</b><span class="small muted">${flagHTML(PLAYER, 14)} You → ${flagHTML(n, 14)} ${N.name}</span></div><p class="small muted">Coalition partners send each other resources directly: free, arriving at once, with nothing asked in return and nothing through the market. You have ${GIFT_K.map(k => `${icon(k)} ${fmt(me[k])}`).join(' · ')}. ${N.name} can still store ${['oil', 'metal', 'food', 'mp'].map(k => `${icon(k)} ${fmt(giftRoom(n, k))}`).join(' · ')}.</p>
     <div>${GIFT_K.map(k => `<label class="dealres" title="${RES.find(R => R.k === k).name}: up to ${fmt(Math.min(me[k], giftRoom(n, k)))}">${icon(k)}<input type="number" min="0" max="${Math.floor(Math.min(me[k], giftRoom(n, k)))}" step="${k === 'cash' ? 10 : 5}" data-act="gift-res" data-k="${k}" value="${G0[k] || 0}"></label>`).join('')}</div>
     <select data-act="gift-prov"><option value="">+ give a province…</option>${cand.map(P => `<option value="${P.id}">${P.cityName || P.name}${P.city ? ' (city)' : ''}</option>`).join('')}</select>
     <div class="chips">${G0.provs.map(p => `<span class="chipx">${G.P[p].cityName || G.P[p].name} <button data-act="gift-unprov" data-id="${p}" aria-label="Remove">×</button></span>`).join('')}</div>
@@ -3866,7 +3947,7 @@ function reportHTML(R){
   const mx = Math.max(1, ...os.map(o => Math.max(...R.s[o].hp, 1))), len = Math.max(2, ...os.map(o => R.s[o].hp.length));
   const line = o => { const h = R.s[o].hp; return `<polyline fill="none" stroke="${colorOf(o)}" stroke-width="2.2" stroke-linejoin="round" points="${h.map((v, i) => `${(i/(len - 1)*296 + 2).toFixed(1)},${(78 - v/mx*72).toFixed(1)}`).join(' ')}"/>`; };
   const side = o => { const b = R.s[o], lost = UT.filter(t => b.lost[t]);
-    return `<div class="rep-side" style="border-left:4px solid ${colorOf(o)}"><b>${o === PLAYER ? 'Your forces' : nationName(o)}</b> <span class="muted">· up to ${b.peak} units${b.dirs > 1 ? ` · attacked from up to ${b.dirs} directions (+${Math.round((flankF(b.dirs) - 1)*100)}%)` : ''}${b.peak > b.F ? ` · ${b.F} on the front line, the rest in reserve` : ''}</span>
+    return `<div class="rep-side" style="border-left:4px solid ${colorOf(o)}"><b>${o >= 0 ? flagHTML(o, 13) + ' ' : ''}${o === PLAYER ? 'Your forces' : nationName(o)}</b> <span class="muted">· up to ${b.peak} units${b.dirs > 1 ? ` · attacked from up to ${b.dirs} directions (+${Math.round((flankF(b.dirs) - 1)*100)}%)` : ''}${b.peak > b.F ? ` · ${b.F} on the front line, the rest in reserve` : ''}</span>
       <div class="rep-lost">${lost.length ? lost.map(t => `<span>${unitSVG(t)} ${UNITS[t].name} ×${b.lost[t]}</span>`).join('') : '<span class="muted">No units lost</span>'}</div></div>`; };
   return `<div class="eyebrow">Battle report · Day ${dayOf(R.h0)}, ${R.h1 - R.h0} hours</div><h2>Battle of ${nm}</h2>
     <p class="muted">${R.terrain} · frontage ${R.front} units. ${R.res === 'win' ? 'Your forces hold the field.' : R.res === 'loss' ? 'Your forces were destroyed or driven off.' : 'Neither side holds the field.'}</p>
@@ -3984,7 +4065,7 @@ function paperHTML(pp){
   if (!pp) return '<p class="muted">The first edition prints at dawn on day 2.</p>';
   return `<div class="paper"><div class="mast">The Meridian Herald</div><div class="pline"><span>Day ${pp.day + 1}</span><span>Morning edition</span><span>${S.nations[PLAYER].name} edition</span></div>
     <h3>${pp.head}</h3>${pp.items.length ? `<ul>${pp.items.map(t => `<li>${t}</li>`).join('')}</ul>` : ''}
-    <div class="standings">${pp.rank.map(([n, sc, c], i) => `<span><i style="background:${c}"></i>${i + 1}. ${n} <b>${sc}</b></span>`).join('')}</div></div>`;
+    <div class="standings">${pp.rank.map(([n, sc, c], i) => `<span>${flagHTML(n, 11)} ${i + 1}. ${n} <b>${sc}</b></span>`).join('')}</div></div>`;
 }
 function showPaper(manual){ openModal(`${paperHTML((S.papers || [])[0])}<div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${manual ? '' : '<button class="btn" data-act="set" data-k="paper" data-v="false">Stop showing at dawn</button>'}</div>`, 'paper'); }
 function recordStats(){
@@ -4337,7 +4418,7 @@ function goHome(){
   const C = G.P[N.capital]; centerOn((x0 + x1)/2*0.5 + C.x*0.5, (y0 + y1)/2*0.5 + C.y*0.5, s);
 }
 function zoomAt(f, sx, sy){
-  const ns = Math.max(minScale(), Math.min(view.s*f, 5));
+  const ns = Math.max(minScale(), Math.min(view.s*f, 7));   // up to 84 px per old hex: close enough for the aerial city and compound art
   const k = ns/view.s; view.x = sx - (sx - view.x)*k; view.y = sy - (sy - view.y)*k; view.s = ns;
 }
 const toScreen = (x, y) => [x*view.s + view.x, y*view.s + view.y];
@@ -4658,18 +4739,18 @@ function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
   if (tot.cargo) tot.cargo = Math.ceil(tot.cargo);
   const types = Object.keys(tot); if (!types.length) return null;
   if (!types.every(t => mArt(t) || (window.U3D && U3D.has(t)))) return null;   // per figure: the top-down picture, else the baked 3D sprite
-  const units = types.reduce((s0, t) => s0 + tot[t], 0), figs = Math.max(1, Math.min(10, Math.ceil(units/2)));
+  const units = types.reduce((s0, t) => s0 + tot[t], 0), figs = Math.max(1, Math.min(4, Math.ceil(units/3)));
   // largest-remainder split of figures between unit types
   const want = types.map(t => ({t, q:tot[t]/units*figs})); want.forEach(w => { w.n = Math.floor(w.q); w.r = w.q - w.n; });
   let left = figs - want.reduce((s0, w) => s0 + w.n, 0); want.sort((a, b) => b.r - a.r).forEach(w => { if (left > 0){ w.n++; left--; } });
   const seq = []; want.sort((a, b) => (FIG_ORDER[a.t] ?? 3) - (FIG_ORDER[b.t] ?? 3)).forEach(w => { for (let i = 0; i < w.n; i++) seq.push(w.t); });
   const naval = seq[0] === 'cargo' || UNITS[seq[0]].cls === 'naval', base = naval ? 50 : 46, P0 = G.P[list[0].at], provR = Math.sqrt(P0.cells.length)*HS*1.2*view.s;
-  const perR0 = moving ? 2 : naval ? 3 : 4, spMax = Math.max(14, provR*(counter.share || 1)*1.6/perR0);
+  const perR0 = moving ? 2 : naval ? 3 : 2, spMax = Math.max(14, provR*(counter.share || 1)*1.6/perR0);
   const sp = Math.min(base*s*0.62*(naval ? 0.95 : 0.62), spMax), fh = Math.min(base*s*0.62, sp/(naval ? 0.95 : 0.62)*1.05);
   const Q = 0.62, fx0 = Math.cos(ang), fy0 = Math.sin(ang)*Q, px0 = -Math.sin(ang), py0 = Math.cos(ang)*Q;
-  const perRank = moving ? 2 : naval ? 3 : 4, slots = [];
+  const perRank = moving ? 2 : naval ? 3 : 2, slots = [];
   seq.forEach((t, i) => { const r = Math.floor(i/perRank), m = Math.min(perRank, seq.length - r*perRank), j = i % perRank;
-    const lat = (j - (m - 1)/2)*sp*(moving ? 0.8 : 1), fwd = -r*sp*(moving ? 1.05 : 0.8) + (fighting ? sp*0.25 : 0);
+    const lat = (j - (m - 1)/2)*sp*(moving ? 0.8 : 0.9), fwd = -r*sp*(moving ? 1.05 : 0.62) + (fighting ? sp*0.25 : 0);
     const jit = moving ? 0 : Math.sin(now/1300 + i*1.7)*0.6*s;
     slots.push({t, i, x:x + fx0*fwd + px0*lat + jit, y:y + fy0*fwd + py0*lat}); });
   // casualties: a lost figure lingers as a fading dark wreck
@@ -4694,11 +4775,23 @@ function drawFallen(now){ for (let i = FALL.length - 1; i >= 0; i--){ const f = 
   const [x, y] = toScreen(f.wx, f.wy), k2 = age/1800;
   if (f.d){ ctx.save(); ctx.globalAlpha = (1 - k2)*0.85; const ok = drawFig(f.t, x, y + k2*3, f.d*(1 - k2*0.1), f.ang + k2*0.5, {wreck:true}); ctx.restore(); if (ok) continue; }
   if (!window.U3D) continue; ctx.save(); ctx.globalAlpha = (1 - k2)*0.85; ctx.filter = 'brightness(0.35) saturate(0.3)'; U3D.draw(ctx, f.t, f.color, x, y + 2 + k2*5, f.h*(1 - k2*0.15), f.ang + k2*0.6, 0); ctx.restore(); } }
+// an independent country's capital province: its marked capital, else its biggest city, else its biggest province (cached; the map never changes)
+let CCAP = null;
+function countryCap(ci){ if (!CCAP) CCAP = G.countries.map(c => { const L = c.provs.filter(id => !G.P[id].sea); if (!L.length) return -1;
+    return (L.find(id => G.P[id].capFlag) ?? L.filter(id => G.P[id].city).sort((a, b) => G.P[b].pop0 - G.P[a].pop0)[0] ?? L.slice().sort((a, b) => G.P[b].cells.length - G.P[a].cells.length)[0]); });
+  return CCAP[ci] ?? -1; }
+// pole-foot spots for a flag pin beside a marker of radius R0 at (x, cy0), nearest first: right of the marker, then left, then beside the
+// garrison counter box gb (the stack sits just above the marker), then below the marker
+function capFlagSpots(x, cy0, R0, pin, gb){ const fw = pin.fw, fhb = pin.ay - pin.fy, low = cy0 + R0*0.75, out = [];
+  out.push([x + R0 + 2, low], [x - R0 - 3 - fw, low]);
+  if (gb){ out.push([gb[2] + 3, Math.min(low, gb[3] + fhb*0.35)], [gb[0] - 4 - fw, Math.min(low, gb[3] + fhb*0.35)], [gb[2] + 3, low], [gb[0] - 4 - fw, low], [gb[2] + 3, gb[1] + fhb]); }
+  out.push([x + R0 + 2, low + fhb*0.45], [x - R0 - 3 - fw, low + fhb*0.45], [x + 4, cy0 + R0 + fhb + 2], [x - fw - 4, cy0 + R0 + fhb + 2]);
+  return out; }
 /* ---------------- Animated city buildings (close zoom) ---------------- */
 const BSLOT = [[-24, 6], [24, 6], [-34, -6], [34, -6], [-20, -18], [20, -18], [-40, 16], [40, 16], [0, -26]];
 const lastSmoke = new Map();
 function drawBuildings(now, kl, vis){
-  const hexPx = view.s*HS0; if (hexPx < 18) return; const u = Math.max(1, Math.min(3.4, hexPx/16));
+  const hexPx = view.s*HS0; if (hexPx < ART_PX) return; const u = Math.max(1, Math.min(3.4, hexPx/16));
   ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !vis.has(p)) continue; const B = S.bld[p], cons = S.cons[p];
     const list = BK.filter(k => B[k] > 0 && k !== 'fort' && !(P.city && bartOk(k))); if (!list.length && !(cons && !(P.city && bartOk(cons.k))) && !B.fort) continue;   // the four art buildings are drawn by drawBuildingArt
@@ -4718,29 +4811,53 @@ function drawBuildings(now, kl, vis){
    shows a progress arc and a flickering scaffold. Any image that fails to load keeps the drawn look above. */
 const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo'}, BART_K = ['fac', 'air', 'yard', 'silo'];
 const BART_D = 20, CITY_D = 25, BANIM_MS = 1200;
+// the aerial art (city patch and building compounds) only shows when zoomed in close; at play zoom the map keeps clean city markers
+const ART_PX = 46, artFade = hexPx => Math.max(0, Math.min(1, 0.2 + (hexPx - ART_PX)/5));
 // slot angles (degrees, screen y down) around the city plate: two columns left and right, so the stack above the city and its name below stay clear
 const BANG = {fac:207, air:-27, yard:153, silo:27}, BART_RING = [160, 20, 90, 200, -20, 130, 50, 235, -55];
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
 const bimg = (k, l, px = 22, dim = false) => (k === 'city' || BART[k]) && ART.ready(bartName(k, l)) ? `<i class="bi${dim ? ' dim' : ''}" style="--bi:url(${ART.url(bartName(k, l))});--bs:${px}px" aria-hidden="true"></i>` : '';
 const bartAny = () => bartOk('city') || BART_K.some(bartOk);
-const PLATE_MK = 0.75;   // city marker scale while it sits on a ground plate
-const cityPlateK = (P, p, vis) => P.city && view.s*HS0 >= 18 && vis.has(p) && bartOk('city') ? PLATE_MK : 1;
+const PLATE_MK = 0.48;   // city marker scale while it sits on the aerial city patch
+const cityPlateK = (P, p, vis) => P.city && view.s*HS0 >= ART_PX && vis.has(p) && bartOk('city') ? PLATE_MK : 1;
 // sizes at the current zoom: the plate is never smaller than about 1.35x the city marker (so it shows around it), buildings sit just outside the plate
 function bartLayout(P, p, kl){ const cap = isCapital(p), hexPx = view.s*HS0, u = Math.max(1, Math.min(3.4, hexPx/16)), R = Math.sqrt(P.cells.length)*HS*view.s*0.62, us = Math.min(u*1.25, Math.max(0.6, R/30));
   const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, mR = (cap ? 6.5 + tier + 2.2 : [2.8, 3.6, 4.6][tier] + 1.8)*kl*(bartOk('city') ? PLATE_MK : 1), L = cityLevel(p);
-  const dc = Math.max(CITY_D*us*(0.9 + 0.06*L), mR*2.7), db = Math.max(14, BART_D*us, hexPx*0.52); let dist = Math.max(dc/2 + db*0.55 + 4, db*1.18 + 2);   // the two buildings of a column never touch
-  // the columns' inner edges (which face the marker at about its centre height) stay clear of what is drawn beside the marker:
-  // your capital's pulsing ring (up to 15*kl), the fort shield (to 13.6*kl on the left) and the oil drop (to 12.8*kl on the right)
-  const B = S.bld[p], Rc = Math.max(cap ? 15 : 0, B.fort ? 13.6 : 0, P.oil ? 12.8 : 0)*kl;
-  if (Rc) dist = Math.max(dist, (Rc + 2 + db/2)/BCOS);
-  // and the lower slots stay clear of the city name centred below the marker (its top is 11*kl below the marker centre)
-  if (BSIN*dist + db/2 > 11*kl - 1) dist = Math.max(dist, (cityNameHW(P, cap) + 4 + db/2)/BCOS);
+  // the aerial city patch covers most of the province (its wide soft edge fades into the terrain, the province's shape clips it) and grows a
+  // little with the city level; the compounds sit inside the province on the patch's rim, so city and compounds read as one built-up area
+  const dc = Math.min(440, Math.max(mR*6, Math.min(380, R*2.0), hexPx*(1.5 + 0.12*L + 0.45*tier)*(cap ? 1.12 : 1))*(0.86 + 0.035*L)); let db = Math.max(26, Math.min(76, R*0.8, dc*0.36));
+  // the two columns sit just clear of the marker (their inner corners may reach its surroundings: the fort shield, the oil drop, your capital's
+  // pulsing ring and the city name are drawn on top) and stay within about the province (only their soft edges may reach past it); the
+  // soft-edged compounds of a column may overlap a little
+  const inD = d0 => (mR + 2 + d0*0.42)/BCOS, outD = d0 => R*1.2 - d0*0.42;
+  if (outD(db) < inD(db)) db = Math.max(22, Math.min(db, (R*1.2 - (mR + 2)/BCOS)/(0.42 + 0.42/BCOS)));
+  const dist = Math.max(inD(db), db*0.85, Math.min(outD(db), dc*0.3 + db*0.35));
   return {us, L, dc, db, dist, ang:BANG}; }
 const BCOS = Math.cos(27*Math.PI/180), BSIN = Math.sin(27*Math.PI/180), CNHW = new Map();
 try { document.fonts && document.fonts.ready.then(() => CNHW.clear()); } catch (e) {}   // re-measure once the web fonts are in
 // half the width of a city's name label as the label pass draws it (same font), cached per name
 function cityNameHW(P, cap){ const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, f = cap ? 12.5 : 10.5 + tier*0.6, font = `${cap || tier === 2 ? 600 : 500} ${f}px ${BODY}`, key = font + '|' + P.cityName;
   let w = CNHW.get(key); if (w == null){ ctx.save(); ctx.font = font; w = (ctx.measureText(P.cityName || '').width + 6)/2; ctx.restore(); if (CNHW.size > 2000) CNHW.clear(); CNHW.set(key, w); } return w; }
+// urban footprint at play zoom: a pale built-up area sized by population - city blocks on a slightly rotated street grid, dense in the
+// middle and thinning into irregular outskirts (low-frequency noise decides which outer blocks exist); at night the same blocks become warm
+// street lights. Cached per variant, quantised size and day/night.
+const UFOOT = new Map();
+function footSprite(v, px, night){ const q = Math.max(12, Math.round(Math.pow(2, Math.round(Math.log2(px*dpr)*5)/5))), key = v + '|' + q + '|' + (night ? 1 : 0);
+  let c = UFOOT.get(key); if (c) return c; if (UFOOT.size > 260) UFOOT.clear();
+  c = document.createElement('canvas'); c.width = c.height = q; const g = c.getContext('2d'), Rr = q/2;
+  let sd = (v*2654435761 + 97) >>> 0; const rnd = () => ((sd = (sd*1664525 + 1013904223) >>> 0)/4294967296);
+  const ph = [rnd()*6.3, rnd()*6.3, rnd()*6.3, rnd()*6.3], lobe = an => 1 + 0.22*Math.sin(an*2 + ph[0]) + 0.14*Math.sin(an*3 + ph[1]) + 0.08*Math.sin(an*5 + ph[2]);
+  const wash = g.createRadialGradient(Rr, Rr, 0, Rr, Rr, Rr*0.9); wash.addColorStop(0, night ? 'rgba(255,180,100,.16)' : 'rgba(200,194,178,.32)'); wash.addColorStop(1, 'rgba(200,190,170,0)');
+  g.fillStyle = wash; g.fillRect(0, 0, q, q);
+  const cells = Math.max(7, Math.min(22, Math.round(q/7))), gs = q/cells, rot = (rnd() - 0.5)*0.5, cr = Math.cos(rot), sr = Math.sin(rot);
+  for (let i = -cells; i <= cells; i++) for (let j = -cells; j <= cells; j++){
+    const u = i*gs*0.5, w = j*gs*0.5, bx = Rr + u*cr - w*sr, by = Rr + u*sr + w*cr, dx = bx - Rr, dy = by - Rr, rr = Math.hypot(dx, dy)/(Rr*0.92*lobe(Math.atan2(dy, dx)));
+    if (rr >= 1 || (i % 5 === 0 && rr > 0.12) || (j % 4 === 0 && rr > 0.12)) continue;   // outside, or an avenue
+    const f = 1 - rr, keep = f*1.6 + Math.sin(i*0.9 + ph[3])*Math.cos(j*0.7 + ph[0])*0.35 - rnd()*0.55; if (keep < 0.25) continue;
+    if (night){ const s0 = Math.max(0.7, gs*0.28*(0.6 + rnd()*0.8)); g.fillStyle = `rgba(255,${196 + Math.round(rnd()*44)},${110 + Math.round(rnd()*70)},${Math.min(1, 0.3 + 0.7*f)*(0.55 + rnd()*0.45)})`; g.fillRect(bx - s0/2, by - s0/2, s0, s0); }
+    else { const w0 = gs*0.5*(0.55 + rnd()*0.35), h0 = gs*0.5*(0.55 + rnd()*0.35), t = 188 + Math.round(rnd()*44);
+      g.save(); g.translate(bx, by); g.rotate(rot); g.fillStyle = `rgba(${t},${t - 5},${t - 16},${Math.min(0.95, 0.3 + 0.75*f)})`; g.fillRect(-w0/2, -h0/2, w0, h0); g.restore(); } }
+  UFOOT.set(key, c); return c; }
 function cityLevel(p){ const B = S.bld[p]; let t = 0; for (const k of BK) t += B[k] || 0; return Math.min(5, Math.min(5, 1 + Math.floor(t/3)) + (isCapital(p) ? 1 : 0)); }
 const bartName = (k, l) => (k === 'city' ? 'b-city-' : 'b-' + BART[k] + '-') + Math.max(1, Math.min(5, l | 0));
 const BART_OK = new Map();   // key -> true once all five levels have loaded, false for good if one failed
@@ -4749,7 +4866,15 @@ function bartOk(k){ const v = BART_OK.get(k); if (v != null) return v; if (k !==
   if (all) BART_OK.set(k, true); return all; }
 // cached sprite at a quantised size (about 12% steps) so zooming does not rescale the big images every frame; night = darker cached variant
 function bartSprite(k, l, d, night){ const q = Math.pow(2, Math.ceil(Math.log2(Math.max(8, d*dpr))*6)/6);
-  return ART.sprite(bartName(k, l), q, night ? {tint:'#0a1222', tintA:0.25} : {}); }
+  return ART.sprite(bartName(k, l), q, night ? {tint:'#050912', tintA:k === 'city' ? 0.62 : 0.42} : {}); }
+// night lights of a city or compound: its own bright roofs and streets turned into warm light (added with 'lighter' over the dark night
+// sprite), so the lit area has the shape of the built-up art instead of a disc of dots. Cached per image and quantised size.
+const BLIT = new Map();
+function lightsSprite(k, l, d){ const base = bartSprite(k, l, d, false); if (!base) return null; const key = bartName(k, l) + '|' + base.width; let c = BLIT.get(key); if (c) return c;
+  if (BLIT.size > 120) BLIT.clear(); c = document.createElement('canvas'); c.width = base.width; c.height = base.height; const g = c.getContext('2d');
+  g.filter = k === 'city' ? 'grayscale(1) brightness(0.84) contrast(6)' : 'grayscale(1) brightness(0.74) contrast(6)'; g.drawImage(base, 0, 0); g.filter = 'none';   // only the brightest roofs and streets light up
+  g.globalCompositeOperation = 'multiply'; g.fillStyle = '#ffc070'; g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(base, 0, 0); BLIT.set(key, c); return c; }
 // last drawn level per province+building; a rise seen while on screen starts the upgrade animation
 const BLV = new Map(); let BLV_S = null;
 function bLevel(key, lvl, now){ if (BLV_S !== S){ BLV.clear(); BLV_S = S; }
@@ -4757,14 +4882,17 @@ function bLevel(key, lvl, now){ if (BLV_S !== S){ BLV.clear(); BLV_S = S; }
   if (lvl !== r.lvl){ if (lvl > r.lvl && now - r.seen < 1500 && SET.motion !== 'reduced'){ r.from = r.lvl; r.t0 = now; r.fresh = true; } else r.t0 = 0; r.lvl = lvl; }
   r.seen = now; return r; }
 const easeOut = t => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
-function drawBart(k, lvl, x, y, d, now, key, night, cons, col, a0, badge){   // badge: 0 none, 1 / -1 the level pill on the building's right / left (outer) lower corner
+function drawBart(k, lvl, x, y, d, now, key, night, cons, col, a0, badge, mode = 3){   // badge: 0 none, 1 / -1 the level pill on the building's right / left (outer) lower corner; mode: 1 the image, 2 the overlays (scaffold, progress, burst, pill), 3 both
   const r = bLevel(key, lvl, now); let f = r.t0 ? (now - r.t0)/BANIM_MS : -1; if (f >= 1){ r.t0 = 0; f = -1; }
   const sc = f < 0 ? 1 : f < 0.45 ? 0.85 + 0.23*easeOut(f/0.45) : 1.08 - 0.08*easeOut((f - 0.45)/0.55), D = d*sc;
-  const img = (l, al, dd) => { if (al <= 0.01) return; const sp = bartSprite(k, l, dd, night); if (!sp) return; ctx.globalAlpha = a0*al; ctx.drawImage(sp, x - dd/2, y - dd/2, dd, dd); };
-  if (lvl > 0){ const fl = cons ? 0.9 + 0.1*Math.sin(now/95 + key.length) : 1;   // construction: a subtle flicker
-    if (f >= 0 && r.from > 0){ const m = Math.min(1, f/0.55); img(r.from, (1 - m)*fl, D); img(lvl, m*fl, D); }
-    else img(lvl, (f >= 0 ? Math.min(1, f/0.3) : 1)*fl, D); }
-  else if (cons){ img(cons.lvl, 0.38 + 0.08*Math.sin(now/140), d); }   // first level under construction: a ghost of what is coming
+  const img = (l, al, dd) => { if (al <= 0.01) return; const sp = bartSprite(k, l, dd, night); if (!sp) return; ctx.globalAlpha = a0*al; ctx.drawImage(sp, x - dd/2, y - dd/2, dd, dd);
+    if (k === 'city'){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = a0*al*0.22; ctx.drawImage(sp, x - dd/2, y - dd/2, dd, dd); ctx.globalCompositeOperation = 'source-over'; }
+    if (night){ const ls = lightsSprite(k, l, dd); if (ls){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*al*(k === 'city' ? 1 : 0.6); ctx.drawImage(ls, x - dd/2, y - dd/2, dd, dd); ctx.globalCompositeOperation = 'source-over'; } } };
+  if (mode & 1){ if (lvl > 0){ const fl = cons ? 0.9 + 0.1*Math.sin(now/95 + key.length) : 1;   // construction: a subtle flicker
+      if (f >= 0 && r.from > 0){ const m = Math.min(1, f/0.55); img(r.from, (1 - m)*fl, D); img(lvl, m*fl, D); }
+      else img(lvl, (f >= 0 ? Math.min(1, f/0.3) : 1)*fl, D); }
+    else if (cons){ img(cons.lvl, 0.38 + 0.08*Math.sin(now/140), d); } }   // first level under construction: a ghost of what is coming
+  if (!(mode & 2)){ ctx.globalAlpha = a0; return; }
   if (cons){ const pf = 1 - cons.h/Math.max(1, cons.h0);
     // scaffold: a few thin girders over the image that shimmer, then the progress ring
     ctx.globalAlpha = a0*(0.45 + 0.2*Math.sin(now/70)); ctx.strokeStyle = '#e8c27a'; ctx.lineWidth = Math.max(0.6, d*0.025); ctx.beginPath();
@@ -4781,30 +4909,48 @@ function drawBart(k, lvl, x, y, d, now, key, night, cons, col, a0, badge){   // 
     if (r.fresh){ r.fresh = false; const [wx, wy] = screenToWorld(x, y + d*0.3), sp0 = d/Math.max(0.3, view.s);
       for (let i = 0; i < 6; i++) emit('dust', wx, wy, {vx:(Math.random() - 0.5)*sp0*1.6, vy:-(1 + Math.random()*3), s0:d*0.08/view.s + 1.5, s1:d*0.3/view.s + 4, life:900 + Math.random()*500});
       for (let i = 0; i < 5; i++) emit('spark', wx, wy - d*0.3/view.s, {vx:(Math.random() - 0.5)*sp0*2.2, vy:-(sp0*(0.8 + Math.random())), s0:2.4, s1:0.6, life:500 + Math.random()*300}); } }
-  if (badge && lvl > 0 && d >= 22){ const fz = Math.round(Math.min(15, Math.max(10, d*0.28)));   // level badge in the holder's colour: a pill sized to the numeral
-    ctx.font = `700 ${fz}px ${MONO}`; const tw = ctx.measureText(ROMAN[lvl]).width, bw = Math.max(fz + 3, tw + fz*0.6), bh = fz + 4, bx = x + Math.sign(badge)*(d*0.5 - bw*0.55), by = y + d*0.5 - bh*0.45;
+  if (badge && lvl > 0 && d >= 22){ const fz = Math.round(Math.min(13, Math.max(8.5, d*0.24)));   // level badge in the holder's colour: a pill sized to the numeral
+    ctx.font = `700 ${fz}px ${MONO}`; const tw = ctx.measureText(ROMAN[lvl]).width, bw = Math.max(fz + 3, tw + fz*0.6), bh = fz + 4, bx = x + Math.sign(badge)*(d*0.46 - bw*0.2), by = y + d*0.46 - bh*0.2;   // on the outer lower corner, mostly off the picture
     ctx.globalAlpha = a0; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx - bw/2, by - bh/2, bw, bh, bh/2); else ctx.rect(bx - bw/2, by - bh/2, bw, bh); ctx.fillStyle = 'rgba(8,12,14,.92)'; ctx.fill(); ctx.lineWidth = Math.max(1.2, fz*0.12); ctx.strokeStyle = col; ctx.stroke();
     ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ROMAN[lvl], bx, by + 0.5); }
   ctx.globalAlpha = a0; }
-// drawn before the city markers and names, so those stay on top of the ground plates
+// drawn before the city markers and names, so those stay on top of the aerial patches
 function drawBuildingArt(now, kl, vis){
-  const hexPx = view.s*HS0; if (hexPx < 18) return; const a0 = Math.min(1, 0.25 + (hexPx - 18)/4);   // fade in over the first few zoom steps
+  const hexPx = view.s*HS0; if (hexPx < ART_PX) return; const a0 = artFade(hexPx);   // fades in over the first zoom steps past ART_PX
   const cityOk = bartOk('city'), anyB = BART_K.some(bartOk); if (!cityOk && !anyB) return;
   ctx.save(); ctx.lineCap = 'round';
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (!P.city || P.sea || !vis.has(p)) continue;
-    const [x, y0] = toScreen(P.x, P.y); if (x < -170 || y0 < -170 || x > cw + 170 || y0 > ch + 170) continue;
+    const [x, y0] = toScreen(P.x, P.y); if (x < -330 || y0 < -330 || x > cw + 330 || y0 > ch + 330) continue;
     const B = S.bld[p], cons = S.cons[p], y = y0 + 9*kl, col = colorOf(S.owner[p]), night = isNight(p);
-    const Lo = bartLayout(P, p, kl);
-    if (cityOk){ const L = Lo.L, d = Lo.dc;   // the plate grows a little with the city level
-      ctx.globalAlpha = a0*0.5; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.ellipse(x + d*0.04, y + d*0.07, d*0.52, d*0.5, 0, 0, Math.PI*2); ctx.fill();
-      drawBart('city', L, x, y, d, now, p + ':city', night, null, col, a0, 0);
-      ctx.globalAlpha = a0*0.85; ctx.lineWidth = Math.max(1.2, d*0.035); ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, y, d*0.5 + ctx.lineWidth*0.5, 0, Math.PI*2); ctx.stroke(); }
+    const Lo = bartLayout(P, p, kl), bs = [];
     for (const k of BART_K){ const lv = B[k] || 0, ck = cons && cons.k === k ? cons : null; if (!(lv > 0 || ck) || !bartOk(k)) continue;
-      const a = Lo.ang[k]*Math.PI/180, d = Lo.db, bx = x + Math.cos(a)*Lo.dist, by = y + Math.sin(a)*Lo.dist;
-      ctx.globalAlpha = a0*0.4; ctx.fillStyle = '#000'; ctx.beginPath(); if (k === 'fac' || k === 'yard') ctx.rect(bx - d*0.44 + d*0.05, by - d*0.44 + d*0.08, d*0.88, d*0.88); else ctx.arc(bx + d*0.05, by + d*0.08, d*0.47, 0, Math.PI*2); ctx.fill();   // drop shadow: square compounds, round tokens
-      drawBart(k, lv, bx, by, d, now, p + ':' + k, night, ck, col, a0, Math.cos(a) < 0 ? -1 : 1); }   // the level pill on the outer side, away from the marker and the name
+      const a = Lo.ang[k]*Math.PI/180; bs.push([k, lv, ck, x + Math.cos(a)*Lo.dist, y + Math.sin(a)*Lo.dist, Math.cos(a) < 0 ? -1 : 1]); }
+    // the city is a satellite patch of its built-up area under the marker, clipped to the province's shape (wide soft edge, lightly
+    // multiplied into the terrain); the compounds at their level sit on the patch's rim in two columns beside the marker
+    ctx.save(); const fp = cityClip(p);
+    if (fp){ ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.clip(fp, 'evenodd'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    if (cityOk){ suburbs(p, Lo, x, y, night, a0);
+      drawBart('city', Lo.L, x, y, Lo.dc, now, p + ':city', night, null, col, a0*0.92, 0, 1); }   // at night the art's own lights glow (lightsSprite)
+    ctx.restore();
+    for (const [k, lv, ck, bx, by] of bs) drawBart(k, lv, bx, by, Lo.db, now, p + ':' + k, night, ck, col, a0, 0, 1);
+    // level pills, construction progress and the upgrade burst on top, unclipped (the pill on the outer side, away from the marker and the name)
+    if (cityOk) drawBart('city', Lo.L, x, y, Lo.dc*0.6, now, p + ':city', night, null, col, a0, 0, 2);
+    for (const [k, lv, ck, bx, by, sd] of bs) drawBart(k, lv, bx, by, Lo.db, now, p + ':' + k, night, ck, col, a0, p === sel.prov ? sd : 0, 2);
     ctx.globalAlpha = 1; }
   ctx.restore(); }
+// the land a city's aerial art may cover: its province and the neighbouring land provinces (never the sea), cached per province
+const CCLIP = new Map();
+function cityClip(p){ if (!GEO.fill) return null; let c = CCLIP.get(p); if (c) return c; c = new Path2D(); c.addPath(GEO.fill[p]);
+  for (const v of G.P[p].nbs) if (!G.P[v].sea) c.addPath(GEO.fill[v]); CCLIP.set(p, c); return c; }
+// suburbs: smaller, turned copies of lower-level city art around the core, so the city reads as irregular urban sprawl, not a disc
+function suburbs(p, Lo, x, y, night, a0){ const P = G.P[p], tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, n = 3 + tier + (Lo.L >> 1);
+  let sd = (p*2654435761 + 7) >>> 0; const rnd = () => ((sd = (sd*1664525 + 1013904223) >>> 0)/4294967296), a00 = rnd()*Math.PI*2;
+  for (let i = 0; i < n; i++){ const an = a00 + i*Math.PI*2/n + (rnd() - 0.5)*0.9, dist = Lo.dc*(0.3 + rnd()*0.2), d = Lo.dc*(0.36 + rnd()*0.2)*(i % 2 ? 0.85 : 1);
+    const sp = bartSprite('city', Math.max(1, Lo.L - 1 - (i % 3 === 2 ? 1 : 0)), d, night); if (!sp) continue;
+    const al = a0*(0.72 + rnd()*0.2), ls = night ? lightsSprite('city', Math.max(1, Lo.L - 1 - (i % 3 === 2 ? 1 : 0)), d) : null;
+    ctx.save(); ctx.translate(x + Math.cos(an)*dist, y + Math.sin(an)*dist*0.78); ctx.rotate(rnd()*Math.PI*2); ctx.globalAlpha = al; ctx.drawImage(sp, -d/2, -d/2, d, d);
+    if (ls){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = al*0.85; ctx.drawImage(ls, -d/2, -d/2, d, d); ctx.globalCompositeOperation = 'source-over'; } ctx.restore(); }
+  ctx.globalAlpha = 1; }
 // fortifications: a small star fort (bastions per level) beside the city instead of a ring of walls across the province
 function fortWalls(x, y, u, lvl, col){ const r = (7 + lvl*1.6)*u, n = 5;
   ctx.beginPath(); for (let i = 0; i < n*2; i++){ const a = -Math.PI/2 + i*Math.PI/n, rr = i % 2 ? r*0.62 : r; ctx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr*0.62); } ctx.closePath();
@@ -4877,9 +5023,87 @@ function wrenchMark(x, y, ps){ const r = 4.6*ps; ctx.save(); ctx.beginPath(); ct
   ctx.fillStyle = 'rgba(20,16,10,.95)'; ctx.fillRect(-0.55*ps, -3.6*ps, 1.1*ps, 2*ps); ctx.restore(); }
 // operational counter plate (below FORM_PX): size of a plate for a strength n at counter scale s (minor = quiet foreign/neutral mini plate)
 const PLATE_TW = new Map();
-function plateDims(n, s, minor){ const ps = Math.max(0.85, Math.min(1.15, Math.max(0.75, s))), fz = Math.round((minor ? 9.5 : 11)*ps), key = fz + ':' + n;
+const plateGrow = () => 1 + 0.22*Math.max(0, Math.min(1, (view.s*HS0 - 22)/20));   // 1 up to hexPx 22, 1.22 from hexPx 42 (provinces have room there); plate scale moves in steps of 0.05, so zooming reuses a few cached picture sizes
+function plateDims(n, s, minor){ const ps = Math.round(Math.max(0.85, Math.min(1.15, Math.max(0.75, s)))*plateGrow()*20)/20, fz = Math.round((minor ? 9.5 : 11)*ps), key = fz + ':' + n;
   let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = `700 ${fz}px ${MONO}`; tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
-  return minor ? {ps, fz, tw, w:Math.max(22*ps, 5*ps + tw + 9*ps), h:14*ps, bars:0} : {ps, fz, tw, w:Math.max(34*ps, 5*ps + 17*ps + tw + 6*ps), h:18*ps, bars:1.5*ps + 6.4*ps}; }
+  return minor ? {ps, fz, tw, w:Math.max(26*ps, 5*ps + PIC_MW*ps + tw + 4*ps), h:14*ps, bars:0} : {ps, fz, tw, w:Math.max(38*ps, 5*ps + PIC_W*ps + tw + 4*ps), h:18*ps, bars:1.5*ps + 6.4*ps}; }
+const PIC_W = 24, PIC_MW = 15;   // picture box width in plate units (full plate / quiet mini plate)
+// faint lit well behind a plate picture: an oval filling the box, baked into the picture canvas
+function picWell(g, bw, bh){ g.save(); g.translate(bw/2, bh/2); g.scale(bw/2, bh/2); const rg = g.createRadialGradient(0, 0, 0, 0, 0, 1); rg.addColorStop(0, 'rgba(170,180,165,.2)'); rg.addColorStop(1, 'rgba(170,180,165,0)'); g.fillStyle = rg; g.fillRect(-1, -1, 2, 2); g.restore(); }
+/* plate silhouettes: crisp side views of each unit type, facing right, drawn from vector paths so they read at 20x12 px
+   (the top-down art turns into speckle at that size). SIL[type] = [viewBox x, y, w, h, body path, detail path (darker), light path (glass/highlights)] */
+const SOLDIER = (x, k = 1) => { const f = v => (v*k).toFixed(2), X = v => (x + v*k).toFixed(2);   // a rifleman advancing, rifle at the ready
+  return `M${X(12.4)} ${f(6.4)}a${f(4.1)} ${f(3.7)} 0 0 1 ${f(8.2)} 0l${f(.6)} ${f(1.1)}h${f(-9.4)}z` +   // helmet
+    `M${X(14.6)} ${f(7)}h${f(4.4)}v${f(3)}h${f(-4.4)}z` +   // face
+    `M${X(12.6)} ${f(9.6)}h${f(7)}l${f(.6)} ${f(9)}h${f(-7)}z` +   // torso
+    `M${X(10.2)} ${f(10.2)}h${f(2.8)}v${f(6.6)}h${f(-2.8)}z` +   // pack
+    `M${X(14.6)} ${f(11.4)}l${f(16.4)} ${f(-1.3)}v${f(1.7)}l${f(-16.4)} ${f(1.6)}z` +   // rifle
+    `M${X(22.6)} ${f(11.8)}h${f(1.8)}v${f(3)}h${f(-1.8)}z` +   // magazine
+    `M${X(17.6)} ${f(10)}l${f(7.4)} ${f(1)}v${f(1.8)}h${f(-7.4)}z` +   // forearm
+    `M${X(13.6)} ${f(18)}h${f(3.8)}l${f(-4)} ${f(12)}h${f(-3.2)}z` + `M${X(16.4)} ${f(18)}h${f(3.6)}l${f(3.8)} ${f(12)}h${f(-3.2)}z` +   // legs
+    `M${X(9.2)} ${f(29.2)}h${f(4.8)}v${f(1.8)}h${f(-4.8)}z` + `M${X(19.8)} ${f(29.2)}h${f(5.2)}v${f(1.8)}h${f(-5.2)}z`; };   // boots
+const KNEEL = (x, tube) => `M${x + 13.4} 12.4a4.1 3.7 0 0 1 8.2 0l.6 1.1h-9.4z M${x + 15.6} 13h4.4v3h-4.4z M${x + 13.2} 15.6h7l.8 7.4h-7.4z M${x + 10.8} 16h2.8v6h-2.8z` +
+  `M${x + 14} 23h7.4l3.4 4.6v3.4h-3l-2.2-3.6h-4.6l-1.6 3.6h-3.4z` + (tube ? `M${x + 6} 12.2h26v3.4h-26z M${x + 4} 11.4h3v5h-3z` : `M${x + 15.6} 17.4l17-1.4v1.6l-17 1.6z M${x + 18} 16.2l6.6 1v1.8h-6.6z`);
+const SIL = {
+  inf:[8, 3.6, 44, 28.4, SOLDIER(-2) + SOLDIER(18), ''],
+  spec:[6, 3.6, 46, 28.4, SOLDIER(-4) + KNEEL(16, false), `M${-4 + 14.6} 7h4.4v1.4h-4.4z`],
+  at:[4, 10, 34, 21, KNEEL(0, true), 'M4.2 12.2h2.6v2.6h-2.6z'],
+  para:[2, 0, 40, 31, 'M2 13Q4 1 22 1Q40 1 42 13Q38 11 34 13Q30 11 26 13Q22 11 18 13Q14 11 10 13Q6 11 2 13z' + 'M3 13.4l15.6 7.6-.5 1-15.8-7.6z M41 13.4l-15.6 7.6.5 1 15.8-7.6z M17.4 13.2h1l1.4 8h-1z M25.6 13.2h1l-1.4 8h-1z' +
+    'M19.4 15.6a2.7 2.4 0 0 1 5.4 0l.4.7h-6.2z M18.8 17.6h6.6l.2 6h-7z M19.4 23.6h2.4l-1 7.2h-2.2z M22.4 23.6h2.4l.8 7.2h-2.2z', ''],
+  tank:[2, 7, 61, 22, 'M9.6 29a4.6 4.6 0 0 1-4.6-4.6L3 20.6l5.4-5.4h40.8l5.6 5.4-1.8 3.8a4.6 4.6 0 0 1-4.6 4.6z M17 15.2l3.2-6.6h17.4l4.8 3.4v3.2z M41 10.4h22v2.4h-22z',
+    'M10 25.2a2.4 2.4 0 1 0 0 .01z M17 25.2a2.4 2.4 0 1 0 0 .01z M24 25.2a2.4 2.4 0 1 0 0 .01z M31 25.2a2.4 2.4 0 1 0 0 .01z M38 25.2a2.4 2.4 0 1 0 0 .01z M45 25.2a2.4 2.4 0 1 0 0 .01z M6 20.8h46v1.2h-46z', 'M21 9.6h12v1.4h-12z'],
+  ifv:[2, 6, 56, 23, 'M8.6 29a4.6 4.6 0 0 1-4.6-4.6L2.6 18l8-6.4h38.8l6.6 6.4v6.4a4.6 4.6 0 0 1-4.6 4.6z M24 11.6l2.4-4.4h10.4l2.4 4.4z M36.4 8.4h18v1.6h-18z',
+    'M10 25.2a2.3 2.3 0 1 0 0 .01z M17.6 25.2a2.3 2.3 0 1 0 0 .01z M25.2 25.2a2.3 2.3 0 1 0 0 .01z M32.8 25.2a2.3 2.3 0 1 0 0 .01z M40.4 25.2a2.3 2.3 0 1 0 0 .01z M48 25.2a2.3 2.3 0 1 0 0 .01z M8 15.2h4v3h-4z M15 15.2h4v3h-4z', 'M48 13.4l4 3.4h-4z'],
+  art:[2, 2, 61, 27, 'M8.6 29a4.6 4.6 0 0 1-4.6-4.6L3.6 20.4l4.6-4.4h41.6l4.4 4.4v4a4.6 4.6 0 0 1-4.6 4.6z M12 16V9.4h25l4 6.6z M36.2 10.6L61.6 2.4l1 2.6L37.4 13.4z',
+    'M10 25.2a2.4 2.4 0 1 0 0 .01z M17.4 25.2a2.4 2.4 0 1 0 0 .01z M24.8 25.2a2.4 2.4 0 1 0 0 .01z M32.2 25.2a2.4 2.4 0 1 0 0 .01z M39.6 25.2a2.4 2.4 0 1 0 0 .01z M47 25.2a2.4 2.4 0 1 0 0 .01z', 'M15 10.8h8v1.4h-8z'],
+  mlrs:[2, 3, 60, 27, 'M3 25V19h40v-5h7.4l5.4 1.4 4.2 5.4v4.2z M5 18.4L7.4 9.6l30-6.6 2.6 9.6-30 6.6z',
+    'M11 26.4a3.4 3.4 0 1 0 0 .01z M22 26.4a3.4 3.4 0 1 0 0 .01z M33 26.4a3.4 3.4 0 1 0 0 .01z M51 26.4a3.4 3.4 0 1 0 0 .01z M11.4 9.6l24.4-5.4.3 1.2-24.4 5.4z M12.4 13.4l24.4-5.4.3 1.2-24.4 5.4z',
+    'M48.2 15.4h4.4l2.6 3.4h-7z'],
+  sam:[2, 1, 58, 28, 'M7 29a3.8 3.8 0 0 1-3.8-3.8L4 20h48l4.4 4.4v.8a3.8 3.8 0 0 1-3.8 3.8z M14 20l3.4-5.4 25-12.4 2.2 4.2-23.4 13.6z M46 20V11.6h2.4V20z M41.6 9.4a5.6 3 0 0 0 11.2 0z',
+    'M9 25a2.2 2.2 0 1 0 0 .01z M16 25a2.2 2.2 0 1 0 0 .01z M23 25a2.2 2.2 0 1 0 0 .01z M30 25a2.2 2.2 0 1 0 0 .01z M37 25a2.2 2.2 0 1 0 0 .01z M44 25a2.2 2.2 0 1 0 0 .01z M20.4 13.2l22.6-11.2.5 1-22.6 11.2z', ''],
+  jet:[1, 6, 62, 22, 'M2 18L7 7h4.6l7 8.4H44q11 .2 18.6 3.2-7.6 3-18.6 3.2H10L3 21z M20 20.2h15l-10 7.4h-6z M3.4 18h11l-6.4 4h-4.6z',
+    'M30 16.8h6v1h-6z', 'M41 15.4q4.4-4.4 11 .4z'],
+  int:[1, 5, 62, 22, 'M3 18L5 6h3.4l8.6 9.4H42q12 .4 20.6 3.2Q54 21.6 42 21.8H12L4 21z M14 20.6l22-.4-14 6.4h-6z M9 6.8h3l6 8.4h-3z',
+    'M26 17h8v1h-8z', 'M40 15.6q5-4.6 12 .2z'],
+  heli:[1, 4, 62, 24, 'M18 16.4q2-6.6 15.4-6.6l15 2q9.6 2.2 12.2 6.4L59 21.2H30L22 19 5 16.6V12.8h3.4L18 15.2z M10 5.6h50V7H10z M33 7h2v3.6h-2z M27 24.6h26V26H27z M30.4 21h1.6v3.6h-1.6z M46 21h1.6v3.6h-1.6z M2.4 9.6h1.6v8h-1.6z M45 17.6h12v1.8h-12z',
+    'M24 17.4h18v1.2h-18z', 'M44 11.8q8 1 13 5.4h-13z'],
+  drone:[1, 4, 62, 20, 'M11 17.4L6 9h3.6l7 7H40q5-4 12-3.4 8 .8 9 5.6-1.4 3-15 3.6H12z M9 19.6l-5 5h3.6l6.4-4.6z M2 12.6h1.6v9.6H2z M24 16.4h18v1.2H24z',
+    'M24 18.6h18v.8H24z', ''],
+  frig:[1, 2, 62, 25, 'M1 19.6h62l-6.4 7.4H7.4z M16 19.6v-5.6h12V9h8.6v5h9v5.6z M31.6 2.4h1.8V9h-1.8z M28 5h9v1.2h-9z M48 17.4h9v1.2h-9z M46.4 16.2h4v3.4h-4z',
+    'M1 21.4h62v1h-62z', 'M30 11h5v1.4h-5z'],
+  crui:[0, 1, 64, 26, 'M0 19.4h64l-5.6 7.6H6z M12 19.4v-6h10V7.4h11v6h9v6z M25.6 1h1.8v6.4h-1.8z M22 3.4h9.4v1.2H22z M47 17.6h12v1.2H47z M45 16.2h5v3.2h-5z M3 17.4h7v1.2H3z M7.4 16.2h4v3.2h-4z M36 11.6h1.6v2h-1.6z',
+    'M0 21.2h64v1H0z', 'M25 9h6v1.4h-6z'],
+  sub:[1, 6, 62, 19, 'M5 19.6q1.6-5.6 12-5.6h33q12 .6 12.6 5.6-.6 4.6-12.6 5H17q-10.4 0-12-5z M26 14.2l2-7.6h10.4l1.4 7.6z M1.6 15l5 3.4v2.6l-5 3.4z M30 6.6h1.4V3.4H30z M34 6.6h1.2V4.2H34z',
+    'M8 21.6h52v1H8z', 'M30 9h6v1.4h-6z'],
+  carr:[0, 1, 64, 26, 'M0 13.6h64l-3.4 4.4-4.4 9H8.4l-4.6-9z M42 13.6V6h8.4v7.6z M45.4 1.4h1.4V6h-1.4z M8 11.6l6-1.4 5 1.4z M22 11.6l6-1.4 5 1.4z',
+    'M2 17.6h60v1H2z', 'M43.6 7.6h5v1.4h-5z']
+};
+const SILP = new Map();   // Path2D cache per type
+function silPaths(t){ let P = SILP.get(t); if (P) return P; const s = SIL[t]; if (!s) return null; P = [new Path2D(s[4]), s[5] ? new Path2D(s[5]) : null, s[6] ? new Path2D(s[6]) : null]; SILP.set(t, P); return P; }
+// the silhouette of type t in a bw x bh device-px canvas: dark outline, a light ivory body with a soft top-down gradient, darker running gear, glints
+function silCanvas(t, bw, bh, left, well){ const s = SIL[t], P = silPaths(t); if (!P) return null;
+  const c = document.createElement('canvas'); c.width = bw; c.height = bh; const g = c.getContext('2d');
+  if (well && typeof picWell === 'function') picWell(g, bw, bh);
+  const ow = Math.max(1, bh/12), pad = ow + 0.5, k = Math.min((bw - 2*pad)/s[2], (bh - 2*pad)/s[3]), dx = (bw - s[2]*k)/2, dy = (bh - s[3]*k)/2;
+  g.save(); if (left){ g.translate(bw, 0); g.scale(-1, 1); }
+  g.translate(dx, dy); g.scale(k, k); g.translate(-s[0], -s[1]); g.lineJoin = 'round';
+  g.lineWidth = ow*2/k; g.strokeStyle = 'rgba(2,5,6,.92)'; g.stroke(P[0]);   // outline
+  const gr = g.createLinearGradient(0, s[1], 0, s[1] + s[3]); gr.addColorStop(0, '#fbf7ea'); gr.addColorStop(0.55, '#e4ddc8'); gr.addColorStop(1, '#a9a28c');
+  g.fillStyle = gr; g.fill(P[0]);
+  if (P[1]){ g.fillStyle = 'rgba(38,40,36,.62)'; g.fill(P[1]); }
+  if (P[2]){ g.fillStyle = 'rgba(120,170,190,.85)'; g.fill(P[2]); }
+  g.restore(); return c; }
+const PICC = new Map();
+// one cached canvas per type, device box size, facing and well
+function platePic(t, bw, bh, left, well){ if (!SIL[t]) return null; bw = Math.max(6, Math.round(bw)); bh = Math.max(6, Math.round(bh));
+  const key = t + '|' + bw + '|' + bh + '|' + (left ? 1 : 0) + (well ? 'w' : ''); let c = PICC.get(key); if (c) return c; if (PICC.size > 300) PICC.clear();
+  c = silCanvas(t, bw, bh, left, well); PICC.set(key, c); return c; }
+// draw the picture of type t in a box (css px) snapped to device pixels and drawn 1:1 (the map layer's transform is the plain dpr scale);
+// falls back to the NATO glyph while the picture is missing. well: the lit well behind it, baked in
+function platePicDraw(t, bx, by, bw, bh, left, alpha = 1, well = false){
+  const X = Math.round(bx*dpr), Y = Math.round(by*dpr), W = Math.round(bw*dpr), H = Math.round(bh*dpr), pic = platePic(t, W, H, left, well);
+  if (!pic){ glyph(bx + bw/2, by + bh/2, t, Math.min(bw/15, bh/9.5)); return false; }
+  const a0 = ctx.globalAlpha; if (alpha < 1) ctx.globalAlpha = a0*alpha; ctx.drawImage(pic, X/dpr, Y/dpr, W/dpr, H/dpr); ctx.globalAlpha = a0; return true; }
 // the plate body: drop shadow, dark gradient body, owner tab (drawn in plate-local coordinates)
 const PLATE_G = new Map();
 function plateBody(x0, y0, w, h, ps, tabW, tab, minor){
@@ -4895,9 +5119,16 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
   const tab = a && a.rebel ? '#e0574f' : a && a.owner === NEUTRAL ? '#9a978a' : color;
   plateBody(x0, y0, w, h, ps, tabW, tab, minor);
   ctx.textBaseline = 'middle'; ctx.font = `700 ${D.fz}px ${MONO}`;
-  if (minor){ ctx.fillStyle = '#d9d5c8'; ctx.textAlign = 'center'; ctx.fillText(String(n), x0 + tabW + (w - tabW)/2, y0 + h/2 + 0.5); return {x:x0 - 1, y:y0 - 1, w:w + 3, h:h + 4}; }
-  glyph(x0 + tabW + 9*ps, y0 + h/2, main, 0.78*ps);
-  ctx.fillStyle = '#f2eee2'; ctx.textAlign = 'center'; ctx.fillText(String(n), x0 + tabW + 17*ps + (w - tabW - 17*ps - 2*ps)/2, y0 + h/2 + 0.5);
+  const left = moving && counter.ang != null && Math.cos(counter.ang) < -0.3, pw = (minor ? PIC_MW : PIC_W)*ps;
+  if (minor){ if (main) platePicDraw(main, x0 + tabW + 0.5*ps, y0 + 1*ps, pw, h - 2*ps, false, 0.92);
+    ctx.fillStyle = '#d9d5c8'; ctx.textAlign = 'center'; const tx0 = main ? x0 + tabW + pw + 0.5*ps : x0 + tabW; ctx.fillText(String(n), tx0 + (x0 + w - 1.5*ps - tx0)/2, y0 + h/2 + 0.5); return {x:x0 - 1, y:y0 - 1, w:w + 3, h:h + 4}; }
+  // the dominant type's picture; a second type holding a good share of the stack shows as a tiny picture on a chip over the plate's top edge
+  const bx = x0 + tabW + 0.5*ps, by = y0 + 1*ps, pbh = h - 2*ps;
+  platePicDraw(main, bx, by, pw, pbh, left, 1, true);
+  if (counter.second && SIL[counter.second]){ const cw2 = 13*ps, ch2 = 9*ps, cx2 = Math.round(bx + pw - cw2 + 1*ps), cy2 = Math.round(y0 - 5*ps);
+    roundRect(ctx, cx2, cy2, cw2, ch2, 2*ps); ctx.fillStyle = 'rgba(13,19,22,.94)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.stroke();
+    platePicDraw(counter.second, cx2 + 0.5*ps, cy2 + 0.5*ps, cw2 - 1*ps, ch2 - 1*ps, left, 1, true); }
+  ctx.fillStyle = '#f2eee2'; ctx.textAlign = 'center'; const tx0 = bx + pw + 0.5*ps; ctx.fillText(String(n), tx0 + (x0 + w - 1.5*ps - tx0)/2, y0 + h/2 + 0.5);
   if (counter.list && counter.list.some(cmdOf)){ ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', x0 + 1*ps, y0 - 1*ps); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', x0 + 1*ps, y0 - 1*ps); }
   if (selected){ ctx.save(); ctx.shadowColor = '#e2a23d'; ctx.shadowBlur = 8; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2; roundRect(ctx, x0 - 1.5, y0 - 1.5, w + 3, h + 3, 4*ps); ctx.stroke(); ctx.restore(); }
   else if (fighting){ ctx.strokeStyle = `rgba(224,87,79,${0.5 + 0.5*Math.sin(now/150)})`; ctx.lineWidth = 1; roundRect(ctx, x0 - 1.5, y0 - 1.5, w + 3, h + 3, 4*ps); ctx.stroke(); }
@@ -4910,17 +5141,26 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
   if (fighting && counter.vol) counter.vol(main, ang ?? 0, 20*ps, x, y);
   const bh = unitBars(a, x0, y0 + h + 1.5*ps, w, ps, now);
   return {x:x0 - 3, y:y0 - 6*ps, w:w + 6 + 4*ps, h:h + 6*ps + 1.5*ps + bh + 3}; }
+// plate types: the cluster's dominant type by weight (strength x hit points) and a second type when it holds at least a quarter of that weight
+function plateTypes(a, main){ const L = counter.list && counter.list.length ? counter.list : a ? [a] : [];
+  if (!a || L.length < 1) return [main, null];
+  const wt = {}; let tot = 0;
+  for (const q of L){ if (G.P[q.at].sea && !shipsN(q) && !q.air){ wt.frig = (wt.frig || 0) + count(q); tot += count(q); continue; }
+    for (const t in q.u) if (q.u[t] > 0 && UNITS[t]){ const v = q.u[t]*UNITS[t].hp; wt[t] = (wt[t] || 0) + v; tot += v; } }
+  const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); if (!ts.length) return [main, null];
+  const t2 = ts[1] && wt[ts[1]] >= tot*0.25 && UART[ts[1]] && UART[ts[1]][0] !== UART[ts[0]][0] ? ts[1] : null;
+  return [ts[0], t2]; }
 function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting = false, dir = 1, now = performance.now()){
   s = Math.max(0.75, s);
   // level of detail: below hexPx 30, forces that don't concern you (independents, powers at peace) are small badges
   const quiet = a && a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner));
   const minor = quiet && view.s*HS0 < FORM_PX;
   if (quiet && !minor) s = Math.max(0.75, s*0.6);
-  if (minor) return plateCounter(x, y, a, n, color, false, false, s, false, null, now, true);
   let types = a ? UT.filter(t => a.u[t]).sort((p1, p2) => a.u[p2]*UNITS[p2].hp - a.u[p1]*UNITS[p1].hp) : ['inf'];
   if (a && G.P[a.at].sea && !shipsN(a) && !a.air) types = ['frig'];          // embarked: troops ride a transport
   const main = types[0] || 'inf', seed = a ? a.id % 13 : 0;
-  if (view.s*HS0 < FORM_PX) return plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, now, false);
+  if (minor || view.s*HS0 < FORM_PX){ const pt = plateTypes(a, main); counter.second = minor ? null : pt[1];
+    return plateCounter(x, y, a, n, color, minor ? false : selected, minor ? false : moving, s, minor ? false : fighting, pt[0], now, minor); }
   // ground shadow / selection ring (formations draw per-figure shadows and ring their own extent)
   const artOK = t => !!mArt(t) || !!(window.U3D && U3D.has(t)), imgOne = !!mArt(main) && (!types[1] || !!mArt(types[1]));
   const formMode = artOK(main) && view.s*HS0 >= FORM_PX && UNITS[main].cls !== 'air' && !quiet;
@@ -4996,19 +5236,19 @@ function linkDyn(vis){ const vk = vis ? vis.key : ''; if (LDYN && LDYN.v === LIN
   return LDYN = D; }
 function drawLinksLayer(c, LN, px, hexPx, wx0, wy0, wx1, wy1, vis, lite){ if (!LN.roadsT || !Array.isArray(LN.roadsT)) return; const D = linkDyn(vis);
   // while the view moves (pan or zoom re-renders), one stroke per class; the full casing, tracks and ballast come back once it settles
-  if (lite){ if (hexPx >= 17){ c.strokeStyle = `rgba(214,196,150,${0.2 + 0.3*Math.min(1, (hexPx - 17)/16)})`; c.lineWidth = (hexPx >= 26 ? 1.6 : 0.8)*px; c.stroke(tiledIn(LN.roadsT[2], wx0, wy0, wx1, wy1)); c.stroke(D.rd); }
-    if (hexPx >= 10){ const z = Math.min(1, (hexPx - 10)/18); c.strokeStyle = `rgba(226,180,92,${0.3 + 0.45*z})`; c.lineWidth = (0.7 + 1.4*z)*px; c.stroke(tiledIn(LN.roadsT[3], wx0, wy0, wx1, wy1)); c.stroke(D.hw); }
+  if (lite){ if (hexPx >= 26){ c.strokeStyle = `rgba(206,192,156,${0.1 + 0.28*Math.min(1, (hexPx - 26)/20)})`; c.lineWidth = (hexPx >= 26 ? 1.6 : 0.8)*px; c.stroke(tiledIn(LN.roadsT[2], wx0, wy0, wx1, wy1)); c.stroke(D.rd); }
+    if (hexPx >= 12){ const z = Math.min(1, (hexPx - 12)/30); c.strokeStyle = `rgba(214,190,132,${0.16 + 0.4*z})`; c.lineWidth = (0.7 + 1.4*z)*px; c.stroke(tiledIn(LN.roadsT[3], wx0, wy0, wx1, wy1)); c.stroke(D.hw); }
     if (hexPx >= 8){ const z = Math.min(1, (hexPx - 8)/16); c.strokeStyle = `rgba(24,20,16,${0.4 + 0.45*z})`; c.lineWidth = (0.8 + 0.8*z)*px; c.stroke(tiledIn(LN.railsT, wx0, wy0, wx1, wy1)); c.stroke(D.rail);
       c.strokeStyle = 'rgba(120,206,236,.9)'; c.lineWidth = (1 + 0.6*z)*px; c.stroke(D.hsr); }
     return; }
   // classes fade in one after another so mid zoom stays readable (highways, then rails, roads, tracks); all strokes are solid: dashes are slow to raster
-  if (hexPx >= 30){ const z = Math.min(1, (hexPx - 30)/14); c.strokeStyle = `rgba(206,190,150,${0.12 + 0.18*z})`; c.lineWidth = (0.6 + 0.2*z)*px; c.stroke(tiledIn(LN.roadsT[1], wx0, wy0, wx1, wy1)); c.stroke(D.tr); }
-  if (hexPx >= 17){ const z = Math.min(1, (hexPx - 17)/16), RD = tiledIn(LN.roadsT[2], wx0, wy0, wx1, wy1);
-    if (hexPx >= 26){ c.strokeStyle = `rgba(20,16,10,${0.42*Math.min(1, (hexPx - 26)/10)})`; c.lineWidth = 2.4*px; c.stroke(RD); c.stroke(D.rd); }
-    c.strokeStyle = `rgba(214,196,150,${0.2 + 0.3*z})`; c.lineWidth = (0.7 + 0.35*z)*px; c.stroke(RD); c.stroke(D.rd); }
-  if (hexPx >= 10){ const z = Math.min(1, (hexPx - 10)/18), HW = tiledIn(LN.roadsT[3], wx0, wy0, wx1, wy1);
-    if (hexPx >= 15){ c.strokeStyle = `rgba(22,15,6,${(0.2 + 0.35*z)*Math.min(1, (hexPx - 15)/6)})`; c.lineWidth = (1.8 + 1.6*z)*px; c.stroke(HW); c.stroke(D.hw); }
-    c.strokeStyle = `rgba(238,194,102,${0.3 + 0.45*z})`; c.lineWidth = (0.7 + 1.0*z)*px; c.stroke(HW); c.stroke(D.hw); }
+  if (hexPx >= 46){ const z = Math.min(1, (hexPx - 46)/14); c.strokeStyle = `rgba(206,190,150,${0.08 + 0.14*z})`; c.lineWidth = (0.6 + 0.2*z)*px; c.stroke(tiledIn(LN.roadsT[1], wx0, wy0, wx1, wy1)); c.stroke(D.tr); }
+  if (hexPx >= 26){ const z = Math.min(1, (hexPx - 26)/20), RD = tiledIn(LN.roadsT[2], wx0, wy0, wx1, wy1);
+    if (hexPx >= 40){ c.strokeStyle = `rgba(20,16,10,${0.42*Math.min(1, (hexPx - 40)/10)})`; c.lineWidth = 2.4*px; c.stroke(RD); c.stroke(D.rd); }
+    c.strokeStyle = `rgba(206,192,156,${0.1 + 0.28*z})`; c.lineWidth = (0.7 + 0.35*z)*px; c.stroke(RD); c.stroke(D.rd); }
+  if (hexPx >= 12){ const z = Math.min(1, (hexPx - 12)/30), HW = tiledIn(LN.roadsT[3], wx0, wy0, wx1, wy1);
+    if (hexPx >= 30){ c.strokeStyle = `rgba(22,15,6,${(0.2 + 0.35*z)*Math.min(1, (hexPx - 30)/8)})`; c.lineWidth = (1.8 + 1.6*z)*px; c.stroke(HW); c.stroke(D.hw); }
+    c.strokeStyle = `rgba(214,190,132,${0.16 + 0.4*z})`; c.lineWidth = (0.7 + 1.0*z)*px; c.stroke(HW); c.stroke(D.hw); }
   if (hexPx >= 8){ const z = Math.min(1, (hexPx - 8)/16), RL = tiledIn(LN.railsT, wx0, wy0, wx1, wy1);
     if (hexPx >= 14 && hexPx < 30){ c.strokeStyle = `rgba(232,226,208,${0.08 + 0.1*z})`; c.lineWidth = (1.7 + 1.0*z)*px; c.stroke(RL); c.stroke(D.rail); }   // faint light casing: the dark rail line reads on dark ground
     if (hexPx >= 40){ c.strokeStyle = `rgba(26,22,18,${0.34*Math.min(1, (hexPx - 40)/8)})`; c.lineWidth = 3.4*px; c.stroke(RL); c.stroke(D.rail); c.stroke(D.hsr); }   // ballast bed at close zoom
@@ -5057,18 +5297,26 @@ function renderLayer(vis, lite = false){
   const onScreen = P => { const b = provBox(P); return b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1; };
   const wm = 40*px, wx0 = vx0 - wm, wy0 = vy0 - wm, wx1 = vx1 + wm, wy1 = vy1 + wm, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
-  if (hexPx >= 12 && SET.fx !== 'low'){ const z = Math.min(1, (hexPx - 9)/12); c.save(); if (GEO.coastV) c.clip(GEO.coastV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z; c.fillStyle = grainPattern(c); c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); c.restore(); }
+  if (hexPx >= 12 && SET.fx !== 'low'){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (GEO.coastV) c.clip(GEO.coastV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
+    if (zc > 0 && gp.fine){ c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.34*zc; c.fillStyle = gp.fine; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // close up: a second, fine ground grain (fields, scrub) so the land is not a smooth smear
+    c.restore(); }
+  if (hexPx >= ART_PX && SET.fx !== 'low' && mapMode === 'political'){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (GEO.coastV) c.clip(GEO.coastV, 'evenodd');
+    for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const t = P.terrain || 'plains', wooded = t === 'mountain' && Math.abs(P.lat) > 24 && Math.abs(P.lat) < 55, pt = t === 'forest' || wooded ? GP.forest : t === 'plains' || t === 'urban' ? GP.fields : null; if (!pt) continue;   // temperate ranges (Appalachians, Alps' flanks) are wooded
+      c.globalAlpha = (t === 'forest' ? 0.7 : wooded ? 0.5 : 0.62)*zg; c.fillStyle = pt; c.fill(GEO.fill[p], 'evenodd');
+      if (wooded){ c.globalAlpha = 0.42*zg; c.fillStyle = '#4a6a3c'; c.fill(GEO.fill[p], 'evenodd'); } }   // their grey rock and white ridge highlights take the green of the woods
+    c.restore(); }
   if (hexPx >= 9){ c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = 'rgba(140,180,190,0.06)'; c.lineWidth = 0.8*px; c.setLineDash([4*px, 6*px]); c.stroke(tiledIn(GEO.seaT, wx0, wy0, wx1, wy1)); c.setLineDash([]); }
   const hp = fogPattern(c, 0.07*Math.min(1, 0.4/Math.max(0.5, Math.min(4, (GS > 1 ? 0.12 : 0.075)*HS*view.s*dpr)))); if (hp.setTransform) hp.setTransform(new DOMMatrix([px, 0, 0, px, 0, 0]));
   const base = c; if (!layer.fl) layer.fl = document.createElement('canvas'); const flc = layer.fl; if (flc.width !== layer.width || flc.height !== layer.height){ flc.width = layer.width; flc.height = layer.height; }
   c = flc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, flc.width, flc.height); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
+  const washK = 1 - 0.72*Math.max(0, Math.min(1, (hexPx - 26)/34));
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
     if (mapMode === 'terrain'){ c.fillStyle = rgba((TERRAIN[P.terrain] || TERRAIN.plains).col, 0.66); c.fill(GEO.fill[p], 'evenodd'); }
     else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p], 'evenodd'); }
     else if (mapMode === 'stability'){ const u = unrestOf(p); c.fillStyle = o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'; c.fill(GEO.fill[p], 'evenodd'); }
     else if (mapMode === 'resources'){ const y = provYield(p), top = ['oil', 'metal', 'food', 'mp', 'cash'].sort((k1, k2) => (y[k2]/({cash:12, oil:5, metal:4, food:3, mp:2})[k2]) - (y[k1]/({cash:12, oil:5, metal:4, food:3, mp:2})[k1]))[0];
       c.fillStyle = {oil:'rgba(40,40,44,.75)', metal:'rgba(140,155,170,.6)', food:'rgba(120,180,80,.5)', mp:'rgba(200,160,120,.5)', cash:'rgba(220,190,90,.55)'}[top]; c.fill(GEO.fill[p], 'evenodd'); }
-    else if (o >= 0){ c.fillStyle = relMode ? (o === PLAYER ? rgba(S.nations[o].color, 0.45) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5)) : rgba(S.nations[o].color, o === PLAYER ? 0.4 : 0.34); c.fill(GEO.fill[p], 'evenodd'); }
+    else if (o >= 0){ c.fillStyle = relMode ? (o === PLAYER ? rgba(S.nations[o].color, 0.45) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5)) : rgba(S.nations[o].color, (o === PLAYER ? 0.4 : 0.34)*washK); c.fill(GEO.fill[p], 'evenodd'); }
     { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p], 'evenodd'); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }
     if (!vis.has(p)){ c.fillStyle = hp; c.fill(GEO.fill[p], 'evenodd'); } }
   // rivers and roads go on the same overlay, above the fills, so they share the single coast clip
@@ -5155,7 +5403,7 @@ function draw(now){
   const plateQuiet = c => { if (c.pq != null) return c.pq; const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), fighting = !c.moving && !c.air && S.battles.includes(c.at), selected = c.list.some(q => q.id === sel.army || sel.group.includes(q.id));
     return (c.pq = a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); };
   const R2 = (hexPx >= (GS > 1 ? FORM_PX : 10) ? 0 : GS > 1 ? 36 : 26)**2;
-  const plateM = GS > 1 && hexPx < FORM_PX, psk = Math.max(0.85, Math.min(1.15, k)), MW = 40*psk, MH = 26*psk;   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
+  const plateM = GS > 1 && hexPx < FORM_PX, psk = Math.round(Math.max(0.85, Math.min(1.15, k))*plateGrow()*20)/20, MW = 44*psk, MH = 26*psk;   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
     let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0) || (plateM && Math.abs(c.x - it.x) < MW && Math.abs(c.y - it.y) < MH)));
@@ -5203,7 +5451,7 @@ function draw(now){
     b.unit = true; b.at = c.moving ? -1 : c.at; boxes0.push(b); }
   drawBuildingArt(now, kl, vis);
   marks = [];
-  const labs = [], capEm = [];
+  const labs = [], capEm = [], pinsOut = [];
   for (let p = 0; p < G.P.length; p++){
     const P = G.P[p]; if (P.sea) continue;
     const [x, y] = toScreen(P.x, P.y);
@@ -5212,19 +5460,27 @@ function draw(now){
     ctx.globalAlpha = dim;
     if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 9 + Math.min(10, P.pop0))*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; ctx.drawImage(GLOW(), x - gr*0.7, y + 9*kl - gr*0.7, gr*1.4, gr*1.4); ctx.restore(); }
     const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, oc = S.owner[p] >= 0 ? S.nations[S.owner[p]].color : '#8c8a80';
-    const pk = cityPlateK(P, p, vis);   // on a city ground plate (close zoom) the marker is smaller and lets the city show through
-    if (cap && hexPx >= 2){ const cy0 = y + 9*kl, rr = (6.5 + tier)*kl*pk; marks.push({p, x, y:cy0, r:rr + 2.2*kl*pk}); ctx.beginPath(); ctx.arc(x, cy0, rr + 2.2*kl*pk, 0, Math.PI*2); ctx.fillStyle = pk < 1 ? 'rgba(3,6,8,.5)' : 'rgba(3,6,8,.75)'; ctx.fill(); ctx.lineWidth = 1.6*kl; ctx.strokeStyle = oc; ctx.stroke();
-      star(x, cy0, rr); ctx.fillStyle = '#f3ead2'; ctx.fill();
-      if (hexPx >= 8 && hexPx < 18){ const Nc = S.nations[S.owner[p]], d = Math.round(Math.max(22, 18*kl)), sp = ART.sprite('emblem-' + emblemOf(Nc.name), d*dpr, {ring:Nc.color, boost:'brightness(1.45) contrast(1.25)'});   // crest beside the star (mid zoom only: closer in, the city plate and its buildings take that room)
-        const R0 = rr + 2.2*kl;
-        if (sp) capEm.push({sp, d, a:dim, p, c:[[x + R0 + d*0.5 + 1, cy0 - d*0.12], [x + (R0 + d*0.5)*0.72, cy0 - (R0 + d*0.5)*0.72], [x - R0 - d*0.5 - 1, cy0 - d*0.12]]}); } }
-    else if (P.city && showCity){ const cy0 = y + 9*kl, rr = [2.8, 3.6, 4.6][tier]*kl*pk; marks.push({p, x, y:cy0, r:rr + 1.8*kl*pk});   // cities: size by population, ring in the holder's colour
-      ctx.beginPath(); ctx.arc(x, cy0, rr + 1.8*kl*pk, 0, Math.PI*2); ctx.fillStyle = pk < 1 ? 'rgba(3,6,8,.6)' : 'rgba(3,6,8,.8)'; ctx.fill(); ctx.lineWidth = 1.3*kl; ctx.strokeStyle = oc; ctx.stroke();
-      ctx.beginPath(); ctx.arc(x, cy0, rr, 0, Math.PI*2); ctx.fillStyle = '#f3ead2'; ctx.fill();
-      if (tier === 2){ ctx.beginPath(); ctx.arc(x, cy0, rr*0.45, 0, Math.PI*2); ctx.fillStyle = '#0b1012'; ctx.fill(); } }
+    const pk = cityPlateK(P, p, vis);   // on the aerial city patch (close zoom) the marker is smaller and lets the city show through
+    if (P.city && hexPx >= 6){ const fa = hexPx >= ART_PX && bartOk('city') ? 1 - artFade(hexPx) : 1;   // urban footprint (play zoom); the aerial patch replaces it close up
+      if (fa > 0.02){ const Rp = Math.sqrt(P.cells.length)*HS*view.s*0.62, rf = Math.min(Math.max(Rp*1.05, 9*kl), (cap ? 17 + tier*2.5 : [9.5, 12.5, 16.5][tier])*kl*Math.min(1.5, Math.max(1, hexPx/24)));
+        const fs = footSprite(p % 7, rf*2, isNight(p)); ctx.globalAlpha = fa*dim*(isNight(p) ? 0.9 : 0.85); ctx.drawImage(fs, x - rf, y + 9*kl - rf, rf*2, rf*2); ctx.globalAlpha = dim; } }
+    if (cap && hexPx >= 2){ const cy0 = y + 9*kl, rr = (6.5 + tier)*kl*pk, R1 = rr + 2.2*kl*pk; marks.push({p, x, y:cy0, r:(8.7 + tier)*kl});   // (the tap target keeps its full size where the marker shrinks on the city art) capital: cream star on a disc in the holder's (deepened) colour
+      ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.globalAlpha = dim*(pk < 1 ? 0.6 : 0.95); ctx.fillStyle = shade(oc, -0.5); ctx.fill(); ctx.globalAlpha = dim;
+      ctx.lineWidth = 1.6*kl + 1.8; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.6*kl; ctx.strokeStyle = oc; ctx.stroke();
+      star(x, cy0, rr); ctx.fillStyle = '#f6efdc'; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = 'rgba(4,7,9,.55)'; ctx.stroke();
+      if (hexPx >= 7){ const fh = Math.round(Math.min(20, Math.max(13, 12*kl))), pin = flagPin(flagIdx(S.owner[p]), fh, dpr);   // the holder's flag flying beside the capital star (mid and close zoom)
+        if (pin) capEm.push({pin, a:dim, p, x, cy0, R0:R1}); } }
+    else if (P.city && showCity){ const cy0 = y + 9*kl, rr = [2.8, 3.6, 4.6][tier]*kl*pk, R1 = rr + 1.8*kl*pk; marks.push({p, x, y:cy0, r:([2.8, 3.6, 4.6][tier] + 1.8)*kl});   // cities: size by population, ring in the holder's colour
+      ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.fillStyle = rgba(oc, pk < 1 ? 0.2 : 0.45); ctx.fill();   // a tint of the holder's colour inside the ring, no dark disc
+      ctx.lineWidth = 1.3*kl + 1.6; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.3*kl; ctx.strokeStyle = oc; ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, cy0, rr, 0, Math.PI*2); ctx.fillStyle = '#f6efdc'; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(4,7,9,.6)'; ctx.stroke();
+      if (tier === 2){ ctx.beginPath(); ctx.arc(x, cy0, rr*0.42, 0, Math.PI*2); ctx.fillStyle = oc; ctx.fill(); } }   // a metropolis carries the holder's colour at its heart
+    if (!cap && hexPx >= 7 && S.owner[p] === NEUTRAL && countryCap(P.country) === p){   // an independent country's own flag at its capital
+      const fh = Math.round(Math.min(17, Math.max(11, 10*kl))), pin = flagPin(flagIdx(G.countries[P.country].name), fh, dpr);
+      if (pin) capEm.push({pin, a:dim, p, x, cy0:y + 9*kl, R0:P.city && showCity ? ([2.8, 3.6, 4.6][tier] + 1.8)*kl*pk : 3*kl, ind:true}); }
     if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 22){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
-    if (S.bld[p].silo && hexPx >= 4 && !(hexPx >= 18 && P.city && bartOk('silo') && vis.has(p))){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-    if (S.bld[p].fort && hexPx >= 6){ const fx2 = x - 10*kl, fy2 = y + 9*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (S.bld[p].silo && hexPx >= 4 && !(hexPx >= ART_PX && P.city && bartOk('silo') && vis.has(p))){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    if (S.bld[p].fort && hexPx >= 6 && !(pk < 1)){ const fx2 = x - 10*kl, fy2 = y + 9*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
     { const Rpx = Math.sqrt(P.cells.length)*HS*view.s, label = cap && hexPx >= 4 ? P.cityName : P.city && hexPx >= 8 ? P.cityName : hexPx >= 9 && Rpx >= 16 ? P.name : '';
       if (label) labs.push({t:label, x, y:y + (P.city ? 20*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:y + 9*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl}); }
     ctx.globalAlpha = 1;
@@ -5233,10 +5489,17 @@ function draw(now){
   }
   // capital crests on top of the city markers; city names step around them (capital names ignore them, like stacks)
   // each crest takes the first free spot (right of the star, above right, left) that covers no other city marker, label, other province's stack or crest; none free = no crest
-  for (const e of capEm){ const h = e.d/2;
-    for (const [ex, ey] of e.c){ const b = [ex - h, ey - h, ex + h, ey + h];
-      if (marks.some(m => m.p !== e.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3]) || boxes0.some(q => q.at !== e.p && q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) continue;   // the capital's own garrison may sit beside it
-      ctx.globalAlpha = e.a*0.95; ctx.drawImage(e.sp, b[0], b[1], e.d, e.d); b.unit = true; boxes0.push(b); break; } }
+  // powers' capitals choose first; a power's flag always shows (at worst over a neighbour's name), never under its own garrison counter
+  capEm.sort((e1, e2) => (e1.ind ? 1 : 0) - (e2.ind ? 1 : 0));
+  const ovl = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
+  for (const e of capEm){ const pin = e.pin, own = boxes0.filter(q => q.unit && q.at === e.p), gb = own.length ? [Math.min(...own.map(q => q[0])), Math.min(...own.map(q => q[1])), Math.max(...own.map(q => q[2])), Math.max(...own.map(q => q[3]))] : null;
+    let pick = null, fall = null;
+    for (const [ex, ey] of capFlagSpots(e.x, e.cy0, e.R0, pin, gb)){ const b = [ex - pin.ax + pin.fx - 1, ey - pin.ay + pin.fy, ex - pin.ax + pin.fx + pin.fw, ey];   // the pole foot stands at (ex, ey); the box is pole + cloth
+      if (own.some(q => ovl(q, b))) continue; if (!fall) fall = [ex, ey, b];
+      if (marks.some(m => m.p !== e.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3]) || boxes0.some(q => q.at !== e.p && ovl(q, b))) continue;
+      pick = [ex, ey, b]; break; }
+    if (!pick && !e.ind) pick = fall; if (!pick) continue;
+    const [ex, ey, b] = pick; pinsOut.push([pin, e.a, Math.round((ex - pin.ax)*dpr)/dpr, Math.round((ey - pin.ay)*dpr)/dpr]); b.unit = true; boxes0.push(b); }   // drawn after the buildings and power names (below)
   ctx.globalAlpha = 1;
   // place labels: highest rank first, skip any that would overlap one already placed
   { labs.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
@@ -5266,10 +5529,13 @@ function draw(now){
     const txt = (you ? S.nations[n].name + ' · You' : S.nations[n].name).toUpperCase();
     ctx.lineWidth = you ? 5 : 4; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(txt, x, y - 22);
     ctx.fillStyle = you ? 'rgba(255,250,235,.85)' : rgba(S.nations[n].color, 0.7); ctx.fillText(txt, x, y - 22); });
+  // capital flag pins on top of the city art and the power names
+  for (const [pin, a, px0, py0] of pinsOut){ ctx.globalAlpha = Math.max(0.9, a); ctx.drawImage(pin.c, px0, py0, pin.w, pin.h); }
+  ctx.globalAlpha = 1;
   // your capital callout
   { const N = S.nations[PLAYER];
     if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + 9*kl;
-      ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke();
+      if (!(hexPx >= ART_PX && bartOk('city'))){ ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
       if (S.hour < 72){ ctx.font = `600 11px ${MONO}`; const t = 'YOUR CAPITAL', w = ctx.measureText(t).width + 12;
         roundRect(ctx, x - w/2, cy + 14*kl + 14, w, 18, 3); ctx.fillStyle = N.color; ctx.fill(); ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.lineWidth = 1.2; ctx.stroke();
         ctx.fillStyle = '#081014'; ctx.fillText(t, x, cy + 14*kl + 23); } } }
@@ -5638,7 +5904,7 @@ function tipShow(x, y){
     tip.innerHTML = `<b>Unidentified contact</b><div class="small" style="color:#9fd8ff">Detected by AWACS — unidentified contact</div><div class="small muted">${air ? 'Aircraft' : 'Force'} ${at >= 0 ? 'near ' + (G.P[at].cityName || G.P[at].name) : 'in flight'}. Nation, type, size, level and health unknown: send a UAV, a satellite or ground forces to identify it.</div>`;
     tip.hidden = false; const tw = 230, th = tip.offsetHeight; let tx = x + 14, ty = y + 14; if (tx + tw > cw - 6) tx = x - tw - 14; if (ty + th > ch - 6) ty = y - th - 14; tip.style.left = Math.max(6, tx) + 'px'; tip.style.top = Math.max(6, ty) + 'px'; return; }
   if (fa.length){ const a0 = fa.reduce((b, a) => count(a) > count(b) ? a : b, fa[0]), o = a0.owner, n = fa.reduce((s0, a) => s0 + count(a), 0), at = a0.to !== null ? a0.to : a0.at;
-    let h = `<b>${o === PLAYER ? armyName(a0) : armyLabel(a0)}${fa.length > 1 ? ` <span class="muted" style="font-weight:400">+${fa.length - 1} more</span>` : ''}</b><div class="small muted"><span class="sw" style="background:${colorOf(o)};vertical-align:-1px"></span> ${o === PLAYER ? 'Your forces' : nationName(o)} · ${a0.to !== null ? 'moving to ' : ''}${G.P[at].city ? G.P[at].cityName : G.P[at].name}</div>`;
+    let h = `<b>${o === PLAYER ? armyName(a0) : armyLabel(a0)}${fa.length > 1 ? ` <span class="muted" style="font-weight:400">+${fa.length - 1} more</span>` : ''}</b><div class="small muted">${o >= 0 ? flagHTML(o, 12) : provFlagHTML(a0.at, 12)} ${o === PLAYER ? 'Your forces' : nationName(o)} · ${a0.to !== null ? 'moving to ' : ''}${G.P[at].city ? G.P[at].cityName : G.P[at].name}</div>`;
     h += `<div class="r"><span>Units</span><span>${n}${o === PLAYER ? "" : ` · ${Math.round(fa.reduce((s0, a) => s0 + power(a), 0))} str`}</span></div>`;
     if (o === PLAYER) h += `<div class="small" style="margin-top:3px">${fa.map(comp).join('')}</div>`;
     else { const v0 = visibleSet(), src = v0.uav && v0.uav.has(at) ? 'Identified by UAV' : G.P[at].sea && v0.sonar && v0.sonar.has(at) ? 'Identified by sonar / maritime patrol' : 'Identified (radar, satellite or ground contact)';
@@ -5650,7 +5916,7 @@ function tipShow(x, y){
   const p = provAt(x, y); if (p < 0){ tipHide(); return; }
   const P = G.P[p], vis = visibleSet(), here = stationaryAt(p).filter(a => armyVisible(a, vis));
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
-  let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted"><span class="sw" style="background:${P.sea ? '#28414a' : colorOf(S.owner[p])};vertical-align:-1px"></span> ${placeOwner(p)}</div>`;
+  let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p), tk = P.terrain || 'plains', [sg, wk] = terrUnitsText(tk); h += `<div class="r"><span style="white-space:nowrap">${ticon(tk, 13)} ${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}</span></div>`;
     h += `<div class="small tline">${T0.spd < 1 ? 'Movement ' + pctS(T0.spd) : 'Normal movement'}${P.river.size ? ' · river line: crossing slower, attackers −20%' : ''}${sg.length ? `<br><span class="tg">▲ ${sg.slice(0, 2).join(', ')}</span>` : ''}${wk.length ? `<br><span class="tb">▼ ${wk.slice(0, 2).join(', ')}</span>` : ''}</div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.oil ? ' · Oil' : ''}${P.ore ? ' · Ore' : ''}</span><span>${yieldStr(y)}</span></div>`;
     h += `<div class="r"><span>Population</span><span>${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></div>`;
@@ -5689,7 +5955,7 @@ function renderSide(force){
   if (renderSide.day !== dayNow){ renderSide.day = dayNow; renderSide.flash = flashes.slice(); renderSide.flashT = tnow; lastRes = nowRes; }
   for (let i = 0; i < flashes.length; i++) flashes[i] = renderSide.flash && tnow - renderSide.flashT < 950 ? renderSide.flash[i] : '';
   setHTML($('res'),
-    `<div class="chip you" title="Your nation: ${N.name}">${embHTML(N.name, N.color, 26, flagSVG(PLAYER, 26, 17))}<b>${N.name}</b></div>` +
+    `<div class="chip you" title="Your nation: ${N.name}">${flagHTML(PLAYER, 22, 'big')}<b>${N.name}</b></div>` +
     RES.map(R => { const v = N[R.k], d = inc.net[R.k], short = N.short && N.short[R.k];
       const tipTxt = `${R.name}: ${fmt(v)}${R.unit}${R.k !== 'cash' ? ' / ' + fmt(stockCap(PLAYER)) + ' storage' : ''}&#10;Production +${fmt(inc.gross[R.k] - (inc.trade && inc.trade[R.k] || 0))}/day${tradeTip(R.k)}&#10;Upkeep -${fmt(inc.upkeep[R.k])}/day${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? '&#10;SHORTAGE' : ''}`;
       return `<div class="chip res-${R.k} ${short ? 'short' : ''} ${flashes[RES.indexOf(R)]}" title="${tipTxt}">${icon(R.k, 18)}<span class="cv"><span class="lbl">${R.name}</span><span class="vv"><b>${R.pre}${fmt(v)}${R.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; }).join(''));
@@ -5704,10 +5970,11 @@ function renderSide(force){
   const order = S.nations.slice().sort((a, b) => (b.alive - a.alive) || counts[b.id] - counts[a.id]);
   const need = landNeed(PLAYER);
   const shown = showAllPowers ? order : order.filter((n, i) => i < 6 || n.id === PLAYER);
-  setHTML($('nations'), shown.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}">${embHTML(n.name, n.color, 20, `<span class="sw" style="background:${n.color}"></span>`)}<span>${n.name}${n.id === PLAYER ? ' (you)' : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to the land victory target (${landNeed(n.id)} provinces)">${Math.round(counts[n.id]/landNeed(n.id)*100)}%</span></div>`).join('') +
+  const BLm = new Map(); for (const B of blocs()) for (const m of B.members) BLm.set(m, B);
+  setHTML($('nations'), shown.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}" style="--c:${n.color}">${flagHTML(n.id, 15)}<span>${n.name}${n.id === PLAYER ? ' (you)' : ''}${BLm.has(n.id) ? ` <span class="bmark" title="${BLm.get(n.id).name}">${blocEmbHTML(BLm.get(n.id).id, 20)}</span>` : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to the land victory target (${landNeed(n.id)} provinces)">${Math.round(counts[n.id]/landNeed(n.id)*100)}%</span></div>`).join('') +
     `<div class="row">${showAllPowers ? '' : `<button class="btn" data-act="allpow" style="font-size:12px;padding:4px 8px">Show all ${order.length}</button>`}<button class="btn" data-act="stats-open" style="font-size:12px;padding:4px 8px">World statistics (S)</button></div>` +
     `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Day-${DAY_LIMIT} score is growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
-  setHTML($('log'), ((S.papers && S.papers[0]) ? `<button class="ev info" data-act="paper-open" style="grid-template-columns:1fr"><span><b>The Meridian Herald · Day ${S.papers[0].day + 1}</b><br><span class="muted">${S.papers[0].head}</span></span></button>` : '') + S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="${e.rep ? 'report' : 'goto'}" data-id="${e.rep || e.p}" title="${e.rep ? 'Open battle report' : 'Show on map'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${e.text}</span></div>`).join(''));
+  setHTML($('log'), ((S.papers && S.papers[0]) ? `<button class="ev info" data-act="paper-open" style="grid-template-columns:1fr"><span><b>The Meridian Herald · Day ${S.papers[0].day + 1}</b><br><span class="muted">${S.papers[0].head}</span></span></button>` : '') + S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="${e.rep ? 'report' : 'goto'}" data-id="${e.rep || e.p}" title="${e.rep ? 'Open battle report' : 'Show on map'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
   { if (tab === 'log') seenHour = S.hour; const n = tab === 'log' ? 0 : S.log.filter(e => e.h > seenHour && (e.kind === 'bad' || e.kind === 'good')).length;
     const lb = $('logbadge'); lb.hidden = n <= 0; lb.textContent = n > 9 ? '9+' : n; }
@@ -5855,7 +6122,7 @@ function diploHTML(){
       bs.forEach(x => { if (x !== prim) x.classList.remove('primary'); }); direct.forEach((x, i) => { x.classList.toggle('primary', i === 0); x.style.cssText = 'padding:3px 9px;font-size:12px'; });
       acts = direct.map(x => x.outerHTML).join('') + (prim ? prim.outerHTML : '') + (bs.length > 1 ? `<details class="more"><summary class="btn">More ▾</summary><div class="morebox">${bs.filter(x => x !== prim).map(x => x.outerHTML).join('')}</div></details>` : ''); }
     return {op, war:r.st === 'war' || !!pend, nb:borders(me, N.id), html:`<div class="drow" style="--c:${N.color}">
-      <div class="nm"><b>${embHTML(N.name, N.color, 24)}${flagSVG(N.id)} ${N.name}${S.unread && S.unread[N.id] ? ` <span class="badge">${S.unread[N.id]}</span>` : ''}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength} military${wars.length ? ' · at war with ' + wars.join(', ') : ''}${(tr0 => tr0 ? ` · trade +$${fmt1(trSide(tr0, me).cash*tr0.f)}M/day${tr0.f < 1 ? ' (cut)' : ''}` : '')(S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)))}</span></div>
+      <div class="nm"><b>${flagHTML(N.id, 18)} ${N.name}${(B => B ? ` <span class="bmark" title="${B.name}">${blocEmbHTML(B.id, 18)}</span>` : '')(blocOf(N.id))}${S.unread && S.unread[N.id] ? ` <span class="badge">${S.unread[N.id]}</span>` : ''}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength} military${wars.length ? ' · at war with ' + wars.join(', ') : ''}${(tr0 => tr0 ? ` · trade +$${fmt1(trSide(tr0, me).cash*tr0.f)}M/day${tr0.f < 1 ? ' (cut)' : ''}` : '')(S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)))}</span></div>
       <div><span class="rel" style="background:${REL_COLOR[r.st]}">${REL[r.st]}${left}</span><div class="opbar" title="${tipTxt}"><i style="left:${opL}%;width:${opW}%;background:${op >= 0 ? 'var(--ok)' : 'var(--danger)'}"></i></div><span class="small muted">Opinion of you: ${op > 0 ? '+' : ''}${Math.round(op)}</span></div>
       <div class="dacts">${acts}${hint ? `<span class="hint">${hint}</span>` : ''}</div></div>`};
   });
@@ -5864,7 +6131,7 @@ function diploHTML(){
   return `<div class="rhead"><div><div class="eyebrow">${S.nations[me].name} · Foreign affairs</div><h1>Diplomacy</h1></div>
     <button class="btn" data-act="relmode">${relMode ? 'Hide' : 'Show'} relations on map</button></div>
     <p class="small muted">Powers at peace cannot enter each other's land. War starts 24 hours after a declaration. Independent countries can always be attacked. Hover an opinion bar for the reasons; buttons marked ✕ would likely be refused.</p>
-    ${incoming}${offers}${tradeHTML()}${(BL => BL.length ? `<div class="eyebrow" style="margin-top:6px">Coalitions</div><div class="blocs">${BL.map(B => `<div class="bloc${B.members.includes(me) ? ' mine' : ''}"><b>${B.name}</b><span>${B.members.map(m => `<i style="background:${S.nations[m].color}"></i>${S.nations[m].name}${m === B.leader ? ' ★' : ''}`).join(' ')}</span><span class="small muted">${B.focus != null ? `Common enemy: ${S.nations[B.focus].name}` : 'No common enemy yet'} · ${B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0)} provinces · ${B.members.reduce((s0, m) => s0 + capsHeld(m), 0)} capitals</span></div>`).join('')}</div>${blocOf(me) ? `<div class="row" style="align-items:center"><span class="small muted">Your coalition:</span><input id="blocname" class="rn2" maxlength="28" value="${blocOf(me).name}" style="width:200px"><button class="btn" data-act="bloc-rename">Rename</button><button class="btn war" data-act="bloc-leave">Leave coalition</button></div>` : `<p class="small muted">To found a coalition, form an alliance (Diplomacy or a trade deal with “Alliance”); allied nations form a coalition automatically. Invite more members by allying with them.</p>`}
+    ${incoming}${offers}${tradeHTML()}${(BL => BL.length ? `<div class="eyebrow" style="margin-top:6px">Coalitions</div><div class="blocs">${BL.map(B => `<div class="bloc${B.members.includes(me) ? ' mine' : ''}">${blocEmbHTML(B.id, 40, B.name)}<div class="bt"><b>${B.name}</b><span class="bmem">${B.members.map(m => `<span>${flagHTML(m, 13)} ${S.nations[m].name}${m === B.leader ? ' ★' : ''}</span>`).join('')}</span><span class="small muted">${B.focus != null ? `Common enemy: ${S.nations[B.focus].name}` : 'No common enemy yet'} · ${B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0)} provinces · ${B.members.reduce((s0, m) => s0 + capsHeld(m), 0)} capitals</span></div></div>`).join('')}</div>${blocOf(me) ? `<div class="row" style="align-items:center"><span class="small muted">Your coalition:</span><input id="blocname" class="rn2" maxlength="28" value="${blocOf(me).name}" style="width:200px"><button class="btn" data-act="bloc-rename">Rename</button><button class="btn war" data-act="bloc-leave">Leave coalition</button></div>` : `<p class="small muted">To found a coalition, form an alliance (Diplomacy or a trade deal with “Alliance”); allied nations form a coalition automatically. Invite more members by allying with them.</p>`}
     <p class="small muted">A coalition wins together by holding ${WIN_CAPS + 3} starting capitals or ${Math.ceil(landNeed(me)*1.8)} provinces. Peace treaties hand every province a side occupies to it for good.</p>` : '')(blocs())}<div class="dip">${rowsHTML}</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
@@ -5910,7 +6177,7 @@ function ctxHTML(){
   const N = S.nations[PLAYER], mine = S.armies.filter(a => a.owner === PLAYER);
   const RQ = S.req && S.req.until > S.hour ? `<div class="status move" style="border-left-color:var(--accent)"><b>Coalition request</b>: ${S.nations[S.req.from].name} asks you to attack <b>${G.P[S.req.p].cityName || G.P[S.req.p].name}</b> within ${S.req.until - S.hour} h. Reward $150M. <button class="btn" data-act="goto" data-id="${S.req.p}" style="padding:2px 7px;font-size:12px">Show</button></div>` : '';
   return `<div class="eyebrow">Command</div><h2>${N.name}</h2>${RQ}
-    <div class="sub"><span class="sw" style="background:${N.color};vertical-align:-1px"></span> Your nation · Capital: ${G.P[N.capital].cityName || G.P[N.capital].name} <button class="btn" data-act="home" style="padding:2px 7px;font-size:12px;margin-left:4px">Show me</button></div>
+    <div class="sub">${flagHTML(PLAYER, 13)} Your nation · Capital: ${G.P[N.capital].cityName || G.P[N.capital].name} <button class="btn" data-act="home" style="padding:2px 7px;font-size:12px;margin-left:4px">Show me</button></div>
     ${checklist()}
     ${researchLine()}
     <div class="status" style="border-left-color:#8a7ad8">Intelligence: ${agentsOf(PLAYER).length}/5 agents (${idleAgents(PLAYER).length} idle) <button class="btn" data-act="train-agent" ${S.nations[PLAYER].cash >= 60 && agentsOf(PLAYER).length < 5 ? '' : 'disabled'} style="padding:2px 7px;font-size:12px;margin-left:4px">Train agent · $60M</button><div class="small muted" style="margin-top:3px">Open any foreign province to send an agent on a mission.</div></div>
@@ -5928,12 +6195,12 @@ function chartSVG(idx, title){
     return `<polyline points="${pts}" fill="none" stroke="${S.nations[id].color}" stroke-width="${id === PLAYER ? 2.6 : 1.5}" ${id === PLAYER ? '' : 'stroke-opacity=".8"'}/>`; }).join('');
   const grid = [0, 0.5, 1].map(f => `<line x1="${pad}" x2="${w - 8}" y1="${y(max*f)}" y2="${y(max*f)}" stroke="var(--line)"/><text x="${pad - 4}" y="${y(max*f) + 3}" text-anchor="end" font-size="9" fill="var(--muted)">${Math.round(max*f)}</text>`).join('');
   return `<figure class="chart"><figcaption>${title}</figcaption><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${title} over time">${grid}<text x="${pad}" y="${h - 4}" font-size="9" fill="var(--muted)">Day ${H0[0].d + 1}</text><text x="${w - 8}" y="${h - 4}" font-size="9" fill="var(--muted)" text-anchor="end">Day ${H0[H0.length - 1].d + 1}</text>${lines}</svg>
-    <div class="legend2">${ids.map(id => `<span><i style="background:${S.nations[id].color}"></i>${S.nations[id].name}</span>`).join('')}</div></figure>`;
+    <div class="legend2">${ids.map(id => `<span><i style="background:${S.nations[id].color}"></i>${flagHTML(id, 12)} ${S.nations[id].name}</span>`).join('')}</div></figure>`;
 }
 function statsHTML(){
   const st0 = S.stats || {}, rows = S.nations.slice().sort((a, b) => (b.alive - a.alive) || score(b.id) - score(a.id)).map((N, i) => {
     const prov = S.owner.filter(o => o === N.id).length;
-    return `<tr class="${N.id === PLAYER ? 'me' : ''} ${N.alive ? '' : 'dead'}"><td>${N.alive ? i + 1 : '—'}</td><td><span class="sw" style="background:${N.color}"></span> ${N.name}${N.id === PLAYER ? ' (you)' : ''}</td><td>${score(N.id)}</td><td>${growth(N.id) >= 0 ? '+' : ''}${growth(N.id)}</td><td>${prov}</td><td>${capsHeld(N.id)}</td><td>${N.alive ? Math.round(natPower(N.id)) : 0}</td><td>${N.alive ? Object.keys(N.tech).length : '—'}</td><td>${N.alive ? warsOf(N.id).length : '—'}</td></tr>`; }).join('');
+    return `<tr class="${N.id === PLAYER ? 'me' : ''} ${N.alive ? '' : 'dead'}"><td>${N.alive ? i + 1 : '—'}</td><td>${flagHTML(N.id, 14)} ${N.name}${N.id === PLAYER ? ' (you)' : ''}</td><td>${score(N.id)}</td><td>${growth(N.id) >= 0 ? '+' : ''}${growth(N.id)}</td><td>${prov}</td><td>${capsHeld(N.id)}</td><td>${N.alive ? Math.round(natPower(N.id)) : 0}</td><td>${N.alive ? Object.keys(N.tech).length : '—'}</td><td>${N.alive ? warsOf(N.id).length : '—'}</td></tr>`; }).join('');
   return `<div class="rhead"><div><div class="eyebrow">${clockStr(S.hour)}</div><h1>World statistics</h1></div></div>
     <div class="statgrid">${[['Provinces taken', st0.taken || 0], ['Provinces lost', st0.lost || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Your units lost', st0.unitsLost || 0], ['Peak army strength', st0.peakArmy || 0], ['Best rank', st0.bestRank ? `#${st0.bestRank} (day ${st0.bestRankDay})` : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>
     <div class="tblwrap"><table class="ptab stab"><thead><tr><th>#</th><th>Power</th><th>Score</th><th>Growth</th><th>Prov.</th><th>Capitals</th><th>Military</th><th>Techs</th><th>Wars</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -5957,7 +6224,7 @@ function replayStart(){ const cv0 = document.getElementById('replay'); if (!cv0 
       const ow = own[pv], k = ow >= 0 ? col[ow] : [62, 64, 58]; img.data[o] = k[0]; img.data[o + 1] = k[1]; img.data[o + 2] = k[2]; img.data[o + 3] = 255; }
     oc.putImageData(img, 0, 0); c.imageSmoothingEnabled = true; c.fillStyle = '#060c0f'; c.fillRect(0, 0, cv0.width, cv0.height); c.drawImage(off, 0, 0, cv0.width, cv0.height);
     const cnt = S.nations.map(N => own.filter(o => o === N.id).length), lg = document.getElementById('rplegend');
-    if (lg) lg.innerHTML = S.nations.map((N, i) => [N, cnt[i]]).filter(e => e[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, 8).map(([N, k]) => `<span style="margin-right:12px"><span class="sw" style="background:${N.color}"></span> ${N.name} ${k}</span>`).join('');
+    if (lg) lg.innerHTML = S.nations.map((N, i) => [N, cnt[i]]).filter(e => e[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, 8).map(([N, k]) => `<span style="margin-right:12px">${flagHTML(N.id, 12)} ${N.name} ${k}</span>`).join('');
     const dl = document.getElementById('rpday'); if (dl) dl.textContent = `Day ${d + 1} of ${n + 1}`; const sl = document.getElementById('rpslider'); if (sl && +sl.value !== d) sl.value = d; };
   draw(0);
   const step = now => { if (!REPLAY || !document.getElementById('replay')) { REPLAY = null; return; } if (REPLAY.playing && now - REPLAY.t0 > 140){ REPLAY.t0 = now; if (REPLAY.day < n){ REPLAY.day++; draw(REPLAY.day); } else { REPLAY.playing = false; const b = document.getElementById('rpplay'); if (b) b.textContent = 'Replay'; } }
@@ -6214,7 +6481,7 @@ function provHTML(p){
   const foeKnown = foe.filter(a => armyVisible(a, vis));
   const y = provYield(p);
   let html = `<div class="eyebrow">${kind} · ${P.sea ? '' : ticon(P.terrain || 'plains', 12) + ' '}${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || linkSummary(p)) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (crossing +30% time, +10% on a bridge; attackers −20%)` : ''}${P.river.size && linkSummary(p) ? ' · ' : ''}${linkSummary(p)}</div>` : ''}
-    <div class="sub">${P.city ? P.name + ' · ' : ''}<span class="sw" style="background:${colorOf(o)};vertical-align:-1px"></span> ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
+    <div class="sub">${P.city ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
     <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}<dt>Daily yield</dt><dd>${yieldStr(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
     ${P.city && !P.sea ? (L => `<dt>City</dt><dd>${bimg('city', L, 26)}Level ${ROMAN[L]}${isCapital(p) ? ' · capital' : ''}</dd>`)(cityLevel(p)) : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => `<span class="bl">${bimg(k, S.bld[p][k], 22)}${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : ''}${bdis(p, k) ? ` <span style="color:var(--danger)" title="Knocked out by a precision strike: works again when repaired">knocked out · ${bdisH(p, k)} h</span>` : ''}</span>`).join('') || 'None'}</dd>
@@ -6226,7 +6493,7 @@ function provHTML(p){
   if (!P.sea && o !== PLAYER){ html += `<div class="eyebrow">Intelligence · ${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}</div><div class="row">${Object.entries(SPY_OPS).map(([k, O]) => { const c = spyCheck(PLAYER, p, k); return `<button class="btn" data-act="spy" data-k="${k}" data-id="${p}" ${c.ok ? '' : 'disabled'} title="${O.desc}${c.ok ? ` ${Math.round(c.chance*100)}% chance.` : ' ' + c.why}" style="padding:4px 8px;font-size:11.5px">${O.name} · $${O.cost}M</button>`; }).join('')}</div>`; }
   if (S.cap[p]) html += `<div class="status cap">${nationName(S.cap[p].by)} capturing: ${Math.round(S.cap[p].h/capNeed(p, S.cap[p].by)*100)}%</div>`;
   if (S.battles.includes(p)){ const B = S.bt && S.bt[p];
-    html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${frontage(p)} units${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => { const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br><span style="color:${o === PLAYER ? 'var(--ok)' : shade(colorOf(o), 0.35)}">■</span> ${o === PLAYER ? 'You' : nationName(o)}: ${b.n} units${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
+    html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${frontage(p)} units${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => { const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br>${o >= 0 ? flagHTML(o, 11) : `<span style="color:${shade(colorOf(o), 0.35)}">■</span>`} ${o === PLAYER ? 'You' : nationName(o)}: ${b.n} units${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
   if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
   if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span>${armyName(a)} · ${count(a)}</span><span class="muted">Command</span></button>`).join('')}</div>`;
   if (mine && P.city){
@@ -6489,7 +6756,7 @@ function showPicker(){
   useScenario(pickScn); if (pickSel >= POWERS.length) pickSel = 0;
   const cards = POWERS.map((P0, i) => { const n = provCount(i), cities = (G.countries[powerCountry(P0)]?.provs || []).filter(id => G.P[id].city).length;
     const diff = DIFF[P0.name] || 'Hard';
-    return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}">${embHTML(P0.name, P0.color, 54)}<span class="pt"><b>${P0.name}</b><span>${n} provinces · ${cities} cities</span><span class="diff">${diff}</span></span></button>`}; })
+    return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}">${flagHTML(P0.name, 40, 'big')}<span class="pt"><b>${P0.name}</b><span>${n} provinces · ${cities} cities</span><span class="diff">${diff}</span></span></button>`}; })
     .sort((a, b) => b.n - a.n).map(c => c.html).join('');
   openModal(`${LOGO}<div class="eyebrow" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
     <div class="eyebrow">Scenario</div><div class="docs">${Object.entries(SCENARIOS).map(([k, X]) => `<button class="btn doc ${pickScn === k ? 'primary' : ''}" data-act="pickscn" data-k="${k}" aria-pressed="${pickScn === k}"><b>${X.name}</b><span>${X.desc}</span></button>`).join('')}</div>
@@ -6504,7 +6771,7 @@ function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
   openModal(`${LOGO}<div class="eyebrow" style="margin-top:2px">Campaign briefing</div>
     ${sv ? `<p class="nudge">Saved campaign: <b>${me.name}</b>, day ${dayOf(sv.hour)}.</p>` : ''}
-    <p>${embHTML(me.name, me.color, 26)} You command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${SCN === 'world' ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}${S.persist ? ' (persistent: the war continues while you are away)' : ''}. Take independent land, out-produce your rivals and hold ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals.</p>
+    <p>${flagHTML(me.name, 20, 'big')} You command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${SCN === 'world' ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}${S.persist ? ' (persistent: the war continues while you are away)' : ''}. Take independent land, out-produce your rivals and hold ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals.</p>
     ${rules()}
     <p class="small muted">Your land has a bright outline and your capital says YOUR CAPITAL. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–4 set speed, P production, R research, D diplomacy, S statistics, N newspaper, O settings, V map mode, M sound, H home. Progress saves in this browser each game day.</p>
     <div class="row">${first
@@ -6527,7 +6794,7 @@ function warWarning(a){
 }
 function showEnd(){
   const win = S.over === 'win', mine = S.owner.filter(o => o === PLAYER).length;
-  openModal(`<div class="endhead">${embHTML(S.nations[PLAYER].name, S.nations[PLAYER].color, 84)}<div><div class="eyebrow">Iron Meridian: World War III · ${clockStr(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1><div class="small muted" style="margin-top:6px">${S.nations[PLAYER].name}</div></div></div>
+  openModal(`<div class="endhead">${flagHTML(PLAYER, 66, 'big')}<div><div class="eyebrow">Iron Meridian: World War III · ${clockStr(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1><div class="small muted" style="margin-top:6px">${S.nations[PLAYER].name}</div></div></div>
     <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} grew the most (+${growth(PLAYER)} score).` : `${S.nations[PLAYER].name} grew ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, behind the leader.`}` : ''}
     ${S.overReason === 'coalition' ? `Your coalition${blocOf(PLAYER) ? `, the ${blocOf(PLAYER).name},` : ''} dominates the world together.` : S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
     ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? (N0 => { const short = [['mp', 20, 'manpower'], ['metal', 15, 'metal'], ['oil', 10, 'oil'], ['food', 10, 'food']].find(([k, lim]) => N0[k] < lim); return short ? ` You had $${fmt(N0.cash)}M but ran out of ${short[2]}: build ${short[0] === 'mp' ? 'Recruiting Offices' : short[0] === 'metal' ? 'Foundries' : short[0] === 'oil' ? 'Refineries' : 'Farms'} early and capture provinces that produce it.` : ` You had $${fmt(N0.cash)}M unspent: next time, turn money into troops and research early.`; })(S.nations[PLAYER]) : ''}</p>
