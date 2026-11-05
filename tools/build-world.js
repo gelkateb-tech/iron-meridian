@@ -242,7 +242,7 @@ const cIndex = new Map(usedCountries.map((k, i) => [k, i]));
 const out = {
   W, H, lon0: LON0, latN: LAT_N, latS: LAT_S,
   countries: usedCountries.map(k => countries[k].name),
-  provinces: finalP.map(p => p.sea ? [p.name, -1, 0, ''] : [p.name, cIndex.get(p.country), (p.city ? 1 : 0) | (p.cap ? 2 : 0), p.city || '']),
+  provinces: finalP.map(p => p.sea ? [p.name, -1, 0, ''] : [p.name, cIndex.get(p.country), (p.city ? 1 : 0) | (p.cap ? 2 : 0), p.city || '', Math.round(p.cells.reduce((s0, c) => s0 + dens0[c], 0))]),   // 5th: known towns (population proxy)
   cells: cellStr,
 };
 const file = path.join(__dirname, '..', 'world.js');

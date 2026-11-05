@@ -370,3 +370,13 @@
 - Coalition partners get a Give button on their Diplomacy row and a Give (coalition) tab in their window. Send money, oil, metal, food or provinces at once, with nothing asked in return. The gift is noted in your chat, the partner thanks you, and they like you more.
 - AI coalition partners send you supplies on their own when you run low on oil, metal or food, and tell you in Messages.
 - Message, Trade deal and Give always show on each nation's row; the rarer actions stay under More.
+
+## Round 49 — Province economy: population, morale, convoys
+- Population: every province now has a population in millions. It is derived from the real density of known towns (now stored in the world file), its area and terrain, latitude, cities and capitals, with South and East Asia weighted up to offset gaps in the town data. Examples: Germany ~72M, the United States ~390M, India and China ~450M. Money and manpower now grow with population, so populous nations produce more (China ~$400M a day against Germany's ~$210M). Population grows slowly where morale is high and shrinks under bombardment.
+- Province morale: morale = 100 − unrest − war damage.
+  - War damage: battles fought there (+0.5 an hour), artillery shelling (+1.2 an hour), air strikes (+5) and missile hits (+12, or +22 for ballistic). It heals 2.5 a day.
+  - Output scales with morale (45% at zero, full at 100).
+  - The province panel and tooltip show population, morale, war damage and unrest.
+- Convoys: provinces cut off by land from your capital (islands, distant coasts, overseas conquests) ship their output home every day along a sea route.
+  - Enemy submarines, frigates or cruisers stationed on that route sink the convoy, and that day's output from those provinces is lost. You get a dispatch naming the attacker and where; your own warships sinking enemy convoys are reported too.
+  - Convoys are drawn as small cargo ships with wakes sailing their routes, and raided ones go down in an explosion and smoke.

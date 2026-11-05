@@ -708,6 +708,12 @@ function loadWorld(){
   for (const p of P){ if (p.sea) continue;
     const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = tr();
     p.terrain = p.city && r < 0.7 ? 'urban' : MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; }
+  // population (millions): known towns, area and terrain, cities and capitals; dense river plains of South and East Asia weighted up
+  const TF = {plains:1, forest:0.6, mountain:0.5, desert:0.22, tundra:0.1, urban:1.4};
+  for (const p of P){ if (p.sea){ p.pop0 = 0; continue; } const d = WORLD.provinces[p.id], towns = d[4] || 0, lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180;
+    const asia = lon > 65 && lon < 125 && p.lat > 5 && p.lat < 42 ? 3.2 : lon > -20 && lon < 50 && p.lat > -35 && p.lat < 15 ? 1.6 : 1;
+    const al = Math.abs(p.lat), latF = al > 64 ? 0.04 : al > 56 ? 0.3 : al > 48 ? 0.75 : 1;
+    p.pop0 = +((0.07*p.cells.length*(TF[p.terrain] || 1)*asia*asia*latF + 0.34*Math.sqrt(towns)*asia*latF + (p.city ? 2.4*asia : 0) + (p.capFlag ? 3.5 : 0))).toFixed(2); }
   const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
   loadWorld.lines = lines;
   const landCount = P.filter(p => !p.sea).length;
@@ -1298,9 +1304,39 @@ const inGrace = o => o >= 0 && S.hour < graceFor(o);
 const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
 let BLOCK = new Set();
 function computeBlockade(){ BLOCK = new Set(); for (const a of S.armies){ if (a.to !== null || !G.P[a.at].sea || !shipsN(a) || a.owner < 0) continue; for (const v of G.P[a.at].nbs){ const o = S.owner[v]; if (!G.P[v].sea && o >= 0 && atWar(a.owner, o)) BLOCK.add(v); } } }
-function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(1 - unrestOf(p)/200), b = S.bld[p];
-  return {cash:(P.city ? 12 : 3)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
-    food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 2 : 0.5) + 3*b.rec)*f}; }
+const popOf = p => (S.pop && S.pop[p] != null) ? S.pop[p] : G.P[p].pop0;
+const dmgOf = p => (S.dmg && S.dmg[p]) || 0;
+const moraleOf = p => Math.max(0, Math.min(100, 100 - unrestOf(p) - dmgOf(p)));
+function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012)); }
+function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(0.45 + 0.55*moraleOf(p)/100)*(CONVOY_LOST.has(p) ? 0 : 1), b = S.bld[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75);
+  return {cash:((P.city ? 8.5 : 1.8) + 0.9*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
+    food:((P.city ? 1 : Math.abs(P.lat) < 55 ? 3 : 1) + 3*b.farm)*f, mp:((P.city ? 1.2 : 0.25) + 0.22*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
+// ---- convoys: provinces cut off by land from the capital ship their output home; enemy warships on the route sink it
+let CONVOY_LOST = new Set();
+function homeComponent(n){ const N = S.nations[n], seen = new Set([N.capital]), q = [N.capital];
+  for (let i = 0; i < q.length; i++) for (const v of G.P[q[i]].nbs){ if (seen.has(v) || G.P[v].sea) continue; const o = S.owner[v]; if (o === n || (o >= 0 && friendly(n, o))){ seen.add(v); q.push(v); } }
+  return seen; }
+function convoyDay(){ CONVOY_LOST = new Set(); S.convoys = (S.convoys || []).filter(c => S.hour - c.t0 < 14);
+  for (const N of S.nations){ if (!N.alive || S.owner[N.capital] !== N.id) continue; const n = N.id, home = homeComponent(n);
+    const over = G.P.filter(P => !P.sea && S.owner[P.id] === n && !home.has(P.id)); if (!over.length) continue;
+    const homePorts = new Set(); for (const p of home) for (const v of G.P[p].nbs) if (G.P[v].sea) homePorts.add(v); if (!homePorts.size) continue;
+    const hostile = v => S.armies.some(a => a.at === v && a.to === null && a.owner >= 0 && atWar(n, a.owner) && (a.u.sub || a.u.frig || a.u.crui));
+    const groups = new Map(); for (const P of over){ const sz = P.nbs.find(v => G.P[v].sea); if (sz == null) continue; if (!groups.has(sz)) groups.set(sz, []); groups.get(sz).push(P.id); }
+    for (const [sz, provs] of groups){ let best = null; for (const hp of homePorts){ const pth = hp === sz ? [sz] : findPath(sz, hp, v => G.P[v].sea); const route = hp === sz ? [sz] : (pth.length ? [sz, ...pth] : null); if (route && (!best || route.length < best.length)) best = route; }
+      if (!best) continue; const raidAt = best.findIndex(hostile);
+      if (raidAt >= 0){ for (const p of provs) CONVOY_LOST.add(p); const by = S.armies.find(a => a.at === best[raidAt] && a.owner >= 0 && atWar(n, a.owner) && (a.u.sub || a.u.frig || a.u.crui));
+        if (n === PLAYER) log(`Convoy from ${G.P[provs[0]].cityName || G.P[provs[0]].name} sunk by ${nationName(by.owner)} warships in ${G.P[best[raidAt]].name}: today's output from ${provs.length} overseas province${provs.length > 1 ? 's' : ''} is lost. Escort the route or clear it.`, 'bad', best[raidAt]);
+        else if (by && by.owner === PLAYER) log(`Your warships in ${G.P[best[raidAt]].name} sank a ${N.name} convoy.`, 'good', best[raidAt]); }
+      if (best.length > 1) S.convoys.push({owner:n, route:best, t0:S.hour, raidAt}); } }
+  if (S.convoys.length > 60) S.convoys.splice(0, S.convoys.length - 60); }
+function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length) return; const live = S.speed && !S.over ? acc : 0;
+  for (const c of S.convoys){ const r = c.route, dur = 12, tt = (S.hour + live - c.t0)/dur; if (tt < 0 || tt > 1) continue;
+    let pos = tt*(r.length - 1); if (c.raidAt >= 0 && pos >= c.raidAt){ if (!c.boom && booted && vis.has(r[c.raidAt])){ c.boom = true; const P = G.P[r[c.raidAt]]; explode(P.x, P.y, 1.2); emit('smoke', P.x, P.y, {vy:-6, s0:6, s1:26, life:3000}); } continue; }
+    const i = Math.min(r.length - 2, Math.floor(pos)), f = pos - i, A = G.P[r[i]], B = G.P[r[i + 1]]; if (!vis.has(r[i]) && !vis.has(r[i + 1]) && c.owner !== PLAYER) continue;
+    const wx = A.x + (B.x - A.x)*f, wy = A.y + (B.y - A.y)*f, [x, y] = toScreen(wx, wy), ang = Math.atan2(B.y - A.y, B.x - A.x), k0 = Math.max(0.8, Math.min(2, view.s*HS/14));
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(220,235,240,.35)'; ctx.beginPath(); ctx.moveTo(-6*k0, 0); ctx.lineTo(-18*k0, -3*k0); ctx.lineTo(-18*k0, 3*k0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5a5e60'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8*k0, 0); ctx.lineTo(4*k0, -2.6*k0); ctx.lineTo(-7*k0, -2.6*k0); ctx.lineTo(-7*k0, 2.6*k0); ctx.lineTo(4*k0, 2.6*k0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = colorOf(c.owner); ctx.fillRect(-5*k0, -1.6*k0, 3*k0, 3.2*k0); ctx.fillStyle = '#b8a06a'; ctx.fillRect(-1*k0, -1.6*k0, 3.5*k0, 3.2*k0); ctx.restore(); } }
 const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
 let INCC = {v:-1, S:null, m:[]};
 function income(n){ if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
@@ -1962,7 +1998,7 @@ function sideAV(armies, owner, scale){
 }
 function resolveStrike(a, p){
   const o = a.owner, defs = stationaryAt(p).filter(b => atWar(o, b.owner) && count(b) > 0);
-  if (isDrone(a)) return;
+  if (isDrone(a)) return; warDamage(p, 5);
   const vis = o === PLAYER || visibleSet().has(p);
   // enemy fighters patrolling the target intercept first
   const cap = S.armies.filter(b => b.fly && b.fly.ph === 'patrol' && b.fly.tgt === p && atWar(o, b.owner));
@@ -2059,6 +2095,7 @@ function missileImpact(m){
     if (m.owner === PLAYER) log(`Your ${MISSILES[m.k].name} was intercepted over ${P.cityName || P.name}.`, 'info', m.to);
     else if (S.owner[m.to] === PLAYER) log(`Air defences intercepted an enemy ${MISSILES[m.k].name} over ${P.cityName || P.name}.`, 'good', m.to);
     return; }
+  warDamage(m.to, m.k === 'bm' ? 22 : 12);
   const M0 = MISSILES[m.k], defs = stationaryAt(m.to).filter(b => atWar(m.owner, b.owner) && count(b) > 0), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), hpBefore = defs.reduce((s0, b) => s0 + effHP(b), 0);
   if (defs.length){ const tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1, f0 = K*M0.power*(0.85 + rng()*0.3)*12;
     const av = {soft:f0*1.2, armored:f0, air:f0*0.4, naval:f0*0.9}; for (const b of defs){ hurt(b, av, 1/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }
@@ -2241,7 +2278,7 @@ function tick(){
     }
     const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
     const dmg = new Map(owners.map(o => [o, {soft:0, armored:0, air:0, naval:0}]));
-    const B = (S.bt || (S.bt = {}))[p] || (S.bt[p] = {h0:S.hour, s:{}});
+    const B = (S.bt || (S.bt = {}))[p] || (S.bt[p] = {h0:S.hour, s:{}}); warDamage(p, 0.5);
     for (const o of owners){
       const av = {soft:0, armored:0, air:0, naval:0}, r0 = K*(0.8 + rng()*0.4);
       const nU = sides.get(o).reduce((s0, a) => s0 + count(a), 0), dirs = dirsOf(sides.get(o), p, o), F = sideFront(p, dirs);
@@ -2346,7 +2383,7 @@ function rangedHour(){
     for (const b of foes){ const h0 = effHP(b), u0 = count(b); hurt(b, av, (b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort) : 1)/tot); const lost = Math.max(0, h0 - effHP(b));
       if (lost >= 0.5 && booted && (a.owner === PLAYER || b.owner === PLAYER || visibleSet().has(best))) fx('dmg', best, {owner:b.owner, val:lost, text:`−${Math.round(lost)}`, color:b.owner === PLAYER ? '#ff8f86' : shade(colorOf(b.owner), 0.35)});
       if (u0 - count(b) > 0 && (a.owner === PLAYER || b.owner === PLAYER)) bump(a.owner === PLAYER ? 'unitsKilled' : 'unitsLost', u0 - count(b)); }
-    cmdXP(a, base*0.4);
+    cmdXP(a, base*0.4); warDamage(best, 1.2);
     if (booted && (a.owner === PLAYER || visibleSet().has(a.at))){ const A = G.P[a.at], B = G.P[best]; for (let i = 0; i < Math.min(4, a.u.art); i++) setTimeout(() => shoot('shell', [A.x + (Math.random() - 0.5)*6, A.y], [B.x + (Math.random() - 0.5)*14, B.y + (Math.random() - 0.5)*8], {dur:1000, arc:50, big:1.1}), i*180); }
     if (!a.lastFireLog || S.hour - a.lastFireLog > 12){ a.lastFireLog = S.hour; if (a.owner === PLAYER) log(`${armyName(a)} is shelling enemy forces in ${G.P[best].cityName || G.P[best].name}.`, 'info', best); }
   }
@@ -2448,7 +2485,9 @@ function recordStats(){
 }
 const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
-  marketDay(); bookDay(); chatDay(); coalitionAid();
+  marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay();
+  if (S.dmg) for (let p = 0; p < S.dmg.length; p++) if (S.dmg[p] > 0) S.dmg[p] = Math.max(0, S.dmg[p] - 2.5);
+  { S.pop = S.pop || G.P.map(P => P.pop0); for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; if (moraleOf(p) > 70) S.pop[p] = Math.min(G.P[p].pop0*1.25, S.pop[p]*1.0004); } }
   for (const N of S.nations){ if (!N.alive || N.id === PLAYER || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }
   for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
     const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
@@ -3132,6 +3171,7 @@ function draw(now){
   // counters (clustered per owner at low zoom)
   hits = [];
   if (window.U3D && FALL.length) drawFallen(now);
+  drawConvoys(now, vis);
   const showNeutral = hexPx >= 11, items = [];
   for (const a of S.armies){ if (!armyVisible(a, vis)) continue; if (a.owner === NEUTRAL && !showNeutral && !vis.has(a.at)) continue;
     if (a.fly) continue;
@@ -3394,6 +3434,7 @@ function tipShow(x, y){
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
   let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted"><span class="sw" style="background:${P.sea ? '#28414a' : colorOf(S.owner[p])};vertical-align:-1px"></span> ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p); h += `<div class="r"><span>${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}${T0.spd < 1 ? ' · slow' : ''}</span></div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.oil ? ' · Oil' : ''}${P.ore ? ' · Ore' : ''}</span><span>${yieldStr(y)}</span></div>`;
+    h += `<div class="r"><span>Population</span><span>${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></div>`;
     { const sz = season(p), w = stormAt(p); if (sz || w) h += `<div class="r"><span>Weather</span><span>${[sz ? `${SEASON_FX[sz].name} (${SEASON_FX[sz].tip})` : '', w ? `${w.kind === 'blizzard' ? 'Blizzard' : 'Storm'} (air grounded, −20% speed)` : ''].filter(Boolean).join(' · ')}</span></div>`; }
     if (unrestOf(p) > 10) h += `<div class="r"><span>Unrest</span><span style="color:${unrestOf(p) > 60 ? 'var(--danger)' : 'var(--accent)'}">${Math.round(unrestOf(p))}%</span></div>`;
     const bl = BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')); if (bl.length && S.owner[p] === PLAYER) h += `<div class="r"><span>Built</span><span>${bl.join(', ')}</span></div>`; }
@@ -3817,7 +3858,7 @@ function provHTML(p){
   const y = provYield(p);
   let html = `<div class="eyebrow">${kind} · ${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || P.road.size) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (attackers −20%)` : ''}${P.river.size && P.road.size ? ' · ' : ''}${P.road.size ? `Highway to ${P.road.size} neighbour${P.road.size > 1 ? 's' : ''} (+35% speed)` : ''}</div>` : ''}
     <div class="sub">${P.city ? P.name + ' · ' : ''}<span class="sw" style="background:${colorOf(o)};vertical-align:-1px"></span> ${placeOwner(p)}</div>
-    <dl class="kv"><dt>Daily yield</dt><dd>${yieldStr(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
+    <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}<dt>Daily yield</dt><dd>${yieldStr(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(', ') || 'None'}</dd>
     <dt>Capture time</dt><dd>${Math.round(capNeed(p, PLAYER))} h</dd>
     <dt>Garrison</dt><dd>${foe.length && !foeKnown.length ? 'Unknown' : foeKnown.length ? foeKnown.reduce((s, a) => s + count(a), 0) + ' hostile units' : mine ? (own.length ? own.reduce((s, a) => s + count(a), 0) + ' of yours' : 'Empty') : 'None seen'}</dd></dl>`;
@@ -4128,7 +4169,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p)};
+if (location.protocol === 'file:') window.__im = {get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b) => findPath(a, b), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p)};
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
