@@ -131,6 +131,113 @@ def save_rgba(arr, name, size=256, trim=True, q=84):
     s = size/max(im.width, im.height); im = im.resize((max(1, round(im.width*s)), max(1, round(im.height*s))), Image.LANCZOS)
     sq = Image.new('RGBA', (size, size), (0, 0, 0, 0)); sq.paste(im, ((size - im.width)//2, (size - im.height)//2)); sq.save(os.path.join(OUT, name), 'WEBP', quality=q, method=6)
 
+def smooth1(v, k=5):
+    k = max(1, int(k)); return np.convolve(np.pad(v, k, mode='edge'), np.ones(2*k + 1)/(2*k + 1), mode='same')[k:-k]
+
+def edge_noise(h, w, seed, cells=7, amp=1.0):
+    """smooth random field in [-1, 1] (bicubic-upscaled lattice), for organic, non-circular patch edges"""
+    rng = np.random.default_rng(seed); g = rng.uniform(0, 255, (cells, cells)).astype(np.uint8)
+    f = np.asarray(Image.fromarray(g).resize((w, h), Image.BICUBIC)).astype(np.float32)/127.5 - 1
+    g2 = rng.uniform(0, 255, (cells*3, cells*3)).astype(np.uint8); f2 = np.asarray(Image.fromarray(g2).resize((w, h), Image.BICUBIC)).astype(np.float32)/127.5 - 1
+    return np.clip((f*0.7 + f2*0.3)*amp, -1, 1)
+
+def sstep(t): t = np.clip(t, 0, 1); return t*t*(3 - 2*t)
+
+def aerial_inner(a):
+    """round tokens (city, airfield, silo): centre, outer radius r0 and the radius where the aerial view ends (inside the metal frame).
+    The frame is grey metal: walking outward from the middle, the view ends where the ring-averaged colourfulness falls well below
+    the aerial's own, or where a dark groove (ring-averaged brightness far below the aerial's) starts - whichever comes first."""
+    h, w, _ = a.shape; gy, gx = np.mgrid[0:h, 0:w]; lum = a.mean(-1); sat = a.max(-1) - a.min(-1)
+    # centre: the point around which the ring-averaged brightness profile is sharpest (the frame's concentric grooves line up)
+    q = 4; sl = lum[::q, ::q]; sy, sx = np.mgrid[0:sl.shape[0], 0:sl.shape[1]]; best = (-1, w/2, h/2)
+    def sharp(cx, cy):
+        rr = np.hypot(sx - cx/q, sy - cy/q); ri = rr.astype(int); lim = int(min(h, w)/q*0.5); k = ri < lim
+        c = np.maximum(np.bincount(ri[k], minlength=lim), 1); p = np.bincount(ri[k], sl[k], minlength=lim)/c
+        return np.abs(np.diff(p[int(lim*0.5):])).sum()
+    for step, rng_ in ((8, 64), (2, 8)):
+        c0x, c0y = best[1], best[2]
+        for dy in range(-rng_, rng_ + 1, step):
+            for dx in range(-rng_, rng_ + 1, step):
+                v = sharp(c0x + dx, c0y + dy)
+                if v > best[0]: best = (v, c0x + dx, c0y + dy)
+    cx, cy = best[1], best[2]
+    r = np.hypot(gx - cx, gy - cy); ri = np.minimum(r.astype(int), int(min(h, w)*0.75)); n = ri.max() + 1
+    cnt = np.maximum(np.bincount(ri.ravel(), minlength=n), 1)
+    ml = np.bincount(ri.ravel(), lum.ravel(), minlength=n)/cnt; ms = np.bincount(ri.ravel(), sat.ravel(), minlength=n)/cnt
+    bgl = np.median(lum[r > min(h, w)*0.49]); lit = np.nonzero(ml[:int(min(h, w)*0.53)] > bgl + 18)[0]; r0 = lit.max() if len(lit) else min(h, w)*0.45
+    a0, a1 = int(r0*0.35), int(r0*0.6); sat_ref, lum_ref = np.median(ms[a0:a1]), np.median(ml[a0:a1])
+    s_s, l_s = smooth1(ms, 2), ml
+    rin = r0
+    for b in range(int(r0*0.6), int(r0)):
+        if s_s[b] < sat_ref*0.6 or l_s[b] < lum_ref*0.42: rin = b; break
+    return cx, cy, r0, rin, ml
+
+def aerial_patch(a, seed, keep=0.97, feather=0.5, wobble=0.09, fix_vignette=True, fine=0.0, sprawl=0.0, recolor=False):
+    """frameless aerial view: circular crop just inside the frame, with a wide soft organic edge so it fades into the terrain like a
+    satellite patch; the frame's inner shadow (darkening towards the rim) is lifted first.
+    fine: extra high-frequency edge wobble; sprawl: patchy, thinning outskirts (a city's suburbs); recolor: a little desaturated and lifted,
+    so a dense dark downtown does not read as a dark ball on the map"""
+    h, w, _ = a.shape; cx, cy, r0, rin, ml = aerial_inner(a); rc = rin*keep
+    gy, gx = np.mgrid[0:h, 0:w]; r = np.hypot(gx - cx, gy - cy)
+    out = a.copy()
+    if fix_vignette:   # brighten rings darker than the aerial's middle (the frame's inner shadow), up to 1.6x, only in the outer part
+        ref = np.median(ml[int(rc*0.2):int(rc*0.55)]); prof = smooth1(ml[:int(rin) + 2], 3)
+        gain = np.ones(len(prof)); o = np.arange(len(prof)) > rc*0.55; gain[o] = np.clip(ref/np.maximum(prof[o], 1), 1, 1.6)
+        gm = gain[np.minimum(r.astype(int), len(gain) - 1)]; out = np.clip(out*gm[..., None], 0, 255)
+    if recolor: l = out.mean(-1, keepdims=True); out = np.clip(255*((out*0.65 + l*0.35)/255)**0.85*1.04, 0, 255)
+    nz = edge_noise(h, w, seed, cells=5 if sprawl else 7)
+    if fine: nz = nz + fine/max(wobble, 1e-3)*edge_noise(h, w, seed + 1, cells=18)
+    t = (rc*(1 + wobble*nz) - r)/(rc*feather)
+    alpha = sstep(t)**(1.2 if sprawl else 1.15)
+    if sprawl: alpha *= np.clip(1 - sprawl*np.clip(r/rc - 0.35, 0, 1)*(0.5 - 0.5*edge_noise(h, w, seed + 2, cells=10)), 0, 1)
+    # crop square around the patch
+    R = int(rc*(1 + wobble)) + 2; x0, y0 = max(0, int(cx - R)), max(0, int(cy - R)); x1, y1 = min(w, int(cx + R)), min(h, int(cy + R))
+    return np.dstack([out, alpha*255])[y0:y1, x0:x1].astype(np.uint8), (rin/r0)
+
+def side_profiles(a, band=(0.3, 0.7)):
+    h, w, _ = a.shape; lum = a.mean(-1); b0, b1 = int(h*band[0]), int(h*band[1])
+    return {'l': lum[b0:b1, :].mean(0), 'r': lum[b0:b1, ::-1].mean(0), 't': lum[:, b0:b1].mean(1), 'b': lum[::-1, b0:b1].mean(1)}
+
+def compound_patch(a, seed, framed, own_outline, feather=0.2, wobble=0.3):
+    """square compounds (military base, naval port): the compound's rectangle (from the background cut-out), moved in past a metal
+    frame where there is one (the last dark groove in the outer band), with a soft feathered, slightly irregular rectangular edge"""
+    h, w, _ = a.shape
+    cut = cutout(a, t_hard=12.0, t_soft=(7.0, 26.0), shadow=0); al = cut[..., 3].astype(np.float32)/255
+    rows, cols = (al > 0.5).mean(1), (al > 0.5).mean(0)
+    def span(v): idx = np.nonzero(v > 0.45)[0]; return (idx[0], idx[-1]) if len(idx) else (0, len(v) - 1)
+    (y0, y1), (x0, x1) = span(rows), span(cols)
+    edges = {'l': x0, 'r': w - 1 - x1, 't': y0, 'b': h - 1 - y1}
+    pr = side_profiles(a); lum = a.mean(-1); inner = np.median(lum[y0:y1, x0:x1])
+    ins = {}
+    for s, e in edges.items():
+        v = pr[s]; e2 = e
+        if framed:
+            for i in range(e, min(len(v) - 1, e + int(0.075*w))):
+                if v[i] < inner*0.45: e2 = i + 1
+        ins[s] = e2 + int(0.012*w)
+    X0, X1, Y0, Y1 = ins['l'], w - 1 - ins['r'], ins['t'], h - 1 - ins['b']
+    gy, gx = np.mgrid[0:h, 0:w]; F = feather*max(X1 - X0, Y1 - Y0)
+    nz = edge_noise(h, w, seed, cells=9)
+    d = np.minimum.reduce([gx - X0, X1 - gx, gy - Y0, Y1 - gy]).astype(np.float32)   # distance to the rectangle's edge, inside > 0
+    alpha = sstep(d/F + wobble*nz*0.5)**1.3
+    if own_outline: alpha = np.minimum(alpha, np.asarray(Image.fromarray((np.clip(al*1.3, 0, 1)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(w*0.012))).astype(np.float32)/255)   # open-ground compounds keep their own (softened) outline
+    return np.dstack([a, alpha*255])[Y0:Y1 + 1, X0:X1 + 1].astype(np.uint8)
+
+def save_patch(arr, name, size, q=86):
+    """frameless patch: centred in a square, no trimming (the feather is meant to reach the edge)"""
+    im = Image.fromarray(arr, 'RGBA'); s = size/max(im.width, im.height)
+    im = im.resize((max(1, round(im.width*s)), max(1, round(im.height*s))), Image.LANCZOS)
+    sq = Image.new('RGBA', (size, size), (0, 0, 0, 0)); sq.paste(im, ((size - im.width)//2, (size - im.height)//2))
+    # transparent pixels keep a neighbour colour (no dark fringe when the image is scaled with bilinear filtering)
+    px = np.asarray(sq).copy(); al = px[..., 3]
+    if (al < 8).any():
+        rgb = Image.fromarray(px[..., :3]); blur = np.asarray(rgb.filter(ImageFilter.GaussianBlur(6))).astype(np.float32)
+        wgt = np.asarray(Image.fromarray(al).filter(ImageFilter.GaussianBlur(6))).astype(np.float32)[..., None]/255
+        prem = np.asarray(Image.fromarray((px[..., :3]*(al[..., None]/255)).astype(np.uint8)).filter(ImageFilter.GaussianBlur(6))).astype(np.float32)
+        fill = np.where(wgt > 0.01, prem/np.maximum(wgt, 0.01), blur)
+        px[..., :3] = np.where(al[..., None] < 8, np.clip(fill, 0, 255), px[..., :3]).astype(np.uint8)
+    Image.fromarray(px, 'RGBA').save(os.path.join(OUT, name), 'WEBP', quality=q, method=6, exact=True)
+
 UNITS = ['infantry', 'special-forces', 'tank', 'light-armor', 'artillery', 'rocket-artillery', 'anti-air', 'missile-launcher', 'supply-truck',
          'jet', 'bomber', 'attack-heli', 'transport-heli', 'drone', 'corvette', 'destroyer', 'submarine', 'carrier']
 BUILD = {'city': ['city', 'city-2', 'city-3', 'city-4', 'city-5'], 'airfield': ['airfield', 'airfield-2', 'airfield-3', 'airfield-4', 'airfield-5'],
@@ -144,10 +251,18 @@ ROT = {'corvette': -90}   # every unit faces up (bow / nose at the top)
 for u in UNITS:
     if want(u) and u in ROT: save_rgba(np.asarray(Image.fromarray(cutout(load(u + '.webp')), 'RGBA').rotate(ROT[u], expand=True)), 'u-' + u + '.webp', 256); continue
     if want(u): save_rgba(chroma_cut(load(u + '.webp')) if u in ('infantry', 'special-forces') else cutout(load(u + '.webp')), 'u-' + u + '.webp', 256)
+# buildings: frameless aerial patches (round tokens cut inside their metal frame, compounds with a feathered rectangular edge)
+BSIZE = {'city': 512, 'airfield': 320, 'missile-silo': 320, 'military-base': 320, 'naval-port': 320}
+FRAMED = {'naval-port-2', 'naval-port-3', 'naval-port-4', 'naval-port-5'}
 for k, files in BUILD.items():
     for lvl, f in enumerate(files, 1):
-        if want(f) and k in ('city', 'airfield', 'missile-silo'): save_rgba(circle_cut(load(f + '.webp')), 'b-%s-%d.webp' % (k, lvl), 256); continue
-        if want(f): save_rgba(cutout(load(f + '.webp'), t_hard=12.0, t_soft=(7.0, 26.0), shadow=0), 'b-%s-%d.webp' % (k, lvl), 256)
+        if not want(f): continue
+        seed = sum(map(ord, f))*7 + lvl
+        if k in ('city', 'airfield', 'missile-silo'):
+            arr, ratio = (aerial_patch(load(f + '.webp', 1024), seed, wobble=0.25, fine=0.1, feather=0.35, sprawl=1.0, recolor=True) if k == 'city' else
+                          aerial_patch(load(f + '.webp', 1024), seed, keep=0.985 if k == 'missile-silo' else 0.97, fix_vignette=k != 'missile-silo'))
+            print('%-16s inner/outer %.3f' % (f, ratio)); save_patch(arr, 'b-%s-%d.webp' % (k, lvl), BSIZE[k])
+        else: save_patch(compound_patch(load(f + '.webp'), seed, f in FRAMED, k == 'military-base'), 'b-%s-%d.webp' % (k, lvl), BSIZE[k])
 for e in EMB:
     if want(e): save_rgba(cutout(load(e + '.webp'), t_hard=30.0 if e == 'emblem-eagle' else 22.0, t_soft=(14.0, 44.0), shadow=0), e + '.webp', 256)
 if want('explosion'): save_rgba(lumkey(load('explosion.webp'), 0.85, 1.25), 'fx-explosion.webp', 256, trim=False)
