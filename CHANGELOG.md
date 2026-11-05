@@ -411,3 +411,8 @@
 - The sea is washed in its own colour outside the real shore, so the terrain texture's soft land edge no longer bleeds into the water. Soft teal shallow-water bands now run along every coast.
 - Province edges facing the sea are pushed out to sea before clipping, so nation colours reach all the way to the actual coastline. Nation borders no longer trace coasts; the shoreline does that.
 - Country and sea names claim their space before town names, biggest countries first, so names never overlap at mid zoom. Oil icons only show on provinces that are large on screen.
+
+## Round 54 — Visual round 3: territory bands and a calmer map
+- Each power's land carries a soft band of its colour just inside its border (clipped to its own land), so territories read at a glance like a strategy map. The band widens as you zoom in.
+- Oil fields and ore deposits are rarer but richer on the finer map: world totals are unchanged, but the Middle East is no longer covered in oil icons.
+- Unit counters that would overlap on screen merge at mid zoom. Independent garrisons stay hidden until you zoom in, unless the province is selected, targeted or fighting.

@@ -701,8 +701,9 @@ function loadWorld(){
   for (const p of P){ if (p.sea) continue;
     const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0;
     const gulf = p.lat > 12 && p.lat < 38 && lon > 35 && lon < 62, arctic = p.lat > 58, sahara = p.lat > 18 && p.lat < 34 && lon > -10 && lon < 35;
-    p.oil = r() < (gulf ? 0.6 : arctic ? 0.22 : sahara ? 0.3 : 0.12);
-    p.ore = r() < (arctic ? 0.35 : 0.22); }
+    const fk = GS > 1 ? 0.3 : 1;   // fine maps: fewer, richer fields (yields are not scaled down), same world totals
+    p.oil = r() < (gulf ? 0.6 : arctic ? 0.22 : sahara ? 0.3 : 0.12)*fk;
+    p.ore = r() < (arctic ? 0.35 : 0.22)*fk; }
   // terrain from real regions (approximate boxes) + noise for variety
   const BOX = (lon, lat, a, b, c, d) => lon >= a && lon <= b && lat >= c && lat <= d;
   const MTN = [[70, 103, 27, 40], [-80, -65, -55, 10], [-125, -104, 32, 60], [5, 17, 44, 48], [38, 50, 40, 44], [56, 62, 50, 68], [44, 62, 27, 38], [35, 42, 5, 15], [-8, 10, 30, 36], [5, 20, 59, 70], [30, 44, 37, 41], [66, 80, 35, 45], [-110, -97, 17, 28], [140, 180, 55, 70], [96, 110, 22, 30]];
@@ -825,7 +826,7 @@ function rebuildOwnerGeo(){
   const per = S.nations.map(() => []), mineL = [], own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
   for (const c of GEO.chains){ const oa = own(c.a), ob = own(c.b); if (oa === ob || (window.COAST && (oa === -9 || ob === -9))) continue;   // coasts are drawn by the real shoreline
     if (oa >= 0) per[oa].push(c); if (ob >= 0) per[ob].push(c); if (oa === PLAYER || ob === PLAYER) mineL.push(c); }
-  GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL);
+  GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL); GEO.nArea = [];
   const anchor = list => { let x = 0, y = 0, c = 0, best = -1, bd = Infinity;
     for (const id of list){ const P = G.P[id]; x += P.x*P.cells.length; y += P.y*P.cells.length; c += P.cells.length; }
     if (!c) return null; x /= c; y /= c;
@@ -1370,7 +1371,7 @@ const moraleOf = p => Math.max(0, Math.min(100, 100 - unrestOf(p) - dmgOf(p)));
 function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012)); }
 function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(0.45 + 0.55*moraleOf(p)/100)*(CONVOY_LOST.has(p) ? 0 : 1), b = S.bld[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75);
   const pf = G.PF;
-  return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5*pf : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3*pf : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
+  return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 3 : 0) + (P.city ? 1 : 0) + b.fdy*(P.ore ? 5 : 3))*f,
     food:((P.city ? 1 : (Math.abs(P.lat) < 55 ? 3 : 1)*pf) + 3*b.farm)*f, mp:((P.city ? 1.2 : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
 const ECO = GS > 1 ? {cash:0.68, mp:0.16} : {cash:0.9, mp:0.22};
 // ---- convoys: provinces cut off by land from the capital ship their output home; enemy warships on the route sink it
@@ -3167,6 +3168,11 @@ function renderLayer(vis){
   if (hexPx >= 3){ const z = Math.min(1, (hexPx - 3)/9); c.strokeStyle = `rgba(0,0,0,${0.25 + 0.2*z})`; c.lineWidth = (0.8 + 0.6*z)*px; c.stroke(GEO.provEdges);
     if (hexPx >= 8){ c.strokeStyle = `rgba(236,230,212,${0.1*z})`; c.lineWidth = 0.6*px; c.stroke(GEO.provEdges); } }
   c.strokeStyle = 'rgba(200,205,190,0.22)'; c.lineWidth = Math.max(0.6*px, 0.9); c.stroke(GEO.countryEdges);
+  if (hexPx >= 2.5 && mapMode === 'political') for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !GEO.nation[n]) continue;
+    // a soft band of the nation's colour just inside its border (clipped to its own land)
+    const area = GEO.nArea[n] || (GEO.nArea[n] = (() => { const a = new Path2D(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && !G.P[p].sea) a.addPath(GEO.outline[p]); return a; })());
+    c.save(); c.clip(area); const bw = Math.min(12, 3 + hexPx*0.35);
+    c.strokeStyle = rgba(S.nations[n].color, 0.28); c.lineWidth = bw*2*px; c.stroke(GEO.nation[n]); c.strokeStyle = rgba(S.nations[n].color, 0.22); c.lineWidth = bw*0.9*px; c.stroke(GEO.nation[n]); c.restore(); }
   for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive) continue;
     c.strokeStyle = 'rgba(3,6,8,0.9)'; c.lineWidth = 3.6*px; c.stroke(GEO.nation[n]);
     c.strokeStyle = S.nations[n].color; c.lineWidth = (n === PLAYER ? 2.4 : 1.8)*px; c.stroke(GEO.nation[n]); }
@@ -3291,13 +3297,13 @@ function draw(now){
   hits = [];
   if (window.U3D && FALL.length) drawFallen(now);
   drawConvoys(now, vis);
-  const showNeutral = hexPx >= 11, items = [];
-  for (const a of S.armies){ if (!armyVisible(a, vis)) continue; if (a.owner === NEUTRAL && !showNeutral && !vis.has(a.at)) continue;
+  const showNeutral = hexPx >= (GS > 1 ? 24 : 11), items = [];   // independent garrisons stay hidden until zoomed in (or selected / fighting)
+  for (const a of S.armies){ if (!armyVisible(a, vis)) continue; if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
     if (a.fly) continue;
     const [wx, wy] = armyPos(a), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
     items.push({a, x, y:y - 2*k, owner:a.owner, moving:a.to !== null, air:!!a.air}); }
   const clusters = [];
-  const R2 = (hexPx >= 10 ? 0 : 26)**2;
+  const R2 = (hexPx >= (GS > 1 ? 26 : 10) ? 0 : GS > 1 ? 30 : 26)**2;   // counters that would overlap on screen merge until provinces are big enough to hold them apart
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
     let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0)));
