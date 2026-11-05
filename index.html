@@ -3228,21 +3228,26 @@ function draw(now){
     if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
     const cap = isCapital(p), dim = vis.has(p) ? 1 : 0.55;
     ctx.globalAlpha = dim;
-    if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 10)*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; ctx.drawImage(GLOW(), x - gr*0.7, y + 9*kl - gr*0.7, gr*1.4, gr*1.4); ctx.restore(); }
-    if (cap && hexPx >= 2){ star(x, y + 9*kl, 6*kl); ctx.fillStyle = '#f3ead2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b1012'; ctx.stroke(); }
-    else if (P.city && showCity){ ctx.fillStyle = '#f3ead2'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1.2; ctx.fillRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); ctx.strokeRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); }
+    if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 9 + Math.min(10, P.pop0))*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; ctx.drawImage(GLOW(), x - gr*0.7, y + 9*kl - gr*0.7, gr*1.4, gr*1.4); ctx.restore(); }
+    const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, oc = S.owner[p] >= 0 ? S.nations[S.owner[p]].color : '#8c8a80';
+    if (cap && hexPx >= 2){ const cy0 = y + 9*kl, rr = (6.5 + tier)*kl; ctx.beginPath(); ctx.arc(x, cy0, rr + 2.2*kl, 0, Math.PI*2); ctx.fillStyle = 'rgba(3,6,8,.75)'; ctx.fill(); ctx.lineWidth = 1.6*kl; ctx.strokeStyle = oc; ctx.stroke();
+      star(x, cy0, rr); ctx.fillStyle = '#f3ead2'; ctx.fill(); }
+    else if (P.city && showCity){ const cy0 = y + 9*kl, rr = [2.8, 3.6, 4.6][tier]*kl;   // cities: size by population, ring in the holder's colour
+      ctx.beginPath(); ctx.arc(x, cy0, rr + 1.8*kl, 0, Math.PI*2); ctx.fillStyle = 'rgba(3,6,8,.8)'; ctx.fill(); ctx.lineWidth = 1.3*kl; ctx.strokeStyle = oc; ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, cy0, rr, 0, Math.PI*2); ctx.fillStyle = '#f3ead2'; ctx.fill();
+      if (tier === 2){ ctx.beginPath(); ctx.arc(x, cy0, rr*0.45, 0, Math.PI*2); ctx.fillStyle = '#0b1012'; ctx.fill(); } }
     if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 22){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
     if (S.bld[p].silo && hexPx >= 4){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     if (S.bld[p].fort && hexPx >= 6){ const fx2 = x - 10*kl, fy2 = y + 9*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
     { const Rpx = Math.sqrt(P.cells.length)*HS*view.s, label = cap && hexPx >= 4 ? P.cityName : P.city && hexPx >= 8 ? P.cityName : hexPx >= 9 && Rpx >= 16 ? P.name : '';
-      if (label) labs.push({t:label, x, y:y + (P.city ? 27*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, a:dim}); }
+      if (label) labs.push({t:label, x, y:y + (P.city ? 20*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim}); }
     ctx.globalAlpha = 1;
     const c = S.cap[p];
     if (c){ const f = Math.min(1, c.h/capNeed(p, c.by)); ctx.beginPath(); ctx.arc(x, y, 15*kl, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.lineWidth = 3; ctx.strokeStyle = S.nations[c.by].color; ctx.stroke(); }
   }
   // place labels: highest rank first, skip any that would overlap one already placed
   { labs.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
-    for (const L of labs){ const f = L.cap ? 12 : L.city ? 11 : 10; ctx.font = `${L.cap ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
+    for (const L of labs){ const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; ctx.font = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
       if (boxes.some(q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) continue; boxes.push(b);
       ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, L.x, y0); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, L.x, y0); }
     ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }

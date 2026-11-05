@@ -416,3 +416,8 @@
 - Each power's land carries a soft band of its colour just inside its border (clipped to its own land), so territories read at a glance like a strategy map. The band widens as you zoom in.
 - Oil fields and ore deposits are rarer but richer on the finer map: world totals are unchanged, but the Middle East is no longer covered in oil icons.
 - Unit counters that would overlap on screen merge at mid zoom. Independent garrisons stay hidden until you zoom in, unless the province is selected, targeted or fighting.
+
+## Round 55 — Visual round 4: city markers by size
+- Cities are drawn as round markers sized by population: regular cities, large cities (2.5 million+) and megacities (8 million+, with a dark core). Each has a ring in the holder's colour, so you can see who owns a city at a glance.
+- Capitals get a bigger star on a dark disc ringed in the owner's colour.
+- City names scale with size (megacities bold), sit closer to their marker and win label space over smaller towns. Night glow grows with population.
