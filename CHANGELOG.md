@@ -405,3 +405,9 @@
 - Readability: province labels are ranked (capitals, cities, then big provinces) and never overlap. Sea names appear once per area, without numbering. Oil icons only show where a province is big enough on screen. Province borders are easier to see. Nation names sit on their main landmass. The home view ignores far-flung islands.
 - Same distances, finer map: ranges, speeds, supply (about 4,800 km over land) and fog-of-war vision are measured in kilometres, so smaller provinces don't shrink them. Range messages now say km instead of hexes. Most neutral land outside cities is ungarrisoned.
 - Speed: route-finding uses A* with cached adjacency (~4× faster), and the minimap is drawn from pixel data. A game day takes about 340–400 ms to simulate with four times as many provinces. Saves move to a new slot (v5) because province ids changed.
+
+## Round 53 — Visual round 2: real coastlines
+- Crisp vector coastlines (Natural Earth 1:50m, simplified, 80 KB) when zoomed in. Nation colours are clipped to the real shore instead of a blurred raster mask, so coasts stay sharp at any zoom.
+- The sea is washed in its own colour outside the real shore, so the terrain texture's soft land edge no longer bleeds into the water. Soft teal shallow-water bands now run along every coast.
+- Province edges facing the sea are pushed out to sea before clipping, so nation colours reach all the way to the actual coastline. Nation borders no longer trace coasts; the shoreline does that.
+- Country and sea names claim their space before town names, biggest countries first, so names never overlap at mid zoom. Oil icons only show on provinces that are large on screen.

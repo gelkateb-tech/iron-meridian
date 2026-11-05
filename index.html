@@ -417,6 +417,7 @@ details.more summary::-webkit-details-marker{display:none}
 
 <script src="world.js"></script>
 <script src="lines.js"></script>
+<script src="coast.js"></script>
 <script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script><script src="terrcells.js"><\/script>'); }</script>
 <script src="units3d.js"></script>
 <script>
@@ -782,6 +783,12 @@ function buildChains(){
       for (let i = 0; i < m - 1; i++){ const p0 = pts[i], p1 = pts[i + 1]; q.push([p0[0]*0.75 + p1[0]*0.25, p0[1]*0.75 + p1[1]*0.25], [p0[0]*0.25 + p1[0]*0.75, p0[1]*0.25 + p1[1]*0.75]); }
       if (!c.closed) q.push(pts[m - 1]); else q.push(q[0]); pts = q; }
     c.pts = pts; }
+  // shores: land/sea chains are pushed most of a cell out to sea, so land fills reach the real coastline (they are clipped to it afterwards)
+  if (window.COAST) for (const c of chains){ if (c.a < 0 || c.b < 0 || G.P[c.a].sea === G.P[c.b].sea) continue; const seaId = G.P[c.a].sea ? c.a : c.b, P = c.pts, n = P.length; if (n < 2) continue;
+    let vote = 0; for (let i = 0; i < n; i++){ const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], tx = b[0] - a[0], ty = b[1] - a[1], L = Math.hypot(tx, ty); if (!L) continue;   // which side is the sea: majority of samples
+      const t1 = worldToCell(P[i][0] - ty/L*HS*0.6, P[i][1] + tx/L*HS*0.6), t2 = worldToCell(P[i][0] + ty/L*HS*0.6, P[i][1] - tx/L*HS*0.6); vote += (t1 >= 0 && G.prov[t1] === seaId ? 1 : 0) - (t2 >= 0 && G.prov[t2] === seaId ? 1 : 0); }
+    const d = HS*0.9*(vote >= 0 ? 1 : -1);
+    c.pts = P.map((q, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], ux = b[0] - a[0], uy = b[1] - a[1], l = Math.hypot(ux, uy) || 1; return [q[0] - uy/l*d, q[1] + ux/l*d]; }); }
   return chains;
 }
 const chainTo = (path, c, rev = false, move = true) => { const P = c.pts, n = P.length; for (let i = 0; i < n; i++){ const q = P[rev ? n - 1 - i : i]; if (i === 0 && move) path.moveTo(q[0], q[1]); else path.lineTo(q[0], q[1]); } };
@@ -795,6 +802,11 @@ function ringPath(p){ const list = GEO.byProv[p] || [], path = new Path2D(), ope
     for (let guard = 0; end !== start && guard < open.length; guard++){ const nx = (at.get(end) || []).find(i => !used[i]); if (nx === undefined) break; used[nx] = 1; const c = open[nx], rev = c.k1 === end; chainTo(path, c, rev, false); end = rev ? c.k0 : c.k1; }
     path.closePath(); }
   return path; }
+function coastPath(){ if (!window.COAST) return null; const path = new Path2D(), sx = HS*SQ3, sy = HS*1.5;
+  for (const R of window.COAST){ let x = 0, y = 0, x0 = Infinity, x1 = -Infinity; const pts = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const fx = x/10, fy = y/10; pts.push(fx, fy); if (fx < x0) x0 = fx; if (fx > x1) x1 = fx; }
+    for (const off of [-W, 0, W]){ if (off < 0 && x1 < W) continue; if (off > 0 && x0 >= 0) continue; if (off === 0 && (x1 < 0 || x0 >= W)) continue;
+      for (let i = 0; i < pts.length; i += 2){ const X = OX + sx*(pts[i] + off), Y = OY + sy*pts[i + 1]; i ? path.lineTo(X, Y) : path.moveTo(X, Y); } path.closePath(); } }
+  return path; }
 function buildGeometry(){
   const chains = buildChains(), byProv = G.P.map(() => []);
   for (const c of chains){ if (c.a >= 0) byProv[c.a].push(c); if (c.b >= 0 && c.b !== c.a) byProv[c.b].push(c); }
@@ -804,14 +816,14 @@ function buildGeometry(){
     if (A.sea !== B.sea) coastL.push(c); else if (A.sea) seaL.push(c); else if (A.country !== B.country) countryL.push(c); else provL.push(c); }
   const lazy = make => new Proxy([], {get:(arr, k) => { if (typeof k !== 'string' || !/^\d+$/.test(k)) return arr[k]; return arr[k] || (arr[k] = make(+k)); }});
   const outline = lazy(p => ringPath(p));
-  GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land};
+  GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land, coastV:coastPath()};
   rebuildOwnerGeo();
 }
 let geoVer = 0;
 function rebuildOwnerGeo(){
   geoVer++;
   const per = S.nations.map(() => []), mineL = [], own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
-  for (const c of GEO.chains){ const oa = own(c.a), ob = own(c.b); if (oa === ob) continue;
+  for (const c of GEO.chains){ const oa = own(c.a), ob = own(c.b); if (oa === ob || (window.COAST && (oa === -9 || ob === -9))) continue;   // coasts are drawn by the real shoreline
     if (oa >= 0) per[oa].push(c); if (ob >= 0) per[ob].push(c); if (oa === PLAYER || ob === PLAYER) mineL.push(c); }
   GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL);
   const anchor = list => { let x = 0, y = 0, c = 0, best = -1, bd = Infinity;
@@ -824,7 +836,7 @@ function rebuildOwnerGeo(){
       for (let i = 0; i < comp.length; i++){ c += G.P[comp[i]].cells.length; for (const v of G.P[comp[i]].nbs) if (!seen.has(v) && S.owner[v] === n){ seen.add(v); comp.push(v); } }
       if (c > bc){ bc = c; best = comp; } } return best; };
   GEO.labels = S.nations.map(n => n.alive ? anchor(mainland(n.id)) : null);
-  GEO.clabels = G.countries.map(c => { const free = c.provs.filter(id => S.owner[id] === NEUTRAL); return free.length ? {...anchor(free), name:c.name} : null; });
+  GEO.clabelsBySize = null; GEO.clabels = G.countries.map(c => { const free = c.provs.filter(id => S.owner[id] === NEUTRAL); return free.length ? {...anchor(free), name:c.name} : null; });
   buildMini();
 }
 function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
@@ -3115,6 +3127,14 @@ function renderLayer(vis){
   c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#060c0f'; c.fillRect(0, 0, cw + 2*mx, ch + 2*my);
   c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   c.imageSmoothingEnabled = true; c.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
+  const px0 = 1/view.s;
+  if (GEO.coastV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
+    // wash the sea with its own colour so the raster texture's soft land edge does not bleed past the real shore, then shallow-water bands
+    if (!GEO.seaV){ GEO.seaV = new Path2D(); GEO.seaV.rect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); GEO.seaV.addPath(GEO.coastV); }
+    c.save(); c.clip(GEO.seaV, 'evenodd'); c.fillStyle = `rgba(11,29,39,${0.86*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); c.lineJoin = 'round';
+    c.strokeStyle = `rgba(40,92,104,${0.22*z})`; c.lineWidth = 16*px0; c.stroke(GEO.coastV);
+    c.strokeStyle = `rgba(60,120,130,${0.22*z})`; c.lineWidth = 7*px0; c.stroke(GEO.coastV);
+    c.strokeStyle = `rgba(150,200,210,${0.14*z})`; c.lineWidth = 2.6*px0; c.stroke(GEO.coastV); c.restore(); }
   const vx0 = -ox/view.s, vy0 = -oy/view.s, vx1 = (cw + 2*mx - ox)/view.s, vy1 = (ch + 2*my - oy)/view.s;
   const onScreen = P => { const b = provBox(P); return b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1; };
   const hp = hatchPattern(c); if (hp.setTransform) hp.setTransform(new DOMMatrix([px, 0, 0, px, 0, 0]));
@@ -3130,7 +3150,8 @@ function renderLayer(vis){
     { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p], 'evenodd'); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }
     if (!vis.has(p)){ c.fillStyle = 'rgba(3,6,8,0.5)'; c.fill(GEO.fill[p], 'evenodd'); c.fillStyle = hp; c.fill(GEO.fill[p], 'evenodd'); } }
   // clip to the real coastline, then soften the hex steps between provinces
-  c.globalCompositeOperation = 'destination-in'; c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over';
+  const clipLand = () => { c.globalCompositeOperation = 'destination-in'; if (GEO.coastV && hexPx >= 7){ c.fillStyle = '#000'; c.fill(GEO.coastV, 'evenodd'); } else c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over'; };
+  clipLand();
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.filter = `blur(${Math.max(0.5, Math.min(4, (GS > 1 ? 0.12 : 0.075)*HS*view.s*dpr))}px)`; base.drawImage(flc, 0, 0); base.restore();
   // sea-zone hints and rivers/roads on the base layer
   c = base; c.lineJoin = 'round'; c.lineCap = 'round';
@@ -3150,8 +3171,12 @@ function renderLayer(vis){
     c.strokeStyle = 'rgba(3,6,8,0.9)'; c.lineWidth = 3.6*px; c.stroke(GEO.nation[n]);
     c.strokeStyle = S.nations[n].color; c.lineWidth = (n === PLAYER ? 2.4 : 1.8)*px; c.stroke(GEO.nation[n]); }
   if (S.nations[PLAYER].alive){ c.strokeStyle = 'rgba(255,250,235,0.85)'; c.lineWidth = 1*px; c.stroke(GEO.mine); }
-  c.globalCompositeOperation = 'destination-in'; c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over';
+  clipLand();
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, 0, 0); base.restore();
+  // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
+  if (GEO.coastV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
+    base.strokeStyle = `rgba(8,14,16,${0.55*z})`; base.lineWidth = 0.9*px; base.stroke(GEO.coastV);
+    base.strokeStyle = `rgba(226,220,196,${0.18*z})`; base.lineWidth = 0.5*px; base.stroke(GEO.coastV); }
 }
 function draw(now){
   clampView();
@@ -3179,15 +3204,17 @@ function draw(now){
   const showCity = hexPx >= 5, showNames = hexPx >= 15, showSea = hexPx >= 9;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   // independent country names
-  if (hexPx >= 3.2 && hexPx < 15){ ctx.font = `600 ${Math.round(Math.min(13, 8 + hexPx*0.5))}px ${BODY}`;
-    for (const L of GEO.clabels){ if (!L || L.cells < 6) continue; const [x, y] = toScreen(L.x, L.y); if (x < -60 || y < -20 || x > cw + 60 || y > ch + 20) continue;
+  const boxes0 = [];   // screen boxes of labels already drawn: country and sea names claim space before province names
+  if (hexPx >= 3.2 && hexPx < 15){ const fs0 = Math.round(Math.min(13, 8 + hexPx*0.5)); ctx.font = `600 ${fs0}px ${BODY}`;
+    for (const L of GEO.clabelsBySize || (GEO.clabelsBySize = GEO.clabels.filter(Boolean).sort((a, b) => b.cells - a.cells))){ if (L.cells < 2.5*GS*GS) continue; const [x, y] = toScreen(L.x, L.y); if (x < -60 || y < -20 || x > cw + 60 || y > ch + 20) continue;
+      const w0 = ctx.measureText(L.name.toUpperCase()).width + 8, bx = [x - w0/2, y - fs0/2 - 2, x + w0/2, y + fs0/2 + 2]; if (boxes0.some(q => q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue; boxes0.push(bx);
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.7)'; ctx.strokeText(L.name.toUpperCase(), x, y); ctx.fillStyle = 'rgba(200,198,184,.55)'; ctx.fillText(L.name.toUpperCase(), x, y); } }
   if (showSea){ ctx.font = `italic 500 11px ${BODY}`; ctx.fillStyle = 'rgba(150,185,195,.38)';
     const placed = [];   // one label per sea name nearby, biggest zones first, never overlapping
     for (const P of SEAL || (SEAL = G.P.filter(q => q.sea && q.cells.length >= 20*GS*GS).sort((a, b) => b.cells.length - a.cells.length))){ const [x, y] = toScreen(P.x, P.y); if (x < -80 || y < -20 || x > cw + 80 || y > ch + 20) continue;
       const nm = P.name.replace(/ [IVXL]+$/, ''), w = ctx.measureText(nm).width + 16;
       if (placed.some(q => (Math.abs(q.x - x) < (q.w + w)/2 && Math.abs(q.y - y) < 18) || (q.nm === nm && Math.hypot(q.x - x, q.y - y) < 260))) continue;
-      placed.push({x, y, w, nm}); ctx.fillText(nm, x, y); } }
+      placed.push({x, y, w, nm}); boxes0.push([x - w/2, y - 8, x + w/2, y + 8]); ctx.fillText(nm, x, y); } }
   const labs = [];
   for (let p = 0; p < G.P.length; p++){
     const P = G.P[p]; if (P.sea) continue;
@@ -3198,7 +3225,7 @@ function draw(now){
     if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 15 : 10)*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; ctx.drawImage(GLOW(), x - gr*0.7, y + 9*kl - gr*0.7, gr*1.4, gr*1.4); ctx.restore(); }
     if (cap && hexPx >= 2){ star(x, y + 9*kl, 6*kl); ctx.fillStyle = '#f3ead2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = '#0b1012'; ctx.stroke(); }
     else if (P.city && showCity){ ctx.fillStyle = '#f3ead2'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1.2; ctx.fillRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); ctx.strokeRect(x - 3*kl, y + 6*kl, 6*kl, 6*kl); }
-    if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 14){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 22){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
     if (S.bld[p].silo && hexPx >= 4){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     if (S.bld[p].fort && hexPx >= 6){ const fx2 = x - 10*kl, fy2 = y + 9*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
     { const Rpx = Math.sqrt(P.cells.length)*HS*view.s, label = cap && hexPx >= 4 ? P.cityName : P.city && hexPx >= 8 ? P.cityName : hexPx >= 9 && Rpx >= 16 ? P.name : '';
@@ -3208,7 +3235,7 @@ function draw(now){
     if (c){ const f = Math.min(1, c.h/capNeed(p, c.by)); ctx.beginPath(); ctx.arc(x, y, 15*kl, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.lineWidth = 3; ctx.strokeStyle = S.nations[c.by].color; ctx.stroke(); }
   }
   // place labels: highest rank first, skip any that would overlap one already placed
-  { labs.sort((a, b) => b.pri - a.pri); const boxes = []; ctx.textBaseline = 'top';
+  { labs.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
     for (const L of labs){ const f = L.cap ? 12 : L.city ? 11 : 10; ctx.font = `${L.cap ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
       if (boxes.some(q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) continue; boxes.push(b);
       ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, L.x, y0); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, L.x, y0); }
