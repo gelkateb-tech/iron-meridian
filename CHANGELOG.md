@@ -390,3 +390,8 @@
   - **Tracks** (tanks, artillery) take 25% from highways and handle rough ground better.
   - **Foot** troops gain least from roads but cross mountains and forests best.
 - Formation names: Rocket Artillery Brigade, Special Operations Group. Artillery panels show range 2 when rocket artillery is present.
+
+## Round 51 — Free movement
+- Exact destinations: the point you click is where the force goes. It travels to that province and then to the exact spot. Several of your forces can hold different positions in the same province, each drawn at its own spot instead of merging into one stack. Tapping elsewhere in a selected force's own province repositions it there.
+- Smooth routes: forces follow curved routes through each province instead of zigzagging between centres. Planned and active routes are drawn as smooth curves ending at the chosen point, and groups spread out around it.
+- Head-on clashes: hostile columns marching toward each other along the same road meet where they cross and fight at the nearer province ("Columns clash near Haut-Rhin"), instead of passing through each other.

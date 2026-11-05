@@ -2253,11 +2253,19 @@ function tick(){
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
-    if (a.to === null && a.path.length && canProceed(a)){ a.to = a.path.shift(); a.t = 0; a.forced = false; }
+    if (a.to === null && a.path.length && canProceed(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false; }
     if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.to = null; a.t = 0; a.path = []; if (a.owner === PLAYER) log(`${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
     if (a.to !== null){ a.t += 1/legHours(a, a.at, a.to);
-      if (a.t >= 1){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; } }
+      if (a.t >= 1){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; a.legFrom = null;
+        if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; } }
   }
+  // head-on clash: hostile columns marching in opposite directions on the same road meet and fight at the nearer province
+  { const edge = new Map(); for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)) edge.set(a.at + '>' + a.to, [...(edge.get(a.at + '>' + a.to) || []), a]);
+    for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(a.to + '>' + a.at); if (!opp) continue;
+      const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
+      const meet = a.t >= 0.5 ? a.to : a.at, A0 = G.P[a.at], B0 = G.P[a.to], mx = A0.x + (B0.x - A0.x)*a.t, my = A0.y + (B0.y - A0.y)*a.t;
+      for (const x of [a, b]){ x.from = x.at; x.at = meet; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = meet === a.at || meet === a.to ? [ (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2 ] : null; x.forced = false; }
+      if (a.owner === PLAYER || b.owner === PLAYER) log(`Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a)} met ${armyLabel(b)} on the road.`, 'bad', meet); } }
   // your forces that arrive where another idle force of yours stands join it (same kind: ground with ground, fleets with fleets)
   for (const a of S.armies){ if (a.owner !== PLAYER || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || !count(a)) continue;
     if (a.lastAt === a.at) continue; a.lastAt = a.at;
@@ -2756,10 +2764,16 @@ function armyVisible(a, vis){ if (a.owner !== PLAYER && a.owner >= 0 && a.u.spec
 function armyPos(a){
   if (a.air) return wingPos(a);
   if (a.fly && a.fly.kind === 'drop'){ const A = G.P[a.fly.from], B = G.P[a.fly.tgt], t = Math.min(1, a.fly.t + (S.speed && !S.over ? acc : 0)*a.fly.dt); return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t]; }
-  const A = G.P[a.at]; if (a.to === null) return [A.x, A.y];
-  const B = G.P[a.to], live = S.speed && !S.over ? acc : 0, t = Math.min(1, a.t + live/legHours(a, a.at, a.to));
-  return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t];
-}
+  const A = G.P[a.at]; if (a.to === null) return a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y];
+  const live = S.speed && !S.over ? acc : 0, t = Math.min(1, a.t + live/legHours(a, a.at, a.to));
+  const p1 = a.legFrom || [A.x, A.y], p2 = legEnd(a), prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]];
+  const nx = a.path.length ? G.P[a.path[0]] : null, p3 = nx ? [nx.x, nx.y] : [2*p2[0] - p1[0], 2*p2[1] - p1[1]];
+  return catmull(prevP, p1, p2, p3, t); }
+// end point of the current leg: the exact destination on the final leg, otherwise the next province centre
+function legEnd(a){ const B = G.P[a.to]; return (!a.path.length && a.dest && a.dest.p === a.to) ? [a.dest.x, a.dest.y] : [B.x, B.y]; }
+function catmull(p0, p1, p2, p3, t){ const t2 = t*t, t3 = t2*t, f = (a0, a1, a2, a3) => 0.5*((2*a1) + (-a0 + a2)*t + (2*a0 - 5*a1 + 4*a2 - a3)*t2 + (-a0 + 3*a1 - 3*a2 + a3)*t3);
+  // keep the curve gentle: blend toward the straight line so it never overshoots badly
+  const cx = f(p0[0], p1[0], p2[0], p3[0]), cy = f(p0[1], p1[1], p2[1], p3[1]), lx = p1[0] + (p2[0] - p1[0])*t, ly = p1[1] + (p2[1] - p1[1])*t; return [lx*0.45 + cx*0.55, ly*0.45 + cy*0.55]; }
 function roundRect(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 function star(x, y, R){ ctx.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? R*0.45 : R, a = -Math.PI/2 + i*Math.PI/5; ctx.lineTo(x + r*Math.cos(a), y + r*Math.sin(a)); } ctx.closePath(); }
 let hatch = null;
@@ -3164,11 +3178,13 @@ function draw(now){
     for (const [o, pw] of arr){ const w2 = bw*pw/tot; ctx.fillStyle = colorOf(o); ctx.fillRect(bxw, byy, w2, 5*kl); bxw += w2; } }
   // paths
   const sa = sel.army !== null ? armyById(sel.army) : null;
-  const drawPath = (a, path, style, w = 2.2) => { if (!path || !path.length) return; const [sx, sy] = toScreen(...armyPos(a)); ctx.beginPath(); ctx.moveTo(sx, sy);
-    if (a.to !== null){ const [tx, ty] = toScreen(G.P[a.to].x, G.P[a.to].y); ctx.lineTo(tx, ty); }
-    for (const p of path){ const [tx, ty] = toScreen(G.P[p].x, G.P[p].y); ctx.lineTo(tx, ty); }
+  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...armyPos(a))];
+    if (a.to !== null && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
+    path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
+    const lastPt = pts[pts.length - 1];
     ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(now/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    const last = path[path.length - 1], [lx, ly] = toScreen(G.P[last].x, G.P[last].y); ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
+    const [lx, ly] = lastPt; ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
   for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null)) drawPath(a, a.path.length ? a.path : [a.to], 'rgba(226,162,61,0.35)', 1.6);
   const drawSelPaths = () => { if (!sa) return;
     if (sa.air){ const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS*SQ3*view.s;
@@ -3178,7 +3194,7 @@ function draw(now){
         ctx.font = `600 11px ${MONO}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
         roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
       return; } if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3);
-    if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3); routeChip(sa, sel.target, targetPath); }
+    if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3, sel.targetPt); routeChip(sa, sel.target, targetPath); }
     else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   // counters (clustered per owner at low zoom)
   hits = [];
@@ -3193,13 +3209,13 @@ function draw(now){
   const R2 = (hexPx >= 10 ? 0 : 26)**2;
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
-    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at) || (c.x - it.x)**2 + (c.y - it.y)**2 < R2));
+    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0)));
     if (it.moving) c = null;
     if (c){ c.list.push(it.a); c.n += count(it.a); }
-    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.a.at, moving:it.moving, air:it.air, list:[it.a], n:count(it.a)});
+    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.a.at, moving:it.moving, air:it.air, list:[it.a], n:count(it.a), pinned:!!it.a.pos});
   }
   const perProv = new Map();
-  for (const c of clusters){ if (c.moving || c.air) continue; const key = c.at; if (!perProv.has(key)) perProv.set(key, []); perProv.get(key).push(c); }
+  for (const c of clusters){ if (c.moving || c.air || c.pinned) continue; const key = c.at; if (!perProv.has(key)) perProv.set(key, []); perProv.get(key).push(c); }
   for (const cs of perProv.values()){ cs.sort((a, b) => (a.owner === PLAYER ? -1 : 0) - (b.owner === PLAYER ? -1 : 0));
     const R = Math.sqrt(G.P[cs[0].at].cells.length)*HS*0.75*view.s, close = hexPx >= FORM_PX, gap = close ? Math.min(Math.max(50*k, R*0.9), R*1.8/Math.max(1, cs.length - 1 || 1)) : 50*k;
     cs.forEach((c, i) => { c.x += (i - (cs.length - 1)/2)*gap; c.share = cs.length > 1 ? 0.5 : 1; }); }
@@ -3296,7 +3312,7 @@ function endPointer(e){
   pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) drag = null;
 }
 cv.addEventListener('pointerup', endPointer);
-cv.addEventListener('contextmenu', e => { e.preventDefault(); if (sel.army === null) return; const [x, y] = localXY(e), a = armyById(sel.army); if (!a) return;
+cv.addEventListener('contextmenu', e => { e.preventDefault(); if (sel.army === null) return; const [x, y] = localXY(e), a = armyById(sel.army); if (!a) return; lastClickW = screenToWorld(x, y);
   for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
   const p = provAt(x, y); if (p < 0) return; if (a.to === null && p === a.at && !a.air) return; setTarget(a, p); if ((a.air && airCheck(a, p).ok) || (targetPath && targetPath.length)) sendToTarget(a); renderSide(true); });
 cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag = null; pinch = null; });
@@ -3317,7 +3333,7 @@ function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a 
     + own.map(a => `<button data-act="choose-army" data-id="${a.id}"><i>${a.air ? '✈' : shipsOnly(a) ? '⚓' : '⚔'}</i>${armyName(a)}<span class="small">${count(a)} units</span></button>`).join('');
   el.hidden = false; tipHide(); const w = 240, h = 46 + own.length*38; el.style.left = Math.max(8, Math.min(cw - w - 8, x + 12)) + 'px'; el.style.top = Math.max(8, Math.min(ch - h - 8, y - 20)) + 'px'; return true; }
 function tap(x, y, shift = false){
-  closeChooser();
+  closeChooser(); lastClickW = screenToWorld(x, y);
   if (!cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null){
     let p = -1; for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const a0 = h.ids.map(armyById).find(Boolean); if (a0 && !a0.fly && a0.to === null) p = a0.at; break; } }
     if (p < 0) p = provAt(x, y);
@@ -3351,6 +3367,8 @@ function tap(x, y, shift = false){
       const ext = pathFor(a, end, p); if (ext.length){ for (const x of groupArmies()) if (!x.air && x !== a && (x.path.length || x.to !== null)){ const e2 = x.path.length ? x.path[x.path.length - 1] : x.to, px = pathFor(x, e2, p); if (px.length) x.path = x.path.concat(px); }
         a.path = a.path.concat(ext); a.forced = true; sfx('order'); toast(`Waypoint added: ${armyName(a)} continues to ${G.P[p].cityName || G.P[p].name}.`, 'info', null); renderSide(true); } else toast('No route from the last waypoint to there.', 'bad', null);
       return; }
+    if (a.to === null && p === a.at && !a.air && !G.P[p].sea && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.pos || [G.P[p].x, G.P[p].y];
+      if (Math.hypot(w0[0] - cur[0], w0[1] - cur[1]) > 6){ a.pos = w0; sfx('order'); renderSide(true); return; } selectProv(p); return; }
     if (a.to === null && p === a.at){ selectProv(p); return; }
     if (sel.target === p && a.air){ sendToTarget(a); return; }
     if (sel.target === p){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet()) && atWar(PLAYER, b.owner)); if (odds(a, p, foes) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
@@ -3375,7 +3393,8 @@ function setRally(city, p){
   else { S.rally[city] = p; toast(`New units from ${G.P[city].cityName} will march to ${G.P[p].cityName || G.P[p].name}.`, 'info', p); }
   sel.prov = city; renderSide(true);
 }
-function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
+let lastClickW = null;
+function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p && !G.P[p].sea ? lastClickW.slice() : null; lastClickW = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
@@ -3427,7 +3446,9 @@ function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; 
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
     + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : '') + b('clear', '✕', 'Close', 'Esc'); }
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || dropFor !== null || !!aimMsl); }
-function sendToTarget(a){ if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }
+function sendToTarget(a){ if (sel.target !== null && sel.targetPt){ groupArmies().forEach((x, i) => { if (!x.air) x.dest = {p:sel.target, x:sel.targetPt[0] + (i % 3 - 1)*7*i/Math.max(1, i), y:sel.targetPt[1] + Math.floor(i/3)*6}; }); }
+  else if (sel.target !== null) groupArmies().forEach(x => { if (!x.air) x.dest = null; });
+  if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a); }); return; }
   if (sel.target !== null){ const g = groupArmies(); let ok = 0; for (const x of g){ if (x.air){ if (orderAir(x, sel.target)) ok++; } else { orderMove(x, sel.target); if (x.path.length || x.to !== null) ok++; } } if (ok) sfx('order'); if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); } sel.target = null; targetPath = null; renderSide(true); }
 function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
