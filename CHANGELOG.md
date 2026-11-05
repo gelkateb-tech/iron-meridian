@@ -380,3 +380,13 @@
 - Convoys: provinces cut off by land from your capital (islands, distant coasts, overseas conquests) ship their output home every day along a sea route.
   - Enemy submarines, frigates or cruisers stationed on that route sink the convoy, and that day's output from those provinces is lost. You get a dispatch naming the attacker and where; your own warships sinking enemy convoys are reported too.
   - Convoys are drawn as small cargo ships with wakes sailing their routes, and raided ones go down in an explosion and smoke.
+
+## Round 50 — More realistic units: new types, livelier models, movement by type
+- New unit: **Thunder MLRS**, wheeled rocket artillery (Arms Factory II, Rocket Artillery research). It shells enemy forces up to 2 provinces away every hour without engaging, but is fragile in close combat. Its new 3D model has an 8-wheel truck chassis, a cab, and a six-tube launcher pod with three animation frames: stowed, raised and firing with exhaust flame.
+- New unit: **Wraith Special Forces** (Special Forces research). Enemy radar, airbases and satellites can't spot them; only troops in the same or a neighbouring province see them. They get +40% attack in forest, mountains and cities and cross rough ground without slowing. Their model is a darker, crouching three-soldier team.
+- Livelier infantry: soldiers swing their arms against their stride and bob as they march (all infantry, anti-tank, special forces and paratroopers).
+- Movement by type: each force moves like its slowest unit's drive type.
+  - **Wheels** (IFV, SAM, MLRS) are 60% faster on highways but slower in forest, mountains and tundra, and bog down in spring mud and snow.
+  - **Tracks** (tanks, artillery) take 25% from highways and handle rough ground better.
+  - **Foot** troops gain least from roads but cross mountains and forests best.
+- Formation names: Rocket Artillery Brigade, Special Operations Group. Artillery panels show range 2 when rocket artillery is present.

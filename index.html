@@ -437,6 +437,8 @@ const UNITS = {
   frig: {name:'Gannet Frigate',    short:'FRG', cls:'naval',   cost:60, oil:6,  metal:18, mp:6,  atk:4, def:5, hp:14, spd:9,  build:60, upk:3, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{air:1.8, soft:0.5, armored:0.4}, role:'Escort: protects troop convoys, shoots down aircraft.'},
   sub:  {name:'Moray Submarine',   short:'SUB', cls:'naval',   cost:55, oil:4,  metal:15, mp:5,  atk:6, def:2, hp:9,  spd:8,  build:60, upk:2, food:0.5, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else.'},
   crui: {name:'Tempest Cruiser',   short:'CRU', cls:'naval',   cost:75, oil:10, metal:30, mp:8,  atk:7, def:6, hp:20, spd:7,  build:96, upk:5, food:0.5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
+  mlrs: {name:'Thunder MLRS',      short:'MRL', cls:'armored', cost:60, oil:5,  metal:16, mp:8,  atk:8, def:2, hp:9,  spd:7,  build:54, upk:3, food:0.5, fuel:1, req:{b:'fac', l:2}, tech:'art2', vs:{soft:1.5, armored:0.9}, role:'Rocket artillery on wheels: shells enemies up to 2 provinces away. Fragile in close combat.'},
+  spec: {name:'Wraith Special Forces', short:'SOF', cls:'soft', cost:55, oil:0,  metal:5,  mp:8,  atk:5, def:4, hp:10, spd:5,  build:42, upk:2, food:1,   fuel:0,   req:{b:'fac', l:1}, tech:'inf3', role:'Elite raiders: hidden from radar and satellites, +40% attack in forest, mountains and cities, cross rough ground fast.'},
   carr: {name:'Albatross Carrier', short:'CVN', cls:'naval',   cost:140, oil:14, metal:45, mp:10, atk:3, def:6, hp:26, spd:6, build:120, upk:7, food:1, fuel:2, req:{b:'yard', l:2}, tech:'nav2', vs:{air:1.4, soft:0.4, armored:0.3, naval:0.6}, role:'Mobile airbase: air wings can base on it and strike far from home. Weak alone; escort it.'},
   heli: {name:'Wasp Gunship',      short:'GUN', cls:'air',     cost:65, oil:8,  metal:15, mp:6,  atk:7, def:4, hp:10, spd:12, build:54, upk:4, food:0.5, fuel:1.5, req:{b:'air', l:1}, tech:'heli1', vs:{armored:2.2, soft:1.3, air:0.3, naval:0.5}, role:'Attack helicopter: short range (6 hexes), tears through armor and infantry.'},
   drone:{name:'Kite Recon UAV',    short:'DRN', cls:'air',     cost:30, oil:2,  metal:8,  mp:1,  atk:0.5, def:1, hp:4, spd:16, build:30, upk:1, food:0,   fuel:0.5, req:{b:'air', l:1}, tech:'drone1', vs:{soft:0.2, armored:0.2, air:0.1, naval:0.1}, role:'Unarmed UAV: flies to any province in range and loiters 12 hours, watching everything within 2 provinces live; the area stays revealed 12 h after it leaves.'},
@@ -464,6 +466,8 @@ const ICONS = {
   mp: '<circle cx="8" cy="4.6" r="2.4" fill="currentColor"/><path d="M3 14c0-3.2 2.2-5.2 5-5.2s5 2 5 5.2z" fill="currentColor"/>',
 };
 const USVG = {
+  mlrs: '<rect x="3" y="9" width="20" height="3" rx="1"/><path d="M17 6h5l1 3h-6z"/><path d="M4 8l9-5 1.4 2.2-9 5z"/><circle cx="7" cy="13" r="1.8"/><circle cx="12" cy="13" r="1.8"/><circle cx="19" cy="13" r="1.8"/>',
+  spec: '<circle cx="14" cy="3.5" r="2.1"/><path d="M12.6 6h2.8l1.2 4 2.4 4.5h-1.9L15 11l-1.5 3.5h-1.9l1-4.5z"/><path d="M9 8.5l11-1.6" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M4 14c3-1 5-1 8 0" stroke="currentColor" stroke-width="1" fill="none"/>',
   carr: '<path d="M1 9h26l-3 4H4z"/><path d="M3 7.6h22v1.4H3z"/><rect x="17" y="3.5" width="3" height="4"/><path d="M6 6.6l3-.9 3 .9z"/>',
   heli: '<rect x="3" y="2" width="22" height="1.2" rx=".6"/><path d="M13 3.2h1v2h-1z"/><path d="M6 7c3-1.6 8-1.8 11-.6l2 1H26v1.6h-6l-2 .8c-3 1.2-8 1-11-.4z"/><path d="M8 11h9v1H8z"/>',
   drone: '<path d="M2 7h24v1.4H2z"/><path d="M12 4.5c1.5-.4 3-.4 4.5 0l.5 6h-5.5z"/><path d="M11 11l-3 3h2l2.5-2.4zM17.5 11l3 3h-2L16 11.6z"/>',
@@ -949,10 +953,10 @@ function addArmy(owner, at, units){
 const has = (n, id) => n >= 0 && !!(S.nations[n].tech && S.nations[n].tech[id]);
 // formation names: "3rd Armored Division", "2nd Fleet", "5th Air Wing" (numbered per nation and kind)
 const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
-const KIND_NAME = {inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'Recon Squadron', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
+const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'Recon Squadron', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
 function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
   let k = a.air ? (a.u.heli ? 'heli' : a.u.drone ? 'drone' : 'air') : shipsOnly(a) ? (a.u.carr ? 'carr' : a.u.sub === count(a) ? 'sub' : 'sea') : null;
-  if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
+  if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para', 'mlrs', 'spec']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
   a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
 const armyLabel = a => a.owner === PLAYER ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
@@ -1012,7 +1016,12 @@ function cmdLost(a){ const c = cmdOf(a); if (!c) return; c.army = null; a.cmd = 
 function cmdXP(a, dealt){ const c = cmdOf(a); if (!c || dealt <= 0) return; c.xp += dealt; const need = [0, 200, 600, 1e9][c.rank];
   if (c.xp >= need && c.rank < 3){ c.rank++; if (a.owner === PLAYER) log(`${c.name} promoted to ${RANKS[c.rank]}: the ${TRAITS[c.trait].name} trait is now ${c.rank}× as strong.`, 'good', a.at); } }
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) && ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);
-const legHours = (a, from, to) => G.P[from].nb.get(to)*24/(legSpeed(a, from, to)*(G.P[to].sea || !ground(a) ? 1 : terr(to).spd*(G.P[from].road.has(to) ? 1.35 : 1)*weatherSpd(to)));
+const MOVE_T = {inf:'foot', at:'foot', spec:'foot', para:'foot', art:'track', tank:'track', ifv:'wheel', sam:'wheel', mlrs:'wheel'};
+const ROAD_F = {wheel:1.6, track:1.25, foot:1.15};
+const TERR_F = {wheel:{forest:0.85, mountain:0.7, desert:0.95, tundra:0.85}, track:{forest:0.95, mountain:0.85, desert:1.05, tundra:0.95}, foot:{forest:1.1, mountain:1.3, urban:1.05}};
+function moveType(a){ let slow = null, sv = 1e9; for (const t of UT){ if (!a.u[t] || !MOVE_T[t]) continue; const v = st(a.owner, t, 'spd'); if (v < sv){ sv = v; slow = t; } } return slow ? MOVE_T[slow] : 'foot'; }
+function moveF(a, from, to){ const mt = moveType(a), P = G.P[to]; let f = (TERR_F[mt] && TERR_F[mt][P.terrain]) || 1; if (G.P[from].road.has(to)) f *= ROAD_F[mt]/1.35; const sz = season(to); if (sz === 'mud' && mt === 'wheel') f *= 0.8; if (sz === 'snow' && mt === 'wheel') f *= 0.9; if (a.u.spec === count(a)) f = Math.max(f, 1); return f; }
+const legHours = (a, from, to) => G.P[from].nb.get(to)*24/(legSpeed(a, from, to)*(G.P[to].sea || !ground(a) ? 1 : terr(to).spd*(G.P[from].road.has(to) ? 1.35 : 1)*weatherSpd(to)*moveF(a, from, to)));
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
 const armyById = id => S.armies.find(a => a.id === id);
 const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;
@@ -2289,7 +2298,7 @@ function tick(){
         const mf = moraleF(a);
         const tm = G.P[p].sea || o === S.owner[p] ? 1 : terr(p).armor;
         const cB = o !== S.owner[p] ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner');
-        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(UNITS[t].cls === 'armored' ? tm : 1)*cB*(t === 'art' || t === 'sam' ? cG : 1); a._dealt0 += base; for (const k of CLASSES) av[k] += base*mult(t, k); } }
+        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(UNITS[t].cls === 'armored' ? tm : 1)*cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1)*(t === 'spec' && !G.P[p].sea && ['forest', 'mountain', 'urban'].includes(G.P[p].terrain) ? 1.4 : 1); a._dealt0 += base; for (const k of CLASSES) av[k] += base*mult(t, k); } }
       // shore bombardment: this side's ships in adjacent sea zones add half their firepower to coastal land battles
       if (!G.P[p].sea && G.P[p].coast) for (const sz of G.P[p].nbs){ if (!G.P[sz].sea) continue;
         for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null) continue;
@@ -2374,12 +2383,14 @@ function reportHTML(R){
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="goto" data-id="${R.p}">Show on map</button></div>`;
 }
 function rangedHour(){
-  for (const a of S.armies){ if (a.owner < 0 || !a.u.art || a.air || a.fly || a.to !== null || G.P[a.at].sea || S.battles.includes(a.at) || a.fire === 'hold') continue;
-    let best = -1, bp = 0; for (const v of G.P[a.at].nbs){ if (G.P[v].sea) continue; const foes = stationaryAt(v).filter(b => b.owner >= 0 && atWar(a.owner, b.owner)); const pw = foes.reduce((s0, b) => s0 + power(b), 0); if (pw > bp){ bp = pw; best = v; } }
+  for (const a of S.armies){ if (a.owner < 0 || !(a.u.art || a.u.mlrs) || a.air || a.fly || a.to !== null || G.P[a.at].sea || S.battles.includes(a.at) || a.fire === 'hold') continue;
+    const near = new Set(G.P[a.at].nbs.filter(v => !G.P[v].sea)), far = new Set(); if (a.u.mlrs) for (const v of near) for (const w of G.P[v].nbs) if (!G.P[w].sea && w !== a.at && !near.has(w)) far.add(w);
+    let best = -1, bp = 0; for (const v of [...near, ...far]){ const foes = stationaryAt(v).filter(b => b.owner >= 0 && atWar(a.owner, b.owner)); const pw = foes.reduce((s0, b) => s0 + power(b), 0)*(near.has(v) ? 1.1 : 1); if (pw > bp){ bp = pw; best = v; } }
     if (best < 0) continue;
     const foes = stationaryAt(best).filter(b => b.owner >= 0 && atWar(a.owner, b.owner)), tot = foes.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
-    const av = {soft:0, armored:0, air:0, naval:0}, base = a.u.art*st(a.owner, 'art', 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4);
-    for (const k of CLASSES) av[k] = base*mult('art', k);
+    const av = {soft:0, armored:0, air:0, naval:0}, shooters = (near.has(best) ? [['art', a.u.art], ['mlrs', a.u.mlrs]] : [['mlrs', a.u.mlrs]]).filter(e => e[1]);
+    let base = 0; for (const [t, n] of shooters){ const b0 = n*st(a.owner, t, 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4); base += b0; for (const k of CLASSES) av[k] += b0*mult(t, k); }
+    if (!base) continue;
     for (const b of foes){ const h0 = effHP(b), u0 = count(b); hurt(b, av, (b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort) : 1)/tot); const lost = Math.max(0, h0 - effHP(b));
       if (lost >= 0.5 && booted && (a.owner === PLAYER || b.owner === PLAYER || visibleSet().has(best))) fx('dmg', best, {owner:b.owner, val:lost, text:`−${Math.round(lost)}`, color:b.owner === PLAYER ? '#ff8f86' : shade(colorOf(b.owner), 0.35)});
       if (u0 - count(b) > 0 && (a.owner === PLAYER || b.owner === PLAYER)) bump(a.owner === PLAYER ? 'unitsKilled' : 'unitsLost', u0 - count(b)); }
@@ -2740,7 +2751,8 @@ function drawSats(now){ if (!S.sats || !S.sats.length) return; ctx.save(); ctx.s
       if (Math.floor(now/500 + st.id) % 2 === 0){ ctx.fillStyle = mine ? '#8fe0ff' : '#ff6a5a'; ctx.beginPath(); ctx.arc(0, -4.6*sc, 1.2*sc, 0, Math.PI*2); ctx.fill(); }
       ctx.restore(); } }
   ctx.restore(); }
-function armyVisible(a, vis){ return a.owner === PLAYER || (a.owner >= 0 && friendly(PLAYER, a.owner) && rel(PLAYER, a.owner).st === 'ally') || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
+function armyVisible(a, vis){ if (a.owner !== PLAYER && a.owner >= 0 && a.u.spec && a.u.spec === count(a) && !S.armies.some(b => b.owner === PLAYER && !b.air && (b.at === a.at || G.P[b.at].nbs.includes(a.at)))) return false;   // special forces: only seen up close
+  return a.owner === PLAYER || (a.owner >= 0 && friendly(PLAYER, a.owner) && rel(PLAYER, a.owner).st === 'ally') || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
 function armyPos(a){
   if (a.air) return wingPos(a);
   if (a.fly && a.fly.kind === 'drop'){ const A = G.P[a.fly.from], B = G.P[a.fly.tgt], t = Math.min(1, a.fly.t + (S.speed && !S.over ? acc : 0)*a.fly.dt); return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t]; }
@@ -2863,7 +2875,7 @@ function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
 const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max(2, hexPx/20)) : 1.35, hexPx/12));
 // close zoom: draw each force as a formation of sprites in ranks (1 figure per ~2 units, max 10); casualties drop out
 const FORM_PX = 36, FIGPREV = new Map(), FALL = [];
-const FIG_ORDER = {tank:0, ifv:1, at:2, inf:3, sam:4, art:5, frig:0, crui:0, sub:1};
+const FIG_ORDER = {tank:0, ifv:1, spec:2, at:2, inf:3, sam:4, art:5, mlrs:5, frig:0, crui:0, sub:1};
 function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
   const tot = {}; for (const a of list) for (const t of UT) if (a.u[t] && UNITS[t].cls !== 'air') tot[t] = (tot[t] || 0) + a.u[t];
   const types = Object.keys(tot); if (!types.length || !types.every(t => U3D.has(t))) return null;
@@ -2887,8 +2899,8 @@ function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
   FIGPREV.set(key, {n:slots.length, slots:slots.map(q => ({t:q.t, x:q.x, y:q.y}))});
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const q of slots.slice().sort((a, b) => a.y - b.y)){
-    const seed = key*7 + q.i*5, inf = q.t === 'inf' || q.t === 'at';
-    const fr = inf ? (moving ? Math.floor(now/85 + seed) % 8 : fighting ? (shotPhase(seed, now) < 90 ? 1 : 0) : 0) : fighting ? ((ph => q.t === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : q.t === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
+    const seed = key*7 + q.i*5, inf = q.t === 'inf' || q.t === 'at' || q.t === 'spec' || q.t === 'para';
+    const fr = q.t === 'mlrs' ? (fighting ? (shotPhase(seed, now) < 120 ? 2 : 1) : 0) : inf ? (moving ? Math.floor(now/85 + seed) % 8 : fighting ? (shotPhase(seed, now) < 90 ? 1 : 0) : 0) : fighting ? ((ph => q.t === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : q.t === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
     ctx.beginPath(); ctx.ellipse(q.x, q.y + 1, fh*0.26, fh*0.07, 0, 0, Math.PI*2); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fill();
     U3D.draw(ctx, q.t, color, q.x, q.y + 2*s, fh, ang, fr, night);
     x0 = Math.min(x0, q.x - fh*0.4); x1 = Math.max(x1, q.x + fh*0.4); y0 = Math.min(y0, q.y - fh*0.6); y1 = Math.max(y1, q.y + fh*0.2); }
@@ -2990,8 +3002,8 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
       if (fighting && counter.vol) counter.vol(fr.t, ang3, hpx, fr.x, fr.y); }
   } catch (e) { form = null; }
   if (form) use3d = false;
-  if (use3d && !form) try { const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:54, sub:46, crui:60, carr:70})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
-    const fr = (main === 'inf' || main === 'at') ? (moving ? Math.floor(now/85 + seed) % 8 : 0) : fighting ? ((ph => main === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : main === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
+  if (use3d && !form) try { const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:54, sub:46, crui:60, carr:70, mlrs:62, spec:58, heli:40, drone:34, para:62})[main]*s, ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
+    const fr = main === 'mlrs' ? (fighting ? (shotPhase(seed, now) < 120 ? 2 : 1) : 0) : (main === 'inf' || main === 'at' || main === 'spec' || main === 'para') ? (moving ? Math.floor(now/85 + seed) % 8 : 0) : fighting ? ((ph => main === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : main === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
     if (types[1]){ const h2 = hpx*0.72; U3D.draw(ctx, types[1], color, x - 16*fs*dir, y - 7*fs, h2, ang3, 0, night); }
     U3D.draw(ctx, main, color, x + shake*0.4, y + 2*s, hpx, ang3, fr, night);
     if (moving && UNITS[main].cls !== 'naval' && counter.dust) counter.dust(main, ang3, hpx);
@@ -3836,7 +3848,7 @@ function armyHTML(a){
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
     ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div><button class="btn" data-act="cmd-off" style="padding:2px 7px;font-size:12px">Relieve</button></div>`
       : (free => `<div class="row" style="align-items:center"><span class="small muted">Commander</span>${free.length ? free.map(f => `<button class="btn" data-act="cmd-on" data-id="${f.id}" title="${TRAITS[f.trait].desc}" style="padding:3px 8px;font-size:12px">${TRAITS[f.trait].icon} ${f.name}</button>`).join('') : ''}${cmdList(PLAYER).length < CMD_MAX ? `<button class="btn" data-act="cmd-new" ${S.nations[PLAYER].cash >= CMD_COST ? '' : 'disabled'} style="padding:3px 8px;font-size:12px" title="Appoint a new commander with a random trait (max ${CMD_MAX})">Appoint · $${CMD_COST}M</button>` : ''}</div>`)(cmdList(PLAYER).filter(f => f.army == null)))(cmdOf(a))}
-    ${a.u.art ? `<div class="row" style="align-items:center"><span class="small muted">Artillery</span><button class="btn ${a.fire !== 'hold' ? 'primary' : ''}" data-act="fire" data-v="free" style="padding:3px 9px;font-size:12px" title="Shell enemy forces in neighbouring provinces every hour">Fire at will</button><button class="btn ${a.fire === 'hold' ? 'primary' : ''}" data-act="fire" data-v="hold" style="padding:3px 9px;font-size:12px">Hold fire</button></div>` : ''}
+    ${a.u.art || a.u.mlrs ? `<div class="row" style="align-items:center"><span class="small muted">Artillery${a.u.mlrs ? ' · range 2' : ''}</span><button class="btn ${a.fire !== 'hold' ? 'primary' : ''}" data-act="fire" data-v="free" style="padding:3px 9px;font-size:12px" title="Shell enemy forces in neighbouring provinces every hour">Fire at will</button><button class="btn ${a.fire === 'hold' ? 'primary' : ''}" data-act="fire" data-v="hold" style="padding:3px 9px;font-size:12px">Hold fire</button></div>` : ''}
     ${a.chase != null && armyById(a.chase) ? `<div class="status move">Pursuing ${armyLabel(armyById(a.chase))}</div>` : ''}
     ${a.air || shipsOnly(a) ? '' : `<div class="row" style="align-items:center"><span class="small muted">Stance</span>${Object.entries(STANCES).map(([k, v]) => `<button class="btn ${(a.stance || 'hold') === k ? 'primary' : ''}" data-act="stance-set" data-k="${k}" title="${v[1]}" style="padding:3px 9px;font-size:12px">${v[0]}</button>`).join('')}</div>`}
     <div class="row">
