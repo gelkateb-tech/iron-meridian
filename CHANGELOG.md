@@ -332,3 +332,22 @@
   - Each follows a looping ground track that crosses the whole map once per game day. Everything inside its footprint (roughly 1,400 km across) is revealed as it passes.
   - On the map you see the satellite with its solar panels and a blinking beacon. Your own also show a dashed scanning footprint and their track.
   - AI powers launch satellites too, and theirs appear in the sky with a red beacon.
+
+## Round 45 — Messages, trade deals, Right of Way airbases, open market
+- Direct messages: every nation in Diplomacy has Message and Trade deal buttons, a generated flag and an unread badge.
+  - The chat window takes free text, plus quick buttons: Hello, Propose peace, Ask Right of Way, Propose alliance, Ask for help, Threaten.
+  - The AI answers according to its opinion of you and the situation, and acts on requests. It may accept peace, grant Right of Way, ally with you, or even declare war on your enemy if it likes you enough. Threats sour relations.
+  - AI nations also message you first: peace feelers, border warnings, alliance invitations, war notices. Unread messages appear as toasts and on the Diplomacy badge.
+- Trade deals: a two-column deal builder.
+  - Each side can include money, oil, metal and food, any number of provinces (buy or sell territory), and treaties: peace, Right of Way, non-aggression, alliance.
+  - A live verdict says whether they would likely accept, or roughly how much more value they want.
+  - The AI values provinces by city, oil, ore and size. It won't give up its capital or its last provinces, and it charges more for peace when it thinks it's winning.
+  - Ceded provinces transfer for good, and troops left inside are evicted.
+  - AI nations send you trade proposals too, such as selling a border province or trading goods for cash. These appear as offers in Diplomacy with Accept and Decline.
+- Right of Way now also opens airbases: allied and Right of Way partners' air wings can rebase onto each other's airbases and stay there.
+- Coalitions: name your coalition or leave it from Diplomacy. Allying with nations founds or grows it.
+- Open market: below the exchange, nations post sell offers of oil, metal and food from their surpluses, each with the seller's flag, quantity, price against the exchange rate, and time left.
+  - Buying pays the seller directly.
+  - Offers from nations at war with you are highlighted red with an ENEMY tag. Hovering says "This offer is made by an enemy: Russia. Buying from them funds their war."
+  - You can post your own offers for 3 days (the goods are held until sold or returned), and AI nations buy them when they are short and your price is fair.
+- Flags are original designs generated from each nation's colour (bands, crosses, chevrons and emblems), not real-world flag designs.
