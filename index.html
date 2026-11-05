@@ -158,9 +158,9 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .chatbox{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px;margin:8px 0;background:rgba(0,0,0,.25);border-radius:6px}
 .msg{max-width:78%;padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.06);align-self:flex-start} .msg.me{align-self:flex-end;background:rgba(226,162,61,.18)}
 .tabs2{display:flex;gap:6px;margin:6px 0} .dealgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:640px){.dealgrid{grid-template-columns:1fr}}
-.dealres{display:inline-flex;align-items:center;gap:4px;margin:0 8px 6px 0} .dealres input{width:72px} .dealgrid select{width:100%;margin:4px 0;background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:4px 6px;font:inherit;font-size:13px}
+.dealres{display:inline-flex;align-items:center;gap:4px;margin:0 8px 6px 0} .dealres input{width:72px} select[data-act=gift-prov]{width:100%;margin:4px 0} .dealgrid select{width:100%;margin:4px 0;background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:4px 6px;font:inherit;font-size:13px}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0} .chipx{font-size:12px;padding:2px 6px;border-radius:10px;background:rgba(255,255,255,.08)} .chipx button{background:none;border:0;color:inherit;cursor:pointer}
-.trrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px} input.rn2,#bk-qty,#bk-price,#bk-res,#bk-type,.dealres input{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:4px 6px;font:inherit;font-size:13px}
+.trrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px} select[data-act=gift-prov],input.rn2,#bk-qty,#bk-price,#bk-res,#bk-type,.dealres input{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:4px 6px;font:inherit;font-size:13px}
 .slots{display:grid;gap:6px;margin-bottom:8px}.slot{display:flex;gap:8px;align-items:center;padding:6px 9px;background:rgba(255,255,255,.03);border-radius:4px}.slot>span{flex:1}
 html.reduced *{transition:none!important;animation:none!important}
 .achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:10px}.ach{display:flex;flex-direction:column;gap:2px;padding:6px 9px;border-radius:4px;background:rgba(255,255,255,.03);opacity:.55}.ach.on{opacity:1;background:rgba(226,162,61,.1);border-left:3px solid var(--accent)}.legend{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
@@ -1362,16 +1362,16 @@ const isBid = o => o.type === 'buy';
 const blocIdOf = n => { const R = S.blocReg && Object.entries(S.blocReg).find(([, r]) => r.members && r.members.includes(n)); return R ? R[0] : null; };
 const canSee = (o, n) => !o.priv || blocIdOf(n) === o.priv;
 function settle(buyer, seller, k, q, price){ const B = S.nations[buyer], Sl = S.nations[seller]; B[k] += q; Sl.cash += q*price; }
-function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty > 0 && S.nations[o.seller].alive);
+function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty > 0 && S.nations[o.seller].alive); for (const o of S.book) o.priv = null;
   // expired listings: goods (sell) or money (buy) go back to their owner
   for (const o of S.book) if (o.exp <= S.hour){ const N = S.nations[o.seller]; if (isBid(o)) N.cash += o.qty*o.price; else N[o.res] += o.qty; o.qty = 0; }
   S.book = S.book.filter(o => o.qty > 0);
   for (const N of S.nations){ if (!N.alive || N.id === PLAYER) continue; const cap = stockCap(N.id), mine = S.book.filter(o => o.seller === N.id).length;
     for (const k of MKT_K){ if (mine >= 3) break;
       if (N[k] > cap*0.55 && rng() < 0.45 && !S.book.some(o => o.seller === N.id && o.res === k && !isBid(o))){ const qty = Math.round(Math.min(N[k] - cap*0.35, 30 + rng()*60)); if (qty < 10) continue;
-        N[k] -= qty; const bp = blocIdOf(N.id); S.book.push({id:S.nid++, type:'sell', seller:N.id, res:k, qty, price:+(M.p[k]*(0.92 + rng()*0.25)).toFixed(2), exp:S.hour + 72, priv:bp && rng() < 0.4 ? bp : null}); }
+        N[k] -= qty; const bp = blocIdOf(N.id); S.book.push({id:S.nid++, type:'sell', seller:N.id, res:k, qty, price:+(M.p[k]*(0.92 + rng()*0.25)).toFixed(2), exp:S.hour + 72}); void bp; }
       else if (N[k] < 40 && N.cash > 260 && rng() < 0.5 && !S.book.some(o => o.seller === N.id && o.res === k && isBid(o))){ const price = +(M.p[k]*(1 + rng()*0.22)).toFixed(2), qty = Math.round(Math.min(60, 25 + rng()*40, (N.cash - 200)/price)); if (qty < 10) continue;
-        N.cash -= qty*price; const bp = blocIdOf(N.id); S.book.push({id:S.nid++, type:'buy', seller:N.id, res:k, qty, price, exp:S.hour + 72, priv:bp && rng() < 0.4 ? bp : null}); } } }
+        N.cash -= qty*price; const bp = blocIdOf(N.id); S.book.push({id:S.nid++, type:'buy', seller:N.id, res:k, qty, price, exp:S.hour + 72}); void bp; } } }
   // matching between listings (never between nations at war); the earlier listing's price stands
   for (const bid of S.book.filter(isBid)){ for (const ask of S.book.filter(o => !isBid(o) && o.res === bid.res && o.price <= bid.price && o.seller !== bid.seller && !atWar(o.seller, bid.seller) && canSee(o, bid.seller) && canSee(bid, o.seller)).sort((x, y) => x.price - y.price)){
       if (bid.qty <= 0) break; if (ask.qty <= 0 || bid.seller === PLAYER || ask.seller === PLAYER) continue; const q = Math.min(bid.qty, ask.qty); settle(bid.seller, ask.seller, bid.res, q, ask.price); S.nations[bid.seller].cash += q*(bid.price - ask.price); bid.qty -= q; ask.qty -= q; } }
@@ -1406,8 +1406,8 @@ function bookHTML(){ const all = (S.book || []).filter(o => canSee(o, PLAYER)), 
     <div class="eyebrow" style="margin-top:12px">Post your own offer (3 days)</div>
     <div class="row" style="align-items:center"><select id="bk-type"><option value="sell">I sell</option><option value="buy">I want to buy</option></select><input id="bk-qty" type="number" min="10" step="10" value="50" style="width:70px" aria-label="Quantity">
       <select id="bk-res">${MKT_K.map(k => `<option value="${k}">${RES.find(r => r.k === k).name}</option>`).join('')}</select><span class="small muted">at $</span><input id="bk-price" type="number" min="0.1" step="0.1" value="${mkt().p.oil.toFixed(1)}" style="width:70px" aria-label="Price per unit"><span class="small muted">M each</span>
-      ${blocIdOf(PLAYER) ? '<label class="small"><input type="checkbox" id="bk-priv"> Coalition only (private)</label>' : ''}<button class="btn primary" data-act="book-post">Post offer</button></div>
-    <p class="small muted">A sell offer holds your goods and a buy offer holds your money until someone takes it or it expires. Every listing is public, except coalition-only offers, which only members of that coalition can see.</p>`; }
+      <button class="btn primary" data-act="book-post">Post offer</button></div>
+    <p class="small muted">A sell offer holds your goods and a buy offer holds your money until someone takes it or it expires. Every listing is public; coalition partners can also send each other supplies directly from Messages.</p>`; }
 function marketHTML(){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), emb = S.nations.filter(m => m.alive && mkt().emb[m.id + '>' + PLAYER]);
   return `<div class="rhead"><div><div class="eyebrow">Open market · day ${dayOf(S.hour)}</div><h1>Market</h1></div><div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
     <p class="small muted">Nations list what they want to sell or buy. Trades happen only between nations: your money goes to the seller, and selling pays you. Offers from nations at war with you are marked red. Stocks: ${MKT_K.map(k => `${icon(k)} ${fmt(N[k])}/${fmt(cap)}`).join(' · ')}</p>
@@ -1772,9 +1772,28 @@ function nationHTML(n){ const N = S.nations[n], r = rel(PLAYER, n), L = chatLog(
     <div class="status ${why ? 'battle' : v >= 10 ? '' : 'move'}">${why ? `Not possible: ${why}.` : v >= 10 ? `${N.name} would likely accept.` : `${N.name} would likely refuse: they want about $${fmt(Math.ceil((10 - v)/10)*10)}M more value.`}</div>
     <div class="row"><button class="btn primary" data-act="deal-send" ${why ? 'disabled' : ''}>Send proposal</button><button class="btn" data-act="deal-clear">Clear</button></div>`;
   return `<div class="rhead"><div><div class="eyebrow">${REL[r.st]} · opinion ${Math.round(opinion(n, PLAYER))}</div><h1 style="display:flex;align-items:center;gap:10px">${flagSVG(n, 36, 24)} ${N.name}</h1></div><button class="btn" data-act="diplo-open">Back to Diplomacy</button></div>
-    <div class="tabs2"><button class="btn ${tab === 'chat' ? 'primary' : ''}" data-act="nat-tab" data-k="chat">Messages</button><button class="btn ${tab === 'trade' ? 'primary' : ''}" data-act="nat-tab" data-k="trade">Trade deal</button></div>
-    ${tab === 'chat' ? chat : trade}`; }
+    <div class="tabs2"><button class="btn ${tab === 'chat' ? 'primary' : ''}" data-act="nat-tab" data-k="chat">Messages</button><button class="btn ${tab === 'trade' ? 'primary' : ''}" data-act="nat-tab" data-k="trade">Trade deal</button>${sameBloc(n) ? `<button class="btn ${tab === 'give' ? 'primary' : ''}" data-act="nat-tab" data-k="give">Give (coalition)</button>` : ''}</div>
+    ${tab === 'give' && sameBloc(n) ? giftHTML(n) : tab === 'trade' ? trade : chat}`; }
 let NATV_TAB = 'chat';
+const sameBloc = n => { const a = blocIdOf(PLAYER); return !!a && a === blocIdOf(n); };
+let GIFT = null;
+function giftHTML(n){ const N = S.nations[n]; if (!GIFT || GIFT.n !== n) GIFT = {n, cash:0, oil:0, metal:0, food:0, provs:[]};
+  const me = S.nations[PLAYER], G0 = GIFT, cand = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && !isCapital(P.id) && !G0.provs.includes(P.id)).slice(0, 80);
+  return `<p class="small muted">Coalition partners can send each other anything at once, with nothing asked in return. You have ${['cash', 'oil', 'metal', 'food'].map(k => `${icon(k)} ${fmt(me[k])}`).join(' · ')}.</p>
+    <div>${['cash', 'oil', 'metal', 'food'].map(k => `<label class="dealres">${icon(k)}<input type="number" min="0" step="${k === 'cash' ? 10 : 5}" data-act="gift-res" data-k="${k}" value="${G0[k] || 0}"></label>`).join('')}</div>
+    <select data-act="gift-prov"><option value="">+ give a province…</option>${cand.map(P => `<option value="${P.id}">${P.cityName || P.name}${P.city ? ' (city)' : ''}</option>`).join('')}</select>
+    <div class="chips">${G0.provs.map(p => `<span class="chipx">${G.P[p].cityName || G.P[p].name} <button data-act="gift-unprov" data-id="${p}" aria-label="Remove">×</button></span>`).join('')}</div>
+    <div class="row"><button class="btn primary" data-act="gift-send">Send to ${N.name}</button><button class="btn" data-act="gift-clear">Clear</button></div>`; }
+function sendGift(n){ const g = GIFT, me = S.nations[PLAYER], N = S.nations[n]; if (!g || !sameBloc(n)) return false; const parts = [];
+  for (const k of ['cash', 'oil', 'metal', 'food']){ const q = Math.max(0, Math.min(g[k] || 0, Math.floor(me[k]))); if (!q) continue; me[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : `${q} ${k}`); }
+  for (const p of g.provs){ if (S.owner[p] !== PLAYER || isCapital(p)) continue; S.owner[p] = n; S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(PLAYER, n); geoDirty = true; parts.push(G.P[p].cityName || G.P[p].name); }
+  if (!parts.length) return false; addMem(n, PLAYER, Math.min(15, 2 + parts.length*2)); say(n, PLAYER, `Sending you ${parts.join(', ')}.`); say(n, n, 'Received with thanks. The coalition stands together.'); if (S.unread) S.unread[n] = 0;
+  log(`You sent ${parts.join(', ')} to your coalition partner ${N.name}.`, 'good', null); GIFT = null; checkEnd(); return true; }
+// AI partners offer supplies when you run short, and send them if you say yes
+function coalitionAid(){ if (!blocIdOf(PLAYER)) return; const me = S.nations[PLAYER];
+  for (const k of ['oil', 'metal', 'food']){ if (me[k] > 25) continue; const donor = S.nations.find(N => N.alive && N.id !== PLAYER && sameBloc(N.id) && N[k] > 150);
+    if (donor && rng() < 0.5 && !(S.aidAsk && S.aidAsk[donor.id] > S.hour)){ const q = Math.min(60, Math.floor(donor[k] - 100)); donor[k] -= q; me[k] += q; (S.aidAsk || (S.aidAsk = {}))[donor.id] = S.hour + 72;
+      say(donor.id, donor.id, `We saw you were short of ${k}, so we sent you ${q}. That is what partners are for.`); log(`${donor.name} sent you ${q} ${k} as coalition aid.`, 'good', null); } } }
 function offerPlayer(from, kind){
   if (S.offers.some(o => o.from === from) || (S.lastOffer && S.lastOffer[from] && S.hour - S.lastOffer[from] < 5*24)) return;
   if (kind !== 'peace' && rel(from, PLAYER).st === kind) return;
@@ -2429,7 +2448,7 @@ function recordStats(){
 }
 const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
-  marketDay(); bookDay(); chatDay();
+  marketDay(); bookDay(); chatDay(); coalitionAid();
   for (const N of S.nations){ if (!N.alive || N.id === PLAYER || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }
   for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
     const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
@@ -3559,15 +3578,15 @@ function diploHTML(){
       if (r.st !== 'ally') acts += btn('ally', 'Propose alliance');
       if (r.st === 'truce') hint = 'Truce: war cannot be declared until it ends.';
     }
-    acts += `<button class="btn primary" data-act="nat-open" data-id="${N.id}" data-k="chat">Message</button><button class="btn" data-act="nat-open" data-id="${N.id}" data-k="trade">Trade deal</button>`;
+    acts += `<button class="btn primary" data-act="nat-open" data-id="${N.id}" data-k="chat">Message</button><button class="btn" data-act="nat-open" data-id="${N.id}" data-k="trade">Trade deal</button>${sameBloc(N.id) ? `<button class="btn" data-act="nat-open" data-id="${N.id}" data-k="give">Give</button>` : ''}`;
     acts += `<button class="btn" data-act="gift" data-id="${N.id}" ${S.nations[me].cash >= 50 ? '' : 'disabled'} title="Improves their opinion of you by 5">Gift $50M</button>`;
     { const e = mkt().emb[me + '>' + N.id]; acts += `<button class="btn" data-act="embargo" data-id="${N.id}" title="${e ? 'Lift the embargo: +5 opinion' : 'Their market prices worsen 15%; −15 opinion with them'}">${e ? 'Lift embargo' : 'Embargo'}</button>`; }
     if (mkt().emb[N.id + '>' + me]) hint = (hint ? hint + ' ' : '') + 'They embargo you.';
     // one primary action up front, the rest behind More
-    { const tmp = document.createElement('div'); tmp.innerHTML = acts; const bs = [...tmp.querySelectorAll('button')];
-      const prim = bs.find(x => x.classList.contains('primary')) || bs.find(x => x.dataset.k === 'peace') || bs.find(x => x.dataset.act !== 'declare') || bs[0];
-      bs.forEach(x => { if (x !== prim) x.classList.remove('primary'); });
-      acts = (prim ? prim.outerHTML : '') + (bs.length > 1 ? `<details class="more"><summary class="btn">More ▾</summary><div class="morebox">${bs.filter(x => x !== prim).map(x => x.outerHTML).join('')}</div></details>` : ''); }
+    { const tmp = document.createElement('div'); tmp.innerHTML = acts; const all = [...tmp.querySelectorAll('button')], direct = all.filter(x => x.dataset.act === 'nat-open'), bs = all.filter(x => x.dataset.act !== 'nat-open');
+      const prim = bs.find(x => x.classList.contains('primary') && x.dataset.act !== 'gift') || bs.find(x => x.dataset.k === 'peace') || bs.find(x => x.dataset.act !== 'declare') || bs[0];
+      bs.forEach(x => { if (x !== prim) x.classList.remove('primary'); }); direct.forEach((x, i) => { x.classList.toggle('primary', i === 0); x.style.cssText = 'padding:3px 9px;font-size:12px'; });
+      acts = direct.map(x => x.outerHTML).join('') + (prim ? prim.outerHTML : '') + (bs.length > 1 ? `<details class="more"><summary class="btn">More ▾</summary><div class="morebox">${bs.filter(x => x !== prim).map(x => x.outerHTML).join('')}</div></details>` : ''); }
     return {op, war:r.st === 'war' || !!pend, nb:borders(me, N.id), html:`<div class="drow" style="--c:${N.color}">
       <div class="nm"><b>${flagSVG(N.id)} ${N.name}${S.unread && S.unread[N.id] ? ` <span class="badge">${S.unread[N.id]}</span>` : ''}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength} military${wars.length ? ' · at war with ' + wars.join(', ') : ''}</span></div>
       <div><span class="rel" style="background:${REL_COLOR[r.st]}">${REL[r.st]}${left}</span><div class="opbar" title="${tipTxt}"><i style="left:${opL}%;width:${opW}%;background:${op >= 0 ? 'var(--ok)' : 'var(--danger)'}"></i></div><span class="small muted">Opinion of you: ${op > 0 ? '+' : ''}${Math.round(op)}</span></div>
@@ -3901,10 +3920,13 @@ document.addEventListener('click', e => {
     case 'choose-prov': closeChooser(); selectProv(+b.dataset.id); break;
     case 'choose-army': closeChooser(); selectArmy(+b.dataset.id); break;
     case 'sat': if (launchSat(PLAYER, +b.dataset.id)) renderSide(true); break;
-    case 'nat-open': NATV_TAB = b.dataset.k || 'chat'; DEAL = null; openModal(nationHTML(+b.dataset.id), 'nation'); setTimeout(() => { const cb = $('chatbox'); if (cb) cb.scrollTop = cb.scrollHeight; }, 0); break;
+    case 'nat-open': NATV_TAB = b.dataset.k || 'chat'; DEAL = null; GIFT = null; openModal(nationHTML(+b.dataset.id), 'nation'); setTimeout(() => { const cb = $('chatbox'); if (cb) cb.scrollTop = cb.scrollHeight; }, 0); break;
     case 'nat-tab': NATV_TAB = b.dataset.k; openModal(nationHTML(NATV), 'nation'); break;
     case 'chat-quick': case 'chat-send': { const n = NATV, tx = act === 'chat-quick' ? b.dataset.t : ($('chatin') ? $('chatin').value.trim() : ''); if (n == null || !tx) break; say(n, PLAYER, tx.slice(0, 160)); const rep0 = aiReply(n, tx); setTimeout(() => { say(n, n, rep0); if (S.unread) S.unread[n] = 0; if (modalKind === 'nation'){ openModal(nationHTML(n), 'nation'); const cb = $('chatbox'); if (cb) cb.scrollTop = cb.scrollHeight; } renderSide(true); }, 600); openModal(nationHTML(n), 'nation'); { const cb = $('chatbox'); if (cb) cb.scrollTop = cb.scrollHeight; } break; }
     case 'deal-unprov': DEAL[b.dataset.side].provs = DEAL[b.dataset.side].provs.filter(p => p !== +b.dataset.id); openModal(nationHTML(NATV), 'nation'); break;
+    case 'gift-send': if (sendGift(NATV)){ NATV_TAB = 'chat'; } else toast('Choose something you have to send.', 'bad', null); openModal(nationHTML(NATV), 'nation'); { const cb = $('chatbox'); if (cb) cb.scrollTop = cb.scrollHeight; } renderSide(true); break;
+    case 'gift-clear': GIFT = null; openModal(nationHTML(NATV), 'nation'); break;
+    case 'gift-unprov': if (GIFT) GIFT.provs = GIFT.provs.filter(p => p !== +b.dataset.id); openModal(nationHTML(NATV), 'nation'); break;
     case 'deal-clear': DEAL = null; openModal(nationHTML(NATV), 'nation'); break;
     case 'deal-send': { const n = NATV, D = DEAL, why = dealOK(n, D); if (why){ toast(`Not possible: ${why}.`, 'bad', null); break; } const v = dealValueFor(n, D); say(n, PLAYER, `Proposal: ${dealText(D, 'you')}.`);
       if (v >= 10){ applyTrade(n, D); say(n, n, 'Agreed. Pleasure doing business.'); log(`Trade with ${S.nations[n].name} completed: ${dealText(D, 'they')}.`, 'good', null); DEAL = null; }
@@ -3914,7 +3936,7 @@ document.addEventListener('click', e => {
       if (q){ const msg = bid0 ? `Sold ${q} ${res0} to ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(q*pr0)}M.` : `Bought ${q} ${res0} from ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(q*pr0)}M.`; toast(msg, atWar(PLAYER, sel0) ? 'bad' : 'good', null); log(msg, '', null); }
       else toast(bid0 ? 'You do not have any to sell.' : 'Not enough money or storage.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
     case 'book-cancel': { const o = (S.book || []).find(x => x.id === +b.dataset.id); if (o){ if (isBid(o)) S.nations[PLAYER].cash += o.qty*o.price; else S.nations[PLAYER][o.res] += o.qty; S.book = S.book.filter(x => x !== o); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
-    case 'book-post': { const ty = $('bk-type').value, k = $('bk-res').value, q = Math.round(+$('bk-qty').value), pr = +$('bk-price').value; if (postOffer(k, q, pr, ty, !!($('bk-priv') && $('bk-priv').checked))) toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${q} ${k} at $${pr.toFixed(2)}M each for 3 days.`, 'good', null); else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'book-post': { const ty = $('bk-type').value, k = $('bk-res').value, q = Math.round(+$('bk-qty').value), pr = +$('bk-price').value; if (postOffer(k, q, pr, ty)) toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${q} ${k} at $${pr.toFixed(2)}M each for 3 days.`, 'good', null); else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
     case 'bloc-rename': { const B = blocOf(PLAYER), v = ($('blocname') ? $('blocname').value : '').trim().replace(/[<>&"]/g, '').slice(0, 28); if (B && v){ S.blocReg[B.id].name = v; log(`Your coalition is now called the ${v}.`, 'good', null); } setHTML($('sheet'), diploHTML()); break; }
     case 'bloc-leave': { const B = blocOf(PLAYER); if (B){ for (const m of alliesOf(PLAYER)) { setRel(PLAYER, m, 'peace'); addMem(m, PLAYER, -10); } log(`You left the ${B.name}.`, 'info', null); } setHTML($('sheet'), diploHTML()); break; }
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
@@ -3961,7 +3983,10 @@ document.addEventListener('click', e => {
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod', 'stats', 'settings', 'paper'].includes(modalKind)) closeModal(); });
 document.addEventListener('input', e => { if (e.target.id === 'volume'){ SET.vol = +e.target.value/100; saveSet(); if (master && !muted) master.gain.value = SET.vol; const sp = e.target.nextElementSibling; if (sp) sp.textContent = e.target.value + '%'; } });
 let renaming = null, dropFor = null;
-document.addEventListener('change', e => { const el = e.target; if (!el || !el.dataset || modalKind !== 'nation' || !DEAL) return; const side = el.dataset.side;
+document.addEventListener('change', e => { const el = e.target; if (!el || !el.dataset || modalKind !== 'nation') return;
+  if (el.dataset.act === 'gift-res' && GIFT){ GIFT[el.dataset.k] = Math.max(0, Math.round(+el.value || 0)); return; }
+  if (el.dataset.act === 'gift-prov' && GIFT && el.value){ GIFT.provs.push(+el.value); openModal(nationHTML(NATV), 'nation'); return; }
+  if (!DEAL) return; const side = el.dataset.side;
   if (el.dataset.act === 'deal-res'){ DEAL[side][el.dataset.k] = Math.max(0, Math.round(+el.value || 0)); openModal(nationHTML(NATV), 'nation'); }
   else if (el.dataset.act === 'deal-prov' && el.value){ DEAL[side].provs.push(+el.value); openModal(nationHTML(NATV), 'nation'); }
   else if (el.dataset.act === 'deal-tr'){ const k = el.dataset.k; DEAL[side].treaty = el.checked ? [...new Set([...DEAL[side].treaty, k])] : DEAL[side].treaty.filter(x => x !== k); openModal(nationHTML(NATV), 'nation'); } });

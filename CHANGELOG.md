@@ -364,3 +364,9 @@
 - AI nations trade only through these listings: they post sell offers from surpluses and buy offers when short, and fill each other's offers (never between nations at war). No hidden trades remain.
 - You can post sell offers (goods are held) or buy offers (money is held) for 3 days. AI nations fill them when the price suits them. Embargoing nations won't trade with you.
 - Private coalition channel: the only hidden trades are inside a coalition. Coalition members can post "Coalition only" listings, marked 🔒 COALITION, which only that coalition's members can see and fill. You get a checkbox for this when you're in a coalition.
+
+## Round 48 — Coalition giving in Messages
+- Coalition trading moved from the market to Messages. Coalition-only market listings are removed, and every market listing is public again.
+- Coalition partners get a Give button on their Diplomacy row and a Give (coalition) tab in their window. Send money, oil, metal, food or provinces at once, with nothing asked in return. The gift is noted in your chat, the partner thanks you, and they like you more.
+- AI coalition partners send you supplies on their own when you run low on oil, metal or food, and tell you in Messages.
+- Message, Trade deal and Give always show on each nation's row; the rarer actions stay under More.
