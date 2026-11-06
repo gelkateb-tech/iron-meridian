@@ -1072,6 +1072,7 @@ kbd{border-color:rgba(255,255,255,.2)}
 <script src="world.js"></script>
 <script src="lines.js"></script>
 <script src="coast.js"></script>
+<script src="coast-hi.js"></script>
 <script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script><script src="terrcells.js"><\/script>'); }</script>
 <script src="units3d.js"></script>
 <script>
@@ -1375,13 +1376,13 @@ const ICONS = {
 };
 const USVG = {
   mlrs: '<rect x="3" y="9" width="20" height="3" rx="1"/><path d="M17 6h5l1 3h-6z"/><path d="M4 8l9-5 1.4 2.2-9 5z"/><circle cx="7" cy="13" r="1.8"/><circle cx="12" cy="13" r="1.8"/><circle cx="19" cy="13" r="1.8"/>',
-  spec: '<circle cx="14" cy="3.5" r="2.1"/><path d="M12.6 6h2.8l1.2 4 2.4 4.5h-1.9L15 11l-1.5 3.5h-1.9l1-4.5z"/><path d="M9 8.5l11-1.6" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M4 14c3-1 5-1 8 0" stroke="currentColor" stroke-width="1" fill="none"/>',
+  spec: '<g transform="translate(2.4 0)"><path d="M11.7 3.85C11.65 2.8 12.15 2.5 12.75 2.5C13.45 2.5 13.85 2.8 13.85 3.6L13.6 3.95L11.7 3.95z"/><path d="M13.3 2.8 13.9 2.2 14.65 2.8 14 3.5z"/><path d="M11.95 4.05 13.65 4 13.65 4.6 13.9 4.85 13.35 5.25 12.4 5.35 11.9 4.8z"/><path d="M11.2 5.2 13.2 5.05 13.2 6.6 12 9.5 9.5 9.5 10.2 6.9z"/><path d="M9.35 5.85 11.25 5.4 10.85 8.3 8.6 8.6 8.6 6.6z"/><path d="M11.95 5.12 14.14 5.38 17.53 5.66 17.45 6.73 14.06 6.55 13.04 6.8 11.84 6.72z"/><path d="M17.44 5.51 20.63 5.73 20.53 7.13 17.34 6.9z"/><path d="M14.77 6.42 15.76 6.49 15.92 7.86 14.91 7.89z"/><path d="M12.08 6 13.25 8.6 16.4 7.99 16.2 6.91 13.95 7.3 13.22 5.5z"/><path d="M10.28 8.37 7.88 10.97 7.63 13.83 8.87 13.97 9.22 11.63 11.52 9.63z"/><path d="M7.25 13.5 8.95 13.45 9.25 14.5 7.05 14.5z"/><path d="M10.78 9.8 13.58 11.04 13.88 13.95 15.12 13.85 14.92 10.16 11.62 8.2z"/><path d="M13.8 13.45 15.05 13.4 16.3 14 16.35 14.5 13.75 14.5z"/></g>',
   carr: '<path d="M1 9h26l-3 4H4z"/><path d="M3 7.6h22v1.4H3z"/><rect x="17" y="3.5" width="3" height="4"/><path d="M6 6.6l3-.9 3 .9z"/>',
   heli: '<rect x="3" y="2" width="22" height="1.2" rx=".6"/><path d="M13 3.2h1v2h-1z"/><path d="M6 7c3-1.6 8-1.8 11-.6l2 1H26v1.6h-6l-2 .8c-3 1.2-8 1-11-.4z"/><path d="M8 11h9v1H8z"/>',
   drone: '<path d="M2 7h24v1.4H2z"/><path d="M12 4.5c1.5-.4 3-.4 4.5 0l.5 6h-5.5z"/><path d="M11 11l-3 3h2l2.5-2.4zM17.5 11l3 3h-2L16 11.6z"/>',
-  para: '<path d="M4 6c3-5 17-5 20 0z"/><path d="M5 6l8 4M23 6l-8 4M14 6v4" stroke="currentColor" stroke-width=".7" fill="none"/><circle cx="14" cy="11.3" r="1.4"/><path d="M13 12.8h2l.6 3h-3.2z"/>',
-  inf: '<circle cx="9" cy="3.5" r="2"/><path d="M8 6h2.4l1 4.5 2.6 4.5h-1.8L10 11l-1.6 4H6.6L8 10.5z"/><path d="M7 7.5l9-2" stroke="currentColor" stroke-width="1.1" fill="none"/><circle cx="17" cy="3.5" r="2"/><path d="M16 6h2.4l1 4.5 2.6 4.5h-1.8L18 11l-1.6 4h-1.8L16 10.5z"/>',
-  at: '<circle cx="11" cy="3.5" r="2"/><path d="M10 6h2.4l1 4.5 2.6 4.5h-1.8L12 11l-1.6 4H8.6L10 10.5z"/><rect x="4" y="5" width="16" height="2.4" rx="1"/>',
+  para: '<g transform="translate(2 0)"><path d="M3 7C4.2 1.2 19.8 1.2 21 7c-1.7-.9-3.4-.9-5 0-1.3-.9-2.7-.9-4 0-1.3-.9-2.7-.9-4 0-1.7-.9-3.3-.9-5 0z"/><path d="M3.38 7.22 11.28 10.67 11.52 10.13 3.62 6.68z"/><path d="M20.38 6.68 12.48 10.13 12.72 10.67 20.62 7.22z"/><path d="M7.92 7.09 11.42 10.49 11.78 10.11 8.28 6.71z"/><path d="M15.72 6.71 12.22 10.11 12.58 10.49 16.08 7.09z"/><path d="M11.53 10.53C11.53 9.97 11.77 9.85 12.12 9.85C12.49 9.85 12.71 9.99 12.71 10.51L12.99 10.59L12.96 10.73L11.37 10.73L11.39 10.52z"/><path d="M11.69 10.6 12.59 10.58 12.61 11 12.38 11.26 11.72 11.26z"/><path d="M11.34 11.14 12.52 11.12 12.66 13.35 11.2 13.35z"/><path d="M10.5 11.38 11.58 11.24 11.58 13.07 10.45 13.12z"/><path d="M11.44 13.37 11.84 14.37 11.55 15.38 12.35 15.65 12.82 14.4 12.56 13.05z"/><path d="M11.58 15.23 12.56 15.23 13.08 15.61 13.03 15.89 11.58 15.89z"/></g>',
+  inf: '<g transform="translate(-3.4 0.5) scale(0.96)" opacity=".55"><path d="M11.75 2.45C11.75 1.4 12.19 1.15 12.85 1.15C13.55 1.15 13.95 1.45 13.95 2.4L14.5 2.57L14.45 2.81L11.45 2.81L11.5 2.43z"/><path d="M12.05 2.7 13.85 2.7 13.8 3.3 14.05 3.55 13.5 3.95 12.55 4.05 12 3.5z"/><path d="M11.45 3.85 13.4 3.75 13.45 5.2 12.3 8.35 9.85 8.35 10.3 5.6z"/><path d="M9.75 4.2 11.65 3.9 11.15 7 8.95 7.25 8.95 4.95z"/><path d="M12.04 3.81 14.61 4.23 19.57 4.8 19.44 5.99 14.47 5.43 13.24 5.66 11.85 5.5z"/><path d="M19.46 4.93 21.59 5.17 21.49 6.12 19.35 5.88z"/><path d="M15.29 5.34 16.43 5.47 16.6 7.05 15.45 7.02z"/><path d="M12.18 4.7 13.4 7.39 16.78 6.84 16.62 5.76 14.1 6.11 13.32 4.2z"/><path d="M10.41 7.57 8.7 10.88 7.4 13.57 8.5 14.13 9.9 11.52 11.89 8.43z"/><path d="M7.05 13.55 8.75 13.45 9.05 14.5 6.85 14.5z"/><path d="M10.81 8.48 13.38 11.24 13.84 13.98 15.06 13.82 14.72 10.66 12.19 7.32z"/><path d="M13.75 13.45 15 13.4 16.25 14 16.3 14.5 13.7 14.5z"/></g><g transform="translate(4.6 0)"><path d="M11.75 2.45C11.75 1.4 12.19 1.15 12.85 1.15C13.55 1.15 13.95 1.45 13.95 2.4L14.5 2.57L14.45 2.81L11.45 2.81L11.5 2.43z"/><path d="M12.05 2.7 13.85 2.7 13.8 3.3 14.05 3.55 13.5 3.95 12.55 4.05 12 3.5z"/><path d="M11.45 3.85 13.4 3.75 13.45 5.2 12.3 8.35 9.85 8.35 10.3 5.6z"/><path d="M9.75 4.2 11.65 3.9 11.15 7 8.95 7.25 8.95 4.95z"/><path d="M12.04 3.81 14.61 4.23 19.57 4.8 19.44 5.99 14.47 5.43 13.24 5.66 11.85 5.5z"/><path d="M19.46 4.93 21.59 5.17 21.49 6.12 19.35 5.88z"/><path d="M15.29 5.34 16.43 5.47 16.6 7.05 15.45 7.02z"/><path d="M12.18 4.7 13.4 7.39 16.78 6.84 16.62 5.76 14.1 6.11 13.32 4.2z"/><path d="M10.41 7.57 8.7 10.88 7.4 13.57 8.5 14.13 9.9 11.52 11.89 8.43z"/><path d="M7.05 13.55 8.75 13.45 9.05 14.5 6.85 14.5z"/><path d="M10.81 8.48 13.38 11.24 13.84 13.98 15.06 13.82 14.72 10.66 12.19 7.32z"/><path d="M13.75 13.45 15 13.4 16.25 14 16.3 14.5 13.7 14.5z"/></g>',
+  at: '<g transform="translate(3.2 0)"><path d="M10.95 5.35C10.95 4.3 11.39 4.05 12.05 4.05C12.75 4.05 13.15 4.35 13.15 5.3L13.7 5.47L13.65 5.71L10.65 5.71L10.7 5.33z"/><path d="M11.25 5.6 13.05 5.6 13 6.2 13.25 6.45 12.7 6.85 11.75 6.95 11.2 6.4z"/><path d="M10.75 6.75 12.75 6.65 12.9 8.1 12.2 10.6 9.6 10.6 9.95 8.5z"/><path d="M9 7.15 10.9 6.8 10.7 9.9 8.45 10.1 8.35 7.9z"/><path d="M3.44 5.45 4.86 5.96 15.65 5.49 15.73 7.25 4.94 7.72 3.56 8.35z"/><path d="M15.44 5.3 17.34 5.21 17.43 7.37 15.54 7.46z"/><path d="M12.96 5.79 12.91 4.64 14.41 4.57 14.46 5.72z"/><path d="M11.62 7.15 12.77 7.1 12.83 8.54 11.68 8.59z"/><path d="M11.36 7.65 12.32 9.63 15.12 8.4 14.68 7.4 12.88 8.17 12.44 7.15z"/><path d="M10.5 10.99 13.92 11.1 14.08 9.6 10.7 9.01z"/><path d="M13.38 10.06 13.73 13.96 14.97 13.84 14.62 9.94z"/><path d="M13.65 13.45 14.9 13.4 16.15 14 16.2 14.5 13.6 14.5z"/><path d="M9.69 9.91 8.86 13.66 10.04 14.04 11.51 10.49z"/><path d="M9.75 13.35 9.95 14.5 5.6 14.5 5.75 13.5z"/></g>',
   art: '<path d="M5 12l8-3 1 2-8 3z"/><path d="M11 9l13-6 .8 1.6-13 6z"/><circle cx="9" cy="13" r="2.6"/><circle cx="15" cy="13" r="2.6"/>',
   sam: '<rect x="3" y="9" width="13" height="3.5"/><rect x="16" y="6" width="6" height="6.5"/><circle cx="6" cy="14" r="1.8"/><circle cx="12" cy="14" r="1.8"/><circle cx="19" cy="14" r="1.8"/><path d="M5 8l8-6.5M7.5 8.5l8-6.5" stroke="currentColor" stroke-width="1.6"/>',
   ifv: '<path d="M3 9h20l2 3H4z"/><rect x="10" y="5.5" width="6" height="3.5"/><path d="M16 7h6" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="13" r="1.8"/><circle cx="11.5" cy="13" r="1.8"/><circle cx="16" cy="13" r="1.8"/><circle cx="20.5" cy="13" r="1.8"/>',
@@ -1975,13 +1976,41 @@ function groundPatterns(ctx0){ if (GROUND) return GROUND; const N = 256, rnd = m
   const pat = cv0 => { const n2 = cv0.width/2, h = document.createElement('canvas'); h.width = h.height = n2; const hg = h.getContext('2d'); hg.imageSmoothingQuality = 'high'; hg.drawImage(cv0, 0, 0, n2, n2);   // half size: about 1:1 on screen close up, cheap to sample
     const q = ctx0.createPattern(h, 'repeat'); if (q.setTransform) q.setTransform(new DOMMatrix().scale(0.17)); return q; };
   return (GROUND = {fields:pat(fc), forest:pat(tc)}); }
-function coastPath(){ if (!window.COAST) return null; const path = new Path2D(), sx = HS*SQ3, sy = HS*1.5; COASTR.length = 0;   // (runs again for every new or loaded game)
-  for (const R of window.COAST){ let x = 0, y = 0, x0 = Infinity, x1 = -Infinity; const pts = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const fx = x/10, fy = y/10; pts.push(fx, fy); if (fx < x0) x0 = fx; if (fx > x1) x1 = fx; }
+// coast rings (coast.js / coast-hi.js: delta-encoded integers at 1/q cell): decoded, copied a world to the left or right where they cross the seam,
+// projected to world coords and pushed to out as {b (box), r (flat x,y list)}; path (optional) gets every ring too
+function decodeRings(src, q, out, path){ const sx = HS*SQ3, sy = HS*1.5;
+  for (const R of src){ let x = 0, y = 0, x0 = Infinity, x1 = -Infinity; const pts = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const fx = x/q, fy = y/q; pts.push(fx, fy); if (fx < x0) x0 = fx; if (fx > x1) x1 = fx; }
     for (const off of [-W, 0, W]){ if (off < 0 && x1 < W) continue; if (off > 0 && x0 >= 0) continue; if (off === 0 && (x1 < 0 || x0 >= W)) continue;
       const ring = [], b = [Infinity, Infinity, -Infinity, -Infinity];
-      for (let i = 0; i < pts.length; i += 2){ const X = OX + sx*(pts[i] + off), Y = OY + sy*pts[i + 1]; i ? path.lineTo(X, Y) : path.moveTo(X, Y); ring.push(X, Y); if (X < b[0]) b[0] = X; if (Y < b[1]) b[1] = Y; if (X > b[2]) b[2] = X; if (Y > b[3]) b[3] = Y; } path.closePath(); COASTR.push({b, r:ring}); } }
+      for (let i = 0; i < pts.length; i += 2){ const X = OX + sx*(pts[i] + off), Y = OY + sy*pts[i + 1]; if (path) i ? path.lineTo(X, Y) : path.moveTo(X, Y); ring.push(X, Y); if (X < b[0]) b[0] = X; if (Y < b[1]) b[1] = Y; if (X > b[2]) b[2] = X; if (Y > b[3]) b[3] = Y; } if (path) path.closePath(); out.push({b, r:ring}); } } }
+// Chaikin corner cutting on a closed flat ring (points at 1/4 and 3/4 of every segment): n passes, then its box again
+function chaikinRing(R, n){ let P = R.r;
+  for (let k = 0; k < n; k++){ const m = P.length, Q = new Array(2*m); for (let i = 0, o = 0; i < m; i += 2){ const ax = P[i], ay = P[i + 1], j = (i + 2) % m, bx = P[j], by = P[j + 1];
+      Q[o++] = 0.75*ax + 0.25*bx; Q[o++] = 0.75*ay + 0.25*by; Q[o++] = 0.25*ax + 0.75*bx; Q[o++] = 0.25*ay + 0.75*by; } P = Q; }
+  const b = [Infinity, Infinity, -Infinity, -Infinity]; for (let i = 0; i < P.length; i += 2){ const X = P[i], Y = P[i + 1]; if (X < b[0]) b[0] = X; if (Y < b[1]) b[1] = Y; if (X > b[2]) b[2] = X; if (Y > b[3]) b[3] = Y; }
+  R.r = P; R.b = b; return R; }
+function coastPath(){ if (!window.COAST) return null; const path = new Path2D(); COASTR.length = 0;   // (runs again for every new or loaded game)
+  decodeRings(window.COAST, 10, COASTR, path);
+  // close zoom (coastRings): the 1:10m coast, smoothed once here (not at draw time, so a pan strip cuts the very polyline a full render strokes)
+  if (Array.isArray(window.COAST_HI) && !COASTR_HI.length) try {   /* (the same for every game: built once) */ decodeRings(window.COAST_HI, 40, COASTR_HI1, null); for (const R of COASTR_HI1){ chaikinRing(R, 1); COASTR_HI.push(chaikinRing({b:R.b, r:R.r}, 1)); } } catch (e) { COASTR_HI.length = COASTR_HI1.length = 0; }
   return path; }
-const COASTR = [];   // the coast rings as emitted by coastPath (world coords, with their boxes)
+const COASTR = [], COASTR_HI1 = [], COASTR_HI = [];   // the coast rings as emitted by coastPath (world coords, with their boxes): 1:50m, and 1:10m smoothed once and twice for close zoom
+const coastRings = hexPx => hexPx < 40 || !COASTR_HI.length ? COASTR : hexPx < 150 ? COASTR_HI1 : COASTR_HI;   // the set every coast clip, mask, wash and foam of a render reads (one corner-cut pass is smooth enough below 150 px a hex, at half the points)
+// the fine coast puts land where the texture (baked to the 1:50m shore) has sea: the texture's land colours pushed a few texels out to sea (stacked
+// blurs of the land alone, the land then cut away), half res, baked once per texture; renderLayer lays it inside the fine coast only
+function coastBleed(){ const T = G.terrain, M = G.landMask; if (!T || !M) return null; if (T.cbl !== undefined) return T.cbl; T.cbl = null;
+  try { const w = M.width, h = M.height, mk = (a, b) => { const c = document.createElement('canvas'); c.width = a; c.height = b; return c; };
+    // the land colours alone (the mask laid three times: its soft rim, where the texture mixes in the sea, all but drops out)
+    const L = mk(w, h), lg = L.getContext('2d'); lg.drawImage(T, 0, 0, w, h); lg.globalCompositeOperation = 'destination-in'; for (let i = 0; i < 3; i++) lg.drawImage(M, 0, 0);
+    // pushed out to sea by a mip chain (each halving averages the land colours in reach, its alpha the share of land), each level made near opaque
+    // and laid under the finer ones: no blur passes, a few cheap downscales
+    const O = mk(w, h), og = O.getContext('2d'); let src = L, lv = [];
+    for (let k = 0; k < 4; k++){ const a = Math.ceil(src.width/2), b = Math.ceil(src.height/2), C = mk(a, b), cg = C.getContext('2d'); cg.imageSmoothingEnabled = true; cg.drawImage(src, 0, 0, a, b); src = C; if (k) lv.push(C); }
+    for (const C of lv){ const cg = C.getContext('2d'); for (let i = 0; i < 3; i++) cg.drawImage(C, 0, 0); }   // (alpha 1 - (1 - a)^8: the colour stays)
+    og.imageSmoothingEnabled = true; for (let k = lv.length - 1; k >= 0; k--) og.drawImage(lv[k], 0, 0, w, h); og.drawImage(L, 0, 0);
+    og.globalCompositeOperation = 'destination-out'; og.drawImage(M, 0, 0); og.globalCompositeOperation = 'source-over';   // keep only what lies on the texture's sea
+    T.cbl = O; } catch (e) { T.cbl = null; }
+  return T.cbl; }
 // big lakes (coast.js window.LAKES, Natural Earth lakes 1:50m): one world-coord path, painted once into the terrain texture and punched out
 // of the land mask, so the world view, the minimap and isWet() all see water at no per-frame cost. Visual only: cells and adjacency are untouched.
 function lakePath(){ if (G.lakeP !== undefined) return G.lakeP; if (!window.LAKES || !window.LAKES.length) return (G.lakeP = null); const lp = new Path2D(), sx = HS*SQ3, sy = HS*1.5;
@@ -2188,7 +2217,7 @@ function buildMini(){
 // 64-letter alphabet: one letter = class*8 + run - 1 (runs of 1..7), or class*8 + 7 followed by two letters for run - 8
 const TERRC = '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DSpnAurWqiHAMXAenAlHAAgCnABHABhAnAEBnAAHABiAhAnACBgHAMgCg/ATiHBHVqnAYGjDnASoSonABCnARvAwkVnADoTojsnAmqXAApkHAMXAZnBIBnAECnAAGjDnAGHAJl/ATgHBJVqnAaEhDnAUpRonABCkBnAKvAnjskVnAEoTphunAmqWplHAKXAVrnA0AnAZAnACGhFnAGHAIgAhAg/ATgHBIVqnAcDhEnAToSonAACnASvAmmrkVnAEoTrTrnAlrUpmHAORkXABvACnA3BnAdAjHAHnAIBgHAFh4h/ATgHBIVqnAcFhCnASpSonAADnAQvAnnAIVnAFoTrUrnAlrTplBgAgHAJnADshunBjHAHnAMHAFg/AQh6hHBIVpnARBnACFnAXoRqjAgAgCnASvAmnAJVnAFoUqVrnAlvAAmAkHABjDnAosnA/ChHAInAEAgAlHAFg/AQgAjHAMhHABhHAngVpnAREmChAnATohpQpnADAnATvAmnAJWonAEoVpWqnAmtnAHEnAxvACnA8BgHAInAEBgAiAgHAGg4h/ANiHANhAhAgAgAlHAmVpnAUHADnAVtRonAhvAmnAIoWonAEpWpVpnArAnAHDnAVFnAMXAAuLHABnAnAjAiAgHAIPABEjHAIhAg/AKjHAQiBiAlHAkgUPADDKnAGHABgCnASrTonACHAAMDnADDvAknALWonAFpXAApTpLEkHAQiFKGPAAFnAUEnAKXAHsIHABnApAhBgAgHADhFPABDhHALh/AIiHAWnAFHAjgUoPABFLiIBkHABjBnARpUpnAEGMDnADCvAlnAKXAAonAGqWpSpLEkEsHAFjFKGMHACnAMBlCnAGQiXAKrHACnAsAkHABhGOGgHALg/AIgAgHAWnAGHAjUohPAAFJiKBlCgEnAUIpUonAFHAAJFnADDvAjnAMXACnAFrVpSpKEnABuDnAFEKGLHADmBnACDnALXATpHACnArAmHAFhCMHAUj/AFhHATgBk+hHAiVjOELhKClBjCnACAnABLCIpTpnABAkHAHnADDvAMivAMnAMXAEgrmsTqQpLEnABpSpCnAGEIHACJHAKgAnADDjvAAnABXASpHACnApCmHAGgCKFgHAOhBg/AFgHAXj+gHAjVkODLiKBlCgAnAGFPAAEpRpnABCjHAHnADDvALjvAMnAOXAH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BuIRHAARAMXADPACqHABLHApvAQXAEpHAArHACoXADrGoWrWpHABoToCIHCRoKXAIpHAVnAiBVHBuRIHAARNWISPABAqHABpJHApvAITrXAFqDpSqGoXADpHABoWtVoHABoToHCXICXAIqHAUnAhAWHBuIQIHACPAATKUOAqGqJHATIHANvAIVrXAEqCoWpFoXADoHABoWpAIqUoHABoToHCXRJSrXABpHAUnAhWHBwQJDXABPAEUNCqEqJHAqvAIWuXABpBoXABqDpXABoHABoWoEpUpGoTHCZIQAISIrXACqHARnAgAWHAMJHBMJHAFRAXAEPADWNHABqJHArvAKXABsXABpAoXADpDrSqAeAoXAApDpUpFoTEJHCSRISIsXAEoHARnAfAWHAMJHBNJHAAKRAXAB4SPADXAAMHABqIHAecHACoHAIrVtXABqXAEoGoQrfABAXABpDpSqFoTFJHCTUJsXAEoHAQnAdBXAAHBkJFLQAXAB5SPADXABMHAVwHAMeHASpArRpBoAoXADqXACqErfADAXAAoFpQrEpTFIAIHCSITItXADrHAHLConAJAhGloApWHBmJoDNXAB5IQPAEXABMHAWxHADJEfABEdHAFoQvABEoXAErWsDpfAEAXAApFsFoUHCcUJtXAGoHAHLConAFHAHirVHBpPADTKR4KSLpMXABMHAFsAsEwHADKEfACqfAAHABrSoQsEoXAHqUsDofAGXAApDKqJEoUHCcQIRJtXAHpBrHAALCqnAAAgHAKqWoHBooPACTPAAAJSJsJXABpIxHAAIAIBvAEHAIOAfACseHAAoXABoHABoXAIvACfAMXAAoDPADAqToHCdTKtXAIuGMHAAkPAMoXABoHBpvACTBoQpEoAUtTtBwGJDUuHAFKsKfACpQpfAAHAAWqHACpXAItfAOoWoCPAFqTHCdUJtXAJpSpGNGPAQoXABoHBqvACTpSqDXABvAEHACIGUtHAEJuJfADqQpfAAEXADuEqXAGpfASVpDPAEpUHCfQIRKtXAJpSpFOGPAJqJoXACoHBpvACAoSoCoSoDXACvADHALVvAAGJuJfAEqRpeFSqWoRuSrXAApfASoUoEPAEpUHCeRIRJAtXAJpRpFPABEPAJrIpXAAIHBrvAACqEqRoCoXABoQvABHALXAAsHAAJuIfAGqReHAAvAA4XA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';
 const DT_N = 512, DT_A = 2, DT_R = [2.5, 5, 10, 20], DT_CAP = 36;
-const DT = {cache:new Map(), clock:0, miss:new Set(), job:null, fail:false, made:0, ms:0, wk:undefined, busy:0, pend:new Set(), ready:[]};
+const DT = {cache:new Map(), mv:12, clock:0, miss:new Set(), job:null, fail:false, made:0, ms:0, wk:undefined, busy:0, pend:new Set(), ready:[]};
 let DTC = null;
 function dtCells(){ if (DTC && DTC.G === G) return DTC; if (DT.fail || typeof TERRC !== 'string') return null;
   const AL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', ix = new Int8Array(128).fill(-1); for (let i = 0; i < 64; i++) ix[AL.charCodeAt(i)] = i;
@@ -2196,8 +2225,8 @@ function dtCells(){ if (DTC && DTC.G === G) return DTC; if (DT.fail || typeof TE
   for (let i = 0; i < TERRC.length && k < N;){ const v = ix[TERRC.charCodeAt(i++)]; if (v < 0) break; const L = v & 7, n = L < 7 ? L + 1 : ix[TERRC.charCodeAt(i++)]*64 + ix[TERRC.charCodeAt(i++)] + 8; cls.fill(v >> 3, k, Math.min(N, k + n)); k += n; }
   if (k !== N){ DT.fail = true; return null; }
   for (let i = 0; i < N; i++){ const p = G.prov[i]; if (p < 0 || G.P[p].sea) cls[i] = 8; }   // 8: sea (only a mild relief and grain: the sea wash covers it)
-  const lat = new Float32Array(H); for (let r = 0; r < H; r++) lat[r] = Math.abs(cellLat(r*W));
-  return (DTC = {G, cls, lat, n1:makeNoise(mulberry(101)), n2:makeNoise(mulberry(202)), n3:makeNoise(mulberry(303))}); }   // (the bake's own warp noises)
+  const lat = new Float32Array(H); let er = H; for (let r = 0; r < H; r++){ const l = cellLat(r*W); lat[r] = Math.abs(l); if (l < 0 && er === H) er = r; }
+  return (DTC = {G, cls, lat, eq:OY + (er - 0.5)*1.5*HS, n1:makeNoise(mulberry(101)), n2:makeNoise(mulberry(202)), n3:makeNoise(mulberry(303))}); }   // (the bake's own warp noises)
 // gradient noise (quintic Perlin, about -0.7..0.7) and an integer hash in [0, 1)
 const DTP = (() => { const r = mulberry(4242), p = new Uint8Array(256), P = new Uint8Array(514), GX = new Float32Array(256), GY = new Float32Array(256);
   for (let i = 0; i < 256; i++) p[i] = i; for (let i = 255; i > 0; i--){ const j = Math.floor(r()*(i + 1)), t = p[i]; p[i] = p[j]; p[j] = t; }
@@ -2212,6 +2241,11 @@ const dtSm = t => t <= 0 ? 0 : t >= 1 ? 1 : t*t*(3 - 2*t);
 const DT_SG = [1, -1, 0.6, -0.6, 1, -1, 1, -0.8, 0];
 // parcel tones (r, g, b multipliers): green crop, ripe, ploughed, pasture, stubble, dark crop, fallow
 const DT_FIELD = [[0.97, 1.05, 0.9], [1.14, 1.09, 0.84], [0.88, 0.8, 0.72], [0.95, 1.02, 0.95], [1.08, 1.02, 0.88], [0.84, 0.92, 0.82], [1.02, 0.98, 0.9]];
+// the parcel tones by season: 0 winter (Dec-Feb: dull winter crop, ploughland, stubble), 1 spring, 2 early summer (the plain set above),
+// 3 harvest (ripe and stubble), 4 autumn (Sep-Nov: stubble and fresh ploughland); a tile is baked for its month's pair (north, south)
+const DT_FP = (() => { const [G, R, P, A, S, D, F] = DT_FIELD, Gw = [0.93, 0.99, 0.88], Pd = [0.85, 0.78, 0.7];
+  return [[Gw, P, Pd, A, S, D, F], [G, P, G, A, F, D, Pd], DT_FIELD, [G, R, R, A, S, S, F], [Gw, S, P, A, Pd, S, F]]; })();
+const DT_MV = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0];
 const DT_ROT = [0, 0.71, 1.93, 2.62, 4.1, 5.3].map(a => [Math.cos(a), Math.sin(a)]);
 // start a tile: its coarse grid of warped class weights (node (i, j) at tile px (i*cs - 1, j*cs - 1), px centres at +0.5)
 // one layer of tree crowns on a jittered grid of spacing sp (world units): the dome's height at (x, y), 0 between crowns; the crown's own hash in DT_CH
@@ -2224,12 +2258,12 @@ function dtCrown(x, y, sp, seed){ const cx = x/sp, cy = y/sp, ix = Math.floor(cx
 // slowly (warped and patch-sharpened class weights, the low relief's shading, low-frequency tones, field and dune strength, the dunes' warp),
 // interpolated per px under the fine relief, crowns, parcels, ripples, pools and grain
 const DT_NF = 18;   // node floats: 0-8 class weights, 9 low relief, 10 its shading, 11-13 tone, 14 farmland, 15 dune sea, 16-17 dune warp
-function dtStart(k, tx, ty){ const C = dtCells(); if (!C) return null;
+function dtStart(k, tx, ty, mo = 5){ const C = dtCells(); if (!C) return null; const vN = DT_MV[mo % 12], vS = DT_MV[(mo + 6) % 12];
   const r = DT_R[k], n = DT_N + 2*DT_A, cs = r < 4 ? 3 : Math.round(r*0.4), gw = Math.ceil((n + 2)/cs) + 2;
   if (!DT.buf || DT.buf.gw < gw){ DT.buf = {gw, g:new Float32Array(gw*gw*DT_NF)}; }
   if (!DT.Hb){ DT.Hb = new Float32Array((n + 2)*(n + 2)); DT.Tb = new Float32Array(n*n*3); }
   const g = DT.buf.g; g.fill(0, 0, gw*gw*DT_NF);
-  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0}; }
+  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq}; }
 function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT_NF, rowStep = 1.5*HS, colStep = HS*SQ3, wq = colStep*1.15, w = new Float32Array(9);
   const b0 = Math.max(0, Math.min(1, (r/3 - 0.45)/(r/6))), bh0 = Math.max(0, Math.min(1, (r/3 - 0.22)/(r/6))), bh1 = Math.max(0, Math.min(1, (r/3 - 0.46)/(r/6)));
   for (let j = J.y; j < j1; j++){ const wy = y0 + (j*cs - 0.5)/r, la = C.lat[Math.min(H - 1, Math.max(0, Math.round((wy - OY)/rowStep)))], latF = dtSm((la - 27)/9)*(1 - dtSm((la - 54)/6));
@@ -2241,15 +2275,20 @@ function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT
       // the hand-over: weights squared and pushed up or down by a noise (opposite signs for classes that meet), so they meet in patches
       const nt = dtPn(wx*0.42 + 11.3, wy*0.42 + 5.1)*1.3 + dtPn(wx*1.1 + 3.7, wy*1.1 + 9.2)*0.5; let ws = 0;
       for (let c = 0; c < 9; c++){ let v = w[c]; if (v > 0.001){ v = v*v*Math.max(0.04, 1 + DT_SG[c]*nt); has[c] = 1; } else v = 0; w[c] = v; ws += v; }
-      for (let c = 0; c < 9; c++) g[o + c] = w[c] /= ws;
+      for (let c = 0; c < 9; c++) w[c] /= ws; let clr = 0;
+      if (w[1] > 0.02 && la > 38 && la < 62){ const lo = 1 - dtSm((w[2] + w[7] + 0.6*w[5] - 0.1)/0.35);   // temperate lowland forest: clearings with field systems between the woods
+        if (lo > 0){ const cut = dtSm((dtPn(wx*0.05 + 31, wy*0.05 + 17) + 0.25)*3)*0.75*lo*dtSm((la - 38)/4)*(1 - dtSm((la - 58)/4)), mv = w[1]*cut; if (mv > 0.001){ w[1] -= mv; w[0] += mv; has[0] = 1; clr = mv; } } }   // (the sum stays 1)
+      for (let c = 0; c < 9; c++) g[o + c] = w[c];
       const wP = w[0], wF = w[1], wM = w[2], wD = w[3], wT = w[4], wHi = w[5], wS = w[7], wO = w[8];
       // low relief: the first ridged octave and two rolling ones
-      const hM = wM + wS*(la < 58 ? 0.7 : 0.12) + 0.28*wHi, hR = 0.12*wP + 0.6*wHi + 0.2*wT + 0.1*wD + 0.22*wF + 0.12*wO + 0.25*wM; let h = 0;
+      const hM = wM + wS*(la < 58 ? 0.7 : 0.12) + 0.12*wHi, hR = 0.12*wP + 0.6*wHi + 0.2*wT + 0.1*wD + 0.22*wF + 0.12*wO + 0.25*wM; let h = 0;
       if (hM > 0.02 && b0 > 0){ let e = 1 - Math.abs(dtPn(wx*0.45, wy*0.45))*1.55; if (e < 0) e = 0; h += hM*0.9*b0*e*e; }
       if (hR > 0.02) h += hR*(1.1*bh0*dtPn(wx*0.22 + 40.1, wy*0.22 + 9.7) + 0.52*bh1*dtPn(wx*0.46 + 57.1, wy*0.46 - 3.3));
       g[o + 9] = h;
       // low tones: forest clumps and clearings, scrub and grass, gravel plains, lichen
       let tr = 1, tg = 1, tb = 1;
+      if (clr > 0){ tr *= 1 + 0.4*clr; tg *= 1 + 0.32*clr; tb *= 1 + 0.08*clr; }   // the clearings: open ground, lighter and warmer than the canopy's dark texture under them
+      if (wM + wHi > 0.02){ const rk = wM + 0.12*wHi; tr *= 1 - 0.15*rk; tg *= 1 - 0.2*rk; tb *= 1 - 0.28*rk; }   // bare rock warm grey-brown (the texture's pale grey read as snow under the relief's light)
       if (wF > 0.02){ const fc = dtPn(wx*0.62 + 5, wy*0.62 + 81) + 0.35*dtPn(wx*1.2 + 2, wy*1.2 + 7), cl = dtSm((fc - 0.44)/0.08)*wF; tr *= (1 + wF*0.14*fc)*(1 + 0.12*cl); tg *= (1 + wF*0.13*fc)*(1 + 0.1*cl); tb *= (1 + wF*0.1*fc)*(1 + 0.03*cl); }
       const fk = (wP + 0.45*wHi)*latF*dtSm((dtPn(wx*0.045 + 20, wy*0.045 + 60) + 0.32)*4); g[o + 14] = fk;
       if (wP + wHi > 0.05){ const sc = (wP + wHi)*(1 - fk)*0.08*dtPn(wx*0.9 + 3, wy*0.9 + 8); tr *= 1 + sc; tg *= 1 + sc*1.1; tb *= 1 + sc*0.8; }
@@ -2269,22 +2308,24 @@ function dtNodeShade(J){ const {r, cs, gw, g, has} = J, NF = DT_NF, K = 0.26, d 
 function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.Hb, Tb = DT.Tb, NF = DT_NF, NP = pres.length, n2 = n + 2, w = J.w || (J.w = new Float32Array(9));
   const band = f => { const fm = r/3; return Math.max(0, Math.min(1, (fm - f)/(0.5*fm))); }, fmic = r/2.6, lw = Math.max(0.05, 0.9/r), ri = 1/r;
   const bR = []; for (let o = 0, f = 0.45; o < 6; o++, f *= 2) bR.push(band(f)); const bCA = Math.max(0, Math.min(1, (0.8*r - 2.5)/2)), bCB = Math.max(0, Math.min(1, (0.36*r - 2.5)/2)), bH2 = band(0.97), bH3 = band(2.04), dper = 1.1, bDn = Math.max(0, Math.min(1, (1.1*r - 3)/3)), bSt = band(2.6), bRk = band(1.7);
-  let rci = 1e9, rcj = 1e9; const SX = new Float64Array(9), SY = new Float64Array(9), SI = new Int32Array(9); let rid = -1, rca = 1, rsa = 0, rsz = 1, rasp = 1;
+  let rci = 1e9, rcj = 1e9; const SX = new Float64Array(9), SY = new Float64Array(9), SI = new Int32Array(9); let rid = -1, rca = 1, rsa = 0, rsz = 1, rasp = 1, pci = 1e9, pcj = 1e9, qci = 1e9, qcj = 1e9; const PX = new Float64Array(9), PY = new Float64Array(9), QX = new Float64Array(9), QY = new Float64Array(9), QI = new Int32Array(9);
   const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat([9, 10, 11, 12, 13, 14, 15, 16, 17]), NQ = QS.length;
-  for (let by = J.y; by < y1; by++){ const py = by - 1, wy = y0 + (py + 0.5)*ri, gy = by/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, la = lat[by];
+  for (let by = J.y; by < y1; by++){ const py = by - 1, wy = y0 + (py + 0.5)*ri, gy = by/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, la = lat[by], FP = wy < J.eq ? J.fN : J.fS;
     for (let i = 0, a = j0*gw*NF, b = a + gw*NF; i < gw; i++, a += NF, b += NF) for (let q = 0; q < NQ; q++){ const c = QS[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; }   // the node rows above and below, blended for this px row
     for (let bx = 0; bx < n2; bx++){ const px = bx - 1, x = x0 + (px + 0.5)*ri, gx = bx/cs, i0 = Math.min(gw - 2, Math.floor(gx)), fx = gx - i0, o0 = i0*NF, o1 = o0 + NF;
       w[0] = w[1] = w[2] = w[3] = w[4] = w[5] = w[6] = w[7] = w[8] = 0; for (let q = 0; q < NP; q++){ const c = pres[q]; w[c] = (V[o0 + c] + (V[o1 + c] - V[o0 + c])*fx); }
       const wP = w[0], wF = w[1], wM = w[2], wD = w[3], wT = w[4], wHi = w[5], wW = w[6], wS = w[7], wO = w[8];
       let h = 0, tr = (V[o0 + 11] + (V[o1 + 11] - V[o0 + 11])*fx), tg = (V[o0 + 12] + (V[o1 + 12] - V[o0 + 12])*fx), tb = (V[o0 + 13] + (V[o1 + 13] - V[o0 + 13])*fx);
       // fine ridged relief (octaves 2..): mountains, the bare high plateaus, a little in the hills; a rock grain on them
-      const hM = wM + wS*(la < 58 ? 0.7 : 0.12) + 0.28*wHi; let wood = 0;
+      const hM = wM + wS*(la < 58 ? 0.7 : 0.12) + 0.12*wHi; let wood = 0;
       if (hM > 0.02){ const mx = x + 0.3*(V[o0 + 16] + (V[o1 + 16] - V[o0 + 16])*fx), my = wy + 0.3*(V[o0 + 17] + (V[o1 + 17] - V[o0 + 17])*fx); let a = 0.4, f = 0.9;
         for (let o = 1; o < 6; o++, f *= 2, a *= 0.42){ const bw = bR[o]; if (bw <= 0) break; const R = DT_ROT[o], u = (mx*R[0] - my*R[1])*f + o*37.1, v = (mx*R[1] + my*R[0])*f + o*11.7;
           let e = 1 - Math.abs(dtPn(u, v))*1.55; if (e < 0) e = 0; h += hM*a*bw*e*e; }
-        const al = ((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx) + h)/Math.max(0.08, hM), ta = Math.max(-0.5, Math.min(0.5, al - 0.5))*0.26*hM; tr *= 1 + ta; tg *= 1 + ta*0.82; tb *= 1 + ta*1.12;   // darker valleys, pale rock on the ridges
+        const al = ((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx) + h)/Math.max(0.08, hM), ta = Math.max(-0.5, Math.min(0.5, al - 0.5))*0.26*hM, r0 = tr*1.12, g0 = tg*1.12, b0 = tb*1.12;
+        if (ta > 0){ tr *= 1 + ta; tg *= 1 + ta*0.92; tb *= 1 + ta*0.7; } else { tr *= 1 + ta; tg *= 1 + ta*0.82; tb *= 1 + ta*1.12; }   // darker valleys, warm grey-brown rock on the ridges (not pale blue-white)
+        if (tr > r0) tr = r0; if (tg > g0) tg = g0; if (tb > b0) tb = b0;
         wood = wM*dtSm((la - 24)/6)*(1 - dtSm((la - 55)/6))*(1 - dtSm(((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx)/Math.max(0.08, hM) - 0.12)/0.3)); if (wood > 0){ tr *= 1 - 0.2*wood; tg *= 1 - 0.03*wood; tb *= 1 - 0.26*wood; }   // temperate ranges: woods on the lower slopes
-        if (bRk > 0){ const rg = hM*0.07*bRk*dtPn(x*1.7 + 61, wy*1.7 + 23); tr *= 1 + rg; tg *= 1 + rg; tb *= 1 + rg*0.85; } }
+        if (bRk > 0){ const rg = hM*0.07*bRk*dtPn(x*1.7 + 61, wy*1.7 + 23); tr *= 1 + rg; tg *= 1 + rg*0.92; tb *= 1 + rg*0.7; } }
       // fine rolling ground
       const hR = 0.12*wP + 0.6*wHi + 0.2*wT + 0.1*wD + 0.22*wF + 0.12*wO + 0.25*wM;
       if (hR > 0.02){ if (bH2 > 0) h += hR*0.24*bH2*dtPn(x*0.97 + 74.1, wy*0.97 - 16.3); if (bH3 > 0) h += hR*0.11*bH3*dtPn(x*2.04 + 91.1, wy*2.04 - 29.3); }
@@ -2292,20 +2333,34 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
       // forest canopy: two sizes of crowns on jittered grids (world-fixed, each shown once it is a few px across), shade in the gaps
       const wFe = Math.min(1, wF + 0.85*wood); if (wFe > 0.02){ const cov = dtSm((wFe - 0.15)/0.5); let gA = 0, gB = 0;
         for (let L = 0; L < 2; L++){ const sp = L ? 0.36 : 0.8, bw = L ? bCB : bCA; if (bw <= 0) continue; const d = dtCrown(x, wy, sp, L ? 21 : 11), bh = DT_CH;
-          if (d > 0 && bh < 0.35 + 0.65*cov){ h += wFe*0.32*sp*bw*d; const tv = 1 + (bh - 0.5)*0.12*wFe*bw; tr *= tv; tg *= tv; tb *= tv; } else if (L) gB = 1; else gA = 1; }
+          if (d > 0 && bh < 0.08 + 0.92*cov){ h += wFe*0.32*sp*bw*d; const tv = 1 + (bh - 0.5)*0.12*wFe*bw; tr *= tv; tg *= tv; tb *= tv; } else if (L) gB = 1; else gA = 1; }
         const gap = (bCB > 0 ? gB*bCB + gA*bCA*(1 - bCB) : gA*bCA)*wFe*cov; if (gap > 0){ tr *= 1 - 0.26*gap; tg *= 1 - 0.2*gap; tb *= 1 - 0.24*gap; } }
       // farmland: Voronoi field systems (RS world units), each with its own angle and parcel size; parcels in staggered rows, hedgerows between
       const fk = (V[o0 + 14] + (V[o1 + 14] - V[o0 + 14])*fx);
       if (fk > 0.03){ const RS = 7, ci = Math.floor(x/RS), cj = Math.floor(wy/RS);
         if (ci !== rci || cj !== rcj){ rci = ci; rcj = cj; let m = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++, m++){ const ii = ci + di, jj = cj + dj; SX[m] = (ii + 0.1 + 0.8*dtHash(ii, jj, 1))*RS; SY[m] = (jj + 0.1 + 0.8*dtHash(ii, jj, 2))*RS; SI[m] = (ii*7919 + jj*104729) | 0; } }
         let d1 = 1e9, d2 = 1e9, m1 = 0; for (let m = 0; m < 9; m++){ const dx = SX[m] - x, dy = SY[m] - wy, d = dx*dx + dy*dy; if (d < d1){ d2 = d1; d1 = d; m1 = m; } else if (d < d2) d2 = d; }
-        const id = SI[m1]; if (id !== rid){ rid = id; const an = dtHash(id, 3, 3)*Math.PI; rca = Math.cos(an); rsa = Math.sin(an); rsz = 0.5 + 0.7*dtHash(id, 4, 4); rasp = 1 + 1.6*dtHash(id, 5, 5); }
+        const id = SI[m1]; if (id !== rid){ rid = id; const an = dtHash(id, 3, 3)*Math.PI; rca = Math.cos(an); rsa = Math.sin(an); rsz = (0.5 + 0.7*dtHash(id, 4, 4))*(0.65 + 0.9*dtSm(dtPn(SX[m1]*0.02 + 7, SY[m1]*0.02 + 3) + 0.5)); rasp = 1 + 1.6*dtHash(id, 5, 5); }
         const lx = x - SX[m1], ly = wy - SY[m1], v = (ly*rca - lx*rsa)/rsz, jr = Math.floor(v), u = (lx*rca + ly*rsa)/(rsz*rasp) + dtHash(jr, id, 6), ir = Math.floor(u), ph = dtHash(ir, jr, id);
         const fu = u - ir, fv = v - jr, e = Math.min(Math.min(fu, 1 - fu)*rsz*rasp, Math.min(fv, 1 - fv)*rsz, (Math.sqrt(d2) - Math.sqrt(d1))*0.5);
-        const T = DT_FIELD[(ph*7) | 0], s = (0.7 + 0.5*dtHash(ir, jr, id + 1))*fk; let rr = 1 + (T[0] - 1)*s, rg = 1 + (T[1] - 1)*s, rb = 1 + (T[2] - 1)*s;
+        const T = FP[(ph*7) | 0], s = (0.7 + 0.5*dtHash(ir, jr, id + 1))*fk; let rr = 1 + (T[0] - 1)*s, rg = 1 + (T[1] - 1)*s, rb = 1 + (T[2] - 1)*s;
         if (ph < 0.5 && rsz*r > 40){ const st = Math.sin((ph < 0.25 ? fu*rsz*rasp : fv*rsz)*Math.PI*28)*0.035*fk*Math.min(1, (rsz*r - 40)/40); rr -= st; rg -= st; rb -= st; }   // crop rows, close up
         const hk = (1 - dtSm((e - lw*0.4)/lw))*fk*(dtHash(ir, jr, id + 2) < 0.6 ? 1 : 0.25);   // hedgerows and tracks
         tr *= rr*(1 - 0.14*hk); tg *= rg*(1 - 0.1*hk); tb *= rb*(1 - 0.14*hk); }
+      // pasture and scrub where no fields, woods or dunes give the ground detail (else a smooth green smear): two octaves of greener and browner
+      // patches, paddocks (small Voronoi cells, each its own tone, most hedged) and a coarser network of tracks; it fades out as other detail takes over
+      const ps = (wP + wHi)*(1 - dtSm(fk/0.06))*(1 - dtSm((wFe - 0.15)/0.25))*(1 - dtSm(wD/0.04)); if (ps > 0.02 && wP + wHi > 0.1){
+        const pn1 = dtPn(x*0.35 + 13.7, wy*0.35 + 41.3), pn2 = dtPn(x*1.4 + 7.1, wy*1.4 + 19.9), pa = (pn1*0.11 + pn2*0.05)*ps, pl = dtPn(x*0.7 + 29.3, wy*0.7 + 3.9)*0.04*ps;
+        tr *= (1 - 0.55*pa)*(1 + pl); tg *= (1 + 0.6*pa)*(1 + pl); tb *= (1 - 0.35*pa)*(1 + pl*0.8);
+        const PS = 14, ci = Math.floor(x/PS), cj = Math.floor(wy/PS);
+        if (ci !== pci || cj !== pcj){ pci = ci; pcj = cj; let m = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++, m++){ const ii = ci + di, jj = cj + dj; PX[m] = (ii + 0.1 + 0.8*dtHash(ii, jj, 41))*PS; PY[m] = (jj + 0.1 + 0.8*dtHash(ii, jj, 42))*PS; } }
+        let d1 = 1e9, d2 = 1e9; for (let m = 0; m < 9; m++){ const dx = PX[m] - x, dy = PY[m] - wy, d = dx*dx + dy*dy; if (d < d1){ d2 = d1; d1 = d; } else if (d < d2) d2 = d; }
+        const QS = 4.2, xq = x + pn2*0.5 + pn1*0.9, yq = wy + pn1*0.6 - pn2*0.4, qi = Math.floor(xq/QS), qj = Math.floor(yq/QS);   // (bent a little: hedges are not ruled lines)
+        if (qi !== qci || qj !== qcj){ qci = qi; qcj = qj; let m = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++, m++){ const ii = qi + di, jj = qj + dj; QX[m] = (ii + 0.1 + 0.8*dtHash(ii, jj, 43))*QS; QY[m] = (jj + 0.1 + 0.8*dtHash(ii, jj, 44))*QS; QI[m] = (ii*6007 + jj*92821) | 0; } }
+        let e1 = 1e9, e2 = 1e9, q1 = 0; for (let m = 0; m < 9; m++){ const dx = QX[m] - xq, dy = QY[m] - yq, d = dx*dx + dy*dy; if (d < e1){ e2 = e1; e1 = d; q1 = m; } else if (d < e2) e2 = d; }
+        const qid = QI[q1], pv = (dtHash(qid, 8, 8) - 0.5)*0.2*ps, pb = (dtHash(qid, 10, 10) - 0.5)*0.1*ps; tr *= (1 - 0.5*pv)*(1 + pb); tg *= (1 + 0.6*pv)*(1 + pb); tb *= (1 - 0.3*pv)*(1 + pb*0.8);   // a paddock's own tone
+        const tk = (1 - dtSm(((Math.sqrt(d2) - Math.sqrt(d1))*0.5 - lw*0.5)/(lw*1.3)))*0.12, hg = (1 - dtSm(((Math.sqrt(e2) - Math.sqrt(e1))*0.5 - lw*0.4)/(lw*1.2)))*(dtHash(qid, 9, 9) < 0.7 ? 0.12 : 0.03), hk = Math.max(tk, hg)*ps;
+        if (hk > 0){ tr *= 1 - hk; tg *= 1 - 0.8*hk; tb *= 1 - hk; } }
       // desert: dune crests swept by the wind (a gentle windward slope, a short steep slip face), ripples on them close up; speckled gravel
       if (wD > 0.02){ const du = (V[o0 + 15] + (V[o1 + 15] - V[o0 + 15])*fx);
         if (du > 0.01 && bDn > 0){ const qx = x + (V[o0 + 16] + (V[o1 + 16] - V[o0 + 16])*fx), qy = wy + (V[o0 + 17] + (V[o1 + 17] - V[o0 + 17])*fx), t = (qx*0.83 + qy*0.56)/dper, ti = Math.floor(t), fr = t - ti;
@@ -2326,7 +2381,7 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
   J.y = y1; }
 // the fine relief's shading (light from the north-west) times the tones, as hard-light grey (128 = no change) into the ImageData
 function dtShade(J, y1, D){ const {r, n} = J, Hb = DT.Hb, Tb = DT.Tb, n2 = n + 2, K = 0.26*r*0.5;
-  for (let y = J.y; y < y1; y++) for (let x = 0; x < n; x++){ const b = (y + 1)*n2 + x + 1, s0 = 1 + K*(Hb[b - 1] - Hb[b + 1] + Hb[b - n2] - Hb[b + n2]), sh = s0 < 0.42 ? 0.42 : s0 > 1.7 ? 1.7 : s0, t = (y*n + x)*3, o = (y*n + x)*4;
+  for (let y = J.y; y < y1; y++) for (let x = 0; x < n; x++){ const b = (y + 1)*n2 + x + 1, s0 = 1 + K*(Hb[b - 1] - Hb[b + 1] + Hb[b - n2] - Hb[b + n2]), sh = s0 < 0.42 ? 0.42 : s0 > 1.35 ? 1.35 : s0, t = (y*n + x)*3, o = (y*n + x)*4;
     for (let c = 0; c < 3; c++){ const m = sh*Tb[t + c], s = m <= 1 ? m*0.5 : 0.5 + (m - 1)*0.3; D[o + c] = s >= 1 ? 255 : s*255; } D[o + 3] = 255; }
   J.y = y1; }
 // run a job until the deadline; true once its pixels are done
@@ -2336,19 +2391,21 @@ function dtStep(J, end){ for (;;){
     else { if (!DT.img) DT.img = new ImageData(J.n, J.n); dtShade(J, Math.min(J.n, J.y + 96), DT.img.data); if (J.y >= J.n) return true; }
     if (performance.now() >= end) return false; } }
 // the tile resolution for this zoom: within 1.41x of the screen's (device px capped at 1.5 per CSS px, so a high-dpi screen does not need four times the tiles)
+// the game month (the parcel palette) and its tile variant, kept in DT.mv
+function dtMonth(){ const m = S ? calDate(S.hour).m : 5; DT.mv = DT_MV[m]*5 + DT_MV[(m + 6) % 12]; return m; }
 function dtBucket(){ const t = view.s*Math.min(dpr, 1.5); let k = 0; while (k < 3 && DT_R[k]*1.41 < t) k++; return k; }
 function dtAlpha(){ return SET.fx === 'low' || DT.fail ? 0 : dtSm((view.s - 3)/2); }   // fades in from z3 to z5; nothing below (the far view is untouched)
 const dtCap = () => dpr > 1 ? 56 : 36;
 // the tiles under the layer's painted rect, each clipped to its own whole-device-px box (the boxes meet exactly, so no seam and no double blend);
 // a tile not made yet is noted (its box is redrawn when it arrives) and a cached coarser or finer one stands in
-function dtDraw(c, vx0, vy0, vx1, vy1, ox, oy, al){ const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, nW = Math.ceil(WORLD_W/T), nH = Math.ceil(WORLD_H/T);
+function dtDraw(c, vx0, vy0, vx1, vy1, ox, oy, al){ dtMonth(); const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, nW = Math.ceil(WORLD_W/T), nH = Math.ceil(WORLD_H/T);
   const tx0 = Math.max(0, Math.floor(vx0/T)), tx1 = Math.min(nW - 1, Math.floor(vx1/T)), ty0 = Math.max(0, Math.floor(vy0/T)), ty1 = Math.min(nH - 1, Math.floor(vy1/T));
   const DX = x => Math.round(dpr*(ox + x*s)), DY = y => Math.round(dpr*(oy + y*s));
   const blit = (E, X0, Y0, X1, Y1) => { E.used = ++DT.clock; c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.beginPath(); c.rect(X0, Y0, X1 - X0, Y1 - Y0); c.clip();
     c.setTransform(dpr*s, 0, 0, dpr*s, dpr*ox, dpr*oy); c.drawImage(E.cv, E.x0, E.y0, E.n/E.r, E.n/E.r); c.restore(); };
   c.save(); c.globalAlpha = al; c.globalCompositeOperation = 'source-over'; c.imageSmoothingEnabled = true;
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++){ const key = k + '|' + tx + '|' + ty, E = DT.cache.get(key), X0 = DX(tx*T), X1 = DX((tx + 1)*T), Y0 = DY(ty*T), Y1 = DY((ty + 1)*T);
-    if (E){ blit(E, X0, Y0, X1, Y1); continue; }
+    if (E){ blit(E, X0, Y0, X1, Y1); if (E.mv !== DT.mv) DT.miss.add(key); continue; }   // (last season's tile stands in until this month's is made)
     DT.miss.add(key);
     const Ec = k > 0 && DT.cache.get((k - 1) + '|' + (tx >> 1) + '|' + (ty >> 1)); if (Ec){ blit(Ec, X0, Y0, X1, Y1); continue; }
     if (k < 3) for (let q = 0; q < 4; q++){ const sx = tx*2 + (q & 1), sy = ty*2 + (q >> 1), Ef = DT.cache.get((k + 1) + '|' + sx + '|' + sy); if (Ef) blit(Ef, DX(sx*T/2), DY(sy*T/2), DX((sx + 1)*T/2), DY((sy + 1)*T/2)); } }
@@ -2361,18 +2418,18 @@ function dtNext(){ const k = dtBucket(), r = DT_R[k], T = DT_N/r, nW = Math.ceil
     const key = k + '|' + tx + '|' + ty; if (want.some(w => w.key === key)) continue; want.push({key, tx, ty, d:pri*1e6 + ((tx + 0.5)*T - cx)**2 + ((ty + 0.5)*T - cy)**2}); } };
   add(sx0, sy0, sx1, sy1, 0); add(lx0, ly0, lx1, ly1, 1); add(lx0 - T*0.5, ly0 - T*0.5, lx1 + T*0.5, ly1 + T*0.5, 2);
   want.sort((a, b) => a.d - b.d); want.length = Math.min(want.length, cap);
-  let next = null; for (const w of want){ const E = DT.cache.get(w.key); if (E) E.used = ++DT.clock; else if (!next && !DT.pend.has(w.key)) next = w; }   // (the wanted ones stay fresh in the cache)
+  let next = null; for (const w of want){ const E = DT.cache.get(w.key); if (E) E.used = ++DT.clock; if ((!E || E.mv !== DT.mv) && !next && !DT.pend.has(w.key)) next = w; }   // (the wanted ones stay fresh in the cache)
   return next && [k, next.tx, next.ty]; }
 // a finished job: the baked texture upscaled exactly as the layer draws it, the modulation laid on with 'hard-light'; into the cache (least
 // recently used out), and its box queued for a redraw if the layer drew it without the tile
 function dtFinish(J, img){ const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
   D.getContext('2d').putImageData(img, 0, 0);
-  let cv = null; if (DT.cache.size >= dtCap()){ let ok = null; for (const [key, E] of DT.cache) if (!ok || E.used < ok[1].used) ok = [key, E]; DT.cache.delete(ok[0]); cv = ok[1].cv; }
+  const old = DT.cache.get(J.key); let cv = old ? old.cv : null; if (!old && DT.cache.size >= dtCap()){ let ok = null; for (const [key, E] of DT.cache) if (!ok || E.used < ok[1].used) ok = [key, E]; DT.cache.delete(ok[0]); cv = ok[1].cv; }
   if (!cv){ cv = document.createElement('canvas'); cv.width = cv.height = n; }
   const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.globalAlpha = 1; g.imageSmoothingEnabled = true;
   g.setTransform(J.r, 0, 0, J.r, -J.x0*J.r, -J.y0*J.r); g.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'hard-light'; g.drawImage(D, 0, 0); g.globalCompositeOperation = 'source-over';
-  DT.cache.set(J.key, {cv, n, r:J.r, x0:J.x0, y0:J.y0, used:++DT.clock}); DT.made++;
+  DT.cache.set(J.key, {cv, n, r:J.r, x0:J.x0, y0:J.y0, mv:J.mv, used:++DT.clock}); DT.made++;
   if (DT.miss.delete(J.key) && layer){ const L = layer, s = L.s, ox = L.vx + L.mx, oy = L.vy + L.my, Wl = L.width/dpr, Hl = L.height/dpr, T = DT_N/J.r;
     const rr = {x0:Math.max(0, Math.floor((ox + J.tx*T*s)*dpr)/dpr), y0:Math.max(0, Math.floor((oy + J.ty*T*s)*dpr)/dpr), x1:Math.min(Wl, Math.ceil((ox + (J.tx + 1)*T*s)*dpr)/dpr), y1:Math.min(Hl, Math.ceil((oy + (J.ty + 1)*T*s)*dpr)/dpr)};
     if (rr.x1 > rr.x0 && rr.y1 > rr.y0){ const q = L.q || (L.q = []), inR = (a, b) => a.x0 >= b.x0 && a.y0 >= b.y0 && a.x1 <= b.x1 && a.y1 <= b.y1;
@@ -2381,27 +2438,27 @@ function dtFinish(J, img){ const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = 
 // unavailable or blocked, and then the tiles are made here, a few ms a frame
 function dtWorker(){ if (DT.wk !== undefined) return DT.wk; DT.wk = null; const C = dtCells(); if (!C || typeof Worker === 'undefined' || typeof Blob === 'undefined' || !window.URL) return null;
   try { const J = JSON.stringify, fns = [mulberry, makeNoise, dtPn, dtHash, dtCrown, dtStart, dtNodes, dtNodeShade, dtRows, dtShade, dtStep].map(f => f.toString()).join('\n');
-    const js = `'use strict';const W=${W},H=${H},HS=${HS},SQ3=Math.sqrt(3),OX=${OX},OY=${OY},DT_N=${DT_N},DT_A=${DT_A},DT_R=${J(DT_R)},DT_NF=${DT_NF},DT_SG=${J(DT_SG)},DT_FIELD=${J(DT_FIELD)},DT_ROT=${J(DT_ROT)};
+    const js = `'use strict';const W=${W},H=${H},HS=${HS},SQ3=Math.sqrt(3),OX=${OX},OY=${OY},DT_N=${DT_N},DT_A=${DT_A},DT_R=${J(DT_R)},DT_NF=${DT_NF},DT_SG=${J(DT_SG)},DT_FIELD=${J(DT_FIELD)},DT_FP=${J(DT_FP)},DT_MV=${J(DT_MV)},DT_ROT=${J(DT_ROT)};
 const dtSm=${dtSm.toString()};const DTP={P:new Uint8Array(${J(Array.from(DTP.P))}),GX:new Float32Array(${J(Array.from(DTP.GX))}),GY:new Float32Array(${J(Array.from(DTP.GY))})};
 const DT={};let DTC=null,DT_CH=0;function dtCells(){return DTC;}
 ${fns}
-onmessage=e=>{const m=e.data;if(m.init){DTC={cls:m.init.cls,lat:m.init.lat,n1:makeNoise(mulberry(101)),n2:makeNoise(mulberry(202)),n3:makeNoise(mulberry(303))};return;}
-const t0=performance.now(),Jb=dtStart(m.k,m.tx,m.ty);DT.img=null;while(!dtStep(Jb,Infinity));const d=DT.img.data;DT.img=null;
-postMessage({key:Jb.key,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0,y0:Jb.y0,buf:d.buffer,ms:performance.now()-t0},[d.buffer]);};`;
+onmessage=e=>{const m=e.data;if(m.init){DTC={cls:m.init.cls,lat:m.init.lat,eq:m.init.eq,n1:makeNoise(mulberry(101)),n2:makeNoise(mulberry(202)),n3:makeNoise(mulberry(303))};return;}
+const t0=performance.now(),Jb=dtStart(m.k,m.tx,m.ty,m.mo);DT.img=null;while(!dtStep(Jb,Infinity));const d=DT.img.data;DT.img=null;
+postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0,y0:Jb.y0,buf:d.buffer,ms:performance.now()-t0},[d.buffer]);};`;
     const url = URL.createObjectURL(new Blob([js], {type:'text/javascript'})), w = new Worker(url);
     w.onmessage = e => { const m = e.data; DT.busy = Math.max(0, DT.busy - 1); DT.pend.delete(m.key); DT.ms += m.ms; DT.ready.push(m); };
     w.onerror = ev => { if (ev && ev.preventDefault) ev.preventDefault(); try { w.terminate(); } catch (e) {} DT.wk = null; DT.busy = 0; DT.pend.clear(); };   // blocked or broken: made here instead
-    w.postMessage({init:{cls:C.cls, lat:C.lat}}); DT.wk = w;
+    w.postMessage({init:{cls:C.cls, lat:C.lat, eq:C.eq}}); DT.wk = w;
   } catch (e) { DT.wk = null; }
   return DT.wk; }
 // make tiles while the view is still, nothing while it moves (panning stays as cheap as before): with the worker, two in flight and the
 // finished ones composited here (a couple of ms each); without it, a few ms of making a frame
-function dtWork(idle){ if (!idle || !layer || layer.s !== view.s || dtAlpha() < 0.02) return; const t0 = performance.now(), end = t0 + 8, k = dtBucket(), wk = dtWorker();
+function dtWork(idle){ if (!idle || !layer || layer.s !== view.s || dtAlpha() < 0.02) return; const t0 = performance.now(), end = t0 + 8, k = dtBucket(), wk = dtWorker(), mo = dtMonth();
   while (DT.ready.length && performance.now() < end){ const m = DT.ready.shift(); if (Math.abs(m.k - k) <= 1) dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); }
   DT.fms = (DT.fms || 0) + performance.now() - t0;
-  if (wk){ while (DT.busy < 2){ const nx = dtNext(); if (!nx) break; DT.pend.add(nx.join('|')); DT.busy++; wk.postMessage({k:nx[0], tx:nx[1], ty:nx[2]}); } return; }
-  let J = DT.job; if (J && J.k !== k) J = DT.job = null;   // the zoom moved to another resolution
-  while (performance.now() < end){ if (!J){ const nx = dtNext(); if (!nx) break; J = DT.job = dtStart(nx[0], nx[1], nx[2]); if (!J) break; }
+  if (wk){ while (DT.busy < 2){ const nx = dtNext(); if (!nx) break; DT.pend.add(nx.join('|')); DT.busy++; wk.postMessage({k:nx[0], tx:nx[1], ty:nx[2], mo}); } return; }
+  let J = DT.job; if (J && (J.k !== k || J.mv !== DT.mv)) J = DT.job = null;   // the zoom moved to another resolution
+  while (performance.now() < end){ if (!J){ const nx = dtNext(); if (!nx) break; J = DT.job = dtStart(nx[0], nx[1], nx[2], mo); if (!J) break; }
     if (dtStep(J, end)){ dtFinish(J, DT.img); DT.job = J = null; } }
   DT.ms += performance.now() - t0; }
 
@@ -2746,19 +2803,27 @@ const mapCol = o => tones()[toneOf(o)];
 // fills are joined into one Path2D and filled once, so no hairline seams show where parts meet.
 const ICON = (() => { const Wh = (cx, r) => `M${cx - r} 13a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0z`, dart = (x, y, s) => `M${x} ${y}l${5*s} ${2*s}l${-5*s} ${2*s}l${1.3*s} ${-2*s}z`; return {
   // ---- ground, side profile, ground line y 14.5
-  inf: [['f', 'M12.2 1.4a2.5 2.3 0 0 1 2.5 2.3v.5h-5v-.5a2.5 2.3 0 0 1 2.5-2.3z'], ['f', 'M10.6 4.2h3.4v1.6a1.7 1.7 0 0 1-3.4 0z'],
-        ['f', 'M10.2 6.6h4.4l.6 4.4h-5.4z'], ['f', 'M8.6 6.9h1.9v3.6H8.6z'],
-        ['f', 'M10.3 10.6h2.6l-2.1 4.4H8.9z'], ['f', 'M12.3 10.6h2.8l1.5 4.4h-1.7z'],
-        ['f', 'M8.4 10.2l9.6-4.6.5 1-9.6 4.6z'], ['f', 'M17.6 5.7l1.6-.8.3.6-1.6.8z']],
-  at:  [['f', 'M10.6 1.8a2.4 2.2 0 0 1 2.4 2.2v.5H8.2V4a2.4 2.2 0 0 1 2.4-2.2z'], ['f', 'M9.1 4.5h3.2V6a1.6 1.6 0 0 1-3.2 0z'],
-        ['f', 'M2.6 6.6h16v2.1h-16z'], ['f', 'M18.6 6.1l2.8-.5v4.1l-2.8-.5z'], ['f', 'M1.4 6.2h1.4v2.9H1.4z'],
-        ['f', 'M8.6 8.7h3.8l.4 3.4H8.4z'], ['f', 'M11.6 10.6h4.2v4.4h-1.6v-2.9h-2.6z'], ['f', 'M8.4 11.4h3.2l-.6 1.6H8.6l-1.2 2H5.6l1.2-2.4z']],
-  spec:[['f', 'M9.6 2.6h4.8l.4 1.6h-5.6z'], ['f', 'M10 4.2h3.6v1.4a1.8 1.8 0 0 1-3.6 0z'], ['f', 'M13.4 4.4h2.8v1H13.4z'],
-        ['f', 'M8.6 7.4l4-.8 1.6 4.4-4.6.8z'], ['f', 'M9.4 11.4h2.6l-1 3.6H9.2z'], ['f', 'M12 10.6l3.4 1.6-.6 2.8h-1.6l.3-1.9-2.4-.9z'],
-        ['f', 'M11.8 7.2h9.8v1.1h-9.8z'], ['f', 'M14.2 8.3h1.2v1.8h-1.2z']],
-  para:[['f', 'M3 7C4.2 1.2 19.8 1.2 21 7c-1.7-.9-3.4-.9-5 0-1.3-.9-2.7-.9-4 0-1.3-.9-2.7-.9-4 0-1.7-.9-3.3-.9-5 0z'],
-        ['f', 'M3.4 7.1l.6-.3 7.6 4.4-.4.5z'], ['f', 'M20.6 7.1l-.6-.3-7.6 4.4.4.5z'], ['f', 'M7.9 7.1l.6-.2 3.4 4-.5.3z'], ['f', 'M16.1 7.1l-.6-.2-3.4 4 .5.3z'],
-        ['f', 'M12 10.4a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z'], ['f', 'M10.9 12.9h2.2l.3 2.4h-2.8z']],
+  // foot soldiers, side profile facing right: a small low helmet, about seven heads tall, limbs and weapons at least ~1.1 units thick so the figure
+  // stays one solid shape on an 18 px plate. inf: a rifleman advancing (lean, pack, rifle at the ready, stride); at: kneeling with a launcher on the
+  // shoulder (flared rear, sight block); spec: a lower crouch, brimless helmet with the goggles flipped up, suppressed carbine; para: canopy and a jumper
+  inf: [['f', 'M11.75 2.45C11.75 1.4 12.19 1.15 12.85 1.15C13.55 1.15 13.95 1.45 13.95 2.4L14.5 2.57L14.45 2.81L11.45 2.81L11.5 2.43z'], ['f', 'M12.05 2.7 13.85 2.7 13.8 3.3 14.05 3.55 13.5 3.95 12.55 4.05 12 3.5z'], ['f', 'M11.45 3.85 13.4 3.75 13.45 5.2 12.3 8.35 9.85 8.35 10.3 5.6z'],
+        ['f', 'M9.75 4.2 11.65 3.9 11.15 7 8.95 7.25 8.95 4.95z'], ['f', 'M12.04 3.81 14.61 4.23 19.57 4.8 19.44 5.99 14.47 5.43 13.24 5.66 11.85 5.5z'], ['f', 'M19.46 4.93 21.59 5.17 21.49 6.12 19.35 5.88z'],
+        ['f', 'M15.29 5.34 16.43 5.47 16.6 7.05 15.45 7.02z'], ['f', 'M12.18 4.7 13.4 7.39 16.78 6.84 16.62 5.76 14.1 6.11 13.32 4.2z'], ['f', 'M10.41 7.57 8.7 10.88 7.4 13.57 8.5 14.13 9.9 11.52 11.89 8.43z'],
+        ['f', 'M7.05 13.55 8.75 13.45 9.05 14.5 6.85 14.5z'], ['f', 'M10.81 8.48 13.38 11.24 13.84 13.98 15.06 13.82 14.72 10.66 12.19 7.32z'], ['f', 'M13.75 13.45 15 13.4 16.25 14 16.3 14.5 13.7 14.5z']],
+  at:  [['f', 'M10.95 5.35C10.95 4.3 11.39 4.05 12.05 4.05C12.75 4.05 13.15 4.35 13.15 5.3L13.7 5.47L13.65 5.71L10.65 5.71L10.7 5.33z'], ['f', 'M11.25 5.6 13.05 5.6 13 6.2 13.25 6.45 12.7 6.85 11.75 6.95 11.2 6.4z'], ['f', 'M10.75 6.75 12.75 6.65 12.9 8.1 12.2 10.6 9.6 10.6 9.95 8.5z'],
+        ['f', 'M9 7.15 10.9 6.8 10.7 9.9 8.45 10.1 8.35 7.9z'], ['f', 'M3.44 5.45 4.86 5.96 15.65 5.49 15.73 7.25 4.94 7.72 3.56 8.35z'], ['f', 'M15.44 5.3 17.34 5.21 17.43 7.37 15.54 7.46z'],
+        ['f', 'M12.96 5.79 12.91 4.64 14.41 4.57 14.46 5.72z'], ['f', 'M11.62 7.15 12.77 7.1 12.83 8.54 11.68 8.59z'], ['f', 'M11.36 7.65 12.32 9.63 15.12 8.4 14.68 7.4 12.88 8.17 12.44 7.15z'],
+        ['f', 'M10.5 10.99 13.92 11.1 14.08 9.6 10.7 9.01z'], ['f', 'M13.38 10.06 13.73 13.96 14.97 13.84 14.62 9.94z'], ['f', 'M13.65 13.45 14.9 13.4 16.15 14 16.2 14.5 13.6 14.5z'],
+        ['f', 'M9.69 9.91 8.86 13.66 10.04 14.04 11.51 10.49z'], ['f', 'M9.75 13.35 9.95 14.5 5.6 14.5 5.75 13.5z']],
+  spec:[['f', 'M11.7 3.85C11.65 2.8 12.15 2.5 12.75 2.5C13.45 2.5 13.85 2.8 13.85 3.6L13.6 3.95L11.7 3.95z'], ['f', 'M13.3 2.8 13.9 2.2 14.65 2.8 14 3.5z'], ['f', 'M11.95 4.05 13.65 4 13.65 4.6 13.9 4.85 13.35 5.25 12.4 5.35 11.9 4.8z'],
+        ['f', 'M11.2 5.2 13.2 5.05 13.2 6.6 12 9.5 9.5 9.5 10.2 6.9z'], ['f', 'M9.35 5.85 11.25 5.4 10.85 8.3 8.6 8.6 8.6 6.6z'], ['f', 'M11.95 5.12 14.14 5.38 17.53 5.66 17.45 6.73 14.06 6.55 13.04 6.8 11.84 6.72z'],
+        ['f', 'M17.44 5.51 20.63 5.73 20.53 7.13 17.34 6.9z'], ['f', 'M14.77 6.42 15.76 6.49 15.92 7.86 14.91 7.89z'], ['f', 'M12.08 6 13.25 8.6 16.4 7.99 16.2 6.91 13.95 7.3 13.22 5.5z'],
+        ['f', 'M10.28 8.37 7.88 10.97 7.63 13.83 8.87 13.97 9.22 11.63 11.52 9.63z'], ['f', 'M7.25 13.5 8.95 13.45 9.25 14.5 7.05 14.5z'], ['f', 'M10.78 9.8 13.58 11.04 13.88 13.95 15.12 13.85 14.92 10.16 11.62 8.2z'],
+        ['f', 'M13.8 13.45 15.05 13.4 16.3 14 16.35 14.5 13.75 14.5z']],
+  para:[['f', 'M3 7C4.2 1.2 19.8 1.2 21 7c-1.7-.9-3.4-.9-5 0-1.3-.9-2.7-.9-4 0-1.3-.9-2.7-.9-4 0-1.7-.9-3.3-.9-5 0z'], ['f', 'M3.38 7.22 11.28 10.67 11.52 10.13 3.62 6.68z'], ['f', 'M20.38 6.68 12.48 10.13 12.72 10.67 20.62 7.22z'],
+        ['f', 'M7.92 7.09 11.42 10.49 11.78 10.11 8.28 6.71z'], ['f', 'M15.72 6.71 12.22 10.11 12.58 10.49 16.08 7.09z'], ['f', 'M11.53 10.53C11.53 9.97 11.77 9.85 12.12 9.85C12.49 9.85 12.71 9.99 12.71 10.51L12.99 10.59L12.96 10.73L11.37 10.73L11.39 10.52z'],
+        ['f', 'M11.69 10.6 12.59 10.58 12.61 11 12.38 11.26 11.72 11.26z'], ['f', 'M11.34 11.14 12.52 11.12 12.66 13.35 11.2 13.35z'], ['f', 'M10.5 11.38 11.58 11.24 11.58 13.07 10.45 13.12z'],
+        ['f', 'M11.44 13.37 11.84 14.37 11.55 15.38 12.35 15.65 12.82 14.4 12.56 13.05z'], ['f', 'M11.58 15.23 12.56 15.23 13.08 15.61 13.03 15.89 11.58 15.89z']],
   tank:[['f', 'M3.6 11.2h16.8a1.9 1.9 0 0 1 0 3.8H3.6a1.9 1.9 0 0 1 0-3.8z'], ['x', Wh(4.2, .8) + Wh(8.1, .8) + Wh(12, .8) + Wh(15.9, .8) + Wh(19.8, .8)],
         ['f', 'M1.8 10.5L3.4 8.2h16.4l2.6 2.3z'], ['f', 'M5.6 8.2l1.2-2.5h7.6l1.8 1.1v1.4z'], ['f', 'M15.4 6.1h8.4v1.2h-8.4z']],
   ifv: [['f', 'M3.6 11.4h14.6a1.8 1.8 0 0 1 0 3.6H3.6a1.8 1.8 0 0 1 0-3.6z'], ['x', Wh(4.2, .75) + Wh(7.8, .75) + Wh(11.4, .75) + Wh(15, .75) + Wh(18.2, .75)],
@@ -2995,8 +3060,8 @@ function afxAmbient(now, vis){
   const spr = Math.min(1, 26/hexPx) + 0.35;   // keep the spread near the battle at close zoom
   // strategic / operational zoom: the battle reads from one baked smoke column with flickers and tracers (drawBattleLOD), no particles
   if (hexPx >= FIG_PX) for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue; const P = G.P[p]; if (afxOff(P.x, P.y, 120)) continue;
-    if ((AFX.bpn.get(p) || 0) < 4 && afxTimer('b' + p, now, 520 + Math.random()*500)){ const sea = P.sea; if (afxPuff(P.x + (Math.random() - 0.5)*12*spr, P.y + (Math.random() - 0.5)*7*spr, {bp:p, s0:5, s1:17 + Math.random()*10, a:sea ? 0.22 : 0.3, dur:4200 + Math.random()*2400, vx:4 + Math.random()*6, vy:-(5 + Math.random()*5)})) AFX.bpn.set(p, (AFX.bpn.get(p) || 0) + 1); }
-    if (S.speed && !S.over && Math.random() < FXG.k && afxTimer('p' + p, now, 700 + Math.random()*900)) afxBoom(P.x + (Math.random() - 0.5)*14*spr, P.y + (Math.random() - 0.5)*8*spr, 0.6 + Math.random()*0.4, true); }
+    if ((AFX.bpn.get(p) || 0) < 4 && afxTimer('b' + p, now, 520 + Math.random()*500)){ const sea = P.sea; const [qx, qy] = fxOff(P.x + (Math.random() - 0.5)*12*spr, P.y + (Math.random() - 0.5)*7*spr, 2); if (afxPuff(qx, qy, {bp:p, s0:5, s1:17 + Math.random()*10, a:sea ? 0.22 : 0.3, dur:4200 + Math.random()*2400, vx:4 + Math.random()*6, vy:-(5 + Math.random()*5)})) AFX.bpn.set(p, (AFX.bpn.get(p) || 0) + 1); }
+    if (S.speed && !S.over && Math.random() < FXG.k && afxTimer('p' + p, now, 700 + Math.random()*900)){ const [qx, qy] = fxOff(P.x + (Math.random() - 0.5)*14*spr, P.y + (Math.random() - 0.5)*8*spr); afxBoom(qx, qy, 0.6 + Math.random()*0.4, true); } }
   if (hexPx < 7) return;
   for (const [p, m] of AFX.heat){ const age = S.hour - m.h; if (age < 0 || age > m.d || S.battles.includes(p)){ if (age < 0 || age > m.d) AFX.heat.delete(p); continue; }
     const P = G.P[p]; if (afxOff(P.x, P.y, 100) || !vis.has(p)) continue; const f = 1 - age/m.d;
@@ -3040,10 +3105,13 @@ function explode(wx, wy, big = 1, air = false, lite = false){
   for (let i = 0; i < 6*big; i++) emit('debris', wx, wy, {vx:(Math.random() - 0.5)*110*big, vy:-(40 + Math.random()*70)*big, s0:1.6, s1:1.2, life:700 + Math.random()*400});
 }
 function shoot(kind, from, to, opt = {}){ if (PROJ.length > 160) PROJ.shift(); PROJ.push({kind, from, to, t0:performance.now(), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite}); }
-let lastPart = 0;
-function drawParticles(now){
+let lastPart = 0, PKZ = 1;
+// battle effects in two passes. drawParticlesUnder runs before the counters (scorch, wreck fires, smoke, fire, flashes, rings, dust, the night
+// ground glow and the art bursts and puffs: the plates always sit on top of them); drawParticlesOver runs after them, clipped off every plate
+// (tracers, shells and missiles in flight, muzzle stars, sparks and debris). PART is advanced once per frame, in the first pass.
+function drawParticlesUnder(now){
   const dt = Math.min(0.1, (now - (lastPart || now))/1000); lastPart = now;
-  const kz = Math.max(0.6, Math.min(2, view.s*HS0/12))*zx();
+  const kz = PKZ = Math.max(0.6, Math.min(2, view.s*HS0/12))*zx();
   // scorch marks on the ground fade over 20 s
   for (let i = SCORCH.length - 1; i >= 0; i--){ const sc0 = SCORCH[i], age = now - sc0.t0; if (age > 20000){ SCORCH.splice(i, 1); continue; }
     const [x, y] = toScreen(sc0.wx, sc0.wy), r = sc0.r*kz; ctx.globalAlpha = 0.5*(1 - age/20000); ctx.fillStyle = '#16120e'; ctx.beginPath(); ctx.ellipse(x, y, r, r*0.5, 0, 0, Math.PI*2); ctx.fill(); }
@@ -3053,6 +3121,24 @@ function drawParticles(now){
     if (ART.ready('fx-smoke') && !afxReduced()){ if (Math.random() < dt*2.5*(1 - (now - w.t0)/32000)) afxPuff(w.wx + (Math.random() - 0.5)*3, w.wy, {s0:4, s1:15 + Math.random()*8, a:0.36, dur:4400 + Math.random()*1600, vx:5 + Math.random()*5, vy:-(10 + Math.random()*8)}); }
     else if (Math.random() < dt*6){ emit('smoke', w.wx, w.wy, {ox:(Math.random() - 0.5)*10, vx:4 + Math.random()*6, vy:-(10 + Math.random()*10), s0:6, s1:34, life:3600}); }
     if (Math.random() < dt*8) emit('fire', w.wx, w.wy, {ox:(Math.random() - 0.5)*8, vx:(Math.random() - 0.5)*6, vy:-(6 + Math.random()*8), s0:7, s1:2, life:420}); }
+  // particles (sparks and debris are drawn by drawParticlesOver)
+  let nl = 0;   // night light pass: at most 24 ground glows per frame
+  for (let i = PART.length - 1; i >= 0; i--){ const q = PART[i]; q.t += dt*1000; if (q.t >= q.life || (q.die != null && q.t >= q.die)){ PART.splice(i, 1); continue; }
+    const k = q.t/q.life, fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1; q.ox += q.vx*dt; q.oy += q.vy*dt;
+    if (q.kind === 'debris'){ q.vy += 220*dt; } else if (q.kind === 'smoke' || q.kind === 'smokel'){ q.vx *= 0.99; q.vy *= 0.985; }
+    const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
+    if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
+    if (q.kind === 'smoke' || q.kind === 'smokel'){ if (!fxBudget(sz*sz*4)) continue; ctx.globalAlpha = fd*0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
+    else if ((q.kind === 'fire' || q.kind === 'flash') && nl < 24){ const nq = fxNight(q.wx ?? 0, q.wy ?? 0); if (nq > 0.2){ nl++; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*0.18*(1 - k)*nq; ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.globalCompositeOperation = 'source-over'; } }   // fire lights the ground at night
+    if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*(1 - k); ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
+    else if (q.kind === 'ring'){ ctx.globalAlpha = fd*0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
+    else if (q.kind === 'dust' && !q.tn){ if (!fxBudget(sz*sz*2.4)) continue; ctx.globalAlpha = fd*0.32*(k < 0.1 ? k/0.1 : 1 - k); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot); ctx.scale(1, 0.6); ctx.drawImage(puffSprite(q.v, false), -sz, -sz, sz*2, sz*2); ctx.restore(); }   // (march dust is drawn under the figures by drawTrailDust)
+  }
+  ctx.globalAlpha = 1;
+  drawArtFx(now, kz);
+}
+function drawParticlesOver(now){
+  const kz = PKZ;
   // projectiles
   for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur;
     const [fx0, fy0] = toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = toScreen(pr.to[0], pr.to[1]);
@@ -3070,23 +3156,34 @@ function drawParticles(now){
     const [x, y] = toScreen(m0.wx, m0.wy), L0 = 10*m0.big*kz; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(m0.ang); ctx.fillStyle = 'rgba(255,226,150,.95)';
     for (const [a0, len] of [[0, 1], [0.7, 0.55], [-0.7, 0.55]]){ ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0 - 0.12)*L0*len, Math.sin(a0 - 0.12)*L0*len); ctx.lineTo(Math.cos(a0)*L0*len*1.4, Math.sin(a0)*L0*len*1.4); ctx.lineTo(Math.cos(a0 + 0.12)*L0*len, Math.sin(a0 + 0.12)*L0*len); ctx.closePath(); ctx.fill(); }
     ctx.restore(); }
-  // particles
-  let nl = 0;   // night light pass: at most 24 ground glows per frame
-  for (let i = PART.length - 1; i >= 0; i--){ const q = PART[i]; q.t += dt*1000; if (q.t >= q.life || (q.die != null && q.t >= q.die)){ PART.splice(i, 1); continue; }
-    const k = q.t/q.life, fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1; q.ox += q.vx*dt; q.oy += q.vy*dt;
-    if (q.kind === 'debris'){ q.vy += 220*dt; } else if (q.kind === 'smoke' || q.kind === 'smokel'){ q.vx *= 0.99; q.vy *= 0.985; }
-    const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
+  // sparks and debris (draw only: drawParticlesUnder advanced and pruned them)
+  for (const q of PART){ if (q.kind !== 'spark' && q.kind !== 'debris') continue; const k = q.t/q.life; if (k >= 1) continue;
+    const fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1, [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
-    if (q.kind === 'smoke' || q.kind === 'smokel'){ if (!fxBudget(sz*sz*4)) continue; ctx.globalAlpha = fd*0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
-    else if ((q.kind === 'fire' || q.kind === 'flash') && nl < 24){ const nq = fxNight(q.wx ?? 0, q.wy ?? 0); if (nq > 0.2){ nl++; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*0.18*(1 - k)*nq; ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.globalCompositeOperation = 'source-over'; } }   // fire lights the ground at night
-    if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*(1 - k); ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
-    else if (q.kind === 'ring'){ ctx.globalAlpha = fd*0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
-    else if (q.kind === 'spark' || q.kind === 'debris'){ ctx.globalAlpha = fd*(1 - k); ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
-    else if (q.kind === 'dust' && !q.tn){ if (!fxBudget(sz*sz*2.4)) continue; ctx.globalAlpha = fd*0.32*(k < 0.1 ? k/0.1 : 1 - k); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot); ctx.scale(1, 0.6); ctx.drawImage(puffSprite(q.v, false), -sz, -sz, sz*2, sz*2); ctx.restore(); }   // (march dust is drawn under the figures by drawTrailDust)
-  }
+    ctx.globalAlpha = fd*(1 - k); ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
   ctx.globalAlpha = 1;
-  drawArtFx(now, kz);
 }
+// the plates of last frame's counters (AFX.avoid, screen boxes with each battle badge) and a spot moved off them: bursts and smoke are
+// drawn under the counters, so a spot on a plate would be hidden; it goes just past the nearest edge (pad + 2-8 px), at most 3 moves
+function fxOff(wx, wy, pad = 4){ const R = AFX.avoid; if (!R || !R.length) return [wx, wy]; let [x, y] = toScreen(wx, wy), moved = false;
+  for (let t = 0; t < 4; t++){ const r = R.find(r => x > r.x - pad && x < r.x + r.w + pad && y > r.y - pad && y < r.y + r.h + pad); if (!r) return moved ? screenToWorld(x, y) : [wx, wy]; if (t === 3) break;
+    const j = 2 + Math.random()*6, dl = x - r.x + pad, dr = r.x + r.w + pad - x, du = y - r.y + pad, dd = r.y + r.h + pad - y, m = Math.min(dl, dr, du, dd); moved = true;
+    if (m === dl) x = r.x - pad - j; else if (m === dr) x = r.x + r.w + pad + j; else if (m === du) y = r.y - pad - j; else y = r.y + r.h + pad + j; }
+  return [wx, wy]; }
+// the screen boxes effects keep off: each plate (as counter() returns it) and its battle badge, which sits just off the plate's corner
+const plateBoxes = hs => { const out = []; for (const h of hs){ out.push(h); if (h.bg) out.push(h.bg); } return out; };
+// the clip that keeps effects off the plates: the screen minus the union of the boxes (pad 3 px), cut into disjoint pixel-aligned rects so
+// that overlapping plates stay holes under 'evenodd'
+function plateClip(rs){ const P = new Path2D(); P.rect(0, 0, cw, ch); if (!rs.length) return P;
+  const R = []; for (const r of rs){ const x0 = Math.floor((r.x - 3)*dpr)/dpr, x1 = Math.ceil((r.x + r.w + 3)*dpr)/dpr, y0 = Math.floor((r.y - 3)*dpr)/dpr, y1 = Math.ceil((r.y + r.h + 3)*dpr)/dpr;
+    if (x1 < 0 || y1 < 0 || x0 > cw || y0 > ch) continue; R.push([Math.max(0, x0), Math.max(0, y0), Math.min(cw, x1), Math.min(ch, y1)]); }
+  if (!R.length) return P; const xs = [...new Set(R.flatMap(r => [r[0], r[2]]))].sort((a, c) => a - c);
+  for (let i = 0; i + 1 < xs.length; i++){ const a0 = xs[i], a1 = xs[i + 1], iv = []; for (const r of R) if (r[0] <= a0 && r[2] >= a1) iv.push([r[1], r[3]]); if (!iv.length) continue;
+    iv.sort((p, q) => p[0] - q[0]); let c0 = iv[0][0], c1 = iv[0][1];
+    for (let j = 1; j <= iv.length; j++){ if (j < iv.length && iv[j][0] <= c1){ c1 = Math.max(c1, iv[j][1]); continue; } P.rect(a0, c0, a1 - a0, c1 - c0); if (j < iv.length){ c0 = iv[j][0]; c1 = iv[j][1]; } } }
+  return P; }
+let PLATECLIP = null;
+const plateClipOn = () => { if (PLATECLIP) ctx.clip(PLATECLIP, 'evenodd'); };
 // march dust (tinted puffs left by moving figures) lies on the ground: drawn before the counters so it never veils the vehicles that raise it
 function drawTrailDust(){ const kz = Math.max(0.6, Math.min(2, view.s*HS0/12))*zx();
   for (const q of PART){ if (q.kind !== 'dust' || !q.tn) continue; const k = q.t/q.life; if (k >= 1) continue;
@@ -3103,7 +3200,10 @@ function volley(c, main, ang, now, hpx, fx1, fy1, snd){
   const mx = (fx1 ?? c.x) + Math.cos(ang)*hpx*0.42, my = (fy1 ?? c.y) - hpx*0.18 + Math.sin(ang)*hpx*0.12;
   if (snd){ if (!muted && AC && now - (shotAt.last || 0) > 70){ shotAt.last = now; shotAt(mx, main === 'art' || UNITS[main].cls === 'naval' ? 'art' : main === 'tank' || main === 'sam' ? 'tank' : 'inf'); } return; }
   const from = screenToWorld(mx, my), spread = () => [(Math.random() - 0.5)*24, (Math.random() - 0.5)*12];
-  const tgt = () => { const [dx, dy] = spread(); return screenToWorld(c.enemy[0] + dx, c.enemy[1] + dy); };
+  const er = (AFX.avoid || []).find(r => c.enemy[0] > r.x && c.enemy[0] < r.x + r.w && c.enemy[1] > r.y && c.enemy[1] < r.y + r.h);   // the enemy's plate: shots land on its near rim, never on it
+  const tgt = () => { if (!er){ const [dx, dy] = spread(); return screenToWorld(c.enemy[0] + dx, c.enemy[1] + dy); } const m = 3 + Math.random()*7, nearL = mx < er.x + er.w/2;
+    if (Math.random() < 0.5) return screenToWorld(nearL ? er.x + Math.random()*er.w*0.6 : er.x + er.w*(0.4 + 0.6*Math.random()), er.y + er.h + m);   // under its lower edge, on the shooter's half
+    return screenToWorld(nearL ? er.x - m : er.x + er.w + m, er.y + er.h*(0.25 + 0.75*Math.random())); };   // or off the side facing the shooter
   const lite = view.s*HS0 < FIG_PX, sm = lite ? () => {} : emit, sh = (k, f, t, o) => shoot(k, f, t, lite ? Object.assign(o, {lite:true}) : o);   // below figure zoom the battle's baked smoke column replaces the shot smoke and dust
   emit('flash', from[0], from[1], {s0:main === 'art' || main === 'tank' ? 10 : 5, s1:3, life:80});
   if (!muted && AC && (shotAt.n = (shotAt.n || 0) + 1) && now - (shotAt.last || 0) > 70){ shotAt.last = now; shotAt(mx, main === 'art' || UNITS[main].cls === 'naval' ? 'art' : main === 'tank' || main === 'sam' ? 'tank' : 'inf'); }
@@ -3232,20 +3332,20 @@ function drawFX(now){
       ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k)*1.6); ctx.font = `800 ${Math.round(14 + (1 - k)*3)}px ${BODY}`; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.9)';
       const kz = Math.min(2, zoomK(view.s*HS0)), cp = f.owner != null && CLPOS.get(f.p + ':' + f.owner), [ax, ay] = cp ? toScreen(cp[0], cp[1]) : [x + (f.dx || 0)*kz, y], tx = ax + (cp ? 22*kz : 0), ty = ay + (cp ? -34 : (f.dy || -30))*kz - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
     } else if (f.type === 'hits'){
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.save(); plateClipOn(); ctx.globalCompositeOperation = 'lighter';
       for (let j = 0; j < 5; j++){ const r0 = ((f.seed*(j + 1)*9301 + 49297) % 233280)/233280, r1 = ((f.seed*(j + 3)*7919 + 104729) % 233280)/233280;
         const px2 = x + (r0 - 0.5)*44, py2 = y - 6 + (r1 - 0.5)*24, kk = Math.min(1, Math.max(0, (k - j*0.12)/0.5)); if (kk <= 0 || kk >= 1) continue;
         ctx.globalAlpha = 1 - kk; ctx.fillStyle = kk < 0.3 ? '#fff1c4' : '#ff9a4a'; ctx.beginPath(); ctx.arc(px2, py2, 2 + kk*7, 0, Math.PI*2); ctx.fill(); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.35*(1 - k); ctx.fillStyle = '#3a3a36'; ctx.beginPath(); ctx.arc(x + Math.sin(f.seed)*10, y - 18 - k*14, 6 + k*10, 0, Math.PI*2); ctx.fill(); ctx.restore();
     } else if (f.type === 'bombs'){
-      ctx.save(); for (let j = 0; j < 5; j++){ const kk = Math.min(1, Math.max(0, (k - j*0.08)/0.5)); if (kk >= 1) continue; ctx.fillStyle = '#1a1c1a'; ctx.beginPath(); ctx.arc(x - 14 + j*7, y - 60 + kk*56, 1.8, 0, Math.PI*2); ctx.fill(); } ctx.restore();
+      ctx.save(); plateClipOn(); for (let j = 0; j < 5; j++){ const kk = Math.min(1, Math.max(0, (k - j*0.08)/0.5)); if (kk >= 1) continue; ctx.fillStyle = '#1a1c1a'; ctx.beginPath(); ctx.arc(x - 14 + j*7, y - 60 + kk*56, 1.8, 0, Math.PI*2); ctx.fill(); } ctx.restore();
     } else if (f.type === 'strike'){
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.save(); plateClipOn(); ctx.globalCompositeOperation = 'lighter';
       for (let j = 0; j < 7; j++){ const ang = j*0.9 + 0.3, rr = 8 + j*3, kk = Math.min(1, Math.max(0, (k - j*0.07)/0.6)); if (kk <= 0 || kk >= 1) continue;
         ctx.globalAlpha = 1 - kk; ctx.fillStyle = kk < 0.35 ? '#fff4d0' : '#ff8a3a'; ctx.beginPath(); ctx.arc(x + Math.cos(ang)*rr, y - 4 + Math.sin(ang)*rr*0.5, 3 + kk*9, 0, Math.PI*2); ctx.fill(); }
       ctx.restore();
     } else if (f.type === 'boom'){
-      ctx.save(); ctx.globalAlpha = (1 - k)*0.8; ctx.fillStyle = '#ffb08a'; ctx.beginPath(); ctx.arc(x, y - 24, 6 + k*20, 0, Math.PI*2); ctx.fill(); ctx.restore();
+      ctx.save(); plateClipOn(); ctx.globalAlpha = (1 - k)*0.8; ctx.fillStyle = '#ffb08a'; ctx.beginPath(); ctx.arc(x, y - 24, 6 + k*20, 0, Math.PI*2); ctx.fill(); ctx.restore();
     } } }
 function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if (S.started) achLog(text); if (S.log.length > 80) S.log.length = 80; if (kind && booted && SET.toasts !== 'none' && (SET.toasts === 'all' || kind === 'bad')) toast(text, kind, p); }
 let booted = false;
@@ -3305,12 +3405,22 @@ function convoyDay(){ CONVOY_LOST = new Set(); S.convoys = (S.convoys || []).fil
         else if (by && by.owner === PLAYER) log(`Your warships in ${G.P[best[raidAt]].name} sank ${artA(N.name)} convoy.`, 'good', best[raidAt]); }
       if (best.length > 1) S.convoys.push({owner:n, route:best, t0:S.hour, raidAt}); } }
   if (S.convoys.length > 60) S.convoys.splice(0, S.convoys.length - 60); }
+// a convoy's drawn track (cached per convoy, and per zone list since the same convoys sail every day; not saved): its sea zones' centres
+// joined through their gates, smoothed and kept on the water like a sea lane
+const CVGEO = new WeakMap(), CVGEO_R = {G:null, m:new Map()};
+function cvGeo(c){ let g = CVGEO.get(c); if (g) return g; const r = c.route, key = r.join(',');
+  if (CVGEO_R.G !== G || CVGEO_R.m.size > 400){ CVGEO_R.G = G; CVGEO_R.m = new Map(); } g = CVGEO_R.m.get(key); if (g){ CVGEO.set(c, g); return g; } let P0 = [[G.P[r[0]].x, G.P[r[0]].y]]; for (let i = 1; i < r.length; i++) P0.push(trGate(r[i - 1], r[i])); P0.push([G.P[r[r.length - 1]].x, G.P[r[r.length - 1]].y]);
+  for (let it = 0; it < 2; it++){ const o = [P0[0]]; for (let i = 0; i < P0.length - 1; i++){ const [x0, y0] = P0[i], [x1, y1] = P0[i + 1]; o.push([x0*0.75 + x1*0.25, y0*0.75 + y1*0.25], [x0*0.25 + x1*0.75, y0*0.25 + y1*0.75]); } o.push(P0[P0.length - 1]); P0 = o; }
+  g = trWater(P0); CVGEO.set(c, g); CVGEO_R.m.set(key, g); return g; }
 function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length) return; const live = S.speed && !S.over ? acc : 0;
   for (const c of S.convoys){ const r = c.route, dur = 12, tt = (S.hour + live - c.t0)/dur; if (tt < 0 || tt > 1) continue;
-    let pos = tt*(r.length - 1); if (c.raidAt >= 0 && pos >= c.raidAt){ if (!c.boom && booted && vis.has(r[c.raidAt])){ c.boom = true; const P = G.P[r[c.raidAt]]; explode(P.x, P.y, 1.2); emit('smoke', P.x, P.y, {vy:-6, s0:6, s1:26, life:3000}); } continue; }
-    const i = Math.min(r.length - 2, Math.floor(pos)), f = pos - i, A = G.P[r[i]], B = G.P[r[i + 1]]; if (!vis.has(r[i]) && !vis.has(r[i + 1]) && c.owner !== PLAYER) continue;
-    const wx = A.x + (B.x - A.x)*f, wy = A.y + (B.y - A.y)*f, [x, y] = toScreen(wx, wy), ang = Math.atan2(B.y - A.y, B.x - A.x), k0 = Math.max(0.8, Math.min(2, view.s*HS0/14));
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(220,235,240,.35)'; ctx.beginPath(); ctx.moveTo(-6*k0, 0); ctx.lineTo(-18*k0, -3*k0); ctx.lineTo(-18*k0, 3*k0); ctx.closePath(); ctx.fill();
+    let pos = tt*(r.length - 1); if (c.raidAt >= 0 && pos >= c.raidAt){ if (!c.boom && booted && vis.has(r[c.raidAt])){ c.boom = true; const P = G.P[r[c.raidAt]], [ex, ey] = fxOff(P.x, P.y, 6); explode(ex, ey, 1.2); emit('smoke', ex, ey, {vy:-6, s0:6, s1:26, life:3000}); } continue; }
+    const i = Math.min(r.length - 2, Math.floor(pos)); if (!vis.has(r[i]) && !vis.has(r[i + 1]) && c.owner !== PLAYER) continue;
+    // along the zones' gates over the water (cvGeo), faded in and out at the ends and near what is still dry, never drawn over land
+    const g = cvGeo(c), sg = tt*g.L, al = Math.min(1, tt/0.06, (1 - tt)/0.06)*trDryFade(g, sg); if (al <= 0.02) continue;
+    const [wx, wy, ang] = trAt(g, sg), k0 = Math.max(0.8, Math.min(2, view.s*HS0/14)), hx = Math.cos(ang)*8*k0/view.s, hy = Math.sin(ang)*8*k0/view.s;
+    if (!isWet(wx, wy, 96) || !isWet(wx + hx, wy + hy) || !isWet(wx - hx, wy - hy)) continue; const [x, y] = toScreen(wx, wy);
+    ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(220,235,240,.35)'; ctx.beginPath(); ctx.moveTo(-6*k0, 0); ctx.lineTo(-18*k0, -3*k0); ctx.lineTo(-18*k0, 3*k0); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#5a5e60'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8*k0, 0); ctx.lineTo(4*k0, -2.6*k0); ctx.lineTo(-7*k0, -2.6*k0); ctx.lineTo(-7*k0, 2.6*k0); ctx.lineTo(4*k0, 2.6*k0); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = mapCol(c.owner); ctx.fillRect(-5*k0, -1.6*k0, 3*k0, 3.2*k0); ctx.fillStyle = '#b8a06a'; ctx.fillRect(-1*k0, -1.6*k0, 3.5*k0, 3.2*k0); ctx.restore(); } }
 /* ---------------- V3 trade routes, blockades, convoy raids and escorts ----------------
@@ -3493,7 +3603,7 @@ function tradeDay(){ const T = trS(); seaIndex(); let news = 0;
     r.raid = S.hour; r.raidZ = R.z; r.f = 0; r.why = 'sunk'; r.sunk = (r.sunk || 0) + 1; T.ver = (T.ver || 0) + 1;
     for (const n of [r.a, r.b]) if (n >= 0) T.hit[n] = (T.hit[n] || 0) + 1;
     if (R.by >= 0) bump(R.by === PLAYER ? 'convoysSunk' : 'tradeHits');
-    if (booted && visibleSet().has(R.z)){ const P = G.P[R.z]; explode(P.x, P.y, 1.2); emit('smoke', P.x, P.y, {vy:-6, s0:6, s1:26, life:3000}); }
+    if (booted && visibleSet().has(R.z)){ const P = G.P[R.z], [ex, ey] = fxOff(P.x, P.y, 6); explode(ex, ey, 1.2); emit('smoke', ex, ey, {vy:-6, s0:6, s1:26, life:3000}); }
     if (trMine(r, PLAYER)) log(`${who} ${how} sank your convoy on the ${trName(r)} trade route in ${G.P[R.z].name}: $${fmt1(pv ? pv.cash : 0)}M of trade income lost today. Escort the route (select a fleet: Escort route).`, 'bad', R.z);
     else if (R.by === PLAYER) log(`Your ${how} sank ${artA(S.nations[r.a].name)}–${trName(r, r.a)} convoy in ${G.P[R.z].name}.`, 'good', R.z);
     else if (news < 2 && rng() < 0.5){ news++; log(`${who} ${how} sank ${artA(S.nations[r.a].name)}–${trName(r, r.a)} convoy in ${G.P[R.z].name}.`, '', R.z); } }
@@ -3587,24 +3697,90 @@ function trGeo(r){ const k = r.id + ':' + r.path.join(','); let g = TRD.geo.get(
   // smooth sea lanes: corner-cut the zone-centre polyline twice (Chaikin)
   let P0 = pts; if (r.kind === 'sea') for (let it = 0; it < 2; it++){ const o = [P0[0]]; for (let i = 0; i < P0.length - 1; i++){ const [x0, y0] = P0[i], [x1, y1] = P0[i + 1]; o.push([x0*0.75 + x1*0.25, y0*0.75 + y1*0.25], [x0*0.25 + x1*0.75, y0*0.25 + y1*0.75]); } o.push(P0[P0.length - 1]); P0 = o; }
   const cum = [0]; for (let i = 1; i < P0.length; i++) cum.push(cum[i - 1] + Math.hypot(P0[i][0] - P0[i - 1][0], P0[i][1] - P0[i - 1][1]));
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of P0){ if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
-  g = {k, pts:P0, cum, L:cum[cum.length - 1], box:[x0, y0, x1, y1]}; TRD.geo.set(r.id, g); return g; }
+  g = r.kind === 'sea' ? trWater(P0) : trBox({pts:P0, cum, L:cum[cum.length - 1]}); g.k = k; TRD.geo.set(r.id, g); return g; }
+function trBox(g){ let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of g.pts){ if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } g.box = [x0, y0, x1, y1]; return g; }
+function trCum(P){ const cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); return cum; }
+/* Sea lanes on the water (visual only: the route, its zones, income and timing are untouched). The zone-gate polyline, smoothed, still cuts
+   across capes and isthmuses and runs inland to the port cities, so against the wet mask (isWet): s0..s1 is the span from the first to the last
+   point that is wet together with the points 4 units either side (lanes and ships keep to it; a faint feeder runs on to the port), and every
+   stretch of it over land is replaced by a path over the water (trWetPath: A* on the mask, land allowed at a high cost so a closed strait or a
+   canal is crossed at its narrowest). dry: the s ranges still over land (canals, straits the mask closes), where the lane breaks and ships fade */
+function trWater(P0){ let cum = trCum(P0), L = cum[cum.length - 1], g = {pts:P0, cum, L};
+  const span = g => { const n = Math.max(1, Math.ceil(g.L/2)), W = new Uint8Array(n + 1); for (let i = 0; i <= n; i++){ const [x, y] = trAt(g, Math.min(g.L, i*2)); W[i] = isWet(x, y) ? 1 : 0; }
+    let a = -1, b = -1; for (let i = 0; i <= n; i++) if (W[i] && W[Math.max(0, i - 2)] && W[Math.min(n, i + 2)]){ if (a < 0) a = i; b = i; } return {n, W, a, b}; };
+  let sp = span(g);
+  if (sp.a >= 0 && LMA){ const {n, W, a, b} = sp, runs = [];
+    for (let i = a; i <= b; i++) if (!W[i]){ const q = runs[runs.length - 1]; if (q && i - q[1] <= 3) q[1] = i; else runs.push([i, i]); }
+    if (runs.length){ const out = []; let si = 0;   // si: index into P0 of the next point to copy
+      const copyTo = s => { while (si < P0.length && cum[si] < s) out.push(P0[si++]); };
+      for (const [ia, ib] of runs){ const sa = (ia - 1)*2, sb = Math.min(L, (ib + 1)*2), A = trAt(g, sa), B = trAt(g, sb);
+        let x0 = Math.min(A[0], B[0]), y0 = Math.min(A[1], B[1]), x1 = Math.max(A[0], B[0]), y1 = Math.max(A[1], B[1]);
+        for (let i = ia; i <= ib; i++){ const [x, y] = trAt(g, i*2); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+        const d = Math.hypot(x1 - x0, y1 - y0); let w = trWetPath(A, B, [x0, y0, x1, y1], Math.max(40, 0.6*d));
+        if (!w || w.land) { const w2 = trWetPath(A, B, [x0, y0, x1, y1], Math.max(140, 1.6*d)); if (w2 && (!w || w2.cost < w.cost)) w = w2; }
+        copyTo(sa); out.push([A[0], A[1]]); if (w) for (const q of w.pts) out.push(q); out.push([B[0], B[1]]); while (si < P0.length && cum[si] <= sb) si++; }
+      copyTo(Infinity); const P1 = out.filter((q, i) => !i || Math.hypot(q[0] - out[i - 1][0], q[1] - out[i - 1][1]) > 1e-3); cum = trCum(P1); L = cum[cum.length - 1]; g = {pts:P1, cum, L}; sp = span(g); } }
+  if (sp.a < 0){ g.s0 = 0; g.s1 = g.L; } else { g.s0 = sp.a*2; g.s1 = Math.min(g.L, sp.b*2); }
+  // what is still dry inside the span, at 1 unit
+  g.dry = []; if (LMA) for (let s = g.s0; s <= g.s1; s += 1){ const [x, y] = trAt(g, s); if (!isWet(x, y)){ const q = g.dry[g.dry.length - 1]; if (q && s - q[1] <= 3) q[1] = s; else g.dry.push([s, s]); } }
+  return trBox(g); }
+// a path over the water from A to B (world points) inside box (grown by m), on the wet mask: 8-way A*, a step costing 1 in open water, 1.6 within
+// two texels of land and 25 on land; then pulled taut (a straight run may not cross worse ground than the A* path it replaces) and its corners
+// eased. Returns {pts (world, without A and B), cost, land (texels of land crossed)}, or null
+function trWetPath(A, B, box, m){ const M = LMA; if (!M) return null; const k = M.k;
+  const gx0 = Math.max(0, Math.floor((box[0] - m)/k)), gy0 = Math.max(0, Math.floor((box[1] - m)/k)), gx1 = Math.min(M.w - 1, Math.ceil((box[2] + m)/k)), gy1 = Math.min(M.h - 1, Math.ceil((box[3] + m)/k));
+  const w = gx1 - gx0 + 1, h = gy1 - gy0 + 1; if (w < 2 || h < 2 || w*h > 1.2e6) return null; const N = w*h, cls = new Uint8Array(N);
+  for (let y = 0; y < h; y++){ const row = (gy0 + y)*M.w + gx0; for (let x = 0; x < w; x++) if (M.a[row + x] >= 128) cls[y*w + x] = 2; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){ if (cls[y*w + x] !== 2) continue; for (let dy = -2; dy <= 2; dy++){ const yy = y + dy; if (yy < 0 || yy >= h) continue; for (let dx = -2; dx <= 2; dx++){ const xx = x + dx; if (xx >= 0 && xx < w && !cls[yy*w + xx]) cls[yy*w + xx] = 1; } } }
+  const cl = (P) => [Math.max(0, Math.min(w - 1, Math.floor(P[0]/k) - gx0)), Math.max(0, Math.min(h - 1, Math.floor(P[1]/k) - gy0))];
+  const [ax, ay] = cl(A), [bx, by] = cl(B), st = ay*w + ax, en = by*w + bx, CO = [1, 1.6, 25];
+  const gs = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  const hk = [], hv = [], push = (f, v) => { let i = hk.length; hk.push(f); hv.push(v); while (i > 0){ const pi = (i - 1) >> 1; if (hk[pi] <= f) break; hk[i] = hk[pi]; hv[i] = hv[pi]; i = pi; } hk[i] = f; hv[i] = v; };
+  const pop = () => { const v = hv[0], lf = hk.pop(), lv = hv.pop(), n = hk.length; if (n){ let i = 0; for (;;){ let c = 2*i + 1; if (c >= n) break; if (c + 1 < n && hk[c + 1] < hk[c]) c++; if (hk[c] >= lf) break; hk[i] = hk[c]; hv[i] = hv[c]; i = c; } hk[i] = lf; hv[i] = lv; } return v; };
+  const H = v => { const dx = Math.abs(v % w - bx), dy = Math.abs(((v/w) | 0) - by); return Math.max(dx, dy) + 0.4142*Math.min(dx, dy); };
+  gs[st] = 0; push(H(st), st); let it = 0;
+  while (hk.length){ const v = pop(); if (done[v]) continue; done[v] = 1; if (v === en || ++it > 6e5) break; const x = v % w, y = (v/w) | 0;
+    for (let dy = -1; dy <= 1; dy++){ const yy = y + dy; if (yy < 0 || yy >= h) continue; for (let dx = -1; dx <= 1; dx++){ if (!dx && !dy) continue; const xx = x + dx; if (xx < 0 || xx >= w) continue; const u = yy*w + xx; if (done[u]) continue;
+      const c = gs[v] + (dx && dy ? 1.4142 : 1)*CO[cls[u]]; if (c < gs[u]){ gs[u] = c; from[u] = v; push(c + H(u), u); } } } }
+  if (!done[en]) return null;
+  const path = []; for (let v = en; v >= 0; v = v === st ? -1 : from[v]) path.push(v); path.reverse(); let land = 0; for (const v of path) if (cls[v] === 2) land++;
+  // pulled taut: from each kept cell, the farthest cell reached by a straight run no worse than the cells the A* path took
+  const ctr = v => [v % w + 0.5, ((v/w) | 0) + 0.5], clsAt = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y); return xi < 0 || yi < 0 || xi >= w || yi >= h ? 2 : cls[yi*w + xi]; };
+  const seg = (P, Q, lim) => { const d = Math.hypot(Q[0] - P[0], Q[1] - P[1]), n = Math.ceil(d/0.5); for (let i = 1; i < n; i++){ const t = i/n; if (clsAt(P[0] + (Q[0] - P[0])*t, P[1] + (Q[1] - P[1])*t) > lim) return false; } return true; };
+  const keep = [ctr(path[0])]; let i = 0;
+  while (i < path.length - 1){ let lim = cls[path[i]], j = i + 1, best = i + 1; lim = Math.max(lim, cls[path[j]]);
+    for (let jj = i + 2; jj < path.length && jj - i < 400; jj++){ const l2 = Math.max(lim, cls[path[jj]]); if (!seg(ctr(path[i]), ctr(path[jj]), l2)) break; lim = l2; best = jj; }
+    keep.push(ctr(path[best])); i = best; }
+  // corners eased (cut at most 6 units back along each side) where the cut stays on ground no worse than the corner's
+  const ek = 6/k, out = [];
+  for (let q = 1; q < keep.length - 1; q++){ const P = keep[q - 1], V = keep[q], Q = keep[q + 1], lp = Math.hypot(P[0] - V[0], P[1] - V[1]), lq = Math.hypot(Q[0] - V[0], Q[1] - V[1]);
+    const a = Math.min(0.25*lp, ek)/Math.max(1e-6, lp), b = Math.min(0.25*lq, ek)/Math.max(1e-6, lq), C1 = [V[0] + (P[0] - V[0])*a, V[1] + (P[1] - V[1])*a], C2 = [V[0] + (Q[0] - V[0])*b, V[1] + (Q[1] - V[1])*b];
+    if (seg(C1, C2, clsAt(V[0], V[1]))) out.push(C1, C2); else out.push(V); }
+  return {pts:out.map(([x, y]) => [(x + gx0)*k, (y + gy0)*k]), cost:gs[en], land}; }
 // where two neighbouring provinces meet: the mean of the cell centres along their shared border (cached)
 var TRGATE = {G:null, m:new Map()};
 function trGate(u, v){ if (TRGATE.G !== G){ TRGATE.G = G; TRGATE.m = new Map(); } const key = Math.min(u, v)*8192 + Math.max(u, v); let g = TRGATE.m.get(key); if (g) return g;
   let sx = 0, sy = 0, n = 0; for (const c of G.P[u].cells) for (let d = 0; d < 6; d++){ const m = nbr(c, d); if (m < 0 || G.prov[m] !== v) continue; const [x0, y0] = cellCenter(c), [x1, y1] = cellCenter(m); sx += x0 + x1; sy += y0 + y1; n += 2; }
   g = n ? [sx/n, sy/n] : [(G.P[u].x + G.P[v].x)/2, (G.P[u].y + G.P[v].y)/2]; TRGATE.m.set(key, g); return g; }
 function trPathAdd(P2, g){ P2.moveTo(g.pts[0][0], g.pts[0][1]); for (let i = 1; i < g.pts.length; i++) P2.lineTo(g.pts[i][0], g.pts[i][1]); }
+// the lane from s = a to b (end points interpolated)
+function trPathAddRange(P2, g, a, b){ if (b - a < 0.5) return; const A = trAt(g, a), B = trAt(g, b); P2.moveTo(A[0], A[1]); for (let i = 0; i < g.pts.length; i++) if (g.cum[i] > a && g.cum[i] < b) P2.lineTo(g.pts[i][0], g.pts[i][1]); P2.lineTo(B[0], B[1]); }
+// a sea lane over its wet span only, broken where it still crosses land
+function trPathAddSea(P2, g){ let a = g.s0; for (const [d0, d1] of g.dry){ trPathAddRange(P2, g, a, d0 - 1); a = d1 + 1; } trPathAddRange(P2, g, a, g.s1); }
+// how much of a ship shows at s on a sea lane: faded in and out near the dry stretches still left inside the span (canals, closed straits)
+function trDryFade(g, s){ let f = 1; for (const [d0, d1] of g.dry){ const d = s < d0 ? d0 - s : s > d1 ? s - d1 : 0; f = Math.min(f, Math.max(0, Math.min(1, (d - 2)/8))); } return f; }
 function trAt(g, s){ s = Math.max(0, Math.min(g.L, s)); let lo = 0, hi = g.cum.length - 1; while (hi - lo > 1){ const m = (lo + hi) >> 1; if (g.cum[m] <= s) lo = m; else hi = m; }
   const A = g.pts[lo], B = g.pts[hi], f = (s - g.cum[lo])/Math.max(1e-6, g.cum[hi] - g.cum[lo]); return [A[0] + (B[0] - A[0])*f, A[1] + (B[1] - A[1])*f, Math.atan2(B[1] - A[1], B[0] - A[0])]; }
 // world-space lanes (called under the world transform)
 function drawTradeLanes(now){ if (!S.trade || !S.trade.routes.length) return; const T = S.trade, px = 1/view.s, hexPx = view.s*HS0;
-  if (TRD.ver !== T.ver || TRD.S !== S){ TRD.ver = T.ver; TRD.S = S; const sea = new Path2D(), mine = new Path2D(), cut = new Path2D(), land = new Path2D();
+  if (TRD.ver !== T.ver || TRD.S !== S){ TRD.ver = T.ver; TRD.S = S; const sea = new Path2D(), mine = new Path2D(), cut = new Path2D(), land = new Path2D(), feed = new Path2D();
     const live = new Set(T.routes.map(r => r.id)); for (const k of TRD.geo.keys()) if (!live.has(k)) TRD.geo.delete(k);
-    for (const r of T.routes){ const g = trGeo(r); trPathAdd(r.f0 < 1 || r.why === 'sunk' ? cut : r.kind === 'land' ? land : trMine(r, PLAYER) ? mine : sea, g); }
-    Object.assign(TRD, {sea, mine, cut, land}); }
+    for (const r of T.routes){ const g = trGeo(r), P2 = r.f0 < 1 || r.why === 'sunk' ? cut : r.kind === 'land' ? land : trMine(r, PLAYER) ? mine : sea;
+      if (r.kind === 'land') trPathAdd(P2, g); else { trPathAddSea(P2, g); trPathAddRange(feed, g, Math.max(0, g.s0 - 12), g.s0); trPathAddRange(feed, g, g.s1, Math.min(g.L, g.s1 + 12)); } }   // (feed: a faint spur on toward each port)
+    Object.assign(TRD, {sea, mine, cut, land, feed}); }
   const z = Math.max(0.75, Math.min(1.5, hexPx/12)), a0 = Math.max(0.5, Math.min(1, hexPx/8));
   ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
+  ctx.setLineDash([3*z*px, 4*z*px]); ctx.lineWidth = 1.2*z*px; ctx.strokeStyle = `rgba(206,226,234,${0.15*a0})`; ctx.stroke(TRD.feed);
   ctx.setLineDash([6*z*px, 6*z*px]); ctx.lineWidth = 1.3*z*px; ctx.strokeStyle = `rgba(196,222,232,${0.34*a0})`; ctx.stroke(TRD.sea);
   ctx.strokeStyle = `rgba(214,190,120,${0.5*a0})`; ctx.stroke(TRD.land);
   ctx.setLineDash([8*z*px, 5*z*px]); ctx.lineWidth = 1.7*z*px; ctx.strokeStyle = `rgba(236,196,108,${0.62*a0})`; ctx.stroke(TRD.mine);
@@ -3632,17 +3808,19 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
       ctx.save(); ctx.fillStyle = `rgba(255,${120 + 60*fl},60,${0.7*fl})`; ctx.beginPath(); ctx.arc(x, y, 4.5*k, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = 'rgba(40,40,40,.5)'; ctx.beginPath(); ctx.arc(x + 3*k, y - 6*k, 5*k, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
     if (r.f <= 0 || g.L < 1) continue;
     const n = Math.max(1, Math.min(6, Math.round(g.L/260))), per = 2*g.L/TR_SPD, ph = ((t/per) % 1 + (r.id*0.137) % 1) % 1;
-    for (let i = 0; i < n*2; i++){ const back = i % 2 === 1; let s = ((ph + Math.floor(i/2)/n) % 1)*g.L; if (back) s = g.L - s;
-      if (r.f0 < 1 && r.bz >= 0){ /* contested routes: ships still sail, slower look */ }
+    for (let i = 0; i < n*2; i++){ const back = i % 2 === 1, sea = r.kind === 'sea'; let f = (ph + Math.floor(i/2)/n) % 1; if (back) f = 1 - f;
+      // sea lanes: ships sail the wet span only (they turn back at the coast, fading in and out there), not the run inland to the port city
+      const s = sea ? g.s0 + f*(g.s1 - g.s0) : f*g.L, al = sea ? Math.min(1, f/0.06, (1 - f)/0.06)*trDryFade(g, s) : 1; if (al <= 0.02) continue;
       const [wx, wy, ang0] = trAt(g, s), ang = back ? ang0 + Math.PI : ang0; if (wx < vx0 || wx > vx1 || wy < vy0 || wy > vy1) continue;
-      if (r.kind === 'sea'){ const c0 = worldToCell(wx, wy), q0 = c0 >= 0 ? G.prov[c0] : -1; if (q0 >= 0 && !G.P[q0].sea) continue; }   // the route ends run to the port cities: no ships drawn on land
       const [x0, y0] = toScreen(wx, wy), off = (back ? -1 : 1)*(close ? 7 : 3)*k, x = x0 - Math.sin(ang0)*off, y = y0 + Math.cos(ang0)*off;
+      if (sea){ const cx = wx - Math.sin(ang0)*off/view.s, cy = wy + Math.cos(ang0)*off/view.s, h = (mid ? 10*k : 1.5)/view.s, hx = Math.cos(ang)*h, hy = Math.sin(ang)*h;   // centre, bow and stern on the water, or not drawn
+        if (!isWet(cx, cy, 96) || !isWet(cx + hx, cy + hy) || !isWet(cx - hx, cy - hy)) continue; }
       const own = back ? r.b : r.a, col = own >= 0 ? mapCol(own) : '#b8b4a6';
-      if (!mid){ ctx.fillStyle = r.kind === 'land' ? 'rgba(214,190,120,.8)' : 'rgba(220,232,236,.75)'; ctx.fillRect(x - 1.2, y - 1.2, 2.4, 2.4); continue; }
+      if (!mid){ ctx.fillStyle = r.kind === 'land' ? 'rgba(214,190,120,.8)' : `rgba(220,232,236,${0.75*al})`; ctx.fillRect(x - 1.2, y - 1.2, 2.4, 2.4); continue; }
       if (r.kind === 'land'){ ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = '#5e5a4e'; ctx.strokeStyle = '#0d1214'; ctx.lineWidth = 1; ctx.fillRect(-5*k, -2*k, 10*k, 4*k); ctx.strokeRect(-5*k, -2*k, 10*k, 4*k); ctx.fillStyle = col; ctx.fillRect(2.5*k, -2*k, 2.5*k, 4*k); ctx.restore(); continue; }
       ctx.save(); ctx.translate(x, y); ctx.rotate(ang + Math.PI/2);
       if (img){ const L = 40*k, wd = L*(img.width/img.height); ctx.globalAlpha = 0.95; ctx.drawImage(img, -wd/2, -L/2, wd, L); ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.fillRect(-2.5*k, L*0.3, 5*k, 2.5*k); }
-      else { const ic = trShipIcon(col), L = 20*k; ctx.drawImage(ic, -L*0.2, -L/2, L*0.4, L); }
+      else { const ic = trShipIcon(col), L = 20*k; if (al < 1) ctx.globalAlpha = al; ctx.drawImage(ic, -L*0.2, -L/2, L*0.4, L); }
       ctx.restore(); } } }
 /* ---- trade UI: the Diplomacy trade-route list, the fleet's escort order, tooltips ---- */
 const TR_MAX = 8;   // routes the player can run at once
@@ -4601,7 +4779,7 @@ function wingVis(a, now, dt){
   const T = G.P[v.tgt], B = G.P[a.air.base], spd = VW_SPEED*Math.sqrt(Math.max(1, S.speed || 1))*dt;
   const go = (tx, ty) => { const dx = tx - v.x, dy = ty - v.y, d = Math.hypot(dx, dy); if (d > 1e-4) v.want = Math.atan2(dy, dx); if (d <= spd){ v.x = tx; v.y = ty; return true; } v.x += dx/d*spd; v.y += dy/d*spd; return false; };
   const follow = (wx, wy, ax, ay, bx, by) => { const d0 = Math.hypot(wx - v.x, wy - v.y); go(wx, wy); if (d0 < 0.05) v.want = Math.atan2(by - ay, bx - ax); };   // caught up with the sim: point along the leg, not at a jittery tiny step
-  const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); if (booted){ const nm = 2 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], [T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10], {dur:450 + i*80, arc:4, big:0.9}); } strikeFX(q.p, v); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
+  const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); if (booted){ const nm = 2 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], fxOff(T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10, 6), {dur:450 + i*80, arc:4, big:0.9}); } strikeFX(q.p, v); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
   if (v.stage === 'out'){ const simOut = f && f.ph === 'out' && f.tgt === v.tgt;
     if (simOut){ const [wx, wy] = wingPos(a); follow(wx, wy, B.x, B.y, T.x, T.y); }                    // follow the simulated flight, catching up if behind
     else if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; v.tr = null; return null; } v.stage = 'over'; v.tOver = now; } }
@@ -4624,7 +4802,7 @@ function fxLater(ms, fn){ if (FXQ.length > 400) FXQ.shift(); FXQ.push({t:FXQ.clk
 function fxDrain(now){ const dt = Math.min(250, Math.max(0, now - (FXQ.last || now))); FXQ.last = now; if (S && S.speed > 0 && !S.over) FXQ.gt += dt; if (!S || !(S.speed > 0) || !FXQ.length) return; FXQ.clk += dt;
   for (let i = 0; i < FXQ.length; i++){ const q = FXQ[i]; if (q.t > FXQ.clk) continue; FXQ.splice(i--, 1); try { q.fn(); } catch (e){ console.error(e); } } }
 function strikeFX(p, v){ fx('strike', p); const P = G.P[p]; afxMark(p, 24);
-  for (let i = 0; i < 5; i++) fxLater(120 + i*170, () => { const ex = P.x + (Math.random() - 0.5)*16, ey = P.y + (Math.random() - 0.5)*9; explode(ex, ey, 1.1); emit('smoke', ex, ey, {vy:-8, s0:6, s1:26, life:2400}); });
+  for (let i = 0; i < 5; i++) fxLater(120 + i*170, () => { const [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*9, 6); explode(ex, ey, 1.1); emit('smoke', ex, ey, {vy:-8, s0:6, s1:26, life:2400}); });
   sfx('boom'); }
 function wingPos(a){
   const B = G.P[a.air.base]; if (!a.fly) return [B.x + 30/Math.max(0.3, view.s), B.y - 14/Math.max(0.3, view.s)];
@@ -4922,7 +5100,7 @@ function missileImpact(m){
   let wrecked = '';
   if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)]; S.bld[m.to][k]--; wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
-  if (vis && booted){ const big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) fxLater(j*120, () => explode(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, big*(0.7 + Math.random()*0.4)));
+  if (vis && booted){ const big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) fxLater(j*120, () => explode(...fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, 6), big*(0.7 + Math.random()*0.4)));
     WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); afxCrater(P.x, P.y, m.k === 'bm' ? 7 : 5, {a:0.95, life:96}); afxMark(m.to, m.k === 'bm' ? 48 : 30); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); shake(m.k === 'bm' ? 9 : 5, m.k === 'bm' ? 900 : 500); sfx('boom'); }
   const where = P.cityName || P.name;
   if (m.owner === PLAYER){ log(`${M0.name} hit ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} destroyed` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'good', m.to); bump('unitsKilled', killed); }
@@ -5154,7 +5332,7 @@ function tick(){
     const playerThere = owners.includes(PLAYER);
     if (playerThere){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const st0 = S.stats || (S.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
     if (playerThere) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(a.owner === PLAYER ? 'unitsLost' : 'unitsKilled', lost); }
-    for (const a of list) if (count(a) === 0 && (playerThere || visibleSet().has(p))){ fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); explode(P.x, P.y, 1.4); } }
+    for (const a of list) if (count(a) === 0 && (playerThere || visibleSet().has(p))){ fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); explode(...fxOff(P.x, P.y, 6), 1.4); } }
     for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
     for (const a of list) if (count(a) === 0 && playerThere){
       if (a.owner === PLAYER) log(`${armyName(a)} was destroyed at ${G.P[p].name}.`, 'bad', p);
@@ -6209,11 +6387,18 @@ function drawSupplyRun(now){
     if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40 || sl < 1) continue;
     ctx.save(); ctx.globalAlpha = fade; flatAir('truck', x, y, 18, Math.atan2(B[1] - A[1], B[0] - A[0]), airTone(PLAYER), null); ctx.restore(); }
 }
-// open water at a world point: the land mask's alpha (read once), else the province grid when the mask cannot be read (a file:// page)
+// open water at a world point: a wet mask baked once from the vector coast (GEO.coast0, lakes punched out) at 1.5 world units a texel. It is
+// drawn from paths, so getImageData works on a file:// page too; the canvas is freed and only the alpha kept. Outside the world counts as wet;
+// without the vector coast it falls back to the province grid. Visual only (trade ships and convoys keep to the water)
 let LMA = null;
-function isWet(wx, wy){
-  if (LMA === null){ LMA = false; try { const m = G.landMask; if (m && m.getContext){ const d = m.getContext('2d').getImageData(0, 0, m.width, m.height).data, a = new Uint8Array(m.width*m.height); for (let i = 0; i < a.length; i++) a[i] = d[i*4 + 3]; LMA = {w:m.width, h:m.height, a}; } } catch (e) { LMA = false; } }
-  if (LMA){ const x = Math.floor(wx/WORLD_W*LMA.w), y = Math.floor(wy/WORLD_H*LMA.h); return x < 0 || y < 0 || x >= LMA.w || y >= LMA.h || LMA.a[y*LMA.w + x] < 100; }
+function bakeWet(){ if (!GEO || !(GEO.coast0 || GEO.coastV)) return;   // (no coast yet: the grid answers, and the bake is tried again later)
+  LMA = false; try { const k = 1.5, w = Math.ceil(WORLD_W/k), h = Math.ceil(WORLD_H/k), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    g.setTransform(1/k, 0, 0, 1/k, 0, 0); g.fillStyle = '#fff'; g.fill(GEO.coast0 || GEO.coastV, 'evenodd'); const lp = lakePath(); if (lp){ g.globalCompositeOperation = 'destination-out'; g.fill(lp); g.globalCompositeOperation = 'source-over'; }
+    const d = g.getImageData(0, 0, w, h).data, a = new Uint8Array(w*h); for (let i = 0; i < a.length; i++) a[i] = d[i*4 + 3]; c.width = c.height = 1; LMA = {w, h, a, k}; } catch (e) { LMA = false; } }
+function isWet(wx, wy, th = 128){ if (LMA === null) bakeWet();   // (the coverage read bilinearly, so the shore falls between texels; th: the land share, of 255, that is still wet)
+  if (LMA){ const {w, h, a, k} = LMA, fx = wx/k - 0.5, fy = wy/k - 0.5, x = Math.floor(fx), y = Math.floor(fy); if (x < -1 || y < -1 || x >= w || y >= h) return true;
+    const x0 = Math.max(0, x), x1 = Math.min(w - 1, x + 1), y0 = Math.max(0, y), y1 = Math.min(h - 1, y + 1), u = fx - x, v = fy - y, r0 = y0*w, r1 = y1*w;
+    return (a[r0 + x0]*(1 - u) + a[r0 + x1]*u)*(1 - v) + (a[r1 + x0]*(1 - u) + a[r1 + x1]*u)*v < th; }
   const c0 = worldToCell(wx, wy), p0 = c0 >= 0 ? G.prov[c0] : -1; return p0 < 0 || G.P[p0].sea; }
 const FORM_PX = 46, FIG_PX = 66;   // hexPx thresholds: from FORM_PX the plates sit just above a force's spot and grow a little; FIG_PX: the old close-zoom size
 /* ---------------- Buildings on the map: clean symbols under the city name ----------------
@@ -6633,7 +6818,8 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
     ctx.beginPath(); ctx.arc(bx, by, R, 0, Math.PI*2); ctx.fillStyle = '#1a0f0e'; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = '#e0574f'; ctx.stroke();
     ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.2, 0.07*h); ctx.strokeStyle = '#f3c9b8'; ctx.beginPath(); ctx.moveTo(bx - L, by - L); ctx.lineTo(bx + L, by + L); ctx.moveTo(bx + L, by - L); ctx.lineTo(bx - L, by + L); ctx.stroke(); }
   ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  return {x:x0 - 3, y:y0 - 6*ps, w:w + 6 + 4*ps, h:h + 6*ps + D.bars + 3}; }
+  const R0 = 0.36*h, bg = fighting ? {x:x0 + w + 0.2*R0 - R0 - 1, y:y0 - 1.25*R0 - 1, w:2*R0 + 2, h:2*R0 + 2} : null;   // (the battle badge pokes out past the box: effects keep off it too)
+  return {x:x0 - 3, y:y0 - 6*ps, w:w + 6 + 4*ps, h:h + 6*ps + D.bars + 3, bg}; }
 // the icon for unit type t of owner o (armed UAVs from level IV get their own)
 const plateIcon = (t, o) => { const k = artT(t, o); return ICONP[k] ? k : ICONP[t] ? t : 'inf'; };
 // plate types: the cluster's dominant type by weight (strength x hit points) and a second type when it holds at least a quarter of that weight
@@ -6662,7 +6848,7 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
       for (const sg of [-1, 1]){ const a2 = ang + Math.PI + sg*0.3; ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a2)*L, by + Math.sin(a2)*L); } ctx.stroke(); ctx.restore(); }
     else if (counter.dust) counter.dust(main, ang, (t + 3)/0.32); }
   const pr = plateCounter(x, cy, a, n, color, quiet ? false : selected, mv, s, quiet ? false : fighting, main, now, quiet);
-  return close ? {x:pr.x, y:pr.y, w:pr.w, h:pr.h, bb:[pr.x, pr.y, pr.x + pr.w, pr.y + pr.h], bdy} : pr;
+  return close ? {x:pr.x, y:pr.y, w:pr.w, h:pr.h, bb:[pr.x, pr.y, pr.x + pr.w, pr.y + pr.h], bdy, bg:pr.bg} : pr;
 }
 // a flat aircraft icon in flight: the relation's light tone with a dark casing, turned to its heading (side-view helicopters and trucks stay level, facing their way)
 const AIRC = new Map();
@@ -6776,7 +6962,7 @@ function stripGeo(x0, y0, x1, y1){ const inB = b => b[2] >= x0 && b[0] <= x1 && 
   if (GEO.coast0 && COASTR.length){ const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(); let nl = 0;
     const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
     const cutR = (r, b) => b[0] >= x0 && b[2] <= x1 && b[1] >= y0 && b[3] <= y1 ? r : clipRing(r, x0, y0, x1, y1);
-    for (const R of COASTR) if (inB(R.b)){ const r = cutR(R.r, R.b); ringTo(cv, r); ringTo(gv, r); }
+    for (const R of coastRings(view.s*HS0)) if (inB(R.b)){ const r = cutR(R.r, R.b); ringTo(cv, r); ringTo(gv, r); }
     if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (!inB(b)) continue; const r = cutR(G.lakeRing[i], b); if (r.length < 6) continue;
       ringTo(cv, r); ringTo(lv, r); nl++; if (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64) ringTo(gv, r); }
     SG.coastV = cv; SG.coastG = gv; SG.lakeV = nl ? lv : null; SG.seaV = new Path2D(); SG.seaV.rect(x0, y0, x1 - x0, y1 - y0); SG.seaV.addPath(cv); }
@@ -6807,17 +6993,26 @@ function renderLayer(vis, lite = false, R = null){
   const SG = R ? stripGeo(wx0, wy0, wx1, wy1) : null;
   // the land path for this render: the coast rings and big lakes in view (lakes as evenodd holes, so the sea wash, shore glow, land clips and tint mask
   // all treat them as water). Rings wholly outside the layer cannot change a pixel in it, and leaving them out keeps the strokes and clips cheap.
-  if (!R && GEO.coast0 && COASTR.length){ const m0 = 24*px0, bx0 = -ox/view.s - m0, by0 = -oy/view.s - m0, bx1 = (cw + 2*mx - ox)/view.s + m0, by1 = (ch + 2*my - oy)/view.s + m0, inV = b => b[2] >= bx0 && b[0] <= bx1 && b[3] >= by0 && b[1] <= by1; let k = '';
-    for (let i = 0; i < COASTR.length; i++) if (inV(COASTR[i].b)) k += i + ',';
+  if (!R && GEO.coast0 && COASTR.length){ const m0 = 24*px0, bx0 = -ox/view.s - m0, by0 = -oy/view.s - m0, bx1 = (cw + 2*mx - ox)/view.s + m0, by1 = (ch + 2*my - oy)/view.s + m0, inV = b => b[2] >= bx0 && b[0] <= bx1 && b[3] >= by0 && b[1] <= by1;
+    // close zoom: the fine coast, each ring in view cut to the layer's world rect (Eurasia alone is tens of thousands of points), so the key holds
+    // the rect (snapped outward to the margin) and a new full render rebuilds the cut rings; further out the whole 1:50m rings in view
+    const RS = coastRings(hexPx), hi = RS !== COASTR, mH = Math.max(m0, 2*HS), cx0 = Math.floor((bx0 - mH)/mH)*mH, cy0 = Math.floor((by0 - mH)/mH)*mH, cx1 = Math.ceil((bx1 + mH)/mH)*mH, cy1 = Math.ceil((by1 + mH)/mH)*mH;   // (cut edges past the widest shore stroke)
+    let k = hi ? 'H' + (RS === COASTR_HI ? 2 : 1) + ':' + [cx0, cy0, cx1, cy1].map(v => Math.round(v*100)).join(',') + ';' : 'L';
+    if (!hi) for (let i = 0; i < RS.length; i++) if (inV(RS[i].b)) k += i + ',';
     k += '|'; if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (inV(b)) k += i + (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64 ? 'b,' : ','); }
-    if (k !== GEO.coastK){ GEO.coastK = k; const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(), [kc, kl] = k.split('|'); let nl = 0;
-      const ringTo = (q, r) => { q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
-      for (const i of kc.split(',')) if (i){ ringTo(cv, COASTR[+i].r); ringTo(gv, COASTR[+i].r); }
+    if (k !== GEO.coastK){ GEO.coastK = k; const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(), kl = k.split('|')[1]; let nl = 0;
+      const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
+      if (hi){ for (const Rr of RS){ const b = Rr.b; if (b[2] < cx0 || b[0] > cx1 || b[3] < cy0 || b[1] > cy1) continue; const r = b[0] >= cx0 && b[2] <= cx1 && b[1] >= cy0 && b[3] <= cy1 ? Rr.r : clipRing(Rr.r, cx0, cy0, cx1, cy1); ringTo(cv, r); ringTo(gv, r); } }
+      else for (const i of k.slice(1).split('|')[0].split(',')) if (i){ ringTo(cv, RS[+i].r); ringTo(gv, RS[+i].r); }
       for (const i of kl.split(',')) if (i){ const r = G.lakeRing[parseInt(i)]; ringTo(cv, r); ringTo(lv, r); nl++; if (i.endsWith('b')) ringTo(gv, r); }   // the wide shallow-water glow rings only lakes big on screen (it would flood a small one)
       GEO.coastV = cv; GEO.coastG = gv; GEO.lakeV = nl ? lv : null; GEO.seaV = null; } }
   if (!R && GEO.coastV && !GEO.seaV){ GEO.seaV = new Path2D(); GEO.seaV.rect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); GEO.seaV.addPath(GEO.coastV); }
   const CV = SG ? SG.coastV : GEO.coastV, CG = SG ? SG.coastG : GEO.coastG || GEO.coastV, LV = SG ? SG.lakeV : GEO.lakeV, SEAV = SG ? SG.seaV : GEO.seaV;
   const NB = n => SG ? SG.nation(n) : GEO.nation[n], NA = n => SG ? SG.nArea(n) : nAreaOf(n), NEU = () => SG ? SG.neuArea() : neuArea(), MINE = SG ? SG.mine : GEO.mine;
+  // fine coast: land colour on the texture's sea slivers inside it. Baked off the frame once the zoom nears the fine coast; until then every render
+  // (full or strip) goes without, and the bake forces one full render, so strips never mix the two
+  if (SET.fx !== 'low' && hexPx >= 24 && COASTR_HI.length && G.terrain && G.terrain.cbl === undefined && !coastBleed.t) coastBleed.t = setTimeout(() => { coastBleed.t = 0; if (!G || !G.terrain) return; coastBleed(); layerKey = ''; }, 60);
+  if (CV && SET.fx !== 'low' && coastRings(hexPx) !== COASTR && G.terrain && G.terrain.cbl){ c.save(); c.clip(CV, 'evenodd'); c.drawImage(G.terrain.cbl, 0, 0, WORLD_W, WORLD_H); c.restore(); }
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
     // wash the sea with its own colour so the raster texture's soft land edge does not bleed past the real shore, then shallow-water bands
     // (the baked depth: shallow shelf, slope and abyss; the flat wash only if it could not be baked)
@@ -7071,7 +7266,17 @@ function drawBattleLOD(now, vis, kl, hexPx){
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
 // the live sea surface: a 256 px tile of thin bright crest arcs (three rotated sine bands bent by tileable noise, broken into arcs), baked once
-const SEAFX = {t:-1e9, g:-1, k:'', cv:null, tile:null, pat:null, fk:'', fp:null, fc:null};
+const SEAFX = {t:-1e9, g:-1, k:'', cv:null, tile:null, pat:null, fk:'', fp:null, fc:null, foam:null, fpat:null};
+// shore foam: a 128 px tileable sheet of soft white blobs and streaks (alpha 0 to about 0.8), baked once; stroked along the coast it breaks the
+// surf line up irregularly instead of into regular dashes
+function foamTile(){ if (SEAFX.foam) return SEAFX.foam; const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), r = mulberry(977);
+  const blob = (x, y, rx, ry, a, al) => { for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]){ const X = x + ox, Y = y + oy; if (X + rx < 0 || X - rx > N || Y + rx < 0 || Y - rx > N) continue;   // (wrapped, so the tile repeats seamlessly)
+      g.save(); g.translate(X, Y); g.rotate(a); g.scale(1, ry/rx); const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, `rgba(255,255,255,${al})`); gr.addColorStop(0.55, `rgba(255,255,255,${al*0.45})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI*2); g.fill(); g.restore(); } };
+  for (let i = 0; i < 26; i++) blob(r()*N, r()*N, 6 + r()*14, 2 + r()*5, r()*Math.PI, 0.35 + 0.4*r());   // patches and long streaks
+  for (let i = 0; i < 60; i++) blob(r()*N, r()*N, 1.5 + r()*3.5, 1 + r()*2, r()*Math.PI, 0.3 + 0.5*r());   // flecks
+  const im = g.getImageData(0, 0, N, N), d = im.data; for (let i = 3; i < d.length; i += 4) d[i] = Math.min(204, d[i]);   // (at most 0.8)
+  g.putImageData(im, 0, 0); return (SEAFX.foam = c); }
 function waveTile(){ if (SEAFX.tile) return SEAFX.tile; const N = 256, P = 8, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data, r = mulberry(131), gr = new Float32Array(P*P*3);
   for (let i = 0; i < gr.length; i++) gr[i] = r();
   const at = (i, j, o) => gr[((((j % P) + P) % P)*P + (((i % P) + P) % P))*3 + o];
@@ -7084,7 +7289,7 @@ function waveTile(){ if (SEAFX.tile) return SEAFX.tile; const N = 256, P = 8, c 
   g.putImageData(im, 0, 0); return (SEAFX.tile = c); }
 // waves (hexPx >= 20) and shore foam (hexPx >= 30) over the layer's sea; not with low effects or reduced motion, not while the view moves (the static
 // depth is under it). Waves: two drifting layers of the tile filled into a half-res canvas at most every 50 ms, cut to the layer's sea mask, laid
-// on with 'screen' (fainter at night). Foam: dashes creeping along the coast rings in view, clipped to the water side.
+// on with 'screen' (fainter at night). Foam: a soft foam sheet stroked along the coast rings in view, clipped to the water side.
 function drawSeaSurface(now, moving){
   const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || SET.fx === 'low' || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || !GEO) return;
   const day = viewLight().day, w2 = Math.ceil(cw*dpr/2), h2 = Math.ceil(ch*dpr/2), Wc = SEAFX.cv || (SEAFX.cv = document.createElement('canvas'));
@@ -7098,14 +7303,18 @@ function drawSeaSurface(now, moving){
     g.globalAlpha = 1; g.globalCompositeOperation = 'destination-in'; g.drawImage(layer.seaM, lx/2 - (layer.seaE || 0), ly/2 - (layer.seaEy || 0)); g.globalCompositeOperation = 'source-over'; }
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.015 + 0.05*day; ctx.drawImage(Wc, 0, 0, w2*2, h2*2); ctx.restore();
   // shore foam: the coast rings that reach the screen, cut to it (kept until the view changes), dashes creeping along them on the water side
-  if (hexPx >= 30 && GEO.coast0 && COASTR.length){ const px = 1/view.s, m0 = 12*px, X0 = -view.x/view.s - m0, Y0 = -view.y/view.s - m0, X1 = (cw - view.x)/view.s + m0, Y1 = (ch - view.y)/view.s + m0, fk = [X0, Y0, view.s, cw, ch].join(',');
+  if (hexPx >= 30 && GEO.coast0 && COASTR.length){ const px = 1/view.s, m0 = 12*px, X0 = -view.x/view.s - m0, Y0 = -view.y/view.s - m0, X1 = (cw - view.x)/view.s + m0, Y1 = (ch - view.y)/view.s + m0, RS = coastRings(hexPx), fk = [X0, Y0, view.s, cw, ch, RS === COASTR ? 'L' : RS === COASTR_HI ? 'H2' : 'H1'].join(',');
     if (fk !== SEAFX.fk){ SEAFX.fk = fk; const fp = new Path2D(), fc = new Path2D(); fc.rect(X0, Y0, X1 - X0, Y1 - Y0); let n = 0;
-      for (const Rr of COASTR){ const b = Rr.b; if (b[2] < X0 || b[0] > X1 || b[3] < Y0 || b[1] > Y1) continue; const r = b[0] >= X0 && b[2] <= X1 && b[1] >= Y0 && b[3] <= Y1 ? Rr.r : clipRing(Rr.r, X0 - m0, Y0 - m0, X1 + m0, Y1 + m0); if (r.length < 6) continue;
+      for (const Rr of RS){ const b = Rr.b; if (b[2] < X0 || b[0] > X1 || b[3] < Y0 || b[1] > Y1) continue; const r = b[0] >= X0 && b[2] <= X1 && b[1] >= Y0 && b[3] <= Y1 ? Rr.r : clipRing(Rr.r, X0 - m0, Y0 - m0, X1 + m0, Y1 + m0); if (r.length < 6) continue;
         for (const q of [fp, fc]){ q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); } n++; }
       SEAFX.fp = n ? fp : null; SEAFX.fc = fc; }
     if (SEAFX.fp){ ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.clip(SEAFX.fc, 'evenodd'); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.setLineDash([2.5*px, 6*px]); ctx.lineDashOffset = -FXQ.gt/350*px; ctx.strokeStyle = `rgba(236,246,248,${(0.13 + 0.13*day).toFixed(3)})`; ctx.lineWidth = 2.6*px; ctx.stroke(SEAFX.fp);   // (half of it lies on land, clipped away)
-      ctx.setLineDash([1.6*px, 9*px]); ctx.lineDashOffset = FXQ.gt/520*px; ctx.strokeStyle = `rgba(236,246,248,${(0.06 + 0.07*day).toFixed(3)})`; ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); ctx.restore(); } } }   // a fainter outer row drifting the other way
+      // the foam sheet, anchored to the world (about 60 screen px a tile) and drifting slowly: a narrow bright line, then a wider fainter one drifting
+      // the other way, so the surf breaks up irregularly (half of each stroke lies on land, clipped away)
+      const fp = SEAFX.fpat || (SEAFX.fpat = ctx.createPattern(foamTile(), 'repeat')), d = FXQ.gt/350*px, ts = 60*px/128;
+      if (fp.setTransform){ fp.setTransform(new DOMMatrix([ts, 0, 0, ts, d, 0.4*d])); ctx.strokeStyle = fp; ctx.globalAlpha = Math.min(1, (0.13 + 0.13*day)*2.2); ctx.lineWidth = 2.6*px; ctx.stroke(SEAFX.fp);
+        fp.setTransform(new DOMMatrix([0, ts*1.4, -ts*1.4, 0, 37*px - 0.7*d, 23*px + 0.3*d])); ctx.globalAlpha = Math.min(1, (0.06 + 0.07*day)*2.2); ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); }
+      ctx.restore(); } } }
 function draw(now){
   clampView(); fxDrain(now);
   { const fdt = now - (FXG.t || now); FXG.t = now; if (fdt > 0 && fdt < 250) FXG.ema = 0.9*FXG.ema + 0.1*fdt; FXG.k = Math.max(0.3, Math.min(1, 1 - (FXG.ema - 20)/25)); FXG.area = 0; }
@@ -7464,11 +7673,15 @@ function draw(now){
   tutDraw(now, kl);   // the tutorial ring goes under the counters, so it never runs across a stack's number
   drawSelPaths(0);
   // counters (clustered per owner at low zoom)
+  const hitsPrev = hits;   // last frame's plates: smoke and bursts spawn off them (AFX.avoid)
   hits = [];
   drawTrade(now, vis);
   drawConvoys(now, vis);
   drawSupplyRun(now);
   if (PART.length) drawTrailDust();
+  AFX.avoid = plateBoxes(hitsPrev); PLATECLIP = null;
+  afxAmbient(now, vis);
+  drawParticlesUnder(now);   // smoke, fire, flashes and bursts: under the counters, so no plate is ever veiled
   const clSetup = c => { const lead = c.list.reduce((b, a) => count(a) > count(b) ? a : b, c.list[0]);
     let dir = 1; counter.ang = null; counter.trail = null; c.enemy = null;
     const mS = c.air ? null : MOV.get(c.list[0].id) || (lead !== c.list[0] ? MOV.get(lead.id) : null);
@@ -7518,6 +7731,7 @@ function draw(now){
   if (unkA.length){ const grp = new Map(); for (const a of unkA){ const key = a.to !== null ? 'm' + a.id : 'p' + a.at; if (!grp.has(key)) grp.set(key, []); grp.get(key).push(a); }
     for (const list of grp.values()){ const [wx, wy] = armyPos(list[0]), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
       const r = unkPlate(x, y - 2*k, k, now); hits.push({...r, ids:list.map(a => a.id), cx:x, cy:y, spread:false, unk:true}); } }
+  PLATECLIP = plateClip(plateBoxes(hits));   // (this frame's plates; the aircraft below are not in it)
   drawIntelLegend(vis, unkA.length);
   // aircraft in flight: formation of jets with contrails
   const dtV = Math.min(0.1, (now - (draw.lastT || now))/1000), airLbl = []; draw.lastT = now;
@@ -7539,7 +7753,7 @@ function draw(now){
       const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = Lf;
       if (!rotor){ const wc = (dr ? 1.2 : 2.2)*Math.min(2, sc/1.1);
         if (nTr >= 3){ const los = heavy ? [-0.2, 0.2] : [0], b1 = Math.floor(nTr/3), b2 = Math.floor(nTr*2/3);
-          ctx.save(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgb(235,240,245)';
+          ctx.save(); plateClipOn(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgb(235,240,245)';   // (never across a plate)
           for (const [j0, j1, wm, a0] of [[0, b1, 2.2, 0.12], [b1, b2, 1.5, 0.3], [b2, nTr - 1, 1, 0.55]]){ if (j1 <= j0) continue;
             ctx.beginPath();
             for (const lo of los){ for (let j = j0; j <= j1; j++){ const o = j*4, cx0 = trS[o + 2], sx0 = trS[o + 3], fx0 = off[0]*Df - Dp*0.38, fy0 = off[1]*Df + lo*Dp;
@@ -7547,7 +7761,7 @@ function draw(now){
             ctx.lineWidth = wc*wm; ctx.globalAlpha = a0*trA*(dr ? 0.8 : 1); ctx.stroke(); }
           ctx.restore(); }
         else { const Lc = (dr ? 34 : heavy ? 72 : 58)*sc/1.1, wc0 = (dr ? 1.7 : 2.2)*Math.min(2, sc/1.1);   // no history yet (first frames): the old fading strip
-          ctx.save(); ctx.translate(px0, py0); ctx.rotate(ang + Math.PI); ctx.globalAlpha = dr ? 0.8 : 1;
+          ctx.save(); plateClipOn(); ctx.translate(px0, py0); ctx.rotate(ang + Math.PI); ctx.globalAlpha = dr ? 0.8 : 1;
           for (const lo of heavy ? [-0.2, 0.2] : [0]) ctx.drawImage(contrailImg(), Dp*0.38, lo*Dp - wc0/2, Lc, wc0);
           ctx.restore(); } }
       // bank: the plane narrows across its heading while it turns, and its shadow slips sideways
@@ -7567,8 +7781,7 @@ function draw(now){
     flatAir('heli', x, y, 26, ang, airTone(a.owner), null);   // transport helicopter carrying the paratroopers: a flat icon, level
     ctx.font = `700 ${Math.round(10*sc)}px ${BODY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2eee2'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText('▼ ' + count(a), x, y + 13 + 6*sc); ctx.fillText('▼ ' + count(a), x, y + 13 + 6*sc);
     if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
-  afxAmbient(now, vis);
-  drawParticles(now);
+  if (PROJ.length || MUZZ.length || PART.length){ ctx.save(); plateClipOn(); drawParticlesOver(now); ctx.restore(); }   // tracers, shells, sparks: over the map, never over a plate
   // missiles in flight: exhaust glow, body and smoke trail; aiming ring
   for (const m of (S.inflight || [])){ const q0 = missilePos(m), [x, y] = toScreen(q0.x, q0.y), A = q0.A, B = q0.B, eps = 0.02, t2 = Math.min(1, q0.t + eps);
     const nx = A.x + (B.x - A.x)*t2, ny = A.y + (B.y - A.y)*t2 - Math.sin(t2*Math.PI)*q0.arc, [x2, y2] = toScreen(nx, ny), ang = Math.atan2(y2 - y, x2 - x);
@@ -9237,7 +9450,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, FXG, nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+if (location.protocol === 'file:') window.__im = {coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, FXG, nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   tables:() => ({UNITS, BUILD, TECH:TECH.map(T => ({id:T.id, name:T.name, branch:T.branch, tier:T.tier, days:T.days, c:techCost(T)})), LINK_COST, MISSILES, SAT_C}), riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
