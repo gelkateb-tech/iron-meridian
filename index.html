@@ -1828,7 +1828,7 @@ function buildGeometry(){
   const lazy = make => new Proxy([], {get:(arr, k) => { if (typeof k !== 'string' || !/^\d+$/.test(k)) return arr[k]; return arr[k] || (arr[k] = make(+k)); }});
   const outline = lazy(p => ringPath(p));
   GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), provT:tiledPath(provL.map(c => c.pts)), seaT:tiledPath(seaL.map(c => c.pts)), countryT:tiledPath(countryL.map(c => c.pts)), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land, coastV:coastPath()};
-  GEO.coast0 = GEO.coastV; bakeLakes();
+  GEO.coast0 = GEO.coastV; bakeLakes(); GEO.seaTex = bakeSeaDepth();
   rebuildOwnerGeo();
 }
 let geoVer = 0, FRONT = {k:'', p:null};
@@ -1840,7 +1840,7 @@ function rebuildOwnerGeo(){
   const per = S.nations.map(() => []), mineL = [], own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
   for (const c of GEO.chains){ const oa = own(c.a), ob = own(c.b); if (oa === ob || (window.COAST && (oa === -9 || ob === -9))) continue;   // coasts are drawn by the real shoreline
     if (oa >= 0) per[oa].push(c); if (ob >= 0) per[ob].push(c); if (oa === PLAYER || ob === PLAYER) mineL.push(c); }
-  GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL); GEO.nArea = [];
+  GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL); GEO.nArea = []; GEO.perL = per; GEO.mineL = mineL;   // (the chain lists: a layer strip strokes only the chains near it)
   const pbb = P => P.cbb || (P.cbb = P.cells.reduce((b, c) => { const [x, y] = cellCenter(c); if (x - HS < b[0]) b[0] = x - HS; if (y - HS < b[1]) b[1] = y - HS; if (x + HS > b[2]) b[2] = x + HS; if (y + HS > b[3]) b[3] = y + HS; return b; }, [Infinity, Infinity, -Infinity, -Infinity]));   // a province's box (world units), worked out once
   GEO.nBox = per.map(list => { const b = [Infinity, Infinity, -Infinity, -Infinity]; for (const c of list) for (const q of c.pts){ if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[0] > b[2]) b[2] = q[0]; if (q[1] > b[3]) b[3] = q[1]; } return b; });
   // the box of each nation's land, for the political tint (nBox above only spans land borders, and an island power such as Japan or Australia has none)
@@ -1861,6 +1861,39 @@ function rebuildOwnerGeo(){
   buildMini();
 }
 function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
+// the sea's depth, baked once from the land mask at half its size: nearness to the shore read off three blurs of the mask (shelf ~3 mask px,
+// slope ~10, abyss ~40 at quarter size), coloured shallow turquoise > shelf > slope > abyss, with a faint low-frequency noise for ridges and trenches.
+// All canvas compositing (no pixel reads: the mask comes from an image, which a file:// page may not read back); the depth masks are grey (white = land
+// near), so each colour step is col*(1 - s) + C*s: a 'multiply' by the inverted mask, a 'multiply' of C by the mask, summed with 'lighter'.
+// .op is opaque (laid under the coast clip, so the mask's soft edge never shows land at sea); the canvas itself has the land cleared, for the far view.
+// Deterministic (its own seeded noise, never the game rng); null if it cannot be made.
+function bakeSeaDepth(){
+  if (G.seaTex !== undefined) return G.seaTex; const M = G.landMask; if (!M || window.__BAKE) return null; G.seaTex = null;
+  try { const w = Math.ceil(M.width/2), h = Math.ceil(M.height/2), mk = (a, b) => { const c = document.createElement('canvas'); c.width = a; c.height = b; return c; };
+    const fill = (g, col, op = 'source-over') => { g.globalCompositeOperation = op; g.fillStyle = col; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over'; };
+    // white land on clear, then a grey low-frequency noise (its own seed)
+    const Mw = mk(w, h), mw = Mw.getContext('2d'); mw.drawImage(M, 0, 0, w, h); fill(mw, '#fff', 'source-in');
+    const nw = Math.ceil(w/2), nh = Math.ceil(h/2), Nc = mk(nw, nh), ng = Nc.getContext('2d'), im = ng.createImageData(nw, nh), nz = makeNoise(mulberry(77));
+    for (let y = 0, i = 0; y < nh; y++) for (let x = 0; x < nw; x++, i += 4){ const v = 0.62*nz(x/19, y/19) + 0.38*nz(x/6 + 17, y/6 + 31); im.data[i] = im.data[i + 1] = im.data[i + 2] = Math.round(v*255); im.data[i + 3] = 255; }
+    ng.putImageData(im, 0, 0);
+    // a grey depth mask: the land blurred by r (at 1/q size), the noise laid in with soft-light (bends the bands into ridges and trenches), then gained
+    const depth = (r, q, gain, nk) => { const ww = Math.ceil(w/q), hh = Math.ceil(h/q), c = mk(ww, hh), g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, ww, hh); g.filter = 'blur(' + r + 'px)'; g.drawImage(Mw, 0, 0, ww, hh); g.filter = 'none';
+      const o = mk(w, h), og = o.getContext('2d'); og.imageSmoothingEnabled = true; og.filter = 'brightness(' + gain + ')'; og.drawImage(c, 0, 0, w, h); og.filter = 'none';
+      og.globalCompositeOperation = 'soft-light'; og.globalAlpha = nk; og.drawImage(Nc, 0, 0, w, h); og.globalAlpha = 1; og.globalCompositeOperation = 'source-over'; return o; };
+    const out = mk(w, h), g = out.getContext('2d'), T = mk(w, h), t = T.getContext('2d'), I = mk(w, h), ig = I.getContext('2d');
+    fill(g, 'rgb(6,18,28)');   // abyss
+    const step = (S, col) => { fill(ig, '#fff'); ig.globalCompositeOperation = 'difference'; ig.drawImage(S, 0, 0); ig.globalCompositeOperation = 'source-over';   // 1 - s
+      g.globalCompositeOperation = 'multiply'; g.drawImage(I, 0, 0); fill(t, col); t.globalCompositeOperation = 'multiply'; t.drawImage(S, 0, 0); t.globalCompositeOperation = 'source-over';
+      g.globalCompositeOperation = 'lighter'; g.drawImage(T, 0, 0); g.globalCompositeOperation = 'source-over'; };
+    { const Rd = mk(w, h), rg = Rd.getContext('2d'); rg.imageSmoothingEnabled = true; rg.filter = 'contrast(1.4) brightness(0.34)'; rg.drawImage(Nc, 0, 0, w, h); rg.filter = 'none'; step(Rd, 'rgb(13,36,50)'); }   // open-ocean ridges and basins
+    step(depth(14, 2, 3, 0.9), 'rgb(13,36,50)');   // slope
+    step(depth(6, 1, 2.1, 0.9), 'rgb(22,60,74)');    // shelf
+    step(depth(1.6, 1, 1.6, 0.8), 'rgb(44,104,112)');   // shallows (noise breaks the band up, so it is no even halo)
+    g.globalCompositeOperation = 'soft-light'; g.globalAlpha = 0.22; g.drawImage(Nc, 0, 0, w, h); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';   // +-6 % light
+    const cut = mk(w, h), cg = cut.getContext('2d'); cg.drawImage(out, 0, 0); cg.globalCompositeOperation = 'destination-out'; cg.drawImage(M, 0, 0, w, h);
+    cut.op = out; G.seaTex = cut;
+  } catch (e) { G.seaTex = null; }
+  return G.seaTex; }
 function buildTerrain(){
   if (G.terrain) return G.terrain;
   if (PRE.terrain && PRE.mask){ const mkc = im => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); return c; };
@@ -2347,13 +2380,45 @@ function puffSprite(i, dark){
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill(); }
   return (SPR[key] = c);
 }
+// battle smoke at strategic / operational zoom: one baked column per size bucket (96/160/256 px) and day/night, drawn once per battle per frame
+// (dark brown-grey base, lit warm-grey top, a sun-side highlight; the night one is under-lit orange by the fire)
+function battleCloud(bucket, night){
+  const key = 'bcl' + bucket + (night ? 'n' : 'd'); if (SPR[key]) return SPR[key];
+  const b = [96, 160, 256][bucket], c = document.createElement('canvas'); c.width = c.height = b; const g = c.getContext('2d'), rr = mulberry(911 + bucket*7);
+  const lo = night ? [52, 38, 30] : [50, 45, 40], hi = night ? [60, 55, 56] : [104, 97, 88], n = 13;
+  for (let k = 0; k < n; k++){ const t = k/(n - 1), r = b*(0.1 + 0.15*t)*(0.85 + 0.3*rr()), x = b*(0.5 + 0.07*t + (rr() - 0.5)*0.12*(0.4 + t)), y = b*(0.9 - 0.66*t) - r*0.2;
+    const cl = lo.map((v, i) => Math.round(v + (hi[i] - v)*Math.pow(t, 1.7))), a = (night ? 0.9 : 0.92) - (night ? 0.28 : 0.18)*t, li = cl.map(v => Math.min(255, v + (night ? 6 + 10*t : 10 + 16*t)));
+    const gr = g.createRadialGradient(x - r*0.35, y - r*0.4, r*0.08, x, y, r);
+    gr.addColorStop(0, `rgba(${li},${a})`); gr.addColorStop(0.66, `rgba(${cl},${(a*0.92).toFixed(3)})`); gr.addColorStop(1, `rgba(${cl},0)`); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill(); }
+  // sun-side highlight on the upper puffs (light from the upper left), kept inside the smoke
+  g.globalCompositeOperation = 'source-atop';
+  { const gr = g.createRadialGradient(b*0.36, b*0.26, 0, b*0.36, b*0.26, b*0.42); gr.addColorStop(0, night ? 'rgba(130,140,160,.14)' : 'rgba(200,190,172,.24)'); gr.addColorStop(1, 'rgba(236,228,210,0)'); g.fillStyle = gr; g.fillRect(0, 0, b, b); }
+  // the base: a dark band of dense smoke by day, the fire's orange glow from below by night
+  { const gr = g.createRadialGradient(b*0.5, b*0.98, 0, b*0.5, b*0.98, night ? b*0.78 : b*0.42);
+    if (night){ gr.addColorStop(0, 'rgba(255,184,92,.95)'); gr.addColorStop(0.3, 'rgba(252,140,56,.75)'); gr.addColorStop(0.62, 'rgba(214,100,42,.36)'); gr.addColorStop(1, 'rgba(160,70,30,0)'); }
+    else { gr.addColorStop(0, 'rgba(34,29,25,.6)'); gr.addColorStop(1, 'rgba(34,29,25,0)'); }
+    g.fillStyle = gr; g.fillRect(0, 0, b, b); }
+  g.globalCompositeOperation = 'source-over';
+  return (SPR[key] = c);
+}
+const nightP = p => Math.max(0, Math.min(1, (0.02 - sunSinEl(p))/0.16));   // 0 by day .. 1 once the sun is ~8 degrees down (per province)
+const fxNight = (wx, wy) => { const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1; return p >= 0 ? nightP(p) : nightAtX(wx); };
+const fxh = a => { a |= 0; a = Math.imul(a ^ a >>> 16, 0x45d9f3b); a = Math.imul(a ^ a >>> 16, 0x45d9f3b); return ((a ^ a >>> 16) >>> 0)/4294967296; };
+// effects governor: frame-time average, spawn factor k (1 = full effects), smoke area drawn this frame, next allowed graceful retire
+const FXG = {ema:16, k:1, area:0, ret:0, t:0};
+const fxBudget = a => { if (FXG.area > 3*cw*ch) return false; FXG.area += a; return true; };
+// over a cap: the oldest entries fade out over ~0.3 s (staggered so they never all vanish in one frame) instead of being cut
+function fxRetire(arr, n, now, local){ let c = 0; for (const q of arr){ if (c >= n) break; if (q.die == null){ q.die = (local ? q.t : now) + 300 + c*12; c++; } } }
 const SMOKE = q => puffSprite((q && q.v) || 0, true), SMOKEL = q => puffSprite((q && q.v) || 0, false);
 const FIRE = () => softSprite('fire', 'rgba(255,245,200,1)', 'rgba(255,150,40,.75)', 'rgba(200,40,0,0)');
 const FOAM = () => softSprite('foam', 'rgba(244,250,252,.85)', 'rgba(230,242,247,.35)', 'rgba(230,242,247,0)');
 const GLOW = () => softSprite('glow', 'rgba(255,240,190,1)', 'rgba(255,200,90,.5)', 'rgba(255,150,40,0)');
 function emit(kind, wx, wy, opt = {}){
-  if ((SET.fx === 'low' || afxReduced()) && (kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris') && Math.random() < (afxReduced() ? 0.8 : 0.6)) return;
-  if (PART.length > (SET.fx === 'low' ? 300 : 900)) PART.splice(0, 100);
+  const soft = kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris';
+  if (soft && (SET.fx === 'low' || afxReduced()) && Math.random() < (afxReduced() ? 0.8 : 0.6)) return;
+  if (soft && Math.random() > FXG.k) return;   // the governor thins smoke and dust when frames get slow
+  const cap = SET.fx === 'low' ? 300 : 900;
+  if (PART.length > cap){ const now = performance.now(); if (now > FXG.ret){ FXG.ret = now + 350; fxRetire(PART, 60, now, true); } if (soft || PART.length > cap*1.6) return; }
   const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, ring:500}[kind] || 800);
   PART.push({kind, wx, wy, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6, spin:(Math.random() - 0.5)*0.6, v:(Math.random()*4) | 0, tn:opt.tn});
 }
@@ -2361,7 +2426,7 @@ function emit(kind, wx, wy, opt = {}){
    Each image is cut once into four cached sizes (mips), so a frame only scales a small canvas. Bursts and puffs are screen-sized like the
    drawn particles (times kz); craters are world-sized decals that fade over three game days. Without the art the drawn particles and
    scorch marks are used as before. SET.fx 'low' keeps only the big bursts and fewer craters; reduced motion drops smoke and pops. */
-const AFX = {boom:[], puff:[], crater:[], mips:new Map(), heat:new Map(), tm:new Map(), pop:0};
+const AFX = {boom:[], puff:[], crater:[], mips:new Map(), heat:new Map(), tm:new Map(), pop:0, bpn:new Map()};   // bpn: live puffs per battle province (refreshed in drawArtFx)
 const afxSync = () => { if (AFX.S !== S){ AFX.S = S; AFX.crater.length = AFX.puff.length = AFX.boom.length = 0; AFX.heat.clear(); } };   // a new or loaded game starts clean
 function afxMips(name, dark){ const key = name + (dark ? ':d' : ''); let m = AFX.mips.get(key); if (m) return m; if (!ART.ready(name)) return null;
   m = [32, 64, 128, 256].map(px => ART.sprite(name, px, dark ? {tint:'#121418', tintA:0.78} : name === 'fx-smoke' ? {tint:'#4a463f', tintA:0.3} : {})); if (m.some(c => !c)) return null; AFX.mips.set(key, m); return m; }
@@ -2377,10 +2442,10 @@ function afxBoom(wx, wy, big = 1, small = false){
   return true; }
 // rising, drifting smoke puff (o: s0/s1 screen radius at kz 1, a peak alpha, dur ms, vx/vy px per s, dark)
 function afxPuff(wx, wy, o = {}){
-  if (!booted || !ART.ready('fx-smoke') || afxReduced()) return false; if (afxOff(wx, wy, 200)) return true;
-  const low = SET.fx === 'low', cap = low ? 30 : 150; if (AFX.puff.length >= cap) AFX.puff.splice(0, AFX.puff.length - cap + 1);
-  AFX.puff.push({wx, wy, t0:performance.now(), delay:o.delay || 0, dur:o.dur || 3600 + Math.random()*1800, s0:o.s0 || 5, s1:o.s1 || 22, a:o.a || 0.32,
-    vx:o.vx ?? 3 + Math.random()*5, vy:o.vy ?? -(6 + Math.random()*6), ox:o.ox || 0, oy:o.oy || 0, rot:Math.random()*6.28, spin:(Math.random() - 0.5)*0.5, dark:o.dark ?? (nightAtX(wx) > 0.45)});
+  if (!booted || !ART.ready('fx-smoke') || afxReduced()) return false; if (afxOff(wx, wy, 200) || Math.random() > FXG.k) return true;
+  const low = SET.fx === 'low', cap = low ? 30 : 150; if (AFX.puff.length >= cap){ fxRetire(AFX.puff, Math.max(8, AFX.puff.length - cap + 1), performance.now()); if (AFX.puff.length >= cap*1.3) return true; }
+  AFX.puff.push({wx, wy, t0:performance.now(), bp:o.bp ?? -1, delay:o.delay || 0, dur:o.dur || 3600 + Math.random()*1800, s0:o.s0 || 5, s1:o.s1 || 22, a:o.a || 0.32,
+    vx:o.vx ?? 3 + Math.random()*5, vy:o.vy ?? -(6 + Math.random()*6), ox:o.ox || 0, oy:o.oy || 0, rot:Math.random()*6.28, spin:(Math.random() - 0.5)*0.5, dark:o.dark ?? (fxNight(wx, wy) > 0.45)});
   return true; }
 // ground crater (world radius r) on land; nearby hits deepen one crater instead of stacking
 function afxCrater(wx, wy, r, o = {}){
@@ -2398,9 +2463,10 @@ function afxTimer(key, now, ms){ const t = AFX.tm.get(key) || 0; if (now - t < m
 function afxAmbient(now, vis){
   if (!booted || SET.fx === 'low' || afxReduced() || !ART.ready('fx-smoke')) return; const hexPx = view.s*HS0; if (hexPx < 4) return;
   const spr = Math.min(1, 26/hexPx) + 0.35;   // keep the spread near the battle at close zoom
-  for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue; const P = G.P[p]; if (afxOff(P.x, P.y, 120)) continue;
-    if (afxTimer('b' + p, now, 520 + Math.random()*500)){ const sea = P.sea; afxPuff(P.x + (Math.random() - 0.5)*12*spr, P.y + (Math.random() - 0.5)*7*spr, {s0:5, s1:17 + Math.random()*10, a:sea ? 0.22 : 0.3, dur:4200 + Math.random()*2400, vx:4 + Math.random()*6, vy:-(5 + Math.random()*5)}); }
-    if (S.speed && !S.over && afxTimer('p' + p, now, 700 + Math.random()*900)) afxBoom(P.x + (Math.random() - 0.5)*14*spr, P.y + (Math.random() - 0.5)*8*spr, 0.6 + Math.random()*0.4, true); }
+  // strategic / operational zoom: the battle reads from one baked smoke column with flickers and tracers (drawBattleLOD), no particles
+  if (hexPx >= FIG_PX) for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue; const P = G.P[p]; if (afxOff(P.x, P.y, 120)) continue;
+    if ((AFX.bpn.get(p) || 0) < 4 && afxTimer('b' + p, now, 520 + Math.random()*500)){ const sea = P.sea; if (afxPuff(P.x + (Math.random() - 0.5)*12*spr, P.y + (Math.random() - 0.5)*7*spr, {bp:p, s0:5, s1:17 + Math.random()*10, a:sea ? 0.22 : 0.3, dur:4200 + Math.random()*2400, vx:4 + Math.random()*6, vy:-(5 + Math.random()*5)})) AFX.bpn.set(p, (AFX.bpn.get(p) || 0) + 1); }
+    if (S.speed && !S.over && Math.random() < FXG.k && afxTimer('p' + p, now, 700 + Math.random()*900)) afxBoom(P.x + (Math.random() - 0.5)*14*spr, P.y + (Math.random() - 0.5)*8*spr, 0.6 + Math.random()*0.4, true); }
   if (hexPx < 7) return;
   for (const [p, m] of AFX.heat){ const age = S.hour - m.h; if (age < 0 || age > m.d || S.battles.includes(p)){ if (age < 0 || age > m.d) AFX.heat.delete(p); continue; }
     const P = G.P[p]; if (afxOff(P.x, P.y, 100) || !vis.has(p)) continue; const f = 1 - age/m.d;
@@ -2414,12 +2480,17 @@ function drawCraters(now){
     ctx.setTransform(co, si, -si, co, x*dpr, y*dpr); ctx.drawImage(afxPick(m, rs*2*dpr), -rs, -rs*q.sq, rs*2, rs*2*q.sq); }
   ctx.globalAlpha = 1; ctx.setTransform(1, 0, 0, 1, 0, 0); }
 function drawArtFx(now, kz){
+  AFX.bpn.clear();
   if (AFX.puff.length){ const m = afxMips('fx-smoke'), md = afxMips('fx-smoke', true);
-    if (m && md) for (let i = AFX.puff.length - 1; i >= 0; i--){ const q = AFX.puff[i], t = now - q.t0 - q.delay; if (t < 0) continue; const k = t/q.dur; if (k >= 1){ AFX.puff.splice(i, 1); continue; }
+    if (m && md) for (let i = AFX.puff.length - 1; i >= 0; i--){ const q = AFX.puff[i], t = now - q.t0 - q.delay; const k = t/q.dur; if (k >= 1 || (q.die != null && now >= q.die)){ AFX.puff.splice(i, 1); continue; }
+      if (q.bp >= 0) AFX.bpn.set(q.bp, (AFX.bpn.get(q.bp) || 0) + 1); if (t < 0) continue;
       const ts = t/1000, [bx, by] = toScreen(q.wx, q.wy), x = bx + (q.ox + q.vx*ts*(1 + 0.6*k))*kz, y = by + (q.oy + q.vy*ts*(1 - 0.35*k))*kz, sz = (q.s0 + (q.s1 - q.s0)*(1 - (1 - k)*(1 - k)))*kz;
       if (x < -sz || y < -sz || x > cw + sz || y > ch + sz) continue;
-      ctx.globalAlpha = q.a*(k < 0.12 ? k/0.12 : Math.pow((1 - k)/0.88, 1.3)); const r = q.rot + q.spin*k, co = Math.cos(r)*dpr, si = Math.sin(r)*dpr;
-      ctx.setTransform(co, si, -si, co, x*dpr, y*dpr); ctx.drawImage(afxPick(q.dark ? md : m, sz*2*dpr), -sz, -sz, sz*2, sz*2); } }
+      if (!fxBudget(sz*sz*4)) continue;   // past ~3 screens of smoke this frame: the older puffs wait a frame
+      const fd = q.die != null ? Math.min(1, Math.max(0, (q.die - now)/300)) : 1;
+      ctx.globalAlpha = fd*q.a*(k < 0.12 ? k/0.12 : Math.pow((1 - k)/0.88, 1.3)); const r = q.rot + q.spin*k, co = Math.cos(r)*dpr, si = Math.sin(r)*dpr;
+      ctx.setTransform(co, si, -si, co, x*dpr, y*dpr); ctx.drawImage(afxPick(q.dark ? md : m, sz*2*dpr), -sz, -sz, sz*2, sz*2);
+      if (q.dark && k < 0.3){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*0.22*(1 - k/0.3); ctx.setTransform(dpr, 0, 0, dpr, x*dpr, y*dpr); ctx.drawImage(GLOW(), -sz*0.8, -sz*0.05, sz*1.6, sz*0.9); ctx.globalCompositeOperation = 'source-over'; } } }
   if (AFX.boom.length){ const m = afxMips('fx-explosion');
     if (m) for (let i = AFX.boom.length - 1; i >= 0; i--){ const q = AFX.boom[i], k = (now - q.t0)/q.dur; if (k >= 1){ AFX.boom.splice(i, 1); continue; } if (k < 0) continue;
       const [x, y] = toScreen(q.wx, q.wy), e = 1 - (1 - k)*(1 - k)*(1 - k), sz = q.s*kz*(q.red ? 0.9 : 0.35 + 0.75*e); if (x < -sz || y < -sz || x > cw + sz || y > ch + sz) continue;
@@ -2427,9 +2498,10 @@ function drawArtFx(now, kz){
       ctx.globalAlpha = k < 0.08 ? k/0.08 : Math.pow(1 - (k - 0.08)/0.92, 1.6); ctx.drawImage(im, -sz, -sz, sz*2, sz*2);
       if (k < 0.3){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.32*(1 - k/0.3); ctx.drawImage(im, -sz*0.5, -sz*0.5, sz, sz); ctx.globalCompositeOperation = 'source-over'; } } }
   ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
-function explode(wx, wy, big = 1, air = false){
+function explode(wx, wy, big = 1, air = false, lite = false){
   const art = afxBoom(wx, wy, big, big < 1);   // sprite burst; the drawn fire then only adds sparkle
   emit('flash', wx, wy, {s0:(art ? 18 : 28)*big, s1:10, life:140});
+  if (lite){ for (let i = 0; i < 2*big; i++) emit('fire', wx, wy, {vx:(Math.random() - 0.5)*60*big, vy:-(10 + Math.random()*40)*big, s0:10*big, s1:3, life:420 + Math.random()*260}); return; }
   for (let i = 0; i < (art ? 5 : 8); i++) emit('dust', wx, wy, {vx:(Math.random() - 0.5)*140*big, vy:-(2 + Math.random()*6), s0:6, s1:30*big, life:1400});
   if (booted && !(big >= 1 && !air && afxCrater(wx, wy, 1.4 + 1.5*big)) && !(big < 1 && ART.ready('fx-crater'))){ SCORCH.push({wx, wy, r:6 + 6*big, t0:performance.now()}); if (SCORCH.length > 60) SCORCH.shift(); }
   for (let i = 0; i < (art ? 2 : 5)*big; i++) emit('fire', wx, wy, {vx:(Math.random() - 0.5)*60*big, vy:-(10 + Math.random()*40)*big, s0:10*big, s1:3, life:420 + Math.random()*260});
@@ -2437,7 +2509,7 @@ function explode(wx, wy, big = 1, air = false){
   if (!puffs) for (let i = 0; i < Math.round(5*big); i++) emit('smoke', wx, wy, {ox:(Math.random() - 0.5)*14*sb, vx:(Math.random() - 0.5)*26, vy:-(6 + Math.random()*16), s0:7*sb, s1:(20 + Math.random()*14)*sb, life:2000 + Math.random()*1600});
   for (let i = 0; i < 6*big; i++) emit('debris', wx, wy, {vx:(Math.random() - 0.5)*110*big, vy:-(40 + Math.random()*70)*big, s0:1.6, s1:1.2, life:700 + Math.random()*400});
 }
-function shoot(kind, from, to, opt = {}){ if (PROJ.length > 160) PROJ.shift(); PROJ.push({kind, from, to, t0:performance.now(), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0}); }
+function shoot(kind, from, to, opt = {}){ if (PROJ.length > 160) PROJ.shift(); PROJ.push({kind, from, to, t0:performance.now(), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite}); }
 let lastPart = 0;
 function drawParticles(now){
   const dt = Math.min(0.1, (now - (lastPart || now))/1000); lastPart = now;
@@ -2454,7 +2526,7 @@ function drawParticles(now){
   // projectiles
   for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur;
     const [fx0, fy0] = toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = toScreen(pr.to[0], pr.to[1]);
-    if (k >= 1){ PROJ.splice(i, 1); if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
+    if (k >= 1){ PROJ.splice(i, 1); if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big, false, pr.lite); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
     const x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*pr.arc*kz;
     if (pr.kind === 'tracer'){ const x2 = fx0 + (tx0 - fx0)*Math.max(0, k - 0.18), y2 = fy0 + (ty0 - fy0)*Math.max(0, k - 0.18); ctx.strokeStyle = 'rgba(255,225,140,.9)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x, y); ctx.stroke(); }
     else { if (pr.kind === 'missile' && now - pr.last > 30){ pr.last = now; const [wx, wy] = screenToWorld(x, y); emit('smokel', wx, wy, {vx:(Math.random() - 0.5)*4, vy:-2, s0:4, s1:14, life:1300}); }
@@ -2469,17 +2541,18 @@ function drawParticles(now){
     for (const [a0, len] of [[0, 1], [0.7, 0.55], [-0.7, 0.55]]){ ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0 - 0.12)*L0*len, Math.sin(a0 - 0.12)*L0*len); ctx.lineTo(Math.cos(a0)*L0*len*1.4, Math.sin(a0)*L0*len*1.4); ctx.lineTo(Math.cos(a0 + 0.12)*L0*len, Math.sin(a0 + 0.12)*L0*len); ctx.closePath(); ctx.fill(); }
     ctx.restore(); }
   // particles
-  for (let i = PART.length - 1; i >= 0; i--){ const q = PART[i]; q.t += dt*1000; if (q.t >= q.life){ PART.splice(i, 1); continue; }
-    const k = q.t/q.life; q.ox += q.vx*dt; q.oy += q.vy*dt;
+  let nl = 0;   // night light pass: at most 24 ground glows per frame
+  for (let i = PART.length - 1; i >= 0; i--){ const q = PART[i]; q.t += dt*1000; if (q.t >= q.life || (q.die != null && q.t >= q.die)){ PART.splice(i, 1); continue; }
+    const k = q.t/q.life, fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1; q.ox += q.vx*dt; q.oy += q.vy*dt;
     if (q.kind === 'debris'){ q.vy += 220*dt; } else if (q.kind === 'smoke' || q.kind === 'smokel'){ q.vx *= 0.99; q.vy *= 0.985; }
     const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
-    if (q.kind === 'smoke' || q.kind === 'smokel'){ ctx.globalAlpha = 0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
-    else if (false){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18*(1 - k)*nightAtX(q.wx ?? 0); ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.restore(); }
-    if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - k; ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
-    else if (q.kind === 'ring'){ ctx.globalAlpha = 0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
-    else if (q.kind === 'spark' || q.kind === 'debris'){ ctx.globalAlpha = 1 - k; ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
-    else if (q.kind === 'dust' && !q.tn){ ctx.globalAlpha = 0.32*(k < 0.1 ? k/0.1 : 1 - k); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot); ctx.scale(1, 0.6); ctx.drawImage(puffSprite(q.v, false), -sz, -sz, sz*2, sz*2); ctx.restore(); }   // (march dust is drawn under the figures by drawTrailDust)
+    if (q.kind === 'smoke' || q.kind === 'smokel'){ if (!fxBudget(sz*sz*4)) continue; ctx.globalAlpha = fd*0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
+    else if ((q.kind === 'fire' || q.kind === 'flash') && nl < 24){ const nq = fxNight(q.wx ?? 0, q.wy ?? 0); if (nq > 0.2){ nl++; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*0.18*(1 - k)*nq; ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.globalCompositeOperation = 'source-over'; } }   // fire lights the ground at night
+    if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*(1 - k); ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
+    else if (q.kind === 'ring'){ ctx.globalAlpha = fd*0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
+    else if (q.kind === 'spark' || q.kind === 'debris'){ ctx.globalAlpha = fd*(1 - k); ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
+    else if (q.kind === 'dust' && !q.tn){ if (!fxBudget(sz*sz*2.4)) continue; ctx.globalAlpha = fd*0.32*(k < 0.1 ? k/0.1 : 1 - k); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot); ctx.scale(1, 0.6); ctx.drawImage(puffSprite(q.v, false), -sz, -sz, sz*2, sz*2); ctx.restore(); }   // (march dust is drawn under the figures by drawTrailDust)
   }
   ctx.globalAlpha = 1;
   drawArtFx(now, kz);
@@ -2488,7 +2561,7 @@ function drawParticles(now){
 function drawTrailDust(){ const kz = Math.max(0.6, Math.min(2, view.s*HS0/12))*zx();
   for (const q of PART){ if (q.kind !== 'dust' || !q.tn) continue; const k = q.t/q.life; if (k >= 1) continue;
     const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*Math.sqrt(k))*kz; if (x < -sz || y < -sz || x > cw + sz || y > ch + sz) continue;
-    ctx.globalAlpha = 0.42*(k < 0.12 ? k/0.12 : Math.pow(1 - k, 1.4)); const co = Math.cos(q.rot)*dpr, si = Math.sin(q.rot)*dpr;
+    ctx.globalAlpha = (q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1)*0.42*(k < 0.12 ? k/0.12 : Math.pow(1 - k, 1.4)); const co = Math.cos(q.rot)*dpr, si = Math.sin(q.rot)*dpr;
     ctx.setTransform(co, si*0.62, -si, co*0.62, x*dpr, y*dpr); ctx.drawImage(dustSprite(q.v, q.tn), -sz, -sz, sz*2, sz*2); }
   ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
 // fire events for a fighting cluster (called from the unit drawing loop)
@@ -2500,16 +2573,17 @@ function volley(c, main, ang, now, hpx, fx1, fy1){
   const mx = (fx1 ?? c.x) + Math.cos(ang)*hpx*0.42, my = (fy1 ?? c.y) - hpx*0.18 + Math.sin(ang)*hpx*0.12;
   const from = screenToWorld(mx, my), spread = () => [(Math.random() - 0.5)*24, (Math.random() - 0.5)*12];
   const tgt = () => { const [dx, dy] = spread(); return screenToWorld(c.enemy[0] + dx, c.enemy[1] + dy); };
+  const lite = view.s*HS0 < FIG_PX, sm = lite ? () => {} : emit, sh = (k, f, t, o) => shoot(k, f, t, lite ? Object.assign(o, {lite:true}) : o);   // below figure zoom the battle's baked smoke column replaces the shot smoke and dust
   emit('flash', from[0], from[1], {s0:main === 'art' || main === 'tank' ? 10 : 5, s1:3, life:80});
   if (!muted && AC && (shotAt.n = (shotAt.n || 0) + 1) && now - (shotAt.last || 0) > 70){ shotAt.last = now; shotAt(mx, main === 'art' || UNITS[main].cls === 'naval' ? 'art' : main === 'tank' || main === 'sam' ? 'tank' : 'inf'); }
   MUZZ.push({wx:from[0], wy:from[1], ang, big:main === 'art' || main === 'tank' || UNITS[main].cls === 'naval' ? 0.9 : 0.45, t0:now});
-  if (main === 'art' || main === 'tank'){ for (let i = 0; i < 4; i++) emit('dust', from[0], from[1], {oy:hpx*0.12, vx:(Math.random() - 0.5)*70, vy:-2, s0:6, s1:24, life:1200}); }
-  if (main === 'inf' || main === 'at' || main === 'ifv'){ for (let i = 0; i < 3; i++) shoot('tracer', from, tgt(), {dur:160 + Math.random()*120});
-    if (main === 'at'){ shoot('missile', from, tgt(), {dur:520, arc:6, big:0.6}); emit('smokel', from[0], from[1], {ox:-Math.cos(ang)*10, vx:-Math.cos(ang)*30, vy:-4, s0:6, s1:18, life:900}); } }
-  else if (main === 'tank'){ shoot('shell', from, tgt(), {dur:200, arc:2, big:0.8}); emit('smokel', from[0], from[1], {vx:Math.cos(ang)*10, vy:-8, s0:6, s1:22, life:1400}); }
-  else if (main === 'art'){ shoot('shell', from, tgt(), {dur:900, arc:46, big:1.3}); emit('smoke', from[0], from[1], {vx:Math.cos(ang)*8, vy:-14, s0:8, s1:30, life:2200}); }
-  else if (main === 'sam'){ shoot('missile', from, tgt(), {dur:800, arc:40, big:0.8}); }
-  else if (UNITS[main] && UNITS[main].cls === 'naval'){ shoot('shell', from, tgt(), {dur:700, arc:30, big:1}); emit('smokel', from[0], from[1], {vy:-6, s0:6, s1:20, life:1500}); }
+  if (main === 'art' || main === 'tank'){ for (let i = 0; i < 4; i++) sm('dust', from[0], from[1], {oy:hpx*0.12, vx:(Math.random() - 0.5)*70, vy:-2, s0:6, s1:24, life:1200}); }
+  if (main === 'inf' || main === 'at' || main === 'ifv'){ for (let i = 0; i < 3; i++) sh('tracer', from, tgt(), {dur:160 + Math.random()*120});
+    if (main === 'at'){ sh('missile', from, tgt(), {dur:520, arc:6, big:0.6}); sm('smokel', from[0], from[1], {ox:-Math.cos(ang)*10, vx:-Math.cos(ang)*30, vy:-4, s0:6, s1:18, life:900}); } }
+  else if (main === 'tank'){ sh('shell', from, tgt(), {dur:200, arc:2, big:0.8}); sm('smokel', from[0], from[1], {vx:Math.cos(ang)*10, vy:-8, s0:6, s1:22, life:1400}); }
+  else if (main === 'art'){ sh('shell', from, tgt(), {dur:900, arc:46, big:1.3}); sm('smoke', from[0], from[1], {vx:Math.cos(ang)*8, vy:-14, s0:8, s1:30, life:2200}); }
+  else if (main === 'sam'){ sh('missile', from, tgt(), {dur:800, arc:40, big:0.8}); }
+  else if (UNITS[main] && UNITS[main].cls === 'naval'){ sh('shell', from, tgt(), {dur:700, arc:30, big:1}); sm('smokel', from[0], from[1], {vy:-6, s0:6, s1:20, life:1500}); }
 }
 // ---- day / night ----
 let NIGHT = null;
@@ -3859,20 +3933,32 @@ function wingVis(a, now, dt){
   if (f && (!v || v.stage === 'done' || v.tgt !== f.tgt || v.mid !== f.mid)){ const B = G.P[a.air.base]; v = {x:v && v.stage !== 'done' ? v.x : B.x, y:v && v.stage !== 'done' ? v.y : B.y, stage:'out', tgt:f.tgt, base:a.air.base, kind:f.kind, mid:f.mid, tOver:0}; VW.set(a.id, v); }
   if (!v || v.stage === 'done') return null;
   const T = G.P[v.tgt], B = G.P[a.air.base], spd = VW_SPEED*Math.sqrt(Math.max(1, S.speed || 1))*dt;
-  const go = (tx, ty) => { const dx = tx - v.x, dy = ty - v.y, d = Math.hypot(dx, dy); if (d <= spd){ v.x = tx; v.y = ty; return true; } v.x += dx/d*spd; v.y += dy/d*spd; v.ang = Math.atan2(dy, dx); return false; };
-  const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); strikeFX(q.p, v); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
+  const go = (tx, ty) => { const dx = tx - v.x, dy = ty - v.y, d = Math.hypot(dx, dy); if (d > 1e-4) v.want = Math.atan2(dy, dx); if (d <= spd){ v.x = tx; v.y = ty; return true; } v.x += dx/d*spd; v.y += dy/d*spd; return false; };
+  const follow = (wx, wy, ax, ay, bx, by) => { const d0 = Math.hypot(wx - v.x, wy - v.y); go(wx, wy); if (d0 < 0.05) v.want = Math.atan2(by - ay, bx - ax); };   // caught up with the sim: point along the leg, not at a jittery tiny step
+  const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); if (booted){ const nm = 2 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], [T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10], {dur:450 + i*80, arc:4, big:0.9}); } strikeFX(q.p, v); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
   if (v.stage === 'out'){ const simOut = f && f.ph === 'out' && f.tgt === v.tgt;
-    if (simOut){ const [wx, wy] = wingPos(a); go(wx, wy); }                    // follow the simulated flight, catching up if behind
-    else if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; return null; } v.stage = 'over'; v.tOver = now; } }
-  else if (v.stage === 'over'){ const t0 = now/900 + a.id, R = 16; v.x = T.x + Math.cos(t0)*R; v.y = T.y + Math.sin(t0)*R*0.55; v.ang = t0 + Math.PI/2; strikeNow();
+    if (simOut){ const [wx, wy] = wingPos(a); follow(wx, wy, B.x, B.y, T.x, T.y); }                    // follow the simulated flight, catching up if behind
+    else if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; v.tr = null; return null; } v.stage = 'over'; v.tOver = now; } }
+  else if (v.stage === 'over'){ const t0 = now/900 + a.id, R = 16; v.x = T.x + Math.cos(t0)*R; v.y = T.y + Math.sin(t0)*R*0.55; v.want = Math.atan2(R*0.55*Math.cos(t0), -R*Math.sin(t0)); strikeNow();   // heading = tangent of the squashed orbit
     const simDone = !f || f.ph === 'back' || f.tgt !== v.tgt; if (simDone && now - v.tOver > (v.kind === 'strike' ? 1500 : 600) && !STRIKEQ.has(a.id)) v.stage = 'back'; }
-  else if (v.stage === 'back'){ if (f && f.ph === 'back'){ const [wx, wy] = wingPos(a); go(wx, wy); } else if (go(B.x, B.y)){ v.stage = 'done'; return null; } }
+  else if (v.stage === 'back'){ if (f && f.ph === 'back'){ const [wx, wy] = wingPos(a); follow(wx, wy, T.x, T.y, B.x, B.y); } else if (go(B.x, B.y)){ v.stage = 'done'; v.tr = null; return null; } }
+  // the drawn heading turns towards the wanted one at a capped rate (3 rad/s), and the wing banks into the turn
+  if (v.want !== undefined){ if (v.hd === undefined) v.hd = v.want;
+    else { let da = v.want - v.hd; da = Math.atan2(Math.sin(da), Math.cos(da)); const lim = 3*dt, turn = Math.max(-lim, Math.min(lim, da)); v.hd += turn;
+      v.bank = (v.bank || 0) + (Math.max(-1, Math.min(1, turn/(lim || 1))) - (v.bank || 0))*0.15; } }
+  // contrail history (world units): up to 36 samples [x, y, heading, ms], one every 60 ms
+  if (!v.tr) v.tr = []; if (!v.trT || now - v.trT >= 60){ v.trT = now; v.tr.push([v.x, v.y, v.hd ?? 0, now]); if (v.tr.length > 36) v.tr.shift(); }
   const dB = Math.hypot(v.x - B.x, v.y - B.y), dT = Math.hypot(v.x - T.x, v.y - T.y);
   v.alt = v.stage === 'over' ? 1 : Math.min(1, (v.stage === 'out' ? dB : Math.min(dB, dT + 30))/30);
   return v;
 }
+// visual-only delayed effects on a frame clock that stops while the game is paused (setTimeout kept firing through a pause)
+const FXQ = []; FXQ.clk = 0; FXQ.gt = 0;   // clk: the queue's clock; gt: the ambient-motion clock (battle smoke sway, waves, foam). Both stand still while paused
+function fxLater(ms, fn){ if (FXQ.length > 400) FXQ.shift(); FXQ.push({t:FXQ.clk + ms, fn}); }
+function fxDrain(now){ const dt = Math.min(250, Math.max(0, now - (FXQ.last || now))); FXQ.last = now; if (S && S.speed > 0 && !S.over) FXQ.gt += dt; if (!S || !(S.speed > 0) || !FXQ.length) return; FXQ.clk += dt;
+  for (let i = 0; i < FXQ.length; i++){ const q = FXQ[i]; if (q.t > FXQ.clk) continue; FXQ.splice(i--, 1); try { q.fn(); } catch (e){ console.error(e); } } }
 function strikeFX(p, v){ fx('strike', p); const P = G.P[p]; afxMark(p, 24);
-  for (let i = 0; i < 5; i++) setTimeout(() => { const ex = P.x + (Math.random() - 0.5)*16, ey = P.y + (Math.random() - 0.5)*9; explode(ex, ey, 1.1); emit('smoke', ex, ey, {vy:-8, s0:6, s1:26, life:2400}); }, 120 + i*170);
+  for (let i = 0; i < 5; i++) fxLater(120 + i*170, () => { const ex = P.x + (Math.random() - 0.5)*16, ey = P.y + (Math.random() - 0.5)*9; explode(ex, ey, 1.1); emit('smoke', ex, ey, {vy:-8, s0:6, s1:26, life:2400}); });
   sfx('boom'); }
 function wingPos(a){
   const B = G.P[a.air.base]; if (!a.fly) return [B.x + 30/Math.max(0.3, view.s), B.y - 14/Math.max(0.3, view.s)];
@@ -4169,7 +4255,7 @@ function missileImpact(m){
   let wrecked = '';
   if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)]; S.bld[m.to][k]--; wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
-  if (vis && booted){ const big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) setTimeout(() => explode(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, big*(0.7 + Math.random()*0.4)), j*120);
+  if (vis && booted){ const big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) fxLater(j*120, () => explode(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, big*(0.7 + Math.random()*0.4)));
     WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); afxCrater(P.x, P.y, m.k === 'bm' ? 7 : 5, {a:0.95, life:96}); afxMark(m.to, m.k === 'bm' ? 48 : 30); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); shake(m.k === 'bm' ? 9 : 5, m.k === 'bm' ? 900 : 500); sfx('boom'); }
   const where = P.cityName || P.name;
   if (m.owner === PLAYER){ log(`${M0.name} hit ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} destroyed` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'good', m.to); bump('unitsKilled', killed); }
@@ -5194,7 +5280,7 @@ function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
 }
 const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max(2, hexPx/20)) : 1.35, hexPx/12))*zx(hexPx);   // past the old max zoom figures keep growing
 // close zoom: draw each force as a formation of sprites in ranks (1 figure per ~2 units, max 10); casualties drop out
-const formKey = c => c.at + ':' + c.owner + ':' + (c.moving ? 'm' : c.air ? 'a' : 's');
+const formKey = c => c.at + ':' + c.owner + ':' + (c.moving ? 'm' + c.list[0].id : c.air ? 'a' : 's');   // (forces on the march each keep their own box: their badges trail their own heading)
 // last frame's boxes for a close-zoom stack, or an estimate on its first frame
 function formBox(c){ const f = FORMBB.get(formKey(c)); if (f) return f; const k = zoomK(view.s*HS0), ps = Math.min(k, 1.6), off = 21*ps + 4*k, hw = Math.max(13*ps, 11*ps + String(c.n).length*3.5*ps);
   return {bb:[-hw, off - 18.5*ps, hw, off], r:[-28*k, -34*k, 28*k, off]}; }
@@ -5264,6 +5350,14 @@ function figComp(t, u, px, vk, color){
     // soft-light keeps the paint's darks and contrast (a plain wash lifted them and the vehicles read as ghosts), then clip back to the picture
     t2.drawImage(im, 0, 0); t2.globalCompositeOperation = 'soft-light'; t2.globalAlpha = vk === 'n' ? 0.12 : 0.2; t2.fillStyle = color; t2.fillRect(0, 0, pic.width, pic.height);
     t2.globalAlpha = 1; t2.globalCompositeOperation = 'destination-in'; t2.drawImage(im, 0, 0); }
+  if (color && color[0] === '#' && vk !== 'w'){   // owner rim (relation tone: yours green, foes red, others grey), so friend and foe read apart at a glance; baked here, no per-frame cost
+    if (!FOOT[t]){ const fp = figFoot(t); g.save(); g.globalAlpha = 0.6; g.lineWidth = 1.5; g.strokeStyle = color; g.beginPath();   // thin contact ellipse under a vehicle
+      g.ellipse(m, m + px*0.02, Math.min(m - 1.5, fp[0]*px*0.5), Math.min(m - 1.5, fp[1]*px*0.45), 0, 0, Math.PI*2); g.stroke(); g.restore(); }
+    const tn = document.createElement('canvas'); tn.width = im.width; tn.height = im.height; const t3 = tn.getContext('2d');
+    t3.drawImage(im, 0, 0); t3.globalCompositeOperation = 'source-in'; t3.fillStyle = color; t3.fillRect(0, 0, tn.width, tn.height);
+    const o = px > 48 && !FOOT[t] ? 1.5 : 1; g.globalAlpha = FOOT[t] ? 0.6 : 0.75;   // (soldier squads a little lighter: a heavy outline turns them into stickers)
+    for (const [dx, dy] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) g.drawImage(tn, m - im.width/2 + dx*o, m - im.height/2 + dy*o);
+    g.globalAlpha = 1; }
   g.drawImage(pic, m - im.width/2, m - im.height/2);
   c.k = S2/px; FIGC.set(key, c); return c;
 }
@@ -5290,7 +5384,7 @@ function drawFig(t, x, y, D, ang, o = {}){
   // aloft: the ground shadow is offset by altitude, drawn on its own
   const im = ART.sprite(u[0], px, vk === 'n' ? FIG_NIGHT : undefined); if (!im) return false;
   const sh = figShadow(u[0], px);
-  if (sh){ const off = D*(0.05 + alt*0.45), Ds = D*(1 + 2*sh.pad)*(1 - alt*0.2); ctx.save(); ctx.globalAlpha = ga*0.3; ctx.translate(x + off*0.55, y + off); ctx.rotate(rot); ctx.drawImage(sh, -Ds/2, -Ds/2, Ds, Ds); ctx.restore(); }
+  if (sh){ const off = D*(0.05 + alt*0.45), Ds = D*(1 + 2*sh.pad)*(1 - alt*0.2); ctx.save(); ctx.globalAlpha = ga*0.3; ctx.translate(x + off*0.55 + (o.shx || 0), y + off + (o.shy || 0)); ctx.rotate(rot); ctx.drawImage(sh, -Ds/2, -Ds/2, Ds, Ds); ctx.restore(); }
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.drawImage(im, -D/2, -D/2, D, D);
   if (o.rotor){ const R = D*0.5, sp = afxReduced() ? 0.6 : (o.now || 0)/38; ctx.translate(0, -D*0.04); ctx.rotate(sp); ctx.globalAlpha = ga*0.9*o.rotor; ctx.drawImage(rotorDisc(), -R, -R, R*2, R*2); }   // spinning main rotor: a blur disc over the blades
   ctx.restore();
@@ -5467,7 +5561,10 @@ function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
       if (now - lt > (inf ? 320 : 130)){ lastDust.set(dkey, now); const f = inf ? 0.4 : 0.8, [wx, wy] = screenToWorld(q.x - Math.cos(ang)*h3*0.3, q.y + 2*s - Math.sin(ang)*h3*0.12);
         emit('dust', wx, wy, {vx:(-Math.cos(ang)*h3*0.25)/dk, vy:(-h3*0.05)/dk, s0:h3*0.08*f/dk, s1:h3*0.4*f/dk, life:1100 + Math.random()*400, tn}); } }
     x0 = Math.min(x0, q.x - fh*0.4); x1 = Math.max(x1, q.x + fh*0.4); y0 = Math.min(y0, q.y - fh*0.6); y1 = Math.max(y1, q.y + fh*0.2); }
-  return {x0, y0, x1, y1, front:slots[0], im:!!mArt(slots[0].t)};
+  // the rearmost rank (smallest projection on the heading): the close-zoom badge sits just behind it, so it trails its own column
+  const ca0 = Math.cos(ang), sa0 = Math.sin(ang), prj = q => (q.x - x)*ca0 + (q.y - y)*sa0, pmin = Math.min(...slots.map(prj)), rr = slots.filter(q => prj(q) <= pmin + fh*0.3);
+  const rear = [rr.reduce((s0, q) => s0 + q.x, 0)/rr.length, rr.reduce((s0, q) => s0 + q.y, 0)/rr.length];
+  return {x0, y0, x1, y1, front:slots[0], im:!!mArt(slots[0].t), rear, pts:slots.map(q => [q.x, q.y]), fh};
 }
 function drawFallen(now){ for (let i = FALL.length - 1; i >= 0; i--){ const f = FALL[i], age = now - f.t0; if (age > 1800){ FALL.splice(i, 1); continue; }
   const [x, y] = toScreen(f.wx, f.wy), k2 = age/1800;
@@ -5584,7 +5681,8 @@ let cityArtOn = false;   // all city art loaded (set once a frame)
 const KM_W = HS0*SQ3/180;          // world units per km (an old map hex is about 180 km across)
 const CITY_DY = 0;                 // city markers sit on the city centre (screen offset, in kl units)
 const cityFade = hexPx => Math.max(0, Math.min(1, (hexPx - 12)/14));   // the urban areas fade in from the mid zoom (they are too small to read below it)
-let CITYV = 0, CITY_PEND = false, CITY_DL = 0, CITY_ART = 0;           // layer-key version, bakes left for a later render, bake deadline, art state seen
+let CITYV = 0, CITY_PEND = false, CITY_DL = 0, CITY_ART = 0, CITY_ALL = false;
+const CITY_MISS = new Map();   // towns the layer drew without their right bake (province -> half size, world units): the layer redraws just their box later           // layer-key version, bakes left for a later render, bake deadline, art state seen
 const CTILE = new Map();
 // a tile that repeats without seams: blended with a copy shifted by half the tile, first across, then down (the shifted copy carries the
 // edges, the original the middle, so the copy's own seam is always covered)
@@ -5761,12 +5859,12 @@ function cityEach(x0, y0, x1, y1, fn){ for (let p = 0; p < G.P.length; p++){ con
     if (P.x + e < x0 || P.x - e > x1 || P.y + e < y0 || P.y - e > y1) continue; fn(p, P); } }
 // layer pass (world transform set, coast clip on): the urban areas laid on the ground
 function drawCitiesLayer(c, x0, y0, x1, y1, hexPx, lite){ const fa = cityFade(hexPx); if (fa <= 0) return;
-  const st = cityArtState(); if (st < 5) return; CITY_DL = performance.now() + (lite ? 6 : 45);
+  const st = cityArtState(); if (st < 5) return; CITY_DL = performance.now() + (typeof lite === 'number' ? lite : lite ? 6 : 45);
   c.save(); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'medium';
   const on = []; cityEach(x0, y0, x1, y1, p => on.push(p));
   for (const p of on){ const I = CGEO.get(p); if (!I || !cityAnyBake(p, cityTier(I), false)) cityBake(p, CLOW_S); }   // first a quick low tier for any city with nothing to show yet, then the right tiers
-  for (const p of on){ const I = cityGeo(p); if (!I || I.r*view.s < 0.8) continue; const S = cityTier(I);
-    const img = cityBake(p, S) || cityAnyBake(p, S, false); if (!img) continue;
+  for (const p of on){ const I = cityGeo(p); if (!I){ CITY_MISS.set(p, 22); continue; } if (I.r*view.s < 0.8) continue; const S = cityTier(I);
+    let img = cityBake(p, S); if (!img){ CITY_MISS.set(p, I.E); img = cityAnyBake(p, S, false); } if (!img) continue;   // (a town drawn from a stand-in tier, or not yet: redrawn once its bake is made)
     c.globalAlpha = fa; c.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); }
   c.restore(); }
 // live pass after the night tint (world transform): city lights, each by the darkness over its own province
@@ -5978,18 +6076,43 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   // unit badge under the figures, CoN style: the same plate as the operational zoom (owner tab, the dominant type's silhouette, the count, health
   // and morale bars, dug-in / commander / supply marks), so a stack reads the same at every zoom; a crowded badge is pushed down (counter.bdy) on a leader
   const pt = plateTypes(a, main); counter.second = quiet ? null : pt[1];
-  const bdy = counter.bdy || 0, top0 = form ? Math.max(form.y1, y) + 2 : one ? Math.max(one.y1, y) + 2 : y + 4*s, pD = plateDims(n, quiet ? s/0.6 : s, quiet), cyb = top0 + bdy + pD.h/2;
-  if (bdy > 2){ ctx.strokeStyle = 'rgba(243,234,210,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, top0 - 2); ctx.lineTo(x, cyb - pD.h/2); ctx.stroke(); }
-  const pArgs = [x, cyb, a, n, color, quiet ? false : selected, false, quiet ? s/0.6 : s, quiet ? false : fighting, pt[0], now, quiet]; let pr;
+  const bdy = counter.bdy || 0, pD = plateDims(n, quiet ? s/0.6 : s, quiet), hexP = view.s*HS0; let bx = x, top0;
+  if (form && form.rear){   // a formation: the badge trails its own column, just behind (and a little below) the rearmost rank, within 0.6 hex of the force's spot
+    const angF = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15), lim = 0.55*hexP;   // (0.55: the plate with its bars stays inside 0.6 hex)
+    // preferred spot: behind the rear rank when marching, clear below the figures when standing; then the free spot (no figure under the plate)
+    // nearest to it within the limit, from a small grid round the force's spot, so the badge never sits on one of its own vehicles
+    let px0, py0; if (moving){ px0 = form.rear[0] - Math.cos(angF)*0.18*hexP; py0 = form.rear[1] - Math.sin(angF)*0.18*hexP + 0.12*hexP; }
+    else { let qx0 = Infinity, qx1 = -Infinity, qy1 = -Infinity; for (const q of form.pts){ qx0 = Math.min(qx0, q[0]); qx1 = Math.max(qx1, q[0]); qy1 = Math.max(qy1, q[1]); } px0 = (qx0 + qx1)/2; py0 = qy1 + form.fh*0.3 + pD.h/2 + 2; }
+    const hw = pD.w/2 + 3, hh = pD.h/2 + 3, fw = form.fh*0.4, fu = form.fh*0.42, fd = form.fh*0.22, pa = 4*hw*hh;
+    const ovf = (cx0, cy0) => { let o = 0; for (const q of form.pts){ const ix = Math.min(cx0 + hw, q[0] + fw) - Math.max(cx0 - hw, q[0] - fw), iy = Math.min(cy0 + hh, q[1] + fd) - Math.max(cy0 - hh, q[1] - fu); if (ix > 0 && iy > 0) o += ix*iy; } return o/pa; };
+    const clampL = (cx0, cy0) => { const d0 = Math.hypot(cx0 - x, cy0 - y); return d0 > lim ? [x + (cx0 - x)*lim/d0, y + (cy0 - y)*lim/d0] : [cx0, cy0]; };
+    let [ex, ey] = clampL(px0, py0), best = ovf(ex, ey)*6 + Math.hypot(ex - px0, ey - py0)/hexP;
+    if (ovf(ex, ey) > 0.01){ const st = lim/4; for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++){ const cx0 = x + i*st, cy0 = y + j*st; if (Math.hypot(i, j) > 4.01) continue;
+        const sc = ovf(cx0, cy0)*6 + Math.hypot(cx0 - px0, cy0 - py0)/hexP; if (sc < best - 1e-6){ best = sc; ex = cx0; ey = cy0; } } }
+    bx = ex; top0 = ey - pD.h/2; }
+  else top0 = one ? Math.max(one.y1, y) + 2 : y + 4*s;
+  const cyb = top0 + bdy + pD.h/2;
+  if (bdy > 2 && !form){ ctx.strokeStyle = 'rgba(243,234,210,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, top0 - 2); ctx.lineTo(x, cyb - pD.h/2); ctx.stroke(); }
+  const pArgs = [bx, cyb, a, n, color, quiet ? false : selected, false, quiet ? s/0.6 : s, quiet ? false : fighting, pt[0], now, quiet]; let pr;
+  const pr0 = plateRect(bx, cyb, n, pArgs[7], quiet);
+  // a badge pushed off its column (or set apart from it) gets a cased leader in the owner's colour to its nearest figure: under the plate, over the hulls
+  let lead = null;
+  if (form && form.pts && form.pts.length){ let bd = Infinity; for (const q of form.pts){ const dd = Math.hypot(q[0] - bx, q[1] - cyb); if (dd < bd){ bd = dd; lead = q; } } const ge = lead ? Math.hypot(lead[0] - Math.max(bx - pD.w/2, Math.min(bx + pD.w/2, lead[0])), lead[1] - Math.max(cyb - pD.h/2, Math.min(cyb + pD.h/2, lead[1]))) : 0;   // (gap from the plate's edge)
+    if (!(bdy > 24 || ge > 0.22*hexP + form.fh*0.3)) lead = null; }
+  const leader = () => { if (!lead) return; const lx = Math.max(bx - pD.w/2, Math.min(bx + pD.w/2, lead[0])), ly = Math.max(cyb - pD.h/2, Math.min(cyb + pD.h/2, lead[1]));   // (from the plate's own edge: the plate covers the rest)
+    if (Math.hypot(lead[0] - lx, lead[1] - ly) < 4) return;
+    ctx.save(); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lead[0], lead[1]); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.7)'; ctx.stroke(); ctx.lineWidth = 1.4; ctx.strokeStyle = color; ctx.stroke();
+    ctx.beginPath(); ctx.arc(lead[0], lead[1], 2.6, 0, Math.PI*2); ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(3,6,8,.7)'; ctx.stroke(); ctx.restore(); };
   if (counter.defer){   // close zoom: every badge is drawn after all the stacks' vehicles, ships and aircraft, so no hull from a neighbouring stack lies on a badge
     const st = {second:counter.second, list:counter.list, dug:counter.dug, ang:counter.ang};
-    counter.defer.push(() => { const o = {second:counter.second, list:counter.list, dug:counter.dug, ang:counter.ang, vol:counter.vol}; Object.assign(counter, st); counter.vol = null; try { plateCounter(...pArgs); } finally { Object.assign(counter, o); } });
-    pr = plateRect(x, cyb, n, pArgs[7], quiet); }
-  else { const vol0 = counter.vol; counter.vol = null; try { pr = plateCounter(...pArgs); } finally { counter.vol = vol0; } }
+    counter.defer.push(() => { const o = {second:counter.second, list:counter.list, dug:counter.dug, ang:counter.ang, vol:counter.vol}; Object.assign(counter, st); counter.vol = null; try { leader(); plateCounter(...pArgs); } finally { Object.assign(counter, o); } });
+    pr = pr0; }
+  else { const vol0 = counter.vol; counter.vol = null; try { leader(); pr = plateCounter(...pArgs); } finally { counter.vol = vol0; } }
   const bb = [pr.x, pr.y, pr.x + pr.w, pr.y + pr.h], bot = pr.y + pr.h;
-  if (form && (selected || (a && a.owner === PLAYER && !supplied(a)))){ const cx2 = (form.x0 + form.x1)/2, cy2 = (form.y0 + form.y1)/2 + (form.y1 - form.y0)*0.2, rx = (form.x1 - form.x0)/2 + 6, ry = (form.y1 - form.y0)*0.38 + 4;
+  if (form && (selected || (a && a.owner === PLAYER && !supplied(a)))){ let qx0 = Infinity, qy0 = Infinity, qx1 = -Infinity, qy1 = -Infinity; for (const q of form.pts){ qx0 = Math.min(qx0, q[0]); qx1 = Math.max(qx1, q[0]); qy0 = Math.min(qy0, q[1]); qy1 = Math.max(qy1, q[1]); }
+    const fr2 = form.fh*0.34, cx2 = (qx0 + qx1)/2, cy2 = (qy0 + qy1)/2 + fr2*0.12, rx = (qx1 - qx0)/2 + fr2 + 4, ry = Math.max((qy1 - qy0)/2 + fr2*0.8 + 3, rx*0.35);
     ctx.save(); if (selected){ ctx.shadowColor = '#e2a23d'; ctx.shadowBlur = 10; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2; } else { ctx.setLineDash([4, 3]); ctx.strokeStyle = '#e0574f'; ctx.lineWidth = 1.5; } ctx.beginPath(); ctx.ellipse(cx2, cy2, rx, ry, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
-  if (form) return {x:Math.min(form.x0, pr.x), y:form.y0, w:Math.max(form.x1, pr.x + pr.w) - Math.min(form.x0, pr.x), h:bot - form.y0, bb, bdy};
+  if (form){ const fx0 = Math.min(form.x0, pr.x), fy0 = Math.min(form.y0, pr.y); return {x:fx0, y:fy0, w:Math.max(form.x1, pr.x + pr.w) - fx0, h:Math.max(form.y1, bot) - fy0, bb, bdy}; }
   const ext2 = types[1] ? 16*fs + 26*s : 0, left = Math.min(pr.x, dir > 0 ? x - 22*s - ext2 : x - 22*s), right = Math.max(pr.x + pr.w, dir > 0 ? x + 22*s : x + 22*s + ext2);
   return {x:left, y:y - 34*s, w:right - left, h:bot - (y - 34*s), bb, bdy};
 }
@@ -5999,6 +6122,7 @@ function clampView(){
   view.x = ww < cw ? Math.min(Math.max(view.x, -ww/2), cw - ww/2) : Math.min(m, Math.max(cw - ww - m, view.x));
   view.y = wh < ch ? Math.min(Math.max(view.y, -wh/2), ch - wh/2) : Math.min(m, Math.max(ch - wh - m, view.y));
 }
+let SHIFTING = false;   // a pan strip is being rendered (shiftLayer)
 let layer = null, layerKey = '', geoDirty = false, relVer = 0, lastPanT = 0;
 function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; } return P.box; }
 const LM = 0.22;                                        // layer margin, as a share of the viewport on each side
@@ -6069,20 +6193,61 @@ function nameNotForeign(xx, yy, ww, ss, own){ return own(provAt(xx, yy)) && name
 function provGround(P){ if (P.ground) return P.ground; const TC = window.TERRCELLS, TN = ['plains', 'forest', 'mountain', 'desert', 'tundra', 'hills', 'marsh', 'snow'], n = {};
   if (TC) for (const i of P.cells){ if (i === P.cc) continue; const t = TN[+TC[i]] || 'plains'; n[t] = (n[t] || 0) + 1; }
   let best = 'plains', bn = 0; for (const t in n) if (n[t] > bn){ bn = n[t]; best = t; } return (P.ground = TC ? best : 'none'); }
-function renderLayer(vis, lite = false){
+// the geometry of a layer strip (world box x0..y1, the strip plus a margin wider than any stroke): only the border chains and provinces that reach
+// into the box, and the coast and lake rings cut to it. Nothing left out can touch a pixel of the strip, so it paints the same pixels as the whole
+// paths; Skia's work per fill, clip or stroke follows the size of the path, so a strip no longer pays for the whole world's coast and borders.
+// (the cut rings run along the box edge, outside the strip, where their strokes are clipped away)
+function clipRing(r, X0, Y0, X1, Y1){ let P = r;
+  for (let e = 0; e < 4 && P.length >= 6; e++){ const Q = [], n = P.length, ins = (x, y) => e === 0 ? x >= X0 : e === 1 ? x <= X1 : e === 2 ? y >= Y0 : y <= Y1;
+    const cut = (ax, ay, bx, by) => { if (e < 2){ const X = e ? X1 : X0; Q.push(X, ay + (by - ay)*(X - ax)/(bx - ax)); } else { const Y = e === 2 ? Y0 : Y1; Q.push(ax + (bx - ax)*(Y - ay)/(by - ay), Y); } };
+    let px = P[n - 2], py = P[n - 1], pin = ins(px, py);
+    for (let i = 0; i < n; i += 2){ const x = P[i], y = P[i + 1], cin = ins(x, y); if (cin !== pin) cut(px, py, x, y); if (cin) Q.push(x, y); px = x; py = y; pin = cin; }
+    P = Q; }
+  return P; }
+function stripGeo(x0, y0, x1, y1){ const inB = b => b[2] >= x0 && b[0] <= x1 && b[3] >= y0 && b[1] <= y1;
+  const cbb = c => c.bb || (c.bb = c.pts.reduce((b, q) => { if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[0] > b[2]) b[2] = q[0]; if (q[1] > b[3]) b[3] = q[1]; return b; }, [Infinity, Infinity, -Infinity, -Infinity]));
+  const near = list => { const path = new Path2D(); for (const c of list) if (inB(cbb(c))) chainTo(path, c); return path; };
+  const SG = {nb:[], area:null, neu:null};
+  SG.nation = n => SG.nb[n] || (SG.nb[n] = GEO.perL && GEO.perL[n] ? near(GEO.perL[n]) : GEO.nation[n]);
+  SG.mine = GEO.mineL ? near(GEO.mineL) : GEO.mine;
+  const areas = () => { SG.area = []; SG.neu = new Path2D(); for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !inB(provBox(P))) continue; const o = S.owner[p];
+      if (o >= 0) (SG.area[o] || (SG.area[o] = new Path2D())).addPath(GEO.outline[p]); else if (o === NEUTRAL) SG.neu.addPath(GEO.outline[p]); } };
+  SG.nArea = n => { if (!SG.area) areas(); return SG.area[n] || (SG.area[n] = new Path2D()); };
+  SG.neuArea = () => { if (!SG.area) areas(); return SG.neu; };
+  if (GEO.coast0 && COASTR.length){ const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(); let nl = 0;
+    const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
+    const cutR = (r, b) => b[0] >= x0 && b[2] <= x1 && b[1] >= y0 && b[3] <= y1 ? r : clipRing(r, x0, y0, x1, y1);
+    for (const R of COASTR) if (inB(R.b)){ const r = cutR(R.r, R.b); ringTo(cv, r); ringTo(gv, r); }
+    if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (!inB(b)) continue; const r = cutR(G.lakeRing[i], b); if (r.length < 6) continue;
+      ringTo(cv, r); ringTo(lv, r); nl++; if (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64) ringTo(gv, r); }
+    SG.coastV = cv; SG.coastG = gv; SG.lakeV = nl ? lv : null; SG.seaV = new Path2D(); SG.seaV.rect(x0, y0, x1 - x0, y1 - y0); SG.seaV.addPath(cv); }
+  return SG; }
+// R (optional, layer CSS px {x0, y0, x1, y1}): render only that rect of the existing layer, at its own origin (the strips a pan exposes, see shiftLayer).
+// Every pass is in world space and clipped to R, so a strip matches a full render pixel for pixel; R is snapped to whole device pixels.
+function renderLayer(vis, lite = false, R = null){
   if (!layer) layer = document.createElement('canvas');
-  const mx = Math.round(Math.max(cw*LM, 224)), my = Math.round(Math.max(ch*LM, 172)), lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
-  if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
-  layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.lite = lite;
-  const ox = view.x + mx, oy = view.y + my;
+  let mx, my;
+  if (R){ mx = layer.mx; my = layer.my; layer.lite = layer.lite || lite; layer.strips = (layer.strips || 0) + 1; }
+  else { mx = Math.round(Math.max(cw*LM, 224)); my = Math.round(Math.max(ch*LM, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
+    if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
+    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.q = []; CITY_MISS.clear(); }
+  // the rect to paint, in device px (the whole layer when R is left out)
+  const dx0 = R ? Math.max(0, Math.round(R.x0*dpr)) : 0, dy0 = R ? Math.max(0, Math.round(R.y0*dpr)) : 0, dx1 = R ? Math.min(layer.width, Math.round(R.x1*dpr)) : layer.width, dy1 = R ? Math.min(layer.height, Math.round(R.y1*dpr)) : layer.height;
+  if (dx1 <= dx0 || dy1 <= dy0) return;
+  const dw = dx1 - dx0, dh = dy1 - dy0, clipR = g => { g.setTransform(1, 0, 0, 1, 0, 0); if (R){ g.beginPath(); g.rect(dx0, dy0, dw, dh); g.clip(); } };
+  const ox = layer.vx + mx, oy = layer.vy + my;
   let c = layer.getContext('2d'); const px = 1/view.s, hexPx = view.s*HS0;
-  c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#060c0f'; c.fillRect(0, 0, cw + 2*mx, ch + 2*my);
+  c.save(); clipR(c); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.fillStyle = '#060c0f'; c.fillRect(dx0, dy0, dw, dh);
   c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   c.imageSmoothingEnabled = true; c.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
   const px0 = 1/view.s;
+  const vx0 = (dx0/dpr - ox)/view.s, vy0 = (dy0/dpr - oy)/view.s, vx1 = (dx1/dpr - ox)/view.s, vy1 = (dy1/dpr - oy)/view.s;   // the painted rect in world space
+  // culling bounds: the painted rect plus a margin wider than any stroke and than a shore chain pushed out to sea past its province's box
+  const wm = Math.max(40*px, 3*HS), wx0 = vx0 - wm, wy0 = vy0 - wm, wx1 = vx1 + wm, wy1 = vy1 + wm;
+  const SG = R ? stripGeo(wx0, wy0, wx1, wy1) : null;
   // the land path for this render: the coast rings and big lakes in view (lakes as evenodd holes, so the sea wash, shore glow, land clips and tint mask
   // all treat them as water). Rings wholly outside the layer cannot change a pixel in it, and leaving them out keeps the strokes and clips cheap.
-  if (GEO.coast0 && COASTR.length){ const m0 = 24*px0, bx0 = -ox/view.s - m0, by0 = -oy/view.s - m0, bx1 = (cw + 2*mx - ox)/view.s + m0, by1 = (ch + 2*my - oy)/view.s + m0, inV = b => b[2] >= bx0 && b[0] <= bx1 && b[3] >= by0 && b[1] <= by1; let k = '';
+  if (!R && GEO.coast0 && COASTR.length){ const m0 = 24*px0, bx0 = -ox/view.s - m0, by0 = -oy/view.s - m0, bx1 = (cw + 2*mx - ox)/view.s + m0, by1 = (ch + 2*my - oy)/view.s + m0, inV = b => b[2] >= bx0 && b[0] <= bx1 && b[3] >= by0 && b[1] <= by1; let k = '';
     for (let i = 0; i < COASTR.length; i++) if (inV(COASTR[i].b)) k += i + ',';
     k += '|'; if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (inV(b)) k += i + (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64 ? 'b,' : ','); }
     if (k !== GEO.coastK){ GEO.coastK = k; const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(), [kc, kl] = k.split('|'); let nl = 0;
@@ -6090,25 +6255,31 @@ function renderLayer(vis, lite = false){
       for (const i of kc.split(',')) if (i){ ringTo(cv, COASTR[+i].r); ringTo(gv, COASTR[+i].r); }
       for (const i of kl.split(',')) if (i){ const r = G.lakeRing[parseInt(i)]; ringTo(cv, r); ringTo(lv, r); nl++; if (i.endsWith('b')) ringTo(gv, r); }   // the wide shallow-water glow rings only lakes big on screen (it would flood a small one)
       GEO.coastV = cv; GEO.coastG = gv; GEO.lakeV = nl ? lv : null; GEO.seaV = null; } }
-  if (GEO.coastV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
+  if (!R && GEO.coastV && !GEO.seaV){ GEO.seaV = new Path2D(); GEO.seaV.rect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); GEO.seaV.addPath(GEO.coastV); }
+  const CV = SG ? SG.coastV : GEO.coastV, CG = SG ? SG.coastG : GEO.coastG || GEO.coastV, LV = SG ? SG.lakeV : GEO.lakeV, SEAV = SG ? SG.seaV : GEO.seaV;
+  const NB = n => SG ? SG.nation(n) : GEO.nation[n], NA = n => SG ? SG.nArea(n) : nAreaOf(n), NEU = () => SG ? SG.neuArea() : neuArea(), MINE = SG ? SG.mine : GEO.mine;
+  if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
     // wash the sea with its own colour so the raster texture's soft land edge does not bleed past the real shore, then shallow-water bands
-    if (!GEO.seaV){ GEO.seaV = new Path2D(); GEO.seaV.rect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); GEO.seaV.addPath(GEO.coastV); }
-    c.save(); c.clip(GEO.seaV, 'evenodd'); c.fillStyle = `rgba(11,29,39,${0.86*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); c.lineJoin = 'round';
-    c.strokeStyle = `rgba(40,92,104,${0.22*z})`; c.lineWidth = 16*px0; c.stroke(GEO.coastG || GEO.coastV);
-    c.strokeStyle = `rgba(60,120,130,${0.22*z})`; c.lineWidth = 7*px0; c.stroke(GEO.coastG || GEO.coastV);
-    c.strokeStyle = `rgba(150,200,210,${0.14*z})`; c.lineWidth = 2.6*px0; c.stroke(GEO.coastV); c.restore(); }
-  const vx0 = -ox/view.s, vy0 = -oy/view.s, vx1 = (cw + 2*mx - ox)/view.s, vy1 = (ch + 2*my - oy)/view.s;
-  const onScreen = P => { const b = provBox(P); return b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1; };
-  const wm = 40*px, wx0 = vx0 - wm, wy0 = vy0 - wm, wx1 = vx1 + wm, wy1 = vy1 + wm, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
+    // (the baked depth: shallow shelf, slope and abyss; the flat wash only if it could not be baked)
+    c.save(); c.clip(SEAV, 'evenodd');
+    if (GEO.seaTex){ c.fillStyle = `rgba(6,18,28,${0.55 + 0.35*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(0, -WORLD_H, WORLD_W, WORLD_H); c.fillRect(0, WORLD_H, WORLD_W, WORLD_H);   // (past the world's edge)
+      c.globalAlpha = 0.55 + 0.35*z; c.drawImage(GEO.seaTex.op, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // (0.55 meets the far view's unclipped depth)
+    else { c.fillStyle = `rgba(11,29,39,${0.86*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); }
+    // the shallow band in world units (it widens as you zoom in, not a constant halo round every island)
+    c.lineJoin = 'round'; c.strokeStyle = `rgba(52,118,126,${0.10*z})`; c.lineWidth = Math.max(2.4, 10*px0); c.stroke(CG);
+    c.strokeStyle = `rgba(70,136,142,${0.12*z})`; c.lineWidth = Math.max(1, 4*px0); c.stroke(CG);
+    c.strokeStyle = `rgba(150,200,210,${0.07*z})`; c.lineWidth = 2.6*px0; c.stroke(CV); c.restore(); }
+  else if (GEO.seaTex){ c.globalAlpha = 0.55; c.drawImage(GEO.seaTex, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // far out (no coast clip): its clear land masks it
+  const onScreen = P => { const b = provBox(P); return b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1; }, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
     nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
-  if (hexPx >= 12 && SET.fx !== 'low'){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (GEO.coastV) c.clip(GEO.coastV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
+  if (hexPx >= 12 && SET.fx !== 'low'){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
     if (zc > 0 && gp.fine){ c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.34*zc; c.fillStyle = gp.fine; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // close up: a second, fine ground grain (fields, scrub) so the land is not a smooth smear
     if (!lite && hexPx > ZOLD && gp.micro && gp.micro.setTransform){ const zm = Math.min(1, (hexPx - ZOLD)/50), lo = Math.max(0, Math.log2(view.s/(ZOLD*0.9/HS0))), o0 = Math.floor(lo), f = lo - o0;   // past the old max zoom the texture is upscaled: a micro grain in world space keeps it from smearing
       c.globalCompositeOperation = 'source-over'; c.fillStyle = gp.micro;
       for (const [oc, w] of [[o0, 1 - f], [o0 + 1, f]]){ if (0.3*zm*w < 0.06) continue;   /* a faint octave costs a full-layer fill for nothing */ gp.micro.setTransform(new DOMMatrix().rotate(-23).scale(0.08/Math.pow(2, oc))); c.globalAlpha = 0.3*zm*w; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); } }
     c.restore(); }
-  if (hexPx >= ART_PX && SET.fx !== 'low' && mapMode === 'political'){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (GEO.coastV) c.clip(GEO.coastV, 'evenodd');
+  if (hexPx >= ART_PX && SET.fx !== 'low' && mapMode === 'political'){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (CV) c.clip(CV, 'evenodd');
     for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const t = P.terrain === 'urban' ? provGround(P) : P.terrain || 'plains', wooded = t === 'mountain' && Math.abs(P.lat) > 24 && Math.abs(P.lat) < 55, pt = t === 'forest' || wooded ? GP.forest : t === 'plains' || t === 'urban' ? GP.fields : null; if (!pt) continue;   // temperate ranges (Appalachians, Alps' flanks) are wooded
       c.globalAlpha = (t === 'forest' ? 0.7 : wooded ? 0.5 : 0.62)*zg; c.fillStyle = pt; c.fill(GEO.fill[p], 'evenodd');
       if (wooded){ c.globalAlpha = 0.42*zg; c.fillStyle = '#4a6a3c'; c.fill(GEO.fill[p], 'evenodd'); } }   // their grey rock and white ridge highlights take the green of the woods
@@ -6116,7 +6287,7 @@ function renderLayer(vis, lite = false){
   if (hexPx >= 9){ c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = 'rgba(140,180,190,0.06)'; c.lineWidth = 0.8*px; c.setLineDash([4*px, 6*px]); c.stroke(tiledIn(GEO.seaT, wx0, wy0, wx1, wy1)); c.setLineDash([]); }
   const hp = fogPattern(c, 0.07*Math.min(1, 0.4/Math.max(0.5, Math.min(4, (GS > 1 ? 0.12 : 0.075)*HS*view.s*dpr)))); if (hp.setTransform) hp.setTransform(new DOMMatrix([px, 0, 0, px, 0, 0]));
   const base = c; if (!layer.fl) layer.fl = document.createElement('canvas'); const flc = layer.fl; if (flc.width !== layer.width || flc.height !== layer.height){ flc.width = layer.width; flc.height = layer.height; }
-  c = flc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, flc.width, flc.height); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
+  c = flc.getContext('2d'); c.save(); clipR(c); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(dx0, dy0, dw, dh); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   const washK = 1 - 0.7*Math.max(0, Math.min(1, (hexPx - 14)/46));   // the political tint thins as you zoom in so the ground shows (the border band keeps the colour)
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
     if (mapMode === 'terrain'){ c.fillStyle = rgba((TERRAIN[P.terrain] || TERRAIN.plains).col, 0.66); c.fill(GEO.fill[p], 'evenodd'); }
@@ -6147,54 +6318,169 @@ function renderLayer(vis, lite = false){
   if (hexPx >= 2.5 && mapMode === 'political') for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !GEO.nation[n] || !nOn(n)) continue;
     // a soft band just inside the border (clipped to the nation's own land): green on yours, red on an enemy's, a faint grey on the rest
     const tn = toneOf(n); if (tn === 'other' && hexPx < 6) continue;
-    const area = nAreaOf(n), tc0 = mapCol(n), ka = tn === 'own' ? 1 : tn === 'war' ? 0.75 : 0.3;
+    const area = NA(n), tc0 = mapCol(n), ka = tn === 'own' ? 1 : tn === 'war' ? 0.75 : 0.3;
     c.save(); c.clip(area); const bw = Math.min(4.5, 1.6 + hexPx*0.08);
-    c.strokeStyle = rgba(tc0, 0.24*ka); c.lineWidth = bw*2*px; c.stroke(GEO.nation[n]); c.strokeStyle = rgba(tc0, 0.27*ka); c.lineWidth = bw*0.8*px; c.stroke(GEO.nation[n]); c.restore(); }
+    c.strokeStyle = rgba(tc0, 0.24*ka); c.lineWidth = bw*2*px; c.stroke(NB(n)); c.strokeStyle = rgba(tc0, 0.27*ka); c.lineWidth = bw*0.8*px; c.stroke(NB(n)); c.restore(); }
   // national borders by relation: thin quiet grey between the others, red round an enemy, green round yours (drawn in that order so yours and the enemy's win the shared edges)
   { const TN = tones(), rank = {neu:0, other:0, war:1, own:2}, ord = [];
     for (let n = 0; n < S.nations.length; n++) if (S.nations[n].alive && GEO.nation[n] && nOn(n)) ord.push(n);
     ord.sort((a, b) => rank[toneOf(a)] - rank[toneOf(b)]);
     for (const n of ord){ const tn = toneOf(n);
-      if (tn === 'other'){ c.strokeStyle = 'rgba(3,6,8,0.38)'; c.lineWidth = 2*px; c.stroke(GEO.nation[n]); c.strokeStyle = 'rgba(206,208,198,0.5)'; c.lineWidth = 0.9*px; c.stroke(GEO.nation[n]); continue; }
-      c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 2.6*px; c.stroke(GEO.nation[n]);
-      c.strokeStyle = tn === 'own' ? TN.own : rgba(TN.war, 0.9); c.lineWidth = (tn === 'own' ? 1.7 : 1.35)*px; c.stroke(GEO.nation[n]); }
-    if (S.nations[PLAYER].alive){ c.strokeStyle = rgba(TN.ownHi, 0.85); c.lineWidth = 0.9*px; c.stroke(GEO.mine); } }
-  const clipLand = () => { c.globalCompositeOperation = 'destination-in'; if (GEO.coastV && hexPx >= 7){ c.fillStyle = '#000'; c.fill(GEO.coastV, 'evenodd'); } else c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over'; };
+      if (tn === 'other'){ c.strokeStyle = 'rgba(3,6,8,0.38)'; c.lineWidth = 2*px; c.stroke(NB(n)); c.strokeStyle = 'rgba(206,208,198,0.5)'; c.lineWidth = 0.9*px; c.stroke(NB(n)); continue; }
+      c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 2.6*px; c.stroke(NB(n));
+      c.strokeStyle = tn === 'own' ? TN.own : rgba(TN.war, 0.9); c.lineWidth = (tn === 'own' ? 1.7 : 1.35)*px; c.stroke(NB(n)); }
+    if (S.nations[PLAYER].alive){ c.strokeStyle = rgba(TN.ownHi, 0.85); c.lineWidth = 0.9*px; c.stroke(MINE); } }
+  const clipLand = () => { c.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ c.fillStyle = '#000'; c.fill(CV, 'evenodd'); } else c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over'; };
   clipLand();
-  if (hexPx >= 3 && GEO.lakeV){ { c.save(); c.clip(GEO.lakeV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(214,218,204,0.35)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1)); c.restore(); } }   // national borders across the lakes in view: a faint dashed line
+  if (hexPx >= 3 && LV){ { c.save(); c.clip(LV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(214,218,204,0.35)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1)); c.restore(); } }   // national borders across the lakes in view: a faint dashed line
+  c.restore();   // the overlay's R clip
   // political tint: each power's land in its colour, laid on the ground with a 'color' blend (hue and saturation from the power, light and shade from the terrain)
   // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
   if (mapMode === 'political' && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
-    const t = tc.getContext('2d'); t.setTransform(1, 0, 0, 1, 0, 0); t.globalCompositeOperation = 'source-over'; t.clearRect(0, 0, tc.width, tc.height); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
-    { const TN = tones(); for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; const tn = toneOf(n); t.fillStyle = rgba(TN[tn], TONE_A[tn]); t.fill(nAreaOf(n)); }
-      t.fillStyle = rgba(TN.neu, TONE_A.neu); t.fill(neuArea()); }   // independents: the same quiet grey
-    t.globalCompositeOperation = 'destination-in'; if (GEO.coastV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(GEO.coastV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over';
+    const t = tc.getContext('2d'); t.save(); clipR(t); t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(dx0, dy0, dw, dh); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
+    { const TN = tones(); for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; const tn = toneOf(n); t.fillStyle = rgba(TN[tn], TONE_A[tn]); t.fill(NA(n)); }
+      t.fillStyle = rgba(TN.neu, TONE_A.neu); t.fill(NEU()); }   // independents: the same quiet grey
+    t.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(CV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over'; t.restore();
     // world view and play zoom: clear national colours over the relief; it eases off slowly (tk) and, past hexPx 80, fades further so the close-up ground and city art lead
     base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/70)), tf = Math.max(0.35, 1 - Math.max(0, hexPx - 80)/160);
-    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.42 - 0.2*tk)*tf; base.drawImage(tc, 0, 0);
-    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.22 - 0.11*tk)*tf; base.drawImage(tc, 0, 0); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
+    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.42 - 0.2*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh);
+    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.22 - 0.11*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
-  if (cityFade(hexPx) > 0){ base.save(); if (GEO.coastV && hexPx >= 7) base.clip(GEO.coastV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite); base.restore(); }
-  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, 0, 0); base.restore();
+  let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
+  if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? 6 : R ? (SHIFTING ? 3 : 8) : 45); base.restore(); }   // (bake budget, ms: short in a pan strip; bakes left over come in once the view is still)
+  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
-  if (GEO.coastV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
-    base.strokeStyle = `rgba(8,14,16,${0.55*z})`; base.lineWidth = 0.9*px; base.stroke(GEO.coastV);
-    base.strokeStyle = `rgba(226,220,196,${0.18*z})`; base.lineWidth = 0.5*px; base.stroke(GEO.coastV); }
+  if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
+    base.strokeStyle = `rgba(8,14,16,${0.55*z})`; base.lineWidth = 0.9*px; base.stroke(CV);
+    base.strokeStyle = `rgba(226,220,196,${0.18*z})`; base.lineWidth = 0.5*px; base.stroke(CV); }
+  base.restore();   // the base's R clip
+  // the layer's sea as a half-resolution alpha mask (white sea, clear land and lakes' shores as drawn) for the live wave surface in draw(); one fill
+  if (CV && hexPx >= 20 && SET.fx !== 'low'){ const SM = layer.seaM || (layer.seaM = document.createElement('canvas')), w2 = Math.ceil(layer.width/2), h2 = Math.ceil(layer.height/2);
+    if (SM.width !== w2 || SM.height !== h2){ SM.width = w2; SM.height = h2; layer.seaOK = false; }
+    if (!R || layer.seaOK){ const m = SM.getContext('2d'), hx0 = Math.floor(dx0/2), hy0 = Math.floor(dy0/2), hw = Math.ceil(dx1/2) - hx0, hh = Math.ceil(dy1/2) - hy0;
+      m.save(); m.setTransform(1, 0, 0, 1, 0, 0); m.globalCompositeOperation = 'source-over'; m.globalAlpha = 1; if (R){ m.beginPath(); m.rect(hx0, hy0, hw, hh); m.clip(); }
+      m.fillStyle = '#fff'; m.fillRect(hx0, hy0, hw, hh); m.setTransform(dpr*view.s/2, 0, 0, dpr*view.s/2, dpr*ox/2, dpr*oy/2);
+      m.globalCompositeOperation = 'destination-out'; m.fillStyle = '#000'; m.fill(CV, 'evenodd'); m.restore(); if (!R){ layer.seaOK = true; layer.seaE = layer.seaEy = 0; } } }
+  else if (!R) layer.seaOK = false;
 }
+// a pure pan past the layer margin: the old layer is shifted by a whole number of device px into a second canvas, and only the strips it exposes
+// (a vertical band at the left or right, a horizontal band at the top or bottom) are rendered; false when the shift is too large to be worth it
+function shiftLayer(vis, lite, ax = true, ay = true){ const L = layer, w = L.width, h = L.height, sx = ax ? Math.round((view.x - L.vx)*dpr) : 0, sy = ay ? Math.round((view.y - L.vy)*dpr) : 0;
+  if (Math.abs(sx) > 0.6*w || Math.abs(sy) > 0.6*h) return false; if (!sx && !sy) return true;
+  let A = L.alt; if (!A) A = document.createElement('canvas'); if (A.width !== w || A.height !== h){ A.width = w; A.height = h; }
+  const g = A.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'copy'; g.drawImage(L, sx, sy); g.globalCompositeOperation = 'source-over';
+  A.mx = L.mx; A.my = L.my; A.vx = L.vx + sx/dpr; A.vy = L.vy + sy/dpr; A.s = L.s; A.lite = L.lite; A.full = L.full; A.strips = L.strips;
+  A.fl = L.fl; A.tc = L.tc; L.fl = L.tc = null; L.alt = null; A.alt = L; layer = A;
+  A.seaOK = false; if (L.seaOK && L.seaM){ const SM = A.seaM || (A.seaM = document.createElement('canvas')); if (SM.width !== L.seaM.width || SM.height !== L.seaM.height){ SM.width = L.seaM.width; SM.height = L.seaM.height; }
+    const e = L.seaE || 0, k2x = Math.round(sx/2 - e), k2y = Math.round(sy/2 - (L.seaEy || 0)), m = SM.getContext('2d'); m.setTransform(1, 0, 0, 1, 0, 0); m.globalAlpha = 1;
+    m.globalCompositeOperation = 'copy'; m.drawImage(L.seaM, k2x, k2y); m.globalCompositeOperation = 'source-over'; A.seaE = e + k2x - sx/2; A.seaEy = (L.seaEy || 0) + k2y - sy/2; A.seaOK = true; }
+  const W = w/dpr, H = h/dpr;
+  A.q = (L.q || []).map(r => ({x0:Math.max(0, r.x0 + sx/dpr), y0:Math.max(0, r.y0 + sy/dpr), x1:Math.min(W, r.x1 + sx/dpr), y1:Math.min(H, r.y1 + sy/dpr)})).filter(r => r.x1 > r.x0 && r.y1 > r.y0);   // bands still to refresh move with the picture
+  const ex0 = sx > 0 ? 0 : (w + sx)/dpr, ex1 = sx > 0 ? sx/dpr : W, ey0 = sy > 0 ? 0 : (h + sy)/dpr, ey1 = sy > 0 ? sy/dpr : H;
+  SHIFTING = true; try { if (sx) renderLayer(vis, lite, {x0:ex0, y0:0, x1:ex1, y1:H});
+    if (sy) renderLayer(vis, lite, {x0:sx > 0 ? ex1 : 0, y0:ey0, x1:sx > 0 ? W : ex0, y1:ey1}); } finally { SHIFTING = false; }
+  return true; }
+// queue the whole layer for a refresh in four bands (whole device px), the one under the middle of the screen first
+function layerBands(){ const L = layer, h = L.height, W = L.width/dpr, n = 6, c = (L.my + ch/2)*dpr, B = [];
+  for (let i = 0; i < n; i++){ const y0 = Math.round(h*i/n), y1 = Math.round(h*(i + 1)/n); B.push({x0:0, y0:y0/dpr, x1:W, y1:y1/dpr, d:Math.abs((y0 + y1)/2 - c)}); }
+  L.q = B.sort((a, b) => a.d - b.d); }
+// the towns drawn without their right bake, queued first for a redraw: one box (layer CSS px, whole device px) per row of the layer round the
+// towns in that row; a box already covered by a queued one is dropped, and one that covers queued boxes replaces them
+function layerCityRefresh(){ const L = layer, W = L.width/dpr, H = L.height/dpr, ox = L.vx + L.mx, oy = L.vy + L.my, n = 6, B = [];
+  for (const [p, e] of CITY_MISS){ const P = G.P[p], I = CGEO.get(p), cx = ox + (I ? I.x : P.x)*L.s, cy = oy + (I ? I.y : P.y)*L.s, E = (I ? I.E : e)*L.s + 2;
+    if (cx + E < 0 || cx - E > W || cy + E < 0 || cy - E > H) continue;
+    const i = Math.max(0, Math.min(n - 1, Math.floor(cy/H*n))), b = B[i] || (B[i] = [Infinity, Infinity, -Infinity, -Infinity]);
+    b[0] = Math.min(b[0], cx - E); b[1] = Math.min(b[1], cy - E); b[2] = Math.max(b[2], cx + E); b[3] = Math.max(b[3], cy + E); }
+  CITY_MISS.clear(); const q = L.q || (L.q = []), inR = (a, r) => a.x0 >= r.x0 && a.y0 >= r.y0 && a.x1 <= r.x1 && a.y1 <= r.y1;
+  for (const b of B){ if (!b) continue; const r = {x0:Math.max(0, Math.floor(b[0]*dpr)/dpr), y0:Math.max(0, Math.floor(b[1]*dpr)/dpr), x1:Math.min(W, Math.ceil(b[2]*dpr)/dpr), y1:Math.min(H, Math.ceil(b[3]*dpr)/dpr)};
+    if (!(r.x1 > r.x0 && r.y1 > r.y0) || q.some(a => inR(r, a))) continue;
+    for (let j = q.length - 1; j >= 0; j--) if (inR(q[j], r)) q.splice(j, 1);
+    q.unshift(r); }
+  if (q.length > 24) layerBands(); }
 // how strongly each relation tints the ground (the alpha of its fill in the tint canvas): yours and the enemy's full, the others a light grey veil that mostly desaturates
 const TONE_A = {own:1, war:1, other:0.42, neu:0.36};
 const neuArea = () => GEO.nArea.neu || (GEO.nArea.neu = (() => { const a = new Path2D(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === NEUTRAL && !G.P[p].sea) a.addPath(GEO.outline[p]); return a; })());
 const nAreaOf = n => GEO.nArea[n] || (GEO.nArea[n] = (() => { const a = new Path2D(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && !G.P[p].sea) a.addPath(GEO.outline[p]); return a; })());
+// a battle below figure zoom: one baked smoke column swaying in the transform, 2-3 gun flickers and 2-4 tracer dashes between the two stacks,
+// and at night a warm glow pool on the ground; everything is seeded from the province and the clock, so no particle state is kept
+function drawBattleLOD(now, vis, kl, hexPx){
+  if (hexPx >= FIG_PX || !S.battles.length) return;
+  const red = afxReduced(), run = !!S.speed && !S.over && !red, tF = Math.floor(now/90), GL = GLOW();
+  for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue;
+    const P = G.P[p]; let [x, y] = toScreen(P.x, P.y); if (x < -260 || y < -120 || x > cw + 260 || y > ch + 320) continue;
+    const sides = new Set(); let na = 0; for (const a of S.armies){ if (a.at !== p || a.to !== null || a.fly) continue; sides.add(a.owner); na++; }
+    const pts = []; for (const o of sides){ const w = CLPOS.get(p + ':' + o); if (w) pts.push(toScreen(w[0], w[1])); }
+    if (pts.length >= 2){ x = 0; y = 0; for (const q of pts){ x += q[0]; y += q[1]; } x /= pts.length; y /= pts.length; }
+    const nt = nightP(p), nb = Math.max(0, Math.min(1, (nt - 0.3)/0.3)), sz = Math.min(96, Math.max(26, Math.min(80, 36 + hexPx*0.42 + na*1.5))*kl)*(P.sea ? 0.8 : 1);   // (kept modest: names and markers are drawn over it)
+    const A = pts.length >= 2 ? pts[0] : [x - 14*kl, y + 4*kl], B = pts.length >= 2 ? pts[1] : [x + 14*kl, y + 4*kl], by = y - (pts.length >= 2 ? 30 : 46)*kl - 6*kl;   // the column rises from the badge (drawn over it afterwards): its dense, fire-lit base sits on the badge's upper rim
+    if (nt > 0.2){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35*nt; const gw = sz*1.4, gh = sz*0.42; ctx.drawImage(GL, x - gw/2, y - gh*0.55, gw, gh); ctx.globalCompositeOperation = 'source-over'; }
+    // the column: base just above the fight, the badge drawn over it afterwards
+    { const px = sz*dpr, bk = px <= 110 ? 0 : px <= 180 ? 1 : 2, ph = (p % 97)*0.37, gt = FXQ.gt, sk = red ? 0 : 0.04*Math.sin(gt/1700 + ph), sc = red ? 1 : 1 + 0.035*Math.sin(gt/2300 + ph*1.7);   // (the paused clock: still while paused)
+      const a0 = P.sea ? 0.78 : 0.92; ctx.setTransform(dpr*sc, 0, dpr*sk*sc, dpr*sc, dpr*x, dpr*by);   // day and night columns cross-fade through dusk
+      if (nb < 1){ ctx.globalAlpha = a0*(1 - nb); ctx.drawImage(battleCloud(bk, false), -sz/2, -sz*0.96, sz, sz); }
+      if (nb > 0){ ctx.globalAlpha = a0*nb; ctx.drawImage(battleCloud(bk, true), -sz/2, -sz*0.96, sz, sz); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    if (!run){ ctx.globalAlpha = 1; continue; }
+    const dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy) || 1, nx = -dy/L, ny = dx/L;
+    // gun flickers on the line between the stacks (additive, brighter at night)
+    ctx.globalCompositeOperation = 'lighter';
+    const nf = 2 + (fxh(p*31 + tF) < 0.5 ? 1 : 0);
+    for (let i = 0; i < nf; i++){ const h = p*7919 + tF*131 + i*17, t = 0.15 + 0.7*fxh(h), o = (fxh(h + 1) - 0.5)*8*kl, r4 = fxh(h + 2), s = Math.max(10 + 4*r4, 8*kl*(0.8 + 0.5*r4));
+      ctx.globalAlpha = Math.min(1, (0.5 + 0.4*fxh(h + 3))*(1 + 1.5*nt)); ctx.drawImage(GL, A[0] + dx*t + nx*o - s/2, A[1] + dy*t + ny*o - s/2 - 3*kl*fxh(h + 4), s, s); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    // tracer dashes flying both ways
+    const nT = 2 + (p % 3), ph0 = (now % 600)/600; ctx.beginPath();
+    for (let i = 0; i < nT; i++){ const f = (ph0 + i/nT + fxh(p*13 + i)) % 1, o = (fxh(p*17 + i*5 + Math.floor((now + i*150)/600)) - 0.5)*7*kl, t1 = 0.1 + 0.8*f, t0 = Math.max(0.1, t1 - 0.2), u0 = i & 1 ? 1 - t0 : t0, u1 = i & 1 ? 1 - t1 : t1;
+      ctx.moveTo(A[0] + dx*u0 + nx*o, A[1] + dy*u0 + ny*o - 4*kl); ctx.lineTo(A[0] + dx*u1 + nx*o, A[1] + dy*u1 + ny*o - 4*kl); }
+    ctx.lineCap = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,200,120,.25)'; ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,235,180,.9)'; ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+// the live sea surface: a 256 px tile of thin bright crest arcs (three rotated sine bands bent by tileable noise, broken into arcs), baked once
+const SEAFX = {t:-1e9, g:-1, k:'', cv:null, tile:null, pat:null, fk:'', fp:null, fc:null};
+function waveTile(){ if (SEAFX.tile) return SEAFX.tile; const N = 256, P = 8, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data, r = mulberry(131), gr = new Float32Array(P*P*3);
+  for (let i = 0; i < gr.length; i++) gr[i] = r();
+  const at = (i, j, o) => gr[((((j % P) + P) % P)*P + (((i % P) + P) % P))*3 + o];
+  const nz = (x, y, o) => { const fx = x/N*P, fy = y/N*P, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0, u = tx*tx*(3 - 2*tx), v = ty*ty*(3 - 2*ty);
+    const a = at(x0, y0, o), b = at(x0 + 1, y0, o), cc = at(x0, y0 + 1, o), dd = at(x0 + 1, y0 + 1, o); return a + (b - a)*u + (cc - a)*v + (a - b - cc + dd)*u*v; };
+  const B = [[4, 1, 0], [3, 2, 1], [5, -1, 2]];   // a swell from one quarter: integer wave numbers, so the tile repeats seamlessly
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ let v = 0;
+    for (const [kx, ky, o] of B){ const s = Math.sin(2*Math.PI*(kx*x + ky*y)/N + 2.2*nz(x, y, o)), m = nz(2*x, 2*y, (o + 1) % 3); if (s > 0.6) v += 0.8*Math.pow(s, 22)*Math.max(0, Math.min(1, (m - 0.45)/0.3)); }
+    const i = (y*N + x)*4; d[i] = 226; d[i + 1] = 242; d[i + 2] = 246; d[i + 3] = Math.round(Math.min(1, v)*235); }
+  g.putImageData(im, 0, 0); return (SEAFX.tile = c); }
+// waves (hexPx >= 20) and shore foam (hexPx >= 30) over the layer's sea; not with low effects or reduced motion, not while the view moves (the static
+// depth is under it). Waves: two drifting layers of the tile filled into a half-res canvas at most every 50 ms, cut to the layer's sea mask, laid
+// on with 'screen' (fainter at night). Foam: dashes creeping along the coast rings in view, clipped to the water side.
+function drawSeaSurface(now, moving){
+  const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || SET.fx === 'low' || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || !GEO) return;
+  const day = viewLight().day, w2 = Math.ceil(cw*dpr/2), h2 = Math.ceil(ch*dpr/2), Wc = SEAFX.cv || (SEAFX.cv = document.createElement('canvas'));
+  if (Wc.width !== w2 || Wc.height !== h2){ Wc.width = w2; Wc.height = h2; SEAFX.k = ''; }
+  const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr), key = view.x + ',' + view.y + ',' + view.s + ',' + lx + ',' + ly + ',' + layer.full + ',' + (layer.strips || 0);
+  if (key !== SEAFX.k || (now - SEAFX.t >= 50 && FXQ.gt !== SEAFX.g)){ SEAFX.k = key; SEAFX.t = now; SEAFX.g = FXQ.gt; const g = Wc.getContext('2d'); if (!SEAFX.pat) SEAFX.pat = g.createPattern(waveTile(), 'repeat');
+    const pat = SEAFX.pat, ks = dpr/2, Tw = Math.max(160, Math.min(360, 40*view.s))/view.s, t = FXQ.gt/1000;   // the tile's size in world units (a sensible size on screen at every zoom)
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, w2, h2); g.fillStyle = pat;
+    for (const [ang, sc, vx, vy, a] of [[0.35, 1, 0.9, 0.35, 1], [0.85, 0.63, 0.55, 0.8, 0.7]]){ const T = Tw*sc, m = T*view.s*ks/256, co = Math.cos(ang)*m, si = Math.sin(ang)*m, wx = vx*t*T/28, wy = vy*t*T/28;
+      pat.setTransform(new DOMMatrix([co, si, -si, co, (wx*view.s + view.x)*ks, (wy*view.s + view.y)*ks])); g.globalAlpha = a; g.fillRect(0, 0, w2, h2); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'destination-in'; g.drawImage(layer.seaM, lx/2 - (layer.seaE || 0), ly/2 - (layer.seaEy || 0)); g.globalCompositeOperation = 'source-over'; }
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.015 + 0.05*day; ctx.drawImage(Wc, 0, 0, w2*2, h2*2); ctx.restore();
+  // shore foam: the coast rings that reach the screen, cut to it (kept until the view changes), dashes creeping along them on the water side
+  if (hexPx >= 30 && GEO.coast0 && COASTR.length){ const px = 1/view.s, m0 = 12*px, X0 = -view.x/view.s - m0, Y0 = -view.y/view.s - m0, X1 = (cw - view.x)/view.s + m0, Y1 = (ch - view.y)/view.s + m0, fk = [X0, Y0, view.s, cw, ch].join(',');
+    if (fk !== SEAFX.fk){ SEAFX.fk = fk; const fp = new Path2D(), fc = new Path2D(); fc.rect(X0, Y0, X1 - X0, Y1 - Y0); let n = 0;
+      for (const Rr of COASTR){ const b = Rr.b; if (b[2] < X0 || b[0] > X1 || b[3] < Y0 || b[1] > Y1) continue; const r = b[0] >= X0 && b[2] <= X1 && b[1] >= Y0 && b[3] <= Y1 ? Rr.r : clipRing(Rr.r, X0 - m0, Y0 - m0, X1 + m0, Y1 + m0); if (r.length < 6) continue;
+        for (const q of [fp, fc]){ q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); } n++; }
+      SEAFX.fp = n ? fp : null; SEAFX.fc = fc; }
+    if (SEAFX.fp){ ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.clip(SEAFX.fc, 'evenodd'); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.setLineDash([2.5*px, 6*px]); ctx.lineDashOffset = -FXQ.gt/350*px; ctx.strokeStyle = `rgba(236,246,248,${(0.13 + 0.13*day).toFixed(3)})`; ctx.lineWidth = 2.6*px; ctx.stroke(SEAFX.fp);   // (half of it lies on land, clipped away)
+      ctx.setLineDash([1.6*px, 9*px]); ctx.lineDashOffset = FXQ.gt/520*px; ctx.strokeStyle = `rgba(236,246,248,${(0.06 + 0.07*day).toFixed(3)})`; ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); ctx.restore(); } } }   // a fainter outer row drifting the other way
 function draw(now){
-  clampView();
+  clampView(); fxDrain(now);
+  { const fdt = now - (FXG.t || now); FXG.t = now; if (fdt > 0 && fdt < 250) FXG.ema = 0.9*FXG.ema + 0.1*fdt; FXG.k = Math.max(0.3, Math.min(1, 1 - (FXG.ema - 20)/25)); FXG.area = 0; }
   if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; } else if (cv.style.transform){ cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
   toneSync();   // war or peace with you (or the palette) changed: the map's relation colours follow at once
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS0;
-  { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
+  { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; CITY_ALL = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
     if (CITY_PEND && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120){ CITY_PEND = false; CITYV++; } }
-  const key = [view.s, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' ? Math.floor(S.hour/24) : 0, LINKD].join('|');
+  const key = [view.s, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' || mapMode === 'resources' ? Math.floor(S.hour/24) : 0, LINKD, SET.fx].join('|');   // (a pure pan no longer re-renders the layer, so whatever it shows is in the key)
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   // any view movement since the last frame (drag, fly-to, keys, tutorial) counts as panning: reuse the shifted layer until it settles
   const moved = draw.pvx !== view.x || draw.pvy !== view.y || draw.pvs !== view.s; if (panning || moved) lastPanT = now; draw.pvx = view.x; draw.pvy = view.y; draw.pvs = view.s;
@@ -6203,11 +6489,23 @@ function draw(now){
   // during a camera flight (game start, jumps) the last layer is drawn scaled while the zoom stays within a modest ratio of it, instead of re-rendering every frame
   const fz = layer && layer.s ? view.s/layer.s : 1, flyReuse = !!camFly && layer && !settled && fz > 0.8 && fz < 1.5 && key.slice(key.indexOf('|')) === layerKey.slice(layerKey.indexOf('|'))
     && view.x - (layer.vx + layer.mx)*fz <= 0 && view.y - (layer.vy + layer.my)*fz <= 0 && view.x - (layer.vx + layer.mx)*fz + layer.width/dpr*fz >= cw && view.y - (layer.vy + layer.my)*fz + layer.height/dpr*fz >= ch;   // the scaled layer still covers the screen
-  if (!flyReuse && (key !== layerKey || offEdge || (settled && ((dxv || dyv) || layer.lite)))){ layerKey = key; renderLayer(vis, !!(panning || moved) && !settled); }
+  // a pure pan (same key) past the margin shifts the layer and renders only the strip it exposes, on the axis that ran out (strips are full detail,
+  // so nothing is left to redo when the pan stops); new city bakes, or a layer rendered light while moving, are refreshed in bands, one a frame
+  // once still, the view snaps to the layer's device-px grid (under half a pixel), so the live overlays sit exactly on the shifted layer's borders
+  if (!flyReuse && settled && !camFly && layer && layer.s === view.s && key === layerKey){ const x0 = view.x, y0 = view.y, sx = layer.vx + Math.round((x0 - layer.vx)*dpr)/dpr, sy = layer.vy + Math.round((y0 - layer.vy)*dpr)/dpr;
+    if (sx !== x0 || sy !== y0){ view.x = sx; view.y = sy; clampView(); if (view.x !== sx || view.y !== sy){ view.x = x0; view.y = y0; } draw.pvx = view.x; draw.pvy = view.y; } }
+  if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), ex = Math.abs(dxv) > layer?.mx*0.25, ey = Math.abs(dyv) > layer?.my*0.25;
+    if (!layer || (key !== layerKey && kNC(key) !== kNC(layerKey))){ layerKey = key; renderLayer(vis, lt); }
+    else { if (key !== layerKey){ layerKey = key; if (CITY_ALL){ CITY_ALL = false; layerBands(); } else layerCityRefresh(); }   // only the city bakes changed: redraw the towns that were missing theirs
+      if ((ex || ey) && shiftLayer(vis, false, ex, ey)){}
+      else if (offEdge) renderLayer(vis, lt);
+      else if (settled && layer.lite){ layer.lite = false; layerBands(); }
+      else if (settled && layer.q && layer.q.length) renderLayer(vis, false, layer.q.shift()); } }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (flyReuse && layer.s !== view.s){ const f = view.s/layer.s; ctx.drawImage(layer, dpr*(view.x - (layer.vx + layer.mx)*f), dpr*(view.y - (layer.vy + layer.my)*f), layer.width*f, layer.height*f); }
   else ctx.drawImage(layer, Math.round((view.x - layer.vx - layer.mx)*dpr), Math.round((view.y - layer.vy - layer.my)*dpr));
   drawCraters(now);   // impact decals: under outlines, units and labels, and under the night tint
+  drawSeaSurface(now, panning || moved);   // live waves and shore foam on the water (static depth only while the view moves)
   ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   if (hoverProv >= 0 && hoverProv !== sel.prov && !G.P[hoverProv].sea){ ctx.strokeStyle = 'rgba(255,248,230,0.55)'; ctx.lineWidth = 1.6*px; ctx.stroke(GEO.outline[hoverProv]); }
@@ -6234,6 +6532,7 @@ function draw(now){
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const k = zoomK(hexPx), kl = Math.min(k, 2), pulse = 0.5 + 0.5*Math.sin(now/180);
   const showCity = hexPx >= 5, showNames = hexPx >= 15, showSea = hexPx >= 9;
+  drawBattleLOD(now, vis, kl, hexPx);   // strategic / operational zoom: smoke column, flickers and tracers, under the city markers, names, counters and the battle badge
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const boxes0 = [];   // screen boxes claimed so far: counters and map controls first, then country and sea names, then city and province names
   const showNeutral = hexPx >= (GS > 1 ? FORM_PX : 11), items = [];   // independent garrisons stay hidden until zoomed in (or selected / fighting)
@@ -6586,22 +6885,39 @@ function draw(now){
     if ((!armyVisible(a, vis) && !vis.has(v.tgt)) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v))){   // stealthy UAVs (III+) only show near your air defence or under your AWACS
       if (vis.loc.size && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && vis.loc.has(p0) && !(a.u.drone && uavLv(a.owner) >= 3)){ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, spread:false, unk:true}); } }
       continue; }
-    const [x, y] = toScreen(v.x, v.y), T = G.P[v.tgt], B = G.P[a.air.base], ang = v.ang ?? 0, phB = v.stage === 'back', alt = v.alt ?? 1;
+    const [x, y] = toScreen(v.x, v.y), T = G.P[v.tgt], B = G.P[a.air.base], ang = v.hd ?? 0, phB = v.stage === 'back', alt = v.alt ?? 1, bank = v.bank || 0, ca0 = Math.cos(ang), sa0 = Math.sin(ang);
     const col = mapCol(a.owner), kind = artT(wingT(a), a.owner), nPl = Math.min(3, count(a)), sc = Math.max(0.9, Math.min(k, 2.2*zx(hexPx)))*1.1, bob = Math.sin(now/300 + a.id)*1.5*alt;
+    // contrail history on screen (world-anchored, so it curves through turns and stays put while panning); far out only the last 0.9 s
+    const trS = []; if (v.tr && v.tr.length){ const tMin = hexPx < 40 ? now - 900 : -Infinity; for (const q of v.tr){ if (q[3] < tMin) continue; const [sx, sy] = toScreen(q[0], q[1]); trS.push(sx, sy + bob, Math.cos(q[2]), Math.sin(q[2])); }
+      trS.push(x, y + bob, ca0, sa0); }
+    const nTr = trS.length/4, trA = hexPx < 40 ? 0.6 : 1;
     for (let i = 0; i < nPl; i++){ const off = [[0, 0], [-0.55, 0.66], [-0.55, -0.66]][i], Df = Math.max(16*sc, 26*sc*(UART[kind] ? UART[kind][2] : 0.7)*(0.85 + 0.15*alt)); const ox = (Math.cos(ang)*off[0] - Math.sin(ang)*off[1])*Df, oy = (Math.sin(ang)*off[0] + Math.cos(ang)*off[1])*Df;
       const px0 = x + ox, py0 = y + oy + bob, L0 = 8*sc;
-      // contrails: cached fading strips, rotated into place (no gradient object per plane per frame); multi-engine heavies leave two, drones a thin one,
-      // helicopters none (their rotor spins instead)
+      // contrails: a tapered trail along this plane's own flight history, in three age buckets that widen and fade (3 strokes per plane);
+      // multi-engine heavies leave two lines, drones a thin one, helicopters none (their rotor spins instead)
       const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = 26*sc*(UART[kind] ? UART[kind][2] : 0.7)*(0.85 + 0.15*alt);
-      if (!rotor){ const Lc = (dr ? 34 : heavy ? 72 : 58)*sc/1.1*(0.92 + 0.08*Math.sin(now/240 + i)), wc = (dr ? 1.7 : 2.2)*Math.min(2, sc/1.1);
-        ctx.save(); ctx.translate(px0, py0); ctx.rotate(ang + Math.PI); ctx.globalAlpha = dr ? 0.8 : 1;
-        for (const lo of heavy ? [-0.2, 0.2] : [0]) ctx.drawImage(contrailImg(), Dp*0.38, lo*Dp - wc/2, Lc, wc);
-        ctx.restore(); }
-      if (uArt(kind) && drawFig(kind, px0, py0, Dp, ang, {alt:0.25 + 0.75*alt, night:isNight(v.tgt), rotor:rotor ? 1 : 0, now})){
+      if (!rotor){ const wc = (dr ? 1.2 : 2.2)*Math.min(2, sc/1.1);
+        if (nTr >= 3){ const los = heavy ? [-0.2, 0.2] : [0], b1 = Math.floor(nTr/3), b2 = Math.floor(nTr*2/3);
+          ctx.save(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgb(235,240,245)';
+          for (const [j0, j1, wm, a0] of [[0, b1, 2.2, 0.12], [b1, b2, 1.5, 0.3], [b2, nTr - 1, 1, 0.55]]){ if (j1 <= j0) continue;
+            ctx.beginPath();
+            for (const lo of los){ for (let j = j0; j <= j1; j++){ const o = j*4, cx0 = trS[o + 2], sx0 = trS[o + 3], fx0 = off[0]*Df - Dp*0.38, fy0 = off[1]*Df + lo*Dp;
+                const qx = trS[o] + cx0*fx0 - sx0*fy0, qy = trS[o + 1] + sx0*fx0 + cx0*fy0; if (j === j0) ctx.moveTo(qx, qy); else ctx.lineTo(qx, qy); } }
+            ctx.lineWidth = wc*wm; ctx.globalAlpha = a0*trA*(dr ? 0.8 : 1); ctx.stroke(); }
+          ctx.restore(); }
+        else { const Lc = (dr ? 34 : heavy ? 72 : 58)*sc/1.1, wc0 = (dr ? 1.7 : 2.2)*Math.min(2, sc/1.1);   // no history yet (first frames): the old fading strip
+          ctx.save(); ctx.translate(px0, py0); ctx.rotate(ang + Math.PI); ctx.globalAlpha = dr ? 0.8 : 1;
+          for (const lo of heavy ? [-0.2, 0.2] : [0]) ctx.drawImage(contrailImg(), Dp*0.38, lo*Dp - wc0/2, Lc, wc0);
+          ctx.restore(); } }
+      // bank: the plane narrows across its heading while it turns, and its shadow slips sideways
+      const bq = 1 - 0.2*Math.abs(bank), bsh = Math.max(3, 0.1*Dp)*bank, shx = -sa0*bsh, shy = ca0*bsh, banked = Math.abs(bank) > 0.02;
+      if (banked){ ctx.save(); ctx.translate(px0, py0); ctx.rotate(ang); ctx.scale(1, bq); ctx.rotate(-ang); ctx.translate(-px0, -py0); }
+      if (uArt(kind) && drawFig(kind, px0, py0, Dp, ang, {alt:0.25 + 0.75*alt, night:isNight(v.tgt), rotor:rotor ? 1 : 0, now, shx, shy})){
         if ((kind === 'jet' || kind === 'int') && Math.random() < 0.18){ const d0 = 15*sc*UART[kind][2], [wx, wy] = screenToWorld(px0 - Math.cos(ang)*d0, py0 - Math.sin(ang)*d0); emit('fire', wx, wy, {vx:-Math.cos(ang)*20, vy:-Math.sin(ang)*20, s0:2.6, s1:0.8, life:130}); } }
-      else if (figFB(kind) && window.U3D && U3D.has(kind)){ const hp3 = 22*sc*(0.8 + 0.2*alt), burn = v.stage === 'out' && v.kind === 'strike' || v.stage === 'over' ? 1 : 0; ctx.save(); ctx.globalAlpha = 0.22 + 0.1*(1 - alt); ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 3 + 9*alt, py0 + 4 + 22*alt, hp3*(1 - 0.15*alt), ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3*(kind === 'drone' ? 0.8 : 1), ang, kind === 'heli' ? Math.floor(now/30 + i) % 4 : burn, isNight(v.tgt));
+      else if (figFB(kind) && window.U3D && U3D.has(kind)){ const hp3 = 22*sc*(0.8 + 0.2*alt), burn = v.stage === 'out' && v.kind === 'strike' || v.stage === 'over' ? 1 : 0; ctx.save(); ctx.globalAlpha = 0.22 + 0.1*(1 - alt); ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 3 + 9*alt + shx, py0 + 4 + 22*alt + shy, hp3*(1 - 0.15*alt), ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3*(kind === 'drone' ? 0.8 : 1), ang, kind === 'heli' ? Math.floor(now/30 + i) % 4 : burn, isNight(v.tgt));
         if (Math.random() < 0.25){ const [wx, wy] = screenToWorld(px0 - Math.cos(ang)*hp3*0.4, py0 - Math.sin(ang)*hp3*0.4); emit('fire', wx, wy, {vx:-Math.cos(ang)*20, vy:-Math.sin(ang)*20, s0:4, s1:1, life:160}); } }
-      else if (figFB(kind)){ ctx.save(); ctx.globalAlpha = 0.3; jetSprite(px0 + 6, py0 + 12, sc*0.9, '#000000', ang, kind); ctx.restore(); jetSprite(px0, py0, sc*0.9, col, ang, kind); } }
+      else if (figFB(kind)){ ctx.save(); ctx.globalAlpha = 0.3; jetSprite(px0 + 6 + shx, py0 + 12 + shy, sc*0.9, '#000000', ang, kind); ctx.restore(); jetSprite(px0, py0, sc*0.9, col, ang, kind); }
+      if (banked) ctx.restore(); }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreen(T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(phB ? toScreen(B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }
     // strength in a small pill edged in the owner's colour; pills of wings flying side by side are nudged apart so '6' and '1' never read as '61'
     { const sl = Math.min(sc, 2.2); ctx.font = `700 ${Math.round(10*sl)}px ${BODY}`; const lb = String(count(a)), lw = ctx.measureText(lb).width + 7*sl, lh = 12*sl; let ly = y + 16*sc;
@@ -8251,14 +8567,14 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, armyPos: a => armyPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, get layer(){ return layer; }, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, FXG, nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3c:{splitRows:a => splitRows(a), splitPlan:(a, pl) => splitPlan(a, pl), halfPlan:a => halfPlan(a), evenPlan:(a, n) => evenPlan(a, n), typePlan:a => typePlan(a), onePlan:a => onePlan(a), splitArmy:a => splitArmy(a),
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
-  armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p)}});
+  armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p)}});
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
