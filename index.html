@@ -1144,35 +1144,6 @@ const provFlagHTML = (p, h = 12) => G.P[p].sea ? `<span class="sw" style="backgr
 function textFlag(text, h = 13){ if (!S || !text) return ''; let best = -1, at = 1e9;
   for (const N of S.nations){ const k = text.indexOf(N.name); if (k >= 0 && k < at && !/[A-Za-z]/.test(text[k + N.name.length] || '')){ at = k; best = N.id; } }
   return best >= 0 ? flagHTML(best, h) : ''; }
-// canvas flags for the map: the atlas cell scaled once (high quality) to the device size, then cached
-const FLAGC = new Map();
-function flagCell(i, wpx, hpx){ const im = ART.img('flags'); if (!im || i < 0) return null; const key = i + '|' + wpx + 'x' + hpx; let c = FLAGC.get(key); if (c) return c;
-  if (FLAGC.size > 400) FLAGC.clear();
-  const src = document.createElement('canvas'); src.width = FLAG_CW; src.height = FLAG_CH; src.getContext('2d').drawImage(im, (i % FLAG_COLS)*FLAG_CW, Math.floor(i/FLAG_COLS)*FLAG_CH, FLAG_CW, FLAG_CH, 0, 0, FLAG_CW, FLAG_CH);
-  c = wpx === FLAG_CW && hpx === FLAG_CH ? src : ART.scaled(src, wpx, hpx); FLAGC.set(key, c); return c; }
-// a flag pin for capitals: the flag flying from a thin pole, a gentle wave (shaded folds) and a soft shadow, drawn once per size.
-// returns {c, w, h, ax, ay}: canvas in device px, its css size, and the pole foot (anchor) in css px from the top-left
-function flagPin(i, fh, dpr){ const key = 'pin|' + i + '|' + fh + '|' + dpr; let P = FLAGC.get(key); if (P) return P;
-  const FH = Math.round(fh*dpr), FW = Math.round(fh*4/3*dpr), cell = flagCell(i, FW, FH); if (!cell) return null;
-  const amp = Math.max(1, FH*0.07), pad = Math.ceil(3*dpr), poleW = Math.max(1.5, 1.6*dpr), poleH = Math.round(FH*2.05), fin = Math.max(2, 1.9*dpr);
-  // waving cloth: columns displaced on a sine growing away from the pole, then light/dark folds
-  const cloth = document.createElement('canvas'); cloth.width = FW; cloth.height = Math.ceil(FH + amp*2 + 2); const g1 = cloth.getContext('2d');
-  const off = x => Math.sin(x/FW*Math.PI*1.7 + 0.35)*amp*(0.25 + 0.75*x/FW);
-  for (let x = 0; x < FW; x++) g1.drawImage(cell, x, 0, 1, FH, x, amp + 1 + off(x), 1, FH);
-  g1.globalCompositeOperation = 'source-atop';
-  for (let x = 0; x < FW; x++){ const sl = Math.cos(x/FW*Math.PI*1.7 + 0.35)*(0.25 + 0.75*x/FW); g1.fillStyle = sl > 0 ? `rgba(255,255,255,${(sl*0.22).toFixed(3)})` : `rgba(0,0,0,${(-sl*0.3).toFixed(3)})`; g1.fillRect(x, 0, 1, cloth.height); }
-  g1.fillStyle = 'rgba(0,0,0,.25)'; g1.fillRect(0, 0, Math.max(1, dpr*0.8), cloth.height);   // hem at the pole
-  const c = document.createElement('canvas'); c.width = Math.ceil(pad*2 + poleW + FW); c.height = Math.ceil(pad*2 + poleH + fin); const g = c.getContext('2d');
-  const px0 = pad + poleW/2, top = pad + fin, foot = top + poleH;
-  // ground shadow at the foot
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(px0 + 1.5*dpr, foot - 0.5*dpr, 3*dpr, 1.2*dpr, 0, 0, Math.PI*2); g.fill();
-  g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 2.5*dpr; g.shadowOffsetX = 1.2*dpr; g.shadowOffsetY = 1.5*dpr;
-  g.drawImage(cloth, px0 + poleW/2, top + fin*0.2 - amp - 1);
-  const pg = g.createLinearGradient(px0 - poleW/2, 0, px0 + poleW/2, 0); pg.addColorStop(0, '#c9ccc8'); pg.addColorStop(0.5, '#7d8486'); pg.addColorStop(1, '#3a4043');
-  g.fillStyle = pg; g.fillRect(px0 - poleW/2, top, poleW, poleH);
-  const fg = g.createRadialGradient(px0 - fin*0.3, top - fin*0.3, 0, px0, top, fin); fg.addColorStop(0, '#fff2bf'); fg.addColorStop(1, '#a8812e');
-  g.fillStyle = fg; g.beginPath(); g.arc(px0, top, fin, 0, Math.PI*2); g.fill(); g.restore();
-  P = {c, w:c.width/dpr, h:c.height/dpr, ax:px0/dpr, ay:foot/dpr, fx:(px0 + poleW/2)/dpr, fy:(top - amp)/dpr, fw:FW/dpr, fh:(FH + amp*2)/dpr}; FLAGC.set(key, P); return P; }
 const LOGO = '<h1 class="logo"><span class="l1">Iron Meridian</span><span class="vh">: </span><span class="l2">World War III</span></h1>';
 
 /* ---------------- Rules ---------------- */
@@ -5392,110 +5363,319 @@ function drawFallen(now){ for (let i = FALL.length - 1; i >= 0; i--){ const f = 
   const [x, y] = toScreen(f.wx, f.wy), k2 = age/1800;
   if (f.d){ ctx.save(); ctx.globalAlpha = (1 - k2)*0.85; const ok = drawFig(f.t, x, y + k2*3, f.d*(1 - k2*0.1), f.ang + k2*0.5, {wreck:true}); ctx.restore(); if (ok) continue; }
   if (!window.U3D) continue; ctx.save(); ctx.globalAlpha = (1 - k2)*0.85; ctx.filter = 'brightness(0.35) saturate(0.3)'; U3D.draw(ctx, f.t, f.color, x, y + 2 + k2*5, f.h*(1 - k2*0.15), f.ang + k2*0.6, 0); ctx.restore(); } }
-// an independent country's capital province: its marked capital, else its biggest city, else its biggest province (cached; the map never changes)
-let CCAP = null;
-function countryCap(ci){ if (!CCAP) CCAP = G.countries.map(c => { const L = c.provs.filter(id => !G.P[id].sea); if (!L.length) return -1;
-    return (L.find(id => G.P[id].capFlag) ?? L.filter(id => G.P[id].city).sort((a, b) => G.P[b].pop0 - G.P[a].pop0)[0] ?? L.slice().sort((a, b) => G.P[b].cells.length - G.P[a].cells.length)[0]); });
-  return CCAP[ci] ?? -1; }
-// pole-foot spots for a flag pin beside a marker of radius R0 at (x, cy0), nearest first: right of the marker, then left, then beside the
-// garrison counter box gb (the stack sits just above the marker), then below the marker
-function capFlagSpots(x, cy0, R0, pin, gb){ const fw = pin.fw, fhb = pin.ay - pin.fy, low = cy0 + R0*0.75, out = [];
-  out.push([x + R0 + 2, low], [x - R0 - 3 - fw, low]);
-  if (gb){ out.push([gb[2] + 3, Math.min(low, gb[3] + fhb*0.35)], [gb[0] - 4 - fw, Math.min(low, gb[3] + fhb*0.35)], [gb[2] + 3, low], [gb[0] - 4 - fw, low], [gb[2] + 3, gb[1] + fhb]); }
-  out.push([x + R0 + 2, low + fhb*0.45], [x - R0 - 3 - fw, low + fhb*0.45], [x + 4, cy0 + R0 + fhb + 2], [x - fw - 4, cy0 + R0 + fhb + 2]);
+/* ---------------- Buildings on the map: clean symbols under the city name ----------------
+   From the mid zoom on, a city's (or province's) buildings show as one compact tray of small, original vector symbols under its name:
+   Arms Factory (factory), Airbase (jet), Naval Yard (anchor), Missile Silo (missile), Fortifications (star fort), Refinery (columns with a
+   flare), Foundry (anvil), Farms (wheat) and Recruiting Office (helmet), each with level pips (filled up to its level, out of the building's
+   maximum). The tray keeps a fixed screen size like the names, takes the first free spot under or beside the name and is left out rather
+   than cover a name, a unit plate, a control or another city. Construction: the symbol dimmed inside a thin progress arc, its next pip
+   blinking. A level rise pops the symbol with a bright ring. The building pictures stay in the city panel and the build menu. Each tray is
+   one cached canvas (rebuilt only when its buildings, levels, owner or size change). */
+const TRAY_PX = 18, TRAY_PX2 = 26, TRAY_ANIM = 1200;   // hexPx from which city / countryside trays show; length of the upgrade pop (ms)
+const TRAY_K = ['fac', 'air', 'yard', 'silo', 'fort', 'ref', 'fdy', 'farm', 'rec'];
+// the symbols, drawn in a 24 x 24 box with the caller's fill (and stroke) colour
+const BGLYPH = {
+  fac(g){ g.fill(new Path2D('M2 21V10.5l5 3.2v-3.2l5 3.2v-3.2l5 3.2V3h3.6v18Z M4.6 16.4h2.2v2.2H4.6Z M9.4 16.4h2.2v2.2H9.4Z M14.2 16.4h2.2v2.2h-2.2Z'), 'evenodd'); },
+  air(g){ g.fill(new Path2D('M12 1.4C13 1.4 13.6 2.6 13.6 4V9.2L22.4 14.4V16.8L13.6 14.1V19L16.4 21.1V22.9L12 21.9L7.6 22.9V21.1L10.4 19V14.1L1.6 16.8V14.4L10.4 9.2V4C10.4 2.6 11 1.4 12 1.4Z')); },
+  yard(g){ g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 2.3;
+    g.beginPath(); g.arc(12, 4.4, 2.2, 0, Math.PI*2); g.stroke();
+    g.beginPath(); g.moveTo(12, 6.6); g.lineTo(12, 21); g.moveTo(7.4, 9.6); g.lineTo(16.6, 9.6); g.stroke();
+    g.beginPath(); g.arc(12, 12.2, 8.3, 0.22, Math.PI - 0.22); g.stroke();
+    for (const sx of [1, -1]){ g.beginPath(); g.moveTo(12 + 5.6*sx, 12.9); g.lineTo(12 + 9.9*sx, 10.9); g.lineTo(12 + 9.2*sx, 15.9); g.closePath(); g.fill(); g.stroke(); } g.restore(); },
+  silo(g){ g.fill(new Path2D('M12 1.2C14.1 2.9 14.6 5 14.6 6.8V14.2L18.2 19.2V21.2L14.6 19.7V20.6H9.4V19.7L5.8 21.2V19.2L9.4 14.2V6.8C9.4 5 9.9 2.9 12 1.2Z M9.4 8.2H14.6V9.4H9.4Z'), 'evenodd');
+    g.save(); g.globalAlpha *= 0.85; g.fill(new Path2D('M10.4 21.4H13.6L12 23.6Z')); g.restore(); },
+  fort(g){ const q = new Path2D(), st = (R, r) => { for (let i = 0; i < 10; i++){ const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r : R, px = 12 + Math.cos(a)*rr, py = 12.6 + Math.sin(a)*rr; if (i) q.lineTo(px, py); else q.moveTo(px, py); } q.closePath(); };
+    st(11.2, 6.6); st(6.8, 4.0); g.fill(q, 'evenodd'); g.beginPath(); g.arc(12, 12.6, 1.8, 0, Math.PI*2); g.fill(); },
+  ref(g){ g.fill(new Path2D('M4.5 21V6.2C4.5 5 5.4 4.2 6.6 4.2S8.7 5 8.7 6.2V21Z M10.6 21V10.4C10.6 9.3 11.4 8.6 12.5 8.6S14.4 9.3 14.4 10.4V21Z M15.9 21V16.2C15.9 14.6 17.4 13.6 19.1 13.6S22.3 14.6 22.3 16.2V21Z M2 21H23V22.6H2Z M8.7 12.2H10.6V13.4H8.7Z M14.4 16.6H15.9V17.8H14.4Z'));
+    g.fill(new Path2D('M6.6 0.6C7.9 1.8 8.1 2.6 7.6 3.5C7.3 2.9 6.9 2.7 6.6 2.4C6.3 2.9 5.9 3 5.6 3.5C5.1 2.4 5.6 1.6 6.6 0.6Z')); },
+  fdy(g){ g.fill(new Path2D('M1 6.6H22.8V10.4H18.2C17.2 10.4 16.6 11 16.6 12V14.6L19.2 17.6H20V20.8H6.4V17.6H7.2L9.8 14.6V12.4C6.4 12.2 2.8 10.4 1 6.6Z'));   // anvil with sparks
+    g.save(); g.lineWidth = 1.3; g.lineCap = 'round'; g.beginPath(); g.moveTo(13.6, 1.4); g.lineTo(14.2, 4.2); g.moveTo(18.4, 2.2); g.lineTo(16.8, 4.6); g.moveTo(9.6, 2.4); g.lineTo(11.4, 4.8); g.stroke(); g.restore(); },
+  farm(g){ g.save(); g.lineCap = 'round'; g.lineWidth = 1.7; g.beginPath(); g.moveTo(12, 23); g.lineTo(12, 5.5); g.stroke();
+    const grain = (x, y, a) => { g.beginPath(); g.ellipse(x, y, 1.75, 3.4, a, 0, Math.PI*2); g.fill(); };
+    grain(12, 3.4, 0); for (const y of [7.4, 11.6, 15.8]){ grain(8.9, y, -0.78); grain(15.1, y, 0.78); } g.restore(); },
+  rec(g){ g.fill(new Path2D('M3.4 16.6C3.4 10 7.2 5 12.2 5C17.2 5 20.8 10 20.8 16.6H22.8V19.2H1.4V16.6Z M3.6 13.4H20.6V14.7H3.6Z'), 'evenodd'); },
+};
+const trayOn = (P, p, hexPx, vis) => vis.has(p) && hexPx >= (P.city || isCapital(p) ? TRAY_PX : TRAY_PX2);
+// the tray's buildings: the built ones at their level, plus the one under construction (c) at its current level (0 for a new one)
+function trayItems(p){ const B = S.bld[p], cons = S.cons[p], out = [];
+  for (const k of TRAY_K){ const lv = B[k] || 0, c = cons && cons.k === k ? cons : null; if (lv > 0 || c) out.push({k, lvl:lv, c}); } return out; }
+// glyph size (css px) grows a little with the zoom; cells (glyph + margins), pips and padding follow it. rows: 1, or 2 where a long tray
+// finds no room on one line
+function trayDims(n, hexPx, rows = 1){ const g = Math.round(12 + Math.max(0, Math.min(3, (hexPx - 24)/20))), cwd = g + 3, ph = g >= 14 ? 2.4 : 2, rh = g + 1.5 + ph + 2.5, cols = Math.ceil(n/rows);
+  return {g, cwd, ph, rh, cols, w:cols*cwd + 2, h:Math.ceil(n/cols)*rh + 1.5}; }
+const trayCell = (i, D) => [1 + (i % D.cols)*D.cwd + D.cwd/2, Math.floor(i/D.cols)*D.rh + 2];   // centre x and glyph top of cell i, inside the tray
+// level pips under a symbol: one per level up to the building's maximum, filled up to its level (only >= 0: that one pip, highlighted)
+function trayPips(g, k, lvl, cx, top, D, only = -1, hi = '#fff3cf'){ const M = BUILD[k].max, pw = Math.min(3, (D.g + 1 - (M - 1))/M), x0 = cx - (M*pw + M - 1)/2, y = top + D.g + 1.5;
+  for (let i = 0; i < M; i++){ if (only >= 0 && i !== only) continue; g.fillStyle = only >= 0 ? hi : i < lvl ? '#e9c46a' : 'rgba(241,233,210,.2)'; g.fillRect(x0 + i*(pw + 1), y, pw, D.ph); } }
+const TRAYC = new Map();   // province -> {sig, cv}: the tray (plate, symbols, pips) as one canvas
+function trayCanvas(p, its, D, col){ const sig = D.g + '|' + D.cols + col + dpr + its.map(t => t.k + t.lvl + (t.c ? 'c' : '') + (t.an ? 'a' : '')).join(','), e = TRAYC.get(p); if (e && e.sig === sig) return e.cv;
+  const cv = document.createElement('canvas'); cv.width = Math.ceil(D.w*dpr); cv.height = Math.ceil(D.h*dpr); const g = cv.getContext('2d'); g.scale(dpr, dpr);
+  roundRect(g, 0.5, 0.5, D.w - 1, D.h - 1, 3); g.fillStyle = 'rgba(9,13,15,.86)'; g.fill(); g.lineWidth = 1; g.strokeStyle = rgba(col, 0.8); g.stroke();
+  its.forEach((t, i) => { const [cx, top] = trayCell(i, D);
+    if (!t.an){ const sc = t.c ? 0.7 : 1, gs = D.g*sc; g.save(); g.globalAlpha = t.c ? 0.6 : 1; g.translate(cx - gs/2, top + (D.g - gs)/2); g.scale(gs/24, gs/24); g.fillStyle = g.strokeStyle = '#f1e9d2'; BGLYPH[t.k](g); g.restore(); }   // popping symbols are drawn live
+    trayPips(g, t.k, t.lvl, cx, top, D); });
+  TRAYC.set(p, {sig, cv}); return cv; }
+// place the trays (city ones right after the city names, the countryside ones after the province names): under the placed name, else
+// beside or above it, else around the city marker; a long tray that finds no room tries again on two lines. A spot over a name, a unit
+// plate, a control or a city marker is never taken: with no free spot the tray is left out.
+function placeTrays(trq, boxes, LPL, cityPass, hexPx){ const out = [];
+  const free = r => !boxes.some(q => q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1]) && !marks.some(m => m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3]);
+  for (const T of trq){ if (!!T.city !== cityPass) continue; const b = LPL.get(T.p);
+    for (const rows of T.items.length >= 3 ? [1, 2] : [1]){ const D = trayDims(T.items.length, hexPx, rows), w = D.w, h = D.h, cand = [];
+      if (b){ const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2; cand.push([cx - w/2, b[3] + 1], [b[0], b[3] + 1], [b[2] - w, b[3] + 1], [b[2] + 3, cy - h/2], [b[0] - 3 - w, cy - h/2], [cx - w/2, b[1] - 1 - h]); }
+      if (T.city) cand.push([T.x - w/2, T.ly], [T.x + T.mr + 3, T.my - h/2], [T.x - T.mr - 3 - w, T.my - h/2], [T.x + T.mr + 3, T.my + 2], [T.x - T.mr - 3 - w, T.my + 2],
+        [T.x + T.mr + 3, T.my - 2 - h], [T.x - T.mr - 3 - w, T.my - 2 - h], [T.x - w/2, T.ly + 16], [T.x - w/2, T.my - T.mr - 3 - h]);
+      else cand.push([T.x - w/2, T.y - h/2], [T.x - w/2, T.y + 6], [T.x - w/2, T.y - 6 - h]);
+      const at = cand.find(([x0, y0]) => free([x0, y0, x0 + w, y0 + h])); if (!at) continue;
+      const r = [at[0], at[1], at[0] + w, at[1] + h]; r.unit = true; r.fort = true; r.bld = true; r.at = -3; boxes.push(r); T.D = D; T.x0 = at[0]; T.y0 = at[1]; out.push(T); break; } }
   return out; }
-/* ---------------- Animated city buildings (close zoom) ---------------- */
-const BSLOT = [[-24, 6], [24, 6], [-34, -6], [34, -6], [-20, -18], [20, -18], [-40, 16], [40, 16], [0, -26]];
-const lastSmoke = new Map();
-function drawBuildings(now, kl, vis){
-  const hexPx = view.s*HS0; if (hexPx < ART_PX) return; const u = Math.max(1, Math.min(3.4, hexPx/16));
-  ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !vis.has(p)) continue; const B = S.bld[p], cons = S.cons[p];
-    const list = BK.filter(k => B[k] > 0 && k !== 'fort' && !(P.city && bartOk(k))); if (!list.length && !(cons && !(P.city && bartOk(cons.k))) && !B.fort) continue;   // the four art buildings are drawn by drawBuildingArt
-    const [x, y0] = toScreen(P.x, P.y); if (x < -200 || y0 < -200 || x > cw + 200 || y0 > ch + 200) continue; const y = y0 + 9*kl, col = colorOf(S.owner[p]);
-    const R = Math.sqrt(P.cells.length)*HS*view.s*0.62, us = Math.min(u, Math.max(0.55, R/44));   // buildings fit inside the province
-    const items = list.map(k => ({k, lvl:B[k]})); if (cons && !(P.city && bartOk(cons.k))) items.push({k:'cons', lvl:cons.lvl, c:cons});
-    if (P.city && bartAny()){ // around the city plate and its building images the drawn buildings sit on an outer ring (the fort first)
-      const Lo = bartLayout(P, p, kl), rL = Lo.dist + Lo.db*0.5 + 9*us, at = i => { const a = BART_RING[i % BART_RING.length]*Math.PI/180; return [x + Math.cos(a)*rL, y + Math.sin(a)*rL*0.8]; };
-      let i0 = 0; if (B.fort){ const [fx, fy] = at(i0++); fortWalls(fx, fy, us, B.fort, col); }
-      items.forEach(it => { const [bx, by] = at(i0++); drawBld(it, bx, by + 4*us, us, now, p, col, isNight(p)); }); continue; }
-    if (B.fort) fortWalls(x - 16*us, y + 10*us, us, B.fort, col);
-    items.forEach((it, i) => { const sl = BSLOT[i % BSLOT.length], bx = x + sl[0]*us, by = y + sl[1]*us; drawBld(it, bx, by, us, now, p, col, isNight(p)); }); }
-  ctx.restore(); }
-/* ---------------- Building art: five-level images at close zoom ----------------
-   The city itself is a round ground plate (b-city-<cityLevel>) under the city marker; Arms Factory, Airbase, Naval Yard and Missile Silo
-   are images at their level in fixed slots around it. A level rise plays a 1.2 s crossfade/scale-pop with a ring and dust; construction
-   shows a progress arc and a flickering scaffold. Any image that fails to load keeps the drawn look above. */
-const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo'}, BART_K = ['fac', 'air', 'yard', 'silo'];
-const BART_D = 20, CITY_D = 25, BANIM_MS = 1200;
-// the aerial art (city patch and building compounds) only shows when zoomed in close; at play zoom the map keeps clean city markers
-const ART_PX = 46, artFade = hexPx => Math.max(0, Math.min(1, 0.2 + (hexPx - ART_PX)/5));
-// slot angles (degrees, screen y down) around the city plate: two columns left and right, so the stack above the city and its name below stay clear
-const BANG = {fac:207, air:-27, yard:153, silo:27}, BART_RING = [160, 20, 90, 200, -20, 130, 50, 235, -55];
+// draw a placed tray: the cached plate, then live: construction arcs and blinking pips, upgrade pops (and the city's own level-up ring)
+function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.x0*dpr)/dpr, Y = Math.round(T.y0*dpr)/dpr, a0 = Math.max(0, Math.min(1, (hexPx - (T.city ? TRAY_PX : TRAY_PX2))/3 + 0.25));
+  for (const t of items){ const r = bLevel(p + ':' + t.k, t.lvl, now); let f = r.t0 ? (now - r.t0)/TRAY_ANIM : -1; if (f >= 1){ r.t0 = 0; f = -1; } t.f = f; t.an = f >= 0; t.r = r; }
+  if (T.city){ const r = bLevel(p + ':city', cityLevel(p), now); let f = r.t0 ? (now - r.t0)/(TRAY_ANIM*1.4) : -1; if (f >= 1){ r.t0 = 0; f = -1; }
+    if (f >= 0){ const e = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*0.5*(1 - f); ctx.drawImage(GLOW(), T.x - 16*kl, T.my - 16*kl, 32*kl, 32*kl);
+      ctx.globalAlpha = a0*(1 - f)*(1 - f); ctx.lineWidth = 1.5 + 1.5*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(T.x, T.my, (6 + 20*e)*kl, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
+  ctx.globalAlpha = a0; ctx.drawImage(trayCanvas(p, items, D, T.col), X, Y, D.w, D.h);
+  items.forEach((t, i) => { const [cx0, top] = trayCell(i, D), cx = X + cx0, cy = Y + top + D.g/2;
+    if (t.c){ const pf = Math.max(0, Math.min(1, 1 - t.c.h/Math.max(1, t.c.h0))), R = D.g*0.5 + 0.6;
+      ctx.lineWidth = 2.4; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
+      ctx.lineWidth = 1.3; ctx.strokeStyle = '#eaa83c'; ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI/2, -Math.PI/2 + Math.max(0.05, pf)*Math.PI*2); ctx.stroke();
+      ctx.save(); ctx.globalAlpha = a0*(afxReduced() ? 0.85 : 0.5 + 0.45*Math.sin(now/210)); ctx.translate(X, Y); trayPips(ctx, t.k, 0, cx0, top, D, t.c.lvl - 1, '#eaa83c'); ctx.restore(); }   // the level being built blinks
+    if (t.an){ const f = t.f, e = easeOut(f), sc = f < 0.3 ? 1 + 0.5*easeOut(f/0.3) : 1.5 - 0.5*easeOut((f - 0.3)/0.7), gs = D.g*sc;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*0.75*(1 - f); ctx.drawImage(GLOW(), cx - D.g*1.4, cy - D.g*1.4, D.g*2.8, D.g*2.8);
+      ctx.globalAlpha = a0*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, D.g*(0.6 + 1.2*e), 0, Math.PI*2); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.globalAlpha = a0; ctx.translate(cx - gs/2, cy - gs/2); ctx.scale(gs/24, gs/24); ctx.fillStyle = ctx.strokeStyle = f < 0.45 ? '#fff8e4' : '#f1e9d2'; BGLYPH[t.k](ctx); ctx.restore();
+      ctx.save(); ctx.globalAlpha = a0*(1 - f); ctx.translate(X, Y); trayPips(ctx, t.k, 0, cx0, top, D, t.lvl - 1); ctx.restore();   // the new pip flashes white
+      if (t.r.fresh){ t.r.fresh = false; const [wx, wy] = screenToWorld(cx, cy), sp0 = D.g*1.6/Math.max(0.3, view.s);
+        for (let n = 0; n < 6; n++) emit('spark', wx, wy, {vx:(Math.random() - 0.5)*sp0*2.4, vy:-(sp0*(0.7 + Math.random())), s0:2.2, s1:0.5, life:450 + Math.random()*300}); } } });
+  ctx.globalAlpha = 1; }
+/* ---------------- Building art: the five-level pictures (city panel and build menu) ----------------
+   Arms Factory, Airbase, Naval Yard and Missile Silo pictures at their level (b-<art>-1..5) and the city pictures (b-city-1..5) show in the
+   city panel and the build menu. On the map the buildings are symbols (see 'Buildings on the map' above) and the city is part of the map
+   (see 'Cities on the map' below). */
+const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo'};
+const ART_PX = 46;   // close zoom: ground patterns on the map, and the city marker steps back so the built-up area shows around it
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
 const bimg = (k, l, px = 22, dim = false) => (k === 'city' || BART[k]) && ART.ready(bartName(k, l)) ? `<i class="bi${dim ? ' dim' : ''}" style="--bi:url(${ART.url(bartName(k, l))});--bs:${px}px" aria-hidden="true"></i>` : '';
-const bartAny = () => bartOk('city') || BART_K.some(bartOk);
-const PLATE_MK = 0.48;   // city marker scale while it sits on the aerial city patch
-const cityPlateK = (P, p, vis) => P.city && view.s*HS0 >= ART_PX && vis.has(p) && bartOk('city') ? PLATE_MK : 1;
-// sizes at the current zoom: the plate is never smaller than about 1.35x the city marker (so it shows around it), buildings sit just outside the plate
-function bartLayout(P, p, kl){ const cap = isCapital(p), hexPx = view.s*HS0, u = Math.max(1, Math.min(3.4, hexPx/16)), R = Math.sqrt(P.cells.length)*HS*view.s*0.62, us = Math.min(u*1.25, Math.max(0.6, R/30));
-  const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, mR = (cap ? 6.5 + tier + 2.2 : [2.8, 3.6, 4.6][tier] + 1.8)*kl*(bartOk('city') ? PLATE_MK : 1), L = cityLevel(p);
-  // the aerial city patch covers most of the province (its wide soft edge fades into the terrain, the province's shape clips it) and grows a
-  // little with the city level; the compounds sit inside the province on the patch's rim, so city and compounds read as one built-up area
-  const dc = Math.min(440, Math.max(mR*6, Math.min(380, R*2.0), hexPx*(1.5 + 0.12*L + 0.45*tier)*(cap ? 1.12 : 1))*(0.86 + 0.035*L)); let db = Math.max(26, Math.min(76, R*0.8, dc*0.36));
-  // the two columns sit just clear of the marker (their inner corners may reach its surroundings: the fort shield, the oil drop, your capital's
-  // pulsing ring and the city name are drawn on top) and stay within about the province (only their soft edges may reach past it); the
-  // soft-edged compounds of a column may overlap a little
-  const inD = d0 => (mR + 2 + d0*0.42)/BCOS, outD = d0 => R*1.2 - d0*0.42;
-  if (outD(db) < inD(db)) db = Math.max(22, Math.min(db, (R*1.2 - (mR + 2)/BCOS)/(0.42 + 0.42/BCOS)));
-  const dist = Math.max(inD(db), db*0.85, Math.min(outD(db), dc*0.3 + db*0.35));
-  return {us, L, dc, db, dist, ang:BANG}; }
-const BCOS = Math.cos(27*Math.PI/180), BSIN = Math.sin(27*Math.PI/180), CNHW = new Map();
-try { document.fonts && document.fonts.ready.then(() => CNHW.clear()); } catch (e) {}   // re-measure once the web fonts are in
-// half the width of a city's name label as the label pass draws it (same font), cached per name
-function cityNameHW(P, cap){ const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, f = cap ? 12.5 : 10.5 + tier*0.6, font = `${cap || tier === 2 ? 600 : 500} ${f}px ${BODY}`, key = font + '|' + P.cityName;
-  let w = CNHW.get(key); if (w == null){ ctx.save(); ctx.font = font; w = (ctx.measureText(P.cityName || '').width + 6)/2; ctx.restore(); if (CNHW.size > 2000) CNHW.clear(); CNHW.set(key, w); } return w; }
-// urban footprint at play zoom: a pale built-up area sized by population - city blocks on a slightly rotated street grid, dense in the
-// middle and thinning into irregular outskirts (low-frequency noise decides which outer blocks exist); at night the same blocks become warm
-// street lights. Cached per variant, quantised size and day/night.
-const UFOOT = new Map();
-function footSprite(v, px, night){ const q = Math.max(12, Math.round(Math.pow(2, Math.round(Math.log2(px*dpr)*5)/5))), key = v + '|' + q + '|' + (night ? 1 : 0);
-  let c = UFOOT.get(key); if (c) return c; if (UFOOT.size > 260) UFOOT.clear();
-  c = document.createElement('canvas'); c.width = c.height = q; const g = c.getContext('2d'), Rr = q/2;
-  let sd = (v*2654435761 + 97) >>> 0; const rnd = () => ((sd = (sd*1664525 + 1013904223) >>> 0)/4294967296);
-  const ph = [rnd()*6.3, rnd()*6.3, rnd()*6.3, rnd()*6.3], lobe = an => 1 + 0.22*Math.sin(an*2 + ph[0]) + 0.14*Math.sin(an*3 + ph[1]) + 0.08*Math.sin(an*5 + ph[2]);
-  const wash = g.createRadialGradient(Rr, Rr, 0, Rr, Rr, Rr*0.9); wash.addColorStop(0, night ? 'rgba(255,180,100,.16)' : 'rgba(200,194,178,.32)'); wash.addColorStop(1, 'rgba(200,190,170,0)');
-  g.fillStyle = wash; g.fillRect(0, 0, q, q);
-  const cells = Math.max(7, Math.min(22, Math.round(q/7))), gs = q/cells, rot = (rnd() - 0.5)*0.5, cr = Math.cos(rot), sr = Math.sin(rot);
-  for (let i = -cells; i <= cells; i++) for (let j = -cells; j <= cells; j++){
-    const u = i*gs*0.5, w = j*gs*0.5, bx = Rr + u*cr - w*sr, by = Rr + u*sr + w*cr, dx = bx - Rr, dy = by - Rr, rr = Math.hypot(dx, dy)/(Rr*0.92*lobe(Math.atan2(dy, dx)));
-    if (rr >= 1 || (i % 5 === 0 && rr > 0.12) || (j % 4 === 0 && rr > 0.12)) continue;   // outside, or an avenue
-    const f = 1 - rr, keep = f*1.6 + Math.sin(i*0.9 + ph[3])*Math.cos(j*0.7 + ph[0])*0.35 - rnd()*0.55; if (keep < 0.25) continue;
-    if (night){ const s0 = Math.max(0.7, gs*0.22*(0.6 + rnd()*0.8)); g.fillStyle = `rgba(255,${214 + Math.round(rnd()*36)},${150 + Math.round(rnd()*60)},${Math.min(1, 0.25 + 0.6*f)*(0.5 + rnd()*0.4)})`; g.beginPath(); g.arc(bx, by, s0*0.6, 0, Math.PI*2); g.fill(); }
-    else { const w0 = gs*0.5*(0.55 + rnd()*0.35), h0 = gs*0.5*(0.55 + rnd()*0.35), t = 188 + Math.round(rnd()*44);
-      g.save(); g.translate(bx, by); g.rotate(rot); g.fillStyle = `rgba(${t},${t - 5},${t - 16},${Math.min(0.95, 0.3 + 0.75*f)})`; g.fillRect(-w0/2, -h0/2, w0, h0); g.restore(); } }
-  // soften the block grid (a crisp lattice reads as pixel dots, worst at night): one blur pass, plus a warm core glow at night
-  { const o = document.createElement('canvas'); o.width = o.height = q; const go = o.getContext('2d'); go.filter = `blur(${Math.max(0.5, q/(night ? 70 : 110)).toFixed(2)}px)`; go.drawImage(c, 0, 0); go.filter = 'none';
-    if (night){ const cg = go.createRadialGradient(Rr, Rr, 0, Rr, Rr, Rr*0.75); cg.addColorStop(0, 'rgba(255,214,150,.28)'); cg.addColorStop(1, 'rgba(255,200,130,0)'); go.globalCompositeOperation = 'lighter'; go.fillStyle = cg; go.fillRect(0, 0, q, q); }
-    c = o; }
-  UFOOT.set(key, c); return c; }
+const PLATE_MK = 0.48;   // city marker scale at close zoom, so the built-up area shows around it
+// the marker steps back as the urban area grows on screen (from the mid zoom), so the city is never hidden under its own marker
+const cityPlateK = (P, p, vis) => P.city && vis.has(p) && cityArtOn ? 1 - (1 - PLATE_MK)*Math.max(0, Math.min(1, (view.s*HS0 - 12)/10))*cityFade(view.s*HS0) : 1;
+let cityArtOn = false;   // all city art loaded (set once a frame)
+/* ---------------- Cities on the map: urban areas in world coordinates ----------------
+   Every city is part of the map itself, not a sticker: an irregular built-up area whose size comes from its population (in km, turned into
+   world units), drawn into the cached map layer, so it grows and shrinks exactly with the terrain. Each footprint is procedural and seeded by
+   the city id: a lumpy dense core, sprawl along the roads and rails that leave the province and along the coast, patchy outer suburbs with
+   green between them, a few satellite towns; it is clipped to land. It is filled with seamless urban textures cut from the dense inner parts
+   of the supplied aerial city art (b-city-1..5), each city with its own picks, rotation, scale, offset and colour grade, so no two match.
+   At night the same built-up area glows (street lights, brightest in the core). The footprint mask is cached per city; the textured result
+   per city and size tier (an LRU of canvases), so a layer render is one drawImage per city on screen. Cities sit on top of the political tint
+   (a city keeps its own concrete colour), and are graded for legibility: a city that is small on screen is lifted (or, on pale desert and
+   snow, deepened) so it reads at play zoom. A low tier of every city is baked in idle time and kept, so a jump never shows empty ground. */
+const KM_W = HS0*SQ3/180;          // world units per km (an old map hex is about 180 km across)
+const CITY_DY = 0;                 // city markers sit on the city centre (screen offset, in kl units)
+const cityFade = hexPx => Math.max(0, Math.min(1, (hexPx - 12)/14));   // the urban areas fade in from the mid zoom (they are too small to read below it)
+let CITYV = 0, CITY_PEND = false, CITY_DL = 0, CITY_ART = 0;           // layer-key version, bakes left for a later render, bake deadline, art state seen
+const CTILE = new Map();
+// a tile that repeats without seams: blended with a copy shifted by half the tile, first across, then down (the shifted copy carries the
+// edges, the original the middle, so the copy's own seam is always covered)
+function cityTileSeam(src, hz){ const N = src.width, h = N/2, o = document.createElement('canvas'); o.width = o.height = N; const g = o.getContext('2d');
+  if (hz){ g.drawImage(src, -h, 0); g.drawImage(src, h, 0); } else { g.drawImage(src, 0, -h); g.drawImage(src, 0, h); }
+  const m = document.createElement('canvas'); m.width = m.height = N; const gm = m.getContext('2d'); gm.drawImage(src, 0, 0);
+  const gr = hz ? gm.createLinearGradient(0, 0, N, 0) : gm.createLinearGradient(0, 0, 0, N); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.3, '#000'); gr.addColorStop(0.7, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  gm.globalCompositeOperation = 'destination-in'; gm.fillStyle = gr; gm.fillRect(0, 0, N, N); g.drawImage(m, 0, 0); return o; }
+// the urban texture of art level l: the opaque, dense middle of the aerial picture, softened (lower contrast and saturation: less of the
+// tall-building shadows, more of a flat satellite view) and made seamless. A drawn grey block texture stands in if the picture failed.
+function cityTile(l){ let t = CTILE.get(l); if (t) return t; const nm = 'b-city-' + l, im = ART.img(nm), N = 192;
+  if (!im && !ART.failed(nm)) return null;
+  const A = document.createElement('canvas'); A.width = A.height = N; const g = A.getContext('2d');
+  if (im){ const iw = im.naturalWidth || im.width, cr = Math.round(iw*0.36), sx = Math.round((iw - cr)/2); g.imageSmoothingQuality = 'high'; g.filter = 'contrast(0.84) saturate(0.8)'; g.drawImage(im, sx, sx, cr, cr, 0, 0, N, N); g.filter = 'none'; }
+  else { let sd = l*977 >>> 0; const rnd = () => ((sd = (sd*1664525 + 1013904223) >>> 0)/4294967296); g.fillStyle = '#77756e'; g.fillRect(0, 0, N, N);
+    for (let i = 0; i < 260 + l*60; i++){ const v = 120 + Math.round(rnd()*90), w = 4 + rnd()*(10 + l*2); g.fillStyle = `rgb(${v},${v - 3},${v - 9})`; g.fillRect(rnd()*N, rnd()*N, w, 3 + rnd()*w); } }
+  t = [cityTileSeam(cityTileSeam(A, true), false)]; while (t[t.length - 1].width > 12) t.push(ART.scaled(t[t.length - 1], t[t.length - 1].width/2, t[t.length - 1].width/2));   // mip levels: a pattern drawn far below its size would sparkle
+  CTILE.set(l, t); return t; }
+const cityMip = (t, px) => { let m = t[0]; for (const c of t) if (c.width >= px*0.9) m = c; return m; };
+// a city's colour grade applied to the (small) tile it repeats, cached: a CSS filter over a whole big fill costs far more than one over a tile
+const GTILE = new Map(); let GTILE_PX = 0;
+function gradedTile(key, t, filt){ let c = GTILE.get(key); if (c){ GTILE.delete(key); GTILE.set(key, c); return c; }
+  c = document.createElement('canvas'); c.width = t.width; c.height = t.height; const g = c.getContext('2d'); g.filter = filt; g.drawImage(t, 0, 0); g.filter = 'none';
+  GTILE.set(key, c); GTILE_PX += c.width*c.height;
+  for (const [k0, c0] of GTILE){ if (GTILE_PX <= 3e6 || k0 === key) break; GTILE.delete(k0); GTILE_PX -= c0.width*c0.height; }
+  return c; }
+const CSCR = new Map();   // scratch canvas per bake size (a filter or composite over a scratch far bigger than the bake would pay for its whole area)
+const cscr = S => { let c = CSCR.get(S); if (!c){ c = document.createElement('canvas'); c.width = c.height = S; CSCR.set(S, c); } return c; };
+const cityArtState = () => [1, 2, 3, 4, 5].reduce((n, l) => n + (ART.ready('b-city-' + l) || ART.failed('b-city-' + l) ? 1 : 0), 0);
+// static description of a city's urban area (size, seed, textures, grade, sprawl corridors) and its masks; cached per city
+const CINFO = new Map(), CGEO = new Map();   // CGEO: just centre and size per city, kept for good (CINFO with its masks is an LRU)
+const cityGeo = p => CGEO.get(p) || cityInfo(p);
+function cityInfo(p, lo = false){ let I = CINFO.get(p); if (I){ CINFO.delete(p); CINFO.set(p, I); return I; } const P = G.P[p]; if (!P || !P.city || P.sea) return null;   // lo: for the low tier only (a coarse footprint, not cached)
+  if (performance.now() > CITY_DL){ CITY_PEND = true; return null; }   // over this render's budget: later
+  let sd = (Math.imul(p + 1, 2654435761) ^ 0x5bd1e995) >>> 0; const rnd = () => ((sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0)/4294967296);
+  const pop = Math.max(0.05, P.pop0 || 0.3), Rprov = Math.sqrt(P.cells.length)*HS*0.62;
+  const rkm = Math.max(34, Math.min(125, 16 + 20*Math.sqrt(pop)))*(P.capFlag ? 1.12 : 1)*(0.92 + rnd()*0.16), r = Math.min(rkm*KM_W, Math.max(Rprov*2.2, 40*KM_W)), E = r*2.3;   // game scale: two to three times the real urban radius, with a floor, so even a small town reads at play zoom; a big city may spread past its small province
+  // sprawl corridors: the roads and rails out of the province (stronger for highways and railways), plus one or two country roads
+  const cor = [], wrapDx = dx => Math.abs(dx) > WORLD_W/2 ? dx - Math.sign(dx)*WORLD_W : dx;
+  for (const [v, k] of P.lk || []){ const lv = (k.r0 || 0) + (k.q0 || 0); if (!lv || G.P[v].sea) continue;   // the map's own (static) links: a footprint never changes
+    cor.push({a:Math.atan2(G.P[v].y - P.y, wrapDx(G.P[v].x - P.x)), s:Math.min(1, 0.62 + 0.1*lv), L:1.35 + 0.18*Math.min(3, lv) + rnd()*0.35, w:0.15 + 0.03*Math.min(3, lv) + rnd()*0.04}); }
+  cor.sort((a, b) => b.s - a.s); cor.length = Math.min(cor.length, 5);
+  for (let i = cor.length; i < 3; i++) cor.push({a:rnd()*Math.PI*2, s:0.55 + rnd()*0.2, L:1.2 + rnd()*0.4, w:0.13 + rnd()*0.05});
+  rnd(); const terr = P.terrain, dry = terr === 'desert', cold = terr === 'tundra' || terr === 'snow';
+  const bodyL = [2, 1, 2, 3, 2][Math.floor(rnd()*5)], coreL = [4, 5, 3, 5][Math.floor(rnd()*4)], kb = 20 + rnd()*9;
+  const hue = Math.round((rnd() - 0.5)*18), sat = (dry ? 0.6 : cold ? 0.55 : 0.68 + rnd()*0.25).toFixed(2), bri = ((dry ? 0.96 : cold ? 1.02 : 0.98 + rnd()*0.14)).toFixed(2), sep = (dry ? 0.16 : rnd()*0.16).toFixed(2);
+  I = {p, x:P.x, y:P.y, r, E, cor, seed:(p*7919 + 13) & 0xffff, pale:dry || cold || paleGround(P), ph:[rnd()*6.3, rnd()*6.3, rnd()*6.3, rnd()*6.3], sats:[],
+    tb:bodyL, tc:coreL === bodyL ? 5 : coreL, kb, kc:kb*(0.72 + rnd()*0.16), rot:rnd()*Math.PI*2, rotC:0, ox:rnd(), oy:rnd(), ox2:rnd(), oy2:rnd(),
+    filt:`sepia(${sep}) hue-rotate(${hue}deg) saturate(${sat}) brightness(${bri})`, filtC:`sepia(${sep}) hue-rotate(${hue}deg) saturate(${sat}) brightness(${(bri*0.8).toFixed(2)}) contrast(1.05)`};
+  I.rotC = I.rot + (rnd() < 0.6 ? 0 : (rnd() - 0.5)*0.8);   // downtown usually shares the street grid
+  I.td = [1, 2, 3, 1][Math.floor(rnd()*4)]; if (I.td === I.tb) I.td = I.tb === 2 ? 1 : 2; I.rotD = I.rot + 0.35 + rnd()*0.9; I.kd = kb*(0.8 + rnd()*0.3); I.ox3 = rnd(); I.oy3 = rnd();
+  I.filtD = `sepia(${sep}) hue-rotate(${hue + Math.round((rnd() - 0.5)*10)}deg) saturate(${sat}) brightness(${(bri*(0.94 + rnd()*0.1)).toFixed(2)})`;
+  const nS = 2 + Math.floor(rnd()*3) + (pop > 8 ? 2 : 0); for (let i = 0; i < nS; i++){ const a = rnd()*Math.PI*2, d = 1.1 + rnd()*0.7; I.sats.push([Math.cos(a)*d, Math.sin(a)*d, 0.09 + rnd()*0.12]); }
+  cityMasks(I, lo ? 56 : 0); if (!lo) CINFO.set(p, I);
+  const dk = document.createElement('canvas'); dk.width = dk.height = 64; const gd = dk.getContext('2d'); gd.fillStyle = '#0b0e12'; gd.fillRect(0, 0, 64, 64); gd.globalCompositeOperation = 'destination-in'; gd.drawImage(I.mask, 0, 0, 64, 64);
+  CGEO.set(p, {x:I.x, y:I.y, r:I.r, E:I.E, dk});   // dk: the footprint in night shadow (kept with the size: concrete is unlit at night, only its lights show)
+  if (!lo && CINFO.size > 80) for (const k0 of CINFO.keys()){ if (k0 !== p){ CINFO.delete(k0); break; } }   // masks of far-away cities are dropped (rebuilt when needed)
+  return I; }
+// pale ground around a city (sand, the dry tan plains of the subtropics, tundra, snow), as the terrain raster paints it from the cells'
+// terrain and latitude: there a city is deepened instead of lifted
+function paleGround(P){ const t = P.terrain === 'urban' ? provGround(P) : P.terrain || 'plains', al = Math.abs(P.lat);
+  return t === 'desert' || t === 'tundra' || t === 'snow' || al > 58 || ((t === 'plains' || t === 'hills' || t === 'none') && al >= 18 && al < 34); }
+const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
+// the footprint as alpha masks over the city's square (2E world units): the whole built-up area (soft edged, land only), its dense core and
+// the districts that take a second street grid
+function cityMasks(I, M0){ const M = M0 || Math.max(56, Math.min(176, Math.round(2*I.E/KM_W/1.6))), x0 = I.x - I.E, y0 = I.y - I.E, k = M/(2*I.E), sd = I.seed;
+  // land: the real coastline rasterised over the square (sprawl never reaches into the sea)
+  const lc = document.createElement('canvas'); lc.width = lc.height = M; const lg = lc.getContext('2d'); let land;
+  if (GEO && GEO.coastV){ lg.setTransform(k, 0, 0, k, -x0*k, -y0*k); lg.fillStyle = '#fff'; lg.fill(GEO.coastV, 'evenodd'); const d = lg.getImageData(0, 0, M, M).data; land = new Float32Array(M*M); for (let i = 0; i < M*M; i++) land[i] = d[i*4 + 3]/255; }
+  else { land = new Float32Array(M*M); for (let j = 0; j < M; j++) for (let i = 0; i < M; i++){ const c = worldToCell(x0 + (i + 0.5)/k, y0 + (j + 0.5)/k); land[j*M + i] = c >= 0 && !G.P[G.prov[c]].sea ? 1 : 0; } }
+  // coastal cities also stretch along the shore: directions that run on land while the sea is close beside them
+  const ray = a => { let s0 = 0, n = 0; for (let t = 0.7; t <= 1.6; t += 0.15){ const i = Math.floor(M/2 + Math.cos(a)*t*I.r*k), j = Math.floor(M/2 + Math.sin(a)*t*I.r*k); if (i >= 0 && j >= 0 && i < M && j < M){ s0 += land[j*M + i]; n++; } } return n ? s0/n : 0; };
+  const NA = 32, lr = []; for (let i = 0; i < NA; i++) lr.push(ray(i/NA*Math.PI*2));
+  if (lr.some(v => v < 0.3)){ const cand = [];
+    for (let i = 0; i < NA; i++){ const sea = Math.min(lr[(i + 3) % NA], lr[(i + NA - 3) % NA]); if (lr[i] > 0.75 && sea < 0.35) cand.push([i, lr[i] - sea]); }
+    cand.sort((a, b) => b[1] - a[1]); const used = [];
+    for (const [i] of cand){ if (used.length >= 2 || used.some(u => Math.min(Math.abs(u - i), NA - Math.abs(u - i)) < 6)) continue; used.push(i);
+      I.cor.push({a:i/NA*Math.PI*2, s:0.92, L:1.75 + ((sd + i) % 5)*0.08, w:0.2}); } }
+  const ph = I.ph, cor = I.cor.map((c, n) => ({...c, ca:Math.cos(c.a), sa:Math.sin(c.a), n}));
+  const md = new Uint8ClampedArray(M*M*4), cd = new Uint8ClampedArray(M*M*4), dd = new Uint8ClampedArray(M*M*4);
+  for (let j = 0; j < M; j++) for (let i = 0; i < M; i++){ const q = j*M + i, L0 = land[q]; if (L0 <= 0.01) continue;
+    const X = ((i + 0.5)/k - I.E)/I.r, Y = ((j + 0.5)/k - I.E)/I.r, d = Math.hypot(X, Y); if (d > 2.25) continue; const a = Math.atan2(Y, X);
+    const lobe = 1 + 0.2*Math.sin(2*a + ph[0]) + 0.13*Math.sin(3*a + ph[1]) + 0.08*Math.sin(5*a + ph[2]) + 0.12*vnoise(Math.cos(a)*1.8 + ph[3], Math.sin(a)*1.8, sd);
+    const dn = d/lobe, rag = 0.14*vnoise(X*3.2 + ph[0], Y*3.2, sd + 1) + 0.06*vnoise(X*9, Y*9, sd + 2);
+    const body = 1 - sstep(0.7, 1.0, dn + rag), coreW = 1 - sstep(0.16, 0.5 + 0.1*vnoise(X*2.4, Y*2.4 + ph[1], sd + 3), dn);
+    let corr = 0;
+    for (const c of cor){ const al = X*c.ca + Y*c.sa; if (al < 0.2 || al > c.L) continue; const pp = Math.abs(-X*c.sa + Y*c.ca + 0.11*vnoise(al*2.4, c.n*7.1, sd + 4)), w = c.w*(1 - 0.55*al/c.L) + 0.03;
+      let v = (1 - sstep(w*0.4, w, pp))*(1 - sstep(c.L*0.72, c.L, al))*c.s; if (v <= corr) continue;
+      v *= 0.5 + 0.5*sstep(-0.25, 0.25, vnoise(al*3.3, c.n*3.7 + 1.3, sd + 5)); if (v > corr) corr = v; }   // beads of towns along the road
+    const ring = sstep(0.5, 0.72, dn)*(1 - sstep(1.2, 1.7, dn)), nz = vnoise(X*2.7 + ph[2], Y*2.7, sd + 6) + 0.5*vnoise(X*6.3, Y*6.3 + ph[3], sd + 7);
+    const sub = sstep(0.3, 0.62, nz)*ring;
+    let sat = 0; for (const [sx, sy, sr] of I.sats){ const dd = Math.hypot(X - sx, Y - sy)/(sr*(1 + 0.3*vnoise(X*5, Y*5, sd + 8))); if (dd < 1) sat = Math.max(sat, 1 - sstep(0.45, 1, dd)); }
+    const park = sstep(0.5, 0.78, vnoise(X*4.6 + ph[1], Y*4.6, sd + 9))*(1 - 0.8*coreW);   // parks and green gaps inside the town
+    const dens = Math.max(body*(0.9 + 0.1*coreW), corr*0.9, sub*0.8, sat*0.88)*(1 - 0.75*park)*L0;
+    if (dens <= 0.004) continue; md[q*4] = md[q*4 + 1] = md[q*4 + 2] = 255; md[q*4 + 3] = dens*255;
+    const cw0 = coreW*body*L0*(1 - 0.5*park); if (cw0 > 0.004){ cd[q*4] = cd[q*4 + 1] = cd[q*4 + 2] = 255; cd[q*4 + 3] = cw0*255; }
+    const dw = sstep(-0.05, 0.3, vnoise(X*1.5 + ph[3], Y*1.5, sd + 10) + 0.3*vnoise(X*4, Y*4, sd + 11)); if (dw > 0.004){ dd[q*4] = dd[q*4 + 1] = dd[q*4 + 2] = 255; dd[q*4 + 3] = dw*255; } }
+  const mk = data => { const c = document.createElement('canvas'); c.width = c.height = M; c.getContext('2d').putImageData(new ImageData(data, M, M), 0, 0); return c; };
+  I.mask = mk(md); I.core = mk(cd); I.dist = mk(dd); I.M = M;
+  for (let q = 3; q < md.length; q += 4) md[q] = Math.min(255, md[q]*1.45); I.maskB = mk(md); }   // small on screen: the soft edges and suburbs a touch more solid
+// textured urban area of city p at S device px across its square (cached, least recently used dropped first)
+const CBAKE = new Map(); let CBAKE_PX = 0;
+const CBAKE_MAX = 14e6;   // device pixels kept across all city canvases (~56 MB)
+const CLOW = new Map(), CLOW_S = 128;   // the low tier of every city, baked in idle time and never dropped: what a jump shows until the right tier is made
+function cbakeGet(key){ const c = CBAKE.get(key); if (c){ CBAKE.delete(key); CBAKE.set(key, c); } return c; }
+function cbakePut(key, c){ CBAKE.set(key, c); CBAKE_PX += c.width*c.height;
+  for (const [k0, c0] of CBAKE){ if (CBAKE_PX <= CBAKE_MAX || k0 === key) break; CBAKE.delete(k0); CBAKE_PX -= c0.width*c0.height; } }
+// legibility of a bake of S device px: 1 while the city is small on screen, easing off as it grows (neighbouring tiers differ only a little)
+const cityLegK = S => Math.max(0, Math.min(1, (10 - Math.log2(S))/3));
+function cityBake(p, S){ if (S === CLOW_S && CLOW.has(p)) return CLOW.get(p); const key = 'd' + p + '|' + S; let c = cbakeGet(key); if (c) return c;
+  if (performance.now() > CITY_DL){ CITY_PEND = true; return null; }
+  const I = cityInfo(p, S === CLOW_S); if (!I) return null; const tb = cityTile(I.tb), tc = cityTile(I.tc), td = cityTile(I.td); if (!tb || !tc || !td) return null;
+  c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), k = S/(2*I.E);   // device px per world unit
+  const pat = (gg, t0, km, rot, ox, oy, filt, tag) => { const t1 = cityMip(t0, km*KM_W*k), t = gradedTile(p + tag + t1.width, t1, filt), P0 = gg.createPattern(t, 'repeat'); if (P0.setTransform) P0.setTransform(new DOMMatrix().translate(ox*S, oy*S).rotate(rot*180/Math.PI).scale(km*KM_W*k/t.width)); return P0; };
+  // the town: the wider urban texture, then the districts and the dense core over it
+  g.fillStyle = pat(g, tb, I.kb, I.rot, I.ox, I.oy, I.filt, 'b'); g.fillRect(0, 0, S, S);
+  const sc = cscr(S), gt = sc.getContext('2d'), over = (t, km, rot, ox, oy, filt, m, tag) => { gt.setTransform(1, 0, 0, 1, 0, 0); gt.globalCompositeOperation = 'source-over'; gt.clearRect(0, 0, S, S);
+    gt.fillStyle = pat(gt, t, km, rot, ox, oy, filt, tag); gt.fillRect(0, 0, S, S);
+    gt.globalCompositeOperation = 'destination-in'; gt.drawImage(m, 0, 0, S, S); gt.globalCompositeOperation = 'source-over'; g.drawImage(sc, 0, 0); };
+  over(td, I.kd, I.rotD, I.ox3, I.oy3, I.filtD, I.dist, 'd');   // districts on another street grid
+  over(tc, I.kc, I.rotC, I.ox2, I.oy2, I.filtC, I.core, 'c');   // the dense, darker core
+  if (!I.shade){ const M = I.M, sh = document.createElement('canvas'); sh.width = sh.height = M; const gs = sh.getContext('2d'); gs.fillStyle = '#5d5850'; gs.fillRect(0, 0, M, M); gs.globalCompositeOperation = 'destination-in'; gs.drawImage(I.core, 0, 0); I.shade = sh; }
+  g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.32; g.drawImage(I.shade, 0, 0, S, S); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';   // built up most densely in the middle: a shade darker
+  // legibility: concrete reads lighter than fields and woods, and darker and greyer than sand or snow; strongest while the city is small
+  // on screen (the texture's own detail averages out to a dull mid grey there)
+  { const lg = cityLegK(S); if (I.pale){ g.globalCompositeOperation = 'saturation'; g.globalAlpha = 0.55; g.fillStyle = '#808080'; g.fillRect(0, 0, S, S); }   // on pale ground: a cool, neutral grey (not brown)
+    g.globalCompositeOperation = I.pale ? 'multiply' : 'screen'; g.globalAlpha = I.pale ? 0.3 + 0.35*lg : 0.2 + 0.45*lg; g.fillStyle = I.pale ? '#8c8c8e' : '#6a675f'; g.fillRect(0, 0, S, S);
+    if (lg > 0){ g.globalCompositeOperation = 'source-over'; g.globalAlpha = 0.25*lg; g.drawImage(I.shade, 0, 0, S, S); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }   // and the dense middle stays a touch darker, so the town has a heart
+  // arterial roads out along the sprawl corridors and a ring road (pale concrete, they fade out with the built-up area)
+  if (S >= 96){ g.save(); g.setTransform(k, 0, 0, k, I.E*k, I.E*k); g.lineCap = g.lineJoin = 'round'; const rr = I.r;
+    g.strokeStyle = 'rgba(214,208,192,.5)'; g.lineWidth = Math.max(0.55/k, 0.32*KM_W); g.beginPath();
+    for (const cr of I.cor){ const ca = Math.cos(cr.a), sa = Math.sin(cr.a); for (let al = 0; al <= cr.L; al += 0.06){ const pp = -0.11*vnoise(al*2.4, I.cor.indexOf(cr)*7.1, I.seed + 4); const X = (al*ca - pp*sa)*rr, Y = (al*sa + pp*ca)*rr; al ? g.lineTo(X, Y) : g.moveTo(X, Y); } }
+    for (let i = 0; i <= 48; i++){ const a = i/48*Math.PI*2, rho = 0.5*rr*(1 + 0.2*Math.sin(2*a + I.ph[0]) + 0.13*Math.sin(3*a + I.ph[1])); const X = Math.cos(a)*rho, Y = Math.sin(a)*rho; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.stroke(); g.restore(); }
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(S <= 256 ? I.maskB : I.mask, 0, 0, S, S);
+  if (S === CLOW_S) CLOW.set(p, c); else cbakePut(key, c); return c; }
+// night: street lights inside the same footprint. The bright streets and roofs of the day texture become points and lines of light; they
+// thin out and dim from the centre outwards (a city is brightest downtown), the outskirts and the arms along the roads stay sparse, and a warm
+// glow sits over the dense core. The footprint is applied twice, so the edges of the lit area are firm rather than a feathered fill.
+const cityLightsTier = S => Math.min(S, 768);   // light is soft: a lighter canvas than the day texture close up
+function cityLightsBake(p, S){ const LS = cityLightsTier(S), key = 'n' + p + '|' + LS; let c = cbakeGet(key); if (c) return c;
+  const day = (S === CLOW_S && CLOW.get(p)) || CBAKE.get('d' + p + '|' + S) || cityBake(p, S); if (!day) return null; if (performance.now() > CITY_DL){ CITY_PEND = true; return null; } const I = cityInfo(p); if (!I) return null;
+  S = LS; c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), k = S/(2*I.E), m = S/2, R = I.r*k;
+  g.filter = I.pale ? 'grayscale(1) brightness(1.2) contrast(5)' : 'grayscale(1) brightness(0.82) contrast(5)'; g.drawImage(day, 0, 0, S, S); g.filter = 'none';   // only the brightest streets and roofs stay lit (the day grade that lifts or deepens the town is undone here)
+  // brightness falls away from the centre: warm white downtown, amber in the middle ring, dim sodium orange at the edge
+  const fall = g.createRadialGradient(m, m, 0, m, m, R*1.9); fall.addColorStop(0, '#fff2d6'); fall.addColorStop(0.22, '#ffd08a'); fall.addColorStop(0.5, '#d98a3c'); fall.addColorStop(0.8, '#7a4216'); fall.addColorStop(1, '#3a1c08');
+  g.globalCompositeOperation = 'multiply'; g.fillStyle = fall; g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = 'lighter'; { const lg = cityLegK(S); if (lg > 0){ g.globalAlpha = 0.3*lg; g.fillRect(0, 0, S, S); } }   // small on screen: the lights merge into a glow that still reads
+  g.globalAlpha = 0.3; g.drawImage(cityGlowCore(I), 0, 0, S, S);
+  const hot = g.createRadialGradient(m, m, 0, m, m, R*0.75); hot.addColorStop(0, 'rgba(255,214,150,.4)'); hot.addColorStop(1, 'rgba(255,170,80,0)'); g.globalAlpha = 1; g.fillStyle = hot; g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(I.mask, 0, 0, S, S); g.drawImage(I.mask, 0, 0, S, S);
+  cbakePut(key, c); return c; }
+function cityGlowCore(I){ if (I.glow) return I.glow; const M = I.M, c = document.createElement('canvas'); c.width = c.height = M; const g = c.getContext('2d');
+  g.fillStyle = '#ff9c48'; g.fillRect(0, 0, M, M); g.globalCompositeOperation = 'destination-in'; g.drawImage(I.core, 0, 0); g.globalCompositeOperation = 'destination-in'; g.drawImage(I.core, 0, 0);
+  return (I.glow = c); }
+// size tier: a power of two at or above the city's size on screen (device px), within limits
+const cityTier = I => Math.min(1536, Math.max(32, Math.pow(2, Math.ceil(Math.log2(Math.max(1, 2*I.E*view.s*dpr))))));
+// any baked tier of the city while the right one waits for a later render (nearest first)
+function cityAnyBake(p, S, night){ for (const f of [0.5, 2, 0.25, 4, 0.125, 8]){ const c = CBAKE.get((night ? 'n' : 'd') + p + '|' + Math.round(S*f)); if (c) return c; } return night ? null : CLOW.get(p) || null; }
+// idle warm-up: the low tier of every city (nearest the view first, from a coarse footprint that is not kept), a few ms a frame while the
+// view is still
+let CWARM = null;
+function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0) < 250) return; if (!CWARM) CWARM = G.P.filter(P => P.city && !P.sea).map(P => P.id);
+  if (!CWARM.length) return; const dl0 = CITY_DL, end = performance.now() + 7, cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s;
+  CITY_DL = Infinity;
+  while (CWARM.length && performance.now() < end){ let j = 0, bd = Infinity; for (let i = 0; i < CWARM.length; i++){ const P = G.P[CWARM[i]], d = (P.x - cx)**2 + (P.y - cy)**2; if (d < bd){ bd = d; j = i; } }
+    const p = CWARM[j]; CWARM.splice(j, 1); if (CLOW.has(p)) continue;
+    if (!cityBake(p, CLOW_S)) continue; const I = CGEO.get(p);
+    if (I && I.x + I.E > x0 && I.x - I.E < x1 && I.y + I.E > y0 && I.y - I.E < y1) CITY_PEND = true; }   // one on screen: the layer picks it up
+  CITY_DL = dl0; }
+// world-space bounds of what the layer or the screen shows
+function cityEach(x0, y0, x1, y1, fn){ for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (!P.city || P.sea) continue; const I = CGEO.get(p), e = I ? I.E : 22;
+    if (P.x + e < x0 || P.x - e > x1 || P.y + e < y0 || P.y - e > y1) continue; fn(p, P); } }
+// layer pass (world transform set, coast clip on): the urban areas laid on the ground
+function drawCitiesLayer(c, x0, y0, x1, y1, hexPx, lite){ const fa = cityFade(hexPx); if (fa <= 0) return;
+  const st = cityArtState(); if (st < 5) return; CITY_DL = performance.now() + (lite ? 6 : 45);
+  c.save(); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'medium';
+  const on = []; cityEach(x0, y0, x1, y1, p => on.push(p));
+  for (const p of on){ const I = CGEO.get(p); if (!I || !cityAnyBake(p, cityTier(I), false)) cityBake(p, CLOW_S); }   // first a quick low tier for any city with nothing to show yet, then the right tiers
+  for (const p of on){ const I = cityGeo(p); if (!I || I.r*view.s < 0.8) continue; const S = cityTier(I);
+    const img = cityBake(p, S) || cityAnyBake(p, S, false); if (!img) continue;
+    c.globalAlpha = fa; c.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); }
+  c.restore(); }
+// live pass after the night tint (world transform): city lights, each by the darkness over its own province
+function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityArtState() < 5) return;
+  const x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s, now = performance.now(), still = now - (lastPanT || 0) > 150; let saved = false;
+  CITY_DL = still ? Math.max(CITY_DL, now + 4) : 0;   // new light canvases only while the view is still (a few ms a frame); moving, the ones already made
+  cityEach(x0, y0, x1, y1, p => { const nf = Math.max(0, Math.min(1, (-sunSinEl(p) + 0.01)/0.13)); if (nf <= 0) return; const I = still ? cityGeo(p) : CGEO.get(p); if (!I || I.r*view.s < 0.8) return;
+    const S = cityTier(I), img = (still ? cityLightsBake(p, S) : CBAKE.get('n' + p + '|' + cityLightsTier(S))) || cityAnyBake(p, cityLightsTier(S), true);
+    if (!saved){ saved = true; ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.imageSmoothingEnabled = true; }
+    const dk = (CGEO.get(p) || I).dk; if (dk){ ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = nf*fa*0.55; ctx.drawImage(dk, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); }   // the grey concrete goes dark first
+    ctx.globalCompositeOperation = 'lighter';
+    if (img){ ctx.globalAlpha = nf*fa*0.95; ctx.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); }
+    const G0 = GLOW(), gr = I.r*(img ? 1.15 : 0.9); ctx.globalAlpha = nf*fa*(img ? 0.16 : 0.5); ctx.drawImage(G0, I.x - gr, I.y - gr, gr*2, gr*2); });   // a soft haze of light over the town (alone until its lights are made)
+  if (saved) ctx.restore(); }
 function cityLevel(p){ const B = S.bld[p]; let t = 0; for (const k of BK) t += B[k] || 0; return Math.min(5, Math.min(5, 1 + Math.floor(t/3)) + (isCapital(p) ? 1 : 0)); }
 const bartName = (k, l) => (k === 'city' ? 'b-city-' : 'b-' + BART[k] + '-') + Math.max(1, Math.min(5, l | 0));
 const BART_OK = new Map();   // key -> true once all five levels have loaded, false for good if one failed
 function bartOk(k){ const v = BART_OK.get(k); if (v != null) return v; if (k !== 'city' && !BART[k]) return false;
   let all = true; for (let l = 1; l <= 5; l++){ const nm = bartName(k, l); if (ART.failed(nm)){ BART_OK.set(k, false); return false; } if (!ART.ready(nm)) all = false; }
   if (all) BART_OK.set(k, true); return all; }
-// cached sprite at a quantised size (about 12% steps) so zooming does not rescale the big images every frame; night = darker cached variant
-function bartSprite(k, l, d, night){ const q = Math.min(512, Math.pow(2, Math.ceil(Math.log2(Math.max(8, d*dpr))*6)/6));   // capped above the 320 px source: closer zooms scale the cached canvas instead of baking ever bigger ones
-  return ART.sprite(bartName(k, l), q, night ? {tint:'#050912', tintA:k === 'city' ? 0.62 : 0.42} : {}); }
-// night lights of a city or compound: its own bright roofs and streets turned into warm light (added with 'lighter' over the dark night
-// sprite), so the lit area has the shape of the built-up art instead of a disc of dots. Cached per image and quantised size.
-const BLIT = new Map();
-function lightsSprite(k, l, d){ const base = bartSprite(k, l, d, false); if (!base) return null; const key = bartName(k, l) + '|' + base.width; let c = BLIT.get(key); if (c) return c;
-  if (BLIT.size > 120) BLIT.clear(); c = document.createElement('canvas'); c.width = base.width; c.height = base.height; const g = c.getContext('2d');
-  g.filter = k === 'city' ? 'grayscale(1) brightness(0.84) contrast(6)' : 'grayscale(1) brightness(0.74) contrast(6)'; g.drawImage(base, 0, 0); g.filter = 'none';   // only the brightest roofs and streets light up
-  g.globalCompositeOperation = 'multiply'; g.fillStyle = '#ffc070'; g.fillRect(0, 0, c.width, c.height);
-  g.globalCompositeOperation = 'destination-in'; g.drawImage(base, 0, 0); BLIT.set(key, c); return c; }
 // last drawn level per province+building; a rise seen while on screen starts the upgrade animation
 const BLV = new Map(); let BLV_S = null;
 function bLevel(key, lvl, now){ if (BLV_S !== S){ BLV.clear(); BLV_S = S; }
@@ -5503,152 +5683,6 @@ function bLevel(key, lvl, now){ if (BLV_S !== S){ BLV.clear(); BLV_S = S; }
   if (lvl !== r.lvl){ if (lvl > r.lvl && now - r.seen < 1500 && !afxReduced()){ r.from = r.lvl; r.t0 = now; r.fresh = true; } else r.t0 = 0; r.lvl = lvl; }
   r.seen = now; return r; }
 const easeOut = t => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
-function drawBart(k, lvl, x, y, d, now, key, night, cons, col, a0, badge, mode = 3){   // badge: 0 none, 1 / -1 the level pill on the building's right / left (outer) lower corner; mode: 1 the image, 2 the overlays (scaffold, progress, burst, pill), 3 both
-  const r = bLevel(key, lvl, now); let f = r.t0 ? (now - r.t0)/BANIM_MS : -1; if (f >= 1){ r.t0 = 0; f = -1; }
-  const sc = f < 0 ? 1 : f < 0.45 ? 0.85 + 0.23*easeOut(f/0.45) : 1.08 - 0.08*easeOut((f - 0.45)/0.55), D = d*sc;
-  const img = (l, al, dd) => { if (al <= 0.01) return; const sp = bartSprite(k, l, dd, night); if (!sp) return; ctx.globalAlpha = a0*al; ctx.drawImage(sp, x - dd/2, y - dd/2, dd, dd);
-    if (k === 'city'){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = a0*al*0.22; ctx.drawImage(sp, x - dd/2, y - dd/2, dd, dd); ctx.globalCompositeOperation = 'source-over'; }
-    if (night){ const ls = lightsSprite(k, l, dd); if (ls){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*al*(k === 'city' ? 1 : 0.6); ctx.drawImage(ls, x - dd/2, y - dd/2, dd, dd); ctx.globalCompositeOperation = 'source-over'; } } };
-  if (mode & 1){ if (lvl > 0){ const fl = cons ? 0.9 + 0.1*Math.sin(now/95 + key.length) : 1;   // construction: a subtle flicker
-      if (f >= 0 && r.from > 0){ const m = Math.min(1, f/0.55); img(r.from, (1 - m)*fl, D); img(lvl, m*fl, D); }
-      else img(lvl, (f >= 0 ? Math.min(1, f/0.3) : 1)*fl, D); }
-    else if (cons){ img(cons.lvl, 0.38 + 0.08*Math.sin(now/140), d); } }   // first level under construction: a ghost of what is coming
-  if (!(mode & 2)){ ctx.globalAlpha = a0; return; }
-  if (cons){ const pf = 1 - cons.h/Math.max(1, cons.h0);
-    // scaffold: a few thin girders over the image that shimmer, then the progress ring
-    ctx.globalAlpha = a0*(0.45 + 0.2*Math.sin(now/70)); ctx.strokeStyle = '#e8c27a'; ctx.lineWidth = Math.max(0.6, d*0.025); ctx.beginPath();
-    const h0 = d*0.36; for (let i = -1; i <= 1; i++){ ctx.moveTo(x + i*h0*0.8, y + h0); ctx.lineTo(x + i*h0*0.8, y + h0 - h0*2*Math.max(0.25, pf)); }
-    for (let j = 0; j < 3; j++){ const yy = y + h0 - j*h0*0.7*Math.max(0.35, pf); ctx.moveTo(x - h0*0.8, yy); ctx.lineTo(x + h0*0.8, yy); } ctx.stroke();
-    const bw = d*0.8, bh = Math.max(3, Math.round(d*0.09)), bx0 = x - bw/2, by0 = y + d*0.5 + 2;
-    ctx.globalAlpha = a0; ctx.fillStyle = 'rgba(6,9,11,.85)'; ctx.fillRect(bx0 - 1, by0 - 1, bw + 2, bh + 2); ctx.fillStyle = '#e2a23d'; ctx.fillRect(bx0, by0, bw*Math.max(0.04, pf), bh);
-    if (!afxReduced() && Math.random() < 0.035){ const [wx, wy] = screenToWorld(x + (Math.random() - 0.5)*d*0.6, y + (Math.random() - 0.5)*d*0.5); emit('spark', wx, wy, {vx:(Math.random() - 0.5)*30/view.s, vy:-(10 + Math.random()*20)/view.s, s0:2, s1:0.6, life:380}); } }
-  if (f >= 0){ // upgrade burst: bright expanding ring and a soft flash
-    const e = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = a0*0.55*(1 - f); ctx.drawImage(GLOW(), x - d*0.75, y - d*0.75, d*1.5, d*1.5);
-    ctx.globalAlpha = a0*0.9*(1 - f)*(1 - f); ctx.lineWidth = Math.max(1.2, d*0.06*(1 - f) + 0.8); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(x, y, d*(0.42 + 0.42*e), 0, Math.PI*2); ctx.stroke();
-    ctx.restore();
-    if (r.fresh){ r.fresh = false; const [wx, wy] = screenToWorld(x, y + d*0.3), sp0 = d/Math.max(0.3, view.s);
-      for (let i = 0; i < 6; i++) emit('dust', wx, wy, {vx:(Math.random() - 0.5)*sp0*1.6, vy:-(1 + Math.random()*3), s0:d*0.08/view.s + 1.5, s1:d*0.3/view.s + 4, life:900 + Math.random()*500});
-      for (let i = 0; i < 5; i++) emit('spark', wx, wy - d*0.3/view.s, {vx:(Math.random() - 0.5)*sp0*2.2, vy:-(sp0*(0.8 + Math.random())), s0:2.4, s1:0.6, life:500 + Math.random()*300}); } }
-  if (badge && lvl > 0 && d >= 22){ const fz = Math.round(Math.min(13, Math.max(8.5, d*0.24)));   // level badge in the holder's colour: a pill sized to the numeral
-    ctx.font = `700 ${fz}px ${BODY}`; const tw = ctx.measureText(ROMAN[lvl]).width, bw = Math.max(fz + 3, tw + fz*0.6), bh = fz + 4, bx = x + Math.sign(badge)*(d*0.46 - bw*0.2), by = y + d*0.46 - bh*0.2;   // on the outer lower corner, mostly off the picture
-    ctx.globalAlpha = a0; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx - bw/2, by - bh/2, bw, bh, bh/2); else ctx.rect(bx - bw/2, by - bh/2, bw, bh); ctx.fillStyle = 'rgba(8,12,14,.92)'; ctx.fill(); ctx.lineWidth = Math.max(1.2, fz*0.12); ctx.strokeStyle = col; ctx.stroke();
-    ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ROMAN[lvl], bx, by + 0.5); }
-  ctx.globalAlpha = a0; }
-// drawn before the city markers and names, so those stay on top of the aerial patches
-function drawBuildingArt(now, kl, vis){
-  const hexPx = view.s*HS0; if (hexPx < ART_PX) return; const a0 = artFade(hexPx);   // fades in over the first zoom steps past ART_PX
-  const cityOk = bartOk('city'), anyB = BART_K.some(bartOk); if (!cityOk && !anyB) return;
-  ctx.save(); ctx.lineCap = 'round';
-  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (!P.city || P.sea || !vis.has(p)) continue;
-    const [x, y0] = toScreen(P.x, P.y); if (x < -330 || y0 < -330 || x > cw + 330 || y0 > ch + 330) continue;
-    const B = S.bld[p], cons = S.cons[p], y = y0 + 9*kl, col = colorOf(S.owner[p]), night = isNight(p);
-    const Lo = bartLayout(P, p, kl), bs = [];
-    for (const k of BART_K){ const lv = B[k] || 0, ck = cons && cons.k === k ? cons : null; if (!(lv > 0 || ck) || !bartOk(k)) continue;
-      const a = Lo.ang[k]*Math.PI/180; bs.push([k, lv, ck, x + Math.cos(a)*Lo.dist, y + Math.sin(a)*Lo.dist, Math.cos(a) < 0 ? -1 : 1]); }
-    // the city is a satellite patch of its built-up area under the marker, clipped to the province's shape (wide soft edge, lightly
-    // multiplied into the terrain); the compounds at their level sit on the patch's rim in two columns beside the marker
-    ctx.save(); const fp = cityClip(p);
-    if (fp){ ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.clip(fp, 'evenodd'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
-    if (cityOk){ const cc = !bLevel(p + ':city', Lo.L, now).t0 ? cityComposite(p, Lo, night) : null;
-      if (cc){ const D = Lo.dc*CITY_EXT; ctx.globalAlpha = a0*0.94; ctx.drawImage(cc, x - D/2, y - D/2, D, D); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = a0*0.2; ctx.drawImage(cc, x - D/2, y - D/2, D, D); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
-      else { suburbs(p, Lo, x, y, night, a0); drawBart('city', Lo.L, x, y, Lo.dc, now, p + ':city', night, null, col, a0*0.92, 0, 1); } }   // during a level-up animation: the plain layers (the art's own lights glow at night)
-    ctx.restore();
-    for (const [k, lv, ck, bx, by] of bs) drawBart(k, lv, bx, by, Lo.db, now, p + ':' + k, night, ck, col, a0, 0, 1);
-    // level pills, construction progress and the upgrade burst on top, unclipped (the pill on the outer side, away from the marker and the name)
-    if (cityOk) drawBart('city', Lo.L, x, y, Lo.dc*0.6, now, p + ':city', night, null, col, a0, 0, 2);
-    for (const [k, lv, ck, bx, by, sd] of bs) drawBart(k, lv, bx, by, Lo.db, now, p + ':' + k, night, ck, col, a0, p === sel.prov ? sd : 0, 2);
-    ctx.globalAlpha = 1; }
-  ctx.restore(); }
-// the land a city's aerial art may cover: its province and the neighbouring land provinces (never the sea), cached per province
-const CCLIP = new Map();
-function cityClip(p){ if (!GEO.fill) return null; let c = CCLIP.get(p); if (c) return c; c = new Path2D(); c.addPath(GEO.fill[p]);
-  for (const v of G.P[p].nbs) if (!G.P[v].sea) c.addPath(GEO.fill[v]); CCLIP.set(p, c); return c; }
-const CMASK = new Map(), CITYC = new Map(), CITY_EXT = 1.7;   // composite canvas spans CITY_EXT x the core art's size
-function cityMask(p, L){ const key = p + ':' + L; let c = CMASK.get(key); if (c) return c; if (CMASK.size > 200) CMASK.clear();
-  const N = 160, m = document.createElement('canvas'); m.width = m.height = N; const g = m.getContext('2d'), P = G.P[p], tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0;
-  // outline radius by angle: a lumpy core plus a few sprawl arms (radial roads out of town), all from the noise field
-  const arms = 3 + (p % 3), a0 = (p*2.39) % (Math.PI*2), R0 = N*(0.28 + 0.03*tier + 0.01*L);
-  g.beginPath(); for (let i = 0; i <= 96; i++){ const a = i/96*Math.PI*2, ca = Math.cos(a), sa = Math.sin(a);
-    let r = R0*(1 + 0.2*vnoise(ca*1.6 + p*0.37, sa*1.6, 51) + 0.1*vnoise(ca*4.2, sa*4.2 + p*0.11, 52));
-    for (let k = 0; k < arms; k++){ const d = Math.atan2(Math.sin(a - a0 - k*Math.PI*2/arms), Math.cos(a - a0 - k*Math.PI*2/arms)); r += R0*0.32*Math.exp(-(d*d)/0.035)*(0.6 + 0.4*((p + k) % 3)/2); }
-    const X = N/2 + ca*r, Y = N/2 + sa*r*0.86; i ? g.lineTo(X, Y) : g.moveTo(X, Y); } g.closePath(); g.fillStyle = '#fff'; g.fill();
-  const out = document.createElement('canvas'); out.width = out.height = N; const o = out.getContext('2d'); o.filter = `blur(${(N*0.035).toFixed(1)}px)`; o.drawImage(m, 0, 0); o.filter = 'none';
-  CMASK.set(key, out); return out; }
-function cityComposite(p, Lo, night){ const D = Lo.dc*CITY_EXT, q = Math.min(1024, Math.round(Math.pow(2, Math.ceil(Math.log2(Math.max(16, D*dpr))*6)/6))), key = p + '|' + Lo.L + '|' + q + '|' + (night ? 1 : 0);
-  let c = CITYC.get(key); if (c) return c; if (!bartSprite('city', Lo.L, Lo.dc, night)) return null; if (CITYC.size > 48) CITYC.clear();
-  c = document.createElement('canvas'); c.width = c.height = q; const g = c.getContext('2d'); g.translate(q/2, q/2); g.scale(q/D, q/D);
-  suburbs(p, Lo, 0, 0, night, 1, g);
-  const sp = bartSprite('city', Lo.L, Lo.dc, night); g.drawImage(sp, -Lo.dc/2, -Lo.dc/2, Lo.dc, Lo.dc);
-  if (night){ const ls = lightsSprite('city', Lo.L, Lo.dc); if (ls){ g.globalCompositeOperation = 'lighter'; g.drawImage(ls, -Lo.dc/2, -Lo.dc/2, Lo.dc, Lo.dc); g.globalCompositeOperation = 'source-over'; } }
-  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'destination-in'; g.drawImage(cityMask(p, Lo.L), 0, 0, q, q);
-  CITYC.set(key, c); return c; }
-// suburbs: smaller, turned copies of lower-level city art around the core, so the city reads as irregular urban sprawl, not a disc
-function suburbs(p, Lo, x, y, night, a0, g0){ const g = g0 || ctx; const P = G.P[p], tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, n = 3 + tier + (Lo.L >> 1);
-  let sd = (p*2654435761 + 7) >>> 0; const rnd = () => ((sd = (sd*1664525 + 1013904223) >>> 0)/4294967296), a00 = rnd()*Math.PI*2;
-  for (let i = 0; i < n; i++){ const an = a00 + i*Math.PI*2/n + (rnd() - 0.5)*0.9, dist = Lo.dc*(0.3 + rnd()*0.2), d = Lo.dc*(0.36 + rnd()*0.2)*(i % 2 ? 0.85 : 1);
-    const sp = bartSprite('city', Math.max(1, Lo.L - 1 - (i % 3 === 2 ? 1 : 0)), d, night); if (!sp) continue;
-    const al = a0*(0.72 + rnd()*0.2), ls = night ? lightsSprite('city', Math.max(1, Lo.L - 1 - (i % 3 === 2 ? 1 : 0)), d) : null;
-    g.save(); g.translate(x + Math.cos(an)*dist, y + Math.sin(an)*dist*0.78); g.rotate(rnd()*Math.PI*2); g.globalAlpha = al; g.drawImage(sp, -d/2, -d/2, d, d);
-    if (ls){ g.globalCompositeOperation = 'lighter'; g.globalAlpha = al*0.85; g.drawImage(ls, -d/2, -d/2, d, d); g.globalCompositeOperation = 'source-over'; } g.restore(); }
-  g.globalAlpha = 1; }
-// fortifications: a small star fort (bastions per level) beside the city instead of a ring of walls across the province
-let FORTB = [];
-function fortWalls(x, y, u, lvl, col){ const r = (7 + lvl*1.6)*u, n = 5; FORTB.push([x - r - 1, y - r*0.62 - 1, x + r + 1.5*u + 1, y + r*0.62 + 2*u + 1]);
-  ctx.beginPath(); for (let i = 0; i < n*2; i++){ const a = -Math.PI/2 + i*Math.PI/n, rr = i % 2 ? r*0.62 : r; ctx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr*0.62); } ctx.closePath();
-  ctx.fillStyle = 'rgba(20,22,20,.55)'; ctx.save(); ctx.translate(1.5*u, 2*u); ctx.fill(); ctx.restore();
-  ctx.fillStyle = '#8f8a7a'; ctx.fill(); ctx.lineWidth = 1.2*u; ctx.strokeStyle = 'rgba(30,32,30,.9)'; ctx.stroke();
-  ctx.beginPath(); for (let i = 0; i < n*2; i++){ const a = -Math.PI/2 + i*Math.PI/n, rr = (i % 2 ? r*0.62 : r)*0.62; ctx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr*0.62); } ctx.closePath(); ctx.fillStyle = '#5d6b55'; ctx.fill();
-  ctx.lineWidth = 1*u; ctx.strokeStyle = col || '#b0aa98'; ctx.stroke();
-  if (u >= 1.6){ ctx.fillStyle = '#e8e2cf'; ctx.font = `700 ${Math.round(5*u + 2)}px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ROMAN[lvl] || lvl, x, y); } }   // the level numeral only when the fort is big enough to read (a lone 'I' reads as a stray badge)
-function box3(x, y, w, h, d, top, side){ ctx.fillStyle = side; ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w + d, y - d*0.6); ctx.lineTo(x + w + d, y - h - d*0.6); ctx.lineTo(x + w, y - h); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = top; ctx.beginPath(); ctx.moveTo(x, y - h); ctx.lineTo(x + w, y - h); ctx.lineTo(x + w + d, y - h - d*0.6); ctx.lineTo(x + d, y - h - d*0.6); ctx.closePath(); ctx.fill(); }
-function drawBld(it, x, y, u, now, p, col, night){ const k = it.k, t = now/1000;
-  // ground shadow pad
-  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y + 1.5*u, 7.5*u, 2.6*u, 0, 0, Math.PI*2); ctx.fill();
-  const wall = '#8d8a80', wallD = '#5e5c55', roof = '#6f7378', glowW = night ? 'rgba(255,214,140,.95)' : 'rgba(40,46,50,.85)';
-  if (k === 'fac'){ // sawtooth-roof works with chimneys; one chimney per level, puffing smoke
-    ctx.fillStyle = wall; ctx.fillRect(x - 6*u, y - 5*u, 12*u, 5*u); ctx.fillStyle = roof; ctx.beginPath(); for (let i = 0; i < 3; i++){ const sx = x - 6*u + i*4*u; ctx.moveTo(sx, y - 5*u); ctx.lineTo(sx + 4*u, y - 8*u); ctx.lineTo(sx + 4*u, y - 5*u); } ctx.fill();
-    ctx.fillStyle = glowW; for (let i = 0; i < 4; i++) ctx.fillRect(x - 5*u + i*3*u, y - 3.2*u, 1.6*u, 1.4*u);
-    for (let c = 0; c < Math.min(4, it.lvl); c++){ const cx = x + (3.5 - c*2.6)*u; ctx.fillStyle = '#4a4744'; ctx.fillRect(cx, y - 12*u, 1.6*u, 7*u); ctx.fillStyle = col; ctx.fillRect(cx, y - 10.5*u, 1.6*u, 0.9*u);
-      const key = p*10 + c, lt = lastSmoke.get(key) || 0; if (now - lt > 900 + c*170 && !afxReduced()){ lastSmoke.set(key, now); const [wx, wy] = screenToWorld(cx + 0.8*u, y - 12*u); emit('smokel', wx, wy, {vx:5 + Math.random()*4, vy:-6 - Math.random()*3, s0:2.5, s1:11, life:2600}); } } }
-  else if (k === 'air'){ // runway + hangar + spinning radar
-    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.35); ctx.fillStyle = '#3a3d40'; ctx.fillRect(-10*u, -1.6*u, 20*u, 3.2*u); ctx.strokeStyle = 'rgba(240,240,230,.8)'; ctx.lineWidth = 0.5*u; ctx.setLineDash([1.6*u, 1.4*u]); ctx.beginPath(); ctx.moveTo(-9*u, 0); ctx.lineTo(9*u, 0); ctx.stroke(); ctx.setLineDash([]);
-    if (night){ ctx.fillStyle = 'rgba(255,220,140,.9)'; for (let i = -9; i <= 9; i += 3){ ctx.fillRect(i*u, -1.8*u, 0.7*u, 0.7*u); ctx.fillRect(i*u, 1.2*u, 0.7*u, 0.7*u); } } ctx.restore();
-    ctx.fillStyle = '#77786f'; ctx.beginPath(); ctx.ellipse(x + 4*u, y - 3.5*u, 3.6*u, 2.6*u, 0, Math.PI, 0); ctx.fill();
-    const ra = t*2.4; ctx.strokeStyle = '#d9d6c8'; ctx.lineWidth = 1*u; ctx.beginPath(); ctx.moveTo(x - 5*u, y - 3*u); ctx.lineTo(x - 5*u, y - 7*u); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x - 5*u - Math.cos(ra)*2.6*u, y - 7.4*u - Math.sin(ra)*0.8*u); ctx.lineTo(x - 5*u + Math.cos(ra)*2.6*u, y - 7.4*u + Math.sin(ra)*0.8*u); ctx.lineWidth = 1.2*u; ctx.stroke(); }
-  else if (k === 'ref'){ // tanks + flare stack
-    for (const [dx, dy] of [[-4, 0], [1, 1], [-1.5, -3]]){ ctx.fillStyle = '#b9b6aa'; ctx.beginPath(); ctx.ellipse(x + dx*u, y + dy*u - 2.2*u, 2.4*u, 1.1*u, 0, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#8d8a80'; ctx.fillRect(x + dx*u - 2.4*u, y + dy*u - 2.2*u, 4.8*u, 2.2*u); ctx.fillStyle = '#c8c5ba'; ctx.beginPath(); ctx.ellipse(x + dx*u, y + dy*u - 2.2*u, 2.4*u, 1.1*u, 0, 0, Math.PI*2); ctx.fill(); }
-    ctx.fillStyle = '#4a4744'; ctx.fillRect(x + 5*u, y - 11*u, 1*u, 11*u); const fl = 0.75 + 0.25*Math.sin(t*13 + p) + 0.12*Math.sin(t*31);
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.9; ctx.drawImage(FIRE(), x + 5.5*u - 2.4*u*fl, y - 15*u*fl, 4.8*u*fl, 6*u*fl); ctx.restore(); }
-  else if (k === 'fdy'){ // block + glowing furnace
-    box3(x - 5*u, y, 9*u, 6*u, 3*u, '#6c6a64', '#4e4c47'); ctx.fillStyle = wallD; ctx.fillRect(x - 5*u, y - 6*u, 9*u, 6*u);
-    const g = 0.6 + 0.4*Math.sin(t*3 + p); ctx.fillStyle = `rgba(255,${Math.round(110 + 60*g)},40,${0.75 + 0.25*g})`; ctx.fillRect(x - 2*u, y - 3.4*u, 3*u, 3.4*u);
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35*g; ctx.drawImage(GLOW(), x - 5*u, y - 7*u, 9*u, 9*u); ctx.restore(); }
-  else if (k === 'farm'){ // fields + turning windmill
-    for (let i = 0; i < 2 + it.lvl; i++){ ctx.fillStyle = ['#7f8f3e', '#b3a24a', '#6d7f36', '#a39443'][i % 4]; ctx.beginPath(); const fx = x - 8*u + i*4*u; ctx.moveTo(fx, y + 1*u); ctx.lineTo(fx + 3.6*u, y + 1*u); ctx.lineTo(fx + 5*u, y - 2.4*u); ctx.lineTo(fx + 1.4*u, y - 2.4*u); ctx.closePath(); ctx.fill(); }
-    ctx.strokeStyle = '#e8e4d8'; ctx.lineWidth = 0.9*u; ctx.beginPath(); ctx.moveTo(x + 6*u, y - 1*u); ctx.lineTo(x + 6*u, y - 9*u); ctx.stroke(); const wa = t*1.6 + p;
-    ctx.lineWidth = 0.8*u; ctx.beginPath(); for (let i = 0; i < 3; i++){ const a = wa + i*Math.PI*2/3; ctx.moveTo(x + 6*u, y - 9*u); ctx.lineTo(x + 6*u + Math.cos(a)*4*u, y - 9*u + Math.sin(a)*4*u); } ctx.stroke(); }
-  else if (k === 'rec'){ // barracks + waving flag in the owner's colour
-    box3(x - 5*u, y, 8*u, 3.6*u, 2.4*u, '#75705f', '#575343'); ctx.fillStyle = '#6a6655'; ctx.fillRect(x - 5*u, y - 3.6*u, 8*u, 3.6*u); ctx.fillStyle = glowW; ctx.fillRect(x - 3.8*u, y - 2.4*u, 1.4*u, 1.2*u); ctx.fillRect(x - 0.6*u, y - 2.4*u, 1.4*u, 1.2*u);
-    ctx.strokeStyle = '#d9d6c8'; ctx.lineWidth = 0.7*u; ctx.beginPath(); ctx.moveTo(x + 5*u, y); ctx.lineTo(x + 5*u, y - 11*u); ctx.stroke();
-    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x + 5*u, y - 11*u); for (let i = 0; i <= 6; i++){ const fx = i/6*5*u; ctx.lineTo(x + 5*u + fx, y - 11*u + Math.sin(t*5 + i*0.9)*0.7*u*(i/6)); } for (let i = 6; i >= 0; i--){ const fx = i/6*5*u; ctx.lineTo(x + 5*u + fx, y - 8*u + Math.sin(t*5 + i*0.9)*0.7*u*(i/6)); } ctx.closePath(); ctx.fill(); }
-  else if (k === 'silo'){ // hatch with blinking warning light
-    ctx.fillStyle = '#4b4e4c'; ctx.beginPath(); ctx.ellipse(x, y - 1*u, 5*u, 2.4*u, 0, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#2c2e2d'; ctx.beginPath(); ctx.ellipse(x, y - 1.3*u, 3*u, 1.4*u, 0, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#d6c040'; ctx.lineWidth = 0.6*u; ctx.beginPath(); ctx.ellipse(x, y - 1*u, 5*u, 2.4*u, 0, 0, Math.PI*2); ctx.stroke();
-    if (Math.floor(t*1.5 + p) % 2 === 0){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,60,40,1)'; ctx.beginPath(); ctx.arc(x + 4*u, y - 3*u, 0.9*u, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 0.5; ctx.drawImage(GLOW(), x + 1.5*u, y - 5.5*u, 5*u, 5*u); ctx.restore(); } }
-  else if (k === 'yard'){ // dock + swinging crane
-    ctx.fillStyle = '#5a5d5f'; ctx.fillRect(x - 8*u, y - 1.5*u, 14*u, 2.4*u); ctx.fillStyle = '#2f4a58'; ctx.fillRect(x - 8*u, y + 0.9*u, 14*u, 1.4*u);
-    ctx.fillStyle = '#8b9093'; ctx.beginPath(); ctx.moveTo(x - 6*u, y - 1.5*u); ctx.lineTo(x - 1*u, y - 1.5*u); ctx.lineTo(x - 2*u, y - 3*u); ctx.lineTo(x - 6*u, y - 3*u); ctx.closePath(); ctx.fill();
-    const ca = Math.sin(t*0.7 + p)*0.6; ctx.strokeStyle = '#e0a63a'; ctx.lineWidth = 1*u; ctx.beginPath(); ctx.moveTo(x + 3*u, y - 1.5*u); ctx.lineTo(x + 3*u, y - 12*u); ctx.lineTo(x + 3*u + Math.cos(ca)*8*u, y - 12*u + Math.sin(ca)*1.6*u); ctx.stroke();
-    ctx.lineWidth = 0.4*u; ctx.beginPath(); ctx.moveTo(x + 3*u + Math.cos(ca)*7*u, y - 12*u + Math.sin(ca)*1.4*u); ctx.lineTo(x + 3*u + Math.cos(ca)*7*u, y - 6*u); ctx.stroke(); }
-  else if (k === 'cons'){ // scaffold + slewing tower crane + progress ring
-    const f = 1 - it.c.h/Math.max(1, it.c.h0); ctx.strokeStyle = 'rgba(214,196,150,.9)'; ctx.lineWidth = 0.6*u; const hh = 3 + 6*f;
-    ctx.beginPath(); for (let i = 0; i <= 3; i++){ ctx.moveTo(x - 5*u + i*3*u, y); ctx.lineTo(x - 5*u + i*3*u, y - hh*u); } for (let j = 0; j <= hh; j += 2.5){ ctx.moveTo(x - 5*u, y - j*u); ctx.lineTo(x + 4*u, y - j*u); } ctx.stroke();
-    const ja = t*0.9 + p; ctx.strokeStyle = '#e8b33c'; ctx.lineWidth = 0.9*u; ctx.beginPath(); ctx.moveTo(x + 5*u, y); ctx.lineTo(x + 5*u, y - 14*u); ctx.moveTo(x + 5*u - Math.cos(ja)*3*u, y - 14*u - Math.sin(ja)*0.6*u); ctx.lineTo(x + 5*u + Math.cos(ja)*9*u, y - 14*u + Math.sin(ja)*1.8*u); ctx.stroke();
-    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 2*u; ctx.beginPath(); ctx.arc(x, y + 5.5*u, 3*u, 0, Math.PI*2); ctx.stroke(); ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 1.4*u; ctx.beginPath(); ctx.arc(x, y + 5.5*u, 3*u, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.stroke();
-    if (!afxReduced() && Math.random() < 0.03){ const [wx, wy] = screenToWorld(x - 2*u + Math.random()*6*u, y); emit('dust', wx, wy, {vx:(Math.random() - 0.5)*8, vy:-2, s0:2, s1:9, life:900}); } } }
 // health (with a short white 'damage taken' tail) and morale bars under a counter
 function unitBars(a, x0, y0, barW, ps, now){
   const hf = Math.max(0, Math.min(1, a ? (a.air ? Math.min(healthFrac(a), wingCond(a)) : healthFrac(a)) : 1)), HB = 3.5*ps; let shown = hf;
@@ -5933,6 +5967,10 @@ function drawLinkFx(now, vis){ if (!S.links) return; const hexPx = view.s*HS0; i
       ctx.strokeStyle = Bd.k === 'rail' ? '#f3ead2' : '#fff2c4'; ctx.lineWidth = 2.2*px; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(A.x + (B.x - A.x)*f, A.y + (B.y - A.y)*f); ctx.stroke();
       if (hexPx >= 7){ ctx.beginPath(); ctx.arc(mx, my, 5*px, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 1.6*px; ctx.stroke(); } }
     ctx.restore(); } }
+// the ground under an 'urban' province: the most common terrain of its cells (the map raster paints them so); the city itself is drawn on its own
+function provGround(P){ if (P.ground) return P.ground; const TC = window.TERRCELLS, TN = ['plains', 'forest', 'mountain', 'desert', 'tundra', 'hills', 'marsh', 'snow'], n = {};
+  if (TC) for (const i of P.cells){ if (i === P.cc) continue; const t = TN[+TC[i]] || 'plains'; n[t] = (n[t] || 0) + 1; }
+  let best = 'plains', bn = 0; for (const t in n) if (n[t] > bn){ bn = n[t]; best = t; } return (P.ground = TC ? best : 'none'); }
 function renderLayer(vis, lite = false){
   if (!layer) layer = document.createElement('canvas');
   const mx = Math.round(Math.max(cw*LM, 224)), my = Math.round(Math.max(ch*LM, 172)), lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
@@ -5962,7 +6000,7 @@ function renderLayer(vis, lite = false){
       for (const [oc, w] of [[o0, 1 - f], [o0 + 1, f]]){ if (0.3*zm*w < 0.06) continue;   /* a faint octave costs a full-layer fill for nothing */ gp.micro.setTransform(new DOMMatrix().rotate(-23).scale(0.08/Math.pow(2, oc))); c.globalAlpha = 0.3*zm*w; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); } }
     c.restore(); }
   if (hexPx >= ART_PX && SET.fx !== 'low' && mapMode === 'political'){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (GEO.coastV) c.clip(GEO.coastV, 'evenodd');
-    for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const t = P.terrain || 'plains', wooded = t === 'mountain' && Math.abs(P.lat) > 24 && Math.abs(P.lat) < 55, pt = t === 'forest' || wooded ? GP.forest : t === 'plains' || t === 'urban' ? GP.fields : null; if (!pt) continue;   // temperate ranges (Appalachians, Alps' flanks) are wooded
+    for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const t = P.terrain === 'urban' ? provGround(P) : P.terrain || 'plains', wooded = t === 'mountain' && Math.abs(P.lat) > 24 && Math.abs(P.lat) < 55, pt = t === 'forest' || wooded ? GP.forest : t === 'plains' || t === 'urban' ? GP.fields : null; if (!pt) continue;   // temperate ranges (Appalachians, Alps' flanks) are wooded
       c.globalAlpha = (t === 'forest' ? 0.7 : wooded ? 0.5 : 0.62)*zg; c.fillStyle = pt; c.fill(GEO.fill[p], 'evenodd');
       if (wooded){ c.globalAlpha = 0.42*zg; c.fillStyle = '#4a6a3c'; c.fill(GEO.fill[p], 'evenodd'); } }   // their grey rock and white ridge highlights take the green of the woods
     c.restore(); }
@@ -5978,8 +6016,11 @@ function renderLayer(vis, lite = false){
     else if (mapMode === 'resources'){ const y = provYield(p), top = ['oil', 'metal', 'food', 'mp', 'cash'].sort((k1, k2) => (y[k2]/({cash:12, oil:5, metal:4, food:3, mp:2})[k2]) - (y[k1]/({cash:12, oil:5, metal:4, food:3, mp:2})[k1]))[0];
       c.fillStyle = {oil:'rgba(40,40,44,.75)', metal:'rgba(140,155,170,.6)', food:'rgba(120,180,80,.5)', mp:'rgba(200,160,120,.5)', cash:'rgba(220,190,90,.55)'}[top]; c.fill(GEO.fill[p], 'evenodd'); }
     else if (o >= 0 && relMode){ c.fillStyle = o === PLAYER ? rgba(S.nations[o].color, 0.45) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5); c.fill(GEO.fill[p], 'evenodd'); }   // political: the nation tint is a colour-blend pass below (keeps the ground's light and shade)
-    { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p], 'evenodd'); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }
-    if (!vis.has(p)){ c.fillStyle = hp; c.fill(GEO.fill[p], 'evenodd'); } }
+    { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p], 'evenodd'); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } } }
+  if (cityFade(hexPx) > 0){ c.globalCompositeOperation = 'destination-out'; c.globalAlpha = 0.65*cityFade(hexPx);   // winter: the snow thins over the towns (cleared streets and roofs read darker than the snowfields)
+    cityEach(wx0, wy0, wx1, wy1, p => { if (season(p) !== 'snow') return; const I = CGEO.get(p); if (!I) return; const img = CBAKE.get('d' + p + '|' + cityTier(I)) || cityAnyBake(p, cityTier(I), false); if (img) c.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); });
+    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; }
+  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.has(p) || !onScreen(P)) continue; c.fillStyle = hp; c.fill(GEO.fill[p], 'evenodd'); }
   // rivers and roads go on the same overlay, above the fills, so they share the single coast clip
   c.lineJoin = 'round'; c.lineCap = 'round';
   { const LN = loadWorld.lines; if (LN){
@@ -6014,6 +6055,9 @@ function renderLayer(vis, lite = false){
     base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/22));   // world view: clear national colours; play zoom and closer: a light cast, the terrain's own colours lead
     base.globalCompositeOperation = 'color'; base.globalAlpha = 0.26 - 0.205*tk; base.drawImage(tc, 0, 0);
     base.globalCompositeOperation = 'soft-light'; base.globalAlpha = 0.28 - 0.17*tk; base.drawImage(tc, 0, 0); base.restore(); }
+  // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
+  // snow, roads, rivers and borders of the overlay
+  if (cityFade(hexPx) > 0){ base.save(); if (GEO.coastV && hexPx >= 7) base.clip(GEO.coastV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite); base.restore(); }
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, 0, 0); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
   if (GEO.coastV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
@@ -6026,7 +6070,9 @@ function draw(now){
   if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; } else if (cv.style.transform){ cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS0;
-  const key = [view.s, cw, ch, dpr, geoVer, vis.key, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' ? Math.floor(S.hour/24) : 0, LINKD].join('|');
+  { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
+    if (CITY_PEND && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120){ CITY_PEND = false; CITYV++; } }
+  const key = [view.s, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' ? Math.floor(S.hour/24) : 0, LINKD].join('|');
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   // any view movement since the last frame (drag, fly-to, keys, tutorial) counts as panning: reuse the shifted layer until it settles
   const moved = draw.pvx !== view.x || draw.pvy !== view.y || draw.pvs !== view.s; if (panning || moved) lastPanT = now; draw.pvx = view.x; draw.pvy = view.y; draw.pvs = view.s;
@@ -6058,6 +6104,8 @@ function draw(now){
       ctx.strokeStyle = `rgba(224,87,79,${(0.12 + 0.08*br).toFixed(3)})`; ctx.lineWidth = 8*z*px; ctx.stroke(F); ctx.strokeStyle = 'rgba(30,6,4,0.55)'; ctx.lineWidth = 2.8*z*px; ctx.stroke(F);
       ctx.strokeStyle = 'rgba(240,96,78,0.95)'; ctx.lineWidth = 1.5*z*px; ctx.stroke(F); ctx.restore(); } }
   { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)); if (tN < 1) drawNightWorld(1 - tN); if (tN > 0) drawNight(tN); }
+  { const pend = CITY_PEND; drawCityLights(hexPx); CITY_PEND = pend; }   // city lights over the night tint (their bakes trickle in frame by frame)
+  if (hexPx >= 9) cityWarm(now);   // idle: the low tier of every city, so a jump never lands on empty ground
   drawWeather(now);
 
   // ---- screen space
@@ -6087,7 +6135,7 @@ function draw(now){
   // stacks at a city or capital sit just above its marker (CoN-style), never on top of the star / dot or the name below it
   for (const c of clusters){ if (c.moving || c.air || c.pinned) continue; const Pm = G.P[c.at], cap = isCapital(c.at);
     if (!(cap && hexPx >= 2) && !(Pm.city && showCity)) continue;
-    const tier = Pm.pop0 >= 8 ? 2 : Pm.pop0 >= 2.5 ? 1 : 0, ring = cap ? (6.5 + tier)*kl + 2.2*kl : [2.8, 3.6, 4.6][tier]*kl + 1.8*kl, mTop = toScreen(Pm.x, Pm.y)[1] + 9*kl - ring;
+    const tier = Pm.pop0 >= 8 ? 2 : Pm.pop0 >= 2.5 ? 1 : 0, ring = cap ? (6.5 + tier)*kl + 2.2*kl : [2.8, 3.6, 4.6][tier]*kl + 1.8*kl, mTop = toScreen(Pm.x, Pm.y)[1] + CITY_DY*kl - ring;
     if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); c.y = Math.min(c.y, mTop - 2*kl - d.h/2 - d.bars - 1); }
     else { c.y0 = c.y; c.y = Math.min(c.y - 10*kl, mTop - 2*kl - formBox(c).bb[3]); } }
   const perProv = new Map();
@@ -6141,9 +6189,8 @@ function draw(now){
       if (placed.some(q => (Math.abs(q.x - x) < (q.w + w)/2 && Math.abs(q.y - y) < 18) || (q.nm === nm && Math.hypot(q.x - x, q.y - y) < 260))) continue;
       const sb = [x - w/2, y - 8, x + w/2, y + 8]; if (boxes0.some(q => q.unit && q[0] < sb[2] && q[2] > sb[0] && q[1] < sb[3] && q[3] > sb[1])) continue;
       placed.push({x, y, w, nm}); boxes0.push(sb); ctx.fillText(nm, x, y); } }
-  drawBuildingArt(now, kl, vis);
   marks = [];
-  const labs = [], capEm = [], pinsOut = [], lateLabs = []; let capLab = null;
+  const labs = [], lateLabs = [], trq = [], LPL = new Map(); let capLab = null, trays = [], trCity = false;   // trq: building trays to place, LPL: placed name boxes per province
   for (let p = 0; p < G.P.length; p++){
     const P = G.P[p]; if (P.sea) continue;
     const [x, y] = toScreen(P.x, P.y);
@@ -6151,52 +6198,34 @@ function draw(now){
     const cap = isCapital(p), dim = vis.has(p) ? 1 : 0.55;
     ctx.globalAlpha = dim;
     const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, oc = S.owner[p] >= 0 ? S.nations[S.owner[p]].color : '#8c8a80';
-    const pk = cityPlateK(P, p, vis);   // on the aerial city patch (close zoom) the marker is smaller and lets the city show through
-    if (P.city && hexPx >= 6){ const fa = hexPx >= ART_PX && bartOk('city') ? 1 - artFade(hexPx) : 1;   // urban footprint (play zoom); the aerial patch replaces it close up
-      if (fa > 0.02){ const Rp = Math.sqrt(P.cells.length)*HS*view.s*0.62, rf = Math.min(Math.max(Rp*1.05, 9*kl), (cap ? 17 + tier*2.5 : [9.5, 12.5, 16.5][tier])*kl*Math.min(1.5, Math.max(1, hexPx/24)));
-        const fs = footSprite(p % 7, rf*2, isNight(p)); ctx.globalAlpha = fa*dim*(isNight(p) ? 0.75 : 0.8); ctx.drawImage(fs, x - rf, y + 9*kl - rf, rf*2, rf*2); ctx.globalAlpha = dim; } }
-    // night: the city's lights over its footprint - a warm core sized by population and, for bigger cities, a few suburbs glowing around it
-    if (P.city && hexPx >= 2.5 && isNight(p)){ const gr = (cap ? 16 : 9 + Math.min(12, P.pop0*1.2))*kl, gy = y + 9*kl, G0 = GLOW(); ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.85*Math.max(0.6, dim); ctx.drawImage(G0, x - gr*0.75, gy - gr*0.75, gr*1.5, gr*1.5); ctx.globalAlpha = 0.35*Math.max(0.6, dim); ctx.drawImage(G0, x - gr*1.4, gy - gr*1.1, gr*2.8, gr*2.2);
-      if (tier && hexPx >= 6){ ctx.globalAlpha = 0.5*Math.max(0.6, dim); for (let i = 0; i < 2 + tier; i++){ const a0 = p*2.4 + i*2.1, d0 = gr*(0.5 + 0.18*((p + i*3) % 3)), r0 = gr*(0.42 + 0.1*(i % 2)); ctx.drawImage(G0, x + Math.cos(a0)*d0 - r0, gy + Math.sin(a0)*d0*0.75 - r0, r0*2, r0*2); } }
+    const pk = cityPlateK(P, p, vis);   // close up the marker is smaller and lets the city on the map show through
+    // night at wide zoom: a point of light per city sized by population; from the mid zoom the city's own lights (drawCityLights, on the map) take over
+    if (P.city && hexPx >= 2.5 && cityFade(hexPx) < 1 && isNight(p)){ const gr = (cap ? 16 : 9 + Math.min(12, P.pop0*1.2))*kl, gy = y + CITY_DY*kl, G0 = GLOW(), wf = 1 - cityFade(hexPx); ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.85*Math.max(0.6, dim)*wf; ctx.drawImage(G0, x - gr*0.75, gy - gr*0.75, gr*1.5, gr*1.5); ctx.globalAlpha = 0.35*Math.max(0.6, dim)*wf; ctx.drawImage(G0, x - gr*1.4, gy - gr*1.1, gr*2.8, gr*2.2);
+      if (tier && hexPx >= 6){ ctx.globalAlpha = 0.5*Math.max(0.6, dim)*wf; for (let i = 0; i < 2 + tier; i++){ const a0 = p*2.4 + i*2.1, d0 = gr*(0.5 + 0.18*((p + i*3) % 3)), r0 = gr*(0.42 + 0.1*(i % 2)); ctx.drawImage(G0, x + Math.cos(a0)*d0 - r0, gy + Math.sin(a0)*d0*0.75 - r0, r0*2, r0*2); } }
       ctx.restore(); }
-    else if (!P.city && hexPx >= 8 && (P.pop0 || 0) >= 0.1 && isNight(p)){ const gr = (3.5 + Math.min(6, P.pop0*1.8))*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + 0.25*Math.min(1, P.pop0); ctx.drawImage(GLOW(), x - gr, y - gr, gr*2, gr*2); ctx.restore(); }   // towns: small points of light
-    if (cap && hexPx >= 2){ const cy0 = y + 9*kl, rr = (6.5 + tier)*kl*pk, R1 = rr + 2.2*kl*pk; marks.push({p, x, y:cy0, r:(8.7 + tier)*kl});   // (the tap target keeps its full size where the marker shrinks on the city art) capital: cream star on a disc in the holder's (deepened) colour
-      ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.globalAlpha = dim*(pk < 1 ? 0.6 : 0.95); ctx.fillStyle = shade(oc, -0.5); ctx.fill(); ctx.globalAlpha = dim;
+    else if (!P.city && hexPx >= 8 && (P.pop0 || 0) >= 0.1 && isNight(p)){ const gr = Math.max(2.5, (5 + 6*Math.min(1.5, P.pop0))*KM_W*view.s); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.24 + 0.2*Math.min(1, P.pop0); ctx.drawImage(GLOW(), x - gr, y - gr, gr*2, gr*2); ctx.restore(); }   // towns: small pools of light, world-sized like the cities (they grow as you zoom in)
+    if (cap && hexPx >= 2){ const cy0 = y + CITY_DY*kl, rr = (6.5 + tier)*kl*pk, R1 = rr + 2.2*kl*pk; marks.push({p, x, y:cy0, r:(8.7 + tier)*kl});   // (the tap target keeps its full size where the marker shrinks on the city art) capital: cream star on a disc in the holder's (deepened) colour
+      ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.globalAlpha = dim*(pk < 1 ? 0.5 : 0.95); ctx.fillStyle = shade(oc, -0.5); ctx.fill(); ctx.globalAlpha = dim;
       ctx.lineWidth = 1.6*kl + 1.8; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.6*kl; ctx.strokeStyle = oc; ctx.stroke();
       star(x, cy0, rr); ctx.fillStyle = '#f6efdc'; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = 'rgba(4,7,9,.55)'; ctx.stroke();
-      if (hexPx >= 7){ const fh = Math.round(Math.min(20, Math.max(13, 12*kl))), pin = flagPin(flagIdx(S.owner[p]), fh, dpr);   // the holder's flag flying beside the capital star (mid and close zoom)
-        if (pin) capEm.push({pin, a:dim, p, x, cy0, R0:R1}); } }
-    else if (P.city && showCity){ const cy0 = y + 9*kl, rr = [2.8, 3.6, 4.6][tier]*kl*pk, R1 = rr + 1.8*kl*pk; marks.push({p, x, y:cy0, r:([2.8, 3.6, 4.6][tier] + 1.8)*kl});   // cities: size by population, ring in the holder's colour
+      }
+    else if (P.city && showCity){ const cy0 = y + CITY_DY*kl, rr = [2.8, 3.6, 4.6][tier]*kl*pk, R1 = rr + 1.8*kl*pk; marks.push({p, x, y:cy0, r:([2.8, 3.6, 4.6][tier] + 1.8)*kl});   // cities: size by population, ring in the holder's colour
       ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.fillStyle = rgba(oc, pk < 1 ? 0.2 : 0.45); ctx.fill();   // a tint of the holder's colour inside the ring, no dark disc
       ctx.lineWidth = 1.3*kl + 1.6; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.3*kl; ctx.strokeStyle = oc; ctx.stroke();
       ctx.beginPath(); ctx.arc(x, cy0, rr, 0, Math.PI*2); ctx.fillStyle = '#f6efdc'; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(4,7,9,.6)'; ctx.stroke();
       if (tier === 2){ ctx.beginPath(); ctx.arc(x, cy0, rr*0.42, 0, Math.PI*2); ctx.fillStyle = oc; ctx.fill(); } }   // a metropolis carries the holder's colour at its heart
-    if (!cap && hexPx >= 7 && S.owner[p] === NEUTRAL && countryCap(P.country) === p){   // an independent country's own flag at its capital
-      const fh = Math.round(Math.min(17, Math.max(11, 10*kl))), pin = flagPin(flagIdx(G.countries[P.country].name), fh, dpr);
-      if (pin) capEm.push({pin, a:dim, p, x, cy0:y + 9*kl, R0:P.city && showCity ? ([2.8, 3.6, 4.6][tier] + 1.8)*kl*pk : 3*kl, ind:true}); }
-    if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 22){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + 9*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
-    if (S.bld[p].silo && hexPx >= 4 && !(hexPx >= ART_PX && P.city && bartOk('silo') && vis.has(p))){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-    if (S.bld[p].fort && hexPx >= 6 && !(pk < 1)){ const fx2 = x - 10*kl, fy2 = y + 9*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 22){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + (P.city || cap ? CITY_DY : 9)*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (S.bld[p].silo && hexPx >= 4 && !trayOn(P, p, hexPx, vis)){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    if (S.bld[p].fort && hexPx >= 6 && !trayOn(P, p, hexPx, vis)){ const fx2 = x - 10*kl, fy2 = y + (P.city || cap ? CITY_DY : 9)*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
     { const Rpx = Math.sqrt(P.cells.length)*HS*view.s, label = cap && hexPx >= 4 ? P.cityName : P.city && hexPx >= 8 ? P.cityName : hexPx >= 9 && Rpx >= 16 ? P.name : '';
-      if (label) labs.push({t:label, x, y:y + (P.city ? 20*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:y + 9*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl}); }
+      if (label) labs.push({t:label, x, y:y + (P.city ? (CITY_DY + 11)*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:y + CITY_DY*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl}); }
+    if (hexPx >= TRAY_PX && trayOn(P, p, hexPx, vis)){ const its = trayItems(p); if (its.length) trq.push({p, items:its, city:!!(P.city || cap), x, y, my:y + CITY_DY*kl, ly:y + (CITY_DY + 11)*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl, col:colorOf(S.owner[p]),
+      pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (S.owner[p] === PLAYER ? 1e5 : 0)}); }   // its buildings as a tray of symbols (placed with the names)
     ctx.globalAlpha = 1;
     const c = S.cap[p];
     if (c){ const f = Math.min(1, c.h/capNeed(p, c.by)); ctx.beginPath(); ctx.arc(x, y, 15*kl, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.lineWidth = 3; ctx.strokeStyle = S.nations[c.by].color; ctx.stroke(); }
   }
-  // capital crests on top of the city markers; city names step around them (capital names ignore them, like stacks)
-  // each crest takes the first free spot (right of the star, above right, left) that covers no other city marker, label, other province's stack or crest; none free = no crest
-  // powers' capitals choose first; a power's flag always shows (at worst over a neighbour's name), never under its own garrison counter
-  capEm.sort((e1, e2) => (e1.ind ? 1 : 0) - (e2.ind ? 1 : 0));
-  const ovl = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
-  for (const e of capEm){ const pin = e.pin, own = boxes0.filter(q => q.unit && q.at === e.p), gb = own.length ? [Math.min(...own.map(q => q[0])), Math.min(...own.map(q => q[1])), Math.max(...own.map(q => q[2])), Math.max(...own.map(q => q[3]))] : null;
-    let pick = null, fall = null;
-    for (const [ex, ey] of capFlagSpots(e.x, e.cy0, e.R0, pin, gb)){ const b = [ex - pin.ax + pin.fx - 1, ey - pin.ay + pin.fy, ex - pin.ax + pin.fx + pin.fw, ey];   // the pole foot stands at (ex, ey); the box is pole + cloth
-      if (own.some(q => ovl(q, b))) continue; if (!fall) fall = [ex, ey, b];
-      if (marks.some(m => m.p !== e.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3]) || boxes0.some(q => q.at !== e.p && ovl(q, b))) continue;
-      pick = [ex, ey, b]; break; }
-    if (!pick && !e.ind) pick = fall; if (!pick) continue;
-    const [ex, ey, b] = pick; pinsOut.push([pin, e.a, Math.round((ex - pin.ax)*dpr)/dpr, Math.round((ey - pin.ay)*dpr)/dpr]); b.unit = true; boxes0.push(b); }   // drawn after the buildings and power names (below)
   ctx.globalAlpha = 1;
   // power names: big and faint, drawn under the city and province names and the counters (area labels sit below point labels)
   const pnB = [];   // power names already placed (they keep clear of each other too)
@@ -6221,11 +6250,11 @@ function draw(now){
     pnB.push([lx - tw2/2 - 4, ly - sz*0.55, lx + tw2/2 + 4, ly + sz*0.5]);
     ctx.lineWidth = you ? 5 : 4; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(txt, lx, ly);
     ctx.fillStyle = you ? 'rgba(255,250,235,.85)' : rgba(S.nations[n].color, 0.7); ctx.fillText(txt, lx, ly); });
-  // buildings and forts go down before the names, so a name is never hidden under a fort; the names keep clear of the forts too
-  FORTB = []; drawBuildings(now, kl, vis); for (const f of FORTB){ const b = f.slice(); b.fort = true; b.unit = true; b.at = -3; boxes0.push(b); }
   // place labels: highest rank first, skip any that would overlap one already placed
-  { labs.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
-    for (const L of labs){ const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; ctx.font = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
+  // building trays: city ones once the city names are placed (they give way to names, not to province names), countryside ones last
+  { labs.sort((a, b) => b.pri - a.pri); trq.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
+    for (const L of labs){ if (!trCity && !L.cap && !L.city){ trCity = true; trays = placeTrays(trq, boxes, LPL, true, hexPx); }
+      const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; ctx.font = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
       const hit = q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
       let lx = L.x, ly = y0, late = false;
       if (boxes.some(hit)){ if (L.cap && boxes.some(q => !q.unit && hit(q))) continue;   // a capital name gives way only to another name; stacks make it step aside
@@ -6241,17 +6270,17 @@ function draw(now){
           if (b[0] < 0 || b[2] > cw || boxes.some(hit) || marks.some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3])) continue;
           lx = x0 + w/2; ly = yt; ok = true; break; }
         if (!ok){ if (!(L.cap && L.p === S.nations[PLAYER].capital)) continue; for (let i = 0; i < 4; i++) b[i] = b0[i]; late = true; } }   // a name boxed in on every side is left out (your own capital alone keeps its spot)
-      boxes.push(b); if (L.cap && L.p === S.nations[PLAYER].capital) capLab = {x:lx, y:ly, f, w, b};
+      boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital) capLab = {x:lx, y:ly, f, w, b};
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else { ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
+    if (!trCity) trays = placeTrays(trq, boxes, LPL, true, hexPx); trays = trays.concat(placeTrays(trq, boxes, LPL, false, hexPx));
     ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
-  // capital flag pins on top of the city art and the power names
-  for (const [pin, a, px0, py0] of pinsOut){ ctx.globalAlpha = Math.max(0.9, a); ctx.drawImage(pin.c, px0, py0, pin.w, pin.h); }
+  for (const T of trays) drawTray(T, now, hexPx, kl);
   ctx.globalAlpha = 1;
   // your capital callout (the YOUR CAPITAL tag itself is placed after the counters, clear of them)
   let capTag = null;
   { const N = S.nations[PLAYER];
-    if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + 9*kl;
+    if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + CITY_DY*kl;
       if (!(hexPx >= ART_PX && bartOk('city'))){ ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
       if (S.hour < 72) capTag = [x, cy]; } }
   // battles: a dark disc with crossed swords and a red ring pulsing out, set between the fighting stacks, with the strength balance right under it
@@ -6898,7 +6927,7 @@ function tutRender(){
 function tutTick(){ if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (typeof st.next === 'function'){ const k = String(st.next()) + sel.army + sel.target; if (TUT.k !== k){ TUT.k = k; tutRender(); } } if (st.done && st.done()){ TUT.i++; if (TUT.i >= TUT_STEPS.length){ tutEnd(); return; } tutRender(); } }
 function tutDraw(now, kl = 1){
   if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (!st.map) return; const p = st.map(); if (p == null) return;
-  const P = G.P[p], [x, y0] = toScreen(P.x, P.y), y = y0 + (P.city ? 9*kl : 0), r = (P.city ? 16*kl + 6 : 26) + Math.sin(now/220)*(afxReduced() ? 0 : 3);   // around the city marker
+  const P = G.P[p], [x, y0] = toScreen(P.x, P.y), y = y0 + (P.city ? CITY_DY*kl : 0), r = (P.city ? 16*kl + 6 : 26) + Math.sin(now/220)*(afxReduced() ? 0 : 3);   // around the city marker
   ctx.save(); ctx.strokeStyle = 'rgba(226,162,61,.95)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -now/30; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.restore();
 }
 function settingsHTML(){
@@ -8019,7 +8048,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, armyPos: a => armyPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, armyPos: a => armyPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
