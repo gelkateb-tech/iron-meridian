@@ -84,6 +84,7 @@ header .brand{display:none}
 .spacer{flex:1}
 .clock{display:flex; flex-direction:column; align-items:flex-end; justify-content:center; gap:4px; flex:none; min-width:168px; margin:0 18px 0 14px; font-family:var(--body); font-variant-numeric:tabular-nums; color:var(--muted); font-variant-numeric:tabular-nums; line-height:1; cursor:default}
 .clock b{color:#f0ece2; font-weight:600; font-size:13px; letter-spacing:.04em; text-shadow:0 1px 0 rgba(0,0,0,.6)}
+.clock b .loc{font-size:9px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:#7d8c89; text-shadow:none}
 .clock .vic{display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#7d8c89; font-weight:500; white-space:nowrap}
 .clock .vic em{font-style:normal; color:#e6b867}
 .clock .vtr{display:block; align-self:stretch; height:2px; border-radius:1px; background:rgba(255,255,255,.09); overflow:hidden}
@@ -1442,23 +1443,26 @@ const WORLD_POWERS = [
   {name:'Brazil',         country:'Brazil',        color:'#3fae5a'},
   {name:'United Kingdom', country:'United Kingdom',color:'#9370e6'},
   {name:'France',         country:'France',        color:'#36bcc4'},
-  {name:'Germany',        country:'Germany',       color:'#8a9a3e'},
-  {name:'Russia',         country:'Russia',        color:'#7a5536'},
+  {name:'Germany',        country:'Germany',       color:'#5672a6'},
+  {name:'Russia',         country:'Russia',        color:'#a3283f'},
   {name:'Turkey',         country:'Turkey',        color:'#b45aa8'},
   {name:'Iran',           country:'Iran',          color:'#7cc04a'},
   {name:'Egypt',          country:'Egypt',         color:'#c2a070'},
   {name:'South Africa',   country:'South Africa',  color:'#2ea48d'},
   {name:'India',          country:'India',         color:'#ff8a3d'},
   {name:'China',          country:'China',         color:'#e8cf47'},
-  {name:'Japan',          country:'Japan',         color:'#eeeeea'},
+  {name:'Japan',          country:'Japan',         color:'#b65acc'},
   {name:'Australia',      country:'Australia',     color:'#1fa3a3'},
 ];
+// display colours replaced since older saves (olive Germany read as farmland, brown Russia as steppe, white Japan as snow; rose Poland matched the new
+// crimson Russia): old -> new, applied on load. Colour is display only.
+const OLD_COLORS = {'#8a9a3e':'#5672a6', '#7a5536':'#a3283f', '#eeeeea':'#b65acc', '#d8566e':'#d6c83c'};
 // scenarios: which powers play and which part of the world counts for victory
 const PW = n => WORLD_POWERS.find(p => p.name === n);
 const SCENARIOS = {
   world:{name:'World War', desc:'Fifteen powers across the whole globe.', powers:WORLD_POWERS, caps:5, box:null, extra:90},
   europe:{name:'European Theatre', desc:'Eight powers fight for Europe and its rim.', caps:4, extra:45, box:L => (L.lon >= -25 && L.lon <= 60 && L.lat >= 33 && L.lat <= 72),
-    powers:[PW('United Kingdom'), PW('France'), PW('Germany'), {name:'Italy', country:'Italy', color:'#3fae5a'}, {name:'Spain', country:'Spain', color:'#d9a03a'}, {name:'Poland', country:'Poland', color:'#d8566e'}, PW('Turkey'), PW('Russia')]},
+    powers:[PW('United Kingdom'), PW('France'), PW('Germany'), {name:'Italy', country:'Italy', color:'#3fae5a'}, {name:'Spain', country:'Spain', color:'#d9a03a'}, {name:'Poland', country:'Poland', color:'#d6c83c'}, PW('Turkey'), PW('Russia')]},
   pacific:{name:'Pacific Rim', desc:'Eight powers contest the Pacific and East Asia.', caps:4, extra:45, box:L => ((L.lon >= 70 || L.lon <= -95) && L.lat >= -48 && L.lat <= 66),
     powers:[PW('United States'), PW('China'), PW('Japan'), PW('Australia'), PW('India'), PW('Russia'), {name:'Indonesia', country:'Indonesia', color:'#c8323c'}, {name:'Mexico', country:'Mexico', color:'#3fae5a'}]},
 };
@@ -1787,11 +1791,32 @@ function groundPatterns(ctx0){ if (GROUND) return GROUND; const N = 256, rnd = m
   const pat = cv0 => { const n2 = cv0.width/2, h = document.createElement('canvas'); h.width = h.height = n2; const hg = h.getContext('2d'); hg.imageSmoothingQuality = 'high'; hg.drawImage(cv0, 0, 0, n2, n2);   // half size: about 1:1 on screen close up, cheap to sample
     const q = ctx0.createPattern(h, 'repeat'); if (q.setTransform) q.setTransform(new DOMMatrix().scale(0.17)); return q; };
   return (GROUND = {fields:pat(fc), forest:pat(tc)}); }
-function coastPath(){ if (!window.COAST) return null; const path = new Path2D(), sx = HS*SQ3, sy = HS*1.5;
+function coastPath(){ if (!window.COAST) return null; const path = new Path2D(), sx = HS*SQ3, sy = HS*1.5; COASTR.length = 0;   // (runs again for every new or loaded game)
   for (const R of window.COAST){ let x = 0, y = 0, x0 = Infinity, x1 = -Infinity; const pts = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const fx = x/10, fy = y/10; pts.push(fx, fy); if (fx < x0) x0 = fx; if (fx > x1) x1 = fx; }
     for (const off of [-W, 0, W]){ if (off < 0 && x1 < W) continue; if (off > 0 && x0 >= 0) continue; if (off === 0 && (x1 < 0 || x0 >= W)) continue;
-      for (let i = 0; i < pts.length; i += 2){ const X = OX + sx*(pts[i] + off), Y = OY + sy*pts[i + 1]; i ? path.lineTo(X, Y) : path.moveTo(X, Y); } path.closePath(); } }
+      const ring = [], b = [Infinity, Infinity, -Infinity, -Infinity];
+      for (let i = 0; i < pts.length; i += 2){ const X = OX + sx*(pts[i] + off), Y = OY + sy*pts[i + 1]; i ? path.lineTo(X, Y) : path.moveTo(X, Y); ring.push(X, Y); if (X < b[0]) b[0] = X; if (Y < b[1]) b[1] = Y; if (X > b[2]) b[2] = X; if (Y > b[3]) b[3] = Y; } path.closePath(); COASTR.push({b, r:ring}); } }
   return path; }
+const COASTR = [];   // the coast rings as emitted by coastPath (world coords, with their boxes)
+// big lakes (coast.js window.LAKES, Natural Earth lakes 1:50m): one world-coord path, painted once into the terrain texture and punched out
+// of the land mask, so the world view, the minimap and isWet() all see water at no per-frame cost. Visual only: cells and adjacency are untouched.
+function lakePath(){ if (G.lakeP !== undefined) return G.lakeP; if (!window.LAKES || !window.LAKES.length) return (G.lakeP = null); const lp = new Path2D(), sx = HS*SQ3, sy = HS*1.5;
+  G.lakeBox = []; G.lakeRing = [];   // world boxes and rings, so a render only clips to the lakes in view
+  for (const R of window.LAKES){ let x = 0, y = 0; const b = [Infinity, Infinity, -Infinity, -Infinity], ring = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const X = OX + sx*x/10, Y = OY + sy*y/10; i ? lp.lineTo(X, Y) : lp.moveTo(X, Y); ring.push(X, Y); if (X < b[0]) b[0] = X; if (Y < b[1]) b[1] = Y; if (X > b[2]) b[2] = X; if (Y > b[3]) b[3] = Y; } lp.closePath(); G.lakeBox.push(b); G.lakeRing.push(ring); }
+  return (G.lakeP = lp); }
+function bakeLakes(){ if (G.lakesBaked || window.__BAKE) return; const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
+  const T = G.terrain, k = T.width/WORLD_W, g = T.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.lineJoin = 'round';
+  g.strokeStyle = 'rgba(70,110,104,0.5)'; g.lineWidth = 1.6; g.stroke(lp); g.fillStyle = '#0a1c27'; g.fill(lp);   // the texture's own sea tone, so a lake reads like the open sea
+  g.save(); g.clip(lp); g.strokeStyle = 'rgba(36,80,92,0.6)'; g.lineWidth = 2; g.stroke(lp); g.restore(); g.restore();
+  const M = G.landMask, km = M.width/WORLD_W, mg = M.getContext('2d'); mg.save(); mg.setTransform(km, 0, 0, km, 0, 0); mg.globalCompositeOperation = 'destination-out'; mg.fill(lp); mg.restore();
+  // province-name anchors: a land province whose centre lies in a lake labels at its cell deepest inland (nearest the centre among the deepest)
+  const hc = document.createElement('canvas'); hc.width = hc.height = 1; const hg = hc.getContext('2d'), inL = (x, y) => hg.isPointInPath(lp, x, y), cap = HS*SQ3*6; G.lakeLab = new Map();
+  for (const P of G.P){ if (P.sea || !inL(P.x, P.y)) continue; const wet = [], dry = [];
+    for (const ci of P.cells){ const q = cellCenter(ci); (inL(q[0], q[1]) ? wet : dry).push(q); }
+    if (!dry.length) continue; const ws = wet.length > 600 ? wet.filter((_, i) => i % Math.ceil(wet.length/600) === 0) : wet; let best = null, bs = -Infinity;
+    for (const q of dry){ let d = Infinity; for (const w of ws){ const e = (q[0] - w[0])**2 + (q[1] - w[1])**2; if (e < d) d = e; } const sc = Math.min(Math.sqrt(d), cap) - 0.05*Math.hypot(q[0] - P.x, q[1] - P.y); if (sc > bs){ bs = sc; best = q; } }
+    G.lakeLab.set(P.id, best); }
+  console.log('lakes: ' + window.LAKES.length + ' baked; ' + G.lakeLab.size + ' province labels moved ashore'); }
 function buildGeometry(){
   const chains = buildChains(), byProv = G.P.map(() => []);
   for (const c of chains){ if (c.a >= 0) byProv[c.a].push(c); if (c.b >= 0 && c.b !== c.a) byProv[c.b].push(c); }
@@ -1802,6 +1827,7 @@ function buildGeometry(){
   const lazy = make => new Proxy([], {get:(arr, k) => { if (typeof k !== 'string' || !/^\d+$/.test(k)) return arr[k]; return arr[k] || (arr[k] = make(+k)); }});
   const outline = lazy(p => ringPath(p));
   GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), provT:tiledPath(provL.map(c => c.pts)), seaT:tiledPath(seaL.map(c => c.pts)), countryT:tiledPath(countryL.map(c => c.pts)), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land, coastV:coastPath()};
+  GEO.coast0 = GEO.coastV; bakeLakes();
   rebuildOwnerGeo();
 }
 let geoVer = 0, FRONT = {k:'', p:null};
@@ -1814,18 +1840,23 @@ function rebuildOwnerGeo(){
   for (const c of GEO.chains){ const oa = own(c.a), ob = own(c.b); if (oa === ob || (window.COAST && (oa === -9 || ob === -9))) continue;   // coasts are drawn by the real shoreline
     if (oa >= 0) per[oa].push(c); if (ob >= 0) per[ob].push(c); if (oa === PLAYER || ob === PLAYER) mineL.push(c); }
   GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL); GEO.nArea = [];
+  const pbb = P => P.cbb || (P.cbb = P.cells.reduce((b, c) => { const [x, y] = cellCenter(c); if (x - HS < b[0]) b[0] = x - HS; if (y - HS < b[1]) b[1] = y - HS; if (x + HS > b[2]) b[2] = x + HS; if (y + HS > b[3]) b[3] = y + HS; return b; }, [Infinity, Infinity, -Infinity, -Infinity]));   // a province's box (world units), worked out once
   GEO.nBox = per.map(list => { const b = [Infinity, Infinity, -Infinity, -Infinity]; for (const c of list) for (const q of c.pts){ if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[0] > b[2]) b[2] = q[0]; if (q[1] > b[3]) b[3] = q[1]; } return b; });
-  const anchor = list => { let x = 0, y = 0, c = 0, best = -1, bd = Infinity;
-    for (const id of list){ const P = G.P[id]; x += P.x*P.cells.length; y += P.y*P.cells.length; c += P.cells.length; }
+  // the box of each nation's land, for the political tint (nBox above only spans land borders, and an island power such as Japan or Australia has none)
+  GEO.nLBox = S.nations.map(() => [Infinity, Infinity, -Infinity, -Infinity]);
+  for (let p = 0; p < G.P.length; p++){ const o = S.owner[p], B = o >= 0 && !G.P[p].sea && GEO.nLBox[o]; if (!B) continue; const b = pbb(G.P[p]); if (b[0] < B[0]) B[0] = b[0]; if (b[1] < B[1]) B[1] = b[1]; if (b[2] > B[2]) B[2] = b[2]; if (b[3] > B[3]) B[3] = b[3]; }
+  const anchor = list => { let x = 0, y = 0, c = 0, best = -1, bd = Infinity; const bb = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const id of list){ const P = G.P[id], b = pbb(P); x += P.x*P.cells.length; y += P.y*P.cells.length; c += P.cells.length; bb[0] = Math.min(bb[0], b[0]); bb[1] = Math.min(bb[1], b[1]); bb[2] = Math.max(bb[2], b[2]); bb[3] = Math.max(bb[3], b[3]); }
     if (!c) return null; x /= c; y /= c;
     for (const id of list){ const P = G.P[id], d = (P.x - x)**2 + (P.y - y)**2; if (d < bd){ bd = d; best = id; } }
-    return {x:G.P[best].x, y:G.P[best].y, cells:c}; };
+    const alt = list.filter(id => id !== best).sort((a, b) => G.P[b].cells.length - G.P[a].cells.length).slice(0, 8).map(id => [G.P[id].x, G.P[id].y]);   // other spots a power name may try (a long or crowded country)
+    return {x:G.P[best].x, y:G.P[best].y, cells:c, bb, alt}; };
   const mainland = n => { const seen = new Set(); let best = []; let bc = 0;
     for (const P of G.P){ if (S.owner[P.id] !== n || seen.has(P.id)) continue; const comp = [P.id]; seen.add(P.id); let c = 0;
       for (let i = 0; i < comp.length; i++){ c += G.P[comp[i]].cells.length; for (const v of G.P[comp[i]].nbs) if (!seen.has(v) && S.owner[v] === n){ seen.add(v); comp.push(v); } }
       if (c > bc){ bc = c; best = comp; } } return best; };
   GEO.labels = S.nations.map(n => n.alive ? anchor(mainland(n.id)) : null);
-  GEO.clabelsBySize = null; GEO.clabels = G.countries.map(c => { const free = c.provs.filter(id => S.owner[id] === NEUTRAL); return free.length ? {...anchor(free), name:c.name} : null; });
+  GEO.clabelsBySize = null; GEO.clabels = G.countries.map((c, ci) => { const free = c.provs.filter(id => S.owner[id] === NEUTRAL); return free.length ? {...anchor(free), name:c.name, ci} : null; });
   buildMini();
 }
 function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
@@ -1921,6 +1952,7 @@ function buildMini(){
   for (let i = 0; i < W*H; i++){ const p = G.prov[i]; if (p < 0 || G.P[p].sea) continue; const o = S.owner[p], col = o >= 0 ? rgbOf[o] : neu, r = (i / W) | 0, x0 = (i % W)*2 + (r & 1);
     for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++){ const x = x0 + dx; if (x >= m.width) continue; const o4 = ((r*2 + dy)*m.width + x)*4; px[o4] = col[0]; px[o4 + 1] = col[1]; px[o4 + 2] = col[2]; px[o4 + 3] = 255; } }
   c.putImageData(img, 0, 0);
+  const lp = lakePath(); if (lp){ const a = 2/(HS*SQ3), d = 2/(HS*1.5); c.save(); c.setTransform(a, 0, 0, d, 1 - OX*a, 1 - OY*d); c.globalCompositeOperation = 'destination-out'; c.fill(lp); c.restore(); }   // lakes stay water on the minimap
 }
 
 /* ---------------- State ---------------- */
@@ -1956,6 +1988,7 @@ function newGame(seed, pick){
   }
   for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; n.prov0In = landHeld(n.id); }
   S.own0 = S.owner.slice(); if (SET.cb) applyPalette();
+  S.sunOff = sunOffFor(PLAYER);   // display only: the opening view over the capital is in daylight
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
   INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
   log(`${S.nations[PLAYER].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
@@ -1974,6 +2007,7 @@ function restore(data){
   if (!G) G = loadWorld();
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.bt = {}; S.speed = 0; S.started = true; linksSync();
+  { const nc = c => c && OLD_COLORS[String(c).toLowerCase()]; for (const N of S.nations){ if (nc(N.color)) N.color = nc(N.color); if (nc(N.color0)) N.color0 = nc(N.color0); } }   // old palette entries -> current ones
   useScenario(S.scn || 'world'); DAY_LIMIT = S.len || 120; if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette();
   resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
@@ -1982,6 +2016,7 @@ function restore(data){
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; G.P[N.capital].city = true; }
+  if (S.sunOff == null) S.sunOff = sunOffFor(PLAYER);   // older saves: the same display-only daylight offset
   buildGeometry();
   return true;
 }
@@ -2000,7 +2035,7 @@ function awayHTML(R){ const sg = v => (v >= 0 ? '+' : '') + fmt(v);
     ${R.ev.length ? `<div class="eyebrow">Key dispatches</div><ul class="away">${R.ev.map(e => `<li class="${e.kind}"><time>D${dayOf(e.h)}</time> ${e.text}</li>`).join('')}</ul>` : '<p class="muted">A quiet stretch: nothing major happened.</p>'}
     <div class="row"><button class="btn primary" data-act="resume">Take command</button></div>`; }
 const SLOT_KEY = i => 'iron-meridian-slot-' + i;
-function slotMeta(i){ try { const raw = localStorage.getItem(SLOT_KEY(i)); if (!raw) return null; const d = JSON.parse(raw); return {name:d.nations[0].name, date:clockStr(d.hour), scn:(SCENARIOS[d.scn || 'world'] || SCENARIOS.world).name}; } catch (e) { return null; } }
+function slotMeta(i){ try { const raw = localStorage.getItem(SLOT_KEY(i)); if (!raw) return null; const d = JSON.parse(raw); return {name:d.nations[0].name, date:localClock(d.hour, d), scn:(SCENARIOS[d.scn || 'world'] || SCENARIOS.world).name}; } catch (e) { return null; } }
 function loadSaved(){ try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
 function clearSave(){ try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
 
@@ -2479,7 +2514,13 @@ function nightTexture1D(){ if (NIGHT) return NIGHT; const c = document.createEle
   for (let i = 0; i < 720; i++){ const ang = (i/720)*Math.PI*2, d = Math.cos(ang); const a = Math.max(0, Math.min(1, (-d + 0.08)/0.3)), tw = Math.max(0, 1 - Math.abs(d - 0.03)/0.13);
     id.data[i*4] = Math.round(4 + (1 - a)*tw*120); id.data[i*4 + 1] = Math.round(10 + (1 - a)*tw*46); id.data[i*4 + 2] = Math.round(26 - (1 - a)*tw*14); id.data[i*4 + 3] = Math.round(Math.max(a*108, tw*(1 - a)*46)); }
   g.putImageData(id, 0, 0); return (NIGHT = c); }
-function sunLon(){ return ((12 - (S.hour % 24) - (performance.now() % 1000)*0) * 15 + 540) % 360 - 180; }
+// the sun is display-only: S.sunOff shifts it so every campaign opens in daylight over the player's capital (about 10:00 local); rules stay keyed to S.hour
+const sunHr = h => h + (S && S.sunOff || 0);
+const capLon = (st, n = 0) => { const N = st && st.nations && st.nations[n], P = N && G && G.P[N.capital]; return P ? WORLD.lon0 + ((P.cc % W) + 0.5)/W*360 : null; };
+function sunOffFor(n, st = S){ const lon = capLon(st, n); return lon == null ? 0 : ((Math.round(10 - lon/15) % 24) + 24) % 24; }
+// capital local time = visual UTC + capital longitude/15 (hours to add to S.hour for the top-bar clock)
+function localOff(st = S){ const lon = capLon(st), so = st && st.sunOff != null ? st.sunOff : sunOffFor(0, st); return lon == null ? 10 : (((so + Math.round(lon/15)) % 24) + 24) % 24; }
+function sunLon(){ return ((12 - (sunHr(S.hour) % 24)) * 15 + 540) % 360 - 180; }
 let CLOUDS = null;
 function cloudTex(){ if (CLOUDS) return CLOUDS; const out = []; for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), n = makeNoise(mulberry(900 + k)), id = g.createImageData(128, 128);
     for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++){ const dx = (x - 64)/64, dy = (y - 64)/64, r = Math.sqrt(dx*dx + dy*dy), v = n(x*0.05, y*0.05)*0.6 + n(x*0.13, y*0.13)*0.4, a = Math.max(0, Math.min(1, (1 - r*1.15)*1.6 + (v - 0.55)*1.8));
@@ -2511,7 +2552,7 @@ function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex 
   ctx.restore(); }
 // daylight at the centre of the view: 1 at full day, 0 at full night, tw = dawn/dusk strength
 let VL = {k:'', day:1, tw:0};
-function viewLight(){ const live = S.speed && !S.over ? acc : 0, hr = S.hour + live, key = Math.round(hr*20) + ':' + Math.round(view.x/40) + ':' + Math.round(view.y/40) + ':' + view.s.toFixed(2); if (VL.k === key) return VL;
+function viewLight(){ const live = S.speed && !S.over ? acc : 0, hr = sunHr(S.hour + live), key = Math.round(hr*20) + ':' + Math.round(view.x/40) + ':' + Math.round(view.y/40) + ':' + view.s.toFixed(2); if (VL.k === key) return VL;
   const [wx, wy] = screenToWorld(cw/2, ch/2), lon = WORLD.lon0 + (((wx - OX)/(HS*SQ3) + 0.5)/W)*360, row = Math.max(0, Math.min(H - 1, Math.round((wy - OY)/(HS*1.5)))), lat = cellLat(row*W)*Math.PI/180;
   const sl = ((12 - (hr % 24))*15 + 540) % 360 - 180, doy = (Math.floor(hr/24) + 318) % 365, dec = -23.44*Math.cos(2*Math.PI*(doy + 10)/365)*Math.PI/180;
   const sinEl = Math.sin(lat)*Math.sin(dec) + Math.cos(lat)*Math.cos(dec)*Math.cos((lon - sl)*Math.PI/180);
@@ -2527,7 +2568,7 @@ function drawNight(alpha = 1){ const L = viewLight(), A = Math.max(0, Math.min(1
 // wide zoom: latitude-correct terminator with a twilight band, one drawImage per visible world copy
 function drawNightWorld(alpha = 1){ if (alpha <= 0) return;
   // texture x maps to (lon - sunLon), texture row r to hex row r; world x maps linearly to longitude
-  const tex = nightTexture(), live = S.speed && !S.over ? acc : 0, sl = ((12 - ((S.hour + live) % 24))*15 + 540) % 360 - 180;
+  const tex = nightTexture(), live = S.speed && !S.over ? acc : 0, sl = ((12 - (sunHr(S.hour + live) % 24))*15 + 540) % 360 - 180;
   const x0w = OX - HS*SQ3*0.5, wpd = HS*SQ3*W/360, span = 360*wpd;          // world units per degree, per full turn
   const start = x0w + (((sl + 180 - WORLD.lon0) % 360) + 360) % 360*wpd - 180*wpd;
   const vx0 = -view.x/view.s, vx1 = (cw - view.x)/view.s, y0 = OY - HS*0.75, y1 = y0 + HS*1.5*H;
@@ -2543,12 +2584,12 @@ function drawNightWorld(alpha = 1){ if (alpha <= 0) return;
 // 0 by day, 1 deep at night, for a world x coordinate (used for light pools)
 let NAX = {h:-1, v:null};
 function nightAtX(wx){ return nightAtX0(wx); }
-function nightAtX0(wx){ const hb = Math.floor((S.hour + (S.speed && !S.over ? acc : 0))*4); if (NAX.h !== hb){ NAX = {h:hb, v:new Float32Array(64)}; const live = hb/4, sl = ((12 - (live % 24))*15 + 540) % 360 - 180;
+function nightAtX0(wx){ const hb = Math.floor(sunHr(S.hour + (S.speed && !S.over ? acc : 0))*4); if (NAX.h !== hb){ NAX = {h:hb, v:new Float32Array(64)}; const live = hb/4, sl = ((12 - (live % 24))*15 + 540) % 360 - 180;
     for (let i = 0; i < 64; i++){ const lon = WORLD.lon0 + (i + 0.5)/64*360, c = Math.cos((lon - sl)*Math.PI/180); NAX.v[i] = Math.max(0, Math.min(1, (-c + 0.05)/0.35)); } }
   const i = Math.floor(((wx - OX)/(HS*SQ3*W))*64); return NAX.v[((i % 64) + 64) % 64]; }
 // sine of the sun's elevation over province p (same sun model as viewLight), cached per 15 game minutes
 let SUNP = {b:NaN, v:null, sl:0, sd:0, cd:0};
-function sunSinEl(p){ const hb = Math.floor((S.hour + (S.speed && !S.over ? acc : 0))*4);
+function sunSinEl(p){ const hb = Math.floor(sunHr(S.hour + (S.speed && !S.over ? acc : 0))*4);
   if (SUNP.b !== hb || !SUNP.v || SUNP.v.length !== G.P.length){ const hr = hb/4, doy = (Math.floor(hr/24) + 318) % 365, dec = -23.44*Math.cos(2*Math.PI*(doy + 10)/365)*Math.PI/180;
     SUNP = {b:hb, v:new Float32Array(G.P.length).fill(NaN), sl:((12 - (hr % 24))*15 + 540) % 360 - 180, sd:Math.sin(dec), cd:Math.cos(dec)}; }
   let v = SUNP.v[p]; if (v === v) return v;
@@ -3583,7 +3624,7 @@ function aiProposeTrade(n){ if (S.offers.some(o => o.from === n)) return; const 
 let DEAL = null, NATV = null;
 function nationHTML(n){ const N = S.nations[n], r = rel(PLAYER, n), L = chatLog(n); if (S.unread) S.unread[n] = 0; NATV = n; if (!DEAL || DEAL.n !== n) DEAL = {n, give:emptySide(), get:emptySide()};
   const tab = NATV_TAB;
-  const chat = `<div class="chatbox" id="chatbox">${L.length ? L.map(m => `<div class="msg ${m.from === PLAYER ? 'me' : ''}"><span class="small muted">${flagHTML(m.from === PLAYER ? PLAYER : n, 11)} ${m.from === PLAYER ? 'You' : N.name} · ${clockStr(m.h)}</span><div>${m.text.replace(/[<>&]/g, '')}</div></div>`).join('') : '<p class="small muted">No messages yet. Say hello, or use a quick message below.</p>'}</div>
+  const chat = `<div class="chatbox" id="chatbox">${L.length ? L.map(m => `<div class="msg ${m.from === PLAYER ? 'me' : ''}"><span class="small muted">${flagHTML(m.from === PLAYER ? PLAYER : n, 11)} ${m.from === PLAYER ? 'You' : N.name} · ${localClock(m.h)}</span><div>${m.text.replace(/[<>&]/g, '')}</div></div>`).join('') : '<p class="small muted">No messages yet. Say hello, or use a quick message below.</p>'}</div>
     <div class="row" style="flex-wrap:wrap;gap:4px">${[['Hello', 'Hello.'], ['Propose peace', 'We propose peace.'], ['Ask Right of Way', 'May we have right of way through your land?'], ['Propose alliance', 'Join us in an alliance.'], ['Ask for help', 'Help us attack our enemy.'], ['Threaten', 'Back down, or else.']].map(([l, tx]) => `<button class="btn" data-act="chat-quick" data-t="${tx}" style="padding:3px 8px;font-size:12px">${l}</button>`).join('')}</div>
     <div class="row"><input id="chatin" class="rn2" maxlength="160" placeholder="Write to ${N.name}…" style="flex:1"><button class="btn primary" data-act="chat-send">Send</button></div>`;
   const D = DEAL, M = mkt(), provList = (owner, side) => { const cand = G.P.filter(P => !P.sea && S.owner[P.id] === owner && !isCapital(P.id) && (owner === PLAYER ? P.nbs.some(q => S.owner[q] === n) || true : visibleSet().has(P.id) || P.nbs.some(q => S.owner[q] === PLAYER))).slice(0, 60);
@@ -4517,7 +4558,7 @@ function makePaper(){
   void st0;
 }
 function paperHTML(pp){
-  if (!pp) return '<p class="muted">The first edition prints at dawn on day 2.</p>';
+  if (!pp) return '<p class="muted">The first edition prints on the morning of day 2.</p>';
   return `<div class="paper"><div class="mast">The Meridian Herald</div><div class="pline"><span>Day ${pp.day + 1}</span><span>Morning edition</span><span>${S.nations[PLAYER].name} edition</span></div>
     <h3>${pp.head}</h3>${pp.items.length ? `<ul>${pp.items.map(t => `<li>${t}</li>`).join('')}</ul>` : ''}
     <div class="standings">${pp.rank.map(([n, sc, c], i) => `<span>${flagHTML(n, 11)} ${i + 1}. ${n} <b>${sc}</b></span>`).join('')}</div></div>`;
@@ -5016,8 +5057,8 @@ const fogPat = new Map();
 function fogPattern(c2 = ctx, a = 0.07){
   a = Math.round(a*200)/200; if (fogPat.has(a)) return fogPat.get(a);
   const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d');
-  g.fillStyle = 'rgba(6,10,14,0.34)'; g.fillRect(0, 0, 8, 8);
-  g.strokeStyle = `rgba(255,255,255,${a})`; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
+  g.fillStyle = 'rgba(6,10,14,0.15)'; g.fillRect(0, 0, 8, 8);   // light: land out of sight keeps its power's colour
+  g.strokeStyle = `rgba(255,255,255,${(a*0.6).toFixed(3)})`; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
   const pat = c2.createPattern(c, 'repeat'); fogPat.set(a, pat); return pat;
 }
 /* original unit counter: nation strip, dark body, type glyph, strength, health bar */
@@ -5594,6 +5635,15 @@ function suburbs(p, Lo, x, y, night, a0, g0){ const g = g0 || ctx; const P = G.P
   g.globalAlpha = 1; }
 // fortifications: a small star fort (bastions per level) beside the city instead of a ring of walls across the province
 let FORTB = [];
+// map names on their own land, tested at 7 points along a name's middle line and one in its upper half. A power name needs both ends and 7 of the 8 over its
+// own land (or, for a country too small on screen to hold it and at world zoom, 2 of the 8 on its land and none over another country's: it may hang over the sea);
+// an independent country's name needs its centre on its own land and at most 2 of the 8 over another country's (it may hang out over the sea).
+// The answers (and the power names' candidate spots) are kept until the view or the borders change, so an idle map does no province lookups.
+const NAMEC = {k:'', pn:new Map(), cl:new Map()};
+const namePts = (xx, yy, ww, ss) => [0, 1, 2, 3, 4, 5, 6].map(i => provAt(xx + ww*(i/6 - 0.5)*0.92, yy)).concat(provAt(xx, yy - ss*0.25));
+function nameFits(xx, yy, ww, ss, own){ const q = namePts(xx, yy, ww, ss); return own(q[0]) && own(q[6]) && q.filter(own).length >= 7; }
+function nameOverSea(xx, yy, ww, ss, own){ const q = namePts(xx, yy, ww, ss); return q.filter(own).length >= 2 && !q.some(p => p >= 0 && !G.P[p].sea && !own(p)); }
+function nameNotForeign(xx, yy, ww, ss, own){ return own(provAt(xx, yy)) && namePts(xx, yy, ww, ss).filter(p => p >= 0 && !G.P[p].sea && !own(p)).length <= 2; }
 function fortWalls(x, y, u, lvl, col){ const r = (7 + lvl*1.6)*u, n = 5; FORTB.push([x - r - 1, y - r*0.62 - 1, x + r + 1.5*u + 1, y + r*0.62 + 2*u + 1]);
   ctx.beginPath(); for (let i = 0; i < n*2; i++){ const a = -Math.PI/2 + i*Math.PI/n, rr = i % 2 ? r*0.62 : r; ctx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr*0.62); } ctx.closePath();
   ctx.fillStyle = 'rgba(20,22,20,.55)'; ctx.save(); ctx.translate(1.5*u, 2*u); ctx.fill(); ctx.restore();
@@ -5668,7 +5718,7 @@ const PLATE_TW = new Map();
 const plateGrow = () => 1 + 0.22*Math.max(0, Math.min(1, (view.s*HS0 - 22)/20));   // 1 up to hexPx 22, 1.22 from hexPx 42 (provinces have room there); plate scale moves in steps of 0.05, so zooming reuses a few cached picture sizes
 let HUDR = {t:0, r:[]};
 function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) return HUDR.r; const cr = cv.getBoundingClientRect(), out = [];
-  for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || getComputedStyle(e).display === 'none') continue;
+  for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || getComputedStyle(e).display === 'none') continue;
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   return (HUDR = {t:now, r:out}).r; }
 function plateDims(n, s, minor){ const ps = Math.round(Math.max(0.85, Math.min(1.15, Math.max(0.75, s)))*plateGrow()*20)/20, fz = Math.round((minor ? 9.5 : 11)*ps), key = fz + ':' + n;
@@ -5944,16 +5994,27 @@ function renderLayer(vis, lite = false){
   c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   c.imageSmoothingEnabled = true; c.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
   const px0 = 1/view.s;
+  // the land path for this render: the coast rings and big lakes in view (lakes as evenodd holes, so the sea wash, shore glow, land clips and tint mask
+  // all treat them as water). Rings wholly outside the layer cannot change a pixel in it, and leaving them out keeps the strokes and clips cheap.
+  if (GEO.coast0 && COASTR.length){ const m0 = 24*px0, bx0 = -ox/view.s - m0, by0 = -oy/view.s - m0, bx1 = (cw + 2*mx - ox)/view.s + m0, by1 = (ch + 2*my - oy)/view.s + m0, inV = b => b[2] >= bx0 && b[0] <= bx1 && b[3] >= by0 && b[1] <= by1; let k = '';
+    for (let i = 0; i < COASTR.length; i++) if (inV(COASTR[i].b)) k += i + ',';
+    k += '|'; if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (inV(b)) k += i + (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64 ? 'b,' : ','); }
+    if (k !== GEO.coastK){ GEO.coastK = k; const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(), [kc, kl] = k.split('|'); let nl = 0;
+      const ringTo = (q, r) => { q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
+      for (const i of kc.split(',')) if (i){ ringTo(cv, COASTR[+i].r); ringTo(gv, COASTR[+i].r); }
+      for (const i of kl.split(',')) if (i){ const r = G.lakeRing[parseInt(i)]; ringTo(cv, r); ringTo(lv, r); nl++; if (i.endsWith('b')) ringTo(gv, r); }   // the wide shallow-water glow rings only lakes big on screen (it would flood a small one)
+      GEO.coastV = cv; GEO.coastG = gv; GEO.lakeV = nl ? lv : null; GEO.seaV = null; } }
   if (GEO.coastV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
     // wash the sea with its own colour so the raster texture's soft land edge does not bleed past the real shore, then shallow-water bands
     if (!GEO.seaV){ GEO.seaV = new Path2D(); GEO.seaV.rect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); GEO.seaV.addPath(GEO.coastV); }
     c.save(); c.clip(GEO.seaV, 'evenodd'); c.fillStyle = `rgba(11,29,39,${0.86*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); c.lineJoin = 'round';
-    c.strokeStyle = `rgba(40,92,104,${0.22*z})`; c.lineWidth = 16*px0; c.stroke(GEO.coastV);
-    c.strokeStyle = `rgba(60,120,130,${0.22*z})`; c.lineWidth = 7*px0; c.stroke(GEO.coastV);
+    c.strokeStyle = `rgba(40,92,104,${0.22*z})`; c.lineWidth = 16*px0; c.stroke(GEO.coastG || GEO.coastV);
+    c.strokeStyle = `rgba(60,120,130,${0.22*z})`; c.lineWidth = 7*px0; c.stroke(GEO.coastG || GEO.coastV);
     c.strokeStyle = `rgba(150,200,210,${0.14*z})`; c.lineWidth = 2.6*px0; c.stroke(GEO.coastV); c.restore(); }
   const vx0 = -ox/view.s, vy0 = -oy/view.s, vx1 = (cw + 2*mx - ox)/view.s, vy1 = (ch + 2*my - oy)/view.s;
   const onScreen = P => { const b = provBox(P); return b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1; };
-  const wm = 40*px, wx0 = vx0 - wm, wy0 = vy0 - wm, wx1 = vx1 + wm, wy1 = vy1 + wm, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };
+  const wm = 40*px, wx0 = vx0 - wm, wy0 = vy0 - wm, wx1 = vx1 + wm, wy1 = vy1 + wm, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
+    nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
   if (hexPx >= 12 && SET.fx !== 'low'){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (GEO.coastV) c.clip(GEO.coastV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
     if (zc > 0 && gp.fine){ c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.34*zc; c.fillStyle = gp.fine; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // close up: a second, fine ground grain (fields, scrub) so the land is not a smooth smear
@@ -5998,22 +6059,25 @@ function renderLayer(vis, lite = false){
     // a soft band of the nation's colour just inside its border (clipped to its own land)
     const area = nAreaOf(n);
     c.save(); c.clip(area); const bw = Math.min(4.5, 1.6 + hexPx*0.08);
-    c.strokeStyle = rgba(S.nations[n].color, 0.11); c.lineWidth = bw*2*px; c.stroke(GEO.nation[n]); c.strokeStyle = rgba(S.nations[n].color, 0.12); c.lineWidth = bw*0.8*px; c.stroke(GEO.nation[n]); c.restore(); }
+    const you = n === PLAYER;   // yours a little stronger
+    c.strokeStyle = rgba(S.nations[n].color, you ? 0.22 : 0.11); c.lineWidth = bw*2*px; c.stroke(GEO.nation[n]); c.strokeStyle = rgba(S.nations[n].color, you ? 0.25 : 0.12); c.lineWidth = bw*0.8*px; c.stroke(GEO.nation[n]); c.restore(); }
   for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOn(n)) continue;
     c.strokeStyle = 'rgba(3,6,8,0.7)'; c.lineWidth = 3*px; c.stroke(GEO.nation[n]);
     c.strokeStyle = S.nations[n].color; c.lineWidth = (n === PLAYER ? 2 : 1.5)*px; c.stroke(GEO.nation[n]); }
   if (S.nations[PLAYER].alive){ c.strokeStyle = 'rgba(255,250,235,0.85)'; c.lineWidth = 1*px; c.stroke(GEO.mine); }
   const clipLand = () => { c.globalCompositeOperation = 'destination-in'; if (GEO.coastV && hexPx >= 7){ c.fillStyle = '#000'; c.fill(GEO.coastV, 'evenodd'); } else c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over'; };
   clipLand();
+  if (hexPx >= 3 && GEO.lakeV){ { c.save(); c.clip(GEO.lakeV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(214,218,204,0.35)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1)); c.restore(); } }   // national borders across the lakes in view: a faint dashed line
   // political tint: each power's land in its colour, laid on the ground with a 'color' blend (hue and saturation from the power, light and shade from the terrain)
-  // plus a whisper of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
+  // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
   if (mapMode === 'political' && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
     const t = tc.getContext('2d'); t.setTransform(1, 0, 0, 1, 0, 0); t.globalCompositeOperation = 'source-over'; t.clearRect(0, 0, tc.width, tc.height); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
-    for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !GEO.nation[n] || !nOn(n)) continue; t.fillStyle = S.nations[n].color; t.fill(nAreaOf(n)); }
+    for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = S.nations[n].color; t.fill(nAreaOf(n)); }
     t.globalCompositeOperation = 'destination-in'; if (GEO.coastV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(GEO.coastV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over';
-    base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/22));   // world view: clear national colours; play zoom and closer: a light cast, the terrain's own colours lead
-    base.globalCompositeOperation = 'color'; base.globalAlpha = 0.26 - 0.205*tk; base.drawImage(tc, 0, 0);
-    base.globalCompositeOperation = 'soft-light'; base.globalAlpha = 0.28 - 0.17*tk; base.drawImage(tc, 0, 0); base.restore(); }
+    // world view and play zoom: clear national colours over the relief; it eases off slowly (tk) and, past hexPx 80, fades further so the close-up ground and city art lead
+    base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/70)), tf = Math.max(0.35, 1 - Math.max(0, hexPx - 80)/160);
+    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.42 - 0.2*tk)*tf; base.drawImage(tc, 0, 0);
+    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.17 - 0.09*tk)*tf; base.drawImage(tc, 0, 0); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, 0, 0); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
   if (GEO.coastV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
@@ -6124,15 +6188,18 @@ function draw(now){
       placed.push({c, x0:c.x - hw, x1:c.x + hw, y0:c.y - top, y1:c.y + bot}); } }
   // counters claim screen space before labels: city and province names give way to them (capital names always show)
   for (const c of clusters){ if (c.x < -60 || c.y < -60 || c.x > cw + 60 || c.y > ch + 60) continue; let b;
-    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - 6*d.ps, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
+    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - 6*d.ps, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
     else { const F = formBox(c), f = F.bb, r = F.r, dy = c.bdy || 0;   // the badge and the figures standing above it: names keep clear of both
-      b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2]; }
-    b.unit = true; b.at = c.moving ? -1 : c.at; boxes0.push(b); }
+      b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2]; b.core = [c.x + f[0] - 1, c.y + f[1] + dy - 1, c.x + f[2] + 1, c.y + f[3] + dy + 1]; }
+    b.unit = true; b.at = c.moving ? -1 : c.at; boxes0.push(b); }   // (core: the plate or badge itself with its strength number, icons and bars, which nothing may cover)
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
+  { const nk = [view.s, Math.round(view.x), Math.round(view.y), cw, ch, geoVer].join('|'); if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
   if (hexPx >= 3.2 && hexPx < 15){ const fs0 = Math.round(Math.min(13, 8 + hexPx*0.5)); ctx.font = `600 ${fs0}px ${BODY}`;
     for (const L of GEO.clabelsBySize || (GEO.clabelsBySize = GEO.clabels.filter(Boolean).sort((a, b) => b.cells - a.cells))){ if (L.cells < 2.5*GS*GS) continue; const [x, y] = toScreen(L.x, L.y); if (x < -60 || y < -20 || x > cw + 60 || y > ch + 20) continue;
-      const w0 = ctx.measureText(L.name.toUpperCase()).width + 8, bx = [x - w0/2, y - fs0/2 - 2, x + w0/2, y + fs0/2 + 2]; if (boxes0.some(q => q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue; boxes0.push(bx);
+      const w0 = ctx.measureText(L.name.toUpperCase()).width + 8, bx = [x - w0/2, y - fs0/2 - 2, x + w0/2, y + fs0/2 + 2]; if (boxes0.some(q => q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue;
+      let fit = NAMEC.cl.get(L.ci); if (fit === undefined) NAMEC.cl.set(L.ci, fit = nameNotForeign(x, y, w0 - 8, fs0, p => p >= 0 && G.P[p].country === L.ci && S.owner[p] === NEUTRAL)); if (!fit) continue;   // the name stays on that country's own free land (or the sea off it)
+      boxes0.push(bx);
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.7)'; ctx.strokeText(L.name.toUpperCase(), x, y); ctx.fillStyle = 'rgba(200,198,184,.55)'; ctx.fillText(L.name.toUpperCase(), x, y); } }
   if (showSea){ ctx.font = `italic 500 11px ${BODY}`; ctx.fillStyle = 'rgba(150,185,195,.38)';
     const placed = [];   // one label per sea name nearby, biggest zones first, never overlapping
@@ -6160,7 +6227,7 @@ function draw(now){
       ctx.globalAlpha = 0.85*Math.max(0.6, dim); ctx.drawImage(G0, x - gr*0.75, gy - gr*0.75, gr*1.5, gr*1.5); ctx.globalAlpha = 0.35*Math.max(0.6, dim); ctx.drawImage(G0, x - gr*1.4, gy - gr*1.1, gr*2.8, gr*2.2);
       if (tier && hexPx >= 6){ ctx.globalAlpha = 0.5*Math.max(0.6, dim); for (let i = 0; i < 2 + tier; i++){ const a0 = p*2.4 + i*2.1, d0 = gr*(0.5 + 0.18*((p + i*3) % 3)), r0 = gr*(0.42 + 0.1*(i % 2)); ctx.drawImage(G0, x + Math.cos(a0)*d0 - r0, gy + Math.sin(a0)*d0*0.75 - r0, r0*2, r0*2); } }
       ctx.restore(); }
-    else if (!P.city && hexPx >= 8 && (P.pop0 || 0) >= 0.1 && isNight(p)){ const gr = (3.5 + Math.min(6, P.pop0*1.8))*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + 0.25*Math.min(1, P.pop0); ctx.drawImage(GLOW(), x - gr, y - gr, gr*2, gr*2); ctx.restore(); }   // towns: small points of light
+    else if (!P.city && hexPx >= 8 && (P.pop0 || 0) >= 0.1 && isNight(p)){ const gr = (3.5 + Math.min(6, P.pop0*1.8))*kl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + 0.25*Math.min(1, P.pop0); const q = G.lakeLab && G.lakeLab.get(p), [tx, ty] = q ? toScreen(q[0], q[1]) : [x, y]; ctx.drawImage(GLOW(), tx - gr, ty - gr, gr*2, gr*2); ctx.restore(); }   // towns: small points of light (ashore when the province centre lies in a lake)
     if (cap && hexPx >= 2){ const cy0 = y + 9*kl, rr = (6.5 + tier)*kl*pk, R1 = rr + 2.2*kl*pk; marks.push({p, x, y:cy0, r:(8.7 + tier)*kl});   // (the tap target keeps its full size where the marker shrinks on the city art) capital: cream star on a disc in the holder's (deepened) colour
       ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.globalAlpha = dim*(pk < 1 ? 0.6 : 0.95); ctx.fillStyle = shade(oc, -0.5); ctx.fill(); ctx.globalAlpha = dim;
       ctx.lineWidth = 1.6*kl + 1.8; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.6*kl; ctx.strokeStyle = oc; ctx.stroke();
@@ -6179,7 +6246,8 @@ function draw(now){
     if (S.bld[p].silo && hexPx >= 4 && !(hexPx >= ART_PX && P.city && bartOk('silo') && vis.has(p))){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     if (S.bld[p].fort && hexPx >= 6 && !(pk < 1)){ const fx2 = x - 10*kl, fy2 = y + 9*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
     { const Rpx = Math.sqrt(P.cells.length)*HS*view.s, label = cap && hexPx >= 4 ? P.cityName : P.city && hexPx >= 8 ? P.cityName : hexPx >= 9 && Rpx >= 16 ? P.name : '';
-      if (label) labs.push({t:label, x, y:y + (P.city ? 20*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:y + 9*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl}); }
+      if (label && label === P.name && !P.city && !cap && G.lakeLab && G.lakeLab.has(p)){ const q = G.lakeLab.get(p), [lx, ly] = toScreen(q[0], q[1]); labs.push({t:label, x:lx, y:ly, pri:P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:ly + 9*kl, mr:[4.6, 5.4, 6.4][tier]*kl}); }
+      else if (label) labs.push({t:label, x, y:y + (P.city ? 20*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:y + 9*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl}); }
     ctx.globalAlpha = 1;
     const c = S.cap[p];
     if (c){ const f = Math.min(1, c.h/capNeed(p, c.by)); ctx.beginPath(); ctx.arc(x, y, 15*kl, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.lineWidth = 3; ctx.strokeStyle = S.nations[c.by].color; ctx.stroke(); }
@@ -6192,40 +6260,90 @@ function draw(now){
   for (const e of capEm){ const pin = e.pin, own = boxes0.filter(q => q.unit && q.at === e.p), gb = own.length ? [Math.min(...own.map(q => q[0])), Math.min(...own.map(q => q[1])), Math.max(...own.map(q => q[2])), Math.max(...own.map(q => q[3]))] : null;
     let pick = null, fall = null;
     for (const [ex, ey] of capFlagSpots(e.x, e.cy0, e.R0, pin, gb)){ const b = [ex - pin.ax + pin.fx - 1, ey - pin.ay + pin.fy, ex - pin.ax + pin.fx + pin.fw, ey];   // the pole foot stands at (ex, ey); the box is pole + cloth
-      if (own.some(q => ovl(q, b))) continue; if (!fall) fall = [ex, ey, b];
+      if (own.some(q => ovl(q, b))) continue; if (!fall && Math.hypot(Math.max(b[0] - e.x, 0, e.x - b[2]), Math.max(b[1] - e.cy0, 0, e.cy0 - b[3])) <= 1.5*e.R0) fall = [ex, ey, b];   // (the fallback only right by the star, never out in the fields)
       if (marks.some(m => m.p !== e.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3]) || boxes0.some(q => q.at !== e.p && ovl(q, b))) continue;
       pick = [ex, ey, b]; break; }
     if (!pick && !e.ind) pick = fall; if (!pick) continue;
     const [ex, ey, b] = pick; pinsOut.push([pin, e.a, Math.round((ex - pin.ax)*dpr)/dpr, Math.round((ey - pin.ay)*dpr)/dpr]); b.unit = true; boxes0.push(b); }   // drawn after the buildings and power names (below)
   ctx.globalAlpha = 1;
-  // power names: big and faint, drawn under the city and province names and the counters (area labels sit below point labels)
-  const pnB = [];   // power names already placed (they keep clear of each other too)
-  if (!showNames) GEO.labels.forEach((L, n) => { if (!L || !S.nations[n].alive) return;
-    const [x, y] = toScreen(L.x, L.y), you = n === PLAYER;
-    const size = Math.max(12, Math.min(34, Math.sqrt(L.cells)*view.s*3.4));
-    ctx.font = `800 ${size}px ${DISPLAY}`;
-    const txt = (you ? S.nations[n].name + ' · You' : S.nations[n].name).toUpperCase();
-    // keep the big name clear of unit counters and flag pins: try the home line, then steps above and below; if all are blocked take the least covered and fade it
-    const tw = ctx.measureText(txt).width, units = boxes0.filter(q => q.unit).concat(pnB), cover = yy => { let o = 0; const bx0 = x - tw/2 - 4, bx1 = x + tw/2 + 4, by0 = yy - size*0.55, by1 = yy + size*0.5;
-      for (const q of units){ const ox = Math.min(bx1, q[2]) - Math.max(bx0, q[0]), oy = Math.min(by1, q[3]) - Math.max(by0, q[1]); if (ox > 0 && oy > 0) o += ox*oy; } return o; };
-    let ly = y - 22, lx = x, sz = size, tw2 = tw, found = cover(ly) === 0;
-    const coverAt = (xx, yy, ww, ss) => { let o = 0; const bx0 = xx - ww/2 - 4, bx1 = xx + ww/2 + 4, by0 = yy - ss*0.55, by1 = yy + ss*0.5; if (bx0 < 2 || bx1 > cw - 2 || by0 < 2 || by1 > ch - 2) return 1;
-      for (const q of units){ const ox = Math.min(bx1, q[2]) - Math.max(bx0, q[0]), oy = Math.min(by1, q[3]) - Math.max(by0, q[1]); if (ox > 0 && oy > 0) o += ox*oy; } return o; };
-    if (!found) for (const k0 of [1, 0.78, 0.6]){ const ss = Math.max(11, size*k0); ctx.font = `800 ${ss}px ${DISPLAY}`; const ww = ctx.measureText(txt).width; const spots = [];
-      for (const ky of [0, -0.6, 0.6, -1.1, 1.1, -1.7, 1.7, -2.3, 2.3]) for (const kx of [0, -0.25, 0.25, -0.5, 0.5]) spots.push([x + kx*ww, y - 22 + ky*ss*1.15, Math.abs(ky) + Math.abs(kx)*2]);
-      spots.sort((p1, p2) => p1[2] - p2[2]);
-      for (const [xx, yy] of spots) if (coverAt(xx, yy, ww, ss) === 0){ lx = xx; ly = yy; sz = ss; tw2 = ww; found = true; break; }
-      if (found) break; }
-    if (!found) return;   // every spot covered by counters or controls: the name is left out rather than cut
-    ctx.font = `800 ${sz}px ${DISPLAY}`;
-    pnB.push([lx - tw2/2 - 4, ly - sz*0.55, lx + tw2/2 + 4, ly + sz*0.5]);
-    ctx.lineWidth = you ? 5 : 4; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(txt, lx, ly);
-    ctx.fillStyle = you ? 'rgba(255,250,235,.85)' : rgba(S.nations[n].color, 0.7); ctx.fillText(txt, lx, ly); });
+  // power names: big and faint area labels; yours is told apart by its light fill alone. A name lies on its own nation's land (both ends and nearly all of its
+  // line over that nation's provinces) and is no wider than the country. They are placed in the label pass, after the capital and city names (after all the
+  // names once the province names are up), and never cover a name, a city marker or capital star (or your capital's pulsing ring), a counter, a flag, a fort,
+  // a control or the YOUR CAPITAL tag: with no free spot on its own land a name is left out. Only a country too small on screen to hold its name at 11 px, or
+  // any at world zoom, may let it hang out over the sea next to its land (never over another country's land).
+  const pnB = [], pnDbg = window.__dbgBoxes ? [] : null; let pnDone = hexPx >= 30, pnYou = pnDone; const pnSeen = new Set();   // power names already placed (they keep clear of each other too)
+  const placePN = youOnly => { pnYou = true; if (!youOnly) pnDone = true; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const order = GEO.labels.map((L, n) => n).sort((a, b) => (b === PLAYER) - (a === PLAYER)), pa = hexPx < 15 ? 1 : 1 - 0.4*(hexPx - 15)/15;   // yours is placed first
+    const NPc = S.nations[PLAYER], capP = NPc.alive && S.owner[NPc.capital] === PLAYER ? NPc.capital : -1;
+    const mk = marks.map(m => { const r = m.p === capP ? Math.max(m.r, 15*kl) + 2 : m.r + 1; return [m.x - r, m.y - r, m.x + r, m.y + r]; });
+    for (const n of order){ const L = GEO.labels[n]; if (!L || !S.nations[n].alive || !L.bb || (youOnly && n !== PLAYER) || pnSeen.has(n)) continue; pnSeen.add(n);
+      const bb = L.bb, bx0 = bb[0]*view.s + view.x, bx1 = bb[2]*view.s + view.x; if (bx1 < 0 || bx0 > cw || bb[3]*view.s + view.y < 0 || bb[1]*view.s + view.y > ch) continue;   // the whole mainland off screen
+      const [x, y] = toScreen(L.x, L.y), you = n === PLAYER, txt = S.nations[n].name.toUpperCase();
+      let C = NAMEC.pn.get(n);
+      if (!C){   // sizes and candidate spots (offsets from the anchor), worked out once per view: the anchor itself, just above it, then a grid around it and spots by the biggest provinces, at up to five sizes (11 px at least)
+        const sA = Math.max(12, Math.min(34, Math.sqrt(L.cells)*view.s*3.4)); ctx.font = `800 ${sA}px ${DISPLAY}`; const t0 = ctx.measureText(txt).width, bw = bx1 - bx0; let s0 = sA;
+        if (t0 > 0.85*bw) s0 = Math.max(11, s0*0.85*bw/t0);   // no wider than the country, never below 11 px
+        C = {s0, narrow:t0*11/sA > 0.85*bw, list:[], ext:[0, 0, 0, 0]}; const done = new Set();
+        for (const k0 of [1, 0.78, 0.6, 0.46, 0.36]){ const ss = Math.round(Math.max(11, s0*k0)*2)/2; if (done.has(ss)) continue; done.add(ss); ctx.font = `800 ${ss}px ${DISPLAY}`; const ww = ctx.measureText(txt).width, spots = [[0, 0, -2], [0, -22, -1]];
+          for (const ky of [0, -0.6, 0.6, -1.1, 1.1, -1.7, 1.7, -2.3, 2.3, -3, 3]) for (const kx of [0, -0.25, 0.25, -0.5, 0.5, -0.8, 0.8]) if (ky || kx) spots.push([kx*ww, ky*ss*1.15, Math.abs(ky) + Math.abs(kx)*2]);
+          if (L.alt) for (let i = 0; i < L.alt.length; i++){ const ax = (L.alt[i][0] - L.x)*view.s, ay = (L.alt[i][1] - L.y)*view.s; for (const oy of [0, -0.7, 0.7]) spots.push([ax, ay + oy*ss, 40 + i + Math.abs(oy)]); }   // then round the country's biggest provinces
+          spots.sort((p1, p2) => p1[2] - p2[2]); for (const [dx, dy] of spots){ C.list.push({dx, dy, ww, ss, fit:undefined, fitw:undefined}); const E = C.ext;
+            E[0] = Math.min(E[0], dx - ww/2 - 4); E[1] = Math.min(E[1], dy - ss*0.55); E[2] = Math.max(E[2], dx + ww/2 + 4); E[3] = Math.max(E[3], dy + ss*0.5); } }
+        NAMEC.pn.set(n, C); }
+      const own = p => p >= 0 && S.owner[p] === n && !G.P[p].sea, boxOf = c => [x + c.dx - c.ww/2 - 4, y + c.dy - c.ss*0.55, x + c.dx + c.ww/2 + 4, y + c.dy + c.ss*0.5];
+      const E = C.ext, reg = [x + E[0], y + E[1], x + E[2], y + E[3]], blk = boxes0.filter(q => ovl(q, reg)).concat(mk.filter(q => ovl(q, reg)), pnB);   // (only what lies near this name's spots is tested)
+      let best = null, nB = 0, nE = 0;
+      for (const pass of C.narrow || hexPx < 6 ? [0, 1] : [0]){ for (const c of C.list){ const b = boxOf(c); if (b[0] < 2 || b[2] > cw - 2 || b[1] < 2 || b[3] > ch - 2){ nE++; continue; } if (blk.some(q => ovl(q, b))){ nB++; continue; }
+          if (pass ? !(c.fitw ?? (c.fitw = nameOverSea(x + c.dx, y + c.dy, c.ww, c.ss, own))) : !(c.fit ?? (c.fit = nameFits(x + c.dx, y + c.dy, c.ww, c.ss, own)))) continue;
+          best = c; break; } if (best) break; }
+      if (!best){ if (pnDbg) pnDbg.push({n:S.nations[n].name, none:1, nB, nE, nL:C.list.length, nar:C.narrow ? 1 : 0, s0:Math.round(C.s0)}); continue; }
+      const lx = x + best.dx, ly = y + best.dy, sz = best.ss, ww = best.ww; ctx.font = `800 ${sz}px ${DISPLAY}`;
+      { const pb = boxOf(best); pb.you = you; pnB.push(pb); boxes0.push(pb); if (pnDbg) pnDbg.push({n:S.nations[n].name, x:Math.round(lx), y:Math.round(ly), sz, w:Math.round(ww), b:pb.map(Math.round), a:+pa.toFixed(2)}); }
+      ctx.globalAlpha = pa; ctx.lineWidth = Math.min(4, sz/3); ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(txt, lx, ly);
+      ctx.fillStyle = you ? 'rgba(255,250,235,.85)' : rgba(S.nations[n].color, 0.7); ctx.fillText(txt, lx, ly); }
+    ctx.restore(); };
   // buildings and forts go down before the names, so a name is never hidden under a fort; the names keep clear of the forts too
   FORTB = []; drawBuildings(now, kl, vis); for (const f of FORTB){ const b = f.slice(); b.fort = true; b.unit = true; b.at = -3; boxes0.push(b); }
+  // YOUR CAPITAL (first three days): its spot is chosen as soon as your capital's name is placed (or after all the names when it has none), so the names
+  // placed after it keep clear of it. Right under the name, else beside or above it, or by the star; failing those a little further out, tied to the star by
+  // a leader. It never covers a counter's plate (its number, icons or bars, your own garrison's included), another name or the ground right by another
+  // city's name, a map control or a panel; it may touch the edges of a counter (marks, padding). With no such spot it is left out.
+  const NP = S.nations[PLAYER]; let capTagAt = null, tagDbg, tagTried = !(S.hour < 72 && NP.alive && S.owner[NP.capital] === PLAYER);
+  const placeTag = () => { tagTried = true; tagDbg = null; const P0 = G.P[NP.capital], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + 9*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, L0 = capLab;
+    if (x < 0 || x > cw || cy < 0 || cy > ch || boxes0.some(o => o.hud && x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3])) return;   // the star itself off screen or under a control or panel
+    ctx.save(); ctx.font = `700 10.5px ${BODY}`; ctx.letterSpacing = '1.2px'; const w = ctx.measureText('YOUR CAPITAL').width + 14, h = 17; ctx.letterSpacing = '0px'; ctx.restore();
+    const cands = L0 ? [[L0.x, L0.b[3] + 2], [L0.b[2] + w/2 + 4, L0.y - 2], [L0.b[0] - w/2 - 4, L0.y - 2], [L0.x, L0.b[1] - h - 2]] : [];
+    cands.push([x, cy + R + 4], [x, cy - R - h - 4], [x + R + 4 + w/2, cy - h/2], [x - R - 4 - w/2, cy - h/2]);
+    for (const d of [6, 18, 32, 50, 70]) for (let i = 0; i < 16; i++){ const an = i*Math.PI/8, ux = Math.cos(an), uy = Math.sin(an);   // further out, all round the star (each step out costs a little, so a near spot wins); tied to it by a leader
+      cands.push([x + ux*(R + 6 + w/2 + d), cy - h/2 + uy*(R + 6 + h/2 + d), 30 + d*4, 1]); }
+    const cores = boxes0.filter(o => o.core).map(o => o.core);
+    const cost = ([tx, ty, base, far]) => { const q = [tx - w/2 - 3, ty - 3, tx + w/2 + 3, ty + h + 3]; if (q[0] < 0 || q[2] > cw || q[1] < 0 || q[3] > ch) return 1e9; let c0 = base || 0;
+      for (const o of cores) if (ovl(q, o)) return 1e8;   // never over a counter's plate, number or bars
+      for (const o of boxes0){ if (o.hud){ if (ovl(q, o)) return 1e9; continue; }
+        const own = o === (L0 && L0.b), ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]);
+        if (o.unit && o.at === NP.capital){ if (ox > 0 && oy > 0) c0 += ox*oy*0.2; continue; }   // the edges of your own capital's garrison counter (marks, padding): allowed, a clear spot still wins
+        if (!own && !o.unit && !o.fort){   // another name: never over it, and never next to another city's name (it would read as that city's tag)
+          if (ox > 0 && oy > 0) return 1e8; if (o.city && Math.hypot(Math.max(-ox, 0), Math.max(-oy, 0)) < (far ? 14 : 30)) return 1e8; continue; }   // (a tag tied by its leader may come closer)
+        if (own){ if (ox > 6 && oy > 6) c0 += (ox - 6)*(oy - 6)*60; continue; }   // its own name: may touch it, never cover it
+        if (ox > 0 && oy > 0) c0 += ox*oy*10; }
+      for (const m of marks){ const ox = Math.min(q[2], m.x + m.r) - Math.max(q[0], m.x - m.r), oy = Math.min(q[3], m.y + m.r) - Math.max(q[1], m.y - m.r); if (ox > 0 && oy > 0) c0 += ox*oy*10; }
+      for (const o of pnB){ const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); if (ox > 0 && oy > 0){ if (o.you) return 1e8; c0 += ox*oy*10; } }   // (off the power names: never over your own)
+      if (Math.hypot(tx - x, ty + h/2 - cy) > 18){ const ex = Math.max(q[0] + 3, Math.min(q[2] - 3, x)), ey = Math.max(q[1] + 3, Math.min(q[3] - 3, cy));   // a leader across a plate costs a lot
+        for (let i = 1; i < 8; i++){ const px = ex + (x - ex)*i/8, py = ey + (cy - ey)*i/8; if (cores.some(o => px > o[0] && px < o[2] && py > o[1] && py < o[3])){ c0 += 2000; break; } }
+        const nb = L0 && L0.b; if (far && nb) for (let i = 1; i < 10; i++){ const px = ex + (x - ex)*i/10, py = ey + (cy - ey)*i/10; if (px > nb[0] + 1 && px < nb[2] - 1 && py > nb[1] + 1 && py < nb[3] - 1) return 1e8; } }   // (a tag out on its own needs its leader, which never runs through your capital's name)
+      if (far){ const dq = (mx, my) => Math.hypot(Math.max(q[0] - mx, 0, mx - q[2]), Math.max(q[1] - my, 0, my - q[3])), d0 = dq(x, cy);   // ...and keeps clear of other cities' markers (nearer your star than theirs, or 14 px off them), so it never reads as their tag
+        for (const m of marks) if (m.p !== NP.capital && dq(m.x, m.y) - m.r < Math.min(d0 - R, 14)) return 1e8; }
+      return c0; };
+    let bestT = null, bc = Infinity; const cc = []; for (const c1 of cands){ const c0 = cost(c1); cc.push(Math.round(c0)); if (c0 < bc){ bc = c0; bestT = c1; } if (!c0) break; }
+    if (window.__dbgBoxes) tagDbg = {none:1, cc};
+    if (!bestT || bc >= 1e8) return;
+    const [tx, ty] = bestT; capTagAt = {tx, ty, w, h, x, cy, R}; if (window.__dbgBoxes){ tagDbg = [tx, ty + h/2, w, h, x, cy]; tagDbg.cc = cc; }
+    const tb = [tx - w/2 - 4, ty - 3, tx + w/2 + 4, ty + h + 3]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); };   // the names placed after it keep a little clear of it
   // place labels: highest rank first, skip any that would overlap one already placed
+  const labDbg = window.__dbgBoxes ? [] : null;
   { labs.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
-    for (const L of labs){ const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; ctx.font = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
+    for (const L of labs){ if (!pnYou && !(L.cap || L.city)) placePN(hexPx >= 15);   // the power names go in after the capital and city names, before the province names (once those are up, only yours)
+      const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; ctx.font = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
       const hit = q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
       let lx = L.x, ly = y0, late = false;
       if (boxes.some(hit)){ if (L.cap && boxes.some(q => !q.unit && hit(q))) continue;   // a capital name gives way only to another name; stacks make it step aside
@@ -6240,20 +6358,31 @@ function draw(now){
         let ok = false; for (const [x0, yt] of cand){ b[0] = x0; b[2] = x0 + w; b[1] = yt - 1; b[3] = yt + f + 2;
           if (b[0] < 0 || b[2] > cw || boxes.some(hit) || marks.some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3])) continue;
           lx = x0 + w/2; ly = yt; ok = true; break; }
-        if (!ok){ if (!(L.cap && L.p === S.nations[PLAYER].capital)) continue; for (let i = 0; i < 4; i++) b[i] = b0[i]; late = true; } }   // a name boxed in on every side is left out (your own capital alone keeps its spot)
-      boxes.push(b); if (L.cap && L.p === S.nations[PLAYER].capital) capLab = {x:lx, y:ly, f, w, b};
+        if (!ok){ const mine = L.cap && L.p === S.nations[PLAYER].capital; if (!(mine || L.cap || (L.city && L.tier >= 1))) continue;
+          // boxed in on every side: a capital or big city may still take its spot (or a nearby one) over the edges of a counter - its marks, padding or figures -
+          // drawn over the counters, but never over a plate's number, icons or bars, another name, a control or the tag. Your own capital's name always
+          // shows: with no such spot it takes the nearby one covering the least of the plates and is drawn under the counters, so their numbers stay readable.
+          const coreA = bx => { let s0 = 0; for (const q of boxes) if (q.core){ const ox = Math.min(bx[2], q.core[2]) - Math.max(bx[0], q.core[0]), oy = Math.min(bx[3], q.core[3]) - Math.max(bx[1], q.core[1]); if (ox > 0 && oy > 0) s0 += ox*oy; } return s0; };
+          const blocked = bx => bx[0] < 0 || bx[2] > cw || boxes.some(q => ovl(q, bx) && (!q.unit || q.hud || q.tag)) || marks.some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3]);
+          let bk = null, bs = Infinity;
+          for (const [x0, yt] of [[b0[0], y0], ...cand]){ const bx = [x0, yt - 1, x0 + w, yt + f + 2], s0 = (blocked(bx) ? 1e7 : 0) + coreA(bx); if (s0 < bs){ bs = s0; bk = bx; } if (!s0) break; }
+          if (bs > 0 && !(mine && bs < 1e7)) { if (!mine) continue; bk = b0; }
+          for (let i = 0; i < 4; i++) b[i] = bk[i]; lx = b[0] + w/2; ly = b[1] + 1; late = !coreA(b); } }
+      if (L.city || L.cap) b.city = true; boxes.push(b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; if (!tagTried) placeTag(); }
+      if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0});
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else { ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
     ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
+  if (!tagTried) placeTag();   // your capital's name hidden or left out: the tag goes by the star
+  if (!pnDone) placePN(false);   // (once the province names are up, the other powers' names come last)
   // capital flag pins on top of the city art and the power names
   for (const [pin, a, px0, py0] of pinsOut){ ctx.globalAlpha = Math.max(0.9, a); ctx.drawImage(pin.c, px0, py0, pin.w, pin.h); }
   ctx.globalAlpha = 1;
-  // your capital callout (the YOUR CAPITAL tag itself is placed after the counters, clear of them)
-  let capTag = null;
+  // your capital callout: a ring pulsing round the star (the YOUR CAPITAL tag is placed in the label pass, drawn after the counters)
   { const N = S.nations[PLAYER];
     if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + 9*kl;
       if (!(hexPx >= ART_PX && bartOk('city'))){ ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
-      if (S.hour < 72) capTag = [x, cy]; } }
+    } }
   // battles: a dark disc with crossed swords and a red ring pulsing out, set between the fighting stacks, with the strength balance right under it
   for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue;
     const sides = new Map(); for (const a of S.armies){ if (a.at !== p || a.to !== null || a.fly) continue; sides.set(a.owner, (sides.get(a.owner) || 0) + power(a)); }
@@ -6317,23 +6446,19 @@ function draw(now){
     hits.push({...r, ids:c.list.map(a => a.id), cx:c.x, cy:c.y, spread:c.list.some(a => a.at !== c.at)});
     if (!plateM && r.bb){ if (FORMBB.size > 3000) FORMBB.clear(); const dy0 = r.bdy || 0; FORMBB.set(formKey(c), {bb:[r.bb[0] - c.x, r.bb[1] - c.y - dy0, r.bb[2] - c.x, r.bb[3] - c.y - dy0], r:[r.x - c.x, r.y - c.y, r.x + r.w - c.x, r.y + r.h - c.y - dy0]}); }
   }
-  // capital names boxed in by stacks, drawn over them so they stay readable
+  // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
-  // YOUR CAPITAL (first three days): a tag under the capital's name, or above it / beside it where stacks sit below; drawn on top of everything
-  if (capTag){ const N = S.nations[PLAYER], [x, cy] = capTag; ctx.font = `700 10.5px ${BODY}`; ctx.letterSpacing = '1.2px'; const t = 'YOUR CAPITAL', w = ctx.measureText(t).width + 14, h = 17;
-    const L0 = capLab, cands = L0 ? [[L0.x, L0.b[3] + 2], [L0.x, L0.b[1] - h - 2], [L0.b[2] + w/2 + 4, L0.y - 2], [L0.b[0] - w/2 - 4, L0.y - 2], [L0.x, L0.b[3] + 24]] : [[x, cy + 14*kl + 14]];
-    if (L0) cands.push([L0.b[2] + w/2 + 4, L0.b[3] + 2], [L0.b[0] - w/2 - 4, L0.b[3] + 2], [L0.b[2] + w/2 + 4, L0.b[1] - h - 2], [L0.b[0] - w/2 - 4, L0.b[1] - h - 2]);
-    { const bx = L0 ? L0.x : x, by = L0 ? L0.b[3] : cy + 14*kl; for (const r of [36, 52, 70]) for (let i = 0; i < 12; i++){ const a = i*Math.PI/6 + Math.PI/2; cands.push([bx + Math.cos(a)*r*1.5, by + Math.sin(a)*r - h/2]); } }
-    // cost of a spot: stacks count ten times more than names; the first free spot wins, else the least covered
-    const cost = ([tx, ty]) => { const q = [tx - w/2 - 3, ty - 3, tx + w/2 + 3, ty + h + 3]; if (q[0] < 0 || q[2] > cw || q[1] < 0 || q[3] > ch) return 1e9; let c0 = 0;
-      for (const o of boxes0){ const own = o === (L0 && L0.b), q2 = own ? [q[0] + 3, q[1] + 3, q[2] - 3, q[3] - 3] : q;   // its own name: may touch it, never cover it
-        const ox = Math.min(q2[2], o[2]) - Math.max(q2[0], o[0]), oy = Math.min(q2[3], o[3]) - Math.max(q2[1], o[1]); if (ox > 0 && oy > 0) c0 += ox*oy*(o.unit || o.fort ? 10 : 6); }
-      for (const m of marks){ const ox = Math.min(q[2], m.x + m.r) - Math.max(q[0], m.x - m.r), oy = Math.min(q[3], m.y + m.r) - Math.max(q[1], m.y - m.r); if (ox > 0 && oy > 0) c0 += ox*oy*10; } return c0; };
-    let bestT = cands[0], bc = Infinity; for (const c1 of cands){ const c0 = cost(c1); if (c0 < bc){ bc = c0; bestT = c1; } if (!c0) break; }
-    const [tx, ty] = bestT;
-    roundRect(ctx, tx - w/2, ty, w, h, h/2); ctx.fillStyle = 'rgba(8,12,14,.86)'; ctx.fill(); ctx.strokeStyle = N.color; ctx.lineWidth = 1.4; ctx.stroke();
-    ctx.fillStyle = '#f4eedc'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t, tx + 0.6, ty + h/2 + 0.5); ctx.letterSpacing = '0px'; }
-  if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), h:hits.map(h => [h.x, h.y, h.w, h.h])};   /*DBGBOX*/
+  // YOUR CAPITAL (first three days; its spot was chosen in the label pass): drawn on top of everything, with a thin leader to the star when it sits away from it
+  if (capTagAt){ const {tx, ty, w, h, x, cy, R} = capTagAt, tb = [tx - w/2, ty, tx + w/2, ty + h];
+    if (Math.hypot(tx - x, ty + h/2 - cy) > 18){ const ex = Math.max(tb[0], Math.min(tb[2], x)), ey = Math.max(tb[1], Math.min(tb[3], cy)), d = Math.hypot(ex - x, ey - cy), nb = capLab && capLab.b;
+      let cross = false; if (nb) for (let i = 1; i < 10 && !cross; i++){ const px = ex + (x - ex)*i/10, py = ey + (cy - ey)*i/10; cross = px > nb[0] + 1 && px < nb[2] - 1 && py > nb[1] + 1 && py < nb[3] - 1; }   // (not through your capital's own name: there the name joins them)
+      if (d > R + 1 && !cross){ const sx = x + (ex - x)/d*R, sy = cy + (ey - cy)/d*R; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(sx, sy); ctx.lineCap = 'round';
+        ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.stroke(); ctx.globalAlpha = 0.8; ctx.lineWidth = 1; ctx.strokeStyle = NP.color; ctx.stroke(); ctx.globalAlpha = 1; ctx.lineCap = 'butt'; } }
+    ctx.font = `700 10.5px ${BODY}`; ctx.letterSpacing = '1.2px';
+    roundRect(ctx, tb[0], ty, w, h, h/2); ctx.fillStyle = 'rgba(8,12,14,.86)'; ctx.fill(); ctx.strokeStyle = NP.color; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = '#f4eedc'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('YOUR CAPITAL', tx + 0.6, ty + h/2 + 0.5); ctx.letterSpacing = '0px'; }
+  if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null,
+    pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl};   /*DBGBOX*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
   if (sel.army !== null && !afxReduced()){ if (SELFX.a !== sel.army){ SELFX.a = sel.army; SELFX.at = now; }
     const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500;
@@ -6719,6 +6844,7 @@ const comp = a => UT.filter(t => a.u[t]).map(t => `<span class="tag" title="${a.
 // an identified foreign force: type, count, level (Mark) and health of each unit type
 const compFoe = a => UT.filter(t => a.u[t]).map(t => { const m = markOf(a.owner, t), hp = Math.round(100*Math.max(0, 1 - a.w[t]/(a.u[t]*UNITS[t].hp))); return `<span class="tag" title="${a.u[t]} × ${UNITS[t].name}${m > 1 ? ` Mk ${ROMAN[m]}` : ''}, ${hp}% health">${unitSVG(t)}<b>×${a.u[t]}</b>${m > 1 ? `<span class="mk2">${ROMAN[m]}</span>` : ''}<span class="hp2" style="--h:${hp}%"></span></span>`; }).join('');
 const clockStr = h => { const c = calDate(h); return `${c.d} ${MONTHS[c.m]} · ${String(h % 24).padStart(2, '0')}:00`; };
+const localClock = (h, st = S) => clockStr(h + localOff(st));   // display only: capital local time (the day counter and the day limit stay on S.hour)
 let lastSig = {};
 function setHTML(el, html){ const ae = document.activeElement; if (ae && (ae.tagName === 'SELECT' || (ae.classList && (ae.classList.contains('rn') || ae.classList.contains('sp-rng')))) && el.contains(ae)) return; if (lastSig[el.id] !== html){ lastSig[el.id] = html; el.innerHTML = html; } }
 const itip = t => `<span class="itip" tabindex="0" role="img" aria-label="${String(t).replace(/"/g, '&quot;')}" title="${String(t).replace(/"/g, '&quot;')}">i</span>`;   // a small (i) with the rules in its tooltip, instead of a paragraph
@@ -6780,7 +6906,7 @@ function renderSide(force){
   document.documentElement.style.setProperty('--you', N.color);
   { const mine = landHeld(PLAYER), pl = mine/landNeed(PLAYER), pc = capsHeld(PLAYER)/WIN_CAPS, best = Math.max(pl, pc);
     const vtip = `Victory: hold ${landNeed(PLAYER)} provinces, or ${WIN_CAPS} starting capitals, or have the most growth when day ${DAY_LIMIT} ends.&#10;You hold ${mine}/${landNeed(PLAYER)} ${SCN === 'world' ? 'land' : 'theatre land'} provinces and ${capsHeld(PLAYER)}/${WIN_CAPS} capitals. Day ${Math.floor(S.hour/24) + 1} of ${DAY_LIMIT}.`;
-    setHTML($('clock'), `<b>${clockStr(S.hour)}</b><span class="vtr"><i style="width:${Math.min(100, best*100)}%"></i></span><span class="vic">Victory <em>${Math.round(Math.min(1, best)*100)}%</em> · ${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS} cap`}<span class="vd"> · D${Math.floor(S.hour/24) + 1}/${DAY_LIMIT}</span></span>`); setTip($('clock'), vtip.replace(/&#10;/g, '\n'));
+    setHTML($('clock'), `<b title="Capital local time">${localClock(S.hour)}<small class="loc"> local</small></b><span class="vtr"><i style="width:${Math.min(100, best*100)}%"></i></span><span class="vic">Victory <em>${Math.round(Math.min(1, best)*100)}%</em> · ${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS} cap`}<span class="vd"> · D${Math.floor(S.hour/24) + 1}/${DAY_LIMIT}</span></span>`); setTip($('clock'), vtip.replace(/&#10;/g, '\n'));
     setHTML($('vbar'), `<span>Victory ${Math.round(Math.min(1, best)*100)}% · ${pl >= pc ? `${mine}/${landNeed(PLAYER)} prov` : `${capsHeld(PLAYER)}/${WIN_CAPS} capitals`}</span><span class="tr"><i style="width:${Math.min(100, best*100)}%"></i></span>`); }
   $('seedlbl').textContent = '';
   for (let i = 0; i < 5; i++) $('sp' + i).setAttribute('aria-pressed', String(S.speed === i));
@@ -6915,7 +7041,7 @@ function settingsHTML(){
     ${row('Text size', `<div class="seg2">${[90, 100, 115, 130].map(v => `<button class="sg ${(SET.ui || 100) === v ? 'on' : ''}" aria-pressed="${(SET.ui || 100) === v}" data-act="set-ui" data-v="${v}">${v}%</button>`).join('')}</div>`)}
     ${row('Colours', `<div class="seg2">${opt('cb', false, 'Standard')}${opt('cb', true, 'Colour-blind')}</div>`)}
     ${row('Motion', `<div class="seg2">${opt('motion', 'full', 'Full')}${opt('motion', 'reduced', 'Reduced', 'No shake, fewer particles')}</div>`)}
-    ${row('Daily newspaper', `<div class="seg2">${opt('paper', true, 'At dawn')}${opt('paper', false, 'Dispatches only')}</div>`)}
+    ${row('Daily newspaper', `<div class="seg2">${opt('paper', true, 'Each morning')}${opt('paper', false, 'Dispatches only')}</div>`)}
     </div>
     <div class="eyebrow">Save slots</div><div class="slots">${[1, 2, 3].map(i => { const m = slotMeta(i); return `<div class="slot"><span><b>Slot ${i}</b> <span class="small muted">${m ? `${m.name} · ${m.date} · ${m.scn}` : 'Empty'}</span></span><button class="btn" data-act="slot-save" data-v="${i}" ${S && S.started && !S.over ? '' : 'disabled'}>Save</button><button class="btn" data-act="slot-load" data-v="${i}" ${m ? '' : 'disabled'}>Load</button></div>`; }).join('')}</div>
     <div class="small muted">Keys: Space pause · 1–3 speed · P production · R research · D diplomacy · T market · A army · S statistics · N newspaper · O settings · V map mode · M sound · H home · ? manual ${itip('Mouse: left-click selects, a second click on the same target sends; right-click with a force selected moves or attacks at once; click an enemy force to pursue it. Keys: M move · K attack · L delay · X halt · Ctrl+4…9 save a group, 4…9 recall it.')}</div>
@@ -7033,7 +7159,7 @@ function statsHTML(){
   const st0 = S.stats || {}, rows = S.nations.slice().sort((a, b) => (b.alive - a.alive) || score(b.id) - score(a.id)).map((N, i) => {
     const prov = S.owner.filter(o => o === N.id).length;
     return `<tr class="${N.id === PLAYER ? 'me' : ''} ${N.alive ? '' : 'dead'}"><td>${N.alive ? i + 1 : '—'}</td><td>${flagHTML(N.id, 14)} ${N.name}${N.id === PLAYER ? ' (you)' : ''}</td><td>${score(N.id)}</td><td>${growth(N.id) >= 0 ? '+' : ''}${growth(N.id)}</td><td>${prov}</td><td>${capsHeld(N.id)}</td><td>${N.alive ? Math.round(natPower(N.id)) : 0}</td><td>${N.alive ? Object.keys(N.tech).length : '—'}</td><td>${N.alive ? warsOf(N.id).length : '—'}</td></tr>`; }).join('');
-  return `<div class="rhead"><div><div class="eyebrow">${clockStr(S.hour)}</div><h1>World statistics</h1></div></div>
+  return `<div class="rhead"><div><div class="eyebrow">${localClock(S.hour)} local</div><h1>World statistics</h1></div></div>
     <div class="statgrid">${[['Provinces taken', st0.taken || 0], ['Provinces lost', st0.lost || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Your units lost', st0.unitsLost || 0], ['Peak army strength', st0.peakArmy || 0], ['Best rank', st0.bestRank ? `#${st0.bestRank} (day ${st0.bestRankDay})` : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>
     <div class="tblwrap"><table class="ptab stab"><thead><tr><th>#</th><th>Power</th><th>Score</th><th>Growth</th><th>Prov.</th><th>Capitals</th><th>Military</th><th>Techs</th><th>Wars</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="charts">${chartSVG(0, 'Score')}${chartSVG(2, 'Military strength')}</div>
@@ -7436,7 +7562,7 @@ document.addEventListener('click', e => {
     case 'rp-play': if (REPLAY){ if (REPLAY.day >= REPLAY.n){ REPLAY.day = 0; } REPLAY.playing = !REPLAY.playing; b.textContent = REPLAY.playing ? 'Pause' : 'Play'; } break;
     case 'set-ui': SET.ui = +b.dataset.v; saveSet(); openModal(settingsHTML(), 'settings'); break;
     case 'slot-save': { try { localStorage.setItem(SLOT_KEY(+b.dataset.v), saveJSON()); toast(`Saved to slot ${b.dataset.v}.`, 'good', null); } catch (e) { toast('Could not save: browser storage is full or blocked.', 'bad', null); } openModal(settingsHTML(), 'settings'); break; }
-    case 'slot-load': { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY(+b.dataset.v))); if (d && restore(d)){ applyPalette(); geoDirty = true; save(); closeModal(); clearSel(); goHome(); toast(`Loaded slot ${b.dataset.v}: ${S.nations[PLAYER].name}, ${clockStr(S.hour)}.`, 'good', null); } else toast('That save could not be loaded.', 'bad', null); } catch (e) { toast('That save could not be loaded.', 'bad', null); } break; }
+    case 'slot-load': { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY(+b.dataset.v))); if (d && restore(d)){ applyPalette(); geoDirty = true; save(); closeModal(); clearSel(); goHome(); toast(`Loaded slot ${b.dataset.v}: ${S.nations[PLAYER].name}, ${localClock(S.hour)}.`, 'good', null); } else toast('That save could not be loaded.', 'bad', null); } catch (e) { toast('That save could not be loaded.', 'bad', null); } break; }
     case 'surprise-go': { const ps = pendingSurprise; pendingSurprise = null; closeModal(); if (ps) ps.go(); renderSide(true); break; }
     case 'surprise-cancel': pendingSurprise = null; closeModal(); if (sel.army !== null){ sel.target = null; targetPath = null; sel.surprise = null; } renderSide(true); break;
     case 'fire': if (a){ a.fire = b.dataset.v; renderSide(true); } break;
@@ -7703,7 +7829,7 @@ function warWarning(a){
 }
 function showEnd(){
   const win = S.over === 'win', mine = S.owner.filter(o => o === PLAYER).length;
-  openModal(`<div class="endhead">${flagHTML(PLAYER, 66, 'big')}<div><div class="eyebrow">Iron Meridian: World War III · ${clockStr(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1><div class="small muted" style="margin-top:6px">${S.nations[PLAYER].name}</div></div></div>
+  openModal(`<div class="endhead">${flagHTML(PLAYER, 66, 'big')}<div><div class="eyebrow">Iron Meridian: World War III · ${localClock(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1><div class="small muted" style="margin-top:6px">${S.nations[PLAYER].name}</div></div></div>
     <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} grew the most (+${growth(PLAYER)} score).` : `${S.nations[PLAYER].name} grew ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, behind the leader.`}` : ''}
     ${S.overReason === 'coalition' ? `Your coalition${blocOf(PLAYER) ? `, the ${blocOf(PLAYER).name},` : ''} dominates the world together.` : S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
     ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? (N0 => { const short = [['mp', 20, 'manpower'], ['metal', 15, 'metal'], ['oil', 10, 'oil'], ['food', 10, 'food']].find(([k, lim]) => N0[k] < lim); return short ? ` You had $${fmt(N0.cash)}M but ran out of ${short[2]}: build ${short[0] === 'mp' ? 'Recruiting Offices' : short[0] === 'metal' ? 'Foundries' : short[0] === 'oil' ? 'Refineries' : 'Farms'} early and capture provinces that produce it.` : ` You had $${fmt(N0.cash)}M unspent: next time, turn money into troops and research early.`; })(S.nations[PLAYER]) : ''}</p>
@@ -7740,7 +7866,7 @@ GLOBE = (() => {
   function sunLL(now){
     if (mode === 'menu' || !S){ const d = new Date(), doy = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 1))/864e5);
       return {lon:norm(menuLon(now) - 38), lat:-23.44*Math.cos(2*Math.PI*(doy + 10)/365)}; }   // the menu globe: lit from the front left, so the face you see is in daylight (not a black night side)
-    const hr = S.hour + (S.speed && !S.over ? acc : 0), doy = (Math.floor(hr/24) + 318) % 365;
+    const hr = sunHr(S.hour + (S.speed && !S.over ? acc : 0)), doy = (Math.floor(hr/24) + 318) % 365;
     return {lon:((12 - (hr % 24))*15 + 540) % 360 - 180, lat:-23.44*Math.cos(2*Math.PI*(doy + 10)/365)}; }
   const fitD = (w, h, f) => 1/Math.sin(Math.atan(f*TF));
   // the menu view turns slowly from Europe and Africa westward (continents first, not an empty Pacific)
@@ -8019,7 +8145,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, armyPos: a => armyPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, armyPos: a => armyPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
