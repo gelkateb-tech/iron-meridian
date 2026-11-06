@@ -873,6 +873,11 @@ select{transition:border-color .15s}
 .mghost{position:fixed; inset:0; z-index:20; pointer-events:none; background:radial-gradient(ellipse at 50% 40%, rgba(5,8,9,.42), rgba(3,5,6,.72)); animation:mfadeout .2s ease-in forwards}
 @keyframes mfadeout{to{opacity:0}}
 /* start of a campaign: the view falls in from high above under a dark vignette */
+/* a button whose work is under way (Lead <nation>): a light sweep runs across it until the next screen appears */
+.btn.busy{pointer-events:none; opacity:.85; cursor:progress; background-image:linear-gradient(90deg,transparent 25%,rgba(255,255,255,.3) 50%,transparent 75%), linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.02)); background-size:200% 100%, 100% 100%; animation:busy 0.9s linear infinite}
+.btn.primary.busy{background-image:linear-gradient(90deg,transparent 25%,rgba(255,255,255,.3) 50%,transparent 75%), linear-gradient(180deg, #edb75c, #c98a2a)}
+@keyframes busy{from{background-position:0 0, 0 0} to{background-position:-200% 0, 0 0}}
+html.reduced .btn.busy{animation:none} @media (prefers-reduced-motion: reduce){ .btn.busy{animation:none} }
 .vign{position:absolute; inset:0; z-index:4; pointer-events:none; background:radial-gradient(ellipse 75% 70% at 50% 50%, rgba(2,4,5,.15) 30%, rgba(2,4,5,.9) 100%), rgba(2,4,5,.6); animation:vign 1.5s ease-out forwards}
 @keyframes vign{0%{opacity:1} 30%{opacity:.85} 100%{opacity:0}}
 /* resource counters */
@@ -1119,7 +1124,7 @@ const ART = (() => {
       c.naturalWidth = 256; c.naturalHeight = 256; imgs.set(name, c); stand.add(name); } catch (e) {} }
   OPT.forEach(standIn);
   function loadOpt(name){ if (typeof Image === 'undefined' || window.__BAKE || waits.has(name)) return; const im = new Image(); im.decoding = 'async'; waits.set(name, Promise.resolve(null));
-    im.onload = () => { const ok = () => { if (!im.naturalWidth) return; imgs.set(name, im); stand.delete(name); durl.delete(name); cache.clear(); try { window.dispatchEvent(new Event('im-art')); } catch (e) {} };
+    im.onload = () => { const ok = () => { if (!im.naturalWidth) return; imgs.set(name, im); stand.delete(name); durl.delete(name); cleanC.delete(name); cache.clear(); try { window.dispatchEvent(new Event('im-art')); } catch (e) {} };
       if (im.decode) im.decode().then(ok, ok); else ok(); };
     im.onerror = () => {};   // not supplied yet: keep the stand-in, no retry
     im.src = BASE + name + '.webp'; }
@@ -1145,10 +1150,36 @@ const ART = (() => {
     const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
     const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, c.width, c.height); return c;
   }
+  // a picture without its baked drop shadow (map figures only: the map casts one shadow for every figure toward the same side). The vehicle pictures
+  // are nose up and mirror-symmetric, their shadow is a near-black wedge on one side: a dark pixel whose mirror across the hull's axis is clear (or
+  // dark too, outside the lit hull's columns on that row) is shadow. Pictures that are not symmetric (the soldier squads) are left as they are.
+  const cleanC = new Map();
+  function clean(name){ if (cleanC.has(name)) return cleanC.get(name); const im = imgs.get(name); if (!im) return null; let c = im;
+    try { const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(im, 0, 0);
+      const D = g.getImageData(0, 0, w, h), d = D.data, N = w*h, dk = new Uint8Array(N), br = new Uint8Array(N); let sw = 0, sx = 0;
+      for (let i = 0; i < N; i++){ const a = d[i*4 + 3]; if (!a) continue; const r = d[i*4], gn = d[i*4 + 1], b = d[i*4 + 2], l = 0.299*r + 0.587*gn + 0.114*b;
+        if (l > 50){ br[i] = 1; sw += a; sx += a*(i % w); } else if (l < 38 && (Math.max(r, gn, b) - Math.min(r, gn, b))/Math.max(r, gn, b, 80) < 0.18) dk[i] = 1; }
+      const ax = sw ? sx/sw : 0; let nb = 0, ns = 0;
+      if (sw) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){ if (!br[y*w + x]) continue; nb++; const q = Math.round(2*ax - x); if (q >= 0 && q < w && br[y*w + q]) ns++; }
+      if (nb && ns/nb >= 0.55){
+        const lo = new Int32Array(h).fill(w), hi = new Int32Array(h).fill(-1), M = Math.max(1, Math.round(w/170));
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (br[y*w + x]){ if (x < lo[y]) lo[y] = x; hi[y] = x; }
+        const lo2 = lo.slice(), hi2 = hi.slice(); for (let y = 0; y < h; y++) for (const yy of [y - 1, y + 1]) if (yy >= 0 && yy < h){ lo2[y] = Math.min(lo2[y], lo[yy]); hi2[y] = Math.max(hi2[y], hi[yy]); }
+        const kill = new Uint8Array(N);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){ const i = y*w + x; if (!dk[i]) continue; const q = Math.round(2*ax - x), j = y*w + q, ok = q >= 0 && q < w;
+          if (!ok || !d[j*4 + 3] || (dk[j] && (x < lo2[y] - M || x > hi2[y] + M))) kill[i] = 1; }
+        for (let i = 0; i < N; i++) if (kill[i]) d[i*4 + 3] = 0;
+        const kill2 = [];   // one erosion pass: dark speckle left with few opaque neighbours goes too
+        for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++){ const i = y*w + x; if (!dk[i] || !d[i*4 + 3]) continue; let n = 0;
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && d[(i + dy*w + dx)*4 + 3]) n++;
+          if (n < 4) kill2.push(i); }
+        for (const i of kill2) d[i*4 + 3] = 0;
+        g.putImageData(D, 0, 0); cv.naturalWidth = w; cv.naturalHeight = h; c = cv; } } catch (e) { c = im; }   // (a picture read back from file:// is tainted: keep it as it is)
+    cleanC.set(name, c); return c; }
   function sprite(name, px, o = {}){
-    name = rn(name); const im = imgs.get(name); if (!im) return null;
+    name = rn(name); const im = o.clean ? clean(name) : imgs.get(name); if (!im) return null;
     px = Math.max(4, Math.round(px));
-    const key = name + '|' + px + '|' + (o.ring || '') + '|' + (o.tint || '') + '|' + (o.tintA || '') + '|' + (o.bg || '') + '|' + (o.boost || '');
+    const key = name + '|' + px + '|' + (o.ring || '') + '|' + (o.tint || '') + '|' + (o.tintA || '') + '|' + (o.bg || '') + '|' + (o.boost || '') + (o.clean ? '|c' : '');
     let c = cache.get(key); if (c) return c;
     if (cache.size > 700) cache.clear();
     const iw = im.naturalWidth, ih = im.naturalHeight, inner = o.ring ? px*0.72 : px, f = inner/Math.max(iw, ih);
@@ -1911,7 +1942,7 @@ function buildGeometry(){
   const outline = lazy(p => ringPath(p));
   GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), provT:tiledPath(provL.map(c => c.pts)), seaT:tiledPath(seaL.map(c => c.pts)), countryT:tiledPath(countryL.map(c => c.pts)), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land, coastV:coastPath()};
   GEO.coast0 = GEO.coastV; bakeLakes(); GEO.seaTex = bakeSeaDepth();
-  rebuildOwnerGeo();
+  rebuildOwnerGeo(); if (S) snowCover(true);
 }
 let geoVer = 0, FRONT = {k:'', p:null};
 function frontPath(){ if (!GEO || !GEO.chains || !S.nations[PLAYER].alive) return null; const foes = S.nations.filter(N => N.id !== PLAYER && N.alive && atWar(PLAYER, N.id)).map(N => N.id); if (!foes.length) return null;
@@ -1987,7 +2018,7 @@ function buildTerrain(){
   const N = W*H, landF = new Float32Array(N), elevF = new Float32Array(N), cR = new Float32Array(N), cG = new Float32Array(N), cB = new Float32Array(N);
   const BIOME = {plains:[92, 104, 62], forest:[50, 72, 44], mountain:[110, 101, 88], desert:[172, 146, 98], tundra:[136, 140, 132], urban:[104, 102, 94], hills:[116, 110, 72], marsh:[66, 68, 44], snow:[238, 243, 248]};
   const ELEV = {plains:0.16, forest:0.28, mountain:1.0, desert:0.24, tundra:0.34, urban:0.14, hills:0.5, marsh:0.06, snow:0.95};
-  const TC = window.TERRCELLS, TN = ['plains', 'forest', 'mountain', 'desert', 'tundra', 'hills', 'marsh', 'snow'], MF = new Float32Array(N);
+  const TC = window.TERRCELLS, TN = ['plains', 'forest', 'mountain', 'desert', 'tundra', 'hills', 'marsh', 'snow'], MF = new Float32Array(N), SF = new Float32Array(N), nzS = makeNoise(mulberry(606));
   for (let i = 0; i < N; i++){ const p = G.prov[i]; if (p < 0 || G.P[p].sea){ landF[i] = 0; elevF[i] = -0.2; continue; }
     const P = G.P[p], t = TC ? (P.terrain === 'urban' && i === P.cc ? 'urban' : TN[+TC[i]] || 'plains') : P.terrain || 'plains', lat = Math.abs(cellLat(i));
     let col = BIOME[t].slice();
@@ -1996,6 +2027,7 @@ function buildTerrain(){
     if (t === 'hills'){ col = lat < 18 ? [106, 108, 64] : lat < 34 ? [140, 126, 84] : lat > 52 ? [102, 102, 80] : col; }
     if (t === 'marsh'){ col = lat > 50 ? [64, 68, 50] : col; MF[i] = 1; }
     if (t === 'tundra' && lat < 60) col = mix(col, [88, 98, 70], Math.min(1, (60 - lat)/8));   // south of the real tundra: boreal heath and woods
+    if (t === 'snow'){ SF[i] = 1; if (lat < 58){ const tan = mix([150, 136, 108], [120, 112, 96], nzS((i % W)/3.5, ((i / W) | 0)/3.5)); col = lat < 50 ? tan : mix(tan, col, (lat - 50)/8); } }   // high plateaus (Tibet, the Altiplano) are bare tan and umber rock and steppe: white only on the high ridges (pk below); real ice caps only far north
     let snow = t === 'snow' ? 0 : lat > 64 ? Math.min(1, (lat - 64)/8) : 0; if (t === 'mountain' && lat > 42) snow = Math.max(snow, Math.min(0.6, (lat - 42)/26)); if (t === 'tundra') snow = Math.max(snow, 0.35*Math.max(0, Math.min(1, (lat - 56)/8)));
     col = col.map((v, k) => v + ([224, 226, 228][k] - v)*snow);
     landF[i] = 1; elevF[i] = t === 'snow' && lat > 58 ? 0.5 : ELEV[t]; cR[i] = col[0]; cG[i] = col[1]; cB[i] = col[2]; }
@@ -2038,7 +2070,7 @@ function buildTerrain(){
       const rg = el > 0.36 ? Math.min(1, (el - 0.36)/0.3)*(Math.pow(1 - Math.abs(2*n4(qx*0.06, qy*0.06) - 1), 2)*0.7 + Math.pow(1 - Math.abs(2*n4(qx*0.17 + 7, qy*0.17) - 1), 2)*0.32 + Math.pow(1 - Math.abs(2*n3(qx*0.43 + 3, qy*0.43) - 1), 2)*0.14) : 0;   // ridged peaks in mountains
       E[o] = el*(0.45 + 0.9*nB + 0.35*nC) + nC*0.05 + rg*el;
       if (land > 0.5){
-        const v = 0.86 + (fbm - 0.5)*0.32, pk = el > 0.45 ? Math.max(0, Math.min(1, (rg - 0.6)*2.2))*Math.min(1, (el - 0.45)*3)*Math.max(0.15, Math.min(1, (Math.abs(lat0) - 22)/22))*0.7 : 0;   // snow on the high ridges
+        const v = 0.86 + (fbm - 0.5)*0.32, pk = el > 0.45 ? Math.max(0, Math.min(1, (rg - 0.6)*2.2))*Math.min(1, (el - 0.45)*3)*Math.max(0.15, Math.min(1, (Math.abs(lat0) - 22)/22), 0.85*sample(SF, wx, wy))*0.7 : 0;   // snow on the high ridges (the high plateaus' ranges keep theirs at any latitude)
         px[o*4] = (sample(cR, qx, qy)*v)*(1 - pk) + 226*pk; px[o*4 + 1] = (sample(cG, qx, qy)*v)*(1 - pk) + 228*pk; px[o*4 + 2] = (sample(cB, qx, qy)*v)*(1 - pk) + 230*pk;
         // marsh: standing water speckle (pools and channels) over the dark reed beds
         const mw = sample(MF, wx, wy); if (mw > 0.25){ const sp = n5(wx*0.26, wy*0.26)*0.75 + nC*0.25, k = Math.max(0, Math.min(1, (sp - 0.58 + 0.14*mw)/0.05))*Math.min(1, (mw - 0.25)/0.35);
@@ -2075,7 +2107,7 @@ function buildMini(){
 let G = null, S = null;
 const PRE = {};
 const powerCountry = p => WORLD.countries.indexOf(p.country);
-function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = new Set(); seenHour = -1; FX.length = 0; visCache = null; borderCache = null; lastRes = null; trLastH = -1; NEUP = null; SEAA = new Map(); if (TRD) TRD.ver = -1; }
+function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = new Set(); seenHour = -1; FX.length = 0; visCache = null; borderCache = null; lastRes = null; trLastH = -1; NEUP = null; SEAA = new Map(); if (TRD) TRD.ver = -1; MOV.clear(); }
 function newGame(seed, pick){
   if (!G) G = loadWorld();
   resetCaches();
@@ -2860,8 +2892,8 @@ function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 :
   const pf = G.PF;
   // materials: ore deposits and cities, Foundries a little; iron: ore deposits and iron-mining hills, Foundries mainly; electronics: cities by
   // population and Arms Factory level (a trickle from populous countryside); rare materials: rare-earth deposits and Rare Earth Mines
-  return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 5 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 1.4 : 0) + (P.city ? 0.9 : 0) + b.fdy*(P.ore ? 1.8 : 1.4))*f,
-    iron:((P.ore ? 0.8 : 0) + (P.iron ? 0.8 : 0) + (P.city ? 0.5 : 0) + b.fdy*(P.ore ? 2.4 : 1.2))*f, elec:(P.city ? (0.2 + ECO.elec*pp)*(1 + 0.25*b.fac) : 0.004*pp)*f,
+  return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 4.2 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 1.4 : 0) + (P.city ? 0.9 : 0) + b.fdy*(P.ore ? 1.8 : 1.4))*f,
+    iron:((P.ore ? 0.8 : 0) + (P.iron ? 0.8 : 0) + (P.city ? 0.8 : 0) + b.fdy*(P.ore ? 2.4 : 1.2))*f, elec:(P.city ? (0.2 + ECO.elec*pp)*(1 + 0.25*b.fac) : 0.004*pp)*f,
     rare:((P.rare || 0) + (b.mine || 0)*mineLv(P))*f, mp:((P.city ? 1.2 : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
 const ECO = GS > 1 ? {cash:0.68, mp:0.16, elec:0.047} : {cash:0.9, mp:0.22, elec:0.06};
 // ---- convoys: provinces cut off by land from the capital ship their output home; enemy warships on the route sink it
@@ -3276,7 +3308,7 @@ function income0(n){
   const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
     const m = (S.home[p] === n ? boost : 1)*capHit;
-    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ g.oil += 3; g.metal += 3; g.iron += 2.5; g.elec += 1.5; g.rare += 1; } }   // the capital: state industry, labs and recycling
+    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ g.oil += 3; g.metal += 3; g.iron += 3.5; g.elec += 1.5; g.rare += 1; } }   // the capital: state industry, labs and recycling
   const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
   for (const k in g) g[k] *= eff;
   if (has(n, 'eco1')) g.cash *= 1.2; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;
@@ -3331,9 +3363,10 @@ const blocIdOf = n => { const R = S.blocReg && Object.entries(S.blocReg).find(([
 const canSee = (o, n) => !o.priv || blocIdOf(n) === o.priv;
 function settle(buyer, seller, k, q, price){ const B = S.nations[buyer], Sl = S.nations[seller]; B[k] += q; Sl.cash += q*price; }
 // AI order-book thresholds: a buy listing below AI_BID_LO, other AIs' sell listings filled below AI_NEED (metal for units and buildings above all, rare materials for research)
-const AI_BID_LO = {oil:40, metal:40, iron:40, elec:30, rare:35}, AI_NEED = {oil:70, metal:140, iron:220, elec:160, rare:160};
-// stocks listed for sale from BOOK_HI down to BOOK_LO (and 55% / 35% of the storage cap): a metal hoard from 900, iron from 300, electronics from 260, rare materials from 240
-const BOOK_HI = {metal:900, iron:300, elec:260, rare:240}, BOOK_LO = {metal:600, iron:200, elec:170, rare:150};
+const AI_BID_LO = {oil:40, metal:40, iron:40, elec:30, rare:35}, AI_NEED = {oil:220, metal:140, iron:220, elec:160, rare:160};
+// stocks listed for sale from BOOK_HI down to BOOK_LO (and 55% / 35% of the storage cap): oil from 600, a metal hoard from 900, iron from 300, electronics from 260, rare materials from 240
+// (oil: the producers' surplus reaches the importers short of fuel through the order book instead of piling up at home)
+const BOOK_HI = {oil:600, metal:900, iron:300, elec:260, rare:240}, BOOK_LO = {oil:380, metal:600, iron:200, elec:170, rare:150};
 function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty > 0 && S.nations[o.seller].alive); for (const o of S.book) o.priv = null;
   // expired listings: goods (sell) or money (buy) go back to their owner
   for (const o of S.book) if (o.exp <= S.hour){ const N = S.nations[o.seller]; if (isBid(o)) N.cash += o.qty*o.price; else N[o.res] += o.qty; o.qty = 0; }
@@ -3354,8 +3387,10 @@ function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty >
   // AIs short of a resource (metal for units and buildings above all) fill other AIs' sell listings at a fair price; never an enemy's
   for (const ask of S.book){ if (isBid(ask) || ask.qty <= 0 || ask.seller === PLAYER || ask.price > M.p[ask.res]*1.15) continue;
     for (const N of S.nations){ if (ask.qty <= 0) break; if (!N.alive || N.id === PLAYER || N.id === ask.seller || atWar(N.id, ask.seller) || M.emb[ask.seller + '>' + N.id] || !canSee(ask, N.id) || rng() > 0.6) continue;
-      const need = (AI_NEED[ask.res] || 70)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1); if (N[ask.res] >= need || N.cash < 230) continue;
-      const q = Math.min(ask.qty, 50, Math.floor((N.cash - 160)/ask.price), Math.floor(stockCap(N.id) - N[ask.res])); if (q < 5) continue;
+      // oil: a big consumer keeps about 25 days of fuel; running out of it, a power buys with less money in hand
+      const need = (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1), dry = ask.res === 'oil' && N.oil < 80 && income(N.id).net.oil < 0;
+      if (N[ask.res] >= need || N.cash < (dry ? 120 : 230)) continue;
+      const q = Math.min(ask.qty, 50, Math.floor((N.cash - (dry ? 80 : 160))/ask.price), Math.floor(stockCap(N.id) - N[ask.res])); if (q < 5) continue;
       N.cash -= q*ask.price; N[ask.res] += q; S.nations[ask.seller].cash += q*ask.price; ask.qty -= q; } }
   // AI fills your listings when the price suits it
   for (const o of S.book){ if (o.seller !== PLAYER) continue;
@@ -3432,7 +3467,8 @@ function spawn(n, p, t){
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp*k)/(h0 + UNITS[t].hp*k) : 80;
   a.u[t] += k;
 }
-function merge(into, from){ if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
+function merge(into, from){ if (MOV.has(from.id) && !MOV.has(into.id)) MOV.set(into.id, MOV.get(from.id));   // (display only: a column absorbed on arrival hands its drawn motion to the stack, so the halt still eases in)
+  if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
 /* ---------------- Flexible splitting ----------------
    A force's rows: each unit type, with its damaged units (below 60% health) as a row of their own. A type's wounds are pooled (a.w) and sit on as
    few units as possible: nd = ceil(w/hp) units carry them; when those are below 60% they form the damaged row, otherwise the wounds are spread
@@ -4032,6 +4068,54 @@ function season0(p){ const P = G.P[p]; if (P.sea) return null; const lat = P.lat
   if (al > 58 && (mm === 10 || mm === 2)) return 'snow';
   if (al > 44 && al < 62 && (mm === 2 || mm === 3) && P.terrain !== 'mountain' && P.terrain !== 'desert' && P.terrain !== 'snow') return 'mud';
   return null; }
+// the winter snow cover as one soft world-space sheet (display only; season() and the rules are untouched). A cell weighs in by its ground (open land and
+// ranges take the snow fully, woods half, towns little), thinning toward the season's southern limit; the weights are blurred and cut by a ragged
+// noise snowline, so the edge crosses province borders. Rebuilt only when the month changes (season0 depends on the month and latitude).
+let SNOWC = {m:-1, S:null, cv:null, bb:null}, SNOWT = 0;
+function snowCover(now){ if (!S || !G || !G.P) return null; const m = calDate(S.hour).m;
+  if (SNOWC.m === m && SNOWC.S === S) return SNOWC.cv;
+  const run = () => { const m1 = calDate(S.hour).m; if (SNOWC.m === m1 && SNOWC.S === S) return; try { snowBuild(m1); } catch (e) { SNOWC = {m:m1, S, cv:null, bb:null}; } };
+  if (now){ run(); return SNOWC.cv; }
+  if (!SNOWT) SNOWT = setTimeout(() => { SNOWT = 0; if (!S || !G) return; run(); layerKey = ''; }, 40);   // later, off this frame: the old sheet shows until then
+  return SNOWC.cv; }
+function snowBuild(m){
+  const NP = G.P.length, sn = new Uint8Array(NP); let any = false;
+  for (let p = 0; p < NP; p++) if (season0(p) === 'snow'){ sn[p] = 1; any = true; }
+  if (!any){ SNOWC = {m, S, cv:null, bb:null}; return; }
+  // land ranges just past the snow line carry a little snow too (season-neutral mountain provinces within ~4 degrees of a snowy one)
+  const deg = HS*SQ3*W/360, r2 = (4*deg)**2, snowP = []; for (let p = 0; p < NP; p++) if (sn[p]) snowP.push(G.P[p]);
+  const nearM = new Uint8Array(NP);
+  for (let p = 0; p < NP; p++){ const P = G.P[p]; if (sn[p] || P.sea || (P.terrain !== 'mountain' && P.terrain !== 'snow')) continue;
+    for (const Q of snowP) if ((Q.x - P.x)**2 + (Q.y - P.y)**2 < r2){ nearM[p] = 1; break; } }
+  const mkc = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  // the weights: each province's outline (the real admin shapes, so small islands and fjord coasts count) filled at the sheet's resolution with
+  // its ground's weight (open land and ranges take the snow fully, woods a little less); a second canvas gets every land province at 1, and the blur
+  // below is normalised by it, so the sea round a coast or an island doesn't thin its snow. No latitude fade inside the snow provinces: the sheet
+  // must show exactly the land the rules treat as snow-covered (season0: past 46 degrees, or the ranges past 38), so its edge sits on that line,
+  // only made ragged by the noise below; the near-snow ranges alone thin out southward. (The towns are thinned in the layer, from their bakes.)
+  const TB = {mountain:1, snow:1, hills:0.95, tundra:0.9, plains:0.9, marsh:0.85, forest:0.78, desert:0.9, urban:0.9};
+  const GW = Math.ceil(WORLD_W*0.4), GH = Math.ceil(WORLD_H*0.4), sm = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a)/(b - a))); return t*t*(3 - 2*t); };
+  const wc = mkc(GW, GH), wg = wc.getContext('2d'), lc = mkc(GW, GH), lg = lc.getContext('2d');
+  for (const q of [wg, lg]) q.setTransform(GW/WORLD_W, 0, 0, GH/WORLD_H, 0, 0);
+  lg.fillStyle = '#fff';
+  for (let p = 0; p < NP; p++){ const P = G.P[p]; if (P.sea || !P.cells.length) continue; const F = GEO && GEO.fill[p]; if (!F) continue; lg.fill(F, 'evenodd'); if (!(sn[p] || nearM[p])) continue;
+    const bw = sn[p] ? TB[P.terrain] || 0.9 : 0.35*sm(34, 46, Math.abs(P.lat)); if (bw <= 0) continue;
+    wg.fillStyle = `rgba(255,255,255,${bw.toFixed(3)})`; wg.fill(F, 'evenodd'); }
+  const BW = Math.ceil(WORLD_W*0.4), BH = Math.ceil(WORLD_H*0.4), cv = mkc(BW, BH), g = cv.getContext('2d', {willReadFrequently:true});
+  g.imageSmoothingEnabled = true; g.filter = 'blur(5px)'; g.drawImage(wc, 0, 0, BW, BH); g.filter = 'none';
+  const im = g.getImageData(0, 0, BW, BH), d = im.data, nz = makeNoise(mulberry(909)), k = 1/0.4; let bx0 = BW, by0 = BH, bx1 = -1, by1 = -1;
+  // normalised by the blurred land (the land mask image itself can't be read back under file://); mixed with a lightly blurred copy (0.4 of it), so the
+  // edge stays on the rules' snow line: a small snowy province among bare ones keeps its snow, a narrow bare valley between ranges stays bare
+  const rd = (src, r) => { const lb = mkc(BW, BH), lbg = lb.getContext('2d', {willReadFrequently:true}); lbg.imageSmoothingEnabled = true; lbg.filter = `blur(${r}px)`; lbg.drawImage(src, 0, 0, BW, BH); lbg.filter = 'none'; return lbg.getImageData(0, 0, BW, BH).data; };
+  const ld = rd(lc, 5), d1 = rd(wc, 1.5), l1 = rd(lc, 1.5), L0 = lg.getImageData(0, 0, GW, GH).data;   // (L0: the unblurred land fills; no snow in a gap no province covers)
+  for (let y = 0, o = 0; y < BH; y++){ const wy = y*k; for (let x = 0; x < BW; x++, o += 4){ const w1 = Math.min(1, d1[o + 3]/255/Math.max(0.25, l1[o + 3]/255)), wb = 0.6*Math.min(1, d[o + 3]/255/Math.max(0.25, ld[o + 3]/255)) + 0.4*w1; if (wb < 0.12){ d[o + 3] = 0; continue; } const wx = x*k;
+    const fbm = 0.62*nz(wx*0.021, wy*0.021) + 0.38*nz(wx*0.074 + 11.3, wy*0.074 + 5.7), a = Math.max(0, Math.min(1, (wb - 0.36 + 0.3*(fbm - 0.5))/0.2));   // (interior weights >= 0.78: full cover; the ragged edge is on the line)
+    d[o] = 240; d[o + 1] = 243; d[o + 2] = 247; d[o + 3] = Math.round(a*(0.4 + 0.6*Math.min(1, w1/0.6))*(L0[o + 3]/255)*(222 + 26*fbm));   // (past the line, on bare land: at most a faint fringe)
+    if (a > 0){ if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; } } }
+  if (bx1 < 0){ SNOWC = {m, S, cv:null, bb:null}; return; }
+  g.putImageData(im, 0, 0);
+  if (G.landMask){ g.globalCompositeOperation = 'destination-in'; g.drawImage(G.landMask, 0, 0, BW, BH); g.globalCompositeOperation = 'source-over'; }   // no spill past the shore (the layer clips to the vector coast close up too)
+  SNOWC = {m, S, cv, bb:[Math.max(0, bx0 - 1)*k, Math.max(0, by0 - 1)*k, Math.min(BW, bx1 + 2)*k, Math.min(BH, by1 + 2)*k]}; }
 const SEASON_FX = {snow:{name:'Winter snow', spd:0.7, atk:0.85, tip:'−30% speed, attackers −15%'}, mud:{name:'Spring thaw (mud)', spd:0.75, atk:0.95, tip:'−25% speed, attackers −5%'}};
 // storm systems drift across the map: they ground aircraft and slow movement
 function stormAt(p){ const P = G.P[p]; for (const w of (S.storms || [])){ if ((P.x - w.x)**2 + ((P.y - w.y)*1.6)**2 < w.r*w.r) return w; } return null; }
@@ -4060,6 +4144,49 @@ function orderAir(a, p){
   a.fly = {tgt:p, kind:c.kind, ph:'out', t:0, hrs:0}; return true;
 }
 const VW = new Map(), STRIKEQ = new Map(), VW_SPEED = 70;     // world units per real second at 1x
+/* drawn motion of ground forces and ships (display only; the sim is untouched): army id -> {x, y, vx, vy, hd, t, tr, trT, halt, ms, px, py, ang}
+   The drawn spot follows armyPos (the target) on a critically damped spring, which evens out the curve's per-leg speed and the leg seams and eases
+   into a halt; a pop (one frame's step over 3x the running mean speed) is clipped and a teleport (load, time skip, over 2 hexes) snaps. The heading
+   turns toward the drawn velocity at a capped rate, and the trail (world points every 60 ms) lets a column snake along its own route. */
+const MOV = new Map(), MOV_W = 9, MOV_TURN = 2.5, MOV_HALT = 900, MOV_FLOOR = 1.2;
+const lerpAng = (a0, b0, t) => a0 + Math.atan2(Math.sin(b0 - a0), Math.cos(b0 - a0))*t;
+const smooth01 = t => { t = Math.max(0, Math.min(1, t)); return t*t*(3 - 2*t); };
+function movStep(a, tx, ty, moving, now){
+  let m = MOV.get(a.id);
+  if (!m){ if (!moving) return null;
+    // a force just setting off starts from its standing heading (the rest angle) and turns onto the road; one already under way (out of the fog, a load) points along it
+    const A = a.pos ? {x:a.pos[0], y:a.pos[1]} : G.P[a.at], B = G.P[a.path.length && a.to === null ? a.path[0] : a.to ?? a.at];
+    m = {x:tx, y:ty, vx:0, vy:0, hd:Math.hypot(tx - A.x, ty - A.y) < 1.5 ? 0.15*Math.PI : Math.atan2(B.y - ty, B.x - tx), t:now, tr:[], trT:now, halt:null, ms:0, px:tx, py:ty};
+    MOV.set(a.id, m); return m; }
+  if (moving) m.halt = null; else if (m.halt == null) m.halt = now;
+  const dtR = (now - m.t)/1000, dt = Math.min(0.1, Math.max(0, dtR)); m.t = now;
+  if (dtR > 0.4 || Math.hypot(tx - m.x, ty - m.y) > 2*HS0){ m.x = m.px = tx; m.y = m.py = ty; m.vx = m.vy = 0; m.tr.length = 0; m.ms = 0; return m; }   // a teleport, a load or a time skip: snap
+  if (dt <= 0) return m;
+  const tv = Math.hypot(tx - m.px, ty - m.py)/dt; m.px = tx; m.py = ty; m.ms += (Math.min(tv, 3*m.ms + MOV_FLOOR) - m.ms)*Math.min(1, dt/0.6);   // running mean of the target's speed (each sample capped, so one pop cannot inflate it)
+  const x0 = m.x, y0 = m.y, calm = afxReduced();
+  if (calm){ m.x = tx; m.y = ty; }
+  else { const w = MOV_W; m.vx += (w*w*(tx - m.x) - 2*w*m.vx)*dt; m.vy += (w*w*(ty - m.y) - 2*w*m.vy)*dt; m.x += m.vx*dt; m.y += m.vy*dt;
+    const sx = m.x - x0, sy = m.y - y0, sl = Math.hypot(sx, sy), lim = (3*m.ms + MOV_FLOOR)*dt;
+    if (sl > lim){ const f = lim/sl; m.x = x0 + sx*f; m.y = y0 + sy*f; m.vx = sx*f/dt; m.vy = sy*f/dt; } }
+  const vx = calm ? (m.x - x0)/dt : m.vx, vy = calm ? (m.y - y0)/dt : m.vy;
+  if (Math.hypot(vx, vy) > 0.15){ const da = Math.atan2(Math.sin(Math.atan2(vy, vx) - m.hd), Math.cos(Math.atan2(vy, vx) - m.hd)), lim = MOV_TURN*dt; m.hd += Math.max(-lim, Math.min(lim, da)); m.hd = Math.atan2(Math.sin(m.hd), Math.cos(m.hd)); }
+  if (now - m.trT >= 60){ m.trT = now; const L = m.tr[m.tr.length - 1]; if (!L || Math.hypot(m.x - L[0], m.y - L[1]) > 0.05){ m.tr.push([m.x, m.y]); if (m.tr.length > 30) m.tr.shift(); } }
+  if (!moving && now - m.halt > MOV_HALT && Math.hypot(m.vx, m.vy) < 0.05 && Math.hypot(tx - m.x, ty - m.y) < 0.05){ MOV.delete(a.id); return null; }   // settled: back to the standing layout
+  return m; }
+// sweep: forces no longer drawn (out of view, in the fog, destroyed) drop their motion state
+function movSweep(now){ if (now - (MOV.sw || 0) < 2000) return; MOV.sw = now; for (const [id, m] of MOV) if (now - m.t > 3000) MOV.delete(id); }
+// where a ground force is drawn (its spring spot while marching or settling), for paths and drag lines that start at its counter
+const dispPos = a => { const m = !a.air && !a.fly ? MOV.get(a.id) : null; return m ? [m.x, m.y] : armyPos(a); };
+// a column's trail in screen space, the head on the counter's anchor (c.x, c.y), newest first
+function movTrail(m, c){ const [hx, hy] = toScreen(m.x, m.y), ox = c.x - hx, oy = c.y - hy, out = [[c.x, c.y]];
+  for (let i = m.tr.length - 1; i >= 0; i--){ const q = toScreen(m.tr[i][0], m.tr[i][1]); out.push([q[0] + ox, q[1] + oy]); } return out; }
+// walking a trail (screen points, newest first) from its head: the point at arc distance d (past the end it runs on along the last segment)
+function trailWalk(tr, x, y){ const ox = x - tr[0][0], oy = y - tr[0][1], pts = tr.map(p => [p[0] + ox, p[1] + oy]), cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const L = cum[cum.length - 1]; if (L < 2) return null;
+  let ex = 0, ey = 0; for (let i = pts.length - 1; i > 0; i--){ const dx = pts[i][0] - pts[i - 1][0], dy = pts[i][1] - pts[i - 1][1], dl = Math.hypot(dx, dy); if (dl > 0.5){ ex = dx/dl; ey = dy/dl; break; } }
+  return {at:d => { if (d <= 0) return pts[0]; if (d >= L){ const e = pts[pts.length - 1]; return [e[0] + ex*(d - L), e[1] + ey*(d - L)]; }
+    let i = 1; while (cum[i] < d) i++; const f = (d - cum[i - 1])/Math.max(1e-6, cum[i] - cum[i - 1]); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0])*f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1])*f]; }}; }
 const PARA_RANGE = 9;
 const paraOnly = a => a && !a.air && count(a) > 0 && a.u.para === count(a);
 function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:false, why:'Only an idle force of Paratroopers can be air-dropped.'};
@@ -4927,10 +5054,12 @@ function aiPickUnit(n, p){
     const manned = ['int', 'asf', 'jet', 'bomb', 'awacs', 'mpa', 'heli'].reduce((s0, t) => s0 + (mine[t] || 0), 0);
     if (manned > Math.max(4, allU*(H.bomb + H.air > 1 ? 0.16 : 0.1))){ const quota = {asf:H.bomb + H.air > 0 ? 6 : 4, awacs:1, mpa:2};
       for (const t of ['int', 'asf', 'jet', 'awacs', 'mpa', 'heli']) if (!((mine[t] || 0) < (quota[t] || 0))) w[t] = (w[t] || 0)*0.25; w.sam *= 0.7; } }
-  { const N = S.nations[n], inc = income(n); if (inc.net.oil < 0 || (N.short && N.short.oil)){ w.tank *= 0.3; w.jet *= 0.3; w.int *= 0.5; w.crui *= 0.5; w.ifv *= 0.5; w.bomb *= 0.2; w.asf *= 0.5; w.mpa *= 0.5; w.awacs *= 0.5; } }
+  { const N = S.nations[n], inc = income(n); if (inc.net.oil < 0 || (N.short && N.short.oil)){ w.tank *= 0.3; w.jet *= 0.3; w.int *= 0.5; w.crui *= 0.5; w.ifv *= 0.5; w.bomb *= 0.2; w.asf *= 0.5; w.mpa *= 0.5; w.awacs *= 0.5; }
+    else if (N.oil > 450 && inc.net.oil > 4){ w.tank *= 1.35; w.ifv *= 1.35; w.jet *= 1.3; w.frig *= 1.2; w.crui *= 1.2; } }   // fuel to spare: more of the units that burn it
   { const N = S.nations[n], inc = income(n);   // iron or electronics running out (a shortage, or maintenance eating the last two weeks of stock): fewer of the units that use most of it
     for (const k of ['iron', 'elec']){ const d = -inc.net[k]; if (!((N.short && N.short[k]) || (d > 0 && N[k] < 14*d))) continue; for (const t in w) if (MAINT[t]) w[t] *= MAINT[t][k] >= (k === 'iron' ? 0.24 : 0.12) ? 0.3 : MAINT[t][k] > 0 ? 0.65 : 1.15; } }   // the heavy users: 6 or more of it in the price
-  { const N = S.nations[n]; for (const t in w){ const U = UNITS[t]; if (!U) continue; for (const k of AI_SCARCE){ const q = U[k] || 0; if (q && N[k] < q*3) w[t] *= N[k] < q ? 0.15 : 0.5; } } }
+  { const N = S.nations[n], av = {}; for (const k of AI_SCARCE) av[k] = N[k] - aiKeepRes(n, k);   // what is left above the maintenance reserve
+    for (const t in w){ const U = UNITS[t]; if (!U) continue; for (const k of AI_SCARCE){ const q = U[k] || 0; if (q && av[k] < q*3) w[t] *= av[k] < q ? 0.15 : 0.5; } } }
   const opts = UT.filter(t => bldOk(p, t) && unlocked(n, t));
   let tot = opts.reduce((s, t) => s + (w[t] || 0), 0), r = rng()*tot;
   for (const t of opts){ r -= w[t] || 0; if (r <= 0 && w[t]) return t; }
@@ -5015,13 +5144,21 @@ function aiAsfWant(n, provs, inc){ if (!has(n, 'asf1') || !warsOf(n).length || i
   return Math.max(0, goal - have); }
 // what the AI holds back: the link project it saves for (cash), and the counter unit it saves for (all of its costs)
 const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awacs']);   // counters, and the heavy aircraft it rarely picks: saved for, not swapped
+// an AI buys from other AIs' sell listings on the order book (cheapest first, up to 1.15x the world price; never an enemy's or an embargoing power's):
+// goods change hands between nations without moving the world price. Returns what it got.
+function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
+  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && o.seller !== PLAYER && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
+  for (const o of asks){ const r = Math.min(q - got, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[k])); if (r <= 0) break;
+    N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r; if (got >= q) break; }
+  if (got) S.book = S.book.filter(o => o.qty > 0); return got; }
 // AI market thresholds: buys when a stock is below AI_LOW (and tops up what is below AI_SHORT, AI_BUYQ at most); never a hoard
 const AI_KEEP = {iron:180, elec:130, rare:170};   // AI stock kept back from a sale into a strong market (plus 25 days of maintenance and what it saves for)
 const AI_LOW = {oil:40, metal:60, iron:50, elec:35, rare:40}, AI_SHORT = {oil:90, metal:90, iron:80, elec:60, rare:70}, AI_BUYQ = {oil:120, metal:120, iron:100, elec:60, rare:50};
 // where the AI builds a Rare Earth Mine (the richest ground it holds) or an Arms Factory for electronics (its most populous city still below level III)
+// a Foundry goes on an ore deposit first (twice the iron), at home rather than on conquered land, the lowest level first
 function aiSite(n, k){ let best = -1, bv = 0;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, k)) continue; const P = G.P[p], lv = S.bld[p][k];
-    const v = k === 'mine' ? (lv < BUILD.mine.max ? mineLv(P)*(1 - 0.25*lv)*(S.home[p] === n ? 1 : 0.7) : 0) : (lv < 3 ? (1 + popOf(p))/(1 + lv) : 0);
+    const v = k === 'mine' ? (lv < BUILD.mine.max ? mineLv(P)*(1 - 0.25*lv)*(S.home[p] === n ? 1 : 0.7) : 0) : k === 'fdy' ? (lv < BUILD.fdy.max ? (P.ore ? 2 : 1)/(1 + lv)*(S.home[p] === n ? 1 : 0.6)*(1 + 0.1*rng()) : 0) : (lv < 3 ? (1 + popOf(p))/(1 + lv) : 0);
     if (v > bv){ bv = v; best = p; } }
   return best; }
 const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U = N.uSave;
@@ -5035,7 +5172,9 @@ const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U 
 function aiBuyFor(n, c, mx, spare = 20){ const N = S.nations[n], miss = MKT_K.map(k => [k, Math.ceil((c[k] || 0) - N[k])]).filter(([, q]) => q > 0); if (!miss.length) return true;
   let tot = c.cash || 0; for (const [k, q] of miss){ if (buyPrice(n, k) > MKT_BASE[k]*mx*(k === 'iron' || k === 'elec' ? 1.25 : 1)) return false; tot += (q + 5)*buyPrice(n, k); }
   if (N.cash < tot + spare + aiReserve(n)) return false; for (const [k, q] of miss) trade(n, k, q + 5); return true; }
-const aiSpare = (n, t) => { const N = S.nations[n], c = ucost(n, t); if (!canAfford(n, t) || N.cash < c.cash + 15 + aiReserve(n)) return false; for (const k of CK) if (k !== 'cash' && c[k] > 0 && N[k] - c[k] < aiReserve(n, k)) return false; return true; };   // only what this unit itself uses is checked against the savings
+// iron and electronics kept back from new units for maintenance: the shortage line plus three days of it (a new unit that would dig into it waits)
+const aiKeepRes = (n, k) => k === 'iron' || k === 'elec' ? AI_LOW[k] + 3*Math.max(0, income(n).upkeep[k]) : 0;
+const aiSpare = (n, t, keep) => { const N = S.nations[n], c = ucost(n, t); if (!canAfford(n, t) || N.cash < c.cash + 15 + aiReserve(n)) return false; for (const k of CK) if (k !== 'cash' && c[k] > 0 && N[k] - c[k] < aiReserve(n, k) + (keep ? aiKeepRes(n, k) : 0)) return false; return true; };   // only what this unit itself uses is checked against the savings
 // AI army supply: how big an army the land can carry before growth waits for more territory (or money above $600M). It stands in for the old food
 // limit (armies ate food; temperate countryside fed three units, a city or cold ground one): without it the populous powers grew until cash alone ran out
 const ARMYC = {v:-1, m:[]};
@@ -5060,8 +5199,8 @@ function aiTurn(n){
         // aiReserve holds its price back from recruiting, so a cash-poor power at war still gets there
         const save = (pick.id === 'asf1' && aw.asf >= 2.5) || (pick.id === 'air2' && aw.air2 >= 2);
         N.rPick = {id:pick.id, until:S.hour + (save ? 96 : 24), save}; }
-      { const tc = techCost(pick);   // short of rare materials or materials for it: buy the rest (never above 1.6x the base price) when the money is there
-        for (const k of ['rare', 'metal']){ const miss = Math.ceil(tc[k] - N[k]); if (miss > 0 && buyPrice(n, k) <= MKT_BASE[k]*1.6 && N.cash > tc.cash + 60 + (miss + 3)*buyPrice(n, k) + aiReserve(n)) trade(n, k, miss + 3); }
+      { const tc = techCost(pick);   // short of rare materials, materials or oil for it: buy the rest (never above 1.6x the base price) when the money is there
+        for (const k of ['rare', 'metal', 'oil']){ const miss = Math.ceil(tc[k] - N[k]); if (miss > 0 && buyPrice(n, k) <= MKT_BASE[k]*1.6 && N.cash > tc.cash + 60 + (miss + 3)*buyPrice(n, k) + aiReserve(n)) trade(n, k, miss + 3); }
         if (N.cash > tc.cash + 30 && startResearch(n, pick.id)) N.rPick = null; } }
   }
   const inc = income(n), provs = S.owner.filter(o => o === n).length;
@@ -5069,12 +5208,19 @@ function aiTurn(n){
   const canGrow = inc.net.cash > 4 && inc.upkeep.cash < inc.gross.cash*0.7 && units < aiArmyCap(n);
   // economy buildings: one new project per turn where it is needed most; a rich power stuck on a resource runs up to three at once
   // (rare materials for research: a Rare Earth Mine on the richest ground; iron or materials: a Foundry; electronics: an Arms Factory in the most populous city)
-  { const needs = [inc.net.rare < 5 && N.rare < 120 ? 'mine' : null, inc.net.iron < -1 || (inc.net.iron < 4 && N.iron < 100) || (inc.net.metal < 4 && N.metal < 80) ? 'fdy' : null, inc.net.oil < 3 ? 'ref' : null, inc.net.mp < 5 && N.mp < 60 ? 'rec' : null, inc.net.elec < -1 || (inc.net.elec < 3 && N.elec < 70) ? 'fac' : null].filter(Boolean);
-    const rich = N.cash > 600 && !canGrow, jobs = rich ? 3 : 1; let done = 0;
-    for (let j = 0; j < jobs && needs.length && N.cash > 90; j++){ const need = needs[j % needs.length];
-      if (need === 'mine' || need === 'fac'){ const p = aiSite(n, need); if (p >= 0 && build(n, p, need)) done++; continue; }
+  // Iron and electronics are spent on new units as fast as they come in (the net income below is after maintenance only), so a Foundry or an Arms Factory
+  // is wanted while the stock is little above the maintenance reserve and the income does not cover most of the maintenance again on top (what recruiting uses);
+  // one of each at a time (two for a big power). A Rare Earth Mine comes first (research); the other needs take turns
+  { const u0 = inc.upkeep, needs = [inc.net.rare < 5 && N.rare < 120 ? 'mine' : null,
+      inc.net.iron < -1 || (N.iron < aiKeepRes(n, 'iron') + 30 && inc.net.iron < Math.max(4, 0.8*u0.iron + 2)) || (inc.net.metal < 4 && N.metal < 80) ? 'fdy' : null, inc.net.oil < 3 ? 'ref' : null, inc.net.mp < 5 && N.mp < 60 ? 'rec' : null,
+      inc.net.elec < -1 || (N.elec < aiKeepRes(n, 'elec') + 50 && inc.net.elec < Math.max(3, u0.elec + 2)) ? 'fac' : null].filter(Boolean);
+    const rich = N.cash > 600 && !canGrow, jobs = rich ? 3 : 1, busy = {}, j0 = Math.floor(S.hour/4) + n; let done = 0;
+    if (needs.length) for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && S.cons[p]) busy[S.cons[p].k] = (busy[S.cons[p].k] || 0) + 1;
+    const ord = needs[0] === 'mine' ? ['mine', ...needs.slice(1).map((x, i, a) => a[(j0 + i) % a.length])] : needs.map((x, i, a) => a[(j0 + i) % a.length]);
+    for (let j = 0; j < ord.length && done < jobs && N.cash > 90; j++){ const need = ord[j]; if (need !== 'mine' && (busy[need] || 0) >= (provs > 150 ? 2 : 1)) continue;
+      if (need === 'mine' || need === 'fac' || need === 'fdy'){ const p = aiSite(n, need); if (p >= 0 && build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; } continue; }
       for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, need) || S.bld[p][need] >= BUILD[need].max) continue;
-        if (need === 'fdy' && !G.P[p].ore && rng() < 0.6) continue; if (build(n, p, need)){ done++; break; } } }
+        if (build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; break; } } }
     // the other way round: a cash-poor power sells a metal hoard on the world market, while metal still fetches 0.8x the base price and at most
     // AI_SELL_DAY units a day. Oil and the other goods are never dumped here (that flattened their prices for everyone): stock above 55% of the storage
     // cap goes to the order book instead (bookDay), sold nation to nation without moving the world price
@@ -5090,9 +5236,11 @@ function aiTurn(n){
     if (N.cash > 450 && (!canGrow || MKT_K.some(k => N[k] < AI_LOW[k]))){ const M = mkt(), cap = stockCap(n);
       for (const k of MKT_K){ const short = N[k] < AI_SHORT[k] || inc.net[k] < 0; if (!short || buyPrice(n, k) > M.p[k]*1.4) continue;
         const q = Math.floor(Math.min(cap*0.6 - N[k], (N.cash - 320)/buyPrice(n, k), AI_BUYQ[k])); if (q >= 10) trade(n, k, q); } }
-    // maintenance running the iron or electronics stock down: buy about two and a half weeks of the deficit while the price is fair (up to 1.5x the base)
-    for (const k of ['iron', 'elec']){ const d = -inc.net[k]; if (d < 0.3 || N[k] > 12*d + 25 || buyPrice(n, k) > MKT_BASE[k]*1.5) continue;
-        const q = Math.floor(Math.min(AI_BUYQ[k], 18*d + 30 - N[k], stockCap(n) - N[k], (N.cash - 110 - aiReserve(n))/buyPrice(n, k))); if (q >= 8) trade(n, k, q); }
+    // fuel or maintenance running the oil, iron or electronics stock down: buy about two and a half weeks of the deficit, first from other powers' listings
+    // on the order book (an oil producer's surplus), the rest on the world market while the price is fair (up to 1.5x the base)
+    for (const k of ['oil', 'iron', 'elec']){ const d = -inc.net[k]; if (d < 0.3 || N[k] > 12*d + 25) continue;
+        const dry = N[k] < 3*d, q = Math.floor(Math.min(AI_BUYQ[k], 18*d + 30 - N[k], stockCap(n) - N[k], (N.cash - (dry ? 50 : 110) - aiReserve(n))/buyPrice(n, k))); if (q < 8) continue;   // all but run dry: before any new unit
+        const got = aiBookBuy(n, k, q); if (q - got >= 8 && buyPrice(n, k) <= MKT_BASE[k]*1.5) trade(n, k, q - got); }
     // the other way round: a big stock of iron, electronics or rare materials (above AI_KEEP, plus what it saves for) is sold on the world market while the
     // price is high (1.1x the base or more), 60 a day at most. It only ever pulls a dear price back towards the base,
     // so it never floods the market, and it is what keeps these goods trading once the opening scramble is over
@@ -5140,7 +5288,7 @@ function aiTurn(n){
       else if (!hold){ let t = aiPickUnit(n, p);
         if (!canAfford(n, t) && unlocked(n, t) && bldOk(p, t)) aiBuyFor(n, ucost(n, t), 1.3, 60);   // goods short: buy them (up to 1.3x the base price) when $60M stay spare
         if (!canAfford(n, t)){ if (AI_CTR.has(t) && !U && unlocked(n, t)){ N.uSave = {t, until:S.hour + 24}; t = null; } else t = 'inf'; }
-        if (t && aiSpare(n, t)) recruit(n, p, t); }
+        if (t && aiSpare(n, t, true)) recruit(n, p, t); }
     }
   }
   const idle = new Map();
@@ -5243,15 +5391,15 @@ let camFly = null;
 const SELFX = {p:null, pt:0, a:null, at:0};   // when the selected province / force was picked (for the highlight pulse)
 function flyHome(){
   goHome(); if (afxReduced() || !cw || (GLOBE && GLOBE.covering && GLOBE.covering())) return;
-  const s1 = view.s, x1 = (cw/2 - view.x)/s1, y1 = (ch/2 - view.y)/s1, s0 = Math.max(minScale(), s1*0.38);
-  camFly = {t0:performance.now(), d:1350, s0, s1, x0:x1 + 70/s0, y0:y1 + 40/s0, x1, y1, last:null}; camStep(camFly.t0);
+  const s1 = view.s, x1 = (cw/2 - view.x)/s1, y1 = (ch/2 - view.y)/s1, s0 = Math.max(minScale(), s1/1.42);   // a 1.42x fall: the whole flight is drawn from one layer of the end view
+  camFly = {t0:performance.now(), d:1350, s0, s1, x0:x1 + 40/s0, y0:y1 + 24/s0, x1, y1, last:null, pre:false}; camStep(camFly.t0);
   const w = $('mapwrap'); if (w){ const v = document.createElement('div'); v.className = 'vign'; w.appendChild(v); setTimeout(() => v.remove(), 1600); }
 }
 function camStep(now){ const F = camFly; if (!F) return;
   if (F.last && (view.x !== F.last.x || view.y !== F.last.y || view.s !== F.last.s)){ camFly = null; return; }
   const k = Math.min(1, Math.max(0, (F.hold != null ? F.hold : now - F.t0)/F.d)), e = k < 0.5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3)/2;
   const s = Math.exp(Math.log(F.s0) + (Math.log(F.s1) - Math.log(F.s0))*e), x = F.x0 + (F.x1 - F.x0)*e, y = F.y0 + (F.y1 - F.y0)*e;
-  view.s = s; view.x = cw/2 - x*s; view.y = ch/2 - y*s; F.last = {x:view.x, y:view.y, s:view.s}; if (k >= 1) camFly = null; }
+  view.s = s; view.x = cw/2 - x*s; view.y = ch/2 - y*s; clampView(); F.last = {x:view.x, y:view.y, s:view.s}; if (k >= 1) camFly = null; }
 const ZMAX = 20, ZOLD = 84;   // max view scale; hexPx of the old maximum (7): above it figures and effects keep growing (zx)
 const zx = (hexPx = view.s*HS0) => hexPx > ZOLD ? Math.pow(hexPx/ZOLD, 0.72) : 1;
 function zoomAt(f, sx, sy){
@@ -5335,11 +5483,14 @@ function armyPos(a){
   const A = G.P[a.at];
   if (a.to === null){ if (!(a.path.length && GO.S === S && GO.has(a.id) && S.speed && !S.over)) return a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y];
     // between legs: already easing toward the next province, on the very curve the next leg will follow (continuous when the hour turns)
-    const n0 = a.path[0], B = G.P[n0], a0 = GO.get(a.id) || 0, t = Math.max(0, (acc - a0)/(1 - a0))*Math.min(1, 1/legHours(a, a.at, n0)), p1 = a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y], p2 = (a.path.length === 1 && a.dest && a.dest.p === n0) ? [a.dest.x, a.dest.y] : [B.x, B.y];
+    // (the leg's first hour is this one: a train running through carries the last hour's spare time into it, so it may cover more)
+    const n0 = a.path[0], B = G.P[n0], a0 = GO.get(a.id) || 0, c0 = a.carry && a.carryH === S.hour && legMode(a, a.at, n0) === 'rail' ? a.carry : 0, t = Math.max(0, (acc - a0)/(1 - a0))/Math.max(1, Math.ceil(legHours(a, a.at, n0) - c0 - 1e-6)), p1 = a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y], p2 = (a.path.length === 1 && a.dest && a.dest.p === n0) ? [a.dest.x, a.dest.y] : [B.x, B.y];
     const prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]], nx = a.path.length > 1 ? G.P[a.path[1]] : null, p3 = nx ? [nx.x, nx.y] : [2*p2[0] - p1[0], 2*p2[1] - p1[1]];
     return catmull(prevP, p1, p2, p3, t); }
-  // eased so the force reaches the end of its leg exactly when the hour that completes it turns (no early arrival and an hour's halt)
-  const live = S.speed && !S.over ? acc : 0, t = Math.min(1, a.t + live*Math.max(0, Math.min(1/legHours(a, a.at, a.to), 1 - a.t)));
+  // eased so the force reaches the end of its leg exactly when the hour that completes it turns (no early arrival and an hour's halt), at an even pace:
+  // the leg's drawn progress is spread evenly over the whole hours it takes (the hour before it started included: j done, R to go), instead of
+  // covering 1/lh an hour and crawling through a short last one (with lh constant this meets the between-legs curve exactly when the hour turns)
+  const live = S.speed && !S.over ? acc : 0, lh = legHours(a, a.at, a.to), rem = (1 - a.t)*lh, j = Math.max(0, Math.floor(a.t*lh + 1e-6)), R = Math.max(1, Math.ceil(rem - 1e-6)), t = rem < 1e-6 ? 1 : Math.min(1, (j + live)/(j + R));
   const p1 = a.legFrom || [A.x, A.y], p2 = legEnd(a), prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]];
   const nx = a.path.length ? G.P[a.path[0]] : null, p3 = nx ? [nx.x, nx.y] : [2*p2[0] - p1[0], 2*p2[1] - p1[1]];
   return catmull(prevP, p1, p2, p3, t); }
@@ -5506,13 +5657,13 @@ const mArt = uArt;
 const figFB = t => !UART[t] || ART.failed(UART[t][0]);
 const SQUAD = [[[-0.06, -0.54], [0.08, 0.54]], [[-0.56, 0.07], [0.56, -0.07]]];   // squads of a foot figure, holding / marching: (forward, lateral) offsets in squad sizes
 const FOOTFP = [[1.55, 1.0], [0.95, 1.55]];   // the footprint of such a figure (across, along the heading) in figure sizes, holding / marching
-const FIG_NIGHT = {tint:'#0a1622', tintA:0.4}, FIG_WRECK = {tint:'#16130f', tintA:0.72}, FIG_FOOT = {boost:'contrast(1.06)'}, FIGSH = new Map();
+const FIG_NIGHT = {tint:'#0a1622', tintA:0.4}, FIG_WRECK = {tint:'#16130f', tintA:0.72}, FIG_FOOT = {boost:'contrast(1.14) brightness(0.92)'}, FIGSH = new Map();
 window.addEventListener('im-art', () => { FIGSH.clear(); if (typeof FIGC !== 'undefined') FIGC.clear(); });   // a promised picture arrived: drop the stand-in figures
 // a picture's footprint as a share of its figure size: [across, along the heading] (the opaque part of the picture, measured for stand-ins)
 const figFoot = t => { const im = UART[t] && ART.img(UART[t][0]); return im && typeof picBox === 'function' ? picBox(im) : [0.6, 0.94]; };
 const figBucket = px => Math.round(2**(Math.ceil(Math.log2(Math.max(8, px))*4)/4));   // cached sizes in steps of 2^(1/4): drawImage never scales by more than 19%
 // soft silhouette of a picture for its drop shadow (blurred once, cached)
-function figShadow(name, px){ const key = name + '|' + px; let c = FIGSH.get(key); if (c) return c; const sp = ART.sprite(name, px); if (!sp) return null;
+function figShadow(name, px){ const key = name + '|' + px + '|c'; let c = FIGSH.get(key); if (c) return c; const sp = ART.sprite(name, px, {clean:1}); if (!sp) return null;
   if (FIGSH.size > 160) FIGSH.clear();
   const pad = Math.ceil(px*0.08); c = document.createElement('canvas'); c.width = c.height = px + pad*2; const g = c.getContext('2d');
   g.filter = `blur(${Math.max(1, px*0.022).toFixed(1)}px)`; g.drawImage(sp, pad, pad); g.filter = 'none'; g.globalCompositeOperation = 'source-in'; g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
@@ -5537,28 +5688,34 @@ function kelvinSprite(){ if (SPR.kelvin) return SPR.kelvin; const W = 160, H = 3
   g.strokeStyle = 'rgba(232,244,248,1)'; g.lineWidth = 1.4;
   for (let i = 1; i <= 5; i++){ const y = i*H/6.2, hw = 7 + (74 - 7)*Math.pow(y/H, 1.25)*0.92; g.globalAlpha = 0.28*(1 - i/6); g.beginPath(); g.moveTo(m - hw*0.9, y + 6); g.quadraticCurveTo(m, y - 10, m + hw*0.9, y + 6); g.stroke(); }
   g.globalAlpha = 1; g.filter = 'none'; return (SPR.kelvin = c); }
-// ground figure composite: soft contact shadow + picture (lightly washed in the nation colour) in one cached canvas (all rotation-invariant
-// around the centre), so a figure on the map is one rotated drawImage
+// ground figure composite: a soft ground decal in the holder's colour (relation tone: yours green, foes red, others grey, so friend and foe read
+// apart), a thin dark contact line and the picture (without its baked shadow, lightly washed in the holder's colour) in one cached canvas (all
+// rotation-invariant around the centre), so a figure on the map is one rotated drawImage. Its sun shadow is drawn apart, in screen space (drawFig).
 const FIGC = new Map();
 function figComp(t, u, px, vk, color){
-  const key = u[0] + '|' + px + '|' + vk + '|' + (color || ''); let c = FIGC.get(key); if (c) return c;
-  const im = ART.sprite(u[0], px, vk === 'w' ? FIG_WRECK : vk === 'n' ? FIG_NIGHT : FOOT[t] ? FIG_FOOT : undefined); if (!im) return null;
+  const key = u[0] + '|' + px + '|' + vk + '|' + (color || '') + '|v3'; let c = FIGC.get(key); if (c) return c;
+  const im = ART.sprite(u[0], px, {...(vk === 'w' ? FIG_WRECK : vk === 'n' ? FIG_NIGHT : FOOT[t] ? FIG_FOOT : {}), clean:1}); if (!im) return null;
   if (FIGC.size > 400) FIGC.clear();
-  const S2 = Math.ceil(px*1.14), m = S2/2, sh = figShadow(u[0], px); c = document.createElement('canvas'); c.width = c.height = S2; const g = c.getContext('2d');
-  if (sh){ g.globalAlpha = 0.5; g.drawImage(sh, m - sh.width/2 + px*0.02, m - sh.height/2 + px*0.035); g.globalAlpha = 1; }
+  const S2 = Math.ceil(px*1.14), m = S2/2; c = document.createElement('canvas'); c.width = c.height = S2; const g = c.getContext('2d');
+  const own = color && color[0] === '#' && color.length === 7 && vk !== 'w';
+  if (own){ const fp = figFoot(t), rx = Math.max(1, Math.min(m - 0.5, fp[0]*px*0.7)), ry = Math.max(1, Math.min(m - 0.5, fp[1]*px*0.62)), a0 = vk === 'n' ? 0.22 : 0.34;   // soft owner decal on the ground
+    const rgb = [1, 3, 5].map(k => parseInt(color.slice(k, k + 2), 16)).join(','), gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+    gr.addColorStop(0, `rgba(${rgb},${a0})`); gr.addColorStop(0.66, `rgba(${rgb},${(a0*0.9).toFixed(3)})`); gr.addColorStop(1, `rgba(${rgb},0)`);   // (a plateau: the ring that shows past the hull's edge carries the tone)
+    g.save(); g.translate(m, m); g.scale(1, ry/rx); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI*2); g.fill(); g.restore(); }
+  { const tn = document.createElement('canvas'); tn.width = im.width; tn.height = im.height; const t3 = tn.getContext('2d');   // thin dark contact line (+-1 px)
+    t3.drawImage(im, 0, 0); t3.globalCompositeOperation = 'source-in'; t3.fillStyle = '#000'; t3.fillRect(0, 0, tn.width, tn.height);
+    // vehicles, aircraft and ships: a thin crisp keyline in the relation colour hugging the hull (1.2-2 px, not the old thick sticker), with the
+    // dark contact line just outside it; the decal alone is mostly under the hull and friend or foe was lost. Foot squads keep the decal only.
+    const kln = own && !FOOT[t], rw = Math.max(1.2, Math.min(2, px*0.022)), dk = kln ? rw + 0.9 : 1;
+    g.globalAlpha = kln ? 0.3 : 0.28; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.drawImage(tn, m - im.width/2 + dx*dk, m - im.height/2 + dy*dk);
+    if (kln){ t3.fillStyle = color; t3.fillRect(0, 0, tn.width, tn.height); g.globalAlpha = vk === 'n' ? 0.7 : 0.85;
+      for (let i = 0; i < 8; i++){ const a = i*Math.PI/4; g.drawImage(tn, m - im.width/2 + Math.cos(a)*rw, m - im.height/2 + Math.sin(a)*rw); } }
+    g.globalAlpha = 1; }
   let pic = im;
-  if (color && color[0] === '#' && vk !== 'w'){ pic = document.createElement('canvas'); pic.width = im.width; pic.height = im.height; const t2 = pic.getContext('2d');   // light wash of the holder's colour
+  if (own){ pic = document.createElement('canvas'); pic.width = im.width; pic.height = im.height; const t2 = pic.getContext('2d');   // light wash of the holder's colour
     // soft-light keeps the paint's darks and contrast (a plain wash lifted them and the vehicles read as ghosts), then clip back to the picture
     t2.drawImage(im, 0, 0); t2.globalCompositeOperation = 'soft-light'; t2.globalAlpha = vk === 'n' ? 0.12 : 0.2; t2.fillStyle = color; t2.fillRect(0, 0, pic.width, pic.height);
     t2.globalAlpha = 1; t2.globalCompositeOperation = 'destination-in'; t2.drawImage(im, 0, 0); }
-  if (color && color[0] === '#' && vk !== 'w'){   // owner rim (relation tone: yours green, foes red, others grey), so friend and foe read apart at a glance; baked here, no per-frame cost
-    if (!FOOT[t]){ const fp = figFoot(t); g.save(); g.globalAlpha = 0.6; g.lineWidth = 1.5; g.strokeStyle = color; g.beginPath();   // thin contact ellipse under a vehicle
-      g.ellipse(m, m + px*0.02, Math.min(m - 1.5, fp[0]*px*0.5), Math.min(m - 1.5, fp[1]*px*0.45), 0, 0, Math.PI*2); g.stroke(); g.restore(); }
-    const tn = document.createElement('canvas'); tn.width = im.width; tn.height = im.height; const t3 = tn.getContext('2d');
-    t3.drawImage(im, 0, 0); t3.globalCompositeOperation = 'source-in'; t3.fillStyle = color; t3.fillRect(0, 0, tn.width, tn.height);
-    const o = px > 48 && !FOOT[t] ? 1.5 : 1; g.globalAlpha = FOOT[t] ? 0.6 : 0.75;   // (soldier squads a little lighter: a heavy outline turns them into stickers)
-    for (const [dx, dy] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) g.drawImage(tn, m - im.width/2 + dx*o, m - im.height/2 + dy*o);
-    g.globalAlpha = 1; }
   g.drawImage(pic, m - im.width/2, m - im.height/2);
   c.k = S2/px; FIGC.set(key, c); return c;
 }
@@ -5567,8 +5724,9 @@ function figComp(t, u, px, vk, color){
 function drawFig(t, x, y, D, ang, o = {}){
   let u = uArt(t); if (!u || !(D > 2)) return false;
   if (FOOT[t] && !o.sq){ const Ds = D*0.72, ca = Math.cos(ang), sa = Math.sin(ang), now = o.now || 0, sd = o.seed || 0; let ok = false;
-    SQUAD[o.walk ? 1 : 0].forEach(([f, l], i) => { const st = o.walk ? Math.sin(now/110 + sd + i*2.1)*Ds*0.05 : 0, fx = (f + (o.walk ? 0 : 0.02*Math.sin(now/1700 + sd + i)))*Ds + st, lx = l*Ds;   // marching squads step, resting ones barely shift
-      ok = drawFig(t, x + ca*fx - sa*lx, y + sa*fx + ca*lx, Ds*(i ? 0.97 : 1), ang + (i ? 0.18 : -0.1), {...o, sq:1, kick:0}) || ok; });
+    if (Ds*dpr < 48) return drawFig(t, x, y, Ds*1.1, ang + 0.08*Math.sin(sd*3.7), {...o, sq:1, kick:0});   // small: one compact squad (its three-soldier cut) at the centre
+    SQUAD[o.walk ? 1 : 0].forEach(([f, l], i) => { const st = o.walk ? Math.sin(now/110 + sd + i*2.1)*Ds*0.05 : 0, fx = (f + (o.walk ? 0 : 0.02*Math.sin(now/1700 + sd + i)))*Ds + st, lx = l*Ds*1.15;   // marching squads step, resting ones barely shift
+      ok = drawFig(t, x + ca*fx - sa*lx, y + sa*fx + ca*lx, Ds*(i ? 0.97 : 1), ang + (i ? 0.18 : -0.1) + 0.12*Math.sin(sd*7.3 + i*2.9), {...o, sq:1, kick:0}) || ok; });
     return ok; }
   if (o.sq && SQI[u[0]] && D*dpr < 150 && ART.ready('i' + u[0].slice(1))) u = ['i' + u[0].slice(1), u[1], u[2]];   // a squad smaller than ~150 device px: its three-soldier cut (nine soldiers that small read as speckles)
   const px = Math.min(figBucket(D*dpr), 362), vk = o.wreck ? 'w' : o.night ? 'n' : '', rot = ang + Math.PI/2 + (u[1] ? Math.PI : 0), alt = o.alt || 0, ga = ctx.globalAlpha;
@@ -5580,7 +5738,8 @@ function drawFig(t, x, y, D, ang, o = {}){
       ctx.globalAlpha = ga*(0.2 + (afxReduced() ? 0 : 0.07*Math.sin((o.now || 0)/1300 + x*0.013))); ctx.drawImage(FOAM(), -D*0.3, -D*0.55, D*0.6, D*1.1); }
     ctx.restore(); }
   const k = o.kick || 0, cx = x - Math.cos(ang)*k, cy = y - Math.sin(ang)*k;
-  if (alt <= 0.05){ const c = figComp(t, u, px, vk, o.base ? o.color : null); if (!c) return false; const Dc = D*c.k;
+  if (alt <= 0.05){ const c = figComp(t, u, px, vk, o.base ? o.color : null); if (!c) return false; const Dc = D*c.k, sh = figShadow(u[0], px);
+    if (sh){ const Ds = D*(1 + 2*sh.pad); ctx.save(); ctx.globalAlpha = ga*(vk === 'n' ? 0.22 : 0.42); ctx.translate(cx + D*0.045, cy + D*0.065); ctx.rotate(rot); ctx.drawImage(sh, -Ds/2, -Ds/2, Ds, Ds); ctx.restore(); }   // the sun's shadow: always to the SE (the terrain's light is from the NW), whatever the heading
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.drawImage(c, -Dc/2, -Dc/2, Dc, Dc); ctx.restore(); return true; }
   // aloft: the ground shadow is offset by altitude, drawn on its own
   const im = ART.sprite(u[0], px, vk === 'n' ? FIG_NIGHT : undefined); if (!im) return false;
@@ -5717,9 +5876,14 @@ function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
     R.forEach((r, ri) => { let l0 = -rw[ri]/2; const fc = f0 + rl[ri]/2 - rl[0]/2; r.forEach(f => { pos.push([-fc*fh, (l0 + f[0]/2)*fh]); l0 += f[0] + gW; }); f0 += rl[ri] + gL; });
     rankS = (rl[0] + gL)*fh; sp = Math.max(rw[0]/R[0].length, rl[0]*0.6)*fh; }
   const fx0 = Math.cos(ang), fy0 = Math.sin(ang)*Q, px0 = -Math.sin(ang), py0 = Math.cos(ang)*Q;
+  // on the march with a trail: each rank sits on the column's own route (arc distance behind the head), turned along the route's local tangent,
+  // so the column snakes round a bend instead of pivoting as one block (the head rank keeps the force's heading)
+  const TRL = moving && counter.trail && counter.trail.length > 2 ? trailWalk(counter.trail, x, y) : null, tw = Math.max(3, fh*0.22);
   seq.forEach((t, i) => { const r = Math.floor(i/perRank), m = Math.min(perRank, seq.length - r*perRank), j = i % perRank;
     const lat = pos ? pos[i][1] : (j - (m - 1)/2)*latS, fwd = (pos ? pos[i][0] : -r*rankS) + (fighting ? rankS*0.25 : 0);
     const jit = moving ? 0 : Math.sin(now/1300 + i*1.7)*0.6*s;
+    if (TRL && fwd < -0.5){ const d = -fwd, P = TRL.at(d), A = TRL.at(Math.max(0, d - tw)), B = TRL.at(d + tw), th = lerpAng(ang, Math.atan2(A[1] - B[1], A[0] - B[0]), Math.min(1, d/Math.max(1, rankS)));
+      const cx = P[0], cy = y + (P[1] - y)*Q; slots.push({t, i, x:cx - Math.sin(th)*lat, y:cy + Math.cos(th)*Q*lat, ang:th}); return; }
     slots.push({t, i, x:x + fx0*fwd + px0*lat + jit, y:y + fy0*fwd + py0*lat}); });
   // ships keep to the water: a hull whose slot falls on land slides back toward the stack's anchor, else takes the mirrored side
   if (naval || embark){ const hl = fh*0.4, hx = Math.cos(ang)*hl, hy = Math.sin(ang)*hl, wet1 = (sx, sy) => { const [wx, wy] = screenToWorld(sx, sy); return isWet(wx, wy); },
@@ -5744,23 +5908,24 @@ function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
   for (const q of slots.slice().sort((a, b) => a.y - b.y)){
     const seed = key*7 + q.i*5, inf = q.t === 'inf' || q.t === 'at' || q.t === 'spec' || q.t === 'para';
     if (P1 !== !!sqA(q.t)){ if (!P1){ const hw = fh*UART[q.t][2]*0.78; x0 = Math.min(x0, q.x - hw); x1 = Math.max(x1, q.x + hw); y0 = Math.min(y0, q.y - hw); y1 = Math.max(y1, q.y + hw*0.9); } continue; }   // drawn in the other pass (its box still counts)
+    const qa = q.ang ?? ang;   // this figure's heading (its own trail tangent in a snaking column)
     if (mArt(q.t)){ const sea = q.t === 'cargo' || UNITS[q.t].cls === 'naval', foot = q.t === 'inf' || q.t === 'spec' || q.t === 'para';
       const D = fh*UART[q.t][2]*(!moving && !fighting && !calm ? 1 + 0.013*Math.sin(now/1150 + seed) : 1);   // standing still: a slow, barely visible breathing
       const walk = moving && foot ? Math.sin(now/110 + seed)*D*0.03 : 0, sway = sea ? Math.sin(now/1100 + seed)*(moving ? 0.02 : 0.03) : 0, kick = fighting && !foot && !sea ? recoilOf(seed, now, D/40) : 0;
       const bob = moving && !calm ? (sea ? Math.sin(now/620 + seed)*D*0.012 : foot ? 0 : Math.sin(now/170 + seed)*D*0.011 + Math.sin(now/53 + seed*3)*D*0.004) : 0;   // under way: hull pitch, engine and track judder
-      drawFig(q.t, q.x + fx0*walk, q.y + Math.sin(ang)*walk + bob, D, ang + sway, {color, base:!sea, wake:sea ? (moving ? 0.9 : 0.12) : 0, night, kick, now, walk:moving && foot, seed});
+      drawFig(q.t, q.x + Math.cos(qa)*walk, q.y + Math.sin(qa)*walk + bob, D, qa + sway, {color, base:!sea, wake:sea ? (moving ? 0.9 : 0.12) : 0, night, kick, now, walk:moving && foot, seed});
       if (moving && !sea && !calm){ const dkey = key*16 + q.i, lt = lastDust.get(dkey) || 0, gap = foot ? 300 : 120;
-        if (now - lt > gap){ lastDust.set(dkey, now); const rx0 = q.x - Math.cos(ang)*D*0.42 + (Math.random() - 0.5)*D*0.2, ry0 = q.y - Math.sin(ang)*D*0.42 + D*0.06, [wx, wy] = screenToWorld(rx0, ry0), f = foot ? 0.55 : 1;
-          emit('dust', wx, wy, {vx:(-Math.cos(ang)*D*0.3 + (Math.random() - 0.5)*D*0.12)/dk, vy:(-Math.sin(ang)*D*0.2 - D*0.06)/dk, s0:D*0.1*f/dk, s1:D*0.46*f/dk, life:(foot ? 900 : 1500) + Math.random()*400, tn}); } }
+        if (now - lt > gap){ lastDust.set(dkey, now); const rx0 = q.x - Math.cos(qa)*D*0.42 + (Math.random() - 0.5)*D*0.2, ry0 = q.y - Math.sin(qa)*D*0.42 + D*0.06, [wx, wy] = screenToWorld(rx0, ry0), f = foot ? 0.55 : 1;
+          emit('dust', wx, wy, {vx:(-Math.cos(qa)*D*0.3 + (Math.random() - 0.5)*D*0.12)/dk, vy:(-Math.sin(qa)*D*0.2 - D*0.06)/dk, s0:D*0.1*f/dk, s1:D*0.46*f/dk, life:(foot ? 900 : 1500) + Math.random()*400, tn}); } }
       if (fighting) figFlash(q.x, q.y, foot ? D*0.6 : D, ang, shotPhase(seed, now));
       const hw = foot ? D*0.78 : D*0.5; x0 = Math.min(x0, q.x - hw); x1 = Math.max(x1, q.x + hw); y0 = Math.min(y0, q.y - hw); y1 = Math.max(y1, q.y + hw*0.9); continue; }
     const fr = q.t === 'mlrs' ? (fighting ? (shotPhase(seed, now) < 120 ? 2 : 1) : 0) : inf ? (moving ? Math.floor(now/85 + seed) % 8 : fighting ? (shotPhase(seed, now) < 90 ? 1 : 0) : 0) : fighting ? ((ph => q.t === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : q.t === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
     const h3 = Math.min(fh, Math.max(fh/zx(), U3D.SZ*1.7/dpr))*(!moving && !fighting && !calm ? 1 + 0.012*Math.sin(now/1150 + seed) : 1);   // the baked sprites stop growing before they blur
     ctx.globalAlpha = 0.7; ctx.drawImage(softSprite('cshad', 'rgba(0,0,0,.3)', 'rgba(0,0,0,.14)', 'rgba(0,0,0,0)'), q.x - h3*0.3, q.y + 1 - h3*0.085, h3*0.6, h3*0.17); ctx.globalAlpha = 1;
-    U3D.draw(ctx, q.t, color, q.x, q.y + 2*s, h3, ang, fr, night);
+    U3D.draw(ctx, q.t, color, q.x, q.y + 2*s, h3, qa, fr, night);
     if (moving && !calm){ const dkey = key*16 + q.i, lt = lastDust.get(dkey) || 0;
-      if (now - lt > (inf ? 320 : 130)){ lastDust.set(dkey, now); const f = inf ? 0.4 : 0.8, [wx, wy] = screenToWorld(q.x - Math.cos(ang)*h3*0.3, q.y + 2*s - Math.sin(ang)*h3*0.12);
-        emit('dust', wx, wy, {vx:(-Math.cos(ang)*h3*0.25)/dk, vy:(-h3*0.05)/dk, s0:h3*0.08*f/dk, s1:h3*0.4*f/dk, life:1100 + Math.random()*400, tn}); } }
+      if (now - lt > (inf ? 320 : 130)){ lastDust.set(dkey, now); const f = inf ? 0.4 : 0.8, [wx, wy] = screenToWorld(q.x - Math.cos(qa)*h3*0.3, q.y + 2*s - Math.sin(qa)*h3*0.12);
+        emit('dust', wx, wy, {vx:(-Math.cos(qa)*h3*0.25)/dk, vy:(-h3*0.05)/dk, s0:h3*0.08*f/dk, s1:h3*0.4*f/dk, life:1100 + Math.random()*400, tn}); } }
     x0 = Math.min(x0, q.x - fh*0.4); x1 = Math.max(x1, q.x + fh*0.4); y0 = Math.min(y0, q.y - fh*0.6); y1 = Math.max(y1, q.y + fh*0.2); }
   // the rearmost rank (smallest projection on the heading): the close-zoom badge sits just behind it, so it trails its own column
   const ca0 = Math.cos(ang), sa0 = Math.sin(ang), prj = q => (q.x - x)*ca0 + (q.y - y)*sa0, pmin = Math.min(...slots.map(prj)), rr = slots.filter(q => prj(q) <= pmin + fh*0.3);
@@ -6325,7 +6490,7 @@ function clampView(){
   view.y = wh < ch ? Math.min(Math.max(view.y, -wh/2), ch - wh/2) : Math.min(m, Math.max(ch - wh - m, view.y));
 }
 let SHIFTING = false;   // a pan strip is being rendered (shiftLayer)
-let layer = null, layerKey = '', geoDirty = false, relVer = 0, lastPanT = 0;
+let layer = null, layerKey = '', geoDirty = false, relVer = 0, lastPanT = 0, FLYMARGIN = 0;   // FLYMARGIN: the next full render's margin (the start flight's layer, see draw)
 function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; } return P.box; }
 const LM = 0.22;                                        // layer margin, as a share of the viewport on each side
 // roads by class (track faint dashed, road, highway thicker and brighter) and railways (dark line, crossties when close), from the bucketed
@@ -6430,7 +6595,7 @@ function renderLayer(vis, lite = false, R = null){
   if (!layer) layer = document.createElement('canvas');
   let mx, my;
   if (R){ mx = layer.mx; my = layer.my; layer.lite = layer.lite || lite; layer.strips = (layer.strips || 0) + 1; }
-  else { mx = Math.round(Math.max(cw*LM, 224)); my = Math.round(Math.max(ch*LM, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
+  else { const lm = FLYMARGIN || LM; FLYMARGIN = 0; mx = Math.round(Math.max(cw*lm, 224)); my = Math.round(Math.max(ch*lm, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
     if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
     layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.q = []; CITY_MISS.clear(); }
   // the rect to paint, in device px (the whole layer when R is left out)
@@ -6498,10 +6663,14 @@ function renderLayer(vis, lite = false, R = null){
     else if (mapMode === 'resources'){ const y = provYield(p), top = RMAP_K.reduce((b0, k) => y[k]/RMAP_W[k] > y[b0]/RMAP_W[b0] ? k : b0, 'cash');
       c.fillStyle = RMAP_C[top]; c.fill(GEO.fill[p], 'evenodd'); }
     else if (o >= 0 && relMode){ c.fillStyle = o === PLAYER ? rgba(tones().ownHi, 0.55) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5); c.fill(GEO.fill[p], 'evenodd'); }   // relations: your land the pale own tone (the ally green is mid green, so the two stay apart); political: the nation tint is a colour-blend pass below (keeps the ground's light and shade)
-    { const sz = season(p); if (sz === 'snow'){ c.fillStyle = 'rgba(236,240,246,0.42)'; c.fill(GEO.fill[p], 'evenodd'); } else if (sz === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } } }
-  if (cityFade(hexPx) > 0){ c.globalCompositeOperation = 'destination-out'; c.globalAlpha = 0.65*cityFade(hexPx);   // winter: the snow thins over the towns (cleared streets and roofs read darker than the snowfields)
-    cityEach(wx0, wy0, wx1, wy1, p => { if (season(p) !== 'snow') return; const I = CGEO.get(p); if (!I) return; const img = CBAKE.get('d' + p + '|' + cityTier(I)) || cityAnyBake(p, cityTier(I), false); if (img) c.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); });
-    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; }
+    if (season(p) === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }   // (winter snow is the soft sheet, next)
+  // winter snow: the cached world-space sheet (snowCover) laid over the fills, as the old per-province snow was (so it reads white over the political
+  // tint and the terrain-mode colours, and relief still shows through), only the part in the painted rect; then thinned over the towns
+  if (mapMode === 'political' || mapMode === 'terrain'){ const SC = snowCover(), bb = SNOWC.bb; if (SC && bb){ const x0 = Math.max(vx0, bb[0]), y0 = Math.max(vy0, bb[1]), x1 = Math.min(vx1, bb[2]), y1 = Math.min(vy1, bb[3]);
+    if (x1 > x0 && y1 > y0){ const kx = SC.width/WORLD_W, ky = SC.height/WORLD_H; c.globalAlpha = 0.45; c.drawImage(SC, x0*kx, y0*ky, (x1 - x0)*kx, (y1 - y0)*ky, x0, y0, x1 - x0, y1 - y0); c.globalAlpha = 1;   // (the overlay is cut to the coast below)
+      if (cityFade(hexPx) > 0){ c.globalCompositeOperation = 'destination-out'; c.globalAlpha = 0.65*cityFade(hexPx);   // cleared streets and roofs read darker than the snowfields
+        cityEach(Math.max(wx0, x0), Math.max(wy0, y0), Math.min(wx1, x1), Math.min(wy1, y1), p => { if (season(p) !== 'snow') return; const I = CGEO.get(p); if (!I) return; const img = CBAKE.get('d' + p + '|' + cityTier(I)) || cityAnyBake(p, cityTier(I), false); if (img) c.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); });
+        c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; } } } }
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.has(p) || !onScreen(P)) continue; c.fillStyle = hp; c.fill(GEO.fill[p], 'evenodd'); }
   // rivers and roads go on the same overlay, above the fills, so they share the single coast clip
   c.lineJoin = 'round'; c.lineCap = 'round';
@@ -6604,38 +6773,109 @@ function layerCityRefresh(){ const L = layer, W = L.width/dpr, H = L.height/dpr,
 const TONE_A = {own:1, war:1, other:0.42, neu:0.36};
 const neuArea = () => GEO.nArea.neu || (GEO.nArea.neu = (() => { const a = new Path2D(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === NEUTRAL && !G.P[p].sea) a.addPath(GEO.outline[p]); return a; })());
 const nAreaOf = n => GEO.nArea[n] || (GEO.nArea[n] = (() => { const a = new Path2D(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && !G.P[p].sea) a.addPath(GEO.outline[p]); return a; })());
-// a battle below figure zoom: one baked smoke column swaying in the transform, 2-3 gun flickers and 2-4 tracer dashes between the two stacks,
-// and at night a warm glow pool on the ground; everything is seeded from the province and the clock, so no particle state is kept
+// a battle below figure zoom: one baked smoke column swaying in the transform with three puffs billowing up from its base, gun flickers and tracer
+// dashes on the open stretch between the two stacks' plates (last frame's counter boxes, so nothing is painted under a plate), impact blooms in
+// the province round the stacks (never on a counter or the badge), a shell arcing in from behind one side about once a second, a pulsing
+// under-glow at far zoom and at night a warm glow pool on the ground. Booms and shells run on the paused clock (FXQ.gt) and live per battle in
+// BLOD; flickers and tracers are seeded from the province and the clock. Low effects and reduced motion: no booms or shells.
+const BLOD = new Map();   // battle province -> {next: next boom (gt), seq, booms:[{t, wx, wy, s}], arcN: next shell, arcs:[{t0, from, to, h}]}
+const BCORE = () => softSprite('bcore', 'rgba(255,255,250,1)', 'rgba(255,238,200,.62)', 'rgba(255,214,150,0)');
+const BUNDER = () => softSprite('bunder', 'rgba(255,140,60,.95)', 'rgba(236,78,40,.5)', 'rgba(200,40,20,0)');
 function drawBattleLOD(now, vis, kl, hexPx){
-  if (hexPx >= FIG_PX || !S.battles.length) return;
-  const red = afxReduced(), run = !!S.speed && !S.over && !red, tF = Math.floor(now/90), GL = GLOW();
+  if (hexPx >= FIG_PX || !S.battles.length){ if (BLOD.size) BLOD.clear(); return; }
+  if (BLOD.size) for (const k of BLOD.keys()) if (!S.battles.includes(k)) BLOD.delete(k);
+  const red = afxReduced(), run = !!S.speed && !S.over && !red, tF = Math.floor(now/90), GL = GLOW(), gt = FXQ.gt, fxOn = run && SET.fx !== 'low', far = hexPx < 26;
+  const inBox = (q, r, pad) => q[0] > r.x - pad && q[0] < r.x + r.w + pad && q[1] > r.y - pad && q[1] < r.y + r.h + pad;
   for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue;
     const P = G.P[p]; let [x, y] = toScreen(P.x, P.y); if (x < -260 || y < -120 || x > cw + 260 || y > ch + 320) continue;
-    const sides = new Set(); let na = 0; for (const a of S.armies){ if (a.at !== p || a.to !== null || a.fly) continue; sides.add(a.owner); na++; }
+    const sides = new Set(), idAt = new Map(); let na = 0; for (const a of S.armies){ if (a.at !== p || a.to !== null || a.fly) continue; sides.add(a.owner); idAt.set(a.id, a.owner); na++; }
     const pts = []; for (const o of sides){ const w = CLPOS.get(p + ':' + o); if (w) pts.push(toScreen(w[0], w[1])); }
     if (pts.length >= 2){ x = 0; y = 0; for (const q of pts){ x += q[0]; y += q[1]; } x /= pts.length; y /= pts.length; }
     const nt = nightP(p), nb = Math.max(0, Math.min(1, (nt - 0.3)/0.3)), sz = Math.min(96, Math.max(26, Math.min(80, 36 + hexPx*0.42 + na*1.5))*kl)*(P.sea ? 0.8 : 1);   // (kept modest: names and markers are drawn over it)
     const A = pts.length >= 2 ? pts[0] : [x - 14*kl, y + 4*kl], B = pts.length >= 2 ? pts[1] : [x + 14*kl, y + 4*kl], by = y - (pts.length >= 2 ? 30 : 46)*kl - 6*kl;   // the column rises from the badge (drawn over it afterwards): its dense, fire-lit base sits on the badge's upper rim
+    const bcy = y - (pts.length >= 2 ? 30 : 46)*kl, bR = 9.5*kl;   // where the battle badge goes (drawn later)
+    // far zoom: a pulsing red-orange under-glow round the badge, so the battle reads even where the column is covered
+    if (far){ const gs = Math.max(28, sz*0.8), ga = 0.25 + 0.15*Math.sin((red ? 0 : gt)/420 + p); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga*(1 + 0.5*nt); ctx.drawImage(BUNDER(), x - gs/2, bcy - gs/2, gs, gs); ctx.globalCompositeOperation = 'source-over'; }
     if (nt > 0.2){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35*nt; const gw = sz*1.4, gh = sz*0.42; ctx.drawImage(GL, x - gw/2, y - gh*0.55, gw, gh); ctx.globalCompositeOperation = 'source-over'; }
     // the column: base just above the fight, the badge drawn over it afterwards
-    { const px = sz*dpr, bk = px <= 110 ? 0 : px <= 180 ? 1 : 2, ph = (p % 97)*0.37, gt = FXQ.gt, sk = red ? 0 : 0.04*Math.sin(gt/1700 + ph), sc = red ? 1 : 1 + 0.035*Math.sin(gt/2300 + ph*1.7);   // (the paused clock: still while paused)
+    { const px = sz*dpr, bk = px <= 110 ? 0 : px <= 180 ? 1 : 2, ph = (p % 97)*0.37, sk = red ? 0 : 0.04*Math.sin(gt/1700 + ph), sc = red ? 1 : 1 + 0.035*Math.sin(gt/2300 + ph*1.7);   // (the paused clock: still while paused)
       const a0 = P.sea ? 0.78 : 0.92; ctx.setTransform(dpr*sc, 0, dpr*sk*sc, dpr*sc, dpr*x, dpr*by);   // day and night columns cross-fade through dusk
       if (nb < 1){ ctx.globalAlpha = a0*(1 - nb); ctx.drawImage(battleCloud(bk, false), -sz/2, -sz*0.96, sz, sz); }
       if (nb > 0){ ctx.globalAlpha = a0*nb; ctx.drawImage(battleCloud(bk, true), -sz/2, -sz*0.96, sz, sz); }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    // three puffs billowing up out of the column's base (paused clock; frozen with reduced motion)
+    for (let i = 0; i < 3; i++){ const u = ((red ? 0 : gt/2600) + i/3 + fxh(p*3 + i)) % 1, ps = sz*(0.25 + 0.35*u), al = Math.min(0.5, 0.5*(1 - u)*u*4);
+      if (al < 0.02) continue; ctx.globalAlpha = al*(P.sea ? 0.8 : 1); ctx.drawImage(puffSprite(i, nb > 0.5), x + u*sz*0.12 - ps/2, by - u*sz*0.8 - ps*0.55, ps, ps); }
     if (!run){ ctx.globalAlpha = 1; continue; }
-    const dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy) || 1, nx = -dy/L, ny = dx/L;
-    // gun flickers on the line between the stacks (additive, brighter at night)
+    // last frame's counter boxes near the battle (hits is rebuilt after this), and the badge, which booms and shells keep off
+    const near = []; for (const r of hits){ const cx0 = r.x + r.w/2 - x, cy0 = r.y + r.h/2 - y; if (cx0*cx0 + cy0*cy0 < 14400*kl*kl) near.push(r); }
+    const avoid = near.concat([{x:x - bR - 3, y:bcy - bR - 3, w:2*bR + 6, h:2*bR + 12*kl}]);
+    // the open line between the plates: the longest stretch of a line between two hostile stacks that no counter box covers (3 px clear of
+    // each box, so each end starts where the ray leaves its stack's plate); where the plates touch, a line just below them
+    const lift = 4*kl, open = (P0, P1) => { const lx = P1[0] - P0[0], ly = P1[1] - P0[1], n = Math.max(4, Math.min(48, Math.ceil(Math.hypot(lx, ly)/3))); let b0 = -1, b1 = -1, s0 = -1;
+      for (let i = 0; i <= n + 1; i++){ const t = i/n, free = i <= n && !avoid.some(r => inBox([P0[0] + lx*t, P0[1] + ly*t - lift*0.5], r, 3 + kl));
+        if (free){ if (s0 < 0) s0 = t; } else if (s0 >= 0){ if (t - 1/n - s0 > b1 - b0){ b0 = s0; b1 = t - 1/n; } s0 = -1; } }
+      return {A:[P0[0] + lx*b0, P0[1] + ly*b0], B:[P0[0] + lx*b1, P0[1] + ly*b1], L:b0 < 0 ? 0 : (b1 - b0)*Math.hypot(lx, ly)}; };
+    let seg = null, E0 = A, E1 = B; const FB = []; { const bp = [], pr = []; for (const r of near){ const id = r.ids && r.ids.find(i => idAt.has(i)); if (id == null) continue; const q = [r.x + r.w/2, r.y + r.h/2]; q.o = idAt.get(id); bp.push(q); FB.push(r); }   // the plates of the stacks in this fight
+      for (let i = 0; i < bp.length; i++) for (let j = i + 1; j < bp.length; j++) if (bp[i].o !== bp[j].o) pr.push([bp[i], bp[j], atWar(bp[i].o, bp[j].o)]);
+      if (!pr.length) pr.push([A, B, true]); const hot = pr.some(q => q[2]);
+      for (const [P0, P1, w] of pr){ if (hot && !w) continue; const o = open(P0, P1); if (!seg || o.L > seg.L){ seg = o; E0 = P0; E1 = P1; } }
+      if (seg.L < 10){ let bot = -Infinity, hh = 0, ww = 0, n0 = 0; for (const r of near) if (inBox(E0, r, 0) || inBox(E1, r, 0)){ bot = Math.max(bot, r.y + r.h); hh += r.h; ww += r.w; n0++; }   // the plates touch:
+        if (n0){ hh /= n0; ww /= n0; const ex = E1[0] - E0[0], ey = E1[1] - E0[1], el = Math.hypot(ex, ey) || 1, qx = -ey/el, qy = ex/el;   // alongside the two plates, to either side of their line,
+          for (const f of [0.8, -0.8]){ const d = f*hh, o2 = open([E0[0] + qx*d, E0[1] + qy*d], [E1[0] + qx*d, E1[1] + qy*d]); if (o2.L > seg.L) seg = o2; }
+          if (seg.L < 10){ const yy = bot + 0.25*hh + lift, cx1 = (E0[0] + E1[0])/2, half = Math.max(Math.abs(ex)/2, ww*0.45), o = open([cx1 - half, yy], [cx1 + half, yy]); if (o.L > seg.L) seg = o; } } }   // or just below them
+      if (seg.L < 4) seg = {A, B, L:0}; }   // (no boxes yet: the first frame)
+    const A1 = seg.A, B1 = seg.B, dx0 = E1[0] - E0[0], dy0 = E1[1] - E0[1], L0 = Math.hypot(dx0, dy0) || 1, ux = dx0/L0, uy = dy0/L0;
+    const st = BLOD.get(p) || (BLOD.set(p, {next:gt + 200*fxh(p), seq:0, booms:[], arcN:gt + 300 + 500*fxh(p + 7), arcs:[]}), BLOD.get(p));
+    const dx = B1[0] - A1[0], dy = B1[1] - A1[1], L = Math.hypot(dx, dy) || 1, nx = -dy/L, ny = dx/L;
+    // gun flickers on the open line between the stacks (additive, brighter at night)
     ctx.globalCompositeOperation = 'lighter';
     const nf = 2 + (fxh(p*31 + tF) < 0.5 ? 1 : 0);
-    for (let i = 0; i < nf; i++){ const h = p*7919 + tF*131 + i*17, t = 0.15 + 0.7*fxh(h), o = (fxh(h + 1) - 0.5)*8*kl, r4 = fxh(h + 2), s = Math.max(10 + 4*r4, 8*kl*(0.8 + 0.5*r4));
-      ctx.globalAlpha = Math.min(1, (0.5 + 0.4*fxh(h + 3))*(1 + 1.5*nt)); ctx.drawImage(GL, A[0] + dx*t + nx*o - s/2, A[1] + dy*t + ny*o - s/2 - 3*kl*fxh(h + 4), s, s); }
+    for (let i = 0; i < nf; i++){ const h = p*7919 + tF*131 + i*17, t = 0.1 + 0.8*fxh(h), o = (fxh(h + 1) - 0.5)*8*kl, r4 = fxh(h + 2), s = Math.max(10 + 4*r4, 8*kl*(0.8 + 0.5*r4));
+      ctx.globalAlpha = Math.min(1, (0.5 + 0.4*fxh(h + 3))*(1 + 1.5*nt)); ctx.drawImage(GL, A1[0] + dx*t + nx*o - s/2, A1[1] + dy*t + ny*o - s/2 - lift*0.75*fxh(h + 4), s, s); }
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     // tracer dashes flying both ways
     const nT = 2 + (p % 3), ph0 = (now % 600)/600; ctx.beginPath();
-    for (let i = 0; i < nT; i++){ const f = (ph0 + i/nT + fxh(p*13 + i)) % 1, o = (fxh(p*17 + i*5 + Math.floor((now + i*150)/600)) - 0.5)*7*kl, t1 = 0.1 + 0.8*f, t0 = Math.max(0.1, t1 - 0.2), u0 = i & 1 ? 1 - t0 : t0, u1 = i & 1 ? 1 - t1 : t1;
-      ctx.moveTo(A[0] + dx*u0 + nx*o, A[1] + dy*u0 + ny*o - 4*kl); ctx.lineTo(A[0] + dx*u1 + nx*o, A[1] + dy*u1 + ny*o - 4*kl); }
-    ctx.lineCap = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,200,120,.25)'; ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,235,180,.9)'; ctx.stroke(); }
+    for (let i = 0; i < nT; i++){ const f = (ph0 + i/nT + fxh(p*13 + i)) % 1, o = (fxh(p*17 + i*5 + Math.floor((now + i*150)/600)) - 0.5)*7*kl, t1 = 0.1 + 0.8*f, t0 = Math.max(0, t1 - 0.25), u0 = i & 1 ? 1 - t0 : t0, u1 = i & 1 ? 1 - t1 : t1;
+      ctx.moveTo(A1[0] + dx*u0 + nx*o, A1[1] + dy*u0 + ny*o - lift); ctx.lineTo(A1[0] + dx*u1 + nx*o, A1[1] + dy*u1 + ny*o - lift); }
+    ctx.lineCap = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,200,120,.25)'; ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,235,180,.9)'; ctx.stroke();
+    if (!fxOn) continue;
+    // impact blooms and shells (paused clock); a point in the province round the stacks, off every counter and the badge (4 tries)
+    // every boom and shell landing lies in the battle province itself (checked cell by cell, so never in a neighbour or on the sea next to it), and
+    // its size is held to the province's size on screen, so at strategic zoom a small province's blooms don't spill over its neighbours
+    const pW = Math.sqrt(P.cells.length)*HS, pR = pW*view.s*0.55, bMax = Math.max(4, Math.min(18*kl, pR*0.75));
+    const spread = Math.min(Math.max(1.2*HS0, 56*kl/view.s), 1.4*pW), [pcx, pcy] = toScreen(P.x, P.y);
+    const pick = (h, pad = 3) => { for (let k = 0; k < 8; k++){ let wx, wy;   // two round the centre, two just off an edge of one of the fight's plates, then cells of the province
+        if (k < 2){ wx = P.x + (fxh(h + k*19) - 0.5)*spread; wy = P.y + (fxh(h + k*19 + 3) - 0.5)*spread*0.7; }
+        else if (k < 4){ if (!FB.length) continue; const r = FB[Math.floor(fxh(h + k*7)*FB.length)], sd = Math.floor(fxh(h + k*7 + 1)*4), al = fxh(h + k*7 + 2), m = pad + (1 + 4*fxh(h + k*7 + 3))*kl;
+          if (Math.hypot(r.x + r.w/2 - pcx, r.y + r.h/2 - pcy) > pR + Math.max(r.w, r.h)) continue;   // (a plate moved off the province: nothing of it is near)
+          [wx, wy] = screenToWorld(sd < 2 ? r.x + al*r.w : sd === 2 ? r.x - m : r.x + r.w + m, sd === 0 ? r.y - m : sd === 1 ? r.y + r.h + m : r.y + al*r.h); }
+        else { const cc = cellCenter(P.cells[Math.floor(fxh(h + k*13 + 7)*P.cells.length)]); wx = cc[0] + (fxh(h + k*13 + 10) - 0.5)*1.6*HS; wy = cc[1] + (fxh(h + k*13 + 11) - 0.5)*1.4*HS; }
+        const q = toScreen(wx, wy); if (provAt(q[0], q[1]) !== p || avoid.some(r => inBox(q, r, k >= 6 ? pad*0.4 : pad))) continue; return [wx, wy]; } return null; };
+    const boom = (w, t, s) => { if (st.booms.length >= 4) st.booms.shift(); st.booms.push({t, wx:w[0], wy:w[1], s}); };
+    if (gt - st.next > 600) st.next = gt;
+    if (gt >= st.next){ const hb = p*977 + st.seq*131, n = fxh(hb) < 0.5 ? 2 : 1; st.seq++;
+      for (let j = 0; j < n; j++){ const bs = Math.min(bMax, (9 + 9*fxh(hb + 5 + j))*kl), w = pick(hb + 11 + j*53, bs*0.6); if (w) boom(w, gt + j*40, bs); }
+      st.next = gt + (120 + 180*fxh(hb + 2))/Math.max(0.3, FXG.k); }
+    if (gt - st.arcN > 1500) st.arcN = gt;
+    if (gt >= st.arcN){ const ha = p*613 + st.seq*71; st.seq++; st.arcN = gt + (FXG.k < 0.6 ? 2000 : 1000)*(0.8 + 0.4*fxh(ha));
+      const tg = st.arcs.length < 2 ? pick(ha + 9, 10*kl) : null;
+      if (tg){ const fA = fxh(ha + 1) < 0.5, sg = fA ? 1 : -1; let S0 = fA ? E0 : E1;   // from behind one side's plate; a plate moved far off the province: from that side of the province instead
+        if (Math.hypot(S0[0] - pcx, S0[1] - pcy) > pR + 60*kl) S0 = [pcx - sg*ux*pR, pcy - sg*uy*pR];
+        const rp = [S0[0] - sg*ux*28*kl, S0[1] - sg*uy*28*kl]; st.arcs.push({t0:gt, from:screenToWorld(rp[0], rp[1]), to:tg, h:Math.min((18 + 12*fxh(ha + 2))*kl, 10 + 2*pR), s:Math.min(bMax*1.2, (12 + 6*fxh(ha + 3))*kl)}); } }
+    let nd = 0; ctx.globalCompositeOperation = 'lighter'; const nk = 1 + nt, CORE = BCORE(), FIRE0 = FIRE();
+    for (let j = st.booms.length - 1; j >= 0; j--){ const q = st.booms[j], age = gt - q.t; if (age > 340){ st.booms.splice(j, 1); continue; } if (age < 0 || nd >= 6) continue;
+      const [qx, qy] = toScreen(q.wx, q.wy), s = q.s, f = age < 90 ? 1 : 1 - (age - 90)/250, s2 = s*1.6*(1 + 0.25*(1 - f));
+      ctx.globalAlpha = Math.min(1, 0.55*f*nk); ctx.drawImage(FIRE0, qx - s2/2, qy - s2/2, s2, s2); nd++;
+      if (age < 90){ ctx.globalAlpha = 0.9; ctx.drawImage(CORE, qx - s/2, qy - s/2, s, s); nd++; } }
+    // shells: a fading 2 px tail (the last 30% of the path) and a glowing head on a quadratic arc rising h above the line; a boom where it lands
+    for (let j = st.arcs.length - 1; j >= 0; j--){ const q = st.arcs[j], f = (gt - q.t0)/700; if (f >= 1){ boom(q.to, q.t0 + 700, q.s || (12 + 6*fxh(q.t0 | 0))*kl); st.arcs.splice(j, 1); continue; } if (f < 0) continue;
+      const P0 = toScreen(q.from[0], q.from[1]), P2 = toScreen(q.to[0], q.to[1]), Cx = (P0[0] + P2[0])/2, Cy = (P0[1] + P2[1])/2 - 2*q.h;   // (control point 2h up: the apex is h above the chord)
+      const at = t => [(1 - t)*(1 - t)*P0[0] + 2*(1 - t)*t*Cx + t*t*P2[0], (1 - t)*(1 - t)*P0[1] + 2*(1 - t)*t*Cy + t*t*P2[1]], f0 = Math.max(0, f - 0.3), hd = at(f), tl = at(f0), a = Math.min(1, 0.85*nk);
+      ctx.globalCompositeOperation = 'source-over'; const gr = ctx.createLinearGradient(tl[0], tl[1], hd[0], hd[1]); gr.addColorStop(0, 'rgba(255,214,150,0)'); gr.addColorStop(1, `rgba(255,214,150,${a.toFixed(3)})`);
+      ctx.beginPath(); ctx.moveTo(tl[0], tl[1]); for (let k = 1; k <= 6; k++){ const w = at(f0 + (f - f0)*k/6); ctx.lineTo(w[0], w[1]); } ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = gr; ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, 0.9*nk); ctx.drawImage(GL, hd[0] - 3.5, hd[1] - 3.5, 7, 7); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
 // the live sea surface: a 256 px tile of thin bright crest arcs (three rotated sine bands bent by tileable noise, broken into arcs), baked once
 const SEAFX = {t:-1e9, g:-1, k:'', cv:null, tile:null, pat:null, fk:'', fp:null, fc:null};
@@ -6681,15 +6921,21 @@ function draw(now){
   toneSync();   // war or peace with you (or the palette) changed: the map's relation colours follow at once
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS0;
   { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; CITY_ALL = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
-    if (CITY_PEND && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120){ CITY_PEND = false; CITYV++; } }
-  const key = [view.s, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' || mapMode === 'resources' ? Math.floor(S.hour/24) : 0, LINKD, SET.fx].join('|');   // (a pure pan no longer re-renders the layer, so whatever it shows is in the key)
+    if (CITY_PEND && !camFly && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120){ CITY_PEND = false; CITYV++; } }
+  const keyOf = vs => [vs, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' || mapMode === 'resources' ? Math.floor(S.hour/24) : 0, LINKD, SET.fx].join('|');
+  const key = keyOf(view.s);   // (a pure pan no longer re-renders the layer, so whatever it shows is in the key)
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   // any view movement since the last frame (drag, fly-to, keys, tutorial) counts as panning: reuse the shifted layer until it settles
   const moved = draw.pvx !== view.x || draw.pvy !== view.y || draw.pvs !== view.s; if (panning || moved) lastPanT = now; draw.pvx = view.x; draw.pvy = view.y; draw.pvs = view.s;
   const offEdge = !layer || Math.abs(dxv) > layer.mx*0.9 || Math.abs(dyv) > layer.my*0.9, settled = !panning && now - (lastPanT || 0) > 140;
   // layers rendered while the view moves are lighter (fewer road and rail strokes); one full render follows when it settles
   // during a camera flight (game start, jumps) the last layer is drawn scaled while the zoom stays within a modest ratio of it, instead of re-rendering every frame
-  const fz = layer && layer.s ? view.s/layer.s : 1, flyReuse = !!camFly && layer && !settled && fz > 0.8 && fz < 1.5 && key.slice(key.indexOf('|')) === layerKey.slice(layerKey.indexOf('|'))
+  // the start flight: its first frame (under the vignette) renders the end view once, with a wide margin, and the whole fall is drawn from that layer scaled
+  // (soft while it falls, sharp as it lands); the clock of the ease starts after that heavy frame so it does not eat the animation
+  if (camFly && !camFly.pre){ const F = camFly, v0 = {s:view.s, x:view.x, y:view.y};
+    view.s = F.s1; view.x = cw/2 - F.x1*F.s1; view.y = ch/2 - F.y1*F.s1; clampView(); FLYMARGIN = 0.45; renderLayer(vis, false); FLYMARGIN = 0; layerKey = keyOf(view.s);
+    view.s = v0.s; view.x = v0.x; view.y = v0.y; F.pre = true; F.t0 = performance.now(); F.last = null; }
+  const fz = layer && layer.s ? view.s/layer.s : 1, flyReuse = !!camFly && layer && (camFly.pre || (!settled && fz > 0.8 && fz < 1.5)) && key.slice(key.indexOf('|')) === layerKey.slice(layerKey.indexOf('|'))
     && view.x - (layer.vx + layer.mx)*fz <= 0 && view.y - (layer.vy + layer.my)*fz <= 0 && view.x - (layer.vx + layer.mx)*fz + layer.width/dpr*fz >= cw && view.y - (layer.vy + layer.my)*fz + layer.height/dpr*fz >= ch;   // the scaled layer still covers the screen
   // a pure pan (same key) past the margin shifts the layer and renders only the strip it exposes, on the axis that ran out (strips are full detail,
   // so nothing is left to redo when the pan stops); new city bakes, or a layer rendered light while moving, are refreshed in bands, one a frame
@@ -6741,8 +6987,11 @@ function draw(now){
   const unkA = [];
   for (const a of S.armies){ if (!armyVisible(a, vis)){ if (vis.loc.size && armyLocated(a, vis)) unkA.push(a); continue; } if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
     if (a.fly) continue;
-    const [wx, wy] = armyPos(a), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
-    items.push({a, x, y:y - 2*k, owner:a.owner, moving:a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id)), air:!!a.air}); }
+    let [wx, wy] = armyPos(a); const mv = a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id));
+    if (!a.air){ const m = movStep(a, wx, wy, mv, now); if (m){ wx = m.x; wy = m.y; } }   // marching or settling: the spring's spot
+    const [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
+    items.push({a, x, y:y - 2*k, owner:a.owner, moving:mv, air:!!a.air}); }
+  movSweep(now);
   const clusters = [];
   const plateQuiet = c => { if (c.pq != null) return c.pq; const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), fighting = !c.moving && !c.air && S.battles.includes(c.at), selected = c.list.some(q => q.id === sel.army || sel.group.includes(q.id));
     return (c.pq = a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); };
@@ -7007,7 +7256,7 @@ function draw(now){
       for (const [o, pw] of arr){ const w2 = bw*pw/tot; ctx.fillStyle = mapCol(o); ctx.fillRect(bxw, byy, w2, bh); bxw += w2; } } }
   // paths
   const sa = sel.army !== null ? armyById(sel.army) : null;
-  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...armyPos(a))];
+  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...dispPos(a))];
     if (a.to !== null && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
     path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
@@ -7036,9 +7285,16 @@ function draw(now){
   drawSupplyRun(now);
   if (PART.length) drawTrailDust();
   const clSetup = c => { const lead = c.list.reduce((b, a) => count(a) > count(b) ? a : b, c.list[0]);
-    let dir = 1; counter.ang = null; c.enemy = null;
-    if (c.moving){ const a = c.list[0], B = G.P[a.path.length && a.to === null ? a.path[0] : a.to ?? a.at]; const [tx, ty] = toScreen(B.x, B.y); dir = tx < c.x ? -1 : 1; counter.ang = Math.atan2(ty - c.y, tx - c.x); }
-    else { const foe = S.battles.includes(c.at); if (foe){ const others = clusters.filter(o => o.at === c.at && o !== c && !o.air && atWar(o.owner, c.owner)); if (others.length){ dir = others[0].x < c.x ? -1 : 1; c.enemy = [others[0].x, others[0].y]; counter.ang = Math.atan2(others[0].y - c.y, others[0].x - c.x); } } }
+    let dir = 1; counter.ang = null; counter.trail = null; c.enemy = null;
+    const mS = c.air ? null : MOV.get(c.list[0].id) || (lead !== c.list[0] ? MOV.get(lead.id) : null);
+    if (c.moving){ const a = c.list[0];   // the drawn heading (turned at a capped rate toward the drawn velocity); the next province's centre only before there is any
+      if (mS){ counter.ang = mS.hd; if (hexPx >= FORM_PX) counter.trail = movTrail(mS, c); }
+      else { const B = G.P[a.path.length && a.to === null ? a.path[0] : a.to ?? a.at]; const [tx, ty] = toScreen(B.x, B.y); counter.ang = Math.atan2(ty - c.y, tx - c.x); }
+      dir = Math.cos(counter.ang) < 0 ? -1 : 1; }
+    else { const foe = S.battles.includes(c.at); if (foe){ const others = clusters.filter(o => o.at === c.at && o !== c && !o.air && atWar(o.owner, c.owner)); if (others.length){ dir = others[0].x < c.x ? -1 : 1; c.enemy = [others[0].x, others[0].y]; counter.ang = Math.atan2(others[0].y - c.y, others[0].x - c.x); } }
+      // just arrived: the heading eases from the march onto the standing (or facing-the-enemy) angle instead of snapping
+      if (mS && mS.halt != null && now - mS.halt < MOV_HALT){ const rest = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15); counter.ang = lerpAng(mS.hd, rest, smooth01((now - mS.halt)/MOV_HALT)); } }
+    if (mS) mS.ang = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);   // (the drawn heading, for the tests)
     const fighting = !c.moving && !c.air && S.battles.includes(c.at);
     counter.vol = (main, ang, hpx, fx1, fy1) => volley(c, main, ang, now, hpx, fx1, fy1); counter.list = c.list; counter.share = c.share || 1;
     if (!c.air) CLPOS.set(c.at + ':' + c.owner, screenToWorld(c.x, c.y));
@@ -7245,7 +7501,7 @@ function joinForces(a, b){ if (!a || !b || a === b) return false;
   const dest = b.to ?? b.at; orderMove(a, dest); if (!a.path.length && a.to === null){ toast('No route to that force.', 'bad', null); return false; }
   a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.`, 'info', null);
   if (sel.army === a.id){ sel.army = null; sel.group = []; } renderSide(true); return true; }
-function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) return; const [ax, ay] = toScreen(...armyPos(a)), h = hitAt(udrag.x, udrag.y);
+function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) return; const [ax, ay] = toScreen(...dispPos(a)), h = hitAt(udrag.x, udrag.y);
   const b = h && !h.unk ? h.ids.map(armyById).find(q => q && q !== a && q.owner === PLAYER && !q.air && !q.fly && count(q)) : null;
   ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = b ? 'rgba(116,194,122,.95)' : 'rgba(243,234,210,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(udrag.x, udrag.y); ctx.stroke(); ctx.setLineDash([]);
   if (b){ ctx.strokeStyle = '#74c27a'; ctx.lineWidth = 2.5; roundRect(ctx, h.x - 3, h.y - 3, h.w + 6, h.h + 6, 5); ctx.stroke(); }
@@ -8273,7 +8529,9 @@ document.addEventListener('click', e => {
     case 'picklen': pickLen = +b.dataset.v; showPicker(); break;
     case 'pickmode': pickPersist = b.dataset.v === '1'; showPicker(); break;
     case 'upgrade': if (startUpgrade(PLAYER, b.dataset.t)){ toast(`Upgrading ${UNITS[b.dataset.t].name} to Mk ${ROMAN[S.nations[PLAYER].eng.m]}.`, 'info', null); } openModal(researchHTML(), 'research'); renderSide(true); break;
-    case 'begin': clearSave(); useScenario('world'); DAY_LIMIT = Infinity; newGame.doc = null; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); break;
+    case 'begin':   // building the campaign takes a moment: the button shows it is working first (painted before the heavy work starts)
+      b.disabled = true; b.setAttribute('aria-busy', 'true'); b.classList.add('busy'); b.textContent = 'Mobilising\u2026';
+      requestAnimationFrame(() => setTimeout(() => { clearSave(); useScenario('world'); DAY_LIMIT = Infinity; newGame.doc = null; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); }, 0)); break;
     case 'start': closeModal(false); flyHome(); setSpeed(1); break;
     case 'start-tut': closeModal(false); flyHome(); setSpeed(0); tutStart(); break;
     case 'resume': closeModal(); break;
@@ -8801,7 +9059,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, get layer(){ return layer; }, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, FXG, nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+if (location.protocol === 'file:') window.__im = {get globe(){ return GLOBE; }, get layer(){ return layer; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, FXG, nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   tables:() => ({UNITS, BUILD, TECH:TECH.map(T => ({id:T.id, name:T.name, branch:T.branch, tier:T.tier, days:T.days, c:techCost(T)})), LINK_COST, MISSILES, SAT_C}), riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
@@ -8809,7 +9067,8 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p)}});
-if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
