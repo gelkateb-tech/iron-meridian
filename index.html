@@ -1493,7 +1493,8 @@ const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
 const WIN_SHARE = 0.25;               // share of land provinces needed to win
 let WIN_CAPS = 5;                     // or hold this many starting capitals (5 of 15; 4 of 8 in theatre scenarios)
-let DAY_LIMIT = 120;                  // or have the top score when this day ends (60 / 120 / 240)
+let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
+const SURVIVOR_DAY = 120;              // 'Still Standing' achievement
 const CAP_MIN = 2;                    // ground units needed to capture
 const SAVE_KEY = 'iron-meridian-save-v5';
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
@@ -1970,7 +1971,7 @@ function newGame(seed, pick){
     for (const id of provs) owner[id] = k;
     const capital = provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
     G.P[capital].city = true;
-    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, food:120, mp:80, short:{}, alive:true, capital, tech:{}, research:null, mk:{}, eng:null, doc:k === PLAYER ? (newGame.doc || 'precision') : ['precision', 'mass', 'bastion'][(seed + k*7) % 3]};
+    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, food:120, mp:80, short:{}, alive:true, capital, tech:{}, research:null, mk:{}, eng:null, doc:null};   // no national doctrines
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, persist:!!newGame.persist, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
@@ -2008,7 +2009,8 @@ function restore(data){
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
   S = data; S.battles = []; S.bt = {}; S.speed = 0; S.started = true; linksSync();
   { const nc = c => c && OLD_COLORS[String(c).toLowerCase()]; for (const N of S.nations){ if (nc(N.color)) N.color = nc(N.color); if (nc(N.color0)) N.color0 = nc(N.color0); } }   // old palette entries -> current ones
-  useScenario(S.scn || 'world'); DAY_LIMIT = S.len || 120; if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette();
+  useScenario('world'); DAY_LIMIT = Infinity;   // older saves with a scenario or a day limit continue as an open-ended world war
+  if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette();
   resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
@@ -4550,7 +4552,7 @@ function checkEnd(){
   if (!S.nations[PLAYER].alive) S.over = 'lose';
   else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= landNeed(PLAYER) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
   else if ((B => B && (B.members.reduce((s0, m) => s0 + landHeld(m), 0) >= Math.ceil(landNeed(PLAYER)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(PLAYER))){ S.over = 'win'; S.overReason = 'coalition'; }
-  else if (S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
+  else if (Number.isFinite(DAY_LIMIT) && S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
   else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
     else { const RB = blocs().find(B => !B.members.includes(PLAYER) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3)); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
   if (S.over){ setSpeed(0); save(); showEnd(); }
@@ -7012,8 +7014,8 @@ function renderSide(force){
   resSync(N, resTips);
   document.documentElement.style.setProperty('--you', N.color);
   { const mine = landHeld(PLAYER), pl = mine/landNeed(PLAYER), pc = capsHeld(PLAYER)/WIN_CAPS, best = Math.max(pl, pc);
-    const vtip = `Victory: hold ${landNeed(PLAYER)} provinces, or ${WIN_CAPS} starting capitals, or have the most growth when day ${DAY_LIMIT} ends.&#10;You hold ${mine}/${landNeed(PLAYER)} ${SCN === 'world' ? 'land' : 'theatre land'} provinces and ${capsHeld(PLAYER)}/${WIN_CAPS} capitals. Day ${Math.floor(S.hour/24) + 1} of ${DAY_LIMIT}.`;
-    setHTML($('clock'), `<b title="Capital local time">${localClock(S.hour)}<small class="loc"> local</small></b><span class="vtr"><i style="width:${Math.min(100, best*100)}%"></i></span><span class="vic">Victory <em>${Math.round(Math.min(1, best)*100)}%</em> · ${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS} cap`}<span class="vd"> · D${Math.floor(S.hour/24) + 1}/${DAY_LIMIT}</span></span>`); setTip($('clock'), vtip.replace(/&#10;/g, '\n'));
+    const vtip = `Victory: hold ${landNeed(PLAYER)} provinces or ${WIN_CAPS} starting capitals.&#10;You hold ${mine}/${landNeed(PLAYER)} land provinces and ${capsHeld(PLAYER)}/${WIN_CAPS} capitals. Day ${Math.floor(S.hour/24) + 1} of the war.`;
+    setHTML($('clock'), `<b title="Capital local time">${localClock(S.hour)}<small class="loc"> local</small></b><span class="vtr"><i style="width:${Math.min(100, best*100)}%"></i></span><span class="vic">Victory <em>${Math.round(Math.min(1, best)*100)}%</em> · ${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS} cap`}<span class="vd"> · Day ${Math.floor(S.hour/24) + 1}</span></span>`); setTip($('clock'), vtip.replace(/&#10;/g, '\n'));
     setHTML($('vbar'), `<span>Victory ${Math.round(Math.min(1, best)*100)}% · ${pl >= pc ? `${mine}/${landNeed(PLAYER)} prov` : `${capsHeld(PLAYER)}/${WIN_CAPS} capitals`}</span><span class="tr"><i style="width:${Math.min(100, best*100)}%"></i></span>`); }
   $('seedlbl').textContent = '';
   for (let i = 0; i < 5; i++) $('sp' + i).setAttribute('aria-pressed', String(S.speed === i));
@@ -7024,7 +7026,7 @@ function renderSide(force){
   const BLm = new Map(); for (const B of blocs()) for (const m of B.members) BLm.set(m, B);
   setHTML($('nations'), shown.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}" style="--c:${n.color}">${flagHTML(n.id, 15)}<span>${n.name}${n.id === PLAYER ? ' (you)' : ''}${BLm.has(n.id) ? ` <span class="bmark" title="${BLm.get(n.id).name}">${blocEmbHTML(BLm.get(n.id).id, 20)}</span>` : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to the land victory target (${landNeed(n.id)} provinces)">${Math.round(counts[n.id]/landNeed(n.id)*100)}%</span></div>`).join('') +
     `<div class="row">${showAllPowers ? '' : `<button class="btn" data-act="allpow" style="font-size:12px;padding:4px 8px">Show all ${order.length}</button>`}<button class="btn" data-act="stats-open" style="font-size:12px;padding:4px 8px">World statistics (S)</button></div>` +
-    `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Day-${DAY_LIMIT} score is growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
+    `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}). Growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
   setHTML($('log'), ((S.papers && S.papers[0]) ? `<button class="ev info" data-act="paper-open" style="grid-template-columns:1fr"><span><b>The Meridian Herald · Day ${S.papers[0].day + 1}</b><br><span class="muted">${S.papers[0].head}</span></span></button>` : '') + S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="${e.rep ? 'report' : 'goto'}" data-id="${e.rep || e.p}" title="${e.rep ? 'Open battle report' : 'Show on map'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${textUnit(e.text)}${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${textUnit(e.text)}${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
   { const key = sel.army !== null ? 'a' + sel.army : sel.prov !== null ? 'p' + sel.prov : 'o';   // a new selection: the command panel slides in (from the right; back to the overview from the left)
@@ -7302,14 +7304,14 @@ const ACH = {
   firstblood:['First Blood', 'Win a battle.'], flanker:['Hammer and Anvil', 'Win a battle attacking from 3 or more directions.'], blitz:['Blitzkrieg', 'Capture 5 provinces in a single day.'],
   peace:['Spoils of Peace', 'Sign a peace treaty that cedes land to you.'], coalition:['Grand Alliance', 'Belong to a coalition.'], marshal:['Field Marshal', 'Promote a commander to Marshal.'],
   tycoon:['War Chest', 'Hold $3,000M at once.'], airborne:['Airborne', 'Land paratroopers.'], eyes:['Eyes in the Sky', 'Scout with a recon UAV.'], carrier:['Blue-Water Navy', 'Land an air wing on a carrier.'],
-  missile:['Long Arm', 'Hit a target with a missile.'], capital:['Decapitation', 'Capture an enemy capital.'], survivor:['Still Standing', 'Reach the final day of a campaign.'], victory:['Victor', 'Win a campaign.'], mark4:['Mk IV', 'Upgrade a unit type to Mark IV.'],
+  missile:['Long Arm', 'Hit a target with a missile.'], capital:['Decapitation', 'Capture an enemy capital.'], survivor:['Still Standing', 'Survive 120 days of war.'], victory:['Victor', 'Win a campaign.'], mark4:['Mk IV', 'Upgrade a unit type to Mark IV.'],
 };
 let ACHS = (() => { try { return JSON.parse(localStorage.getItem('iron-meridian-ach') || '{}'); } catch (e) { return {}; } })();
 function unlock(k){ if (ACHS[k] || !ACH[k]) return; ACHS[k] = Date.now(); try { localStorage.setItem('iron-meridian-ach', JSON.stringify(ACHS)); } catch (e) {} if (booted){ toast(`Achievement unlocked: ${ACH[k][0]}. ${ACH[k][1]}`, 'good', null); sfx('research'); } }
 function achLog(text){ if (/^Battle of .* won/.test(text)) unlock('firstblood'); if (/promoted to Marshal/.test(text) && text.length) unlock('marshal'); if (/Paratroopers landed/.test(text)) unlock('airborne'); if (/^UAV over/.test(text)) unlock('eyes');
   if (/landed on .*Carrier|landed on .*: it now strikes/.test(text)) unlock('carrier'); if (/^Peace conference.* to you/.test(text)) unlock('peace'); if (/^You captured .*, capital of/.test(text)) unlock('capital'); if (/Missile hit/.test(text)) unlock('missile'); if (/to Mk IV/.test(text)) unlock('mark4'); }
 function achDaily(){ if (!S.nations[PLAYER].alive) return; if (S.nations[PLAYER].cash >= 3000) unlock('tycoon'); if (typeof blocOf === 'function' && blocOf(PLAYER)) unlock('coalition');
-  const st0 = S.stats || {}, tk = st0.taken || 0; if (tk - (S.achTaken ?? tk) >= 5) unlock('blitz'); S.achTaken = tk; if (Math.floor(S.hour/24) >= DAY_LIMIT - 1) unlock('survivor'); }
+  const st0 = S.stats || {}, tk = st0.taken || 0; if (tk - (S.achTaken ?? tk) >= 5) unlock('blitz'); S.achTaken = tk; if (Math.floor(S.hour/24) >= SURVIVOR_DAY - 1) unlock('survivor'); }
 function achHTML(){ const keys = Object.keys(ACH), got = keys.filter(k => ACHS[k]).length;
   return `<div class="eyebrow" style="margin-top:12px">Achievements · ${got} of ${keys.length}</div><div class="achs">${keys.map(k => `<div class="ach ${ACHS[k] ? 'on' : ''}" title="${ACH[k][1]}"><b>${ACHS[k] ? '★' : '☆'} ${ACH[k][0]}</b><span class="small muted">${ACH[k][1]}</span></div>`).join('')}</div>`; }
 function statusText(a){
@@ -7737,7 +7739,7 @@ document.addEventListener('click', e => {
     case 'picklen': pickLen = +b.dataset.v; showPicker(); break;
     case 'pickmode': pickPersist = b.dataset.v === '1'; showPicker(); break;
     case 'upgrade': if (startUpgrade(PLAYER, b.dataset.t)){ toast(`Upgrading ${UNITS[b.dataset.t].name} to Mk ${ROMAN[S.nations[PLAYER].eng.m]}.`, 'info', null); } openModal(researchHTML(), 'research'); renderSide(true); break;
-    case 'begin': clearSave(); useScenario(pickScn); DAY_LIMIT = pickLen; newGame.doc = pickDoc; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); break;
+    case 'begin': clearSave(); useScenario('world'); DAY_LIMIT = Infinity; newGame.doc = null; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); break;
     case 'start': closeModal(false); flyHome(); setSpeed(1); break;
     case 'start-tut': closeModal(false); flyHome(); setSpeed(0); tutStart(); break;
     case 'resume': closeModal(); break;
@@ -7800,7 +7802,7 @@ document.addEventListener('keydown', e => { INCC.v = -1;
 function setSpeed(s){ if (S.over && s) return; const open = !$('modal').hidden; if (s && open && !(S.started && $('modal').classList.contains('docked'))) return; S.speed = s; if (open) speedBefore = s; renderSide(); }
 
 /* ---------------- Modal ---------------- */
-let pickDiff = 'regular', pickDoc = 'precision', pickScn = 'world', pickLen = 120, pickPersist = false, modalKind = '', pickSel = WORLD_POWERS.findIndex(p => p.name === 'Brazil');
+let pickDiff = 'regular', pickDoc = null, pickScn = 'world', pickLen = Infinity, pickPersist = false, modalKind = '', pickSel = WORLD_POWERS.findIndex(p => p.name === 'Brazil');
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel'];
@@ -7899,13 +7901,11 @@ function showPicker(){
     return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}">${flagHTML(P0.name, 40, 'big')}<span class="pt"><b>${P0.name}</b><span>${n} provinces · ${cities} cities</span><span class="diff d-${String(diff).toLowerCase()}">${diff}</span></span></button>`}; })
     .sort((a, b) => b.n - a.n).map(c => c.html).join('');
   openModal(`${LOGO}<div class="eyebrow" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
-    <div class="eyebrow">Scenario</div><div class="docs">${Object.entries(SCENARIOS).map(([k, X]) => `<button class="btn doc ${pickScn === k ? 'primary' : ''}" data-act="pickscn" data-k="${k}" aria-pressed="${pickScn === k}"><b>${X.name}</b><span>${X.desc}</span></button>`).join('')}</div>
-    <p>${cap1(NUMW[POWERS.length])} powers fight${SCN === 'world' ? ' for the world' : ''}. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>
+    <p>${cap1(NUMW[POWERS.length])} powers fight for the world. Win by holding a quarter of the world's land or five starting capitals; there is no time limit. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>
     <div class="picks">${cards}</div>
     <div class="eyebrow">AI difficulty</div><div class="row">${DIFFS.map(d => `<button class="btn ${pickDiff === d.k ? 'primary' : ''}" data-act="pickdiff" data-k="${d.k}">${d.name}</button>`).join('')}</div>
-    <div class="eyebrow">Campaign length and mode</div><div class="row">${[60, 120, 240].map(d => `<button class="btn ${pickLen === d ? 'primary' : ''}" data-act="picklen" data-v="${d}">${d} days</button>`).join('')}<span style="width:12px"></span><button class="btn ${!pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="0" title="Time only runs while you play.">Classic</button><button class="btn ${pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="1" title="The war keeps going while you are away at the normal pace (4 game minutes per real minute), up to 30 days of catch-up when you return.">Persistent</button></div>
-    <div class="eyebrow">Doctrine</div><div class="docs">${Object.entries(DOCTRINES).map(([k, D]) => `<button class="btn doc ${pickDoc === k ? 'primary' : ''}" data-act="pickdoc" data-k="${k}" aria-pressed="${pickDoc === k}"><b>${D.name}</b><span>${D.tag}</span><span class="small">${D.desc}</span></button>`).join('')}</div>
-    <div class="row"><button class="btn primary" data-act="begin">Lead ${POWERS[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}<span class="psum">AI <b>${(DIFFS.find(d => d.k === pickDiff) || DIFFS[1]).name}</b> · <b>${pickLen}</b> days · <b>${(DOCTRINES[pickDoc] || {}).name || ''}</b> doctrine · options below</span></div>`, 'picker');
+    <div class="eyebrow">Mode</div><div class="row"><button class="btn ${!pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="0" title="Time only runs while you play.">Classic</button><button class="btn ${pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="1" title="The war keeps going while you are away at the normal pace (4 game minutes per real minute), up to 30 days of catch-up when you return.">Persistent</button></div>
+    <div class="row"><button class="btn primary" data-act="begin">Lead ${POWERS[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}<span class="psum">AI <b>${(DIFFS.find(d => d.k === pickDiff) || DIFFS[1]).name}</b> · World War · no time limit</span></div>`, 'picker');
 }
 function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
@@ -7940,7 +7940,7 @@ function showEnd(){
     ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? (N0 => { const short = [['mp', 20, 'manpower'], ['metal', 15, 'metal'], ['oil', 10, 'oil'], ['food', 10, 'food']].find(([k, lim]) => N0[k] < lim); return short ? ` You had $${fmt(N0.cash)}M but ran out of ${short[2]}: build ${short[0] === 'mp' ? 'Recruiting Offices' : short[0] === 'metal' ? 'Foundries' : short[0] === 'oil' ? 'Refineries' : 'Farms'} early and capture provinces that produce it.` : ` You had $${fmt(N0.cash)}M unspent: next time, turn money into troops and research early.`; })(S.nations[PLAYER]) : ''}</p>
     ${(() => { const st0 = S.stats || {}; return `<div class="statgrid">${[['Days', dayOf(S.hour)], ['Provinces taken', st0.taken || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Units lost', st0.unitsLost || 0], ['Peak army', st0.peakArmy || 0], ['Best rank', st0.bestRank ? '#' + st0.bestRank : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>${st0.bigBattle ? `<p class="small muted">Biggest battle: ${st0.bigBattle} units at ${st0.bigBattleAt} on day ${st0.bigBattleDay}.</p>` : ''}${chartSVG(0, 'Score over the campaign')}`; })()}
     <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="stats-open">Full statistics</button><button class="btn" data-act="replay-open">Watch replay</button><button class="btn" data-act="resume">View the map</button></div>${achHTML()}`, 'end');
-  if (win) unlock('victory'); if (Math.floor(S.hour/24) >= DAY_LIMIT - 1 && S.nations[PLAYER].alive) unlock('survivor');
+  if (win) unlock('victory'); if (Math.floor(S.hour/24) >= SURVIVOR_DAY - 1 && S.nations[PLAYER].alive) unlock('survivor');
   sfx(win ? 'win' : 'lose');
 }
 
