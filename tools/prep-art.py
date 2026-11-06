@@ -1,6 +1,11 @@
 """Prepares the game art (supplied .webp files) for the web.
-- units, building markers, emblems: dark background removed (flood fill from the border through background-like
-  pixels against a fitted background gradient; enclosed parts stay opaque; soft anti-aliased edges), trimmed, 256 px
+- units: dark background removed (flood fill from the border through background-like pixels against a fitted background
+  gradient; enclosed parts stay opaque; soft anti-aliased edges; the soldier groups are cut against their textured ground
+  instead, see soldier_parts), found at 768 px and applied to a sharper 1536 px copy, facing up, trimmed: u-<name>.webp 512 px
+  (sharp up to the closest zoom), plus a tight, levels-lifted, unsharp-masked icon for small sizes: i-<name>.webp 128 px.
+  The two soldier groups are cut with the IS-Net general-use segmentation model when it is present (onnxruntime; the rembg model file
+  isnet-general-use.onnx in ~/.u2net/ or at $ISNET), see soldier_net; without it they fall back to soldier_parts
+- building markers, emblems: the same background removal, trimmed, 256 px
 - explosion, smoke: luminance-keyed alpha against the dark background (colours un-premultiplied), 256 px
 - crater: radial fade into a decal, 256 px
 - earth day/night/clouds: stretched from 21:9 to 2:1 (4096x2048 day/night, 2048x1024 clouds as alpha)
@@ -13,6 +18,7 @@ from PIL import Image, ImageFilter
 SRC, OUT = sys.argv[1], sys.argv[2]
 os.makedirs(OUT, exist_ok=True)
 WORK = 768   # processing resolution
+UNIT, ICON, HI = 512, 128, 1536   # unit picture and icon sizes; colour resolution the unit pictures are made from
 
 def load(name, size=WORK):
     im = Image.open(os.path.join(SRC, name)).convert('RGB')
@@ -33,16 +39,57 @@ def fit_bg(a, mask):
 def dilate(m):
     o = m.copy(); o[1:] |= m[:-1]; o[:-1] |= m[1:]; o[:, 1:] |= m[:, :-1]; o[:, :-1] |= m[:, 1:]; return o
 
-def flood(bglike, seed=None):
-    if seed is None: seed = np.zeros_like(bglike); seed[0, :] = seed[-1, :] = True; seed[:, 0] = seed[:, -1] = True
-    r = seed & bglike
-    for _ in range(4000):
-        n = dilate(r) & bglike
-        if n.sum() == r.sum(): break
-        r = n
-    return r
+def runfill(r, m):
+    """every horizontal run of m that holds a pixel of r becomes r"""
+    h, w = m.shape; f = m.ravel(); prev = np.zeros_like(f); prev[1:] = f[:-1]; prev[::w] = False
+    ids = np.cumsum(f & ~prev)*f; hit = np.zeros(int(ids.max()) + 1, bool); hit[ids[r.ravel() & f]] = True; hit[0] = False
+    return hit[ids].reshape(h, w)
 
-def cutout(a, t_hard=14.0, t_soft=(8.0, 30.0), border=10, dark=0.45, shadow=0.3):
+def flood(bglike, seed=None):
+    """the parts of bglike 4-connected to the seed (default: the border), by alternating row and column run fills"""
+    if seed is None: seed = np.zeros_like(bglike); seed[0, :] = seed[-1, :] = True; seed[:, 0] = seed[:, -1] = True
+    r = seed & bglike; n0 = -1; mt = np.ascontiguousarray(bglike.T)
+    while True:
+        r = runfill(r, bglike); r = np.ascontiguousarray(runfill(np.ascontiguousarray(r.T), mt).T); n = int(r.sum())
+        if n == n0: return r
+        n0 = n
+
+def label(m):
+    """connected parts (4-neighbour) of a mask as a label image (0 outside): row and column run minima until stable"""
+    h, w = m.shape; L = np.where(m, np.arange(1, h*w + 1, dtype=np.int64).reshape(h, w), 0)
+    def runmin(L, m):
+        hh, ww = m.shape; f = m.ravel(); prev = np.zeros_like(f); prev[1:] = f[:-1]; prev[::ww] = False
+        Lc = L.ravel()[f]; idx = np.flatnonzero((f & ~prev)[f]); out = np.zeros(hh*ww, np.int64)
+        if len(idx): out[f] = np.repeat(np.minimum.reduceat(Lc, idx), np.diff(np.append(idx, len(Lc))))
+        return out.reshape(hh, ww)
+    mt = np.ascontiguousarray(m.T)
+    while True:
+        L2 = runmin(L, m); L2 = np.ascontiguousarray(runmin(np.ascontiguousarray(L2.T), mt).T)
+        if (L2 == L).all(): return L
+        L = L2
+
+def drop_small(m, min_area):
+    """m without its connected parts smaller than min_area pixels"""
+    u, inv, cnt = np.unique(label(m).ravel(), return_inverse=True, return_counts=True)
+    return ((cnt >= min_area) & (u > 0))[inv].reshape(m.shape)
+
+def erode(m, n=1):
+    inv = ~m
+    for _ in range(n): inv = dilate(inv)
+    return ~inv
+
+def gblur(x, sigma):
+    """Gaussian-like blur of a float image (three box passes), edges clamped"""
+    r = max(1, int(round(sigma*0.9)))
+    for _ in range(3):
+        for ax in (0, 1):
+            pad = [(r + 1, r) if k == ax else (0, 0) for k in range(x.ndim)]
+            c = np.cumsum(np.pad(x, pad, mode='edge'), axis=ax, dtype=np.float64); n = x.shape[ax]
+            x = ((np.take(c, np.arange(2*r + 1, 2*r + 1 + n), axis=ax) - np.take(c, np.arange(n), axis=ax))/(2*r + 1)).astype(np.float32)
+    return x
+
+def cutout_parts(a, t_hard=14.0, t_soft=(8.0, 30.0), border=10, dark=0.45, shadow=0.3):
+    """alpha (with the soft drop shadow), the object's own alpha (no shadow) and the fitted background"""
     h, w, _ = a.shape
     edge = np.zeros((h, w), bool); edge[:border] = edge[-border:] = True; edge[:, :border] = edge[:, -border:] = True
     bg = fit_bg(a, edge)
@@ -61,40 +108,99 @@ def cutout(a, t_hard=14.0, t_soft=(8.0, 30.0), border=10, dark=0.45, shadow=0.3)
     alpha = np.where(reach & near, soft, alpha)
     al = Image.fromarray((alpha*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8))
     alpha = np.asarray(al).astype(np.float32)/255
-    alpha = np.where(reach & ~near, 0, alpha)
+    alpha = np.where(reach & ~near, 0, alpha); obj = alpha
     if shadow:   # soft drop shadow where the background is darker than its fit (only close to the object)
         sh = np.clip(np.sqrt((np.clip(bg - a, 0, None)**2).sum(-1))/60, 0, shadow)
         ring = ~reach
         for _ in range(10): ring = dilate(ring)
         alpha = np.maximum(alpha, np.where(reach & ring, sh, 0))
-    # remove the background tint from semi-transparent rim pixels
+    return alpha, obj, bg
+
+def detint(a, alpha, bg):
+    """RGBA: colour with the background tint removed from semi-transparent (rim) pixels"""
     aa = np.clip(alpha[..., None], 1e-3, 1)
     col = np.clip((a - bg*(1 - aa))/aa, 0, 255)
     col = np.where(alpha[..., None] > 0.98, a, col)
     return np.dstack([col, alpha*255]).astype(np.uint8)
 
-def keep_main(rgba):
-    """drop specks: keep only what connects to the most solid region near the centre"""
-    al = rgba[..., 3].astype(np.float32)/255; h, w = al.shape; m = al > 0.3
+def cutout(a, *args, **kw):
+    alpha, _, bg = cutout_parts(a, *args, **kw); return detint(a, alpha, bg)
+
+def main_mask(al):
+    """what connects to the most solid region near the centre (alpha in 0..1), grown by 4 px"""
+    h, w = al.shape; m = al > 0.3
     cy, cx = h//2, w//2; win = m[cy - h//6:cy + h//6, cx - w//6:cx + w//6]
-    if not win.any(): return rgba
+    if not win.any(): return np.ones_like(m)
     seed = np.zeros_like(m); seed[cy - h//6:cy + h//6, cx - w//6:cx + w//6] = win
     main = flood(m, seed)
     for _ in range(4): main = dilate(main)
+    return main
+
+def keep_main(rgba):
+    """drop specks: keep only what connects to the most solid region near the centre"""
+    main = main_mask(rgba[..., 3].astype(np.float32)/255)
     out = rgba.copy(); out[..., 3] = np.where(main, out[..., 3], 0); return out
 
-def chroma_cut(a, border=10):
-    """soldiers on neutral ground: object = coloured or bright pixels, closed, then soft edges"""
-    mx, mn = a.max(-1), a.min(-1); lum = a.mean(-1); chroma = mx - mn
-    m = (chroma > 9) | (lum > 82)
-    for _ in range(7): m = dilate(m)
-    inv = ~m
-    for _ in range(7): inv = dilate(inv)
-    m = ~inv
-    reach = flood(~m)
-    al = Image.fromarray(((~reach)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2))
-    alpha = np.asarray(al).astype(np.float32)
-    return np.dstack([a, alpha]).astype(np.uint8)
+def soldier_parts(a):
+    """soldier groups on dark, grainy, spot-lit ground (at WORK px): alpha (with a soft drop shadow), alpha without it, local ground colour.
+    The ground's own brightness and colourfulness are estimated locally (blurred, from what is neither soldier nor shadow), so the
+    lighting falloff and the grain do not count. Soldiers = clearly more colourful or brighter than the ground there (found on a blurred
+    copy so the grain averages out, then fine parts such as straps and rifle furniture that touch them), closed, holes without open
+    ground filled, specks dropped. Dark things next to them (rifles, boots, the shadows they cast) are luminance-keyed: black with partial
+    alpha, as dark as they are against the ground, so nothing of the ground itself is left in the picture."""
+    h, w, _ = a.shape
+    def feats(sig):
+        s = np.dstack([gblur(a[..., c], sig) for c in range(3)]); return s.mean(-1), s.max(-1) - s.min(-1)
+    lum, chroma = feats(2.5); lum1, chroma1 = feats(0.8)
+    obj = (chroma > 12) | (lum > 95)
+    for _ in range(3):
+        wgt = erode(~obj, 3).astype(np.float32); W = np.maximum(gblur(wgt, 24), 1e-3)
+        Lbg = gblur(lum*wgt, 24)/W; Cbg = gblur(chroma*wgt, 24)/W
+        obj = (chroma > Cbg + 5) | (lum > Lbg + 12) | (lum < Lbg - 16)
+    obj = drop_small((chroma > Cbg + 5) | (lum > Lbg + 12), 80)
+    obj = flood(obj | (chroma1 > Cbg + 7) | (lum1 > Lbg + 20), obj)
+    c = erode(dilate(dilate(dilate(obj))), 3)
+    border = np.zeros_like(c); border[0, :] = border[-1, :] = border[:, 0] = border[:, -1] = True
+    m = drop_small(~flood(~c, erode(~c, 6) | border), h*w*0.002)   # ground = reached from the border or from any 13 px wide open patch
+    m &= erode(m, 3) | (chroma1 > Cbg + 5) | (lum1 > Lbg + 10)   # the blurred test reaches a little past the edge: there only what is clearly soldier
+    W = np.maximum(gblur((~m).astype(np.float32), 24), 1e-3); bgc = np.dstack([gblur(a[..., k]*~m, 24)/W for k in range(3)])
+    al = np.asarray(Image.fromarray((m*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.9))).astype(np.float32)/255
+    da = np.clip((1 - lum1/np.maximum(Lbg, 1) - 0.38)/(0.8 - 0.38), 0, 1)
+    ring = m.copy()
+    for _ in range(10): ring = dilate(ring)
+    da = gblur(np.where(flood(da > 0.2, m & (da > 0.2)) & ring, da, 0).astype(np.float32), 1.0)   # only what joins the soldiers through clearly dark pixels
+    obj = np.maximum(al, da)
+    sh = np.roll(gblur(m.astype(np.float32), 5), (3, 3), (0, 1))*0.22   # soft drop shadow, light from the upper left like the vehicles'
+    return np.maximum(obj, sh), obj, bgc
+
+ISNET = os.environ.get('ISNET', os.path.expanduser('~/.u2net/isnet-general-use.onnx'))
+_NET = []
+def net_mask(name, size):
+    """soft object mask (0..1) of a source picture from the IS-Net general-use segmentation model (onnxruntime), at size px"""
+    if not _NET:
+        import onnxruntime as ort; _NET.append(ort.InferenceSession(ISNET, providers=['CPUExecutionProvider']))
+    s = _NET[0]; im = Image.open(os.path.join(SRC, name)).convert('RGB').resize((1024, 1024), Image.LANCZOS)
+    x = (np.asarray(im, np.float32)/255 - 0.5).transpose(2, 0, 1)[None]
+    o = s.run(None, {s.get_inputs()[0].name: x})[0][0, 0].astype(np.float32); o = (o - o.min())/max(float(o.max() - o.min()), 1e-6)
+    return np.clip(np.asarray(Image.fromarray(o, 'F').resize((size, size), Image.BICUBIC)), 0, 1)
+
+def soldier_net(u):
+    """soldier groups, cut with the segmentation model (keeps every rifle and the dark parts of the uniforms whole, which the colour and
+    brightness tests could not): RGBA at HI px with a soft drop shadow, and without it. The model's mask is tightened (smoothstep); where it
+    is still partial over colourless ground no brighter than the ground around (shadowed ground between the soldiers), that is kept only as
+    a faint dark shadow, so no grainy patch of the photo's ground is left in the picture."""
+    A = load(u + '.webp', HI); m = net_mask(u + '.webp', HI); a = load(u + '.webp')
+    al = sstep((m - 0.14)/0.62)
+    mw = np.asarray(Image.fromarray(m, 'F').resize((WORK, WORK), Image.BILINEAR)); wgt = (mw < 0.04).astype(np.float32); W = np.maximum(gblur(wgt, 24), 1e-3)
+    up = lambda x: np.asarray(Image.fromarray(np.ascontiguousarray(x, np.float32), 'F').resize((HI, HI), Image.BICUBIC))
+    B = np.dstack([up(gblur(a[..., k]*wgt, 24)/W) for k in range(3)])
+    s1 = np.dstack([gblur(A[..., k], 1.2) for k in range(3)]); lum, chroma = s1 @ LUMA, s1.max(-1) - s1.min(-1); Lbg, Cbg = B @ LUMA, B.max(-1) - B.min(-1)
+    g = sstep((Cbg + 10 - chroma)/7)*sstep((Lbg + 24 - lum)/14)*(1 - sstep((al - 0.7)/0.25))   # shadowed ground the mask half took
+    aa = np.clip(al[..., None], 1e-3, 1); col = np.where(al[..., None] > 0.98, A, np.clip((A - B*(1 - aa))/aa, 0, 255))
+    col = col*(1 - g[..., None]) + np.minimum(A, 40)*0.35*g[..., None]; obj = al*(1 - 0.55*g)
+    sh = np.roll(gblur((al > 0.5).astype(np.float32), 10), (6, 6), (0, 1))*0.22   # soft drop shadow, light from the upper left like the vehicles'
+    full = np.maximum(obj, sh); colf = np.where((obj < 0.02)[..., None], 0, col)
+    return [np.dstack([colf, full*255]).astype(np.uint8), np.dstack([col, obj*255]).astype(np.uint8)]
 
 def circle_cut(a):
     """round tokens: the outer edge of the frame is found from the radial brightness profile"""
@@ -121,13 +227,18 @@ def radial(a, inner=0.62, outer=0.97):
     alpha = np.clip((outer - r)/(outer - inner), 0, 1)**1.4
     return np.dstack([a, alpha*255]).astype(np.uint8)
 
-def save_rgba(arr, name, size=256, trim=True, q=84):
-    if trim: arr = keep_main(arr)
+def trim_box(im):
+    """the crop box save_rgba trims a picture to: its opaque part (alpha > 24) with 3 % padding"""
+    bb = im.getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox()
+    if not bb: return None
+    x0, y0, x1, y1 = bb; pad = int(max(x1 - x0, y1 - y0)*0.03); return (max(0, x0 - pad), max(0, y0 - pad), min(im.width, x1 + pad), min(im.height, y1 + pad))
+
+def save_rgba(arr, name, size=256, trim=True, q=84, clean=True):
+    if trim and clean: arr = keep_main(arr)
     im = Image.fromarray(arr, 'RGBA')
     if trim:
-        bb = im.getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox()
-        if bb:
-            x0, y0, x1, y1 = bb; pad = int(max(x1 - x0, y1 - y0)*0.03); im = im.crop((max(0, x0 - pad), max(0, y0 - pad), min(im.width, x1 + pad), min(im.height, y1 + pad)))
+        bb = trim_box(im)
+        if bb: im = im.crop(bb)
     s = size/max(im.width, im.height); im = im.resize((max(1, round(im.width*s)), max(1, round(im.height*s))), Image.LANCZOS)
     sq = Image.new('RGBA', (size, size), (0, 0, 0, 0)); sq.paste(im, ((size - im.width)//2, (size - im.height)//2)); sq.save(os.path.join(OUT, name), 'WEBP', quality=q, method=6)
 
@@ -228,15 +339,40 @@ def save_patch(arr, name, size, q=86):
     im = Image.fromarray(arr, 'RGBA'); s = size/max(im.width, im.height)
     im = im.resize((max(1, round(im.width*s)), max(1, round(im.height*s))), Image.LANCZOS)
     sq = Image.new('RGBA', (size, size), (0, 0, 0, 0)); sq.paste(im, ((size - im.width)//2, (size - im.height)//2))
-    # transparent pixels keep a neighbour colour (no dark fringe when the image is scaled with bilinear filtering)
-    px = np.asarray(sq).copy(); al = px[..., 3]
+    Image.fromarray(bleed(np.asarray(sq)), 'RGBA').save(os.path.join(OUT, name), 'WEBP', quality=q, method=6, exact=True)
+
+def bleed(px, r=6):
+    """transparent pixels keep a neighbour colour (no dark fringe when the image is scaled with bilinear filtering or sharpened)"""
+    px = px.copy(); al = px[..., 3]
     if (al < 8).any():
-        rgb = Image.fromarray(px[..., :3]); blur = np.asarray(rgb.filter(ImageFilter.GaussianBlur(6))).astype(np.float32)
-        wgt = np.asarray(Image.fromarray(al).filter(ImageFilter.GaussianBlur(6))).astype(np.float32)[..., None]/255
-        prem = np.asarray(Image.fromarray((px[..., :3]*(al[..., None]/255)).astype(np.uint8)).filter(ImageFilter.GaussianBlur(6))).astype(np.float32)
+        rgb = Image.fromarray(px[..., :3]); blur = np.asarray(rgb.filter(ImageFilter.GaussianBlur(r))).astype(np.float32)
+        wgt = np.asarray(Image.fromarray(al).filter(ImageFilter.GaussianBlur(r))).astype(np.float32)[..., None]/255
+        prem = np.asarray(Image.fromarray((px[..., :3]*(al[..., None]/255)).astype(np.uint8)).filter(ImageFilter.GaussianBlur(r))).astype(np.float32)
         fill = np.where(wgt > 0.01, prem/np.maximum(wgt, 0.01), blur)
         px[..., :3] = np.where(al[..., None] < 8, np.clip(fill, 0, 255), px[..., :3]).astype(np.uint8)
-    Image.fromarray(px, 'RGBA').save(os.path.join(OUT, name), 'WEBP', quality=q, method=6, exact=True)
+    return px
+
+LUMA = np.array([0.299, 0.587, 0.114], np.float32)
+
+def save_icon(arr, name, size=ICON, q=88, gamma=0.85, gain=1.3, sat=1.15, sharp=(1.0, 80, 1)):
+    """icon for small sizes (24-32 px on a dark tile): cropped to the object (alpha > 25 %) with 4 % padding, levels stretched over the
+    object's own brightness (1st..99.5th percentile -> 10..245, at most gain x), mid-tones lifted (gamma), a little more colour, then unsharp-masked
+    after the downscale; alpha as cut"""
+    im = Image.fromarray(arr, 'RGBA'); bb = im.getchannel('A').point(lambda v: 255 if v > 64 else 0).getbbox()
+    if bb:
+        x0, y0, x1, y1 = bb; pad = int(max(x1 - x0, y1 - y0)*0.04); im = im.crop((max(0, x0 - pad), max(0, y0 - pad), min(im.width, x1 + pad), min(im.height, y1 + pad)))
+    px = np.asarray(im).astype(np.float32); rgb, al = px[..., :3], px[..., 3]
+    l = rgb @ LUMA; sel = al > 150
+    lo, hi = (np.percentile(l[sel], 1), np.percentile(l[sel], 99.5)) if sel.sum() > 50 else (0, 255)
+    hi = max(hi, lo + 235/gain)   # at most gain x the original contrast (light grey aircraft stay grey, not white)
+    rgb = np.clip((rgb - lo)/max(hi - lo, 1), 0, 1)**gamma
+    l = (rgb @ LUMA)[..., None]; rgb = np.clip(l + (rgb - l)*sat, 0, 1)*235 + 10
+    im = Image.fromarray(np.dstack([rgb, al]).astype(np.uint8), 'RGBA')
+    s = size/max(im.width, im.height); im = im.resize((max(1, round(im.width*s)), max(1, round(im.height*s))), Image.LANCZOS)
+    sq = Image.new('RGBA', (size, size), (0, 0, 0, 0)); sq.paste(im, ((size - im.width)//2, (size - im.height)//2))
+    px = bleed(np.asarray(sq), 3)
+    rgb = np.asarray(Image.fromarray(px[..., :3]).filter(ImageFilter.UnsharpMask(radius=sharp[0], percent=sharp[1], threshold=sharp[2])))
+    Image.fromarray(np.dstack([rgb, px[..., 3]]), 'RGBA').save(os.path.join(OUT, name), 'WEBP', quality=q, method=6)
 
 UNITS = ['infantry', 'special-forces', 'tank', 'light-armor', 'artillery', 'rocket-artillery', 'anti-air', 'missile-launcher', 'supply-truck',
          'jet', 'bomber', 'attack-heli', 'transport-heli', 'drone', 'corvette', 'destroyer', 'submarine', 'carrier']
@@ -250,11 +386,53 @@ only = set(sys.argv[3:])
 def want(n): return not only or n in only
 
 ROT = {'corvette': -90}   # every unit faces up (bow / nose at the top)
+SOLDIERS = ('infantry', 'special-forces')
+def unit_art(u):
+    """unit picture (with its soft drop shadow) and icon source (object only), RGBA at HI px: the cut-out is found at WORK px, then its
+    alpha and background are scaled up and applied to a sharper HI px copy of the original"""
+    if u in SOLDIERS and os.path.exists(ISNET): out = soldier_net(u)
+    else: out = None
+    if out is not None:
+        if u in ROT: out = [np.asarray(Image.fromarray(x, 'RGBA').rotate(ROT[u], expand=True)) for x in out]
+        return out
+    a = load(u + '.webp')
+    if u in SOLDIERS: alpha, obj, bg = soldier_parts(a)   # fallback without the model   # their own clean-up keeps every soldier (they need not touch the middle)
+    else:
+        alpha, obj, bg = cutout_parts(a); keep = main_mask(alpha); alpha, obj = alpha*keep, obj*keep
+    A = load(u + '.webp', HI)
+    up = lambda x: np.asarray(Image.fromarray(np.ascontiguousarray(x, np.float32), 'F').resize((HI, HI), Image.BICUBIC))
+    B = np.dstack([up(bg[..., c]) for c in range(3)])
+    out = [detint(A, np.clip(up(x), 0, 1), B) for x in (alpha, obj)]
+    if u in ROT: out = [np.asarray(Image.fromarray(x, 'RGBA').rotate(ROT[u], expand=True)) for x in out]
+    return out
+# soldier icons: a whole squad shrunk into a 20-40 px tile reads as a grey rosette, so their icon is three of its soldiers, cut out of the
+# picture: every opaque pixel belongs to the soldier with the nearest seed point (helmet, body, rifle; given in the 512 px u-picture),
+# and only the chosen soldiers are kept. 256 px, so the game can use the icon at every tile size
+SQUAD_SEEDS = {
+    'infantry': ({1:[(254, 78), (250, 130), (220, 45), (232, 178), (272, 176)], 2:[(146, 112), (165, 165), (75, 122), (195, 235), (185, 212)], 3:[(362, 120), (330, 165), (395, 90), (292, 200), (300, 215)],
+                  4:[(95, 205), (130, 250), (40, 280), (160, 240)],
+                  5:[(245, 220), (250, 260), (265, 320), (270, 195)], 6:[(410, 232), (360, 240), (470, 260)], 7:[(135, 310), (170, 340), (100, 410)],
+                  8:[(245, 370), (245, 400), (290, 470)], 9:[(365, 330), (340, 350), (430, 405)]}, (5, 8, 9)),
+    'special-forces': ({1:[(175, 135), (205, 185), (60, 135), (115, 180), (230, 215)], 2:[(318, 120), (285, 190), (250, 70), (250, 150), (260, 240)],
+                        3:[(370, 230), (330, 255), (480, 248), (395, 270)], 4:[(140, 235), (185, 265), (30, 295), (120, 300), (215, 290)],
+                        5:[(205, 330), (235, 330), (115, 445), (175, 395), (245, 400)], 6:[(330, 330), (300, 330), (425, 425), (330, 385), (275, 385)]}, (3, 5, 6))}
+def squad_icon_src(full, obj, u):
+    seeds, keep = SQUAD_SEEDS[u]; bb = trim_box(Image.fromarray(full, 'RGBA')); x0, y0, x1, y1 = bb; w, h = x1 - x0, y1 - y0; k = UNIT/max(w, h)
+    ox, oy = (UNIT - round(w*k))//2, (UNIT - round(h*k))//2   # 512 px picture -> this frame (inverse of save_rgba's trim, scale and centring)
+    pts = [(sid, x0 + (x - ox)/k, y0 + (y - oy)/k) for sid, v in seeds.items() for x, y in v]
+    H, W = obj.shape[:2]; gy, gx = np.mgrid[0:H:4, 0:W:4]
+    own = np.array([sid for sid, _, _ in pts])[np.stack([np.hypot(gx - x, gy - y) for _, x, y in pts]).argmin(0)]
+    kq = np.isin(own, keep) & (obj[::4, ::4, 3] > 70); kq = drop_small(kq, kq.sum()*0.04)   # stray bits of the others' rifles and arms go
+    m = np.asarray(Image.fromarray(dilate(kq).astype(np.uint8)*255).resize((W, H), Image.NEAREST)) > 127
+    out = obj.copy(); out[..., 3] = np.where(m, out[..., 3], 0); return out
 for u in UNITS:
-    if want(u) and not os.path.exists(os.path.join(SRC, u + '.webp')):
-        print('skip (no source yet):', u); continue
-    if want(u) and u in ROT: save_rgba(np.asarray(Image.fromarray(cutout(load(u + '.webp')), 'RGBA').rotate(ROT[u], expand=True)), 'u-' + u + '.webp', 256); continue
-    if want(u): save_rgba(chroma_cut(load(u + '.webp')) if u in ('infantry', 'special-forces') else cutout(load(u + '.webp')), 'u-' + u + '.webp', 256)
+    if not want(u): continue
+    if not os.path.exists(os.path.join(SRC, u + '.webp')): print('skip (no source yet):', u); continue
+    full, obj = unit_art(u)
+    save_rgba(full, 'u-' + u + '.webp', UNIT, clean=False)
+    if u in SQUAD_SEEDS: save_icon(squad_icon_src(full, obj, u), 'i-' + u + '.webp', 256, gamma=0.94, gain=1.12, sat=1.1)   # milder lift: tan camouflage stays tan
+    else: save_icon(obj, 'i-' + u + '.webp')
+    print('%-18s u %5.1f KB  i %4.1f KB' % (u, os.path.getsize(os.path.join(OUT, 'u-' + u + '.webp'))/1024, os.path.getsize(os.path.join(OUT, 'i-' + u + '.webp'))/1024))
 # buildings: frameless aerial patches (round tokens cut inside their metal frame, compounds with a feathered rectangular edge)
 BSIZE = {'city': 512, 'airfield': 320, 'missile-silo': 320, 'military-base': 320, 'naval-port': 320}
 FRAMED = {'naval-port-2', 'naval-port-3', 'naval-port-4', 'naval-port-5'}

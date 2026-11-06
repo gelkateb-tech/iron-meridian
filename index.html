@@ -174,7 +174,7 @@ main{grid-column:2; grid-row:2; min-height:0; min-width:0; display:grid; grid-te
 #chooser{position:absolute; z-index:7; min-width:210px; max-width:280px; padding:8px; border-radius:8px; background:linear-gradient(180deg, rgba(17,25,28,.92), rgba(12,18,21,.95)), var(--tex) center / cover, rgba(14,20,23,.97); border:1px solid rgba(255,255,255,.16); box-shadow:0 10px 30px rgba(0,0,0,.55); display:flex; flex-direction:column; gap:4px}
 #chooser .ct{font:600 11px var(--mono,monospace); letter-spacing:.06em; text-transform:uppercase; opacity:.6; padding:0 4px 2px}
 #chooser button{display:flex; align-items:center; gap:8px; text-align:left; padding:7px 9px; border-radius:6px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:var(--ink,#e8e4d8); font:500 13px var(--body,sans-serif); cursor:pointer}
-#chooser button:hover{background:rgba(226,162,61,.16); border-color:var(--accent)} #chooser button i{font-style:normal; width:18px; text-align:center} #chooser button span.small{margin-left:auto; opacity:.7}
+#chooser button:hover{background:rgba(226,162,61,.16); border-color:var(--accent)} #chooser button i{font-style:normal; width:22px; text-align:center} #chooser button .ut, #chooser button .bi{margin:0} #chooser button span.small{margin-left:auto; opacity:.7}
 #mapwrap:has(#cmdbar:not([hidden])) #hint{bottom:88px}
 @media (max-width:820px){ #mapwrap:has(#cmdbar:not([hidden])) #hint{bottom:auto} #cmdbar{bottom:44px; gap:2px; padding:4px; max-width:calc(100% - 16px); overflow-x:auto} #cmdbar .cb{min-width:46px; font-size:9.5px} #cmdbar .cb kbd{display:none} }
 #miniframe{position:absolute; right:5px; bottom:5px; width:250px; height:136px; border-radius:6px; pointer-events:none; background:linear-gradient(180deg, rgba(40,52,58,.55), rgba(10,15,17,.7)), var(--tex) center / cover, #1a2226; border:1px solid rgba(255,255,255,.1); box-shadow:0 6px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08)}
@@ -270,8 +270,8 @@ html.reduced *{transition:none!important;animation:none!important}
 .blocs{display:grid;gap:6px;margin-bottom:8px}.bloc .bt{display:flex;flex-direction:column;gap:3px;min-width:0}.bloc .bmem{display:flex;flex-wrap:wrap;gap:4px 12px}.bloc{display:flex;flex-direction:row;align-items:center;gap:12px;padding:6px 10px;border-left:3px solid var(--line,#3a4448);background:rgba(255,255,255,.03);border-radius:4px}.bloc.mine{border-left-color:var(--accent)}.bloc > .emb{margin:2px}
 
 .docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:10px}.btn.doc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;white-space:normal;padding:8px 10px}.btn.doc span{font-size:12px;opacity:.85}.marks{display:grid;gap:4px;margin-bottom:10px}.mrow{display:grid;grid-template-columns:22px 150px 120px 1fr;align-items:center;gap:8px;padding:4px 6px;background:rgba(255,255,255,.03);border-radius:4px}.mrow svg{width:20px;height:20px}.mrow .btn{justify-self:start}@media (max-width:600px){.mrow{grid-template-columns:22px 1fr}.mrow .mk,.mrow .btn,.mrow>span.small{grid-column:2}}.mk i{font-style:normal;font-size:11px;padding:1px 5px;margin-right:2px;border:1px solid rgba(255,255,255,.18);border-radius:3px;opacity:.45}.mk i.on{opacity:1;background:rgba(226,162,61,.25);border-color:var(--accent)}.mkb{font-size:10.5px;padding:0 4px;border:1px solid var(--accent);border-radius:3px;color:var(--accent)}
-.acomp span{display:inline-flex;align-items:center;gap:2px;margin-right:6px;font-size:12px}.acomp svg{width:16px;height:16px}.aname{cursor:pointer}select[data-act=stance]{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:3px 6px;font:inherit;font-size:12.5px}.tag{font-size:11.5px;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.07)}.tag.battle{background:rgba(224,87,79,.25)}.tag.move{background:rgba(226,162,61,.2)}.tag.dug{background:rgba(176,150,96,.24)}
-.rep-side{padding:6px 10px;margin:6px 0;background:rgba(255,255,255,.04);border-radius:4px}.rep-lost{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:13px}.rep-lost span{display:inline-flex;align-items:center;gap:4px}.rep-lost svg{width:18px;height:18px}.rep-chart{width:100%;height:auto;background:rgba(0,0,0,.25);border-radius:4px;margin:6px 0}
+.acomp span{display:inline-flex;align-items:center;gap:2px;margin-right:6px;font-size:12px}.acomp svg{width:16px;height:16px}.acomp .ut{margin-right:3px}.aname{cursor:pointer}select[data-act=stance]{background:#1a2226;color:var(--ink,#e8e4d8);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:3px 6px;font:inherit;font-size:12.5px}.tag{font-size:11.5px;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.07)}.tag.battle{background:rgba(224,87,79,.25)}.tag.move{background:rgba(226,162,61,.2)}.tag.dug{background:rgba(176,150,96,.24)}
+.rep-side{padding:6px 10px;margin:6px 0;background:rgba(255,255,255,.04);border-radius:4px}.rep-lost{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:13px}.rep-lost span{display:inline-flex;align-items:center;gap:4px}.rep-lost svg{width:18px;height:18px}.rep-lost .ut svg{width:84%;height:56%}.rep-chart{width:100%;height:auto;background:rgba(0,0,0,.25);border-radius:4px;margin:6px 0}
 
 .vbar{display:flex; flex-direction:column; gap:3px; min-width:110px; font-family:var(--body); font-variant-numeric:tabular-nums; font-size:10.5px; color:var(--muted)}
 .vbar .tr{height:5px; border-radius:3px; background:#24323a; overflow:hidden}
@@ -293,9 +293,7 @@ header .vbar{display:none!important}
 .legend2 i{display:inline-block; width:10px; height:3px; margin-right:4px; vertical-align:middle}
 /* Unit rows */
 .urows{display:flex; flex-direction:column; gap:5px}
-.urow{display:grid; grid-template-columns:42px 1fr 64px auto; align-items:center; gap:8px; font-size:12.5px}
-.urow > .ut{width:42px; height:30px; border-radius:5px} .urow > .ut::after{width:30px; height:42px; margin:-21px 0 0 -15px} .urow > .ut.v::after{background-size:42px 42px} .urow > .ut.svgt svg{width:32px; height:19px; margin:-9.5px 0 0 -16px}   /* bigger, sharper pictures in the force card */
-.kv dd .ut, .kv dt .ut{width:36px; height:26px} .kv dd .ut::after, .kv dt .ut::after{width:26px; height:36px; margin:-18px 0 0 -13px}
+.urow{display:grid; grid-template-columns:36px 1fr 64px auto; align-items:center; gap:8px; font-size:12.5px}
 /* split panel and airframe condition */
 .sp-quick{display:flex; flex-wrap:wrap; gap:5px} .sp-quick .btn, .sp-tabs .btn{padding:4px 8px; font-size:12px}
 .sp-even{display:inline-flex; gap:0; align-items:stretch} .sp-even .btn{border-top-right-radius:0; border-bottom-right-radius:0} .sp-even select{border-top-left-radius:0; border-bottom-left-radius:0; padding:0 4px; font:inherit; font-size:12px; background:var(--panel-2); color:var(--fg); border:1px solid var(--line)}
@@ -314,18 +312,7 @@ header .vbar{display:none!important}
 .cond{display:flex; flex-direction:column; gap:3px} .cond .r{display:flex; justify-content:space-between; font-size:12.5px} .cond .bar{height:7px} .cond .wear{margin-top:3px}
 
 .urow svg{color:var(--fg)} .urow .un b{font-family:var(--body); font-variant-numeric:tabular-nums; font-weight:600}
-/* unit picture tile: the top-down art turned to face right on a dark tile (falls back to the drawn SVG while the image is missing) */
-.ut{display:inline-block; position:relative; flex:none; width:30px; height:22px; border-radius:3px; vertical-align:middle; overflow:hidden; font-style:normal;
-  background:radial-gradient(ellipse at 50% 45%, #22302f 0%, #121a1c 70%, #0b1012 100%); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.45)}
-.ut::after{content:""; position:absolute; left:50%; top:50%; width:22px; height:30px; margin:-15px 0 0 -11px; background:var(--ut) center / contain no-repeat; transform:rotate(90deg)}
-.ut.dn::after{transform:rotate(-90deg)}
-.ut.svgt::after{display:none} .ut.svgt svg{position:absolute; left:50%; top:50%; width:24px; height:14px; margin:-7px 0 0 -12px; color:#d9d3c2} .ut.sm.svgt svg{width:20px; height:12px; margin:-6px 0 0 -10px}
-.ut.v::after{background-size:30px 30px}
-.ut.sm{width:24px; height:18px} .ut.sm::after{width:18px; height:24px; margin:-12px 0 0 -9px} .ut.sm.v::after{background-size:24px 24px}
 #tip .tag{display:inline-flex; align-items:center; white-space:nowrap; margin:0 3px 3px 0; padding:2px 6px 2px 3px}
-.tag .ut{margin:-1px 4px -1px 0}
-.kv dt .ut{margin-right:5px; vertical-align:-6px}
-.modes .ut{margin:-4px 5px -4px -2px; width:24px; height:16px} .modes .ut::after{width:16px; height:24px; margin:-12px 0 0 -8px; background-size:24px 24px}
 .uhp{height:5px; border-radius:3px; background:#24323a; overflow:hidden} .uhp i{display:block; height:100%}
 .unum{font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .unit .nm{display:flex; align-items:center; gap:6px}
@@ -426,7 +413,7 @@ kbd{font-family:var(--mono); font-size:10px; color:var(--muted); border:1px soli
 .agc{display:grid; grid-template-columns:72px 1fr; gap:9px; padding:8px 9px; border:1px solid var(--line); border-radius:5px; background:rgba(255,255,255,.025)}
 .agc.lk{opacity:.72}
 .agc .pic{width:72px; height:72px; border-radius:5px; background:radial-gradient(ellipse at 50% 45%, #22302f 0%, #121a1c 70%, #0b1012 100%); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09); display:flex; align-items:center; justify-content:center}
-.agc .pic img{width:64px; height:64px; object-fit:contain}
+.agc .pic .ut{border-radius:5px}
 .agc .small{margin-top:3px; line-height:1.35}
 .uavb{display:inline-block; padding:1px 7px; margin:3px 4px 0 0; border-radius:3px; font-size:11.5px; font-weight:700; letter-spacing:.03em; background:rgba(143,209,143,.14); color:#a8dca8; border:1px solid rgba(143,209,143,.35)}
 .uavb.arm{background:rgba(226,162,61,.16); color:#f0c27a; border-color:rgba(226,162,61,.45)}
@@ -439,7 +426,7 @@ kbd{font-family:var(--mono); font-size:10px; color:var(--muted); border:1px soli
 .tnode.active{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
 .tnode.locked b{color:#c9cfcc} .tnode.locked .tdesc{color:#a3adaa} .tnode.locked .tier{color:#8f9a97}
 .tart{position:absolute; right:8px; top:8px; width:42px; height:42px; border-radius:9px; display:grid; place-items:center; background:radial-gradient(circle at 50% 42%, #3d4a43, #1b2320 75%); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09), 0 2px 6px rgba(0,0,0,.4); overflow:hidden; pointer-events:none}
-.tart img{width:36px; height:36px; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))} .tart svg{width:30px; height:auto; color:#d9d4c4} .tart .bi{margin:0; --bs:42px; border-radius:0; box-shadow:none}
+.tart > .ut{border-radius:9px; box-shadow:none} .tart svg{width:30px; height:auto; color:#d9d4c4} .tart .bi{margin:0; --bs:42px; border-radius:0; box-shadow:none}
 .tnode .tier, .tnode > b{padding-right:48px} .tnode.locked .tart{filter:grayscale(.8) brightness(.8)} .tnode.done .tart{box-shadow:inset 0 0 0 1px rgba(116,194,122,.55)}
 .tnode b{font-size:13.5px; line-height:1.2}
 .tier{font-family:var(--body); font-weight:600; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
@@ -870,6 +857,24 @@ html.reduced .sheet.ghost, html.reduced .mghost, html.reduced .vign{display:none
 .hsec li b, ul.qs li b{color:#ece6d6; font-weight:600}
 .hsec kbd, ul.qs + p kbd{font-family:var(--mono); font-size:10.5px; padding:0 4px; border-radius:3px; background:rgba(255,255,255,.07); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); color:#e3dccb}
 @media (max-width: 700px){ .hgrid{columns:1} .hnav{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none} .hnav .btn{flex:none} }
+/* ---- unit pictures in the UI (unitPic): the owner's top-down picture of the type on a dark square tile; --us is the tile's side (size classes xs..xxl).
+   The picture itself is a generated rule .utp-* on ::after: a background image sized to the tile (the 128 px icon, the 512 px picture past ~136 device px)
+   and turned like the map counters. svgt: the drawn silhouette, only while the picture loads or if it failed to load ---- */
+.ut{--us:28px; display:inline-block; position:relative; flex:none; width:var(--us); height:var(--us); border-radius:calc(var(--us)*.16); vertical-align:middle; overflow:hidden; font-style:normal;
+  background:radial-gradient(circle at 50% 44%, rgba(196,204,186,.2), rgba(196,204,186,0) 64%), linear-gradient(180deg, #2c353a, #10161a);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 1px 2px rgba(0,0,0,.5)}
+.ut::after{content:""; position:absolute; inset:-30%; background-repeat:no-repeat; filter:drop-shadow(0 calc(var(--us)*.025) calc(var(--us)*.035) rgba(0,0,0,.85))}
+.ut.xs{--us:18px; border-radius:3px} .ut.sm{--us:22px} .ut.md{--us:36px} .ut.lg{--us:44px} .ut.xl{--us:72px} .ut.xxl{--us:96px}
+.ut.svgt::after{display:none} .ut.svgt svg{position:absolute; left:8%; top:22%; width:84%; height:56%; color:#d9d3c2}
+.tag .ut{margin:-1px 4px -1px 0} #tip .tag{padding:2px 7px 2px 2px}
+.unit.hasp{grid-template-columns:44px minmax(0,1fr); column-gap:10px} .unit.hasp > .ut{grid-row:1 / span 3; grid-column:1; align-self:center}
+.unit.hasp > .nm, .unit.hasp > .cost, .unit.hasp > .st{grid-column:2}
+.uhd{display:flex; align-items:center; gap:12px; margin:0 0 6px} .uhd > .ut{border-radius:8px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 3px 10px rgba(0,0,0,.5)}
+.uhd .uht{min-width:0; flex:1} .uhd .uht h2{margin-bottom:0}
+.al{display:flex; align-items:center; gap:8px; min-width:0}
+.log .ev .ut, .toast .ut{margin-right:6px; vertical-align:-4px}
+.armylist button > span:first-child > .ut{margin-right:0}
+.qb .ut{margin:0}
 </style>
 
 <div id="app">
@@ -1057,6 +1062,8 @@ const ART = (() => {
   const FIRST = ['menu-background', 'panel-texture', 'flags', 'emblem-bear', 'emblem-eagle', 'emblem-lion', 'emblem-star'];   // needed by the first screen
   const REST = ['u-infantry', 'u-special-forces', 'u-tank', 'u-light-armor', 'u-artillery', 'u-rocket-artillery', 'u-anti-air', 'u-missile-launcher', 'u-supply-truck',
     'u-jet', 'u-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
+    'i-infantry', 'i-special-forces', 'i-tank', 'i-light-armor', 'i-artillery', 'i-rocket-artillery', 'i-anti-air', 'i-missile-launcher', 'i-supply-truck',
+    'i-jet', 'i-bomber', 'i-attack-heli', 'i-transport-heli', 'i-drone', 'i-corvette', 'i-destroyer', 'i-submarine', 'i-carrier',
     ...L5('city'), ...L5('military-base'), ...L5('naval-port'), ...L5('airfield'), ...L5('missile-silo'), 'fx-explosion', 'fx-smoke', 'fx-crater'];
   const LATE = ['earth-day', 'earth-night', 'earth-clouds'];   // big globe textures: fetched after everything else
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
@@ -1260,17 +1267,39 @@ const USVG = {
   asf: '<path d="M27 8l-12-1.6L10 1H8.6l1.6 5.5-5 .6L3 4H2v8h1l2.2-3.1 5 .6L8.6 15H10l5-5.4z"/><path d="M5 5.4l-1.4-2M5 10.6l-1.4 2" stroke="currentColor" stroke-width="1"/>',
 };
 const unitSVG0 = t => `<svg width="28" height="16" viewBox="0 0 28 16" fill="currentColor" aria-hidden="true">${USVG[t] || ''}</svg>`;
-// unit picture tile for the UI (cards, force rows, tooltips); the drawn SVG until the art has loaded, or if it failed. UTILE: picture, faces down, long and narrow.
-// Foot units keep their drawn silhouettes on the same dark tile (svg): at tile size the top-down soldier pictures are look-alike grey discs.
-const UTILE = {inf:['u-infantry', 0, 0, 1], para:['u-infantry', 0, 0, 1], spec:['u-special-forces', 0, 0, 1], at:['u-missile-launcher', 1, 1], tank:['u-tank', 0, 1], ifv:['u-light-armor', 1, 1],
-  art:['u-artillery', 1, 1], mlrs:['u-rocket-artillery', 1, 1], sam:['u-anti-air', 1, 1], jet:['u-bomber'], int:['u-jet'], heli:['u-attack-heli'], drone:['u-uav-recon'], drone4:['u-uav-armed'],
-  frig:['u-corvette', 0, 1], crui:['u-destroyer', 0, 1], sub:['u-submarine', 0, 1], carr:['u-carrier', 0, 1], truck:['u-supply-truck', 0, 1],
-  swarm:['u-swarm-drone'], sdrone:['u-strike-drone'], jam:['u-anti-drone', 0, 1], bomb:['u-heavy-bomber'], mpa:['u-naval-patrol'], awacs:['u-awacs'], asf:['u-air-superiority'], cargo:['u-cargo-ship', 0, 1]};
 // the UAV's picture follows its level: unarmed recon airframe for UAV I-III, the armed one from UAV IV (per owner)
 const artT = (t, n) => t === 'drone' && typeof S !== 'undefined' && S && S.nations && n >= 0 && S.nations[n] && uavLv(n) >= 4 ? 'drone4' : t;
-const unitTile = (t, sm) => { const u = UTILE[artT(t, PLAYER)]; if (u && u[3]) return ART.ready(u[0]) ? `<i class="ut svgt${sm ? ' sm' : ''}" aria-hidden="true">${unitSVG0(t)}</i>` : '';
-  return u && ART.ready(u[0]) ? `<i class="ut${u[1] ? ' dn' : ''}${u[2] ? ' v' : ''}${sm ? ' sm' : ''}" style="--ut:url(${ART.url(u[0])})" aria-hidden="true"></i>` : ''; };
-const unitSVG = (t, sm) => unitTile(t, sm) || unitSVG0(t);
+/* Unit pictures in the HTML UI (recruit cards, force rows, split rows, tooltips, research, reports, dispatches): unitPic(type, size) is the owner's top-down
+   picture of the type (UART) on a dark square tile, turned like the map counters (long vehicles and ships at a 3/4 heading, nose up and to the right;
+   aircraft and squads nose up). Size classes: xs 18, sm 22, (none) 28, md 36, lg 44, xl 72, xxl 96 css px. The picture is a CSS background sized to the
+   tile: the 128 px icon (i-*) while that is at least as sharp as the screen needs, else the 512 px picture (u-*); types whose picture has not arrived use
+   their stand-in picture the same way. The drawn silhouette (USVG) shows only while a picture is still loading, or if it failed to load. */
+const UIPX = {xs:18, sm:22, '':28, md:36, lg:44, xl:72, xxl:96};
+// the soldier pictures' icons (i-infantry, i-special-forces) are three soldiers cut out of the squad picture (a whole squad shrunk to icon size reads
+// as a grey rosette): tiles, UI icons and the close-zoom squads use them at every size where they are sharp enough (256 px)
+const SQI = {'u-infantry':1, 'u-special-forces':1};
+const UIPC = new Map(), UTR = new Set(); let utSheet = null;
+window.addEventListener('im-art', () => UIPC.clear());   // a promised picture arrived: tiles move from the stand-in to it
+function utRule(name, css){ if (UTR.has(name)) return true; try { if (!utSheet){ const el = document.createElement('style'); el.id = 'utcss'; (document.head || document.documentElement).appendChild(el); utSheet = el.sheet; }
+    utSheet.insertRule(`.${name}::after{${css}}`, utSheet.cssRules.length); UTR.add(name); return true; } catch (e) { return false; } }
+function unitPic(t, sz = ''){ const k = artT(t, PLAYER), u = UART[k], im = u && ART.img(u[0]);
+  if (!im) return `<i class="ut ${sz} svgt" aria-hidden="true">${unitSVG0(t)}</i>`;
+  const m = /\/u(-[a-z0-9-]+)\.webp/.exec(im.src || ''), dp = (typeof window !== 'undefined' && window.devicePixelRatio) || 1, ir = m && ART.ready('i' + m[1]), sq = ir && SQI['u' + m[1]];
+  const key = k + '|' + sz + '|' + dp + '|' + (m ? m[1] : 's') + (ir ? 'i' : ''); let c = UIPC.get(key);
+  if (!c){ const b = picBox(sq ? ART.img('i' + m[1]) : im), diag = b[0]/b[1] < 0.62, ang = (diag ? 45 : 0) + (u[1] ? 180 : 0), a = ang*Math.PI/180, ca = Math.abs(Math.cos(a)), sa = Math.abs(Math.sin(a));
+    const z = (diag ? 0.97 : 0.86)/Math.max(b[0]*ca + b[1]*sa, b[0]*sa + b[1]*ca);   // a turned hull touches the tile only at its two ends, so it may fill more
+    const ic = ir && (sq || (UIPX[sz] || 28)*dp*z <= 136), src = ic ? 'i' + m[1] : m ? 'u' + m[1] : u[0];
+    c = 'utp-' + k + '-' + (ic ? 'i' : m ? 'u' : 's');
+    const f = v => (+v.toFixed(4)) + '';
+    if (!utRule(c, `background-image:url("${ART.url(src)}"); background-size:calc(var(--us)*${f(z)}) auto; background-position:calc(50% + var(--us)*${f((0.5 - b[2])*z)}) calc(50% + var(--us)*${f((0.5 - b[3])*z)}); transform:rotate(${ang}deg)`)) c = '';
+    UIPC.set(key, c); }
+  return c ? `<i class="ut ${sz} ${c}" aria-hidden="true"></i>` : `<i class="ut ${sz} svgt" aria-hidden="true">${unitSVG0(t)}</i>`; }
+// the type that leads a force (most hit points on the field), for its picture in lists and headers
+const leadT = a => { let best = null, bv = -1; for (const t in a.u) if (a.u[t] > 0 && UNITS[t]){ const v = a.u[t]*UNITS[t].hp; if (v > bv){ bv = v; best = t; } } return best; };
+// the unit type a dispatch or toast names (earliest, longest name), shown as its picture beside the text
+const UNAMES = Object.keys(UNITS).map(t => [t, UNITS[t].name.toLowerCase()]).sort((x, y) => y[1].length - x[1].length);
+function textUnit(text, sz = 'xs'){ if (!text) return ''; const lo = String(text).toLowerCase(); let best = null, at = 1e9;
+  for (const [t, n] of UNAMES){ const k = lo.indexOf(n); if (k >= 0 && k < at){ at = k; best = t; } } return best ? unitPic(best, sz) : ''; }
 const icon = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 16 16" aria-hidden="true">${ICONS[k]}</svg>`;
 const UT = Object.keys(UNITS);
 const AIR_SPEED = 2.5;                // hexes per hour for aircraft on missions
@@ -2593,7 +2622,7 @@ function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if
 let booted = false;
 function toast(text, kind, p){
   const box = document.getElementById('toasts'); if (!box) return;
-  const el = document.createElement('button'); el.className = 'toast ' + kind; el.textContent = text; const fl = textFlag(text, 13); if (fl) el.insertAdjacentHTML('afterbegin', fl);
+  const el = document.createElement('button'); el.className = 'toast ' + kind; el.textContent = text; const fl = textFlag(text, 13) + textUnit(text); if (fl) el.insertAdjacentHTML('afterbegin', fl);
   if (p != null){ el.dataset.act = 'goto'; el.dataset.id = p; }
   box.prepend(el); [...box.children].filter(c => !c.classList.contains('out')).slice(2).forEach(toastOut);
   setTimeout(() => toastOut(el), 4500);
@@ -4403,7 +4432,7 @@ function reportHTML(R){
   const line = o => { const h = R.s[o].hp; return `<polyline fill="none" stroke="${colorOf(o)}" stroke-width="2.2" stroke-linejoin="round" points="${h.map((v, i) => `${(i/(len - 1)*296 + 2).toFixed(1)},${(78 - v/mx*72).toFixed(1)}`).join(' ')}"/>`; };
   const side = o => { const b = R.s[o], lost = UT.filter(t => b.lost[t]);
     return `<div class="rep-side" style="border-left:4px solid ${colorOf(o)}"><b>${o >= 0 ? flagHTML(o, 13) + ' ' : ''}${o === PLAYER ? 'Your forces' : nationName(o)}</b> <span class="muted">· up to ${pluN(b.peak, 'unit')}${b.dirs > 1 ? ` · attacked from up to ${b.dirs} directions (+${Math.round((flankF(b.dirs) - 1)*100)}%)` : ''}${b.peak > b.F ? ` · ${b.F} on the front line, the rest in reserve` : ''}</span>
-      <div class="rep-lost">${lost.length ? lost.map(t => `<span>${unitSVG(t)} ${UNITS[t].name} ×${b.lost[t]}</span>`).join('') : '<span class="muted">No units lost</span>'}</div></div>`; };
+      <div class="rep-lost">${lost.length ? lost.map(t => `<span>${unitPic(t)} ${UNITS[t].name} ×${b.lost[t]}</span>`).join('') : '<span class="muted">No units lost</span>'}</div></div>`; };
   return `<div class="eyebrow">Battle report · Day ${dayOf(R.h0)}, ${R.h1 - R.h0} hours</div><h2>Battle of ${nm}</h2>
     <p class="muted">${R.terrain} · frontage ${pluN(R.front, 'unit')}. ${R.res === 'win' ? 'Your forces hold the field.' : R.res === 'loss' ? 'Your forces were destroyed or driven off.' : 'Neither side holds the field.'}</p>
     <svg viewBox="0 0 300 82" class="rep-chart" role="img" aria-label="Strength of each side over the battle"><line x1="2" y1="78" x2="298" y2="78" stroke="rgba(255,255,255,.18)"/>${os.map(line).join('')}</svg>
@@ -5148,7 +5177,7 @@ function formBox(c){ const f = FORMBB.get(formKey(c)); if (f) return f; const k 
 /* ---------------- Unit art: top-down pictures (assets/art/u-*.webp) ----------------
    UART[type] = [image, faces down, size as a share of a formation figure's height]. The pictures are drawn nose up, except the self-propelled gun,
    the launchers and the IFV, whose gun or cab is at the bottom of the picture: those turn half a circle more. 'drop' = an airborne drop in flight. */
-const UART = {inf:['u-infantry', 0, 0.56], para:['u-infantry', 0, 0.56], spec:['u-special-forces', 0, 0.58], at:['u-missile-launcher', 1, 0.6],
+const UART = {inf:['u-infantry', 0, 0.62], para:['u-infantry', 0, 0.62], spec:['u-special-forces', 0, 0.64], at:['u-missile-launcher', 1, 0.6],
   tank:['u-tank', 0, 0.62], ifv:['u-light-armor', 1, 0.6], art:['u-artillery', 1, 0.62], mlrs:['u-rocket-artillery', 1, 0.62], sam:['u-anti-air', 1, 0.6],
   jet:['u-bomber', 0, 0.8], int:['u-jet', 0, 0.72], heli:['u-attack-heli', 0, 0.72], drone:['u-drone', 0, 0.55],
   frig:['u-corvette', 0, 0.62], crui:['u-destroyer', 0, 0.7], sub:['u-submarine', 0, 0.6], carr:['u-carrier', 0, 0.8], drop:['u-transport-heli', 0, 0.72], truck:['u-supply-truck', 0, 0.5]};
@@ -5158,12 +5187,18 @@ Object.assign(UART, {drone:['u-uav-recon', 0, 0.58], drone4:['u-uav-armed', 0, 0
 // enemy stealth UAV (level III+) seen in flight: near your SAMs or jammers, or under your AWACS
 function uavSpotted(v){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 < 0) return false; if (aewCover(PLAYER).has(p0)) return true;
   for (const b of S.armies) if (b.owner === PLAYER && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
-// on the map: infantry, paratroopers and special forces are drawn as the baked 3D soldiers when those exist (the top-down infantry picture
-// reads as a speckled disc at map sizes); the picture is their fallback
+// on the map every type is drawn from its picture. Infantry, paratroopers and special forces: the squad picture (soldiers seen from above),
+// two squads per figure, abreast when holding and one behind the other on the march. The baked 3D models (U3D) and the drawn figures (unitFigure) are only a last resort, for a type whose
+// picture failed to load (figFB)
 const FOOT = {inf:1, para:1, spec:1};
-const mArt = t => FOOT[t] && window.U3D && U3D.has(t) ? null : uArt(t);
-const FIG_NIGHT = {tint:'#0a1622', tintA:0.4}, FIG_WRECK = {tint:'#16130f', tintA:0.72}, FIGSH = new Map();
+const mArt = uArt;
+const figFB = t => !UART[t] || ART.failed(UART[t][0]);
+const SQUAD = [[[-0.06, -0.54], [0.08, 0.54]], [[-0.56, 0.07], [0.56, -0.07]]];   // squads of a foot figure, holding / marching: (forward, lateral) offsets in squad sizes
+const FOOTFP = [[1.55, 1.0], [0.95, 1.55]];   // the footprint of such a figure (across, along the heading) in figure sizes, holding / marching
+const FIG_NIGHT = {tint:'#0a1622', tintA:0.4}, FIG_WRECK = {tint:'#16130f', tintA:0.72}, FIG_FOOT = {boost:'contrast(1.06)'}, FIGSH = new Map();
 window.addEventListener('im-art', () => { FIGSH.clear(); if (typeof FIGC !== 'undefined') FIGC.clear(); });   // a promised picture arrived: drop the stand-in figures
+// a picture's footprint as a share of its figure size: [across, along the heading] (the opaque part of the picture, measured for stand-ins)
+const figFoot = t => { const im = UART[t] && ART.img(UART[t][0]); return im && typeof picBox === 'function' ? picBox(im) : [0.6, 0.94]; };
 const figBucket = px => Math.round(2**(Math.ceil(Math.log2(Math.max(8, px))*4)/4));   // cached sizes in steps of 2^(1/4): drawImage never scales by more than 19%
 // soft silhouette of a picture for its drop shadow (blurred once, cached)
 function figShadow(name, px){ const key = name + '|' + px; let c = FIGSH.get(key); if (c) return c; const sp = ART.sprite(name, px); if (!sp) return null;
@@ -5196,14 +5231,14 @@ function kelvinSprite(){ if (SPR.kelvin) return SPR.kelvin; const W = 160, H = 3
 const FIGC = new Map();
 function figComp(t, u, px, vk, color){
   const key = u[0] + '|' + px + '|' + vk + '|' + (color || ''); let c = FIGC.get(key); if (c) return c;
-  const im = ART.sprite(u[0], px, vk === 'w' ? FIG_WRECK : vk === 'n' ? FIG_NIGHT : undefined); if (!im) return null;
+  const im = ART.sprite(u[0], px, vk === 'w' ? FIG_WRECK : vk === 'n' ? FIG_NIGHT : FOOT[t] ? FIG_FOOT : undefined); if (!im) return null;
   if (FIGC.size > 400) FIGC.clear();
   const S2 = Math.ceil(px*1.14), m = S2/2, sh = figShadow(u[0], px); c = document.createElement('canvas'); c.width = c.height = S2; const g = c.getContext('2d');
   if (sh){ g.globalAlpha = 0.5; g.drawImage(sh, m - sh.width/2 + px*0.02, m - sh.height/2 + px*0.035); g.globalAlpha = 1; }
   let pic = im;
   if (color && color[0] === '#' && vk !== 'w'){ pic = document.createElement('canvas'); pic.width = im.width; pic.height = im.height; const t2 = pic.getContext('2d');   // light wash of the holder's colour
     // soft-light keeps the paint's darks and contrast (a plain wash lifted them and the vehicles read as ghosts), then clip back to the picture
-    t2.drawImage(im, 0, 0); t2.globalCompositeOperation = 'soft-light'; t2.globalAlpha = vk === 'n' ? 0.18 : 0.32; t2.fillStyle = color; t2.fillRect(0, 0, pic.width, pic.height);
+    t2.drawImage(im, 0, 0); t2.globalCompositeOperation = 'soft-light'; t2.globalAlpha = vk === 'n' ? 0.12 : 0.2; t2.fillStyle = color; t2.fillRect(0, 0, pic.width, pic.height);
     t2.globalAlpha = 1; t2.globalCompositeOperation = 'destination-in'; t2.drawImage(im, 0, 0); }
   g.drawImage(pic, m - im.width/2, m - im.height/2);
   c.k = S2/px; FIGC.set(key, c); return c;
@@ -5211,7 +5246,12 @@ function figComp(t, u, px, vk, color){
 // one top-down figure centred on (x, y), D px across, heading ang (screen radians, 0 = east). o: color + base (thin disc in the nation colour under
 // ground units), alt (0 parked .. 1 cruising: the ground shadow drifts away), wake (0..1, ships), night, wreck, kick (recoil px). false = no picture.
 function drawFig(t, x, y, D, ang, o = {}){
-  const u = uArt(t); if (!u || !(D > 2)) return false;
+  let u = uArt(t); if (!u || !(D > 2)) return false;
+  if (FOOT[t] && !o.sq){ const Ds = D*0.72, ca = Math.cos(ang), sa = Math.sin(ang), now = o.now || 0, sd = o.seed || 0; let ok = false;
+    SQUAD[o.walk ? 1 : 0].forEach(([f, l], i) => { const st = o.walk ? Math.sin(now/110 + sd + i*2.1)*Ds*0.05 : 0, fx = (f + (o.walk ? 0 : 0.02*Math.sin(now/1700 + sd + i)))*Ds + st, lx = l*Ds;   // marching squads step, resting ones barely shift
+      ok = drawFig(t, x + ca*fx - sa*lx, y + sa*fx + ca*lx, Ds*(i ? 0.97 : 1), ang + (i ? 0.18 : -0.1), {...o, sq:1, kick:0}) || ok; });
+    return ok; }
+  if (o.sq && SQI[u[0]] && D*dpr < 150 && ART.ready('i' + u[0].slice(1))) u = ['i' + u[0].slice(1), u[1], u[2]];   // a squad smaller than ~150 device px: its three-soldier cut (nine soldiers that small read as speckles)
   const px = Math.min(figBucket(D*dpr), 362), vk = o.wreck ? 'w' : o.night ? 'n' : '', rot = ang + Math.PI/2 + (u[1] ? Math.PI : 0), alt = o.alt || 0, ga = ctx.globalAlpha;
   if (o.wake){ ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
     if (o.wake > 0.5){ const rmq = afxReduced(), sh = rmq ? 0.92 : 0.85 + 0.15*Math.sin((o.now || 0)/340 + x*0.01);   // under way: a long Kelvin V spreading behind the stern, the narrow churn inside it and foam at the bow
@@ -5331,19 +5371,35 @@ function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
   for (const a of list) for (const t of UT) if (a.u[t] && UNITS[t].cls !== 'air'){ const k = embark && UNITS[t].cls !== 'naval' ? 'cargo' : t; tot[k] = (tot[k] || 0) + (k === 'cargo' ? a.u[t]/3 : a.u[t]); }
   if (tot.cargo) tot.cargo = Math.ceil(tot.cargo);
   const types = Object.keys(tot); if (!types.length) return null;
-  if (!types.every(t => mArt(t) || (window.U3D && U3D.has(t)))) return null;   // per figure: the top-down picture, else the baked 3D sprite
-  const units = types.reduce((s0, t) => s0 + tot[t], 0), figs = Math.max(1, Math.min(4, Math.ceil(units/3)));
-  // largest-remainder split of figures between unit types
-  const want = types.map(t => ({t, q:tot[t]/units*figs})); want.forEach(w => { w.n = Math.floor(w.q); w.r = w.q - w.n; });
-  let left = figs - want.reduce((s0, w) => s0 + w.n, 0); want.sort((a, b) => b.r - a.r).forEach(w => { if (left > 0){ w.n++; left--; } });
+  if (!types.every(t => mArt(t) || (figFB(t) && window.U3D && U3D.has(t)))) return null;   // per figure: the top-down picture (the baked 3D sprite only if the picture failed to load)
+  const units = types.reduce((s0, t) => s0 + tot[t], 0), figs = Math.max(1, Math.min(4, Math.ceil(units/3)), Math.min(4, types.length));
+  // every type in the stack gets a figure (heaviest first, so the type on the stack's counter is always on the map: a mixed fleet shows its carrier),
+  // up to four; figures left over go by largest remainder
+  const wt = t => tot[t]*((UNITS[t] && UNITS[t].hp) || 1), want = types.map(t => ({t, q:tot[t]/units*figs, n:0}));
+  want.slice().sort((a, b) => wt(b.t) - wt(a.t)).slice(0, figs).forEach(w => { w.n = 1; });
+  for (let left = figs - want.reduce((s0, w) => s0 + w.n, 0); left > 0; left--){ let best = want[0]; for (const w of want) if (w.q - w.n > best.q - best.n) best = w; best.n++; }
   const seq = []; want.sort((a, b) => (FIG_ORDER[a.t] ?? 3) - (FIG_ORDER[b.t] ?? 3)).forEach(w => { for (let i = 0; i < w.n; i++) seq.push(w.t); });
+  // close zoom draws in two passes (counter.pass): 1 = the soldier squads of every stack, 2 = vehicles, ships, parked aircraft and badges over them,
+  // so squads never lie on top of a hull or a plane
+  const P1 = counter.pass === 1, sqA = t => FOOT[t] && mArt(t), hasFoot = seq.some(sqA); if (P1 && !hasFoot) return null;
   const naval = seq[0] === 'cargo' || UNITS[seq[0]].cls === 'naval', base = naval ? 50 : 46, P0 = G.P[list[0].at], provR = Math.sqrt(P0.cells.length)*HS*1.2*view.s;
   const perR0 = moving ? 2 : naval ? 3 : 2, spMax = Math.max(14, provR*(counter.share || 1)*1.6/perR0);
-  const sp = Math.min(base*s*0.62*(naval ? 0.95 : 0.62), spMax), fh = Math.min(base*s*0.62, sp/(naval ? 0.95 : 0.62)*1.05);
-  const Q = 0.62, fx0 = Math.cos(ang), fy0 = Math.sin(ang)*Q, px0 = -Math.sin(ang), py0 = Math.cos(ang)*Q;
+  let sp = Math.min(base*s*0.62*(naval ? 0.95 : 0.62), spMax), fh = Math.min(base*s*0.62, sp/(naval ? 0.95 : 0.62)*1.05);
   const perRank = moving ? 2 : naval ? 3 : 2, slots = [];
+  let Q = 0.62, latS = sp*(moving ? 0.8 : 0.9), rankS = sp*(moving ? 1.05 : 0.62);
+  let pos = null;
+  if (seq.every(t => mArt(t))){   // top-down pictures: each rank laid out by its own figures' footprints (width across, length along the heading), unsquashed;
+    // the whole formation shrinks only when the province cannot hold it
+    const fp = t => { const k0 = UART[t][2], b = FOOT[t] ? FOOTFP[moving ? 1 : 0] : figFoot(t); return [Math.max(b[0], b[1]*0.5)*k0, b[1]*k0]; };   // [across (at least half its length, so hulls abreast keep apart), along] in fh
+    const R = []; for (let i = 0; i < seq.length; i += perRank) R.push(seq.slice(i, i + perRank).map(fp));
+    const gW = 0.1, gL = moving ? 0.12 : 0.05, rw = R.map(r => r.reduce((s0, f) => s0 + f[0], 0) + gW*(r.length - 1)), rl = R.map(r => Math.max(...r.map(f => f[1])));
+    const ext = Math.max(Math.max(...rw), rl.reduce((s0, v) => s0 + v, 0) + gL*(R.length - 1)), room = Math.max(28, provR*(counter.share || 1)*1.6);
+    Q = 1; fh = base*s*0.62*Math.min(1, room/(ext*base*s*0.62)); pos = []; let f0 = 0;
+    R.forEach((r, ri) => { let l0 = -rw[ri]/2; const fc = f0 + rl[ri]/2 - rl[0]/2; r.forEach(f => { pos.push([-fc*fh, (l0 + f[0]/2)*fh]); l0 += f[0] + gW; }); f0 += rl[ri] + gL; });
+    rankS = (rl[0] + gL)*fh; sp = Math.max(rw[0]/R[0].length, rl[0]*0.6)*fh; }
+  const fx0 = Math.cos(ang), fy0 = Math.sin(ang)*Q, px0 = -Math.sin(ang), py0 = Math.cos(ang)*Q;
   seq.forEach((t, i) => { const r = Math.floor(i/perRank), m = Math.min(perRank, seq.length - r*perRank), j = i % perRank;
-    const lat = (j - (m - 1)/2)*sp*(moving ? 0.8 : 0.9), fwd = -r*sp*(moving ? 1.05 : 0.62) + (fighting ? sp*0.25 : 0);
+    const lat = pos ? pos[i][1] : (j - (m - 1)/2)*latS, fwd = (pos ? pos[i][0] : -r*rankS) + (fighting ? rankS*0.25 : 0);
     const jit = moving ? 0 : Math.sin(now/1300 + i*1.7)*0.6*s;
     slots.push({t, i, x:x + fx0*fwd + px0*lat + jit, y:y + fy0*fwd + py0*lat}); });
   // ships keep to the water: a hull whose slot falls on land slides back toward the stack's anchor, else takes the mirrored side
@@ -5357,27 +5413,28 @@ function formation(x, y, list, n, color, s, ang, moving, fighting, now, night){
       done.push(q); } }
   // casualties: a lost figure lingers as a fading dark wreck
   const key = list[0].id, prev = FIGPREV.get(key);
-  if (prev && prev.n > slots.length){ for (let i = slots.length; i < prev.n; i++){ const ps = prev.slots[i]; if (!ps) continue; const [wx, wy] = screenToWorld(ps.x, ps.y); FALL.push({t:ps.t, color, wx, wy, h:fh, ang, t0:now, d:mArt(ps.t) ? fh*UART[ps.t][2] : 0}); if (FALL.length > 40) FALL.shift(); emit('smoke', wx, wy, {vy:-6, s0:5, s1:20, life:1800}); } }
-  FIGPREV.set(key, {n:slots.length, slots:slots.map(q => ({t:q.t, x:q.x, y:q.y}))});
+  if (!P1 && prev && prev.n > slots.length){ for (let i = slots.length; i < prev.n; i++){ const ps = prev.slots[i]; if (!ps) continue; const [wx, wy] = screenToWorld(ps.x, ps.y); FALL.push({t:ps.t, color, wx, wy, h:fh, ang, t0:now, d:mArt(ps.t) ? fh*UART[ps.t][2] : 0}); if (FALL.length > 40) FALL.shift(); emit('smoke', wx, wy, {vy:-6, s0:5, s1:20, life:1800}); } }
+  if (!P1) FIGPREV.set(key, {n:slots.length, slots:slots.map(q => ({t:q.t, x:q.x, y:q.y}))});
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   // dug in: a berm of sandbags around the formation, under the figures
-  if (counter.dug && !naval && !embark && view.s*HS0 >= ZOLD*1.5){ let a0 = Infinity, b0 = Infinity, a1 = -Infinity, b1 = -Infinity;
+  if (counter.dug && !naval && !embark && view.s*HS0 >= ZOLD*1.5 && P1 === hasFoot){   // (in the pass that draws first) let a0 = Infinity, b0 = Infinity, a1 = -Infinity, b1 = -Infinity;
     for (const q of slots){ const r = mArt(q.t) ? fh*UART[q.t][2]*0.5 : fh*0.3; a0 = Math.min(a0, q.x - r); a1 = Math.max(a1, q.x + r); b0 = Math.min(b0, q.y - r*0.7); b1 = Math.max(b1, q.y + r*0.7); }
     const rx = (a1 - a0)/2 + fh*0.3, ry = Math.max((b1 - b0)/2 + fh*0.22, rx*0.5); sandbagRing((a0 + a1)/2, (b0 + b1)/2 + fh*0.03, rx, ry, now, 0.96); }
   const calm = afxReduced(), tn = moving ? dustTone(list[0].at) : null, dk = Math.max(0.6, Math.min(2, view.s*HS0/12))*zx();   // particle scale (as drawParticles)
   if (lastDust.size > 3000) lastDust.clear();
   for (const q of slots.slice().sort((a, b) => a.y - b.y)){
     const seed = key*7 + q.i*5, inf = q.t === 'inf' || q.t === 'at' || q.t === 'spec' || q.t === 'para';
+    if (P1 !== !!sqA(q.t)){ if (!P1){ const hw = fh*UART[q.t][2]*0.78; x0 = Math.min(x0, q.x - hw); x1 = Math.max(x1, q.x + hw); y0 = Math.min(y0, q.y - hw); y1 = Math.max(y1, q.y + hw*0.9); } continue; }   // drawn in the other pass (its box still counts)
     if (mArt(q.t)){ const sea = q.t === 'cargo' || UNITS[q.t].cls === 'naval', foot = q.t === 'inf' || q.t === 'spec' || q.t === 'para';
       const D = fh*UART[q.t][2]*(!moving && !fighting && !calm ? 1 + 0.013*Math.sin(now/1150 + seed) : 1);   // standing still: a slow, barely visible breathing
       const walk = moving && foot ? Math.sin(now/110 + seed)*D*0.03 : 0, sway = sea ? Math.sin(now/1100 + seed)*(moving ? 0.02 : 0.03) : 0, kick = fighting && !foot && !sea ? recoilOf(seed, now, D/40) : 0;
       const bob = moving && !calm ? (sea ? Math.sin(now/620 + seed)*D*0.012 : foot ? 0 : Math.sin(now/170 + seed)*D*0.011 + Math.sin(now/53 + seed*3)*D*0.004) : 0;   // under way: hull pitch, engine and track judder
-      drawFig(q.t, q.x + fx0*walk, q.y + Math.sin(ang)*walk + bob, D, ang + sway, {color, base:!sea, wake:sea ? (moving ? 0.9 : 0.12) : 0, night, kick, now});
+      drawFig(q.t, q.x + fx0*walk, q.y + Math.sin(ang)*walk + bob, D, ang + sway, {color, base:!sea, wake:sea ? (moving ? 0.9 : 0.12) : 0, night, kick, now, walk:moving && foot, seed});
       if (moving && !sea && !calm){ const dkey = key*16 + q.i, lt = lastDust.get(dkey) || 0, gap = foot ? 300 : 120;
         if (now - lt > gap){ lastDust.set(dkey, now); const rx0 = q.x - Math.cos(ang)*D*0.42 + (Math.random() - 0.5)*D*0.2, ry0 = q.y - Math.sin(ang)*D*0.42 + D*0.06, [wx, wy] = screenToWorld(rx0, ry0), f = foot ? 0.55 : 1;
           emit('dust', wx, wy, {vx:(-Math.cos(ang)*D*0.3 + (Math.random() - 0.5)*D*0.12)/dk, vy:(-Math.sin(ang)*D*0.2 - D*0.06)/dk, s0:D*0.1*f/dk, s1:D*0.46*f/dk, life:(foot ? 900 : 1500) + Math.random()*400, tn}); } }
       if (fighting) figFlash(q.x, q.y, foot ? D*0.6 : D, ang, shotPhase(seed, now));
-      x0 = Math.min(x0, q.x - D*0.5); x1 = Math.max(x1, q.x + D*0.5); y0 = Math.min(y0, q.y - D*0.5); y1 = Math.max(y1, q.y + D*0.45); continue; }
+      const hw = foot ? D*0.78 : D*0.5; x0 = Math.min(x0, q.x - hw); x1 = Math.max(x1, q.x + hw); y0 = Math.min(y0, q.y - hw); y1 = Math.max(y1, q.y + hw*0.9); continue; }
     const fr = q.t === 'mlrs' ? (fighting ? (shotPhase(seed, now) < 120 ? 2 : 1) : 0) : inf ? (moving ? Math.floor(now/85 + seed) % 8 : fighting ? (shotPhase(seed, now) < 90 ? 1 : 0) : 0) : fighting ? ((ph => q.t === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : q.t === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
     const h3 = Math.min(fh, Math.max(fh/zx(), U3D.SZ*1.7/dpr))*(!moving && !fighting && !calm ? 1 + 0.012*Math.sin(now/1150 + seed) : 1);   // the baked sprites stop growing before they blur
     ctx.globalAlpha = 0.7; ctx.drawImage(softSprite('cshad', 'rgba(0,0,0,.3)', 'rgba(0,0,0,.14)', 'rgba(0,0,0,0)'), q.x - h3*0.3, q.y + 1 - h3*0.085, h3*0.6, h3*0.17); ctx.globalAlpha = 1;
@@ -5671,112 +5728,80 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
   for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || getComputedStyle(e).display === 'none') continue;
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   return (HUDR = {t:now, r:out}).r; }
-function plateDims(n, s, minor){ const ps = Math.round(Math.max(0.85, Math.min(1.15, Math.max(0.75, s)))*plateGrow()*20)/20, fz = Math.round((minor ? 9.5 : 11)*ps), key = fz + ':' + n;
+function plateDims(n, s, minor){ const ps = Math.round(Math.max(0.85, Math.min(1.15, Math.max(0.75, s)))*plateGrow()*20)/20, fz = Math.round((minor ? 9.5 : 12)*ps), key = fz + ':' + n;
   let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = `700 ${fz}px ${BODY}`; tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
-  return minor ? {ps, fz, tw, w:Math.max(26*ps, 5*ps + PIC_MW*ps + tw + 4*ps), h:14*ps, bars:0} : {ps, fz, tw, w:Math.max(38*ps, 5*ps + PIC_W*ps + tw + 4*ps), h:18*ps, bars:1.5*ps + 6.4*ps}; }
-const PIC_W = 24, PIC_MW = 15;   // picture box width in plate units (full plate / quiet mini plate)
-// faint lit well behind a plate picture: an oval filling the box, baked into the picture canvas
-function picWell(g, bw, bh){ g.save(); g.translate(bw/2, bh/2); g.scale(bw/2, bh/2); const rg = g.createRadialGradient(0, 0, 0, 0, 0, 1); rg.addColorStop(0, 'rgba(170,180,165,.2)'); rg.addColorStop(1, 'rgba(170,180,165,0)'); g.fillStyle = rg; g.fillRect(-1, -1, 2, 2); g.restore(); }
-/* plate silhouettes: crisp side views of each unit type, facing right, drawn from vector paths so they read at 20x12 px
-   (the top-down art turns into speckle at that size). SIL[type] = [viewBox x, y, w, h, body path, detail path (darker), light path (glass/highlights)] */
-const SOLDIER = (x, k = 1) => { const f = v => (v*k).toFixed(2), X = v => (x + v*k).toFixed(2);   // a rifleman advancing, rifle at the ready
-  return `M${X(12.4)} ${f(6.4)}a${f(4.1)} ${f(3.7)} 0 0 1 ${f(8.2)} 0l${f(.6)} ${f(1.1)}h${f(-9.4)}z` +   // helmet
-    `M${X(14.6)} ${f(7)}h${f(4.4)}v${f(3)}h${f(-4.4)}z` +   // face
-    `M${X(12.6)} ${f(9.6)}h${f(7)}l${f(.6)} ${f(9)}h${f(-7)}z` +   // torso
-    `M${X(10.2)} ${f(10.2)}h${f(2.8)}v${f(6.6)}h${f(-2.8)}z` +   // pack
-    `M${X(14.6)} ${f(11.4)}l${f(16.4)} ${f(-1.3)}v${f(1.7)}l${f(-16.4)} ${f(1.6)}z` +   // rifle
-    `M${X(22.6)} ${f(11.8)}h${f(1.8)}v${f(3)}h${f(-1.8)}z` +   // magazine
-    `M${X(17.6)} ${f(10)}l${f(7.4)} ${f(1)}v${f(1.8)}h${f(-7.4)}z` +   // forearm
-    `M${X(13.6)} ${f(18)}h${f(3.8)}l${f(-4)} ${f(12)}h${f(-3.2)}z` + `M${X(16.4)} ${f(18)}h${f(3.6)}l${f(3.8)} ${f(12)}h${f(-3.2)}z` +   // legs
-    `M${X(9.2)} ${f(29.2)}h${f(4.8)}v${f(1.8)}h${f(-4.8)}z` + `M${X(19.8)} ${f(29.2)}h${f(5.2)}v${f(1.8)}h${f(-5.2)}z`; };   // boots
-const KNEEL = (x, tube) => `M${x + 13.4} 12.4a4.1 3.7 0 0 1 8.2 0l.6 1.1h-9.4z M${x + 15.6} 13h4.4v3h-4.4z M${x + 13.2} 15.6h7l.8 7.4h-7.4z M${x + 10.8} 16h2.8v6h-2.8z` +
-  `M${x + 14} 23h7.4l3.4 4.6v3.4h-3l-2.2-3.6h-4.6l-1.6 3.6h-3.4z` + (tube ? `M${x + 6} 12.2h26v3.4h-26z M${x + 4} 11.4h3v5h-3z` : `M${x + 15.6} 17.4l17-1.4v1.6l-17 1.6z M${x + 18} 16.2l6.6 1v1.8h-6.6z`);
-const SIL = {
-  inf:[8, 3.6, 44, 28.4, SOLDIER(-2) + SOLDIER(18), ''],
-  spec:[6, 3.6, 46, 28.4, SOLDIER(-4) + KNEEL(16, false), `M${-4 + 14.6} 7h4.4v1.4h-4.4z`],
-  at:[4, 10, 34, 21, KNEEL(0, true), 'M4.2 12.2h2.6v2.6h-2.6z'],
-  para:[2, 0, 40, 31, 'M2 13Q4 1 22 1Q40 1 42 13Q38 11 34 13Q30 11 26 13Q22 11 18 13Q14 11 10 13Q6 11 2 13z' + 'M3 13.4l15.6 7.6-.5 1-15.8-7.6z M41 13.4l-15.6 7.6.5 1 15.8-7.6z M17.4 13.2h1l1.4 8h-1z M25.6 13.2h1l-1.4 8h-1z' +
-    'M19.4 15.6a2.7 2.4 0 0 1 5.4 0l.4.7h-6.2z M18.8 17.6h6.6l.2 6h-7z M19.4 23.6h2.4l-1 7.2h-2.2z M22.4 23.6h2.4l.8 7.2h-2.2z', ''],
-  tank:[2, 7, 61, 22, 'M9.6 29a4.6 4.6 0 0 1-4.6-4.6L3 20.6l5.4-5.4h40.8l5.6 5.4-1.8 3.8a4.6 4.6 0 0 1-4.6 4.6z M17 15.2l3.2-6.6h17.4l4.8 3.4v3.2z M41 10.4h22v2.4h-22z',
-    'M10 25.2a2.4 2.4 0 1 0 0 .01z M17 25.2a2.4 2.4 0 1 0 0 .01z M24 25.2a2.4 2.4 0 1 0 0 .01z M31 25.2a2.4 2.4 0 1 0 0 .01z M38 25.2a2.4 2.4 0 1 0 0 .01z M45 25.2a2.4 2.4 0 1 0 0 .01z M6 20.8h46v1.2h-46z', 'M21 9.6h12v1.4h-12z'],
-  ifv:[2, 6, 56, 23, 'M8.6 29a4.6 4.6 0 0 1-4.6-4.6L2.6 18l8-6.4h38.8l6.6 6.4v6.4a4.6 4.6 0 0 1-4.6 4.6z M24 11.6l2.4-4.4h10.4l2.4 4.4z M36.4 8.4h18v1.6h-18z',
-    'M10 25.2a2.3 2.3 0 1 0 0 .01z M17.6 25.2a2.3 2.3 0 1 0 0 .01z M25.2 25.2a2.3 2.3 0 1 0 0 .01z M32.8 25.2a2.3 2.3 0 1 0 0 .01z M40.4 25.2a2.3 2.3 0 1 0 0 .01z M48 25.2a2.3 2.3 0 1 0 0 .01z M8 15.2h4v3h-4z M15 15.2h4v3h-4z', 'M48 13.4l4 3.4h-4z'],
-  art:[2, 2, 61, 27, 'M8.6 29a4.6 4.6 0 0 1-4.6-4.6L3.6 20.4l4.6-4.4h41.6l4.4 4.4v4a4.6 4.6 0 0 1-4.6 4.6z M12 16V9.4h25l4 6.6z M36.2 10.6L61.6 2.4l1 2.6L37.4 13.4z',
-    'M10 25.2a2.4 2.4 0 1 0 0 .01z M17.4 25.2a2.4 2.4 0 1 0 0 .01z M24.8 25.2a2.4 2.4 0 1 0 0 .01z M32.2 25.2a2.4 2.4 0 1 0 0 .01z M39.6 25.2a2.4 2.4 0 1 0 0 .01z M47 25.2a2.4 2.4 0 1 0 0 .01z', 'M15 10.8h8v1.4h-8z'],
-  mlrs:[2, 3, 60, 27, 'M3 25V19h40v-5h7.4l5.4 1.4 4.2 5.4v4.2z M5 18.4L7.4 9.6l30-6.6 2.6 9.6-30 6.6z',
-    'M11 26.4a3.4 3.4 0 1 0 0 .01z M22 26.4a3.4 3.4 0 1 0 0 .01z M33 26.4a3.4 3.4 0 1 0 0 .01z M51 26.4a3.4 3.4 0 1 0 0 .01z M11.4 9.6l24.4-5.4.3 1.2-24.4 5.4z M12.4 13.4l24.4-5.4.3 1.2-24.4 5.4z',
-    'M48.2 15.4h4.4l2.6 3.4h-7z'],
-  sam:[2, 1, 58, 28, 'M7 29a3.8 3.8 0 0 1-3.8-3.8L4 20h48l4.4 4.4v.8a3.8 3.8 0 0 1-3.8 3.8z M14 20l3.4-5.4 25-12.4 2.2 4.2-23.4 13.6z M46 20V11.6h2.4V20z M41.6 9.4a5.6 3 0 0 0 11.2 0z',
-    'M9 25a2.2 2.2 0 1 0 0 .01z M16 25a2.2 2.2 0 1 0 0 .01z M23 25a2.2 2.2 0 1 0 0 .01z M30 25a2.2 2.2 0 1 0 0 .01z M37 25a2.2 2.2 0 1 0 0 .01z M44 25a2.2 2.2 0 1 0 0 .01z M20.4 13.2l22.6-11.2.5 1-22.6 11.2z', ''],
-  jet:[1, 6, 62, 22, 'M2 18L7 7h4.6l7 8.4H44q11 .2 18.6 3.2-7.6 3-18.6 3.2H10L3 21z M20 20.2h15l-10 7.4h-6z M3.4 18h11l-6.4 4h-4.6z',
-    'M30 16.8h6v1h-6z', 'M41 15.4q4.4-4.4 11 .4z'],
-  int:[1, 5, 62, 22, 'M3 18L5 6h3.4l8.6 9.4H42q12 .4 20.6 3.2Q54 21.6 42 21.8H12L4 21z M14 20.6l22-.4-14 6.4h-6z M9 6.8h3l6 8.4h-3z',
-    'M26 17h8v1h-8z', 'M40 15.6q5-4.6 12 .2z'],
-  heli:[1, 4, 62, 24, 'M18 16.4q2-6.6 15.4-6.6l15 2q9.6 2.2 12.2 6.4L59 21.2H30L22 19 5 16.6V12.8h3.4L18 15.2z M10 5.6h50V7H10z M33 7h2v3.6h-2z M27 24.6h26V26H27z M30.4 21h1.6v3.6h-1.6z M46 21h1.6v3.6h-1.6z M2.4 9.6h1.6v8h-1.6z M45 17.6h12v1.8h-12z',
-    'M24 17.4h18v1.2h-18z', 'M44 11.8q8 1 13 5.4h-13z'],
-  drone:[1, 4, 62, 20, 'M11 17.4L6 9h3.6l7 7H40q5-4 12-3.4 8 .8 9 5.6-1.4 3-15 3.6H12z M9 19.6l-5 5h3.6l6.4-4.6z M2 12.6h1.6v9.6H2z M24 16.4h18v1.2H24z',
-    'M24 18.6h18v.8H24z', ''],
-  frig:[1, 2, 62, 25, 'M1 19.6h62l-6.4 7.4H7.4z M16 19.6v-5.6h12V9h8.6v5h9v5.6z M31.6 2.4h1.8V9h-1.8z M28 5h9v1.2h-9z M48 17.4h9v1.2h-9z M46.4 16.2h4v3.4h-4z',
-    'M1 21.4h62v1h-62z', 'M30 11h5v1.4h-5z'],
-  crui:[0, 1, 64, 26, 'M0 19.4h64l-5.6 7.6H6z M12 19.4v-6h10V7.4h11v6h9v6z M25.6 1h1.8v6.4h-1.8z M22 3.4h9.4v1.2H22z M47 17.6h12v1.2H47z M45 16.2h5v3.2h-5z M3 17.4h7v1.2H3z M7.4 16.2h4v3.2h-4z M36 11.6h1.6v2h-1.6z',
-    'M0 21.2h64v1H0z', 'M25 9h6v1.4h-6z'],
-  sub:[1, 6, 62, 19, 'M5 19.6q1.6-5.6 12-5.6h33q12 .6 12.6 5.6-.6 4.6-12.6 5H17q-10.4 0-12-5z M26 14.2l2-7.6h10.4l1.4 7.6z M1.6 15l5 3.4v2.6l-5 3.4z M30 6.6h1.4V3.4H30z M34 6.6h1.2V4.2H34z',
-    'M8 21.6h52v1H8z', 'M30 9h6v1.4h-6z'],
-  carr:[0, 1, 64, 26, 'M0 13.6h64l-3.4 4.4-4.4 9H8.4l-4.6-9z M42 13.6V6h8.4v7.6z M45.4 1.4h1.4V6h-1.4z M8 11.6l6-1.4 5 1.4z M22 11.6l6-1.4 5 1.4z',
-    'M2 17.6h60v1H2z', 'M43.6 7.6h5v1.4h-5z']
-};
-const SILP = new Map();   // Path2D cache per type
-function silPaths(t){ let P = SILP.get(t); if (P) return P; const s = SIL[t]; if (!s) return null; P = [new Path2D(s[4]), s[5] ? new Path2D(s[5]) : null, s[6] ? new Path2D(s[6]) : null]; SILP.set(t, P); return P; }
-// the silhouette of type t in a bw x bh device-px canvas: dark outline, a light ivory body with a soft top-down gradient, darker running gear, glints
-function silCanvas(t, bw, bh, left, well){ const s = SIL[t], P = silPaths(t); if (!P) return null;
-  const c = document.createElement('canvas'); c.width = bw; c.height = bh; const g = c.getContext('2d');
-  if (well && typeof picWell === 'function') picWell(g, bw, bh);
-  const ow = Math.max(1, bh/12), pad = ow + 0.5, k = Math.min((bw - 2*pad)/s[2], (bh - 2*pad)/s[3]), dx = (bw - s[2]*k)/2, dy = (bh - s[3]*k)/2;
-  g.save(); if (left){ g.translate(bw, 0); g.scale(-1, 1); }
-  g.translate(dx, dy); g.scale(k, k); g.translate(-s[0], -s[1]); g.lineJoin = 'round';
-  g.lineWidth = ow*2/k; g.strokeStyle = 'rgba(2,5,6,.92)'; g.stroke(P[0]);   // outline
-  const gr = g.createLinearGradient(0, s[1], 0, s[1] + s[3]); gr.addColorStop(0, '#fbf7ea'); gr.addColorStop(0.55, '#e4ddc8'); gr.addColorStop(1, '#a9a28c');
-  g.fillStyle = gr; g.fill(P[0]);
-  if (P[1]){ g.fillStyle = 'rgba(38,40,36,.62)'; g.fill(P[1]); }
-  if (P[2]){ g.fillStyle = 'rgba(120,170,190,.85)'; g.fill(P[2]); }
-  g.restore(); return c; }
-const PICC = new Map();
-// one cached canvas per type, device box size, facing and well
-function platePic(t, bw, bh, left, well){ if (!SIL[t]) return null; bw = Math.max(6, Math.round(bw)); bh = Math.max(6, Math.round(bh));
-  const key = t + '|' + bw + '|' + bh + '|' + (left ? 1 : 0) + (well ? 'w' : ''); let c = PICC.get(key); if (c) return c; if (PICC.size > 300) PICC.clear();
-  c = silCanvas(t, bw, bh, left, well); PICC.set(key, c); return c; }
-// draw the picture of type t in a box (css px) snapped to device pixels and drawn 1:1 (the map layer's transform is the plain dpr scale);
-// falls back to the NATO glyph while the picture is missing. well: the lit well behind it, baked in
-function platePicDraw(t, bx, by, bw, bh, left, alpha = 1, well = false){
-  const X = Math.round(bx*dpr), Y = Math.round(by*dpr), W = Math.round(bw*dpr), H = Math.round(bh*dpr), pic = platePic(t, W, H, left, well);
-  if (!pic){ glyph(bx + bw/2, by + bh/2, t, Math.min(bw/15, bh/9.5)); return false; }
-  const a0 = ctx.globalAlpha; if (alpha < 1) ctx.globalAlpha = a0*alpha; ctx.drawImage(pic, X/dpr, Y/dpr, W/dpr, H/dpr); ctx.globalAlpha = a0; return true; }
-// the plate body: drop shadow, dark gradient body, owner tab (drawn in plate-local coordinates)
+  const T = (minor ? TILE_MW : TILE_W)*ps, tab = Math.max((minor ? 10 : 15)*ps, tw + (minor ? 6 : 8)*ps);
+  return {ps, fz, tw, T, tab, w:T + tab, h:T, bars:minor ? 0 : 1.5*ps + 6.4*ps}; }
+// the box plateCounter returns for a plate centred at (x, y), without drawing it (deferred close-zoom badges)
+function plateRect(x, y, n, s, minor){ const D = plateDims(n, s, minor), ps = D.ps, x0 = Math.round(x - D.w/2), y0 = Math.round(y - D.h/2);
+  return minor ? {x:x0 - 1, y:y0 - 1, w:D.w + 3, h:D.h + 4} : {x:x0 - 3, y:y0 - 6*ps, w:D.w + 6 + 4*ps, h:D.h + 6*ps + 1.5*ps + 5.9*ps + 3}; }
+const TILE_W = 26, TILE_MW = 17;   // picture tile side in plate units (full plate / quiet mini plate)
+/* ---------------- Counter picture tiles: the owner's top-down unit pictures (assets/art/i-*.webp, 128 px icons; u-*.webp past ~96 device px) ----------------
+   A counter shows the stack's main type as a square tile: the picture on a dark rounded tile with the owner's colour edge, built once per device
+   size / colour / facing into an offscreen canvas and drawn 1:1 at device pixels. Long vehicles and ships turn to a 3/4 heading (nose up and to
+   the right, mirrored when the force heads left) so they fill the square; aircraft and squads stay nose up. Types whose picture has not arrived
+   use their stand-in picture (ART) the same way. */
+// opaque extent of each supplied picture as a share of its square (width, height): they are trimmed, centred and drawn with the long side vertical
+const PICBOX = {'u-infantry':[0.95, 0.88], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.74, 0.93], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
+  'u-anti-air':[0.44, 0.94], 'u-missile-launcher':[0.36, 0.94], 'u-supply-truck':[0.44, 0.94], 'u-jet':[0.73, 0.94], 'u-bomber':[0.79, 0.94], 'u-attack-heli':[0.65, 0.94],
+  'u-transport-heli':[0.64, 0.94], 'u-drone':[0.94, 0.86], 'u-corvette':[0.22, 0.94], 'u-destroyer':[0.17, 0.94], 'u-submarine':[0.19, 0.94], 'u-carrier':[0.36, 0.95]};
+const PICBB = new WeakMap();
+// [w, h, cx, cy] of a picture's opaque part (shares of its size): the table for the supplied files, measured once for a code-drawn stand-in
+function picBox(src){ let b = PICBB.get(src); if (b) return b;
+  const m = /\/([ui])(-[a-z-]+)\.webp/.exec(src.src || ''), pb = m && (PICBOX[m[1] + m[2]] || PICBOX['u' + m[2]]); b = pb ? [...pb, 0.5, 0.5] : null;   // an icon's own box where it differs (the soldier trios)
+  if (!b){ b = [0.9, 0.9, 0.5, 0.5]; try { if (src.getContext){ const W = src.width, H = src.height, d = src.getContext('2d').getImageData(0, 0, W, H).data; let x0 = W, y0 = H, x1 = -1, y1 = -1;
+        for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (d[(y*W + x)*4 + 3] > 40){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        if (x1 > x0 && y1 > y0) b = [(x1 - x0 + 2)/W, (y1 - y0 + 2)/H, (x0 + x1 + 1)/2/W, (y0 + y1 + 1)/2/H]; } } catch (e) {} }
+  PICBB.set(src, b); return b; }
+const TPIC = new Map(), TILEC = new Map();
+window.addEventListener('im-art', () => { TPIC.clear(); TILEC.clear(); });   // a promised picture arrived: rebuild the tiles that used its stand-in
+// the picture of type t fitted in a W x W device-px square (transparent): rotated on a 4x canvas, then downscaled in halving steps (crisp at 15-40 px)
+function tilePic(t, W, flip){ const u = UART[t]; if (!u) return null; const ic = 'i' + u[0].slice(1), src = (W <= 96 || SQI[u[0]]) && ART.ready(ic) ? ART.img(ic) : ART.img(u[0]); if (!src) return null;
+  const key = t + '|' + W + '|' + (flip ? 1 : 0) + '|' + (src.src || u[0]); let c = TPIC.get(key); if (c) return c; if (TPIC.size > 240) TPIC.clear();
+  const b = picBox(src), diag = b[0]/b[1] < 0.62, ang = (diag ? Math.PI/4 : 0) + (u[1] ? Math.PI : 0), sw = src.naturalWidth || src.width, sh = src.naturalHeight || src.height;
+  const S = Math.max(W, Math.min(W*4, Math.max(sw, sh))), big = document.createElement('canvas'); big.width = big.height = S; const g = big.getContext('2d');
+  const bw = b[0]*sw, bh = b[1]*sh, ca = Math.abs(Math.cos(ang)), sa = Math.abs(Math.sin(ang)), k = S*(diag ? 0.99 : 0.95)/Math.max(bw*ca + bh*sa, bw*sa + bh*ca);
+  g.imageSmoothingQuality = 'high'; g.translate(S/2, S/2); if (flip) g.scale(-1, 1); g.rotate(ang); g.scale(k, k); g.drawImage(src, -b[2]*sw, -b[3]*sh);
+  c = S > W ? ART.scaled(big, W, W) : big; TPIC.set(key, c); return c; }
+// the whole tile (W device px): dark rounded tile with a faint lit centre, the picture with a soft contact halo, the owner's colour edge
+function unitTileC(t, W, edge, flip, minor){ const key = t + '|' + W + '|' + edge + '|' + (flip ? 1 : 0) + (minor ? 'm' : ''); let c = TILEC.get(key); if (c) return c;
+  const u = W/26, lw = Math.max(1, Math.round((minor ? 1.3 : 1.7)*u*2)/2), pic = tilePic(t, Math.max(6, Math.round(W - 2*lw - 1.6*u)), flip); if (!pic) return null;
+  if (TILEC.size > 320) TILEC.clear();
+  c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), r = Math.max(2, 3.6*u);
+  roundRect(g, 0, 0, W, W, r); const gr = g.createLinearGradient(0, 0, 0, W); gr.addColorStop(0, '#2c353a'); gr.addColorStop(1, '#10161a'); g.fillStyle = gr; g.fill();
+  const rg = g.createRadialGradient(W/2, W*0.46, 0, W/2, W/2, W*0.62); rg.addColorStop(0, 'rgba(196,204,186,.24)'); rg.addColorStop(1, 'rgba(196,204,186,0)'); g.fillStyle = rg; g.fill();
+  g.save(); roundRect(g, lw, lw, W - 2*lw, W - 2*lw, Math.max(1, r - lw)); g.clip(); g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowBlur = Math.max(1, 1.4*u); g.shadowOffsetY = Math.max(0.5, 0.6*u);
+  const o = Math.round((W - pic.width)/2); g.drawImage(pic, o, o); g.restore();
+  g.lineWidth = lw; g.strokeStyle = edge; roundRect(g, lw/2, lw/2, W - lw, W - lw, Math.max(1, r - lw/2)); g.stroke();
+  TILEC.set(key, c); return c; }
+// draw the tile of type t at (x, y), T css px across, snapped to device pixels; a dark tile with the NATO glyph only if the picture failed to load
+function tileDraw(t, x, y, T, edge, flip, minor){ const W = Math.max(8, Math.round(T*dpr)), X = Math.round(x*dpr)/dpr, Y = Math.round(y*dpr)/dpr, c = unitTileC(t, W, edge, flip, minor);
+  if (c){ ctx.drawImage(c, X, Y, W/dpr, W/dpr); return true; }
+  const Tc = W/dpr; roundRect(ctx, X + 0.5, Y + 0.5, Tc - 1, Tc - 1, Tc*0.14); ctx.fillStyle = '#161d21'; ctx.fill(); ctx.lineWidth = Math.max(1, Tc*0.065); ctx.strokeStyle = edge; ctx.stroke();
+  if (figFB(t)){ ctx.save(); glyph(X + Tc/2, Y + Tc/2, t, Tc/26*1.3); ctx.restore(); } return false; }   // still loading: the empty tile
+// the plate body behind the tile: drop shadow under the whole counter and the dark number tab to the right of the tile (plate-local coordinates)
 const PLATE_G = new Map();
-function plateBody(x0, y0, w, h, ps, tabW, tab, minor){
+function plateBody(x0, y0, w, h, ps, T, minor){
   const r = 3*ps; ctx.save(); ctx.translate(x0, y0);
   roundRect(ctx, 1, 2, w, h, r); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill();
   const gk = Math.round(h*4) + (minor ? 'm' : ''); let g = PLATE_G.get(gk); if (!g){ g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, minor ? 'rgba(30,36,38,.92)' : '#1b2428'); g.addColorStop(1, minor ? 'rgba(14,19,21,.92)' : '#0d1316'); PLATE_G.set(gk, g); }
-  roundRect(ctx, 0, 0, w, h, r); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(tabW, 0); ctx.lineTo(r, 0); ctx.arcTo(0, 0, 0, r, r); ctx.lineTo(0, h - r); ctx.arcTo(0, h, r, h, r); ctx.lineTo(tabW, h); ctx.closePath(); ctx.fillStyle = tab; ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.fillRect(tabW, 0.5, w - tabW - r, 1);
+  roundRect(ctx, T - r - 1, 0, w - T + r + 1, h, r); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.09)'; ctx.fillRect(T, 0.5, w - T - r, 1);
   ctx.restore(); }
 function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, now, minor){
-  const D = plateDims(n, s, minor), ps = D.ps, w = D.w, h = D.h, x0 = Math.round(x - w/2), y0 = Math.round(y - h/2), tabW = 5*ps;
-  const tab = a && a.rebel ? '#e0574f' : a && a.owner === NEUTRAL ? '#9a978a' : color;
+  const D = plateDims(n, s, minor), ps = D.ps, w = D.w, h = D.h, T = D.T, x0 = Math.round(x - w/2), y0 = Math.round(y - h/2);
+  const edge = a && a.rebel ? '#e0574f' : a && a.owner === NEUTRAL ? '#9a978a' : color;
   if (moving && counter.ang != null && !afxReduced()) plateStreak(x0, y0, w, h, ps, counter.ang, now);   // on the march: speed lines off the back edge
-  plateBody(x0, y0, w, h, ps, tabW, tab, minor);
-  ctx.textBaseline = 'middle'; ctx.font = `700 ${D.fz}px ${BODY}`;
-  const left = moving && counter.ang != null && Math.cos(counter.ang) < -0.3, pw = (minor ? PIC_MW : PIC_W)*ps;
-  if (minor){ if (main) platePicDraw(main, x0 + tabW + 0.5*ps, y0 + 1*ps, pw, h - 2*ps, false, 0.92);
-    ctx.fillStyle = '#d9d5c8'; ctx.textAlign = 'center'; const tx0 = main ? x0 + tabW + pw + 0.5*ps : x0 + tabW; ctx.fillText(String(n), tx0 + (x0 + w - 1.5*ps - tx0)/2, y0 + h/2 + 0.5); return {x:x0 - 1, y:y0 - 1, w:w + 3, h:h + 4}; }
-  // the dominant type's picture; a second type holding a good share of the stack shows as a tiny picture on a chip in the picture's lower corner (inside the plate, so it never sits on a name)
-  const bx = x0 + tabW + 0.5*ps, by = y0 + 1*ps, pbh = h - 2*ps;
-  platePicDraw(main, bx, by, pw, pbh, left, 1, true);
-  if (counter.second && SIL[counter.second]){ const cw2 = 12*ps, ch2 = 8*ps, cx2 = Math.round(bx + pw - cw2 + 2*ps), cy2 = Math.round(y0 + h - ch2 - 0.5*ps);
-    roundRect(ctx, cx2, cy2, cw2, ch2, 2*ps); ctx.fillStyle = 'rgba(13,19,22,.94)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.stroke();
-    platePicDraw(counter.second, cx2 + 0.5*ps, cy2 + 0.5*ps, cw2 - 1*ps, ch2 - 1*ps, left, 1, true); }
-  ctx.fillStyle = '#f2eee2'; ctx.textAlign = 'center'; const tx0 = bx + pw + 0.5*ps; ctx.fillText(String(n), tx0 + (x0 + w - 1.5*ps - tx0)/2, y0 + h/2 + 0.5);
+  const left = moving && counter.ang != null && Math.cos(counter.ang) < -0.3;   // heading left: the pictures face left
+  plateBody(x0, y0, w, h, ps, T, minor);
+  if (main) tileDraw(main, x0, y0, T, edge, left, minor);
+  ctx.textBaseline = 'middle'; ctx.font = `700 ${D.fz}px ${BODY}`; ctx.textAlign = 'center';
+  const tx = x0 + T + D.tab/2 - 0.5*ps;
+  if (minor){ ctx.fillStyle = '#d9d5c8'; ctx.fillText(String(n), tx, y0 + h/2 + 0.5); return {x:x0 - 1, y:y0 - 1, w:w + 3, h:h + 4}; }
+  // a second type holding a good share of the stack: a small picture chip under the number (inside the plate, so it never sits on a name)
+  const two = counter.second && UART[counter.second] ? counter.second : null;
+  ctx.fillStyle = '#f2eee2'; ctx.fillText(String(n), tx, (two ? y0 + h*0.3 : y0 + h/2) + 0.5);
+  if (two){ const cs = Math.min(12.5*ps, D.tab - 2.5*ps); tileDraw(two, tx - cs/2, y0 + h - cs - 1.5*ps, cs, 'rgba(160,156,140,.6)', left, true); }
   const cmd = counter.list && counter.list.some(cmdOf);
   if (cmd){ ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', x0 + 1*ps, y0 - 1*ps); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', x0 + 1*ps, y0 - 1*ps); }
   if (counter.dug && !moving) sandbagMark(x0 + (cmd ? 11 : 1.5)*ps, y0 + (cmd ? -0.5 : 0.5)*ps, ps);   // dug in
@@ -5785,9 +5810,9 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
   const ang = counter.ang;
   if (moving && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = Math.min((w/2 + 4*ps)/Math.max(1e-3, Math.abs(ca)), (h/2 + (sa > 0 ? D.bars + 1.5*ps : 0) + 4*ps)/Math.max(1e-3, Math.abs(sa))), cx = x0 + w/2 + ca*t, cy = y0 + h/2 + sa*t, r = 5.2*ps;
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(r, 0); ctx.lineTo(-r*0.7, -r*0.85); ctx.lineTo(-r*0.25, 0); ctx.lineTo(-r*0.7, r*0.85); ctx.closePath(); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke(); ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(243,234,210,.85)'; ctx.stroke(); ctx.restore(); }   // heading chevron: owner colour with a light rim
-  if (a && a.owner === PLAYER && !supplied(a)){ const tx = x0 + w - 1*ps, ty = y0 - 1*ps, r = 5*ps;
-    ctx.beginPath(); ctx.moveTo(tx, ty - r); ctx.lineTo(tx + r*0.95, ty + r*0.7); ctx.lineTo(tx - r*0.95, ty + r*0.7); ctx.closePath(); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
-    ctx.fillStyle = '#14100a'; ctx.font = `800 ${Math.round(7*ps)}px ${BODY}`; ctx.textAlign = 'center'; ctx.fillText('!', tx, ty + r*0.22); }
+  if (a && a.owner === PLAYER && !supplied(a)){ const tx2 = x0 + w - 1*ps, ty = y0 - 1*ps, r = 5*ps;
+    ctx.beginPath(); ctx.moveTo(tx2, ty - r); ctx.lineTo(tx2 + r*0.95, ty + r*0.7); ctx.lineTo(tx2 - r*0.95, ty + r*0.7); ctx.closePath(); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
+    ctx.fillStyle = '#14100a'; ctx.font = `800 ${Math.round(7*ps)}px ${BODY}`; ctx.textAlign = 'center'; ctx.fillText('!', tx2, ty + r*0.22); }
   if (fighting && counter.vol) counter.vol(main, ang ?? 0, 20*ps, x, y);
   const bh = unitBars(a, x0, y0 + h + 1.5*ps, w, ps, now);
   return {x:x0 - 3, y:y0 - 6*ps, w:w + 6 + 4*ps, h:h + 6*ps + 1.5*ps + bh + 3}; }
@@ -5817,15 +5842,17 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
     const pr = plateCounter(x, cy, a, n, color, quiet ? false : selected, quiet ? false : moving, sp, quiet ? false : fighting, pt[0], now, quiet);
     return {x:pr.x, y:pr.y, w:pr.w, h:pr.h, bb:[pr.x, pr.y, pr.x + pr.w, pr.y + pr.h], bdy}; }
   // ground shadow / selection ring (formations draw per-figure shadows and ring their own extent)
-  const artOK = t => !!mArt(t) || !!(window.U3D && U3D.has(t)), imgOne = !!mArt(main) && (!types[1] || !!mArt(types[1]));
+  const artOK = t => !!mArt(t) || !!(figFB(t) && window.U3D && U3D.has(t)), imgOne = !!mArt(main) && (!types[1] || !!mArt(types[1]));
   const formMode = artOK(main) && view.s*HS0 >= FORM_PX && UNITS[main].cls !== 'air' && !quiet;
+  if (counter.pass === 1){ if (formMode && (imgOne || (artOK(main) && (!types[1] || artOK(types[1]))))) try { formation(x, y - 4*s, counter.list || [a], n, color, s, counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15), moving, fighting, now, a && isNight(a.at)); } catch (e) {}
+    return null; }   // the squads' pass: nothing else
   if (!formMode && !(imgOne && s > 2.2)){ ctx.globalAlpha = 0.8; ctx.drawImage(softSprite('cshad', 'rgba(0,0,0,.3)', 'rgba(0,0,0,.14)', 'rgba(0,0,0,0)'), x - 20*s, y + 1.5*s - 5.5*s, 40*s, 11*s); ctx.globalAlpha = 1; }   // soft contact shadow, no hard slab   // (a single picture brings its own shadow: no dark slab under it close up)
   if (selected && !formMode){ ctx.save(); ctx.shadowColor = '#e2a23d'; ctx.shadowBlur = 10; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 17*s, 5.5*s, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
   if (a && a.owner === PLAYER && !supplied(a) && !formMode){ ctx.save(); ctx.setLineDash([3, 2]); ctx.strokeStyle = '#e0574f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y + 1.5*s, 16*s, 5*s, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
   const shake = fighting ? Math.sin(now/45 + seed)*0.8 : 0;
   const fs = s*1.35;
-  if ((types[1] || stack) && !(artOK(main) && (!types[1] || artOK(types[1])))){ ctx.save(); ctx.globalAlpha = 0.9; unitFigure(types[1] || main, x - 15*fs*dir, y - 8*fs, fs*0.72, shade(color, -0.12), now, moving, fighting, dir, seed + 3, 2); ctx.restore(); }
-  let use3d = (window.U3D && U3D.has(main) && (!types[1] || U3D.has(types[1] || main))) || imgOne || (artOK(main) && (!types[1] || artOK(types[1])));   // a second type with only a picture (e.g. the jammer) still gets a formation
+  if ((types[1] || stack) && figFB(types[1] || main) && !(artOK(main) && (!types[1] || artOK(types[1])))){ ctx.save(); ctx.globalAlpha = 0.9; unitFigure(types[1] || main, x - 15*fs*dir, y - 8*fs, fs*0.72, shade(color, -0.12), now, moving, fighting, dir, seed + 3, 2); ctx.restore(); }
+  let use3d = imgOne || (artOK(main) && (!types[1] || artOK(types[1])));   // a second type with only a picture (e.g. the jammer) still gets a formation
   let form = null;
   if (use3d && formMode) try {
     const ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15), night = a && isNight(a.at);
@@ -5837,17 +5864,21 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   let one = null;   // single top-down picture (quiet foreign stacks, air wings parked at a base)
   if (use3d && !form && imgOne) try { const night = a && isNight(a.at), cls = UNITS[main].cls, air = cls === 'air', calm = afxReduced();
     // parked aircraft sit on the apron (rotors still); a quiet stack on the march judders, one standing still breathes
-    const ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15), D = 46*s*0.62*UART[main][2]*(air ? 1.15 : 1.3)*(!moving && !fighting && !calm ? 1 + 0.013*Math.sin(now/1150 + seed) : 1), cy = y - D*0.32;
+    const ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15), D = 46*s*0.62*UART[main][2]*(air ? 1.0 : 1.3)*(!moving && !fighting && !calm ? 1 + 0.013*Math.sin(now/1150 + seed) : 1), cy = y - D*0.32;
     const bob = moving && !calm ? (cls === 'naval' ? Math.sin(now/620 + seed)*D*0.012 : Math.sin(now/170 + seed)*D*0.011) : 0, hov = false;
     if (types[1]){ const D2 = 46*s*0.62*UART[types[1]][2]*1.0; drawFig(types[1], x - 16*fs*dir, cy - 5*fs, D2, ang3, {color, base:UNITS[types[1]].cls !== 'naval' && UNITS[types[1]].cls !== 'air', alt:UNITS[types[1]].cls === 'air' ? 0.04 : 0, wake:UNITS[types[1]].cls === 'naval' ? 0.12 : 0, night}); }
-    if (drawFig(artT(main, a ? a.owner : -1), x + shake*0.4, cy + bob, D, ang3, {color, base:!air && cls !== 'naval', alt:hov ? 0.22 : air ? 0.04 : 0, wake:cls === 'naval' ? (moving ? 0.9 : 0.12) : 0, night, kick:fighting ? recoilOf(seed, now, D/40) : 0, now})){
-      one = {y0:cy - D*0.5, y1:cy + D*0.45};
+    const nAir = air ? Math.max(1, Math.min(3, a ? a.u[main] || 1 : 1)) : 1, Dm = nAir > 1 ? D*0.8 : D, art1 = artT(main, a ? a.owner : -1);
+    let yA = cy - Dm*0.5, yB = cy + Dm*0.45;
+    for (let i = 1; i < nAir; i++){ const lat = (i === 1 ? -1 : 1)*Dm*0.9, back = -Dm*0.3, px1 = x - Math.sin(ang3)*lat + Math.cos(ang3)*back, py1 = cy + Math.cos(ang3)*lat + Math.sin(ang3)*back;   // wingmen beside and a little behind the lead
+      if (drawFig(art1, px1, py1, Dm, ang3, {alt:0.04, night, now})){ yA = Math.min(yA, py1 - Dm*0.5); yB = Math.max(yB, py1 + Dm*0.45); } }
+    if (drawFig(art1, x + shake*0.4, cy + bob, Dm, ang3, {color, base:!air && cls !== 'naval', alt:hov ? 0.22 : air ? 0.04 : 0, wake:cls === 'naval' ? (moving ? 0.9 : 0.12) : 0, night, kick:fighting ? recoilOf(seed, now, D/40) : 0, now})){
+      one = {y0:yA, y1:yB};
       if (fighting) figFlash(x, cy, D, ang3, shotPhase(seed, now));
       if (moving && cls !== 'naval' && !air && counter.dust) counter.dust(main, ang3, D*1.6);
       if (fighting && counter.vol) counter.vol(main, ang3, D, x, cy + D*0.18); }
   } catch (e) { one = null; }
   if (one) use3d = false;
-  if (use3d && !form && !(window.U3D && U3D.has(main))) use3d = false;
+  if (use3d && !form && !(figFB(main) && window.U3D && U3D.has(main))) use3d = false;
   if (use3d && !form) try { const night = a && isNight(a.at), hpx = ({inf:62, at:62, art:70, sam:70, ifv:66, tank:68, jet:34, int:34, frig:54, sub:46, crui:60, carr:70, mlrs:62, spec:58, heli:40, drone:34, para:62})[main]*Math.min(s, Math.max(s/zx(), U3D.SZ*1.7/dpr/62)), ang3 = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);
     const fr = main === 'mlrs' ? (fighting ? (shotPhase(seed, now) < 120 ? 2 : 1) : 0) : (main === 'inf' || main === 'at' || main === 'spec' || main === 'para') ? (moving ? Math.floor(now/85 + seed) % 8 : 0) : fighting ? ((ph => main === 'tank' ? (ph < 50 ? 1 : ph < 110 ? 2 : ph < 180 ? 3 : ph < 260 ? 4 : 0) : main === 'art' ? (ph < 70 ? 1 : ph < 150 ? 2 : ph < 250 ? 3 : 0) : ph < 90 ? 1 : 0)(shotPhase(seed, now))) : 0;
     if (types[1]){ const h2 = hpx*0.72; U3D.draw(ctx, types[1], color, x - 16*fs*dir, y - 7*fs, h2, ang3, 0, night); }
@@ -5855,14 +5886,18 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
     if (moving && UNITS[main].cls !== 'naval' && counter.dust) counter.dust(main, ang3, hpx);
     if (fighting && counter.vol) counter.vol(main, ang3, hpx);
   } catch (e) { use3d = false; }
-  if (!use3d && !form && !one) unitFigure(main, x + shake, y, fs, color, now, moving, fighting, dir, seed, a ? a.u[main] : n);
+  if (!use3d && !form && !one && figFB(main)) unitFigure(main, x + shake, y, fs, color, now, moving, fighting, dir, seed, a ? a.u[main] : n);
   // unit badge under the figures, CoN style: the same plate as the operational zoom (owner tab, the dominant type's silhouette, the count, health
   // and morale bars, dug-in / commander / supply marks), so a stack reads the same at every zoom; a crowded badge is pushed down (counter.bdy) on a leader
   const pt = plateTypes(a, main); counter.second = quiet ? null : pt[1];
   const bdy = counter.bdy || 0, top0 = form ? Math.max(form.y1, y) + 2 : one ? Math.max(one.y1, y) + 2 : y + 4*s, pD = plateDims(n, quiet ? s/0.6 : s, quiet), cyb = top0 + bdy + pD.h/2;
   if (bdy > 2){ ctx.strokeStyle = 'rgba(243,234,210,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, top0 - 2); ctx.lineTo(x, cyb - pD.h/2); ctx.stroke(); }
-  const vol0 = counter.vol; counter.vol = null; let pr;
-  try { pr = plateCounter(x, cyb, a, n, color, quiet ? false : selected, false, quiet ? s/0.6 : s, quiet ? false : fighting, pt[0], now, quiet); } finally { counter.vol = vol0; }
+  const pArgs = [x, cyb, a, n, color, quiet ? false : selected, false, quiet ? s/0.6 : s, quiet ? false : fighting, pt[0], now, quiet]; let pr;
+  if (counter.defer){   // close zoom: every badge is drawn after all the stacks' vehicles, ships and aircraft, so no hull from a neighbouring stack lies on a badge
+    const st = {second:counter.second, list:counter.list, dug:counter.dug, ang:counter.ang};
+    counter.defer.push(() => { const o = {second:counter.second, list:counter.list, dug:counter.dug, ang:counter.ang, vol:counter.vol}; Object.assign(counter, st); counter.vol = null; try { plateCounter(...pArgs); } finally { Object.assign(counter, o); } });
+    pr = plateRect(x, cyb, n, pArgs[7], quiet); }
+  else { const vol0 = counter.vol; counter.vol = null; try { pr = plateCounter(...pArgs); } finally { counter.vol = vol0; } }
   const bb = [pr.x, pr.y, pr.x + pr.w, pr.y + pr.h], bot = pr.y + pr.h;
   if (form && (selected || (a && a.owner === PLAYER && !supplied(a)))){ const cx2 = (form.x0 + form.x1)/2, cy2 = (form.y0 + form.y1)/2 + (form.y1 - form.y0)*0.2, rx = (form.x1 - form.x0)/2 + 6, ry = (form.y1 - form.y0)*0.38 + 4;
     ctx.save(); if (selected){ ctx.shadowColor = '#e2a23d'; ctx.shadowBlur = 10; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2; } else { ctx.setLineDash([4, 3]); ctx.strokeStyle = '#e0574f'; ctx.lineWidth = 1.5; } ctx.beginPath(); ctx.ellipse(cx2, cy2, rx, ry, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
@@ -6076,7 +6111,7 @@ function draw(now){
   const plateQuiet = c => { if (c.pq != null) return c.pq; const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), fighting = !c.moving && !c.air && S.battles.includes(c.at), selected = c.list.some(q => q.id === sel.army || sel.group.includes(q.id));
     return (c.pq = a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); };
   const R2 = (hexPx >= (GS > 1 ? FORM_PX : 10) ? 0 : GS > 1 ? 36 : 26)**2;
-  const plateM = GS > 1 && hexPx < FORM_PX, psk = Math.round(Math.max(0.85, Math.min(1.15, k))*plateGrow()*20)/20, MW = 44*psk, MH = 26*psk;   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
+  const plateM = GS > 1 && hexPx < FORM_PX, psk = Math.round(Math.max(0.85, Math.min(1.15, k))*plateGrow()*20)/20, MW = 44*psk, MH = 32*psk;   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
     let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0) || (plateM && Math.abs(c.x - it.x) < MW && Math.abs(c.y - it.y) < MH)));
@@ -6090,6 +6125,9 @@ function draw(now){
     const tier = Pm.pop0 >= 8 ? 2 : Pm.pop0 >= 2.5 ? 1 : 0, ring = cap ? (6.5 + tier)*kl + 2.2*kl : [2.8, 3.6, 4.6][tier]*kl + 1.8*kl, mTop = toScreen(Pm.x, Pm.y)[1] + 9*kl - ring;
     if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); c.y = Math.min(c.y, mTop - 2*kl - d.h/2 - d.bars - 1); }
     else { c.y0 = c.y; c.y = Math.min(c.y - 10*kl, mTop - 2*kl - formBox(c).bb[3]); } }
+  // air wings parked at a base stand on its airfield compound once the compounds are drawn (close zoom), clear of the ground forces at the city
+  if (hexPx >= ART_PX && bartOk('air')) for (const c of clusters){ if (!c.air || c.moving) continue; const Pa = G.P[c.at]; if (!Pa.city || !(S.bld[c.at] && S.bld[c.at].air > 0)) continue;
+    const Lo = bartLayout(Pa, c.at, kl), an = (Lo.ang.air ?? 0)*Math.PI/180, [ax, ay] = toScreen(Pa.x, Pa.y); c.x = ax + Math.cos(an)*Lo.dist; c.y = ay + 9*kl + Math.sin(an)*Lo.dist + Lo.db*0.2; }
   const perProv = new Map();
   for (const c of clusters){ if (c.moving || c.air || c.pinned) continue; const key = c.at; if (!perProv.has(key)) perProv.set(key, []); perProv.get(key).push(c); }
   for (const cs of perProv.values()){ cs.sort((a, b) => (a.owner === PLAYER ? -1 : 0) - (b.owner === PLAYER ? -1 : 0));
@@ -6126,8 +6164,9 @@ function draw(now){
   for (const c of clusters){ if (c.x < -60 || c.y < -60 || c.x > cw + 60 || c.y > ch + 60) continue; let b;
     if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - 6*d.ps, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
     else { const F = formBox(c), f = F.bb, r = F.r, dy = c.bdy || 0;   // the badge and the figures standing above it: names keep clear of both
-      b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2]; }
-    b.unit = true; b.at = c.moving ? -1 : c.at; boxes0.push(b); }
+      b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2];
+      const bg = [c.x + f[0] - 2, c.y + f[1] + dy - 2, c.x + f[2] + 2, c.y + f[3] + dy + 2]; bg.unit = true; bg.badge = true; bg.at = c.moving ? -1 : c.at; boxes0.push(bg); }   // the badge alone too: a name or tag that must sit on a stack's figures still keeps off its badge
+    b.unit = true; b.badge = plateM; b.at = c.moving ? -1 : c.at; boxes0.push(b); }
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
   if (hexPx >= 3.2 && hexPx < 15){ const fs0 = Math.round(Math.min(13, 8 + hexPx*0.5)); ctx.font = `600 ${fs0}px ${BODY}`;
@@ -6240,7 +6279,12 @@ function draw(now){
         let ok = false; for (const [x0, yt] of cand){ b[0] = x0; b[2] = x0 + w; b[1] = yt - 1; b[3] = yt + f + 2;
           if (b[0] < 0 || b[2] > cw || boxes.some(hit) || marks.some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3])) continue;
           lx = x0 + w/2; ly = yt; ok = true; break; }
-        if (!ok){ if (!(L.cap && L.p === S.nations[PLAYER].capital)) continue; for (let i = 0; i < 4; i++) b[i] = b0[i]; late = true; } }   // a name boxed in on every side is left out (your own capital alone keeps its spot)
+        if (!ok){ if (!(L.cap && L.p === S.nations[PLAYER].capital)) continue;   // a name boxed in on every side is left out; your own capital alone is drawn over the stacks,
+          let best = b0, bc = Infinity;   // at the spot that covers the least of any badge or name (then of the figures)
+          for (const [x0, yt] of [[b0[0], b0[1] + 1], ...cand]){ const q = [x0, yt - 1, x0 + w, yt + f + 2]; if (q[0] < 0 || q[2] > cw) continue; let c0 = 0;
+            for (const o of boxes){ const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); if (ox > 0 && oy > 0) c0 += ox*oy*(o.badge || !o.unit ? 50 : 1); }
+            if (c0 < bc - 0.5){ bc = c0; best = q; } }
+          for (let i = 0; i < 4; i++) b[i] = best[i]; lx = b[0] + w/2; ly = b[1] + 1; late = true; } }
       boxes.push(b); if (L.cap && L.p === S.nations[PLAYER].capital) capLab = {x:lx, y:ly, f, w, b};
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else { ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
@@ -6302,8 +6346,7 @@ function draw(now){
   drawConvoys(now, vis);
   drawSupplyRun(now);
   if (PART.length) drawTrailDust();
-  for (const c of clusters){
-    const lead = c.list.reduce((b, a) => count(a) > count(b) ? a : b, c.list[0]);
+  const clSetup = c => { const lead = c.list.reduce((b, a) => count(a) > count(b) ? a : b, c.list[0]);
     let dir = 1; counter.ang = null; c.enemy = null;
     if (c.moving){ const a = c.list[0], B = G.P[a.path.length && a.to === null ? a.path[0] : a.to ?? a.at]; const [tx, ty] = toScreen(B.x, B.y); dir = tx < c.x ? -1 : 1; counter.ang = Math.atan2(ty - c.y, tx - c.x); }
     else { const foe = S.battles.includes(c.at); if (foe){ const others = clusters.filter(o => o.at === c.at && o !== c && !o.air && atWar(o.owner, c.owner)); if (others.length){ dir = others[0].x < c.x ? -1 : 1; c.enemy = [others[0].x, others[0].y]; counter.ang = Math.atan2(others[0].y - c.y, others[0].x - c.x); } } }
@@ -6312,11 +6355,18 @@ function draw(now){
     if (!c.air) CLPOS.set(c.at + ':' + c.owner, screenToWorld(c.x, c.y));
     counter.dust = (main, ang, hpx) => { const key = c.list[0].id, lt = lastDust.get(key) || 0; if (now - lt < 130) return; lastDust.set(key, now); const [wx, wy] = screenToWorld(c.x - Math.cos(ang)*hpx*0.32, c.y + hpx*0.05 - Math.sin(ang)*hpx*0.1); emit('dust', wx, wy, {vx:-Math.cos(ang)*8 + (Math.random() - 0.5)*6, vy:-3 - Math.random()*4, s0:5, s1:22, life:1600, tn:dustTone(c.list[0].at)}); };
     counter.dug = !c.moving && !c.air && dugIn(lead); counter.bdy = plateM ? 0 : (c.bdy || 0);
+    return {lead, dir, fighting}; };
+  if (hexPx >= FIG_PX){ counter.pass = 1;   // close zoom: every stack's soldier squads first, under all the vehicles, ships, aircraft and badges
+    try { for (const c of clusters){ if (c.air || c.x < -150 || c.y < -150 || c.x > cw + 150 || c.y > ch + 150) continue; const {lead, dir, fighting} = clSetup(c);
+        counter(c.x, c.y, lead, c.n, colorOf(c.owner), c.list.some(a => a.id === sel.army || sel.group.includes(a.id)), c.moving, k, c.list.length > 1, fighting, dir, now); } } finally { counter.pass = 0; } }
+  counter.defer = hexPx >= FIG_PX ? [] : null;
+  try { for (const c of clusters){
+    const {lead, dir, fighting} = clSetup(c);
     if (c.ay != null){ const d = plateDims(c.n, k, plateQuiet(c)); ctx.strokeStyle = 'rgba(243,234,210,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c.x, c.y - d.h/2); ctx.lineTo(c.ax, c.ay); ctx.stroke(); ctx.fillStyle = 'rgba(243,234,210,.8)'; ctx.fillRect(c.ax - 1.5, c.ay - 1.5, 3, 3); }
     const r = counter(c.x, c.y, lead, c.n, colorOf(c.owner), c.list.some(a => a.id === sel.army || sel.group.includes(a.id)), c.moving, k, c.list.length > 1, fighting, dir, now);
     hits.push({...r, ids:c.list.map(a => a.id), cx:c.x, cy:c.y, spread:c.list.some(a => a.at !== c.at)});
     if (!plateM && r.bb){ if (FORMBB.size > 3000) FORMBB.clear(); const dy0 = r.bdy || 0; FORMBB.set(formKey(c), {bb:[r.bb[0] - c.x, r.bb[1] - c.y - dy0, r.bb[2] - c.x, r.bb[3] - c.y - dy0], r:[r.x - c.x, r.y - c.y, r.x + r.w - c.x, r.y + r.h - c.y - dy0]}); }
-  }
+  } } finally { const D = counter.defer; counter.defer = null; if (D) for (const f of D) try { f(); } catch (e) {} }   // the close-zoom badges, over every stack's figures
   // capital names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   // YOUR CAPITAL (first three days): a tag under the capital's name, or above it / beside it where stacks sit below; drawn on top of everything
@@ -6327,7 +6377,7 @@ function draw(now){
     // cost of a spot: stacks count ten times more than names; the first free spot wins, else the least covered
     const cost = ([tx, ty]) => { const q = [tx - w/2 - 3, ty - 3, tx + w/2 + 3, ty + h + 3]; if (q[0] < 0 || q[2] > cw || q[1] < 0 || q[3] > ch) return 1e9; let c0 = 0;
       for (const o of boxes0){ const own = o === (L0 && L0.b), q2 = own ? [q[0] + 3, q[1] + 3, q[2] - 3, q[3] - 3] : q;   // its own name: may touch it, never cover it
-        const ox = Math.min(q2[2], o[2]) - Math.max(q2[0], o[0]), oy = Math.min(q2[3], o[3]) - Math.max(q2[1], o[1]); if (ox > 0 && oy > 0) c0 += ox*oy*(o.unit || o.fort ? 10 : 6); }
+        const ox = Math.min(q2[2], o[2]) - Math.max(q2[0], o[0]), oy = Math.min(q2[3], o[3]) - Math.max(q2[1], o[1]); if (ox > 0 && oy > 0) c0 += ox*oy*(o.badge ? 80 : o.unit || o.fort ? 10 : 6); }
       for (const m of marks){ const ox = Math.min(q[2], m.x + m.r) - Math.max(q[0], m.x - m.r), oy = Math.min(q[3], m.y + m.r) - Math.max(q[1], m.y - m.r); if (ox > 0 && oy > 0) c0 += ox*oy*10; } return c0; };
     let bestT = cands[0], bc = Infinity; for (const c1 of cands){ const c0 = cost(c1); if (c0 < bc){ bc = c0; bestT = c1; } if (!c0) break; }
     const [tx, ty] = bestT;
@@ -6354,20 +6404,20 @@ function draw(now){
       continue; }
     const [x, y] = toScreen(v.x, v.y), T = G.P[v.tgt], B = G.P[a.air.base], ang = v.ang ?? 0, phB = v.stage === 'back', alt = v.alt ?? 1;
     const col = colorOf(a.owner), kind = artT(wingT(a), a.owner), nPl = Math.min(3, count(a)), sc = Math.max(0.9, Math.min(k, 2.2*zx(hexPx)))*1.1, bob = Math.sin(now/300 + a.id)*1.5*alt;
-    for (let i = 0; i < nPl; i++){ const off = [[0, 0], [-9, 7], [-9, -7]][i]; const ox = Math.cos(ang)*off[0]*sc - Math.sin(ang)*off[1]*sc, oy = Math.sin(ang)*off[0]*sc + Math.cos(ang)*off[1]*sc;
+    for (let i = 0; i < nPl; i++){ const off = [[0, 0], [-0.55, 0.66], [-0.55, -0.66]][i], Df = Math.max(16*sc, 26*sc*(UART[kind] ? UART[kind][2] : 0.7)*(0.85 + 0.15*alt)); const ox = (Math.cos(ang)*off[0] - Math.sin(ang)*off[1])*Df, oy = (Math.sin(ang)*off[0] + Math.cos(ang)*off[1])*Df;
       const px0 = x + ox, py0 = y + oy + bob, L0 = 8*sc;
       // contrails: cached fading strips, rotated into place (no gradient object per plane per frame); multi-engine heavies leave two, drones a thin one,
       // helicopters none (their rotor spins instead)
-      const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = 30*sc*(UART[kind] ? UART[kind][2] : 0.7)*(0.85 + 0.15*alt);
+      const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = 26*sc*(UART[kind] ? UART[kind][2] : 0.7)*(0.85 + 0.15*alt);
       if (!rotor){ const Lc = (dr ? 34 : heavy ? 72 : 58)*sc/1.1*(0.92 + 0.08*Math.sin(now/240 + i)), wc = (dr ? 1.7 : 2.2)*Math.min(2, sc/1.1);
         ctx.save(); ctx.translate(px0, py0); ctx.rotate(ang + Math.PI); ctx.globalAlpha = dr ? 0.8 : 1;
         for (const lo of heavy ? [-0.2, 0.2] : [0]) ctx.drawImage(contrailImg(), Dp*0.38, lo*Dp - wc/2, Lc, wc);
         ctx.restore(); }
       if (uArt(kind) && drawFig(kind, px0, py0, Dp, ang, {alt:0.25 + 0.75*alt, night:isNight(v.tgt), rotor:rotor ? 1 : 0, now})){
         if ((kind === 'jet' || kind === 'int') && Math.random() < 0.18){ const d0 = 15*sc*UART[kind][2], [wx, wy] = screenToWorld(px0 - Math.cos(ang)*d0, py0 - Math.sin(ang)*d0); emit('fire', wx, wy, {vx:-Math.cos(ang)*20, vy:-Math.sin(ang)*20, s0:2.6, s1:0.8, life:130}); } }
-      else if (window.U3D && U3D.has(kind)){ const hp3 = 22*sc*(0.8 + 0.2*alt), burn = v.stage === 'out' && v.kind === 'strike' || v.stage === 'over' ? 1 : 0; ctx.save(); ctx.globalAlpha = 0.22 + 0.1*(1 - alt); ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 3 + 9*alt, py0 + 4 + 22*alt, hp3*(1 - 0.15*alt), ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3*(kind === 'drone' ? 0.8 : 1), ang, kind === 'heli' ? Math.floor(now/30 + i) % 4 : burn, isNight(v.tgt));
+      else if (figFB(kind) && window.U3D && U3D.has(kind)){ const hp3 = 22*sc*(0.8 + 0.2*alt), burn = v.stage === 'out' && v.kind === 'strike' || v.stage === 'over' ? 1 : 0; ctx.save(); ctx.globalAlpha = 0.22 + 0.1*(1 - alt); ctx.filter = 'brightness(0)'; U3D.draw(ctx, kind, col, px0 + 3 + 9*alt, py0 + 4 + 22*alt, hp3*(1 - 0.15*alt), ang, 0); ctx.restore(); U3D.draw(ctx, kind, col, px0, py0, hp3*(kind === 'drone' ? 0.8 : 1), ang, kind === 'heli' ? Math.floor(now/30 + i) % 4 : burn, isNight(v.tgt));
         if (Math.random() < 0.25){ const [wx, wy] = screenToWorld(px0 - Math.cos(ang)*hp3*0.4, py0 - Math.sin(ang)*hp3*0.4); emit('fire', wx, wy, {vx:-Math.cos(ang)*20, vy:-Math.sin(ang)*20, s0:4, s1:1, life:160}); } }
-      else { ctx.save(); ctx.globalAlpha = 0.3; jetSprite(px0 + 6, py0 + 12, sc*0.9, '#000000', ang, kind); ctx.restore(); jetSprite(px0, py0, sc*0.9, col, ang, kind); } }
+      else if (figFB(kind)){ ctx.save(); ctx.globalAlpha = 0.3; jetSprite(px0 + 6, py0 + 12, sc*0.9, '#000000', ang, kind); ctx.restore(); jetSprite(px0, py0, sc*0.9, col, ang, kind); } }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreen(T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(phB ? toScreen(B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }
     // strength in a small pill edged in the owner's colour; pills of wings flying side by side are nudged apart so '6' and '1' never read as '61'
     { const sl = Math.min(sc, 2.2); ctx.font = `700 ${Math.round(10*sl)}px ${BODY}`; const lb = String(count(a)), lw = ctx.measureText(lb).width + 7*sl, lh = 12*sl; let ly = y + 16*sc;
@@ -6378,8 +6428,8 @@ function draw(now){
   for (const a of S.armies){ if (!a.fly || a.fly.kind !== 'drop' || (!armyVisible(a, vis) && a.owner !== PLAYER)) continue;
     const [wx, wy] = armyPos(a), [x, y] = toScreen(wx, wy), B = G.P[a.fly.tgt], A = G.P[a.fly.from], ang = Math.atan2(B.y - A.y, B.x - A.x), sc = Math.max(0.9, Math.min(k, 2.2*zx(hexPx)));
     if (drawFig('drop', x, y + Math.sin(now/300 + a.id)*1.2*sc, 30*sc*UART.drop[2], ang, {alt:0.7, rotor:1, now})){}   // transport helicopter carrying the paratroopers
-    else if (window.U3D && U3D.has('int')){ ctx.save(); ctx.globalAlpha = 0.25; ctx.filter = 'brightness(0)'; U3D.draw(ctx, 'int', colorOf(a.owner), x + 8, y + 18, 30*sc, ang, 0); ctx.restore(); U3D.draw(ctx, 'int', colorOf(a.owner), x, y, 30*sc, ang, 0); }
-    else jetSprite(x, y, sc, colorOf(a.owner), ang, 'int');
+    else if (figFB('drop') && window.U3D && U3D.has('int')){ ctx.save(); ctx.globalAlpha = 0.25; ctx.filter = 'brightness(0)'; U3D.draw(ctx, 'int', colorOf(a.owner), x + 8, y + 18, 30*sc, ang, 0); ctx.restore(); U3D.draw(ctx, 'int', colorOf(a.owner), x, y, 30*sc, ang, 0); }
+    else if (figFB('drop')) jetSprite(x, y, sc, colorOf(a.owner), ang, 'int');
     ctx.font = `700 ${Math.round(10*sc)}px ${BODY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2eee2'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText('▼ ' + count(a), x, y + 18*sc); ctx.fillText('▼ ' + count(a), x, y + 18*sc);
     if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
   afxAmbient(now, vis);
@@ -6516,8 +6566,8 @@ mini.addEventListener('pointerup', () => { miniDrag = false; });
 function closeChooser(){ const el = $('chooser'); if (el && !el.hidden){ el.hidden = true; el.innerHTML = ''; } }
 function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a => a.owner === PLAYER), el = $('chooser'); if (!el) return false;
   const nm = P.cityName || P.name;
-  el.innerHTML = `<div class="ct">${nm}</div><button data-act="choose-prov" data-id="${p}"><i>🏙</i>City · ${nm}<span class="small">${S.owner[p] === PLAYER ? 'recruit, build' : 'details'}</span></button>`
-    + own.map(a => `<button data-act="choose-army" data-id="${a.id}"><i>${a.air ? '✈' : shipsOnly(a) ? '⚓' : '⚔'}</i>${armyName(a)}<span class="small">${pluN(count(a), 'unit')}</span></button>`).join('');
+  el.innerHTML = `<div class="ct">${nm}</div><button data-act="choose-prov" data-id="${p}">${bimg('city', cityLevel(p), 22) || '<i>🏙</i>'}City · ${nm}<span class="small">${S.owner[p] === PLAYER ? 'recruit, build' : 'details'}</span></button>`
+    + own.map(a => `<button data-act="choose-army" data-id="${a.id}">${leadT(a) ? unitPic(leadT(a), 'sm') : '<i>⚔</i>'}${armyName(a)}<span class="small">${pluN(count(a), 'unit')}</span></button>`).join('');
   el.hidden = false; tipHide(); const w = 240, h = 46 + own.length*38; el.style.left = Math.max(8, Math.min(cw - w - 8, x + 12)) + 'px'; el.style.top = Math.max(8, Math.min(ch - h - 8, y - 20)) + 'px'; return true; }
 function markAt(x, y){ let best = null, bd = 1e9; for (const m of marks){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
 function hitAt(x, y){ for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }
@@ -6627,7 +6677,7 @@ function armiesHTML(){
   const L = S.armies.filter(a => a.owner === PLAYER && count(a)).sort((x, y) => (x.air ? 2 : shipsOnly(x) ? 1 : 0) - (y.air ? 2 : shipsOnly(y) ? 1 : 0) || power(y) - power(x));
   const idle = idleArmies().length, tot = L.reduce((s0, a) => s0 + count(a), 0);
   const rows = L.map(a => { const st0 = statusText(a), hp = Math.round(Math.min(healthFrac(a), a.air ? wingCond(a) : strengthFrac(a))*100), dest = a.path.length ? a.path[a.path.length - 1] : a.to;
-    const comp = UT.filter(t => a.u[t]).map(t => `<span title="${UNITS[t].name}">${unitSVG(t, true)}${a.u[t]}</span>`).join('');
+    const comp = UT.filter(t => a.u[t]).map(t => `<span title="${UNITS[t].name}">${unitPic(t, 'sm')}${a.u[t]}</span>`).join('');
     return `<tr><td><button class="lnk" data-act="army-go" data-id="${a.id}" title="Select this force on the map">${armyName(a)}</button>${cmdOf(a) ? ` <span class="small" style="color:var(--accent)">${'★'.repeat(cmdOf(a).rank)} ${cmdOf(a).name}</span>` : ''}<div class="small muted">${G.P[a.at].cityName || G.P[a.at].name}${dest != null && dest !== a.at ? ` → ${G.P[dest].cityName || G.P[dest].name}` : ''}</div></td>
       <td class="acomp">${comp}</td><td><div class="bar" style="width:60px"><i style="width:${hp}%;background:${hp > 60 ? 'var(--ok)' : hp > 30 ? 'var(--accent)' : 'var(--danger)'}"></i></div><span class="small">${hp}% · M${Math.round(a.m ?? 80)}</span></td>
       <td><span class="stx ${st0.cls}">${st0.short}</span>${a.air ? (wornWing(a) ? ' <span class="small" style="color:var(--accent)">🔧 needs maintenance</span>' : '') : supplied(a) ? '' : ' <span class="small" style="color:var(--danger)">cut off</span>'}</td>
@@ -6715,9 +6765,9 @@ const yieldStr = y => ['cash', 'oil', 'metal', 'food', 'mp'].filter(k => y[k] >=
 // the same yield as compact chips (resource icon + amount, the words in the tooltip), so the row fits on one line in the side panel
 const yieldChips = y => ['cash', 'oil', 'metal', 'food', 'mp'].filter(k => y[k] >= 0.5).map(k => { const v = Math.round(y[k]), t = k === 'cash' ? `$${v}M` : k === 'mp' ? `${v}k` : `${v}`, w = k === 'cash' ? `$${v}M money` : k === 'mp' ? `${v}k manpower` : `${v} ${yword(k, v)}`;
   return `<i class="cp yc" title="${w} a day">${icon(k, 12)}${t}</i>`; }).join('') || '—';
-const comp = a => UT.filter(t => a.u[t]).map(t => `<span class="tag" title="${a.u[t]} × ${UNITS[t].name}">${unitSVG(t)}<b>×${a.u[t]}</b></span>`).join('');   // picture and count; the name in the tooltip
+const comp = a => UT.filter(t => a.u[t]).map(t => `<span class="tag" title="${a.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}<b>×${a.u[t]}</b></span>`).join('');   // picture and count; the name in the tooltip
 // an identified foreign force: type, count, level (Mark) and health of each unit type
-const compFoe = a => UT.filter(t => a.u[t]).map(t => { const m = markOf(a.owner, t), hp = Math.round(100*Math.max(0, 1 - a.w[t]/(a.u[t]*UNITS[t].hp))); return `<span class="tag" title="${a.u[t]} × ${UNITS[t].name}${m > 1 ? ` Mk ${ROMAN[m]}` : ''}, ${hp}% health">${unitSVG(t)}<b>×${a.u[t]}</b>${m > 1 ? `<span class="mk2">${ROMAN[m]}</span>` : ''}<span class="hp2" style="--h:${hp}%"></span></span>`; }).join('');
+const compFoe = a => UT.filter(t => a.u[t]).map(t => { const m = markOf(a.owner, t), hp = Math.round(100*Math.max(0, 1 - a.w[t]/(a.u[t]*UNITS[t].hp))); return `<span class="tag" title="${a.u[t]} × ${UNITS[t].name}${m > 1 ? ` Mk ${ROMAN[m]}` : ''}, ${hp}% health">${unitPic(t, 'sm')}<b>×${a.u[t]}</b>${m > 1 ? `<span class="mk2">${ROMAN[m]}</span>` : ''}<span class="hp2" style="--h:${hp}%"></span></span>`; }).join('');
 const clockStr = h => { const c = calDate(h); return `${c.d} ${MONTHS[c.m]} · ${String(h % 24).padStart(2, '0')}:00`; };
 let lastSig = {};
 function setHTML(el, html){ const ae = document.activeElement; if (ae && (ae.tagName === 'SELECT' || (ae.classList && (ae.classList.contains('rn') || ae.classList.contains('sp-rng')))) && el.contains(ae)) return; if (lastSig[el.id] !== html){ lastSig[el.id] = html; el.innerHTML = html; } }
@@ -6792,7 +6842,7 @@ function renderSide(force){
   setHTML($('nations'), shown.map(n => `<div class="nat ${n.alive ? '' : 'dead'} ${n.id === PLAYER ? 'you' : ''}" style="--c:${n.color}">${flagHTML(n.id, 15)}<span>${n.name}${n.id === PLAYER ? ' (you)' : ''}${BLm.has(n.id) ? ` <span class="bmark" title="${BLm.get(n.id).name}">${blocEmbHTML(BLm.get(n.id).id, 20)}</span>` : ''}</span><span class="n" title="Provinces">${counts[n.id]}</span><span class="n" title="Progress to the land victory target (${landNeed(n.id)} provinces)">${Math.round(counts[n.id]/landNeed(n.id)*100)}%</span></div>`).join('') +
     `<div class="row">${showAllPowers ? '' : `<button class="btn" data-act="allpow" style="font-size:12px;padding:4px 8px">Show all ${order.length}</button>`}<button class="btn" data-act="stats-open" style="font-size:12px;padding:4px 8px">World statistics (S)</button></div>` +
     `<div class="muted small">Win: hold ${need} land provinces or ${WIN_CAPS} starting capitals (you hold ${capsHeld(PLAYER)}), or have the top score on day ${DAY_LIMIT}. Day-${DAY_LIMIT} score is growth since the start: yours ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, best ${Math.max(...S.nations.filter(n => n.alive).map(n => growth(n.id)))}.</div>`);
-  setHTML($('log'), ((S.papers && S.papers[0]) ? `<button class="ev info" data-act="paper-open" style="grid-template-columns:1fr"><span><b>The Meridian Herald · Day ${S.papers[0].day + 1}</b><br><span class="muted">${S.papers[0].head}</span></span></button>` : '') + S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="${e.rep ? 'report' : 'goto'}" data-id="${e.rep || e.p}" title="${e.rep ? 'Open battle report' : 'Show on map'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${e.text}</span></div>`).join(''));
+  setHTML($('log'), ((S.papers && S.papers[0]) ? `<button class="ev info" data-act="paper-open" style="grid-template-columns:1fr"><span><b>The Meridian Herald · Day ${S.papers[0].day + 1}</b><br><span class="muted">${S.papers[0].head}</span></span></button>` : '') + S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="${e.rep ? 'report' : 'goto'}" data-id="${e.rep || e.p}" title="${e.rep ? 'Open battle report' : 'Show on map'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${textUnit(e.text)}${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${textUnit(e.text)}${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
   { const key = sel.army !== null ? 'a' + sel.army : sel.prov !== null ? 'p' + sel.prov : 'o';   // a new selection: the command panel slides in (from the right; back to the overview from the left)
     if (renderSide.ck !== key){ const was = renderSide.ck; renderSide.ck = key; if (was != null && tab === 'cmd') slideIn($('ctx'), key === 'o' ? -16 : 16); } }
@@ -6847,7 +6897,7 @@ function prodHTML(){
     const qtxt = q.length ? `${(UNITS[q[0].t] || MISSILES[q[0].t]).name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || 24))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
     // queue buttons: the unit's picture and its price (full name and costs in the tooltip), not cryptic code chips
     const btns = UT.filter(t => bldOk(p, t) && unlocked(PLAYER, t)).map(t => { const uc = ucost(PLAYER, t);   // the price you actually pay (doctrine-adjusted), same as the Recruit list
-      return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: $${uc.cash}M${uc.metal ? ', ' + uc.metal + ' materials' : ''}${uc.oil ? ', ' + uc.oil + ' oil' : ''}, ${uc.mp}k manpower (shift-click: 5)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitSVG(t)}<span>$${uc.cash}</span></button>`; }).join('');
+      return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: $${uc.cash}M${uc.metal ? ', ' + uc.metal + ' materials' : ''}${uc.oil ? ', ' + uc.oil + ' oil' : ''}, ${uc.mp}k manpower (shift-click: 5)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted">${BK.filter(k => S.bld[p][k]).map(k => BUILD[k].name.split(' ')[0] + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '<span class="muted">—</span>'}</td>
@@ -6981,7 +7031,7 @@ function researchHTML(){
     <div class="tree">`;
   for (const br of BRANCHES){
     const bt = ({Infantry:'inf', Armor:'tank', Artillery:'art', Air:'int', Airmobile:'heli', Drones:'drone', Naval:'frig', Strategic:'bomb', Logistics:'truck'})[br];
-    h += `<div class="branch"><div class="eyebrow bhd">${bt ? unitSVG(bt, true) : br === 'Economy' ? `<i class="bico">${icon('cash', 16)}</i>` : ''}<span>${br}</span></div>`;
+    h += `<div class="branch"><div class="eyebrow bhd">${bt ? unitPic(bt) : br === 'Economy' ? `<i class="bico">${icon('cash', 16)}</i>` : ''}<span>${br}</span></div>`;
     TECH.filter(t => t.branch === br).forEach((T, i) => {
       const done = has(PLAYER, T.id), active = R && R.id === T.id, ready = !T.req || has(PLAYER, T.req);
       const cls = done ? 'done' : active ? 'active' : ready ? 'open' : 'locked';
@@ -6998,7 +7048,7 @@ function researchHTML(){
   h += `</div><div class="eyebrow" style="margin-top:14px">Unit upgrades · Marks I–IV${D ? ` · Doctrine: ${D.name}` : ''}</div>
     <p class="small muted">Engineering runs in parallel with research, one upgrade at a time. Each Mark adds 12% attack and defense to every unit of that type you have or build (Mk II +12%, Mk III +25%, Mk IV +40%).${D ? ` ${D.desc}` : ''}</p>
     <div class="marks">${UT.filter(t => unlocked(PLAYER, t)).map(t => { const m = markOf(PLAYER, t), nx = m + 1, c = nx <= 4 ? markCost(t, nx) : null, act = E && E.t === t;
-      return `<div class="mrow">${unitSVG(t)}<b>${UNITS[t].name}</b><span class="mk">${[1, 2, 3, 4].map(i => `<i class="${i <= m ? 'on' : ''}">${ROMAN[i]}</i>`).join('')}</span>
+      return `<div class="mrow">${unitPic(t, 'sm')}<b>${UNITS[t].name}</b><span class="mk">${[1, 2, 3, 4].map(i => `<i class="${i <= m ? 'on' : ''}">${ROMAN[i]}</i>`).join('')}</span>
         ${act ? `<span class="small">Mk ${ROMAN[E.m]} in ${Math.ceil(E.h/24)} d</span>` : c ? `<button class="btn ${canUpgrade(PLAYER, t) ? 'primary' : ''}" data-act="upgrade" data-t="${t}" ${canUpgrade(PLAYER, t) ? '' : 'disabled'} style="padding:3px 8px;font-size:12px" title="${E ? 'Another upgrade is running' : ''}">Mk ${ROMAN[nx]} · $${c.cash}M · ${c.metal} materials · ${c.days} d</button>` : '<span class="small muted">Fully upgraded</span>'}</div>`; }).join('')}</div>`;
   return h + `<div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
@@ -7015,7 +7065,7 @@ function ctxHTML(){
     <div class="status intel" style="border-left-color:#8a7ad8">Intelligence: ${agentsOf(PLAYER).length}/5 agents (${idleAgents(PLAYER).length} idle) <button class="btn" data-act="train-agent" ${S.nations[PLAYER].cash >= 60 && agentsOf(PLAYER).length < 5 ? '' : 'disabled'} style="padding:2px 7px;font-size:12px;margin-left:4px">Train agent · $60M</button> <button class="btn" data-act="intel" style="padding:2px 7px;font-size:12px">Open</button></div>
     ${N.cash > 300 && S.queue.every((q, p) => S.owner[p] !== PLAYER || !q.length) ? `<div class="nudge">You have $${fmt(N.cash)}M and nothing in training. Money only wins wars once it is spent. <button class="btn" data-act="prov" data-id="${N.capital}" style="padding:2px 7px;font-size:12px">Recruit in ${G.P[N.capital].cityName}</button></div>` : ''}
     <div class="eyebrow">Your forces · ${mine.length} ${itip('Tap a province to inspect it or recruit in your cities. Tap one of your counters to command that force. Forces cross water by embarking from coastal provinces.')}</div>
-    <div class="armylist">${mine.slice(0, 40).map(a => `<button data-act="army" data-id="${a.id}"><span class="an"><b>${armyName(a)}</b><span class="muted">${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span><span class="muted">${pluN(count(a), 'unit')} · ${statusText(a).short}</span></button>`).join('') || '<span class="muted small">You have no forces in the field.</span>'}</div>`;
+    <div class="armylist">${mine.slice(0, 40).map(a => `<button data-act="army" data-id="${a.id}"><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span class="an"><b>${armyName(a)}</b><span class="muted">${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span></span><span class="muted">${pluN(count(a), 'unit')} · ${statusText(a).short}</span></button>`).join('') || '<span class="muted small">You have no forces in the field.</span>'}</div>`;
 }
 function chartSVG(idx, title){
   const H0 = S.hist || []; if (H0.length < 2) return `<div class="small muted">Charts appear after day 2.</div>`;
@@ -7114,7 +7164,7 @@ function oddsHTML(a, t, foes){
 function unitRows(a){
   return `<div class="urows">${UT.filter(t => a.u[t]).map(t => { const U = UNITS[t], max = a.u[t]*U.hp, cur = Math.max(0, max - a.w[t]), f = cur/max;
     const sp = unitKmd(a.owner, t), spT = sp[0] != null ? ` Speed: land ${kmd(sp[0])}, water ${kmd(sp[1])} (embarked).` : sp[1] != null ? ` Speed at sea: ${kmd(sp[1])}.` : '';
-    return `<div class="urow" title="${U.role}${spT}">${unitSVG(t)}<span class="un">${U.name}${markOf(a.owner, t) > 1 ? ` <span class="mkb">Mk ${ROMAN[markOf(a.owner, t)]}</span>` : ''} <b>×${a.u[t]}</b></span><span class="uhp"><i style="width:${Math.round(f*100)}%;background:${f > 0.6 ? 'var(--ok)' : f > 0.3 ? 'var(--accent)' : 'var(--danger)'}"></i></span><span class="unum">${Math.round(cur)}/${max} HP</span></div>`; }).join('')}</div>`;
+    return `<div class="urow" title="${U.role}${spT}">${unitPic(t, 'md')}<span class="un">${U.name}${markOf(a.owner, t) > 1 ? ` <span class="mkb">Mk ${ROMAN[markOf(a.owner, t)]}</span>` : ''} <b>×${a.u[t]}</b></span><span class="uhp"><i style="width:${Math.round(f*100)}%;background:${f > 0.6 ? 'var(--ok)' : f > 0.3 ? 'var(--accent)' : 'var(--danger)'}"></i></span><span class="unum">${Math.round(cur)}/${max} HP</span></div>`; }).join('')}</div>`;
 }
 function groupHTML(){
   const g = groupArmies(); sel.group = g.map(a => a.id); if (g.length < 2) return armyHTML(g[0]);
@@ -7125,7 +7175,7 @@ function groupHTML(){
       <div class="row"><button class="btn primary" data-act="send" ${reach ? '' : 'disabled'}>Send all</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
     <dl class="kv"><dt>Total strength</dt><dd>${Math.round(pw)}</dd><dt>Saved groups</dt><dd>Ctrl+4…9 to save, 4…9 to recall</dd></dl>
-    <div class="armylist">${g.map(a => `<button data-act="gsel" data-id="${a.id}" ${a.id === sel.army ? 'style="border-color:var(--accent)"' : ''}><span>${a.air ? '✈ ' : ''}${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span><span class="muted">${pluN(count(a), 'unit')} · ${a.air ? 'air wing' : statusText(a).short}</span></button>`).join('')}</div>
+    <div class="armylist">${g.map(a => `<button data-act="gsel" data-id="${a.id}" ${a.id === sel.army ? 'style="border-color:var(--accent)"' : ''}><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span><span class="muted">${pluN(count(a), 'unit')} · ${a.air ? 'air wing' : statusText(a).short}</span></button>`).join('')}</div>
     <p class="small muted" style="margin:0">Tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>
     <div class="row"><button class="btn" data-act="clear">Deselect</button></div>`;
 }
@@ -7156,7 +7206,7 @@ function wingHTML(a){
         : c.kind === 'hunt' ? `Patrol the sea for 12 h after ${c.hours} h: spots every ship and submerged submarine within ${Math.round(MPA_R*KM_HEX/100)*100} km and attacks hostile ships (subs first) every 3 h. Frigates fire back.`
         : `Move this wing to the airbase here.`) : c.why}</span></div>
       <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (T === 'bomb' ? 'Launch raid' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
-  return `<div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2>${plan}
+  return `<div class="uhd">${unitPic(T, 'xl')}<div class="uht"><div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2></div></div>${plan}
     <div class="status ${f ? 'move' : ''}">${status}</div>
     ${T === 'drone' ? `<div>${uavBadge(a.owner)}</div><div class="small muted">Vision ${Math.round(L0.vis*KM_HEX/50)*50} km · loiter ${L0.loiter} h · stealth ${Math.round((1 - L0.stealth)*100)}%</div>` : ''}
     ${!G.P[a.air.base].sea && bdis(a.air.base, 'air') ? `<div class="status battle">Airbase knocked out: grounded for ${bdisH(a.air.base, 'air')} h</div>` : ''}
@@ -7181,7 +7231,7 @@ function splitHTML(a){
   let big = -1; if (cmdOf(a)){ let bv = -1; cols.forEach((c, i) => { if (c.u && c.hp > bv + 1e-6){ bv = c.hp; big = i; } }); }
   const hpc = f => f > 0.6 ? 'var(--ok)' : f > 0.3 ? 'var(--accent)' : 'var(--danger)';
   const rowH = rows.map(r => { const U = UNITS[r.t], v = g[r.k] || 0, mx = r.n - spTaken(r.k, gi), stay = r.n - spTaken(r.k, -1);
-    return `<div class="sprow${r.dmg ? ' dmg' : ''}" title="${U.role}"><span class="sn">${unitSVG(r.t, true)}<span>${U.name}${r.dmg ? ` <em>damaged · ${Math.round(r.hf*100)}% HP</em>` : r.hf < 0.995 ? ` <em class="ok">${Math.round(r.hf*100)}% HP</em>` : ''}</span></span><span class="sa">×${r.n}</span>
+    return `<div class="sprow${r.dmg ? ' dmg' : ''}" title="${U.role}"><span class="sn">${unitPic(r.t)}<span>${U.name}${r.dmg ? ` <em>damaged · ${Math.round(r.hf*100)}% HP</em>` : r.hf < 0.995 ? ` <em class="ok">${Math.round(r.hf*100)}% HP</em>` : ''}</span></span><span class="sa">×${r.n}</span>
       <span class="sctl"><button class="sb" data-act="sp-dec" data-k="${r.k}" ${v ? '' : 'disabled'} aria-label="One fewer">−</button><input type="range" class="sp-rng" data-k="${r.k}" min="0" max="${mx}" step="1" value="${v}" ${mx ? '' : 'disabled'} aria-label="${U.name}${r.dmg ? ' (damaged)' : ''} to group ${gi + 1}"><button class="sb" data-act="sp-inc" data-k="${r.k}" ${v < mx ? '' : 'disabled'} aria-label="One more">+</button>
       <span class="sv"><b data-sv="${r.k}">${v}</b> to G${gi + 1}</span><span class="sst" data-ss="${r.k}">${stay} stay</span></span></div>`; }).join('');
   const head = `<tr><th>Unit</th><th class="${''}">Stays</th>${SPLIT.plan.map((_, i) => `<th class="${i === gi ? 'on' : ''}"><button data-act="sp-tab" data-g="${i}">G${i + 1}</button></th>`).join('')}</tr>`;
@@ -7214,7 +7264,7 @@ function armyHTML(a){
       <button class="btn" data-act="prov" data-id="${t}" ${G.P[t].sea ? 'disabled' : ''}>View province</button>
       <button class="btn" data-act="untarget">Cancel route</button></div>`;
   }
-  return `<div class="eyebrow">Your force · ${pluN(count(a), 'unit')}</div>${renaming === a.id ? `<input class="rn" data-id="${a.id}" maxlength="32" value="${armyName(a)}" aria-label="Force name" style="font:inherit;font-size:20px;width:100%;margin:2px 0 6px">` : `<h2 class="aname" data-act="rename" data-id="${a.id}" title="Click to rename">${armyName(a)} <span class="small muted">✎</span></h2>`}${plan}
+  return `<div class="uhd">${leadT(a) ? unitPic(leadT(a), 'xl') : ''}<div class="uht"><div class="eyebrow">Your force · ${pluN(count(a), 'unit')}</div>${renaming === a.id ? `<input class="rn" data-id="${a.id}" maxlength="32" value="${armyName(a)}" aria-label="Force name" style="font:inherit;font-size:20px;width:100%;margin:2px 0 6px">` : `<h2 class="aname" data-act="rename" data-id="${a.id}" title="Click to rename">${armyName(a)} <span class="small muted">✎</span></h2>`}</div></div>${plan}
     ${unitRows(a)}
     <div class="status ${st0.cls}">${st0.long}</div>
     <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${speedHTML(a)}</dd>
@@ -7234,7 +7284,7 @@ function armyHTML(a){
       <button class="btn" data-act="prov" data-id="${a.to !== null ? a.to : a.at}" ${G.P[a.to !== null ? a.to : a.at].sea ? 'disabled' : ''}>${a.to === null && S.owner[a.at] === PLAYER ? (G.P[a.at].city ? 'Recruit / build here' : 'Build here') : 'Province'}</button>
       <button class="btn" data-act="clear">Deselect</button>
     </div>
-    ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitSVG(t, true)}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}`;
+    ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}`;
 }
 function terrBoxHTML(p){ const P = G.P[p], k = P.terrain || 'plains', T = TERRAIN[k] || TERRAIN.plains, [sg, wk] = terrUnitsText(k);
   return `<div class="terrbox"><div class="th">${ticon(k, 16)}<b>${T.name}</b><span class="muted">${T.def > 1 ? `defence +${Math.round((T.def - 1)*100)}%` : 'open ground, no cover'}${FRONT_T[k] ? ` · front ${frontage(p)}` : ''}</span></div>
@@ -7284,12 +7334,10 @@ const TECH_BLD = {eco1:'fac', eco2:'city', eco3:'fac', msl1:'silo', msl2:'silo',
 function techArt(T, bt){ const ut = Object.keys(UNITS).find(t => UNITS[t].tech === T.id) || Object.keys(T.fx || {}).find(t => UNITS[t]) || bt;
   const bk = TECH_BLD[T.id], bi = bk ? bimg(bk, 3, 40) : '';
   if (bi) return `<span class="tart">${bi}</span>`;
-  if (ut === 'truck') return ART.ready('u-supply-truck') ? `<span class="tart"><img src="${ART.url('u-supply-truck')}" alt=""></span>` : '';
-  return ut && UNITS[ut] ? `<span class="tart">${agPic(ut)}</span>` : ''; }
-function agPic(t){ const u = UTILE[artT(t, PLAYER)]; return u && ART.ready(u[0]) && !u[3] ? `<img src="${ART.url(u[0])}" alt="" style="${u[1] ? 'transform:rotate(180deg)' : ''}">` : unitSVG0(t); }
+  return ut && (UNITS[ut] || UART[ut]) ? `<span class="tart">${unitPic(ut, 'lg')}</span>` : ''; }
 function airGuideHTML(){ const L = uavLv(PLAYER);
   const card = t => { const U = UNITS[t], lk = !unlocked(PLAYER, t), rng0 = U.cls === 'air' ? `range ${airRangeT(PLAYER, t)*KM_HEX} km · ` : '', C = COUNTER_TXT[t] || ['', ''];
-    return `<div class="agc${lk ? ' lk' : ''}"><div class="pic">${agPic(t)}</div><div><b>${U.name}</b> <span class="muted small">${U.short} · ${U.dr ? 'drone' : U.cls}${U.pack ? ` · ${U.pack} per card` : ''}</span>
+    return `<div class="agc${lk ? ' lk' : ''}"><div class="pic">${unitPic(t, 'xl')}</div><div><b>${U.name}</b> <span class="muted small">${U.short} · ${U.dr ? 'drone' : U.cls}${U.pack ? ` · ${U.pack} per card` : ''}</span>
       ${t === 'drone' ? `<div>${uavBadge()}</div>` : ''}<div class="small">${U.role}</div>
       <div class="small"><span class="tg">Strong vs</span> ${C[0]}</div><div class="small"><span class="tb">Countered by</span> ${C[1]}</div>
       <div class="small muted">ATK ${+st(PLAYER, t, 'atk').toFixed(1)} · DEF ${+st(PLAYER, t, 'def').toFixed(1)} · HP ${U.hp} · ${rng0}$${U.cost}M${U.pack ? '/card' : ''}${lk ? ` · <span style="color:var(--accent)">Research ${TECH_BY[U.tech].name}</span>` : ''}${U.req ? ` · needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''}</div></div></div>`; };
@@ -7335,12 +7383,12 @@ function provHTML(p){
   if (S.battles.includes(p)){ const B = S.bt && S.bt[p];
     html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${pluN(frontage(p), 'unit')}${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => { const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br>${o >= 0 ? flagHTML(o, 11) : `<span style="color:${shade(colorOf(o), 0.35)}">■</span>`} ${o === PLAYER ? 'You' : nationName(o)}: ${pluN(b.n, 'unit')}${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
   if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
-  if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span>${armyName(a)} · ${count(a)}</span><span class="muted">Command</span></button>`).join('')}</div>`;
+  if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${armyName(a)} · ${count(a)}</span></span><span class="muted">Command</span></button>`).join('')}</div>`;
   if (mine && P.city){
     const card = t => { const U = UNITS[t];
       const why = reqText(p, t);
       const h = trainH(p, t, PLAYER);
-      return `<button class="btn unit" data-act="recruit" data-t="${t}" title="${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}><span class="nm">${unitSVG(t)}${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || (c0 => [`$${c0.cash}M`, c0.oil ? `${c0.oil} oil` : '', c0.metal ? `${c0.metal} materials` : '', `${c0.mp}k manpower`, U.food ? `−${U.food} food a day` : ''].filter(Boolean).map(x => `<i class="cp">${x}</i>`).join(' · '))(ucost(PLAYER, t))}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
+      return `<button class="btn unit hasp" data-act="recruit" data-t="${t}" title="${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || (c0 => [`$${c0.cash}M`, c0.oil ? `${c0.oil} oil` : '', c0.metal ? `${c0.metal} materials` : '', `${c0.mp}k manpower`, U.food ? `−${U.food} food a day` : ''].filter(Boolean).map(x => `<i class="cp">${x}</i>`).join(' · '))(ucost(PLAYER, t))}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
     const open = UT.filter(t => !reqText(p, t)), locked = UT.filter(t => reqText(p, t));
     { const nf = income(PLAYER).net.food; if (nf < 3) html += `<div class="nudge" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)">Food ${nf < 0 ? 'deficit' : 'margin'} ${Math.round(nf)}/day: every unit eats food. ${canBuildHere(p, 'farm') && S.bld[p].farm < BUILD.farm.max && !S.cons[p] ? `<button class="btn" data-act="build" data-k="farm" style="padding:2px 7px;font-size:12px">Build Farms here</button>` : 'Build Farms in your provinces.'}</div>`; }
     html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
