@@ -1893,6 +1893,130 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
 .sheet.mid > .row:last-child{background:linear-gradient(180deg, #34484f, #2f434a); border-top:1px solid rgba(143,163,170,.38); box-shadow:0 -10px 16px -8px rgba(0,0,0,.6); z-index:2}
 
 @media (max-width: 400px){ .vbar .vm b small{display:none!important} .vbar .vm{padding:0 6px} .hbox{padding-right:5px} .hbox .hi{padding:0 3px; margin-right:4px} .hmid{gap:3px} #speed.seg button{min-width:20px; padding:0 2px} .hrow1{gap:3px; padding:0 5px} }
+/* ===================== v3.8 polish pass (CoN reference colours) =====================
+   Research banners run edge to edge in a bright dusk gradient (warm orange-red over saturated blue) over the darkened photo, split by light separators;
+   the tree's day column and title row are dark slate; the city sheet's stats row is light with dark figures, its building cards are teal tiles with a
+   light-blue name band and a black level square; Diplomacy actions all carry button chrome on an aligned grid; list footers are full-width bars;
+   the hint moves clear of the city sheet; on phones the map controls step aside for the city sheet and the sheet is compact. */
+/* research: banner rows */
+.rs-list{gap:3px; padding:3px 0; background:linear-gradient(180deg, #9aa1a5, #8b9397)}
+.rs-ban{height:86px; padding:0 18px 0 26px; border-radius:0;
+  background:radial-gradient(ellipse 46% 70% at 14% 6%, rgba(236,150,98,.5), rgba(236,150,98,0) 72%),
+    linear-gradient(180deg, #b47658 0%, #a3694f 28%, #925f4c 47%, #6c5759 58%, #34495f 70%, #24527d 85%, #1d5a86 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -2px 0 rgba(122,196,240,.85), inset 0 -6px 8px -4px rgba(90,170,230,.45)}
+.rs-ban::before{background:linear-gradient(90deg, rgba(16,24,32,.34) 0, rgba(16,24,32,.12) 28%, rgba(16,24,32,0) 46%, rgba(16,24,32,0) 82%, rgba(16,24,32,.18) 100%)}
+.rs-ban::after{opacity:.7; -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,.55) 0, #000 60%); mask-image:linear-gradient(90deg, rgba(0,0,0,.55) 0, #000 60%)}
+.rs-bw{position:absolute; inset:0; z-index:-3; overflow:hidden; pointer-events:none; mix-blend-mode:luminosity; opacity:.78}
+.rs-bw .rs-bimg{z-index:auto; filter:contrast(1.12) brightness(.82) drop-shadow(0 8px 8px rgba(0,0,0,.55)); opacity:1}
+.rs-bw .rs-bimg.flat{opacity:.8}
+.rs-ban.marks{background:radial-gradient(ellipse 46% 70% at 14% 6%, rgba(240,196,96,.42), rgba(240,196,96,0) 72%),
+    linear-gradient(180deg, #ad7c4e 0%, #9c6d4a 28%, #8a6249 47%, #685a58 58%, #34495f 70%, #24527d 85%, #1d5a86 100%)}
+.rs-ban .rs-dm{background:linear-gradient(135deg, rgba(236,228,228,.5), rgba(150,142,150,.42)); border-color:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 3px 7px rgba(0,0,0,.45)}
+.rs-bt b{font-weight:600; letter-spacing:.03em; color:#fff; text-shadow:var(--cn-out)}
+.rs-bt span{color:#f1f4f5; text-shadow:0 0 1px #0d171c, 0 1px 1px #0d171c, 0 1px 3px rgba(0,0,0,.7)}
+.rs-ban:hover{filter:brightness(1.08) saturate(1.05)}
+/* research: tree title row and day column in dark slate */
+.rs-thead{background:#273f47; border-bottom:1px solid #8fa3aa; box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.rs-tc{background:#273f47; border-right:1px solid #8fa3aa}
+.rs-rows{background:#273f47; border-right:1px solid #8fa3aa; box-shadow:none}
+@media (max-width: 820px){
+  .rs-list{gap:3px; padding:3px 0}
+  .rs-ban{height:80px; gap:14px; padding:0 12px 0 18px}
+}
+
+/* city sheet: MOBILIZE UNIT / BUILD in CoN's deep teal slate with darker icon tiles */
+.cs-acts{background:linear-gradient(180deg, #23363c, #1e2f35)}
+.cs-big{background:linear-gradient(180deg, rgba(43,72,79,.98), rgba(37,63,69,.98)); box-shadow:inset 0 1px 0 rgba(255,255,255,.1), inset 0 0 0 1px rgba(143,163,170,.26)}
+.cs-acts .cs-big{box-shadow:inset 0 1px 0 rgba(255,255,255,.1), inset 0 0 0 1px rgba(143,163,170,.26)}
+.cs-bi{border:1px solid #b6e3ea; background:linear-gradient(135deg, #1c6676 0%, #247788 46%, #3592a8 100%); box-shadow:inset 0 1px 0 rgba(255,255,255,.25), inset 0 -2px 0 rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.45)}
+/* the stats row: light grey with dark figures (the morale bar stays blue on its left) */
+.cs-stat{background:linear-gradient(180deg, #ececec, #e2e3e3); border-bottom:1px solid #a9b2b6; box-shadow:inset 0 1px 0 #fff}
+.cs-mor{background:linear-gradient(180deg, #c4ccd0, #d3d9dc); border-right:1px solid #a9b2b6; box-shadow:inset 0 1px 2px rgba(0,0,0,.18)}
+.cs-y b, .cs-pp b{color:#16242a; text-shadow:none; font-weight:700}
+.cs-y svg, .cs-pp svg{filter:drop-shadow(0 1px 0 rgba(0,0,0,.25))}
+.cs-pp{color:#22343b; border-left:1px solid #b9c1c4; box-shadow:inset 1px 0 0 rgba(255,255,255,.7)}
+.cs-none{color:#4f6168}
+/* building cards: teal tiles in a thin light frame, a light-blue name band and a black level square */
+.cs-blds{background:linear-gradient(180deg, #364f57, #314850); gap:10px}
+.cs-c{border:2px solid #e2e7e7; border-radius:1px; background:radial-gradient(circle at 50% 38%, #4bb5c4 0%, #2a8d9d 42%, #17707e 74%, #125d69 100%);
+  box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 3px 6px rgba(0,0,0,.4)}
+.cs-ci{background-size:96%; background-position:center 46%}
+.cs-ci.gl{background-size:58px; background-position:center 8px}
+.cs-cn{padding:3px 3px 3px; font:700 9.5px/1.15 var(--body); letter-spacing:.03em; color:#0f2229; text-shadow:0 1px 0 rgba(255,255,255,.35);
+  background:linear-gradient(180deg, #8ccbea, #7abee0 60%, #6cb1d6); box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.cs-lvb{top:3px; right:3px; width:21px; height:21px; clip-path:none; background:#0b0f11; border:1px solid #d5dde0; border-radius:1px; filter:none; box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.cs-lvb::before{display:none}
+.cs-lvb b{margin:0; font:700 12.5px/1 var(--body); color:#fff; text-shadow:none}
+.cs-c.add{border-color:rgba(226,231,231,.55); background:radial-gradient(circle at 50% 38%, #3d6670 0%, #2a4c55 60%, #213e46 100%); box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+.cs-c.add .cs-ci{opacity:.42}
+.cs-c.add .cs-cn{background:linear-gradient(180deg, #a7bcc4, #93a9b2); color:#1c2d33; text-shadow:none}
+.cs-plus{top:3px; right:3px; width:21px; height:21px; padding:0 0 1px; clip-path:none; border:1px solid #d5f3f6; border-radius:1px; background:linear-gradient(180deg, #49b6c5, #1f7f8e); font-size:16px; filter:none; box-shadow:0 1px 2px rgba(0,0,0,.5)}
+button.cs-c:hover{box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 0 3px rgba(79,208,222,.65), 0 6px 10px rgba(0,0,0,.45)}
+.cs-c.busy{box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 0 3px var(--cn-teal), 0 0 12px rgba(79,208,222,.6)}
+.cs-cb{bottom:22px}
+.cs-empty{background:linear-gradient(180deg, #364f57, #314850)}
+/* phones: a compact sheet (CoN keeps the map in view) */
+@media (max-width: 820px){
+  .cs-big{height:50px; gap:9px; padding:0 9px 0 6px}
+  .cs-bi{width:38px; height:38px} .cs-bi svg{width:24px; height:24px}
+  .cs-bt{gap:4px} .cs-bt b{font-size:14.5px} .cs-bt small{font-size:10px}
+  .cs-ban{height:50px; gap:9px}
+  .cs-fl{width:82px} .cs-fl .flg{left:-22px}
+  .cs-nm{font-size:19px} .cs-tt{gap:3px} .cs-st{font-size:11px}
+  .cs-i{width:30px; height:30px; font-size:17px} .cs-x{width:28px; height:28px}
+  .cs-stat{height:30px}
+  .cs-mor b{font-size:13px}
+  .cs-blds{gap:7px; padding:7px 10px 8px; scroll-padding-left:10px}
+  .cs-c{width:74px; height:74px} .cs-cn{font-size:8.5px; padding:2px 2px 3px}
+  .cs-lvb, .cs-plus{width:19px; height:19px} .cs-lvb b{font-size:11.5px}
+  .cs-ci.gl{background-size:44px; background-position:center 5px}
+  /* the map controls step aside while the city sheet is up: nothing floats between the map and the sheet */
+  body.cs-on .modes:not(.open), body.cs-on .mapctl{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .18s, visibility 0s linear .18s}
+}
+@media (max-width: 400px){ .cs-bt b{font-size:13.5px} .cs-nm{font-size:17.5px} .cs-c{width:70px; height:70px} }
+/* the hint never covers the city sheet or the selected city: top centre, under the bars */
+@media (min-width: 821px){ body.cs-on #hint{top:10px!important; bottom:auto!important; left:50%!important; transform:translateX(-50%)!important} }
+
+/* Diplomacy: every action is a real button; trade routes on one aligned grid */
+.dacts .btn:not(.primary):not(.war), .trr .acts .btn, .dacts summary.btn, .morebox .btn:not(.primary):not(.war){
+  background:linear-gradient(180deg, #566e75, #475d64 55%, #3f545b); border:1px solid rgba(143,163,170,.55); border-radius:2px; color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15), 0 1px 2px rgba(0,0,0,.4); text-shadow:0 1px 1px rgba(0,0,0,.45);
+  padding:5px 11px!important; font:600 12px/1.2 var(--body)!important; white-space:nowrap; transition:filter .15s, border-color .15s, transform .1s}
+.dacts .btn:not(.primary):not(.war):hover, .trr .acts .btn:hover, .dacts summary.btn:hover, .morebox .btn:not(.primary):not(.war):hover:not(:disabled){
+  background:linear-gradient(180deg, #5f7980, #4e666d 55%, #455c63); border-color:var(--cn-teal); color:#fff}
+.dacts .btn:active, .trr .acts .btn:active, .dacts summary.btn:active{transform:scale(.96)}
+.dacts .btn.primary{padding:5px 11px!important; font:700 12px/1.2 var(--body)!important}
+.dacts .btn.war{background:linear-gradient(180deg, #c8433d, #a52a25 55%, #8f211d); border:1px solid #f0a29c; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.5); box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 1px 2px rgba(0,0,0,.4)}
+.dacts .btn.war:hover:not(:disabled){filter:brightness(1.1); border-color:#ffd0cb; color:#fff}
+.dacts{gap:6px; align-items:center}
+details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0 0 1px rgba(79,208,222,.5)}
+.morebox{gap:5px; padding:7px; background:linear-gradient(180deg, #34484f, #2b3c43); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 10px 26px rgba(0,0,0,.55)}
+.morebox .btn{width:100%; text-align:left}
+.trr{grid-template-columns:minmax(0, 1.55fr) 170px minmax(0, 1fr) 206px; column-gap:14px}
+.trr .v{display:flex; align-items:center; gap:4px}
+.trr .acts{justify-content:flex-end; gap:6px}
+@media (max-width: 700px){
+  .trr{grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"nm v" "st acts"; gap:6px 10px; padding:9px 4px}
+  .trr > .nm{grid-area:nm; min-width:0} .trr > .v{grid-area:v; justify-content:flex-end; align-self:start; padding-top:1px} .trr > .st{grid-area:st; grid-column:auto; align-self:center} .trr > .acts{grid-area:acts}
+  .trr .nm span.small{font-size:11.5px; line-height:1.3}
+  .trr .v .small.muted:last-child{display:none}
+  .drow{grid-template-columns:minmax(0, 1fr) minmax(112px, 38%); gap:6px 12px; padding:10px 4px}
+  .drow > .dacts{grid-column:1 / -1; justify-content:flex-start}
+  .drow .nm span{display:block; white-space:normal}
+  .sheet > .rhead:first-child > .btn{padding:6px 11px; font-size:12.5px}
+}
+
+/* list windows: the sticky footer is a full-width, solid bar flush with the window's edges; the list scrolls clear of it */
+.sheet.mid{scroll-padding-bottom:86px}
+.sheet.mid > .row:last-child{flex:none; margin:auto -26px -24px; padding:10px 26px 12px; bottom:-24px; background:linear-gradient(180deg, #34484f, #2d4148); border-top:1px solid rgba(143,163,170,.5);
+  box-shadow:0 -1px 0 rgba(0,0,0,.35), 0 -8px 14px -6px rgba(0,0,0,.55); z-index:3}
+
+/* Market: no empty gap where a price history has not started; on phones the sparkline sits beside the price */
+.good > svg:empty{display:none}
+@media (max-width: 640px){
+  .good{gap:4px}
+  .good > svg{position:absolute; right:10px; top:31px; width:58px; height:18px}
+}
 </style>
 
 <div id="app">
@@ -7946,17 +8070,17 @@ function wrenchMark(x, y, ps){ const r = 4.6*ps; ctx.save(); ctx.beginPath(); ct
   ctx.translate(x, y); ctx.rotate(-Math.PI/4); ctx.fillStyle = '#e8b33c'; ctx.fillRect(-0.8*ps, -0.6*ps, 1.6*ps, 3.4*ps); ctx.beginPath(); ctx.arc(0, -1.6*ps, 1.9*ps, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = 'rgba(20,16,10,.95)'; ctx.fillRect(-0.55*ps, -3.6*ps, 1.1*ps, 2*ps); ctx.restore(); }
 // flat counter plate: size of a plate for a strength n at counter scale s (minor = quiet foreign/neutral mini plate). The plate keeps one size on
-// screen; past hexPx 30 it grows gently (plateGrow, at most x1.3 overall), in steps of 0.05 so zooming reuses a few cached icon sizes
+// screen at every zoom (the owner's rule: plate, flag and number never grow or shrink with the map)
 const PLATE_TW = new Map();
-const plateGrow = () => 1 + 0.3*smooth01((view.s*HS0 - 30)/90);
+const plateGrow = () => 1, PLATE_K = 1;   // (no growth with zoom: one size everywhere)
 let HUDR = {t:0, r:[]};
 function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) return HUDR.r; const cr = cv.getBoundingClientRect(), out = [];
   for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || getComputedStyle(e).display === 'none') continue;
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   return (HUDR = {t:now, r:out}).r; }
 // h: plate height, C: icon cell width, tab: count tab width, r: corner radius, bars: what the health and morale bars add below (full plates)
-function plateDims(n, s, minor, two){ const sk0 = Math.max(0.85, Math.min(1.15, Math.max(0.75, s))), ps = Math.round((minor ? sk0 : Math.min(1.3, sk0*plateGrow()))*20)/20;
-  const h = minor ? Math.round((view.s*HS0 >= FORM_PX ? 18 : 14)*sk0) : Math.round(22*ps), fz = Math.round((minor ? 0.72 : 0.76)*h), key = fz + ':' + n;   // the number keeps one size on every plate (a mixed stack too)
+function plateDims(n, s, minor, two){ const ps = PLATE_K;   // the owner's rule: counters keep one pixel size at every zoom (s is ignored)
+  const h = minor ? 15 : Math.round(22*ps), fz = Math.round((minor ? 0.72 : 0.76)*h), key = fz + ':' + n;   // the number keeps one size on every plate (a mixed stack too)
   let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = `italic 800 ${fz}px ${BODY}`; tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
   const sk = Math.round(h*0.21), C = Math.round(h*1.3), i2 = two ? Math.round(0.6*h) : 0, tab = Math.round(Math.max(0.8*h, tw + 0.46*h + (two ? i2 - 0.08*h : 0))), HB = Math.max(2, Math.round(0.14*h*2)/2);
   const fh = Math.round(h*(minor ? 0.62 : 0.6)), fw = Math.round(fh*4/3);
@@ -8720,7 +8844,7 @@ function draw(now){
   const clusters = [];
   const plateQuiet = clQuiet;
   const R2 = (hexPx >= (GS > 1 ? FORM_PX : 10) ? 0 : GS > 1 ? 36 : 26)**2;
-  const plateM = GS > 1 && hexPx < FORM_PX, psk = Math.round(Math.max(0.85, Math.min(1.15, k))*plateGrow()*20)/20, MW = 44*psk, MH = 32*psk;   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
+  const plateM = GS > 1 && hexPx < FORM_PX, psk = PLATE_K, MW = 44*psk, MH = 32*psk;   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
     let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0) || (plateM && Math.abs(c.x - it.x) < MW && Math.abs(c.y - it.y) < MH)));
@@ -9963,7 +10087,7 @@ function rLayout(br){ if (RLAY[br]) return RLAY[br];
   return (RLAY[br] = {L, pos, cols:Math.max(1, nc), r0, rows:r1 - r0 + 1, inB}); }
 // a banner's picture: the owner's top-down unit photo turned to face the title (pictures stored nose-down are turned the other way); building art stays upright
 const rbImg = art => { const e = Object.values(UART).find(u => u[0] === art), rot = /^b-/.test(art) ? 0 : e && e[1] ? 96 : -84;
-  return `<i class="rs-bimg${rot ? '' : ' flat'}" style="background-image:url('${ART.url(art)}');--rot:${rot}deg"></i>`; };
+  return `<span class="rs-bw" aria-hidden="true"><i class="rs-bimg${rot ? '' : ' flat'}" style="background-image:url('${ART.url(art)}');--rot:${rot}deg"></i></span>`; };
 const rDur = h => h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`;
 // may this project wait in slot #2? (slot #1 busy, not yet known, and what it needs is known or being researched now)
 function rCanQueue(n, id){ const N = S.nations[n], T = TECH_BY[id], R = N.research; return !!(T && N.alive && R && R.id !== id && !has(n, id) && (!T.req || has(n, T.req) || R.id === T.req)); }
