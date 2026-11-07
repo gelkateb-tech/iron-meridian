@@ -12,7 +12,10 @@
   const BAKE_SZ = 136;
   const SZ = window.__BAKE ? BAKE_SZ : ((window.devicePixelRatio || 1) > 1.3 && (window.innerWidth || 1000) > 820 ? 136 : 112);   // pixels per frame
   const cache = {};
-  let buildFn = null;
+  let buildFn = null, mapFn = null;
+  const MAP_SZ = 192;
+  // the baked map atlases (assets/units/m-<type>.png): their crop and ground origin, written by tools/bake-assets.js map
+  const MAPMETA = {"sol":{"w":158,"h":165,"ox":62,"oy":114.07,"ppm":71.1111,"air":false,"sea":false},"hmv":{"w":176,"h":186,"ox":80,"oy":110.44,"ppm":29.0909,"air":false,"sea":false},"truck":{"w":173,"h":161,"ox":77,"oy":91.23,"ppm":20.8696,"air":false,"sea":false},"tank":{"w":192,"h":170,"ox":96,"oy":91.22,"ppm":14.5455,"air":false,"sea":false},"ifv":{"w":136,"h":115,"ox":60,"oy":63.22,"ppm":14.5455,"air":false,"sea":false},"art":{"w":192,"h":192,"ox":96,"oy":104.45,"ppm":13.3333,"air":false,"sea":false},"mlrs":{"w":170,"h":157,"ox":74,"oy":89.23,"ppm":20.8696,"air":false,"sea":false},"sam":{"w":145,"h":123,"ox":63,"oy":67.8,"ppm":12.3077,"air":false,"sea":false},"frig":{"w":146,"h":113,"ox":73,"oy":70.42,"ppm":19.5918,"air":false,"sea":true},"sub":{"w":150,"h":116,"ox":75,"oy":62.7,"ppm":18.4615,"air":false,"sea":true},"crui":{"w":152,"h":115,"ox":76,"oy":68.87,"ppm":17.1429,"air":false,"sea":true},"carr":{"w":162,"h":128,"ox":81,"oy":70.22,"ppm":14.5455,"air":false,"sea":true},"jet":{"w":192,"h":175,"ox":96,"oy":88,"ppm":9.7959,"air":true,"sea":false},"int":{"w":192,"h":177,"ox":96,"oy":90,"ppm":9.7959,"air":true,"sea":false},"heli":{"w":192,"h":192,"ox":96,"oy":96,"ppm":14.5455,"air":true,"sea":false},"drone":{"w":172,"h":146,"ox":86,"oy":73,"ppm":15,"air":true,"sea":false}};
   if (T) (function(){
   let renderer;
   try { renderer = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); } catch (e){ return; }
@@ -31,7 +34,7 @@
     exhaust: new T.MeshBasicMaterial({color:0xffa24a}),
   };
   const isTeam = m => m && m.userData && m.userData.team;
-  function team(dark){ const m = std(dark ? 0x75756e : 0x9a9a92, 0.85, 0.05); m.userData.team = true; return m; }
+  function team(dark){ const m = std(dark ? 0x75756e : 0x9a9a92, 0.85, 0.05); m.userData.team = true; m.userData.dark = !!dark; return m; }
   function mesh(geo, mat, x = 0, y = 0, z = 0){ const o = new T.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; return o; }
   const box = (w, h, d, mat, x, y, z) => mesh(new T.BoxGeometry(w, h, d), mat, x, y, z);
   const cyl = (rt, rb, h, mat, seg = 16) => mesh(new T.CylinderGeometry(rt, rb, h, seg), mat);
@@ -235,7 +238,37 @@
     else { g.add(box(B*0.85, 0.02, 1.05, M.deck, 0, 0.68, -L*0.38)); const rd = cyl(0.3, 0.3, 0.02, t, 16); rd.position.set(0, 0.7, -L*0.38); g.add(rd); }
     return {g, ext:big ? 5.6 : 4.9, sea:true};
   }
-  const BUILDERS = {tank:mbt, ifv, art:arty, sam, inf:() => squad(false), at:() => squad(true), jet:() => jet('jet'), int:() => jet('int'), frig:() => ship('frig'), sub:() => ship('sub'), crui:() => ship('crui'), carr:() => ship('carr'), heli, drone, mlrs, spec:() => squad(false, true)};
+
+  // ---------- map models (troops standing on the map beside their counters): a lone rifleman, a light 4x4 and a 6x6 supply truck
+  function rifleman(){ const g = new T.Group(), s = soldier(team(), false); s.name = 'rifleman'; g.add(s); return {g, ext:1.35}; }
+  function hmv(){
+    // light 4x4 utility vehicle (~4.9 m): low wide body, sloped bonnet, squared cab, roof weapon ring, open rear deck
+    const g = new T.Group(), t = team(), td = team(true);
+    for (const sx of [-0.98, 0.98]) for (const z of [1.5, -1.45]){ g.add(wheel(0.46, 0.38, M.rubber, sx, 0.46, z)); const hb = cyl(0.2, 0.2, 0.4, M.gearD, 8); hb.rotation.z = Math.PI/2; hb.position.set(sx*1.01, 0.46, z); g.add(hb); }
+    g.add(extrudeSide([[-2.4, 0.55], [2.15, 0.55], [2.45, 0.85], [2.4, 1.12], [1.05, 1.28], [-2.4, 1.28]], 2.1, t));
+    g.add(extrudeSide([[-1.55, 1.24], [0.95, 1.24], [0.6, 1.92], [-1.55, 1.95]], 1.98, td));
+    const ws = box(1.8, 0.55, 0.05, M.glass, 0, 1.6, 0.8); ws.rotation.x = -0.45; g.add(ws);
+    for (const sx of [-1, 1]) g.add(box(0.04, 0.42, 1.3, M.glass, sx*1.0, 1.62, -0.25));
+    g.add(box(1.7, 0.28, 0.06, M.dark, 0, 0.88, 2.44));
+    g.add(box(1.95, 0.08, 0.85, td, 0, 1.3, -1.98));
+    const ring = cyl(0.42, 0.42, 0.22, M.dark, 14); ring.position.set(0, 2.06, -0.45); g.add(ring);
+    const mg = cyl(0.04, 0.04, 1.1, M.steel, 6); mg.rotation.x = Math.PI/2; mg.position.set(0, 2.22, 0.15); g.add(mg);
+    const ant = cyl(0.012, 0.012, 1.8, M.dark, 5); ant.position.set(-0.85, 2.3, -1.9); g.add(ant);
+    return {g, ext:3.3};
+  }
+  function truck(){
+    // 6x6 supply truck (~7.5 m): forward cab, flatbed under a canvas tilt
+    const g = new T.Group(), t = team(), td = team(true);
+    for (const sx of [-1.05, 1.05]) for (const z of [2.35, -0.85, -2.15]) g.add(wheel(0.52, 0.42, M.rubber, sx, 0.52, z));
+    g.add(box(1.8, 0.32, 6.6, M.dark, 0, 0.82, 0));
+    g.add(extrudeSide([[1.55, 0.92], [3.35, 0.92], [3.42, 1.7], [3.15, 2.62], [1.55, 2.66]], 2.3, t));
+    g.add(box(2.0, 0.62, 0.05, M.glass, 0, 2.15, 3.25));
+    g.add(box(2.36, 0.45, 4.5, td, 0, 1.22, -0.95));
+    const tilt = box(2.3, 1.15, 4.4, M.gear, 0, 2.02, -0.95); g.add(tilt);
+    const roof = cyl(1.15, 1.15, 4.4, M.gear, 18); roof.rotation.x = Math.PI/2; roof.scale.set(1, 0.3, 1); roof.position.set(0, 2.6, -0.95); g.add(roof);
+    return {g, ext:4.6};
+  }
+  const BUILDERS = {sol:rifleman, hmv, truck, tank:mbt, ifv, art:arty, sam, inf:() => squad(false), at:() => squad(true), jet:() => jet('jet'), int:() => jet('int'), frig:() => ship('frig'), sub:() => ship('sub'), crui:() => ship('crui'), carr:() => ship('carr'), heli, drone, mlrs, spec:() => squad(false, true)};
   const SPEC = {inf:{dirs:8, frames:8}, at:{dirs:8, frames:8}, tank:{dirs:8, frames:6}, ifv:{dirs:8, frames:2}, art:{dirs:8, frames:4}, sam:{dirs:8, frames:2},
                 jet:{dirs:16, frames:2}, int:{dirs:16, frames:2}, frig:{dirs:16, frames:1}, sub:{dirs:16, frames:1}, crui:{dirs:16, frames:1}, carr:{dirs:16, frames:1}, heli:{dirs:16, frames:4}, drone:{dirs:16, frames:1}, mlrs:{dirs:8, frames:3}, spec:{dirs:8, frames:8}};
 
@@ -296,6 +329,34 @@
     return (cache[type] = {base, mask, dirs, frames, air:!!model.air, sea:!!model.sea});
   }
   buildFn = build;
+
+  // ---------- map atlases (tools/bake-assets.js map): one camouflaged frame per direction (16, no animation), lit from the north-west so the baked
+  // shadow falls to the south-east like the terrain's hillshade; the nation-coloured parts become olive drab (land), haze grey (sea) or grey (air).
+  // The sheet is cropped to what any direction covers (one cell of w x h per direction, stacked), and the ground origin's pixel (ox, oy) is kept so
+  // a model is planted exactly on its spot; ppm: atlas pixels per metre
+  const CAMO = {land:[0x5b6139, 0x474d2f], sea:[0x60676c, 0x4b5156], air:[0x6e757a, 0x565c61]}, camoMat = {};
+  const camoOf = (cls, dark) => { const k = cls + dark; return camoMat[k] || (camoMat[k] = std(CAMO[cls][dark ? 1 : 0], 0.86, 0.05)); };
+  function mapBuild(type){
+    const model = BUILDERS[type](), cls = model.sea ? 'sea' : model.air ? 'air' : 'land', dirs = 16, Z = MAP_SZ;
+    model.g.traverse(o => { if (o.isMesh && isTeam(o.material)) o.material = camoOf(cls, o.material.userData.dark); });
+    model.g.traverse(o => { if (o.name === 'flame' || (o.isMesh && o.material && o.material.transparent)) o.visible = false; });   // at rest: no exhaust, no rotor blur
+    renderer.setSize(Z, Z);
+    const sunP = sun.position.clone(); sun.position.set(-9, 15, -7);
+    scene.add(model.g); const gv = ground.visible; ground.visible = !model.air && !model.sea;   // (a ship sits in the water: no cast shadow, its wake or a soft shade is drawn on the map)
+    const half = model.ext; cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half; cam.updateProjectionMatrix();
+    const dist = 60, el = model.air ? 1.0 : 0.8; cam.position.set(0, Math.sin(el)*dist, Math.cos(el)*dist); cam.lookAt(0, model.air ? 0 : 0.9, 0); cam.updateMatrixWorld();
+    const full = document.createElement('canvas'); full.width = Z; full.height = Z*dirs; const fx = full.getContext('2d', {willReadFrequently:true});
+    for (let d = 0; d < dirs; d++){ model.g.rotation.y = Math.PI/2 - d*Math.PI*2/dirs; renderer.render(scene, cam); fx.drawImage(renderer.domElement, 0, d*Z); }
+    scene.remove(model.g); sun.position.copy(sunP); ground.visible = gv; renderer.setSize(SZ, SZ);
+    const v = new T.Vector3(0, 0, 0).project(cam), ox = (v.x + 1)/2*Z, oy = (1 - v.y)/2*Z;
+    const px = fx.getImageData(0, 0, full.width, full.height).data; let x0 = Z, y0 = Z, x1 = 0, y1 = 0;
+    for (let d = 0; d < dirs; d++) for (let y = 0; y < Z; y++) for (let x = 0; x < Z; x++){ if (px[((d*Z + y)*Z + x)*4 + 3] > 6){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+    x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(Z - 1, x1 + 1); y1 = Math.min(Z - 1, y1 + 1);
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, cv = document.createElement('canvas'); cv.width = w; cv.height = h*dirs; const cx = cv.getContext('2d');
+    for (let d = 0; d < dirs; d++) cx.drawImage(full, x0, d*Z + y0, w, h, 0, d*h, w, h);
+    return {cv, dirs, w, h, ox:+(ox - x0).toFixed(2), oy:+(oy - y0).toFixed(2), ppm:+(Z/(2*half)).toFixed(4), air:!!model.air, sea:!!model.sea};
+  }
+  mapFn = mapBuild;
   })();
   function mixCol(hex, base, t){ const A = parseInt(hex.slice(1), 16), B = parseInt(base.slice(1), 16); const m = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${m(16)},${m(8)},${m(0)})`; }
   const tinted = new Map(); let scratch = null;
@@ -324,10 +385,21 @@
       cache[t] = {base:mk(b), mask:mk(m), dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea}; }));
     return true;
   }
+  const mapAt = {}; let mapDir = 'assets/units/';
   const queue = ['inf', 'tank', 'at', 'art', 'ifv', 'sam', 'jet', 'int', 'frig', 'sub', 'crui', 'heli', 'drone', 'carr', 'mlrs', 'spec'];
   let warm = false;
   function warmup(){ if (warm || !buildFn) return; warm = true; let i = 0; const step = () => { if (i >= queue.length) return; try { if (!cache[queue[i]]) buildFn(queue[i]); i++; } catch (e) { i++; } setTimeout(step, 30); }; setTimeout(step, 50); }
   window.U3D = {
+
+    // the map model atlas of a type ({cv, dirs, w, h, ox, oy, ppm, air, sea}), or null while it loads: a baked sheet is fetched the first time it is
+    // wanted (no stand-in meanwhile); with three.js present and nothing baked (the bake page) it is rendered here
+    map(type){ const A = mapAt[type]; if (A !== undefined) return A;
+      const m = MAPMETA[type]; mapAt[type] = null;
+      if (m && !window.__BAKE){ const im = new Image(); im.decoding = 'async'; im.onload = () => { mapAt[type] = Object.assign({cv:im, dirs:16}, m); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '.png'; }
+      else if (mapFn) try { mapAt[type] = mapFn(type); } catch (e) {}
+      return mapAt[type]; },
+    mapTypes: () => Object.keys(MAPMETA), mapDir(d){ mapDir = d; },
+    exportMap(type){ if (!mapFn) return null; const A = mapFn(type); return {png:A.cv.toDataURL('image/png'), meta:{w:A.w, h:A.h, ox:A.ox, oy:A.oy, ppm:A.ppm, air:A.air, sea:A.sea}}; },
     SZ, has: type => !!cache[ALIAS[type] || type], warmup, loadBaked, canRender: () => !!buildFn,
     exportAtlas(type){ if (!cache[type] && buildFn) buildFn(type); const a = cache[type]; return a ? {base:a.base.toDataURL('image/png'), mask:a.mask.toDataURL('image/png')} : null; },
     // draw a unit sprite centred on (x, y) at on-screen height h; ang in radians (screen space)
