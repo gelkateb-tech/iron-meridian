@@ -2638,6 +2638,8 @@ const AFX_RM = (() => { try { return window.matchMedia ? matchMedia('(prefers-re
 const afxReduced = () => SET.motion === 'reduced' || !!(AFX_RM && AFX_RM.matches);
 function slideIn(el, dx = 16, dy = 0, ms = 220){ if (!el || !el.animate || afxReduced()) return; try { el.animate([{opacity:0, transform:`translate(${dx}px,${dy}px)`}, {opacity:1, transform:'none'}], {duration:ms, easing:'cubic-bezier(.2,.8,.25,1)'}); } catch (e) {} }
 function setTab(t){ const was = tab; tab = t; document.querySelectorAll('[data-pane]').forEach(el => { el.hidden = el.dataset.pane !== t; if (!el.hidden && was !== t) slideIn(el, 0, 8, 200); }); document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); if (t === 'log' && S) seenHour = S.hour; const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
+// every unit can be unlocked from day one; a tech only needs another when it upgrades that same unit (UAV I to V, Infantry, Armor, Artillery, jets),
+// or for the missile line (Cruise, then Ballistic, Anti-Missile Shield and satellites)
 const TECH = [
   {id:'inf1',  branch:'Infantry',  name:'Ceramic Body Armor',   cost:60,  days:3, req:null,    desc:'Infantry and anti-tank defense +1',       fx:{inf:{def:1}, at:{def:1}}},
   {id:'inf2',  branch:'Infantry',  name:'Mechanized Infantry',  cost:110, days:5, req:'inf1',  desc:'Infantry attack +2 and speed +1',      fx:{inf:{atk:2, spd:1}, at:{atk:1}}},
@@ -2652,32 +2654,32 @@ const TECH = [
   {id:'air2',  branch:'Air',       name:'Precision Munitions',  cost:180, days:6, req:'air1',  desc:'Jet attack +2 (Strikers and Interceptors)', fx:{jet:{atk:2}, int:{atk:2}}},
   {id:'air3',  branch:'Air',       name:'Stealth Airframes',    cost:260, days:8, req:'air2',  desc:'Strike Jet defense +3',                fx:{jet:{def:3}}},
   {id:'eco1',  branch:'Economy',   name:'Industrial Automation',cost:100, days:4, req:null,    desc:'All cash income +20%',                 fx:{}},
-  {id:'eco2',  branch:'Economy',   name:'National Service',     cost:110, days:5, req:'eco1',  desc:'Manpower income +40%',                 fx:{}},
-  {id:'eco3',  branch:'Economy',   name:'Oil Refining',         cost:150, days:6, req:'eco2',  desc:'Oil income +50%',                      fx:{}},
+  {id:'eco2',  branch:'Economy',   name:'National Service',     cost:110, days:5, req:null,  desc:'Manpower income +40%',                 fx:{}},
+  {id:'eco3',  branch:'Economy',   name:'Oil Refining',         cost:150, days:6, req:null,  desc:'Oil income +50%',                      fx:{}},
   {id:'log1',  branch:'Logistics', name:'Motorized Supply',     cost:110, days:4, req:null,    desc:'All forces move 20% faster',           fx:{}},
-  {id:'log2',  branch:'Logistics', name:'Combat Engineers',     cost:130, days:5, req:'log1',  desc:'Capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build',  fx:{}},
-  {id:'log3',  branch:'Logistics', name:'Field Hospitals',      cost:170, days:7, req:'log2',  desc:'Your forces take 15% less damage',     fx:{}},
+  {id:'log2',  branch:'Logistics', name:'Combat Engineers',     cost:130, days:5, req:null,  desc:'Capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build',  fx:{}},
+  {id:'log3',  branch:'Logistics', name:'Field Hospitals',      cost:170, days:7, req:null,  desc:'Your forces take 15% less damage',     fx:{}},
   {id:'msl1',  branch:'Strategic', name:'Cruise Missiles',      cost:160, days:6, req:null,    desc:'Missile Silos can build Cruise Missiles', fx:{}},
   {id:'msl2',  branch:'Strategic', name:'Ballistic Missiles',   cost:240, days:8, req:'msl1',  desc:'Silos can build Ballistic Missiles',   fx:{}},
   {id:'msl3',  branch:'Strategic', name:'Anti-Missile Shield',  cost:220, days:7, req:'msl2',  desc:'Your SAMs and Frigates intercept missiles twice as well', fx:{}},
   {id:'sat1',  branch:'Strategic', name:'Reconnaissance Satellites', cost:200, days:6, req:'msl1', desc:'Launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day, revealing a wide swath', fx:{}},
   {id:'nav1',  branch:'Naval',     name:'Naval Gunnery',       cost:90,  days:4, req:null,    desc:'Frigates +1 attack, Cruisers +2 attack', fx:{frig:{atk:1}, crui:{atk:2}}},
-  {id:'nav2',  branch:'Naval',     name:'Carrier Aviation',    cost:170, days:7, req:'nav1',  desc:'Unlocks aircraft carriers (Naval Yard II): mobile airbases at sea', fx:{}},
-  {id:'nav3',  branch:'Naval',     name:'Amphibious Doctrine', cost:190, days:7, req:'nav2',  desc:'Troops landing from the sea fight at 90% instead of 67% on their first day', fx:{}},
-  {id:'asf1',  branch:'Air',       name:'Air Superiority Fighters', cost:190, days:7, req:'air2', desc:'Unlocks air superiority fighters (Airbase II): patrols cover neighbouring provinces and beat bombers, AWACS, patrol planes and drones', fx:{}},
-  {id:'awacs1', branch:'Air',      name:'Airborne Early Warning', cost:170, days:6, req:'air1', desc:'Unlocks AWACS aircraft (Airbase II): locate every enemy force in a huge radius, as unidentified contacts', fx:{}},
-  {id:'mpa1',  branch:'Air',       name:'Maritime Patrol',      cost:140, days:5, req:'air1',  desc:'Unlocks maritime patrol aircraft: find submerged submarines and hunt ships', fx:{}},
-  {id:'bomb1', branch:'Air',       name:'Strategic Bombers',    cost:230, days:8, req:'air2',  desc:'Unlocks heavy bombers (Airbase II): very long range, wreck cities and buildings', fx:{}},
+  {id:'nav2',  branch:'Naval',     name:'Carrier Aviation',    cost:170, days:7, req:null,  desc:'Unlocks aircraft carriers (Naval Yard II): mobile airbases at sea', fx:{}},
+  {id:'nav3',  branch:'Naval',     name:'Amphibious Doctrine', cost:190, days:7, req:null,  desc:'Troops landing from the sea fight at 90% instead of 67% on their first day', fx:{}},
+  {id:'asf1',  branch:'Air',       name:'Air Superiority Fighters', cost:190, days:7, req:null, desc:'Unlocks air superiority fighters (Airbase II): patrols cover neighbouring provinces and beat bombers, AWACS, patrol planes and drones', fx:{}},
+  {id:'awacs1', branch:'Air',      name:'Airborne Early Warning', cost:170, days:6, req:null, desc:'Unlocks AWACS aircraft (Airbase II): locate every enemy force in a huge radius, as unidentified contacts', fx:{}},
+  {id:'mpa1',  branch:'Air',       name:'Maritime Patrol',      cost:140, days:5, req:null,  desc:'Unlocks maritime patrol aircraft: find submerged submarines and hunt ships', fx:{}},
+  {id:'bomb1', branch:'Air',       name:'Strategic Bombers',    cost:230, days:8, req:null,  desc:'Unlocks heavy bombers (Airbase II): very long range, wreck cities and buildings', fx:{}},
   {id:'drone1', branch:'Drones',   name:'UAV I · Unmanned Recon', cost:90, days:4, req:null, desc:'Unlocks recon UAVs: loiter over any area in range and identify every enemy force around it (recon only, no weapons)', fx:{}},
   {id:'uav2',  branch:'Drones',    name:'UAV II · Long-Endurance Optics', cost:110, days:4, req:'drone1', desc:'UAVs see farther, loiter 16 h, reach farther and are harder to shoot down', fx:{drone:{def:1}}},
   {id:'uav3',  branch:'Drones',    name:'UAV III · Low-Observable Airframe', cost:140, days:5, req:'uav2', desc:'UAVs loiter 20 h with a wider view; stealthy airframe: air defences hit 40% less', fx:{drone:{def:1}}},
   {id:'uav4',  branch:'Drones',    name:'UAV IV · Armed UAV', cost:170, days:6, req:'uav3', desc:'UAVs carry light missiles: one precise salvo per sortie on units (and sometimes a building), still spotting', fx:{drone:{atk:3}}},
   {id:'uav5',  branch:'Drones',    name:'UAV V · Hunter-Killer', cost:210, days:7, req:'uav4', desc:'Two salvos per sortie, heavier missiles, longer range and loiter, best survivability', fx:{drone:{atk:2, def:2}}},
   {id:'jam1',  branch:'Drones',    name:'Counter-Drone Jamming', cost:80, days:3, req:null,   desc:'Unlocks Static Jammers: down and jam drones over a province and its neighbours', fx:{}},
-  {id:'swarm1', branch:'Drones',   name:'Swarm Drones',         cost:120, days:5, req:'drone1', desc:'Unlocks swarm drones (six per card, Arms Factory II): saturate air defences, shred light units', fx:{}},
-  {id:'sdrone1', branch:'Drones',  name:'Strike Drones',        cost:150, days:6, req:'uav2',  desc:'Unlocks strike drones: long-range precision hits on units and buildings', fx:{}},
-  {id:'heli1',  branch:'Airmobile', name:'Rotary Wing',         cost:150, days:6, req:'drone1', desc:'Unlocks attack helicopters: short-range attack helicopters that shred armor', fx:{}},
-  {id:'para1',  branch:'Airmobile', name:'Airborne Forces',     cost:190, days:7, req:'heli1',  desc:'Unlocks paratroopers, air-dropped behind enemy lines', fx:{}},
+  {id:'swarm1', branch:'Drones',   name:'Swarm Drones',         cost:120, days:5, req:null, desc:'Unlocks swarm drones (six per card, Arms Factory II): saturate air defences, shred light units', fx:{}},
+  {id:'sdrone1', branch:'Drones',  name:'Strike Drones',        cost:150, days:6, req:null,  desc:'Unlocks strike drones: long-range precision hits on units and buildings', fx:{}},
+  {id:'heli1',  branch:'Airmobile', name:'Rotary Wing',         cost:150, days:6, req:null, desc:'Unlocks attack helicopters: short-range attack helicopters that shred armor', fx:{}},
+  {id:'para1',  branch:'Airmobile', name:'Airborne Forces',     cost:190, days:7, req:null,  desc:'Unlocks paratroopers, air-dropped behind enemy lines', fx:{}},
 ];
 // research prices: money, materials and rare materials (the main research resource: by tier, a little more for the dearer projects); oil only for Oil Refining
 for (const t of TECH){ const tier = t.req ? (TECH.find(x => x.id === t.req).req ? 3 : 2) : 1, base = t.cost; t.tier = tier; t.cost = Math.round(base*0.6); t.metal = [0, 20, 35, 60][tier]; t.rare = [0, 22, 52, 92][tier] + Math.round(base/10); t.oil = t.id === 'eco3' ? 40 : 0; }
@@ -7086,8 +7088,8 @@ function aiTurn(n){
     const av = TECH.filter(t => !has(n, t.id) && (!t.req || has(n, t.req)));
     if (av.length){ const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0};
       const hb = H.bomb > 0 ? 4 : 0, wr = warsOf(n).length > 0, ab2 = G.P.some(P => S.owner[P.id] === n && S.bld[P.id].air >= 2);
-      // enemies fielding (or able to field) bombers, AWACS and patrol planes, or flying drones, call for Air Superiority Fighters; air2 leads there
-      const aw = (() => { const foes = warsOf(n), heavy = foes.filter(e => has(e, 'bomb1') || has(e, 'awacs1')).length; const v = (wr ? 2.5 : 0) + 14*mx.bomb + 12*mx.sup + 8*mx.drone + 3*Math.min(2, heavy) + (H.bomb + H.air > 0 ? 4 : 0); return {asf:v, air2:has(n, 'asf1') ? 0 : 0.6*v}; })();
+      // enemies fielding (or able to field) bombers, AWACS and patrol planes, or flying drones, call for Air Superiority Fighters
+      const aw = (() => { const foes = warsOf(n), heavy = foes.filter(e => has(e, 'bomb1') || has(e, 'awacs1')).length; const v = (wr ? 2.5 : 0) + 14*mx.bomb + 12*mx.sup + 8*mx.drone + 3*Math.min(2, heavy) + (H.bomb + H.air > 0 ? 4 : 0); return {asf:v, air2:0}; })();   // (fighters are open from day one: Precision Munitions no longer leads there)
       const RW = {air1:3, eco1:3, air2:(wr ? 4.2 : 2.6) + 4*(mx.bomb + mx.air) + 2*Math.min(3, H.bomb) + hb + aw.air2, drone1:2.5, uav2:2, uav3:1.5, uav4:2, uav5:1.5, swarm1:3, sdrone1:2.5, jam1:0.8 + 14*mx.drone + 2*Math.min(3, H.drone), asf1:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + aw.asf, mpa1:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), awacs1:wr ? 2.2 : 1.5, bomb1:wr ? (ab2 ? 11 : 8) : 3};
       // the pick sticks for a day: an expensive tech (bombers, fighters) is saved for instead of losing every roll to the cheap ones
       let pick = N.rPick && N.rPick.until > S.hour ? av.find(t => t.id === N.rPick.id) : null;
