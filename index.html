@@ -1177,7 +1177,9 @@ header .tbi .badge{top:-7px; right:-7px}
 #miniframe{border-radius:3px; background:linear-gradient(180deg, #3f565e, #2b3c43); border:1px solid var(--cn-edge); box-shadow:0 0 8px rgba(79,208,222,.25), 0 6px 18px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12)}
 #mini{border-radius:2px; border-color:#1c282e}
 #globe .ghint{background:rgba(43,60,67,.88); border-color:rgba(143,163,170,.5); color:var(--cn-fg2)}
-#hint{background:rgba(43,60,67,.92); box-shadow:0 0 0 1px rgba(143,163,170,.45), 0 4px 12px rgba(0,0,0,.4); border-radius:3px; color:#fff}
+#hint{background:rgba(43,60,67,.92); box-shadow:0 0 0 1px rgba(143,163,170,.45), 0 4px 12px rgba(0,0,0,.4); border-radius:3px; color:#fff; transition:opacity .18s, transform .22s var(--ease)}
+/* the missile dropdown slides down over the top of the map: the hint and toasts under it fade out of its way while it is open */
+body:has(#mslmenu:not([hidden])) #hint, body:has(#mslmenu:not([hidden])) #toasts{opacity:0; visibility:hidden}
 
 /* ---- side column ---- */
 aside#side{background:linear-gradient(180deg, #2f434b, #2b3c43); border-left:1px solid #1f2d33; box-shadow:-3px 0 10px rgba(0,0,0,.35); scrollbar-color:#5a7178 transparent}
@@ -1790,6 +1792,107 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   .rup{width:18px; height:18px; top:-6px; left:calc(50% + 11px)} .rup .rg{width:10px; height:10px}
   .rs-tree{--rh:124px}
 }
+/* research tree, third pass (CoN contrast): strongly alternating column stripes that run the full height, a lighter day column,
+   clear diamonds (light backdrops behind the unit photos, bold white glyphs for upgrades) and a ringed, glowing selection */
+.rs-tree{align-items:stretch}
+.rs-rows, .rs-grid{height:auto; min-height:calc(var(--rows)*var(--rh) + 24px)}
+.rs-rows{background:linear-gradient(90deg, #4a6168, #435a61); border-right:1px solid #14252d; box-shadow:inset -1px 0 0 rgba(255,255,255,.06)}
+.rs-rows span{color:#fff}
+.rs-grid{background:repeating-linear-gradient(180deg, transparent 0 calc(var(--rh) - 1px), rgba(0,0,0,.18) calc(var(--rh) - 1px) var(--rh)),
+    repeating-linear-gradient(90deg, #384e54 0 calc(100% / var(--cols)), #17303c calc(100% / var(--cols)) calc(200% / var(--cols)))}
+.rs-lines path{stroke:rgba(206,218,222,.62)}
+.rs-lines path.on{stroke:#f2f8f9} .rs-lines path.av{stroke:#7fe6f0}
+.rnode .dm{border-color:#eef4f5; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 3px 7px rgba(0,0,0,.55)}
+/* the photo sits on a light, lit backdrop so a dark top-down vehicle still reads at phone size */
+.rnode.unit .dm{background:radial-gradient(circle at 50% 45%, #b9d9a6 0, #6da35d 46%, #3b6f37 100%)}
+.rnode.unit .rface.u{filter:drop-shadow(0 1px 1px rgba(0,0,0,.55)) saturate(1.15) brightness(1.12) contrast(1.08)}
+.rnode.unit.st-done .dm{background:radial-gradient(circle at 50% 45%, #bfe3f4 0, #5fa6cf 48%, #2a6a92 100%)}
+.rnode.unit.st-lock .dm{background:radial-gradient(circle at 50% 45%, #c9d2d5 0, #8b989d 48%, #5a676c 100%)}
+.rnode.unit.st-lock .rface{filter:drop-shadow(0 1px 1px rgba(0,0,0,.5)) saturate(.55) brightness(1.05); opacity:1}
+/* upgrades and other projects: a bold white glyph on blue (open), steel (done) or grey (locked) */
+.rnode.upg .dm, .rnode.gly .dm{background:linear-gradient(135deg, #5a9bd0, #2c6396)}
+.rnode.upg.st-done .dm, .rnode.gly.st-done .dm{background:linear-gradient(135deg, #67b6d8, #2b6f92)}
+.rnode.upg.st-lock .dm, .rnode.gly.st-lock .dm{background:linear-gradient(135deg, #8a969b, #59656a)}
+.rnode.upg.st-run .dm, .rnode.gly.st-run .dm{background:linear-gradient(135deg, #3fa6b6, #1f6370)}
+.rnode.upg .rface, .rnode.gly .rface, .rnode.upg.st-lock .rface, .rnode.gly.st-lock .rface{filter:none; opacity:1}
+.rnode .rface.g svg{color:#fff; filter:drop-shadow(0 1px 0 rgba(0,0,0,.7)) drop-shadow(0 0 2px rgba(0,0,0,.45))}
+.rnode .rface.g .rg{width:28px; height:28px}
+.rnode.st-lock .rn{color:#d3dde0} .rnode.st-lock .rn b{color:#dbe4e6}
+/* selection: the diamond lifts, a white ring with a teal glow pulses round it, and the plate lights up */
+.rnode.sel{z-index:2}
+.rnode.sel .dm{transform:rotate(45deg) scale(1.08); border-color:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 0 14px rgba(159,245,251,.9)}
+.rnode.sel::after{content:""; position:absolute; z-index:0; top:-8px; left:calc(50% - 31px); width:62px; height:62px; border-radius:3px; transform:rotate(45deg); pointer-events:none;
+  border:2.5px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.5), 0 0 16px 2px rgba(79,208,222,.85), inset 0 0 10px rgba(79,208,222,.55); animation:rsSel 1.6s ease-in-out infinite}
+@keyframes rsSel{50%{box-shadow:0 0 0 1px rgba(0,0,0,.5), 0 0 24px 5px rgba(79,208,222,1), inset 0 0 12px rgba(79,208,222,.7)}}
+.rnode.sel .rn{background:linear-gradient(180deg, #2a7f8c, #1c5560); box-shadow:0 0 0 1.5px #fff, 0 0 10px rgba(79,208,222,.6), 0 2px 6px rgba(0,0,0,.5)} .rnode.sel .rn b{color:#fff} .rnode.sel .rn small{color:#d6f6f9}
+@media (min-width: 821px){
+  .rs-tree{--rh:165px}
+  .rnode .rface.g .rg{width:36px; height:36px}
+  .rnode.sel::after{top:-8px; left:calc(50% - 37px); width:74px; height:74px}
+}
+@media (max-width: 820px){
+  .rs-tree{--rh:146px}
+  .rnode{width:calc(100% / var(--cols) - 14px)}
+  .rnode.sel::after{top:-9px; left:calc(50% - 29px); width:58px; height:58px}
+  .rs-bp em{display:inline-block; font-size:9px; padding:2px 4px; letter-spacing:.04em}
+  .rs-bpt{flex-direction:column; align-items:flex-end; gap:4px}
+}
+@media (prefers-reduced-motion: reduce){ .rnode.sel::after{animation:none} }
+
+/* bottom nav, repair 2: flat CoN slate like the top bar, the open tab lit in the strip's cell tones; on wide screens the tabs carry bigger
+   icons, bolder labels and their key so five tabs do not look lost across the width */
+#dock{background:#364b54; box-shadow:0 -2px 8px rgba(0,0,0,.35)}
+#dock .dk.on, #dock > .dk[aria-expanded="true"], #dock > .dk.cur{background:linear-gradient(180deg, #4e6368, #42565c); box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 -2px 0 var(--cn-teal)}
+#dock > .dk:focus-visible:not(.on):not(.cur){outline:0; box-shadow:inset 0 0 0 1px rgba(143,163,170,.6)}
+@media (min-width: 1000px){
+  #dock > .dk{gap:6px}
+  #dock > .dk .ni{width:28px; height:28px}
+  #dock > .dk .dl{display:flex; align-items:center; gap:7px}
+  #dock > .dk .dl .ln{font:600 14px/1 var(--body); letter-spacing:.05em; text-transform:uppercase; color:#dfe8ea}
+  #dock > .dk .dl kbd{display:inline-grid; place-items:center; min-width:17px; height:17px; padding:0 3px; border:1px solid rgba(143,163,170,.55); border-radius:2px;
+    background:rgba(0,0,0,.22); font:600 10px/1 var(--mono, monospace); color:var(--cn-fg2); box-shadow:none}
+  #dock .badge{right:calc(50% - 34px)}
+}
+
+/* phones, repair 2: a selected force gets a short CoN-style sheet (about a quarter of the screen, scrolls for the rest) with a compact header */
+@media (max-width: 820px){
+  body.side-army aside#side{max-height:min(29%, 262px)}
+  body.side-army aside#side .tabs{height:34px; min-height:34px}
+  body.side-army aside#side .tabs button{font-size:11.5px; padding-top:0; padding-bottom:0}
+  body.side-army .side-x{height:34px; margin-bottom:-34px}
+  body.side-army #ctx{padding-top:8px}
+  body.side-army #ctx .uhd{gap:10px; margin-bottom:6px}
+  body.side-army #ctx .uhd .ut.xl{--us:44px; width:44px; height:44px}
+  body.side-army #ctx .uhd h2{font-size:20px; line-height:1.05; margin:0}
+  body.side-army #ctx .uhd .eyebrow{margin-bottom:2px}
+  body.side-army #ctx .urows{margin-bottom:6px}
+  body.side-army #ctx .urow{padding-top:3px; padding-bottom:3px}
+  body.side-army #ctx .status{margin:4px 0; padding-top:6px; padding-bottom:6px}
+}
+
+/* phones, repair 2: the production list is part of the panel's own scroll (no list scrolling inside a scrolling panel), one divider per city */
+@media (max-width: 820px){
+  #sheet .tblwrap:has(> .prodt){flex:none; height:auto; max-height:none; overflow:visible}
+}
+@media (max-width: 640px){
+  .ptab.prodt td, .ptab.prodt tr:hover > td{border:0; background:none}
+  .ptab.prodt tr{border-bottom:1px solid rgba(143,163,170,.28)}
+  .ptab.prodt tr:last-child{border-bottom:0}
+  .ptab.prodt .cty .small{padding-bottom:2px}
+}
+
+/* phones, repair 2: the top row keeps the flag and a short name (CoN shows both) */
+.natid .nsh{display:none}
+@media (max-width: 820px){
+  .natid{gap:6px; flex:0 1 auto; min-width:0}
+  .natid .nsh{display:block; flex:0 1 auto; min-width:0; font:700 14px/1 var(--body); letter-spacing:.02em; text-transform:none; color:#fff; text-shadow:var(--cn-num); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+}
+@media (max-width: 400px){ .natid .nsh{font-size:12.5px} .natid{gap:4px} }
+
+/* the sticky button row of the list windows reads as a footer bar floating over the list that scrolls under it */
+.sheet.mid > .row:last-child{background:linear-gradient(180deg, #34484f, #2f434a); border-top:1px solid rgba(143,163,170,.38); box-shadow:0 -10px 16px -8px rgba(0,0,0,.6); z-index:2}
+
+@media (max-width: 400px){ .vbar .vm b small{display:none!important} .vbar .vm{padding:0 6px} .hbox{padding-right:5px} .hbox .hi{padding:0 3px; margin-right:4px} .hmid{gap:3px} #speed.seg button{min-width:20px; padding:0 2px} .hrow1{gap:3px; padding:0 5px} }
 </style>
 
 <div id="app">
@@ -7007,6 +7110,8 @@ function goHome(){
   for (const p of set){ const P = G.P[p]; x0 = Math.min(x0, P.x); y0 = Math.min(y0, P.y); x1 = Math.max(x1, P.x); y1 = Math.max(y1, P.y); }
   const pad = 60, s = Math.max(minScale(), Math.min(2.2, Math.min(cw/(x1 - x0 + pad*2), ch/(y1 - y0 + pad*2))));
   const C = G.P[N.capital]; centerOn((x0 + x1)/2*0.5 + C.x*0.5, (y0 + y1)/2*0.5 + C.y*0.5, s);
+  // the home view never opens on the empty space above or below the world (a tall phone map would otherwise show a band of it under the strip)
+  const wh = WORLD_H*s; if (wh > ch) view.y = Math.min(0, Math.max(ch - wh, view.y));
 }
 /* entering the campaign: the camera falls from high above onto the home view under a fading vignette (~1.3 s);
    any other change of the view (a drag, a zoom, a test) ends the flight at once */
@@ -7045,7 +7150,7 @@ function camStep(now){ const F = camFly; if (!F) return;
   const k = Math.min(1, Math.max(0, (F.hold != null ? F.hold : now - F.t0)/F.d)), e = k < 0.5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3)/2;
   const s = k >= 1 || F.s0 === F.s1 ? F.s1 : Math.exp(Math.log(F.s0) + (Math.log(F.s1) - Math.log(F.s0))*e); let x = k >= 1 ? F.x1 : F.x0 + (F.x1 - F.x0)*e, y = k >= 1 ? F.y1 : F.y0 + (F.y1 - F.y0)*e;   // (the last step lands exactly on the end view, the view its layer was rendered for)
   if (F.cv && k < 1){ const dx = F.x1 - F.x0, dy = F.y1 - F.y0, l = Math.hypot(dx, dy) || 1, b = Math.sin(Math.PI*e)*F.cv; x += -dy/l*b; y += dx/l*b; }   // a gentle curve, not a straight slide
-  view.s = s; view.x = cw/2 - x*s; view.y = ch/2 - y*s; clampView(); F.last = {x:view.x, y:view.y, s:view.s}; if (k >= 1){ camFly = null; CAMLAND = now; } }
+  view.s = s; view.x = cw/2 - x*s; view.y = ch/2 - y*s; clampView(); if (F.mode === 'home' && WORLD_H*s > ch) view.y = Math.min(0, Math.max(ch - WORLD_H*s, view.y)); F.last = {x:view.x, y:view.y, s:view.s}; if (k >= 1){ camFly = null; CAMLAND = now; } }
 // a far jump's first ~260 ms: the old place (the snapshot) fades and swells slightly over the new one as it falls in
 function camSnapDraw(now){ const F = camFly; if (!F || !F.snap || !F.pre || !CAMSNAP) return;
   const t = Math.min(1, Math.max(0, (F.hold != null ? F.hold : now - F.t0)/260)), a = 1 - t*t*(3 - 2*t); if (a <= 0.003){ F.snap = false; return; }
@@ -7851,14 +7956,14 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
   return (HUDR = {t:now, r:out}).r; }
 // h: plate height, C: icon cell width, tab: count tab width, r: corner radius, bars: what the health and morale bars add below (full plates)
 function plateDims(n, s, minor, two){ const sk0 = Math.max(0.85, Math.min(1.15, Math.max(0.75, s))), ps = Math.round((minor ? sk0 : Math.min(1.3, sk0*plateGrow()))*20)/20;
-  const h = minor ? Math.round((view.s*HS0 >= FORM_PX ? 18 : 14)*sk0) : Math.round(22*ps), fz = two ? Math.round(0.5*h) : Math.round((minor ? 0.72 : 0.76)*h), key = fz + ':' + n;
+  const h = minor ? Math.round((view.s*HS0 >= FORM_PX ? 18 : 14)*sk0) : Math.round(22*ps), fz = Math.round((minor ? 0.72 : 0.76)*h), key = fz + ':' + n;   // the number keeps one size on every plate (a mixed stack too)
   let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = `italic 800 ${fz}px ${BODY}`; tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
-  const sk = Math.round(h*0.21), C = Math.round(h*1.3), tab = Math.round(Math.max(0.8*h, tw + 0.46*h, two ? 15*ps : 0)), HB = Math.max(2, Math.round(0.14*h*2)/2);
+  const sk = Math.round(h*0.21), C = Math.round(h*1.3), i2 = two ? Math.round(0.6*h) : 0, tab = Math.round(Math.max(0.8*h, tw + 0.46*h + (two ? i2 - 0.08*h : 0))), HB = Math.max(2, Math.round(0.14*h*2)/2);
   const fh = Math.round(h*(minor ? 0.62 : 0.6)), fw = Math.round(fh*4/3);
-  return {ps, fz, tw, C, T:C, tab, sk, w:C + tab + sk, h, r:Math.max(2, 0.14*h), fh, fw, up:Math.max(6*ps, fh + 1), bars:minor ? 0 : 2 + HB + 2.2 + 0.5}; }
+  return {ps, fz, tw, i2, C, T:C, tab, sk, w:C + tab + sk, h, r:Math.max(2, 0.14*h), fh, fw, up:Math.max(6*ps, fh + 1), bars:minor ? 0 : 2 + HB + 2.2 + 0.5}; }
 const snapD = v => Math.round(v*dpr)/dpr;   // to whole device pixels
 // the box plateCounter returns for a plate centred at (x, y), without drawing it (marks above it, bars below)
-function plateRect(x, y, n, s, minor){ const D = plateDims(n, s, minor), ps = D.ps, x0 = snapD(x - D.w/2), y0 = snapD(y - D.h/2);
+function plateRect(x, y, n, s, minor, two){ const D = plateDims(n, s, minor, two), ps = D.ps, x0 = snapD(x - D.w/2), y0 = snapD(y - D.h/2);
   return minor ? {x:x0 - 1, y:y0 - D.fh - 1, w:D.w + 3, h:D.h + D.fh + 4} : {x:x0 - 3, y:y0 - D.up, w:D.w + 6 + 4*ps, h:D.h + D.up + D.bars + 3}; }
 /* The owner's unit pictures (assets/art/i-*.webp, u-*.webp) are portraits for the menus and panels only (recruit cards, army panel, unit info, tooltips);
    on the map every force is a flat plate with a vector icon (ICON). */
@@ -7928,12 +8033,12 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
   const IW = Math.max(6, Math.round((C - 2*ti)*0.8*dpr)), ic = main && iconC(main, IW, '#121816');
   if (ic){ const icx = (ti + C)/2 + 0.6 + at(h/2); ctx.drawImage(ic, Math.round((icx - IW/dpr/2)*dpr)/dpr, Math.round((h*dpr - ic.height)/2 + 0.5*dpr)/dpr, IW/dpr, ic.height/dpr); }
   ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; const tx = C + D.tab/2;
-  const num = (v, fz, cy) => { ctx.font = `italic 800 ${fz}px ${BODY}`; const X = tx + at(cy); ctx.lineWidth = Math.max(2, 0.17*fz); ctx.strokeStyle = 'rgba(6,14,8,.92)'; ctx.strokeText(v, X, cy); ctx.fillStyle = '#ffffff'; ctx.fillText(v, X, cy); };
+  const num = (v, fz, cy, dx = 0) => { ctx.font = `italic 800 ${fz}px ${BODY}`; const X = tx + dx + at(cy); ctx.lineWidth = Math.max(2, 0.17*fz); ctx.strokeStyle = 'rgba(6,14,8,.92)'; ctx.strokeText(v, X, cy); ctx.fillStyle = '#ffffff'; ctx.fillText(v, X, cy); };
   if (minor){ num(String(n), D.fz, h/2 + 0.5); ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; return {x:x0 - 1, y:y0 - (fc ? fh : 0) - 1, w:w + 3, h:h + (fc ? fh : 0) + 4}; }
-  // a second type holding a good share of the stack: the number moves up and a small white silhouette of that type sits under it
-  if (two){ num(String(n), D.fz, h*0.33 + 0.5);
-    const IW2 = Math.max(5, Math.round(Math.min(D.tab - 4, 0.62*h*1.5)*dpr)), ic2 = iconC(two, IW2, '#f4f7f2'), cy2 = h*0.76;
-    if (ic2) ctx.drawImage(ic2, Math.round((tx + at(cy2) - IW2/dpr/2)*dpr)/dpr, Math.round(cy2*dpr - ic2.height/2)/dpr, IW2/dpr, ic2.height/dpr); }
+  // a second type holding a good share of the stack: the number keeps its size and steps left; a small white silhouette of that type sits after it
+  if (two){ num(String(n), D.fz, h/2 + 0.5, -D.i2/2 + 0.04*h);
+    const IW2 = Math.max(5, Math.round(D.i2*dpr)), ic2 = iconC(two, IW2, '#f4f7f2'), cy2 = h*0.58, cx2 = C + D.tab - D.i2/2 - 0.1*h + at(cy2);
+    if (ic2){ ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 1.5; ctx.drawImage(ic2, Math.round((cx2 - IW2/dpr/2)*dpr)/dpr, Math.round(cy2*dpr - ic2.height/2)/dpr, IW2/dpr, ic2.height/dpr); ctx.restore(); } }
   else num(String(n), D.fz, h/2 + 0.5);
   const cmd = counter.list && counter.list.some(cmdOf), mx = sk + (fc ? fw + 2 : 0);
   if (cmd){ ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', mx + 5*ps, -4*ps); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', mx + 5*ps, -4*ps); }
@@ -7955,6 +8060,8 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
 // the icon for unit type t of owner o (armed UAVs from level IV get their own)
 const plateIcon = (t, o) => { const k = artT(t, o); return ICONP[k] ? k : ICONP[t] ? t : 'inf'; };
 // plate types: the cluster's dominant type by weight (strength x hit points) and a second type when it holds at least a quarter of that weight
+// does a stack's plate carry a second unit type (the wider number tab)? the layout sizes plates with it; cached on the cluster
+function clTwo(c){ if (c.p2 == null){ const L0 = counter.list; counter.list = c.list; c.p2 = !!plateTypes(c.list[0], 'inf')[1]; counter.list = L0; } return c.p2; }
 function plateTypes(a, main){ const L = counter.list && counter.list.length ? counter.list : a ? [a] : [];
   if (!a || L.length < 1) return [main, null];
   const wt = {}; let tot = 0;
@@ -7967,7 +8074,7 @@ function plateTypes(a, main){ const L = counter.list && counter.list.length ? co
 function clQuiet(c){ if (c.pq != null) return c.pq; const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), fighting = !c.moving && !c.air && S.battles.includes(c.at), selected = c.list.some(q => q.id === sel.army || sel.group.includes(q.id));
   return (c.pq = a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); }
 // the box of a stack's plate relative to its spot (from hexPx FORM_PX up); bb = r = the plate with marks and bars
-function formBox(c){ const k = zoomK(view.s*HS0), q = clQuiet(c), r = plateRect(0, 0, c.n, k, q), b = [r.x, r.y, r.x + r.w, r.y + r.h]; return {bb:b, r:b}; }
+function formBox(c){ const k = zoomK(view.s*HS0), q = clQuiet(c), r = plateRect(0, 0, c.n, k, q, !q && clTwo(c)), b = [r.x, r.y, r.x + r.w, r.y + r.h]; return {bb:b, r:b}; }
 function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting = false, dir = 1, now = performance.now()){
   s = Math.max(0.75, s);
   // level of detail: forces that don't concern you (independents, powers at peace) are quiet mini plates
@@ -8625,14 +8732,14 @@ function draw(now){
   for (const c of clusters){ if (c.moving || c.air || c.pinned) continue; const Pm = G.P[c.at], cap = isCapital(c.at);
     if (!(cap && hexPx >= 2) && !(Pm.city && showCity)) continue;
     const tier = Pm.pop0 >= 8 ? 2 : Pm.pop0 >= 2.5 ? 1 : 0, ring = cap ? (6.5 + tier)*kl + 2.2*kl : [2.8, 3.6, 4.6][tier]*kl + 1.8*kl, mTop = toScreen(Pm.x, Pm.y)[1] + CITY_DY*kl - ring;
-    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); c.y = Math.min(c.y, mTop - 2*kl - d.h/2 - d.bars - 1); }
+    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)); c.y = Math.min(c.y, mTop - 2*kl - d.h/2 - d.bars - 1); }
     else { c.y0 = c.y; c.y = Math.min(c.y - 10*kl, mTop - 2*kl - formBox(c).bb[3]); } }
   // air wings parked at a city stand just left of its marker (no airfield compound is drawn on the map; the building tray keeps the right), never on the star / dot
   // (at close zoom after the ground stacks there have been lifted above the marker, so the wing never holds them down on it)
   const parkAir = () => { for (const c of clusters){ if (!c.air || c.moving || c.pinned) continue; const base = c.list[0].air && c.list[0].air.base, p = base != null ? base : c.at, Pm = G.P[p];
     if (!Pm || !((isCapital(p) && hexPx >= 2) || (Pm.city && showCity))) continue;
     const tier = Pm.pop0 >= 8 ? 2 : Pm.pop0 >= 2.5 ? 1 : 0, ring = isCapital(p) ? (6.5 + tier)*kl + 2.2*kl : [2.8, 3.6, 4.6][tier]*kl + 1.8*kl, [mx, my0] = toScreen(Pm.x, Pm.y), my = my0 + CITY_DY*kl;
-    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); c.x = mx - ring - 4*kl - d.w/2; c.y = my - d.bars/2; }
+    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)); c.x = mx - ring - 4*kl - d.w/2; c.y = my - d.bars/2; }
     else { const F = formBox(c), f = F.bb; c.x = mx - ring - 4*kl - Math.max(f[2], F.r[2]); c.y = my - (f[1] + f[3])/2; } } };   // (close zoom: badge and parked aircraft all west of the marker, so the name and tray keep their spots)
   if (plateM) parkAir();
   const perProv = new Map();
@@ -8640,7 +8747,7 @@ function draw(now){
   for (const cs of perProv.values()){ cs.sort((a, b) => (a.owner === PLAYER ? -1 : 0) - (b.owner === PLAYER ? -1 : 0));
     const R = Math.sqrt(G.P[cs[0].at].cells.length)*HS*0.75*view.s, close = hexPx >= FORM_PX, gap = close ? Math.min(Math.max(50*k, R*0.9), R*1.8/Math.max(1, cs.length - 1 || 1)) : 50*k;
     if (cs.length < 2) cs.forEach(c => { c.share = 1; });
-    else { const sp = close ? Math.min(Math.max(10, gap*0.25), 28) : 6, ws = cs.map(c => plateDims(c.n, k, plateQuiet(c)).w), tot = ws.reduce((s0, v) => s0 + v, 0) + sp*(cs.length - 1); let px1 = -tot/2;   // plates side by side (a little apart close in)
+    else { const sp = close ? Math.min(Math.max(10, gap*0.25), 28) : 6, ws = cs.map(c => plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)).w), tot = ws.reduce((s0, v) => s0 + v, 0) + sp*(cs.length - 1); let px1 = -tot/2;   // plates side by side (a little apart close in)
       cs.forEach((c, i) => { c.x += px1 + ws[i]/2; px1 += ws[i] + sp; c.share = 0.5; }); } }
   if (!plateM){ const on = clusters.filter(c => c.x > -150 && c.y > -150 && c.x < cw + 150 && c.y < ch + 150).slice(0, 200);
     const bbAt = (c, y, pad) => { const f = formBox(c).bb; return [c.x + f[0] - pad, y + f[1] - pad, c.x + f[2] + pad, y + f[3] + pad]; };
@@ -8659,7 +8766,7 @@ function draw(now){
   // plate declutter: a plate overlapping another is moved down (or up, whichever is shorter) and tied to its true spot by a leader line (yours stay put)
   { const on = clusters.filter(c => c.x > -60 && c.y > -60 && c.x < cw + 60 && c.y < ch + 60).slice(0, 150), placed = [];
     const selC = c => c.list.some(a => a.id === sel.army || sel.group.includes(a.id)) ? 1 : 0; on.sort((a, b) => (selC(b) - selC(a)) || ((b.owner === PLAYER) - (a.owner === PLAYER)));   // the selected force first: it never slides away
-    for (const c of on){ const d = plateDims(c.n, k, plateQuiet(c)), hw = d.w/2 + 2, top = d.h/2 + d.up - 3, bot = d.h/2 + d.bars + 2, ay = c.y;
+    for (const c of on){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)), hw = d.w/2 + 2, top = d.h/2 + d.up - 3, bot = d.h/2 + d.bars + 2, ay = c.y;
       const slide = sgn => { let y = ay; for (let it = 0; it < 8; it++){ let mv = 0;
           for (const o of placed){ const ox = Math.min(c.x + hw, o.x1) - Math.max(c.x - hw, o.x0), oy = Math.min(y + bot, o.y1) - Math.max(y - top, o.y0); if (ox > 0 && oy > 0) mv = Math.max(mv, sgn > 0 ? o.y1 - (y - top) : (y + bot) - o.y0); }
           if (!mv) return y; y += sgn*(mv + 4); } return y; };
@@ -8667,7 +8774,7 @@ function draw(now){
       placed.push({c, x0:c.x - hw, x1:c.x + hw, y0:c.y - top, y1:c.y + bot}); } }
   // counters claim screen space before labels: city and province names give way to them (capital names always show)
   for (const c of clusters){ if (c.x < -60 || c.y < -60 || c.x > cw + 60 || c.y > ch + 60) continue; let b;
-    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - d.up, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
+    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - d.up, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
     else { const F = formBox(c), f = F.bb, r = F.r, dy = c.bdy || 0;   // the badge and the figures standing above it: names keep clear of both
       b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2]; b.core = [c.x + f[0] - 1, c.y + f[1] + dy - 1, c.x + f[2] + 1, c.y + f[3] + dy + 1]; }
     b.unit = true; b.at = c.moving ? -1 : c.at; boxes0.push(b); }   // (core: the plate or badge itself with its strength number, icons and bars, which nothing may cover)
@@ -8925,7 +9032,7 @@ function draw(now){
     let r0 = Math.random()*tot; for (const [t, v] of w) if ((r0 -= v) <= 0) return t; return c.mt; };
   try { for (const c of clusters){
     const {lead, dir, fighting} = clSetup(c);
-    if (c.ay != null){ const d = plateDims(c.n, k, plateQuiet(c)); ctx.strokeStyle = 'rgba(243,234,210,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c.x, c.y - d.h/2); ctx.lineTo(c.ax, c.ay); ctx.stroke(); ctx.fillStyle = 'rgba(243,234,210,.8)'; ctx.fillRect(c.ax - 1.5, c.ay - 1.5, 3, 3); }
+    if (c.ay != null){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)); ctx.strokeStyle = 'rgba(243,234,210,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c.x, c.y - d.h/2); ctx.lineTo(c.ax, c.ay); ctx.stroke(); ctx.fillStyle = 'rgba(243,234,210,.8)'; ctx.fillRect(c.ax - 1.5, c.ay - 1.5, 3, 3); }
     const r = counter(c.x, c.y, lead, c.n, mapCol(c.owner), c.list.some(a => a.id === sel.army || sel.group.includes(a.id)), c.moving, k, c.list.length > 1, fighting, dir, now);
     hits.push({...r, ids:c.list.map(a => a.id), cx:c.x, cy:c.y, spread:c.list.some(a => a.at !== c.at)});
     if (volFx && fighting && c.enemy && c.mt && r && r.w > 0 && (volN.get(c.at) || 0) < 2){ const pcx = r.x + r.w/2, pcy = r.y + r.h/2, ex = c.enemy[0] - pcx, ey = c.enemy[1] - pcy, an = Math.atan2(ey, ex), ca = Math.cos(an), sa = Math.sin(an);
@@ -9290,7 +9397,8 @@ function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.group = []; CS.det
 let sideOpen = false;   // phones: the command panel opened by hand (advisor shield, dispatches), until closed or the selection clears
 function sideSync(){ const phone = innerWidth <= 820, b = document.body; if (!phone){ if (b.classList.contains('side-on')) b.classList.remove('side-on'); return; }
   const auto = sel.army !== null || (sel.prov !== null && (CS.det || csWanted() < 0)), on = !!S && S.started && (auto || sideOpen);
-  if (b.classList.contains('side-on') !== on){ b.classList.toggle('side-on', on); if (on) $('side').scrollTop = 0; } { const rs = $('railside'); if (rs) rs.setAttribute('aria-pressed', String(on)); }
+  if (b.classList.contains('side-on') !== on){ b.classList.toggle('side-on', on); if (on) $('side').scrollTop = 0; }
+  { const ar = on && sel.army !== null && !sideOpen; if (b.classList.contains('side-army') !== ar) b.classList.toggle('side-army', ar); }   // a selected force: the short sheet { const rs = $('railside'); if (rs) rs.setAttribute('aria-pressed', String(on)); }
   sideH(); }
 function sideH(){ const sd = $('side'), w = $('mapwrap'); if (!sd || !w) return; const h = document.body.classList.contains('side-on') && innerWidth <= 820 ? sd.offsetHeight : 0; if (w.style.getPropertyValue('--sideh') !== h + 'px') w.style.setProperty('--sideh', h + 'px'); }
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => sideH()).observe(document.getElementById('side'));
@@ -9370,11 +9478,14 @@ let uitipEl = null;
 function setTip(el, t){ if (!el) return; if (el.hasAttribute('data-tip')){ if (el.dataset.tip !== t){ el.dataset.tip = t; if (uitipEl === el) uitipShow(el); } } else if (el.title !== t) el.title = t; }
 /* header fit: measure, then add compaction steps until nothing is clipped; the header's bottom feeds --hdrb (where open panels start) */
 let hdrKey = '';
+// a short form of a nation's name for the phone's top row (flag and name, as in CoN): short names stay, long ones become their usual letters
+const NSHORT = {'United States':'USA', 'United Kingdom':'UK', 'Saudi Arabia':'KSA', 'South Korea':'ROK', 'North Korea':'DPRK', 'South Africa':'RSA', 'New Zealand':'NZ'};
+function natShort(nm){ return NSHORT[nm] || (nm.length <= 8 ? nm : nm.split(/\s+/).length > 1 ? nm.split(/\s+/).map(w => w[0]).join('').toUpperCase() : nm.slice(0, 7) + '.'); }
 function hdrSync(force){ const h = document.querySelector('header'); if (!h) return; const res = $('res'), nb = $('natchip') && $('natchip').querySelector('b');
   const key = innerWidth + '|' + innerHeight + '|' + (SET.ui || 100) + '|' + res.textContent.length + '|' + (nb ? nb.textContent : '') + '|' + $('clock').textContent.length;
   if (key !== hdrKey || force){ hdrKey = key;   // the two-row CoN bar has room for every cell: only the nation name may drop (hc3) when row 1 is crowded
     for (let i = 1; i <= 5; i++) h.classList.remove('hc' + i);
-    const r1 = h.querySelector('.hrow1'); if (r1 && r1.scrollWidth > r1.clientWidth + 1) h.classList.add('hc3'); }
+    const r1 = h.querySelector('.hrow1'), hm = h.querySelector('.hmid'); if (r1 && (r1.scrollWidth > r1.clientWidth + 1 || (hm && hm.scrollWidth > hm.clientWidth + 1))) h.classList.add('hc3'); }   // (the centred clock group spills both ways when squeezed)
   const de = document.documentElement.style, b = Math.round(h.getBoundingClientRect().bottom) + 'px'; if (de.getPropertyValue('--hdrb') !== b) de.setProperty('--hdrb', b);
   const dk = $('dock'), db = dk && dk.offsetHeight ? Math.max(0, Math.round(innerHeight - dk.getBoundingClientRect().top)) + 'px' : '0px'; if (de.getPropertyValue('--dockb') !== db) de.setProperty('--dockb', db); }
 /* the resource strip's icons (drawn here, original): bold, coloured, filling the cell like CoN's strip */
@@ -9561,7 +9672,7 @@ function resStep(now){ rcntRaf = 0; let busy = false;
 function renderSide(force){
   if (force) lastSig = {};
   const N = S.nations[PLAYER], inc = income(PLAYER);
-  setHTML($('natchip'), `${flagHTML(PLAYER, 21, 'big')}<b>${N.name}</b>`); setTip($('natchip'), `${N.name}\nYour nation · capital ${G.P[N.capital].cityName || G.P[N.capital].name}`);
+  setHTML($('natchip'), `${flagHTML(PLAYER, 21, 'big')}<b>${N.name}</b><b class="nsh" aria-hidden="true">${natShort(N.name)}</b>`); setTip($('natchip'), `${N.name}\nYour nation · capital ${G.P[N.capital].cityName || G.P[N.capital].name}`);
   const resTips = [];   // the figures and tooltips are written by resSync (the numbers count to new values), so this markup only changes with the daily rates
   setHTML($('res'),
     RES.map(R => { const v = N[R.k], d = inc.net[R.k], short = N.short && N.short[R.k];
@@ -9835,7 +9946,7 @@ const techUnit = T => Object.keys(UNITS).find(t => UNITS[t].tech === T.id) || nu
 const TGLY = {eco1:'factory', eco2:'mp', eco3:'oil', log1:'truck', log2:'wrench', log3:'cross', msl1:'cm', msl2:'bm', msl3:'def', sat1:'sat', nav3:'anchor', drone1:null, jam1:'jam', air1:null};
 const TBADGE = {uav2:'eye', art1:'eye'};   // a badge other than the stat's own (atk / def / spd)
 function techFace(T){ const ut = techUnit(T); if (ut) return {ut};
-  { const fx = T.fx || {}, k0 = Object.keys(fx).find(k => UNITS[k]), st = k0 && fx[k0]; if (!TGLY[T.id] && st) return {ut:k0, up:TBADGE[T.id] || (st.atk ? 'atk' : st.def ? 'def' : 'spd')}; }
+  { const fx = T.fx || {}, k0 = Object.keys(fx).find(k => UNITS[k]), st = k0 && fx[k0]; if (!TGLY[T.id] && st){ const up = TBADGE[T.id] || (st.atk ? 'atk' : st.def ? 'def' : 'spd'); return {g:up, up, base:k0}; } }
   let g = TGLY[T.id]; if (g === undefined || g === null){ const fx = T.fx || {}, st = Object.values(fx)[0] || {}; g = st.atk ? 'atk' : st.def ? 'def' : st.spd ? 'spd' : (RB[T.branch] || {}).g || 'atk'; }
   return {g}; }
 function faceHTML(F, sz){ if (F.ut) return `<span class="rface u">${unitPic(F.ut, 'lg')}</span>`;
@@ -9912,13 +10023,13 @@ function researchHTML(){
   const X = c => (c + CO + .5)*100, Y = r => (r - Ly.r0 + .36)*100;
   let lines = '';
   for (const T of L){ const p = Ly.pos[T.id], lit = !T.req || has(PLAYER, T.req), cls = lit ? (has(PLAYER, T.id) ? 'on' : 'av') : '';
-    if (T.req && Ly.inB.has(T.req)){ const q = Ly.pos[T.req], ym = Y(p.r) - 32;
+    if (T.req && Ly.inB.has(T.req)){ const q = Ly.pos[T.req], ym = Y(p.r) - 29;
       lines += `<path class="${cls}" d="${q.c === p.c ? `M${X(q.c)} ${Y(q.r)}V${Y(p.r)}` : `M${X(q.c)} ${Y(q.r)}V${ym}H${X(p.c)}V${Y(p.r)}`}"/>`; }
     else if (T.req) lines += `<path class="${cls} ext" d="M${X(p.c)} 0V${Y(p.r)}"/>`;
   }
   const nodes = L.map(T => { const p = Ly.pos[T.id], s = st(T), F = techFace(T), q = Q && Q.id === T.id, ext = T.req && !Ly.inB.has(T.req) ? TECH_BY[T.req] : null;
-    return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${F.ut ? ' unit' : ''}" data-act="rsel" data-id="${T.id}"${s === 'run' ? ' id="rring"' : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}">
-      <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>${F.up ? `<i class="rup up-${F.up}" title="${F.up === 'atk' ? 'Attack' : F.up === 'def' ? 'Defense' : F.up === 'spd' ? 'Speed' : 'Detection'} upgrade">${rg(F.up, 12)}</i>` : ''}
+    return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${F.ut ? ' unit' : F.up ? ' upg' : ' gly'}" data-act="rsel" data-id="${T.id}"${s === 'run' ? ' id="rring"' : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}">
+      <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>${F.up && F.ut ? `<i class="rup up-${F.up}" title="${F.up === 'atk' ? 'Attack' : F.up === 'def' ? 'Defense' : F.up === 'spd' ? 'Speed' : 'Detection'} upgrade">${rg(F.up, 12)}</i>` : ''}
       ${s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s === 'run' ? `<i class="rbdg run">#1</i>` : q ? `<i class="rbdg qd">#2</i>` : ''}
       <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>`; }).join('');
   const rowsL = Array.from({length:Ly.rows}, (_, i) => `<span style="--r:${i}">${Ly.r0 + i + 1}</span>`).join('');
@@ -10555,7 +10666,10 @@ let pickDiff = 'regular', pickDoc = null, pickScn = 'world', pickLen = Infinity,
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel', 'cities', 'mob', 'cbld'];
-function openModal(html, kind = ''){ modalKind = kind; $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
+function openModal(html, kind = ''){ modalKind = kind;
+  // a bar tab still holding focus (More after its menu, or the last tab used) lets it go when another window opens, so only that window's tab reads as active
+  { const fe = document.activeElement; if (fe && fe.closest && fe.closest('#dock') && fe.dataset.kind !== kind) fe.blur(); }
+  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
 // in-game panels with a title band get CoN's red close box in it (added after each render, so every panel has one without touching its markup)
 new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
   const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
@@ -10574,7 +10688,7 @@ function rules(){ return `<ul class="qs">
   <li><b>Capture</b> provinces by parking ground troops in them. Terrain, rivers, supply and morale decide battles.</li>
   <li><b>Air, drones and navy</b>: wings strike or patrol from airbases; UAVs and AWACS find the enemy; fleets guard your trade and raid theirs.</li>
   <li><b>Diplomacy</b>: everyone starts at peace. Trade routes pay both partners; allies form coalitions that share supplies.</li>
-</ul><p class="small muted" style="margin-top:-2px">The <b>How to play</b> button at the bottom of the left dock (or the <kbd>?</kbd> key) opens the full field manual at any time.</p>`; }
+</ul><p class="small muted" style="margin-top:-2px"><b>How to play</b> in the <b>More</b> menu of the bottom bar (or the <kbd>?</kbd> key) opens the full field manual at any time.</p>`; }
 // the in-game field manual: short sections with small headers, a jump list at the top
 const HELP_SEC = [
   ['ui', 'Interface', `<ul>
