@@ -1992,10 +1992,21 @@ function chaikinRing(R, n){ let P = R.r;
 function coastPath(){ if (!window.COAST) return null; const path = new Path2D(); COASTR.length = 0;   // (runs again for every new or loaded game)
   decodeRings(window.COAST, 10, COASTR, path);
   // close zoom (coastRings): the 1:10m coast, smoothed once here (not at draw time, so a pan strip cuts the very polyline a full render strokes)
-  if (Array.isArray(window.COAST_HI) && !COASTR_HI.length) try {   /* (the same for every game: built once) */ decodeRings(window.COAST_HI, 40, COASTR_HI1, null); for (const R of COASTR_HI1){ chaikinRing(R, 1); COASTR_HI.push(chaikinRing({b:R.b, r:R.r}, 1)); } } catch (e) { COASTR_HI.length = COASTR_HI1.length = 0; }
+  if (Array.isArray(window.COAST_HI) && !COASTR_HI.length) try {   /* (the same for every game: built once) */ decodeRings(window.COAST_HI, 40, COASTR_HI1, null); for (const R of COASTR_HI1){ chaikinRing(R, 1); COASTR_HI.push(chaikinRing({b:R.b, r:R.r}, 1)); COASTR_MID.push({b:R.b, r:simplifyRing(R.r, 0.35)}); COASTR_GL.push({b:R.b, r:simplifyRing(R.r, 0.9)}); } } catch (e) { COASTR_HI.length = COASTR_HI1.length = COASTR_MID.length = COASTR_GL.length = 0; }
   return path; }
-const COASTR = [], COASTR_HI1 = [], COASTR_HI = [];   // the coast rings as emitted by coastPath (world coords, with their boxes): 1:50m, and 1:10m smoothed once and twice for close zoom
-const coastRings = hexPx => hexPx < 40 || !COASTR_HI.length ? COASTR : hexPx < 150 ? COASTR_HI1 : COASTR_HI;   // the set every coast clip, mask, wash and foam of a render reads (one corner-cut pass is smooth enough below 150 px a hex, at half the points)
+const COASTR = [], COASTR_MID = [], COASTR_GL = [], COASTR_HI1 = [], COASTR_HI = [];   // the coast rings as emitted by coastPath (world coords, with their boxes): 1:50m, and 1:10m (thinned for play zoom; smoothed once and twice for close zoom)
+// play zoom (hexPx 24-40, z2-3.3) takes the 1:10m shape thinned to 0.35 world units (under a px at z2-3): estuaries and bays (the Wash, the Thames) without the full point count
+const coastRings = hexPx => hexPx < 24 || !COASTR_HI.length ? COASTR : hexPx < 40 ? COASTR_MID : hexPx < 150 ? COASTR_HI1 : COASTR_HI;   // the set every coast clip, mask, wash and foam of a render reads (one corner-cut pass is smooth enough below 150 px a hex, at half the points)
+// the wide soft shallow-water glow (round-joined strokes many px wide) needs no sub-px shape: at play zoom it follows the same coast thinned to 0.9 units
+const coastGlowRings = RS => RS === COASTR_MID && COASTR_GL.length ? COASTR_GL : RS;
+const coastRingsId = RS => RS === COASTR ? 'L' : RS === COASTR_MID ? 'H0' : RS === COASTR_HI ? 'H2' : 'H1';
+// Douglas-Peucker on a closed flat ring (kept points within tol of the dropped ones); small rings unchanged
+function simplifyRing(r, tol){ const n = r.length/2; if (n < 8) return r; const keep = new Uint8Array(n), t2 = tol*tol; keep[0] = 1; let f = 0, fd = -1;
+  for (let i = 1; i < n; i++){ const d = (r[2*i] - r[0])**2 + (r[2*i + 1] - r[1])**2; if (d > fd){ fd = d; f = i; } } keep[f] = 1;
+  const st = [0, f, f, n]; while (st.length){ const b = st.pop(), a = st.pop(); if (b - a < 2) continue; const ax = r[2*a], ay = r[2*a + 1], bi = b % n, dx = r[2*bi] - ax, dy = r[2*bi + 1] - ay, L2 = dx*dx + dy*dy; let m = -1, md = t2;
+    for (let i = a + 1; i < b; i++){ const px = r[2*i] - ax, py = r[2*i + 1] - ay, c = px*dy - py*dx, d = L2 > 1e-12 ? c*c/L2 : px*px + py*py; if (d > md){ md = d; m = i; } }
+    if (m >= 0){ keep[m] = 1; st.push(a, m, m, b); } }
+  const o = []; for (let i = 0; i < n; i++) if (keep[i]) o.push(r[2*i], r[2*i + 1]); return o; }
 // the fine coast puts land where the texture (baked to the 1:50m shore) has sea: the texture's land colours pushed a few texels out to sea (stacked
 // blurs of the land alone, the land then cut away), half res, baked once per texture; renderLayer lays it inside the fine coast only
 function coastBleed(){ const T = G.terrain, M = G.landMask; if (!T || !M) return null; if (T.cbl !== undefined) return T.cbl; T.cbl = null;
@@ -2217,7 +2228,7 @@ function buildMini(){
 // 64-letter alphabet: one letter = class*8 + run - 1 (runs of 1..7), or class*8 + 7 followed by two letters for run - 8
 const TERRC = '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DSpnAurWqiHAMXAenAlHAAgCnABHABhAnAEBnAAHABiAhAnACBgHAMgCg/ATiHBHVqnAYGjDnASoSonABCnARvAwkVnADoTojsnAmqXAApkHAMXAZnBIBnAECnAAGjDnAGHAJl/ATgHBJVqnAaEhDnAUpRonABCkBnAKvAnjskVnAEoTphunAmqWplHAKXAVrnA0AnAZAnACGhFnAGHAIgAhAg/ATgHBIVqnAcDhEnAToSonAACnASvAmmrkVnAEoTrTrnAlrUpmHAORkXABvACnA3BnAdAjHAHnAIBgHAFh4h/ATgHBIVqnAcFhCnASpSonAADnAQvAnnAIVnAFoTrUrnAlrTplBgAgHAJnADshunBjHAHnAMHAFg/AQh6hHBIVpnARBnACFnAXoRqjAgAgCnASvAmnAJVnAFoUqVrnAlvAAmAkHABjDnAosnA/ChHAInAEAgAlHAFg/AQgAjHAMhHABhHAngVpnAREmChAnATohpQpnADAnATvAmnAJWonAEoVpWqnAmtnAHEnAxvACnA8BgHAInAEBgAiAgHAGg4h/ANiHANhAhAgAgAlHAmVpnAUHADnAVtRonAhvAmnAIoWonAEpWpVpnArAnAHDnAVFnAMXAAuLHABnAnAjAiAgHAIPABEjHAIhAg/AKjHAQiBiAlHAkgUPADDKnAGHABgCnASrTonACHAAMDnADDvAknALWonAFpXAApTpLEkHAQiFKGPAAFnAUEnAKXAHsIHABnApAhBgAgHADhFPABDhHALh/AIiHAWnAFHAjgUoPABFLiIBkHABjBnARpUpnAEGMDnADCvAlnAKXAAonAGqWpSpLEkEsHAFjFKGMHACnAMBlCnAGQiXAKrHACnAsAkHABhGOGgHALg/AIgAgHAWnAGHAjUohPAAFJiKBlCgEnAUIpUonAFHAAJFnADDvAjnAMXACnAFrVpSpKEnABuDnAFEKGLHADmBnACDnALXATpHACnArAmHAFhCMHAUj/AFhHATgBk+hHAiVjOELhKClBjCnACAnABLCIpTpnABAkHAHnADDvAMivAMnAMXAEgrmsTqQpLEnABpSpCnAGEIHACJHAKgAnADDjvAAnABXASpHACnApCmHAGgCKFgHAOhBg/AFgHAXj+gHAjVkODLiKBlCgAnAGFPAAEpRpnABCjHAHnADDvALjvAMnAOXAH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BuIRHAARAMXADPACqHABLHApvAQXAEpHAArHACoXADrGoWrWpHABoToCIHCRoKXAIpHAVnAiBVHBuRIHAARNWISPABAqHABpJHApvAITrXAFqDpSqGoXADpHABoWtVoHABoToHCXICXAIqHAUnAhAWHBuIQIHACPAATKUOAqGqJHATIHANvAIVrXAEqCoWpFoXADoHABoWpAIqUoHABoToHCXRJSrXABpHAUnAhWHBwQJDXABPAEUNCqEqJHAqvAIWuXABpBoXABqDpXABoHABoWoEpUpGoTHCZIQAISIrXACqHARnAgAWHAMJHBMJHAFRAXAEPADWNHABqJHArvAKXABsXABpAoXADpDrSqAeAoXAApDpUpFoTEJHCSRISIsXAEoHARnAfAWHAMJHBNJHAAKRAXAB4SPADXAAMHABqIHAecHACoHAIrVtXABqXAEoGoQrfABAXABpDpSqFoTFJHCTUJsXAEoHAQnAdBXAAHBkJFLQAXAB5SPADXABMHAVwHAMeHASpArRpBoAoXADqXACqErfADAXAAoFpQrEpTFIAIHCSITItXADrHAHLConAJAhGloApWHBmJoDNXAB5IQPAEXABMHAWxHADJEfABEdHAFoQvABEoXAErWsDpfAEAXAApFsFoUHCcUJtXAGoHAHLConAFHAHirVHBpPADTKR4KSLpMXABMHAFsAsEwHADKEfACqfAAHABrSoQsEoXAHqUsDofAGXAApDKqJEoUHCcQIRJtXAHpBrHAALCqnAAAgHAKqWoHBooPACTPAAAJSJsJXABpIxHAAIAIBvAEHAIOAfACseHAAoXABoHABoXAIvACfAMXAAoDPADAqToHCdTKtXAIuGMHAAkPAMoXABoHBpvACTBoQpEoAUtTtBwGJDUuHAFKsKfACpQpfAAHAAWqHACpXAItfAOoWoCPAFqTHCdUJtXAJpSpGNGPAQoXABoHBqvACTpSqDXABvAEHACIGUtHAEJuJfADqQpfAAEXADuEqXAGpfASVpDPAEpUHCfQIRKtXAJpSpFOGPAJqJoXACoHBpvACAoSoCoSoDXACvADHALVvAAGJuJfAEqRpeFSqWoRuSrXAApfASoUoEPAEpUHCeRIRJAtXAJpRpFPABEPAJrIpXAAIHBrvAACqEqRoCoXABoQvABHALXAAsHAAJuIfAGqReHAAvAA4XA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';
 const DT_N = 512, DT_A = 2, DT_R = [2.5, 5, 10, 20], DT_CAP = 36;
-const DT = {cache:new Map(), mv:12, clock:0, miss:new Set(), job:null, fail:false, made:0, ms:0, wk:undefined, busy:0, pend:new Set(), ready:[]};
+const DT = {cache:new Map(), mv:12, clock:0, miss:new Set(), job:null, fail:false, made:0, ms:0, wk:undefined, busy:0, pend:new Set(), ready:[], hold:[], holdT:0};
 let DTC = null;
 function dtCells(){ if (DTC && DTC.G === G) return DTC; if (DT.fail || typeof TERRC !== 'string') return null;
   const AL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', ix = new Int8Array(128).fill(-1); for (let i = 0; i < 64; i++) ix[AL.charCodeAt(i)] = i;
@@ -2307,7 +2318,7 @@ function dtNodeShade(J){ const {r, cs, gw, g, has} = J, NF = DT_NF, K = 0.26, d 
 // px rows (rows -1..n as buffer rows 0..n+1): the fine relief into Hb, the tones (with the low shading folded in) into Tb
 function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.Hb, Tb = DT.Tb, NF = DT_NF, NP = pres.length, n2 = n + 2, w = J.w || (J.w = new Float32Array(9));
   const band = f => { const fm = r/3; return Math.max(0, Math.min(1, (fm - f)/(0.5*fm))); }, fmic = r/2.6, lw = Math.max(0.05, 0.9/r), ri = 1/r;
-  const bR = []; for (let o = 0, f = 0.45; o < 6; o++, f *= 2) bR.push(band(f)); const bCA = Math.max(0, Math.min(1, (0.8*r - 2.5)/2)), bCB = Math.max(0, Math.min(1, (0.36*r - 2.5)/2)), bH2 = band(0.97), bH3 = band(2.04), dper = 1.1, bDn = Math.max(0, Math.min(1, (1.1*r - 3)/3)), bSt = band(2.6), bRk = band(1.7);
+  const bR = []; for (let o = 0, f = 0.45; o < 6; o++, f *= 2) bR.push(band(f)); const spA = r < 4 ? 1.7 : 0.8, bCA = r < 4 ? 0.7 : Math.max(0, Math.min(1, (0.8*r - 2.5)/2)), bCB = Math.max(0, Math.min(1, (0.36*r - 2.5)/2)), bH2 = band(0.97), bH3 = band(2.04), dper = 1.1, bDn = Math.max(0, Math.min(1, (1.1*r - 3)/3)), bSt = band(2.6), bRk = band(1.7);
   let rci = 1e9, rcj = 1e9; const SX = new Float64Array(9), SY = new Float64Array(9), SI = new Int32Array(9); let rid = -1, rca = 1, rsa = 0, rsz = 1, rasp = 1, pci = 1e9, pcj = 1e9, qci = 1e9, qcj = 1e9; const PX = new Float64Array(9), PY = new Float64Array(9), QX = new Float64Array(9), QY = new Float64Array(9), QI = new Int32Array(9);
   const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat([9, 10, 11, 12, 13, 14, 15, 16, 17]), NQ = QS.length;
   for (let by = J.y; by < y1; by++){ const py = by - 1, wy = y0 + (py + 0.5)*ri, gy = by/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, la = lat[by], FP = wy < J.eq ? J.fN : J.fS;
@@ -2330,9 +2341,10 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
       const hR = 0.12*wP + 0.6*wHi + 0.2*wT + 0.1*wD + 0.22*wF + 0.12*wO + 0.25*wM;
       if (hR > 0.02){ if (bH2 > 0) h += hR*0.24*bH2*dtPn(x*0.97 + 74.1, wy*0.97 - 16.3); if (bH3 > 0) h += hR*0.11*bH3*dtPn(x*2.04 + 91.1, wy*2.04 - 29.3); }
       // forest canopy: crowns as billows
-      // forest canopy: two sizes of crowns on jittered grids (world-fixed, each shown once it is a few px across), shade in the gaps
+      // forest canopy: two sizes of crowns on jittered grids (world-fixed, each shown once it is a few px across), shade in the gaps; the coarsest
+      // tiles (play zoom, z1.35-3.5) take crown clumps about twice as wide, so the canopy reads as texture there instead of a smooth green
       const wFe = Math.min(1, wF + 0.85*wood); if (wFe > 0.02){ const cov = dtSm((wFe - 0.15)/0.5); let gA = 0, gB = 0;
-        for (let L = 0; L < 2; L++){ const sp = L ? 0.36 : 0.8, bw = L ? bCB : bCA; if (bw <= 0) continue; const d = dtCrown(x, wy, sp, L ? 21 : 11), bh = DT_CH;
+        for (let L = 0; L < 2; L++){ const sp = L ? 0.36 : spA, bw = L ? bCB : bCA; if (bw <= 0) continue; const d = dtCrown(x, wy, sp, L ? 21 : 11), bh = DT_CH;
           if (d > 0 && bh < 0.08 + 0.92*cov){ h += wFe*0.32*sp*bw*d; const tv = 1 + (bh - 0.5)*0.12*wFe*bw; tr *= tv; tg *= tv; tb *= tv; } else if (L) gB = 1; else gA = 1; }
         const gap = (bCB > 0 ? gB*bCB + gA*bCA*(1 - bCB) : gA*bCA)*wFe*cov; if (gap > 0){ tr *= 1 - 0.26*gap; tg *= 1 - 0.2*gap; tb *= 1 - 0.24*gap; } }
       // farmland: Voronoi field systems (RS world units), each with its own angle and parcel size; parcels in staggered rows, hedgerows between
@@ -2394,8 +2406,8 @@ function dtStep(J, end){ for (;;){
 // the game month (the parcel palette) and its tile variant, kept in DT.mv
 function dtMonth(){ const m = S ? calDate(S.hour).m : 5; DT.mv = DT_MV[m]*5 + DT_MV[(m + 6) % 12]; return m; }
 function dtBucket(){ const t = view.s*Math.min(dpr, 1.5); let k = 0; while (k < 3 && DT_R[k]*1.41 < t) k++; return k; }
-function dtAlpha(){ return SET.fx === 'low' || DT.fail ? 0 : dtSm((view.s - 3)/2); }   // fades in from z3 to z5; nothing below (the far view is untouched)
-const dtCap = () => dpr > 1 ? 56 : 36;
+function dtAlpha(){ return SET.fx === 'low' || DT.fail ? 0 : dtSm((view.s - 1.35)/1.15); }   // fades in from z1.35 to z2.5 (the start view and normal play); nothing below (the far view is untouched)
+const dtCap = () => dtBucket() === 0 ? (dpr > 1 ? 64 : 48) : dpr > 1 ? 56 : 36;   // (the coarsest tiles serve the widest views, z1.35-3.5: more of them on screen and in the margin)
 // the tiles under the layer's painted rect, each clipped to its own whole-device-px box (the boxes meet exactly, so no seam and no double blend);
 // a tile not made yet is noted (its box is redrawn when it arrives) and a cached coarser or finer one stands in
 function dtDraw(c, vx0, vy0, vx1, vy1, ox, oy, al){ dtMonth(); const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, nW = Math.ceil(WORLD_W/T), nH = Math.ceil(WORLD_H/T);
@@ -2424,16 +2436,28 @@ function dtNext(){ const k = dtBucket(), r = DT_R[k], T = DT_N/r, nW = Math.ceil
 // recently used out), and its box queued for a redraw if the layer drew it without the tile
 function dtFinish(J, img){ const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
   D.getContext('2d').putImageData(img, 0, 0);
-  const old = DT.cache.get(J.key); let cv = old ? old.cv : null; if (!old && DT.cache.size >= dtCap()){ let ok = null; for (const [key, E] of DT.cache) if (!ok || E.used < ok[1].used) ok = [key, E]; DT.cache.delete(ok[0]); cv = ok[1].cv; }
+  const old = DT.cache.get(J.key); let cv = old ? old.cv : null; while (!old && DT.cache.size && DT.cache.size >= dtCap()){ let ok = null; for (const [key, E] of DT.cache) if (!ok || E.used < ok[1].used) ok = [key, E]; DT.cache.delete(ok[0]); cv = ok[1].cv; }   // (down to the cap: it is lower again past the coarsest tiles)
   if (!cv){ cv = document.createElement('canvas'); cv.width = cv.height = n; }
   const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.globalAlpha = 1; g.imageSmoothingEnabled = true;
   g.setTransform(J.r, 0, 0, J.r, -J.x0*J.r, -J.y0*J.r); g.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'hard-light'; g.drawImage(D, 0, 0); g.globalCompositeOperation = 'source-over';
   DT.cache.set(J.key, {cv, n, r:J.r, x0:J.x0, y0:J.y0, mv:J.mv, used:++DT.clock}); DT.made++;
-  if (DT.miss.delete(J.key) && layer){ const L = layer, s = L.s, ox = L.vx + L.mx, oy = L.vy + L.my, Wl = L.width/dpr, Hl = L.height/dpr, T = DT_N/J.r;
-    const rr = {x0:Math.max(0, Math.floor((ox + J.tx*T*s)*dpr)/dpr), y0:Math.max(0, Math.floor((oy + J.ty*T*s)*dpr)/dpr), x1:Math.min(Wl, Math.ceil((ox + (J.tx + 1)*T*s)*dpr)/dpr), y1:Math.min(Hl, Math.ceil((oy + (J.ty + 1)*T*s)*dpr)/dpr)};
-    if (rr.x1 > rr.x0 && rr.y1 > rr.y0){ const q = L.q || (L.q = []), inR = (a, b) => a.x0 >= b.x0 && a.y0 >= b.y0 && a.x1 <= b.x1 && a.y1 <= b.y1;
-      if (!q.some(a => inR(rr, a))){ for (let j = q.length - 1; j >= 0; j--) if (inR(q[j], rr)) q.splice(j, 1); q.push(rr); if (q.length > 24) layerBands(); } } } }
+  if (DT.miss.delete(J.key) && layer){ DT.hold.push([J.tx, J.ty, J.r]); if (!DT.holdT) DT.holdT = performance.now(); } }
+// the boxes of finished tiles the layer drew without them are held until no tile on screen is still missing (or 2 s pass), then redrawn together:
+// their union in a few horizontal bands (one a frame, the middle first), so the detail comes in at once, not square by square
+function dtScreenMissing(){ if (!DT.miss.size) return false; const k = dtBucket(), T = DT_N/DT_R[k], s = view.s, nW = Math.ceil(WORLD_W/T), nH = Math.ceil(WORLD_H/T);
+  const tx0 = Math.max(0, Math.floor(-view.x/s/T)), tx1 = Math.min(nW - 1, Math.floor((cw - view.x)/s/T)), ty0 = Math.max(0, Math.floor(-view.y/s/T)), ty1 = Math.min(nH - 1, Math.floor((ch - view.y)/s/T));
+  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (DT.miss.has(k + '|' + tx + '|' + ty)) return true; return false; }
+function dtRelease(){ const L = layer, H0 = DT.hold; DT.hold = []; DT.holdT = 0; if (!L || !H0.length) return;
+  const s = L.s, ox = L.vx + L.mx, oy = L.vy + L.my, Wl = L.width/dpr, Hl = L.height/dpr, U = {x0:Infinity, y0:Infinity, x1:-Infinity, y1:-Infinity};
+  for (const [tx, ty, r] of H0){ const T = DT_N/r; U.x0 = Math.min(U.x0, Math.max(0, Math.floor((ox + tx*T*s)*dpr)/dpr)); U.y0 = Math.min(U.y0, Math.max(0, Math.floor((oy + ty*T*s)*dpr)/dpr));
+    U.x1 = Math.max(U.x1, Math.min(Wl, Math.ceil((ox + (tx + 1)*T*s)*dpr)/dpr)); U.y1 = Math.max(U.y1, Math.min(Hl, Math.ceil((oy + (ty + 1)*T*s)*dpr)/dpr)); }
+  if (!(U.x1 > U.x0 && U.y1 > U.y0)) return;
+  const nb = Math.max(1, Math.min(6, Math.round(6*(U.x1 - U.x0)*(U.y1 - U.y0)/(Wl*Hl) + 0.5))), cy = L.my + ch/2, q = L.q || (L.q = []), inR = (a, b) => a.x0 >= b.x0 && a.y0 >= b.y0 && a.x1 <= b.x1 && a.y1 <= b.y1, B = [];
+  for (let i = 0; i < nb; i++){ const y0 = Math.round((U.y0 + (U.y1 - U.y0)*i/nb)*dpr)/dpr, y1 = i === nb - 1 ? U.y1 : Math.round((U.y0 + (U.y1 - U.y0)*(i + 1)/nb)*dpr)/dpr; if (y1 > y0) B.push({x0:U.x0, y0, x1:U.x1, y1, d:Math.abs((y0 + y1)/2 - cy)}); }
+  B.sort((a, b) => a.d - b.d);
+  for (const rr of B){ if (q.some(a => inR(rr, a))) continue; for (let j = q.length - 1; j >= 0; j--) if (inR(q[j], rr)) q.splice(j, 1); q.push(rr); }
+  if (q.length > 24) layerBands(); }
 // the tile maker off the main thread: a worker built from these same functions (so its tiles are the same px for px); null where workers are
 // unavailable or blocked, and then the tiles are made here, a few ms a frame
 function dtWorker(){ if (DT.wk !== undefined) return DT.wk; DT.wk = null; const C = dtCells(); if (!C || typeof Worker === 'undefined' || typeof Blob === 'undefined' || !window.URL) return null;
@@ -2445,21 +2469,28 @@ ${fns}
 onmessage=e=>{const m=e.data;if(m.init){DTC={cls:m.init.cls,lat:m.init.lat,eq:m.init.eq,n1:makeNoise(mulberry(101)),n2:makeNoise(mulberry(202)),n3:makeNoise(mulberry(303))};return;}
 const t0=performance.now(),Jb=dtStart(m.k,m.tx,m.ty,m.mo);DT.img=null;while(!dtStep(Jb,Infinity));const d=DT.img.data;DT.img=null;
 postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0,y0:Jb.y0,buf:d.buffer,ms:performance.now()-t0},[d.buffer]);};`;
-    const url = URL.createObjectURL(new Blob([js], {type:'text/javascript'})), w = new Worker(url);
-    w.onmessage = e => { const m = e.data; DT.busy = Math.max(0, DT.busy - 1); DT.pend.delete(m.key); DT.ms += m.ms; DT.ready.push(m); };
-    w.onerror = ev => { if (ev && ev.preventDefault) ev.preventDefault(); try { w.terminate(); } catch (e) {} DT.wk = null; DT.busy = 0; DT.pend.clear(); };   // blocked or broken: made here instead
-    w.postMessage({init:{cls:C.cls, lat:C.lat, eq:C.eq}}); DT.wk = w;
+    // two workers where the machine has the cores (the widest views want 20-35 tiles: about half the wait), else one
+    const url = URL.createObjectURL(new Blob([js], {type:'text/javascript'})), nw = (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1, WS = [];
+    const fail = ev => { if (ev && ev.preventDefault) ev.preventDefault(); for (const x of WS) try { x.terminate(); } catch (e) {} DT.wk = null; DT.wks = []; DT.busy = 0; DT.pend.clear(); };   // blocked or broken: made here instead
+    for (let i = 0; i < nw; i++){ const w = new Worker(url); w.busy = 0;
+      w.onmessage = e => { const m = e.data; w.busy = Math.max(0, w.busy - 1); DT.busy = Math.max(0, DT.busy - 1); DT.pend.delete(m.key); DT.ms += m.ms; DT.ready.push(m); };
+      w.onerror = fail; w.postMessage({init:{cls:C.cls, lat:C.lat, eq:C.eq}}); WS.push(w); }
+    DT.wks = WS; DT.wk = WS[0];
   } catch (e) { DT.wk = null; }
   return DT.wk; }
-// make tiles while the view is still, nothing while it moves (panning stays as cheap as before): with the worker, two in flight and the
+// make tiles while the view is still, nothing while it moves (panning stays as cheap as before): with the workers, two in flight each and the
 // finished ones composited here (a couple of ms each); without it, a few ms of making a frame
 function dtWork(idle){ if (!idle || !layer || layer.s !== view.s || dtAlpha() < 0.02) return; const t0 = performance.now(), end = t0 + 8, k = dtBucket(), wk = dtWorker(), mo = dtMonth();
   while (DT.ready.length && performance.now() < end){ const m = DT.ready.shift(); if (Math.abs(m.k - k) <= 1) dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); }
+  if (DT.hold.length && (performance.now() - DT.holdT > 2000 || !dtScreenMissing())) dtRelease();
   DT.fms = (DT.fms || 0) + performance.now() - t0;
-  if (wk){ while (DT.busy < 2){ const nx = dtNext(); if (!nx) break; DT.pend.add(nx.join('|')); DT.busy++; wk.postMessage({k:nx[0], tx:nx[1], ty:nx[2], mo}); } return; }
+  if (wk){ const WS = DT.wks && DT.wks.length && DT.wks[0] === wk ? DT.wks : [wk];
+    for (;;){ let w = null; for (const x of WS) if ((x.busy || 0) < 2 && (!w || (x.busy || 0) < (w.busy || 0))) w = x; if (!w) break;   // (two in flight a worker, to the idlest)
+      const nx = dtNext(); if (!nx) break; DT.pend.add(nx.join('|')); DT.busy++; w.busy = (w.busy || 0) + 1; w.postMessage({k:nx[0], tx:nx[1], ty:nx[2], mo}); } return; }
   let J = DT.job; if (J && (J.k !== k || J.mv !== DT.mv)) J = DT.job = null;   // the zoom moved to another resolution
   while (performance.now() < end){ if (!J){ const nx = dtNext(); if (!nx) break; J = DT.job = dtStart(nx[0], nx[1], nx[2], mo); if (!J) break; }
     if (dtStep(J, end)){ dtFinish(J, DT.img); DT.job = J = null; } }
+  if (DT.hold.length && (performance.now() - DT.holdT > 2000 || !dtScreenMissing())) dtRelease();
   DT.ms += performance.now() - t0; }
 
 /* ---------------- State ---------------- */
@@ -3014,7 +3045,7 @@ function emit(kind, wx, wy, opt = {}){
   if (soft && Math.random() > FXG.k) return;   // the governor thins smoke and dust when frames get slow
   const cap = SET.fx === 'low' ? 300 : 900;
   if (PART.length > cap){ const now = performance.now(); if (now > FXG.ret){ FXG.ret = now + 350; fxRetire(PART, 60, now, true); } if (soft || PART.length > cap*1.6) return; }
-  const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, ring:500}[kind] || 800);
+  const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, core:60, ring:500}[kind] || 800);
   PART.push({kind, wx, wy, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6, spin:(Math.random() - 0.5)*0.6, v:(Math.random()*4) | 0, tn:opt.tn});
 }
 /* ---- art combat effects: fx-explosion bursts, fx-smoke puffs and fx-crater ground decals (assets/art) ----
@@ -3042,15 +3073,24 @@ function afxPuff(wx, wy, o = {}){
   AFX.puff.push({wx, wy, t0:performance.now(), bp:o.bp ?? -1, delay:o.delay || 0, dur:o.dur || 3600 + Math.random()*1800, s0:o.s0 || 5, s1:o.s1 || 22, a:o.a || 0.32,
     vx:o.vx ?? 3 + Math.random()*5, vy:o.vy ?? -(6 + Math.random()*6), ox:o.ox || 0, oy:o.oy || 0, rot:Math.random()*6.28, spin:(Math.random() - 0.5)*0.5, dark:o.dark ?? (fxNight(wx, wy) > 0.45)});
   return true; }
-// ground crater (world radius r) on land; nearby hits deepen one crater instead of stacking
+// ground crater (world radius r, at most 2.5, or o.cap: a missile's 3.5) on land; a hit inside a crater adds a new small one elsewhere in the
+// province while it holds fewer than 6, else deepens that crater (never grows it), so a long fight leaves several small craters, not one huge disc
 function afxCrater(wx, wy, r, o = {}){
   if (!booted || !ART.ready('fx-crater') || !S) return false; afxSync(); const c = worldToCell(wx, wy); if (c < 0 || G.prov[c] < 0 || G.P[G.prov[c]].sea) return true;
   const h = S.hour + (S.speed && !S.over ? acc : 0), life = o.life || 72, land = (x, y) => { const c1 = worldToCell(x, y); return c1 >= 0 && G.prov[c1] >= 0 && !G.P[G.prov[c1]].sea; };
+  const pv = G.prov[c], inQ = (q, x, y, f) => Math.abs(q.wx - x) < q.r*0.55*f && Math.abs(q.wy - y) < q.r*0.45*f; r = Math.min(r, o.cap || 2.5);
+  { const hitQ = AFX.crater.find(q => inQ(q, wx, wy, 1));
+    if (hitQ){ const Pv = G.P[pv], n = Pv.cells.length; let inP = 0; for (const q of AFX.crater) if (q.p === pv) inP++;
+      let best = null, bd = Infinity;
+      if (inP < 6 && n) for (let k = 0; k < 10; k++){ const hh = fxh(pv*7919 + AFX.crater.length*131 + k*977 + (h*60 | 0)), cc = cellCenter(Pv.cells[Math.floor(hh*n)]);   // a jittered cell of the province
+        const x = cc[0] + (fxh(hh*1e9 + 3) - 0.5)*1.4*HS, y = cc[1] + (fxh(hh*1e9 + 5) - 0.5)*1.2*HS, d = Math.hypot(x - wx, y - wy);
+        if (d >= bd || !land(x, y) || worldToCell(x, y) < 0 || G.prov[worldToCell(x, y)] !== pv || AFX.crater.some(q => inQ(q, x, y, 1.6))) continue; best = [x, y]; bd = d; }
+      if (best){ wx = best[0]; wy = best[1]; r *= 0.7 + 0.3*fxh(bd*97); }
+      else { hitQ.h = h; hitQ.life = Math.max(hitQ.life, life); hitQ.a = Math.min(0.95, hitQ.a + 0.08); return true; } } }
   let ok = false; for (let n = 0; n < 7 && r >= 1.2; n++){ ok = true; for (let j = 0; j < 8 && ok; j++) ok = land(wx + Math.cos(j*0.785)*r*0.75, wy + Math.sin(j*0.785)*r*0.6); if (ok) break; r *= 0.78; }   // keep the decal on land at coasts
   if (!ok) return true;   // no room on a tiny island or a sliver of coast: no crater rather than one covering the land
-  for (const q of AFX.crater) if (Math.abs(q.wx - wx) < q.r*0.55 && Math.abs(q.wy - wy) < q.r*0.45){ q.h = h; q.life = Math.max(q.life, life); { const nr = Math.min(Math.max(q.r, r)*1.06, 9); let fits = true; for (let j = 0; j < 8 && fits; j++) fits = land(q.wx + Math.cos(j*0.785)*nr*0.75, q.wy + Math.sin(j*0.785)*nr*0.6); if (fits) q.r = nr; } q.a = Math.min(0.95, q.a + 0.08); return true; }
   const cap = SET.fx === 'low' ? 50 : 120; if (AFX.crater.length >= cap) AFX.crater.splice(0, AFX.crater.length - cap + 1);
-  AFX.crater.push({wx, wy, r, h, life, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85}); return true; }
+  AFX.crater.push({wx, wy, r, h, life, p:pv, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85}); return true; }
 // a city burns for a while after it is bombarded or captured (smoke drawn by afxAmbient)
 function afxMark(p, hours){ if (!booted || !S || G.P[p].sea) return; afxSync(); const h = S.hour, m = AFX.heat.get(p); if (!m || h + hours > m.h + m.d) AFX.heat.set(p, {h, d:hours}); }
 function afxTimer(key, now, ms){ const t = AFX.tm.get(key) || 0; if (now - t < ms) return false; if (AFX.tm.size > 400) AFX.tm.clear(); AFX.tm.set(key, now); return true; }
@@ -3061,19 +3101,21 @@ function afxAmbient(now, vis){
   // strategic / operational zoom: the battle reads from one baked smoke column with flickers and tracers (drawBattleLOD), no particles
   if (hexPx >= FIG_PX) for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue; const P = G.P[p]; if (afxOff(P.x, P.y, 120)) continue;
     if ((AFX.bpn.get(p) || 0) < 4 && afxTimer('b' + p, now, 520 + Math.random()*500)){ const sea = P.sea; const [qx, qy] = fxOff(P.x + (Math.random() - 0.5)*12*spr, P.y + (Math.random() - 0.5)*7*spr, 2); if (afxPuff(qx, qy, {bp:p, s0:5, s1:17 + Math.random()*10, a:sea ? 0.22 : 0.3, dur:4200 + Math.random()*2400, vx:4 + Math.random()*6, vy:-(5 + Math.random()*5)})) AFX.bpn.set(p, (AFX.bpn.get(p) || 0) + 1); }
-    if (S.speed && !S.over && Math.random() < FXG.k && afxTimer('p' + p, now, 700 + Math.random()*900)){ const [qx, qy] = fxOff(P.x + (Math.random() - 0.5)*14*spr, P.y + (Math.random() - 0.5)*8*spr); afxBoom(qx, qy, 0.6 + Math.random()*0.4, true); } }
+    if (S.speed && !S.over && hexPx < 76 && Math.random() < FXG.k && afxTimer('p' + p, now, 700 + Math.random()*900)){   // (from 76 px a hex the plates' own shells make the impacts: no random pops)
+      const [qx, qy] = fxOff(P.x + (Math.random() - 0.5)*14*spr, P.y + (Math.random() - 0.5)*8*spr); afxBoom(qx, qy, 0.6 + Math.random()*0.4, true); } }
   if (hexPx < 7) return;
   for (const [p, m] of AFX.heat){ const age = S.hour - m.h; if (age < 0 || age > m.d || S.battles.includes(p)){ if (age < 0 || age > m.d) AFX.heat.delete(p); continue; }
     const P = G.P[p]; if (afxOff(P.x, P.y, 100) || !vis.has(p)) continue; const f = 1 - age/m.d;
     if (afxTimer('c' + p, now, 700 + (1 - f)*1400 + Math.random()*400)) afxPuff(P.x + (Math.random() - 0.5)*5, P.y + (Math.random() - 0.5)*3, {s0:4, s1:13 + 9*f, a:0.22 + 0.14*f, dur:5200 + Math.random()*2400, vx:5 + Math.random()*4, vy:-(8 + Math.random()*5)}); } }
 function drawCraters(now){
   afxSync(); if (!AFX.crater.length || !S) return; const hexPx = view.s*HS0, m = hexPx >= 6 ? afxMips('fx-crater') : null; if (!m) return;
-  const h0 = S.hour + (S.speed && !S.over ? acc : 0), zin = Math.min(1, (hexPx - 6)/5), red = afxReduced();
+  const h0 = S.hour + (S.speed && !S.over ? acc : 0), zin = Math.min(1, (hexPx - 6)/5), red = afxReduced(); ctx.globalCompositeOperation = 'multiply';   // darkened ground: the roads and the city grid show through
   for (let i = AFX.crater.length - 1; i >= 0; i--){ const q = AFX.crater[i], age = h0 - q.h; if (age > q.life || age < -2){ AFX.crater.splice(i, 1); continue; }
-    const rs = Math.max(q.r*view.s, q.r*1.5)*(red ? 1 : 1 + 0.25*Math.max(0, 1 - (now - q.t0)/260)), [x, y] = toScreen(q.wx, q.wy); if (rs < 1.5 || x < -rs || y < -rs || x > cw + rs || y > ch + rs) continue;
-    ctx.globalAlpha = q.a*zin*Math.min(1, Math.pow(1 - Math.max(0, age)/q.life, 0.7)); const co = Math.cos(q.rot)*dpr, si = Math.sin(q.rot)*dpr;
+    const rs = Math.min(35, Math.max(q.r*view.s, q.r*1.5)*(red ? 1 : 1 + 0.25*Math.max(0, 1 - (now - q.t0)/260))), [x, y] = toScreen(q.wx, q.wy); if (rs < 1.5 || x < -rs || y < -rs || x > cw + rs || y > ch + rs) continue;
+    const Pq = q.p != null ? G.P[q.p] : null, cty = Pq && Pq.city && Math.hypot(q.wx - Pq.x, q.wy - Pq.y) < 1.5*HS ? 0.5 : 1;   // (on a city's centre: half, its streets stay readable)
+    ctx.globalAlpha = 0.7*cty*q.a*zin*Math.min(1, Math.pow(1 - Math.max(0, age)/q.life, 0.7)); const co = Math.cos(q.rot)*dpr, si = Math.sin(q.rot)*dpr;
     ctx.setTransform(co, si, -si, co, x*dpr, y*dpr); ctx.drawImage(afxPick(m, rs*2*dpr), -rs, -rs*q.sq, rs*2, rs*2*q.sq); }
-  ctx.globalAlpha = 1; ctx.setTransform(1, 0, 0, 1, 0, 0); }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); }
 function drawArtFx(now, kz){
   AFX.bpn.clear();
   if (AFX.puff.length){ const m = afxMips('fx-smoke'), md = afxMips('fx-smoke', true);
@@ -3093,9 +3135,10 @@ function drawArtFx(now, kz){
       ctx.globalAlpha = k < 0.08 ? k/0.08 : Math.pow(1 - (k - 0.08)/0.92, 1.6); ctx.drawImage(im, -sz, -sz, sz*2, sz*2);
       if (k < 0.3){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.32*(1 - k/0.3); ctx.drawImage(im, -sz*0.5, -sz*0.5, sz, sz); ctx.globalCompositeOperation = 'source-over'; } } }
   ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
-function explode(wx, wy, big = 1, air = false, lite = false){
+function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: the flash's scale (a plate's shells, very close in)
   const art = afxBoom(wx, wy, big, big < 1);   // sprite burst; the drawn fire then only adds sparkle
-  emit('flash', wx, wy, {s0:(art ? 18 : 28)*big, s1:10, life:140});
+  if (!lite) emit('core', wx, wy, {s0:(4 + 3*Math.min(1.5, big))*Math.min(1, 2.6/PKZ), s1:2, life:60});   // a small white core for the first frames of the impact (held in scale very close in)
+  emit('flash', wx, wy, {s0:(art ? 18 : 28)*big*fz, s1:10*fz, life:140});
   if (lite){ for (let i = 0; i < 2*big; i++) emit('fire', wx, wy, {vx:(Math.random() - 0.5)*60*big, vy:-(10 + Math.random()*40)*big, s0:10*big, s1:3, life:420 + Math.random()*260}); return; }
   for (let i = 0; i < (art ? 5 : 8); i++) emit('dust', wx, wy, {vx:(Math.random() - 0.5)*140*big, vy:-(2 + Math.random()*6), s0:6, s1:30*big, life:1400});
   if (booted && !(big >= 1 && !air && afxCrater(wx, wy, 1.4 + 1.5*big)) && !(big < 1 && ART.ready('fx-crater'))){ SCORCH.push({wx, wy, r:6 + 6*big, t0:performance.now()}); if (SCORCH.length > 60) SCORCH.shift(); }
@@ -3104,7 +3147,8 @@ function explode(wx, wy, big = 1, air = false, lite = false){
   if (!puffs) for (let i = 0; i < Math.round(5*big); i++) emit('smoke', wx, wy, {ox:(Math.random() - 0.5)*14*sb, vx:(Math.random() - 0.5)*26, vy:-(6 + Math.random()*16), s0:7*sb, s1:(20 + Math.random()*14)*sb, life:2000 + Math.random()*1600});
   for (let i = 0; i < 6*big; i++) emit('debris', wx, wy, {vx:(Math.random() - 0.5)*110*big, vy:-(40 + Math.random()*70)*big, s0:1.6, s1:1.2, life:700 + Math.random()*400});
 }
-function shoot(kind, from, to, opt = {}){ if (PROJ.length > 160) PROJ.shift(); PROJ.push({kind, from, to, t0:performance.now(), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite}); }
+let VOLA = 1;   // the cross-fade share of the unit fire being emitted (volley: smoothstep 56-76 px a hex), stored on its shots and muzzle stars
+function shoot(kind, from, to, opt = {}){ while (PROJ.length >= 160) PROJ.shift(); PROJ.push({kind, from, to, t0:performance.now() + (opt.delay || 0), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite, a:VOLA, fz:opt.fz || 1}); }
 let lastPart = 0, PKZ = 1;
 // battle effects in two passes. drawParticlesUnder runs before the counters (scorch, wreck fires, smoke, fire, flashes, rings, dust, the night
 // ground glow and the art bursts and puffs: the plates always sit on top of them); drawParticlesOver runs after them, clipped off every plate
@@ -3129,6 +3173,7 @@ function drawParticlesUnder(now){
     const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
     if (q.kind === 'smoke' || q.kind === 'smokel'){ if (!fxBudget(sz*sz*4)) continue; ctx.globalAlpha = fd*0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.save(); ctx.translate(x, y); ctx.rotate(q.rot + q.spin*k*3); ctx.drawImage(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), -sz, -sz, sz*2, sz*2); ctx.restore(); }
+    else if (q.kind === 'core'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.9*fd*(1 - k*k); ctx.drawImage(BCORE(), x - sz, y - sz, sz*2, sz*2); ctx.globalCompositeOperation = 'source-over'; }
     else if ((q.kind === 'fire' || q.kind === 'flash') && nl < 24){ const nq = fxNight(q.wx ?? 0, q.wy ?? 0); if (nq > 0.2){ nl++; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*0.18*(1 - k)*nq; ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.globalCompositeOperation = 'source-over'; } }   // fire lights the ground at night
     if (q.kind === 'fire' || q.kind === 'flash'){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*(1 - k); ctx.drawImage(q.kind === 'flash' ? GLOW() : FIRE(), x - sz, y - sz, sz*2, sz*2); ctx.restore(); }
     else if (q.kind === 'ring'){ ctx.globalAlpha = fd*0.55*(1 - k); ctx.strokeStyle = '#ffe6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, sz, sz*0.45, 0, 0, Math.PI*2); ctx.stroke(); }
@@ -3136,32 +3181,36 @@ function drawParticlesUnder(now){
   }
   ctx.globalAlpha = 1;
   drawArtFx(now, kz);
-}
-function drawParticlesOver(now){
-  const kz = PKZ;
-  // projectiles
-  for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur;
-    const [fx0, fy0] = toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = toScreen(pr.to[0], pr.to[1]);
-    if (k >= 1){ PROJ.splice(i, 1); if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big, false, pr.lite); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
-    const x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*pr.arc*kz;
-    if (pr.kind === 'tracer'){ const x2 = fx0 + (tx0 - fx0)*Math.max(0, k - 0.18), y2 = fy0 + (ty0 - fy0)*Math.max(0, k - 0.18); ctx.strokeStyle = 'rgba(255,225,140,.9)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x, y); ctx.stroke(); }
-    else { if (pr.kind === 'missile' && now - pr.last > 30){ pr.last = now; const [wx, wy] = screenToWorld(x, y); emit('smokel', wx, wy, {vx:(Math.random() - 0.5)*4, vy:-2, s0:4, s1:14, life:1300}); }
-      const kb = Math.max(0, k - 0.07), xb = fx0 + (tx0 - fx0)*kb, yb = fy0 + (ty0 - fy0)*kb - Math.sin(kb*Math.PI)*pr.arc*kz;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = pr.kind === 'missile' ? 'rgba(255,190,120,.9)' : 'rgba(255,236,190,.95)'; ctx.lineWidth = pr.kind === 'missile' ? 1.6 : 1.2; ctx.beginPath(); ctx.moveTo(xb, yb); ctx.lineTo(x, y); ctx.stroke();
-      ctx.globalAlpha = 0.6; ctx.drawImage(GLOW(), x - 4, y - 4, 8, 8); ctx.restore(); } }
-  // muzzle stars (60 ms)
-  for (let i = MUZZ.length - 1; i >= 0; i--){ const m0 = MUZZ[i], age = now - m0.t0; if (age > 45){ MUZZ.splice(i, 1); continue; }
-    { const [x, y] = toScreen(m0.wx, m0.wy), L0 = 9*m0.big*kz, k3 = 1 - age/45; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k3; ctx.drawImage(GLOW(), x - L0, y - L0, L0*2, L0*2);
+  // muzzle stars (45 ms): under the counters, so a star on a plate's rim is never cut into a bar by the plate clip of the pass over them
+  for (let i = MUZZ.length - 1; i >= 0; i--){ const m0 = MUZZ[i], age = now - m0.t0; if (age > 45 && m0.dr){ MUZZ.splice(i, 1); continue; } m0.dr = 1;   // (each star is drawn at least once, also on a slow frame)
+    { const [x, y] = toScreen(m0.wx, m0.wy), L0 = 9*m0.big*kz, k3 = Math.max(0.35, 1 - age/45)*(m0.a ?? 1), Lg = L0; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k3; ctx.drawImage(GLOW(), x - Lg, y - Lg, Lg*2, Lg*2);
       ctx.translate(x, y); ctx.rotate(m0.ang); ctx.fillStyle = 'rgba(255,214,140,.9)'; ctx.beginPath(); ctx.moveTo(0, -1.2); ctx.lineTo(L0*1.4, 0); ctx.lineTo(0, 1.2); ctx.closePath(); ctx.fill(); ctx.restore(); continue; }
     const [x, y] = toScreen(m0.wx, m0.wy), L0 = 10*m0.big*kz; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(m0.ang); ctx.fillStyle = 'rgba(255,226,150,.95)';
     for (const [a0, len] of [[0, 1], [0.7, 0.55], [-0.7, 0.55]]){ ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0 - 0.12)*L0*len, Math.sin(a0 - 0.12)*L0*len); ctx.lineTo(Math.cos(a0)*L0*len*1.4, Math.sin(a0)*L0*len*1.4); ctx.lineTo(Math.cos(a0 + 0.12)*L0*len, Math.sin(a0 + 0.12)*L0*len); ctx.closePath(); ctx.fill(); }
     ctx.restore(); }
+  ctx.globalAlpha = 1;
+}
+function drawParticlesOver(now){
+  const kz = PKZ;
+  // projectiles
+  for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur; if (k < 0) continue;   // (a burst's later rounds wait)
+    const [fx0, fy0] = toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = toScreen(pr.to[0], pr.to[1]);
+    if (k >= 1){ PROJ.splice(i, 1); if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big, false, pr.lite, pr.fz || 1); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
+    const x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*pr.arc*kz; ctx.globalAlpha = pr.a ?? 1;
+    if (pr.kind === 'tracer'){ const x2 = fx0 + (tx0 - fx0)*Math.max(0, k - 0.18), y2 = fy0 + (ty0 - fy0)*Math.max(0, k - 0.18); ctx.strokeStyle = 'rgba(255,225,140,.9)'; ctx.lineWidth = 1.2*Math.min(1.8, Math.sqrt(kz)); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x, y); ctx.stroke(); ctx.lineCap = 'butt'; }
+    else { if (pr.kind === 'missile' && now - pr.last > 30){ pr.last = now; const [wx, wy] = screenToWorld(x, y); emit('smokel', wx, wy, {vx:(Math.random() - 0.5)*4, vy:-2, s0:4, s1:14, life:1300}); }
+      const kb = Math.max(0, k - 0.07), xb = fx0 + (tx0 - fx0)*kb, yb = fy0 + (ty0 - fy0)*kb - Math.sin(kb*Math.PI)*pr.arc*kz;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = pr.kind === 'missile' ? 'rgba(255,190,120,.9)' : 'rgba(255,236,190,.95)'; ctx.lineWidth = pr.kind === 'missile' ? 1.6 : 1.2; ctx.beginPath(); ctx.moveTo(xb, yb); ctx.lineTo(x, y); ctx.stroke();
+      ctx.globalAlpha = 0.6*(pr.a ?? 1); ctx.drawImage(GLOW(), x - 4, y - 4, 8, 8); ctx.restore(); } }
+  ctx.globalAlpha = 1;
   // sparks and debris (draw only: drawParticlesUnder advanced and pruned them)
   for (const q of PART){ if (q.kind !== 'spark' && q.kind !== 'debris') continue; const k = q.t/q.life; if (k >= 1) continue;
     const fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1, [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
-    ctx.globalAlpha = fd*(1 - k); ctx.fillStyle = q.kind === 'spark' ? '#ffd27a' : '#2a2a26'; ctx.fillRect(x - sz/2, y - sz/2, sz, sz); }
-  ctx.globalAlpha = 1;
+    const sp = q.kind === 'spark', ln = Math.max(sp ? 1.5 : 2, Math.hypot(q.vx, q.vy)*0.03)*kz, vl = Math.hypot(q.vx, q.vy) || 1;   // a streak from p - v*0.03 s to p (at least 1.5-2 px)
+    ctx.globalAlpha = fd*(1 - k); ctx.strokeStyle = sp ? '#ffd27a' : '#2a2a26'; ctx.lineWidth = sp ? 1 : Math.max(1, Math.min(1.5, sz*0.9)); ctx.lineCap = 'round';
+    if (sp) ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.moveTo(x - q.vx/vl*ln, y - q.vy/vl*ln); ctx.lineTo(x, y); ctx.stroke(); if (sp) ctx.globalCompositeOperation = 'source-over'; }
+  ctx.globalAlpha = 1; ctx.lineCap = 'butt';
 }
 // the plates of last frame's counters (AFX.avoid, screen boxes with each battle badge) and a spot moved off them: bursts and smoke are
 // drawn under the counters, so a spot on a plate would be hidden; it goes just past the nearest edge (pad + 2-8 px), at most 3 moves
@@ -3194,22 +3243,26 @@ function drawTrailDust(){ const kz = Math.max(0.6, Math.min(2, view.s*HS0/12))*z
 // fire events for a fighting cluster (called from the unit drawing loop)
 const lastVolley = new Map(), lastDust = new Map(), SCORCH = [], MUZZ = [], CLPOS = new Map();
 function volley(c, main, ang, now, hpx, fx1, fy1, snd){
-  const a = c.list[0], seed = a.id % 13, period = 650 + (seed*977 % 600), cyc = Math.floor((now + seed*131)/period);
+  const a = c.list[0], seed = a.id % 13, period = (650 + (seed*977 % 600))*(snd ? 1 : 0.7), cyc = Math.floor((now + seed*131)/period);
   if (lastVolley.get(a.id) === cyc) return; lastVolley.set(a.id, cyc);
   if (!c.enemy) return;
-  const mx = (fx1 ?? c.x) + Math.cos(ang)*hpx*0.42, my = (fy1 ?? c.y) - hpx*0.18 + Math.sin(ang)*hpx*0.12;
+  const mx = fx1 != null ? fx1 : c.x + Math.cos(ang)*hpx*0.42, my = fy1 != null ? fy1 : c.y - hpx*0.18 + Math.sin(ang)*hpx*0.12;   // (fx1, fy1: the plate's rim toward the enemy)
   if (snd){ if (!muted && AC && now - (shotAt.last || 0) > 70){ shotAt.last = now; shotAt(mx, main === 'art' || UNITS[main].cls === 'naval' ? 'art' : main === 'tank' || main === 'sam' ? 'tank' : 'inf'); } return; }
   const from = screenToWorld(mx, my), spread = () => [(Math.random() - 0.5)*24, (Math.random() - 0.5)*12];
   const er = (AFX.avoid || []).find(r => c.enemy[0] > r.x && c.enemy[0] < r.x + r.w && c.enemy[1] > r.y && c.enemy[1] < r.y + r.h);   // the enemy's plate: shots land on its near rim, never on it
   const tgt = () => { if (!er){ const [dx, dy] = spread(); return screenToWorld(c.enemy[0] + dx, c.enemy[1] + dy); } const m = 3 + Math.random()*7, nearL = mx < er.x + er.w/2;
     if (Math.random() < 0.5) return screenToWorld(nearL ? er.x + Math.random()*er.w*0.6 : er.x + er.w*(0.4 + 0.6*Math.random()), er.y + er.h + m);   // under its lower edge, on the shooter's half
     return screenToWorld(nearL ? er.x - m : er.x + er.w + m, er.y + er.h*(0.25 + 0.75*Math.random())); };   // or off the side facing the shooter
-  const lite = view.s*HS0 < FIG_PX, sm = lite ? () => {} : emit, sh = (k, f, t, o) => shoot(k, f, t, lite ? Object.assign(o, {lite:true}) : o);   // below figure zoom the battle's baked smoke column replaces the shot smoke and dust
-  emit('flash', from[0], from[1], {s0:main === 'art' || main === 'tank' ? 10 : 5, s1:3, life:80});
+  const lite = view.s*HS0 < FIG_PX, vz = lite ? 1 : Math.min(1, 2.6/PKZ);   // below figure zoom the battle's baked smoke column replaces the shot smoke and dust; very close in
+  // (z ~10 on) the shots' bursts, arcs, smoke and dust stop growing with the zoom, so they stay in scale with the plates that fire them
+  const sm = lite ? () => {} : (k, x, y, o) => emit(k, x, y, vz < 1 ? Object.assign(o, {s0:o.s0*vz, s1:o.s1*vz, ox:(o.ox || 0)*vz, vx:(o.vx || 0)*vz, vy:(o.vy || 0)*vz}) : o);
+  const sh = (k, f, t, o) => shoot(k, f, t, lite ? Object.assign(o, {lite:true}) : vz < 1 ? Object.assign(o, {big:(o.big || 1)*vz, arc:(o.arc || 0)*vz, fz:vz}) : o);
+  if (VOLA < 1 && Math.random() > VOLA) return;   // cross-fade in from the battle's drawn effects: fewer volleys, and fainter, until 76 px a hex
+  const nt0 = fxNight(from[0], from[1]); emit('flash', from[0], from[1], {s0:(main === 'art' || main === 'tank' ? 10 : 5)*VOLA*(1 + 0.6*nt0), s1:3, life:80});   // (brighter at night)
   if (!muted && AC && (shotAt.n = (shotAt.n || 0) + 1) && now - (shotAt.last || 0) > 70){ shotAt.last = now; shotAt(mx, main === 'art' || UNITS[main].cls === 'naval' ? 'art' : main === 'tank' || main === 'sam' ? 'tank' : 'inf'); }
-  MUZZ.push({wx:from[0], wy:from[1], ang, big:main === 'art' || main === 'tank' || UNITS[main].cls === 'naval' ? 0.9 : 0.45, t0:now});
-  if (main === 'art' || main === 'tank'){ for (let i = 0; i < 4; i++) sm('dust', from[0], from[1], {oy:hpx*0.12, vx:(Math.random() - 0.5)*70, vy:-2, s0:6, s1:24, life:1200}); }
-  if (main === 'inf' || main === 'at' || main === 'ifv'){ for (let i = 0; i < 3; i++) sh('tracer', from, tgt(), {dur:160 + Math.random()*120});
+  MUZZ.push({wx:from[0], wy:from[1], ang, big:main === 'art' || main === 'tank' || UNITS[main].cls === 'naval' ? 0.9 : 0.45, t0:now, a:VOLA});
+  if (main === 'art' || main === 'tank'){ for (let i = 0; i < 2; i++) sm('dust', from[0], from[1], {oy:hpx*0.12, vx:(Math.random() - 0.5)*70, vy:-2, s0:6, s1:24, life:1200}); }
+  if (main === 'inf' || main === 'at' || main === 'ifv'){ for (let i = 0; i < (lite ? 3 : 4); i++) sh('tracer', from, tgt(), {dur:160 + Math.random()*120, delay:lite ? 0 : i*55 + Math.random()*25});
     if (main === 'at'){ sh('missile', from, tgt(), {dur:520, arc:6, big:0.6}); sm('smokel', from[0], from[1], {ox:-Math.cos(ang)*10, vx:-Math.cos(ang)*30, vy:-4, s0:6, s1:18, life:900}); } }
   else if (main === 'tank'){ sh('shell', from, tgt(), {dur:200, arc:2, big:0.8}); sm('smokel', from[0], from[1], {vx:Math.cos(ang)*10, vy:-8, s0:6, s1:22, life:1400}); }
   else if (main === 'art'){ sh('shell', from, tgt(), {dur:900, arc:46, big:1.3}); sm('smoke', from[0], from[1], {vx:Math.cos(ang)*8, vy:-14, s0:8, s1:30, life:2200}); }
@@ -3239,34 +3292,85 @@ function sunOffFor(n, st = S){ const lon = capLon(st, n); return lon == null ? 0
 function localOff(st = S){ const lon = capLon(st), so = st && st.sunOff != null ? st.sunOff : sunOffFor(0, st); return lon == null ? 10 : (((so + Math.round(lon/15)) % 24) + 24) % 24; }
 function sunLon(){ return ((12 - (sunHr(S.hour) % 24)) * 15 + 540) % 360 - 180; }
 let CLOUDS = null;
+/* cloud sprites: [0..2] sunlit tops, [3..5] dark rain-laden bases, [6..8] night tops (slate blue-grey), [9..11] warm rims (sunset side, drawn 'lighter');
+   .sh: the soft ground shadow (a radial dab, no hard corner). All baked once */
 function cloudTex(){ if (CLOUDS) return CLOUDS; const out = []; for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), n = makeNoise(mulberry(900 + k)), id = g.createImageData(128, 128);
     for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++){ const dx = (x - 64)/64, dy = (y - 64)/64, r = Math.sqrt(dx*dx + dy*dy), v = n(x*0.05, y*0.05)*0.6 + n(x*0.13, y*0.13)*0.4, a = Math.max(0, Math.min(1, (1 - r*1.15)*1.6 + (v - 0.55)*1.8));
       const o = (y*128 + x)*4, sh = Math.min(255, 168 + v*95 - dy*22); id.data[o] = sh; id.data[o + 1] = sh; id.data[o + 2] = Math.min(255, sh + 8); id.data[o + 3] = a*235; }
     g.putImageData(id, 0, 0); out.push(c); }
   for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0.6)'; g.drawImage(out[k], 0, 0); out.push(c); }
-  for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0)'; g.drawImage(out[k], 0, 0); out.push(c); }
+  const tint = (k, col, al) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.drawImage(out[k], 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = al; g.fillStyle = col; g.fillRect(0, 0, 128, 128); return c; };
+  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(52,60,78)', 0.4));
+  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(255,150,90)', 1));
+  out.sh = softSprite('cshade', 'rgba(0,0,0,1)', 'rgba(0,0,0,.5)', 'rgba(0,0,0,0)');
   return (CLOUDS = out); }
-function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0;
+/* a storm's lobe layout, from its seed only (no per-frame randomness): 9 lobes in 2-3 clusters along a band rotated to the drift
+   (centres within ~1.6 r along, ~0.55 r across). lob = [dx, dy, size] per lobe in units of r */
+const WLAY = new Map();
+function stormLay(w){ let Ly = WLAY.get(w.seed); if (Ly) return Ly;
+  const h = j => fxh(Math.round(w.seed*1000) + j*7919), nc = h(1) < 0.45 ? 2 : 3, th = Math.atan2(w.vy || 0, w.vx || 1), c = Math.cos(th), sn = Math.sin(th), lob = new Float32Array(27);
+  for (let i = 0; i < 9; i++){ const ci = i % nc, first = i < nc, cu = -0.6 + 1.2*ci/(nc - 1) + (h(10 + ci) - 0.5)*0.16, cv = (h(20 + ci) - 0.5)*0.18;
+    const u = cu + (first ? 0 : (h(30 + i) - 0.5)*0.62), v = cv + (first ? 0 : (h(40 + i) - 0.5)*0.36), sz = first ? 0.56 + 0.1*h(50 + i) : 0.34 + 0.22*h(50 + i);
+    lob[i*3] = u*c - v*sn; lob[i*3 + 1] = u*sn + v*c; lob[i*3 + 2] = sz; }
+  if (WLAY.size > 64) WLAY.clear(); WLAY.set(w.seed, Ly = {lob, c, s:sn}); return Ly; }
+// light over a storm (0 day .. 1 night), its twilight strength and which side the sun is on (+1 east, -1 west)
+function stormLight(x, y){ const cl = worldToCell(x, y), p = cl >= 0 ? G.prov[cl] : -1, e = p >= 0 ? sunSinEl(p) : NaN, L = p >= 0 ? Math.max(0, Math.min(1, (0.02 - e)/0.16)) : nightAtX(x), lon = WORLD.lon0 + (((x - OX)/(HS*SQ3) + 0.5)/W)*360, dl = ((((sunLon() - lon) % 360) + 540) % 360) - 180; return {L, tw:p >= 0 ? Math.max(0, 1 - Math.abs(e + 0.02)/0.17) : 4*L*(1 - L), sg:dl >= 0 ? 1 : -1}; }   // twilight: sun within ~10 degrees of the horizon
+const WPOS = new Float32Array(27);
+function stormPos(w, cx, cy, now = FXQ.gt){   // the slow sway runs on the game clock: still while paused
+  const lob = stormLay(w).lob; for (let i = 0; i < 9; i++){ WPOS[i*3] = cx + lob[i*3]*w.r + Math.sin(now/9000 + i)*3; WPOS[i*3 + 1] = cy + lob[i*3 + 1]*w.r; WPOS[i*3 + 2] = lob[i*3 + 2]*w.r; } return WPOS; }
+const stormVis = (cx, cy, R) => !((cx + R)*view.s + view.x < -50 || (cx - R)*view.s + view.x > cw + 50 || (cy + R)*view.s + view.y < -50 || (cy - R)*view.s + view.y > ch + 50);
+/* storms: drawn under the night tint (night darkens them like the land and city lights shine over them), tops cross-faded to a slate
+   night deck by the local light, warm rims on the sun side at dusk, rain streaks / snow dots on the game clock (paused with the game) */
+function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1;
   ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
-  for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12);
-    for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if ((cx + w.r)*view.s + view.x < -50 || (cx - w.r)*view.s + view.x > cw + 50) continue;
-      for (let i = 0; i < 9; i++){ const a = w.seed + i*2.39, rr = w.r*(0.15 + 0.55*((i*0.37 + w.seed) % 1)), px = cx + Math.cos(a)*rr + Math.sin(now/9000 + i)*3, py = y0 + Math.sin(a)*rr*0.6, sz = w.r*(0.55 + 0.35*((i*0.61) % 1));
-        ctx.globalAlpha = 0.14*fade; ctx.drawImage(tex[6 + i % 3], px - sz + 10, py - sz*0.6 + 14, sz*2, sz*1.2);           // shadow on the ground
-        const za = fade*(hexPx > 30 ? 0.55 : 1);
-        if (w.kind === 'storm'){ ctx.globalAlpha = 0.4*za; ctx.drawImage(tex[3 + i % 3], px - sz, py - sz*0.6 + sz*0.1, sz*2, sz*1.2);   // a storm cell: dark rain-laden base, bright billowing top lit from above
-          ctx.globalAlpha = 0.5*za; ctx.drawImage(tex[(i + 1) % 3], px - sz*0.78 - sz*0.06, py - sz*0.47 - sz*0.16, sz*1.56, sz*0.94); }
-        else { ctx.globalAlpha = (w.kind === 'blizzard' ? 0.42 : 0.34)*za; ctx.drawImage(tex[i % 3], px - sz, py - sz*0.6, sz*2, sz*1.2); } }
-    } }
+  for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), R = w.r*1.7, storm = w.kind === 'storm'; let lt = null;
+    for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if (!stormVis(cx, y0, R)) continue;
+      const { L, tw, sg } = lt || (lt = stormLight(x0, y0)), Pp = stormPos(w, cx, y0);
+      if (L < 0.98){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.18*fade*(1 - L);   // soft ground shadow (gone at night)
+        for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex.sh, px - sz*1.1 + 10, py - sz*0.7 + 14, sz*2.2, sz*1.4); }
+        ctx.globalCompositeOperation = 'source-over'; }
+      if (storm){ ctx.globalAlpha = 0.4*za*fade; for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[3 + i % 3], px - sz, py - sz*0.5, sz*2, sz*1.2); } }   // dark rain-laden base
+      const ta = (storm ? 0.5 : w.kind === 'blizzard' ? 0.42 : 0.34)*za*fade*(1 + 0.45*L);   // at night the tops go slate (and thicker, so the night tint does not swallow them)
+      for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2], k = storm ? (i + 1) % 3 : i % 3, dw = storm ? sz*1.56 : sz*2, dh = storm ? sz*0.94 : sz*1.2, gx = px - dw/2, gy = storm ? py - sz*0.63 : py - sz*0.6;
+        if (L < 0.99){ ctx.globalAlpha = ta*(1 - L); ctx.drawImage(tex[k], gx, gy, dw, dh); }
+        if (L > 0.01){ ctx.globalAlpha = ta*L; ctx.drawImage(tex[6 + k], gx, gy, dw, dh); } }
+      if (tw > 0.15){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(0.36, 0.5*tw)*fade;   // dusk / dawn: warm light on the sun-facing flanks
+        for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[9 + (i + 1) % 3], px - sz*0.78 + sg*sz*0.32, py - sz*0.7, sz*1.56, sz*0.94); }
+        ctx.globalCompositeOperation = 'source-over'; } } }
   ctx.restore();
-  return; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
-  for (const w of S.storms){ const [sx, sy] = toScreen(w.x + w.vx*live, w.y + w.vy*live), R = w.r*view.s; if (sx + R < 0 || sx - R > cw || sy + R < 0 || sy - R > ch) continue;
-    const n = Math.min(160, Math.round(R*0.5)), snow = w.kind === 'blizzard';
-    ctx.strokeStyle = snow ? 'rgba(240,244,250,.75)' : 'rgba(185,205,225,.35)'; ctx.fillStyle = 'rgba(240,244,250,.8)'; ctx.beginPath();
-    for (let i = 0; i < n; i++){ const r1 = ((i*7919 + w.seed*13) % 1000)/1000, r2 = ((i*104729 + w.seed*7) % 1000)/1000, sp = snow ? 0.04 : 0.6, fy = (r2 + now*sp/1000) % 1;
-      const x = sx + (r1 - 0.5)*2*R + (snow ? Math.sin(now/600 + i)*6 : 0), y = sy - R*0.6 + fy*R*1.2; if (((x - sx)/R)**2 + ((y - sy)/(R*0.62))**2 > 1) continue;
-      if (snow){ ctx.moveTo(x + 1.4, y); ctx.arc(x, y, 1.4, 0, Math.PI*2); } else { ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 11); } }
-    if (snow) ctx.fill(); else ctx.stroke(); }
+  if (hexPx < 10 || afxReduced() || SET.fx === 'low') return;
+  const t = FXQ.gt; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
+  for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), snow = w.kind === 'blizzard', Ly = stormLay(w), c = Ly.c, sn = Ly.s;
+    const A = w.r*view.s*1.25, B = w.r*view.s*0.5, Rx = Math.sqrt(A*A*c*c + B*B*sn*sn), Ry = Math.sqrt(A*A*sn*sn + B*B*c*c), n = Math.min(120, Math.round(Rx*0.5)), sk = Math.round(w.seed*1000)*977; let L = -1;
+    for (const off of [-WORLD_W, 0, WORLD_W]){ const sx = (x0 + off)*view.s + view.x, sy = y0*view.s + view.y; if (sx + Rx < 0 || sx - Rx > cw || sy + Ry < 0 || sy - Ry > ch) continue;
+      if (L < 0) L = stormLight(x0, y0).L; const d = 1 - 0.5*L, sl = Math.max(-6, Math.min(6, (w.vx || 0)*1.6));
+      if (snow){ const v = 240*(1 - 0.35*L) | 0; ctx.fillStyle = `rgba(${v},${v + 4 > 255 ? 255 : v + 4},${Math.min(255, v + 10)},${(0.8*fade).toFixed(3)})`; }
+      else ctx.strokeStyle = `rgba(${185*d | 0},${205*d | 0},${225*d | 0},${((0.25 + 0.1*Math.min(1, (hexPx - 10)/20))*fade).toFixed(3)})`;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++){ const r1 = fxh(sk + i*2), r2 = fxh(sk + i*2 + 1), sp = snow ? 0.04 : 0.6, fy = (r2 + t*sp/1000) % 1;
+        const x = sx + (r1 - 0.5)*2*Rx + (snow ? Math.sin(t/600 + i)*6 : 0), y = sy - Ry + fy*2*Ry, dx = x - sx, dy = y - sy, u = dx*c + dy*sn, v = dy*c - dx*sn; if ((u/A)**2 + (v/B)**2 > 1) continue;
+        if (snow){ ctx.moveTo(x + 1.4, y); ctx.arc(x, y, 1.4, 0, Math.PI*2); } else { ctx.moveTo(x, y); ctx.lineTo(x + sl, y + 11); } }
+      if (snow) ctx.fill(); else ctx.stroke(); } }
   ctx.restore(); }
+/* lightning in storm cells, drawn over the night tint: every 2.5-7 s of game-clock time one lobe flashes for 80 ms; close in, a jagged bolt
+   drops from its base with a glow where it strikes. Off with reduced motion */
+const LTN = new Map();   // storm seed -> {next, at, lobe, pts} on the FXQ.gt clock
+function drawLightning(now){ if (!S.storms || !S.storms.length || afxReduced()) return; const gt = FXQ.gt, run = S.speed > 0 && !S.over, hexPx = view.s*HS0, live = run ? acc : 0; let tex = null;
+  if (LTN.size > 48) LTN.clear();
+  for (const w of S.storms){ if (w.kind !== 'storm') continue; let Q = LTN.get(w.seed);
+    if (!Q){ Q = {next:gt + 400 + Math.random()*3000, at:-1e9, lobe:0, pts:null}; LTN.set(w.seed, Q); }
+    if (gt >= Q.next){ Q.at = gt; Q.next = gt + 2500 + 4500*Math.random(); Q.lobe = Math.random()*9 | 0; Q.pts = [0]; for (let k = 1; k <= 6; k++) Q.pts.push((Math.random() - 0.5)*0.16); }
+    const e = gt - Q.at; if (!run || e < 0 || e > 80) continue;
+    const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), kf = 1 - 0.6*e/80;
+    for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if (!stormVis(cx, y0, w.r*1.7)) continue;
+      if (!tex){ tex = cloudTex(); ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; }
+      const L = stormLight(x0, y0).L, Pp = stormPos(w, cx, y0), i = Q.lobe, px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2];
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (0.35 + 0.5*L)*fade*kf; ctx.drawImage(tex[i % 3], px - sz, py - sz*0.6, sz*2, sz*1.2);
+      if (hexPx >= 14 && Q.pts){ const by = py + sz*0.2, len = 0.5*w.r; ctx.globalCompositeOperation = 'source-over'; ctx.beginPath();
+        for (let k = 0; k <= 6; k++){ const x = px + Q.pts[k]*w.r, y = by + k/6*len; if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+        ctx.globalAlpha = fade*kf; ctx.strokeStyle = 'rgba(170,190,255,.35)'; ctx.lineWidth = 4/view.s; ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2/view.s; ctx.stroke();
+        const gx = px + Q.pts[6]*w.r, gy = by + len, g = Math.max(3/view.s, 0.12*w.r); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.7*fade*kf; ctx.drawImage(GLOW(), gx - g, gy - g, 2*g, 2*g); } } }
+  if (tex){ ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.restore(); } }
 // daylight at the centre of the view: 1 at full day, 0 at full night, tw = dawn/dusk strength
 let VL = {k:'', day:1, tw:0};
 function viewLight(){ const live = S.speed && !S.over ? acc : 0, hr = sunHr(S.hour + live), key = Math.round(hr*20) + ':' + Math.round(view.x/40) + ':' + Math.round(view.y/40) + ':' + view.s.toFixed(2); if (VL.k === key) return VL;
@@ -5101,7 +5205,7 @@ function missileImpact(m){
   if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)]; S.bld[m.to][k]--; wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
   if (vis && booted){ const big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) fxLater(j*120, () => explode(...fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, 6), big*(0.7 + Math.random()*0.4)));
-    WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); afxCrater(P.x, P.y, m.k === 'bm' ? 7 : 5, {a:0.95, life:96}); afxMark(m.to, m.k === 'bm' ? 48 : 30); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); shake(m.k === 'bm' ? 9 : 5, m.k === 'bm' ? 900 : 500); sfx('boom'); }
+    WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); afxCrater(P.x, P.y, m.k === 'bm' ? 3.5 : 3, {a:0.95, life:96, cap:3.5}); afxMark(m.to, m.k === 'bm' ? 48 : 30); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); shake(m.k === 'bm' ? 9 : 5, m.k === 'bm' ? 900 : 500); sfx('boom'); }
   const where = P.cityName || P.name;
   if (m.owner === PLAYER){ log(`${M0.name} hit ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} destroyed` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'good', m.to); bump('unitsKilled', killed); }
   else if (S.owner[m.to] === PLAYER || defs.some(b => b.owner === PLAYER)){ log(`Enemy ${M0.name} struck ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'bad', m.to); bump('unitsLost', killed); }
@@ -5944,7 +6048,7 @@ let GLOBE = null;   // the three.js globe (set up further down; null until then)
 function fit(){ if (GLOBE) GLOBE.leave(); const s = Math.min(cw/WORLD_W, ch/WORLD_H)*0.98; view.s = s; view.x = (cw - WORLD_W*s)/2; view.y = (ch - WORLD_H*s)/2; }
 function centerOn(x, y, s = view.s){ if (GLOBE) GLOBE.leave(); view.s = s; view.x = cw/2 - x*s; view.y = ch/2 - y*s; }
 function goHome(){
-  const N = S.nations[PLAYER];
+  ZTW = null; const N = S.nations[PLAYER];
   if (!N.alive){ fit(); return; }
   const C0 = G.P[N.capital], far = WORLD_W*0.2;   // far-flung islands (Hawaii, the Aleutians, overseas departments) do not zoom the home view out
   const set = new Set(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === PLAYER && Math.hypot(G.P[p].x - C0.x, G.P[p].y - C0.y) < far){ set.add(p); for (const q of G.P[p].nbs) if (!G.P[q].sea) set.add(q); }
@@ -5970,10 +6074,26 @@ function camStep(now){ const F = camFly; if (!F) return;
   view.s = s; view.x = cw/2 - x*s; view.y = ch/2 - y*s; clampView(); F.last = {x:view.x, y:view.y, s:view.s}; if (k >= 1) camFly = null; }
 const ZMAX = 20, ZOLD = 84;   // max view scale; hexPx of the old maximum (7): above it figures and effects keep growing (zx)
 const zx = (hexPx = view.s*HS0) => hexPx > ZOLD ? Math.pow(hexPx/ZOLD, 0.72) : 1;
-function zoomAt(f, sx, sy){
+function zoomAt(f, sx, sy){   // instant (pinch, which tracks the fingers, and tests)
   const ns = Math.max(minScale(), Math.min(view.s*f, ZMAX));   // up to 240 px per old hex: close enough to watch single vehicles move and fight
   const k = ns/view.s; view.x = sx - (sx - view.x)*k; view.y = sy - (sy - view.y)*k; view.s = ns;
 }
+/* a gliding zoom (wheel, +/- buttons): each tick moves the target scale and the view eases toward it in log space (~180 ms), keeping the
+   world point under the anchor (the cursor) under it; the map is drawn from the last layer scaled while it glides (see draw) and renders
+   once in full when it settles. Any other change of the view (a drag, a pinch, a jump, the start flight) ends the glide at once */
+let ZTW = null;   // {s1, ax, ay, wx, wy, last}
+const zoomGoal = () => ZTW ? ZTW.s1 : view.s;
+function zoomTo(f, sx, sy){
+  if (afxReduced() || camFly){ ZTW = null; zoomAt(f, sx, sy); return; }
+  const s1 = Math.max(minScale(), Math.min(zoomGoal()*f, ZMAX));
+  if (!ZTW || Math.hypot(sx - ZTW.ax, sy - ZTW.ay) > 4){ const [wx, wy] = screenToWorld(sx, sy); ZTW = {s1, ax:sx, ay:sy, wx, wy, last:ZTW ? ZTW.last : null}; }
+  else ZTW.s1 = s1;
+}
+function zoomStep(dt){ const Z = ZTW; if (!Z) return;
+  if (camFly || (Z.last && (view.x !== Z.last.x || view.y !== Z.last.y || view.s !== Z.last.s))){ ZTW = null; return; }   // the view was moved by something else
+  const l0 = Math.log(view.s), l1 = Math.log(Z.s1), ls = l0 + (l1 - l0)*(1 - Math.exp(-dt*1000/65)), done = Math.abs(ls - l1) < 0.004;
+  view.s = done ? Z.s1 : Math.exp(ls); view.x = Z.ax - Z.wx*view.s; view.y = Z.ay - Z.wy*view.s; clampView();
+  if (done) ZTW = null; else Z.last = {x:view.x, y:view.y, s:view.s}; }
 const toScreen = (x, y) => [x*view.s + view.x, y*view.s + view.y];
 // provinces whose centre lies within r old hexes of p's centre (always including direct neighbours), cached
 const NEARC = new Map();
@@ -6871,6 +6991,8 @@ let SHIFTING = false;   // a pan strip is being rendered (shiftLayer)
 let layer = null, layerKey = '', geoDirty = false, relVer = 0, lastPanT = 0, FLYMARGIN = 0;   // FLYMARGIN: the next full render's margin (the start flight's layer, see draw)
 function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; } return P.box; }
 const LM = 0.22;                                        // layer margin, as a share of the viewport on each side
+const ZRES = 0.5;                                       // a layer rendered mid-zoom (drawn scaled, soon replaced) is made at this share of the pixel ratio
+let ZRND = false;                                       // such a render is under way: it leaves out the faint passes (shallow-water bands, ground grain) and new city bakes
 // roads by class (track faint dashed, road, highway thicker and brighter) and railways (dark line, crossties when close), from the bucketed
 // Natural Earth paths plus the links built or upgraded in game (centre to centre, from linkDyn)
 let LDYN = null;
@@ -6962,7 +7084,7 @@ function stripGeo(x0, y0, x1, y1){ const inB = b => b[2] >= x0 && b[0] <= x1 && 
   if (GEO.coast0 && COASTR.length){ const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(); let nl = 0;
     const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
     const cutR = (r, b) => b[0] >= x0 && b[2] <= x1 && b[1] >= y0 && b[3] <= y1 ? r : clipRing(r, x0, y0, x1, y1);
-    for (const R of coastRings(view.s*HS0)) if (inB(R.b)){ const r = cutR(R.r, R.b); ringTo(cv, r); ringTo(gv, r); }
+    const RS = coastRings(view.s*HS0), RG = coastGlowRings(RS); for (const RR of RG === RS ? [RS] : [RS, RG]) for (const R of RR) if (inB(R.b)){ const r = cutR(R.r, R.b); if (RR === RS) ringTo(cv, r); if (RR === RG) ringTo(gv, r); }
     if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (!inB(b)) continue; const r = cutR(G.lakeRing[i], b); if (r.length < 6) continue;
       ringTo(cv, r); ringTo(lv, r); nl++; if (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64) ringTo(gv, r); }
     SG.coastV = cv; SG.coastG = gv; SG.lakeV = nl ? lv : null; SG.seaV = new Path2D(); SG.seaV.rect(x0, y0, x1 - x0, y1 - y0); SG.seaV.addPath(cv); }
@@ -6975,7 +7097,7 @@ function renderLayer(vis, lite = false, R = null){
   if (R){ mx = layer.mx; my = layer.my; layer.lite = layer.lite || lite; layer.strips = (layer.strips || 0) + 1; }
   else { const lm = FLYMARGIN || LM; FLYMARGIN = 0; mx = Math.round(Math.max(cw*lm, 224)); my = Math.round(Math.max(ch*lm, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
     if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
-    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.q = []; CITY_MISS.clear(); DT.miss.clear(); }
+    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.dp = dpr; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.q = []; CITY_MISS.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; }
   // the rect to paint, in device px (the whole layer when R is left out)
   const dx0 = R ? Math.max(0, Math.round(R.x0*dpr)) : 0, dy0 = R ? Math.max(0, Math.round(R.y0*dpr)) : 0, dx1 = R ? Math.min(layer.width, Math.round(R.x1*dpr)) : layer.width, dy1 = R ? Math.min(layer.height, Math.round(R.y1*dpr)) : layer.height;
   if (dx1 <= dx0 || dy1 <= dy0) return;
@@ -6997,12 +7119,12 @@ function renderLayer(vis, lite = false, R = null){
     // close zoom: the fine coast, each ring in view cut to the layer's world rect (Eurasia alone is tens of thousands of points), so the key holds
     // the rect (snapped outward to the margin) and a new full render rebuilds the cut rings; further out the whole 1:50m rings in view
     const RS = coastRings(hexPx), hi = RS !== COASTR, mH = Math.max(m0, 2*HS), cx0 = Math.floor((bx0 - mH)/mH)*mH, cy0 = Math.floor((by0 - mH)/mH)*mH, cx1 = Math.ceil((bx1 + mH)/mH)*mH, cy1 = Math.ceil((by1 + mH)/mH)*mH;   // (cut edges past the widest shore stroke)
-    let k = hi ? 'H' + (RS === COASTR_HI ? 2 : 1) + ':' + [cx0, cy0, cx1, cy1].map(v => Math.round(v*100)).join(',') + ';' : 'L';
+    let k = hi ? coastRingsId(RS) + ':' + [cx0, cy0, cx1, cy1].map(v => Math.round(v*100)).join(',') + ';' : 'L';
     if (!hi) for (let i = 0; i < RS.length; i++) if (inV(RS[i].b)) k += i + ',';
     k += '|'; if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (inV(b)) k += i + (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64 ? 'b,' : ','); }
     if (k !== GEO.coastK){ GEO.coastK = k; const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(), kl = k.split('|')[1]; let nl = 0;
       const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
-      if (hi){ for (const Rr of RS){ const b = Rr.b; if (b[2] < cx0 || b[0] > cx1 || b[3] < cy0 || b[1] > cy1) continue; const r = b[0] >= cx0 && b[2] <= cx1 && b[1] >= cy0 && b[3] <= cy1 ? Rr.r : clipRing(Rr.r, cx0, cy0, cx1, cy1); ringTo(cv, r); ringTo(gv, r); } }
+      if (hi){ const RG = coastGlowRings(RS); for (const RR of RG === RS ? [RS] : [RS, RG]) for (const Rr of RR){ const b = Rr.b; if (b[2] < cx0 || b[0] > cx1 || b[3] < cy0 || b[1] > cy1) continue; const r = b[0] >= cx0 && b[2] <= cx1 && b[1] >= cy0 && b[3] <= cy1 ? Rr.r : clipRing(Rr.r, cx0, cy0, cx1, cy1); if (RR === RS) ringTo(cv, r); if (RR === RG) ringTo(gv, r); } }
       else for (const i of k.slice(1).split('|')[0].split(',')) if (i){ ringTo(cv, RS[+i].r); ringTo(gv, RS[+i].r); }
       for (const i of kl.split(',')) if (i){ const r = G.lakeRing[parseInt(i)]; ringTo(cv, r); ringTo(lv, r); nl++; if (i.endsWith('b')) ringTo(gv, r); }   // the wide shallow-water glow rings only lakes big on screen (it would flood a small one)
       GEO.coastV = cv; GEO.coastG = gv; GEO.lakeV = nl ? lv : null; GEO.seaV = null; } }
@@ -7021,14 +7143,15 @@ function renderLayer(vis, lite = false, R = null){
       c.globalAlpha = 0.55 + 0.35*z; c.drawImage(GEO.seaTex.op, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // (0.55 meets the far view's unclipped depth)
     else { c.fillStyle = `rgba(11,29,39,${0.86*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); }
     // the shallow band in world units (it widens as you zoom in, not a constant halo round every island)
-    c.lineJoin = 'round'; c.strokeStyle = `rgba(52,118,126,${0.10*z})`; c.lineWidth = Math.max(2.4, 10*px0); c.stroke(CG);
-    c.strokeStyle = `rgba(70,136,142,${0.12*z})`; c.lineWidth = Math.max(1, 4*px0); c.stroke(CG);
-    c.strokeStyle = `rgba(150,200,210,${0.07*z})`; c.lineWidth = 2.6*px0; c.stroke(CV); c.restore(); }
+    if (!ZRND){ c.lineJoin = 'round'; c.strokeStyle = `rgba(52,118,126,${0.10*z})`; c.lineWidth = Math.max(2.4, 10*px0); c.stroke(CG);
+      c.strokeStyle = `rgba(70,136,142,${0.12*z})`; c.lineWidth = Math.max(1, 4*px0); c.stroke(CG);
+      c.strokeStyle = `rgba(150,200,210,${0.07*z})`; c.lineWidth = 2.6*px0; c.stroke(coastGlowRings(coastRings(hexPx)) !== coastRings(hexPx) ? CG : CV); }   // (at play zoom the faint bright line too follows the glow's thinned coast: strokes over the fine coast under its own clip are costly)
+    c.restore(); }
   else if (GEO.seaTex){ c.globalAlpha = 0.55; c.drawImage(GEO.seaTex, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // far out (no coast clip): its clear land masks it
   const onScreen = P => { const b = provBox(P); return b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1; }, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
     nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
-  if (hexPx >= 12 && SET.fx !== 'low'){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
+  if (hexPx >= 12 && SET.fx !== 'low' && !ZRND){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
     if (zc > 0 && gp.fine && DTa < 0.98){ c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.34*zc*(1 - DTa); c.fillStyle = gp.fine; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // close up: a second, fine ground grain (fields, scrub) so the land is not a smooth smear
     if (!lite && hexPx > ZOLD && DTa < 0.02 && gp.micro && gp.micro.setTransform){ const zm = Math.min(1, (hexPx - ZOLD)/50), lo = Math.max(0, Math.log2(view.s/(ZOLD*0.9/HS0))), o0 = Math.floor(lo), f = lo - o0;   // past the old max zoom the texture is upscaled: a micro grain in world space keeps it from smearing
       c.globalCompositeOperation = 'source-over'; c.fillStyle = gp.micro;
@@ -7107,7 +7230,7 @@ function renderLayer(vis, lite = false, R = null){
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
-  if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? 6 : R ? (SHIFTING ? 3 : 8) : 45); base.restore(); }   // (bake budget, ms: short in a pan strip; bakes left over come in once the view is still)
+  if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : R ? (SHIFTING ? 3 : 8) : 45); base.restore(); }   // (bake budget, ms: short in a pan strip; bakes left over come in once the view is still)
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
@@ -7115,7 +7238,7 @@ function renderLayer(vis, lite = false, R = null){
     base.strokeStyle = `rgba(226,220,196,${0.18*z})`; base.lineWidth = 0.5*px; base.stroke(CV); }
   base.restore();   // the base's R clip
   // the layer's sea as a half-resolution alpha mask (white sea, clear land and lakes' shores as drawn) for the live wave surface in draw(); one fill
-  if (CV && hexPx >= 20 && SET.fx !== 'low'){ const SM = layer.seaM || (layer.seaM = document.createElement('canvas')), w2 = Math.ceil(layer.width/2), h2 = Math.ceil(layer.height/2);
+  if (CV && hexPx >= 20 && SET.fx !== 'low' && !ZRND){ const SM = layer.seaM || (layer.seaM = document.createElement('canvas')), w2 = Math.ceil(layer.width/2), h2 = Math.ceil(layer.height/2);
     if (SM.width !== w2 || SM.height !== h2){ SM.width = w2; SM.height = h2; layer.seaOK = false; }
     if (!R || layer.seaOK){ const m = SM.getContext('2d'), hx0 = Math.floor(dx0/2), hy0 = Math.floor(dy0/2), hw = Math.ceil(dx1/2) - hx0, hh = Math.ceil(dy1/2) - hy0;
       m.save(); m.setTransform(1, 0, 0, 1, 0, 0); m.globalCompositeOperation = 'source-over'; m.globalAlpha = 1; if (R){ m.beginPath(); m.rect(hx0, hy0, hw, hh); m.clip(); }
@@ -7173,28 +7296,19 @@ function drawBattleLOD(now, vis, kl, hexPx){
   if (!S.battles.length){ if (BLOD.size) BLOD.clear(); return; }
   if (BLOD.size) for (const k of BLOD.keys()) if (!S.battles.includes(k)) BLOD.delete(k);
   const red = afxReduced(), run = !!S.speed && !S.over && !red, tF = Math.floor(now/90), GL = GLOW(), gt = FXQ.gt, fxOn = run && SET.fx !== 'low', far = hexPx < 26;
+  // close in the plates fire themselves (volley, from FIG_PX): the drawn flickers, tracers, booms and shells fade out from 56 to 76 px a hex
+  const fig = red || SET.fx === 'low' ? 0 : smooth01((hexPx - 56)/20), lf = 1 - fig;
   const inBox = (q, r, pad) => q[0] > r.x - pad && q[0] < r.x + r.w + pad && q[1] > r.y - pad && q[1] < r.y + r.h + pad;
   for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue;
     const P = G.P[p]; let [x, y] = toScreen(P.x, P.y); if (x < -260 || y < -120 || x > cw + 260 || y > ch + 320) continue;
     const sides = new Set(), idAt = new Map(); let na = 0; for (const a of S.armies){ if (a.at !== p || a.to !== null || a.fly) continue; sides.add(a.owner); idAt.set(a.id, a.owner); na++; }
     const pts = []; for (const o of sides){ const w = CLPOS.get(p + ':' + o); if (w) pts.push(toScreen(w[0], w[1])); }
     if (pts.length >= 2){ x = 0; y = 0; for (const q of pts){ x += q[0]; y += q[1]; } x /= pts.length; y /= pts.length; }
-    const nt = nightP(p), nb = Math.max(0, Math.min(1, (nt - 0.3)/0.3)), sz = Math.min(96, Math.max(26, Math.min(80, 36 + hexPx*0.42 + na*1.5))*kl)*(P.sea ? 0.8 : 1);   // (kept modest: names and markers are drawn over it)
-    const A = pts.length >= 2 ? pts[0] : [x - 14*kl, y + 4*kl], B = pts.length >= 2 ? pts[1] : [x + 14*kl, y + 4*kl], by = y - (pts.length >= 2 ? 30 : 46)*kl - 6*kl;   // the column rises from the badge (drawn over it afterwards): its dense, fire-lit base sits on the badge's upper rim
-    const bcy = y - (pts.length >= 2 ? 30 : 46)*kl, bR = 9.5*kl;   // where the battle badge goes (drawn later)
+    const nt = nightP(p), nb = Math.max(0, Math.min(1, (nt - 0.3)/0.3)), szO = Math.min(96, Math.max(26, Math.min(80, 36 + hexPx*0.42 + na*1.5))*kl)*(P.sea ? 0.8 : 1);   // (strategic zoom: kept modest, names and markers are drawn over it)
+    const A = pts.length >= 2 ? pts[0] : [x - 14*kl, y + 4*kl], B = pts.length >= 2 ? pts[1] : [x + 14*kl, y + 4*kl], byO = y - (pts.length >= 2 ? 30 : 46)*kl - 6*kl;   // strategic zoom: the column rises from just above the fight
+    const bcy = y - (pts.length >= 2 ? 30 : 46)*kl, bR = 9.5*kl;   // the old badge spot: the far under-glow, and kept clear of booms and shells
     // far zoom: a pulsing red-orange under-glow round the badge, so the battle reads even where the column is covered
-    if (far){ const gs = Math.max(28, sz*0.8), ga = 0.25 + 0.15*Math.sin((red ? 0 : gt)/420 + p); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga*(1 + 0.5*nt); ctx.drawImage(BUNDER(), x - gs/2, bcy - gs/2, gs, gs); ctx.globalCompositeOperation = 'source-over'; }
-    if (nt > 0.2){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35*nt; const gw = sz*1.4, gh = sz*0.42; ctx.drawImage(GL, x - gw/2, y - gh*0.55, gw, gh); ctx.globalCompositeOperation = 'source-over'; }
-    // the column: base just above the fight, the badge drawn over it afterwards
-    { const px = sz*dpr, bk = px <= 110 ? 0 : px <= 180 ? 1 : 2, ph = (p % 97)*0.37, sk = red ? 0 : 0.04*Math.sin(gt/1700 + ph), sc = red ? 1 : 1 + 0.035*Math.sin(gt/2300 + ph*1.7);   // (the paused clock: still while paused)
-      const a0 = P.sea ? 0.78 : 0.92; ctx.setTransform(dpr*sc, 0, dpr*sk*sc, dpr*sc, dpr*x, dpr*by);   // day and night columns cross-fade through dusk
-      if (nb < 1){ ctx.globalAlpha = a0*(1 - nb); ctx.drawImage(battleCloud(bk, false), -sz/2, -sz*0.96, sz, sz); }
-      if (nb > 0){ ctx.globalAlpha = a0*nb; ctx.drawImage(battleCloud(bk, true), -sz/2, -sz*0.96, sz, sz); }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
-    // three puffs billowing up out of the column's base (paused clock; frozen with reduced motion)
-    for (let i = 0; i < 3; i++){ const u = ((red ? 0 : gt/2600) + i/3 + fxh(p*3 + i)) % 1, ps = sz*(0.25 + 0.35*u), al = Math.min(0.5, 0.5*(1 - u)*u*4);
-      if (al < 0.02) continue; ctx.globalAlpha = al*(P.sea ? 0.8 : 1); ctx.drawImage(puffSprite(i, nb > 0.5), x + u*sz*0.12 - ps/2, by - u*sz*0.8 - ps*0.55, ps, ps); }
-    if (!run){ ctx.globalAlpha = 1; continue; }
+    if (far){ const gs = Math.max(28, szO*0.8), ga = 0.25 + 0.15*Math.sin((red ? 0 : gt)/420 + p); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga*(1 + 0.5*nt); ctx.drawImage(BUNDER(), x - gs/2, bcy - gs/2, gs, gs); ctx.globalCompositeOperation = 'source-over'; }
     // last frame's counter boxes near the battle (hits is rebuilt after this), and the badge, which booms and shells keep off
     const near = []; for (const r of hits){ const cx0 = r.x + r.w/2 - x, cy0 = r.y + r.h/2 - y; if (cx0*cx0 + cy0*cy0 < 14400*kl*kl) near.push(r); }
     const avoid = near.concat([{x:x - bR - 3, y:bcy - bR - 3, w:2*bR + 6, h:2*bR + 12*kl}]);
@@ -7214,19 +7328,45 @@ function drawBattleLOD(now, vis, kl, hexPx){
           if (seg.L < 10){ const yy = bot + 0.25*hh + lift, cx1 = (E0[0] + E1[0])/2, half = Math.max(Math.abs(ex)/2, ww*0.45), o = open([cx1 - half, yy], [cx1 + half, yy]); if (o.L > seg.L) seg = o; } } }   // or just below them
       if (seg.L < 4) seg = {A, B, L:0}; }   // (no boxes yet: the first frame)
     const A1 = seg.A, B1 = seg.B, dx0 = E1[0] - E0[0], dy0 = E1[1] - E0[1], L0 = Math.hypot(dx0, dy0) || 1, ux = dx0/L0, uy = dy0/L0;
+    // the column stands on the ground of the fight: from the open line between the hostile plates (the lower edge of the fight's plates on the
+    // first frame); from 26 to 36 px a hex it eases there from the strategic spot above the fight, and grows with the zoom (two columns along the front from 120 px)
+    const g = far ? 0 : smooth01((hexPx - 26)/10); let bx = x, by = byO, sz = szO;
+    if (g > 0){ let gx = (A1[0] + B1[0])/2, gy = Math.max(A1[1], B1[1]) + 4*kl;
+      if (!(seg.L > 0)){ gx = x; let bot = -Infinity; for (const r of FB) bot = Math.max(bot, r.y + r.h); gy = (bot > -Infinity ? bot : Math.max(A[1], B[1])) + 4*kl; }
+      gy = Math.min(gy, Math.max(E0[1], E1[1]) + 4*kl);   // (where the open line runs below touching plates: from between them, so the column shows over them, not behind them)
+      if (P.sea){ const q = provAt(gx, gy); if (!(q === p || (q >= 0 && G.P[q].sea))){ gx = x; gy = y; } }   // a naval fight's column stands on the water: else the naval plates' mean
+      const szN = Math.max(szO, Math.min(240, Math.max(26, 36 + hexPx*0.6 + na*1.5))*(P.sea ? 0.8 : 1));   // (never smaller than the strategic column: it rises over the plates)
+      bx = x + (gx - x)*g; by = byO + (gy - byO)*g; sz = szO + (szN - szO)*g; }
+    // night: the fire's glow pool on the ground at the fight, and a flickering fire dab at the column's foot
+    if (nt > 0.2){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35*nt; const gw = sz*(1.4 + 0.2*g), gh = sz*(0.42 - 0.07*g), gcy = (y - gh*0.05)*(1 - g) + by*g; ctx.drawImage(GL, bx - gw/2, gcy - gh/2, gw, gh); ctx.globalCompositeOperation = 'source-over'; }
+    const c2 = g > 0 ? smooth01((hexPx - 120)/20) : 0, Lc = Math.max(seg.L || 0, 0.6*L0), dsp = c2*Math.max(0.18*sz, Math.min(0.6*sz, 0.3*Lc));
+    const column = (cx, cy, cs, ph, al, ch = cs) => { if (al < 0.01) return; const px = Math.max(cs, ch)*dpr, bk = px <= 110 ? 0 : px <= 180 ? 1 : 2, sk = red ? 0 : 0.04*Math.sin(gt/1700 + ph), sc = red ? 1 : 1 + 0.035*Math.sin(gt/2300 + ph*1.7);   // (the paused clock: still while paused)
+      const a0 = (P.sea ? 0.78 : 0.92)*al; ctx.setTransform(dpr*sc, 0, dpr*sk*sc, dpr*sc, dpr*cx, dpr*cy);   // day and night columns cross-fade through dusk
+      if (nb < 1){ ctx.globalAlpha = a0*(1 - nb); ctx.drawImage(battleCloud(bk, false), -cs/2, -ch*0.96, cs, ch); }
+      if (nb > 0){ ctx.globalAlpha = a0*nb; ctx.drawImage(battleCloud(bk, true), -cs/2, -ch*0.96, cs, ch); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    { const ph = (p % 97)*0.37; column(bx, by, sz, ph, 1 - c2);
+      if (c2 > 0){ const cs = sz*0.75, ch = sz*(1 + 0.1*c2); column(bx - ux*dsp, by - uy*dsp, cs, ph, c2, ch); column(bx + ux*dsp, by + uy*dsp, cs, ph + 2.3, c2, ch*0.9); } }   // (two slimmer columns, as tall as the one)
+    // three puffs billowing up out of the column's base (paused clock; frozen with reduced motion)
+    for (let i = 0; i < 3; i++){ const u = ((red ? 0 : gt/2600) + i/3 + fxh(p*3 + i)) % 1, ps = sz*(0.25 + 0.35*u), al = Math.min(0.5, 0.5*(1 - u)*u*4);
+      if (al < 0.02) continue; ctx.globalAlpha = al*(P.sea ? 0.8 : 1); ctx.drawImage(puffSprite(i, nb > 0.5), bx + u*sz*0.12 - ps/2, by - u*sz*0.8 - ps*0.55, ps, ps); }
+    if (nt > 0.2 && g > 0){ const fl = red ? 0.8 : 0.7 + 0.3*Math.sin(gt/97 + p) * Math.sin(gt/53 + p*1.3), fw = sz*0.5, fh = sz*0.2;
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25*nt*g*fl; ctx.drawImage(FIRE(), bx - fw/2, by - fh*0.6, fw, fh); ctx.globalCompositeOperation = 'source-over'; }
+    ctx.globalAlpha = 1;
+    if (!run || fig >= 1) continue;   // (the column and the under-glow stay at every zoom)
     const st = BLOD.get(p) || (BLOD.set(p, {next:gt + 200*fxh(p), seq:0, booms:[], arcN:gt + 300 + 500*fxh(p + 7), arcs:[]}), BLOD.get(p));
     const dx = B1[0] - A1[0], dy = B1[1] - A1[1], L = Math.hypot(dx, dy) || 1, nx = -dy/L, ny = dx/L;
     // gun flickers on the open line between the stacks (additive, brighter at night)
     ctx.globalCompositeOperation = 'lighter';
     const nf = 2 + (fxh(p*31 + tF) < 0.5 ? 1 : 0);
     for (let i = 0; i < nf; i++){ const h = p*7919 + tF*131 + i*17, t = 0.1 + 0.8*fxh(h), o = (fxh(h + 1) - 0.5)*8*kl, r4 = fxh(h + 2), s = Math.max(10 + 4*r4, 8*kl*(0.8 + 0.5*r4));
-      ctx.globalAlpha = Math.min(1, (0.5 + 0.4*fxh(h + 3))*(1 + 1.5*nt)); ctx.drawImage(GL, A1[0] + dx*t + nx*o - s/2, A1[1] + dy*t + ny*o - s/2 - lift*0.75*fxh(h + 4), s, s); }
+      ctx.globalAlpha = lf*Math.min(1, (0.5 + 0.4*fxh(h + 3))*(1 + 1.5*nt)); ctx.drawImage(GL, A1[0] + dx*t + nx*o - s/2, A1[1] + dy*t + ny*o - s/2 - lift*0.75*fxh(h + 4), s, s); }
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     // tracer dashes flying both ways
     const nT = 2 + (p % 3), ph0 = (now % 600)/600; ctx.beginPath();
     for (let i = 0; i < nT; i++){ const f = (ph0 + i/nT + fxh(p*13 + i)) % 1, o = (fxh(p*17 + i*5 + Math.floor((now + i*150)/600)) - 0.5)*7*kl, t1 = 0.1 + 0.8*f, t0 = Math.max(0, t1 - 0.25), u0 = i & 1 ? 1 - t0 : t0, u1 = i & 1 ? 1 - t1 : t1;
       ctx.moveTo(A1[0] + dx*u0 + nx*o, A1[1] + dy*u0 + ny*o - lift); ctx.lineTo(A1[0] + dx*u1 + nx*o, A1[1] + dy*u1 + ny*o - lift); }
-    ctx.lineCap = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,200,120,.25)'; ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,235,180,.9)'; ctx.stroke();
+    ctx.globalAlpha = lf; ctx.lineCap = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,200,120,.25)'; ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,235,180,.9)'; ctx.stroke(); ctx.globalAlpha = 1;
     if (!fxOn) continue;
     // impact blooms and shells (paused clock); a point in the province round the stacks, off every counter and the badge (4 tries)
     // every boom and shell landing lies in the battle province itself (checked cell by cell, so never in a neighbour or on the sea next to it), and
@@ -7240,7 +7380,7 @@ function drawBattleLOD(now, vis, kl, hexPx){
           [wx, wy] = screenToWorld(sd < 2 ? r.x + al*r.w : sd === 2 ? r.x - m : r.x + r.w + m, sd === 0 ? r.y - m : sd === 1 ? r.y + r.h + m : r.y + al*r.h); }
         else { const cc = cellCenter(P.cells[Math.floor(fxh(h + k*13 + 7)*P.cells.length)]); wx = cc[0] + (fxh(h + k*13 + 10) - 0.5)*1.6*HS; wy = cc[1] + (fxh(h + k*13 + 11) - 0.5)*1.4*HS; }
         const q = toScreen(wx, wy); if (provAt(q[0], q[1]) !== p || avoid.some(r => inBox(q, r, k >= 6 ? pad*0.4 : pad))) continue; return [wx, wy]; } return null; };
-    const boom = (w, t, s) => { if (st.booms.length >= 4) st.booms.shift(); st.booms.push({t, wx:w[0], wy:w[1], s}); };
+    const boom = (w, t, s) => { if (st.booms.length >= 4) st.booms.shift(); st.booms.push({t, wx:w[0], wy:w[1], s, rot:Math.random()*6.28, d:0}); };
     if (gt - st.next > 600) st.next = gt;
     if (gt >= st.next){ const hb = p*977 + st.seq*131, n = fxh(hb) < 0.5 ? 2 : 1; st.seq++;
       for (let j = 0; j < n; j++){ const bs = Math.min(bMax, (9 + 9*fxh(hb + 5 + j))*kl), w = pick(hb + 11 + j*53, bs*0.6); if (w) boom(w, gt + j*40, bs); }
@@ -7251,18 +7391,25 @@ function drawBattleLOD(now, vis, kl, hexPx){
       if (tg){ const fA = fxh(ha + 1) < 0.5, sg = fA ? 1 : -1; let S0 = fA ? E0 : E1;   // from behind one side's plate; a plate moved far off the province: from that side of the province instead
         if (Math.hypot(S0[0] - pcx, S0[1] - pcy) > pR + 60*kl) S0 = [pcx - sg*ux*pR, pcy - sg*uy*pR];
         const rp = [S0[0] - sg*ux*28*kl, S0[1] - sg*uy*28*kl]; st.arcs.push({t0:gt, from:screenToWorld(rp[0], rp[1]), to:tg, h:Math.min((18 + 12*fxh(ha + 2))*kl, 10 + 2*pR), s:Math.min(bMax*1.2, (12 + 6*fxh(ha + 3))*kl)}); } }
-    let nd = 0; ctx.globalCompositeOperation = 'lighter'; const nk = 1 + nt, CORE = BCORE(), FIRE0 = FIRE();
+    // impacts in three stages: a small white core (0-40 ms), a turned explosion burst fading out (40-340 ms), and at 120 ms one dark smoke puff
+    // and a few debris streaks (once a boom); the burst is lit up at night
+    let nd = 0; const nk = 1 + nt, CORE = BCORE(), EXP = afxMips('fx-explosion'), kz0 = PKZ || 1;
     for (let j = st.booms.length - 1; j >= 0; j--){ const q = st.booms[j], age = gt - q.t; if (age > 340){ st.booms.splice(j, 1); continue; } if (age < 0 || nd >= 6) continue;
-      const [qx, qy] = toScreen(q.wx, q.wy), s = q.s, f = age < 90 ? 1 : 1 - (age - 90)/250, s2 = s*1.6*(1 + 0.25*(1 - f));
-      ctx.globalAlpha = Math.min(1, 0.55*f*nk); ctx.drawImage(FIRE0, qx - s2/2, qy - s2/2, s2, s2); nd++;
-      if (age < 90){ ctx.globalAlpha = 0.9; ctx.drawImage(CORE, qx - s/2, qy - s/2, s, s); nd++; } }
+      const [qx, qy] = toScreen(q.wx, q.wy), s = q.s;
+      if (age < 40 || !EXP){ const f = age < 40 ? 1 : Math.max(0, 1 - (age - 40)/200), c0 = s*(0.55 + 0.3*(1 - f)); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = lf*f; ctx.drawImage(CORE, qx - c0/2, qy - c0/2, c0, c0); nd++; }
+      else { const k = (age - 40)/300, e = 1 - (1 - k)*(1 - k), sz = s*(0.35 + 0.25*e), co = Math.cos(q.rot + 0.2*k)*dpr, si = Math.sin(q.rot + 0.2*k)*dpr;
+        if (nt > 0.2){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = lf*0.45*nt*(1 - k); ctx.drawImage(GL, qx - sz*1.6, qy - sz*1.6, sz*3.2, sz*3.2); }
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = lf*Math.pow(1 - k, 1.6); ctx.setTransform(co, si, -si, co, qx*dpr, qy*dpr); ctx.drawImage(afxPick(EXP, sz*2*dpr), -sz, -sz, sz*2, sz*2); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); nd++; }
+      if (age >= 120 && !q.d){ q.d = 1; if (!far) afxPuff(q.wx, q.wy, {s0:0.4*s/kz0, s1:1.2*s/kz0, a:0.34, dur:1800, dark:true, vx:2 + Math.random()*4, vy:-(4 + Math.random()*4)});
+        if (!far && lf > 0.3) for (let i = 0, nD = 3 + (Math.random() < 0.5 ? 1 : 0); i < nD; i++) emit('debris', q.wx, q.wy, {vx:(Math.random() - 0.5)*s*7/kz0, vy:-(3 + Math.random()*4)*s/kz0, s0:1.4, s1:1, life:450 + Math.random()*300}); } }
+    ctx.globalCompositeOperation = 'lighter';
     // shells: a fading 2 px tail (the last 30% of the path) and a glowing head on a quadratic arc rising h above the line; a boom where it lands
     for (let j = st.arcs.length - 1; j >= 0; j--){ const q = st.arcs[j], f = (gt - q.t0)/700; if (f >= 1){ boom(q.to, q.t0 + 700, q.s || (12 + 6*fxh(q.t0 | 0))*kl); st.arcs.splice(j, 1); continue; } if (f < 0) continue;
       const P0 = toScreen(q.from[0], q.from[1]), P2 = toScreen(q.to[0], q.to[1]), Cx = (P0[0] + P2[0])/2, Cy = (P0[1] + P2[1])/2 - 2*q.h;   // (control point 2h up: the apex is h above the chord)
       const at = t => [(1 - t)*(1 - t)*P0[0] + 2*(1 - t)*t*Cx + t*t*P2[0], (1 - t)*(1 - t)*P0[1] + 2*(1 - t)*t*Cy + t*t*P2[1]], f0 = Math.max(0, f - 0.3), hd = at(f), tl = at(f0), a = Math.min(1, 0.85*nk);
       ctx.globalCompositeOperation = 'source-over'; const gr = ctx.createLinearGradient(tl[0], tl[1], hd[0], hd[1]); gr.addColorStop(0, 'rgba(255,214,150,0)'); gr.addColorStop(1, `rgba(255,214,150,${a.toFixed(3)})`);
-      ctx.beginPath(); ctx.moveTo(tl[0], tl[1]); for (let k = 1; k <= 6; k++){ const w = at(f0 + (f - f0)*k/6); ctx.lineTo(w[0], w[1]); } ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = gr; ctx.stroke();
-      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, 0.9*nk); ctx.drawImage(GL, hd[0] - 3.5, hd[1] - 3.5, 7, 7); }
+      ctx.beginPath(); ctx.moveTo(tl[0], tl[1]); for (let k = 1; k <= 6; k++){ const w = at(f0 + (f - f0)*k/6); ctx.lineTo(w[0], w[1]); } ctx.globalAlpha = lf; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = gr; ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = lf*Math.min(1, 0.9*nk); ctx.drawImage(GL, hd[0] - 3.5, hd[1] - 3.5, 7, 7); }
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
 // the live sea surface: a 256 px tile of thin bright crest arcs (three rotated sine bands bent by tileable noise, broken into arcs), baked once
@@ -7291,7 +7438,7 @@ function waveTile(){ if (SEAFX.tile) return SEAFX.tile; const N = 256, P = 8, c 
 // depth is under it). Waves: two drifting layers of the tile filled into a half-res canvas at most every 50 ms, cut to the layer's sea mask, laid
 // on with 'screen' (fainter at night). Foam: a soft foam sheet stroked along the coast rings in view, clipped to the water side.
 function drawSeaSurface(now, moving){
-  const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || SET.fx === 'low' || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || !GEO) return;
+  const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || SET.fx === 'low' || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || layer.dp !== dpr || !GEO) return;
   const day = viewLight().day, w2 = Math.ceil(cw*dpr/2), h2 = Math.ceil(ch*dpr/2), Wc = SEAFX.cv || (SEAFX.cv = document.createElement('canvas'));
   if (Wc.width !== w2 || Wc.height !== h2){ Wc.width = w2; Wc.height = h2; SEAFX.k = ''; }
   const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr), key = view.x + ',' + view.y + ',' + view.s + ',' + lx + ',' + ly + ',' + layer.full + ',' + (layer.strips || 0);
@@ -7303,7 +7450,7 @@ function drawSeaSurface(now, moving){
     g.globalAlpha = 1; g.globalCompositeOperation = 'destination-in'; g.drawImage(layer.seaM, lx/2 - (layer.seaE || 0), ly/2 - (layer.seaEy || 0)); g.globalCompositeOperation = 'source-over'; }
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.015 + 0.05*day; ctx.drawImage(Wc, 0, 0, w2*2, h2*2); ctx.restore();
   // shore foam: the coast rings that reach the screen, cut to it (kept until the view changes), dashes creeping along them on the water side
-  if (hexPx >= 30 && GEO.coast0 && COASTR.length){ const px = 1/view.s, m0 = 12*px, X0 = -view.x/view.s - m0, Y0 = -view.y/view.s - m0, X1 = (cw - view.x)/view.s + m0, Y1 = (ch - view.y)/view.s + m0, RS = coastRings(hexPx), fk = [X0, Y0, view.s, cw, ch, RS === COASTR ? 'L' : RS === COASTR_HI ? 'H2' : 'H1'].join(',');
+  if (hexPx >= 30 && GEO.coast0 && COASTR.length){ const px = 1/view.s, m0 = 12*px, X0 = -view.x/view.s - m0, Y0 = -view.y/view.s - m0, X1 = (cw - view.x)/view.s + m0, Y1 = (ch - view.y)/view.s + m0, RS = coastRings(hexPx), fk = [X0, Y0, view.s, cw, ch, coastRingsId(RS)].join(',');
     if (fk !== SEAFX.fk){ SEAFX.fk = fk; const fp = new Path2D(), fc = new Path2D(); fc.rect(X0, Y0, X1 - X0, Y1 - Y0); let n = 0;
       for (const Rr of RS){ const b = Rr.b; if (b[2] < X0 || b[0] > X1 || b[3] < Y0 || b[1] > Y1) continue; const r = b[0] >= X0 && b[2] <= X1 && b[1] >= Y0 && b[3] <= Y1 ? Rr.r : clipRing(Rr.r, X0 - m0, Y0 - m0, X1 + m0, Y1 + m0); if (r.length < 6) continue;
         for (const q of [fp, fc]){ q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); } n++; }
@@ -7323,11 +7470,13 @@ function draw(now){
   toneSync();   // war or peace with you (or the palette) changed: the map's relation colours follow at once
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS0;
   { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; CITY_ALL = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
-    if (CITY_PEND && !camFly && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120){ CITY_PEND = false; CITYV++; } }
+    if (CITY_PEND && !camFly && !ZTW && now - (draw.zt || 0) > 150 && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120){ CITY_PEND = false; CITYV++; } }
   const keyOf = vs => [vs, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' || mapMode === 'resources' ? Math.floor(S.hour/24) : 0, LINKD, SET.fx].join('|');
   const key = keyOf(view.s);   // (a pure pan no longer re-renders the layer, so whatever it shows is in the key)
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   // any view movement since the last frame (drag, fly-to, keys, tutorial) counts as panning: reuse the shifted layer until it settles
+  if (draw.pvs !== view.s) draw.zt = now;   // the scale changed this frame (glide, pinch, a test)
+  const zoomLive = !!ZTW || !!pinch || now - (draw.zt || 0) < 140;
   const moved = draw.pvx !== view.x || draw.pvy !== view.y || draw.pvs !== view.s; if (panning || moved) lastPanT = now; draw.pvx = view.x; draw.pvy = view.y; draw.pvs = view.s;
   const offEdge = !layer || Math.abs(dxv) > layer.mx*0.9 || Math.abs(dyv) > layer.my*0.9, settled = !panning && now - (lastPanT || 0) > 140;
   // layers rendered while the view moves are lighter (fewer road and rail strokes); one full render follows when it settles
@@ -7337,23 +7486,39 @@ function draw(now){
   if (camFly && !camFly.pre){ const F = camFly, v0 = {s:view.s, x:view.x, y:view.y};
     view.s = F.s1; view.x = cw/2 - F.x1*F.s1; view.y = ch/2 - F.y1*F.s1; clampView(); FLYMARGIN = 0.45; renderLayer(vis, false); FLYMARGIN = 0; layerKey = keyOf(view.s);
     view.s = v0.s; view.x = v0.x; view.y = v0.y; F.pre = true; F.t0 = performance.now(); F.last = null; }
-  const fz = layer && layer.s ? view.s/layer.s : 1, flyReuse = !!camFly && layer && (camFly.pre || (!settled && fz > 0.8 && fz < 1.5)) && key.slice(key.indexOf('|')) === layerKey.slice(layerKey.indexOf('|'))
-    && view.x - (layer.vx + layer.mx)*fz <= 0 && view.y - (layer.vy + layer.my)*fz <= 0 && view.x - (layer.vx + layer.mx)*fz + layer.width/dpr*fz >= cw && view.y - (layer.vy + layer.my)*fz + layer.height/dpr*fz >= ch;   // the scaled layer still covers the screen
+  // a live zoom (wheel glide, pinch) does the same: the scaled layer is drawn while it covers the screen and the ratio stays in 0.67-1.5, else one lite render
+  const fz = layer && layer.s ? view.s/layer.s : 1, fzOK = camFly ? fz > 0.8 && fz < 1.5 : fz > 0.67 && fz < 1.5;
+  const ldp = layer ? layer.dp || dpr : dpr, flyReuse = (!!camFly || zoomLive) && layer && ((camFly && camFly.pre) || (!settled && fzOK)) && key.slice(key.indexOf('|')) === layerKey.slice(layerKey.indexOf('|'))
+    && view.x - (layer.vx + layer.mx)*fz <= 0 && view.y - (layer.vy + layer.my)*fz <= 0 && view.x - (layer.vx + layer.mx)*fz + layer.width/ldp*fz >= cw && view.y - (layer.vy + layer.my)*fz + layer.height/ldp*fz >= ch;   // the scaled layer still covers the screen
   // a pure pan (same key) past the margin shifts the layer and renders only the strip it exposes, on the axis that ran out (strips are full detail,
   // so nothing is left to redo when the pan stops); new city bakes, or a layer rendered light while moving, are refreshed in bands, one a frame
   // once still, the view snaps to the layer's device-px grid (under half a pixel), so the live overlays sit exactly on the shifted layer's borders
   if (!flyReuse && settled && !camFly && layer && layer.s === view.s && key === layerKey){ const x0 = view.x, y0 = view.y, sx = layer.vx + Math.round((x0 - layer.vx)*dpr)/dpr, sy = layer.vy + Math.round((y0 - layer.vy)*dpr)/dpr;
     if (sx !== x0 || sy !== y0){ view.x = sx; view.y = sy; clampView(); if (view.x !== sx || view.y !== sy){ view.x = x0; view.y = y0; } draw.pvx = view.x; draw.pvy = view.y; } }
   if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), ex = Math.abs(dxv) > layer?.mx*0.25, ey = Math.abs(dyv) > layer?.my*0.25;
-    if (!layer || (key !== layerKey && kNC(key) !== kNC(layerKey))){ layerKey = key; renderLayer(vis, lt); }
+    // a render made mid-zoom is only drawn scaled until the zoom settles: it gets a wider margin (so the next zoom-out step stays covered) and a
+    // lower pixel ratio (a fraction of the cost); a layer made that way is never shifted or patched, the next render replaces it whole
+    // during a glide the render is made ahead, part of the way toward the goal scale (around the same anchor), so the one layer serves a longer
+    // stretch of the zoom: drawn shrunk (sharp) first, then enlarged; the lead is capped so the shrunk layer still covers the screen
+    const zm = zoomLive && !settled && !camFly ? 0.3 : 0, rl = () => { const d0 = dpr, v0 = {s:view.s, x:view.x, y:view.y}, Z = zm ? ZTW : null; let Ls = 0;
+      if (Z){ const mx = Math.round(Math.max(cw*zm, 224)), my = Math.round(Math.max(ch*zm, 172)), ax = Math.min(cw, Math.max(0, Z.ax)), ay = Math.min(ch, Math.max(0, Z.ay));
+        const fmin = Math.max(0.7, ax/(ax + mx), (cw - ax)/(cw - ax + mx), ay/(ay + my), (ch - ay)/(ch - ay + my)) + 0.02;
+        Ls = Math.max(view.s/1.25, Math.min(view.s/fmin, Z.s1)); if (Math.abs(Math.log(Ls/view.s)) < 0.01) Ls = 0; }
+      FLYMARGIN = zm; if (zm){ dpr = d0*ZRES; ZRND = true; } if (Ls){ view.s = Ls; view.x = Z.ax - Z.wx*Ls; view.y = Z.ay - Z.wy*Ls; clampView(); }
+      try { renderLayer(vis, lt || !!zm); } finally { dpr = d0; FLYMARGIN = 0; ZRND = false; if (Ls){ layerKey = keyOf(view.s); view.s = v0.s; view.x = v0.x; view.y = v0.y; } } };
+    if (!layer || ldp !== dpr || (key !== layerKey && kNC(key) !== kNC(layerKey))){ layerKey = key; rl(); }
     else { if (key !== layerKey){ layerKey = key; if (CITY_ALL){ CITY_ALL = false; layerBands(); } else layerCityRefresh(); }   // only the city bakes changed: redraw the towns that were missing theirs
       if ((ex || ey) && shiftLayer(vis, false, ex, ey)){}
-      else if (offEdge) renderLayer(vis, lt);
+      else if (offEdge) rl();
       else if (settled && layer.lite){ layer.lite = false; layerBands(); }
       else if (settled && layer.q && layer.q.length) renderLayer(vis, false, layer.q.shift()); } }
   try { dtWork(settled && !camFly && !flyReuse); } catch (e) { DT.fail = true; DT.job = null; }   // close-zoom detail tiles, made while the view is still
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (flyReuse && layer.s !== view.s){ const f = view.s/layer.s; ctx.drawImage(layer, dpr*(view.x - (layer.vx + layer.mx)*f), dpr*(view.y - (layer.vy + layer.my)*f), layer.width*f, layer.height*f); }
+  // a layer at another scale or pixel ratio (reused mid-zoom, or just rendered ahead of a glide at half resolution) is always drawn scaled to the view;
+  // if that scaled copy does not cover the canvas, the uncovered rim is cleared so no stale frame (doubled labels, old counters) shows through
+  if (layer.s !== view.s || (layer.dp || dpr) !== dpr){ const f = view.s/layer.s, g = f*dpr/(layer.dp || dpr), lx = dpr*(view.x - (layer.vx + layer.mx)*f), ly = dpr*(view.y - (layer.vy + layer.my)*f), lw = layer.width*g, lh = layer.height*g;
+    if (lx > 0 || ly > 0 || lx + lw < cv.width || ly + lh < cv.height) ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(layer, lx, ly, lw, lh); }
   else ctx.drawImage(layer, Math.round((view.x - layer.vx - layer.mx)*dpr), Math.round((view.y - layer.vy - layer.my)*dpr));
   drawCraters(now);   // impact decals: under outlines, units and labels, and under the night tint
   drawSeaSurface(now, panning || moved);   // live waves and shore foam on the water (static depth only while the view moves)
@@ -7374,10 +7539,11 @@ function draw(now){
   { const F = frontPath(); if (F){ const z = Math.min(1.6, Math.max(0.7, hexPx/14)), br = afxReduced() ? 0.5 : 0.5 + 0.5*Math.sin(now/700); ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       ctx.strokeStyle = `rgba(224,87,79,${(0.12 + 0.08*br).toFixed(3)})`; ctx.lineWidth = 8*z*px; ctx.stroke(F); ctx.strokeStyle = 'rgba(30,6,4,0.55)'; ctx.lineWidth = 2.8*z*px; ctx.stroke(F);
       ctx.strokeStyle = 'rgba(240,96,78,0.95)'; ctx.lineWidth = 1.5*z*px; ctx.stroke(F); ctx.restore(); } }
+  drawWeather(now);   // storms under the night tint: night darkens them like the land, and the city lights shine over them
   { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)); if (tN < 1) drawNightWorld(1 - tN); if (tN > 0) drawNight(tN); }
   { const pend = CITY_PEND; drawCityLights(hexPx); CITY_PEND = pend; }   // city lights over the night tint (their bakes trickle in frame by frame)
   if (hexPx >= 9) cityWarm(now);   // idle: the low tier of every city, so a jump never lands on empty ground
-  drawWeather(now);
+  drawLightning(now);
 
   // ---- screen space
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -7694,19 +7860,29 @@ function draw(now){
       if (mS && mS.halt != null && now - mS.halt < MOV_HALT){ const rest = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15); counter.ang = lerpAng(mS.hd, rest, smooth01((now - mS.halt)/MOV_HALT)); } }
     if (mS) mS.ang = counter.ang ?? (dir < 0 ? Math.PI*0.85 : Math.PI*0.15);   // (the drawn heading, for the tests)
     const fighting = !c.moving && !c.air && S.battles.includes(c.at);
-    if (fighting && c.enemy){ const mt = UT.reduce((b, t) => (lead.u[t] || 0)*UNITS[t].hp > (lead.u[b] || 0)*UNITS[b].hp ? t : b, 'inf'); volley(c, mt, counter.ang ?? 0, now, 20, null, null, true); }   // battle sound only: the shots and smoke are the battle's own map effects (drawBattleLOD)
+    if (fighting && c.enemy){ const mt = UT.reduce((b, t) => (lead.u[t] || 0)*UNITS[t].hp > (lead.u[b] || 0)*UNITS[b].hp ? t : b, 'inf'); c.mt = mt;
+      if (!volFx) volley(c, mt, counter.ang ?? 0, now, 20, null, null, true); }   // battle sound only: below figure zoom the shots and smoke are the battle's own map effects (drawBattleLOD); close in the plates fire (after counter(), below)
     counter.vol = null; counter.list = c.list; counter.share = c.share || 1;
     if (!c.air) CLPOS.set(c.at + ':' + c.owner, screenToWorld(c.x, c.y));
     counter.dust = (main, ang, hpx) => { const key = c.list[0].id, lt = lastDust.get(key) || 0; if (now - lt < 240) return; lastDust.set(key, now); const [wx, wy] = screenToWorld(c.x - Math.cos(ang)*hpx*0.32, c.y + hpx*0.05 - Math.sin(ang)*hpx*0.1); emit('dust', wx, wy, {vx:-Math.cos(ang)*8 + (Math.random() - 0.5)*6, vy:-3 - Math.random()*4, s0:4, s1:16, life:1400, tn:dustTone(c.list[0].at)}); };
     counter.dug = !c.moving && !c.air && dugIn(lead); counter.bdy = plateM ? 0 : (c.bdy || 0);
     return {lead, dir, fighting}; };
   counter.defer = null;
+  // close in (from FIG_PX) the fighting plates fire: muzzle flashes on each plate's rim toward the enemy and typed shots (volley), at most two
+  // volleys per battle a frame; the battle's drawn flickers, tracers and booms fade out over the same zooms (drawBattleLOD)
+  const volFx = hexPx >= FIG_PX && !afxReduced() && SET.fx !== 'low' && !!S.speed && !S.over, volN = new Map(); VOLA = volFx ? smooth01((hexPx - 56)/20) : 1;
+  const VOLT = {para:'inf', spec:'inf', jam:'inf', mlrs:'art'}, volType = c => {   // each volley one of the stack's ground or naval types, weighted by count times hp (display only)
+    let tot = 0; const w = []; for (const a of c.list) for (const t in a.u){ const n = a.u[t], U = UNITS[t]; if (!n || !U || U.cls === 'air') continue; const v = n*U.hp; w.push([VOLT[t] || t, v]); tot += v; }
+    let r0 = Math.random()*tot; for (const [t, v] of w) if ((r0 -= v) <= 0) return t; return c.mt; };
   try { for (const c of clusters){
     const {lead, dir, fighting} = clSetup(c);
     if (c.ay != null){ const d = plateDims(c.n, k, plateQuiet(c)); ctx.strokeStyle = 'rgba(243,234,210,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c.x, c.y - d.h/2); ctx.lineTo(c.ax, c.ay); ctx.stroke(); ctx.fillStyle = 'rgba(243,234,210,.8)'; ctx.fillRect(c.ax - 1.5, c.ay - 1.5, 3, 3); }
     const r = counter(c.x, c.y, lead, c.n, mapCol(c.owner), c.list.some(a => a.id === sel.army || sel.group.includes(a.id)), c.moving, k, c.list.length > 1, fighting, dir, now);
     hits.push({...r, ids:c.list.map(a => a.id), cx:c.x, cy:c.y, spread:c.list.some(a => a.at !== c.at)});
-  } } finally { counter.defer = null; }
+    if (volFx && fighting && c.enemy && c.mt && r && r.w > 0 && (volN.get(c.at) || 0) < 2){ const pcx = r.x + r.w/2, pcy = r.y + r.h/2, ex = c.enemy[0] - pcx, ey = c.enemy[1] - pcy, an = Math.atan2(ey, ex), ca = Math.cos(an), sa = Math.sin(an);
+      const t = Math.min((r.w/2)/Math.max(1e-3, Math.abs(ca)), (r.h/2)/Math.max(1e-3, Math.abs(sa))) + 4;   // the plate's rim toward the enemy, just outside the effects' 3 px clip pad
+      const nv = lastVolley.get(c.list[0].id); volley(c, volType(c), an, now, 20, pcx + ca*t, pcy + sa*t, false); if (lastVolley.get(c.list[0].id) !== nv) volN.set(c.at, (volN.get(c.at) || 0) + 1); }
+  } } finally { counter.defer = null; VOLA = 1; }
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   // YOUR CAPITAL (first three days; its spot was chosen in the label pass): drawn on top of everything, with a thin leader to the star when it sits away from it
@@ -7781,7 +7957,7 @@ function draw(now){
     flatAir('heli', x, y, 26, ang, airTone(a.owner), null);   // transport helicopter carrying the paratroopers: a flat icon, level
     ctx.font = `700 ${Math.round(10*sc)}px ${BODY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2eee2'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText('▼ ' + count(a), x, y + 13 + 6*sc); ctx.fillText('▼ ' + count(a), x, y + 13 + 6*sc);
     if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
-  if (PROJ.length || MUZZ.length || PART.length){ ctx.save(); plateClipOn(); drawParticlesOver(now); ctx.restore(); }   // tracers, shells, sparks: over the map, never over a plate
+  if (PROJ.length || PART.length){ ctx.save(); plateClipOn(); drawParticlesOver(now); ctx.restore(); }   // tracers, shells, sparks: over the map, never over a plate
   // missiles in flight: exhaust glow, body and smoke trail; aiming ring
   for (const m of (S.inflight || [])){ const q0 = missilePos(m), [x, y] = toScreen(q0.x, q0.y), A = q0.A, B = q0.B, eps = 0.02, t2 = Math.min(1, q0.t + eps);
     const nx = A.x + (B.x - A.x)*t2, ny = A.y + (B.y - A.y)*t2 - Math.sin(t2*Math.PI)*q0.arc, [x2, y2] = toScreen(nx, ny), ang = Math.atan2(y2 - y, x2 - x);
@@ -7849,11 +8025,11 @@ function localXY(e){ const r = cv.getBoundingClientRect(); return [e.clientX - r
 cv.addEventListener('pointerdown', e => {
   cv.setPointerCapture(e.pointerId); const [x, y] = localXY(e); pointers.set(e.pointerId, {x, y});
   if (pointers.size === 1 && e.shiftKey && e.pointerType === 'mouse'){ boxSel = {x0:x, y0:y, x1:x, y1:y}; drag = null; return; }
-  if (pointers.size === 1){ drag = {x, y, vx:view.x, vy:view.y, moved:false};
+  if (pointers.size === 1){ drag = {x, y, vx:view.x, vy:view.y, moved:false}; ZTW = null;
     // pressing on your own force's counter (with a mouse, or a selected one by touch) drags that force: drop it on another force to merge
     const h = hitAt(x, y), own = h && !h.spread && !h.unk ? h.ids.map(armyById).filter(b => b && b.owner === PLAYER && !b.air && !b.fly && count(b)) : [];
     if (own.length && e.button === 0 && !cmdMode && !aimMsl && dropFor === null && (e.pointerType === 'mouse' || own.some(b => b.id === sel.army || sel.group.includes(b.id)))) drag.unit = (own.find(b => b.id === sel.army) || own[0]).id; }
-  else if (pointers.size === 2){ const [a, b] = [...pointers.values()]; pinch = {d:Math.hypot(a.x - b.x, a.y - b.y), s:view.s}; drag = null; }
+  else if (pointers.size === 2){ ZTW = null; const [a, b] = [...pointers.values()]; pinch = {d:Math.hypot(a.x - b.x, a.y - b.y), s:view.s}; drag = null; }
 });
 cv.addEventListener('pointermove', e => {
   const [x, y] = localXY(e);
@@ -7901,8 +8077,8 @@ function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) 
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(lbl).width + 14; roundRect(ctx, udrag.x - w/2, udrag.y + 17, w, 18, 4); ctx.fillStyle = b ? '#24452a' : '#1b2a2e'; ctx.fill(); ctx.fillStyle = '#f3ead2'; ctx.fillText(lbl, udrag.x, udrag.y + 26); ctx.restore(); }
 cv.addEventListener('pointerleave', () => { hoverProv = -1; hoverPath = null; mouse = null; tipHide(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = localXY(e);
-  if (GLOBE){ if (e.deltaY > 0 && view.s <= minScale()*1.001){ if (GLOBE.pushOut(e.deltaY)){ tipHide(); return; } } else GLOBE.resetPush(); }   // past the minimum: the globe
-  zoomAt(Math.exp(-e.deltaY*0.0015), x, y); tipHide(); }, {passive:false});
+  if (GLOBE){ if (e.deltaY > 0 && zoomGoal() <= minScale()*1.001){ if (GLOBE.pushOut(e.deltaY)){ ZTW = null; tipHide(); return; } } else GLOBE.resetPush(); }   // past the minimum: the globe
+  zoomTo(Math.exp(-e.deltaY*0.0015), x, y); tipHide(); }, {passive:false});
 // minimap: click or drag to move the view
 let miniDrag = false;
 function miniJump(e){ const r = mini.getBoundingClientRect(); const wx = (e.clientX - r.left)/r.width*WORLD_W, wy = (e.clientY - r.top)/r.height*WORLD_H; centerOn(wx, wy); }
@@ -8828,8 +9004,8 @@ document.addEventListener('click', e => {
       if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
     case 'build': if (sel.prov !== null && build(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
     case 'link-build': if (buildLink(PLAYER, +b.dataset.a, +b.dataset.b, b.dataset.k)){ sfx('ready'); renderSide(true); } break;
-    case 'zin': if (GLOBE && GLOBE.on()) GLOBE.zoom(1/1.5); else zoomAt(1.4, cw/2, ch/2); break;
-    case 'zout': if (GLOBE && GLOBE.on()) GLOBE.zoom(1.5); else if (!(GLOBE && view.s <= minScale()*1.001 && GLOBE.enter('zoom'))) zoomAt(1/1.4, cw/2, ch/2); break;
+    case 'zin': if (GLOBE && GLOBE.on()) GLOBE.zoom(1/1.5); else zoomTo(1.4, cw/2, ch/2); break;
+    case 'zout': if (GLOBE && GLOBE.on()) GLOBE.zoom(1.5); else if (GLOBE && zoomGoal() <= minScale()*1.001 && GLOBE.enter('zoom')) ZTW = null; else zoomTo(1/1.4, cw/2, ch/2); break;
     case 'globe': if (GLOBE) GLOBE.toggle(); break;
     case 'zfit': fit(); break;
     case 'home': goHome(); break;
@@ -9426,6 +9602,7 @@ function frame(now){
   if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; while (acc >= 1 && n < 8){ tick(); acc -= 1; n++; } if (n >= 8) acc = 0; }
   uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; try { ambience(now); } catch (e) {} renderSide(); tutTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
   if (camFly) camStep(now);
+  zoomStep(dt);   // a gliding wheel / button zoom
   toneSync();   // before the covering test: the globe's political overlay follows war and peace too (geoVer -> buildPol)
   if (!(GLOBE && GLOBE.covering())) draw(now);   // the globe covers the map: skip the 2D frame (the game clock keeps running)
   else if (mini && !mini.hidden && now - (drawMini.t || 0) > 100){ drawMini.t = now; drawMini(); }   // the minimap still frames the side of the earth the globe faces
@@ -9450,7 +9627,7 @@ function start(data){
   if (window.U3D && window.__BAKE) U3D.warmup();
   requestAnimationFrame(frame);
 }
-if (location.protocol === 'file:') window.__im = {coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, FXG, nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+if (location.protocol === 'file:') window.__im = {coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, PROJ, MUZZ, FXG, LTN, stormLight: (x, y) => stormLight(x, y), nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   tables:() => ({UNITS, BUILD, TECH:TECH.map(T => ({id:T.id, name:T.name, branch:T.branch, tier:T.tier, days:T.days, c:techCost(T)})), LINK_COST, MISSILES, SAT_C}), riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
