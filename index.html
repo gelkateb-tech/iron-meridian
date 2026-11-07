@@ -8173,7 +8173,7 @@ function plateFlagOf(a){ if (!a) return PLAYER; if (a.owner >= 0) return a.owner
    A small isometric command building beside your capital's star for the whole game: a squat concrete block with window bands and a rooftop helipad,
    a lattice radio mast with a dish, and a flag mast flying your real flag (from the flag atlas), on a low plinth in your relation tone with a soft drop
    shadow. Painted once per device-pixel ratio, flag and tone into an offscreen canvas (HQ_W x HQ_H css px, the same size at every zoom) and blitted
-   at whole device pixels. Its spot is chosen in the label pass (placeTag), drawn under the counters. */
+   at whole device pixels. Its spot is chosen before the counters are laid out (the plates slide clear of it), drawn under the counters. */
 // (the art is drawn in a 30 x 34 design box, scaled by HQ_K: larger on a desktop screen, where it stands beside 50 px counters, than on a phone)
 // and a little smaller at world zoom, where the cities crowd together (painted once at the full size, drawn scaled)
 let HQ_KB = 0, HQ_K = 0, HQ_W = 0, HQ_H = 0, HQ_PARTS = [], HQBOX = null; const HQ_C = new Map();   // HQBOX: this frame's HQ boxes on screen (hover tooltip)
@@ -8184,9 +8184,12 @@ function hqScale(){ HQ_KB = innerWidth <= 820 ? 1.12 : 1.6; const z = Math.max(0
 // the HQ's bearing from the star, fixed per capital (it does not hop round the star as you zoom): the side where, across the zoom range, the spot beside
 // the star lies on your capital's own province (else your own land) rather than at sea, abroad or by another city; beside the star rather than above it,
 // never below it (where the capital's name goes)
-const HQ_DIR = new Map();
+const HQ_DIR = new Map(), HQ_NEAR = new Map();
+function hqNear(cap){ let L = HQ_NEAR.get(cap); if (L) return L; const P0 = G.P[cap]; L = [];   // the cities and capitals round your capital (the provinces it must not read as belonging to)
+  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (p !== cap && !P.sea && (P.city || isCapital(p)) && Math.hypot(P.x - P0.x, P.y - P0.y) < 260) L.push(p); }
+  HQ_NEAR.set(cap, L); return L; }
 function hqBearing(cap){ const key = PLAYER + '|' + cap; let best = HQ_DIR.get(key); if (best !== undefined) return best;
-  const P0 = G.P[cap], near = []; for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (p !== cap && !P.sea && (P.city || isCapital(p)) && Math.hypot(P.x - P0.x, P.y - P0.y) < 260) near.push(P); }
+  const P0 = G.P[cap], near = hqNear(cap).map(p => G.P[p]);
   const ZS = [[0.35, 0.5], [0.5, 0.8], [0.7, 1], [0.9, 1.2], [1.2, 1.3], [1.6, 1.3], [2.2, 1], [3, 0.8], [4, 0.6]]; let bs = -Infinity; best = 0;
   for (let i = 0; i < 24; i++){ const an = i*Math.PI/12, ux = Math.cos(an), uy = Math.sin(an); let sc = 0, ws = 0;
     for (const [s0, w] of ZS) for (const dp of [26, 40]){ const wx = P0.x + ux*dp/s0, wy = P0.y + uy*dp/s0, c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1;
@@ -9022,8 +9025,65 @@ function draw(now){
     parkAir();
     for (const c of on) c.bdy = 0; }   // (overlapping plates are slid apart below, as at every zoom)
   clusters.sort((a, b) => ((a.owner === PLAYER) - (b.owner === PLAYER)) || ((a.air ? 0 : 1) - (b.air ? 0 : 1)));
-  // plate declutter: a plate overlapping another is moved down (or up, whichever is shorter) and tied to its true spot by a leader line (yours stay put)
-  { const on = clusters.filter(c => c.x > -60 && c.y > -60 && c.x < cw + 60 && c.y < ch + 60).slice(0, 150), placed = [];
+  // the screen box a counter claims: the whole drawn counter (marks above it: commander, dug-in, supply; the bars below) and its core (the plate or badge
+  // itself with its strength number, icons and bars, which nothing may cover); close in the badge and the figures standing above it
+  const clBox = c => { let b;
+    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - d.up, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1]; }
+    else { const F = formBox(c), f = F.bb, r = F.r, dy = c.bdy || 0;
+      b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2]; b.core = [c.x + f[0] - 1, c.y + f[1] + dy - 1, c.x + f[2] + 1, c.y + f[3] + dy + 1]; }
+    b.unit = true; b.at = c.moving ? -1 : c.at; return b; };
+  // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital's star, on your own land (your capital's
+  // province first), on the bearing hqBearing() fixed for this capital, the same side at every zoom. It claims its spot before the counters are laid out:
+  // a plate (yours too) that would cover it slides clear of it with a leader line, as plates do for each other, so the HQ is never hidden under a counter
+  // and never pushed out to sea, abroad or beside another city by them. The names (your capital's own name included), the building trays and the power
+  // names keep clear of it too. Where your land is crowded it steps a little further out along its bearing (a short leader line ties it to the star) or
+  // turns a little round the star; it is never left out. Only the screen edges and the map's controls rule a spot out; standing off your land (its plinth's
+  // centre at sea or abroad) is a last resort behind everything else, then covering another city's marker or standing nearer another city than yours,
+  // then turning and stepping out; displacing a standing counter costs only a little.
+  const NP = S.nations[PLAYER]; let capTagAt = null, tagDbg = null; HQBOX = null;
+  if (hexPx >= 2 && NP.alive && S.owner[NP.capital] === PLAYER){ hqScale(); const cap = NP.capital, P0 = G.P[cap], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + CITY_DY*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, w = HQ_W, h = HQ_H, K = HQ_K;
+    const hud = hudRects(), ovl = (q, o) => q[0] < o[2] && q[2] > o[0] && q[1] < o[3] && q[3] > o[1];
+    if (!(x < 0 || x > cw || cy < 0 || cy > ch || hud.some(o => x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3]))){   // (the star itself on screen and clear of the controls)
+      const reg = [x - R - 150, cy - R - 150, x + R + 150, cy + R + 150], hudN = hud.filter(o => ovl(o, reg));
+      const cls = clusters.filter(c => !c.moving && Math.abs(c.x - x) < 300 && Math.abs(c.y - cy) < 300).map(clBox).filter(o => ovl(o, reg));   // the standing counters where they would be (marching ones pass over it)
+      const mk = []; for (const p of hqNear(cap)){ const P = G.P[p], cp = isCapital(p); if (!((cp && hexPx >= 2) || (P.city && showCity))) continue; const [mx, my] = toScreen(P.x, P.y), tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0;
+        if (Math.abs(mx - x) < R + 170 && Math.abs(my - cy) < R + 170) mk.push({x:mx, y:my + CITY_DY*kl, r:cp ? (8.7 + tier)*kl : ([2.8, 3.6, 4.6][tier] + 1.8)*kl}); }   // the other cities' markers nearby
+      const PO = P0.oil && hexPx >= 8 ? [x + 7*kl, cy - 5*kl, x + 13*kl, cy + 4.5*kl] : null, PS = S.bld[cap].silo && hexPx >= 4 ? [x - 13*kl, y0 + 3*kl, x - 5*kl, y0 + 15*kl] : null;
+      const area = (q, o) => { const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); return ox > 0 && oy > 0 ? ox*oy : 0; };
+      const rectsAt = (px, py) => { const ix = Math.round(px - 15*K), iy = Math.round(py - 25*K); return [ix, iy, HQ_PARTS.map(r => [ix + r[0], iy + r[1], ix + r[2], iy + r[3]])]; };   // (px, py): the plinth's centre
+      const provAtS = (px, py) => { const c = worldToCell((px - view.x)/view.s, (py - view.y)/view.s), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea ? -1 : q; };
+      const gcode = (px, py) => { const q = provAtS(px, py); return q < 0 ? 2600 : q === cap ? 0 : S.owner[q] === PLAYER ? 150 : 900; };
+      // on your capital's province, else your own land; the plinth's centre off your land only as a last resort, its corners a little
+      const ground = (px, py) => { const g0 = gcode(px, py); let c0 = g0 > 150 ? 1e6 : g0;
+        for (const [ox, oy] of [[-8.4, 0], [8.4, 0], [0, -4.2], [0, 4.2]]) if (gcode(px + ox*K, py + oy*K) > 150) c0 += 2500;
+        return c0; };
+      const circ = (q, r) => Math.hypot(Math.max(q[0] - x, 0, x - q[2]), Math.max(q[1] - cy, 0, cy - q[3])) < r;
+      const reach = (ux, uy) => { for (let t = 0; t < 90; t++){ if (!rectsAt(x + ux*t, cy + uy*t)[2].some(q => circ(q, R + 0.5))) return t; } return 90; };   // the nearest it can stand to the star without covering it
+      const cost = (px, py, led) => { const [, , qs] = rectsAt(px, py); let c0 = ground(px, py);
+        for (const q of qs){ if (q[0] < 2 || q[2] > cw - 2 || q[1] < 2 || q[3] > ch - 2) return 1e9;
+          for (const o of hudN) if (ovl(q, o)) return 1e9;
+          for (const o of cls){ const a = area(q, o); if (a) c0 += 150 + a*0.3; const ac = area(q, o.core); if (ac) c0 += 300 + ac*0.8; }   // a counter it would make slide aside
+          for (const m of mk){ const a = area(q, [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]); if (a) c0 += 4e4 + a*60; }   // another city's marker
+          for (const o of [PO, PS]) if (o){ const a = area(q, o); if (a) c0 += a*20; } }   // (the capital's oil derrick and silo glyphs: better left in view)
+        const qb = qs[2], dq = (mx, my) => Math.hypot(Math.max(qb[0] - mx, 0, mx - qb[2]), Math.max(qb[1] - my, 0, my - qb[3])), d0 = dq(x, cy);   // nearer your star than any other city's marker, so it never reads as theirs
+        for (const m of mk) if (dq(m.x, m.y) - m.r < Math.min(d0 - R + 4, led ? 4 : 10)) { c0 += 3e4; break; }
+        return c0; };
+      // candidates: its own bearing first, then out along it, then turning round the star in 20 degree steps (each step and each pixel out costs, so it
+      // stays put; far out costs more than turning); below the star, where the capital's name goes, costs more
+      const th0 = hqBearing(cap), cands = [];
+      for (let d = 0; d <= 9; d++) for (const sg of d && d < 9 ? [1, -1] : [1]) for (const e of [0, 4, 8, 13, 19, 26, 34, 44, 56]){ const dd = d*sg, uy = Math.sin(th0 + dd*Math.PI/9);
+        cands.push([dd, e, d*1500 + e*30 + e*e*3 + (e >= 10 ? 800 : 0) + (uy > 0.35 ? 5000*(uy - 0.35) : 0) - (HQ_LAST && HQ_LAST.k === cap + '|' + K && HQ_LAST.d === dd && HQ_LAST.e === e ? 900 : 0)]); }
+      cands.sort((p1, p2) => p1[2] - p2[2]);
+      let bt = null, bc = Infinity, n = 0; const RC = new Map();
+      for (const [dd, e, base] of cands){ if (base >= bc) break; n++;
+        const an = th0 + dd*Math.PI/9, ux = Math.cos(an), uy = Math.sin(an); let t0 = RC.get(dd); if (t0 === undefined){ t0 = reach(ux, uy); RC.set(dd, t0); }
+        const px = x + ux*(t0 + 2 + e), py = cy + uy*(t0 + 2 + e), c0 = base + cost(px, py, e >= 10); if (window.__dbgAll) window.__dbgAll.push([dd, e, Math.round(c0)]); if (c0 < bc){ bc = c0; bt = [px, py, dd, e, ux, uy]; } }
+      if (bt && bc < 1e9){ HQ_LAST = {k:cap + '|' + K, d:bt[2], e:bt[3]};
+        const [ix, iy, qs] = rectsAt(bt[0], bt[1]); capTagAt = {tx:ix + w/2, ty:iy, w, h, x, cy, R, ix, iy, lead:bt[3] >= 10 ? [x + bt[4]*(R + 1), cy + bt[5]*(R + 1), bt[0], bt[1]] : null}; HQBOX = qs;
+        if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = [Math.round(bc)]; tagDbg.d = bt[2]; tagDbg.e = bt[3]; tagDbg.g = gcode(bt[0], bt[1]); tagDbg.th = Math.round(th0*180/Math.PI); tagDbg.n = n; } } } }
+  // plate declutter: a plate overlapping another is moved down (or up, whichever is shorter) and tied to its true spot by a leader line (yours stay put);
+  // your HQ is laid down first, so every plate keeps clear of it
+  { const on = clusters.filter(c => c.x > -60 && c.y > -60 && c.x < cw + 60 && c.y < ch + 60).slice(0, 150), placed = (HQBOX || []).map(q => ({c:null, x0:q[0] - 1, x1:q[2] + 1, y0:q[1] - 1, y1:q[3] + 1}));
     const selC = c => c.list.some(a => a.id === sel.army || sel.group.includes(a.id)) ? 1 : 0; on.sort((a, b) => (selC(b) - selC(a)) || ((b.owner === PLAYER) - (a.owner === PLAYER)));   // the selected force first: it never slides away
     for (const c of on){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)), hw = d.w/2 + 2, top = d.h/2 + d.up - 3, bot = d.h/2 + d.bars + 2, ay = c.y;
       const slide = sgn => { let y = ay; for (let it = 0; it < 8; it++){ let mv = 0;
@@ -9032,11 +9092,8 @@ function draw(now){
       const dn = slide(1); if (dn !== ay){ const up = slide(-1); c.y = ay - up < dn - ay ? up : dn; c.ax = c.x; c.ay = ay; }
       placed.push({c, x0:c.x - hw, x1:c.x + hw, y0:c.y - top, y1:c.y + bot}); } }
   // counters claim screen space before labels: city and province names give way to them (capital names always show)
-  for (const c of clusters){ if (c.x < -60 || c.y < -60 || c.x > cw + 60 || c.y > ch + 60) continue; let b;
-    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - d.up, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
-    else { const F = formBox(c), f = F.bb, r = F.r, dy = c.bdy || 0;   // the badge and the figures standing above it: names keep clear of both
-      b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2]; b.core = [c.x + f[0] - 1, c.y + f[1] + dy - 1, c.x + f[2] + 1, c.y + f[3] + dy + 1]; }
-    b.unit = true; b.at = c.moving ? -1 : c.at; boxes0.push(b); }   // (core: the plate or badge itself with its strength number, icons and bars, which nothing may cover)
+  for (const c of clusters){ if (c.x < -60 || c.y < -60 || c.x > cw + 60 || c.y > ch + 60) continue; boxes0.push(clBox(c)); }
+  for (const q of HQBOX || []){ const tb = [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); }   // your HQ: the names keep a little clear of it
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
   { const nk = [view.s, Math.round(view.x), Math.round(view.y), cw, ch, geoVer].join('|'); if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
@@ -9134,46 +9191,6 @@ function draw(now){
       ctx.globalAlpha = pa; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = Math.min(4, 1.5 + sz*0.12); ctx.shadowOffsetY = 1;
       ctx.fillStyle = you ? 'rgba(246,242,228,.8)' : 'rgba(226,222,208,.56)'; ctx.fillText(txt, lx + sz*0.125, ly); ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
     ctx.letterSpacing = '0px'; ctx.restore(); };
-  // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital's star, on the bearing hqBearing() fixed for
-  // this capital (inland, on your own land), the same side at every zoom. It is placed before all the names, so they (your capital's own name included),
-  // the building trays and the power names keep clear of it. On a crowded map it steps a little further out along its bearing (a short leader line ties
-  // it to the star) or, failing that, turns a little round the star; it is never left out. Nothing rules a spot out but the screen edges and the map's
-  // controls; covering a counter's plate or another city's marker, or standing nearer another city, at sea or abroad, only costs.
-  const NP = S.nations[PLAYER]; let capTagAt = null, tagDbg, tagTried = !(hexPx >= 2 && NP.alive && S.owner[NP.capital] === PLAYER); HQBOX = null;
-  const placeTag = () => { tagTried = true; tagDbg = null; hqScale(); const cap = NP.capital, P0 = G.P[cap], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + CITY_DY*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, w = HQ_W, h = HQ_H, K = HQ_K;
-    if (x < 0 || x > cw || cy < 0 || cy > ch || boxes0.some(o => o.hud && x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3])) return;   // the star itself off screen or under a control or panel
-    const reg = [x - R - 140, cy - R - 140, x + R + 140, cy + R + 140], near = boxes0.filter(o => ovl(o, reg)), cores = near.filter(o => o.core), mk = marks.filter(m => m.p !== cap && Math.abs(m.x - x) < R + 160 && Math.abs(m.y - cy) < R + 160);
-    const PO = P0.oil && hexPx >= 8 ? [x + 7*kl, cy - 5*kl, x + 13*kl, cy + 4.5*kl] : null, PS = S.bld[cap].silo && hexPx >= 4 ? [x - 13*kl, y0 + 3*kl, x - 5*kl, y0 + 15*kl] : null;
-    const area = (q, o) => { const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); return ox > 0 && oy > 0 ? [ox, oy] : null; };
-    const rectsAt = (px, py) => { const ix = Math.round(px - 15*K), iy = Math.round(py - 25*K); return [ix, iy, HQ_PARTS.map(r => [ix + r[0], iy + r[1], ix + r[2], iy + r[3]])]; };   // (px, py): the plinth's centre
-    const ground = (px, py) => { const c = worldToCell((px - view.x)/view.s, (py - view.y)/view.s), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea ? 2600 : q === cap ? 0 : S.owner[q] === PLAYER ? 150 : 900; };   // on your capital's province, else your own land, rather than abroad or at sea
-    const circ = (q, r) => Math.hypot(Math.max(q[0] - x, 0, x - q[2]), Math.max(q[1] - cy, 0, cy - q[3])) < r;
-    const reach = (ux, uy) => { for (let t = 0; t < 90; t++){ if (!rectsAt(x + ux*t, cy + uy*t)[2].some(q => circ(q, R + 0.5))) return t; } return 90; };   // the nearest it can stand to the star without covering it
-    const cost = (px, py, led) => { const [, , qs] = rectsAt(px, py); let c0 = ground(px, py);
-      for (const q of qs){ if (q[0] < 2 || q[2] > cw - 2 || q[1] < 2 || q[3] > ch - 2) return 1e9;
-        for (const o of cores){ const a = area(q, o.core); if (a) c0 += (o.at === cap ? 3e4 : 9e4) + a[0]*a[1]*60; }   // under a counter's plate, number or bars: a last resort (it is drawn under the counters)
-        for (const o of near){ const a = area(q, o); if (!a) continue; if (o.hud) return 1e9;
-          c0 += o.unit && o.at === cap ? a[0]*a[1]*0.2 : o.unit || o.fort ? a[0]*a[1]*8 : 3000 + a[0]*a[1]*30; }   // (the edges of your own garrison's counter are fine; a name placed before it costs)
-        for (const m of mk){ const a = area(q, [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]); if (a) c0 += 6e4 + a[0]*a[1]*60; }   // another city's marker
-        for (const o of [PO, PS]) if (o){ const a = area(q, o); if (a) c0 += a[0]*a[1]*20; } }   // (the capital's oil derrick and silo glyphs: better left in view)
-      const qb = qs[2], dq = (mx, my) => Math.hypot(Math.max(qb[0] - mx, 0, mx - qb[2]), Math.max(qb[1] - my, 0, my - qb[3])), d0 = dq(x, cy);   // nearer your star than any other city's marker, so it never reads as theirs
-      if (!led) for (const m of mk) if (dq(m.x, m.y) - m.r < Math.min(d0 - R + 4, 10)) { c0 += 2e4; break; }   // (a leader line ties it to your star)
-      return c0; };
-    // candidates: its own bearing first, then out along it, then turning round the star in 20 degree steps (each step and each pixel out costs, so it stays put; far out costs more than turning)
-    const th0 = hqBearing(cap), cands = [];
-    for (let d = 0; d <= 9; d++) for (const sg of d && d < 9 ? [1, -1] : [1]) for (const e of [0, 5, 10, 16, 24, 34, 46, 60]){ const dd = d*sg; cands.push([dd, e, d*1500 + e*30 + e*e*3 - (HQ_LAST && HQ_LAST.k === cap + '|' + K && HQ_LAST.d === dd && HQ_LAST.e === e ? 900 : 0)]); }
-    cands.sort((p1, p2) => p1[2] - p2[2]);
-    let bt = null, bc = Infinity, n = 0; const RC = new Map();
-    for (const [dd, e, base] of cands){ if (base >= bc) break; n++;
-      const an = th0 + dd*Math.PI/9, ux = Math.cos(an), uy = Math.sin(an); let t0 = RC.get(dd); if (t0 === undefined){ t0 = reach(ux, uy); RC.set(dd, t0); }
-      const px = x + ux*(t0 + 2 + e), py = cy + uy*(t0 + 2 + e), c0 = base + cost(px, py, e >= 10); if (window.__dbgAll) window.__dbgAll.push([dd, e, Math.round(c0)]); if (c0 < bc){ bc = c0; bt = [px, py, dd, e, ux, uy, c0 - base]; } }
-    if (window.__dbgBoxes) tagDbg = {none:1, n, bc};
-    if (!bt || bc >= 1e9) return;
-    HQ_LAST = {k:cap + '|' + K, d:bt[2], e:bt[3]};
-    const [ix, iy, qs] = rectsAt(bt[0], bt[1]); capTagAt = {tx:ix + w/2, ty:iy, w, h, x, cy, R, ix, iy, lead:bt[3] >= 10 ? [x + bt[4]*(R + 1), cy + bt[5]*(R + 1), bt[0], bt[1]] : null}; HQBOX = qs;
-    if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = [Math.round(bc)]; tagDbg.d = bt[2]; tagDbg.e = bt[3]; tagDbg.g = ground(bt[0], bt[1]); tagDbg.th = Math.round(th0*180/Math.PI); }
-    for (const q of qs){ const tb = [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); } };   // the names placed after it keep a little clear of it
-  if (!tagTried) placeTag();
   // place labels: highest rank first, skip any that would overlap one already placed
   // building trays: city ones once the city names are placed (they give way to names, not to province names), countryside ones last
   const labDbg = window.__dbgBoxes ? [] : null;
@@ -9214,7 +9231,7 @@ function draw(now){
   if (!pnDone) placePN(false);   // (once the province names are up, the other powers' names come last)
   for (const T of trays) drawTray(T, now, hexPx, kl);
   ctx.globalAlpha = 1;
-  // your capital callout: a ring pulsing round the star, and your headquarters beside it (placed in the label pass, drawn under the counters)
+  // your capital callout: a ring pulsing round the star, and your headquarters beside it (placed before the counters, which keep clear of it; drawn under them)
   { const N = S.nations[PLAYER];
     if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + CITY_DY*kl;
       if (!(hexPx >= ART_PX && bartOk('city'))){ ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
