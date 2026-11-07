@@ -2017,6 +2017,44 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
   .good{gap:4px}
   .good > svg{position:absolute; right:10px; top:31px; width:58px; height:18px}
 }
+
+/* repair: windows keep their title band (and its close box) pinned while the list scrolls under it; a scrolling table keeps its column heads
+   on a solid bar with a bottom edge, so no half-cut row shows above the list */
+.sheet > .rhead:first-child, .sheet > .hhead:first-child{position:sticky; top:-24px; z-index:4; box-shadow:inset 0 -1px 0 rgba(0,0,0,.45), 0 1px 0 rgba(143,163,170,.4), 0 8px 12px -8px rgba(0,0,0,.65)}
+.tblwrap{overscroll-behavior:contain}
+.tblwrap > .ptab > thead th{position:sticky; top:0; z-index:2; background:linear-gradient(180deg, #31454c, #2c3f46); border-bottom:0;
+  box-shadow:inset 0 -1px 0 rgba(143,163,170,.5), 0 1px 0 rgba(0,0,0,.4), 0 7px 10px -7px rgba(0,0,0,.7)}
+/* the advisor shield shows on every layout: on a desktop it brings the command panel back to your overview and first steps */
+#railside{display:block}
+
+/* research, repair: banner photos run across the banner in their own colours (three of the branch's pictures fading out to the left) */
+.rs-bw{mix-blend-mode:normal; opacity:1; -webkit-mask-image:linear-gradient(90deg, transparent 14%, rgba(0,0,0,.55) 34%, #000 62%); mask-image:linear-gradient(90deg, transparent 14%, rgba(0,0,0,.55) 34%, #000 62%)}
+.rs-bw .rs-bimg{filter:saturate(.8) contrast(1.1) brightness(.86) drop-shadow(0 8px 8px rgba(0,0,0,.55)); transform:rotate(var(--rot, -84deg)) scale(var(--sc, 1))}
+.rs-bw .rs-bimg.flat{transform:scale(var(--sc, 1))}
+.rs-bw .rs-bimg.b2{--sc:.9; right:calc(32% + 90px); opacity:.88}
+.rs-bw .rs-bimg.b3{--sc:.8; right:calc(52% + 90px); opacity:.6}
+.rs-ban:hover .rs-bw .rs-bimg{transform:rotate(var(--rot, -84deg)) translateY(6px) scale(calc(var(--sc, 1)*1.04))} .rs-ban:hover .rs-bw .rs-bimg.flat{transform:scale(calc(var(--sc, 1)*1.04))}
+.rs-ban::after{opacity:.45}
+@media (max-width: 820px){ .rs-bw .rs-bimg.b2{right:calc(38% + 65px)} .rs-bw .rs-bimg.b3{display:none} .rs-bw{-webkit-mask-image:linear-gradient(90deg, transparent 22%, #000 66%); mask-image:linear-gradient(90deg, transparent 22%, #000 66%)} }
+/* research, repair: a single-lane branch fills its lanes with a card beside each node */
+.rinfo{position:absolute; z-index:1; top:calc(var(--r)*var(--rh) + var(--rh)*.36 - 36px); left:calc(100% / 3 - 4px); right:16px; min-height:72px; display:flex; flex-direction:column; justify-content:center; gap:4px;
+  padding:9px 14px 9px 18px; border:0; border-radius:2px; text-align:left; color:#e8f0f2; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  background:linear-gradient(90deg, rgba(24,38,45,.94), rgba(31,48,56,.86)); box-shadow:inset 0 0 0 1px rgba(143,163,170,.32), inset 0 1px 0 rgba(255,255,255,.05), 0 3px 8px rgba(0,0,0,.35); transition:background .15s, box-shadow .15s}
+.rinfo::before{content:""; position:absolute; left:-8px; top:50%; margin-top:-8px; border:8px solid transparent; border-left:0; border-right-color:rgba(143,163,170,.45)}
+.rinfo::after{content:""; position:absolute; left:-6px; top:50%; margin-top:-7px; border:7px solid transparent; border-left:0; border-right-color:#18262d}
+.rinfo b{font:700 13.5px/1.15 var(--body); color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.6)}
+.rinfo .ri-d{font:500 11.5px/1.3 var(--body); color:#b9cbd0}
+.rinfo .ri-m{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin-top:1px; font:600 11px/1.2 var(--body); color:#d4e3e7}
+.rinfo .ri-t{color:#c5d6da} .rinfo .ri-s{display:inline-flex; align-items:center; gap:4px; font-weight:600}
+.rinfo .ri-s.ok{color:#8fe0a2} .rinfo .ri-s.run{color:#9ff5fb} .rinfo .ri-s.lk{color:#aebcc0} .rinfo .ri-s.qd{color:var(--cn-gold)}
+.rinfo.st-open{box-shadow:inset 3px 0 0 var(--cn-teal), inset 0 0 0 1px rgba(79,208,222,.4), 0 3px 8px rgba(0,0,0,.35)}
+.rinfo.st-run{box-shadow:inset 3px 0 0 #9ff5fb, inset 0 0 0 1px rgba(159,245,251,.5), 0 3px 8px rgba(0,0,0,.35)}
+.rinfo.st-done{box-shadow:inset 3px 0 0 #63b1d2, inset 0 0 0 1px rgba(99,177,210,.35), 0 3px 8px rgba(0,0,0,.35)}
+.rinfo.st-lock{background:linear-gradient(90deg, rgba(24,38,45,.82), rgba(31,48,56,.7))} .rinfo.st-lock b{color:#c9d4d7}
+.rinfo.sel{box-shadow:inset 3px 0 0 #fff, inset 0 0 0 1.5px #fff, 0 3px 10px rgba(0,0,0,.45)}
+.rinfo:hover{background:linear-gradient(90deg, rgba(30,47,55,.96), rgba(38,58,67,.9))} .rinfo:active{transform:scale(.995)}
+@media (min-width: 821px){ .rs-tree{--rh:136px} .rinfo{top:calc(var(--r)*var(--rh) + var(--rh)*.36 - 38px); min-height:76px; max-width:640px} }
+@media (max-width: 820px){ .rinfo{top:calc(var(--r)*var(--rh) + var(--rh)*.36 - 33px); min-height:66px; right:8px; padding:7px 10px 7px 14px; gap:3px} .rinfo b{font-size:12.5px} .rinfo .ri-d{font-size:10.5px} .rinfo .ri-m{font-size:10px} }
 </style>
 
 <div id="app">
@@ -8136,10 +8174,28 @@ function plateFlagOf(a){ if (!a) return PLAYER; if (a.owner >= 0) return a.owner
    a lattice radio mast with a dish, and a flag mast flying your real flag (from the flag atlas), on a low plinth in your relation tone with a soft drop
    shadow. Painted once per device-pixel ratio, flag and tone into an offscreen canvas (HQ_W x HQ_H css px, the same size at every zoom) and blitted
    at whole device pixels. Its spot is chosen in the label pass (placeTag), drawn under the counters. */
-const HQ_K = 1.12, HQ_W = Math.round(30*HQ_K), HQ_H = Math.round(34*HQ_K), HQ_C = new Map();   // (the art is drawn in a 30 x 34 design box, scaled by HQ_K)
+// (the art is drawn in a 30 x 34 design box, scaled by HQ_K: larger on a desktop screen, where it stands beside 50 px counters, than on a phone)
+// and a little smaller at world zoom, where the cities crowd together (painted once at the full size, drawn scaled)
+let HQ_KB = 0, HQ_K = 0, HQ_W = 0, HQ_H = 0, HQ_PARTS = [], HQBOX = null; const HQ_C = new Map();   // HQBOX: this frame's HQ boxes on screen (hover tooltip)
 // the parts that block other things (design units from the image's top-left): the flag and mast tops, the building, the plinth's wide middle and its front tip
-const HQ_PARTS = [[9, 0.5, 23, 12], [7, 11.5, 24, 22], [3.5, 22, 27, 29], [9.5, 29, 21.5, 34]].map(r => r.map(v => v*HQ_K));
-let HQBOX = null;   // this frame's HQ boxes on screen (hover tooltip)
+function hqScale(){ HQ_KB = innerWidth <= 820 ? 1.12 : 1.6; const z = Math.max(0, Math.min(1, ((view.s || 1) - 0.5)/0.9)), k = Math.round(HQ_KB*(0.66 + 0.34*z)*50)/50;
+  if (k === HQ_K) return; HQ_K = k; HQ_W = Math.round(30*k); HQ_H = Math.round(34*k);
+  HQ_PARTS = [[9, 0.5, 23, 12], [7, 11.5, 24, 22], [3.5, 22, 27, 29], [9.5, 29, 21.5, 34]].map(r => r.map(v => v*k)); }
+// the HQ's bearing from the star, fixed per capital (it does not hop round the star as you zoom): the side where, across the zoom range, the spot beside
+// the star lies on your capital's own province (else your own land) rather than at sea, abroad or by another city; beside the star rather than above it,
+// never below it (where the capital's name goes)
+const HQ_DIR = new Map();
+function hqBearing(cap){ const key = PLAYER + '|' + cap; let best = HQ_DIR.get(key); if (best !== undefined) return best;
+  const P0 = G.P[cap], near = []; for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (p !== cap && !P.sea && (P.city || isCapital(p)) && Math.hypot(P.x - P0.x, P.y - P0.y) < 260) near.push(P); }
+  const ZS = [[0.35, 0.5], [0.5, 0.8], [0.7, 1], [0.9, 1.2], [1.2, 1.3], [1.6, 1.3], [2.2, 1], [3, 0.8], [4, 0.6]]; let bs = -Infinity; best = 0;
+  for (let i = 0; i < 24; i++){ const an = i*Math.PI/12, ux = Math.cos(an), uy = Math.sin(an); let sc = 0, ws = 0;
+    for (const [s0, w] of ZS) for (const dp of [26, 40]){ const wx = P0.x + ux*dp/s0, wy = P0.y + uy*dp/s0, c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1;
+      sc += w*(q < 0 || G.P[q].sea ? 0 : q === cap ? 3 : S.owner[q] === PLAYER ? 2.3 : 0.6); ws += w;
+      for (const P of near){ const d = Math.hypot(P.x - wx, P.y - wy)*s0; if (d < 26) sc -= w*1.6*(1 - d/26); } }
+    sc += ws*(0.45*ux*ux - (uy > 0.4 ? 4*(uy - 0.4) : 0));
+    if (sc > bs + 1e-6){ bs = sc; best = an; } }
+  HQ_DIR.set(key, best); return best; }
+let HQ_LAST = null;   // last frame's choice (a small preference for it keeps the HQ from flickering between two near-equal spots)
 function hqPaint(sc, im, fi, CT, cols = FLAG_COLS, rows = FLAG_ROWS){
   const DW = 30, DH = 34, c = document.createElement('canvas'); c.width = Math.ceil(DW*sc); c.height = Math.ceil(DH*sc);
   const g = c.getContext('2d'); g.scale(sc, sc); g.lineJoin = 'round'; g.lineCap = 'round';
@@ -8208,8 +8264,8 @@ function hqPaint(sc, im, fi, CT, cols = FLAG_COLS, rows = FLAG_ROWS){
   return c; }
 function hqCanvas(){ const i = flagIdx(PLAYER), im = ART.img('flags');
   if (i >= 0 && !im && !ART.failed('flags')) return null;   // the atlas is still loading: try again next frame
-  const CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES).own, key = dpr + '|' + i + '|' + CT[0]; let c = HQ_C.get(key);
-  if (!c){ c = hqPaint(dpr*HQ_K, im, i, CT); if (HQ_C.size > 8) HQ_C.clear(); HQ_C.set(key, c); } return c; }
+  const CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES).own, key = dpr + '|' + HQ_KB + '|' + i + '|' + CT[0]; let c = HQ_C.get(key);
+  if (!c){ c = hqPaint(dpr*HQ_KB, im, i, CT); if (HQ_C.size > 8) HQ_C.clear(); HQ_C.set(key, c); } return c; }
 function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, now, minor){
   const two = !minor && counter.second && ICONP[counter.second] ? counter.second : null;
   const D = plateDims(n, s, minor, !!two), ps = D.ps, w = D.w, h = D.h, C = D.C, sk = D.sk, W0 = C + D.tab;
@@ -9078,41 +9134,46 @@ function draw(now){
       ctx.globalAlpha = pa; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = Math.min(4, 1.5 + sz*0.12); ctx.shadowOffsetY = 1;
       ctx.fillStyle = you ? 'rgba(246,242,228,.8)' : 'rgba(226,222,208,.56)'; ctx.fillText(txt, lx + sz*0.125, ly); ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
     ctx.letterSpacing = '0px'; ctx.restore(); };
-  // YOUR HQ (the whole game, while you hold your capital): a small headquarters building beside the capital's star. Its spot is chosen as soon as your
-  // capital's name is placed (or after all the names when it has none), so the names placed after it keep clear of it. Right of the star, else left,
-  // above it on either side, below it on either side or straight above; failing those a little further out round the star. It never covers a counter's
-  // plate (its number, icons or bars), a name, a city marker (your star included), a map control or a panel, and never sits nearer another city's marker
-  // than your star; it may touch the edges of your own capital's garrison counter (marks, padding). With no such spot it is left out.
+  // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital's star, on the bearing hqBearing() fixed for
+  // this capital (inland, on your own land), the same side at every zoom. It is placed before all the names, so they (your capital's own name included),
+  // the building trays and the power names keep clear of it. On a crowded map it steps a little further out along its bearing (a short leader line ties
+  // it to the star) or, failing that, turns a little round the star; it is never left out. Nothing rules a spot out but the screen edges and the map's
+  // controls; covering a counter's plate or another city's marker, or standing nearer another city, at sea or abroad, only costs.
   const NP = S.nations[PLAYER]; let capTagAt = null, tagDbg, tagTried = !(hexPx >= 2 && NP.alive && S.owner[NP.capital] === PLAYER); HQBOX = null;
-  const placeTag = () => { tagTried = true; tagDbg = null; const P0 = G.P[NP.capital], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + CITY_DY*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, L0 = capLab, w = HQ_W, h = HQ_H;
+  const placeTag = () => { tagTried = true; tagDbg = null; hqScale(); const cap = NP.capital, P0 = G.P[cap], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + CITY_DY*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, w = HQ_W, h = HQ_H, K = HQ_K;
     if (x < 0 || x > cw || cy < 0 || cy > ch || boxes0.some(o => o.hud && x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3])) return;   // the star itself off screen or under a control or panel
-    // candidates: where the plinth's centre goes (15, 25 design units from the image's top-left), then a cost
-    const K = HQ_K, cands = [[x + R + 14*K, cy + 2, 0], [x - R - 14*K, cy + 2, 2], [x + R + 9*K, cy - 8*K, 4], [x - R - 9*K, cy - 8*K, 6], [x + R + 8*K, cy + R + 4*K, 8], [x - R - 8*K, cy + R + 4*K, 10], [x, cy - R - 10*K, 12]];
-    for (const d of [4, 9, 15]) for (let i = 0; i < 16; i++){ const an = i*Math.PI/8, ux = Math.cos(an), uy = Math.sin(an); cands.push([x + ux*(R + 14*K + d), cy + 2 + uy*(R + 12*K + d), 30 + d*4]); }
-    const cores = boxes0.filter(o => o.core).map(o => o.core), PO = P0.oil && hexPx >= 8 ? [x + 7*kl, cy - 5*kl, x + 13*kl, cy + 4.5*kl] : null, PS = S.bld[NP.capital].silo && hexPx >= 4 ? [x - 13*kl, y0 + 3*kl, x - 5*kl, y0 + 15*kl] : null;
+    const reg = [x - R - 140, cy - R - 140, x + R + 140, cy + R + 140], near = boxes0.filter(o => ovl(o, reg)), cores = near.filter(o => o.core), mk = marks.filter(m => m.p !== cap && Math.abs(m.x - x) < R + 160 && Math.abs(m.y - cy) < R + 160);
+    const PO = P0.oil && hexPx >= 8 ? [x + 7*kl, cy - 5*kl, x + 13*kl, cy + 4.5*kl] : null, PS = S.bld[cap].silo && hexPx >= 4 ? [x - 13*kl, y0 + 3*kl, x - 5*kl, y0 + 15*kl] : null;
     const area = (q, o) => { const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); return ox > 0 && oy > 0 ? [ox, oy] : null; };
-    const rectsAt = (px, py) => { const ix = Math.round(px - 15*HQ_K), iy = Math.round(py - 25*HQ_K); return [ix, iy, HQ_PARTS.map(r => [ix + r[0], iy + r[1], ix + r[2], iy + r[3]])]; };
-    const ground = (px, py) => { const c = worldToCell((px - view.x)/view.s, (py - view.y)/view.s), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea ? 200 : S.owner[q] === PLAYER ? 0 : 60; };   // it stands on your own land, else any land, rather than at sea
-    const cost = ([px, py, base]) => { const [, , qs] = rectsAt(px, py); let c0 = (base || 0) + ground(px, py);
+    const rectsAt = (px, py) => { const ix = Math.round(px - 15*K), iy = Math.round(py - 25*K); return [ix, iy, HQ_PARTS.map(r => [ix + r[0], iy + r[1], ix + r[2], iy + r[3]])]; };   // (px, py): the plinth's centre
+    const ground = (px, py) => { const c = worldToCell((px - view.x)/view.s, (py - view.y)/view.s), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea ? 2600 : q === cap ? 0 : S.owner[q] === PLAYER ? 150 : 900; };   // on your capital's province, else your own land, rather than abroad or at sea
+    const circ = (q, r) => Math.hypot(Math.max(q[0] - x, 0, x - q[2]), Math.max(q[1] - cy, 0, cy - q[3])) < r;
+    const reach = (ux, uy) => { for (let t = 0; t < 90; t++){ if (!rectsAt(x + ux*t, cy + uy*t)[2].some(q => circ(q, R + 0.5))) return t; } return 90; };   // the nearest it can stand to the star without covering it
+    const cost = (px, py, led) => { const [, , qs] = rectsAt(px, py); let c0 = ground(px, py);
       for (const q of qs){ if (q[0] < 2 || q[2] > cw - 2 || q[1] < 2 || q[3] > ch - 2) return 1e9;
-        for (const o of cores) if (area(q, o)) return 1e8;   // never over a counter's plate, number or bars
-        for (const o of boxes0){ const a = area(q, o); if (!a) continue; if (o.hud) return 1e9;
-          if (o.unit && o.at === NP.capital){ c0 += a[0]*a[1]*0.2; continue; }   // the edges of your own capital's garrison counter (marks, padding): allowed, a clear spot still wins
-          if (L0 && o === L0.b){ if (a[0] > 6 && a[1] > 6) return 1e8; c0 += a[0]*a[1]*20; continue; }   // its own name: may touch it, never cover it
-          if (!o.unit && !o.fort) return 1e8;   // another name: never over it
-          c0 += a[0]*a[1]*10; }
-        for (const m of marks){ const a = area(q, [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]); if (!a) continue; if (m.p === NP.capital ? a[0] > 1.5 && a[1] > 1.5 : true) return 1e8; }   // never over a city marker (its own star only grazed)
-        for (const o of pnB){ const a = area(q, o); if (a){ if (o.you) return 1e8; c0 += a[0]*a[1]*10; } }   // (off the power names: never over your own)
+        for (const o of cores){ const a = area(q, o.core); if (a) c0 += (o.at === cap ? 3e4 : 9e4) + a[0]*a[1]*60; }   // under a counter's plate, number or bars: a last resort (it is drawn under the counters)
+        for (const o of near){ const a = area(q, o); if (!a) continue; if (o.hud) return 1e9;
+          c0 += o.unit && o.at === cap ? a[0]*a[1]*0.2 : o.unit || o.fort ? a[0]*a[1]*8 : 3000 + a[0]*a[1]*30; }   // (the edges of your own garrison's counter are fine; a name placed before it costs)
+        for (const m of mk){ const a = area(q, [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]); if (a) c0 += 6e4 + a[0]*a[1]*60; }   // another city's marker
         for (const o of [PO, PS]) if (o){ const a = area(q, o); if (a) c0 += a[0]*a[1]*20; } }   // (the capital's oil derrick and silo glyphs: better left in view)
       const qb = qs[2], dq = (mx, my) => Math.hypot(Math.max(qb[0] - mx, 0, mx - qb[2]), Math.max(qb[1] - my, 0, my - qb[3])), d0 = dq(x, cy);   // nearer your star than any other city's marker, so it never reads as theirs
-      for (const m of marks) if (m.p !== NP.capital && dq(m.x, m.y) - m.r < Math.min(d0 - R + 4, 10)) return 1e8;
+      if (!led) for (const m of mk) if (dq(m.x, m.y) - m.r < Math.min(d0 - R + 4, 10)) { c0 += 2e4; break; }   // (a leader line ties it to your star)
       return c0; };
-    let bestT = null, bc = Infinity; const cc = []; for (const c1 of cands){ const c0 = cost(c1); cc.push(Math.round(c0)); if (c0 < bc){ bc = c0; bestT = c1; } if (!c0) break; }
-    if (window.__dbgBoxes) tagDbg = {none:1, cc};
-    if (!bestT || bc >= 1e8) return;
-    const [ix, iy, qs] = rectsAt(bestT[0], bestT[1]); capTagAt = {tx:ix + w/2, ty:iy, w, h, x, cy, R, ix, iy}; HQBOX = qs;
-    if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = cc; }
+    // candidates: its own bearing first, then out along it, then turning round the star in 20 degree steps (each step and each pixel out costs, so it stays put; far out costs more than turning)
+    const th0 = hqBearing(cap), cands = [];
+    for (let d = 0; d <= 9; d++) for (const sg of d && d < 9 ? [1, -1] : [1]) for (const e of [0, 5, 10, 16, 24, 34, 46, 60]){ const dd = d*sg; cands.push([dd, e, d*1500 + e*30 + e*e*3 - (HQ_LAST && HQ_LAST.k === cap + '|' + K && HQ_LAST.d === dd && HQ_LAST.e === e ? 900 : 0)]); }
+    cands.sort((p1, p2) => p1[2] - p2[2]);
+    let bt = null, bc = Infinity, n = 0; const RC = new Map();
+    for (const [dd, e, base] of cands){ if (base >= bc) break; n++;
+      const an = th0 + dd*Math.PI/9, ux = Math.cos(an), uy = Math.sin(an); let t0 = RC.get(dd); if (t0 === undefined){ t0 = reach(ux, uy); RC.set(dd, t0); }
+      const px = x + ux*(t0 + 2 + e), py = cy + uy*(t0 + 2 + e), c0 = base + cost(px, py, e >= 10); if (window.__dbgAll) window.__dbgAll.push([dd, e, Math.round(c0)]); if (c0 < bc){ bc = c0; bt = [px, py, dd, e, ux, uy, c0 - base]; } }
+    if (window.__dbgBoxes) tagDbg = {none:1, n, bc};
+    if (!bt || bc >= 1e9) return;
+    HQ_LAST = {k:cap + '|' + K, d:bt[2], e:bt[3]};
+    const [ix, iy, qs] = rectsAt(bt[0], bt[1]); capTagAt = {tx:ix + w/2, ty:iy, w, h, x, cy, R, ix, iy, lead:bt[3] >= 10 ? [x + bt[4]*(R + 1), cy + bt[5]*(R + 1), bt[0], bt[1]] : null}; HQBOX = qs;
+    if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = [Math.round(bc)]; tagDbg.d = bt[2]; tagDbg.e = bt[3]; tagDbg.g = ground(bt[0], bt[1]); tagDbg.th = Math.round(th0*180/Math.PI); }
     for (const q of qs){ const tb = [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); } };   // the names placed after it keep a little clear of it
+  if (!tagTried) placeTag();
   // place labels: highest rank first, skip any that would overlap one already placed
   // building trays: city ones once the city names are placed (they give way to names, not to province names), countryside ones last
   const labDbg = window.__dbgBoxes ? [] : null;
@@ -9144,13 +9205,12 @@ function draw(now){
           for (const [x0, yt] of [[b0[0], y0], ...cand]){ const bx = [x0, yt - 1, x0 + w, yt + f + 2], s0 = (blocked(bx) ? 1e7 : 0) + coreA(bx); if (s0 < bs){ bs = s0; bk = bx; } if (!s0) break; }
           if (bs > 0 && !(mine && bs < 1e7)) { if (!mine) continue; bk = b0; }
           for (let i = 0; i < 4; i++) b[i] = bk[i]; lx = b[0] + w/2; ly = b[1] + 1; late = !coreA(b); } }
-      if (L.city || L.cap) b.city = true; boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; if (!tagTried) placeTag(); }
+      if (L.city || L.cap) b.city = true; boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; }
       if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0});
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else { ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
     if (!trCity) trays = placeTrays(trq, boxes, LPL, true, hexPx); trays = trays.concat(placeTrays(trq, boxes, LPL, false, hexPx));
     ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
-  if (!tagTried) placeTag();   // your capital's name hidden or left out: the HQ still goes by the star
   if (!pnDone) placePN(false);   // (once the province names are up, the other powers' names come last)
   for (const T of trays) drawTray(T, now, hexPx, kl);
   ctx.globalAlpha = 1;
@@ -9159,7 +9219,10 @@ function draw(now){
     if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + CITY_DY*kl;
       if (!(hexPx >= ART_PX && bartOk('city'))){ ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
     }
-    const hq = capTagAt && hqCanvas(); if (hq){ ctx.globalAlpha = 1; ctx.drawImage(hq, snapD(capTagAt.ix), snapD(capTagAt.iy), hq.width/dpr, hq.height/dpr); } }
+    const hq = capTagAt && hqCanvas(); if (hq){ ctx.globalAlpha = 1;
+      const L = capTagAt.lead; if (L){ ctx.beginPath(); ctx.moveTo(L[0], L[1]); ctx.lineTo(L[2], L[3]); ctx.lineCap = 'round'; ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(4,7,9,.55)'; ctx.stroke();
+        ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(246,239,220,.92)'; ctx.stroke(); ctx.lineCap = 'butt'; }   // a short leader line when it stands further out
+      ctx.drawImage(hq, snapD(capTagAt.ix), snapD(capTagAt.iy), hq.width/dpr*HQ_K/HQ_KB, hq.height/dpr*HQ_K/HQ_KB); } }
   // battles: each fighting plate carries its own crossed-bars badge; the province shows the strength balance in one slim bar under the fighting plates
   for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue;
     const sides = new Map(); for (const a of S.armies){ if (a.at !== p || a.to !== null || a.fly) continue; sides.set(a.owner, (sides.get(a.owner) || 0) + power(a)); }
@@ -9245,7 +9308,7 @@ function draw(now){
   } } finally { counter.defer = null; VOLA = 1; }
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
-  if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null,
+  if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null,
     pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl};   /*DBGBOX*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
   if (sel.army !== null && !afxReduced()){ if (SELFX.a !== sel.army){ SELFX.a = sel.army; SELFX.at = now; }
@@ -9904,7 +9967,7 @@ function renderSide(force){
   setHTML($('ctx'), ctxHTML());
   { const key = sel.army !== null ? 'a' + sel.army : sel.prov !== null ? 'p' + sel.prov : 'o';   // a new selection: the command panel slides in (from the right; back to the overview from the left)
     if (renderSide.ck !== key){ const was = renderSide.ck; renderSide.ck = key; if (key === 'o') sideOpen = false; else if (key[0] === 'a') sideReveal(sel.army); if (was != null && tab === 'cmd') slideIn($('ctx'), key === 'o' ? -16 : 16); } }
-  { if (tab === 'log') seenHour = S.hour; const n = tab === 'log' ? 0 : S.log.filter(e => e.h > seenHour && (e.kind === 'bad' || e.kind === 'good')).length;
+  { if (tab === 'log') seenHour = S.hour; const n = tab === 'log' ? 0 : S.log.filter(e => e.h > seenHour).length;   // every dispatch not read yet
     for (const id of ['logbadge', 'notifbadge', 'railbadge', 'morebadge']){ const bb = $(id); if (bb){ bb.hidden = n <= 0; bb.textContent = n > 99 ? '99+' : n; } } }
   if (modalKind === 'research' && !$('modal').hidden){
     setHTML($('sheet'), researchHTML()); rPatch(N);
@@ -10161,7 +10224,7 @@ function rLayout(br){ if (RLAY[br]) return RLAY[br];
   return (RLAY[br] = {L, pos, cols:Math.max(1, nc), r0, rows:r1 - r0 + 1, inB}); }
 // a banner's picture: the owner's top-down unit photo turned to face the title (pictures stored nose-down are turned the other way); building art stays upright
 const rbImg = art => { const e = Object.values(UART).find(u => u[0] === art), rot = /^b-/.test(art) ? 0 : e && e[1] ? 96 : -84;
-  return `<span class="rs-bw" aria-hidden="true"><i class="rs-bimg${rot ? '' : ' flat'}" style="background-image:url('${ART.url(art)}');--rot:${rot}deg"></i></span>`; };
+  return `<span class="rs-bw" aria-hidden="true">${['b1', 'b2', 'b3'].map(k => `<i class="rs-bimg ${k}${rot ? '' : ' flat'}" style="background-image:url('${ART.url(art)}');--rot:${rot}deg"></i>`).join('')}</span>`; };   // a column of three across the banner
 const rDur = h => h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`;
 // may this project wait in slot #2? (slot #1 busy, not yet known, and what it needs is known or being researched now)
 function rCanQueue(n, id){ const N = S.nations[n], T = TECH_BY[id], R = N.research; return !!(T && N.alive && R && R.id !== id && !has(n, id) && (!T.req || has(n, T.req) || R.id === T.req)); }
@@ -10217,7 +10280,7 @@ function researchHTML(){
   const br = RV.br, M = RB[br] || {g:'atk'}, Ly = rLayout(br), L = Ly.L, dn = L.filter(T => has(PLAYER, T.id)).length;
   if (RV.sel && (!TECH_BY[RV.sel] || TECH_BY[RV.sel].branch !== br)) RV.sel = null;
   const st = T => has(PLAYER, T.id) ? 'done' : R && R.id === T.id ? 'run' : (!T.req || has(PLAYER, T.req)) ? 'open' : 'lock';
-  const CV = Ly.cols < 3 ? Ly.cols + 2 : Ly.cols, CO = CV > Ly.cols ? 1 : 0;   // shown columns, and the offset of the branch's own
+  const INFO = Ly.cols === 1, CV = INFO ? 3 : Ly.cols < 3 ? Ly.cols + 2 : Ly.cols, CO = INFO ? 0 : CV > Ly.cols ? 1 : 0;   // shown columns, and the offset of the branch's own (a single lane: nodes on the left, a card beside each)
   const X = c => (c + CO + .5)*100, Y = r => (r - Ly.r0 + .36)*100;
   let lines = '';
   for (const T of L){ const p = Ly.pos[T.id], lit = !T.req || has(PLAYER, T.req), cls = lit ? (has(PLAYER, T.id) ? 'on' : 'av') : '';
@@ -10229,7 +10292,10 @@ function researchHTML(){
     return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${F.ut ? ' unit' : F.up ? ' upg' : ' gly'}" data-act="rsel" data-id="${T.id}"${s === 'run' ? ' id="rring"' : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}">
       <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>${F.up && F.ut ? `<i class="rup up-${F.up}" title="${F.up === 'atk' ? 'Attack' : F.up === 'def' ? 'Defense' : F.up === 'spd' ? 'Speed' : 'Detection'} upgrade">${rg(F.up, 12)}</i>` : ''}
       ${s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s === 'run' ? `<i class="rbdg run">#1</i>` : q ? `<i class="rbdg qd">#2</i>` : ''}
-      <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>`; }).join('');
+      <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>` +
+      (INFO ? (() => { const ut = techUnit(T), rq = T.req ? TECH_BY[T.req] : null, tc = techCost(T);
+        const m = s === 'done' ? `<span class="ri-s ok">${rg('check', 11)} Researched</span>` : s === 'run' ? `<span class="ri-s run">In slot #1</span>` : s === 'lock' && rq ? `<span class="ri-s lk">${rg('lock', 11)} After ${rq.name.split(' · ')[0]}</span>` : `${costHTML(tc, N)}<span class="ri-t">${T.days} d</span>${q ? '<span class="ri-s qd">Slot #2</span>' : ''}`;
+        return `<button class="rinfo st-${s}${RV.sel === T.id ? ' sel' : ''}" data-act="rsel" data-id="${T.id}" style="--r:${p.r - Ly.r0}" tabindex="-1" aria-hidden="true"><b>${T.name}</b><span class="ri-d">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span><span class="ri-m">${m}</span></button>`; })() : ''); }).join('');
   const rowsL = Array.from({length:Ly.rows}, (_, i) => `<span style="--r:${i}">${Ly.r0 + i + 1}</span>`).join('');
   h += `<div class="rs-thead"><span class="rs-tc" title="Research step: how many projects lead to it">${rg('steps', 18)}</span><b>${rg(M.g, 22)} ${br}</b><span class="rs-tn">${dn}/${L.length} researched</span></div>
     <div class="rs-tree" style="--cols:${CV};--rows:${Ly.rows}"><div class="rs-rows">${rowsL}</div>
@@ -10652,7 +10718,8 @@ document.addEventListener('click', e => {
     case 'allpow': showAllPowers = true; renderSide(true); break;
     case 'goto': { if (!$('modal').hidden) closeModal(); const P = G.P[+b.dataset.id]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.1)); if (!P.sea) selectProv(P.id); break; }
     case 'clear': clearSel(); break;
-    case 'side-open': { const on = !document.body.classList.contains('side-on'); if (on){ sideOpen = true; if (tab !== 'cmd' && sel.army === null && sel.prov === null) setTab('cmd'); } else { sideOpen = false; if (sel.army !== null || sel.prov !== null){ clearSel(); break; } } renderSide(true); break; }
+    case 'side-open': { if (innerWidth > 820){ if (sel.army !== null || sel.prov !== null) clearSel(); setTab('cmd'); renderSide(true); const sd = $('side'); if (sd){ sd.scrollTop = 0; slideIn($('ctx'), -16); } break; }   // desktop: the panel is always there
+      const on = !document.body.classList.contains('side-on'); if (on){ sideOpen = true; if (tab !== 'cmd' && sel.army === null && sel.prov === null) setTab('cmd'); } else { sideOpen = false; if (sel.army !== null || sel.prov !== null){ clearSel(); break; } } renderSide(true); break; }
     case 'side-x': sideOpen = false; if (sel.army !== null || sel.prov !== null) clearSel(); else renderSide(true); break;
     case 'send': if (a){ delete a.escort; sendToTarget(a); } break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
@@ -10778,7 +10845,9 @@ document.addEventListener('click', e => {
     case 'rback': RV.br = null; RV.sel = null; setHTML($('sheet'), researchHTML()); $('sheet').scrollTop = 0; renderSide(true); break;
     case 'rsel': { const id = b.dataset.id, T = TECH_BY[id]; if (!T) break; const nb = T.branch !== RV.br; RV.br = T.branch; RV.sel = id; const N0 = S.nations[PLAYER];
       if (!b.classList.contains('rs-slot') && N0.research && !N0.rqueue && rQueue(id)) toast(`${T.name} queued in slot #2: it starts when ${TECH_BY[N0.research.id].name} is done.`, 'info', null);   // slot #1 busy: tapping a project queues it next
-      setHTML($('sheet'), researchHTML()); if (nb) $('sheet').scrollTop = 0; renderSide(true); break; }
+      setHTML($('sheet'), researchHTML()); if (nb) $('sheet').scrollTop = 0; renderSide(true);
+      { const sh = $('sheet'), ne = sh.querySelector(`.rnode[data-id="${id}"]`), dt = sh.querySelector('.rs-det'); if (ne && dt){ const over = ne.getBoundingClientRect().bottom + 12 - dt.getBoundingClientRect().top; if (over > 0) sh.scrollBy({top:over, behavior:AFX_RM && AFX_RM.matches ? 'auto' : 'smooth'}); } }   // (the selected node stays clear of the detail strip)
+      break; }
     case 'rqueue': { const T = TECH_BY[b.dataset.id]; if (T && rQueue(T.id)) toast(`${T.name} queued in slot #2.`, 'info', null); renderSide(true); break; }
     case 'runqueue': S.nations[PLAYER].rqueue = null; renderSide(true); break;
     case 'pick': pickSel = +b.dataset.p; showPicker(); break;
