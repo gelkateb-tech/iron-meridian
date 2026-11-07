@@ -1652,6 +1652,144 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
 }
 @media (max-width: 400px){ .cs-bt b{font-size:14px; letter-spacing:.02em} .cs-bi{width:38px; height:38px} .cs-big{gap:8px} .cs-nm{font-size:19px} .cs-yl{gap:8px} }
 @media (prefers-reduced-motion: reduce){ .csheet, .csheet.out, .cs-flash{animation:none} }
+
+/* ===================== v3.8 repair: CoN chrome, second pass =====================
+   Outlined figures everywhere on the bars, bold coloured resource icons, five equal bottom tabs (Army and Production live in More), a gold VP meter,
+   readable title bands with a red close box, one solid action row on the city sheet, and on phones the map between the bars with every detail in sheets. */
+:root{--cn-out:1px 0 0 #0d171c, -1px 0 0 #0d171c, 0 1px 0 #0d171c, 0 -1px 0 #0d171c, 1px 1px 0 #0d171c, -1px -1px 0 #0d171c, 1px -1px 0 #0d171c, -1px 1px 0 #0d171c, 0 2px 3px rgba(0,0,0,.55)}
+#res .chip b, .mcell b, .hbox b, .vbar .vm b{text-shadow:var(--cn-out)}
+#res .chip > svg.rico{flex:none; width:30px; height:30px; margin:0; filter:drop-shadow(0 1px 1px rgba(0,0,0,.75)) drop-shadow(0 0 3px rgba(0,0,0,.25))}
+#res .chip:hover > svg.rico{transform:translateY(-1px)} #res .chip > svg.rico{transition:transform .15s var(--ease)}
+/* desktop: icon beside the figure, both large, the daily change under the figure */
+@media (min-width: 821px){
+  .hrow2{height:58px}
+  #res .chip{flex-direction:row; gap:11px; padding:0 10px}
+  #res .chip > svg.rico{width:40px; height:40px}
+  #res .chip .vv{flex-direction:column; align-items:flex-start; gap:4px}
+  #res .chip b{font-size:21px; letter-spacing:.01em}
+  #res .chip .d{position:static; font-size:11.5px; font-weight:700}
+  .mslc .crate{width:46px; height:37px}
+  /* the missile dropdown: three rich cells, the picture beside a name, the count and a status line */
+  .mslmenu{width:37.5%; min-width:460px; max-width:600px}
+  .mcell{flex-direction:row; justify-content:center; gap:14px; height:80px; padding:0 12px}
+  .mcell .mpic{width:50px; height:50px}
+  .mcell .mtx{align-items:flex-start}
+  .mcell b{font-size:24px}
+  .mcell small{font-size:10.5px}
+}
+.mcell .mpic{position:relative; flex:none; display:grid; place-items:center; width:34px; height:34px; border-radius:50%;
+  background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.16), rgba(0,0,0,.18) 70%); box-shadow:inset 0 0 0 1px rgba(143,163,170,.35)}
+.mcell .mpic > svg{width:86%; height:86%; filter:drop-shadow(0 1px 2px rgba(0,0,0,.75))}
+.mcell .mtx{display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0}
+.mcell .mn{font:700 10.5px/1 var(--body); letter-spacing:.09em; text-transform:uppercase; color:var(--cn-fg2); white-space:nowrap}
+.mcell small{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%}
+.mcell.lock .mpic > svg{filter:saturate(.45) brightness(.92) drop-shadow(0 1px 2px rgba(0,0,0,.75)); opacity:1}
+.mcell.lock > svg:first-child{filter:none; opacity:1}
+.mcell.lock b{color:#d3dde0} .mcell.lock small{color:#f2c94c}
+.mcell .lk{position:absolute; right:-3px; bottom:-3px; top:auto; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; background:linear-gradient(180deg, #f6d35a, #d6a017); box-shadow:0 0 0 1.5px #2b3c43, 0 1px 3px rgba(0,0,0,.6)}
+@media (max-width: 820px){ .mcell .mn{display:none} .mcell .mpic{width:32px; height:32px; background:none; box-shadow:none} .mcell .lk{width:15px; height:15px; right:-4px; bottom:-2px} .mcell .lk svg{width:8px; height:10px} .mcell small{font-size:9px} }
+/* victory meter: the gold accent */
+.vbar .vm i{background:linear-gradient(180deg, #f6d45c, #d9a61c 55%, #b88412); box-shadow:inset -1px 0 0 rgba(255,240,180,.8), 0 0 6px rgba(232,185,35,.45)}
+.vbar .vm b small{font-size:11.5px; letter-spacing:.04em}
+/* bottom nav: five equal tabs; More lights up while one of its panels is open */
+#dock > .dk.cur{background:linear-gradient(180deg, #557079, #3a5059 70%, #33474f); box-shadow:inset 0 1px 0 rgba(255,255,255,.16), inset 0 -2px 0 var(--cn-teal)}
+#dock > .dk.cur .ln, #dock > .dk.cur .sn{color:#fff}
+#dock > .dk .dl .ln{font-size:12.5px}
+#dock #moredot{top:9px; right:calc(50% - 21px)}
+@media (max-width: 430px){ #dock > .dk .dl .ln{display:block; font:500 11.5px/1 var(--body); color:var(--cn-fg2)} #dock > .dk .dl .sn{display:none} #dock > .dk.on .ln, #dock > .dk.cur .ln{color:#fff} }
+/* More: no keyboard chips on phones and touch screens (they read like count badges there) */
+@media (max-width: 820px), (pointer: coarse){ #dock .morepop .dl kbd{display:none} }
+#dock .morepop .dk.on{box-shadow:inset 3px 0 0 var(--cn-teal)}
+/* the advisor shield only matters where the command panel is a sheet */
+#railside{display:none}
+.shd.adv .si{width:26px; height:26px; margin-top:7px}
+/* title bands: the light part runs under the whole title and eyebrow; the red close box sits at the right */
+.sheet > .rhead:first-child, .sheet > .hhead:first-child{background:linear-gradient(100deg, #f3f6f7 0%, #e7edef 42%, rgba(231,237,239,.82) 58%, rgba(231,237,239,0) 80%), linear-gradient(112deg, transparent 70%, rgba(255,255,255,.08) 70.4%, rgba(255,255,255,.08) 73%, transparent 73.4%), linear-gradient(180deg, #30566b, #1f3a4b)}
+.sheet > .rhead:first-child .eyebrow, .sheet > .hhead:first-child .eyebrow{color:#2e464e!important; text-shadow:0 1px 0 rgba(255,255,255,.7); font-weight:700}
+.sheet > .rhead:first-child .eyebrow .idle{color:#b3191a; text-shadow:none}
+.sheet > .rhead.hasx:first-child, .sheet > .hhead.hasx:first-child{padding-right:70px}
+.sheet > .rhead > .mx, .sheet > .hhead > .mx{position:absolute; right:16px; top:50%; margin-top:-18px}
+/* city sheet: MOBILIZE UNIT and BUILD as one solid row joined to the card */
+.csheet{gap:0}
+.cs-acts{gap:0; padding:3px; background:linear-gradient(180deg, #2b3c43, #22323a); border-radius:2px 2px 0 0; box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 -4px 14px rgba(0,0,0,.35)}
+.cs-acts .cs-big{max-width:none; box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(143,163,170,.34)}
+.cs-acts .cs-big + .cs-big{margin-left:3px}
+.cs-acts.one{justify-content:stretch} .cs-acts.one .cs-big{flex:1 1 0}
+.csheet .cs-body{border-radius:0 0 2px 2px}
+.side-x{display:none}
+
+/* ---- phones: the map fills the screen between the bars; the command panel is a sheet that rises when it has something to show ---- */
+@media (max-width: 820px){
+  main, body.cs-on main{position:relative; grid-template-rows:minmax(0, 1fr)}
+  #map{height:100%}
+  #mapwrap::after{display:none}
+  aside#side{position:absolute; left:0; right:0; bottom:0; z-index:7; max-height:min(46%, 460px); min-height:0; overflow:auto; overscroll-behavior:contain;
+    border-top:1px solid var(--cn-edge); box-shadow:0 -6px 22px rgba(0,0,0,.55), 0 -1px 0 rgba(79,208,222,.35);
+    transform:translateY(calc(100% + 16px)); visibility:hidden; transition:transform .26s var(--ease), visibility 0s linear .26s}
+  body.side-on aside#side{transform:none; visibility:visible; transition:transform .26s var(--ease), visibility 0s}
+  body.cs-on aside#side{display:flex; transform:translateY(calc(100% + 16px)); visibility:hidden}
+  body.hud-intro aside#side{animation:none!important}
+  aside#side .tabs{margin-right:36px}
+  .side-x{position:sticky; top:0; z-index:3; order:-1; align-self:flex-end; flex:none; display:grid; place-items:center; width:44px; height:41px; margin:0 -8px -41px 0; padding:0; border:0; border-radius:0; color:#fff; cursor:pointer;
+    background:linear-gradient(180deg, #d9413b, #b22622); box-shadow:inset 0 1px 0 rgba(255,255,255,.3), inset 1px 0 0 rgba(0,0,0,.3)}
+  .side-x:active{filter:brightness(.9)}
+  #railside{display:block}
+  /* map controls float on the map's lower corners (and rise with a sheet) */
+  .modes{top:auto; bottom:calc(var(--sideh, 0px) + 8px); left:8px; right:auto; z-index:6; background:rgba(43,60,67,.9); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 4px 12px rgba(0,0,0,.45); border-radius:3px; transition:bottom .26s var(--ease)}
+  #mini, #miniframe{display:none}
+  #hint{top:6px; bottom:auto}
+  .mapctl{flex-direction:row; top:auto; left:auto; bottom:calc(var(--sideh, 0px) + 8px); right:8px; z-index:6; background:rgba(43,60,67,.9); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 4px 12px rgba(0,0,0,.45); border-radius:3px; padding:2px; transition:bottom .26s var(--ease)}
+  body.cs-on .mapctl, body.cs-on #modes{bottom:calc(var(--csh, 0px) + 8px)}
+  #cmdbar{bottom:calc(var(--sideh, 0px) + 8px)!important; transition:bottom .26s var(--ease)}
+  #mapwrap:has(#cmdbar:not([hidden])) .modes, #mapwrap:has(#cmdbar:not([hidden])) .mapctl{opacity:0; pointer-events:none}
+  .vbar .vm b small{display:inline!important; font-size:10px}
+  body.cs-on #cmdbar{bottom:calc(var(--csh, 0px) + 8px)!important}
+  #toasts{bottom:auto}
+  .tlegend{bottom:calc(var(--sideh, 0px) + 48px)}
+  /* panels fill the space between the two bars */
+  #modal.docked{padding:0}
+  #modal.docked > .sheet{width:100%; height:100%; max-height:none; border-radius:0; box-shadow:none}
+  .sheet > .rhead:first-child, .sheet > .hhead:first-child{background:linear-gradient(100deg, #f3f6f7 0%, #e7edef 60%, rgba(231,237,239,.85) 74%, rgba(231,237,239,0) 94%), linear-gradient(180deg, #30566b, #1f3a4b)}
+  .sheet > .rhead > .mx, .sheet > .hhead > .mx{right:10px}
+  .sheet > .rhead.hasx:first-child, .sheet > .hhead.hasx:first-child{padding-right:58px}
+  /* resource cells: icon over a compact outlined figure */
+  #res .chip{gap:3px; padding:4px 1px 3px}
+  #res .chip > svg.rico{width:26px; height:26px}
+  #res .chip b{font-size:13.5px; letter-spacing:-.01em}
+  /* city sheet: the row stays solid on phones too */
+  .cs-acts{padding:3px; gap:0}
+}
+@media (max-width: 480px){ #res .chip > svg.rico{width:24px; height:24px} #res .chip b{font-size:13px} }
+
+/* research tree, second pass: labels are name plates the connectors pass behind, set well under the badges; upgrade badges on unit portraits */
+.rnode{width:min(168px, calc(100% / var(--cols) - 8px))}
+.rnode .rn{display:flex; flex-direction:column; align-items:center; gap:1px; width:auto; max-width:100%; margin-top:30px; padding:3px 7px 4px; border-radius:2px;
+  background:linear-gradient(180deg, rgba(27,42,49,.94), rgba(21,33,39,.94)); box-shadow:0 0 0 1px rgba(143,163,170,.32), 0 2px 5px rgba(0,0,0,.45); -webkit-line-clamp:unset; overflow:visible}
+.rnode .rn b{font:700 11.5px/1.15 var(--body); color:#eef5f6; white-space:normal; overflow-wrap:anywhere}
+.rnode .rn small{font:500 10px/1.15 var(--body); color:#a9bec4; white-space:normal}
+.rnode.st-open .rn{box-shadow:0 0 0 1px rgba(79,208,222,.55), 0 2px 5px rgba(0,0,0,.45)} .rnode.sel .rn{box-shadow:0 0 0 1.5px #fff, 0 2px 6px rgba(0,0,0,.5)} .rnode.sel .rn b{color:#9ff5fb}
+.rnode.st-lock .rn b{color:#b9c6ca}
+.rnode .rx{margin-top:3px}
+.rbdg{top:47px}
+.rup{position:absolute; z-index:2; top:-6px; left:calc(50% + 14px); display:grid; place-items:center; width:21px; height:21px; border-radius:50%; font-style:normal; color:#fff;
+  background:linear-gradient(180deg, #e0574f, #a8302a); border:1.5px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.6)}
+.rup.up-def{background:linear-gradient(180deg, #4f9fd6, #2a6799)} .rup.up-spd{background:linear-gradient(180deg, #e8b923, #b8870e); color:#2a1f00} .rup.up-eye{background:linear-gradient(180deg, #4fd0de, #23808c)}
+.rnode.st-lock .rup{filter:grayscale(.7) brightness(.85)}
+.rs-lines path{stroke-width:3.5}
+@media (min-width: 821px){
+  .rs-tree{--rh:150px}
+  .rnode{top:calc(var(--r)*var(--rh) + var(--rh)*.36 - 29px)} .rnode .dm{width:58px; height:58px} .rnode .rface.u .ut{--us:72px} .rnode .rface.g .rg{width:32px; height:32px}
+  .rnode.st-run::before{top:-10px; left:calc(50% - 39px); width:78px; height:78px}
+  .rbdg{top:58px} .rnode .rn{margin-top:25px} .rnode .rn b{font-size:12.5px} .rnode .rn small{font-size:10.5px}
+  .rup{top:-8px; left:calc(50% + 18px); width:23px; height:23px}
+}
+@media (max-width: 820px){
+  .rnode{width:calc(100% / var(--cols) - 4px)}
+  .rnode .rn{margin-top:23px; padding:2px 4px 3px} .rnode .rn b{font-size:10.5px} .rnode .rn small{font-size:9px}
+  .rbdg{top:40px}
+  .rup{width:18px; height:18px; top:-6px; left:calc(50% + 11px)} .rup .rg{width:10px; height:10px}
+  .rs-tree{--rh:124px}
+}
 </style>
 
 <div id="app">
@@ -1686,10 +1824,10 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
     <button class="dk" id="mktbtn" data-act="market-open" data-kind="market" aria-label="Market"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20.5h18"/><path d="M6.5 8v10M11.5 5v9M16.5 9v9"/><rect x="5" y="10.5" width="3" height="5" rx=".6" fill="currentColor" fill-opacity=".2"/><rect x="10" y="7" width="3" height="4.6" rx=".6" fill="currentColor" fill-opacity=".2"/><rect x="15" y="11.5" width="3" height="4.2" rx=".6" fill="currentColor" fill-opacity=".2"/><path d="M3.5 13.5l5-4 4 2 7.5-7"/><path d="M16.6 4.4h3.4v3.4"/></svg><span class="dl"><b class="ln">Market</b><b class="sn">Market</b><kbd>T</kbd></span></button>
     <button class="dk" id="citybtn" data-act="cities-open" data-kind="cities" aria-label="Cities"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20.5V11h4.5v9.5M7.5 20.5V6.5L12 4v16.5M12 20.5V9h4v11.5M16 20.5v-7h5v7" fill="currentColor" fill-opacity=".14"/><path d="M1.8 20.5h20.4"/><path d="M9.3 8.5h1M9.3 11.5h1M9.3 14.5h1M13.6 12h.8M13.6 15h.8M4.8 14h1M4.8 17h1M18 16h1"/></svg><span class="dl"><b class="ln">Cities</b><b class="sn">Cities</b><kbd>C</kbd></span><span class="badge" id="citybadge" hidden></span></button>
     <button class="dk" id="resbtn" data-act="research-open" data-kind="research" aria-label="Research"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="9.4" ry="3.7"/><ellipse cx="12" cy="12" rx="9.4" ry="3.7" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9.4" ry="3.7" transform="rotate(-60 12 12)"/><circle cx="12" cy="12" r="1.9" fill="currentColor"/></svg><span class="dl"><b class="ln">Research</b><b class="sn">Research</b><kbd>R</kbd></span><span class="badge" id="resdot" hidden>1</span></button>
-    <button class="dk" id="armbtn" data-act="armies-open" data-kind="armies" aria-label="Army"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 15.4h17.6l-1.5 3.6H4.7z" fill="currentColor" fill-opacity=".16"/><path d="M4.8 15.4l1.6-3.2h10.2l2 3.2"/><path d="M8.6 12.2l.8-2.6h5.2l1 2.6"/><path d="M14.4 10.6l7.2-1.4"/><circle cx="7.4" cy="17.2" r=".7" fill="currentColor"/><circle cx="12" cy="17.2" r=".7" fill="currentColor"/><circle cx="16.6" cy="17.2" r=".7" fill="currentColor"/></svg><span class="dl"><b class="ln">Army</b><b class="sn">Army</b><kbd>A</kbd></span></button>
-    <button class="dk" id="prodbtn" data-act="prod-open" data-kind="prod" aria-label="Production"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 20.5V11.2l4.6 2.9v-2.9l4.6 2.9v-2.9l4.6 2.9V5h3.6v15.5z" fill="currentColor" fill-opacity=".16"/><path d="M1.8 20.5h20.4"/><path d="M6 17.4h1.8M10.6 17.4h1.8M15.2 17.4h1.8"/><path d="M17.6 3.2c.6-.9 1.7-1.3 2.7-.9"/></svg><span class="dl"><b class="ln">Production</b><b class="sn">Prod.</b><kbd>P</kbd></span><span class="dot" id="proddot" hidden></span></button>
-    <button class="dk" id="morebtn" data-act="more" aria-label="More" aria-haspopup="menu" aria-expanded="false" aria-controls="morepop"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 6.5h15M4.5 12h15M4.5 17.5h15"/></svg><span class="dl"><b class="ln">More</b><b class="sn">More</b></span><span class="badge" id="morebadge" hidden></span></button>
+    <button class="dk" id="morebtn" data-act="more" aria-label="More" aria-haspopup="menu" aria-expanded="false" aria-controls="morepop"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 6.5h15M4.5 12h15M4.5 17.5h15"/></svg><span class="dl"><b class="ln">More</b><b class="sn">More</b></span><span class="badge" id="morebadge" hidden></span><span class="dot" id="moredot" hidden></span></button>
     <div class="morepop" id="morepop" role="menu" aria-label="More" hidden>
+      <button class="dk mi" role="menuitem" id="prodbtn" data-act="prod-open" data-kind="prod" aria-label="Production"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 20.5V11.2l4.6 2.9v-2.9l4.6 2.9v-2.9l4.6 2.9V5h3.6v15.5z" fill="currentColor" fill-opacity=".16"/><path d="M1.8 20.5h20.4"/><path d="M6 17.4h1.8M10.6 17.4h1.8M15.2 17.4h1.8"/><path d="M17.6 3.2c.6-.9 1.7-1.3 2.7-.9"/></svg><span class="dl"><b class="ln">Production</b><b class="sn">Production</b><kbd>P</kbd></span><span class="dot" id="proddot" hidden></span></button>
+      <button class="dk mi" role="menuitem" id="armbtn" data-act="armies-open" data-kind="armies" aria-label="Army"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 15.4h17.6l-1.5 3.6H4.7z" fill="currentColor" fill-opacity=".16"/><path d="M4.8 15.4l1.6-3.2h10.2l2 3.2"/><path d="M8.6 12.2l.8-2.6h5.2l1 2.6"/><path d="M14.4 10.6l7.2-1.4"/><circle cx="7.4" cy="17.2" r=".7" fill="currentColor"/><circle cx="12" cy="17.2" r=".7" fill="currentColor"/><circle cx="16.6" cy="17.2" r=".7" fill="currentColor"/></svg><span class="dl"><b class="ln">Armies</b><b class="sn">Armies</b><kbd>A</kbd></span></button>
       <button class="dk mi" role="menuitem" id="intelbtn" data-act="intel" data-kind="intel" aria-label="Intelligence"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.6 12s3.4-5.6 9.4-5.6 9.4 5.6 9.4 5.6-3.4 5.6-9.4 5.6S2.6 12 2.6 12z"/><circle cx="12" cy="12" r="2.6" fill="currentColor" fill-opacity=".25"/><circle cx="12" cy="12" r=".9" fill="currentColor"/><path d="M12 1.8v2.6M12 19.6v2.6M1.6 4.6V2.2h2.4M22.4 4.6V2.2H20M1.6 19.4v2.4h2.4M22.4 19.4v2.4H20"/></svg><span class="dl"><b class="ln">Intelligence</b><b class="sn">Intel</b></span><span class="dot" id="inteldot" hidden></span></button>
       <button class="dk mi" role="menuitem" id="setbtn" data-act="settings-open" data-kind="settings" aria-label="Settings"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.90 10.31 L21.20 10.61 L21.20 13.39 L18.90 13.69 L18.07 15.68 L19.48 17.52 L17.52 19.48 L15.68 18.07 L13.69 18.90 L13.39 21.20 L10.61 21.20 L10.31 18.90 L8.32 18.07 L6.48 19.48 L4.52 17.52 L5.93 15.68 L5.10 13.69 L2.80 13.39 L2.80 10.61 L5.10 10.31 L5.93 8.32 L4.52 6.48 L6.48 4.52 L8.32 5.93 L10.31 5.10 L10.61 2.80 L13.39 2.80 L13.69 5.10 L15.68 5.93 L17.52 4.52 L19.48 6.48 L18.07 8.32Z"/><circle cx="12" cy="12" r="3.1"/></svg><span class="dl"><b class="ln">Settings</b><b class="sn">Setup</b><kbd>O</kbd></span></button>
       <button class="dk mi" role="menuitem" id="mutebtn" data-act="mute" aria-label="Sound and music" aria-pressed="false"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.2h3.6L12.5 5v14l-4.9-4.2H4z" fill="currentColor" fill-opacity=".16"/><path d="M16 9a4.2 4.2 0 0 1 0 6M18.7 6.4a8 8 0 0 1 0 11.2"/></svg><span class="dl"><b class="ln">Sound on</b><b class="sn">Sound</b><kbd>M</kbd></span></button>
@@ -1716,6 +1854,7 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
       <div class="rail" id="rail">
         <button class="shd" id="zhome" data-act="home" aria-label="Go to your capital" title="Go to your capital (H)"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M6 9.6v9.9h12V9.6" fill="currentColor" fill-opacity=".22"/><path d="M10 19.5v-5.2h4v5.2"/></svg></button>
         <button class="shd" id="railnotif" data-act="notif" aria-label="Dispatches" title="Dispatches&#10;News, battles and reports from the front"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.5" width="14" height="16.5" rx="1.6" fill="currentColor" fill-opacity=".18"/><path d="M9 4.5V3h6v1.5"/><path d="M8.2 9h7.6M8.2 12.5h7.6M8.2 16h4.6"/></svg><span class="badge" id="railbadge" hidden></span></button>
+        <button class="shd adv" id="railside" data-act="side-open" aria-label="Command panel" title="Command panel&#10;Your advisor: first steps, your forces and the selected province"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4.2 21.6c.5-3.9 3.4-5.9 7.8-5.9s7.3 2 7.8 5.9z" fill="#4f6b3a" stroke="#14200d" stroke-width=".9"/><path d="M10 15.9l2 2.6 2-2.6" fill="none" stroke="#e8b923" stroke-width="1"/><circle cx="12" cy="11.4" r="3.7" fill="#e3b48a" stroke="#4a2f1a" stroke-width=".7"/><path d="M7.4 10.4c0-3.6 2-5.9 4.6-5.9s4.6 2.3 4.6 5.9c-1.3-.7-2.9-1-4.6-1s-3.3.3-4.6 1z" fill="#5f7a44" stroke="#14200d" stroke-width=".8"/><path d="M6.6 10.6h10.8" stroke="#2c3b1d" stroke-width="1.2" stroke-linecap="round"/><path d="M11.1 7.2l.9-.9.9.9-.9.9z" fill="#e8b923"/></svg></button>
         <button class="shd" id="zrel" data-act="relmode" aria-label="Relations map" title="Relations map (V)" aria-pressed="false"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></button>
       </div>
       <div id="miniframe" aria-hidden="true"></div>
@@ -1727,6 +1866,7 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
         <div class="ir"><i class="ik un">?</i><span><b>Unidentified</b> · AWACS radar: location only</span></div></div>
     </div>
     <aside id="side">
+      <button class="side-x" data-act="side-x" aria-label="Close panel" title="Close (Esc)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
       <div class="tabs" role="tablist">
         <button role="tab" data-act="tab" data-tab="cmd" aria-selected="true">Command</button>
         <button role="tab" data-act="tab" data-tab="pow" aria-selected="false">Powers</button>
@@ -6997,12 +7137,13 @@ function armyLocated(a, vis){ const L = vis.loc; if (!L || !L.size || a.owner ==
 let ILEG = '';
 function drawIntelLegend(vis, nUnk){ const el = document.getElementById('ilegend'); if (!el) return; const k = (vis.loc.size && nUnk) || vis.uav.size ? 'on' : ''; if (k === ILEG) return; ILEG = k; el.hidden = !k; }
 // unidentified contact: the flat plate with a '?' in a neutral cell and a small radar mark in the tab (no type, size or nation colour); static
-function unkPlate(x, y, s, now = performance.now()){ const ps = Math.max(0.85, Math.min(1.3, s)), h = Math.round(20*ps), C = Math.round(h*1.36), w = C + Math.round(0.7*h), r = Math.max(2, 0.14*h), x0 = snapD(x - w/2), y0 = snapD(y - h/2), CT = CELL_TONES.neu;
-  ctx.save(); ctx.translate(x0, y0); roundRect(ctx, 1, 2, w, h, r); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill();
-  roundRect(ctx, 0, 0, w, h, r); ctx.fillStyle = 'rgba(21,28,31,.92)'; ctx.fill(); ctx.save(); ctx.clip(); ctx.fillStyle = plateGrad(h, CT[0], CT[1]); ctx.fillRect(0, 0, C, h); ctx.restore();
-  roundRect(ctx, -0.5, -0.5, w + 1, h + 1, r + 0.5); ctx.setLineDash([3*ps, 2*ps]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.85)'; ctx.stroke(); ctx.setLineDash([]);
-  ctx.font = `800 ${Math.round(0.62*h)}px ${BODY}`; ctx.fillStyle = '#f6f3ea'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', C/2, h/2 + 0.5);
-  const bx = C + (w - C)/2, by = h/2; ctx.beginPath(); ctx.arc(bx, by, 2.2*ps, 0, Math.PI*2); ctx.fillStyle = '#9fd8ff'; ctx.fill(); ctx.beginPath(); ctx.arc(bx, by, 4.4*ps, -Math.PI*0.8, -Math.PI*0.2); ctx.strokeStyle = 'rgba(159,216,255,.7)'; ctx.lineWidth = 1.1; ctx.stroke();
+function unkPlate(x, y, s, now = performance.now()){ const ps = Math.max(0.85, Math.min(1.3, s)), h = Math.round(20*ps), C = Math.round(h*1.3), sk = Math.round(h*0.21), W0 = C + Math.round(0.8*h), w = W0 + sk, x0 = snapD(x - w/2), y0 = snapD(y - h/2), CT = PLATE_TONES.neu;
+  ctx.save(); ctx.translate(x0, y0); ctx.save(); ctx.transform(1, 0, -sk/h, 1, sk, 0);   // an unidentified radar contact: a grey slanted plate with a dashed edge
+  ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(0.8, 1.4, W0, h); ctx.fillStyle = plateGrad(h, CT[0], CT[1]); ctx.fillRect(0, 0, W0, h);
+  const ti = Math.max(1.5, Math.round(1.6*ps*2)/2); cutRect(ctx, ti, ti, C - ti, h - 2*ti, Math.round(0.3*h)); ctx.fillStyle = 'rgba(236,240,238,.85)'; ctx.fill();
+  ctx.setLineDash([3*ps, 2*ps]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.9)'; ctx.strokeRect(-0.5, -0.5, W0 + 1, h + 1); ctx.setLineDash([]); ctx.restore();
+  ctx.font = `italic 800 ${Math.round(0.68*h)}px ${BODY}`; ctx.fillStyle = '#20262a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', (ti + C)/2 + sk/2, h/2 + 0.5);
+  const bx = C + (W0 - C)/2 + sk/2, by = h/2; ctx.beginPath(); ctx.arc(bx, by, 2.2*ps, 0, Math.PI*2); ctx.fillStyle = '#9fd8ff'; ctx.fill(); ctx.beginPath(); ctx.arc(bx, by, 4.4*ps, -Math.PI*0.8, -Math.PI*0.2); ctx.strokeStyle = 'rgba(159,216,255,.7)'; ctx.lineWidth = 1.1; ctx.stroke();
   ctx.restore(); return {x:x0 - 2, y:y0 - 2, w:w + 4, h:h + 4}; }
 const GO = new Map();
 function armyPos(a){
@@ -7709,15 +7850,16 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   return (HUDR = {t:now, r:out}).r; }
 // h: plate height, C: icon cell width, tab: count tab width, r: corner radius, bars: what the health and morale bars add below (full plates)
-function plateDims(n, s, minor, two){ const sk = Math.max(0.85, Math.min(1.15, Math.max(0.75, s))), ps = Math.round((minor ? sk : Math.min(1.3, sk*plateGrow()))*20)/20;
-  const h = minor ? Math.round((view.s*HS0 >= FORM_PX ? 18 : 14)*sk) : Math.round(22*ps), fz = minor ? Math.round(h*0.68*2)/2 : Math.round(0.52*h), key = fz + ':' + n;
-  let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = `700 ${fz}px ${BODY}`; tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
-  const C = Math.round(h*1.36), tab = Math.round(Math.max(0.62*h, tw + 0.36*h, two ? 14*ps : 0)), HB = Math.max(2, Math.round(0.14*h*2)/2);
-  return {ps, fz, tw, C, T:C, tab, w:C + tab, h, r:Math.max(2, 0.14*h), bars:minor ? 0 : 2 + HB + 2.2 + 0.5}; }
+function plateDims(n, s, minor, two){ const sk0 = Math.max(0.85, Math.min(1.15, Math.max(0.75, s))), ps = Math.round((minor ? sk0 : Math.min(1.3, sk0*plateGrow()))*20)/20;
+  const h = minor ? Math.round((view.s*HS0 >= FORM_PX ? 18 : 14)*sk0) : Math.round(22*ps), fz = two ? Math.round(0.5*h) : Math.round((minor ? 0.72 : 0.76)*h), key = fz + ':' + n;
+  let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = `italic 800 ${fz}px ${BODY}`; tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
+  const sk = Math.round(h*0.21), C = Math.round(h*1.3), tab = Math.round(Math.max(0.8*h, tw + 0.46*h, two ? 15*ps : 0)), HB = Math.max(2, Math.round(0.14*h*2)/2);
+  const fh = Math.round(h*(minor ? 0.62 : 0.6)), fw = Math.round(fh*4/3);
+  return {ps, fz, tw, C, T:C, tab, sk, w:C + tab + sk, h, r:Math.max(2, 0.14*h), fh, fw, up:Math.max(6*ps, fh + 1), bars:minor ? 0 : 2 + HB + 2.2 + 0.5}; }
 const snapD = v => Math.round(v*dpr)/dpr;   // to whole device pixels
 // the box plateCounter returns for a plate centred at (x, y), without drawing it (marks above it, bars below)
 function plateRect(x, y, n, s, minor){ const D = plateDims(n, s, minor), ps = D.ps, x0 = snapD(x - D.w/2), y0 = snapD(y - D.h/2);
-  return minor ? {x:x0 - 1, y:y0 - 1, w:D.w + 3, h:D.h + 4} : {x:x0 - 3, y:y0 - 6*ps, w:D.w + 6 + 4*ps, h:D.h + 6*ps + D.bars + 3}; }
+  return minor ? {x:x0 - 1, y:y0 - D.fh - 1, w:D.w + 3, h:D.h + D.fh + 4} : {x:x0 - 3, y:y0 - D.up, w:D.w + 6 + 4*ps, h:D.h + D.up + D.bars + 3}; }
 /* The owner's unit pictures (assets/art/i-*.webp, u-*.webp) are portraits for the menus and panels only (recruit cards, army panel, unit info, tooltips);
    on the map every force is a flat plate with a vector icon (ICON). */
 // opaque extent of each supplied picture as a share of its square (width, height): unitPic trims and centres them with this
@@ -7733,52 +7875,83 @@ function picBox(src){ let b = PICBB.get(src); if (b) return b;
         if (x1 > x0 && y1 > y0) b = [(x1 - x0 + 2)/W, (y1 - y0 + 2)/H, (x0 + x1 + 1)/2/W, (y0 + y1 + 1)/2/H]; } } catch (e) {} }
   PICBB.set(src, b); return b; }
 /* ---------------- Flat unit counters (CoN manner, original art) ----------------
-   One marker at every zoom: a dark plate with an icon cell in the relation colour (yours green, at war red, everyone else grey), the lead type's white
-   vector icon (always facing right, never flipped, rotated or animated), the unit count in the tab, a slim health bar (and your morale line) under it.
-   Status marks: commander star and dug-in sandbags top left, out of supply top right, a crossed-bars badge in battle, a heading chevron on the march. */
+   One marker at every zoom, a flat slanted plate (a parallelogram leaning forward): the owner's small national flag standing on its top-left corner,
+   a white cut-corner tab on the left holding the lead type's black vector silhouette (always facing right, never flipped, rotated or animated), and the
+   unit count as a big bold italic white number with a dark outline on the plate in the relation colour (yours green, at war red, everyone else grey).
+   A thin dark edge and a soft drop shadow; a slim health bar (and your morale line) under it. It keeps one size on screen at every zoom.
+   Status marks: commander star and dug-in sandbags beside the flag, out of supply top right, a crossed-bars badge in battle, a heading chevron on the march. */
 const PLATE_GR = new Map();
-function plateGrad(h, c0, c1){ const k = h + c0; let g = PLATE_GR.get(k); if (!g){ g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, c0); g.addColorStop(1, c1); if (PLATE_GR.size > 80) PLATE_GR.clear(); PLATE_GR.set(k, g); } return g; }
+function plateGrad(h, c0, c1){ const k = h + c0 + c1; let g = PLATE_GR.get(k); if (!g){ g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, c0); g.addColorStop(1, c1); if (PLATE_GR.size > 80) PLATE_GR.clear(); PLATE_GR.set(k, g); } return g; }
+// plate colours (top, bottom, edge): brighter than the old icon cells, like CoN's counters
+const PLATE_TONES = {own:['#62b34a', '#3c8a2d', '#1c4a14'], war:['#d0473c', '#9c2a23', '#4a100c'], other:['#8a9194', '#61686b', '#262c2f'], neu:['#7d8385', '#585e60', '#24292b']},
+  PLATE_TONES_CB = {own:['#4f97dc', '#2c6aa8', '#123660'], war:['#e08f36', '#b0661c', '#5a300a'], other:['#8a9194', '#61686b', '#262c2f'], neu:['#7d8385', '#585e60', '#24292b']};
+// the skew used for every plate shape: (u, v) -> (u + sk*(1 - v/h), v), so the top edge sits sk to the right of the bottom edge
+const plateSkew = (sk, h) => ctx.transform(1, 0, -sk/h, 1, sk, 0);
+function cutRect(g, x, y, w, h, c){ g.beginPath(); g.moveTo(x + c, y); g.lineTo(x + w, y); g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.lineTo(x, y + c); g.closePath(); }
+// a small national flag (4:3, from the flag atlas) with a dark 1 px frame and a faint sheen, fh css px high; cached per nation and size
+const FLAGC = new Map(); let FLAGC_D = 0;
+function flagCanvas(n, fh){ if (FLAGC_D !== dpr){ FLAGC.clear(); FLAGC_D = dpr; } if (n == null) return null;
+  const i = flagIdx(n), H = Math.max(5, Math.round(fh*dpr)), W = Math.round(H*4/3), key = (i >= 0 ? i : 'c' + flagColor(n)) + '|' + H; if (FLAGC.has(key)) return FLAGC.get(key);   // (keyed by the atlas cell: nation ids change between games)
+  const im = ART.img('flags'); if (i < 0 && typeof n !== 'number'){ FLAGC.set(key, null); return null; }
+  if (i >= 0 && !im && !ART.failed('flags')) return null;   // the atlas is still loading: try again next frame
+  const c = document.createElement('canvas'); c.width = W + 2; c.height = H + 2; const g = c.getContext('2d');
+  g.fillStyle = 'rgba(8,12,10,.9)'; g.fillRect(0, 0, W + 2, H + 2);
+  if (i >= 0 && im){ g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; const cw0 = (im.naturalWidth || im.width)/FLAG_COLS, ch0 = (im.naturalHeight || im.height)/FLAG_ROWS; g.drawImage(im, (i % FLAG_COLS)*cw0, Math.floor(i/FLAG_COLS)*ch0, cw0, ch0, 1, 1, W, H); }
+  else { g.fillStyle = flagColor(n); g.fillRect(1, 1, W, H); }
+  const gr = g.createLinearGradient(0, 1, 0, H + 1); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(0.45, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.2)'); g.fillStyle = gr; g.fillRect(1, 1, W, H);
+  if (FLAGC.size > 300) FLAGC.clear(); FLAGC.set(key, c); return c; }
+// whose flag a force flies: its power, else (independents) the country it stands in
+function plateFlagOf(a){ if (!a) return PLAYER; if (a.owner >= 0) return a.owner; const P0 = G.P[a.at]; return P0 && !P0.sea && G.countries[P0.country] ? G.countries[P0.country].name : null; }
 function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, now, minor){
   const two = !minor && counter.second && ICONP[counter.second] ? counter.second : null;
-  const D = plateDims(n, s, minor, !!two), ps = D.ps, w = D.w, h = D.h, C = D.C, r = D.r;
+  const D = plateDims(n, s, minor, !!two), ps = D.ps, w = D.w, h = D.h, C = D.C, sk = D.sk, W0 = C + D.tab;
   const x0 = moving ? x - w/2 : snapD(x - w/2), y0 = moving ? y - h/2 : snapD(y - h/2);   // (on the march: no snapping, so the glide has no 1 px stair-steps)
-  const tk = a ? (a.rebel ? 'war' : toneOf(a.owner)) : 'own', CT = (SET.cb ? CELL_TONES_CB : CELL_TONES)[tk], nst = minor || !counter.list ? 0 : Math.max(0, Math.min(2, counter.list.length - 1));
-  ctx.save(); ctx.translate(x0, y0); if (minor) ctx.globalAlpha = 0.9;
-  roundRect(ctx, 1, 2, w, h, r); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fill();   // drop shadow
-  for (let i = nst; i > 0; i--){ const o = 3*ps*i; roundRect(ctx, o + 0.5, -o + 0.5, w - 1, h - 1, r); ctx.fillStyle = '#0e1417'; ctx.fill(); ctx.lineWidth = selected ? 1.5 : 1; ctx.strokeStyle = selected ? '#e8a83a' : CT[1]; ctx.stroke(); }   // stacked cards: several armies in one marker
-  roundRect(ctx, 0, 0, w, h, r); ctx.fillStyle = minor ? 'rgba(21,28,31,.92)' : '#151c1f'; ctx.fill();
-  ctx.save(); ctx.clip(); ctx.fillStyle = plateGrad(h, CT[0], CT[1]); ctx.fillRect(0, 0, C, h); ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(0, 0, C, 1); ctx.restore();
-  const IW = Math.max(6, Math.round(C*0.84*dpr)), ic = main && iconC(main, IW, '#f6f3ea');
-  if (ic) ctx.drawImage(ic, Math.round((C*dpr - IW)/2)/dpr, Math.round((h*dpr - ic.height)/2)/dpr, IW/dpr, ic.height/dpr);
-  roundRect(ctx, -0.5, -0.5, w + 1, h + 1, r + 0.5);
-  if (fighting){ ctx.globalAlpha = afxReduced() ? 1 : 0.85 + 0.15*Math.sin(now*Math.PI*2/1600); ctx.lineWidth = 2; ctx.strokeStyle = '#e0574f'; } else { ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(5,8,10,.9)'; }
-  ctx.stroke(); ctx.globalAlpha = minor ? 0.9 : 1;
-  ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; const tx = C + D.tab/2;
-  if (minor){ ctx.font = `700 ${D.fz}px ${BODY}`; ctx.fillStyle = '#d9d5c8'; ctx.fillText(String(n), tx, h/2 + 0.5); ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; return {x:x0 - 1, y:y0 - 1, w:w + 3, h:h + 4}; }
-  // a second type holding a good share of the stack: a mini chip under the number, inside the tab
-  if (two){ ctx.font = `700 ${Math.round(0.42*h)}px ${BODY}`; ctx.fillStyle = '#f2eee2'; ctx.fillText(String(n), tx, h*0.25 + 0.5);
-    const cs = Math.round(Math.min(12*ps, 0.5*h, D.tab - 3)*dpr)/dpr, cx0 = snapD(tx - cs/2), cy0 = snapD(h - cs - 1.5*ps);
-    roundRect(ctx, cx0, cy0, cs, cs, 2); ctx.fillStyle = plateGrad(h, CT[0], CT[1]); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(5,8,10,.8)'; ctx.stroke();
-    const IW2 = Math.max(5, Math.round(cs*0.84*dpr)), ic2 = iconC(two, IW2, '#f6f3ea'); if (ic2) ctx.drawImage(ic2, cx0 + Math.round((cs*dpr - IW2)/2)/dpr, cy0 + Math.round((cs*dpr - ic2.height)/2)/dpr, IW2/dpr, ic2.height/dpr); }
-  else { ctx.font = `700 ${D.fz}px ${BODY}`; ctx.fillStyle = '#f2eee2'; ctx.fillText(String(n), tx, h/2 + 0.5); }
-  const cmd = counter.list && counter.list.some(cmdOf);
-  if (cmd){ ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', 1*ps, -1*ps); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', 1*ps, -1*ps); }
-  if (counter.dug && !moving) sandbagMark((cmd ? 11 : 1.5)*ps, (cmd ? -0.5 : 0.5)*ps, ps);   // dug in
-  if (selected){ ctx.save(); ctx.shadowColor = 'rgba(232,168,58,.85)'; ctx.shadowBlur = 4; ctx.strokeStyle = '#e8a83a'; ctx.lineWidth = 2; roundRect(ctx, -1.5, -1.5, w + 3, h + 3, r + 1.5); ctx.stroke(); ctx.restore(); }
+  const tk = a ? (a.rebel ? 'war' : toneOf(a.owner)) : 'own', CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES)[tk], nst = minor || !counter.list ? 0 : Math.max(0, Math.min(2, counter.list.length - 1));
+  const fc = flagCanvas(plateFlagOf(a), D.fh), fw = fc ? (fc.width - 2)/dpr : 0, fh = fc ? (fc.height - 2)/dpr : 0;
+  ctx.save(); ctx.translate(x0, y0); if (minor) ctx.globalAlpha = 0.92;
+  // the flag stands on the plate's top-left corner (drawn first: the plate's top edge covers its foot)
+  if (fc){ const fx = snapD(sk + 1), fy = snapD(-fh + 0.5); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(fx + 1, fy + 1.5, fw + 2/dpr, fh); ctx.drawImage(fc, fx - 1/dpr, fy - 1/dpr, fw + 2/dpr, fh + 2/dpr); }
+  ctx.save(); plateSkew(sk, h);
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(1.5, 2.5, W0 + 1, h + 0.5); ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(0.8, 1.4, W0, h);   // soft drop shadow
+  for (let i = nst; i > 0; i--){ const o = 3*ps*i; ctx.fillStyle = CT[2]; ctx.fillRect(o, -o, W0, h); ctx.fillStyle = plateGrad(h, CT[1], CT[2]); ctx.fillRect(o + 1, -o + 1, W0 - 2, h - 2);
+    ctx.lineWidth = selected ? 1.5 : 1; ctx.strokeStyle = selected ? '#e8a83a' : 'rgba(5,8,10,.85)'; ctx.strokeRect(o - 0.5, -o - 0.5, W0 + 1, h + 1); }   // stacked cards: several armies in one marker
+  ctx.fillStyle = plateGrad(h, CT[0], CT[1]); ctx.fillRect(0, 0, W0, h);
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(0, 0, W0, 1); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, h - 1, W0, 1);
+  // the white cut-corner tab holding the silhouette
+  const ti = Math.max(1.5, Math.round(1.6*ps*2)/2), cut = Math.round(0.3*h);
+  cutRect(ctx, ti, ti, C - ti, h - 2*ti, cut); ctx.fillStyle = plateGrad(h, '#ffffff', '#d9dfdd'); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.stroke();
+  ctx.strokeStyle = fighting ? '#ff6a5c' : CT[2]; ctx.lineWidth = fighting ? 2 : 1; if (fighting) ctx.globalAlpha = afxReduced() ? 1 : 0.85 + 0.15*Math.sin(now*Math.PI*2/1600);
+  ctx.strokeRect(-0.5, -0.5, W0 + 1, h + 1); ctx.globalAlpha = minor ? 0.92 : 1;
+  if (selected){ ctx.save(); ctx.shadowColor = 'rgba(232,168,58,.85)'; ctx.shadowBlur = 4; ctx.strokeStyle = '#f0b440'; ctx.lineWidth = 2; ctx.strokeRect(-2, -2, W0 + 4, h + 4); ctx.restore(); }
+  ctx.restore();
+  const at = v => sk*(1 - v/h);   // the skew's shift at height v
+  const IW = Math.max(6, Math.round((C - 2*ti)*0.8*dpr)), ic = main && iconC(main, IW, '#121816');
+  if (ic){ const icx = (ti + C)/2 + 0.6 + at(h/2); ctx.drawImage(ic, Math.round((icx - IW/dpr/2)*dpr)/dpr, Math.round((h*dpr - ic.height)/2 + 0.5*dpr)/dpr, IW/dpr, ic.height/dpr); }
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; const tx = C + D.tab/2;
+  const num = (v, fz, cy) => { ctx.font = `italic 800 ${fz}px ${BODY}`; const X = tx + at(cy); ctx.lineWidth = Math.max(2, 0.17*fz); ctx.strokeStyle = 'rgba(6,14,8,.92)'; ctx.strokeText(v, X, cy); ctx.fillStyle = '#ffffff'; ctx.fillText(v, X, cy); };
+  if (minor){ num(String(n), D.fz, h/2 + 0.5); ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; return {x:x0 - 1, y:y0 - (fc ? fh : 0) - 1, w:w + 3, h:h + (fc ? fh : 0) + 4}; }
+  // a second type holding a good share of the stack: the number moves up and a small white silhouette of that type sits under it
+  if (two){ num(String(n), D.fz, h*0.33 + 0.5);
+    const IW2 = Math.max(5, Math.round(Math.min(D.tab - 4, 0.62*h*1.5)*dpr)), ic2 = iconC(two, IW2, '#f4f7f2'), cy2 = h*0.76;
+    if (ic2) ctx.drawImage(ic2, Math.round((tx + at(cy2) - IW2/dpr/2)*dpr)/dpr, Math.round(cy2*dpr - ic2.height/2)/dpr, IW2/dpr, ic2.height/dpr); }
+  else num(String(n), D.fz, h/2 + 0.5);
+  const cmd = counter.list && counter.list.some(cmdOf), mx = sk + (fc ? fw + 2 : 0);
+  if (cmd){ ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', mx + 5*ps, -4*ps); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', mx + 5*ps, -4*ps); }
+  if (counter.dug && !moving) sandbagMark(mx + (cmd ? 10.5 : 0.5)*ps, -Math.max(fh, 9*ps) + 0.5*ps, ps);   // dug in
   const ang = counter.ang;
-  if (moving && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = Math.min((w/2 + 4*ps)/Math.max(1e-3, Math.abs(ca)), (h/2 + (sa > 0 ? D.bars + 1.5*ps : 0) + 4*ps)/Math.max(1e-3, Math.abs(sa))), cx = w/2 + ca*t, cy = h/2 + sa*t, q = Math.max(4.5, 0.26*h);
+  if (moving && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = Math.min((w/2 + 4*ps)/Math.max(1e-3, Math.abs(ca)), (h/2 + (sa > 0 ? D.bars + 1.5*ps : sa < 0 && fc ? fh*0.6 : 0) + 4*ps)/Math.max(1e-3, Math.abs(sa))), cx = w/2 + ca*t, cy = h/2 + sa*t, q = Math.max(4.5, 0.26*h);
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(q, 0); ctx.lineTo(-q*0.8, -q*0.9); ctx.lineTo(-q*0.35, 0); ctx.lineTo(-q*0.8, q*0.9); ctx.closePath();
     ctx.lineJoin = 'round'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(5,8,10,.85)'; ctx.stroke(); ctx.fillStyle = (SET.cb ? CHEV_CB : CHEV)[tk]; ctx.fill(); ctx.restore(); }   // heading chevron: only the chevron turns
   if (a && a.owner === PLAYER && !supplied(a)){ const tx2 = fighting ? w - 0.9*h : w - 1*ps, ty = -1*ps, q = 5*ps;   // out of supply
     ctx.beginPath(); ctx.moveTo(tx2, ty - q); ctx.lineTo(tx2 + q*0.95, ty + q*0.7); ctx.lineTo(tx2 - q*0.95, ty + q*0.7); ctx.closePath(); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
     ctx.fillStyle = '#14100a'; ctx.font = `800 ${Math.round(7*ps)}px ${BODY}`; ctx.fillText('!', tx2, ty + q*0.22); }
-  unitBars(a, 0, h + 2, w, ps, now, h);
+  unitBars(a, 0, h + 2, W0, ps, now, h);
   if (fighting){ const R = 0.36*h, bx = w + 0.2*R, by = -0.25*R, L = R*0.5;   // battle badge: steady, on top of everything (just off the corner, clear of the number)
     ctx.beginPath(); ctx.arc(bx, by, R, 0, Math.PI*2); ctx.fillStyle = '#1a0f0e'; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = '#e0574f'; ctx.stroke();
     ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.2, 0.07*h); ctx.strokeStyle = '#f3c9b8'; ctx.beginPath(); ctx.moveTo(bx - L, by - L); ctx.lineTo(bx + L, by + L); ctx.moveTo(bx + L, by - L); ctx.lineTo(bx - L, by + L); ctx.stroke(); }
-  ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
   const R0 = 0.36*h, bg = fighting ? {x:x0 + w + 0.2*R0 - R0 - 1, y:y0 - 1.25*R0 - 1, w:2*R0 + 2, h:2*R0 + 2} : null;   // (the battle badge pokes out past the box: effects keep off it too)
-  return {x:x0 - 3, y:y0 - 6*ps, w:w + 6 + 4*ps, h:h + 6*ps + D.bars + 3, bg}; }
+  return {x:x0 - 3, y:y0 - D.up, w:w + 6 + 4*ps, h:h + D.up + D.bars + 3, bg}; }
 // the icon for unit type t of owner o (armed UAVs from level IV get their own)
 const plateIcon = (t, o) => { const k = artT(t, o); return ICONP[k] ? k : ICONP[t] ? t : 'inf'; };
 // plate types: the cluster's dominant type by weight (strength x hit points) and a second type when it holds at least a quarter of that weight
@@ -8486,7 +8659,7 @@ function draw(now){
   // plate declutter: a plate overlapping another is moved down (or up, whichever is shorter) and tied to its true spot by a leader line (yours stay put)
   { const on = clusters.filter(c => c.x > -60 && c.y > -60 && c.x < cw + 60 && c.y < ch + 60).slice(0, 150), placed = [];
     const selC = c => c.list.some(a => a.id === sel.army || sel.group.includes(a.id)) ? 1 : 0; on.sort((a, b) => (selC(b) - selC(a)) || ((b.owner === PLAYER) - (a.owner === PLAYER)));   // the selected force first: it never slides away
-    for (const c of on){ const d = plateDims(c.n, k, plateQuiet(c)), hw = d.w/2 + 2, top = d.h/2 + 2, bot = d.h/2 + d.bars + 2, ay = c.y;
+    for (const c of on){ const d = plateDims(c.n, k, plateQuiet(c)), hw = d.w/2 + 2, top = d.h/2 + d.up - 3, bot = d.h/2 + d.bars + 2, ay = c.y;
       const slide = sgn => { let y = ay; for (let it = 0; it < 8; it++){ let mv = 0;
           for (const o of placed){ const ox = Math.min(c.x + hw, o.x1) - Math.max(c.x - hw, o.x0), oy = Math.min(y + bot, o.y1) - Math.max(y - top, o.y0); if (ox > 0 && oy > 0) mv = Math.max(mv, sgn > 0 ? o.y1 - (y - top) : (y + bot) - o.y0); }
           if (!mv) return y; y += sgn*(mv + 4); } return y; };
@@ -8494,7 +8667,7 @@ function draw(now){
       placed.push({c, x0:c.x - hw, x1:c.x + hw, y0:c.y - top, y1:c.y + bot}); } }
   // counters claim screen space before labels: city and province names give way to them (capital names always show)
   for (const c of clusters){ if (c.x < -60 || c.y < -60 || c.x > cw + 60 || c.y > ch + 60) continue; let b;
-    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - 6*d.ps, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
+    if (plateM){ const d = plateDims(c.n, k, plateQuiet(c)); b = [c.x - d.w/2 - 3, c.y - d.h/2 - d.up, c.x + d.w/2 + 3 + 4*d.ps, c.y + d.h/2 + d.bars + 4]; b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1]; }   // the whole drawn counter: marks above it (commander, dug-in, supply) and the bars below
     else { const F = formBox(c), f = F.bb, r = F.r, dy = c.bdy || 0;   // the badge and the figures standing above it: names keep clear of both
       b = [c.x + Math.min(f[0], r[0]) - 2, c.y + Math.min(f[1] + dy, r[1]) - 2, c.x + Math.max(f[2], r[2]) + 2, c.y + Math.max(f[3] + dy, r[3]) + 2]; b.core = [c.x + f[0] - 1, c.y + f[1] + dy - 1, c.x + f[2] + 1, c.y + f[3] + dy + 1]; }
     b.unit = true; b.at = c.moving ? -1 : c.at; boxes0.push(b); }   // (core: the plate or badge itself with its strength number, icons and bars, which nothing may cover)
@@ -9114,6 +9287,18 @@ function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   sel.group = []; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.group = []; CS.det = false; if (rallyFor !== null){ setRally(rallyFor, p); return; }
   if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
+let sideOpen = false;   // phones: the command panel opened by hand (advisor shield, dispatches), until closed or the selection clears
+function sideSync(){ const phone = innerWidth <= 820, b = document.body; if (!phone){ if (b.classList.contains('side-on')) b.classList.remove('side-on'); return; }
+  const auto = sel.army !== null || (sel.prov !== null && (CS.det || csWanted() < 0)), on = !!S && S.started && (auto || sideOpen);
+  if (b.classList.contains('side-on') !== on){ b.classList.toggle('side-on', on); if (on) $('side').scrollTop = 0; } { const rs = $('railside'); if (rs) rs.setAttribute('aria-pressed', String(on)); }
+  sideH(); }
+function sideH(){ const sd = $('side'), w = $('mapwrap'); if (!sd || !w) return; const h = document.body.classList.contains('side-on') && innerWidth <= 820 ? sd.offsetHeight : 0; if (w.style.getPropertyValue('--sideh') !== h + 'px') w.style.setProperty('--sideh', h + 'px'); }
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => sideH()).observe(document.getElementById('side'));
+// phones: a selected force that sits under the sheet or the command bar glides up into the free map above them
+function sideReveal(id){ setTimeout(() => requestAnimationFrame(() => { if (innerWidth > 820 || sel.army !== id || camFly) return; const a = armyById(id); if (!a) return;
+  const sd = $('side'), cb = $('cmdbar'), cr = cv.getBoundingClientRect(); let top = sd.getBoundingClientRect().top - cr.top; if (cb && !cb.hidden) top = Math.min(top, cb.getBoundingClientRect().top - cr.top);
+  const [ax, ay] = armyPos(a), [, sy] = toScreen(ax, ay); if (top < 140 || sy < top - 50) return;
+  const [cx] = screenToWorld(cw/2, ch/2); camGo(cx, ay + (ch/2 - top*0.45)/view.s, view.s); }), 120); }
 function clearSel(){ sel.group = []; rallyFor = null; aimMsl = null; sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 
 /* ---------------- Tooltip ---------------- */
@@ -9192,6 +9377,16 @@ function hdrSync(force){ const h = document.querySelector('header'); if (!h) ret
     const r1 = h.querySelector('.hrow1'); if (r1 && r1.scrollWidth > r1.clientWidth + 1) h.classList.add('hc3'); }
   const de = document.documentElement.style, b = Math.round(h.getBoundingClientRect().bottom) + 'px'; if (de.getPropertyValue('--hdrb') !== b) de.setProperty('--hdrb', b);
   const dk = $('dock'), db = dk && dk.offsetHeight ? Math.max(0, Math.round(innerHeight - dk.getBoundingClientRect().top)) + 'px' : '0px'; if (de.getPropertyValue('--dockb') !== db) de.setProperty('--dockb', db); }
+/* the resource strip's icons (drawn here, original): bold, coloured, filling the cell like CoN's strip */
+const RES_ICO = {
+  cash:'<rect x="3" y="13.5" width="23" height="12" rx="1.5" fill="#2c6e35" stroke="#0f3216" stroke-width="1" transform="rotate(-9 14.5 19.5)"/><rect x="5" y="9" width="24" height="13" rx="1.6" fill="#57b45a" stroke="#154a1d" stroke-width="1.1"/><rect x="7.2" y="11.2" width="19.6" height="8.6" rx="1" fill="none" stroke="#b8eba8" stroke-width=".8" opacity=".75"/><circle cx="20" cy="15.5" r="3.3" fill="#3b8f40" stroke="#e2f8d6" stroke-width=".9"/><path d="M21.2 13.9c-.4-.5-1-.7-1.6-.6-.8.1-1.2.6-1.1 1.1.1.6.8.8 1.4 1 .7.2 1.4.5 1.4 1.2 0 .6-.6 1.1-1.4 1.1-.7 0-1.3-.3-1.6-.8M20 12.4v6.3" fill="none" stroke="#fff" stroke-width=".9" stroke-linecap="round"/><rect x="10" y="8.2" width="4.4" height="14.6" rx=".5" fill="#f0c12b" stroke="#7a5a0a" stroke-width=".8"/><path d="M10.8 9.4v12" stroke="#fff3c0" stroke-width=".8" opacity=".8"/><path d="M6 10.3h3.6M15 10.3h13" stroke="#fff" stroke-width=".9" opacity=".45"/>',
+  oil:'<rect x="7.5" y="5" width="17" height="23" rx="2.6" fill="#3c4a54" stroke="#0e1519" stroke-width="1.1"/><path d="M7.5 10.6h17M7.5 22.4h17" stroke="#1d2a33" stroke-width="1.8"/><path d="M7.5 9.6h17M7.5 21.4h17" stroke="#6d7f8b" stroke-width=".8"/><rect x="11" y="6.4" width="2.6" height="20.2" rx="1.2" fill="#fff" opacity=".2"/><path d="M16.8 11.8c2.4 2.9 3.6 4.8 3.6 6.4a3.6 3.6 0 0 1-7.2 0c0-1.6 1.2-3.5 3.6-6.4z" fill="#f2b62c" stroke="#6a4a08" stroke-width=".9"/><path d="M15.4 17.4c0 1 .5 1.7 1.3 2" fill="none" stroke="#fff6c8" stroke-width=".9" stroke-linecap="round"/><ellipse cx="16" cy="5.4" rx="2.2" ry=".9" fill="#1d2a33"/>',
+  metal:'<rect x="3.5" y="18" width="12" height="8" rx="1" fill="#c8783f" stroke="#4f2a10" stroke-width="1"/><rect x="16.5" y="18" width="12" height="8" rx="1" fill="#b86a35" stroke="#4f2a10" stroke-width="1"/><rect x="10" y="9.5" width="12" height="8" rx="1" fill="#e0925a" stroke="#4f2a10" stroke-width="1"/><path d="M4.6 19.3h9.8M17.6 19.3h9.8M11.1 10.8h9.8" stroke="#ffd2ac" stroke-width=".9" opacity=".8"/><path d="M9.5 18v8M22.5 18v8M16 9.5v8" stroke="#6e3a17" stroke-width=".8" opacity=".7"/><path d="M3 27.6h26" stroke="#2a1606" stroke-width="1.3" opacity=".55"/>',
+  iron:'<path d="M2.8 26.5l2.6-7h10l2.6 7z" fill="#8a9fae" stroke="#222d35" stroke-width="1"/><path d="M14.2 26.5l2.6-7h10l2.6 7z" fill="#7c91a1" stroke="#222d35" stroke-width="1"/><path d="M8.5 18.6l2.6-7h10l2.6 7z" fill="#a8bac7" stroke="#222d35" stroke-width="1"/><path d="M6.2 20.6h8.4M17.6 20.6h8.4M11.9 12.7h8.4" stroke="#e8f0f5" stroke-width="1" opacity=".85"/><path d="M3.6 25.4h13.2M15 25.4h13.2" stroke="#4d5f6b" stroke-width=".8"/>',
+  elec:'<rect x="5" y="5" width="22" height="22" rx="2.2" fill="#1f7a4d" stroke="#0b3320" stroke-width="1.1"/><path d="M8 9.5h3.5l2 2M24 9.5h-3l-2 2M8 22.5h3.5l2-2M24 22.5h-3l-2-2" fill="none" stroke="#86e6b0" stroke-width=".9"/><path d="M13 7v4M16 7v4M19 7v4M13 21v4M16 21v4M19 21v4M7 13h4M7 16h4M7 19h4M21 13h4M21 16h4M21 19h4" stroke="#e9c75a" stroke-width="1.3"/><rect x="11" y="11" width="10" height="10" rx="1.1" fill="#1e2529" stroke="#93a8b0" stroke-width=".9"/><path d="M12.6 12.6h3" stroke="#fff" stroke-width=".9" opacity=".5"/><circle cx="16" cy="16" r="1.6" fill="#4fd0de"/>',
+  rare:'<path d="M16 3.5l4.6 7.2L16 28.5l-4.6-17.8z" fill="#a777e8" stroke="#33175f" stroke-width=".9" stroke-linejoin="round"/><path d="M8.6 11.5l3.8 4.8-2.4 11.2-4.3-9.4z" fill="#8656d2" stroke="#33175f" stroke-width=".9" stroke-linejoin="round"/><path d="M23.6 10.5l3.8 6.8-3.8 10.6-3.3-11.4z" fill="#c4a0f6" stroke="#33175f" stroke-width=".9" stroke-linejoin="round"/><path d="M16 3.8v24M12.4 10.8h7.2" stroke="#f1e6ff" stroke-width=".8" opacity=".6"/><path d="M4 28.2h24" stroke="#2c3238" stroke-width="2" stroke-linecap="round"/>',
+  mp:'<path d="M5.5 28.5c.6-5.2 4.6-7.8 10.5-7.8s9.9 2.6 10.5 7.8z" fill="#5b6b3a" stroke="#1f2610" stroke-width="1"/><path d="M13 21.2l3 3.6 3-3.6" fill="none" stroke="#2f3a1a" stroke-width="1"/><circle cx="16" cy="15.2" r="5" fill="#e6b88e" stroke="#5a3a20" stroke-width=".8"/><path d="M9.4 13.9c0-4.8 3-7.9 6.6-7.9s6.6 3.1 6.6 7.9c-1.9-.9-4.1-1.4-6.6-1.4s-4.7.5-6.6 1.4z" fill="#73854a" stroke="#1f2610" stroke-width="1"/><path d="M8.4 14.1h15.2" stroke="#3e4a22" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.6c1.2-.9 2.5-1.3 4-1.3" fill="none" stroke="#c9d8a0" stroke-width=".9" stroke-linecap="round" opacity=".8"/>'};
+const resIco = k => `<svg class="rico" viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">${RES_ICO[k] || ''}</svg>`;
 /* top bar icons (drawn here, original): calendar, clock, trophy */
 const HB_ICO = {
   cal:'<svg class="hi" viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><rect x="2.5" y="4" width="15" height="13" rx="1.6" fill="#2b3c43" stroke="#c5d2d6" stroke-width="1.3"/><path d="M2.5 7.8h15" stroke="#c5d2d6" stroke-width="1.3"/><path d="M6.5 2.4v3.2M13.5 2.4v3.2" stroke="#c5d2d6" stroke-width="1.5" stroke-linecap="round"/><path d="M5.5 10.5h2M9 10.5h2M12.5 10.5h2M5.5 13.6h2M9 13.6h2" stroke="#8fa3aa" stroke-width="1.6"/></svg>',
@@ -9207,10 +9402,11 @@ function mslDDSync(N){ const mm = $('mslmenu'); if (!mm) return; const tot = {cm
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== PLAYER) continue; const st = S.mstock && S.mstock[p]; if (st){ tot.cm += st.cm || 0; tot.bm += st.bm || 0; }
     for (const q of S.queue[p]) if (q.msl && bld0[q.t] != null) bld0[q.t]++;
     if (S.bld[p].silo){ silos++; siloP.push(p); } }
-  const cell = (k, ico, v, sub, lock, tip) => `<button class="mcell${lock ? ' lock' : ''}" role="menuitem" data-act="msl-cell" data-k="${k}" title="${tip}">${ico}${lock ? '<svg class="lk" viewBox="0 0 12 14" width="11" height="13" aria-hidden="true"><rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="#c5d2d6"/><path d="M3.6 6V4.4a2.4 2.4 0 0 1 4.8 0V6" fill="none" stroke="#c5d2d6" stroke-width="1.5"/></svg>' : ''}<b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const MN = {cm:'Cruise', bm:'Ballistic', silo:'Silos'};
+  const cell = (k, ico, v, sub, lock, tip) => `<button class="mcell${lock ? ' lock' : ''}" role="menuitem" data-act="msl-cell" data-k="${k}" title="${tip}"><span class="mpic">${ico}${lock ? '<span class="lk" aria-hidden="true"><svg viewBox="0 0 12 14" width="10" height="12"><rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="#2b2006"/><path d="M3.6 6V4.4a2.4 2.4 0 0 1 4.8 0V6" fill="none" stroke="#2b2006" stroke-width="1.6"/></svg></span>' : ''}</span><span class="mtx"><span class="mn">${MN[k] || k}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</span></button>`;
   const html = Object.entries(MISSILES).map(([k, M0]) => { const lock = !has(PLAYER, M0.tech);
-      return cell(k, mslIcon(k), tot[k], bld0[k] ? `+${bld0[k]} building` : '', lock, `${M0.name}: ${tot[k]} ready${bld0[k] ? `, ${bld0[k]} in production` : ''}&#10;${lock ? `Locked: research ${TECH_BY[M0.tech].name}` : silos ? 'Tap to go to a silo and launch or build more' : 'Build a Missile Silo in a city to produce and launch them'}&#10;Range ${M0.range*KM_HEX} km · ${M0.desc}`); }).join('')
-    + cell('silo', mslIcon('silo'), silos, '', false, `Missile Silos: ${silos}&#10;${silos ? 'Tap to go to your silo' : 'Build one in a city (Construction) to produce and launch missiles'}`);
+      return cell(k, mslIcon(k, 44), tot[k], bld0[k] ? `+${bld0[k]} building` : lock ? 'Locked' : silos ? 'Ready to launch' : 'Needs a silo', lock, `${M0.name}: ${tot[k]} ready${bld0[k] ? `, ${bld0[k]} in production` : ''}&#10;${lock ? `Locked: research ${TECH_BY[M0.tech].name}` : silos ? 'Tap to go to a silo and launch or build more' : 'Build a Missile Silo in a city to produce and launch them'}&#10;Range ${M0.range*KM_HEX} km · ${M0.desc}`); }).join('')
+    + cell('silo', mslIcon('silo', 44), silos, silos ? 'Tap to go there' : 'None built', false, `Missile Silos: ${silos}&#10;${silos ? 'Tap to go to your silo' : 'Build one in a city (Construction) to produce and launch missiles'}`);
   setHTML(mm, html); mslDDSync.silos = siloP;
   const any = tot.cm + tot.bm, bt = $('mslbtn'); bt.classList.toggle('has', any > 0); bt.setAttribute('aria-label', `Missiles: ${tot.cm} cruise, ${tot.bm} ballistic`); }
 function mslDD(open){ const mm = $('mslmenu'), bt = $('mslbtn'); if (!mm) return; open = open == null ? mm.hidden : open; if (open) mslDDSync(S.nations[PLAYER]); mm.hidden = !open; bt.setAttribute('aria-expanded', String(open)); bt.classList.toggle('on', open); }
@@ -9341,8 +9537,11 @@ function uitipShow(el){ let t = document.getElementById('uitip'); if (!t){ t = d
   hd.addEventListener('mouseleave', uitipHide); hd.addEventListener('pointerdown', uitipHide); }
 /* resource figures count smoothly to a new value (~600 ms, rAF only while one is moving) with a brief green / red flash */
 const RCNT = {}; let rcntRaf = 0;
-function resText(R, v){ const a = Math.abs(v); if (a < 1e4) return R.pre + fmt(v) + R.unit; const q = v/1000, t = (Math.abs(q) >= 100 ? Math.round(q) : Math.floor(q*10)/10).toLocaleString('en-US');
-  return R.pre + t + (R.k === 'cash' ? 'B' : R.k === 'mp' ? 'M' : 'k'); }
+// compact like CoN's strip: below 1,000 the plain figure, then one decimal under 10 of the next unit ('3.2B', '4.5k'), whole numbers above ('53k', '249k')
+const RES_UNITS = {cash:['M', 'B', 'T'], mp:['k', 'M', 'B']};
+function resText(R, v){ const a = Math.abs(v); if (a < 1000) return R.pre + fmt(v) + R.unit; const U = RES_UNITS[R.k] || ['', 'k', 'M']; let q = v, i = 0;
+  while (Math.abs(q) >= 1000 && i < U.length - 1){ q /= 1000; i++; }
+  const t = Math.abs(q) < 10 ? (Math.floor(Math.abs(q)*10)/10)*Math.sign(q) : Math.floor(q); return R.pre + t.toLocaleString('en-US') + U[i]; }
 function resSync(N, tips){
   const chips = $('res').children, now = performance.now(), calm = afxReduced();
   RES.forEach((R, i) => { const chip = chips[i]; if (!chip) return; const b = chip.querySelector('b.rv'), to = Math.floor(N[R.k]); let c = RCNT[R.k];
@@ -9370,16 +9569,16 @@ function renderSide(force){
       const cap = stockCap(PLAYER), full = R.k !== 'cash' && v >= cap - 1, fill = R.k !== 'cash' && d > 0.05 && !full ? Math.ceil((cap - v)/d) : 0;
       const tipTxt = `${R.name}: ${fv(v)}${R.k !== 'cash' ? ' / ' + fmt(cap) + R.unit + ' storage' : ''}&#10;Net ${d >= 0 ? '+' : '-'}${fv(Math.abs(d))}/day${full ? ' · storage full: sell or gift the surplus' : fill && fill <= 30 ? ` · storage full in ${fill} d` : ''}&#10;Production +${fv(inc.gross[R.k] - (inc.trade && inc.trade[R.k] || 0))}/day${tradeTip(R.k)}${fmt(up) !== '0' ? `&#10;Upkeep -${fv(up)}/day${R.k === 'cash' ? ' (armed forces)' : R.k === 'oil' ? ' (fuel)' : R.k === 'iron' || R.k === 'elec' ? ' (maintenance)' : ''}` : ''}${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? `&#10;SHORTAGE${R.k === 'oil' ? ': armor, aircraft and ships slowed and weakened' : R.k === 'iron' ? ': armor, artillery and warships weakened' : R.k === 'elec' ? ': aircraft, drones, air defence and warships weakened' : R.k === 'cash' ? ': upkeep unpaid' : ''}` : ''}&#10;Used for ${R.use}.&#10;From ${R.src}.${MKT_K.includes(R.k) ? `&#10;Market price $${mkt().p[R.k].toFixed(2)}M a unit` : ''}`;
       resTips.push(tipTxt.replace(/&#10;/g, '\n'));
-      return `<div class="chip res-${R.k} ${short ? 'short' : ''}">${icon(R.k, 18)}<span class="cv"><span class="lbl"><span class="lf">${R.name}</span><span class="la">${R.ab}</span></span><span class="vv"><b class="rv"></b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; }).join(''));
+      return `<div class="chip res-${R.k} ${short ? 'short' : ''}">${resIco(R.k)}<span class="cv"><span class="lbl"><span class="lf">${R.name}</span><span class="la">${R.ab}</span></span><span class="vv"><b class="rv"></b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; }).join(''));
   resSync(N, resTips);
   document.documentElement.style.setProperty('--you', N.color);
   { const mine = landHeld(PLAYER), pl = mine/landNeed(PLAYER), pc = capsHeld(PLAYER)/WIN_CAPS, best = Math.max(pl, pc);
-    const vtip = `Victory: hold ${landNeed(PLAYER)} provinces or ${WIN_CAPS} starting capitals.&#10;You hold ${mine}/${landNeed(PLAYER)} land provinces and ${capsHeld(PLAYER)}/${WIN_CAPS} capitals. Day ${Math.floor(S.hour/24) + 1} of the war.`;
+    const vtip = `Victory points (VP): every land province you hold is 1 VP.&#10;Victory: hold ${landNeed(PLAYER)} provinces or ${WIN_CAPS} starting capitals.&#10;You hold ${mine}/${landNeed(PLAYER)} land provinces and ${capsHeld(PLAYER)}/${WIN_CAPS} capitals. Day ${Math.floor(S.hour/24) + 1} of the war.`;
     // top bar row 1 (CoN layout): boxed day counter, boxed local clock, trophy + boxed victory meter
     const day = Math.floor(S.hour/24) + 1, lc = localClock(S.hour).split(' · ');
     setHTML($('hday'), `${HB_ICO.cal}<b>${day}</b>`); setTip($('hday'), `Day ${day} of the war\nThe war began on day 1; every game day is 24 game hours.`);
     setHTML($('clock'), `${HB_ICO.clk}<b><span class="cd">${lc[0]} </span>${lc[1]}</b>`); setTip($('clock'), `Capital local time\n${lc[0]}, ${lc[1]} in ${G.P[N.capital].cityName || G.P[N.capital].name} · day ${day} of the war`);
-    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS}`}<small> ${pl >= pc ? 'PROV' : 'CAP'}</small></b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
+    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS}`}<small> VP</small></b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
     $('vbar').setAttribute('aria-label', `Victory ${Math.round(Math.min(1, best)*100)}%`); }
   mslDDSync(N);
   $('seedlbl').textContent = '';
@@ -9395,7 +9594,7 @@ function renderSide(force){
   setHTML($('log'), ((S.papers && S.papers[0]) ? `<button class="ev info" data-act="paper-open" style="grid-template-columns:1fr"><span><b>The Meridian Herald · Day ${S.papers[0].day + 1}</b><br><span class="muted">${S.papers[0].head}</span></span></button>` : '') + S.log.slice(0, 40).map(e => e.p != null ? `<button class="ev ${e.kind || 'info'}" data-act="${e.rep ? 'report' : 'goto'}" data-id="${e.rep || e.p}" title="${e.rep ? 'Open battle report' : 'Show on map'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${textUnit(e.text)}${e.text}</span></button>` : `<div class="ev ${e.kind || 'info'}"><time>D${dayOf(e.h)}</time><span>${textFlag(e.text, 11)}${textUnit(e.text)}${e.text}</span></div>`).join(''));
   setHTML($('ctx'), ctxHTML());
   { const key = sel.army !== null ? 'a' + sel.army : sel.prov !== null ? 'p' + sel.prov : 'o';   // a new selection: the command panel slides in (from the right; back to the overview from the left)
-    if (renderSide.ck !== key){ const was = renderSide.ck; renderSide.ck = key; if (was != null && tab === 'cmd') slideIn($('ctx'), key === 'o' ? -16 : 16); } }
+    if (renderSide.ck !== key){ const was = renderSide.ck; renderSide.ck = key; if (key === 'o') sideOpen = false; else if (key[0] === 'a') sideReveal(sel.army); if (was != null && tab === 'cmd') slideIn($('ctx'), key === 'o' ? -16 : 16); } }
   { if (tab === 'log') seenHour = S.hour; const n = tab === 'log' ? 0 : S.log.filter(e => e.h > seenHour && (e.kind === 'bad' || e.kind === 'good')).length;
     for (const id of ['logbadge', 'notifbadge', 'railbadge', 'morebadge']){ const bb = $(id); if (bb){ bb.hidden = n <= 0; bb.textContent = n > 99 ? '99+' : n; } } }
   if (modalKind === 'research' && !$('modal').hidden){
@@ -9409,6 +9608,9 @@ function renderSide(force){
     cb.title = idleC ? `${idleC} ${idleC === 1 ? 'city has' : 'cities have'} nothing in training` : ''; }
   if (modalKind === 'cities' && !$('modal').hidden) setHTML($('sheet'), citiesHTML());
   for (const d of document.querySelectorAll('#dock .dk[data-kind]')){ const on = !$('modal').hidden && d.dataset.kind === modalKind; d.classList.toggle('on', on); if (on) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); }
+  { const mb = $('morebtn'), inMore = !$('modal').hidden && !!document.querySelector(`#morepop .dk[data-kind="${modalKind}"]`); mb.classList.toggle('cur', inMore);
+    $('moredot').hidden = !$('morebadge').hidden || ($('proddot').hidden && $('inteldot').hidden); }
+  sideSync();
   if (uitipEl && !uitipEl.isConnected) uitipHide();
   if (modalKind === 'diplo' && !$('modal').hidden) setHTML($('sheet'), diploHTML());
   if (modalKind === 'prod' && !$('modal').hidden) setHTML($('sheet'), prodHTML());
@@ -9630,11 +9832,14 @@ const rg = (k, sz = 22, cls = '') => `<svg class="rg ${cls}" width="${sz}" heigh
 const techStep = id => { let d = 0, T = TECH_BY[id]; while (T && T.req && d < 20){ d++; T = TECH_BY[T.req]; } return d; };
 const techUnit = T => Object.keys(UNITS).find(t => UNITS[t].tech === T.id) || null;
 // the picture in a node: the unit the project unlocks, else a glyph for what it does
-const TGLY = {eco1:'cash', eco2:'mp', eco3:'oil', log1:'spd', log2:'wrench', log3:'cross', msl1:'missile', msl2:'missile', msl3:'def', sat1:'sat', nav3:'anchor', drone1:null, jam1:'jam', uav2:'eye', uav3:'def', uav4:'atk', uav5:'atk', air1:null};
+const TGLY = {eco1:'factory', eco2:'mp', eco3:'oil', log1:'truck', log2:'wrench', log3:'cross', msl1:'cm', msl2:'bm', msl3:'def', sat1:'sat', nav3:'anchor', drone1:null, jam1:'jam', air1:null};
+const TBADGE = {uav2:'eye', art1:'eye'};   // a badge other than the stat's own (atk / def / spd)
 function techFace(T){ const ut = techUnit(T); if (ut) return {ut};
+  { const fx = T.fx || {}, k0 = Object.keys(fx).find(k => UNITS[k]), st = k0 && fx[k0]; if (!TGLY[T.id] && st) return {ut:k0, up:TBADGE[T.id] || (st.atk ? 'atk' : st.def ? 'def' : 'spd')}; }
   let g = TGLY[T.id]; if (g === undefined || g === null){ const fx = T.fx || {}, st = Object.values(fx)[0] || {}; g = st.atk ? 'atk' : st.def ? 'def' : st.spd ? 'spd' : (RB[T.branch] || {}).g || 'atk'; }
   return {g}; }
 function faceHTML(F, sz){ if (F.ut) return `<span class="rface u">${unitPic(F.ut, 'lg')}</span>`;
+  if (F.g === 'cm' || F.g === 'bm') return `<span class="rface g">${mslIcon(F.g, Math.round(sz*1.25))}</span>`;
   return `<span class="rface g">${['cash', 'mp', 'oil', 'rare', 'metal'].includes(F.g) ? icon(F.g, Math.round(sz*0.8)) : rg(F.g, sz)}</span>`; }
 // per-branch tree layout: rows are research steps (how many projects lead to it), columns follow the chains; computed once
 const RLAY = {};
@@ -9703,22 +9908,23 @@ function researchHTML(){
   const br = RV.br, M = RB[br] || {g:'atk'}, Ly = rLayout(br), L = Ly.L, dn = L.filter(T => has(PLAYER, T.id)).length;
   if (RV.sel && (!TECH_BY[RV.sel] || TECH_BY[RV.sel].branch !== br)) RV.sel = null;
   const st = T => has(PLAYER, T.id) ? 'done' : R && R.id === T.id ? 'run' : (!T.req || has(PLAYER, T.req)) ? 'open' : 'lock';
-  const X = c => (c + .5)*100, Y = r => (r - Ly.r0 + .36)*100;
+  const CV = Ly.cols < 3 ? Ly.cols + 2 : Ly.cols, CO = CV > Ly.cols ? 1 : 0;   // shown columns, and the offset of the branch's own
+  const X = c => (c + CO + .5)*100, Y = r => (r - Ly.r0 + .36)*100;
   let lines = '';
   for (const T of L){ const p = Ly.pos[T.id], lit = !T.req || has(PLAYER, T.req), cls = lit ? (has(PLAYER, T.id) ? 'on' : 'av') : '';
-    if (T.req && Ly.inB.has(T.req)){ const q = Ly.pos[T.req], ym = Y(p.r) - 39;
+    if (T.req && Ly.inB.has(T.req)){ const q = Ly.pos[T.req], ym = Y(p.r) - 32;
       lines += `<path class="${cls}" d="${q.c === p.c ? `M${X(q.c)} ${Y(q.r)}V${Y(p.r)}` : `M${X(q.c)} ${Y(q.r)}V${ym}H${X(p.c)}V${Y(p.r)}`}"/>`; }
     else if (T.req) lines += `<path class="${cls} ext" d="M${X(p.c)} 0V${Y(p.r)}"/>`;
   }
   const nodes = L.map(T => { const p = Ly.pos[T.id], s = st(T), F = techFace(T), q = Q && Q.id === T.id, ext = T.req && !Ly.inB.has(T.req) ? TECH_BY[T.req] : null;
-    return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${F.ut ? ' unit' : ''}" data-act="rsel" data-id="${T.id}"${s === 'run' ? ' id="rring"' : ''} style="--c:${p.c};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}">
-      <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>
+    return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${F.ut ? ' unit' : ''}" data-act="rsel" data-id="${T.id}"${s === 'run' ? ' id="rring"' : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}">
+      <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>${F.up ? `<i class="rup up-${F.up}" title="${F.up === 'atk' ? 'Attack' : F.up === 'def' ? 'Defense' : F.up === 'spd' ? 'Speed' : 'Detection'} upgrade">${rg(F.up, 12)}</i>` : ''}
       ${s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s === 'run' ? `<i class="rbdg run">#1</i>` : q ? `<i class="rbdg qd">#2</i>` : ''}
-      <span class="rn">${T.name}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>`; }).join('');
+      <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>`; }).join('');
   const rowsL = Array.from({length:Ly.rows}, (_, i) => `<span style="--r:${i}">${Ly.r0 + i + 1}</span>`).join('');
   h += `<div class="rs-thead"><span class="rs-tc" title="Research step: how many projects lead to it">${rg('steps', 18)}</span><b>${rg(M.g, 22)} ${br}</b><span class="rs-tn">${dn}/${L.length} researched</span></div>
-    <div class="rs-tree" style="--cols:${Ly.cols};--rows:${Ly.rows}"><div class="rs-rows">${rowsL}</div>
-      <div class="rs-grid"><svg class="rs-lines" viewBox="0 0 ${Ly.cols*100} ${Ly.rows*100}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${nodes}</div></div>`;
+    <div class="rs-tree" style="--cols:${CV};--rows:${Ly.rows}"><div class="rs-rows">${rowsL}</div>
+      <div class="rs-grid"><svg class="rs-lines" viewBox="0 0 ${CV*100} ${Ly.rows*100}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${nodes}</div></div>`;
   const T = RV.sel ? TECH_BY[RV.sel] : null;
   if (T){ const s = st(T), tc = techCost(T), F = techFace(T), ut = techUnit(T), q = Q && Q.id === T.id, cq = rCanQueue(PLAYER, T.id), cr = canResearch(PLAYER, T.id);
     const req = T.req ? TECH_BY[T.req] : null, d0 = Math.round(T.days*(docOf(PLAYER) ? docOf(PLAYER).res : 1)*24);
@@ -10124,7 +10330,7 @@ document.addEventListener('click', e => {
     case 'army': selectArmy(+b.dataset.id); { const x = armyById(+b.dataset.id); if (x){ const [wx, wy] = armyPos(x); const [sx, sy] = toScreen(wx, wy); if (sx < 0 || sy < 0 || sx > cw || sy > ch) camGo(wx, wy); } } break;
     case 'prov': selectProv(+b.dataset.id); break;
     case 'tab': setTab(b.dataset.tab); renderSide(); break;
-    case 'notif': if (!$('modal').hidden && S && S.started) closeModal(); setTab('log'); renderSide(true); { const sd = $('side'); if (sd && innerWidth <= 820) sd.scrollIntoView({block:'nearest'}); } break;
+    case 'notif': if (!$('modal').hidden && S && S.started) closeModal(); setTab('log'); if (innerWidth <= 820) sideOpen = true; renderSide(true); break;
     case 'intel': if (modalKind === 'intel' && !$('modal').hidden) closeModal(); else openModal(intelHTML(), 'intel'); break;
     case 'pacify': { const pp = +b.dataset.id; if (S.nations[PLAYER].cash >= 40){ S.nations[PLAYER].cash -= 40; S.unrest[pp] = Math.max(0, unrestOf(pp) - 25); } renderSide(true); break; }
     case 'spy': startSpy(PLAYER, +b.dataset.id, b.dataset.k); renderSide(true); break;
@@ -10137,6 +10343,8 @@ document.addEventListener('click', e => {
     case 'allpow': showAllPowers = true; renderSide(true); break;
     case 'goto': { if (!$('modal').hidden) closeModal(); const P = G.P[+b.dataset.id]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.1)); if (!P.sea) selectProv(P.id); break; }
     case 'clear': clearSel(); break;
+    case 'side-open': { const on = !document.body.classList.contains('side-on'); if (on){ sideOpen = true; if (tab !== 'cmd' && sel.army === null && sel.prov === null) setTab('cmd'); } else { sideOpen = false; if (sel.army !== null || sel.prov !== null){ clearSel(); break; } } renderSide(true); break; }
+    case 'side-x': sideOpen = false; if (sel.army !== null || sel.prov !== null) clearSel(); else renderSide(true); break;
     case 'send': if (a){ delete a.escort; sendToTarget(a); } break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
     case 'drop': if (a){ dropFor = dropFor === a.id ? null : a.id; if (dropFor !== null) toast(`Tap a drop zone up to ${PARA_RANGE*KM_HEX} km away.`, 'info', null); renderSide(true); } break;
@@ -10322,7 +10530,7 @@ document.addEventListener('keydown', e => { INCC.v = -1;
   else if (e.key === 'Escape' && cmdMode){ cmdMode = null; renderSide(true); }
   else if (e.key === 'Escape' && GLOBE && GLOBE.on() && $('modal').hidden){ GLOBE.exit(); }
   else if ((e.key === 'g' || e.key === 'G') && GLOBE && GLOBE.ok() && $('modal').hidden){ GLOBE.toggle(); }
-  else if (e.key === 'Escape'){ if (!$('modal').hidden){ if (S && S.started && !S.over && modalKind !== 'picker-first') closeModal(); } else clearSel(); }
+  else if (e.key === 'Escape'){ if (!$('modal').hidden){ if (S && S.started && !S.over && modalKind !== 'picker-first') closeModal(); } else { sideOpen = false; clearSel(); } }
   else if (e.key === '?' || e.key === 'F1'){ e.preventDefault(); if (modalKind === 'help' && !$('modal').hidden) closeModal(); else if ($('modal').hidden || $('modal').classList.contains('docked')) showHelp(); }
   else if (e.key === 'h' || e.key === 'H') goHomeGlide();
   else if (e.key === 'd' || e.key === 'D'){ if (modalKind === 'diplo') closeModal(); else if ($('modal').hidden) openModal(diploHTML(), 'diplo'); }
@@ -10348,6 +10556,10 @@ const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russ
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel', 'cities', 'mob', 'cbld'];
 function openModal(html, kind = ''){ modalKind = kind; $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
+// in-game panels with a title band get CoN's red close box in it (added after each render, so every panel has one without touching its markup)
+new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
+  const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
+  hd.classList.add('hasx'); hd.insertAdjacentHTML('beforeend', `<button class="rs-x mx" data-act="resume" aria-label="Close" title="Back to the map (Esc)">${rg('x', 18)}</button>`); }).observe($('sheet'), {childList:true});
 // the closing sheet: a lifeless copy (no ids, no actions) slides out while the real one is already hidden, so closing stays instant for the game and the tests
 function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || afxReduced() || m.classList.contains('menu')) return; const r = sh.getBoundingClientRect(); if (r.width < 10) return;
   const g = sh.cloneNode(true); g.removeAttribute('id'); g.querySelectorAll('[id],[data-act],[name],[for]').forEach(e => { e.removeAttribute('id'); e.removeAttribute('data-act'); e.removeAttribute('name'); e.removeAttribute('for'); });
