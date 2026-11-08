@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Barlow:wght@400;500;600&family=Barlow+Condensed:ital,wght@1,700;1,800&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 /* Layout: a dark war-room map fills the screen; a command column sits on the right (stacks under the map on phones). Panels are medium-dark grey (v3.4). */
 :root{
@@ -4080,6 +4080,109 @@ function iconC(t, W, col){ if (ICONC_D !== dpr){ ICONC.clear(); ICONC_D = dpr; }
     g.globalCompositeOperation = 'source-over';
     if (img){ ga.putImageData(img, 0, 0); g.drawImage(ga.canvas, 0, 0); } else g.drawImage(ga.canvas, 0, 0); }
   g.globalCompositeOperation = 'source-over'; ICONC.set(key, c); return c; }
+// Sleek counter glyphs: 20 x 14 design units (one unit = one css px on the counter's tab, so whole and half units land on device pixels at 1x, 2x and 3x).
+// Ops: ['f', d] fill, ['s', d, w] round stroke w units wide, ['b', d, w] butt stroke, ['x', d] cut out, ['xs', d, w] cut a stroke. Ground vehicles face right
+// with the ground at y 12.5, aircraft are seen from above with the nose right on the axis y 7, ships sit on the waterline y 11.
+const SLK = (() => {
+  const C = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0z`;
+  const sheet = y => `M5 ${y}H18.6L15.6 ${y + 5.4}H2z`;
+  const wheels = (xs, y, r) => xs.map(x => C(x, y, r)).join('');
+  // a soldier's helmeted head: dome, brim, face
+  const head = (x, y) => [['f', `M${x - 1.55} ${y + .25}C${x - 1.55} ${y - 1.15} ${x - .75} ${y - 1.7} ${x + .1} ${y - 1.7}C${x + 1.05} ${y - 1.7} ${x + 1.7} ${y - 1.05} ${x + 1.7} ${y + .25}L${x + 2.1} ${y + .45}V${y + .85}H${x - 1.75}z`],
+    ['f', `M${x - .9} ${y + .6}H${x + 1.3}V${y + 1.55}Q${x + 1.3} ${y + 2.1} ${x + .55} ${y + 2.1}H${x - .9}z`]];
+  // a tracked running gear: track band with road wheels cut out
+  const track = (x0, x1, y0, y1, n) => { const r = (y1 - y0)/2, ws = []; for (let i = 0; i < n; i++) ws.push(x0 + r + (x1 - x0 - 2*r)*i/(n - 1));
+    return [['f', `M${x0 + r} ${y0}H${x1 - r}a${r} ${r} 0 0 1 0 ${2*r}H${x0 + r}a${r} ${r} 0 0 1 0 ${-2*r}z`], ['x', wheels(ws, y0 + r, r*0.46)]]; };
+  // wheels on a truck: dark tyres with a cut hub ring
+  const tyres = (xs, y, r) => [['f', wheels(xs, y, r)], ['x', wheels(xs, y, r*0.42)]];
+  const truckCab = (x, y) => [['f', `M${x} ${y + 5}V${y + 1.2}Q${x} ${y} ${x + 1.2} ${y}H${x + 2.6}L${x + 4.3} ${y + 2.6}V${y + 5}z`], ['x', `M${x + .9} ${y + .9}H${x + 2.3}L${x + 3.4} ${y + 2.4}H${x + .9}z`]];
+  return {
+  // advancing rifleman
+  inf: [...head(10.3, 2.2), ['s', 'M9.9 5.2L9 8.6', 2.7], ['f', 'M6.9 4.9H8.9L9 8.2H6.7z'],
+        ['s', 'M9.1 8.6L7.6 10.4L6.2 12.6', 1.75], ['s', 'M9.5 8.6L11.2 10.3L11.9 12.6', 1.75], ['b', 'M5.4 13.1H7.2M11.4 13.1H13.4', 1],
+        ['s', 'M10.6 5.4L12 7L13.4 6.5', 1.25], ['b', 'M8.6 7.1L18.4 5', 1.05], ['b', 'M12.2 6.6L12.6 8.1', 0.9]],
+  // kneeling soldier with a launcher on the shoulder
+  at: [...head(11.9, 2.3), ['b', 'M2.6 4.7H17', 2.1], ['f', 'M16.6 3.3H18.4L19.4 4.1V5.3L18.4 6.1H16.6z'], ['f', 'M1.4 3.9H3V5.5H1.4z'],
+        ['s', 'M10.8 5.8L9.9 9', 2.6], ['s', 'M10 9.2L12.4 9.8L12.8 12.6', 1.75], ['s', 'M9.8 9.2L8 12.2H5.4', 1.7], ['b', 'M12.4 13.1H14.4', 1],
+        ['s', 'M11.4 6.4L13 7.4L13.8 5.8', 1.2]],
+  // special forces: crouched, aiming a long suppressed rifle, beret instead of a helmet
+  spec: [['f', 'M8.3 2.9C8.3 1.6 9.6 1 11.1 1.2C12.2 1.35 12.8 1.9 12.7 2.6L10.9 3.1H8.3z'], ['f', 'M9.2 2.9H11.6V4.3Q11.6 4.9 10.9 4.9H9.2z'],
+        ['s', 'M9.6 5.8L8.4 8.8', 2.7], ['f', 'M6.2 5.6H8.2L8.4 8.4H6z'], ['s', 'M8.4 9L10.8 9.8L11.3 12.6', 1.75], ['s', 'M8.2 9L6.4 11L5 12.6', 1.75], ['b', 'M4.4 13.1H6.2M10.8 13.1H12.7', 1],
+        ['b', 'M8.8 5.3L19.4 5.3', 1], ['b', 'M8.2 5.3L9.6 5.3', 2], ['s', 'M10 6L12.6 5.6', 1.25], ['b', 'M12.4 5.8L12.6 7.4', 0.9]],
+  // paratrooper under a canopy
+  para: [['f', 'M2.2 6.2C2.6 1.9 6.4 .4 10 .4S17.4 1.9 17.8 6.2Q16.3 5.2 14.7 6.2Q13.2 5.2 11.6 6.2Q10 5.3 8.4 6.2Q6.8 5.2 5.3 6.2Q3.8 5.2 2.2 6.2z'],
+        ['b', 'M2.6 6.3L9.4 9.6M17.4 6.3L10.6 9.6M6.6 6.2L9.6 9.4M13.4 6.2L10.4 9.4', 0.55],
+        ['f', C(10, 9.3, 0.95)], ['s', 'M10 10.6V12.2', 1.9], ['s', 'M9.6 12.3L9.1 13.4M10.4 12.3L10.9 13.4', 1]],
+  // supply truck
+  truck: [...truckCab(14.2, 5.4), ['f', 'M1.2 4.2H13.6V10.4H1.2z'], ['x', 'M1.9 4.9H12.9V5.5H1.9z'], ['f', 'M1 10H19V11.4H1z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6)],
+  // mobile jammer: a truck with a mast and a dish
+  jam: [...truckCab(14.2, 5.4), ['f', 'M1.2 6.2H13.6V10.4H1.2z'], ['f', 'M1 10H19V11.4H1z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6),
+        ['b', 'M8 6.2V1.4', 0.9], ['b', 'M5.6 1.8H10.4M6.4 3.4H9.6', 0.8], ['f', 'M2.4 2.6Q3.6 1 5.2 2.2L3.4 4.6Q2 3.8 2.4 2.6z'], ['b', 'M3.9 3.6L4.4 6.2', 0.8]],
+  // wheeled infantry fighting vehicle: a sloped armoured hull, small cannon turret, four big wheels
+  ifv: [['f', 'M1.2 10.6V6.8L2.2 5.8H12L18.8 8.6V10.6z'], ['f', 'M6.2 5.8L7 4H11L11.8 5.8z'], ['b', 'M10.6 4.8H18.4', 0.85],
+        ['x', 'M1.6 7.6H12.6V8.2H1.6z'], ...tyres([3.6, 7.2, 12.6, 16.2], 11.4, 1.75)],
+  // main battle tank
+  tank: [...track(1.6, 17.4, 9.4, 13, 5), ['f', 'M.6 9.4L2.2 7.2H17.2L19.2 9.4z'], ['f', 'M4.6 7.2L5.6 4.6H11.8L13.8 5.6V7.2z'], ['b', 'M13.4 5.6H19.8', 1.1],
+        ['f', 'M18.9 5H19.8V6.2H18.9z'], ['b', 'M7.2 4.6V3.4H9.2', 0.7]],
+  // self-propelled howitzer: big rear turret, long barrel raised
+  art: [...track(1.6, 17.4, 9.4, 13, 5), ['f', 'M.8 9.4L1.6 7.4H17.2L19 9.4z'], ['f', 'M1.6 7.4V4.2L2.6 3.4H10.6L12.2 4.6V7.4z'], ['b', 'M11.6 5L19.6 1.4', 1.1],
+        ['f', 'M18.8 .8L19.4 .5L20 1.9L19.4 2.2z'], ['x', 'M3 5.2H9.6V5.8H3z']],
+  // rocket artillery: a truck carrying a raised launch pod with tube mouths
+  mlrs: [...truckCab(14.2, 5.4), ['f', 'M1 10H19V11.4H1z'], ['f', 'M1.2 8.4H13.6V10.4H1.2z'], ['f', 'M1.6 8.2L11.6 3.2L13 6L3 11z'],
+        ['x', C(11.6, 4.3, .45) + C(12.2, 5.5, .45)], ['x', 'M3.1 8.7L11.3 4.6L11.5 5L3.3 9.1z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6)],
+  // mobile SAM: launcher truck with two missiles raised
+  sam: [...truckCab(14.2, 5.4), ['f', 'M1 10H19V11.4H1z'], ['f', 'M1.2 8.4H13.6V10.4H1.2z'],
+        ['f', 'M3.2 8.6L8.6 2.2L10 3.4L4.6 9.8z'], ['f', 'M6.6 8.6L12 2.2L13.4 3.4L8 9.8z'], ['f', 'M8.3 1.9L9.2 1.2L10.3 2.5L9.6 3z'], ['f', 'M11.7 1.9L12.6 1.2L13.7 2.5L13 3z'],
+        ['f', 'M2.6 7.6H9.4V9H2.6z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6)],
+  // ---- aircraft, seen from above, nose right, axis y 7
+  jet: [['f', 'M1.6 6.3H14.4Q18.2 6.4 19.9 7Q18.2 7.6 14.4 7.7H1.6z'], ['f', 'M6.4 7L8 1.4H9.2L12.6 7zM6.4 7L8 12.6H9.2L12.6 7z'],
+        ['f', 'M1.6 7L2.2 3.9H3.2L4.8 7zM1.6 7L2.2 10.1H3.2L4.8 7z'], ['x', 'M15.4 6.75H17.4V7.25H15.4z']],
+  int: [['f', 'M1.4 6.3H14Q18.2 6.4 19.9 7Q18.2 7.6 14 7.7H1.4z'], ['f', 'M3.4 7L4.8 1.8H6L13.8 7zM3.4 7L4.8 12.2H6L13.8 7z'],
+        ['f', 'M1.4 7L2 4.8H2.8L3.8 7zM1.4 7L2 9.2H2.8L3.8 7z'], ['x', 'M15.4 6.75H17.4V7.25H15.4z']],
+  asf: [['f', 'M1.4 5.6H13.8Q18.4 6 19.9 7Q18.4 8 13.8 8.4H1.4z'], ['f', 'M5.4 7L8.6 .9H10.4L12.8 7zM5.4 7L8.6 13.1H10.4L12.8 7z'],
+        ['f', 'M1.4 7L2.2 2.8H3.8L5 7zM1.4 7L2.2 11.2H3.8L5 7z'], ['x', 'M15.4 6.75H17.4V7.25H15.4z'], ['x', 'M1.4 6.75H6V7.25H1.4z']],
+  // heavy bomber: a flying wing
+  bomb: [['f', 'M19.8 7L6.6 .6L5 1.2L7.6 3.4L5.4 5.2L6.8 7L5.4 8.8L7.6 10.6L5 12.8L6.6 13.4z'], ['x', 'M14 6.75H17.4V7.25H14z']],
+  // maritime patrol: straight wings, four turboprops
+  mpa: [['f', 'M.6 6.3H16.4Q19 6.4 19.9 7Q19 7.6 16.4 7.7H.6z'], ['f', 'M8.6 7L9.2 .6H10.8L11.4 7zM8.6 7L9.2 13.4H10.8L11.4 7z'],
+        ['f', 'M10.6 2.4H13V3.4H10.6zM10.6 4.4H13V5.4H10.6zM10.6 8.6H13V9.6H10.6zM10.6 10.6H13V11.6H10.6z'], ['f', 'M.6 7L1.2 3.8H2.4L3.6 7zM.6 7L1.2 10.2H2.4L3.6 7z']],
+  // AWACS: airliner with a rotodome
+  awacs: [['f', 'M.6 6.3H16.8Q19.2 6.4 19.9 7Q19.2 7.6 16.8 7.7H.6z'], ['f', 'M8.4 7L6.4 .6H7.8L12.4 7zM8.4 7L6.4 13.4H7.8L12.4 7z'],
+        ['f', 'M.6 7L.9 3.6H2L3.6 7zM.6 7L.9 10.4H2L3.6 7z'], ['x', C(5, 7, 3.1)], ['f', C(5, 7, 2.4)], ['x', 'M2.8 6.75H7.2V7.25H2.8z']],
+  // recon UAV: long thin wings, V tail
+  drone: [['f', 'M2.6 6.4H15.6Q19 6.5 19.8 7Q19 7.5 15.6 7.6H2.6z'], ['f', 'M10.2 7L10.6 .6H11.8L12.2 7zM10.2 7L10.6 13.4H11.8L12.2 7z'],
+        ['f', 'M2.6 7L1.2 3.6H2.2L4.2 7zM2.6 7L1.2 10.4H2.2L4.2 7z']],
+  drone4: [['f', 'M2.6 6.4H15.6Q19 6.5 19.8 7Q19 7.5 15.6 7.6H2.6z'], ['f', 'M10.2 7L10.6 .6H11.8L12.2 7zM10.2 7L10.6 13.4H11.8L12.2 7z'],
+        ['f', 'M2.6 7L1.2 3.6H2.2L4.2 7zM2.6 7L1.2 10.4H2.2L4.2 7z'], ['f', 'M11.8 2.8H14.8V3.6H11.8zM11.8 10.4H14.8V11.2H11.8z']],
+  // strike drone: a delta-wing loitering munition
+  sdrone: [['f', 'M3.4 7L6 .8H7.4L18 6.2Q19.8 6.6 19.8 7Q19.8 7.4 18 7.8L7.4 13.2H6z'], ['f', 'M5.6 .4H8.2V1.4H5.6zM5.6 12.6H8.2V13.6H5.6z'], ['x', 'M3 6.75H6.6V7.25H3z']],
+  // drone swarm: three small deltas in formation
+  swarm: [['f', 'M3.4 1.2L8.6 3.2L3.4 5.2L4.6 3.2z'], ['f', 'M10.6 5L15.8 7L10.6 9L11.8 7z'], ['f', 'M3.4 8.8L8.6 10.8L3.4 12.8L4.6 10.8z'], ['f', 'M14.2 .8L19 2.6L14.2 4.4L15.2 2.6z'], ['f', 'M14.2 9.6L19 11.4L14.2 13.2L15.2 11.4z']],
+  // attack helicopter, side view
+  heli: [['b', 'M1.6 1.6H18.4', 0.9], ['f', 'M9.6 1.6H11V3.4H9.6z'], ['f', 'M7.4 3.4H13.8Q17.6 3.6 18.6 6.6L18.8 7.8H13.4L12.4 8.8H8.2L6.8 7.6L2.6 6.6V5.2L7.4 4.4z'],
+        ['x', 'M14.2 4.4H16.4L17.4 6.2H14.2z'], ['f', 'M.6 3.4H1.8L3.2 5.8V6.8H1.6z'], ['f', 'M8.8 8.4H14.4V9.4H8.8z'], ['b', 'M7.4 11.4H17.4', 0.9], ['b', 'M9.4 9V11.4M15.2 9V11.4', 0.8]],
+  // ---- ships, side profile, bow right, waterline y 11
+  frig: [['f', 'M.6 8.4H17.4L19.8 7.2L17.8 11.6H2.2z'], ['f', 'M6.4 8.6V5.6H8V3.8H11.6L13 5.6H14V8.6z'], ['f', 'M9.1 3.9L9.8 .6L10.5 3.9z'], ['b', 'M8.6 2H11', 0.6], ['f', 'M15.6 8.6V7.6H17.2V8.6z'], ['b', 'M17 8L19.4 7.6', 0.6],
+        ['x', 'M8.4 6.2H11.6V6.8H8.4z']],
+  crui: [['f', 'M.4 8.2H17.6L19.8 7L17.6 11.8H2z'], ['f', 'M3.8 8.4V5.4H6.4V3.6H10L11.4 5.4V8.4z'], ['f', 'M12 8.4V6H15.2V8.4z'], ['f', 'M7.1 3.7L7.8 .4L8.5 3.7z'], ['b', 'M6.6 1.8H9', 0.6], ['b', 'M13.6 6V3.6', 0.8],
+        ['f', 'M16.2 8.4V7.4H17.6V8.4z'], ['b', 'M17.4 7.8L19.6 7.4', 0.6], ['x', 'M6.2 6H10V6.6H6.2z']],
+  carr: [['f', 'M1.6 9H18.6L17.4 12H3.4z'], ['f', 'M.2 7.8H19.8V9.2H.2z'], ['f', 'M12.8 3.8H15.4V7.8H12.8z'], ['b', 'M14 3.8V1.6M13 2.4H15', 0.7], ['x', 'M13.4 4.6H14.8V5.2H13.4z']],
+  sub: [['f', 'M1.2 9.4C1.2 7.9 3.4 7.4 6 7.4H16.2C18.6 7.4 19.8 8.3 19.8 9.4S18.6 11.4 16.2 11.4H6C3.4 11.4 1.2 10.9 1.2 9.4z'], ['f', 'M10.2 7.6L10.8 4.4H13.4L13.8 7.6z'],
+        ['b', 'M11.8 4.4V2.6', 0.7], ['f', 'M.4 7.6H1.4L2.6 9.4H1.2z'], ['f', 'M9.6 5.6H11V6.2H9.6z']],
+  cargo: [['f', 'M.6 8.4H18L19.8 7.4L18.2 11.6H2.4z'], ['f', 'M1.8 4H5V8.6H1.8z'], ['f', 'M6.2 5.6H9V8.6H6.2zM9.6 4.6H12.4V8.6H9.6zM13 5.6H15.8V8.6H13z']],
+  lst: [['f', 'M.6 8.6H16.4L19.8 7.4L18 11.6H2.4z'], ['f', 'M1.6 4H5.6V8.8H1.6z'], ['b', 'M3.6 4V1.8', 0.8], ['f', 'M6.6 7H16.6V8.8H6.6z']],
+  // a mixed stack: three flat slanted sheets stacked on one another (the plate's own lean), with thin light gaps
+  stack: [['f', sheet(7)], ['x', 'M0 -1H20V' + (4.4 + 5.4 + 0.9) + 'H0z'], ['f', sheet(4.4)], ['x', 'M0 -1H20V' + (1.8 + 5.4 + 0.9) + 'H0z'], ['f', sheet(1.8)]],
+  }; })();
+// a sleek glyph of type t, W device px wide (20 design units: at the counter's 20 css px every whole and half unit lands on a device pixel), in colour col;
+// painted once into an offscreen canvas (dropped when the pixel ratio changes)
+const SLKC = new Map(); let SLKC_D = 0;
+function slkC(t, W, col){ if (SLKC_D !== dpr){ SLKC.clear(); SLKC_D = dpr; } const key = t + '|' + W + '|' + col; let c = SLKC.get(key); if (c) return c;
+  const ops = SLK[t]; if (!ops) return null; if (SLKC.size > 300) SLKC.clear();
+  c = document.createElement('canvas'); c.width = W; c.height = Math.max(1, Math.round(W*14/20)); const g = c.getContext('2d'); g.scale(W/20, W/20); g.fillStyle = g.strokeStyle = col;
+  for (const [op, d, w] of ops){ const P = new Path2D(d); g.globalCompositeOperation = op[0] === 'x' ? 'destination-out' : 'source-over';
+    if (op === 'f' || op === 'x') g.fill(P); else { g.lineWidth = w; g.lineCap = op === 'b' || op === 'xb' ? 'butt' : 'round'; g.lineJoin = op === 'b' || op === 'xb' ? 'miter' : 'round'; g.stroke(P); } }
+  SLKC.set(key, c); return c; }
 // plate icon cells: darker versions of the relation tones, so the white icon has contrast; chevrons and aircraft in flight use the light tones
 const CELL_TONES = {own:['#5b9a4c', '#3d7331'], war:['#b4463d', '#8b2e28'], other:['#6c6f67', '#4f524c'], neu:['#5d5f59', '#454742']},
   CELL_TONES_CB = {own:['#4f8fcf', '#2f6aa3'], war:['#d4842f', '#a8621c'], other:['#6c6f67', '#4f524c'], neu:['#5d5f59', '#454742']};
@@ -8263,6 +8366,9 @@ function wrenchMark(x, y, ps){ const r = 4.6*ps; ctx.save(); ctx.beginPath(); ct
 // flat counter plate: size of a plate for a strength n at counter scale s (minor = quiet foreign/neutral mini plate). The plate keeps one size on
 // screen at every zoom (the owner's rule: plate, flag and number never grow or shrink with the map)
 const PLATE_TW = new Map();
+// the count's face: a bold italic condensed sans (Barlow Condensed when it has loaded, else the body face); the plate caches are dropped when fonts arrive
+const plateFont = fz => `italic 800 ${fz}px "Barlow Condensed", ${BODY}`;
+try { if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { PLATE_TW.clear(); if (typeof PLATEC !== 'undefined') PLATEC.clear(); }); } catch (e) {}
 const plateGrow = () => 1, PLATE_K = 1;   // (no growth with zoom: one size everywhere)
 let HUDR = {t:0, r:[]};
 function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) return HUDR.r; const cr = cv.getBoundingClientRect(), out = [];
@@ -8271,8 +8377,8 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
   return (HUDR = {t:now, r:out}).r; }
 // h: plate height, C: icon cell width, tab: count tab width, r: corner radius, bars: what the health and morale bars add below (full plates)
 function plateDims(n, s, minor, two){ const ps = PLATE_K;   // the owner's rule: counters keep one pixel size at every zoom (s is ignored)
-  const h = minor ? 15 : Math.round(22*ps), fz = Math.round((minor ? 0.72 : 0.76)*h), key = fz + ':' + n;   // the number keeps one size on every plate (a mixed stack too)
-  let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = `italic 800 ${fz}px ${BODY}`; tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
+  const h = minor ? 15 : Math.round(22*ps), fz = Math.round((minor ? 0.76 : 0.82)*h), key = fz + ':' + n;   // the number keeps one size on every plate (a mixed stack too)
+  let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = plateFont(fz); tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
   const sk = Math.round(h*0.21), C = Math.round(h*1.3), i2 = two ? Math.round(0.6*h) : 0, tab = Math.round(Math.max(0.8*h, tw + 0.46*h + (two ? i2 - 0.08*h : 0))), HB = Math.max(2, Math.round(0.14*h*2)/2);
   const fh = Math.round(h*(minor ? 0.62 : 0.6)), fw = Math.round(fh*4/3);
   return {ps, fz, tw, i2, C, T:C, tab, sk, w:C + tab + sk, h, r:Math.max(2, 0.14*h), fh, fw, up:Math.max(6*ps, fh + 1), bars:minor ? 0 : 2 + HB + 2.2 + 0.5}; }
@@ -8296,7 +8402,8 @@ function picBox(src){ let b = PICBB.get(src); if (b) return b;
   PICBB.set(src, b); return b; }
 /* ---------------- Flat unit counters (CoN manner, original art) ----------------
    One marker at every zoom, a flat slanted plate (a parallelogram leaning forward): the owner's small national flag standing on its top-left corner,
-   a white cut-corner tab on the left holding the lead type's black vector silhouette (always facing right, never flipped, rotated or animated), and the
+   a white cut-corner tab on the left holding the lead type's dark vector silhouette (SLK; always facing right, never flipped, rotated or animated; a stack
+   of more than one unit type shows the stacked-sheets glyph instead), and the
    unit count as a big bold italic white number with a dark outline on the plate in the relation colour (yours green, at war red, everyone else grey).
    A thin dark edge and a soft drop shadow; a slim health bar (and your morale line) under it. It keeps one size on screen at every zoom.
    Status marks: commander star and dug-in sandbags beside the flag, out of supply top right, a crossed-bars badge in battle, a heading chevron on the march. */
@@ -8422,39 +8529,67 @@ function hqCanvas(){ const i = flagIdx(PLAYER), im = ART.img('flags');
   if (i >= 0 && !im && !ART.failed('flags')) return null;   // the atlas is still loading: try again next frame
   const CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES).own, key = dpr + '|' + HQ_KB + '|' + i + '|' + CT[0]; let c = HQ_C.get(key);
   if (!c){ c = hqPaint(dpr*HQ_KB, im, i, CT); if (HQ_C.size > 8) HQ_C.clear(); HQ_C.set(key, c); } return c; }
-function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, now, minor){
-  const two = !minor && counter.second && ICONP[counter.second] ? counter.second : null;
-  const D = plateDims(n, s, minor, !!two), ps = D.ps, w = D.w, h = D.h, C = D.C, sk = D.sk, W0 = C + D.tab;
-  const x0 = moving ? x - w/2 : snapD(x - w/2), y0 = moving ? y - h/2 : snapD(y - h/2);   // (on the march: no snapping, so the glide has no 1 px stair-steps)
-  const tk = a ? (a.rebel ? 'war' : toneOf(a.owner)) : 'own', CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES)[tk], nst = minor || !counter.list ? 0 : Math.max(0, Math.min(2, counter.list.length - 1));
-  const fc = flagCanvas(plateFlagOf(a), D.fh), fw = fc ? (fc.width - 2)/dpr : 0, fh = fc ? (fc.height - 2)/dpr : 0;
-  ctx.save(); ctx.translate(x0, y0); if (minor) ctx.globalAlpha = 0.92;
-  // the flag stands on the plate's top-left corner (drawn first: the plate's top edge covers its foot)
-  if (fc){ const fx = snapD(sk + 1), fy = snapD(-fh + 0.5); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(fx + 1, fy + 1.5, fw + 2/dpr, fh); ctx.drawImage(fc, fx - 1/dpr, fy - 1/dpr, fw + 2/dpr, fh + 2/dpr); }
-  ctx.save(); plateSkew(sk, h);
-  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(1.5, 2.5, W0 + 1, h + 0.5); ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(0.8, 1.4, W0, h);   // soft drop shadow
-  for (let i = nst; i > 0; i--){ const o = 3*ps*i; ctx.fillStyle = CT[2]; ctx.fillRect(o, -o, W0, h); ctx.fillStyle = plateGrad(h, CT[1], CT[2]); ctx.fillRect(o + 1, -o + 1, W0 - 2, h - 2);
-    ctx.lineWidth = selected ? 1.5 : 1; ctx.strokeStyle = selected ? '#e8a83a' : 'rgba(5,8,10,.85)'; ctx.strokeRect(o - 0.5, -o - 0.5, W0 + 1, h + 1); }   // stacked cards: several armies in one marker
-  ctx.fillStyle = plateGrad(h, CT[0], CT[1]); ctx.fillRect(0, 0, W0, h);
-  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(0, 0, W0, 1); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, h - 1, W0, 1);
-  // the white cut-corner tab holding the silhouette
-  const ti = Math.max(1.5, Math.round(1.6*ps*2)/2), cut = Math.round(0.3*h);
-  cutRect(ctx, ti, ti, C - ti, h - 2*ti, cut); ctx.fillStyle = plateGrad(h, '#ffffff', '#d9dfdd'); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.stroke();
-  ctx.strokeStyle = fighting ? '#ff6a5c' : CT[2]; ctx.lineWidth = fighting ? 2 : 1; if (fighting) ctx.globalAlpha = afxReduced() ? 1 : 0.85 + 0.15*Math.sin(now*Math.PI*2/1600);
-  ctx.strokeRect(-0.5, -0.5, W0 + 1, h + 1); ctx.globalAlpha = minor ? 0.92 : 1;
-  if (selected){ ctx.save(); ctx.shadowColor = 'rgba(232,168,58,.85)'; ctx.shadowBlur = 4; ctx.strokeStyle = '#f0b440'; ctx.lineWidth = 2; ctx.strokeRect(-2, -2, W0 + 4, h + 4); ctx.restore(); }
-  ctx.restore();
+// the counter's still parts (flag, drop shadow, plate, bevel, tab, glyph, count, selection ring, battle edge) painted once per look into a device-pixel
+// canvas and blitted (a soft blurred shadow costs nothing per frame); E.ox / E.oy: where the plate's top-left corner sits in it (whole css px)
+const PLATEC = new Map(); let PLATEC_D = 0, FLAGK = 0;
+function plateBody(D, CT, n, glyph, selected, fighting, minor, fc){
+  if (PLATEC_D !== dpr){ PLATEC.clear(); PLATEC_D = dpr; }
+  if (fc && !fc.__k) fc.__k = ++FLAGK;
+  const key = CT[0] + CT[2] + '|' + n + '|' + glyph + '|' + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + (fc ? fc.__k : 0) + '|' + D.h + '|' + D.tab + '|' + D.fz;
+  let E = PLATEC.get(key); if (E) return E;
+  const {h, C, sk, tab} = D, W0 = C + tab, fw = fc ? (fc.width - 2)/dpr : 0, fh = fc ? (fc.height - 2)/dpr : 0, px = 1/dpr, sn = v => Math.round(v*dpr)/dpr;
+  const L = 4, T = Math.ceil(Math.max(fh + 2, 4)), R = 6, B = 6;   // room round the plate: the selection glow, the shadow below and to the right, the flag above
+  const c = document.createElement('canvas'); c.width = Math.ceil((L + sk + W0 + R)*dpr); c.height = Math.ceil((T + h + B)*dpr); const g = c.getContext('2d');
+  g.scale(dpr, dpr); g.translate(L, T); g.lineJoin = 'miter';
+  const skew = () => g.transform(1, 0, -sk/h, 1, sk, 0);   // (u, v) -> (u + sk*(1 - v/h), v): the top edge sits sk right of the bottom edge
+  const lw = Math.max(1, Math.round(0.8*dpr))*px, hl = Math.max(1, Math.round(0.67*dpr))*px;   // outline and bevel line widths: whole device pixels, thinner at 2-3x
+  // the flag stands on the plate's top-left corner (its foot hidden under the plate's top edge), with a faint shadow of its own
+  if (fc){ const fx = sn(sk + 1), fy = sn(-fh + 0.5); g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(fx + 0.8, fy + 1, fw + 2*px, fh); g.drawImage(fc, fx - px, fy - px, fw + 2*px, fh + 2*px); }
+  g.save(); skew();
+  // soft drop shadow (blur and offset are in device pixels)
+  g.save(); g.shadowColor = minor ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.55)'; g.shadowBlur = (minor ? 2 : 3.2)*dpr; g.shadowOffsetX = 0.5*dpr; g.shadowOffsetY = (minor ? 1 : 1.6)*dpr;
+  g.fillStyle = CT[2]; g.fillRect(-lw, -lw, W0 + 2*lw, h + 2*lw); g.restore();
+  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; g.fillStyle = '#f2b843'; g.fillRect(-lw - 1.5, -lw - 1.5, W0 + 2*lw + 3, h + 2*lw + 3); g.restore(); }
+  // the outline: a thin dark edge round the plate (red in battle), filled under the body so its straight edges stay crisp
+  g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fillRect(-lw, -lw, W0 + 2*lw, h + 2*lw);
+  if (!fighting){ g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(-lw, -lw, W0 + 2*lw, h + 2*lw); }
+  if (fighting){ g.fillStyle = '#4a100c'; g.fillRect(0, 0, W0, h); }
+  const ins = fighting ? Math.max(1, Math.round(0.7*dpr))*px : 0;   // (in battle a second, inner dark line separates the red edge from the body)
+  // the body: the relation tone, lighter at the top, with a soft gloss over the top half and a thin bevel (lit top and left edges, a darker foot)
+  let gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); g.fillStyle = gr; g.fillRect(ins, ins, W0 - 2*ins, h - 2*ins);
+  gr = g.createLinearGradient(0, 0, 0, h*0.55); gr.addColorStop(0, 'rgba(255,255,255,.16)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(ins, ins, W0 - 2*ins, h*0.55);
+  g.fillStyle = 'rgba(255,255,255,.42)'; g.fillRect(ins, ins, W0 - 2*ins, hl);
+  g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(ins, ins + hl, hl, h - 2*ins - 2*hl);
+  g.fillStyle = 'rgba(0,0,0,.24)'; g.fillRect(ins, h - ins - hl, W0 - 2*ins, hl);
+  // the white cut-corner tab: a faint inset line on the plate, a white-to-pale-grey fill, a lit top line and a soft foot
+  const ti = sn(minor ? 1.5 : 2), cut = Math.round(0.3*h), tx1 = C - (minor ? 0.5 : 1), ty0 = ti, ty1 = h - ti;
+  const tabP = (o) => { g.beginPath(); g.moveTo(ti - o + cut, ty0 - o); g.lineTo(tx1 + o, ty0 - o); g.lineTo(tx1 + o, ty1 + o); g.lineTo(ti - o, ty1 + o); g.lineTo(ti - o, ty0 - o + cut); g.closePath(); };
+  tabP(px); g.fillStyle = 'rgba(0,0,0,.3)'; g.fill();
+  tabP(0); gr = g.createLinearGradient(0, ty0, 0, ty1); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, '#f1f4f2'); gr.addColorStop(1, '#d3dad7'); g.fillStyle = gr; g.fill();
+  g.save(); tabP(0); g.clip(); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(ti, ty1 - hl, tx1 - ti, hl); g.restore();
+  g.restore();
   const at = v => sk*(1 - v/h);   // the skew's shift at height v
-  const IW = Math.max(6, Math.round((C - 2*ti)*0.8*dpr)), ic = main && iconC(main, IW, '#121816');
-  if (ic){ const icx = (ti + C)/2 + 0.6 + at(h/2); ctx.drawImage(ic, Math.round((icx - IW/dpr/2)*dpr)/dpr, Math.round((h*dpr - ic.height)/2 + 0.5*dpr)/dpr, IW/dpr, ic.height/dpr); }
-  ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; const tx = C + D.tab/2;
-  const num = (v, fz, cy, dx = 0) => { ctx.font = `italic 800 ${fz}px ${BODY}`; const X = tx + dx + at(cy); ctx.lineWidth = Math.max(2, 0.17*fz); ctx.strokeStyle = 'rgba(6,14,8,.92)'; ctx.strokeText(v, X, cy); ctx.fillStyle = '#ffffff'; ctx.fillText(v, X, cy); };
-  if (minor){ num(String(n), D.fz, h/2 + 0.5); ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; return {x:x0 - 1, y:y0 - (fc ? fh : 0) - 1, w:w + 3, h:h + (fc ? fh : 0) + 4}; }
-  // a second type holding a good share of the stack: the number keeps its size and steps left; a small white silhouette of that type sits after it
-  if (two){ num(String(n), D.fz, h/2 + 0.5, -D.i2/2 + 0.04*h);
-    const IW2 = Math.max(5, Math.round(D.i2*dpr)), ic2 = iconC(two, IW2, '#f4f7f2'), cy2 = h*0.58, cx2 = C + D.tab - D.i2/2 - 0.1*h + at(cy2);
-    if (ic2){ ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 1.5; ctx.drawImage(ic2, Math.round((cx2 - IW2/dpr/2)*dpr)/dpr, Math.round(cy2*dpr - ic2.height/2)/dpr, IW2/dpr, ic2.height/dpr); ctx.restore(); } }
-  else num(String(n), D.fz, h/2 + 0.5);
+  // the glyph: upright (never skewed), 20 css px wide on a full plate, centred in the tab at whole device pixels
+  const GW = minor ? 13 : 20, Wd = Math.round(GW*dpr), ic = SLK[glyph] ? slkC(glyph, Wd, '#151b19') : iconC(glyph, Wd, '#151b19');
+  if (ic){ const iw = ic.width/dpr, ih = ic.height/dpr, icx = (ti + tx1)/2 + at(h/2) + 0.4; g.drawImage(ic, sn(icx - iw/2), sn(h/2 - ih/2 + (minor ? 0 : 0.2)), iw, ih); }
+  // the count: bold italic condensed white with a crisp thin dark outline and a soft shadow under it
+  g.textBaseline = 'middle'; g.textAlign = 'center'; g.lineJoin = 'round'; g.font = plateFont(D.fz);
+  const cy = h/2 + 0.6, X = C + tab/2 + at(cy) - (minor ? 0 : 0.5), v = String(n), ow = minor ? 1.8 : 2.2;
+  g.lineWidth = ow + 1; g.strokeStyle = 'rgba(0,0,0,.3)'; g.strokeText(v, X + 0.4, cy + 1);
+  g.lineWidth = ow; g.strokeStyle = 'rgba(8,16,10,.95)'; g.strokeText(v, X, cy); g.fillStyle = '#ffffff'; g.fillText(v, X, cy);
+  E = {c, ox:L, oy:T}; if (PLATEC.size > 400) PLATEC.clear(); PLATEC.set(key, E); return E; }
+function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, now, minor){
+  const D = plateDims(n, s, minor, false), ps = D.ps, w = D.w, h = D.h, C = D.C, sk = D.sk, W0 = C + D.tab;
+  const x0 = moving ? x - w/2 : snapD(x - w/2), y0 = moving ? y - h/2 : snapD(y - h/2);   // (on the march: no snapping, so the glide has no 1 px stair-steps)
+  const tk = a ? (a.rebel ? 'war' : toneOf(a.owner)) : 'own', CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES)[tk];
+  const fc = flagCanvas(plateFlagOf(a), D.fh), fw = fc ? (fc.width - 2)/dpr : 0, fh = fc ? (fc.height - 2)/dpr : 0;
+  const E = plateBody(D, CT, n, main || 'inf', selected, fighting, minor, fc);
+  ctx.save(); ctx.translate(x0, y0); if (minor) ctx.globalAlpha = 0.92;
+  ctx.drawImage(E.c, -E.ox, -E.oy, E.c.width/dpr, E.c.height/dpr);
+  // in battle the red edge breathes (a faint outer glow; steady with reduced effects)
+  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); ctx.save(); ctx.transform(1, 0, -sk/h, 1, sk, 0); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.strokeRect(-2, -2, W0 + 4, h + 4); ctx.restore(); }
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+  if (minor){ ctx.restore(); return {x:x0 - 1, y:y0 - (fc ? fh : 0) - 1, w:w + 3, h:h + (fc ? fh : 0) + 4}; }
   const cmd = counter.list && counter.list.some(cmdOf), mx = sk + (fc ? fw + 2 : 0);
   if (cmd){ ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', mx + 5*ps, -4*ps); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', mx + 5*ps, -4*ps); }
   if (counter.dug && !moving) sandbagMark(mx + (cmd ? 10.5 : 0.5)*ps, -Math.max(fh, 9*ps) + 0.5*ps, ps);   // dug in
@@ -8476,15 +8611,15 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
 const plateIcon = (t, o) => { const k = artT(t, o); return ICONP[k] ? k : ICONP[t] ? t : 'inf'; };
 // plate types: the cluster's dominant type by weight (strength x hit points) and a second type when it holds at least a quarter of that weight
 // does a stack's plate carry a second unit type (the wider number tab)? the layout sizes plates with it; cached on the cluster
-function clTwo(c){ if (c.p2 == null){ const L0 = counter.list; counter.list = c.list; c.p2 = !!plateTypes(c.list[0], 'inf')[1]; counter.list = L0; } return c.p2; }
+function clTwo(c){ return false; }   // (the mini second icon is gone: a mixed stack shows the stack glyph instead)
 function plateTypes(a, main){ const L = counter.list && counter.list.length ? counter.list : a ? [a] : [];
   if (!a || L.length < 1) return [main, null];
   const wt = {}; let tot = 0;
   for (const q of L){ if (G.P[q.at].sea && !shipsN(q) && !q.air){ wt.lst = (wt.lst || 0) + count(q); tot += count(q); continue; }   // embarked troops: a landing ship
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]){ const v = q.u[t]*UNITS[t].hp; wt[t] = (wt[t] || 0) + v; tot += v; } }
-  const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); if (!ts.length) return [main, null];
+  const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); if (!ts.length) return [main, null, false];
   const t2 = ts[1] && wt[ts[1]] >= tot*0.25 && ICONP[ts[1]] ? ts[1] : null;
-  return [ts[0], t2]; }
+  return [ts[0], t2, ts.length > 1]; }   // [lead type, a second type holding a quarter of the weight, more than one type at all (a mixed stack)]
 // a stack's quiet flag (independents and powers at peace that are neither fighting nor selected: mini plates), cached on the cluster
 function clQuiet(c){ if (c.pq != null) return c.pq; const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), fighting = !c.moving && !c.air && S.battles.includes(c.at), selected = c.list.some(q => q.id === sel.army || sel.group.includes(q.id));
   return (c.pq = a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); }
@@ -8494,8 +8629,9 @@ function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting
   s = Math.max(0.75, s);
   // level of detail: forces that don't concern you (independents, powers at peace) are quiet mini plates
   const quiet = a && a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)), o = a ? a.owner : PLAYER;
-  const pt = plateTypes(a, 'inf'), main = plateIcon(pt[0], o); counter.second = quiet || !pt[1] ? null : plateIcon(pt[1], o);
-  const close = view.s*HS0 >= FORM_PX, D = plateDims(n, s, quiet, !!counter.second), bdy = 0, cy = y, mv = moving && !quiet, ang = counter.ang;
+  // the tab's glyph: the lead type's silhouette, or for a stack of more than one unit type the stacked-sheets glyph
+  const pt = plateTypes(a, 'inf'), main = pt[2] ? 'stack' : plateIcon(pt[0], o); counter.second = null;
+  const close = view.s*HS0 >= FORM_PX, D = plateDims(n, s, quiet, false), bdy = 0, cy = y, mv = moving && !quiet, ang = counter.ang;
   // on the march, close in: a faint wake behind a ship's plate, a little dust behind a ground force's (world-anchored particles)
   if (mv && close && ang != null && a && !a.air && !afxReduced()){ const ca = Math.cos(ang), sa = Math.sin(ang), t = Math.min((D.w/2 + 1)/Math.max(1e-3, Math.abs(ca)), (D.h/2 + 1)/Math.max(1e-3, Math.abs(sa))), bx = x - ca*t, by = cy - sa*t;
     if (G.P[a.at].sea){ const L = D.w*0.85; ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(232,240,244,.3)'; ctx.lineWidth = 1.3; ctx.beginPath();
