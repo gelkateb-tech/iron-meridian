@@ -1,5 +1,7 @@
 #!/bin/bash
 # Builds a standalone test page at <project>/.test/page.html (adds the doctype/body skeleton the Artifact host adds at publish time).
+# This page is the TEST build: the @DEV / @TEST markers in index.html are comments, so the developer mode and the window.__im hooks stay in
+# (tools/build.js writes the same test build to dist/test and the stripped public build to dist/public; see BUILD.md).
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$ROOT/.test"

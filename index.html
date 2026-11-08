@@ -2069,6 +2069,35 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
 @media (min-width: 821px){ .rs-tree{--rh:150px} }
 @media (max-width: 820px){ .rs-bw .rs-bimg{--sc:1.1; right:calc(8% + 65px)} .rs-bw{-webkit-mask-image:linear-gradient(90deg, transparent 34%, #000 72%); mask-image:linear-gradient(90deg, transparent 34%, #000 72%)} }
 .bkgrp{display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap}
+/*@DEV*/
+/* developer mode (test build only): the DEV badge beside the speed control, the 16x/50x/100x speeds, the developer panel */
+.devb{flex:none; height:22px; padding:0 7px; margin-left:2px; border:1px solid rgba(232,185,35,.75); border-radius:2px; background:repeating-linear-gradient(135deg, #3a3418 0 5px, #2f2a14 5px 10px);
+  color:var(--cn-gold); font:800 10.5px/1 var(--body); letter-spacing:.12em; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.devb:hover{background:repeating-linear-gradient(135deg, #4a4220 0 5px, #3d3619 5px 10px)} .devb[aria-expanded="true"]{background:var(--cn-gold); color:#1c1306}
+.seg button.devsp{color:#e8c860} .seg button.devsp[aria-pressed="true"]{color:#1c1306}
+@media (max-width: 820px){ .seg button.devsp{display:none} .devb{height:20px; padding:0 5px; font-size:9.5px; letter-spacing:.08em} }
+.devp{position:fixed; top:calc(var(--hdrb, 84px) + 6px); right:8px; z-index:45; width:300px; max-width:calc(100vw - 16px); max-height:calc(100vh - var(--hdrb, 84px) - 20px); overflow:auto;
+  background:var(--cn-bar); border:1px solid rgba(143,163,170,.6); border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 14px 32px rgba(0,0,0,.55); color:#fff; font:500 12px/1.3 var(--body);
+  transform-origin:top right; animation:cnDrop .2s var(--ease)}
+.devp .dv-h{display:flex; align-items:center; gap:8px; height:32px; padding:0 6px 0 10px; background:linear-gradient(180deg, #3a5059, #364b54); border-bottom:2px solid var(--cn-gold)}
+.devp .dv-h b{flex:1; font:800 11.5px/1 var(--body); letter-spacing:.14em; color:var(--cn-gold); text-transform:uppercase}
+.devp .dv-h small{font:600 10px/1 var(--body); color:var(--cn-fg2); letter-spacing:.04em}
+.devp .dv-x{width:26px; height:26px; border:0; border-radius:2px; background:transparent; color:#c5d2d6; font-size:17px; cursor:pointer} .devp .dv-x:hover{background:rgba(255,255,255,.08); color:#fff}
+.devp .dv-s{padding:7px 8px 8px; border-top:1px solid var(--cn-div)} .devp .dv-s:first-of-type{border-top:0}
+.devp .dv-l{margin:0 0 6px 2px; font:700 10px/1 var(--body); letter-spacing:.1em; text-transform:uppercase; color:var(--cn-fg2)}
+.devp .dv-t{display:flex; align-items:center; gap:9px; width:100%; min-height:32px; padding:4px 8px; margin-top:3px; border:0; border-radius:2px; background:var(--cn-cell) var(--cn-cellg); color:#fff; font:600 12.5px/1.2 var(--body); text-align:left; cursor:pointer}
+.devp .dv-t:hover{background-color:#516a71} .devp .dv-t small{display:block; font:500 10.5px/1.25 var(--body); color:#b9cbd0}
+.devp .dv-t i{flex:none; position:relative; width:30px; height:16px; border-radius:8px; background:#22323a; box-shadow:inset 0 0 0 1px rgba(143,163,170,.5)}
+.devp .dv-t i::after{content:""; position:absolute; left:2px; top:2px; width:12px; height:12px; border-radius:50%; background:#8fa3aa; transition:left .15s var(--ease), background .15s}
+.devp .dv-t[aria-pressed="true"] i{background:#1f5a62; box-shadow:inset 0 0 0 1px var(--cn-teal)} .devp .dv-t[aria-pressed="true"] i::after{left:16px; background:var(--cn-teal)}
+.devp .dv-r{display:flex; gap:4px; margin-top:5px} .devp .dv-r > *{flex:1; min-width:0}
+.devp .dv-b{height:30px; padding:0 8px; border:1px solid rgba(143,163,170,.5); border-radius:2px; background:var(--cn-box); color:#fff; font:700 12px/1 var(--body); cursor:pointer; white-space:nowrap}
+.devp .dv-b:hover{border-color:var(--cn-teal)} .devp .dv-b[aria-pressed="true"]{background:linear-gradient(180deg,#ecb65a,#c98a2a); color:#1c1306; border-color:#ecb65a}
+.devp .dv-b.go{background:linear-gradient(180deg, #2f7c86, #24626b); border-color:var(--cn-teal)} .devp .dv-b.go[aria-pressed="true"]{background:linear-gradient(180deg, #ecb65a, #c98a2a); border-color:#ecb65a}
+.devp select, .devp input{height:30px; min-width:0; padding:0 6px; border:1px solid rgba(143,163,170,.5); border-radius:2px; background:#22323a; color:#fff; font:600 12px/1 var(--body)}
+.devp input{width:58px; flex:none} .devp .dv-n{margin:6px 2px 0; color:#b9cbd0; font-size:11px; min-height:14px} .devp .dv-n.ok{color:#8fe0a2} .devp .dv-n.bad{color:#ff8a7a}
+body.devpick #map, body.devpick canvas{cursor:crosshair!important}
+/*@ENDDEV*/
 </style>
 
 <div id="app">
@@ -2085,7 +2114,15 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
           <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)&#10;1 real minute = 8 game minutes">2×</button>
           <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3)&#10;1 real minute = 16 game minutes">4×</button>
           <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest&#10;1 real minute = 32 game minutes">8×</button>
+<!--@DEV-->
+          <button id="sp5" class="devsp" data-speed="5" aria-pressed="false" title="Developer 16× (9 cycles the developer speeds)">16×</button>
+          <button id="sp6" class="devsp" data-speed="6" aria-pressed="false" title="Developer 50× (9 cycles the developer speeds)">50×</button>
+          <button id="sp7" class="devsp" data-speed="7" aria-pressed="false" title="Developer 100× (9 cycles the developer speeds)">100×</button>
+<!--@ENDDEV-->
         </div>
+<!--@DEV-->
+        <button class="devb" id="devbadge" data-dev="panel" aria-expanded="false" aria-controls="devpanel" title="Developer mode (test build only)&#10;Shortcut: ` (backquote)">DEV</button>
+<!--@ENDDEV-->
       </div>
       <div class="hright">
         <div class="vbar" id="vbar"></div>
@@ -2164,13 +2201,18 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
     </aside>
   </main>
 </div>
+<!--@DEV-->
+<div class="devp" id="devpanel" role="dialog" aria-label="Developer mode" hidden></div>
+<!--@ENDDEV-->
 <div id="modal" hidden><div id="menuGlobe" aria-hidden="true"></div><div class="sheet" id="sheet"></div></div>
 
 <script src="world.js"></script>
 <script src="lines.js"></script>
 <script src="coast.js"></script>
 <script src="coast-hi.js"></script>
+<!--@TEST-->
 <script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script><script src="terrcells.js"><\/script>'); }</script>
+<!--@ENDTEST-->
 <script src="units3d.js"></script>
 <script>
 (() => {
@@ -2749,6 +2791,15 @@ function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.sli
 const W = WORLD.W, H = WORLD.H, GS = WORLD.GS || 1, HS0 = 12, HS = HS0/GS, SQ3 = Math.sqrt(3);   // GS: cells per old map hex
 const K = 0.25;                       // combat damage per hour factor
 const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game minutes (a game hour every 15 s)
+/*@DEV*/
+// Developer mode (test build only: tools/build.js strips every @DEV block from the public build). The switches live in this browser
+// (localStorage 'iron-meridian-dev'); every override is off unless its switch is on. Speeds 5-7 = 16x / 50x / 100x.
+const DEV_KEY = 'iron-meridian-dev', DEV_FILL = 500000, DEV_SPEEDS = [5, 6, 7];
+const DEV = {instant:false, research:false, res:false, reveal:false};
+try { const d = JSON.parse(localStorage.getItem(DEV_KEY) || '{}'); for (const k in DEV) if (typeof d[k] === 'boolean') DEV[k] = d[k]; } catch (e) {}
+const devSave = () => { try { localStorage.setItem(DEV_KEY, JSON.stringify(DEV)); } catch (e) {} };
+HOURS_PER_SEC.push(16/15, 50/15, 100/15);
+/*@ENDDEV*/
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
 const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
@@ -6655,30 +6706,59 @@ function aiSpies(n){
 /* ---------------- Simulation ---------------- */
 function alarm(){ if (S.speed > 1){ S.speed = 1; } sfx('alarm'); }
 let tickVer = 0;
-function tick(){
-  S.hour++; tickVer++;
-  // production
-  for (let p = 0; p < G.P.length; p++){ const q = S.queue[p]; if (!q.length) continue;
-    if (S.owner[p] < 0){ q.length = 0; continue; }
-    { const it0 = q[0], rb = it0.msl ? 'silo' : UNITS[it0.t] && UNITS[it0.t].req ? UNITS[it0.t].req.b : null; if (rb && bdis(p, rb)) continue; }   // knocked-out building: its line waits
+// the hour steps of production, construction, unit upgrades and research (one province / nation each; tick() runs them every game hour)
+function prodHour(p){ const q = S.queue[p];
+    if (S.owner[p] < 0){ q.length = 0; return; }
+    { const it0 = q[0], rb = it0.msl ? 'silo' : UNITS[it0.t] && UNITS[it0.t].req ? UNITS[it0.t].req.b : null; if (rb && bdis(p, rb)) return; }   // knocked-out building: its line waits
     const lines = 1 + S.bld[p].fac;            // each Arms Factory level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
-    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (S.owner[p] === PLAYER){ log(`${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fx('ready', p); sfx('ready'); } } continue; }
+    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (S.owner[p] === PLAYER){ log(`${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fx('ready', p); sfx('ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
       if (S.owner[p] === PLAYER){ fx('ready', p); sfx('ready'); log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
         if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])) log(`Repeat production paused in ${G.P[p].cityName}: not enough resources for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } }
-  // construction
-  for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (!c) continue;
-    if (S.owner[p] < 0){ S.cons[p] = null; continue; }
+function consHour(p){ const c = S.cons[p];
+    if (S.owner[p] < 0){ S.cons[p] = null; return; }
     if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (S.owner[p] === PLAYER) log(`${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
-  // unit upgrades (one at a time, parallel to research)
-  for (const N of S.nations){ if (!N.alive || !N.eng) continue;
+function engHour(N){
     if (--N.eng.h <= 0){ const {t, m} = N.eng; (N.mk || (N.mk = {}))[t] = m; N.tv = (N.tv || 0) + 1; N.eng = null;
       if (N.id === PLAYER){ log(`${UNITS[t].name} upgraded to Mk ${ROMAN[m]}: +${Math.round((MARK_F[m] - 1)*100)}% attack and defense for every one you field.`, 'good'); sfx('research'); } } }
-  // research
-  for (const N of S.nations){ if (!N.alive || !N.research) continue;
+function researchHour(N){
     if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
       if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
+/*@DEV*/
+// developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
+// consHour, prodHour, engHour, addArmy. devHour runs at the top of every game hour; devDone also runs right after a click (instant while paused).
+function devFill(N){ for (const k of CK) if (!((N[k] || 0) >= DEV_FILL)) N[k] = DEV_FILL; }   // unlimited resources: all seven topped up
+function devDone(n){ const N = S && S.nations[n]; if (!N || !N.alive) return 0; let k = 0;
+  if (DEV.research) for (let i = 0; i < 4; i++){ if (!N.research && N.rqueue && startResearch(n, N.rqueue)) N.rqueue = null; if (!N.research) break; N.research.h = 1; researchHour(N); k++; }
+  if (DEV.instant){
+    if (N.eng){ N.eng.h = 1; engHour(N); k++; }
+    for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue;
+      if (S.cons[p]){ S.cons[p].h = 1; consHour(p); k++; }
+      const q = S.queue[p]; for (let i = q.length; i > 0 && q.length; i--){ const L = q.length, it = q[0]; it.h = 1; prodHour(p); if (q.length === L && q[0] === it) break; k++; } } }   // (a knocked-out line waits; repeat orders run once per pass)
+  if (k) visCache = null; return k; }
+function devHour(n){ const N = S.nations[n]; if (!N || !N.alive) return; if (DEV.res) devFill(N); devDone(n); }
+// research every technology at once (free: the stocks are restored afterwards)
+function devResearchAll(n){ const N = S.nations[n]; if (!N || !N.alive) return 0; const keep = Object.fromEntries(CK.map(k => [k, N[k]])); let k = 0;
+  if (N.research){ N.research.h = 1; researchHour(N); k++; }
+  for (let go = true; go;){ go = false; for (const T of TECH){ devFill(N); if (startResearch(n, T.id)){ N.research.h = 1; researchHour(N); k++; go = true; } } }
+  N.rqueue = null; Object.assign(N, keep); visCache = null; return k; }
+// spawn: a new force of k units of type t for nation n in province p (ground and air on land, ships at sea or on a coast), built by addArmy
+function devSpawnOk(p, t){ const U = UNITS[t], P = G.P[p]; return !!U && !!P && (U.cls === 'naval' ? !!(P.sea || P.coast) : !P.sea); }
+function devSpawn(n, p, t, k){ if (!S.nations[n] || !S.nations[n].alive || !devSpawnOk(p, t)) return null;
+  const a = addArmy(n, p, {[t]:Math.max(1, Math.min(999, Math.round(k) || 1))}); if (UNITS[t].cls === 'air') a.air = {base:p, cd:0}; visCache = null; return a; }
+/*@ENDDEV*/
+function tick(){
+  S.hour++; tickVer++;
+  /*@DEV*/if (DEV.instant || DEV.research || DEV.res) devHour(PLAYER);/*@ENDDEV*/
+  // production
+  for (let p = 0; p < G.P.length; p++) if (S.queue[p].length) prodHour(p);
+  // construction
+  for (let p = 0; p < G.P.length; p++) if (S.cons[p]) consHour(p);
+  // unit upgrades (one at a time, parallel to research)
+  for (const N of S.nations) if (N.alive && N.eng) engHour(N);
+  // research
+  for (const N of S.nations) if (N.alive && N.research) researchHour(N);
   rqueueHour();   // slot #2: the queued project starts as soon as slot #1 is free
   diploHour(); reqHour(); weatherHour(); dropTick(); linkHour(); if (S.hour % 6 === 0) strandedHour(); if (S.hour % 3 === 0) escortHour();
   airTick();
@@ -7505,6 +7585,7 @@ function visibleSet(){
     if (a.air) continue;
     for (const q of nearList(a.at, 0.8*LEG)) v.add(q); if (a.to !== null) v.add(a.to); }
   for (const st of (S.sats || [])) if (al.has(st.owner)) for (const p0 of satSwath(st)) v.add(p0);
+  /*@DEV*/if (DEV.reveal) for (let p = 0; p < G.P.length; p++) v.add(p);/*@ENDDEV*/   // (in sight = identified; armyVisible shows hidden subs and special forces too)
   for (const q of v) loc.delete(q); v.uav = uav; v.loc = loc; v.sonar = sonar;
   let h = v.size; for (const p of v) h = (h*31 + p) | 0; v.key = h;
   return (visCache = v);
@@ -7532,7 +7613,8 @@ function drawSats(now){ if (!S.sats || !S.sats.length) return; ctx.save(); ctx.s
       if (Math.floor(now/500 + st.id) % 2 === 0){ ctx.fillStyle = mine ? '#8fe0ff' : '#ff6a5a'; ctx.beginPath(); ctx.arc(0, -4.6*sc, 1.2*sc, 0, Math.PI*2); ctx.fill(); }
       ctx.restore(); } }
   ctx.restore(); }
-function armyVisible(a, vis){ if (a.owner !== PLAYER && a.owner >= 0 && a.u.spec && a.u.spec === count(a) && !S.armies.some(b => b.owner === PLAYER && !b.air && (b.at === a.at || G.P[b.at].nbs.includes(a.at)))) return false;   // special forces: only seen up close
+function armyVisible(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
+  if (a.owner !== PLAYER && a.owner >= 0 && a.u.spec && a.u.spec === count(a) && !S.armies.some(b => b.owner === PLAYER && !b.air && (b.at === a.at || G.P[b.at].nbs.includes(a.at)))) return false;   // special forces: only seen up close
   if (a.owner !== PLAYER && a.owner >= 0 && subOnly(a) && G.P[a.at].sea && !S.battles.includes(a.at) && !(vis.sonar && (vis.sonar.has(a.at) || (a.to !== null && vis.sonar.has(a.to)))) && rel(PLAYER, a.owner).st !== 'ally') return false;   // submerged: only sonar (warships next to it) or maritime patrol finds it
   return a.owner === PLAYER || (a.owner >= 0 && friendly(PLAYER, a.owner) && rel(PLAYER, a.owner).st === 'ally') || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
 const subOnly = a => a.u.sub > 0 && a.u.sub === count(a);
@@ -7943,8 +8025,8 @@ function layoutCompute(p, roles){
     // or abroad, or touching the enemy in a battle, or its counter on another counter or your HQ out where they first must stand apart): crowding a name or a neighbour a little is better than a counter sliding off as another force comes or goes
     let keep = false; if (pg){ const B = {}, c = ev(pg.tx - P.x, pg.ty - P.y, 0, Infinity, B); if (!((B.pin || 0) >= 1400 || (B.feet || 0) >= 3000 || (B.foe || 0) > 0 || (B.plates || 0) >= 800 || (B.hq || 0) >= 300)){ keep = true; bc = c; best = [pg.tx, pg.ty]; bb = [pg.tx - P.x, pg.ty - P.y, 0]; } }
     if (!keep) for (const [dx, dy, bonus] of cand){ const c = ev(dx, dy, bonus, bc); if (c < bc){ bc = c; best = [P.x + dx, P.y + dy]; bb = [dx, dy, bonus]; } }
-    if (TMDBG.on){ const B = {}; ev(bb[0], bb[1], bb[2], Infinity, B); (mine.bk || (mine.bk = [])).push([r, bb[0], bb[1], B]); LAYEV.set(p + '|' + r, (dx, dy) => { const B2 = {}; return [ev(dx, dy, 0, Infinity, B2), B2]; }); if (LAYEV.size > 300) LAYEV.clear(); }
-    if (TMDBG.on) (mine.bc || (mine.bc = [])).push([r, Math.round(bc), (best[0] - P.x).toFixed(1), (best[1] - P.y).toFixed(1), near.length, [...new Set(near.map(q => q.p))].join(' ')]);
+    /*@TEST*/if (TMDBG.on){ const B = {}; ev(bb[0], bb[1], bb[2], Infinity, B); (mine.bk || (mine.bk = [])).push([r, bb[0], bb[1], B]); LAYEV.set(p + '|' + r, (dx, dy) => { const B2 = {}; return [ev(dx, dy, 0, Infinity, B2), B2]; }); if (LAYEV.size > 300) LAYEV.clear(); }/*@ENDTEST*/
+    /*@TEST*/if (TMDBG.on) (mine.bc || (mine.bc = [])).push([r, Math.round(bc), (best[0] - P.x).toFixed(1), (best[1] - P.y).toFixed(1), near.length, [...new Set(near.map(q => q.p))].join(' ')]);/*@ENDTEST*/
     out.set(r, best); mine.push({p, ax:best[0], ay:best[1], fb, ow, sb:SB}); }
   return {out, items:mine}; }
 const layoutKey = (p, roles) => roleSort(roles).join(',') + '|' + (hqBoxPx(p) ? 1 : 0) + '|' + tmRW() + '|' + (S.battles.includes(p) ? 1 : 0);
@@ -7966,7 +8048,7 @@ function provLayoutH(p, roles){ const key = layoutKey(p, roles), L = PLAY.get(p)
 // (TM_GLIDE: timed, whatever the frame rate; never more than 1.2 s), so a counter never creeps on for seconds. A force already standing
 // there keeps its spot outright while it is tenable (layoutCompute), so glides are rare: a force joining a stack that no longer fits, say
 const TM_GLIDE = [300, 1200];   // ms: the shortest and longest glide (a short hop takes the least, a long one never more than 1.2 s; about 55 px a second on screen in between)
-const glideTo = (g, T, now) => { if (g.tx !== T[0] || g.ty !== T[1]){ g.dur = Math.max(TM_GLIDE[0], Math.min(TM_GLIDE[1], 18*Math.hypot(T[0] - g.x, T[1] - g.y)*view.s)); if (TMDBG.on){ const gl = window.__glog || (window.__glog = []); if (gl.length < 300) gl.push([Math.round(now), g.key, +g.x.toFixed(2), +g.y.toFixed(2), +T[0].toFixed(2), +T[1].toFixed(2)]); }   // (file:// tests: every glide)
+const glideTo = (g, T, now) => { if (g.tx !== T[0] || g.ty !== T[1]){ g.dur = Math.max(TM_GLIDE[0], Math.min(TM_GLIDE[1], 18*Math.hypot(T[0] - g.x, T[1] - g.y)*view.s)); /*@TEST*/if (TMDBG.on){ const gl = window.__glog || (window.__glog = []); if (gl.length < 300) gl.push([Math.round(now), g.key, +g.x.toFixed(2), +g.y.toFixed(2), +T[0].toFixed(2), +T[1].toFixed(2)]); }/*@ENDTEST*/   // (file:// tests: every glide)
     g.fx = g.x; g.fy = g.y; g.tx = T[0]; g.ty = T[1]; g.t0 = now; }
   const u = Math.min(1, Math.max(0, (now - g.t0)/(g.dur || TM_GLIDE[0]))), e = u*u*(3 - 2*u); g.x = g.fx + (g.tx - g.fx)*e; g.y = g.fy + (g.ty - g.fy)*e; g.t = now; };
 function anchorOf(R, p, role, now){ const L = provLayout(p, rolesAt(R, p)), T = L.out.get(role) || [G.P[p].x, G.P[p].y], key = p + '|' + roleBase(role); let g = PLAG.get(key);
@@ -8121,8 +8203,8 @@ function troopModels(clusters, clBox, hexPx, now){
     ctx.globalAlpha = al*(night ? 0.42 : 0.62); ctx.drawImage(tmFoam(), -L*0.555, -B*0.95, L*1.11, B*1.9); ctx.restore(); }
   ctx.globalAlpha = 1;
   for (const q of groups){ const r = tmDraw(q.t, q.d, q.x, q.y, q.s, lut, now, q.a, !q.c.moving); const box = r ? r.box : q.box; if (r && TMBX.length < 200) TMBX.push(box);
-    if (TMDBG.on){ const [wx, wy] = screenToWorld(q.x, q.y); TMDBG.push({t:q.t, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:+wx.toFixed(3), wy:+wy.toFixed(3), box:box.map(v => +v.toFixed(1)), w:Math.round(box[2] - box[0]), h:Math.round(box[3] - box[1]), d:q.d, lvl:r ? r.lvl : null, a:+q.a.toFixed(3),
-      id:q.id, ids:q.c.list.map(a => a.id), tiny:!q.c.moving && tmPrim(q.c.at) ? 1 : 0, owner:q.c.owner, moving:q.c.moving ? 1 : 0, air:q.c.air ? 1 : 0, sea:q.sea ? 1 : 0, core:clBox(q.c).core.map(v => +v.toFixed(1)), tp:[q.c.x, q.c.y].map(v => +v.toFixed(1)), spot:q.slot, aw:[+q.c.wx.toFixed(3), +q.c.wy.toFixed(3)], gl:[+(q.x - toScreen(q.c.wx, q.c.wy)[0]).toFixed(2), +(q.y - toScreen(q.c.wx, q.c.wy)[1]).toFixed(2)]}); } }
+    /*@TEST*/if (TMDBG.on){ const [wx, wy] = screenToWorld(q.x, q.y); TMDBG.push({t:q.t, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:+wx.toFixed(3), wy:+wy.toFixed(3), box:box.map(v => +v.toFixed(1)), w:Math.round(box[2] - box[0]), h:Math.round(box[3] - box[1]), d:q.d, lvl:r ? r.lvl : null, a:+q.a.toFixed(3),
+      id:q.id, ids:q.c.list.map(a => a.id), tiny:!q.c.moving && tmPrim(q.c.at) ? 1 : 0, owner:q.c.owner, moving:q.c.moving ? 1 : 0, air:q.c.air ? 1 : 0, sea:q.sea ? 1 : 0, core:clBox(q.c).core.map(v => +v.toFixed(1)), tp:[q.c.x, q.c.y].map(v => +v.toFixed(1)), spot:q.slot, aw:[+q.c.wx.toFixed(3), +q.c.wy.toFixed(3)], gl:[+(q.x - toScreen(q.c.wx, q.c.wy)[0]).toFixed(2), +(q.y - toScreen(q.c.wx, q.c.wy)[1]).toFixed(2)]}); }/*@ENDTEST*/ }
   ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
 /* ---------------- Unit art: top-down pictures (assets/art/u-*.webp) ----------------
    UART[type] = [image, faces down, size as a share of a formation figure's height]. The pictures are drawn nose up, except the self-propelled gun,
@@ -9671,10 +9753,10 @@ function draw(now){
       let bt = null, bc = Infinity, n = 0; const RC = new Map();
       for (const [dd, e, base] of cands){ if (base >= bc) break; n++;
         const an = th0 + dd*Math.PI/9, ux = Math.cos(an), uy = Math.sin(an); let t0 = RC.get(dd); if (t0 === undefined){ t0 = reach(ux, uy); RC.set(dd, t0); }
-        const px = x + ux*(t0 + 2 + e), py = cy + uy*(t0 + 2 + e), c0 = base + cost(px, py, e >= 10); if (window.__dbgAll) window.__dbgAll.push([dd, e, Math.round(c0)]); if (c0 < bc){ bc = c0; bt = [px, py, dd, e, ux, uy]; } }
+        const px = x + ux*(t0 + 2 + e), py = cy + uy*(t0 + 2 + e), c0 = base + cost(px, py, e >= 10); /*@TEST*/if (window.__dbgAll) window.__dbgAll.push([dd, e, Math.round(c0)]);/*@ENDTEST*/ if (c0 < bc){ bc = c0; bt = [px, py, dd, e, ux, uy]; } }
       if (bt && bc < 1e9){ HQ_LAST = {k:cap + '|' + K, d:bt[2], e:bt[3]};
         const [ix, iy, qs] = rectsAt(bt[0], bt[1]); capTagAt = {tx:ix + w/2, ty:iy, w, h, x, cy, R, ix, iy, lead:bt[3] >= 10 ? [x + bt[4]*(R + 1), cy + bt[5]*(R + 1), bt[0], bt[1]] : null}; HQBOX = qs;
-        if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = [Math.round(bc)]; tagDbg.d = bt[2]; tagDbg.e = bt[3]; tagDbg.g = gcode(bt[0], bt[1]); tagDbg.th = Math.round(th0*180/Math.PI); tagDbg.n = n; } } } }
+        /*@TEST*/if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = [Math.round(bc)]; tagDbg.d = bt[2]; tagDbg.e = bt[3]; tagDbg.g = gcode(bt[0], bt[1]); tagDbg.th = Math.round(th0*180/Math.PI); tagDbg.n = n; }/*@ENDTEST*/ } } }
   // counters claim screen space before labels: city and province names give way to them (capital names always show)
   for (const c of clusters){ if (!c.pv) continue; const b = clBox(c); if (b[2] < -60 || b[3] < -60 || b[0] > cw + 60 || b[1] > ch + 60) continue; boxes0.push(b); }
   // a battle's strength balance: a slim bar right under one of its counters (yours, else the holder's), part of that counter, never adrift between
@@ -9916,15 +9998,15 @@ function draw(now){
     const r = counter(c.x, c.y, lead, c.n + (c.mn || 0), mapCol(c.owner), L.some(a => a.id === sel.army || sel.group.includes(a.id)), c.moving, k, L.length > 1, fighting, dir, now);
     ctx.globalAlpha = 1;
     const hb = {...r, ids:L.map(a => a.id), own:c.list.map(a => a.id), cx:c.sx, cy:c.sy, spread:L.some(a => a.at !== c.at), a:+(fa0*pa).toFixed(3)};
-    if (c.pv) hits.push(hb); else if (TMDBG.on) PGHOST.push(hb);   // (a counter fading out is no tap target)
+    if (c.pv) hits.push(hb); /*@TEST*/else if (TMDBG.on) PGHOST.push(hb);/*@ENDTEST*/   // (a counter fading out is no tap target)
     if (volFx && fighting && c.enemy && c.mt && r && r.w > 0 && (volN.get(c.at) || 0) < 2){ const pcx = r.x + r.w/2, pcy = r.y + r.h/2, ex = c.enemy[0] - pcx, ey = c.enemy[1] - pcy, an = Math.atan2(ey, ex), ca = Math.cos(an), sa = Math.sin(an);
       const t = Math.min((r.w/2)/Math.max(1e-3, Math.abs(ca)), (r.h/2)/Math.max(1e-3, Math.abs(sa))) + 4;   // the plate's rim toward the enemy, just outside the effects' 3 px clip pad
       const nv = lastVolley.get(c.list[0].id); volley(c, volType(c), an, now, 20, pcx + ca*t, pcy + sa*t, false); if (lastVolley.get(c.list[0].id) !== nv) volN.set(c.at, (volN.get(c.at) || 0) + 1); }
   } } finally { counter.defer = null; VOLA = 1; }
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
-  if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null, tba:capTagAt ? capTagAt.a ?? 1 : null,
-    pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};   /*DBGBOX*/
+  /*@TEST*/if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null, tba:capTagAt ? capTagAt.a ?? 1 : null,
+    pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};/*@ENDTEST*/   /*DBGBOX*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
   if (sel.army !== null && !afxReduced()){ if (SELFX.a !== sel.army){ SELFX.a = sel.army; SELFX.at = now; }
     const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500;
@@ -10127,6 +10209,7 @@ function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a 
 function markAt(x, y){ let best = null, bd = 1e9; for (const m of marks){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
 function hitAt(x, y){ for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }
 function tap(x, y, shift = false){
+  /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   closeChooser(); lastClickW = screenToWorld(x, y);
   const mk = markAt(x, y);   // a tap on a city star / dot means that city, even where a neighbouring stack's box overlaps it
   if (!cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null){
@@ -10571,6 +10654,7 @@ function renderSide(force){
   mslDDSync(N);
   $('seedlbl').textContent = '';
   for (let i = 0; i < 5; i++) $('sp' + i).setAttribute('aria-pressed', String(S.speed === i));
+  /*@DEV*/devSync();/*@ENDDEV*/
   const counts = S.nations.map(n => S.owner.filter(o => o === n.id).length);
   const order = S.nations.slice().sort((a, b) => (b.alive - a.alive) || counts[b.id] - counts[a.id]);
   const need = landNeed(PLAYER);
@@ -11514,6 +11598,7 @@ document.addEventListener('change', e => { const el = e.target;
   if (el && el.classList && el.classList.contains('rn')){ const a = armyById(+el.dataset.id), v = el.value.trim().slice(0, 32).replace(/[<>&"]/g, ''); if (a && v) a.nm = v; renaming = null; el.blur(); renderSide(true); return; } if (el && el.dataset && el.dataset.act === 'stance'){ const a = armyById(+el.dataset.id); if (a){ a.stance = el.value; a.home = null; toast(`${armyName(a)}: ${STANCES[el.value][0]}. ${STANCES[el.value][1]}`, 'info', null); renderSide(true); } } });
 document.addEventListener('keydown', e => { INCC.v = -1;
   if (e.target.closest && e.target.closest('input,textarea')) return;
+  /*@DEV*/if (devKey(e)) return;/*@ENDDEV*/
   if (e.code === 'Space'){ e.preventDefault(); setSpeed(S.speed ? 0 : 1); }
   else if (e.key === '1' || e.key === '2' || e.key === '3') setSpeed(+e.key);
   else if (e.key === 'o' || e.key === 'O'){ if (modalKind === 'settings') closeModal(); else if ($('modal').hidden) openModal(settingsHTML(), 'settings'); }
@@ -11543,6 +11628,48 @@ document.addEventListener('keydown', e => { INCC.v = -1;
   else if (e.key === 'r' || e.key === 'R'){ if (modalKind === 'research') closeModal(); else if ($('modal').hidden){ RV.br = null; RV.sel = null; openModal(researchHTML(), 'research'); } }
   else if (e.key === 'c' || e.key === 'C'){ if (modalKind === 'cities') closeModal(); else if ($('modal').hidden) openModal(citiesHTML(), 'cities'); }
 });
+/*@DEV*/
+// ---- developer panel (test build only; the rules it calls sit next to tick(): devDone, devFill, devResearchAll, devSpawn) ----
+const DEVUI = {open:false, t:'tank', o:PLAYER, k:5, pick:false, note:'', ok:true};
+const DEV_TOG = [['research', 'Instant research', 'Started research completes at once'], ['instant', 'Instant building and production', 'Construction, training, missiles, upgrades'],
+  ['res', 'Unlimited resources', 'All seven stocks topped up every hour'], ['reveal', 'Reveal map', 'No fog: every force visible and identified']];
+function devPanelHTML(){ const al = S.nations.filter(N => N.alive), U = UNITS[DEVUI.t];
+  const tog = ([k, t, d]) => `<button class="dv-t" data-dev="tog" data-k="${k}" aria-pressed="${DEV[k]}"><i></i><span>${t}<small>${d}</small></span></button>`;
+  return `<div class="dv-h"><b>Developer mode</b><small>test build</small><button class="dv-x" data-dev="panel" aria-label="Close">×</button></div>
+  <div class="dv-s"><div class="dv-l">Rules</div>${DEV_TOG.map(tog).join('')}<div class="dv-r"><button class="dv-b" data-dev="resall">Research all</button><button class="dv-b" data-dev="fill">Fill stocks</button></div></div>
+  <div class="dv-s"><div class="dv-l">Game speed</div><div class="dv-r">${DEV_SPEEDS.map(i => `<button class="dv-b" data-speed="${i}" aria-pressed="${S.speed === i}">${[16, 50, 100][i - 5]}×</button>`).join('')}<button class="dv-b" data-speed="0" aria-pressed="${S.speed === 0}">Pause</button></div></div>
+  <div class="dv-s"><div class="dv-l">Spawn unit</div>
+    <div class="dv-r"><select id="devt" aria-label="Unit type">${Object.keys(UNITS).map(t => `<option value="${t}"${t === DEVUI.t ? ' selected' : ''}>${UNITS[t].name} (${UNITS[t].cls})</option>`).join('')}</select></div>
+    <div class="dv-r"><select id="devo" aria-label="Owner">${al.map(N => `<option value="${N.id}"${N.id === DEVUI.o ? ' selected' : ''}>${N.name}${N.id === PLAYER ? ' (you)' : ''}</option>`).join('')}</select><input id="devk" type="number" min="1" max="999" value="${DEVUI.k}" aria-label="Count"></div>
+    <div class="dv-r"><button class="dv-b go" data-dev="pick" aria-pressed="${DEVUI.pick}">${DEVUI.pick ? 'Click provinces to place · Esc stops' : 'Place: click a province'}</button></div>
+    <div class="dv-n${DEVUI.note ? DEVUI.ok ? ' ok' : ' bad' : ''}">${DEVUI.note || (U.cls === 'naval' ? 'Ships: a sea zone or a coastal province.' : 'Ground and air: any land province.')}</div></div>`; }
+function devRender(){ const el = $('devpanel'); if (!el) return; el.hidden = !DEVUI.open; $('devbadge').setAttribute('aria-expanded', String(DEVUI.open)); document.body.classList.toggle('devpick', DEVUI.open && DEVUI.pick);
+  if (DEVUI.open && S) el.innerHTML = devPanelHTML(); }
+function devSync(){ for (const i of DEV_SPEEDS){ const b = $('sp' + i); if (b) b.setAttribute('aria-pressed', String(S.speed === i)); }
+  const el = $('devpanel'); if (el && !el.hidden) for (const b of el.querySelectorAll('[data-speed]')) b.setAttribute('aria-pressed', String(S.speed === +b.dataset.speed)); }
+function devPanel(open){ DEVUI.open = open == null ? !DEVUI.open : open; if (!DEVUI.open) DEVUI.pick = false; devRender(); }
+function devTap(x, y){ if (!DEVUI.pick || !S || !S.started) return false; const p = provAt(x, y); if (p < 0) return true;
+  const a = devSpawn(DEVUI.o, p, DEVUI.t, DEVUI.k), P = G.P[p];
+  DEVUI.ok = !!a; DEVUI.note = a ? `Placed ${DEVUI.k} × ${UNITS[DEVUI.t].name} for ${nationName(DEVUI.o)} in ${P.cityName || P.name}.` : `${UNITS[DEVUI.t].name} cannot stand in ${P.name}${P.sea ? ' (sea)' : ''}.`;
+  if (a) fx('ready', p); devRender(); renderSide(true); return true; }
+function devKey(e){ if (e.key === '`'){ devPanel(); return true; }
+  if (e.key === '9' && S && S.started){ const i = DEV_SPEEDS.indexOf(S.speed); setSpeed(DEV_SPEEDS[(i + 1) % DEV_SPEEDS.length]); return true; }
+  if (e.key === 'Escape' && DEVUI.pick){ DEVUI.pick = false; devRender(); return true; }
+  return false; }
+document.addEventListener('click', e => { const b = e.target.closest('[data-dev]');
+  if (b){ const k = b.dataset.dev;
+    if (k === 'panel') devPanel();
+    else if (k === 'tog'){ DEV[b.dataset.k] = !DEV[b.dataset.k]; devSave(); visCache = null; if (S && S.started){ devHour(PLAYER); renderSide(true); } devRender(); }
+    else if (k === 'resall' && S && S.started){ const n = devResearchAll(PLAYER); DEVUI.ok = true; DEVUI.note = `Researched ${n} technologies.`; renderSide(true); devRender(); }
+    else if (k === 'fill' && S && S.started){ devFill(S.nations[PLAYER]); DEVUI.ok = true; DEVUI.note = 'Stocks filled.'; renderSide(true); devRender(); }
+    else if (k === 'pick'){ DEVUI.pick = !DEVUI.pick; DEVUI.note = ''; devRender(); }
+    return; }
+  if (e.target.closest('[data-speed]') && DEVUI.open) devSync();
+  if ((DEV.instant || DEV.research) && S && S.started && !S.over && e.target.closest('[data-act]') && devDone(PLAYER)){ renderSide(true); if (modalKind === 'research' && !$('modal').hidden) setHTML($('sheet'), researchHTML()); } });
+document.addEventListener('change', e => { const el = e.target; if (!el || !el.closest || !el.closest('#devpanel')) return;
+  if (el.id === 'devt'){ DEVUI.t = el.value; DEVUI.note = ''; } else if (el.id === 'devo') DEVUI.o = +el.value; else if (el.id === 'devk') DEVUI.k = Math.max(1, Math.min(999, Math.round(+el.value) || 1));
+  devRender(); });
+/*@ENDDEV*/
 function setSpeed(s){ if (S.over && s) return; const open = !$('modal').hidden; if (s && open && !(S.started && $('modal').classList.contains('docked'))) return; S.speed = s; if (open) speedBefore = s; renderSide(); }
 
 /* ---------------- Modal ---------------- */
@@ -12011,9 +12138,11 @@ function start(data){
   if (!resumed){ if (saved && saved.v === 4 && !saved.over) showBriefing(true, true); else showPicker(); }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderSide(true));
   booted = true;
-  if (window.U3D && window.__BAKE) U3D.warmup();
+  /*@TEST*/if (window.U3D && window.__BAKE) U3D.warmup();/*@ENDTEST*/
   requestAnimationFrame(frame);
 }
+/*@TEST*/
+// test hooks (test build only: tools/build.js strips every @TEST block from the public build). window.__im exists on file:// pages.
 if (location.protocol === 'file:') window.__im = {coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, get FADE(){ return FADE; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, PROJ, MUZZ, FXG, LTN, stormLight: (x, y) => stormLight(x, y), nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l) => buildCost(n, k, l), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
@@ -12025,6 +12154,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
+/*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}

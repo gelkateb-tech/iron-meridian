@@ -464,3 +464,8 @@
 - City bottom sheet: flag banner, name and status, morale, production, building cards with level badges, MOBILIZE UNIT and BUILD.
 - Army counters: small real flag, slanted relation-tone plate, white tab with unit silhouette, bold italic count, fixed pixel size at every zoom.
 - Headquarters building beside your capital replaces the YOUR CAPITAL tag (whole game).
+
+## Test and public builds
+- `node tools/build.js` writes two builds from the same source: `dist/test` (with developer mode and the test hooks) and `dist/public` (both removed at build time, then checked: no markers, no developer or test names, scripts parse, smaller). Publish `dist/public`. See BUILD.md.
+- Developer mode (test build only): a DEV badge and panel with instant research (and Research all), instant building and production, unlimited resources, reveal map, 16×/50×/100× speeds (key 9), and a spawner that places any unit for any nation on land or at sea.
+- Rules: the hourly production, construction, upgrade and research steps are now separate functions (`prodHour`, `consHour`, `engHour`, `researchHour`). They behave the same; developer mode reuses them.
