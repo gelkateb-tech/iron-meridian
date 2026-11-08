@@ -781,6 +781,8 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     // drop the hi sheets not drawn for a while (memory: at most a few are decoded at once)
     mapTrim(now){ for (const t in mapAt){ const A = mapAt[t]; if (A && A.hi && now - A.hiT > 15000){ A.hi = null; A.hiLoad = false; } } },
     mapTypes: () => Object.keys(MAPMETA), mapDir(d){ mapDir = d; },
+    // a type's baked sheet meta (hi level: ppm, ground origin, per-direction boxes) without loading the sheet
+    mapMeta: type => MAPMETA[type] || (mapAt[type] && mapAt[type].m) || null,
     exportMap(type){ if (!mapFn) return null; const A = mapFn(type); return {hi:A.hi.toDataURL('image/webp', 0.86), img:A.mid.toDataURL('image/webp', 0.9), meta:{w:A.w, h:A.h, ox:A.ox, oy:A.oy, ppm:A.ppm, air:A.air, sea:A.sea, bb:A.bb}}; },
     SZ, has: type => !!cache[ALIAS[type] || type], warmup, loadBaked, canRender: () => !!buildFn,
     exportAtlas(type){ if (!cache[type] && buildFn) buildFn(type); const a = cache[type]; return a ? {base:a.base.toDataURL('image/png'), mask:a.mask.toDataURL('image/png')} : null; },
