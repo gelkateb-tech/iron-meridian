@@ -502,6 +502,7 @@ kbd{font-family:var(--mono); font-size:10px; color:var(--muted); border:1px soli
 /* settings: label + segmented control rows; amber-filled slider */
 .setgrid{display:grid; gap:0; border-top:1px solid var(--sep, rgba(255,255,255,.08))}
 .srow{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 2px; border-bottom:1px solid var(--sep, rgba(255,255,255,.08))} .srow .sl{font-weight:600; color:#e3ebee; font-size:13px}
+.srow .snote{display:block; margin-top:2px; font-weight:400; font-size:11px; line-height:1.35; color:#93a4aa; letter-spacing:0; text-transform:none}
 .seg2{display:inline-flex; padding:3px; gap:2px; border-radius:9px; background:rgba(0,0,0,.35); box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), inset 0 1px 3px rgba(0,0,0,.5); flex-wrap:wrap}
 .seg2 .sg{border:0; background:transparent; color:#b9c8cd; font:600 12.5px var(--body); padding:5px 12px; border-radius:7px; cursor:pointer; transition:background .12s, color .12s}
 .seg2 .sg:hover{color:#fff; background:rgba(255,255,255,.06)} .seg2 .sg.on{color:#1b1206; background:linear-gradient(180deg, #f0be62, #c98f2e); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 1px 3px rgba(0,0,0,.5)}
@@ -2314,6 +2315,29 @@ const STANDIN = (() => {
     light(g); };
   return D;
 })();
+/* ---------------- Redraw scheduling and the Battery saver (drawing side only: no game rule reads or calls any of this) ----------------
+   The map is drawn only when its picture can change. A one-off change asks for a frame with redraw() (input, a sim tick, a resize, a setting,
+   a picture or a detail tile that arrived); redraw(ms) also keeps frames coming for ms (input: short transitions finish). Whatever keeps moving
+   registers itself from inside draw(), every frame it runs: animFast() (marching forces, battles, missiles, particles, fades, the camera),
+   animAmb() (gentle ambient motion: pulses, waves, drifting weather, orbiting satellites) or animIn(ms) (a slow change due in ms: the
+   terminator's drift). A frame where nothing registered and nothing asked is not drawn at all (the canvas keeps the last picture).
+   While the game is paused, the ambient motion rests once there has been no input for a while (ambIdle: 6 s with the Battery saver, 15 s
+   without), so a paused map with a still camera is not redrawn at all. Battery saver on: at most 30 fps, 10 fps when only ambient motion is
+   left. Off: as many frames as the screen gives while anything moves. */
+const RD = {n:0, dirty:true, until:0, f:0, a:0, nx:Infinity, last:0, inp:0, vx:NaN, vy:NaN, vs:NaN, cov:false, raf:0, bg:false, ac:false};
+const ambIdle = () => saverOn() ? 6000 : 15000;
+function redraw(ms = 0){ RD.dirty = true; /*@TEST*/if (RD.dbg) rdWhy('r');/*@ENDTEST*/ if (ms){ const t = performance.now() + ms; if (t > RD.until) RD.until = t; } }
+function animFast(){ RD.f = 1; /*@TEST*/if (RD.dbg) rdWhy('f');/*@ENDTEST*/ }
+function animAmb(){ RD.a = 1; /*@TEST*/if (RD.dbg) rdWhy('a');/*@ENDTEST*/ }
+/*@TEST*/function rdWhy(k){ const l = (new Error().stack || '').split('\n')[3] || '', m = l.match(/:(\d+):\d+\)?$/), key = k + (m ? m[1] : '?'); RD.dbg[key] = (RD.dbg[key] || 0) + 1; }/*@ENDTEST*/
+function animIn(ms){ if (ms < RD.nx) RD.nx = Math.max(0, ms); }
+const saverOn = () => SET.saver === true;
+// ms after the last draw when the next one is due (Infinity: nothing to draw)
+function rdInterval(now){ const sv = saverOn(), cap = sv ? 1000/30 : 0;
+  if (RD.dirty || RD.f || now < RD.until || view.x !== RD.vx || view.y !== RD.vy || view.s !== RD.vs || camFly || ZTW) return cap;
+  return RD.a && ((S && S.speed > 0 && !S.over) || now - RD.inp < ambIdle()) ? Math.min(RD.nx, sv ? 100 : 0) : RD.nx; }
+// the game clock's ms per game hour at the current speed (0 while paused): for changes that follow the game time between ticks
+const msPerHour = () => S && S.speed > 0 && !S.over ? 1000/HOURS_PER_SEC[S.speed] : 0;
 const ART = (() => {
   const BASE = 'assets/art/', L5 = k => [1, 2, 3, 4, 5].map(i => `b-${k}-${i}`);
   const FIRST = ['menu-background', 'panel-texture', 'flags', 'emblem-bear', 'emblem-eagle', 'emblem-lion', 'emblem-star'];   // needed by the first screen
@@ -2321,7 +2345,9 @@ const ART = (() => {
     'u-jet', 'u-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
     'i-infantry', 'i-special-forces', 'i-tank', 'i-light-armor', 'i-artillery', 'i-rocket-artillery', 'i-anti-air', 'i-missile-launcher', 'i-supply-truck',
     'i-jet', 'i-bomber', 'i-attack-heli', 'i-transport-heli', 'i-drone', 'i-corvette', 'i-destroyer', 'i-submarine', 'i-carrier',
-    ...L5('city'), ...L5('military-base'), ...L5('naval-port'), ...L5('airfield'), ...L5('missile-silo'), 'fx-explosion', 'fx-smoke', 'fx-crater'];
+    'fx-explosion', 'fx-smoke', 'fx-crater'];
+  // the building-level pictures (b-<art>-<level>: city, military-base, naval-port, airfield, missile-silo; L5) are not fetched at startup: each one
+  // when it is first needed (want): the city sheet or the build menu shows it, or for the city pictures the map zooms in to where towns are drawn
   const LATE = ['earth-day', 'earth-night', 'earth-clouds'];   // big globe textures: fetched after everything else
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
@@ -2344,7 +2370,7 @@ const ART = (() => {
       /*@TEST*/if (window.__BAKE){ failed.add(name); res(null); return; }/*@ENDTEST*/
       if (typeof Image === 'undefined'){ failed.add(name); res(null); return; }
       const im = new Image(); im.decoding = 'async';
-      im.onload = () => { const ok = () => { if (im.naturalWidth){ imgs.set(name, im); res(im); } else { failed.add(name); res(null); } };
+      im.onload = () => { const ok = () => { if (im.naturalWidth){ imgs.set(name, im); res(im); try { window.dispatchEvent(new Event('im-redraw')); } catch (e) {} } else { failed.add(name); res(null); } };
         if (im.decode) im.decode().then(ok, ok); else ok(); };
       im.onerror = () => { failed.add(name); res(null); };
       im.src = BASE + name + '.webp';
@@ -2404,7 +2430,9 @@ const ART = (() => {
     cache.set(key, c); return c;
   }
   const url = name => { name = rn(name); if (!stand.has(name)) return BASE + name + '.webp'; let u = durl.get(name); if (!u){ try { u = imgs.get(name).toDataURL('image/png'); } catch (e) { u = ''; } durl.set(name, u); } return u; };
-  return {img:name => imgs.get(rn(name)) || null, ready:name => imgs.has(name), failed:name => failed.has(name), standIn:name => stand.has(rn(name)), load, sprite, scaled, first, rest, url, OPT};
+  // a lazily loaded picture: fetched once on first want; when it arrives the panels showing its placeholder redraw ('im-bart') and so does the map
+  const want = name => { if (imgs.has(name) || failed.has(name) || waits.has(name)) return; load(name).then(im => { if (im) try { window.dispatchEvent(new Event('im-bart')); } catch (e) {} }); };
+  return {img:name => imgs.get(rn(name)) || null, ready:name => imgs.has(name), failed:name => failed.has(name), standIn:name => stand.has(rn(name)), load, want, sprite, scaled, first, rest, url, OPT, L5};
 })();
 // coalition emblems: every coalition (bloc) carries one of four crests, stable by its id (b1 eagle, b2 bear, b3 lion, b4 star, b5 eagle...)
 const BLOC_EMB = ['eagle', 'bear', 'lion', 'star'];
@@ -2802,14 +2830,17 @@ const devSave = () => { try { localStorage.setItem(DEV_KEY, JSON.stringify(DEV))
 HOURS_PER_SEC.push(16/15, 50/15, 100/15);
 /*@ENDDEV*/
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
-const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true};
+// Battery saver: on by default on phones and tablets (a coarse pointer or a small screen), off on desktops; saved settings without it get the default
+const SAVER_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches || Math.max(screen.width, screen.height) <= 1024; } catch (e) { return false; } })();
+const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, saver:SAVER_DEF};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
 const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} applySet(); };
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
 function applyPalette(){ if (!S || !S.nations) return; for (const N of S.nations){ if (!N.color0) N.color0 = N.color; N.color = SET.cb ? CB_PAL[N.id % CB_PAL.length] : N.color0; } geoDirty = true; layerKey = ''; }
 function applySet(){ const z = (SET.ui || 100)/100; for (const sel0 of ['header', '#dock', '#side', '#modal', '#toasts', '#tut']){ const el = document.querySelector(sel0); if (el) el.style.zoom = z === 1 ? '' : z; } document.documentElement.style.setProperty('--uiz', z);
-  document.documentElement.classList.toggle('reduced', SET.motion === 'reduced'); if (typeof hdrSync === 'function') try { hdrSync(true); } catch (e) {} if (typeof S !== 'undefined' && S) applyPalette(); }
+  document.documentElement.classList.toggle('reduced', SET.motion === 'reduced'); if (typeof hdrSync === 'function') try { hdrSync(true); } catch (e) {} if (typeof S !== 'undefined' && S) applyPalette();
+  try { const d0 = window.devicePixelRatio || 1; if (booted && RD.ov !== undefined && (Math.min(d0, saverOn() ? 2 : 3) > Math.min(d0, 2) + 0.05) !== RD.ov) resize(); } catch (e) {} redraw(); }   // a setting changed: draw it (the Battery saver drops the 3x overlay)
 const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
 const WIN_SHARE = 0.25;               // share of land provinces needed to win
@@ -3680,7 +3711,7 @@ postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0
     const url = URL.createObjectURL(new Blob([js], {type:'text/javascript'})), nw = (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1, WS = [];
     const fail = ev => { if (ev && ev.preventDefault) ev.preventDefault(); for (const x of WS) try { x.terminate(); } catch (e) {} DT.wk = null; DT.wks = []; DT.busy = 0; DT.pend.clear(); };   // blocked or broken: made here instead
     for (let i = 0; i < nw; i++){ const w = new Worker(url); w.busy = 0;
-      w.onmessage = e => { const m = e.data; w.busy = Math.max(0, w.busy - 1); DT.busy = Math.max(0, DT.busy - 1); DT.pend.delete(m.key); DT.ms += m.ms; DT.ready.push(m); };
+      w.onmessage = e => { const m = e.data; w.busy = Math.max(0, w.busy - 1); DT.busy = Math.max(0, DT.busy - 1); DT.pend.delete(m.key); DT.ms += m.ms; DT.ready.push(m); redraw(); };   // (a detail tile is ready: a frame lays it)
       w.onerror = fail; w.postMessage({init:{cls:C.cls, lat:C.lat, eq:C.eq}}); WS.push(w); }
     DT.wks = WS; DT.wk = WS[0];
   } catch (e) { DT.wk = null; }
@@ -4699,10 +4730,10 @@ function stormPos(w, cx, cy, now = FXQ.gt){   // the slow sway runs on the game 
 const stormVis = (cx, cy, R) => !((cx + R)*view.s + view.x < -50 || (cx - R)*view.s + view.x > cw + 50 || (cy + R)*view.s + view.y < -50 || (cy - R)*view.s + view.y > ch + 50);
 /* storms: drawn under the night tint (night darkens them like the land and city lights shine over them), tops cross-faded to a slate
    night deck by the local light, warm rims on the sun side at dusk, rain streaks / snow dots on the game clock (paused with the game) */
-function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1;
+function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1, run = S.speed && !S.over;
   ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), R = w.r*1.7, storm = w.kind === 'storm'; let lt = null;
-    for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if (!stormVis(cx, y0, R)) continue;
+    for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if (!stormVis(cx, y0, R)) continue; if (run) animAmb();   // (a storm on screen drifts and sways while the clock runs)
       const { L, tw, sg } = lt || (lt = stormLight(x0, y0)), Pp = stormPos(w, cx, y0);
       if (L < 0.98){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.18*fade*(1 - L);   // soft ground shadow (gone at night)
         for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex.sh, px - sz*1.1 + 10, py - sz*0.7 + 14, sz*2.2, sz*1.4); }
@@ -4738,7 +4769,8 @@ function drawLightning(now){ if (!S.storms || !S.storms.length || afxReduced()) 
   for (const w of S.storms){ if (w.kind !== 'storm') continue; let Q = LTN.get(w.seed);
     if (!Q){ Q = {next:gt + 400 + Math.random()*3000, at:-1e9, lobe:0, pts:null}; LTN.set(w.seed, Q); }
     if (gt >= Q.next){ Q.at = gt; Q.next = gt + 2500 + 4500*Math.random(); Q.lobe = Math.random()*9 | 0; Q.pts = [0]; for (let k = 1; k <= 6; k++) Q.pts.push((Math.random() - 0.5)*0.16); }
-    const e = gt - Q.at; if (!run || e < 0 || e > 80) continue;
+    if (run) animIn(Q.next - gt);   // (the next flash gets its frame, also at a capped frame rate)
+    const e = gt - Q.at; if (!run || e < 0 || e > 80) continue; animFast();
     const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), kf = 1 - 0.6*e/80;
     for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if (!stormVis(cx, y0, w.r*1.7)) continue;
       if (!tex){ tex = cloudTex(); ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; }
@@ -4901,7 +4933,7 @@ function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length) return; con
     // along the zones' gates over the water (cvGeo), faded in and out at the ends and near what is still dry, never drawn over land
     const g = cvGeo(c), sg = tt*g.L, al = Math.min(1, tt/0.06, (1 - tt)/0.06)*trDryFade(g, sg); if (al <= 0.02) continue;
     const [wx, wy, ang] = trAt(g, sg), k0 = Math.max(0.8, Math.min(2, view.s*HS0/14)), hx = Math.cos(ang)*8*k0/view.s, hy = Math.sin(ang)*8*k0/view.s;
-    if (!isWet(wx, wy, 96) || !isWet(wx + hx, wy + hy) || !isWet(wx - hx, wy - hy)) continue; const [x, y] = toScreen(wx, wy);
+    if (!isWet(wx, wy, 96) || !isWet(wx + hx, wy + hy) || !isWet(wx - hx, wy - hy)) continue; const [x, y] = toScreen(wx, wy); if (S.speed && !S.over) animAmb();
     ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(220,235,240,.35)'; ctx.beginPath(); ctx.moveTo(-6*k0, 0); ctx.lineTo(-18*k0, -3*k0); ctx.lineTo(-18*k0, 3*k0); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#5a5e60'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8*k0, 0); ctx.lineTo(4*k0, -2.6*k0); ctx.lineTo(-7*k0, -2.6*k0); ctx.lineTo(-7*k0, 2.6*k0); ctx.lineTo(4*k0, 2.6*k0); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = mapCol(c.owner); ctx.fillRect(-5*k0, -1.6*k0, 3*k0, 3.2*k0); ctx.fillStyle = '#b8a06a'; ctx.fillRect(-1*k0, -1.6*k0, 3.5*k0, 3.2*k0); ctx.restore(); } }
@@ -5266,7 +5298,7 @@ function drawTradeLanes(now){ if (!S.trade || !S.trade.routes.length) return; co
   ctx.setLineDash([6*z*px, 6*z*px]); ctx.lineWidth = 1.3*z*px; ctx.strokeStyle = `rgba(196,222,232,${0.34*a0})`; ctx.stroke(TRD.sea);
   ctx.strokeStyle = `rgba(214,190,120,${0.5*a0})`; ctx.stroke(TRD.land);
   ctx.setLineDash([8*z*px, 5*z*px]); ctx.lineWidth = 1.7*z*px; ctx.strokeStyle = `rgba(236,196,108,${0.62*a0})`; ctx.stroke(TRD.mine);
-  ctx.setLineDash([4*z*px, 5*z*px]); ctx.lineDashOffset = -((now/90) % 9)*z*px; ctx.lineWidth = 1.8*z*px; ctx.strokeStyle = `rgba(236,96,80,${0.75*a0})`; ctx.stroke(TRD.cut);
+  if (T.routes.some(r => r.f0 < 1 || r.why === 'sunk')) animAmb(); ctx.setLineDash([4*z*px, 5*z*px]); ctx.lineDashOffset = -((now/90) % 9)*z*px; ctx.lineWidth = 1.8*z*px; ctx.strokeStyle = `rgba(236,96,80,${0.75*a0})`; ctx.stroke(TRD.cut);
   ctx.restore(); }
 let CONTRAIL = null;   // a 64×4 strip fading from white to clear, for aircraft contrails
 function contrailImg(){ if (CONTRAIL) return CONTRAIL; const c = document.createElement('canvas'); c.width = 64; c.height = 4; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 64, 0);
@@ -5286,7 +5318,7 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
     if (r.bz >= 0 && r.f0 < 1 && mid){ const P = G.P[r.bz], [x, y] = toScreen(P.x, P.y); ctx.save(); ctx.strokeStyle = 'rgba(236,96,80,.85)'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(x, y, 11*k, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(x - 4*k, y - 4*k); ctx.lineTo(x + 4*k, y + 4*k); ctx.moveTo(x + 4*k, y - 4*k); ctx.lineTo(x - 4*k, y + 4*k); ctx.stroke();
       if (hexPx >= 12){ ctx.font = `700 ${Math.round(9.5*Math.min(1.3, k))}px ${BODY}`; ctx.fillStyle = 'rgba(255,170,150,.92)'; ctx.textAlign = 'center'; ctx.fillText(r.why === 'contested' ? 'CONTESTED' : 'BLOCKADE', x, y - 15*k); } ctx.restore(); }
-    if (r.raidZ >= 0 && S.hour - r.raid < 12 && mid){ const P = G.P[r.raidZ], [x, y] = toScreen(P.x, P.y), fl = 0.6 + 0.4*Math.sin(now/120);
+    if (r.raidZ >= 0 && S.hour - r.raid < 12 && mid){ const P = G.P[r.raidZ], [x, y] = toScreen(P.x, P.y), fl = 0.6 + 0.4*Math.sin(now/120); animFast();
       ctx.save(); ctx.fillStyle = `rgba(255,${120 + 60*fl},60,${0.7*fl})`; ctx.beginPath(); ctx.arc(x, y, 4.5*k, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = 'rgba(40,40,40,.5)'; ctx.beginPath(); ctx.arc(x + 3*k, y - 6*k, 5*k, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
     if (r.f <= 0 || g.L < 1) continue;
     const n = Math.max(1, Math.min(6, Math.round(g.L/260))), per = 2*g.L/TR_SPD, ph = ((t/per) % 1 + (r.id*0.137) % 1) % 1;
@@ -5294,7 +5326,7 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
       // sea lanes: ships sail the wet span only (they turn back at the coast, fading in and out there), not the run inland to the port city
       const s = sea ? g.s0 + f*(g.s1 - g.s0) : f*g.L, al = sea ? Math.min(1, f/0.06, (1 - f)/0.06)*trDryFade(g, s) : 1; if (al <= 0.02) continue;
       const [wx, wy, ang0] = trAt(g, s), ang = back ? ang0 + Math.PI : ang0; if (wx < vx0 || wx > vx1 || wy < vy0 || wy > vy1) continue;
-      const [x0, y0] = toScreen(wx, wy), off = (back ? -1 : 1)*(close ? 7 : 3)*k, x = x0 - Math.sin(ang0)*off, y = y0 + Math.cos(ang0)*off;
+      const [x0, y0] = toScreen(wx, wy), off = (back ? -1 : 1)*(close ? 7 : 3)*k, x = x0 - Math.sin(ang0)*off, y = y0 + Math.cos(ang0)*off; if (live) animAmb();
       if (sea){ const cx = wx - Math.sin(ang0)*off/view.s, cy = wy + Math.cos(ang0)*off/view.s, h = (mid ? 10*k : 1.5)/view.s, hx = Math.cos(ang)*h, hy = Math.sin(ang)*h;   // centre, bow and stern on the water, or not drawn
         if (!isWet(cx, cy, 96) || !isWet(cx + hx, cy + hy) || !isWet(cx - hx, cy - hy)) continue; }
       const own = back ? r.b : r.a, col = own >= 0 ? mapCol(own) : '#b8b4a6';
@@ -6229,7 +6261,7 @@ function movStep(a, tx, ty, moving, now){
     MOV.set(a.id, m); return m; }
   if (moving) m.halt = null; else if (m.halt == null) m.halt = now;
   const dtR = (now - m.t)/1000, dt = Math.min(0.1, Math.max(0, dtR)); m.t = now;
-  if (dtR > 0.4 || Math.hypot(tx - m.x, ty - m.y) > 2*HS0){ m.x = m.px = tx; m.y = m.py = ty; m.vx = m.vy = 0; m.tr.length = 0; m.ms = 0; return m; }   // a teleport, a load or a time skip: snap
+  if (dtR > 0.4 || Math.hypot(tx - m.x, ty - m.y) > 2*HS0){ m.x = m.px = tx; m.y = m.py = ty; m.vx = m.vy = 0; m.tr.length = 0; m.ms = 0; m.rest = true; return m; }   // a teleport, a load or a time skip: snap
   if (dt <= 0) return m;
   const tv = Math.hypot(tx - m.px, ty - m.py)/dt; m.px = tx; m.py = ty; m.ms += (Math.min(tv, 3*m.ms + MOV_FLOOR) - m.ms)*Math.min(1, dt/0.6);   // running mean of the target's speed (each sample capped, so one pop cannot inflate it)
   const x0 = m.x, y0 = m.y, calm = afxReduced();
@@ -6240,7 +6272,8 @@ function movStep(a, tx, ty, moving, now){
   const vx = calm ? (m.x - x0)/dt : m.vx, vy = calm ? (m.y - y0)/dt : m.vy;
   if (Math.hypot(vx, vy) > 0.15){ const da = Math.atan2(Math.sin(Math.atan2(vy, vx) - m.hd), Math.cos(Math.atan2(vy, vx) - m.hd)), lim = MOV_TURN*dt; m.hd += Math.max(-lim, Math.min(lim, da)); m.hd = Math.atan2(Math.sin(m.hd), Math.cos(m.hd)); }
   if (now - m.trT >= 60){ m.trT = now; const L = m.tr[m.tr.length - 1]; if (!L || Math.hypot(m.x - L[0], m.y - L[1]) > 0.05){ m.tr.push([m.x, m.y]); if (m.tr.length > 30) m.tr.shift(); } }
-  if (!moving && now - m.halt > MOV_HALT && Math.hypot(m.vx, m.vy) < 0.05 && Math.hypot(tx - m.x, ty - m.y) < 0.05){ MOV.delete(a.id); return null; }   // settled: back to the standing layout
+  m.rest = Math.hypot(m.vx, m.vy) < 0.05 && Math.hypot(tx - m.x, ty - m.y) < 0.05;
+  if (!moving && now - m.halt > MOV_HALT && m.rest){ MOV.delete(a.id); return null; }   // settled: back to the standing layout
   return m; }
 // sweep: forces no longer drawn (out of view, in the fog, destroyed) drop their motion state
 function movSweep(now){ if (now - (MOV.sw || 0) < 2000) return; MOV.sw = now; for (const [id, m] of MOV) if (now - m.t > 3000) MOV.delete(id); }
@@ -7476,11 +7509,12 @@ function resize(){
   ovOut(); const r = cv.getBoundingClientRect(); dpr = Math.min(window.devicePixelRatio || 1, 2);
   const first = !cw; cw = r.width; ch = r.height;
   cv.width = Math.max(1, Math.round(cw*dpr)); cv.height = Math.max(1, Math.round(ch*dpr));
-  { const od = Math.min(window.devicePixelRatio || 1, 3); if (OV.cv && od > dpr + 0.05){ if (!OV.g) OV.g = OV.cv.getContext('2d'); OV.dpr = od; OV.on = true; OV.cv.hidden = false;
+  { const od = Math.min(window.devicePixelRatio || 1, saverOn() ? 2 : 3); if (OV.cv && od > dpr + 0.05){ if (!OV.g) OV.g = OV.cv.getContext('2d'); OV.dpr = od; OV.on = true; OV.cv.hidden = false;   // (Battery saver: no 3x overlay for the counters and names on a 3x phone screen)
       OV.cv.width = Math.max(1, Math.round(cw*od)); OV.cv.height = Math.max(1, Math.round(ch*od)); }
     else if (OV.on || (OV.cv && !OV.cv.hidden)){ OV.on = false; OV.cv.hidden = true; OV.cv.width = OV.cv.height = 1; } }
   const mr = mini.getBoundingClientRect(); mini.width = Math.round(mr.width*dpr); mini.height = Math.round(mr.height*dpr);
   if (first) fit();
+  RD.ov = OV.on; redraw();   // (the canvases were cleared)
 }
 const minScale = () => Math.min(cw/WORLD_W, ch/WORLD_H)*0.9;
 let GLOBE = null;   // the three.js globe (set up further down; null until then)
@@ -7611,7 +7645,7 @@ function drawSats(now){ if (!S.sats || !S.sats.length) return; ctx.save(); ctx.s
         ctx.fillStyle = 'rgba(140,210,255,.05)'; ctx.fill();
         ctx.strokeStyle = 'rgba(140,210,255,.25)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = -12; i <= 12; i++){ const [tx, ty] = satPos(st, S.hour + i*0.5), [sx, sy] = toScreen(tx + off + (Math.abs(tx - wx) > WORLD_W/2 ? (tx < wx ? WORLD_W : -WORLD_W) : 0), ty); if (i === -12) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy); } ctx.stroke(); }
       // the satellite: body, solar panels, blinking beacon
-      const sc = 1.8, a0 = now/2000 + st.id; ctx.save(); ctx.translate(x, y - 6); ctx.rotate(Math.sin(a0)*0.2);
+      const sc = 1.8, a0 = now/2000 + st.id; animAmb(); ctx.save(); ctx.translate(x, y - 6); ctx.rotate(Math.sin(a0)*0.2);
       ctx.fillStyle = '#4a6c94'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 0.8; for (const sx of [-1, 1]){ ctx.fillRect(sx*5*sc - (sx < 0 ? 9*sc : 0), -2.6*sc, 9*sc, 5.2*sc); ctx.strokeRect(sx*5*sc - (sx < 0 ? 9*sc : 0), -2.6*sc, 9*sc, 5.2*sc); }
       ctx.fillStyle = '#d8d4c6'; ctx.fillRect(-4*sc, -3.6*sc, 8*sc, 7.2*sc); ctx.fillStyle = col; ctx.fillRect(-4*sc, -0.8*sc, 8*sc, 1.6*sc);
       if (Math.floor(now/500 + st.id) % 2 === 0){ ctx.fillStyle = mine ? '#8fe0ff' : '#ff6a5a'; ctx.beginPath(); ctx.arc(0, -4.6*sc, 1.2*sc, 0, Math.PI*2); ctx.fill(); }
@@ -7764,7 +7798,7 @@ function jetSprite(x, y, s, col, ang, kind){
   ctx.restore();
 }
 function shipSprite(x, y, s, col, ang, kind, moving, now){
-  ctx.save(); ctx.translate(x, y + Math.sin(now/600 + x*0.05)*0.8*s); ctx.rotate(ang);
+  animAmb(); ctx.save(); ctx.translate(x, y + Math.sin(now/600 + x*0.05)*0.8*s); ctx.rotate(ang);
   const k = kind === 'crui' ? 1.25 : 1;
   if (moving){ ctx.strokeStyle = 'rgba(220,235,240,.45)'; ctx.lineWidth = 1.2; const w0 = (now/80) % 6; for (const side of [-1, 1]){ ctx.beginPath(); ctx.moveTo(-11*s*k, side*2*s); ctx.lineTo(-(22 + w0)*s*k, side*(6 + w0*0.5)*s); ctx.stroke(); } }
   const h = new Path2D();
@@ -7858,7 +7892,7 @@ function tmDir(id, t, ang, now){ const n = 16, raw = (((ang/(Math.PI*2))*n) % n 
   if (!L){ const d = Math.round(raw) % n; TMD.set(key, {d, t:now, p:-1, pt:0}); return d; }
   L.t = now; let df = raw - L.d; df -= Math.round(df/n)*n; if (Math.abs(df) < 0.66){ L.p = -1; return L.d; }
   const d = Math.round(raw) % n; if (L.p !== d){ L.p = d; L.pt = now; }
-  if (now - L.pt < 200 && Math.abs(df) < 2.5) return L.d;
+  if (now - L.pt < 200 && Math.abs(df) < 2.5){ animIn(200 - (now - L.pt)); return L.d; }
   L.d = d; L.p = -1; return d; }
 // the soft shade under a ship (a blurred ellipse)
 function tmShadow(){ if (TMSH) return TMSH; const c = document.createElement('canvas'); c.width = 128; c.height = 40; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 2, 64, 64, 62);
@@ -8056,7 +8090,7 @@ function provLayoutH(p, roles){ const key = layoutKey(p, roles), L = PLAY.get(p)
 const TM_GLIDE = [300, 1200];   // ms: the shortest and longest glide (a short hop takes the least, a long one never more than 1.2 s; about 55 px a second on screen in between)
 const glideTo = (g, T, now) => { if (g.tx !== T[0] || g.ty !== T[1]){ g.dur = Math.max(TM_GLIDE[0], Math.min(TM_GLIDE[1], 18*Math.hypot(T[0] - g.x, T[1] - g.y)*view.s)); /*@TEST*/if (TMDBG.on){ const gl = window.__glog || (window.__glog = []); if (gl.length < 300) gl.push([Math.round(now), g.key, +g.x.toFixed(2), +g.y.toFixed(2), +T[0].toFixed(2), +T[1].toFixed(2)]); }/*@ENDTEST*/   // (file:// tests: every glide)
     g.fx = g.x; g.fy = g.y; g.tx = T[0]; g.ty = T[1]; g.t0 = now; }
-  const u = Math.min(1, Math.max(0, (now - g.t0)/(g.dur || TM_GLIDE[0]))), e = u*u*(3 - 2*u); g.x = g.fx + (g.tx - g.fx)*e; g.y = g.fy + (g.ty - g.fy)*e; g.t = now; };
+  const u = Math.min(1, Math.max(0, (now - g.t0)/(g.dur || TM_GLIDE[0]))), e = u*u*(3 - 2*u); g.x = g.fx + (g.tx - g.fx)*e; g.y = g.fy + (g.ty - g.fy)*e; g.t = now; if (u < 1) animFast(); };
 function anchorOf(R, p, role, now){ const L = provLayout(p, rolesAt(R, p)), T = L.out.get(role) || [G.P[p].x, G.P[p].y], key = p + '|' + roleBase(role); let g = PLAG.get(key);
   if (!g || g.S !== S || now - g.t > 3000){ g = {x:T[0], y:T[1], fx:T[0], fy:T[1], tx:T[0], ty:T[1], t0:now, t:now, S, key}; PLAG.set(key, g); return [g.x, g.y]; }
   glideTo(g, T, now); return [g.x, g.y]; }
@@ -8086,7 +8120,7 @@ function moveAnchor(R, a, wx, wy){ let o0 = [0, 0], o1 = null, f0 = 0, f1 = 0; c
 function haltAnchor(a, A, now, wx, wy){ const E = OFS.get(a.id); if (!E) return A; if (now - E.t > 2000){ OFS.delete(a.id); return A; }
   if (!E.st){ E.st = true; E.rx = E.ax + (wx - E.x) - A[0]; E.ry = E.ay + (wy - E.y) - A[1]; }   // (from where the march would have carried it this frame)
   else { const dt = Math.min(0.1, Math.max(0, (now - E.t)/1000)), l = Math.hypot(E.rx, E.ry), cap = Math.min(60*dt, 1)/Math.max(0.05, view.s), f = l > cap ? (l - cap)/l : 0; E.rx *= f; E.ry *= f; }
-  E.t = now; if (Math.hypot(E.rx, E.ry) < 1e-3){ OFS.delete(a.id); return A; } return [A[0] + E.rx, A[1] + E.ry]; }
+  E.t = now; if (Math.hypot(E.rx, E.ry) < 1e-3){ OFS.delete(a.id); return A; } animFast(); return [A[0] + E.rx, A[1] + E.ry]; }
 /* ---------------- Counters that would cover each other: in-place fades ----------------
    Every counter is pinned to its force's world spot (provLayout, from the game state alone) at one pixel size, at every zoom: the zoom never moves
    one. Out where the spots are too close to hold one-pixel-size counters apart, the counters that would touch fade out IN PLACE: the most
@@ -8118,7 +8152,7 @@ function plateFade(clusters, k, now){ const hud = hudRects(), mg = 300, shown = 
   // the fades (in place), and the HUD's cover
   for (const c of clusters){ const key = c.list[0].id; let E = PF.get(key); const tgt = c.pv ? 1 : 0;
     if (!E || E.S !== S || now - E.t > 1500){ E = {a:!c.pv || pfFresh(now) ? tgt : 0, on:c.pv, S, t:now}; PF.set(key, E); if (PF.size > 4000) PF.clear(); }   // (a counter new to the map fades in)
-    const dt = Math.max(0, Math.min(100, now - E.t)); E.a = tgt > E.a ? Math.min(tgt, E.a + dt/PF_UP) : Math.max(tgt, E.a - dt/PF_DN); E.on = c.pv; E.t = now;
+    const dt = Math.max(0, Math.min(100, now - E.t)); E.a = tgt > E.a ? Math.min(tgt, E.a + dt/PF_UP) : Math.max(tgt, E.a - dt/PF_DN); E.on = c.pv; E.t = now; if (E.a !== tgt) animFast();
     c.pa = E.a; c.hud = c.x > -100 && c.y > -100 && c.x < cw + 100 && c.y < ch + 100 && hudCover(pfBox(c, k), hud); } }
 // a stable resting bearing of a force's own (screen radians): one of the views that show a model's side and front, never all the same way
 const TM_REST = [0.2, 0.32, 0.68, 0.8, 0.12, 0.88].map(f => f*Math.PI);
@@ -8150,9 +8184,9 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     for (let i = 0; i < want.length; i++) if (F.slots[i]) top = Math.min(top, F.slots[i][1] + tmVB(want[i])[d[i]][1]);
     if (!isFinite(top)) top = 0; let E = TMTOP.get(lead.id);
     if (!E || E.S !== S || now - E.t > 1500){ E = {v:top, t:now, S}; TMTOP.set(lead.id, E); if (TMTOP.size > 3000) TMTOP.clear(); }
-    else { const dt = Math.max(0, Math.min(100, now - E.t)); E.v += (top - E.v)*(1 - Math.exp(-dt/120)); if (Math.abs(top - E.v) < 1e-3) E.v = top; E.t = now; }
+    else { const dt = Math.max(0, Math.min(100, now - E.t)); E.v += (top - E.v)*(1 - Math.exp(-dt/120)); if (Math.abs(top - E.v) < 1e-3) E.v = top; else animFast(); E.t = now; }
     let G0 = TMGA.get(lead.id); if (!G0 || G0.S !== S || now - G0.t > 1500){ G0 = {a:pfFresh(now) ? 1 : 0, t:now, S}; TMGA.set(lead.id, G0); if (TMGA.size > 3000) TMGA.clear(); }   // (a group new to the map fades in)
-    G0.a = Math.min(1, G0.a + Math.max(0, Math.min(100, now - G0.t))/220); G0.t = now;
+    G0.a = Math.min(1, G0.a + Math.max(0, Math.min(100, now - G0.t))/220); G0.t = now; if (G0.a < 1) animFast();
     c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a}; c.pinY = c.wy + E.v; } }
 // the models each force shows this frame (from the zoom they are big enough to read: all of a group's models fade in together), planned before
 // the names, the HQ and the counters are placed (they keep clear of them): c.fm = {ents:[{t, d, s, x, y, box, slot}], box, a} in screen px
@@ -8182,7 +8216,7 @@ function tmGlide(c, gid, t, sl, now){ const key = gid + '|' + t; let E = TMGL.ge
     if (st && Math.hypot(st[0] - sl[0], st[1] - sl[1]) > 30) st = null;
     E = {x:st ? st[0] : sl[0], y:st ? st[1] : sl[1], t:now, S}; TMGL.set(key, E); if (TMGL.size > 3000) TMGL.clear(); }
   else if (E.t !== now){ const dx = sl[0] - E.x, dy = sl[1] - E.y, l = Math.hypot(dx, dy);   // (eased, at most 1.6 px a frame on screen: the group re-forms gently round its counter)
-    if (l < 0.01){ E.x = sl[0]; E.y = sl[1]; } else { const dt = Math.min(0.1, Math.max(0, (now - E.t)/1000)), cap = 1.6/Math.max(0.05, view.s), st = Math.min(l*(1 - Math.exp(-dt*9)), cap); E.x += dx*st/l; E.y += dy*st/l; } }
+    if (l < 0.01){ E.x = sl[0]; E.y = sl[1]; } else { animFast(); const dt = Math.min(0.1, Math.max(0, (now - E.t)/1000)), cap = 1.6/Math.max(0.05, view.s), st = Math.min(l*(1 - Math.exp(-dt*9)), cap); E.x += dx*st/l; E.y += dy*st/l; } }
   E.t = now; const wx = c.wx + E.x, wy = c.wy + E.y; for (const q of c.list){ const k2 = q.id + '|' + t; let P = TMWP.get(k2); if (!P){ P = {}; TMWP.set(k2, P); if (TMWP.size > 4000) TMWP.clear(); } P.wx = wx; P.wy = wy; P.t = now; P.S = S; }
   return [E.x, E.y]; }
 function troopModels(clusters, clBox, hexPx, now){
@@ -8302,6 +8336,7 @@ function drawFig(t, x, y, D, ang, o = {}){
   let u = uArt(t); if (!u || !(D > 2)) return false;
   if (FOOT[t] && !o.sq){ const Ds = D*0.72, ca = Math.cos(ang), sa = Math.sin(ang), now = o.now || 0, sd = o.seed || 0; let ok = false;
     if (Ds*dpr < 48) return drawFig(t, x, y, Ds*1.1, ang + 0.08*Math.sin(sd*3.7), {...o, sq:1, kick:0});   // small: one compact squad (its three-soldier cut) at the centre
+    if (o.walk) animFast(); else animAmb();
     SQUAD[o.walk ? 1 : 0].forEach(([f, l], i) => { const st = o.walk ? Math.sin(now/110 + sd + i*2.1)*Ds*0.05 : 0, fx = (f + (o.walk ? 0 : 0.02*Math.sin(now/1700 + sd + i)))*Ds + st, lx = l*Ds*1.15;   // marching squads step, resting ones barely shift
       ok = drawFig(t, x + ca*fx - sa*lx, y + sa*fx + ca*lx, Ds*(i ? 0.97 : 1), ang + (i ? 0.18 : -0.1) + 0.12*Math.sin(sd*7.3 + i*2.9), {...o, sq:1, kick:0}) || ok; });
     return ok; }
@@ -8393,7 +8428,7 @@ function drawSupplyRun(now){
   const scr = R.pts.map(q => toScreen(q[0], q[1]));
   ctx.save(); ctx.setLineDash([2, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(116,194,122,.55)'; ctx.beginPath(); scr.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke(); ctx.restore();
   const k = Math.max(0.9, Math.min(2, view.s*HS0/20)), D = 20*k, trip = Math.max(4000, R.len*260);   // ms per run
-  for (const off of [0, 0.5]){ const f = ((now/trip) + off) % 1; let d = f*R.len, i = 1;
+  animAmb(); for (const off of [0, 0.5]){ const f = ((now/trip) + off) % 1; let d = f*R.len, i = 1;
     for (; i < R.pts.length; i++){ const sl = Math.hypot(R.pts[i][0] - R.pts[i - 1][0], R.pts[i][1] - R.pts[i - 1][1]); if (d <= sl || i === R.pts.length - 1){ d = Math.min(d, sl); break; } d -= sl; }
     const A = scr[i - 1], B = scr[i], sl = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, segW = Math.hypot(R.pts[i][0] - R.pts[i - 1][0], R.pts[i][1] - R.pts[i - 1][1]) || 1, u = d/segW;
     const x = A[0] + (B[0] - A[0])*u, y = A[1] + (B[1] - A[1])*u, fade = Math.min(1, f*8, (1 - f)*8);
@@ -8485,8 +8520,8 @@ function placeTrays(trq, boxes, LPL, cityPass, hexPx){ const out = [];
   return out; }
 // draw a placed tray: the cached plate, then live: construction arcs and blinking pips, upgrade pops (and the city's own level-up ring)
 function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.x0*dpr)/dpr, Y = Math.round(T.y0*dpr)/dpr, a0 = Math.max(0, Math.min(1, (hexPx - (T.city ? TRAY_PX : TRAY_PX2))/3 + 0.25));
-  for (const t of items){ const r = bLevel(p + ':' + t.k, t.lvl, now); let f = r.t0 ? (now - r.t0)/TRAY_ANIM : -1; if (f >= 1){ r.t0 = 0; f = -1; } t.f = f; t.an = f >= 0; t.r = r; }
-  if (T.city){ const r = bLevel(p + ':city', cityLevel(p), now); let f = r.t0 ? (now - r.t0)/(TRAY_ANIM*1.4) : -1; if (f >= 1){ r.t0 = 0; f = -1; }
+  for (const t of items){ const r = bLevel(p + ':' + t.k, t.lvl, now); let f = r.t0 ? (now - r.t0)/TRAY_ANIM : -1; if (f >= 1){ r.t0 = 0; f = -1; } t.f = f; t.an = f >= 0; t.r = r; if (t.an) animFast(); }
+  if (T.city){ const r = bLevel(p + ':city', cityLevel(p), now); let f = r.t0 ? (now - r.t0)/(TRAY_ANIM*1.4) : -1; if (f >= 1){ r.t0 = 0; f = -1; } if (f >= 0) animFast();
     if (f >= 0){ const e = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*0.5*(1 - f); ctx.drawImage(GLOW(), T.x - 16*kl, T.my - 16*kl, 32*kl, 32*kl);
       ctx.globalAlpha = a0*(1 - f)*(1 - f); ctx.lineWidth = 1.5 + 1.5*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(T.x, T.my, (6 + 20*e)*kl, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
   ctx.globalAlpha = a0; ctx.drawImage(trayCanvas(p, items, D, T.col), X, Y, D.w, D.h);
@@ -8494,7 +8529,7 @@ function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.
     if (t.c){ const pf = Math.max(0, Math.min(1, 1 - t.c.h/Math.max(1, t.c.h0))), R = D.g*0.5 + 0.6;
       ctx.lineWidth = 2.4; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
       ctx.lineWidth = 1.3; ctx.strokeStyle = '#eaa83c'; ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI/2, -Math.PI/2 + Math.max(0.05, pf)*Math.PI*2); ctx.stroke();
-      ctx.save(); ctx.globalAlpha = a0*(afxReduced() ? 0.85 : 0.5 + 0.45*Math.sin(now/210)); ctx.translate(X, Y); trayPips(ctx, t.k, 0, cx0, top, D, t.c.lvl - 1, '#eaa83c'); ctx.restore(); }   // the level being built blinks
+      if (!afxReduced()) animAmb(); ctx.save(); ctx.globalAlpha = a0*(afxReduced() ? 0.85 : 0.5 + 0.45*Math.sin(now/210)); ctx.translate(X, Y); trayPips(ctx, t.k, 0, cx0, top, D, t.c.lvl - 1, '#eaa83c'); ctx.restore(); }   // the level being built blinks
     if (t.an){ const f = t.f, e = easeOut(f), sc = f < 0.3 ? 1 + 0.5*easeOut(f/0.3) : 1.5 - 0.5*easeOut((f - 0.3)/0.7), gs = D.g*sc;
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*0.75*(1 - f); ctx.drawImage(GLOW(), cx - D.g*1.4, cy - D.g*1.4, D.g*2.8, D.g*2.8);
       ctx.globalAlpha = a0*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, D.g*(0.6 + 1.2*e), 0, Math.PI*2); ctx.stroke(); ctx.restore();
@@ -8510,7 +8545,9 @@ function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.
 const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo'};
 const ART_PX = 46;   // close zoom: ground patterns on the map, and the city marker steps back so the built-up area shows around it
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
-const bimg = (k, l, px = 22, dim = false) => (k === 'city' || BART[k]) && ART.ready(bartName(k, l)) ? `<i class="bi${dim ? ' dim' : ''}" style="--bi:url(${ART.url(bartName(k, l))});--bs:${px}px" aria-hidden="true"></i>` : '';
+// (a picture not loaded yet is asked for, and an empty plate of the same size holds its place: no layout jump when it arrives)
+const bimg = (k, l, px = 22, dim = false) => { if (k !== 'city' && !BART[k]) return ''; const n = bartName(k, l); if (ART.failed(n)) return ''; if (!ART.ready(n)) ART.want(n);
+  return `<i class="bi${dim ? ' dim' : ''}" style="--bi:${ART.ready(n) ? `url(${ART.url(n)})` : 'none'};--bs:${px}px" aria-hidden="true"></i>`; };
 const PLATE_MK = 0.48;   // city marker scale at close zoom, so the built-up area shows around it
 // the marker steps back as the urban area grows on screen (from the mid zoom), so the city is never hidden under its own marker
 const cityPlateK = (P, p, vis) => P.city && vis.has(p) && cityArtOn ? 1 - (1 - PLATE_MK)*Math.max(0, Math.min(1, (view.s*HS0 - 12)/10))*cityFade(view.s*HS0) : 1;
@@ -8744,7 +8781,7 @@ const easeOut = t => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
 // health (with a short white 'damage taken' tail) and morale bars under a counter
 function unitBars(a, x0, y0, barW, ps, now, H = 22*ps){
   const hf = Math.max(0, Math.min(1, a ? (a.air ? Math.min(healthFrac(a), wingCond(a)) : healthFrac(a)) : 1)), HB = barH(H), mor = !!a && a.owner === PLAYER; let shown = hf;   // (the morale line: your forces only)
-  if (a){ const d = HPD.get(a.id); if (!d || hf > d.v + 0.001){ HPD.set(a.id, {v:hf, t:now}); } else if (hf < d.v - 0.001){ if (!d.from){ d.from = d.v; d.t = now; } const k2 = Math.min(1, (now - d.t)/600); shown = d.from + (hf - d.from)*k2; if (k2 >= 1){ d.v = hf; d.from = null; } } }
+  if (a){ const d = HPD.get(a.id); if (!d || hf > d.v + 0.001){ HPD.set(a.id, {v:hf, t:now}); } else if (hf < d.v - 0.001){ if (!d.from){ d.from = d.v; d.t = now; } const k2 = Math.min(1, (now - d.t)/600); if (k2 < 1) animFast(); shown = d.from + (hf - d.from)*k2; if (k2 >= 1){ d.v = hf; d.from = null; } } }
   // one slim strip inset under the plate: health on its left, and for your forces morale on a short blue end past a hairline gap (one line, not two)
   const px = 1/dpr, G0 = mor ? Math.max(2*px, 1) : 0; x0 += 4; barW -= 8; const hw = mor ? Math.round(barW*0.7*dpr)/dpr : barW, mw = barW - hw - G0;
   ctx.globalAlpha *= 0.9; ctx.fillStyle = 'rgba(6,10,8,.55)'; ctx.fillRect(x0 - px, y0 - px, barW + 2*px, HB + 2*px);
@@ -8991,7 +9028,7 @@ function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, no
   ctx.save(); ctx.translate(x0, y0); if (minor) ctx.globalAlpha = 0.92;
   ctx.drawImage(E.c, -E.ox, -E.oy, E.c.width/dpr, E.c.height/dpr);
   // in battle the red edge breathes (a faint outer glow; steady with reduced effects)
-  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); ctx.save(); ctx.transform(1, 0, -sk/h, 1, sk, 0); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.strokeRect(-2, -2, W0 + 4, h + 4); ctx.restore(); }
+  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); ctx.transform(1, 0, -sk/h, 1, sk, 0); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.strokeRect(-2, -2, W0 + 4, h + 4); ctx.restore(); }
   ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
   if (minor){ ctx.restore(); return {x:x0 - 1, y:y0 - (fc ? fh : 0) - 1, w:w + 3, h:h + (fc ? fh : 0) + 4}; }
   const cmd = counter.list && counter.list.some(cmdOf), mx = sk + (fc ? fw + 2 : 0);
@@ -9115,7 +9152,7 @@ function drawLinkFx(now, vis){ if (!S.links) return; const hexPx = view.s*HS0; i
         // spanner glyph
         ctx.strokeStyle = '#ffe2c8'; ctx.lineWidth = 1.5*px; ctx.beginPath(); ctx.moveTo(mx - 2.6*px, my + 2.6*px); ctx.lineTo(mx + 1.2*px, my - 1.2*px); ctx.stroke();
         ctx.lineWidth = 1.1*px; ctx.beginPath(); ctx.arc(mx + 2*px, my - 2*px, 1.6*px, Math.PI*0.75, Math.PI*2.25); ctx.stroke(); } }
-    else { const Bd = d.bld, f = Math.max(0, Math.min(1, 1 - Bd.h/(Bd.h0 || 1))), pulse = 0.45 + 0.4*Math.sin(now/260 + r.a);
+    else { const Bd = d.bld, f = Math.max(0, Math.min(1, 1 - Bd.h/(Bd.h0 || 1))), pulse = 0.45 + 0.4*Math.sin(now/260 + r.a); animAmb();
       ctx.globalAlpha = pulse; ctx.strokeStyle = Bd.k === 'rail' ? (Bd.lv === 2 ? '#78cee8' : '#2a241c') : '#eec266'; ctx.lineWidth = (Bd.k === 'rail' ? 2.6 : 2.2)*px; ctx.setLineDash([5*px, 3*px]); ctx.lineDashOffset = -(now/60 % 8)*px;
       ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
       ctx.strokeStyle = Bd.k === 'rail' ? '#f3ead2' : '#fff2c4'; ctx.lineWidth = 2.2*px; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(A.x + (B.x - A.x)*f, A.y + (B.y - A.y)*f); ctx.stroke();
@@ -9384,7 +9421,7 @@ function drawBattleLOD(now, vis, kl, hexPx){
   const fig = red || SET.fx === 'low' ? 0 : smooth01((hexPx - 56)/20), lf = 1 - fig;
   const inBox = (q, r, pad) => q[0] > r.x - pad && q[0] < r.x + r.w + pad && q[1] > r.y - pad && q[1] < r.y + r.h + pad;
   for (const p of S.battles){ if (!vis.has(p) && !S.armies.some(a => a.owner === PLAYER && a.at === p)) continue;
-    const P = G.P[p]; let [x, y] = toScreen(P.x, P.y); if (x < -260 || y < -120 || x > cw + 260 || y > ch + 320) continue;
+    const P = G.P[p]; let [x, y] = toScreen(P.x, P.y); if (x < -260 || y < -120 || x > cw + 260 || y > ch + 320) continue; if (run) animFast();
     const sides = new Set(), idAt = new Map(); let na = 0; for (const a of S.armies){ if (a.at !== p || a.to !== null || a.fly) continue; sides.add(a.owner); idAt.set(a.id, a.owner); na++; }
     const pts = []; for (const o of sides){ const w = CLPOS.get(p + ':' + o); if (w) pts.push(toScreen(w[0], w[1])); }
     if (pts.length >= 2){ x = 0; y = 0; for (const q of pts){ x += q[0]; y += q[1]; } x /= pts.length; y /= pts.length; }
@@ -9543,6 +9580,7 @@ function waveTile(){ if (SEAFX.tile) return SEAFX.tile; const N = 256, P = 8, c 
 // on with 'screen' (fainter at night). Foam: a soft foam sheet stroked along the coast rings in view, clipped to the water side.
 function drawSeaSurface(now, moving){
   const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || SET.fx === 'low' || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || layer.dp !== dpr || !GEO) return;
+  if (S.speed && !S.over) animAmb();
   const day = viewLight().day, w2 = Math.ceil(cw*dpr/2), h2 = Math.ceil(ch*dpr/2), Wc = SEAFX.cv || (SEAFX.cv = document.createElement('canvas'));
   if (Wc.width !== w2 || Wc.height !== h2){ Wc.width = w2; Wc.height = h2; SEAFX.k = ''; }
   const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr), key = view.x + ',' + view.y + ',' + view.s + ',' + lx + ',' + ly + ',' + layer.full + ',' + (layer.strips || 0);
@@ -9567,13 +9605,14 @@ function drawSeaSurface(now, moving){
         fp.setTransform(new DOMMatrix([0, ts*1.4, -ts*1.4, 0, 37*px - 0.7*d, 23*px + 0.3*d])); ctx.globalAlpha = Math.min(1, (0.06 + 0.07*day)*2.2); ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); }
       ctx.restore(); } } }
 function draw(now){
-  ovOut(); ovClear(); clampView(); fxDrain(now);
+  ovOut(); ovClear(); clampView();
   { const fdt = now - (FXG.t || now); FXG.t = now; if (fdt > 0 && fdt < 250) FXG.ema = 0.9*FXG.ema + 0.1*fdt; FXG.k = Math.max(0.3, Math.min(1, 1 - (FXG.ema - 20)/25)); FXG.area = FXG.pa = 0;
     if (FXG.ema > 28 && now > FXG.ret){ if (FXG.ema > 40) fxRetire(AFX.puff, 10, now); fxRetire(PART, 30, now, true); FXG.ret = now + 350; } }   // slow frames: the oldest particles fade out early (the art puffs, cheap to draw, only under 25 fps)
   if (now < shakeUntil){ const k2 = (shakeUntil - now)/900, a0 = shakeAmp*Math.min(1, k2); cv.style.transform = `translate(${(Math.random() - 0.5)*a0}px, ${(Math.random() - 0.5)*a0}px)`; if (OV.on) OV.cv.style.transform = cv.style.transform; } else if (cv.style.transform){ cv.style.transform = ''; if (OV.cv) OV.cv.style.transform = ''; shakeAmp = 0; }
   if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }
   toneSync();   // war or peace with you (or the palette) changed: the map's relation colours follow at once
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS0;
+  if (Math.max(hexPx, (ZTW ? ZTW.s1 : camFly ? camFly.s1 || 0 : 0)*HS0) >= 8) for (const n of ART.L5('city')) ART.want(n);   // (towns fade in from 12 px a hex)
   { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; CITY_ALL = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
     if (CITY_PEND && !camFly && !ZTW && now - (draw.zt || 0) > 150 && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120){ CITY_PEND = false; CITYV++; } }
   const keyOf = vs => [vs, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' || mapMode === 'resources' ? Math.floor(S.hour/24) : 0, LINKD, SET.fx].join('|');
@@ -9624,6 +9663,9 @@ function draw(now){
   if (DT.pre && (camFly || now - DT.pre.t > 60000)) DT.pre = null;
   try { const F = cfR, Z = ZTW, T = F ? {s:F.s1, x:cw/2 - F.x1*F.s1, y:ch/2 - F.y1*F.s1, fly:true} : Z ? {s:Z.s1, x:Z.ax - Z.wx*Z.s1, y:Z.ay - Z.wy*Z.s1} : DT.pre;
     if (T) dtWork(true, T); else dtWork(settled && !flyReuse); } catch (e) { DT.fail = true; DT.job = null; }
+  // frames until the view has settled: the camera moving, a light layer, bands or city bakes still to render, dissolves, a shake, detail tiles to lay
+  // (tiles still in the workers come back with a redraw)
+  if (panning || moved || !settled || zoomLive || camFly || flyReuse || layer.lite || (layer.q && layer.q.length) || CITY_PEND || FADE.length || now < shakeUntil || DT.ready.length || DT.hold.length || DT.job) animFast();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a layer at another scale or pixel ratio (reused mid-zoom, or just rendered ahead of a glide at half resolution) is always drawn scaled to the view;
   // if that scaled copy does not cover the canvas, the uncovered rim is cleared so no stale frame (doubled labels, old counters) shows through
@@ -9642,18 +9684,20 @@ function draw(now){
     ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(GEO.outline[sel.target]); ctx.setLineDash([]); }
   if (sel.prov !== null){ const calm = afxReduced(); if (SELFX.p !== sel.prov){ SELFX.p = sel.prov; SELFX.pt = now; }
     // a soft highlight pulse: a bright flash on selection settling into a slow breathing glow (one fill and two strokes)
-    const k = calm ? 1 : Math.min(1, (now - SELFX.pt)/650), br = calm ? 0.5 : 0.5 + 0.5*Math.sin((now - SELFX.pt)/380);
+    const k = calm ? 1 : Math.min(1, (now - SELFX.pt)/650), br = calm ? 0.5 : 0.5 + 0.5*Math.sin((now - SELFX.pt)/380); if (!calm){ if (k < 1) animFast(); else animAmb(); }
     if (GEO.fill[sel.prov] && !G.P[sel.prov].sea){ ctx.fillStyle = `rgba(226,162,61,${(0.05 + 0.05*br + 0.2*(1 - k)).toFixed(3)})`; ctx.fill(GEO.fill[sel.prov], 'evenodd'); }
     ctx.strokeStyle = `rgba(226,162,61,${(0.14 + 0.12*br + 0.3*(1 - k)).toFixed(3)})`; ctx.lineWidth = (5 + 2.5*br + 8*(1 - k))*px; ctx.stroke(GEO.outline[sel.prov]);
     ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.4*px; ctx.stroke(GEO.outline[sel.prov]); } else SELFX.p = null;
   // front lines: your borders with powers you are at war with: a soft red glow under one clean solid line that breathes gently (no dashed 'zipper')
-  { const F = frontPath(); if (F){ const z = Math.min(1.6, Math.max(0.7, hexPx/14)), br = afxReduced() ? 0.5 : 0.5 + 0.5*Math.sin(now/700); ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  { const F = frontPath(); if (F){ const z = Math.min(1.6, Math.max(0.7, hexPx/14)), br = afxReduced() ? 0.5 : 0.5 + 0.5*Math.sin(now/700); if (!afxReduced()) animAmb(); ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       ctx.strokeStyle = `rgba(224,87,79,${(0.12 + 0.08*br).toFixed(3)})`; ctx.lineWidth = 8*z*px; ctx.stroke(F); ctx.strokeStyle = 'rgba(30,6,4,0.55)'; ctx.lineWidth = 2.8*z*px; ctx.stroke(F);
       ctx.strokeStyle = 'rgba(240,96,78,0.95)'; ctx.lineWidth = 1.5*z*px; ctx.stroke(F); ctx.restore(); } }
   drawWeather(now);   // storms under the night tint: night darkens them like the land, and the city lights shine over them
-  { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)); if (tN < 1) drawNightWorld(1 - tN); if (tN > 0) drawNight(tN); }
-  { const pend = CITY_PEND; drawCityLights(hexPx); CITY_PEND = pend; }   // city lights over the night tint (their bakes trickle in frame by frame)
-  if (hexPx >= 9) cityWarm(now);   // idle: the low tier of every city, so a jump never lands on empty ground
+  { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)); if (tN < 1) drawNightWorld(1 - tN); if (tN > 0) drawNight(tN);
+    const mph = msPerHour(); if (mph){ animIn(mph/4);   // (lights and glows step every 15 game minutes, the close-zoom tint every 3)
+      if (tN > 0) animIn(mph*0.05); if (tN < 1) animIn(Math.max(33, mph*(saverOn() ? 4 : 1)/(15*HS*SQ3*W/360*view.s))); } }   // the wide-zoom terminator (a soft band): each pixel it moves, 4 with the Battery saver
+  { const pend = CITY_PEND; CITY_PEND = false; drawCityLights(hexPx); if (CITY_PEND) animFast(); CITY_PEND = pend; }   // (lights still to make: a few ms a frame until done)   // city lights over the night tint (their bakes trickle in frame by frame)
+  if (hexPx >= 9){ cityWarm(now); if (CWARM && CWARM.length && cityArtState() >= 5) animAmb(); }   // idle: the low tier of every city, so a jump never lands on empty ground
   drawLightning(now);
 
   // ---- screen space
@@ -9668,10 +9712,11 @@ function draw(now){
   for (const a of S.armies){ if (!armyVisible(a, vis)){ if (vis.loc.size && armyLocated(a, vis)) unkA.push(a); continue; } tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
     if (a.fly) continue;
     let [wx, wy] = armyPos(a); const mv = a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id));
-    if (!a.air){ const m = movStep(a, wx, wy, mv, now); if (m){ wx = m.x; wy = m.y; } }   // marching or settling: the spring's spot
+    let mvm = null; if (!a.air){ const m = mvm = movStep(a, wx, wy, mv, now); if (m){ wx = m.x; wy = m.y; } }   // marching or settling: the spring's spot
     // (standing forces off screen count too: the zoom bands are resolved over every force you can see, so a counter never shifts as others come
     // into view; a province not laid out yet waits for a frame with time to spare)
     const [x, y] = toScreen(wx, wy), cm = 40 + 26*view.s, far = x < -cm || y < -cm || x > cw + cm || y > ch + cm;
+    if (!far && ((mv && S.speed && !S.over) || (mvm && (!mvm.rest || mvm.halt != null)))) animFast();   // marching on screen, or its spring still settling
     if (far && (mv || a.pos)) continue;
     items.push({a, x, y, wx, wy, owner:a.owner, moving:mv, air:!!a.air, far}); }
   movSweep(now);
@@ -9775,14 +9820,15 @@ function draw(now){
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
   // paths (under the troop models, the names and the counters)
   const sa = sel.army !== null ? armyById(sel.army) : null;
-  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...dispPos(a))];
+  const antOn = (S.speed && !S.over) || !!sa; if (antOn || RD.antT == null) RD.antT = now; const antT = RD.antT;   // (paused with nothing selected: the dashes rest)
+  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...dispPos(a))]; if (antOn) animAmb();
     if (a.to !== null && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
     path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
     const lastPt = pts[pts.length - 1];
-    ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(now/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(antT/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
     const [lx, ly] = lastPt; ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
-  { const lo = sel.lastOrder && now - sel.lastOrder.t < 6000 ? sel.lastOrder : null, k0 = lo ? 1 - Math.max(0, (now - lo.t - 3000)/3000) : 0;
+  { const lo = sel.lastOrder && now - sel.lastOrder.t < 6000 ? sel.lastOrder : null, k0 = lo ? 1 - Math.max(0, (now - lo.t - 3000)/3000) : 0; if (lo){ if (now - lo.t >= 3000) animFast(); else animIn(3000 - (now - lo.t)); }
     for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null)){ const hot = lo && lo.ids.includes(a.id);
       drawPath(a, a.path.length ? a.path : [a.to], hot ? `rgba(226,162,61,${(0.5 + 0.45*k0).toFixed(2)})` : 'rgba(226,162,61,0.5)', hot ? 1.8 + 1.0*k0 : 1.6); } }
   // the selected force's routes: ph 0 = the lines (under the counters, so no route runs across a plate), ph 1 = the route chip and air planning (over them)
@@ -9790,7 +9836,7 @@ function draw(now){
     if (sa.air){ if (ph !== 1) return; const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS0*SQ3*view.s;
       ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(111,176,232,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(111,176,232,.05)'; ctx.fill(); ctx.restore();
       if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target);
-        ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); animAmb(); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
         ctx.font = `600 11px ${BODY}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
         roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
       return; }
@@ -9943,7 +9989,7 @@ function draw(now){
   // your capital callout: a ring pulsing round the star, and your headquarters beside it (placed before the counters, which keep clear of it; drawn under them)
   { const N = S.nations[PLAYER];
     if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + CITY_DY*kl;
-      if (!(hexPx >= ART_PX && bartOk('city'))){ ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
+      if (!(hexPx >= ART_PX && bartOk('city'))){ if (x > -40 && y > -40 && x < cw + 40 && y < ch + 40) animAmb(); ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
     }
     const hq = capTagAt && hqCanvas(); if (hq){ { const T = [capTagAt.ix, capTagAt.iy, capTagAt.ix + capTagAt.w, capTagAt.iy + capTagAt.h]; ctx.globalAlpha = capTagAt.a = clusters.some(c => c.pv && !c.moving && (c.pa ?? 1) > 0.05 && Math.abs(c.x - T[0]) < 200 && Math.abs(c.y - T[1]) < 200 && (b => T[0] < b[2] + 4 && T[2] > b[0] - 4 && T[1] < b[3] + 4 && T[3] > b[1] - 4)(pfBox(c, k, c.n + (c.mn || 0)))) ? 0.4 : 1; }   // (far out, where it cannot stand clear of every counter, it fades under the one on it)
       const L = capTagAt.lead; if (L){ ctx.beginPath(); ctx.moveTo(L[0], L[1]); ctx.lineTo(L[2], L[3]); ctx.lineCap = 'round'; ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(4,7,9,.55)'; ctx.stroke();
@@ -10016,7 +10062,7 @@ function draw(now){
     pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};/*@ENDTEST*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
   if (sel.army !== null && !afxReduced()){ if (SELFX.a !== sel.army){ SELFX.a = sel.army; SELFX.at = now; }
-    const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500;
+    const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500; if (fresh > 0) animFast(); else animAmb();
     for (const h of hits){ if (h.unk || !(h.ids.includes(sel.army) || (sel.group.length && h.ids.some(id => sel.group.includes(id))))) continue;
       ctx.save(); ctx.strokeStyle = '#f0b44e';
       for (const [q, a0] of fresh > 0 ? [[1 - fresh, 0.9*fresh]] : []){ const g = 2 + q*9; ctx.globalAlpha = a0*(1 - q); ctx.lineWidth = 2 - q; roundRect(ctx, h.x - g, h.y - g, h.w + g*2, h.h + g*2, 5 + g*0.6); ctx.stroke(); }
@@ -10029,7 +10075,7 @@ function draw(now){
   drawIntelLegend(vis, unkA.length);
   // aircraft in flight: formation of jets with contrails
   const dtV = Math.min(0.1, (now - (draw.lastT || now))/1000), airLbl = []; draw.lastT = now;
-  for (const a of S.armies){ if (!a.air || !count(a)) continue; const v = wingVis(a, now, dtV); if (!v) continue;
+  for (const a of S.armies){ if (!a.air || !count(a)) continue; const v = wingVis(a, now, dtV); if (!v) continue; animFast();
     if ((!armyVisible(a, vis) && !vis.has(v.tgt)) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v))){   // stealthy UAVs (III+) only show near your air defence or under your AWACS
       if (vis.loc.size && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && vis.loc.has(p0) && !(a.u.drone && uavLv(a.owner) >= 3)){ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, spread:false, unk:true}); } }
       continue; }
@@ -10089,6 +10135,12 @@ function draw(now){
   drawSelPaths(1); drawUDrag();
   if (dropFor !== null){ const d0 = armyById(dropFor); if (d0){ const [bx, by] = toScreen(G.P[d0.at].x, G.P[d0.at].y), rr = PARA_RANGE*HS0*SQ3*view.s; ctx.save(); ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(226,162,61,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(226,162,61,.05)'; ctx.fill(); ctx.restore(); } }
   drawFX(now);
+  // effects still alive: shells, flashes, booms, impacts growing in, floating numbers, missiles, queued effects; particles, smoke puffs and wrecks
+  // (paused, only drifting smoke is left: gentle ambient motion); scorch marks fade over 20 s
+  const fxRun = S.speed && !S.over;
+  if (PROJ.length || MUZZ.length || AFX.boom.length || FX.length || (S.inflight && S.inflight.length) || (FXQ.length && fxRun) || AFX.crater.some(q => now - q.t0 < 300)) animFast();
+  else if (PART.length || AFX.puff.length || WRECKS.length){ if (fxRun) animFast(); else animAmb(); }
+  else if (SCORCH.length) animAmb();
   ovOut();
   drawMini();
 }
@@ -10536,7 +10588,7 @@ function csGlyph(k){ if (CS_GL[k]) return CS_GL[k]; let u = '';
   try { const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 5; g.shadowOffsetY = 2;
     g.translate(18, 18); g.scale(2.5, 2.5); g.fillStyle = g.strokeStyle = '#f2fbfc'; if (BGLYPH[k]) BGLYPH[k](g); u = c.toDataURL(); } catch (e) {}
   return CS_GL[k] = u; }
-const csArt = (k, lv) => { if (k === 'city' || BART[k]){ const n = bartName(k, Math.max(1, lv)); if (ART.ready(n)) return {u:ART.url(n), art:true}; } return {u:k === 'city' ? '' : csGlyph(k), art:false}; };
+const csArt = (k, lv) => { if (k === 'city' || BART[k]){ const n = bartName(k, Math.max(1, lv)); if (ART.ready(n)) return {u:ART.url(n), art:true}; ART.want(n); } return {u:k === 'city' ? '' : csGlyph(k), art:false}; };   // (the symbol until the picture arrives)
 function csWanted(){ const p = sel.prov;
   if (!S || p === null || sel.army !== null || aimMsl || rallyFor !== null || (typeof GLOBE !== 'undefined' && GLOBE && GLOBE.on())) return -1;
   const P = G.P[p]; return P && !P.sea ? p : -1; }
@@ -10580,6 +10632,7 @@ function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWa
 function csH(){ const el = $('csheet'), w = $('mapwrap'); if (el && w) w.style.setProperty('--csh', (el.hidden ? 0 : el.offsetHeight) + 'px'); }
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => csH()).observe($('csheet'));
 window.addEventListener('im-art', () => { if (CS.p >= 0){ lastSig.csheet = ''; csSync(); } });
+window.addEventListener('im-bart', () => { if (CS.p >= 0){ lastSig.csheet = ''; csSync(); } if (S) renderSide(); });   // a building picture arrived: the sheet and the panels show it
 $('csheet').addEventListener('wheel', e => { const r = e.target.closest('.cs-blds'); if (r && Math.abs(e.deltaY) > Math.abs(e.deltaX) && r.scrollWidth > r.clientWidth){ r.scrollLeft += e.deltaY; e.preventDefault(); } }, {passive:false});
 // a tapped province that lands under the sheet glides up into the free map above it
 function csReveal(p){ setTimeout(() => requestAnimationFrame(() => { const el = $('csheet'); if (!el || el.hidden || sel.prov !== p || camFly) return;
@@ -10784,12 +10837,12 @@ function tutTick(){ if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (typeof st
 function tutDraw(now, kl = 1){
   if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (!st.map) return; const p = st.map(); if (p == null) return;
   const P = G.P[p], [x, y0] = toScreen(P.x, P.y), y = y0 + (P.city ? CITY_DY*kl : 0), r = (P.city ? 16*kl + 6 : 26) + Math.sin(now/220)*(afxReduced() ? 0 : 3);   // around the city marker
-  ctx.save(); ctx.strokeStyle = 'rgba(226,162,61,.95)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -now/30; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+  animFast(); ctx.save(); ctx.strokeStyle = 'rgba(226,162,61,.95)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -now/30; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.restore();
 }
 function settingsHTML(){
   // one row per setting: a label on the left, a segmented control (or the slider) on the right
   const opt = (k, v, label, tip = '') => `<button class="sg ${SET[k] === v ? 'on' : ''}" aria-pressed="${SET[k] === v}" data-act="set" data-k="${k}" data-v="${v}"${tip ? ` title="${tip}"` : ''}>${label}</button>`;
-  const row = (label, ctl) => `<div class="srow"><span class="sl">${label}</span>${ctl}</div>`;
+  const row = (label, ctl, note = '') => `<div class="srow"><span class="sl">${label}${note ? `<span class="snote">${note}</span>` : ''}</span>${ctl}</div>`;
   return `<div class="eyebrow">Iron Meridian: World War III</div><h1>Settings</h1>
     <div class="setgrid">
     ${row('AI difficulty', `<div class="seg2">${DIFFS.map(d => `<button class="sg ${diffOf().k === d.k ? 'on' : ''}" aria-pressed="${diffOf().k === d.k}" data-act="diff" data-k="${d.k}" title="AI income ×${d.inc}, war appetite ×${d.war}">${d.name}</button>`).join('')}</div>`)}
@@ -10797,6 +10850,7 @@ function settingsHTML(){
     ${row('Music', `<div class="seg2">${opt('music', true, 'On')}${opt('music', false, 'Off', 'Effects and ambience only')}</div>`)}
     ${row('Pop-up alerts', `<div class="seg2">${opt('toasts', 'all', 'All')}${opt('toasts', 'bad', 'Threats')}${opt('toasts', 'none', 'None')}</div>`)}
     ${row('Effects', `<div class="seg2">${opt('fx', 'high', 'High')}${opt('fx', 'low', 'Low', 'Faster on slow machines')}</div>`)}
+    ${row('Battery saver', `<div class="seg2">${opt('saver', true, 'On')}${opt('saver', false, 'Off', 'Full frame rate while anything moves')}</div>`, 'Caps the frame rate at 30 and pauses drawing when nothing moves')}
     ${row('Text size', `<div class="seg2">${[90, 100, 115, 130].map(v => `<button class="sg ${(SET.ui || 100) === v ? 'on' : ''}" aria-pressed="${(SET.ui || 100) === v}" data-act="set-ui" data-v="${v}">${v}%</button>`).join('')}</div>`)}
     ${row('Colours', `<div class="seg2">${opt('cb', false, 'Standard')}${opt('cb', true, 'Colour-blind')}</div>`)}
     ${row('Motion', `<div class="seg2">${opt('motion', 'full', 'Full')}${opt('motion', 'reduced', 'Reduced', 'No shake, fewer particles')}</div>`)}
@@ -12076,7 +12130,7 @@ GLOBE = (() => {
     if (!mode){ lastT = now; return; }
     const dt = Math.min(0.1, (now - (lastT || now))/1000); lastT = now;
     const busy = mode === 'game' && (gdrag || gpinch || fly || Math.abs(vel.lon) + Math.abs(vel.lat) > 0.5 || Math.abs(Dgoal - D) > 0.002 || now - fadeT0 < 450 || now < hideUntil);
-    if (!busy && now - lastR < 32) return;    // idle globe: ~30 fps is plenty for slow clouds and sun
+    if (!busy && now - lastR < (mode === 'game' && saverOn() ? 100 : 32)) return;    // idle globe: ~30 fps is plenty for slow clouds and sun (10 with the Battery saver)
     const step = Math.min(0.1, (now - (lastR || now))/1000); lastR = now;
     try { render(now, step); } catch (e){ fail(); }
   }
@@ -12117,21 +12171,44 @@ GLOBE = (() => {
 
 /* ---------------- Loop & boot ---------------- */
 let last = 0, acc = 0, uiAcc = 0;
+// one map frame (see 'Redraw scheduling'): the registrations of this draw decide whether and when the next one comes
+function rdDraw(now){ const gap = now - (RD.dn || now); RD.dn = now; if (gap > 250) rdShift(gap - 50);
+  RD.dirty = false; RD.f = RD.a = 0; RD.nx = Infinity; RD.n++;
+  try { draw(now); } finally { ovOut(); } camSnapDraw(now);
+  RD.vx = view.x; RD.vy = view.y; RD.vs = view.s; }   // (after the draw: it clamps and snaps the view)
+// after frames that were not drawn, the map's own easing and expiry clocks move on by the time that was skipped, as if it had stood still:
+// counters and models do not fade in again, cached formations, facings and model sheets are not dropped, springs do not snap
+function rdShift(ms){ const sh = (M, ...ks) => { for (const E of M.values()) for (const k of ks) if (typeof E[k] === 'number') E[k] += ms; };
+  try { sh(PF, 't'); sh(TMGA, 't'); sh(TMTOP, 't'); sh(TMGL, 't'); sh(TMWP, 't'); sh(TMD, 't', 'pt'); sh(TMSLOT, 't'); sh(PLAG, 't', 't0'); sh(OFS, 't'); sh(MOV, 't', 'halt', 'trT'); sh(HPD, 't');
+    TMSW += ms; PLAY_SW += ms; if (MOV.sw) MOV.sw += ms; if (PF_S.t != null) PF_S.t += ms; if (window.U3D && U3D.mapShift) U3D.mapShift(ms); } catch (e) {} }
 function frame(now){
+  RD.raf = 0; if (RD.bg) return;   // in the background: the loop stops (bgResume starts it again)
   const dt = Math.min(0.25, (now - (last || now))/1000); last = now;
-  if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; while (acc >= 1 && n < 8){ tick(); acc -= 1; n++; } if (n >= 8) acc = 0; }
+  if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; while (acc >= 1 && n < 8){ tick(); acc -= 1; n++; } if (n >= 8) acc = 0; if (n) redraw(); }   // a game hour passed: draw what it changed
+  fxDrain(now);   // the effects queue and the ambient-motion clock run on real time, drawn or not
   uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; try { ambience(now); } catch (e) {} renderSide(); tutTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
   if (camFly) camStep(now);
   zoomStep(dt);   // a gliding wheel / button zoom
   toneSync();   // before the covering test: the globe's political overlay follows war and peace too (geoVer -> buildPol)
-  if (!(GLOBE && GLOBE.covering())){ try { draw(now); } finally { ovOut(); } camSnapDraw(now); }   // the globe covers the map: skip the 2D frame (the game clock keeps running)
-  else if (mini && !mini.hidden && now - (drawMini.t || 0) > 100){ drawMini.t = now; drawMini(); }   // the minimap still frames the side of the earth the globe faces
-  if (GLOBE && GLOBE.covering()) ovClear();
+  const md = $('modal'), menu = !md.hidden && md.classList.contains('menu');   // the title and picker screens cover the whole map with their art
+  const cover = menu || !!(GLOBE && GLOBE.covering()); if (cover !== RD.cov){ RD.cov = cover; redraw(); }
+  if (!cover){ const iv = rdInterval(now);   // the 2D map, when a frame is due: a frame-time accumulator keeps a capped rate even (30 fps on a 60, 120 or 144 Hz screen)
+    if (iv !== Infinity && now - RD.last >= iv - 2){ RD.last = iv > 0 && now - RD.last < iv + 40 ? RD.last + iv : now; rdDraw(now); } }   // the globe covers the map: skip the 2D frame (the game clock keeps running)
+  else if (!menu && mini && !mini.hidden && now - (drawMini.t || 0) > 100){ drawMini.t = now; drawMini(); }   // the minimap still frames the side of the earth the globe faces
+  if (cover) ovClear();
   else if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }   // ...but keep the ownership version current for the globe's territories
   if (camFly) camFly.last = {x:view.x, y:view.y, s:view.s};   // after the map clamped it
   if (GLOBE) GLOBE.tick(now);
-  requestAnimationFrame(frame);
+  RD.raf = requestAnimationFrame(frame);
 }
+// in the background (tab hidden, page hidden, or on a phone the app losing focus): the loop stops, so the game clock stops with it (no catching
+// up on return: the first frame back has dt 0), and the sound is suspended; back in front everything resumes as it was (a paused game stays paused)
+function bgPause(){ if (RD.bg) return; RD.bg = true; if (RD.raf) cancelAnimationFrame(RD.raf); RD.raf = 0;
+  try { if (AC && AC.state === 'running'){ AC.suspend(); RD.ac = true; } } catch (e) {} }
+function bgResume(){ if (!RD.bg || document.hidden) return; RD.bg = false; last = 0; FXQ.last = 0; RD.last = 0; redraw(600);
+  try { if (RD.ac && AC && !muted) AC.resume(); } catch (e) {} RD.ac = false;
+  if (booted && !RD.raf) RD.raf = requestAnimationFrame(frame); }
+const phoneish = () => { try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch (e) { return false; } };
 function start(data){
   const css = getComputedStyle(document.documentElement);
   MONO = css.getPropertyValue('--mono').trim() || MONO; BODY = css.getPropertyValue('--body').trim() || BODY; DISPLAY = css.getPropertyValue('--display').trim() || DISPLAY;
@@ -12143,10 +12220,11 @@ function start(data){
   new ResizeObserver(() => resize()).observe(cv);
   renderSide(true);
   if (!resumed){ if (saved && saved.v === 4 && !saved.over) showBriefing(true, true); else showPicker(); }
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderSide(true));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { renderSide(true); redraw(); });
+  try { const dq = () => { const m = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`); m.addEventListener('change', () => { resize(); dq(); }, {once:true}); }; dq(); } catch (e) {}   // the window moved to a screen with another pixel ratio
   booted = true;
   /*@TEST*/if (window.U3D && window.__BAKE) U3D.warmup();/*@ENDTEST*/
-  requestAnimationFrame(frame);
+  if (document.hidden) RD.bg = true; else RD.raf = requestAnimationFrame(frame);   // (opened in a background tab: the loop starts once it is shown)
 }
 /*@TEST*/
 // test hooks (test build only: tools/build.js strips every @TEST block from the public build). window.__im exists on file:// pages.
@@ -12160,9 +12238,19 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 /*@ENDTEST*/
-document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
+window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });
+window.addEventListener('pageshow', () => bgResume());
+window.addEventListener('blur', () => { if (phoneish() && booted) bgPause(); });   // a phone: the app went to the background (a call, the app switcher)
+window.addEventListener('focus', () => bgResume());
+// input: whatever it changes gets drawn, and short transitions it starts get their frames (each animation also registers itself while it runs)
+for (const ev of ['pointerdown', 'pointerup', 'wheel', 'keydown', 'keyup', 'click', 'input', 'change', 'touchstart', 'touchend'])
+  document.addEventListener(ev, () => { RD.inp = performance.now(); redraw(600); if (RD.bg && booted) bgResume(); }, {capture:true, passive:true});
+document.addEventListener('pointermove', () => { RD.inp = performance.now(); redraw(); }, {capture:true, passive:true});   // hover highlights, tooltips
+window.addEventListener('im-redraw', () => redraw());   // a picture (map model sheet, building art) arrived
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
 function preload(){

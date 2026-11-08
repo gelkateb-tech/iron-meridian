@@ -811,6 +811,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
   }
   const shadowSheets = {};
   function nightSheet(type){ if (shadowSheets[type]) return shadowSheets[type]; const a = cache[type], c = document.createElement('canvas'); c.width = a.base.width; c.height = a.base.height; const x = c.getContext('2d'); x.drawImage(a.base, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#0a1426'; x.fillRect(0, 0, c.width, c.height); return (shadowSheets[type] = c); }
+  const drawn = () => { try { window.dispatchEvent(new Event('im-redraw')); } catch (e) {} };   // a sheet arrived: the map draws it (the page only redraws when something changed)
   function loadImg(src){ return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
   async function loadBaked(dir){
     const types = Object.keys(META);
@@ -835,16 +836,18 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     map(type, lvl = 0){ let A = mapAt[type];
       if (A === undefined){ let m = MAPMETA[type]; mapAt[type] = A = null;
         /*@TEST*/if (window.__BAKE) m = null;/*@ENDTEST*/   // (the bake page renders every model here)
-        if (m){ const im = new Image(); im.decoding = 'async'; im.onload = () => { mapAt[type] = mapLevels(m, im, null); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '.webp'; }
+        if (m){ const im = new Image(); im.decoding = 'async'; im.onload = () => { mapAt[type] = mapLevels(m, im, null); drawn(); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '.webp'; }
         else if (mapFn) try { const R = mapFn(type); mapAt[type] = A = mapLevels(R, R.mid, R.hi); } catch (e) {} }
       if (!A) return null;
       if (lvl > 0){ A.hiT = performance.now(); if (A.hi) return A.hi;
         /*@TEST*/if (window.__BAKE) return null;/*@ENDTEST*/
-        if (!A.hiLoad){ A.hiLoad = true; const im = new Image(); im.decoding = 'async'; im.onload = () => { if (A.hiLoad) A.hi = Object.assign({cv:im, lvl:1}, A.m); hiTrim(type); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '-hi.webp'; }
+        if (!A.hiLoad){ A.hiLoad = true; const im = new Image(); im.decoding = 'async'; im.onload = () => { if (A.hiLoad) A.hi = Object.assign({cv:im, lvl:1}, A.m); hiTrim(type); drawn(); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '-hi.webp'; }
         return null; }
       return A.mid; },
     // drop the hi sheets not drawn for a while (memory: at most a few are decoded at once)
     mapTrim(now){ for (const t in mapAt){ const A = mapAt[t]; if (A && A.hi && now - A.hiT > 15000){ A.hi = null; A.hiLoad = false; } } },
+    // the map was not drawn for ms (nothing moved): the hi sheets' last use moves on with it, so a still map does not drop them
+    mapShift(ms){ for (const t in mapAt){ const A = mapAt[t]; if (A && A.hiT) A.hiT += ms; } },
     mapTypes: () => Object.keys(MAPMETA), mapDir(d){ mapDir = d; },
     // a type's baked sheet meta (hi level: ppm, ground origin, per-direction boxes) without loading the sheet
     mapMeta: type => MAPMETA[type] || (mapAt[type] && mapAt[type].m) || null,
