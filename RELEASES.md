@@ -9,7 +9,7 @@ How it works from now on:
 - v3.11 (commit 986e1fb): CoN layout, sleek counters, mixed-stack icon, troop models fixed while zooming, research open from day one, Arms Factory pricing, public build with no dev code.
 
 ## Waiting for public
-_(nothing yet: the dev build and the public build are the same version, v3.11)_
+- Battery saver (setting, on by default on phones): the map redraws only when something on it changes, 30 fps cap, pauses in the background, building pictures load when first shown; repairs 1 and 2 (no redraws for convoys, storms or water off screen; names placed right after a phone rotation).
 
 ## Released
 - v3.11 — Arms Factory pricing: first factory $25M, each extra one a nation owns +40%.

@@ -1,7 +1,8 @@
 // Battery saver measurements: node .test/battery.js [quick]
 // For desktop (1400x860) and phone emulation (390x844, dpr 3, touch), with the Battery saver setting OFF and ON, prints:
 //  (a) map draws per second over 10 s fully idle (paused, nothing selected, static camera)
-//  (b) draws per second while the game runs at 1x on a view with nothing moving
+//  (b) draws per second while the game runs at 1x on a view with nothing on screen moving, at zoom 4 (must be the sim-tick rate only),
+//      and (b2) the same view at zoom 1.2, where the day/night line's band drifts across the screen
 //  (c) draws per second during a pan (25 px per animation frame, 3 s)
 //  (d) main-thread busy time per second (CDP Performance metrics: TaskDuration) for the same cases
 //  (e) image requests and bytes from page load to 8 s after the game starts (served over http, like the published page)
@@ -37,16 +38,35 @@ async function measure(b, name, saver){
   await p.evaluate(() => { const im = window.__im; im.S.speed = 0; im.v3c.clearSel(); }); await p.mouse.move(0, 0).catch(() => {}); await p.waitForTimeout(2000);
   await p.evaluate(() => new Promise(r => { const im = window.__im; if (!im.ambIdle) return r(); const f = () => performance.now() - im.rd.inp > im.ambIdle() + 300 ? r() : setTimeout(f, 200); f(); }));   // (paused: the ambient motion rests after a while without input)
   out.idle = await window_(P, IDLE_S*1000);
-  // (b) running at 1x on a quiet view: land provinces far from any force, at a mid zoom; a view where something still moves (a convoy sailing
-  // by, a storm) is skipped: the first of the farthest 8 where fewer than 30 draws come in 1.5 s at 1x
-  const cands = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, out = [];
-    for (const P of G.P){ if (P.sea) continue; let d = Infinity; for (const a of S.armies){ const A = G.P[a.at]; d = Math.min(d, (A.x - P.x)**2 + (A.y - P.y)**2); } out.push([P.id, d]); }
-    out.sort((a, b) => b[1] - a[1]); const pick = []; for (const [id, d] of out){ const P = G.P[id]; if (pick.every(([j]) => Math.hypot(G.P[j].x - P.x, G.P[j].y - P.y) > 150)) pick.push([id, d]); if (pick.length >= 8) break; } return pick; });
-  const goQ = id => p.evaluate(id => { const im = window.__im, P = im.G.P[id], s = 1.2, v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; im.S.speed = 1; return P.name; }, id);
-  let q = null;
-  for (const [id, d] of cands){ const name = await goQ(id); await p.waitForTimeout(2500); const d0 = await draws(p); await p.waitForTimeout(1500); const n = await draws(p) - d0;
-    if (!q || n < q.n) q = { id, prov: name, km: Math.round(Math.sqrt(d)), n }; if (n < 30) break; }
-  await goQ(q.id); await p.waitForTimeout(2500); out.run1x = { ...(await window_(P, RUN_S*1000)), view: q.prov };
+  // (b) running at 1x on a view where nothing on screen moves, at a close zoom (4: towns, buildings, waves drawn): inland views (Kashgar,
+  // Denver, then the land provinces farthest from both every force and the sea). Each is checked with the redraw scheduler's debug tally: a view
+  // where anything on screen registered motion (a convoy, a storm, a lake's waves) is passed over; the first view where only the slow
+  // game-clock changes asked for frames (animIn: the lights and the close-zoom tint every 3 game minutes) is measured. There the map must
+  // redraw only on those sim ticks: at 1x a game hour is 15 s, so one frame every 0.75 s (about 1.3 a second), saver on or off.
+  const cands = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, out = [], seas = G.P.filter(q => q.sea);
+    for (const P of G.P){ if (P.sea) continue; let d = Infinity, w = Infinity; for (const a of S.armies){ const A = G.P[a.at]; d = Math.min(d, (A.x - P.x)**2 + (A.y - P.y)**2); }
+      for (const Q of seas) w = Math.min(w, (Q.x - P.x)**2 + (Q.y - P.y)**2); out.push([P.id, d, Math.min(d, w)]); }
+    out.sort((a, b) => b[2] - a[2]); const pick = [];   // (far from every force and from the sea: deep inland)
+    for (const c of ['Kashgar', 'Denver']){ const P = G.P.find(q => q.cityName === c); if (P) pick.push([P.id, out.find(o => o[0] === P.id)[1]]); }
+    for (const [id, d] of out){ const P = G.P[id]; if (pick.every(([j]) => Math.hypot(G.P[j].x - P.x, G.P[j].y - P.y) > 120)) pick.push([id, d]); if (pick.length >= 14) break; } return pick; });
+  const goQ = (id, s) => p.evaluate(([id, s]) => { const im = window.__im, P = im.G.P[id], v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; im.S.speed = 1; return P.name; }, [id, s]);
+  const tally = ms => p.evaluate(ms => new Promise(r => { const RD = window.__im.rd; if (!RD) return r({}); RD.dbg = {}; setTimeout(() => { const d = RD.dbg; RD.dbg = null; r(d); }, ms); }), ms);
+  const moving = why => Object.keys(why).filter(k => k[0] === 'a' || k[0] === 'f');
+  // the timed window keeps the tally on (a few stack captures a second at the sim-tick rate: no measurable cost); a storm that drifts onto the
+  // screen or a convoy that comes into view during the window makes it a window where something moved: the next quiet view is measured instead
+  const tallyOn = () => p.evaluate(() => { const RD = window.__im.rd; if (RD) RD.dbg = {}; }), tallyOff = () => p.evaluate(() => { const RD = window.__im.rd; if (!RD) return {}; const d = RD.dbg || {}; RD.dbg = null; return d; });
+  let q = null; const skipped = [];
+  for (const [id, d] of cands){ const name = await goQ(id, 4); await p.waitForTimeout(2500); const why = await tally(1200), mv = moving(why);
+    if (mv.length){ skipped.push(name + ' (' + mv.join(' ') + ')'); continue; }
+    await tallyOn(); const w = await window_(P, RUN_S*1000), why2 = await tallyOff(), mv2 = moving(why2);
+    if (mv2.length){ skipped.push(name + ' (during the window: ' + mv2.join(' ') + ')'); continue; }
+    q = { id, prov: name }; out.run1x = { ...w, view: name, zoom: 4, asked: Object.keys(why2).join(' '), passedOver: skipped.join(', ') || 'none' };
+    if (w.drawsPerS > 2) errs.push(name + ' saver ' + saver + ': running at 1x with nothing on screen moving, the map redrew more than on sim ticks: ' + JSON.stringify(out.run1x));
+    break; }
+  if (!q){ errs.push(name + ' saver ' + saver + ': no view without motion among ' + skipped.join(', ')); q = { id: cands[0][0], prov: '?' }; }
+  // (b2) the same view at a wide zoom (1.2), for information: far more of the world shows, usually with convoys sailing or driving on screen
+  // (they move at the full rate, 10 fps with the saver), and the day/night line's soft band drifts (one frame a pixel it moves, 4 px with the saver)
+  await goQ(q.id, 1.2); await p.waitForTimeout(2500); out.run1xWide = { ...(await window_(P, RUN_S*1000)), view: q.prov, zoom: 1.2 }; out.run1xWide.asked = Object.keys(await tally(2000)).join(' ');
   await p.evaluate(() => { window.__im.S.speed = 0; });
   // (c) pan: 25 px per animation frame for 3 s over Berlin at a mid zoom
   await p.evaluate(() => { const im = window.__im, P = im.G.P.find(q => q.cityName === 'Berlin'), s = 3; im.view.s = s; im.view.x = innerWidth/2 - P.x*s; im.view.y = innerHeight/2 - P.y*s; }); await p.waitForTimeout(1500);
@@ -96,10 +116,10 @@ async function startup(b, name){ const srv = await serve(), port = srv.address()
 (async () => {
   const b = await chromium.launch(), res = {};
   const hasSaver = fs.readFileSync(DIR + '/' + PAGE, 'utf8').includes('saver:');
-  const only = process.env.ONLY;   // ONLY=stuck: just section (f)
-  if (!only) for (const name of ['desktop', 'phone']){ res[name] = {};
+  const only = process.env.ONLY;   // ONLY=stuck: just section (f); ONLY=measure: just (a)-(d)
+  if (!only || only === 'measure') for (const name of ['desktop', 'phone']){ res[name] = {};
     for (const sv of hasSaver ? [false, true] : [null]) res[name][sv == null ? 'before' : sv ? 'saverOn' : 'saverOff'] = await measure(b, name, sv); }
-  if (hasSaver) res.stuck = { desktopSaverOff: await stuck(b, 'desktop', false), desktopSaverOn: await stuck(b, 'desktop', true), phoneSaverOn: await stuck(b, 'phone', true) };
+  if (hasSaver && only !== 'measure') res.stuck = { desktopSaverOff: await stuck(b, 'desktop', false), desktopSaverOn: await stuck(b, 'desktop', true), phoneSaverOn: await stuck(b, 'phone', true) };
   if (hasSaver && !only) res.background = { desktop: await background(b, 'desktop'), phone: await background(b, 'phone') };
   if (!only) res.startup = { desktop: await startup(b, 'desktop'), phone: await startup(b, 'phone') };
   await b.close();

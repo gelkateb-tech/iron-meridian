@@ -2330,7 +2330,7 @@ function redraw(ms = 0){ RD.dirty = true; /*@TEST*/if (RD.dbg) rdWhy('r');/*@END
 function animFast(){ RD.f = 1; /*@TEST*/if (RD.dbg) rdWhy('f');/*@ENDTEST*/ }
 function animAmb(){ RD.a = 1; /*@TEST*/if (RD.dbg) rdWhy('a');/*@ENDTEST*/ }
 /*@TEST*/function rdWhy(k){ const l = (new Error().stack || '').split('\n')[3] || '', m = l.match(/:(\d+):\d+\)?$/), key = k + (m ? m[1] : '?'); RD.dbg[key] = (RD.dbg[key] || 0) + 1; }/*@ENDTEST*/
-function animIn(ms){ if (ms < RD.nx) RD.nx = Math.max(0, ms); }
+function animIn(ms){ if (ms < RD.nx) RD.nx = Math.max(0, ms); /*@TEST*/if (RD.dbg) rdWhy('i');/*@ENDTEST*/ }
 const saverOn = () => SET.saver === true;
 // ms after the last draw when the next one is due (Infinity: nothing to draw)
 function rdInterval(now){ const sv = saverOn(), cap = sv ? 1000/30 : 0;
@@ -4777,9 +4777,10 @@ function drawLightning(now){ if (!S.storms || !S.storms.length || afxReduced()) 
   for (const w of S.storms){ if (w.kind !== 'storm') continue; let Q = LTN.get(w.seed);
     if (!Q){ Q = {next:gt + 400 + Math.random()*3000, at:-1e9, lobe:0, pts:null}; LTN.set(w.seed, Q); }
     if (gt >= Q.next){ Q.at = gt; Q.next = gt + 2500 + 4500*Math.random(); Q.lobe = Math.random()*9 | 0; Q.pts = [0]; for (let k = 1; k <= 6; k++) Q.pts.push((Math.random() - 0.5)*0.16); }
-    if (run) animIn(Q.next - gt);   // (the next flash gets its frame, also at a capped frame rate)
-    const e = gt - Q.at; if (!run || e < 0 || e > 80) continue; animFast();
-    const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), kf = 1 - 0.6*e/80;
+    const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, vis = run && [-WORLD_W, 0, WORLD_W].some(off => stormVis(x0 + off, y0, w.r*1.7));
+    if (vis) animIn(Q.next - gt);   // (the next flash of a storm on screen gets its frame, also at a capped frame rate; storms off screen ask for none)
+    const e = gt - Q.at; if (!vis || e < 0 || e > 80) continue; animFast();
+    const fade = Math.min(1, w.life/12), kf = 1 - 0.6*e/80;
     for (const off of [-WORLD_W, 0, WORLD_W]){ const cx = x0 + off; if (!stormVis(cx, y0, w.r*1.7)) continue;
       if (!tex){ tex = cloudTex(); ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; }
       const L = stormLight(x0, y0).L, Pp = stormPos(w, cx, y0), i = Q.lobe, px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2];
@@ -5326,7 +5327,7 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
     if (r.bz >= 0 && r.f0 < 1 && mid){ const P = G.P[r.bz], [x, y] = toScreen(P.x, P.y); ctx.save(); ctx.strokeStyle = 'rgba(236,96,80,.85)'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(x, y, 11*k, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(x - 4*k, y - 4*k); ctx.lineTo(x + 4*k, y + 4*k); ctx.moveTo(x + 4*k, y - 4*k); ctx.lineTo(x - 4*k, y + 4*k); ctx.stroke();
       if (hexPx >= 12){ ctx.font = `700 ${Math.round(9.5*Math.min(1.3, k))}px ${BODY}`; ctx.fillStyle = 'rgba(255,170,150,.92)'; ctx.textAlign = 'center'; ctx.fillText(r.why === 'contested' ? 'CONTESTED' : 'BLOCKADE', x, y - 15*k); } ctx.restore(); }
-    if (r.raidZ >= 0 && S.hour - r.raid < 12 && mid){ const P = G.P[r.raidZ], [x, y] = toScreen(P.x, P.y), fl = 0.6 + 0.4*Math.sin(now/120); animFast();
+    if (r.raidZ >= 0 && S.hour - r.raid < 12 && mid){ const P = G.P[r.raidZ], [x, y] = toScreen(P.x, P.y), fl = 0.6 + 0.4*Math.sin(now/120); if (x > -20 && y > -20 && x < cw + 20 && y < ch + 20) animFast();   // (the flickering wreck asks for frames only on screen)
       ctx.save(); ctx.fillStyle = `rgba(255,${120 + 60*fl},60,${0.7*fl})`; ctx.beginPath(); ctx.arc(x, y, 4.5*k, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = 'rgba(40,40,40,.5)'; ctx.beginPath(); ctx.arc(x + 3*k, y - 6*k, 5*k, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
     if (r.f <= 0 || g.L < 1) continue;
     const n = Math.max(1, Math.min(6, Math.round(g.L/260))), per = 2*g.L/TR_SPD, ph = ((t/per) % 1 + (r.id*0.137) % 1) % 1;
@@ -5334,9 +5335,10 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
       // sea lanes: ships sail the wet span only (they turn back at the coast, fading in and out there), not the run inland to the port city
       const s = sea ? g.s0 + f*(g.s1 - g.s0) : f*g.L, al = sea ? Math.min(1, f/0.06, (1 - f)/0.06)*trDryFade(g, s) : 1; if (al <= 0.02) continue;
       const [wx, wy, ang0] = trAt(g, s), ang = back ? ang0 + Math.PI : ang0; if (wx < vx0 || wx > vx1 || wy < vy0 || wy > vy1) continue;
-      const [x0, y0] = toScreen(wx, wy), off = (back ? -1 : 1)*(close ? 7 : 3)*k, x = x0 - Math.sin(ang0)*off, y = y0 + Math.cos(ang0)*off; if (live) animAmb();
+      const [x0, y0] = toScreen(wx, wy), off = (back ? -1 : 1)*(close ? 7 : 3)*k, x = x0 - Math.sin(ang0)*off, y = y0 + Math.cos(ang0)*off;
       if (sea){ const cx = wx - Math.sin(ang0)*off/view.s, cy = wy + Math.cos(ang0)*off/view.s, h = (mid ? 10*k : 1.5)/view.s, hx = Math.cos(ang)*h, hy = Math.sin(ang)*h;   // centre, bow and stern on the water, or not drawn
         if (!isWet(cx, cy, 96) || !isWet(cx + hx, cy + hy) || !isWet(cx - hx, cy - hy)) continue; }
+      if (live && x > -24*k && y > -24*k && x < cw + 24*k && y < ch + 24*k) animAmb();   // (registered only for a convoy that is drawn and reaches the screen: one hidden on a lane's overland stretch, or in the margin just off screen, does not keep the map redrawing)
       const own = back ? r.b : r.a, col = own >= 0 ? mapCol(own) : '#b8b4a6';
       if (!mid){ ctx.fillStyle = r.kind === 'land' ? 'rgba(214,190,120,.8)' : `rgba(220,232,236,${0.75*al})`; ctx.fillRect(x - 1.2, y - 1.2, 2.4, 2.4); continue; }
       if (r.kind === 'land'){ ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = '#5e5a4e'; ctx.strokeStyle = '#0d1214'; ctx.lineWidth = 1; ctx.fillRect(-5*k, -2*k, 10*k, 4*k); ctx.strokeRect(-5*k, -2*k, 10*k, 4*k); ctx.fillStyle = col; ctx.fillRect(2.5*k, -2*k, 2.5*k, 4*k); ctx.restore(); continue; }
@@ -7522,8 +7524,11 @@ function resize(){
     else if (OV.on || (OV.cv && !OV.cv.hidden)){ OV.on = false; OV.cv.hidden = true; OV.cv.width = OV.cv.height = 1; } }
   const mr = mini.getBoundingClientRect(); mini.width = Math.round(mr.width*dpr); mini.height = Math.round(mr.height*dpr);
   if (first) fit();
-  RD.ov = OV.on; redraw();   // (the canvases were cleared)
+  RD.ov = OV.on; hudFresh();   // (the canvases were cleared; a rotation or window resize fires no input, so the HUD boxes are re-read and a short window of frames follows)
 }
+// the HUD panels changed size or place (a resize, a rotation, a panel opening): the cached HUD boxes that sea and country names keep clear of are
+// dropped and the map gets a few frames to settle against the new layout (a single frame could still see the old boxes or a half-done layout)
+function hudFresh(){ try { HUDR.t = 0; RAILR.t = -1e9; } catch (e) {} redraw(600); }
 const minScale = () => Math.min(cw/WORLD_W, ch/WORLD_H)*0.9;
 let GLOBE = null;   // the three.js globe (set up further down; null until then)
 function fit(){ if (GLOBE) GLOBE.leave(); const s = Math.min(cw/WORLD_W, ch/WORLD_H)*0.98; view.s = s; view.x = (cw - WORLD_W*s)/2; view.y = (ch - WORLD_H*s)/2; }
@@ -8826,10 +8831,11 @@ function railThru(hits, now){ if (now - RAILT < 200) return; RAILT = now; const 
 function railRects(){ const now = performance.now(); if (now - RAILR.t < 400) return RAILR.r; const e = document.querySelector('#rail'), out = [];
   if (e && !e.hidden && getComputedStyle(e).display !== 'none'){ const cr = cv.getBoundingClientRect(), r = e.getBoundingClientRect(); if (r.width > 2 && r.height > 2) out.push([r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]); }
   return (RAILR = {t:now, r:out}).r; }
-function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) return HUDR.r; const cr = cv.getBoundingClientRect(), out = [];
-  for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || getComputedStyle(e).display === 'none') continue;
+function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) return HUDR.r; const cr = cv.getBoundingClientRect(), out = [], v0 = HUDR.v || 0, k0 = HUDR.k || '';
+  for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') continue;   // (the phone's command sheet slid away is only hidden)
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
-  return (HUDR = {t:now, r:out}).r; }
+  const k = out.map(b => b.map(Math.round).join(',')).join(';');   // v: bumped whenever the boxes change, so the names placed against them are placed again (NAMEC)
+  return (HUDR = {t:now, r:out, k, v:k === k0 ? v0 : v0 + 1}).r; }
 // h: plate height, C: icon cell width, tab: count tab width, r: corner radius, bars: what the health and morale bars add below (full plates)
 function plateDims(n, s, minor, two){ const ps = PLATE_K;   // the owner's rule: counters keep one pixel size at every zoom (s is ignored)
   const h = minor ? 15 : Math.round(22*ps), fz = Math.round((minor ? 0.76 : 0.82)*h), key = fz + ':' + n;   // the number keeps one size on every plate (a mixed stack too)
@@ -9591,12 +9597,18 @@ function waveTile(){ if (SEAFX.tile) return SEAFX.tile; const N = 256, P = 8, c 
 // waves (hexPx >= 20) and shore foam (hexPx >= 30) over the layer's sea; not with low effects or reduced motion, not while the view moves (the static
 // depth is under it). Waves: two drifting layers of the tile filled into a half-res canvas at most every 50 ms, cut to the layer's sea mask, laid
 // on with 'screen' (fainter at night). Foam: a soft foam sheet stroked along the coast rings in view, clipped to the water side.
+// whether the layer's sea mask has water anywhere on screen: the screen's part of the mask (half res) shrunk 8x into a small canvas, any alpha left
+function seaOnScreen(lx, ly, w2, h2){ const c = SEAFX.wc || (SEAFX.wc = document.createElement('canvas')), w = Math.max(1, Math.ceil(w2/8)), h = Math.max(1, Math.ceil(h2/8));
+  if (c.width !== w || c.height !== h){ c.width = w; c.height = h; } const g = c.getContext('2d', {willReadFrequently:true});
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.imageSmoothingEnabled = true; g.setTransform(w/w2, 0, 0, h/h2, 0, 0); g.drawImage(layer.seaM, lx/2 - (layer.seaE || 0), ly/2 - (layer.seaEy || 0));
+  try { const d = g.getImageData(0, 0, w, h).data; for (let i = 3; i < d.length; i += 4) if (d[i] > 6) return true; return false; } catch (e){ return true; } }
 function drawSeaSurface(now, moving){
   const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || SET.fx === 'low' || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || layer.dp !== dpr || !GEO) return;
-  if (S.speed && !S.over) animAmb();
   const day = viewLight().day, w2 = Math.ceil(cw*dpr/2), h2 = Math.ceil(ch*dpr/2), Wc = SEAFX.cv || (SEAFX.cv = document.createElement('canvas'));
   if (Wc.width !== w2 || Wc.height !== h2){ Wc.width = w2; Wc.height = h2; SEAFX.k = ''; }
   const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr), key = view.x + ',' + view.y + ',' + view.s + ',' + lx + ',' + ly + ',' + layer.full + ',' + (layer.strips || 0);
+  if (key !== SEAFX.wk){ SEAFX.wk = key; SEAFX.wet = seaOnScreen(lx, ly, w2, h2); }   // (is any of the layer's sea on screen: checked once per view)
+  if (S.speed && !S.over && SEAFX.wet) animAmb();   // waves and foam move only where water shows (a coast ring whose box reaches the screen may still show no water)
   if (key !== SEAFX.k || (now - SEAFX.t >= 50 && FXQ.gt !== SEAFX.g)){ SEAFX.k = key; SEAFX.t = now; SEAFX.g = FXQ.gt; const g = Wc.getContext('2d'); if (!SEAFX.pat) SEAFX.pat = g.createPattern(waveTile(), 'repeat');
     const pat = SEAFX.pat, ks = dpr/2, Tw = Math.max(160, Math.min(360, 40*view.s))/view.s, t = FXQ.gt/1000;   // the tile's size in world units (a sensible size on screen at every zoom)
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, w2, h2); g.fillStyle = pat;
@@ -9861,7 +9873,7 @@ function draw(now){
   drawSelPaths(0);
   ovIn(); try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, markers, HQ, paths and counters drawn below
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
-  { const nk = [view.s, Math.round(view.x), Math.round(view.y), cw, ch, geoVer].join('|'); if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
+  { const nk = [view.s, Math.round(view.x), Math.round(view.y), cw, ch, geoVer, HUDR.v || 0].join('|'); if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
   if (hexPx >= 3.2 && hexPx < 15){ const fs0 = Math.round(Math.min(11.5, 8 + hexPx*0.36)*2)/2; ctx.save(); ctx.font = `500 ${fs0}px ${BODY}`; ctx.letterSpacing = (fs0*0.16).toFixed(1) + 'px';
     ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1; ctx.fillStyle = 'rgba(218,214,200,.5)';
     for (const L of GEO.clabelsBySize || (GEO.clabelsBySize = GEO.clabels.filter(Boolean).sort((a, b) => b.cells - a.cells))){ if (L.cells < 2.5*GS*GS) continue; const [x, y] = toScreen(L.x, L.y); if (x < -60 || y < -20 || x > cw + 60 || y > ch + 20) continue;
@@ -12237,6 +12249,9 @@ function start(data){
   if (!resumed) newGame((Math.random()*2**31) | 0, pickSel);
   resize(); applySet(); if (resumed && data.view) Object.assign(view, data.view); else goHome();
   new ResizeObserver(() => resize()).observe(cv);
+  { const HQ = ['#side', '#dock', '#sheet', '#rail', '#mini', '#modes', '.mapctl', '#tlegend', '#ilegend'], ro = new ResizeObserver(() => hudFresh()); for (const q of HQ){ const e = document.querySelector(q); if (e) ro.observe(e); }   // (HUD boxes resized with no input)
+    const hq = HQ.join(','), slid = e => { if (e.target && e.target.matches && e.target.matches(hq)) hudFresh(); };   // a HUD panel that slid or faded in or out (a move fires no resize: the phone's command sheet leaving after a rotation)
+    document.addEventListener('transitionend', slid, true); document.addEventListener('animationend', slid, true); }
   renderSide(true);
   if (!resumed){ if (saved && saved.v === 4 && !saved.over) showBriefing(true, true); else showPicker(); }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { renderSide(true); redraw(); });
