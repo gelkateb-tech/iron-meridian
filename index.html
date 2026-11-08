@@ -3724,7 +3724,15 @@ postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0
 // else in batches every 150 ms, or once nothing on screen is missing: the detail dissolves in from the middle out
 function dtHoldRel(){ if (!DT.hold.length) return; const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, cx = Math.floor((cw/2 - view.x)/s/T), cy = Math.floor((ch/2 - view.y)/s/T);
   if (performance.now() - DT.holdT > 150 || DT.hold.some(h => h[0] === cx && h[1] === cy && h[2] === r) || !dtScreenMissing()) dtRelease(); }
-function dtWork(idle, tv){ if (!idle || !layer) return; const s = tv ? tv.s : view.s; if (tv ? dtAlpha(s) < 0.02 : layer.s !== view.s || dtAlpha() < 0.02) return;
+// tiles that came back after the view zoomed out past the detail: kept in the cache (a zoom back in finds them; at most the few that were in
+// flight, so a few ms) and the boxes held for the layer dropped (no detail at this zoom): nothing is left waiting for a frame that would never use it
+function dtPark(){ if (!DT.ready.length && !DT.hold.length && !DT.job) return; const end = performance.now() + 8;
+  while (DT.ready.length && performance.now() < end){ const m = DT.ready.shift(); dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); }
+  DT.hold = []; DT.holdT = 0; DT.job = null; }
+// detail work that a frame can do now: the tiles back from the workers, the boxes held, a tile being made here (redraw scheduling: a frame is
+// asked for only while one of them can be laid, see draw)
+const dtLive = tv => tv ? dtAlpha(tv.s) >= 0.02 : !!layer && layer.s === view.s && dtAlpha() >= 0.02;
+function dtWork(idle, tv){ if (!idle || !layer) return; const s = tv ? tv.s : view.s; if (tv ? dtAlpha(s) < 0.02 : layer.s !== view.s || dtAlpha() < 0.02){ if (!tv && dtAlpha() < 0.02) dtPark(); return; }
   const t0 = performance.now(), end = t0 + 8, k = dtBucket(s), wk = dtWorker(), mo = dtMonth(); let nf = tv ? 1 : 1e9; DT.ck = k;
   while (DT.ready.length && nf > 0 && performance.now() < end){ const m = DT.ready.shift(); if (Math.abs(m.k - k) <= 1){ dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); nf--; } }
   if (!tv) dtHoldRel();
@@ -8738,6 +8746,11 @@ function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0
     if (!cityBake(p, CLOW_S)) continue; const I = CGEO.get(p);
     if (I && I.x + I.E > x0 && I.x - I.E < x1 && I.y + I.E > y0 && I.y - I.E < y1) CITY_PEND = true; }   // one on screen: the layer picks it up
   CITY_DL = dl0; }
+// cityWarm runs from the loop, not from draw: it is preparation, not motion, so it never keeps the map redrawing and it does not stop when the
+// ambient motion rests (a paused, untouched map still finishes it); a few ms a frame (every 50 ms with the Battery saver) until every city has
+// its low tier; a town on screen just baked asks for one frame (the layer picks it up)
+function cityWarmPump(now){ if (CWARM && !CWARM.length) return; if (view.s*HS0 < 9 || now - (cityWarmPump.t || 0) < (saverOn() ? 50 : 0)) return; cityWarmPump.t = now;
+  const p0 = CITY_PEND; cityWarm(now); if (CITY_PEND && !p0) redraw(); }
 // world-space bounds of what the layer or the screen shows
 function cityEach(x0, y0, x1, y1, fn){ for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (!P.city || P.sea) continue; const I = CGEO.get(p), e = I ? I.E : 22;
     if (P.x + e < x0 || P.x - e > x1 || P.y + e < y0 || P.y - e > y1) continue; fn(p, P); } }
@@ -9661,11 +9674,13 @@ function draw(now){
   // close-zoom detail tiles, made while the view is still; during the start flight or a zoom glide, those of the view it is heading for (prefetch)
   // (and while the briefing of a new campaign is open, those of the home view the flight will land on: DT.pre)
   if (DT.pre && (camFly || now - DT.pre.t > 60000)) DT.pre = null;
-  try { const F = cfR, Z = ZTW, T = F ? {s:F.s1, x:cw/2 - F.x1*F.s1, y:ch/2 - F.y1*F.s1, fly:true} : Z ? {s:Z.s1, x:Z.ax - Z.wx*Z.s1, y:Z.ay - Z.wy*Z.s1} : DT.pre;
+  let dtT = null;
+  try { const F = cfR, Z = ZTW, T = dtT = F ? {s:F.s1, x:cw/2 - F.x1*F.s1, y:ch/2 - F.y1*F.s1, fly:true} : Z ? {s:Z.s1, x:Z.ax - Z.wx*Z.s1, y:Z.ay - Z.wy*Z.s1} : DT.pre;
     if (T) dtWork(true, T); else dtWork(settled && !flyReuse); } catch (e) { DT.fail = true; DT.job = null; }
   // frames until the view has settled: the camera moving, a light layer, bands or city bakes still to render, dissolves, a shake, detail tiles to lay
-  // (tiles still in the workers come back with a redraw)
-  if (panning || moved || !settled || zoomLive || camFly || flyReuse || layer.lite || (layer.q && layer.q.length) || CITY_PEND || FADE.length || now < shakeUntil || DT.ready.length || DT.hold.length || DT.job) animFast();
+  // (tiles still in the workers come back with a redraw; tiles back while the view shows no detail wait for the next zoom in: dtLive, dtPark)
+  RD.st = !!(panning || moved || !settled || zoomLive || camFly || flyReuse || layer.lite || (layer.q && layer.q.length) || CITY_PEND || FADE.length || now < shakeUntil || ((DT.ready.length || DT.hold.length || DT.job) && dtLive(dtT)));
+  if (RD.st) animFast();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a layer at another scale or pixel ratio (reused mid-zoom, or just rendered ahead of a glide at half resolution) is always drawn scaled to the view;
   // if that scaled copy does not cover the canvas, the uncovered rim is cleared so no stale frame (doubled labels, old counters) shows through
@@ -9697,7 +9712,6 @@ function draw(now){
     const mph = msPerHour(); if (mph){ animIn(mph/4);   // (lights and glows step every 15 game minutes, the close-zoom tint every 3)
       if (tN > 0) animIn(mph*0.05); if (tN < 1) animIn(Math.max(33, mph*(saverOn() ? 4 : 1)/(15*HS*SQ3*W/360*view.s))); } }   // the wide-zoom terminator (a soft band): each pixel it moves, 4 with the Battery saver
   { const pend = CITY_PEND; CITY_PEND = false; drawCityLights(hexPx); if (CITY_PEND) animFast(); CITY_PEND = pend; }   // (lights still to make: a few ms a frame until done)   // city lights over the night tint (their bakes trickle in frame by frame)
-  if (hexPx >= 9){ cityWarm(now); if (CWARM && CWARM.length && cityArtState() >= 5) animAmb(); }   // idle: the low tier of every city, so a jump never lands on empty ground
   drawLightning(now);
 
   // ---- screen space
@@ -10246,7 +10260,7 @@ function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) 
   ctx.globalAlpha = 1; ctx.fillStyle = '#f3ead2'; ctx.font = `700 12px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(count(a)), udrag.x, udrag.y);
   const lbl = b ? (b.at === a.at && a.to === null && b.to === null ? `Merge into ${armyName(b)}` : `Join ${armyName(b)}`) : 'Drop on a force to merge';
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(lbl).width + 14; roundRect(ctx, udrag.x - w/2, udrag.y + 17, w, 18, 4); ctx.fillStyle = b ? '#24452a' : '#1b2a2e'; ctx.fill(); ctx.fillStyle = '#f3ead2'; ctx.fillText(lbl, udrag.x, udrag.y + 26); ctx.restore(); }
-cv.addEventListener('pointerleave', () => { hoverProv = -1; hoverPath = null; mouse = null; tipHide(); });
+cv.addEventListener('pointerleave', () => { hoverProv = -1; hoverPath = null; mouse = null; tipHide(); redraw(); });   // (a frame clears the hover outline and route preview)
 cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = localXY(e);
   if (GLOBE){ if (e.deltaY > 0 && zoomGoal() <= minScale()*1.001){ if (GLOBE.pushOut(e.deltaY)){ ZTW = null; tipHide(); return; } } else GLOBE.resetPush(); }   // past the minimum: the globe
   zoomTo(Math.exp(-e.deltaY*0.0015), x, y); tipHide(); }, {passive:false});
@@ -11902,7 +11916,7 @@ GLOBE = (() => {
   const FOV = 35, TF = Math.tan(FOV/2*Math.PI/180), D_EXIT = 1.85, D_MAX = 5.5, RAD = Math.PI/180;
   const wrap = document.getElementById('globe'), btn = document.getElementById('zglobe'), menuEl = document.getElementById('menuGlobe');
   let T = null, R = null, scene, cam, earth, clouds, atmo, UE, UC, UA, polTex = null, polData = null, polIdx = null, polIdxG = null, polVer = -1, polT = 0;
-  let state = 'idle', mode = '', on = false, fadeT0 = 0, hideUntil = 0, saved = null, moved = false, lastT = 0, lastR = 0, cloudRot = 0, fly = null, wheelAcc = 0, wheelT = 0;
+  let state = 'idle', mode = '', on = false, fadeT0 = 0, hideUntil = 0, saved = null, moved = false, lastT = 0, lastR = 0, gDirty = true, cloudRot = 0, fly = null, wheelAcc = 0, wheelT = 0;
   const menuT0 = performance.now(), ll = {lon:0, lat:20}, vel = {lon:0, lat:0}, size = {menu:[0, 0], game:[0, 0]}, cur = [0, 0, 0];
   let D = 3.8, Dgoal = 3.8, gdrag = null, gpinch = null, lastTap = null;
   const ptrs = new Map();
@@ -12126,13 +12140,17 @@ GLOBE = (() => {
     const md = $('modal'), menuVis = !md.hidden && md.classList.contains('menu') && menuEl.offsetWidth > 0;
     if (menuVis && on){ exit(null, null, true); hideUntil = 0; }   // a new campaign: the map comes back flat
     const m = menuVis ? 'menu' : on || now < hideUntil ? 'game' : '';
-    if (m !== mode){ mode = m; place(m); lastR = 0; if (m === 'menu') R.domElement.classList.remove('shown'); }
+    if (m !== mode){ mode = m; place(m); lastR = 0; gDirty = true; if (m === 'menu') R.domElement.classList.remove('shown'); }
     if (!mode){ lastT = now; return; }
     const dt = Math.min(0.1, (now - (lastT || now))/1000); lastT = now;
     const busy = mode === 'game' && (gdrag || gpinch || fly || Math.abs(vel.lon) + Math.abs(vel.lat) > 0.5 || Math.abs(Dgoal - D) > 0.002 || now - fadeT0 < 450 || now < hideUntil);
+    // at rest (redraw scheduling, as the flat map): the game paused, the globe still, no input for a while (ambIdle), nothing new to draw:
+    // the globe is not rendered at all (the canvas keeps its last picture; the clouds and the sun wait); input, a resume or a resize wakes it
+    if (mode === 'game' && !busy && !gDirty && !(S && S.speed > 0 && !S.over) && now - RD.inp > ambIdle() && !(on && geoVer !== polVer)){
+      const [w, h] = size.game; if (cur[0] === w && cur[1] === h && cur[2] === Math.min(window.devicePixelRatio || 1, 2)){ lastR = now; return; } }
     if (!busy && now - lastR < (mode === 'game' && saverOn() ? 100 : 32)) return;    // idle globe: ~30 fps is plenty for slow clouds and sun (10 with the Battery saver)
     const step = Math.min(0.1, (now - (lastR || now))/1000); lastR = now;
-    try { render(now, step); } catch (e){ fail(); }
+    gDirty = false; try { render(now, step); } catch (e){ fail(); }
   }
   function render(now, dt){
     const [w, h] = size[mode]; if (w < 8 || h < 8) return;
@@ -12164,8 +12182,8 @@ GLOBE = (() => {
     pushOut(dy){ if (state !== 'ready') return false; const now = performance.now(); if (now - wheelT > 600) wheelAcc = 0; wheelT = now; wheelAcc += dy; if (wheelAcc < 260) return false; wheelAcc = 0; return enter('zoom'); },
     resetPush(){ wheelAcc = 0; },
     info:() => ({state, mode, on, lon:ll.lon, lat:ll.lat, D, Dgoal, polVer, geoVer, sun:sunLL(performance.now()), size:size[mode || 'game'], canvas:R ? [R.domElement.width, R.domElement.height] : null}),
-    __set(lon, lat, d){ ll.lon = lon; ll.lat = lat; D = Dgoal = d; vel.lon = vel.lat = 0; moved = true; },   // tests
-    __cloud(r){ cloudRot = r; moved = true; },   // tests: set the cloud shell's rotation (radians; it turns 0.006 rad/s)
+    __set(lon, lat, d){ ll.lon = lon; ll.lat = lat; D = Dgoal = d; vel.lon = vel.lat = 0; moved = true; gDirty = true; },   // tests
+    __cloud(r){ cloudRot = r; moved = true; gDirty = true; },   // tests: set the cloud shell's rotation (radians; it turns 0.006 rad/s)
     llWorld, viewLL};
 })();
 
@@ -12198,6 +12216,7 @@ function frame(now){
   if (cover) ovClear();
   else if (geoDirty){ geoDirty = false; rebuildOwnerGeo(); }   // ...but keep the ownership version current for the globe's territories
   if (camFly) camFly.last = {x:view.x, y:view.y, s:view.s};   // after the map clamped it
+  if (!menu) try { cityWarmPump(now); } catch (e) {}   // idle: the low tier of every city, so a jump never lands on empty ground
   if (GLOBE) GLOBE.tick(now);
   RD.raf = requestAnimationFrame(frame);
 }
@@ -12231,14 +12250,14 @@ function start(data){
 if (location.protocol === 'file:') window.__im = {coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, get FADE(){ return FADE; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, PROJ, MUZZ, FXG, LTN, stormLight: (x, y) => stormLight(x, y), nightAtX: x => nightAtX(x), battleCloud: (b, n) => battleCloud(b, n), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet()), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l, p) => buildCost(n, k, l, p), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CBAKE.delete(k); CLOW.delete(p); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I); cityBake(p, S); const t2 = performance.now(); cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I); return {exact:CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S}; }, warmLeft: () => CWARM ? CWARM.length : -1, state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size})}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(b, nc), close:id => tradeClose(id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => sendGift(n), giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet()).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
-  tables:() => ({UNITS, BUILD, TECH:TECH.map(T => ({id:T.id, name:T.name, branch:T.branch, tier:T.tier, days:T.days, c:techCost(T)})), LINK_COST, MISSILES, SAT_C}), riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
+  tables:() => ({UNITS, BUILD, TECH:TECH.map(T => ({id:T.id, name:T.name, branch:T.branch, tier:T.tier, days:T.days, c:techCost(T)})), LINK_COST, MISSILES, SAT_C}), riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; redraw(); return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3c:{splitRows:a => splitRows(a), splitPlan:(a, pl) => splitPlan(a, pl), halfPlan:a => halfPlan(a), evenPlan:(a, n) => evenPlan(a, n), typePlan:a => typePlan(a), onePlan:a => onePlan(a), splitArmy:a => splitArmy(a),
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
-if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
@@ -12247,10 +12266,12 @@ window.addEventListener('pageshow', () => bgResume());
 window.addEventListener('blur', () => { if (phoneish() && booted) bgPause(); });   // a phone: the app went to the background (a call, the app switcher)
 window.addEventListener('focus', () => bgResume());
 // input: whatever it changes gets drawn, and short transitions it starts get their frames (each animation also registers itself while it runs)
-for (const ev of ['pointerdown', 'pointerup', 'wheel', 'keydown', 'keyup', 'click', 'input', 'change', 'touchstart', 'touchend'])
+for (const ev of ['pointerdown', 'pointerup', 'pointercancel', 'wheel', 'keydown', 'keyup', 'click', 'input', 'change', 'touchstart', 'touchend'])
   document.addEventListener(ev, () => { RD.inp = performance.now(); redraw(600); if (RD.bg && booted) bgResume(); }, {capture:true, passive:true});
-document.addEventListener('pointermove', () => { RD.inp = performance.now(); redraw(); }, {capture:true, passive:true});   // hover highlights, tooltips
+for (const ev of ['pointermove', 'pointerleave'])   // hover highlights, tooltips (pointerleave: the pointer left the map or the window: the hover goes)
+  document.addEventListener(ev, () => { RD.inp = performance.now(); redraw(); }, {capture:true, passive:true});
 window.addEventListener('im-redraw', () => redraw());   // a picture (map model sheet, building art) arrived
+window.addEventListener('im-art', () => redraw());   // a promised unit picture replaced its stand-in (counters and figures drop the stand-in: draw them again)
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
 function preload(){
