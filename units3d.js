@@ -14,7 +14,7 @@
   const cache = {};
   let buildFn = null, mapFn = null;
   // the baked map atlases (assets/units/m-<type>.webp): their crop, ground origin and per-direction model boxes, written by tools/bake-assets.js map
-  const MAPMETA = {"sol":{"w":132,"h":142,"ox":55,"oy":92.23,"ppm":62.069,"air":false,"sea":false,"bb":[[37,10,98,100],[36,12,100,103],[33,14,96,104],[32,14,85,105],[34,15,73,103],[37,14,74,101],[35,14,73,102],[21,12,74,102],[12,10,73,101],[10,8,74,102],[14,5,77,102],[24,3,78,102],[37,2,76,100],[36,3,73,98],[37,5,75,98],[36,8,89,99]]},"hmv":{"w":198,"h":198,"ox":99,"oy":119.96,"ppm":34.1379,"air":false,"sea":false,"bb":[[8,26,187,148],[6,9,193,161],[13,0,186,168],[33,0,166,171],[59,18,139,166],[32,15,165,171],[12,0,185,168],[5,22,192,161],[11,39,190,148],[5,45,191,161],[12,31,185,171],[32,26,166,176],[59,31,139,171],[33,26,166,176],[13,31,186,171],[7,45,193,161]]},"truck":{"w":236,"h":223,"ox":112.5,"oy":126.73,"ppm":28.0682,"air":false,"sea":false,"bb":[[17,46,213,151],[12,30,217,169],[22,13,206,181],[45,6,181,186],[72,10,150,182],[43,6,180,186],[19,13,203,181],[8,30,213,169],[12,46,208,151],[8,26,213,168],[19,9,203,179],[43,2,180,183],[75,5,153,182],[45,2,181,183],[22,9,206,179],[12,26,217,168]]},"tank":{"w":324,"h":324,"ox":162,"oy":180.42,"ppm":30,"air":false,"sea":false,"bb":[[45,78,324,221],[35,68,324,245],[43,60,310,260],[68,55,257,280],[105,57,219,292],[67,55,256,280],[14,60,281,260],[0,52,289,245],[0,73,279,221],[0,83,289,245],[14,30,281,261],[67,0,256,264],[105,0,219,255],[68,0,257,264],[43,29,310,261],[35,83,324,245]]},"ifv":{"w":269,"h":245,"ox":131,"oy":135.42,"ppm":30,"air":false,"sea":false,"bb":[[12,51,252,168],[9,28,255,188],[19,9,242,201],[46,1,216,204],[82,6,179,199],[47,1,216,204],[20,9,243,201],[7,28,254,188],[10,35,250,168],[7,40,253,185],[20,24,243,200],[47,11,216,211],[82,5,179,209],[46,11,215,211],[19,24,242,200],[9,40,255,185]]},"art":{"w":325,"h":325,"ox":162.5,"oy":179.7,"ppm":28.0172,"air":false,"sea":false,"bb":[[57,90,325,216],[47,68,325,239],[54,54,314,253],[76,49,248,263],[111,45,214,274],[77,49,249,263],[11,53,271,253],[0,68,278,239],[0,90,268,216],[0,68,278,240],[11,6,271,254],[77,0,249,258],[111,0,214,249],[76,0,248,258],[54,6,314,254],[47,68,325,240]]},"mlrs":{"w":235,"h":220,"ox":114.5,"oy":124.71,"ppm":28.0233,"air":false,"sea":false,"bb":[[19,39,216,150],[16,29,221,167],[25,12,210,178],[47,4,185,184],[78,8,151,180],[44,4,182,184],[19,12,204,178],[8,29,213,167],[13,39,210,150],[8,13,213,166],[19,7,204,177],[44,1,182,180],[78,5,151,180],[47,1,185,180],[25,7,210,177],[16,23,221,166]]},"sam":{"w":271,"h":240,"ox":130.5,"oy":133.48,"ppm":26.0185,"air":false,"sea":false,"bb":[[24,47,251,158],[23,56,253,180],[37,41,238,196],[66,34,207,206],[95,35,166,206],[55,34,195,206],[23,41,224,196],[8,56,239,180],[10,47,237,158],[8,33,238,177],[23,12,224,189],[55,2,195,199],[95,5,166,198],[66,2,206,199],[37,12,238,189],[23,33,253,177]]},"frig":{"w":260,"h":206,"ox":130,"oy":117.94,"ppm":34.0476,"air":false,"sea":true,"bb":[[3,41,257,123],[6,44,248,146],[28,20,220,176],[66,4,179,196],[112,1,148,203],[81,4,194,196],[40,20,232,176],[12,44,254,146],[3,41,257,123],[12,38,254,157],[40,28,232,184],[81,9,194,201],[112,2,148,203],[66,9,179,201],[28,28,220,184],[6,38,248,157]]},"sub":{"w":279,"h":216,"ox":139.5,"oy":120.63,"ppm":32.0652,"air":false,"sea":true,"bb":[[2,80,258,126],[12,63,249,148],[42,31,224,175],[86,9,186,194],[119,1,160,200],[93,9,193,194],[55,31,237,175],[30,63,267,148],[20,80,277,126],[30,66,267,152],[55,50,237,185],[93,33,193,207],[119,27,160,214],[86,33,186,207],[42,50,224,185],[12,65,249,152]]},"crui":{"w":308,"h":242,"ox":154,"oy":135.95,"ppm":34.0816,"air":false,"sea":true,"bb":[[3,59,305,144],[7,57,294,171],[33,24,261,206],[78,5,212,230],[133,2,175,238],[96,5,230,230],[47,24,275,206],[14,57,301,171],[3,59,305,144],[14,54,301,184],[47,34,275,216],[96,10,230,236],[133,3,175,239],[78,10,212,236],[33,34,261,216],[7,54,294,184]]},"carr":{"w":340,"h":266,"ox":170,"oy":147.28,"ppm":30,"air":false,"sea":true,"bb":[[4,51,336,175],[7,42,324,188],[31,13,293,226],[75,1,260,253],[104,6,226,262],[87,6,282,253],[49,23,322,226],[16,54,338,192],[4,76,336,167],[16,63,333,208],[47,36,309,239],[80,12,265,260],[114,3,236,262],[58,12,253,260],[18,34,291,239],[2,58,324,204]]},"jet":{"w":229,"h":218,"ox":114.5,"oy":118.38,"ppm":13.0114,"air":true,"sea":false,"bb":[[11,50,228,163],[12,42,220,149],[20,29,195,170],[33,11,168,190],[44,2,185,197],[61,3,196,189],[34,13,209,170],[9,32,217,149],[1,50,218,163],[10,64,217,172],[34,42,209,182],[61,22,196,190],[44,15,185,192],[33,22,168,188],[20,42,195,182],[12,64,219,171]]},"int":{"w":229,"h":218,"ox":114.5,"oy":118.38,"ppm":13.0114,"air":true,"sea":false,"bb":[[11,42,228,172],[12,32,220,162],[20,29,195,170],[21,11,183,190],[33,2,196,197],[47,3,208,189],[34,13,209,170],[9,32,217,161],[1,42,218,172],[10,53,217,182],[34,42,209,182],[47,22,208,190],[33,15,196,192],[21,22,182,188],[20,42,195,182],[12,53,219,182]]},"heli":{"w":237,"h":237,"ox":118.5,"oy":128.2,"ppm":16.0135,"air":true,"sea":false,"bb":[[0,51,198,144],[0,37,193,157],[13,12,198,161],[43,0,193,173],[60,0,177,177],[44,0,194,173],[39,12,224,161],[45,37,237,157],[39,51,237,144],[44,38,237,165],[39,34,224,194],[44,39,194,214],[60,49,177,222],[43,39,193,214],[13,34,198,194],[0,38,193,165]]},"drone":{"w":223,"h":186,"ox":109,"oy":95.27,"ppm":12,"air":true,"sea":false,"bb":[[40,1,172,169],[41,7,167,163],[33,25,187,147],[12,26,207,134],[4,32,214,137],[11,26,206,134],[31,25,184,147],[51,7,177,163],[46,1,178,169],[50,7,177,163],[31,23,184,145],[11,40,207,151],[4,36,214,154],[11,40,207,150],[34,23,187,145],[41,7,168,163]]}};
+  const MAPMETA = {"sol":{"w":214,"h":246,"ox":90,"oy":166.36,"ppm":99.2,"air":false,"sea":false,"bb":[[56,31,159,184],[53,24,163,190],[54,17,156,197],[53,10,139,201],[56,6,120,203],[56,3,120,200],[49,4,119,194],[35,7,120,186],[21,12,124,180],[17,19,127,182],[24,27,126,183],[41,23,127,182],[60,22,124,179],[60,23,124,178],[61,27,131,179],[60,32,145,180]]},"hmv":{"w":316,"h":316,"ox":158,"oy":191.45,"ppm":54.4,"air":false,"sea":false,"bb":[[13,41,305,238],[10,13,309,259],[21,0,297,271],[52,0,265,278],[92,0,224,274],[51,0,264,278],[19,0,295,271],[7,0,306,259],[11,18,303,238],[7,50,306,259],[19,49,295,273],[51,41,264,281],[92,50,224,274],[52,41,265,281],[21,49,297,273],[10,70,309,259]]},"truck":{"w":380,"h":358,"ox":182,"oy":203.63,"ppm":44.8,"air":false,"sea":false,"bb":[[29,75,344,245],[21,48,350,274],[37,21,332,294],[74,10,294,301],[118,17,246,293],[70,10,290,301],[32,21,327,294],[14,48,344,274],[20,75,335,245],[14,41,343,271],[32,14,327,290],[70,3,290,297],[118,9,246,293],[74,3,294,297],[37,14,332,290],[21,41,350,271]]},"tank":{"w":520,"h":520,"ox":260,"oy":289.56,"ppm":48,"air":false,"sea":false,"bb":[[72,116,520,354],[56,93,520,394],[68,81,497,418],[109,80,415,450],[168,82,352,468],[105,71,411,450],[23,71,452,418],[0,83,464,394],[0,143,448,354],[0,133,464,394],[23,47,452,418],[105,0,411,424],[168,0,352,409],[109,0,415,423],[68,47,497,418],[56,133,520,394]]},"ifv":{"w":432,"h":396,"ox":211,"oy":218.5,"ppm":48,"air":false,"sea":false,"bb":[[20,83,405,273],[15,47,409,305],[32,16,389,326],[75,3,346,332],[131,11,291,320],[76,3,347,332],[33,16,391,326],[13,46,407,305],[17,47,401,273],[13,51,407,300],[33,25,391,322],[76,18,347,339],[132,9,290,336],[75,18,346,339],[31,25,389,322],[15,51,409,300]]},"art":{"w":520,"h":520,"ox":260,"oy":287.52,"ppm":44.8,"air":false,"sea":false,"bb":[[91,144,520,345],[75,109,520,382],[86,85,502,418],[122,76,397,453],[178,55,342,466],[123,48,398,453],[18,75,434,418],[0,90,445,383],[0,111,429,345],[0,109,445,383],[18,10,434,407],[123,0,399,412],[178,0,342,399],[122,0,397,412],[86,10,502,407],[75,109,520,383]]},"mlrs":{"w":376,"h":354,"ox":183,"oy":200.56,"ppm":44.8,"air":false,"sea":false,"bb":[[30,64,346,243],[25,46,353,271],[40,19,336,289],[76,8,296,295],[124,13,242,289],[70,8,290,295],[30,19,326,289],[13,46,341,271],[20,46,336,243],[13,20,341,269],[30,8,326,287],[70,3,291,292],[124,9,242,289],[76,3,296,292],[40,13,336,287],[25,38,353,269]]},"sam":{"w":434,"h":386,"ox":209,"oy":214.58,"ppm":41.6,"air":false,"sea":false,"bb":[[38,76,402,256],[36,90,406,292],[60,66,381,317],[106,55,331,330],[152,57,266,330],[88,55,312,330],[37,66,358,317],[12,90,382,292],[16,76,380,256],[12,54,382,286],[37,20,358,307],[88,4,313,319],[152,8,266,318],[106,4,330,319],[60,20,381,307],[36,54,406,285]]},"frig":{"w":418,"h":330,"ox":209,"oy":189.32,"ppm":54.4,"air":false,"sea":true,"bb":[[6,65,413,198],[11,71,397,234],[46,32,353,282],[106,6,287,315],[180,2,238,326],[131,6,312,315],[65,32,372,282],[21,71,407,234],[5,65,412,198],[21,60,407,252],[65,46,372,296],[131,14,312,322],[180,3,238,326],[106,14,287,322],[46,46,353,296],[11,60,397,252]]},"sub":{"w":448,"h":348,"ox":224,"oy":195,"ppm":51.2,"air":false,"sea":true,"bb":[[4,131,415,203],[20,103,400,239],[68,51,359,283],[139,16,299,312],[191,4,257,323],[149,16,309,312],[89,51,380,283],[48,103,428,239],[33,131,444,203],[48,108,428,246],[89,82,380,298],[149,55,309,333],[191,45,257,345],[139,55,299,333],[68,82,359,298],[20,106,400,246]]},"crui":{"w":484,"h":378,"ox":242,"oy":211.72,"ppm":53.0612,"air":false,"sea":true,"bb":[[7,91,478,224],[13,88,460,266],[54,37,409,322],[124,7,332,359],[209,3,275,371],[152,7,360,359],[75,37,430,322],[24,88,471,266],[6,91,477,224],[24,84,471,286],[75,53,430,337],[152,16,360,367],[209,3,275,372],[124,16,332,367],[54,53,409,337],[13,84,460,286]]},"heli":{"w":380,"h":380,"ox":190,"oy":205.55,"ppm":25.6,"air":true,"sea":false,"bb":[[0,81,318,231],[0,59,309,251],[21,19,318,258],[68,0,310,277],[96,0,284,284],[70,0,312,277],[62,19,360,258],[71,59,380,251],[62,81,380,231],[70,60,380,264],[62,54,359,311],[70,61,312,343],[96,78,284,357],[68,61,310,343],[20,54,318,311],[0,60,310,264]]},"jet":{"w":368,"h":350,"ox":184,"oy":190.67,"ppm":20.8,"air":true,"sea":false,"bb":[[18,81,368,263],[19,67,354,240],[31,46,314,274],[53,18,269,306],[70,4,298,317],[98,5,315,305],[54,21,337,274],[14,51,350,240],[0,81,350,263],[14,103,349,276],[54,67,337,293],[98,35,315,305],[70,25,298,308],[53,35,269,303],[31,67,314,293],[19,103,354,276]]},"int":{"w":368,"h":350,"ox":184,"oy":190.67,"ppm":20.8,"air":true,"sea":false,"bb":[[18,67,368,276],[19,51,354,260],[31,46,314,274],[33,18,294,306],[53,4,315,317],[75,5,335,305],[54,21,337,274],[14,51,350,260],[0,67,350,276],[14,85,349,293],[54,67,337,293],[75,35,335,305],[53,25,315,308],[33,35,294,303],[31,67,314,293],[19,85,354,293]]},"drone":{"w":360,"h":300,"ox":175,"oy":154.69,"ppm":19.2,"air":true,"sea":false,"bb":[[65,4,277,273],[66,13,269,264],[53,41,301,238],[18,43,333,216],[6,39,344,222],[17,41,332,216],[49,41,297,238],[81,13,284,264],[73,4,285,273],[80,12,284,263],[49,38,296,235],[17,65,332,245],[6,59,344,250],[18,65,333,243],[54,38,301,235],[66,12,270,263]]},"carr":{"w":476,"h":372,"ox":238,"oy":207.17,"ppm":41.9355,"air":false,"sea":true,"bb":[[6,72,470,246],[10,60,453,265],[44,20,411,318],[105,3,364,355],[146,10,316,367],[122,10,395,355],[69,33,450,318],[23,77,473,270],[6,107,470,235],[23,90,466,293],[65,51,432,336],[112,18,371,364],[160,5,330,367],[81,18,353,364],[26,48,407,336],[3,83,453,287]]}};
   if (T) (function(){
   let renderer;
   try { renderer = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); } catch (e){ return; }
@@ -335,7 +335,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = clamp(roughnessFactor + (n3(vMP*6.0) - 0.5)*0.24, 0.04, 1.0);');
     };
     return m; }
-  const CAMO_LAND = {camo:[0x2c341f, 0x463b29, 0x1b1c16], cs:1.5}, CAMO_SEA = {camo:[0x737b80, 0x5a6166, 0x6a7277], cs:2.2, k3:0.6, dust:0.06, grain:0.1}, CAMO_AIR = {camo:[0x5d666c, 0x7a8288, 0x545c61], cs:2.6, k3:0.6, dust:0.04, grain:0.08};
+  const CAMO_LAND = {camo:[0x2c341f, 0x463b29, 0x1b1c16], cs:1.5}, CAMO_SEA = {camo:[0x737b80, 0x5a6166, 0x6a7277], cs:2.2, k3:0.6, dust:0.06, grain:0.1}, CAMO_AIR = {camo:[0x535b61, 0x6c747a, 0x4a5257], cs:2.6, k3:0.6, dust:0.04, grain:0.08};
   const P = {
     olive:pbr(0x515a37, 0.78, 0.08, CAMO_LAND), oliveD:pbr(0x444b2e, 0.85, 0.08, Object.assign({}, CAMO_LAND, {k3:0.6})),
     uni:pbr(0x5f6445, 0.95, 0, {camo:[0x40472d, 0x6d6448, 0x2e2f22], cs:0.16, gs:30, dust:0.35, dh:0.5}),
@@ -347,7 +347,9 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     dark:pbr(0x262724, 0.8, 0.2, {dust:0.1}), glass:pbr(0x1f3442, 0.06, 0.9, {grain:0, dust:0}), lamp:pbr(0xd8d4c0, 0.2, 0.3, {grain:0, dust:0}),
     navy:pbr(0x7d858a, 0.62, 0.25, CAMO_SEA), navyD:pbr(0x5d656a, 0.66, 0.25, CAMO_SEA), deck:pbr(0x4d5254, 0.85, 0.15, {grain:0.18, gs:6, dust:0}), hullR:pbr(0x5a2b25, 0.7, 0.1, {dust:0}),
     sub:pbr(0x222628, 0.55, 0.2, {grain:0.1, dust:0}), white:pbr(0xd9d7cc, 0.7, 0.05, {grain:0.06, dust:0}),
-    air:pbr(0x6c757b, 0.5, 0.35, CAMO_AIR), airD:pbr(0x50575c, 0.55, 0.35, CAMO_AIR), rotor:pbr(0x3b3f3a, 0.6, 0.3, {dust:0}),
+    air:pbr(0x5d666c, 0.52, 0.35, CAMO_AIR), airD:pbr(0x464d52, 0.56, 0.35, CAMO_AIR), rotor:pbr(0x4a4f4a, 0.6, 0.3, {dust:0}),
+    heli:pbr(0x67715b, 0.6, 0.2, {camo:[0x56604b, 0x7b8569, 0x4b5442], cs:2.2, k3:0.5, dust:0.05, grain:0.08}), heliD:pbr(0x515a46, 0.64, 0.2, {camo:[0x454e3b, 0x65705a, 0x3e4635], cs:2.2, k3:0.5, dust:0.04, grain:0.08}),
+    bolt:pbr(0x2e302a, 0.55, 0.5, {grain:0.05, dust:0.1}),
     foam:new T.MeshBasicMaterial({color:0xe9f2f4, transparent:true, opacity:0.32, depthWrite:false}),
   };
   const ad = (p, o) => { p.add(o); return o; };
@@ -374,6 +376,8 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     const t = mk(new T.LatheGeometry([new T.Vector2(ri, -w/2), ...pr, new T.Vector2(ri, w/2)], 24), P.rubber); t.rotation.z = Math.PI/2; g.add(t);
     const rim = cy(ri, ri, w*0.8, rimMat || P.oliveD, 18); rim.rotation.z = Math.PI/2; g.add(rim);
     const hub = cy(ri*0.45, ri*0.55, w*0.92, P.dark, 10); hub.rotation.z = Math.PI/2; g.add(hub);
+    for (let i = 0; i < 16; i++){ const a = i/16*Math.PI*2, l = rbox(w*0.86, 0.045, r*0.2, 0.012, P.rubber, 0, Math.cos(a)*(r - 0.008), Math.sin(a)*(r - 0.008)); l.rotation.x = -a + (i % 2 ? 0.35 : -0.35); l.castShadow = false; g.add(l); }   // tread lugs
+    for (const s of [-1, 1]) for (let i = 0; i < 6; i++){ const a = i/6*Math.PI*2; g.add(cyX(0.022, 0.03, P.bolt, s*w*0.42, Math.cos(a)*ri*0.66, Math.sin(a)*ri*0.66, 6)); }   // wheel nuts
     g.position.set(x, y, z); return g; }
   // a tracked running gear (one side): road wheels, drive sprocket, idler, return rollers, and the track as a loop of links
   function tracks(x, len, h, wR, n, w){ const g = new T.Group(), zF = len/2 - wR*1.1, zR = -len/2 + wR*1.05, yB = 0.04, rF = wR*0.95, yA = h - rF - 0.02;
@@ -409,6 +413,8 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     torso.add(rbox(0.1, 0.1, 0.06, 0.02, P.gearD, 0.13, 0.42, 0.17));
     torso.add(rbox(0.32, 0.36, 0.18, 0.06, P.gearD, 0, 0.32, -0.23));                    // pack
     torso.add(rbox(0.3, 0.1, 0.12, 0.04, P.tarp, 0, 0.53, -0.25));                       // bed roll
+    torso.add(rbox(0.14, 0.2, 0.08, 0.02, P.dark, -0.1, 0.36, -0.34)); torso.add(ant(-0.13, 0.42, -0.36, 0.7));   // radio and its whip antenna
+    torso.add(cy(0.045, 0.045, 0.13, P.gearD, 10, 0.19, 0.06, -0.12));                     // canteen
     torso.add(sph(0.2, U, 0, 0.55, 0, 1.15, 0.55, 0.75));                                 // shoulders
     const neck = cy(0.05, 0.06, 0.1, P.skin, 10, 0, 0.64, 0.01); torso.add(neck);
     const head = new T.Group(); head.position.set(0, 0.76, 0.02); head.rotation.x = -0.18; torso.add(head);
@@ -420,7 +426,9 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     // the rifle, held across the body at the ready, muzzle low and forward
     const rf = new T.Group(); rf.position.set(0.02, 0.27, 0.27); rf.rotation.set(0.32, 0.48, 0); torso.add(rf);
     rf.add(rbox(0.05, 0.08, 0.34, 0.01, P.gun, 0, 0, 0)); rf.add(cyZ(0.013, 0.013, 0.32, P.gun, 0, 0.01, 0.32, 8)); rf.add(rbox(0.055, 0.06, 0.2, 0.012, P.dark, 0, 0.0, 0.25));
-    ad(rf, rbox(0.035, 0.13, 0.06, 0.01, P.gun, 0, -0.09, 0.05)).rotation.x = 0.25; rf.add(rbox(0.045, 0.1, 0.18, 0.015, P.dark, 0, -0.02, -0.24)); rf.add(rbox(0.035, 0.045, 0.1, 0.01, P.gun, 0, 0.07, 0.02));
+    ad(rf, rbox(0.035, 0.13, 0.06, 0.01, P.gun, 0, -0.09, 0.05)).rotation.x = 0.25; ad(rf, rbox(0.04, 0.16, 0.07, 0.012, P.dark, 0, -0.1, 0.13)).rotation.x = 0.2;   // grip, curved magazine
+    rf.add(cyZ(0.024, 0.024, 0.12, P.dark, 0, 0.075, 0.08, 10)); rf.add(rbox(0.03, 0.03, 0.04, 0.008, P.glass, 0, 0.075, 0.145));   // optic
+    rf.add(rbox(0.012, 0.012, 0.5, 0.004, P.gearD, 0.03, -0.06, 0.02));   // sling rf.add(rbox(0.045, 0.1, 0.18, 0.015, P.dark, 0, -0.02, -0.24)); rf.add(rbox(0.035, 0.045, 0.1, 0.01, P.gun, 0, 0.07, 0.02));
     // arms: the right hand on the grip, the left on the handguard
     const arm = (sx, a1, b1, a2) => { const sh = new T.Group(); sh.position.set(sx*0.2, 0.52, 0); torso.add(sh); const up = limb(0.058, 0.05, 0.28, U); sh.add(up); up.rotation.set(a1, 0, b1);
       const el = new T.Group(); el.position.y = -0.28; up.add(el); const fo = limb(0.05, 0.04, 0.26, U); el.add(fo); fo.rotation.x = a2; fo.add(sph(0.04, P.skin, 0, -0.27, 0)); return sh; };
@@ -439,6 +447,11 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     g.add(rbox(0.7, 0.06, 0.7, 0.03, P.oliveD, 0, 1.63, 2.45)); g.add(cy(0.24, 0.24, 0.06, P.oliveD, 14, -0.55, 1.65, 2.2));
     for (const sx of [-1.2, 1.2]){ g.add(rbox(0.26, 0.16, 0.12, 0.03, P.dark, sx, 1.36, 3.72)); g.add(rbox(0.18, 0.1, 0.04, 0.02, P.lamp, sx, 1.36, 3.79)); }
     g.add(jerry(-1.45, 1.86, -3.3)); g.add(jerry(-1.05, 1.86, -3.3)); g.add(rbox(0.9, 0.35, 0.5, 0.06, P.tarp, 1.0, 1.8, -3.25));
+    for (const sx of [-1, 1]){ g.add(rbox(0.66, 0.05, 0.75, 0.02, P.oliveD, sx*1.55, 1.24, 3.55));   // track guards over the front idlers
+      for (let i = 0; i < 2; i++){ const c = cyZ(0.035, 0.035, 4.4, P.steel, sx*(1.5 + i*0.08), 1.66, -0.5, 8); g.add(c); }   // tow cables along the deck edge
+      g.add(rbox(0.08, 0.06, 0.45, 0.02, P.dark, sx*1.0, 1.66, 3.1)); }   // headlight guards
+    for (let i = 0; i < 5; i++) g.add(rbox(2.6, 0.035, 0.05, 0.01, P.dark, 0, 1.4 - i*0.07, -3.86));   // rear exhaust grille
+    for (const [x, z] of [[-0.9, 1.4], [0.9, 1.4], [-0.9, -1.1], [0.9, -1.1]]) g.add(cy(0.04, 0.04, 0.04, P.bolt, 6, x, 1.64, z));
     const tur = new T.Group(); tur.position.set(0, 1.62, -0.25); g.add(tur);
     tur.add(plan([[-1.68, -2.0], [1.68, -2.0], [1.8, 0.5], [1.15, 2.05], [0.35, 2.3], [-0.35, 2.3], [-1.15, 2.05], [-1.8, 0.5]], 0.82, P.olive, 0, 0.07));
     tur.add(plan([[-1.5, -1.8], [1.5, -1.8], [1.6, 0.4], [0.9, 1.9], [-0.9, 1.9], [-1.6, 0.4]], 0.12, P.oliveD, 0.8, 0.04));
@@ -452,6 +465,8 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     tur.add(cy(0.3, 0.3, 0.05, P.oliveD, 14, 0.75, 0.86, -0.85));   // loader's hatch
     tur.add(smokeL(1.55, 0.6, 0.9, 0.5)); tur.add(smokeL(-1.55, 0.6, 0.9, -0.5));
     tur.add(ant(-1.2, 0.82, -1.6, 1.9)); tur.add(ant(1.25, 0.82, -1.7, 1.5));
+    for (const sx of [-1, 1]) for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++){ const e = rbox(0.42, 0.28, 0.3, 0.03, c % 2 ? P.olive : P.oliveD, sx*(0.55 + c*0.36), 0.22 + r*0.3, 2.08 - c*0.2); e.rotation.y = -sx*0.5; tur.add(e); }   // ERA blocks on the turret cheeks
+    for (let i = 0; i < 6; i++) tur.add(cy(0.035, 0.035, 0.04, P.bolt, 6, -0.7 + Math.cos(i*1.05)*0.42, 1.03, -0.45 + Math.sin(i*1.05)*0.42));   // cupola ring bolts
     const gun = new T.Group(); gun.position.set(0, 0.42, 2.2); tur.add(gun);
     gun.add(rbox(0.82, 0.58, 0.5, 0.08, P.oliveD, 0, 0, 0.05));   // mantlet
     gun.add(cyZ(0.13, 0.14, 1.6, P.oliveD, 0, 0, 1.0, 14)); gun.add(cyZ(0.12, 0.13, 1.6, P.olive, 0, 0, 2.6, 14)); gun.add(cyZ(0.17, 0.17, 0.55, P.oliveD, 0, 0, 2.0, 14));
@@ -468,6 +483,8 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     for (const sx of [-0.9, 0.9]){ g.add(rbox(0.28, 0.14, 0.1, 0.03, P.dark, sx, 1.45, 3.82)); g.add(rbox(0.2, 0.08, 0.03, 0.02, P.lamp, sx, 1.45, 3.88)); }
     g.add(rbox(0.6, 0.08, 0.6, 0.03, P.oliveD, -0.7, 2.14, 2.2)); for (const x of [-0.95, -0.7, -0.45]) g.add(rbox(0.12, 0.08, 0.05, 0.02, P.glass, x, 2.18, 2.5));   // driver's hatch and periscopes
     for (let i = 0; i < 4; i++) g.add(rbox(0.9, 0.05, 0.13, 0.02, P.dark, 0.9, 2.15, 1.9 - i*0.2));
+    for (const sx of [-1, 1]){ for (let i = 0; i < 9; i++) g.add(cyX(0.028, 0.04, P.bolt, sx*1.53, 1.9, 2.2 - i*0.62, 6)); ad(g, rbox(0.06, 0.12, 0.2, 0.02, P.dark, sx*1.6, 2.05, 3.3)).rotation.y = sx*0.3; }
+    g.add(rbox(1.3, 1.0, 0.06, 0.03, P.oliveD, 0, 1.45, -3.87)); g.add(rbox(0.08, 0.1, 0.06, 0.02, P.dark, 0.5, 1.45, -3.91));   // rear door and handle
     g.add(rbox(1.2, 0.08, 0.8, 0.03, P.oliveD, 0, 2.17, -2.6)); g.add(rbox(0.7, 0.3, 0.45, 0.05, P.tarp, 0.9, 2.3, -3.1)); g.add(jerry(-1.2, 2.4, -3.3)); g.add(jerry(-0.95, 2.4, -3.3));
     const tur = new T.Group(); tur.position.set(0, 2.15, -0.15); g.add(tur);
     tur.add(plan([[-1.0, -1.1], [1.0, -1.1], [1.1, 0.3], [0.6, 1.1], [-0.6, 1.1], [-1.1, 0.3]], 0.62, P.olive, 0, 0.06));
@@ -493,6 +510,8 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     const tr = new T.Group(); tr.position.set(0, 1.98, -0.45); g.add(tr); tr.add(cy(0.42, 0.44, 0.16, P.oliveD, 16));
     tr.add(side([[0.3, 0.05], [0.42, 0.05], [0.42, 0.52], [0.3, 0.52]], 0.9, P.oliveD, 0.02)); tr.add(rbox(0.14, 0.14, 0.55, 0.03, P.gun, 0, 0.3, 0.35)); tr.add(cyZ(0.022, 0.022, 0.6, P.gun, 0, 0.3, 0.85, 6));
     g.add(ant(-0.85, 1.95, -1.9, 1.8)); g.add(ant(0.85, 1.95, -1.95, 1.2));
+    for (const sx of [-1, 1]){ g.add(rbox(0.04, 0.3, 0.04, 0.01, P.dark, sx*1.15, 1.55, 0.85)); g.add(rbox(0.04, 0.2, 0.14, 0.02, P.glass, sx*1.18, 1.62, 0.85)); }
+    g.add(rbox(1.9, 0.16, 0.18, 0.04, P.dark, 0, 0.66, 2.5)); g.add(cyX(0.1, 0.5, P.steel, 0, 0.72, 2.6));   // bumper and winch
     return {g, ext:2.9, ppm:34}; }
 
   // a 6x6 supply truck (~8 m): forward cab with windows and grille, cargo bed under a camouflaged tilt with hoops, spare wheel, fuel tank
@@ -508,6 +527,8 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     g.add(rbox(2.36, 1.12, 4.6, 0.06, P.tarp, 0, 1.96, -1.05)); const roof = cyZ(1.18, 1.18, 4.6, P.tarp, 0, 2.48, -1.05, 22); roof.scale.set(1, 0.24, 1); g.add(roof);
     for (let i = 0; i < 5; i++) g.add(rbox(2.4, 0.07, 0.06, 0.02, P.gear, 0, 2.52 + (i % 4 ? 0.06 : 0), 1.2 - i*1.12));
     g.add(cyX(0.28, 0.85, P.dark, -1.0, 0.95, 0.6)); ad(g, cyX(0.5, 0.36, P.rubber, 0, 1.35, 1.25)).rotation.set(0, 0, 0);
+    for (const sx of [-1, 1]){ g.add(rbox(0.05, 0.4, 0.04, 0.01, P.dark, sx*1.38, 2.45, 3.0)); g.add(rbox(0.04, 0.26, 0.16, 0.02, P.glass, sx*1.4, 2.5, 3.0));   // mirrors
+      g.add(rbox(0.5, 0.42, 0.03, 0.01, P.rubber, sx*1.05, 0.62, -2.95)); for (let i = 0; i < 4; i++) g.add(rbox(0.03, 1.0, 0.05, 0.01, P.gearD, sx*1.2, 1.95, 0.6 - i*1.1)); }   // mud flaps, tie straps
     return {g, ext:4.4, ppm:28}; }
 
   // a self-propelled howitzer (~11 m with the gun): tracked hull, large slab-sided turret, long barrel with a muzzle brake, raised a little
@@ -626,7 +647,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     gear(g, [[0, 5.0], [-1.6, -1.0], [1.6, -1.0]], H);
     return {g, ext:8.8, ppm:13, air:true}; }
   function mHeli(){
-    const g = new T.Group(), H = 0.55, A = P.olive, AD = P.oliveD;   // ~17 m attack helicopter on its wheels
+    const g = new T.Group(), H = 0.55, A = P.heli, AD = P.heliD;   // ~17 m attack helicopter on its wheels (a light grey-green scheme: it reads against the ground)
     const prof = []; for (let i = 0; i <= 14; i++){ const u = i/14, r = 0.12 + Math.sin(Math.min(1, u*1.25)*Math.PI*0.5)*0.85*(1 - Math.max(0, u - 0.62)*2.3); prof.push(new T.Vector2(Math.max(0.1, r), (u - 0.5)*8.0)); }
     const fus = mk(new T.LatheGeometry(prof, 18), A); fus.rotation.x = -Math.PI/2; fus.scale.set(0.95, 1.1, 1); fus.position.set(0, H + 0.95, 0.6); g.add(fus);
     const can = sph(0.55, P.glass, 0, H + 1.45, 2.6, 0.62, 0.62, 1.9); g.add(can); g.add(rbox(0.1, 0.1, 1.6, 0.04, AD, 0, H + 1.8, 2.3));
@@ -655,18 +676,32 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     return {g, ext:10.0, ppm:12, air:true}; }
   const MAPB = {sol:mRifleman, hmv:mHmv, truck:mTruck, tank:mTank, ifv:mIfv, art:mArt, mlrs:mMlrs, sam:mSam, frig:() => mShip('frig'), crui:() => mShip('crui'), sub:mSub, carr:mCarr, jet:() => mJet('jet'), int:() => mJet('int'), heli:mHeli, drone:mDrone};
 
-  // ---------- the map atlases: one frame per direction (16, no animation), north-west sun (its shadow falls south-east like the terrain's hillshade)
-  // plus soft sky shadows, twice the size and filtered down. The sheet is cropped to what any direction covers (one cell of w x h per direction,
-  // stacked); kept: the ground origin's pixel (ox, oy), each direction's tight box of the model itself (bb, without its shadow) and ppm (atlas px per m)
+  // ---------- the map atlases: one cell per direction (16, no animation) in a 4 x 4 grid, north-west sun (its shadow falls south-east like the
+  // terrain's hillshade) plus soft sky shadows and a soft contact shade under the hull, rendered at twice the size and filtered down. Two levels are
+  // kept: 'hi' (about 1.6x the old sheets, up to 520 px a cell) and its half; the grid is cropped to what any direction covers (one cell of w x h per
+  // direction); kept: the ground origin's pixel (ox, oy), each direction's tight box of the model itself (bb, without its shadow) and ppm (px per m),
+  // all for the hi level (the half level is exactly half of each)
   const MS = new T.Scene(), MSUN = new T.DirectionalLight(0xfff0da, 1.75), MSKY = [];
   MS.add(new T.HemisphereLight(0xdde7ee, 0x4b4a38, 0.42));
-  MSUN.position.set(-8, 17, -7); MSUN.castShadow = true; MSUN.shadow.mapSize.set(2048, 2048); MSUN.shadow.radius = 3; MSUN.shadow.bias = -0.0004; MSUN.shadow.normalBias = 0.015; MS.add(MSUN);
+  MSUN.position.set(-8, 17, -7); MSUN.castShadow = true; MSUN.shadow.mapSize.set(4096, 4096); MSUN.shadow.radius = 3; MSUN.shadow.bias = -0.0003; MSUN.shadow.normalBias = 0.012; MS.add(MSUN);
   for (let i = 0; i < 9; i++){ const a = i*2.4, r = i ? 2.6 : 0.3, x = Math.cos(a)*r, z = Math.sin(a)*r, y = 19; const l = new T.DirectionalLight(0xd8e4ee, 0.075); l.position.set(x, y, z); l.castShadow = true; l.shadow.mapSize.set(1024, 1024); l.shadow.radius = 9; l.shadow.bias = -0.0006; l.shadow.normalBias = 0.02; MS.add(l); MSKY.push(l); }
   { const f = new T.DirectionalLight(0xb8c8d6, 0.3); f.position.set(6, 6, 12); MS.add(f); }
   const MGND = new T.Mesh(new T.PlaneGeometry(80, 80), new T.ShadowMaterial({opacity:0.5})); MGND.rotation.x = -Math.PI/2; MGND.receiveShadow = true; MS.add(MGND);
-  const MEXP = 0.96, MCAM = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 200), CLIP = [new T.Plane(new T.Vector3(0, 1, 0), -WL)];
+  const MEXP = 0.96, MCAM = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 200), CLIP = [new T.Plane(new T.Vector3(0, 1, 0), -WL)], MCOLS = 4, MHI = 1.6, MZMAX = 520;
+  // the contact shade: a soft dark ellipse right under the hull (where the sky cannot reach), so a model sits on the ground instead of floating
+  let AOT = null; const aoTex = () => { if (AOT) return AOT; const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.55, 'rgba(0,0,0,.7)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (AOT = new T.CanvasTexture(c)); };
+  function contactShade(model, air){ const bx = new T.Box3().setFromObject(model.g), sx = (bx.max.x - bx.min.x)*(air ? 0.55 : 1.12), sz = (bx.max.z - bx.min.z)*(air ? 0.5 : 1.08);
+    const m = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({map:aoTex(), color:0x000000, transparent:true, opacity:air ? 0.3 : 0.5, depthWrite:false}));
+    m.rotation.x = -Math.PI/2; m.scale.set(sx, sz, 1); m.position.set((bx.max.x + bx.min.x)/2, 0.012, (bx.max.z + bx.min.z)/2); m.renderOrder = -1; model.g.add(m); }
+  // a thin dark rim round the model itself (not its soft shadow) at one level, so it stands out of the terrain like a rendered miniature
+  function rimify(cv){ const g = cv.getContext('2d', {willReadFrequently:true}), w = cv.width, h = cv.height, id = g.getImageData(0, 0, w, h), px = id.data, rim = g.createImageData(w, h), rp = rim.data;
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++){ const i = (y*w + x)*4; if (px[i + 3] > 150) continue; const n = (px[i + 7] > 200) + (px[i - 1] > 200) + (px[i + w*4 + 3] > 200) + (px[i - w*4 + 3] > 200);
+      if (n){ rp[i] = 14; rp[i + 1] = 16; rp[i + 2] = 10; rp[i + 3] = Math.min(255, 70 + n*42); } }
+    const r = document.createElement('canvas'); r.width = w; r.height = h; r.getContext('2d').putImageData(rim, 0, 0); g.globalCompositeOperation = 'destination-over'; g.drawImage(r, 0, 0); g.globalCompositeOperation = 'source-over'; }
   function mapBuild(type){
-    const model = MAPB[type](), air = !!model.air, sea = !!model.sea, dirs = 16, half = model.ext, Z = Math.ceil(2*half*model.ppm), SS = 2;
+    const model = MAPB[type](), air = !!model.air, sea = !!model.sea, dirs = 16, rows = dirs/MCOLS, half = model.ext, ppm = Math.min(model.ppm*MHI, MZMAX/(2*half)), Z = Math.ceil(half*ppm)*2, SS = 2;
+    if (!sea) contactShade(model, air);
     const mats = new Set(); model.g.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.pbr) mats.add(o.material); });
     for (const m of mats){ m.clippingPlanes = sea ? CLIP : []; m.needsUpdate = true; }
     renderer.localClippingEnabled = true; renderer.setSize(Z*SS, Z*SS); const ex0 = renderer.toneMappingExposure; renderer.toneMappingExposure = MEXP; renderer.shadowMap.needsUpdate = true;
@@ -674,21 +709,24 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     MS.add(model.g); MGND.visible = !sea; MGND.material.opacity = air ? 0.42 : 0.5;
     MCAM.left = -half; MCAM.right = half; MCAM.top = half; MCAM.bottom = -half; MCAM.updateProjectionMatrix();
     const dist = 60, el = air ? 0.92 : 0.82, ly = model.look ?? (air ? 1.0 : sea ? 0.6 : 0.9); MCAM.position.set(0, Math.sin(el)*dist + ly, Math.cos(el)*dist); MCAM.lookAt(0, ly, 0); MCAM.updateMatrixWorld();
-    const full = document.createElement('canvas'); full.width = Z; full.height = Z*dirs; const fx = full.getContext('2d', {willReadFrequently:true}); fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = 'high';
+    const full = document.createElement('canvas'); full.width = Z*MCOLS; full.height = Z*rows; const fx = full.getContext('2d', {willReadFrequently:true}); fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = 'high';
+    const cx0 = d => (d % MCOLS)*Z, cy0 = d => Math.floor(d/MCOLS)*Z;
     for (let d = 0; d < dirs; d++){ model.g.rotation.y = Math.PI/2 - d*Math.PI*2/dirs; model.g.updateMatrixWorld(true); CU.inv.value.copy(model.g.matrixWorld).invert();
-      renderer.render(MS, MCAM); fx.drawImage(renderer.domElement, 0, 0, Z*SS, Z*SS, 0, d*Z, Z, Z); }
+      renderer.render(MS, MCAM); fx.drawImage(renderer.domElement, 0, 0, Z*SS, Z*SS, cx0(d), cy0(d), Z, Z); }
     MS.remove(model.g); for (const m of mats){ m.clippingPlanes = []; m.needsUpdate = true; } renderer.localClippingEnabled = false; renderer.setSize(SZ, SZ); renderer.toneMappingExposure = ex0;
     const v = new T.Vector3(0, 0, 0).project(MCAM), ox = (v.x + 1)/2*Z, oy = (1 - v.y)/2*Z;
-    const px = fx.getImageData(0, 0, full.width, full.height).data; let x0 = Z, y0 = Z, x1 = 0, y1 = 0; const bb0 = [];
-    for (let d = 0; d < dirs; d++){ let a0 = Z, b0 = Z, a1 = -1, b1 = -1;
-      for (let y = 0; y < Z; y++) for (let x = 0; x < Z; x++){ const al = px[((d*Z + y)*Z + x)*4 + 3]; if (al > 6){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const px = fx.getImageData(0, 0, full.width, full.height).data, FW = full.width; let x0 = Z, y0 = Z, x1 = 0, y1 = 0; const bb0 = [];
+    for (let d = 0; d < dirs; d++){ let a0 = Z, b0 = Z, a1 = -1, b1 = -1; const X0 = cx0(d), Y0 = cy0(d);
+      for (let y = 0; y < Z; y++) for (let x = 0; x < Z; x++){ const al = px[((Y0 + y)*FW + X0 + x)*4 + 3]; if (al > 6){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
         if (al > 170){ if (x < a0) a0 = x; if (x > a1) a1 = x; if (y < b0) b0 = y; if (y > b1) b1 = y; } }
       bb0.push([a0, b0, a1 + 1, b1 + 1]); }
-    x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(Z - 1, x1 + 1); y1 = Math.min(Z - 1, y1 + 1);
-    const w = x1 - x0 + 1, h = y1 - y0 + 1, cv = document.createElement('canvas'); cv.width = w; cv.height = h*dirs; const cx = cv.getContext('2d');
-    for (let d = 0; d < dirs; d++) cx.drawImage(full, x0, d*Z + y0, w, h, 0, d*h, w, h);
+    x0 = Math.max(0, x0 - 2); y0 = Math.max(0, y0 - 2); x1 = Math.min(Z - 1, x1 + 2); y1 = Math.min(Z - 1, y1 + 2); x0 -= x0 % 2; y0 -= y0 % 2;
+    const w = Math.min(Z - x0, Math.ceil((x1 - x0 + 1)/2)*2), h = Math.min(Z - y0, Math.ceil((y1 - y0 + 1)/2)*2), hi = document.createElement('canvas'); hi.width = w*MCOLS; hi.height = h*rows; const hx = hi.getContext('2d', {willReadFrequently:true});
+    for (let d = 0; d < dirs; d++) hx.drawImage(full, cx0(d) + x0, cy0(d) + y0, w, h, (d % MCOLS)*w, Math.floor(d/MCOLS)*h, w, h);
+    const mid = document.createElement('canvas'); mid.width = hi.width/2; mid.height = hi.height/2; const mx = mid.getContext('2d', {willReadFrequently:true}); mx.imageSmoothingEnabled = true; mx.imageSmoothingQuality = 'high'; mx.drawImage(hi, 0, 0, mid.width, mid.height);
+    rimify(hi); rimify(mid);
     const bb = bb0.map(q => q[2] > q[0] ? [q[0] - x0, q[1] - y0, q[2] - x0, q[3] - y0] : [0, 0, w, h]);
-    return {cv, dirs, w, h, ox:+(ox - x0).toFixed(2), oy:+(oy - y0).toFixed(2), ppm:+(Z/(2*half)).toFixed(4), air, sea, bb}; }
+    return {hi, mid, cols:MCOLS, w, h, ox:+(ox - x0).toFixed(2), oy:+(oy - y0).toFixed(2), ppm:+ppm.toFixed(4), air, sea, bb}; }
   mapFn = mapBuild;
   })();
   function mixCol(hex, base, t){ const A = parseInt(hex.slice(1), 16), B = parseInt(base.slice(1), 16); const m = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${m(16)},${m(8)},${m(0)})`; }
@@ -719,6 +757,11 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     return true;
   }
   const mapAt = {}; let mapDir = 'assets/units/';
+  function mapLevels(m, midCv, hiCv){ const H = {cols:4, w:m.w, h:m.h, ox:m.ox, oy:m.oy, ppm:m.ppm, bb:m.bb, air:!!m.air, sea:!!m.sea};
+    const M = {cv:midCv, lvl:0, cols:4, w:m.w/2, h:m.h/2, ox:m.ox/2, oy:m.oy/2, ppm:m.ppm/2, bb:m.bb.map(q => q.map(v => v/2)), air:!!m.air, sea:!!m.sea};
+    return {m:H, mid:M, hi:hiCv ? Object.assign({cv:hiCv, lvl:1}, H) : null, hiT:0, hiLoad:!!hiCv}; }
+  function hiTrim(keep){ const on = Object.keys(mapAt).filter(t => mapAt[t] && mapAt[t].hi).sort((a, b) => mapAt[b].hiT - mapAt[a].hiT);
+    for (const t of on.slice(4)) if (t !== keep){ mapAt[t].hi = null; mapAt[t].hiLoad = false; } }
   const queue = ['inf', 'tank', 'at', 'art', 'ifv', 'sam', 'jet', 'int', 'frig', 'sub', 'crui', 'heli', 'drone', 'carr', 'mlrs', 'spec'];
   let warm = false;
   function warmup(){ if (warm || !buildFn) return; warm = true; let i = 0; const step = () => { if (i >= queue.length) return; try { if (!cache[queue[i]]) buildFn(queue[i]); i++; } catch (e) { i++; } setTimeout(step, 30); }; setTimeout(step, 50); }
@@ -726,13 +769,19 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
 
     // the map model atlas of a type ({cv, dirs, w, h, ox, oy, ppm, air, sea}), or null while it loads: a baked sheet is fetched the first time it is
     // wanted (no stand-in meanwhile); with three.js present and nothing baked (the bake page) it is rendered here
-    map(type){ const A = mapAt[type]; if (A !== undefined) return A;
-      const m = MAPMETA[type]; mapAt[type] = null;
-      if (m && !window.__BAKE){ const im = new Image(); im.decoding = 'async'; im.onload = () => { mapAt[type] = Object.assign({cv:im, dirs:16}, m); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '.webp'; }
-      else if (mapFn) try { mapAt[type] = mapFn(type); } catch (e) {}
-      return mapAt[type]; },
+    map(type, lvl = 0){ let A = mapAt[type];
+      if (A === undefined){ const m = MAPMETA[type]; mapAt[type] = A = null;
+        if (m && !window.__BAKE){ const im = new Image(); im.decoding = 'async'; im.onload = () => { mapAt[type] = mapLevels(m, im, null); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '.webp'; }
+        else if (mapFn) try { const R = mapFn(type); mapAt[type] = A = mapLevels(R, R.mid, R.hi); } catch (e) {} }
+      if (!A) return null;
+      if (lvl > 0){ A.hiT = performance.now(); if (A.hi) return A.hi;
+        if (!A.hiLoad && !window.__BAKE){ A.hiLoad = true; const im = new Image(); im.decoding = 'async'; im.onload = () => { if (A.hiLoad) A.hi = Object.assign({cv:im, lvl:1}, A.m); hiTrim(type); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '-hi.webp'; }
+        return null; }
+      return A.mid; },
+    // drop the hi sheets not drawn for a while (memory: at most a few are decoded at once)
+    mapTrim(now){ for (const t in mapAt){ const A = mapAt[t]; if (A && A.hi && now - A.hiT > 15000){ A.hi = null; A.hiLoad = false; } } },
     mapTypes: () => Object.keys(MAPMETA), mapDir(d){ mapDir = d; },
-    exportMap(type){ if (!mapFn) return null; const A = mapFn(type); return {img:A.cv.toDataURL('image/webp', 0.9), meta:{w:A.w, h:A.h, ox:A.ox, oy:A.oy, ppm:A.ppm, air:A.air, sea:A.sea, bb:A.bb}}; },
+    exportMap(type){ if (!mapFn) return null; const A = mapFn(type); return {hi:A.hi.toDataURL('image/webp', 0.86), img:A.mid.toDataURL('image/webp', 0.9), meta:{w:A.w, h:A.h, ox:A.ox, oy:A.oy, ppm:A.ppm, air:A.air, sea:A.sea, bb:A.bb}}; },
     SZ, has: type => !!cache[ALIAS[type] || type], warmup, loadBaked, canRender: () => !!buildFn,
     exportAtlas(type){ if (!cache[type] && buildFn) buildFn(type); const a = cache[type]; return a ? {base:a.base.toDataURL('image/png'), mask:a.mask.toDataURL('image/png')} : null; },
     // draw a unit sprite centred on (x, y) at on-screen height h; ang in radians (screen space)

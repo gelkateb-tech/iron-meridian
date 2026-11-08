@@ -7684,44 +7684,64 @@ function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
 }
 const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max(2, hexPx/20)) : 1.35, hexPx/12))*zx(hexPx);   // past the old max zoom figures keep growing
 /* ---------------- Troop models on the map (CoN-style): from the city zoom on, small 3D models of each force's main unit types stand on the map
-   tucked against its counter (a rifleman and a 4x4 for motorized infantry, a tank, a howitzer, a frigate in the water, a jet parked at its base...),
-   so the counter reads as their label; a mixed stack shows up to three different models (a tank, a rifleman and an IFV). The models are original
-   procedural three.js designs (units3d.js) in shader-made camouflage, rendered at twice the size with soft sun and sky shadows and baked once per
-   direction into sheets (assets/units/m-<type>.webp, units3d.js MAPMETA with each direction's tight box; each sheet is fetched the first time a
-   model of its type is wanted). They are planted with their ground origin on the force's (spring-smoothed) spot, sized like the map (they grow as
-   you zoom in, easing off to about a counter's width close in; a soldier stands about half a tank's length tall), face the way they march,
-   their enemy in a battle or a fixed bearing of their own at rest (16 directions, with hysteresis), and are never offset per frame, so they do not
-   shake. Each group takes the spot round its plate that covers the fewest other counters, models and your HQ, and keeps it (it moves only for a
-   clearly better one, gliding there). They are drawn before the names, city markers, the HQ, the paths and the counters, which all paint over
-   them. Independent garrisons show none unless selected or fighting; wings in flight keep their flat icons. Settings: 'Troop models'. */
+   beside its counter (a rifleman and a 4x4 for motorized infantry, a tank, a howitzer, a frigate in the water, a jet parked at its base...), so the
+   counter reads as their label; a mixed stack shows up to three different models in a tidy staggered group with small gaps. The models are original
+   procedural three.js designs (units3d.js) in shader-made camouflage, rendered at twice the size with soft sun and sky shadows and a contact shade,
+   baked once per direction into sheets at two levels (assets/units/m-<type>.webp and the sharper m-<type>-hi.webp, fetched the first time a model of
+   that type is wanted; the hi sheet only close in on sharp screens, and dropped again when it has not been drawn for a while). The sheet level is
+   picked by the model's size in device pixels (a quarter and an eighth are made from the half sheet for small sizes), so it is never scaled down by
+   much more than 2x nor up by more than about 12%.
+   They live in WORLD space: each model's ground origin is the force's (spring-smoothed) spot plus a fixed world offset for its slot, and they are
+   sized with the map like the cities (TM_RK: a tank is half a hex long), so zooming only grows or shrinks them on their own patch of ground. The
+   slot is worked out once for the force's make-up and place (and when that changes it glides to the new one): the spot near its counter that keeps
+   the group off the counters, the city markers and names, your HQ and the other groups at three reference zooms (so it holds at every zoom), on dry
+   land (ships on the water). A model still mostly covered by a counter, a marker or a name at the current zoom fades out instead of moving. They
+   face the way they march, their enemy in a battle or a fixed bearing of their own at rest (16 directions, with hysteresis), are never offset per
+   frame, so they do not shake, and they are lit like the map: each drawn cell is graded with the same daylight lift, dusk glow and night multiply
+   as the terrain (drawNight), a little lighter at night so they stay readable. They are drawn over the path lines and under the names, city
+   markers, the HQ and the counters. Independent garrisons show none unless selected or fighting; wings in flight keep their flat icons.
+   Settings: 'Troop models'. */
 const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
   jet:['jet'], bomb:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
-// each model's size as [characteristic length in metres, share of the reference size R]: a tank's length is R, a soldier stands half R tall
-const TMG = {sol:[1.8, 0.5], hmv:[5.2, 0.58], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.84], art:[11, 1.05], mlrs:[8, 0.84], sam:[9.6, 0.94],
+// each model's size as [characteristic length in metres, share of the reference size R]: a tank's length is R, a soldier stands a little over half R tall
+const TMG = {sol:[1.8, 0.56], hmv:[5.2, 0.6], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.84], art:[11, 1.05], mlrs:[8, 0.84], sam:[9.6, 0.94],
   frig:[7.4, 1.3], crui:[8.8, 1.5], sub:[8.6, 1.2], carr:[11, 1.85], jet:[17, 1.05], int:[17, 1.05], heli:[17, 0.95], drone:[10.6, 0.72]};
-const TMMC = new Map(), TMA = new Map(), TMD = new Map(), TMH = new Map(), TMDBG = []; let TMSH = null, TMSW = 0;
+const TMA = new Map(), TMD = new Map(), TMH = new Map(), TMDBG = [], TMCELL = new Map(), TMLAST = new Map(), TMMIP = new Map(), TMLUT = new Map(); let TMSH = null, TMSW = 0, TMCB = 0, TMNEW = 0, TMLB = null;
 const tmOn = () => SET.models !== false;
-// the reference size R in css px (a tank's length): grows with the map and eases off to about a counter's width close in
-const tmR = hexPx => 72*(1 - Math.exp(-hexPx/100));
-// the screen scale of a model type (css px per metre)
-const tmScale = (t, hexPx) => { const g = TMG[t] || [8, 0.8]; return tmR(hexPx)*g[1]/g[0]; };
-// a model's direction cell pre-scaled once (cached per type, direction, 2^(1/6) size step and night step): [canvas, origin x, origin y (css px), atlas, device px per metre]
-function tmmFrame(t, d, s, nb){ const sb = Math.round(2**(Math.round(Math.log2(s*dpr)*6)/6)*1000)/1000, key = t + '|' + d + '|' + sb + '|' + nb; let e = TMMC.get(key); if (e) return e;
-  const A = window.U3D && U3D.map ? U3D.map(t) : null; if (!A) return null; const k = sb/A.ppm, w = Math.max(1, Math.ceil(A.w*k) + 2), h = Math.max(1, Math.ceil(A.h*k) + 2);
-  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-  let src = A.cv, sx = 0, sy = d*A.h, sw = A.w, sh = A.h; const tw = A.w*k;
-  while (sw > tw*2.2){ const m = document.createElement('canvas'); m.width = Math.ceil(sw/2); m.height = Math.ceil(sh/2); const gm = m.getContext('2d'); gm.imageSmoothingQuality = 'high';   // big steps down in halves (crisper than one)
-    gm.drawImage(src, sx, sy, sw, sh, 0, 0, sw/2, sh/2); src = m; sx = sy = 0; sw /= 2; sh /= 2; }
-  g.drawImage(src, sx, sy, sw, sh, 1, 1, A.w*k, A.h*k);
-  // a thin dark rim round the model itself (not its soft shadow), so it stands out of the terrain like a rendered miniature
-  try { const id = g.getImageData(0, 0, w, h), px = id.data, rim = g.createImageData(w, h), rp = rim.data;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){ const i = (y*w + x)*4; if (px[i + 3] > 150) continue; let n = 0;
-      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const X = x + ox, Y = y + oy; if (X >= 0 && Y >= 0 && X < w && Y < h && px[((Y*w + X)*4) + 3] > 200) n++; }
-      if (n){ rp[i] = 14; rp[i + 1] = 16; rp[i + 2] = 10; rp[i + 3] = Math.min(255, 90 + n*45); } }
-    const r = document.createElement('canvas'); r.width = w; r.height = h; r.getContext('2d').putImageData(rim, 0, 0); g.globalCompositeOperation = 'destination-over'; g.drawImage(r, 0, 0); g.globalCompositeOperation = 'source-over'; } catch (er) {}
-  if (nb){ g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(8,18,32,${Math.min(0.3, 0.1*nb).toFixed(2)})`; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over'; }
-  const q = sb/A.ppm/dpr, bb = A.bb && A.bb[d] ? A.bb[d].map((v, i) => (v - (i % 2 ? A.oy : A.ox))*q) : [-A.ox*q, -A.oy*q, (A.w - A.ox)*q, (A.h - A.oy)*q];   // the model's own box round its ground origin (css px at this step)
-  e = [c, (A.ox*sb/A.ppm + 1)/dpr, (A.oy*sb/A.ppm + 1)/dpr, A, sb, bb]; if (TMMC.size > 500) TMMC.clear(); TMMC.set(key, e); return e; }
+const TM_RK = 0.5, TM_F0 = 86, TM_F1 = 18;   // R as a share of a hex (world-sized, like the cities); they fade in from 86 to 104 hexPx
+const tmFade = hexPx => smooth01((hexPx - TM_F0)/TM_F1);
+// world units per metre of a model type, and css px per metre at a zoom
+const tmWpm = t => { const g = TMG[t] || [8, 0.8]; return TM_RK*HS0*g[1]/g[0]; };
+const tmScale = (t, hexPx) => tmWpm(t)*hexPx/HS0;
+// the sheet level for dp device px per metre: hi, the half sheet, or a quarter / eighth made from it (null while the type's sheet loads)
+function tmLevel(t, dp){ const M = U3D.map(t); if (!M) return null;
+  if (dp > M.ppm*1.12) return U3D.map(t, 1) || M;
+  if (dp > M.ppm*0.56) return M;
+  return tmMip(t, M, dp > M.ppm*0.28 ? 1 : 2); }
+function tmMip(t, M, k){ const key = t + '|' + k; let L = TMMIP.get(key); if (L && L.src === M.cv) return L;
+  const src = k > 1 ? tmMip(t, M, k - 1) : M, f = 2**-k, w = Math.ceil(src.w/2), h = Math.ceil(src.h/2), c = document.createElement('canvas'); c.width = w*M.cols; c.height = h*Math.ceil(16/M.cols);
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  for (let d = 0; d < 16; d++) g.drawImage(src.cv, (d % M.cols)*src.w, Math.floor(d/M.cols)*src.h, src.w, src.h, (d % M.cols)*w, Math.floor(d/M.cols)*h, src.w/2, src.h/2);
+  L = {cv:c, src:M.cv, cols:M.cols, w, h, ox:M.ox*f, oy:M.oy*f, ppm:M.ppm*f, bb:M.bb.map(q => q.map(v => v*f)), air:M.air, sea:M.sea, lvl:-k}; TMMIP.set(key, L); return L; }
+// the map's light on a model (drawNight's daylight lift, dusk glow and night multiply as per-channel tables; 17 steps each)
+function tmLut(Lt){ const dk = Math.round(Lt.day*16), tk = Math.round(Lt.tw*16), key = dk + ':' + tk; let E = TMLUT.get(key); if (E) return E;
+  const day = dk/16, tw = tk/16, nn = (1 - day)*0.86, F1 = [255, 250, 236], F2 = [255, 128, 60], MU = [140, 128, 98], tb = [0, 1, 2].map(() => new Uint8ClampedArray(256));
+  const sl = (cb, cs, a) => { const B = cs <= 0.5 ? cb - (1 - 2*cs)*cb*(1 - cb) : cb + (2*cs - 1)*((cb <= 0.25 ? ((16*cb - 12)*cb + 4)*cb : Math.sqrt(cb)) - cb); return cb*(1 - a) + B*a; };
+  for (let ch = 0; ch < 3; ch++) for (let v = 0; v < 256; v++){ let c = v/255; if (day > 0.02) c = sl(c, F1[ch]/255, 0.3*day); if (tw > 0.02) c = sl(c, F2[ch]/255, 0.35*tw); if (day < 0.98) c *= 1 - MU[ch]/255*nn; tb[ch][v] = Math.round(c*255); }
+  E = {key, tb}; TMLUT.set(key, E); if (TMLUT.size > 80) TMLUT.delete(TMLUT.keys().next().value); return E; }
+// one direction cell of a level, graded for the light: {c (canvas), L (its level)}. A few new cells a frame at most; meanwhile the last cell made
+// for that type and direction (another light or level) stands in
+let TMSCR = null;
+function tmCell(t, L, d, lut, now){ const key = t + '|' + L.lvl + '|' + d + '|' + lut.key, e = TMCELL.get(key); if (e){ e.u = now; return e; }
+  const lk = t + '|' + d, last = TMLAST.get(lk); if (TMNEW <= 0 && last) return last; TMNEW--;
+  const w = Math.ceil(L.w), h = Math.ceil(L.h); if (!TMSCR) TMSCR = document.createElement('canvas'); const S0 = TMSCR; if (S0.width < w || S0.height < h){ S0.width = Math.max(S0.width, w); S0.height = Math.max(S0.height, h); }
+  const g = S0.getContext('2d', {willReadFrequently:true}); g.clearRect(0, 0, w, h); g.drawImage(L.cv, (d % L.cols)*L.w, Math.floor(d/L.cols)*L.h, L.w, L.h, 0, 0, L.w, L.h);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  try { const id = g.getImageData(0, 0, w, h), p = id.data, [R, G2, B] = lut.tb; for (let i = 0; i < p.length; i += 4){ if (!p[i + 3]) continue; p[i] = R[p[i]]; p[i + 1] = G2[p[i + 1]]; p[i + 2] = B[p[i + 2]]; } c.getContext('2d').putImageData(id, 0, 0); }
+  catch (er) { c.getContext('2d').drawImage(S0, 0, 0); }
+  const E = {c, L, u:now, b:w*h*4}; TMCELL.set(key, E); TMLAST.set(lk, E); TMCB += E.b;
+  if (TMCB > 48e6){ const ks = [...TMCELL.entries()].sort((p, q) => p[1].u - q[1].u); for (const [k, v] of ks){ if (TMCB < 32e6) break; TMCELL.delete(k); TMCB -= v.b; if (TMLAST.get(k.split('|')[0] + '|' + k.split('|')[2]) === v) TMLAST.delete(k.split('|')[0] + '|' + k.split('|')[2]); } }
+  return E; }
 // the direction cell (of 16) for a heading, with hysteresis: a heading wavering on a boundary never flips the model back and forth
 function tmDir(id, t, ang, now){ const n = 16, raw = (((ang/(Math.PI*2))*n) % n + n) % n, key = id + '|' + t, L = TMD.get(key);
   if (L){ L.t = now; let df = raw - L.d; df -= Math.round(df/n)*n; if (Math.abs(df) < 0.62) return L.d; }
@@ -7740,86 +7760,115 @@ function tmmTypes(c, nMax){ const wt = {}; let tot = 0;
 // a stable resting bearing of a force's own (screen radians): one of the views that show a model's side and front, never all the same way
 const TM_REST = [0.2, 0.32, 0.68, 0.8, 0.12, 0.88].map(f => f*Math.PI);
 const tmRest = id => TM_REST[((id*2654435761) >>> 0) % TM_REST.length];
+// draw one model with its ground origin on screen point (x, y): returns its tight box on screen and the level used
+function tmDraw(t, d, x, y, lut, now, alpha, snap){ const s = tmWpm(t)*view.s, L = tmLevel(t, s*dpr); if (!L) return null; const E = tmCell(t, L, d, lut, now), k = s/E.L.ppm;
+  let X = x - E.L.ox*k, Y = y - E.L.oy*k; const w = E.c.width*k, h = E.c.height*k; if (snap && w*dpr < 64){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
+  if (alpha > 0.003){ const ga = ctx.globalAlpha; ctx.globalAlpha = ga*alpha; ctx.drawImage(E.c, X, Y, w, h); ctx.globalAlpha = ga; }
+  const b = E.L.bb[d]; return {box:[x + (b[0] - E.L.ox)*k, y + (b[1] - E.L.oy)*k, x + (b[2] - E.L.ox)*k, y + (b[3] - E.L.oy)*k], cell:[X, Y, X + w, Y + h], lvl:E.L.lvl}; }
 // one model on its own (a supply truck on its run): planted on (x, y) facing ang. Returns how far it has faded in (0: not shown: far, off or still
 // loading), so the caller cross-fades its flat icon
-function tmSingle(t, key, x, y, ang, alpha, now){ const hexPx = view.s*HS0, k = smooth01((hexPx - 50)/12); if (!tmOn() || k <= 0 || !window.U3D || !U3D.map) return 0;
-  const [wx] = screenToWorld(x, y), s = tmScale(t, hexPx), e = tmmFrame(t, tmDir(key, t, ang, now), s, Math.round(nightAtX(wx)*3)); if (!e) return 0;
-  const f = s*dpr/e[4], w = e[0].width/dpr*f, h = e[0].height/dpr*f, ga = ctx.globalAlpha; ctx.globalAlpha = alpha*k; ctx.drawImage(e[0], x - e[1]*f, y - e[2]*f, w, h); ctx.globalAlpha = ga; return k; }
+function tmSingle(t, key, x, y, ang, alpha, now){ const hexPx = view.s*HS0, k = tmFade(hexPx); if (!tmOn() || k <= 0 || !window.U3D || !U3D.map || !U3D.map(t)) return 0;
+  const ga = ctx.globalAlpha, sm = ctx.imageSmoothingQuality; ctx.imageSmoothingQuality = 'high'; TMNEW = Math.max(TMNEW, 1);
+  const r = tmDraw(t, tmDir(key, t, ang, now), x, y, tmLut(viewLight()), now, alpha*k, false); ctx.globalAlpha = ga; ctx.imageSmoothingQuality = sm; return r ? k : 0; }
+// the obstacles a group's slot keeps clear of, at a reference zoom: boxes in css px relative to the force's spot on screen at that zoom
+function tmObstacles(A, own, env, hz, self){ const s = hz/HS0, kl = Math.min(zoomK(hz), 2), out = [], rel = (wx, wy) => [(wx - A[0])*s, (wy - A[1])*s];
+  for (const o of env.plates){ const [rx, ry] = rel(o.a[0], o.a[1]); out.push([rx + o.b[0], ry + o.b[1], rx + o.b[2], ry + o.b[3], o.c === own ? 5 : 3]); }
+  for (const q of env.hq){ const [rx, ry] = rel(q.a[0], q.a[1]); out.push([rx + q.b[0], ry + q.b[1], rx + q.b[2], ry + q.b[3], 3]); }
+  for (const P of env.cities){ const [rx, ry] = rel(P.x, P.y), my = ry + CITY_DY*kl, mr = P.mr*kl + 2; out.push([rx - mr, my - mr, rx + mr, my + mr, 3]);
+    if (P.nw){ const y0 = ry + (CITY_DY + 11)*kl; out.push([rx - P.nw/2, y0 - 1, rx + P.nw/2, y0 + P.nf + 2, 1.5]); } }
+  for (const P of env.pnames){ const [rx, ry] = rel(P.x, P.y); out.push([rx - P.nw/2, ry - 7, rx + P.nw/2, ry + 7, 1]); }
+  for (const q of env.labels){ const [rx, ry] = rel(q.a[0], q.a[1]); out.push([rx + q.b[0], ry + q.b[1], rx + q.b[2], ry + q.b[3], 1.5]); }   // the names and markers as they were last placed
+  for (const [k, E] of TMA){ if (k === self || env.now - E.t > 1500) continue; const g = E.box, [x0, y0] = rel(g[0], g[1]), [x1, y1] = rel(g[2], g[3]); out.push([x0, y0, x1, y1, 2.5]); }   // the other groups' slots (kept ones too)
+  return out; }
+// a force's slot: world offsets of each model's ground origin from its spot, for its make-up and place (zoom never changes it)
+function tmPlan(c, ents, A, env, self){
+  const R = TM_RK*HS0, gap = R*(c.air ? 0.14 : 0.08), L0 = ents[0], rel = {}; rel[L0.t] = [0, 0];
+  let left = L0.bw[0], right = L0.bw[2]; const lh = L0.bw[3] - L0.bw[1];
+  ents.forEach((q, i) => { if (!i) return; if (i % 2){ const x = left - gap - q.bw[2]; rel[q.t] = [x, lh*0.16]; left = x + q.bw[0]; } else { const x = right + gap - q.bw[0]; rel[q.t] = [x, -lh*0.12]; right = x + q.bw[2]; } });
+  const gb = [Infinity, Infinity, -Infinity, -Infinity]; for (const q of ents){ const r = rel[q.t]; gb[0] = Math.min(gb[0], r[0] + q.bw[0]); gb[1] = Math.min(gb[1], r[1] + q.bw[1]); gb[2] = Math.max(gb[2], r[0] + q.bw[2]); gb[3] = Math.max(gb[3], r[1] + q.bw[3]); }
+  const gw = gb[2] - gb[0], gh = gb[3] - gb[1], own = env.plates.find(o => o.c === c), s0 = 180/HS0, pb = own ? own.b : [-24, -12, 24, 12];
+  const pref = [(pb[0] + pb[2])/2/s0, (pb[3] + 3)/s0];   // just under its own plate (as it stands at 180 hexPx)
+  const done = (ox, oy) => { const off = {}; for (const q of ents) off[q.t] = [ox + rel[q.t][0], oy + rel[q.t][1]]; return {off, box:[A[0] + ox + gb[0], A[1] + oy + gb[1], A[0] + ox + gb[2], A[1] + oy + gb[3]]}; };
+  if (c.moving) return done(pref[0] - (gb[0] + gb[2])/2, pref[1] - gb[1]);
+  // the reference zooms: from where they are fully in (below it a model that ends up under a counter or a name fades out) to the closest
+  const zs = [130, 180, 240], zw = [1, 0.7, 0.5], obs = zs.map(hz => tmObstacles(A, c, env, hz, self)), wetA = isWet(A[0], A[1]);
+  const others = env.plates.filter(o => o.c !== c && Math.hypot(o.a[0] - A[0], o.a[1] - A[1]) < R*4).map(o => [o.a[0] - A[0] + (o.b[0] + o.b[2])/2/s0, o.a[1] - A[1] + (o.b[1] + o.b[3])/2/s0]);
+  const mine = [(pb[0] + pb[2])/2/s0, (pb[1] + pb[3])/2/s0];
+  let best = null, bc = Infinity;
+  for (let iy = -5; iy <= 6; iy++) for (let ix = -6; ix <= 6; ix++){
+    const cx = pref[0] + ix*R*0.2, top = pref[1] + iy*R*0.15, ox = cx - (gb[0] + gb[2])/2, oy = top - gb[1];
+    const dx = (cx - pref[0])*s0, dy = (top - pref[1])*s0; let cost = (dx*dx + dy*dy*(iy < 0 ? 1.4 : 1))*0.12;
+    const mx = cx, my = top + gh/2, dm = Math.hypot(mx - mine[0], my - mine[1]); for (const o of others) if (Math.hypot(mx - o[0], my - o[1]) < dm) cost += 2500;   // never nearer another counter than its own
+    for (let z = 0; z < zs.length && cost < bc; z++){ const s = zs[z]/HS0, b = [(ox + gb[0])*s, (oy + gb[1])*s, (ox + gb[2])*s, (oy + gb[3])*s];
+      for (const o of obs[z]){ const w = Math.min(b[2], o[2]) - Math.max(b[0], o[0]), h = Math.min(b[3], o[3]) - Math.max(b[1], o[1]); if (w > 0 && h > 0) cost += (20 + w*h)*o[4]*zw[z]; } }
+    if (cost >= bc) continue;
+    for (const q of ents){ const wx = A[0] + ox + rel[q.t][0], wy = A[1] + oy + rel[q.t][1], sea = q.sea, w0 = isWet(wx, wy); if (sea ? !w0 : (w0 && !wetA)) cost += 1e6; }   // ships on the water, the rest ashore
+    if (cost < bc){ bc = cost; best = [ox, oy]; } }
+  return done(best[0], best[1]); }
 function troopModels(clusters, clBox, hexPx, now){
   TMDBG.length = 0; if (!tmOn() || !S || !window.U3D || !U3D.map) return;
-  const fa = smooth01((hexPx - 40)/16); if (fa <= 0) return;
-  const low = SET.fx === 'low' || FXG.k < 0.3, nMax = hexPx >= 120 ? (low ? 2 : 3) : hexPx >= 60 ? 2 : 1; let budget = low || afxReduced() || FXG.k < 0.6 ? 48 : 90;
-  const ov = (p, o) => p[0] < o[2] && p[2] > o[0] && p[1] < o[3] && p[3] > o[1], area = (p, o) => { const w = Math.min(p[2], o[2]) - Math.max(p[0], o[0]), h = Math.min(p[3], o[3]) - Math.max(p[1], o[1]); return w > 0 && h > 0 ? w*h : 0; };
+  const fa = tmFade(hexPx); if (fa <= 0) return;
+  const low = SET.fx === 'low' || FXG.k < 0.3, nMax = low ? 2 : 3; let left = low || afxReduced() || FXG.k < 0.6 ? 18 : 34;
+  const lut = tmLut(viewLight()); TMNEW = 4;
   const on = clusters.filter(c => isFinite(c.x) && isFinite(c.y) && c.x > -150 && c.y > -150 && c.x < cw + 150 && c.y < ch + 150);
-  const cores = on.map(c => { const b = clBox(c); return {c, core:b.core, box:b}; }), taken = (HQBOX || []).map(q => [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]), hud = hudRects();
-  // the city markers and names near the counters (models keep off the markers; the names, drawn over them, a little)
-  const kl = Math.min(zoomK(hexPx), 2), marks = [], seen = new Set();
-  for (const c of on){ const P = G.P[c.at]; if (!P || seen.has(c.at) || !(P.city || isCapital(c.at))) continue; seen.add(c.at); const [mx, my] = toScreen(P.x, P.y), R = (isCapital(c.at) ? 8.7 : 4.6)*kl;
-    marks.push([mx - R, my - R, mx + R, my + R]); const nm = [mx - 34, my + R, mx + 34, my + R + 15]; nm.nm = true; marks.push(nm); }
+  const anc = c => { const lead = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]); if (c.air){ const base = c.list[0].air && c.list[0].air.base, Pm = G.P[base != null ? base : c.at]; return Pm ? [Pm.x, Pm.y] : screenToWorld(c.x, c.y); } return dispPos(lead); };
+  let env = null; const tlOk = !!TMLB && Math.abs(TMLB.s/view.s - 1) < 0.08;
+  const mkEnv = () => { if (env) return env; ctx.save();
+    const plates = on.map(o => { const a = anc(o), [ax, ay] = toScreen(a[0], a[1]), q = clBox(o).core; return {c:o, a, b:[q[0] - ax, q[1] - ay, q[2] - ax, q[3] - ay]}; });
+    const hq = (HQBOX || []).map(q => { const cx = (q[0] + q[2])/2, cy = (q[1] + q[3])/2; return {a:screenToWorld(cx, cy), b:[q[0] - cx - 2, q[1] - cy - 2, q[2] - cx + 2, q[3] - cy + 2]}; });
+    const [w0, h0] = screenToWorld(-200, -200), [w1, h1] = screenToWorld(cw + 200, ch + 200), cities = [], pnames = [];
+    for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || P.x < w0 || P.x > w1 || P.y < h0 || P.y > h1) continue; const cap = isCapital(p), tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0;
+      if (cap || P.city){ const f = cap ? 12.5 : 10.5 + tier*0.6; ctx.font = `${cap || tier === 2 ? 600 : 500} ${f}px ${BODY}`; cities.push({x:P.x, y:P.y, mr:cap ? 8.7 + tier : [4.6, 5.4, 6.4][tier], nw:ctx.measureText(P.cityName || '').width + 6, nf:f}); }
+      else { ctx.font = `400 10px ${BODY}`; const q = G.lakeLab && G.lakeLab.get(p); pnames.push({x:q ? q[0] : P.x, y:q ? q[1] : P.y, nw:ctx.measureText(P.name).width + 6}); } }
+    ctx.restore(); const labels = TMLB ? TMLB.pl.filter(q => G.P[q.p]).map(q => ({a:[G.P[q.p].x, G.P[q.p].y], b:q.o})) : [];
+    return (env = {plates, hq, cities, pnames, labels, now}); };
+  // last frame's names and city markers, moved to this view (they are placed after the models; a model mostly under one fades out)
+  const lb = [], hidAt = []; if (TMLB){ const f = view.s/TMLB.s; for (const q of TMLB.b){ const cx = ((q[0] + q[2])/2 - TMLB.x)*f + view.x, cy = ((q[1] + q[3])/2 - TMLB.y)*f + view.y, hw = (q[2] - q[0])/2, hh = (q[3] - q[1])/2; lb.push([cx - hw, cy - hh, cx + hw, cy + hh]); } }
+  for (const c of on) hidAt.push(clBox(c).core); for (const q of HQBOX || []) hidAt.push(q);
   const groups = [];
   // yours first (the clusters list ends with yours), then the selected and fighting ones
-  const order = on.slice().reverse();
-  for (const c of order){ if (budget <= 0) break;
+  for (const c of on.slice().reverse()){ if (left <= 0) break;
     if (c.air && c.moving) continue;   // wings in flight keep their flat icons and contrails
     if (c.owner === NEUTRAL && !(sel.prov === c.at || sel.target === c.at || S.battles.includes(c.at))) continue;   // independent garrisons: their plate alone
-    const types = tmmTypes(c, Math.min(nMax, budget)); if (!types.length) continue;
+    const types = tmmTypes(c, nMax); if (!types.length) continue;
     const lead = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), mS = c.air ? null : MOV.get(lead.id);
     const foe = !c.air && S.battles.includes(c.at) ? on.find(o => o.at === c.at && o !== c && !o.air && atWar(o.owner, c.owner)) : null;
     let ang = foe ? Math.atan2(foe.y - c.y, foe.x - c.x) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // in a battle at the enemy; marching (or at rest) the way it went
     if (mS && (c.moving || mS.halt != null) && isFinite(mS.hd)){ TMH.set(lead.id, mS.hd); if (TMH.size > 3000) TMH.clear(); }
     if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B){ const [tx, ty] = toScreen(B.x, B.y); if (Math.hypot(tx - c.x, ty - c.y) > 1) ang = Math.atan2(ty - c.y, tx - c.x); } }   // ordered off but not yet under way: toward its next stop
     if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
-    const [wx] = screenToWorld(c.x, c.y), nb = Math.round(nightAtX(wx)*3), ents = [];
-    for (const t of types){ const d = tmDir(lead.id, t, ang, now), s = tmScale(t, hexPx), e = tmmFrame(t, d, s, nb); if (e){ const f = s*dpr/e[4]; ents.push({t, d, e, f, bb:e[5].map(v => v*f)}); budget--; } }
-    if (!ents.length) continue;
-    // the group round its lead (ground origins; tight boxes): the lead, a second model beside it a little in front, a third on its other side a
-    // little behind, each overlapping its neighbour by at most an eighth of its width
-    const L0 = ents[0]; L0.gx = 0; L0.gy = 0;
-    if (ents[1]){ const q = ents[1]; q.gx = L0.bb[0] - q.bb[2] + (q.bb[2] - q.bb[0])*0.12; q.gy = (L0.bb[3] - L0.bb[1])*0.16; }
-    if (ents[2]){ const q = ents[2]; q.gx = L0.bb[2] - q.bb[0] - (q.bb[2] - q.bb[0])*0.12; q.gy = -(L0.bb[3] - L0.bb[1])*0.1; }
-    const gb = [Infinity, Infinity, -Infinity, -Infinity]; for (const q of ents){ gb[0] = Math.min(gb[0], q.gx + q.bb[0]); gb[1] = Math.min(gb[1], q.gy + q.bb[1]); gb[2] = Math.max(gb[2], q.gx + q.bb[2]); gb[3] = Math.max(gb[3], q.gy + q.bb[3]); }
-    const gw = gb[2] - gb[0], gh = gb[3] - gb[1], sea = ents.some(q => q.e[3].sea);
-    // where the group stands round its plate (the plate as drawn, slid aside or not): tucked under its lower left corner, under its lower right,
-    // against its left or right side, or under its middle. The plate overlaps the models' tops a little, so it reads as their label
-    const core = clBox(c).core, K = core, pw = K[2] - K[0], ph = K[3] - K[1], tuck = Math.min(gh*0.2, ph*0.3, 6, ...ents.map(q => (q.bb[3] - q.bb[1])*0.22));
-    const spots = [[K[0] + pw*0.55 - gw, K[3] - tuck, 0], [K[2] - pw*0.55, K[3] - tuck, 6], [K[0] - gw + 3, K[3] - gh*0.62, 10], [K[2] - 3, K[3] - gh*0.62, 12], [K[0] + pw/2 - gw/2, K[3] - tuck*0.6, 18]];   // [left, top, base cost]
-    const pref = foe ? (foe.x < c.x ? [1, 3] : [0, 2]) : null, key = lead.id, E = TMA.get(key); let E0;
-    let best = null, bc = Infinity;
-    spots.forEach(([gx, gy, b0], i) => { const r = [gx, gy, gx + gw, gy + gh]; let c0 = b0 + (pref && !pref.includes(i) ? 400 : 0) + (E && E.s === i ? (c.moving ? -400 : -80) : 0);
-      if (r[0] < 4 || r[2] > cw - 4 || r[1] < 4 || r[3] > ch - 4) c0 += 200;
-      for (const o of hud) c0 += area(r, o)*2;
-      for (const o of cores) if (o.c !== c){ const a = area(r, o.core); if (a) c0 += 60 + a*1.5; }
-      for (const o of taken){ const a = area(r, o); if (a) c0 += 40 + a*1.2; }
-      for (const o of marks){ const a = area(r, o); if (a) c0 += 30 + a*(o.nm ? 0.25 : 1); }
-      if (sea){ let dry = 0; for (const q of ents){ const [wx1, wy1] = screenToWorld(gx - gb[0] + q.gx, gy - gb[1] + q.gy); if (!isWet(wx1, wy1)) dry++; } c0 += dry*600; }   // ships stay on the water
-      if (c0 < bc){ bc = c0; best = [gx - gb[0], gy - gb[1], i, r]; } });
-    // the spot kept (hysteresis above)
-    const ox = best[0], oy = best[1], sp = dispPos(lead), [tx, ty] = toScreen(sp[0], sp[1]), u = hexPx, okT = isFinite(tx) && isFinite(ty);
-    E0 = TMA.get(key); if (E0) { E0.t = now; E0.s = best[2]; } else TMA.set(key, {t:now, s:best[2]});
-    taken.push([ox + gb[0], oy + gb[1], ox + gb[2], oy + gb[3]]);
-    for (const q of ents){ const w = q.e[0].width/dpr*q.f, h = q.e[0].height/dpr*q.f; let x = ox + q.gx, y = oy + q.gy;
-      // each model hangs off the lead force's true spot (its spring-smoothed position) and its offset from it follows a critically damped spring:
-      // when the counter is laid out elsewhere (a stack halting and joining the province's row, a plate sliding aside, a new spot, a model joining
-      // the group) the models glide there, setting off and arriving softly, never jumping. The offset is kept in map units, so a zoom is never lagged
-      if (okT){ const mk = key + '|' + q.t, M = TMA.get(mk), o1x = (x - tx)/u, o1y = (y - ty)/u;
-        if (!M || now - M.t > 400) TMA.set(mk, {ox:o1x, oy:o1y, vx:0, vy:0, t:now});
-        else { let dt = Math.min(0.25, Math.max(0, (now - M.t)/1000)); const wk = 7;
-          while (dt > 1e-4){ const st = Math.min(dt, 1/120); M.vx += (wk*wk*(o1x - M.ox) - 2*wk*M.vx)*st; M.vy += (wk*wk*(o1y - M.oy) - 2*wk*M.vy)*st; M.ox += M.vx*st; M.oy += M.vy*st; dt -= st; }
-          M.t = now; x = tx + M.ox*u; y = ty + M.oy*u; } }
-      groups.push({...q, x, y, w, h, ox:q.e[1]*q.f, oy:q.e[2]*q.f, c, ang, id:lead.id, core:K, tp:[tx, ty, ox + q.gx, oy + q.gy]}); } }
-  if (now - TMSW > 2000){ TMSW = now; for (const [k, E] of TMA) if (now - E.t > 3000) TMA.delete(k); for (const [k, E] of TMD) if (now - E.t > 3000) TMD.delete(k); }
+    const A = anc(c), ents = [];
+    for (const t of types){ const M = U3D.map(t); if (!M) continue; const d = tmDir(lead.id, t, ang, now), k = tmWpm(t)/M.ppm, b = M.bb[d]; ents.push({t, d, sea:M.sea, bw:[(b[0] - M.ox)*k, (b[1] - M.oy)*k, (b[2] - M.ox)*k, (b[3] - M.oy)*k]}); }
+    if (!ents.length) continue; left--;
+    // the slot, kept while the make-up and place hold (a new one is glided to, never jumped to)
+    const sig = c.at + '|' + (c.moving ? 'm' : c.air ? 'a' + (c.list[0].air && c.list[0].air.base) : 's') + '|' + ents.map(q => q.t + ':' + q.d).join(',') + (foe ? '|f' : '');
+    let E = TMA.get(lead.id);
+    if ((!E || E.sig !== sig) && !tlOk){ if (!E) continue; }   // a slot is only worked out against names placed at about this zoom (just after a jump: next frame)
+    else if (!E || E.sig !== sig){ const pl = tmPlan(c, ents, A, mkEnv(), lead.id), from = E && now - E.t < 1000 ? E.cur : null; E = {sig, off:pl.off, box:pl.box, A0:A, from, t0:now, t:now, cur:{}, al:E && now - E.t < 1000 ? E.al : {}}; TMA.set(lead.id, E); }
+    E.t = now; if (E.A0[0] !== A[0] || E.A0[1] !== A[1]){ const dx = A[0] - E.A0[0], dy = A[1] - E.A0[1]; E.box = [E.box[0] + dx, E.box[1] + dy, E.box[2] + dx, E.box[3] + dy]; E.A0 = A; }   // (its slot's box follows a marching force)
+    const u = E.from ? smooth01((now - E.t0)/650) : 1;
+    for (const q of ents){ const o = E.off[q.t]; if (!o) continue; let ox = o[0], oy = o[1]; const f0 = E.from && E.from[q.t]; if (f0 && u < 1){ ox = f0[0] + (ox - f0[0])*u; oy = f0[1] + (oy - f0[1])*u; }
+      E.cur[q.t] = [ox, oy]; const wx = A[0] + ox, wy = A[1] + oy, [x, y] = toScreen(wx, wy); groups.push({...q, wx, wy, x, y, c, E, ang, id:lead.id}); } }
+  if (now - TMSW > 2000){ TMSW = now; for (const [k, E] of TMA) if (now - E.t > 5000) TMA.delete(k); for (const [k, E] of TMD) if (now - E.t > 5000) TMD.delete(k); if (U3D.mapTrim) U3D.mapTrim(now); }
   if (!groups.length) return;
   groups.sort((p, q) => p.y - q.y);   // back to front
-  const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingQuality = 'high';
-  // on the water: a soft shade under each hull and, under way, the Kelvin V behind the stern (land models and parked aircraft carry their baked
-  // sun and sky shadows)
-  for (const q of groups){ if (!q.e[3].sea) continue; const bw = q.bb[2] - q.bb[0];
-    if (q.c.moving){ const Ls = bw*0.75; ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.ang + Math.PI/2); ctx.globalAlpha = fa*0.7; ctx.drawImage(kelvinSprite(), -Ls*0.4, -Ls*0.1, Ls*0.8, Ls*1.5); ctx.restore(); }
-    const sw = bw*0.95, sh = Math.max(4, (q.bb[3] - q.bb[1])*0.75); ctx.globalAlpha = fa*0.22; ctx.drawImage(tmShadow(), q.x - sw/2 + bw*0.04, q.y - sh*0.35, sw, sh); }
+  const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingQuality = 'high'; ctx.imageSmoothingEnabled = true;
+  const dt = Math.min(0.1, Math.max(0, (now - (troopModels.t || now))/1000)); troopModels.t = now;
   ctx.globalAlpha = fa;
-  for (const q of groups){ let X = q.x - q.ox, Y = q.y - q.oy; if (q.w*dpr < 64 && !q.c.moving){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
-    ctx.drawImage(q.e[0], X, Y, q.w, q.h);
-    if (TMDBG.on){ const bx = [q.x + q.bb[0], q.y + q.bb[1], q.x + q.bb[2], q.y + q.bb[3]]; TMDBG.push({t:q.t, x:+q.x.toFixed(2), y:+q.y.toFixed(2), box:bx.map(v => +v.toFixed(1)), cell:[X, Y, X + q.w, Y + q.h].map(v => +v.toFixed(1)), w:Math.round(bx[2] - bx[0]), h:Math.round(bx[3] - bx[1]), d:q.d, id:q.id, ids:q.c.list.map(a => a.id), owner:q.c.owner, moving:q.c.moving ? 1 : 0, air:q.c.air ? 1 : 0, sea:q.e[3].sea ? 1 : 0, core:q.core.map(v => +v.toFixed(1)), tp:q.tp.map(v => +v.toFixed(1))}); } }
+  for (const q of groups){
+    // its box at this zoom: how much of it a counter, a marker or a name covers (the model fades out under them, it never moves for them)
+    const vs = view.s, b = [q.x + q.bw[0]*vs, q.y + q.bw[1]*vs, q.x + q.bw[2]*vs, q.y + q.bw[3]*vs], ar = Math.max(1, (b[2] - b[0])*(b[3] - b[1]));
+    let cov = 0; for (const o of hidAt) cov += Math.max(0, Math.min(b[2], o[2]) - Math.max(b[0], o[0]))*Math.max(0, Math.min(b[3], o[3]) - Math.max(b[1], o[1]));
+    for (const o of lb) cov += 0.7*Math.max(0, Math.min(b[2], o[2]) - Math.max(b[0], o[0]))*Math.max(0, Math.min(b[3], o[3]) - Math.max(b[1], o[1]));
+    const want = cov/ar > 0.3 ? 0 : 1, a0 = q.E.al[q.t] ?? (q.E.from ? 0 : want); q.E.al[q.t] = want > a0 ? Math.min(want, a0 + dt*4) : Math.max(want, a0 - dt*4); q.al = q.E.al[q.t]; q.b = b; }
+  // on the water: a soft shade under each hull and, under way, the Kelvin V behind the stern (land models and parked aircraft carry their baked shadows)
+  for (const q of groups){ if (!q.sea || q.al <= 0.01) continue; const bw = q.b[2] - q.b[0];
+    if (q.c.moving){ const Ls = bw*0.75; ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.ang + Math.PI/2); ctx.globalAlpha = fa*0.7*q.al; ctx.drawImage(kelvinSprite(), -Ls*0.4, -Ls*0.1, Ls*0.8, Ls*1.5); ctx.restore(); }
+    const sw = bw*0.95, sh = Math.max(4, (q.b[3] - q.b[1])*0.75); ctx.globalAlpha = fa*0.22*q.al; ctx.drawImage(tmShadow(), q.x - sw/2 + bw*0.04, q.y - sh*0.35, sw, sh); }
+  ctx.globalAlpha = fa;
+  for (const q of groups){ const r = tmDraw(q.t, q.d, q.x, q.y, lut, now, q.al, !q.c.moving); if (!r) continue;
+    if (TMDBG.on){ const core = clBox(q.c).core; TMDBG.push({t:q.t, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:+q.wx.toFixed(3), wy:+q.wy.toFixed(3), box:r.box.map(v => +v.toFixed(1)), cell:r.cell.map(v => +v.toFixed(1)), w:Math.round(r.box[2] - r.box[0]), h:Math.round(r.box[3] - r.box[1]), d:q.d, lvl:r.lvl, a:+q.al.toFixed(2),
+      id:q.id, ids:q.c.list.map(a => a.id), owner:q.c.owner, moving:q.c.moving ? 1 : 0, air:q.c.air ? 1 : 0, sea:q.sea ? 1 : 0, core:core.map(v => +v.toFixed(1)), tp:[q.c.x, q.c.y].map(v => +v.toFixed(1))}); } }
   ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
 /* ---------------- Unit art: top-down pictures (assets/art/u-*.webp) ----------------
    UART[type] = [image, faces down, size as a share of a formation figure's height]. The pictures are drawn nose up, except the self-propelled gun,
@@ -8371,6 +8420,10 @@ const plateFont = fz => `italic 800 ${fz}px "Barlow Condensed", ${BODY}`;
 try { if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { PLATE_TW.clear(); if (typeof PLATEC !== 'undefined') PLATEC.clear(); }); } catch (e) {}
 const plateGrow = () => 1, PLATE_K = 1;   // (no growth with zoom: one size everywhere)
 let HUDR = {t:0, r:[]};
+let RAILR = {t:-1e9, r:[]};
+function railRects(){ const now = performance.now(); if (now - RAILR.t < 400) return RAILR.r; const e = document.querySelector('#rail'), out = [];
+  if (e && !e.hidden && getComputedStyle(e).display !== 'none'){ const cr = cv.getBoundingClientRect(), r = e.getBoundingClientRect(); if (r.width > 2 && r.height > 2) out.push([r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]); }
+  return (RAILR = {t:now, r:out}).r; }
 function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) return HUDR.r; const cr = cv.getBoundingClientRect(), out = [];
   for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || getComputedStyle(e).display === 'none') continue;
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
@@ -9372,18 +9425,47 @@ function draw(now){
         if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = [Math.round(bc)]; tagDbg.d = bt[2]; tagDbg.e = bt[3]; tagDbg.g = gcode(bt[0], bt[1]); tagDbg.th = Math.round(th0*180/Math.PI); tagDbg.n = n; } } } }
   // plate declutter: a plate overlapping another is moved down (or up, whichever is shorter) and tied to its true spot by a leader line (yours stay put);
   // your HQ is laid down first, so every plate keeps clear of it
-  { const on = clusters.filter(c => c.x > -60 && c.y > -60 && c.x < cw + 60 && c.y < ch + 60).slice(0, 150), placed = (HQBOX || []).map(q => ({c:null, x0:q[0] - 1, x1:q[2] + 1, y0:q[1] - 1, y1:q[3] + 1}));
+  { const on = clusters.filter(c => c.x > -60 && c.y > -60 && c.x < cw + 60 && c.y < ch + 60).slice(0, 150), placed = (HQBOX || []).map(q => ({c:null, x0:q[0] - 1, x1:q[2] + 1, y0:q[1] - 1, y1:q[3] + 1})).concat(railRects().map(q => ({c:null, hud:true, x0:q[0], x1:q[2], y0:q[1], y1:q[3]})));   // (and the shield buttons down the right edge: other powers' plates slide off them)
     const selC = c => c.list.some(a => a.id === sel.army || sel.group.includes(a.id)) ? 1 : 0; on.sort((a, b) => (selC(b) - selC(a)) || ((b.owner === PLAYER) - (a.owner === PLAYER)));   // the selected force first: it never slides away
     for (const c of on){ const d = plateDims(c.n, k, plateQuiet(c), !plateQuiet(c) && clTwo(c)), hw = d.w/2 + 2, top = d.h/2 + d.up - 3, bot = d.h/2 + d.bars + 2, ay = c.y;
       const slide = sgn => { let y = ay; for (let it = 0; it < 8; it++){ let mv = 0;
-          for (const o of placed){ const ox = Math.min(c.x + hw, o.x1) - Math.max(c.x - hw, o.x0), oy = Math.min(y + bot, o.y1) - Math.max(y - top, o.y0); if (ox > 0 && oy > 0) mv = Math.max(mv, sgn > 0 ? o.y1 - (y - top) : (y + bot) - o.y0); }
+          for (const o of placed){ if (o.hud && c.owner === PLAYER) continue; const ox = Math.min(c.x + hw, o.x1) - Math.max(c.x - hw, o.x0), oy = Math.min(y + bot, o.y1) - Math.max(y - top, o.y0); if (ox > 0 && oy > 0) mv = Math.max(mv, sgn > 0 ? o.y1 - (y - top) : (y + bot) - o.y0); }
           if (!mv) return y; y += sgn*(mv + 4); } return y; };
       const dn = slide(1); if (dn !== ay){ const up = slide(-1); c.y = ay - up < dn - ay ? up : dn; c.ax = c.x; c.ay = ay; }
       placed.push({c, x0:c.x - hw, x1:c.x + hw, y0:c.y - top, y1:c.y + bot}); } }
   // counters claim screen space before labels: city and province names give way to them (capital names always show)
   for (const c of clusters){ if (c.x < -60 || c.y < -60 || c.x > cw + 60 || c.y > ch + 60) continue; boxes0.push(clBox(c)); }
+  { const Dp = plateDims(1, k, false); for (const p of S.battles){ const cs = clusters.filter(c => c.at === p && !c.moving && !c.air); if (cs.length < 2) continue;   // a battle's strength bar under its plates: the names keep clear of it too
+      const x = cs.reduce((s0, c) => s0 + c.x, 0)/cs.length, y = cs.reduce((s0, c) => s0 + c.y, 0)/cs.length, byy = y + Dp.h/2 + Dp.bars + 5, bw = 34*kl, bh = 3*kl;
+      const bb = [x - bw/2 - 2, byy - 2, x + bw/2 + 2, byy + bh + 2]; bb.unit = true; bb.at = p; boxes0.push(bb); } }
   for (const q of HQBOX || []){ const tb = [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); }   // your HQ: the names keep a little clear of it
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
+  // paths (under the troop models, the names and the counters)
+  const sa = sel.army !== null ? armyById(sel.army) : null;
+  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...dispPos(a))];
+    if (a.to !== null && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
+    path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
+    const lastPt = pts[pts.length - 1];
+    ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(now/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    const [lx, ly] = lastPt; ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
+  { const lo = sel.lastOrder && now - sel.lastOrder.t < 6000 ? sel.lastOrder : null, k0 = lo ? 1 - Math.max(0, (now - lo.t - 3000)/3000) : 0;
+    for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null)){ const hot = lo && lo.ids.includes(a.id);
+      drawPath(a, a.path.length ? a.path : [a.to], hot ? `rgba(226,162,61,${(0.5 + 0.45*k0).toFixed(2)})` : 'rgba(226,162,61,0.5)', hot ? 1.8 + 1.0*k0 : 1.6); } }
+  // the selected force's routes: ph 0 = the lines (under the counters, so no route runs across a plate), ph 1 = the route chip and air planning (over them)
+  const drawSelPaths = ph => { if (!sa) return;
+    if (sa.air){ if (ph !== 1) return; const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS0*SQ3*view.s;
+      ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(111,176,232,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(111,176,232,.05)'; ctx.fill(); ctx.restore();
+      if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target);
+        ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
+        ctx.font = `600 11px ${BODY}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
+        roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
+      return; }
+    if (ph === 1){ if (sel.target !== null && targetPath && targetPath.length) routeChip(sa, sel.target, targetPath); return; }
+    if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3);
+    if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3, sel.targetPt); if (!sa.air){ riverMarks(sa, targetPath); railMarks(sa, targetPath); } }
+    else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
+  drawSelPaths(0);
   try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } }   // under the names, markers, HQ, paths and counters drawn below
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
   { const nk = [view.s, Math.round(view.x), Math.round(view.y), cw, ch, geoVer].join('|'); if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
@@ -9517,6 +9599,8 @@ function draw(now){
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else { ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
     if (!trCity) trays = placeTrays(trq, boxes, LPL, true, hexPx); trays = trays.concat(placeTrays(trq, boxes, LPL, false, hexPx));
+    TMLB = {s:view.s, x:view.x, y:view.y, b:boxes.filter(q => !q.unit).map(q => [q[0], q[1], q[2], q[3]]).concat(marks.map(m => [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r])),   // (the troop models fade out under them next frame,
+      pl:[...LPL].map(([p, b]) => { const [sx, sy] = toScreen(G.P[p].x, G.P[p].y); return {p, o:[b[0] - sx, b[1] - sy, b[2] - sx, b[3] - sy]}; })};   // and their slots keep clear of each province's name where it was placed)
     ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   if (!pnDone) placePN(false);   // (once the province names are up, the other powers' names come last)
   for (const T of trays) drawTray(T, now, hexPx, kl);
@@ -9541,33 +9625,7 @@ function draw(now){
     const arr = [...sides.entries()].sort((s1, s2) => (s1[0] === PLAYER ? -1 : 0) - (s2[0] === PLAYER ? -1 : 0)), tot = arr.reduce((s0, e) => s0 + e[1], 0) || 1;
     if (arr.length > 1 && nP >= 2){ const bw = 34*kl, bh = 3*kl; let bxw = x - bw/2; roundRect(ctx, bxw - 1, byy - 1, bw + 2, bh + 2, (bh + 2)/2); ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fill();
       for (const [o, pw] of arr){ const w2 = bw*pw/tot; ctx.fillStyle = mapCol(o); ctx.fillRect(bxw, byy, w2, bh); bxw += w2; } } }
-  // paths
-  const sa = sel.army !== null ? armyById(sel.army) : null;
-  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...dispPos(a))];
-    if (a.to !== null && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
-    path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
-    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
-    const lastPt = pts[pts.length - 1];
-    ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(now/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    const [lx, ly] = lastPt; ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
-  { const lo = sel.lastOrder && now - sel.lastOrder.t < 6000 ? sel.lastOrder : null, k0 = lo ? 1 - Math.max(0, (now - lo.t - 3000)/3000) : 0;
-    for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null)){ const hot = lo && lo.ids.includes(a.id);
-      drawPath(a, a.path.length ? a.path : [a.to], hot ? `rgba(226,162,61,${(0.5 + 0.45*k0).toFixed(2)})` : 'rgba(226,162,61,0.5)', hot ? 1.8 + 1.0*k0 : 1.6); } }
-  // the selected force's routes: ph 0 = the lines (under the counters, so no route runs across a plate), ph 1 = the route chip and air planning (over them)
-  const drawSelPaths = ph => { if (!sa) return;
-    if (sa.air){ if (ph !== 1) return; const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS0*SQ3*view.s;
-      ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(111,176,232,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(111,176,232,.05)'; ctx.fill(); ctx.restore();
-      if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target);
-        ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
-        ctx.font = `600 11px ${BODY}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
-        roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
-      return; }
-    if (ph === 1){ if (sel.target !== null && targetPath && targetPath.length) routeChip(sa, sel.target, targetPath); return; }
-    if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3);
-    if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3, sel.targetPt); if (!sa.air){ riverMarks(sa, targetPath); railMarks(sa, targetPath); } }
-    else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   tutDraw(now, kl);   // the tutorial ring goes under the counters, so it never runs across a stack's number
-  drawSelPaths(0);
   // counters (clustered per owner at low zoom)
   const hitsPrev = hits;   // last frame's plates: smoke and bursts spawn off them (AFX.avoid)
   hits = [];
@@ -11712,7 +11770,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p)}});
-if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMMC.size; }, scale:(t, h) => tmScale(t, h)}; }
+if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMA].map(([k, E]) => [k, E.sig, E.box.map(v => +v.toFixed(2)), Object.fromEntries(Object.entries(E.off).map(([t, v]) => [t, v.map(x => +x.toFixed(2))]))]); }, scale:(t, h) => tmScale(t, h)}; }
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });

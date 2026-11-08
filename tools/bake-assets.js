@@ -21,7 +21,7 @@ const MAP_TYPES = ['sol', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam', '
   const meta = {};
   const pick = process.argv[3] ? process.argv[3].split(',') : MAP_TYPES, old = (() => { try { return JSON.parse(/const MAPMETA = (\{.*\});\n/.exec(fs.readFileSync(path.join(root, 'units3d.js'), 'utf8'))[1]); } catch (e) { return {}; } })();
   for (const t of MAP_TYPES) if (!pick.includes(t) && old[t]) meta[t] = old[t];
-  for (const t of pick){ const a = await p.evaluate(tt => window.U3D.exportMap(tt), t); if (!a){ errs.push('no map atlas ' + t); continue; } save(`units/m-${t}.webp`, a.img); meta[t] = a.meta; }
+  for (const t of pick){ const a = await p.evaluate(tt => window.U3D.exportMap(tt), t); if (!a){ errs.push('no map atlas ' + t); continue; } save(`units/m-${t}.webp`, a.img); save(`units/m-${t}-hi.webp`, a.hi); meta[t] = a.meta; }
   const u3 = path.join(root, 'units3d.js'), src = fs.readFileSync(u3, 'utf8'), re = /const MAPMETA = \{.*\};\n/;
   if (!re.test(src)) errs.push('MAPMETA line not found in units3d.js'); else fs.writeFileSync(u3, src.replace(re, 'const MAPMETA = ' + JSON.stringify(meta) + ';\n'));
   const sizes = fs.readdirSync(out).concat(fs.readdirSync(path.join(out, 'units')).map(f => 'units/' + f)).filter(f => /\.(png|webp)$/.test(f) && (only !== 'map' || /m-/.test(f))).map(f => `${f} ${(fs.statSync(path.join(out, f)).size/1024).toFixed(0)}K`);
