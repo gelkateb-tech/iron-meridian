@@ -7580,107 +7580,143 @@ function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
   ctx.restore();
 }
 const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max(2, hexPx/20)) : 1.35, hexPx/12))*zx(hexPx);   // past the old max zoom figures keep growing
-/* ---------------- Troop models on the map (CoN-style): from the city zoom on, a small 3D model of each force's main unit types stands on the map
-   beside its counter (a rifleman and a 4x4 for motorized infantry, a tank, a howitzer, a frigate in the water, a jet parked at its base...), so the
-   counter reads as the models' label. The models are original procedural three.js designs baked once per direction into camouflaged sheets
-   (assets/units/m-<type>.png, units3d.js MAPMETA; each sheet is fetched the first time a model of its type is wanted). They are planted on the
-   force's (spring-smoothed) spot with their ground origin, sized in screen pixels per metre tied to the map (they grow as you zoom in), carry a baked
-   south-east shadow plus a soft contact shadow (a wake at sea), face the way they move (16 directions, with hysteresis) and are never offset per
-   frame, so they do not shake. They are drawn before the names, city markers, the HQ, the paths and the counters, which all paint over them: a model
-   never hides a counter, a name or your HQ. Wings in flight keep their flat icons. Settings: 'Troop models'. */
+/* ---------------- Troop models on the map (CoN-style): from the city zoom on, small 3D models of each force's main unit types stand on the map
+   tucked against its counter (a rifleman and a 4x4 for motorized infantry, a tank, a howitzer, a frigate in the water, a jet parked at its base...),
+   so the counter reads as their label; a mixed stack shows up to three different models (a tank, a rifleman and an IFV). The models are original
+   procedural three.js designs (units3d.js) in shader-made camouflage, rendered at twice the size with soft sun and sky shadows and baked once per
+   direction into sheets (assets/units/m-<type>.webp, units3d.js MAPMETA with each direction's tight box; each sheet is fetched the first time a
+   model of its type is wanted). They are planted with their ground origin on the force's (spring-smoothed) spot, sized like the map (they grow as
+   you zoom in, easing off to about a counter's width close in; a soldier stands about half a tank's length tall), face the way they march,
+   their enemy in a battle or a fixed bearing of their own at rest (16 directions, with hysteresis), and are never offset per frame, so they do not
+   shake. Each group takes the spot round its plate that covers the fewest other counters, models and your HQ, and keeps it (it moves only for a
+   clearly better one, gliding there). They are drawn before the names, city markers, the HQ, the paths and the counters, which all paint over
+   them. Independent garrisons show none unless selected or fighting; wings in flight keep their flat icons. Settings: 'Troop models'. */
 const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
   jet:['jet'], bomb:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
-// screen px per metre per hexPx of each model (a soldier is drawn larger than true scale, aircraft smaller, so each reads at the counter's size)
-const TMG = {sol:0.19, hmv:0.075, truck:0.062, tank:0.064, ifv:0.066, art:0.062, mlrs:0.07, sam:0.056, frig:0.095, crui:0.095, sub:0.095, carr:0.095, jet:0.026, int:0.026, heli:0.034, drone:0.04};
-const TMMC = new Map(), TMA = new Map(), TMD = new Map(), TMDBG = []; let TMSH = null, TMSW = 0;
+// each model's size as [characteristic length in metres, share of the reference size R]: a tank's length is R, a soldier stands half R tall
+const TMG = {sol:[1.8, 0.5], hmv:[5.2, 0.58], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.84], art:[11, 1.05], mlrs:[8, 0.84], sam:[9.6, 0.94],
+  frig:[7.4, 1.3], crui:[8.8, 1.5], sub:[8.6, 1.2], carr:[11, 1.85], jet:[17, 1.05], int:[17, 1.05], heli:[17, 0.95], drone:[10.6, 0.72]};
+const TMMC = new Map(), TMA = new Map(), TMD = new Map(), TMH = new Map(), TMDBG = []; let TMSH = null, TMSW = 0;
 const tmOn = () => SET.models !== false;
-// the screen scale of a model type (px per metre): grows with the map, a little slower past hexPx 110 (phones close in)
-const tmScale = (t, hexPx) => (TMG[t] || 0.07)*(hexPx < 110 ? hexPx : 110 + (hexPx - 110)*0.45)*Math.min(1, 0.55 + hexPx/110);
+// the reference size R in css px (a tank's length): grows with the map and eases off to about a counter's width close in
+const tmR = hexPx => 72*(1 - Math.exp(-hexPx/100));
+// the screen scale of a model type (css px per metre)
+const tmScale = (t, hexPx) => { const g = TMG[t] || [8, 0.8]; return tmR(hexPx)*g[1]/g[0]; };
 // a model's direction cell pre-scaled once (cached per type, direction, 2^(1/6) size step and night step): [canvas, origin x, origin y (css px), atlas, device px per metre]
 function tmmFrame(t, d, s, nb){ const sb = Math.round(2**(Math.round(Math.log2(s*dpr)*6)/6)*1000)/1000, key = t + '|' + d + '|' + sb + '|' + nb; let e = TMMC.get(key); if (e) return e;
   const A = window.U3D && U3D.map ? U3D.map(t) : null; if (!A) return null; const k = sb/A.ppm, w = Math.max(1, Math.ceil(A.w*k) + 2), h = Math.max(1, Math.ceil(A.h*k) + 2);
   const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-  if (k < 0.5){ const m = document.createElement('canvas'); m.width = Math.ceil(A.w*k*2); m.height = Math.ceil(A.h*k*2); const gm = m.getContext('2d'); gm.imageSmoothingQuality = 'high';   // big steps down in two halves (crisper than one)
-    gm.drawImage(A.cv, 0, d*A.h, A.w, A.h, 0, 0, m.width, m.height); g.drawImage(m, 0, 0, m.width, m.height, 1, 1, A.w*k, A.h*k); }
-  else g.drawImage(A.cv, 0, d*A.h, A.w, A.h, 1, 1, A.w*k, A.h*k);
+  let src = A.cv, sx = 0, sy = d*A.h, sw = A.w, sh = A.h; const tw = A.w*k;
+  while (sw > tw*2.2){ const m = document.createElement('canvas'); m.width = Math.ceil(sw/2); m.height = Math.ceil(sh/2); const gm = m.getContext('2d'); gm.imageSmoothingQuality = 'high';   // big steps down in halves (crisper than one)
+    gm.drawImage(src, sx, sy, sw, sh, 0, 0, sw/2, sh/2); src = m; sx = sy = 0; sw /= 2; sh /= 2; }
+  g.drawImage(src, sx, sy, sw, sh, 1, 1, A.w*k, A.h*k);
+  // a thin dark rim round the model itself (not its soft shadow), so it stands out of the terrain like a rendered miniature
+  try { const id = g.getImageData(0, 0, w, h), px = id.data, rim = g.createImageData(w, h), rp = rim.data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){ const i = (y*w + x)*4; if (px[i + 3] > 150) continue; let n = 0;
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const X = x + ox, Y = y + oy; if (X >= 0 && Y >= 0 && X < w && Y < h && px[((Y*w + X)*4) + 3] > 200) n++; }
+      if (n){ rp[i] = 14; rp[i + 1] = 16; rp[i + 2] = 10; rp[i + 3] = Math.min(255, 90 + n*45); } }
+    const r = document.createElement('canvas'); r.width = w; r.height = h; r.getContext('2d').putImageData(rim, 0, 0); g.globalCompositeOperation = 'destination-over'; g.drawImage(r, 0, 0); g.globalCompositeOperation = 'source-over'; } catch (er) {}
   if (nb){ g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(8,18,32,${Math.min(0.3, 0.1*nb).toFixed(2)})`; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over'; }
-  e = [c, (A.ox*k + 1)/dpr, (A.oy*k + 1)/dpr, A, sb]; if (TMMC.size > 500) TMMC.clear(); TMMC.set(key, e); return e; }
+  const q = sb/A.ppm/dpr, bb = A.bb && A.bb[d] ? A.bb[d].map((v, i) => (v - (i % 2 ? A.oy : A.ox))*q) : [-A.ox*q, -A.oy*q, (A.w - A.ox)*q, (A.h - A.oy)*q];   // the model's own box round its ground origin (css px at this step)
+  e = [c, (A.ox*sb/A.ppm + 1)/dpr, (A.oy*sb/A.ppm + 1)/dpr, A, sb, bb]; if (TMMC.size > 500) TMMC.clear(); TMMC.set(key, e); return e; }
 // the direction cell (of 16) for a heading, with hysteresis: a heading wavering on a boundary never flips the model back and forth
 function tmDir(id, t, ang, now){ const n = 16, raw = (((ang/(Math.PI*2))*n) % n + n) % n, key = id + '|' + t, L = TMD.get(key);
   if (L){ L.t = now; let df = raw - L.d; df -= Math.round(df/n)*n; if (Math.abs(df) < 0.62) return L.d; }
   const d = Math.round(raw) % n; if (L) L.d = d; else TMD.set(key, {d, t:now}); return d; }
-// the soft contact shadow under a model (a blurred ellipse)
+// the soft shade under a ship (a blurred ellipse)
 function tmShadow(){ if (TMSH) return TMSH; const c = document.createElement('canvas'); c.width = 128; c.height = 40; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 2, 64, 64, 62);
   gr.addColorStop(0, 'rgba(0,0,0,.6)'); gr.addColorStop(0.5, 'rgba(0,0,0,.32)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.setTransform(1, 0, 0, 20/64, 0, 0); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (TMSH = c); }
-// which models a stack shows: its unit types by weight (count x hp), the first always, any other only with 18% of the weight; troops embarked at sea
-// ride a transport (drawn as the frigate hull)
+// which models a stack shows: its unit types by weight (count x hp), heaviest first, each other one with 5% of the weight; different models only
+// (each type's main model first, then the second ones: a rifleman, then the 4x4 of motorized infantry); troops embarked at sea ride a transport (the frigate hull)
 function tmmTypes(c, nMax){ const wt = {}; let tot = 0;
   for (const q of c.list){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ const n = count(q); wt.lst = (wt.lst || 0) + n; tot += n; continue; }
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]){ const v = q.u[t]*UNITS[t].hp; wt[t] = (wt[t] || 0) + v; tot += v; } }
-  const ts = Object.keys(wt).sort((a, b) => wt[b] - wt[a]), out = [];
-  const ok = ts.filter((t, i) => TMM[t] && (!i || wt[t] >= tot*0.18));
-  for (const pass of [0, 1, 2]) for (const t of ok){ const m = TMM[t][pass]; if (m && !out.includes(m) && out.length < nMax) out.push(m); }   // each type's main model first (a tank and a rifleman), then their second ones
+  const ok = Object.keys(wt).sort((a, b) => wt[b] - wt[a]).filter((t, i) => TMM[t] && (!i || wt[t] >= tot*0.05)), out = [];
+  for (const pass of [0, 1]) for (const t of ok){ const m = TMM[t][pass]; if (m && !out.includes(m) && out.length < nMax) out.push(m); }
   return out; }
-// one model on its own (a supply truck on its run): planted on (x, y) facing ang, with its contact shadow. Returns how far it has faded in (0: not
-// shown: far, off or still loading), so the caller cross-fades its flat icon
+// a stable resting bearing of a force's own (screen radians): one of the views that show a model's side and front, never all the same way
+const TM_REST = [0.2, 0.32, 0.68, 0.8, 0.12, 0.88].map(f => f*Math.PI);
+const tmRest = id => TM_REST[((id*2654435761) >>> 0) % TM_REST.length];
+// one model on its own (a supply truck on its run): planted on (x, y) facing ang. Returns how far it has faded in (0: not shown: far, off or still
+// loading), so the caller cross-fades its flat icon
 function tmSingle(t, key, x, y, ang, alpha, now){ const hexPx = view.s*HS0, k = smooth01((hexPx - 50)/12); if (!tmOn() || k <= 0 || !window.U3D || !U3D.map) return 0;
   const [wx] = screenToWorld(x, y), s = tmScale(t, hexPx), e = tmmFrame(t, tmDir(key, t, ang, now), s, Math.round(nightAtX(wx)*3)); if (!e) return 0;
-  const f = s*dpr/e[4], w = e[0].width/dpr*f, h = e[0].height/dpr*f, ga = ctx.globalAlpha, fa = alpha*k, sw = w*0.7, sh = sw*0.3;
-  ctx.globalAlpha = fa*0.35; ctx.drawImage(tmShadow(), x - sw/2 + w*0.03, y - sh*0.42, sw, sh); ctx.globalAlpha = fa; ctx.drawImage(e[0], x - e[1]*f, y - e[2]*f, w, h); ctx.globalAlpha = ga; return k; }
+  const f = s*dpr/e[4], w = e[0].width/dpr*f, h = e[0].height/dpr*f, ga = ctx.globalAlpha; ctx.globalAlpha = alpha*k; ctx.drawImage(e[0], x - e[1]*f, y - e[2]*f, w, h); ctx.globalAlpha = ga; return k; }
 function troopModels(clusters, clBox, hexPx, now){
   TMDBG.length = 0; if (!tmOn() || !S || !window.U3D || !U3D.map) return;
   const fa = smooth01((hexPx - 40)/16); if (fa <= 0) return;
-  const lite = SET.fx === 'low' || afxReduced() || FXG.k < 0.6, nMax = lite ? 1 : hexPx >= 130 ? 3 : hexPx >= 70 ? 2 : 1; let budget = FXG.k < 0.6 ? 40 : 80;
-  const ov = (p, o) => p[0] < o[2] && p[2] > o[0] && p[1] < o[3] && p[3] > o[1];
+  const low = SET.fx === 'low' || FXG.k < 0.3, nMax = hexPx >= 120 ? (low ? 2 : 3) : hexPx >= 60 ? 2 : 1; let budget = low || afxReduced() || FXG.k < 0.6 ? 48 : 90;
+  const ov = (p, o) => p[0] < o[2] && p[2] > o[0] && p[1] < o[3] && p[3] > o[1], area = (p, o) => { const w = Math.min(p[2], o[2]) - Math.max(p[0], o[0]), h = Math.min(p[3], o[3]) - Math.max(p[1], o[1]); return w > 0 && h > 0 ? w*h : 0; };
+  const on = clusters.filter(c => isFinite(c.x) && isFinite(c.y) && c.x > -150 && c.y > -150 && c.x < cw + 150 && c.y < ch + 150);
+  const cores = on.map(c => { const b = clBox(c); return {c, core:b.core, box:b}; }), taken = (HQBOX || []).map(q => [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]), hud = hudRects();
+  // the city markers and names near the counters (models keep off the markers; the names, drawn over them, a little)
+  const kl = Math.min(zoomK(hexPx), 2), marks = [], seen = new Set();
+  for (const c of on){ const P = G.P[c.at]; if (!P || seen.has(c.at) || !(P.city || isCapital(c.at))) continue; seen.add(c.at); const [mx, my] = toScreen(P.x, P.y), R = (isCapital(c.at) ? 8.7 : 4.6)*kl;
+    marks.push([mx - R, my - R, mx + R, my + R]); const nm = [mx - 34, my + R, mx + 34, my + R + 15]; nm.nm = true; marks.push(nm); }
   const groups = [];
-  // yours first for the budget (the clusters list ends with yours)
-  for (let ci = clusters.length - 1; ci >= 0 && budget > 0; ci--){ const c = clusters[ci];
-    if (!isFinite(c.x) || !isFinite(c.y) || c.x < -150 || c.y < -150 || c.x > cw + 150 || c.y > ch + 150) continue;
+  // yours first (the clusters list ends with yours), then the selected and fighting ones
+  const order = on.slice().reverse();
+  for (const c of order){ if (budget <= 0) break;
     if (c.air && c.moving) continue;   // wings in flight keep their flat icons and contrails
+    if (c.owner === NEUTRAL && !(sel.prov === c.at || sel.target === c.at || S.battles.includes(c.at))) continue;   // independent garrisons: their plate alone
     const types = tmmTypes(c, Math.min(nMax, budget)); if (!types.length) continue;
-    const lead = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), mS = c.air ? null : MOV.get(lead.id) || MOV.get(c.list[0].id);
-    let ang = mS ? (c.moving ? mS.hd : (mS.ang ?? mS.hd)) : null;
-    const foe = !c.air && S.battles.includes(c.at) ? clusters.find(o => o.at === c.at && o !== c && !o.air && atWar(o.owner, c.owner)) : null;
-    if (ang == null && foe) ang = Math.atan2(foe.y - c.y, foe.x - c.x);
-    if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 : Math.PI*0.15;
+    const lead = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), mS = c.air ? null : MOV.get(lead.id);
+    const foe = !c.air && S.battles.includes(c.at) ? on.find(o => o.at === c.at && o !== c && !o.air && atWar(o.owner, c.owner)) : null;
+    let ang = foe ? Math.atan2(foe.y - c.y, foe.x - c.x) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // in a battle at the enemy; marching (or at rest) the way it went
+    if (mS && (c.moving || mS.halt != null) && isFinite(mS.hd)){ TMH.set(lead.id, mS.hd); if (TMH.size > 3000) TMH.clear(); }
+    if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B){ const [tx, ty] = toScreen(B.x, B.y); if (Math.hypot(tx - c.x, ty - c.y) > 1) ang = Math.atan2(ty - c.y, tx - c.x); } }   // ordered off but not yet under way: toward its next stop
+    if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
     const [wx] = screenToWorld(c.x, c.y), nb = Math.round(nightAtX(wx)*3), ents = [];
-    for (const t of types){ const d = tmDir(lead.id, t, ang, now), s = tmScale(t, hexPx), e = tmmFrame(t, d, s, nb); if (e){ ents.push({t, d, e, f:s*dpr/e[4]}); budget--; } }
+    for (const t of types){ const d = tmDir(lead.id, t, ang, now), s = tmScale(t, hexPx), e = tmmFrame(t, d, s, nb); if (e){ const f = s*dpr/e[4]; ents.push({t, d, e, f, bb:e[5].map(v => v*f)}); budget--; } }
     if (!ents.length) continue;
-    // a compact group at the plate's lower-left corner (the lead model, a second one behind it up-left, a third in front), mirrored to the lower-right
-    // when it would stand on your HQ. A plate slid aside by the declutter is laid out as if it stood on its true spot, so the models stay with the force
-    const core = clBox(c).core, dy = c.ay != null ? c.ay - c.y : 0;
-    const lay = side => { const ax = side > 0 ? core[0] : core[2], ay = core[3] + dy, out = [];
-      ents.forEach((q, i) => { const w = q.e[0].width/dpr*q.f, h = q.e[0].height/dpr*q.f, s0 = out[0];
-        const ox = q.e[1]*q.f, oy = q.e[2]*q.f, y = i === 0 ? ay + h*0.06 : i === 1 ? s0.y - h*0.24 : s0.y + h*0.34;
-        let x = i === 0 ? ax - side*w*0.42 : i === 1 ? s0.x - side*w*0.48 : s0.x - side*w*0.08;
-        if (side > 0) x = Math.min(x, core[0] - 2 - (w - ox)); else x = Math.max(x, core[2] + 2 + ox);   // the whole model clear of its own plate
-        out.push({...q, x, y, w, h, ox, oy, r:[x - ox, y - oy, x - ox + w, y - oy + h]}); }); return out; };
-    let side = foe && foe.x < c.x ? -1 : 1, L = lay(side);   // in a battle the two sides' models stand on the outer flanks, facing each other
-    if (HQBOX && L.some(q => HQBOX.some(o => ov(q.r, o)))){ side = -side; L = lay(side); }
-    // the group hangs off the lead force's true spot (its spring-smoothed position), and its offset from it eases: when the counter is laid out
-    // elsewhere (a stack halting and joining the province's row, a plate sliding aside, a side flip) the models glide there, never jump. The offset is
-    // kept in map units (per hexPx), so a zoom is never lagged
-    { const sp = dispPos(lead), [tx, ty] = toScreen(sp[0], sp[1]), ax = side > 0 ? core[0] : core[2], ay = core[3] + dy;
-      if (isFinite(tx) && isFinite(ty)){ const u = hexPx, o1x = (ax - tx)/u, o1y = (ay - ty)/u, key = lead.id; let E = TMA.get(key);
-        if (!E || now - E.t > 400){ E = {ox:o1x, oy:o1y, t:now}; TMA.set(key, E); }
-        else { const f = 1 - Math.exp(-Math.min(0.25, Math.max(0, (now - E.t)/1000))/0.16); E.ox += (o1x - E.ox)*f; E.oy += (o1y - E.oy)*f; E.t = now; }
-        const ddx = tx + E.ox*u - ax, ddy = ty + E.oy*u - ay; for (const q of L){ q.x += ddx; q.y += ddy; } } }
-    for (const q of L){ q.c = c; q.ang = ang; q.id = lead.id; q.core = core; groups.push(q); } }
+    // the group round its lead (ground origins; tight boxes): the lead, a second model beside it a little in front, a third on its other side a
+    // little behind, each overlapping its neighbour by at most an eighth of its width
+    const L0 = ents[0]; L0.gx = 0; L0.gy = 0;
+    if (ents[1]){ const q = ents[1]; q.gx = L0.bb[0] - q.bb[2] + (q.bb[2] - q.bb[0])*0.12; q.gy = (L0.bb[3] - L0.bb[1])*0.16; }
+    if (ents[2]){ const q = ents[2]; q.gx = L0.bb[2] - q.bb[0] - (q.bb[2] - q.bb[0])*0.12; q.gy = -(L0.bb[3] - L0.bb[1])*0.1; }
+    const gb = [Infinity, Infinity, -Infinity, -Infinity]; for (const q of ents){ gb[0] = Math.min(gb[0], q.gx + q.bb[0]); gb[1] = Math.min(gb[1], q.gy + q.bb[1]); gb[2] = Math.max(gb[2], q.gx + q.bb[2]); gb[3] = Math.max(gb[3], q.gy + q.bb[3]); }
+    const gw = gb[2] - gb[0], gh = gb[3] - gb[1], sea = ents.some(q => q.e[3].sea);
+    // where the group stands round its plate (the plate as drawn, slid aside or not): tucked under its lower left corner, under its lower right,
+    // against its left or right side, or under its middle. The plate overlaps the models' tops a little, so it reads as their label
+    const core = clBox(c).core, K = core, pw = K[2] - K[0], ph = K[3] - K[1], tuck = Math.min(gh*0.2, ph*0.3, 6, ...ents.map(q => (q.bb[3] - q.bb[1])*0.22));
+    const spots = [[K[0] + pw*0.55 - gw, K[3] - tuck, 0], [K[2] - pw*0.55, K[3] - tuck, 6], [K[0] - gw + 3, K[3] - gh*0.62, 10], [K[2] - 3, K[3] - gh*0.62, 12], [K[0] + pw/2 - gw/2, K[3] - tuck*0.6, 18]];   // [left, top, base cost]
+    const pref = foe ? (foe.x < c.x ? [1, 3] : [0, 2]) : null, key = lead.id, E = TMA.get(key); let E0;
+    let best = null, bc = Infinity;
+    spots.forEach(([gx, gy, b0], i) => { const r = [gx, gy, gx + gw, gy + gh]; let c0 = b0 + (pref && !pref.includes(i) ? 400 : 0) + (E && E.s === i ? (c.moving ? -400 : -80) : 0);
+      if (r[0] < 4 || r[2] > cw - 4 || r[1] < 4 || r[3] > ch - 4) c0 += 200;
+      for (const o of hud) c0 += area(r, o)*2;
+      for (const o of cores) if (o.c !== c){ const a = area(r, o.core); if (a) c0 += 60 + a*1.5; }
+      for (const o of taken){ const a = area(r, o); if (a) c0 += 40 + a*1.2; }
+      for (const o of marks){ const a = area(r, o); if (a) c0 += 30 + a*(o.nm ? 0.25 : 1); }
+      if (sea){ let dry = 0; for (const q of ents){ const [wx1, wy1] = screenToWorld(gx - gb[0] + q.gx, gy - gb[1] + q.gy); if (!isWet(wx1, wy1)) dry++; } c0 += dry*600; }   // ships stay on the water
+      if (c0 < bc){ bc = c0; best = [gx - gb[0], gy - gb[1], i, r]; } });
+    // the spot kept (hysteresis above)
+    const ox = best[0], oy = best[1], sp = dispPos(lead), [tx, ty] = toScreen(sp[0], sp[1]), u = hexPx, okT = isFinite(tx) && isFinite(ty);
+    E0 = TMA.get(key); if (E0) { E0.t = now; E0.s = best[2]; } else TMA.set(key, {t:now, s:best[2]});
+    taken.push([ox + gb[0], oy + gb[1], ox + gb[2], oy + gb[3]]);
+    for (const q of ents){ const w = q.e[0].width/dpr*q.f, h = q.e[0].height/dpr*q.f; let x = ox + q.gx, y = oy + q.gy;
+      // each model hangs off the lead force's true spot (its spring-smoothed position) and its offset from it follows a critically damped spring:
+      // when the counter is laid out elsewhere (a stack halting and joining the province's row, a plate sliding aside, a new spot, a model joining
+      // the group) the models glide there, setting off and arriving softly, never jumping. The offset is kept in map units, so a zoom is never lagged
+      if (okT){ const mk = key + '|' + q.t, M = TMA.get(mk), o1x = (x - tx)/u, o1y = (y - ty)/u;
+        if (!M || now - M.t > 400) TMA.set(mk, {ox:o1x, oy:o1y, vx:0, vy:0, t:now});
+        else { let dt = Math.min(0.25, Math.max(0, (now - M.t)/1000)); const wk = 7;
+          while (dt > 1e-4){ const st = Math.min(dt, 1/120); M.vx += (wk*wk*(o1x - M.ox) - 2*wk*M.vx)*st; M.vy += (wk*wk*(o1y - M.oy) - 2*wk*M.vy)*st; M.ox += M.vx*st; M.oy += M.vy*st; dt -= st; }
+          M.t = now; x = tx + M.ox*u; y = ty + M.oy*u; } }
+      groups.push({...q, x, y, w, h, ox:q.e[1]*q.f, oy:q.e[2]*q.f, c, ang, id:lead.id, core:K, tp:[tx, ty, ox + q.gx, oy + q.gy]}); } }
   if (now - TMSW > 2000){ TMSW = now; for (const [k, E] of TMA) if (now - E.t > 3000) TMA.delete(k); for (const [k, E] of TMD) if (now - E.t > 3000) TMD.delete(k); }
   if (!groups.length) return;
   groups.sort((p, q) => p.y - q.y);   // back to front
   const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingQuality = 'high';
-  // ground contact first (so no shadow ever falls over a neighbour): a soft ellipse under each model on land, a wake behind a ship, a smaller
-  // shadow to the south-east of a parked aircraft
-  for (const q of groups){ const A = q.e[3];
-    if (A.sea && q.c.moving){ const Ls = q.w*0.7; ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.ang + Math.PI/2); ctx.globalAlpha = fa*0.8; ctx.drawImage(kelvinSprite(), -Ls*0.4, -Ls*0.1, Ls*0.8, Ls*1.5); ctx.restore(); }   // under way: the Kelvin V behind the stern
-    else if (A.sea){ const sw = q.w*0.62, sh = sw*0.3; ctx.globalAlpha = fa*0.28; ctx.drawImage(tmShadow(), q.x - sw/2, q.y - sh*0.45, sw, sh); }
-    else if (A.air){ const sw = q.w*0.42; ctx.globalAlpha = fa*0.3; ctx.drawImage(tmShadow(), q.x - sw/2 + q.w*0.1, q.y - sw*0.15 + q.h*0.12, sw, sw*0.3); }
-    else { const sw = q.w*0.7, sh = sw*0.3; ctx.globalAlpha = fa*0.35; ctx.drawImage(tmShadow(), q.x - sw/2 + q.w*0.03, q.y - sh*0.42, sw, sh); } }
+  // on the water: a soft shade under each hull and, under way, the Kelvin V behind the stern (land models and parked aircraft carry their baked
+  // sun and sky shadows)
+  for (const q of groups){ if (!q.e[3].sea) continue; const bw = q.bb[2] - q.bb[0];
+    if (q.c.moving){ const Ls = bw*0.75; ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.ang + Math.PI/2); ctx.globalAlpha = fa*0.7; ctx.drawImage(kelvinSprite(), -Ls*0.4, -Ls*0.1, Ls*0.8, Ls*1.5); ctx.restore(); }
+    const sw = bw*0.95, sh = Math.max(4, (q.bb[3] - q.bb[1])*0.75); ctx.globalAlpha = fa*0.22; ctx.drawImage(tmShadow(), q.x - sw/2 + bw*0.04, q.y - sh*0.35, sw, sh); }
   ctx.globalAlpha = fa;
-  for (const q of groups){ let X = q.x - q.ox, Y = q.y - q.oy; if (q.w*dpr < 48 && !q.c.moving){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
+  for (const q of groups){ let X = q.x - q.ox, Y = q.y - q.oy; if (q.w*dpr < 64 && !q.c.moving){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
     ctx.drawImage(q.e[0], X, Y, q.w, q.h);
-    if (TMDBG.on) TMDBG.push({t:q.t, x:+q.x.toFixed(2), y:+q.y.toFixed(2), box:[X, Y, X + q.w, Y + q.h].map(v => +v.toFixed(1)), w:Math.round(q.w), h:Math.round(q.h), d:q.d, id:q.id, ids:q.c.list.map(a => a.id), owner:q.c.owner, moving:q.c.moving ? 1 : 0, air:q.c.air ? 1 : 0, sea:q.e[3].sea ? 1 : 0, core:q.core.map(v => +v.toFixed(1))}); }
+    if (TMDBG.on){ const bx = [q.x + q.bb[0], q.y + q.bb[1], q.x + q.bb[2], q.y + q.bb[3]]; TMDBG.push({t:q.t, x:+q.x.toFixed(2), y:+q.y.toFixed(2), box:bx.map(v => +v.toFixed(1)), cell:[X, Y, X + q.w, Y + q.h].map(v => +v.toFixed(1)), w:Math.round(bx[2] - bx[0]), h:Math.round(bx[3] - bx[1]), d:q.d, id:q.id, ids:q.c.list.map(a => a.id), owner:q.c.owner, moving:q.c.moving ? 1 : 0, air:q.c.air ? 1 : 0, sea:q.e[3].sea ? 1 : 0, core:q.core.map(v => +v.toFixed(1)), tp:q.tp.map(v => +v.toFixed(1))}); } }
   ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
 /* ---------------- Unit art: top-down pictures (assets/art/u-*.webp) ----------------
    UART[type] = [image, faces down, size as a share of a formation figure's height]. The pictures are drawn nose up, except the self-propelled gun,
@@ -11540,7 +11576,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p)}});
-if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || afxReduced() || FXG.k < 0.6; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMMC.size; }, scale:(t, h) => tmScale(t, h)}; }
+if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMMC.size; }, scale:(t, h) => tmScale(t, h)}; }
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 document.addEventListener('visibilitychange', () => { if (document.hidden && S) save(); });
