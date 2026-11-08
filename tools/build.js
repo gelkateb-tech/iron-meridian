@@ -18,7 +18,10 @@ const SKIP_ASSETS = new Set(['art-src']);   // source art for tools/prep-art.py:
 // names that exist only in developer mode or the test hooks: none of them may survive in the public build
 const DEV_NAMES = ['DEV', 'DEV_KEY', 'DEV_FILL', 'DEV_SPEEDS', 'DEV_TOG', 'DEVUI', 'devSave', 'devFill', 'devDone', 'devHour', 'devResearchAll', 'devSpawn', 'devSpawnOk',
   'devPanel', 'devPanelHTML', 'devRender', 'devSync', 'devTap', 'devKey', 'devbadge', 'devpanel', 'devsp', 'devpick', 'devb', 'devp', 'iron-meridian-dev', 'sp5', 'sp6', 'sp7',
-  '__im', '__glog', '__dbgAll', 'TMDBG.on', 'PGHOST.push', '__BAKE = true', 'Developer mode', '@DEV', '@ENDDEV', '@TEST', '@ENDTEST'];
+  '__im', '__glog', '__dbgAll', '__dbgBoxes', 'tagDbg', 'pnDbg', 'labDbg', 'TMDBG', 'PGHOST', 'LAYEV', '__BAKE', 'artall', 'PLAY_MS', 'PLAY_N', 'DBGBOX', 'Developer mode', '@DEV', '@ENDDEV', '@TEST', '@ENDTEST'];
+// window.__<name> globals are test / debug switches by convention: the public build may not read or set any of them (this list stays empty
+// unless a real game global with that prefix is ever added)
+const PUBLIC_GLOBALS_OK = [];
 
 // a marker token: [kind, isEnd, start, end]
 const TOKEN = /\/\*@(END)?(DEV|TEST)\*\/|<!--@(END)?(DEV|TEST)-->/g;
@@ -66,10 +69,12 @@ function linkTree(from, to, top = true){ let n = 0, bytes = 0; fs.mkdirSync(to, 
     try { fs.linkSync(a, b); } catch (err) { fs.copyFileSync(a, b); }
     n++; bytes += fs.statSync(b).size; }
   return {n, bytes}; }
-function writeBuild(name, html){ const dir = path.join(DIST, name); fs.rmSync(dir, {recursive:true, force:true}); fs.mkdirSync(dir, {recursive:true});
+function writeBuild(name, html, js){ const dir = path.join(DIST, name); fs.rmSync(dir, {recursive:true, force:true}); fs.mkdirSync(dir, {recursive:true});
   fs.writeFileSync(path.join(dir, 'index.html'), html);   // the page as published (a fragment: the Artifact host adds the document skeleton)
   fs.writeFileSync(path.join(dir, 'play.html'), SKELETON[0] + html + SKELETON[1]);   // the same page as a whole document, for opening locally (not for publishing)
-  for (const f of SCRIPTS){ const a = path.join(ROOT, f); if (fs.existsSync(a)){ try { fs.linkSync(a, path.join(dir, f)); } catch (e) { fs.copyFileSync(a, path.join(dir, f)); } } else throw new Error('missing ' + f); }
+  for (const f of SCRIPTS){ const a = path.join(ROOT, f), b = path.join(dir, f);
+    if (js[f] !== undefined){ fs.writeFileSync(b, js[f]); continue; }   // a script with markers: its stripped text
+    try { fs.linkSync(a, b); } catch (e) { fs.copyFileSync(a, b); } }
   const as = fs.existsSync(path.join(ROOT, 'assets')) ? linkTree(path.join(ROOT, 'assets'), path.join(dir, 'assets')) : {n:0, bytes:0};
   return {dir, assets:as}; }
 // the document skeleton the Artifact host adds at publish time (the same one tools/mkpage.sh adds for the tests)
@@ -81,24 +86,37 @@ function main(){
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const test = strip(src, () => true), pub = strip(src, () => false);
   const fails = [];
+  // the map/model scripts: the ones with markers (units3d.js) are stripped the same way, the rest are linked as they are
+  const jsT = {}, jsP = {}, jsSrc = {};
+  for (const f of SCRIPTS){ const a = path.join(ROOT, f); if (!fs.existsSync(a)) throw new Error('missing ' + f);
+    const code = fs.readFileSync(a, 'utf8'); jsSrc[f] = code;
+    if (!tokens(code).length) continue;
+    let t, p; try { t = strip(code, () => true); p = strip(code, () => false); } catch (e) { throw new Error(f + ': ' + e.message); }
+    jsT[f] = t.html; jsP[f] = p.html; test.B.push(...t.B.map(b => Object.assign({}, b, {file:f})));
+    for (const [nm, c] of [['test', t.html], ['public', p.html]]){ try { new vm.Script(c, {filename:f}); } catch (e) { fails.push(`${nm} build: ${f} does not parse: ${e.message}`); } } }
+  const pubFiles = [['index.html', pub.html], ...SCRIPTS.map(f => [f, jsP[f] !== undefined ? jsP[f] : jsSrc[f]])];
   // the test build: no markers left, scripts parse
   if (tokens(test.html).length) fails.push('test build: marker text left');
   for (const e of parseErrors(test.html)) fails.push('test build: ' + e);
   // the public build: no markers, no developer or test names, scripts parse, smaller than the test build
-  if (tokens(pub.html).length || /@(END)?(DEV|TEST)\b/.test(pub.html)) fails.push('public build: marker text left');
-  for (const n of DEV_NAMES){ const re = /^[A-Za-z_$]/.test(n) && /[A-Za-z0-9_$]$/.test(n) ? new RegExp('(^|[^A-Za-z0-9_$-])' + escRe(n) + '(?![A-Za-z0-9_$-])') : new RegExp(escRe(n));
-    const m = re.exec(pub.html); if (m) fails.push(`public build: developer/test name "${n}" left (line ${lineOf(pub.html, m.index)})`); }
+  for (const [f, code] of pubFiles){
+    if (tokens(code).length || /@(END)?(DEV|TEST)\b/.test(code)) fails.push(`public build: marker text left in ${f}`);
+    for (const n of DEV_NAMES){ const re = /^[A-Za-z_$]/.test(n) && /[A-Za-z0-9_$]$/.test(n) ? new RegExp('(^|[^A-Za-z0-9_$-])' + escRe(n) + '(?![A-Za-z0-9_$-])') : new RegExp(escRe(n));
+      const m = re.exec(code); if (m) fails.push(`public build: developer/test name "${n}" left in ${f} (line ${lineOf(code, m.index)})`); }
+    // generic: no window.__x / window['__x'] debug globals at all
+    const G = /\bwindow\s*(?:\.\s*|\[\s*['"`])(__[A-Za-z0-9_$]+)/g; let m;
+    while ((m = G.exec(code))) if (!PUBLIC_GLOBALS_OK.includes(m[1])) fails.push(`public build: debug global window.${m[1]} left in ${f} (line ${lineOf(code, m.index)})`); }
   for (const e of parseErrors(pub.html)) fails.push('public build: ' + e);
   if (!(pub.html.length < test.html.length)) fails.push('public build is not smaller than the test build');
-  const T = writeBuild('test', test.html), P = writeBuild('public', pub.html);
+  const T = writeBuild('test', test.html, jsT), P = writeBuild('public', pub.html, jsP);
   const n = k => test.B.filter(b => b.kind === k).length, nl = k => test.B.filter(b => b.kind === k).reduce((s, b) => s + b.lines, 0);
   if (!QUIET || fails.length){
     console.log(`Iron Meridian build (${new Date().toISOString().slice(0, 19)}Z)`);
-    console.log(`  source     index.html ${kb(Buffer.byteLength(src))}: ${n('DEV')} @DEV blocks (${nl('DEV')} lines), ${n('TEST')} @TEST blocks (${nl('TEST')} lines)`);
+    console.log(`  source     index.html ${kb(Buffer.byteLength(src))}${Object.keys(jsT).length ? ' + ' + Object.keys(jsT).join(' ') : ''}: ${n('DEV')} @DEV blocks (${nl('DEV')} lines), ${n('TEST')} @TEST blocks (${nl('TEST')} lines)`);
     console.log(`  test       ${path.relative(ROOT, T.dir)}/index.html ${kb(Buffer.byteLength(test.html))}  (developer mode + test hooks)`);
     console.log(`  public     ${path.relative(ROOT, P.dir)}/index.html ${kb(Buffer.byteLength(pub.html))}  (${test.B.length} blocks stripped, ${kb(Buffer.byteLength(test.html) - Buffer.byteLength(pub.html))} smaller)`);
     console.log(`  each build + play.html (local run) + ${SCRIPTS.join(' ')} + assets/ without art-src (${T.assets.n} files, ${(T.assets.bytes/1048576).toFixed(1)} MB, hard-linked where possible)`);
-    console.log(fails.length ? 'VERIFY FAILED\n  ' + fails.join('\n  ') : `  verify     public build OK: no markers, none of ${DEV_NAMES.length} developer/test names, ${inlineScripts(pub.html).length} inline scripts parse, smaller than test`);
+    console.log(fails.length ? 'VERIFY FAILED\n  ' + fails.join('\n  ') : `  verify     public build OK: no markers, none of ${DEV_NAMES.length} developer/test names, ${inlineScripts(pub.html).length} inline scripts and ${Object.keys(jsP).join(' ') || 'no'} stripped scripts parse, no window.__ debug globals, smaller than test`);
     console.log('  publish    dist/public'); }
   if (fails.length){ fs.rmSync(P.dir, {recursive:true, force:true}); console.log('  dist/public removed: fix the source and build again'); process.exit(1); }   // never leave a failed public build to publish
 }

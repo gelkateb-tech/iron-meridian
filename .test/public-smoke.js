@@ -16,6 +16,8 @@ const up = port => new Promise(r => { const t0 = Date.now(); const go = () => { 
   const b = await chromium.launch(), errs = [], checks = {}, ok = (k, v, info) => { checks[k] = v ? 'PASS' : 'FAIL' + (info !== undefined ? ' ' + JSON.stringify(info) : ''); };
   const html = fs.readFileSync(path.join(DIR, 'index.html'), 'utf8');
   ok('page source: no developer or test markup', !/@DEV|@TEST|devbadge|devpanel|__im\b|DEVUI|devSpawn/.test(html));
+  const u3d = fs.readFileSync(path.join(DIR, 'units3d.js'), 'utf8');
+  ok('page and units3d.js: no window.__ debug globals (?bake, __dbgBoxes ...)', !/window\s*(\.|\[\s*['"])__/.test(html + u3d) && !/artall|__BAKE|__dbgBoxes/.test(html + u3d));
   const res = {};
   for (const [name, vp] of [['desktop', { width: 1400, height: 860 }], ['phone', { width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }]]){
     const ctx = await b.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: !!vp.isMobile, hasTouch: !!vp.hasTouch, deviceScaleFactor: vp.deviceScaleFactor || 1 });
@@ -26,9 +28,10 @@ const up = port => new Promise(r => { const t0 = Date.now(); const go = () => { 
     await p.goto(`http://127.0.0.1:${port}/play.html`); await p.waitForTimeout(1200);
     if (await p.locator('[data-act="pick"]').count()){ await p.click('[data-act="pick"][data-p="0"]'); await p.click('[data-act="begin"]'); }
     await p.click('[data-act="start"]'); await p.waitForTimeout(400);
-    const dom = await p.evaluate(() => ({ im: typeof window.__im, badge: !!document.getElementById('devbadge'), panel: !!document.getElementById('devpanel'), devsp: document.querySelectorAll('[data-speed="5"],[data-speed="6"],[data-speed="7"],.devsp').length,
+    const dom = await p.evaluate(() => ({ im: typeof window.__im, unders: Object.keys(window).filter(k => /^__/.test(k) && k !== '__THREE__'),   /* (three.js sets __THREE__ itself) */ badge: !!document.getElementById('devbadge'), panel: !!document.getElementById('devpanel'), devsp: document.querySelectorAll('[data-speed="5"],[data-speed="6"],[data-speed="7"],.devsp').length,
       speeds: [...document.querySelectorAll('#speed [data-speed]')].map(b => b.dataset.speed).join(','), devText: /\bDEV\b|Developer mode/.test(document.body.innerText) }));
     ok(name + ': no window.__im', dom.im === 'undefined', dom.im);
+    ok(name + ': no window.__ globals at run time', dom.unders.length === 0, dom.unders);
     ok(name + ': no DEV badge or panel', !dom.badge && !dom.panel && !dom.devText, dom);
     ok(name + ': speed control is 0-4 only', dom.speeds === '0,1,2,3,4' && !dom.devsp, dom.speeds);
     const spd = () => p.evaluate(() => [...document.querySelectorAll('#speed [data-speed]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.speed).join(','));

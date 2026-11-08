@@ -2333,7 +2333,7 @@ const ART = (() => {
   function standIn(name){ const f = STANDIN[name]; if (!f || typeof document === 'undefined') return; try { const c = document.createElement('canvas'); c.width = c.height = 256; f(c.getContext('2d'), 256);
       c.naturalWidth = 256; c.naturalHeight = 256; imgs.set(name, c); stand.add(name); } catch (e) {} }
   OPT.forEach(standIn);
-  function loadOpt(name){ if (typeof Image === 'undefined' || window.__BAKE || waits.has(name)) return; const im = new Image(); im.decoding = 'async'; waits.set(name, Promise.resolve(null));
+  function loadOpt(name){ if (typeof Image === 'undefined' || waits.has(name)) return; /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const im = new Image(); im.decoding = 'async'; waits.set(name, Promise.resolve(null));
     im.onload = () => { const ok = () => { if (!im.naturalWidth) return; imgs.set(name, im); stand.delete(name); durl.delete(name); cleanC.delete(name); cache.clear(); try { window.dispatchEvent(new Event('im-art')); } catch (e) {} };
       if (im.decode) im.decode().then(ok, ok); else ok(); };
     im.onerror = () => {};   // not supplied yet: keep the stand-in, no retry
@@ -2341,7 +2341,8 @@ const ART = (() => {
   function load(name){
     if (waits.has(name)) return waits.get(name);
     const pr = new Promise(res => {
-      if (typeof Image === 'undefined' || window.__BAKE){ failed.add(name); res(null); return; }
+      /*@TEST*/if (window.__BAKE){ failed.add(name); res(null); return; }/*@ENDTEST*/
+      if (typeof Image === 'undefined'){ failed.add(name); res(null); return; }
       const im = new Image(); im.decoding = 'async';
       im.onload = () => { const ok = () => { if (im.naturalWidth){ imgs.set(name, im); res(im); } else { failed.add(name); res(null); } };
         if (im.decode) im.decode().then(ok, ok); else ok(); };
@@ -2351,7 +2352,7 @@ const ART = (() => {
     waits.set(name, pr); return pr;
   }
   const first = Promise.all(FIRST.map(load)), rest = Promise.all(REST.map(load));
-  rest.then(() => { OPT.filter(n => ART_SUPPLIED.includes(n) || /[?&]artall\b/.test(location.search)).forEach(loadOpt); LATE.forEach(load); });
+  rest.then(() => { let opt = OPT.filter(n => ART_SUPPLIED.includes(n)); /*@TEST*/if (/[?&]artall\b/.test(location.search)) opt = OPT;/*@ENDTEST*/ opt.forEach(loadOpt); LATE.forEach(load); });
   // high-quality downscale: halve until within 2x of the target, then one last step
   function scaled(im, w, h){
     let src = im, sw = im.naturalWidth || im.width, sh = im.naturalHeight || im.height;
@@ -3178,7 +3179,7 @@ function lakePath(){ if (G.lakeP !== undefined) return G.lakeP; if (!window.LAKE
   G.lakeBox = []; G.lakeRing = [];   // world boxes and rings, so a render only clips to the lakes in view
   for (const R of window.LAKES){ let x = 0, y = 0; const b = [Infinity, Infinity, -Infinity, -Infinity], ring = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const X = OX + sx*x/10, Y = OY + sy*y/10; i ? lp.lineTo(X, Y) : lp.moveTo(X, Y); ring.push(X, Y); if (X < b[0]) b[0] = X; if (Y < b[1]) b[1] = Y; if (X > b[2]) b[2] = X; if (Y > b[3]) b[3] = Y; } lp.closePath(); G.lakeBox.push(b); G.lakeRing.push(ring); }
   return (G.lakeP = lp); }
-function bakeLakes(){ if (G.lakesBaked || window.__BAKE) return; const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
+function bakeLakes(){ if (G.lakesBaked) return; /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
   const T = G.terrain, k = T.width/WORLD_W, g = T.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.lineJoin = 'round';
   g.strokeStyle = 'rgba(70,110,104,0.5)'; g.lineWidth = 1.6; g.stroke(lp); g.fillStyle = '#0a1c27'; g.fill(lp);   // the texture's own sea tone, so a lake reads like the open sea
   g.save(); g.clip(lp); g.strokeStyle = 'rgba(36,80,92,0.6)'; g.lineWidth = 2; g.stroke(lp); g.restore(); g.restore();
@@ -3241,7 +3242,7 @@ function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
 // .op is opaque (laid under the coast clip, so the mask's soft edge never shows land at sea); the canvas itself has the land cleared, for the far view.
 // Deterministic (its own seeded noise, never the game rng); null if it cannot be made.
 function bakeSeaDepth(){
-  if (G.seaTex !== undefined) return G.seaTex; const M = G.landMask; if (!M || window.__BAKE) return null; G.seaTex = null;
+  if (G.seaTex !== undefined) return G.seaTex; const M = G.landMask; if (!M) return null; /*@TEST*/if (window.__BAKE) return null;/*@ENDTEST*/ G.seaTex = null;
   try { const w = Math.ceil(M.width/2), h = Math.ceil(M.height/2), mk = (a, b) => { const c = document.createElement('canvas'); c.width = a; c.height = b; return c; };
     const fill = (g, col, op = 'source-over') => { g.globalCompositeOperation = op; g.fillStyle = col; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over'; };
     // white land on clear, then a grey low-frequency noise (its own seed)
@@ -7810,7 +7811,8 @@ const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['h
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
 const TMG = {sol:[1.8, 0.5], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
   frig:[7.4, 1.25], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[17, 0.9], int:[17, 0.9], heli:[17, 0.82], drone:[10.6, 0.66]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter)
-const TMD = new Map(), TMDBG = [], TMCELL = new Map(), TMLAST = new Map(), TMMIP = new Map(), TMLUT = new Map(), TMH = new Map(), TMGLOW = new Map(), TMSLOT = new Map(), TMEX = new Map(); let TMSH = null, TMSW = 0, TMCB = 0, TMNEW = 0;
+/*@TEST*/const TMDBG = [];/*@ENDTEST*/
+const TMD = new Map(), TMCELL = new Map(), TMLAST = new Map(), TMMIP = new Map(), TMLUT = new Map(), TMH = new Map(), TMGLOW = new Map(), TMSLOT = new Map(), TMEX = new Map(); let TMSH = null, TMSW = 0, TMCB = 0, TMNEW = 0;
 const tmOn = () => SET.models !== false;
 const TM_F0 = 100, TM_F1 = 14;   // they fade in together from 98 to 112 hexPx (from where a soldier is ~16 css px tall and a tank ~28 px long)
 const tmFade = hexPx => smooth01((hexPx - TM_F0)/TM_F1);
@@ -7928,7 +7930,8 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW(); let E = TMFORM.get
    land, fleets on the water, inside their province where they fit, near its spot, above a city's marker. A spot changes only when the forces
    there change (then it glides there), never with the zoom. */
 let LAY_R = null;   // this frame's roles (draw)
-const LAYEV = new Map(), PLAY = new Map(), PLAYH = new Map(), PLAG = new Map(), PREG = new Map(), LASTSLOT = new Map(), WGM = new Map(), OFS = new Map(); let PLAY_SW = 0, PLAY_MS = 0, PLAY_N = 0;
+/*@TEST*/const LAYEV = new Map();/*@ENDTEST*/
+const PLAY = new Map(), PLAYH = new Map(), PLAG = new Map(), PREG = new Map(), LASTSLOT = new Map(), WGM = new Map(), OFS = new Map(); let PLAY_SW = 0; /*@TEST*/let PLAY_MS = 0, PLAY_N = 0;/*@ENDTEST*/
 const PLATE_GAP = 6, TM_PLATE = [-34, -50 - PLATE_GAP, 37, 1 - PLATE_GAP], TM_PLATE_C = -26 - PLATE_GAP;   // a counter's box round its anchor (css px): pinned just above the spot its troops stand on
 const roleOwner = r => +r.slice(1, r.indexOf(':'));
 // a role: kind, holder and the model types it shows (as a set: a spot changes only when a type comes or goes, not with the counts)
@@ -8040,7 +8043,7 @@ function nearDeps(p){ if (LDEP_R !== LAY_R){ LDEP.clear(); LDEP_R = LAY_R; } let
 function provLayout(p, roles){ const L = PLAY.get(p); if (L && L.chk === LAY_R && L.S === S && LAY_R) return L;
   const key = layoutKey(p, roles) + '#' + nearDeps(p).map(q => q + ':' + provLayout(q, rolesAt(LAY_R, q)).v).join(',');
   if (L && L.key === key && L.S === S){ L.chk = LAY_R; return L; }
-  const t0 = performance.now(), R = layoutCompute(p, roles), N = {key, S, out:R.out, dbg:R.items.bk, dbc:R.items.bc, v:++PLAY_V, chk:LAY_R, bat:S.battles.includes(p)}; PLAY_MS += performance.now() - t0; PLAY_N++; PLAY.set(p, N); PREG.set(p, R.items); return N; }
+  /*@TEST*/const t0 = performance.now();/*@ENDTEST*/ const R = layoutCompute(p, roles), N = {key, S, out:R.out, v:++PLAY_V, chk:LAY_R, bat:S.battles.includes(p)}; /*@TEST*/N.dbg = R.items.bk; N.dbc = R.items.bc; PLAY_MS += performance.now() - t0; PLAY_N++;/*@ENDTEST*/ PLAY.set(p, N); PREG.set(p, R.items); return N; }
 // the spot a force arriving at q will stand on (without disturbing q's present layout)
 function provLayoutH(p, roles){ const key = layoutKey(p, roles), L = PLAY.get(p); if (L && L.key.startsWith(key + '#') && L.S === S) return L; const k2 = p + '#' + key; let H = PLAYH.get(k2); if (H && H.S === S) return H;
   H = {key, S, out:layoutCompute(p, roles).out}; if (PLAYH.size > 200) PLAYH.clear(); PLAYH.set(k2, H); return H; }
@@ -8088,7 +8091,8 @@ function haltAnchor(a, A, now, wx, wy){ const E = OFS.get(a.id); if (!E) return 
    mixed-stack glyph, a tap opens the chooser); as you zoom in each fades back in at its own spot. A counter is hidden while it comes within
    PF_IN px of a shown one and shown again only past PF_OUT (hysteresis: a slow zoom never flickers). Under the HUD (the shield rail, the map
    controls, the minimap) a counter and its troops fade to a quarter instead of moving. */
-const PF = new Map(), PF_IN = 10, PF_OUT = 20, PF_UP = 160, PF_DN = 70, PGHOST = [];   // (fade in / out ms)
+/*@TEST*/const PGHOST = [];/*@ENDTEST*/
+const PF = new Map(), PF_IN = 10, PF_OUT = 20, PF_UP = 160, PF_DN = 70;   // (fade in / out ms)
 const pbQuiet = c => { const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]); return a.owner !== PLAYER && !pbFight(c) && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)); };
 const pbFight = c => !c.moving && !c.air && S.battles.includes(c.at);
 // a counter's box on screen (css px): the plate with its flag, marks, bars and battle badge
@@ -8179,7 +8183,7 @@ function tmGlide(c, gid, t, sl, now){ const key = gid + '|' + t; let E = TMGL.ge
   E.t = now; const wx = c.wx + E.x, wy = c.wy + E.y; for (const q of c.list){ const k2 = q.id + '|' + t; let P = TMWP.get(k2); if (!P){ P = {}; TMWP.set(k2, P); if (TMWP.size > 4000) TMWP.clear(); } P.wx = wx; P.wy = wy; P.t = now; P.S = S; }
   return [E.x, E.y]; }
 function troopModels(clusters, clBox, hexPx, now){
-  TMDBG.length = 0; TMBX.length = 0; if (!tmOn() || !S || !window.U3D || !U3D.map) return;
+  /*@TEST*/TMDBG.length = 0;/*@ENDTEST*/ TMBX.length = 0; if (!tmOn() || !S || !window.U3D || !U3D.map) return;
   if (now - TMSW > 2000){ TMSW = now; for (const [k, E] of TMD) if (now - E.t > 5000) TMD.delete(k); for (const [k, E] of TMSLOT) if (now - E.t > 8000) TMSLOT.delete(k); if (U3D.mapTrim) U3D.mapTrim(now); }
   const fa = tmFade(hexPx); if (fa <= 0) return;
   const lut = tmLut(viewLight()); TMNEW = 4;
@@ -9716,7 +9720,7 @@ function draw(now){
   // turns a little round the star; it is never left out. Only the screen edges and the map's controls rule a spot out; standing off your land (its plinth's
   // centre at sea or abroad) is a last resort behind everything else, then covering another city's marker or standing nearer another city than yours,
   // then turning and stepping out; displacing a standing counter costs only a little.
-  const NP = S.nations[PLAYER]; let capTagAt = null, tagDbg = null; HQBOX = null;
+  const NP = S.nations[PLAYER]; let capTagAt = null; /*@TEST*/let tagDbg = null;/*@ENDTEST*/ HQBOX = null;
   if (hexPx >= 2 && NP.alive && S.owner[NP.capital] === PLAYER){ hqScale(); const cap = NP.capital, P0 = G.P[cap], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + CITY_DY*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, w = HQ_W, h = HQ_H, K = HQ_K;
     const hud = hudRects(), ovl = (q, o) => q[0] < o[2] && q[2] > o[0] && q[1] < o[3] && q[3] > o[1];
     if (!(x < 0 || x > cw || cy < 0 || cy > ch || hud.some(o => x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3]))){   // (the star itself on screen and clear of the controls)
@@ -9855,7 +9859,7 @@ function draw(now){
   // names once the province names are up), and never cover a name, a city marker or capital star (or your capital's pulsing ring), a counter, a building tray,
   // a control or your HQ building: with no free spot on its own land a name is left out. Only a country too small on screen to hold its name at 11 px, or
   // any at world zoom, may let it hang out over the sea next to its land (never over another country's land).
-  const pnB = [], pnDbg = window.__dbgBoxes ? [] : null; let pnDone = hexPx >= 30, pnYou = pnDone; const pnSeen = new Set();   // power names already placed (they keep clear of each other too)
+  const pnB = []; /*@TEST*/const pnDbg = window.__dbgBoxes ? [] : null;/*@ENDTEST*/ let pnDone = hexPx >= 30, pnYou = pnDone; const pnSeen = new Set();   // power names already placed (they keep clear of each other too)
   // atlas lettering for the power names: the body face at a light weight, uppercase and widely spaced (the spacing counts in the measured width)
   const pnFont = sz => { ctx.font = `500 ${sz}px ${BODY}`; ctx.letterSpacing = (sz*0.25).toFixed(1) + 'px'; };
   const placePN = youOnly => { pnYou = true; if (!youOnly) pnDone = true; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -9882,16 +9886,16 @@ function draw(now){
       for (const pass of C.narrow || hexPx < 6 ? [0, 1] : [0]){ for (const c of C.list){ const b = boxOf(c); if (b[0] < 2 || b[2] > cw - 2 || b[1] < 2 || b[3] > ch - 2){ nE++; continue; } if (blk.some(q => ovl(q, b))){ nB++; continue; }
           if (pass ? !(c.fitw ?? (c.fitw = nameOverSea(x + c.dx, y + c.dy, c.ww, c.ss, own))) : !(c.fit ?? (c.fit = nameFits(x + c.dx, y + c.dy, c.ww, c.ss, own)))) continue;
           best = c; break; } if (best) break; }
-      if (!best){ if (pnDbg) pnDbg.push({n:S.nations[n].name, none:1, nB, nE, nL:C.list.length, nar:C.narrow ? 1 : 0, s0:Math.round(C.s0)}); continue; }
+      if (!best){ /*@TEST*/if (pnDbg) pnDbg.push({n:S.nations[n].name, none:1, nB, nE, nL:C.list.length, nar:C.narrow ? 1 : 0, s0:Math.round(C.s0)});/*@ENDTEST*/ continue; }
       const lx = x + best.dx, ly = y + best.dy, sz = best.ss, ww = best.ww; pnFont(sz);
-      { const pb = boxOf(best); pb.you = you; pnB.push(pb); boxes0.push(pb); if (pnDbg) pnDbg.push({n:S.nations[n].name, x:Math.round(lx), y:Math.round(ly), sz, w:Math.round(ww), b:pb.map(Math.round), a:+pa.toFixed(2)}); }
+      { const pb = boxOf(best); pb.you = you; pnB.push(pb); boxes0.push(pb); /*@TEST*/if (pnDbg) pnDbg.push({n:S.nations[n].name, x:Math.round(lx), y:Math.round(ly), sz, w:Math.round(ww), b:pb.map(Math.round), a:+pa.toFixed(2)});/*@ENDTEST*/ }
       // a soft shadow lifts it off the relief instead of a heavy outline; yours a little brighter, the rest a quiet warm grey
       ctx.globalAlpha = pa; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = Math.min(4, 1.5 + sz*0.12); ctx.shadowOffsetY = 1;
       ctx.fillStyle = you ? 'rgba(246,242,228,.8)' : 'rgba(226,222,208,.56)'; ctx.fillText(txt, lx + sz*0.125, ly); ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
     ctx.letterSpacing = '0px'; ctx.restore(); };
   // place labels: highest rank first, skip any that would overlap one already placed
   // building trays: city ones once the city names are placed (they give way to names, not to province names), countryside ones last
-  const labDbg = window.__dbgBoxes ? [] : null;
+  /*@TEST*/const labDbg = window.__dbgBoxes ? [] : null;/*@ENDTEST*/
   { labs.sort((a, b) => b.pri - a.pri); trq.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
     for (const L of labs){ if (!trCity && !L.cap && !L.city){ trCity = true; trays = placeTrays(trq, boxes, LPL, true, hexPx); }   // (the trays go first, so the power names keep clear of them)
       if (!pnYou && !(L.cap || L.city)) placePN(hexPx >= 15);   // the power names go in after the capital and city names, before the province names (once those are up, only yours)
@@ -9925,7 +9929,7 @@ function draw(now){
           if (bs > 0 && !(mine && bs < 1e7)) { if (!mine) continue; bk = b0; }
           for (let i = 0; i < 4; i++) b[i] = bk[i]; lx = b[0] + w/2; ly = b[1] + 1; late = !coreA(b); } }
       if (L.city || L.cap) b.city = true; boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; }
-      if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0});
+      /*@TEST*/if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0});/*@ENDTEST*/
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else { ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
     if (!trCity) trays = placeTrays(trq, boxes, LPL, true, hexPx); trays = trays.concat(placeTrays(trq, boxes, LPL, false, hexPx));
@@ -9987,7 +9991,7 @@ function draw(now){
   const VOLT = {para:'inf', spec:'inf', jam:'inf', mlrs:'art'}, volType = c => {   // each volley one of the stack's ground or naval types, weighted by count times hp (display only)
     let tot = 0; const w = []; for (const a of c.list) for (const t in a.u){ const n = a.u[t], U = UNITS[t]; if (!n || !U || U.cls === 'air') continue; const v = n*U.hp; w.push([VOLT[t] || t, v]); tot += v; }
     let r0 = Math.random()*tot; for (const [t, v] of w) if ((r0 -= v) <= 0) return t; return c.mt; };
-  PGHOST.length = 0;
+  /*@TEST*/PGHOST.length = 0;/*@ENDTEST*/
   try { for (const c of clusters){ if (c.x < -100 || c.y < -100 || c.x > cw + 100 || c.y > ch + 100) continue; const pa = (c.pa ?? 1)*(c.hud ? PF_HUD : 1); if (pa < 0.01) continue;
     const {lead, dir, fighting} = clSetup(c);
     // a marching counter still over a standing one (a force just setting off from its stack) shows faintly until it is clear: it comes out from under
@@ -10006,7 +10010,7 @@ function draw(now){
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   /*@TEST*/if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null, tba:capTagAt ? capTagAt.a ?? 1 : null,
-    pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};/*@ENDTEST*/   /*DBGBOX*/
+    pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};/*@ENDTEST*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
   if (sel.army !== null && !afxReduced()){ if (SELFX.a !== sel.army){ SELFX.a = sel.army; SELFX.at = now; }
     const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500;
@@ -11909,7 +11913,7 @@ GLOBE = (() => {
   // WebGL refuses images from another origin (e.g. a page opened from file://): check with a 1-pixel canvas read first
   function tainted(im){ try { const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.drawImage(im, 0, 0, 1, 1); g.getImageData(0, 0, 1, 1); return false; } catch (e){ return true; } }
   async function init(){
-    if (state !== 'idle' || window.__BAKE) return; state = 'loading';
+    if (state !== 'idle') return; /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ state = 'loading';
     const ims = Promise.all(['earth-day', 'earth-night', 'earth-clouds'].map(n => ART.load(n)));   // jump the queue of the other art
     T = await loadThree(); const [day, night, cl] = await ims;
     if (!T || !T.WebGLRenderer || !day || tainted(day)) return fail();
@@ -12159,7 +12163,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && S) 
 const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) try { hot.snapshot(() => ({state:serialize(), view:{...view}})); } catch (e) {}
 function preload(){
-  if (window.__BAKE) return Promise.resolve();
+  /*@TEST*/if (window.__BAKE) return Promise.resolve();/*@ENDTEST*/
   const img = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
   const tasks = [img('assets/terrain.webp').then(im => PRE.terrain = im), img('assets/landmask.png').then(im => PRE.mask = im), ART.first];
   if (window.U3D && U3D.loadBaked) tasks.push(U3D.loadBaked('assets/units/').catch(() => { if (U3D.canRender()) U3D.warmup(); }));

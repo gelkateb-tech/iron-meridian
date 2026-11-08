@@ -17,7 +17,7 @@ Each folder is a complete copy: `index.html` (the page to publish), `play.html` 
 
 ## Markers
 
-Code that only the test build may contain goes between markers in `index.html`:
+Code that only the test build may contain goes between markers in `index.html` and `units3d.js` (the build strips both; the other map scripts have no markers and are copied as they are):
 
 | Kind | JS / CSS | HTML |
 |---|---|---|
@@ -30,14 +30,16 @@ Code that only the test build may contain goes between markers in `index.html`:
 - Fence whole statements, such as `/*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/`, so the code still parses when a block is removed. Never put a marker inside an expression.
 - Developer rule overrides sit next to the rules they change (`devHour` / `devDone` / `devSpawn` next to `tick()`, the reveal override in `visibleSet` / `armyVisible`). They always call the game's own rule functions: `startResearch`, `researchHour`, `consHour`, `prodHour`, `engHour`, `addArmy`. The panel sits with the UI code next to `setSpeed`.
 - If you add a dev-only name, add it to `DEV_NAMES` in `tools/build.js` so the public check catches any reference left outside a block.
+- Test hooks are `@TEST` blocks too: `window.__im` and its `file://` extensions, the debug collections (`TMDBG`, `PGHOST`, `LAYEV`, `window.__dbgBoxes` with `tagDbg` / `pnDbg` / `labDbg`, the layout timers `PLAY_MS` / `PLAY_N`), the `?bake` page used by `tools/bake-assets.js` (the script that sets `window.__BAKE` and every statement that reads it, in `index.html` and `units3d.js`), and the `?artall` switch (loads every optional art file). A test or debug global is named `window.__<name>`; declare and read it only inside `@TEST` blocks.
 
 ## What the build checks
 
 After writing both folders, `tools/build.js` checks the public build and exits non-zero if any check fails:
 
 - no marker text is left;
-- none of the developer or test names in `DEV_NAMES` appear (`DEV`, `devPanel`, `devSpawn`, `__im`, `TMDBG.on`, ...);
-- every inline `<script>` parses (`vm.Script`);
+- none of the developer or test names in `DEV_NAMES` appear (`DEV`, `devPanel`, `devSpawn`, `__im`, `TMDBG`, `__BAKE`, ...), in the page or in any of the five scripts;
+- no `window.__<name>` global is read or set anywhere (a generic check, so a new debug switch left outside a block fails the build even before it is added to `DEV_NAMES`);
+- every inline `<script>` parses (`vm.Script`), and so does the stripped `units3d.js`;
 - the public page is smaller than the test page.
 
 It also checks that the test build has no marker text left and that its scripts parse. At the end it prints the sizes and the number of blocks it stripped.

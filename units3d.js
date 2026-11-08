@@ -10,7 +10,8 @@
                 heli:{dirs:16, frames:4, air:true}, drone:{dirs:16, frames:1, air:true}, carr:{dirs:16, frames:1, sea:true}, mlrs:{dirs:8, frames:3}, spec:{dirs:8, frames:8}};
   const ALIAS = {para:'inf'};
   const BAKE_SZ = 136;
-  const SZ = window.__BAKE ? BAKE_SZ : ((window.devicePixelRatio || 1) > 1.3 && (window.innerWidth || 1000) > 820 ? 136 : 112);   // pixels per frame
+  let SZ = (window.devicePixelRatio || 1) > 1.3 && (window.innerWidth || 1000) > 820 ? 136 : 112;   // pixels per frame
+  /*@TEST*/if (window.__BAKE) SZ = BAKE_SZ;/*@ENDTEST*/   // (the bake page renders at the baked size)
   const cache = {};
   let buildFn = null, mapFn = null;
   // the baked map atlases (assets/units/m-<type>.webp): their crop, ground origin and per-direction model boxes, written by tools/bake-assets.js map
@@ -832,12 +833,14 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     // the map model atlas of a type ({cv, dirs, w, h, ox, oy, ppm, air, sea}), or null while it loads: a baked sheet is fetched the first time it is
     // wanted (no stand-in meanwhile); with three.js present and nothing baked (the bake page) it is rendered here
     map(type, lvl = 0){ let A = mapAt[type];
-      if (A === undefined){ const m = MAPMETA[type]; mapAt[type] = A = null;
-        if (m && !window.__BAKE){ const im = new Image(); im.decoding = 'async'; im.onload = () => { mapAt[type] = mapLevels(m, im, null); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '.webp'; }
+      if (A === undefined){ let m = MAPMETA[type]; mapAt[type] = A = null;
+        /*@TEST*/if (window.__BAKE) m = null;/*@ENDTEST*/   // (the bake page renders every model here)
+        if (m){ const im = new Image(); im.decoding = 'async'; im.onload = () => { mapAt[type] = mapLevels(m, im, null); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '.webp'; }
         else if (mapFn) try { const R = mapFn(type); mapAt[type] = A = mapLevels(R, R.mid, R.hi); } catch (e) {} }
       if (!A) return null;
       if (lvl > 0){ A.hiT = performance.now(); if (A.hi) return A.hi;
-        if (!A.hiLoad && !window.__BAKE){ A.hiLoad = true; const im = new Image(); im.decoding = 'async'; im.onload = () => { if (A.hiLoad) A.hi = Object.assign({cv:im, lvl:1}, A.m); hiTrim(type); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '-hi.webp'; }
+        /*@TEST*/if (window.__BAKE) return null;/*@ENDTEST*/
+        if (!A.hiLoad){ A.hiLoad = true; const im = new Image(); im.decoding = 'async'; im.onload = () => { if (A.hiLoad) A.hi = Object.assign({cv:im, lvl:1}, A.m); hiTrim(type); }; im.onerror = () => {}; im.src = mapDir + 'm-' + type + '-hi.webp'; }
         return null; }
       return A.mid; },
     // drop the hi sheets not drawn for a while (memory: at most a few are decoded at once)
