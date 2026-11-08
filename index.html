@@ -8820,7 +8820,7 @@ function wrenchMark(x, y, ps){ const r = 4.6*ps; ctx.save(); ctx.beginPath(); ct
 const PLATE_TW = new Map();
 // the count's face: a bold italic condensed sans (Barlow Condensed when it has loaded, else the body face); the plate caches are dropped when fonts arrive
 const plateFont = fz => `italic 800 ${fz}px "Barlow Condensed", ${BODY}`;
-try { if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { PLATE_TW.clear(); if (typeof PLATEC !== 'undefined') PLATEC.clear(); }); } catch (e) {}
+try { if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { PLATE_TW.clear(); if (typeof PLATEC !== 'undefined') PLATEC.clear(); if (typeof redraw === 'function') redraw(); }); } catch (e) {}   // (a font arriving while the map is idle must still repaint the counters)
 const plateGrow = () => 1, PLATE_K = 1;   // (no growth with zoom: one size everywhere)
 let HUDR = {t:0, r:[]};
 let RAILR = {t:-1e9, r:[]}, RAILT = 0; const TMBX = [];   // TMBX: this frame's troop model boxes (screen css px)
