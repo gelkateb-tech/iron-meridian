@@ -8,12 +8,13 @@
 //  (e) image requests and bytes from page load to 8 s after the game starts (served over http, like the published page)
 //  (f) stuck-work checks (repair 1): wheel 6 notches in, 0.7 s, 10 notches out (detail tiles come back after the view left the detail zoom),
 //      pause, no input: draws per second must fall to ~0; the pointer leaving the map straight out of the window must clear the hover (a frame)
+//  (c2) touch pan driven by pointer events, (c3) a marching force with a still camera, (c4) ambient motion only (saver on: ~60, 30, 10 a second)
 // A draw is one call of the map's draw(); on a page without the redraw scheduler (older builds) every animation frame draws, so frames are counted.
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs'), http = require('http');
 const PAGE = process.env.PAGE || 'page.html', DIR = __dirname, quick = process.argv[2] === 'quick', IDLE_S = quick ? 5 : 10, RUN_S = quick ? 6 : 10;
 const VPS = { desktop: { viewport: { width: 1400, height: 860 } }, phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } };
-const errs = [];
+const errs = [], OFF = {};   // OFF: the saver-off results per device (the machine's own limit for a case)
 async function page(b, vp, saver){
   const ctx = await b.newContext(vp); const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -71,6 +72,45 @@ async function measure(b, name, saver){
   // (c) pan: 25 px per animation frame for 3 s over Berlin at a mid zoom
   await p.evaluate(() => { const im = window.__im, P = im.G.P.find(q => q.cityName === 'Berlin'), s = 3; im.view.s = s; im.view.x = innerWidth/2 - P.x*s; im.view.y = innerHeight/2 - P.y*s; }); await p.waitForTimeout(1500);
   out.pan = await window_(P, 0, () => p.evaluate(() => new Promise(res => { const im = window.__im, t0 = performance.now(); let n = 0; const f = () => { im.view.x -= 25; n++; if (performance.now() - t0 < 3000) requestAnimationFrame(f); else res(n); }; requestAnimationFrame(f); })));
+  // (c2) touch pan: a finger dragging the map, driven by touch pointer events at a steady 125 a second (every 8 ms, faster than the display)
+  // inside the page, in a circle of 120 px around where it went down, for 3 s. With the Battery saver on the map must draw at about the
+  // display rate (60 in headless Chromium), not the 30 fps cap; from 0.5 s after the finger lifts (1.5 s) it is back under the 30 fps cap.
+  await p.waitForTimeout(800);
+  out.touchPan = await window_(P, 0, () => p.evaluate(() => new Promise(res => { const c = document.getElementById('map'), r = c.getBoundingClientRect(), x0 = r.left + r.width/2, y0 = r.top + r.height/2, R = 120;
+    c.setPointerCapture = () => {}; c.releasePointerCapture = () => {};   // (a synthetic pointer id: capture would throw)
+    const ev = (t, x, y) => c.dispatchEvent(new PointerEvent(t, { pointerId: 71, pointerType: 'touch', isPrimary: true, bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: t === 'pointerup' ? 0 : 1 }));
+    ev('pointerdown', x0 + R, y0); const t0 = performance.now(); let n = 0;
+    const iv = setInterval(() => { const a = (performance.now() - t0)/1000*Math.PI*2*0.8; ev('pointermove', x0 + R*Math.cos(a), y0 + R*Math.sin(a)); n++;
+      if (performance.now() - t0 >= 3000){ clearInterval(iv); ev('pointerup', x0 + R*Math.cos(a), y0 + R*Math.sin(a)); res(n); } }, 8); })));
+  await p.waitForTimeout(500); await tallyOn(); out.touchPanAfter = await window_(P, 1500); out.touchPanAfter.asked = Object.keys(await tallyOff()).join(' ');
+  // (c3) game animation with a still camera: one of the player's land forces marches to a neighbouring province, the camera centred on it,
+  // the game running at 1x (the scheduler's tally must show a fast animation: 'f' keys): 30 fps with the Battery saver, the display rate without
+  const anim = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, me = S.armies.filter(a => a.owner === 0 && !a.air && !a.fly && a.to === null);
+    for (const a of me){ const P = G.P[a.at], nb = [...P.nb.keys()].filter(q => !G.P[q].sea && S.owner[q] === 0);
+      for (const q of nb){ im.orderMove(a, q); if (a.to !== null || (a.path && a.path.length)){ const s = 3, v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; S.speed = 1; return { id: a.id, from: P.name, to: G.P[q].name }; } } }
+    return null; });
+  if (anim){ await p.waitForTimeout(1200); await tallyOn(); out.anim = { ...(await window_(P, 3000)), ...anim }; const w = await tallyOff(); out.anim.fast = Object.keys(w).filter(k => k[0] === 'f').join(' ') || 'none'; }
+  else out.anim = 'no force could march';
+  await p.evaluate(() => { window.__im.S.speed = 0; });
+  // (c4) ambient motion only (waves and foam on a coast, which move while the clock runs), the game at 1x, no input: coastal cities at zoom 4,
+  // the first view whose tally shows ambient motion ('a') and no fast motion; 10 fps with the Battery saver (the sim ticks fall on those frames)
+  await p.evaluate(() => { window.__im.S.speed = 1; });
+  for (const c of ['Lisbon', 'Sydney', 'Cape Town', 'Rio de Janeiro', 'Tokyo', 'Mumbai', 'Oslo', 'Athens', 'Istanbul', 'Shanghai']){
+    const ok = await p.evaluate(c => { const im = window.__im, P = im.G.P.find(q => q.cityName === c); if (!P) return false; const s = 4, v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; return true; }, c);
+    if (!ok) continue; await p.waitForTimeout(1500); const why = await tally(1000), ks = Object.keys(why);
+    if (!ks.some(k => k[0] === 'a') || ks.some(k => k[0] === 'f')) continue;
+    await tallyOn(); const w = await window_(P, 3000), why2 = await tallyOff();
+    if (Object.keys(why2).some(k => k[0] === 'f')) continue;
+    out.ambient = { ...w, view: c, asked: Object.keys(why2).join(' ') }; break; }
+  await p.evaluate(() => { window.__im.S.speed = 0; }); if (!out.ambient) out.ambient = 'no view with only ambient motion';
+  // saver on: the map moving ~60 (the display rate in headless Chromium), a marching force 30, ambient motion 10, from 0.5 s after the finger
+  // lifts no more than the 30 fps cap (the view settling: detail tiles laid, names placed; then the ambient motion input woke, 10 fps). A case where the main thread was busy nearly the whole time (the
+  // phone emulation's 3x canvas on a slow machine), or where the saver drew at least 85% of what the same case drew with the saver off (which
+  // itself fell short: the machine's limit), is reported as cpuBound instead of failing a too-low rate.
+  if (!saver) OFF[name] = out;
+  if (saver){ const ck = (k, lo, hi) => { const o = out[k], v = o && o.drawsPerS, f = OFF[name] && OFF[name][k] && OFF[name][k].drawsPerS; if (v >= lo && v <= hi) return;
+      if (v < lo && (o.busyMsPerS > 800 || (f < lo && v >= 0.85*f))){ o.cpuBound = true; return; } errs.push(name + ' saver on: ' + k + ' drew ' + v + ' a second (expected ' + lo + '-' + hi + ')'); };
+    ck('touchPan', 50, 66); ck('pan', 50, 66); ck('touchPanAfter', 0, 33); if (anim) ck('anim', 24, 33); if (out.ambient.drawsPerS != null) ck('ambient', 7, 13); }
   await P.ctx.close(); return out;
 }
 // background: hidden (visibilitychange), and on a phone a lost focus (blur): no frames, no game time, sound suspended; back: as before

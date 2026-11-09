@@ -2323,8 +2323,10 @@ const STANDIN = (() => {
    terminator's drift). A frame where nothing registered and nothing asked is not drawn at all (the canvas keeps the last picture).
    While the game is paused, the ambient motion rests once there has been no input for a while (ambIdle: 6 s with the Battery saver, 15 s
    without), so a paused map with a still camera is not redrawn at all. Battery saver on: at most 30 fps, 10 fps when only ambient motion is
-   left. Off: as many frames as the screen gives while anything moves. */
-const RD = {n:0, dirty:true, until:0, f:0, a:0, nx:Infinity, last:0, inp:0, vx:NaN, vy:NaN, vs:NaN, cov:false, raf:0, bg:false, ac:false};
+   left, but while the map itself moves (a finger or the mouse held on it, a drag, a pinch, a wheel or button zoom glide, a camera jump or
+   flight, any change of the view) and for 300 ms after, the display rate, at most about 60 fps (rdFastIv). Off: as many frames as the screen
+   gives while anything moves. */
+const RD = {n:0, dirty:true, until:0, f:0, a:0, nx:Infinity, last:0, inp:0, vx:NaN, vy:NaN, vs:NaN, cov:false, raf:0, bg:false, ac:false, mv:-1e9, fi:1000/60};
 const ambIdle = () => saverOn() ? 6000 : 15000;
 function redraw(ms = 0){ RD.dirty = true; /*@TEST*/if (RD.dbg) rdWhy('r');/*@ENDTEST*/ if (ms){ const t = performance.now() + ms; if (t > RD.until) RD.until = t; } }
 function animFast(){ RD.f = 1; /*@TEST*/if (RD.dbg) rdWhy('f');/*@ENDTEST*/ }
@@ -2332,9 +2334,16 @@ function animAmb(){ RD.a = 1; /*@TEST*/if (RD.dbg) rdWhy('a');/*@ENDTEST*/ }
 /*@TEST*/function rdWhy(k){ const l = (new Error().stack || '').split('\n')[3] || '', m = l.match(/:(\d+):\d+\)?$/), key = k + (m ? m[1] : '?'); RD.dbg[key] = (RD.dbg[key] || 0) + 1; }/*@ENDTEST*/
 function animIn(ms){ if (ms < RD.nx) RD.nx = Math.max(0, ms); /*@TEST*/if (RD.dbg) rdWhy('i');/*@ENDTEST*/ }
 const saverOn = () => SET.saver === true;
-// ms after the last draw when the next one is due (Infinity: nothing to draw)
-function rdInterval(now){ const sv = saverOn(), cap = sv ? 1000/30 : 0;
-  if (RD.dirty || RD.f || now < RD.until || view.x !== RD.vx || view.y !== RD.vy || view.s !== RD.vs || camFly || ZTW) return cap;
+// the Battery saver's rate while the map moves: every k-th display frame, the k that keeps it near 60 fps (RD.fi: the smoothed display frame
+// time; a 60 or 75 Hz screen: every frame; 90 or 120 Hz: every second frame; 144 or 165 Hz: every third), so the steps stay even
+function rdFastIv(){ const k = Math.max(1, Math.ceil(1000/RD.fi/60 - 0.25)); return k > 1 ? k*RD.fi : 0; }
+// ms after the last draw when the next one is due (Infinity: nothing to draw). mv: the view changed since the last frame, or a camera glide
+// runs; a pointer held on the map or a minimap drag also keeps the smooth rate without asking for frames itself; RD.mv keeps the time, so
+// the smooth rate lasts 300 ms past the end (the settle, the hover and names catching up)
+function rdInterval(now){ const sv = saverOn(), mv = view.x !== RD.vx || view.y !== RD.vy || view.s !== RD.vs || camFly || ZTW;
+  if (mv || pointers.size || miniDrag) RD.mv = now;
+  const cap = !sv ? 0 : now - RD.mv < 300 ? rdFastIv() : 1000/30;
+  if (RD.dirty || RD.f || now < RD.until || mv) return cap;
   return RD.a && ((S && S.speed > 0 && !S.over) || now - RD.inp < ambIdle()) ? Math.min(RD.nx, sv ? 100 : 0) : RD.nx; }
 // the game clock's ms per game hour at the current speed (0 while paused): for changes that follow the game time between ticks
 const msPerHour = () => S && S.speed > 0 && !S.over ? 1000/HOURS_PER_SEC[S.speed] : 0;
@@ -10876,7 +10885,7 @@ function settingsHTML(){
     ${row('Music', `<div class="seg2">${opt('music', true, 'On')}${opt('music', false, 'Off', 'Effects and ambience only')}</div>`)}
     ${row('Pop-up alerts', `<div class="seg2">${opt('toasts', 'all', 'All')}${opt('toasts', 'bad', 'Threats')}${opt('toasts', 'none', 'None')}</div>`)}
     ${row('Effects', `<div class="seg2">${opt('fx', 'high', 'High')}${opt('fx', 'low', 'Low', 'Faster on slow machines')}</div>`)}
-    ${row('Battery saver', `<div class="seg2">${opt('saver', true, 'On')}${opt('saver', false, 'Off', 'Full frame rate while anything moves')}</div>`, 'Caps the frame rate at 30 and pauses drawing when nothing moves')}
+    ${row('Battery saver', `<div class="seg2">${opt('saver', true, 'On')}${opt('saver', false, 'Off', 'Full frame rate while anything moves')}</div>`, 'Smooth while you move the map; 30 fps otherwise, and no drawing when nothing moves')}
     ${row('Text size', `<div class="seg2">${[90, 100, 115, 130].map(v => `<button class="sg ${(SET.ui || 100) === v ? 'on' : ''}" aria-pressed="${(SET.ui || 100) === v}" data-act="set-ui" data-v="${v}">${v}%</button>`).join('')}</div>`)}
     ${row('Colours', `<div class="seg2">${opt('cb', false, 'Standard')}${opt('cb', true, 'Colour-blind')}</div>`)}
     ${row('Motion', `<div class="seg2">${opt('motion', 'full', 'Full')}${opt('motion', 'reduced', 'Reduced', 'No shake, fewer particles')}</div>`)}
@@ -12213,7 +12222,7 @@ function rdShift(ms){ const sh = (M, ...ks) => { for (const E of M.values()) for
     TMSW += ms; PLAY_SW += ms; if (MOV.sw) MOV.sw += ms; if (PF_S.t != null) PF_S.t += ms; if (window.U3D && U3D.mapShift) U3D.mapShift(ms); } catch (e) {} }
 function frame(now){
   RD.raf = 0; if (RD.bg) return;   // in the background: the loop stops (bgResume starts it again)
-  const dt = Math.min(0.25, (now - (last || now))/1000); last = now;
+  const fd = now - (last || now), dt = Math.min(0.25, fd/1000); last = now; if (fd > 3 && fd < 60) RD.fi += (fd - RD.fi)*0.05;   // (RD.fi: the display's frame time, smoothed)
   if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; while (acc >= 1 && n < 8){ tick(); acc -= 1; n++; } if (n >= 8) acc = 0; if (n) redraw(); }   // a game hour passed: draw what it changed
   fxDrain(now);   // the effects queue and the ambient-motion clock run on real time, drawn or not
   uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; try { ambience(now); } catch (e) {} renderSide(); tutTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
