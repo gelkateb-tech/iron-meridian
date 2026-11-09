@@ -13,6 +13,7 @@ How it works from now on:
 - Battery saver: the map now runs smooth (up to 60 fps) while you drag, pinch or zoom it or the camera glides, and for a moment after; 30 fps for other animation, 10 for gentle background motion, nothing when still.
 - Research: two projects run at the same time (slot #1 and slot #2, both at full speed, for you and the AI); a project waits while its prerequisite is still running, and an old save's queued project starts in slot #2 when it loads; repair 1 (tapping a project only selects it, the Research button starts it and its slot lights up; button text no longer runs together).
 - Cities: sharper and more detailed up close: big cities are drawn at full screen resolution when you zoom in (made in pieces, only the part you see), and as you zoom they gain streets, blocks of buildings with soft shadows, parks with trees and ponds, squares, downtown towers, works and rail yards on the outskirts, and city lights along the new streets at night; each city keeps its own shape.
+- Cities repair 1: on 3x phone screens the map now draws at the phone's full sharpness once you zoom in to city level, so cities get a pixel of detail for every screen pixel; city lights at night are just as sharp; jumping straight to a city on a phone no longer leaves it blurry; and cities are now made in many small steps, so making them never holds up the game for more than a moment.
 
 ## Released
 - v3.11 — Arms Factory pricing: first factory $25M, each extra one a nation owns +40%.
