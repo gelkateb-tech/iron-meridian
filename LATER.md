@@ -18,6 +18,7 @@ Plan the code for these, but don't build them yet. (Owner's spec; this replaces 
 - Military ranks (Private, Sergeant, Lieutenant, Captain, Major, Colonel, General, Marshal), with a few levels inside each. The game already uses Colonel, General and Marshal for commanders, so avoid confusing the two.
 - Seasons of about 2 months. Ranks reset each season, and top players get skins, flags and titles. A new unit only every few seasons.
 - A minimum player level (around 10) is needed to enter.
+- Territory sales in competitive mode: the lowest allowed price is 40% of the province's value for everyone, 25% between coalition partners (normal games: 25%, and 10% between coalition partners who have been together a few days).
 
 ## Player levels
 - Permanent, separate from ranks, earned in any mode, with a small reward at each level.
