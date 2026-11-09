@@ -11,6 +11,7 @@ How it works from now on:
 ## Waiting for public
 - Battery saver (setting, on by default on phones): the map redraws only when something on it changes, 30 fps cap, pauses in the background, building pictures load when first shown; repairs 1 and 2 (no redraws for convoys, storms or water off screen; names placed right after a phone rotation).
 - Battery saver: the map now runs smooth (up to 60 fps) while you drag, pinch or zoom it or the camera glides, and for a moment after; 30 fps for other animation, 10 for gentle background motion, nothing when still.
+- Research: two projects run at the same time (slot #1 and slot #2, both at full speed, for you and the AI); a project waits while its prerequisite is still running, and an old save's queued project starts in slot #2 when it loads.
 
 ## Released
 - v3.11 — Arms Factory pricing: first factory $25M, each extra one a nation owns +40%.

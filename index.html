@@ -1456,6 +1456,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .rnode.st-run::before{content:""; position:absolute; z-index:0; top:-7px; left:calc(50% - 30px); width:60px; height:60px; border-radius:3px; transform:rotate(45deg);
   background:conic-gradient(from -45deg, #8ff4fb calc(var(--p, 0)*360deg), rgba(255,255,255,.14) 0); box-shadow:0 0 14px rgba(79,208,222,.75); animation:rsRun 1.6s ease-in-out infinite}
 @keyframes rsRun{50%{box-shadow:0 0 22px rgba(79,208,222,1)}}
+.rnode.busy .dm{filter:saturate(.55) brightness(.9)}
 .rnode.q .dm{border-color:var(--cn-gold); box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 0 12px rgba(232,185,35,.7)}
 .rnode.sel .dm{box-shadow:0 0 0 3px #fff, 0 0 0 4px rgba(0,0,0,.6), 0 0 18px rgba(255,255,255,.45)} .rnode.sel .rn{color:#9ff5fb}
 /* detail strip */
@@ -3772,7 +3773,7 @@ function newGame(seed, pick){
     for (const id of provs) owner[id] = k;
     const capital = provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
     G.P[capital].city = true;
-    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, mk:{}, eng:null, doc:null};   // no national doctrines
+    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, persist:!!newGame.persist, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
@@ -3818,9 +3819,10 @@ function restore(data){
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
-  for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.rqueue && !TECH_BY[N.rqueue]) N.rqueue = null; G.P[N.capital].city = true; }
+  for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.research2 === undefined) N.research2 = null; G.P[N.capital].city = true; }
   if (S.sunOff == null) S.sunOff = sunOffFor(PLAYER);   // older saves: the same display-only daylight offset
   resMigrate();
+  rqueueMigrate();
   buildGeometry();
   return true;
 }
@@ -3904,8 +3906,33 @@ const bdisH = (p, k) => { const d = bdisOf(p); if (!d) return 0; let h = 0; for 
 function knockOut(p, k, h){ const d = bdisOf(p) || ((S.bdis || (S.bdis = {}))[p] = {}); for (const b in d) if (d[b] <= S.hour) delete d[b]; d[k] = Math.max(S.hour + h, d[k] || 0); }
 const bldOk = (p, t) => !UNITS[t].req || (S.bld[p][UNITS[t].req.b] >= UNITS[t].req.l && !bdis(p, UNITS[t].req.b));
 const reqText = (p, t, n = PLAYER) => { const U = UNITS[t]; return !unlocked(n, t) ? `Research ${TECH_BY[U.tech].name}` : U.req && bdis(p, U.req.b) && S.bld[p][U.req.b] >= U.req.l ? `${BUILD[U.req.b].name} knocked out · ${bdisH(p, U.req.b)} h` : !bldOk(p, t) ? `Needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''; };
-function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return N.alive && !N.research && !has(n, id) && (!T.req || has(n, T.req)) && hasC(N, techCost(T)); }
-function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id]; payC(N, techCost(T)); N.research = {id, h:Math.round(T.days*24*(docOf(n) ? docOf(n).res : 1))}; N.research.h0 = N.research.h; if (n === PLAYER){ (S.tut || (S.tut = {})).research = true; bump('rareRes', techCost(T).rare || 0); } return true; }
+// ---------- research rules: every nation runs two projects at once, slot #1 (N.research) and slot #2 (N.research2), each {id, h, h0} or null.
+// Both slots progress at full speed; a project's costs are paid when it starts; a project whose prerequisite is still running in the other slot
+// waits until that one is done. Pure rules (no drawing): the UI asks researchWhy / canResearch and calls startResearch.
+const R_SLOTS = ['research', 'research2'];
+const rFree = N => !N.research ? 'research' : !N.research2 ? 'research2' : null;   // the free slot (slot #1 first), or null when both are busy
+const rFreeN = N => R_SLOTS.reduce((c, k) => c + (N[k] ? 0 : 1), 0);   // how many slots are free
+const rRunning = (N, id) => R_SLOTS.find(k => N[k] && N[k].id === id) || null;   // the slot running this project, or null
+const rSlotNo = k => k === 'research2' ? 2 : 1;
+// why nation n cannot start project id now ('' when it can)
+function researchWhy(n, id){ const N = S.nations[n], T = TECH_BY[id];
+  if (!T || !N || !N.alive) return 'Not available'; if (has(n, id)) return 'Researched'; { const k = rRunning(N, id); if (k) return `Running in slot #${rSlotNo(k)}`; }
+  if (T.req && !has(n, T.req)){ const k = rRunning(N, T.req); return k ? `Waits for ${TECH_BY[T.req].name} (slot #${rSlotNo(k)})` : `Needs ${TECH_BY[T.req].name}`; }
+  if (!rFree(N)) return 'Both slots busy';
+  return hasC(N, techCost(T)) ? '' : `Needs ${missTxt(N, techCost(T))}`; }
+function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return !!T && N.alive && !!rFree(N) && !has(n, id) && !rRunning(N, id) && (!T.req || has(n, T.req)) && hasC(N, techCost(T)); }
+// start project id in the free slot (paying its costs); returns false when it cannot start
+function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id], k = rFree(N); payC(N, techCost(T));
+  const h = Math.round(T.days*24*(docOf(n) ? docOf(n).res : 1)); N[k] = {id, h, h0:h};
+  if (n === PLAYER){ (S.tut || (S.tut = {})).research = true; bump('rareRes', techCost(T).rare || 0); } return true; }
+// one game hour of one slot: completion frees the slot
+function researchSlotHour(N, k){ const R = N[k]; if (!R) return;
+  if (--R.h <= 0){ const T = TECH_BY[R.id]; N[k] = null; if (!T) return; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1;
+    if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
+// the hourly research step: both slots advance
+function researchHour(N){ for (const k of R_SLOTS) researchSlotHour(N, k); }
+// saves from before two slots held a queued project for slot #2 (N.rqueue): it starts now if it can (paying as usual), else it is dropped
+function rqueueMigrate(){ for (const N of S.nations){ const q = N.rqueue; delete N.rqueue; delete N.rqWarn; if (q && TECH_BY[q] && canResearch(N.id, q)) startResearch(N.id, q); } }
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 // Arms Factory price rises 40% for every OTHER province of the nation that already has one (built, or under construction at level 1+), cash, materials and iron alike
 const FAC_RISE = 1.4;
@@ -6778,15 +6805,12 @@ function consHour(p){ const c = S.cons[p];
 function engHour(N){
     if (--N.eng.h <= 0){ const {t, m} = N.eng; (N.mk || (N.mk = {}))[t] = m; N.tv = (N.tv || 0) + 1; N.eng = null;
       if (N.id === PLAYER){ log(`${UNITS[t].name} upgraded to Mk ${ROMAN[m]}: +${Math.round((MARK_F[m] - 1)*100)}% attack and defense for every one you field.`, 'good'); sfx('research'); } } }
-function researchHour(N){
-    if (--N.research.h <= 0){ const T = TECH_BY[N.research.id]; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1; N.research = null;
-      if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
 /*@DEV*/
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
 // consHour, prodHour, engHour, addArmy. devHour runs at the top of every game hour; devDone also runs right after a click (instant while paused).
 function devFill(N){ for (const k of CK) if (!((N[k] || 0) >= DEV_FILL)) N[k] = DEV_FILL; }   // unlimited resources: all seven topped up
 function devDone(n){ const N = S && S.nations[n]; if (!N || !N.alive) return 0; let k = 0;
-  if (DEV.research) for (let i = 0; i < 4; i++){ if (!N.research && N.rqueue && startResearch(n, N.rqueue)) N.rqueue = null; if (!N.research) break; N.research.h = 1; researchHour(N); k++; }
+  if (DEV.research) for (const s of R_SLOTS) if (N[s]){ N[s].h = 1; researchSlotHour(N, s); k++; }
   if (DEV.instant){
     if (N.eng){ N.eng.h = 1; engHour(N); k++; }
     for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue;
@@ -6796,9 +6820,9 @@ function devDone(n){ const N = S && S.nations[n]; if (!N || !N.alive) return 0; 
 function devHour(n){ const N = S.nations[n]; if (!N || !N.alive) return; if (DEV.res) devFill(N); devDone(n); }
 // research every technology at once (free: the stocks are restored afterwards)
 function devResearchAll(n){ const N = S.nations[n]; if (!N || !N.alive) return 0; const keep = Object.fromEntries(CK.map(k => [k, N[k]])); let k = 0;
-  if (N.research){ N.research.h = 1; researchHour(N); k++; }
-  for (let go = true; go;){ go = false; for (const T of TECH){ devFill(N); if (startResearch(n, T.id)){ N.research.h = 1; researchHour(N); k++; go = true; } } }
-  N.rqueue = null; Object.assign(N, keep); visCache = null; return k; }
+  for (const s of R_SLOTS) if (N[s]){ N[s].h = 1; researchSlotHour(N, s); k++; }
+  for (let go = true; go;){ go = false; for (const T of TECH){ devFill(N); if (startResearch(n, T.id)){ for (const s of R_SLOTS) if (N[s] && N[s].id === T.id){ N[s].h = 1; researchSlotHour(N, s); } k++; go = true; } } }
+  Object.assign(N, keep); visCache = null; return k; }
 // spawn: a new force of k units of type t for nation n in province p (ground and air on land, ships at sea or on a coast), built by addArmy
 function devSpawnOk(p, t){ const U = UNITS[t], P = G.P[p]; return !!U && !!P && (U.cls === 'naval' ? !!(P.sea || P.coast) : !P.sea); }
 function devSpawn(n, p, t, k){ if (!S.nations[n] || !S.nations[n].alive || !devSpawnOk(p, t)) return null;
@@ -6814,8 +6838,7 @@ function tick(){
   // unit upgrades (one at a time, parallel to research)
   for (const N of S.nations) if (N.alive && N.eng) engHour(N);
   // research
-  for (const N of S.nations) if (N.alive && N.research) researchHour(N);
-  rqueueHour();   // slot #2: the queued project starts as soon as slot #1 is free
+  for (const N of S.nations) if (N.alive && (N.research || N.research2)) researchHour(N);   // both slots
   diploHour(); reqHour(); weatherHour(); dropTick(); linkHour(); if (S.hour % 6 === 0) strandedHour(); if (S.hour % 3 === 0) escortHour();
   airTick();
   missileTick();
@@ -7319,7 +7342,7 @@ const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U 
   let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
   if (U && U.until > S.hour && UNITS[U.t]) r += (ucost(n, U.t)[k] || 0) + (k === 'cash' ? 15 : 0);
   if (N.bSave && N.bSave.until > S.hour) r += buildCost(n, 'air', 2)[k] || 0;
-  if (!N.research && N.rPick && N.rPick.until > S.hour && TECH_BY[N.rPick.id] && (N.rPick.save || k === 'rare')) r += techCost(TECH_BY[N.rPick.id])[k] || 0;   // saving for a counter tech (all of it); rare materials always wait for the next research
+  if (rFree(N) && N.rPick && N.rPick.until > S.hour && TECH_BY[N.rPick.id] && (N.rPick.save || k === 'rare')) r += techCost(TECH_BY[N.rPick.id])[k] || 0;   // saving for a counter tech (all of it); rare materials always wait for the next research
   return r; };
 // buy what a cost lacks in traded goods (plus a few spare) on the world market, if every price is at most mx times the base and the money covers it all
 function aiBuyFor(n, c, mx, spare = 20){ const N = S.nations[n], miss = MKT_K.map(k => [k, Math.ceil((c[k] || 0) - N[k])]).filter(([, q]) => q > 0); if (!miss.length) return true;
@@ -7336,8 +7359,8 @@ function aiArmyCap(n){ if (ARMYC.v !== tickVer || ARMYC.S !== S){ ARMYC.v = tick
   return (ARMYC.m[n] = 90 + c*Math.min(1, 0.55 + 40/(40 + k))); }   // large empires feed and supply their armies less efficiently (as food was hit by administration)
 function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
-  if (!N.research){
-    const av = TECH.filter(t => !has(n, t.id) && (!t.req || has(n, t.req)));
+  if (rFree(N)){   // a slot is free (one start per turn: the other slot fills on a later turn, with a different project)
+    const av = TECH.filter(t => !has(n, t.id) && !rRunning(N, t.id) && (!t.req || has(n, t.req)));
     if (av.length){ const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0};
       const hb = H.bomb > 0 ? 4 : 0, wr = warsOf(n).length > 0, ab2 = G.P.some(P => S.owner[P.id] === n && S.bld[P.id].air >= 2);
       // enemies fielding (or able to field) bombers, AWACS and patrol planes, or flying drones, call for Air Superiority Fighters
@@ -10767,7 +10790,7 @@ function renderSide(force){
   if (modalKind === 'research' && !$('modal').hidden){
     setHTML($('sheet'), researchHTML()); rPatch(N);
   }
-  $('resdot').hidden = !!N.research || !N.alive;
+  { const fr = N.alive ? rFreeN(N) : 0, d = $('resdot'); d.hidden = !fr; if (d.textContent !== String(fr)) d.textContent = fr; d.title = fr === 1 ? '1 research slot free' : `${fr} research slots free`; }
   // dock signals: idle cities (money to spend and nothing training, the same test as the Command nudge), idle agents, the open panel
   $('proddot').hidden = !(N.alive && N.cash > 300 && S.queue.every((q, p) => S.owner[p] !== PLAYER || !q.length));
   $('inteldot').hidden = !(N.alive && idleAgents(PLAYER).length);
@@ -10843,7 +10866,7 @@ const TUT_STEPS = [
   {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
-  {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project. Jet Engines unlocks aircraft; Industrial Automation boosts money.', el:'#resbtn', done:() => !!S.nations[PLAYER].research},
+  {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Jet Engines unlocks aircraft; Industrial Automation boosts money.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
   {t:'You are ready', d:() => 'The bar along the bottom opens Diplomacy (war, peace, trade routes), Market, Cities, Research, Army and Production (P); More holds Intelligence, Settings, Sound and “How to play” (or press ?), which explains roads and railways, drones, trade and coalitions. The crate at the left of the resource strip lists your missiles; the shields on the right of the map fly home, open the dispatches and toggle the relations map. Good luck, commander.', el:'#dock', next:true, last:true},
 ];
 // the weakest independent province the selected army can reach and win against
@@ -10943,14 +10966,14 @@ function diploHTML(){
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
 function researchLine(){
-  const N = S.nations[PLAYER], R = N.research, done = Object.keys(N.tech).length;
-  if (R){ const T = TECH_BY[R.id], f = 1 - R.h/(R.h0 || T.days*24);
-    return `<div class="status move"><div class="qi"><span>Researching ${T.name}</span><span class="muted">${R.h} h</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.round(f*100)}%"></i></div>${N.rqueue && TECH_BY[N.rqueue] ? `<div class="small muted" style="margin-top:4px">Next (slot #2): ${TECH_BY[N.rqueue].name}</div>` : ''}</div>
-      <div class="row"><button class="btn" data-act="research-open">Research tree · ${done}/${TECH.length}</button></div>`; }
-  return `<div class="status"><b>No research running.</b> Pick a project to improve your units and economy.</div>
+  const N = S.nations[PLAYER], done = Object.keys(N.tech).length, run = R_SLOTS.map(k => N[k]).filter(Boolean), fr = rFreeN(N);
+  if (run.length){ const row = R => { const T = TECH_BY[R.id], f = 1 - R.h/(R.h0 || T.days*24); return `<div class="qi"><span>Researching ${T.name}</span><span class="muted">${R.h} h</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.round(f*100)}%"></i></div>`; };
+    return `<div class="status move">${run.map(row).join('<div style="height:6px"></div>')}${fr ? `<div class="small muted" style="margin-top:4px">A research slot is free: start a second project.</div>` : ''}</div>
+      <div class="row"><button class="btn${fr ? ' primary' : ''}" data-act="research-open">Research tree · ${done}/${TECH.length}</button></div>`; }
+  return `<div class="status"><b>No research running.</b> Pick two projects to improve your units and economy: both slots run at once.</div>
     <div class="row"><button class="btn primary" data-act="research-open">Open research tree · ${done}/${TECH.length}</button></div>`;
 }
-// ---------- research screen (CoN layout): a RESEARCH title band, SLOT #1 (the running project) and SLOT #2 (the next one, queued), then a list of branch
+// ---------- research screen (CoN layout): a RESEARCH title band, SLOT #1 and SLOT #2 (two projects running at once), then a list of branch
 // banners; a banner opens that branch's tree: rows by research step down the left, diamond nodes in columns, connector lines to what each needs, and a detail
 // strip for the selected node. The view (list / branch / marks) and the selected node live here, so the hourly re-render keeps them.
 const RV = {br:null, sel:null};
@@ -11023,26 +11046,18 @@ function rLayout(br){ if (RLAY[br]) return RLAY[br];
 const rbImg = art => { const e = Object.values(UART).find(u => u[0] === art), rot = /^b-/.test(art) ? 0 : e && e[1] ? 96 : -84;
   return `<span class="rs-bw" aria-hidden="true">${['b1', 'b2', 'b3'].map(k => `<i class="rs-bimg ${k}${rot ? '' : ' flat'}" style="background-image:url('${ART.url(art)}');--rot:${rot}deg"></i>`).join('')}</span>`; };   // a column of three across the banner
 const rDur = h => h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`;
-// may this project wait in slot #2? (slot #1 busy, not yet known, and what it needs is known or being researched now)
-function rCanQueue(n, id){ const N = S.nations[n], T = TECH_BY[id], R = N.research; return !!(T && N.alive && R && R.id !== id && !has(n, id) && (!T.req || has(n, T.req) || R.id === T.req)); }
-function rQueue(id){ const N = S.nations[PLAYER]; if (!rCanQueue(PLAYER, id)) return false; N.rqueue = id; N.rqWarn = 0; return true; }
-// each hour: slot #2 starts as soon as slot #1 is free (paying its costs then, as a normal start); it waits while the costs are short
-function rqueueHour(){ for (const N of S.nations){ const q = N.rqueue; if (!q) continue; const T = TECH_BY[q];
-  if (!N.alive || !T || has(N.id, q) || (N.research && N.research.id === q) || (!N.research && T.req && !has(N.id, T.req))){ N.rqueue = null; continue; }
-  if (N.research) continue;
-  if (startResearch(N.id, q)){ N.rqueue = null; N.rqWarn = 0; if (N.id === PLAYER) log(`Research started from slot #2: ${T.name}.`, 'info'); }
-  else if (N.id === PLAYER && !N.rqWarn){ N.rqWarn = 1; log(`Slot #2 waits: ${T.name} needs ${missTxt(N, techCost(T))}.`, 'info'); } } }
 function rSlotHTML(k, T, N, extra){ const lbl = `<span class="rs-tag">SLOT #${k}</span>`;
-  if (!T) return `<div class="rs-slot empty" id="rslot${k}"><span class="rs-dm sm"><span class="dmi">${rg(k === 1 ? 'steps' : 'clock', 20)}</span></span>${lbl}<span class="rs-sh">${k === 1 ? 'Pick a project below' : N.research ? 'Tap a project to queue it next' : 'Free once slot #1 is busy'}</span></div>`;
+  if (!T) return `<div class="rs-slot empty" id="rslot${k}"><span class="rs-dm sm"><span class="dmi">${rg(k === 1 ? 'steps' : 'clock', 20)}</span></span>${lbl}<span class="rs-sh">${rFreeN(N) > 1 ? 'Free: pick a project below' : 'Free: tap a project to start it here'}</span></div>`;
   return `<button class="rs-slot full s${k}" id="rslot${k}" data-act="rsel" data-id="${T.id}" data-b="${T.branch}" title="${T.name}: ${T.desc}"><span class="rs-dm sm"><span class="dmi">${faceHTML(techFace(T), 22)}</span></span>
     <span class="rs-si">${lbl}<b>${T.name}</b>${extra}</span></button>`; }
 function researchHTML(){
-  const N = S.nations[PLAYER], R = N.research, Q = N.rqueue && TECH_BY[N.rqueue] ? TECH_BY[N.rqueue] : null, done = Object.keys(N.tech).filter(k => TECH_BY[k]).length;
+  const N = S.nations[PLAYER], R = N.research, R2 = N.research2, busy = !rFree(N), done = Object.keys(N.tech).filter(k => TECH_BY[k]).length;
+  const slotOf = id => { const k = rRunning(N, id); return k ? rSlotNo(k) : 0; };
   if (RV.br && RV.br !== 'marks' && !BRANCHES.includes(RV.br)) RV.br = null;
   const inc = income(PLAYER), rk = k => { const R0 = RES.find(x => x.k === k), d = inc.net[k]; return `<div class="chip res-${k}" title="${R0.name}: ${R0.pre}${fmt(N[k])}${R0.unit}, ${d >= 0 ? '+' : ''}${fmt1(d)} a day">${icon(k, 16)}<span class="cv"><span class="vv"><b>${R0.pre}${fmt(N[k])}${R0.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; };
   const view = RV.br === 'marks' ? 'marks' : RV.br ? 'tree' : 'list';
-  const s1 = R ? rSlotHTML(1, TECH_BY[R.id], N, `<span class="rs-bar"><i id="rbar"></i></span><span class="rs-left" id="rleft"></span>`) : rSlotHTML(1, null, N);
-  const s2 = Q ? rSlotHTML(2, Q, N, `<span class="rs-sub">${hasC(N, techCost(Q)) ? `Starts when slot #1 is done · ${Q.days} d` : `Starts when slot #1 is done · needs ${missTxt(N, techCost(Q))}`}</span>`) : rSlotHTML(2, null, N);
+  const slot = (k, X) => X && TECH_BY[X.id] ? rSlotHTML(k, TECH_BY[X.id], N, `<span class="rs-bar"><i id="rbar${k}"></i></span><span class="rs-left" id="rleft${k}"></span>`) : rSlotHTML(k, null, N);
+  const s1 = slot(1, R), s2 = slot(2, R2);
   let h = `<div class="rs-top"><div class="rs-head">${view !== 'list' ? `<button class="rs-back" data-act="rback" aria-label="Back to the research list" title="Back">${rg('back', 22)}</button>` : ''}
       <div class="rs-ttl"><h1>Research</h1><span class="rs-cnt">${N.name} · ${done}/${TECH.length} researched</span></div>
       <div class="rs-stk">${['cash', 'metal', 'rare'].map(rk).join('')}</div>
@@ -11053,12 +11068,12 @@ function researchHTML(){
     const t1 = TECH.filter(T => !has(PLAYER, T.id) && (!T.req || has(PLAYER, T.req))).map(T => techCost(T).rare).sort((a, b) => a - b)[0];
     h += `<div class="rs-list">`;
     for (const br of RB_ORDER){ const M = RB[br] || {g:'atk', tag:''}, L = TECH.filter(T => T.branch === br), dn = L.filter(T => has(PLAYER, T.id)).length;
-      const open = L.filter(T => !has(PLAYER, T.id) && (!T.req || has(PLAYER, T.req)) && !(R && R.id === T.id)).length;
-      const run = R && TECH_BY[R.id].branch === br, qd = Q && Q.branch === br;
+      const open = L.filter(T => !has(PLAYER, T.id) && (!T.req || has(PLAYER, T.req)) && !slotOf(T.id)).length;
+      const run = R && TECH_BY[R.id] && TECH_BY[R.id].branch === br, qd = R2 && TECH_BY[R2.id] && TECH_BY[R2.id].branch === br;
       h += `<button class="rs-ban${dn === L.length ? ' full' : ''}" data-act="rbranch" data-b="${br}" title="${br}: ${dn} of ${L.length} researched${open ? `, ${open} open now` : ''}">
         ${M.art ? rbImg(M.art) : ''}<span class="rs-dm"><span class="dmi">${rg(M.g, 30)}</span></span>
         <span class="rs-bt"><b>${br}</b><span>${M.tag}</span></span>
-        <span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open && !run ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${L.length}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/L.length*100)}%"></i></span></span></button>`; }
+        <span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open && !run && !qd ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${L.length}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/L.length*100)}%"></i></span></span></button>`; }
     const E = N.eng, nm = UT.filter(t => unlocked(PLAYER, t)), mk = nm.filter(t => markOf(PLAYER, t) >= 4).length;
     h += `<button class="rs-ban marks" data-act="rbranch" data-b="marks" title="Unit upgrades, Marks I to IV">${rbImg('u-special-forces')}<span class="rs-dm"><span class="dmi">${rg('marks', 30)}</span></span>
         <span class="rs-bt"><b>Unit upgrades</b><span>Hone what you field · Marks I–IV</span></span><span class="rs-bp"><span class="rs-bpt">${E ? `<em class="rs-run">${UNITS[E.t].short} Mk ${ROMAN[E.m]}</em>` : ''}<b>${mk}<small>/${nm.length}</small></b></span><span class="rs-pb"><i style="width:${nm.length ? Math.round(mk/nm.length*100) : 0}%"></i></span></span></button></div>
@@ -11076,7 +11091,7 @@ function researchHTML(){
   // the branch tree
   const br = RV.br, M = RB[br] || {g:'atk'}, Ly = rLayout(br), L = Ly.L, dn = L.filter(T => has(PLAYER, T.id)).length;
   if (RV.sel && (!TECH_BY[RV.sel] || TECH_BY[RV.sel].branch !== br)) RV.sel = null;
-  const st = T => has(PLAYER, T.id) ? 'done' : R && R.id === T.id ? 'run' : (!T.req || has(PLAYER, T.req)) ? 'open' : 'lock';
+  const st = T => has(PLAYER, T.id) ? 'done' : slotOf(T.id) ? 'run' : (!T.req || has(PLAYER, T.req)) ? 'open' : 'lock';
   const INFO = Ly.cols === 1, CV = INFO ? 3 : Ly.cols < 3 ? Ly.cols + 2 : Ly.cols, CO = INFO ? 0 : CV > Ly.cols ? 1 : 0;   // shown columns, and the offset of the branch's own (a single lane: nodes on the left, a card beside each)
   const X = c => (c + CO + .5)*100, Y = r => (r - Ly.r0 + .36)*100;
   let lines = '';
@@ -11085,36 +11100,36 @@ function researchHTML(){
       lines += `<path class="${cls}" d="${q.c === p.c ? `M${X(q.c)} ${Y(q.r)}V${Y(p.r)}` : `M${X(q.c)} ${Y(q.r)}V${ym}H${X(p.c)}V${Y(p.r)}`}"/>`; }
     else if (T.req) lines += `<path class="${cls} ext" d="M${X(p.c)} 0V${Y(p.r)}"/>`;
   }
-  const nodes = L.map(T => { const p = Ly.pos[T.id], s = st(T), F = techFace(T), q = Q && Q.id === T.id, ext = T.req && !Ly.inB.has(T.req) ? TECH_BY[T.req] : null;
-    return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${F.ut ? ' unit' : F.up ? ' upg' : ' gly'}" data-act="rsel" data-id="${T.id}"${s === 'run' ? ' id="rring"' : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}">
+  const nodes = L.map(T => { const p = Ly.pos[T.id], s = st(T), F = techFace(T), sn = slotOf(T.id), q = sn === 2, ext = T.req && !Ly.inB.has(T.req) ? TECH_BY[T.req] : null, why = s === 'open' || s === 'lock' ? researchWhy(PLAYER, T.id) : '';
+    return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${s === 'open' && busy ? ' busy' : ''}${F.ut ? ' unit' : F.up ? ' upg' : ' gly'}" data-act="rsel" data-id="${T.id}"${sn ? ` id="rring${sn}"` : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}${why ? ` · ${why}` : ''}">
       <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>${F.up && F.ut ? `<i class="rup up-${F.up}" title="${F.up === 'atk' ? 'Attack' : F.up === 'def' ? 'Defense' : F.up === 'spd' ? 'Speed' : 'Detection'} upgrade">${rg(F.up, 12)}</i>` : ''}
-      ${s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s === 'run' ? `<i class="rbdg run">#1</i>` : q ? `<i class="rbdg qd">#2</i>` : ''}
+      ${s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s === 'run' ? (q ? `<i class="rbdg qd">#2</i>` : `<i class="rbdg run">#1</i>`) : ''}
       <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>` +
       (INFO ? (() => { const ut = techUnit(T), rq = T.req ? TECH_BY[T.req] : null, tc = techCost(T);
-        const m = s === 'done' ? `<span class="ri-s ok">${rg('check', 11)} Researched</span>` : s === 'run' ? `<span class="ri-s run">In slot #1</span>` : s === 'lock' && rq ? `<span class="ri-s lk">${rg('lock', 11)} After ${rq.name.split(' · ')[0]}</span>` : `${costHTML(tc, N)}<span class="ri-t">${T.days} d</span>${q ? '<span class="ri-s qd">Slot #2</span>' : ''}`;
+        const m = s === 'done' ? `<span class="ri-s ok">${rg('check', 11)} Researched</span>` : s === 'run' ? `<span class="ri-s ${q ? 'qd' : 'run'}">In slot #${sn}</span>` : s === 'lock' && rq ? `<span class="ri-s lk">${rg('lock', 11)} ${rRunning(N, rq.id) ? why : `After ${rq.name.split(' · ')[0]}`}</span>` : `${costHTML(tc, N)}<span class="ri-t">${T.days} d</span>${busy ? '<span class="ri-s lk">Both slots busy</span>' : ''}`;
         return `<button class="rinfo st-${s}${RV.sel === T.id ? ' sel' : ''}" data-act="rsel" data-id="${T.id}" style="--r:${p.r - Ly.r0}" tabindex="-1" aria-hidden="true"><b>${T.name}</b><span class="ri-d">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span><span class="ri-m">${m}</span></button>`; })() : ''); }).join('');
   const rowsL = Array.from({length:Ly.rows}, (_, i) => `<span style="--r:${i}">${Ly.r0 + i + 1}</span>`).join('');
   h += `<div class="rs-thead"><span class="rs-tc" title="Research step: how many projects lead to it">${rg('steps', 18)}</span><b>${rg(M.g, 22)} ${br}</b><span class="rs-tn">${dn}/${L.length} researched</span></div>
     <div class="rs-tree" style="--cols:${CV};--rows:${Ly.rows}"><div class="rs-rows">${rowsL}</div>
       <div class="rs-grid"><svg class="rs-lines" viewBox="0 0 ${CV*100} ${Ly.rows*100}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${nodes}</div></div>`;
   const T = RV.sel ? TECH_BY[RV.sel] : null;
-  if (T){ const s = st(T), tc = techCost(T), F = techFace(T), ut = techUnit(T), q = Q && Q.id === T.id, cq = rCanQueue(PLAYER, T.id), cr = canResearch(PLAYER, T.id);
+  if (T){ const s = st(T), tc = techCost(T), F = techFace(T), ut = techUnit(T), sn = slotOf(T.id), cr = canResearch(PLAYER, T.id), why = researchWhy(PLAYER, T.id);
     const req = T.req ? TECH_BY[T.req] : null, d0 = Math.round(T.days*(docOf(PLAYER) ? docOf(PLAYER).res : 1)*24);
     let btns;
     if (s === 'done') btns = `<span class="rs-state ok">${rg('check', 14)} Researched</span>`;
-    else if (s === 'run') btns = `<span class="rs-state run">In slot #1 · <span id="rleft2"></span></span>`;
-    else { const rb = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${T.id}" ${cr ? '' : 'disabled'} title="${R ? 'One project runs at a time: queue this one in slot #2' : `Costs ${costTxt(tc, ', ')}; takes ${T.days} days${hasC(N, tc) ? '' : ' · needs ' + missTxt(N, tc)}`}">${R ? 'Slot #1 is busy' : s === 'lock' ? `<span class="rb1">Research</span><span class="rb2">needs ${req.name}</span>` : hasC(N, tc) ? `<span class="rb1">Research <em>${T.days} d</em></span>` : `<span class="rb1">Research</span><span class="rb2">needs ${missTxt(N, tc)}</span>`}</button>`;
-      btns = rb + (q ? `<button class="btn rs-qb on" data-act="runqueue" title="Take it out of slot #2">${rg('x', 12)} Unqueue</button>` : R ? `<button class="btn rs-qb${cq ? ' primary' : ''}" data-act="rqueue" data-id="${T.id}" ${cq ? '' : 'disabled'} title="${cq ? `Starts by itself when slot #1 is done (costs are paid then)${Q ? `; replaces ${Q.name}` : ''}` : `Needs ${req ? req.name : ''} first`}">Queue${Q ? ' instead' : ''} <em>slot #2</em></button>` : ''); }
+    else if (s === 'run') btns = `<span class="rs-state run">In slot #${sn} · <span id="rleftd${sn}"></span></span>`;
+    else { const lbl = cr ? `<span class="rb1">Research <em>${T.days} d</em></span>` : why === 'Both slots busy' ? `<span class="rb1">Both slots busy</span>` : /^(Needs|Waits)/.test(why) ? `<span class="rb1">Research</span><span class="rb2">${why.replace(/^Needs/, 'needs').replace(/^Waits/, 'waits')}</span>` : `<span class="rb1">${why}</span>`;
+      btns = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${T.id}" ${cr ? '' : 'disabled'} title="${cr ? `Starts in slot #${rSlotNo(rFree(N))}. Costs ${costTxt(tc, ', ')}; takes ${T.days} days` : why}">${lbl}</button>`; }
     h += `<div class="rs-det st-${s}"><span class="rs-dm lg"><span class="dmi">${faceHTML(F, 30)}</span></span>
       <div class="rs-dt"><span class="rs-dk">${br} · Step ${techStep(T.id) + 1} · ${T.days} days${d0 !== T.days*24 ? ` (${rDur(d0)} for you)` : ''}</span><b>${T.name}</b><span class="rs-dd">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span>
         ${req ? `<span class="rs-dr ${has(PLAYER, req.id) ? 'ok' : ''}">${rg(has(PLAYER, req.id) ? 'check' : 'lock', 11)} Requires ${req.name}${req.branch !== br ? ` (${req.branch})` : ''}</span>` : ''}</div>
       <div class="rs-da">${s === 'done' ? '' : `<div class="tcost">${costHTML(tc, N)}<span class="td">${T.days} d</span></div>`}<div class="rs-db">${btns}</div></div></div>`;
-  } else h += `<div class="rs-det hint">${rg('plus', 14)} Tap a project to see what it does and what it costs${R ? '; tap one while slot #1 is busy to queue it in slot #2' : ''}.</div>`;
+  } else h += `<div class="rs-det hint">${rg('plus', 14)} Tap a project to see what it does and what it costs. Two projects run at once, one in each slot${busy ? ': both slots are busy now' : (R || R2) ? '; tap an open project to start it in the free slot' : ''}.</div>`;
   return h;
 }
 // live progress without re-rendering: the slot bar, time left and the running node's ring
-function rPatch(N){ const R = N.research; if (!R) return; const f = 1 - R.h/(R.h0 || TECH_BY[R.id].days*24), bar = document.getElementById('rbar'), left = document.getElementById('rleft'), ring = document.getElementById('rring'), l2 = document.getElementById('rleft2');
-  if (bar) bar.style.width = Math.round(f*100) + '%'; if (left) left.textContent = `${rDur(R.h)} left · ${Math.round(f*100)}%`; if (l2) l2.textContent = `${rDur(R.h)} left`; if (ring) ring.style.setProperty('--p', f.toFixed(3)); }
+function rPatch(N){ for (const k of R_SLOTS){ const R = N[k], n = rSlotNo(k); if (!R || !TECH_BY[R.id]) continue; const f = 1 - R.h/(R.h0 || TECH_BY[R.id].days*24), bar = document.getElementById('rbar' + n), left = document.getElementById('rleft' + n), ring = document.getElementById('rring' + n), l2 = document.getElementById('rleftd' + n);
+  if (bar) bar.style.width = Math.round(f*100) + '%'; if (left) left.textContent = `${rDur(R.h)} left · ${Math.round(f*100)}%`; if (l2) l2.textContent = `${rDur(R.h)} left`; if (ring) ring.style.setProperty('--p', f.toFixed(3)); } }
 function ctxHTML(){
   if (SPLIT && (sel.army !== SPLIT.id || sel.group.length > 1 || !armyById(SPLIT.id) || count(armyById(SPLIT.id)) < 2)) SPLIT = null;
   if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return sel.group.length > 1 ? groupHTML() : a.air ? wingHTML(a) : SPLIT ? splitHTML(a) : armyHTML(a); }
@@ -11637,16 +11652,14 @@ document.addEventListener('click', e => {
       const res = v[0] === 'c' ? tradeOpen(NEUTRAL, +v.slice(1)) : tradeOpen(+v.slice(1)); if (res !== true) toast(`No trade route: ${res}.`, 'bad', null); setHTML($('sheet'), diploHTML()); renderSide(true); break; }
     case 'gift': { const m = +b.dataset.id; if (S.nations[PLAYER].cash >= 50){ S.nations[PLAYER].cash -= 50; addMem(m, PLAYER, 5); log(`You sent $50M in aid to ${S.nations[m].name}.`, '', null); } renderSide(true); break; }
     case 'offer-yes': case 'offer-no': { const o = S.offers.find(x => x.id === +b.dataset.id); if (o){ S.offers = S.offers.filter(x => x !== o); if (act === 'offer-yes'){ if (o.kind === 'trade'){ const why = dealOK(o.from, o.deal); if (why) log(`That trade no longer works: ${why}.`, 'info', null); else { applyTrade(o.from, o.deal); log(`Trade with ${S.nations[o.from].name} completed: ${dealText(o.deal, 'they')}.`, 'good', null); } } else { const war = atWar(o.from, PLAYER); if ((o.kind === 'peace') === war) applyDeal(o.from, PLAYER, o.kind); else log('That offer no longer applies.', 'info', null); } } else addMem(o.from, PLAYER, -5); } renderSide(true); break; }
-    case 'research': if (startResearch(PLAYER, b.dataset.id)){ const N0 = S.nations[PLAYER]; if (N0.rqueue === b.dataset.id) N0.rqueue = null; renderSide(true); } break;
+    case 'research': if (startResearch(PLAYER, b.dataset.id)){ setHTML($('sheet'), researchHTML()); rPatch(S.nations[PLAYER]); renderSide(true); } break;
     case 'rbranch': RV.br = b.dataset.b; RV.sel = null; setHTML($('sheet'), researchHTML()); $('sheet').scrollTop = 0; renderSide(true); break;
     case 'rback': RV.br = null; RV.sel = null; setHTML($('sheet'), researchHTML()); $('sheet').scrollTop = 0; renderSide(true); break;
     case 'rsel': { const id = b.dataset.id, T = TECH_BY[id]; if (!T) break; const nb = T.branch !== RV.br; RV.br = T.branch; RV.sel = id; const N0 = S.nations[PLAYER];
-      if (!b.classList.contains('rs-slot') && N0.research && !N0.rqueue && rQueue(id)) toast(`${T.name} queued in slot #2: it starts when ${TECH_BY[N0.research.id].name} is done.`, 'info', null);   // slot #1 busy: tapping a project queues it next
+      if (!b.classList.contains('rs-slot') && rFreeN(N0) === 1 && startResearch(PLAYER, id)){ const k = rRunning(N0, id); toast(`${T.name} started in slot #${rSlotNo(k)}.`, 'info', null); }   // one project running: tapping an open project starts it in the free slot
       setHTML($('sheet'), researchHTML()); if (nb) $('sheet').scrollTop = 0; renderSide(true);
       { const sh = $('sheet'), ne = sh.querySelector(`.rnode[data-id="${id}"]`), dt = sh.querySelector('.rs-det'); if (ne && dt){ const over = ne.getBoundingClientRect().bottom + 12 - dt.getBoundingClientRect().top; if (over > 0) sh.scrollBy({top:over, behavior:AFX_RM && AFX_RM.matches ? 'auto' : 'smooth'}); } }   // (the selected node stays clear of the detail strip)
       break; }
-    case 'rqueue': { const T = TECH_BY[b.dataset.id]; if (T && rQueue(T.id)) toast(`${T.name} queued in slot #2.`, 'info', null); renderSide(true); break; }
-    case 'runqueue': S.nations[PLAYER].rqueue = null; renderSide(true); break;
     case 'pick': pickSel = +b.dataset.p; showPicker(); break;
     case 'pickdiff': pickDiff = b.dataset.k; showPicker(); break;
     case 'pickdoc': pickDoc = b.dataset.k; showPicker(); break;
@@ -11790,7 +11803,7 @@ function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || af
   document.body.append(bd, g); g.scrollTop = st; setTimeout(() => { g.remove(); bd.remove(); }, 240); }
 function closeModal(restore = true){ sheetGhost(); $('modal').hidden = true; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
 function rules(){ return `<ul class="qs">
-  <li><b>Recruit</b> in your cities and <b>research</b> new arms; every unit costs money and manpower plus, by type, oil, materials, iron (armor, guns, ships), electronics (aircraft, drones, air defence) and rare materials (advanced arms); research costs money, materials and rare materials.</li>
+  <li><b>Recruit</b> in your cities and <b>research</b> new arms; every unit costs money and manpower plus, by type, oil, materials, iron (armor, guns, ships), electronics (aircraft, drones, air defence) and rare materials (advanced arms); research costs money, materials and rare materials, and two projects run at the same time.</li>
   <li><b>Move</b>: tap a force, then a destination (tap again or press Send). Troops embark on their own to cross water; roads and railways speed them up.</li>
   <li><b>Capture</b> provinces by parking ground troops in them. Terrain, rivers, supply and morale decide battles.</li>
   <li><b>Air, drones and navy</b>: wings strike or patrol from airbases; UAVs and AWACS find the enemy; fleets guard your trade and raid theirs.</li>
@@ -11811,7 +11824,7 @@ const HELP_SEC = [
     <li><span class="res-metal">${icon('metal', 12)}</span> <b>Materials</b>: ore deposits, cities and Foundries. Nearly every unit, building, road and research project uses them.</li>
     <li><span class="res-iron">${icon('iron', 12)}</span> <b>Iron</b>: ore deposits, iron-bearing hills, cities and your capital, and Foundries (+1.2 a level, +2.4 on ore). Armor, artillery, warships, Arms Factories, forts and railways. Those units also use 4% of their iron a day for spare parts; run dry and they fight worse.</li>
     <li><span class="res-elec">${icon('elec', 12)}</span> <b>Electronics</b>: big cities by population, +25% per Arms Factory level there. Aircraft, drones, air defence, missiles, satellites and high-speed rail. Those units also use 2% of their electronics a day in maintenance; run dry and they fight worse.</li>
-    <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>: every technology costs money, materials and rare materials (about 30 at tier 1, 65 at tier 2, 110 at tier 3). They come from rare-earth deposits and <b>Rare Earth Mines</b> (best on a deposit, +1 on hills, mountains, desert or tundra), plus a little from your capital. Advanced aircraft, carriers and missiles need some too.</li>
+    <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>: every technology costs money, materials and rare materials (about 30 at tier 1, 65 at tier 2, 110 at tier 3), paid when it starts. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from rare-earth deposits and <b>Rare Earth Mines</b> (best on a deposit, +1 on hills, mountains, desert or tundra), plus a little from your capital. Advanced aircraft, carriers and missiles need some too.</li>
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3 a day); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> The Resources map mode shows each province's main output, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
@@ -12283,6 +12296,7 @@ if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
+if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:id => techCost(TECH_BY[id]), TECH:() => TECH.map(T => ({id:T.id, req:T.req || null, days:T.days})), html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });
