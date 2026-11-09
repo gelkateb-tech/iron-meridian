@@ -13,6 +13,10 @@ Plan the code for these, but don't build them yet. (Owner's spec; this replaces 
 - A currency bought with real money through the App Store and Play Store, with every purchase checked on the server.
 - Buys speed-ups, resource packs, a monthly premium pass and cosmetics. Normal mode has daily purchase limits.
 
+## Premium pass (monthly, like Conflict of Nations' Security Council)
+- Members get extra unit-training queue slots per city (free players: 2), rally points (set a spot; units finished in that city march there automatically), an Aggressive stance, and Hold for ships.
+- Free players keep the basic stances.
+
 ## Competitive mode
 - No spending limits. Kept completely separate from normal games.
 - Military ranks (Private, Sergeant, Lieutenant, Captain, Major, Colonel, General, Marshal), with a few levels inside each. The game already uses Colonel, General and Marshal for commanders, so avoid confusing the two.
