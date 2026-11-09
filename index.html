@@ -1475,6 +1475,10 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .rs-da .tcost{display:flex; align-items:center; gap:10px}
 .rs-db{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end}
 .rs-db .btn{min-height:38px}
+.rs-db .btn{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.15; padding-top:5px; padding-bottom:5px}
+.rs-db .btn .rb1{font-weight:700; font-size:12px; letter-spacing:.04em; text-transform:uppercase} .rs-db .btn .rb1 em{font-style:normal; text-transform:none; letter-spacing:0; font-weight:600; opacity:.75; margin-left:4px} .rs-db .btn .rb2{display:block; font-size:10.5px; font-weight:600; opacity:.85; text-transform:none; letter-spacing:0; max-width:260px; white-space:normal; text-align:center}
+.rs-slot.fresh{animation:rsFresh 1.3s var(--ease)}
+@keyframes rsFresh{0%, 35%{background:linear-gradient(180deg, #4f7680, #3c5d66); box-shadow:inset 0 0 0 2px #8ff4fb, 0 0 18px rgba(79,208,222,.8)}}
 .rs-qb em{font-style:normal; font-size:11px; opacity:.85; margin-left:4px}
 .rs-qb.primary{background:linear-gradient(180deg, #f3cf55, #c9970f); color:#2a1f00; border-color:#ffe9a0; box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 2px 4px rgba(0,0,0,.4); text-shadow:none}
 .rs-qb.on{color:#ffe08a; border-color:rgba(232,185,35,.7)}
@@ -1510,7 +1514,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
   .rs-da{grid-column:1 / -1; flex-direction:row; align-items:center; justify-content:space-between; flex-wrap:wrap}
 }
 @media (max-width: 400px){ .rs-cnt{font-size:10px; letter-spacing:.05em} .rs-slot .rs-dm.sm{width:28px; height:28px} .rs-si b{font-size:13px} .rs-ban .rs-dm{width:34px; height:34px} .rs-ban{gap:12px} }
-@media (prefers-reduced-motion: reduce){ .rnode.st-open .dm, .rnode.st-run::before, .rs-det{animation:none} }
+@media (prefers-reduced-motion: reduce){ .rnode.st-open .dm, .rnode.st-run::before, .rs-det, .rs-slot.fresh{animation:none} }
 /* ===================== v3.8: the city sheet (CoN layout) =====================
    A bottom sheet over the map for the selected land province: MOBILIZE UNIT / BUILD on top, then the light banner (flag cut with an arrow edge,
    the name in big caps, the status line, (i) and close), the morale bar and the daily production, and a scrolling row of building cards. */
@@ -10967,7 +10971,7 @@ function diploHTML(){
 }
 function researchLine(){
   const N = S.nations[PLAYER], done = Object.keys(N.tech).length, run = R_SLOTS.map(k => N[k]).filter(Boolean), fr = rFreeN(N);
-  if (run.length){ const row = R => { const T = TECH_BY[R.id], f = 1 - R.h/(R.h0 || T.days*24); return `<div class="qi"><span>Researching ${T.name}</span><span class="muted">${R.h} h</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.round(f*100)}%"></i></div>`; };
+  if (run.length){ const row = R => { const T = TECH_BY[R.id], f = 1 - R.h/(R.h0 || T.days*24); return `<div class="qi"><span>Researching ${T.name}</span><span class="muted">${rDur(R.h)}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.round(f*100)}%"></i></div>`; };
     return `<div class="status move">${run.map(row).join('<div style="height:6px"></div>')}${fr ? `<div class="small muted" style="margin-top:4px">A research slot is free: start a second project.</div>` : ''}</div>
       <div class="row"><button class="btn${fr ? ' primary' : ''}" data-act="research-open">Research tree · ${done}/${TECH.length}</button></div>`; }
   return `<div class="status"><b>No research running.</b> Pick two projects to improve your units and economy: both slots run at once.</div>
@@ -11047,7 +11051,7 @@ const rbImg = art => { const e = Object.values(UART).find(u => u[0] === art), ro
   return `<span class="rs-bw" aria-hidden="true">${['b1', 'b2', 'b3'].map(k => `<i class="rs-bimg ${k}${rot ? '' : ' flat'}" style="background-image:url('${ART.url(art)}');--rot:${rot}deg"></i>`).join('')}</span>`; };   // a column of three across the banner
 const rDur = h => h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`;
 function rSlotHTML(k, T, N, extra){ const lbl = `<span class="rs-tag">SLOT #${k}</span>`;
-  if (!T) return `<div class="rs-slot empty" id="rslot${k}"><span class="rs-dm sm"><span class="dmi">${rg(k === 1 ? 'steps' : 'clock', 20)}</span></span>${lbl}<span class="rs-sh">${rFreeN(N) > 1 ? 'Free: pick a project below' : 'Free: tap a project to start it here'}</span></div>`;
+  if (!T) return `<div class="rs-slot empty" id="rslot${k}"><span class="rs-dm sm"><span class="dmi">${rg('plus', 20)}</span></span>${lbl}<span class="rs-sh">Free: pick a project below</span></div>`;
   return `<button class="rs-slot full s${k}" id="rslot${k}" data-act="rsel" data-id="${T.id}" data-b="${T.branch}" title="${T.name}: ${T.desc}"><span class="rs-dm sm"><span class="dmi">${faceHTML(techFace(T), 22)}</span></span>
     <span class="rs-si">${lbl}<b>${T.name}</b>${extra}</span></button>`; }
 function researchHTML(){
@@ -11118,13 +11122,13 @@ function researchHTML(){
     let btns;
     if (s === 'done') btns = `<span class="rs-state ok">${rg('check', 14)} Researched</span>`;
     else if (s === 'run') btns = `<span class="rs-state run">In slot #${sn} · <span id="rleftd${sn}"></span></span>`;
-    else { const lbl = cr ? `<span class="rb1">Research <em>${T.days} d</em></span>` : why === 'Both slots busy' ? `<span class="rb1">Both slots busy</span>` : /^(Needs|Waits)/.test(why) ? `<span class="rb1">Research</span><span class="rb2">${why.replace(/^Needs/, 'needs').replace(/^Waits/, 'waits')}</span>` : `<span class="rb1">${why}</span>`;
+    else { const lbl = cr ? `<span class="rb1">Research <em>${T.days} d</em></span>` : /^(Needs|Waits)/.test(why) ? `<span class="rb1">Research</span><span class="rb2">${why.replace(/^Needs/, 'needs').replace(/^Waits/, 'waits')}</span>` : `<span class="rbw">${why}</span>`;   // (a plain reason, such as Both slots busy, reads in sentence case)
       btns = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${T.id}" ${cr ? '' : 'disabled'} title="${cr ? `Starts in slot #${rSlotNo(rFree(N))}. Costs ${costTxt(tc, ', ')}; takes ${T.days} days` : why}">${lbl}</button>`; }
     h += `<div class="rs-det st-${s}"><span class="rs-dm lg"><span class="dmi">${faceHTML(F, 30)}</span></span>
       <div class="rs-dt"><span class="rs-dk">${br} · Step ${techStep(T.id) + 1} · ${T.days} days${d0 !== T.days*24 ? ` (${rDur(d0)} for you)` : ''}</span><b>${T.name}</b><span class="rs-dd">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span>
         ${req ? `<span class="rs-dr ${has(PLAYER, req.id) ? 'ok' : ''}">${rg(has(PLAYER, req.id) ? 'check' : 'lock', 11)} Requires ${req.name}${req.branch !== br ? ` (${req.branch})` : ''}</span>` : ''}</div>
       <div class="rs-da">${s === 'done' ? '' : `<div class="tcost">${costHTML(tc, N)}<span class="td">${T.days} d</span></div>`}<div class="rs-db">${btns}</div></div></div>`;
-  } else h += `<div class="rs-det hint">${rg('plus', 14)} Tap a project to see what it does and what it costs. Two projects run at once, one in each slot${busy ? ': both slots are busy now' : (R || R2) ? '; tap an open project to start it in the free slot' : ''}.</div>`;
+  } else h += `<div class="rs-det hint">${rg('plus', 14)} Tap a project to see what it does and what it costs. Two projects run at once, one in each slot${busy ? ': both slots are busy now' : (R || R2) ? '; pick an open project and press Research to start it in the free slot' : ''}.</div>`;
   return h;
 }
 // live progress without re-rendering: the slot bar, time left and the running node's ring
@@ -11652,11 +11656,11 @@ document.addEventListener('click', e => {
       const res = v[0] === 'c' ? tradeOpen(NEUTRAL, +v.slice(1)) : tradeOpen(+v.slice(1)); if (res !== true) toast(`No trade route: ${res}.`, 'bad', null); setHTML($('sheet'), diploHTML()); renderSide(true); break; }
     case 'gift': { const m = +b.dataset.id; if (S.nations[PLAYER].cash >= 50){ S.nations[PLAYER].cash -= 50; addMem(m, PLAYER, 5); log(`You sent $50M in aid to ${S.nations[m].name}.`, '', null); } renderSide(true); break; }
     case 'offer-yes': case 'offer-no': { const o = S.offers.find(x => x.id === +b.dataset.id); if (o){ S.offers = S.offers.filter(x => x !== o); if (act === 'offer-yes'){ if (o.kind === 'trade'){ const why = dealOK(o.from, o.deal); if (why) log(`That trade no longer works: ${why}.`, 'info', null); else { applyTrade(o.from, o.deal); log(`Trade with ${S.nations[o.from].name} completed: ${dealText(o.deal, 'they')}.`, 'good', null); } } else { const war = atWar(o.from, PLAYER); if ((o.kind === 'peace') === war) applyDeal(o.from, PLAYER, o.kind); else log('That offer no longer applies.', 'info', null); } } else addMem(o.from, PLAYER, -5); } renderSide(true); break; }
-    case 'research': if (startResearch(PLAYER, b.dataset.id)){ setHTML($('sheet'), researchHTML()); rPatch(S.nations[PLAYER]); renderSide(true); } break;
+    case 'research': if (startResearch(PLAYER, b.dataset.id)){ const N0 = S.nations[PLAYER], k = rRunning(N0, b.dataset.id); setHTML($('sheet'), researchHTML()); rPatch(N0); renderSide(true);
+      { const el = k && $('rslot' + rSlotNo(k)); if (el) el.classList.add('fresh'); } } break;   // the slot it went into lights up once
     case 'rbranch': RV.br = b.dataset.b; RV.sel = null; setHTML($('sheet'), researchHTML()); $('sheet').scrollTop = 0; renderSide(true); break;
     case 'rback': RV.br = null; RV.sel = null; setHTML($('sheet'), researchHTML()); $('sheet').scrollTop = 0; renderSide(true); break;
-    case 'rsel': { const id = b.dataset.id, T = TECH_BY[id]; if (!T) break; const nb = T.branch !== RV.br; RV.br = T.branch; RV.sel = id; const N0 = S.nations[PLAYER];
-      if (!b.classList.contains('rs-slot') && rFreeN(N0) === 1 && startResearch(PLAYER, id)){ const k = rRunning(N0, id); toast(`${T.name} started in slot #${rSlotNo(k)}.`, 'info', null); }   // one project running: tapping an open project starts it in the free slot
+    case 'rsel': { const id = b.dataset.id, T = TECH_BY[id]; if (!T) break; const nb = T.branch !== RV.br; RV.br = T.branch; RV.sel = id;   // a tap only selects: the Research button starts it
       setHTML($('sheet'), researchHTML()); if (nb) $('sheet').scrollTop = 0; renderSide(true);
       { const sh = $('sheet'), ne = sh.querySelector(`.rnode[data-id="${id}"]`), dt = sh.querySelector('.rs-det'); if (ne && dt){ const over = ne.getBoundingClientRect().bottom + 12 - dt.getBoundingClientRect().top; if (over > 0) sh.scrollBy({top:over, behavior:AFX_RM && AFX_RM.matches ? 'auto' : 'smooth'}); } }   // (the selected node stays clear of the detail strip)
       break; }
