@@ -2260,6 +2260,8 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 <script src="rules/combat.js"></script>
 <script src="rules/air.js"></script>
 <script src="rules/vision.js"></script>
+<script src="rules/ai.js"></script>
+<script src="rules/tick.js"></script>
 <script>
 'use strict';
 
@@ -4296,36 +4298,6 @@ function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length) return; con
     ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = 'rgba(220,235,240,.35)'; ctx.beginPath(); ctx.moveTo(-6*k0, 0); ctx.lineTo(-18*k0, -3*k0); ctx.lineTo(-18*k0, 3*k0); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#5a5e60'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8*k0, 0); ctx.lineTo(4*k0, -2.6*k0); ctx.lineTo(-7*k0, -2.6*k0); ctx.lineTo(-7*k0, 2.6*k0); ctx.lineTo(4*k0, 2.6*k0); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = mapCol(c.owner); ctx.fillRect(-5*k0, -1.6*k0, 3*k0, 3.2*k0); ctx.fillStyle = '#b8a06a'; ctx.fillRect(-1*k0, -1.6*k0, 3.5*k0, 3.2*k0); ctx.restore(); } }
-// AI: escort its own threatened routes, raid its enemies' trade with submarines and warships
-function aiTrade(n){ const T = S.trade; if (!T || !S.nations[n].alive) return; const mine = T.routes.filter(r => trMine(r, n) && r.kind === 'sea');
-  const fleets = S.armies.filter(a => a.owner === n && shipsOnly(a) && a.to === null && !a.path.length && count(a) && !S.battles.includes(a.at));
-  for (const a of fleets){ if (healthFrac(a) < 0.5 && (a.escort != null || a.raid)){ delete a.escort; delete a.raid; const y = G.P.find(P => S.owner[P.id] === n && S.bld[P.id].yard); if (y) a.path = pathFor(a, a.at, y.id); } }
-  // 1. escort the most valuable routes raided in the last three days or blockaded now
-  const threat = mine.filter(r => S.hour - r.raid < 72 || r.f < 1).sort((x, y) => (trSide(y, n) || {cash:0}).cash - (trSide(x, n) || {cash:0}).cash);
-  for (const r of threat.slice(0, 2)){ if (S.armies.some(a => a.owner === n && a.escort === r.id)) continue; let pick = null, bd = 1e9;
-    for (const a of fleets){ if (a.escort != null || a.path.length || healthFrac(a) < 0.5 || !(a.u.frig || a.u.crui)) continue; const d = hexDist(G.P[a.at].cc, G.P[r.path[Math.floor(r.path.length/2)]].cc); if (d < bd && d < 40){ bd = d; pick = a; } }
-    if (pick){ pick.escort = r.id; delete pick.raid; } }
-  // 2. raid: at war, idle fleets with submarines or frigates hunt enemy convoys within reach (half of them at most while own trade is threatened)
-  // a raid ends when the route is gone or at peace, or after six quiet days on station (then the fleet looks for a better hunting ground)
-  for (const a of fleets) if (a.raid && (!routeById(a.raid.r) || !trHostile(routeById(a.raid.r), n) || (a.raid.t != null && S.hour - a.raid.t > 24*6 && S.hour - routeById(a.raid.r).raid > 24*3))) delete a.raid;
-  if (!warsOf(n).length) return;
-  const foe = T.routes.filter(r => r.kind === 'sea' && !trMine(r, n) && trHostile(r, n)); if (!foe.length) return;
-  const zv = new Map(); for (const r of foe){ const v = ((r.va ? r.va.cash : 0) + (r.vb ? r.vb.cash : 0)); for (const z of r.path) zv.set(z, (zv.get(z) || 0) + v); }
-  let raiding = fleets.filter(a => a.raid).length; const cap = Math.max(1, Math.ceil(fleets.length*(threat.length ? 0.5 : 0.7)));
-  for (const a of fleets){ if (raiding >= cap) break; if (a.escort != null || a.raid || a.path.length || healthFrac(a) < 0.6 || !(a.u.sub || a.u.frig || a.u.crui)) continue;
-    if (!G.P[a.at].sea && rng() < 0.4) continue;   // some fleets keep the old coastal patrol duty
-    const pw = navPw(a), seen = new Map([[a.at, 0]]), q = [a.at]; let best = -1, bs = 0;
-    for (let h = 0; h < q.length; h++){ const u = q[h], du = seen.get(u); if (du >= 14) continue;
-      for (const v of G.P[u].nbs){ if (seen.has(v) || !G.P[v].sea) continue; seen.set(v, du + 1); q.push(v); const val = zv.get(v); if (!val) continue;
-        let guard = 0; for (const w of [v, ...G.P[v].nbs]) for (const x of SEAA.get(w) || []) if (x.owner >= 0 && atWar(n, x.owner)) guard += navPw(x);
-        if (guard > pw*1.2) continue; const sc = val/(1 + du*0.25)*(a.u.sub ? 1.2 : 1); if (sc > bs){ bs = sc; best = v; } } }
-    if (best < 0) continue; const p = best === a.at ? [] : pathFor(a, a.at, best); if (best !== a.at && !p.length) continue;
-    a.path = p; a.raid = {r:foe.find(r => r.path.includes(best)).id, z:best, t:S.hour}; raiding++; } }
-// AI patrol aircraft: an enemy route zone (convoys to hit) or an own raided route (subs to find) when no ships are in sight
-function aiTradeHunt(n, B, r){ if (!S.trade) return -1; let best = -1, bs = 0;
-  for (const R of S.trade.routes){ if (R.kind !== 'sea') continue; const own = trMine(R, n), foe = !own && trHostile(R, n); if (!foe && !(own && S.hour - R.raid < 72)) continue;
-    const z = own && R.raidZ >= 0 ? R.raidZ : R.path[Math.floor(R.path.length/2)]; if (hexDist(B.cc, G.P[z].cc) > r) continue; const v = (R.va ? R.va.cash : 0) + (R.vb ? R.vb.cash : 0) + (own ? 8 : 0); if (v > bs){ bs = v; best = z; } }
-  return best; }
 /* ---- drawing: dashed lanes over the sea (along the roads for land routes) and cargo convoys moving on them ---- */
 var TRD = {ver:-1, S:null, sea:null, mine:null, cut:null, land:null, geo:new Map()};
 function trGeo(r){ const k = r.id + ':' + r.path.join(','); let g = TRD.geo.get(r.id); if (g && g.k === k) return g;
@@ -4730,88 +4702,8 @@ function wingPos(a){
   if (f.ph === 'back'){ const t = Math.min(1, f.t + live*dt); return [T.x + (B.x - T.x)*t, T.y + (B.y - T.y)*t]; }
   const ang = performance.now()/(f.ph === 'over' ? 450 : 700) + a.id, R = f.ph === 'over' ? 18 : 22; return [T.x + Math.cos(ang)*R, T.y + Math.sin(ang)*R*0.55];
 }
-// AI air targets: hostile forces per province within reach of an airbase (cached per call), scored per wing type
-function aiFoesNear(n, B, r){ const out = []; for (const [pid, list] of provPowers()){ if (hexDist(B.cc, G.P[pid].cc) > r) continue; let pw = 0; for (const [o, p0] of list) if (o >= 0 && o !== n && atWar(n, o)) pw += p0; if (pw > 0) out.push([pid, pw]); } return out; }
-function aiDroneTarget(n, B, r, T){ const plan = S.plans && S.plans[n]; let best = -1, bs = 0;
-  for (const [pid, pw] of aiFoesNear(n, B, r)){ const foes = stationaryAt(pid).filter(b => b.owner >= 0 && atWar(n, b.owner)); if (!foes.length) continue; let sam = 0, jam = 0, soft = 0, guns = 0, armor = 0;
-    for (const b of foes){ sam += b.u.sam || 0; jam += b.u.jam || 0; guns += (b.u.art || 0) + (b.u.mlrs || 0); armor += b.u.tank || 0; for (const t of UT) if (UNITS[t].cls === 'soft') soft += b.u[t]; }
-    let sc = T === 'swarm' ? pw*0.4 + sam*9 + guns*5 + soft*1.2 - jam*4 - armor*1.5 : pw*0.5 + sam*6 + guns*6 + jam*5 + armor*1.5;
-    if (plan && (pid === plan.tgt || G.P[plan.tgt].nbs.includes(pid))) sc *= 1.6; if (S.owner[pid] === n) sc *= 1.4;
-    if (sc > bs){ bs = sc; best = pid; } }
-  if (T === 'sdrone'){ for (const P of G.P){ const o = S.owner[P.id]; if (o < 0 || o === n || !atWar(n, o) || !P.city || hexDist(B.cc, P.cc) > r) continue; const k = bestBld(P.id); if (!k) continue; const sc = BLD_VAL[k]*4*(1 + 0.3*S.bld[P.id][k]); if (sc > bs){ bs = sc; best = P.id; } } }
-  return bs >= (T === 'swarm' ? 5 : 8) ? best : -1; }
-function aiBombTarget(n, B, r){ let best = -1, bs = 0;
-  for (const P of G.P){ const o = S.owner[P.id]; if (o < 0 || o === n || !atWar(n, o) || !P.city || hexDist(B.cc, P.cc) > r || stormAt(P.id)) continue;   // a storm over the city would ground the raid: pick another
-    let sc = BK.reduce((s0, k) => s0 + BLD_VAL[k]*S.bld[P.id][k], 0) + (isCapital(P.id) ? 6 : 0); const foes = stationaryAt(P.id).filter(b => atWar(n, b.owner)); sc += foes.reduce((s0, b) => s0 + power(b), 0)*0.15;
-    const sam = foes.reduce((s0, b) => s0 + (b.u.sam || 0), 0), cap = capOver(P.id, n).reduce((s0, b) => s0 + count(b), 0); sc /= 1 + 0.35*sam + 1.5*cap;
-    if (sc > bs){ bs = sc; best = P.id; } }
-  return bs >= 6 ? best : -1; }
-// UAV: watch the planned objective (or the busiest enemy front province) that nothing is revealing yet; armed UAVs prefer provinces with enemies
-function aiReconTarget(n, B, r){ const plan = S.plans && S.plans[n], R0 = S.reveal || {}, armed = uavLv(n) >= 4;
-  if (plan && hexDist(B.cc, G.P[plan.tgt].cc) <= r && !((R0[plan.tgt] || 0) > S.hour + 6) && !stationaryAt(plan.tgt).some(b => atWar(n, b.owner) && b.u.jam)) return plan.tgt;
-  let best = -1, bs = 0; for (const P of G.P){ const o = S.owner[P.id]; if (P.sea || o < 0 || o === n || !atWar(n, o) || hexDist(B.cc, P.cc) > r) continue; if (!P.nbs.some(v => S.owner[v] === n)) continue;
-    const foes = stationaryAt(P.id).filter(b => atWar(n, b.owner)), jam = foes.reduce((s0, b) => s0 + (b.u.jam || 0), 0); let sc = (P.city ? 2 : 1) + (armed ? foes.reduce((s0, b) => s0 + power(b), 0)*0.05 : 0); sc /= 1 + jam; if (sc > bs){ bs = sc; best = P.id; } }
-  return best; }
-// AWACS: orbit over an own province behind the front, closest to the planned objective (or the most contested border)
-function aiOrbitTarget(n, B, r){ const plan = S.plans && S.plans[n]; let best = -1, bs = -1e9;
-  for (const P of G.P){ if (P.sea || S.owner[P.id] !== n || hexDist(B.cc, P.cc) > r) continue; if (P.nbs.some(v => S.owner[v] >= 0 && atWar(n, S.owner[v]))) continue;   // one step behind the line
-    const sc = plan ? -hexDist(P.cc, G.P[plan.tgt].cc) : P.nbs.reduce((s0, v) => s0 + G.P[v].nbs.filter(w => S.owner[w] >= 0 && atWar(n, S.owner[w])).length, 0); if (sc > bs){ bs = sc; best = P.id; } }
-  return best; }
-// maritime patrol: the sea zone in reach with the most hostile naval power (subs count double), else one off an own port when at war
-function aiSeaHunt(n, B, r){ let best = -1, bs = 0;
-  for (const P of G.P){ if (!P.sea || hexDist(B.cc, P.cc) > r) continue; const sc = stationaryAt(P.id).filter(b => b.owner >= 0 && atWar(n, b.owner) && shipsN(b)).reduce((s0, b) => s0 + power(b)*(b.u.sub ? 2 : 1), 0); if (sc > bs){ bs = sc; best = P.id; } }
-  if (best < 0 && rng() < 0.6){ const tz = aiTradeHunt(n, B, r); if (tz >= 0) best = tz; }   // convoys on enemy trade routes, or the subs raiding ours
-  if (best < 0 && warsOf(n).length && rng() < 0.3){ const ports = G.P.filter(P => S.owner[P.id] === n && P.city && P.coast && hexDist(B.cc, P.cc) <= r); if (ports.length){ const pt = ports[Math.floor(rng()*ports.length)], sz = pt.nbs.find(v => G.P[v].sea); if (sz != null) best = sz; } }
-  return best; }
-// short-range strike wings with nothing in reach move up to the own airbase closest to the main enemy (planned objective, else nearest enemy land)
-function aiForward(n, a, B, r){ if (!warsOf(n).length || rng() > 0.5) return; const plan = S.plans && S.plans[n];
-  let goal = plan ? G.P[plan.tgt] : null; if (!goal){ let bd = 1e9; for (const P of G.P){ const o = S.owner[P.id]; if (P.sea || o < 0 || o === n || !atWar(n, o)) continue; const d = hexDist(B.cc, P.cc); if (d < bd){ bd = d; goal = P; } } } if (!goal) return;
-  const d0 = hexDist(B.cc, goal.cc); let best = -1, bd = d0 - 2;
-  const pad = a.u.swarm > 0, keep = pad ? 3 : 0;   // swarms move up to any own city, staying a few hexes behind the front
-  for (const P of G.P){ if (P.sea || S.owner[P.id] !== n || !(S.bld[P.id].air || (pad && swarmPad(a, P.id))) || P.id === a.air.base || hexDist(B.cc, P.cc) > r) continue; const d = hexDist(P.cc, goal.cc); if (d < keep) continue; if (d < bd){ bd = d; best = P.id; } }
-  if (best >= 0) orderAir(a, best); }
-function aiAir(n){
-  for (const a of S.armies){ if (a.owner !== n || !a.air || a.fly || (a.air.cd || 0) > 0 || !count(a)) continue;
-    // maintenance: worn or damaged wings stand down; where nothing repairs them they fly back to the best own airbase in reach
-    if (wingCond(a) < WEAR_WARN + 0.05) a.air.mnt = 1; else if (a.air.mnt && (wingCond(a) >= 0.85 || maintRate(a) <= 0)) delete a.air.mnt;
-    if (healthFrac(a) < 0.5 || a.air.mnt){ if (maintRate(a) < 0.12){ const mb = maintBase(a); if (mb >= 0) orderAir(a, mb); } continue; }
-    const r = wingRange(a)*(wingCond(a) < 0.7 ? 0.6 : 1), B = G.P[a.air.base], T = wingT(a);
-    if (T === 'drone'){ if (!warsOf(n).length) continue; const tg = aiReconTarget(n, B, r); if (tg >= 0) orderAir(a, tg); continue; }
-    if (T === 'awacs'){ if (!warsOf(n).length) continue; const tg = aiOrbitTarget(n, B, r); if (tg >= 0) orderAir(a, tg); continue; }
-    if (T === 'mpa'){ const tg = aiSeaHunt(n, B, r); if (tg >= 0) orderAir(a, tg); continue; }
-    if (T === 'bomb'){ const tg = aiBombTarget(n, B, r); if (tg >= 0) orderAir(a, tg); else aiForward(n, a, B, r); continue; }
-    if (T === 'swarm' || T === 'sdrone'){ const tg = aiDroneTarget(n, B, r, T); if (tg >= 0) orderAir(a, tg); else aiForward(n, a, B, r); continue; }
-    if (isStriker(a)){ let best = -1, bs = 0;
-      for (const [pid, list] of provPowers()){ if (hexDist(B.cc, G.P[pid].cc) > r) continue; let sc = 0;
-        for (const [o, pw] of list) if (o >= 0 && atWar(n, o)) sc += pw*(o === PLAYER ? 1.1 : 1);
-        if (S.owner[pid] === n) sc *= 1.5;              // enemies on our soil first
-        if (sc > bs){ bs = sc; best = pid; } }
-      if (best >= 0 && bs > 8) orderAir(a, best);
-      else if (warsOf(n).length && rng() < 0.6){ const tg = aiInterdict(n, B, r); if (tg >= 0) orderAir(a, tg); }
-    } else { let best = -1, bs = 0;
-      const H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, airThreat = H.drone + H.bomb + H.air;
-      for (const P of G.P){ if (S.owner[P.id] !== n || P.sea || hexDist(B.cc, P.cc) > r) continue;
-        const sc = (S.battles.includes(P.id) ? 3 : 0) + (H.bp && S.hour - (H.bp[P.id] ?? -1e9) < 72 ? 6 + BK.reduce((s0, k) => s0 + S.bld[P.id][k], 0)*0.5 : 0) + P.nbs.filter(v => S.owner[v] >= 0 && atWar(n, S.owner[v])).length*(P.city ? 2 : 1) + (airThreat > 1 ? (P.city ? 1.5 : 0) + BK.reduce((s0, k) => s0 + S.bld[P.id][k], 0)*0.25*Math.min(3, airThreat) : 0);
-        if (sc > bs){ bs = sc; best = P.id; } }
-      if (best >= 0 && bs >= 2 && best !== a.air.base) orderAir(a, best); }
-  }
-}
 
-// interdiction: an enemy rail hub or highway junction near the front, best where enemy columns are moving through it
-function aiInterdict(n, B, r){ let best = -1, bs = 0;
-  for (const P of G.P){ const o = S.owner[P.id]; if (P.sea || o < 0 || o === n || !atWar(n, o) || !P.lk.size || hexDist(B.cc, P.cc) > r) continue;
-    let sc = 0; for (const lk of P.lk.values()){ if (lk.dmg > 0) continue; sc += railLv(lk)*2 + (roadLv(lk) >= 3 ? 1 : 0); } if (sc < 4) continue;
-    const near = P.nbs.some(v => S.owner[v] === n) ? 2 : P.nbs.some(v => G.P[v].nbs.some(w => S.owner[w] === n)) ? 1.4 : 0.6;
-    let moving = 0; for (const x of S.armies) if (x.owner === o && x.to !== null && (x.to === P.id || x.at === P.id)) moving++;
-    sc *= near*(1 + moving); if (sc > bs){ bs = sc; best = P.id; } }
-  return bs >= 6 ? best : -1; }
 
-function aiMissiles(n){
-  for (const [ps, st] of Object.entries(S.mstock || {})){ const p = +ps; if (S.owner[p] !== n) continue;
-    for (const k of ['bm', 'cm']){ if (!st[k]) continue; let best = -1, bs = 0;
-      for (const [pid, list] of provPowers()){ let sc = 0; for (const [o, pw] of list) if (o >= 0 && o !== n && atWar(n, o)) sc += pw*(o === PLAYER ? 1.1 : 1); if (sc < (k === 'bm' ? 60 : 30)) continue; if (!missileCheck(n, p, pid, k).ok) continue; if (sc > bs){ bs = sc; best = pid; } }
-      if (best >= 0) launchMissile(n, p, best, k); } }
-}
 function missilePos(m){
   const A = G.P[m.from], B = G.P[m.to], live = S.speed && !S.over ? acc : 0, t = Math.min(1, m.t + live*m.dt), d = Math.hypot(B.x - A.x, B.y - A.y);
   const arc = m.k === 'bm' ? Math.min(420, d*0.35) : Math.min(28, d*0.04);
@@ -4821,159 +4713,7 @@ let shakeUntil = 0, shakeAmp = 0;
 function shake(amp, ms){ if (afxReduced()) return; shakeAmp = Math.max(shakeAmp, amp); shakeUntil = Math.max(shakeUntil, performance.now() + ms); }
 
 
-function aiSpies(n){
-  const N = S.nations[n]; if (agentsOf(n).length < 2 && N.cash > 220 && rng() < 0.3) trainAgent(n);
-  const wars = warsOf(n); if (!wars.length || !idleAgents(n).length || rng() > 0.4) return;
-  const m = wars[Math.floor(rng()*wars.length)], provs = G.P.filter(P => S.owner[P.id] === m && !P.sea); if (!provs.length) return;
-  const P = provs[Math.floor(rng()*provs.length)], op = S.home[P.id] !== m ? 'incite' : BK.some(k => S.bld[P.id][k]) ? 'sabotage' : 'steal';
-  startSpy(n, P.id, op);
-}
 
-/* ---------------- Simulation ---------------- */
-let tickVer = 0;
-function tick(){
-  S.hour++; tickVer++;
-  /*@DEV*/if (DEV.instant || DEV.research || DEV.res) devHour(PLAYER);/*@ENDDEV*/
-  // production
-  for (let p = 0; p < G.P.length; p++) if (S.queue[p].length) prodHour(p);
-  // construction
-  for (let p = 0; p < G.P.length; p++) if (S.cons[p]) consHour(p);
-  // unit upgrades (one at a time, parallel to research)
-  for (const N of S.nations) if (N.alive && N.eng) engHour(N);
-  // research
-  for (const N of S.nations) if (N.alive && (N.research || N.research2)) researchHour(N);   // both slots
-  diploHour(); reqHour(); weatherHour(); dropTick(); linkHour(); if (S.hour % 6 === 0) strandedHour(); if (S.hour % 3 === 0) escortHour();
-  airTick();
-  missileTick();
-  spyHour();
-  rebelHour();
-  // movement
-  for (const a of S.armies){
-    if (a.air){ a.path = []; continue; }
-    if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (a.owner === PLAYER) log(`Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
-    if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
-      const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
-    if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
-    if (a.to === null && a.path.length && canProceed(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;
-      if (a.carry && a.carryH === S.hour - 1 && legMode(a, a.at, a.to) === 'rail') a.t = a.carry/legHours(a, a.at, a.to); a.carry = 0; }   // trains run through: no stop at every station
-    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.to = null; a.t = 0; a.path = []; if (a.owner === PLAYER) log(`${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
-    if (a.to !== null){ const lh = legHours(a, a.at, a.to); a.t += 1/lh;
-      if (a.t >= 1){ if (a.path.length && ground(a) && legMode(a, a.at, a.to) === 'rail'){ a.carry = Math.min(1, (a.t - 1)*lh); a.carryH = S.hour; } else a.carry = 0;
-        if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; a.legFrom = null;
-        if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; } }
-  }
-  // head-on clash: hostile columns marching in opposite directions on the same road meet and fight at the nearer province
-  { const edge = new Map(); for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)) edge.set(a.at + '>' + a.to, [...(edge.get(a.at + '>' + a.to) || []), a]);
-    for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(a.to + '>' + a.at); if (!opp) continue;
-      const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
-      const meet = a.t >= 0.5 ? a.to : a.at, A0 = G.P[a.at], B0 = G.P[a.to], mx = A0.x + (B0.x - A0.x)*a.t, my = A0.y + (B0.y - A0.y)*a.t;
-      for (const x of [a, b]){ x.from = x.at; x.at = meet; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = meet === a.at || meet === a.to ? [ (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2 ] : null; x.forced = false; }
-      if (a.owner === PLAYER || b.owner === PLAYER) log(`Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a)} met ${armyLabel(b)} on the road.`, 'bad', meet); } }
-  // your forces that arrive where another idle force of yours stands join it (same kind: ground with ground, fleets with fleets)
-  for (const a of S.armies){ if (a.owner !== PLAYER || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || !count(a)) continue;
-    if (a.lastAt === a.at) continue; a.lastAt = a.at;
-    if (S.owner[a.at] !== PLAYER && !(S.owner[a.at] >= 0 && rel(PLAYER, S.owner[a.at]).st === 'ally')) continue;
-    const jt = a.join != null ? armyById(a.join) : null;   // a join order picks its partner
-    const into = (jt && jt !== a && jt.owner === PLAYER && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === PLAYER && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a));
-    if (into) delete a.join;
-    if (into){ merge(into, a); if (sel.army === a.id){ sel.army = into.id; } if (sel.group) sel.group = sel.group.map(id => id === a.id ? into.id : id); }
-  }
-  // dug in: the hour each force came to a stop (display only: the sandbag mark on its plate and the sandbag ring at close zoom)
-  for (const a of S.armies){ if (a.to !== null || a.path.length || a.fly || a.air){ if (a.still != null) delete a.still; } else if (a.still == null) a.still = S.hour; }
-  if (S.hour % 2 === 0) stanceHour();
-  rangedHour(); chaseHour(); joinHour(); for (const a of S.armies) if (a.delay > 0) a.delay--;
-  // combat
-  if (S.hour - supHour >= 6 || !SUP){ computeSupply(); computeBlockade(); }
-  const prevBattles = new Set(S.battles); S.battles = [];
-  for (const a of S.armies){ a._h = effHP(a); a._n0 = count(a); }
-  let by = index();
-  for (let p = 0; p < by.length; p++){
-    const list = by[p]; if (list.length < 2) continue;
-    const sides = new Map(); for (const a of list){ if (!sides.has(a.owner)) sides.set(a.owner, []); sides.get(a.owner).push(a); }
-    if (sides.size < 2) continue;
-    const owners = [...sides.keys()].filter(o => [...sides.keys()].some(e => atWar(o, e)));
-    if (owners.length < 2) continue;
-    S.battles.push(p);
-    if (!prevBattles.has(p) && owners.includes(PLAYER)){
-      const foes = owners.filter(o => o !== PLAYER).map(nationName).join(', ');
-      if (S.owner[p] === PLAYER){ log(`${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(); }
-      else log(`Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
-      sfx('battle');
-    }
-    const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
-    const dmg = new Map(owners.map(o => [o, {soft:0, armored:0, air:0, naval:0}]));
-    const B = (S.bt || (S.bt = {}))[p] || (S.bt[p] = {h0:S.hour, s:{}}); warDamage(p, 0.5);
-    for (const o of owners){
-      const av = {soft:0, armored:0, air:0, naval:0}, r0 = K*(0.8 + rng()*0.4);
-      const nU = sides.get(o).reduce((s0, a) => s0 + count(a), 0), dirs = dirsOf(sides.get(o), p, o), F = sideFront(p, dirs);
-      const r = r0*frontScale(nU, F)*flankF(dirs);
-      const bs = B.s[o] || (B.s[o] = {peak:0, lost:{}, dirs:0, hp:[]}); bs.peak = Math.max(bs.peak, nU); bs.dirs = Math.max(bs.dirs, dirs); bs.dcur = dirs; bs.F = F; bs.n = nU;
-      const sznA = o !== S.owner[p] && season(p) ? SEASON_FX[season(p)].atk : 1;
-      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? (has(o, 'nav3') ? 0.9 : 0.67) : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? RIVER_ATK : 1)*sznA;
-        const mf = moraleF(a);
-        const TFo = G.P[p].sea ? null : tuf(G.P[p].terrain || 'plains', o !== S.owner[p], !arctic(o));
-        const cB = o !== S.owner[p] ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner');
-        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(TFo ? TFo[t] : 1)*cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1); a._dealt0 += base; for (const k of CLASSES) av[k] += base*mult(t, k); } }
-      // shore bombardment: this side's ships in adjacent sea zones add half their firepower to coastal land battles
-      if (!G.P[p].sea && G.P[p].coast) for (const sz of G.P[p].nbs){ if (!G.P[sz].sea) continue;
-        for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null) continue;
-          for (const t of UT){ if (!a.u[t] || UNITS[t].cls !== 'naval') continue; const base = 0.5*a.u[t]*st(o, t, 'atk')*r*moraleF(a); for (const k of CLASSES) av[k] += base*mult(t, k); } } }
-      const foes = owners.filter(e => atWar(o, e)), tot = foes.reduce((s, e) => s + hp.get(e), 0);
-      for (const e of foes){ const d = dmg.get(e); for (const k of CLASSES) d[k] += av[k]*hp.get(e)/tot; }
-    }
-    for (const o of owners){
-      let f = 1;
-      if (o === S.owner[p]){ f /= 1.25; f *= Math.pow(0.8, S.bld[p].fort); const dd = docOf(o); if (dd && dd.home && S.home[p] === o) f *= dd.home; }
-      if (!G.P[p].sea && (o === S.owner[p] || (S.owner[p] < 0 && o < 0))) f /= terr(p).def;
-      if (has(o, 'log3')) f *= 0.85;
-      const d = dmg.get(o), tot = hp.get(o);
-      const escorted = G.P[p].sea && sides.get(o).some(b => shipsN(b) > 0);
-      const bs = B.s[o];
-      for (const a of sides.get(o)){ const u0 = {...a.u}; hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot*(o === S.owner[p] ? 1 - 0.12*cmdF(a, 'shield') : 1)); cmdXP(a, (a._dealt0 || 0)*0.5); for (const t of UT) if (u0[t] > a.u[t]) bs.lost[t] = (bs.lost[t] || 0) + u0[t] - a.u[t]; }
-      bs.hp.push(Math.round(sides.get(o).reduce((s0, a) => s0 + armyHP(a), 0))); if (bs.hp.length > 96) bs.hp.shift();
-    }
-    { const showFx = owners.includes(PLAYER) || visibleSet().has(p);
-      if (showFx) owners.forEach((o, i) => { const lost = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
-      if (showFx) fx('hits', p, {seed:Math.random()*1000});
-      if (showFx && booted){ const P = G.P[p], nB = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0);   // visual only (Math.random, never rng)
-        for (let j = 0; j < 2; j++) afxBoom(P.x + (Math.random() - 0.5)*12, P.y + (Math.random() - 0.5)*7, 0.7 + Math.random()*0.4, true);
-        if (!P.sea && nB >= 6 && Math.random() < Math.min(0.7, nB/30)) afxCrater(P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8, 2 + Math.min(2.5, nB/12), {a:0.7, life:60});
-        if (!P.sea && P.coast) for (const sz of P.nbs){ if (!G.P[sz].sea) continue; const sh = S.armies.find(a => a.at === sz && a.to === null && owners.includes(a.owner) && shipsN(a) > 0); if (!sh) continue;
-          const Z = G.P[sz]; for (let j = 0; j < Math.min(3, shipsN(sh)); j++) setTimeout(() => shoot('shell', [Z.x + (Math.random() - 0.5)*6, Z.y + (Math.random() - 0.5)*4], [P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8], {dur:1100, arc:44, big:1.15}), j*260); break; } } }
-    const playerThere = owners.includes(PLAYER);
-    if (playerThere){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const st0 = S.stats || (S.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
-    if (playerThere) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(a.owner === PLAYER ? 'unitsLost' : 'unitsKilled', lost); }
-    for (const a of list) if (count(a) === 0 && (playerThere || visibleSet().has(p))){ fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); explode(...fxOff(P.x, P.y, 6), 1.4); } }
-    for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
-    for (const a of list) if (count(a) === 0 && playerThere){
-      if (a.owner === PLAYER) log(`${armyName(a)} was destroyed at ${G.P[p].name}.`, 'bad', p);
-      else log(`${armyLabel(a)} destroyed at ${G.P[p].name}.`, 'good', p);
-    }
-  }
-  removeEmpty();
-  for (const p of prevBattles) if (!S.battles.includes(p)) endBattle(p);
-  armyUpkeep(prevBattles);
-  // capture
-  by = index();
-  for (let p = 0; p < by.length; p++){
-    if (G.P[p].sea) continue;
-    const list = by[p], owners = new Set(list.map(a => a.owner));
-    let hostileToOwner = [...owners].filter(o => o !== S.owner[p] && atWar(o, S.owner[p]));
-    if (hostileToOwner.length > 1 && !hostileToOwner.some(x => hostileToOwner.some(y => x !== y && atWar(x, y)))){ const sz = o => list.filter(a => a.owner === o).reduce((s0, a) => s0 + groundN(a), 0); hostileToOwner = [hostileToOwner.sort((x, y) => sz(y) - sz(x))[0]]; }
-    if (owners.size >= 1 && hostileToOwner.length === 1 && ![...owners].some(o => o !== hostileToOwner[0] && atWar(o, hostileToOwner[0]))){
-      const O = hostileToOwner[0];
-      const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
-      if (O !== NEUTRAL && gN >= CAP_MIN){
-        if (!S.cap[p] || S.cap[p].by !== O){ S.cap[p] = {by:O, h:0}; if (S.owner[p] === PLAYER){ log(`${nationName(O)} is occupying ${G.P[p].cityName || G.P[p].name}. Retake it before the capture completes.`, 'bad', p); alarm(); } }
-        S.cap[p].h += 1 + 0.25*Math.max(0, ...list.filter(a => a.owner === O).map(a => cmdF(a, 'siege'))); if (S.cap[p].h >= capNeed(p, O)) capture(p, O);
-      } else S.cap[p] = null;
-    } else if (owners.size === 0) S.cap[p] = null;
-  }
-  if (S.hour % 24 === 0){ diploDay(); daily(); }
-  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
-  goScan();
-  visCache = null;
-}
 // forces that will set off on their next leg when the coming hour turns keep rolling on screen instead of halting an hour at every province
 // (display only; id -> share of the hour already gone when the order came, 0 after a tick)
 function goScan(){ GO.clear(); GO.S = S; for (const a of S.armies) goMark(a, 0); }
@@ -4994,17 +4734,6 @@ function reportHTML(R){
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="goto" data-id="${R.p}">Show on map</button></div>`;
 }
 let lastRes = null;
-function makePaper(){
-  // summarise the last 24 hours of dispatches into a front page
-  const day = Math.floor(S.hour/24), from = S.hour - 24, ev = S.log.filter(e => e.h > from && e.h <= S.hour);
-  const score0 = e => /has fallen|collapsed|capital/.test(e.text) ? 9 : /declared war on you|attacks|Missile warning/.test(e.text) ? 8 : /declared war/.test(e.text) ? 6 : /alliance|truce|pact/.test(e.text) ? 5 : /captured|took/.test(e.text) ? 4 : /strike|Missile|hit/.test(e.text) ? 4 : /Battle/.test(e.text) ? 3 : 1;
-  const top = ev.slice().sort((a, b) => score0(b) - score0(a));
-  const st0 = S.stats || {}, rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id));
-  S.papers = S.papers || []; const paper = {day, head:top[0] ? top[0].text : `Quiet day on the fronts. ${S.nations[PLAYER].name} holds ${S.owner.filter(o => o === PLAYER).length} provinces.`, items:top.slice(1, 5).map(e => e.text), rank:rank.slice(0, 5).map(N => [N.name, score(N.id), N.color]), big:top[0] ? score0(top[0]) : 0};
-  S.papers.unshift(paper); if (S.papers.length > 10) S.papers.length = 10;
-  if (SET.paper && paper.big >= 8 && booted && $('modal').hidden && S.started) setTimeout(() => { if ($('modal').hidden) showPaper(false); }, 50);
-  void st0;
-}
 function paperHTML(pp){
   if (!pp) return '<p class="muted">The first edition prints on the morning of day 2.</p>';
   return `<div class="paper"><div class="mast">The Meridian Herald</div><div class="pline"><span>Day ${pp.day + 1}</span><span>Morning edition</span><span>${S.nations[PLAYER].name} edition</span></div>
@@ -5012,415 +4741,7 @@ function paperHTML(pp){
     <div class="standings">${pp.rank.map(([n, sc, c], i) => `<span>${flagHTML(n, 11)} ${i + 1}. ${n} <b>${sc}</b></span>`).join('')}</div></div>`;
 }
 function showPaper(manual){ openModal(`${paperHTML((S.papers || [])[0])}<div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${manual ? '' : '<button class="btn" data-act="set" data-k="paper" data-v="false">Stop showing at dawn</button>'}</div>`, 'paper'); }
-function recordStats(){
-  const day = Math.floor(S.hour/24);
-  { if (!S.own0) S.own0 = S.owner.slice(); const R = S.rec || (S.rec = {last:S.own0.slice(), d:[]}); const diff = []; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] !== R.last[p]){ diff.push(p, S.owner[p]); R.last[p] = S.owner[p]; } R.d.push(diff); }
-  achDaily();
-  S.hist = S.hist || [];
-  S.hist.push({d:day, n:S.nations.map(N => N.alive ? [score(N.id), S.owner.filter(o => o === N.id).length, Math.round(natPower(N.id)), Math.round(income(N.id).net.cash)] : null)});
-  if (S.hist.length > 200) S.hist.shift();
-  const st0 = S.stats || (S.stats = {}); st0.peakArmy = Math.max(st0.peakArmy || 0, Math.round(natPower(PLAYER)));
-  const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id)).findIndex(N => N.id === PLAYER) + 1;
-  if (rank && (!st0.bestRank || rank < st0.bestRank)){ st0.bestRank = rank; st0.bestRankDay = day + 1; }
-}
-function daily(){
-  if (S.airHit) for (const k in S.airHit){ const H = S.airHit[k]; for (const j in H) if (typeof H[j] === 'number') H[j] *= 0.7; if (H.bp) for (const q in H.bp) if (S.hour - H.bp[q] > 96) delete H.bp[q]; }   // air-raid memory fades
-  marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay(); tradeDay(); INCC.v = -1;
-  if (S.dmg) for (let p = 0; p < S.dmg.length; p++) if (S.dmg[p] > 0) S.dmg[p] = Math.max(0, S.dmg[p] - 2.5);
-  { S.pop = S.pop || G.P.map(P => P.pop0); for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; if (moraleOf(p) > 70) S.pop[p] = Math.min(G.P[p].pop0*1.25, S.pop[p]*1.0004); } }
-  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }
-  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
-    const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
-  for (const c of (S.cmds || [])){ if (!c.alive || c.army == null) continue; const a = armyById(c.army); if (!a || a.cmd !== c.id) c.army = null; }
-  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.eng || N.cash < 300 || rng() > 0.4) continue;
-    const tot = {}; for (const a of S.armies) if (a.owner === N.id) for (const t of UT) tot[t] = (tot[t] || 0) + a.u[t];
-    const t = UT.filter(t => tot[t] && markOf(N.id, t) < 4).sort((x, y) => tot[y]*UNITS[y].cost - tot[x]*UNITS[x].cost)[0]; if (t) startUpgrade(N.id, t); }
-  if (S.nations[PLAYER].alive){ const W = S.warn || (S.warn = {}), day = dayOf(S.hour);
-    const border = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== PLAYER));
-    const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === PLAYER || x.air || !S.nations[x.owner].alive) continue; const r = rel(PLAYER, x.owner).st; if (r === 'ally') continue;
-      if (border.some(P => P.nbs.includes(x.at) || P.id === x.at)) mass.set(x.owner, (mass.get(x.owner) || 0) + power(x)); }
-    const mine = border.reduce((s0, P) => s0 + S.armies.filter(x => x.owner === PLAYER && x.at === P.id && !x.air).reduce((s1, x) => s1 + power(x), 0), 0);
-    for (const [o, pw] of mass){ const grew = pw > (W['p' + o] ?? pw)*1.2; W['p' + o] = Math.max(pw*0.9, Math.min(W['p' + o] ?? pw, pw));
-      if (day >= 3 && grew && pw > 40 && pw > mine*1.4 && (!W[o] || day - W[o] >= 5)){ W[o] = day; const r = rel(PLAYER, o).st;
-      log(`${nationName(o)} ${r === 'war' ? 'has' : 'is massing'} ${Math.round(pw)} strength on your border against your ${Math.round(mine)}. ${r === 'war' ? 'Reinforce the front.' : 'Recruit defenders or seek a pact in Diplomacy.'}`, 'bad', border[0].id); } }
-    const idle = G.P.filter(P => S.owner[P.id] === PLAYER && P.city && !S.queue[P.id].length);
-    const N0 = S.nations[PLAYER], lowMp = N0.mp < 25, lowMetal = N0.metal < 15, lowIron = N0.iron < 12, lowElec = N0.elec < 8;
-    if (warsOf(PLAYER).length && idle.length && N0.cash > 250 && (!W.idle || day - W.idle >= 3)){ W.idle = day;
-      log(lowMp ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.mp)}k manpower: money is not your limit. Raise Mobilisation in Production, build Recruiting Offices, or capture populous provinces.`
-        : lowMetal ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.metal)} materials: buy more on the Market (T) or build Foundries.`
-        : lowIron ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.iron)} iron for armor, guns and ships: buy more on the Market (T) or build Foundries.`
-        : lowElec ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.elec)} electronics for aircraft, drones and air defence: buy more on the Market (T) or raise Arms Factories in your big cities.`
-        : `At war with $${fmt(N0.cash)}M unspent and ${idle.length} idle ${idle.length === 1 ? 'city' : 'cities'}: open Production (P) to queue defenders.`, 'bad', idle[0].id); } }
-  for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id), was = N.short || {};
-    N.short = {};
-    const cap = stockCap(N.id);
-    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(cap, v); }
-    if (N.id === PLAYER){ const st0 = S.stats || (S.stats = {}), mk = st0.made || (st0.made = {}); for (const R of RES) mk[R.k] = (mk[R.k] || 0) + Math.max(0, inc.gross[R.k]); }   // produced over the campaign (statistics)
-    if (N.id === PLAYER){ for (const k of ['oil', 'iron', 'elec', 'cash']) if (N.short[k] && !was[k]) log(SHORT_MSG[k], 'bad'); } }
-  unrestDay();
-  recordStats();
-  makePaper();
-  checkEnd();
-  save();
-}
 
-/* ---------------- AI ---------------- */
-let PPC = {v:-1, m:null};
-function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S){ const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a)]); } PPC = {v:tickVer, S, m}; } return PPC.m; }
-function defPower(p, n){
-  let d = 0; for (const [o, pw] of (provPowers().get(p) || [])) if (o !== n) d += pw;
-  if (S.owner[p] !== n){ d *= 1.25/Math.pow(0.8, S.bld[p].fort)*(G.P[p].sea ? 1 : terr(p).def); }   // the AI reads terrain: dug in on a mountain counts for more
-  return d;
-}
-function threatNear(p, n){ return G.P[p].nbs.some(v => S.armies.some(a => a.at === v && a.owner >= 0 && atWar(n, a.owner) && count(a) > 0)); }
-const EMC = {};
-function enemyMix(n){
-  const ck = EMC[n]; if (ck && ck.v === tickVer && ck.S === S) return ck.r;
-  const r = enemyMix0(n); EMC[n] = {v:tickVer, S, r}; return r;
-}
-function enemyMix0(n){
-  const m = {soft:0, armored:0, air:0, naval:0}, c = {drone:0, bomb:0, sub:0, ad:0, sup:0, all:0}; let mm = 0;
-  for (const a of S.armies){ if (a.owner < 0 || !atWar(n, a.owner)) continue; for (const t of UT){ const k = a.u[t]; if (!k) continue; m[UNITS[t].cls] += k*UNITS[t].hp; if (UNITS[t].cls === 'air' && !UNITS[t].dr) mm += k*UNITS[t].hp; const v = k*UNITS[t].cost/(UNITS[t].pack || 1); c.all += v;
-      if (UNITS[t].dr) c.drone += v; else if (t === 'bomb') c.bomb += v; else if (t === 'sub') c.sub += v; else if (t === 'sam' || t === 'jam') c.ad += v; else if (t === 'awacs' || t === 'mpa') c.sup += v; } }
-  const tot = m.soft + m.armored + m.air + m.naval || 1, ct = c.all || 1;
-  // cost shares of the kinds the counter-picks care about: drones, bombers, subs, air defence (SAM + jammers), support aircraft
-  // airm: manned aircraft only (drones have their own counters: jammers, SAMs; counted in 'drone')
-  return {soft:m.soft/tot, armored:m.armored/tot, air:m.air/tot, airm:mm/tot, naval:m.naval/tot, drone:c.drone/ct, bomb:c.bomb/ct, sub:c.sub/ct, ad:c.ad/ct, sup:c.sup/ct};
-}
-// how rough the ground is where this nation fights (enemy and foreign land next to its own): 0 open steppe .. 1 marsh and mountains
-const FRC = {};
-function frontRough(n){ const d = Math.floor(S.hour/24), ck = FRC[n]; if (ck && ck.d === d && ck.S === S) return ck.r;
-  const wars = warsOf(n), seen = new Set(); let s = 0, c = 0;
-  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || G.P[p].sea) continue; for (const v of G.P[p].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] === n) continue; if (wars.length && !wars.includes(S.owner[v])) continue; seen.add(v); s += rough(G.P[v].terrain); c++; } }
-  const r = c ? s/c : 0; FRC[n] = {d, S, r}; return r; }
-// aircraft counts per type a nation fields (cached per tick: aiPickUnit runs for every city)
-let AIRM = {v:-1, S:null, m:new Map()};
-function airMine(n){ if (AIRM.v !== tickVer || AIRM.S !== S) AIRM = {v:tickVer, S, m:new Map()}; let m = AIRM.m.get(n); if (m) return m; m = {};
-  for (const a of S.armies) if (a.owner === n && a.air) for (const t of AIR_T) if (a.u[t]) m[t] = (m[t] || 0) + a.u[t]; AIRM.m.set(n, m); return m; }
-const AI_SCARCE = ['iron', 'elec', 'rare'];
-function aiPickUnit(n, p){
-  const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.2, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
-  // terrain counter-pick: rough fronts (forest, hills, mountains, marsh, ice) want infantry and special forces, open ones armor
-  { const rg = frontRough(n); w.tank *= 1 - 0.5*rg; w.ifv *= 1 - 0.5*rg; w.inf *= 1 + 0.5*rg; w.art *= 1 - 0.2*rg; w.spec = 0.3 + 2.2*rg; }
-  // trade war: convoys sunk lately want frigates (escorts); enemy trade routes in the world invite submarines (raiders)
-  const trHit = S.trade ? Math.min(4, S.trade.hit[n] || 0) : 0, foeTr = S.trade && warsOf(n).length ? S.trade.routes.filter(r => r.kind === 'sea' && !trMine(r, n) && trHostile(r, n)).length : 0;
-  w.frig += 1.3*trHit; w.crui += 0.3*trHit; w.sub += 0.2*Math.min(8, foeTr);
-  let allU = 0, jamN = 0; { let ships = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } if (ships > allU*(trHit >= 1 ? 0.28 : 0.2)){ w.frig = w.sub = w.crui = 0; } }
-  // V3 air: drones, the jammer, specialised aircraft, with counter-picks against what the enemy fields and what has been hitting us
-  { const H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, mine = airMine(n);
-    const rich = S.nations[n].cash > 400, wars = warsOf(n).length > 0, coast = G.P[p].coast;
-    w.jam = 0.15 + 12*mix.drone + 1.2*Math.min(4, H.drone); if (jamN > Math.max(8, allU*0.07)) w.jam *= 0.3;   // jammers cannot fight: a screen, not an army
-    w.sam += 5*mix.bomb + 0.8*Math.min(4, H.bomb + H.air);
-    w.int += 3*mix.bomb + 2*mix.drone + 2*mix.sup;
-    w.asf = 2 + 6*am + 6*mix.bomb + 4*mix.drone + 3*mix.sup + 1.2*Math.min(4, H.bomb + H.air);
-    w.swarm = wars ? 1.2 + 9*mix.ad + 1.5*mix.soft : 0.2;
-    w.sdrone = wars ? 0.7 + 1.5*mix.armored + 5*mix.ad : 0.2;
-    w.drone = (mine.drone || 0) < 2 ? 1.4 : 0.1;
-    w.bomb = wars && (mine.bomb || 0) < 4 ? (rich ? 2.5 : 2) : 0.05;
-    if (H.bomb > 0){ const hb = Math.min(3, H.bomb); w.int += 2*hb; w.sam += 2.5*hb; w.asf += 6*hb; }   // being bombed: air-superiority fighters (the real counter), interceptors and SAMs where none can be built
-    w.mpa = coast && (mine.mpa || 0) < 3 ? 0.25 + 8*mix.sub + 1.2*trHit : 0;
-    w.awacs = wars && !(mine.awacs) ? 1.5 + 2*mix.airm : 0;
-    // where an Air Superiority Fighter can be built it takes over most of the interceptor's share: it covers seven provinces, not one
-    if (unlocked(n, 'asf') && bldOk(p, 'asf') && (mine.asf || 0) < 12){ w.asf += 0.6*w.int; w.int *= 0.4; }
-    if ((mine.swarm || 0) > 48) w.swarm *= 0.2; if ((mine.sdrone || 0) > 8) w.sdrone *= 0.3; if ((mine.asf || 0) > 12) w.asf *= 0.4;
-    const manned = ['int', 'asf', 'jet', 'bomb', 'awacs', 'mpa', 'heli'].reduce((s0, t) => s0 + (mine[t] || 0), 0);
-    if (manned > Math.max(4, allU*(H.bomb + H.air > 1 ? 0.16 : 0.1))){ const quota = {asf:H.bomb + H.air > 0 ? 6 : 4, awacs:1, mpa:2};
-      for (const t of ['int', 'asf', 'jet', 'awacs', 'mpa', 'heli']) if (!((mine[t] || 0) < (quota[t] || 0))) w[t] = (w[t] || 0)*0.25; w.sam *= 0.7; } }
-  { const N = S.nations[n], inc = income(n); if (inc.net.oil < 0 || (N.short && N.short.oil)){ w.tank *= 0.3; w.jet *= 0.3; w.int *= 0.5; w.crui *= 0.5; w.ifv *= 0.5; w.bomb *= 0.2; w.asf *= 0.5; w.mpa *= 0.5; w.awacs *= 0.5; }
-    else if (N.oil > 450 && inc.net.oil > 4){ w.tank *= 1.35; w.ifv *= 1.35; w.jet *= 1.3; w.frig *= 1.2; w.crui *= 1.2; } }   // fuel to spare: more of the units that burn it
-  { const N = S.nations[n], inc = income(n);   // iron or electronics running out (a shortage, or maintenance eating the last two weeks of stock): fewer of the units that use most of it
-    for (const k of ['iron', 'elec']){ const d = -inc.net[k]; if (!((N.short && N.short[k]) || (d > 0 && N[k] < 14*d))) continue; for (const t in w) if (MAINT[t]) w[t] *= MAINT[t][k] >= (k === 'iron' ? 0.24 : 0.12) ? 0.3 : MAINT[t][k] > 0 ? 0.65 : 1.15; } }   // the heavy users: 6 or more of it in the price
-  { const N = S.nations[n], av = {}; for (const k of AI_SCARCE) av[k] = N[k] - aiKeepRes(n, k);   // what is left above the maintenance reserve
-    for (const t in w){ const U = UNITS[t]; if (!U) continue; for (const k of AI_SCARCE){ const q = U[k] || 0; if (q && av[k] < q*3) w[t] *= av[k] < q ? 0.15 : 0.5; } } }
-  const opts = UT.filter(t => bldOk(p, t) && unlocked(n, t));
-  let tot = opts.reduce((s, t) => s + (w[t] || 0), 0), r = rng()*tot;
-  for (const t of opts){ r -= w[t] || 0; if (r <= 0 && w[t]) return t; }
-  return opts.includes('inf') ? 'inf' : null;   // nothing with weight: infantry, where this city can mobilize it
-}
-function aiFleet(a, n){
-  // damaged fleets go home to a yard; healthy ones patrol a sea zone next to an enemy coast
-  if (healthFrac(a) < 0.5){ const y = G.P.find(P => S.owner[P.id] === n && S.bld[P.id].yard); if (y && a.at !== y.id) a.path = pathFor(a, a.at, y.id); return; }
-  const seen = new Map([[a.at, 0]]), q = [a.at]; let best = -1;
-  for (let h = 0; h < q.length && best < 0; h++){ const u = q[h], du = seen.get(u); if (du >= 8) continue;
-    for (const v of G.P[u].nbs){ if (seen.has(v) || !G.P[v].sea) continue; seen.set(v, du + 1); q.push(v);
-      if (G.P[v].nbs.some(x => !G.P[x].sea && S.owner[x] >= 0 && atWar(n, S.owner[x]))){ best = v; break; } } }
-  if (best >= 0 && best !== a.at) a.path = pathFor(a, a.at, best);
-}
-const focusOf = n => { const R = S.blocReg && Object.values(S.blocReg).find(R => R.members && R.members.includes(n)); return R ? R.focus : null; };
-// pick one offensive objective against the main enemy and the own provinces next to it to gather in
-function aiPlan(n){ const P0 = (S.plans || (S.plans = {}))[n];
-  if (P0 && S.owner[P0.tgt] !== n && atWar(n, S.owner[P0.tgt] ?? -1) && S.hour - P0.made < 24*8) return P0;
-  const wars = warsOf(n); if (!wars.length){ delete S.plans[n]; return null; }
-  const foe = focusOf(n) != null && wars.includes(focusOf(n)) ? focusOf(n) : wars.slice().sort((x, y) => natPower(x) - natPower(y))[0];
-  let best = null, bv = 0;
-  for (const P of G.P){ if (P.sea || S.owner[P.id] !== foe) continue; const stage = P.nbs.filter(v => S.owner[v] === n && !G.P[v].sea); if (!stage.length) continue;
-    const v = (P.city ? 3 : 1) + (isCapital(P.id) ? 4 : 0) + (P.oil ? 1 : 0) + stage.length*0.6, dp = defPower(P.id, n), rx = stage.filter(s0 => riverX(s0, P.id)).length/stage.length, sc = v/(8 + dp)*(1 - 0.2*rx); if (sc > bv){ bv = sc; best = {tgt:P.id, stage, foe, made:S.hour}; } }
-  if (best) S.plans[n] = best; else delete S.plans[n]; return best; }
-function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = new Set();
-  // 1. front defence: send the nearest idle reserve to an own border province that faces a much stronger enemy stack
-  for (const P of G.P){ if (P.sea || S.owner[P.id] !== n) continue; let threat = 0; for (const v of P.nbs){ if (S.owner[v] >= 0 && atWar(n, S.owner[v])) threat += stationaryAt(v).filter(b => b.owner === S.owner[v]).reduce((s0, b) => s0 + power(b), 0); }
-    if (P.id === N.capital){ const r2 = new Set(); for (const v of P.nbs) for (const w of G.P[v].nbs) if (w !== P.id && !P.nbs.includes(w)) r2.add(w);   // and the ring beyond, at 60%
-      for (const b of S.armies) if (r2.has(b.at) && b.owner >= 0 && b.owner !== n && !b.air && atWar(n, b.owner) && count(b)) threat += 0.6*power(b); }
-    if (P.city && S.battles.includes(P.id)) threat += stationaryAt(P.id).filter(b => b.owner >= 0 && atWar(n, b.owner)).reduce((s0, b) => s0 + power(b), 0)*1.5;   // a city already under attack
-    // the capital is defended against any raid (small strike groups now race along captured rail lines), and from further away
-    const capP = P.id === N.capital; if (threat < (capP ? 5 : 20)) continue; const here = stationaryAt(P.id).filter(b => b.owner === n).reduce((s0, b) => s0 + power(b), 0) + S.armies.filter(b => b.owner === n && b.path.length && b.path[b.path.length - 1] === P.id).reduce((s0, b) => s0 + power(b), 0);
-    if (here >= threat*(capP ? 1.4 : 0.8)) continue;
-    let pick = null, bd = 1e9; for (const a of idle){ if (used.has(a) || a.at === P.id || a.at === N.capital && threatNear(a.at, n) || power(a) < (capP ? 6 : 10)) continue; const d = hexDist(G.P[a.at].cc, P.cc); if (d < bd && d <= (capP ? 16 : 8)){ bd = d; pick = a; } }
-    if (pick){ const pth = pathFor(pick, pick.at, P.id); if (pth.length){ pick.path = pth; used.add(pick); } } }
-  if (!plan) return used;
-  // 2. gather at the staging provinces, then strike together from every side once strong enough
-  const stage = plan.stage.filter(v => S.owner[v] === n); if (!stage.length){ delete S.plans[n]; return used; }
-  const atStage = S.armies.filter(a => a.owner === n && !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a));
-  const massed = atStage.reduce((s0, a) => s0 + power(a)*terrFit(a, plan.tgt, true)*(riverX(a.at, plan.tgt) ? RIVER_ATK : 1), 0), need = defPower(plan.tgt, n)*1.5 + 10;
-  if (massed >= need){ for (const a of atStage){ orderMove(a, plan.tgt); used.add(a); } plan.launched = S.hour;
-    if (S.owner[plan.tgt] === PLAYER) log(`${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${(n0 => n0 + (n0 === 1 ? ' direction' : ' directions'))(new Set(atStage.map(a => a.at)).size)}!`, 'bad', plan.tgt);
-    return used; }
-  let i = 0; for (const a of idle){ if (used.has(a) || stage.includes(a.at) || power(a) < 14 || (a.at === N.capital && threatNear(a.at, n))) continue;
-    const st = stage[i++ % stage.length], d = hexDist(G.P[a.at].cc, G.P[st].cc); if (d > 14) continue;
-    const pth = pathFor(a, a.at, st); if (pth.length){ a.path = pth; used.add(a); } }
-  for (const a of atStage) used.add(a);       // forces already in position wait for the rest
-  return used; }
-// AI transport works, rate-limited (one new project a day at most, 1-2 running, a cash reserve kept): rails from the capital toward its fronts,
-// otherwise roads and rails to its own cities; high-speed lines only when rich. The route is planned rail-aware, so the first gap on it is a real gap.
-function aiLinks(n){ const N = S.nations[n]; if (!N.alive) return 'dead'; if (N.lkSave && N.lkSave.until <= S.hour) N.lkSave = null; if (!N.lkSave && rng() > (N.cash > 800 ? 0.95 : 0.6)) return 'skip';
-  const np = S.owner.filter(o => o === n).length; if (np < 3 || linkProjects(n) >= (np > 80 ? 2 : 1)) return 'busy';
-  const inc = income(n); if (inc.net.cash < 2) return 'income';
-  const mine = v => S.owner[v] === n, fronts = [], cities = [];
-  for (const P of G.P){ if (P.sea || !mine(P.id) || P.id === N.capital) continue;
-    if (P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== n && atWar(n, S.owner[v]))) fronts.push(P.id); else if (P.city) cities.push(P.id); }
-  const pool = fronts.length && rng() < 0.75 ? fronts : cities.length ? cities : fronts; if (!pool.length) return 'nodest';
-  const t = pool[Math.floor(rng()*pool.length)], path = N.lkSave ? [] : findPath(N.capital, t, mine, 'wheel', n); if (!path.length && !N.lkSave) return 'nopath';
-  let u = N.capital, job = null, hsr = null;
-  if (N.lkSave && N.lkSave.job && linkCheck(n, N.lkSave.job[0], N.lkSave.job[1], N.lkSave.job[2]).lv) job = N.lkSave.job;   // the project it is saving for
-  else for (const v of path){ const r = linkOf(u, v), rd = r ? r.road : 0, rl = r ? r.rail : 0;
-    if (!(r && (r.bld || r.dmg > 0))){ if (!rl){ job = [u, v, rd ? 'rail' : 'road']; break; } if (rd < 2 && !job) job = [u, v, 'road']; if (rl === 1 && !hsr) hsr = [u, v, 'rail']; }
-    u = v; }
-  if (!job && hsr && has(n, 'log1') && N.cash > 900 && rng() < 0.3) job = hsr;
-  if (!job){ N.lkSave = null; return 'nojob'; } const ck = linkCheck(n, job[0], job[1], job[2]);
-  // short of money: hold back that much from unit purchases for up to two days (metal is not held back)
-  if (!ck.ok && ck.c && (N.cash < ck.c.cash + 20 || !hasC(N, {...ck.c, cash:0})) && !/yours|under way|Damaged|research|track first|projects/.test(ck.why)){ if (!N.lkSave) N.lkSave = {job, c:ck.c.cash + 20, until:S.hour + 48}; return 'save'; }
-  if (!ck.ok){ N.lkSave = null; return 'check:' + ck.why; } if (N.cash < ck.c.cash + 20){ if (!N.lkSave) N.lkSave = {job, c:ck.c.cash + 20, until:S.hour + 48}; return 'save'; }
-  N.lkSave = null; return buildLink(n, job[0], job[1], job[2]) ? 'built:' + job[2] : 'fail'; }
-// how many heavy bombers the AI still wants: at war, Strategic Bombers researched, an Airbase II standing, oil not running dry; 2 for a small power, up to 4 for a big one
-function aiBomberWant(n, provs, inc){ if (!has(n, 'bomb1') || !warsOf(n).length || inc.net.oil < -2) return 0;
-  if (!G.P.some(P => S.owner[P.id] === n && P.city && S.bld[P.id].air >= 2 && !bdis(P.id, 'air'))) return 0;
-  const goal = provs > 160 ? 4 : provs > 70 ? 3 : 2, have = (airMine(n).bomb || 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'bomb').length : 0), 0);
-  return Math.max(0, goal - have); }
-// Air Superiority Fighters wanted: with the research and an Airbase II, at war with powers that fly bombers, AWACS, patrol planes or drones
-// (or hit by air), a small fighter force: 2 + up to 4 more with the threat, bigger empires a little more
-function aiAsfWant(n, provs, inc){ if (!has(n, 'asf1') || !warsOf(n).length || inc.net.oil < -2) return 0;
-  if (!G.P.some(P => S.owner[P.id] === n && P.city && S.bld[P.id].air >= 2 && !bdis(P.id, 'air'))) return 0;
-  const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, thr = 18*mx.bomb + 14*mx.sup + 6*mx.drone + 4*(mx.airm || 0) + (H.bomb + H.air > 0 ? 1.5 : 0);
-  if (thr < 0.4) return 0;
-  const goal = Math.min(provs > 160 ? 8 : 6, 2 + Math.round(Math.min(4, thr))), have = (airMine(n).asf || 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'asf').length : 0), 0);
-  return Math.max(0, goal - have); }
-// what the AI holds back: the link project it saves for (cash), and the counter unit it saves for (all of its costs)
-const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awacs']);   // counters, and the heavy aircraft it rarely picks: saved for, not swapped
-// an AI buys from other AIs' sell listings on the order book (cheapest first, up to 1.15x the world price; never an enemy's or an embargoing power's):
-// goods change hands between nations without moving the world price. Returns what it got.
-function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
-  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && o.seller !== PLAYER && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
-  for (const o of asks){ const r = Math.min(q - got, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[k])); if (r <= 0) break;
-    N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r; if (got >= q) break; }
-  if (got) S.book = S.book.filter(o => o.qty > 0); return got; }
-// AI market thresholds: buys when a stock is below AI_LOW (and tops up what is below AI_SHORT, AI_BUYQ at most); never a hoard
-const AI_KEEP = {iron:180, elec:130, rare:170};   // AI stock kept back from a sale into a strong market (plus 25 days of maintenance and what it saves for)
-const AI_LOW = {oil:40, metal:60, iron:50, elec:35, rare:40}, AI_SHORT = {oil:90, metal:90, iron:80, elec:60, rare:70}, AI_BUYQ = {oil:120, metal:120, iron:100, elec:60, rare:50};
-// where the AI builds a Rare Earth Mine (the richest ground it holds) or an Arms Factory for electronics (its most populous city still below level III)
-// a Foundry goes on an ore deposit first (twice the iron), at home rather than on conquered land, the lowest level first
-function aiSite(n, k){ let best = -1, bv = 0;
-  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, k)) continue; const P = G.P[p], lv = S.bld[p][k];
-    const v = k === 'mine' ? (lv < BUILD.mine.max ? mineLv(P)*(1 - 0.25*lv)*(S.home[p] === n ? 1 : 0.7) : 0) : k === 'fdy' ? (lv < BUILD.fdy.max ? (P.ore ? 2 : 1)/(1 + lv)*(S.home[p] === n ? 1 : 0.6)*(1 + 0.1*rng()) : 0) : (lv < 3 ? (1 + popOf(p))/(1 + lv) : 0);
-    if (v > bv){ bv = v; best = p; } }
-  return best; }
-const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U = N.uSave;
-  // at war, troops come first: the link project only holds its money back once there is twice that much in the bank
-  let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
-  if (U && U.until > S.hour && UNITS[U.t]) r += (ucost(n, U.t)[k] || 0) + (k === 'cash' ? 15 : 0);
-  if (N.bSave && N.bSave.until > S.hour) r += buildCost(n, 'air', 2)[k] || 0;
-  if (rFree(N) && N.rPick && N.rPick.until > S.hour && TECH_BY[N.rPick.id] && (N.rPick.save || k === 'rare')) r += techCost(TECH_BY[N.rPick.id])[k] || 0;   // saving for a counter tech (all of it); rare materials always wait for the next research
-  return r; };
-// buy what a cost lacks in traded goods (plus a few spare) on the world market, if every price is at most mx times the base and the money covers it all
-function aiBuyFor(n, c, mx, spare = 20){ const N = S.nations[n], miss = MKT_K.map(k => [k, Math.ceil((c[k] || 0) - N[k])]).filter(([, q]) => q > 0); if (!miss.length) return true;
-  let tot = c.cash || 0; for (const [k, q] of miss){ if (buyPrice(n, k) > MKT_BASE[k]*mx*(k === 'iron' || k === 'elec' ? 1.25 : 1)) return false; tot += (q + 5)*buyPrice(n, k); }
-  if (N.cash < tot + spare + aiReserve(n)) return false; for (const [k, q] of miss) trade(n, k, q + 5); return true; }
-// iron and electronics kept back from new units for maintenance: the shortage line plus three days of it (a new unit that would dig into it waits)
-const aiKeepRes = (n, k) => k === 'iron' || k === 'elec' ? AI_LOW[k] + 3*Math.max(0, income(n).upkeep[k]) : 0;
-const aiSpare = (n, t, keep) => { const N = S.nations[n], c = ucost(n, t); if (!canAfford(n, t) || N.cash < c.cash + 15 + aiReserve(n)) return false; for (const k of CK) if (k !== 'cash' && c[k] > 0 && N[k] - c[k] < aiReserve(n, k) + (keep ? aiKeepRes(n, k) : 0)) return false; return true; };   // only what this unit itself uses is checked against the savings
-// AI army supply: how big an army the land can carry before growth waits for more territory (or money above $600M). It stands in for the old food
-// limit (armies ate food; temperate countryside fed three units, a city or cold ground one): without it the populous powers grew until cash alone ran out
-const ARMYC = {v:-1, m:[]};
-function aiArmyCap(n){ if (ARMYC.v !== tickVer || ARMYC.S !== S){ ARMYC.v = tickVer; ARMYC.S = S; ARMYC.m = []; }
-  if (ARMYC.m[n] != null) return ARMYC.m[n]; let c = 0, k = 0; for (const P of G.P) if (!P.sea && S.owner[P.id] === n){ k++; c += P.city ? 1 : (Math.abs(P.lat) < 55 ? 3 : 1)*G.PF; }
-  return (ARMYC.m[n] = 90 + c*Math.min(1, 0.55 + 40/(40 + k))); }   // large empires feed and supply their armies less efficiently (as food was hit by administration)
-function aiTurn(n){
-  const N = S.nations[n]; if (!N.alive) return;
-  if (rFree(N)){   // a slot is free (one start per turn: the other slot fills on a later turn, with a different project)
-    const av = TECH.filter(t => !has(n, t.id) && !rRunning(N, t.id) && (!t.req || has(n, t.req)));
-    if (av.length){ const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0};
-      const hb = H.bomb > 0 ? 4 : 0, wr = warsOf(n).length > 0, ab2 = G.P.some(P => S.owner[P.id] === n && S.bld[P.id].air >= 2);
-      // enemies fielding (or able to field) bombers, AWACS and patrol planes, or flying drones, call for Air Superiority Fighters
-      const aw = (() => { const foes = warsOf(n), heavy = foes.filter(e => has(e, 'bomb1') || has(e, 'awacs1')).length; const v = (wr ? 2.5 : 0) + 14*mx.bomb + 12*mx.sup + 8*mx.drone + 3*Math.min(2, heavy) + (H.bomb + H.air > 0 ? 4 : 0); return {asf:v, air2:0}; })();   // (fighters are open from day one: Precision Munitions no longer leads there)
-      const RW = {air1:3, eco1:3, air2:(wr ? 4.2 : 2.6) + 4*(mx.bomb + mx.air) + 2*Math.min(3, H.bomb) + hb + aw.air2, drone1:2.5, uav2:2, uav3:1.5, uav4:2, uav5:1.5, swarm1:3, sdrone1:2.5, jam1:0.8 + 14*mx.drone + 2*Math.min(3, H.drone), asf1:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + aw.asf, mpa1:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), awacs1:wr ? 2.2 : 1.5, bomb1:wr ? (ab2 ? 11 : 8) : 3};
-      // the pick sticks for a day: an expensive tech (bombers, fighters) is saved for instead of losing every roll to the cheap ones
-      let pick = N.rPick && N.rPick.until > S.hour ? av.find(t => t.id === N.rPick.id) : null;
-      const rInc = Math.max(0, income(n).net.rare), rOk = t => N.rare + 5*rInc >= t.rare;   // fundable in about five days of rare-material income
-      if (!pick){ const w = av.map(t => (RW[t.id] || 1)*(rOk(t) ? 1 : 0.35)), tot = w.reduce((a, b) => a + b, 0);
-        let r = rng()*tot; pick = av[0]; for (let i = 0; i < av.length; i++){ r -= w[i]; if (r <= 0){ pick = av[i]; break; } }
-        // a counter that is badly needed (Air Superiority Fighters, or the Precision Munitions that lead to them) is saved for over four days:
-        // aiReserve holds its price back from recruiting, so a cash-poor power at war still gets there
-        const save = (pick.id === 'asf1' && aw.asf >= 2.5) || (pick.id === 'air2' && aw.air2 >= 2);
-        N.rPick = {id:pick.id, until:S.hour + (save ? 96 : 24), save}; }
-      { const tc = techCost(pick);   // short of rare materials, materials or oil for it: buy the rest (never above 1.6x the base price) when the money is there
-        for (const k of ['rare', 'metal', 'oil']){ const miss = Math.ceil(tc[k] - N[k]); if (miss > 0 && buyPrice(n, k) <= MKT_BASE[k]*1.6 && N.cash > tc.cash + 60 + (miss + 3)*buyPrice(n, k) + aiReserve(n)) trade(n, k, miss + 3); }
-        if (N.cash > tc.cash + 30 && startResearch(n, pick.id)) N.rPick = null; } }
-  }
-  const inc = income(n), provs = S.owner.filter(o => o === n).length;
-  const units = S.armies.reduce((s, a) => s + (a.owner === n ? count(a) : 0), 0) + S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.length : 0), 0);
-  const canGrow = inc.net.cash > 4 && inc.upkeep.cash < inc.gross.cash*0.7 && units < aiArmyCap(n);
-  // economy buildings: one new project per turn where it is needed most; a rich power stuck on a resource runs up to three at once
-  // (rare materials for research: a Rare Earth Mine on the richest ground; iron or materials: a Foundry; electronics: an Arms Factory in the most populous city)
-  // Iron and electronics are spent on new units as fast as they come in (the net income below is after maintenance only), so a Foundry or an Arms Factory
-  // is wanted while the stock is little above the maintenance reserve and the income does not cover most of the maintenance again on top (what recruiting uses);
-  // one of each at a time (two for a big power). A Rare Earth Mine comes first (research); the other needs take turns
-  { const u0 = inc.upkeep, needs = [inc.net.rare < 5 && N.rare < 120 ? 'mine' : null,
-      inc.net.iron < -1 || (N.iron < aiKeepRes(n, 'iron') + 30 && inc.net.iron < Math.max(4, 0.8*u0.iron + 2)) || (inc.net.metal < 4 && N.metal < 80) ? 'fdy' : null, inc.net.oil < 3 ? 'ref' : null, inc.net.mp < 5 && N.mp < 60 ? 'rec' : null,
-      inc.net.elec < -1 || (N.elec < aiKeepRes(n, 'elec') + 50 && inc.net.elec < Math.max(3, u0.elec + 2)) ? 'fac' : null].filter(Boolean);
-    const rich = N.cash > 600 && !canGrow, jobs = rich ? 3 : 1, busy = {}, j0 = Math.floor(S.hour/4) + n; let done = 0;
-    if (needs.length) for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && S.cons[p]) busy[S.cons[p].k] = (busy[S.cons[p].k] || 0) + 1;
-    const ord = needs[0] === 'mine' ? ['mine', ...needs.slice(1).map((x, i, a) => a[(j0 + i) % a.length])] : needs.map((x, i, a) => a[(j0 + i) % a.length]);
-    for (let j = 0; j < ord.length && done < jobs && N.cash > 90; j++){ const need = ord[j]; if (need !== 'mine' && (busy[need] || 0) >= (provs > 150 ? 2 : 1)) continue;
-      if (need === 'mine' || need === 'fac' || need === 'fdy'){ const p = aiSite(n, need); if (p >= 0 && build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; } continue; }
-      for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, need) || S.bld[p][need] >= BUILD[need].max) continue;
-        if (build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; break; } } }
-    // the other way round: a cash-poor power sells a metal hoard on the world market, while metal still fetches 0.8x the base price and at most
-    // AI_SELL_DAY units a day. Oil and the other goods are never dumped here (that flattened their prices for everyone): stock above 55% of the storage
-    // cap goes to the order book instead (bookDay), sold nation to nation without moving the world price
-    // A real hoard (over 1,000) held by a power short of cash is unloaded too, AI_HOARD_DAY a day and more for bigger hoards, while the price is
-    // above 0.6x the base or 85% of the last two weeks' average, whichever is lower (never below 0.5x): hoards of 1,000-3,000 no longer sit idle all game while the price never reaches 0.8x
-    if (N.metal > 1000) N.mHoard = 1; else if (N.metal < 650) N.mHoard = 0;   // once over 1,000 the hoard is sold down to about 650
-    const hoard = !!N.mHoard && N.cash < 500;
-    if (N.cash < 260 || hoard){ const day = Math.floor(S.hour/24); if (N.sellD !== day){ N.sellD = day; N.sold = 0; }
-      const M = mkt(), sur = N.metal - (hoard ? 620 : 420) - aiReserve(n, 'metal'), h14 = M.hist.metal.slice(-14), avg = h14.length ? h14.reduce((a, b) => a + b, 0)/h14.length : M.p.metal;
-      const floor = hoard ? Math.max(MKT_BASE.metal*0.5, Math.min(MKT_BASE.metal*0.6, avg*0.85)) : MKT_BASE.metal*0.8, cap = hoard ? Math.min(90, Math.max(AI_HOARD_DAY, 0.9*inc.gross.metal) + Math.max(0, N.metal - 1000)/20) : AI_SELL_DAY;   // a big producer (~60 a day) sells about its output, bigger hoards a bit more
-      if (sur >= 30 && (inc.net.metal >= 0 || hoard) && M.p.metal >= floor){ const q = Math.floor(Math.min(sur, cap - (N.sold || 0), hoard ? 40 : 30)); if (q >= 10) N.sold = (N.sold || 0) - trade(n, 'metal', -q); } }
-    // hoarded cash buys the scarce resources on the world market (up to 1.4× the going price)
-    if (N.cash > 450 && (!canGrow || MKT_K.some(k => N[k] < AI_LOW[k]))){ const M = mkt(), cap = stockCap(n);
-      for (const k of MKT_K){ const short = N[k] < AI_SHORT[k] || inc.net[k] < 0; if (!short || buyPrice(n, k) > M.p[k]*1.4) continue;
-        const q = Math.floor(Math.min(cap*0.6 - N[k], (N.cash - 320)/buyPrice(n, k), AI_BUYQ[k])); if (q >= 10) trade(n, k, q); } }
-    // fuel or maintenance running the oil, iron or electronics stock down: buy about two and a half weeks of the deficit, first from other powers' listings
-    // on the order book (an oil producer's surplus), the rest on the world market while the price is fair (up to 1.5x the base)
-    for (const k of ['oil', 'iron', 'elec']){ const d = -inc.net[k]; if (d < 0.3 || N[k] > 12*d + 25) continue;
-        const dry = N[k] < 3*d, q = Math.floor(Math.min(AI_BUYQ[k], 18*d + 30 - N[k], stockCap(n) - N[k], (N.cash - (dry ? 50 : 110) - aiReserve(n))/buyPrice(n, k))); if (q < 8) continue;   // all but run dry: before any new unit
-        const got = aiBookBuy(n, k, q); if (q - got >= 8 && buyPrice(n, k) <= MKT_BASE[k]*1.5) trade(n, k, q - got); }
-    // the other way round: a big stock of iron, electronics or rare materials (above AI_KEEP, plus what it saves for) is sold on the world market while the
-    // price is high (1.1x the base or more), 60 a day at most. It only ever pulls a dear price back towards the base,
-    // so it never floods the market, and it is what keeps these goods trading once the opening scramble is over
-    { const M = mkt(), day = Math.floor(S.hour/24); if (N.surD !== day){ N.surD = day; N.surS = {}; }
-      for (const k of ['iron', 'elec', 'rare']){ const keep = AI_KEEP[k] + aiReserve(n, k) + 25*Math.max(0, inc.upkeep[k]), over = N[k] - keep; if (over < 15 || M.p[k] < MKT_BASE[k]*1.1) continue;
-        const q = Math.floor(Math.min(over, 10 + over/10, 60 - (N.surS[k] || 0))); if (q >= 8) N.surS[k] = (N.surS[k] || 0) - trade(n, k, -q); } }
-    // cheap iron, electronics or rare materials (world price under 0.85x the base): a power with money stocks up to twice its shortage line,
-    // which keeps these goods trading after the opening months and their price off the floor
-    if (N.cash > 350){ const M = mkt(), cap = stockCap(n);
-      for (const k of ['iron', 'elec', 'rare']){ if (M.p[k] >= MKT_BASE[k]*0.85 || N[k] >= 2*AI_SHORT[k]) continue;
-        const q = Math.floor(Math.min(cap*0.6 - N[k], 2*AI_SHORT[k] - N[k], (N.cash - 300)/buyPrice(n, k), 40)); if (q >= 10) trade(n, k, q); } }
-    void done; }
-  // heavy-aircraft research but no Airbase II yet: save up for one (like a link project) and build it as soon as the money is there
-  { const B2 = N.bSave; if (B2 && (B2.until <= S.hour || S.owner[B2.p] !== n || S.bld[B2.p].air !== 1)) N.bSave = null;
-    if (!N.bSave && (has(n, 'bomb1') || has(n, 'asf1') || has(n, 'awacs1')) && (warsOf(n).length || N.cash > 300) && !G.P.some(P => S.owner[P.id] === n && S.bld[P.id].air >= 2)){ const P = G.P.find(q => S.owner[q.id] === n && q.city && S.bld[q.id].air === 1); if (P) N.bSave = {p:P.id, until:S.hour + 48}; }
-    if (N.bSave && !S.cons[N.bSave.p] && build(n, N.bSave.p, 'air')) N.bSave = null; }
-  // fighters before bombers: an ASF want replaces a bomber saving (and anything but another counter)
-  { const A3 = aiAsfWant(n, provs, inc), U0 = N.uSave && N.uSave.until > S.hour ? N.uSave : null; if (A3 && (!U0 || U0.t === 'bomb' || !AI_CTR.has(U0.t)) && rng() < 0.5) N.uSave = {t:'asf', until:S.hour + 48}; }
-  { const B3 = aiBomberWant(n, provs, inc); if (B3 && !(N.uSave && N.uSave.until > S.hour) && rng() < 0.4) N.uSave = {t:'bomb', until:S.hour + 48}; }
-  { const U = N.uSave; if (U && U.until > S.hour && UNITS[U.t]){ const c = ucost(n, U.t);
-      for (const k of MKT_K){ const miss = Math.ceil(c[k] - N[k]); if (miss <= 0) continue; const q = miss + 5; if (N.cash >= c.cash + q*buyPrice(n, k) + 20) trade(n, k, q); } } }
-  for (let p = 0; p < G.P.length; p++){
-    if (S.owner[p] !== n || !G.P[p].city) continue;
-    if (!S.cons[p]){
-      if (p === N.capital && (threatNear(p, n) ? S.bld[p].fort < (provs > 150 ? 3 : 2) : warsOf(n).length && S.bld[p].fort < 1 && N.cash > 90)) build(n, p, 'fort');
-      else if (!S.bld[p].rec && N.cash > (p === N.capital ? 40 : 80) && (p === N.capital || rng() < 0.3)) build(n, p, 'rec');   // infantry is mobilized only where a Recruiting Office stands
-      else if (!S.bld[p].fac && N.cash > 110) build(n, p, 'fac');
-      else if (has(n, 'air1') && !S.bld[p].air && N.cash > 140 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air).length < 2) build(n, p, 'air');
-      else if (has(n, 'msl1') && p === N.capital && !S.bld[p].silo && N.cash > 260 && rng() < 0.3) build(n, p, 'silo');
-      else if (canBuildHere(p, 'yard') && !S.bld[p].yard && S.bld[p].fac && N.cash > 170 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].yard).length < 2 && rng() < 0.3) build(n, p, 'yard');
-      else if (S.bld[p].yard === 1 && N.cash > 220 && rng() < 0.2 && !G.P.some(P => S.owner[P.id] === n && S.bld[P.id].yard >= 2)) build(n, p, 'yard');
-      else if (S.bld[p].air === 1 && (has(n, 'asf1') || has(n, 'bomb1') || has(n, 'awacs1')) && N.cash > 200 && rng() < (has(n, 'bomb1') || has(n, 'asf1') ? 0.6 : 0.4) && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air >= 2).length < 2) build(n, p, 'air');   // Airbase II (up to two) for the heavy aircraft
-      else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
-      else if (S.bld[p].air >= 1 && S.bld[p].air < 3 && N.cash > 300 + 120*S.bld[p].air && rng() < 0.2 && S.armies.filter(w => w.owner === n && w.air && w.air.base === p && count(w)).length >= 2 && S.armies.some(w => w.owner === n && w.air && w.air.base === p && (w.air.wear || 0) > 0.2)) build(n, p, 'air');   // worn wings: faster repairs
-      else if ((canGrow || N.cash > 900) && N.cash > 700 && rng() < (N.cash > 1000 ? 0.2 : 0.08)){ const up = ['fac', 'air', 'yard', 'silo'].find(k => S.bld[p][k] > 0 && S.bld[p][k] < BUILD[k].max && N.cash > buildCost(n, k, S.bld[p][k] + 1, p).cash + 450); if (up) build(n, p, up); }
-    }
-    if (S.bld[p].silo && S.queue[p].length < 2 && N.cash > 320 && rng() < 0.25){ const k = has(n, 'msl2') && rng() < 0.4 ? 'bm' : 'cm'; if (mstock(p)[k] < 3) buildMissile(n, p, k); }
-    if (p === N.capital && S.queue[p].length < 3 && (threatNear(p, n) || enemiesAt(p, n)) && canAfford(n, 'inf')) recruit(n, p, 'inf');   // capital under threat: infantry first, savings or not
-    else if (p === N.capital && S.queue[p].length < 2 && warsOf(n).length && canAfford(n, 'inf') && N.cash > 60){ const keep = Math.max(4, Math.min(12, Math.round(units*0.07)));   // at war: keep the garrison topped up
-      if (stationaryAt(p).filter(b => b.owner === n && !b.air).reduce((s0, b) => s0 + count(b), 0) + S.queue[p].length < keep) recruit(n, p, 'inf'); }
-    const U1 = N.uSave && N.uSave.until > S.hour ? N.uSave : null;
-    if (S.queue[p].length < 2 && (canGrow || N.cash > 600 || (U1 && bldOk(p, U1.t) && canAfford(n, U1.t)))){   // a counter saved for is bought even outside growth
-      const U = U1;
-      const hold = U && bldOk(p, U.t) && reqsOf(U.t).some(r => r.b === 'air' && r.l >= 2) && S.queue[p].length >= 1;
-      if (U && bldOk(p, U.t) && canAfford(n, U.t)){ if (recruit(n, p, U.t) !== false) N.uSave = null; }
-      else if (!hold){ let t = aiPickUnit(n, p);
-        if (t && !canAfford(n, t) && unlocked(n, t) && bldOk(p, t)) aiBuyFor(n, ucost(n, t), 1.3, 60);   // goods short: buy them (up to 1.3x the base price) when $60M stay spare
-        if (t && !canAfford(n, t)){ if (AI_CTR.has(t) && !U && unlocked(n, t)){ N.uSave = {t, until:S.hour + 24}; t = null; } else t = canMobilize(n, p, 'inf') ? null : 'inf'; }
-        if (t && aiSpare(n, t, true)) recruit(n, p, t); }
-    }
-  }
-  const idle = new Map();
-  for (const a of S.armies){ if (a.owner !== n || a.to !== null || a.path.length || a.air || S.owner[a.at] !== n) continue;
-    if (idle.has(a.at)) merge(idle.get(a.at), a); else idle.set(a.at, a); }
-  removeEmpty();
-  // at war the capital's infantry garrison (4-12 by army size) is split off first: neither the offensive planner nor the idle moves below take it
-  if (warsOf(n).length){ const ca = idle.get(N.capital); if (ca && !ca.air && !shipsOnly(ca)){ const keep = Math.max(4, Math.min(12, Math.round(units*0.07))), g = Math.min(ca.u.inf || 0, keep);
-      if (g >= 1 && count(ca) - g >= 4) splitPlan(ca, [{inf:g}]); else if (g >= 1) idle.delete(N.capital); } }
-  // badly damaged units (the split panel's damaged rows, below 45%) leave idle field stacks for the nearest own city within 4 provinces, where they heal 2.5× faster
-  if (rng() < 0.5) for (const a of [...idle.values()]){ if (count(a) < 4 || G.P[a.at].city || G.P[a.at].sea || S.battles.includes(a.at) || enemiesAt(a.at, n)) continue;
-    const dr = splitRows(a).filter(r => r.dmg && r.hf < 0.45); if (!dr.length || dr.reduce((s0, r) => s0 + r.n, 0) >= count(a)) continue;
-    const seen = new Map([[a.at, 0]]), q = [a.at]; let city = -1;
-    for (let h = 0; h < q.length && city < 0; h++){ const u = q[h], du = seen.get(u); if (du >= 4) continue; for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); if (G.P[v].city && !S.battles.includes(v)){ city = v; break; } q.push(v); } }
-    if (city < 0) continue; const pth = pathFor(a, a.at, city); if (!pth.length || pth.length > 5) continue;
-    const [b] = splitPlan(a, [Object.fromEntries(dr.map(r => [r.k, r.n]))]); if (b){ b.path = pth; b.forced = true; } }
-  const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
-  const planned = aiOperate(n, [...idle.values()].filter(a => count(a) && !a.air && !shipsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
-  for (const a of idle.values()){
-    if (planned.has(a)) continue;
-    if (count(a) === 0 || enemiesAt(a.at, n)) continue;
-    if (a.air) continue;
-    if (shipsOnly(a)){ if (a.escort == null && !a.raid) aiFleet(a, n); continue; }
-    if (G.P[a.at].sea || (S.owner[a.at] !== n && !atWar(n, S.owner[a.at]))){
-      // stranded at sea or in land it may not fight in: head to the nearest own province
-      const seen = new Set([a.at]), q = [a.at]; let dest = -1;
-      for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v) || !canEnter(n, v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-      if (dest >= 0) a.path = pathFor(a, a.at, dest);
-      continue;
-    }
-    if (S.owner[a.at] !== n) continue;
-    if (a.at === N.capital && threatNear(a.at, n)) continue;
-    if ((a.m ?? 80) < 50 || (a.resting && a.m < 70)){ a.resting = true; continue; } a.resting = false;
-    let pw = power(a); if (pw < 14) continue;
-    const dist = new Map([[a.at, 0]]), q = [a.at], maxD = warsOf(n).length ? 10 : 7, fw = fitW(a), cold = !arctic(n), fc = {};
-    const fitAt = v => { const k = G.P[v].terrain || 'plains'; return fc[k] ?? (fc[k] = fitOf(fw, k, true, cold)); };
-    let best = -1, bestScore = 0;
-    for (let h = 0; h < q.length; h++){ const u = q[h], du = dist.get(u); if (du >= maxD) continue;
-      for (const v of G.P[u].nbs){ if (dist.has(v)) continue; const step = G.P[v].sea ? 2 : 1; dist.set(v, du + step); q.push(v);
-        if (G.P[v].sea || S.owner[v] === n || targeted.has(v)) continue;
-        if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
-        if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
-        const fv = fitAt(v)*(riverX(u, v) ? RIVER_ATK : 1); if (pw*fv < defPower(v, n)*1.3 + 4) continue;
-        let val = (G.P[v].city ? 3 : 1)*(S.owner[v] >= 0 && focusOf(n) === S.owner[v] ? 1.8 : 1); if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
-        if (S.owner[v] >= 0 && atWar(n, S.owner[v])){ val *= 1.6; let rj = 0; for (const lk of G.P[v].lk.values()) if (lk.rail) rj++; if (rj >= 3) val += 0.8; }
-        const sc = val/(1 + (du + step)*0.7)*(0.5 + 0.5*Math.min(1.2, fv)); if (sc > bestScore){ bestScore = sc; best = v; } } }
-    if (best < 0) continue;
-    // the capital keeps a garrison when the force there marches out: two infantry in peace, more at war (rail lets enemies strike deep along captured lines)
-    if (a.at === N.capital && !warsOf(n).length){ const k2 = Math.min(2, a.u.inf - 2); if (k2 >= 2){ addArmy(n, a.at, {inf:k2}); a.u.inf -= k2; } }   // at war the garrison was split off above
-    a.path = pathFor(a, a.at, best);
-    if (!a.path.length) continue;
-    targeted.add(best);
-    // oversized stacks split and send half around to a second side of the target (frontage + flank bonus)
-    if (count(a) > frontage(best) + 4){ const last = a.path.length > 1 ? a.path[a.path.length - 2] : a.at;
-      const alt = G.P[best].nbs.filter(w => w !== last && !G.P[w].sea && (S.owner[w] === n || (S.owner[w] >= 0 && atWar(n, S.owner[w]) && defPower(w, n) < pw*0.25)));
-      for (const w of alt){ const pth = pathFor(a, a.at, w); if (!pth.length || pth.length > a.path.length + 3) continue;
-        const b = splitArmy(a); if (!b) break; b.path = pth.concat([best]); break; } }
-  }
-}
 
 /* ---------------- Rendering ---------------- */
 const cv = document.getElementById('map'), MCTX = cv.getContext('2d'); let ctx = MCTX;
@@ -10808,7 +10129,8 @@ IM.on('fxRaid', R => { if (booted && visibleSet().has(R.z)){ const P = G.P[R.z],
 IM.hook.approach = a => sel.army === a.id && targetPath && targetPath.length > 1 ? targetPath[targetPath.length - 2] : null;   // the province the hovered route would enter from
 IM.hook.surpriseOk = o => o == null ? !!sel.surprise : !!(sel.surprise && sel.surprise.includes(o));
 IM.hook.posOf = armyPos;   // aircraft spot what they are drawn flying over
-IM.on('merged', (from, into) => { if (sel.army === from) sel.army = into; sel.group = sel.group.filter(id => id !== from); });
+// two forces became one: the selection follows. joined (the hourly arrival merge in rules/tick.js) keeps the place in a selected group
+IM.on('merged', (from, into, joined) => { if (sel.army === from) sel.army = into; if (!joined) sel.group = sel.group.filter(id => id !== from); else if (sel.group) sel.group = sel.group.map(id => id === from ? into : id); });
 IM.on('achieve', key => unlock(key));
 IM.on('fxRanged', (a, b, best, lost) => { if (!booted) return;
   if (b){ if (a.owner === PLAYER || b.owner === PLAYER || visibleSet().has(best)) fx('dmg', best, {owner:b.owner, val:lost, text:`−${Math.round(lost)}`, color:b.owner === PLAYER ? '#ff8f86' : shade(colorOf(b.owner), 0.35)}); }
@@ -10825,6 +10147,22 @@ IM.on('fxMissile', E => { if (!booted) return; const m = E.m, P = G.P[m.to];
   if (!E.hit){ const [ix, iy] = [P.x, P.y - 40]; for (let j = 0; j < 2; j++) explode(ix + (Math.random() - 0.5)*10, iy, 0.9, true); return; }
   const dealt = E.dealt, big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) fxLater(j*120, () => explode(...fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, 6), big*(0.7 + Math.random()*0.4)));
   WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); afxCrater(P.x, P.y, m.k === 'bm' ? 3.5 : 3, {a:0.95, life:96, cap:3.5}); afxMark(m.to, m.k === 'bm' ? 48 : 30); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); shake(m.k === 'bm' ? 9 : 5, m.k === 'bm' ? 900 : 500); sfx('boom'); });
+// the hourly step (rules/tick.js): battle numbers, hits, blasts, craters and shore fire where the player fights or can see; the wreck of a destroyed force
+IM.on('fxBattle', (p, owners, sides, list) => { const showFx = owners.includes(PLAYER) || visibleSet().has(p);
+  if (showFx) owners.forEach((o, i) => { const lost = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
+  if (showFx) fx('hits', p, {seed:Math.random()*1000});
+  if (showFx && booted){ const P = G.P[p], nB = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0);   // visual only (Math.random, never rng)
+    for (let j = 0; j < 2; j++) afxBoom(P.x + (Math.random() - 0.5)*12, P.y + (Math.random() - 0.5)*7, 0.7 + Math.random()*0.4, true);
+    if (!P.sea && nB >= 6 && Math.random() < Math.min(0.7, nB/30)) afxCrater(P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8, 2 + Math.min(2.5, nB/12), {a:0.7, life:60});
+    if (!P.sea && P.coast) for (const sz of P.nbs){ if (!G.P[sz].sea) continue; const sh = S.armies.find(a => a.at === sz && a.to === null && owners.includes(a.owner) && shipsN(a) > 0); if (!sh) continue;
+      const Z = G.P[sz]; for (let j = 0; j < Math.min(3, shipsN(sh)); j++) setTimeout(() => shoot('shell', [Z.x + (Math.random() - 0.5)*6, Z.y + (Math.random() - 0.5)*4], [P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8], {dur:1100, arc:44, big:1.15}), j*260); break; } } });
+IM.on('fxWreck', p => { fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); explode(...fxOff(P.x, P.y, 6), 1.4); } });
+// the hour is over: mark the forces that set off next hour, so their counters keep rolling
+IM.on('hour', goScan);
+// the morning paper was printed: show the front page on a big day; the day's achievements; the midnight autosave
+IM.on('paper', paper => { if (SET.paper && paper.big >= 8 && booted && $('modal').hidden && S.started) setTimeout(() => { if ($('modal').hidden) showPaper(false); }, 50); });
+IM.on('statsDay', () => achDaily());
+IM.on('day', () => save());
 IM.on('reset', () => { seenHour = -1; FX.length = 0; lastRes = null; if (TRD) TRD.ver = -1; MOV.clear(); });
 IM.on('newGame', () => { if (SET.cb) applyPalette(); buildGeometry(); });
 IM.on('restored', () => { if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette(); buildGeometry(); });

@@ -18,18 +18,18 @@ Each folder is a complete copy: `index.html` (the page to publish), `play.html` 
 | Files | What they are |
 |---|---|
 | `world.js` `lines.js` `coast.js` `coast-hi.js` | map data |
-| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` `rules/economy.js` `rules/trade.js` `rules/movement.js` `rules/diplomacy.js` `rules/combat.js` `rules/air.js` `rules/vision.js` | the game rules (the list grows as the rules split goes on: publish every `.js` file in `dist/public/rules/`) |
+| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` `rules/economy.js` `rules/trade.js` `rules/movement.js` `rules/diplomacy.js` `rules/combat.js` `rules/air.js` `rules/vision.js` `rules/ai.js` `rules/tick.js` | the game rules, 15 files (publish every `.js` file in `dist/public/rules/`) |
 | `units3d.js` | unit models |
 | `assets/` | pictures, flags and sounds |
 
 ## Rules files
 
-The game rules are moving out of `index.html` into plain scripts in `rules/` (owner task 5). The page loads them with `<script src="rules/x.js">` after the map data and before its own script. A rules file has no DOM, canvas, `window`, `localStorage`, sound or camera code. It reports what happened through `IM.emit(...)` (`rules/core.js`), and the page subscribes with `IM.on(...)` (the `RULES EVENTS` block next to boot in `index.html`).
+The game rules live in plain scripts in `rules/`, not in `index.html` (owner task 5; since step 9 no rule or AI declaration is left in the page: the hourly step `tick()` is in `rules/tick.js`, the AI in `rules/ai.js`). The page loads them with `<script src="rules/x.js">` after the map data and before its own script. A rules file has no DOM, canvas, `window`, `localStorage`, sound or camera code. It reports what happened through `IM.emit(...)` (`rules/core.js`), and the page subscribes with `IM.on(...)` (the `RULES EVENTS` block next to boot in `index.html`).
 
 - The build copies every rules file the page loads to `dist/test/rules/` and `dist/public/rules/`, strips the markers the same way as in `index.html`, and checks them like the page. A `.js` file in `rules/` that the page does not load fails the build.
 - `bash tools/mkpage.sh` copies `rules/` to `.test/rules/` for the tests.
 - `node tools/split-golden.js 20` plays 20 fixed-seed days and compares one hash of the whole state per day with `tools/golden-12345.txt`. A step of the split must not change it.
-- `node tools/split-lint.js --report` lists what the rules files still reach in the UI (it needs the `acorn` parser: `require('acorn')` or `/opt/node-tools`). `node tools/split-plan.js` shows which declaration goes to which file, `node tools/split-move.js <file>` moves them, `node tools/split-names.js` checks that no top-level name hides a browser global, and `node tools/split-perf.js page.html` measures speed.
+- `node tools/split-lint.js` must exit 0: no UI name, browser global, unknown global or `Math.random` in a rules file, no load-order problem, no name declared twice. With `--report` it lists what the rules files still reach in the UI (it needs the `acorn` parser: `require('acorn')` or `/opt/node-tools`). `node tools/split-plan.js` shows which declaration goes to which file, `node tools/split-move.js <file>` moves them, `node tools/split-names.js` checks that no top-level name hides a browser global, and `node tools/split-perf.js page.html` measures speed.
 
 ## Markers
 
