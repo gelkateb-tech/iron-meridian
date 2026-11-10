@@ -9589,7 +9589,7 @@ const TIP_ICO = {
 };
 const tipIco = k => `<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TIP_ICO[k]}</svg>`;
 // the three briefing tips (6 words at most each). The win line follows the real rule: land provinces OR starting capitals.
-const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, then tap where to go'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
+const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, then a destination'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
 // keys, for the small Controls link on the briefing (desktop only) and the manual
 const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual.';
 // the full text of the old briefing, kept in the Field Manual ("Getting started")
