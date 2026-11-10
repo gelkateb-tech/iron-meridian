@@ -39,7 +39,7 @@ const { chromium } = require('playwright');
     const foe = (() => { for (const P of G.P) if (S.owner[P.id] === n) for (const v of P.nbs){ const o = S.owner[v]; if (o >= 0 && o !== n && o !== ME) return o; } return -1; })();
     const N = S.nations[n], keep = {cash:N.cash, metal:N.metal, oil:N.oil, mp:N.mp, tech:{...N.tech}};
     const C2 = cities(n).find(P => P.id !== N.capital) || cities(n)[0];
-    const setup = () => { for (const k of ['air1', 'air2', 'bomb1']) N.tech[k] = 1; S.bld[C2.id].air = 2; S.bld[C2.id].fac = Math.max(1, S.bld[C2.id].fac); N.cash = 3000; N.metal = 600; N.oil = 400; N.mp = 600; N.uSave = null; N.research = N.research || {id:'eco1', h:999, h0:999}; clearQ(n); };
+    const setup = () => { for (const k of ['air1', 'air2', 'bomb1']) N.tech[k] = 1; S.bld[C2.id].air = 2; S.bld[C2.id].fac = Math.max(1, S.bld[C2.id].fac); S.bld[C2.id].rec = 1; N.cash = 3000; N.metal = 600; N.oil = 400; N.mp = 600; N.uSave = null; N.research = N.research || {id:'eco1', h:999, h0:999}; clearQ(n); };
     // 3. bomber doctrine: at war, Strategic Bombers and an Airbase II -> the AI wants bombers and queues one
     setup(); war(n, foe); out.want = im.r2.bomberWant(n);
     let turns = 0; for (; turns < 72 && !qOf(n, 'bomb'); turns++) im.tick();   // three days of play (its turns come every 4 h)
