@@ -5,7 +5,7 @@
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs'), net = require('net'), { spawn } = require('child_process');
 const ROOT = path.join(__dirname, '..'), DIR = path.join(ROOT, 'dist', 'public'), OUT = __dirname;
-const THREE_LOCAL = '/tmp/claude-0/-home-user/7fd07611-91e4-5b00-ba43-06c622a65904/scratchpad/build/node_modules/three/build/three.min.js';
+const THREE_LOCAL = '/home/user/iron-meridian/tools/vendor/three.min.js';
 const freePort = () => new Promise(r => { const s = net.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
 const up = port => new Promise(r => { const t0 = Date.now(); const go = () => { const c = net.connect(port, '127.0.0.1', () => { c.end(); r(true); }); c.on('error', () => Date.now() - t0 > 10000 ? r(false) : setTimeout(go, 150)); }; go(); });
 (async () => {
