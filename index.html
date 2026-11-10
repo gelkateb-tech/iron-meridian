@@ -2249,6 +2249,8 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 <!--@ENDTEST-->
 <script src="units3d.js"></script>
 <script src="rules/data.js"></script>
+<script src="rules/map.js"></script>
+<script src="rules/state.js"></script>
 <script>
 'use strict';
 
@@ -2640,42 +2642,6 @@ function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = 
 function canUpgrade(n, t){ const N = S.nations[n], m = markOf(n, t) + 1; if (m > 4 || N.eng || !unlocked(n, t)) return false; return hasC(N, markCost(t, m)); }
 function startUpgrade(n, t){ if (!canUpgrade(n, t)) return false; const N = S.nations[n], m = markOf(n, t) + 1, c = markCost(t, m); payC(N, c); N.eng = {t, m, h:c.days*24, h0:c.days*24}; return true; }
 const BRANCHES = [...new Set(TECH.map(t => t.branch))];
-const WORLD_POWERS = [
-  {name:'United States',  country:'United States of America', color:'#3f7fe0'},
-  {name:'Canada',         country:'Canada',        color:'#c8323c'},
-  {name:'Brazil',         country:'Brazil',        color:'#3fae5a'},
-  {name:'United Kingdom', country:'United Kingdom',color:'#9370e6'},
-  {name:'France',         country:'France',        color:'#36bcc4'},
-  {name:'Germany',        country:'Germany',       color:'#5672a6'},
-  {name:'Russia',         country:'Russia',        color:'#a3283f'},
-  {name:'Turkey',         country:'Turkey',        color:'#b45aa8'},
-  {name:'Iran',           country:'Iran',          color:'#7cc04a'},
-  {name:'Egypt',          country:'Egypt',         color:'#c2a070'},
-  {name:'South Africa',   country:'South Africa',  color:'#2ea48d'},
-  {name:'India',          country:'India',         color:'#ff8a3d'},
-  {name:'China',          country:'China',         color:'#e8cf47'},
-  {name:'Japan',          country:'Japan',         color:'#b65acc'},
-  {name:'Australia',      country:'Australia',     color:'#1fa3a3'},
-];
-// display colours replaced since older saves (olive Germany read as farmland, brown Russia as steppe, white Japan as snow; rose Poland matched the new
-// crimson Russia): old -> new, applied on load. Colour is display only.
-const OLD_COLORS = {'#8a9a3e':'#5672a6', '#7a5536':'#a3283f', '#eeeeea':'#b65acc', '#d8566e':'#d6c83c'};
-// scenarios: which powers play and which part of the world counts for victory
-const PW = n => WORLD_POWERS.find(p => p.name === n);
-const SCENARIOS = {
-  world:{name:'World War', desc:'Fifteen powers across the whole globe.', powers:WORLD_POWERS, caps:5, box:null, extra:90},
-  europe:{name:'European Theatre', desc:'Eight powers fight for Europe and its rim.', caps:4, extra:45, box:L => (L.lon >= -25 && L.lon <= 60 && L.lat >= 33 && L.lat <= 72),
-    powers:[PW('United Kingdom'), PW('France'), PW('Germany'), {name:'Italy', country:'Italy', color:'#3fae5a'}, {name:'Spain', country:'Spain', color:'#d9a03a'}, {name:'Poland', country:'Poland', color:'#d6c83c'}, PW('Turkey'), PW('Russia')]},
-  pacific:{name:'Pacific Rim', desc:'Eight powers contest the Pacific and East Asia.', caps:4, extra:45, box:L => ((L.lon >= 70 || L.lon <= -95) && L.lat >= -48 && L.lat <= 66),
-    powers:[PW('United States'), PW('China'), PW('Japan'), PW('Australia'), PW('India'), PW('Russia'), {name:'Indonesia', country:'Indonesia', color:'#c8323c'}, {name:'Mexico', country:'Mexico', color:'#3fae5a'}]},
-};
-let POWERS = WORLD_POWERS, SCN = 'world';
-function useScenario(k){ SCN = SCENARIOS[k] ? k : 'world'; POWERS = SCENARIOS[SCN].powers; WIN_CAPS = SCENARIOS[SCN].caps; scnLandCache = null; scnInCache = null; }
-let scnLandCache = null, scnInCache = null;
-function inScn(p){ if (!scnInCache || scnInCache.S !== SCN){ const box = SCENARIOS[SCN].box; scnInCache = {S:SCN, a:G.P.map(P => !P.sea && (!box || box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})))}; } return scnInCache.a[p]; }
-const landHeld = n => { let c = 0; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] === n && inScn(p)) c++; return c; };
-function scnLand(){ if (scnLandCache) return scnLandCache; const box = SCENARIOS[SCN].box; if (!box) return (scnLandCache = G.landCount);
-  return (scnLandCache = G.P.filter(P => !P.sea && box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})).length); }
 function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16); const ch2 = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${ch2(16)},${ch2(8)},${ch2(0)})`; }
 const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game minutes (a game hour every 15 s)
 /*@DEV*/
@@ -2694,6 +2660,26 @@ try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings
 const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} applySet(); };
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
+// the drawable half of the world: river, road and railway paths by class (the rules half, the links between provinces, is loadWorld in rules/map.js)
+function worldLines(G){ const P = G.P, LK = loadWorld.LK;
+  const lines = {rivers:[new Path2D(), new Path2D(), new Path2D()], roads:new Path2D()}, rPolys = [[], [], []], dPolys = [[], [], [], []], qPolys = [];
+  if (LINES){ const L = LINES;
+    const toW = (fx, fy) => [OX + HS*SQ3*fx/20, OY + HS*1.5*fy/20];
+    const add = (path, arr, polys, delta) => { const pts = []; let fx = 0, fy = 0; for (let i = 1; i < arr.length; i += 2){ if (delta && i > 1){ fx += arr[i]; fy += arr[i + 1]; } else { fx = arr[i]; fy = arr[i + 1]; } const [x, y] = toW(fx, fy); pts.push([x, y]); if (path){ if (i === 1) path.moveTo(x, y); else path.lineTo(x, y); } } polys.push(pts); };
+    for (const R of L.rivers){ const k = R[0] <= 2 ? 0 : R[0] <= 4 ? 1 : 2; add(lines.rivers[k], R, rPolys[k]); }
+    for (const R of L.roads) add(null, R, dPolys[L.delta ? Math.max(1, Math.min(3, R[0])) : 2], !!L.delta);
+    for (const R of (L.rails || [])) add(null, R, qPolys, !!L.delta);
+    // gap-fill tracks have no Natural Earth line: drawn centre to centre
+    for (const r of LK.values()) if (r.gap) dPolys[1].push([[P[r.a].x, P[r.a].y], [P[r.b].x, P[r.b].y]]); }
+  { const CW = HS*SQ3, len = q => { let l = 0; for (let i = 1; i < q.length; i++) l += Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]); return l; };
+    // rivers meander more and on a shorter wave than roads; railways bend least (long gentle curves)
+    lines.riversT = rPolys.map(q => tiledPath(q.map(p => naturalLine(p, CW*0.22, CW*1.5, CW*0.2, 10)), 96, 24));
+    const RD = dPolys.map(q => chainPolys(q).map(p => [naturalLine(p, CW*0.4, CW*2.2, CW*0.22, 20), len(p)])), RL = chainPolys(qPolys).map(p => [naturalLine(p, CW*0.45, CW*3.6, CW*0.24, 30), len(p)]);
+    lines.roadsT = RD.map((q, i) => tiledPath(q.map(e => e[0]), 96, 16, i >= 2));   // (the highways' and main roads' runs kept: the lamps along them through a town at night, cityLinesNight)
+    lines.roadsMain = tiledPath(RD[2].filter(e => e[1] >= CW*5).map(e => e[0]), 96, 16, true);   // the longer local roads: shown a little earlier than the rest
+    lines.railsT = tiledPath(RL.map(e => e[0]), 96, 16); lines.railsMain = tiledPath(RL.filter(e => e[1] >= CW*6).map(e => e[0]), 96, 16); }
+  loadWorld.lines = lines;
+}
 function applyPalette(){ if (!S || !S.nations) return; for (const N of S.nations){ if (!N.color0) N.color0 = N.color; N.color = SET.cb ? CB_PAL[N.id % CB_PAL.length] : N.color0; } geoDirty = true; layerKey = ''; }
 function applySet(){ const z = (SET.ui || 100)/100; for (const sel0 of ['header', '#dock', '#side', '#modal', '#toasts', '#tut']){ const el = document.querySelector(sel0); if (el) el.style.zoom = z === 1 ? '' : z; } document.documentElement.style.setProperty('--uiz', z);
   document.documentElement.classList.toggle('reduced', SET.motion === 'reduced'); if (typeof hdrSync === 'function') try { hdrSync(true); } catch (e) {} if (typeof S !== 'undefined' && S) applyPalette();
@@ -2711,99 +2697,6 @@ function makeNoise(r){
 
 function corner(cx, cy, k, rad = HS){ const a = Math.PI/180*(60*k + 30); return [cx + rad*Math.cos(a), cy + rad*Math.sin(a)]; }
 
-/* ---------------- World map ---------------- */
-function loadWorld(){
-  const N = W*H, prov = WORLD.prov || new Int16Array(N);
-  if (!WORLD.prov) for (let i = 0; i < N; i++){ const s = WORLD.cells.substr(i*2, 2); prov[i] = s === '..' ? -1 : parseInt(s, 36); }
-  const P = WORLD.provinces.map((d, k) => ({id:k, name:d[0], country:d[1], sea:d[1] < 0, city:!!(d[2] & 1), capFlag:!!(d[2] & 2), cityName:d[3], cells:[], nb:new Map()}));
-  for (let i = 0; i < N; i++) if (prov[i] >= 0) P[prov[i]].cells.push(i);
-  for (const p of P){
-    let sx = 0, sy = 0; for (const c of p.cells){ const [x, y] = cellCenter(c); sx += x; sy += y; }
-    sx /= p.cells.length; sy /= p.cells.length;
-    let bc = p.cells[0], bd = 1e9; for (const c of p.cells){ const [x, y] = cellCenter(c); const dd = (x-sx)**2 + (y-sy)**2; if (dd < bd){ bd = dd; bc = c; } }
-    p.cc = bc; [p.x, p.y] = cellCenter(bc); p.lat = cellLat(bc);
-  }
-  for (let i = 0; i < N; i++){ if (prov[i] < 0) continue; for (let d = 0; d < 6; d++){ const m = nbr(i, d);
-    if (m >= 0 && prov[m] >= 0 && prov[m] !== prov[i]){ const a = P[prov[i]], b = prov[m]; if (!a.nb.has(b)) a.nb.set(b, Math.max(GS > 1 ? 0.35 : 1, hexDist(a.cc, P[b].cc))); } } }
-  // straits: water bodies the hex grid closes off (Gibraltar, the Danish straits, the Bosporus, Suez, Bab-el-Mandeb, Hormuz, narrow sounds) are
-  // joined to the neighbouring water where one coastal province touches both (closest pairs first); the Caspian stays a lake. Ids are unchanged.
-  { const par = P.map((p, i) => i), find = i => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; };
-    for (const p of P) if (p.sea) for (const v of p.nb.keys()) if (P[v].sea) par[find(p.id)] = find(v);
-    const lake = p => /Caspian/.test(p.name), cand = [];
-    for (const p of P){ if (p.sea) continue; const ss = [...p.nb.keys()].filter(v => P[v].sea && !lake(P[v]));
-      for (let i = 0; i < ss.length; i++) for (let j = i + 1; j < ss.length; j++) if (find(ss[i]) !== find(ss[j])) cand.push([ss[i], ss[j], hexDist(P[ss[i]].cc, P[ss[j]].cc)]); }
-    cand.sort((x, y) => x[2] - y[2]); loadWorld.straits = [];
-    for (const [a, b, d] of cand){ if (find(a) === find(b)) continue; par[find(a)] = find(b); const w = Math.max(GS > 1 ? 0.35 : 1, d); P[a].nb.set(b, w); P[b].nb.set(a, w); loadWorld.straits.push([a, b]); } }
-  for (const p of P){ p.nbs = [...p.nb.keys()]; p.coast = !p.sea && p.nbs.some(v => P[v].sea); p.river = new Set(); p.road = new Set(); p.lk = new Map(); }
-  // rivers, roads and railways (Natural Earth): river lines between provinces, road and rail links between neighbours, drawable paths by class
-  // LK: one record per linked neighbour pair; r0/q0 are the static road (1 track, 2 road, 3 highway) and rail (1 railway, 2 high-speed) levels,
-  // road/rail/dmg/bld the live state (reset from S.links by linksSync)
-  const lines = {rivers:[new Path2D(), new Path2D(), new Path2D()], roads:new Path2D()}, rPolys = [[], [], []], dPolys = [[], [], [], []], qPolys = [], LK = new Map();
-  const mk = (a, b) => { let r = P[a].lk.get(b); if (!r){ r = {a:Math.min(a, b), b:Math.max(a, b), k:Math.min(a, b) + ',' + Math.max(a, b), r0:0, q0:0, road:0, rail:0, dmg:0, bld:null, gap:false}; LK.set(r.k, r); P[a].lk.set(b, r); P[b].lk.set(a, r); } return r; };
-  if (window.LINES){ const L = window.LINES;
-    for (const [a, b] of L.riverPairs) if (P[a] && P[b] && P[a].nb.has(b)){ P[a].river.add(b); P[b].river.add(a); }
-    for (const [a, b, lv, gap] of L.roadPairs) if (P[a] && P[b] && P[a].nb.has(b) && !P[a].sea && !P[b].sea){ const r = mk(a, b); r.r0 = Math.max(r.r0, lv || 2); if (gap) r.gap = true; if (r.r0 >= 2){ P[a].road.add(b); P[b].road.add(a); } }
-    for (const [a, b, lv] of (L.railPairs || [])) if (P[a] && P[b] && P[a].nb.has(b) && !P[a].sea && !P[b].sea) mk(a, b).q0 = Math.max(mk(a, b).q0, lv || 1);
-    const toW = (fx, fy) => [OX + HS*SQ3*fx/20, OY + HS*1.5*fy/20];
-    const add = (path, arr, polys, delta) => { const pts = []; let fx = 0, fy = 0; for (let i = 1; i < arr.length; i += 2){ if (delta && i > 1){ fx += arr[i]; fy += arr[i + 1]; } else { fx = arr[i]; fy = arr[i + 1]; } const [x, y] = toW(fx, fy); pts.push([x, y]); if (path){ if (i === 1) path.moveTo(x, y); else path.lineTo(x, y); } } polys.push(pts); };
-    for (const R of L.rivers){ const k = R[0] <= 2 ? 0 : R[0] <= 4 ? 1 : 2; add(lines.rivers[k], R, rPolys[k]); }
-    for (const R of L.roads) add(null, R, dPolys[L.delta ? Math.max(1, Math.min(3, R[0])) : 2], !!L.delta);
-    for (const R of (L.rails || [])) add(null, R, qPolys, !!L.delta);
-    // gap-fill tracks have no Natural Earth line: drawn centre to centre
-    for (const r of LK.values()) if (r.gap) dPolys[1].push([[P[r.a].x, P[r.a].y], [P[r.b].x, P[r.b].y]]); }
-  for (const r of LK.values()){ r.road = r.r0; r.rail = r.q0; }
-  { const CW = HS*SQ3, len = q => { let l = 0; for (let i = 1; i < q.length; i++) l += Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]); return l; };
-    // rivers meander more and on a shorter wave than roads; railways bend least (long gentle curves)
-    lines.riversT = rPolys.map(q => tiledPath(q.map(p => naturalLine(p, CW*0.22, CW*1.5, CW*0.2, 10)), 96, 24));
-    const RD = dPolys.map(q => chainPolys(q).map(p => [naturalLine(p, CW*0.4, CW*2.2, CW*0.22, 20), len(p)])), RL = chainPolys(qPolys).map(p => [naturalLine(p, CW*0.45, CW*3.6, CW*0.24, 30), len(p)]);
-    lines.roadsT = RD.map((q, i) => tiledPath(q.map(e => e[0]), 96, 16, i >= 2));   // (the highways' and main roads' runs kept: the lamps along them through a town at night, cityLinesNight)
-    lines.roadsMain = tiledPath(RD[2].filter(e => e[1] >= CW*5).map(e => e[0]), 96, 16, true);   // the longer local roads: shown a little earlier than the rest
-    lines.railsT = tiledPath(RL.map(e => e[0]), 96, 16); lines.railsMain = tiledPath(RL.filter(e => e[1] >= CW*6).map(e => e[0]), 96, 16); }
-  loadWorld.LK = LK;
-  // oil fields: deserts and seas known for crude, by latitude band and region, deterministic
-  const r = mulberry(7);
-  for (const p of P){ if (p.sea) continue;
-    const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0;
-    const gulf = p.lat > 12 && p.lat < 38 && lon > 35 && lon < 62, arctic = p.lat > 58, sahara = p.lat > 18 && p.lat < 34 && lon > -10 && lon < 35;
-    const fk = GS > 1 ? 0.3 : 1;   // fine maps: fewer, richer fields (yields are not scaled down), same world totals
-    p.oil = r() < (gulf ? 0.6 : arctic ? 0.22 : sahara ? 0.3 : 0.12)*fk;
-    p.ore = r() < (arctic ? 0.35 : 0.22)*fk; }
-  // terrain from real regions (approximate boxes) + noise for variety
-  const BOX = (lon, lat, a, b, c, d) => lon >= a && lon <= b && lat >= c && lat <= d;
-  const MTN = [[70, 103, 27, 40], [-80, -65, -55, 10], [-125, -104, 32, 60], [5, 17, 44, 48], [38, 50, 40, 44], [56, 62, 50, 68], [44, 62, 27, 38], [35, 42, 5, 15], [-8, 10, 30, 36], [5, 20, 59, 70], [30, 44, 37, 41], [66, 80, 35, 45], [-110, -97, 17, 28], [140, 180, 55, 70], [96, 110, 22, 30]];
-  const FOR = [[-75, -45, -15, 5], [10, 30, -5, 5], [95, 125, -8, 20], [-130, -60, 50, 64], [30, 140, 52, 64], [10, 30, 58, 66], [-90, -70, 30, 45], [125, 140, 30, 45]];
-  const DES = [[-15, 35, 16, 32], [35, 58, 15, 30], [90, 115, 38, 46], [118, 145, -32, -20], [15, 27, -28, -20], [-118, -104, 30, 37], [-72, -68, -28, -18], [55, 70, 36, 45], [58, 75, 24, 30]];
-  const tr = mulberry(23), TCODE = {p:'plains', f:'forest', m:'mountain', d:'desert', t:'tundra', h:'hills', w:'marsh', s:'snow'};
-  for (const p of P){ if (p.sea) continue;
-    const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = tr(), d5 = WORLD.provinces[p.id][5];
-    if (d5){ p.terrain = p.city && r < 0.85 ? 'urban' : TCODE[d5] || 'plains'; continue; }
-    p.terrain = p.city && r < 0.7 ? 'urban' : MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; }
-  // rare-earth deposits (P.rare: output a day before buildings): the real rare-earth districts (approximate boxes and richness), then scattered
-  // minor finds on ore-bearing hard rock. Iron-mining country (P.iron): a share of the hills and mountains without an ore deposit. Own random stream.
-  const RARE_BOX = [[106, 114, 39, 44, 3.5], [109, 118, 22, 28, 2.2], [100, 104, 26, 30, 1.8], [96, 99.5, 23, 27.5, 2.5], [102, 105.5, 21, 23.5, 1.5],   // China: Bayan Obo, southern clays, Sichuan; Myanmar (Kachin); Vietnam
-    [115, 124, -30, -26, 3], [126, 130, -21, -17, 2], [131, 136, -24, -21, 1.4], [-50, -45, -21, -17, 2.2], [30, 38, 66.5, 69.5, 2], [110, 125, 68, 73, 1.6], [98, 104, 52, 56, 1.2],   // Australia (Mt Weld, Browns Range, Nolans); Brazil (Araxa, Catalao); Russia (Kola, Tomtor, Irkutsk)
-    [24, 29, -12, -7, 2.2], [17.5, 20, -32, -29.5, 1.8], [29.5, 31.5, -25, -23, 1.5], [44, 48, -26, -20, 1.2], [75, 79, 8, 11.5, 1.6], [84, 87.5, 18.5, 21.5, 1.4],   // DR Congo (Katanga); South Africa (Steenkampskraal, Phalaborwa); Madagascar; India's monazite coasts
-    [-117, -114.5, 34, 36.5, 4], [-106, -103.5, 43, 45.5, 1.8], [-106, -104, 30.5, 32, 1.5], [-133, -131, 54.5, 56.5, 1.5], [-48, -44, 60, 62, 3],   // USA (Mountain Pass, Bear Lodge, Round Top, Bokan); Greenland (Kvanefjeld)
-    [-115, -111, 61, 63.5, 1.6], [-66, -63, 55, 57, 1.5], [68, 76, 45, 50, 1.2], [30, 32, 39, 40.5, 1.6], [14, 21, 58, 68.5, 1.2], [30, 32, 31, 31.6, 1], [54, 56.5, 31, 32.5, 1]];   // Canada; Kazakhstan; Turkey (Beylikova); Sweden; Egypt (Nile sands); Iran (Yazd)
-  { const rr = mulberry(41), inBox = RARE_BOX.map(() => []);   // per district: the nearest land province and its distance (degrees)
-    for (const p of P){ if (p.sea) continue; const lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180, t = p.terrain, hard = t === 'hills' || t === 'mountain' || t === 'desert' || t === 'tundra';
-      let rv = 0; RARE_BOX.forEach((B, i) => { const d = Math.hypot(lon - (B[0] + B[1])/2, p.lat - (B[2] + B[3])/2); if (!inBox[i][0] || d < inBox[i][1]) inBox[i] = [p, d]; if (BOX(lon, p.lat, B[0], B[1], B[2], B[3]) && rr() < (hard || p.ore ? 0.42 : 0.2)) rv = Math.max(rv, Math.max(0.8, 0.5*B[4])); });   // the district's lesser finds: half its main deposit (the big districts were giving one power most of the world's output)
-      if (!rv && hard && rr() < (p.ore ? 0.3 : 0.02)) rv = 0.8;
-      p.rare = rv; p.iron = !p.ore && (t === 'hills' || t === 'mountain') && rr() < 0.14; }
-    // every district has its main deposit in the province nearest its centre (small districts can fall between province centres)
-    RARE_BOX.forEach((B, i) => { const c = inBox[i][0]; if (c && inBox[i][1] < 4) c.rare = Math.max(c.rare, B[4]); }); }
-  // population (millions): known towns, area and terrain, cities and capitals; dense river plains of South and East Asia weighted up
-  const TF = {plains:1, forest:0.6, mountain:0.5, desert:0.22, tundra:0.1, urban:1.4}, POPK = 1;
-  for (const p of P){ if (p.sea){ p.pop0 = 0; continue; } const d = WORLD.provinces[p.id], towns = d[4] || 0, lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180;
-    const asia = lon > 65 && lon < 125 && p.lat > 5 && p.lat < 42 ? 3.2 : lon > -20 && lon < 50 && p.lat > -35 && p.lat < 15 ? 1.6 : 1;
-    const al = Math.abs(p.lat), latF = al > 64 ? 0.04 : al > 56 ? 0.3 : al > 48 ? 0.75 : 1;
-    if (WORLD.v >= 2){ p.pop0 = +(d[4]/1000*POPK).toFixed(3); continue; }
-    p.pop0 = +((0.07*p.cells.length*(TF[p.terrain] || 1)*asia*asia*latF + 0.34*Math.sqrt(towns)*asia*latF + (p.city ? 2.4*asia : 0) + (p.capFlag ? 3.5 : 0))).toFixed(2); }
-  const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
-  loadWorld.lines = lines;
-  const landCount = P.filter(p => !p.sea).length, PF = Math.min(1, 740/landCount);   // PF: per-province base yields shrink as provinces get smaller
-  return {prov, P, countries, landCount, PF, LK};
-}
 
 /* ---------------- Map geometry (Path2D) ---------------- */
 let GEO = null, SEAL = null;
@@ -3586,105 +3479,7 @@ function dtWork(idle, tv){ if (!idle || !layer) return; const s = tv ? tv.s : vi
   dtHoldRel();
   DT.ms += performance.now() - t0; }
 
-/* ---------------- State ---------------- */
-let G = null, S = null;
 const PRE = {};
-const powerCountry = p => WORLD.countries.indexOf(p.country);
-function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = new Set(); seenHour = -1; FX.length = 0; visCache = null; borderCache = null; lastRes = null; trLastH = -1; NEUP = null; SEAA = new Map(); if (TRD) TRD.ver = -1; MOV.clear(); }
-function newGame(seed, pick){
-  if (!G) G = loadWorld();
-  resetCaches();
-  const order = [pick, ...POWERS.map((_, i) => i).filter(i => i !== pick)];
-  const owner = G.P.map(p => p.sea ? SEA : NEUTRAL);
-  const nations = order.map((pi, k) => {
-    const P0 = POWERS[pi], ci = powerCountry(P0), provs = ci >= 0 ? G.countries[ci].provs : [];
-    for (const id of provs) owner[id] = k;
-    const capital = provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
-    G.P[capital].city = true;
-    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
-  });
-  S = {v:4, scn:SCN, len:DAY_LIMIT, persist:!!newGame.persist, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
-       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
-  S.mob = 1;   // made under the mobilization rule (see mobMigrate)
-  linksSync();
-  for (const n of S.nations){
-    const np = S.owner.filter(o => o === n.id).length;
-    n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
-    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 200/Math.max(1, income(n.id).gross.cash)));
-    S.bld[n.capital].fac = 1;
-    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // infantry needs a Recruiting Office: the capital and the two biggest other cities start with one
-    addArmy(n.id, n.capital, {inf:4, tank:1});
-    for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
-    // compact powers (Germany, Japan, Britain...) start with a denser, dug-in home army
-    if (n.small){ S.bld[n.capital].fort = 1; addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
-      for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) { addArmy(n.id, P.id, {inf:2}); S.bld[P.id].fort = 1; } }
-  }
-  for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; n.prov0In = landHeld(n.id); }
-  S.own0 = S.owner.slice(); if (SET.cb) applyPalette();
-  S.sunOff = sunOffFor(PLAYER);   // display only: the opening view over the capital is in daylight
-  for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
-  INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
-  log(`${S.nations[PLAYER].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
-  buildGeometry();
-}
-// where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
-function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
-// saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
-function mobMigrate(){ if (S.mob) return; S.mob = 1; let mine = false;
-  for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].rec) continue; S.bld[c].rec = 1; if (N.id === PLAYER) mine = true; }
-  if (Array.isArray(S.log)) S.log.unshift({h:S.hour, text:`New rule: infantry is mobilized only in cities with a Recruiting Office.${mine ? ' Your capital has been given one' : ' Your capital has one'}; build more in your other cities. Units already in training carry on.`, kind:'info', p:S.nations[PLAYER] ? S.nations[PLAYER].capital : null}); }
-function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
-function serialize(){ return JSON.parse(saveJSON()); }
-// the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded
-function saveJSON(){ const BLD = S.bld; return JSON.stringify({...S, battles:[]}, function(k, v){
-  if (v && typeof v === 'object' && !Array.isArray(v)){
-    if ((k === 'u' || k === 'w') && this && this.id != null && this.at != null){ const o = {}; for (const t in v){ const x = v[t]; if (x) o[t] = k === 'w' ? Math.round(x*1000)/1000 : x; } return o; }
-    if (this === BLD){ const o = {}; for (const t in v) if (v[t]) o[t] = v[t]; return o; } }
-  return v; }); }
-function restore(data){
-  if (!data || data.v !== 4 || typeof data.seed !== 'number') return false;
-  if (!G) G = loadWorld();
-  if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
-  S = data; S.battles = []; S.bt = {}; S.speed = 0; S.started = true; linksSync();
-  { const nc = c => c && OLD_COLORS[String(c).toLowerCase()]; for (const N of S.nations){ if (nc(N.color)) N.color = nc(N.color); if (nc(N.color0)) N.color0 = nc(N.color0); } }   // old palette entries -> current ones
-  useScenario('world'); DAY_LIMIT = Infinity;   // older saves with a scenario or a day limit continue as an open-ended world war
-  if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette();
-  resetCaches();
-  for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
-  for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
-  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
-  fixWings();
-  if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
-  for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.research2 === undefined) N.research2 = null; G.P[N.capital].city = true; }
-  if (S.sunOff == null) S.sunOff = sunOffFor(PLAYER);   // older saves: the same display-only daylight offset
-  resMigrate();
-  rqueueMigrate();
-  mobMigrate();
-  buildGeometry();
-  return true;
-}
-// saves from before iron, electronics and rare materials (and with food): food is dropped everywhere, the new goods start at the new-game stocks
-function resMigrate(){
-  for (const N of S.nations){ delete N.food; if (N.short) delete N.short.food; for (const [k, v] of [['iron', 50], ['elec', 30], ['rare', 40]]) if (typeof N[k] !== 'number' || !isFinite(N[k])) N[k] = v; }
-  // Farms are gone: each level is refunded ($20M), a farm under construction is cancelled (refunded), a knocked-out one forgotten
-  for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p], o = S.owner[p], N = o >= 0 ? S.nations[o] : null;
-    if (b && b.farm){ if (N) N.cash += 20*b.farm; } if (b) delete b.farm;
-    const c = S.cons[p]; if (c && !BUILD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
-    if (S.bdis && S.bdis[p] && typeof S.bdis[p] === 'object') delete S.bdis[p].farm; }
-  // food listings: a sell offer's food is gone, a buy offer's money goes back to its owner
-  if (Array.isArray(S.book)) S.book = S.book.filter(o => { if (MKT_K.includes(o.res)) return true; if (isBid(o) && S.nations[o.seller]) S.nations[o.seller].cash += o.qty*o.price; return false; });
-  mktFix();
-  // a pending trade offer that moved food no longer balances once the food is gone (and one that only sold food would ask money for nothing): drop it; the rest just lose the food key
-  const hadFood = sd => !!(sd && sd.food > 0);
-  if (Array.isArray(S.offers)) S.offers = S.offers.filter(o => !(o.deal && (hadFood(o.deal.give) || hadFood(o.deal.get))));
-  for (const o of S.offers || []) if (o.deal){ o.deal.give = sideFix(o.deal.give); o.deal.get = sideFix(o.deal.get); }
-  // old messages, dispatches and front pages that talk about food or farms are forgotten
-  const oldTxt = t => typeof t === 'string' && /\b(food|farms?)\b/i.test(t);
-  if (Array.isArray(S.log)) S.log = S.log.filter(e => !(e && oldTxt(e.text)));
-  if (S.chat && typeof S.chat === 'object') for (const n in S.chat) if (Array.isArray(S.chat[n])) S.chat[n] = S.chat[n].filter(m => !(m && oldTxt(m.text)));
-  for (const P of Array.isArray(S.papers) ? S.papers : []){ if (Array.isArray(P.items)) P.items = P.items.filter(t => !oldTxt(t)); if (oldTxt(P.head)) P.head = P.items && P.items.length ? P.items.shift() : 'Quiet day on the fronts.'; }
-  if (S.trade && Array.isArray(S.trade.routes)) for (const r of S.trade.routes) if ((r.va && !MKT_K.includes(r.va.k)) || (r.vb && !MKT_K.includes(r.vb.k))) trValue(r);
-  INCC.v = -1; }
 function save(){ if (!S || !S.started) return; S.savedAt = Date.now(); try { localStorage.setItem(SAVE_KEY, saveJSON()); } catch (e) {} }
 // persistent campaigns keep running while you are away at the 1x pace (4 game minutes per real minute), up to 30 days of catch-up
 function catchUp(){ if (!S || !S.persist || !S.savedAt || S.over) return null;
@@ -3704,41 +3499,6 @@ function slotMeta(i){ try { const raw = localStorage.getItem(SLOT_KEY(i)); if (!
 function loadSaved(){ try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
 function clearSave(){ try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
 
-function addArmy(owner, at, units){
-  const a = {id:S.nid++, owner, at, to:null, t:0, path:[], forced:false, m:80, u:{}, w:{}}; for (const t of UT){ a.u[t] = 0; a.w[t] = 0; }
-  for (const t of UT) if (units[t]) a.u[t] = units[t];
-  S.armies.push(a); return a;
-}
-const has = (n, id) => n >= 0 && !!(S.nations[n].tech && S.nations[n].tech[id]);
-const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'UAV Squadron', swarm:'Drone Swarm Group', sdrone:'Strike Drone Squadron', bomb:'Bomber Wing', mpa:'Maritime Patrol Squadron', awacs:'Early Warning Squadron', asf:'Fighter Wing', jam:'Electronic Warfare Battalion', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
-function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
-  let k = a.air ? (['heli', 'drone', 'swarm', 'sdrone', 'bomb', 'mpa', 'awacs', 'asf'].find(t => a.u[t]) || 'air') : shipsOnly(a) ? (a.u.carr ? 'carr' : a.u.sub === count(a) ? 'sub' : 'sea') : null;
-  if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para', 'mlrs', 'spec', 'jam']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
-  const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
-  a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
-const armyLabel = a => a.owner === PLAYER ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
-const STC = [];
-function st(o, t, k){
-  if (o < 0) return UNITS[t][k];
-  const N = S.nations[o], T = N.tech || {}, sh = N.short || {}, key = (N.tv || 0)*8 + (sh.oil ? 1 : 0) + (sh.iron ? 2 : 0) + (sh.elec ? 4 : 0);
-  let c = STC[o];
-  if (!c || c.key !== key || c.S !== S){ c = STC[o] = {key, S, v:{}};
-    for (const u of UT){ const r = {}; for (const kk of ['atk', 'def', 'spd', 'hp']){ let v = UNITS[u][kk];
-        for (const id in T){ const fx = TECH_BY[id] && TECH_BY[id].fx[u]; if (fx && fx[kk]) v += fx[kk]; }
-        if (sh.oil && UNITS[u].fuel){ if (kk === 'atk') v *= 0.7; if (kk === 'spd') v *= 0.6; }
-        if (sh.iron && MAINT[u].iron >= 0.05){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.85; }   // no spare parts: armor, guns and warships fight worse
-        if (sh.elec && MAINT[u].elec >= 0.05){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.9; }   // no avionics or radar spares: aircraft, drones, air defence and warships
-        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[(N.mk && N.mk[u]) || 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }
-        r[kk] = v; } c.v[u] = r; } }
-  return c.v[t][k];
-}
-const unlocked = (n, t) => !UNITS[t].tech || has(n, UNITS[t].tech);
-// buildings knocked out by a precision strike (strike drone, armed UAV) work again after a while: S.bdis[p] = {<building>: hour it is back, ...},
-// one entry per building type, so knocking out a second building keeps the first one down (old saves held a single {k, h}: converted on read)
-const bdisOf = p => { const d = S.bdis && S.bdis[p]; if (d && typeof d.k === 'string'){ const o = {}; if (d.h > 0) o[d.k] = d.h; return S.bdis[p] = o; } return d; };
-const bdis = (p, k) => { const d = bdisOf(p); return !!d && (d[k] || 0) > S.hour; };
-const bdisH = (p, k) => { const d = bdisOf(p); if (!d) return 0; let h = 0; for (const b in d) if ((k == null || b === k) && d[b] - S.hour > h) h = d[b] - S.hour; return h; };
-function knockOut(p, k, h){ const d = bdisOf(p) || ((S.bdis || (S.bdis = {}))[p] = {}); for (const b in d) if (d[b] <= S.hour) delete d[b]; d[k] = Math.max(S.hour + h, d[k] || 0); }
 // ---------- mobilization rules (no drawing, no UI): what a city needs before it can train a unit.
 // A unit must be researched (units with no tech are known from day one) AND its city must have the unit's building(s) at the needed level, working.
 const reqsOf = t => { const U = UNITS[t]; return U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };
@@ -3797,19 +3557,6 @@ const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.ma
 const MINE_T = {hills:1, mountain:1, desert:1, tundra:1, plains:0.5, forest:0.5, snow:0.5};
 const mineLv = P => P.rare ? Math.max(1.5, 0.6*P.rare) : (MINE_T[P.terrain || 'plains'] || 0);
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast) || (B.where === 'mine' && mineLv(P) > 0)); }
-const count = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v) s += v; } return s; };
-const GROUND_T = Object.keys(UNITS).filter(t => UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored'), NAVAL_T = Object.keys(UNITS).filter(t => UNITS[t].cls === 'naval');
-const groundN = a => { const u = a.u; let s = 0; for (let i = 0; i < GROUND_T.length; i++){ const v = u[GROUND_T[i]]; if (v) s += v; } return s; };
-const shipsN = a => { const u = a.u; let s = 0; for (let i = 0; i < NAVAL_T.length; i++){ const v = u[NAVAL_T[i]]; if (v) s += v; } return s; };
-const shipsOnly = a => shipsN(a) > 0 && shipsN(a) === count(a);
-const portOk = (n, v) => G.P[v].sea || (G.P[v].coast && (S.owner[v] === n || friendly(n, S.owner[v])));
-const ground = a => groundN(a) > 0;
-const armyHP = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp; } return s; };
-const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t) => s + a.w[t], 0)/hp : 0; };
-// remaining strength against the force's recent peak (units lost count, not just wounds)
-const strengthFrac = a => { const cur = effHP(a), pk = Math.max(a.peak || 0, cur); return pk ? cur/pk : 0; };
-const power = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*UNITS[t].hp/10; } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
-const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1)*(1 + 0.15*cmdF(a, 'blitz'));
 /* ---------------- Commanders ---------------- */
 const TRAITS = {
   blitz:{name:'Blitz', icon:'»', desc:'+15% speed; +10% attack when attacking (×rank)'},
@@ -3838,32 +3585,6 @@ function unitKmd(o, t){ const U = UNITS[t], v = st(o, t, 'spd')*(has(o, 'log1') 
   return U.cls === 'naval' ? [null, Math.round(v*KM_HEX/10)*10] : [Math.round(v*KM_HEX/10)*10, Math.round(SEA_SPEED*(has(o, 'log1') ? 1.2 : 1)*KM_HEX/10)*10]; }
 const kmd = v => `${fmtK(v)} km/day`;
 const fmtK = v => v >= 1000 ? v.toLocaleString('en-US') : String(v);
-/* Sea lanes: the sea-zone links along the world's major shipping routes (North Atlantic, Mediterranean–Suez–Indian Ocean–Malacca–East Asia,
-   Persian Gulf, trans-Pacific, Panama, the Cape, Australia, South America). Waypoints (lon, lat) snap to the nearest sea zone and are joined by
-   the shortest all-water route. Fixed per map; trade lanes and convoy routes can build on the same set. */
-const LANE_ROUTES = [
-  [[-73, 40], [-50, 45], [-20, 48], [-6, 49], [1.5, 50.8], [4, 52.8], [8, 55], [10.5, 57.8], [12.7, 55.8], [18, 57], [25, 59.8]],
-  [[-6, 49], [-9.5, 44], [-9.8, 37], [-5.6, 35.9], [4, 38], [11.8, 37.2], [20, 34.5], [32.3, 31.6], [33.6, 27.5], [38, 21], [43.4, 12.6], [50, 12.8], [60, 13], [73, 8], [80.8, 5.4], [92, 6], [97.8, 5], [103.8, 1.2], [109, 8], [113.5, 20], [119.5, 24.5], [123, 31], [129, 34], [139.8, 34.8]],
-  [[60, 13], [60, 22], [56.6, 26.4], [52, 27], [50, 29]],
-  [[139.8, 34.8], [160, 40], [180, 43], [-150, 40], [-122.8, 37.6], [-119, 33.4]],
-  [[-119, 33.4], [-108, 20], [-90, 12], [-79.5, 8.2], [-79.9, 9.6], [-75, 15], [-74, 20.3], [-72, 25], [-74, 35], [-73, 40]],
-  [[-79.9, 9.6], [-84, 22], [-80.6, 24.2], [-86, 26], [-94, 28.6]],
-  [[-5.6, 35.9], [-17.6, 21], [-17.8, 14.5], [-8, 4], [5, -4], [11.5, -20], [18.4, -35], [32, -30], [40.5, -18], [46, -4], [60, 13]],
-  [[103.8, 1.2], [105.8, -6], [112, -22], [114.6, -32], [130, -37], [146, -39.6], [151.5, -34]],
-  [[-74, 20.3], [-62, 12], [-35, -5], [-43.2, -23.5], [-56, -35.4]],
-];
-let LANES = null;
-function laneSet(){ if (LANES && LANES.G === G) return LANES.s; const s = new Set(), sea = G.P.filter(P => P.sea);
-  const ll = P => [((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180, cellLat(P.cc)];
-  const LL = new Map(sea.map(P => [P.id, ll(P)]));
-  const snap = (lon, lat) => { let best = -1, bd = 1e9; for (const P of sea){ const [x, y] = LL.get(P.id), dl = Math.abs(((x - lon + 540) % 360) - 180)*Math.cos(lat*Math.PI/180), d = dl*dl + (y - lat)**2; if (d < bd){ bd = d; best = P.id; } } return best; };
-  const route = (a, b) => { if (a < 0 || b < 0 || a === b) return []; const d = new Map([[a, 0]]), prev = new Map(), q = [[0, a]];
-    while (q.length){ let bi = 0; for (let i = 1; i < q.length; i++) if (q[i][0] < q[bi][0]) bi = i; const [du, u] = q.splice(bi, 1)[0]; if (u === b) break; if (du > d.get(u)) continue;
-      for (const [v, w] of G.P[u].nb){ if (!G.P[v].sea) continue; const nd = du + w; if (nd < (d.has(v) ? d.get(v) : 1e9)){ d.set(v, nd); prev.set(v, u); q.push([nd, v]); } } }
-    const out = []; if (!prev.has(b)) return out; for (let v = b; v !== a; v = prev.get(v)) out.push([prev.get(v), v]); return out; };
-  for (const R of LANE_ROUTES){ const z = R.map(([lon, lat]) => snap(lon, lat)); for (let i = 1; i < z.length; i++) for (const [u, v] of route(z[i - 1], z[i])) s.add(u < v ? u + ',' + v : v + ',' + u); }
-  LANES = {G, s}; return s; }
-const isLane = (u, v) => G.P[u].sea && G.P[v].sea && laneSet().has(u < v ? u + ',' + v : v + ',' + u);
 const MOVE_T = {inf:'foot', at:'foot', spec:'foot', para:'foot', art:'track', tank:'track', ifv:'wheel', sam:'wheel', mlrs:'wheel'};
 const ROAD_F = {wheel:1.6, track:1.25, foot:1.15};
 // movement-type factors on top of TERRAIN.spd: wheels bog down off-road, tracks less so, infantry climbs and wades
@@ -3961,11 +3682,6 @@ function routeMix(a, path){ const m = {rail:0, road:0, track:0, off:0, sea:0}; l
   if (tot) for (const k in m) m[k] /= tot; return m; }
 const mixText = m => [m.rail >= 0.05 ? `rail ${Math.round(m.rail*100)}%` : '', m.road >= 0.05 ? `road ${Math.round(m.road*100)}%` : ''].filter(Boolean).join(' · ');
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
-const armyById = id => S.armies.find(a => a.id === id);
-const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;
-const placeOwner = p => G.P[p].sea ? 'Open sea' : S.owner[p] === NEUTRAL ? `${G.countries[G.P[p].country].name} · Independent` : S.nations[S.owner[p]].name;
-const isCapital = p => S.nations.some(n => n.alive && n.capital === p && S.owner[p] === n.id);
-const dayOf = h => Math.floor(h/24) + 1;
 const colorOf = o => o >= 0 ? S.nations[o].color : '#7d7a6c';
 // the map goes by relation to you, as in Conflict of Nations: your land a light green, powers at war with you red, everyone else (other powers, independents,
 // allies) a quiet grey; the colour-blind setting swaps the green and red for blue and orange. Nation colours stay in the panels (accents, charts).
@@ -4589,8 +4305,6 @@ function nightTexture1D(){ if (NIGHT) return NIGHT; const c = document.createEle
   g.putImageData(id, 0, 0); return (NIGHT = c); }
 // the sun is display-only: S.sunOff shifts it so every campaign opens in daylight over the player's capital (about 10:00 local); rules stay keyed to S.hour
 const sunHr = h => h + (S && S.sunOff || 0);
-const capLon = (st, n = 0) => { const N = st && st.nations && st.nations[n], P = N && G && G.P[N.capital]; return P ? WORLD.lon0 + ((P.cc % W) + 0.5)/W*360 : null; };
-function sunOffFor(n, st = S){ const lon = capLon(st, n); return lon == null ? 0 : ((Math.round(10 - lon/15) % 24) + 24) % 24; }
 // capital local time = visual UTC + capital longitude/15 (hours to add to S.hour for the top-bar clock)
 function localOff(st = S){ const lon = capLon(st), so = st && st.sunOff != null ? st.sunOff : sunOffFor(0, st); return lon == null ? 10 : (((so + Math.round(lon/15)) % 24) + 24) % 24; }
 function sunLon(){ return ((12 - (sunHr(S.hour) % 24)) * 15 + 540) % 360 - 180; }
@@ -6033,17 +5747,6 @@ function airMissionKind(a, p){
   if (isStriker(a)) return 'strike';
   return 'patrol';
 }
-/* ---------------- Weather and seasons ---------------- */
-// the campaign opens on 15 November and runs through the northern winter into the thaw; northern winters are Dec–Feb, spring thaw (mud) Mar–Apr, the south is reversed
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], MDAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-function calDate(h){ let d = (Math.floor(h/24) + 318) % 365, m = 0; while (d >= MDAYS[m]){ d -= MDAYS[m]; m++; } return {m, d:d + 1}; }
-let SZC = {d:-1, S:null, a:null};
-function season(p){ const d = Math.floor(S.hour/24); if (SZC.d !== d || SZC.S !== S){ SZC = {d, S, a:G.P.map(P => season0(P.id))}; } return SZC.a[p]; }
-function season0(p){ const P = G.P[p]; if (P.sea) return null; const lat = P.lat, m = calDate(S.hour).m, south = lat < 0, mm = south ? (m + 6) % 12 : m, al = Math.abs(lat);
-  if (al > 38 && (mm === 11 || mm <= 1) && (al > 46 || P.terrain === 'mountain' || P.terrain === 'snow')) return 'snow';
-  if (al > 58 && (mm === 10 || mm === 2)) return 'snow';
-  if (al > 44 && al < 62 && (mm === 2 || mm === 3) && P.terrain !== 'mountain' && P.terrain !== 'desert' && P.terrain !== 'snow') return 'mud';
-  return null; }
 // the winter snow cover as one soft world-space sheet (display only; season() and the rules are untouched). A cell weighs in by its ground (open land and
 // ranges take the snow fully, woods half, towns little), thinning toward the season's southern limit; the weights are blurred and cut by a ragged
 // noise snowline, so the edge crosses province borders. Rebuilt only when the month changes (season0 depends on the month and latitude).
@@ -6110,16 +5813,6 @@ function snowBuild(m){
     const a = s/c; if (a < 0.05) continue; const path = new Path2D(); path.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) path.lineTo(r[j], r[j + 1]); path.closePath(); ice.push({i, path, a, b}); } }
   const wq = (wx, wy) => { const lat = latAt(wy), B = lat < 0 ? BS : BN; return B ? wAt(Math.abs(lat), B, bil(cb, wx, wy), fine(wx, wy)) : 0; };   // (the weight at a world point, for the tests)
   SNOWC = {m, S, cv, ice, wq, bb:[Math.max(0, bx0 - 1)*k, Math.max(0, by0 - 1)*k, Math.min(BW, bx1 + 2)*k, Math.min(BH, by1 + 2)*k]}; }
-const SEASON_FX = {snow:{name:'Winter snow', spd:0.7, atk:0.85, tip:'−30% speed, attackers −15%'}, mud:{name:'Spring thaw (mud)', spd:0.75, atk:0.95, tip:'−25% speed, attackers −5%'}};
-// storm systems drift across the map: they ground aircraft and slow movement
-function stormAt(p){ const P = G.P[p]; for (const w of (S.storms || [])){ if ((P.x - w.x)**2 + ((P.y - w.y)*1.6)**2 < w.r*w.r) return w; } return null; }
-function weatherSpd(p){ const sz = season(p), w = stormAt(p); return (sz ? SEASON_FX[sz].spd : 1)*(w ? 0.8 : 1); }
-function weatherHour(){ S.storms = S.storms || [];
-  for (const w of S.storms){ w.x += w.vx; w.y += w.vy; w.life--; if (w.x > WORLD_W + 40) w.x -= WORLD_W; if (w.x < -40) w.x += WORLD_W; }
-  S.storms = S.storms.filter(w => w.life > 0 && w.y > -30 && w.y < WORLD_H + 30);
-  while (S.storms.length < 7){ const y = OY + rng()*(WORLD_H - 2*OY), lat = Math.abs(cellLat(Math.max(0, Math.min(W*H - 1, Math.round((y - OY)/(HS*1.5))*W)))), west = lat > 30;
-    const sz = season(G.P.find(P => !P.sea && Math.abs(P.y - y) < 20)?.id ?? 0);
-    S.storms.push({id:S.nid++, x:rng()*WORLD_W, y, r:40 + rng()*55, vx:(west ? 1 : -1)*(1.6 + rng()*1.8), vy:(rng() - 0.5)*0.6, life:48 + Math.floor(rng()*96), kind:lat > 45 && sz === 'snow' ? 'blizzard' : 'storm', seed:rng()*1000}); } }
 function airCheck(a, p){
   { const w = stormAt(p) || stormAt(a.air.base); if (w && !a.fly) return {ok:false, why:`Grounded: ${w.kind === 'blizzard' ? 'a blizzard' : 'a storm'} over ${stormAt(p) ? (G.P[p].cityName || G.P[p].name) : 'the airbase'}. Wait for it to pass.`}; }
   const d = Math.max(p === a.air.base ? 0 : 1, hexDist(G.P[a.air.base].cc, G.P[p].cc)), r = wingRange(a);
@@ -6908,41 +6601,6 @@ function capture(p, O){
   if (prev >= 0) checkNation(prev, O);
   checkEnd();
 }
-function checkNation(n, by = NEUTRAL){
-  const N = S.nations[n]; if (!N.alive) return;
-  const cities = G.P.filter(p => S.owner[p.id] === n && p.city);
-  if (!cities.length){
-    N.alive = false;
-    const annex = by >= 0 && S.nations[by].alive;
-    for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
-      if (annex){ S.owner[p] = by; S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; addArmy(NEUTRAL, p, {inf:2}); } }
-    for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
-    removeEmpty(); geoDirty = true;
-    log(n === PLAYER ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, n === PLAYER ? 'bad' : by === PLAYER ? 'good' : 'info');
-  } else if (S.owner[N.capital] !== n){
-    const home = cities.filter(c => S.home[c.id] === n);
-    const nc = (home.length ? home : cities)[0];
-    N.capital = nc.id; N.capHit = S.hour; nc.city = true;
-    for (const a of S.armies) if (a.owner === n) a.m = Math.max(0, (a.m ?? 80) - 15);
-    log(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 40% for 14 days.`, n === PLAYER ? 'bad' : 'info', nc.id);
-  }
-}
-function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
-const landNeed = n => SCN === 'world' ? Math.max(Math.ceil(scnLand()*WIN_SHARE), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra)
-  : Math.max(Math.ceil(scnLand()*0.4), (S.nations[n].prov0In ?? S.nations[n].prov0 ?? 0) + SCENARIOS[SCN].extra);
-const growth = n => score(n) - (S.nations[n].score0 || 0);
-const capsHeld = n => S.nations.filter(N => S.owner[N.cap0] === n).length;
-function checkEnd(){
-  if (S.over) return;
-  const mine = landHeld(PLAYER);
-  if (!S.nations[PLAYER].alive) S.over = 'lose';
-  else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= landNeed(PLAYER) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
-  else if ((B => B && (B.members.reduce((s0, m) => s0 + landHeld(m), 0) >= Math.ceil(landNeed(PLAYER)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(PLAYER))){ S.over = 'win'; S.overReason = 'coalition'; }
-  else if (Number.isFinite(DAY_LIMIT) && S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
-  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
-    else { const RB = blocs().find(B => !B.members.includes(PLAYER) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3)); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
-  if (S.over){ setSpeed(0); save(); showEnd(); }
-}
 let lastRes = null;
 function makePaper(){
   // summarise the last 24 hours of dispatches into a front page
@@ -7493,11 +7151,6 @@ function zoomStep(dt){ const Z = ZTW; if (!Z) return;
   view.s = done ? Z.s1 : Math.exp(ls); view.x = Z.ax - Z.wx*view.s; view.y = Z.ay - Z.wy*view.s; clampView();
   if (done) ZTW = null; else Z.last = {x:view.x, y:view.y, s:view.s}; }
 const toScreen = (x, y) => [x*view.s + view.x, y*view.s + view.y];
-// provinces whose centre lies within r old hexes of p's centre (always including direct neighbours), cached
-const NEARC = new Map();
-function nearList(p, r){ const key = p*1024 + Math.round(r*4); let l = NEARC.get(key); if (l) return l; const P0 = G.P[p], R = r*HS0*SQ3, seen = new Set([p]), q = [p];
-  for (let i = 0; i < q.length; i++) for (const v of G.P[q[i]].nbs){ if (seen.has(v)) continue; const P = G.P[v]; if (q[i] === p || Math.hypot(P.x - P0.x, P.y - P0.y) <= R){ seen.add(v); q.push(v); } }
-  l = [...seen]; NEARC.set(key, l); return l; }
 function visibleSet(){
   if (visCache) return visCache;
   const v = new Set();
@@ -12380,7 +12033,7 @@ function helpHTML(){ const me = S && S.nations ? S.nations[PLAYER] : null;
 function showHelp(){ openModal(helpHTML(), 'help'); }
 function provCount(pi){ const ci = powerCountry(POWERS[pi]); return ci >= 0 ? G.countries[ci].provs.length : 0; }
 function showPicker(){
-  if (!G) G = loadWorld();
+  if (!G){ G = loadWorld(); worldLines(G); }
   useScenario(pickScn); if (pickSel >= POWERS.length) pickSel = 0;
   const cards = POWERS.map((P0, i) => { const n = provCount(i), cities = (G.countries[powerCountry(P0)]?.provs || []).filter(id => G.P[id].city).length;
     const diff = DIFF[P0.name] || 'Hard';
@@ -12819,6 +12472,13 @@ function preload(){
 /* ---------------- RULES EVENTS: what the rules files (rules/*.js) report through IM.emit, and what this page does about it ---------------- */
 IM.on('log', (text, kind, p) => { if (S.started) achLog(text); if (kind && booted && SET.toasts !== 'none' && (SET.toasts === 'all' || kind === 'bad')) toastShow(text, kind, p); });
 IM.on('toast', toastShow); IM.on('sfx', sfxPlay); IM.on('fx', fxAdd); IM.on('geo', () => { geoDirty = true; });
+// the world was just built (first new game or load): make its drawable lines
+IM.on('world', () => worldLines(G));
+// a new game or a loaded one starts: drop what the page remembers about the last one
+IM.on('reset', () => { seenHour = -1; FX.length = 0; lastRes = null; if (TRD) TRD.ver = -1; MOV.clear(); });
+IM.on('newGame', () => { if (SET.cb) applyPalette(); buildGeometry(); });
+IM.on('restored', () => { if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette(); buildGeometry(); });
+IM.on('over', () => { setSpeed(0); save(); showEnd(); });
 const boot = data => preload().then(() => start(data));
 if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
 </script>

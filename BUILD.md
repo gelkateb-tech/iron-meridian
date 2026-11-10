@@ -18,7 +18,7 @@ Each folder is a complete copy: `index.html` (the page to publish), `play.html` 
 | Files | What they are |
 |---|---|
 | `world.js` `lines.js` `coast.js` `coast-hi.js` | map data |
-| `rules/core.js` `rules/data.js` | the game rules (the list grows as the rules split goes on: publish every `.js` file in `dist/public/rules/`) |
+| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` | the game rules (the list grows as the rules split goes on: publish every `.js` file in `dist/public/rules/`) |
 | `units3d.js` | unit models |
 | `assets/` | pictures, flags and sounds |
 
