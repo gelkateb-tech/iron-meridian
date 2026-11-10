@@ -847,6 +847,13 @@ One screenshot of the start screen's region tab, one of the region at the openin
 4. **Classic 15-power world.** Keep it on the start screen for good, or only until the 64 are complete.
 5. **Economy.** Section 3.3 is an assumption until docs/ECONOMY.md is merged.
 
+
+### Owner's answers (2026-11-10)
+1. **Small nations:** Israel, Greece, Cuba and Belarus must be **playable**: do whatever is needed province-wise (split their provinces into smaller ones, a map job, section 4.6) so each can hold 7 cities. Serbia, Portugal and Taiwan stay **AI-only**.
+2. **Tiers:** in **normal mode**, nations start **close to equal, like Conflict of Nations** (big countries are bigger, not much richer at the start). In **competitive mode**, starts are **more distinctive, but not too much**: balance realism with a good playing experience.
+3. **Classic 15-power world:** keep it on the start screen **until the 64 are done**, then remove it.
+4. **Roster:** keep the plan's 64 (no swaps). Adding Israel, Greece, Cuba and Belarus makes 68 playable unless the owner later drops some.
+
 ## Appendix: world numbers
 
 **Table G. Victory numbers measured**
