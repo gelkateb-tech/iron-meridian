@@ -5,6 +5,8 @@
   (sharp up to the closest zoom), plus a tight, levels-lifted, unsharp-masked icon for small sizes: i-<name>.webp 128 px.
   The two soldier groups are cut with the IS-Net general-use segmentation model when it is present (onnxruntime; the rembg model file
   isnet-general-use.onnx in ~/.u2net/ or at $ISNET), see soldier_net; without it they fall back to soldier_parts
+- the owner's Higgsfield pictures (white-background JPEGs of units, dark-matte aerial buildings; assets/art-src/u-<name>.jpg, b-<name>-<n>.jpeg):
+  python3 -I tools/prep-art.py assets/art-src assets/art hf   (see the HF section at the end of this file)
 - building markers, emblems: the same background removal, trimmed, 256 px
 - explosion, smoke: luminance-keyed alpha against the dark background (colours un-premultiplied), 256 px
 - crater: radial fade into a decal, 256 px
@@ -374,10 +376,10 @@ def save_icon(arr, name, size=ICON, q=88, gamma=0.85, gain=1.3, sat=1.15, sharp=
     rgb = np.asarray(Image.fromarray(px[..., :3]).filter(ImageFilter.UnsharpMask(radius=sharp[0], percent=sharp[1], threshold=sharp[2])))
     Image.fromarray(np.dstack([rgb, px[..., 3]]), 'RGBA').save(os.path.join(OUT, name), 'WEBP', quality=q, method=6)
 
-UNITS = ['infantry', 'special-forces', 'tank', 'light-armor', 'artillery', 'rocket-artillery', 'anti-air', 'missile-launcher', 'supply-truck',
+UNITS = ['special-forces', 'tank', 'light-armor', 'artillery', 'rocket-artillery', 'anti-air', 'missile-launcher', 'supply-truck',
          'jet', 'bomber', 'attack-heli', 'transport-heli', 'drone', 'corvette', 'destroyer', 'submarine', 'carrier']
 # V3 air (promised art; the game draws code stand-ins until these exist): skipped quietly when the source file is not there yet
-UNITS += ['heavy-bomber', 'naval-patrol', 'awacs', 'air-superiority', 'swarm-drone', 'strike-drone', 'anti-drone', 'cargo-ship', 'uav-recon', 'uav-armed']
+UNITS += ['heavy-bomber']   # the other V3 pictures and the infantry come from the owner's Higgsfield files (HF section)
 BUILD = {'city': ['city', 'city-2', 'city-3', 'city-4', 'city-5'], 'airfield': ['airfield', 'airfield-2', 'airfield-3', 'airfield-4', 'airfield-5'],
          'missile-silo': ['missile-silo', 'missile-silo-2', 'missile-silo-3', 'missile-silo-4', 'missile-silo-5'],
          'military-base': ['military-base-%d' % i for i in range(1, 6)], 'naval-port': ['naval-port-%d' % i for i in range(1, 6)]}
@@ -459,9 +461,172 @@ if want('earth'):
 if want('menu'):
     m = Image.open(os.path.join(SRC, 'menu-background.webp')).convert('RGB'); m.resize((1920, round(1920*m.height/m.width)), Image.LANCZOS).save(os.path.join(OUT, 'menu-background.webp'), 'WEBP', quality=80, method=6)
     t = Image.open(os.path.join(SRC, 'panel-texture.webp')).convert('RGB'); t.resize((1024, round(1024*t.height/t.width)), Image.LANCZOS).save(os.path.join(OUT, 'panel-texture.webp'), 'WEBP', quality=78, method=6)
+# ---------------------------------------------------------------------------------------------------------------------------------
+# HF: the owner's Higgsfield pictures (assets/art-src/u-<name>.jpg: a unit on a plain WHITE background, nose up; b-<name>-<n>.jpeg: an aerial
+# building patch). usage: python3 -I tools/prep-art.py assets/art-src assets/art hf   (or name them: hf-units, hf-buildings, or one picture, e.g. u-awacs)
+# units -> u-<name>.webp 512 px (transparent, centred, nose up) + i-<name>.webp 128 px icon; buildings -> b-<name>.webp 320 px (feathered edge)
+# ---------------------------------------------------------------------------------------------------------------------------------
+HF_UNITS = ['infantry', 'naval-patrol', 'awacs', 'air-superiority', 'uav-recon', 'uav-armed', 'swarm-drone', 'strike-drone', 'anti-drone',
+            'cargo-ship', 'cruise-missile', 'ballistic-missile', 'icbm']
+HF_ICON_SKIP = {'icbm'}                   # stored for later (no icon needed yet)
+HF_FLAME = {'cruise-missile': False, 'ballistic-missile': True, 'icbm': True}   # rocket exhaust fades into the white: matted as translucent glow
+HF_BUILD = ['arms-industry-%d' % i for i in range(1, 6)] + ['recruiting-office-1'] + ['fortifications-%d' % i for i in range(1, 4)]
+HF_WORK = 1536
+
+def hf_find(stem):
+    for e in ('.jpg', '.jpeg', '.png', '.webp'):
+        f = os.path.join(SRC, stem + e)
+        if os.path.exists(f): return f
+    return None
+
+def lnorm_blur(x, w, sigma):
+    """normalised blur: the weighted local mean of x where w is 1 (colour bleeding outward from the solid part)"""
+    W = np.maximum(gblur(w.astype(np.float32), sigma), 1e-4)
+    return np.dstack([gblur(x[..., c]*w, sigma)/W for c in range(x.shape[-1])]), W
+
+def white_cut(a, flame=False, hole=40, thr=238):
+    """RGBA from a picture on a plain white background. The background is what the flood fill reaches from the border through pixels whose
+    darkest channel is >= thr (JPEG noise included); enclosed white pockets (rotor gaps, between soldiers) larger than `hole` px go too. The rim
+    is matted against white: alpha = (255 - min)/(255 - the object's own darkest channel nearby), with the first soft step cut away so no
+    near-white JPEG ringing is left; the rim colour is taken from the solid pixels just inside (no white halo on a dark map). Exhaust flames
+    (flame=True) are translucent glow: alpha from how far below white the pixel is, colour un-mixed from white."""
+    h, w, _ = a.shape; mn = a.min(-1)
+    bgl = mn >= thr
+    reach = flood(bgl)
+    pockets = bgl & ~reach
+    if pockets.any(): reach |= drop_small(pockets, hole)
+    obj = drop_small(~reach, 120)                      # the object: connected parts of at least 120 px (specks go)
+    core = erode(obj, 3)
+    # the object's own darkest channel near the rim (normalised blur over its solid part), so grey and dark objects both get a proper alpha ramp
+    mo, _ = lnorm_blur(mn[..., None], core, 6); mo = mo[..., 0]
+    band = obj | dilate(dilate(dilate(obj)))
+    a0 = np.clip((255 - mn)/np.maximum(255 - np.minimum(mo, 235), 20), 0, 1)
+    soft = np.clip((a0 - 0.12)/0.7, 0, 1)
+    alpha = np.where(core, 1.0, np.where(band, np.where(obj, np.maximum(soft, 0.0) , soft*0.9), 0.0)).astype(np.float32)
+    # keep the solid object solid right up to where the matting starts, then a thin soft rim
+    alpha = np.where(obj & ~core, np.maximum(alpha, 0.55), alpha)
+    inner, _ = lnorm_blur(a, core, 2.5)
+    aa = np.clip(alpha[..., None], 1e-3, 1)
+    un = np.clip((a - 255*(1 - aa))/aa, 0, 255)
+    col = np.where((alpha < 0.999)[..., None], np.minimum(un, inner + 18), a)
+    col = np.where((alpha < 0.999)[..., None], np.where(alpha[..., None] < 0.35, inner, col), col)
+    if flame:   # the picture's exhaust fades into the white and cannot be matted cleanly: the body is cut off at the nozzle and a clean plume is drawn
+        # (white-yellow core, orange edge, red tail, soft alpha) the width of the nozzle
+        chroma = a.max(-1) - a.min(-1); warm = (a[..., 0] - a[..., 2] > 10) & (chroma > 14)
+        lowr = warm[int(h*0.9):]; xs = np.nonzero(lowr.any(0))[0]; xl, xr = xs.min(), xs.max(); wn = xr - xl
+        glow = (a[..., 0] > 225) & (a[..., 1] > 170) & (chroma > 14); y0 = np.nonzero(glow[:, xl:xr + 1].sum(1) > 0.4*wn)[0].min()   # the first row where the flame spans the nozzle
+        rows = np.arange(h)[:, None]; cutz = (rows >= y0 - 2) & (np.arange(w)[None, :] >= xl - 0.35*wn) & (np.arange(w)[None, :] <= xr + 0.35*wn)
+        alpha = np.where(cutz, 0, alpha)
+        ys_ = np.nonzero((alpha > 0.5).any(1))[0]; Hb = ys_.max() - ys_.min(); L = int(max(0.2*Hb, 40)); cx = (xl + xr)/2
+        t = np.clip((rows - (y0 - 6))/L, -1, 1.2); u = np.abs(np.arange(w)[None, :] - cx)/np.maximum(0.5*wn*(1 - 0.5*np.clip(t, 0, 1)), 1)
+        pr = np.clip(1 - u**1.7, 0, 1)*np.clip(1 - np.clip(t, 0, 1.2)**1.3, 0, 1)*(t > -0.1)
+        pr = gblur(pr.astype(np.float32), 3); k = np.clip(0.25*np.clip(t, 0, 1)*1.2 + 0.85*u, 0, 1)[..., None]   # 0 = core .. 1 = edge / tail
+        c0 = np.array([255, 250, 225], np.float32); c1 = np.array([255, 160, 45], np.float32); c2 = np.array([225, 70, 20], np.float32)
+        pc = np.where(k < 0.5, c0 + (c1 - c0)*(k/0.5), c1 + (c2 - c1)*((k - 0.5)/0.5))
+        alpha = np.maximum(alpha, pr); col = np.where((pr > 0.02)[..., None] & (alpha <= pr + 1e-3)[..., None], pc, col)
+    al = np.asarray(Image.fromarray((np.clip(alpha, 0, 1)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.7))).astype(np.float32)/255
+    alpha = np.where(core, 1.0, al) if not flame else al
+    return np.dstack([col, alpha*255]).astype(np.uint8)
+
+def hf_unit(name):
+    f = hf_find('u-' + name)
+    if not f: print('skip (no source):', name); return
+    im = Image.open(f).convert('RGB').resize((HF_WORK, HF_WORK), Image.LANCZOS)
+    rgba = white_cut(np.asarray(im).astype(np.float32), flame=HF_FLAME.get(name, False))
+    rgba = keep_main_all(rgba)
+    return rgba
+
+def keep_main_all(rgba, min_area=400):
+    """drop specks: connected opaque parts smaller than min_area px (the soldier groups, drone swarms and aircraft are several parts apart, so
+    only real specks go)"""
+    keep = drop_small(rgba[..., 3] > 40, min_area); keep = dilate(dilate(keep))
+    out = rgba.copy(); out[..., 3] = np.where(keep, out[..., 3], 0); return out
+
+def bold_icon(arr, name, size=ICON, rim=1.6, grow=1.0, contrast=1.35, sat=1.2):
+    """small-list icon: the silhouette thickened (grow px at size), a dark outline (rim px), contrast and colour lifted, unsharp-masked, so a
+    squad or a swarm stays readable at 24-32 px; the picture is cropped to its opaque part first"""
+    im = Image.fromarray(arr, 'RGBA'); bb = im.getchannel('A').point(lambda v: 255 if v > 64 else 0).getbbox()
+    x0, y0, x1, y1 = bb; pad = int(max(x1 - x0, y1 - y0)*0.06); im = im.crop((max(0, x0 - pad), max(0, y0 - pad), min(im.width, x1 + pad), min(im.height, y1 + pad)))
+    S2 = 2   # work at 2x and let the final resize do the anti-aliasing
+    s = size*S2*0.92/max(im.width, im.height); im = im.resize((max(1, round(im.width*s)), max(1, round(im.height*s))), Image.LANCZOS)
+    big = size*S2; sq = Image.new('RGBA', (big, big), (0, 0, 0, 0)); sq.paste(im, ((big - im.width)//2, (big - im.height)//2))
+    px = bleed(np.asarray(sq), 3).astype(np.float32); rgb, al = px[..., :3], px[..., 3]/255
+    l = (rgb @ LUMA); sel = al > 0.6
+    lo, hi = (np.percentile(l[sel], 2), np.percentile(l[sel], 98)) if sel.sum() > 50 else (0, 255)
+    rgb = np.clip((rgb - lo)/max(hi - lo, 1), 0, 1)**0.85
+    l2 = (rgb @ LUMA)[..., None]; rgb = np.clip(l2 + (rgb - l2)*sat, 0, 1)
+    rgb = np.clip((rgb - 0.5)*contrast + 0.5, 0, 1)*225 + 14
+    # thicken the silhouette (max filter on alpha), then draw a dark outline just outside it
+    A = Image.fromarray((al*255).astype(np.uint8))
+    if grow > 0: A = A.filter(ImageFilter.MaxFilter(2*int(round(grow*S2)) + 1))
+    A = A.filter(ImageFilter.GaussianBlur(0.6)); a_body = np.asarray(A).astype(np.float32)/255
+    RM = Image.fromarray((a_body*255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2*int(round(rim*S2)) + 1)).filter(ImageFilter.GaussianBlur(0.7))
+    a_out = np.asarray(RM).astype(np.float32)/255
+    fill, _ = lnorm_blur(rgb, (al > 0.5), 3)   # colour for the thickened rim: the nearest solid colour
+    body = np.where((al > 0.5)[..., None], rgb, fill)
+    out_rgb = body*a_body[..., None] + np.array([14, 16, 14], np.float32)*(1 - a_body[..., None])
+    out = np.dstack([out_rgb, a_out*255]).astype(np.uint8)
+    img = Image.fromarray(out, 'RGBA').resize((size, size), Image.LANCZOS)
+    px2 = bleed(np.asarray(img), 3)
+    rgbs = np.asarray(Image.fromarray(px2[..., :3]).filter(ImageFilter.UnsharpMask(radius=1.0, percent=70, threshold=1)))
+    Image.fromarray(np.dstack([rgbs, px2[..., 3]]), 'RGBA').save(os.path.join(OUT, name), 'WEBP', quality=90, method=6)
+
+def hf_box(name):
+    """opaque extent [w, h] of a saved picture as a share of its square (for the game's PICBOX table)"""
+    im = Image.open(os.path.join(OUT, name)); bb = im.getchannel('A').point(lambda v: 255 if v > 40 else 0).getbbox()
+    return [round((bb[2] - bb[0])/im.width, 2), round((bb[3] - bb[1])/im.height, 2)] if bb else None
+
+def infantry_icon(rgba):
+    """the squad for a 24-32 px tile: two of its soldiers, bold, so it reads as people and not a blob"""
+    keep = os.environ.get('HF_INF_KEEP', 'lr')
+    if keep == 'all': return rgba
+    lab = label(rgba[..., 3] > 40); H, W = lab.shape; ids = [i for i in np.unique(lab) if i]
+    parts = sorted([(float(np.mean(np.nonzero(lab == i)[0])), float(np.mean(np.nonzero(lab == i)[1])), i) for i in ids if (lab == i).sum() > 4000])
+    out = rgba.copy(); sel = np.zeros(lab.shape, bool)
+    pick = {'top': [0], 'two': [0, -1], 'lr': [0, -1], 'three': [0, 1, -1]}.get(keep, None)
+    if pick is None: return rgba
+    srt = sorted(parts, key=(lambda p: p[1]) if keep == 'lr' else (lambda p: p[0]))   # 'lr': the squad's left and right soldiers, side by side (an upright icon, wider than tall)
+    for k in pick: sel |= lab == srt[k][2]
+    out[..., 3] = np.where(sel, out[..., 3], 0); return out
+
+HF_SEEN = []
+for n in HF_UNITS:
+    if not (want('hf') or want('hf-units') or want('u-' + n)): continue
+    rgba = hf_unit(n)
+    if rgba is None: continue
+    save_rgba(rgba, 'u-' + n + '.webp', UNIT, clean=False, q=86)
+    if n not in HF_ICON_SKIP:
+        if n == 'infantry': bold_icon(infantry_icon(rgba), 'i-' + n + '.webp', 128, rim=1.8, grow=1.2, contrast=1.3)
+        else: save_icon(rgba, 'i-' + n + '.webp')
+    HF_SEEN.append(n); print('HF unit %-18s u %5.1f KB  box %s' % (n, os.path.getsize(os.path.join(OUT, 'u-' + n + '.webp'))/1024, hf_box('u-' + n + '.webp')))
+
+def hf_matte_patch(a, seed, size=320, inset=0.0, feather=0.075, wobble=0.1):
+    """dark-matte aerial building: the picture's own rectangle (found by the cut-out where it sits on a dark matte, else the whole frame) with
+    a feathered, slightly irregular edge fading to transparent, the same look as the existing b-military-base / b-naval-port patches"""
+    h, w, _ = a.shape
+    cut = cutout(a, t_hard=12.0, t_soft=(7.0, 26.0), shadow=0); al = cut[..., 3].astype(np.float32)/255
+    rows, cols = (al > 0.5).mean(1), (al > 0.5).mean(0)
+    def span(v): idx = np.nonzero(v > 0.45)[0]; return (idx[0], idx[-1]) if len(idx) else (0, len(v) - 1)
+    (y0, y1), (x0, x1) = span(rows), span(cols)
+    if (x1 - x0) < w*0.5 or (y1 - y0) < h*0.5: x0, x1, y0, y1 = 0, w - 1, 0, h - 1
+    m = int(0.012*w); X0, X1, Y0, Y1 = x0 + m, x1 - m, y0 + m, y1 - m
+    gy, gx = np.mgrid[0:h, 0:w]; F = feather*max(X1 - X0, Y1 - Y0)
+    nz = edge_noise(h, w, seed, cells=9)
+    d = np.minimum.reduce([gx - X0, X1 - gx, gy - Y0, Y1 - gy]).astype(np.float32)
+    alpha = sstep(d/F + wobble*nz*0.5)**1.3
+    return np.dstack([a, alpha*255])[Y0:Y1 + 1, X0:X1 + 1].astype(np.uint8)
+
+for f in HF_BUILD:
+    if not (want('hf') or want('hf-buildings') or want('b-' + f)): continue
+    src = hf_find('b-' + f)
+    if not src: print('skip (no source):', f); continue
+    a = np.asarray(Image.open(src).convert('RGB').resize((1024, 1024), Image.LANCZOS)).astype(np.float32)
+    save_patch(hf_matte_patch(a, sum(map(ord, f))*7 + 1), 'b-' + f + '.webp', 320); print('HF building', f, os.path.getsize(os.path.join(OUT, 'b-' + f + '.webp'))//1024, 'KB')
+if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_SEEN})
+
 # tell the game which promised V3 pictures now exist (it draws code stand-ins for the rest and never requests a missing file)
 import re
-V3 = ['u-' + u for u in ['heavy-bomber', 'naval-patrol', 'awacs', 'air-superiority', 'swarm-drone', 'strike-drone', 'anti-drone', 'cargo-ship', 'uav-recon', 'uav-armed']]
+V3 = ['u-heavy-bomber-1', 'u-heavy-bomber-2']
 have = [n for n in V3 if os.path.exists(os.path.join(OUT, n + '.webp'))]
 idx = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT))), 'index.html')
 if os.path.exists(idx):

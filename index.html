@@ -2297,81 +2297,14 @@ const STANDIN = (() => {
   // soft light from the upper left over the whole drawing (keeps the flat shapes from looking like icons)
   const light = g => { g.save(); g.globalCompositeOperation = 'source-atop'; const gr = g.createLinearGradient(40, 20, 220, 240); gr.addColorStop(0, 'rgba(255,255,250,.16)'); gr.addColorStop(0.55, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.22)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); g.restore(); };
   const seam = (g, x0, y0, x1, y1, a = 0.35) => { g.strokeStyle = `rgba(20,22,18,${a})`; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
-  const missile = (g, x, y, l = 30) => { R(g, x - 3.5, y - l/2, 7, l, 3, '#4c5048', C.line, 1.6); P(g, [[x, y - l/2 - 5], [x - 3.5, y - l/2 + 1], [x + 3.5, y - l/2 + 1]], '#8a3d2c', C.line, 1.2); };
-  const small = (g, x, y, k, fill) => { const s = k; P(g, [[x, y - 22*s], [x - 5*s, y - 8*s], [x - 21*s, y + 13*s], [x - 6*s, y + 11*s], [x, y + 17*s], [x + 6*s, y + 11*s], [x + 21*s, y + 13*s], [x + 5*s, y - 8*s]], fill, C.line, 2);
-    seam(g, x, y - 18*s, x, y + 14*s, 0.4); E(g, x, y + 15*s, 6*s, 1.6*s, 'rgba(20,22,18,.55)', null); };
   const D = {};
-  D['u-heavy-bomber'] = g => {
+  D['u-heavy-bomber-1'] = g => {
     for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) R(g, x - 7, y - 16, 14, 30, 6, C.dark, C.line, 2);   // engine pods hang ahead of the wing
     P(g, mirror([[128, 16], [120, 26], [116, 58], [115, 94], [22, 168], [20, 182], [42, 183], [113, 142], [114, 196], [70, 222], [68, 233], [113, 229], [118, 247], [128, 249]]), C.body);
     E(g, 128, 40, 6, 10, C.glass, C.line, 1.6); seam(g, 128, 52, 128, 240); seam(g, 113, 104, 30, 174, 0.25); seam(g, 143, 104, 226, 174, 0.25);
     for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) E(g, x, y - 13, 4.5, 3, '#1c1f1a', null);
     light(g); };
-  D['u-naval-patrol'] = g => {
-    for (const [x, y] of [[80, 118], [176, 118]]) R(g, x - 8, y - 18, 16, 34, 7, C.navyD, C.line, 2);
-    P(g, mirror([[128, 14], [119, 28], [116, 60], [115, 100], [36, 140], [28, 150], [32, 157], [114, 136], [114, 202], [80, 220], [78, 231], [114, 227], [119, 238], [124, 240], [125, 252], [128, 253]]), C.navy);
-    E(g, 128, 22, 7, 8, C.navyD, C.line, 1.5); E(g, 128, 38, 6, 7, C.glass, C.line, 1.4); seam(g, 128, 50, 128, 236);
-    for (const y of [74, 92, 110]) E(g, 128, y, 3.2, 3.2, 'rgba(20,24,28,.6)', null);   // sonobuoy / sensor ports
-    missile(g, 62, 140, 24); missile(g, 194, 140, 24);
-    light(g); };
-  D['u-awacs'] = g => {
-    for (const [x, y] of [[62, 128], [92, 112], [164, 112], [194, 128]]) R(g, x - 7, y - 15, 14, 28, 6, C.navyD, C.line, 2);
-    P(g, mirror([[128, 14], [119, 28], [116, 60], [115, 100], [30, 146], [24, 156], [30, 162], [114, 138], [114, 206], [78, 224], [76, 235], [114, 230], [119, 246], [128, 248]]), C.navy);
-    E(g, 128, 36, 6, 8, C.glass, C.line, 1.4); seam(g, 128, 48, 128, 240);
-    R(g, 122, 132, 12, 40, 3, C.navyD, C.line, 1.6);                     // struts
-    E(g, 128, 160, 48, 48, '#5a6268', C.line, 3); E(g, 128, 160, 38, 38, null, 'rgba(230,232,225,.22)', 2);
-    g.save(); g.beginPath(); g.ellipse(128, 160, 46, 46, 0, 0, Math.PI*2); g.clip(); g.fillStyle = 'rgba(28,30,26,.55)'; g.fillRect(80, 152, 96, 16); g.restore();   // the dome's black stripe
-    E(g, 128, 160, 6, 6, '#3c4247', C.line, 1.5);
-    light(g); };
-  D['u-air-superiority'] = g => {
-    P(g, mirror([[128, 12], [123, 30], [119, 60], [107, 80], [105, 102], [40, 150], [38, 166], [100, 172], [104, 188], [64, 222], [66, 235], [110, 228], [113, 242], [121, 243], [128, 237]]), C.body);
-    for (const s of [-1, 1]){ P(g, [[128 + s*22, 168], [128 + s*28, 166], [128 + s*42, 204], [128 + s*36, 206]], C.dark, C.line, 2); }   // canted twin fins
-    E(g, 128, 54, 7.5, 18, C.glass, C.line, 1.6); g.fillStyle = 'rgba(200,220,230,.25)'; g.beginPath(); g.ellipse(126, 48, 2.5, 8, 0, 0, Math.PI*2); g.fill();
-    seam(g, 128, 74, 128, 236); seam(g, 107, 84, 104, 170, 0.28); seam(g, 149, 84, 152, 170, 0.28);
-    for (const x of [119, 137]) E(g, x, 238, 6, 4, '#1c1f1a', null);
-    missile(g, 70, 150, 26); missile(g, 186, 150, 26);
-    light(g); };
-  D['u-swarm-drone'] = g => {
-    const spots = [[128, 46, 1.05], [86, 98, 0.92], [170, 98, 0.92], [50, 152, 0.82], [206, 152, 0.82], [128, 150, 0.95], [92, 204, 0.78], [164, 204, 0.78]];
-    spots.forEach(([x, y, k], i) => small(g, x, y, k*1.3, i % 3 === 1 ? '#5c6153' : i % 3 === 2 ? '#6b705f' : '#626757'));
-    light(g); };
-  D['u-strike-drone'] = g => {
-    missile(g, 66, 128, 30); missile(g, 190, 128, 30); missile(g, 92, 128, 26); missile(g, 164, 128, 26);
-    P(g, mirror([[128, 22], [118, 34], [113, 70], [112, 100], [14, 112], [12, 124], [22, 129], [112, 128], [114, 196], [121, 222], [128, 227]]), '#62675a');
-    R(g, 120, 140, 16, 50, 6, '#545849', 'rgba(20,22,18,.5)', 1.2);   // fuel / avionics spine
-    for (const s of [-1, 1]) P(g, [[128 + s*4, 200], [128 + s*8, 198], [128 + s*44, 236], [128 + s*38, 242]], '#6a6e63', C.line, 2);   // V-tail
-    E(g, 128, 50, 9, 9, '#2c3236', C.line, 1.8); E(g, 126, 48, 3, 3, 'rgba(140,180,200,.55)', null);   // sensor turret
-    R(g, 112, 228, 32, 4, 2, '#1e211b', null); seam(g, 128, 60, 128, 220);
-    light(g); };
-  D['u-uav-recon'] = g => {
-    P(g, mirror([[128, 34], [123, 42], [121, 76], [120, 106], [28, 110], [26, 118], [34, 122], [120, 120], [120, 186], [124, 206], [128, 208]]), '#83877b');
-    for (const s of [-1, 1]) P(g, [[128 + s*3, 186], [128 + s*7, 184], [128 + s*34, 214], [128 + s*29, 219]], '#727669', C.line, 2);
-    E(g, 128, 56, 7.5, 7.5, '#2a3034', C.line, 1.6); E(g, 126.5, 54.5, 2.6, 2.6, 'rgba(150,190,210,.65)', null);
-    R(g, 114, 210, 28, 3.5, 2, '#1e211b', null); seam(g, 128, 66, 128, 200);
-    light(g); };
-  D['u-uav-armed'] = g => {
-    missile(g, 74, 122, 26); missile(g, 182, 122, 26);
-    P(g, mirror([[128, 28], [122, 38], [120, 74], [119, 104], [18, 108], [16, 118], [26, 123], [119, 122], [119, 192], [123, 214], [128, 216]]), '#777b6e');
-    for (const s of [-1, 1]) P(g, [[128 + s*4, 192], [128 + s*8, 190], [128 + s*40, 224], [128 + s*34, 230]], '#686c60', C.line, 2);
-    E(g, 128, 50, 8.5, 8.5, '#2a3034', C.line, 1.6); E(g, 126, 48, 3, 3, 'rgba(150,190,210,.6)', null);
-    R(g, 112, 218, 32, 4, 2, '#1e211b', null); seam(g, 128, 62, 128, 206);
-    light(g); };
-  D['u-anti-drone'] = g => {
-    for (const s of [-1, 1]) for (const y of [70, 106, 160, 196]) R(g, 128 + s*46 - 7, y - 13, 14, 26, 4, '#1f221d', null);   // wheels
-    R(g, 86, 36, 84, 184, 10, C.olive);
-    R(g, 92, 42, 72, 46, 7, '#525c3b', C.line, 2); R(g, 98, 46, 60, 9, 3, C.glass, null);   // cab and windscreen
-    R(g, 94, 96, 68, 116, 5, '#56603e', C.line, 1.6);
-    E(g, 128, 140, 25, 25, '#6b6f62', C.line, 2.5); E(g, 128, 140, 17, 17, '#4b4f46', C.line, 1.4); E(g, 128, 140, 4, 4, '#2a2d27', null);   // jammer dish
-    for (const [x, y] of [[104, 186], [152, 186], [104, 104], [152, 104]]){ E(g, x, y, 6, 6, '#3f4339', C.line, 1.6); g.strokeStyle = 'rgba(30,32,27,.85)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (x < 128 ? -14 : 14), y + (y < 140 ? -10 : 10)); g.stroke(); }
-    R(g, 110, 196, 36, 14, 3, '#3f4632', C.line, 1.4); for (const x of [116, 124, 132, 140]) seam(g, x, 197, x, 209, 0.6);   // antenna panel
-    light(g); };
-  D['u-cargo-ship'] = g => {
-    P(g, mirror([[128, 8], [114, 30], [104, 62], [101, 100], [101, 226], [105, 243], [128, 248]]), '#56595a');
-    P(g, mirror([[128, 22], [118, 40], [110, 66], [108, 98], [108, 222], [128, 224]]), '#6f726c', 'rgba(20,22,20,.6)', 1.5);
-    const cols = [C.rust, C.blue, C.olive, C.sand, '#6c4f3f', '#4a5a50'];
-    for (let r = 0; r < 9; r++) for (let c = 0; c < 3; c++){ const k = (r*7 + c*3) % cols.length; R(g, 110 + c*12.5, 66 + r*15, 11, 13, 1.5, cols[k], 'rgba(16,18,16,.7)', 1.2); }
-    R(g, 108, 204, 40, 18, 3, C.bone, C.line, 2); R(g, 112, 206, 32, 5, 2, C.glass, null); E(g, 128, 230, 6, 5, '#3a3c3a', C.line, 1.4);   // bridge and funnel
-    light(g); };
+  D['u-heavy-bomber-2'] = D['u-heavy-bomber-1'];   // (the second bomber picture, levels 5-8, uses the same stand-in until its file arrives)
   return D;
 })();
 /* ---------------- Redraw scheduling and the Battery saver (drawing side only: no game rule reads or calls any of this) ----------------
@@ -2413,6 +2346,8 @@ const ART = (() => {
     'u-jet', 'u-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
     'i-infantry', 'i-special-forces', 'i-tank', 'i-light-armor', 'i-artillery', 'i-rocket-artillery', 'i-anti-air', 'i-missile-launcher', 'i-supply-truck',
     'i-jet', 'i-bomber', 'i-attack-heli', 'i-transport-heli', 'i-drone', 'i-corvette', 'i-destroyer', 'i-submarine', 'i-carrier',
+    ...['naval-patrol', 'awacs', 'air-superiority', 'uav-recon', 'uav-armed', 'swarm-drone', 'strike-drone', 'anti-drone', 'cargo-ship'].flatMap(n => ['u-' + n, 'i-' + n]),   // the owner's Higgsfield pictures (V3 air, the cargo ship, the missiles' menu pictures)
+    'u-cruise-missile', 'i-cruise-missile', 'u-ballistic-missile', 'i-ballistic-missile',
     'fx-explosion', 'fx-smoke', 'fx-crater'];
   // the building-level pictures (b-<art>-<level>: city, military-base, naval-port, airfield, missile-silo; L5) are not fetched at startup: each one
   // when it is first needed (want): the city sheet or the build menu shows it, or for the city pictures the map zooms in to where towns are drawn
@@ -2420,7 +2355,7 @@ const ART = (() => {
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
   const ART_SUPPLIED = [];
-  const OPT = ['u-heavy-bomber', 'u-naval-patrol', 'u-awacs', 'u-air-superiority', 'u-swarm-drone', 'u-strike-drone', 'u-anti-drone', 'u-cargo-ship', 'u-uav-recon', 'u-uav-armed'];
+  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
   const imgs = new Map(), waits = new Map(), failed = new Set(), cache = new Map(), stand = new Set(), durl = new Map();
   // until a promised picture arrives, an older supplied picture of the same thing beats the code-drawn stand-in (the recon UAV keeps u-drone)
   const ALT = {'u-uav-recon':'u-drone'}, rn = name => stand.has(name) && ALT[name] && imgs.has(ALT[name]) && !stand.has(ALT[name]) ? ALT[name] : name;
@@ -2574,7 +2509,10 @@ const USVG = {
 };
 const unitSVG0 = t => `<svg width="28" height="16" viewBox="0 0 28 16" fill="currentColor" aria-hidden="true">${USVG[t] || ''}</svg>`;
 // the UAV's picture follows its level: unarmed recon airframe for UAV I-III, the armed one from UAV IV (per owner)
-const artT = (t, n) => t === 'drone' && typeof S !== 'undefined' && S && S.nations && n >= 0 && S.nations[n] && uavLv(n) >= 4 ? 'drone4' : t;
+// The Heavy Bomber's picture by level: u-heavy-bomber-1 for levels 1-4, u-heavy-bomber-2 for levels 5-8. Today the level is the nation's Mark of the type
+// (markOf: Mk I-IV, so only the first picture shows until a higher level exists); both pictures are stand-ins until their files arrive.
+const heavyBomberArt = lv => lv >= 5 ? 'u-heavy-bomber-2' : 'u-heavy-bomber-1';
+const artT = (t, n) => typeof S === 'undefined' || !S || !S.nations || n < 0 || !S.nations[n] ? t : t === 'drone' && uavLv(n) >= 4 ? 'drone4' : t === 'bomb' && heavyBomberArt(markOf(n, 'bomb')) === 'u-heavy-bomber-2' ? 'bomb2' : t;
 /* Unit pictures in the HTML UI (recruit cards, force rows, split rows, tooltips, research, reports, dispatches): unitPic(type, size) is the owner's top-down
    picture of the type (UART) on a dark square tile, turned like the map counters (long vehicles and ships at a 3/4 heading, nose up and to the right;
    aircraft and squads nose up). Size classes: xs 18, sm 22, (none) 28, md 36, lg 44, xl 72, xxl 96 css px. The picture is a CSS background sized to the
@@ -2583,18 +2521,18 @@ const artT = (t, n) => t === 'drone' && typeof S !== 'undefined' && S && S.natio
 const UIPX = {xs:18, sm:22, '':28, md:36, lg:44, xl:72, xxl:96};
 // the soldier pictures' icons (i-infantry, i-special-forces) are three soldiers cut out of the squad picture (a whole squad shrunk to icon size reads
 // as a grey rosette): tiles, UI icons and the close-zoom squads use them at every size where they are sharp enough (256 px)
-const SQI = {'u-infantry':1, 'u-special-forces':1};
+const SQI = {'u-infantry':136, 'u-special-forces':1e9};   // (the largest device size at which the icon is used: the infantry icon is 128 px, the special forces' 256)
 const UIPC = new Map(), UTR = new Set(); let utSheet = null;
 window.addEventListener('im-art', () => UIPC.clear());   // a promised picture arrived: tiles move from the stand-in to it
 function utRule(name, css){ if (UTR.has(name)) return true; try { if (!utSheet){ const el = document.createElement('style'); el.id = 'utcss'; (document.head || document.documentElement).appendChild(el); utSheet = el.sheet; }
     utSheet.insertRule(`.${name}::after{${css}}`, utSheet.cssRules.length); UTR.add(name); return true; } catch (e) { return false; } }
 function unitPic(t, sz = ''){ const k = artT(t, PLAYER), u = UART[k], im = u && ART.img(u[0]);
   if (!im) return `<i class="ut ${sz} svgt" aria-hidden="true">${unitSVG0(t)}</i>`;
-  const m = /\/u(-[a-z0-9-]+)\.webp/.exec(im.src || ''), dp = (typeof window !== 'undefined' && window.devicePixelRatio) || 1, ir = m && ART.ready('i' + m[1]), sq = ir && SQI['u' + m[1]];
+  const m = /\/u(-[a-z0-9-]+)\.webp/.exec(im.src || ''), dp = (typeof window !== 'undefined' && window.devicePixelRatio) || 1, ir = m && ART.ready('i' + m[1]), sq = ir && SQI['u' + m[1]] >= (UIPX[sz] || 28)*dp;
   const key = k + '|' + sz + '|' + dp + '|' + (m ? m[1] : 's') + (ir ? 'i' : ''); let c = UIPC.get(key);
   if (!c){ const b = picBox(sq ? ART.img('i' + m[1]) : im), diag = b[0]/b[1] < 0.62, ang = (diag ? 45 : 0) + (u[1] ? 180 : 0), a = ang*Math.PI/180, ca = Math.abs(Math.cos(a)), sa = Math.abs(Math.sin(a));
     const z = (diag ? 0.97 : 0.86)/Math.max(b[0]*ca + b[1]*sa, b[0]*sa + b[1]*ca);   // a turned hull touches the tile only at its two ends, so it may fill more
-    const ic = ir && (sq || (UIPX[sz] || 28)*dp*z <= 136), src = ic ? 'i' + m[1] : m ? 'u' + m[1] : u[0];
+    const ic = ir && (sq || (!SQI['u' + m[1]] && (UIPX[sz] || 28)*dp*z <= 136)), src = ic ? 'i' + m[1] : m ? 'u' + m[1] : u[0];
     c = 'utp-' + k + '-' + (ic ? 'i' : m ? 'u' : 's');
     const f = v => (+v.toFixed(4)) + '';
     if (!utRule(c, `background-image:url("${ART.url(src)}"); background-size:calc(var(--us)*${f(z)}) auto; background-position:calc(50% + var(--us)*${f((0.5 - b[2])*z)}) calc(50% + var(--us)*${f((0.5 - b[3])*z)}); transform:rotate(${ang}deg)`)) c = '';
@@ -5486,7 +5424,7 @@ const UART = {inf:['u-infantry', 0, 0.62], para:['u-infantry', 0, 0.62], spec:['
   frig:['u-corvette', 0, 0.62], crui:['u-destroyer', 0, 0.7], sub:['u-submarine', 0, 0.6], carr:['u-carrier', 0, 0.8], drop:['u-transport-heli', 0, 0.72], truck:['u-supply-truck', 0, 0.5]};
 const uArt = t => { const u = UART[t]; return u && ART.ready(u[0]) ? u : null; };
 Object.assign(UART, {drone:['u-uav-recon', 0, 0.58], drone4:['u-uav-armed', 0, 0.62], swarm:['u-swarm-drone', 0, 0.74], sdrone:['u-strike-drone', 0, 0.72], jam:['u-anti-drone', 0, 0.6],
-  bomb:['u-heavy-bomber', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (stand-ins until the pictures arrive)
+  bomb:['u-heavy-bomber-1', 0, 0.92], bomb2:['u-heavy-bomber-2', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
 // enemy stealth UAV (level III+) seen in flight: near your SAMs or jammers, or under your AWACS
 function uavSpotted(v){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 < 0) return false; if (aewCover(PLAYER).has(p0)) return true;
   for (const b of S.armies) if (b.owner === PLAYER && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
@@ -5570,7 +5508,7 @@ function drawFig(t, x, y, D, ang, o = {}){
     SQUAD[o.walk ? 1 : 0].forEach(([f, l], i) => { const st = o.walk ? Math.sin(now/110 + sd + i*2.1)*Ds*0.05 : 0, fx = (f + (o.walk ? 0 : 0.02*Math.sin(now/1700 + sd + i)))*Ds + st, lx = l*Ds*1.15;   // marching squads step, resting ones barely shift
       ok = drawFig(t, x + ca*fx - sa*lx, y + sa*fx + ca*lx, Ds*(i ? 0.97 : 1), ang + (i ? 0.18 : -0.1) + 0.12*Math.sin(sd*7.3 + i*2.9), {...o, sq:1, kick:0}) || ok; });
     return ok; }
-  if (o.sq && SQI[u[0]] && D*dpr < 150 && ART.ready('i' + u[0].slice(1))) u = ['i' + u[0].slice(1), u[1], u[2]];   // a squad smaller than ~150 device px: its three-soldier cut (nine soldiers that small read as speckles)
+  if (o.sq && SQI[u[0]] && D*dpr < Math.min(150, SQI[u[0]]) && ART.ready('i' + u[0].slice(1))) u = ['i' + u[0].slice(1), u[1], u[2]];   // a squad smaller than ~150 device px: its three-soldier cut (nine soldiers that small read as speckles)
   const px = Math.min(figBucket(D*dpr), 362), vk = o.wreck ? 'w' : o.night ? 'n' : '', rot = ang + Math.PI/2 + (u[1] ? Math.PI : 0), alt = o.alt || 0, ga = ctx.globalAlpha;
   if (o.wake){ ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
     if (o.wake > 0.5){ const rmq = afxReduced(), sh = rmq ? 0.92 : 0.85 + 0.15*Math.sin((o.now || 0)/340 + x*0.01);   // under way: a long Kelvin V spreading behind the stern, the narrow churn inside it and foam at the bow
@@ -5775,7 +5713,9 @@ function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.
    Arms Factory, Airbase, Naval Yard and Missile Silo pictures at their level (b-<art>-1..5) and the city pictures (b-city-1..5) show in the
    city panel and the build menu. On the map the buildings are symbols (see 'Buildings on the map' above) and the city is part of the map
    (see 'Cities on the map' below). */
-const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo'};
+// building -> picture name; pictures b-<name>-<level>. BART_N: how many levels have a picture (default 5): the Recruiting Office has one (every level uses it),
+// Fortifications three (levels I-III). 'arms' (Arms Industry, five levels) is registered for the buildings rework: the building does not exist yet.
+const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo', rec:'recruiting-office', fort:'fortifications', arms:'arms-industry'}, BART_N = {rec:1, fort:3};
 const ART_PX = 46;   // close zoom: ground patterns on the map
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
 // (a picture not loaded yet is asked for, and an empty plate of the same size holds its place: no layout jump when it arrives)
@@ -6637,10 +6577,10 @@ function cityLgGlow(p, make){ let c = CLGL.get(p); if (c || !make) return c || n
   g.fillStyle = fall; g.fillRect(0, 0, M, M); g.globalCompositeOperation = 'multiply'; g.drawImage(I.ms, 0, 0, M, M); g.drawImage(I.ms, 0, 0, M, M);   // (opaque, black outside: it is added onto the map)
   CLGL.set(p, c); CLOW_PX += M*M; if (CLGL.size > 64){ CLGL.delete(CLGL.keys().next().value); CLOW_PX -= M*M; } return c; }
 function cityLevel(p){ const B = S.bld[p]; let t = 0; for (const k of BK) t += B[k] || 0; return Math.min(5, Math.min(5, 1 + Math.floor(t/3)) + (isCapital(p) ? 1 : 0)); }
-const bartName = (k, l) => (k === 'city' ? 'b-city-' : 'b-' + BART[k] + '-') + Math.max(1, Math.min(5, l | 0));
+const bartName = (k, l) => (k === 'city' ? 'b-city-' : 'b-' + BART[k] + '-') + Math.max(1, Math.min(BART_N[k] || 5, l | 0));
 const BART_OK = new Map();   // key -> true once all five levels have loaded, false for good if one failed
 function bartOk(k){ const v = BART_OK.get(k); if (v != null) return v; if (k !== 'city' && !BART[k]) return false;
-  let all = true; for (let l = 1; l <= 5; l++){ const nm = bartName(k, l); if (ART.failed(nm)){ BART_OK.set(k, false); return false; } if (!ART.ready(nm)) all = false; }
+  let all = true; for (let l = 1; l <= (BART_N[k] || 5); l++){ const nm = bartName(k, l); if (ART.failed(nm)){ BART_OK.set(k, false); return false; } if (!ART.ready(nm)) all = false; }
   if (all) BART_OK.set(k, true); return all; }
 // last drawn level per province+building; a rise seen while on screen starts the upgrade animation
 const BLV = new Map(); let BLV_S = null;
@@ -6703,9 +6643,11 @@ function plateRect(x, y, n, s, minor, two){ const D = plateDims(n, s, minor, two
 /* The owner's unit pictures (assets/art/i-*.webp, u-*.webp) are portraits for the menus and panels only (recruit cards, army panel, unit info, tooltips);
    on the map every force is a flat plate with a vector icon (ICON). */
 // opaque extent of each supplied picture as a share of its square (width, height): unitPic trims and centres them with this
-const PICBOX = {'u-infantry':[0.95, 0.88], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.74, 0.93], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
+const PICBOX = {'u-infantry':[0.84, 0.94], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.88, 0.52], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
   'u-anti-air':[0.44, 0.94], 'u-missile-launcher':[0.36, 0.94], 'u-supply-truck':[0.44, 0.94], 'u-jet':[0.73, 0.94], 'u-bomber':[0.79, 0.94], 'u-attack-heli':[0.65, 0.94],
-  'u-transport-heli':[0.64, 0.94], 'u-drone':[0.94, 0.86], 'u-corvette':[0.22, 0.94], 'u-destroyer':[0.17, 0.94], 'u-submarine':[0.19, 0.94], 'u-carrier':[0.36, 0.95]};
+  'u-transport-heli':[0.64, 0.94], 'u-drone':[0.94, 0.86], 'u-corvette':[0.22, 0.94], 'u-destroyer':[0.17, 0.94], 'u-submarine':[0.19, 0.94], 'u-carrier':[0.36, 0.95],
+  'u-naval-patrol':[0.94, 0.94], 'u-awacs':[0.95, 0.94], 'u-air-superiority':[0.78, 0.94], 'u-uav-recon':[0.99, 0.81], 'u-uav-armed':[0.99, 0.82], 'u-swarm-drone':[0.95, 0.86], 'u-strike-drone':[0.85, 0.95],
+  'u-anti-drone':[0.48, 0.94], 'u-cargo-ship':[0.26, 0.96], 'u-cruise-missile':[0.52, 0.95], 'u-ballistic-missile':[0.28, 0.97], 'u-icbm':[0.12, 0.97]};   // (measured by tools/prep-art.py: HF section)
 const PICBB = new WeakMap();
 // [w, h, cx, cy] of a picture's opaque part (shares of its size): the table for the supplied files, measured once for a code-drawn stand-in
 function picBox(src){ let b = PICBB.get(src); if (b) return b;
@@ -8002,7 +7944,8 @@ function draw(now){ draw.now = now;
     const nx = A.x + (B.x - A.x)*t2, ny = A.y + (B.y - A.y)*t2 - Math.sin(t2*Math.PI)*q0.arc, [x2, y2] = toScreen(nx, ny), ang = Math.atan2(y2 - y, x2 - x);
     if (Math.random() < 0.7) emit('smokel', q0.x, q0.y, {vx:(Math.random() - 0.5)*6, vy:-1, s0:m.k === 'bm' ? 6 : 4, s1:m.k === 'bm' ? 26 : 16, life:m.k === 'bm' ? 2600 : 1600});
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(GLOW(), -22, -9, 22, 18); ctx.globalCompositeOperation = 'source-over';
-    const L0 = m.k === 'bm' ? 16 : 11; ctx.fillStyle = '#e8e4da'; ctx.strokeStyle = '#1a1c1b'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L0/2, 0); ctx.lineTo(-L0/2, -2.2); ctx.lineTo(-L0/2, 2.2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+    const L0 = m.k === 'bm' ? 16 : 11, MQ = L0*1.5/0.95, mp = ART.sprite(m.k === 'bm' ? 'u-ballistic-missile' : 'u-cruise-missile', Math.round(MQ*dpr));   // the owner's missile picture (nose up: turned along the flight) once loaded, else the drawn arrowhead
+    if (mp){ ctx.rotate(Math.PI/2); ctx.drawImage(mp, -MQ/2, -MQ/2, MQ, MQ); ctx.restore(); } else { ctx.fillStyle = '#e8e4da'; ctx.strokeStyle = '#1a1c1b'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L0/2, 0); ctx.lineTo(-L0/2, -2.2); ctx.lineTo(-L0/2, 2.2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
     if (m.owner !== PLAYER && (S.owner[m.to] === PLAYER)){ const [tx, ty] = toScreen(B.x, B.y); ctx.save(); ctx.strokeStyle = `rgba(224,87,79,${0.5 + 0.4*Math.sin(now/120)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tx, ty, 16, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
   if (aimMsl){ const F = G.P[aimMsl.from], [fx1, fy1] = toScreen(F.x, F.y), rr = MISSILES[aimMsl.k].range*HS0*SQ3*view.s;
     ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(224,87,79,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(fx1, fy1, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(224,87,79,.04)'; ctx.fill(); ctx.restore(); }
@@ -8382,6 +8325,8 @@ const HB_ICO = {
   cup:'<svg class="hi cup" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 3.5h10v5.2a5 5 0 0 1-10 0z" fill="#dfe6e9" stroke="#33454c" stroke-width=".9"/><path d="M7 5.2H4.2v1.6A3.2 3.2 0 0 0 7.6 10M17 5.2h2.8v1.6A3.2 3.2 0 0 1 16.4 10" fill="none" stroke="#dfe6e9" stroke-width="1.6"/><path d="M10.6 13.4h2.8l.5 3.6h-3.8z" fill="#c5d2d6"/><path d="M7.6 17h8.8v3.4H7.6z" fill="#dfe6e9" stroke="#33454c" stroke-width=".9"/><path d="M9.6 5.6v3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".8"/></svg>'};
 /* missile pictures for the strip's dropdown (drawn here, original): side-view cruise missile, upright ballistic missile, silo hatch */
 function mslIcon(k, sz = 30){ const w = `width="${sz}" height="${sz}"`;
+  { const pic = k === 'cm' ? 'cruise-missile' : k === 'bm' ? 'ballistic-missile' : '';   // the owner's pictures once loaded (the cruise missile turned to a diagonal like the drawn one); the drawn ones below are the fallback
+    if (pic && ART.ready('i-' + pic)) return `<svg ${w} viewBox="0 0 32 32" aria-hidden="true"><image href="${ART.url('i-' + pic)}" x="1" y="1" width="30" height="30"${k === 'cm' ? ' transform="rotate(40 16 16)"' : ''}/></svg>`; }
   if (k === 'cm') return `<svg ${w} viewBox="0 0 32 32" aria-hidden="true"><g transform="rotate(-38 16 16)"><path d="M5 14.6h18.5l4.2 1.4-4.2 1.4H5z" fill="#c9d6de" stroke="#33454c" stroke-width=".8"/><path d="M23.5 14.6l4.2 1.4-4.2 1.4z" fill="#d42a2a"/><path d="M12 14.6 9.6 10h2.2l3.6 4.6zM12 17.4 9.6 22h2.2l3.6-4.6z" fill="#8fa3aa"/><path d="M5 14.6 2.6 12.2h1.8L7 14.6zM5 17.4 2.6 19.8h1.8L7 17.4z" fill="#8fa3aa"/><path d="M6 15.4h15" stroke="#fff" stroke-width=".7" opacity=".7"/></g><path d="M6.5 25.5c-1.6.8-3 1.2-4.5 1.2" stroke="#e8b923" stroke-width="1.6" stroke-linecap="round" opacity=".9"/></svg>`;
   if (k === 'bm') return `<svg ${w} viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.2c2.2 2 3.2 4.6 3.2 7.6v13.4h-6.4V9.8c0-3 1-5.6 3.2-7.6z" fill="#e3ecf1" stroke="#33454c" stroke-width=".8"/><path d="M16 2.2c2.2 2 3.2 4.6 3.2 7.6h-6.4c0-3 1-5.6 3.2-7.6z" fill="#d42a2a"/><path d="M12.8 13.5h6.4" stroke="#33454c" stroke-width=".8"/><path d="M12.8 18.5 9.4 23.4v2.2h3.4zM19.2 18.5l3.4 4.9v2.2h-3.4z" fill="#8fa3aa" stroke="#33454c" stroke-width=".6"/><path d="M14 23.2h4l.8 2.4h-5.6z" fill="#465c62"/><path d="M14.6 25.8c.3 1.8.8 3 1.4 4 .6-1 1.1-2.2 1.4-4z" fill="#e8b923"/><path d="M14.4 10.5v10" stroke="#fff" stroke-width=".8" opacity=".6"/></svg>`;
   return `<svg ${w} viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="20" rx="12" ry="6" fill="#2b3c43" stroke="#8fa3aa" stroke-width="1"/><ellipse cx="16" cy="18.4" rx="9" ry="4.2" fill="#465c62" stroke="#c5d2d6" stroke-width="1"/><path d="M16 14.2v8.4M7.2 18.4h17.6" stroke="#33454c" stroke-width="1.2"/><path d="M16 4.5v7M12.8 8.2 16 11.6l3.2-3.4" fill="none" stroke="#e8b923" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
@@ -9256,7 +9201,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
     return html; }
 function citySiloHTML(p){ let html = ''; const st = mstock(p);
-    html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.entries(MISSILES).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm">${M0.name} <b class="cost">×${st[k]}</b></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + TECH_BY[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`;  return html; }
+    html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.entries(MISSILES).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${st[k]}</b></span></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + TECH_BY[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`;  return html; }
 function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '';
     const c = S.cons[p];
     html += `<div class="eyebrow">Construction</div>`;
