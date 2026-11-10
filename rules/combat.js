@@ -1,4 +1,4 @@
-// Iron Meridian rules: combat. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: combat. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 // frontage: how many units can fight at once in a province; the rest wait in reserve and fight at 25%
 const FRONT_T = {mountain:0.6, urban:0.75, forest:0.8, tundra:0.9, hills:0.85, marsh:0.7, snow:0.75};

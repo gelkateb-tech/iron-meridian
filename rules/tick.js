@@ -1,4 +1,4 @@
-// Iron Meridian rules: tick. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: tick. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 /* ---------------- Simulation ---------------- */
 let tickVer = 0;
@@ -134,7 +134,7 @@ function tick(){
     } else if (owners.size === 0) S.cap[p] = null;
   }
   if (S.hour % 24 === 0){ diploDay(); daily(); }
-  for (let n = 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
+  for (let n = IM.cfg.allAI ? 0 : 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
   IM.emit('hour');
   visCache = null;
 }

@@ -2262,7 +2262,9 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 <script src="rules/vision.js"></script>
 <script src="rules/ai.js"></script>
 <script src="rules/tick.js"></script>
+<script src="rules/api.js"></script>
 <script>
+(() => {
 'use strict';
 
 /* ---------------- Art: the supplied images in assets/art ----------------
@@ -10169,4 +10171,5 @@ IM.on('restored', () => { if (SET.cb || S.nations.some(N => N.color0 && N.color0
 IM.on('over', () => { setSpeed(0); save(); showEnd(); });
 const boot = data => preload().then(() => start(data));
 if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
+})();
 </script>

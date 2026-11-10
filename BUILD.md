@@ -18,18 +18,45 @@ Each folder is a complete copy: `index.html` (the page to publish), `play.html` 
 | Files | What they are |
 |---|---|
 | `world.js` `lines.js` `coast.js` `coast-hi.js` | map data |
-| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` `rules/economy.js` `rules/trade.js` `rules/movement.js` `rules/diplomacy.js` `rules/combat.js` `rules/air.js` `rules/vision.js` `rules/ai.js` `rules/tick.js` | the game rules, 15 files (publish every `.js` file in `dist/public/rules/`) |
+| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` `rules/economy.js` `rules/trade.js` `rules/movement.js` `rules/diplomacy.js` `rules/combat.js` `rules/air.js` `rules/vision.js` `rules/ai.js` `rules/tick.js` `rules/api.js` | the game rules, 16 files (publish every `.js` file in `dist/public/rules/`) |
 | `units3d.js` | unit models |
 | `assets/` | pictures, flags and sounds |
 
 ## Rules files
 
-The game rules live in plain scripts in `rules/`, not in `index.html` (owner task 5; since step 9 no rule or AI declaration is left in the page: the hourly step `tick()` is in `rules/tick.js`, the AI in `rules/ai.js`). The page loads them with `<script src="rules/x.js">` after the map data and before its own script. A rules file has no DOM, canvas, `window`, `localStorage`, sound or camera code. It reports what happened through `IM.emit(...)` (`rules/core.js`), and the page subscribes with `IM.on(...)` (the `RULES EVENTS` block next to boot in `index.html`).
+The game rules live in plain scripts in `rules/`, not in `index.html` (owner task 5, finished in step 10). The page loads them with `<script src="rules/x.js">` after the map data and before its own script, in this order:
 
+| File | What it holds |
+|---|---|
+| `rules/core.js` | the namespace `IM`: the event sink (`IM.on` / `IM.emit`), run options (`IM.cfg`), client hooks (`IM.hook`), and the report shims `log` `toast` `sfx` `fx` |
+| `rules/data.js` | tables and constants (units, missiles, resources, terrain, buildings, research, doctrines), the seedable dice `rng()`, hex-grid maths, `PLAYER` |
+| `rules/map.js` | the world: provinces, neighbours, straits, links, resources, seasons and weather |
+| `rules/state.js` | scenarios, `newGame`, `saveJSON`, `restore` and the old-save upgrades |
+| `rules/research.js` `rules/production.js` | research slots; costs, building, mobilizing, training |
+| `rules/economy.js` `rules/trade.js` | yields, income, market and order book, unrest; trade routes, raids, escorts |
+| `rules/movement.js` `rules/diplomacy.js` | speeds, roads and rail, paths, orders, split and merge, supply; relations, wars, peace, coalitions, spies |
+| `rules/combat.js` `rules/air.js` `rules/vision.js` | battles and captures; air wings, drops, missiles, satellites; fog of war |
+| `rules/ai.js` `rules/tick.js` | the computer players; the hourly step `tick()` |
+| `rules/api.js` | `IM.api`: the names a host calls (`newGame` `restore` `saveJSON` `tick` `S` `G` and the order functions). Names only, no logic |
+
+The boundary:
+
+- A rules file has no DOM, canvas, `window`, `localStorage`, sound, timer, camera or `Math.random` code. Dice go through `rng()` (its state is `S.rs`, part of the save), so a seed replays exactly.
+- Rules report what happened with `IM.emit(...)`; the page subscribes with `IM.on(...)` (the `RULES EVENTS` block next to boot in `index.html`) and draws, plays sounds and saves as before. Handlers never call `rng()` and never change rule state.
+- The rules files are global scripts and share one scope. The page's own script is wrapped in `(() => { ... })();`, so the page can call any rule by its bare name, but a rules file cannot see a page name: the browser enforces the boundary. Tests reach page internals through `window.__im` (test build only), and rule names directly.
+- `PLAYER` is seat 0, one constant in `rules/data.js`. The rules still decide which dispatches are "for the player" by comparing with it; delivering dispatches per seat comes with the multiplayer server (it changes the save format, so it was left out of the split).
+- `IM.cfg.allAI = true` lets the AI play seat 0 as well (used by the headless run; off in the page, where play is unchanged).
+
+The checks:
+
+- `node tools/headless.js` runs the rules in plain Node with no browser: it loads `world.js`, `lines.js` and the rules files in the page's order, starts a world game, lets the AI play all nations for 30 days and prints a summary (nations alive, provinces per nation, wars, units, dice state, state hash). Options: `--days N`, `--seed N`. `node tools/headless.js --check` plays the same seed twice from scratch and exits 1 unless both summaries and state hashes are equal (about 30 s). Compare Node with Node only: Node and Chromium differ in the last digit of a few floats.
+- `node tools/split-lint.js` must exit 0: no page name, browser global, unknown global or `Math.random` in a rules file, no load-order problem, no name declared twice (it needs the `acorn` parser: `require('acorn')` or `/opt/node-tools`). `node tools/split-names.js` checks that no top-level name hides a browser global.
+- `node tools/split-golden.js 20` plays 20 fixed-seed days in the browser and compares one hash of the whole state per day with `tools/golden-12345.txt`. A change that is not meant to alter the rules must not change it; a change that is meant to must record a new golden file and say so in its commit.
 - The build copies every rules file the page loads to `dist/test/rules/` and `dist/public/rules/`, strips the markers the same way as in `index.html`, and checks them like the page. A `.js` file in `rules/` that the page does not load fails the build.
 - `bash tools/mkpage.sh` copies `rules/` to `.test/rules/` for the tests.
-- `node tools/split-golden.js 20` plays 20 fixed-seed days and compares one hash of the whole state per day with `tools/golden-12345.txt`. A step of the split must not change it.
-- `node tools/split-lint.js` must exit 0: no UI name, browser global, unknown global or `Math.random` in a rules file, no load-order problem, no name declared twice. With `--report` it lists what the rules files still reach in the UI (it needs the `acorn` parser: `require('acorn')` or `/opt/node-tools`). `node tools/split-plan.js` shows which declaration goes to which file, `node tools/split-move.js <file>` moves them, `node tools/split-names.js` checks that no top-level name hides a browser global, and `node tools/split-perf.js page.html` measures speed.
+- `tools/split-plan.js`, `tools/split-move.js` and `tools/split-perf.js` are the tools the split was done with (which declaration went to which file, the verbatim mover, a speed comparison); they are kept for reference.
+
+To publish, upload from `dist/public/`: `index.html`, `world.js`, `lines.js`, `coast.js`, `coast-hi.js`, `units3d.js`, every file in `rules/` (16 files, at `rules/<name>.js`), and `assets/`.
 
 ## Markers
 

@@ -1,4 +1,4 @@
-// Iron Meridian rules: state. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: state. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 const WORLD_POWERS = [
   {name:'United States',  country:'United States of America', color:'#3f7fe0'},

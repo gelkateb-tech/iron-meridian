@@ -1,4 +1,4 @@
-// Iron Meridian rules: map. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: map. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 /* ---------------- World map ---------------- */
 function loadWorld(){

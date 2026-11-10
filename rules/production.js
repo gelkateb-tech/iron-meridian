@@ -1,4 +1,4 @@
-// Iron Meridian rules: production. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: production. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = {cash:Math.round(U.cost*f), oil:U.oil, metal:Math.round(U.metal*f), iron:Math.round((U.iron || 0)*f), elec:Math.round((U.elec || 0)*f), rare:U.rare || 0, mp:U.mp};
   if (t === 'drone' && n >= 0 && S && S.nations[n]){ const lv = uavLv(n); c.elec += lv - 1; if (lv >= 4) c.rare += 2*(lv - 3); }   // better UAVs: more electronics, rare materials from the armed UAV IV

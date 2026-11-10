@@ -1,4 +1,4 @@
-// Iron Meridian rules: economy. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: economy. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 const graceFor = o => o >= 0 && S.nations[o].small ? 24*21 : GRACE_H;
 const inGrace = o => o >= 0 && S.hour < graceFor(o);

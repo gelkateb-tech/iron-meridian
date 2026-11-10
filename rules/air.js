@@ -1,4 +1,4 @@
-// Iron Meridian rules: air. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: air. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 const AIR_SPEED = 2.5;                // hexes per hour for aircraft on missions
 const AIR_RANGE = {jet:16, int:12, heli:6, drone:18, swarm:6, sdrone:20, bomb:34, mpa:22, awacs:18, asf:14};   // mission radius in hexes from the home airbase

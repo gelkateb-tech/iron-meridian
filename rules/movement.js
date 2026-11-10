@@ -1,4 +1,4 @@
-// Iron Meridian rules: movement. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: movement. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 const seaSpeed = a => ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);   // open water, no lane
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) ? seaSpeed(a)*(isLane(from, to) ? LANE_F : 1) : landSpeed(a);

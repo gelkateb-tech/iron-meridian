@@ -1,4 +1,4 @@
-// Iron Meridian rules: diplomacy. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: diplomacy. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 // relVer counts every change of a relation (the client redraws its relations map when it moves)
 let relVer = 0;

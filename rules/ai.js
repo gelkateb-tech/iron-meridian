@@ -1,4 +1,4 @@
-// Iron Meridian rules: ai. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: ai. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 // AI: escort its own threatened routes, raid its enemies' trade with submarines and warships
 function aiTrade(n){ const T = S.trade; if (!T || !S.nations[n].alive) return; const mine = T.routes.filter(r => trMine(r, n) && r.kind === 'sea');

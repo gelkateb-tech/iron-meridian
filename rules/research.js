@@ -1,4 +1,4 @@
-// Iron Meridian rules: research. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: research. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 // ---------- research rules: every nation runs two projects at once, slot #1 (N.research) and slot #2 (N.research2), each {id, h, h0} or null.
 // Both slots progress at full speed; a project's costs are paid when it starts; a project whose prerequisite is still running in the other slot

@@ -1,4 +1,4 @@
-// Iron Meridian rules: trade. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: trade. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 /* ---------------- V3 trade routes, blockades, convoy raids and escorts ----------------
    Powers that are not at war trade along routes: mostly sea lanes from port to port through the sea zones (the major shipping lanes are

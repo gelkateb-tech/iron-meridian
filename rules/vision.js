@@ -1,4 +1,4 @@
-// Iron Meridian rules: vision. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+// Iron Meridian rules: vision. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 // the player's fog-of-war set for this hour (null = work it out again); every rule that changes what can be seen clears it
 let visCache = null;

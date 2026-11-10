@@ -1,7 +1,7 @@
 // Rules split (owner task 5): the behaviour fingerprint. Plays a fixed-seed game for N days with no input and prints one hash of the whole
 // saved state per day. Every step of the split must print exactly the same hashes as the step before it (same rules, same AI, same dice).
 //   node tools/split-golden.js [days=10] [seed=12345] [page]      (run tools/mkpage.sh first; works the same when copied to tools/)
-// Needs newGame / tick / S / saveJSON reachable as globals (true since step 1: the game script is no longer wrapped in an IIFE).
+// newGame / tick / S / saveJSON are reached as globals: they are declared in the rules files (rules/*.js), which are global scripts.
 // With seed 12345 it also compares against tools/golden-12345.txt and exits 1 on a difference.
 const { chromium } = require('playwright'); const path = require('path'), TEST = path.join(process.env.IM_ROOT || path.join(__dirname, '..'), '.test'), fs = require('fs');
 (async () => { const days = +(process.argv[2] || 10), seed = +(process.argv[3] || 12345);
