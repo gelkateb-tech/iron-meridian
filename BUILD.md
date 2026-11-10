@@ -11,13 +11,29 @@ node tools/build.js
 | Test | `dist/test/` | the game, developer mode, and the test hooks (`window.__im` on `file://`) | playtesting and the automated tests |
 | Public | `dist/public/` | the game only. Every developer and test block is removed at build time. | **publishing** |
 
-Each folder is a complete copy: `index.html` (the page to publish), `play.html` (the same page in a full HTML document, so you can open it locally), `world.js lines.js coast.js coast-hi.js units3d.js`, and `assets/` (without `assets/art-src`, the source art the game never loads). The assets are hard-linked to the source files where the file system allows, so they take no extra disk space. Do not edit files inside `dist/`, because a hard-linked file is the source file. `dist/` is in `.gitignore`.
+Each folder is a complete copy: `index.html` (the page to publish), `play.html` (the same page in a full HTML document, so you can open it locally), `world.js lines.js coast.js coast-hi.js units3d.js`, the rules files `rules/*.js`, and `assets/` (without `assets/art-src`, the source art the game never loads). The assets are hard-linked to the source files where the file system allows, so they take no extra disk space. Do not edit files inside `dist/`, because a hard-linked file is the source file. `dist/` is in `.gitignore`.
 
-**To publish, use `dist/public`:** publish `index.html` as the page, plus the five scripts and `assets/` at the same relative paths. Do not publish `play.html`.
+**To publish, use `dist/public`:** publish `index.html` as the page, plus these files at the same relative paths. Do not publish `play.html`.
+
+| Files | What they are |
+|---|---|
+| `world.js` `lines.js` `coast.js` `coast-hi.js` | map data |
+| `rules/core.js` | the game rules (the list grows as the rules split goes on: publish every `.js` file in `dist/public/rules/`) |
+| `units3d.js` | unit models |
+| `assets/` | pictures, flags and sounds |
+
+## Rules files
+
+The game rules are moving out of `index.html` into plain scripts in `rules/` (owner task 5). The page loads them with `<script src="rules/x.js">` after the map data and before its own script. A rules file has no DOM, canvas, `window`, `localStorage`, sound or camera code. It reports what happened through `IM.emit(...)` (`rules/core.js`), and the page subscribes with `IM.on(...)` (the `RULES EVENTS` block next to boot in `index.html`).
+
+- The build copies every rules file the page loads to `dist/test/rules/` and `dist/public/rules/`, strips the markers the same way as in `index.html`, and checks them like the page. A `.js` file in `rules/` that the page does not load fails the build.
+- `bash tools/mkpage.sh` copies `rules/` to `.test/rules/` for the tests.
+- `node tools/split-golden.js 20` plays 20 fixed-seed days and compares one hash of the whole state per day with `tools/golden-12345.txt`. A step of the split must not change it.
+- `node tools/split-lint.js --report` lists what the rules files still reach in the UI (it needs the `acorn` parser: `require('acorn')` or `/opt/node-tools`). `node tools/split-plan.js` shows which declaration goes to which file, `node tools/split-move.js <file>` moves them, `node tools/split-names.js` checks that no top-level name hides a browser global, and `node tools/split-perf.js page.html` measures speed.
 
 ## Markers
 
-Code that only the test build may contain goes between markers in `index.html` and `units3d.js` (the build strips both; the other map scripts have no markers and are copied as they are):
+Code that only the test build may contain goes between markers in `index.html`, `units3d.js` and `rules/*.js` (the build strips all of them; the other map scripts have no markers and are copied as they are):
 
 | Kind | JS / CSS | HTML |
 |---|---|---|
@@ -37,9 +53,9 @@ Code that only the test build may contain goes between markers in `index.html` a
 After writing both folders, `tools/build.js` checks the public build and exits non-zero if any check fails:
 
 - no marker text is left;
-- none of the developer or test names in `DEV_NAMES` appear (`DEV`, `devPanel`, `devSpawn`, `__im`, `TMDBG`, `__BAKE`, ...), in the page or in any of the five scripts;
+- none of the developer or test names in `DEV_NAMES` appear (`DEV`, `devPanel`, `devSpawn`, `__im`, `TMDBG`, `__BAKE`, ...), in the page, in any of the five scripts or in any rules file;
 - no `window.__<name>` global is read or set anywhere (a generic check, so a new debug switch left outside a block fails the build even before it is added to `DEV_NAMES`);
-- every inline `<script>` parses (`vm.Script`), and so does the stripped `units3d.js`;
+- every inline `<script>` parses (`vm.Script`), and so do the stripped `units3d.js` and every rules file;
 - the public page is smaller than the test page.
 
 It also checks that the test build has no marker text left and that its scripts parse. At the end it prints the sizes and the number of blocks it stripped.

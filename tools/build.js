@@ -3,7 +3,7 @@
 //   dist/test/    the test build: every @DEV and @TEST block kept (developer mode, window.__im test hooks), only the marker comments removed
 //   dist/public/  the public build: every @DEV and @TEST block removed. This is the one to publish.
 // Each holds index.html (the page to publish), play.html (the same page wrapped in a full document, to open locally), the five map/model
-// scripts and assets/.
+// scripts, the rules files (rules/*.js, the ones the page loads) and assets/.
 // Markers (see BUILD.md):  JS / CSS  /*@DEV*/ ... /*@ENDDEV*/   /*@TEST*/ ... /*@ENDTEST*/
 //                          HTML      <!--@DEV--> ... <!--@ENDDEV-->   <!--@TEST--> ... <!--@ENDTEST-->
 // Then it verifies the public build and exits non-zero on any failure.
@@ -12,7 +12,8 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 
 const ROOT = path.join(__dirname, '..'), DIST = path.join(ROOT, 'dist');
-const SCRIPTS = ['world.js', 'lines.js', 'coast.js', 'coast-hi.js', 'units3d.js'];
+const BASE_SCRIPTS = ['world.js', 'lines.js', 'coast.js', 'coast-hi.js', 'units3d.js'];
+let SCRIPTS = BASE_SCRIPTS;   // main() adds the rules files the page loads (<script src="rules/x.js">)
 const QUIET = process.argv.includes('--quiet');
 const SKIP_ASSETS = new Set(['art-src']);   // source art for tools/prep-art.py: never loaded by the game, so left out of both builds
 // names that exist only in developer mode or the test hooks: none of them may survive in the public build
@@ -72,7 +73,7 @@ function linkTree(from, to, top = true){ let n = 0, bytes = 0; fs.mkdirSync(to, 
 function writeBuild(name, html, js){ const dir = path.join(DIST, name); fs.rmSync(dir, {recursive:true, force:true}); fs.mkdirSync(dir, {recursive:true});
   fs.writeFileSync(path.join(dir, 'index.html'), html);   // the page as published (a fragment: the Artifact host adds the document skeleton)
   fs.writeFileSync(path.join(dir, 'play.html'), SKELETON[0] + html + SKELETON[1]);   // the same page as a whole document, for opening locally (not for publishing)
-  for (const f of SCRIPTS){ const a = path.join(ROOT, f), b = path.join(dir, f);
+  for (const f of SCRIPTS){ const a = path.join(ROOT, f), b = path.join(dir, f); fs.mkdirSync(path.dirname(b), {recursive:true});
     if (js[f] !== undefined){ fs.writeFileSync(b, js[f]); continue; }   // a script with markers: its stripped text
     try { fs.linkSync(a, b); } catch (e) { fs.copyFileSync(a, b); } }
   const as = fs.existsSync(path.join(ROOT, 'assets')) ? linkTree(path.join(ROOT, 'assets'), path.join(dir, 'assets')) : {n:0, bytes:0};
@@ -86,11 +87,18 @@ function main(){
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const test = strip(src, () => true), pub = strip(src, () => false);
   const fails = [];
+  // the rules files: every <script src="rules/x.js"> of the page, in load order; a file in rules/ that the page does not load is an error
+  const RULES = [...src.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
+  SCRIPTS = BASE_SCRIPTS.concat(RULES);
+  const onDisk = fs.existsSync(path.join(ROOT, 'rules')) ? fs.readdirSync(path.join(ROOT, 'rules')).filter(f => /\.js$/.test(f)).map(f => 'rules/' + f) : [];
+  for (const f of onDisk) if (!RULES.includes(f)) fails.push(`${f} is not loaded by index.html (add its <script> tag or remove the file)`);
+  for (const f of RULES) if (!pub.html.includes(`<script src="${f}"></script>`)) fails.push(`public build: the <script> tag of ${f} is missing`);
   // the map/model scripts: the ones with markers (units3d.js) are stripped the same way, the rest are linked as they are
   const jsT = {}, jsP = {}, jsSrc = {};
   for (const f of SCRIPTS){ const a = path.join(ROOT, f); if (!fs.existsSync(a)) throw new Error('missing ' + f);
     const code = fs.readFileSync(a, 'utf8'); jsSrc[f] = code;
-    if (!tokens(code).length) continue;
+    const isRule = RULES.includes(f);   // rules files are always written out and parse-checked, markers or not
+    if (!tokens(code).length && !isRule) continue;
     let t, p; try { t = strip(code, () => true); p = strip(code, () => false); } catch (e) { throw new Error(f + ': ' + e.message); }
     jsT[f] = t.html; jsP[f] = p.html; test.B.push(...t.B.map(b => Object.assign({}, b, {file:f})));
     for (const [nm, c] of [['test', t.html], ['public', p.html]]){ try { new vm.Script(c, {filename:f}); } catch (e) { fails.push(`${nm} build: ${f} does not parse: ${e.message}`); } } }
@@ -115,7 +123,7 @@ function main(){
     console.log(`  source     index.html ${kb(Buffer.byteLength(src))}${Object.keys(jsT).length ? ' + ' + Object.keys(jsT).join(' ') : ''}: ${n('DEV')} @DEV blocks (${nl('DEV')} lines), ${n('TEST')} @TEST blocks (${nl('TEST')} lines)`);
     console.log(`  test       ${path.relative(ROOT, T.dir)}/index.html ${kb(Buffer.byteLength(test.html))}  (developer mode + test hooks)`);
     console.log(`  public     ${path.relative(ROOT, P.dir)}/index.html ${kb(Buffer.byteLength(pub.html))}  (${test.B.length} blocks stripped, ${kb(Buffer.byteLength(test.html) - Buffer.byteLength(pub.html))} smaller)`);
-    console.log(`  each build + play.html (local run) + ${SCRIPTS.join(' ')} + assets/ without art-src (${T.assets.n} files, ${(T.assets.bytes/1048576).toFixed(1)} MB, hard-linked where possible)`);
+    console.log(`  each build + play.html (local run) + ${BASE_SCRIPTS.join(' ')} + ${RULES.length} rules file${RULES.length === 1 ? '' : 's'} (${RULES.join(' ') || 'none'}) + assets/ without art-src (${T.assets.n} files, ${(T.assets.bytes/1048576).toFixed(1)} MB, hard-linked where possible)`);
     console.log(fails.length ? 'VERIFY FAILED\n  ' + fails.join('\n  ') : `  verify     public build OK: no markers, none of ${DEV_NAMES.length} developer/test names, ${inlineScripts(pub.html).length} inline scripts and ${Object.keys(jsP).join(' ') || 'no'} stripped scripts parse, no window.__ debug globals, smaller than test`);
     console.log('  publish    dist/public'); }
   if (fails.length){ fs.rmSync(P.dir, {recursive:true, force:true}); console.log('  dist/public removed: fix the source and build again'); process.exit(1); }   // never leave a failed public build to publish

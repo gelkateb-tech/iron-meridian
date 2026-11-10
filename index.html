@@ -2243,12 +2243,12 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 <script src="lines.js"></script>
 <script src="coast.js"></script>
 <script src="coast-hi.js"></script>
+<script src="rules/core.js"></script>
 <!--@TEST-->
 <script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script><script src="terrcells.js"><\/script>'); }</script>
 <!--@ENDTEST-->
 <script src="units3d.js"></script>
 <script>
-(() => {
 'use strict';
 const WORLD = window.WORLD;
 
@@ -4462,7 +4462,7 @@ function musicTick(now){ if (SET.music === false || !AC) return; if (!MUS){ MUS 
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.012, t0 + 2.5); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(f); f.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.1); }
   if (war) for (let i = 0; i < 8; i++){ const o = AC.createOscillator(), g = AC.createGain(), tt = t0 + i*0.9; o.type = 'sine'; o.frequency.value = r/2; g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(0.05, tt + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.5); o.connect(g); g.connect(master); o.start(tt); o.stop(tt + 0.6); }
   MUS.step++; MUS.next = t0 + dur - 1.5; }
-function sfx(name){ if (muted || !booted) return; const now = performance.now(); if (lastSfx[name] && now - lastSfx[name] < 400) return; lastSfx[name] = now; try { SFX[name] && SFX[name](); } catch (e) {} }
+function sfxPlay(name){ if (muted || !booted) return; const now = performance.now(); if (lastSfx[name] && now - lastSfx[name] < 400) return; lastSfx[name] = now; try { SFX[name] && SFX[name](); } catch (e) {} }
 document.addEventListener('pointerdown', e => { if (!muted) audio(); if (AC && AC.state === 'suspended') AC.resume(); const md = document.getElementById('modes'); if (md && md.classList.contains('open') && !md.contains(e.target)) md.classList.remove('open'); }, {capture:true});
 const FX = [];
 // ---- particle system (world-anchored, pixel offsets) ----
@@ -4944,7 +4944,7 @@ function sunSinEl(p){ const hb = Math.floor(sunHr(S.hour + (S.speed && !S.over ?
   const cc = G.P[p].cc, lat = cellLat(cc)*Math.PI/180, lon = WORLD.lon0 + ((cc % W) + 0.5)/W*360;
   v = Math.sin(lat)*SUNP.sd + Math.cos(lat)*SUNP.cd*Math.cos((lon - SUNP.sl)*Math.PI/180); SUNP.v[p] = v; return v; }
 function isNight(p){ return G.P[p] ? sunSinEl(p) < -0.04 : viewLight().day < 0.35; }
-function fx(type, p, extra = {}){ if (!booted) return;
+function fxAdd(type, p, extra = {}){ if (!booted) return;
   if (type === 'dmg' && extra.owner != null && extra.val != null){ const now = performance.now(), f0 = FX.find(f => f.type === 'dmg' && f.p === p && f.owner === extra.owner && now - f.t0 < 1000 && now - (f.born || f.t0) < 3500);
     if (f0){ f0.val += extra.val; f0.text = `−${Math.round(f0.val)}`; f0.t0 = now - 120; return; } }
   if (type === 'dmg' || type === 'hits'){ const now = performance.now(); if (FX.some(f => f.type === type && f.p === p && now - f.t0 < 280 && (f.dx || 0) === (extra.dx || 0))) return; } FX.push({type, p, t0:performance.now(), born:performance.now(), ...extra}); if (FX.length > 90) FX.shift(); }
@@ -4978,9 +4978,8 @@ function drawFX(now){
     } else if (f.type === 'boom'){
       ctx.save(); plateClipOn(); ctx.globalAlpha = (1 - k)*0.8; ctx.fillStyle = '#ffb08a'; ctx.beginPath(); ctx.arc(x, y - 24, 6 + k*20, 0, Math.PI*2); ctx.fill(); ctx.restore();
     } } }
-function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if (S.started) achLog(text); if (S.log.length > 80) S.log.length = 80; if (kind && booted && SET.toasts !== 'none' && (SET.toasts === 'all' || kind === 'bad')) toast(text, kind, p); }
 let booted = false;
-function toast(text, kind, p){
+function toastShow(text, kind, p){
   const box = document.getElementById('toasts'); if (!box) return;
   const el = document.createElement('button'); el.className = 'toast ' + kind; el.textContent = text; const fl = textFlag(text, 13) + textUnit(text); if (fl) el.insertAdjacentHTML('afterbegin', fl);
   if (p != null){ el.dataset.act = 'goto'; el.dataset.id = p; }
@@ -6859,7 +6858,6 @@ function aiSpies(n){
 }
 
 /* ---------------- Simulation ---------------- */
-function alarm(){ if (S.speed > 1){ S.speed = 1; } sfx('alarm'); }
 let tickVer = 0;
 // the hour steps of production, construction, unit upgrades and research (one province / nation each; tick() runs them every game hour)
 function prodHour(p){ const q = S.queue[p];
@@ -7198,7 +7196,6 @@ function recordStats(){
   const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id)).findIndex(N => N.id === PLAYER) + 1;
   if (rank && (!st0.bestRank || rank < st0.bestRank)){ st0.bestRank = rank; st0.bestRankDay = day + 1; }
 }
-const bump = (k, v = 1) => { const st0 = S.stats || (S.stats = {}); st0[k] = (st0[k] || 0) + v; };
 function daily(){
   if (S.airHit) for (const k in S.airHit){ const H = S.airHit[k]; for (const j in H) if (typeof H[j] === 'number') H[j] *= 0.7; if (H.bp) for (const q in H.bp) if (S.hour - H.bp[q] > 96) delete H.bp[q]; }   // air-raid memory fades
   marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay(); tradeDay(); INCC.v = -1;
@@ -13045,7 +13042,9 @@ function preload(){
   if (window.U3D && U3D.loadBaked) tasks.push(U3D.loadBaked('assets/units/').catch(() => { if (U3D.canRender()) U3D.warmup(); }));
   return Promise.race([Promise.all(tasks), new Promise(r => setTimeout(r, 6000))]);
 }
+/* ---------------- RULES EVENTS: what the rules files (rules/*.js) report through IM.emit, and what this page does about it ---------------- */
+IM.on('log', (text, kind, p) => { if (S.started) achLog(text); if (kind && booted && SET.toasts !== 'none' && (SET.toasts === 'all' || kind === 'bad')) toastShow(text, kind, p); });
+IM.on('toast', toastShow); IM.on('sfx', sfxPlay); IM.on('fx', fxAdd); IM.on('geo', () => { geoDirty = true; });
 const boot = data => preload().then(() => start(data));
 if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
-})();
 </script>
