@@ -11,6 +11,11 @@ const IM = { subs:{}, cfg:{allAI:false}, hook:{approach:a => null, surpriseOk:o 
   on(t, f){ (this.subs[t] || (this.subs[t] = [])).push(f); },
   emit(t, a, b, c, d){ const L = this.subs[t]; if (L) for (let i = 0; i < L.length; i++) L[i](a, b, c, d); } };
 
+/*@DEV*/
+// developer switches (test build only; all off unless the client turns one on): the developer rules in rules/production.js read them
+const DEV = {instant:false, research:false, res:false, reveal:false}, DEV_FILL = 500000;
+/*@ENDDEV*/
+
 // ---- reports: the names the rules have always called; each one tells the client and nothing else
 // the player's dispatch list (part of the save); the client shows it and may pop a toast
 function log(text, kind, p = null){ S.log.unshift({h:S.hour, text, kind, p}); if (S.log.length > 80) S.log.length = 80; IM.emit('log', text, kind, p); }

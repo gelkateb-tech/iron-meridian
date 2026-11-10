@@ -18,7 +18,7 @@ Each folder is a complete copy: `index.html` (the page to publish), `play.html` 
 | Files | What they are |
 |---|---|
 | `world.js` `lines.js` `coast.js` `coast-hi.js` | map data |
-| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` | the game rules (the list grows as the rules split goes on: publish every `.js` file in `dist/public/rules/`) |
+| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` | the game rules (the list grows as the rules split goes on: publish every `.js` file in `dist/public/rules/`) |
 | `units3d.js` | unit models |
 | `assets/` | pictures, flags and sounds |
 
@@ -44,7 +44,7 @@ Code that only the test build may contain goes between markers in `index.html`, 
 - The public build removes the markers and everything between them. If a marker stands alone on its line, the whole line goes.
 - Blocks never nest, and every block opens and closes with the same kind and syntax. The build stops with an error otherwise.
 - Fence whole statements, such as `/*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/`, so the code still parses when a block is removed. Never put a marker inside an expression.
-- Developer rule overrides sit next to the rules they change (`devHour` / `devDone` / `devSpawn` next to `tick()`, the reveal override in `visibleSet` / `armyVisible`). They always call the game's own rule functions: `startResearch`, `researchHour`, `consHour`, `prodHour`, `engHour`, `addArmy`. The panel sits with the UI code next to `setSpeed`.
+- Developer rule overrides sit next to the rules they change (`devFill` / `devDone` / `devHour` / `devResearchAll` / `devSpawn` at the end of `rules/production.js`, the reveal override in `visibleSet` / `armyVisible`). The switches they read, `DEV` and `DEV_FILL`, are in `rules/core.js`; the page loads the saved switches into `DEV` from `localStorage` and keeps `DEV_KEY`, `DEV_SPEEDS` and `devSave`. They always call the game's own rule functions: `startResearch`, `researchHour`, `consHour`, `prodHour`, `engHour`, `addArmy`. The panel sits with the UI code next to `setSpeed`.
 - If you add a dev-only name, add it to `DEV_NAMES` in `tools/build.js` so the public check catches any reference left outside a block.
 - Test hooks are `@TEST` blocks too: `window.__im` and its `file://` extensions, the debug collections (`TMDBG`, `PGHOST`, `LAYEV`, `window.__dbgBoxes` with `tagDbg` / `pnDbg` / `labDbg`, the layout timers `PLAY_MS` / `PLAY_N`), the `?bake` page used by `tools/bake-assets.js` (the script that sets `window.__BAKE` and every statement that reads it, in `index.html` and `units3d.js`), and the `?artall` switch (loads every optional art file). A test or debug global is named `window.__<name>`; declare and read it only inside `@TEST` blocks.
 
