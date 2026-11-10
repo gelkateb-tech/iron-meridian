@@ -543,3 +543,38 @@ the patch is /home/user/iron-meridian-eco/.test/eco-proto.js), then `node .test/
 5. **Rare city placement** is by nearest city to the deposit, which makes Istanbul and Sao Paulo rare cities rather than
    the industrial cities they are. A hand-written override table (country -> city) would be easy to add if the owner
    prefers other cities; the totals do not depend on which city it is.
+
+---
+
+## 14. As implemented (branch economy-v1)
+
+The rules follow this document, with two deliberate differences, and the tables were measured again on the real rules
+(`node .test/eco-measure.js`, six seeds, against today's rules at 140d490).
+
+1. **Exports go through the order book only.** Section 8.4 let an exporter with a listing already out also sell 12 to 50 a
+   day on the world market. That broke the standing market rule (and its test, .test/v3mkt): only a cash-poor power's
+   materials hoard is ever sold on the world market, because dumping flattened prices for everyone. So an AI exporter now
+   keeps one listing of up to 120 per good on the order book at 98% of the world price, and importers buy from the listings
+   first. Prices stay closer to base than in section 10.2 (day 30: oil 3.19, materials 2.12, iron 2.72, electronics 4.37,
+   rare 7.30).
+2. **The Army Base speeds up ground units only** (open point 1): the units an Army Base or a Recruiting Office mobilizes.
+   Aircraft and ships keep the Airbase and Naval Yard bonuses.
+
+World gross income a day, six-seed mean, before > after:
+
+| Day | Money | Oil | Materials | Iron | Electronics | Rare | Manpower |
+|---|---|---|---|---|---|---|---|
+| 1 | 4117 > 4494 (+9%) | 502 > 510 (+2%) | 319 > 348 (+9%) | 295 > 296 (0%) | 86 > 90 (+5%) | 89 > 101 (+13%) | 901 > 959 (+6%) |
+| 10 | 4199 > 4269 (+2%) | 473 > 483 (+2%) | 299 > 323 (+8%) | 279 > 282 (+1%) | 89 > 86 (-3%) | 140 > 130 (-7%) | 994 > 1036 (+4%) |
+| 20 | 4120 > 4028 (-2%) | 453 > 446 (-1%) | 292 > 309 (+6%) | 267 > 268 (0%) | 82 > 82 (-1%) | 136 > 121 (-11%) | 1009 > 1020 (+1%) |
+| 30 | 3935 > 3851 (-2%) | 447 > 427 (-4%) | 292 > 309 (+6%) | 273 > 276 (+1%) | 78 > 78 (-1%) | 134 > 122 (-9%) | 1034 > 1023 (-1%) |
+
+Day 30, before > after: upkeep money 1912 > 1866, oil 197 > 204, iron 97 > 100, electronics 11 > 13; units 1439 > 1432;
+techs researched 98 > 98; prices oil 3.06 > 3.19, materials 2.33 > 2.12, iron 2.57 > 2.72, electronics 3.95 > 4.37,
+rare 7.71 > 7.30; all 15 nations alive in all six runs, no nation with an empty stock and a negative balance.
+Buildings at day 30 (levels, mean): Army Bases 59 (factories 77 before), Arms Industry 52, Recruiting Offices 122 (119),
+Naval Yards 28 (21), Airbases 24 (22). World-market buying, seed 12345: 3,362 > 9,278; order-book listings at day 30: 8 > 28.
+Single seeds at day 30: money -13..+9%, oil -12..+5%, materials 0..+11%, iron -4..+4%, electronics -10..+7%, rare -16..-4%.
+
+Checks: `node tools/eco-check.js` (city resources, buildings, every playable nation of the three scenarios, an old save),
+`node tools/headless.js --check`, tools/golden-12345.txt regenerated.
