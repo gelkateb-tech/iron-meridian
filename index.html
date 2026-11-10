@@ -7612,7 +7612,7 @@ function ovIn(){ if (!OV.on || ctx === OV.g) return; const m = MCTX, g = OV.g; O
 function ovOut(){ if (ctx !== OV.g) return; ctx = MCTX; dpr = OV.md; }
 const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
 const view = {s:1, x:0, y:0};
-let dpr = 1, cw = 0, ch = 0, hits = [], marks = [], hoverProv = -1, hoverPath = null, visCache = null, mouse = null, relMode = false, mapMode = 'political';
+let dpr = 1, cw = 0, ch = 0, hits = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, visCache = null, mouse = null, relMode = false, mapMode = 'political';
 // resources map: each province tinted by its strongest output against a typical yield of that good
 const RMAP_K = ['oil', 'rare', 'iron', 'metal', 'elec', 'mp', 'cash'], RMAP_W = {cash:12, oil:5, metal:3, iron:2.5, elec:2, rare:1.2, mp:2};
 const RMAP_C = {oil:'rgba(28,30,36,.78)', metal:'rgba(150,165,178,.6)', iron:'rgba(200,120,80,.62)', elec:'rgba(80,195,220,.55)', rare:'rgba(178,128,240,.68)', mp:'rgba(210,165,120,.5)', cash:'rgba(222,192,92,.5)'};
@@ -7816,7 +7816,6 @@ function catmull(p0, p1, p2, p3, t){ const t2 = t*t, t3 = t2*t, f = (a0, a1, a2,
   // keep the curve gentle: blend toward the straight line so it never overshoots badly
   const cx = f(p0[0], p1[0], p2[0], p3[0]), cy = f(p0[1], p1[1], p2[1], p3[1]), lx = p1[0] + (p2[0] - p1[0])*t, ly = p1[1] + (p2[1] - p1[1])*t; return [lx*0.45 + cx*0.55, ly*0.45 + cy*0.55]; }
 function roundRect(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
-function star(x, y, R){ ctx.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? R*0.45 : R, a = -Math.PI/2 + i*Math.PI/5; ctx.lineTo(x + r*Math.cos(a), y + r*Math.sin(a)); } ctx.closePath(); }
 // fog of war in one fill: the dark veil with the hatch already composited on top ('over' is associative, so this matches veil-then-hatch)
 // a: hatch opacity (the map used to soften it with a blur at close zoom, so callers fade it the same way); one cached pattern per level
 const fogPat = new Map();
@@ -7954,14 +7953,14 @@ const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max
    and the sharper m-<type>-hi.webp, fetched the first time a model of that type is wanted; the hi sheet only when the model is drawn large on the
    screen, and dropped again when it has not been drawn for a while); the level is picked by the model's size in device pixels.
    WORLD-ANCHORED, like the cities: every force has a spot on the map in world units (provLayout: its province's spot plus a slot of its own,
-   chosen once for the forces standing there, clear of the city marker, its name and your HQ; a marching force: its smoothed position, easing
+   chosen once for the forces standing there, clear of the city's point, its name and your HQ; a marching force: its smoothed position, easing
    off its old slot and onto its new one). Its models stand on the ground just under that spot in a rigid formation (world units: slot 0 the
    most numerous type in front, the others left and right a little back; up to four models, fewer in a small province, all fading in together
    from the zoom where a soldier is ~16 css px tall) and its counter is pinned PLATE_GAP px above the top of them at one pixel size: the spot is a
    pure function of the game state, never of the zoom, so zooming only scales the models with the map (they grow like the cities), the counter
    keeps labelling its troops and nothing ever slides. Counters that would touch fade in place (plateFade). They face the way they
    march, their enemy in a battle or a fixed bearing of their own at rest (16 directions with hysteresis), are never offset per frame, and are
-   lit like the map (drawNight's daylight lift, dusk glow and night multiply). Drawn over the path lines and under the names, city markers,
+   lit like the map (drawNight's daylight lift, dusk glow and night multiply). Drawn over the path lines and under the names,
    the HQ and the counters. Independent garrisons show none unless selected or fighting; wings in flight keep their flat icons.
    Settings: 'Troop models'. */
 const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
@@ -8083,9 +8082,9 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW(); let E = TMFORM.get
 /* ---------------- World anchors: where each force stands ----------------
    The forces standing in a province (one per holder and kind: ground 'g', naval 's', parked air 'a'; a role 'g3:2' = ground force of power 3
    showing 2 models) get their spots once, in world units, by provLayout: yours first, then the others by power, each the cheapest spot of a grid
-   round the province's spot, checked at a few zooms against what keeps a pixel size (the city marker and name, your HQ, other cities, the
+   round the province's spot, checked at a few zooms against what keeps a pixel size (the city's point and name, your HQ, other cities, the
    counters) and against the forces placed before it (in this and the nearby provinces; the two sides of a battle keep a gap): ground forces on
-   land, fleets on the water, inside their province where they fit, near its spot, above a city's marker. A spot changes only when the forces
+   land, fleets on the water, inside their province where they fit, near its spot, above a city's point. A spot changes only when the forces
    there change (then it glides there), never with the zoom. */
 let LAY_R = null;   // this frame's roles (draw)
 /*@TEST*/const LAYEV = new Map();/*@ENDTEST*/
@@ -8107,7 +8106,7 @@ function tmRoleAdd(R, a){ if (a.fly || a.pos || a.to !== null || (a.path.length 
 function roleOf(p, e){ if (e.r) return e.r; const u = tmUnits(e.list), naval = Object.keys(u).every(t => t === 'lst' || (UNITS[t] && UNITS[t].cls === 'naval'));
   const cls = e.air ? 'a' : G.P[p].sea || naval ? 's' : 'g'; return (e.r = roleStr(cls, e.owner, u, p)); }
 function rolesAt(R, p){ const M = R.get(p); return M ? [...M.values()].map(e => roleOf(p, e)) : []; }
-// your HQ's box beside your capital's star at its own bearing (css px from the star), or null
+// your HQ's box beside your capital at its own bearing (css px from the capital's point), or null
 function hqBoxPx(p){ const N = S.nations[PLAYER]; if (!N || !N.alive || N.capital !== p || S.owner[p] !== PLAYER) return null;
   const K = 1.6, P0 = G.P[p], R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*2, th = hqBearing(p), ux = Math.cos(th), uy = Math.sin(th);
   const parts = [[9, 0.5, 23, 12], [7, 11.5, 24, 22], [3.5, 22, 27, 29], [9.5, 29, 21.5, 34]].map(r => r.map(v => v*K));
@@ -8129,7 +8128,7 @@ function layoutCompute(p, roles){
     obs.push({wx:Q.x, wy:Q.y, b:[-r, -r, r, r], k:own ? 'mk' : 'omk'});
     const f = cq ? 12.5 : 10.5 + tq*0.6; ctx.font = `${cq || tq === 2 ? 600 : 500} ${f}px ${BODY}`; const w = ctx.measureText(Q.cityName || Q.name).width + 8;
     obs.push({wx:Q.x, wy:Q.y, b:[-w/2, 20, w/2, 25 + f], k:own ? 'nm' : 'onm'});
-    obs.push({wx:Q.x, wy:Q.y, b:[-w/2, -r - f - 6, w/2, -r + 1], k:'nm2'}); };   // (where the name goes when something sits under the marker)
+    obs.push({wx:Q.x, wy:Q.y, b:[-w/2, -r - f - 6, w/2, -r + 1], k:'nm2'}); };   // (where the name goes when something sits under the city's point)
   // a countryside province's own name (at its centre, from the zoom it shows at)
   const provObs = (q, own) => { const Q = G.P[q], L = G.lakeLab && G.lakeLab.get(q), z0 = 16*HS0/(Math.sqrt(Q.cells.length)*HS); ctx.font = `400 10px ${BODY}`; const w = ctx.measureText(Q.name).width + 8;
     obs.push({wx:L ? L[0] : Q.x, wy:L ? L[1] : Q.y, b:[-w/2, -7, w/2, 8], k:own ? 'pnm' : 'onm', z0}); };
@@ -8626,10 +8625,10 @@ function trayCanvas(p, its, D, col){ const sig = D.g + '|' + D.cols + col + dpr 
     trayPips(g, t.k, t.lvl, cx, top, D); });
   TRAYC.set(p, {sig, cv}); return cv; }
 // place the trays (city ones right after the city names, the countryside ones after the province names): under the placed name, else
-// beside or above it, else around the city marker; a long tray that finds no room tries again on two lines. A spot over a name, a unit
-// plate, a control or a city marker is never taken: with no free spot the tray is left out.
+// beside or above it, else around the city's point; a long tray that finds no room tries again on two lines. A spot over a name, a unit
+// plate, a control or a city's point is never taken: with no free spot the tray is left out.
 function placeTrays(trq, boxes, LPL, cityPass, hexPx){ const out = [];
-  const free = r => !boxes.some(q => q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1]) && !marks.some(m => m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3]);
+  const free = r => !boxes.some(q => q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1]) && !cityPts.some(m => m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3]);
   for (const T of trq){ if (!!T.city !== cityPass) continue; const b = LPL.get(T.p);
     for (const rows of T.items.length >= 3 ? [1, 2] : [1]){ const D = trayDims(T.items.length, hexPx, rows), w = D.w, h = D.h, cand = [];
       if (b){ const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2; cand.push([cx - w/2, b[3] + 1], [b[0], b[3] + 1], [b[2] - w, b[3] + 1], [b[2] + 3, cy - h/2], [b[0] - 3 - w, cy - h/2], [cx - w/2, b[1] - 1 - h]); }
@@ -8667,15 +8666,11 @@ function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.
    city panel and the build menu. On the map the buildings are symbols (see 'Buildings on the map' above) and the city is part of the map
    (see 'Cities on the map' below). */
 const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo'};
-const ART_PX = 46;   // close zoom: ground patterns on the map, and the city marker steps back so the built-up area shows around it
+const ART_PX = 46;   // close zoom: ground patterns on the map
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
 // (a picture not loaded yet is asked for, and an empty plate of the same size holds its place: no layout jump when it arrives)
 const bimg = (k, l, px = 22, dim = false) => { if (k !== 'city' && !BART[k]) return ''; const n = bartName(k, l); if (ART.failed(n)) return ''; if (!ART.ready(n)) ART.want(n);
   return `<i class="bi${dim ? ' dim' : ''}" style="--bi:${ART.ready(n) ? `url(${ART.url(n)})` : 'none'};--bs:${px}px" aria-hidden="true"></i>`; };
-const PLATE_MK = 0.48;   // city marker scale at close zoom, so the built-up area shows around it
-// the marker steps back as the urban area grows on screen (from the mid zoom), so the city is never hidden under its own marker
-const cityPlateK = (P, p, vis) => P.city && vis.has(p) && cityArtOn ? 1 - (1 - PLATE_MK)*Math.max(0, Math.min(1, (view.s*HS0 - 12)/10))*cityFade(view.s*HS0) : 1;
-let cityArtOn = false;   // all city art loaded (set once a frame)
 /* ---------------- Cities on the map: urban areas in world coordinates ----------------
    Every city is part of the map itself, not a sticker: an irregular built-up area whose size comes from its population (in km, turned into
    world units), drawn into the cached map layer, so it grows and shrinks exactly with the terrain. Each footprint is procedural and seeded by
@@ -8687,7 +8682,7 @@ let cityArtOn = false;   // all city art loaded (set once a frame)
    (a city keeps its own concrete colour), and are graded for legibility: a city that is small on screen is lifted (or, on pale desert and
    snow, deepened) so it reads at play zoom. A low tier of every city is baked in idle time and kept, so a jump never shows empty ground. */
 const KM_W = HS0*SQ3/180;          // world units per km (an old map hex is about 180 km across)
-const CITY_DY = 0;                 // city markers sit on the city centre (screen offset, in kl units)
+const CITY_DY = 0;                 // a city's point (name anchor and tap target) sits on the city centre (screen offset, in kl units)
 const cityFade = hexPx => Math.max(0, Math.min(1, (hexPx - 12)/14));   // the urban areas fade in from the mid zoom (they are too small to read below it)
 let CITY_SCR = false, CITYV = 0, CITY_PEND = false, CITY_DL = 0, CITY_ART = 0, CITY_ALL = false, CITY_RT = 0;   // CITY_RT: when the layer last took up new city bakes
 const CITY_MISS = new Map();   // towns the layer drew without their right bake (province -> half size, world units): the layer redraws just their box later           // layer-key version, bakes left for a later render, bake deadline, art state seen
@@ -9639,7 +9634,7 @@ function flagCanvas(n, fh){ if (n == null) return null;
 // whose flag a force flies: its power, else (independents) the country it stands in
 function plateFlagOf(a){ if (!a) return PLAYER; if (a.owner >= 0) return a.owner; const P0 = G.P[a.at]; return P0 && !P0.sea && G.countries[P0.country] ? G.countries[P0.country].name : null; }
 /* ---------------- Your headquarters (original art) ----------------
-   A small isometric command building beside your capital's star for the whole game: a squat concrete block with window bands and a rooftop helipad,
+   A small isometric command building beside your capital for the whole game: a squat concrete block with window bands and a rooftop helipad,
    a lattice radio mast with a dish, and a flag mast flying your real flag (from the flag atlas), on a low plinth in your relation tone with a soft drop
    shadow. Painted once per device-pixel ratio, flag and tone into an offscreen canvas (HQ_W x HQ_H css px, the same size at every zoom) and blitted
    at whole device pixels. Its spot is chosen before the counters are laid out (the plates slide clear of it), drawn under the counters. */
@@ -9650,8 +9645,8 @@ let HQ_KB = 0, HQ_K = 0, HQ_W = 0, HQ_H = 0, HQ_PARTS = [], HQBOX = null; const 
 function hqScale(){ HQ_KB = innerWidth <= 820 ? 1.12 : 1.6; const z = Math.max(0, Math.min(1, ((view.s || 1) - 0.5)/0.9)), k = Math.round(HQ_KB*(0.66 + 0.34*z)*50)/50;
   if (k === HQ_K) return; HQ_K = k; HQ_W = Math.round(30*k); HQ_H = Math.round(34*k);
   HQ_PARTS = [[9, 0.5, 23, 12], [7, 11.5, 24, 22], [3.5, 22, 27, 29], [9.5, 29, 21.5, 34]].map(r => r.map(v => v*k)); }
-// the HQ's bearing from the star, fixed per capital (it does not hop round the star as you zoom): the side where, across the zoom range, the spot beside
-// the star lies on your capital's own province (else your own land) rather than at sea, abroad or by another city; beside the star rather than above it,
+// the HQ's bearing from the capital, fixed per capital (it does not hop round the capital as you zoom): the side where, across the zoom range, the spot beside
+// the capital lies on your capital's own province (else your own land) rather than at sea, abroad or by another city; beside the capital rather than above it,
 // never below it (where the capital's name goes)
 const HQ_DIR = new Map(), HQ_NEAR = new Map();
 function hqNear(cap){ let L = HQ_NEAR.get(cap); if (L) return L; const P0 = G.P[cap]; L = [];   // the cities and capitals round your capital (the provinces it must not read as belonging to)
@@ -10390,7 +10385,7 @@ function draw(now){ draw.now = now;
   toneSync();   // war or peace with you (or the palette) changed: the map's relation colours follow at once
   const vis = visibleSet(), px = 1/view.s, hexPx = view.s*HS0;
   if (Math.max(hexPx, (ZTW ? ZTW.s1 : camFly ? camFly.s1 || 0 : 0)*HS0) >= 8) for (const n of ART.L5('city')) ART.want(n);   // (towns fade in from 12 px a hex)
-  { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; CITY_ALL = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
+  { const st = cityArtState(); if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; CITY_ALL = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
     // (while the bake pump still makes what the view asked for, the towns wait for all of it, so they sharpen in one soft step, not in waves;
     // a pump that takes long refreshes them every 2 s)
     // (and what is made for the layer's margins, off screen, is taken up once all of it is made, not a town at a time: CITY_SCR, something on
@@ -10489,9 +10484,9 @@ function draw(now){ draw.now = now;
 
   // ---- screen space
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const k = zoomK(hexPx), kl = Math.min(k, 2), pulse = 0.5 + 0.5*Math.sin(now/180);
+  const k = zoomK(hexPx), kl = Math.min(k, 2);
   const showCity = hexPx >= 5, showNames = hexPx >= 15, showSea = hexPx >= 9;
-  drawBattleLOD(now, vis, kl, hexPx);   // strategic / operational zoom: smoke column, flickers and tracers, under the city markers, names, counters and the battle badge
+  drawBattleLOD(now, vis, kl, hexPx);   // strategic / operational zoom: smoke column, flickers and tracers, under the names, counters and the battle badge
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const boxes0 = [];   // screen boxes claimed so far: counters and map controls first, then country and sea names, then city and province names
   const showNeutral = GS > 1 ? hexPx >= 49 : hexPx >= 11, items = [];   // (they fade in where they show)   // independent garrisons stay hidden until zoomed in (or selected / fighting)
@@ -10547,22 +10542,22 @@ function draw(now){ draw.now = now;
     b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1];
     if (c.fm){ const f = c.fm.box; b[0] = Math.min(b[0], f[0]); b[1] = Math.min(b[1], f[1]); b[2] = Math.max(b[2], f[2]); b[3] = Math.max(b[3], f[3]); b.fmb = c.fm.ents.map(e => e.box); }
     b.unit = true; b.at = c.moving ? -1 : c.at; return b; };
-  // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital's star, on your own land (your capital's
+  // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital, on your own land (your capital's
   // province first), on the bearing hqBearing() fixed for this capital, the same side at every zoom. It claims its spot before the counters are laid out:
   // a plate (yours too) that would cover it slides clear of it with a leader line, as plates do for each other, so the HQ is never hidden under a counter
   // and never pushed out to sea, abroad or beside another city by them. The names (your capital's own name included), the building trays and the power
-  // names keep clear of it too. Where your land is crowded it steps a little further out along its bearing (a short leader line ties it to the star) or
-  // turns a little round the star; it is never left out. Only the screen edges and the map's controls rule a spot out; standing off your land (its plinth's
-  // centre at sea or abroad) is a last resort behind everything else, then covering another city's marker or standing nearer another city than yours,
+  // names keep clear of it too. Where your land is crowded it steps a little further out along its bearing (a short leader line ties it to the capital) or
+  // turns a little round the capital; it is never left out. Only the screen edges and the map's controls rule a spot out; standing off your land (its plinth's
+  // centre at sea or abroad) is a last resort behind everything else, then covering another city's point or standing nearer another city than yours,
   // then turning and stepping out; displacing a standing counter costs only a little.
   const NP = S.nations[PLAYER]; let capTagAt = null; /*@TEST*/let tagDbg = null;/*@ENDTEST*/ HQBOX = null;
   if (hexPx >= 2 && NP.alive && S.owner[NP.capital] === PLAYER){ hqScale(); const cap = NP.capital, P0 = G.P[cap], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + CITY_DY*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, w = HQ_W, h = HQ_H, K = HQ_K;
     const hud = hudRects(), ovl = (q, o) => q[0] < o[2] && q[2] > o[0] && q[1] < o[3] && q[3] > o[1];
-    if (!(x < 0 || x > cw || cy < 0 || cy > ch || hud.some(o => x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3]))){   // (the star itself on screen and clear of the controls)
+    if (!(x < 0 || x > cw || cy < 0 || cy > ch || hud.some(o => x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3]))){   // (the capital itself on screen and clear of the controls)
       const reg = [x - R - 150, cy - R - 150, x + R + 150, cy + R + 150], hudN = hud.filter(o => ovl(o, reg));
       const cls = clusters.filter(c => !c.moving && c.pv && Math.abs(c.x - x) < 300 && Math.abs(c.y - cy) < 300).map(clBox).filter(o => ovl(o, reg));   // the standing counters where they would be (marching ones pass over it)
       const mk = []; for (const p of hqNear(cap)){ const P = G.P[p], cp = isCapital(p); if (!((cp && hexPx >= 2) || (P.city && showCity))) continue; const [mx, my] = toScreen(P.x, P.y), tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0;
-        if (Math.abs(mx - x) < R + 170 && Math.abs(my - cy) < R + 170) mk.push({x:mx, y:my + CITY_DY*kl, r:cp ? (8.7 + tier)*kl : ([2.8, 3.6, 4.6][tier] + 1.8)*kl}); }   // the other cities' markers nearby
+        if (Math.abs(mx - x) < R + 170 && Math.abs(my - cy) < R + 170) mk.push({x:mx, y:my + CITY_DY*kl, r:cp ? (8.7 + tier)*kl : ([2.8, 3.6, 4.6][tier] + 1.8)*kl}); }   // the other cities' points nearby
       const PO = P0.oil && hexPx >= 8 ? [x + 7*kl, cy - 5*kl, x + 13*kl, cy + 4.5*kl] : null, PS = S.bld[cap].silo && hexPx >= 4 ? [x - 13*kl, y0 + 3*kl, x - 5*kl, y0 + 15*kl] : null;
       const area = (q, o) => { const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); return ox > 0 && oy > 0 ? ox*oy : 0; };
       const rectsAt = (px, py) => { const ix = Math.round(px - 15*K), iy = Math.round(py - 25*K); return [ix, iy, HQ_PARTS.map(r => [ix + r[0], iy + r[1], ix + r[2], iy + r[3]])]; };   // (px, py): the plinth's centre
@@ -10573,18 +10568,18 @@ function draw(now){ draw.now = now;
         for (const [ox, oy] of [[-8.4, 0], [8.4, 0], [0, -4.2], [0, 4.2]]) if (gcode(px + ox*K, py + oy*K) > 150) c0 += 2500;
         return c0; };
       const circ = (q, r) => Math.hypot(Math.max(q[0] - x, 0, x - q[2]), Math.max(q[1] - cy, 0, cy - q[3])) < r;
-      const reach = (ux, uy) => { for (let t = 0; t < 90; t++){ if (!rectsAt(x + ux*t, cy + uy*t)[2].some(q => circ(q, R + 0.5))) return t; } return 90; };   // the nearest it can stand to the star without covering it
+      const reach = (ux, uy) => { for (let t = 0; t < 90; t++){ if (!rectsAt(x + ux*t, cy + uy*t)[2].some(q => circ(q, R + 0.5))) return t; } return 90; };   // the nearest it can stand to the capital's point without covering it
       const cost = (px, py, led) => { const [, , qs] = rectsAt(px, py); let c0 = ground(px, py);
         for (const q of qs){ const ov0 = Math.max(0, 2 - q[0], q[2] - cw + 2, 2 - q[1], q[3] - ch + 2); if (ov0 > 0) c0 += 3000 + ov0*40;   // (cut by the screen's edge: better than standing on a counter)
           for (const o of hudN) if (ovl(q, o)) return 1e9;
           for (const o of cls){ const a = area(q, o); if (a) c0 += 5000 + a*4; const ac = area(q, o.core); if (ac) c0 += 8000 + ac*8; }   // a counter it would stand on (counters keep their spots: the HQ steps round them)
-          for (const m of mk){ const a = area(q, [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]); if (a) c0 += 4e4 + a*60; }   // another city's marker
+          for (const m of mk){ const a = area(q, [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]); if (a) c0 += 4e4 + a*60; }   // another city's point
           for (const o of [PO, PS]) if (o){ const a = area(q, o); if (a) c0 += a*20; } }   // (the capital's oil derrick and silo glyphs: better left in view)
-        const qb = qs[2], dq = (mx, my) => Math.hypot(Math.max(qb[0] - mx, 0, mx - qb[2]), Math.max(qb[1] - my, 0, my - qb[3])), d0 = dq(x, cy);   // nearer your star than any other city's marker, so it never reads as theirs
+        const qb = qs[2], dq = (mx, my) => Math.hypot(Math.max(qb[0] - mx, 0, mx - qb[2]), Math.max(qb[1] - my, 0, my - qb[3])), d0 = dq(x, cy);   // nearer your capital than any other city's point, so it never reads as theirs
         for (const m of mk) if (dq(m.x, m.y) - m.r < Math.min(d0 - R + 4, led ? 4 : 10)) { c0 += 3e4; break; }
         return c0; };
-      // candidates: its own bearing first, then out along it, then turning round the star in 20 degree steps (each step and each pixel out costs, so it
-      // stays put; far out costs more than turning); below the star, where the capital's name goes, costs more
+      // candidates: its own bearing first, then out along it, then turning round the capital in 20 degree steps (each step and each pixel out costs, so it
+      // stays put; far out costs more than turning); below the capital, where the capital's name goes, costs more
       const th0 = hqBearing(cap), cands = [];
       for (let d = 0; d <= 9; d++) for (const sg of d && d < 9 ? [1, -1] : [1]) for (const e of [0, 4, 8, 13, 19, 26, 34, 44, 56]){ const dd = d*sg, uy = Math.sin(th0 + dd*Math.PI/9);
         cands.push([dd, e, d*1500 + e*30 + e*e*3 + (e >= 10 ? 800 : 0) + (uy > 0.35 ? 5000*(uy - 0.35) : 0) - (HQ_LAST && HQ_LAST.k === cap + '|' + K && HQ_LAST.d === dd && HQ_LAST.e === e ? 900 : 0)]); }
@@ -10632,7 +10627,7 @@ function draw(now){ draw.now = now;
     if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3, sel.targetPt); if (!sa.air){ riverMarks(sa, targetPath); railMarks(sa, targetPath); } }
     else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   drawSelPaths(0);
-  ovIn(); try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, markers, HQ, paths and counters drawn below
+  ovIn(); try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, HQ, paths and counters drawn below
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
   { const nk = [view.s, Math.round(view.x), Math.round(view.y), cw, ch, geoVer, HUDR.v || 0].join('|'); if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
   if (hexPx >= 3.2 && hexPx < 15){ const fs0 = Math.round(Math.min(11.5, 8 + hexPx*0.36)*2)/2; ctx.save(); ctx.font = `500 ${fs0}px ${BODY}`; ctx.letterSpacing = (fs0*0.16).toFixed(1) + 'px';
@@ -10650,7 +10645,7 @@ function draw(now){ draw.now = now;
       if (placed.some(q => (Math.abs(q.x - x) < (q.w + w)/2 && Math.abs(q.y - y) < 18) || (q.nm === nm && Math.hypot(q.x - x, q.y - y) < 260))) continue;
       const sb = [x - w/2, y - 8, x + w/2, y + 8]; if (boxes0.some(q => q.unit && q[0] < sb[2] && q[2] > sb[0] && q[1] < sb[3] && q[3] > sb[1])) continue;
       placed.push({x, y, w, nm}); boxes0.push(sb); ctx.fillText(nm, x, y); } }
-  marks = [];
+  cityPts = []; cityNames = [];   // the cities on screen: each one's point with its tap radius (nothing is drawn there), and the boxes of the city names drawn
   const labs = [], lateLabs = [], trq = [], LPL = new Map(); let capLab = null, trays = [], trCity = false;   // trq: building trays to place, LPL: placed name boxes per province
   for (let p = 0; p < G.P.length; p++){
     const P = G.P[p]; if (P.sea) continue;
@@ -10658,24 +10653,10 @@ function draw(now){ draw.now = now;
     if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
     const cap = isCapital(p), dim = vis.has(p) ? 1 : 0.55;
     ctx.globalAlpha = dim;
-    const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, oc = S.owner[p] >= 0 ? mapCol(S.owner[p]) : '#8c8a80';
-    const pk = cityPlateK(P, p, vis);   // close up the marker is smaller and lets the city on the map show through
-    // night at wide zoom: a point of light per city sized by population; from the mid zoom the city's own lights (drawCityLights, on the map) take over
-    if (P.city && hexPx >= 2.5 && cityFade(hexPx) < 1 && cityLightsOn() && isNight(p)){ const gr = (cap ? 16 : 9 + Math.min(12, P.pop0*1.2))*kl, gy = y + CITY_DY*kl, G0 = GLOW(), wf = 1 - cityFade(hexPx); ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.85*Math.max(0.6, dim)*wf; ctx.drawImage(G0, x - gr*0.75, gy - gr*0.75, gr*1.5, gr*1.5); ctx.globalAlpha = 0.35*Math.max(0.6, dim)*wf; ctx.drawImage(G0, x - gr*1.4, gy - gr*1.1, gr*2.8, gr*2.2);
-      if (tier && hexPx >= 6){ ctx.globalAlpha = 0.5*Math.max(0.6, dim)*wf; for (let i = 0; i < 2 + tier; i++){ const a0 = p*2.4 + i*2.1, d0 = gr*(0.5 + 0.18*((p + i*3) % 3)), r0 = gr*(0.42 + 0.1*(i % 2)); ctx.drawImage(G0, x + Math.cos(a0)*d0 - r0, gy + Math.sin(a0)*d0*0.75 - r0, r0*2, r0*2); } }
-      ctx.restore(); }
-    else if (!P.city && hexPx >= 8 && (P.pop0 || 0) >= 0.1 && cityLightsOn() && isNight(p)){ const gr = Math.max(2.5, (5 + 6*Math.min(1.5, P.pop0))*KM_W*view.s); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.24 + 0.2*Math.min(1, P.pop0); const q = G.lakeLab && G.lakeLab.get(p), [tx, ty] = q ? toScreen(q[0], q[1]) : [x, y]; ctx.drawImage(GLOW(), tx - gr, ty - gr, gr*2, gr*2); ctx.restore(); }   // towns: small pools of light, world-sized like the cities (they grow as you zoom in), ashore when the province centre lies in a lake
-    if (cap && hexPx >= 2){ const cy0 = y + CITY_DY*kl, rr = (6.5 + tier)*kl*pk, R1 = rr + 2.2*kl*pk; marks.push({p, x, y:cy0, r:(8.7 + tier)*kl});   // (the tap target keeps its full size where the marker shrinks on the city art) capital: cream star on a disc in the holder's (deepened) colour
-      ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.globalAlpha = dim*(pk < 1 ? 0.5 : 0.95); ctx.fillStyle = shade(oc, -0.5); ctx.fill(); ctx.globalAlpha = dim;
-      ctx.lineWidth = 1.6*kl + 1.8; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.6*kl; ctx.strokeStyle = oc; ctx.stroke();
-      star(x, cy0, rr); ctx.fillStyle = '#f6efdc'; ctx.fill(); ctx.lineWidth = 0.9; ctx.strokeStyle = 'rgba(4,7,9,.55)'; ctx.stroke();
-      }
-    else if (P.city && showCity){ const cy0 = y + CITY_DY*kl, rr = [2.8, 3.6, 4.6][tier]*kl*pk, R1 = rr + 1.8*kl*pk; marks.push({p, x, y:cy0, r:([2.8, 3.6, 4.6][tier] + 1.8)*kl});   // cities: size by population, ring in the holder's colour
-      ctx.beginPath(); ctx.arc(x, cy0, R1, 0, Math.PI*2); ctx.fillStyle = rgba(oc, pk < 1 ? 0.2 : 0.45); ctx.fill();   // a tint of the holder's colour inside the ring, no dark disc
-      ctx.lineWidth = 1.3*kl + 1.6; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.3*kl; ctx.strokeStyle = oc; ctx.stroke();
-      ctx.beginPath(); ctx.arc(x, cy0, rr, 0, Math.PI*2); ctx.fillStyle = '#f6efdc'; ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(4,7,9,.6)'; ctx.stroke();
-      if (tier === 2){ ctx.beginPath(); ctx.arc(x, cy0, rr*0.42, 0, Math.PI*2); ctx.fillStyle = oc; ctx.fill(); } }   // a metropolis carries the holder's colour at its heart
+    const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0;
+    // no marker is drawn on a city: the city is its artwork on the map and its name. Its point keeps a tap target and a little room the names, trays and your HQ leave free
+    if (cap && hexPx >= 2) cityPts.push({p, x, y:y + CITY_DY*kl, r:(8.7 + tier)*kl});
+    else if (P.city && showCity) cityPts.push({p, x, y:y + CITY_DY*kl, r:([2.8, 3.6, 4.6][tier] + 1.8)*kl});
     if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 22){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + (P.city || cap ? CITY_DY : 9)*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
     if (S.bld[p].silo && hexPx >= 4 && !trayOn(P, p, hexPx, vis)){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     if (S.bld[p].fort && hexPx >= 6 && !trayOn(P, p, hexPx, vis)){ const fx2 = x - 10*kl, fy2 = y + (P.city || cap ? CITY_DY : 9)*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
@@ -10692,7 +10673,7 @@ function draw(now){ draw.now = now;
   ctx.globalAlpha = 1;
   // power names: big and faint area labels; yours is told apart by its light fill alone. A name lies on its own nation's land (both ends and nearly all of its
   // line over that nation's provinces) and is no wider than the country. They are placed in the label pass, after the capital and city names (after all the
-  // names once the province names are up), and never cover a name, a city marker or capital star (or your capital's pulsing ring), a counter, a building tray,
+  // names once the province names are up), and never cover a name, a city's point, a counter, a building tray,
   // a control or your HQ building: with no free spot on its own land a name is left out. Only a country too small on screen to hold its name at 11 px, or
   // any at world zoom, may let it hang out over the sea next to its land (never over another country's land).
   const pnB = []; /*@TEST*/const pnDbg = window.__dbgBoxes ? [] : null;/*@ENDTEST*/ let pnDone = hexPx >= 30, pnYou = pnDone; const pnSeen = new Set();   // power names already placed (they keep clear of each other too)
@@ -10701,7 +10682,7 @@ function draw(now){ draw.now = now;
   const placePN = youOnly => { pnYou = true; if (!youOnly) pnDone = true; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const order = GEO.labels.map((L, n) => n).sort((a, b) => (b === PLAYER) - (a === PLAYER)), pa = hexPx < 15 ? 1 : 1 - 0.4*(hexPx - 15)/15;   // yours is placed first
     const NPc = S.nations[PLAYER], capP = NPc.alive && S.owner[NPc.capital] === PLAYER ? NPc.capital : -1;
-    const mk = marks.map(m => { const r = m.p === capP ? Math.max(m.r, 15*kl) + 2 : m.r + 1; return [m.x - r, m.y - r, m.x + r, m.y + r]; });
+    const mk = cityPts.map(m => { const r = m.p === capP ? Math.max(m.r, 15*kl) + 2 : m.r + 1; return [m.x - r, m.y - r, m.x + r, m.y + r]; });
     for (const n of order){ const L = GEO.labels[n]; if (!L || !S.nations[n].alive || !L.bb || (youOnly && n !== PLAYER) || pnSeen.has(n)) continue; pnSeen.add(n);
       const bb = L.bb, bx0 = bb[0]*view.s + view.x, bx1 = bb[2]*view.s + view.x; if (bx1 < 0 || bx0 > cw || bb[3]*view.s + view.y < 0 || bb[1]*view.s + view.y > ch) continue;   // the whole mainland off screen
       const [x, y] = toScreen(L.x, L.y), you = n === PLAYER, txt = S.nations[n].name.toUpperCase();
@@ -10739,11 +10720,11 @@ function draw(now){ draw.now = now;
       const hit = q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
       let lx = L.x, ly = y0, late = false;
       // a name blocked only by counters and troop models keeps its spot (they are laid out round the names, in world space): no name pops in and
-      // out or jumps round its marker as the view zooms or a force goes by; the plates are drawn over it
+      // out or jumps round its city as the view zooms or a force goes by; the plates are drawn over it
       const blkN = boxes.filter(hit), onlyUnits = blkN.length && blkN.every(q => q.unit && !q.hud && !q.tag);
       if (!onlyUnits && blkN.length){ if (L.cap && boxes.some(q => !q.unit && hit(q))) continue;   // a capital name gives way only to another name; stacks make it step aside
         const b0 = b.slice();
-        // a city name blocked below its marker (by a stack or a bigger name) tries the right, then the left side of the marker, then spots further below;
+        // a city name blocked below its city's point (by a stack or a bigger name) tries the right, then the left side of the point, then spots further below;
         // a province name blocked only by stacks steps just above or below them
         let cand;
         if (L.city) cand = [[L.x + L.mr + 2, L.my - f/2], [L.x - L.mr - 2 - w, L.my - f/2], [L.x + L.mr - w, y0], [L.x - L.mr, y0], [L.x + 2, y0], [L.x - 2 - w, y0], [L.x - w/2, y0 + f + 3],
@@ -10751,7 +10732,7 @@ function draw(now){ draw.now = now;
         else { const blk = boxes.filter(hit); if (!blk.every(q => q.unit)) continue; const t0 = Math.min(...blk.map(q => q[1])), t1 = Math.max(...blk.map(q => q[3]));
           cand = [[L.x - w/2, t0 - f - 3], [L.x - w/2, t1 + 1]].filter(q => Math.abs(q[1] - y0) <= 3*f); }
         let ok = false; for (const [x0, yt] of cand){ b[0] = x0; b[2] = x0 + w; b[1] = yt - 1; b[3] = yt + f + 2;
-          if (b[0] < 0 || b[2] > cw || boxes.some(hit) || marks.some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3])) continue;
+          if (b[0] < 0 || b[2] > cw || boxes.some(hit) || cityPts.some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3])) continue;
           lx = x0 + w/2; ly = yt; ok = true; break; }
         if (!ok){ const mine = L.cap && L.p === S.nations[PLAYER].capital; if (!(mine || L.cap || (L.city && L.tier >= 1))) continue;
           // boxed in on every side: a capital or big city may still take its spot (or a nearby one) over the edges of a counter - its marks, padding or figures -
@@ -10759,12 +10740,12 @@ function draw(now){ draw.now = now;
           // shows: with no such spot it takes the nearby one covering the least of the plates and is drawn under the counters, so their numbers stay readable.
           const coreA = bx => { let s0 = 0; for (const q of boxes){ if (q.core){ const ox = Math.min(bx[2], q.core[2]) - Math.max(bx[0], q.core[0]), oy = Math.min(bx[3], q.core[3]) - Math.max(bx[1], q.core[1]); if (ox > 0 && oy > 0) s0 += ox*oy; }
             if (q.fmb) for (const m of q.fmb){ const ox = Math.min(bx[2], m[2]) - Math.max(bx[0], m[0]), oy = Math.min(bx[3], m[3]) - Math.max(bx[1], m[1]); if (ox > 0 && oy > 0) s0 += 1.2*ox*oy; } } return s0; };   // (and the troop models: a name painted over a hull is a last resort)
-          const blocked = bx => bx[0] < 0 || bx[2] > cw || boxes.some(q => ovl(q, bx) && (!q.unit || q.hud || q.tag)) || marks.some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3]);
+          const blocked = bx => bx[0] < 0 || bx[2] > cw || boxes.some(q => ovl(q, bx) && (!q.unit || q.hud || q.tag)) || cityPts.some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3]);
           let bk = null, bs = Infinity;
           for (const [x0, yt] of [[b0[0], y0], ...cand]){ const bx = [x0, yt - 1, x0 + w, yt + f + 2], s0 = (blocked(bx) ? 1e7 : 0) + coreA(bx); if (s0 < bs){ bs = s0; bk = bx; } if (!s0) break; }
           if (bs > 0 && !(mine && bs < 1e7)) { if (!mine) continue; bk = b0; }
           for (let i = 0; i < 4; i++) b[i] = bk[i]; lx = b[0] + w/2; ly = b[1] + 1; late = !coreA(b); } }
-      if (L.city || L.cap) b.city = true; boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; }
+      if (L.city || L.cap){ b.city = true; cityNames.push({p:L.p, b}); } boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; }
       /*@TEST*/if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0});/*@ENDTEST*/
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else { labNight(L, lx, ly); ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
@@ -10773,11 +10754,8 @@ function draw(now){ draw.now = now;
   if (!pnDone) placePN(false);   // (once the province names are up, the other powers' names come last)
   for (const T of trays) drawTray(T, now, hexPx, kl);
   ctx.globalAlpha = 1;
-  // your capital callout: a ring pulsing round the star, and your headquarters beside it (placed before the counters, which keep clear of it; drawn under them)
-  { const N = S.nations[PLAYER];
-    if (N.alive && S.owner[N.capital] === PLAYER){ const [x, y] = toScreen(G.P[N.capital].x, G.P[N.capital].y), cy = y + CITY_DY*kl;
-      if (!(hexPx >= ART_PX && bartOk('city'))){ if (x > -40 && y > -40 && x < cw + 40 && y < ch + 40) animAmb(); ctx.beginPath(); ctx.arc(x, cy, (11 + pulse*4)*kl, 0, Math.PI*2); ctx.strokeStyle = `rgba(255,250,235,${0.5 + pulse*0.4})`; ctx.lineWidth = 2; ctx.stroke(); }
-    }
+  // your headquarters beside your capital (placed before the counters, which keep clear of it; drawn under them)
+  {
     const hq = capTagAt && hqCanvas(); if (hq){ { const T = [capTagAt.ix, capTagAt.iy, capTagAt.ix + capTagAt.w, capTagAt.iy + capTagAt.h]; ctx.globalAlpha = capTagAt.a = clusters.some(c => c.pv && !c.moving && (c.pa ?? 1) > 0.05 && Math.abs(c.x - T[0]) < 200 && Math.abs(c.y - T[1]) < 200 && (b => T[0] < b[2] + 4 && T[2] > b[0] - 4 && T[1] < b[3] + 4 && T[3] > b[1] - 4)(pfBox(c, k, c.n + (c.mn || 0)))) ? 0.4 : 1; }   // (far out, where it cannot stand clear of every counter, it fades under the one on it)
       const L = capTagAt.lead; if (L){ ctx.beginPath(); ctx.moveTo(L[0], L[1]); ctx.lineTo(L[2], L[3]); ctx.lineCap = 'round'; ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(4,7,9,.55)'; ctx.stroke();
         ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(246,239,220,.92)'; ctx.stroke(); ctx.lineCap = 'butt'; }   // a short leader line when it stands further out
@@ -10846,7 +10824,7 @@ function draw(now){ draw.now = now;
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; labNight(L, lx, ly); ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   /*@TEST*/if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null, tba:capTagAt ? capTagAt.a ?? 1 : null,
-    pn:pnDbg, lab:labDbg, mk:marks.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};/*@ENDTEST*/
+    pn:pnDbg, lab:labDbg, mk:cityPts.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};/*@ENDTEST*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
   if (sel.army !== null && !afxReduced()){ if (SELFX.a !== sel.army){ SELFX.a = sel.army; SELFX.at = now; }
     const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500; if (fresh > 0) animFast(); else animAmb();
@@ -11052,13 +11030,16 @@ function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a 
   el.innerHTML = `<div class="ct">${nm}</div><button data-act="choose-prov" data-id="${p}">${bimg('city', cityLevel(p), 22) || '<i>🏙</i>'}City · ${nm}<span class="small">${S.owner[p] === PLAYER ? 'recruit, build' : 'details'}</span></button>`
     + own.map(a => `<button data-act="choose-army" data-id="${a.id}">${leadT(a) ? unitPic(leadT(a), 'sm') : '<i>⚔</i>'}${armyName(a)}<span class="small">${pluN(count(a), 'unit')}</span></button>`).join('');
   el.hidden = false; tipHide(); const w = 240, h = 46 + own.length*38; el.style.left = Math.max(8, Math.min(cw - w - 8, x + 12)) + 'px'; el.style.top = Math.max(8, Math.min(ch - h - 8, y - 20)) + 'px'; return true; }
-function markAt(x, y){ let best = null, bd = 1e9; for (const m of marks){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
+function cityAt(x, y){ let best = null, bd = 1e9; for (const m of cityPts){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
+// the city whose drawn name is at (x, y): a plain tap on a city's name picks that city (the name is what marks a city on the map)
+function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ const b = cityNames[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return cityNames[i]; } return null; }
 function hitAt(x, y){ for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }
 function tap(x, y, shift = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   closeChooser(); lastClickW = screenToWorld(x, y);
-  const mk = markAt(x, y);   // a tap on a city star / dot means that city, even where a neighbouring stack's box overlaps it
-  if (!cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null){
+  const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
+  const mk = cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
+  if (plain){
     let p = mk ? mk.p : -1; if (!mk) for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const a0 = h.ids.map(armyById).find(Boolean); if (a0 && !a0.fly && a0.to === null) p = a0.at; break; } }
     if (p < 0) p = provAt(x, y);
     if (p >= 0 && !G.P[p].sea && G.P[p].city && stationaryAt(p).some(a => a.owner === PLAYER) && openChooser(p, x, y)) return; }
@@ -11216,7 +11197,7 @@ function clearSel(){ sel.group = []; rallyFor = null; aimMsl = null; sel.army = 
 const tip = document.getElementById('tip');
 function tipHide(){ tip.hidden = true; }
 function tipShow(x, y){
-  const hf = !markAt(x, y) && hitAt(x, y), fa = hf ? hf.ids.map(armyById).filter(Boolean) : [];
+  const hf = !cityAt(x, y) && hitAt(x, y), fa = hf ? hf.ids.map(armyById).filter(Boolean) : [];
   // where the plate is drawn (an aircraft in flight is far from its base; never name the base), and always one 'contact': no count leak
   if (fa.length && hf.unk){ const pq = provAt(hf.cx, hf.cy), at = pq >= 0 ? pq : fa[0].air ? -1 : fa[0].to !== null ? fa[0].to : fa[0].at, air = fa[0].air;
     tip.innerHTML = `<b>Unidentified contact</b><div class="small" style="color:#9fd8ff">Detected by AWACS — unidentified contact</div><div class="small muted">${air ? 'Aircraft' : 'Force'} ${at >= 0 ? 'near ' + (G.P[at].cityName || G.P[at].name) : 'in flight'}. Nation, type, size, level and health unknown: send a UAV, a satellite or ground forces to identify it.</div>`;
@@ -11593,7 +11574,7 @@ function prodHTML(){
 }
 let TUT = null;
 const TUT_STEPS = [
-  {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b> (the star).`, map:() => S.nations[PLAYER].capital, next:true},
+  {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b>.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
   {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map, then choose <b>City</b> in the little menu.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Recruit', d:() => `Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.`, el:'#csheet:not([hidden]) .cs-mob, #ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
@@ -11629,7 +11610,7 @@ function tutRender(){
 function tutTick(){ if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (typeof st.next === 'function'){ const k = String(st.next()) + sel.army + sel.target; if (TUT.k !== k){ TUT.k = k; tutRender(); } } if (st.done && st.done()){ TUT.i++; if (TUT.i >= TUT_STEPS.length){ tutEnd(); return; } tutRender(); } }
 function tutDraw(now, kl = 1){
   if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (!st.map) return; const p = st.map(); if (p == null) return;
-  const P = G.P[p], [x, y0] = toScreen(P.x, P.y), y = y0 + (P.city ? CITY_DY*kl : 0), r = (P.city ? 16*kl + 6 : 26) + Math.sin(now/220)*(afxReduced() ? 0 : 3);   // around the city marker
+  const P = G.P[p], [x, y0] = toScreen(P.x, P.y), y = y0 + (P.city ? CITY_DY*kl : 0), r = (P.city ? 16*kl + 6 : 26) + Math.sin(now/220)*(afxReduced() ? 0 : 3);   // around the city's point
   animFast(); ctx.save(); ctx.strokeStyle = 'rgba(226,162,61,.95)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -now/30; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.restore();
 }
 function settingsHTML(){
@@ -12516,7 +12497,7 @@ document.addEventListener('change', e => { const el = e.target; if (!el || !el.c
   if (el.id === 'devt'){ DEVUI.t = el.value; DEVUI.note = ''; } else if (el.id === 'devo') DEVUI.o = +el.value; else if (el.id === 'devk') DEVUI.k = Math.max(1, Math.min(999, Math.round(+el.value) || 1));
   devRender(); });
 /*@ENDDEV*/
-function setSpeed(s){ if (S.over && s) return; const open = !$('modal').hidden; if (s && open && !(S.started && $('modal').classList.contains('docked'))) return; S.speed = s; if (open) speedBefore = s; renderSide(); }
+function setSpeed(s){ if (S.over && s) return; const open = !$('modal').hidden; if (s && open && !(S.started && $('modal').classList.contains('docked'))) return; S.speed = s; if (open) speedBefore = s; renderSide(); redraw(); }   // (the clock starting or stopping changes what moves on the map: one frame, so the moving things register again)
 
 /* ---------------- Modal ---------------- */
 let pickDiff = 'regular', pickDoc = null, pickScn = 'world', pickLen = Infinity, pickPersist = false, modalKind = '', pickSel = WORLD_POWERS.findIndex(p => p.name === 'Brazil');
