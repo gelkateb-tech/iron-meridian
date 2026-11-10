@@ -1,0 +1,186 @@
+// Iron Meridian rules: economy. No DOM, canvas, window, storage, audio or camera in this file (node tools/rules-lint.js checks it).
+'use strict';
+const graceFor = o => o >= 0 && S.nations[o].small ? 24*21 : GRACE_H;
+const inGrace = o => o >= 0 && S.hour < graceFor(o);
+const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
+let BLOCK = new Set();
+function computeBlockade(){ BLOCK = new Set(); const by = new Map(); for (const a of S.armies){ if (a.to !== null || !G.P[a.at].sea || !shipsN(a) || a.owner < 0) continue; for (const v of G.P[a.at].nbs){ const o = S.owner[v]; if (!G.P[v].sea && o >= 0 && atWar(a.owner, o)){ BLOCK.add(v); if (o === PLAYER && !by.has(v)) by.set(v, a.owner); } } } tradeBlockade(); blockNews(by); }
+// dispatch when enemy warships start (or stop) blockading your ports; S.blk remembers what was announced, so a reload does not repeat it
+function blockNews(by){ if (!S.started || PLAYER == null) return; const was = new Set(Array.isArray(S.blk) ? S.blk : []), now = [...by.keys()], nw = now.filter(p => !was.has(p)), gone = [...was].filter(p => !by.has(p));
+  const nm = p => G.P[p].cityName || G.P[p].name, list = ps => ps.length === 1 ? nm(ps[0]) : ps.length === 2 ? nm(ps[0]) + ' and ' + nm(ps[1]) : `${nm(ps[0])}, ${nm(ps[1])} and ${ps.length - 2} more`;
+  if (nw.length && (nw.some(p => G.P[p].city) || S.hour - (S.blkT ?? -1e9) >= 24)){ S.blkT = S.hour; const ps = nw.sort((x, y) => (G.P[y].city ? 1 : 0) - (G.P[x].city ? 1 : 0)), foes = [...new Set(nw.map(p => by.get(p)))].map(nationName).join(' and ');
+    log(`Blockade! ${foes} warships off ${list(ps)}: output there falls 25% and trade routes through ${ps.length > 1 ? 'these ports' : 'the port'} are cut. Send ships to break it.`, 'bad', ps[0]); }
+  if (gone.length && !now.length) log(`Blockade lifted at ${list(gone)}.`, 'good', gone[0]);
+  S.blk = now; }
+const popOf = p => (S.pop && S.pop[p] != null) ? S.pop[p] : G.P[p].pop0;
+const dmgOf = p => (S.dmg && S.dmg[p]) || 0;
+const moraleOf = p => Math.max(0, Math.min(100, 100 - unrestOf(p) - dmgOf(p)));
+function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012)); }
+function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(0.45 + 0.55*moraleOf(p)/100)*(CONVOY_LOST.has(p) ? 0 : 1), b = bdisH(p) ? (o => { for (const k in S.bdis[p]) if (S.bdis[p][k] > S.hour) o[k] = 0; return o; })({...S.bld[p]}) : S.bld[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75);
+  const pf = G.PF;
+  // materials: ore deposits and cities, Foundries a little; iron: ore deposits and iron-mining hills, Foundries mainly; electronics: cities by
+  // population and Arms Factory level (a trickle from populous countryside); rare materials: rare-earth deposits and Rare Earth Mines
+  return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 4.2 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 1.4 : 0) + (P.city ? 0.9 : 0) + b.fdy*(P.ore ? 1.8 : 1.4))*f,
+    iron:((P.ore ? 0.8 : 0) + (P.iron ? 0.8 : 0) + (P.city ? 0.8 : 0) + b.fdy*(P.ore ? 2.4 : 1.2))*f, elec:(P.city ? (0.2 + ECO.elec*pp)*(1 + 0.25*b.fac) : 0.004*pp)*f,
+    rare:((P.rare || 0) + (b.mine || 0)*mineLv(P))*f, mp:((P.city ? 1.2 : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
+const ECO = GS > 1 ? {cash:0.68, mp:0.16, elec:0.047} : {cash:0.9, mp:0.22, elec:0.06};
+// ---- convoys: provinces cut off by land from the capital ship their output home; enemy warships on the route sink it
+let CONVOY_LOST = new Set();
+function homeComponent(n){ const N = S.nations[n], seen = new Set([N.capital]), q = [N.capital];
+  for (let i = 0; i < q.length; i++) for (const v of G.P[q[i]].nbs){ if (seen.has(v) || G.P[v].sea) continue; const o = S.owner[v]; if (o === n || (o >= 0 && friendly(n, o))){ seen.add(v); q.push(v); } }
+  return seen; }
+function convoyDay(){ CONVOY_LOST = new Set(); S.convoys = (S.convoys || []).filter(c => S.hour - c.t0 < 14);
+  for (const N of S.nations){ if (!N.alive || S.owner[N.capital] !== N.id) continue; const n = N.id, home = homeComponent(n);
+    const over = G.P.filter(P => !P.sea && S.owner[P.id] === n && !home.has(P.id)); if (!over.length) continue;
+    const homePorts = new Set(); for (const p of home) for (const v of G.P[p].nbs) if (G.P[v].sea) homePorts.add(v); if (!homePorts.size) continue;
+    const hostile = v => S.armies.some(a => a.at === v && a.to === null && a.owner >= 0 && atWar(n, a.owner) && (a.u.sub || a.u.frig || a.u.crui));
+    const groups = new Map(); for (const P of over){ const sz = P.nbs.find(v => G.P[v].sea); if (sz == null) continue; if (!groups.has(sz)) groups.set(sz, []); groups.get(sz).push(P.id); }
+    for (const [sz, provs] of groups){ let best = null; for (const hp of homePorts){ const pth = hp === sz ? [sz] : findPath(sz, hp, v => G.P[v].sea); const route = hp === sz ? [sz] : (pth.length ? [sz, ...pth] : null); if (route && (!best || route.length < best.length)) best = route; }
+      if (!best) continue; const raidAt = best.findIndex(hostile);
+      if (raidAt >= 0){ const lost = {}; if (n === PLAYER) for (const p of provs){ const y = provYield(p); for (const k in y) lost[k] = (lost[k] || 0) + y[k]; }   // what the convoy carried (before the loss zeroes it)
+        for (const p of provs) CONVOY_LOST.add(p); const by = S.armies.find(a => a.at === best[raidAt] && a.owner >= 0 && atWar(n, a.owner) && (a.u.sub || a.u.frig || a.u.crui));
+        if (n === PLAYER) log(`Convoy from ${G.P[provs[0]].cityName || G.P[provs[0]].name} sunk by ${nationName(by.owner)} warships in ${G.P[best[raidAt]].name}: today's output from ${provs.length} overseas province${provs.length > 1 ? 's' : ''} is lost (${yieldStr(lost)}). Escort the route or clear it.`, 'bad', best[raidAt]);
+        else if (by && by.owner === PLAYER) log(`Your warships in ${G.P[best[raidAt]].name} sank ${artA(N.name)} convoy.`, 'good', best[raidAt]); }
+      if (best.length > 1) S.convoys.push({owner:n, route:best, t0:S.hour, raidAt}); } }
+  if (S.convoys.length > 60) S.convoys.splice(0, S.convoys.length - 60); }
+const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
+const SHORT_MSG = {oil:'Oil shortage: Armor and Strike Jets are slowed and weakened.', iron:'Iron shortage: armor, artillery and warships go without spare parts (-20% attack, -15% defence). Buy iron on the Market (T) or build Foundries.', elec:'Electronics shortage: aircraft, drones, air defence and warships go without spares (-20% attack, -10% defence). Buy electronics on the Market (T) or raise Arms Factories in big cities.', cash:'Treasury empty: upkeep is unpaid.'};
+let INCC = {v:-1, S:null, m:[]};
+function income(n){ if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
+function income0(n){
+  const g = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}, u = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}; let provs = 0;
+  const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1;
+  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
+    const m = (S.home[p] === n ? boost : 1)*capHit;
+    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ g.oil += 3; g.metal += 3; g.iron += 3.5; g.elec += 1.5; g.rare += 1; } }   // the capital: state industry, labs and recycling
+  const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
+  for (const k in g) g[k] *= eff;
+  if (has(n, 'eco1')) g.cash *= 1.2; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;
+  const mob = N0.mob || 0; if (mob){ g.mp *= 1 + 0.4*mob; g.cash *= 1 - 0.06*mob; }
+  if (n !== PLAYER && S.diff){ const dm = diffOf().inc; for (const k in g) g[k] *= dm; }
+  if (S.rel){ const tired = warsOf(n).filter(m => S.hour - rel(n, m).since > 240).length; g.cash *= 1 - Math.min(0.2, 0.05*tired); }
+  const trade = tradeIncome(n); for (const k of DEAL_K) g[k] += trade[k];   // trade routes (after the administration and difficulty factors)
+  for (const a of S.armies) if (a.owner === n) for (const t of UT){ const q = a.u[t]; if (!q) continue; u.cash += q*UNITS[t].upk; u.oil += q*UNITS[t].fuel; u.iron += q*MAINT[t].iron; u.elec += q*MAINT[t].elec; }
+  { const dd = n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] : null; if (dd && dd.upk) u.cash *= dd.upk; }
+  const net = {}; for (const k in g) net[k] = g[k] - u[k];
+  return {gross:g, upkeep:u, net, eff, cash:g.cash, upk:u.cash, trade};
+}
+/* ---------------- World market ---------------- */
+const MKT_BASE = {oil:3.2, metal:2.4, iron:2.2, elec:4.2, rare:6.5}, MKT_K = Object.keys(MKT_BASE), AI_SELL_DAY = 40, AI_HOARD_DAY = 30;   // AI metal sale on the world market: units a day at most (surplus / real hoard)
+// metal is never part of upkeep, so the world demand for it is what nations spend: units, buildings, links, research, upgrades, missiles.
+// Without this the demand side read zero and the world metal price sank to its 0.7x floor in every game.
+// (the same for iron, electronics and rare materials)
+function useRes(k, q){ if (!(q > 0) || !S || !S.mkt) return; const U = S.mkt.use || (S.mkt.use = {}); U[k] = (U[k] || 0) + q; }
+function mkt(){ if (!S.mkt){ S.mkt = {p:{...MKT_BASE}, prev:{...MKT_BASE}, hist:Object.fromEntries(MKT_K.map(k => [k, []])), press:Object.fromEntries(MKT_K.map(k => [k, 0])), emb:{}}; } return S.mkt; }
+// an old save's market: food dropped, the new goods start at their base price
+function mktFix(){ const M = S.mkt; if (!M) return; for (const o of [M.p, M.prev, M.hist, M.press, M.use, M.dem]) if (o) delete o.food;
+  M.prev = M.prev || {}; M.hist = M.hist || {}; M.press = M.press || {};
+  for (const k of MKT_K){ if (!(M.p[k] > 0)) M.p[k] = MKT_BASE[k]; if (!(M.prev[k] > 0)) M.prev[k] = M.p[k]; if (!Array.isArray(M.hist[k])) M.hist[k] = []; if (typeof M.press[k] !== 'number') M.press[k] = 0; } }
+const embargoes = n => S.nations.filter(m => m.alive && m.id !== n && mkt().emb[m.id + '>' + n]).length;
+const sanctionF = n => Math.min(3, embargoes(n))*0.15;
+const buyPrice = (n, k) => mkt().p[k]*1.1*(1 + sanctionF(n));
+const sellPrice = (n, k) => mkt().p[k]*0.9*(1 - sanctionF(n));
+function trade(n, k, qty){ const N = S.nations[n], M = mkt();
+  if (qty > 0){ qty = Math.min(qty, Math.floor(stockCap(n) - N[k]), Math.floor(N.cash/buyPrice(n, k))); if (qty <= 0) return 0; N.cash -= qty*buyPrice(n, k); N[k] += qty; }
+  else { qty = -Math.min(-qty, Math.floor(N[k])); if (qty >= 0) return 0; N.cash += -qty*sellPrice(n, k); N[k] += qty; }
+  M.press[k] += qty/1500; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k]*(1 + qty/4000))); return qty; }
+function marketDay(){ const M = mkt(), incs = S.nations.map(N => N.alive ? income(N.id) : null);
+  const U = M.use || (M.use = {}), D = M.dem || (M.dem = {});
+  for (const k of MKT_K){ let sup = 0, dem = 0; for (const inc of incs){ if (!inc) continue; sup += inc.gross[k]; dem += inc.upkeep[k]; }
+    if (SPEND_K.includes(k)){ const used = U[k] || 0; U[k] = 0; D[k] = D[k] == null ? Math.max(used, sup*0.45) : D[k]*0.75 + used*0.25; dem += (k === 'metal' ? 0.3 : k === 'rare' ? 0.6 : 0.45)*D[k]; }   // smoothed daily spending, weighted 0.3 for materials (stockpiles and build-ups are lumpy), 0.6 for rare materials (research, all of their demand), 0.45 for the rest (an old save starts near the usual level)
+    const ratio = dem/Math.max(1, sup), target = MKT_BASE[k]*Math.max(0.7, Math.min(2.6, 0.6 + 1.0*ratio + 4*M.press[k]));
+    M.prev[k] = M.p[k]; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k] + (target - M.p[k])*0.2 + M.p[k]*(rng() - 0.5)*0.06));
+    M.press[k] *= 0.7; M.hist[k].push(+M.p[k].toFixed(2)); if (M.hist[k].length > 60) M.hist[k].shift(); }
+  // AI trading and sanctions
+  for (const N of S.nations){ if (!N.alive || N.id === PLAYER) continue; const cap = stockCap(N.id);
+    void cap;
+    for (const O of S.nations){ if (!O.alive || O.id === N.id) continue; const key = N.id + '>' + O.id, op = opinion(N.id, O.id), war = atWar(N.id, O.id);
+      if (!M.emb[key] && (op < -45 || war) && rng() < 0.25){ M.emb[key] = S.hour; if (O.id === PLAYER) log(`${N.name} imposes an embargo on you: your market prices worsen by 15% per embargo (${embargoes(PLAYER)} now).`, 'bad', null); }
+      else if (M.emb[key] && op > -20 && !war && rng() < 0.2){ delete M.emb[key]; if (O.id === PLAYER) log(`${N.name} lifts its embargo on you.`, 'good', null); } } }
+}
+/* ---- market: only what nations list. Sell offers (goods held) and buy offers (money held); nothing else ---- */
+const isBid = o => o.type === 'buy';
+// coalition-only listings are the one private channel: only members of that coalition see and fill them
+const blocIdOf = n => { const R = S.blocReg && Object.entries(S.blocReg).find(([, r]) => r.members && r.members.includes(n)); return R ? R[0] : null; };
+const canSee = (o, n) => !o.priv || blocIdOf(n) === o.priv;
+function settle(buyer, seller, k, q, price){ const B = S.nations[buyer], Sl = S.nations[seller]; B[k] += q; Sl.cash += q*price; }
+// AI order-book thresholds: a buy listing below AI_BID_LO, other AIs' sell listings filled below AI_NEED (metal for units and buildings above all, rare materials for research)
+const AI_BID_LO = {oil:40, metal:40, iron:40, elec:30, rare:35}, AI_NEED = {oil:220, metal:140, iron:220, elec:160, rare:160};
+// stocks listed for sale from BOOK_HI down to BOOK_LO (and 55% / 35% of the storage cap): oil from 600, a metal hoard from 900, iron from 300, electronics from 260, rare materials from 240
+// (oil: the producers' surplus reaches the importers short of fuel through the order book instead of piling up at home)
+const BOOK_HI = {oil:600, metal:900, iron:300, elec:260, rare:240}, BOOK_LO = {oil:380, metal:600, iron:200, elec:170, rare:150};
+function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty > 0 && S.nations[o.seller].alive); for (const o of S.book) o.priv = null;
+  // expired listings: goods (sell) or money (buy) go back to their owner
+  for (const o of S.book) if (o.exp <= S.hour){ const N = S.nations[o.seller]; if (isBid(o)) N.cash += o.qty*o.price; else N[o.res] += o.qty; o.qty = 0; }
+  S.book = S.book.filter(o => o.qty > 0);
+  // the biggest surplus first (a nation holds at most five listings); a hoard well above the line goes in bigger lots (up to 250) and a little cheaper,
+  // so a rare-earth giant's stock reaches the nations short of it instead of piling up all game
+  for (const N of S.nations){ if (!N.alive || N.id === PLAYER) continue; const cap = stockCap(N.id); let mine = S.book.filter(o => o.seller === N.id).length;
+    const hiOf = k => Math.min(cap*0.55, BOOK_HI[k] || 1e9);
+    for (const k of MKT_K.slice().sort((a, b) => N[b]/hiOf(b) - N[a]/hiOf(a))){ if (mine >= 5) break;
+      const hi = hiOf(k), lo = Math.min(cap*0.35, BOOK_LO[k] || 1e9);   // a metal hoard is listed from 900 units (sold nation to nation: no effect on the world price)
+      if (N[k] > hi && rng() < 0.45 && !S.book.some(o => o.seller === N.id && o.res === k && !isBid(o))){ const big = N[k] > 2*hi, qty = Math.round(Math.min(N[k] - lo, 250, 30 + rng()*60 + 0.25*(N[k] - hi))); if (qty < 10) continue;
+        N[k] -= qty; mine++; S.book.push({id:S.nid++, type:'sell', seller:N.id, res:k, qty, price:+(M.p[k]*(big ? 0.86 + rng()*0.18 : 0.92 + rng()*0.25)).toFixed(2), exp:S.hour + 72}); }
+      else if (N[k] < AI_BID_LO[k] && N.cash > 260 && rng() < 0.5 && !S.book.some(o => o.seller === N.id && o.res === k && isBid(o))){ const price = +(M.p[k]*(1 + rng()*0.22)).toFixed(2), qty = Math.round(Math.min(60, 25 + rng()*40, (N.cash - 200)/price)); if (qty < 10) continue;
+        N.cash -= qty*price; mine++; S.book.push({id:S.nid++, type:'buy', seller:N.id, res:k, qty, price, exp:S.hour + 72}); } } }
+  // matching between listings (never between nations at war); the earlier listing's price stands
+  for (const bid of S.book.filter(isBid)){ for (const ask of S.book.filter(o => !isBid(o) && o.res === bid.res && o.price <= bid.price && o.seller !== bid.seller && !atWar(o.seller, bid.seller) && canSee(o, bid.seller) && canSee(bid, o.seller)).sort((x, y) => x.price - y.price)){
+      if (bid.qty <= 0) break; if (ask.qty <= 0 || bid.seller === PLAYER || ask.seller === PLAYER) continue; const q = Math.min(bid.qty, ask.qty); settle(bid.seller, ask.seller, bid.res, q, ask.price); S.nations[bid.seller].cash += q*(bid.price - ask.price); bid.qty -= q; ask.qty -= q; } }
+  // AIs short of a resource (metal for units and buildings above all) fill other AIs' sell listings at a fair price; never an enemy's
+  for (const ask of S.book){ if (isBid(ask) || ask.qty <= 0 || ask.seller === PLAYER || ask.price > M.p[ask.res]*1.15) continue;
+    for (const N of S.nations){ if (ask.qty <= 0) break; if (!N.alive || N.id === PLAYER || N.id === ask.seller || atWar(N.id, ask.seller) || M.emb[ask.seller + '>' + N.id] || !canSee(ask, N.id) || rng() > 0.6) continue;
+      // oil: a big consumer keeps about 25 days of fuel; running out of it, a power buys with less money in hand
+      const need = (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1), dry = ask.res === 'oil' && N.oil < 80 && income(N.id).net.oil < 0;
+      if (N[ask.res] >= need || N.cash < (dry ? 120 : 230)) continue;
+      const q = Math.min(ask.qty, 50, Math.floor((N.cash - (dry ? 80 : 160))/ask.price), Math.floor(stockCap(N.id) - N[ask.res])); if (q < 5) continue;
+      N.cash -= q*ask.price; N[ask.res] += q; S.nations[ask.seller].cash += q*ask.price; ask.qty -= q; } }
+  // AI fills your listings when the price suits it
+  for (const o of S.book){ if (o.seller !== PLAYER) continue;
+    for (const N of S.nations){ if (!N.alive || N.id === PLAYER || atWar(N.id, PLAYER) || mkt().emb[N.id + '>' + PLAYER] || o.qty <= 0 || !canSee(o, N.id) || rng() > 0.5) continue;
+      if (!isBid(o)){ if (N[o.res] > 60 || o.price > M.p[o.res]*1.12) continue; const q = Math.min(o.qty, 40, Math.floor((N.cash - 150)/o.price)); if (q < 5) continue; N.cash -= q*o.price; N[o.res] += q; S.nations[PLAYER].cash += q*o.price; o.qty -= q; log(`${N.name} bought ${q} ${rlbl(o.res)} from your offer for $${fmt(q*o.price)}M.`, 'good', null); }
+      else { if (N[o.res] < 120 || o.price < M.p[o.res]*0.95) continue; const q = Math.min(o.qty, 40, Math.floor(N[o.res] - 80)); if (q < 5) continue; N[o.res] -= q; N.cash += q*o.price; S.nations[PLAYER][o.res] += q; o.qty -= q; log(`${N.name} sold you ${q} ${rlbl(o.res)} through your buy offer for $${fmt(q*o.price)}M.`, 'good', null); } } }
+  S.book = S.book.filter(o => o.qty > 0); }
+function fillOffer(id, q){ const o = (S.book || []).find(x => x.id === id), N = S.nations[PLAYER]; if (!o || o.seller === PLAYER || !canSee(o, PLAYER)) return 0;
+  if (mkt().emb[o.seller + '>' + PLAYER]) return 0;
+  if (!isBid(o)){ q = Math.min(q, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(PLAYER) - N[o.res])); if (q <= 0) return 0; N.cash -= q*o.price; N[o.res] += q; S.nations[o.seller].cash += q*o.price; }
+  else { q = Math.min(q, o.qty, Math.floor(N[o.res])); if (q <= 0) return 0; N[o.res] -= q; N.cash += q*o.price; S.nations[o.seller][o.res] += q; }
+  o.qty -= q; addMem(o.seller, PLAYER, 1); if (o.qty <= 0) S.book = S.book.filter(x => x !== o); return q; }
+const buyOffer = fillOffer;
+function postOffer(k, qty, price, type = 'sell', priv = false){ const N = S.nations[PLAYER]; if (!(price > 0) || !(qty > 0)) return false;
+  if (type === 'sell'){ qty = Math.min(qty, Math.floor(N[k])); if (qty <= 0) return false; N[k] -= qty; }
+  else { qty = Math.min(qty, Math.floor(N.cash/price)); if (qty <= 0) return false; N.cash -= qty*price; }
+  (S.book || (S.book = [])).push({id:S.nid++, type, seller:PLAYER, res:k, qty, price:+price.toFixed(2), exp:S.hour + 72, priv:priv ? blocIdOf(PLAYER) : null}); return true; }
+/* ---------------- Occupation unrest ---------------- */
+const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
+function unrestDay(){
+  S.unrest = S.unrest || G.P.map(() => 0);
+  // mobilisation strains the home front; long garrisons integrate conquests
+  for (const N of S.nations){ if (!N.alive || !N.mob) continue; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === N.id && S.home[p] === N.id) S.unrest[p] = Math.max(unrestOf(p) - 4, Math.min(15*N.mob, unrestOf(p) + 3*N.mob)); }
+  S.integ = S.integ || {};
+  for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const o = S.owner[p], home = S.home[p];
+    if (o < 0 || home === o){ if (!(o >= 0 && S.nations[o].mob)) S.unrest[p] = Math.max(0, unrestOf(p) - 4); continue; }
+    const garrison = S.armies.reduce((s0, a) => s0 + (a.owner === o && a.at === p && a.to === null && !a.fly ? groundN(a) : 0), 0);
+    const ik = p + ':' + o; S.integ[ik] = garrison >= 2 ? (S.integ[ik] || 0) + 1 : Math.max(0, (S.integ[ik] || 0) - 1);
+    if (S.integ[ik] >= 10){ S.unrest[p] = Math.min(unrestOf(p), 30); if (S.integ[ik] === 10 && o === PLAYER) log(`${G.P[p].cityName || G.P[p].name} is integrated: unrest there stays below 30%.`, 'good', p); continue; }
+    const homeAlive = home >= 0 && S.nations[home].alive, d = (homeAlive ? 5 : 3) + (G.P[p].city ? 2 : 0) - Math.min(9, garrison*1.5);
+    const before = unrestOf(p); S.unrest[p] = Math.max(0, Math.min(100, before + d));
+    if (o === PLAYER && before <= 50 && S.unrest[p] > 50) log(`${G.P[p].cityName || G.P[p].name} is close to revolt (${Math.round(S.unrest[p])}% unrest): garrison 2+ units there or pacify it.`, 'bad', p);
+    if (S.unrest[p] > 60 && rng() < (S.unrest[p] - 60)/160 && !S.armies.some(a => a.rebel && a.at === p)){
+      const r = addArmy(NEUTRAL, p, {inf:2 + Math.floor(rng()*3) + (G.P[p].city ? 2 : 0)}); r.rebel = true; S.unrest[p] -= 20;
+      if (o === PLAYER) log(`Partisans rose up in ${G.P[p].cityName || G.P[p].name}! Garrison or pacify occupied land to prevent revolts.`, 'bad', p);
+    } }
+}
+function rebelHour(){
+  // partisans holding a province alone for a day hand it back to its original nation (or independence)
+  for (const a of S.armies){ if (!a.rebel || !count(a) || a.to !== null) continue; const p = a.at;
+    if (S.armies.some(b => b !== a && b.at === p && b.to === null && !b.fly && b.owner === S.owner[p] && count(b))){ a.hold = 0; continue; }
+    if (++a.hold < 24) continue;
+    const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
+    S.owner[p] = to; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoChanged(); for (const t of UT) a.u[t] = 0;
+    if (to >= 0) addArmy(to, p, {inf:2});
+    if (prev === PLAYER) log(`${G.P[p].cityName || G.P[p].name} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}.`, 'bad', p);
+    else if (to === PLAYER) log(`Partisans liberated ${G.P[p].cityName || G.P[p].name} for you!`, 'good', p);
+    if (prev >= 0) checkNation(prev);
+  }
+  removeEmpty();
+}
