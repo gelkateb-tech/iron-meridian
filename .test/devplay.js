@@ -6,7 +6,7 @@
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
 const ROOT = path.join(__dirname, '..'), PAGE = path.join(ROOT, 'dist', 'test', 'play.html'), OUT = __dirname;
-const THREE_LOCAL = '/tmp/claude-0/-home-user/7fd07611-91e4-5b00-ba43-06c622a65904/scratchpad/build/node_modules/three/build/three.min.js';
+const THREE_LOCAL = '/home/user/iron-meridian/tools/vendor/three.min.js';
 (async () => {
   if (!fs.existsSync(PAGE)){ console.log('missing ' + PAGE + ': run node tools/build.js'); process.exit(1); }
   const b = await chromium.launch(); const errs = [], checks = {}, ok = (k, v, info) => { checks[k] = v ? 'PASS' : 'FAIL' + (info !== undefined ? ' ' + JSON.stringify(info) : ''); };
