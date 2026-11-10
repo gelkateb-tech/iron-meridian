@@ -1984,6 +1984,32 @@ button.cs-c:hover{box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 0 3px rgba(79,208,22
 }
 @media (max-width: 400px){ .cs-bt b{font-size:13.5px} .cs-nm{font-size:17.5px} .cs-c{width:70px; height:70px} }
 /* the hint never covers the city sheet or the selected city: top centre, under the bars */
+/* MOBILIZE UNIT square: the unit in training (its picture) with a light fill that rises from the bottom as it trains, a bright line at its level; an
+   empty dashed square with a faint plus when nothing trains. The fill moves by transform only (csSync eases it once per game hour); the line's slow
+   pulse runs only with Battery saver off and motion allowed */
+.cs-bi.cs-mi{position:relative; overflow:hidden; padding:0}
+.cs-mi.tr{background:linear-gradient(180deg, #1d4a56, #143540)}
+.cs-mi.tr > .ut{--us:48px; border-radius:0; box-shadow:none; margin:0; background:none}
+.cs-mi.tr > .ut::after{filter:brightness(1.35) drop-shadow(0 1px 1.5px rgba(0,0,0,.85))}
+.cs-mi.tr > svg{width:30px; height:30px}
+.cs-mf{position:absolute; left:0; right:0; top:0; height:100%; background:linear-gradient(180deg, rgba(120,226,238,.42), rgba(79,208,222,.2)); mix-blend-mode:screen; pointer-events:none}
+.cs-mf::after{content:""; position:absolute; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg, #2aa6b5, #8beff7 50%, #2aa6b5); box-shadow:0 0 6px rgba(139,239,247,.9)}
+.cs-mi.live .cs-mf::after{animation:csMobLine 2.6s ease-in-out infinite}
+@keyframes csMobLine{ 0%, 100%{opacity:1} 50%{opacity:.5} }
+html.reduced .cs-mi.live .cs-mf::after{animation:none}
+.cs-bi.cs-mi.idle{background:rgba(5,16,20,.32); border:1.5px dashed rgba(182,227,234,.5); box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+.cs-mi.idle::before{content:""; width:14px; height:14px; opacity:.4; background:linear-gradient(#d7f4f8, #d7f4f8) 50% 50%/100% 2px no-repeat, linear-gradient(#d7f4f8, #d7f4f8) 50% 50%/2px 100% no-repeat}
+@media (max-width: 820px){ .cs-mi.tr > .ut{--us:36px} .cs-mi.tr > svg{width:24px; height:24px} .cs-mi.idle::before{width:12px; height:12px} }
+@media (prefers-reduced-motion: reduce){ .cs-mi.live .cs-mf::after{animation:none} }
+/* a unit the city cannot mobilize yet (no Recruiting Office, Arms Factory level, research...): greyed, the reason in amber; a tap says why */
+.unit.blk{cursor:not-allowed}
+.unit.blk > .ut, .unit.blk > .nm, .unit.blk > .st{opacity:.42} .unit.blk > .ut{filter:grayscale(.85)}
+.unit.blk > .cost{color:#ffd27a; font-weight:600; transform-origin:0 50%}
+.unit.blk.why > .cost{animation:mobWhy .5s var(--ease)}
+@keyframes mobWhy{ 0%{transform:none; color:#fff} 30%{transform:scale(1.07); color:#fff} 100%{transform:none} }
+html.reduced .unit.blk.why > .cost{animation:none}
+.unit.btn.blk:hover{background:transparent} .unit.btn.blk:hover::before{opacity:0}
+.cs-mmod .unit.blk, .cs-mmod .unit.blk:hover{background:linear-gradient(180deg, #2f4047, #29383f); border-color:rgba(143,163,170,.3)}
 @media (min-width: 821px){ body.cs-on #hint{top:10px!important; bottom:auto!important; left:50%!important; transform:translateX(-50%)!important} }
 
 /* Diplomacy: every action is a real button; trade routes on one aligned grid */
@@ -2480,9 +2506,12 @@ function textFlag(text, h = 13){ if (!S || !text) return ''; let best = -1, at =
 const LOGO = '<h1 class="logo"><span class="l1">Iron Meridian</span><span class="vh">: </span><span class="l2">World War III</span></h1>';
 
 /* ---------------- Rules ---------------- */
+// req (and req2 for the few that need two): the building, and its level, a city must have to mobilize the unit; tech: the research it needs (null: known from day one).
+// Foot units (infantry, anti-tank, special forces, paratroopers) come from a Recruiting Office, vehicles from an Arms Factory, aircraft from an Airbase,
+// ships from a Naval Yard. The rule itself is canMobilize()
 const UNITS = {
-  inf:  {name:'Motorized Infantry',short:'INF', cls:'soft',    cost:25, oil:0, metal:0, iron:0, elec:0, rare:0, mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, fuel:0,   req:null,          tech:null,  role:'Cheap line infantry. Holds ground, captures.'},
-  at:   {name:'Anti-Tank Infantry',short:'ATI', cls:'soft',    cost:32, oil:0, metal:3, iron:3, elec:0, rare:0, mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{armored:3.5}, role:'Anti-tank infantry: 3.5× damage to armor.'},
+  inf:  {name:'Motorized Infantry',short:'INF', cls:'soft',    cost:25, oil:0, metal:0, iron:0, elec:0, rare:0, mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, fuel:0,   req:{b:'rec', l:1},          tech:null,  role:'Cheap line infantry. Holds ground, captures.'},
+  at:   {name:'Anti-Tank Infantry',short:'ATI', cls:'soft',    cost:32, oil:0, metal:3, iron:3, elec:0, rare:0, mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, fuel:0,   req:{b:'rec', l:1}, tech:null,  vs:{armored:3.5}, role:'Anti-tank infantry: 3.5× damage to armor.'},
   art:  {name:'Mobile Artillery',  short:'ART', cls:'soft',    cost:36, oil:3, metal:4, iron:7, elec:0, rare:0, mp:10, atk:7, def:3, hp:9,  spd:3,  build:48, upk:2, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{soft:1.4}, role:'Artillery: shreds infantry, fragile.'},
   sam:  {name:'Mobile SAM',        short:'SAM', cls:'soft',    cost:44, oil:2, metal:6, iron:3, elec:7, rare:0, mp:8,  atk:5, def:2, hp:8,  spd:4,  build:48, upk:2, fuel:0,   req:{b:'fac', l:2}, tech:null,  vs:{air:3.0, soft:0.3, armored:0.3}, vsU:{swarm:1.4, sdrone:3.2, bomb:4.0}, role:'Air defense: triple damage to aircraft; shoots down strike drones and covers its neighbours a little. Swarms saturate it.'},
   ifv:  {name:'Infantry Fighting Vehicle',short:'IFV', cls:'armored', cost:32, oil:4, metal:4, iron:7, elec:0, rare:0, mp:10, atk:4, def:4, hp:12, spd:7,  build:36, upk:2, fuel:0.5, req:{b:'fac', l:1}, tech:'inf2', role:'Fast armored infantry carrier.'},
@@ -2493,11 +2522,11 @@ const UNITS = {
   sub:  {name:'Attack Submarine',  short:'SUB', cls:'naval',   cost:48, oil:4, metal:5, iron:10, elec:4, rare:0, mp:5,  atk:6, def:2, hp:9,  spd:5.4, build:60, upk:2, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else.'},
   crui: {name:'Cruiser',           short:'CRU', cls:'naval',   cost:66, oil:10, metal:10, iron:20, elec:6, rare:0, mp:8,  atk:7, def:6, hp:20, spd:5.8, build:96, upk:5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
   mlrs: {name:'Rocket Artillery',  short:'MRL', cls:'armored', cost:52, oil:5, metal:5, iron:10, elec:3, rare:0, mp:8,  atk:8, def:2, hp:9,  spd:7,  build:54, upk:3, fuel:1, req:{b:'fac', l:2}, tech:'art2', vs:{soft:1.5, armored:0.9}, role:'Rocket artillery on wheels: shells enemies up to 2 provinces away. Fragile in close combat.'},
-  spec: {name:'Special Forces', short:'SOF', cls:'soft', cost:50, oil:0, metal:5, iron:0, elec:2, rare:0, mp:8,  atk:5, def:4, hp:10, spd:5,  build:42, upk:2, fuel:0,   req:{b:'fac', l:1}, tech:'inf3', role:'Elite raiders: hidden from radar and satellites, +40% attack in forest, mountains and cities, cross rough ground fast.'},
+  spec: {name:'Special Forces', short:'SOF', cls:'soft', cost:50, oil:0, metal:5, iron:0, elec:2, rare:0, mp:8,  atk:5, def:4, hp:10, spd:5,  build:42, upk:2, fuel:0,   req:{b:'rec', l:1}, tech:'inf3', role:'Elite raiders: hidden from radar and satellites, +40% attack in forest, mountains and cities, cross rough ground fast.'},
   carr: {name:'Aircraft Carrier', short:'CVN', cls:'naval',   cost:124, oil:14, metal:15, iron:32, elec:10, rare:3, mp:10, atk:3, def:6, hp:26, spd:5, build:120, upk:7, fuel:2, req:{b:'yard', l:2}, tech:'nav2', vs:{air:1.4, soft:0.4, armored:0.3, naval:0.6}, role:'Mobile airbase: air wings can base on it and strike far from home. Weak alone; escort it.'},
   heli: {name:'Attack Helicopter', short:'GUN', cls:'air',     cost:56, oil:8, metal:8, iron:0, elec:7, rare:0, mp:6,  atk:7, def:4, hp:10, spd:12, build:54, upk:4, fuel:1.5, req:{b:'air', l:1}, tech:'heli1', vs:{armored:2.2, soft:1.3, air:0.3, naval:0.5}, role:'Attack helicopter: short range (6 hexes), tears through armor and infantry.'},
   drone:{name:'Recon UAV',         short:'UAV', cls:'air', dr:'uav', cost:26, oil:2, metal:4, iron:0, elec:5, rare:0, mp:1,  atk:0, def:1, hp:4, spd:16, build:30, upk:1, fuel:0.5, req:{b:'air', l:1}, tech:'drone1', vs:{soft:1.0, armored:1.2, air:0, naval:0.6}, vsU:{sam:1.3, jam:1.6, art:1.4, mlrs:1.4}, role:'Recon UAV (levels I–V by research): loiters over a province and identifies every enemy force around it — type, size, level and health. Levels I–III are unarmed; UAV IV adds light missiles, UAV V more missiles, range and survivability. Jammers and SAMs shoot it down.'},
-  para: {name:'Paratroopers',short:'PAR', cls:'soft',   cost:36, oil:0, metal:4, iron:0, elec:0, rare:0, mp:10, atk:4, def:3, hp:10, spd:4,  build:36, upk:1.5, fuel:0,   req:{b:'air', l:1}, tech:'para1', role:'Elite infantry. From a province with your airbase, can be air-dropped up to 9 hexes away.'},
+  para: {name:'Paratroopers',short:'PAR', cls:'soft',   cost:36, oil:0, metal:4, iron:0, elec:0, rare:0, mp:10, atk:4, def:3, hp:10, spd:4,  build:36, upk:1.5, fuel:0,   req:{b:'rec', l:1}, req2:{b:'air', l:1}, tech:'para1', role:'Elite infantry. From a province with your airbase, can be air-dropped up to 9 hexes away.'},
   // V3 air: drones, the jammer that counters them, and specialised aircraft. dr = drone kind (swarm / uav / sdrone); pack = units per recruit card
   swarm:{name:'Swarm Drones',      short:'SWM', cls:'air', dr:'swarm', pack:6, cost:40, oil:2, metal:4, iron:0, elec:5, rare:0, mp:2, atk:1.6, def:0.5, hp:2, spd:14, build:30, upk:0.25, fuel:0.05, req:{b:'fac', l:2}, tech:'swarm1', vs:{soft:1.3, armored:0.35, air:0, naval:0.25}, vsU:{sam:1.8, jam:2.0, art:1.6, mlrs:1.0, ifv:0.9, at:1.2}, role:'Cheap loitering munitions, six per card, built in an Arms Factory II city and launched from truck launchers (they can rebase to any of your cities, with field repairs only): short-range strikes (1,080 km) that saturate air defences (SAMs and jammers fire less for hours) and shred infantry, guns and light vehicles. Weak against tanks; jammers and SAMs down them fast.'},
   sdrone:{name:'Strike Drone', short:'SDR', cls:'air', dr:'sdrone', cost:48, oil:3, metal:6, iron:0, elec:7, rare:1, mp:2, atk:5, def:1, hp:5, spd:12, build:42, upk:1.5, fuel:0.4, req:{b:'air', l:1}, tech:'sdrone1', vs:{soft:1.1, armored:1.4, air:0, naval:0.9}, vsU:{sam:1.5, jam:1.8, art:1.6, mlrs:1.6}, role:'Long-range precision drone (3,600 km): hits units and knocks out a building for 24 h (sometimes a whole level). Fragile: SAMs, fighters and jammers kill it.'},
@@ -2707,12 +2736,12 @@ const SEA_SPEED = 3.6;                // hexes/day for embarked ground units (tr
 const LANE_F = 1.12;                  // sea-lane bonus for every force at sea
 const KM_HEX = 180;                   // one map hex is roughly 180 km
 const BUILD = {
-  fac:  {name:'Arms Factory',      max:5, cost:25, ecost:55, metal:12, iron:12, days:3, where:'city', desc:'Level I unlocks anti-tank infantry, mobile artillery, main battle tanks and IFVs; level II unlocks mobile SAMs. Each level: +20% money and +25% electronics here and one more training line; units train 20% faster per level up to III, then 5% faster per level. Each Arms Factory you already own in another province makes the next one cost 40% more.'},
+  fac:  {name:'Arms Factory',      max:5, cost:25, ecost:55, metal:12, iron:12, days:3, where:'city', desc:'Level I unlocks mobile artillery, main battle tanks, IFVs and jammers; level II unlocks mobile SAMs. Each level: +20% money and +25% electronics here and one more training line; units train 20% faster per level up to III, then 5% faster per level. Each Arms Factory you already own in another province makes the next one cost 40% more.'},
   air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:'Needed for strike fighters and interceptors (with Jet Engines research). Levels II\u2013V: aircraft build 10% faster and wings based here reach 1 hex farther per level above I.'},
   ref:  {name:'Refinery',          max:2, cost:50, metal:10, iron:5, days:3, where:'oil',  desc:'+60% oil from this field per level.'},
   fdy:  {name:'Foundry',           max:2, cost:50, metal:10, days:3, where:'any',  desc:'Per level: +1.2 iron and +1.4 materials (+2.4 iron and +1.8 materials on ore deposits).'},
   mine: {name:'Rare Earth Mine',   max:2, cost:55, metal:10, days:3, where:'mine', desc:'Rare materials per level: +60% of a rare-earth deposit\u2019s output (at least +1.5); +1 on other hard-rock ground (hills, mountains, desert, tundra), +0.5 elsewhere. Not in cities on urban ground or in marshes.'},
-  rec:  {name:'Recruiting Office', max:1, cost:30, metal:0,  days:2, where:'any',  desc:'+3 manpower per day.'},
+  rec:  {name:'Recruiting Office', max:1, cost:30, metal:0,  days:2, where:'any',  desc:'Needed to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. +3 manpower per day.'},
   fort: {name:'Fortifications',    max:3, cost:36, metal:8, iron:8, days:2, where:'any',  desc:'Defenders here take 20% less damage per level.'},
   silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores cruise and ballistic missiles (needs Strategic research). Levels II\u2013V: missiles build 10% faster per level above I.'},
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
@@ -3786,12 +3815,14 @@ function newGame(seed, pick){
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, persist:!!newGame.persist, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
+  S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   linksSync();
   for (const n of S.nations){
     const np = S.owner.filter(o => o === n.id).length;
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 200/Math.max(1, income(n.id).gross.cash)));
     S.bld[n.capital].fac = 1;
+    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // infantry needs a Recruiting Office: the capital and the two biggest other cities start with one
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
     // compact powers (Germany, Japan, Britain...) start with a denser, dug-in home army
@@ -3806,6 +3837,12 @@ function newGame(seed, pick){
   log(`${S.nations[PLAYER].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   buildGeometry();
 }
+// where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
+function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
+// saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
+function mobMigrate(){ if (S.mob) return; S.mob = 1; let mine = false;
+  for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].rec) continue; S.bld[c].rec = 1; if (N.id === PLAYER) mine = true; }
+  if (Array.isArray(S.log)) S.log.unshift({h:S.hour, text:`New rule: infantry is mobilized only in cities with a Recruiting Office.${mine ? ' Your capital has been given one' : ' Your capital has one'}; build more in your other cities. Units already in training carry on.`, kind:'info', p:S.nations[PLAYER] ? S.nations[PLAYER].capital : null}); }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
 // the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded
@@ -3832,6 +3869,7 @@ function restore(data){
   if (S.sunOff == null) S.sunOff = sunOffFor(PLAYER);   // older saves: the same display-only daylight offset
   resMigrate();
   rqueueMigrate();
+  mobMigrate();
   buildGeometry();
   return true;
 }
@@ -3913,8 +3951,23 @@ const bdisOf = p => { const d = S.bdis && S.bdis[p]; if (d && typeof d.k === 'st
 const bdis = (p, k) => { const d = bdisOf(p); return !!d && (d[k] || 0) > S.hour; };
 const bdisH = (p, k) => { const d = bdisOf(p); if (!d) return 0; let h = 0; for (const b in d) if ((k == null || b === k) && d[b] - S.hour > h) h = d[b] - S.hour; return h; };
 function knockOut(p, k, h){ const d = bdisOf(p) || ((S.bdis || (S.bdis = {}))[p] = {}); for (const b in d) if (d[b] <= S.hour) delete d[b]; d[k] = Math.max(S.hour + h, d[k] || 0); }
-const bldOk = (p, t) => !UNITS[t].req || (S.bld[p][UNITS[t].req.b] >= UNITS[t].req.l && !bdis(p, UNITS[t].req.b));
-const reqText = (p, t, n = PLAYER) => { const U = UNITS[t]; return !unlocked(n, t) ? `Research ${TECH_BY[U.tech].name}` : U.req && bdis(p, U.req.b) && S.bld[p][U.req.b] >= U.req.l ? `${BUILD[U.req.b].name} knocked out · ${bdisH(p, U.req.b)} h` : !bldOk(p, t) ? `Needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''; };
+// ---------- mobilization rules (no drawing, no UI): what a city needs before it can train a unit.
+// A unit must be researched (units with no tech are known from day one) AND its city must have the unit's building(s) at the needed level, working.
+const reqsOf = t => { const U = UNITS[t]; return U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };
+const bldOk = (p, t) => reqsOf(t).every(r => S.bld[p][r.b] >= r.l && !bdis(p, r.b));
+// why nation n cannot mobilize unit t in province p: null when it can, else {kind, why, b}: kind 'own' (not its province), 'city' (not a city),
+// 'tech' (research missing), 'bld' (building missing or too low; b = the building), 'ko' (building knocked out for a while)
+function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why:'Unknown unit'};
+  if (S.owner[p] !== n) return {kind:'own', why:'Not your city'};
+  if (!G.P[p].city) return {kind:'city', why:'Units are mobilized in cities'};
+  if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${TECH_BY[U.tech].name}`};
+  for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
+    if (lv < r.l) return {kind:'bld', b:r.b, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${c.h} h` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
+    if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
+  return null; }
+// the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words
+function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : ''; }
+const reqText = (p, t, n = PLAYER) => canMobilize(n, p, t);
 // ---------- research rules: every nation runs two projects at once, slot #1 (N.research) and slot #2 (N.research2), each {id, h, h0} or null.
 // Both slots progress at full speed; a project's costs are paid when it starts; a project whose prerequisite is still running in the other slot
 // waits until that one is done. Pure rules (no drawing): the UI asks researchWhy / canResearch and calls startResearch.
@@ -5580,7 +5633,7 @@ function marketHTML(){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), emb 
     ${bookHTML()}
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
-const canRecruit = (n, p, t) => S.owner[p] === n && G.P[p].city && bldOk(p, t) && canAfford(n, t);
+const canRecruit = (n, p, t) => !canMobilize(n, p, t) && canAfford(n, t);
 function recruit(n, p, t){
   if (!canRecruit(n, p, t)) return false;
   const N = S.nations[n], c = ucost(n, t); payC(N, c);
@@ -6801,13 +6854,13 @@ let tickVer = 0;
 // the hour steps of production, construction, unit upgrades and research (one province / nation each; tick() runs them every game hour)
 function prodHour(p){ const q = S.queue[p];
     if (S.owner[p] < 0){ q.length = 0; return; }
-    { const it0 = q[0], rb = it0.msl ? 'silo' : UNITS[it0.t] && UNITS[it0.t].req ? UNITS[it0.t].req.b : null; if (rb && bdis(p, rb)) return; }   // knocked-out building: its line waits
+    { const it0 = q[0]; if (it0.msl ? bdis(p, 'silo') : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits
     const lines = 1 + S.bld[p].fac;            // each Arms Factory level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
     if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (S.owner[p] === PLAYER){ log(`${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fx('ready', p); sfx('ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
       if (S.owner[p] === PLAYER){ fx('ready', p); sfx('ready'); log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
-        if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])) log(`Repeat production paused in ${G.P[p].cityName}: not enough resources for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } }
+        if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])){ const why = canMobilize(PLAYER, p, S.repeat[p]); log(`Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
     if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (S.owner[p] === PLAYER) log(`${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
@@ -7451,6 +7504,7 @@ function aiTurn(n){
     if (S.owner[p] !== n || !G.P[p].city) continue;
     if (!S.cons[p]){
       if (p === N.capital && (threatNear(p, n) ? S.bld[p].fort < (provs > 150 ? 3 : 2) : warsOf(n).length && S.bld[p].fort < 1 && N.cash > 90)) build(n, p, 'fort');
+      else if (!S.bld[p].rec && N.cash > (p === N.capital ? 40 : 80) && (p === N.capital || rng() < 0.3)) build(n, p, 'rec');   // infantry is mobilized only where a Recruiting Office stands
       else if (!S.bld[p].fac && N.cash > 110) build(n, p, 'fac');
       else if (has(n, 'air1') && !S.bld[p].air && N.cash > 140 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air).length < 2) build(n, p, 'air');
       else if (has(n, 'msl1') && p === N.capital && !S.bld[p].silo && N.cash > 260 && rng() < 0.3) build(n, p, 'silo');
@@ -7468,7 +7522,7 @@ function aiTurn(n){
     const U1 = N.uSave && N.uSave.until > S.hour ? N.uSave : null;
     if (S.queue[p].length < 2 && (canGrow || N.cash > 600 || (U1 && bldOk(p, U1.t) && canAfford(n, U1.t)))){   // a counter saved for is bought even outside growth
       const U = U1;
-      const hold = U && bldOk(p, U.t) && UNITS[U.t].req && UNITS[U.t].req.b === 'air' && UNITS[U.t].req.l >= 2 && S.queue[p].length >= 1;
+      const hold = U && bldOk(p, U.t) && reqsOf(U.t).some(r => r.b === 'air' && r.l >= 2) && S.queue[p].length >= 1;
       if (U && bldOk(p, U.t) && canAfford(n, U.t)){ if (recruit(n, p, U.t) !== false) N.uSave = null; }
       else if (!hold){ let t = aiPickUnit(n, p);
         if (!canAfford(n, t) && unlocked(n, t) && bldOk(p, t)) aiBuyFor(n, ucost(n, t), 1.3, 60);   // goods short: buy them (up to 1.3x the base price) when $60M stay spare
@@ -11271,11 +11325,14 @@ function citiesHTML(){ const N = S.nations[PLAYER], cities = G.P.filter(P => S.o
    big buttons sit on top: MOBILIZE UNIT (the recruit cards of that city) and BUILD (its construction list); elsewhere the sheet is read-only with
    DIPLOMACY and INTEL. The side panel keeps the full detail (provHTML); on phones it gives way to the sheet and the (i) button brings it back. */
 const CS = {p:-1, det:false, t:0};
-const csGear = (cx, cy, r0, r1, n) => { let d = ''; for (let i = 0; i < n*2; i++){ const r = i % 2 ? r0 : r1, a0 = (i - 0.5)*Math.PI/n, a1 = (i + 0.5)*Math.PI/n;
-  d += (i ? 'L' : 'M') + (cx + r*Math.cos(a0)).toFixed(2) + ' ' + (cy + r*Math.sin(a0)).toFixed(2) + 'L' + (cx + r*Math.cos(a1)).toFixed(2) + ' ' + (cy + r*Math.sin(a1)).toFixed(2); } return d + 'Z'; };
 const csCirc = (cx, cy, r) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`;
+// the MOBILIZE UNIT square: the picture of the unit (or missile) in training with its progress fill, or the empty idle square
+const csMobF = q0 => q0 ? Math.max(0, Math.min(1, 1 - q0.h/(q0.h0 || 24))) : -1;
+const csMobY = f => ((1 - f)*100).toFixed(1) + '%';   // the fill's top edge: 100% (empty) down to 0 (done)
+const csMobIcon = q0 => q0 ? `<span class="cs-bi cs-mi tr${saverOn() || afxReduced() ? '' : ' live'}">${q0.msl ? mslIcon(q0.t, 30) : unitPic(q0.t, 'lg')}<i class="cs-mf" style="transform:translateY(${csMobY(csMobF(q0))})"></i></span>` : '<span class="cs-bi cs-mi idle"></span>';
+// what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a Recruiting Office says so
+const csMobIdle = p => UT.some(t => !canMobilize(PLAYER, p, t)) || S.bld[p].rec ? 'Nothing in training' : `No ${BUILD.rec.name}`;
 const CS_ICO = {
-  mob:`<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="${csGear(13, 13, 8.2, 11, 8)}${csCirc(13, 13, 3.6)}"/><path fill="currentColor" fill-rule="evenodd" d="${csGear(24, 24, 4.4, 6.3, 7)}${csCirc(24, 24, 2)}"/></svg>`,
   bld:`<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><path d="M15 18h7.4v4.2H15zM23.6 18H31v4.2h-7.4zM19.3 23.4h7.4v4.2h-7.4zM15 23.4h3.1v4.2H15zM27.9 23.4H31v4.2h-3.1zM15 28.8h7.4V31H15zM23.6 28.8H31V31h-7.4zM19.3 12.6h7.4v4.2h-7.4z"/>
     <g transform="rotate(-42 11 12)"><rect x="9.4" y="8" width="3.2" height="21" rx="1.2"/><path d="M3 2.4h13.4l2.6 2.4v4.8H3z"/></g></g></svg>`,
   dip:`<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><rect x="5" y="3" width="2.4" height="27" rx="1"/><path d="M7.4 4.4c4.4-2 8.2 2 12.6 0s6-1.4 7.6-.4v12.4c-1.6-1-3.8-1.6-7.6.2s-8.2-2-12.6 0z"/></g></svg>`,
@@ -11303,10 +11360,10 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   const fl = flagHTML(o >= 0 ? o : G.countries[P.country].name, 96, 'big'), y = provYield(p), m = Math.round(moraleOf(p)), lv = P.city ? cityLevel(p) : 0;
   const r = o >= 0 && !mine ? rel(PLAYER, o) : null, c = mine ? S.cons[p] : null, q = mine ? S.queue[p] : [];
   // MOBILIZE UNIT / BUILD (yours), DIPLOMACY / INTEL (theirs); the sub-line carries the queue, a thin bar its progress
-  const big = (act, ico, label, sub, pr, cls = '') => `<button class="cs-big ${cls}" data-act="${act}"><span class="cs-bi">${CS_ICO[ico]}</span><span class="cs-bt"><b>${label}</b><small>${sub}</small></span>${pr != null ? `<span class="cs-pb"><i style="width:${Math.round(pr*100)}%"></i></span>` : ''}</button>`;
+  const big = (act, ico, label, sub, pr, cls = '') => `<button class="cs-big ${cls}" data-act="${act}">${ico.charAt(0) === '<' ? ico : `<span class="cs-bi">${CS_ICO[ico]}</span>`}<span class="cs-bt"><b>${label}</b><small>${sub}</small></span>${pr != null ? `<span class="cs-pb"><i style="width:${Math.round(pr*100)}%"></i></span>` : ''}</button>`;
   let acts = '';
   if (mine){ const q0 = q[0];
-    const mob = P.city ? big('cs-mob', 'mob', 'Mobilize unit', q0 ? `${q0.msl ? mslIcon(q0.t, 15) : unitPic(q0.t, 'xs')}<span>${(UNITS[q0.t] || MISSILES[q0.t]).name}</span><em>${csTime(q0.h)}${q.length > 1 ? ` · +${q.length - 1}` : ''}</em>` : 'Nothing in training', q0 ? 1 - q0.h/(q0.h0 || 24) : null, (q0 ? '' : 'idle ') + 'cs-mob') : '';
+    const mob = P.city ? big('cs-mob', csMobIcon(q0), 'Mobilize unit', q0 ? `${q0.msl ? mslIcon(q0.t, 15) : unitPic(q0.t, 'xs')}<span>${(UNITS[q0.t] || MISSILES[q0.t]).name}</span><em>${csTime(q0.h)}${q.length > 1 ? ` · +${q.length - 1}` : ''}</em>` : csMobIdle(p), q0 ? 1 - q0.h/(q0.h0 || 24) : null, (q0 ? '' : 'idle ') + 'cs-mob') : '';
     const bld = big('cs-bld', 'bld', 'Build', c ? `<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${csTime(c.h)}</em>` : BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? 'No construction' : 'Fully built', c ? 1 - c.h/c.h0 : null, 'cs-bldb');
     acts = `<div class="cs-acts${P.city ? '' : ' one'}">${mob}${bld}</div>`; }
   else if (o >= 0) acts = `<div class="cs-acts">${big('diplo-open', 'dip', 'Diplomacy', `${REL[r.st]} with ${nationName(o)}`, null)}${big('intel', 'intel', 'Intel', `${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}`, null)}</div>`;
@@ -11333,6 +11390,9 @@ function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWa
   clearTimeout(CS.t); el.classList.remove('out'); const fresh = el.hidden; el.hidden = false;
   const row = el.querySelector('.cs-blds'), sl = row && CS.p === p ? row.scrollLeft : 0;
   setHTML(el, csHTML(p)); { const r2 = el.querySelector('.cs-blds'); if (r2 && sl) r2.scrollLeft = sl; }
+  { const q = S.owner[p] === PLAYER ? S.queue[p] : [], q0 = q[0], f = csMobF(q0), key = q0 ? p + ':' + q0.t + ':' + q0.h0 + ':' + q.length : '', mf = q0 && el.querySelector('.cs-mf');
+    if (mf && mf.animate && CS.mk === key && CS.mf >= 0 && Math.abs(f - CS.mf) > 1e-4 && !afxReduced()) try { mf.animate([{transform:`translateY(${csMobY(CS.mf)})`}, {transform:`translateY(${csMobY(f)})`}], {duration:700, easing:'cubic-bezier(.3,.7,.3,1)'}); } catch (e) {}
+    CS.mk = key; CS.mf = f; }
   if (CS.p !== p && !fresh) slideIn(el.querySelector('.cs-body'), 0, 8, 200);
   CS.p = p; csH(); }
 // the sheet's height, for the map controls, hints and the tutorial box that sit above it
@@ -11490,12 +11550,12 @@ function prodHTML(){
   const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p];
     const qtxt = q.length ? `${(UNITS[q[0].t] || MISSILES[q[0].t]).name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || 24))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
     // queue buttons: the unit's picture and its price (full name and costs in the tooltip), not cryptic code chips
-    const btns = UT.filter(t => bldOk(p, t) && unlocked(PLAYER, t)).map(t => { const uc = ucost(PLAYER, t);   // the price you actually pay (doctrine-adjusted), same as the Recruit list
+    const btns = UT.filter(t => !canMobilize(PLAYER, p, t)).map(t => { const uc = ucost(PLAYER, t);   // the price you actually pay (doctrine-adjusted), same as the Recruit list
       return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: ${costTxt(uc, ', ')} (shift-click: 5)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted">${BK.filter(k => S.bld[p][k]).map(k => (k === 'mine' ? 'Mine' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '<span class="muted">—</span>'}</td>
-      <td class="qcell"><div class="ub">${btns || '<span class="small muted">Needs an Arms Factory or research</span>'}</div></td>
+      <td class="qcell"><div class="ub">${btns || `<span class="small muted">${S.bld[p].rec ? 'Needs an Arms Factory or research' : 'Build a Recruiting Office first'}</span>`}</div></td>
       <td class="rcell"><label class="rep" title="Repeat: keep training the last unit queued here while you can afford it"><input type="checkbox" data-act="repeat" data-p="${p}" ${rp ? 'checked' : ''}><i aria-hidden="true"></i><span>${rp ? UNIT_NICK[rp] || UNITS[rp].short : 'Repeat'}</span></label></td></tr>`; }).join('');
   const idle = cities.filter(P => !S.queue[P.id].length).length;
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} cities</div><h1>Production</h1></div>
@@ -12073,7 +12133,7 @@ function airGuideHTML(){ const L = uavLv(PLAYER);
     return `<div class="agc${lk ? ' lk' : ''}"><div class="pic">${unitPic(t, 'xl')}</div><div><b>${U.name}</b> <span class="muted small">${U.short} · ${U.dr ? 'drone' : U.cls}${U.pack ? ` · ${U.pack} per card` : ''}</span>
       ${t === 'drone' ? `<div>${uavBadge()}</div>` : ''}<div class="small">${U.role}</div>
       <div class="small"><span class="tg">Strong vs</span> ${C[0]}</div><div class="small"><span class="tb">Countered by</span> ${C[1]}</div>
-      <div class="small muted">ATK ${+st(PLAYER, t, 'atk').toFixed(1)} · DEF ${+st(PLAYER, t, 'def').toFixed(1)} · HP ${U.hp} · ${rng0}${costHTML(ucost(PLAYER, t))}${U.pack ? ' /card' : ''}${lk ? ` · <span style="color:var(--accent)">Research ${TECH_BY[U.tech].name}</span>` : ''}${U.req ? ` · needs ${BUILD[U.req.b].name}${U.req.l > 1 ? ' ' + ROMAN[U.req.l] : ''}` : ''}</div></div></div>`; };
+      <div class="small muted">ATK ${+st(PLAYER, t, 'atk').toFixed(1)} · DEF ${+st(PLAYER, t, 'def').toFixed(1)} · HP ${U.hp} · ${rng0}${costHTML(ucost(PLAYER, t))}${U.pack ? ' /card' : ''}${lk ? ` · <span style="color:var(--accent)">Research ${TECH_BY[U.tech].name}</span>` : ''}${reqsOf(t).length ? ` · needs ${reqsOf(t).map(r => BUILD[r.b].name + (r.l > 1 ? ' ' + ROMAN[r.l] : '')).join(' and ')}` : ''}</div></div></div>`; };
   const lvRow = i => { const X = UAV_LV[i]; return `<tr${i === L && has(PLAYER, 'drone1') ? ' style="background:rgba(226,162,61,.1)"' : ''}><td><b>UAV ${ROMAN[i]}</b>${has(PLAYER, UAV_TECH[i - 1]) ? ' ✓' : ''}</td><td>${Math.round(X.vis*KM_HEX/50)*50} km</td><td>${X.loiter} h</td><td>${X.range*KM_HEX} km</td><td>${Math.round((1 - X.stealth)*100)}% fewer hits</td><td>${X.salvos ? `<b>Armed</b>: ${X.salvos} missile salvo${X.salvos > 1 ? 's' : ''}` : 'Recon only'}</td></tr>`; };
   return `<div class="eyebrow">Unit guide</div><h1>Air power, drones &amp; counters</h1>
     <p class="small muted">Every unit has a counter. Drones are cheap and fragile; manned aircraft cost more and survive more. <b>Identified</b> contacts (UAV, satellite, radar, ground contact) show nation, type, size, level and health; <b>unidentified</b> ones (AWACS radar) show only a <b>?</b> where something is.</p>
@@ -12098,10 +12158,11 @@ function airGuideHTML(){ const L = uavLv(PLAYER);
 // MOBILIZE UNIT / BUILD panels of the city sheet show the same blocks
 function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html = '';
     const card = t => { const U = UNITS[t];
-      const why = reqText(p, t);
+      const why = canMobilize(PLAYER, p, t);
       const h = trainH(p, t, PLAYER);
-      return `<button class="btn unit hasp" data-act="recruit" data-t="${t}" title="${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)} Shift-click to queue 5." ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
-    const open = UT.filter(t => !reqText(p, t)), locked = UT.filter(t => reqText(p, t));
+      return `<button class="btn unit hasp${why ? ' blk' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)} Shift-click to queue 5." ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
+    const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b)));
+    const open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), locked = UT.filter(t => blk(t) && !near(blk(t)));
     html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
     html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (Arms Factory adds more). Shift-click a card to queue 5. <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
@@ -12200,7 +12261,8 @@ document.addEventListener('click', e => {
     case 'sp-go': if (a && SPLIT){ const n0 = count(a), out = splitPlan(a, SPLIT.plan); SPLIT = null; if (out.length){ sfx('order'); toast(`Split ${n0} units into ${out.length + 1} forces: ${[a, ...out].map(count).join(' · ')}.`, 'info', null); selectArmy(out[0].id); } else renderSide(true); } break;
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty(); renderSide(true); } break;
     case 'stop': if (a){ a.path = []; delete a.join; delete a.escort; renderSide(true); } break;
-    case 'recruit': if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
+    case 'recruit': if (sel.prov !== null){ const why = canMobilize(PLAYER, sel.prov, b.dataset.t); if (why){ toast(`${UNITS[b.dataset.t].name}: ${why}.`, 'info', sel.prov); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; } }
+      if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
       if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
     case 'build': if (sel.prov !== null && build(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
     case 'link-build': if (buildLink(PLAYER, +b.dataset.a, +b.dataset.b, b.dataset.k)){ sfx('ready'); renderSide(true); } break;
@@ -12953,6 +13015,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:id => techCost(TECH_BY[id]), TECH:() => TECH.map(T => ({id:T.id, req:T.req || null, days:T.days})), html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
+if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });
