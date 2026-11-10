@@ -18,12 +18,18 @@ const dmgOf = p => (S.dmg && S.dmg[p]) || 0;
 const moraleOf = p => Math.max(0, Math.min(100, 100 - unrestOf(p) - dmgOf(p)));
 function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012)); }
 function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(0.45 + 0.55*moraleOf(p)/100)*(CONVOY_LOST.has(p) ? 0 : 1), b = bdisH(p) ? (o => { for (const k in S.bdis[p]) if (S.bdis[p][k] > S.hour) o[k] = 0; return o; })({...S.bld[p]}) : S.bld[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75);
-  const pf = G.PF;
-  // materials: ore deposits and cities, Foundries a little; iron: ore deposits and iron-mining hills, Foundries mainly; electronics: cities by
-  // population and Arms Factory level (a trickle from populous countryside); rare materials: rare-earth deposits and Rare Earth Mines
-  return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 4.2 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 1.4 : 0) + (P.city ? 0.9 : 0) + b.fdy*(P.ore ? 1.8 : 1.4))*f,
-    iron:((P.ore ? 0.8 : 0) + (P.iron ? 0.8 : 0) + (P.city ? 0.8 : 0) + b.fdy*(P.ore ? 2.4 : 1.2))*f, elec:(P.city ? (0.2 + ECO.elec*pp)*(1 + 0.25*b.fac) : 0.004*pp)*f,
-    rare:((P.rare || 0) + (b.mine || 0)*mineLv(P))*f, mp:((P.city ? 1.2 : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
+  // a city yields money, manpower and its ONE main resource (P.main; 'cash' when it has none): a money city 60% more money, the others ECO_Y units a day
+  // times the city-size factor (0.8 for a town, 1.2 from about 16 million people); the Arms Industry adds 25% of it per level. The countryside keeps a
+  // thin trickle: oil fields, ore deposits (materials and a little iron), iron hills, a trace of electronics; rare materials come from rare-earth cities only
+  const pf = G.PF, y = {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*f, oil:(P.oil && !P.city ? ECO_RUR.oil : 0)*f, metal:(P.ore && !P.city ? ECO_RUR.metal : 0)*f,
+    iron:(P.city ? 0 : (P.ore ? ECO_RUR.ironOre : 0) + (P.iron ? ECO_RUR.iron : 0))*f, elec:(P.city ? 0 : 0.004*pp)*f, rare:0,
+    mp:((P.city ? ECO_MP_CITY : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f};
+  if (P.city){ const k = P.main || 'cash', a = 1 + ARMS_PCT*(b.arms || 0); if (k === 'cash') y.cash *= ECO_Y.cash*a; else y[k] = ECO_Y[k]*citySize(pp)*a*f; }
+  return y; }
+const citySize = pp => 0.8 + 0.4*Math.min(1, pp/8);   // pp = population^0.75
+// what a city produces (for the city sheet, the build menu and the AI): its main resource, today's output of it, and the output before the Arms Industry
+const cityMain = p => G.P[p].city ? (G.P[p].main || 'cash') : null;
+function cityOut(p){ const k = cityMain(p); if (!k) return null; const y = provYield(p)[k], lv = bdis(p, 'arms') ? 0 : (S.bld[p].arms || 0); return {k, y, base:y/(1 + ARMS_PCT*lv), lv}; }
 const ECO = GS > 1 ? {cash:0.68, mp:0.16, elec:0.047} : {cash:0.9, mp:0.22, elec:0.06};
 // ---- convoys: provinces cut off by land from the capital ship their output home; enemy warships on the route sink it
 let CONVOY_LOST = new Set();
@@ -45,7 +51,7 @@ function convoyDay(){ CONVOY_LOST = new Set(); S.convoys = (S.convoys || []).fil
       if (best.length > 1) S.convoys.push({owner:n, route:best, t0:S.hour, raidAt}); } }
   if (S.convoys.length > 60) S.convoys.splice(0, S.convoys.length - 60); }
 const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
-const SHORT_MSG = {oil:'Oil shortage: Armor and Strike Jets are slowed and weakened.', iron:'Iron shortage: armor, artillery and warships go without spare parts (-20% attack, -15% defence). Buy iron on the Market (T) or build Foundries.', elec:'Electronics shortage: aircraft, drones, air defence and warships go without spares (-20% attack, -10% defence). Buy electronics on the Market (T) or raise Arms Factories in big cities.', cash:'Treasury empty: upkeep is unpaid.'};
+const SHORT_MSG = {oil:'Oil shortage: Armor and Strike Jets are slowed and weakened.', iron:'Iron shortage: armor, artillery and warships go without spare parts (-20% attack, -15% defence). Buy iron on the Market (T) or build an Arms Industry in an iron city.', elec:'Electronics shortage: aircraft, drones, air defence and warships go without spares (-20% attack, -10% defence). Buy electronics on the Market (T) or build an Arms Industry in an electronics city.', cash:'Treasury empty: upkeep is unpaid.'};
 let INCC = {v:-1, S:null, m:[]};
 function income(n){ if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
 function income0(n){
@@ -53,10 +59,10 @@ function income0(n){
   const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
     const m = (S.home[p] === n ? boost : 1)*capHit;
-    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ g.oil += 3; g.metal += 3; g.iron += 3.5; g.elec += 1.5; g.rare += 1; } }   // the capital: state industry, labs and recycling
+    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ const c = ECO_CAPITAL; g.oil += c.oil; g.metal += c.metal; g.iron += c.iron; g.elec += c.elec; g.rare += c.rare; } }   // the capital: state industry, labs and recycling
   const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
   for (const k in g) g[k] *= eff;
-  if (has(n, 'eco1')) g.cash *= 1.2; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;
+  g.cash *= has(n, 'eco1') ? 1.2 : ECO_CASH_ALL; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;   // eco1-3: the old Economy research (now part of buildings); a nation that researched one keeps its bonus
   const mob = N0.mob || 0; if (mob){ g.mp *= 1 + 0.4*mob; g.cash *= 1 - 0.06*mob; }
   if (!isSeat(n) && S.diff){ const dm = diffOf().inc; for (const k in g) g[k] *= dm; }
   if (S.rel){ const tired = warsOf(n).filter(m => S.hour - rel(n, m).since > 240).length; g.cash *= 1 - Math.min(0.2, 0.05*tired); }

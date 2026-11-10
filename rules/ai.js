@@ -279,13 +279,22 @@ function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
 // AI market thresholds: buys when a stock is below AI_LOW (and tops up what is below AI_SHORT, AI_BUYQ at most); never a hoard
 const AI_KEEP = {iron:180, elec:130, rare:170};   // AI stock kept back from a sale into a strong market (plus 25 days of maintenance and what it saves for)
 const AI_LOW = {oil:40, metal:60, iron:50, elec:35, rare:40}, AI_SHORT = {oil:90, metal:90, iron:80, elec:60, rare:70}, AI_BUYQ = {oil:120, metal:120, iron:100, elec:60, rare:50};
-// where the AI builds a Rare Earth Mine (the richest ground it holds) or an Arms Factory for electronics (its most populous city still below level III)
-// a Foundry goes on an ore deposit first (twice the iron), at home rather than on conquered land, the lowest level first
+// AI economy constants (the city-resource economy): an Arms Industry level must pay for itself within AI_PAY_NEED days when the good is really short,
+// AI_PAY_FREE days as a plain investment; its rare-earth city is taken to Arms Industry AI_RARE_LV first; AI_XKEEP: the stock an exporter keeps before it
+// sells; AI_IMP: what an importer buys a day at most; exporters sell while the world price is at least AI_XPX of the base
+const AI_PAY_NEED = 40, AI_PAY_FREE = 20, AI_RARE_LV = 3, AI_XPX = 0.75, AI_BASE_Q = 0.34;
+const AI_XKEEP = {oil:200, metal:120, iron:140, elec:110, rare:40}, AI_IMP = {oil:40, metal:40, iron:35, elec:20, rare:30};
+// where the AI builds an Arms Industry for resource k: its own city whose main resource is k, the lowest level first, big cities and home cities first
 function aiSite(n, k){ let best = -1, bv = 0;
-  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, k)) continue; const P = G.P[p], lv = S.bld[p][k];
-    const v = k === 'mine' ? (lv < BUILD.mine.max ? mineLv(P)*(1 - 0.25*lv)*(S.home[p] === n ? 1 : 0.7) : 0) : k === 'fdy' ? (lv < BUILD.fdy.max ? (P.ore ? 2 : 1)/(1 + lv)*(S.home[p] === n ? 1 : 0.6)*(1 + 0.1*rng()) : 0) : (lv < 3 ? (1 + popOf(p))/(1 + lv) : 0);
-    if (v > bv){ bv = v; best = p; } }
+  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || cityMain(p) !== k) continue; const lv = S.bld[p].arms; if (lv >= BUILD.arms.max) continue;
+    const v = (1 + 0.2*Math.min(4, Math.pow(popOf(p), 0.75)/4))/(1 + lv)*(S.home[p] === n ? 1 : 0.6)*(1 + 0.1*rng()); if (v > bv){ bv = v; best = p; } }
   return best; }
+// days until the next Arms Industry level for resource k pays for itself: its price (money, plus materials and iron at base prices) against the daily
+// value of the +25% (at base prices; money at par). 1e9 when the nation has no city for it
+function aiArmsPay(n, k){ const p = aiSite(n, k); if (p < 0) return 1e9; const c = buildCost(n, 'arms', S.bld[p].arms + 1, p), y0 = provYield(p)[k]/(1 + ARMS_PCT*S.bld[p].arms);
+  return (c.cash + c.metal*MKT_BASE.metal + c.iron*MKT_BASE.iron)/Math.max(0.01, ARMS_PCT*y0*(k === 'cash' ? 1 : MKT_BASE[k])); }
+// the main resources of the nation's cities (what it can raise at home and export; the rest it must buy or conquer)
+function aiMains(n){ const m = new Set(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && G.P[p].city) m.add(cityMain(p)); return m; }
 const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U = N.uSave;
   // at war, troops come first: the link project only holds its money back once there is twice that much in the bank
   let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
@@ -306,6 +315,7 @@ const ARMYC = {v:-1, m:[]};
 function aiArmyCap(n){ if (ARMYC.v !== tickVer || ARMYC.S !== S){ ARMYC.v = tickVer; ARMYC.S = S; ARMYC.m = []; }
   if (ARMYC.m[n] != null) return ARMYC.m[n]; let c = 0, k = 0; for (const P of G.P) if (!P.sea && S.owner[P.id] === n){ k++; c += P.city ? 1 : (Math.abs(P.lat) < 55 ? 3 : 1)*G.PF; }
   return (ARMYC.m[n] = 90 + c*Math.min(1, 0.55 + 40/(40 + k))); }   // large empires feed and supply their armies less efficiently (as food was hit by administration)
+const aiBases = n => G.P.filter(P => S.owner[P.id] === n && P.city && (S.bld[P.id].fac || (S.cons[P.id] && S.cons[P.id].k === 'fac'))).length;
 function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
   if (rFree(N)){   // a slot is free (one start per turn: the other slot fills on a later turn, with a different project)
@@ -314,7 +324,7 @@ function aiTurn(n){
       const hb = H.bomb > 0 ? 4 : 0, wr = warsOf(n).length > 0, ab2 = G.P.some(P => S.owner[P.id] === n && S.bld[P.id].air >= 2);
       // enemies fielding (or able to field) bombers, AWACS and patrol planes, or flying drones, call for Air Superiority Fighters
       const aw = (() => { const foes = warsOf(n), heavy = foes.filter(e => has(e, 'bomb1') || has(e, 'awacs1')).length; const v = (wr ? 2.5 : 0) + 14*mx.bomb + 12*mx.sup + 8*mx.drone + 3*Math.min(2, heavy) + (H.bomb + H.air > 0 ? 4 : 0); return {asf:v, air2:0}; })();   // (fighters are open from day one: Precision Munitions no longer leads there)
-      const RW = {air1:3, eco1:3, air2:(wr ? 4.2 : 2.6) + 4*(mx.bomb + mx.air) + 2*Math.min(3, H.bomb) + hb + aw.air2, drone1:2.5, uav2:2, uav3:1.5, uav4:2, uav5:1.5, swarm1:3, sdrone1:2.5, jam1:0.8 + 14*mx.drone + 2*Math.min(3, H.drone), asf1:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + aw.asf, mpa1:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), awacs1:wr ? 2.2 : 1.5, bomb1:wr ? (ab2 ? 11 : 8) : 3};
+      const RW = {air1:3, air2:(wr ? 4.2 : 2.6) + 4*(mx.bomb + mx.air) + 2*Math.min(3, H.bomb) + hb + aw.air2, drone1:2.5, uav2:2, uav3:1.5, uav4:2, uav5:1.5, swarm1:3, sdrone1:2.5, jam1:0.8 + 14*mx.drone + 2*Math.min(3, H.drone), asf1:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + aw.asf, mpa1:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), awacs1:wr ? 2.2 : 1.5, bomb1:wr ? (ab2 ? 11 : 8) : 3};
       // the pick sticks for a day: an expensive tech (bombers, fighters) is saved for instead of losing every roll to the cheap ones
       let pick = N.rPick && N.rPick.until > S.hour ? av.find(t => t.id === N.rPick.id) : null;
       const rInc = Math.max(0, income(n).net.rare), rOk = t => N.rare + 5*rInc >= t.rare;   // fundable in about five days of rare-material income
@@ -331,19 +341,23 @@ function aiTurn(n){
   const inc = income(n), provs = S.owner.filter(o => o === n).length;
   const units = S.armies.reduce((s, a) => s + (a.owner === n ? count(a) : 0), 0) + S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.length : 0), 0);
   const canGrow = inc.net.cash > 4 && inc.upkeep.cash < inc.gross.cash*0.7 && units < aiArmyCap(n);
-  // economy buildings: one new project per turn where it is needed most; a rich power stuck on a resource runs up to three at once
-  // (rare materials for research: a Rare Earth Mine on the richest ground; iron or materials: a Foundry; electronics: an Arms Factory in the most populous city)
-  // Iron and electronics are spent on new units as fast as they come in (the net income below is after maintenance only), so a Foundry or an Arms Factory
-  // is wanted while the stock is little above the maintenance reserve and the income does not cover most of the maintenance again on top (what recruiting uses);
-  // one of each at a time (two for a big power). A Rare Earth Mine comes first (research); the other needs take turns
-  { const u0 = inc.upkeep, needs = [inc.net.rare < 5 && N.rare < 120 ? 'mine' : null,
-      inc.net.iron < -1 || (N.iron < aiKeepRes(n, 'iron') + 30 && inc.net.iron < Math.max(4, 0.8*u0.iron + 2)) || (inc.net.metal < 4 && N.metal < 80) ? 'fdy' : null, inc.net.oil < 3 ? 'ref' : null, inc.net.mp < 5 && N.mp < 60 ? 'rec' : null,
-      inc.net.elec < -1 || (N.elec < aiKeepRes(n, 'elec') + 50 && inc.net.elec < Math.max(3, u0.elec + 2)) ? 'fac' : null].filter(Boolean);
+  // economy buildings: one new project per turn where it is needed most; a rich power stuck on a resource runs up to three at once.
+  // The Arms Industry raises a city's main resource, so only goods one of its own cities produces can be raised at home: rare materials first (research),
+  // then iron, materials, oil, electronics and money by need (iron and electronics are spent on new units as fast as they come in, so they are wanted
+  // while the stock is little above the maintenance reserve); manpower: a Recruiting Office. A level must pay for itself (aiArmsPay): a real shortage
+  // accepts AI_PAY_NEED days, and a power with money to spare also adds the single best investment under AI_PAY_FREE days (exporters grow what they are
+  // good at). What does not pay is imported instead (the structural trade below). One Arms Industry at a time (two for a big power)
+  { const u0 = inc.upkeep, rareLv = G.P.reduce((m, P) => S.owner[P.id] === n && P.city && P.main === 'rare' ? Math.min(m, S.bld[P.id].arms + (S.cons[P.id] && S.cons[P.id].k === 'arms' ? 1 : 0)) : m, 9),
+      needs = [(inc.net.rare < 6 && N.rare < 140) || rareLv < AI_RARE_LV ? 'rare' : null,
+      inc.net.iron < -1 || (N.iron < aiKeepRes(n, 'iron') + 30 && inc.net.iron < Math.max(4, 0.8*u0.iron + 2)) ? 'iron' : null, inc.net.metal < 4 && N.metal < 80 ? 'metal' : null, inc.net.oil < 3 ? 'oil' : null, inc.net.mp < 5 && N.mp < 60 ? 'rec' : null,
+      inc.net.elec < -1 || (N.elec < aiKeepRes(n, 'elec') + 50 && inc.net.elec < Math.max(3, u0.elec + 2)) ? 'elec' : null, inc.net.cash < 25 || N.cash > 500 ? 'cash' : null].filter(Boolean);
+    for (let i = needs.length - 1; i >= 0; i--) if (needs[i] !== 'rec' && aiArmsPay(n, needs[i]) > AI_PAY_NEED) needs.splice(i, 1);
+    if (N.cash > 200){ let bk = null, bv = AI_PAY_FREE; for (const k of ['cash', ...MKT_K]){ if (needs.includes(k)) continue; const v = aiArmsPay(n, k)*(1 + 0.1*rng()); if (v < bv){ bv = v; bk = k; } } if (bk) needs.push(bk); }
     const rich = N.cash > 600 && !canGrow, jobs = rich ? 3 : 1, busy = {}, j0 = Math.floor(S.hour/4) + n; let done = 0;
     if (needs.length) for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && S.cons[p]) busy[S.cons[p].k] = (busy[S.cons[p].k] || 0) + 1;
-    const ord = needs[0] === 'mine' ? ['mine', ...needs.slice(1).map((x, i, a) => a[(j0 + i) % a.length])] : needs.map((x, i, a) => a[(j0 + i) % a.length]);
-    for (let j = 0; j < ord.length && done < jobs && N.cash > 90; j++){ const need = ord[j]; if (need !== 'mine' && (busy[need] || 0) >= (provs > 150 ? 2 : 1)) continue;
-      if (need === 'mine' || need === 'fac' || need === 'fdy'){ const p = aiSite(n, need); if (p >= 0 && build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; } continue; }
+    const ord = needs[0] === 'rare' ? ['rare', ...needs.slice(1).map((x, i, a) => a[(j0 + i) % a.length])] : needs.map((x, i, a) => a[(j0 + i) % a.length]);
+    for (let j = 0; j < ord.length && done < jobs && N.cash > 90; j++){ const need = ord[j], bk = need === 'rec' ? 'rec' : 'arms'; if ((busy[bk] || 0) >= (provs > 150 ? 2 : 1)) continue;
+      if (bk === 'arms'){ const p = aiSite(n, need); if (p >= 0 && build(n, p, 'arms')){ done++; busy.arms = (busy.arms || 0) + 1; } continue; }
       for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, need) || S.bld[p][need] >= BUILD[need].max) continue;
         if (build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; break; } } }
     // the other way round: a cash-poor power sells a metal hoard on the world market, while metal still fetches 0.8x the base price and at most
@@ -357,6 +371,17 @@ function aiTurn(n){
       const M = mkt(), sur = N.metal - (hoard ? 620 : 420) - aiReserve(n, 'metal'), h14 = M.hist.metal.slice(-14), avg = h14.length ? h14.reduce((a, b) => a + b, 0)/h14.length : M.p.metal;
       const floor = hoard ? Math.max(MKT_BASE.metal*0.5, Math.min(MKT_BASE.metal*0.6, avg*0.85)) : MKT_BASE.metal*0.8, cap = hoard ? Math.min(90, Math.max(AI_HOARD_DAY, 0.9*inc.gross.metal) + Math.max(0, N.metal - 1000)/20) : AI_SELL_DAY;   // a big producer (~60 a day) sells about its output, bigger hoards a bit more
       if (sur >= 30 && (inc.net.metal >= 0 || hoard) && M.p.metal >= floor){ const q = Math.floor(Math.min(sur, cap - (N.sold || 0), hoard ? 40 : 30)); if (q >= 10) N.sold = (N.sold || 0) - trade(n, 'metal', -q); } }
+    // structural trade, good by good. What one of its own cities produces and it holds too much of (above AI_XKEEP, what it saves for and
+    // 25 days of upkeep) is offered while the world price is at least AI_XPX of the base: one listing of up to 120 on the order book just under the
+    // world price (nation to nation: exports are never dumped on the world market, which flattened prices for everyone). What none of its cities produce is bought up to the
+    // shortage line (plus what it saves for and 10 days of upkeep) while the price is at most 1.5x the base: other powers' listings first, then the
+    // world market, AI_IMP a day at most and never below $120M
+    { const mains = aiMains(n), M = mkt(), day = Math.floor(S.hour/24); if (N.xD !== day){ N.xD = day; N.xB = {}; }
+      for (const k of MKT_K){ const px = M.p[k]/MKT_BASE[k];
+        if (mains.has(k)){ const over = N[k] - AI_XKEEP[k] - aiReserve(n, k) - 25*Math.max(0, inc.upkeep[k]); if (over < 15 || px < AI_XPX) continue;
+          if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ const q = Math.floor(Math.min(over, 120)); N[k] -= q; (S.book || (S.book = [])).push({id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:+(M.p[k]*0.98).toFixed(2), exp:S.hour + 72}); } }
+        else { const want = AI_SHORT[k] + aiReserve(n, k) + 10*Math.max(0, inc.upkeep[k]); if (N[k] >= want || px > 1.5) continue;
+          const q = Math.floor(Math.min(want - N[k], AI_IMP[k] - (N.xB[k] || 0), (N.cash - 120)/buyPrice(n, k))); if (q >= 5){ const got = aiBookBuy(n, k, q); N.xB[k] = (N.xB[k] || 0) + got + (q - got >= 5 ? trade(n, k, q - got) : 0); } } } }
     // hoarded cash buys the scarce resources on the world market (up to 1.4× the going price)
     if (N.cash > 450 && (!canGrow || MKT_K.some(k => N[k] < AI_LOW[k]))){ const M = mkt(), cap = stockCap(n);
       for (const k of MKT_K){ const short = N[k] < AI_SHORT[k] || inc.net[k] < 0; if (!short || buyPrice(n, k) > M.p[k]*1.4) continue;
@@ -392,10 +417,10 @@ function aiTurn(n){
     if (!S.cons[p]){
       if (p === N.capital && (threatNear(p, n) ? S.bld[p].fort < (provs > 150 ? 3 : 2) : warsOf(n).length && S.bld[p].fort < 1 && N.cash > 90)) build(n, p, 'fort');
       else if (!S.bld[p].rec && N.cash > (p === N.capital ? 40 : 80) && (p === N.capital || rng() < 0.3)) build(n, p, 'rec');   // infantry is mobilized only where a Recruiting Office stands
-      else if (!S.bld[p].fac && N.cash > 110) build(n, p, 'fac');
+      else if (!S.bld[p].fac && N.cash > 110 && (S.bld[p].rec || rng() < 0.15) && aiBases(n) < Math.max(2, Math.ceil(G.P.filter(P => S.owner[P.id] === n && P.city).length*AI_BASE_Q))) build(n, p, 'fac');   // Army Bases pay nothing: the capital, then about one city in three, Recruiting Office cities first
       else if (has(n, 'air1') && !S.bld[p].air && N.cash > 140 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air).length < 2) build(n, p, 'air');
       else if (has(n, 'msl1') && p === N.capital && !S.bld[p].silo && N.cash > 260 && rng() < 0.3) build(n, p, 'silo');
-      else if (canBuildHere(p, 'yard') && !S.bld[p].yard && S.bld[p].fac && N.cash > 170 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].yard).length < 2 && rng() < 0.3) build(n, p, 'yard');
+      else if (canBuildHere(p, 'yard') && !S.bld[p].yard && N.cash > 170 && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].yard).length < 2 && rng() < 0.3) build(n, p, 'yard');
       else if (S.bld[p].yard === 1 && N.cash > 220 && rng() < 0.2 && !G.P.some(P => S.owner[P.id] === n && S.bld[P.id].yard >= 2)) build(n, p, 'yard');
       else if (S.bld[p].air === 1 && (has(n, 'asf1') || has(n, 'bomb1') || has(n, 'awacs1')) && N.cash > 200 && rng() < (has(n, 'bomb1') || has(n, 'asf1') ? 0.6 : 0.4) && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air >= 2).length < 2) build(n, p, 'air');   // Airbase II (up to two) for the heavy aircraft
       else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
