@@ -3742,6 +3742,11 @@ document.addEventListener('pointerdown', e => { if (!muted) audio(); if (AC && A
 const FX = [];
 // ---- particle system (world-anchored, pixel offsets) ----
 const PART = [], PROJ = [], WRECKS = [], SPR = {};
+// a particle's offset, drift and size are given in screen px at the zoom it was born at (times kz, the effects' zoom factor): u keeps the
+// world units that px stood for then, so its offset is drawn in world units (q.ox*u*view.s: it stays on its map spot while zooming) and its
+// size follows the map too, held within half to twice today's kz size. (Old entries without u keep the screen-px look.)
+const kzNow = () => Math.max(0.6, Math.min(2, view.s*HS0/12))*zx();
+const kzF = (q, kz) => q.u ? q.u*view.s : kz, kzS = (f, kz) => Math.max(kz*0.5, Math.min(kz*2, f));
 function softSprite(key, inner, mid, outer){
   if (SPR[key]) return SPR[key]; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
   const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, inner); gr.addColorStop(0.45, mid); gr.addColorStop(1, outer); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return (SPR[key] = c);
@@ -3804,7 +3809,7 @@ function emit(kind, wx, wy, opt = {}){
   const cap = SET.fx === 'low' ? 300 : 900;
   if (PART.length > cap){ const now = performance.now(); if (now > FXG.ret){ FXG.ret = now + 350; fxRetire(PART, 60, now, true); } if (soft || PART.length > cap*1.6) return; }
   const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, core:60, ring:500}[kind] || 800);
-  PART.push({kind, wx, wy, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6, spin:(Math.random() - 0.5)*0.6, v:(Math.random()*4) | 0, tn:opt.tn});
+  PART.push({kind, wx, wy, u:kzNow()/view.s, ox:opt.ox || 0, oy:opt.oy || 0, vx:opt.vx ?? (Math.random() - 0.5)*12, vy:opt.vy ?? -(8 + Math.random()*14), life, t:0, s0:opt.s0 || 6, s1:opt.s1 || 26, rot:Math.random()*6, spin:(Math.random() - 0.5)*0.6, v:(Math.random()*4) | 0, tn:opt.tn});
 }
 /* ---- art combat effects: fx-explosion bursts, fx-smoke puffs and fx-crater ground decals (assets/art) ----
    Each image is cut once into four cached sizes (mips), so a frame only scales a small canvas. Bursts and puffs are screen-sized like the
@@ -3839,7 +3844,7 @@ function afxPuff(wx, wy, o = {}){
   let bp = o.bp ?? -1; if (bp < 0 && S && S.battles.length){ const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1; if (p >= 0 && S.battles.includes(p)) bp = p; }   // smoke in a battle counts toward that battle
   if (bp >= 0){ const hx = view.s*HS0, n = AFX.bpn.get(bp) || 0; if (n >= (hx < 26 ? 4 : hx < 76 ? 8 : 12)) return true; AFX.bpn.set(bp, n + 1); if (o.bp != null) AFX.bpa.set(bp, (AFX.bpa.get(bp) || 0) + 1); }   // live puffs per battle, by zoom (last frame's count)
   const low = SET.fx === 'low', cap = low ? 30 : 150; if (AFX.puff.length >= cap){ fxRetire(AFX.puff, Math.max(8, AFX.puff.length - cap + 1), performance.now()); if (AFX.puff.length >= cap*1.3) return true; }
-  AFX.puff.push({wx, wy, t0:performance.now(), bp, amb:o.bp != null, delay:o.delay || 0, dur:o.dur || 3600 + Math.random()*1800, s0:o.s0 || 5, s1:o.s1 || 22, a:o.a || 0.32,
+  AFX.puff.push({wx, wy, u:kzNow()/view.s, t0:performance.now(), bp, amb:o.bp != null, delay:o.delay || 0, dur:o.dur || 3600 + Math.random()*1800, s0:o.s0 || 5, s1:o.s1 || 22, a:o.a || 0.32,
     vx:o.vx ?? windX(3, 5), vy:o.vy ?? -(6 + Math.random()*6) + windY(3, 5), ox:o.ox || 0, oy:o.oy || 0, rot:Math.random()*6.28, spin:(Math.random() - 0.5)*0.5, dark:o.dark ?? (fxNight(wx, wy) > 0.45)});
   return true; }
 // ground crater (world radius r, at most 2.5, or o.cap: a missile's 3.5) on land; a hit inside a crater adds a new small one elsewhere in the
@@ -3922,8 +3927,9 @@ function drawArtFx(now, kz){
   if (AFX.puff.length){ const m = afxMips('fx-smoke'), md = afxMips('fx-smoke', true);
     if (m && md) for (let i = AFX.puff.length - 1; i >= 0; i--){ const q = AFX.puff[i], t = now - q.t0 - q.delay; const k = t/q.dur; if (k >= 1 || (q.die != null && now >= q.die)){ AFX.puff.splice(i, 1); continue; }
       if (q.bp >= 0){ AFX.bpn.set(q.bp, (AFX.bpn.get(q.bp) || 0) + 1); if (q.amb) AFX.bpa.set(q.bp, (AFX.bpa.get(q.bp) || 0) + 1); } if (t < 0) continue;
-      const ts = t/1000, [bx, by] = toScreen(q.wx, q.wy), x = bx + (q.ox + q.vx*ts*(1 + 0.6*k))*kz, y = by + (q.oy + q.vy*ts*(1 - 0.35*k))*kz, sz = (q.s0 + (q.s1 - q.s0)*(1 - (1 - k)*(1 - k)))*kz;
+      const ts = t/1000, f = kzF(q, kz), [bx, by] = toScreen(q.wx, q.wy), x = bx + (q.ox + q.vx*ts*(1 + 0.6*k))*f, y = by + (q.oy + q.vy*ts*(1 - 0.35*k))*f, sz = (q.s0 + (q.s1 - q.s0)*(1 - (1 - k)*(1 - k)))*kzS(f, kz);
       if (x < -sz || y < -sz || x > cw + sz || y > ch + sz) continue;
+      /*@TEST*/if (WFX.dbg) WFX.dbg.push(['a' + (q.id || (q.id = ++WFX.id)), x, y, view.s, view.x, view.y]);/*@ENDTEST*/
       if (!fxBudget(sz*sz*4, true)) continue;   // past the smoke budget this frame: the older puffs wait a frame
       const fd = q.die != null ? Math.min(1, Math.max(0, (q.die - now)/300)) : 1;
       ctx.globalAlpha = fd*q.a*(k < 0.12 ? k/0.12 : Math.pow((1 - k)/0.88, 1.3));
@@ -3948,14 +3954,235 @@ function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: t
   if (!puffs) for (let i = 0; i < Math.round(5*big); i++) emit('smoke', wx, wy, {ox:(Math.random() - 0.5)*14*sb, vx:(Math.random() - 0.5)*26, vy:-(6 + Math.random()*16), s0:7*sb, s1:(20 + Math.random()*14)*sb, life:2000 + Math.random()*1600});
   for (let i = 0; i < 6*big; i++) emit('debris', wx, wy, {vx:(Math.random() - 0.5)*110*big, vy:-(40 + Math.random()*70)*big, s0:1.6, s1:1.2, life:700 + Math.random()*400});
 }
+/* ---- strike and blast effects (WFX), all drawn with code (no video): one look per weapon. cm: cruise missile (a quick, sharp blast: bright
+   orange fireball, sparks, a small dark smoke puff); bm: ballistic missile (white flash, ground shock ring, big fireball, thick smoke column);
+   chem: chemical (a small burst, then a sickly yellow-green gas cloud that spreads slowly and lingers); tac: tactical nuclear (blinding flash,
+   fireball, fast shock ring, small mushroom cloud); icbm: the biggest (a screen-wide flash, huge fireball, large shock ring, tall mushroom
+   cloud, then burning ground for several game hours); and combat blasts by size: exS (infantry, drones), exM (tanks, aircraft), exL (ships,
+   buildings). Every part lives in WORLD units round its world spot: its offset, rise, spread and size, so an effect stays fixed to the map and
+   scales with it while zooming and panning (sprites only keep a few px minimum, so a far blast still reads). Each part is a pure function of the
+   effect's age (no per-frame state), drawn from cached noise sprites: fire over a hot additive core, smoke lit from above (dimmed at night),
+   ring sprites for shock fronts and base surges; on High a shock front also bends the map under it (the canvas copied onto itself, magnified, in
+   an elliptic band: a canvas 2D 'shader'). Battery: at most wfxCap() heavy and light effects at once (fewer on Low and with the Battery saver:
+   the oldest fades out), none started off screen, off-screen ones not drawn, frames asked (animFast) only while one on screen runs; the burning
+   ground after an ICBM moves on the paused game clock (animAmb). Low: fewer parts, no smoke column, no ripple, shorter.
+   The rules can trigger the warheads they do not have yet with IM.emit('fxWarhead', {kind, p, by}) (kind cm, bm, chem, tac, icbm), and a blast
+   with IM.emit('fxBlast', {size:'S'|'M'|'L', p}); the page's own entry points are FXW.cruise / ballistic / chemical / tactical / icbm / blast. */
+const WFX = {list:[], burn:[], flash:null, area:0, bud:0, S:null, id:0, ks:1/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};
+const WFX_R = {cm:2, bm:3.5, chem:0.9, tac:4.5, icbm:12, exS:0.6, exM:1, exL:1.7};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
+const WFX_MP = {cm:7, bm:10, chem:6, tac:12, icbm:16, exS:4.5, exM:6, exL:8};   // the fireball's smallest drawn radius (css px): far out a blast still reads
+const wfxHeavy = k => k[0] !== 'e';
+const wfxCap = heavy => { const low = SET.fx === 'low', sv = saverOn(); return heavy ? (low ? 3 : 6) - (sv ? (low ? 1 : 2) : 0) : (low ? 6 : 12) - (sv ? (low ? 2 : 4) : 0); };
+const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.length = 0; WFX.flash = null; } };
+// ---- sprites: noise-textured, baked once per variant at 128 px and 48 px (the small one for small draws: no sparkle from a big texture shrunk)
+function wfxNoise(seed){ const n = makeNoise(mulberry(seed)); return (x, y) => n(x, y)*0.55 + n(x*2.03 + 17.3, y*2.03 + 5.1)*0.3 + n(x*4.1 + 31.7, y*4.1 + 11.9)*0.15; }
+const wfxSm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
+function wfxBake(key, N, mk){ if (SPR[key]) return SPR[key]; const px = mk(), c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ const o = (y*N + x)*4, q = px((x + 0.5)/N*2 - 1, (y + 0.5)/N*2 - 1); if (!q) continue; d[o] = q[0]; d[o + 1] = q[1]; d[o + 2] = q[2]; d[o + 3] = q[3]; }
+  g.putImageData(im, 0, 0); return (SPR[key] = c); }
+// a billow: 11 overlapping spheres (seeded per variant) seen from above, the sample point warped by noise so no outline is round; per pixel the
+// blended top surface (a soft maximum of the spheres' heights, so there is no seam where two meet), its normal and how far inside the union
+// it lies. Smoke shades that surface by its normal (puffs lit from the upper left), fire colours it by heat
+function wfxBillow(seed){ const r = mulberry(seed), B = [], wn = wfxNoise(seed + 3), K = 9;
+  for (let k = 0; k < 11; k++){ const a = r()*Math.PI*2, d = k ? 0.14 + 0.36*r() : 0, rb = k ? 0.2 + 0.2*r() : 0.42; B.push([Math.cos(a)*d, Math.sin(a)*d*0.9, rb, r()*0.2]); }
+  return (x0, y0) => { const x = x0 + (wn(x0*2.2 + 9, y0*2.2 + 9) - 0.5)*0.34, y = y0 + (wn(x0*2.2 + 41, y0*2.2 + 3) - 0.5)*0.34; let sw = 0, nx = 0, ny = 0, nz = 0, cov = 0, zs = 0;
+    for (const [cx, cy, rb, cz] of B){ const ux = (x - cx)/rb, uy = (y - cy)/rb, q = 1 - ux*ux - uy*uy; if (q <= 0) continue; const h = Math.sqrt(q), z = cz + h*rb, w = Math.exp(K*z);
+      sw += w; nx += ux*w; ny += uy*w; nz += h*w; zs += z*w; cov = Math.max(cov, q); }
+    if (!sw) return null; const l = Math.hypot(nx, ny, nz) || 1; return {nx:nx/l, ny:ny/l, nz:nz/l, cov, top:zs/sw}; }; }
+const WFX_FIRE = [[0, 120, 26, 6], [0.2, 190, 52, 10], [0.42, 238, 108, 24], [0.64, 255, 168, 60], [0.82, 255, 220, 140], [1, 255, 248, 222]];
+function wfxRamp(R, t){ for (let i = 1; i < R.length; i++) if (t <= R[i][0]){ const a = R[i - 1], b = R[i], f = (t - a[0])/(b[0] - a[0]); return [a[1] + (b[1] - a[1])*f, a[2] + (b[2] - a[2])*f, a[3] + (b[3] - a[3])*f]; } const l = R[R.length - 1]; return [l[1], l[2], l[3]]; }
+// fire: a billow of flame, white-yellow deep inside, orange, then deep red at its edge, mottled by noise
+function wfxFire(v, small){ const key = 'wf' + v + (small ? 's' : ''); if (SPR[key]) return SPR[key];
+  return wfxBake(key, small ? 48 : 128, () => { const nz = wfxNoise(7100 + v*31), bl = wfxBillow(7150 + v*13); return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null; const n = nz((dx + 1)*2.4, (dy + 1)*2.4), nf = nz((dx + 1)*7 + 13, (dy + 1)*7 + 7), b = bl(dx*1.1, dy*1.1); if (!b) return null;
+    const dn = b.cov + (nf - 0.5)*0.45; if (dn <= 0) return null; const t = Math.max(0, Math.min(1, 0.12 + 0.62*b.nz*(1 - 0.5*r) + (n - 0.5)*0.7 + (nf - 0.5)*0.35)), c = wfxRamp(WFX_FIRE, t);
+    return [c[0], c[1], c[2], 255*wfxSm(0, 0.36, dn)*wfxSm(1, 0.9, r)]; }; }); }
+// smoke: a billow lit from the upper left (sky light: each sphere shaded by its normal), soft and frayed at the rim; tones [shadow, lit];
+// at night dimmed and a little warm
+const WFX_TONE = {dark:[[22, 20, 18], [104, 96, 86]], grey:[[56, 53, 49], [168, 162, 152]], mush:[[64, 46, 36], [212, 194, 170]], light:[[104, 99, 94], [240, 236, 228]],
+  dust:[[86, 70, 50], [198, 178, 142]], gas:[[80, 104, 20], [212, 226, 104]], spray:[[150, 166, 174], [252, 253, 253]]};
+function wfxSmoke(tone, v, night, small){ const key = 'ws' + tone + v + (night ? 'n' : '') + (small ? 's' : ''); if (SPR[key]) return SPR[key];
+  return wfxBake(key, small ? 48 : 128, () => { const T = WFX_TONE[tone] || WFX_TONE.dark, nz = wfxNoise(7300 + v*37), gas = tone === 'gas', bl = wfxBillow(7350 + v*17 + (gas ? 5 : 0)), L = [-0.46, -0.62, 0.64]; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null; const n = nz((dx + 1)*3.2, (dy + 1)*3.2), nf = nz((dx + 1)*8 + 21, (dy + 1)*8 + 5), b = bl(dx*1.08, dy*1.08); if (!b) return null;
+    const dn = b.cov + (n - 0.5)*0.35 + (nf - 0.5)*0.3; if (dn <= 0) return null; const dif = Math.max(0, b.nx*L[0] + b.ny*L[1] + b.nz*L[2]), li = Math.max(0, Math.min(1, (gas ? 0.36 : 0.18) + (gas ? 0.5 : 0.7)*dif + (n - 0.5)*0.35 + (nf - 0.5)*0.4)), k = night ? 0.42 : 1;
+    return [(T[0][0] + (T[1][0] - T[0][0])*li)*k + (night ? 8 : 0), (T[0][1] + (T[1][1] - T[0][1])*li)*k + (night ? 3 : 0), (T[0][2] + (T[1][2] - T[0][2])*li)*k, 255*(gas ? 0.78 : 0.94)*wfxSm(0, 0.65, dn)*wfxSm(1, 0.86, r)]; }; }); }
+// rings (256 px): the shock front (a thin bright band, soft inside) and the base surge (a broad, broken dust band); the burnt-ground decal
+function wfxRing(dust){ const key = dust ? 'wrd' : 'wrs'; if (SPR[key]) return SPR[key];
+  return wfxBake(key, 256, () => { const nz = wfxNoise(dust ? 7700 : 7710), T = WFX_TONE.dust; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null;
+    if (!dust){ const a = r < 0.94 ? 0.22*wfxSm(0.55, 0.9, r) + 0.78*Math.pow(wfxSm(0.78, 0.94, r), 3) : wfxSm(1, 0.96, r); return a > 0.003 ? [255, 252, 244, 255*a] : null; }
+    const an = Math.atan2(dy, dx), n = nz(Math.cos(an)*3 + 4 + r*5, Math.sin(an)*3 + 4 + r*5), a = wfxSm(0.45, 0.82, r)*wfxSm(1, 0.9, r)*(0.45 + 0.75*n); if (a < 0.01) return null;
+    const li = Math.min(1, 0.3 + 0.9*n); return [T[0][0] + (T[1][0] - T[0][0])*li, T[0][1] + (T[1][1] - T[0][1])*li, T[0][2] + (T[1][2] - T[0][2])*li, 255*Math.min(1, a)]; }; }); }
+function wfxScorch(){ if (SPR.wsc) return SPR.wsc;
+  return wfxBake('wsc', 128, () => { const nz = wfxNoise(7900); return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null; const n = nz((dx + 1)*4, (dy + 1)*4), dn = 1 - r*1.08 + (n - 0.5)*0.55; if (dn <= 0) return null;
+    const c = dn > 0.45 ? [34, 26, 22] : [74, 54, 40]; return [c[0], c[1], c[2], 255*0.9*wfxSm(0, 0.3, dn)*wfxSm(1, 0.85, r)]; }; }); }
+const WGLOW = () => softSprite('wglow', 'rgba(255,255,252,1)', 'rgba(255,238,206,.42)', 'rgba(255,206,150,0)');
+// ---- building an effect: its parts, from one seed. Units: world (y up the screen is negative), ms; t0 the part's start, d its life
+function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, red = e.red, q = (L ? 0.5 : 1)*Math.max(0.55, FXG.k)*(saverOn() ? 0.8 : 1), n = m => Math.max(1, Math.round(m*q)), tl = L ? 0.7 : 1, E = e.els;
+  const ang = () => r()*Math.PI*2, j = s => (r() - 0.5)*2*s;
+  const light = (t0, d, r0, r1, a, gr) => E.push({k:gr ? 'G' : 'L', t0, d, r0, r1, a});
+  const ring = (kind, t0, d, r1, a) => { if (kind === 'rip' && (L || red)) return; E.push({k:'R', kind, t0, d:d*tl, r1, a}); };
+  // fire lobes: born within rr of the spot, flung out up to `spread` and up by `rise`, growing from r0 to r1
+  const fire = (cnt, rr, t0, t1, life, rise, spread, r0, r1, a = 1) => { for (let i = 0; i < n(cnt); i++){ const th = ang(), d0 = rr*Math.sqrt(r()), d1 = spread*(0.4 + 0.6*r());
+    E.push({k:'F', t0:t0 + (t1 - t0)*r(), d:life*(0.75 + 0.5*r())*tl, x:Math.cos(th)*d0, y:Math.sin(th)*d0*0.6, dx:Math.cos(th)*d1, dy:Math.sin(th)*d1*0.6 - rise*(0.6 + 0.8*r()), r0:r0*(0.8 + 0.4*r()), r1:r1*(0.8 + 0.4*r()), a, v:r()*4 | 0}); } };
+  // smoke lobes (o: w the share of the wind drift, sq a squash for smoke lying on the ground, p the spread's ease, fi/fo fade in/out)
+  const smoke = (cnt, tone, rr, t0, t1, life, rise, spread, r0, r1, a, o = {}) => { for (let i = 0; i < n(cnt); i++){ const th = ang(), d0 = rr*Math.sqrt(r()), d1 = spread*(o.even ? Math.sqrt(0.08 + 0.92*r()) : 0.3 + 0.7*r());
+    E.push({k:'S', tone, t0:t0 + (t1 - t0)*(o.late ? r()*r() : r()), d:life*(0.8 + 0.4*r())*tl, x:Math.cos(th)*d0, y:Math.sin(th)*d0*0.6, dx:Math.cos(th)*d1, dy:Math.sin(th)*d1*(o.sq ? 0.62 : 0.6) - rise*(0.7 + 0.6*r()),
+      r0:r0*(0.8 + 0.4*r()), r1:r1*(0.8 + 0.4*r()), a:a*(0.8 + 0.3*r()), v:r()*4 | 0, w:o.w ?? 1, sq:o.sq || 1, p:o.p || 1.7, fi:o.fi || 0.12, fo:o.fo || 0.45}); } };
+  // sparks (hot) and debris: thrown out at up to sp world/s, falling at g world/s2
+  const sparks = (cnt, sp, g, life, hot = true) => { if (red) return; for (let i = 0; i < n(cnt); i++){ const th = ang(), v = sp*(0.4 + 0.6*r()), up = sp*(0.25 + 0.85*r());
+    E.push({k:hot ? 'K' : 'D', t0:40*r(), d:life*(0.6 + 0.6*r())*tl, vx:Math.cos(th)*v, vy:Math.sin(th)*v*0.55 - up, g}); } };
+  const core = (d, r0, r1, rise, a = 1) => E.push({k:'F', t0:0, d:d*tl, x:0, y:0, dx:0, dy:-rise, r0, r1, a, v:r()*4 | 0});   // the fireball's main body
+  const mush = (d, H, Rc, nc, ns) => E.push({k:'M', t0:0, d:d*tl, H, Rc, nc:n(nc), ns:n(ns), sd:r()*1e6 | 0});
+  if (k === 'cm'){ light(0, 140, R*0.9, R*2.4, 1); light(0, 800, R*2, R*3.2, 0.5, true); ring('dust', 30, 1000, R*1.7, 0.32);
+    core(560, R*0.5, R*1.0, R*0.3); fire(8, R*0.2, 0, 70, 700, R*0.4, R*0.42, R*0.36, R*0.8); smoke(5, 'dark', R*0.3, 180, 460, 3400, R*1.5, R*0.5, R*0.4, R*1.05, 0.7);
+    sparks(12, R*7, R*15, 520); sparks(5, R*4.5, R*13, 750, false); }
+  else if (k === 'bm'){ light(0, 220, R*1.1, R*3.2, 1); light(0, 1400, R*2.4, R*4, 0.6, true); ring('rip', 0, 950, R*3.8, 1); ring('shock', 0, 760, R*3.4, 0.28); ring('dust', 80, 3000, R*3.3, 0.6);
+    smoke(7, 'dust', R*0.7, 160, 600, 3400, R*0.25, R*1.5, R*0.4, R*1.05, 0.42, {w:0.4, sq:0.58});
+    core(1100, R*0.55, R*1.05, R*0.5); fire(14, R*0.28, 0, 130, 1300, R*0.65, R*0.48, R*0.4, R*0.9);
+    if (!L) for (let i = 0, N = 16; i < N; i++){ const f = i/(N - 1); E.push({k:'S', tone:f < 0.2 ? 'dust' : 'dark', t0:180 + f*1000 + 80*r(), d:(6800 + 1600*r())*tl, x:j(R*0.18), y:-R*0.15, dx:j(R*0.28)*f, dy:-R*(0.3 + 4.1*f),
+      r0:R*0.42, r1:R*(0.58 + 0.55*f)*(0.9 + 0.2*r()), a:0.78, v:r()*4 | 0, w:0.25 + 1.3*f, sq:1, p:1.35, fi:0.08, fo:0.55}); }   // the smoke column: lobes stacked to 4.4 R, widening up, leaning downwind
+    else smoke(8, 'dark', R*0.3, 150, 500, 3600, R*1.7, R*0.6, R*0.4, R*1.0, 0.64);
+    sparks(16, R*6, R*12, 800); sparks(7, R*4, R*10, 1000, false); }
+  else if (k === 'chem'){ light(0, 130, R, R*2.4, 0.85); light(0, 600, R*1.5, R*2.4, 0.4, true); core(420, R*0.5, R*1.1, R*0.2); fire(4, R*0.2, 0, 50, 460, R*0.3, R*0.3, R*0.3, R*0.72); sparks(8, R*5, R*14, 460);
+    smoke(2, 'dark', R*0.2, 120, 260, 1700, R*1.1, R*0.3, R*0.3, R*0.85, 0.5);
+    const G = 8.5, life = L ? 15000 : 26000;   // the gas: low, translucent lobes that spread over about a province, drift with the wind and linger
+    smoke(10, 'gas', R*0.3, 40, 400, life*0.55, 0.5, G*0.4, R*1.1, 2.4, 0.4, {even:true, w:0.35, sq:0.7, p:2.2, fi:0.015, fo:0.45});   // the first cloud, rolling out of the burst
+    smoke(28, 'gas', R*0.45, 250, 2600, life, -0.2, G, R*0.7, 3.2, 0.28, {even:true, late:true, w:0.5, sq:0.62, p:1.25, fi:0.1, fo:0.58});   // then spreading over the area,
+    smoke(7, 'gas', R*0.5, 900, 3500, life*1.05, -0.1, G*0.75, 2.5, G*0.55, 0.14, {even:true, w:0.55, sq:0.55, p:1.15, fi:0.18, fo:0.6}); }   // a thin haze joining the lobes
+  else if (k === 'tac'){ light(0, 340, R*2, R*9, 1); light(0, 2800, R*3, R*6.2, 0.85, true); ring('rip', 0, 1150, R*5.6, 1); ring('shock', 0, 900, R*5, 0.32); ring('shock', 140, 1350, R*6.6, 0.12); ring('dust', 160, 4400, R*3.7, 0.55);
+    smoke(10, 'dust', R*1.1, 250, 900, 5200, R*0.35, R*2.3, R*0.5, R*1.3, 0.48, {w:0.4, sq:0.56}); mush(red ? 6000 : 10500, R*4, R*1.6, 26, 16); sparks(20, R*5, R*8, 1150); }
+  else if (k === 'icbm'){ light(0, 520, R*2, R*7, 1); light(0, 5200, R*2.6, R*5.2, 0.9, true); ring('rip', 0, 1950, R*5.6, 1); ring('shock', 0, 1650, R*5, 0.32); ring('shock', 220, 2300, R*6.6, 0.12); ring('dust', 300, 7200, R*3.4, 0.6);
+    smoke(14, 'dust', R*1.1, 300, 1300, 8000, R*0.35, R*2.6, R*0.5, R*1.4, 0.5, {w:0.4, sq:0.55}); mush(red ? 8000 : 15500, R*4.2, R*1.75, 32, 18); sparks(26, R*3.5, R*5, 1500); }
+  else { const sz = k[2], big = sz === 'L', med = sz === 'M';   // combat blasts: infantry and drones (S), tanks and aircraft (M), ships and buildings (L)
+    light(0, big ? 150 : 90, R*0.8, R*(big ? 2.2 : 1.8), 0.95); if (!e.sea || big) light(0, big ? 900 : 500, R*1.6, R*2.6, 0.45, true);
+    core(big ? 650 : med ? 480 : 340, R*0.5, R*0.95, R*0.25); fire(big ? 9 : med ? 6 : 4, R*0.2, 0, 50, big ? 850 : med ? 600 : 400, R*0.3, R*0.38, R*0.32, R*0.75);
+    if (big) fire(4, R*0.5, 200, 450, 620, R*0.4, R*0.4, R*0.25, R*0.6, 0.9);   // a secondary blast (magazine, fuel)
+    sparks(big ? 14 : med ? 10 : 7, R*6, R*15, big ? 650 : 480); if (big || med) sparks(big ? 8 : 5, R*4, R*12, 800, false);
+    if (e.sea) smoke(big ? 7 : 4, 'spray', R*0.25, 0, 120, 1500, R*1.7, R*0.45, R*0.3, R*0.8, 0.7, {w:0.2, p:2.2, fo:0.35});   // a white water plume
+    smoke(big ? 5 : med ? 3 : 2, 'dark', R*0.3, 100, 320, big ? 3900 : med ? 2700 : 1900, R*(big ? 1.9 : 1.3), R*0.45, R*0.32, R*(big ? 1.15 : 0.95), 0.6); }
+  const rk = {G:0, R:1, S:2, M:3, F:4, K:5, D:5, L:6}; E.forEach((o, i) => { o.i = i; o.rk = o.kind === 'rip' ? -1 : rk[o.k] + (o.k === 'S' && o.sq === 1 ? 1 : 0); });   // (the ripple first: it bends the map only, not the blast's own light)
+  E.sort((a, b) => a.rk - b.rk || a.i - b.i);   // ground light, rings, ground smoke and gas, then smoke and the cloud, fire over them, sparks, the flash on top
+  let d = 0, ext = R*2, top = R; for (const o of E){ d = Math.max(d, o.t0 + o.d);
+    if (o.k === 'S' || o.k === 'F'){ ext = Math.max(ext, Math.abs(o.x) + Math.abs(o.dx) + o.r1 + R*0.5); top = Math.max(top, -(o.y + o.dy) + o.r1); }
+    else if (o.k === 'R' || o.k === 'L' || o.k === 'G') ext = Math.max(ext, o.r1 || 0, o.r1 || o.r0 || 0);
+    else if (o.k === 'M'){ ext = Math.max(ext, o.Rc*1.8); top = Math.max(top, o.H + o.Rc*1.4); }
+    else top = Math.max(top, R*4); }
+  e.d = d; e.ext = ext*1.15; e.top = top*1.2; }
+// ---- starting one: o.sea (a blast at sea: a water plume), o.force (start it even off screen: the developer buttons). Returns the effect or null
+function wfxStart(k, wx, wy, o = {}){ if (!booted || !S || !WFX_R[k]) return null; wfxSync(); const now = performance.now(), R = WFX_R[k], heavy = wfxHeavy(k);
+  const [sx, sy] = toScreen(wx, wy), mg = Math.max(R*6*view.s, 120); if (!o.force && (sx < -mg || sy < -mg || sx > cw + mg || sy > ch + mg*1.6)) return null;   // off screen: not started
+  const live = WFX.list.filter(e => wfxHeavy(e.k) === heavy && e.die == null), cap = wfxCap(heavy);
+  for (let i = 0; i <= live.length - cap; i++) live[i].die = now + 350;   // over the cap: the oldest fade out over 0.35 s
+  const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1, e = {k, wx, wy, R, t0:now, id:++WFX.id, seed:(Math.random()*2**31) | 0, low:SET.fx === 'low', red:afxReduced(), sea:o.sea ?? (p >= 0 && G.P[p].sea), night:fxNight(wx, wy), els:[]};
+  wfxBuild(e); WFX.list.push(e); if (WFX.list.length > 24) WFX.list.splice(0, WFX.list.length - 24);
+  if (k === 'icbm' || k === 'tac'){ const a = (k === 'icbm' ? 1 : 0.42)*(e.red ? 0.3 : 1);   // the flash: the whole map whitens (an ICBM) or a strong white veil (tactical)
+    if (!WFX.flash || a > WFX.flash.a*(1 - (now - WFX.flash.t0)/WFX.flash.d)) WFX.flash = {t0:now, d:k === 'icbm' ? (e.low ? 650 : 950) : 450, a}; }
+  if (k === 'icbm'){ WFX.burn.push({wx, wy, r:R*1.5, h0:S.hour + (S.speed && !S.over ? acc : 0), life:10, seed:e.seed}); if (WFX.burn.length > 6) WFX.burn.shift(); }   // burning ground: ten game hours
+  redraw(); return e; }
+// a strike: the effect, the crater and the burning city it leaves, the shake and the sound (o.p: the province hit)
+function wfxStrike(k, wx, wy, o = {}){ const e = wfxStart(k, wx, wy, o), p = o.p ?? (() => { const c = worldToCell(wx, wy); return c >= 0 ? G.prov[c] : -1; })(), land = p >= 0 && !G.P[p].sea;
+  if (land && k !== 'chem') afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, {a:0.95, life:k === 'icbm' ? 160 : k === 'tac' ? 120 : 96, cap:3.5});
+  if (land && k !== 'chem') afxMark(p, {cm:30, bm:48, tac:72, icbm:120}[k] || 24);
+  shake({cm:5, bm:9, chem:2, tac:12, icbm:18}[k] || 4, {cm:500, bm:900, chem:250, tac:1100, icbm:1800}[k] || 400); sfx('boom'); return e; }
+const FXW = {cruise:(x, y, o) => wfxStrike('cm', x, y, o), ballistic:(x, y, o) => wfxStrike('bm', x, y, o), chemical:(x, y, o) => wfxStrike('chem', x, y, o),
+  tactical:(x, y, o) => wfxStrike('tac', x, y, o), icbm:(x, y, o) => wfxStrike('icbm', x, y, o), blast:(size, x, y, o) => wfxStart('ex' + size, x, y, o)};
+// ---- drawing (under the counters, after the small particles); the flash over everything at the end of the frame
+// one sprite at (x, y) css px, radii rx, ry, alpha a, blend op; culled off screen; smoke (budget) is charged to the frame's fill budget
+function wfxSpr(big, small, x, y, rx, ry, a, op, budget){ if (a < 0.004 || rx < 0.3 || x + rx < 0 || x - rx > cw || y + ry < 0 || y - ry > ch) return;
+  if (budget){ if (WFX.area > WFX.bud) return; WFX.area += Math.min(2*rx, cw)*Math.min(2*ry, ch); }
+  ctx.globalAlpha = Math.min(1, a); ctx.globalCompositeOperation = op || 'source-over'; ctx.drawImage(small && rx*dpr < 34 ? small : big, x - rx, y - ry, 2*rx, 2*ry); }
+const wfxS = (e, o, night, small) => wfxSmoke(o.tone, o.v, night, small);
+function wfxDrawOne(e, tau, now){ const ks = view.s, kr = Math.max(ks, WFX_MP[e.k]/e.R), [bx, by] = toScreen(e.wx, e.wy), nt = e.night > 0.5, WD = windSync(), fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1;
+  const sx = s => bx + s*ks, sy = s => by + s*ks; /*@TEST*/const dbg = WFX.dbg;/*@ENDTEST*/
+  for (const o of e.els){ const t = tau - o.t0; if (t < 0 || t >= o.d) continue; const u = t/o.d, ts = t/1000;
+    if (o.k === 'S'){ const m = 1 - Math.pow(1 - u, o.p), dw = (o.w || 0)*e.R*0.12*ts, x = sx(o.x + o.dx*m + WD.wx*dw), y = sy(o.y + o.dy*m + WD.wy*dw), rr = (o.r0 + (o.r1 - o.r0)*(1 - (1 - u)*(1 - u)))*kr;
+      const a = fd*o.a*Math.min(1, u/o.fi)*(u > o.fo ? Math.pow((1 - u)/(1 - o.fo), 1.2) : 1); wfxSpr(wfxS(e, o, nt), wfxS(e, o, nt, true), x, y, rr, rr*o.sq, a, 'source-over', true);
+      /*@TEST*/if (dbg) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
+    if (o.k === 'F'){ const m = 1 - Math.pow(1 - u, 2.4), x = sx(o.x + o.dx*m), y = sy(o.y + o.dy*m), rr = (o.r0 + (o.r1 - o.r0)*(1 - Math.pow(1 - u, 3)))*kr, at = fd*o.a*Math.min(1, u/0.06);
+      wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr, rr, at*Math.pow(1 - u, 0.9), 'source-over');
+      if (u > 0.18) wfxSpr(wfxSmoke('dark', o.v, nt), wfxSmoke('dark', o.v, nt, true), x, y - rr*0.1, rr*0.98, rr*0.98, at*0.9*Math.pow((u - 0.18)/0.82, 1.1)*Math.pow(1 - u, 0.35), 'source-over');   // cooling into smoke
+      wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr*0.62, rr*0.62, at*0.85*Math.pow(1 - u, 2.5), 'lighter');   // the hot core
+      /*@TEST*/if (dbg) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
+    if (o.k === 'K' || o.k === 'D'){ const pt = s => [sx(o.vx*s), sy(o.vy*s + 0.5*o.g*s*s)], [x, y] = pt(ts), [x0, y0] = pt(Math.max(0, ts - 0.035)), l = Math.hypot(x - x0, y - y0) || 1, ml = Math.max(1.5, l);
+      ctx.globalAlpha = fd*(1 - u)*(o.k === 'K' ? 1 : 0.85); ctx.globalCompositeOperation = o.k === 'K' ? 'lighter' : 'source-over'; ctx.strokeStyle = o.k === 'K' ? (u < 0.4 ? '#ffe7b0' : '#ff9d4a') : '#1f1c19';
+      ctx.lineWidth = o.k === 'K' ? 1 : 1.3; ctx.beginPath(); ctx.moveTo(x - (x - x0)/l*ml, y - (y - y0)/l*ml); ctx.lineTo(x, y); ctx.stroke();
+      /*@TEST*/if (dbg) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
+    if (o.k === 'L' || o.k === 'G'){ const rr = (o.r0 + (o.r1 - o.r0)*Math.min(1, u*3))*kr, a = fd*o.a*(u < 0.04 ? u/0.04 : Math.pow(1 - u, o.k === 'L' ? 2 : 1.5))*(o.k === 'G' ? 0.45 + 0.55*e.night : 1);
+      wfxSpr(o.k === 'L' ? WGLOW() : GLOW(), null, bx, by - (o.k === 'L' ? e.R*0.2*ks : 0), rr, rr*(o.k === 'G' ? 0.46 : 1), a, 'lighter'); continue; }
+    if (o.k === 'R'){ const m = 1 - Math.pow(1 - u, o.kind === 'dust' ? 2.6 : 2.2), rr = o.r1*m*kr; if (rr < 1) continue;
+      if (o.kind === 'rip'){ wfxRipple(bx, by, rr, Math.max(4, rr*0.09), 0.05*(1 - u)); continue; }
+      if (o.kind === 'shock'){ const a = fd*o.a*Math.pow(1 - u, 1.4); if (a > 0.005 && bx + rr > 0 && bx - rr < cw && by + rr*0.5 > 0 && by - rr*0.5 < ch){   // the shock front: a thin pale line in a soft band, not a painted ring
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgb(255,248,232)'; ctx.beginPath(); ctx.ellipse(bx, by, rr, rr*0.5, 0, 0, Math.PI*2);
+        ctx.globalAlpha = a*0.35; ctx.lineWidth = Math.max(3, rr*0.05); ctx.stroke(); ctx.globalAlpha = a; ctx.lineWidth = Math.max(1, Math.min(2.2, rr*0.012)); ctx.stroke(); } }
+      else wfxSpr(wfxRing(true), null, bx, by, rr, rr*0.5, fd*o.a*Math.min(1, u/0.1)*Math.pow(1 - u, 1.2), 'source-over', true);
+      continue; }
+    if (o.k === 'M') wfxMush(e, o, t, bx, by, ks, kr, fd, nt); }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+// the map under a shock front, bent: the band between two ellipses copied onto itself magnified by 1 + amp about the blast (High only)
+function wfxRipple(x, y, rr, w, amp){ if (amp < 0.004 || ctx !== MCTX) return; const c = ctx.canvas, d = dpr, x0 = Math.max(0, Math.floor((x - rr - w)*d)), y0 = Math.max(0, Math.floor((y - (rr + w)*0.5)*d)),
+    x1 = Math.min(c.width, Math.ceil((x + rr + w)*d)), y1 = Math.min(c.height, Math.ceil((y + (rr + w)*0.5)*d)); if (x1 - x0 < 4 || y1 - y0 < 4) return;
+  const m = 1 + amp; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.beginPath(); ctx.ellipse(x*d, y*d, (rr + w)*d, (rr + w)*0.5*d, 0, 0, Math.PI*2); ctx.ellipse(x*d, y*d, Math.max(1, rr - w)*d, Math.max(1, rr - w)*0.5*d, 0, 0, Math.PI*2); ctx.clip('evenodd');
+  ctx.globalAlpha = 0.9; ctx.drawImage(c, x0, y0, x1 - x0, y1 - y0, x*d + (x0 - x*d)*m, y*d + (y0 - y*d)*m, (x1 - x0)*m, (y1 - y0)*m); ctx.restore(); }
+// the mushroom cloud: the fireball rises and spreads into a cap that rolls (a torus of lobes: up through the middle, down the outside, the
+// far side drawn first), on a stem of dusty smoke wide at the foot; glowing orange at first, then brown-grey and pale, leaning downwind, fading
+function wfxMush(e, o, t, bx, by, ks, kr, fd, nt){ const T = o.d, u = t/T, s = t/1000, R = e.R, rnd = mulberry(o.sd), fade = fd*(u < 0.55 ? 1 : Math.pow((1 - u)/0.45, 1.3));
+  const hc = o.H*(1 - Math.exp(-t/(T*0.16))), rc = R*0.72 + (o.Rc - R*0.72)*(1 - Math.exp(-t/(T*0.2))), heat = Math.exp(-t/(T*0.07)), warm = Math.exp(-t/(T*0.28)), WD = windSync(), sh = WD.wx*R*0.5*u*u;
+  const X = v => bx + v*ks, Y = v => by + v*ks; /*@TEST*/const dbg = WFX.dbg;/*@ENDTEST*/
+  // the stem: from the ground up to under the cap, once the cap has lifted off it
+  for (let k = 0; k < o.ns; k++){ const f = (k + 0.5)/o.ns, h = hc*f*0.9, rs = R*(0.4 + 0.75*Math.pow(1 - f, 3) + 0.06*Math.sin(k*1.7 + s*0.6)), a = fade*0.82*wfxSm(R*0.4, R*1.2, hc*f), v = (k + (o.sd & 3)) & 3;
+    const x = X(sh*f*f + Math.sin(s*0.7 + k*1.3)*rs*0.12), y = Y(-h), tone = f < 0.3 ? 'dust' : 'mush';
+    wfxSpr(wfxSmoke(tone, v, nt), wfxSmoke(tone, v, nt, true), x, y, rs*kr*1.45, rs*kr*1.3, a, 'source-over', true);
+    if (warm > 0.05 && f > 0.4) wfxSpr(wfxFire(v), wfxFire(v, true), x, y, rs*kr*0.8, rs*kr*0.8, fade*0.5*warm*f, 'lighter');
+    /*@TEST*/if (dbg) dbg.push([e.id + ':m' + k, x, y, ks, view.x, view.y]);/*@ENDTEST*/ }
+  // the cap's lobes, round the torus
+  const L = [], rho = rc*0.58, rm = rc*0.42, om = -0.42;
+  for (let j = 0; j < o.nc; j++){ const th = j/o.nc*Math.PI*2 + (rnd() - 0.5)*0.4, ph = rnd()*Math.PI*2 + s*om*(0.8 + 0.4*rnd()), lr = rc*0.42*(0.85 + 0.3*rnd()), v = rnd()*4 | 0;
+    const rad = rho + rm*Math.cos(ph), z = rad*Math.sin(th); L.push({x:rad*Math.cos(th), y:-hc - rm*Math.sin(ph)*0.85 - z*0.22, z, lr:lr*(1 + 0.12*Math.sin(ph)), up:Math.sin(ph), v, id:j}); }
+  for (let j = 0; j < 3; j++) L.push({x:(j - 1)*rc*0.32, y:-hc - rm*0.25, z:0, lr:rc*0.5, up:0.5, v:j, id:'c' + j});   // the cap's middle, so it never reads hollow
+  for (let j = 0; j < 6; j++){ const a0 = rnd()*Math.PI*2, d0 = Math.sqrt(rnd())*rho, z = d0*Math.sin(a0); L.push({x:d0*Math.cos(a0), y:-hc - rm*(0.55 + 0.25*rnd()) - z*0.22, z, lr:rc*(0.34 + 0.1*rnd()), up:1, v:j & 3, id:'d' + j}); }   // its dome
+  L.sort((a, b) => b.z - a.z);
+  const pale = lit => lit ? wfxSm(0.3, 0.6, u) : 0;   // the lit lobes pale from brown-grey to light grey (a cross-fade)
+  for (const q of L){ const x = X(q.x + sh), y = Y(q.y), lr = q.lr*kr, lit = q.up > -0.2, pl = pale(lit), tone = lit ? 'mush' : 'grey', ca = fade*(1 - heat*0.6);
+    if (pl < 1) wfxSpr(wfxSmoke(tone, q.v, nt), wfxSmoke(tone, q.v, nt, true), x, y, lr, lr*0.92, ca*(pl > 0 ? 1 - pl*0.5 : 1), 'source-over', true);
+    if (pl > 0) wfxSpr(wfxSmoke('light', q.v, nt), wfxSmoke('light', q.v, nt, true), x, y, lr, lr*0.92, ca*pl, 'source-over', true);
+    if (heat > 0.02) wfxSpr(wfxFire(q.v), wfxFire(q.v, true), x, y, lr*1.05, lr*1.05, fade*Math.min(1, heat*1.4), 'source-over');
+    if (warm > 0.04 && !lit) wfxSpr(wfxFire(q.v), wfxFire(q.v, true), x, y, lr*0.7, lr*0.7, fade*0.55*warm, 'lighter');   // the underside still glows from the fire below
+    /*@TEST*/if (dbg) dbg.push([e.id + ':c' + q.id, x, y, ks, view.x, view.y]);/*@ENDTEST*/ }
+  if (heat > 0.03){ const fr = (rc + rm*0.4)*kr; wfxSpr(wfxFire((o.sd >> 2) & 3), wfxFire((o.sd >> 2) & 3, true), X(sh), Y(-hc), fr, fr, fade*Math.min(1, heat*1.6), 'source-over');   // the fireball's body,
+    wfxSpr(wfxFire(o.sd & 3), wfxFire(o.sd & 3, true), X(sh), Y(-hc), rc*kr*0.8, rc*kr*0.8, fade*heat*0.9, 'lighter'); }   // its white-hot heart
+  if (warm > 0.03) wfxSpr(GLOW(), null, X(sh), Y(-hc + rm*0.7), rc*kr*1.2, rc*kr*0.6, fade*0.5*warm, 'lighter'); }
+// the ground still burning after an ICBM: a charred patch (multiplied in) with fires flickering over it and wisps of smoke, on the paused game
+// clock (still while paused); it fades over its game hours. Returns whether one is on screen
+function wfxDrawBurn(){ const h0 = S.hour + (S.speed && !S.over ? acc : 0), gt = FXQ.gt, ks = view.s; let on = false;
+  for (let i = WFX.burn.length - 1; i >= 0; i--){ const B = WFX.burn[i], age = h0 - B.h0; if (age > B.life || age < -1){ WFX.burn.splice(i, 1); continue; }
+    const f = Math.max(0, 1 - age/B.life), [x, y] = toScreen(B.wx, B.wy), rr = Math.max(B.r*ks, 10); if (x + rr < 0 || x - rr > cw || y + rr*1.6 < 0 || y - rr*0.6 > ch) continue; on = true;
+    const ni = fxNight(B.wx, B.wy), rnd = mulberry(B.seed), fl = Math.pow(f, 0.6);
+    wfxSpr(wfxScorch(), null, x, y, rr, rr*0.55, 0.85*Math.min(1, f*2), 'multiply');
+    for (let k = 0, nk = SET.fx === 'low' ? 14 : 30; k < nk; k++){ const a0 = rnd()*Math.PI*2, d0 = Math.sqrt(rnd())*0.8, fx0 = x + Math.cos(a0)*d0*rr, fy0 = y + Math.sin(a0)*d0*rr*0.52, fs = Math.max(1.8, B.r*ks*(0.022 + 0.03*rnd())), ph = rnd()*7;
+      const fk = 0.6 + 0.4*Math.sin(gt/90 + ph)*Math.sin(gt/53 + ph*1.3); if (rnd() > fl*1.1) continue;
+      wfxSpr(GLOW(), null, fx0, fy0, fs*4.2, fs*2, (0.14 + 0.32*ni)*fl*fk, 'lighter'); wfxSpr(wfxFire(k & 3), wfxFire(k & 3, true), fx0, fy0 - fs*0.6, fs, fs*1.6, 0.9*fl*fk, 'source-over');
+      wfxSpr(wfxFire(k & 3), wfxFire(k & 3, true), fx0, fy0 - fs*0.45, fs*0.62, fs*1.05, 0.75*fl*fk, 'lighter');   // the hot heart of the flame
+      /*@TEST*/if (WFX.dbg) WFX.dbg.push(['b' + i + ':' + k, fx0, fy0, ks, view.x, view.y]);/*@ENDTEST*/ }
+    for (let k = 0; k < 6; k++){ const P = 7000, cyc = gt/P + k/6, c = Math.floor(cyc), w = cyc - c, hh = fxh(B.seed + c*131 + k*17), hv = fxh(B.seed + c*71 + k*29), a0 = hh*Math.PI*2, d0 = Math.sqrt(hv)*0.7;
+      const wx0 = B.wx + Math.cos(a0)*d0*B.r, wy0 = B.wy + Math.sin(a0)*d0*B.r*0.52, sr = B.r*(0.1 + 0.22*w), WD = windSync();
+      const px = (wx0 + WD.wx*B.r*0.35*w)*ks + view.x, py = (wy0 - B.r*0.75*w)*ks + view.y, a = 0.55*fl*Math.min(1, w/0.15)*Math.pow(1 - w, 1.2);
+      wfxSpr(wfxSmoke('dark', k & 3, ni > 0.5), wfxSmoke('dark', k & 3, ni > 0.5, true), px, py, Math.max(3, sr*ks), Math.max(3, sr*ks), a, 'source-over', true); } }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; return on; }
+function drawWFX(now){ wfxSync(); if (!WFX.list.length && !WFX.burn.length) return; const t0 = /*@TEST*/WFX.fz ||/*@ENDTEST*/ now;
+  WFX.area = 0; WFX.bud = (SET.fx === 'low' ? 2.5 : 4)*cw*ch*Math.max(0.5, FXG.k); ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const burn = WFX.burn.length ? wfxDrawBurn() : false; let run = false;
+  for (let i = 0; i < WFX.list.length; i++){ const e = WFX.list[i], tau = t0 - e.t0; if (tau >= e.d || (e.die != null && now >= e.die)){ WFX.list.splice(i--, 1); continue; }
+    const [x, y] = toScreen(e.wx, e.wy), kr = Math.max(view.s, WFX_MP[e.k]/e.R), ex = e.ext*kr, up = e.top*kr; if (x + ex < 0 || x - ex > cw || y + ex*0.6 < 0 || y - up > ch) continue;   // off screen: not drawn (its clock runs on)
+    run = true; wfxDrawOne(e, tau, now); }
+  ctx.restore(); if (run) animFast(); else if (burn && S.speed && !S.over) animAmb(); }
+function drawWFXFlash(now){ const F = WFX.flash; if (!F) return; const k = ((/*@TEST*/WFX.fz ||/*@ENDTEST*/ now) - F.t0)/F.d; if (k >= 1 || k < 0){ WFX.flash = null; return; }
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = F.a*(k < 0.05 ? 1 : Math.pow(1 - (k - 0.05)/0.95, 2.2)); ctx.fillStyle = '#fffaf0'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore(); animFast(); }
 let VOLA = 1;   // the cross-fade share of the unit fire being emitted (volley: smoothstep 56-76 px a hex), stored on its shots and muzzle stars
-function shoot(kind, from, to, opt = {}){ while (PROJ.length >= 160) PROJ.shift(); PROJ.push({kind, from, to, t0:performance.now() + (opt.delay || 0), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite, a:VOLA, fz:opt.fz || 1}); }
+function shoot(kind, from, to, opt = {}){ while (PROJ.length >= 160) PROJ.shift(); PROJ.push({kind, from, to, u:kzNow()/view.s, t0:performance.now() + (opt.delay || 0), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite, a:VOLA, fz:opt.fz || 1}); }
 let lastPart = 0, PKZ = 1;
 // battle effects in two passes. drawParticlesUnder runs before the counters (scorch, wreck fires, smoke, fire, flashes, rings, dust, the night
 // ground glow and the art bursts and puffs: the plates always sit on top of them); drawParticlesOver runs after them, clipped off every plate
 // (tracers, shells and missiles in flight, muzzle stars, sparks and debris). PART is advanced once per frame, in the first pass.
 function drawParticlesUnder(now){
-  const dt = Math.min(0.1, (now - (lastPart || now))/1000); lastPart = now;
+  const dt = /*@TEST*/WFX.fz ? 0 :/*@ENDTEST*/ Math.min(0.1, (now - (lastPart || now))/1000); lastPart = now;
   const kz = PKZ = Math.max(0.6, Math.min(2, view.s*HS0/12))*zx();
   // scorch marks on the ground fade over 20 s
   for (let i = SCORCH.length - 1; i >= 0; i--){ const sc0 = SCORCH[i], age = now - sc0.t0; if (age > 20000){ SCORCH.splice(i, 1); continue; }
@@ -3971,8 +4198,9 @@ function drawParticlesUnder(now){
   for (let i = PART.length - 1; i >= 0; i--){ const q = PART[i]; q.t += dt*1000; if (q.t >= q.life || (q.die != null && q.t >= q.die)){ PART.splice(i, 1); continue; }
     const k = q.t/q.life, fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1; q.ox += q.vx*dt; q.oy += q.vy*dt;
     if (q.kind === 'debris'){ q.vy += 220*dt; } else if (q.kind === 'smoke' || q.kind === 'smokel'){ q.vx *= 0.99; q.vy *= 0.985; }
-    const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
+    const f = kzF(q, kz), [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*f, y = by + q.oy*f, sz = (q.s0 + (q.s1 - q.s0)*k)*kzS(f, kz);
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
+    /*@TEST*/if (WFX.dbg) WFX.dbg.push(['p' + (q.id || (q.id = ++WFX.id)), x, y, view.s, view.x, view.y]);/*@ENDTEST*/
     if (q.kind === 'smoke' || q.kind === 'smokel'){ if (!fxBudget(sz*sz*4)) continue; ctx.globalAlpha = fd*0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); ctx.drawImage(rotSpr(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), q.rot), x - sz, y - sz, sz*2, sz*2); }
     else if (q.kind === 'core'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.9*fd*(1 - k*k); ctx.drawImage(BCORE(), x - sz, y - sz, sz*2, sz*2); ctx.globalCompositeOperation = 'source-over'; }
     else if ((q.kind === 'fire' || q.kind === 'flash') && nl < 24){ const nq = fxNight(q.wx ?? 0, q.wy ?? 0); if (nq > 0.2){ nl++; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fd*0.18*(1 - k)*nq; ctx.drawImage(GLOW(), x - sz*3.2, y - sz*2.2, sz*6.4, sz*4.4); ctx.globalCompositeOperation = 'source-over'; } }   // fire lights the ground at night
@@ -3981,7 +4209,7 @@ function drawParticlesUnder(now){
     else if (q.kind === 'dust' && !q.tn){ if (!fxBudget(sz*sz*2.4)) continue; ctx.globalAlpha = fd*0.32*(k < 0.1 ? k/0.1 : 1 - k); const im = rotSpr(puffSprite(q.v, false), q.rot, 0.6), fx = im.fx || 1, fy = im.fy || 1; ctx.drawImage(im, x - sz*fx, y - sz*fy, sz*2*fx, sz*2*fy); }   // (squashed in its own frame, then turned)   // (march dust is drawn under the figures by drawTrailDust)
   }
   ctx.globalAlpha = 1;
-  drawArtFx(now, kz);
+  drawArtFx(/*@TEST*/WFX.fz ||/*@ENDTEST*/ now, kz);
   // muzzle stars (45 ms): under the counters, so a star on a plate's rim is never cut into a bar by the plate clip of the pass over them
   for (let i = MUZZ.length - 1; i >= 0; i--){ const m0 = MUZZ[i], age = now - m0.t0; if (age > 45 && m0.dr){ MUZZ.splice(i, 1); continue; } m0.dr = 1;   // (each star is drawn at least once, also on a slow frame)
     { const [x, y] = toScreen(m0.wx, m0.wy), L0 = 9*m0.big*kz, k3 = Math.max(0.35, 1 - age/45)*(m0.a ?? 1), Lg = L0; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k3; ctx.drawImage(GLOW(), x - Lg, y - Lg, Lg*2, Lg*2);
@@ -3997,18 +4225,19 @@ function drawParticlesOver(now){
   for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur; if (k < 0) continue;   // (a burst's later rounds wait)
     const [fx0, fy0] = toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = toScreen(pr.to[0], pr.to[1]);
     if (k >= 1){ PROJ.splice(i, 1); if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big, false, pr.lite, pr.fz || 1); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
-    const x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*pr.arc*kz; ctx.globalAlpha = pr.a ?? 1;
+    const ak = pr.arc*kzF(pr, kz), x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*ak; ctx.globalAlpha = pr.a ?? 1;
     if (pr.kind === 'tracer'){ const x2 = fx0 + (tx0 - fx0)*Math.max(0, k - 0.18), y2 = fy0 + (ty0 - fy0)*Math.max(0, k - 0.18); ctx.strokeStyle = 'rgba(255,225,140,.9)'; ctx.lineWidth = 1.2*Math.min(1.8, Math.sqrt(kz)); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x, y); ctx.stroke(); ctx.lineCap = 'butt'; }
     else { if (pr.kind === 'missile' && now - pr.last > 30){ pr.last = now; const [wx, wy] = screenToWorld(x, y); emit('smokel', wx, wy, {vx:(Math.random() - 0.5)*4, vy:-2, s0:4, s1:14, life:1300}); }
-      const kb = Math.max(0, k - 0.07), xb = fx0 + (tx0 - fx0)*kb, yb = fy0 + (ty0 - fy0)*kb - Math.sin(kb*Math.PI)*pr.arc*kz;
+      const kb = Math.max(0, k - 0.07), xb = fx0 + (tx0 - fx0)*kb, yb = fy0 + (ty0 - fy0)*kb - Math.sin(kb*Math.PI)*ak;
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = pr.kind === 'missile' ? 'rgba(255,190,120,.9)' : 'rgba(255,236,190,.95)'; ctx.lineWidth = pr.kind === 'missile' ? 1.6 : 1.2; ctx.beginPath(); ctx.moveTo(xb, yb); ctx.lineTo(x, y); ctx.stroke();
       ctx.globalAlpha = 0.6*(pr.a ?? 1); ctx.drawImage(GLOW(), x - 4, y - 4, 8, 8); ctx.restore(); } }
   ctx.globalAlpha = 1;
   // sparks and debris (draw only: drawParticlesUnder advanced and pruned them)
   for (const q of PART){ if (q.kind !== 'spark' && q.kind !== 'debris') continue; const k = q.t/q.life; if (k >= 1) continue;
-    const fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1, [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*k)*kz;
+    const f = kzF(q, kz), fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1, [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*f, y = by + q.oy*f, sz = (q.s0 + (q.s1 - q.s0)*k)*kzS(f, kz);
     if (x < -60 || y < -60 || x > cw + 60 || y > ch + 60) continue;
-    const sp = q.kind === 'spark', ln = Math.max(sp ? 1.5 : 2, Math.hypot(q.vx, q.vy)*0.03)*kz, vl = Math.hypot(q.vx, q.vy) || 1;   // a streak from p - v*0.03 s to p (at least 1.5-2 px)
+    /*@TEST*/if (WFX.dbg) WFX.dbg.push(['p' + (q.id || (q.id = ++WFX.id)), x, y, view.s, view.x, view.y]);/*@ENDTEST*/
+    const sp = q.kind === 'spark', ln = Math.max(sp ? 1.5 : 2, Math.hypot(q.vx, q.vy)*0.03)*kzS(f, kz), vl = Math.hypot(q.vx, q.vy) || 1;   // a streak from p - v*0.03 s to p (at least 1.5-2 px)
     ctx.globalAlpha = fd*(1 - k); ctx.strokeStyle = sp ? '#ffd27a' : '#2a2a26'; ctx.lineWidth = sp ? 1 : Math.max(1, Math.min(1.5, sz*0.9)); ctx.lineCap = 'round';
     if (sp) ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.moveTo(x - q.vx/vl*ln, y - q.vy/vl*ln); ctx.lineTo(x, y); ctx.stroke(); if (sp) ctx.globalCompositeOperation = 'source-over'; }
   ctx.globalAlpha = 1; ctx.lineCap = 'butt';
@@ -4037,7 +4266,7 @@ const plateClipOn = () => { if (!PLATECLIP && PLATEBOX){ PLATECLIP = plateClip(P
 // march dust (tinted puffs left by moving figures) lies on the ground: drawn before the counters so it never veils the vehicles that raise it
 function drawTrailDust(){ const kz = Math.max(0.6, Math.min(2, view.s*HS0/12))*zx(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   for (const q of PART){ if (q.kind !== 'dust' || !q.tn) continue; const k = q.t/q.life; if (k >= 1) continue;
-    const [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*kz, y = by + q.oy*kz, sz = (q.s0 + (q.s1 - q.s0)*Math.sqrt(k))*kz; if (x < -sz || y < -sz || x > cw + sz || y > ch + sz) continue;
+    const f = kzF(q, kz), [bx, by] = toScreen(q.wx, q.wy), x = bx + q.ox*f, y = by + q.oy*f, sz = (q.s0 + (q.s1 - q.s0)*Math.sqrt(k))*kzS(f, kz); if (x < -sz || y < -sz || x > cw + sz || y > ch + sz) continue;
     ctx.globalAlpha = (q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1)*0.42*(k < 0.12 ? k/0.12 : Math.pow(1 - k, 1.4)); ctx.drawImage(rotSpr(dustSprite(q.v, q.tn), q.rot), x - sz, y - sz*0.62, sz*2, sz*2*0.62); }
   ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
 // fire events for a fighting cluster (called from the unit drawing loop)
@@ -4651,7 +4880,7 @@ function wingVis(a, now, dt){
   const T = G.P[v.tgt], B = G.P[a.air.base], spd = VW_SPEED*Math.sqrt(Math.max(1, S.speed || 1))*dt;
   const go = (tx, ty) => { const dx = tx - v.x, dy = ty - v.y, d = Math.hypot(dx, dy); if (d > 1e-4) v.want = Math.atan2(dy, dx); if (d <= spd){ v.x = tx; v.y = ty; return true; } v.x += dx/d*spd; v.y += dy/d*spd; return false; };
   const follow = (wx, wy, ax, ay, bx, by) => { const d0 = Math.hypot(wx - v.x, wy - v.y); go(wx, wy); if (d0 < 0.05) v.want = Math.atan2(by - ay, bx - ax); };   // caught up with the sim: point along the leg, not at a jittery tiny step
-  const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); if (booted){ const nm = 2 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], fxOff(T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10, 6), {dur:450 + i*80, arc:4, big:0.9}); } strikeFX(q.p, v); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
+  const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); if (booted){ const nm = 2 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], fxOff(T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10, 6), {dur:450 + i*80, arc:4, big:0.9}); } strikeFX(q.p, v, q.bnote); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
   if (v.stage === 'out'){ const simOut = f && f.ph === 'out' && f.tgt === v.tgt;
     if (simOut){ const [wx, wy] = wingPos(a); follow(wx, wy, B.x, B.y, T.x, T.y); }                    // follow the simulated flight, catching up if behind
     else if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; v.tr = null; return null; } v.stage = 'over'; v.tOver = now; } }
@@ -4673,8 +4902,8 @@ const FXQ = []; FXQ.clk = 0; FXQ.gt = 0;   // clk: the queue's clock; gt: the am
 function fxLater(ms, fn){ if (FXQ.length > 400) FXQ.shift(); FXQ.push({t:FXQ.clk + ms, fn}); }
 function fxDrain(now){ const dt = Math.min(250, Math.max(0, now - (FXQ.last || now))); FXQ.last = now; if (S && S.speed > 0 && !S.over) FXQ.gt += dt; if (!S || !(S.speed > 0) || !FXQ.length) return; FXQ.clk += dt;
   for (let i = 0; i < FXQ.length; i++){ const q = FXQ[i]; if (q.t > FXQ.clk) continue; FXQ.splice(i--, 1); try { q.fn(); } catch (e){ console.error(e); } } }
-function strikeFX(p, v){ fx('strike', p); const P = G.P[p]; afxMark(p, 24);
-  for (let i = 0; i < 5; i++) fxLater(120 + i*170, () => { const [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*9, 6); explode(ex, ey, 1.1); emit('smoke', ex, ey, {vy:-8, s0:6, s1:26, life:2400}); });
+function strikeFX(p, v, bld){ fx('strike', p); const P = G.P[p]; afxMark(p, 24);   // (bld: buildings were hit: large blasts)
+  for (let i = 0; i < 5; i++) fxLater(120 + i*170, () => { const [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*9, 6); FXW.blast(bld && i % 2 === 0 ? 'L' : 'M', ex, ey, {sea:P.sea}); });
   sfx('boom'); }
 function wingPos(a){
   const B = G.P[a.air.base]; if (!a.fly) return [B.x + 30/Math.max(0.3, view.s), B.y - 14/Math.max(0.3, view.s)];
@@ -7860,6 +8089,7 @@ function draw(now){ draw.now = now;
   AFX.avoid = plateBoxes(hitsPrev); PLATECLIP = PLATEBOX = null;
   afxAmbient(now, vis);
   drawParticlesUnder(now);   // smoke, fire, flashes and bursts: under the counters, so no plate is ever veiled
+  if (WFX.list.length || WFX.burn.length) drawWFX(now);   // strike and blast effects (missiles, warheads, combat blasts): over the small ones, still under the counters
   ovIn();   // (the counters and all drawn after them: on the full-ratio overlay when there is one)
   const clSetup = c => { const lead = c.list.reduce((b, a) => count(a) > count(b) ? a : b, c.list[0]);
     let dir = 1; counter.ang = null; counter.trail = null; c.enemy = null;
@@ -7989,6 +8219,7 @@ function draw(now){ draw.now = now;
   if (PROJ.length || MUZZ.length || AFX.boom.length || FX.length || (S.inflight && S.inflight.length) || (FXQ.length && fxRun) || AFX.crater.some(q => now - q.t0 < 300)) animFast();
   else if (PART.length || AFX.puff.length || WRECKS.length){ if (fxRun) animFast(); else animAmb(); }
   else if (SCORCH.length) animAmb();
+  if (WFX.flash) drawWFXFlash(now);   // a nuclear flash whitens the whole map, counters too
   ovOut();
   drawMini();
 }
@@ -8688,7 +8919,7 @@ function settingsHTML(){
     ${row('Sound volume', `<div class="volrow"><input type="range" id="volume" class="rng" min="0" max="100" value="${Math.round(SET.vol*100)}" style="--v:${Math.round(SET.vol*100)}%"><span class="small muted">${Math.round(SET.vol*100)}%</span></div>`)}
     ${row('Music', `<div class="seg2">${opt('music', true, 'On')}${opt('music', false, 'Off', 'Effects and ambience only')}</div>`)}
     ${row('Pop-up alerts', `<div class="seg2">${opt('toasts', 'all', 'All')}${opt('toasts', 'bad', 'Threats')}${opt('toasts', 'none', 'None')}</div>`)}
-    ${row('Effects', `<div class="seg2">${opt('fx', 'high', 'High')}${opt('fx', 'low', 'Low', 'Faster on slow machines')}</div>`)}
+    ${row('Effects', `<div class="seg2">${opt('fx', 'high', 'High', 'Full strike and battle effects: smoke columns, shock ripples, more fire and smoke')}${opt('fx', 'low', 'Low', 'Faster on slow machines: fewer particles, no smoke columns or shock ripples, shorter effects')}</div>`)}
     ${row('Battery saver', `<div class="seg2">${opt('saver', true, 'On')}${opt('saver', false, 'Off', 'Full frame rate while anything moves')}</div>`, 'Smooth while you move the map; 30 fps otherwise, and no drawing when nothing moves')}
     ${row('Text size', `<div class="seg2">${[90, 100, 115, 130].map(v => `<button class="sg ${(SET.ui || 100) === v ? 'on' : ''}" aria-pressed="${(SET.ui || 100) === v}" data-act="set-ui" data-v="${v}">${v}%</button>`).join('')}</div>`)}
     ${row('Colours', `<div class="seg2">${opt('cb', false, 'Standard')}${opt('cb', true, 'Colour-blind')}</div>`)}
@@ -9527,7 +9758,13 @@ function devPanelHTML(){ const al = S.nations.filter(N => N.alive), U = UNITS[DE
     <div class="dv-r"><select id="devt" aria-label="Unit type">${Object.keys(UNITS).map(t => `<option value="${t}"${t === DEVUI.t ? ' selected' : ''}>${UNITS[t].name} (${UNITS[t].cls})</option>`).join('')}</select></div>
     <div class="dv-r"><select id="devo" aria-label="Owner">${al.map(N => `<option value="${N.id}"${N.id === DEVUI.o ? ' selected' : ''}>${N.name}${N.id === PLAYER ? ' (you)' : ''}</option>`).join('')}</select><input id="devk" type="number" min="1" max="999" value="${DEVUI.k}" aria-label="Count"></div>
     <div class="dv-r"><button class="dv-b go" data-dev="pick" aria-pressed="${DEVUI.pick}">${DEVUI.pick ? 'Click provinces to place · Esc stops' : 'Place: click a province'}</button></div>
-    <div class="dv-n${DEVUI.note ? DEVUI.ok ? ' ok' : ' bad' : ''}">${DEVUI.note || (U.cls === 'naval' ? 'Ships: a sea zone or a coastal province.' : 'Ground and air: any land province.')}</div></div>`; }
+    <div class="dv-n${DEVUI.note ? DEVUI.ok ? ' ok' : ' bad' : ''}">${DEVUI.note || (U.cls === 'naval' ? 'Ships: a sea zone or a coastal province.' : 'Ground and air: any land province.')}</div></div>
+  <div class="dv-s"><div class="dv-l">Strike effects</div>${DEV_FX.map(r => `<div class="dv-r">${r.map(([k, t]) => `<button class="dv-b" data-dev="wfx" data-k="${k}">${t}</button>`).join('')}</div>`).join('')}
+    <div class="dv-n">At the selected province, else the map centre.</div></div>`; }
+// the strike-effect test buttons: each fires one effect where the developer looks (the selected province, else the middle of the map)
+const DEV_FX = [[['cm', 'Cruise'], ['bm', 'Ballistic'], ['chem', 'Chemical']], [['tac', 'Tactical nuke'], ['icbm', 'ICBM']], [['exS', 'Blast S'], ['exM', 'Blast M'], ['exL', 'Blast L']]];
+function devFx(k){ if (!S || !S.started) return; const p = sel.prov != null && sel.prov >= 0 && G.P[sel.prov] ? sel.prov : -1, [wx, wy] = p >= 0 ? [G.P[p].x, G.P[p].y] : screenToWorld(cw/2, ch/2);
+  if (k[0] === 'e'){ const c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1; wfxStart(k, wx, wy, {force:true, sea:q >= 0 && G.P[q].sea}); } else wfxStrike(k, wx, wy, {force:true, p:p >= 0 ? p : undefined}); }
 function devRender(){ const el = $('devpanel'); if (!el) return; el.hidden = !DEVUI.open; $('devbadge').setAttribute('aria-expanded', String(DEVUI.open)); document.body.classList.toggle('devpick', DEVUI.open && DEVUI.pick);
   if (DEVUI.open && S) el.innerHTML = devPanelHTML(); }
 function devSync(){ for (const i of DEV_SPEEDS){ const b = $('sp' + i); if (b) b.setAttribute('aria-pressed', String(S.speed === i)); }
@@ -9548,6 +9785,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-dev]
     else if (k === 'resall' && S && S.started){ const n = devResearchAll(PLAYER); DEVUI.ok = true; DEVUI.note = `Researched ${n} technologies.`; renderSide(true); devRender(); }
     else if (k === 'fill' && S && S.started){ devFill(S.nations[PLAYER]); DEVUI.ok = true; DEVUI.note = 'Stocks filled.'; renderSide(true); devRender(); }
     else if (k === 'pick'){ DEVUI.pick = !DEVUI.pick; DEVUI.note = ''; devRender(); }
+    else if (k === 'wfx') devFx(b.dataset.k);
     return; }
   if (e.target.closest('[data-speed]') && DEVUI.open) devSync();
   if ((DEV.instant || DEV.research) && S && S.started && !S.over && e.target.closest('[data-act]') && devDone(PLAYER)){ renderSide(true); if (modalKind === 'research' && !$('modal').hidden) setHTML($('sheet'), researchHTML()); } });
@@ -10114,6 +10352,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
+if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
@@ -10158,7 +10397,7 @@ IM.on('war', (me, a) => { if (me === PLAYER && booted && !S.over) setTimeout(() 
 // a nation wrote to the player (rules/diplomacy.js say): a toast unless its window is open
 IM.on('chat', (me, n, from, text) => { if (me === PLAYER && booted && modalKind !== 'nation') toast(`${S.nations[from].name}: “${text}”`, 'info', null); });
 // a convoy was sunk (rules/trade.js tradeDay): blast and smoke at the raid zone if the player can see it
-IM.on('fxRaid', R => { if (booted && visibleSet(PLAYER).has(R.z)){ const P = G.P[R.z], [ex, ey] = fxOff(P.x, P.y, 6); explode(ex, ey, 1.2); emit('smoke', ex, ey, {vy:-6, s0:6, s1:26, life:3000}); } });
+IM.on('fxRaid', R => { if (booted && visibleSet(PLAYER).has(R.z)){ const P = G.P[R.z], [ex, ey] = fxOff(P.x, P.y, 6); FXW.blast('L', ex, ey, {sea:true}); } });
 // a new game or a loaded one starts: drop what the page remembers about the last one
 // combat (rules/combat.js): the battle effects
 // two forces became one: the selection follows. joined (the hourly arrival merge in rules/tick.js) keeps the place in a selected group
@@ -10174,21 +10413,37 @@ IM.on('fxCapture', (p, O, prev) => {
 IM.on('fxDrop', (a, p) => { if (booted && (a.owner === PLAYER || visibleSet(PLAYER).has(p))){ const P = G.P[p]; for (let i = 0; i < 7; i++) emit('smoke', P.x + (Math.random() - 0.5)*18, P.y - 14 - Math.random()*8, {vy:3, s0:5, s1:7, life:1500}); } });
 IM.on('fxSat', (p, n) => { if (booted && n === PLAYER){ const P = G.P[p]; for (let i = 0; i < 6; i++) emit('smokel', P.x, P.y, {vx:(Math.random() - 0.5)*10, vy:-20 - Math.random()*10, s0:6, s1:24, life:2600}); } });
 IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : 20); if (E.T === 'bomb') shake(4, 400); }
-  STRIKEQ.set(E.a.id, {p:E.p, t:performance.now(), dealt:E.dealt, owner:E.owner}); });
+  STRIKEQ.set(E.a.id, {p:E.p, t:performance.now(), dealt:E.dealt, owner:E.owner, bnote:!!E.bnote}); });
 IM.on('fxMissile', E => { const m = E.m, P = G.P[m.to]; if (!booted || !(m.owner === PLAYER || E.owner === PLAYER || visibleSet(PLAYER).has(m.to))) return;
   if (!E.hit){ const [ix, iy] = [P.x, P.y - 40]; for (let j = 0; j < 2; j++) explode(ix + (Math.random() - 0.5)*10, iy, 0.9, true); return; }
-  const dealt = E.dealt, big = m.k === 'bm' ? 3 : 1.8; for (let j = 0; j < (m.k === 'bm' ? 5 : 3); j++) fxLater(j*120, () => explode(...fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*8, 6), big*(0.7 + Math.random()*0.4)));
-  WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); afxCrater(P.x, P.y, m.k === 'bm' ? 3.5 : 3, {a:0.95, life:96, cap:3.5}); afxMark(m.to, m.k === 'bm' ? 48 : 30); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); shake(m.k === 'bm' ? 9 : 5, m.k === 'bm' ? 900 : 500); sfx('boom'); });
+  const dealt = E.dealt, [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*6, P.y + (Math.random() - 0.5)*4, 6);
+  wfxStrike(m.k === 'bm' ? 'bm' : 'cm', ex, ey, {p:m.to});   // the blast, its crater, the burning city, the shake and the boom
+  WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); });
+// warheads the rules do not have yet (chemical, tactical nuclear, ICBM) and cruise or ballistic ones by kind: IM.emit('fxWarhead', {kind, p, by})
+// shows the strike at province p (or at E.x, E.y) where the player struck or can see; IM.emit('fxBlast', {size:'S'|'M'|'L', p}) a combat blast
+IM.on('fxWarhead', E => { const P = G.P[E.p]; if (!booted || !P || !FXW_K[E.kind] || !(E.by === PLAYER || S.owner[E.p] === PLAYER || visibleSet(PLAYER).has(E.p))) return; FXW[FXW_K[E.kind]](E.x ?? P.x, E.y ?? P.y, {p:E.p}); });
+IM.on('fxBlast', E => { const P = G.P[E.p]; if (!booted || !P || !visibleSet(PLAYER).has(E.p)) return; FXW.blast(E.size || 'M', ...fxOff(E.x ?? P.x, E.y ?? P.y, 4), {sea:P.sea}); });
 // the hourly step (rules/tick.js): battle numbers, hits, blasts, craters and shore fire where the player fights or can see; the wreck of a destroyed force
+// combat blasts by what was lost: the battle's running losses by unit type (S.bt, read only) against what was already shown; small for infantry
+// and drones, medium for vehicles, guns and aircraft, large for ships; up to 4 an hour per battle, by the side's counter, over about a second
+const BLOSS = new Map(), FXW_K = {cm:'cruise', bm:'ballistic', chem:'chemical', tac:'tactical', icbm:'icbm'};
+const blastSize = t => { const U = UNITS[t]; return !U ? 'S' : U.cls === 'naval' ? 'L' : U.dr ? 'S' : U.cls === 'air' || U.cls === 'armored' || t === 'art' || t === 'sam' || t === 'jam' ? 'M' : 'S'; };
+function battleBlasts(p, owners){ const B = S.bt && S.bt[p], P = G.P[p]; if (!B || !P) return; if (BLOSS.size > 600) BLOSS.clear(); let left = 4;
+  for (const o of owners){ const bs = B.s[o]; if (!bs || !bs.lost) continue; const key = p + ':' + o, seen = BLOSS.get(key), same = seen && seen.h0 === B.h0, got = {L:0, M:0, S:0};
+    for (const t in bs.lost){ const d = bs.lost[t] - (same ? seen.l[t] || 0 : 0); if (d > 0.2) got[blastSize(t)] += d; } BLOSS.set(key, {h0:B.h0, l:{...bs.lost}});
+    const c = CLPOS.get(key) || [P.x, P.y];
+    for (const sz of ['L', 'M', 'S']) for (let i = 0; i < Math.min(2, Math.ceil(got[sz] - 0.2)) && left > 0; i++, left--){ const dl = (4 - left)*170 + Math.random()*120;
+      fxLater(dl, () => FXW.blast(sz, ...fxOff(c[0] + (Math.random() - 0.5)*6, c[1] + (Math.random() - 0.5)*4, 4), {sea:P.sea})); } } }
 IM.on('fxBattle', (p, owners, sides, list) => { const showFx = owners.includes(PLAYER) || visibleSet(PLAYER).has(p);
   if (showFx) owners.forEach((o, i) => { const lost = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
   if (showFx) fx('hits', p, {seed:Math.random()*1000});
+  if (showFx && booted) battleBlasts(p, owners);   // a blast for each kind of unit lost this hour, sized by its class
   if (showFx && booted){ const P = G.P[p], nB = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0);   // visual only (Math.random, never rng)
     for (let j = 0; j < 2; j++) afxBoom(P.x + (Math.random() - 0.5)*12, P.y + (Math.random() - 0.5)*7, 0.7 + Math.random()*0.4, true);
     if (!P.sea && nB >= 6 && Math.random() < Math.min(0.7, nB/30)) afxCrater(P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8, 2 + Math.min(2.5, nB/12), {a:0.7, life:60});
     if (!P.sea && P.coast) for (const sz of P.nbs){ if (!G.P[sz].sea) continue; const sh = S.armies.find(a => a.at === sz && a.to === null && owners.includes(a.owner) && shipsN(a) > 0); if (!sh) continue;
       const Z = G.P[sz]; for (let j = 0; j < Math.min(3, shipsN(sh)); j++) setTimeout(() => shoot('shell', [Z.x + (Math.random() - 0.5)*6, Z.y + (Math.random() - 0.5)*4], [P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8], {dur:1100, arc:44, big:1.15}), j*260); break; } } });
-IM.on('fxWreck', (p, owners) => { if (!(owners.includes(PLAYER) || visibleSet(PLAYER).has(p))) return; fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); explode(...fxOff(P.x, P.y, 6), 1.4); } });
+IM.on('fxWreck', (p, owners) => { if (!(owners.includes(PLAYER) || visibleSet(PLAYER).has(p))) return; fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); FXW.blast(P.sea ? 'L' : 'M', ...fxOff(P.x, P.y, 6), {sea:P.sea}); } });
 // the hour is over: mark the forces that set off next hour, so their counters keep rolling
 IM.on('hour', goScan);
 // the morning paper was printed: show the front page on a big day; the day's achievements; the midnight autosave
