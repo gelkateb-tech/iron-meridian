@@ -19,7 +19,7 @@ function trS(){ if (!S.trade) S.trade = {routes:[], closed:{}, want:{}, nid:1, a
 const trKey = (a, b, nc) => b === NEUTRAL ? a + ':n' + nc : Math.min(a, b) + ':' + Math.max(a, b);
 const trMine = (r, n) => r.a === n || r.b === n;
 const trOther = (r, n) => r.a === n ? r.b : r.a;
-const trName = (r, n = PLAYER) => r.b === NEUTRAL ? G.countries[r.nc].name : S.nations[trOther(r, n)].name;
+const trName = (r, n) => r.b === NEUTRAL ? G.countries[r.nc].name : S.nations[trOther(r, n)].name;
 const routesOf = n => S.trade ? S.trade.routes.filter(r => trMine(r, n)) : [];
 const routeById = id => S.trade ? S.trade.routes.find(r => r.id === id) || null : null;
 const isPort = P => !!P && !P.sea && P.city && P.nbs.some(v => G.P[v].sea);
@@ -82,7 +82,7 @@ function trInvalid(r){ const T = trS(), M = mkt();
   if (r.b >= 0){ if (!S.nations[r.b].alive || S.owner[S.nations[r.b].capital] !== r.b) return 'gone';
     if (atWar(r.a, r.b) || S.decl.some(d => (d.by === r.a && d.to === r.b) || (d.by === r.b && d.to === r.a))) return 'war';
     if (M.emb[r.a + '>' + r.b] || M.emb[r.b + '>' + r.a]) return 'embargo';
-    if ((r.a === PLAYER || r.b === PLAYER) && opinion(trOther(r, PLAYER), PLAYER) < -50) return 'refused';
+    for (const me of [r.a, r.b]) if (isSeat(me) && opinion(trOther(r, me), me) < -50) return 'refused';   // a seat's partner breaks off when it comes to dislike the seat
     if (r.kind === 'land' && !borders(r.a, r.b)) return 'border'; }
   else if (!(neuPorts().get(r.nc) || []).length) return 'gone';
   if (T.closed[r.key]) return 'closed';
@@ -92,7 +92,7 @@ function trMake(a, b, kind, nc = null){ const T = trS(), r = {id:T.nid++, a, b, 
   if (trInvalid(r) || !trPlace(r)) return null; T.routes.push(r); T.ver = (T.ver || 0) + 1; trStatus(r); return r; }
 function trEnded(r, why){ const T = trS(); T.ver = (T.ver || 0) + 1;
   for (const a of S.armies) if (a.escort === r.id) delete a.escort;
-  if (trMine(r, PLAYER) && why !== 'closed') log(`The ${trName(r)} trade route has ended: ${TR_WHY[why] || why}.`, 'info', r.path[Math.floor(r.path.length/2)]); }
+  if (why !== 'closed') for (const me of [r.a, r.b]) if (isSeat(me)) tell(me, `The ${trName(r, me)} trade route has ended: ${TR_WHY[why] || why}.`, 'info', r.path[Math.floor(r.path.length/2)]); }
 // pre-trade money income: the economy that drives a route's value
 const trGdp = n => { const i = income(n); return Math.max(40, i.gross.cash - (i.trade ? i.trade.cash : 0)); };
 function neuGdp(nc){ const c = G.countries[nc]; let s = 0; for (const p of c.provs) if (S.owner[p] === NEUTRAL) s += G.P[p].city ? 12 : 3; return Math.max(30, Math.min(260, 30 + s)); }
@@ -171,18 +171,18 @@ function tradeDay(){ const T = trS(); seaIndex(); let news = 0;
   for (const k in T.air) if (S.hour - T.air[k].h >= 24) delete T.air[k];
   for (const r of T.routes){ const live = trStatus(r); r.f = S.hour - r.raid < 24 ? 0 : (r.accN ? Math.round(r.acc/r.accN*100)/100 : live); r.acc = 0; r.accN = 0;
     if (r.f <= 0 || r.kind !== 'sea') continue;
-    const R = trRaid(r); if (!R) continue; const pv = trSide(r, PLAYER), who = R.by >= 0 ? nationName(R.by) : 'Enemy', how = R.air ? 'aircraft' : R.subs ? 'submarines' : 'warships';
+    const R = trRaid(r); if (!R) continue; const mine = [r.a, r.b].filter(isSeat), who = R.by >= 0 ? nationName(R.by) : 'Enemy', how = R.air ? 'aircraft' : R.subs ? 'submarines' : 'warships';
     if (R.saved){ r.esc = (r.esc || 0) + 1;
-      if (trMine(r, PLAYER)) log(`Escorts beat off ${artA(who)} raid on your ${trName(r)} convoy in ${G.P[R.z].name}${R.dealt > 0 ? `: raiders took ${R.dealt} damage${R.lost ? `, ${R.lost} sunk` : ''}` : ''}. Trade income kept.`, 'good', R.z);
-      else if (R.by === PLAYER) log(`The ${S.nations[r.a].name}–${trName(r, r.a)} convoy in ${G.P[R.z].name} was escorted: your raiders were driven off${R.dealt > 0 ? ` (${R.dealt} damage taken)` : ''}.`, 'bad', R.z);
+      for (const me of mine) tell(me, `Escorts beat off ${artA(who)} raid on your ${trName(r, me)} convoy in ${G.P[R.z].name}${R.dealt > 0 ? `: raiders took ${R.dealt} damage${R.lost ? `, ${R.lost} sunk` : ''}` : ''}. Trade income kept.`, 'good', R.z);
+      if (isSeat(R.by)) tell(R.by, `The ${S.nations[r.a].name}–${trName(r, r.a)} convoy in ${G.P[R.z].name} was escorted: your raiders were driven off${R.dealt > 0 ? ` (${R.dealt} damage taken)` : ''}.`, 'bad', R.z);
       continue; }
     r.raid = S.hour; r.raidZ = R.z; r.f = 0; r.why = 'sunk'; r.sunk = (r.sunk || 0) + 1; T.ver = (T.ver || 0) + 1;
     for (const n of [r.a, r.b]) if (n >= 0) T.hit[n] = (T.hit[n] || 0) + 1;
-    if (R.by >= 0) bump(R.by === PLAYER ? 'convoysSunk' : 'tradeHits');
+    if (R.by >= 0) for (const me of seats()) bump(me, R.by === me ? 'convoysSunk' : 'tradeHits');
     IM.emit('fxRaid', R);
-    if (trMine(r, PLAYER)) log(`${who} ${how} sank your convoy on the ${trName(r)} trade route in ${G.P[R.z].name}: $${fmt1(pv ? pv.cash : 0)}M of trade income lost today. Escort the route (select a fleet: Escort route).`, 'bad', R.z);
-    else if (R.by === PLAYER) log(`Your ${how} sank ${artA(S.nations[r.a].name)}–${trName(r, r.a)} convoy in ${G.P[R.z].name}.`, 'good', R.z);
-    else if (news < 2 && rng() < 0.5){ news++; log(`${who} ${how} sank ${artA(S.nations[r.a].name)}–${trName(r, r.a)} convoy in ${G.P[R.z].name}.`, '', R.z); } }
+    for (const me of mine) tell(me, `${who} ${how} sank your convoy on the ${trName(r, me)} trade route in ${G.P[R.z].name}: $${fmt1((pv => pv ? pv.cash : 0)(trSide(r, me)))}M of trade income lost today. Escort the route (select a fleet: Escort route).`, 'bad', R.z);
+    if (isSeat(R.by)) tell(R.by, `Your ${how} sank ${artA(S.nations[r.a].name)}–${trName(r, r.a)} convoy in ${G.P[R.z].name}.`, 'good', R.z);
+    if (!mine.length && !isSeat(R.by) && news < 2 && rng() < 0.5){ news++; tellAll(`${who} ${how} sank ${artA(S.nations[r.a].name)}–${trName(r, r.a)} convoy in ${G.P[R.z].name}.`, '', R.z); } }
   tradeGen();
   INCC.v = -1; }
 // keep valid routes, re-lay those whose port changed hands, fill free slots by economy and distance
@@ -194,7 +194,7 @@ function tradeGen(){ const T = trS(); NEUP = null;
   const seaSlots = n => 2 + (gdp[n] > 300 ? 1 : 0) + (gdp[n] > 450 ? 1 : 0), neuSlots = n => 1 + (gdp[n] > 350 ? 1 : 0);
   const C = n => G.P[S.nations[n].capital];
   // opinions are costly: checked lazily, once per pair, only for the pairs a pass actually considers
-  const likes = (a, b) => (a === PLAYER ? true : opinion(a, b) > -40) && (b === PLAYER ? true : opinion(b, a) > -40), okq = q => q.ok ?? (q.ok = likes(q.a, q.b));
+  const likes = (a, b) => (isSeat(a) ? true : opinion(a, b) > -40) && (isSeat(b) ? true : opinion(b, a) > -40), okq = q => q.ok ?? (q.ok = likes(q.a, q.b));
   const pairs = []; for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++){ const a = live[i], b = live[j], key = trKey(a, b);
     if (used.has(key) || T.closed[key]) continue; const d = hexDist(C(a).cc, C(b).cc); pairs.push({a, b, key, sc:Math.sqrt(gdp[a]*gdp[b])/(1 + d/60)*(T.want[key] ? 100 : 1), land:borders(a, b)}); }
   pairs.sort((x, y) => y.sc - x.sc);
@@ -218,20 +218,20 @@ function tradeGen(){ const T = trS(); NEUP = null;
       for (const nc of ncs.slice(0, 10)){ const r = trMake(n, NEUTRAL, 'sea', nc); used.add(trKey(n, NEUTRAL, nc)); if (r){ cnt[n].neu++; break; } } } }
   for (const r of T.routes) trValue(r);
   T.ver = (T.ver || 0) + 1; }
-// the player opens or closes a route in Diplomacy
-function tradeOpen(b, nc = null, kind = null){ const T = trS(), key = trKey(PLAYER, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
+// nation n opens a route with nation b (or with the unaligned country nc), or closes its route id
+function tradeOpen(n, b, nc = null, kind = null){ const T = trS(), key = trKey(n, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
   if (T.routes.some(r => r.key === key)) return true;
-  if (b >= 0){ if (atWar(PLAYER, b)) return 'you are at war'; if (mkt().emb[PLAYER + '>' + b] || mkt().emb[b + '>' + PLAYER]) return 'an embargo is in force'; if (opinion(b, PLAYER) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
-  const r = trMake(PLAYER, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(PLAYER, b) ? trMake(PLAYER, b, 'land') : null);
+  if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (mkt().emb[n + '>' + b] || mkt().emb[b + '>' + n]) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
+  const r = trMake(n, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(n, b) ? trMake(n, b, 'land') : null);
   if (!r) return 'no route can be laid: no port or sea path';
-  trValue(r); INCC.v = -1; log(`Trade route opened with ${trName(r)}: +$${fmt1(r.va.cash)}M and ${r.va.q} ${rlbl(r.va.k)} a day while it runs.`, 'good', r.path[Math.floor(r.path.length/2)]); return true; }
-function tradeClose(id){ const T = trS(), r = routeById(id); if (!r) return; T.closed[r.key] = 1; delete T.want[r.key]; T.routes = T.routes.filter(x => x !== r); trEnded(r, 'closed'); INCC.v = -1;
-  if (r.b >= 0 && r.b !== PLAYER) addMem(r.b, PLAYER, -4); log(`You closed the ${trName(r)} trade route.`, 'info', null); }
+  trValue(r); INCC.v = -1; tell(n, `Trade route opened with ${trName(r, n)}: +$${fmt1(r.va.cash)}M and ${r.va.q} ${rlbl(r.va.k)} a day while it runs.`, 'good', r.path[Math.floor(r.path.length/2)]); return true; }
+function tradeClose(n, id){ const T = trS(), r = routeById(id); if (!r || !trMine(r, n)) return; T.closed[r.key] = 1; delete T.want[r.key]; T.routes = T.routes.filter(x => x !== r); trEnded(r, 'closed'); INCC.v = -1;
+  { const o = trOther(r, n); if (o >= 0) addMem(o, n, -4); } tell(n, `You closed the ${trName(r, n)} trade route.`, 'info', null); }
 // escorts: fleets ordered to escort a route sail to its most threatened zone (else its middle) and guard it
 function escortHour(){ for (const a of S.armies){ if (a.escort == null) continue; const r = routeById(a.escort);
-    if (!r || !shipsOnly(a) || !count(a) || r.kind !== 'sea'){ if (a.owner === PLAYER && count(a)) log(`${armyName(a)} stopped escorting: the trade route is gone.`, 'info', a.at); delete a.escort; continue; }
+    if (!r || !shipsOnly(a) || !count(a) || r.kind !== 'sea'){ if (isSeat(a.owner) && count(a)) tell(a.owner, `${armyName(a)} stopped escorting: the trade route is gone.`, 'info', a.at); delete a.escort; continue; }
     if (a.to !== null || a.path.length || S.battles.includes(a.at)) continue;
-    let tgt = r.path[Math.floor(r.path.length/2)], bt = 0; const seen = a.owner === PLAYER ? visibleSet() : null;
+    let tgt = r.path[Math.floor(r.path.length/2)], bt = 0; const seen = isSeat(a.owner) ? visibleSet(a.owner) : null;   // a seat's escorts go by what the seat can see
     for (const z of r.path){ let t = 0; for (const v of [z, ...G.P[z].nbs]) for (const x of SEAA.get(v) || []) if (trHostile(r, x.owner) && (!seen || armyVisible(x, seen))) t += navPw(x)*(v === z ? 1 : 0.5); if (r.raidZ === z && S.hour - r.raid < 72) t += 4; if (t > bt){ bt = t; tgt = z; } }
     if (a.at !== tgt && !(bt === 0 && r.path.includes(a.at))){ const p = pathFor(a, a.at, tgt); if (p.length) a.path = p; } } }
 /* ---- trade UI: the Diplomacy trade-route list, the fleet's escort order, tooltips ---- */
@@ -250,5 +250,5 @@ function trState0(r){ const zn = z => z >= 0 ? (G.P[z].sea ? G.P[z].name : pName
   const esc = S.armies.filter(a => a.escort === r.id && count(a)); return ['ok', esc.length ? `Open · escorted by ${esc.map(armyName).join(', ')}` : r.sunk ? `Open · ${r.sunk} convoy${r.sunk > 1 ? 's' : ''} lost so far` : 'Open'];
 }
 function trRisk(r){ if (r.kind !== 'sea' || !SEAA) return 0; let R = 0; for (const z of r.path){ const rp = trRaidPower(r, z); R = Math.max(R, 1 - Math.exp(-rp.R/TR_RAID_K)); } return R; }
-function escortSet(a, id){ if (!a || !shipsOnly(a)) return; if (id == null){ if (a.escort != null) log(`${armyName(a)} stops escorting.`, 'info', a.at); delete a.escort; return; }
-  const r = routeById(id); if (!r) return; a.escort = r.id; delete a.raid; a.path = []; seaIndex(); escortHour(); log(`${armyName(a)} will escort the ${trName(r)} trade route${a.path.length ? ` (about ${etaHours(a)} h to station)` : ''}.`, 'good', a.at); }
+function escortSet(a, id){ if (!a || !shipsOnly(a)) return; if (id == null){ if (a.escort != null) tell(a.owner, `${armyName(a)} stops escorting.`, 'info', a.at); delete a.escort; return; }
+  const r = routeById(id); if (!r) return; a.escort = r.id; delete a.raid; a.path = []; seaIndex(); escortHour(); tell(a.owner, `${armyName(a)} will escort the ${trName(r, a.owner)} trade route${a.path.length ? ` (about ${etaHours(a)} h to station)` : ''}.`, 'good', a.at); }

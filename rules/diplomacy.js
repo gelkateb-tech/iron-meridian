@@ -35,7 +35,7 @@ const opinion = (a, b) => Math.max(-100, Math.min(100, opinionParts(a, b).reduce
 function setRel(a, b, st, days = null){
   const prev = rel(a, b).st;
   S.rel[rkey(a, b)] = {st, since:S.hour, until:days ? S.hour + days*24 : null}; relVer++;
-  if (a === PLAYER || b === PLAYER) S.offers = S.offers.filter(o => o.from !== (a === PLAYER ? b : a));
+  for (const me of [a, b]) if (isSeat(me)){ const D = desk(me), o = me === a ? b : a; D.offers = (D.offers || []).filter(x => x.from !== o); }   // a seat's open offers from the other lapse
   if ((prev === 'war' || prev === 'pass' || prev === 'ally') && !['war', 'pass', 'ally'].includes(st)){ evict(a, b); evict(b, a); }
   visCache = null;
 }
@@ -46,7 +46,7 @@ function sendHome(a){ const seen = new Set([a.at]), q = [a.at]; let dest = -1;
 function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.path.length || !count(a) || G.P[a.at].sea || shipsN(a)) continue;
     const o = S.owner[a.at]; if (o === a.owner) continue;
     const peaceful = o >= 0 && !atWar(a.owner, o) && !['pass', 'ally'].includes(rel(a.owner, o).st);
-    const tooSmall = a.owner !== PLAYER && groundN(a) < CAP_MIN && !S.battles.includes(a.at) && !S.armies.some(b => b !== a && b.owner === a.owner && b.at === a.at);
+    const tooSmall = !isSeat(a.owner) && groundN(a) < CAP_MIN && !S.battles.includes(a.at) && !S.armies.some(b => b !== a && b.owner === a.owner && b.at === a.at);
     if (peaceful || tooSmall) sendHome(a); } }
 function evict(n, host){
   // forces of n standing in host's land go to their nearest own province
@@ -66,11 +66,12 @@ function surpriseWar(a, b){ if (a === b || atWar(a, b)) return;
   setRel(a, b, 'war'); addMem(b, a, -60);
   for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b) addMem(c.id, a, opinion(c.id, b) >= 0 ? -20 : -8);
   for (const al of alliesOf(b)){ if (al === a || atWar(al, a) || ['truce', 'nap', 'pass'].includes(rel(al, a).st)) continue;
-    if (al === PLAYER){ log(`Your ally ${S.nations[b].name} was attacked by ${S.nations[a].name} without warning. You may join the war from Diplomacy.`, 'info', null); continue; }
-    if (opinion(al, b) >= 30){ setRel(al, a, 'war'); log(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[a].name}.`, a === PLAYER ? 'bad' : '', null); } }
-  if (b === PLAYER){ log(`${S.nations[a].name} launched a surprise attack on you! You are at war.`, 'bad', S.nations[a].capital); alarm(); IM.emit('war', a); }
-  else if (a === PLAYER) log(`Surprise attack: you are now at war with ${S.nations[b].name}. Other nations think less of you.`, 'bad', S.nations[b].capital);
-  else if (borders(PLAYER, a) || borders(PLAYER, b)) log(`${S.nations[a].name} launched a surprise attack on ${S.nations[b].name}.`, '', null);
+    if (isSeat(al)){ tell(al, `Your ally ${S.nations[b].name} was attacked by ${S.nations[a].name} without warning. You may join the war from Diplomacy.`, 'info', null); continue; }
+    if (opinion(al, b) >= 30){ setRel(al, a, 'war'); tellAll(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[a].name}.`, me => a === me ? 'bad' : '', null); } }
+  for (const me of seats()){
+    if (b === me){ tell(me, `${S.nations[a].name} launched a surprise attack on you! You are at war.`, 'bad', S.nations[a].capital); alarm(me); IM.emit('war', me, a); }
+    else if (a === me) tell(me, `Surprise attack: you are now at war with ${S.nations[b].name}. Other nations think less of you.`, 'bad', S.nations[b].capital);
+    else if (borders(me, a) || borders(me, b)) tell(me, `${S.nations[a].name} launched a surprise attack on ${S.nations[b].name}.`, '', null); }
   relVer++; }
 // a route that ignores peace borders, and the nations it would violate
 function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].sea || S.owner[v] !== SEA) && (!so || portOk(a.owner, v) || G.P[v].sea);
@@ -84,10 +85,11 @@ function declareWar(a, b){
   S.decl.push({by:a, to:b, at:S.hour + 24}); relVer++;
   addMem(b, a, -50);
   for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b && opinion(c.id, b) >= 25) addMem(c.id, a, -15);
-  if (b === PLAYER && S.chat !== undefined) say(a, a, 'Our patience is at an end. In 24 hours, we will be at war.');
-  if (b === PLAYER){ log(`${S.nations[a].name} has formally declared war on you: their attack can begin in 24 hours. You may strike first at any time.`, 'bad', S.nations[a].capital); alarm(); IM.emit('war', a); }
-  else if (a === PLAYER) log(`You formally declared war on ${S.nations[b].name}: war begins in 24 hours, without the surprise-attack penalty.`, 'info', S.nations[b].capital);
-  else if (S.hour > 0 && (borders(PLAYER, a) || borders(PLAYER, b) || rel(PLAYER, a).st === 'ally' || rel(PLAYER, b).st === 'ally')) log(`${S.nations[a].name} declared war on ${S.nations[b].name}.`, '', null);
+  if (isSeat(b) && desk(b).chat !== undefined) say(b, a, a, 'Our patience is at an end. In 24 hours, we will be at war.');
+  for (const me of seats()){
+    if (b === me){ tell(me, `${S.nations[a].name} has formally declared war on you: their attack can begin in 24 hours. You may strike first at any time.`, 'bad', S.nations[a].capital); alarm(me); IM.emit('war', me, a); }
+    else if (a === me) tell(me, `You formally declared war on ${S.nations[b].name}: war begins in 24 hours, without the surprise-attack penalty.`, 'info', S.nations[b].capital);
+    else if (S.hour > 0 && (borders(me, a) || borders(me, b) || rel(me, a).st === 'ally' || rel(me, b).st === 'ally')) tell(me, `${S.nations[a].name} declared war on ${S.nations[b].name}.`, '', null); }
   return true;
 }
 function acceptOffer(ai, from, kind){
@@ -115,34 +117,37 @@ function acceptOffer(ai, from, kind){
   }
   return {ok:false, why:''};
 }
-const tribute = m => Math.round(Math.max(100, 0.15*S.nations[PLAYER].cash + 3*G.P.filter(P => S.owner[P.id] === m).length)/10)*10;
-const tributeOk = m => atWar(m, PLAYER) && (S.hour - rel(m, PLAYER).since)/24 >= 2 && natPower(m) < 2.5*Math.max(1, natPower(PLAYER));
+// peace for tribute: what nation m asks of nation `me`, and whether m would take it
+const tribute = (me, m) => Math.round(Math.max(100, 0.15*S.nations[me].cash + 3*G.P.filter(P => S.owner[P.id] === m).length)/10)*10;
+const tributeOk = (me, m) => atWar(m, me) && (S.hour - rel(m, me).since)/24 >= 2 && natPower(m) < 2.5*Math.max(1, natPower(me));
 // provinces each side holds of the other's home land: these change hands for good when peace is signed
 function warTerms(a, b){ const toA = [], toB = []; for (const P of G.P){ if (P.sea) continue; if (S.home[P.id] === b && S.owner[P.id] === a) toA.push(P.id); else if (S.home[P.id] === a && S.owner[P.id] === b) toB.push(P.id); } return {toA, toB}; }
 function cede(list, to){ for (const p of list){ S.home[p] = to; if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = Math.min(unrestOf(p), 10); } if (list.length) geoChanged(); }
-const termsText = (a, b, T) => { const nm = id => G.P[id].cityName || G.P[id].name, part = (lst, from, to) => lst.length ? `${S.nations[from].name} cedes ${lst.slice(0, 3).map(nm).join(', ')}${lst.length > 3 ? ` and ${lst.length - 3} more` : ''} to ${to === PLAYER ? 'you' : S.nations[to].name}` : '';
+// the land terms of a peace in words, as read by nation `me` ("you" where it is a party)
+const termsText = (a, b, T, me) => { const nm = id => G.P[id].cityName || G.P[id].name, part = (lst, from, to) => lst.length ? `${S.nations[from].name} cedes ${lst.slice(0, 3).map(nm).join(', ')}${lst.length > 3 ? ` and ${lst.length - 3} more` : ''} to ${to === me ? 'you' : S.nations[to].name}` : '';
   return [part(T.toA, b, a), part(T.toB, a, b)].filter(Boolean).join('; ') || 'No land changes hands'; };
 function applyDeal(a, b, kind){
-  if (kind === 'peace'){ const T = warTerms(a, b); setRel(a, b, 'truce', 10); cede(T.toA, a); cede(T.toB, b); if (a === PLAYER || b === PLAYER) (S.tut || (S.tut = {})).survived = true;
-    if (T.toA.length + T.toB.length && (a === PLAYER || b === PLAYER || borders(PLAYER, a) || borders(PLAYER, b))) log(`Peace conference between ${S.nations[a].name} and ${S.nations[b].name}: ${termsText(a, b, T)}.`, a === PLAYER || b === PLAYER ? 'good' : '', null); }
+  if (kind === 'peace'){ const T = warTerms(a, b); setRel(a, b, 'truce', 10); cede(T.toA, a); cede(T.toB, b); for (const me of [a, b]) if (isSeat(me)){ const D = desk(me); (D.tut || (D.tut = {})).survived = true; }
+    if (T.toA.length + T.toB.length) for (const me of seats()) if (a === me || b === me || borders(me, a) || borders(me, b)) tell(me, `Peace conference between ${S.nations[a].name} and ${S.nations[b].name}: ${termsText(a, b, T, me)}.`, a === me || b === me ? 'good' : '', null); }
   else if (kind === 'nap') setRel(a, b, 'nap', 20);
   else if (kind === 'pass') setRel(a, b, 'pass');
   else if (kind === 'ally') setRel(a, b, 'ally');
   const word = {peace:'signed a 10-day truce', nap:'signed a non-aggression pact', pass:'agreed on right of passage', ally:'formed an alliance'}[kind];
-  if (a === PLAYER || b === PLAYER) log(`${S.nations[a === PLAYER ? b : a].name} and you ${word}.`, 'good', null);
-  else if (kind === 'ally' || ((kind === 'peace') && (borders(PLAYER, a) || borders(PLAYER, b)))) log(`${S.nations[a].name} and ${S.nations[b].name} ${word}.`, '', null);
+  for (const me of seats()){
+    if (a === me || b === me) tell(me, `${S.nations[a === me ? b : a].name} and you ${word}.`, 'good', null);
+    else if (kind === 'ally' || ((kind === 'peace') && (borders(me, a) || borders(me, b)))) tell(me, `${S.nations[a].name} and ${S.nations[b].name} ${word}.`, '', null); }
 }
 function diploHour(){
   for (let i = S.decl.length - 1; i >= 0; i--){ const d = S.decl[i]; if (S.hour < d.at) continue; S.decl.splice(i, 1);
     if (!S.nations[d.by].alive || !S.nations[d.to].alive) continue;
     setRel(d.by, d.to, 'war');
     for (const al of alliesOf(d.to)){ if (al === d.by || atWar(al, d.by) || ['truce', 'ally', 'nap', 'pass'].includes(rel(al, d.by).st)) continue;
-      if (al === PLAYER){ log(`Your ally ${S.nations[d.to].name} is under attack by ${S.nations[d.by].name}. You may join the war from Diplomacy.`, 'info', null); continue; }
+      if (isSeat(al)){ tell(al, `Your ally ${S.nations[d.to].name} is under attack by ${S.nations[d.by].name}. You may join the war from Diplomacy.`, 'info', null); continue; }
       if (opinion(al, d.to) < 30) continue;
-      setRel(al, d.by, 'war'); log(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[d.by].name}.`, d.by === PLAYER ? 'bad' : '', null); } }
+      setRel(al, d.by, 'war'); tellAll(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[d.by].name}.`, me => d.by === me ? 'bad' : '', null); } }
   for (const k in S.rel){ const r = S.rel[k]; if (r.until == null || S.hour < r.until) continue;
-    if (r.st === 'truce'){ r.st = 'peace'; r.until = null; r.since = S.hour; r.afterTruce = true; } else if (r.st === 'nap'){ r.st = 'peace'; r.until = null; r.since = S.hour; const [x, y] = k.split(',').map(Number); if (x === PLAYER || y === PLAYER) log(`Your non-aggression pact with ${S.nations[x === PLAYER ? y : x].name} has expired.`, 'info', null); } }
-  S.offers = S.offers.filter(o => o.exp > S.hour && S.nations[o.from].alive);
+    if (r.st === 'truce'){ r.st = 'peace'; r.until = null; r.since = S.hour; r.afterTruce = true; } else if (r.st === 'nap'){ r.st = 'peace'; r.until = null; r.since = S.hour; const [x, y] = k.split(',').map(Number); for (const me of [x, y]) if (isSeat(me)) tell(me, `Your non-aggression pact with ${S.nations[x === me ? y : x].name} has expired.`, 'info', null); } }
+  for (const me of seats()){ const D = desk(me); D.offers = (D.offers || []).filter(o => o.exp > S.hour && S.nations[o.from].alive); }
 }
 const BLOC_NAMES = ['Northern Compact', 'Meridian Accord', 'Atlantic Concord', 'Eastern Covenant', 'Southern League', 'Pacific Charter', 'Continental Pact', 'Iron Concord'];
 // coalitions: groups of 2+ powers linked by alliances, led by the strongest member, with a common enemy
@@ -153,7 +158,7 @@ function blocs(){ const seen = new Set(), out = [];
   const reg = S.blocReg || (S.blocReg = {});
   const res = out.map(m => { const leader = m.slice().sort((a, b) => score(b) - score(a))[0];
     let id = Object.keys(reg).find(k => reg[k].members.some(x => m.includes(x)) && !out.some(o => o !== m && reg[k].members.every(x => o.includes(x))));
-    if (!id){ const used = new Set(Object.values(reg).map(r => r.name)); id = 'b' + (Object.keys(reg).length + 1); reg[id] = {name:BLOC_NAMES.find(nm => !used.has(nm)) || `Coalition ${Object.keys(reg).length + 1}`}; if (m.includes(PLAYER) || S.hour > 0) log(`${m.map(x => S.nations[x].name).join(', ')} form the ${reg[id].name}.`, m.includes(PLAYER) ? 'good' : 'info', null); }
+    if (!id){ const used = new Set(Object.values(reg).map(r => r.name)); id = 'b' + (Object.keys(reg).length + 1); reg[id] = {name:BLOC_NAMES.find(nm => !used.has(nm)) || `Coalition ${Object.keys(reg).length + 1}`}; for (const me of seats()) if (m.includes(me) || S.hour > 0) tell(me, `${m.map(x => S.nations[x].name).join(', ')} form the ${reg[id].name}.`, m.includes(me) ? 'good' : 'info', null); }
     reg[id].members = m; reg[id].leader = leader; return {id, name:reg[id].name, members:m, leader, focus:reg[id].focus ?? null}; });
   for (const k in reg) if (!res.some(B => B.id === k)) reg[k].members = [];   // dissolved coalitions: nobody is a member any more
   return res; }
@@ -163,20 +168,21 @@ function blocDay(){ const reg = S.blocReg || (S.blocReg = {}), day = Math.floor(
     // the leader names a common enemy: the power at war with most members, else the weakest bordering rival
     const cnt = new Map(); for (const m of B.members) for (const e of warsOf(m)) if (!B.members.includes(e)) cnt.set(e, (cnt.get(e) || 0) + 1);
     let focus = [...cnt.entries()].sort((x, y) => y[1] - x[1] || natPower(x[0]) - natPower(y[0]))[0]?.[0] ?? null;
-    if (focus !== R.focus){ R.focus = focus; if (focus != null && B.members.includes(PLAYER)) log(`The ${B.name} names ${S.nations[focus].name} as its common enemy.`, 'info', S.nations[focus].capital); }
+    if (focus !== R.focus){ R.focus = focus; if (focus != null) for (const me of B.members) if (isSeat(me)) tell(me, `The ${B.name} names ${S.nations[focus].name} as its common enemy.`, 'info', S.nations[focus].capital); }
     if (focus == null) continue;
-    for (const m of B.members){ if (m === PLAYER || atWar(m, focus) || S.decl.some(d => d.by === m && d.to === focus) || ['truce', 'nap', 'ally'].includes(rel(m, focus).st) || rng() > 0.25) continue; declareWar(m, focus); }
-    // the AI leader asks you for a coordinated offensive
-    if (B.members.includes(PLAYER) && B.leader !== PLAYER && (!S.req || S.req.until < S.hour) && (!R.lastReq || day - R.lastReq >= 4) && atWar(PLAYER, focus)){
-      const near = G.P.filter(P => !P.sea && S.owner[P.id] === focus && P.nbs.some(v => S.owner[v] === PLAYER)).sort((x, y) => (y.city ? 1 : 0) - (x.city ? 1 : 0));
-      if (near.length){ const tP = near[0]; R.lastReq = day; S.req = {from:B.leader, p:tP.id, until:S.hour + 48, bloc:B.id};
-        log(`${S.nations[B.leader].name} asks you to attack ${tP.cityName || tP.name} within 48 h as part of ${artA(B.name)} offensive. Reward: $150M and goodwill.`, 'info', tP.id); } } }
-  if (S.req && S.hour >= S.req.until){ const q = S.req; S.req = null; if (S.nations[q.from].alive){ addMem(q.from, PLAYER, -10); log(`You did not join the offensive on ${G.P[q.p].cityName || G.P[q.p].name}: ${S.nations[q.from].name} is disappointed.`, 'bad', null); } }
+    for (const m of B.members){ if (isSeat(m) || atWar(m, focus) || S.decl.some(d => d.by === m && d.to === focus) || ['truce', 'nap', 'ally'].includes(rel(m, focus).st) || rng() > 0.25) continue; declareWar(m, focus); }
+    // the AI leader asks a member seat for a coordinated offensive
+    for (const me of B.members){ const D = isSeat(me) ? desk(me) : null; if (!D || B.leader === me || isSeat(B.leader) || !(!D.req || D.req.until < S.hour) || !(!R.lastReq || day - R.lastReq >= 4) || !atWar(me, focus)) continue;
+      const near = G.P.filter(P => !P.sea && S.owner[P.id] === focus && P.nbs.some(v => S.owner[v] === me)).sort((x, y) => (y.city ? 1 : 0) - (x.city ? 1 : 0));
+      if (near.length){ const tP = near[0]; R.lastReq = day; D.req = {from:B.leader, p:tP.id, until:S.hour + 48, bloc:B.id};
+        tell(me, `${S.nations[B.leader].name} asks you to attack ${tP.cityName || tP.name} within 48 h as part of ${artA(B.name)} offensive. Reward: $150M and goodwill.`, 'info', tP.id); } } }
+  for (const me of seats()){ const D = desk(me); if (!(D.req && S.hour >= D.req.until)) continue; const q = D.req; D.req = null; if (S.nations[q.from].alive){ addMem(q.from, me, -10); tell(me, `You did not join the offensive on ${G.P[q.p].cityName || G.P[q.p].name}: ${S.nations[q.from].name} is disappointed.`, 'bad', null); } }
 }
-function reqHour(){ const q = S.req; if (!q) return;
-  const fought = S.battles.includes(q.p) && S.armies.some(a => a.owner === PLAYER && a.at === q.p);
-  if (S.owner[q.p] === PLAYER || fought){ S.req = null; S.nations[PLAYER].cash += 150; const B = blocOf(PLAYER); for (const m of (B ? B.members : [q.from])) if (m !== PLAYER) addMem(m, PLAYER, 10);
-    log(`Offensive on ${G.P[q.p].cityName || G.P[q.p].name} joined: $150M from ${S.nations[q.from].name}, and your coalition partners trust you more.`, 'good', q.p); } }
+// a seat that takes (or fights in) the province its coalition leader asked for is paid and trusted more
+function reqHour(){ for (const me of seats()){ const D = desk(me), q = D.req; if (!q) continue;
+  const fought = S.battles.includes(q.p) && S.armies.some(a => a.owner === me && a.at === q.p);
+  if (S.owner[q.p] === me || fought){ D.req = null; S.nations[me].cash += 150; const B = blocOf(me); for (const m of (B ? B.members : [q.from])) if (m !== me) addMem(m, me, 10);
+    tell(me, `Offensive on ${G.P[q.p].cityName || G.P[q.p].name} joined: $150M from ${S.nations[q.from].name}, and your coalition partners trust you more.`, 'good', q.p); } } }
 function diploDay(){
   for (const a in S.mem) for (const b in S.mem[a]){ const v = S.mem[a][b]; S.mem[a][b] = v > 0 ? Math.max(0, v - 1) : Math.min(0, v + 1); }
   // treaties and shared wars build trust between AIs over time
@@ -192,7 +198,7 @@ function diploDay(){
       const lostTo = wars.length >= 3 ? G.P.reduce((c, P) => c + (S.home[P.id] === n && S.owner[P.id] === m ? 1 : 0), 0) : 0;   // fighting on three fronts: cede what one attacker holds to end that war
       if (age < 5 || !((wars.length >= 2 && natPower(m) === Math.min(...wars.map(natPower))) || age > 20 || natPower(n) < 0.7*natPower(m) || lostTo >= 5)) continue;
       if (!acceptOffer(n, m, 'peace').ok) continue;
-      if (m === PLAYER) offerPlayer(n, 'peace');
+      if (isSeat(m)) offerSeat(m, n, 'peace');
       else if (acceptOffer(m, n, 'peace').ok){ applyDeal(n, m, 'peace'); break; } }
     // declare war
     const pending = S.decl.some(d => d.by === n);
@@ -200,95 +206,102 @@ function diploDay(){
       let best = -1, bs = 0; const myP = natPower(n);
       for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || inGrace(m)) continue;
         if (opinion(n, m) >= 0 || myP < 1.1*natPower(m)) continue;
-        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = (cnt + 5)/(natPower(m) + 10)*(m === PLAYER ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1);
+        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = (cnt + 5)/(natPower(m) + 10)*(isSeat(m) ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1);
         if (sc > bs){ bs = sc; best = m; } }
       if (best >= 0){ if (natPower(n) > 1.6*natPower(best) && opinion(n, best) < -25 && rng() < 0.35) surpriseWar(n, best); else declareWar(n, best); }
     }
     // treaties
     if (rng() < 0.12){ const nbs = S.nations.filter(M => M.alive && M.id !== n && borders(n, M.id) && rel(n, M.id).st === 'peace' && opinion(n, M.id) >= 0);
-      const M = nbs[Math.floor(rng()*nbs.length)]; if (M){ if (M.id === PLAYER) offerPlayer(n, 'nap'); else if (acceptOffer(M.id, n, 'nap').ok) applyDeal(n, M.id, 'nap'); } }
+      const M = nbs[Math.floor(rng()*nbs.length)]; if (M){ if (isSeat(M.id)) offerSeat(M.id, n, 'nap'); else if (acceptOffer(M.id, n, 'nap').ok) applyDeal(n, M.id, 'nap'); } }
     if (rng() < 0.07 && alliesOf(n).length < 3){ const c = S.nations.filter(M => M.alive && M.id !== n && rel(n, M.id).st !== 'ally' && !atWar(n, M.id) && opinion(n, M.id) >= 35 && acceptOffer(n, M.id, 'ally').ok);
-      const M = c[0]; if (M){ if (M.id === PLAYER) offerPlayer(n, 'ally'); else if (acceptOffer(M.id, n, 'ally').ok) applyDeal(n, M.id, 'ally'); } }
+      const M = c[0]; if (M){ if (isSeat(M.id)) offerSeat(M.id, n, 'ally'); else if (acceptOffer(M.id, n, 'ally').ok) applyDeal(n, M.id, 'ally'); } }
   }
 }
 /* ---------------- Direct messages and trade deals ---------------- */
-function chatLog(n){ const C = S.chat || (S.chat = {}); return C[n] || (C[n] = []); }
-function say(n, from, text){ const L = chatLog(n); L.push({from, text, h:S.hour}); if (L.length > 60) L.shift(); if (from !== PLAYER){ (S.unread || (S.unread = {}))[n] = ((S.unread || {})[n] || 0) + 1; IM.emit('chat', n, from, text); } }
-const mood = n => { const op = opinion(n, PLAYER); return op >= 40 ? 'warm' : op >= 10 ? 'friendly' : op > -20 ? 'neutral' : op > -50 ? 'cold' : 'hostile'; };
-function aiReply(n, text){ const t = text.toLowerCase(), N = S.nations[n], op = opinion(n, PLAYER), m = mood(n), war = atWar(n, PLAYER);
+// the messages between seat `me` and nation n; say adds one (from: who wrote it) and counts it unread when the other side wrote
+function chatLog(me, n){ const D = desk(me), C = D.chat || (D.chat = {}); return C[n] || (C[n] = []); }
+function say(me, n, from, text){ const L = chatLog(me, n); L.push({from, text, h:S.hour}); if (L.length > 60) L.shift(); if (from !== me){ const D = desk(me); (D.unread || (D.unread = {}))[n] = ((D.unread || {})[n] || 0) + 1; IM.emit('chat', me, n, from, text); } }
+// how nation n feels about nation `me`, and its answer to a message from `me`
+const mood = (me, n) => { const op = opinion(n, me); return op >= 40 ? 'warm' : op >= 10 ? 'friendly' : op > -20 ? 'neutral' : op > -50 ? 'cold' : 'hostile'; };
+function aiReply(me, n, text){ const t = text.toLowerCase(), op = opinion(n, me), m = mood(me, n), war = atWar(n, me);
   const pick = arr => arr[Math.floor(rng()*arr.length)];
-  if (/\b(peace|ceasefire|truce|stop)\b/.test(t)){ if (!war) return 'We are not at war with you.'; const a = acceptOffer(n, PLAYER, 'peace'); if (a.ok){ applyDeal(n, PLAYER, 'peace'); return `Agreed: ${a.why}. Our guns fall silent. ${termsText(PLAYER, n, {toA:[], toB:[]}) ? '' : ''}`; } return `No peace yet: ${a.why}. Make it worth our while in a trade.`; }
-  if (/right of way|passage|cross|transit/.test(t)){ const a = acceptOffer(n, PLAYER, 'pass'); if (a.ok){ applyDeal(n, PLAYER, 'pass'); return 'You may cross our land and use our airfields.'; } return `Not now (${a.why}).`; }
-  if (/\b(ally|alliance|coalition|join)\b/.test(t)){ const a = acceptOffer(n, PLAYER, 'ally'); if (a.ok){ applyDeal(n, PLAYER, 'ally'); return 'We stand with you. Together we are stronger.'; } return `An alliance is not possible: ${a.why}.`; }
-  if (/\b(help|support|attack|strike)\b/.test(t) && /\b(them|enemy|against|help|support)\b/.test(t)){ const common = warsOf(PLAYER).filter(e => !atWar(n, e) && e !== n); if (common.length && op >= 30 && rng() < 0.5){ const e = common[0]; declareWar(n, e); return `Very well. We declare war on ${S.nations[e].name}.`; } return op >= 10 ? 'We sympathise, but we will not risk our people for you.' : 'Fight your own wars.'; }
-  if (/\b(threat|destroy|crush|surrender|or else|warn)\b/.test(t)){ addMem(n, PLAYER, -8); return natPower(n) < natPower(PLAYER)*0.6 ? 'We hear you. We have no wish for conflict.' : pick(['Empty words. Come and try.', 'Threats only harden our resolve.', 'We will remember this.']); }
+  if (/\b(peace|ceasefire|truce|stop)\b/.test(t)){ if (!war) return 'We are not at war with you.'; const a = acceptOffer(n, me, 'peace'); if (a.ok){ applyDeal(n, me, 'peace'); return `Agreed: ${a.why}. Our guns fall silent. ${termsText(me, n, {toA:[], toB:[]}, me) ? '' : ''}`; } return `No peace yet: ${a.why}. Make it worth our while in a trade.`; }
+  if (/right of way|passage|cross|transit/.test(t)){ const a = acceptOffer(n, me, 'pass'); if (a.ok){ applyDeal(n, me, 'pass'); return 'You may cross our land and use our airfields.'; } return `Not now (${a.why}).`; }
+  if (/\b(ally|alliance|coalition|join)\b/.test(t)){ const a = acceptOffer(n, me, 'ally'); if (a.ok){ applyDeal(n, me, 'ally'); return 'We stand with you. Together we are stronger.'; } return `An alliance is not possible: ${a.why}.`; }
+  if (/\b(help|support|attack|strike)\b/.test(t) && /\b(them|enemy|against|help|support)\b/.test(t)){ const common = warsOf(me).filter(e => !atWar(n, e) && e !== n); if (common.length && op >= 30 && rng() < 0.5){ const e = common[0]; declareWar(n, e); return `Very well. We declare war on ${S.nations[e].name}.`; } return op >= 10 ? 'We sympathise, but we will not risk our people for you.' : 'Fight your own wars.'; }
+  if (/\b(threat|destroy|crush|surrender|or else|warn)\b/.test(t)){ addMem(n, me, -8); return natPower(n) < natPower(me)*0.6 ? 'We hear you. We have no wish for conflict.' : pick(['Empty words. Come and try.', 'Threats only harden our resolve.', 'We will remember this.']); }
   if (/\b(trade|deal|buy|sell|offer)\b/.test(t)) return 'Send us a proposal in the Trade tab and we will consider it.';
   if (/\b(hello|hi|greetings|hey)\b/.test(t)) return {warm:'Greetings, friend!', friendly:'Hello. Good to hear from you.', neutral:'Greetings.', cold:'What do you want?', hostile:'Speak quickly.'}[m];
-  if (/\b(thanks|thank you)\b/.test(t)){ addMem(n, PLAYER, 1); return 'You are welcome.'; }
+  if (/\b(thanks|thank you)\b/.test(t)){ addMem(n, me, 1); return 'You are welcome.'; }
   return {warm:'We value our friendship. What do you propose?', friendly:'Interesting. Tell us more, or send a proposal.', neutral:'We have noted your message.', cold:'We do not trust you.', hostile:'We have nothing to discuss.'}[m]; }
-function chatDay(){ for (const N of S.nations){ if (!N.alive || N.id === PLAYER || rng() > 0.04) continue; const n = N.id, op = opinion(n, PLAYER), war = atWar(n, PLAYER);
-    if (war && acceptOffer(n, PLAYER, 'peace').ok) say(n, n, 'This war bleeds us both. Shall we talk peace?');
-    else if (!war && op < -45 && borders(n, PLAYER)) say(n, n, 'Your troops near our border are noted. Do not test us.');
-    else if (op >= 35 && rel(n, PLAYER).st !== 'ally' && alliesOf(n).length < 3) say(n, n, 'We would welcome closer ties. An alliance, perhaps?');
-    else if (op >= 10 && rng() < 0.5) aiProposeTrade(n); } }
-// a deal: {give:{cash,oil,metal,iron,elec,rare,provs:[],treaty:[]}, get:{...}} from the player's point of view
+// now and then an AI nation writes to a seat
+function chatDay(){ for (const me of seats()) for (const N of S.nations){ if (!N.alive || isSeat(N.id) || rng() > 0.04) continue; const n = N.id, op = opinion(n, me), war = atWar(n, me);
+    if (war && acceptOffer(n, me, 'peace').ok) say(me, n, n, 'This war bleeds us both. Shall we talk peace?');
+    else if (!war && op < -45 && borders(n, me)) say(me, n, n, 'Your troops near our border are noted. Do not test us.');
+    else if (op >= 35 && rel(n, me).st !== 'ally' && alliesOf(n).length < 3) say(me, n, n, 'We would welcome closer ties. An alliance, perhaps?');
+    else if (op >= 10 && rng() < 0.5) aiProposeTrade(n, me); } }
+// a deal between seat `me` and AI nation ai: {give:{cash,oil,metal,iron,elec,rare,provs:[],treaty:[]}, get:{...}} from the seat's point of view
 const emptySide = () => ({cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, provs:[], treaty:[]});
 // an old save's deal side: food dropped, the new goods filled in
 function sideFix(sd){ if (!sd) return emptySide(); delete sd.food; for (const k of DEAL_K) if (!(sd[k] >= 0)) sd[k] = 0; sd.provs = sd.provs || []; sd.treaty = sd.treaty || []; return sd; }
 function provValue(p, holder){ const P = G.P[p]; return (P.city ? 90 : 28) + (P.oil ? 30 : 0) + (P.ore ? 12 : 0) + (isCapital(p) ? 1e6 : 0) + P.cells.length*2/(GS*GS); }
-function dealValueFor(ai, D){ // value of the deal to the AI: what it receives minus what it gives
+function dealValueFor(me, ai, D){ // value of the deal to the AI: what it receives minus what it gives
   const M = mkt(), res = side => DEAL_K.reduce((s0, k) => s0 + (side[k] || 0)*(k === 'cash' ? 1 : M.p[k]), 0);
   let v = res(D.give) - res(D.get)*1.05;
   for (const p of D.give.provs) v += provValue(p)*(G.P[p].nbs.some(q => S.owner[q] === ai) ? 1 : 0.55);
   for (const p of D.get.provs){ v -= provValue(p)*1.6; if (S.owner.filter(o => o === ai).length - D.get.provs.length < 2) v -= 1e6; }
-  const tv = (k, aiGives) => { const a = acceptOffer(ai, PLAYER, k); if (k === 'peace') return a.ok ? 60 : -(140 + natPower(ai)*0.4);
-    if (k === 'pass') return aiGives ? (a.ok ? -10 : opinion(ai, PLAYER) >= 0 ? -90 : -300) : 30; if (k === 'nap') return a.ok ? 20 : -110; if (k === 'ally') return a.ok ? 40 : -1e6; return 0; };
+  const tv = (k, aiGives) => { const a = acceptOffer(ai, me, k); if (k === 'peace') return a.ok ? 60 : -(140 + natPower(ai)*0.4);
+    if (k === 'pass') return aiGives ? (a.ok ? -10 : opinion(ai, me) >= 0 ? -90 : -300) : 30; if (k === 'nap') return a.ok ? 20 : -110; if (k === 'ally') return a.ok ? 40 : -1e6; return 0; };
   for (const k of new Set([...D.give.treaty, ...D.get.treaty])) v += k === 'pass' ? (D.get.treaty.includes(k) ? tv(k, true) : 0) + (D.give.treaty.includes(k) ? tv(k, false) : 0) : tv(k, true);
-  return v + opinion(ai, PLAYER)*1.2; }
-function dealOK(ai, D){ const N = S.nations[PLAYER], A = S.nations[ai];
+  return v + opinion(ai, me)*1.2; }
+function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
   for (const k of DEAL_K){ if ((D.give[k] || 0) > N[k] + 0.01) return `you do not have ${D.give[k]} ${rlbl(k)}`; if ((D.get[k] || 0) > A[k] + 0.01) return `they do not have ${D.get[k]} ${rlbl(k)}`; }
-  if (D.give.provs.some(p => S.owner[p] !== PLAYER) || D.get.provs.some(p => S.owner[p] !== ai)) return 'a province changed hands';
+  if (D.give.provs.some(p => S.owner[p] !== me) || D.get.provs.some(p => S.owner[p] !== ai)) return 'a province changed hands';
   if (D.give.provs.some(p => isCapital(p)) ) return 'you cannot hand over your capital';
-  if (D.give.treaty.includes('peace') && !atWar(ai, PLAYER)) return 'you are not at war';
+  if (D.give.treaty.includes('peace') && !atWar(ai, me)) return 'you are not at war';
   return null; }
-function applyTrade(ai, D){ const N = S.nations[PLAYER], A = S.nations[ai];
+function applyTrade(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
   for (const k of DEAL_K){ const d = (D.get[k] || 0) - (D.give[k] || 0); N[k] += d; A[k] -= d; }
   const cedeTo = (p, to) => { const prev = S.owner[p]; S.owner[p] = to; S.home[p] = to; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = 0; evict(prev, to); geoChanged(); if (prev >= 0) checkNation(prev, to); };
-  if (D.give.treaty.includes('peace') || D.get.treaty.includes('peace')) if (atWar(ai, PLAYER)) setRel(ai, PLAYER, 'truce', 10);
-  for (const p of D.give.provs) cedeTo(p, ai); for (const p of D.get.provs) cedeTo(p, PLAYER);
-  for (const k of new Set([...D.give.treaty, ...D.get.treaty])) if (k !== 'peace') applyDeal(ai, PLAYER, k);
-  addMem(ai, PLAYER, 4); checkEnd(); }
+  if (D.give.treaty.includes('peace') || D.get.treaty.includes('peace')) if (atWar(ai, me)) setRel(ai, me, 'truce', 10);
+  for (const p of D.give.provs) cedeTo(p, ai); for (const p of D.get.provs) cedeTo(p, me);
+  for (const k of new Set([...D.give.treaty, ...D.get.treaty])) if (k !== 'peace') applyDeal(ai, me, k);
+  addMem(ai, me, 4); checkEnd(); }
 function dealText(D, who){ const part = (side, ownerName) => [...DEAL_K.map(k => !side[k] ? '' : k === 'cash' ? `$${fmt(side.cash)}M` : `${side[k]} ${yword(k, side[k])}`), ...side.provs.map(p => G.P[p].cityName || G.P[p].name), ...side.treaty.map(k => ({peace:'peace', pass:'Right of Way', nap:'non-aggression', ally:'alliance'})[k])].filter(Boolean).join(', ') || 'nothing';
   return `you give ${part(D.give)}; ${who} ${who === "they" || who === "you" ? "give" : "gives"} ${part(D.get)}`; }
-function aiProposeTrade(n){ if (S.offers.some(o => o.from === n)) return; const N = S.nations[n], M = mkt(), D = {give:emptySide(), get:emptySide()};
-  const myBorder = G.P.filter(P => !P.sea && S.owner[P.id] === n && !isCapital(P.id) && !P.city && P.nbs.some(q => S.owner[q] === PLAYER));
-  if (myBorder.length && N.cash < 120 && S.nations[PLAYER].cash > 300 && rng() < 0.4){ const p = myBorder[0].id; D.get.provs = [p]; D.give.cash = Math.round(provValue(p)*1.8/10)*10; }
+// AI nation n proposes a trade to seat `me`
+function aiProposeTrade(n, me){ const DK = desk(me); if ((DK.offers || (DK.offers = [])).some(o => o.from === n)) return; const N = S.nations[n], M = mkt(), D = {give:emptySide(), get:emptySide()};
+  const myBorder = G.P.filter(P => !P.sea && S.owner[P.id] === n && !isCapital(P.id) && !P.city && P.nbs.some(q => S.owner[q] === me));
+  if (myBorder.length && N.cash < 120 && S.nations[me].cash > 300 && rng() < 0.4){ const p = myBorder[0].id; D.get.provs = [p]; D.give.cash = Math.round(provValue(p)*1.8/10)*10; }
   else { const k = MKT_K[Math.floor(rng()*MKT_K.length)], q = M.p[k] > 4 ? 20 : 40; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(q*M.p[k]*0.95); }
-  if (dealOK(n, D)) return; S.offers.push({id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}); say(n, n, `Proposal: ${dealText(D, 'we').replace('you give', 'you give us')}.`); }
-const sameBloc = n => { blocs(); const a = blocIdOf(PLAYER); return !!a && n !== PLAYER && a === blocIdOf(n); };   // fresh: alliances can break mid-day
+  if (dealOK(me, n, D)) return; DK.offers.push({id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}); say(me, n, n, `Proposal: ${dealText(D, 'we').replace('you give', 'you give us')}.`); }
+const sameBloc = (me, n) => { blocs(); const a = blocIdOf(me); return !!a && n !== me && a === blocIdOf(n); };   // fresh: alliances can break mid-day
 const GIFT_K = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'];
 const giftRoom = (n, k) => k === 'cash' ? 1e9 : Math.max(0, Math.floor(stockCap(n) - S.nations[n][k]));   // what the recipient can store
-function sendGift(n, g){ const me = S.nations[PLAYER], N = S.nations[n]; if (!g || !sameBloc(n)) return false; const parts = [];
-  for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, Math.floor(me[k]), giftRoom(n, k))); if (!q) continue; me[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${q} ${rlbl(k)}`); }
-  for (const p of g.provs){ if (S.owner[p] !== PLAYER || isCapital(p)) continue; S.owner[p] = n; S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(PLAYER, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
-  if (!parts.length) return false; addMem(n, PLAYER, Math.min(15, 2 + parts.length*2)); say(n, PLAYER, `Sending you ${parts.join(', ')}.`); say(n, n, 'Received with thanks. The coalition stands together.'); if (S.unread) S.unread[n] = 0;
-  log(`You sent ${parts.join(', ')} to your coalition partner ${N.name}.`, 'good', null); checkEnd(); return true; }
+// nation `me` gives stocks and provinces (g) to its coalition partner n
+function sendGift(me, n, g){ const M0 = S.nations[me], N = S.nations[n]; if (!g || !sameBloc(me, n)) return false; const parts = [];
+  for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, Math.floor(M0[k]), giftRoom(n, k))); if (!q) continue; M0[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${q} ${rlbl(k)}`); }
+  for (const p of g.provs){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
+  if (!parts.length) return false; addMem(n, me, Math.min(15, 2 + parts.length*2));
+  if (isSeat(me)){ say(me, n, me, `Sending you ${parts.join(', ')}.`); say(me, n, n, 'Received with thanks. The coalition stands together.'); const D = desk(me); if (D.unread) D.unread[n] = 0; }
+  tell(me, `You sent ${parts.join(', ')} to your coalition partner ${N.name}.`, 'good', null); checkEnd(); return true; }
 // AI partners offer supplies when you run short, and send them if you say yes
 // AI partners send supplies straight to coalition members who run short (the player included); nothing goes through the market
 const AID = {cash:{low:40, rich:700, keep:450, max:150}, oil:{low:25, rich:150, keep:100, max:60}, metal:{low:25, rich:150, keep:100, max:60}, iron:{low:20, rich:150, keep:100, max:50}, elec:{low:15, rich:120, keep:80, max:40}, rare:{low:15, rich:120, keep:80, max:30}, mp:{low:15, rich:140, keep:90, max:40}};
 function coalitionAid(){ const BL = blocs(), ask = S.aidAsk || (S.aidAsk = {});
   for (const B of BL) for (const m of B.members){ const R = S.nations[m]; if (!R.alive) continue;
     for (const k of GIFT_K){ const A = AID[k]; if (R[k] > A.low && !(R.short && R.short[k])) continue;
-      const donor = B.members.map(x => S.nations[x]).find(N => N.alive && N.id !== m && N.id !== PLAYER && N[k] > A.rich && !(ask[N.id] > S.hour)); if (!donor || rng() >= 0.5) continue;
+      const donor = B.members.map(x => S.nations[x]).find(N => N.alive && N.id !== m && !isSeat(N.id) && N[k] > A.rich && !(ask[N.id] > S.hour)); if (!donor || rng() >= 0.5) continue;
       const q = Math.min(A.max, Math.floor(donor[k] - A.keep), giftRoom(m, k)); if (q < 1) continue; donor[k] -= q; R[k] += q; ask[donor.id] = S.hour + 72; addMem(m, donor.id, 3);
       const what = k === 'cash' ? `$${q}M` : k === 'mp' ? `${q}k manpower` : `${q} ${rlbl(k)}`;
-      if (m === PLAYER){ say(donor.id, donor.id, `We saw you were short of ${rlbl(k)}, so we sent you ${what}. That is what partners are for.`); log(`${donor.name} sent you ${what} as coalition aid.`, 'good', null); }
-      else if (B.members.includes(PLAYER)) log(`${donor.name} sent ${what} to your coalition partner ${R.name}.`, '', null); } } }
-function offerPlayer(from, kind){
-  if (S.offers.some(o => o.from === from) || (S.lastOffer && S.lastOffer[from] && S.hour - S.lastOffer[from] < 5*24)) return;
-  if (kind !== 'peace' && rel(from, PLAYER).st === kind) return;
-  S.offers.push({id:S.nid++, from, kind, exp:S.hour + 48}); (S.lastOffer || (S.lastOffer = {}))[from] = S.hour;
-  log(`${S.nations[from].name} proposes ${{peace:'peace', nap:'a non-aggression pact', pass:'right of passage', ally:'an alliance'}[kind]}. Open Diplomacy (D) to answer.`, 'info', null);
+      if (isSeat(m)){ say(m, donor.id, donor.id, `We saw you were short of ${rlbl(k)}, so we sent you ${what}. That is what partners are for.`); tell(m, `${donor.name} sent you ${what} as coalition aid.`, 'good', null); }
+      for (const me of B.members) if (me !== m && isSeat(me)) tell(me, `${donor.name} sent ${what} to your coalition partner ${R.name}.`, '', null); } } }
+// AI nation `from` puts a treaty offer on the desk of seat `me` (one open offer per nation, at most one every five days)
+function offerSeat(me, from, kind){ const D = desk(me), L = D.offers || (D.offers = []);
+  if (L.some(o => o.from === from) || (D.lastOffer && D.lastOffer[from] && S.hour - D.lastOffer[from] < 5*24)) return;
+  if (kind !== 'peace' && rel(from, me).st === kind) return;
+  L.push({id:S.nid++, from, kind, exp:S.hour + 48}); (D.lastOffer || (D.lastOffer = {}))[from] = S.hour;
+  tell(me, `${S.nations[from].name} proposes ${{peace:'peace', nap:'a non-aggression pact', pass:'right of passage', ally:'an alliance'}[kind]}. Open Diplomacy (D) to answer.`, 'info', null);
 }
 /* ---------------- Espionage ---------------- */
 const SPY_OPS = {
@@ -312,22 +325,22 @@ function spyCheck(n, p, op){
   if (op === 'sabotage' && !BK.some(k => S.bld[p][k]) && !S.cons[p]) return {ok:false, why:'Nothing to sabotage there.'};
   return {ok:true, chance:spyChance(n, p, op)};
 }
-function startSpy(n, p, op){ const c = spyCheck(n, p, op); if (!c.ok){ if (n === PLAYER) toast(c.why, 'bad', null); return false; }
+function startSpy(n, p, op){ const c = spyCheck(n, p, op); if (!c.ok){ refuse(n, c.why); return false; }
   const ag = idleAgents(n)[0]; S.nations[n].cash -= SPY_OPS[op].cost; ag.op = {k:op, p, h:24};
-  if (n === PLAYER) log(`Agent dispatched to ${G.P[p].cityName || G.P[p].name}: ${SPY_OPS[op].name} (${Math.round(c.chance*100)}% chance, 24 h).`, 'info', p); return true; }
+  if (isSeat(n)) tell(n, `Agent dispatched to ${G.P[p].cityName || G.P[p].name}: ${SPY_OPS[op].name} (${Math.round(c.chance*100)}% chance, 24 h).`, 'info', p); return true; }
 function spyHour(){
   for (const ag of (S.spies || [])){ if (!ag.op || --ag.op.h > 0) continue;
     const {k, p} = ag.op, n = ag.owner, o = S.owner[p], where = G.P[p].cityName || G.P[p].name; ag.op = null;
     if (!S.nations[n].alive){ continue; }
     if (rng() > spyChance(n, p, k)){ S.spies = S.spies.filter(x => x !== ag); if (o >= 0) addMem(o, n, -20);
-      if (n === PLAYER) log(`Your agent was caught in ${where}${o >= 0 ? ` by ${S.nations[o].name} (relations −20)` : ''}.`, 'bad', p);
-      else if (o === PLAYER) log(`Counter-intelligence caught ${artA(S.nations[n].name)} agent in ${where}.`, 'good', p); continue; }
+      if (isSeat(n)) tell(n, `Your agent was caught in ${where}${o >= 0 ? ` by ${S.nations[o].name} (relations −20)` : ''}.`, 'bad', p);
+      if (o !== n && isSeat(o)) tell(o, `Counter-intelligence caught ${artA(S.nations[n].name)} agent in ${where}.`, 'good', p); continue; }
     let res = '';
     if (k === 'recon'){ S.reveal = S.reveal || {}; for (const v of [p, ...G.P[p].nbs]) S.reveal[v] = S.hour + 72; visCache = null; res = 'the area is revealed for 3 days'; }
     else if (k === 'sabotage'){ if (S.cons[p]){ S.cons[p] = null; res = 'construction destroyed'; } else { const ks = BK.filter(b => S.bld[p][b]); const b = ks[Math.floor(rng()*ks.length)]; if (b){ S.bld[p][b]--; res = `${BUILD[b].name} damaged`; } } }
     else if (k === 'incite'){ S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = Math.min(100, unrestOf(p) + 35); res = `unrest now ${Math.round(S.unrest[p])}%`; }
     else if (k === 'steal' && o >= 0){ const ts = Object.keys(S.nations[o].tech).filter(t => !has(n, t) && (!TECH_BY[t].req || has(n, TECH_BY[t].req))); const t = ts[Math.floor(rng()*ts.length)]; if (t){ S.nations[n].tech[t] = 1; S.nations[n].tv = (S.nations[n].tv || 0) + 1; res = `${TECH_BY[t].name} acquired`; } else res = 'nothing usable found'; }
-    if (n === PLAYER) log(`${SPY_OPS[k].name} in ${where} succeeded: ${res}.`, 'good', p);
-    else if (o === PLAYER && k !== 'recon') log(`Enemy agents struck ${where}: ${res}.`, 'bad', p);
+    if (isSeat(n)) tell(n, `${SPY_OPS[k].name} in ${where} succeeded: ${res}.`, 'good', p);
+    if (o !== n && isSeat(o) && k !== 'recon') tell(o, `Enemy agents struck ${where}: ${res}.`, 'bad', p);
   }
 }

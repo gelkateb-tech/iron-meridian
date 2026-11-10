@@ -40,7 +40,8 @@ function scnLand(){ if (scnLandCache) return scnLandCache; const box = SCENARIOS
 let G = null, S = null;
 const powerCountry = p => WORLD.countries.indexOf(p.country);
 function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = new Set(); visCache = null; borderCache = null; trLastH = -1; NEUP = null; SEAA = new Map(); IM.emit('reset'); }
-function newGame(seed, pick){
+// seed: the dice; pick: the power that takes nation 0; humans: the nations people play (the seats, none unless given); the AI plays the rest
+function newGame(seed, pick, humans = []){
   if (!G){ G = loadWorld(); IM.emit('world'); }
   resetCaches();
   const order = [pick, ...POWERS.map((_, i) => i).filter(i => i !== pick)];
@@ -50,7 +51,7 @@ function newGame(seed, pick){
     for (const id of provs) owner[id] = k;
     const capital = provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
     G.P[capital].city = true;
-    return {id:k, power:pi, name:P0.name, color:P0.color, ai:k !== PLAYER, cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
+    return {id:k, power:pi, name:P0.name, color:P0.color, ai:!humans.includes(k), cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, persist:!!newGame.persist, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
@@ -70,18 +71,18 @@ function newGame(seed, pick){
   }
   for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; n.prov0In = landHeld(n.id); }
   S.own0 = S.owner.slice();
-  S.sunOff = sunOffFor(PLAYER);   // display only: the opening view over the capital is in daylight
+  for (const me of seats()) desk(me).sunOff = sunOffFor(me);   // display only: the seat's opening view over its capital is in daylight
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
   INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
-  log(`${S.nations[PLAYER].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
+  tellAll(me => `${S.nations[me].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   IM.emit('newGame');
 }
 // where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
 function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
 // saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
-function mobMigrate(){ if (S.mob) return; S.mob = 1; let mine = false;
-  for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].rec) continue; S.bld[c].rec = 1; if (N.id === PLAYER) mine = true; }
-  if (Array.isArray(S.log)) S.log.unshift({h:S.hour, text:`New rule: infantry is mobilized only in cities with a Recruiting Office.${mine ? ' Your capital has been given one' : ' Your capital has one'}; build more in your other cities. Units already in training carry on.`, kind:'info', p:S.nations[PLAYER] ? S.nations[PLAYER].capital : null}); }
+function mobMigrate(){ if (S.mob) return; S.mob = 1; const got = new Set();
+  for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].rec) continue; S.bld[c].rec = 1; got.add(N.id); }
+  for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, text:`New rule: infantry is mobilized only in cities with a Recruiting Office.${got.has(me) ? ' Your capital has been given one' : ' Your capital has one'}; build more in your other cities. Units already in training carry on.`, kind:'info', p:S.nations[me].capital}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
 // the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded
@@ -103,8 +104,9 @@ function restore(data){
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
+  for (const N of S.nations) if (N.ai === undefined) N.ai = N.id !== 0;   // (every save so far carries the flag: nation 0 is the seat of a one-player game)
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.research2 === undefined) N.research2 = null; G.P[N.capital].city = true; }
-  if (S.sunOff == null) S.sunOff = sunOffFor(PLAYER);   // older saves: the same display-only daylight offset
+  for (const me of seats()){ const D = desk(me); if (D.sunOff == null) D.sunOff = sunOffFor(me); }   // older saves: the same display-only daylight offset
   resMigrate();
   rqueueMigrate();
   mobMigrate();
@@ -145,7 +147,8 @@ function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === 
   if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para', 'mlrs', 'spec', 'jam']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
   a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
-const armyLabel = a => a.owner === PLAYER ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
+// a force as nation `me` names it: its own by name alone, another's with the nation in front
+const armyLabel = (a, me) => a.owner === me ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
 const STC = [];
 function st(o, t, k){
   if (o < 0) return UNITS[t][k];
@@ -196,13 +199,13 @@ function checkNation(n, by = NEUTRAL){
       if (annex){ S.owner[p] = by; S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
     removeEmpty(); geoChanged();
-    log(n === PLAYER ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, n === PLAYER ? 'bad' : by === PLAYER ? 'good' : 'info');
+    tellAll(me => n === me ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, me => n === me ? 'bad' : by === me ? 'good' : 'info');
   } else if (S.owner[N.capital] !== n){
     const home = cities.filter(c => S.home[c.id] === n);
     const nc = (home.length ? home : cities)[0];
     N.capital = nc.id; N.capHit = S.hour; nc.city = true;
     for (const a of S.armies) if (a.owner === n) a.m = Math.max(0, (a.m ?? 80) - 15);
-    log(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 40% for 14 days.`, n === PLAYER ? 'bad' : 'info', nc.id);
+    tellAll(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 40% for 14 days.`, me => n === me ? 'bad' : 'info', nc.id);
   }
 }
 function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
@@ -210,14 +213,21 @@ const landNeed = n => SCN === 'world' ? Math.max(Math.ceil(scnLand()*WIN_SHARE),
   : Math.max(Math.ceil(scnLand()*0.4), (S.nations[n].prov0In ?? S.nations[n].prov0 ?? 0) + SCENARIOS[SCN].extra);
 const growth = n => score(n) - (S.nations[n].score0 || 0);
 const capsHeld = n => S.nations.filter(N => S.owner[N.cap0] === n).length;
+// the verdict for seat `me`, if the game is decided for it: S.over ('win' or 'lose') and S.overReason
+function verdict(me){
+  const mine = landHeld(me);
+  if (!S.nations[me].alive) S.over = 'lose';
+  else if (S.nations.every(n => n.id === me || !n.alive) || mine >= landNeed(me) || capsHeld(me) >= WIN_CAPS) S.over = 'win';
+  else if ((B => B && (B.members.reduce((s0, m) => s0 + landHeld(m), 0) >= Math.ceil(landNeed(me)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(me))){ S.over = 'win'; S.overReason = 'coalition'; }
+  else if (Number.isFinite(DAY_LIMIT) && S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === me ? 'win' : 'lose'; S.overReason = 'time'; }
+  else { const rival = S.nations.find(n => n.id !== me && n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
+    else { const RB = blocs().find(B => !B.members.includes(me) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3)); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
+}
+// the game ends with the first seat's verdict (S.over is kept once per game: one seat today; a game with several seats needs one each).
+// With no seat at all the game ends when a nation reaches the victory conditions: S.over 'end', S.overReason its name
 function checkEnd(){
   if (S.over) return;
-  const mine = landHeld(PLAYER);
-  if (!S.nations[PLAYER].alive) S.over = 'lose';
-  else if (S.nations.every(n => n.id === PLAYER || !n.alive) || mine >= landNeed(PLAYER) || capsHeld(PLAYER) >= WIN_CAPS) S.over = 'win';
-  else if ((B => B && (B.members.reduce((s0, m) => s0 + landHeld(m), 0) >= Math.ceil(landNeed(PLAYER)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(PLAYER))){ S.over = 'win'; S.overReason = 'coalition'; }
-  else if (Number.isFinite(DAY_LIMIT) && S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === PLAYER ? 'win' : 'lose'; S.overReason = 'time'; }
-  else { const rival = S.nations.find(n => n.id !== PLAYER && n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
-    else { const RB = blocs().find(B => !B.members.includes(PLAYER) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3)); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
+  const L = seats(); for (const me of L){ verdict(me); if (S.over) break; }
+  if (!L.length){ const top = S.nations.find(n => n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (top){ S.over = 'end'; S.overReason = top.name; } }
   if (S.over) IM.emit('over');
 }

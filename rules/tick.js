@@ -4,7 +4,7 @@
 let tickVer = 0;
 function tick(){
   S.hour++; tickVer++;
-  /*@DEV*/if (DEV.instant || DEV.research || DEV.res) devHour(PLAYER);/*@ENDDEV*/
+  /*@DEV*/if (DEV.instant || DEV.research || DEV.res) for (const me of seats()) devHour(me);/*@ENDDEV*/
   // production
   for (let p = 0; p < G.P.length; p++) if (S.queue[p].length) prodHour(p);
   // construction
@@ -21,13 +21,13 @@ function tick(){
   // movement
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
-    if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (a.owner === PLAYER) log(`Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
+    if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (isSeat(a.owner)) tell(a.owner, `Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
     if (a.to === null && a.path.length && canProceed(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;
       if (a.carry && a.carryH === S.hour - 1 && legMode(a, a.at, a.to) === 'rail') a.t = a.carry/legHours(a, a.at, a.to); a.carry = 0; }   // trains run through: no stop at every station
-    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.to = null; a.t = 0; a.path = []; if (a.owner === PLAYER) log(`${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
+    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.to = null; a.t = 0; a.path = []; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
     if (a.to !== null){ const lh = legHours(a, a.at, a.to); a.t += 1/lh;
       if (a.t >= 1){ if (a.path.length && ground(a) && legMode(a, a.at, a.to) === 'rail'){ a.carry = Math.min(1, (a.t - 1)*lh); a.carryH = S.hour; } else a.carry = 0;
         if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; a.legFrom = null;
@@ -39,13 +39,13 @@ function tick(){
       const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
       const meet = a.t >= 0.5 ? a.to : a.at, A0 = G.P[a.at], B0 = G.P[a.to], mx = A0.x + (B0.x - A0.x)*a.t, my = A0.y + (B0.y - A0.y)*a.t;
       for (const x of [a, b]){ x.from = x.at; x.at = meet; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = meet === a.at || meet === a.to ? [ (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2 ] : null; x.forced = false; }
-      if (a.owner === PLAYER || b.owner === PLAYER) log(`Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a)} met ${armyLabel(b)} on the road.`, 'bad', meet); } }
-  // your forces that arrive where another idle force of yours stands join it (same kind: ground with ground, fleets with fleets)
-  for (const a of S.armies){ if (a.owner !== PLAYER || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || !count(a)) continue;
+      for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
+  // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets)
+  for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || !count(a)) continue;
     if (a.lastAt === a.at) continue; a.lastAt = a.at;
-    if (S.owner[a.at] !== PLAYER && !(S.owner[a.at] >= 0 && rel(PLAYER, S.owner[a.at]).st === 'ally')) continue;
+    if (S.owner[a.at] !== me && !(S.owner[a.at] >= 0 && rel(me, S.owner[a.at]).st === 'ally')) continue;
     const jt = a.join != null ? armyById(a.join) : null;   // a join order picks its partner
-    const into = (jt && jt !== a && jt.owner === PLAYER && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === PLAYER && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a));
+    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a));
     if (into) delete a.join;
     if (into){ merge(into, a); IM.emit('merged', a.id, into.id, true); }
   }
@@ -65,11 +65,11 @@ function tick(){
     const owners = [...sides.keys()].filter(o => [...sides.keys()].some(e => atWar(o, e)));
     if (owners.length < 2) continue;
     S.battles.push(p);
-    if (!prevBattles.has(p) && owners.includes(PLAYER)){
-      const foes = owners.filter(o => o !== PLAYER).map(nationName).join(', ');
-      if (S.owner[p] === PLAYER){ log(`${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(); }
-      else log(`Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
-      sfx('battle');
+    if (!prevBattles.has(p)) for (const me of owners) if (isSeat(me)){
+      const foes = owners.filter(o => o !== me).map(nationName).join(', ');
+      if (S.owner[p] === me){ tell(me, `${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(me); }
+      else tell(me, `Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
+      cue(me, 'battle');
     }
     const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
     const dmg = new Map(owners.map(o => [o, {soft:0, armored:0, air:0, naval:0}]));
@@ -104,14 +104,14 @@ function tick(){
       bs.hp.push(Math.round(sides.get(o).reduce((s0, a) => s0 + armyHP(a), 0))); if (bs.hp.length > 96) bs.hp.shift();
     }
     IM.emit('fxBattle', p, owners, sides, list);
-    const playerThere = owners.includes(PLAYER);
-    if (playerThere){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const st0 = S.stats || (S.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
-    if (playerThere) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(a.owner === PLAYER ? 'unitsLost' : 'unitsKilled', lost); }
-    for (const a of list) if (count(a) === 0 && (playerThere || visibleSet().has(p))) IM.emit('fxWreck', p);
+    const here = owners.filter(isSeat);   // the seats fighting here: their statistics and dispatches
+    for (const me of here){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const D = desk(me), st0 = D.stats || (D.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
+    for (const me of here) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(me, a.owner === me ? 'unitsLost' : 'unitsKilled', lost); }
+    for (const a of list) if (count(a) === 0) IM.emit('fxWreck', p, owners);   // the client draws the wreck where its seat fought or can see
     for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
-    for (const a of list) if (count(a) === 0 && playerThere){
-      if (a.owner === PLAYER) log(`${armyName(a)} was destroyed at ${G.P[p].name}.`, 'bad', p);
-      else log(`${armyLabel(a)} destroyed at ${G.P[p].name}.`, 'good', p);
+    for (const a of list) if (count(a) === 0) for (const me of here){
+      if (a.owner === me) tell(me, `${armyName(a)} was destroyed at ${G.P[p].name}.`, 'bad', p);
+      else tell(me, `${armyLabel(a, me)} destroyed at ${G.P[p].name}.`, 'good', p);
     }
   }
   removeEmpty();
@@ -128,26 +128,27 @@ function tick(){
       const O = hostileToOwner[0];
       const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
       if (O !== NEUTRAL && gN >= CAP_MIN){
-        if (!S.cap[p] || S.cap[p].by !== O){ S.cap[p] = {by:O, h:0}; if (S.owner[p] === PLAYER){ log(`${nationName(O)} is occupying ${G.P[p].cityName || G.P[p].name}. Retake it before the capture completes.`, 'bad', p); alarm(); } }
+        if (!S.cap[p] || S.cap[p].by !== O){ S.cap[p] = {by:O, h:0}; if (isSeat(S.owner[p])){ tell(S.owner[p], `${nationName(O)} is occupying ${G.P[p].cityName || G.P[p].name}. Retake it before the capture completes.`, 'bad', p); alarm(S.owner[p]); } }
         S.cap[p].h += 1 + 0.25*Math.max(0, ...list.filter(a => a.owner === O).map(a => cmdF(a, 'siege'))); if (S.cap[p].h >= capNeed(p, O)) capture(p, O);
       } else S.cap[p] = null;
     } else if (owners.size === 0) S.cap[p] = null;
   }
   if (S.hour % 24 === 0){ diploDay(); daily(); }
-  for (let n = IM.cfg.allAI ? 0 : 1; n < S.nations.length; n++) if ((S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
+  // the AI plays every nation that is not a seat
+  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
   IM.emit('hour');
   visCache = null;
 }
-function makePaper(){
-  // summarise the last 24 hours of dispatches into a front page
-  const day = Math.floor(S.hour/24), from = S.hour - 24, ev = S.log.filter(e => e.h > from && e.h <= S.hour);
+function makePaper(){ for (const me of seats()) makePaperFor(me); }
+function makePaperFor(me){
+  // summarise the last 24 hours of the seat's dispatches into a front page
+  const D = desk(me), day = Math.floor(S.hour/24), from = S.hour - 24, ev = (D.log || []).filter(e => e.h > from && e.h <= S.hour);
   const score0 = e => /has fallen|collapsed|capital/.test(e.text) ? 9 : /declared war on you|attacks|Missile warning/.test(e.text) ? 8 : /declared war/.test(e.text) ? 6 : /alliance|truce|pact/.test(e.text) ? 5 : /captured|took/.test(e.text) ? 4 : /strike|Missile|hit/.test(e.text) ? 4 : /Battle/.test(e.text) ? 3 : 1;
   const top = ev.slice().sort((a, b) => score0(b) - score0(a));
-  const st0 = S.stats || {}, rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id));
-  S.papers = S.papers || []; const paper = {day, head:top[0] ? top[0].text : `Quiet day on the fronts. ${S.nations[PLAYER].name} holds ${S.owner.filter(o => o === PLAYER).length} provinces.`, items:top.slice(1, 5).map(e => e.text), rank:rank.slice(0, 5).map(N => [N.name, score(N.id), N.color]), big:top[0] ? score0(top[0]) : 0};
-  S.papers.unshift(paper); if (S.papers.length > 10) S.papers.length = 10;
-  IM.emit('paper', paper);
-  void st0;
+  const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id));
+  D.papers = D.papers || []; const paper = {day, head:top[0] ? top[0].text : `Quiet day on the fronts. ${S.nations[me].name} holds ${S.owner.filter(o => o === me).length} provinces.`, items:top.slice(1, 5).map(e => e.text), rank:rank.slice(0, 5).map(N => [N.name, score(N.id), N.color]), big:top[0] ? score0(top[0]) : 0};
+  D.papers.unshift(paper); if (D.papers.length > 10) D.papers.length = 10;
+  IM.emit('paper', me, paper);
 }
 function recordStats(){
   const day = Math.floor(S.hour/24);
@@ -156,34 +157,35 @@ function recordStats(){
   S.hist = S.hist || [];
   S.hist.push({d:day, n:S.nations.map(N => N.alive ? [score(N.id), S.owner.filter(o => o === N.id).length, Math.round(natPower(N.id)), Math.round(income(N.id).net.cash)] : null)});
   if (S.hist.length > 200) S.hist.shift();
-  const st0 = S.stats || (S.stats = {}); st0.peakArmy = Math.max(st0.peakArmy || 0, Math.round(natPower(PLAYER)));
-  const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id)).findIndex(N => N.id === PLAYER) + 1;
-  if (rank && (!st0.bestRank || rank < st0.bestRank)){ st0.bestRank = rank; st0.bestRankDay = day + 1; }
+  for (const me of seats()){ const D = desk(me), st0 = D.stats || (D.stats = {}); st0.peakArmy = Math.max(st0.peakArmy || 0, Math.round(natPower(me)));
+    const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id)).findIndex(N => N.id === me) + 1;
+    if (rank && (!st0.bestRank || rank < st0.bestRank)){ st0.bestRank = rank; st0.bestRankDay = day + 1; } }
 }
 function daily(){
   if (S.airHit) for (const k in S.airHit){ const H = S.airHit[k]; for (const j in H) if (typeof H[j] === 'number') H[j] *= 0.7; if (H.bp) for (const q in H.bp) if (S.hour - H.bp[q] > 96) delete H.bp[q]; }   // air-raid memory fades
   marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay(); tradeDay(); INCC.v = -1;
   if (S.dmg) for (let p = 0; p < S.dmg.length; p++) if (S.dmg[p] > 0) S.dmg[p] = Math.max(0, S.dmg[p] - 2.5);
   { S.pop = S.pop || G.P.map(P => P.pop0); for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; if (moraleOf(p) > 70) S.pop[p] = Math.min(G.P[p].pop0*1.25, S.pop[p]*1.0004); } }
-  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }
-  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
+  for (const N of S.nations){ if (!N.alive || isSeat(N.id) || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }
+  for (const N of S.nations){ if (!N.alive || isSeat(N.id) || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
     const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
   for (const c of (S.cmds || [])){ if (!c.alive || c.army == null) continue; const a = armyById(c.army); if (!a || a.cmd !== c.id) c.army = null; }
-  for (const N of S.nations){ if (!N.alive || N.id === PLAYER || N.eng || N.cash < 300 || rng() > 0.4) continue;
+  for (const N of S.nations){ if (!N.alive || isSeat(N.id) || N.eng || N.cash < 300 || rng() > 0.4) continue;
     const tot = {}; for (const a of S.armies) if (a.owner === N.id) for (const t of UT) tot[t] = (tot[t] || 0) + a.u[t];
     const t = UT.filter(t => tot[t] && markOf(N.id, t) < 4).sort((x, y) => tot[y]*UNITS[y].cost - tot[x]*UNITS[x].cost)[0]; if (t) startUpgrade(N.id, t); }
-  if (S.nations[PLAYER].alive){ const W = S.warn || (S.warn = {}), day = dayOf(S.hour);
-    const border = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== PLAYER));
-    const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === PLAYER || x.air || !S.nations[x.owner].alive) continue; const r = rel(PLAYER, x.owner).st; if (r === 'ally') continue;
+  // the advisor: each seat is warned of a build-up on its border and of idle cities in wartime
+  for (const me of seats()) if (S.nations[me].alive){ const D = desk(me), W = D.warn || (D.warn = {}), day = dayOf(S.hour);
+    const border = G.P.filter(P => !P.sea && S.owner[P.id] === me && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== me));
+    const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === me || x.air || !S.nations[x.owner].alive) continue; const r = rel(me, x.owner).st; if (r === 'ally') continue;
       if (border.some(P => P.nbs.includes(x.at) || P.id === x.at)) mass.set(x.owner, (mass.get(x.owner) || 0) + power(x)); }
-    const mine = border.reduce((s0, P) => s0 + S.armies.filter(x => x.owner === PLAYER && x.at === P.id && !x.air).reduce((s1, x) => s1 + power(x), 0), 0);
+    const mine = border.reduce((s0, P) => s0 + S.armies.filter(x => x.owner === me && x.at === P.id && !x.air).reduce((s1, x) => s1 + power(x), 0), 0);
     for (const [o, pw] of mass){ const grew = pw > (W['p' + o] ?? pw)*1.2; W['p' + o] = Math.max(pw*0.9, Math.min(W['p' + o] ?? pw, pw));
-      if (day >= 3 && grew && pw > 40 && pw > mine*1.4 && (!W[o] || day - W[o] >= 5)){ W[o] = day; const r = rel(PLAYER, o).st;
-      log(`${nationName(o)} ${r === 'war' ? 'has' : 'is massing'} ${Math.round(pw)} strength on your border against your ${Math.round(mine)}. ${r === 'war' ? 'Reinforce the front.' : 'Recruit defenders or seek a pact in Diplomacy.'}`, 'bad', border[0].id); } }
-    const idle = G.P.filter(P => S.owner[P.id] === PLAYER && P.city && !S.queue[P.id].length);
-    const N0 = S.nations[PLAYER], lowMp = N0.mp < 25, lowMetal = N0.metal < 15, lowIron = N0.iron < 12, lowElec = N0.elec < 8;
-    if (warsOf(PLAYER).length && idle.length && N0.cash > 250 && (!W.idle || day - W.idle >= 3)){ W.idle = day;
-      log(lowMp ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.mp)}k manpower: money is not your limit. Raise Mobilisation in Production, build Recruiting Offices, or capture populous provinces.`
+      if (day >= 3 && grew && pw > 40 && pw > mine*1.4 && (!W[o] || day - W[o] >= 5)){ W[o] = day; const r = rel(me, o).st;
+      tell(me, `${nationName(o)} ${r === 'war' ? 'has' : 'is massing'} ${Math.round(pw)} strength on your border against your ${Math.round(mine)}. ${r === 'war' ? 'Reinforce the front.' : 'Recruit defenders or seek a pact in Diplomacy.'}`, 'bad', border[0].id); } }
+    const idle = G.P.filter(P => S.owner[P.id] === me && P.city && !S.queue[P.id].length);
+    const N0 = S.nations[me], lowMp = N0.mp < 25, lowMetal = N0.metal < 15, lowIron = N0.iron < 12, lowElec = N0.elec < 8;
+    if (warsOf(me).length && idle.length && N0.cash > 250 && (!W.idle || day - W.idle >= 3)){ W.idle = day;
+      tell(me, lowMp ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.mp)}k manpower: money is not your limit. Raise Mobilisation in Production, build Recruiting Offices, or capture populous provinces.`
         : lowMetal ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.metal)} materials: buy more on the Market (T) or build Foundries.`
         : lowIron ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.iron)} iron for armor, guns and ships: buy more on the Market (T) or build Foundries.`
         : lowElec ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.elec)} electronics for aircraft, drones and air defence: buy more on the Market (T) or raise Arms Factories in your big cities.`
@@ -192,8 +194,8 @@ function daily(){
     N.short = {};
     const cap = stockCap(N.id);
     for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(cap, v); }
-    if (N.id === PLAYER){ const st0 = S.stats || (S.stats = {}), mk = st0.made || (st0.made = {}); for (const R of RES) mk[R.k] = (mk[R.k] || 0) + Math.max(0, inc.gross[R.k]); }   // produced over the campaign (statistics)
-    if (N.id === PLAYER){ for (const k of ['oil', 'iron', 'elec', 'cash']) if (N.short[k] && !was[k]) log(SHORT_MSG[k], 'bad'); } }
+    if (isSeat(N.id)){ const D = desk(N.id), st0 = D.stats || (D.stats = {}), mk = st0.made || (st0.made = {}); for (const R of RES) mk[R.k] = (mk[R.k] || 0) + Math.max(0, inc.gross[R.k]); }   // produced over the campaign (statistics)
+    if (isSeat(N.id)){ for (const k of ['oil', 'iron', 'elec', 'cash']) if (N.short[k] && !was[k]) tell(N.id, SHORT_MSG[k], 'bad'); } }
   unrestDay();
   recordStats();
   makePaper();

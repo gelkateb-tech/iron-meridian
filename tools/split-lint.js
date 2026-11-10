@@ -130,9 +130,12 @@ if (require.main === module){
   console.log(`browser globals in rules files: ${new Set(brow.map(l => l[0])).size}` + (brow.length ? '\n' + group(brow) : ''));
   console.log(`unknown globals in rules files: ${new Set(unk.map(l => l[0])).size}` + (unk.length ? '\n' + group(unk) : ''));
   console.log(`Math.random in rules files: ${rnd.length}` + (rnd.length ? '  ' + rnd.map(r => r[1].replace(/^rules\/|\.js$/g, '') + ':' + r[0]).join(' ') : ''));
+  // the rules name no seat and ask the client nothing: no PLAYER constant, no IM.hook, no IM.cfg (checked by text, code and comments alike)
+  const seatTxt = []; for (const f of files){ const n = (fs.readFileSync(path.join(ROOT, f), 'utf8').match(/\bPLAYER\b|\bIM\.(hook|cfg)\b/g) || []).length; if (n) seatTxt.push(`${f} (${n})`); }
+  console.log(`PLAYER, IM.hook or IM.cfg in rules files: ${seatTxt.length}` + (seatTxt.length ? '  ' + seatTxt.join(' ') : ''));
   console.log(`load-order problems: ${ord.length}` + (ord.length ? '\n  ' + ord.join('\n  ') : ''));
   console.log(`names declared twice: ${A.dups.length}` + (A.dups.length ? '\n  ' + A.dups.join('\n  ') : ''));
-  const bad = leaks.length + brow.length + unk.length + rnd.length + ord.length + A.dups.length;
+  const bad = leaks.length + brow.length + unk.length + rnd.length + seatTxt.length + ord.length + A.dups.length;
   console.log(bad ? 'LINT: not clean yet' : 'LINT OK: the rules files stand on their own');
   process.exit(bad && !process.argv.includes('--report') ? 1 : 0);
 }

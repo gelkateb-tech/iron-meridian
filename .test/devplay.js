@@ -59,7 +59,7 @@ const THREE_LOCAL = '/home/user/iron-meridian/tools/vendor/three.min.js';
   ok('instant missiles: a cruise missile ready at once', cm1 === cm0 + 1, { cm0, cm1 });
   // reveal map
   await p.click('[data-dev="tog"][data-k="reveal"]'); await p.waitForTimeout(100);
-  const rv = await p.evaluate(() => { const im = window.__im, v = im.air.visibleSet(); const foes = im.S.armies.filter(a => a.owner > 0); return { vis: v.size, all: im.G.P.length, uav: v.uav.size, loc: v.loc.size, foes: foes.length, seen: foes.filter(a => im.air.armyVisible(a, v)).length }; });
+  const rv = await p.evaluate(() => { const im = window.__im, v = im.air.visibleSet(0); const foes = im.S.armies.filter(a => a.owner > 0); return { vis: v.size, all: im.G.P.length, uav: v.uav.size, loc: v.loc.size, foes: foes.length, seen: foes.filter(a => im.air.armyVisible(a, v)).length }; });
   ok('reveal map: every province visible and identified, every force seen', rv.vis === rv.all && rv.loc === 0 && rv.seen === rv.foes, rv);
   // spawn: pick type / owner / count in the panel, arm the pick, click provinces on the map
   const spawnAt = async (t, o, k, which) => {

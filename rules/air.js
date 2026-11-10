@@ -66,7 +66,9 @@ function airMissionKind(a, p){
   if (isStriker(a)) return 'strike';
   return 'patrol';
 }
-function airCheck(a, p){
+// may wing a fly to p, and on what mission. surprise: the nations this order is allowed to attack without a war (the client passes the ones
+// its player is about to confirm a surprise attack on); a strike on any other nation's land needs a war
+function airCheck(a, p, surprise = null){
   { const w = stormAt(p) || stormAt(a.air.base); if (w && !a.fly) return {ok:false, why:`Grounded: ${w.kind === 'blizzard' ? 'a blizzard' : 'a storm'} over ${stormAt(p) ? (G.P[p].cityName || G.P[p].name) : 'the airbase'}. Wait for it to pass.`}; }
   const d = Math.max(p === a.air.base ? 0 : 1, hexDist(G.P[a.air.base].cc, G.P[p].cc)), r = wingRange(a);
   if (a.fly) return {ok:false, why:'This wing is already on a mission.'};
@@ -76,11 +78,11 @@ function airCheck(a, p){
   if (d > r) return {ok:false, why:`Out of range: ${Math.round(d*KM_HEX/10)*10} km, this wing reaches ${r*KM_HEX} km.`};
   const k = airMissionKind(a, p), o = S.owner[p];
   if (k !== 'rebase' && wingCond(a) < WEAR_GROUND) return {ok:false, why:`Grounded for maintenance: airframes at ${Math.round(wingCond(a)*100)}% condition. Repairs run at an airbase of yours or a carrier; rebasing is still possible.`};
-  if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o) && !(a.owner === PLAYER && IM.hook.surpriseOk(o))) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
+  if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o) && !(surprise && surprise.includes(o))) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
   return {ok:true, kind:k, d, hours:Math.max(1, Math.ceil(d/wingSpd(a)))};
 }
 function orderAir(a, p){
-  const c = airCheck(a, p); if (!c.ok){ if (a.owner === PLAYER) toast(c.why, 'bad', null); return false; }
+  const c = airCheck(a, p); if (!c.ok){ refuse(a.owner, c.why); return false; }
   a.fly = {tgt:p, kind:c.kind, ph:'out', t:0, hrs:0}; return true;
 }
 const PARA_RANGE = 9;
@@ -92,13 +94,13 @@ function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:f
   if (S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p])) return {ok:false, why:`You are not at war with ${nationName(S.owner[p])}.`};
   if (stormAt(p) || stormAt(a.at)) return {ok:false, why:'Grounded by a storm.'};
   return {ok:true, d, hours:Math.max(1, Math.ceil(d/AIR_SPEED))}; }
-function orderDrop(a, p){ const c = canDrop(a, p); if (!c.ok){ if (a.owner === PLAYER) toast(c.why, 'bad', null); return false; } a.fly = {kind:'drop', from:a.at, tgt:p, t:0, dt:AIR_SPEED/Math.max(1, c.d)}; a.path = []; if (a.owner === PLAYER) sfx('order'); return true; }
+function orderDrop(a, p){ const c = canDrop(a, p); if (!c.ok){ refuse(a.owner, c.why); return false; } a.fly = {kind:'drop', from:a.at, tgt:p, t:0, dt:AIR_SPEED/Math.max(1, c.d)}; a.path = []; cue(a.owner, 'order'); return true; }
 function dropTick(){ for (const a of S.armies){ const f = a.fly; if (!f || f.kind !== 'drop') continue; f.t += f.dt; if (f.t < 1) continue;
     const p = f.tgt, sams = stationaryAt(p).filter(b => atWar(a.owner, b.owner)).reduce((s0, b) => s0 + (b.u.sam || 0), 0), lossF = Math.min(0.6, sams*0.15);
     if (lossF > 0) for (const t of UT) if (a.u[t]){ const k = Math.round(a.u[t]*lossF); a.u[t] -= k; }
     a.fly = null; a.from = f.from; a.froms = [f.from]; a.at = p; a.to = null; a.m = Math.max(0, (a.m ?? 80) - 10); a.lastAt = null;
     IM.emit('fxDrop', a, p);
-    if (a.owner === PLAYER) log(`Paratroopers landed at ${G.P[p].cityName || G.P[p].name}${lossF > 0 ? `, losing ${Math.round(lossF*100)}% to air defences` : ''}.`, lossF > 0.3 ? 'bad' : 'good', p); }
+    if (isSeat(a.owner)) tell(a.owner, `Paratroopers landed at ${G.P[p].cityName || G.P[p].name}${lossF > 0 ? `, losing ${Math.round(lossF*100)}% to air defences` : ''}.`, lossF > 0.3 ? 'bad' : 'good', p); }
   removeEmpty(); }
 function sideAV(armies, owner, scale){
   const av = {soft:0, armored:0, air:0, naval:0}; for (const u of VSU_T) av[UK[u]] = 0;
@@ -165,9 +167,9 @@ function uavSalvo(a, p){ const o = a.owner, n0 = count(a), r = droneAD(a, p, 0.5
   if (!defs.length && !bn) return; let dealt = 0, killed = 0;
   if (defs.length){ const h0 = defs.reduce((s0, b) => s0 + effHP(b), 0), u0 = defs.reduce((s0, b) => s0 + count(b), 0), av = avScale(sideAV([a], o, STRIKE*0.6*(0.8 + rng()*0.4)), 1/(1 + 0.3*r.jam)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
     for (const b of defs) hurt(b, av, 1/tot); dealt = Math.round(h0 - defs.reduce((s0, b) => s0 + effHP(b), 0)); killed = u0 - defs.reduce((s0, b) => s0 + count(b), 0); noteHit(defs[0].owner, 'drone'); }
-  if (o === PLAYER || visibleSet().has(p)){ fx('strike', p); if (dealt > 0) fx('dmg', p, {text:`−${dealt}`, color:'#ffb27a', dy:-40}); }
-  if (o === PLAYER){ log(`UAV missiles over ${where}: ${dealt} damage${killed ? `, ${killed} unit${killed > 1 ? 's' : ''} destroyed` : ''}${bn ? ', ' + bn : ''}${r.lost ? `; ${r.lost} UAV lost to air defence` : ''}.`, dealt || bn ? 'good' : 'info', p); bump('unitsKilled', killed); }
-  else if (defs.some(b => b.owner === PLAYER) || (bn && S.owner[p] === PLAYER)) log(`${nationName(o)} armed UAV fired on ${where}: ${dealt} damage${bn ? ', ' + bn : ''}.`, 'bad', p);
+  fxAt('strike', p, {}, o); if (dealt > 0) fxAt('dmg', p, {text:`−${dealt}`, color:'#ffb27a', dy:-40}, o);
+  if (isSeat(o)){ tell(o, `UAV missiles over ${where}: ${dealt} damage${killed ? `, ${killed} unit${killed > 1 ? 's' : ''} destroyed` : ''}${bn ? ', ' + bn : ''}${r.lost ? `; ${r.lost} UAV lost to air defence` : ''}.`, dealt || bn ? 'good' : 'info', p); bump(o, 'unitsKilled', killed); }
+  for (const me of seatsBut(o)) if (defs.some(b => b.owner === me) || (bn && S.owner[p] === me)) tell(me, `${nationName(o)} armed UAV fired on ${where}: ${dealt} damage${bn ? ', ' + bn : ''}.`, 'bad', p);
   removeEmpty(); }
 // maritime patrol: attack the hostile ships (subs first) in the target sea zone or the zones next to it; their guns fire back
 function mpaHunt(a, p){ const o = a.owner, zones = G.P[p].sea ? [p, ...G.P[p].nbs.filter(v => G.P[v].sea)] : G.P[p].nbs.filter(v => G.P[v].sea);
@@ -177,9 +179,9 @@ function mpaHunt(a, p){ const o = a.owner, zones = G.P[p].sea ? [p, ...G.P[p].nb
   const av = sideAV([a], o, STRIKE*0.4*(0.8 + rng()*0.4)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1; for (const b of defs) hurt(b, av, 1/tot);
   aaFire(a, defs, 1);
   const dealt = Math.round(h0 - defs.reduce((s0, b) => s0 + effHP(b), 0)), killed = u0 - defs.reduce((s0, b) => s0 + count(b), 0), subsK = subs0 - defs.reduce((s0, b) => s0 + (b.u.sub || 0), 0);
-  if (o === PLAYER || visibleSet().has(best)){ fx('strike', best); if (dealt > 0) fx('dmg', best, {text:`−${dealt}`, color:'#ffb27a', dy:-40}); }
-  if (o === PLAYER){ log(`Maritime patrol attacked ships in ${G.P[best].name}: ${dealt} damage${killed ? `, ${killed} sunk${subsK ? ` (${subsK} submarine${subsK > 1 ? 's' : ''})` : ''}` : ''}.`, killed ? 'good' : 'info', best); bump('unitsKilled', killed); }
-  else if (defs.some(b => b.owner === PLAYER)){ log(`${nationName(o)} patrol aircraft attacked your ships in ${G.P[best].name}: ${dealt} damage${killed ? `, ${killed} lost` : ''}.`, 'bad', best); bump('unitsLost', killed); }
+  fxAt('strike', best, {}, o); if (dealt > 0) fxAt('dmg', best, {text:`−${dealt}`, color:'#ffb27a', dy:-40}, o);
+  if (isSeat(o)){ tell(o, `Maritime patrol attacked ships in ${G.P[best].name}: ${dealt} damage${killed ? `, ${killed} sunk${subsK ? ` (${subsK} submarine${subsK > 1 ? 's' : ''})` : ''}` : ''}.`, killed ? 'good' : 'info', best); bump(o, 'unitsKilled', killed); }
+  for (const me of seatsBut(o)) if (defs.some(b => b.owner === me)){ tell(me, `${nationName(o)} patrol aircraft attacked your ships in ${G.P[best].name}: ${dealt} damage${killed ? `, ${killed} lost` : ''}.`, 'bad', best); bump(me, 'unitsLost', killed); }
   removeEmpty(); }
 // one hour of loitering (UAV over its target, AWACS orbit, maritime patrol): exposed to the air defence below and to hostile fighter patrols
 function loiterHour(a){ const f = a.fly, p = f.tgt, o = a.owner, n0 = count(a);
@@ -187,41 +189,41 @@ function loiterHour(a){ const f = a.fly, p = f.tgt, o = a.owner, n0 = count(a);
   else { const defs = stationaryAt(p).filter(b => atWar(o, b.owner) && count(b) && ((b.u.sam || 0) + (b.u.frig || 0) + (b.u.crui || 0) > 0)); if (defs.length) aaFire(a, defs, 0.3); }
   const cap = count(a) ? capOver(p, o) : []; if (cap.length) dogfight(a, cap, p, 1);
   const lost = n0 - count(a);
-  if (lost > 0){ if (o === PLAYER) log(`${armyName(a)} lost ${lost} aircraft over ${G.P[p].cityName || G.P[p].name}${cap.length ? ' to enemy fighters' : ' to air defence'}.`, 'bad', p);
-    else if (cap.some(b => b.owner === PLAYER) || stationaryAt(p).some(b => b.owner === PLAYER)) log(`Your ${cap.some(b => b.owner === PLAYER) ? 'fighters' : 'air defence'} shot down ${lost} ${nationName(o)} ${UNITS[wingT(a)].name}${lost > 1 ? 's' : ''} near ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
+  if (lost > 0){ if (isSeat(o)) tell(o, `${armyName(a)} lost ${lost} aircraft over ${G.P[p].cityName || G.P[p].name}${cap.length ? ' to enemy fighters' : ' to air defence'}.`, 'bad', p);
+    for (const me of seatsBut(o)) if (cap.some(b => b.owner === me) || stationaryAt(p).some(b => b.owner === me)) tell(me, `Your ${cap.some(b => b.owner === me) ? 'fighters' : 'air defence'} shot down ${lost} ${nationName(o)} ${UNITS[wingT(a)].name}${lost > 1 ? 's' : ''} near ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
 function resolveStrike(a, p){
   const o = a.owner, T = wingT(a);
   if (isDrone(a)) return;
   if (G.P[p].sea) tradeAirRaid(o, p, power(a)*0.8);   // strikes on a sea zone also hit the convoys on its trade routes
-  const vis = o === PLAYER || visibleSet().has(p), where = G.P[p].cityName || G.P[p].name, n00 = count(a);
+  const where = G.P[p].cityName || G.P[p].name, n00 = count(a);
   // enemy fighters patrolling over the target (Air Superiority Fighters and fighters under AWACS also over its neighbours) intercept first
   const cap = capOver(p, o);
   if (cap.length){ dogfight(a, cap, p, 2);
-    if (vis) fx('dmg', p, {text:'dogfight', color:'#f3ead2', dy:-34});
-    if (o === PLAYER || cap.some(b => b.owner === PLAYER)) log(`Dogfight over ${where}: ${o === PLAYER ? `your ${UNITS[T].dr ? 'drones were' : 'strike was'} intercepted (${n00 - count(a)} lost)` : `your fighters intercepted an enemy ${(T === 'awacs' ? 'AWACS' : UNITS[T].name.toLowerCase())} raid (${n00 - count(a)} shot down)`}.`, 'info', p);
-    if (T === 'bomb' && count(a) && count(a) <= n00*0.5){ if (o === PLAYER) log(`Your bombers jettisoned their loads over ${where} and turned back.`, 'bad', p); else if (S.owner[p] === PLAYER) log(`Your fighters broke up a ${nationName(o)} bomber raid on ${where}.`, 'good', p); removeEmpty(); return; } }
+    fxAt('dmg', p, {text:'dogfight', color:'#f3ead2', dy:-34}, o);
+    for (const me of seats()) if (o === me || cap.some(b => b.owner === me)) tell(me, `Dogfight over ${where}: ${o === me ? `your ${UNITS[T].dr ? 'drones were' : 'strike was'} intercepted (${n00 - count(a)} lost)` : `your fighters intercepted an enemy ${(T === 'awacs' ? 'AWACS' : UNITS[T].name.toLowerCase())} raid (${n00 - count(a)} shot down)`}.`, 'info', p);
+    if (T === 'bomb' && count(a) && count(a) <= n00*0.5){ if (isSeat(o)) tell(o, `Your bombers jettisoned their loads over ${where} and turned back.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your fighters broke up a ${nationName(o)} bomber raid on ${where}.`, 'good', p); removeEmpty(); return; } }
   if (!count(a)) { removeEmpty(); return; }
   // drones run the gauntlet of jammers, SAMs and guns before they reach the target; jamming also blunts the survivors
   let jamF = 1, adLost = 0;
   if (UNITS[T].dr){ const r = droneAD(a, p, 1); adLost = r.lost; jamF = 1/(1 + (UNITS[T].dr === 'sdrone' ? 0.15 : 0.3)*r.jam);
     if (T === 'swarm') saturate(r.ad, count(a));
-    if (!count(a)){ if (o === PLAYER) log(`Your ${UNITS[T].name}s were all shot down over ${where} by ${r.jam >= r.ad.sam ? 'jammers' : 'air defence'}.`, 'bad', p);
-      else if (S.owner[p] === PLAYER || r.ad.armies.some(b => b.owner === PLAYER)) log(`Air defences destroyed ${artA(nationName(o))} ${UNITS[T].name.toLowerCase()} raid on ${where} (${adLost} downed).`, 'good', p);
-      if (vis) fx('dmg', p, {text:'shot down', color:'#9fd2ff', dy:-34}); removeEmpty(); return; } }
+    if (!count(a)){ if (isSeat(o)) tell(o, `Your ${UNITS[T].name}s were all shot down over ${where} by ${r.jam >= r.ad.sam ? 'jammers' : 'air defence'}.`, 'bad', p);
+      for (const me of seatsBut(o)) if (S.owner[p] === me || r.ad.armies.some(b => b.owner === me)) tell(me, `Air defences destroyed ${artA(nationName(o))} ${UNITS[T].name.toLowerCase()} raid on ${where} (${adLost} downed).`, 'good', p);
+      fxAt('dmg', p, {text:'shot down', color:'#9fd2ff', dy:-34}, o); removeEmpty(); return; } }
   const city = G.P[p].city, defs = stationaryAt(p).filter(b => atWar(o, b.owner) && count(b) > 0);
   // bombers run the target's air defence on the way in: only the survivors drop (the rest of the fire comes after the drop)
   let preLost = 0; if (T === 'bomb'){ const aaD = defs.filter(b => (b.u.sam || 0) + (b.u.frig || 0) + (b.u.crui || 0) > 0); if (aaD.length){ const b0 = count(a); aaFire(a, aaD, 1.2); preLost = b0 - count(a);
-      if (!count(a)){ if (o === PLAYER) log(`Your bombers were all shot down over ${where} before they could drop.`, 'bad', p); else if (S.owner[p] === PLAYER) log(`Your air defence shot down ${artA(nationName(o))} bomber raid on ${where} before it could drop.`, 'good', p); removeEmpty(); return; } } }
+      if (!count(a)){ if (isSeat(o)) tell(o, `Your bombers were all shot down over ${where} before they could drop.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your air defence shot down ${artA(nationName(o))} bomber raid on ${where} before it could drop.`, 'good', p); removeEmpty(); return; } } }
   warDamage(p, T === 'bomb' ? (city ? 6 : 3)*a.u.bomb : 5);
   const enemyLand = S.owner[p] >= 0 && S.owner[p] !== o && atWar(o, S.owner[p]);
   let bnote = '';
   if (enemyLand){ if (T === 'bomb') bnote = bombBuildings(p, a.u.bomb); else if (T === 'sdrone') bnote = preciseHit(p, a.u.sdrone >= 2 ? 0.35 : 0.15, 24); if (bnote) noteHit(S.owner[p], T, p); }
   const cut = S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
-  if (cut && (o === PLAYER || S.owner[p] === PLAYER) && !defs.length) log(o === PLAYER ? `Strike on ${G.P[p].cityName || G.P[p].name} cut ${cut} road and rail link${cut > 1 ? 's' : ''} for ${LINK_DMG.strike} h.` : `${nationName(o)} bombed the roads and railways at ${G.P[p].cityName || G.P[p].name}: ${cut} link${cut > 1 ? 's' : ''} out for ${LINK_DMG.strike} h.`, o === PLAYER ? 'good' : 'bad', p);
+  if (cut && !defs.length) for (const me of new Set([o, S.owner[p]])) if (isSeat(me)) tell(me, o === me ? `Strike on ${G.P[p].cityName || G.P[p].name} cut ${cut} road and rail link${cut > 1 ? 's' : ''} for ${LINK_DMG.strike} h.` : `${nationName(o)} bombed the roads and railways at ${G.P[p].cityName || G.P[p].name}: ${cut} link${cut > 1 ? 's' : ''} out for ${LINK_DMG.strike} h.`, o === me ? 'good' : 'bad', p);
   const label = T === 'bomb' ? 'Bombing raid' : T === 'swarm' ? 'Swarm attack' : T === 'sdrone' ? 'Drone strike' : 'Air strike';
-  if (!defs.length){ if (o === PLAYER && (bnote || !cut)) log(bnote ? `${label} on ${where}: ${bnote}${adLost ? `; ${adLost} drones lost to air defence` : ''}.` : `Strike on ${where} found no targets.`, bnote ? 'good' : 'info', p);
-    else if (o !== PLAYER && bnote && S.owner[p] === PLAYER) log(`${nationName(o)} ${label.toLowerCase()} on ${where}: ${bnote}.`, 'bad', p);
-    if (bnote && vis) IM.emit('fxStrike', {a, p, T, vis, bnote:true, dealt:0, owner:S.owner[p]}); removeEmpty(); return; }
+  if (!defs.length){ if (isSeat(o) && (bnote || !cut)) tell(o, bnote ? `${label} on ${where}: ${bnote}${adLost ? `; ${adLost} drones lost to air defence` : ''}.` : `Strike on ${where} found no targets.`, bnote ? 'good' : 'info', p);
+    if (S.owner[p] !== o && bnote && isSeat(S.owner[p])) tell(S.owner[p], `${nationName(o)} ${label.toLowerCase()} on ${where}: ${bnote}.`, 'bad', p);
+    if (bnote) IM.emit('fxStrike', {a, p, T, by:o, bnote:true, dealt:0, owner:S.owner[p]}); removeEmpty(); return; }
   const hpBefore = defs.map(effHP), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), myBefore = count(a) + adLost + preLost;
   // bombers over a city hit the troops sheltering there 50% harder
   const av = avScale(sideAV([a], o, STRIKE*(0.8 + rng()*0.4)), jamF*(T === 'bomb' && city ? 1.5 : 1)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
@@ -230,29 +232,29 @@ function resolveStrike(a, p){
   // air defence fires back at manned aircraft (drones already ran the gauntlet)
   if (!UNITS[T].dr) aaFire(a, defs, T === 'bomb' ? 1.2 : 2);
   const dealt = Math.round(hpBefore.reduce((s0, h, i) => s0 + h - effHP(defs[i]), 0)), killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), lost = myBefore - count(a);
-  if (vis) IM.emit('fxStrike', {a, p, T, vis, bnote:!!bnote, dealt, owner:defs[0] ? defs[0].owner : null});
-  if (o === PLAYER){ log(`${label} on ${where}: ${dealt} damage${killed ? `, ${killed} enemy unit${killed > 1 ? 's' : ''} destroyed` : ''}${bnote ? ', ' + bnote : ''}${lost ? `, ${lost} ${UNITS[T].dr ? 'drone' : 'aircraft'}${lost > 1 && UNITS[T].dr ? 's' : ''} lost` : ''}.`, killed || dealt > 20 || bnote ? 'good' : 'info', p); sfx('battle'); bump('unitsKilled', killed); bump('unitsLost', lost); }
-  else if (defs.some(b => b.owner === PLAYER)){ log(`${nationName(o)} ${label.toLowerCase()} hit your forces at ${where} (${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${bnote ? ', ' + bnote : ''}${adLost ? `; ${adLost} drones downed` : ''}).`, 'bad', p); bump('unitsLost', killed); }
+  IM.emit('fxStrike', {a, p, T, by:o, bnote:!!bnote, dealt, owner:defs[0] ? defs[0].owner : null});   // the client shows it where its seat struck or can see
+  if (isSeat(o)){ tell(o, `${label} on ${where}: ${dealt} damage${killed ? `, ${killed} enemy unit${killed > 1 ? 's' : ''} destroyed` : ''}${bnote ? ', ' + bnote : ''}${lost ? `, ${lost} ${UNITS[T].dr ? 'drone' : 'aircraft'}${lost > 1 && UNITS[T].dr ? 's' : ''} lost` : ''}.`, killed || dealt > 20 || bnote ? 'good' : 'info', p); cue(o, 'battle'); bump(o, 'unitsKilled', killed); bump(o, 'unitsLost', lost); }
+  for (const me of seatsBut(o)) if (defs.some(b => b.owner === me)){ tell(me, `${nationName(o)} ${label.toLowerCase()} hit your forces at ${where} (${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${bnote ? ', ' + bnote : ''}${adLost ? `; ${adLost} drones downed` : ''}).`, 'bad', p); bump(me, 'unitsLost', killed); }
   removeEmpty();
 }
 function airTick(){
   for (const a of S.armies) if (a.sat){ a.sat = Math.max(0, a.sat - 0.04); if (!a.sat) delete a.sat; }   // saturated air defence recovers
   for (const a of S.armies){ if (!a.air || !count(a)) continue;
     if (a.air.car != null){ const cv = armyById(a.air.car); if (cv && cv.u.carr > 0){ if (!a.fly){ a.air.base = cv.at; a.at = cv.at; } else a.air.base = cv.to ?? cv.at; continue; }
-      a.air.car = null; const nb = nearestAirbase(a.owner, a.at); if (nb >= 0){ a.air.base = nb; if (!a.fly) a.at = nb; if (a.owner === PLAYER) log(`${armyName(a)} lost its carrier and diverted to ${G.P[nb].cityName || G.P[nb].name}.`, 'bad', nb); } else for (const t of UT) a.u[t] = 0; }
+      a.air.car = null; const nb = nearestAirbase(a.owner, a.at); if (nb >= 0){ a.air.base = nb; if (!a.fly) a.at = nb; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} lost its carrier and diverted to ${G.P[nb].cityName || G.P[nb].name}.`, 'bad', nb); } else for (const t of UT) a.u[t] = 0; }
     if (!a.fly){ if (a.air.cd > 0) a.air.cd--; else if (a.air.wear){ a.air.wear = Math.max(0, a.air.wear - maintRate(a)/24); if (a.air.wear < 1e-4) delete a.air.wear; } if (!G.P[a.air.base].sea && S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; a.at = nb; } continue; }
     const f = a.fly, B = G.P[a.air.base], T = G.P[f.tgt], dist = Math.max(1, hexDist(B.cc, T.cc)), dt = wingSpd(a)/dist;
-    if (f.ph === 'out' && f.kind === 'strike' && stormAt(f.tgt)){ f.ph = 'back'; f.t = Math.max(0, 1 - f.t); if (a.owner === PLAYER) log(`Strike on ${G.P[f.tgt].cityName || G.P[f.tgt].name} aborted: a storm closed in over the target.`, 'info', f.tgt); continue; }
+    if (f.ph === 'out' && f.kind === 'strike' && stormAt(f.tgt)){ f.ph = 'back'; f.t = Math.max(0, 1 - f.t); if (isSeat(a.owner)) tell(a.owner, `Strike on ${G.P[f.tgt].cityName || G.P[f.tgt].name} aborted: a storm closed in over the target.`, 'info', f.tgt); continue; }
     if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
         wearWing(a, f.kind, dist, f.kind === 'patrol' || f.kind === 'hunt' ? 12 : f.kind === 'orbit' ? 16 : f.kind === 'recon' ? uavOf(a.owner).loiter : 0);
         if (f.kind === 'rebase'){ const cv = G.P[f.tgt].sea ? carrierAt(a.owner, f.tgt) : null; if (G.P[f.tgt].sea && !cv){ f.ph = 'back'; f.t = 0; continue; } a.air.base = f.tgt; a.at = f.tgt; a.air.car = cv ? cv.id : null; a.fly = null; a.air.cd = 2;
-          if (a.owner === PLAYER && cv) log(`${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
+          if (isSeat(a.owner) && cv) tell(a.owner, `${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
         else if (f.kind === 'recon'){ const L = uavOf(a.owner), seen = nearList(f.tgt, L.vis); S.reveal = S.reveal || {};
           for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + L.loiter + 12); visCache = null; f.ph = 'over'; f.hrs = f.h0 = L.loiter; f.t = 0; f.salvo = L.salvos;
-          if (a.owner === PLAYER){ const foes = seen.reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== PLAYER).reduce((s1, b) => s1 + count(b), 0), 0); log(`UAV ${ROMAN[uavLv(a.owner)]} over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: identifying everything in ${seen.length} provinces for ${L.loiter} h, ${foes} foreign units spotted.`, 'info', f.tgt); }
+          if (isSeat(a.owner)){ const foes = seen.reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== a.owner).reduce((s1, b) => s1 + count(b), 0), 0); tell(a.owner, `UAV ${ROMAN[uavLv(a.owner)]} over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: identifying everything in ${seen.length} provinces for ${L.loiter} h, ${foes} foreign units spotted.`, 'info', f.tgt); }
           if (f.salvo > 0){ f.salvo--; uavSalvo(a, f.tgt); } }
-        else if (f.kind === 'orbit'){ f.ph = 'over'; f.hrs = 16; f.t = 0; visCache = null; if (a.owner === PLAYER) log(`Early warning orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: enemy forces within ${Math.round(AEW_R*KM_HEX/100)*100} km show as unidentified contacts for 16 h.`, 'info', f.tgt); }
+        else if (f.kind === 'orbit'){ f.ph = 'over'; f.hrs = 16; f.t = 0; visCache = null; if (isSeat(a.owner)) tell(a.owner, `Early warning orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: enemy forces within ${Math.round(AEW_R*KM_HEX/100)*100} km show as unidentified contacts for 16 h.`, 'info', f.tgt); }
         else if (f.kind === 'hunt'){ f.ph = 'over'; f.hrs = 12; f.t = 0; f.nx = 0; visCache = null; mpaHunt(a, f.tgt); }
         else { f.ph = 'patrol'; f.hrs = 12; f.t = 0; } } }
     else if (f.ph === 'patrol' || f.ph === 'over'){
@@ -275,12 +277,12 @@ function missileCheck(n, from, to, k){
   return {ok:true, d, hours:Math.max(k === 'bm' ? 4 : 2, Math.ceil(d/M0.speed))};
 }
 function launchMissile(n, from, to, k){
-  const c = missileCheck(n, from, to, k); if (!c.ok){ if (n === PLAYER) toast(c.why, 'bad', null); return false; }
+  const c = missileCheck(n, from, to, k); if (!c.ok){ refuse(n, c.why); return false; }
   mstock(from)[k]--; (S.inflight || (S.inflight = [])).push({id:S.nid++, owner:n, k, from, to, t:0, dt:1/c.hours});
   const o = S.owner[to];
-  if (n === PLAYER) log(`${MISSILES[k].name} launched from ${G.P[from].cityName} at ${G.P[to].cityName || G.P[to].name}. Impact in ${c.hours} h.`, 'info', to);
-  else if (o === PLAYER || stationaryAt(to).some(b => b.owner === PLAYER)){ log(`Missile warning: ${nationName(n)} launched a ${MISSILES[k].name} at ${G.P[to].cityName || G.P[to].name}! Impact in ${c.hours} h.`, 'bad', to); alarm(); }
-  sfx('launch'); return true;
+  if (isSeat(n)) tell(n, `${MISSILES[k].name} launched from ${G.P[from].cityName} at ${G.P[to].cityName || G.P[to].name}. Impact in ${c.hours} h.`, 'info', to);
+  for (const me of seatsBut(n)) if (o === me || stationaryAt(to).some(b => b.owner === me)){ tell(me, `Missile warning: ${nationName(n)} launched a ${MISSILES[k].name} at ${G.P[to].cityName || G.P[to].name}! Impact in ${c.hours} h.`, 'bad', to); alarm(me); }
+  cue(null, 'launch'); return true;   // (every client hears a launch)
 }
 function interceptChance(m){
   // SAMs and Frigates in or next to the target can shoot the missile down
@@ -293,11 +295,11 @@ function missileTick(){
   for (let i = S.inflight.length - 1; i >= 0; i--){ const m = S.inflight[i]; m.t += m.dt; if (m.t < 1) continue; S.inflight.splice(i, 1); missileImpact(m); }
 }
 function missileImpact(m){
-  const P = G.P[m.to], vis = m.owner === PLAYER || visibleSet().has(m.to) || S.owner[m.to] === PLAYER;
+  const P = G.P[m.to];   // the blast events go to every client: each shows them for its own seat's missile, its own land, or what its seat can see
   if (rng() < interceptChance(m)){
-    if (vis) IM.emit('fxMissile', {m, hit:false});
-    if (m.owner === PLAYER) log(`Your ${MISSILES[m.k].name} was intercepted over ${P.cityName || P.name}.`, 'info', m.to);
-    else if (S.owner[m.to] === PLAYER) log(`Air defences intercepted an enemy ${MISSILES[m.k].name} over ${P.cityName || P.name}.`, 'good', m.to);
+    IM.emit('fxMissile', {m, hit:false, owner:S.owner[m.to]});
+    if (isSeat(m.owner)) tell(m.owner, `Your ${MISSILES[m.k].name} was intercepted over ${P.cityName || P.name}.`, 'info', m.to);
+    if (S.owner[m.to] !== m.owner && isSeat(S.owner[m.to])) tell(S.owner[m.to], `Air defences intercepted an enemy ${MISSILES[m.k].name} over ${P.cityName || P.name}.`, 'good', m.to);
     return; }
   warDamage(m.to, m.k === 'bm' ? 22 : 12); if (S.owner[m.to] !== m.owner) damageLinks(m.to, LINK_DMG[m.k] || 48);
   const M0 = MISSILES[m.k], defs = stationaryAt(m.to).filter(b => atWar(m.owner, b.owner) && count(b) > 0), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), hpBefore = defs.reduce((s0, b) => s0 + effHP(b), 0);
@@ -306,10 +308,10 @@ function missileImpact(m){
   let wrecked = '';
   if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)]; S.bld[m.to][k]--; wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
-  if (vis) IM.emit('fxMissile', {m, hit:true, dealt});
+  IM.emit('fxMissile', {m, hit:true, dealt, owner:S.owner[m.to]});
   const where = P.cityName || P.name;
-  if (m.owner === PLAYER){ log(`${M0.name} hit ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} destroyed` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'good', m.to); bump('unitsKilled', killed); }
-  else if (S.owner[m.to] === PLAYER || defs.some(b => b.owner === PLAYER)){ log(`Enemy ${M0.name} struck ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'bad', m.to); bump('unitsLost', killed); }
+  if (isSeat(m.owner)){ tell(m.owner, `${M0.name} hit ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} destroyed` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'good', m.to); bump(m.owner, 'unitsKilled', killed); }
+  for (const me of seatsBut(m.owner)) if (S.owner[m.to] === me || defs.some(b => b.owner === me)){ tell(me, `Enemy ${M0.name} struck ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'bad', m.to); bump(me, 'unitsLost', killed); }
 }
 // satellites: a sinusoidal ground track crossing the map once per game day; the footprint reveals everything under it
 const SAT_MAX = 3, SAT_COST = 220, SAT_C = {cash:SAT_COST, elec:25, rare:10}, SAT_R = 78;   // a launch: money, electronics and rare materials
@@ -319,5 +321,5 @@ function satSwath(st){ if (st.cache && st.cache.h === S.hour) return st.cache.a;
   st.cache = {h:S.hour, a}; return a; }
 function launchSat(n, p){ const N = S.nations[n]; S.sats = S.sats || []; if (!has(n, 'sat1') || S.sats.filter(x => x.owner === n).length >= SAT_MAX || !hasC(N, SAT_C) || S.owner[p] !== n || !(S.bld[p].silo || p === N.capital)) return false;
   payC(N, SAT_C); S.sats.push({id:S.nid++, owner:n, ph:rng(), amp:0.18 + rng()*0.2, k:1 + Math.floor(rng()*2), h0:S.hour}); visCache = null;
-  if (n === PLAYER){ log('Reconnaissance satellite launched: it sweeps the globe once a day, revealing everything beneath its track.', 'good', p); sfx('launch'); IM.emit('fxSat', p); }
+  if (isSeat(n)){ tell(n, 'Reconnaissance satellite launched: it sweeps the globe once a day, revealing everything beneath its track.', 'good', p); cue(n, 'launch'); IM.emit('fxSat', p, n); }
   return true; }

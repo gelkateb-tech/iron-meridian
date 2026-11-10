@@ -83,7 +83,7 @@ function aiAir(n){
     if (T === 'swarm' || T === 'sdrone'){ const tg = aiDroneTarget(n, B, r, T); if (tg >= 0) orderAir(a, tg); else aiForward(n, a, B, r); continue; }
     if (isStriker(a)){ let best = -1, bs = 0;
       for (const [pid, list] of provPowers()){ if (hexDist(B.cc, G.P[pid].cc) > r) continue; let sc = 0;
-        for (const [o, pw] of list) if (o >= 0 && atWar(n, o)) sc += pw*(o === PLAYER ? 1.1 : 1);
+        for (const [o, pw] of list) if (o >= 0 && atWar(n, o)) sc += pw*(isSeat(o) ? 1.1 : 1);
         if (S.owner[pid] === n) sc *= 1.5;              // enemies on our soil first
         if (sc > bs){ bs = sc; best = pid; } }
       if (best >= 0 && bs > 8) orderAir(a, best);
@@ -107,7 +107,7 @@ function aiInterdict(n, B, r){ let best = -1, bs = 0;
 function aiMissiles(n){
   for (const [ps, st] of Object.entries(S.mstock || {})){ const p = +ps; if (S.owner[p] !== n) continue;
     for (const k of ['bm', 'cm']){ if (!st[k]) continue; let best = -1, bs = 0;
-      for (const [pid, list] of provPowers()){ let sc = 0; for (const [o, pw] of list) if (o >= 0 && o !== n && atWar(n, o)) sc += pw*(o === PLAYER ? 1.1 : 1); if (sc < (k === 'bm' ? 60 : 30)) continue; if (!missileCheck(n, p, pid, k).ok) continue; if (sc > bs){ bs = sc; best = pid; } }
+      for (const [pid, list] of provPowers()){ let sc = 0; for (const [o, pw] of list) if (o >= 0 && o !== n && atWar(n, o)) sc += pw*(isSeat(o) ? 1.1 : 1); if (sc < (k === 'bm' ? 60 : 30)) continue; if (!missileCheck(n, p, pid, k).ok) continue; if (sc > bs){ bs = sc; best = pid; } }
       if (best >= 0) launchMissile(n, p, best, k); } }
 }
 function aiSpies(n){
@@ -226,7 +226,7 @@ function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = ne
   const atStage = S.armies.filter(a => a.owner === n && !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a));
   const massed = atStage.reduce((s0, a) => s0 + power(a)*terrFit(a, plan.tgt, true)*(riverX(a.at, plan.tgt) ? RIVER_ATK : 1), 0), need = defPower(plan.tgt, n)*1.5 + 10;
   if (massed >= need){ for (const a of atStage){ orderMove(a, plan.tgt); used.add(a); } plan.launched = S.hour;
-    if (S.owner[plan.tgt] === PLAYER) log(`${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${(n0 => n0 + (n0 === 1 ? ' direction' : ' directions'))(new Set(atStage.map(a => a.at)).size)}!`, 'bad', plan.tgt);
+    if (isSeat(S.owner[plan.tgt])) tell(S.owner[plan.tgt], `${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${(n0 => n0 + (n0 === 1 ? ' direction' : ' directions'))(new Set(atStage.map(a => a.at)).size)}!`, 'bad', plan.tgt);
     return used; }
   let i = 0; for (const a of idle){ if (used.has(a) || stage.includes(a.at) || power(a) < 14 || (a.at === N.capital && threatNear(a.at, n))) continue;
     const st = stage[i++ % stage.length], d = hexDist(G.P[a.at].cc, G.P[st].cc); if (d > 14) continue;
@@ -272,7 +272,7 @@ const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awac
 // an AI buys from other AIs' sell listings on the order book (cheapest first, up to 1.15x the world price; never an enemy's or an embargoing power's):
 // goods change hands between nations without moving the world price. Returns what it got.
 function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
-  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && o.seller !== PLAYER && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
+  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && !isSeat(o.seller) && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
   for (const o of asks){ const r = Math.min(q - got, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[k])); if (r <= 0) break;
     N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r; if (got >= q) break; }
   if (got) S.book = S.book.filter(o => o.qty > 0); return got; }

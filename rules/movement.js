@@ -73,19 +73,19 @@ function linkCheck(n, a, b, k){ const P = G.P;
   if (linkProjects(n) >= linkMaxProj(n)) return fail(`At most ${linkMaxProj(n)} link projects at once.`);
   if (!hasC(N, c)) return fail(`Needs ${costTxt(c, ', ')} (${missTxt(N, c)}).`);
   return {ok:true, c, lv}; }
-function buildLink(n, a, b, k){ const ck = linkCheck(n, a, b, k); if (!ck.ok){ if (n === PLAYER) toast(ck.why, 'bad', null); return false; }
+function buildLink(n, a, b, k){ const ck = linkCheck(n, a, b, k); if (!ck.ok){ refuse(n, ck.why); return false; }
   const N = S.nations[n]; payC(N, ck.c); const r = linkMake(a, b); r.bld = {n, k, lv:ck.lv, h:ck.c.h, h0:ck.c.h}; linkSave(r, false);
-  if (n === PLAYER) log(`Work started: ${k === 'rail' ? RAIL_NAME[ck.lv] : LINK_NAME[ck.lv]} ${G.P[a].cityName || G.P[a].name} – ${G.P[b].cityName || G.P[b].name}, ${Math.round(ck.c.h/2.4)/10} days.`, 'info', a);
+  if (isSeat(n)) tell(n, `Work started: ${k === 'rail' ? RAIL_NAME[ck.lv] : LINK_NAME[ck.lv]} ${G.P[a].cityName || G.P[a].name} – ${G.P[b].cityName || G.P[b].name}, ${Math.round(ck.c.h/2.4)/10} days.`, 'info', a);
   return true; }
 // hourly: repairs count down, construction advances (paused while damaged, cancelled if either end is lost)
 function linkHour(){ if (!S.links) return;
   for (const k of Object.keys(S.links)){ const d = S.links[k], r = G.LK.get(k); if (!r){ delete S.links[k]; continue; }
     if (r.dmg > 0){ r.dmg--; if (r.dmg <= 0){ r.dmg = 0; linkSave(r); } else d.dmg = r.dmg; }
     const B = r.bld; if (!B) continue;
-    if (S.owner[r.a] !== B.n || S.owner[r.b] !== B.n){ r.bld = null; linkSave(r, false); if (B.n === PLAYER) log(`Link works ${G.P[r.a].cityName || G.P[r.a].name} – ${G.P[r.b].cityName || G.P[r.b].name} abandoned: the province was lost.`, 'bad', r.a); continue; }
+    if (S.owner[r.a] !== B.n || S.owner[r.b] !== B.n){ r.bld = null; linkSave(r, false); if (isSeat(B.n)) tell(B.n, `Link works ${G.P[r.a].cityName || G.P[r.a].name} – ${G.P[r.b].cityName || G.P[r.b].name} abandoned: the province was lost.`, 'bad', r.a); continue; }
     if (r.dmg > 0) continue;
     if (--B.h <= 0){ if (B.k === 'rail') r.rail = B.lv; else r.road = B.lv; r.bld = null; linkSave(r); LINKD++;
-      if (B.n === PLAYER){ log(`${B.k === 'rail' ? RAIL_NAME[B.lv] : LINK_NAME[B.lv]} opened: ${G.P[r.a].cityName || G.P[r.a].name} – ${G.P[r.b].cityName || G.P[r.b].name}.`, 'good', r.a); fx('ready', r.a); } } } }
+      if (isSeat(B.n)){ tell(B.n, `${B.k === 'rail' ? RAIL_NAME[B.lv] : LINK_NAME[B.lv]} opened: ${G.P[r.a].cityName || G.P[r.a].name} – ${G.P[r.b].cityName || G.P[r.b].name}.`, 'good', r.a); fxAt('ready', r.a, {}, null, B.n); } } } }
 function legHours(a, from, to){ const w = G.P[from].nb.get(to);
   if (G.P[to].sea || !ground(a)) return w*24/legSpeed(a, from, to);
   const r = linkOf(from, to), lv = roadLv(r), ws = weatherSpd(to);
@@ -118,13 +118,14 @@ function splitRows(a){ const rows = [];
     if (nd && dh < DMG_T){ if (n > nd) rows.push({k:t + ':h', t, n:n - nd, wu:0, hf:1}); rows.push({k:t + ':d', t, n:nd, wu:w/nd, hf:dh, dmg:true}); }
     else rows.push({k:t + ':h', t, n, wu:w/n, hf:1 - w/(n*hp)}); }
   return rows; }
-// spread new groups around the parent's spot inside its province, so each gets a counter of its own (drag one onto another to merge)
-function splitSpot(a, i){ const P = G.P[a.at], sp = IM.hook.spotOf(a), c0 = a.pos || sp || [P.x, P.y];   // (beside the spot its counter is drawn on)
+// spread new groups around the parent's spot inside its province, so each gets a counter of its own (drag one onto another to merge).
+// spot: where the client draws the parent's counter (the split order may carry it); without it, the parent's own place or the province centre
+function splitSpot(a, i, spot){ const P = G.P[a.at], c0 = a.pos || spot || [P.x, P.y];
   for (const r of [7, 5, 10, 3.5]) for (let j = 0; j < 8; j++){ const ang = (i*2.4 + j*0.785) % (Math.PI*2), x = c0[0] + Math.cos(ang)*r*1.3, y = c0[1] + Math.sin(ang)*r, c = worldToCell(x, y);
     if (c >= 0 && G.prov[c] === a.at) return [x, y]; }
   return null; }
 // carry out a plan: [{rowKey: units}, ...] → the new forces (groups that move nothing are skipped; if nothing would stay, the largest group stays)
-function splitPlan(a, plan){
+function splitPlan(a, plan, spot = null){
   if (!a || a.air || a.fly || count(a) < 2) return [];
   const R = new Map(splitRows(a).map(r => [r.k, r])), tot = new Map();
   let G0 = (plan || []).map(g => { const o = {}; for (const k in g){ const r = R.get(k), v = Math.max(0, Math.floor(+g[k] || 0)); if (r && v) o[k] = v; } return o; }).filter(g => Object.keys(g).length);
@@ -137,7 +138,7 @@ function splitPlan(a, plan){
   G0.forEach((g, i) => { const b = addArmy(a.owner, a.at, {});
     b.to = a.to; b.t = a.t; b.path = a.path.slice(); b.m = a.m; b.stance = a.stance; b.from = a.from; b.froms = a.froms ? a.froms.slice() : undefined; b.landed = a.landed;
     b.forced = a.forced; b.fire = a.fire; b.delay = a.delay; b.home = a.home; b.retreating = a.retreating; b.chase = a.chase; b.legFrom = a.legFrom; if (a.dest) b.dest = {...a.dest};
-    if (a.to === null && a.owner === PLAYER) b.pos = splitSpot(a, i);
+    if (a.to === null && isSeat(a.owner)) b.pos = splitSpot(a, i, spot);   // a seat's groups get places of their own (the AI's stay on the province centre)
     for (const k in g){ const r = R.get(k), v = g[k]; b.u[r.t] += v; b.w[r.t] += v*r.wu; a.u[r.t] -= v; a.w[r.t] = Math.max(0, a.w[r.t] - v*r.wu); if (!a.u[r.t]) a.w[r.t] = 0; }
     out.push(b); });
   if (pk){ const all = [a, ...out]; for (const x of all) x.peak = h0 > 0 ? pk*effHP(x)/h0 : pk/all.length; }
@@ -147,7 +148,7 @@ function splitPlan(a, plan){
 // the classic halving (also used by the AI): half of every unit type leaves, HP in proportion; one unit if nothing would move
 function halfPlan(a){ const g = {}; for (const r of splitRows(a)){ const k = Math.floor(r.n/2); if (k) g[r.k] = k; }
   if (!Object.keys(g).length){ const r = splitRows(a).find(r0 => r0.n > 1) || splitRows(a)[1]; if (r) g[r.k] = 1; } return [g]; }
-function splitArmy(a){ if (!a || count(a) < 2) return null; return splitPlan(a, halfPlan(a))[0] || null; }
+function splitArmy(a, spot = null){ if (!a || count(a) < 2) return null; return splitPlan(a, halfPlan(a), spot)[0] || null; }
 // evenly into n forces (n - 1 new groups); remainders rotate so the group totals stay level
 function evenPlan(a, n){ n = Math.max(2, Math.min(SPLIT_MAX, n)); const plan = Array.from({length:n - 1}, () => ({})); let off = 0;
   for (const r of splitRows(a)){ const base = Math.floor(r.n/n), ex = r.n % n; for (let gi = 0; gi < n; gi++){ const v = base + (((gi - off) % n + n) % n < ex ? 1 : 0); if (gi > 0 && v) plan[gi - 1][r.k] = v; } off = (off + ex) % n; }
@@ -288,8 +289,8 @@ function armyUpkeep(prevBattles){
         for (const v of G.P[u].nbs){ if (seen.has(v) || !canEnter(a.owner, v)) continue; seen.add(v);
           if (S.owner[v] === a.owner && SUP[a.owner] && SUP[a.owner][v] && !S.battles.includes(v)){ dest = v; break; } q.push([v, du + 1]); } }
       if (dest >= 0){ a.path = pathFor(a, a.at, dest); a.forced = true; a.retreating = true;
-        if (a.owner === PLAYER) log(`${armyName(a)} broke at ${G.P[a.at].name} and is retreating to ${G.P[dest].name}.`, 'bad', a.at); }
-      else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (a.owner === PLAYER) log(`Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
+        if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} broke at ${G.P[a.at].name} and is retreating to ${G.P[dest].name}.`, 'bad', a.at); }
+      else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (isSeat(a.owner)) tell(a.owner, `Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
     }
     if (!inBattle && a.retreating && a.m >= 40) a.retreating = false;
   }

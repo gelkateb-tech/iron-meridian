@@ -21,7 +21,7 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
   return null; }
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words
 function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : ''; }
-const reqText = (p, t, n = PLAYER) => canMobilize(n, p, t);
+const reqText = (p, t, n) => canMobilize(n, p, t);
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 // Arms Factory price rises 40% for every OTHER province of the nation that already has one (built, or under construction at level 1+), cash, materials and iron alike
 const FAC_RISE = 1.4;
@@ -41,19 +41,20 @@ const canRecruit = (n, p, t) => !canMobilize(n, p, t) && canAfford(n, t);
 function recruit(n, p, t){
   if (!canRecruit(n, p, t)) return false;
   const N = S.nations[n], c = ucost(n, t); payC(N, c);
-  if (n === PLAYER) (S.tut || (S.tut = {})).recruit = true;
+  if (isSeat(n)){ const D = desk(n); (D.tut || (D.tut = {})).recruit = true; }
   const h = trainH(p, t, n); S.queue[p].push({t, h, h0:h}); return true;
 }
 function build(n, p, k){
   const B = BUILD[k], N = S.nations[n], lvl = nextLvl(p, k), c = buildCost(n, k, lvl, p);
   if (S.owner[p] !== n || S.cons[p] || lvl > B.max || !canBuildHere(p, k)) return false;
-  if (n !== PLAYER && !hasC(N, c)) aiBuyFor(n, c, 1.3, 40);   // an AI short of materials, iron or electronics for it buys them (a materials-poor power can still fortify)
+  if (!isSeat(n) && !hasC(N, c)) aiBuyFor(n, c, 1.3, 40);   // an AI short of materials, iron or electronics for it buys them (a materials-poor power can still fortify)
   if (!hasC(N, c)) return false;
   payC(N, c); const fh = k === 'fort' && docOf(n) && docOf(n).fort ? Math.max(1, Math.round(c.h*docOf(n).fort)) : c.h; S.cons[p] = {k, lvl, h:fh, h0:fh}; return true;
 }
 function spawn(n, p, t){
   const air = UNITS[t].cls === 'air';
-  if (!air && n === PLAYER && S.rally && S.rally[p] != null && S.rally[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, S.rally[p]); if (!na.path.length) delete S.rally[p]; return; }
+  const RL = isSeat(n) ? desk(n).rally : null;   // a seat's rally points: new ground units march there on their own
+  if (!air && RL && RL[p] != null && RL[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, RL[p]); if (!na.path.length) delete RL[p]; return; }
   const k = UNITS[t].pack || 1;
   if (air){ const w = S.armies.find(x => x.owner === n && x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u])); if (w && !S.armies.some(x => x.owner === n && x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
   let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])));
@@ -72,16 +73,16 @@ function prodHour(p){ const q = S.queue[p];
     { const it0 = q[0]; if (it0.msl ? bdis(p, 'silo') : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits
     const lines = 1 + S.bld[p].fac;            // each Arms Factory level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
-    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (S.owner[p] === PLAYER){ log(`${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fx('ready', p); sfx('ready'); } } return; }
+    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
-      if (S.owner[p] === PLAYER){ fx('ready', p); sfx('ready'); log(`${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
-        if (S.repeat && S.repeat[p] && !q.length && !recruit(PLAYER, p, S.repeat[p])){ const why = canMobilize(PLAYER, p, S.repeat[p]); log(`Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[S.repeat[p]].name}.`, 'info', p); } } } }
+      const o = S.owner[p]; if (isSeat(o)){ const RP = desk(o).repeat; fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
+        if (RP && RP[p] && !q.length && !recruit(o, p, RP[p])){ const why = canMobilize(o, p, RP[p]); tell(o, `Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[RP[p]].name}.`, 'info', p); } } } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
-    if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (S.owner[p] === PLAYER) log(`${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
+    if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
 function engHour(N){
     if (--N.eng.h <= 0){ const {t, m} = N.eng; (N.mk || (N.mk = {}))[t] = m; N.tv = (N.tv || 0) + 1; N.eng = null;
-      if (N.id === PLAYER){ log(`${UNITS[t].name} upgraded to Mk ${ROMAN[m]}: +${Math.round((MARK_F[m] - 1)*100)}% attack and defense for every one you field.`, 'good'); sfx('research'); } } }
+      if (isSeat(N.id)){ tell(N.id, `${UNITS[t].name} upgraded to Mk ${ROMAN[m]}: +${Math.round((MARK_F[m] - 1)*100)}% attack and defense for every one you field.`, 'good'); cue(N.id, 'research'); } } }
 /*@DEV*/
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
 // consHour, prodHour, engHour, addArmy. devHour runs at the top of every game hour; devDone also runs right after a click (instant while paused).

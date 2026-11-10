@@ -184,7 +184,7 @@ const markOf = (n, t) => n >= 0 && S.nations[n] && S.nations[n].mk ? S.nations[n
 const markCost = (t, m) => { const U = UNITS[t]; return {cash:Math.round(U.cost*1.6*m), metal:12*m + (U.metal || 0)*m, iron:(U.iron || 0)*m, elec:Math.round((U.elec || 0)*m*0.8), rare:2*(m - 1), days:1 + m}; };
 const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 const cap1 = w => w[0].toUpperCase() + w.slice(1);
-const NEUTRAL = -1, SEA = -2, PLAYER = 0;
+const NEUTRAL = -1, SEA = -2;
 const W = WORLD.W, H = WORLD.H, GS = WORLD.GS || 1, HS0 = 12, HS = HS0/GS, SQ3 = Math.sqrt(3);   // GS: cells per old map hex
 const K = 0.25;                       // combat damage per hour factor
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];

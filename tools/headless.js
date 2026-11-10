@@ -1,14 +1,15 @@
 // Iron Meridian: the rules without a browser (owner task 5, the proof that the rules stand on their own).
-// Loads world.js, lines.js and the rules files in plain Node, starts a new world game, lets the AI play every nation (seat 0 included)
+// Loads world.js, lines.js and the rules files in plain Node, starts a new world game, lets the AI play every nation (no seat is taken)
 // for N game days and prints a short summary. No DOM, no canvas, no page: this is how a multiplayer server will run the rules.
 //   node tools/headless.js                    30 days, seed 12345
 //   node tools/headless.js --days 10 --seed 7
+//   node tools/headless.js --seat 3           nation 3 is a seat (a person's nation) that gives no orders: the AI plays the others
 //   node tools/headless.js --check            plays the same seed twice from scratch; exit 1 unless both summaries and state hashes are equal
 // The state hash is for Node against Node only: Node and Chromium differ in the last digit of a few floats.
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 && process.argv[i + 1] !== undefined ? +process.argv[i + 1] : d; };
-const DAYS = arg('days', 30), SEED = arg('seed', 12345), CHECK = process.argv.includes('--check');
+const DAYS = arg('days', 30), SEED = arg('seed', 12345), SEAT = arg('seat', -1), CHECK = process.argv.includes('--check');
 
 // the map data scripts set window.WORLD and window.LINES; in Node "window" is the global object and nothing else of a browser exists
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
@@ -23,8 +24,9 @@ const hash = s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s.
 // one game in a fresh evaluation of the rules (nothing is shared between two runs but the read-only map data)
 function play(seed, days){
   const IM = new Function(SRC)(), api = IM.api, events = {};
-  for (const t of ['log', 'toast', 'over']) IM.on(t, () => { events[t] = (events[t] || 0) + 1; });
-  IM.cfg.allAI = true; api.newGame(seed, 0); const S = api.S, G = api.G; S.started = true; S.nations[0].ai = true;
+  for (const t of ['log', 'fxCapture', 'over']) IM.on(t, () => { events[t] = (events[t] || 0) + 1; });
+  // no seats: the AI plays every nation. With --seat N nation N is a seat nobody plays: the AI leaves it alone and the rules address its dispatches to it
+  api.newGame(seed, 0, SEAT >= 0 ? [SEAT] : []); const S = api.S, G = api.G; S.started = true;
   const t0 = Date.now(); let hours = 0;
   while (hours < days*24 && !S.over){ api.tick(); hours++; }
   const prov = S.nations.map(() => 0); for (const o of S.owner) if (o >= 0 && o < prov.length) prov[o]++;
@@ -39,7 +41,7 @@ function play(seed, days){
     'provinces per nation  ' + S.nations.map((N, n) => `${N.name} ${prov[n]}`).join(', '),
     `wars ${wars.length}` + (wars.length ? '  ' + wars.map(k => k.split(/[^0-9]+/).filter(Boolean).map(i => S.nations[+i] ? S.nations[+i].name : i).join(' v ')).join(', ') : ''),
     `units ${Math.round(units)} in ${S.armies.length} forces  ` + S.nations.map((N, n) => `${N.name} ${Math.round(perN[n])}`).filter((s, n) => perN[n] > 0).join(', ') + `, unaligned ${Math.round(units - perN.reduce((x, y) => x + y, 0))}`,
-    `dispatches ${events.log || 0}  dice state ${S.rs}`,
+    `provinces captured ${events.fxCapture || 0}  ` + (SEAT >= 0 ? `dispatches to seat ${SEAT} (${S.nations[SEAT].name}) ${events.log || 0}  ` : '') + `dice state ${S.rs}`,
     `state hash ${hash(JSON.stringify(o))}`];
   return {lines, ms:Date.now() - t0, hours};
 }

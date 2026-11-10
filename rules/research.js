@@ -18,11 +18,11 @@ function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return !!T
 // start project id in the free slot (paying its costs); returns false when it cannot start
 function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id], k = rFree(N); payC(N, techCost(T));
   const h = Math.round(T.days*24*(docOf(n) ? docOf(n).res : 1)); N[k] = {id, h, h0:h};
-  if (n === PLAYER){ (S.tut || (S.tut = {})).research = true; bump('rareRes', techCost(T).rare || 0); } return true; }
+  if (isSeat(n)){ const D = desk(n); (D.tut || (D.tut = {})).research = true; bump(n, 'rareRes', techCost(T).rare || 0); } return true; }
 // one game hour of one slot: completion frees the slot
 function researchSlotHour(N, k){ const R = N[k]; if (!R) return;
   if (--R.h <= 0){ const T = TECH_BY[R.id]; N[k] = null; if (!T) return; N.tech[T.id] = 1; N.tv = (N.tv || 0) + 1;
-    if (N.id === PLAYER){ log(`Research complete: ${T.name}. ${T.desc}.`, 'good'); sfx('research'); } } }
+    if (isSeat(N.id)){ tell(N.id, `Research complete: ${T.name}. ${T.desc}.`, 'good'); cue(N.id, 'research'); } } }
 // the hourly research step: both slots advance
 function researchHour(N){ for (const k of R_SLOTS) researchSlotHour(N, k); }
 // saves from before two slots held a queued project for slot #2 (N.rqueue): it starts now if it can (paying as usual), else it is dropped
