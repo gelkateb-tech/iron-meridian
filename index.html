@@ -2946,8 +2946,8 @@ function loadWorld(){
     // rivers meander more and on a shorter wave than roads; railways bend least (long gentle curves)
     lines.riversT = rPolys.map(q => tiledPath(q.map(p => naturalLine(p, CW*0.22, CW*1.5, CW*0.2, 10)), 96, 24));
     const RD = dPolys.map(q => chainPolys(q).map(p => [naturalLine(p, CW*0.4, CW*2.2, CW*0.22, 20), len(p)])), RL = chainPolys(qPolys).map(p => [naturalLine(p, CW*0.45, CW*3.6, CW*0.24, 30), len(p)]);
-    lines.roadsT = RD.map(q => tiledPath(q.map(e => e[0]), 96, 16));
-    lines.roadsMain = tiledPath(RD[2].filter(e => e[1] >= CW*5).map(e => e[0]), 96, 16);   // the longer local roads: shown a little earlier than the rest
+    lines.roadsT = RD.map((q, i) => tiledPath(q.map(e => e[0]), 96, 16, i >= 2));   // (the highways' and main roads' runs kept: the lamps along them through a town at night, cityLinesNight)
+    lines.roadsMain = tiledPath(RD[2].filter(e => e[1] >= CW*5).map(e => e[0]), 96, 16, true);   // the longer local roads: shown a little earlier than the rest
     lines.railsT = tiledPath(RL.map(e => e[0]), 96, 16); lines.railsMain = tiledPath(RL.filter(e => e[1] >= CW*6).map(e => e[0]), 96, 16); }
   loadWorld.LK = LK;
   // oil fields: deserts and seas known for crude, by latitude band and region, deterministic
@@ -3094,11 +3094,20 @@ function chainPolys(polys){ const key = q => Math.round(q[0]*100) + ',' + Math.r
   for (const [k, l] of at) if (l.length !== 2) for (const e of l) if (!e.u) walk(e, k);
   for (const e of E) if (!e.u) walk(e, e.ka);
   return out; }
-function tiledPath(polys, TPB = 256, run = 0){ const m = new Map();
+function tiledPath(polys, TPB = 256, run = 0, keep = false){ const m = new Map();   // (keep: each tile also keeps its runs of points with their bounds, t.runs, for a stroke of just the runs over a small rect: tiledNear)
   if (run) polys = polys.flatMap(pts => { if (!pts || pts.length <= run) return [pts]; const out = []; for (let i = 0; i < pts.length - 1; i += run - 1) out.push(pts.slice(i, i + run)); return out; });
   for (const pts of polys){ if (!pts || !pts.length) continue; const k = Math.floor(pts[0][0]/TPB) + ',' + Math.floor(pts[0][1]/TPB); let t = m.get(k); if (!t) m.set(k, t = {p:new Path2D(), x0:Infinity, y0:Infinity, x1:-Infinity, y1:-Infinity});
-    for (let i = 0; i < pts.length; i++){ const x = pts[i][0], y = pts[i][1]; if (i) t.p.lineTo(x, y); else t.p.moveTo(x, y); if (x < t.x0) t.x0 = x; if (x > t.x1) t.x1 = x; if (y < t.y0) t.y0 = y; if (y > t.y1) t.y1 = y; } }
+    let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+    for (let i = 0; i < pts.length; i++){ const x = pts[i][0], y = pts[i][1]; if (i) t.p.lineTo(x, y); else t.p.moveTo(x, y); if (x < a) a = x; if (x > c) c = x; if (y < b) b = y; if (y > d) d = y; }
+    if (a < t.x0) t.x0 = a; if (c > t.x1) t.x1 = c; if (b < t.y0) t.y0 = b; if (d > t.y1) t.y1 = d; if (keep){ const f = new Float32Array(pts.length*2); for (let i = 0; i < pts.length; i++){ f[2*i] = pts[i][0]; f[2*i + 1] = pts[i][1]; } (t.runs || (t.runs = [])).push([f, a, b, c, d]); } }
   return {tiles:[...m.values()], k:null, p:null}; }
+// the runs of a tiled path (made with keep) that touch a world rect, as one Path2D: a dashed stroke lays its dashes along the whole of every
+// path it is given, clipped or not, so a small canvas is given only the runs that cross it (each run its own subpath, as in the tiles: the
+// dashes fall where they do when the whole tile is stroked)
+function tiledNear(T, x0, y0, x1, y1){ const P = new Path2D(); if (!T || !T.tiles) return P;
+  for (const t of T.tiles){ if (t.x1 < x0 || t.x0 > x1 || t.y1 < y0 || t.y0 > y1) continue; if (!t.runs){ P.addPath(t.p); continue; }
+    for (const r of t.runs){ if (r[3] < x0 || r[1] > x1 || r[4] < y0 || r[2] > y1) continue; const f = r[0]; P.moveTo(f[0], f[1]); for (let i = 2; i < f.length; i += 2) P.lineTo(f[i], f[i + 1]); } }
+  return P; }
 // the buckets touching a world rect, merged into one Path2D (one stroke call, so overlapping line ends never double-blend); cached until the set changes
 function tiledIn(T, x0, y0, x1, y1){ let k = ''; for (let i = 0; i < T.tiles.length; i++){ const t = T.tiles[i]; if (t.x1 >= x0 && t.x0 <= x1 && t.y1 >= y0 && t.y0 <= y1) k += i + ','; }
   if (k !== T.k){ T.k = k; T.p = new Path2D(); for (const i of k.split(',')) if (i) T.p.addPath(T.tiles[+i].p); } return T.p; }
@@ -8625,7 +8634,7 @@ let cityArtOn = false;   // all city art loaded (set once a frame)
 const KM_W = HS0*SQ3/180;          // world units per km (an old map hex is about 180 km across)
 const CITY_DY = 0;                 // city markers sit on the city centre (screen offset, in kl units)
 const cityFade = hexPx => Math.max(0, Math.min(1, (hexPx - 12)/14));   // the urban areas fade in from the mid zoom (they are too small to read below it)
-let CITYV = 0, CITY_PEND = false, CITY_DL = 0, CITY_ART = 0, CITY_ALL = false, CITY_RT = 0;   // CITY_RT: when the layer last took up new city bakes
+let CITY_SCR = false, CITYV = 0, CITY_PEND = false, CITY_DL = 0, CITY_ART = 0, CITY_ALL = false, CITY_RT = 0;   // CITY_RT: when the layer last took up new city bakes
 const CITY_MISS = new Map();   // towns the layer drew without their right bake (province -> half size, world units): the layer redraws just their box later           // layer-key version, bakes left for a later render, bake deadline, art state seen
 const CTILE = new Map();
 // a tile that repeats without seams: blended with a copy shifted by half the tile, first across, then down (the shifted copy carries the
@@ -8682,11 +8691,14 @@ function* cityInfoGen(p, P, lo){ let I;
   I.filtD = `sepia(${sep}) hue-rotate(${hue + Math.round((rnd() - 0.5)*10)}deg) saturate(${sat}) brightness(${(bri*(0.94 + rnd()*0.1)).toFixed(2)})`;
   const nS = 2 + Math.floor(rnd()*3) + (pop > 8 ? 2 : 0); for (let i = 0; i < nS; i++){ const a = rnd()*Math.PI*2, d = 1.1 + rnd()*0.7; I.sats.push([Math.cos(a)*d, Math.sin(a)*d, 0.09 + rnd()*0.12]); }
   if (!dry && !cold && I.pale && (P.terrain === 'urban' ? provGround(P) : terr) !== 'tundra' && Math.abs(P.lat || 0) < 36) I.dry = true;   // a town on warm sand or dry plains (whatever its own cell is): the warm roofs and sand-toned grade
-  I.lo = lo; yield* cityMasks(I, lo ? 56 : 0); if (!lo) CINFO.set(p, I);
+  I.lo = lo; yield* cityMasks(I, lo ? 56 : 0);
   const dk = document.createElement('canvas'); dk.width = dk.height = 64; const gd = dk.getContext('2d'); gd.fillStyle = '#0b0e12'; gd.fillRect(0, 0, 64, 64); gd.globalCompositeOperation = 'destination-in'; gd.drawImage(I.maskS || I.mask, 0, 0, 64, 64); gd.globalCompositeOperation = 'source-over'; gd.drawImage(dk, 0, 0);   // (twice: the fringe darkens too) I.maskS = null;
   const ms = document.createElement('canvas'); ms.width = ms.height = 64; const gs = ms.getContext('2d'); gs.fillStyle = '#000'; gs.fillRect(0, 0, 64, 64); gs.imageSmoothingQuality = 'high'; gs.drawImage(I.maskS || I.mask, 0, 0, 64, 64);
   const gl = document.createElement('canvas'); gl.width = gl.height = 48; gl.getContext('2d').drawImage(cityGlowCore(I), 0, 0, 48, 48);
-  CGEO.set(p, {x:I.x, y:I.y, r:I.r, E:I.E, dk, ms, gl, gc:CGEO.get(p)?.gc, occ:cityOcc(I), pale:I.pale, lift:cityLiftMask(I), shd:I.shade || cityShade(I)});   // ms, gl: the soft footprint (a grey) and the core's glow, small: what the low tier of the lights is made from   // dk: the footprint in night shadow (kept with the size: concrete is unlit at night, only its lights show)
+  // (each of the small canvases the map and the lights draw from is rasterised here, a slice each, not in the frame that first draws the town:
+  // a canvas only records its drawing until it is used)
+  cityFlush(dk); cityFlush(ms); cityFlush(gl); yield; const lift = cityLiftMask(I); cityFlush(lift); yield; const shd = I.shade || cityShade(I); cityFlush(shd); yield;
+  CGEO.set(p, {x:I.x, y:I.y, r:I.r, E:I.E, dk, ms, gl, gc:CGEO.get(p)?.gc, occ:cityOcc(I), pale:I.pale, lift, shd}); if (!lo) CINFO.set(p, I);   // ms, gl: the soft footprint (a grey) and the core's glow, small: what the low tier of the lights is made from   // dk: the footprint in night shadow (kept with the size: concrete is unlit at night, only its lights show)
   if (!lo && CINFO.size > 80) for (const k0 of CINFO.keys()){ if (k0 !== p){ CINFO.delete(k0); break; } }   // masks of far-away cities are dropped (rebuilt when needed)
   return I; }
 // pale ground around a city (sand, the dry tan plains of the subtropics, tundra, snow), as the terrain raster paints it from the cells'
@@ -9193,7 +9205,7 @@ function cityFill(c, p, I, n, L, k, u0, v0, u1, v1, sx, sy){ const X = I.x - I.E
 function cityDraw(c, p, I, S, x0, y0, x1, y1, n, make){ const T = c.getTransform(), sx = w => (Math.round(w*T.a + T.e) - T.e)/T.a, sy = w => (Math.round(w*T.d + T.f) - T.f)/T.d, L = cityCands(S), ch = n ? 'n' : 'd';
   if (S <= CCH){ const key = ch + p + '|' + S, im = n ? (CBAKE.has(key) ? cbakeGet(key) : S === CLOW_S ? cityLightsLow(p) : make ? cityLightsBake(p, S) : null) : cityBake(p, S);
     if (im){ im._e = CITY_GEN; return cityFill(c, p, I, n, L, 0, 0, 0, 1, 1, sx, sy); }
-    if (!n) CITY_MISS.set(p, I.E); if (S !== CLOW_S || n) CWANT.set(key, [n ? 'nb' : 'b', p, S]); return cityFill(c, p, I, n, L, 1, 0, 0, 1, 1, sx, sy); }
+    if (!n) CITY_MISS.set(p, I.E); if (S !== CLOW_S || n) CWANT.set(key, [n ? 'nb' : 'b', p, S]); else CITY_SCR = true; return cityFill(c, p, I, n, L, 1, 0, 0, 1, 1, sx, sy); }
   const X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E; let any = false;
   if (!n && !CBAKE.has('d' + p + '|' + CCH)) CWANT.set('d' + p + '|' + CCH, ['b', p, CCH, null, null, 1]);   // (the whole bake of the biggest size: the stand-in while the chunks are made)
   for (const [key, i, j] of cityChunkKeys(p, I, S, x0, y0, x1, y1)){ const nk = n ? 'n' + key.slice(1) : key, a0 = i*CCH/S, b0 = j*CCH/S, a1 = Math.min(S, (i + 1)*CCH)/S, b1 = Math.min(S, (j + 1)*CCH)/S;
@@ -9207,19 +9219,22 @@ function cityDraw(c, p, I, S, x0, y0, x1, y1, n, make){ const T = c.getTransform
 // that town's box; the lights are drawn every frame anyway). CWANT starts afresh with every full layer render.
 const CWANT = new Map();
 // is any of what the pump still makes on screen (a chunk's or a whole town's square)?
-// (n: only the night lights; day: only the day bakes, not the stand-ins asked for; p: only town p)
-function cityWantOn(n, p, day){ const x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s;
-  for (const w of CWANT.values()){ if ((n && w[0][0] !== 'n') || (day && (w[0][0] === 'n' || w[5])) || (p != null && w[1] !== p)) continue; const I = CGEO.get(w[1]); if (!I) return true; let a = I.x - I.E, b = I.y - I.E, e = 2*I.E;
+// (n: only the night lights; day: only the day bakes, not the stand-ins asked for; p: only town p; now: all but the stand-ins asked for later)
+const cityWantNow = () => cityWantOn(false, null, false, true);
+function cityWantOn(n, p, day, now){ const x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s;
+  for (const w of CWANT.values()){ if ((n && (w[0][0] !== 'n' || w[5])) || (day && (w[0][0] === 'n' || w[5])) || (now && w[5]) || (p != null && w[1] !== p)) continue; const I = CGEO.get(w[1]); if (!I) return true; let a = I.x - I.E, b = I.y - I.E, e = 2*I.E;
     if (w[3] != null){ const u = 2*I.E/w[2]*CCH; a += w[3]*u; b += w[4]*u; e = u; } if (a < x1 && b < y1 && a + e > x0 && b + e > y0) return true; }
   return false; }
-// While forces march or anything else moves fast (a frame drawn every display frame) it takes less, 4 ms a frame, so the motion keeps an
-// even pace
-// The map is not redrawn while it waits (no frame is drawn just because bakes are under way: a frame costs far more than it shows), so the pump
-// gets most of each display frame (13 ms, 10 when a frame was drawn) until the view's canvases are made, nearest the middle of the screen first; each one that lands
-// asks for a frame
+// In a frame that was drawn (forces marching, the game clock running, the view settling after a zoom) it takes 6 ms where the display keeps
+// its rate, 4 while a fade plays or where frames already run late (RD.fi, the smoothed frame time, over 22 ms), 2.5 in every other frame where they take
+// over 30 ms: there every ms of baking is a ms more per frame, so the motion keeps its pace and the towns sharpen a little later.
+// The map is not redrawn while it waits (no frame is drawn just because bakes are under way: a frame costs far more than it shows), so on a
+// still map the pump gets most of each display frame (13 ms) until the view's canvases are made, nearest the middle of the screen first; the
+// towns on screen are shown once all of theirs are made (one frame asked for then), those for the layer's margins once everything is
 function cityPump(now){ if (!CWANT.size || camFly || ZTW || pinch || (drag && drag.moved) || now - (lastPanT || 0) < 200 || now - (draw.zt || 0) < 200 || view.x !== RD.vx || view.y !== RD.vy || view.s !== RD.vs) return false;
-  const mv = (RD.f && RD.dn2 === now && now - (lastPanT || 0) > 2500) || fadeRun(now) || now - CNF_RUN < 60;   // (and while a fade plays, the layer's or the lights': a short slice, so it stays smooth and the bakes still go on)   // (frames drawn every display frame: 4 ms, so motion keeps an even pace; but in the first seconds after the view stopped, the frames are its settling, and the towns it waits for come first)
-  const dl0 = CITY_DL, go0 = CITY_GO, q0 = CITY_QUICK, p0 = CITY_PEND; CITY_DL = performance.now() + (mv ? 4 : RD.dn2 === now ? 10 : 13); CITY_GO = true; CITY_QUICK = false; let got = false, gotN = null, lowN = false;
+  const mv = fadeRun(now) || now - CNF_RUN < 60, drawn = RD.dn2 === now, slow = RD.fi > 30, tight = RD.fi > 22; if (drawn && slow && (cityPump.k = !cityPump.k)) return true;   // (frames over 30 ms: every other one only)
+  const d0 = cityWantNow(); if (d0) CITY_SCR = true;
+  const dl0 = CITY_DL, go0 = CITY_GO, q0 = CITY_QUICK, p0 = CITY_PEND; CITY_DL = performance.now() + (!drawn && !mv ? 13 : slow ? 2.5 : tight || mv ? 4 : 6); CITY_GO = true; CITY_QUICK = false; let got = false, gotN = null, lowN = false;
   const cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, d2 = w => { const I = CGEO.get(w[1]) || G.P[w[1]]; let x = I.x, y = I.y; if (w[3] != null && I.E){ const u = 2*I.E/w[2]*CCH; x = I.x - I.E + (w[3] + 0.5)*u; y = I.y - I.E + (w[4] + 0.5)*u; } return (x - cx)**2 + (y - cy)**2; };
   // (first the lights of a town that holds its stand-in until all of them are made, then what is on screen, then the layer's margins, and
   // stand-ins for later last)
@@ -9231,7 +9246,8 @@ function cityPump(now){ if (!CWANT.size || camFly || ZTW || pinch || (drag && dr
   finally { CITY_DL = dl0; CITY_GO = go0; CITY_QUICK = q0; CITY_PEND = p0 || got; }
   // a frame only once it shows something: every canvas on screen made (the layer takes them all up at once), or all of a town's lights (they
   // fade in once); 'nl' (a town's low tier of lights, made while it shows the haze alone) at once
-  if (got && (!cityWantOn() || (gotN && [...gotN].some(p => !cityWantOn(true, p))) || CWANT.size === 0)) redraw(); else if (got && lowN) redraw();
+  // (a canvas for the layer's margins, off screen, asks for none: a frame costs far more than a slice, and shows nothing new)
+  if (got && (CWANT.size === 0 || (d0 && !cityWantNow()))) redraw(); else if (got && lowN) redraw();
   return true; }
 // night: the lights of a town, as they always looked: the brightest bits of the day picture become points and lines of light (the bright
 // streets lit, the roofs not), warm white downtown falling away to dim sodium orange at the edge and fading out into the country, a warm glow
@@ -9349,10 +9365,11 @@ function cityLinesNight(g, I, S, X0, Y0, lit){ const LN = loadWorld.lines; if (!
   const k = S/(2*I.E), f = dpr*cityOver(), lo = S === CLOW_S && S/(2*I.E*f)*HS0 < 96, hp = lo ? 96 : S/(2*I.E*f)*HS0, cs = lo ? HS0/96 : f/k, wx0 = I.x - I.E, wy0 = I.y - I.E, wx1 = I.x + I.E, wy1 = I.y + I.E;   // cs: world units per CSS px of the view the tier is for
   const each = (T, fn) => { if (T && T.tiles) for (const t of T.tiles) if (t.x1 >= wx0 && t.x0 <= wx1 && t.y1 >= wy0 && t.y0 <= wy1) fn(t.p); }, ramp = (a, b) => Math.max(0, Math.min(1, (hp - a)/(b - a)));
   g.save(); g.setTransform(k, 0, 0, k, -wx0*k - X0, -wy0*k - Y0); g.lineJoin = g.lineCap = 'round'; g.filter = 'none';
-  if (lit){ g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#f2d2a0'; const u = KM_W; g.setLineDash([0.9*u, 0.35*u, 0.4*u, 0.6*u, 1.3*u, 0.45*u]);   // (in broken runs of lamps, like the town's own streets)
+  if (lit){ const m = 4/k, ax = wx0 + X0/k - m, ay = wy0 + Y0/k - m, bx = wx0 + (X0 + g.canvas.width)/k + m, by = wy0 + (Y0 + g.canvas.height)/k + m, near = T => tiledNear(T, ax, ay, bx, by);   // (only the runs of road over this canvas: the dashes of a whole tile of roads cost 10 ms and more a town)
+    g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#f2d2a0'; const u = KM_W; g.setLineDash([0.9*u, 0.35*u, 0.4*u, 0.6*u, 1.3*u, 0.45*u]);   // (in broken runs of lamps, like the town's own streets)
     const wd = (w, m) => { const lw = Math.max(m/k, w); g.lineWidth = lw; return w/lw; };   // (a line thinner than the canvas holds drawn wider and dimmer by as much: the same light, so a soft stand-in's roads are as bright as the sharp tier's, not streaks)
-    if (hp >= 22){ const f2 = wd((0.7 + 0.5*ramp(22, 90))*cs, 1.2); g.globalAlpha = (0.15 + 0.04*ramp(40, 120))*f2; each(Array.isArray(LN.roadsT) ? LN.roadsT[3] : null, p => g.stroke(p)); }
-    if (hp >= 70){ const f2 = wd(0.6*cs, 1); g.globalAlpha = 0.13*ramp(70, 110)*f2; each(LN.roadsMain || LN.roadsT[2], p => g.stroke(p)); } g.setLineDash([]); }
+    if (hp >= 22){ const f2 = wd((0.7 + 0.5*ramp(22, 90))*cs, 1.2); g.globalAlpha = (0.15 + 0.04*ramp(40, 120))*f2; g.stroke(near(Array.isArray(LN.roadsT) ? LN.roadsT[3] : null)); }
+    if (hp >= 70){ const f2 = wd(0.6*cs, 1); g.globalAlpha = 0.13*ramp(70, 110)*f2; g.stroke(near(LN.roadsMain || LN.roadsT[2])); } g.setLineDash([]); }
   else { g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.strokeStyle = '#000';
     const z = Math.max(0.7, Math.min(2.4, hp/32));   // (the overlay's river: RIV_W wide times z CSS px, a dark bank 1.1 px wider; past hexPx 77 the same on screen at every zoom)
     for (let i = 0; i < 3; i++){ if (hp < RIV_W[i][1]) continue; const w = (RIV_W[i][0]*z + 1.1)*cs, lw = Math.max(1.5/k, w); g.lineWidth = lw; g.globalAlpha = Math.min(1, 0.15 + w/lw); each(LN.riversT[i], p => g.stroke(p)); } }   // (as wide as the river and its bank on screen at the zoom the tier is for: the river runs through the lit town as it does by day)
@@ -9373,7 +9390,7 @@ function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0
     if (!cityBake(p, CLOW_S)){ if (CJOB.has('l' + p) || CJOB.has('d' + p + '|' + CLOW_S)) break; CWARM.splice(j, 1); continue; }   // (half made: carried on next time)
     CWARM.splice(j, 1); cityLightsLow(p); const I = CGEO.get(p);   // (and its lights' low tier: a fraction of a ms)
     if (I && I.x + I.E > x0 && I.x - I.E < x1 && I.y + I.E > y0 && I.y - I.E < y1) on = true; }   // one on screen: the layer picks it up
-  CITY_PEND = pend0 || on; CITY_DL = dl0; CITY_GO = go0; }
+  CITY_PEND = pend0 || on; if (on) CITY_SCR = true; CITY_DL = dl0; CITY_GO = go0; }
 // cityWarm runs from the loop, not from draw: it is preparation, not motion, so it never keeps the map redrawing and it does not stop when the
 // ambient motion rests (a paused, untouched map still finishes it); a few ms a frame (every 50 ms with the Battery saver) until every city has
 // its low tier; a town on screen just baked asks for one frame (the layer picks it up)
@@ -9391,7 +9408,8 @@ function drawCitiesIn(c, x0, y0, x1, y1, fa){
   const on = [], cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, d2 = p => (G.P[p].x - cx)**2 + (G.P[p].y - cy)**2;
   cityEach(x0, y0, x1, y1, p => on.push(p)); on.sort((a, b) => d2(a) - d2(b));   // (nearest the middle first: their bakes come first)
   for (const p of on) if (!CLOW.has(p)) cityBake(p, CLOW_S);   // first a quick low tier for any city without one (what every stand-in falls back on), then the right tiers
-  for (const p of on){ const I = cityGeo(p); if (!I){ CITY_MISS.set(p, 22); continue; } if (I.r*view.s < 0.8) continue;
+  for (const p of on){ const I = cityGeo(p); if (!I){ CITY_MISS.set(p, 22); CITY_SCR = true; continue; }   // (no pump job for this one: the layer tries again once the view is still)
+    if (I.r*view.s < 0.8) continue;
     c.globalAlpha = fa; if (cityDraw(c, p, I, cityTier(I), x0, y0, x1, y1, false, true)) cityLift(c, CGEO.get(p), cityLegK(1.3*2*I.E*view.s*cityDpr()*cityOver()), fa); }   // (1.3: about the tier a town of that size had, rounded up)
   c.restore(); }
 // live pass after the night tint (world transform): city lights, each by the darkness over its own province
@@ -9399,6 +9417,10 @@ const cityLightsOn = () => SET.cityLights !== false;   // Settings: 'City lights
 function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityArtState() < 5) return; const lit = cityLightsOn();
   const x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s, now = performance.now(), still = now - (lastPanT || 0) > 150; let saved = false, low = 0;
   const dkA = 0.55;   // the concrete goes dark first
+  // the low tier of the lights of towns new to the view: a few ms of them a frame (their haze alone until then, a frame or a few), and none in
+  // the frame that rendered the layer whole (the frame a zoom stops on is the longest there is: nothing more goes into it)
+  const lowDl = draw.rlT === draw.now ? 0 : now + 3;
+  CNF_WAIT = lit && cityWantNow(); CNF_REL = !!CNF_T0 && now - CNF_T0 >= 2000; if (CNF_REL || !CNF_WAIT) CNF_T0 = 0;   // (the day pictures too: the layer takes those up in the same frame, so the towns sharpen once, by day and by night)
   CITY_DL = still ? Math.max(CITY_DL, now + 4) : 0; CITY_GO = still;   // new light canvases only while the view is still (a slice or a few ms a frame); moving, the ones already made
   cityEach(x0, y0, x1, y1, (p, P) => { const nf = Math.max(0, Math.min(1, (-sunSinEl(p) + 0.01)/0.13)); if (nf <= 0) return; const I = still ? cityGeo(p) : CGEO.get(p);
     if (!I){ if (!lit) return; if (!saved){ saved = true; ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; }   // (a town seen for the first time, its outline not worked out yet: a warm glow of its size at once)
@@ -9407,30 +9429,30 @@ function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityA
     if (!saved){ saved = true; ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; }   // (every frame: plain bilinear, the tiers are within 1-1.5 texels a pixel)
     const dk = (CGEO.get(p) || I).dk; if (dk){ ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = nf*fa*dkA; ctx.drawImage(dk, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); }
     if (!lit) return;   // lights off: the concrete only goes dark
-    if (!CLOWN.has(p) && low < 12){ low++; if (!cityLightsLow(p)){ if (!CLOW.has(p)){ const go = CITY_GO; CITY_GO = true; cityBake(p, CLOW_S); CITY_GO = go && CITY_GO; } if (!cityLightsLow(p)) CWANT.set('N' + p, ['nl', p]); } }   // (the low tier of the lights, at once, moving or not: a fraction of a ms from the day's low tier)
+    if (!CLOWN.has(p) && (performance.now() >= lowDl ? (animFast(), false) : true)){ if (!cityLightsLow(p)){ if (!CLOW.has(p)){ const go = CITY_GO; CITY_GO = true; cityBake(p, CLOW_S); CITY_GO = go && CITY_GO; } if (!cityLightsLow(p)) CWANT.set('N' + p, ['nl', p]); } }   // (the low tier of the lights, at once, moving or not: a fraction of a ms from the day's low tier)
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nf*fa*0.95;
-    const S = cityTier(I), a0 = nf*fa*0.95; if (still) cityLightsMake(p, I, S, x0, y0, x1, y1);   // (new canvases first, so one that lands this frame fades in like the rest)
-    const F = cityNightFade(p, I, S, x0, y0, x1, y1, now), T = ctx.getTransform(), sx = w => (Math.round(w*T.a + T.e) - T.e)/T.a, sy = w => (Math.round(w*T.d + T.f) - T.f)/T.d;
+    const S = cityTier(I), a0 = nf*fa*0.95;
+    const F = cityNightFade(p, I, S, x0, y0, x1, y1, now), T = ctx.getTransform(); if (still){ if (!F.ex) cityNightWant(p, I, S, x0, y0, x1, y1); else if (S > CCH && !CBAKE.has('n' + p + '|' + CCH)) CWANT.set('n' + p + '|' + CCH, ['nb', p, CCH, null, null, 1]); }   // (its light canvases still to make: asked of the bake pump, none made in the frame itself)
+    const sx = w => (Math.round(w*T.a + T.e) - T.e)/T.a, sy = w => (Math.round(w*T.d + T.f) - T.f)/T.d;
     // the right canvases not all made yet (and never all shown at this tier): the stand-in alone, whole, until they are; then it fades out over
     // them (CNF_MS), once, so the lights sharpen in one soft step rather than a chunk at a time
-    let on; if (F.hold || F.fd >= 0){ ctx.globalAlpha = F.hold ? a0 : a0*(1 - F.fd); on = cityNightStand(ctx, p, I, S, F, x0, y0, x1, y1, sx, sy); if (F.hold){ if (still) cityNightWant(p, I, S, x0, y0, x1, y1); } else { ctx.globalAlpha = a0*F.fd; animFast(); } }
+    let on; if (F.hold || F.fd >= 0){ ctx.globalAlpha = F.hold ? a0 : a0*(1 - F.fd); on = cityNightStand(ctx, p, I, S, F, x0, y0, x1, y1, sx, sy); if (!F.hold){ ctx.globalAlpha = a0*F.fd; animFast(); } }
     if (!F.hold) on = cityDraw(ctx, p, I, S, x0, y0, x1, y1, true, false) || on;   // its lights (pieces newly in view at a tier already shown: from the best canvas there is while they are made)
     { const lgV = cityLegK(2*I.E*view.s*dpr*1.41*cityOver()), gc = lgV > 0 ? cityLgGlow(p, true) : null; if (gc){ ctx.globalAlpha = a0*0.3*lgV; ctx.drawImage(gc, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); } }
     const G0 = GLOW(), gr = I.r*(on ? 1.15 : 0.9); ctx.globalAlpha = nf*fa*(on ? 0.16 : 0.5); ctx.drawImage(G0, I.x - gr, I.y - gr, gr*2, gr*2); });   // a soft haze of light over the town (alone until its lights are made)
   CITY_GO = false; if (saved) ctx.restore(); }
-// the light canvases the view needs for town p at tier S, made ahead of drawing (within the pass's budget)
-function cityLightsMake(p, I, S, x0, y0, x1, y1){ if (S <= CCH){ if (!CBAKE.has('n' + p + '|' + S)) cityLightsBake(p, S); return; }
-  for (const [key, i, j] of cityChunkKeys(p, I, S, x0, y0, x1, y1)){ if (!cityCan()) return; if (!CBAKE.has('n' + key.slice(1)) && !cityLightsChunk(p, S, i, j)) return; }
-  if (cityCan() && !CBAKE.has('n' + p + '|' + CCH)) cityLightsBake(p, CCH); }   // then the whole lights of the biggest single size: what a zoom out shows round the chunks it has
 // a town's lights cross-fade from the stand-in to the right canvas when that lands (CNF_MS); a new tier (the view zoomed) shows what there is
 // at once. Returns the share of the right canvas while fading, else -1
 // F: {S, shown (the tier has been drawn whole), t0 (its fade's start), sb (the stand-in's tier, kept while it lasts), hold, fd (share of the
 // right canvases while fading, else -1)}
-const CNF = new Map(), CNF_MS = 450; let CNF_RUN = 0;   // CNF_RUN: when a frame last drew a fade of the lights (the bake pump waits while one plays, so it plays smoothly)
+const CNF = new Map(), CNF_MS = 450; let CNF_RUN = 0, CNF_WAIT = false, CNF_T0 = 0, CNF_REL = false;   // CNF_RUN: when a frame last drew a fade of the lights (the bake pump waits while one plays, so it plays smoothly)
 const cityHas = (n, p, I, S2, x0, y0, x1, y1) => { const ch = n ? 'n' : 'd'; if (S2 <= CCH) return !!citySrc(n, p, S2); if (!CBTN.has(ch + p + '|' + S2)) return false; return cityChunkKeys(p, I, S2, x0, y0, x1, y1).every(k => CBAKE.has(ch + k[0].slice(1))); };
 function cityNightFade(p, I, S, x0, y0, x1, y1, now){ const ex = cityHas(true, p, I, S, x0, y0, x1, y1);
   let F = CNF.get(p); if (!F || F.S !== S){ CNF.delete(p); F = {S, shown:ex, t0:0, sb:0}; CNF.set(p, F); if (CNF.size > 64) CNF.delete(CNF.keys().next().value); }   // (a new tier whose canvases are all there, as a zoom passes through tiers it made before: shown at once)
-  F.fd = -1; F.hold = !F.shown && !ex; if (F.hold) return F;
+  F.fd = -1; F.ex = ex; F.hold = !F.shown && !ex; if (F.hold) return F;
+  // (the towns in view sharpen together: one made while the pump still makes others' lights on screen waits for them, 2 s at most, so the
+  // lights fade once, half a second of frames, not town after town for seconds)
+  if (!F.shown && CNF_WAIT && !CNF_REL){ if (!CNF_T0) CNF_T0 = now; F.hold = true; animIn(2016 - (now - CNF_T0)); return F; }   // (CNF_T0: since when the first of them waits; all that wait are let go together)
   if (!F.shown && layer && (layer.lite || (layer.q && layer.q.length))){ if (!F.tr) F.tr = now; if (now - F.tr < 1500){ F.hold = true; return F; } }   // (the layer still redrawing its bands after a zoom: frames are slow, so the fade waits for them, a second and a half at most, and plays smoothly)
   if (!F.shown){ F.shown = true; F.t0 = now; }
   const t = F.t0 ? (now - F.t0)/CNF_MS : 1; if (t < 1){ F.fd = Math.max(0, t); CNF_RUN = now; } else F.t0 = 0; return F; }
@@ -9442,7 +9464,7 @@ function cityNightStand(c, p, I, S, F, x0, y0, x1, y1, sx, sy){ const L = cityCa
   if (!F.sb) return cityFill(c, p, I, true, L, 1, 0, 0, 1, 1, sx, sy);
   const t = F.so ? (now - F.st)/CNF_MS : 1; if (t >= 1 || !cityHas(true, p, I, F.so, x0, y0, x1, y1)){ F.so = 0; return cityFill(c, p, I, true, [F.sb], 0, 0, 0, 1, 1, sx, sy); }
   const A = c.globalAlpha; c.globalAlpha = A*(1 - t); cityFill(c, p, I, true, [F.so], 0, 0, 0, 1, 1, sx, sy); c.globalAlpha = A*Math.max(0, t); cityFill(c, p, I, true, [F.sb], 0, 0, 0, 1, 1, sx, sy); c.globalAlpha = A; CNF_RUN = now; animFast(); return true; }
-// the light canvases a held town still needs, asked of the bake pump (the pass itself makes what its budget allows, cityLightsMake)
+// the light canvases a town still needs, asked of the bake pump (no frame makes any itself: a frame is for drawing)
 function cityNightWant(p, I, S, x0, y0, x1, y1){ if (S <= CCH){ const k = 'n' + p + '|' + S; if (!CBAKE.has(k)) CWANT.set(k, ['nb', p, S]); return; }
   for (const [key, i, j] of cityChunkKeys(p, I, S, x0, y0, x1, y1)){ const k = 'n' + key.slice(1); if (!CBAKE.has(k)) CWANT.set(k, ['nc', p, S, i, j]); } }
 // the merged glow of a town small on screen (the lights of a canvas that small run together): drawn live by the town's size on screen rather
@@ -10035,7 +10057,7 @@ function renderLayer(vis, lite = false, R = null){
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
-  if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : R ? (SHIFTING ? 3 : 8) : 45); base.restore(); }   // (bake budget, ms: short in a pan strip; bakes left over come in once the view is still)
+  if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : R ? 3 : 24); base.restore(); }   // (bake budget, ms: short in a pan strip or a box redrawn: the bake pump makes what is left over, between the frames)
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
@@ -10304,7 +10326,7 @@ function drawSeaSurface(now, moving){
       if (fp.setTransform){ fp.setTransform(new DOMMatrix([ts, 0, 0, ts, d, 0.4*d])); ctx.strokeStyle = fp; ctx.globalAlpha = Math.min(1, (0.13 + 0.13*day)*2.2); ctx.lineWidth = 2.6*px; ctx.stroke(SEAFX.fp);
         fp.setTransform(new DOMMatrix([0, ts*1.4, -ts*1.4, 0, 37*px - 0.7*d, 23*px + 0.3*d])); ctx.globalAlpha = Math.min(1, (0.06 + 0.07*day)*2.2); ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); }
       ctx.restore(); } } }
-function draw(now){
+function draw(now){ draw.now = now;
   ovOut(); ovClear(); clampView();
   { const fdt = now - (FXG.t || now); FXG.t = now; if (fdt > 0 && fdt < 250) FXG.ema = 0.9*FXG.ema + 0.1*fdt; FXG.k = Math.max(0.3, Math.min(1, 1 - (FXG.ema - 20)/25)); FXG.area = FXG.pa = 0;
     if (FXG.ema > 28 && now > FXG.ret){ if (FXG.ema > 40) fxRetire(AFX.puff, 10, now); fxRetire(PART, 30, now, true); FXG.ret = now + 350; } }   // slow frames: the oldest particles fade out early (the art puffs, cheap to draw, only under 25 fps)
@@ -10316,7 +10338,10 @@ function draw(now){
   { const st = cityArtState(); cityArtOn = st >= 5; if (st !== CITY_ART){ CITY_ART = st; CITY_PEND = true; CITY_ALL = true; }   // city art arrived, or city bakes were left for later: one more layer render once the view is still
     // (while the bake pump still makes what the view asked for, the towns wait for all of it, so they sharpen in one soft step, not in waves;
     // a pump that takes long refreshes them every 2 s)
-    if (CITY_PEND && !camFly && !ZTW && now - (draw.zt || 0) > 150 && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120 && (!cityWantOn() || now - CITY_RT > 2000)){ CITY_PEND = false; CITYV++; CITY_RT = now; } }
+    // (and what is made for the layer's margins, off screen, is taken up once all of it is made, not a town at a time: CITY_SCR, something on
+    // screen changed or was waited for since the towns were last redrawn)
+    const wOn = CITY_PEND && cityWantNow(); if (wOn) CITY_SCR = true;
+    if (CITY_PEND && !camFly && !ZTW && now - (draw.zt || 0) > 150 && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120 && (!CWANT.size || (!wOn && CITY_SCR) || now - CITY_RT > 2000)){ CITY_PEND = false; CITYV++; CITY_RT = now; CITY_SCR = false; } }
   const keyOf = vs => [vs, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' || mapMode === 'resources' ? Math.floor(S.hour/24) : 0, LINKD, SET.fx].join('|');
   const key = keyOf(view.s);   // (a pure pan no longer re-renders the layer, so whatever it shows is in the key)
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
@@ -10355,13 +10380,13 @@ function draw(now){
         const fmin = Math.max(0.7, ax/(ax + mx), (cw - ax)/(cw - ax + mx), ay/(ay + my), (ch - ay)/(ch - ay + my)) + 0.02;
         Ls = Math.max(view.s/1.25, Math.min(view.s/fmin, Z.s1)); if (Math.abs(Math.log(Ls/view.s)) < 0.01) Ls = 0; }
       FLYMARGIN = zm; if (zm){ dpr = d0*ZRES; ZRND = true; } if (Ls){ view.s = Ls; view.x = Z.ax - Z.wx*Ls; view.y = Z.ay - Z.wy*Ls; clampView(); }
-      try { renderLayer(vis, lt || !!zm); } finally { dpr = d0; FLYMARGIN = 0; ZRND = false; if (Ls){ layerKey = keyOf(view.s); view.s = v0.s; view.x = v0.x; view.y = v0.y; } } };
+      draw.rlT = now; try { renderLayer(vis, lt || !!zm); } finally { dpr = d0; FLYMARGIN = 0; ZRND = false; if (Ls){ layerKey = keyOf(view.s); view.s = v0.s; view.x = v0.x; view.y = v0.y; } } };
     if (!layer || ldp !== dpr || (key !== layerKey && kNC(key) !== kNC(layerKey))){ layerKey = key; const fc = settled && !moved && !camFly && layer ? fadeScreen() : null; rl(); fadeScreenAdopt(fc); }
     else { if (key !== layerKey){ layerKey = key; if (CITY_ALL){ CITY_ALL = false; layerBands(); } else layerCityRefresh(); }   // only the city bakes changed: redraw the towns that were missing theirs
       if ((ex || ey) && shiftLayer(vis, false, ex, ey)){}
       else if (offEdge) rl();
       else if (settled && layer.lite){ layer.lite = false; layerBands(); }
-      else if (settled && layer.q && layer.q.length && !fadeRun(now)){ const t0 = performance.now();   // (bands until 30 ms of this frame are spent: the towns that came in together show together)
+      else if (settled && layer.q && layer.q.length){ const t0 = performance.now();   // (while a dissolve plays too: waiting for it kept the map redrawing for seconds longer)   // (bands until 30 ms of this frame are spent: the towns that came in together show together)
         do { const r = layer.q.shift(), E = layer.s === view.s && !moved ? fadeSnap(r) : null; renderLayer(vis, false, r); if (E){ E.t0 = Infinity; E.h0 = t0; } } while (layer.q.length && performance.now() - t0 < 30);
         if (!layer.q.length) fadeGo(performance.now()); } } }   // (the last box redrawn: every held box starts its fade now, together)
   // close-zoom detail tiles, made while the view is still; during the start flight or a zoom glide, those of the view it is heading for (prefetch)
@@ -10373,7 +10398,7 @@ function draw(now){
   // frames until the view has settled: the camera moving, a light layer, bands or city bakes still to render, dissolves, a shake, detail tiles to lay
   // (tiles still in the workers come back with a redraw; tiles back while the view shows no detail wait for the next zoom in: dtLive, dtPark)
   RD.st = !!(panning || moved || !settled || zoomLive || camFly || flyReuse || layer.lite || (layer.q && layer.q.length) || (CITY_PEND && !CWANT.size) || FADE.length || now < shakeUntil || ((DT.ready.length || DT.hold.length || DT.job) && dtLive(dtT)));
-  if (RD.st) animFast(); else if (CITY_PEND) animIn(250);   // (bakes the pump is making: each asks for a frame as it lands; this only in case one cannot be made)
+  if (RD.st) animFast(); else if (CITY_PEND) animIn(CWANT.size ? 500 : 250);   // (bakes the pump is making: each asks for a frame as it lands; this only in case one cannot be made)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a layer at another scale or pixel ratio (reused mid-zoom, or just rendered ahead of a glide at half resolution) is always drawn scaled to the view;
   // if that scaled copy does not cover the canvas, the uncovered rim is cleared so no stale frame (doubled labels, old counters) shows through
