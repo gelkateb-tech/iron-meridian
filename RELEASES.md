@@ -27,6 +27,7 @@ How it works from now on:
 - Rules split, step 10 of 10 (no change in play): the split is finished. The game rules now run on their own without a browser (node tools/headless.js plays 30 days of all-computer play and prints who holds what; the same seed gives the same game twice), the screen code is sealed off so the rules cannot reach it, and rules/api.js lists the calls a multiplayer server will use.
 - Rules split, repair (no change in play): the rules no longer know which nation is "the player". Every rule takes the nation as an input, messages and sounds are addressed to a nation, each nation has its own fog of war, and the rules no longer look at what is selected or drawn on screen. This is what a multiplayer server needs; a one-player game and old saves play exactly as before.
 - New pictures: your AWACS, patrol plane, air superiority fighter, UAVs, swarm and strike drones, anti-drone truck, cargo ship, cruise and ballistic missiles and a new bold infantry picture are in the game (menus, lists, tooltips, missile menu), and the Recruiting Office and Fortifications show their own building pictures by level; the Arms Industry pictures are stored for the coming rework.
+- Campaign briefing cut down to the logo, one line, three short tips and big buttons; the rest moved to the Field Manual (Getting started), and one-line first-time tips (with Got it and Skip all tips) now teach cities, moving, battles and research.
 
 ## Released
 - v3.11 — Arms Factory pricing: first factory $25M, each extra one a nation owns +40%.

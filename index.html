@@ -920,6 +920,34 @@ html.reduced .sheet.ghost, html.reduced .mghost, html.reduced .vign{display:none
 .hsec li::marker, ul.qs li::marker{color:rgba(79,208,222,.75)}
 .hsec li b, ul.qs li b{color:#ece6d6; font-weight:600}
 .hsec kbd, ul.qs + p kbd{font-family:var(--mono); font-size:10.5px; padding:0 4px; border-radius:3px; background:rgba(255,255,255,.07); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); color:#e3dccb}
+/* the campaign briefing: logo, one line, three tips with icons, big buttons (the rest lives in the Field Manual) */
+.bline{display:flex; align-items:center; gap:12px; margin:0; font-size:18px; line-height:1.3}
+.bline b{font-weight:700}
+ul.btips{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px}
+ul.btips li{display:flex; align-items:center; gap:12px; margin:0; padding:10px 12px; font-size:15.5px; line-height:1.25; color:#ece6d6; background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); border-radius:6px}
+ul.btips li::marker{content:""}
+.tico{flex:none; width:30px; height:30px; color:var(--accent,#4fd0de); display:block}
+.bbtns{display:flex; flex-wrap:wrap; gap:10px; margin-top:4px}
+.bbtns .btn{flex:1 1 180px; font-size:17px; padding:14px 18px; min-height:52px}
+.ctlink{align-self:flex-start; background:none; border:0; padding:2px 0; font:inherit; font-size:12px; color:var(--muted,#9aa); text-decoration:underline; cursor:pointer}
+.ctlink:hover{color:var(--accent)}
+.ctlbox{margin:0; font-size:12px; line-height:1.5; color:#c9c6bb}
+.ctlbox[hidden]{display:none}
+@media (max-width:760px), (pointer:coarse){ .ctlink, .ctlbox{display:none !important} }
+@media (max-width:760px){ .bline{font-size:17px} ul.btips li{font-size:15px; padding:9px 11px} }
+/* first-time tips: a small card over the map, out of the way; only its buttons take clicks */
+#ftip{position:fixed; z-index:40; left:50%; transform:translateX(-50%); top:calc(var(--hdrb, 44px) + 10px); width:min(440px, calc(100vw - 16px)); display:flex; align-items:center; gap:10px; padding:9px 10px 9px 12px; background:rgba(52,58,62,.97); border-radius:8px; box-shadow:0 0 0 1px rgba(79,208,222,.55), 0 10px 28px rgba(0,0,0,.5); pointer-events:none; color:#f2efe6}
+#ftip[hidden]{display:none}
+#ftip.bot{top:auto; bottom:calc(var(--dockb, 0px) + 12px)}
+#ftip .tico{width:26px; height:26px}
+#ftip .tt{flex:1; font-size:13.5px; line-height:1.3; min-width:0}
+#ftip .tb{display:flex; flex-direction:column; align-items:stretch; gap:3px; pointer-events:auto}
+#ftip .tb .btn{padding:5px 12px; font-size:13px}
+#ftip .tskip{background:none; border:0; padding:0; font:inherit; font-size:11px; color:var(--muted,#9aa); text-decoration:underline; cursor:pointer; text-align:center}
+#ftip .tskip:hover{color:var(--accent)}
+html:has(#modal.menu:not([hidden])), body:has(#modal.menu:not([hidden])){overflow:hidden}   /* the briefing and picker screens: the page behind never scrolls */
+body:has(#ftip:not([hidden]):not(.bot)) #hint{top:auto; bottom:10px}
+@media (max-width:820px){ #ftip{top:calc(var(--hdrb, 44px) + 6px)} #ftip.bot{top:auto; bottom:calc(var(--dockb, 58px) + 8px)} body:has(#ftip:not([hidden]):not(.bot)) #hint{top:calc(var(--hdrb, 44px) + 74px); bottom:auto} }
 @media (max-width: 700px){ .hgrid{columns:1} .hnav{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none} .hnav .btn{flex:none} }
 /* ---- unit pictures in the UI (unitPic): the owner's top-down picture of the type on a dark square tile; --us is the tile's side (size classes xs..xxl).
    The picture itself is a generated rule .utp-* on ::after: a background image sized to the tile (the 128 px icon, the 512 px picture past ~136 device px)
@@ -2194,6 +2222,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
       <div id="tip" hidden></div>
       <div id="toasts" aria-live="polite"></div>
       <div id="tut" hidden></div>
+      <div id="ftip" hidden role="status" aria-live="polite"></div>
       <div id="csheet" class="csheet" hidden role="region" aria-label="City"></div>
       <div class="mapctl">
         <button class="btn" id="zin" data-act="zin" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5v13M5.5 12h13"/></svg></button>
@@ -2589,8 +2618,9 @@ HOURS_PER_SEC.push(16/15, 50/15, 100/15);
 /*@ENDDEV*/
 // Battery saver: on by default on phones and tablets (a coarse pointer or a small screen), off on desktops; saved settings without it get the default
 const SAVER_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches || Math.max(screen.width, screen.height) <= 1024; } catch (e) { return false; } })();
-const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, saver:SAVER_DEF};
+const SET = {vol:0.35, toasts:'all', fx:'high', paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, saver:SAVER_DEF, tipsOff:false, tipSeen:{}};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
+if (!SET.tipSeen || typeof SET.tipSeen !== 'object') SET.tipSeen = {};   // first-time tips: which ones were shown (old settings: none yet)
 const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} applySet(); };
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
@@ -8204,7 +8234,7 @@ function sendToTarget(a, keep = false){ if (sel.target !== null && sel.targetPt)
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
   let ok = 0, g = [];
-  if (sel.target !== null){ g = groupArmies(); for (const x of g){ delete x.join; if (x.air){ if (orderAir(x, sel.target)) ok++; } else { orderMove(x, sel.target); if (x.path.length || x.to !== null) ok++; } } if (ok) sfx('order'); if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
+  if (sel.target !== null){ g = groupArmies(); for (const x of g){ delete x.join; if (x.air){ if (orderAir(x, sel.target)) ok++; } else { orderMove(x, sel.target); if (x.path.length || x.to !== null) ok++; } } if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
   sel.target = null; targetPath = null;
   // auto-deselect: once an order is given the force (or the whole group) is released; its route stays drawn, brighter for a few seconds
   if (ok && !keep){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; sel.army = null; sel.group = []; sel.prov = null; hoverPath = null; cmdMode = null; }
@@ -8213,7 +8243,7 @@ function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
   sel.group = []; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.group = []; CS.det = false; if (rallyFor !== null){ setRally(rallyFor, p); return; }
-  if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
+  if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (G.P[p].city) ftipAsk('city'); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 let sideOpen = false;   // phones: the command panel opened by hand (advisor shield, dispatches), until closed or the selection clears
 function sideSync(){ const phone = innerWidth <= 820, b = document.body; if (!phone){ if (b.classList.contains('side-on')) b.classList.remove('side-on'); return; }
   const auto = sel.army !== null || (sel.prov !== null && (CS.det || csWanted() < 0)), on = !!S && S.started && (auto || sideOpen);
@@ -8629,7 +8659,7 @@ function tutPick(){ const a = sel.army !== null && armyById(sel.army); if (!a ||
       if (S.owner[v] === PLAYER) q.push(v);
       else if (S.owner[v] === NEUTRAL){ const foes = stationaryAt(v).filter(b => b.owner === NEUTRAL), r = odds(a, v, foes)/(1 + du*0.25); if (r > bv && pathFor(a, a.at, v).length){ bv = r; best = v; } } } }
   if (TUT){ TUT.pick = best; TUT.pickA = a.id; } return best; }
-function tutStart(){ TUT = {i:0}; S.tut = S.tut || {}; S.tut.hide = true; tutRender(); }
+function tutStart(){ TUT = {i:0}; S.tut = S.tut || {}; S.tut.hide = true; for (const k in FTIPS) SET.tipSeen[k] = true; saveSet(); ftipHide(false); tutRender(); }
 function tutEnd(){ TUT = null; sel.army = null; sel.target = null; sel.group = []; targetPath = null; document.querySelectorAll('.tut-hi').forEach(e => e.classList.remove('tut-hi')); $('tut').hidden = true; try { localStorage.setItem('iron-meridian-tutorial', 'done'); } catch (e) {} }
 function tutNext(force){ if (!TUT) return; const st = TUT_STEPS[TUT.i]; if (st.last && force){ tutEnd(); return; } TUT.i = Math.min(TUT_STEPS.length - 1, TUT.i + 1); tutRender(); }
 function tutRender(){
@@ -8665,6 +8695,7 @@ function settingsHTML(){
     ${row('Motion', `<div class="seg2">${opt('motion', 'full', 'Full')}${opt('motion', 'reduced', 'Reduced', 'No shake, fewer particles')}</div>`)}
     ${row('Troop models', `<div class="seg2">${opt('models', true, 'On')}${opt('models', false, 'Off', 'Close in, only the counters show (no unit models on the map)')}</div>`)}
     ${row('City lights at night', `<div class="seg2">${opt('cityLights', true, 'On')}${opt('cityLights', false, 'Off', 'Night still darkens the map, without the glow of cities and towns')}</div>`)}
+    ${row('First-time tips', `<div class="seg2">${opt('tipsOff', false, 'On')}${opt('tipsOff', true, 'Off', 'Skip all tips')}</div>`)}
     ${row('Daily newspaper', `<div class="seg2">${opt('paper', true, 'Each morning')}${opt('paper', false, 'Dispatches only')}</div>`)}
     </div>
     <div class="eyebrow">Save slots</div><div class="slots">${[1, 2, 3].map(i => { const m = slotMeta(i); return `<div class="slot"><span><b>Slot ${i}</b> <span class="small muted">${m ? `${m.name} · ${m.date} · ${m.scn}` : 'Empty'}</span></span><button class="btn" data-act="slot-save" data-v="${i}" ${S && S.started && !S.over ? '' : 'disabled'}>Save</button><button class="btn" data-act="slot-load" data-v="${i}" ${m ? '' : 'disabled'}>Load</button></div>`; }).join('')}</div>
@@ -9411,6 +9442,10 @@ document.addEventListener('click', e => {
     case 'begin':   // building the campaign takes a moment: the button shows it is working first (painted before the heavy work starts)
       b.disabled = true; b.setAttribute('aria-busy', 'true'); b.classList.add('busy'); b.textContent = 'Mobilising\u2026';
       requestAnimationFrame(() => setTimeout(() => { clearSave(); useScenario('world'); DAY_LIMIT = Infinity; newGame.doc = null; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel, [PLAYER]); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); try { dtWorker(); const v0 = {s:view.s, x:view.x, y:view.y}; goHome(); DT.pre = {s:view.s, x:view.x, y:view.y, t:performance.now(), pre:true}; view.s = v0.s; view.x = v0.x; view.y = v0.y; } catch (e) {} }, 0)); break;   // (the tile workers start now: the flight in prefetches its detail)
+    case 'ctl-toggle': { const bx = $('ctlbox'); if (bx){ bx.hidden = !bx.hidden; b.setAttribute('aria-expanded', String(!bx.hidden)); } } break;
+    case 'tip-ok': ftipHide(true); break;
+    case 'tip-skip': SET.tipsOff = true; ftipHide(false); saveSet(); break;
+    case 'tips-reset': SET.tipSeen = {}; SET.tipsOff = false; saveSet(); toast('The first-time tips will show again.', 'info', null); break;
     case 'start': closeModal(false); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); setSpeed(1); break;
     case 'start-tut': closeModal(false); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); setSpeed(0); tutStart(); break;
     case 'resume': closeModal(); break;
@@ -9530,7 +9565,7 @@ const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings',
 function openModal(html, kind = ''){ modalKind = kind;
   // a bar tab still holding focus (More after its menu, or the last tab used) lets it go when another window opens, so only that window's tab reads as active
   { const fe = document.activeElement; if (fe && fe.closest && fe.closest('#dock') && fe.dataset.kind !== kind) fe.blur(); }
-  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
+  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research') ftipAsk('research'); $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
 // in-game panels with a title band get CoN's red close box in it (added after each render, so every panel has one without touching its markup)
 new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
   const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
@@ -9543,15 +9578,33 @@ function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || af
   const bd = document.createElement('div'); bd.className = 'mghost'; if (m.classList.contains('docked')) bd.style.left = m.getBoundingClientRect().left + 'px';
   document.body.append(bd, g); g.scrollTop = st; setTimeout(() => { g.remove(); bd.remove(); }, 240); }
 function closeModal(restore = true){ sheetGhost(); $('modal').hidden = true; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
-function rules(){ return `<ul class="qs">
+// small line icons (own art, 24x24, stroke) for the briefing tips and the first-time tips
+const TIP_ICO = {
+  recruit:'<path d="M3 20V10l4-2v12M7 20V6l5-2v16M12 20V9l4 2v9M16 20h5M2 20h20"/><path d="M19 5v5M16.5 7.5h5" />',
+  move:'<circle cx="5" cy="18" r="2"/><path d="M7 17c3-1 4-5 7-6" stroke-dasharray="2.4 2.4"/><path d="M14 11c2 0 3-1 4-3M16 6l3 1.5-1.5 3"/><path d="M20 20h-6" opacity="0"/>',
+  win:'<path d="M6 21V3"/><path d="M6 4h12l-3 4 3 4H6"/><path d="M12 6.4l.7 1.5 1.6.2-1.2 1.1.3 1.6-1.4-.8-1.4.8.3-1.6-1.2-1.1 1.6-.2z" fill="currentColor" stroke="none"/>',
+  city:'<path d="M3 21V11l4-2v12M7 21V5l6-2v18M13 21V9l4 2v10M2 21h20"/><path d="M9.5 8v.01M9.5 12v.01M9.5 16v.01" stroke-width="2.4"/>',
+  battle:'<path d="M5 5l9 9M19 5l-9 9"/><path d="M13 15l2 2M11 15l-2 2"/><path d="M4 20l3-3M20 20l-3-3"/><path d="M4 4h3l1 1M20 4h-3l-1 1"/>',
+  research:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 15h9" /><circle cx="11" cy="18" r=".8" fill="currentColor"/><circle cx="14" cy="17" r=".6" fill="currentColor"/>',
+};
+const tipIco = k => `<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TIP_ICO[k]}</svg>`;
+// the three briefing tips (6 words at most each). The win line follows the real rule: land provinces OR starting capitals.
+const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, then tap where to go'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
+// keys, for the small Controls link on the briefing (desktop only) and the manual
+const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual.';
+// the full text of the old briefing, kept in the Field Manual ("Getting started")
+const startHTML = () => { const me = S && S.nations ? S.nations[PLAYER] : null; return `<ul class="qs">
+  <li><b>Your goal</b>: ${me ? `you command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${SCN === 'world' ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}. ` : ''}Take independent land, out-produce your rivals and hold ${me ? landNeed(PLAYER) : 'a quarter of the world’s'} land provinces or ${WIN_CAPS} starting capitals.</li>
   <li><b>Recruit</b> in your cities and <b>research</b> new arms; every unit costs money and manpower plus, by type, oil, materials, iron (armor, guns, ships), electronics (aircraft, drones, air defence) and rare materials (advanced arms); research costs money, materials and rare materials, and two projects run at the same time.</li>
   <li><b>Move</b>: tap a force, then a destination (tap again or press Send). Troops embark on their own to cross water; roads and railways speed them up.</li>
   <li><b>Capture</b> provinces by parking ground troops in them. Terrain, rivers, supply and morale decide battles.</li>
   <li><b>Air, drones and navy</b>: wings strike or patrol from airbases; UAVs and AWACS find the enemy; fleets guard your trade and raid theirs.</li>
   <li><b>Diplomacy</b>: everyone starts at peace. Trade routes pay both partners; allies form coalitions that share supplies.</li>
-</ul><p class="small muted" style="margin-top:-2px"><b>How to play</b> in the <b>More</b> menu of the bottom bar (or the <kbd>?</kbd> key) opens the full field manual at any time.</p>`; }
+  <li><b>Finding your way</b>: your land has a bright outline and your capital has a headquarters building flying your flag. Drag to pan, scroll or pinch to zoom, use the minimap to jump. ${KEYS_TXT} Progress saves in this browser each game day.</li>
+  <li><b>First-time tips</b>: a one-line tip appears the first time you tap a city, move a force, fight a battle and open research. <button class="btn" data-act="tips-reset" style="padding:2px 10px;font-size:12px">Show the tips again</button></li></ul>`; };
 // the in-game field manual: short sections with small headers, a jump list at the top
 const HELP_SEC = [
+  ['start', 'Getting started', startHTML],
   ['ui', 'Interface', `<ul>
     <li><b>Top bar</b>: your flag and nation; money, oil, materials, iron, electronics, rare materials and manpower with today's net change (hover a resource for the breakdown); the date, clock and victory progress; pause and 1×–8× speed; Dispatches (the bell) on the right.</li>
     <li><b>Dock</b> (left edge; a bottom bar on phones): Production <kbd>P</kbd>, Market <kbd>T</kbd>, Army <kbd>A</kbd>, Research <kbd>R</kbd>, Diplomacy <kbd>D</kbd>, Intelligence; at the bottom Settings <kbd>O</kbd>, Sound <kbd>M</kbd> and this manual <kbd>?</kbd>. A dot means something waits for you (no research running, idle cities, idle agents); a number counts unread diplomacy.</li>
@@ -9627,7 +9680,7 @@ const HELP_SEC = [
 function helpHTML(){ const me = S && S.nations ? S.nations[PLAYER] : null;
   return `<div class="hhead"><div><div class="eyebrow">Field manual</div><h1>How to play</h1></div>${me ? `<span class="small muted">${flagHTML(me.name, 16)} ${me.name} · win with ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals</span>` : ''}</div>
     <nav class="hnav" aria-label="Manual sections">${HELP_SEC.map(([k, t], i) => `<button class="btn" data-act="help-sec" data-k="${k}"><i>${String(i + 1).padStart(2, '0')}</i>${t}</button>`).join('')}</nav>
-    <div class="hgrid">${HELP_SEC.map(([k, t, body], i) => `<section class="hsec" id="h-${k}"><h3><i>${String(i + 1).padStart(2, '0')}</i>${t}</h3>${body}</section>`).join('')}</div>
+    <div class="hgrid">${HELP_SEC.map(([k, t, body], i) => `<section class="hsec" id="h-${k}"><h3><i>${String(i + 1).padStart(2, '0')}</i>${t}</h3>${typeof body === 'function' ? body() : body}</section>`).join('')}</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="airguide">Air &amp; drone guide</button><button class="btn" data-act="start-tut-again">Replay the tutorial</button><button class="btn" data-act="newgame">New campaign…</button></div>`; }
 function showHelp(){ openModal(helpHTML(), 'help'); }
 function provCount(pi){ const ci = powerCountry(POWERS[pi]); return ci >= 0 ? G.countries[ci].provs.length : 0; }
@@ -9647,14 +9700,34 @@ function showPicker(){
 }
 function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
-  openModal(`${LOGO}<div class="eyebrow" style="margin-top:2px">Campaign briefing</div>
-    ${sv ? `<p class="nudge">Saved campaign: <b>${me.name}</b>, day ${dayOf(sv.hour)}.</p>` : ''}
-    <p>${flagHTML(me.name, 20, 'big')} You command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${SCN === 'world' ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}${S.persist ? ' (persistent: the war continues while you are away)' : ''}. Take independent land, out-produce your rivals and hold ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals.</p>
-    ${rules()}
-    <p class="small muted">Your land has a bright outline and your capital has a headquarters building flying your flag. Drag to pan, scroll or pinch to zoom, use the minimap to jump. Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual. Progress saves in this browser each game day.</p>
-    <div class="row">${first
-      ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start-tut">Start with tutorial</button><button class="btn" data-act="start">Start without</button>`)
-      : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign…</button>`}</div>`, first ? 'title' : '');
+  openModal(`${LOGO}
+    <p class="bline">${flagHTML(me.name, 28, 'big')}<span>You command <b style="color:${me.color}">${me.name}</b>. Win the war.</span></p>
+    <ul class="btips">${briefTips().map(([k, t]) => `<li>${tipIco(k)}<span>${t}</span></li>`).join('')}</ul>
+    <div class="bbtns">${first
+      ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start">Start campaign</button>`)
+      : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign</button>`}</div>
+    <button class="ctlink" data-act="ctl-toggle" aria-expanded="false">Controls</button><p class="ctlbox" id="ctlbox" hidden>Drag to pan, scroll to zoom, minimap to jump. ${KEYS_TXT}</p>`, first ? 'title' : '');
+}
+// ---- first-time tips: one short line the first time a player taps a city, moves a force, fights a battle or opens research.
+// "Got it" retires that tip; "Skip all tips" retires every one (both kept in the settings). A tip never takes clicks on the map and
+// sits clear of what it explains; the step tutorial (Replay the tutorial) teaches the same things, so starting it retires the tips.
+const FTIPS = {
+  city:{t:'Tap MOBILIZE UNIT to recruit here.', pos:'top'},
+  move:{t:'Forces march while the clock runs (1×).', pos:'top'},
+  battle:{t:'Battle: the blue bar is morale. At zero, a force retreats.', pos:'top'},
+  research:{t:'Pick a project. Two run at once.', pos:'bot'},
+};
+let FTIP = null;
+function ftipAsk(k){
+  if (FTIP || SET.tipsOff || SET.tipSeen[k] || !S || !S.started || S.over || TUT || !FTIPS[k]) return;
+  if (k !== 'research' && !$('modal').hidden) return;
+  FTIP = k; const el = $('ftip'), d = FTIPS[k];
+  el.classList.toggle('bot', d.pos === 'bot'); el.innerHTML = `${tipIco(k)}<span class="tt">${d.t}</span><span class="tb"><button class="btn primary" data-act="tip-ok">Got it</button><button class="tskip" data-act="tip-skip">Skip all tips</button></span>`; el.hidden = false;
+}
+function ftipHide(seen){ const k = FTIP; FTIP = null; $('ftip').hidden = true; if (seen && k){ SET.tipSeen[k] = true; saveSet(); } }
+function ftipTick(){   // every quarter second: battles, and housekeeping
+  if (FTIP){ const out = !S || !S.started || S.over || TUT || SET.tipsOff || (FTIP !== 'research' && !$('modal').hidden) || (FTIP === 'research' && $('modal').hidden); if (out) ftipHide(FTIP === 'research'); return; }
+  if (S && S.started && !S.over && !SET.tipsOff && !SET.tipSeen.battle && !TUT && $('modal').hidden && S.battles.some(p => S.armies.some(a => a.owner === PLAYER && a.at === p))) ftipAsk('battle');
 }
 function warWarning(a){
   if (!$('modal').hidden) return;
@@ -9979,7 +10052,7 @@ function frame(now){
   const fd = now - (last || now), dt = Math.min(0.25, fd/1000); last = now; if (fd > 3 && fd < 60) RD.fi += (fd - RD.fi)*0.05;   // (RD.fi: the display's frame time, smoothed)
   if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; while (acc >= 1 && n < 8){ tick(); acc -= 1; n++; } if (n >= 8) acc = 0; if (n) redraw(); }   // a game hour passed: draw what it changed
   fxDrain(now);   // the effects queue and the ambient-motion clock run on real time, drawn or not
-  uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; try { ambience(now); } catch (e) {} renderSide(); tutTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
+  uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; try { ambience(now); } catch (e) {} renderSide(); tutTick(); ftipTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
   if (camFly) camStep(now);
   zoomStep(dt);   // a gliding wheel / button zoom
   toneSync();   // before the covering test: the globe's political overlay follows war and peace too (geoVer -> buildPol)
