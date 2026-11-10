@@ -1756,6 +1756,7 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   .vbar .vm b small{display:inline!important; font-size:10px}
   body.cs-on #cmdbar{bottom:calc(var(--csh, 0px) + 8px)!important}
   #toasts{bottom:auto}
+  body:has(#modal.docked:not([hidden])) #toasts{position:fixed; top:auto; bottom:calc(var(--dockb, 58px) + 10px); left:10px; z-index:30}   /* a panel fills the screen here: toasts ride above it, just over the bottom bar (clear of the panel's title and close button) */
   .tlegend{bottom:calc(var(--sideh, 0px) + 48px)}
   /* panels fill the space between the two bars */
   #modal.docked{padding:0}
@@ -7301,7 +7302,7 @@ function aiPickUnit(n, p){
   const opts = UT.filter(t => bldOk(p, t) && unlocked(n, t));
   let tot = opts.reduce((s, t) => s + (w[t] || 0), 0), r = rng()*tot;
   for (const t of opts){ r -= w[t] || 0; if (r <= 0 && w[t]) return t; }
-  return 'inf';
+  return opts.includes('inf') ? 'inf' : null;   // nothing with weight: infantry, where this city can mobilize it
 }
 function aiFleet(a, n){
   // damaged fleets go home to a yard; healthy ones patrol a sea zone next to an enemy coast
@@ -7525,8 +7526,8 @@ function aiTurn(n){
       const hold = U && bldOk(p, U.t) && reqsOf(U.t).some(r => r.b === 'air' && r.l >= 2) && S.queue[p].length >= 1;
       if (U && bldOk(p, U.t) && canAfford(n, U.t)){ if (recruit(n, p, U.t) !== false) N.uSave = null; }
       else if (!hold){ let t = aiPickUnit(n, p);
-        if (!canAfford(n, t) && unlocked(n, t) && bldOk(p, t)) aiBuyFor(n, ucost(n, t), 1.3, 60);   // goods short: buy them (up to 1.3x the base price) when $60M stay spare
-        if (!canAfford(n, t)){ if (AI_CTR.has(t) && !U && unlocked(n, t)){ N.uSave = {t, until:S.hour + 24}; t = null; } else t = 'inf'; }
+        if (t && !canAfford(n, t) && unlocked(n, t) && bldOk(p, t)) aiBuyFor(n, ucost(n, t), 1.3, 60);   // goods short: buy them (up to 1.3x the base price) when $60M stay spare
+        if (t && !canAfford(n, t)){ if (AI_CTR.has(t) && !U && unlocked(n, t)){ N.uSave = {t, until:S.hour + 24}; t = null; } else t = canMobilize(n, p, 'inf') ? null : 'inf'; }
         if (t && aiSpare(n, t, true)) recruit(n, p, t); }
     }
   }
