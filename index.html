@@ -1493,7 +1493,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .rs-lines path.av{stroke:rgba(110,220,120,.85)} .rs-lines path.on{stroke:#9fd4ee}
 .rs-lines path.fam{stroke:rgba(214,226,230,.55); stroke-width:2; stroke-dasharray:5 5}
 .rs-lines path.xr{stroke-width:3}
-.rnode{position:absolute; z-index:2; top:calc(var(--r)*var(--rh) + var(--rh)*.42 - 19px); left:calc((var(--c) + .5 + var(--l)*.31) * 100% / var(--cols)); width:min(96px, calc(31% / var(--cols)));
+.rnode{position:absolute; z-index:2; top:calc(var(--r)*var(--rh) + var(--rh)*.42 - 19px); left:calc((var(--c) + .5 + var(--l)*.31) * 100% / var(--cols)); width:min(108px, calc(37% / var(--cols)));
   transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; padding:0; border:0; background:none; color:#fff; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 .rnode .dm{width:38px; height:38px}
 .rnode.big{top:calc(var(--r)*var(--rh) + var(--rh)*.42 - 24px)} .rnode.big .dm{width:48px; height:48px} .rnode.k-gen .dm{width:52px; height:52px} .rnode.k-gen{top:calc(var(--r)*var(--rh) + var(--rh)*.42 - 26px)}
@@ -1504,7 +1504,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .rnode.big{width:min(150px, calc(60% / var(--cols)))} .rnode.big .rn{margin-top:17px; width:auto; max-width:100%; padding:1px 5px 2px; border-radius:2px; background:rgba(27,42,49,.9)}   /* a plate: the spine passes behind the name */
 .rnode .rn b{font:600 10.5px/1.12 var(--body); color:#e8f0f2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere}
 .rnode.big .rn b{font-size:11.5px; font-weight:700}
-.rnode .rn small{font:600 9.5px/1.1 var(--body); color:#a9bcc2; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
+.rnode .rn small{font:600 9.5px/1.1 var(--body); color:#a9bcc2; max-width:100%; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
 .rnode .rx{max-width:150%; margin-top:2px; padding:1px 5px; border-radius:2px; background:rgba(0,0,0,.35); font:600 9.5px/1.2 var(--body); color:#ffd27a; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .rnode .rx.out{color:#8fdbe4}
 .rbdg{position:absolute; z-index:2; top:35px; left:50%; display:grid; place-items:center; min-width:17px; height:17px; padding:0 3px; transform:translateX(-50%); border-radius:9px;
@@ -8915,7 +8915,7 @@ const TUT_STEPS = [
   {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
-  {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Jet Engines unlocks aircraft; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
+  {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Each unit has its own line: its unlock, then upgrades. Every project opens on its own day; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
   {t:'You are ready', d:() => 'The bar along the bottom opens Diplomacy (war, peace, trade routes), Market, Cities, Research, Army and Production (P); More holds Intelligence, Settings, Sound and “How to play” (or press ?), which explains roads and railways, drones, trade and coalitions. The crate at the left of the resource strip lists your missiles; the shields on the right of the map fly home, open the dispatches and toggle the relations map. Good luck, commander.', el:'#dock', next:true, last:true},
 ];
 // the weakest independent province the selected army can reach and win against
@@ -9295,12 +9295,12 @@ const ACH = {
   firstblood:['First Blood', 'Win a battle.'], flanker:['Hammer and Anvil', 'Win a battle attacking from 3 or more directions.'], blitz:['Blitzkrieg', 'Capture 5 provinces in a single day.'],
   peace:['Spoils of Peace', 'Sign a peace treaty that cedes land to you.'], coalition:['Grand Alliance', 'Belong to a coalition.'], marshal:['Field Marshal', 'Promote a commander to Marshal.'],
   tycoon:['War Chest', 'Hold $3,000M at once.'], airborne:['Airborne', 'Land paratroopers.'], eyes:['Eyes in the Sky', 'Scout with a recon UAV.'], carrier:['Blue-Water Navy', 'Land an air wing on a carrier.'],
-  missile:['Long Arm', 'Hit a target with a missile.'], capital:['Decapitation', 'Capture an enemy capital.'], survivor:['Still Standing', 'Survive 120 days of war.'], victory:['Victor', 'Win a campaign.'], mark4:['Mk IV', 'Upgrade a unit type to Mark IV.'],
+  missile:['Long Arm', 'Hit a target with a missile.'], capital:['Decapitation', 'Capture an enemy capital.'], survivor:['Still Standing', 'Survive 120 days of war.'], victory:['Victor', 'Win a campaign.'], mark4:['Honed Edge', 'Research Firepower 3 or Protection 3 for a unit type.'],
 };
 let ACHS = (() => { try { return JSON.parse(localStorage.getItem('iron-meridian-ach') || '{}'); } catch (e) { return {}; } })();
 function unlock(k){ if (ACHS[k] || !ACH[k]) return; ACHS[k] = Date.now(); try { localStorage.setItem('iron-meridian-ach', JSON.stringify(ACHS)); } catch (e) {} if (booted){ toast(`Achievement unlocked: ${ACH[k][0]}. ${ACH[k][1]}`, 'good', null); sfx('research'); } }
 function achLog(text){ if (/^Battle of .* won/.test(text)) unlock('firstblood'); if (/promoted to Marshal/.test(text) && text.length) unlock('marshal'); if (/Paratroopers landed/.test(text)) unlock('airborne'); if (/^UAV over/.test(text)) unlock('eyes');
-  if (/landed on .*Carrier|landed on .*: it now strikes/.test(text)) unlock('carrier'); if (/^Peace conference.* to you/.test(text)) unlock('peace'); if (/^You captured .*, capital of/.test(text)) unlock('capital'); if (/Missile hit/.test(text)) unlock('missile'); if (/to Mk IV/.test(text)) unlock('mark4'); }
+  if (/landed on .*Carrier|landed on .*: it now strikes/.test(text)) unlock('carrier'); if (/^Peace conference.* to you/.test(text)) unlock('peace'); if (/^You captured .*, capital of/.test(text)) unlock('capital'); if (/Missile hit/.test(text)) unlock('missile'); if (/^Research complete: (Firepower|Protection) 3 /.test(text)) unlock('mark4'); }
 function achDaily(){ if (!S.nations[PLAYER].alive) return; if (S.nations[PLAYER].cash >= 3000) unlock('tycoon'); if (typeof blocOf === 'function' && blocOf(PLAYER)) unlock('coalition');
   const st0 = S.stats || {}, tk = st0.taken || 0; if (tk - (S.achTaken ?? tk) >= 5) unlock('blitz'); S.achTaken = tk; if (Math.floor(S.hour/24) >= SURVIVOR_DAY - 1) unlock('survivor'); }
 function achHTML(){ const keys = Object.keys(ACH), got = keys.filter(k => ACHS[k]).length;
@@ -9512,7 +9512,7 @@ function airGuideHTML(){ const L = uavLv(PLAYER);
     <p class="small muted">Every unit has a counter. Drones are cheap and fragile; manned aircraft cost more and survive more. <b>Identified</b> contacts (UAV, satellite, radar, ground contact) show nation, type, size, level and health; <b>unidentified</b> ones (AWACS radar) show only a <b>?</b> where something is.</p>
     <div class="agrid">${AG_T.map(card).join('')}</div>
     <p class="small" style="margin:0"><b>Maintenance</b>: every mission wears aircraft and drones 3–6% (more for long and loitering missions), even unopposed. Repairs run only at your airbases (10% + 6% per level a day) or aboard a carrier (20%), and only once the wing has rearmed (not during the 6 h after a sortie), so back-to-back strikes wear it down; worn wings fire weaker and take more damage, and below 20% they are grounded.</p>
-    <div class="eyebrow">UAV levels (research, Drones branch)</div>
+    <div class="eyebrow">UAV levels (research, Unmanned Systems)</div>
     <table class="ctab"><tr><th>Level</th><th>Vision</th><th>Loiter</th><th>Range</th><th>Stealth</th><th>Weapons</th></tr>${[1, 2, 3, 4, 5].map(lvRow).join('')}</table>
     <div class="eyebrow">Who beats whom</div>
     <table class="ctab"><tr><th>Threat</th><th>Best answer</th><th>Also works</th></tr>
@@ -9945,7 +9945,7 @@ const HELP_SEC = [
     <li><span class="res-metal">${icon('metal', 12)}</span> <b>Materials</b>: materials cities, a little from ore deposits and your capital. Nearly every unit, building, road and research project uses them.</li>
     <li><span class="res-iron">${icon('iron', 12)}</span> <b>Iron</b>: iron cities, a little from ore deposits, iron-bearing hills and your capital. Armor, artillery, warships, Army Bases, forts and railways. Those units also use 4% of their iron a day for spare parts; run dry and they fight worse.</li>
     <li><span class="res-elec">${icon('elec', 12)}</span> <b>Electronics</b>: electronics cities and your capital. Aircraft, drones, air defence, missiles, satellites and high-speed rail. Those units also use 2% of their electronics a day in maintenance; run dry and they fight worse.</li>
-    <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>: every technology costs money, materials and rare materials (about 27 at tier 1, 55 at tier 2, 95 at tier 3), paid when it starts. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from <b>rare-earth cities</b> (a country has one or two at most, many have none) and a little from your capital: trade or fight for the rest. Advanced aircraft, carriers and missiles need some too.</li>
+    <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>. Research is organised by unit: each unit type has its own column with its unlock at the top, upgrades below and a newer generation further down. Unlocks, upgrades and generations cost money, materials and rare materials (about 20 to 45 for an unlock), paid when they start; <b>Firepower</b> and <b>Protection</b> (three levels each: +12%, +25%, +40% attack or defense for that unit type) cost few rare materials. Every project <b>opens on its own day</b>. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from <b>rare-earth cities</b> (a country has one or two at most, many have none) and a little from your capital: trade or fight for the rest. Advanced aircraft, carriers and missiles need some too.</li>
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> The Resources map mode shows each province's main output, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
@@ -9976,7 +9976,7 @@ const HELP_SEC = [
     <li><b>Wings</b> live at your airbases (or on a carrier). Select one and tap a target inside its range ring: strike missions hit everything hostile there and fly home to rearm; patrols guard a province for 12 h.</li>
     <li><b>Interceptor</b>: patrols one province and shoots down strikes, bombers and drones. <b>Air Superiority Fighter</b> (Airbase II): covers the province and all its neighbours, hits aircraft hardest and hunts UAVs, AWACS and patrol planes. Countered by SAMs.</li>
     <li><b>Heavy Bomber</b> (Airbase II): very long range; wrecks cities, buildings, roads and rail. Easy prey for fighters and SAMs: escort it or clear the sky first.</li>
-    <li><b>Stealth Bomber</b> (Airbase III; research Strategic Bomber Upgrade, then Stealth Bombers, which also needs Stealth Airframes): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
+    <li><b>Stealth Bomber</b> (Airbase III; research the Strategic Bomber Upgrade on the Heavy Bomber's line and Stealth Airframes on the Strike Fighter's, then the Stealth Bomber itself, from day 14): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
     <li><b>AWACS</b> (Airbase II) locates enemy forces over a huge area and lets your fighters under it fight better and farther. <b>Maritime Patrol</b> finds submerged submarines and hunts ships and convoys. <b>Gunships</b> hit armor and infantry at short range.</li>
     <li><b>Wear and maintenance</b>: every mission wears a wing 3–6% (more for long or loitering missions), even unopposed. Wings repair only on the ground at your airbases (10% + 6% per base level a day) or on a carrier (20%), and not in the 6 h after a sortie, so back-to-back strikes grind them down. Below 50% they show <b>Needs maintenance</b> and fight worse; below 20% they are grounded.</li></ul>`],
   ['drones', 'Drones, UAVs, AWACS and jammers', `<ul>
@@ -10003,7 +10003,7 @@ const HELP_SEC = [
   ['intel', 'Intelligence and missiles', `<ul>
     <li><b>Agents</b>: train up to 5 ($60M) and send them from any foreign province to scout, sabotage, stir unrest or steal technology. Failed agents are lost.</li>
     <li><b>Fog of war</b>: you see enemy troops next to your land and forces; UAVs, satellites, radar and AWACS see further (see Drones).</li>
-    <li><b>Strategic missiles</b>: research the Strategic branch, build a Missile Silo, produce Cruise or Ballistic missiles and launch them at any province in range. SAMs and frigates near the target can intercept.</li></ul>`],
+    <li><b>Strategic missiles</b>: research Cruise Missiles (Strategic Weapons), build a Missile Silo, produce Cruise or Ballistic missiles and launch them at any province in range. SAMs and frigates near the target can intercept.</li></ul>`],
 ];
 function helpHTML(){ const me = S && S.nations ? S.nations[PLAYER] : null;
   return `<div class="hhead"><div><div class="eyebrow">Field manual</div><h1>How to play</h1></div>${me ? `<span class="small muted">${flagHTML(me.name, 16)} ${me.name} · win with ${landNeed(PLAYER)} land provinces or ${WIN_CAPS} starting capitals</span>` : ''}</div>
@@ -10054,7 +10054,7 @@ function ftipAsk(k){
 }
 function ftipHide(seen){ const k = FTIP; FTIP = null; $('ftip').hidden = true; if (seen && k){ SET.tipSeen[k] = true; saveSet(); } }
 function ftipTick(){   // every quarter second: battles, and housekeeping
-  if (FTIP){ const out = !S || !S.started || S.over || TUT || SET.tipsOff || (FTIP !== 'research' && !$('modal').hidden) || (FTIP === 'research' && $('modal').hidden); if (out) ftipHide(FTIP === 'research'); return; }
+  if (FTIP){ const out = !S || !S.started || S.over || TUT || SET.tipsOff || (FTIP !== 'research' && !$('modal').hidden) || (FTIP === 'research' && ($('modal').hidden || RV.sel)); if (out) ftipHide(FTIP === 'research'); return; }
   if (S && S.started && !S.over && !SET.tipsOff && !SET.tipSeen.battle && !TUT && $('modal').hidden && S.battles.some(p => S.armies.some(a => a.owner === PLAYER && a.at === p))) ftipAsk('battle');
 }
 function warWarning(a){

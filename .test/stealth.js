@@ -1,6 +1,6 @@
-// Stealth Bomber (unit 'stealth', research bomb2 / bomb3): the rules, checked in plain Node with no browser.
+// Stealth Bomber (unit 'stealth', research: bomb_up, then the unlock u_stealth): the rules, checked in plain Node with no browser.
 //   node .test/stealth.js [quick]
-// 1. the unit's numbers, its two research projects (bomb3 needs BOTH bomb2 and air3) and its building (Airbase III)
+// 1. the unit's numbers, its research (the unlock needs BOTH the Strategic Bomber Upgrade and Stealth Airframes, from day 14) and its building (Airbase III)
 // 2. detection: Mobile SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often (measured over many raids)
 // 3. bomb load: 60% of the Heavy Bomber's on cities and buildings, +25% (not +50%) on troops sheltering in a city
 // 4. fog of war: in flight only a SAM or jammer in or next to the province sees it; an AWACS only locates it, at half range
@@ -10,7 +10,7 @@ const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.en
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
-const NAMES = ['IM', 'UNITS', 'TECH_BY', 'AIR_RANGE', 'airRangeT', 'wingRange', 'st', 'multU', 'mult', 'addArmy', 'aaFire', 'dogfight', 'resolveStrike', 'bombBuildings', 'bombCityF', 'effHP', 'count',
+const NAMES = ['IM', 'UNITS', 'RN', 'rCost', 'rLevel', 'AIR_RANGE', 'airRangeT', 'wingRange', 'st', 'multU', 'mult', 'addArmy', 'aaFire', 'dogfight', 'resolveStrike', 'bombBuildings', 'bombCityF', 'effHP', 'count',
   'canResearch', 'researchWhy', 'startResearch', 'canMobilize', 'ucost', 'trainH', 'loWing', 'loSpotted', 'loLocated', 'loHidden', 'nearList', 'AEW_R', 'hexDist', 'aiStealthWant', 'aiStealthOk', 'aiStealthSite',
   'aiFoeSams', 'aiTurn', 'income', 'isStriker', 'airMissionKind', 'armyName', 'removeEmpty', 'stationaryAt', 'isBmb', 'AI_STEALTH_MAX', 'armyVisible', 'visibleSet'];
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + '\nreturn {' + NAMES.join(', ') + ', get S(){ return S; }, get G(){ return G; }, clearVis(){ visCache = null; }};';
@@ -18,13 +18,13 @@ const QUICK = process.argv.includes('quick'), errors = [], info = {}, ok = (c, m
 const near = (v, t, tol) => Math.abs(v - t) <= tol, r2 = v => Math.round(v*1000)/1000;
 
 function fresh(seed){ const R = new Function(SRC)(); R.IM.api.newGame(seed, 0, []); R.S.started = true; return R; }
-{ const R = fresh(777), {UNITS, TECH_BY, S, G} = R, U = UNITS.stealth;
+{ const R = fresh(777), {UNITS, RN, S, G} = R, U = UNITS.stealth;
   // ---- 1. numbers
   ok(U && U.name === 'Stealth Bomber' && U.short === 'STB' && U.cls === 'air', 'the unit exists');
   const want = {cost:330, oil:26, metal:34, iron:6, elec:40, rare:8, mp:8, build:168, upk:14, fuel:3.5, atk:8, def:4, hp:12, spd:10};
   for (const k in want) ok(U[k] === want[k], `stealth.${k} is ${want[k]}`, U[k]);
   ok(U.vs.soft === 1 && U.vs.armored === 0.7 && U.vs.naval === 0.6 && U.vs.air === 0.2, 'damage by target class', U.vs);
-  ok(U.req.b === 'air' && U.req.l === 3 && U.tech === 'bomb3', 'needs Airbase III and Stealth Bombers', U.req);
+  ok(U.req.b === 'air' && U.req.l === 3 && U.tech === 'u_stealth', 'needs Airbase III and its own unlock', U.req);
   ok(R.AIR_RANGE.stealth === R.AIR_RANGE.bomb && R.AIR_RANGE.stealth === 34, 'range 34 hexes, the Heavy Bomber\'s');
   ok(U.bmb === 0.6 && UNITS.bomb.bmb === 1, 'bomb load 60% of the Heavy Bomber\'s');
   const c = R.ucost(0, 'stealth'), d = S.nations[0].doc; info.cost = c; ok(d || (c.cash === 330 && c.elec === 40 && c.rare === 8 && c.mp === 8), 'price', c);
@@ -35,27 +35,29 @@ function fresh(seed){ const R = new Function(SRC)(); R.IM.api.newGame(seed, 0, [
   for (const t of ['int', 'asf', 'jet']) ok(near(share(t), 0.4, 1e-9), `${t} hits it 40% as often`, share(t));
   ok(near(R.multU('asf', 'stealth'), 1.5, 0.03) && R.multU('asf', 'bomb') === 3.8, 'the ASF anti-bomber bonus 3.8 becomes 1.5', R.multU('asf', 'stealth'));
   ok(share('inf') === 1 && share('tank') === 1, 'guns hit it like any aircraft');
-  // ---- research: bomb2 after bomb1, bomb3 after bomb2 AND air3
-  const N = S.nations[0], B2 = TECH_BY.bomb2, B3 = TECH_BY.bomb3; N.research = N.research2 = null; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 50000;
-  ok(B2 && B2.name === 'Strategic Bomber Upgrade' && B2.days === 8 && B2.req === 'bomb1' && !B2.req2, 'bomb2 is there', B2);
-  ok(B3 && B3.name === 'Stealth Bombers' && B3.days === 11 && B3.req === 'bomb2' && B3.req2 === 'air3', 'bomb3 is there', B3);
-  ok(B2.cost === Math.round(260*0.6) && B3.cost === Math.round(420*0.6) && B3.tier === 3, 'priced like every project (base 260 and 420)', [B2.cost, B3.cost, B3.tier]);
-  N.tech = {}; N.tv = (N.tv || 0) + 1;
-  ok(!R.canResearch(0, 'bomb2') && /Strategic Bombers/.test(R.researchWhy(0, 'bomb2')), 'bomb2 needs bomb1', R.researchWhy(0, 'bomb2'));
-  N.tech.bomb1 = 1; ok(R.canResearch(0, 'bomb2'), 'bomb2 opens after bomb1');
-  const r0 = R.airRangeT(0, 'bomb'), a0 = R.st(0, 'bomb', 'atk'); N.tech.bomb2 = 1; N.tv++;
-  ok(R.airRangeT(0, 'bomb') === r0 + 4 && near(R.st(0, 'bomb', 'atk') - a0, 1*(a0/UNITS.bomb.atk), 0.2), 'bomb2: Heavy Bomber range +4 and attack +1', [r0, R.airRangeT(0, 'bomb'), a0, R.st(0, 'bomb', 'atk')]);
+  // ---- research (the tree by unit): the Strategic Bomber Upgrade on the Heavy Bomber's line, the Stealth Bomber's unlock needs it AND Stealth Airframes
+  const N = S.nations[0], B2 = RN.bomb_up, B3 = RN.u_stealth; N.research = N.research2 = null; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 50000;
+  ok(B2 && B2.name === 'Strategic Bomber Upgrade' && B2.lv[0].day === 11 && B2.req.join() === 'u_bomb', 'the Strategic Bomber Upgrade is there', B2);
+  ok(B3 && B3.name === 'Stealth Bomber' && B3.lv[0].c.days === 9 && B3.lv[0].day === 14 && B3.req.join() === 'bomb_up,jet_lo' && B3.elite, 'the Stealth Bomber unlock is there', B3);
+  ok(R.rCost(B3, 1).cash === Math.round(30 + 0.9*330) && R.rCost(B3, 1).rare === 12 + Math.round(330/4), 'priced from the unit\'s own price', R.rCost(B3, 1));
+  N.tech = {}; N.tv = (N.tv || 0) + 1; S.hour = 5*24;
+  ok(!R.canResearch(0, 'bomb_up') && /Opens on day 11/.test(R.researchWhy(0, 'bomb_up')), 'the upgrade opens on day 11', R.researchWhy(0, 'bomb_up'));
+  S.hour = 20*24; ok(!R.canResearch(0, 'bomb_up') && /Needs Heavy Bomber/.test(R.researchWhy(0, 'bomb_up')), 'the upgrade needs the Heavy Bomber', R.researchWhy(0, 'bomb_up'));
+  N.tech.u_bomb = 1; ok(R.canResearch(0, 'bomb_up'), 'the upgrade opens after the Heavy Bomber');
+  const r0 = R.airRangeT(0, 'bomb'), a0 = R.st(0, 'bomb', 'atk'); N.tech.bomb_up = 1; N.tv++;
+  ok(R.airRangeT(0, 'bomb') === r0 + 4 && near(R.st(0, 'bomb', 'atk') - a0, 1*(a0/UNITS.bomb.atk), 0.2), 'the upgrade: Heavy Bomber range +4 and attack +1', [r0, R.airRangeT(0, 'bomb'), a0, R.st(0, 'bomb', 'atk')]);
   ok(R.airRangeT(0, 'stealth') === 34, 'the upgrade does not change the Stealth Bomber\'s range');
-  ok(!R.canResearch(0, 'bomb3') && /Needs Stealth Airframes/.test(R.researchWhy(0, 'bomb3')), 'bomb3 with bomb2 only: needs Stealth Airframes', R.researchWhy(0, 'bomb3'));
-  N.tech = {bomb1:1, air1:1, air2:1, air3:1}; N.tv++;
-  ok(!R.canResearch(0, 'bomb3') && /Needs Strategic Bomber Upgrade/.test(R.researchWhy(0, 'bomb3')), 'bomb3 with air3 only: needs the upgrade', R.researchWhy(0, 'bomb3'));
-  N.tech = {}; N.tv++; ok(/Strategic Bomber Upgrade and Stealth Airframes/.test(R.researchWhy(0, 'bomb3')), 'bomb3 with neither names both', R.researchWhy(0, 'bomb3'));
-  N.tech = {bomb1:1, air1:1, air2:1, air3:1}; N.tv++; ok(R.startResearch(0, 'bomb2'), 'bomb2 starts');
-  ok(/Waits for Strategic Bomber Upgrade/.test(R.researchWhy(0, 'bomb3')), 'bomb3 waits while its prerequisite runs', R.researchWhy(0, 'bomb3'));
-  N.research = N.research2 = null; N.tech.bomb2 = 1; N.tv++; ok(R.canResearch(0, 'bomb3') && R.researchWhy(0, 'bomb3') === '', 'bomb3 opens with both', R.researchWhy(0, 'bomb3'));
+  ok(!R.canResearch(0, 'u_stealth') && /Needs Stealth Airframes/.test(R.researchWhy(0, 'u_stealth')), 'with the upgrade only: needs Stealth Airframes', R.researchWhy(0, 'u_stealth'));
+  N.tech = {u_bomb:1, u_jet:1, jet_pgm:1, jet_lo:1}; N.tv++;
+  ok(!R.canResearch(0, 'u_stealth') && /Needs Strategic Bomber Upgrade/.test(R.researchWhy(0, 'u_stealth')), 'with Stealth Airframes only: needs the upgrade', R.researchWhy(0, 'u_stealth'));
+  N.tech = {}; N.tv++; ok(/Strategic Bomber Upgrade and Stealth Airframes/.test(R.researchWhy(0, 'u_stealth')), 'with neither it names both', R.researchWhy(0, 'u_stealth'));
+  N.tech = {u_bomb:1, u_jet:1, jet_pgm:1, jet_lo:1}; N.tv++; ok(R.startResearch(0, 'bomb_up'), 'the upgrade starts');
+  ok(/Waits for Strategic Bomber Upgrade/.test(R.researchWhy(0, 'u_stealth')), 'the unlock waits while its prerequisite runs', R.researchWhy(0, 'u_stealth'));
+  N.research = N.research2 = null; N.tech.bomb_up = 1; N.tv++; ok(R.canResearch(0, 'u_stealth') && R.researchWhy(0, 'u_stealth') === '', 'the unlock opens with both', R.researchWhy(0, 'u_stealth'));
+  S.hour = 12*24; ok(/Opens on day 14/.test(R.researchWhy(0, 'u_stealth')), 'and not before day 14', R.researchWhy(0, 'u_stealth')); S.hour = 20*24;
   // ---- mobilizing: the research and an Airbase III
-  const cap = N.capital; S.bld[cap].air = 2; ok(/Research required: Stealth Bombers/.test(R.canMobilize(0, cap, 'stealth')), 'not researched: blocked', R.canMobilize(0, cap, 'stealth'));
-  N.tech.bomb3 = 1; N.tv++; ok(/Airbase III/.test(R.canMobilize(0, cap, 'stealth')), 'Airbase II is not enough', R.canMobilize(0, cap, 'stealth'));
+  const cap = N.capital; S.bld[cap].air = 2; ok(/Research required: Stealth Bomber/.test(R.canMobilize(0, cap, 'stealth')), 'not researched: blocked', R.canMobilize(0, cap, 'stealth'));
+  N.tech.u_stealth = 1; N.tv++; ok(/Airbase III/.test(R.canMobilize(0, cap, 'stealth')), 'Airbase II is not enough', R.canMobilize(0, cap, 'stealth'));
   S.bld[cap].air = 3; ok(R.canMobilize(0, cap, 'stealth') === '', 'Airbase III: can be mobilized', R.canMobilize(0, cap, 'stealth'));
   ok(R.IM.api.recruit(0, cap, 'stealth') === true && S.queue[cap].some(j => j.t === 'stealth'), 'queued');
   info.trainH = R.trainH(cap, 'stealth', 0);
@@ -131,7 +133,7 @@ function arena(seed){ const R = fresh(seed), {S, G} = R; let E = -1, fp = -1, gp
   const rich = () => { for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 40000; };
   const mine = () => ({wings:S.armies.filter(a => a.owner === n && a.air && a.u.stealth > 0).length, planes:S.armies.reduce((s, a) => s + (a.owner === n ? a.u.stealth || 0 : 0), 0), queued:S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.filter(j => j.t === 'stealth').length : 0), 0)});
   const turns = k => { for (let i = 0; i < k; i++){ rich(); R.aiTurn(n); } };
-  N.tech = {...N.tech, air1:1, air2:1, air3:1, bomb1:1, bomb2:1, bomb3:1}; N.tv = (N.tv || 0) + 1; S.bld[cap].air = 3; S.bld[cap].fac = Math.max(1, S.bld[cap].fac); rich();
+  N.tech = {...N.tech, u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}; N.tv = (N.tv || 0) + 1; S.bld[cap].air = 3; S.bld[cap].fac = Math.max(1, S.bld[cap].fac); rich();
   const fc = S.nations[foe].capital; for (const a of S.armies) if (a.owner === foe) a.u.sam = 0;
   S.hour = 30*24; ok(!R.aiFoeSams(n), 'the enemy has no SAM stack yet');
   const sams = R.addArmy(foe, fc, {sam:3}); ok(R.aiFoeSams(n), 'now it has');
@@ -158,7 +160,7 @@ if (!QUICK){ const R = fresh(12345), {S, G} = R; let err = null, first = null, m
   const census = () => { const w = {}, q = {}; for (const a of S.armies) if (a.owner >= 0 && a.air && a.u.stealth > 0) w[a.owner] = (w[a.owner] || 0) + 1;
     S.queue.forEach((l, p) => { for (const j of l) if (j.t === 'stealth') q[S.owner[p]] = (q[S.owner[p]] || 0) + 1; }); return {w, q}; };
   try { for (let h = 0; h < 80*24 && !S.over; h++){
-      if (h === 49*24) for (const N of S.nations){ if (!N.alive) continue; Object.assign(N.tech, {air1:1, air2:1, air3:1, bomb1:1, bomb2:1, bomb3:1}); N.tv = (N.tv || 0) + 1; S.bld[N.capital].air = 3; }
+      if (h === 49*24) for (const N of S.nations){ if (!N.alive) continue; Object.assign(N.tech, {u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}); N.tv = (N.tv || 0) + 1; S.bld[N.capital].air = 3; }
       if (h >= 49*24 && h % 24 === 0) for (const N of S.nations) if (N.alive){ N.cash = Math.max(N.cash, 1500); for (const k of ['oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = Math.max(N[k], 400); }
       const q0 = census().q; R.IM.api.tick(); const c = census();
       for (const n in c.w) maxW = Math.max(maxW, c.w[n]);
