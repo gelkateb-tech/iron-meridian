@@ -9,7 +9,7 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
   await p.click('[data-act="pick"][data-p="4"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(900);
   // ---- research: the Air branch
-  await p.evaluate(() => { const S = window.__im.S, N = S.nations[0]; S.hour = 20*24; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 5000; for (const id of ['u_jet', 'jet_pgm', 'u_bomb']) N.tech[id] = 1; N.tv = (N.tv || 0) + 1; N.research = N.research2 = null; });
+  await p.evaluate(() => { const S = window.__im.S, N = S.nations[0]; window.__h0 = S.hour; S.hour = 20*24; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 5000; for (const id of ['u_jet', 'jet_pgm', 'u_bomb']) N.tech[id] = 1; N.tv = (N.tv || 0) + 1; N.research = N.research2 = null; });
   await p.click('[data-act="research-open"]'); await p.waitForTimeout(300); await p.click('[data-act="rbranch"][data-b="str"]'); await p.waitForTimeout(300);
   const node = id => p.evaluate(id => { const e = document.querySelector(`.rnode[data-id="${id}"]`); return e ? { cls: e.className, title: e.title, text: e.innerText.replace(/\s+/g, ' ').trim(), row: getComputedStyle(e).getPropertyValue('--r').trim() } : null; }, id);
   let n2 = await node('bomb_up'), n3 = await node('u_stealth');
@@ -29,7 +29,7 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   await p.screenshot({ path: out('tree-open') });
   await p.click('.rs-card [data-act="research"]'); await p.waitForTimeout(250);
   ck('research starts in a slot', await p.evaluate(() => { const N = window.__im.S.nations[0]; return [N.research, N.research2].some(r => r && r.id === 'u_stealth'); }));
-  await p.evaluate(() => { const N = window.__im.S.nations[0]; N.research = N.research2 = null; N.tech.u_stealth = 1; N.tv++; });
+  await p.evaluate(() => { const N = window.__im.S.nations[0]; N.research = N.research2 = null; N.tech.u_stealth = 1; N.tv++; window.__im.S.hour = window.__h0; });   // back to the game's own hour for the map checks
   await p.click('#sheet [data-act="resume"]').catch(() => {}); await p.waitForTimeout(200);
   // ---- Mobilize list in the capital: greyed with Airbase II, live with Airbase III
   const cap = await p.evaluate(() => { const im = window.__im, S = im.S, c = S.nations[0].capital; S.bld[c].air = 2; S.bld[c].fac = Math.max(1, S.bld[c].fac); im.selectProv(c); return c; });
