@@ -8991,13 +8991,13 @@ function diploHTML(){
     const left = r.until ? ` · ${Math.ceil((r.until - S.hour)/24)}d` : '';
     const opW = Math.abs(op)/2, opL = op >= 0 ? 50 : 50 - opW;
     const tipTxt = parts.length ? parts.map(x => `${x[0]}: ${x[1] > 0 ? '+' : ''}${x[1]}`).join('&#10;') : 'Neutral';
-    const btn = (kind, label, cls = '') => { const a = acceptOffer(N.id, me, kind); return `<button class="btn ${a.ok ? 'primary' : ''} ${cls}" data-act="propose" data-k="${kind}" data-id="${N.id}" title="${a.ok ? 'Likely accepted: ' : 'Likely refused: '}${a.why}">${label}${a.ok ? '' : ' ✕'}</button>`; };
+    const btn = (kind, label, cls = '', tip = '') => { const a = acceptOffer(N.id, me, kind); return `<button class="btn ${a.ok ? 'primary' : ''} ${cls}" data-act="propose" data-k="${kind}" data-id="${N.id}" title="${tip ? tip + ' ' : ''}${a.ok ? 'Likely accepted: ' : 'Likely refused: '}${a.why}">${label}${a.ok ? '' : ' ✕'}</button>`; };
     let acts = '', hint = '';
     if (pend) hint = pend.by === me ? `War begins in ${pend.at - S.hour} h.` : `They attack in ${pend.at - S.hour} h.`;
     else if (r.st === 'war'){ acts += btn('peace', 'Propose peace'); { const tr = tribute(PLAYER, N.id); acts += `<button class="btn ${S.nations[me].cash >= tr && tributeOk(PLAYER, N.id) ? 'primary' : ''}" data-act="tribute" data-id="${N.id}" ${S.nations[me].cash >= tr ? '' : 'disabled'} title="${tributeOk(PLAYER, N.id) ? 'Likely accepted' : 'Likely refused: they are winning too clearly'}">Pay $${tr}M for peace${tributeOk(PLAYER, N.id) ? '' : ' ✕'}</button>`; } hint = acceptOffer(N.id, me, 'peace').ok ? 'Peace would likely be accepted.' : 'Peace refused: ' + acceptOffer(N.id, me, 'peace').why + '.'; }
     else {
       if (r.st !== 'truce') acts += `<button class="btn war" data-act="declare" data-id="${N.id}" title="War starts in 24 h. −50 opinion with them${['nap', 'ally', 'pass'].includes(r.st) ? ', and breaking a treaty makes everyone distrust you' : ''}.${alliesOf(N.id).length ? ' Their allies may join: ' + alliesOf(N.id).map(x => S.nations[x].name).join(', ') + '.' : ''}">Declare war</button>`;
-      if (r.st === 'peace' || r.st === 'truce') acts += btn('nap', 'Offer NAP');
+      if (r.st === 'peace' || r.st === 'truce') acts += btn('nap', 'Offer NAP', '', 'Non-aggression pact: lasts 20 days. Breaking it marks you as a treaty breaker. It does not give right of passage (ask for that separately).');
       if (r.st === 'peace' || r.st === 'nap') acts += btn('pass', 'Ask passage');
       if (r.st !== 'ally') acts += btn('ally', 'Propose alliance');
       if (r.st === 'truce') hint = 'Truce: war cannot be declared until it ends.';
