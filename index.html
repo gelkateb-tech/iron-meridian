@@ -8428,7 +8428,10 @@ function tap(x, y, shift = false){
     if (a.to === null && p === a.at){ selectProv(p); return; }
     if (sel.target === p && a.air){ sendToTarget(a); return; }
     if (sel.target === p){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner)); if (odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
-    setTarget(a, p); return;
+    setTarget(a, p);
+    // tap that is not a valid order target (a land force and a province it can never reach, not merely a diplomatic block, which the plan panel explains) = tap away: deselect
+    if (!a.air && !(targetPath && targetPath.length) && canEnter(PLAYER, p)) clearSel();
+    return;
   }
   selectProv(p); csReveal(p);
 }
@@ -8489,12 +8492,12 @@ function armiesHTML(){
 let cmdMode = null;
 function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.owner !== PLAYER) return '';
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
-  if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') + '<span class="sep"></span>' + b('clear', '✕', 'Deselect', 'Esc');
+  if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
   return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
     + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null, 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
-    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : '') + b('clear', '✕', 'Close', 'Esc'); }
+    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : ''); }   // no Close button: tap empty map (or Esc) to deselect
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || dropFor !== null || !!aimMsl); }
 function sendToTarget(a, keep = false){ if (sel.target !== null && sel.targetPt){ groupArmies().forEach((x, i) => { if (!x.air) x.dest = {p:sel.target, x:sel.targetPt[0] + (i % 3 - 1)*7*i/Math.max(1, i), y:sel.targetPt[1] + Math.floor(i/3)*6}; }); }
   else if (sel.target !== null) groupArmies().forEach(x => { if (!x.air) x.dest = null; });
@@ -9307,8 +9310,7 @@ function groupHTML(){
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
     <dl class="kv"><dt>Total strength</dt><dd>${Math.round(pw)}</dd><dt>Saved groups</dt><dd>Ctrl+4…9 to save, 4…9 to recall</dd></dl>
     <div class="armylist">${g.map(a => `<button data-act="gsel" data-id="${a.id}" ${a.id === sel.army ? 'style="border-color:var(--accent)"' : ''}><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span><span class="muted">${pluN(count(a), 'unit')} · ${a.air ? 'air wing' : statusText(a).short}</span></button>`).join('')}</div>
-    <p class="small muted" style="margin:0">Tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>
-    <div class="row"><button class="btn" data-act="clear">Deselect</button></div>`;
+    <p class="small muted" style="margin:0">Tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>`;
 }
 // airframe condition of a wing: bar, repair rate where it is parked and the maintenance warning
 function condHTML(a){ const c = wingCond(a), pc = Math.round(c*100), mr = maintRate(a), B = G.P[a.air.base], col = c > 0.6 ? 'var(--ok)' : c >= WEAR_WARN ? 'var(--accent)' : 'var(--danger)';
@@ -9346,7 +9348,7 @@ function wingHTML(a){
     ${condHTML(a)}
     <dl class="kv"><dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Speed</dt><dd>${fmtK(Math.round(wingSpd(a)*24*KM_HEX/100)*100)} km/day in flight</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
     <p class="small muted" style="margin:0">Tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol; UAVs watch, AWACS orbit, patrol planes hunt ships; tapping one of your airbases rebases the wing.</p>
-    <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button><button class="btn" data-act="clear">Deselect</button></div>`;
+    <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button></div>`;
 }
 // ---- split panel: every unit row (damaged units apart), a slider and +/- per row for the group being edited, quick plans, several groups at once
 let SPLIT = null;   // {id, plan:[{rowKey:n}], g: group being edited, n: 'evenly into' count}
@@ -9401,8 +9403,7 @@ function armyHTML(a){
     <div class="status ${st0.cls}">${st0.long}</div>
     <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${speedHTML(a)}</dd>
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
-    ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div><button class="btn" data-act="cmd-off" style="padding:2px 7px;font-size:12px">Relieve</button></div>`
-      : (free => `<div class="row" style="align-items:center"><span class="small muted">Commander</span>${free.length ? free.map(f => `<button class="btn" data-act="cmd-on" data-id="${f.id}" title="${TRAITS[f.trait].desc}" style="padding:3px 8px;font-size:12px">${TRAITS[f.trait].icon} ${f.name}</button>`).join('') : ''}${cmdList(PLAYER).length < CMD_MAX ? `<button class="btn" data-act="cmd-new" ${S.nations[PLAYER].cash >= CMD_COST ? '' : 'disabled'} style="padding:3px 8px;font-size:12px" title="Appoint a new commander with a random trait (max ${CMD_MAX})">Appoint · $${CMD_COST}M</button>` : ''}</div>`)(cmdList(PLAYER).filter(f => f.army == null)))(cmdOf(a))}
+    ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div></div>` : '')(cmdOf(a))}
     ${a.u.art || a.u.mlrs ? `<div class="row" style="align-items:center"><span class="small muted">Artillery${a.u.mlrs ? ' · range 2' : ''}</span><button class="btn ${a.fire !== 'hold' ? 'primary' : ''}" data-act="fire" data-v="free" style="padding:3px 9px;font-size:12px" title="Shell enemy forces in neighbouring provinces every hour">Fire at will</button><button class="btn ${a.fire === 'hold' ? 'primary' : ''}" data-act="fire" data-v="hold" style="padding:3px 9px;font-size:12px">Hold fire</button></div>` : ''}
     ${a.chase != null && armyById(a.chase) ? `<div class="status move">Pursuing ${armyLabel(armyById(a.chase), PLAYER)}</div>` : ''}
     ${shipsOnly(a) && !a.air && a.owner === PLAYER ? escortRowHTML(a) : ''}
@@ -9410,11 +9411,8 @@ function armyHTML(a){
     <div class="row">
       ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE*KM_HEX} km away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
       <button class="btn" data-act="split-open" ${count(a) < 2 ? 'disabled' : ''} title="Choose exactly which units leave: per unit type, damaged units apart, several groups at once">Split…</button>
-      <button class="btn" data-act="split" ${count(a) < 2 ? 'disabled' : ''}>Split in half</button>
       <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one."`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
       <button class="btn" data-act="stop" ${!a.path.length && a.to === null ? 'disabled' : ''} title="Stop right now, where the force stands">Halt</button>
-      <button class="btn" data-act="prov" data-id="${a.to !== null ? a.to : a.at}" ${G.P[a.to !== null ? a.to : a.at].sea ? 'disabled' : ''}>${a.to === null && S.owner[a.at] === PLAYER ? (G.P[a.at].city ? 'Recruit / build here' : 'Build here') : 'Province'}</button>
-      <button class="btn" data-act="clear">Deselect</button>
     </div>
     ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}`;
 }
@@ -9587,7 +9585,6 @@ document.addEventListener('click', e => {
     case 'send': if (a){ delete a.escort; sendToTarget(a); } break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
     case 'drop': if (a){ dropFor = dropFor === a.id ? null : a.id; if (dropFor !== null) toast(`Tap a drop zone up to ${PARA_RANGE*KM_HEX} km away.`, 'info', null); renderSide(true); } break;
-    case 'split': if (a){ SPLIT = null; const nb = splitArmy(a, counterSpot(a)); if (nb) selectArmy(nb.id); } break;
     case 'split-open': if (a){ if (SPLIT && SPLIT.id === a.id){ SPLIT = null; renderSide(true); } else splitOpen(a); } break;
     case 'sp-close': SPLIT = null; renderSide(true); break;
     case 'sp-reset': if (SPLIT){ SPLIT.plan = [{}]; SPLIT.g = 0; renderSide(true); } break;
@@ -9635,9 +9632,6 @@ document.addEventListener('click', e => {
     case 'armies-open': openModal(armiesHTML(), 'armies'); break;
     case 'army-go': { const a = armyById(+b.dataset.id); if (a){ closeModal(); const P = G.P[a.at]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.6)); selectArmy(a.id); } break; }
     case 'mob': S.nations[PLAYER].mob = +b.dataset.v; setHTML($('sheet'), prodHTML()); renderSide(true); break;
-    case 'cmd-new': if (S.nations[PLAYER].cash >= CMD_COST && cmdList(PLAYER).length < CMD_MAX){ S.nations[PLAYER].cash -= CMD_COST; const c = newCommander(PLAYER); if (a && !a.air && a.cmd == null){ a.cmd = c.id; c.army = a.id; } log(`${c.name} appointed (${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc}).`, 'good', null); renderSide(true); } break;
-    case 'cmd-on': if (a){ const c = (S.cmds || []).find(x => x.id === +b.dataset.id); if (c){ const old = cmdOf(a); if (old) old.army = null; a.cmd = c.id; c.army = a.id; renderSide(true); } } break;
-    case 'cmd-off': if (a){ const c = cmdOf(a); if (c) c.army = null; a.cmd = null; renderSide(true); } break;
     case 'replay-open': openModal(replayHTML(), 'replay'); setTimeout(replayStart, 30); break;
     case 'rp-play': if (REPLAY){ if (REPLAY.day >= REPLAY.n){ REPLAY.day = 0; } REPLAY.playing = !REPLAY.playing; b.textContent = REPLAY.playing ? 'Pause' : 'Play'; } break;
     case 'set-ui': SET.ui = +b.dataset.v; saveSet(); openModal(settingsHTML(), 'settings'); break;
