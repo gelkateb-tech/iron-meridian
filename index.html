@@ -8458,7 +8458,8 @@ function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null;
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
 const groupArmies = () => (sel.group.length ? sel.group : [sel.army]).map(armyById).filter(Boolean);
-const STANCES = {hold:['Hold', 'Stays where you put it.'], defend:['Defend', 'Marches to fight enemies that enter your land within 3 provinces, then returns.'], retreat:['Preserve', 'Falls back to the nearest city of yours when health drops below 40%.']};
+// one-line tooltips written from what the rules do (rules/combat.js: dugIn and stanceHour)
+const STANCES = {hold:['Hold', 'Stays put and takes no standing orders; digs in only after 12 h on your own ground.'], defend:['Defend', 'Dug in at once for the defence bonus, and sorties against weaker enemies within 3 provinces of your land, then returns.'], retreat:['Preserve', 'Falls back to your nearest city to recover when health drops below 40%.']};
 function idleArmies(){ return S.armies.filter(a => a.owner === PLAYER && !a.fly && count(a) && a.to === null && !a.path.length && !S.battles.includes(a.at) && (!a.stance || a.stance === 'hold') && !(a.air && a.air.cd > 0)); }
 function nextIdle(){ const L = idleArmies(); if (!L.length){ toast('Every force has orders.', 'info', null); return; }
   const i = (L.findIndex(a => a.id === sel.army) + 1) % L.length, a = L[i], P = G.P[a.at]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.6)); selectArmy(a.id); }
@@ -8484,7 +8485,7 @@ function armiesHTML(){
       <td><span class="stx ${st0.cls}">${st0.short}</span>${a.air ? (wornWing(a) ? ' <span class="small" style="color:var(--accent)">🔧 needs maintenance</span>' : '') : supplied(a) ? '' : ' <span class="small" style="color:var(--danger-t)">cut off</span>'}</td>
       <td>${a.air || shipsOnly(a) ? '<span class="small muted">—</span>' : `<select class="stsel" data-act="stance" data-id="${a.id}" title="Stance">${Object.entries(STANCES).map(([k, v]) => `<option value="${k}" ${(a.stance || 'hold') === k ? 'selected' : ''} title="${v[1]}">${v[0]}</option>`).join('')}</select>`}</td></tr>`; }).join('');
   return `<div class="rhead"><div><div class="eyebrow">${S.nations[PLAYER].name} · ${L.length} force${L.length === 1 ? '' : 's'} · ${tot} unit${tot === 1 ? '' : 's'}</div><h1>Armies</h1></div><div class="chip">${idle} idle</div></div>
-    <div class="tblwrap"><table class="ptab armt"><thead><tr><th>Force</th><th>Units</th><th>Health</th><th>Status</th><th title="Hold stays put · Defend reacts to enemies within 3 provinces of your land · Preserve pulls back to a city below 40% health">Stance</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">You have no forces.</td></tr>'}</tbody></table></div>
+    <div class="tblwrap"><table class="ptab armt"><thead><tr><th>Force</th><th>Units</th><th>Health</th><th>Status</th><th title="Hold: stays put, digs in after 12 h · Defend: dug in at once, sorties against weaker enemies within 3 provinces · Preserve: falls back to a city below 40% health">Stance</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">You have no forces.</td></tr>'}</tbody></table></div>
     <div class="small muted">Click a force to select it · <kbd>.</kbd> jumps to the next idle force</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${idle ? '<button class="btn" data-act="next-idle">Next idle force</button>' : ''}</div>`;
 }

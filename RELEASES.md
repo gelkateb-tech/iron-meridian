@@ -19,6 +19,7 @@ How it works from now on:
 - Embargo is now a real rule and no longer looks like war: it cannot change map colours or show their units; it closes trade routes (with a notice) and blocks market deals between the two countries in both directions, coalition partners can use Join embargo (computer partners join too, and drop it when the leader lifts it), and the Diplomacy buttons explain it in a tooltip.
 - NAP button tooltip: says the pact lasts 20 days, breaking it marks you as a treaty breaker, and it does not give right of passage.
 - No war delay: a formal war declaration now starts the fighting at once (it used to wait 24 hours); it still avoids the surprise-attack penalty, allies are called in immediately, and saves with a pending declaration start that war on load.
+- Stances: checked Hold, Defend and Preserve and they do differ (Defend digs in at once and sorties against weaker enemies within 3 provinces; Hold only digs in after 12 h; Preserve falls back to a city below 40% health), so all three stay; each now has a one-line tooltip describing what it really does.
 
 ## Released
 - v3.12 (commit 5b47dd8, public 2026-11-11):
