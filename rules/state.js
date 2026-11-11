@@ -68,6 +68,9 @@ function newGame(seed, pick, humans = []){
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
     // compact powers (Germany, Japan, Britain...) start with a denser, dug-in home army
+    // medium powers (41 to 55 provinces: France, Turkey, Iran) sit between the two: no forts, but a stronger capital garrison and two weeks before an AI
+    // power may attack them (graceFor), so the compact, dug-in powers next door do not pick them off in the second week
+    n.mid = !n.small && GS > 1 && np <= 55; if (n.mid) addArmy(n.id, n.capital, {inf:3, art:1});
     if (n.small){ S.bld[n.capital].fort = 1; addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
       for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) { addArmy(n.id, P.id, {inf:2}); S.bld[P.id].fort = 1; } }
   }

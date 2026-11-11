@@ -163,5 +163,9 @@ function cityMains(P, countries){ const KS = ['cash', 'oil', 'metal', 'iron', 'e
       for (const id of left){ const p = P[id]; for (const k of KS){
         const wb = Math.max(0.6, Math.min(1.6, Math.sqrt(ECO_SHARE[k]*(done + 6)/(used[k] + 6*ECO_SHARE[k]))));
         const v = score(p, k)*wb/(1 + 1.5*loc[k]); if (v > bv + 1e-9){ bv = v; best = [p, k]; } } }
-      take(best[0], best[1]); } }
+      take(best[0], best[1]); }
+    // no big country is left without oil of its own: with eight or more cities and no oil city, the smallest city of its most common resource
+    // (never the capital) becomes an oil city. On today's map that is Australia alone (Port Hedland, off the North West Shelf)
+    if (n >= 8 && !loc.oil){ const top = KS.filter(k => k !== 'cash').reduce((x, y) => loc[y] > loc[x] ? y : x), c0 = cs.filter(p => p !== cap && p.main === top).sort((x, y) => x.pop0 - y.pop0 || y.id - x.id)[0];
+      if (c0){ c0.main = 'oil'; loc[top]--; loc.oil++; } } }
   for (const p of P) if (!p.main) p.main = null; }

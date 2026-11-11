@@ -302,6 +302,9 @@ const AI_LOW = {oil:40, metal:60, iron:50, elec:35, rare:40}, AI_SHORT = {oil:90
 // sells; AI_IMP: what an importer buys a day at most; exporters sell while the world price is at least AI_XPX of the base
 const AI_PAY_NEED = 40, AI_PAY_FREE = 20, AI_RARE_LV = 3, AI_XPX = 0.75, AI_BASE_Q = 0.34;
 const AI_XKEEP = {oil:200, metal:120, iron:140, elec:110, rare:40}, AI_IMP = {oil:40, metal:40, iron:35, elec:20, rare:30};
+// iron reaches the powers without an iron city from the first week: a power with an iron city and iron to spare (a net income of AI_XEARLY.net a day or more)
+// lists small lots (up to lot) as soon as its stock is above keep (plus what it saves for and 10 days of upkeep), long before the full export line (AI_XKEEP)
+const AI_XEARLY = {iron:{keep:90, net:3, lot:40}};
 // where the AI builds an Arms Industry for resource k: its own city whose main resource is k, the lowest level first, big cities and home cities first
 function aiSite(n, k){ let best = -1, bv = 0;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || cityMain(p) !== k) continue; const lv = S.bld[p].arms; if (lv >= BUILD.arms.max) continue;
@@ -446,10 +449,12 @@ function aiTurn(n){
     // world price (nation to nation: exports are never dumped on the world market, which flattened prices for everyone). What none of its cities produce is bought up to the
     // shortage line (plus what it saves for and 10 days of upkeep) while the price is at most 1.5x the base: other powers' listings first, then the
     // world market, AI_IMP a day at most and never below $120M
+    // (a good its cities do produce, but less than its forces use, is imported the same way: Australia's one oil city does not fuel a navy)
     { const mains = aiMains(n), M = mkt(), day = Math.floor(S.hour/24); if (N.xD !== day){ N.xD = day; N.xB = {}; }
       for (const k of MKT_K){ const px = M.p[k]/MKT_BASE[k];
-        if (mains.has(k)){ const over = N[k] - AI_XKEEP[k] - aiReserve(n, k) - 25*Math.max(0, inc.upkeep[k]); if (over < 15 || px < AI_XPX) continue;
-          if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ const q = Math.floor(Math.min(over, 120)); N[k] -= q; (S.book || (S.book = [])).push({id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:+(M.p[k]*0.98).toFixed(2), exp:S.hour + 72}); } }
+        if (mains.has(k) && inc.net[k] >= 0){ const res = aiReserve(n, k), upk = Math.max(0, inc.upkeep[k]), over = N[k] - AI_XKEEP[k] - res - 25*upk, E = AI_XEARLY[k], early = E && inc.net[k] >= E.net ? N[k] - E.keep - res - 10*upk : 0;
+          const q = over >= 15 ? Math.floor(Math.min(over, 120)) : early >= 10 ? Math.floor(Math.min(early, E.lot)) : 0; if (!q || px < AI_XPX) continue;
+          if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ N[k] -= q; (S.book || (S.book = [])).push({id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:+(M.p[k]*0.98).toFixed(2), exp:S.hour + 72}); } }
         else { const want = AI_SHORT[k] + aiReserve(n, k) + 10*Math.max(0, inc.upkeep[k]); if (N[k] >= want || px > 1.5) continue;
           const q = Math.floor(Math.min(want - N[k], AI_IMP[k] - (N.xB[k] || 0), (N.cash - 120)/buyPrice(n, k))); if (q >= 5){ const got = aiBookBuy(n, k, q); N.xB[k] = (N.xB[k] || 0) + got + (q - got >= 5 ? trade(n, k, q - got) : 0); } } } }
     // hoarded cash buys the scarce resources on the world market (up to 1.4× the going price)

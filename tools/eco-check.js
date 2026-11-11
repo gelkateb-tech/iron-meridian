@@ -25,6 +25,9 @@ for (const C of G.countries){ const n = C.provs.filter(v => G.P[v].main === 'rar
 const noRare = G.countries.filter(C => C.provs.some(v => G.P[v].city) && !C.provs.some(v => G.P[v].main === 'rare')).length;
 ok(cnt.rare >= 8 && cnt.rare <= 20 && noRare >= 60, `rare-earth cities ${cnt.rare}, countries without ${noRare}`);
 { const R2 = load(); R2.IM.api.newGame(7, 3, []); const G2 = R2.IM.api.G; ok(G2.P.every((P, i) => P.main === G.P[i].main || (P.city && !G.P[i].city) || (!P.city && G.P[i].city)), 'city main resources differ between two loads'); }
+// a country with eight or more cities has an oil city of its own (Australia: Port Hedland)
+for (const C of G.countries){ const cs = C.provs.filter(v => G.P[v].city && !G.P[v].sea); ok(cs.length < 8 || cs.some(v => G.P[v].main === 'oil'), `${C.name} (${cs.length} cities) has no oil city`); }
+ok((G.P.find(P => P.cityName === 'Port Hedland') || {}).main === 'oil', 'Port Hedland is not an oil city');
 console.log('cities ' + cities.length + '  ' + KS.map(k => k + ' ' + cnt[k]).join('  ') + `  countries without a rare-earth city ${noRare}`);
 
 // ---- 2. buildings
@@ -39,8 +42,8 @@ for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owne
   ok(Object.keys(y0).filter(r => r !== 'cash' && r !== 'mp' && y0[r] > 0).every(r => r === k), `${P.cityName} yields more than its main resource`);
   S.bld[p].arms = keep.arms; }
 { const n = 0, cs = G.P.filter(P => S.owner[P.id] === n && P.city).map(P => P.id), c1 = R.buildCost(n, 'arms', 1, cs[0]), c2 = R.buildCost(n, 'arms', 2, cs[0]), c5 = R.buildCost(n, 'arms', 5, cs[0]);
-  ok(c1.cash === 40 && c1.metal === 12 && c1.iron === 6 && c2.cash === 64 && c5.cash === 262 && c5.elec === 26, 'Arms Industry prices ' + JSON.stringify([c1, c2, c5]));
-  S.bld[cs[1]].arms = 1; const d1 = R.buildCost(n, 'arms', 1, cs[0]); ok(d1.cash === 56 && d1.metal === 17 && d1.iron === 8, 'second Arms Industry price ' + JSON.stringify(d1));
+  ok(c1.cash === 20 && c1.metal === 6 && c1.iron === 3 && c2.cash === 64 && c2.metal === 19 && c2.iron === 10 && c5.cash === 262 && c5.elec === 26, 'Arms Industry prices (level I at half price) ' + JSON.stringify([c1, c2, c5]));
+  S.bld[cs[1]].arms = 1; const d1 = R.buildCost(n, 'arms', 1, cs[0]); ok(d1.cash === 28 && d1.metal === 8 && d1.iron === 4, 'second Arms Industry price ' + JSON.stringify(d1));
   const f0 = R.buildCost(n, 'fac', 1, cs[2]).cash; ok(f0 === Math.round(25*1.4), 'an Arms Industry must not raise the Army Base price: ' + f0); S.bld[cs[1]].arms = 0;   // (the capital's Army Base raises it once)
   ok(cs.every(p => R.canBuildHere(p, 'arms')) && !R.canBuildHere(G.P.find(P => S.owner[P.id] === n && !P.city).id, 'arms'), 'Arms Industry: cities only');
   const cap = S.nations[n].capital, rec0 = S.bld[cap].rec; S.bld[cap].fac = 2; S.bld[cap].rec = 0; ok(near(R.trainF(cap, 'tank'), 0.6) && near(R.trainF(cap, 'inf'), 0.6) && near(R.trainF(cap, 'jet'), 1) && near(R.trainF(cap, 'frig'), 1), 'Army Base II: ground units 40% faster, aircraft and ships not');
@@ -53,6 +56,14 @@ for (const scn of Object.keys(R.SCENARIOS)){ const Q = load(); Q.useScenario(scn
     for (const k of ['elec', 'rare']){ ok(g[k] > 1, `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
     for (const t of ['inf', 'at', 'tank', 'art']){ const c = Q.ucost(N.id, t); ok(Object.keys(c).every(k => N[k] >= c[k]), `${scn}: ${N.name} cannot pay for ${t} on day 1`); } }
   console.log(`${scn}: ${S2.nations.length} nations; lowest day-1 income  ` + Object.entries(low).map(([k, v]) => `${k} ${v[0].toFixed(1)} (${v[1]})`).join('  ')); }
+
+// ---- 3b. the follow-ups: a seat's expired offers come back with a dispatch; medium powers get two weeks before an AI attacks them
+{ const Q = load(), a2 = Q.IM.api; a2.newGame(11, 0, [0]); const T = a2.S, N = T.nations[0]; T.started = true; N.oil = 200; N.cash = 500;
+  ok(a2.postOffer(0, 'oil', 60, 90, 'sell') === 60 && a2.postOffer(0, 'iron', 40, 0.1, 'buy') === 40 && N.oil === 140 && near(N.cash, 496), 'posting the two offers');
+  for (let h = 0; h < 96; h++) a2.tick(); const L = a2.desk(0).log.map(e => e.text).filter(t => /expired/.test(t));
+  ok(!T.book.some(o => o.seller === 0) && L.length === 2 && L.some(t => /^Your sell offer of 60 oil at \$90\.00M each expired unsold\. The 60 oil are back in your stock/.test(t)) && L.some(t => /^Your buy offer for 40 iron at \$0\.10M each expired unfilled\. The \$4M held for it is back in your treasury\.$/.test(t)), 'expired offers: ' + JSON.stringify(L));
+  const mid = T.nations.filter(M => M.mid).map(M => M.name).sort().join(), sm = T.nations.filter(M => M.small && M.mid).length;
+  ok(mid === 'France,Iran,Turkey' && !sm, 'medium powers: ' + mid); }
 
 // ---- 4. an old save
 { const Q = load(), a2 = Q.IM.api; a2.newGame(99, 0, [0]); let T = a2.S; const Gq = a2.G, me = 0, N = T.nations[me];
