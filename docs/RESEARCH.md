@@ -2,7 +2,7 @@
 
 The design for the new research tree, built from the owner's notes in `docs/RESEARCH-REFERENCE.md` (structure and feel of Conflict of Nations' research screen; every name, icon and picture here is our own).
 
-**Status: design only. Nothing in this file is in the game yet.** The tree itself lives as data in `tools/research-proto.js`; sections 4 and 6 of this file are written by that tool (`node tools/research-proto.js --write`), so the tables always match the data. The tool also checks the tree (see section 6.3).
+**Status: built in the developer build** (branch `research-redesign`), everything except section 12.2 to 12.7 (new units, new weapons, officers, new elite units), which wait for the owner. The tree itself is data in `rules/data.js` (`RCATS`, `R_LINES`, `R_SPECIAL`, built into `RNODES`); sections 4 and 6 of this file are written from it by `node tools/research-proto.js --write`, so the tables always match the game. The tool also checks the tree (see section 6.3). What the build changed from this plan is listed in section 13.
 
 Contents: 1 what changes, 2 how the tree works, 3 categories, 4 the tree, 5 prices and times, 6 balance, 7 old saves, 8 computer players, 9 the screen, 10 build plan, 11 later, 12 NEEDS OWNER APPROVAL.
 
@@ -734,7 +734,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 9 | Anti-Missile Shield 1/3 (`msl3`) | Upgrade | SAMs and Frigates intercept missiles twice as well. Needs Ballistic Missiles | $132M, 60 mat, 96 rare | 7 |
+| 9 | Anti-Missile Shield 1/3 (`msl3`) | Upgrade | your SAMs and Frigates intercept missiles twice as well. Needs Ballistic Missiles | $132M, 60 mat, 96 rare | 7 |
 | 15 | Anti-Missile Shield 2/3 (`msl3`) | Upgrade | 2.5 times as well | $170M, 60 mat, 60 rare | 6 |
 | 21 | Anti-Missile Shield 3/3 (`msl3`) | Upgrade | 3 times as well | $220M, 80 mat, 80 rare | 7 |
 
@@ -742,8 +742,8 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 5 | Reconnaissance Satellites 1/3 (`sat1`) | Upgrade | up to 3 spy satellites. Needs Cruise Missiles | $120M, 35 mat, 61 rare | 6 |
-| 11 | Reconnaissance Satellites 2/3 (`sat1`) | Upgrade | up to 4 | $150M, 50 mat, 48 rare | 5 |
+| 5 | Reconnaissance Satellites 1/3 (`sat1`) | Upgrade | launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day. Needs Cruise Missiles | $120M, 35 mat, 61 rare | 6 |
+| 11 | Reconnaissance Satellites 2/3 (`sat1`) | Upgrade | up to 4 satellites | $150M, 50 mat, 48 rare | 5 |
 | 17 | Reconnaissance Satellites 3/3 (`sat1`) | Upgrade | up to 5, each with a wider swath | $200M, 70 mat, 64 rare | 6 |
 
 ### Command & Logistics
@@ -761,25 +761,25 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 3 | Motorized Supply (`log1`) | Upgrade | All forces move 20% faster; opens high-speed rail | $66M, 20 mat, 27 rare | 4 |
+| 3 | Motorized Supply (`log1`) | Upgrade | all forces move 20% faster; opens high-speed rail | $66M, 20 mat, 27 rare | 4 |
 
 **Engineers**: 1 steps, 29 rare materials, $78M, 5 research days in all.
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 4 | Combat Engineers (`log2`) | Upgrade | Capture 30% faster; forts cost half; roads and railways 25% cheaper and faster | $78M, 20 mat, 29 rare | 5 |
+| 4 | Combat Engineers (`log2`) | Upgrade | capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build | $78M, 20 mat, 29 rare | 5 |
 
 **Landings**: 1 steps, 34 rare materials, $114M, 7 research days in all.
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 5 | Amphibious Doctrine (`nav3`) | Upgrade | Troops landing from the sea fight at 90% instead of 67% on their first day | $114M, 20 mat, 34 rare | 7 |
+| 5 | Amphibious Doctrine (`nav3`) | Upgrade | troops landing from the sea fight at 90% instead of 67% on their first day | $114M, 20 mat, 34 rare | 7 |
 
 **Medical**: 1 steps, 32 rare materials, $102M, 7 research days in all.
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 6 | Field Hospitals (`log3`) | Upgrade | Your forces take 15% less damage | $102M, 20 mat, 32 rare | 7 |
+| 6 | Field Hospitals (`log3`) | Upgrade | your forces take 15% less damage | $102M, 20 mat, 32 rare | 7 |
 
 <!-- TREE:END -->
 
@@ -807,7 +807,7 @@ Totals, by category:
 
 <!-- BALANCE:BEGIN (written by tools/research-proto.js --write) -->
 Whole tree: 170 nodes, 285 research steps, 4829 rare materials, $38476M, 8882 materials, 950 research days (475 days with both slots never idle).
-Today's tree: 38 projects, 1962 rare materials, $3774M, 228 research days.
+The tree before the redesign: 38 projects, 1962 rare materials, $3774M, 228 research days.
 
 | Category | Lines | Steps | Rare materials | Money | Research days |
 |---|---|---|---|---|---|
@@ -1106,3 +1106,17 @@ One officer per branch (ground, mechanized, armor, air, naval), each a unit of i
 ### 12.7 Elite units as units of their own
 
 The reference lists an elite helicopter, an elite fighter and an elite submarine as separate units. This plan marks four existing units as elite instead. New elite units (for example a stealth attack helicopter or a quiet hunter submarine) would each be a new unit type with its own art; none is proposed until the owner asks for them.
+
+## 13. As built
+
+What the build does differently from, or adds to, the plan above.
+
+- **Health.** A generation's health is taken as less damage: the damage a unit type takes is multiplied by `base health / researched health` (`hurt()` in `rules/combat.js`). Wounds stay in the unit's base health, so health bars, repairs, merging and old saves need no change. A tank with +4 health (14 to 18) takes 22% less damage.
+- **Save format.** The save keeps version 4. A save made under the new tree carries `S.rsv = 2`; one without it is converted once on load (`researchMigrate` in `rules/research.js`). `N.mk` goes; `N.eng` is only ever read from an old save, runs to its end and then gives its two levels.
+- **`has(n, id)`** means "holds node `id` at any level". No call site uses an old id any more, so there is no translation table at run time; `R_LEGACY` is used only by the conversion and by a project that was still running in a slot.
+- **Rows.** The grid has a row for each day that holds a diamond (a levelled node sits on the day of its first level), not for every day a later level opens; the later levels' days are in the detail card.
+- **Lanes.** Inside a column the spine (unlock, generations) is the middle lane, Firepower hangs to its left, Protection to its right, upgrades alternate. A family tie is a dashed line over the top of the columns; the Stealth Bomber's requirement inside Strategic Air is a solid line, its requirement from Tactical Air a tag on the node and a link in the card.
+- **Phone.** Upgrade diamonds show their icon only (the card names them); unit diamonds keep their name.
+- **Worded upgrades** (phase 4) are all in, one small rule each in `rules/research.js` (`multO`, `rTrainF`, `rDrilled`, `rSpecTerr`, `rSightF`, `rMlrsReach`, `rSamNear`, `rJamF`, `rPack`, `rKoHours`, `rAdF`, `rBombF`, `rMpaR`, `rMpaH`, `rAewR`, `rAewF`, `rDeckRate`, `mslOf`, `rShield`, `rSatMax`, `rSatR`, `dropOnly`, `dropRange`). Rough-ground training applies to a force made up only of trained types. "Sees half a province farther" is a sight radius of 1.3 legs instead of 0.8.
+- **Computer players.** As section 8, with two softenings: a line whose unit needs a kind of building the nation has none of at any level (not "no Airbase II") is the one that is held back, so bombers and fighters are still researched before the bigger airbase is built; and upgrades of a unit type the nation does not field are weighted at a quarter rather than zero.
+- **Generation pictures.** The Heavy Bomber's generation 2 uses the second bomber picture and UAV IV the armed UAV picture, as before; every other generation shows the unit's picture with a "II" / "III" tag until its art exists.

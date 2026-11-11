@@ -62,12 +62,13 @@ function battleReport(p, B, os, me){ const D = desk(me);
 function rangedHour(){ let by = null;   // stationary forces per province, built once per hour on first use (stationaryAt scans every army)
   for (const a of S.armies){ if (a.owner < 0 || !(a.u.art || a.u.mlrs) || a.air || a.fly || a.to !== null || G.P[a.at].sea || S.battles.includes(a.at) || a.fire === 'hold') continue;
     if (!by) by = index(); const stAt = v => by[v];
-    const near = new Set(G.P[a.at].nbs.filter(v => !G.P[v].sea)), far = new Set(); if (a.u.mlrs) for (const v of near) for (const w of G.P[v].nbs) if (!G.P[w].sea && w !== a.at && !near.has(w)) far.add(w);
+    const near = new Set(G.P[a.at].nbs.filter(v => !G.P[v].sea)), far = new Set(); if (a.u.mlrs){ for (const v of near) for (const w of G.P[v].nbs) if (!G.P[w].sea && w !== a.at && !near.has(w)) far.add(w);
+      if (rMlrsReach(a.owner) > 2) for (const v of [...far]) for (const w of G.P[v].nbs) if (!G.P[w].sea && w !== a.at && !near.has(w)) far.add(w); }   // Extended-Range Rockets: one province farther
     let best = -1, bp = 0; for (const v of [...near, ...far]){ const foes = stAt(v).filter(b => b.owner >= 0 && atWar(a.owner, b.owner) && count(b) > 0); const pw = foes.reduce((s0, b) => s0 + power(b), 0)*(near.has(v) ? 1.1 : 1); if (pw > bp){ bp = pw; best = v; } }
     if (best < 0) continue;
     const foes = stAt(best).filter(b => b.owner >= 0 && atWar(a.owner, b.owner) && count(b) > 0), tot = foes.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
     const av = {soft:0, armored:0, air:0, naval:0}, shooters = (near.has(best) ? [['art', a.u.art], ['mlrs', a.u.mlrs]] : [['mlrs', a.u.mlrs]]).filter(e => e[1]);
-    const cov = Math.min(1, terr(best).art); let base = 0; for (const [t, n] of shooters){ const b0 = n*st(a.owner, t, 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4)*cov; base += b0; for (const k of CLASSES) av[k] += b0*mult(t, k); }
+    const cov = Math.min(1, terr(best).art); let base = 0; for (const [t, n] of shooters){ const b0 = n*st(a.owner, t, 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4)*cov; base += b0; for (const k of CLASSES) av[k] += b0*multO(a.owner, t, k); }
     if (!base) continue;
     for (const b of foes){ const h0 = effHP(b), u0 = count(b); hurt(b, av, (b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort) : 1)/tot); const lost = Math.max(0, h0 - effHP(b));
       if (lost >= 0.5) IM.emit('fxRanged', a, b, best, lost);   // the client shows the damage number

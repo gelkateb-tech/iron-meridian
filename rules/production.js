@@ -49,7 +49,7 @@ function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const 
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
 const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
 function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
-const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)));
+const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)*(n >= 0 ? rTrainF(n, t) : 1)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && P.city && P.coast)); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
@@ -71,7 +71,7 @@ function spawn(n, p, t){
   const air = UNITS[t].cls === 'air';
   const RL = isSeat(n) ? desk(n).rally : null;   // a seat's rally points: new ground units march there on their own
   if (!air && RL && RL[p] != null && RL[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, RL[p]); if (!na.path.length) delete RL[p]; return; }
-  const k = UNITS[t].pack || 1;
+  const k = rPack(n, t);   // (a card of swarm drones holds six, eight with the Bigger Salvo upgrade)
   if (air){ const w = S.armies.find(x => x.owner === n && x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u])); if (w && !S.armies.some(x => x.owner === n && x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
   let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])));
   if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }

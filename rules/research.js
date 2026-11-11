@@ -46,6 +46,38 @@ function rGrant(N, id, lv){ const nd = RN[id]; if (!nd) return; const T = N.tech
 function rGrantLegacy(N, old){ for (const s of R_LEGACY[old] || []){ const add = s.endsWith('@'), id = add ? s.slice(0, -1) : s; rGrant(N, id, add ? (+(N.tech && N.tech[id]) || 0) + 1 : 1); } }
 // what a spy of nation n could steal from nation o: the nodes o holds at a higher level (one level is taken at a time; days do not matter)
 const rStealable = (n, o) => Object.keys(S.nations[o].tech || {}).filter(t => RN[t] && rLevel(o, t) > rLevel(n, t));
+// ---------- upgrades worded rather than a flat stat (docs/RESEARCH.md phase 4): each is one small rule read from the nation's level
+// class multipliers a generation or an upgrade changes: unit -> class -> [node, new value]
+const R_VS = {at:{armored:['at_g2', 4]}, mlrs:{armored:['mlrs_g2', 1.2]}, jet:{armored:['jet_g2', 1.8]}, swarm:{armored:['swarm_g2', 0.6]}, frig:{air:['frig_aa', 2.1]}};
+const multO = (o, t, k) => { const r = R_VS[t] && R_VS[t][k]; return r && o >= 0 && has(o, r[0]) ? r[1] : mult(t, k); };
+const multUO = (o, t, u) => (UNITS[t].vsU && UNITS[t].vsU[u] != null) ? UNITS[t].vsU[u] : multO(o, t, UNITS[u].cls);
+const rTrainF = (n, t) => t === 'inf' ? [1, 0.85, 0.7][rLevel(n, 'inf_build')] || 1 : 1;                 // Rapid Mobilisation: Motorized Infantry trains 15% / 30% faster
+// rough-ground training: a force made up only of trained types loses half the terrain's speed penalty (Rough-Ground Drills: forest and hills, then
+// mountains and jungle too; Wide Tracks: any rough ground). Special Forces already cross rough ground at full speed
+const R_DRILL = [null, {forest:1, hills:1}, {forest:1, hills:1, mountain:1, jungle:1}];
+function rDrilled(a, terrain){ const o = a.owner; if (o < 0) return false; let any = false;
+  for (const t of UT){ if (!a.u[t]) continue; if (t === 'spec') continue; if (t === 'inf'){ const D = R_DRILL[rLevel(o, 'inf_terr')]; if (!D || !D[terrain]) return false; any = true; } else if (t === 'tank'){ if (!has(o, 'tank_terr')) return false; any = true; } else return false; }
+  return any; }
+const rSpecTerr = (n, f) => f > 1 ? 1 + (f - 1)*[1, 1.25, 1.5][rLevel(n, 'spec_terr')] : f;             // Mountain & Arctic Training: the rough-terrain attack bonus 40% -> 50% -> 60%
+const rSightF = a => a.owner >= 0 && ((a.u.at && has(a.owner, 'at_eye')) || (a.u.spec && has(a.owner, 'spec_eye'))) ? 1.3 : 0.8;   // Thermal Sights, Night Optics: half a province farther (in legs)
+const rMlrsReach = n => has(n, 'mlrs_rng') ? 3 : 2;                                                   // Extended-Range Rockets: provinces
+const rSamNear = n => has(n, 'sam_g2') ? 1 : 0.35;                                                    // Long-Range SAM: neighbouring provinces at full strength
+const rJamF = n => [1, 1.2, 1.4][rLevel(n, 'jam_band')] || 1;                                         // Wideband Jamming
+const rPack = (n, t) => (UNITS[t].pack || 1) + (t === 'swarm' && has(n, 'swarm_pack') ? 2 : 0);       // Bigger Salvo: eight swarm drones per card
+const rKoHours = n => has(n, 'sdrone_hit') ? 36 : 24;                                                 // Bunker-Buster Warhead
+const rAdF = (n, t) => t === 'sdrone' && has(n, 'sdrone_g2') ? 0.7 : 1;                               // Low-Observable Strike Drone: air defences hit 30% less
+const rBombF = (n, t) => t === 'stealth' && has(n, 'stealth_bay') ? 0.75 : UNITS[t].bmb || 0;         // Enlarged Bomb Bay
+const rMpaR = n => MPA_R*([1, 1.2, 1.4][rLevel(n, 'mpa_sonar')] || 1), rMpaH = n => has(n, 'mpa_g2') ? 18 : 12;   // Sonobuoy Field; Long-Endurance Patrol Aircraft
+const rAewR = n => AEW_R*([1, 1.15, 1.3][rLevel(n, 'awacs_radar')] || 1), rAewF = n => has(n, 'awacs_link') ? 1.35 : 1.25;   // High-Power Radar; Fighter Data Link
+const rDeckRate = n => [0.2, 0.25, 0.3][rLevel(n, 'carr_deck')] || 0.2;                               // Flight-Deck Crews: repairs aboard a carrier, per day
+// missiles: range, speed and power by research (Cruise Missile Range / Speed, Ballistic Missile Range, Heavier Warhead)
+function mslOf(n, k){ const M0 = MISSILES[k]; if (!M0 || n < 0) return M0; const r = k === 'cm' ? rLevel(n, 'cm_rng')*4 : rLevel(n, 'bm_rng')*12, s = k === 'cm' ? rLevel(n, 'cm_spd')*2 : 0, p = k === 'bm' && has(n, 'bm_pow') ? 3 : 0;
+  return r || s || p ? {...M0, range:M0.range + r, speed:M0.speed + s, power:M0.power + p} : M0; }
+const rShield = n => [1, 2, 2.5, 3][rLevel(n, 'msl3')] || 1;                                          // Anti-Missile Shield: how much better SAMs and Frigates intercept
+const rSatMax = n => [0, 3, 4, 5][rLevel(n, 'sat1')] || 0, rSatR = n => SAT_R*(rLevel(n, 'sat1') >= 3 ? 1.15 : 1);   // Reconnaissance Satellites: how many, and the swath
+// who may be air-dropped: Paratroopers, and Special Forces once they are Air-Transportable; how far (the shortest reach in the force)
+const dropOnly = a => !!a && !a.air && count(a) > 0 && (a.u.para || 0) + (a.owner >= 0 && has(a.owner, 'spec_airlift') ? a.u.spec || 0 : 0) === count(a);
+const dropRange = a => Math.min(a.u.para ? PARA_RANGE + 2*rLevel(a.owner, 'para_airlift') : 99, a.u.spec ? 6 : 99);
 // one game hour of one slot: completion frees the slot
 function researchSlotHour(N, k){ const R = N[k]; if (!R) return;
   if (--R.h <= 0){ const nd = RN[R.id]; N[k] = null;

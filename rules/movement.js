@@ -13,7 +13,9 @@ const ROAD_F = {wheel:1.6, track:1.25, foot:1.15};
 const TERR_F = {wheel:{forest:0.85, mountain:0.7, desert:1.1, tundra:0.85, hills:0.85, marsh:0.7, snow:0.7}, track:{forest:0.95, mountain:0.85, desert:1.1, tundra:0.95, hills:0.95, marsh:0.75, snow:0.8}, foot:{forest:1.1, mountain:1.3, urban:1.05, hills:1.15, marsh:0.95, snow:0.9}};
 function moveType(a){ let slow = null, sv = 1e9; for (const t of UT){ if (!a.u[t] || !MOVE_T[t]) continue; const v = st(a.owner, t, 'spd'); if (v < sv){ sv = v; slow = t; } } return slow ? MOVE_T[slow] : 'foot'; }
 // terrain and season part of a ground leg (the road or rail bonus is applied in legHours)
-function moveF(a, from, to){ const mt = moveType(a), P = G.P[to]; let f = (TERR_F[mt] && TERR_F[mt][P.terrain]) || 1; const sz = season(to); if (sz === 'mud' && mt === 'wheel') f *= 0.8; if (sz === 'snow' && mt === 'wheel') f *= 0.9; if (a.u.spec === count(a)) f = Math.max(f, 1); return f; }
+function moveF(a, from, to){ const mt = moveType(a), P = G.P[to]; let f = (TERR_F[mt] && TERR_F[mt][P.terrain]) || 1; const sz = season(to); if (sz === 'mud' && mt === 'wheel') f *= 0.8; if (sz === 'snow' && mt === 'wheel') f *= 0.9; if (a.u.spec === count(a)) f = Math.max(f, 1);
+  { const b = terr(to).spd*f; if (b < 1 && rDrilled(a, P.terrain)) f *= (1 + b)/2/b; }   // trained for rough ground: half the terrain's speed penalty
+  return f; }
 /* ---------------- Roads and railways ----------------
    Each linked pair of neighbouring land provinces has a road level (0 none, 1 track, 2 road, 3 highway) and a rail level (0 none, 1 railway, 2 high-speed).
    Static levels come from lines.js; S.links stores only the differences ("a,b" -> {road, rail, dmg, bld}), so saves stay small.

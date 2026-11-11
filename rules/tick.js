@@ -80,15 +80,15 @@ function tick(){
       const r = r0*frontScale(nU, F)*flankF(dirs);
       const bs = B.s[o] || (B.s[o] = {peak:0, lost:{}, dirs:0, hp:[]}); bs.peak = Math.max(bs.peak, nU); bs.dirs = Math.max(bs.dirs, dirs); bs.dcur = dirs; bs.F = F; bs.n = nU;
       const sznA = o !== S.owner[p] && season(p) ? SEASON_FX[season(p)].atk : 1;
-      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? (has(o, 'nav3') ? 0.9 : 0.67) : 1)*(o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? RIVER_ATK : 1)*sznA;
+      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? (has(o, 'nav3') ? 0.9 : 0.67) : 1)*sznA, riv = o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? RIVER_ATK : 1;   // (riv: attacking across a river; an IFV with the Amphibious Kit is exempt)
         const mf = moraleF(a);
         const TFo = G.P[p].sea ? null : tuf(G.P[p].terrain || 'plains', o !== S.owner[p], !arctic(o));
         const cB = o !== S.owner[p] ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner');
-        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*r*mf*(TFo ? TFo[t] : 1)*cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1); a._dealt0 += base; for (const k of CLASSES) av[k] += base*mult(t, k); } }
+        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*(t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv)*r*mf*(TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1)*cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1); a._dealt0 += base; for (const k of CLASSES) av[k] += base*multO(o, t, k); } }
       // shore bombardment: this side's ships in adjacent sea zones add half their firepower to coastal land battles
       if (!G.P[p].sea && G.P[p].coast) for (const sz of G.P[p].nbs){ if (!G.P[sz].sea) continue;
         for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null) continue;
-          for (const t of UT){ if (!a.u[t] || UNITS[t].cls !== 'naval') continue; const base = 0.5*a.u[t]*st(o, t, 'atk')*r*moraleF(a); for (const k of CLASSES) av[k] += base*mult(t, k); } } }
+          for (const t of UT){ if (!a.u[t] || UNITS[t].cls !== 'naval') continue; const base = 0.5*(t === 'crui' && has(o, 'crui_rng') ? 1.3 : 1)*a.u[t]*st(o, t, 'atk')*r*moraleF(a); for (const k of CLASSES) av[k] += base*multO(o, t, k); } } }
       const foes = owners.filter(e => atWar(o, e)), tot = foes.reduce((s, e) => s + hp.get(e), 0);
       for (const e of foes){ const d = dmg.get(e); for (const k of CLASSES) d[k] += av[k]*hp.get(e)/tot; }
     }
