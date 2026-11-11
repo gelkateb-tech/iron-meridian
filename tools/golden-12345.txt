@@ -16,6 +16,6 @@ day 15  2b3ea8b0dc71d74a  rs -945164407  forces 1021  log 6
 day 16  28cc2fefbb0a3ab5  rs -472431037  forces 1004  log 6
 day 17  55035b22f5cd2162  rs 71819830  forces 984  log 6
 day 18  85ffcfef883d946a  rs 920624082  forces 990  log 6
-day 19  6bd455d4a56e6b9e  rs 106957212  forces 991  log 8
-day 20  0c548ece4bd1bffd  rs 203619700  forces 995  log 9
+day 19  93c6c840f55439f5  rs -1284596522  forces 993  log 8
+day 20  b0a84594345fefaa  rs 963337764  forces 995  log 8
 ERRORS none

@@ -2338,6 +2338,7 @@ const STANDIN = (() => {
     E(g, 128, 40, 6, 10, C.glass, C.line, 1.6); seam(g, 128, 52, 128, 240); seam(g, 113, 104, 30, 174, 0.25); seam(g, 143, 104, 226, 174, 0.25);
     for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) E(g, x, y - 13, 4.5, 3, '#1c1f1a', null);
     light(g); };
+  D['u-stealth-bomber'] = D['u-heavy-bomber-1'];   // (the Stealth Bomber's picture is still to come: the Heavy Bomber's stand-in until its file arrives)
   D['u-heavy-bomber-2'] = D['u-heavy-bomber-1'];   // (the second bomber picture, levels 5-8, uses the same stand-in until its file arrives)
   return D;
 })();
@@ -2389,7 +2390,7 @@ const ART = (() => {
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
   const ART_SUPPLIED = [];
-  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
+  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
   const imgs = new Map(), waits = new Map(), failed = new Set(), cache = new Map(), stand = new Set(), durl = new Map();
   // until a promised picture arrives, an older supplied picture of the same thing beats the code-drawn stand-in (the recon UAV keeps u-drone)
   const ALT = {'u-uav-recon':'u-drone'}, rn = name => stand.has(name) && ALT[name] && imgs.has(ALT[name]) && !stand.has(ALT[name]) ? ALT[name] : name;
@@ -2541,6 +2542,7 @@ const USVG = {
   awacs: '<path d="M27 8L15.5 6.8 11 2H9.4l2.6 4.7-7 .4L3 5.4H2l.6 2.6L2 10.6h1L5 8.9l7 .4L9.4 14H11l4.5-4.8z"/><ellipse cx="10" cy="8" rx="4.2" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.3"/>',
   asf: '<path d="M27 8l-12-1.6L10 1H8.6l1.6 5.5-5 .6L3 4H2v8h1l2.2-3.1 5 .6L8.6 15H10l5-5.4z"/><path d="M5 5.4l-1.4-2M5 10.6l-1.4 2" stroke="currentColor" stroke-width="1"/>',
 };
+USVG.stealth = USVG.bomb;   // (the Stealth Bomber shares the bomber's glyphs and models until it has its own)
 const unitSVG0 = t => `<svg width="28" height="16" viewBox="0 0 28 16" fill="currentColor" aria-hidden="true">${USVG[t] || ''}</svg>`;
 // the UAV's picture follows its level: unarmed recon airframe for UAV I-III, the armed one from UAV IV (per owner)
 // The Heavy Bomber's picture by level: u-heavy-bomber-1 for levels 1-4, u-heavy-bomber-2 for levels 5-8. Today the level is the nation's Mark of the type
@@ -3547,6 +3549,7 @@ const ICON = (() => { const Wh = (cx, r) => `M${cx - r} 13a${r} ${r} 0 1 0 ${2*r
   lst: [['f', 'M1 9.2h19.4l3.2-1.2-2 5H2.6z'], ['f', 'M2.4 4.6h4.4v4.6H2.4z'], ['f', 'M3.6 2.6h1v2h-1z'], ['f', 'M8 7.4h12v1.8H8z']],
   truck:[['f', Wh(5.4, 1.7) + Wh(17.8, 1.7)], ['f', 'M2.4 10.2h19.8v1.6H2.4z'], ['f', 'M17.6 10.2V6.4h3l1.6 2.2v1.6z'], ['f', 'M2.4 4.8h14.6v5.4H2.4z']],   // supply truck (the supply run)
 }; })();
+ICON.stealth = ICON.bomb;   // (the Stealth Bomber shares the bomber's glyph until it has its own)
 // ICONP[type] = runs of [op, joined Path2D, the parts' Path2Ds]
 const ICONP = (() => { const out = {}; for (const k in ICON){ const L = []; for (const [op, d] of ICON[k]){ const last = L[L.length - 1]; if (last && last[0] === op){ last[1] += d; last[2].push(d); } else L.push([op, d, [d]]); }
   out[k] = L.map(([op, d, parts]) => [op, new Path2D(d), parts.map(q => new Path2D(q))]); } return out; })();
@@ -3666,6 +3669,7 @@ const SLK = (() => {
     L.forEach(([cx, cy], i) => { if (i) out.push(['x', slab(cx, cy, 0.75)]); out.push(['f', slab(cx, cy, 0)], ['xb', rim(cx, cy), 0.5]); });
     return out; })(),
   }; })();
+SLK.stealth = SLK.bomb;
 // a sleek glyph of type t, W device px wide (20 design units: at the counter's 20 css px every whole and half unit lands on a device pixel), in colour col;
 // painted once into an offscreen canvas (dropped when the pixel ratio changes)
 const SLKC = new Map(); let SLKC_D = 0;
@@ -5158,7 +5162,7 @@ function glyph(x, y, t, s){
   else if (t === 'swarm'){ for (const [dx, dy] of [[-0.26, 0.12], [0, -0.18], [0.26, 0.12]]){ ctx.moveTo(x + w*dx, y + h*dy - 1.6*s); ctx.lineTo(x + w*dx + 1.5*s, y + h*dy + 1.2*s); ctx.lineTo(x + w*dx - 1.5*s, y + h*dy + 1.2*s); ctx.closePath(); } ctx.fill(); }
   else if (t === 'sdrone'){ chev(-0.8*s); ctx.moveTo(x - w*0.2, y + h*0.34); ctx.lineTo(x + w*0.2, y + h*0.34); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y + h*0.05, 1.3*s, 0, Math.PI*2); ctx.fill(); }
   else if (t === 'jam'){ ctx.moveTo(x - w*0.34, y + h*0.1); ctx.lineTo(x - w*0.14, y - h*0.25); ctx.lineTo(x, y + h*0.25); ctx.lineTo(x + w*0.14, y - h*0.25); ctx.lineTo(x + w*0.34, y + h*0.1); ctx.stroke(); }
-  else if (t === 'bomb'){ ctx.moveTo(x - w*0.36, y + h*0.28); ctx.lineTo(x, y - h*0.32); ctx.lineTo(x + w*0.36, y + h*0.28); ctx.closePath(); ctx.fill(); }
+  else if (t === 'bomb' || t === 'stealth'){ ctx.moveTo(x - w*0.36, y + h*0.28); ctx.lineTo(x, y - h*0.32); ctx.lineTo(x + w*0.36, y + h*0.28); ctx.closePath(); ctx.fill(); }
   else if (t === 'mpa'){ chev(-1.2*s); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - w*0.32, y + h*0.3); ctx.quadraticCurveTo(x - w*0.16, y + h*0.1, x, y + h*0.3); ctx.quadraticCurveTo(x + w*0.16, y + h*0.5, x + w*0.32, y + h*0.3); ctx.stroke(); }
   else if (t === 'awacs'){ ctx.ellipse(x, y, w*0.26, h*0.24, 0, 0, Math.PI*2); ctx.moveTo(x - w*0.26, y); ctx.lineTo(x + w*0.26, y); ctx.stroke(); }
   else if (t === 'asf'){ chev(-2.4*s); chev(0); chev(2.4*s); ctx.stroke(); }
@@ -5252,7 +5256,7 @@ function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
   else if (t === 'art') artySprite(x, y, s, col, fighting, now, seed);
   else if (t === 'sam') samSprite(x, y, s, col, fighting, now, seed);
   else if (t === 'jet' || t === 'int') jetSprite(x, y - 6*s, s, col, 0, t);
-  else if (UNITS[t] && UNITS[t].cls === 'air') jetSprite(x, y - 6*s, s, col, 0, t === 'bomb' || t === 'mpa' || t === 'awacs' ? 'jet' : 'int');
+  else if (UNITS[t] && UNITS[t].cls === 'air') jetSprite(x, y - 6*s, s, col, 0, isBmb(t) || t === 'mpa' || t === 'awacs' ? 'jet' : 'int');
   else if (UNITS[t] && UNITS[t].cls !== 'naval') samSprite(x, y, s, col, fighting, now, seed);
   else shipSprite(x, y - 2*s, s, col, 0, t, moving, now);
   ctx.restore();
@@ -5276,7 +5280,7 @@ const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max
    the HQ and the counters. Independent garrisons show none unless selected or fighting; wings in flight keep their flat icons.
    Settings: 'Troop models'. */
 const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
-  jet:['jet'], bomb:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
+  jet:['jet'], bomb:['jet'], stealth:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
 const TMG = {sol:[1.8, 0.5], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
   frig:[7.4, 1.25], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[17, 0.9], int:[17, 0.9], heli:[17, 0.82], drone:[10.6, 0.66]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter)
@@ -5688,7 +5692,7 @@ const UART = {inf:['u-infantry', 0, 0.62], para:['u-infantry', 0, 0.62], spec:['
   frig:['u-corvette', 0, 0.62], crui:['u-destroyer', 0, 0.7], sub:['u-submarine', 0, 0.6], carr:['u-carrier', 0, 0.8], drop:['u-transport-heli', 0, 0.72], truck:['u-supply-truck', 0, 0.5]};
 const uArt = t => { const u = UART[t]; return u && ART.ready(u[0]) ? u : null; };
 Object.assign(UART, {drone:['u-uav-recon', 0, 0.58], drone4:['u-uav-armed', 0, 0.62], swarm:['u-swarm-drone', 0, 0.74], sdrone:['u-strike-drone', 0, 0.72], jam:['u-anti-drone', 0, 0.6],
-  bomb:['u-heavy-bomber-1', 0, 0.92], bomb2:['u-heavy-bomber-2', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
+  bomb:['u-heavy-bomber-1', 0, 0.92], bomb2:['u-heavy-bomber-2', 0, 0.92], stealth:['u-stealth-bomber', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
 // enemy stealth UAV (level III+) seen in flight: near your SAMs or jammers, or under your AWACS
 function uavSpotted(v){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 < 0) return false; if (aewCover(PLAYER).has(p0)) return true;
   for (const b of S.armies) if (b.owner === PLAYER && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
@@ -8158,12 +8162,15 @@ function draw(now){ draw.now = now;
   // aircraft in flight: formation of jets with contrails
   const dtV = Math.min(0.1, (now - (draw.lastT || now))/1000), airLbl = []; draw.lastT = now;
   for (const a of S.armies){ if (!a.air || !count(a)) continue; const v = wingVis(a, now, dtV); if (!v) continue; animFast();
-    if ((!armyVisible(a, vis) && !vis.has(v.tgt)) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v))){   // stealthy UAVs (III+) only show near your air defence or under your AWACS
-      if (vis.loc.size && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && vis.loc.has(p0) && !(a.u.drone && uavLv(a.owner) >= 3)){ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, spread:false, unk:true}); } }
+    const pU = a.owner !== PLAYER && loWing(a) ? (c0 => c0 >= 0 ? G.prov[c0] : -1)(worldToCell(v.x, v.y)) : -1, lo = a.owner !== PLAYER && loHidden(a, PLAYER, pU);   // a foreign Stealth Bomber wing no SAM or jammer of yours is close to
+    if ((!armyVisible(a, vis) && !vis.has(v.tgt)) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v)) || lo){   // stealthy UAVs (III+) only show near your air defence or under your AWACS; stealth bombers only near your SAMs and jammers
+      /*@TEST*/(window.__airSeen || (window.__airSeen = {}))[a.id] = 'hidden';/*@ENDTEST*/
+      if ((lo || vis.loc.size) && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && (lo ? loLocated(PLAYER, p0) : vis.loc.has(p0)) && !(a.u.drone && uavLv(a.owner) >= 3)){   /* AWACS: a '?' contact; a stealth bomber only inside half the radar's range */ /*@TEST*/window.__airSeen[a.id] = 'contact';/*@ENDTEST*/ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, spread:false, unk:true}); } }
       continue; }
+    /*@TEST*/(window.__airSeen || (window.__airSeen = {}))[a.id] = 'drawn';/*@ENDTEST*/
     const [x, y] = toScreen(v.x, v.y), T = G.P[v.tgt], B = G.P[a.air.base], ang = v.hd ?? 0, phB = v.stage === 'back', alt = v.alt ?? 1, bank = v.bank || 0, ca0 = Math.cos(ang), sa0 = Math.sin(ang);
     const col = mapCol(a.owner), kind = artT(wingT(a), a.owner), nPl = 1, sc = Math.max(0.9, Math.min(k, 2.2*zx(hexPx)))*1.1, bob = 0;   // one flat aircraft icon per wing (the pill gives the count), gliding without bob
-    const Lf = (22 + 8*smooth01((hexPx - 20)/100))*(/bomb|awacs|mpa/.test(kind) ? 1.2 : /drone|swarm/.test(kind) ? 0.9 : 1)*(0.9 + 0.1*alt);
+    const Lf = (22 + 8*smooth01((hexPx - 20)/100))*(/bomb|stealth|awacs|mpa/.test(kind) ? 1.2 : /drone|swarm/.test(kind) ? 0.9 : 1)*(0.9 + 0.1*alt);
     // contrail history on screen (world-anchored, so it curves through turns and stays put while panning); far out only the last 0.9 s
     const trS = []; if (v.tr && v.tr.length){ const tMin = hexPx < 40 ? now - 900 : -Infinity; for (const q of v.tr){ if (q[3] < tMin) continue; const [sx, sy] = toScreen(q[0], q[1]); trS.push(sx, sy + bob, Math.cos(q[2]), Math.sin(q[2])); }
       trS.push(x, y + bob, ca0, sa0); }
@@ -8172,7 +8179,7 @@ function draw(now){ draw.now = now;
       const px0 = x + ox, py0 = y + oy + bob, L0 = 8*sc;
       // contrails: a tapered trail along this plane's own flight history, in three age buckets that widen and fade (3 strokes per plane);
       // multi-engine heavies leave two lines, drones a thin one, helicopters none (their rotor spins instead)
-      const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = Lf;
+      const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'stealth' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = Lf;
       if (!rotor){ const wc = (dr ? 1.2 : 2.2)*Math.min(2, sc/1.1);
         if (nTr >= 3){ const los = heavy ? [-0.2, 0.2] : [0], b1 = Math.floor(nTr/3), b2 = Math.floor(nTr*2/3);
           ctx.save(); plateClipOn(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgb(235,240,245)';   // (never across a plate)
@@ -9047,7 +9054,7 @@ const RGLY = {
   clock:'<circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M11 6.6h2v6.2l3.6 2.2-1 1.7-4.6-2.8z"/>',
 };
 const rg = (k, sz = 22, cls = '') => `<svg class="rg ${cls}" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${RGLY[k] || ''}</svg>`;
-const techStep = id => { let d = 0, T = TECH_BY[id]; while (T && T.req && d < 20){ d++; T = TECH_BY[T.req]; } return d; };
+const techStep = (id, g = 0) => { const T = TECH_BY[id]; return !T || g > 20 ? 0 : techReqs(T).reduce((d, q) => Math.max(d, 1 + techStep(q, g + 1)), 0); };   // (the longest chain of prerequisites leading to it)
 const techUnit = T => Object.keys(UNITS).find(t => UNITS[t].tech === T.id) || null;
 // the picture in a node: the unit the project unlocks, else a glyph for what it does
 const TGLY = {eco1:'factory', eco2:'mp', eco3:'oil', log1:'truck', log2:'wrench', log3:'cross', msl1:'cm', msl2:'bm', msl3:'def', sat1:'sat', nav3:'anchor', drone1:null, jam1:'jam', air1:null};
@@ -9091,10 +9098,10 @@ function researchHTML(){
       <button class="rs-x" data-act="resume" aria-label="Close research" title="Back to the map">${rg('x', 18)}</button></div>
     <div class="rs-slots">${s1}${s2}</div></div>`;
   if (view === 'list'){
-    const t1 = TECH.filter(T => !has(PLAYER, T.id) && (!T.req || has(PLAYER, T.req))).map(T => techCost(T).rare).sort((a, b) => a - b)[0];
+    const t1 = TECH.filter(T => !has(PLAYER, T.id) && techOpen(PLAYER, T)).map(T => techCost(T).rare).sort((a, b) => a - b)[0];
     h += `<div class="rs-list">`;
     for (const br of RB_ORDER){ const M = RB[br] || {g:'atk', tag:''}, L = TECH.filter(T => T.branch === br), dn = L.filter(T => has(PLAYER, T.id)).length;
-      const open = L.filter(T => !has(PLAYER, T.id) && (!T.req || has(PLAYER, T.req)) && !slotOf(T.id)).length;
+      const open = L.filter(T => !has(PLAYER, T.id) && techOpen(PLAYER, T) && !slotOf(T.id)).length;
       const run = R && TECH_BY[R.id] && TECH_BY[R.id].branch === br, qd = R2 && TECH_BY[R2.id] && TECH_BY[R2.id].branch === br;
       h += `<button class="rs-ban${dn === L.length ? ' full' : ''}" data-act="rbranch" data-b="${br}" title="${br}: ${dn} of ${L.length} researched${open ? `, ${open} open now` : ''}">
         ${M.art ? rbImg(M.art) : ''}<span class="rs-dm"><span class="dmi">${rg(M.g, 30)}</span></span>
@@ -9117,11 +9124,13 @@ function researchHTML(){
   // the branch tree
   const br = RV.br, M = RB[br] || {g:'atk'}, Ly = rLayout(br), L = Ly.L, dn = L.filter(T => has(PLAYER, T.id)).length;
   if (RV.sel && (!TECH_BY[RV.sel] || TECH_BY[RV.sel].branch !== br)) RV.sel = null;
-  const st = T => has(PLAYER, T.id) ? 'done' : slotOf(T.id) ? 'run' : (!T.req || has(PLAYER, T.req)) ? 'open' : 'lock';
+  const st = T => has(PLAYER, T.id) ? 'done' : slotOf(T.id) ? 'run' : techOpen(PLAYER, T) ? 'open' : 'lock';
   const INFO = Ly.cols === 1, CV = INFO ? 3 : Ly.cols < 3 ? Ly.cols + 2 : Ly.cols, CO = INFO ? 0 : CV > Ly.cols ? 1 : 0;   // shown columns, and the offset of the branch's own (a single lane: nodes on the left, a card beside each)
   const X = c => (c + CO + .5)*100, Y = r => (r - Ly.r0 + .36)*100;
   let lines = '';
-  for (const T of L){ const p = Ly.pos[T.id], lit = !T.req || has(PLAYER, T.req), cls = lit ? (has(PLAYER, T.id) ? 'on' : 'av') : '';
+  for (const T of L){ const p = Ly.pos[T.id], lit = techOpen(PLAYER, T), cls = lit ? (has(PLAYER, T.id) ? 'on' : 'av') : '';
+    if (T.req2 && Ly.inB.has(T.req2)){ const q = Ly.pos[T.req2], ym = Y(p.r) - 21, c2 = has(PLAYER, T.req2) ? (has(PLAYER, T.id) ? 'on' : 'av') : '';   // the second prerequisite: its own line, joining a little lower
+      lines += `<path class="${c2}" d="M${X(q.c)} ${Y(q.r)}V${ym}H${X(p.c)}V${Y(p.r)}"/>`; }
     if (T.req && Ly.inB.has(T.req)){ const q = Ly.pos[T.req], ym = Y(p.r) - 29;
       lines += `<path class="${cls}" d="${q.c === p.c ? `M${X(q.c)} ${Y(q.r)}V${Y(p.r)}` : `M${X(q.c)} ${Y(q.r)}V${ym}H${X(p.c)}V${Y(p.r)}`}"/>`; }
     else if (T.req) lines += `<path class="${cls} ext" d="M${X(p.c)} 0V${Y(p.r)}"/>`;
@@ -9130,7 +9139,7 @@ function researchHTML(){
     return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${s === 'open' && busy ? ' busy' : ''}${F.ut ? ' unit' : F.up ? ' upg' : ' gly'}" data-act="rsel" data-id="${T.id}"${sn ? ` id="rring${sn}"` : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}${why ? ` · ${why}` : ''}">
       <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>${F.up && F.ut ? `<i class="rup up-${F.up}" title="${F.up === 'atk' ? 'Attack' : F.up === 'def' ? 'Defense' : F.up === 'spd' ? 'Speed' : 'Detection'} upgrade">${rg(F.up, 12)}</i>` : ''}
       ${s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s === 'run' ? (q ? `<i class="rbdg qd">#2</i>` : `<i class="rbdg run">#1</i>`) : ''}
-      <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>` +
+      <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}${T.req2 ? `<span class="rx">and ${TECH_BY[T.req2].name.split(' · ')[0]}${Ly.inB.has(T.req2) ? '' : ` (${TECH_BY[T.req2].branch})`}</span>` : ''}</button>` +
       (INFO ? (() => { const ut = techUnit(T), rq = T.req ? TECH_BY[T.req] : null, tc = techCost(T);
         const m = s === 'done' ? `<span class="ri-s ok">${rg('check', 11)} Researched</span>` : s === 'run' ? `<span class="ri-s ${q ? 'qd' : 'run'}">In slot #${sn}</span>` : s === 'lock' && rq ? `<span class="ri-s lk">${rg('lock', 11)} ${rRunning(N, rq.id) ? why : `After ${rq.name.split(' · ')[0]}`}</span>` : `${costHTML(tc, N)}<span class="ri-t">${T.days} d</span>${busy ? '<span class="ri-s lk">Both slots busy</span>' : ''}`;
         return `<button class="rinfo st-${s}${RV.sel === T.id ? ' sel' : ''}" data-act="rsel" data-id="${T.id}" style="--r:${p.r - Ly.r0}" tabindex="-1" aria-hidden="true"><b>${T.name}</b><span class="ri-d">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span><span class="ri-m">${m}</span></button>`; })() : ''); }).join('');
@@ -9148,7 +9157,7 @@ function researchHTML(){
       btns = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${T.id}" ${cr ? '' : 'disabled'} title="${cr ? `Starts in slot #${rSlotNo(rFree(N))}. Costs ${costTxt(tc, ', ')}; takes ${T.days} days` : why}">${lbl}</button>`; }
     h += `<div class="rs-det st-${s}"><span class="rs-dm lg"><span class="dmi">${faceHTML(F, 30)}</span></span>
       <div class="rs-dt"><span class="rs-dk">${br} · Step ${techStep(T.id) + 1} · ${T.days} days${d0 !== T.days*24 ? ` (${rDur(d0)} for you)` : ''}</span><b>${T.name}</b><span class="rs-dd">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span>
-        ${req ? `<span class="rs-dr ${has(PLAYER, req.id) ? 'ok' : ''}">${rg(has(PLAYER, req.id) ? 'check' : 'lock', 11)} Requires ${req.name}${req.branch !== br ? ` (${req.branch})` : ''}</span>` : ''}</div>
+        ${techReqs(T).map(q => TECH_BY[q]).map(req => `<span class="rs-dr ${has(PLAYER, req.id) ? 'ok' : ''}">${rg(has(PLAYER, req.id) ? 'check' : 'lock', 11)} Requires ${req.name}${req.branch !== br ? ` (${req.branch})` : ''}</span>`).join('')}</div>
       <div class="rs-da">${s === 'done' ? '' : `<div class="tcost">${costHTML(tc, N)}<span class="td">${T.days} d</span></div>`}<div class="rs-db">${btns}</div></div></div>`;
   } else h += `<div class="rs-det hint">${rg('plus', 14)} Tap a project to see what it does and what it costs. Two projects run at once, one in each slot${busy ? ': both slots are busy now' : (R || R2) ? '; pick an open project and press Research to start it in the free slot' : ''}.</div>`;
   return h;
@@ -9294,7 +9303,8 @@ function wingHTML(a){
   let plan = '';
   if (sel.target !== null){ const c = airCheck(a, sel.target, sel.surprise);
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned mission</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br>
-      <span class="small">${c.ok ? (c.kind === 'strike' ? (T === 'bomb' ? `Bombing raid: fly out ${c.hours} h (bombers are slow), wreck building levels and roads, hit troops there (50% harder in a city). Fighter patrols and SAMs are its bane: a raid that loses half turns back.`
+      <span class="small">${c.ok ? (c.kind === 'strike' ? (T === 'stealth' ? `Stealth raid: fly out ${c.hours} h, wreck building levels and roads (60% of a Heavy Bomber's load), hit troops there (25% harder in a city). SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often; in flight the enemy sees it only from a SAM or jammer in or next to the province under it. A raid that loses half turns back.`
+        : T === 'bomb' ? `Bombing raid: fly out ${c.hours} h (bombers are slow), wreck building levels and roads, hit troops there (50% harder in a city). Fighter patrols and SAMs are its bane: a raid that loses half turns back.`
         : T === 'swarm' ? `Swarm attack in ${c.hours} h: jammers and SAMs down some drones first and jamming blunts the rest; survivors saturate the air defence for hours and shred infantry, guns and SAMs.`
         : T === 'sdrone' ? `Precision strike in ${c.hours} h: hits units hard and knocks out the most valuable building for 24 h (sometimes a whole level). SAMs, fighters and jammers fire first.`
         : `Strike: fly out ${c.hours} h, hit everything hostile there with ${STRIKE}× firepower, then return and rearm 6 h. Air defence (SAMs, Interceptors, Frigates) fires back.`)
@@ -9303,7 +9313,7 @@ function wingHTML(a){
         : c.kind === 'orbit' ? `Radar orbit for 16 h after ${c.hours} h: every enemy force within ${Math.round(AEW_R*KM_HEX/100)*100} km shows as an unidentified contact (?); your fighters under it cover neighbouring provinces and fight 25% better. Keep it away from enemy fighters.`
         : c.kind === 'hunt' ? `Patrol the sea for 12 h after ${c.hours} h: spots every ship and submerged submarine within ${Math.round(MPA_R*KM_HEX/100)*100} km and attacks hostile ships (subs first) every 3 h. Frigates fire back.`
         : `Move this wing to the airbase here.`) : c.why}</span></div>
-      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (T === 'bomb' ? 'Launch raid' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
+      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (isBmb(T) ? 'Launch raid' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
   return `<div class="uhd">${unitPic(T, 'xl')}<div class="uht"><div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2></div></div>${plan}
     <div class="status ${f ? 'move' : ''}">${status}</div>
     ${T === 'drone' ? `<div>${uavBadge(a.owner)}</div><div class="small muted">Vision ${Math.round(L0.vis*KM_HEX/50)*50} km · loiter ${L0.loiter} h · stealth ${Math.round((1 - L0.stealth)*100)}%</div>` : ''}
@@ -9421,11 +9431,12 @@ const COUNTER_TXT = {
   jet:['Armor and ground forces', 'Fighters, SAMs, frigates'],
   heli:['Armor and infantry at short range', 'SAMs, fighters'],
   bomb:['Cities and buildings, troops in cities, roads and railways', 'Fighters (raids break up), SAMs'],
+  stealth:['Cities and buildings behind heavy air defence: SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often', 'Its price and upkeep; fighter patrols over the target; a SAM or jammer close by still sees it coming'],
   mpa:['Submarines above all, surface ships; finds subs in a wide sea area', 'Frigates and cruisers, fighters'],
   awacs:['Nothing: locates every enemy force over a huge area as unidentified contacts; your fighters under it fight better and farther', 'Fighters, SAMs if it orbits too close'],
   sub:['Surface ships and convoys; invisible unless found', 'Maritime patrol aircraft, frigates (sonar)'],
 };
-const AG_T = ['drone', 'swarm', 'sdrone', 'jam', 'sam', 'int', 'asf', 'jet', 'heli', 'bomb', 'mpa', 'awacs', 'sub'];
+const AG_T = ['drone', 'swarm', 'sdrone', 'jam', 'sam', 'int', 'asf', 'jet', 'heli', 'bomb', 'stealth', 'mpa', 'awacs', 'sub'];
 function uavBadge(n = PLAYER){ const L = uavLv(n), on = has(n, 'drone1'); return `<span class="uavb ${L >= 4 ? 'arm' : ''}">UAV ${ROMAN[L]} · ${L >= 4 ? (L >= 5 ? 'Armed · 2 salvos' : 'Armed') : 'Recon only'}</span>${L < 4 ? '<span class="small muted">Weapons unlock at UAV IV</span>' : ''}${on ? '' : ' <span class="small muted">(research UAV I to build)</span>'}`; }
 // research card picture: the unit a technology unlocks or improves (top-down art), or a building for economy and missile work
 const TECH_BLD = {eco1:'fac', eco2:'city', eco3:'fac', msl1:'silo', msl2:'silo', msl3:'silo', sat1:'silo', log2:'fac', log3:'city'};
@@ -9452,6 +9463,7 @@ function airGuideHTML(){ const L = uavLv(PLAYER);
       <tr><td>Strike drones</td><td>SAMs</td><td>Fighters, jammers</td></tr>
       <tr><td>Recon / armed UAVs</td><td>Jammers</td><td>SAMs, Air Superiority patrols</td></tr>
       <tr><td>Heavy bombers</td><td>Fighter patrols (raids that lose half turn back)</td><td>SAMs in the target city (they fire before the drop: only survivors bomb)</td></tr>
+      <tr><td>Stealth bombers</td><td>Fighter patrols over the likely target (they still hit it, at 40% of the rate)</td><td>SAMs and jammers in or next to the province (the only things that see it in flight); an AWACS shows it as a ? at half range</td></tr>
       <tr><td>AWACS, patrol planes</td><td>Air Superiority Fighters</td><td>Interceptors</td></tr>
       <tr><td>Fighters</td><td>SAMs</td><td>Air Superiority Fighters</td></tr>
       <tr><td>SAMs</td><td>Swarm drones (then jets)</td><td>Artillery, strike drones</td></tr>
@@ -9900,6 +9912,7 @@ const HELP_SEC = [
     <li><b>Wings</b> live at your airbases (or on a carrier). Select one and tap a target inside its range ring: strike missions hit everything hostile there and fly home to rearm; patrols guard a province for 12 h.</li>
     <li><b>Interceptor</b>: patrols one province and shoots down strikes, bombers and drones. <b>Air Superiority Fighter</b> (Airbase II): covers the province and all its neighbours, hits aircraft hardest and hunts UAVs, AWACS and patrol planes. Countered by SAMs.</li>
     <li><b>Heavy Bomber</b> (Airbase II): very long range; wrecks cities, buildings, roads and rail. Easy prey for fighters and SAMs: escort it or clear the sky first.</li>
+    <li><b>Stealth Bomber</b> (Airbase III; research Strategic Bomber Upgrade, then Stealth Bombers, which also needs Stealth Airframes): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
     <li><b>AWACS</b> (Airbase II) locates enemy forces over a huge area and lets your fighters under it fight better and farther. <b>Maritime Patrol</b> finds submerged submarines and hunts ships and convoys. <b>Gunships</b> hit armor and infantry at short range.</li>
     <li><b>Wear and maintenance</b>: every mission wears a wing 3–6% (more for long or loitering missions), even unopposed. Wings repair only on the ground at your airbases (10% + 6% per base level a day) or on a carrier (20%), and not in the 6 h after a sortie, so back-to-back strikes grind them down. Below 50% they show <b>Needs maintenance</b> and fight worse; below 20% they are grounded.</li></ul>`],
   ['drones', 'Drones, UAVs, AWACS and jammers', `<ul>
@@ -10425,7 +10438,7 @@ IM.on('fxCapture', (p, O, prev) => {
 // air war (rules/air.js): paradrop dust, satellite launch smoke, the strike animation queue, missile blasts: shown for the player's own and for what the player can see
 IM.on('fxDrop', (a, p) => { if (booted && (a.owner === PLAYER || visibleSet(PLAYER).has(p))){ const P = G.P[p]; for (let i = 0; i < 7; i++) emit('smoke', P.x + (Math.random() - 0.5)*18, P.y - 14 - Math.random()*8, {vy:3, s0:5, s1:7, life:1500}); } });
 IM.on('fxSat', (p, n) => { if (booted && n === PLAYER){ const P = G.P[p]; for (let i = 0; i < 6; i++) emit('smokel', P.x, P.y, {vx:(Math.random() - 0.5)*10, vy:-20 - Math.random()*10, s0:6, s1:24, life:2600}); } });
-IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : 20); if (E.T === 'bomb') shake(4, 400); }
+IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : E.T === 'stealth' ? 30 : 20); if (isBmb(E.T)) shake(E.T === 'bomb' ? 4 : 3, 400); }
   STRIKEQ.set(E.a.id, {p:E.p, t:performance.now(), dealt:E.dealt, owner:E.owner, bnote:!!E.bnote}); });
 IM.on('fxMissile', E => { const m = E.m, P = G.P[m.to]; if (!booted || !(m.owner === PLAYER || E.owner === PLAYER || visibleSet(PLAYER).has(m.to))) return;
   if (!E.hit){ const [ix, iy] = [P.x, P.y - 40]; for (let j = 0; j < 2; j++) explode(ix + (Math.random() - 0.5)*10, iy, 0.9, true); return; }

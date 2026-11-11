@@ -8,13 +8,18 @@ const rFree = N => !N.research ? 'research' : !N.research2 ? 'research2' : null;
 const rFreeN = N => R_SLOTS.reduce((c, k) => c + (N[k] ? 0 : 1), 0);   // how many slots are free
 const rRunning = (N, id) => R_SLOTS.find(k => N[k] && N[k].id === id) || null;   // the slot running this project, or null
 const rSlotNo = k => k === 'research2' ? 2 : 1;
+// a project's prerequisites: one (req), or two for the few that join two lines of research (req and req2)
+const techReqs = T => T.req2 ? [T.req, T.req2] : T.req ? [T.req] : [];
+const techOpen = (n, T) => techReqs(T).every(id => has(n, id));   // every prerequisite is researched
 // why nation n cannot start project id now ('' when it can)
 function researchWhy(n, id){ const N = S.nations[n], T = TECH_BY[id];
   if (!T || !N || !N.alive) return 'Not available'; if (has(n, id)) return 'Researched'; { const k = rRunning(N, id); if (k) return `Running in slot #${rSlotNo(k)}`; }
-  if (T.req && !has(n, T.req)){ const k = rRunning(N, T.req); return k ? `Waits for ${TECH_BY[T.req].name} (slot #${rSlotNo(k)})` : `Needs ${TECH_BY[T.req].name}`; }
+  { const miss = techReqs(T).filter(q => !has(n, q)), idle = miss.filter(q => !rRunning(N, q));
+    if (idle.length) return `Needs ${idle.map(q => TECH_BY[q].name).join(' and ')}`;
+    if (miss.length) return `Waits for ${miss.map(q => `${TECH_BY[q].name} (slot #${rSlotNo(rRunning(N, q))})`).join(' and ')}`; }
   if (!rFree(N)) return 'Both slots busy';
   return hasC(N, techCost(T)) ? '' : `Needs ${missTxt(N, techCost(T))}`; }
-function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return !!T && N.alive && !!rFree(N) && !has(n, id) && !rRunning(N, id) && (!T.req || has(n, T.req)) && hasC(N, techCost(T)); }
+function canResearch(n, id){ const N = S.nations[n], T = TECH_BY[id]; return !!T && N.alive && !!rFree(N) && !has(n, id) && !rRunning(N, id) && techOpen(n, T) && hasC(N, techCost(T)); }
 // start project id in the free slot (paying its costs); returns false when it cannot start
 function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = S.nations[n], T = TECH_BY[id], k = rFree(N); payC(N, techCost(T));
   const h = Math.round(T.days*24*(docOf(n) ? docOf(n).res : 1)); N[k] = {id, h, h0:h};
