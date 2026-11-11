@@ -178,137 +178,138 @@ const R_PRICE = {
 // fx: flat changes to the unit's own stats (atk, def, hp, spd) and rng (mission radius in hexes); the text says the rest (rules read the level)
 const R_LINES = [
   {u:'inf', cat:'inf', day:1, std:1, k:[
-    ['armor', 'Ceramic Body Armour', 'hp', [[2, {def:1}, 'defense +1']]],
+    ['armor', 'Ceramic Body Armour', 'armor', [[1, {def:1}, 'defense +1']]],
     ['build', 'Rapid Mobilisation', 'build', [[5, {}, 'trains 15% faster'], [14, {}, 'trains 30% faster']]],
     ['terr', 'Rough-Ground Drills', 'terr', [[6, {}, 'half the speed penalty in forest and hills'], [12, {}, 'and in mountains and jungle']]]],
    g:[[2, 9, 'Mechanized Infantry', {atk:2, spd:1, hp:2}, 'attack +2, speed +1, health +2'], [3, 17, 'Assault Infantry', {atk:1, def:1, hp:2}, 'attack +1, defense +1, health +2']]},
   {u:'at', cat:'inf', day:1, std:1, k:[
-    ['armor', 'Ceramic Body Armour', 'hp', [[2, {def:1}, 'defense +1']]],
-    ['warhead', 'Tandem Warheads', 'dmg', [[5, {atk:1}, 'attack +1'], [11, {atk:1}, 'attack +1 more']]],
-    ['eye', 'Thermal Sights', 'eye', [[8, {}, 'sees half a province farther']]]],
+    ['armor', 'Ceramic Body Armour', 'armor', [[1, {def:1}, 'defense +1']]],
+    ['warhead', 'Tandem Warheads', 'warhead', [[5, {atk:1}, 'attack +1'], [11, {atk:1}, 'attack +1 more']]],
+    ['eye', 'Thermal Sights', 'scope', [[8, {}, 'sees half a province farther']]]],
    g:[[2, 12, 'Guided Missile Teams', {atk:1, hp:2}, 'attack +1, health +2, damage to armor 3.5x to 4x']]},
   {u:'spec', cat:'inf', day:4, ud:4, elite:1, fam:'inf', k:[
     ['terr', 'Mountain & Arctic Training', 'terr', [[7, {}, 'rough-terrain attack bonus 40% to 50%'], [13, {}, 'to 60%']]],
-    ['eye', 'Night Optics', 'eye', [[8, {}, 'sees half a province farther']]],
+    ['eye', 'Night Optics', 'scope', [[8, {}, 'sees half a province farther']]],
     ['airlift', 'Air-Transportable', 'airlift', [[10, {}, 'can be air-dropped from an airbase province, up to 6 hexes']]]],
    g:[[2, 16, 'Tier-One Operators', {atk:2, def:1, hp:2}, 'attack +2, defense +1, health +2']]},
 
   {u:'ifv', cat:'arm', day:1, ud:3, k:[
-    ['gun', '30 mm Autocannon', 'dmg', [[5, {atk:2}, 'attack +2']]],
-    ['spd', 'Uprated Powerpack', 'spd', [[8, {spd:1}, 'speed +1']]],
-    ['terr', 'Amphibious Kit', 'terr', [[10, {}, 'no penalty for attacking across a river']]]],
+    ['gun', '30 mm Autocannon', 'autocannon', [[5, {atk:2}, 'attack +2']]],
+    ['spd', 'Uprated Powerpack', 'engine', [[8, {spd:1}, 'speed +1']]],
+    ['terr', 'Amphibious Kit', 'wave', [[10, {}, 'no penalty for attacking across a river']]]],
    g:[[2, 13, 'Heavy IFV', {atk:1, def:1, hp:3}, 'attack +1, defense +1, health +3']]},
   {u:'tank', cat:'arm', day:1, std:1, k:[
-    ['armor', 'Composite Armour', 'hp', [[3, {def:2}, 'defense +2']]],
-    ['gun', 'Smoothbore Main Gun', 'dmg', [[7, {atk:3}, 'attack +3']]],
-    ['terr', 'Wide Tracks', 'terr', [[9, {}, 'half the speed penalty on rough ground']]],
-    ['eng', 'Turbine Engines', 'spd', [[11, {spd:2, atk:1}, 'speed +2, attack +1']]]],
+    ['armor', 'Composite Armour', 'armor', [[1, {def:2}, 'defense +2']]],
+    ['gun', 'Smoothbore Main Gun', 'cannon', [[7, {atk:3}, 'attack +3']]],
+    ['terr', 'Wide Tracks', 'tracks', [[9, {}, 'half the speed penalty on rough ground']]],
+    ['eng', 'Turbine Engines', 'engine', [[11, {spd:2, atk:1}, 'speed +2, attack +1']]]],
    g:[[2, 14, 'Third-Generation MBT', {def:1, hp:4}, 'defense +1, health +4'], [3, 22, 'Next-Generation MBT', {atk:2, def:1, hp:3}, 'attack +2, defense +1, health +3']]},
 
   {u:'art', cat:'sup', day:1, std:1, k:[
-    ['radar', 'Counter-Battery Radar', 'eye', [[3, {atk:2}, 'attack +2']]],
-    ['shell', 'Extended-Range Shells', 'rng', [[8, {atk:3, def:2}, 'attack +3, defense +2']]],
-    ['guided', 'Guided Shells', 'dmg', [[13, {atk:2, spd:1}, 'attack +2, speed +1']]]],
+    ['radar', 'Counter-Battery Radar', 'radar', [[1, {atk:2}, 'attack +2']]],
+    ['shell', 'Extended-Range Shells', 'shell', [[8, {atk:3, def:2}, 'attack +3, defense +2']]],
+    ['guided', 'Guided Shells', 'guided', [[13, {atk:2, spd:1}, 'attack +2, speed +1']]]],
    g:[[2, 15, 'Long-Barrel Howitzer', {atk:1, hp:3}, 'attack +1, health +3']]},
   {u:'mlrs', cat:'sup', day:5, ud:4, fam:'art', k:[
-    ['reload', 'Rapid Reload', 'dmg', [[9, {atk:2}, 'attack +2']]],
+    ['reload', 'Rapid Reload', 'reload', [[9, {atk:2}, 'attack +2']]],
     ['rng', 'Extended-Range Rockets', 'rng', [[12, {}, 'shells enemies up to 3 provinces away (was 2)']]]],
    g:[[2, 16, 'Guided Rocket System', {atk:2, hp:2}, 'attack +2, health +2, damage to armor 0.9x to 1.2x']]},
   {u:'sam', cat:'sup', day:1, std:1, k:[
-    ['seek', 'Improved Seekers', 'dmg', [[4, {atk:1}, 'attack +1'], [10, {atk:1}, 'attack +1 more']]],
+    ['seek', 'Improved Seekers', 'seeker', [[4, {atk:1}, 'attack +1'], [10, {atk:1}, 'attack +1 more']]],
     ['spd', 'Shoot-and-Scoot', 'spd', [[7, {spd:1, def:1}, 'speed +1, defense +1']]]],
    g:[[2, 13, 'Long-Range SAM', {atk:2, hp:2}, 'attack +2, health +2, covers neighbouring provinces at full strength']]},
   {u:'jam', cat:'sup', day:3, ud:3, k:[
-    ['band', 'Wideband Jamming', 'eye', [[7, {}, 'downs and jams 20% more drones'], [13, {}, '40% more']]]],
+    ['band', 'Wideband Jamming', 'jam', [[7, {}, 'downs and jams 20% more drones'], [13, {}, '40% more']]]],
    g:[[2, 16, 'Counter-UAV Laser', {atk:2, def:1, hp:2}, 'attack +2, defense +1, health +2']]},
 
-  {u:'heli', cat:'aas', day:2, ud:4, k:[
-    ['rng', 'Long-Range Tanks', 'rng', [[6, {rng:1}, 'range +1 hex (7)'], [12, {rng:1}, 'range +1 more (8)']]],
-    ['atgm', 'Fire-and-Forget Missiles', 'dmg', [[8, {atk:1}, 'attack +1']]]],
+  {u:'heli', cat:'aas', day:1, ud:4, k:[
+    ['rng', 'Long-Range Tanks', 'fuel', [[6, {rng:1}, 'range +1 hex (7)'], [12, {rng:1}, 'range +1 more (8)']]],
+    ['atgm', 'Fire-and-Forget Missiles', 'rocket', [[8, {atk:1}, 'attack +1']]]],
    g:[[2, 14, 'Heavy Gunship', {atk:2, def:1, hp:3}, 'attack +2, defense +1, health +3']]},
   {u:'para', cat:'aas', day:3, ud:4, elite:1, k:[
     ['airlift', 'Long-Range Airlift', 'airlift', [[7, {}, 'drop range 9 to 11 hexes'], [13, {}, 'to 13 hexes']]]],
    g:[[2, 15, 'Air Assault Brigade', {atk:1, def:1, hp:2}, 'attack +1, defense +1, health +2']]},
 
   {u:'int', cat:'tac', day:1, ud:4, k:[
-    ['msl', 'Radar-Guided Missiles', 'dmg', [[5, {atk:2}, 'attack +2']]],
-    ['rng', 'Drop Tanks', 'rng', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]]],
+    ['msl', 'Radar-Guided Missiles', 'rocket', [[5, {atk:2}, 'attack +2']]],
+    ['rng', 'Drop Tanks', 'fuel', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]]],
    g:[[2, 12, 'Fourth-Generation Interceptor', {atk:1, def:1, hp:2, spd:2}, 'attack +1, defense +1, health +2, speed +2']]},
   {u:'jet', cat:'tac', day:1, ud:4, k:[
-    ['pgm', 'Precision Munitions', 'dmg', [[5, {atk:2}, 'attack +2']]],
-    ['rng', 'Drop Tanks', 'rng', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]],
-    ['lo', 'Stealth Airframes', 'hp', [[10, {def:3}, 'defense +3; with the Strategic Bomber Upgrade it opens the Stealth Bomber']]]],
+    ['pgm', 'Precision Munitions', 'bomb', [[5, {atk:2}, 'attack +2']]],
+    ['rng', 'Drop Tanks', 'fuel', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]],
+    ['lo', 'Stealth Airframes', 'stealth', [[10, {def:3}, 'defense +3; with the Strategic Bomber Upgrade it opens the Stealth Bomber']]]],
    g:[[2, 14, 'Multirole Strike Fighter', {atk:2, hp:2}, 'attack +2, health +2, damage to armor 1.6x to 1.8x']]},
   {u:'asf', cat:'tac', day:4, ud:5, elite:1, fam:'int', k:[
-    ['rng', 'Drop Tanks', 'rng', [[8, {rng:1}, 'range +1 hex'], [14, {rng:1}, 'range +1 more']]],
-    ['radar', 'Look-Down Radar', 'eye', [[10, {atk:1}, 'attack +1']]]],
+    ['rng', 'Drop Tanks', 'fuel', [[8, {rng:1}, 'range +1 hex'], [14, {rng:1}, 'range +1 more']]],
+    ['radar', 'Look-Down Radar', 'radar', [[10, {atk:1}, 'attack +1']]]],
    g:[[2, 17, 'Fifth-Generation Fighter', {atk:2, def:2, hp:2}, 'attack +2, defense +2, health +2']]},
 
-  {u:'drone', cat:'uns', day:2, ud:3, k:[],
+  {u:'drone', cat:'uns', day:1, ud:3, k:[],
    g:[[2, 5, 'UAV II · Long-Endurance Optics', {def:1}, 'sees farther, loiters 16 h, reaches farther, harder to shoot down'], [3, 9, 'UAV III · Low-Observable Airframe', {def:1}, 'loiters 20 h, wider view, air defences hit 40% less'],
       [4, 13, 'UAV IV · Armed UAV', {atk:3}, 'light missiles: one salvo per sortie'], [5, 18, 'UAV V · Hunter-Killer', {atk:2, def:2}, 'two salvos, heavier missiles, longer range and loiter']]},
   {u:'swarm', cat:'uns', day:4, ud:4, k:[
-    ['rng', 'Booster Rockets', 'rng', [[8, {rng:1}, 'range +1 hex'], [14, {rng:1}, 'range +1 more']]],
+    ['rng', 'Booster Rockets', 'booster', [[8, {rng:1}, 'range +1 hex'], [14, {rng:1}, 'range +1 more']]],
     ['pack', 'Bigger Salvo', 'msl', [[9, {}, 'eight drones per card (was six), same price']]]],
    g:[[2, 15, 'Networked Swarm', {atk:0.6, hp:1}, 'attack +0.6, health +1, damage to armor 0.35x to 0.6x']]},
   {u:'sdrone', cat:'uns', day:6, ud:4, fam:'drone', k:[
-    ['rng', 'Satellite Link', 'rng', [[10, {rng:2}, 'range +2 hexes'], [15, {rng:2}, 'range +2 more']]],
-    ['hit', 'Bunker-Buster Warhead', 'dmg', [[12, {}, 'knocks a building out for 36 h (was 24 h)']]]],
+    ['rng', 'Satellite Link', 'sat', [[10, {rng:2}, 'range +2 hexes'], [15, {rng:2}, 'range +2 more']]],
+    ['hit', 'Bunker-Buster Warhead', 'bunker', [[12, {}, 'knocks a building out for 36 h (was 24 h)']]]],
    g:[[2, 17, 'Low-Observable Strike Drone', {atk:2, hp:2}, 'attack +2, health +2, air defences hit 30% less']]},
 
   {u:'bomb', cat:'str', day:6, ud:6, k:[
-    ['ecm', 'Defensive Jammers', 'hp', [[9, {def:2}, 'defense +2']]],
+    ['ecm', 'Defensive Jammers', 'jam', [[9, {def:2}, 'defense +2']]],
     ['up', 'Strategic Bomber Upgrade', 'rng', [[11, {atk:1, rng:4}, 'range +4 hexes (+720 km), attack +1; with Stealth Airframes it opens the Stealth Bomber']]]],
    g:[[2, 17, 'Supersonic Bomber', {atk:2, hp:3, spd:3}, 'attack +2, health +3, speed +3']]},
   {u:'stealth', cat:'str', day:14, ud:9, elite:1, req:['bomb_up', 'jet_lo'], k:[
     ['bay', 'Enlarged Bomb Bay', 'msl', [[19, {}, 'bomb load 60% to 75% of a Heavy Bomber’s']]],
-    ['rng', 'Flying-Wing Tanks', 'rng', [[21, {rng:4}, 'range +4 hexes']]]],
+    ['rng', 'Flying-Wing Tanks', 'fuel', [[21, {rng:4}, 'range +4 hexes']]]],
    g:[]},
-  {u:'mpa', cat:'str', day:4, ud:4, k:[
-    ['sonar', 'Sonobuoy Field', 'eye', [[8, {}, 'detection radius +20%'], [14, {}, '+40%']]],
-    ['torp', 'Homing Torpedoes', 'dmg', [[10, {atk:2}, 'attack +2']]]],
+  {u:'mpa', cat:'str', day:2, ud:4, k:[
+    ['sonar', 'Sonobuoy Field', 'sonar', [[8, {}, 'detection radius +20%'], [14, {}, '+40%']]],
+    ['torp', 'Homing Torpedoes', 'torpedo', [[10, {atk:2}, 'attack +2']]]],
    g:[[2, 15, 'Long-Endurance Patrol Aircraft', {atk:1, hp:2}, 'attack +1, health +2, patrols 18 h (was 12 h)']]},
   {u:'awacs', cat:'str', day:5, ud:5, noFp:1, k:[
-    ['radar', 'High-Power Radar', 'eye', [[9, {}, 'radar radius +15%'], [15, {}, '+30%']]],
-    ['link', 'Fighter Data Link', 'dmg', [[12, {}, 'fighters under it fight 35% better (was 25%)']]]],
+    ['radar', 'High-Power Radar', 'radar', [[9, {}, 'radar radius +15%'], [15, {}, '+30%']]],
+    ['link', 'Fighter Data Link', 'link', [[12, {}, 'fighters under it fight 35% better (was 25%)']]]],
    g:[[2, 17, 'Phased-Array AWACS', {def:1, hp:2}, 'defense +1, health +2, identifies forces within half its radius']]},
 
   {u:'frig', cat:'nav', day:1, std:1, k:[
-    ['gun', 'Naval Gunnery', 'dmg', [[3, {atk:1}, 'attack +1']]],
-    ['sonar', 'Towed Sonar', 'eye', [[6, {}, 'hears submarines two sea zones away']]],
-    ['aa', 'Area Air Defence', 'hp', [[9, {def:1}, 'defense +1, damage to aircraft 1.8x to 2.1x']]]],
+    ['gun', 'Naval Gunnery', 'cannon', [[1, {atk:1}, 'attack +1']]],
+    ['sonar', 'Towed Sonar', 'sonar', [[6, {}, 'hears submarines two sea zones away']]],
+    ['aa', 'Area Air Defence', 'flak', [[9, {def:1}, 'defense +1, damage to aircraft 1.8x to 2.1x']]]],
    g:[[2, 14, 'Guided-Missile Frigate', {atk:2, def:1, hp:3}, 'attack +2, defense +1, health +3']]},
   {u:'crui', cat:'nav', day:1, std:1, k:[
-    ['gun', 'Naval Gunnery', 'dmg', [[3, {atk:2}, 'attack +2']]],
-    ['rng', 'Long-Range Bombardment', 'rng', [[11, {}, 'coastal bombardment 30% stronger']]]],
+    ['gun', 'Naval Gunnery', 'cannon', [[3, {atk:2}, 'attack +2']]],
+    ['rng', 'Long-Range Bombardment', 'shell', [[11, {}, 'coastal bombardment 30% stronger']]]],
    g:[[2, 15, 'Missile Cruiser', {atk:2, hp:4}, 'attack +2, health +4']]},
   {u:'carr', cat:'nav', day:7, ud:6, fam:'crui', k:[
     ['deck', 'Flight-Deck Crews', 'deck', [[11, {}, 'wings aboard repair 25% a day (was 20%)'], [16, {}, '30% a day']]],
-    ['spd', 'Nuclear Propulsion', 'spd', [[13, {spd:0.8}, 'speed +0.8']]]],
+    ['spd', 'Nuclear Propulsion', 'engine', [[13, {spd:0.8}, 'speed +0.8']]]],
    g:[[2, 18, 'Supercarrier', {def:2, hp:6}, 'defense +2, health +6']]},
   {u:'sub', cat:'nav', day:1, std:1, k:[
-    ['torp', 'Heavy Torpedoes', 'dmg', [[4, {atk:1}, 'attack +1'], [10, {atk:1}, 'attack +1 more']]],
-    ['quiet', 'Quiet Drive', 'hp', [[7, {def:1}, 'defense +1'], [13, {def:1}, 'defense +1 more']]]],
+    ['torp', 'Heavy Torpedoes', 'torpedo', [[2, {atk:1}, 'attack +1'], [10, {atk:1}, 'attack +1 more']]],
+    ['quiet', 'Quiet Drive', 'quiet', [[7, {def:1}, 'defense +1'], [13, {def:1}, 'defense +1 more']]]],
    g:[[2, 14, 'Nuclear Attack Submarine', {atk:1, hp:3, spd:1.2}, 'attack +1, health +3, speed +1.2']]},
 ];
 // the two categories that are not unit lines. The first level of each keeps the id, price and time it had before the redesign.
 const R_SPECIAL = [
   {cat:'msl', line:'Cruise Missile', pic:'cm', nodes:[
-    {id:'msl1', name:'Cruise Missiles', kind:'unlock', ic:'cm', lv:[[2, 'Missile Silos can build Cruise Missiles', {cash:96, metal:20, rare:31, days:6}]]},
+    {id:'msl1', name:'Cruise Missiles', kind:'unlock', ic:'cm', lv:[[1, 'Missile Silos can build Cruise Missiles', {cash:96, metal:20, rare:31, days:6}]]},
     {id:'cm_rng', name:'Cruise Missile Range', kind:'kit', ic:'rng', req:['msl1'], lv:[[7, 'range 28 to 32 hexes', {cash:90, metal:30, rare:20, days:4}], [13, 'to 36 hexes', {cash:130, metal:45, rare:30, days:5}]]},
     {id:'cm_spd', name:'Cruise Missile Speed', kind:'kit', ic:'spd', req:['msl1'], lv:[[9, 'speed 9 to 11: less time for the defences', {cash:90, metal:30, rare:20, days:4}], [15, 'to 13', {cash:130, metal:45, rare:30, days:5}]]}]},
   {cat:'msl', line:'Ballistic Missile', pic:'bm', nodes:[
     {id:'msl2', name:'Ballistic Missiles', kind:'unlock', ic:'bm', req:['msl1'], lv:[[6, 'Silos can build Ballistic Missiles', {cash:144, metal:35, rare:64, days:8}]]},
     {id:'bm_rng', name:'Ballistic Missile Range', kind:'kit', ic:'rng', req:['msl2'], lv:[[11, 'range 90 to 102 hexes', {cash:140, metal:45, rare:34, days:5}], [17, 'to 114 hexes', {cash:190, metal:60, rare:46, days:6}]]},
-    {id:'bm_pow', name:'Heavier Warhead', kind:'kit', ic:'dmg', req:['msl2'], lv:[[14, 'power 16 to 19', {cash:170, metal:60, rare:44, days:6}]]}]},
+    {id:'bm_pow', name:'Heavier Warhead', kind:'kit', ic:'warhead', req:['msl2'], lv:[[14, 'power 16 to 19', {cash:170, metal:60, rare:44, days:6}]]}]},
   {cat:'msl', line:'Missile Defence', pic:'def', nodes:[
-    {id:'msl3', name:'Anti-Missile Shield', kind:'kit', ic:'hp', req:['msl2'], lv:[[9, 'your SAMs and Frigates intercept missiles twice as well', {cash:132, metal:60, rare:96, days:7}], [15, '2.5 times as well', {cash:170, metal:60, rare:60, days:6}], [21, '3 times as well', {cash:220, metal:80, rare:80, days:7}]]}]},
+    {id:'msl3', name:'Anti-Missile Shield', kind:'kit', ic:'def2', req:['msl2'], lv:[[9, 'your SAMs and Frigates intercept missiles twice as well', {cash:132, metal:60, rare:96, days:7}], [15, '2.5 times as well', {cash:170, metal:60, rare:60, days:6}], [21, '3 times as well', {cash:220, metal:80, rare:80, days:7}]]}]},
   {cat:'msl', line:'Satellites', pic:'sat', nodes:[
-    {id:'sat1', name:'Reconnaissance Satellites', kind:'kit', ic:'eye', req:['msl1'], lv:[[5, 'launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day', {cash:120, metal:35, rare:61, days:6}], [11, 'up to 4 satellites', {cash:150, metal:50, rare:48, days:5}], [17, 'up to 5, each with a wider swath', {cash:200, metal:70, rare:64, days:6}]]}]},
-  {cat:'cmd', line:'Supply', pic:'truck', nodes:[{id:'log1', name:'Motorized Supply', kind:'kit', ic:'spd', lv:[[3, 'all forces move 20% faster; opens high-speed rail', {cash:66, metal:20, rare:27, days:4}]]}]},
-  {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'build', lv:[[4, 'capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}]]}]},
-  {cat:'cmd', line:'Landings', pic:'anchor', nodes:[{id:'nav3', name:'Amphibious Doctrine', kind:'kit', ic:'terr', lv:[[5, 'troops landing from the sea fight at 90% instead of 67% on their first day', {cash:114, metal:20, rare:34, days:7}]]}]},
-  {cat:'cmd', line:'Medical', pic:'cross', nodes:[{id:'log3', name:'Field Hospitals', kind:'kit', ic:'hp', lv:[[6, 'your forces take 15% less damage', {cash:102, metal:20, rare:32, days:7}]]}]},
+    {id:'sat1', name:'Reconnaissance Satellites', kind:'kit', ic:'sat', req:['msl1'], lv:[[5, 'launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day', {cash:120, metal:35, rare:61, days:6}], [11, 'up to 4 satellites', {cash:150, metal:50, rare:48, days:5}], [17, 'up to 5, each with a wider swath', {cash:200, metal:70, rare:64, days:6}]]}]},
+  // Command & Logistics: four doctrines, each with a second level (its rule reads the level: rMoveF, rCapF, rRoadF, rLandF, rHospF in rules/research.js)
+  {cat:'cmd', line:'Supply', pic:'truck', nodes:[{id:'log1', name:'Motorized Supply', kind:'kit', ic:'truck', lv:[[1, 'all forces move 20% faster; opens high-speed rail', {cash:66, metal:20, rare:27, days:4}], [10, 'all forces move 30% faster', {cash:110, metal:30, rare:30, days:5}]]}]},
+  {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'wrench', lv:[[2, 'capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}], [11, 'capture 40% faster; roads and railways 35% cheaper and faster to build', {cash:120, metal:30, rare:32, days:5}]]}]},
+  {cat:'cmd', line:'Landings', pic:'anchor', nodes:[{id:'nav3', name:'Amphibious Doctrine', kind:'kit', ic:'anchor', lv:[[3, 'troops landing from the sea fight at 90% instead of 67% on their first day', {cash:114, metal:20, rare:34, days:7}], [12, 'they fight at full strength on their first day', {cash:140, metal:30, rare:36, days:6}]]}]},
+  {cat:'cmd', line:'Medical', pic:'cross', nodes:[{id:'log3', name:'Field Hospitals', kind:'kit', ic:'cross', lv:[[4, 'your forces take 15% less damage', {cash:102, metal:20, rare:32, days:7}], [13, '20% less damage', {cash:150, metal:30, rare:40, days:7}]]}]},
 ];
 // the node list. node: {id, cat, line, u, kind, name, ic, req:[node ids], req3 (Firepower / Protection level 3 needs it), std, elite, fam, gen, pic,
 // lv:[{day, c:{cash, metal, iron, elec, rare, days}, fx, txt}]}

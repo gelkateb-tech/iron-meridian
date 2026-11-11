@@ -357,7 +357,7 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   // the weights the projects had before the redesign, carried over to the nodes they became
   const NW = {u_jet:3, u_int:3, jet_pgm:pgm, int_msl:pgm, u_drone:2.5, drone_g2:2, drone_g3:1.5, drone_g4:2, drone_g5:1.5, u_swarm:3, u_sdrone:2.5, u_jam:jamW, jam_band:jamW,
     u_asf:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + awv, u_mpa:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), u_awacs:wr ? 2.2 : 1.5, u_bomb:wr ? (ab2 ? 11 : 8) : 3,
-    bomb_up:(airMine(n).bomb || 0) > 0 ? 2.5 : 0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15};   // stealth bombers: only late, at war with a power that fields SAM stacks
+    bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15};   // stealth bombers: only late, at war with a power that fields SAM stacks
   // what the nation fields: units in service and in training, and their money value (the old Mark rule: count x unit price)
   const cnt = {}; let val = 0; for (const a of S.armies) if (a.owner === n) for (const t of UT) if (a.u[t]) cnt[t] = (cnt[t] || 0) + a.u[t];
   for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n) for (const it of S.queue[p]) if (!it.msl && UNITS[it.t]) cnt[it.t] = (cnt[it.t] || 0) + (UNITS[it.t].pack || 1);
@@ -368,8 +368,12 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   const ups = {}; for (const id in N.tech){ const nd = RN[id]; if (nd && (nd.kind === 'kit' || nd.kind === 'gen')) ups[nd.cat + nd.line] = (ups[nd.cat + nd.line] || 0) + (+N.tech[id] || 1); }
   const silo = G.P.some(P => S.owner[P.id] === n && S.bld[P.id].silo > 0);
   const rInc = Math.max(0, income(n).net.rare), rOk = c => N.rare + 5*rInc >= c.rare;   // fundable in about five days of rare-material income
+  // the Stealth Bomber's path: a nation that flies Heavy Bombers wants the Strategic Bomber Upgrade (range +720 km) as soon as it opens, and
+  // once it has it, the Strike Fighter's Stealth Airframes that open the Stealth Bomber with it (weights that are not scaled by the fleet's share)
+  const bombs = cnt.bomb || 0, NWD = {bomb_up:bombs ? 30 + 4*Math.min(4, bombs) : has(n, 'u_bomb') ? (ab2 ? 16 : 6) : 0, jet_lo:has(n, 'bomb_up') ? 8 : 0};
   const weigh = ({nd, lv}) => { const u = nd.u, c = rCost(nd, lv); let w;
-    if (nd.kind === 'eng') w = cnt[u] ? 0.2 + 10*share(u) : 0;                                   // hone the big arm first; nothing for a unit it does not field
+    if (NWD[nd.id]) w = NWD[nd.id];
+    else if (nd.kind === 'eng') w = cnt[u] ? 0.2 + 10*share(u) : 0;                                   // hone the big arm first; nothing for a unit it does not field
     else if (nd.kind === 'unlock') w = (NW[nd.id] || 1)*(u && !canB(u) ? 0.3 : 1);
     else if (u){ if (!cnt[u] && !canB(u)) w = 0;
       else if (nd.kind === 'gen') w = Math.max(NW[nd.id] || 0, cnt[u] ? 1 + 45*share(u) : 0.15);   // a generation of the main arm outweighs everything but a badly needed counter
@@ -381,18 +385,25 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   const other = R_SLOTS.map(k => N[k]).find(Boolean), busyKind = other && RN[other.id] ? AI_RKIND(RN[other.id]) : null;
   const want = busyKind === 'sci' ? 'eng' : 'sci', pool = k => av.filter(x => AI_RKIND(x.nd) === k);
   // buy what the step lacks (never above 1.6x the base price) when the money is there, then start it
-  const go = x => { const tc = rCost(x.nd, x.lv);
-    for (const k of ['rare', 'metal', 'iron', 'elec']){ const miss = Math.ceil((tc[k] || 0) - N[k]); if (miss > 0 && buyPrice(n, k) <= MKT_BASE[k]*1.6 && N.cash > tc.cash + 60 + (miss + 3)*buyPrice(n, k) + aiReserve(n)) trade(n, k, miss + 3); }
+  // (for a step it has been saving for, the computer pays up to twice the base price: a generation's 50 materials are often dear)
+  const go = x => { const tc = rCost(x.nd, x.lv), mx = N.rPick && N.rPick.save && N.rPick.id === x.nd.id ? 2 : 1.6, res = N.rPick && N.rPick.id === x.nd.id ? 0 : aiReserve(n);
+    for (const k of ['rare', 'metal', 'iron', 'elec']){ const miss = Math.ceil((tc[k] || 0) - N[k]); if (miss > 0 && buyPrice(n, k) <= MKT_BASE[k]*mx && N.cash > tc.cash + 60 + (miss + 3)*buyPrice(n, k) + res) trade(n, k, miss + 3); }
     return N.cash > tc.cash + 30 && startResearch(n, x.nd.id); };
   // the pick sticks for a day: an expensive step (bombers, fighters) is saved for instead of losing every roll to the cheap ones
   let pick = N.rPick && N.rPick.until > S.hour ? av.find(x => x.nd.id === N.rPick.id) : null;
   if (!pick){ pick = roll(pool(want)) || roll(pool(want === 'sci' ? 'eng' : 'sci')); if (!pick){ N.rPick = null; return; }
-    // a counter that is badly needed (Air Superiority Fighters) is saved for over four days: aiReserve holds its price back from recruiting
-    const save = pick.nd.id === 'u_asf' && awv >= 2.5;
-    N.rPick = {id:pick.nd.id, until:S.hour + (save ? 96 : 24), save}; }
+    // a counter that is badly needed (Air Superiority Fighters) is saved for over four days, a generation of a unit type that makes up a fifth
+    // or more of the forces for two: aiReserve holds its price back from recruiting
+    const save = (pick.nd.id === 'u_asf' && awv >= 2.5) || (pick.nd.kind === 'gen' && share(pick.nd.u) >= 0.2) || (pick.nd.id === 'bomb_up' && bombs >= 2);
+    N.rPick = {id:pick.nd.id, until:S.hour + (save ? (pick.nd.id === 'u_asf' ? 96 : 72) : 24), save}; }
   if (go(pick)){ N.rPick = null; return; }
-  // the pick must wait for its price: with both slots free the second one hones meanwhile (engineering costs 3 to 8 rare materials)
-  if (!other && AI_RKIND(pick.nd) === 'sci'){ const e = roll(pool('eng').filter(x => hasC(N, rCost(x.nd, x.lv)) && N.cash > rCost(x.nd, x.lv).cash + 30 + aiReserve(n))); if (e) startResearch(n, e.nd.id); } }
+  // the pick must wait for its price, but a free slot does not sit idle meanwhile: with both slots free one of them takes a cheaper step (a level
+  // of Firepower or Protection first: they cost 3 to 8 rare materials) and the other stays for the pick; with one slot free, a pick that is not
+  // being saved for lets a cheaper step have it. A step that would eat the rare materials a saved-for pick needs is not taken
+  const saving = N.rPick && N.rPick.save, pc = rCost(pick.nd, pick.lv);
+  const left = x => { const c = rCost(x.nd, x.lv); return x !== pick && hasC(N, c) && N.cash > c.cash + 30 + aiReserve(n) && (!saving || ['rare', 'metal', 'iron', 'elec'].every(k => N[k] - (c[k] || 0) >= (pc[k] || 0))) && c.cash <= Math.max(60, pc.cash*0.6); };
+  const alt = !other ? roll(pool('eng').filter(left)) || roll(av.filter(left)) : !saving ? roll(av.filter(left)) : null;
+  if (alt) startResearch(n, alt.nd.id); }
 function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
   aiResearch(n);

@@ -15,24 +15,29 @@ const T0 = Date.now();
   const card = () => p.evaluate(() => { const c = document.querySelector('.rs-card'); return c ? { cls: c.className, text: c.innerText.replace(/\s+/g, ' ').trim(), btn: (c.querySelector('.rs-db .btn') || {}).innerText || '', dis: !!(c.querySelector('.rs-db .btn') || {}).disabled } : null; });
   // ---- the tree as data
   const T = await p.evaluate(() => { const im = window.__im, L = im.rs.TECH(); return { n: L.length, steps: im.rs.steps(), day1: L.filter(t => t.kind === 'unlock' && t.day === 1).map(t => t.id), cats: [...new Set(L.map(t => t.cat))], lv3: L.filter(t => t.levels === 3).length, done0: im.rs.done(0) }; });
-  ck('the tree: 162 researchable nodes, 285 steps, ten categories', T.n === 162 && T.steps === 285 && T.cats.length === 10 && T.done0 === 0, T);
+  ck('the tree: 162 researchable nodes, 289 steps, ten categories', T.n === 162 && T.steps === 289 && T.cats.length === 10 && T.done0 === 0, T);
   // ---- category list
   await p.click('[data-act="research-open"]'); await p.waitForTimeout(350);
-  const list = await p.evaluate(() => [...document.querySelectorAll('.rs-ban')].map(e => ({ b: e.dataset.b, name: e.querySelector('.rs-bt b').textContent, role: e.querySelector('.rs-bt span').textContent, dm: !!e.querySelector('.rs-dm svg'), pic: !!e.querySelector('.rs-bimg'), cnt: e.querySelector('.rs-bpt > b').textContent, open: (e.querySelector('.rs-open') || {}).textContent || '' })));
-  ck('list: ten category banners with a diamond icon, a name, a role line and a picture', list.length === 10 && list.every(x => x.dm && x.pic && x.name && x.role) && list[0].name === 'Infantry Corps' && list[9].name === 'Command & Logistics', list.map(x => x.name));
-  ck('list: steps count and the green "open" chip (day 1: the IFV in Armoured Forces, two fighters in Tactical Air, nothing in Navy)', list[1].cnt === '0/23' && /1 open/i.test(list[1].open) && /2 open/i.test(list[4].open) && !list[7].open, list.map(x => [x.b, x.cnt, x.open]));
+  const list = await p.evaluate(() => [...document.querySelectorAll('.rs-ban')].map(e => ({ b: e.dataset.b, name: e.querySelector('.rs-bt b').textContent, role: e.querySelector('.rs-bt span').textContent, dm: !!e.querySelector('.rs-dm svg'), pic: !!e.querySelector('.rs-bimg') && !!e.querySelector('.rs-bph'), cnt: e.querySelector('.rs-bpt > b').textContent, open: (e.querySelector('.rs-open') || {}).textContent || '' })));
+  ck('list: ten category banners with a diamond icon, a name, a role line, a photo and a unit picture', list.length === 10 && list.every(x => x.dm && x.pic && x.name && x.role) && list[0].name === 'Infantry Corps' && list[9].name === 'Command & Logistics', list.map(x => x.name));
+  ck('list: steps count and the green "open" chip (day 1: the IFV and Composite Armour, two fighters, the Frigate\'s gunnery; nine categories have one, Strategic Air opens on day 2)', list[1].cnt === '0/23' && /2 open/i.test(list[1].open) && /2 open/i.test(list[4].open) && /1 open/i.test(list[7].open) && list.filter(x => x.open).length === 9 && !list[6].open, list.map(x => [x.b, x.cnt, x.open]));
   ck('list: no Unit upgrades banner (Marks are in the tree)', await p.evaluate(() => !document.querySelector('.rs-ban.marks') && !/Marks/.test(document.querySelector('.rs-list').innerText)), null);
   ck('list: the note says Firepower and Protection cost few rare materials', await p.evaluate(() => /Firepower and Protection cost few rare materials/.test(document.querySelector('.rs-note').innerText)), null);
   // ---- Armoured Forces on day 1
   await cat('arm');
-  const g = await p.evaluate(() => ({ heads: [...document.querySelectorAll('.rt-hd b')].map(e => e.textContent), days: [...document.querySelectorAll('.rt-days span b')].map(e => +e.textContent), today: (document.querySelector('.rt-days span.now') || {}).innerText || '', nodes: document.querySelectorAll('.rnode').length, sticky: getComputedStyle(document.querySelector('.rt-days')).position + '/' + getComputedStyle(document.querySelector('.rt-hd')).position }));
+  const g = await p.evaluate(() => ({ heads: [...document.querySelectorAll('.rt-hd .rnl')].map(e => e.textContent), days: [...document.querySelectorAll('.rt-days span b')].map(e => +e.textContent), today: (document.querySelector('.rt-days span.now') || {}).innerText || '', nodes: document.querySelectorAll('.rnode').length, sticky: getComputedStyle(document.querySelector('.rt-days')).position + '/' + getComputedStyle(document.querySelector('.rt-hd')).position }));
   ck('grid: one column per unit line, a day scale with only the days that hold a node, today marked', g.heads.join('|') === 'Infantry Fighting Vehicle|Main Battle Tank' && g.days[0] === 1 && g.days.every((d, i) => !i || d > g.days[i - 1]) && g.days.includes(14) && g.days.includes(22) && !g.days.includes(2) && /1\s*Today/i.test(g.today) && g.sticky === 'sticky/sticky', g);
   let mbt = await node('u_tank'), ifv = await node('u_ifv'), g2 = await node('tank_g2'), fp = await node('tank_fp'), arm = await node('tank_armor');
   ck('colours: standard issue is blue with a check', mbt && /st-done/.test(mbt.cls) && /90, 169, 214|195, 229, 246|95, 166, 207/.test(mbt.bg) && /ok/.test(mbt.mark) && /Standard issue/.test(mbt.text), mbt);
   ck('colours: a unit unlock open on day 1 is green', ifv && /st-open/.test(ifv.cls) && /pay/.test(ifv.cls) && /111, 184, 95|201, 239, 184|47, 122, 54/.test(ifv.bg), ifv);
-  ck('colours: a later node is grey with a lock and its day', g2 && /st-lock/.test(g2.cls) && /lk/.test(g2.mark) && /Day 14/.test(g2.text) && /Opens on day 14/.test(g2.title) && /139, 152, 157|201, 210, 213/.test(g2.bg), g2);
+  ck('colours: a later node is grey with a lock, on the row of its day', g2 && /st-lock/.test(g2.cls) && /lk/.test(g2.mark) && g2.row === g.days.indexOf(14) && /Opens on day 14/.test(g2.title) && /139, 152, 157|201, 210, 213/.test(g2.bg), [g2, g.days]);
   ck('layout: the unlock tops its column, generations sit on the spine below it, Firepower left and Protection right', mbt.row === 0 && mbt.lane === 0 && g2.lane === 0 && g2.row > mbt.row && fp.lane === -1 && (await node('tank_pr')).lane === 1 && arm.lane !== 0, [mbt.row, g2.row, fp.lane]);
   ck('badges: a levelled node shows its number of levels; a generation its numeral', fp.lv === '3' && /II/.test(g2.text), [fp.lv, g2.text]);
+  // ---- repair 1: the spine under an open (unresearched) unlock is not lit; each kind of upgrade has its own icon; the side pane suggests
+  ck('spine: under the open IFV unlock the spine is not green (only its elbows to open steps may be)', await p.evaluate(() => { const ps = [...document.querySelectorAll('.rs-lines path.sp')]; return ps.length > 0 && ps.every(e => !e.classList.contains('av')); }), null);
+  ck('icons: the IFV and tank upgrades do not share one icon', await p.evaluate(() => { const ic = ['ifv_gun', 'tank_gun', 'tank_armor', 'tank_eng', 'tank_terr', 'ifv_terr'].map(id => document.querySelector(`.rnode[data-id="${id}"] .rface.g svg`).innerHTML); return new Set(ic).size === ic.length; }), null);
+  ck('side pane: with nothing selected it lists what to research next (open steps of the category)', await p.evaluate(() => { const L = [...document.querySelectorAll('.rs-card.hint .rc-sg')].map(e => e.dataset.id); return L.length >= 2 && L.includes('u_ifv') && L.includes('tank_armor'); }), null);
+  ck('labels wrap at spaces only', await p.evaluate(() => [...document.querySelectorAll('.rnode .rn b')].every(e => getComputedStyle(e).overflowWrap !== 'anywhere' && getComputedStyle(e).wordBreak !== 'break-all')), null);
   // ---- detail card and the two slots
   await p.click('.rnode[data-id="u_ifv"]'); await p.waitForTimeout(250);
   let c = await card();
@@ -55,7 +60,7 @@ const T0 = Date.now();
   ck('tapping a running slot opens that node in its category', await p.evaluate(() => /Armoured Forces/i.test(document.querySelector('.rs-thead > b').innerText) && /sel/.test(document.querySelector('.rnode[data-id="u_ifv"]').className)), null);
   // ---- rules: days, levels, the spine
   const R = await p.evaluate(() => { const im = window.__im, S = im.S, N = S.nations[0], rs = im.rs, o = {}; N.research = N.research2 = null;
-    o.day1 = [rs.can(0, 'tank_armor'), rs.why(0, 'tank_armor')]; S.hour = 2*24 + 1; o.day3 = [rs.can(0, 'tank_armor'), rs.why(0, 'tank_armor'), rs.day()];
+    o.day1 = [rs.can(0, 'tank_fp'), rs.why(0, 'tank_fp')]; S.hour = 2*24 + 1; o.day3 = [rs.can(0, 'tank_fp'), rs.why(0, 'tank_fp'), rs.day()];
     o.atk0 = rs.st(0, 'tank', 'atk'); o.def0 = rs.st(0, 'tank', 'def'); o.hp0 = rs.st(0, 'tank', 'hp');
     rs.start(0, 'tank_fp'); o.slot = { ...N.research }; for (let i = 0; i < 48; i++) rs.hour(0); o.fp1 = [rs.level(0, 'tank_fp'), rs.st(0, 'tank', 'atk'), N.research];
     o.fp2 = rs.why(0, 'tank_fp'); S.hour = 20*24; rs.grant(0, 'tank_fp', 2); o.fp3 = rs.why(0, 'tank_fp'); o.g3 = rs.why(0, 'tank_g3'); o.kitAfter = rs.why(0, 'u_stealth');
@@ -66,7 +71,7 @@ const T0 = Date.now();
     const cap = N.capital, a = im.addArmy(0, cap, { tank: 10 }), a2 = im.addArmy(1, S.nations[1].capital, { tank: 10 }); rs.hurt(a, { armored: 0.02, soft: 0, air: 0, naval: 0 }, 1); rs.hurt(a2, { armored: 0.02, soft: 0, air: 0, naval: 0 }, 1);
     o.hurt = [a.w.tank + (10 - a.u.tank)*14, a2.w.tank + (10 - a2.u.tank)*14, (4 + rs.st(1, 'tank', 'def'))/(4 + rs.st(0, 'tank', 'def'))*14/21];
     return o; });
-  ck('days: a node cannot be started before its day (Composite Armour opens on day 3)', R.day1[0] === false && R.day1[1] === 'Opens on day 3' && R.day3[0] === true && R.day3[2] === 3, [R.day1, R.day3]);
+  ck('days: a node cannot be started before its day (the tank\'s Firepower opens on day 3)', R.day1[0] === false && R.day1[1] === 'Opens on day 3' && R.day3[0] === true && R.day3[2] === 3, [R.day1, R.day3]);
   ck('levels: Firepower 1 takes 2 days and gives +12% attack', R.slot.id === 'tank_fp' && R.slot.lv === 1 && R.slot.h === 48 && R.fp1[0] === 1 && Math.abs(R.fp1[1] - R.atk0*1.12) < 1e-9 && R.fp1[2] === null, [R.slot, R.fp1]);
   ck('levels: each level has its own day; level 3 needs generation 2', R.fp2 === 'Opens on day 10' && R.fp3 === 'Needs Third-Generation MBT' && R.fp3b === '' && R.done === 'Researched', [R.fp2, R.fp3, R.fp3b, R.done]);
   ck('the spine: generation 3 needs generation 2; the Stealth Bomber needs two lines', R.g3 === 'Opens on day 22' && R.kitAfter === 'Needs Strategic Bomber Upgrade and Stealth Airframes', [R.g3, R.kitAfter]);
@@ -119,6 +124,15 @@ const T0 = Date.now();
   await q.evaluate(() => { document.querySelector('.rnode[data-id="art_radar"]').click(); }); await q.waitForTimeout(350);
   const ph2 = await q.evaluate(() => { const c = document.querySelector('.rs-card'), r = c.getBoundingClientRect(), bd = document.querySelector('.rs-body').getBoundingClientRect(), n = document.querySelector('.rnode.sel .dm').getBoundingClientRect(), sc = document.getElementById('rtscroll'); return { pos: getComputedStyle(c).position, bottom: Math.round(bd.bottom - r.bottom), w: Math.round(r.width), nodeClear: n.bottom <= r.top + 1, kept: sc.scrollLeft > 0, text: c.innerText.replace(/\s+/g, ' ').slice(0, 200), btnVis: (() => { const x = c.querySelector('.rs-db .btn').getBoundingClientRect(); return x.bottom <= innerHeight && x.top >= r.top; })() }; });
   ck('phone: the detail card is a bottom sheet, full width, with the selected node clear of it and the button in view', ph2.pos === 'absolute' && Math.abs(ph2.bottom) <= 1 && ph2.w === 430 && ph2.nodeClear && ph2.btnVis && /Counter-Battery Radar/.test(ph2.text), ph2);
+  // repair 1 on a phone: upgrades carry a short name, the column headers keep the step count, a hint arrow while columns wait to the right,
+  // Command & Logistics as two columns of cards, the research tip inside the sheet (never over the tree)
+  await q.evaluate(() => { document.querySelector('.rs-card .rc-x').click(); }); await q.waitForTimeout(200);
+  const ph3 = await q.evaluate(() => { const vis = e => !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0; const sc = document.getElementById('rtscroll'); sc.scrollLeft = 0; sc.dispatchEvent(new Event('scroll'));
+    const r = document.querySelector('.rnode[data-id="art_radar"]'); return { short: vis(r.querySelector('.rns')) && r.querySelector('.rns').textContent, long: vis(r.querySelector('.rnl')), cnt: [...document.querySelectorAll('.rt-hd .rt-hm small')].every(vis), more: !document.getElementById('rtmore').hidden }; });
+  ck('phone: an upgrade shows a short name, the headers keep their counts, an arrow says more columns wait', ph3.short === 'CB Radar' && !ph3.long && ph3.cnt && ph3.more, ph3);
+  await q.evaluate(() => { document.querySelector('[data-act="rback"]').click(); }); await q.waitForTimeout(150); await q.click('[data-act="rbranch"][data-b="cmd"]'); await q.waitForTimeout(300);
+  const ph4 = await q.evaluate(() => ({ cols: document.querySelectorAll('.rt-hd').length, cards: document.querySelectorAll('.rsolo').length, ftip: !document.getElementById('ftip').hidden, w: document.documentElement.scrollWidth }));
+  ck('phone: Command & Logistics shows two columns with a card for each doctrine; no tip card over the tree', ph4.cols === 2 && ph4.cards === 4 && !ph4.ftip && ph4.w <= 431, ph4);
   await q.close();
   const bad = checks.filter(c => !c.ok);
   console.log(JSON.stringify({ checks: checks.length, failed: bad, errors: errs }, null, 1)); await b.close(); process.exit(bad.length || errs.length ? 1 : 0); })();

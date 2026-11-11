@@ -2115,6 +2115,133 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
     linear-gradient(180deg, #b47658 0%, #a76c53 20%, #916253 36%, #765c5c 48%, #5a5867 58%, #3f5470 68%, #2b5579 80%, #1d5a86 100%)}
 .rs-ban.marks{background:radial-gradient(ellipse 46% 70% at 14% 6%, rgba(240,196,96,.42), rgba(240,196,96,0) 72%), linear-gradient(180deg, #8f7a52 0%, #77704f 30%, #5b6258 50%, #3c5a6c 70%, #285a80 100%)}
 @media (max-width: 820px){ .rs-bw .rs-bimg{--sc:1.1; right:calc(8% + 65px)} .rs-bw{-webkit-mask-image:linear-gradient(90deg, transparent 34%, #000 72%); mask-image:linear-gradient(90deg, transparent 34%, #000 72%)} }
+/* ===================== research redesign, repair 1 =====================
+   Banners: an aerial photo of the branch's ground behind the name under a slate wash (no more flat dusk band). The tree: shorter rows, a compact
+   top while a category is open, names that wrap at spaces only (short names on a phone), one icon per kind of upgrade, unit pictures upright
+   and cropped to fill the diamond, newer generations in a new paint scheme, headers that keep the elite badge and the count on a phone, an arrow
+   when more columns wait to the right, the research tip inside the sheet, suggestions in the empty detail pane, doctrine cards for Command. */
+.rs-ban{background:linear-gradient(90deg, #1f3138 0%, #253a42 46%, #2c4650 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 -2px 0 rgba(79,208,222,.6), 0 0 0 1px rgba(0,0,0,.45)}
+.rs-ban.marks{background:linear-gradient(90deg, #1f3138 0%, #253a42 46%, #2c4650 100%)}
+.rs-ban::before{background:linear-gradient(90deg, rgba(14,24,29,.94) 0, rgba(14,24,29,.78) 30%, rgba(14,24,29,.28) 58%, rgba(14,24,29,.12) 80%, rgba(14,24,29,.42) 100%)}
+.rs-ban::after{opacity:.16}
+.rs-bph{position:absolute; z-index:-4; top:0; bottom:0; right:0; width:66%; background:center 42% / cover no-repeat; filter:saturate(.72) brightness(.74) contrast(1.06);
+  -webkit-mask-image:linear-gradient(90deg, transparent 0, rgba(0,0,0,.55) 24%, #000 52%); mask-image:linear-gradient(90deg, transparent 0, rgba(0,0,0,.55) 24%, #000 52%); transition:transform .4s var(--ease)}
+.rs-ban:hover .rs-bph{transform:scale(1.03)}
+.rs-bw{opacity:.92}
+.rs-bt span .rns, .rnode .rn .rns, .rt-hd .rns{display:none}
+.rs-bp em{white-space:nowrap}
+/* the tree: a compact top while a category is open (on a wide screen the two slots sit in the title band), shorter rows */
+.rs-top.rs-tv .rs-tip{display:none}
+.rs-top.rs-tv .rs-slot.empty{flex-wrap:nowrap; justify-content:flex-start} .rs-top.rs-tv .rs-slot.empty .rs-sh{flex-basis:auto; text-align:left}
+@media (min-width: 821px){
+  .rs-top.rs-tv{display:flex; flex-wrap:wrap; align-items:center; column-gap:12px; padding:0 10px 0 16px; min-height:58px;
+    background:linear-gradient(100deg, #f3f6f7 0%, #e3eaed 12%, rgba(227,234,237,.6) 20%, rgba(227,234,237,0) 30%), linear-gradient(180deg, #2f5568, #1d3746)}
+  .rs-top.rs-tv .rs-head{display:contents}
+  .rs-top.rs-tv .rs-back{order:0} .rs-top.rs-tv .rs-ttl{order:1; flex:none} .rs-top.rs-tv .rs-stk{display:none}
+  .rs-top.rs-tv .rs-slots{order:2; flex:1 1 300px; min-width:0; padding:6px 0} .rs-top.rs-tv .rs-emb{order:3} .rs-top.rs-tv .rs-x{order:4}
+  .rs-top.rs-tv .rs-eng{order:5; flex:1 1 100%; margin:0 0 6px}
+}
+.rs-top.rs-tv .rs-head{min-height:46px} .sheet.rsch .rs-top.rs-tv .rs-ttl h1{font-size:23px}
+.rs-top.rs-tv .rs-slots{padding:6px 8px; gap:6px} .rs-top.rs-tv .rs-slot{height:50px; padding:0 12px; gap:10px} .rs-top.rs-tv .rs-slot .rs-dm.sm{width:28px; height:28px}
+.rs-top.rs-tv .rs-si{gap:2px} .rs-top.rs-tv .rs-si .rs-tag{padding:1px 9px 1px 6px; font-size:9.5px} .rs-top.rs-tv .rs-si b{font-size:13px} .rs-top.rs-tv .rs-bar{height:5px} .rs-top.rs-tv .rs-left{display:none} .rs-top.rs-tv .rs-slot.empty .rs-sh{flex-basis:auto} .rs-top.rs-tv .rs-slot.empty .rs-tag{font-size:11px}
+.rs-thead{height:34px} .rs-thead > b{font-size:16px}
+.rt{--rh:84px}
+.rnode{top:calc(var(--r)*var(--rh) + var(--rh)*.4 - 19px); width:min(124px, calc(58% / var(--cols)))}
+.rnode.big{top:calc(var(--r)*var(--rh) + var(--rh)*.4 - 24px); width:min(150px, calc(60% / var(--cols)))} .rnode.k-gen{top:calc(var(--r)*var(--rh) + var(--rh)*.4 - 26px)}
+.rnode.nar{width:min(92px, calc(27% / var(--cols)))} .rnode.big.nar{width:min(110px, calc(34% / var(--cols)))} .rnode.nar .rn b{-webkit-line-clamp:3}
+.rt-grid{overflow-x:clip}
+@media (min-width: 821px){ .rt-more{display:none!important} }
+.rnode.edge:not(.big){width:min(96px, calc(36% / var(--cols)))}
+/* a spine node with another right under it: the name beside the diamond */
+.rnode.ttR .rn, .rnode.ttL .rn{position:absolute; width:max-content; max-width:110px; margin:0}
+.rnode.big.ttR .rn{left:calc(50% + 34px)} .rnode.big.ttL .rn{right:calc(50% + 34px)} .rnode.k-gen.ttR .rn{left:calc(50% + 36px)} .rnode.k-gen.ttL .rn{right:calc(50% + 36px)}
+.rnode.ttR .rn, .rnode.ttL .rn{top:16px}
+/* the state mark of an upgrade sits at its left corner (the level badge at the right): the name under the diamond stays clear */
+.rnode:not(.big) .rbdg{top:23px; left:calc(50% - 31px); transform:none}
+.rnode .rn{margin-top:12px} .rnode.big .rn{margin-top:15px}
+.rnode .rn b{overflow-wrap:normal; word-break:normal; hyphens:manual}
+.rnode .rn small{color:#c3d0d4}
+.rnode.st-lock .rn small{color:#aab8bc}
+.rt-days span{padding-top:calc(var(--rh)*.4 - 12px)}
+.rs-lines path.av{stroke:rgba(110,220,120,.9)}
+/* unit pictures in diamonds: upright, cropped to fill the diamond (drawn in a box the size of its diagonals) */
+.dmi{position:relative}
+.rface.rfb{position:absolute; inset:-21%; display:block; transform:none!important; overflow:visible}
+.rfb i{position:absolute; display:block; background:center / 100% 100% no-repeat; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
+/* newer generations: the same picture in a new paint scheme until their own art exists (g2 desert, g3 dark grey) */
+.rfb.g2 i, .rgv.g2 .ut{filter:sepia(.62) saturate(1.9) hue-rotate(-16deg) brightness(1.12) contrast(1.06) drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
+.rfb.g3 i, .rgv.g3 .ut{filter:grayscale(.75) sepia(.22) hue-rotate(172deg) saturate(1.5) brightness(.8) contrast(1.4) drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
+.rgv{display:inline-grid}
+/* column headers: picture, name, then the elite badge and the count */
+.rt-hn{display:flex; align-items:center; gap:7px; min-width:0}
+.rt-hn > b{font:700 12.5px/1.1 var(--body); letter-spacing:.02em; text-shadow:var(--cn-num); min-width:0; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+.rt-hm{display:flex; align-items:center; gap:5px; flex:none} .rt-hm small{font:600 10.5px/1 var(--body); color:#9fb3b9; font-variant-numeric:tabular-nums}
+/* more columns to the right (phones): an arrow at the edge, the tree under it fades */
+.rt-more{position:absolute; z-index:7; right:4px; top:calc(50% - 22px); display:grid; place-items:center; width:30px; height:44px; padding:0; border:1px solid rgba(143,244,251,.55); border-radius:2px;
+  background:linear-gradient(180deg, rgba(43,72,79,.96), rgba(30,50,56,.96)); color:#e6f7f9; box-shadow:0 2px 8px rgba(0,0,0,.5), -14px 0 18px rgba(20,32,38,.65); cursor:pointer}
+.rt-more[hidden]{display:none}
+.rt-more:active{transform:scale(.94)}
+.rs-body.hassel .rt-more{top:calc(20% - 22px)}
+/* the research tip, inside the sheet under the slots */
+.rs-tip{display:flex; align-items:center; gap:10px; margin:0 8px 8px; padding:6px 8px 6px 10px; border-radius:2px; background:rgba(12,22,26,.55); box-shadow:inset 0 0 0 1px rgba(143,244,251,.4); color:#eef5f6}
+.rs-tip .tico{flex:none; width:22px; height:22px; color:#8ff4fb} .rs-tip .tt{flex:1; min-width:0; font:600 13px/1.25 var(--body)}
+.rs-tip .btn{flex:none; padding:4px 12px; font-size:12.5px; min-height:0}
+.rs-tip .tskip{flex:none; background:none; border:0; padding:0; font:inherit; font-size:11.5px; color:#a9bcc2; text-decoration:underline; cursor:pointer}
+/* the empty detail pane: what to research next */
+.rc-next{display:flex; flex-direction:column; gap:6px}
+.rc-next .rs-dk{margin-bottom:2px}
+.rc-sg{display:grid; grid-template-columns:34px minmax(0, 1fr); align-items:center; gap:10px; width:100%; padding:7px 8px 7px 10px; border:0; border-radius:2px; background:rgba(0,0,0,.22);
+  box-shadow:inset 3px 0 0 rgba(160,180,186,.5); color:#e6eef0; font:inherit; text-align:left; cursor:pointer; transition:background-color .15s}
+.rc-sg:hover{background:rgba(0,0,0,.34)} .rc-sg.ok{box-shadow:inset 3px 0 0 #5fbf4a} .rc-sg.short{box-shadow:inset 3px 0 0 #d6b24a}
+.rc-sg .rs-dm.sm{width:28px; height:28px; margin:0 auto; background:linear-gradient(135deg, #59666c, #394549)} .rc-sg.ok .rs-dm.sm, .rc-sg.short .rs-dm.sm{background:linear-gradient(135deg, #58b85c, #2c7a3a)}
+.rc-sgt{display:flex; flex-direction:column; gap:2px; min-width:0} .rc-sgt b{font:700 12.5px/1.2 var(--body); color:#fff} .rc-sgt small{font:500 11px/1.25 var(--body); color:var(--cn-fg2)}
+.rc-sg.short .rc-sgt small{color:#f1d48a}
+.rs-card.hint{gap:14px}
+/* Command & Logistics: two columns of doctrines, a card beside each diamond with every level */
+.rt.solo{--rh:118px; --cmin:220px}
+.rnode.solo .rn{display:none}
+.rsolo{position:absolute; z-index:2; top:calc(var(--r)*var(--rh) + 10px); left:calc((var(--c) + .37) * 100% / var(--cols)); width:calc(58% / var(--cols)); min-height:calc(var(--rh) - 20px);
+  display:flex; flex-direction:column; gap:4px; padding:7px 9px; border:0; border-radius:2px; background:rgba(14,24,29,.55); box-shadow:inset 0 0 0 1px rgba(143,163,170,.3);
+  color:#d7e1e4; font:500 11.5px/1.3 var(--body); text-align:left; cursor:pointer}
+.rsolo:hover{background:rgba(14,24,29,.72)} .rsolo.sel{box-shadow:inset 0 0 0 2px #fff}
+.rsolo > b{font:700 12.5px/1.15 var(--body); color:#fff}
+.rsolo > span{display:block} .rsolo > span em{display:inline-block; min-width:12px; margin-right:4px; font:800 10px/1 var(--body); font-style:normal; color:#9fb3b9}
+.rsolo > span i{font-style:normal; color:#9fb3b9} .rsolo > span.dn{color:#8ccdf0} .rsolo > span.dn em{color:#8ccdf0} .rsolo > span.nx em{color:#8fe08a}
+@media (max-width: 820px){
+  .rs-bt b{font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .rs-bt span{white-space:nowrap; display:block; overflow:hidden; text-overflow:ellipsis; -webkit-line-clamp:unset}
+  .rs-bt span .rnl{display:none} .rs-bt span .rns{display:inline}
+  .rs-bt{flex:1 1 auto}
+  .rs-bp{flex:none; max-width:none} .rs-bp em.rs-open{display:inline-block; padding:2px 5px; font-size:9.5px} .rs-bpt{gap:5px}
+  .rs-bw{opacity:.5} .rs-bph{width:78%}
+  .rs-top.rs-tv .rs-head{min-height:44px} .sheet.rsch .rs-top.rs-tv .rs-ttl h1{font-size:21px} .rs-top.rs-tv .rs-cnt{font-size:10px}
+  .rs-top.rs-tv .rs-slot{height:46px; padding:0 8px; gap:8px} .rs-top.rs-tv .rs-slot .rs-dm.sm{width:24px; height:24px} .rs-top.rs-tv .rs-si b{font-size:12.5px}
+  .rs-thead{height:32px} .rs-thead > b{font-size:14px}
+  .rt{--rh:74px}
+  .rnode{top:calc(var(--r)*var(--rh) + var(--rh)*.4 - 16px); width:calc(58% / var(--cols))}
+  .rnode.big{top:calc(var(--r)*var(--rh) + var(--rh)*.4 - 20px); width:calc(64% / var(--cols))} .rnode.k-gen{top:calc(var(--r)*var(--rh) + var(--rh)*.4 - 22px)}
+  .rnode.nar{width:calc(26% / var(--cols))} .rnode.big.nar{width:calc(35% / var(--cols))} .rnode.big.nar .rn{padding:1px 2px 2px} .rnode.big.nar .rn small{display:none}
+  .rnode.edge:not(.big){width:calc(38% / var(--cols))}
+  .rnode:not(.big) .rbdg{top:19px; left:calc(50% - 26px)}
+  .rnode.big.ttR .rn{left:calc(50% + 27px)} .rnode.big.ttL .rn{right:calc(50% + 27px)} .rnode.k-gen.ttR .rn{left:calc(50% + 29px)} .rnode.k-gen.ttL .rn{right:calc(50% + 29px)}
+  .rnode.ttR .rn, .rnode.ttL .rn{top:12px; max-width:52px}
+  .rnode:not(.big) .rn b{display:-webkit-box} .rnode .rn{margin-top:10px} .rnode.big .rn{margin-top:13px}
+  .rnode .rn b{font-size:9.5px; line-height:1.1}
+  .rnode .rn .rnl:has(+ .rns){display:none} .rnode .rn .rns{display:-webkit-box}
+  .rnode .rn small{font-size:8.5px}
+  .rt-days span{padding-top:calc(var(--rh)*.4 - 11px)}
+  .rt-hd{height:42px; justify-content:flex-start; padding:0 5px}
+  .rt-hn{flex-direction:column; align-items:flex-start; gap:2px}
+  .rt-hn > b{font-size:10.5px; -webkit-line-clamp:1; display:block; white-space:nowrap; text-overflow:ellipsis; max-width:100%}
+  .rt-hd .rnl:has(+ .rns){display:none} .rt-hd .rns{display:inline}
+  .rt-hd .rt-hm .relite{display:inline-block} .rt-hm small{display:inline; font-size:9.5px}
+  .rt.solo{--rh:126px; --cmin:max(170px, calc((100vw - 48px)/2))}
+  .rsolo{left:calc((var(--c) + .36) * 100% / var(--cols)); width:calc(61% / var(--cols)); padding:5px 6px; font-size:9.5px; gap:3px} .rsolo > b{font-size:10.5px}
+  .rsolo > span{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden} .rsolo > span + span{-webkit-line-clamp:2} .rsolo > span em{min-width:10px; margin-right:3px}
+  .rs-tip{margin:0 6px 6px; padding:5px 6px 5px 8px; gap:7px} .rs-tip .tt{font-size:12px} .rs-tip .btn{padding:3px 9px; font-size:12px}
+}
+@media (max-width: 400px){ .rs-bt b{font-size:15.5px; letter-spacing:.01em} .rs-ban{gap:11px; padding:0 10px 0 14px} .rs-bt span{font-size:10.5px} }
 .bkgrp{display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap}
 /*@DEV*/
 /* developer mode (test build only): the DEV badge beside the speed control, the 16x/50x/100x speeds, the developer panel */
@@ -9075,6 +9202,36 @@ Object.assign(RGLY, {
   coin:'<circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M10.8 6.6h2.4v10.8h-2.4z"/><path d="M8.4 9h7v2H8.4zM8.6 13h7v2h-7z"/>',
   def2:'<path d="M12 2.4l8 3v6.2c0 4.9-3.4 8.6-8 10.2-4.6-1.6-8-5.3-8-10.2V5.4z"/><circle cx="12" cy="11.6" r="3.4" fill="#24363d"/>',
 });
+// one icon per kind of upgrade, so neighbouring diamonds tell apart at a glance (all drawn for this game): body armour, armour plates, warheads,
+// sights, guns, engines, water, tracks, radar, shells, guided shells, reloading, seekers, missiles, bombs, bunker-busters, stealth, fuel tanks,
+// boosters, sonar, torpedoes, data links, flak, a quiet drive
+Object.assign(RGLY, {
+  vest:'<path d="M7.6 2.6h2.6c.4 1.5 1 2.2 1.8 2.2s1.4-.7 1.8-2.2h2.6l4 3.2-1.9 4.6-1.5-.7v10.9a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9.7l-1.5.7-1.9-4.6z"/><path d="M9.2 11h5.6v2.2H9.2zM9.2 15h5.6v2.2H9.2z" fill="#24363d"/>',
+  armor:'<path d="M12 2.2 20.8 7v10L12 21.8 3.2 17V7z"/><path d="M12 6.4 17 9.2v5.6L12 17.6 7 14.8V9.2z" fill="#24363d"/><path d="M12 9.2 14.4 10.6v2.8L12 14.8l-2.4-1.4v-2.8z"/>',
+  warhead:'<path d="M9.4 2.6c1.6 1.4 2.4 3.4 2.4 5.8v9.2H7V8.4c0-2.4.8-4.4 2.4-5.8z"/><path d="M15.4 6.2c1.3 1.1 2 2.8 2 4.8v6.6h-4V11c0-2 .7-3.7 2-4.8z"/><path d="M6.4 18.6h11.6v3H6.4z"/><path d="M19 3.4l1.6-1.6M21 7.4h2" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  scope:'<circle cx="6.8" cy="15.4" r="4.8"/><circle cx="17.2" cy="15.4" r="4.8"/><path d="M3.8 12.4 5.6 4.2h3.8l1.2 6.8zM20.2 12.4 18.4 4.2h-3.8l-1.2 6.8z"/><path d="M10 10.6h4v3.4h-4z"/><circle cx="6.8" cy="15.4" r="2.1" fill="#24363d"/><circle cx="17.2" cy="15.4" r="2.1" fill="#24363d"/>',
+  autocannon:'<path d="M1.6 8.8h12v2.4h-12zM1.6 12.8h12v2.4h-12z"/><path d="M13 6.4h6.4a2.4 2.4 0 0 1 2.4 2.4v6.4a2.4 2.4 0 0 1-2.4 2.4H13z"/><path d="M4.4 18.6h2.4v2.6H4.4zM8.2 18.6h2.4v2.6H8.2zM12 18.6h2.4v2.6H12z"/>',
+  cannon:'<path d="M1.6 10.7h13v2.6h-13z"/><path d="M.8 9.6h3.2v4.8H.8z"/><path d="M13.6 6.2h6.2a2.6 2.6 0 0 1 2.6 2.6v6.4a2.6 2.6 0 0 1-2.6 2.6h-6.2z"/><circle cx="18.2" cy="12" r="1.7" fill="#24363d"/>',
+  engine:'<circle cx="12" cy="12" r="9.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 12V4.2a7.8 7.8 0 0 1 6 2.8zM12 12l6.8 3.8a7.8 7.8 0 0 1-4.6 4.6zM12 12l-6.8 3.9a7.8 7.8 0 0 1-1-6.6z"/><circle cx="12" cy="12" r="2.1" fill="#24363d"/>',
+  wave:'<path d="M5 7.6h14l-1.6 4.8H6.6z"/><path d="M8.4 4.4h6.8l1 3.2H7.4z"/><path d="M1.4 16.2c1.8 0 1.8-1.5 3.6-1.5s1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5 1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5 1.8 1.5 3.4 1.5M1.4 20.4c1.8 0 1.8-1.5 3.6-1.5s1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5 1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5 1.8 1.5 3.4 1.5" fill="none" stroke="currentColor" stroke-width="2"/>',
+  tracks:'<rect x="1.8" y="6.8" width="20.4" height="10.4" rx="5.2" fill="none" stroke="currentColor" stroke-width="2.8"/><circle cx="6.8" cy="12" r="2.3"/><circle cx="12" cy="12" r="2.3"/><circle cx="17.2" cy="12" r="2.3"/><path d="M3.4 20.6h17.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2 1.6"/>',
+  radar:'<path d="M3 5.4a11 11 0 0 0 14.4 14.4z"/><path d="M10.2 12.6 17.6 5.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18.2" cy="4.6" r="1.8"/><path d="M8.8 18.6 6.4 22.2h7.4l-1.6-2.8z"/><path d="M20.6 10.2a5.6 5.6 0 0 0-5.4-5.6M23 10.4a8 8 0 0 0-7.8-8.2" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  shell:'<g transform="rotate(40 12 12)"><path d="M12 1.6c2 1.8 3.1 4.4 3.1 7.3v8.6H8.9V8.9c0-2.9 1.1-5.5 3.1-7.3z"/><path d="M8.4 18.4h7.2v3.2H8.4z"/><path d="M8.9 12.6h6.2" stroke="#24363d" stroke-width="1.2"/></g>',
+  guided:'<circle cx="16.6" cy="16.6" r="5.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="16.6" r="1.8"/><g transform="rotate(40 8.6 8.6)"><path d="M8.6 .8c1.5 1.3 2.3 3.2 2.3 5.4v6.2H6.3V6.2c0-2.2.8-4.1 2.3-5.4z"/><path d="M6 13.2h5.2v2.4H6z"/></g>',
+  reload:'<path d="M19.8 12.2a7.8 7.8 0 1 1-2.4-5.6" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15.2 2.4l6.4 1.8-1.8 6.4z"/><path d="M9.2 8.2h2v7.6h-2zM12.8 8.2h2v7.6h-2z"/>',
+  seeker:'<g transform="rotate(-40 10 14)"><path d="M1.6 12.6h12l5 1.4-5 1.4h-12z"/><path d="M1.6 9.8l3.4 2.8H1.6zM1.6 18.2 5 15.4H1.6z"/></g><path d="M16.2 4.6a5 5 0 0 1 3.6 3.6M16.8 1.2a8.4 8.4 0 0 1 6.4 6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  rocket:'<g transform="rotate(-28 12 12)"><path d="M2.6 10.6h14l5 1.4-5 1.4h-14z"/><path d="M2.8 7l3.8 3.6H2.8zM2.8 17l3.8-3.6H2.8z"/><path d="M11.2 8.6l2.2 2h-2.2zM11.2 15.4l2.2-2h-2.2z"/></g><path d="M1.4 19.6 4 18M2 22.6l3-1.2" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  bomb:'<path d="M12 1.8c2.8 0 4.6 2.8 4.6 7.1S14.8 17.4 12 17.4 7.4 13.2 7.4 8.9 9.2 1.8 12 1.8z"/><path d="M9.4 16.6 7.4 22h9.2l-2-5.4z"/><path d="M12 17.6V22" stroke="#24363d" stroke-width="1.4"/><path d="M8.6 7.6h6.8" stroke="#24363d" stroke-width="1.2"/>',
+  bunker:'<path d="M1.6 20.2h20.8v2.4H1.6z"/><path d="M3.8 20.2a8.2 6 0 0 1 16.4 0z"/><path d="M12 1.2c1.5 0 2.4 1.5 2.4 3.9v5.3L12 13.4l-2.4-3V5.1c0-2.4.9-3.9 2.4-3.9z" stroke="#24363d" stroke-width="1"/><path d="M12 13.4v3.4M9.4 15.6l-1.6 1.6M14.6 15.6l1.6 1.6" stroke="#24363d" stroke-width="1.6"/>',
+  stealth:'<path d="M12 4.6 23.2 15.4l-3.2 1.4-2.6-1.6-2.2 2L12 15.4l-3.2 1.8-2.2-2-2.6 1.6L.8 15.4z"/><path d="M12 8.4l-2.6 2.6h5.2z" fill="#24363d"/>',
+  fuel:'<path d="M6 5.4h9.2l3.6 3.6v11.6a1.2 1.2 0 0 1-1.2 1.2H6a1.2 1.2 0 0 1-1.2-1.2V6.6A1.2 1.2 0 0 1 6 5.4z"/><path d="M7.4 2.2h5.4v3.2H7.4z"/><path d="M8.2 10.2l7.6 7.6M15.8 10.2l-7.6 7.6" stroke="#24363d" stroke-width="1.8"/>',
+  booster:'<path d="M12 1.2c2.4 1.9 3.6 4.6 3.6 7.8v6H8.4V9c0-3.2 1.2-5.9 3.6-7.8z"/><path d="M8.4 10.6 5.6 14.4v2.8l2.8-1.4zM15.6 10.6l2.8 3.8v2.8l-2.8-1.4z"/><path d="M9.8 15.8h4.4l-.8 3.4L12 23l-1.4-3.8z" opacity=".75"/><circle cx="12" cy="7.6" r="1.4" fill="#24363d"/>',
+  sonar:'<path d="M1.4 5.4h21.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 1.6"/><circle cx="12" cy="15.6" r="2.6"/><path d="M7.6 20.2a6.4 6.4 0 0 1 0-9.2M16.4 11a6.4 6.4 0 0 1 0 9.2M4.6 22.8a10.4 10.4 0 0 1 0-14.4M19.4 8.4a10.4 10.4 0 0 1 0 14.4" fill="none" stroke="currentColor" stroke-width="1.9"/>',
+  torpedo:'<path d="M3.6 9.6h13.8a2.4 2.4 0 0 1 0 4.8H3.6z"/><path d="M3.6 12 1 8.4v7.2z"/><path d="M19.8 12h3" stroke="currentColor" stroke-width="2"/><path d="M4.6 18.6c1.6 0 1.6-1.2 3.2-1.2s1.6 1.2 3.2 1.2 1.6-1.2 3.2-1.2 1.6 1.2 3.2 1.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.6 12h7" stroke="#24363d" stroke-width="1.2"/>',
+  link:'<path d="M5 18 12 5.6 19 18z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="5.4" r="3.2"/><circle cx="4.8" cy="18" r="3.2"/><circle cx="19.2" cy="18" r="3.2"/>',
+  flak:'<circle cx="7.2" cy="7.8" r="3.6"/><circle cx="16.6" cy="5.8" r="2.8"/><circle cx="15" cy="13.6" r="3.2"/><path d="M2.4 22.2l7.4-7.4M6.4 22.2l7.4-7.4" fill="none" stroke="currentColor" stroke-width="2.2"/>',
+  quiet:'<path d="M1.8 9h4.6l5.6-5v16l-5.6-5H1.8z"/><path d="M14.6 8.2l7.4 7.6M22 8.2l-7.4 7.6" fill="none" stroke="currentColor" stroke-width="2.4"/>',
+});
 // the elite badge: a star between two wings (our own drawing)
 const eliteSVG = (w = 30) => `<svg class="relite" width="${w}" height="${Math.round(w*14/32)}" viewBox="0 0 32 14" fill="currentColor" role="img" aria-label="Elite unit"><path d="M16 .8l1.9 3.9 4.3.6-3.1 3 .7 4.3L16 10.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"/><path d="M10 4C6.4 2.6 3.2 2.8.6 4.2c2 .2 3.5.8 4.5 1.8-1.2-.2-2.3 0-3.1.6 1.6.2 2.9.9 3.7 1.9-.9 0-1.7.2-2.3.7 2.9 1.6 5.6 1.2 7.5-.6z"/><path transform="translate(32 0) scale(-1 1)" d="M10 4C6.4 2.6 3.2 2.8.6 4.2c2 .2 3.5.8 4.5 1.8-1.2-.2-2.3 0-3.1.6 1.6.2 2.9.9 3.7 1.9-.9 0-1.7.2-2.3.7 2.9 1.6 5.6 1.2 7.5-.6z"/></svg>`;
 // the banner glyph of each category, and the word for each node kind
@@ -9082,29 +9239,74 @@ const RCG = {inf:'helmet', arm:'tank', sup:'gun', aas:'heli', tac:'jet', uns:'dr
 const RKIND = {unlock:'Unlock', eng:'Levels', kit:'Upgrade', gen:'Generation'};
 const RSTAT = {atk:'Attack', def:'Defense', spd:'Speed', hp:'Health'};
 // the picture in a node: the unit (its unlock and its generations), a missile, or a white icon for what the upgrade does
-function rFace(nd, sz){ if (nd.u && (nd.kind === 'unlock' || nd.kind === 'gen')) return `<span class="rface u">${unitPic(nd.u, 'lg', rGenArt(nd.u, nd.gen || 1))}</span>`;
+function rFace(nd, sz){ if (nd.u && (nd.kind === 'unlock' || nd.kind === 'gen')){ const g = nd.gen || 1; return rUnitFace(nd.u, rGenArt(nd.u, g), rGenTone(nd.u, g)); }
   if (nd.ic === 'cm' || nd.ic === 'bm') return `<span class="rface g">${mslIcon(nd.ic, Math.round(sz*1.25))}</span>`;
-  const g = !nd.u && nd.kind !== 'eng' && nd.cat === 'cmd' ? ({log1:'truck', log2:'wrench', nav3:'anchor', log3:'cross'})[nd.id] : nd.id === 'sat1' ? 'sat' : nd.id === 'msl3' ? 'def2' : nd.ic;
-  return `<span class="rface g">${rg(g, sz)}</span>`; }
+  return `<span class="rface g">${rg(nd.ic, sz)}</span>`; }
+// a unit's picture in a diamond: upright and cropped to what reads at that size (the squad pictures show one soldier, a long hull fills the
+// diamond's height), drawn in a box the size of the diamond's diagonals. RFCROP: [cx, cy, height] of the part shown, as shares of the picture
+const RFCROP = {inf:[0.5, 0.25, 0.44], para:[0.5, 0.25, 0.44]};
+function rUnitFace(t, k, tone){ const u = UART[k], im = u && ART.img(u[0]);
+  if (!im) return `<span class="rface u">${unitPic(t, 'lg', k)}</span>`;
+  const b = picBox(im), cr = RFCROP[t], cx = cr ? cr[0] : b[2], cy = cr ? cr[1] : b[3], hh = cr ? cr[2] : Math.max(b[0], b[1]), tall = !cr && b[1] > b[0]*1.4;
+  const X = (cr ? 0.84 : tall ? 0.94 : 0.8)/hh*100, f = v => +v.toFixed(2);
+  return `<span class="rface u rfb${tone ? ' ' + tone : ''}"><i style="width:${f(X)}%;height:${f(X)}%;left:${f(50 - cx*X)}%;top:${f(50 - cy*X)}%;transform-origin:${f(cx*100)}% ${f(cy*100)}%;${u[1] ? 'transform:rotate(180deg);' : ''}background-image:url('${ART.url(u[0])}')"></i></span>`; }
+// a newer generation's picture until its own art exists: the type's picture in a new paint scheme (g2 desert, g3 dark grey). A generation that
+// already has a picture of its own (the armed UAV) is shown as it is
+const R_TONE = ['', '', 'g2', 'g3', '', 'g3'];
+const rGenTone = (t, g) => { if (g < 2) return ''; const a = rGenArt(t, g), p = rGenArt(t, g - 1); return a !== p && UART[a] && !ART.standIn(UART[a][0]) ? '' : R_TONE[g] || 'g2'; };
+// short labels for the phone, where a diamond's name has about 70 px (the card always shows the full name)
+const RSN = {'Ceramic Body Armour':'Body Armour', 'Rapid Mobilisation':'Mobilisation', 'Rough-Ground Drills':'Drills', 'Tandem Warheads':'Tandem', 'Thermal Sights':'Thermals',
+  'Mountain & Arctic Training':'Mountain', 'Air-Transportable':'Airlift', '30 mm Autocannon':'Autocannon', 'Uprated Powerpack':'Powerpack', 'Amphibious Kit':'Amphibious', 'Composite Armour':'Composite',
+  'Smoothbore Main Gun':'Main Gun', 'Turbine Engines':'Turbine', 'Counter-Battery Radar':'CB Radar', 'Extended-Range Shells':'ER Shells', 'Guided Shells':'Guided', 'Extended-Range Rockets':'ER Rockets',
+  'Improved Seekers':'Seekers', 'Shoot-and-Scoot':'Scoot', 'Wideband Jamming':'Wideband', 'Long-Range Tanks':'Fuel Tanks', 'Fire-and-Forget Missiles':'Fire & Forget', 'Long-Range Airlift':'Airlift',
+  'Radar-Guided Missiles':'Radar AAM', 'Precision Munitions':'Precision', 'Stealth Airframes':'Stealth', 'Look-Down Radar':'Look-Down', 'Booster Rockets':'Boosters', 'Bigger Salvo':'Salvo',
+  'Satellite Link':'Sat Link', 'Bunker-Buster Warhead':'Bunker Buster', 'Defensive Jammers':'Jammers', 'Strategic Bomber Upgrade':'Long Range', 'Enlarged Bomb Bay':'Bomb Bay', 'Flying-Wing Tanks':'Wing Tanks',
+  'Sonobuoy Field':'Sonobuoys', 'Homing Torpedoes':'Torpedoes', 'High-Power Radar':'Radar', 'Fighter Data Link':'Data Link', 'Naval Gunnery':'Gunnery', 'Towed Sonar':'Sonar', 'Area Air Defence':'Air Defence',
+  'Long-Range Bombardment':'Bombard', 'Flight-Deck Crews':'Deck Crews', 'Nuclear Propulsion':'Nuclear', 'Heavy Torpedoes':'Torpedoes', 'Quiet Drive':'Quiet', 'Cruise Missile Range':'Range',
+  'Cruise Missile Speed':'Speed', 'Ballistic Missile Range':'Range', 'Heavier Warhead':'Warhead', 'Anti-Missile Shield':'Shield', 'Reconnaissance Satellites':'Satellites', 'Motorized Supply':'Supply',
+  'Combat Engineers':'Engineers', 'Amphibious Doctrine':'Landings', 'Field Hospitals':'Hospitals',
+  'Mechanized Infantry':'Mechanized', 'Guided Missile Teams':'ATGM Teams', 'Tier-One Operators':'Tier One', 'Third-Generation MBT':'3rd-Gen MBT', 'Next-Generation MBT':'Next-Gen MBT',
+  'Long-Barrel Howitzer':'Long Barrel', 'Guided Rocket System':'Guided Rockets', 'Counter-UAV Laser':'Laser', 'Heavy Gunship':'Gunship', 'Air Assault Brigade':'Air Assault',
+  'Fourth-Generation Interceptor':'4th-Gen', 'Multirole Strike Fighter':'Multirole', 'Fifth-Generation Fighter':'5th-Gen', 'Networked Swarm':'Networked', 'Low-Observable Strike Drone':'Low-Observable',
+  'Supersonic Bomber':'Supersonic', 'Long-Endurance Patrol Aircraft':'Long-Endurance', 'Phased-Array AWACS':'Phased-Array', 'Guided-Missile Frigate':'Missile Frigate', 'Nuclear Attack Submarine':'Nuclear Sub',
+  'Motorized Infantry':'Motorized', 'Anti-Tank Infantry':'Anti-Tank', 'Infantry Fighting Vehicle':'IFV', 'Main Battle Tank':'Battle Tank', 'Mobile Artillery':'Artillery', 'Rocket Artillery':'Rockets',
+  'Attack Helicopter':'Attack Heli', 'Air Superiority Fighter':'Air Superiority', 'Maritime Patrol Aircraft':'Maritime Patrol', 'Aircraft Carrier':'Carrier', 'Attack Submarine':'Submarine',
+  'Cruise Missiles':'Cruise', 'Ballistic Missiles':'Ballistic'};
+const rShort = nm => RSN[nm] || nm;
+// Command & Logistics shows its four doctrines in two columns (no line joins them: none needs another), each diamond with a card of its levels
+const RDCOL = {Supply:'Logistics', Engineers:'Logistics', Landings:'Operations', Medical:'Operations'};
+const RCOLG = {Logistics:'truck', Operations:'anchor'};
 // what a node does at one level, as a sentence (the unit's role for an unlock)
 const rTxt = (nd, lv) => cap1(nd.lv[lv - 1].txt);
 // per-category layout, computed once: one column per unit line, one row per day that holds a node (a levelled node sits on the day of its
 // first level). Inside a column the spine (unlock, generations) runs down the middle lane; upgrades hang off it in the left and right lanes
 const RLAY = {};
 function rLayout(cat){ if (RLAY[cat]) return RLAY[cat];
-  const L = RNODES.filter(n => n.cat === cat), lines = [...new Set(L.map(n => n.line))], days = [...new Set(L.map(n => n.lv[0].day))].sort((a, b) => a - b), pos = {};
-  const spine = n => n.kind === 'unlock' || n.kind === 'gen';
-  lines.forEach((ln, c) => { const ns = L.filter(n => n.line === ln).sort((a, b) => a.lv[0].day - b.lv[0].day || a.i - b.i), hasSp = ns.some(spine), used = {}; let flip = 1;
+  const L = RNODES.filter(n => n.cat === cat), colOf = n => RDCOL[n.line] || n.line, lines = [...new Set(L.map(colOf))], days = [...new Set(L.map(n => n.lv[0].day))].sort((a, b) => a - b), pos = {};
+  const spine = n => n.kind === 'unlock' || n.kind === 'gen', solo = lines.length < new Set(L.map(n => n.line)).size;   // solo: columns of independent doctrines, a card beside each diamond
+  lines.forEach((ln, c) => { const ns = L.filter(n => colOf(n) === ln).sort((a, b) => a.lv[0].day - b.lv[0].day || a.i - b.i), hasSp = ns.some(spine), used = {}; let flip = 1;
     ns.forEach((n, i) => { const r = days.indexOf(n.lv[0].day); let l = 0;
-      if (!(hasSp ? spine(n) : i === 0)){ const out = RNODES.find(m => m.line !== ln && m.req.includes(n.id)), want = out && out.cat === cat ? (lines.indexOf(out.line) > c ? 1 : -1) : n.kind === 'eng' ? (n.eng === 'fp' ? -1 : 1) : flip;
+      if (solo) l = -1;
+      else if (!(hasSp ? spine(n) : i === 0)){ const out = RNODES.find(m => m.line !== n.line && m.req.includes(n.id)), want = out && out.cat === cat ? (lines.indexOf(colOf(out)) > c ? 1 : -1) : n.kind === 'eng' ? (n.eng === 'fp' ? -1 : 1) : flip;
         l = used[r + ':' + want] ? -want : want; if (n.kind !== 'eng') flip = -l; used[r + ':' + l] = 1; }
-      pos[n.id] = {c, l, r}; }); });
+      pos[n.id] = {c, l, r}; });
+    // a spine node and a side node on one row (a day-1 upgrade beside its unlock): both names keep to their own lane, in two short lines, and the
+    // side node steps out to the edge of the column so the two diamonds do not touch
+    for (const n of ns) if (ns.some(m => m !== n && !pos[m.id].l !== !pos[n.id].l && pos[m.id].r === pos[n.id].r)){ pos[n.id].nar = 1; if (pos[n.id].l) pos[n.id].l *= 1.38; }
+    // a spine node with another right under it (two generations on consecutive rows): its name goes beside the diamond, not under it
+    for (const n of ns) if (!pos[n.id].l && ns.some(m => m !== n && !pos[m.id].l && pos[m.id].r === pos[n.id].r + 1)) pos[n.id].tight = ns.some(m => pos[m.id].l > 0 && pos[m.id].r === pos[n.id].r) ? 'L' : 'R';
+    for (const n of ns) if ((c === 0 && pos[n.id].l < 0) || (c === lines.length - 1 && pos[n.id].l > 0)) pos[n.id].edge = 1; });
   // each line's column: its nodes, its first node (the header's picture), its spine nodes top to bottom
-  const cols = lines.map(ln => { const ns = L.filter(n => n.line === ln); return {ln, ns, head:ns.find(n => n.kind === 'unlock') || ns[0], sp:ns.filter(n => pos[n.id].l === 0).sort((a, b) => pos[a.id].r - pos[b.id].r), r1:Math.max(...ns.map(n => pos[n.id].r))}; });
-  return (RLAY[cat] = {L, lines, days, pos, cols}); }
+  const cols = lines.map(ln => { const ns = L.filter(n => colOf(n) === ln); return {ln, ns, head:ns.find(n => n.kind === 'unlock') || ns[0], sp:solo ? [] : ns.filter(n => pos[n.id].l === 0).sort((a, b) => pos[a.id].r - pos[b.id].r), r1:Math.max(...ns.map(n => pos[n.id].r))}; });
+  return (RLAY[cat] = {L, lines, days, pos, cols, solo}); }
 // a banner's picture: the owner's top-down unit photo turned to face the title (pictures stored nose-down are turned the other way); building art stays upright
 const rbImg = art => { const e = Object.values(UART).find(u => u[0] === art), rot = /^b-/.test(art) ? 0 : e && e[1] ? 96 : -84;
   return `<span class="rs-bw" aria-hidden="true">${['b1', 'b2', 'b3'].map(k => `<i class="rs-bimg ${k}${rot ? '' : ' flat'}" style="background-image:url('${ART.url(art)}');--rot:${rot}deg"></i>`).join('')}</span>`; };   // a column of three across the banner
+// the photo behind a category's banner: an aerial view of the ground that branch works from (the building pictures), under a slate wash
+const RROLE = {inf:'Takes ground, holds it', arm:'Breaks the line', sup:'Guns, rockets, air defence', aas:'Gunships, airborne troops', tac:'Fighters and strike jets', uns:'Eyes and expendable strikes',
+  str:'Bombers and big sensors', nav:'Sea control, submarines', msl:'Missiles, shield, satellites', cmd:'Every force you field'};   // the role line on a phone
+const RBPH = {inf:'b-fortifications-2', arm:'b-military-base-3', sup:'b-fortifications-3', aas:'b-airfield-2', tac:'b-airfield-4', uns:'b-airfield-3', str:'b-airfield-5', nav:'b-naval-port-3', msl:'b-missile-silo-3', cmd:'b-recruiting-office-1'};
+const rbPhoto = id => RBPH[id] ? `<span class="rs-bph" aria-hidden="true" style="background-image:url('${ART.url(RBPH[id])}')"></span>` : '';
 const rDur = h => h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`;
 // the name a slot shows: the node and its level; a project of the old tree (an earlier save) keeps its old name until it finishes
 const rSlotName = R => RN[R.id] && (R.lv || !R_LEGACY[R.id]) ? rName(RN[R.id], R.lv || 1) : R_LEGACY_NAME[R.id] || R.id;
@@ -9124,12 +9326,13 @@ function researchHTML(){
   const inc = income(PLAYER), rk = k => { const R0 = RES.find(x => x.k === k), d = inc.net[k]; return `<div class="chip res-${k}" title="${R0.name}: ${R0.pre}${fmt(N[k])}${R0.unit}, ${d >= 0 ? '+' : ''}${fmt1(d)} a day">${icon(k, 16)}<span class="cv"><span class="vv"><b>${R0.pre}${fmt(N[k])}${R0.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; };
   const view = RV.br ? 'tree' : 'list';
   const slot = (k, X) => X ? rSlotHTML(k, X, `<span class="rs-bar"><i id="rbar${k}"></i></span><span class="rs-left" id="rleft${k}"></span>`) : rSlotHTML(k, null);
-  let h = `<div class="rs-top"><div class="rs-head">${view !== 'list' ? `<button class="rs-back" data-act="rback" aria-label="Back to the research list" title="Back">${rg('back', 22)}</button>` : ''}
+  let h = `<div class="rs-top${view === 'tree' ? ' rs-tv' : ''}"><div class="rs-head">${view !== 'list' ? `<button class="rs-back" data-act="rback" aria-label="Back to the research list" title="Back">${rg('back', 22)}</button>` : ''}
       <div class="rs-ttl"><h1>Research</h1><span class="rs-cnt">${N.name} · Day ${today} · ${done}/${R_STEPS} steps</span></div>
       <div class="rs-stk">${['cash', 'metal', 'rare'].map(rk).join('')}</div>
       <span class="rs-emb" aria-hidden="true"><span class="rs-embi">${flagHTML(PLAYER, 46)}</span></span>
       <button class="rs-x" data-act="resume" aria-label="Close research" title="Back to the map">${rg('x', 18)}</button></div>
     <div class="rs-slots">${slot(1, R)}${slot(2, R2)}</div>
+    ${FTIP === 'research' ? `<div class="rs-tip" role="note">${tipIco('research')}<span class="tt">${FTIPS.research.t}</span><button class="btn primary" data-act="tip-ok">Got it</button><button class="tskip" data-act="tip-skip">Skip all tips</button></div>` : ''}
     ${N.eng && UNITS[N.eng.t] ? `<div class="rs-eng" title="A Mark upgrade from your earlier game. It runs to the end and then gives Firepower and Protection level ${Math.min(3, N.eng.m - 1)}. Marks are now part of the research tree, so no new one can be started.">${rg('gen', 14)}<span>Engineering (from your earlier game): ${UNITS[N.eng.t].name} Mk ${ROMAN[N.eng.m]}</span><span class="rs-bar"><i style="width:${Math.round((1 - N.eng.h/(N.eng.h0 || N.eng.h))*100)}%"></i></span><span class="rs-left">${rDur(N.eng.h)} left</span></div>` : ''}</div>`;
   if (view === 'list'){
     const opn = RNODES.filter(nd => rOpen(PLAYER, nd.id) && !rRunning(N, nd.id)), t1 = opn.map(nd => rCost(nd, rNextLv(PLAYER, nd.id)).rare).sort((a, b) => a - b)[0];
@@ -9139,8 +9342,8 @@ function researchHTML(){
       const open = opn.filter(nd => nd.cat === C.id).length, inC = X => X && RN[X.id] && RN[X.id].cat === C.id, run = inC(R), qd = inC(R2);
       const names = [...new Set(RNODES.filter(nd => nd.cat === C.id).map(rLineName))].join(', ');
       h += `<button class="rs-ban${dn === tot ? ' full' : ''}" data-act="rbranch" data-b="${C.id}" title="${C.name}: ${names}. ${dn} of ${tot} steps researched${open ? `, ${open} open now` : ''}">
-        ${rbImg(C.art)}<span class="rs-dm"><span class="dmi">${rg(RCG[C.id], 30)}</span></span>
-        <span class="rs-bt"><b>${C.name}</b><span>${C.role}</span></span>
+        ${rbPhoto(C.id)}${rbImg(C.art)}<span class="rs-dm"><span class="dmi">${rg(RCG[C.id], 30)}</span></span>
+        <span class="rs-bt"><b>${C.name}</b><span><span class="rnl">${C.role}</span><span class="rns">${RROLE[C.id] || C.role}</span></span></span>
         <span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${tot}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/tot*100)}%"></i></span></span></button>`; }
     h += `</div><p class="rnote rs-note">${icon('rare', 13)}<span><b>Rare materials drive research.</b> Unit unlocks, upgrades and new generations cost money, materials and rare materials. Firepower and Protection cost few rare materials. Every project opens on its own day. ${t1 != null && N.rare < t1 ? `You need ${Math.ceil(t1 - N.rare)} more for the cheapest open project${inc.net.rare > 0.05 ? ` (about ${Math.ceil((t1 - N.rare)/inc.net.rare)} d at +${fmt1(inc.net.rare)} a day)` : ''}. ` : ''}Rare materials come from rare-earth cities (Resources map; an Arms Industry there adds 25% per level), your capital, trade routes and the Market.</span></p>`;
     return h;
@@ -9149,11 +9352,13 @@ function researchHTML(){
   const C = RCAT_BY[RV.br], Ly = rLayout(C.id), L = Ly.L, nC = Ly.cols.length, nR = Ly.days.length;
   if (RV.sel && (!RN[RV.sel] || RN[RV.sel].cat !== C.id)) RV.sel = null;
   const ST = {}; for (const nd of L) ST[nd.id] = rNodeState(nd);
-  const X = (c, l) => (c + .5 + l*.31)*100, Y = r => (r + .42)*100, lit = nd => ST[nd.id].lv > 0 ? 'on' : ST[nd.id].open ? 'av' : '';
+  const X = (c, l) => (c + .5 + l*.31)*100, Y = r => (r + .4)*100, lit = nd => ST[nd.id].lv > 0 ? 'on' : ST[nd.id].open ? 'av' : '';
   let lines = '';
   for (const K of Ly.cols){ const c = Ly.pos[K.head.id].c, sp = K.sp;
-    // the spine: one segment per row step, lit down to where the spine node in force is researched
-    for (let r = Ly.pos[sp[0].id].r; r < K.r1; r++){ const gov = sp.filter(n => Ly.pos[n.id].r <= r + 1).pop(); lines += `<path class="sp ${gov ? lit(gov) : ''}" d="M${X(c, 0)} ${Y(r)}V${Y(r + 1)}"/>`; }
+    // the spine: one segment per row step, blue down to where the spine node in force is researched (an open unlock does not light the
+    // locked steps under it: only the short elbow to an open step is green)
+    if (sp.length) for (let r = Ly.pos[sp[0].id].r; r < K.r1; r++){ const gov = sp.filter(n => Ly.pos[n.id].r <= r + 1).pop(); lines += `<path class="sp ${gov && ST[gov.id].lv > 0 ? 'on' : ''}" d="M${X(c, 0)} ${Y(r)}V${Y(r + 1)}"/>`; }
+    if (Ly.solo) continue;
     for (const nd of K.ns){ const p = Ly.pos[nd.id]; if (p.l) lines += `<path class="${lit(nd)}" d="M${X(c, 0)} ${Y(p.r)}H${X(c, p.l)}"/>`; } }
   for (const nd of L){ const p = Ly.pos[nd.id];
     if (nd.fam && Ly.pos['u_' + nd.fam]){ const q = Ly.pos['u_' + nd.fam], yt = Y(Math.min(p.r, q.r)) - 36;   // a family tie, dashed: no requirement
@@ -9162,33 +9367,40 @@ function researchHTML(){
       lines += `<path class="xr ${on ? (ST[nd.id].lv > 0 ? 'on' : 'av') : ''}" d="M${X(q.c, q.l)} ${Y(q.r)}H${xm}V${Y(p.r)}H${X(p.c, 0)}"/>`; } }
   const nodes = L.map(nd => { const p = Ly.pos[nd.id], s = ST[nd.id], nlv = nd.lv.length, part = s.lv > 0 && s.lv < nlv, lvN = s.nx || nlv, big = nd.kind === 'unlock' || nd.kind === 'gen';
     const xreq = nd.req.map(q => RN[q]).filter(m => m.cat !== nd.cat), xout = RNODES.filter(m => m.cat !== nd.cat && m.req.includes(nd.id));
-    const sub = nd.std ? 'Standard issue' : s.s === 'lock' ? (nd.lv[lvN - 1].day > today ? `Day ${nd.lv[lvN - 1].day}` : s.why.replace(/^Needs /, 'After ')) : s.s === 'wait' ? `After slot #${(s.why.match(/slot #(\d)/) || [])[1] || ''}` : s.s === 'run' ? `Slot #${s.slot}` : '';
+    // the line under the name says only what the row and the lines do not: standard issue, a slot, a later level's own day, a level that needs Generation 2
+    const dLv = nd.lv[lvN - 1].day, sub = nd.std ? 'Standard issue' : s.s === 'run' ? `Slot #${s.slot}` : s.s === 'wait' ? `After slot #${(s.why.match(/slot #(\d)/) || [])[1] || ''}`
+      : s.s === 'lock' ? (dLv > today && lvN > 1 ? `Level ${lvN}: day ${dLv}` : lvN === 3 && nd.req3 && !rLevel(PLAYER, nd.req3) && dLv <= today ? `Needs ${rShort(RN[nd.req3].name.split(' · ')[0])}` : '') : '';
     const mark = s.s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s.s === 'run' ? `<i class="rbdg ${s.slot === 2 ? 'qd' : 'run'}">#${s.slot}</i>` : s.s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s.s === 'wait' ? `<i class="rbdg wt">${rg('clock', 11)}</i>` : !s.pay ? `<i class="rbdg cn" title="You cannot pay for it yet">${rg('coin', 11)}</i>` : '';
-    return `<button class="rnode k-${nd.kind} st-${s.s}${part ? ' part' : ''}${part && s.open ? ' nxt' : ''}${s.pay ? ' pay' : ''}${big ? ' big' : ''}${s.slot === 2 ? ' q' : ''}${RV.sel === nd.id ? ' sel' : ''}" data-act="rsel" data-id="${nd.id}"${s.slot ? ` id="rring${s.slot}"` : ''} style="--c:${p.c};--l:${p.l};--r:${p.r}"
+    const nm = nd.name.split(' · ')[0], sn = rShort(nm);
+    return `<button class="rnode k-${nd.kind} st-${s.s}${part ? ' part' : ''}${part && s.open ? ' nxt' : ''}${s.pay ? ' pay' : ''}${big ? ' big' : ''}${s.slot === 2 ? ' q' : ''}${p.nar ? ' nar' : ''}${p.tight ? ' tt' + p.tight : ''}${p.edge ? ' edge' : ''}${Ly.solo ? ' solo' : ''}${RV.sel === nd.id ? ' sel' : ''}" data-act="rsel" data-id="${nd.id}"${s.slot ? ` id="rring${s.slot}"` : ''} style="--c:${p.c};--l:${p.l};--r:${p.r}"
       title="${rName(nd, lvN)}: ${rTxt(nd, lvN)}${s.s === 'done' ? ' · researched' : s.why ? ` · ${s.why}` : s.open ? ` · ${costTxt(rCost(nd, lvN), ', ')} · ${nd.lv[lvN - 1].c.days} d` : ''}" aria-label="${rName(nd, lvN)}, ${rLineName(nd)}: ${s.s === 'done' ? 'researched' : s.s === 'run' ? 'running in slot ' + s.slot : s.s === 'open' ? 'can be researched now' : s.why}">
       <span class="dm"><span class="dmi">${rFace(nd, big ? 26 : 20)}</span></span>${mark}
       ${nd.elite ? `<i class="rbadge-e" title="Elite unit">${eliteSVG(26)}</i>` : ''}${nd.kind === 'gen' ? `<i class="rgn" title="Generation ${nd.gen}">${ROMAN[nd.gen]}</i>` : ''}${nlv > 1 ? `<i class="rlv${s.lv ? ' some' : ''}" title="${s.lv ? `${s.lv} of ${nlv} levels researched` : `${nlv} levels`}">${s.lv ? `${s.lv}/${nlv}` : nlv}</i>` : ''}
-      <span class="rn"><b>${nd.name.split(' · ')[0]}</b>${sub ? `<small>${sub}</small>` : ''}</span>
-      ${xreq.map(m => `<span class="rx">+ ${m.name} (${RCAT_BY[m.cat].name})</span>`).join('')}${xout.map(m => `<span class="rx out">to ${m.name}</span>`).join('')}</button>`; }).join('');
+      <span class="rn"><b class="rnl">${nm}</b>${sn !== nm ? `<b class="rns">${sn}</b>` : ''}${sub ? `<small>${sub}</small>` : ''}</span>
+      ${xreq.map(m => `<span class="rx">+ ${m.name} (${RCAT_BY[m.cat].name})</span>`).join('')}${xout.map(m => `<span class="rx out">to ${m.name}</span>`).join('')}</button>`; }).join('')
+    + (Ly.solo ? L.map(nd => { const p = Ly.pos[nd.id], s = ST[nd.id];
+      return `<button class="rsolo st-${s.s}${RV.sel === nd.id ? ' sel' : ''}" data-act="rsel" data-id="${nd.id}" style="--c:${p.c};--r:${p.r}" title="${nd.name}"><b>${nd.name}</b>${nd.lv.map((x, i) => `<span class="${i < s.lv ? 'dn' : i === s.lv && s.open ? 'nx' : ''}"><em>${ROMAN[i + 1]}</em>${cap1(x.txt)}${i >= s.lv && x.day > today ? ` <i>· day ${x.day}</i>` : ''}</span>`).join('')}</button>`; }).join('') : '');
   // the day scale: only days that hold a node get a row; today's row is marked, later rows are dimmer
   const fut = Ly.days.findIndex(d => d > today), nPast = fut < 0 ? nR : fut;
   const dayL = Ly.days.map((d, i) => `<span class="${d === today ? 'now' : d < today ? 'past' : 'fut'}" style="--r:${i}"><b>${d}</b>${d === today ? '<small>Today</small>' : ''}${i && d - Ly.days[i - 1] > 1 ? '<i class="gap" title="Days without a new project are left out"></i>' : ''}</span>`).join('');
   const rowsBg = Ly.days.map((d, i) => `<i class="rt-rw ${d === today ? 'now' : d < today ? 'past' : 'fut'}" style="--r:${i}"></i>`).join('');
   const nowLine = !Ly.days.includes(today) && nPast > 0 && nPast < nR ? `<i class="rt-now" style="--r:${nPast}"><em>Today · day ${today}</em></i>` : '';
   const heads = Ly.cols.map(K => { const hd = K.head, tot = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), dn = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
-    return `<div class="rt-hd${hd.elite ? ' elite' : ''}" title="${rLineName(hd)}${hd.elite ? ' (elite unit)' : ''}: ${dn} of ${tot} steps researched">${hd.u ? unitPic(hd.u, 'sm') : `<span class="rt-hg">${rg(({cm:'missile', bm:'missile', def:'def2', sat:'sat'})[hd.pic] || hd.pic || 'gen', 18)}</span>`}<b>${rLineName(hd)}</b>${hd.elite ? eliteSVG(24) : ''}<small>${dn}/${tot}</small></div>`; }).join('');
+    const nm = Ly.solo ? K.ln : rLineName(hd), sn = rShort(nm), gl = Ly.solo ? RCOLG[K.ln] : ({cm:'missile', bm:'missile', def:'def2', sat:'sat'})[hd.pic] || hd.pic || 'gen';
+    return `<div class="rt-hd${hd.elite ? ' elite' : ''}" title="${nm}${hd.elite ? ' (elite unit)' : ''}: ${dn} of ${tot} steps researched">${hd.u && !Ly.solo ? unitPic(hd.u, 'sm') : `<span class="rt-hg">${rg(gl, 18)}</span>`}<span class="rt-hn"><b><span class="rnl">${nm}</span>${sn !== nm ? `<span class="rns">${sn}</span>` : ''}</b><span class="rt-hm">${hd.elite ? eliteSVG(22) : ''}<small>${dn}/${tot}</small></span></span></div>`; }).join('');
   const catT = L.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), catD = L.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
   h += `<div class="rs-thead"><span class="rs-tc" title="The day a project opens">${rg('clock', 18)}</span><b>${rg(RCG[C.id], 22)} ${C.name}</b><span class="rs-tn">${catD}/${catT} steps</span></div>
-    <div class="rs-body${RV.sel ? ' hassel' : ''}"><div class="rt-scroll" id="rtscroll"><div class="rt" style="--cols:${nC};--rows:${nR}">
+    <div class="rs-body${RV.sel ? ' hassel' : ''}${Ly.solo ? ' solo' : ''}"><div class="rt-scroll" id="rtscroll"><div class="rt${Ly.solo ? ' solo' : ''}" style="--cols:${nC};--rows:${nR}">
       <div class="rt-corner">Day</div>${heads}
       <div class="rt-days">${dayL}</div>
-      <div class="rt-grid">${rowsBg}${nowLine}<svg class="rs-lines" viewBox="0 0 ${nC*100} ${nR*100}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${nodes}</div></div></div>${rCardHTML(RV.sel ? RN[RV.sel] : null, busy)}</div>`;
+      <div class="rt-grid">${rowsBg}${nowLine}<svg class="rs-lines" viewBox="0 0 ${nC*100} ${nR*100}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${nodes}</div></div></div>
+      <button class="rt-more" id="rtmore" data-act="rt-more" hidden aria-label="More columns to the right" title="More columns: swipe or tap">${rg('spd', 16)}</button>${rCardHTML(RV.sel ? RN[RV.sel] : null, busy, C.id)}</div>`;
   return h;
 }
 // the detail card of the selected node (at the side on a wide screen, a bottom sheet on a phone): what it does with before and after for
 // your nation, every level with its day, price and time, what it needs, and the button. Every reason comes from the rules (researchWhy)
-function rCardHTML(nd, busy){
-  if (!nd) return `<aside class="rs-card hint"><span class="rc-hint">${rg('plus', 14)} Tap a diamond to see what it does and what it costs. <b class="c-done">Blue</b>: researched. <b class="c-open">Green</b>: can be researched now. <b class="c-lock">Grey</b>: locked, by its day or by what it needs. Two projects run at once, one in each slot${busy ? ': both slots are busy now' : ''}.</span></aside>`;
+function rCardHTML(nd, busy, cat){
+  if (!nd) return `<aside class="rs-card hint">${rNextHTML(cat, busy)}<span class="rc-hint">${rg('plus', 14)} Tap a diamond to see what it does and what it costs. <b class="c-done">Blue</b>: researched. <b class="c-open">Green</b>: can be researched now. <b class="c-lock">Grey</b>: locked, by its day or by what it needs.</span></aside>`;
   const N = S.nations[PLAYER], s = rNodeState(nd), nlv = nd.lv.length, lvN = s.slot ? (N[R_SLOTS[s.slot - 1]].lv || s.nx) : s.nx || nlv, X = nd.lv[lvN - 1], c = rCost(nd, lvN), today = rDay(), inc = income(PLAYER);
   const cr = canResearch(PLAYER, nd.id), C = RCAT_BY[nd.cat], h0 = rHours(PLAYER, nd, lvN), U = nd.u ? UNITS[nd.u] : null;
   // before and after for your nation, from the rules
@@ -9208,7 +9420,7 @@ function rCardHTML(nd, busy){
   else if (s.s === 'done') btn = `<span class="rs-state ok">${rg('check', 14)} Researched</span>`;
   else if (s.s === 'run') btn = `<span class="rs-state run${s.slot === 2 ? ' q' : ''}">In slot #${s.slot} · <span id="rleftd${s.slot}"></span></span>`;
   else btn = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${nd.id}" ${cr ? '' : 'disabled'} title="${cr ? `Starts in slot #${rSlotNo(rFree(N))}. Costs ${costTxt(c, ', ')}; takes ${rDur(h0)}` : s.why}">${cr ? `<span class="rb1">Research in slot #${rSlotNo(rFree(N))}</span>` : `<span class="rbw">${s.why}</span>`}</button>`;
-  const gp = nd.kind === 'gen' ? `<div class="rc-gen"><figure>${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen - 1))}<figcaption>${nd.gen - 1 > 1 ? 'Generation ' + ROMAN[nd.gen - 1] : 'Today'}</figcaption></figure>${rg('spd', 16)}<figure class="new">${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen))}<figcaption>Generation ${ROMAN[nd.gen]}</figcaption></figure></div>` : '';
+  const gp = nd.kind === 'gen' ? `<div class="rc-gen"><figure><span class="rgv ${rGenTone(nd.u, nd.gen - 1)}">${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen - 1))}</span><figcaption>${nd.gen - 1 > 1 ? 'Generation ' + ROMAN[nd.gen - 1] : 'Today'}</figcaption></figure>${rg('spd', 16)}<figure class="new"><span class="rgv ${rGenTone(nd.u, nd.gen)}">${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen))}</span><figcaption>Generation ${ROMAN[nd.gen]}</figcaption></figure></div>` : '';
   return `<aside class="rs-card st-${s.s}${s.lv && s.nx ? ' part' : ''}" aria-live="polite"><button class="rc-x" data-act="rcard-x" aria-label="Close the details" title="Close">${rg('x', 14)}</button>
     <div class="rc-top"><span class="rs-dm lg"><span class="dmi">${rFace(nd, 30)}</span></span>
       <div class="rs-dt"><span class="rs-dk">${C.name} · ${rLineName(nd)} · ${RKIND[nd.kind]}</span><b>${nd.name}${nlv > 1 ? ` <em>${s.lv}/${nlv}</em>` : ''}${nd.elite ? ` ${eliteSVG(28)}` : ''}</b>
@@ -9217,12 +9429,25 @@ function rCardHTML(nd, busy){
     ${s.nx || nd.std ? `<div class="rc-need">${nd.std ? `<span class="rs-dr ok">${rg('check', 11)} Known from day one</span>` : dayRow + reqs}${outs}</div>` : outs ? `<div class="rc-need">${outs}</div>` : ''}
     ${s.nx && !nd.std ? `<div class="rc-pay"><div class="tcost">${costHTML(c, s.slot ? null : N)}<span class="td" title="Research time${h0 !== X.c.days*24 ? ', with your doctrine' : ''}">${rDur(h0)}</span></div>${missR}</div>` : ''}
     <div class="rs-db">${btn}</div></aside>`; }
+// suggestions for the empty detail pane: up to four open steps of the category (those you can pay for now first, then by rare materials),
+// or, with none open, the next one to open and its day. A tap selects the step (the rules say what can start: rOpenSteps, canResearch)
+function rNextHTML(cat, busy){ if (!cat) return ''; const N = S.nations[PLAYER], today = rDay();
+  const op = rOpenSteps(PLAYER).filter(x => x.nd.cat === cat).map(x => ({...x, c:rCost(x.nd, x.lv), ok:hasC(N, rCost(x.nd, x.lv))})).sort((a, b) => (b.ok - a.ok) || a.c.rare - b.c.rare || a.c.cash - b.c.cash).slice(0, 4);
+  const row = (nd, lv, txt, cls) => `<button class="rc-sg ${cls}" data-act="rsel" data-id="${nd.id}" title="${rName(nd, lv)}: ${rTxt(nd, lv)}"><span class="rs-dm sm"><span class="dmi">${rFace(nd, 18)}</span></span><span class="rc-sgt"><b>${rName(nd, lv)}</b><small>${txt}</small></span></button>`;
+  let h = `<div class="rc-next"><span class="rs-dk">${busy ? 'Both slots are busy · next up' : 'What to research next'}</span>`;
+  if (op.length) h += op.map(x => row(x.nd, x.lv, `${x.ok ? '' : 'Short of goods · '}$${fmt(x.c.cash)}M · ${x.c.rare} rare · ${rDur(rHours(PLAYER, x.nd, x.lv))}`, x.ok ? 'ok' : 'short')).join('');
+  else { const nx = RNODES.filter(nd => nd.cat === cat && rNextLv(PLAYER, nd.id) && !rRunning(N, nd.id) && rReqsOk(PLAYER, nd, rNextLv(PLAYER, nd.id))).map(nd => ({nd, lv:rNextLv(PLAYER, nd.id)})).sort((a, b) => a.nd.lv[a.lv - 1].day - b.nd.lv[b.lv - 1].day)[0];
+    h += nx ? row(nx.nd, nx.lv, `Opens on day ${nx.nd.lv[nx.lv - 1].day}, in ${nx.nd.lv[nx.lv - 1].day - today} day${nx.nd.lv[nx.lv - 1].day - today > 1 ? 's' : ''}`, 'lock') : `<span class="rc-hint">Nothing more to open here: every step is researched or running.</span>`; }
+  return h + '</div>'; }
+// the research screen after it is drawn: the "more columns" arrow shows while the tree can scroll further right (phones, four columns)
+function rHint(sc){ sc = sc || document.getElementById('rtscroll'); const m = document.getElementById('rtmore'); if (!sc || !m) return; m.hidden = !(sc.scrollWidth > sc.clientWidth + 6 && sc.scrollLeft < sc.scrollWidth - sc.clientWidth - 6); }
+document.addEventListener('scroll', e => { if (e.target && e.target.id === 'rtscroll') rHint(e.target); }, true);
 // live progress without re-rendering: the slot bar, time left and the running node's ring
 function rPatch(N){ for (const k of R_SLOTS){ const R = N[k], n = rSlotNo(k); if (!R) continue; const f = 1 - R.h/(R.h0 || R.h), bar = document.getElementById('rbar' + n), left = document.getElementById('rleft' + n), ring = document.getElementById('rring' + n), l2 = document.getElementById('rleftd' + n);
   if (bar) bar.style.width = Math.round(f*100) + '%'; if (left) left.textContent = `${rDur(R.h)} left · ${Math.round(f*100)}%`; if (l2) l2.textContent = `${rDur(R.h)} left`; if (ring) ring.style.setProperty('--p', f.toFixed(3)); } }
 // re-render the research screen in place, keeping the grid where the player scrolled it
 function rRender(keep = true){ const sc = keep && document.getElementById('rtscroll'), x = sc ? sc.scrollLeft : 0, y = sc ? sc.scrollTop : 0;
-  setHTML($('sheet'), researchHTML()); rPatch(S.nations[PLAYER]); const s2 = document.getElementById('rtscroll'); if (s2 && sc){ s2.scrollLeft = x; s2.scrollTop = y; } }
+  setHTML($('sheet'), researchHTML()); rPatch(S.nations[PLAYER]); const s2 = document.getElementById('rtscroll'); if (s2 && sc){ s2.scrollLeft = x; s2.scrollTop = y; } rHint(s2); }
 function ctxHTML(){
   if (SPLIT && (sel.army !== SPLIT.id || sel.group.length > 1 || !armyById(SPLIT.id) || count(armyById(SPLIT.id)) < 2)) SPLIT = null;
   if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return sel.group.length > 1 ? groupHTML() : a.air ? wingHTML(a) : SPLIT ? splitHTML(a) : armyHTML(a); }
@@ -9747,11 +9972,13 @@ document.addEventListener('click', e => {
     case 'rbranch': RV.br = b.dataset.b; RV.sel = null; rRender(false); $('sheet').scrollTop = 0; renderSide(true); break;
     case 'rback': RV.br = null; RV.sel = null; rRender(false); $('sheet').scrollTop = 0; renderSide(true); break;
     case 'rcard-x': RV.sel = null; rRender(); break;
+    case 'rt-more': { const sc = $('rtscroll'); if (sc) sc.scrollBy({left:Math.round(sc.clientWidth*0.6), behavior:AFX_RM && AFX_RM.matches ? 'auto' : 'smooth'}); break; }
     case 'rsel': { const id = b.dataset.id, nd = RN[id]; if (!nd) break; const nb = nd.cat !== RV.br; RV.br = nd.cat; RV.sel = id;   // a tap only selects: the Research button starts it
       rRender(!nb); if (nb) $('sheet').scrollTop = 0; renderSide(true);
-      { const sc = $('rtscroll'), ne = sc && sc.querySelector(`.rnode[data-id="${id}"]`); if (ne){ const a = ne.getBoundingClientRect(), v = sc.getBoundingClientRect(), cd = $('sheet').querySelector('.rs-card'), cb = cd && matchMedia('(max-width: 820px)').matches ? cd.getBoundingClientRect().top : v.bottom;
+      { const sc = $('rtscroll'), ne = sc && sc.querySelector(`.rnode[data-id="${id}"]`); if (ne){ const a = ne.getBoundingClientRect(), v = sc.getBoundingClientRect(), cd = $('sheet').querySelector('.rs-card'), cb = cd && matchMedia('(max-width: 820px)').matches ? cd.getBoundingClientRect().top - 16 : v.bottom;
           const dy = a.bottom + 10 > cb ? a.bottom + 10 - cb : a.top < v.top + 56 ? a.top - v.top - 56 : 0, dx = a.right > v.right ? a.right - v.right + 8 : a.left < v.left + 50 ? a.left - v.left - 50 : 0;
-          if (dx || dy) sc.scrollBy({left:dx, top:dy, behavior:nb || (AFX_RM && AFX_RM.matches) ? 'auto' : 'smooth'}); } }   // (the selected node stays in view, clear of the day column, the header and the card)
+          if (dx || dy) sc.scrollBy({left:dx, top:dy, behavior:'auto'}); } }   // (the selected node stays in view, clear of the day column, the header and the card; at once: a redraw of the
+      // sheet while a smooth scroll ran would stop it half-way, and the phone's card would cover the node)
       break; }
     case 'pick': pickSel = +b.dataset.p; showPicker(); break;
     case 'pickdiff': pickDiff = b.dataset.k; showPicker(); break;
@@ -9892,7 +10119,7 @@ const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings',
 function openModal(html, kind = ''){ modalKind = kind;
   // a bar tab still holding focus (More after its menu, or the last tab used) lets it go when another window opens, so only that window's tab reads as active
   { const fe = document.activeElement; if (fe && fe.closest && fe.closest('#dock') && fe.dataset.kind !== kind) fe.blur(); }
-  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research') ftipAsk('research'); $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
+  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research'){ ftipAsk('research'); rHint(); } $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
 // in-game panels with a title band get CoN's red close box in it (added after each render, so every panel has one without touching its markup)
 new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
   const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
@@ -10044,16 +10271,17 @@ const FTIPS = {
   city:{t:'Tap MOBILIZE UNIT to recruit here.', pos:'top'},
   move:{t:'Forces march while the clock runs (1×).', pos:'top'},
   battle:{t:'Battle: the blue bar is morale. At zero, a force retreats.', pos:'top'},
-  research:{t:'Pick a project. Two run at once.', pos:'bot'},
+  research:{t:'Pick a project. Two run at once.', pos:'sheet'},
 };
 let FTIP = null;
 function ftipAsk(k){
   if (FTIP || SET.tipsOff || SET.tipSeen[k] || !S || !S.started || S.over || TUT || !FTIPS[k]) return;
   if (k !== 'research' && !$('modal').hidden) return;
   FTIP = k; const el = $('ftip'), d = FTIPS[k];
+  if (k === 'research'){ if (modalKind === 'research') rRender(); return; }   // the research tip sits in the sheet under the slots, never over the tree
   el.classList.toggle('bot', d.pos === 'bot'); el.innerHTML = `${tipIco(k)}<span class="tt">${d.t}</span><span class="tb"><button class="btn primary" data-act="tip-ok">Got it</button><button class="tskip" data-act="tip-skip">Skip all tips</button></span>`; el.hidden = false;
 }
-function ftipHide(seen){ const k = FTIP; FTIP = null; $('ftip').hidden = true; if (seen && k){ SET.tipSeen[k] = true; saveSet(); } }
+function ftipHide(seen){ const k = FTIP; FTIP = null; $('ftip').hidden = true; if (seen && k){ SET.tipSeen[k] = true; saveSet(); } if (k === 'research' && modalKind === 'research' && !$('modal').hidden) rRender(); }
 function ftipTick(){   // every quarter second: battles, and housekeeping
   if (FTIP){ const out = !S || !S.started || S.over || TUT || SET.tipsOff || (FTIP !== 'research' && !$('modal').hidden) || (FTIP === 'research' && ($('modal').hidden || RV.sel)); if (out) ftipHide(FTIP === 'research'); return; }
   if (S && S.started && !S.over && !SET.tipsOff && !SET.tipSeen.battle && !TUT && $('modal').hidden && S.battles.some(p => S.armies.some(a => a.owner === PLAYER && a.at === p))) ftipAsk('battle');

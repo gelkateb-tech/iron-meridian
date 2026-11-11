@@ -70,6 +70,9 @@ const rBombF = (n, t) => t === 'stealth' && has(n, 'stealth_bay') ? 0.75 : UNITS
 const rMpaR = n => MPA_R*([1, 1.2, 1.4][rLevel(n, 'mpa_sonar')] || 1), rMpaH = n => has(n, 'mpa_g2') ? 18 : 12;   // Sonobuoy Field; Long-Endurance Patrol Aircraft
 const rAewR = n => AEW_R*([1, 1.15, 1.3][rLevel(n, 'awacs_radar')] || 1), rAewF = n => has(n, 'awacs_link') ? 1.35 : 1.25;   // High-Power Radar; Fighter Data Link
 const rDeckRate = n => [0.2, 0.25, 0.3][rLevel(n, 'carr_deck')] || 0.2;                               // Flight-Deck Crews: repairs aboard a carrier, per day
+// Command & Logistics, by level: Motorized Supply (speed), Combat Engineers (capture work, road and rail price), Amphibious Doctrine (first day ashore), Field Hospitals (damage taken)
+const rMoveF = n => [1, 1.2, 1.3][rLevel(n, 'log1')] || 1, rCapF = n => [1, 0.7, 0.6][rLevel(n, 'log2')] || 1, rRoadF = n => [1, 0.75, 0.65][rLevel(n, 'log2')] || 1;
+const rLandF = n => [0.67, 0.9, 1][rLevel(n, 'nav3')] || 0.67, rHospF = n => [1, 0.85, 0.8][rLevel(n, 'log3')] || 1;
 // missiles: range, speed and power by research (Cruise Missile Range / Speed, Ballistic Missile Range, Heavier Warhead)
 function mslOf(n, k){ const M0 = MISSILES[k]; if (!M0 || n < 0) return M0; const r = k === 'cm' ? rLevel(n, 'cm_rng')*4 : rLevel(n, 'bm_rng')*12, s = k === 'cm' ? rLevel(n, 'cm_spd')*2 : 0, p = k === 'bm' && has(n, 'bm_pow') ? 3 : 0;
   return r || s || p ? {...M0, range:M0.range + r, speed:M0.speed + s, power:M0.power + p} : M0; }
@@ -88,8 +91,14 @@ function researchSlotHour(N, k){ const R = N[k]; if (!R) return;
     if (isSeat(N.id)){ tell(N.id, `Research complete: ${rName(nd, lv)}. ${cap1(nd.lv[lv - 1].txt)}.`, 'good'); cue(N.id, 'research'); } } }
 // the hourly research step: both slots advance
 function researchHour(N){ for (const k of R_SLOTS) researchSlotHour(N, k); }
-// saves from before two slots held a queued project for slot #2 (N.rqueue): it starts now if it can (paying as usual), else it is dropped
-function rqueueMigrate(){ for (const N of S.nations){ const q = N.rqueue; delete N.rqueue; delete N.rqWarn; if (q && RN[q] && canResearch(N.id, q)) startResearch(N.id, q); } }
+// saves from before two slots held a queued project for slot #2 (N.rqueue). It runs after researchMigrate, so the queue is read in the new tree:
+// a project of the old tree becomes its first node (R_LEGACY) that the nation can start now, which starts (paying as usual). When none can
+// (its day has not come, the money is short) the queue is dropped and a person's nation is told why, so the project is not lost without a word.
+function rqueueMigrate(){ for (const N of S.nations){ const q = N.rqueue; delete N.rqueue; delete N.rqWarn; if (!q || !N.alive) continue;
+    const ids = RN[q] ? [q] : (R_LEGACY[q] || []).map(s => s.replace('@', '')).filter(id => RN[id] && rNextLv(N.id, id) && !rRunning(N, id));
+    const go = ids.find(id => canResearch(N.id, id)); if (go){ startResearch(N.id, go); continue; }
+    if (isSeat(N.id) && ids.length){ const D = desk(N.id), nm = R_LEGACY_NAME[q] || (RN[q] ? RN[q].name : q);
+      if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:`Your queued research ${nm} did not start: in the new tree it is ${ids.map(id => RN[id].name).join(' and ')} (${researchWhy(N.id, ids[0]).replace(/^./, c => c.toLowerCase())}). Choose it again in Research when it opens.`}); } } }
 // saves from before the research redesign (S.rsv unset): every researched project becomes the nodes that give the same bonus or more (R_LEGACY),
 // every unit Mark II to IV becomes levels 1 to 3 of that unit's Firepower and Protection. Nothing is lost: converted levels stay whatever the
 // new days and prerequisites say. A project still running keeps running under its old id and converts when it finishes (researchSlotHour);

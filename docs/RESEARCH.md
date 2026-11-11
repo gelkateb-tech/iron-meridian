@@ -73,13 +73,13 @@ Ten categories, each a wide banner with a diamond icon, the name, a one-line rol
 | 1 | **Infantry Corps** | Takes ground and holds it | Motorized Infantry (1), Anti-Tank Infantry (1), Special Forces (4, elite) | Infantry |
 | 2 | **Armoured Forces** | Breaks the line and carries the infantry forward | Infantry Fighting Vehicle (1), Main Battle Tank (1) | Armored |
 | 3 | **Artillery & Air Defence** | Long reach on the ground, a roof over the army | Mobile Artillery (1), Mobile SAM (1), Mobile Jammer (3), Rocket Artillery (5) | Support |
-| 4 | **Air Assault** | Short reach from the air: gunships and airborne troops | Attack Helicopter (2), Paratroopers (3, elite) | Helicopters (and the airmobile infantry) |
+| 4 | **Air Assault** | Short reach from the air: gunships and airborne troops | Attack Helicopter (1), Paratroopers (3, elite) | Helicopters (and the airmobile infantry) |
 | 5 | **Tactical Air** | Fighters and strike jets, medium reach | Interceptor (1), Strike Fighter (1), Air Superiority Fighter (4, elite) | Fighters |
-| 6 | **Unmanned Systems** | Cheap eyes and expendable strikes | Recon UAV (2), Swarm Drones (4), Strike Drone (6) | the UAV line of Fighters; our drones deserve their own page |
-| 7 | **Strategic Air** | Bombers and the big sensors, long reach | Maritime Patrol Aircraft (4), AWACS (5), Heavy Bomber (6), Stealth Bomber (14, elite) | Heavies |
+| 6 | **Unmanned Systems** | Cheap eyes and expendable strikes | Recon UAV (1), Swarm Drones (4), Strike Drone (6) | the UAV line of Fighters; our drones deserve their own page |
+| 7 | **Strategic Air** | Bombers and the big sensors, long reach | Maritime Patrol Aircraft (2), AWACS (5), Heavy Bomber (6), Stealth Bomber (14, elite) | Heavies |
 | 8 | **Navy** | Sea control, convoys and the silent service | Frigate (1), Cruiser (1), Attack Submarine (1), Aircraft Carrier (7) | Naval and Submarines |
-| 9 | **Strategic Weapons** | Missiles, the shield against them, eyes in orbit | Cruise Missile (2), Reconnaissance Satellites (5), Ballistic Missile (6), Anti-Missile Shield (9) | Missiles |
-| 10 | **Command & Logistics** | Advantages for every force you field | Motorized Supply (3), Combat Engineers (4), Amphibious Doctrine (5), Field Hospitals (6) | none (ours today: the Logistics branch) |
+| 9 | **Strategic Weapons** | Missiles, the shield against them, eyes in orbit | Cruise Missile (1), Reconnaissance Satellites (5), Ballistic Missile (6), Anti-Missile Shield (9) | Missiles |
+| 10 | **Command & Logistics** | Advantages for every force you field | Motorized Supply (1), Combat Engineers (2), Amphibious Doctrine (3), Field Hospitals (4), each with a second level (days 10 to 13); shown in two columns, Logistics and Operations | none (ours today: the Logistics branch) |
 
 Notes on the mapping:
 
@@ -100,8 +100,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Motorized Infantry | Anti-Tank Infantry | Special Forces (elite) |
 |---|---|---|---|
-| 1 | (standard) | (standard) |  |
-| 2 | Ceramic Body Armour | Ceramic Body Armour |  |
+| 1 | (standard); Ceramic Body Armour | (standard); Ceramic Body Armour |  |
 | 3 | Firepower 1 | Firepower 1 |  |
 | 4 | Protection 1 | Protection 1 | UNLOCK |
 | 5 | Rapid Mobilisation 1 | Tandem Warheads 1 |  |
@@ -124,7 +123,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
 | 1 | Motorized Infantry (`u_inf`) | Unlock | standard issue: known from day one | free | - |
-| 2 | Ceramic Body Armour (`inf_armor`) | Upgrade | defense +1 | $40M, 20 mat, 13 rare | 3 |
+| 1 | Ceramic Body Armour (`inf_armor`) | Upgrade | defense +1 | $40M, 20 mat, 13 rare | 3 |
 | 3 | Firepower 1/3 (`inf_fp`) | Levels | attack +12% in all | $40M, 12 mat, 3 rare | 2 |
 | 4 | Protection 1/3 (`inf_pr`) | Levels | defense +12% in all | $40M, 12 mat, 3 rare | 2 |
 | 5 | Rapid Mobilisation 1/2 (`inf_build`) | Upgrade | trains 15% faster | $40M, 20 mat, 13 rare | 3 |
@@ -143,7 +142,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
 | 1 | Anti-Tank Infantry (`u_at`) | Unlock | standard issue: known from day one | free | - |
-| 2 | Ceramic Body Armour (`at_armor`) | Upgrade | defense +1 | $44M, 20 mat, 14 rare | 3 |
+| 1 | Ceramic Body Armour (`at_armor`) | Upgrade | defense +1 | $44M, 20 mat, 14 rare | 3 |
 | 3 | Firepower 1/3 (`at_fp`) | Levels | attack +12% in all | $51M, 15 mat, 3 iron, 3 rare | 2 |
 | 4 | Protection 1/3 (`at_pr`) | Levels | defense +12% in all | $51M, 15 mat, 3 iron, 3 rare | 2 |
 | 5 | Tandem Warheads 1/2 (`at_warhead`) | Upgrade | attack +1 | $44M, 20 mat, 14 rare | 3 |
@@ -178,8 +177,8 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Infantry Fighting Vehicle | Main Battle Tank |
 |---|---|---|
-| 1 | UNLOCK | (standard) |
-| 3 | Firepower 1 | Firepower 1; Composite Armour |
+| 1 | UNLOCK | (standard); Composite Armour |
+| 3 | Firepower 1 | Firepower 1 |
 | 4 | Protection 1 | Protection 1 |
 | 5 | 30 mm Autocannon |  |
 | 7 |  | Smoothbore Main Gun |
@@ -215,8 +214,8 @@ Each category starts with its day grid (what the screen shows: one column per li
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
 | 1 | Main Battle Tank (`u_tank`) | Unlock | standard issue: known from day one | free | - |
+| 1 | Composite Armour (`tank_armor`) | Upgrade | defense +2 | $49M, 20 mat, 14 rare | 3 |
 | 3 | Firepower 1/3 (`tank_fp`) | Levels | attack +12% in all | $64M, 17 mat, 11 iron, 3 rare | 2 |
-| 3 | Composite Armour (`tank_armor`) | Upgrade | defense +2 | $49M, 20 mat, 14 rare | 3 |
 | 4 | Protection 1/3 (`tank_pr`) | Levels | defense +12% in all | $64M, 17 mat, 11 iron, 3 rare | 2 |
 | 7 | Smoothbore Main Gun (`tank_gun`) | Upgrade | attack +3 | $49M, 20 mat, 14 rare | 3 |
 | 9 | Wide Tracks (`tank_terr`) | Upgrade | half the speed penalty on rough ground | $49M, 20 mat, 14 rare | 3 |
@@ -234,8 +233,8 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Mobile Artillery | Rocket Artillery | Mobile SAM | Mobile Jammer |
 |---|---|---|---|---|
-| 1 | (standard) |  | (standard) |  |
-| 3 | Firepower 1; Counter-Battery Radar |  | Firepower 1 | UNLOCK |
+| 1 | (standard); Counter-Battery Radar |  | (standard) |  |
+| 3 | Firepower 1 |  | Firepower 1 | UNLOCK |
 | 4 | Protection 1 |  | Protection 1; Improved Seekers 1 |  |
 | 5 |  | UNLOCK |  | Firepower 1 |
 | 6 |  |  |  | Protection 1 |
@@ -260,8 +259,8 @@ Each category starts with its day grid (what the screen shows: one column per li
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
 | 1 | Mobile Artillery (`u_art`) | Unlock | standard issue: known from day one | free | - |
+| 1 | Counter-Battery Radar (`art_radar`) | Upgrade | attack +2 | $47M, 20 mat, 14 rare | 3 |
 | 3 | Firepower 1/3 (`art_fp`) | Levels | attack +12% in all | $58M, 16 mat, 7 iron, 3 rare | 2 |
-| 3 | Counter-Battery Radar (`art_radar`) | Upgrade | attack +2 | $47M, 20 mat, 14 rare | 3 |
 | 4 | Protection 1/3 (`art_pr`) | Levels | defense +12% in all | $58M, 16 mat, 7 iron, 3 rare | 2 |
 | 8 | Extended-Range Shells (`art_shell`) | Upgrade | attack +3, defense +2 | $47M, 20 mat, 14 rare | 3 |
 | 10 | Firepower 2/3 (`art_fp`) | Levels | attack +25% in all | $86M, 24 mat, 11 iron, 5 rare | 2 |
@@ -323,15 +322,16 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Attack Helicopter | Paratroopers (elite) |
 |---|---|---|
-| 2 | UNLOCK |  |
-| 3 |  | UNLOCK |
-| 4 | Firepower 1 |  |
-| 5 | Protection 1 | Firepower 1 |
+| 1 | UNLOCK |  |
+| 3 | Firepower 1 | UNLOCK |
+| 4 | Protection 1 |  |
+| 5 |  | Firepower 1 |
 | 6 | Long-Range Tanks 1 | Protection 1 |
 | 7 |  | Long-Range Airlift 1 |
 | 8 | Fire-and-Forget Missiles |  |
-| 11 | Firepower 2 |  |
-| 12 | Protection 2; Long-Range Tanks 2 | Firepower 2 |
+| 10 | Firepower 2 |  |
+| 11 | Protection 2 |  |
+| 12 | Long-Range Tanks 2 | Firepower 2 |
 | 13 |  | Protection 2; Long-Range Airlift 2 |
 | 14 | GEN 2 |  |
 | 15 |  | GEN 2 |
@@ -343,13 +343,13 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 2 | Attack Helicopter (`u_heli`) | Unlock | unlocks the Attack Helicopter | $80M, 20 mat, 26 rare | 4 |
-| 4 | Firepower 1/3 (`heli_fp`) | Levels | attack +12% in all. Needs Attack Helicopter | $90M, 20 mat, 6 elec, 3 rare | 2 |
-| 5 | Protection 1/3 (`heli_pr`) | Levels | defense +12% in all. Needs Attack Helicopter | $90M, 20 mat, 6 elec, 3 rare | 2 |
+| 1 | Attack Helicopter (`u_heli`) | Unlock | unlocks the Attack Helicopter | $80M, 20 mat, 26 rare | 4 |
+| 3 | Firepower 1/3 (`heli_fp`) | Levels | attack +12% in all. Needs Attack Helicopter | $90M, 20 mat, 6 elec, 3 rare | 2 |
+| 4 | Protection 1/3 (`heli_pr`) | Levels | defense +12% in all. Needs Attack Helicopter | $90M, 20 mat, 6 elec, 3 rare | 2 |
 | 6 | Long-Range Tanks 1/2 (`heli_rng`) | Upgrade | range +1 hex (7). Needs Attack Helicopter | $59M, 20 mat, 15 rare | 3 |
 | 8 | Fire-and-Forget Missiles (`heli_atgm`) | Upgrade | attack +1. Needs Attack Helicopter | $59M, 20 mat, 15 rare | 3 |
-| 11 | Firepower 2/3 (`heli_fp`) | Levels | attack +25% in all | $134M, 30 mat, 8 elec, 5 rare | 2 |
-| 12 | Protection 2/3 (`heli_pr`) | Levels | defense +25% in all | $134M, 30 mat, 8 elec, 5 rare | 2 |
+| 10 | Firepower 2/3 (`heli_fp`) | Levels | attack +25% in all | $134M, 30 mat, 8 elec, 5 rare | 2 |
+| 11 | Protection 2/3 (`heli_pr`) | Levels | defense +25% in all | $134M, 30 mat, 8 elec, 5 rare | 2 |
 | 12 | Long-Range Tanks 2/2 (`heli_rng`) | Upgrade | range +1 more (8) | $92M, 30 mat, 21 rare | 4 |
 | 14 | Heavy Gunship (`heli_g2`), picture `u-heli-2` | Generation | attack +2, defense +1, health +3. Needs Attack Helicopter | $183M, 50 mat, 14 elec, 44 rare | 6 |
 | 17 | Firepower 3/3 (`heli_fp`) | Levels | attack +40% in all. Needs generation 2 | $179M, 40 mat, 11 elec, 8 rare | 3 |
@@ -449,22 +449,23 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Recon UAV | Swarm Drones | Strike Drone |
 |---|---|---|---|
-| 2 | UNLOCK |  |  |
-| 4 | Firepower 1 | UNLOCK |  |
-| 5 | Protection 1; GEN 2 |  |  |
+| 1 | UNLOCK |  |  |
+| 3 | Firepower 1 |  |  |
+| 4 | Protection 1 | UNLOCK |  |
+| 5 | GEN 2 |  |  |
 | 6 |  | Firepower 1 | UNLOCK |
 | 7 |  | Protection 1 |  |
 | 8 |  | Booster Rockets 1 | Firepower 1 |
 | 9 | GEN 3 | Bigger Salvo | Protection 1 |
-| 10 |  |  | Satellite Link 1 |
-| 11 | Firepower 2 |  |  |
-| 12 | Protection 2 |  | Bunker-Buster Warhead |
+| 10 | Firepower 2 |  | Satellite Link 1 |
+| 11 | Protection 2 |  |  |
+| 12 |  |  | Bunker-Buster Warhead |
 | 13 | GEN 4 | Firepower 2 |  |
 | 14 |  | Protection 2; Booster Rockets 2 |  |
 | 15 |  | GEN 2 | Firepower 2; Satellite Link 2 |
-| 16 |  |  | Protection 2 |
-| 17 | Firepower 3 |  | GEN 2 |
-| 18 | Protection 3; GEN 5 |  |  |
+| 16 | Firepower 3 |  | Protection 2 |
+| 17 | Protection 3 |  | GEN 2 |
+| 18 | GEN 5 |  |  |
 | 19 |  | Firepower 3 |  |
 | 20 |  | Protection 3 |  |
 | 21 |  |  | Firepower 3 |
@@ -474,16 +475,16 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 2 | Recon UAV (`u_drone`) | Unlock | unlocks the Recon UAV | $53M, 20 mat, 19 rare | 3 |
-| 4 | Firepower 1/3 (`drone_fp`) | Levels | attack +12% in all. Needs Recon UAV | $42M, 16 mat, 4 elec, 3 rare | 2 |
-| 5 | Protection 1/3 (`drone_pr`) | Levels | defense +12% in all. Needs Recon UAV | $42M, 16 mat, 4 elec, 3 rare | 2 |
+| 1 | Recon UAV (`u_drone`) | Unlock | unlocks the Recon UAV | $53M, 20 mat, 19 rare | 3 |
+| 3 | Firepower 1/3 (`drone_fp`) | Levels | attack +12% in all. Needs Recon UAV | $42M, 16 mat, 4 elec, 3 rare | 2 |
+| 4 | Protection 1/3 (`drone_pr`) | Levels | defense +12% in all. Needs Recon UAV | $42M, 16 mat, 4 elec, 3 rare | 2 |
 | 5 | UAV II · Long-Endurance Optics (`drone_g2`), picture `u-drone-2` | Generation | sees farther, loiters 16 h, reaches farther, harder to shoot down. Needs Recon UAV | $117M, 50 mat, 10 elec, 37 rare | 6 |
 | 9 | UAV III · Low-Observable Airframe (`drone_g3`), picture `u-drone-3` | Generation | loiters 20 h, wider view, air defences hit 40% less. Needs UAV II · Long-Endurance Optics | $176M, 80 mat, 10 elec, 62 rare | 8 |
-| 11 | Firepower 2/3 (`drone_fp`) | Levels | attack +25% in all | $62M, 24 mat, 6 elec, 5 rare | 2 |
-| 12 | Protection 2/3 (`drone_pr`) | Levels | defense +25% in all | $62M, 24 mat, 6 elec, 5 rare | 2 |
+| 10 | Firepower 2/3 (`drone_fp`) | Levels | attack +25% in all | $62M, 24 mat, 6 elec, 5 rare | 2 |
+| 11 | Protection 2/3 (`drone_pr`) | Levels | defense +25% in all | $62M, 24 mat, 6 elec, 5 rare | 2 |
 | 13 | UAV IV · Armed UAV (`drone_g4`), picture `u-drone-4` | Generation | light missiles: one salvo per sortie. Needs UAV III · Low-Observable Airframe | $234M, 80 mat, 10 elec, 80 rare | 8 |
-| 17 | Firepower 3/3 (`drone_fp`) | Levels | attack +40% in all. Needs generation 2 | $83M, 32 mat, 8 elec, 8 rare | 3 |
-| 18 | Protection 3/3 (`drone_pr`) | Levels | defense +40% in all. Needs generation 2 | $83M, 32 mat, 8 elec, 8 rare | 3 |
+| 16 | Firepower 3/3 (`drone_fp`) | Levels | attack +40% in all. Needs generation 2 | $83M, 32 mat, 8 elec, 8 rare | 3 |
+| 17 | Protection 3/3 (`drone_pr`) | Levels | defense +40% in all. Needs generation 2 | $83M, 32 mat, 8 elec, 8 rare | 3 |
 | 18 | UAV V · Hunter-Killer (`drone_g5`), picture `u-drone-5` | Generation | two salvos, heavier missiles, longer range and loiter. Needs UAV IV · Armed UAV | $281M, 80 mat, 10 elec, 95 rare | 9 |
 
 **Swarm Drones**: 11 steps, 142 rare materials, $961M, 34 research days in all.
@@ -524,22 +525,21 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Heavy Bomber | Stealth Bomber (elite) | Maritime Patrol Aircraft | AWACS |
 |---|---|---|---|---|
-| 4 |  |  | UNLOCK |  |
-| 5 |  |  |  | UNLOCK |
-| 6 | UNLOCK |  | Firepower 1 |  |
-| 7 |  |  | Protection 1 |  |
+| 2 |  |  | UNLOCK |  |
+| 4 |  |  | Firepower 1 |  |
+| 5 |  |  | Protection 1 | UNLOCK |
+| 6 | UNLOCK |  |  |  |
 | 8 | Firepower 1 |  | Sonobuoy Field 1 | Protection 1 |
 | 9 | Protection 1; Defensive Jammers |  |  | High-Power Radar 1 |
 | 10 |  |  | Homing Torpedoes |  |
-| 11 | Strategic Bomber Upgrade |  |  |  |
-| 12 |  |  |  | Fighter Data Link |
-| 13 |  |  | Firepower 2 |  |
-| 14 |  | UNLOCK | Protection 2; Sonobuoy Field 2 |  |
+| 11 | Strategic Bomber Upgrade |  | Firepower 2 |  |
+| 12 |  |  | Protection 2 | Fighter Data Link |
+| 14 |  | UNLOCK | Sonobuoy Field 2 |  |
 | 15 | Firepower 2 |  | GEN 2 | Protection 2; High-Power Radar 2 |
 | 16 | Protection 2 | Firepower 1 |  |  |
 | 17 | GEN 2 | Protection 1 |  | GEN 2 |
-| 19 |  | Enlarged Bomb Bay | Firepower 3 |  |
-| 20 |  |  | Protection 3 |  |
+| 18 |  |  | Firepower 3 |  |
+| 19 |  | Enlarged Bomb Bay | Protection 3 |  |
 | 21 | Firepower 3 | Flying-Wing Tanks |  | Protection 3 |
 | 22 | Protection 3 |  |  |  |
 | 23 |  | Firepower 2 |  |  |
@@ -580,17 +580,17 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 4 | Maritime Patrol Aircraft (`u_mpa`) | Unlock | unlocks the Maritime Patrol Aircraft | $97M, 20 mat, 31 rare | 4 |
-| 6 | Firepower 1/3 (`mpa_fp`) | Levels | attack +12% in all. Needs Maritime Patrol Aircraft | $118M, 24 mat, 9 elec, 3 rare | 2 |
-| 7 | Protection 1/3 (`mpa_pr`) | Levels | defense +12% in all. Needs Maritime Patrol Aircraft | $118M, 24 mat, 9 elec, 3 rare | 2 |
+| 2 | Maritime Patrol Aircraft (`u_mpa`) | Unlock | unlocks the Maritime Patrol Aircraft | $97M, 20 mat, 31 rare | 4 |
+| 4 | Firepower 1/3 (`mpa_fp`) | Levels | attack +12% in all. Needs Maritime Patrol Aircraft | $118M, 24 mat, 9 elec, 3 rare | 2 |
+| 5 | Protection 1/3 (`mpa_pr`) | Levels | defense +12% in all. Needs Maritime Patrol Aircraft | $118M, 24 mat, 9 elec, 3 rare | 2 |
 | 8 | Sonobuoy Field 1/2 (`mpa_sonar`) | Upgrade | detection radius +20%. Needs Maritime Patrol Aircraft | $69M, 20 mat, 16 rare | 3 |
 | 10 | Homing Torpedoes (`mpa_torp`) | Upgrade | attack +2. Needs Maritime Patrol Aircraft | $69M, 20 mat, 16 rare | 3 |
-| 13 | Firepower 2/3 (`mpa_fp`) | Levels | attack +25% in all | $178M, 36 mat, 13 elec, 5 rare | 2 |
-| 14 | Protection 2/3 (`mpa_pr`) | Levels | defense +25% in all | $178M, 36 mat, 13 elec, 5 rare | 2 |
+| 11 | Firepower 2/3 (`mpa_fp`) | Levels | attack +25% in all | $178M, 36 mat, 13 elec, 5 rare | 2 |
+| 12 | Protection 2/3 (`mpa_pr`) | Levels | defense +25% in all | $178M, 36 mat, 13 elec, 5 rare | 2 |
 | 14 | Sonobuoy Field 2/2 (`mpa_sonar`) | Upgrade | +40% | $114M, 30 mat, 22 rare | 4 |
 | 15 | Long-Endurance Patrol Aircraft (`mpa_g2`), picture `u-mpa-2` | Generation | attack +1, health +2, patrols 18 h (was 12 h). Needs Maritime Patrol Aircraft | $223M, 50 mat, 22 elec, 49 rare | 6 |
-| 19 | Firepower 3/3 (`mpa_fp`) | Levels | attack +40% in all. Needs generation 2 | $237M, 48 mat, 18 elec, 8 rare | 3 |
-| 20 | Protection 3/3 (`mpa_pr`) | Levels | defense +40% in all. Needs generation 2 | $237M, 48 mat, 18 elec, 8 rare | 3 |
+| 18 | Firepower 3/3 (`mpa_fp`) | Levels | attack +40% in all. Needs generation 2 | $237M, 48 mat, 18 elec, 8 rare | 3 |
+| 19 | Protection 3/3 (`mpa_pr`) | Levels | defense +40% in all. Needs generation 2 | $237M, 48 mat, 18 elec, 8 rare | 3 |
 
 **AWACS**: 8 steps, 163 rare materials, $1384M, 28 research days in all.
 
@@ -611,9 +611,10 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Frigate | Cruiser | Aircraft Carrier | Attack Submarine |
 |---|---|---|---|---|
-| 1 | (standard) | (standard) |  | (standard) |
-| 3 | Firepower 1; Naval Gunnery | Firepower 1; Naval Gunnery |  | Firepower 1 |
-| 4 | Protection 1 | Protection 1 |  | Protection 1; Heavy Torpedoes 1 |
+| 1 | (standard); Naval Gunnery | (standard) |  | (standard) |
+| 2 |  |  |  | Heavy Torpedoes 1 |
+| 3 | Firepower 1 | Firepower 1; Naval Gunnery |  | Firepower 1 |
+| 4 | Protection 1 | Protection 1 |  | Protection 1 |
 | 6 | Towed Sonar |  |  |  |
 | 7 |  |  | UNLOCK | Quiet Drive 1 |
 | 9 | Area Air Defence |  | Firepower 1 |  |
@@ -634,8 +635,8 @@ Each category starts with its day grid (what the screen shows: one column per li
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
 | 1 | Frigate (`u_frig`) | Unlock | standard issue: known from day one | free | - |
+| 1 | Naval Gunnery (`frig_gun`) | Upgrade | attack +1 | $56M, 20 mat, 15 rare | 3 |
 | 3 | Firepower 1/3 (`frig_fp`) | Levels | attack +12% in all | $83M, 18 mat, 12 iron, 3 elec, 3 rare | 2 |
-| 3 | Naval Gunnery (`frig_gun`) | Upgrade | attack +1 | $56M, 20 mat, 15 rare | 3 |
 | 4 | Protection 1/3 (`frig_pr`) | Levels | defense +12% in all | $83M, 18 mat, 12 iron, 3 elec, 3 rare | 2 |
 | 6 | Towed Sonar (`frig_sonar`) | Upgrade | hears submarines two sea zones away | $56M, 20 mat, 15 rare | 3 |
 | 9 | Area Air Defence (`frig_aa`) | Upgrade | defense +1, damage to aircraft 1.8x to 2.1x | $56M, 20 mat, 15 rare | 3 |
@@ -681,9 +682,9 @@ Each category starts with its day grid (what the screen shows: one column per li
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
 | 1 | Attack Submarine (`u_sub`) | Unlock | standard issue: known from day one | free | - |
+| 2 | Heavy Torpedoes 1/2 (`sub_torp`) | Upgrade | attack +1 | $54M, 20 mat, 14 rare | 3 |
 | 3 | Firepower 1/3 (`sub_fp`) | Levels | attack +12% in all | $77M, 17 mat, 10 iron, 3 elec, 3 rare | 2 |
 | 4 | Protection 1/3 (`sub_pr`) | Levels | defense +12% in all | $77M, 17 mat, 10 iron, 3 elec, 3 rare | 2 |
-| 4 | Heavy Torpedoes 1/2 (`sub_torp`) | Upgrade | attack +1 | $54M, 20 mat, 14 rare | 3 |
 | 7 | Quiet Drive 1/2 (`sub_quiet`) | Upgrade | defense +1 | $54M, 20 mat, 14 rare | 3 |
 | 10 | Firepower 2/3 (`sub_fp`) | Levels | attack +25% in all | $115M, 26 mat, 15 iron, 5 elec, 5 rare | 2 |
 | 10 | Heavy Torpedoes 2/2 (`sub_torp`) | Upgrade | attack +1 more | $83M, 30 mat, 20 rare | 4 |
@@ -699,7 +700,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Cruise Missile | Ballistic Missile | Missile Defence | Satellites |
 |---|---|---|---|---|
-| 2 | UNLOCK |  |  |  |
+| 1 | UNLOCK |  |  |  |
 | 5 |  |  |  | Reconnaissance Satellites 1 |
 | 6 |  | UNLOCK |  |  |
 | 7 | Cruise Missile Range 1 |  |  |  |
@@ -715,7 +716,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 2 | Cruise Missiles (`msl1`) | Unlock | Missile Silos can build Cruise Missiles | $96M, 20 mat, 31 rare | 6 |
+| 1 | Cruise Missiles (`msl1`) | Unlock | Missile Silos can build Cruise Missiles | $96M, 20 mat, 31 rare | 6 |
 | 7 | Cruise Missile Range 1/2 (`cm_rng`) | Upgrade | range 28 to 32 hexes. Needs Cruise Missiles | $90M, 30 mat, 20 rare | 4 |
 | 9 | Cruise Missile Speed 1/2 (`cm_spd`) | Upgrade | speed 9 to 11: less time for the defences. Needs Cruise Missiles | $90M, 30 mat, 20 rare | 4 |
 | 13 | Cruise Missile Range 2/2 (`cm_rng`) | Upgrade | to 36 hexes | $130M, 45 mat, 30 rare | 5 |
@@ -752,34 +753,42 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Supply | Engineers | Landings | Medical |
 |---|---|---|---|---|
-| 3 | Motorized Supply |  |  |  |
-| 4 |  | Combat Engineers |  |  |
-| 5 |  |  | Amphibious Doctrine |  |
-| 6 |  |  |  | Field Hospitals |
+| 1 | Motorized Supply 1 |  |  |  |
+| 2 |  | Combat Engineers 1 |  |  |
+| 3 |  |  | Amphibious Doctrine 1 |  |
+| 4 |  |  |  | Field Hospitals 1 |
+| 10 | Motorized Supply 2 |  |  |  |
+| 11 |  | Combat Engineers 2 |  |  |
+| 12 |  |  | Amphibious Doctrine 2 |  |
+| 13 |  |  |  | Field Hospitals 2 |
 
-**Supply**: 1 steps, 27 rare materials, $66M, 4 research days in all.
-
-| Day | Node (id) | Type | Effect | Price | Days |
-|---|---|---|---|---|---|
-| 3 | Motorized Supply (`log1`) | Upgrade | all forces move 20% faster; opens high-speed rail | $66M, 20 mat, 27 rare | 4 |
-
-**Engineers**: 1 steps, 29 rare materials, $78M, 5 research days in all.
+**Supply**: 2 steps, 57 rare materials, $176M, 9 research days in all.
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 4 | Combat Engineers (`log2`) | Upgrade | capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build | $78M, 20 mat, 29 rare | 5 |
+| 1 | Motorized Supply 1/2 (`log1`) | Upgrade | all forces move 20% faster; opens high-speed rail | $66M, 20 mat, 27 rare | 4 |
+| 10 | Motorized Supply 2/2 (`log1`) | Upgrade | all forces move 30% faster | $110M, 30 mat, 30 rare | 5 |
 
-**Landings**: 1 steps, 34 rare materials, $114M, 7 research days in all.
-
-| Day | Node (id) | Type | Effect | Price | Days |
-|---|---|---|---|---|---|
-| 5 | Amphibious Doctrine (`nav3`) | Upgrade | troops landing from the sea fight at 90% instead of 67% on their first day | $114M, 20 mat, 34 rare | 7 |
-
-**Medical**: 1 steps, 32 rare materials, $102M, 7 research days in all.
+**Engineers**: 2 steps, 61 rare materials, $198M, 10 research days in all.
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 6 | Field Hospitals (`log3`) | Upgrade | your forces take 15% less damage | $102M, 20 mat, 32 rare | 7 |
+| 2 | Combat Engineers 1/2 (`log2`) | Upgrade | capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build | $78M, 20 mat, 29 rare | 5 |
+| 11 | Combat Engineers 2/2 (`log2`) | Upgrade | capture 40% faster; roads and railways 35% cheaper and faster to build | $120M, 30 mat, 32 rare | 5 |
+
+**Landings**: 2 steps, 70 rare materials, $254M, 13 research days in all.
+
+| Day | Node (id) | Type | Effect | Price | Days |
+|---|---|---|---|---|---|
+| 3 | Amphibious Doctrine 1/2 (`nav3`) | Upgrade | troops landing from the sea fight at 90% instead of 67% on their first day | $114M, 20 mat, 34 rare | 7 |
+| 12 | Amphibious Doctrine 2/2 (`nav3`) | Upgrade | they fight at full strength on their first day | $140M, 30 mat, 36 rare | 6 |
+
+**Medical**: 2 steps, 72 rare materials, $252M, 14 research days in all.
+
+| Day | Node (id) | Type | Effect | Price | Days |
+|---|---|---|---|---|---|
+| 4 | Field Hospitals 1/2 (`log3`) | Upgrade | your forces take 15% less damage | $102M, 20 mat, 32 rare | 7 |
+| 13 | Field Hospitals 2/2 (`log3`) | Upgrade | 20% less damage | $150M, 30 mat, 40 rare | 7 |
 
 <!-- TREE:END -->
 
@@ -806,7 +815,7 @@ Why these shapes:
 Totals, by category:
 
 <!-- BALANCE:BEGIN (written by tools/research-proto.js --write) -->
-Whole tree: 170 nodes, 285 research steps, 4829 rare materials, $38476M, 8882 materials, 950 research days (475 days with both slots never idle).
+Whole tree: 170 nodes, 289 research steps, 4967 rare materials, $38996M, 9002 materials, 973 research days (487 days with both slots never idle).
 The tree before the redesign: 38 projects, 1962 rare materials, $3774M, 228 research days.
 
 | Category | Lines | Steps | Rare materials | Money | Research days |
@@ -820,7 +829,7 @@ The tree before the redesign: 38 projects, 1962 rare materials, $3774M, 228 rese
 | Strategic Air | 4 | 38 | 692 | $11154M | 123 |
 | Navy | 4 | 41 | 567 | $6140M | 125 |
 | Strategic Weapons | 4 | 15 | 728 | $2172M | 86 |
-| Command & Logistics | 4 | 4 | 122 | $360M | 23 |
+| Command & Logistics | 4 | 8 | 260 | $880M | 46 |
 
 | Plan | Nation | Steps done by day 30 | Of the chosen line by day 30 | Line finished on day | Steps done by day 60 |
 |---|---|---|---|---|---|
@@ -832,13 +841,13 @@ The tree before the redesign: 38 projects, 1962 rare materials, $3774M, 228 rese
 | Air power: unlock Interceptor, Strike Fighter, UAV and Air Superiority Fighter, then the whole Strike Fighter line | Rich, two rare-earth cities (18 a day) | 15 of 15 | 12 of 12 (100%) | 28 | 15 of 15 |
 | Hone what you field: no unlocks; Firepower and Protection 1 and 2 for Infantry and Artillery, then the whole Main Battle Tank line | No rare-earth city (2 a day) | 12 of 20 | 4 of 12 (33%) | not by day 60 | 16 of 20 |
 | Hone what you field: no unlocks; Firepower and Protection 1 and 2 for Infantry and Artillery, then the whole Main Battle Tank line | Typical, one rare-earth city (8 a day) | 16 of 20 | 8 of 12 (67%) | 46 | 20 of 20 |
-| Hone what you field: no unlocks; Firepower and Protection 1 and 2 for Infantry and Artillery, then the whole Main Battle Tank line | Rich, two rare-earth cities (18 a day) | 19 of 20 | 11 of 12 (92%) | 37 | 20 of 20 |
+| Hone what you field: no unlocks; Firepower and Protection 1 and 2 for Infantry and Artillery, then the whole Main Battle Tank line | Rich, two rare-earth cities (18 a day) | 19 of 20 | 11 of 12 (92%) | 36 | 20 of 20 |
 
 | Everything, as it opens | Steps by day 30 | Steps by day 60 | Share of the tree by day 60 |
 |---|---|---|---|
-| No rare-earth city (2 a day) | 2 | 6 | 2% |
-| Typical, one rare-earth city (8 a day) | 10 | 34 | 12% |
-| Rich, two rare-earth cities (18 a day) | 20 | 43 | 15% |
+| No rare-earth city (2 a day) | 5 | 7 | 2% |
+| Typical, one rare-earth city (8 a day) | 10 | 26 | 9% |
+| Rich, two rare-earth cities (18 a day) | 16 | 42 | 15% |
 
 <!-- BALANCE:END -->
 
@@ -994,7 +1003,7 @@ Ten banners in the order of section 3. Each: diamond icon on the left, name, rol
 |---|---|
 | Researched (all its levels) | **blue** diamond, check mark |
 | Can be researched now (day reached, spine node researched, not running) | **green** diamond. Bright green when you can also pay for it; green with a small coin mark when you cannot yet |
-| Locked (day not reached, or the spine node is missing) | **grey** diamond, a lock; under it "Day 12" or the missing node's name |
+| Locked (day not reached, or the spine node is missing) | **grey** diamond, a lock; its row is its day and the spine line shows what it needs, so under it only its name (and the day of a later level, or "Needs Generation 2" for level 3) |
 | Partly levelled | blue, with the badge showing `2/3`; a green ring around it when the next level is open |
 | Running | the slot's colour (teal or gold) as a ring that fills with progress |
 | Waiting for the other slot | green with a clock mark |
@@ -1056,7 +1065,7 @@ These are part of the design above; say no to any of them and the tree still wor
 
 | Change | Today | Proposed |
 |---|---|---|
-| Unit unlocks get a first day | every unlock can be started on day 1 | Interceptor, Strike Fighter, IFV day 1; Attack Helicopter, Recon UAV, Cruise Missile day 2; Paratroopers, Jammer day 3; Special Forces, Air Superiority Fighter, Swarm Drones, Maritime Patrol day 4; Rocket Artillery, AWACS day 5; Heavy Bomber, Strike Drone, Ballistic Missile day 6; Aircraft Carrier day 7; Stealth Bomber day 14. Setting every unlock to day 1 is a one-number change per line |
+| Unit unlocks get a first day | every unlock can be started on day 1 | Interceptor, Strike Fighter, IFV, Attack Helicopter, Recon UAV, Cruise Missile day 1; Maritime Patrol day 2; Paratroopers, Jammer day 3; Special Forces, Air Superiority Fighter, Swarm Drones day 4; Rocket Artillery, AWACS day 5; Heavy Bomber, Strike Drone, Ballistic Missile day 6; Aircraft Carrier day 7; Stealth Bomber day 14. Setting every unlock to day 1 is a one-number change per line |
 | Marks become research | a third, separate slot; no computer player uses it | Firepower and Protection in the two research slots |
 | Generations | none | 24 lines get a Generation 2, infantry and tanks a Generation 3; mostly health |
 | IFV, Special Forces, Rocket Artillery | at the end of chains (76, 169 and 82 rare materials) | stand-alone unlocks (20, 25 and 25) |
@@ -1116,7 +1125,12 @@ What the build does differently from, or adds to, the plan above.
 - **`has(n, id)`** means "holds node `id` at any level". No call site uses an old id any more, so there is no translation table at run time; `R_LEGACY` is used only by the conversion and by a project that was still running in a slot.
 - **Rows.** The grid has a row for each day that holds a diamond (a levelled node sits on the day of its first level), not for every day a later level opens; the later levels' days are in the detail card.
 - **Lanes.** Inside a column the spine (unlock, generations) is the middle lane, Firepower hangs to its left, Protection to its right, upgrades alternate. A family tie is a dashed line over the top of the columns; the Stealth Bomber's requirement inside Strategic Air is a solid line, its requirement from Tactical Air a tag on the node and a link in the card.
-- **Phone.** Upgrade diamonds show their icon only (the card names them); unit diamonds keep their name.
 - **Worded upgrades** (phase 4) are all in, one small rule each in `rules/research.js` (`multO`, `rTrainF`, `rDrilled`, `rSpecTerr`, `rSightF`, `rMlrsReach`, `rSamNear`, `rJamF`, `rPack`, `rKoHours`, `rAdF`, `rBombF`, `rMpaR`, `rMpaH`, `rAewR`, `rAewF`, `rDeckRate`, `mslOf`, `rShield`, `rSatMax`, `rSatR`, `dropOnly`, `dropRange`). Rough-ground training applies to a force made up only of trained types. "Sees half a province farther" is a sight radius of 1.3 legs instead of 0.8.
 - **Computer players.** As section 8, with two softenings: a line whose unit needs a kind of building the nation has none of at any level (not "no Airbase II") is the one that is held back, so bombers and fighters are still researched before the bigger airbase is built; and upgrades of a unit type the nation does not field are weighted at a quarter rather than zero.
-- **Generation pictures.** The Heavy Bomber's generation 2 uses the second bomber picture and UAV IV the armed UAV picture, as before; every other generation shows the unit's picture with a "II" / "III" tag until its art exists.
+- **Generation pictures.** The Heavy Bomber's generation 2 uses the second bomber picture and UAV IV the armed UAV picture, as before. Every other generation shows the unit's picture in a new paint scheme (generation 2 desert, generation 3 dark grey: `rGenTone` in `index.html`) beside the "II" / "III" tag, in the tree and side by side in the detail card, until its own art (`u-<unit>-<generation>`) exists.
+- **Repair 1 (the review of the first build).**
+  - **Day 1.** More opens on day 1 so most categories have something to start: the first upgrade of most standard-issue lines (Ceramic Body Armour for both infantry lines, Composite Armour, Counter-Battery Radar, the Frigate's Naval Gunnery) and the unlocks of the Attack Helicopter, the Recon UAV and Cruise Missiles; Maritime Patrol on day 2, the Submarine's Heavy Torpedoes on day 2. On day 1, nine of the ten categories have an open step; Strategic Air opens on day 2.
+  - **Command & Logistics** has two levels for each doctrine (Motorized Supply 30% faster, Combat Engineers capture 40% faster and roads 35% cheaper, Amphibious Doctrine full strength on the first day ashore, Field Hospitals 20% less damage; days 10 to 13). The rules read the level (`rMoveF`, `rCapF`, `rRoadF`, `rLandF`, `rHospF` in `rules/research.js`). The screen shows the four in two columns, Logistics and Operations, with a card of their levels beside each diamond; no line joins them, since none needs another.
+  - **Old saves with a queued project** (`N.rqueue`, saves from before two slots) are read after the conversion (`rqueueMigrate` now runs after `researchMigrate`): an old project becomes the first of its new nodes that can start, which starts in slot #2; when none can (its day has not come, the money is short), a person's nation gets a dispatch that names the new node and why.
+  - **Computer players.** A nation that flies Heavy Bombers weighs the Strategic Bomber Upgrade at 30 or more (it was about 2 against about 100 in all), one that has the Heavy Bomber but flies none yet at 16 with an Airbase II (6 without), and Stealth Airframes at 8 once it has the upgrade. A generation of a unit type that makes up a fifth or more of the forces is saved for (three days: recruiting holds its price back, its goods may be bought at up to twice the base price), and a slot no longer sits idle while the pick waits: with both slots free one takes a cheaper step, with one free a pick that is not saved for lets a cheaper step have it, and no step eats the goods a saved-for pick needs. Measured over three seeds (12345, 7, 99), headless: on day 30 the middle nation holds 15 to 16 steps and 12 to 13 of the 15 nations hold a generation (4 to 5 before). By day 60: 1, 5 and 3 nations hold the Heavy Bomber (4, 5 and 2 before), the Strategic Bomber Upgrade is in 2 nations on seed 7 (from day 45) and in none on the other two, Air Superiority Fighters in 5 to 7 (6 to 12 before), and no nation has the Stealth Bomber yet. The bomber line is now held back mostly by how few nations take the Heavy Bomber itself, a question for the next balance pass. About 30% of the computer's slot-hours are still idle by day 30, mostly for want of materials.
+  - **Screen.** Category banners show an aerial photo of the branch's ground (the building pictures) under a slate wash, with the unit picture and a short role line on phones. In a category the top is compact (on a wide screen the two slots sit in the title band) and rows are 84 px (74 on a phone), so a 1280 x 720 laptop shows four to five day rows. Names wrap at spaces only; phones show short names (`RSN`) instead of icons alone; every kind of upgrade has its own white icon; locked nodes no longer repeat the row's day or the line's prerequisite. Unit diamonds are upright and cropped to fill the diamond (one soldier of the squad pictures). The spine is blue only below a researched spine node. Column headers keep the elite badge and the step count on phones; an arrow shows when more columns wait to the right. The first-time research tip sits under the slots instead of over the tree. With nothing selected, the side pane lists what to research next in that category. On a phone a selected node scrolls clear of the bottom sheet.

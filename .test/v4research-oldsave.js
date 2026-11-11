@@ -48,5 +48,13 @@ const FX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/eco-v1-save.json', 
   // saved again and loaded again: nothing is converted twice
   const again = await p.evaluate(() => { const im = window.__im, d = JSON.parse(im.rs.save()), before = JSON.stringify(im.S.nations[0].tech); const ok = im.restore(d); return { ok, same: JSON.stringify(im.S.nations[0].tech) === before, rsv: im.S.rsv, w: im.rs.level(0, 'at_warhead') }; });
   ck('a save of the new format is not converted again', again.ok && again.same && again.rsv === 2 && again.w === 2, again);
+  // saves from before two slots: a project queued for slot #2 under an old id is read in the new tree (art1 -> Counter-Battery Radar starts);
+  // one that cannot start yet (bomb3 -> the Stealth Bomber opens on day 14, the save is on day 5) is dropped with a dispatch that says why
+  const q = await p.evaluate(save => { const im = window.__im, d = JSON.parse(JSON.stringify(save)), n0 = d.nations[0], n3 = d.nations[3];
+    n0.research2 = null; n0.rqueue = 'bomb3'; n3.research = null; n3.research2 = null; n3.rqueue = 'art1'; for (const k of ['cash', 'metal', 'rare']) n3[k] = Math.max(n3[k] || 0, 400);
+    const ok = im.restore(d), S = im.S, N0 = S.nations[0], N3 = S.nations[3];
+    return { ok, s3: [N3.research && N3.research.id, N3.research2 && N3.research2.id], s0: [N0.research && N0.research.id, N0.research2 && N0.research2.id], rq: [N0.rqueue, N3.rqueue], log: (S.log || []).slice(0, 3).map(l => l.text) }; }, FX.save);
+  ck('a queued old project starts in the new tree (art1 -> Counter-Battery Radar)', q.ok && q.s3.includes('art_radar') && q.rq[1] === undefined, q);
+  ck('a queued old project that cannot start yet is reported, not dropped without a word (bomb3 -> Stealth Bomber, day 14)', q.s0[1] === null && q.rq[0] === undefined && q.log.some(t => /queued research Stealth Bombers did not start/.test(t) && /Stealth Bomber/.test(t) && /day 14/.test(t)), q);
   const bad = checks.filter(c => !c.ok);
   console.log(JSON.stringify({ checks: checks.length, failed: bad, errors: errs }, null, 1)); await b.close(); process.exit(bad.length || errs.length ? 1 : 0); })();

@@ -1,10 +1,10 @@
 // Iron Meridian rules: movement. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
-const seaSpeed = a => ground(a) ? SEA_SPEED*(has(a.owner, 'log1') ? 1.2 : 1)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);   // open water, no lane
+const seaSpeed = a => ground(a) ? SEA_SPEED*rMoveF(a.owner)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);   // open water, no lane
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) ? seaSpeed(a)*(isLane(from, to) ? LANE_F : 1) : landSpeed(a);
 // one unit type's base speeds in km/day: [land or null, water] (land: plains, no road; water: open sea, no lane; ships on land only enter ports)
-function unitKmd(o, t){ const U = UNITS[t], v = st(o, t, 'spd')*(has(o, 'log1') ? 1.2 : 1); if (U.cls === 'air') return [null, null];
-  return U.cls === 'naval' ? [null, Math.round(v*KM_HEX/10)*10] : [Math.round(v*KM_HEX/10)*10, Math.round(SEA_SPEED*(has(o, 'log1') ? 1.2 : 1)*KM_HEX/10)*10]; }
+function unitKmd(o, t){ const U = UNITS[t], v = st(o, t, 'spd')*rMoveF(o); if (U.cls === 'air') return [null, null];
+  return U.cls === 'naval' ? [null, Math.round(v*KM_HEX/10)*10] : [Math.round(v*KM_HEX/10)*10, Math.round(SEA_SPEED*rMoveF(o)*KM_HEX/10)*10]; }
 const kmd = v => `${fmtK(v)} km/day`;
 const fmtK = v => v >= 1000 ? v.toLocaleString('en-US') : String(v);
 const MOVE_T = {inf:'foot', at:'foot', spec:'foot', para:'foot', art:'track', tank:'track', ifv:'wheel', sam:'wheel', mlrs:'wheel'};
@@ -56,7 +56,7 @@ function linkSave(r, speed = true){ const d = {}; if (r.road !== r.r0) d.road = 
 function damageLinks(p, h){ if (!G.P[p] || G.P[p].sea) return 0; let n = 0;
   for (const r of G.P[p].lk.values()){ if (!r.road && !r.rail) continue; const was = r.dmg > 0; r.dmg = Math.max(r.dmg, h); if (!was) n++; linkSave(r, !was); }
   return n; }
-function linkCost(n, a, b, k, lv){ const C = LINK_COST[k][lv], w = Math.max(0.6, Math.min(2.2, G.P[a].nb.get(b) || 1)), rough = Math.max(LINK_ROUGH[G.P[a].terrain] || 1, LINK_ROUGH[G.P[b].terrain] || 1), eng = has(n, 'log2') ? 0.75 : 1;
+function linkCost(n, a, b, k, lv){ const C = LINK_COST[k][lv], w = Math.max(0.6, Math.min(2.2, G.P[a].nb.get(b) || 1)), rough = Math.max(LINK_ROUGH[G.P[a].terrain] || 1, LINK_ROUGH[G.P[b].terrain] || 1), eng = rRoadF(n);
   return {cash:Math.round(C.cash*w*rough*eng), metal:Math.round(C.metal*w*rough*eng), iron:Math.round((C.iron || 0)*w*rough*eng), elec:Math.round((C.elec || 0)*w*rough*eng), h:Math.max(12, Math.round(C.d*24*Math.sqrt(w)*Math.sqrt(rough)*eng))}; }
 const linkProjects = n => { let c = 0; for (const k in S.links){ const d = S.links[k]; if (d.bld && d.bld.n === n) c++; } return c; };
 const linkMaxProj = n => { const M = linkMaxProj.m || (linkMaxProj.m = {}); if (M.h !== S.hour || M.S !== S){ M.h = S.hour; M.S = S; M.v = {}; }
@@ -236,7 +236,7 @@ function canProceed(a){
   if (!G.P[a.at].sea && S.owner[a.at] !== a.owner && ground(a) && atWar(a.owner, S.owner[a.at])) return false;
   return true;
 }
-function capNeed(p, by = NEUTRAL){ const P = G.P[p]; return (16 + (P.city ? 16 : 0) + (isCapital(p) ? 16 : 0))*(1 + 0.25*S.bld[p].fort)*(has(by, 'log2') ? 0.7 : 1)*(S.home && S.home[p] === by ? 0.5 : 1); }
+function capNeed(p, by = NEUTRAL){ const P = G.P[p]; return (16 + (P.city ? 16 : 0) + (isCapital(p) ? 16 : 0))*(1 + 0.25*S.bld[p].fort)*rCapF(by)*(S.home && S.home[p] === by ? 0.5 : 1); }
 function etaHours(a, path = a.path){
   if (a.to === null && !path.length) return 0;
   let h = 0, from = a.at;
