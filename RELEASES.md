@@ -28,6 +28,7 @@ How it works from now on:
   - New pictures: your AWACS, patrol plane, air superiority fighter, UAVs, swarm and strike drones, anti-drone truck, cargo ship, cruise and ballistic missiles and a new bold infantry picture are in the game (menus, lists, tooltips, missile menu), and the Recruiting Office and Fortifications show their own building pictures by level; the Arms Industry pictures are stored for the coming rework.
   - Campaign briefing cut down to the logo, one line, three short tips and big buttons; the rest moved to the Field Manual (Getting started), and one-line first-time tips (with Got it and Skip all tips) now teach cities, moving, battles and research.
   - Rules split into rules/*.js in 10 steps plus a repair (no change in play): the rules run on their own, even without a browser (tools/headless.js).
+  - Gift $50M button now shows only for allies and coalition partners.
 - v3.11 — Arms Factory pricing: first factory $25M, each extra one a nation owns +40%.
 - v3.10 — Test build with developer mode and a public build with all dev/test code stripped at build time.
 - v3.9 — Sleek counters, mixed-stack icon, troop models, nothing moves while zooming.

@@ -9003,7 +9003,8 @@ function diploHTML(){
       if (r.st === 'truce') hint = 'Truce: war cannot be declared until it ends.';
     }
     acts += `<button class="btn primary" data-act="nat-open" data-id="${N.id}" data-k="chat">Message</button><button class="btn" data-act="nat-open" data-id="${N.id}" data-k="trade">Trade deal</button>${sameBloc(PLAYER, N.id) ? `<button class="btn" data-act="nat-open" data-id="${N.id}" data-k="give">Give</button>` : ''}`;
-    acts += `<button class="btn" data-act="gift" data-id="${N.id}" ${S.nations[me].cash >= 50 ? '' : 'disabled'} title="Improves their opinion of you by 5">Gift $50M</button>`;
+    // Gift $50M only for allies and coalition partners
+    if (r.st === 'ally' || sameBloc(PLAYER, N.id)) acts += `<button class="btn" data-act="gift" data-id="${N.id}" ${S.nations[me].cash >= 50 ? '' : 'disabled'} title="Improves their opinion of you by 5">Gift $50M</button>`;
     { const tr0 = S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)); acts += tr0 ? `<button class="btn" data-act="trade-close" data-id="${tr0.id}" title="Close the trade route (−$${fmt1(trSide(tr0, me).cash)}M a day, −4 opinion)">Close trade route</button>` : r.st !== 'war' && !pend ? `<button class="btn" data-act="trade-open1" data-id="${N.id}" title="Open a trade route: money and goods for both sides every day">Open trade route</button>` : ''; }
     { const e = mkt().emb[me + '>' + N.id]; acts += `<button class="btn" data-act="embargo" data-id="${N.id}" title="${e ? 'Lift the embargo: +5 opinion' : 'Their market prices worsen 15%; −15 opinion with them'}">${e ? 'Lift embargo' : 'Embargo'}</button>`; }
     if (mkt().emb[N.id + '>' + me]) hint = (hint ? hint + ' ' : '') + 'They embargo you.';
