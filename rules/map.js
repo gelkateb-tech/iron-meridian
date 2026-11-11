@@ -51,8 +51,9 @@ function loadWorld(){
   const tr = mulberry(23), TCODE = {p:'plains', f:'forest', m:'mountain', d:'desert', t:'tundra', h:'hills', w:'marsh', s:'snow'};
   for (const p of P){ if (p.sea) continue;
     const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = tr(), d5 = WORLD.provinces[p.id][5];
-    if (d5){ p.terrain = p.city && r < 0.85 ? 'urban' : TCODE[d5] || 'plains'; continue; }
-    p.terrain = p.city && r < 0.7 ? 'urban' : MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; }
+    // ter0: the ground without a city on it; urb: whether a city here covers it (useWorld re-applies both when the set of cities changes)
+    if (d5){ p.ter0 = TCODE[d5] || 'plains'; p.urb = r < 0.85; p.terrain = p.city && p.urb ? 'urban' : p.ter0; continue; }
+    p.urb = r < 0.7; p.ter0 = MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; p.terrain = p.city && p.urb ? 'urban' : p.ter0; }
   // rare-earth deposits (P.rare: output a day before buildings): the real rare-earth districts (approximate boxes and richness), then scattered
   // minor finds on ore-bearing hard rock. Iron-mining country (P.iron): a share of the hills and mountains without an ore deposit. Own random stream.
   const RARE_BOX = [[106, 114, 39, 44, 3.5], [109, 118, 22, 28, 2.2], [100, 104, 26, 30, 1.8], [96, 99.5, 23, 27.5, 2.5], [102, 105.5, 21, 23.5, 1.5],   // China: Bayan Obo, southern clays, Sichuan; Myanmar (Kachin); Vietnam
@@ -77,8 +78,20 @@ function loadWorld(){
   const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
   const landCount = P.filter(p => !p.sea).length, PF = Math.min(1, 740/landCount);   // PF: per-province base yields shrink as provinces get smaller
   cityMains(P, countries);
-  return {prov, P, countries, landCount, PF, LK};
+  // base: the classic world's cities, capitals, city names and main resources as world.js gives them (useWorld switches between it and the nations world)
+  const base = {city:P.map(p => p.city), cap:P.map(p => p.capFlag), name:P.map(p => p.cityName), main:P.map(p => p.main)};
+  return {prov, P, countries, landCount, PF, LK, base, worldKey:'classic'};
 }
+// Which provinces are cities and capitals depends on the world in use. def null: the classic world (the flags of world.js: the 15-power world,
+// the two theatres and every old save). def {cities, caps, names}: the nations world (province ids of every city, of the nations' capitals, and
+// the names of promoted cities). Sets P.city, P.capFlag, P.cityName, the urban ground and each city's main resource, afresh on every new game
+// and every load, so nothing a game did to the flags leaks into the next one. Deposits and people do not depend on it.
+function useWorld(def){ const P = G.P, B = G.base, key = def ? 'n:' + def.cities.join(',') + '|' + def.caps.join(',') + '|' + JSON.stringify(def.names || {}) : 'classic';
+  if (!def){ for (const p of P){ p.city = B.city[p.id]; p.capFlag = B.cap[p.id]; p.cityName = B.name[p.id]; p.main = B.main[p.id]; if (!p.sea) p.terrain = p.city && p.urb ? 'urban' : p.ter0; } }
+  else { const cs = new Set(def.cities), cp = new Set(def.caps), nm = def.names || {};
+    for (const p of P){ p.city = !p.sea && cs.has(p.id); p.capFlag = p.city && cp.has(p.id); p.cityName = nm[p.id] || B.name[p.id] || (p.city ? p.name : B.name[p.id]); p.main = undefined; if (!p.sea) p.terrain = p.city && p.urb ? 'urban' : p.ter0; }
+    cityMains(P, G.countries); }
+  if (G.worldKey !== key){ G.worldKey = key; IM.emit('cities'); } }
 /* Sea lanes: the sea-zone links along the world's major shipping routes (North Atlantic, Mediterranean–Suez–Indian Ocean–Malacca–East Asia,
    Persian Gulf, trans-Pacific, Panama, the Cape, Australia, South America). Waypoints (lon, lat) snap to the nearest sea zone and are joined by
    the shortest all-water route. Fixed per map; trade lanes and convoy routes can build on the same set. */

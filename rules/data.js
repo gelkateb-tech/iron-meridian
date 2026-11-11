@@ -1,6 +1,7 @@
 // Iron Meridian rules: data. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 const WORLD = globalThis.WORLD, LINES = globalThis.LINES;   // the map data (world.js, lines.js), loaded before this file
+const NATIONS = globalThis.NATIONS || null;   // the playable nations of the nations world (nations.js); null when a host does not load it
 /* ---------------- Rules ---------------- */
 // req (and req2 for the few that need two): the building, and its level, a city must have to mobilize the unit; tech: the research it needs (null: known from day one).
 // Foot units (infantry, anti-tank, special forces, paratroopers) come from a Recruiting Office, vehicles from an Army Base, aircraft from an Airbase,
@@ -212,6 +213,33 @@ const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
 const WIN_SHARE = 0.25;               // share of land provinces needed to win
 let WIN_CAPS = 5;                     // or hold this many starting capitals (5 of 15; 4 of 8 in theatre scenarios)
+// The nations world (scenario world64, docs/NATIONS-PLAN.md): victory numbers follow the number of playable nations in the game
+const winCapsFor = k => Math.max(5, Math.round(k/6));               // starting capitals to hold: a sixth of the nations, never fewer than 5
+const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : 0.2;    // share of the world's land provinces to hold
+// Tiers (S superpower, A major, B regional, C minor): what a nation starts with. TIER_FULL is the plan's wide table (3.2), TIER_EVEN an equal
+// start for everyone; a game mode sits between the two by its spread (0 = everyone equal, 1 = the wide table). Normal mode is close to equal
+// (the owner's rule: big countries are bigger, not much richer at the start); a later competitive mode is mildly more distinctive.
+//   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; inf/tank/art: the capital's force;
+//   cityTanks: that many of the biggest other cities get a tank; guards: border guards (2 infantry each); recs: Recruiting Offices outside the capital
+const TIER_RANK = {S:0, A:1, B:2, C:3};
+const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
+const TIER_FULL = {
+  S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, inf:6, tank:3, art:2, cityTanks:4, guards:5, recs:4},
+  A:{day:262, mpDay:70, cash:260, mp:110, oil:50, metal:70, iron:80, elec:35, inf:5, tank:2, art:1, cityTanks:2, guards:4, recs:3},
+  B:{day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:1, cityTanks:0, guards:3, recs:2},
+  C:{day:201, mpDay:52, cash:200, mp:80, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2}};
+// floor: how far the catch-up may hold a rich nation back (income multiplier, home provinces only)
+const TIER_MODES = {normal:{name:'Normal', spread:0.3, floor:0.3}, competitive:{name:'Competitive', spread:0.6, floor:0.75}};
+const tierMode = k => TIER_MODES[k] || TIER_MODES.normal;
+function tierKit(tier, mode){ const F = TIER_FULL[tier] || TIER_FULL.B, M = tierMode(mode), k = {};
+  for (const key in TIER_EVEN) k[key] = Math.round(TIER_EVEN[key] + M.spread*(F[key] - TIER_EVEN[key]));
+  k.floor = M.floor; k.fortCap = tier === 'C'; k.fortGuards = tier === 'B' || tier === 'C'; k.yard = tier === 'S' || tier === 'A'; return k; }
+const tierGap = (a, b) => (TIER_RANK[b] ?? 2) - (TIER_RANK[a] ?? 2);   // how many tiers b stands below a
+const TIER_WARS = {S:2, A:1, B:1, C:0};
+// choosing a victim in the nations world: land beyond TIER_LAND provinces does not make a nation more tempting (with close-to-equal incomes a big
+// country has the most land per soldier, and every neighbour went for it), and a computer nation already in TIER_GANG wars is left alone
+// (two equal neighbours at once take any nation apart)
+const TIER_LAND = 60, TIER_GANG = 1;   // an AI nation starts a war only while it is in at most this many wars of its own making
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
 const CAP_MIN = 2;                    // ground units needed to capture
 const OX = HS*SQ3/2 + 8, OY = HS + 8;

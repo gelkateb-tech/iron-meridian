@@ -12,7 +12,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 
 const ROOT = path.join(__dirname, '..'), DIST = path.join(ROOT, 'dist');
-const BASE_SCRIPTS = ['world.js', 'lines.js', 'coast.js', 'coast-hi.js', 'units3d.js'];
+const BASE_SCRIPTS = ['world.js', 'nations.js', 'lines.js', 'coast.js', 'coast-hi.js', 'units3d.js'];
 let SCRIPTS = BASE_SCRIPTS;   // main() adds the rules files the page loads (<script src="rules/x.js">)
 const QUIET = process.argv.includes('--quiet');
 const SKIP_ASSETS = new Set(['art-src']);   // source art for tools/prep-art.py: never loaded by the game, so left out of both builds

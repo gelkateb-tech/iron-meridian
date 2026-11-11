@@ -6,6 +6,8 @@
 IM.api = {
   // the game: start, load, save, one hour
   newGame, restore, saveJSON, tick,
+  // which world the next new game is (a scenario key: 'world' the classic 15 powers, 'world64' the nations world of nations.js)
+  useScenario,
   get S(){ return S; }, get G(){ return G; },
   // seats and what a seat sees
   seats, isSeat, desk, visibleSet, armyVisible,

@@ -578,7 +578,10 @@ details.more summary::-webkit-details-marker{display:none}
 .sheet.mid > .row:last-child{position:sticky; bottom:-22px; background:rgba(64,69,72,.97); padding:10px 0; margin:0; border-top:1px solid var(--line)}
 .pick[aria-pressed="true"]{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; border-left-color:var(--c)}
 .diff{display:inline-flex; align-items:center; gap:5px; font:700 9.5px var(--body); letter-spacing:.14em; text-transform:uppercase; padding:0; background:none; color:#c5d2d6} .diff::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
-.diff.d-easy{color:#8fcf86} .diff.d-normal{color:#e2b45a} .diff.d-hard{color:#ee8a7d}
+.diff.d-easy{color:#8fcf86} .diff.d-normal{color:#e2b45a} .diff.d-hard{color:#ee8a7d} .diff.d-veryhard{color:#f0627a}
+.pick .pt > span.tier{font:700 9.5px var(--body); letter-spacing:.12em; text-transform:uppercase; color:#9fb4ba} .pick .pt > span.tier.t-S{color:#e8cf7a} .pick .pt > span.tier.t-A{color:#b9d6dc}
+.wsel, .regs{flex-wrap:wrap; gap:6px; margin:2px 0 8px} .wsel .btn, .regs .btn{display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; line-height:1.15} .regs .btn{flex-direction:row; align-items:baseline; gap:6px}
+.wsel .btn small, .regs .btn small{font:500 10.5px var(--body); letter-spacing:.02em; text-transform:none; opacity:.75}
 
 /* Modal */
 #modal{position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; background:rgba(5,8,9,.62);
@@ -2279,6 +2282,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 <div id="modal" hidden><div id="menuGlobe" aria-hidden="true"></div><div class="sheet" id="sheet"></div></div>
 
 <script src="world.js"></script>
+<script src="nations.js"></script>
 <script src="lines.js"></script>
 <script src="coast.js"></script>
 <script src="coast-hi.js"></script>
@@ -9032,7 +9036,7 @@ function diploHTML(){
   return `<div class="rhead"><div><div class="eyebrow">${S.nations[me].name} · Foreign affairs ${itip("Powers at peace cannot enter each other's land. War starts 24 hours after a declaration. Independent countries can always be attacked. Hover an opinion bar for the reasons; buttons marked ✕ would likely be refused.")}</div><h1>Diplomacy</h1></div>
     <button class="btn" data-act="relmode">${relMode ? 'Hide' : 'Show'} relations on map</button></div>
     ${incoming}${offers}${tradeHTML()}${(BL => BL.length ? `<div class="eyebrow" style="margin-top:6px">Coalitions</div><div class="blocs">${BL.map(B => `<div class="bloc${B.members.includes(me) ? ' mine' : ''}">${blocEmbHTML(B.id, 40, B.name)}<div class="bt"><b>${B.name}</b><span class="bmem">${B.members.map(m => `<span>${flagHTML(m, 13)} ${S.nations[m].name}${m === B.leader ? ' ★' : ''}</span>`).join('')}</span><span class="small muted">${B.focus != null ? `Common enemy: ${S.nations[B.focus].name}` : 'No common enemy yet'} · ${B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0)} provinces · ${B.members.reduce((s0, m) => s0 + capsHeld(m), 0)} capitals</span></div></div>`).join('')}</div>${blocOf(me) ? `<div class="row" style="align-items:center"><span class="small muted">Your coalition:</span><input id="blocname" class="rn2" maxlength="28" value="${blocOf(me).name}" style="width:200px"><button class="btn" data-act="bloc-rename">Rename</button><button class="btn war" data-act="bloc-leave">Leave coalition</button></div>` : `<p class="small muted">To found a coalition, form an alliance (Diplomacy or a trade deal with “Alliance”); allied nations form a coalition automatically. Invite more members by allying with them.</p>`}
-    <p class="small muted">A coalition wins together by holding ${WIN_CAPS + 3} starting capitals or ${Math.ceil(landNeed(me)*1.8)} provinces. Peace treaties hand every province a side occupies to it for good.</p>` : '')(blocs())}<div class="dip">${rowsHTML}</div>
+    <p class="small muted">A coalition wins together by holding ${coalCaps()} starting capitals or ${Math.ceil(landNeed(me)*1.8)} provinces. Peace treaties hand every province a side occupies to it for good.</p>` : '')(blocs())}<div class="dip">${rowsHTML}</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
 function researchLine(){
@@ -9658,7 +9662,7 @@ document.addEventListener('click', e => {
     case 'rp-play': if (REPLAY){ if (REPLAY.day >= REPLAY.n){ REPLAY.day = 0; } REPLAY.playing = !REPLAY.playing; b.textContent = REPLAY.playing ? 'Pause' : 'Play'; } break;
     case 'set-ui': SET.ui = +b.dataset.v; saveSet(); openModal(settingsHTML(), 'settings'); break;
     case 'slot-save': { try { localStorage.setItem(SLOT_KEY(+b.dataset.v), saveJSON()); toast(`Saved to slot ${b.dataset.v}.`, 'good', null); } catch (e) { toast('Could not save: browser storage is full or blocked.', 'bad', null); } openModal(settingsHTML(), 'settings'); break; }
-    case 'slot-load': { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY(+b.dataset.v))); if (d && restore(d)){ applyPalette(); geoDirty = true; save(); closeModal(); clearSel(); goHome(); toast(`Loaded slot ${b.dataset.v}: ${S.nations[PLAYER].name}, ${localClock(S.hour)}.`, 'good', null); } else toast('That save could not be loaded.', 'bad', null); } catch (e) { toast('That save could not be loaded.', 'bad', null); } break; }
+    case 'slot-load': { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY(+b.dataset.v))); if (d && restore(d)){ applyPalette(); geoDirty = true; save(); closeModal(); clearSel(); goHome(); toast(`Loaded slot ${b.dataset.v}: ${S.nations[PLAYER].name}, ${localClock(S.hour)}.`, 'good', null); } else toast(restore.why || 'That save could not be loaded.', 'bad', null); } catch (e) { toast('That save could not be loaded.', 'bad', null); } break; }
     case 'surprise-go': { const ps = pendingSurprise; pendingSurprise = null; closeModal(); if (ps) ps.go(); renderSide(true); break; }
     case 'surprise-cancel': pendingSurprise = null; closeModal(); if (sel.army !== null){ sel.target = null; targetPath = null; sel.surprise = null; sel.chase = null; } renderSide(true); break;
     case 'fire': if (a){ a.fire = b.dataset.v; renderSide(true); } break;
@@ -9732,13 +9736,14 @@ document.addEventListener('click', e => {
     case 'pick': pickSel = +b.dataset.p; showPicker(); break;
     case 'pickdiff': pickDiff = b.dataset.k; showPicker(); break;
     case 'pickdoc': pickDoc = b.dataset.k; showPicker(); break;
-    case 'pickscn': pickScn = b.dataset.k; pickSel = 0; showPicker(); break;
+    case 'pickscn': if (SCENARIOS[b.dataset.k] && pickScn !== b.dataset.k){ pickScn = b.dataset.k; const L = SCENARIOS[pickScn].powers; pickSel = Math.max(0, L.findIndex(p => p.name === 'Brazil')); } showPicker(); break;
+    case 'pickreg': { const L = SCENARIOS[pickScn].powers, k = b.dataset.k, ix = L.map((p, i) => i).filter(i => L[i].region === k).sort((x, y) => provsOf(L[y]).length - provsOf(L[x]).length); if (ix.length && L[pickSel].region !== k) pickSel = ix[0]; showPicker(); break; }
     case 'picklen': pickLen = +b.dataset.v; showPicker(); break;
     case 'pickmode': pickPersist = b.dataset.v === '1'; showPicker(); break;
     case 'upgrade': if (startUpgrade(PLAYER, b.dataset.t)){ toast(`Upgrading ${UNITS[b.dataset.t].name} to Mk ${ROMAN[S.nations[PLAYER].eng.m]}.`, 'info', null); } openModal(researchHTML(), 'research'); renderSide(true); break;
     case 'begin':   // building the campaign takes a moment: the button shows it is working first (painted before the heavy work starts)
       b.disabled = true; b.setAttribute('aria-busy', 'true'); b.classList.add('busy'); b.textContent = 'Mobilising\u2026';
-      requestAnimationFrame(() => setTimeout(() => { clearSave(); useScenario('world'); DAY_LIMIT = Infinity; newGame.doc = null; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel, [PLAYER]); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); try { dtWorker(); const v0 = {s:view.s, x:view.x, y:view.y}; goHome(); DT.pre = {s:view.s, x:view.x, y:view.y, t:performance.now(), pre:true}; view.s = v0.s; view.x = v0.x; view.y = v0.y; } catch (e) {} }, 0)); break;   // (the tile workers start now: the flight in prefetches its detail)
+      requestAnimationFrame(() => setTimeout(() => { clearSave(); useScenario(pickScn); DAY_LIMIT = Infinity; newGame.doc = null; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel, [PLAYER]); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); try { dtWorker(); const v0 = {s:view.s, x:view.x, y:view.y}; goHome(); DT.pre = {s:view.s, x:view.x, y:view.y, t:performance.now(), pre:true}; view.s = v0.s; view.x = v0.x; view.y = v0.y; } catch (e) {} }, 0)); break;   // (the tile workers start now: the flight in prefetches its detail)
     case 'ctl-toggle': { const bx = $('ctlbox'); if (bx){ bx.hidden = !bx.hidden; b.setAttribute('aria-expanded', String(!bx.hidden)); } } break;
     case 'tip-ok': ftipHide(true); break;
     case 'tip-skip': SET.tipsOff = true; ftipHide(false); saveSet(); break;
@@ -9746,7 +9751,7 @@ document.addEventListener('click', e => {
     case 'start': closeModal(false); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); setSpeed(1); break;
     case 'start-tut': closeModal(false); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); setSpeed(0); tutStart(); break;
     case 'resume': closeModal(); break;
-    case 'continue': { const d = loadSaved(); if (d && restore(d)){ clearSel(); } closeModal(); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); const R = catchUp(); if (R){ geoDirty = true; save(); openModal(awayHTML(R), 'paper'); } else setSpeed(1); break; }
+    case 'continue': { const d = loadSaved(); if (d && restore(d)){ clearSel(); } else if (d && restore.why) toast(restore.why, 'bad', null); closeModal(); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); const R = catchUp(); if (R){ geoDirty = true; save(); openModal(awayHTML(R), 'paper'); } else setSpeed(1); break; }
     case 'newgame': showPicker(); break;
   }
 });
@@ -9898,7 +9903,7 @@ const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['m
 const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual.';
 // the full text of the old briefing, kept in the Field Manual ("Getting started")
 const startHTML = () => { const me = S && S.nations ? S.nations[PLAYER] : null; return `<ul class="qs">
-  <li><b>Your goal</b>: ${me ? `you command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${SCN === 'world' ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}. ` : ''}Take independent land, out-produce your rivals and hold ${me ? landNeed(PLAYER) : 'a quarter of the world’s'} land provinces or ${WIN_CAPS} starting capitals.</li>
+  <li><b>Your goal</b>: ${me ? `you command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${!SCENARIOS[SCN].box ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}. ` : ''}Take independent land, out-produce your rivals and hold ${me ? landNeed(PLAYER) : 'a quarter of the world’s'} land provinces or ${WIN_CAPS} starting capitals.</li>
   <li><b>Recruit</b> in your cities and <b>research</b> new arms; every unit costs money and manpower plus, by type, oil, materials, iron (armor, guns, ships), electronics (aircraft, drones, air defence) and rare materials (advanced arms); research costs money, materials and rare materials, and two projects run at the same time.</li>
   <li><b>Move</b>: tap a force, then a destination (tap again or press Send). Troops embark on their own to cross water; roads and railways speed them up.</li>
   <li><b>Capture</b> provinces by parking ground troops in them. Terrain, rivers, supply and morale decide battles.</li>
@@ -9989,20 +9994,30 @@ function helpHTML(){ const me = S && S.nations ? S.nations[PLAYER] : null;
     <div class="hgrid">${HELP_SEC.map(([k, t, body], i) => `<section class="hsec" id="h-${k}"><h3><i>${String(i + 1).padStart(2, '0')}</i>${t}</h3>${typeof body === 'function' ? body() : body}</section>`).join('')}</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="airguide">Air &amp; drone guide</button><button class="btn" data-act="start-tut-again">Replay the tutorial</button><button class="btn" data-act="newgame">New campaign…</button></div>`; }
 function showHelp(){ openModal(helpHTML(), 'help'); }
-function provCount(pi){ const ci = powerCountry(POWERS[pi]); return ci >= 0 ? G.countries[ci].provs.length : 0; }
+// the start screen. Two worlds while the nations world is being rolled out: the nations world (tiers, regions; nations.js) and the classic
+// 15-power world. The picker only reads the lists: the scenario in use changes when a campaign begins (a running game keeps its own)
+const TIER_NAME = {S:'Superpower', A:'Major power', B:'Regional power', C:'Minor power'};
+const provsOf = P0 => { const ci = powerCountry(P0); return ci >= 0 ? G.countries[ci].provs : []; };
 function showPicker(){
   if (!G){ G = loadWorld(); worldLines(G); }
-  useScenario(pickScn); if (pickSel >= POWERS.length) pickSel = 0;
-  const cards = POWERS.map((P0, i) => { const n = provCount(i), cities = (G.countries[powerCountry(P0)]?.provs || []).filter(id => G.P[id].city).length;
-    const diff = DIFF[P0.name] || 'Hard';
-    return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}">${flagHTML(P0.name, 40, 'big')}<span class="pt"><b>${P0.name}</b><span>${n} provinces · ${cities} cities</span><span class="diff d-${String(diff).toLowerCase()}">${diff}</span></span></button>`}; })
-    .sort((a, b) => b.n - a.n).map(c => c.html).join('');
+  if (!SCENARIOS[pickScn]) pickScn = 'world';
+  const SC = SCENARIOS[pickScn], L = SC.powers, nat = !!SC.tiers; if (pickSel >= L.length) pickSel = 0;
+  const regs = nat ? NATIONS.regions.filter(r => L.some(p => p.region === r)) : [], reg = nat ? L[pickSel].region : null;
+  const cards = L.map((P0, i) => { if (nat && P0.region !== reg) return null; const n = provsOf(P0).length, cities = P0.cities ? P0.cities.length : provsOf(P0).filter(id => G.base.city[id]).length;
+    const diff = nat ? powerDifficulty(L, i) : DIFF[P0.name] || 'Hard';
+    return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}">${flagHTML(P0.name, 40, 'big')}<span class="pt"><b>${P0.name}</b>${nat ? `<span class="tier t-${P0.tier}">${TIER_NAME[P0.tier] || ''}</span>` : ''}<span>${n} provinces · ${cities} cities</span><span class="diff d-${String(diff).toLowerCase().replace(/\s+/g, '')}">${diff}</span></span></button>`}; })
+    .filter(Boolean).sort((a, b) => b.n - a.n).map(c => c.html).join('');
+  const caps = nat ? winCapsFor(L.length) : SC.caps, share = nat ? winShareFor(L.length) : WIN_SHARE, shareW = share === 0.25 ? 'a quarter' : share === 0.2 ? 'a fifth' : Math.round(share*100) + '%';
+  const nW = NUMW[L.length] || String(L.length), capW = NUMW[caps] || String(caps);
   openModal(`${LOGO}<div class="eyebrow" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
-    <p>${cap1(NUMW[POWERS.length])} powers fight for the world. Win by holding a quarter of the world's land or five starting capitals; there is no time limit. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>
+    ${SCENARIOS.world64 ? `<div class="row wsel" role="group" aria-label="World"><button class="btn ${nat ? 'primary' : ''}" data-act="pickscn" data-k="world64" aria-pressed="${nat}">Nations of the world<small>${SCENARIOS.world64.powers.length} nations · new rules</small></button><button class="btn ${!nat ? 'primary' : ''}" data-act="pickscn" data-k="world" aria-pressed="${!nat}">Classic<small>15 powers · old rules</small></button></div>` : ''}
+    ${nat ? `<p>${cap1(nW)} nations fight for the world. Win by holding ${shareW} of the world's land or ${capW} starting capitals; there is no time limit. Nations start close to equal: a big country has more land and cities, not much more money. Every other country is independent and can be taken.</p>
+    <div class="row regs" role="tablist" aria-label="Regions">${regs.map(r => `<button class="btn ${r === reg ? 'primary' : ''}" role="tab" aria-selected="${r === reg}" data-act="pickreg" data-k="${r}">${r}<small>${L.filter(p => p.region === r).length}</small></button>`).join('')}</div>`
+    : `<p>${cap1(nW)} powers fight for the world. Win by holding a quarter of the world's land or five starting capitals; there is no time limit. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>`}
     <div class="picks">${cards}</div>
     <div class="eyebrow">AI difficulty</div><div class="row">${DIFFS.map(d => `<button class="btn ${pickDiff === d.k ? 'primary' : ''}" data-act="pickdiff" data-k="${d.k}">${d.name}</button>`).join('')}</div>
     <div class="eyebrow">Mode</div><div class="row"><button class="btn ${!pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="0" title="Time only runs while you play.">Classic</button><button class="btn ${pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="1" title="The war keeps going while you are away at the normal pace (4 game minutes per real minute), up to 30 days of catch-up when you return.">Persistent</button></div>
-    <div class="row"><button class="btn primary" data-act="begin">Lead ${POWERS[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}<span class="psum">AI <b>${(DIFFS.find(d => d.k === pickDiff) || DIFFS[1]).name}</b> · World War · no time limit</span></div>`, 'picker');
+    <div class="row"><button class="btn primary" data-act="begin">Lead ${L[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}<span class="psum">AI <b>${(DIFFS.find(d => d.k === pickDiff) || DIFFS[1]).name}</b> · ${nat ? SC.name : 'World War'} · no time limit</span></div>`, 'picker');
 }
 function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
@@ -10458,6 +10473,7 @@ IM.on('fx', (type, p, extra, who) => { if (who.to != null ? who.to === PLAYER : 
 IM.on('geo', () => { geoDirty = true; });
 // the world was just built (first new game or load): make its drawable lines
 IM.on('world', () => worldLines(G));
+IM.on('cities', () => { geoDirty = true; });   // the set of cities changed with the world in use (classic or nations): the geometry is rebuilt with the new game or the load that follows
 // a move order was given (rules/movement.js orderMove): mark where the counter starts from
 IM.on('ordered', a => { try { if (GO.S !== S){ GO.clear(); GO.S = S; } goMark(a, S.speed ? Math.min(0.99, acc) : 0); } catch (e) {} });
 // a nation attacked or declared war on the player (rules/diplomacy.js surpriseWar, declareWar): the war warning popup

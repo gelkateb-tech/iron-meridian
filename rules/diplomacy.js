@@ -202,13 +202,16 @@ function diploDay(){
       else if (acceptOffer(m, n, 'peace').ok){ applyDeal(n, m, 'peace'); break; } }
     // declare war
     const pending = S.decl.some(d => d.by === n);
-    if (day >= 8 && warsOf(n).length <= 1 && !pending && rng() < 0.22*diffOf().war){
+    // (the nations world: a nation starts a war only while it is in at most TIER_WARS wars of its own making; wars declared on it do not count)
+    if (day >= 8 && (N.tier ? warsOf(n).filter(m => (N.wby || []).includes(m)).length <= TIER_WARS[N.tier] : warsOf(n).length <= 1) && !pending && rng() < 0.22*diffOf().war){
       let best = -1, bs = 0; const myP = natPower(n);
-      for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || inGrace(m)) continue;
+      for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || graceOn(n, m)) continue;
         if (opinion(n, m) >= 0 || myP < 1.1*natPower(m)) continue;
-        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = (cnt + 5)/(natPower(m) + 10)*(isSeat(m) ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1);
+        if (N.tier && warsOf(m).length >= (isSeat(m) ? TIER_GANG + 1 : TIER_GANG)) continue;   // (the nations world: the computer does not join in on a nation already at war; a person's nation may get a second enemy, never a third)
+        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = ((N.tier ? Math.min(cnt, TIER_LAND) : cnt) + 5)/(natPower(m) + 10)*(isSeat(m) ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1)*(N.tier && tierGap(N.tier, M.tier) >= 2 ? 0.5 : 1);   // (the nations world: a victim two tiers below is half as attractive)
         if (sc > bs){ bs = sc; best = m; } }
-      if (best >= 0){ if (natPower(n) > 1.6*natPower(best) && opinion(n, best) < -25 && rng() < 0.35) surpriseWar(n, best); else declareWar(n, best); }
+      if (best >= 0){ if (natPower(n) > 1.6*natPower(best) && opinion(n, best) < -25 && rng() < 0.35) surpriseWar(n, best); else declareWar(n, best);
+        if (N.tier){ N.wby = (N.wby || []).filter(m => atWar(n, m) || S.decl.some(d => d.by === n && d.to === m)); if (!N.wby.includes(best)) N.wby.push(best); } }
     }
     // treaties
     if (rng() < 0.12){ const nbs = S.nations.filter(M => M.alive && M.id !== n && borders(n, M.id) && rel(n, M.id).st === 'peace' && opinion(n, M.id) >= 0);

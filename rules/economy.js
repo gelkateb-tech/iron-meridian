@@ -2,6 +2,9 @@
 'use strict';
 const graceFor = o => o >= 0 && S.nations[o].small ? 24*21 : GRACE_H;
 const inGrace = o => o >= 0 && S.hour < graceFor(o);
+// may AI nation a not yet declare war on nation b? The classic world: b's own grace (three weeks for a small power). The nations world: 8 days
+// for everyone, 21 days when the attacker stands two or more tiers above its victim (S against B or C, A against C)
+const graceOn = (a, b) => S.nations[a].tier ? S.hour < (tierGap(S.nations[a].tier, S.nations[b].tier) >= 2 ? 24*21 : GRACE_H) : inGrace(b);
 const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
 let BLOCK = new Set();
 function computeBlockade(){ BLOCK = new Set(); const by = new Map(); for (const a of S.armies){ if (a.to !== null || !G.P[a.at].sea || !shipsN(a) || a.owner < 0) continue; for (const v of G.P[a.at].nbs){ const o = S.owner[v]; if (!G.P[v].sea && o >= 0 && atWar(a.owner, o)){ BLOCK.add(v); if (isSeat(o)){ const m = by.get(o) || by.set(o, new Map()).get(o); if (!m.has(v)) m.set(v, a.owner); } } } } tradeBlockade(); for (const me of seats()) blockNews(me, by.get(me) || new Map()); }
@@ -56,10 +59,12 @@ let INCC = {v:-1, S:null, m:[]};
 function income(n){ if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
 function income0(n){
   const g = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}, u = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}; let provs = 0;
-  const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1;
+  const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1, bM = N0.boostM;   // boostM: the nations world's own catch-up for manpower
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
     const m = (S.home[p] === n ? boost : 1)*capHit;
-    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ const c = ECO_CAPITAL; g.oil += c.oil; g.metal += c.metal; g.iron += c.iron; g.elec += c.elec; g.rare += c.rare; } }   // the capital: state industry, labs and recycling
+    // (a catch-up below 1 holds money back in full and goods by its square root only: a big country keeps about the goods of the others)
+    const mg = boost < 1 && S.home[p] === n ? Math.sqrt(boost)*capHit : m;
+    for (const k in g) g[k] += y[k]*(k === 'cash' ? m : k === 'mp' ? (bM != null ? (S.home[p] === n ? bM : 1)*capHit : m) : mg); if (S.nations[n].capital === p){ const c = ECO_CAPITAL; g.oil += c.oil; g.metal += c.metal; g.iron += c.iron; g.elec += c.elec; g.rare += c.rare; } }   // the capital: state industry, labs and recycling
   const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
   for (const k in g) g[k] *= eff;
   g.cash *= has(n, 'eco1') ? 1.2 : ECO_CASH_ALL; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;   // eco1-3: the old Economy research (now part of buildings); a nation that researched one keeps its bonus
