@@ -32,6 +32,7 @@ How it works from now on:
 - Unit training is limited to 2 queued per city for everyone (the computer players too); old saves with longer queues keep them but cannot add more until below 2, and the city panel shows 'x/2 in training' and greys the unit buttons with the reason.
 - Tapping a city now opens its city sheet straight away, with Build and Mobilize unit one tap each; the 'city or troops' menu is gone, and your troops in a city are reached by tapping their counter.
 - Three new infantry counter icons to choose from (standing soldier, helmet bust, crossed rifles) can be switched on with one setting in the code; the current icon stays the default.
+- Battle effects: up close, soldiers fire from their rifles, tanks from their barrels and artillery from its guns, hitting the ground around the enemy's troops; battle smoke and fires stay on their spot on the map and scale with it, drawn as sharp layered puffs at every zoom; zoomed out to counters only, a fight shows just a small crossed-swords badge and no gunfire.
 
 ## Released
 - v3.12 (commit 5b47dd8, public 2026-11-11):
