@@ -23,7 +23,7 @@ function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 :
   // population and Arms Factory level (a trickle from populous countryside); rare materials: rare-earth deposits and Rare Earth Mines
   return {cash:((P.city ? 8.5 : 1.8*pf) + ECO.cash*pp)*(1 + 0.2*b.fac)*f, oil:(P.oil ? 4.2 : 0)*(1 + 0.6*b.ref)*f, metal:((P.ore ? 1.4 : 0) + (P.city ? 0.9 : 0) + b.fdy*(P.ore ? 1.8 : 1.4))*f,
     iron:((P.ore ? 0.8 : 0) + (P.iron ? 0.8 : 0) + (P.city ? 0.8 : 0) + b.fdy*(P.ore ? 2.4 : 1.2))*f, elec:(P.city ? (0.2 + ECO.elec*pp)*(1 + 0.25*b.fac) : 0.004*pp)*f,
-    rare:((P.rare || 0) + (b.mine || 0)*mineLv(P))*f, mp:((P.city ? 1.2 : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + 3*b.rec)*f}; }
+    rare:((P.rare || 0) + (b.mine || 0)*mineLv(P))*f, mp:((P.city ? 1.2 : 0.25*pf) + ECO.mp*Math.pow(Math.max(0, popOf(p)), 0.8) + recMp(b.rec))*f}; }
 const ECO = GS > 1 ? {cash:0.68, mp:0.16, elec:0.047} : {cash:0.9, mp:0.22, elec:0.06};
 // ---- convoys: provinces cut off by land from the capital ship their output home; enemy warships on the route sink it
 let CONVOY_LOST = new Set();

@@ -42,6 +42,18 @@ function armyVisible(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
   if (a.owner !== me && a.owner >= 0 && a.u.spec && a.u.spec === count(a) && !S.armies.some(b => b.owner === me && !b.air && (b.at === a.at || G.P[b.at].nbs.includes(a.at)))) return false;   // special forces: only seen up close
   if (a.owner !== me && a.owner >= 0 && subOnly(a) && G.P[a.at].sea && !S.battles.includes(a.at) && !(vis.sonar && (vis.sonar.has(a.at) || (a.to !== null && vis.sonar.has(a.to)))) && rel(me, a.owner).st !== 'ally') return false;   // submerged: only sonar (warships next to it) or maritime patrol finds it
   return a.owner === me || (a.owner >= 0 && friendly(me, a.owner) && rel(me, a.owner).st === 'ally') || vis.has(a.at) || (a.to !== null && vis.has(a.to)); }
+// low-observable aircraft in flight (a wing of Stealth Bombers): radar, satellites, UAVs and other aircraft do not show them to a foreign nation.
+// Nation n sees such a wing over province p0 only from a Mobile SAM or jammer of its own standing in p0 or next to it (loSpotted); an early-warning
+// orbit of its own or of an ally gives a location-only contact at half the radar's range, never an identification (loLocated). On the ground the
+// wing is seen like any other.
+const loWing = a => !!a.air && count(a) > 0 && AIR_T.every(t => !a.u[t] || !!UNITS[t].lo);
+function loSpotted(n, p0){ if (p0 < 0) return false; for (const b of S.armies) if (b.owner === n && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
+function loLocated(n, p0){ if (p0 < 0) return false;
+  for (const b of S.armies) if (b.fly && b.fly.kind === 'orbit' && b.fly.ph === 'over' && b.u.awacs && (b.owner === n || (b.owner >= 0 && n >= 0 && rel(n, b.owner).st === 'ally')) && nearList(b.fly.tgt, AEW_R/2).includes(p0)) return true;
+  return false; }
+// is wing a, flying over province p0, hidden from nation n by its low-observable airframe (its own and its allies' wings never are)
+function loHidden(a, n, p0){ /*@DEV*/if (DEV.reveal) return false;/*@ENDDEV*/
+  return !!a.fly && a.owner !== n && loWing(a) && !(a.owner >= 0 && n >= 0 && rel(n, a.owner).st === 'ally') && !loSpotted(n, p0); }
 const subOnly = a => a.u.sub > 0 && a.u.sub === count(a);
 // AWACS contact: a foreign force inside an early-warning orbit that nothing identifies (not special forces, not a submerged sub)
 function armyLocated(a, vis){ const L = vis.loc, me = vis.n; if (!L || !L.size || a.owner === me || a.owner < 0 || a.fly) return false;

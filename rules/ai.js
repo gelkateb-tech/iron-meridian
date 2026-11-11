@@ -79,7 +79,7 @@ function aiAir(n){
     if (T === 'drone'){ if (!warsOf(n).length) continue; const tg = aiReconTarget(n, B, r); if (tg >= 0) orderAir(a, tg); continue; }
     if (T === 'awacs'){ if (!warsOf(n).length) continue; const tg = aiOrbitTarget(n, B, r); if (tg >= 0) orderAir(a, tg); continue; }
     if (T === 'mpa'){ const tg = aiSeaHunt(n, B, r); if (tg >= 0) orderAir(a, tg); continue; }
-    if (T === 'bomb'){ const tg = aiBombTarget(n, B, r); if (tg >= 0) orderAir(a, tg); else aiForward(n, a, B, r); continue; }
+    if (isBmb(T)){ const tg = aiBombTarget(n, B, r); if (tg >= 0) orderAir(a, tg); else aiForward(n, a, B, r); continue; }
     if (T === 'swarm' || T === 'sdrone'){ const tg = aiDroneTarget(n, B, r, T); if (tg >= 0) orderAir(a, tg); else aiForward(n, a, B, r); continue; }
     if (isStriker(a)){ let best = -1, bs = 0;
       for (const [pid, list] of provPowers()){ if (hexDist(B.cc, G.P[pid].cc) > r) continue; let sc = 0;
@@ -134,7 +134,7 @@ function enemyMix(n){
 function enemyMix0(n){
   const m = {soft:0, armored:0, air:0, naval:0}, c = {drone:0, bomb:0, sub:0, ad:0, sup:0, all:0}; let mm = 0;
   for (const a of S.armies){ if (a.owner < 0 || !atWar(n, a.owner)) continue; for (const t of UT){ const k = a.u[t]; if (!k) continue; m[UNITS[t].cls] += k*UNITS[t].hp; if (UNITS[t].cls === 'air' && !UNITS[t].dr) mm += k*UNITS[t].hp; const v = k*UNITS[t].cost/(UNITS[t].pack || 1); c.all += v;
-      if (UNITS[t].dr) c.drone += v; else if (t === 'bomb') c.bomb += v; else if (t === 'sub') c.sub += v; else if (t === 'sam' || t === 'jam') c.ad += v; else if (t === 'awacs' || t === 'mpa') c.sup += v; } }
+      if (UNITS[t].dr) c.drone += v; else if (isBmb(t)) c.bomb += v; else if (t === 'sub') c.sub += v; else if (t === 'sam' || t === 'jam') c.ad += v; else if (t === 'awacs' || t === 'mpa') c.sup += v; } }
   const tot = m.soft + m.armored + m.air + m.naval || 1, ct = c.all || 1;
   // cost shares of the kinds the counter-picks care about: drones, bombers, subs, air defence (SAM + jammers), support aircraft
   // airm: manned aircraft only (drones have their own counters: jammers, SAMs; counted in 'drone')
@@ -176,7 +176,7 @@ function aiPickUnit(n, p){
     // where an Air Superiority Fighter can be built it takes over most of the interceptor's share: it covers seven provinces, not one
     if (unlocked(n, 'asf') && bldOk(p, 'asf') && (mine.asf || 0) < 12){ w.asf += 0.6*w.int; w.int *= 0.4; }
     if ((mine.swarm || 0) > 48) w.swarm *= 0.2; if ((mine.sdrone || 0) > 8) w.sdrone *= 0.3; if ((mine.asf || 0) > 12) w.asf *= 0.4;
-    const manned = ['int', 'asf', 'jet', 'bomb', 'awacs', 'mpa', 'heli'].reduce((s0, t) => s0 + (mine[t] || 0), 0);
+    const manned = ['int', 'asf', 'jet', 'bomb', 'stealth', 'awacs', 'mpa', 'heli'].reduce((s0, t) => s0 + (mine[t] || 0), 0);
     if (manned > Math.max(4, allU*(H.bomb + H.air > 1 ? 0.16 : 0.1))){ const quota = {asf:H.bomb + H.air > 0 ? 6 : 4, awacs:1, mpa:2};
       for (const t of ['int', 'asf', 'jet', 'awacs', 'mpa', 'heli']) if (!((mine[t] || 0) < (quota[t] || 0))) w[t] = (w[t] || 0)*0.25; w.sam *= 0.7; } }
   { const N = S.nations[n], inc = income(n); if (inc.net.oil < 0 || (N.short && N.short.oil)){ w.tank *= 0.3; w.jet *= 0.3; w.int *= 0.5; w.crui *= 0.5; w.ifv *= 0.5; w.bomb *= 0.2; w.asf *= 0.5; w.mpa *= 0.5; w.awacs *= 0.5; }
@@ -259,6 +259,21 @@ function aiBomberWant(n, provs, inc){ if (!has(n, 'bomb1') || !warsOf(n).length 
   if (!G.P.some(P => S.owner[P.id] === n && P.city && S.bld[P.id].air >= 2 && !bdis(P.id, 'air'))) return 0;
   const goal = provs > 160 ? 4 : provs > 70 ? 3 : 2, have = (airMine(n).bomb || 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'bomb').length : 0), 0);
   return Math.max(0, goal - have); }
+// Stealth Bombers: the AI buys them late and rarely. Only from day 60, only at war with a power that fields SAM stacks (a force with two or more
+// Mobile SAMs), and never more than one wing per nation: AI_STEALTH_MAX aircraft, all at one airbase (aiStealthSite). They are never a random pick
+// (aiPickUnit gives them no weight): the AI saves for one (N.uSave with the city in .p)
+const AI_STEALTH_DAY = 60, AI_STEALTH_MAX = 2;
+const aiFoeSams = n => S.armies.some(b => b.owner >= 0 && (b.u.sam || 0) >= 2 && atWar(n, b.owner));
+const aiStealthOk = n => S.hour >= (AI_STEALTH_DAY - 1)*24 && warsOf(n).length > 0 && aiFoeSams(n);
+// the one city the nation's stealth wing is (or will be) built in: where the wing is based or one is in training, else an Airbase III city; -1 if none can train it
+function aiStealthSite(n){ const w = S.armies.find(a => a.owner === n && a.air && a.u.stealth > 0); let p = w ? w.air.base : -1;
+  if (p < 0) p = S.queue.findIndex((q, pp) => S.owner[pp] === n && q.some(j => j.t === 'stealth'));
+  if (p >= 0) return S.owner[p] === n && !G.P[p].sea && bldOk(p, 'stealth') ? p : -1;
+  const P = G.P.find(q => S.owner[q.id] === n && q.city && bldOk(q.id, 'stealth')); return P ? P.id : -1; }
+function aiStealthWant(n, inc){ if (!has(n, 'bomb3') || !aiStealthOk(n) || inc.net.oil < -2) return 0;
+  const wings = S.armies.filter(a => a.owner === n && a.air && a.u.stealth > 0); if (wings.length > 1) return 0;
+  const have = wings.reduce((s0, a) => s0 + a.u.stealth + ((a.air.pend && a.air.pend.stealth) || 0), 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'stealth').length : 0), 0);
+  return have < AI_STEALTH_MAX && aiStealthSite(n) >= 0 ? AI_STEALTH_MAX - have : 0; }
 // Air Superiority Fighters wanted: with the research and an Airbase II, at war with powers that fly bombers, AWACS, patrol planes or drones
 // (or hit by air), a small fighter force: 2 + up to 4 more with the threat, bigger empires a little more
 function aiAsfWant(n, provs, inc){ if (!has(n, 'asf1') || !warsOf(n).length || inc.net.oil < -2) return 0;
@@ -268,7 +283,7 @@ function aiAsfWant(n, provs, inc){ if (!has(n, 'asf1') || !warsOf(n).length || i
   const goal = Math.min(provs > 160 ? 8 : 6, 2 + Math.round(Math.min(4, thr))), have = (airMine(n).asf || 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'asf').length : 0), 0);
   return Math.max(0, goal - have); }
 // what the AI holds back: the link project it saves for (cash), and the counter unit it saves for (all of its costs)
-const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awacs']);   // counters, and the heavy aircraft it rarely picks: saved for, not swapped
+const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awacs', 'stealth']);   // counters, and the heavy aircraft it rarely picks: saved for, not swapped
 // an AI buys from other AIs' sell listings on the order book (cheapest first, up to 1.15x the world price; never an enemy's or an embargoing power's):
 // goods change hands between nations without moving the world price. Returns what it got.
 function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
@@ -286,6 +301,14 @@ function aiSite(n, k){ let best = -1, bv = 0;
     const v = k === 'mine' ? (lv < BUILD.mine.max ? mineLv(P)*(1 - 0.25*lv)*(S.home[p] === n ? 1 : 0.7) : 0) : k === 'fdy' ? (lv < BUILD.fdy.max ? (P.ore ? 2 : 1)/(1 + lv)*(S.home[p] === n ? 1 : 0.6)*(1 + 0.1*rng()) : 0) : (lv < 3 ? (1 + popOf(p))/(1 + lv) : 0);
     if (v > bv){ bv = v; best = p; } }
   return best; }
+// Recruiting Office for an AI short of manpower: a new office first (the first province without one, +3k a day for $40M); only when every province
+// has one, the next level of its lowest office (cities first). No upgrades otherwise, except where training speed is the limit (aiRecSlow)
+function aiRecSite(n){ let best = -1, bl = 99;
+  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, 'rec')) continue; const l = S.bld[p].rec || 0;
+    if (!l) return p; if (l >= BUILD.rec.max) continue; const v = l - (G.P[p].city ? 0.5 : 0); if (v < bl){ bl = v; best = p; } }
+  return best; }
+// training speed limits the AI in city p: it is at war, the city's queue is full (two or more waiting) and the money for the next level is spare
+function aiRecSlow(n, p){ const l = S.bld[p].rec || 0; return l >= 1 && l < BUILD.rec.max && S.queue[p].length >= 2 && warsOf(n).length > 0 && S.nations[n].cash > buildCost(n, 'rec', l + 1, p).cash + 300; }
 const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U = N.uSave;
   // at war, troops come first: the link project only holds its money back once there is twice that much in the bank
   let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
@@ -309,12 +332,13 @@ function aiArmyCap(n){ if (ARMYC.v !== tickVer || ARMYC.S !== S){ ARMYC.v = tick
 function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
   if (rFree(N)){   // a slot is free (one start per turn: the other slot fills on a later turn, with a different project)
-    const av = TECH.filter(t => !has(n, t.id) && !rRunning(N, t.id) && (!t.req || has(n, t.req)));
+    const av = TECH.filter(t => !has(n, t.id) && !rRunning(N, t.id) && techOpen(n, t));
     if (av.length){ const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0};
       const hb = H.bomb > 0 ? 4 : 0, wr = warsOf(n).length > 0, ab2 = G.P.some(P => S.owner[P.id] === n && S.bld[P.id].air >= 2);
       // enemies fielding (or able to field) bombers, AWACS and patrol planes, or flying drones, call for Air Superiority Fighters
       const aw = (() => { const foes = warsOf(n), heavy = foes.filter(e => has(e, 'bomb1') || has(e, 'awacs1')).length; const v = (wr ? 2.5 : 0) + 14*mx.bomb + 12*mx.sup + 8*mx.drone + 3*Math.min(2, heavy) + (H.bomb + H.air > 0 ? 4 : 0); return {asf:v, air2:0}; })();   // (fighters are open from day one: Precision Munitions no longer leads there)
-      const RW = {air1:3, eco1:3, air2:(wr ? 4.2 : 2.6) + 4*(mx.bomb + mx.air) + 2*Math.min(3, H.bomb) + hb + aw.air2, drone1:2.5, uav2:2, uav3:1.5, uav4:2, uav5:1.5, swarm1:3, sdrone1:2.5, jam1:0.8 + 14*mx.drone + 2*Math.min(3, H.drone), asf1:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + aw.asf, mpa1:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), awacs1:wr ? 2.2 : 1.5, bomb1:wr ? (ab2 ? 11 : 8) : 3};
+      const RW = {air1:3, eco1:3, air2:(wr ? 4.2 : 2.6) + 4*(mx.bomb + mx.air) + 2*Math.min(3, H.bomb) + hb + aw.air2, drone1:2.5, uav2:2, uav3:1.5, uav4:2, uav5:1.5, swarm1:3, sdrone1:2.5, jam1:0.8 + 14*mx.drone + 2*Math.min(3, H.drone), asf1:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + aw.asf, mpa1:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), awacs1:wr ? 2.2 : 1.5, bomb1:wr ? (ab2 ? 11 : 8) : 3,
+        bomb2:(airMine(n).bomb || 0) > 0 ? 2.5 : 0.8, bomb3:aiStealthOk(n) ? 3 : 0.15};   // stealth bombers: only late, at war with a power that fields SAM stacks
       // the pick sticks for a day: an expensive tech (bombers, fighters) is saved for instead of losing every roll to the cheap ones
       let pick = N.rPick && N.rPick.until > S.hour ? av.find(t => t.id === N.rPick.id) : null;
       const rInc = Math.max(0, income(n).net.rare), rOk = t => N.rare + 5*rInc >= t.rare;   // fundable in about five days of rare-material income
@@ -343,6 +367,7 @@ function aiTurn(n){
     if (needs.length) for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && S.cons[p]) busy[S.cons[p].k] = (busy[S.cons[p].k] || 0) + 1;
     const ord = needs[0] === 'mine' ? ['mine', ...needs.slice(1).map((x, i, a) => a[(j0 + i) % a.length])] : needs.map((x, i, a) => a[(j0 + i) % a.length]);
     for (let j = 0; j < ord.length && done < jobs && N.cash > 90; j++){ const need = ord[j]; if (need !== 'mine' && (busy[need] || 0) >= (provs > 150 ? 2 : 1)) continue;
+      if (need === 'rec'){ const p = aiRecSite(n); if (p >= 0 && build(n, p, 'rec')){ done++; busy.rec = (busy.rec || 0) + 1; } continue; }
       if (need === 'mine' || need === 'fac' || need === 'fdy'){ const p = aiSite(n, need); if (p >= 0 && build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; } continue; }
       for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, need) || S.bld[p][need] >= BUILD[need].max) continue;
         if (build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; break; } } }
@@ -385,6 +410,12 @@ function aiTurn(n){
   // fighters before bombers: an ASF want replaces a bomber saving (and anything but another counter)
   { const A3 = aiAsfWant(n, provs, inc), U0 = N.uSave && N.uSave.until > S.hour ? N.uSave : null; if (A3 && (!U0 || U0.t === 'bomb' || !AI_CTR.has(U0.t)) && rng() < 0.5) N.uSave = {t:'asf', until:S.hour + 48}; }
   { const B3 = aiBomberWant(n, provs, inc); if (B3 && !(N.uSave && N.uSave.until > S.hour) && rng() < 0.4) N.uSave = {t:'bomb', until:S.hour + 48}; }
+  // the stealth wing (see aiStealthWant): an Airbase III first, then the aircraft, saved for like any counter; a saving whose reason is gone is dropped
+  if (has(n, 'bomb3')){ const ok = aiStealthOk(n);
+    if (N.uSave && N.uSave.t === 'stealth' && !aiStealthWant(n, inc)) N.uSave = null;
+    if (ok && aiStealthSite(n) < 0 && !S.armies.some(a => a.owner === n && a.air && a.u.stealth > 0)){ const P = G.P.find(q => S.owner[q.id] === n && q.city && S.bld[q.id].air === 2 && !S.cons[q.id]);
+      if (P && N.cash > buildCost(n, 'air', 3, P.id).cash + 150 && rng() < 0.3) build(n, P.id, 'air'); }
+    else if (ok && aiStealthWant(n, inc) && !(N.uSave && N.uSave.until > S.hour) && rng() < 0.3) N.uSave = {t:'stealth', p:aiStealthSite(n), until:S.hour + 72}; }
   { const U = N.uSave; if (U && U.until > S.hour && UNITS[U.t]){ const c = ucost(n, U.t);
       for (const k of MKT_K){ const miss = Math.ceil(c[k] - N[k]); if (miss <= 0) continue; const q = miss + 5; if (N.cash >= c.cash + q*buyPrice(n, k) + 20) trade(n, k, q); } } }
   for (let p = 0; p < G.P.length; p++){
@@ -399,6 +430,7 @@ function aiTurn(n){
       else if (S.bld[p].yard === 1 && N.cash > 220 && rng() < 0.2 && !G.P.some(P => S.owner[P.id] === n && S.bld[P.id].yard >= 2)) build(n, p, 'yard');
       else if (S.bld[p].air === 1 && (has(n, 'asf1') || has(n, 'bomb1') || has(n, 'awacs1')) && N.cash > 200 && rng() < (has(n, 'bomb1') || has(n, 'asf1') ? 0.6 : 0.4) && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air >= 2).length < 2) build(n, p, 'air');   // Airbase II (up to two) for the heavy aircraft
       else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
+      else if (aiRecSlow(n, p) && rng() < 0.15) build(n, p, 'rec');   // training speed is the limit here: the next Recruiting Office level
       else if (S.bld[p].air >= 1 && S.bld[p].air < 3 && N.cash > 300 + 120*S.bld[p].air && rng() < 0.2 && S.armies.filter(w => w.owner === n && w.air && w.air.base === p && count(w)).length >= 2 && S.armies.some(w => w.owner === n && w.air && w.air.base === p && (w.air.wear || 0) > 0.2)) build(n, p, 'air');   // worn wings: faster repairs
       else if ((canGrow || N.cash > 900) && N.cash > 700 && rng() < (N.cash > 1000 ? 0.2 : 0.08)){ const up = ['fac', 'air', 'yard', 'silo'].find(k => S.bld[p][k] > 0 && S.bld[p][k] < BUILD[k].max && N.cash > buildCost(n, k, S.bld[p][k] + 1, p).cash + 450); if (up) build(n, p, up); }
     }
@@ -406,14 +438,14 @@ function aiTurn(n){
     if (p === N.capital && S.queue[p].length < 3 && (threatNear(p, n) || enemiesAt(p, n)) && canAfford(n, 'inf')) recruit(n, p, 'inf');   // capital under threat: infantry first, savings or not
     else if (p === N.capital && S.queue[p].length < 2 && warsOf(n).length && canAfford(n, 'inf') && N.cash > 60){ const keep = Math.max(4, Math.min(12, Math.round(units*0.07)));   // at war: keep the garrison topped up
       if (stationaryAt(p).filter(b => b.owner === n && !b.air).reduce((s0, b) => s0 + count(b), 0) + S.queue[p].length < keep) recruit(n, p, 'inf'); }
-    const U1 = N.uSave && N.uSave.until > S.hour ? N.uSave : null;
+    const U1 = N.uSave && N.uSave.until > S.hour && (N.uSave.p == null || N.uSave.p === p) ? N.uSave : null;   // (.p: the one city this saving is for)
     if (S.queue[p].length < 2 && (canGrow || N.cash > 600 || (U1 && bldOk(p, U1.t) && canAfford(n, U1.t)))){   // a counter saved for is bought even outside growth
       const U = U1;
       const hold = U && bldOk(p, U.t) && reqsOf(U.t).some(r => r.b === 'air' && r.l >= 2) && S.queue[p].length >= 1;
       if (U && bldOk(p, U.t) && canAfford(n, U.t)){ if (recruit(n, p, U.t) !== false) N.uSave = null; }
       else if (!hold){ let t = aiPickUnit(n, p);
         if (t && !canAfford(n, t) && unlocked(n, t) && bldOk(p, t)) aiBuyFor(n, ucost(n, t), 1.3, 60);   // goods short: buy them (up to 1.3x the base price) when $60M stay spare
-        if (t && !canAfford(n, t)){ if (AI_CTR.has(t) && !U && unlocked(n, t)){ N.uSave = {t, until:S.hour + 24}; t = null; } else t = canMobilize(n, p, 'inf') ? null : 'inf'; }
+        if (t && !canAfford(n, t)){ if (AI_CTR.has(t) && !(N.uSave && N.uSave.until > S.hour) && unlocked(n, t)){ N.uSave = {t, until:S.hour + 24}; t = null; } else t = canMobilize(n, p, 'inf') ? null : 'inf'; }
         if (t && aiSpare(n, t, true)) recruit(n, p, t); }
     }
   }
