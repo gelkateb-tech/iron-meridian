@@ -39,7 +39,7 @@ const { chromium } = require('playwright');
     const foe = (() => { for (const P of G.P) if (S.owner[P.id] === n) for (const v of P.nbs){ const o = S.owner[v]; if (o >= 0 && o !== n && o !== ME) return o; } return -1; })();
     const N = S.nations[n], keep = {cash:N.cash, metal:N.metal, oil:N.oil, mp:N.mp, tech:{...N.tech}};
     const C2 = cities(n).find(P => P.id !== N.capital) || cities(n)[0];
-    const setup = () => { for (const k of ['air1', 'air2', 'bomb1']) N.tech[k] = 1; S.bld[C2.id].air = 2; S.bld[C2.id].fac = Math.max(1, S.bld[C2.id].fac); S.bld[C2.id].rec = 1; N.cash = 3000; N.metal = 600; N.oil = 400; N.mp = 600; N.uSave = null; N.research = N.research || {id:'eco1', h:999, h0:999}; clearQ(n); };
+    const setup = () => { for (const k of ['u_jet', 'u_int', 'jet_pgm', 'int_msl', 'u_bomb']) N.tech[k] = 1; S.bld[C2.id].air = 2; S.bld[C2.id].fac = Math.max(1, S.bld[C2.id].fac); S.bld[C2.id].rec = 1; N.cash = 3000; N.metal = 600; N.oil = 400; N.mp = 600; N.uSave = null; N.research = N.research || {id:'eco1', h:999, h0:999}; clearQ(n); };
     // 3. bomber doctrine: at war, Strategic Bombers and an Airbase II -> the AI wants bombers and queues one
     setup(); war(n, foe); out.want = im.r2.bomberWant(n);
     let turns = 0; for (; turns < 72 && !qOf(n, 'bomb'); turns++) im.tick();   // three days of play (its turns come every 4 h)
@@ -47,7 +47,7 @@ const { chromium } = require('playwright');
     ck('an AI at war with Strategic Bombers and an Airbase II wants 2-4 bombers', out.want >= 2 && out.want <= 4, out.bomber);
     ck('... and queues one at its Airbase II within three days', qOf(n, 'bomb') >= 1 && S.queue[C2.id].some(j => j.t === 'bomb'), out.bomber);
     // control: at peace (or without the research) it does not want any
-    clearQ(n); peace(n, foe); for (const o of S.nations) if (o.id !== n && F.atWar(n, o.id)) peace(n, o.id); out.wantPeace = im.r2.bomberWant(n); war(n, foe); N.tech.bomb1 = 0; delete N.tech.bomb1; out.wantNoTech = im.r2.bomberWant(n); N.tech.bomb1 = 1;
+    clearQ(n); peace(n, foe); for (const o of S.nations) if (o.id !== n && F.atWar(n, o.id)) peace(n, o.id); out.wantPeace = im.r2.bomberWant(n); war(n, foe); N.tech.u_bomb = 0; delete N.tech.u_bomb; out.wantNoTech = im.r2.bomberWant(n); N.tech.u_bomb = 1;
     ck('no bomber wanted at peace or without Strategic Bombers', out.wantPeace === 0 && out.wantNoTech === 0, {peace:out.wantPeace, noTech:out.wantNoTech});
     // 4. saving for a bomber with no oil: the AI buys the missing oil on the world market and then builds it
     setup(); war(n, foe); N.oil = 0; N.uSave = {t:'bomb', until:S.hour + 48}; const cash0 = N.cash; F.aiTurn(n);
@@ -59,7 +59,7 @@ const { chromium } = require('playwright');
       S.storms = []; if (S.bdis && S.bdis[C2.id]) delete S.bdis[C2.id];   // weather and a knocked-out airbase ground any raid (airCheck): keep this check about the AI's choice   // a controlled raid: the nearest enemy city, no enemy fighter patrol up yet (the foe's own AI may have launched one during the earlier ticks)
       let flew = false; for (let i = 0; i < 8 && !flew; i++){ F.aiAir(n); flew = !!W.fly; if (!flew){ W.air.cd = 0; } }
       out.bombFly = {flew, to:W.fly ? (G.P[W.fly.tgt] || {}).name : null, tgt:tgt.name, ready:im.r2.bombDbg ? im.r2.bombDbg(W, tgt.id) : null}; ck('the AI sends its bombers on a raid', flew, out.bombFly); W.u.bomb = 0; delete W.fly; im.v3c.removeEmpty(); }
-    { const pick = (m, k) => { const c = {}; const cp = cities(m).find(P => S.bld[P.id].air >= 2) || cities(m)[0]; for (const kk of ['air1', 'air2', 'asf1']) S.nations[m].tech[kk] = 1; S.bld[cp.id].air = 2; S.bld[cp.id].fac = Math.max(2, S.bld[cp.id].fac);
+    { const pick = (m, k) => { const c = {}; const cp = cities(m).find(P => S.bld[P.id].air >= 2) || cities(m)[0]; for (const kk of ['u_jet', 'u_int', 'jet_pgm', 'int_msl', 'u_asf']) S.nations[m].tech[kk] = 1; S.bld[cp.id].air = 2; S.bld[cp.id].fac = Math.max(2, S.bld[cp.id].fac);
         for (let i = 0; i < k; i++){ const t = A.aiPickUnit(m, cp.id); c[t] = (c[t] || 0) + 1; } return c; };
       const H = (S.airHit || (S.airHit = {})); const h0 = H[foe]; H[foe] = {drone:0, bomb:0, air:0}; const base = pick(foe, 600); H[foe] = {drone:0, bomb:3, air:0}; const hit = pick(foe, 600); H[foe] = h0 || {drone:0, bomb:0, air:0};
       const share = c => ['int', 'asf', 'sam'].reduce((s0, t) => s0 + (c[t] || 0), 0)/600; out.counter = {base:+share(base).toFixed(3), bombed:+share(hit).toFixed(3)};
@@ -69,7 +69,7 @@ const { chromium } = require('playwright');
     ck('a cash-poor AI sells surplus metal on the world market', m0 - N.metal >= 20, out.sale);
     // 7. manned aircraft cap: a force already 30% fighters stops picking more of them (repair 3: the specialists keep a small quota of their own,
     //    a few ASF and one AWACS, so the wing here already holds that quota; v3mkt.js checks the quota itself)
-    { const cp = C2.id; setup(); const g = im.addArmy(n, N.capital, {inf:20}); const f = im.addArmy(n, cp, {int:12, asf:4, awacs:1}); f.air = {base:cp, cd:0}; S.bld[cp].air = 2; N.tech.asf1 = 1;
+    { const cp = C2.id; setup(); const g = im.addArmy(n, N.capital, {inf:20}); const f = im.addArmy(n, cp, {int:12, asf:4, awacs:1}); f.air = {base:cp, cd:0}; S.bld[cp].air = 2; N.tech.u_asf = 1;
       const cnt = () => { const c = {}; for (let i = 0; i < 600; i++){ const t = A.aiPickUnit(n, cp); c[t] = (c[t] || 0) + 1; } return ['int', 'asf', 'jet', 'awacs'].reduce((s0, t) => s0 + (c[t] || 0), 0)/600; };
       im.tick(); const capped = cnt(); f.u.int = 0; f.u.asf = 0; f.u.awacs = 0; im.v3c.removeEmpty(); im.tick(); const free = cnt(); g.u.inf = 0; im.v3c.removeEmpty();
       out.mannedCap = {capped:+capped.toFixed(3), free:+free.toFixed(3)}; ck('manned-aircraft picks drop once fighters are a large share of the force', capped < free*0.5, out.mannedCap); }

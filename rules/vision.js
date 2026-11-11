@@ -23,13 +23,13 @@ function visibleSet(n){
   for (const a of S.armies){ if (!al.has(a.owner)) continue;
     if (a.fly && a.fly.ph === 'over'){ const f = a.fly;
       if (f.kind === 'recon' && a.u.drone) for (const q of nearList(f.tgt, uavOf(a.owner).vis)){ v.add(q); uav.add(q); }   // UAV: identifies everything around its target
-      else if (f.kind === 'hunt') for (const q of nearList(f.tgt, MPA_R)){ if (G.P[q].sea){ v.add(q); sonar.add(q); } }   // maritime patrol: ships and submerged subs
-      else if (f.kind === 'orbit') for (const q of nearList(f.tgt, AEW_R)) loc.add(q); }   // AWACS radar: location only
-    if (!a.air && !a.fly && G.P[a.at].sea && shipsN(a)){ sonar.add(a.at); for (const q of G.P[a.at].nbs) if (G.P[q].sea) sonar.add(q); }   // warships hear submarines close by
+      else if (f.kind === 'hunt') for (const q of nearList(f.tgt, rMpaR(a.owner))){ if (G.P[q].sea){ v.add(q); sonar.add(q); } }   // maritime patrol: ships and submerged subs
+      else if (f.kind === 'orbit'){ for (const q of nearList(f.tgt, rAewR(a.owner))) loc.add(q); if (a.u.awacs && has(a.owner, 'awacs_g2')) for (const q of nearList(f.tgt, rAewR(a.owner)/2)) v.add(q); } }   // AWACS radar: location only
+    if (!a.air && !a.fly && G.P[a.at].sea && shipsN(a)){ sonar.add(a.at); const far = a.u.frig && has(a.owner, 'frig_sonar'); for (const q of G.P[a.at].nbs) if (G.P[q].sea){ sonar.add(q); if (far) for (const w of G.P[q].nbs) if (G.P[w].sea) sonar.add(w); } }   // warships hear submarines close by
     if (a.fly && a.u.awacs && a.u.awacs === count(a)) continue;   // early warning radar locates, it never identifies
     if (a.fly){ const [wx, wy] = flightPos(a), c = worldToCell(wx, wy), p0 = c >= 0 ? G.prov[c] : -1; if (p0 >= 0) ring(p0, (isDrone(a) || a.fly.ph === 'patrol' || a.fly.ph === 'over' && a.fly.kind === 'recon') ? 2 : 1); continue; }   // aircraft spot what they fly over
     if (a.air) continue;
-    for (const q of nearList(a.at, 0.8*LEG)) v.add(q); if (a.to !== null) v.add(a.to); }
+    for (const q of nearList(a.at, rSightF(a)*LEG)) v.add(q); if (a.to !== null) v.add(a.to); }
   for (const st of (S.sats || [])) if (al.has(st.owner)) for (const p0 of satSwath(st)) v.add(p0);
   /*@DEV*/if (DEV.reveal) for (let p = 0; p < G.P.length; p++) v.add(p);/*@ENDDEV*/   // (in sight = identified; armyVisible shows hidden subs and special forces too)
   for (const q of v) loc.delete(q); v.uav = uav; v.loc = loc; v.sonar = sonar;
@@ -49,7 +49,7 @@ function armyVisible(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
 const loWing = a => !!a.air && count(a) > 0 && AIR_T.every(t => !a.u[t] || !!UNITS[t].lo);
 function loSpotted(n, p0){ if (p0 < 0) return false; for (const b of S.armies) if (b.owner === n && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
 function loLocated(n, p0){ if (p0 < 0) return false;
-  for (const b of S.armies) if (b.fly && b.fly.kind === 'orbit' && b.fly.ph === 'over' && b.u.awacs && (b.owner === n || (b.owner >= 0 && n >= 0 && rel(n, b.owner).st === 'ally')) && nearList(b.fly.tgt, AEW_R/2).includes(p0)) return true;
+  for (const b of S.armies) if (b.fly && b.fly.kind === 'orbit' && b.fly.ph === 'over' && b.u.awacs && (b.owner === n || (b.owner >= 0 && n >= 0 && rel(n, b.owner).st === 'ally')) && nearList(b.fly.tgt, rAewR(b.owner)/2).includes(p0)) return true;
   return false; }
 // is wing a, flying over province p0, hidden from nation n by its low-observable airframe (its own and its allies' wings never are)
 function loHidden(a, n, p0){ /*@DEV*/if (DEV.reveal) return false;/*@ENDDEV*/

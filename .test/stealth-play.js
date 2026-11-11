@@ -20,7 +20,7 @@ const THREE_LOCAL = '/home/user/iron-meridian/tools/vendor/three.min.js';
   const act = (attrs) => p.evaluate(a => { const e = document.createElement('button'); for (const k in a) e.setAttribute(k, a[k]); e.style.display = 'none'; document.body.appendChild(e); e.click(); e.remove(); }, attrs);
   await p.click('#devbadge'); await p.waitForTimeout(250);
   await p.click('[data-dev="tog"][data-k="res"]'); await p.click('[data-dev="tog"][data-k="research"]'); await p.click('[data-dev="resall"]'); await p.click('[data-dev="tog"][data-k="instant"]'); await p.waitForTimeout(150);
-  ok('research all includes Strategic Bomber Upgrade and Stealth Bombers', await p.evaluate(() => { const t = window.__im.S.nations[0].tech; return !!(t.bomb2 && t.bomb3 && t.air3); }));
+  ok('research all includes Strategic Bomber Upgrade and Stealth Bombers', await p.evaluate(() => { const t = window.__im.S.nations[0].tech; return !!(t.bomb_up && t.u_stealth && t.jet_lo); }));
   ok('the developer spawn list offers the Stealth Bomber', await p.evaluate(() => [...document.querySelectorAll('#devt option')].some(o => o.value === 'stealth' && /Stealth Bomber/.test(o.textContent))));
   // mobilize through the game's own buttons: Airbase to level III in the capital, then three Stealth Bombers
   const cap = await p.evaluate(() => window.__im.S.nations[0].capital);

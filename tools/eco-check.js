@@ -12,7 +12,7 @@ globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(pa
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') +
-  '\nreturn {IM, income, provYield, buildCost, ucost, cityMain, cityOut, canBuildHere, trainF, stockCap, has, useScenario, SCENARIOS, UNITS, BUILD, TECH, TECH_BY, BK, MKT_BASE, ARMS_PCT};';
+  '\nreturn {IM, income, provYield, buildCost, ucost, cityMain, cityOut, canBuildHere, trainF, stockCap, has, useScenario, SCENARIOS, UNITS, BUILD, RNODES, RCATS, RN, BK, MKT_BASE, ARMS_PCT};';
 const load = () => new Function(SRC)();
 let bad = 0; const ok = (c, msg) => { if (!c){ bad++; console.log('FAIL  ' + msg); } }, near = (a, b, e = 1e-6) => Math.abs(a - b) <= e*Math.max(1, Math.abs(a), Math.abs(b));
 
@@ -30,7 +30,7 @@ console.log('cities ' + cities.length + '  ' + KS.map(k => k + ' ' + cnt[k]).joi
 // ---- 2. buildings
 ok(!R.BUILD.ref && !R.BUILD.fdy && !R.BUILD.mine, 'Refinery, Foundry or Rare Earth Mine still in BUILD');
 ok(R.BUILD.fac.name === 'Army Base' && R.BUILD.arms && R.BUILD.arms.max === 5, 'Army Base / Arms Industry missing');
-ok(!R.TECH.some(T => T.branch === 'Economy') && !R.TECH_BY.eco1, 'the Economy research branch is still there');
+ok(!R.RCATS.some(C => /econom/i.test(C.name)) && !R.RN.eco1, 'the Economy research branch is still there');
 ok(R.BUILD.rec.max === 5 && R.BUILD.rec.cost === 40 && R.buildCost(0, 'rec', 5, 0).cash === 360, 'the Recruiting Office is not the five-level one');
 for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owner[q.id] >= 0), p = P.id, y0 = R.provYield(p), keep = {...S.bld[p]};
   S.bld[p].fac = 3; const y1 = R.provYield(p); ok(Object.keys(y0).every(r => near(y0[r], y1[r])), `Army Base changes the income of ${P.cityName}`);

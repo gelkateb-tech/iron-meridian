@@ -3,8 +3,6 @@
 function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = {cash:Math.round(U.cost*f), oil:U.oil, metal:Math.round(U.metal*f), iron:Math.round((U.iron || 0)*f), elec:Math.round((U.elec || 0)*f), rare:U.rare || 0, mp:U.mp};
   if (t === 'drone' && n >= 0 && S && S.nations[n]){ const lv = uavLv(n); c.elec += lv - 1; if (lv >= 4) c.rare += 2*(lv - 3); }   // better UAVs: more electronics, rare materials from the armed UAV IV
   return c; }
-function canUpgrade(n, t){ const N = S.nations[n], m = markOf(n, t) + 1; if (m > 4 || N.eng || !unlocked(n, t)) return false; return hasC(N, markCost(t, m)); }
-function startUpgrade(n, t){ if (!canUpgrade(n, t)) return false; const N = S.nations[n], m = markOf(n, t) + 1, c = markCost(t, m); payC(N, c); N.eng = {t, m, h:c.days*24, h0:c.days*24}; return true; }
 // ---------- mobilization rules (no drawing, no UI): what a city needs before it can train a unit.
 // A unit must be researched (units with no tech are known from day one) AND its city must have the unit's building(s) at the needed level, working.
 const reqsOf = t => { const U = UNITS[t]; return U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };
@@ -14,7 +12,7 @@ const bldOk = (p, t) => reqsOf(t).every(r => S.bld[p][r.b] >= r.l && !bdis(p, r.
 function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why:'Unknown unit'};
   if (S.owner[p] !== n) return {kind:'own', why:'Not your city'};
   if (!G.P[p].city) return {kind:'city', why:'Units are mobilized in cities'};
-  if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${TECH_BY[U.tech].name}`};
+  if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
     if (lv < r.l) return {kind:'bld', b:r.b, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${c.h} h` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
     if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
@@ -60,7 +58,7 @@ function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const 
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
 const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
 function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
-const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)));
+const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)*(n >= 0 ? rTrainF(n, t) : 1)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && P.city && P.coast)); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
@@ -82,7 +80,7 @@ function spawn(n, p, t){
   const air = UNITS[t].cls === 'air';
   const RL = isSeat(n) ? desk(n).rally : null;   // a seat's rally points: new ground units march there on their own
   if (!air && RL && RL[p] != null && RL[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, RL[p]); if (!na.path.length) delete RL[p]; return; }
-  const k = UNITS[t].pack || 1;
+  const k = rPack(n, t);   // (a card of swarm drones holds six, eight with the Bigger Salvo upgrade)
   if (air){ const w = S.armies.find(x => x.owner === n && x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u])); if (w && !S.armies.some(x => x.owner === n && x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
   let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])));
   if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }
@@ -108,9 +106,6 @@ function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
     if (--c.h <= 0){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0);
       if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.${f0 && f0.length ? ' Units in training there will be ready sooner.' : ''}`, 'good', p); } }
-function engHour(N){
-    if (--N.eng.h <= 0){ const {t, m} = N.eng; (N.mk || (N.mk = {}))[t] = m; N.tv = (N.tv || 0) + 1; N.eng = null;
-      if (isSeat(N.id)){ tell(N.id, `${UNITS[t].name} upgraded to Mk ${ROMAN[m]}: +${Math.round((MARK_F[m] - 1)*100)}% attack and defense for every one you field.`, 'good'); cue(N.id, 'research'); } } }
 /*@DEV*/
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
 // consHour, prodHour, engHour, addArmy. devHour runs at the top of every game hour; devDone also runs right after a click (instant while paused).
@@ -127,7 +122,7 @@ function devHour(n){ const N = S.nations[n]; if (!N || !N.alive) return; if (DEV
 // research every technology at once (free: the stocks are restored afterwards)
 function devResearchAll(n){ const N = S.nations[n]; if (!N || !N.alive) return 0; const keep = Object.fromEntries(CK.map(k => [k, N[k]])); let k = 0;
   for (const s of R_SLOTS) if (N[s]){ N[s].h = 1; researchSlotHour(N, s); k++; }
-  for (let go = true; go;){ go = false; for (const T of TECH){ devFill(N); if (startResearch(n, T.id)){ for (const s of R_SLOTS) if (N[s] && N[s].id === T.id){ N[s].h = 1; researchSlotHour(N, s); } k++; go = true; } } }
+  for (let go = true; go;){ go = false; for (const T of RNODES){ if (rNextLv(n, T.id)){ rGrant(N, T.id, T.lv.length); k++; } } }
   Object.assign(N, keep); visCache = null; return k; }
 // spawn: a new force of k units of type t for nation n in province p (ground and air on land, ships at sea or in a port city), built by addArmy
 function devSpawnOk(p, t){ const U = UNITS[t], P = G.P[p]; return !!U && !!P && (U.cls === 'naval' ? shipPlaceOk(p) : !P.sea); }

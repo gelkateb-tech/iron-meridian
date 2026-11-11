@@ -1,4 +1,4 @@
-// Stealth Bomber in the page: research tree (bomb2, bomb3 with two prerequisites), Mobilize list, unit guide, a wing's mission panel,
+// Stealth Bomber in the page: research tree (bomb_up, and the unlock u_stealth with two prerequisites), Mobilize list, unit guide, a wing's mission panel,
 // and the fog rule on the map (an enemy stealth wing in flight is drawn only near your SAMs / jammers; AWACS gives a '?' at half range).
 //   node .test/stealth-ui.js   (bash tools/mkpage.sh first; screenshots .test/stealth-*.png; exits 1 on a failed check or a page error)
 const { chromium } = require('playwright');
@@ -9,28 +9,27 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
   await p.click('[data-act="pick"][data-p="4"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(900);
   // ---- research: the Air branch
-  await p.evaluate(() => { const S = window.__im.S, N = S.nations[0]; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 5000; for (const id of ['air1', 'air2', 'bomb1']) N.tech[id] = 1; N.tv = (N.tv || 0) + 1; N.research = N.research2 = null; });
-  await p.click('[data-act="research-open"]'); await p.waitForTimeout(300); await p.click('[data-act="rbranch"][data-b="Air"]'); await p.waitForTimeout(300);
+  await p.evaluate(() => { const S = window.__im.S, N = S.nations[0]; window.__h0 = S.hour; S.hour = 20*24; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 5000; for (const id of ['u_jet', 'jet_pgm', 'u_bomb']) N.tech[id] = 1; N.tv = (N.tv || 0) + 1; N.research = N.research2 = null; });
+  await p.click('[data-act="research-open"]'); await p.waitForTimeout(300); await p.click('[data-act="rbranch"][data-b="str"]'); await p.waitForTimeout(300);
   const node = id => p.evaluate(id => { const e = document.querySelector(`.rnode[data-id="${id}"]`); return e ? { cls: e.className, title: e.title, text: e.innerText.replace(/\s+/g, ' ').trim(), row: getComputedStyle(e).getPropertyValue('--r').trim() } : null; }, id);
-  let n2 = await node('bomb2'), n3 = await node('bomb3'), a3 = await node('air3');
-  ck('tree: Strategic Bomber Upgrade is open after Strategic Bombers', n2 && /st-open/.test(n2.cls), n2);
-  ck('tree: Stealth Bombers is locked and names both prerequisites', n3 && /st-lock/.test(n3.cls) && /Needs Strategic Bomber Upgrade and Stealth Airframes/.test(n3.title) && /and Stealth Airframes/.test(n3.text), n3);
-  ck('tree: Stealth Bombers sits below both of its prerequisites', n3 && a3 && n2 && +n3.row > +a3.row && +n3.row > +n2.row, [n2 && n2.row, a3 && a3.row, n3 && n3.row]);
-  const lines = await p.evaluate(() => document.querySelectorAll('.rs-lines path').length), techN = await p.evaluate(() => document.querySelectorAll('.rnode').length);
-  ck('tree: one more line than a single-prerequisite tree would draw', lines >= techN - 4, [lines, techN]);
-  await p.click('.rnode[data-id="bomb3"]'); await p.waitForTimeout(250);
-  const det = await p.evaluate(() => ({ req: [...document.querySelectorAll('.rs-det .rs-dr')].map(e => e.innerText.trim()), btn: (document.querySelector('.rs-det .rs-db') || {}).innerText }));
-  ck('detail: two "Requires" lines and a disabled button that says why', det.req.length === 2 && /Strategic Bomber Upgrade/.test(det.req[0]) && /Stealth Airframes/.test(det.req[1]) && /needs/i.test(det.btn || ''), det);
+  let n2 = await node('bomb_up'), n3 = await node('u_stealth');
+  ck('tree: Strategic Bomber Upgrade is open after the Heavy Bomber', n2 && /st-open/.test(n2.cls), n2);
+  ck('tree: the Stealth Bomber is locked and names both prerequisites', n3 && /st-lock/.test(n3.cls) && /Needs Strategic Bomber Upgrade and Stealth Airframes/.test(n3.title) && /Stealth Airframes \(Tactical Air\)/.test(n3.text), n3);
+  ck('tree: the Stealth Bomber sits below the Strategic Bomber Upgrade', n3 && n2 && +n3.row > +n2.row, [n2 && n2.row, n3 && n3.row]);
+  ck('tree: a solid line joins the upgrade to the Stealth Bomber', await p.evaluate(() => document.querySelectorAll('.rs-lines path.xr').length) === 1);
+  await p.click('.rnode[data-id="u_stealth"]'); await p.waitForTimeout(250);
+  const det = await p.evaluate(() => ({ req: [...document.querySelectorAll('.rs-card .rc-need .rs-dr')].map(e => e.innerText.trim()).filter(t => /^Needs/.test(t)), btn: (document.querySelector('.rs-card .rs-db') || {}).innerText }));
+  ck('detail: two "Needs" lines and a disabled button that says why', det.req.length === 2 && /Strategic Bomber Upgrade/.test(det.req[0]) && /Stealth Airframes/.test(det.req[1]) && /needs/i.test(det.btn || ''), det);
   await p.screenshot({ path: out('tree-locked') });
-  await p.evaluate(() => { const N = window.__im.S.nations[0]; N.tech.bomb2 = 1; N.tech.air3 = 1; N.tv++; });
-  await p.click('.rnode[data-id="bomb2"]'); await p.waitForTimeout(150); await p.click('.rnode[data-id="bomb3"]'); await p.waitForTimeout(250);
-  n3 = await node('bomb3'); ck('tree: with both researched Stealth Bombers opens', n3 && /st-open/.test(n3.cls), n3);
-  const btn = await p.evaluate(() => { const e = document.querySelector('.rs-det [data-act="research"]'); return e ? { dis: e.disabled, text: e.innerText.replace(/\s+/g, ' ') } : null; });
-  ck('detail: the Research button is live (11 days)', btn && !btn.dis && /11 d/.test(btn.text), btn);
+  await p.evaluate(() => { const N = window.__im.S.nations[0]; N.tech.bomb_up = 1; N.tech.jet_lo = 1; N.tv++; });
+  await p.click('.rnode[data-id="bomb_up"]'); await p.waitForTimeout(150); await p.click('.rnode[data-id="u_stealth"]'); await p.waitForTimeout(250);
+  n3 = await node('u_stealth'); ck('tree: with both researched the Stealth Bomber opens', n3 && /st-open/.test(n3.cls), n3);
+  const btn = await p.evaluate(() => { const e = document.querySelector('.rs-card [data-act="research"]'); return e ? { dis: e.disabled, text: e.innerText.replace(/\s+/g, ' '), time: (document.querySelector('.rs-card .rc-pay .td') || {}).innerText } : null; });
+  ck('detail: the Research button is live (9 days)', btn && !btn.dis && /9 d/.test(btn.time), btn);
   await p.screenshot({ path: out('tree-open') });
-  await p.click('.rs-det [data-act="research"]'); await p.waitForTimeout(250);
-  ck('research starts in a slot', await p.evaluate(() => { const N = window.__im.S.nations[0]; return [N.research, N.research2].some(r => r && r.id === 'bomb3'); }));
-  await p.evaluate(() => { const N = window.__im.S.nations[0]; N.research = N.research2 = null; N.tech.bomb3 = 1; N.tv++; });
+  await p.click('.rs-card [data-act="research"]'); await p.waitForTimeout(250);
+  ck('research starts in a slot', await p.evaluate(() => { const N = window.__im.S.nations[0]; return [N.research, N.research2].some(r => r && r.id === 'u_stealth'); }));
+  await p.evaluate(() => { const N = window.__im.S.nations[0]; N.research = N.research2 = null; N.tech.u_stealth = 1; N.tv++; window.__im.S.hour = window.__h0; });   // back to the game's own hour for the map checks
   await p.click('#sheet [data-act="resume"]').catch(() => {}); await p.waitForTimeout(200);
   // ---- Mobilize list in the capital: greyed with Airbase II, live with Airbase III
   const cap = await p.evaluate(() => { const im = window.__im, S = im.S, c = S.nations[0].capital; S.bld[c].air = 2; S.bld[c].fac = Math.max(1, S.bld[c].fac); im.selectProv(c); return c; });

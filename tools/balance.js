@@ -12,7 +12,7 @@ const { chromium } = require('playwright'); const path = require('path');
       const rs = {}; for (const k in S.rel) rs[S.rel[k].st] = (rs[S.rel[k].st] || 0) + 1; return { day: Math.floor(S.hour/24), over: S.over, reason: S.overReason, churn, rel: rs, allyEver: S.log.filter(l => /alliance/.test(l.text)).length, end: S.nations.filter(n=>n.alive).map(n => `${n.name.slice(0,6)}:${S.owner.filter(o => o === n.id).length}`).join(' '), dead, snap, units: S.armies.filter(a=>a.owner>=0).reduce((s,a)=>s+a.u.inf+a.u.tank+a.u.art+a.u.jet,0),
         // economy and air mix at the end: AI metal hoards (>1,000) with their cash, the world metal price against its base, fighters vs bombers in service
         hoards: S.nations.filter(n=>n.alive && n.id>0 && n.metal>1000).map(n => n.name.slice(0,6) + ':' + Math.round(n.metal) + 'm/$' + Math.round(n.cash)).join(' ') || 'none', metalPx: S.mkt ? +(S.mkt.p.metal/2.4).toFixed(2) : null,
-        air: ['asf','int','bomb','awacs','drone','jam'].map(t => t + ':' + S.armies.filter(a=>a.owner>0).reduce((s,a)=>s+(a.u[t]||0),0)).join(' '), asf1: S.nations.filter(n=>n.id>0 && n.tech && n.tech.asf1).length }; }, days);
+        air: ['asf','int','bomb','awacs','drone','jam'].map(t => t + ':' + S.armies.filter(a=>a.owner>0).reduce((s,a)=>s+(a.u[t]||0),0)).join(' '), asf1: S.nations.filter(n=>n.id>0 && n.tech && n.tech.u_asf).length, steps: (d => d[d.length >> 1])(S.nations.filter(n=>n.id>0 && n.alive).map(n=>Object.keys(n.tech).reduce((s,k)=>s+(+n.tech[k]||1),0)).sort((a,b)=>a-b)), gens: S.nations.filter(n=>n.id>0 && n.tech && Object.keys(n.tech).some(k=>/_g\d$/.test(k))).length }; }, days);
     console.log(`run ${r+1}:`, JSON.stringify(res));
     await p.close();
   }

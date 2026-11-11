@@ -323,7 +323,7 @@ function spyCheck(n, p, op){
   if (G.P[p].sea) return {ok:false, why:'Agents work on land.'};
   if (N.cash < O.cost) return {ok:false, why:`Needs $${O.cost}M.`};
   if (op === 'incite' && (o < 0 || S.home[p] === o)) return {ok:false, why:'Only occupied land can be incited.'};
-  if (op === 'steal' && (o < 0 || !Object.keys(S.nations[o].tech).some(t => TECH_BY[t] && !has(n, t)))) return {ok:false, why:'They have no technology you lack.'};
+  if (op === 'steal' && (o < 0 || !rStealable(n, o).length)) return {ok:false, why:'They have no technology you lack.'};
   if (op === 'sabotage' && !BK.some(k => S.bld[p][k]) && !S.cons[p]) return {ok:false, why:'Nothing to sabotage there.'};
   return {ok:true, chance:spyChance(n, p, op)};
 }
@@ -341,7 +341,7 @@ function spyHour(){
     if (k === 'recon'){ S.reveal = S.reveal || {}; for (const v of [p, ...G.P[p].nbs]) S.reveal[v] = S.hour + 72; visCache = null; res = 'the area is revealed for 3 days'; }
     else if (k === 'sabotage'){ if (S.cons[p]){ S.cons[p] = null; res = 'construction destroyed'; } else { const ks = BK.filter(b => S.bld[p][b]); const b = ks[Math.floor(rng()*ks.length)]; if (b){ S.bld[p][b]--; res = `${BUILD[b].name} damaged`; } } }
     else if (k === 'incite'){ S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = Math.min(100, unrestOf(p) + 35); res = `unrest now ${Math.round(S.unrest[p])}%`; }
-    else if (k === 'steal' && o >= 0){ const ts = Object.keys(S.nations[o].tech).filter(t => TECH_BY[t] && !has(n, t) && (!TECH_BY[t].req || has(n, TECH_BY[t].req))); const t = ts[Math.floor(rng()*ts.length)]; if (t){ S.nations[n].tech[t] = 1; S.nations[n].tv = (S.nations[n].tv || 0) + 1; res = `${TECH_BY[t].name} acquired`; } else res = 'nothing usable found'; }
+    else if (k === 'steal' && o >= 0){ const ts = rStealable(n, o).filter(t => rReqsOk(n, RN[t], rLevel(n, t) + 1)); const t = ts[Math.floor(rng()*ts.length)]; if (t){ const lv = rLevel(n, t) + 1; rGrant(S.nations[n], t, lv); res = `${rName(RN[t], lv)} acquired`; } else res = 'nothing usable found'; }
     if (isSeat(n)) tell(n, `${SPY_OPS[k].name} in ${where} succeeded: ${res}.`, 'good', p);
     if (o !== n && isSeat(o) && k !== 'recon') tell(o, `Enemy agents struck ${where}: ${res}.`, 'bad', p);
   }
