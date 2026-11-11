@@ -219,11 +219,11 @@ def _jet():
     return sym(half)
 I['jet'] = _jet()
 
-# INTERCEPTOR: a pure delta wing on a long, needle-nosed fuselage, no tailplanes
+# INTERCEPTOR: a long needle-nosed fuselage, canards behind the cockpit and a small pure delta at the tail (taller than it is wide)
 def _int():
-    half = U(Polygon([(16, 0.8), (17.4, 6.4), (17.8, 12.0), (17.8, 28.0), (16, 29.6)]),
-             Polygon([(17.4, 11.0), (29.8, 27.0), (29.8, 28.4), (17.6, 28.4)]),
-             Polygon([(17.6, 6.4), (19.0, 9.6), (17.6, 10.6)]))
+    half = U(Polygon([(16, 0.4), (17.0, 4.2), (18.0, 9.0), (18.0, 27.6), (16, 29.6)]),
+             Polygon([(17.6, 13.6), (27.2, 26.4), (27.2, 28.4), (17.6, 28.4)]),
+             Polygon([(17.6, 8.4), (22.4, 11.6), (22.4, 13.0), (17.6, 12.0)]))
     return sym(half).difference(L([(16, 24.6), (16, 30.0)], 0.0001))
 I['int'] = _int()
 
@@ -245,11 +245,11 @@ def _bomb():
     return sym(half)
 I['bomb'] = _bomb()
 
-# STEALTH BOMBER: a flying wing with a saw-tooth trailing edge
+# STEALTH BOMBER: a broad, flat flying wing with a saw-tooth trailing edge (much wider than it is long)
 def _stealth():
-    half = Polygon([(16, 6.0), (31.0, 21.0), (29.0, 23.6), (25.4, 20.4), (21.6, 24.2), (18.6, 21.0), (16, 23.6)])
+    half = Polygon([(16, 7.0), (31.4, 18.6), (30.0, 21.4), (26.4, 19.0), (22.4, 22.8), (19.2, 19.6), (16, 22.8)])
     g = sym(half)
-    return g.difference(U(L([(14.2, 11.4), (16, 9.8), (17.8, 11.4)], 1.0, 'round')))
+    return g.difference(L([(14.2, 12.6), (16, 11.3), (17.8, 12.6)], 1.0, 'round'))
 I['stealth'] = _stealth()
 
 # MARITIME PATROL: straight wings with four propellers, long tail boom (the MAD sting)
@@ -275,15 +275,22 @@ def _awacs():
     return U(g.difference(dome_clear), dome, bar.intersection(C(16, 17.6, 6.2)))
 I['awacs'] = _awacs()
 
-# RECON UAV: very long straight wings, slim body with a bulbous nose, V tail
+# RECON UAV: very long, thin straight wings, a slim body with a big satcom bulge at the nose and a V tail
 def _drone():
-    half = U(Polygon([(16, 3.0), (17.6, 4.0), (18.4, 7.4), (18.0, 12.0), (17.2, 26.0), (16, 27.4)]),
-             Polygon([(17.4, 11.2), (31.2, 12.6), (31.2, 14.2), (17.4, 15.4)]),
-             Polygon([(16.8, 24.0), (22.8, 28.6), (22.4, 30.0), (16.6, 27.0)]))
-    return sym(half)
+    half = U(Polygon([(16, 2.0), (18.6, 3.4), (19.2, 7.4), (18.0, 12.0), (17.0, 26.0), (16, 27.4)]),
+             Polygon([(17.4, 11.6), (31.4, 12.8), (31.4, 14.2), (17.4, 15.0)]),
+             Polygon([(16.8, 24.0), (23.0, 28.8), (22.6, 30.2), (16.6, 27.0)]))
+    return sym(half).difference(C(16, 5.6, 1.1))
 I['drone'] = _drone()
-# ARMED UAV: the same airframe with a missile under each wing
-I['drone4'] = U(I['drone'], RR(21.2, 9.4, 1.6, 8.6, 0.8), RR(9.2, 9.4, 1.6, 8.6, 0.8))
+# ARMED UAV: shorter, broader wings with two missiles under each, their noses well ahead of the wing, and a straight tail
+def _drone4():
+    half = U(Polygon([(16, 3.6), (17.8, 4.8), (18.4, 8.4), (18.2, 13.0), (17.2, 25.6), (16, 27.0)]),
+             Polygon([(17.6, 13.0), (30.6, 14.4), (30.6, 17.0), (17.6, 18.0)]),
+             Polygon([(16.8, 23.4), (23.4, 25.4), (23.4, 27.4), (16.6, 27.2)]))
+    def msl(x):
+        return U(RR(x - 1.15, 7.8, 2.3, 10.6, 1.15), Polygon([(x - 1.15, 9.0), (x, 6.0), (x + 1.15, 9.0)]))
+    return sym(U(half, msl(21.8), msl(26.4)))
+I['drone4'] = _drone4()
 
 # STRIKE DRONE: a one-way attack drone (cropped delta with tip fins, pusher propeller)
 def _sdrone():
@@ -295,14 +302,14 @@ def _sdrone():
     return U(g.difference(L([(11.0, 28.8), (21.0, 28.8)], 3.4, 'flat')).difference(C(16, 13.4, 1.3)), prop, hub)
 I['sdrone'] = _sdrone()
 
-# SWARM DRONES: three small quadcopters in formation
+# SWARM DRONES: three quadcopters in formation (solid rotors, thick arms: each still reads as a quadcopter at 16 px)
 def _swarm():
     def quad(x, y, s):
-        arms = U(L([(x - 3.6*s, y - 3.6*s), (x + 3.6*s, y + 3.6*s)], 1.7*s), L([(x - 3.6*s, y + 3.6*s), (x + 3.6*s, y - 3.6*s)], 1.7*s))
-        rotors = unary_union([C(x + dx*3.9*s, y + dy*3.9*s, 2.5*s) for dx in (-1, 1) for dy in (-1, 1)])
-        return U(arms, rotors, RR(x - 2.0*s, y - 2.0*s, 4.0*s, 4.0*s, 1.0*s))
-    a, b, c = quad(16, 9.4, 1.18), quad(7.4, 23.0, 1.0), quad(24.6, 23.0, 1.0)
-    gap = 1.6
+        arms = U(L([(x - 3.6*s, y - 3.6*s), (x + 3.6*s, y + 3.6*s)], 2.2*s), L([(x - 3.6*s, y + 3.6*s), (x + 3.6*s, y - 3.6*s)], 2.2*s))
+        rotors = unary_union([C(x + dx*4.0*s, y + dy*4.0*s, 3.0*s) for dx in (-1, 1) for dy in (-1, 1)])
+        return U(arms, rotors, RR(x - 2.4*s, y - 2.4*s, 4.8*s, 4.8*s, 1.2*s))
+    a, b, c = quad(16, 8.6, 1.22), quad(7.2, 23.2, 1.04), quad(24.8, 23.2, 1.04)
+    gap = 1.8
     return U(a, b.difference(a.buffer(gap)), c.difference(a.buffer(gap)))
 I['swarm'] = _swarm()
 
@@ -321,68 +328,70 @@ def _heli():
     return U(rotor, mast, body.difference(canopy), boom, fin.difference(C(2.6, 15.6, 2.2)), trot, wing, gun, skid)
 I['heli'] = _heli()
 
-# ---- ships, side view facing right
-def hull(x0, x1, deck, keel, bow_rise=1.6, stern_cut=1.4):
-    return Polygon([(x0, deck), (x1 - 3.0, deck), (x1, deck - bow_rise), (x1 - 3.6, keel), (x0 + stern_cut, keel)])
+# ---- ships, side view facing right. Drawn tall for their length (a deep hull and high superstructures), so at 16 px and inside a counter they
+# are not slivers; each has its own outline: the frigate one stepped tower, the cruiser two towers and two masts, the carrier a thick flat deck
+# with its island, the submarine a round hull and sail, the cargo ship a block of containers with its bridge aft.
+def hull(x0, x1, deck, keel, bow=3.6, rake=3.8, stern=1.6):
+    return Polygon([(x0, deck), (x1 - bow, deck), (x1, deck - 2.4), (x1 - rake, keel), (x0 + stern, keel)])
 
-# FRIGATE: one superstructure block with a mast, gun forward
+# FRIGATE: one stepped superstructure tower with a tall mast, a gun forward, a low helicopter deck aft
 def _frig():
-    h = hull(1.2, 31.0, 20.0, 25.6)
-    sup = Polygon([(8.4, 20.2), (8.4, 15.6), (11.0, 15.6), (11.0, 12.6), (17.6, 12.6), (19.6, 15.6), (21.0, 15.6), (21.0, 20.2)])
-    mast = U(Polygon([(13.4, 12.8), (14.4, 4.8), (15.2, 4.8), (16.2, 12.8)]), R(12.0, 7.6, 5.6, 1.1))
-    gun = U(R(24.0, 17.6, 3.0, 2.6), L([(26.2, 18.4), (29.6, 17.6)], 1.1, 'flat'))
-    win = R(12.6, 14.6, 4.6, 1.0)
-    heli = R(2.4, 18.6, 5.0, 1.6)
-    return U(h, sup.difference(win), mast, gun, heli)
+    h = hull(1.0, 31.0, 19.0, 26.4)
+    sup = Polygon([(8.0, 19.2), (8.0, 14.4), (10.4, 14.4), (11.4, 10.4), (18.4, 10.4), (20.4, 14.4), (22.2, 14.4), (22.2, 19.2)])
+    mast = U(Polygon([(13.6, 10.6), (14.4, 3.4), (15.8, 3.4), (16.6, 10.6)]), Polygon([(11.4, 2.2), (18.8, 2.2), (18.0, 3.8), (12.2, 3.8)]))   # tapered mast, the radar bar across its top
+    win = R(12.4, 12.0, 5.8, 1.3)
+    gun = U(RR(23.6, 16.0, 3.8, 3.2, 1.4), L([(26.4, 17.0), (30.0, 14.8)], 1.4, 'flat'))
+    return U(h, sup.difference(win), mast, gun)
 I['frig'] = _frig()
 
-# CRUISER: longer, two superstructure blocks and two masts, guns fore and aft
+# CRUISER: longer and heavier: a big bridge tower forward with the main mast, a second tower aft with its own mast, guns fore and aft
 def _crui():
-    h = hull(0.6, 31.4, 19.6, 25.8, 1.8)
-    s1 = Polygon([(9.0, 19.8), (9.0, 14.6), (11.4, 14.6), (11.4, 11.2), (17.4, 11.2), (19.0, 14.6), (19.0, 19.8)])
-    s2 = R(5.0, 15.6, 3.4, 4.4)
-    m1 = U(Polygon([(13.4, 11.4), (14.2, 3.4), (15.0, 3.4), (15.8, 11.4)]), R(12.0, 6.0, 5.2, 1.1))
-    m2 = U(Polygon([(5.8, 15.8), (6.4, 9.8), (7.0, 9.8), (7.6, 15.8)]))
-    g1 = U(R(22.4, 17.2, 3.0, 2.6), L([(24.6, 18.0), (28.4, 17.0)], 1.1, 'flat'))
-    g2 = U(R(1.8, 17.2, 2.8, 2.6))
-    vls = R(19.6, 18.2, 2.4, 1.6)
-    win = R(12.2, 13.0, 5.0, 1.0)
-    return U(h, s1.difference(win), s2, m1, m2, g1, g2, vls)
+    h = hull(0.4, 31.6, 19.4, 26.6)
+    fwd = Polygon([(15.0, 19.6), (15.0, 12.2), (16.6, 9.0), (22.4, 9.0), (23.2, 12.2), (23.2, 19.6)])
+    aft = Polygon([(4.4, 19.6), (4.4, 13.4), (11.6, 13.4), (11.6, 19.6)])
+    fun = Polygon([(11.4, 19.6), (12.0, 15.4), (14.6, 15.4), (15.2, 19.6)])
+    m1 = U(Polygon([(18.0, 9.2), (18.8, 2.4), (20.0, 2.4), (20.8, 9.2)]), Polygon([(16.0, 1.2), (22.8, 1.2), (22.0, 2.8), (16.8, 2.8)]))
+    m2 = U(Polygon([(6.6, 13.6), (7.4, 7.0), (8.6, 7.0), (9.4, 13.6)]), Polygon([(5.4, 5.8), (10.6, 5.8), (10.0, 7.2), (6.0, 7.2)]))
+    win = R(17.0, 10.8, 5.0, 1.3)
+    g1 = U(RR(24.8, 16.4, 3.4, 3.2, 1.4), L([(27.2, 17.4), (30.6, 15.2)], 1.4, 'flat'))
+    g2 = U(RR(1.2, 16.4, 3.0, 3.2, 1.3))
+    return U(h, fwd.difference(win), aft, fun, m1, m2, g1, g2)
 I['crui'] = _crui()
 
-# AIRCRAFT CARRIER: long flat flight deck overhanging the hull, island to starboard aft of centre
+# AIRCRAFT CARRIER: a long, thick flight deck overhanging the hull at both ends, the island aft of centre, two jets parked on deck
 def _carr():
-    h = Polygon([(3.0, 19.6), (29.0, 19.6), (27.6, 25.2), (4.6, 25.2)])
-    deck = Polygon([(0.6, 17.4), (31.4, 17.4), (31.4, 19.8), (0.6, 19.8)])
-    island = Polygon([(18.4, 17.6), (18.4, 11.4), (19.4, 10.2), (23.6, 10.2), (23.6, 17.6)])
-    mast = U(R(20.4, 5.6, 1.1, 4.8), R(19.0, 7.4, 3.9, 1.0))
-    win = R(19.6, 12.0, 3.0, 1.0)
-    jet = sc(I['jet'], 0.26, 0, 0)
-    jet = mv(rot(jet, 90, 0, 0), 12.4, 12.4)
-    return U(h, deck, island.difference(win), mast, jet)
+    h = Polygon([(4.0, 19.2), (28.4, 19.2), (25.6, 25.8), (6.4, 25.8)])
+    deck = Polygon([(0.4, 14.6), (31.6, 14.6), (31.6, 19.6), (0.4, 19.6)])
+    island = Polygon([(19.4, 14.8), (19.4, 8.2), (20.6, 6.8), (25.4, 6.8), (25.4, 14.8)])
+    mast = U(R(21.8, 2.8, 1.4, 4.2), Polygon([(19.8, 1.4), (25.2, 1.4), (24.6, 2.9), (20.4, 2.9)]))
+    win = R(20.6, 8.8, 3.8, 1.3)
+    def jet(x):
+        return Polygon([(x, 14.8), (x, 12.0), (x + 1.4, 12.0), (x + 2.6, 13.2), (x + 6.8, 13.4), (x + 7.4, 14.8)])
+    edge = R(2.0, 16.6, 27.6, 1.0)
+    return U(h, deck.difference(edge), island.difference(win), mast, jet(3.0), jet(11.0))
 I['carr'] = _carr()
 
-# ATTACK SUBMARINE: a long rounded hull with its sail, planes and rudder
+# ATTACK SUBMARINE: a deep, round hull, a tall sail with its planes and masts, the rudder at the stern
 def _sub():
-    body = Polygon(bez((3.0, 19.8), (3.0, 15.8), (8.0, 15.4), (12.0, 15.4), 10) + [(25.0, 15.4)] + bez((25.0, 15.4), (29.8, 15.4), (31.4, 17.6), (31.4, 19.0), 8)
-                   + bez((31.4, 19.0), (31.4, 21.0), (29.0, 22.6), (24.0, 22.6), 8) + [(8.0, 22.6)] + bez((8.0, 22.6), (4.6, 22.6), (3.0, 21.6), (3.0, 19.8), 6)).buffer(0)
-    sail = Polygon([(17.0, 15.6), (17.8, 9.4), (23.6, 9.4), (24.6, 15.6)])
-    planes = R(15.6, 11.4, 9.8, 1.4)
-    peri = R(20.6, 5.8, 1.2, 3.8)
-    rud = Polygon([(1.4, 13.6), (3.2, 13.6), (5.2, 18.6), (5.2, 21.4), (3.2, 25.6), (1.4, 25.6)])
+    body = Polygon(bez((4.0, 19.4), (4.0, 15.4), (8.0, 14.4), (12.0, 14.4), 10) + [(25.0, 14.4)] + bez((25.0, 14.4), (30.2, 14.4), (31.6, 17.4), (31.6, 19.2), 8)
+                   + bez((31.6, 19.2), (31.6, 21.4), (29.4, 23.8), (24.0, 23.8), 8) + [(8.0, 23.8)] + bez((8.0, 23.8), (5.0, 23.8), (4.0, 22.0), (4.0, 19.4), 6)).buffer(0)
+    sail = Polygon([(16.4, 14.6), (17.4, 6.6), (24.2, 6.6), (25.2, 14.6)])
+    planes = RR(14.0, 9.2, 13.6, 1.8, 0.9)
+    peri = U(R(21.2, 2.2, 1.4, 4.6), R(18.6, 3.4, 1.2, 3.4))
+    rud = Polygon([(0.6, 12.2), (3.0, 12.2), (6.4, 16.6), (6.4, 21.8), (3.0, 26.6), (0.6, 26.6)])
     return U(body, sail, planes, peri, rud)
 I['sub'] = _sub()
 
-# CARGO SHIP: hull, bridge and funnel aft, stacked containers
+# CARGO SHIP: a full block of containers forward of the bridge and funnel at the stern
 def _cargo():
-    h = hull(0.8, 31.4, 19.4, 25.6, 2.0, 1.0)
-    bridge = Polygon([(2.4, 19.6), (2.4, 9.6), (8.6, 9.6), (8.6, 19.6)])
-    win = R(3.4, 11.0, 4.2, 1.1)
-    fun = R(3.6, 6.0, 2.6, 3.8)
+    h = hull(0.8, 31.4, 20.0, 26.6, 4.4, 4.0, 1.2)
+    bridge = Polygon([(2.0, 20.2), (2.0, 7.4), (8.8, 7.4), (8.8, 20.2)])
+    win = R(3.0, 9.0, 4.8, 1.3)
+    fun = R(3.4, 3.2, 2.8, 4.4)
     boxes = []
-    for x, rows in ((10.0, 3), (14.6, 4), (19.2, 4), (23.8, 3)):
-        for j in range(rows):
-            boxes.append(R(x, 19.6 - 2.8*(j + 1), 4.2, 2.4))
+    for x in (10.4, 14.8, 19.2, 23.6):
+        for j in range(3):
+            boxes.append(R(x, 20.2 - 3.5*(j + 1), 3.9, 3.0))
     return U(h, bridge.difference(win), fun, *boxes)
 I['cargo'] = _cargo()
 

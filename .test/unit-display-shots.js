@@ -22,7 +22,7 @@ const OUT = process.argv[2] || __dirname, W = +(process.argv[3] || 1440), H = +(
     if (uk >= 0) im.addArmy(uk, ber.id, { inf: 2, tank: 1 });
     try { im.air.spawn(0, ber.id, 'jet'); im.air.spawn(0, ber.id, 'heli'); } catch (e) {}
     im.addArmy(0, WI, { inf: 3, tank: 1 }); im.addArmy(fr, WI, { tank: 3, inf: 2 }); im.addArmy(fr, KA, { inf: 2, sam: 1 });
-    im.addArmy(0, SEA, { frig: 3, sub: 1, crui: 1 });
+    im.addArmy(0, SEA, { frig: 3, sub: 1, crui: 1 }); im.addArmy(0, ham.id, { frig: 2, crui: 1, carr: 1 });   // (a fleet at sea, and one docked at Hamburg)
     const mu = im.addArmy(0, mun.id, { tank: 4, art: 3, inf: 2 });
     im.addArmy(0, 564, { mlrs: 3, sam: 2, ifv: 2, inf: 1 });
     if (it >= 0){ const P = G.P.find(q => S.owner[q.id] === it && q.city); if (P) im.addArmy(it, P.id, { inf: 3, tank: 2 }); }
@@ -35,10 +35,12 @@ const OUT = process.argv[2] || __dirname, W = +(process.argv[3] || 1440), H = +(
   await shot('out-europe', sc.ber, PHONE ? 10 : 14, -60, 40);
   await shot('out-germany', sc.ber, 34, -60, 50);
   await shot('mid-germany', sc.wi, 64, 30, -40);
-  await shot('fade-berlin', sc.ber, 107);
+  await shot('out-overlap-rhine', sc.wi, PHONE ? 18 : 22, 20, -20);   // (forces of several sides close together: stacked beside each other, none hidden)
+  await shot('fade-berlin', sc.ber, 129);
   await shot('in-berlin', sc.ber, 170);
   await shot('in-wiesbaden', sc.wi, 160);
-  await shot('in-sea', sc.sea, 130);
+  await shot('in-sea', sc.sea, 160);
+  await shot('in-port-hamburg', sc.ham, 170);
   await p.evaluate(() => { window.__im.S.speed = 2; }); await p.waitForTimeout(300);
   await shot('in-munich-march', sc.mun, 150, 0, 0, 2500);
   await p.evaluate(() => { window.__im.S.speed = 0; });
