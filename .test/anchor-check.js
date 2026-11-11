@@ -11,6 +11,7 @@
 //  (1) ANCHOR       every visible (alpha > 0.2) plate's pin and model's foot stays on one world point (> 1 world px, or > 2 css px at
 //                   the zoom it is drawn at, fails)
 //  (P) CONTAINMENT  every plate pin and model foot inside its own province (or on its path while moving; parked air: its base)
+//  (9) PLATES     two counters never cover each other: diamonds measured by their own shape (corner to corner), tags by their boxes
 //  (G) GAP          the gap between a flag tag's bottom and the top of its group stays 4-16 css px at every zoom models show (the diamond
 //                   stands on its group's middle and fades out as the pictures fade in: it is left out of (G) and of covering its own group)
 //  (D) DEPTH        stacks with >= 3 unit classes show >= 3 distinct models at max zoom
@@ -82,9 +83,9 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     // is on screen belongs to the view of the last drawn frame, which a zoom step since may have moved on)
     window.__acCap = () => { if (im.rd){ if (im.rd.n === window.__acN) return null; window.__acN = im.rd.n; } const v = im.rd ? { x: im.rd.vx, y: im.rd.vy, s: im.rd.vs } : im.view, D = window.__dbgBoxes || {};
       const plates = im.hits.filter(h => !h.unk && h.w > 0).map(h => { const own = (h.own || h.ids).slice().sort((a, b) => a - b), wx = (h.cx - v.x)/v.s, wy = (h.cy - v.y)/v.s, al = allowed(own), pv = provW(wx, wy);
-        return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: al.has(pv) ? 1 : 0, pv, tag: h.tag ? 1 : 0 }; });
+        return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], d: h.d, c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: al.has(pv) ? 1 : 0, pv, tag: h.tag ? 1 : 0 }; });
       const models = im.TM.dbg.map(q => { const a = S.armies.find(z => z.id === q.id), al = allowed(q.ids), pv = provW(q.wx, q.wy);
-        return { k: q.id + ':' + q.t, id: q.id, ids: q.ids, t: q.t, at: a && a.at, x: q.x, y: q.y, w: [q.wx, q.wy], box: q.box, len: q.len, a: q.a, tiny: q.tiny, owner: q.owner, mv: q.moving, air: q.air, sea: q.sea, inP: al.has(pv) ? 1 : 0, pv }; });
+        return { k: q.id + ':' + q.t, id: q.id, ids: q.ids, t: q.t, at: a && a.at, cut: q.cut, x: q.x, y: q.y, w: [q.wx, q.wy], box: q.box, len: q.len, a: q.a, tiny: q.tiny, owner: q.owner, mv: q.moving, air: q.air, sea: q.sea, inP: al.has(pv) ? 1 : 0, pv }; });
       return { hp: v.s*12, v: [v.x, v.y, v.s], plates, models, hud: hud(), lab: (D.lab || []).map(l => l.b), pn: (D.pn || []).filter(q => q.b).map(q => q.b), mk: (D.mk || []).map(m => [m[0] - m[2], m[1] - m[2], m[0] + m[2], m[1] + m[2]]), hq: D.tb && (D.tba == null || D.tba > 0.5) ? D.tb : null, bbar: D.bbar || [] }; };
     window.__acUnits = ids => { const u = {}; for (const id of ids){ const a = S.armies.find(q => q.id === id); if (a) for (const t in a.u) if (a.u[t] > 0) u[t] = (u[t] || 0) + a.u[t]; } return u; };
     // a continuous zoom through the game's own wheel handler: one wheel tick every frame (dy css px of wheel delta) until hp1 is reached and
@@ -154,7 +155,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
       for (const [id, g] of Object.entries(grp)){ const al = g.map(m => m.a); tn++; if (Math.max(...al) - Math.min(...al) > LIM.togetherA){ tbad++; if (tex.length < 5) tex.push(`${c.mode}@${r1(c.hp)} ${id}: ${g.map(m => m.t + ' ' + r2(m.a)).join(', ')}`); }
         for (const m of g){ if (m.a <= 0.2) continue; const h = m.box[3] - m.box[1], L = m.len || Math.max(m.box[2] - m.box[0], h);   // (a picture: its drawn length)
           if ((m.t === 'sol' && h < LIM.solMin) || (m.t === 'tank' && L < LIM.tankMin)){ small++; if (sex.length < 4) sex.push(`${c.mode}@${r1(c.hp)} ${m.k} ${r1(m.t === 'sol' ? h : L)} px`); } }
-        const vis0 = g.filter(m => m.a > 0.2); if (!vis0.length || g.some(m => m.mv)) continue;
+        const vis0 = g.filter(m => m.a > 0.2); if (!vis0.length || g.some(m => m.mv || m.cut)) continue;   // (a group partly off screen draws only its pictures on screen: its top is not measured)
         const pl = c.plates.find(q => q.own.includes(+id) && q.a > 0.2 && q.tag); if (!pl || !VIS(pl.r)) continue;   // (the flag tag: the diamond stands on its pictures' middle and fades out as they fade in)
         const top = Math.min(...vis0.map(m => m.box[1])), gap = top - pl.r[3]; n++; gaps.push(gap);
         if (gap < LIM.gap[0] || gap > LIM.gap[1]){ bad++; if (ex.length < 6) ex.push(`${c.mode}@${r1(c.hp)} ${pl.k}: ${r1(gap)} px`); } } }
@@ -175,7 +176,10 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
   // (9) PLATES OVER PLATES, (10) OVER YOUR HQ, (11) BATTLE BAR beside its counter
   { let pairs = 0, bad = 0, worst = 0, hqBad = 0, hqN = 0, barN = 0, barBad = 0; const ex = [], hqEx = [], barEx = [];
     for (const c of caps){ const pl = c.plates.filter(q => VIS(q.r) && !q.mv && q.a > 0.2);
-      for (let i = 0; i < pl.length; i++) for (let j = i + 1; j < pl.length; j++){ pairs++; const f = ov(pl[i].r, pl[j].r)/Math.max(1, Math.min(area(pl[i].r), area(pl[j].r))); if (f > worst) worst = f;
+      // (two diamonds overlap by their own shape: how far they reach into each other along both axes, as a share of a diamond's width; their boxes'
+      // corners may meet. A flag tag by its box)
+      const DIA = PHONE ? 32 : 28, dov = (p, q) => { const d = ((p.d || DIA) + (q.d || DIA))/2; return Math.max(0, d - Math.abs(p.c[0] - q.c[0]) - Math.abs(p.c[1] - q.c[1]))/d; };
+      for (let i = 0; i < pl.length; i++) for (let j = i + 1; j < pl.length; j++){ pairs++; const f = !pl[i].tag && !pl[j].tag ? dov(pl[i], pl[j]) : ov(pl[i].r, pl[j].r)/Math.max(1, Math.min(area(pl[i].r), area(pl[j].r))); if (f > worst) worst = f;
         if (f > LIM.plateOv){ bad++; if (ex.length < 6) ex.push(`${c.mode}@${r1(c.hp)} ${pl[i].k} / ${pl[j].k} ${Math.round(f*100)}%`); } }
       if (c.hq) for (const q of pl){ hqN++; if (ov(q.r, c.hq) > 0){ hqBad++; if (hqEx.length < 6) hqEx.push(`${c.mode}@${r1(c.hp)} ${q.k}`); } }
       for (const B of c.bbar){ const bb = [B[0], B[1], B[0] + B[2], B[1] + B[3]]; let d = Infinity; for (const q of c.plates){ const g = Math.max(q.r[0] - bb[2], bb[0] - q.r[2], q.r[1] - bb[3], bb[1] - q.r[3], 0); d = Math.min(d, g); }
@@ -222,7 +226,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
   // (5) COMPOSITION and (D) DEPTH
   { let groups = 0, phantom = 0, missing = 0, deep = 0, shallow = 0; const ex = [], dex = [];
     for (const c of caps){ if (c.hp < 130) continue; const grp = {}; for (const m of c.models) if (m.a > 0.2) (grp[m.id] = grp[m.id] || []).push(m);
-      for (const g of Object.values(grp)){ groups++; const u = await unitsOf(g[0].ids), ts = Object.keys(u).filter(t => ALLOW[t]), have = new Set(g.map(m => m.t)), ok = new Set(ts.flatMap(t => ALLOW[t]));
+      for (const g of Object.values(grp)){ if (g.some(m => m.cut)) continue; groups++; const u = await unitsOf(g[0].ids), ts = Object.keys(u).filter(t => ALLOW[t]), have = new Set(g.map(m => m.t)), ok = new Set(ts.flatMap(t => ALLOW[t]));
         const ph = [...have].filter(t => !ok.has(t)); if (g.some(m => m.sea) && !ts.some(t => ['frig', 'sub', 'crui', 'carr'].includes(t))) ph.length = 0;
         const byN = ts.slice().sort((a, b) => u[b] - u[a]), need = []; if (byN.length){ const th = u[byN[Math.min(2, byN.length - 1)]], above = byN.filter(t => u[t] > th), tied = byN.filter(t => u[t] === th);
           for (const t of above) if (!ALLOW[t].some(m => have.has(m))) need.push(t);

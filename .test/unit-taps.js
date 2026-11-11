@@ -45,12 +45,17 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   let found = 0;
   for (const [xy, hp] of [[sc.wi, 14], [sc.wi, 10], [sc.ber, 14], [sc.wi, 20], [sc.ber, 8], [sc.wi, 28]]){
     await view(xy, hp); await p.waitForTimeout(1300); await clear(); await p.waitForTimeout(200);
-    const st = await p.evaluate(() => ({ hits: window.__im.hits.map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids })), sats: window.__im.hitx.filter(h => h.sat).map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids, cx: h.cx, cy: h.cy, a: h.a })) }));
-    for (const q of st.sats){ found++; const own = await p.evaluate(ids => ids.filter(id => { const a = window.__im.S.armies.find(z => z.id === id); return a && a.owner === 0; }), q.ids);
+    // (the stacks are read again before each tap: a tap that zooms in, and the view set back, may leave a stack laid out a little differently,
+    // as the counters' fades keep their state a moment; what is tapped is always what is on screen at that moment)
+    const rd = () => p.evaluate(() => ({ hits: window.__im.hits.map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids })), sats: window.__im.hitx.filter(h => h.sat).map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids, cx: h.cx, cy: h.cy, a: h.a })) }));
+    // (and only once the view has come to rest: a tap that zoomed in glides the camera for a moment after the view is set back)
+    const settle = async () => { let last = ''; for (let i = 0; i < 40; i++){ const v = await p.evaluate(() => { const im = window.__im, v = im.view; return [v.s, v.x, v.y].map(q => q.toFixed(3)).join(',') + (im.camFly ? 'f' : ''); }); if (v === last) break; last = v; await p.waitForTimeout(120); } await p.waitForTimeout(250); };
+    const st = await rd(), done = new Set();
+    for (let it = 0; it < 24; it++){ if (it) await settle(); const cur = it ? await rd() : st, q = cur.sats.find(z => !done.has(z.ids.join(','))); if (!q) break; done.add(q.ids.join(',')); found++; const own = await p.evaluate(ids => ids.filter(id => { const a = window.__im.S.armies.find(z => z.id === id); return a && a.owner === 0; }), q.ids);
       const spread = await p.evaluate(ids => new Set(ids.map(id => { const a = window.__im.S.armies.find(z => z.id === id); return a ? a.at : -1; })).size > 1, q.ids);
       if (spread){ await clear(); const s0 = await p.evaluate(() => window.__im.view.s); await p.evaluate(([x, y]) => window.__im.tap(x, y), [q.cx, q.cy]); await p.waitForTimeout(700); const s1 = await p.evaluate(() => window.__im.view.s);   // (forces from more than one province: a tap zooms in on them, or in a city of yours opens the chooser, as a tap on any counter does)
         const ch = await p.evaluate(() => { const el = document.getElementById('chooser'); const r = el && !el.hidden; if (el) el.hidden = true; return r; });
-        checks['sat-spread-' + hp + '-' + q.ids[0]] = { ok: s1 > s0*1.3 || ch, s0, s1, chooser: ch }; await view(xy, hp); await p.waitForTimeout(600); continue; }
+        checks['sat-spread-' + hp + '-' + q.ids[0]] = { ok: s1 > s0*1.3 || ch, s0, s1, chooser: ch }; await settle(); await view(xy, hp); await p.waitForTimeout(600); continue; }
       if (own.length){ await clear(); await p.evaluate(([x, y]) => window.__im.tap(x, y), [q.cx, q.cy]); await p.waitForTimeout(120); const s1 = await p.evaluate(() => window.__im.sel.army); checks['sat-own-' + hp + '-' + q.ids[0]] = { ok: own.includes(s1), sel: s1, ids: q.ids }; }
       else { const mine = st.hits.map(h => h.ids).flat(); const myId = await p.evaluate(ids => { const a = window.__im.S.armies.find(z => ids.includes(z.id) && z.owner === 0 && !z.air); return a ? a.id : null; }, mine);
         if (myId == null) continue; await clear(); await p.evaluate(id => window.__im.selectArmy(id), myId); await p.waitForTimeout(150);

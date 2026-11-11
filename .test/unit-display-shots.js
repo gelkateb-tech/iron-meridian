@@ -36,7 +36,7 @@ const OUT = process.argv[2] || __dirname, W = +(process.argv[3] || 1440), H = +(
   await shot('out-germany', sc.ber, 34, -60, 50);
   await shot('mid-germany', sc.wi, 64, 30, -40);
   await shot('out-overlap-rhine', sc.wi, PHONE ? 18 : 22, 20, -20);   // (forces of several sides close together: stacked beside each other, none hidden)
-  await shot('fade-berlin', sc.ber, 129);
+  await shot('fade-early-berlin', sc.ber, 125); await shot('fade-berlin', sc.ber, 129); await shot('fade-late-berlin', sc.ber, 133);   // (the diamond fades out over the band's first half, the flag tag in over its second: never both)
   await shot('in-berlin', sc.ber, 170);
   await shot('in-wiesbaden', sc.wi, 160);
   await shot('in-sea', sc.sea, 160);

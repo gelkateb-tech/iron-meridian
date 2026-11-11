@@ -96,15 +96,14 @@ I['mot'] = _mot()
 
 # ANTI-TANK INFANTRY: helmet with a shoulder launcher across it, warhead forward
 def _at():
-    h = helmet(13.4, 22.6, 0.98)
-    ax = (2.0, 26.4); bx = (21.6, 12.6)
-    tube = L([ax, bx], 3.4, 'flat')
-    head = Polygon([(0, -1.7), (1.6, -3.2), (4.4, -3.2), (9.4, 0), (4.4, 3.2), (1.6, 3.2), (0, 1.7)])
-    ang = math.degrees(math.atan2(bx[1] - ax[1], bx[0] - ax[0]))
-    head = mv(rot(head, ang, 0, 0), bx[0] - 0.4, bx[1] + 0.3)
-    clear = L([ax, bx], 5.0, 'flat')
-    sight = L([(9.6, 18.6), (8.4, 16.6)], 1.6, 'flat')
-    return U(h.difference(clear), tube, head, sight.difference(clear.buffer(-1.0)))
+    # an anti-tank guided missile on its tripod: a thick launch tube with a pointed warhead, the sight box on top, three splayed legs
+    tube = RR(5.0, 9.6, 18.6, 5.6, 1.2)
+    rear = Polygon([(1.0, 8.4), (5.6, 9.6), (5.6, 15.2), (1.0, 16.4)])
+    head = Polygon([(22.6, 8.6), (26.0, 8.6), (31.2, 12.4), (26.0, 16.2), (22.6, 16.2)])
+    sight = U(RR(9.0, 3.6, 7.0, 4.2, 1.0), R(11.6, 7.0, 1.8, 3.0))
+    legs = U(L([(14.0, 15.0), (6.0, 28.6)], 2.8), L([(14.0, 15.0), (22.4, 28.6)], 2.8), L([(14.0, 15.0), (14.0, 27.4)], 2.4))
+    hub = C(14.0, 15.6, 2.6)
+    return U(tube, rear, head, sight, legs, hub).difference(L([(6.4, 12.4), (21.0, 12.4)], 0.0001))
 I['at'] = _at()
 
 # SPECIAL FORCES: a commando dagger, point up
@@ -212,11 +211,13 @@ I['jam'] = _jam()
 # ---- aircraft, seen from above, nose up (drawn half and mirrored about x 16)
 # STRIKE FIGHTER: swept wings carrying two bombs, twin tails
 def _jet():
-    half = U(Polygon([(16, 1.2), (17.6, 5.0), (18.2, 9.0), (18.2, 25.0), (16, 26.6)]),
-             Polygon([(17.6, 11.0), (29.4, 19.4), (29.4, 21.4), (17.8, 19.6)]),
-             Polygon([(17.6, 23.2), (23.8, 27.4), (23.8, 29.0), (17.4, 28.2)]),
-             RR(22.6, 20.6, 2.6, 7.6, 1.3), L([(23.9, 20.4), (23.9, 19.2)], 1.0))
-    return sym(half)
+    # a swept wing, a small tailplane, and a bomb hanging behind each wing (set apart by a clear gap): the fighter that drops bombs
+    half = U(Polygon([(16, 1.0), (17.8, 5.0), (18.4, 9.6), (18.2, 26.4), (16, 28.4)]),
+             Polygon([(18.0, 9.6), (30.8, 19.0), (30.8, 21.0), (18.0, 18.6)]),
+             Polygon([(18.0, 24.0), (22.2, 27.4), (22.2, 29.2), (17.8, 28.4)]))
+    bomb = U(RR(23.0, 21.6, 3.0, 7.4, 1.5), Polygon([(23.0, 27.4), (26.0, 27.4), (26.8, 30.4), (22.2, 30.4)]))
+    gap = L([(18.0, 18.6), (30.8, 21.0)], 2.2).union(Polygon([(18.0, 24.0), (22.2, 27.4), (22.2, 29.2), (17.8, 28.4)]).buffer(1.0))
+    return sym(U(half, bomb.difference(gap)))
 I['jet'] = _jet()
 
 # INTERCEPTOR: a long needle-nosed fuselage, canards behind the cockpit and a small pure delta at the tail (taller than it is wide)
@@ -264,15 +265,14 @@ I['mpa'] = _mpa()
 
 # AWACS: an airliner with the radar dish on its back (a ring with a bar)
 def _awacs():
-    half = U(Polygon([(16, 1.4), (17.6, 3.8), (18.0, 7.4), (17.8, 28.4), (16, 30.4)]),
-             Polygon([(17.6, 11.6), (30.4, 19.6), (30.4, 21.2), (17.6, 17.4)]),
-             Polygon([(17.6, 24.0), (23.6, 27.6), (23.6, 29.0), (17.6, 28.0)]),
-             RR(21.2, 13.6, 2.0, 4.8, 0.9))
+    # an airliner seen from above with a big solid radar disc on its back (a slit across it), set apart by a clear ring
+    half = U(Polygon([(16, 0.8), (17.8, 3.4), (18.2, 7.4), (18.0, 28.6), (16, 30.8)]),
+             Polygon([(17.6, 9.8), (31.0, 16.6), (31.0, 18.6), (17.6, 15.0)]),
+             Polygon([(17.6, 25.4), (24.0, 28.6), (24.0, 30.4), (17.6, 29.6)]))
     g = sym(half)
-    dome_clear = C(16, 17.6, 7.4)
-    dome = C(16, 17.6, 6.2).difference(C(16, 17.6, 3.8))
-    bar = R(9.8, 16.7, 12.4, 1.8)
-    return U(g.difference(dome_clear), dome, bar.intersection(C(16, 17.6, 6.2)))
+    clear = C(16, 20.4, 7.2)
+    dome = C(16, 20.4, 5.4).difference(R(9.0, 19.5, 14.0, 1.8))
+    return U(g.difference(clear), dome)
 I['awacs'] = _awacs()
 
 # RECON UAV: very long, thin straight wings, a slim body with a big satcom bulge at the nose and a V tail
@@ -336,63 +336,52 @@ def hull(x0, x1, deck, keel, bow=3.6, rake=3.8, stern=1.6):
 
 # FRIGATE: one stepped superstructure tower with a tall mast, a gun forward, a low helicopter deck aft
 def _frig():
-    h = hull(1.0, 31.0, 19.0, 26.4)
-    sup = Polygon([(8.0, 19.2), (8.0, 14.4), (10.4, 14.4), (11.4, 10.4), (18.4, 10.4), (20.4, 14.4), (22.2, 14.4), (22.2, 19.2)])
-    mast = U(Polygon([(13.6, 10.6), (14.4, 3.4), (15.8, 3.4), (16.6, 10.6)]), Polygon([(11.4, 2.2), (18.8, 2.2), (18.0, 3.8), (12.2, 3.8)]))   # tapered mast, the radar bar across its top
-    win = R(12.4, 12.0, 5.8, 1.3)
-    gun = U(RR(23.6, 16.0, 3.8, 3.2, 1.4), L([(26.4, 17.0), (30.0, 14.8)], 1.4, 'flat'))
-    return U(h, sup.difference(win), mast, gun)
+    h = hull(3.0, 29.0, 19.6, 27.6, 3.2, 3.4, 1.4)
+    sup = Polygon([(8.6, 19.8), (8.6, 13.2), (11.0, 13.2), (12.2, 8.6), (19.6, 8.6), (21.4, 13.2), (22.0, 13.2), (22.0, 19.8)])
+    mast = U(Polygon([(14.2, 8.8), (15.0, 2.6), (16.8, 2.6), (17.6, 8.8)]), RR(11.8, 1.0, 8.2, 2.4, 0.6))
+    gun = U(RR(22.4, 16.2, 4.0, 3.8, 1.4), L([(25.4, 17.4), (28.8, 15.2)], 1.8, 'flat'))
+    return U(h, sup, mast, gun)
 I['frig'] = _frig()
 
 # CRUISER: longer and heavier: a big bridge tower forward with the main mast, a second tower aft with its own mast, guns fore and aft
 def _crui():
-    h = hull(0.4, 31.6, 19.4, 26.6)
-    fwd = Polygon([(15.0, 19.6), (15.0, 12.2), (16.6, 9.0), (22.4, 9.0), (23.2, 12.2), (23.2, 19.6)])
-    aft = Polygon([(4.4, 19.6), (4.4, 13.4), (11.6, 13.4), (11.6, 19.6)])
-    fun = Polygon([(11.4, 19.6), (12.0, 15.4), (14.6, 15.4), (15.2, 19.6)])
-    m1 = U(Polygon([(18.0, 9.2), (18.8, 2.4), (20.0, 2.4), (20.8, 9.2)]), Polygon([(16.0, 1.2), (22.8, 1.2), (22.0, 2.8), (16.8, 2.8)]))
-    m2 = U(Polygon([(6.6, 13.6), (7.4, 7.0), (8.6, 7.0), (9.4, 13.6)]), Polygon([(5.4, 5.8), (10.6, 5.8), (10.0, 7.2), (6.0, 7.2)]))
-    win = R(17.0, 10.8, 5.0, 1.3)
-    g1 = U(RR(24.8, 16.4, 3.4, 3.2, 1.4), L([(27.2, 17.4), (30.6, 15.2)], 1.4, 'flat'))
-    g2 = U(RR(1.2, 16.4, 3.0, 3.2, 1.3))
-    return U(h, fwd.difference(win), aft, fun, m1, m2, g1, g2)
+    h = hull(1.4, 30.6, 19.6, 27.6, 3.4, 3.6, 1.4)
+    fwd = Polygon([(15.4, 19.8), (15.4, 11.0), (17.0, 7.8), (23.2, 7.8), (24.0, 11.0), (24.0, 19.8)])
+    aft = Polygon([(4.2, 19.8), (4.2, 12.0), (12.6, 12.0), (12.6, 19.8)])
+    m1 = U(Polygon([(18.4, 8.0), (19.2, 2.4), (20.8, 2.4), (21.6, 8.0)]), RR(16.6, 0.8, 6.8, 2.2, 0.6))
+    m2 = U(Polygon([(7.0, 12.2), (7.8, 6.4), (9.2, 6.4), (10.0, 12.2)]), RR(5.6, 4.8, 5.8, 2.2, 0.6))
+    gun = U(RR(25.0, 16.4, 3.4, 3.6, 1.4), L([(27.4, 17.4), (30.2, 15.4)], 1.8, 'flat'))
+    return U(h, fwd, aft, m1, m2, gun).difference(R(12.6, 13.6, 2.8, 6.4).difference(R(12.6, 16.0, 2.8, 4.0)))
 I['crui'] = _crui()
 
 # AIRCRAFT CARRIER: a long, thick flight deck overhanging the hull at both ends, the island aft of centre, two jets parked on deck
 def _carr():
-    h = Polygon([(4.0, 19.2), (28.4, 19.2), (25.6, 25.8), (6.4, 25.8)])
-    deck = Polygon([(0.4, 14.6), (31.6, 14.6), (31.6, 19.6), (0.4, 19.6)])
-    island = Polygon([(19.4, 14.8), (19.4, 8.2), (20.6, 6.8), (25.4, 6.8), (25.4, 14.8)])
-    mast = U(R(21.8, 2.8, 1.4, 4.2), Polygon([(19.8, 1.4), (25.2, 1.4), (24.6, 2.9), (20.4, 2.9)]))
-    win = R(20.6, 8.8, 3.8, 1.3)
-    def jet(x):
-        return Polygon([(x, 14.8), (x, 12.0), (x + 1.4, 12.0), (x + 2.6, 13.2), (x + 6.8, 13.4), (x + 7.4, 14.8)])
-    edge = R(2.0, 16.6, 27.6, 1.0)
-    return U(h, deck.difference(edge), island.difference(win), mast, jet(3.0), jet(11.0))
+    # a thick flight deck far wider than the hull below it, the island on the right with its mast: the flat top reads at once
+    h = Polygon([(5.0, 19.8), (27.0, 19.8), (24.4, 27.4), (7.6, 27.4)])
+    deck = Polygon([(0.6, 13.8), (31.4, 13.8), (31.4, 20.0), (0.6, 20.0)])
+    island = Polygon([(20.0, 14.0), (20.0, 7.4), (21.4, 5.8), (26.6, 5.8), (26.6, 14.0)])
+    mast = U(R(22.6, 1.6, 1.8, 4.6), RR(20.4, 0.6, 6.2, 2.2, 0.6))
+    return U(h, deck.difference(R(2.4, 16.4, 27.2, 1.2)), island, mast)
 I['carr'] = _carr()
 
 # ATTACK SUBMARINE: a deep, round hull, a tall sail with its planes and masts, the rudder at the stern
 def _sub():
-    body = Polygon(bez((4.0, 19.4), (4.0, 15.4), (8.0, 14.4), (12.0, 14.4), 10) + [(25.0, 14.4)] + bez((25.0, 14.4), (30.2, 14.4), (31.6, 17.4), (31.6, 19.2), 8)
-                   + bez((31.6, 19.2), (31.6, 21.4), (29.4, 23.8), (24.0, 23.8), 8) + [(8.0, 23.8)] + bez((8.0, 23.8), (5.0, 23.8), (4.0, 22.0), (4.0, 19.4), 6)).buffer(0)
-    sail = Polygon([(16.4, 14.6), (17.4, 6.6), (24.2, 6.6), (25.2, 14.6)])
-    planes = RR(14.0, 9.2, 13.6, 1.8, 0.9)
-    peri = U(R(21.2, 2.2, 1.4, 4.6), R(18.6, 3.4, 1.2, 3.4))
-    rud = Polygon([(0.6, 12.2), (3.0, 12.2), (6.4, 16.6), (6.4, 21.8), (3.0, 26.6), (0.6, 26.6)])
+    body = Polygon(bez((4.0, 20.4), (4.0, 15.6), (8.0, 14.6), (12.0, 14.6), 10) + [(24.0, 14.6)] + bez((24.0, 14.6), (29.6, 14.6), (31.2, 17.6), (31.2, 20.0), 8)
+                   + bez((31.2, 20.0), (31.2, 22.6), (29.0, 25.6), (23.4, 25.6), 8) + [(8.0, 25.6)] + bez((8.0, 25.6), (5.0, 25.6), (4.0, 23.4), (4.0, 20.4), 6)).buffer(0)
+    sail = Polygon([(15.4, 14.8), (16.6, 5.6), (24.0, 5.6), (25.2, 14.8)])
+    planes = RR(13.0, 8.8, 14.6, 2.4, 1.2)
+    peri = U(R(20.6, 1.2, 1.8, 4.8), R(17.8, 2.6, 1.6, 3.4))
+    rud = Polygon([(0.6, 12.6), (3.2, 12.6), (6.6, 17.0), (6.6, 23.0), (3.2, 28.2), (0.6, 28.2)])
     return U(body, sail, planes, peri, rud)
 I['sub'] = _sub()
 
 # CARGO SHIP: a full block of containers forward of the bridge and funnel at the stern
 def _cargo():
-    h = hull(0.8, 31.4, 20.0, 26.6, 4.4, 4.0, 1.2)
-    bridge = Polygon([(2.0, 20.2), (2.0, 7.4), (8.8, 7.4), (8.8, 20.2)])
-    win = R(3.0, 9.0, 4.8, 1.3)
-    fun = R(3.4, 3.2, 2.8, 4.4)
-    boxes = []
-    for x in (10.4, 14.8, 19.2, 23.6):
-        for j in range(3):
-            boxes.append(R(x, 20.2 - 3.5*(j + 1), 3.9, 3.0))
-    return U(h, bridge.difference(win), fun, *boxes)
+    h = hull(1.6, 30.4, 20.0, 27.6, 4.0, 3.8, 1.2)
+    bridge = Polygon([(2.8, 20.2), (2.8, 7.4), (9.6, 7.4), (9.6, 20.2)])
+    fun = R(4.0, 2.6, 3.2, 5.0)
+    boxes = [R(x, 20.2 - 4.4*(j + 1), 5.2, 3.8) for x in (11.0, 17.0, 23.0) for j in range(3) if not (x == 23.0 and j == 2)]
+    return U(h, bridge.difference(R(3.8, 9.4, 4.8, 1.6)), fun, *boxes)
 I['cargo'] = _cargo()
 
 # ---- missiles
