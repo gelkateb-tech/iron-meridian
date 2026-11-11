@@ -2007,6 +2007,10 @@ button.cs-c:hover{box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 0 3px rgba(79,208,22
 html.reduced .cs-mi.live .cs-mf::after{animation:none}
 .cs-bi.cs-mi.idle{background:rgba(5,16,20,.32); border:1.5px dashed rgba(182,227,234,.5); box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
 .cs-mi.idle::before{content:""; width:14px; height:14px; opacity:.4; background:linear-gradient(#d7f4f8, #d7f4f8) 50% 50%/100% 2px no-repeat, linear-gradient(#d7f4f8, #d7f4f8) 50% 50%/2px 100% no-repeat}
+/* the BUILD square while something goes up: the building's picture at its target level, the level numeral, the same rising fill */
+.cs-bpic > .cs-bp{position:absolute; inset:0; background:center/cover no-repeat}
+.cs-bpic > .cs-bp.gl{background-size:62% auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.cs-bpic > .cs-bl{position:absolute; right:3px; bottom:2px; z-index:1; font:700 11px/1 var(--body); color:#fff; text-shadow:0 1px 2px #000, 0 0 3px #000}
 @media (max-width: 820px){ .cs-mi.tr > .ut{--us:36px} .cs-mi.tr > svg{width:24px; height:24px} .cs-mi.idle::before{width:12px; height:12px} }
 @media (prefers-reduced-motion: reduce){ .cs-mi.live .cs-mf::after{animation:none} }
 /* a unit the city cannot mobilize yet (no Recruiting Office, Army Base level, research...): greyed, the reason in amber; a tap says why */
@@ -8747,6 +8751,13 @@ const csCirc = (cx, cy, r) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${
 const csMobF = q0 => q0 ? Math.max(0, Math.min(1, 1 - q0.h/(q0.h0 || 24))) : -1;
 const csMobY = f => ((1 - f)*100).toFixed(1) + '%';   // the fill's top edge: 100% (empty) down to 0 (done)
 const csMobIcon = q0 => q0 ? `<span class="cs-bi cs-mi tr${saverOn() || afxReduced() ? '' : ' live'}">${q0.msl ? mslIcon(q0.t, 30) : unitPic(q0.t, 'lg')}<i class="cs-mf" style="transform:translateY(${csMobY(csMobF(q0))})"></i></span>` : '<span class="cs-bi cs-mi idle"></span>';
+// the BUILD square works the same way: while something goes up it shows that building's picture at the level it is going up to (Army Base II shows the level II
+// picture; the map symbol until the picture arrives) with the same rising fill, the hammer only while nothing is being built. The fill needs the total time
+// (S.cons[p].h0); an old save without it takes the time of the build from its data.
+const csBldH0 = (p, c) => c.h0 || (c.k && BUILD[c.k] && (buildCost(PLAYER, c.k, c.lvl, p) || {}).h) || c.h || 1;
+const csBldF = (p, c) => c ? Math.max(0, Math.min(1, 1 - c.h/csBldH0(p, c))) : -1;
+const csBPic = c => { const A = csArt(c.k, c.lvl); return `<span class="cs-bp${A.art ? '' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>`; };
+const csBldIcon = (p, c) => c ? `<span class="cs-bi cs-mi tr cs-bpic${saverOn() || afxReduced() ? '' : ' live'}" title="${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' level ' + ROMAN[c.lvl] : ''}">${csBPic(c)}${BUILD[c.k].max > 1 ? `<b class="cs-bl">${ROMAN[c.lvl]}</b>` : ''}<i class="cs-mf" style="transform:translateY(${csMobY(csBldF(p, c))})"></i></span>` : `<span class="cs-bi">${CS_ICO.bld}</span>`;
 // what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a Recruiting Office says so
 // a city's main resource in words ("Oil city") and as the chip of the city sheet (with today's output and what the Arms Industry adds)
 // goods none of your cities produce (the city-resource economy: buy them or take a city)
@@ -8792,7 +8803,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   let acts = '';
   if (mine){ const q0 = q[0];
     const mob = P.city ? big('cs-mob', csMobIcon(q0), 'Mobilize unit', q0 ? `${q0.msl ? mslIcon(q0.t, 15) : unitPic(q0.t, 'xs')}<span>${(UNITS[q0.t] || MISSILES[q0.t]).name}</span><em>${csTime(q0.h)}${q.length > 1 ? ` · +${q.length - 1}` : ''}</em>` : csMobIdle(p), q0 ? 1 - q0.h/(q0.h0 || 24) : null, (q0 ? '' : 'idle ') + 'cs-mob') : '';
-    const bld = big('cs-bld', 'bld', 'Build', c ? `<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${csTime(c.h)}</em>` : BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? 'No construction' : 'Fully built', c ? 1 - c.h/c.h0 : null, 'cs-bldb');
+    const bld = big('cs-bld', csBldIcon(p, c), 'Build', c ? `<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${csTime(c.h)}</em>` : BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? 'No construction' : 'Fully built', c ? csBldF(p, c) : null, 'cs-bldb');
     acts = `<div class="cs-acts${P.city ? '' : ' one'}">${mob}${bld}</div>`; }
   else if (o >= 0) acts = `<div class="cs-acts">${big('diplo-open', 'dip', 'Diplomacy', `${REL[r.st]} with ${nationName(o)}`, null)}${big('intel', 'intel', 'Intel', `${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}`, null)}</div>`;
   const st = csStatus(p);
@@ -8808,7 +8819,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = k === 'city' ? (isCapital(p) ? 'Capital' : 'City') : BUILD[k].name, tag = o0.btn ? 'button' : 'span';
     const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${k === 'rec' && mine ? '\n' + recTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
     return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
-      ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
+      ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
   const cards = (P.city ? card('city', lv, {btn:true}) : '') + built.map(k => card(k, S.bld[p][k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
   return `${acts}<div class="cs-body">${ban}${stat}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
@@ -8818,9 +8829,12 @@ function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWa
   clearTimeout(CS.t); el.classList.remove('out'); const fresh = el.hidden; el.hidden = false;
   const row = el.querySelector('.cs-blds'), sl = row && CS.p === p ? row.scrollLeft : 0;
   setHTML(el, csHTML(p)); { const r2 = el.querySelector('.cs-blds'); if (r2 && sl) r2.scrollLeft = sl; }
-  { const q = S.owner[p] === PLAYER ? S.queue[p] : [], q0 = q[0], f = csMobF(q0), key = q0 ? p + ':' + q0.t + ':' + q0.h0 + ':' + q.length : '', mf = q0 && el.querySelector('.cs-mf');
+  { const q = S.owner[p] === PLAYER ? S.queue[p] : [], q0 = q[0], f = csMobF(q0), key = q0 ? p + ':' + q0.t + ':' + q0.h0 + ':' + q.length : '', mf = q0 && el.querySelector('.cs-mob .cs-mf');
     if (mf && mf.animate && CS.mk === key && CS.mf >= 0 && Math.abs(f - CS.mf) > 1e-4 && !afxReduced()) try { mf.animate([{transform:`translateY(${csMobY(CS.mf)})`}, {transform:`translateY(${csMobY(f)})`}], {duration:700, easing:'cubic-bezier(.3,.7,.3,1)'}); } catch (e) {}
     CS.mk = key; CS.mf = f; }
+  { const c = S.owner[p] === PLAYER ? S.cons[p] : null, f = csBldF(p, c), key = c ? p + ':' + c.k + ':' + c.lvl + ':' + csBldH0(p, c) : '', mf = c && el.querySelector('.cs-bldb .cs-mf');   // (the same rising fill on the BUILD square)
+    if (mf && mf.animate && CS.bk === key && CS.bf >= 0 && Math.abs(f - CS.bf) > 1e-4 && !afxReduced()) try { mf.animate([{transform:`translateY(${csMobY(CS.bf)})`}, {transform:`translateY(${csMobY(f)})`}], {duration:700, easing:'cubic-bezier(.3,.7,.3,1)'}); } catch (e) {}
+    CS.bk = key; CS.bf = f; }
   if (CS.p !== p && !fresh) slideIn(el.querySelector('.cs-body'), 0, 8, 200);
   CS.p = p; csH(); }
 // the sheet's height, for the map controls, hints and the tutorial box that sit above it
