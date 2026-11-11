@@ -23,7 +23,6 @@ Last updated: 2026-11-11.
 | Unit display by zoom: code-drawn unit icons; diamond counters when zoomed out, unit pictures with flag tags close in | Opus | Repair pass, then its last review |
 | Research follow-up: dark military category banners, sharp Higgsfield unit pictures, list of categories with no picture | Opus | Running (the redesign itself is built and reviewed on its branch; this step also fixes 3 small review points), then research is merged |
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Step 1 of 8 (plumbing) |
-| Battle effects: gunfire from the unit models, smoke and fire fixed to the map, sharp layered smoke, only crossed swords when zoomed out | Opus | Started at the owner's request as an extra job |
 
 ## Queued (in this order)
 
@@ -84,6 +83,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | One tap on a city opens its sheet with Build and Mobilize | Sonnet |
 | Three infantry counter icon options (waiting for the owner's pick) | Sonnet |
 | LATER.md: radar stations, coastal batteries, anti-air sites | Opus |
+| Battle effects: gunfire and shells from the unit models onto the enemy's, smoke and fire fixed to the map and sharp at every zoom, only crossed swords when zoomed out | Opus |
 
 ## Done and public (v3.12 and earlier)
 
