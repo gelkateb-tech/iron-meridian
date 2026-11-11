@@ -3452,13 +3452,7 @@ function dtWork(idle, tv){ if (!idle || !layer) return; const s = tv ? tv.s : vi
 
 const PRE = {};
 function save(){ if (!S || !S.started) return; S.savedAt = Date.now(); try { localStorage.setItem(SAVE_KEY, saveJSON()); } catch (e) {} }
-// persistent campaigns keep running while you are away at the 1x pace (4 game minutes per real minute), up to 30 days of catch-up
-function catchUp(){ if (!S || !S.persist || !S.savedAt || S.over) return null;
-  const hrs = Math.min(30*24, Math.floor((Date.now() - S.savedAt)/1000*HOURS_PER_SEC[1])); if (hrs < 1) return null;
-  const h0 = S.hour, p0 = S.owner.filter(o => o === PLAYER).length, u0 = S.armies.filter(a => a.owner === PLAYER).reduce((s0, a) => s0 + count(a), 0), c0 = S.nations[PLAYER].cash;
-  const wasBooted = booted; booted = false; for (let i = 0; i < hrs && !S.over; i++) tick(); booted = wasBooted;
-  const ev = S.log.filter(e => e.h > h0 && (e.kind === 'bad' || e.kind === 'good')).slice(0, 12);
-  return {hrs:S.hour - h0, dp:S.owner.filter(o => o === PLAYER).length - p0, du:S.armies.filter(a => a.owner === PLAYER).reduce((s0, a) => s0 + count(a), 0) - u0, dc:S.nations[PLAYER].cash - c0, ev}; }
+// Not used in the single-player game (time only runs while you play). Multiplayer will reuse this report to show what happened while the player was away, because the server runs the game.
 function awayHTML(R){ const sg = v => (v >= 0 ? '+' : '') + fmt(v);
   return `<div class="eyebrow">The Meridian Herald · special edition</div><h1>While you were away</h1>
     <p>${Math.floor(R.hrs/24)} days and ${R.hrs % 24} hours passed on the fronts. Your forces followed their standing orders.</p>
@@ -9717,11 +9711,10 @@ document.addEventListener('click', e => {
     case 'pickdoc': pickDoc = b.dataset.k; showPicker(); break;
     case 'pickscn': pickScn = b.dataset.k; pickSel = 0; showPicker(); break;
     case 'picklen': pickLen = +b.dataset.v; showPicker(); break;
-    case 'pickmode': pickPersist = b.dataset.v === '1'; showPicker(); break;
     case 'upgrade': if (startUpgrade(PLAYER, b.dataset.t)){ toast(`Upgrading ${UNITS[b.dataset.t].name} to Mk ${ROMAN[S.nations[PLAYER].eng.m]}.`, 'info', null); } openModal(researchHTML(), 'research'); renderSide(true); break;
     case 'begin':   // building the campaign takes a moment: the button shows it is working first (painted before the heavy work starts)
       b.disabled = true; b.setAttribute('aria-busy', 'true'); b.classList.add('busy'); b.textContent = 'Mobilising\u2026';
-      requestAnimationFrame(() => setTimeout(() => { clearSave(); useScenario('world'); DAY_LIMIT = Infinity; newGame.doc = null; newGame.persist = pickPersist; newGame((Math.random()*2**31) | 0, pickSel, [PLAYER]); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); try { dtWorker(); const v0 = {s:view.s, x:view.x, y:view.y}; goHome(); DT.pre = {s:view.s, x:view.x, y:view.y, t:performance.now(), pre:true}; view.s = v0.s; view.x = v0.x; view.y = v0.y; } catch (e) {} }, 0)); break;   // (the tile workers start now: the flight in prefetches its detail)
+      requestAnimationFrame(() => setTimeout(() => { clearSave(); useScenario('world'); DAY_LIMIT = Infinity; newGame.doc = null; newGame((Math.random()*2**31) | 0, pickSel, [PLAYER]); S.diff = pickDiff; S.started = true; save(); clearSel(); showBriefing(true, false); try { dtWorker(); const v0 = {s:view.s, x:view.x, y:view.y}; goHome(); DT.pre = {s:view.s, x:view.x, y:view.y, t:performance.now(), pre:true}; view.s = v0.s; view.x = v0.x; view.y = v0.y; } catch (e) {} }, 0)); break;   // (the tile workers start now: the flight in prefetches its detail)
     case 'ctl-toggle': { const bx = $('ctlbox'); if (bx){ bx.hidden = !bx.hidden; b.setAttribute('aria-expanded', String(!bx.hidden)); } } break;
     case 'tip-ok': ftipHide(true); break;
     case 'tip-skip': SET.tipsOff = true; ftipHide(false); saveSet(); break;
@@ -9729,7 +9722,7 @@ document.addEventListener('click', e => {
     case 'start': closeModal(false); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); setSpeed(1); break;
     case 'start-tut': closeModal(false); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); setSpeed(0); tutStart(); break;
     case 'resume': closeModal(); break;
-    case 'continue': { const d = loadSaved(); if (d && restore(d)){ clearSel(); } closeModal(); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); const R = catchUp(); if (R){ geoDirty = true; save(); openModal(awayHTML(R), 'paper'); } else setSpeed(1); break; }
+    case 'continue': { const d = loadSaved(); if (d && restore(d)){ clearSel(); } closeModal(); try { dtWorker(); } catch (e) {} hudIntro(); flyHome(); setSpeed(1); break; }
     case 'newgame': showPicker(); break;
   }
 });
@@ -9845,7 +9838,7 @@ document.addEventListener('change', e => { const el = e.target; if (!el || !el.c
 function setSpeed(s){ if (S.over && s) return; const open = !$('modal').hidden; if (s && open && !(S.started && $('modal').classList.contains('docked'))) return; S.speed = s; if (open) speedBefore = s; renderSide(); redraw(); }   // (the clock starting or stopping changes what moves on the map: one frame, so the moving things register again)
 
 /* ---------------- Modal ---------------- */
-let pickDiff = 'regular', pickDoc = null, pickScn = 'world', pickLen = Infinity, pickPersist = false, modalKind = '', pickSel = WORLD_POWERS.findIndex(p => p.name === 'Brazil');
+let pickDiff = 'regular', pickDoc = null, pickScn = 'world', pickLen = Infinity, modalKind = '', pickSel = WORLD_POWERS.findIndex(p => p.name === 'Brazil');
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel', 'cities', 'mob', 'cbld'];
@@ -9983,7 +9976,6 @@ function showPicker(){
     <p>${cap1(NUMW[POWERS.length])} powers fight for the world. Win by holding a quarter of the world's land or five starting capitals; there is no time limit. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>
     <div class="picks">${cards}</div>
     <div class="eyebrow">AI difficulty</div><div class="row">${DIFFS.map(d => `<button class="btn ${pickDiff === d.k ? 'primary' : ''}" data-act="pickdiff" data-k="${d.k}">${d.name}</button>`).join('')}</div>
-    <div class="eyebrow">Mode</div><div class="row"><button class="btn ${!pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="0" title="Time only runs while you play.">Classic</button><button class="btn ${pickPersist ? 'primary' : ''}" data-act="pickmode" data-v="1" title="The war keeps going while you are away at the normal pace (4 game minutes per real minute), up to 30 days of catch-up when you return.">Persistent</button></div>
     <div class="row"><button class="btn primary" data-act="begin">Lead ${POWERS[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}<span class="psum">AI <b>${(DIFFS.find(d => d.k === pickDiff) || DIFFS[1]).name}</b> · World War · no time limit</span></div>`, 'picker');
 }
 function showBriefing(first, hasSave){
@@ -10369,7 +10361,7 @@ function start(data){
   MONO = css.getPropertyValue('--mono').trim() || MONO; BODY = css.getPropertyValue('--body').trim() || BODY; DISPLAY = css.getPropertyValue('--display').trim() || DISPLAY;
   const saved = loadSaved();
   let resumed = false;
-  if (data && data.state && restore(data.state)){ resumed = true; const R = catchUp(); if (R) setTimeout(() => { geoDirty = true; save(); openModal(awayHTML(R), 'paper'); }, 300); }
+  if (data && data.state && restore(data.state)){ resumed = true; }
   if (!resumed) newGame((Math.random()*2**31) | 0, pickSel, [PLAYER]);
   resize(); applySet(); if (resumed && data.view) Object.assign(view, data.view); else goHome();
   new ResizeObserver(() => resize()).observe(cv);
