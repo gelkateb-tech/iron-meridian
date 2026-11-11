@@ -1517,7 +1517,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
   font:700 9.5px/1 var(--body); font-style:normal; color:#e6eef0; font-variant-numeric:tabular-nums} .rlv.some{background:#1d5a80; border-color:#bfe6f7; color:#fff}
 .rgn{position:absolute; z-index:3; top:-6px; left:calc(50% + 15px); min-width:17px; height:15px; padding:0 3px; display:grid; place-items:center; border-radius:2px; background:#e8b923; color:#2a1f00;
   font:800 9.5px/1 var(--body); font-style:normal; box-shadow:0 1px 2px rgba(0,0,0,.6)}
-.rel{position:absolute; z-index:3; top:-11px; left:50%; transform:translateX(-50%); display:grid; line-height:0}
+.rnode .rbadge-e{position:absolute; z-index:3; top:-11px; left:50%; transform:translateX(-50%); display:grid; line-height:0}
 /* node states: blue = researched, green = can be researched now, grey = locked; marks (check, lock, coin, clock, ring) say the same without colour */
 .rnode.st-done .dm, .rnode.part .dm{background:linear-gradient(135deg, #5aa9d6, #25648c); border-color:#e6f6fd; box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 0 10px rgba(110,190,240,.35)}
 .rnode.st-open .dm{background:linear-gradient(135deg, #3f8a4c, #245a30); border-color:#b9efb4}
@@ -9166,7 +9166,7 @@ function researchHTML(){
     return `<button class="rnode k-${nd.kind} st-${s.s}${part ? ' part' : ''}${part && s.open ? ' nxt' : ''}${s.pay ? ' pay' : ''}${big ? ' big' : ''}${s.slot === 2 ? ' q' : ''}${RV.sel === nd.id ? ' sel' : ''}" data-act="rsel" data-id="${nd.id}"${s.slot ? ` id="rring${s.slot}"` : ''} style="--c:${p.c};--l:${p.l};--r:${p.r}"
       title="${rName(nd, lvN)}: ${rTxt(nd, lvN)}${s.s === 'done' ? ' · researched' : s.why ? ` · ${s.why}` : s.open ? ` · ${costTxt(rCost(nd, lvN), ', ')} · ${nd.lv[lvN - 1].c.days} d` : ''}" aria-label="${rName(nd, lvN)}, ${rLineName(nd)}: ${s.s === 'done' ? 'researched' : s.s === 'run' ? 'running in slot ' + s.slot : s.s === 'open' ? 'can be researched now' : s.why}">
       <span class="dm"><span class="dmi">${rFace(nd, big ? 26 : 20)}</span></span>${mark}
-      ${nd.elite ? `<i class="rel" title="Elite unit">${eliteSVG(26)}</i>` : ''}${nd.kind === 'gen' ? `<i class="rgn" title="Generation ${nd.gen}">${ROMAN[nd.gen]}</i>` : ''}${nlv > 1 ? `<i class="rlv${s.lv ? ' some' : ''}" title="${s.lv ? `${s.lv} of ${nlv} levels researched` : `${nlv} levels`}">${s.lv ? `${s.lv}/${nlv}` : nlv}</i>` : ''}
+      ${nd.elite ? `<i class="rbadge-e" title="Elite unit">${eliteSVG(26)}</i>` : ''}${nd.kind === 'gen' ? `<i class="rgn" title="Generation ${nd.gen}">${ROMAN[nd.gen]}</i>` : ''}${nlv > 1 ? `<i class="rlv${s.lv ? ' some' : ''}" title="${s.lv ? `${s.lv} of ${nlv} levels researched` : `${nlv} levels`}">${s.lv ? `${s.lv}/${nlv}` : nlv}</i>` : ''}
       <span class="rn"><b>${nd.name.split(' · ')[0]}</b>${sub ? `<small>${sub}</small>` : ''}</span>
       ${xreq.map(m => `<span class="rx">+ ${m.name} (${RCAT_BY[m.cat].name})</span>`).join('')}${xout.map(m => `<span class="rx out">to ${m.name}</span>`).join('')}</button>`; }).join('');
   // the day scale: only days that hold a node get a row; today's row is marked, later rows are dimmer
