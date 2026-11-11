@@ -2395,7 +2395,7 @@ const ART = (() => {
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
   const ART_SUPPLIED = [];
-  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
+  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber', 'u-infantry-figure'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
   const imgs = new Map(), waits = new Map(), failed = new Set(), cache = new Map(), stand = new Set(), durl = new Map();
   // until a promised picture arrives, an older supplied picture of the same thing beats the code-drawn stand-in (the recon UAV keeps u-drone)
   const ALT = {'u-uav-recon':'u-drone'}, rn = name => stand.has(name) && ALT[name] && imgs.has(ALT[name]) && !stand.has(ALT[name]) ? ALT[name] : name;
@@ -3513,212 +3513,6 @@ const TONES = {own:'#7fc36a', ownHi:'#c4ecb0', war:'#d9534a', other:'#a7a99f', n
 const toneOf = o => o === PLAYER ? 'own' : o >= 0 && S.rel[rkey(PLAYER, o)] && S.rel[rkey(PLAYER, o)].st === 'war' ? 'war' : o >= 0 ? 'other' : 'neu';
 const tones = () => SET.cb ? TONES_CB : TONES;
 const mapCol = o => tones()[toneOf(o)];
-// ---- flat unit icons for the map counters (original art): 24 x 16 grid, facing right (ground and ships side-on, bow or muzzle right; aircraft
-// from above, nose right; the helicopter side-on). Each icon is a list of [op, path data]: 'f' fills, 'x' knocks out (destination-out). Consecutive
-// fills are joined into one Path2D and filled once, so no hairline seams show where parts meet.
-const ICON = (() => { const Wh = (cx, r) => `M${cx - r} 13a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0z`, dart = (x, y, s) => `M${x} ${y}l${5*s} ${2*s}l${-5*s} ${2*s}l${1.3*s} ${-2*s}z`; return {
-  // ---- ground, side profile, ground line y 14.5
-  // foot soldiers, side profile facing right: a small low helmet, about seven heads tall, limbs and weapons at least ~1.1 units thick so the figure
-  // stays one solid shape on an 18 px plate. inf: a rifleman advancing (lean, pack, rifle at the ready, stride); at: kneeling with a launcher on the
-  // shoulder (flared rear, sight block); spec: a lower crouch, brimless helmet with the goggles flipped up, suppressed carbine; para: canopy and a jumper
-  inf: [['f', 'M11.75 2.45C11.75 1.4 12.19 1.15 12.85 1.15C13.55 1.15 13.95 1.45 13.95 2.4L14.5 2.57L14.45 2.81L11.45 2.81L11.5 2.43z'], ['f', 'M12.05 2.7 13.85 2.7 13.8 3.3 14.05 3.55 13.5 3.95 12.55 4.05 12 3.5z'], ['f', 'M11.45 3.85 13.4 3.75 13.45 5.2 12.3 8.35 9.85 8.35 10.3 5.6z'],
-        ['f', 'M9.75 4.2 11.65 3.9 11.15 7 8.95 7.25 8.95 4.95z'], ['f', 'M12.04 3.81 14.61 4.23 19.57 4.8 19.44 5.99 14.47 5.43 13.24 5.66 11.85 5.5z'], ['f', 'M19.46 4.93 21.59 5.17 21.49 6.12 19.35 5.88z'],
-        ['f', 'M15.29 5.34 16.43 5.47 16.6 7.05 15.45 7.02z'], ['f', 'M12.18 4.7 13.4 7.39 16.78 6.84 16.62 5.76 14.1 6.11 13.32 4.2z'], ['f', 'M10.41 7.57 8.7 10.88 7.4 13.57 8.5 14.13 9.9 11.52 11.89 8.43z'],
-        ['f', 'M7.05 13.55 8.75 13.45 9.05 14.5 6.85 14.5z'], ['f', 'M10.81 8.48 13.38 11.24 13.84 13.98 15.06 13.82 14.72 10.66 12.19 7.32z'], ['f', 'M13.75 13.45 15 13.4 16.25 14 16.3 14.5 13.7 14.5z']],
-  at:  [['f', 'M10.95 5.35C10.95 4.3 11.39 4.05 12.05 4.05C12.75 4.05 13.15 4.35 13.15 5.3L13.7 5.47L13.65 5.71L10.65 5.71L10.7 5.33z'], ['f', 'M11.25 5.6 13.05 5.6 13 6.2 13.25 6.45 12.7 6.85 11.75 6.95 11.2 6.4z'], ['f', 'M10.75 6.75 12.75 6.65 12.9 8.1 12.2 10.6 9.6 10.6 9.95 8.5z'],
-        ['f', 'M9 7.15 10.9 6.8 10.7 9.9 8.45 10.1 8.35 7.9z'], ['f', 'M3.44 5.45 4.86 5.96 15.65 5.49 15.73 7.25 4.94 7.72 3.56 8.35z'], ['f', 'M15.44 5.3 17.34 5.21 17.43 7.37 15.54 7.46z'],
-        ['f', 'M12.96 5.79 12.91 4.64 14.41 4.57 14.46 5.72z'], ['f', 'M11.62 7.15 12.77 7.1 12.83 8.54 11.68 8.59z'], ['f', 'M11.36 7.65 12.32 9.63 15.12 8.4 14.68 7.4 12.88 8.17 12.44 7.15z'],
-        ['f', 'M10.5 10.99 13.92 11.1 14.08 9.6 10.7 9.01z'], ['f', 'M13.38 10.06 13.73 13.96 14.97 13.84 14.62 9.94z'], ['f', 'M13.65 13.45 14.9 13.4 16.15 14 16.2 14.5 13.6 14.5z'],
-        ['f', 'M9.69 9.91 8.86 13.66 10.04 14.04 11.51 10.49z'], ['f', 'M9.75 13.35 9.95 14.5 5.6 14.5 5.75 13.5z']],
-  spec:[['f', 'M11.7 3.85C11.65 2.8 12.15 2.5 12.75 2.5C13.45 2.5 13.85 2.8 13.85 3.6L13.6 3.95L11.7 3.95z'], ['f', 'M13.3 2.8 13.9 2.2 14.65 2.8 14 3.5z'], ['f', 'M11.95 4.05 13.65 4 13.65 4.6 13.9 4.85 13.35 5.25 12.4 5.35 11.9 4.8z'],
-        ['f', 'M11.2 5.2 13.2 5.05 13.2 6.6 12 9.5 9.5 9.5 10.2 6.9z'], ['f', 'M9.35 5.85 11.25 5.4 10.85 8.3 8.6 8.6 8.6 6.6z'], ['f', 'M11.95 5.12 14.14 5.38 17.53 5.66 17.45 6.73 14.06 6.55 13.04 6.8 11.84 6.72z'],
-        ['f', 'M17.44 5.51 20.63 5.73 20.53 7.13 17.34 6.9z'], ['f', 'M14.77 6.42 15.76 6.49 15.92 7.86 14.91 7.89z'], ['f', 'M12.08 6 13.25 8.6 16.4 7.99 16.2 6.91 13.95 7.3 13.22 5.5z'],
-        ['f', 'M10.28 8.37 7.88 10.97 7.63 13.83 8.87 13.97 9.22 11.63 11.52 9.63z'], ['f', 'M7.25 13.5 8.95 13.45 9.25 14.5 7.05 14.5z'], ['f', 'M10.78 9.8 13.58 11.04 13.88 13.95 15.12 13.85 14.92 10.16 11.62 8.2z'],
-        ['f', 'M13.8 13.45 15.05 13.4 16.3 14 16.35 14.5 13.75 14.5z']],
-  para:[['f', 'M3 7C4.2 1.2 19.8 1.2 21 7c-1.7-.9-3.4-.9-5 0-1.3-.9-2.7-.9-4 0-1.3-.9-2.7-.9-4 0-1.7-.9-3.3-.9-5 0z'], ['f', 'M3.38 7.22 11.28 10.67 11.52 10.13 3.62 6.68z'], ['f', 'M20.38 6.68 12.48 10.13 12.72 10.67 20.62 7.22z'],
-        ['f', 'M7.92 7.09 11.42 10.49 11.78 10.11 8.28 6.71z'], ['f', 'M15.72 6.71 12.22 10.11 12.58 10.49 16.08 7.09z'], ['f', 'M11.53 10.53C11.53 9.97 11.77 9.85 12.12 9.85C12.49 9.85 12.71 9.99 12.71 10.51L12.99 10.59L12.96 10.73L11.37 10.73L11.39 10.52z'],
-        ['f', 'M11.69 10.6 12.59 10.58 12.61 11 12.38 11.26 11.72 11.26z'], ['f', 'M11.34 11.14 12.52 11.12 12.66 13.35 11.2 13.35z'], ['f', 'M10.5 11.38 11.58 11.24 11.58 13.07 10.45 13.12z'],
-        ['f', 'M11.44 13.37 11.84 14.37 11.55 15.38 12.35 15.65 12.82 14.4 12.56 13.05z'], ['f', 'M11.58 15.23 12.56 15.23 13.08 15.61 13.03 15.89 11.58 15.89z']],
-  tank:[['f', 'M3.6 11.2h16.8a1.9 1.9 0 0 1 0 3.8H3.6a1.9 1.9 0 0 1 0-3.8z'], ['x', Wh(4.2, .8) + Wh(8.1, .8) + Wh(12, .8) + Wh(15.9, .8) + Wh(19.8, .8)],
-        ['f', 'M1.8 10.5L3.4 8.2h16.4l2.6 2.3z'], ['f', 'M5.6 8.2l1.2-2.5h7.6l1.8 1.1v1.4z'], ['f', 'M15.4 6.1h8.4v1.2h-8.4z']],
-  ifv: [['f', 'M3.6 11.4h14.6a1.8 1.8 0 0 1 0 3.6H3.6a1.8 1.8 0 0 1 0-3.6z'], ['x', Wh(4.2, .75) + Wh(7.8, .75) + Wh(11.4, .75) + Wh(15, .75) + Wh(18.2, .75)],
-        ['f', 'M2 10.8V7h13l5.8 3.8z'], ['f', 'M7.4 7l.6-1.8h4.6l.6 1.8z'], ['f', 'M12.8 5.6h7v.75h-7z']],
-  art: [['f', 'M3.4 11.4h15.2a1.8 1.8 0 0 1 0 3.6H3.4a1.8 1.8 0 0 1 0-3.6z'], ['x', Wh(4, .75) + Wh(7.6, .75) + Wh(11.2, .75) + Wh(14.8, .75) + Wh(18.2, .75)],
-        ['f', 'M1.8 10.8l.6-2.2h16.2l2.2 2.2z'], ['f', 'M2.6 8.6V5h9.6l1.8 1.6v2z'], ['f', 'M12.4 5.4l10-4 .45 1.1-10 4z'], ['f', 'M21.2 1.2l1.8-.7.6 1.5-1.8.7z']],
-  mlrs:[['f', Wh(5, 1.7) + Wh(9.6, 1.7) + Wh(18.6, 1.7)], ['f', 'M2 10.2h20.6v1.6H2z'], ['f', 'M17.6 10.2V6.2h3.4l1.8 2.4v1.6z'],
-        ['f', 'M2.6 9.8l11.4-6 1.6 3-11.4 6z'], ['x', 'M12.9 4.9l.7-.35.5.9-.7.35zM13.6 6.2l.7-.35.5.9-.7.35z']],
-  sam: [['f', Wh(5, 1.7) + Wh(9.6, 1.7) + Wh(18.6, 1.7)], ['f', 'M2 10.2h20.6v1.6H2z'], ['f', 'M17.6 10.2V6.2h3.4l1.8 2.4v1.6z'],
-        ['f', 'M3.4 9.8l5.6-7.4 1.7 1.3-5.6 7.4z'], ['f', 'M7.4 9.8l5.6-7.4 1.7 1.3-5.6 7.4z'], ['f', 'M12.2 7h3.6v3.2h-3.6z']],
-  jam: [['f', Wh(5.4, 1.7) + Wh(17.8, 1.7)], ['f', 'M2.4 10.2h19.8v1.6H2.4z'], ['f', 'M17.6 10.2V6.4h3l1.6 2.2v1.6z'],
-        ['f', 'M3 5.6h13.6v4.6H3z'], ['f', 'M9.3 1.2h1v4.4h-1z'], ['f', 'M6.6 1.4h6.4v.8H6.6zM7.4 3h4.8v.8H7.4z']],
-  // ---- aircraft, plan view, nose right, axis y 8
-  jet: [['f', 'M2.4 7.3H16l6.8.7-6.8.7H2.4z'], ['f', 'M6.4 7.3l3.8-5.5h1.6l2.8 5.5zM6.4 8.7l3.8 5.5h1.6l2.8-5.5z'],
-        ['f', 'M2.4 7.3l.8-2.1h1l1 2.1zM2.4 8.7l.8 2.1h1l1-2.1z'], ['f', 'M11.2 4.1h3.6v.85h-3.6zM11.2 11.05h3.6v.85h-3.6z']],
-  int: [['f', 'M1.8 7.4h15.4l6.3.6-6.3.6H1.8z'], ['f', 'M4.2 7.4l1.2-5.2 8.4 5.2zM4.2 8.6l1.2 5.2 8.4-5.2z'], ['f', 'M15.2 7.4l.7-1.9 1.6 1.9zM15.2 8.6l.7 1.9 1.6-1.9z']],
-  asf: [['f', 'M1.6 6.5h13.6l7.6 1.5-7.6 1.5H1.6z'], ['f', 'M5.6 6.5l3.4-5.6h2.2l2.8 5.6zM5.6 9.5l3.4 5.6h2.2l2.8-5.6z'],
-        ['f', 'M1.6 6.5l1-2.9h1.6l1.6 2.9zM1.6 9.5l1 2.9h1.6l1.6-2.9z'], ['f', 'M3.6 4.9h3.6v.75H3.6zM3.6 10.35h3.6v.75H3.6z']],
-  bomb:[['f', 'M1 7.3h17l4.8.7-4.8.7H1z'], ['f', 'M8.2 7.3L4.6.6h1.6l7 6.7zM8.2 8.7l-3.6 6.7h1.6l7-6.7z'],
-        ['f', 'M8.4 4.4h2.6v.9H8.4zM6.6 2.2h2.4v.8H6.6zM8.4 10.7h2.6v.9H8.4zM6.6 13h2.4v.8H6.6z'], ['f', 'M1 7.3l.6-2.5h1.2l1.6 2.5zM1 8.7l.6 2.5h1.2l1.6-2.5z']],
-  mpa: [['f', 'M.4 7.4h18.6l3.6.6-3.6.6H.4z'], ['f', 'M9.6 7.4L10 1.1h1.6l1.2 6.3zM9.6 8.6l.4 6.3h1.6l1.2-6.3z'],
-        ['f', 'M11.4 5h2.8v1.1h-2.8zM11.2 2.6h2.6v.9h-2.6zM11.4 9.9h2.8v1.1h-2.8zM11.2 12.5h2.6v.9h-2.6z'], ['f', 'M2 7.4l.6-2.6h1l1 2.6zM2 8.6l.6 2.6h1l1-2.6z']],
-  awacs:[['f', 'M1 7.3h17.6l4.2.7-4.2.7H1z'], ['f', 'M9.4 7.3L7.2 1h1.6l4.8 6.3zM9.4 8.7L7.2 15h1.6l4.8-6.3z'],
-        ['f', 'M10.6 4.6h2.6v1h-2.6zM10.6 10.4h2.6v1h-2.6z'], ['f', 'M1 7.3l.3-2.4h1.2l1.6 2.4zM1 8.7l.3 2.4h1.2l1.6-2.4z'],
-        ['x', 'M2.8 8a3.4 3.4 0 1 0 6.8 0 3.4 3.4 0 1 0-6.8 0z'], ['f', 'M3.5 8a2.7 2.7 0 1 0 5.4 0 2.7 2.7 0 1 0-5.4 0z']],
-  drone:[['f', 'M3 7.5h15c2.4 0 3.6.2 3.9.5-.3.3-1.5.5-3.9.5H3z'], ['f', 'M11 7.5l.2-6.7h1.4l.8 6.7zM11 8.5l.2 6.7h1.4l.8-6.7z'],
-        ['f', 'M3 7.5L1.4 4.8h.9l2.4 2.7zM3 8.5l-1.6 2.7h.9l2.4-2.7z'], ['f', 'M1.4 6h.7v4h-.7z']],
-  drone4:[['f', 'M3 7.5h15c2.4 0 3.6.2 3.9.5-.3.3-1.5.5-3.9.5H3z'], ['f', 'M11 7.5l.2-6.7h1.4l.8 6.7zM11 8.5l.2 6.7h1.4l.8-6.7z'],
-        ['f', 'M3 7.5L1.4 4.8h.9l2.4 2.7zM3 8.5l-1.6 2.7h.9l2.4-2.7z'], ['f', 'M1.4 6h.7v4h-.7z'], ['f', 'M11.8 3.6h3v.75h-3zM11.8 11.65h3v.75h-3z']],
-  sdrone:[['f', 'M4 8L6.2 1.4 20.2 7.3 22.6 8 20.2 8.7 6.2 14.6z'], ['f', 'M5.2 .8h2.6v1.1H5.2zM5.2 14.1h2.6v1.1H5.2z'], ['x', 'M4 7.6h3.2v.8H4z']],
-  swarm:[['f', dart(3, 1.2, 1) + dart(13.6, 2.2, 1) + dart(8.4, 6, 1) + dart(2.2, 10.4, 1) + dart(15.6, 9.8, 1)]],
-  heli:[['f', 'M2 1.8h20v1h-20z'], ['f', 'M11.9 2.8h1.1v1.6h-1.1z'], ['f', 'M8.4 4.4h7.4c2.6 0 4.8 1.4 5.8 3.6l.1 1H16l-1 1.4H9.6L8.2 8.6 3.2 7.6V6.4l5-.8z'],
-        ['f', 'M1 3.6h1.2l1.4 3.4V8H2.4z'], ['f', 'M10.4 8.6h5.4v1h-5.4z'], ['f', 'M8.6 11.6h10.2v.75H8.6zM10.4 10.2h.7v1.6h-.7zM16 10.2h.7v1.6H16z']],
-  // ---- ships, side profile, bow right, waterline y 12.8
-  frig:[['f', 'M1 9.6h20.6l2.2-1.4-2.4 4.8H3z'], ['f', 'M7.6 9.6V6.4h2V4.6h3.6l1.5 1.8h1.2v3.2z'], ['f', 'M11.2 1.4h.9v3.2h-.9zM10 2.4h3.2v.7H10z'],
-        ['f', 'M18.2 9.6V8.6h1.5v1zM19.5 8.8h2.2v.5h-2.2z']],
-  crui:[['f', 'M.6 9.2h21.4l1.8-1.4-2.4 5.2H2.4z'], ['f', 'M4.6 9.2V6h3.2V4.4h3.4L12.4 6v3.2z'], ['f', 'M13.6 9.2V6.6h3.4v2.6z'],
-        ['f', 'M9.4 1h.9v3.4h-.9zM8.2 2h3.2v.7H8.2zM15 3.6h.8v3h-.8z'], ['f', 'M18.6 9.2V8.2H20v1zM19.8 8.4h2.4v.5h-2.4z']],
-  carr:[['f', 'M1.6 9.4h21.2l-1.2 3.6H3.6z'], ['f', 'M.2 8.2h23.6v1.3H.2z'], ['f', 'M15.4 4.2h2.8v4h-2.8z'], ['f', 'M16.4 2.2h.8v2h-.8z']],
-  sub: [['f', 'M1.6 10.4C1.6 8.6 4 8.2 7 8.2h12c3 0 4.6 1.1 4.6 2.2s-1.6 2.2-4.6 2.2H7c-3 0-5.4-.4-5.4-2.2z'], ['f', 'M12 8.2l.6-3.6h2.8l.4 3.6z'],
-        ['f', 'M11.2 5.8h5.4v.75h-5.4z'], ['f', 'M1.8 10.4L.4 8.4h1.1l1.8.8z']],
-  cargo:[['f', 'M1 9h21l1.4-1-1.8 5H2.8z'], ['f', 'M2.4 4.6h3.6V9H2.4z'], ['f', 'M3.1 3h1.5v1.6H3.1z'],
-        ['f', 'M7.2 6.2h3.2V9H7.2zM10.8 5.2H14V9h-3.2zM14.4 6.2h3.2V9h-3.2zM18 7.2h2.6V9H18z']],
-  lst: [['f', 'M1 9.2h19.4l3.2-1.2-2 5H2.6z'], ['f', 'M2.4 4.6h4.4v4.6H2.4z'], ['f', 'M3.6 2.6h1v2h-1z'], ['f', 'M8 7.4h12v1.8H8z']],
-  truck:[['f', Wh(5.4, 1.7) + Wh(17.8, 1.7)], ['f', 'M2.4 10.2h19.8v1.6H2.4z'], ['f', 'M17.6 10.2V6.4h3l1.6 2.2v1.6z'], ['f', 'M2.4 4.8h14.6v5.4H2.4z']],   // supply truck (the supply run)
-}; })();
-ICON.stealth = ICON.bomb;   // (the Stealth Bomber shares the bomber's glyph until it has its own)
-// ICONP[type] = runs of [op, joined Path2D, the parts' Path2Ds]
-const ICONP = (() => { const out = {}; for (const k in ICON){ const L = []; for (const [op, d] of ICON[k]){ const last = L[L.length - 1]; if (last && last[0] === op){ last[1] += d; last[2].push(d); } else L.push([op, d, [d]]); }
-  out[k] = L.map(([op, d, parts]) => [op, new Path2D(d), parts.map(q => new Path2D(q))]); } return out; })();
-// the icon of type t, W device px wide, in colour col: built once into an offscreen canvas and drawn 1:1 (the cache is dropped when the pixel ratio changes).
-// A run of fills is drawn twice, part by part and as one joined path, and the two merged by the larger alpha: the joined path leaves no hairline seams
-// where parts meet, the separate parts fill what the joined path's winding cancels where parts overlap
-const ICONC = new Map(); let ICONC_D = 0;
-function iconC(t, W, col){ const key = t + '|' + W + '|' + col + '|' + dpr; let c = ICONC.get(key); if (c) return c;
-  const P = ICONP[t]; if (!P) return null; if (ICONC.size > 500) ICONC.clear();
-  const H = Math.max(1, Math.round(W*16/24)); c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
-  const mk = () => { const q = document.createElement('canvas'); q.width = W; q.height = H; const qg = q.getContext('2d', {willReadFrequently:true}); qg.scale(W/24, H/16); return qg; };
-  const ga = mk(), gb = mk();
-  for (const [op, p, parts] of P){
-    if (op === 'x'){ g.globalCompositeOperation = 'destination-out'; g.save(); g.scale(W/24, H/16); g.fill(p); g.restore(); continue; }
-    ga.clearRect(0, 0, 24, 16); gb.clearRect(0, 0, 24, 16); ga.fillStyle = gb.fillStyle = col; for (const q of parts) ga.fill(q); gb.fill(p);
-    let img; try { const A = ga.getImageData(0, 0, W, H), B = gb.getImageData(0, 0, W, H).data, d = A.data; for (let i = 3; i < d.length; i += 4) if (B[i] > d[i]){ d[i - 3] = B[i - 3]; d[i - 2] = B[i - 2]; d[i - 1] = B[i - 1]; d[i] = B[i]; } img = A; } catch (e) { img = null; }
-    g.globalCompositeOperation = 'source-over';
-    if (img){ ga.putImageData(img, 0, 0); g.drawImage(ga.canvas, 0, 0); } else g.drawImage(ga.canvas, 0, 0); }
-  g.globalCompositeOperation = 'source-over'; ICONC.set(key, c); return c; }
-// Sleek counter glyphs: 20 x 14 design units (one unit = one css px on the counter's tab, so whole and half units land on device pixels at 1x, 2x and 3x).
-// Ops: ['f', d] fill, ['s', d, w] round stroke w units wide, ['b', d, w] butt stroke, ['x', d] cut out, ['xs', d, w] cut a stroke. Ground vehicles face right
-// with the ground at y 12.5, aircraft are seen from above with the nose right on the axis y 7, ships sit on the waterline y 11.
-const SLK = (() => {
-  const C = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0z`;
-  const sheet = y => `M5 ${y}H18.6L15.6 ${y + 5.4}H2z`;
-  const wheels = (xs, y, r) => xs.map(x => C(x, y, r)).join('');
-  // a soldier's helmeted head: dome, brim, face
-  const head = (x, y) => [['f', `M${x - 1.55} ${y + .25}C${x - 1.55} ${y - 1.15} ${x - .75} ${y - 1.7} ${x + .1} ${y - 1.7}C${x + 1.05} ${y - 1.7} ${x + 1.7} ${y - 1.05} ${x + 1.7} ${y + .25}L${x + 2.1} ${y + .45}V${y + .85}H${x - 1.75}z`],
-    ['f', `M${x - .9} ${y + .6}H${x + 1.3}V${y + 1.55}Q${x + 1.3} ${y + 2.1} ${x + .55} ${y + 2.1}H${x - .9}z`]];
-  // a tracked running gear: track band with road wheels cut out
-  const track = (x0, x1, y0, y1, n) => { const r = (y1 - y0)/2, ws = []; for (let i = 0; i < n; i++) ws.push(x0 + r + (x1 - x0 - 2*r)*i/(n - 1));
-    return [['f', `M${x0 + r} ${y0}H${x1 - r}a${r} ${r} 0 0 1 0 ${2*r}H${x0 + r}a${r} ${r} 0 0 1 0 ${-2*r}z`], ['x', wheels(ws, y0 + r, r*0.46)]]; };
-  // wheels on a truck: dark tyres with a cut hub ring
-  const tyres = (xs, y, r) => [['f', wheels(xs, y, r)], ['x', wheels(xs, y, r*0.42)]];
-  const truckCab = (x, y) => [['f', `M${x} ${y + 5}V${y + 1.2}Q${x} ${y} ${x + 1.2} ${y}H${x + 2.6}L${x + 4.3} ${y + 2.6}V${y + 5}z`], ['x', `M${x + .9} ${y + .9}H${x + 2.3}L${x + 3.4} ${y + 2.4}H${x + .9}z`]];
-  return {
-  // advancing rifleman
-  inf: [...head(10.3, 2.2), ['s', 'M9.9 5.2L9 8.6', 2.7], ['f', 'M6.9 4.9H8.9L9 8.2H6.7z'],
-        ['s', 'M9.1 8.6L7.6 10.4L6.2 12.6', 1.75], ['s', 'M9.5 8.6L11.2 10.3L11.9 12.6', 1.75], ['b', 'M5.4 13.1H7.2M11.4 13.1H13.4', 1],
-        ['s', 'M10.6 5.4L12 7L13.4 6.5', 1.25], ['b', 'M8.6 7.1L18.4 5', 1.05], ['b', 'M12.2 6.6L12.6 8.1', 0.9]],
-  // kneeling soldier with a launcher on the shoulder
-  at: [...head(11.9, 2.3), ['b', 'M2.6 4.7H17', 2.1], ['f', 'M16.6 3.3H18.4L19.4 4.1V5.3L18.4 6.1H16.6z'], ['f', 'M1.4 3.9H3V5.5H1.4z'],
-        ['s', 'M10.8 5.8L9.9 9', 2.6], ['s', 'M10 9.2L12.4 9.8L12.8 12.6', 1.75], ['s', 'M9.8 9.2L8 12.2H5.4', 1.7], ['b', 'M12.4 13.1H14.4', 1],
-        ['s', 'M11.4 6.4L13 7.4L13.8 5.8', 1.2]],
-  // special forces: crouched, aiming a long suppressed rifle, beret instead of a helmet
-  spec: [['f', 'M8.3 2.9C8.3 1.6 9.6 1 11.1 1.2C12.2 1.35 12.8 1.9 12.7 2.6L10.9 3.1H8.3z'], ['f', 'M9.2 2.9H11.6V4.3Q11.6 4.9 10.9 4.9H9.2z'],
-        ['s', 'M9.6 5.8L8.4 8.8', 2.7], ['f', 'M6.2 5.6H8.2L8.4 8.4H6z'], ['s', 'M8.4 9L10.8 9.8L11.3 12.6', 1.75], ['s', 'M8.2 9L6.4 11L5 12.6', 1.75], ['b', 'M4.4 13.1H6.2M10.8 13.1H12.7', 1],
-        ['b', 'M8.8 5.3L19.4 5.3', 1], ['b', 'M8.2 5.3L9.6 5.3', 2], ['s', 'M10 6L12.6 5.6', 1.25], ['b', 'M12.4 5.8L12.6 7.4', 0.9]],
-  // paratrooper under a canopy
-  para: [['f', 'M2.2 6.2C2.6 1.9 6.4 .4 10 .4S17.4 1.9 17.8 6.2Q16.3 5.2 14.7 6.2Q13.2 5.2 11.6 6.2Q10 5.3 8.4 6.2Q6.8 5.2 5.3 6.2Q3.8 5.2 2.2 6.2z'],
-        ['b', 'M2.6 6.3L9.4 9.6M17.4 6.3L10.6 9.6M6.6 6.2L9.6 9.4M13.4 6.2L10.4 9.4', 0.55],
-        ['f', C(10, 9.3, 0.95)], ['s', 'M10 10.6V12.2', 1.9], ['s', 'M9.6 12.3L9.1 13.4M10.4 12.3L10.9 13.4', 1]],
-  // supply truck
-  truck: [...truckCab(14.2, 5.4), ['f', 'M1.2 4.2H13.6V10.4H1.2z'], ['x', 'M1.9 4.9H12.9V5.5H1.9z'], ['f', 'M1 10H19V11.4H1z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6)],
-  // mobile jammer: a truck with a mast and a dish
-  jam: [...truckCab(14.2, 5.4), ['f', 'M1.2 6.2H13.6V10.4H1.2z'], ['f', 'M1 10H19V11.4H1z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6),
-        ['b', 'M8 6.2V1.4', 0.9], ['b', 'M5.6 1.8H10.4M6.4 3.4H9.6', 0.8], ['f', 'M2.4 2.6Q3.6 1 5.2 2.2L3.4 4.6Q2 3.8 2.4 2.6z'], ['b', 'M3.9 3.6L4.4 6.2', 0.8]],
-  // wheeled infantry fighting vehicle: a sloped armoured hull, small cannon turret, four big wheels
-  ifv: [['f', 'M1.2 10.6V6.8L2.2 5.8H12L18.8 8.6V10.6z'], ['f', 'M6.2 5.8L7 4H11L11.8 5.8z'], ['b', 'M10.6 4.8H18.4', 0.85],
-        ['x', 'M1.6 7.6H12.6V8.2H1.6z'], ...tyres([3.6, 7.2, 12.6, 16.2], 11.4, 1.75)],
-  // main battle tank
-  tank: [...track(1.6, 17.4, 9.4, 13, 5), ['f', 'M.6 9.4L2.2 7.2H17.2L19.2 9.4z'], ['f', 'M4.6 7.2L5.6 4.6H11.8L13.8 5.6V7.2z'], ['b', 'M13.4 5.6H19.8', 1.1],
-        ['f', 'M18.9 5H19.8V6.2H18.9z'], ['b', 'M7.2 4.6V3.4H9.2', 0.7]],
-  // self-propelled howitzer: big rear turret, long barrel raised
-  art: [...track(1.6, 17.4, 9.4, 13, 5), ['f', 'M.8 9.4L1.6 7.4H17.2L19 9.4z'], ['f', 'M1.6 7.4V4.2L2.6 3.4H10.6L12.2 4.6V7.4z'], ['b', 'M11.6 5L19.6 1.4', 1.1],
-        ['f', 'M18.8 .8L19.4 .5L20 1.9L19.4 2.2z'], ['x', 'M3 5.2H9.6V5.8H3z']],
-  // rocket artillery: a truck carrying a raised launch pod with tube mouths
-  mlrs: [...truckCab(14.2, 5.4), ['f', 'M1 10H19V11.4H1z'], ['f', 'M1.2 8.4H13.6V10.4H1.2z'], ['f', 'M1.6 8.2L11.6 3.2L13 6L3 11z'],
-        ['x', C(11.6, 4.3, .45) + C(12.2, 5.5, .45)], ['x', 'M3.1 8.7L11.3 4.6L11.5 5L3.3 9.1z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6)],
-  // mobile SAM: launcher truck with two missiles raised
-  sam: [...truckCab(14.2, 5.4), ['f', 'M1 10H19V11.4H1z'], ['f', 'M1.2 8.4H13.6V10.4H1.2z'],
-        ['f', 'M3.2 8.6L8.6 2.2L10 3.4L4.6 9.8z'], ['f', 'M6.6 8.6L12 2.2L13.4 3.4L8 9.8z'], ['f', 'M8.3 1.9L9.2 1.2L10.3 2.5L9.6 3z'], ['f', 'M11.7 1.9L12.6 1.2L13.7 2.5L13 3z'],
-        ['f', 'M2.6 7.6H9.4V9H2.6z'], ...tyres([4, 7.2, 16.2], 11.9, 1.6)],
-  // ---- aircraft, seen from above, nose right, axis y 7
-  jet: [['f', 'M1.6 6.3H14.4Q18.2 6.4 19.9 7Q18.2 7.6 14.4 7.7H1.6z'], ['f', 'M6.4 7L8 1.4H9.2L12.6 7zM6.4 7L8 12.6H9.2L12.6 7z'],
-        ['f', 'M1.6 7L2.2 3.9H3.2L4.8 7zM1.6 7L2.2 10.1H3.2L4.8 7z'], ['x', 'M15.4 6.75H17.4V7.25H15.4z']],
-  int: [['f', 'M1.4 6.3H14Q18.2 6.4 19.9 7Q18.2 7.6 14 7.7H1.4z'], ['f', 'M3.4 7L4.8 1.8H6L13.8 7zM3.4 7L4.8 12.2H6L13.8 7z'],
-        ['f', 'M1.4 7L2 4.8H2.8L3.8 7zM1.4 7L2 9.2H2.8L3.8 7z'], ['x', 'M15.4 6.75H17.4V7.25H15.4z']],
-  asf: [['f', 'M1.4 5.6H13.8Q18.4 6 19.9 7Q18.4 8 13.8 8.4H1.4z'], ['f', 'M5.4 7L8.6 .9H10.4L12.8 7zM5.4 7L8.6 13.1H10.4L12.8 7z'],
-        ['f', 'M1.4 7L2.2 2.8H3.8L5 7zM1.4 7L2.2 11.2H3.8L5 7z'], ['x', 'M15.4 6.75H17.4V7.25H15.4z'], ['x', 'M1.4 6.75H6V7.25H1.4z']],
-  // heavy bomber: a flying wing
-  bomb: [['f', 'M19.8 7L6.6 .6L5 1.2L7.6 3.4L5.4 5.2L6.8 7L5.4 8.8L7.6 10.6L5 12.8L6.6 13.4z'], ['x', 'M14 6.75H17.4V7.25H14z']],
-  // maritime patrol: straight wings, four turboprops
-  mpa: [['f', 'M.6 6.3H16.4Q19 6.4 19.9 7Q19 7.6 16.4 7.7H.6z'], ['f', 'M8.6 7L9.2 .6H10.8L11.4 7zM8.6 7L9.2 13.4H10.8L11.4 7z'],
-        ['f', 'M10.6 2.4H13V3.4H10.6zM10.6 4.4H13V5.4H10.6zM10.6 8.6H13V9.6H10.6zM10.6 10.6H13V11.6H10.6z'], ['f', 'M.6 7L1.2 3.8H2.4L3.6 7zM.6 7L1.2 10.2H2.4L3.6 7z']],
-  // AWACS: airliner with a rotodome
-  awacs: [['f', 'M.6 6.3H16.8Q19.2 6.4 19.9 7Q19.2 7.6 16.8 7.7H.6z'], ['f', 'M8.4 7L6.4 .6H7.8L12.4 7zM8.4 7L6.4 13.4H7.8L12.4 7z'],
-        ['f', 'M.6 7L.9 3.6H2L3.6 7zM.6 7L.9 10.4H2L3.6 7z'], ['x', C(5, 7, 3.1)], ['f', C(5, 7, 2.4)], ['x', 'M2.8 6.75H7.2V7.25H2.8z']],
-  // recon UAV: long thin wings, V tail
-  drone: [['f', 'M2.6 6.4H15.6Q19 6.5 19.8 7Q19 7.5 15.6 7.6H2.6z'], ['f', 'M10.2 7L10.6 .6H11.8L12.2 7zM10.2 7L10.6 13.4H11.8L12.2 7z'],
-        ['f', 'M2.6 7L1.2 3.6H2.2L4.2 7zM2.6 7L1.2 10.4H2.2L4.2 7z']],
-  drone4: [['f', 'M2.6 6.4H15.6Q19 6.5 19.8 7Q19 7.5 15.6 7.6H2.6z'], ['f', 'M10.2 7L10.6 .6H11.8L12.2 7zM10.2 7L10.6 13.4H11.8L12.2 7z'],
-        ['f', 'M2.6 7L1.2 3.6H2.2L4.2 7zM2.6 7L1.2 10.4H2.2L4.2 7z'], ['f', 'M11.8 2.8H14.8V3.6H11.8zM11.8 10.4H14.8V11.2H11.8z']],
-  // strike drone: a delta-wing loitering munition
-  sdrone: [['f', 'M3.4 7L6 .8H7.4L18 6.2Q19.8 6.6 19.8 7Q19.8 7.4 18 7.8L7.4 13.2H6z'], ['f', 'M5.6 .4H8.2V1.4H5.6zM5.6 12.6H8.2V13.6H5.6z'], ['x', 'M3 6.75H6.6V7.25H3z']],
-  // drone swarm: three small deltas in formation
-  swarm: [['f', 'M3.4 1.2L8.6 3.2L3.4 5.2L4.6 3.2z'], ['f', 'M10.6 5L15.8 7L10.6 9L11.8 7z'], ['f', 'M3.4 8.8L8.6 10.8L3.4 12.8L4.6 10.8z'], ['f', 'M14.2 .8L19 2.6L14.2 4.4L15.2 2.6z'], ['f', 'M14.2 9.6L19 11.4L14.2 13.2L15.2 11.4z']],
-  // attack helicopter, side view
-  heli: [['b', 'M1.6 1.6H18.4', 0.9], ['f', 'M9.6 1.6H11V3.4H9.6z'], ['f', 'M7.4 3.4H13.8Q17.6 3.6 18.6 6.6L18.8 7.8H13.4L12.4 8.8H8.2L6.8 7.6L2.6 6.6V5.2L7.4 4.4z'],
-        ['x', 'M14.2 4.4H16.4L17.4 6.2H14.2z'], ['f', 'M.6 3.4H1.8L3.2 5.8V6.8H1.6z'], ['f', 'M8.8 8.4H14.4V9.4H8.8z'], ['b', 'M7.4 11.4H17.4', 0.9], ['b', 'M9.4 9V11.4M15.2 9V11.4', 0.8]],
-  // ---- ships, side profile, bow right, waterline y 11
-  frig: [['f', 'M.6 8.4H17.4L19.8 7.2L17.8 11.6H2.2z'], ['f', 'M6.4 8.6V5.6H8V3.8H11.6L13 5.6H14V8.6z'], ['f', 'M9.1 3.9L9.8 .6L10.5 3.9z'], ['b', 'M8.6 2H11', 0.6], ['f', 'M15.6 8.6V7.6H17.2V8.6z'], ['b', 'M17 8L19.4 7.6', 0.6],
-        ['x', 'M8.4 6.2H11.6V6.8H8.4z']],
-  crui: [['f', 'M.4 8.2H17.6L19.8 7L17.6 11.8H2z'], ['f', 'M3.8 8.4V5.4H6.4V3.6H10L11.4 5.4V8.4z'], ['f', 'M12 8.4V6H15.2V8.4z'], ['f', 'M7.1 3.7L7.8 .4L8.5 3.7z'], ['b', 'M6.6 1.8H9', 0.6], ['b', 'M13.6 6V3.6', 0.8],
-        ['f', 'M16.2 8.4V7.4H17.6V8.4z'], ['b', 'M17.4 7.8L19.6 7.4', 0.6], ['x', 'M6.2 6H10V6.6H6.2z']],
-  carr: [['f', 'M1.6 9H18.6L17.4 12H3.4z'], ['f', 'M.2 7.8H19.8V9.2H.2z'], ['f', 'M12.8 3.8H15.4V7.8H12.8z'], ['b', 'M14 3.8V1.6M13 2.4H15', 0.7], ['x', 'M13.4 4.6H14.8V5.2H13.4z']],
-  sub: [['f', 'M1.2 9.4C1.2 7.9 3.4 7.4 6 7.4H16.2C18.6 7.4 19.8 8.3 19.8 9.4S18.6 11.4 16.2 11.4H6C3.4 11.4 1.2 10.9 1.2 9.4z'], ['f', 'M10.2 7.6L10.8 4.4H13.4L13.8 7.6z'],
-        ['b', 'M11.8 4.4V2.6', 0.7], ['f', 'M.4 7.6H1.4L2.6 9.4H1.2z'], ['f', 'M9.6 5.6H11V6.2H9.6z']],
-  cargo: [['f', 'M.6 8.4H18L19.8 7.4L18.2 11.6H2.4z'], ['f', 'M1.8 4H5V8.6H1.8z'], ['f', 'M6.2 5.6H9V8.6H6.2zM9.6 4.6H12.4V8.6H9.6zM13 5.6H15.8V8.6H13z']],
-  lst: [['f', 'M.6 8.6H16.4L19.8 7.4L18 11.6H2.4z'], ['f', 'M1.6 4H5.6V8.8H1.6z'], ['b', 'M3.6 4V1.8', 0.8], ['f', 'M6.6 7H16.6V8.8H6.6z']],
-  // a mixed stack: three filled isometric tiles (true 2:1 diamonds with a little thickness) stacked on a diagonal, each parted from the one below
-  // by a clear rim (the white tab shows through) and with a fine light line where its top face meets its edge
-  stack: (() => { const P = (pts) => 'M' + pts.map(q => q.map(v => v.toFixed(2)).join(' ')).join('L') + 'z', hw = 6.1, hh = 3.05, T = 1.25;
-    const slab = (cx, cy, m) => P([[cx - hw - m*2, cy], [cx, cy - hh - m], [cx + hw + m*2, cy], [cx + hw + m*2, cy + T + m*0.6], [cx, cy + hh + T + m], [cx - hw - m*2, cy + T + m*0.6]]);
-    const rim = (cx, cy) => `M${(cx - hw + 0.5).toFixed(2)} ${(cy + 0.25).toFixed(2)}L${cx.toFixed(2)} ${(cy + hh - 0.05).toFixed(2)}L${(cx + hw - 0.5).toFixed(2)} ${(cy + 0.25).toFixed(2)}`;
-    const L = [[8.1, 9.35], [10, 6.75], [11.9, 4.15]], out = [];
-    L.forEach(([cx, cy], i) => { if (i) out.push(['x', slab(cx, cy, 0.75)]); out.push(['f', slab(cx, cy, 0)], ['xb', rim(cx, cy), 0.5]); });
-    return out; })(),
-  }; })();
-SLK.stealth = SLK.bomb;
-// a sleek glyph of type t, W device px wide (20 design units: at the counter's 20 css px every whole and half unit lands on a device pixel), in colour col;
-// painted once into an offscreen canvas (dropped when the pixel ratio changes)
-const SLKC = new Map(); let SLKC_D = 0;
-function slkC(t, W, col){ const key = t + '|' + W + '|' + col + '|' + dpr; let c = SLKC.get(key); if (c) return c;
-  const ops = SLK[t]; if (!ops) return null; if (SLKC.size > 300) SLKC.clear();
-  c = document.createElement('canvas'); c.width = W; c.height = Math.max(1, Math.round(W*14/20)); const g = c.getContext('2d'); g.scale(W/20, W/20); g.fillStyle = g.strokeStyle = col;
-  for (const [op, d, w] of ops){ const P = new Path2D(d); g.globalCompositeOperation = op[0] === 'x' ? 'destination-out' : 'source-over';
-    if (op === 'f' || op === 'x') g.fill(P); else { g.lineWidth = w; g.lineCap = op === 'b' || op === 'xb' ? 'butt' : 'round'; g.lineJoin = op === 'b' || op === 'xb' ? 'miter' : 'round'; g.stroke(P); } }
-  SLKC.set(key, c); return c; }
-// plate icon cells: darker versions of the relation tones, so the white icon has contrast; chevrons and aircraft in flight use the light tones
-const CELL_TONES = {own:['#5b9a4c', '#3d7331'], war:['#b4463d', '#8b2e28'], other:['#6c6f67', '#4f524c'], neu:['#5d5f59', '#454742']},
-  CELL_TONES_CB = {own:['#4f8fcf', '#2f6aa3'], war:['#d4842f', '#a8621c'], other:['#6c6f67', '#4f524c'], neu:['#5d5f59', '#454742']};
-const CHEV = {own:'#c4ecb0', war:'#f0a39a', other:'#d8d9d2', neu:'#d8d9d2'}, CHEV_CB = {own:'#b6d8f6', war:'#f5c48f', other:'#d8d9d2', neu:'#d8d9d2'};
 // what the map's colours depend on beyond ownership (who is at war with you, the palette): a change re-renders the layer, minimap and globe
 const toneSig = () => { let k = SET.cb ? 'cb:' : ':'; if (S && S.nations) for (const N of S.nations) if (N.id !== PLAYER && toneOf(N.id) === 'war') k += N.id + ','; return k; };
 // run every frame from the main loop (also while the globe covers the map, so its overlay recolours on war or peace): a change bumps the geometry version
@@ -5037,7 +4831,7 @@ function ovIn(){ if (!OV.on || ctx === OV.g) return; const m = MCTX, g = OV.g; O
 function ovOut(){ if (ctx !== OV.g) return; ctx = MCTX; dpr = OV.md; }
 const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
 const view = {s:1, x:0, y:0};
-let dpr = 1, cw = 0, ch = 0, hits = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, relMode = false, mapMode = 'political';
+let dpr = 1, cw = 0, ch = 0, hits = [], HITX = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, relMode = false, mapMode = 'political';
 // resources map: each province tinted by its strongest output against a typical yield of that good
 const RMAP_K = ['oil', 'rare', 'iron', 'metal', 'elec', 'mp', 'cash'], RMAP_W = {cash:12, oil:5, metal:3, iron:2.5, elec:2, rare:1.2, mp:2};
 const RMAP_C = {oil:'rgba(28,30,36,.78)', metal:'rgba(150,165,178,.6)', iron:'rgba(200,120,80,.62)', elec:'rgba(80,195,220,.55)', rare:'rgba(178,128,240,.68)', mp:'rgba(210,165,120,.5)', cash:'rgba(222,192,92,.5)'};
@@ -5160,14 +4954,13 @@ function drawSats(now){ if (!S.sats || !S.sats.length) return; ctx.save(); ctx.s
 let ILEG = '';
 function drawIntelLegend(vis, nUnk){ const el = document.getElementById('ilegend'); if (!el) return; const k = (vis.loc.size && nUnk) || vis.uav.size ? 'on' : ''; if (k === ILEG) return; ILEG = k; el.hidden = !k; }
 // unidentified contact: the flat plate with a '?' in a neutral cell and a small radar mark in the tab (no type, size or nation colour); static
-function unkPlate(x, y, s, now = performance.now()){ const ps = Math.max(0.85, Math.min(1.3, s)), h = Math.round(20*ps), C = Math.round(h*1.3), sk = Math.round(h*0.21), W0 = C + Math.round(0.8*h), w = W0 + sk, x0 = snapD(x - w/2), y0 = snapD(y - h/2), CT = PLATE_TONES.neu;
-  ctx.save(); ctx.translate(x0, y0); ctx.save(); ctx.transform(1, 0, -sk/h, 1, sk, 0);   // an unidentified radar contact: a grey slanted plate with a dashed edge
-  ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(0.8, 1.4, W0, h); ctx.fillStyle = plateGrad(h, CT[0], CT[1]); ctx.fillRect(0, 0, W0, h);
-  const ti = Math.max(1.5, Math.round(1.6*ps*2)/2); cutRect(ctx, ti, ti, C - ti, h - 2*ti, Math.round(0.3*h)); ctx.fillStyle = 'rgba(236,240,238,.85)'; ctx.fill();
-  ctx.setLineDash([3*ps, 2*ps]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.9)'; ctx.strokeRect(-0.5, -0.5, W0 + 1, h + 1); ctx.setLineDash([]); ctx.restore();
-  ctx.font = `italic 800 ${Math.round(0.68*h)}px ${BODY}`; ctx.fillStyle = '#20262a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', (ti + C)/2 + sk/2, h/2 + 0.5);
-  const bx = C + (W0 - C)/2 + sk/2, by = h/2; ctx.beginPath(); ctx.arc(bx, by, 2.2*ps, 0, Math.PI*2); ctx.fillStyle = '#9fd8ff'; ctx.fill(); ctx.beginPath(); ctx.arc(bx, by, 4.4*ps, -Math.PI*0.8, -Math.PI*0.2); ctx.strokeStyle = 'rgba(159,216,255,.7)'; ctx.lineWidth = 1.1; ctx.stroke();
-  ctx.restore(); return {x:x0 - 2, y:y0 - 2, w:w + 4, h:h + 4}; }
+function unkPlate(x, y, s, now = performance.now()){ const r = DIA/2*Math.max(0.85, Math.min(1.1, s)), X = snapD(x), Y = snapD(y), CT = SIDE_T.other, rc = Math.max(1.5, r*0.16);   // an unidentified radar contact: a grey diamond with a dashed edge and a '?'
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1.4; diaPath(ctx, X, Y, r, rc); ctx.fillStyle = CT[2]; ctx.fill(); ctx.restore();
+  const gr = ctx.createLinearGradient(0, Y - r, 0, Y + r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); diaPath(ctx, X, Y, r - 1, rc); ctx.fillStyle = gr; ctx.fill();
+  ctx.save(); ctx.setLineDash([3, 2]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.9)'; diaPath(ctx, X, Y, r + 0.5, rc); ctx.stroke(); ctx.restore();
+  ctx.font = `italic 800 ${Math.round(r*1.05)}px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.4; ctx.strokeStyle = 'rgba(8,12,10,.8)'; ctx.strokeText('?', X, Y + 1); ctx.fillStyle = '#ffffff'; ctx.fillText('?', X, Y + 1);
+  const bx = X + r*0.62, by = Y - r*0.62; ctx.beginPath(); ctx.arc(bx, by, 2.2, 0, Math.PI*2); ctx.fillStyle = '#9fd8ff'; ctx.fill(); ctx.beginPath(); ctx.arc(bx, by, 4.4, -Math.PI*0.8, -Math.PI*0.2); ctx.strokeStyle = 'rgba(159,216,255,.7)'; ctx.lineWidth = 1.1; ctx.stroke();
+  return {x:X - r - 2, y:Y - r - 2, w:2*r + 4, h:2*r + 4}; }
 const GO = new Map();
 function armyPos(a){
   if (a.air) return wingPos(a);
@@ -5202,143 +4995,27 @@ function fogPattern(c2 = ctx, a = 0.07){
   g.strokeStyle = `rgba(255,255,255,${(a*0.6).toFixed(3)})`; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
   const pat = c2.createPattern(c, 'repeat'); fogPat.set(a, pat); return pat;
 }
-/* original unit counter: nation strip, dark body, type glyph, strength, health bar */
-function glyph(x, y, t, s){
-  ctx.strokeStyle = '#e4e0d4'; ctx.fillStyle = '#e4e0d4'; ctx.lineWidth = 1.5;
-  const w = 13*s, h = 8*s; ctx.strokeRect(x - w/2, y - h/2, w, h);
-  ctx.beginPath();
-  const X = () => { ctx.moveTo(x - w/2, y - h/2); ctx.lineTo(x + w/2, y + h/2); ctx.moveTo(x + w/2, y - h/2); ctx.lineTo(x - w/2, y + h/2); };
-  const chev = dy => { ctx.moveTo(x - w*0.32, y + h*0.22 + dy); ctx.lineTo(x, y - h*0.28 + dy); ctx.lineTo(x + w*0.32, y + h*0.22 + dy); };
-  if (t === 'inf'){ X(); ctx.stroke(); }
-  else if (t === 'at'){ X(); ctx.moveTo(x - w/2, y + h*0.12); ctx.lineTo(x + w/2, y + h*0.12); ctx.stroke(); }
-  else if (t === 'art'){ ctx.arc(x, y, 1.8*s, 0, Math.PI*2); ctx.fill(); }
-  else if (t === 'sam'){ ctx.arc(x, y + h*0.35, w*0.3, Math.PI, 0); ctx.stroke(); }
-  else if (t === 'ifv'){ X(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, y, w*0.3, h*0.26, 0, 0, Math.PI*2); ctx.stroke(); }
-  else if (t === 'tank'){ ctx.ellipse(x, y, w*0.32, h*0.28, 0, 0, Math.PI*2); ctx.stroke(); }
-  else if (t === 'int'){ chev(-1.5*s); chev(1.5*s); ctx.stroke(); }
-  else if (t === 'jet'){ ctx.moveTo(x - w*0.32, y); ctx.lineTo(x + w*0.34, y); ctx.moveTo(x - w*0.08, y - h*0.36); ctx.lineTo(x + w*0.1, y); ctx.lineTo(x - w*0.08, y + h*0.36); ctx.moveTo(x - w*0.3, y - h*0.2); ctx.lineTo(x - w*0.3, y + h*0.2); ctx.stroke(); }
-  else if (t === 'heli'){ ctx.moveTo(x - w*0.28, y - h*0.3); ctx.lineTo(x + w*0.28, y + h*0.3); ctx.lineTo(x + w*0.28, y - h*0.3); ctx.lineTo(x - w*0.28, y + h*0.3); ctx.closePath(); ctx.fill(); }
-  else if (t === 'drone'){ chev(-0.8*s); ctx.moveTo(x - w*0.2, y + h*0.34); ctx.lineTo(x + w*0.2, y + h*0.34); ctx.stroke(); }
-  else if (t === 'swarm'){ for (const [dx, dy] of [[-0.26, 0.12], [0, -0.18], [0.26, 0.12]]){ ctx.moveTo(x + w*dx, y + h*dy - 1.6*s); ctx.lineTo(x + w*dx + 1.5*s, y + h*dy + 1.2*s); ctx.lineTo(x + w*dx - 1.5*s, y + h*dy + 1.2*s); ctx.closePath(); } ctx.fill(); }
-  else if (t === 'sdrone'){ chev(-0.8*s); ctx.moveTo(x - w*0.2, y + h*0.34); ctx.lineTo(x + w*0.2, y + h*0.34); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y + h*0.05, 1.3*s, 0, Math.PI*2); ctx.fill(); }
-  else if (t === 'jam'){ ctx.moveTo(x - w*0.34, y + h*0.1); ctx.lineTo(x - w*0.14, y - h*0.25); ctx.lineTo(x, y + h*0.25); ctx.lineTo(x + w*0.14, y - h*0.25); ctx.lineTo(x + w*0.34, y + h*0.1); ctx.stroke(); }
-  else if (t === 'bomb' || t === 'stealth'){ ctx.moveTo(x - w*0.36, y + h*0.28); ctx.lineTo(x, y - h*0.32); ctx.lineTo(x + w*0.36, y + h*0.28); ctx.closePath(); ctx.fill(); }
-  else if (t === 'mpa'){ chev(-1.2*s); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - w*0.32, y + h*0.3); ctx.quadraticCurveTo(x - w*0.16, y + h*0.1, x, y + h*0.3); ctx.quadraticCurveTo(x + w*0.16, y + h*0.5, x + w*0.32, y + h*0.3); ctx.stroke(); }
-  else if (t === 'awacs'){ ctx.ellipse(x, y, w*0.26, h*0.24, 0, 0, Math.PI*2); ctx.moveTo(x - w*0.26, y); ctx.lineTo(x + w*0.26, y); ctx.stroke(); }
-  else if (t === 'asf'){ chev(-2.4*s); chev(0); chev(2.4*s); ctx.stroke(); }
-  else if (t === 'mlrs'){ for (const dx of [-0.17, 0.17]){ ctx.moveTo(x + w*dx + 1.5*s, y); ctx.arc(x + w*dx, y, 1.5*s, 0, Math.PI*2); } ctx.fill(); ctx.beginPath(); ctx.moveTo(x - w*0.3, y - h*0.3); ctx.lineTo(x + w*0.3, y - h*0.3); ctx.stroke(); }
-  else if (t === 'spec'){ X(); ctx.moveTo(x - w*0.2, y - h*0.5 - 1.6*s); ctx.lineTo(x + w*0.2, y - h*0.5 - 1.6*s); ctx.stroke(); }
-  else if (t === 'para'){ X(); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - h*0.5, w*0.17, Math.PI, 0); ctx.fill(); }
-  else if (t === 'carr'){ ctx.moveTo(x - w*0.42, y - h*0.12); ctx.lineTo(x + w*0.42, y - h*0.12); ctx.lineTo(x + w*0.28, y + h*0.32); ctx.lineTo(x - w*0.28, y + h*0.32); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - w*0.46, y - h*0.32); ctx.lineTo(x + w*0.46, y - h*0.32); ctx.stroke(); }
-  else if (UNITS[t] && UNITS[t].cls === 'naval'){ ctx.moveTo(x - w*0.42, y - h*0.05); ctx.lineTo(x + w*0.42, y - h*0.05); ctx.lineTo(x + w*0.28, y + h*0.32); ctx.lineTo(x - w*0.28, y + h*0.32); ctx.closePath(); ctx.stroke();
-    if (t === 'sub'){ ctx.beginPath(); ctx.moveTo(x - w*0.42, y + h*0.35); ctx.lineTo(x + w*0.42, y + h*0.35); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(x, y - h*0.05); ctx.lineTo(x, y - h*0.38); ctx.stroke(); } }
-  else { chev(0); ctx.stroke(); }
-}
 function shade(col, f){ let r, g, b; if (col[0] === '#'){ const n = parseInt(col.slice(1), 16); r = n >> 16; g = n >> 8 & 255; b = n & 255; } else { const m = col.match(/\d+(\.\d+)?/g) || [0, 0, 0]; [r, g, b] = m.map(Number); }
   const c = v => Math.max(0, Math.min(255, Math.round(v*(1 + f)))); return `rgb(${c(r)},${c(g)},${c(b)})`; }
 const DARK = '#0b1012';
 const HPD = new Map();
-function seg2(pts, w, col){ ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.lineWidth = w + 1.6; ctx.strokeStyle = DARK; ctx.stroke(); ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke(); }
-function blob(path, fill){ ctx.fillStyle = fill; ctx.fill(path); ctx.lineWidth = 1.3; ctx.strokeStyle = DARK; ctx.stroke(path); }
-function shotPhase(seed, now){ const period = 650 + (seed*977 % 600); return (now + seed*131) % period; }
-function recoilOf(seed, now, s){ const ph = shotPhase(seed, now); return ph < 250 ? 2.5*s*(1 - ph/250) : 0; }
-function flash(x, y, s, now, seed){ const ph = shotPhase(seed, now);
-  if (ph > 80 && ph < 480){ const k2 = (ph - 80)/400; ctx.save(); ctx.globalAlpha = 0.45*(1 - k2); ctx.fillStyle = '#9a978c'; ctx.beginPath(); ctx.arc(x + k2*6*s, y - k2*8*s, (2 + k2*5)*s, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
-  if (ph < 150){ ctx.save(); ctx.strokeStyle = 'rgba(255,230,160,.9)'; ctx.lineWidth = 1.2; ctx.beginPath(); const tx = x + 4*s + ph/150*16*s; ctx.moveTo(tx, y); ctx.lineTo(tx + 6*s, y - 0.5*s); ctx.stroke(); ctx.restore(); }
-  if (ph > 80) return; s *= 1.4; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffd27a'; ctx.beginPath(); for (let i = 0; i < 8; i++){ const r = i % 2 ? 1.5*s : 4.2*s, a = i*Math.PI/4; ctx.lineTo(x + r*Math.cos(a), y + r*Math.sin(a)); } ctx.fill(); ctx.restore(); }
-function soldier(x, y, s, col, phase, walk, kind){
-  const sw = walk ? Math.sin(phase)*1 : 0, hipY = y - 5*s, shY = y - 9.6*s;
-  seg2([x, hipY, x + 3.2*s*sw, y], 1.7*s, shade(col, -0.35)); seg2([x, hipY, x - 3.2*s*sw, y], 1.7*s, shade(col, -0.45));
-  seg2([x, hipY, x + 0.4*s, shY], 2.6*s, col);
-  if (kind === 'at'){ seg2([x - 5*s, shY - 1.8*s, x + 5.5*s, shY - 1.8*s], 4*s, '#4b5a3a'); }
-  else seg2([x - 1.2*s, y - 7.4*s, x + 6*s, y - 9.6*s], 1*s, '#22282a');
-  seg2([x + 0.4*s, shY, x + 3.2*s, y - 7.8*s], 1.3*s, shade(col, -0.2));
-  ctx.beginPath(); ctx.arc(x + 0.5*s, y - 12.6*s, 2.2*s, 0, Math.PI*2); ctx.fillStyle = '#d8c3a2'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = DARK; ctx.stroke();
-  ctx.beginPath(); ctx.arc(x + 0.5*s, y - 13*s, 2.5*s, Math.PI, 0); ctx.fillStyle = shade(col, -0.25); ctx.fill(); ctx.stroke();
-}
-function tankSprite(x, y, s, col, phase, moving, fighting, now, seed, ifv){
-  const L = ifv ? 17 : 22, Hh = ifv ? 6 : 4.5;
-  const tr = new Path2D(); roundRect({beginPath(){}, moveTo:(...a) => tr.moveTo(...a), arcTo:(...a) => tr.arcTo(...a), closePath:() => tr.closePath()}, x - L/2*s, y - 3*s, L*s, 5*s, 2.5*s);
-  blob(tr, '#1d211e');
-  if (!ifv){ ctx.save(); ctx.setLineDash([1.6*s, 1.8*s]); ctx.lineDashOffset = moving ? -phase*2*s : 0; ctx.strokeStyle = '#6b6f66'; ctx.lineWidth = 1.2*s; ctx.beginPath(); ctx.moveTo(x - (L/2 - 2)*s, y + 1.9*s); ctx.lineTo(x + (L/2 - 2)*s, y + 1.9*s); ctx.stroke(); ctx.restore(); }
-  else for (let i = 0; i < 6; i++){ ctx.beginPath(); ctx.arc(x + (-7 + i*2.8)*s, y + 0.4*s, 1.4*s, 0, Math.PI*2); ctx.fillStyle = '#3a3e38'; ctx.fill(); ctx.strokeStyle = DARK; ctx.lineWidth = 1; ctx.stroke(); }
-  const hull = new Path2D(); hull.moveTo(x - (L/2 - 1)*s, y - 3*s); hull.lineTo(x + (L/2 - 2)*s, y - 3*s); hull.lineTo(x + L/2*s, y - (3 + Hh*0.6)*s); hull.lineTo(x - (L/2 - 2)*s, y - (3 + Hh)*s); hull.closePath(); blob(hull, shade(col, -0.1));
-  const ty = y - (3 + Hh)*s, recoil = fighting ? recoilOf(seed, now, s) : 0;
-  if (moving && !ifv) for (let i = 0; i < 3; i++){ const ph = ((now/400 + i/3) % 1); ctx.save(); ctx.globalAlpha = 0.3*(1 - ph); ctx.fillStyle = '#8c8270'; ctx.beginPath(); ctx.arc(x - (L/2 + 2 + ph*10)*s, y + 1*s - ph*4*s, (1.5 + ph*3.5)*s, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
-  if (!ifv){ seg2([x + 2*s, ty - 2.5*s, x + 14*s - recoil, ty - 3*s], 1.6*s, '#2b302c'); const tu = new Path2D(); tu.ellipse(x - 1*s, ty - 2*s, 5.5*s, 3*s, 0, 0, Math.PI*2); blob(tu, col); if (fighting) flash(x + 15*s, ty - 3*s, s, now, seed); }
-  else { seg2([x, ty - 1.6*s, x + 8*s, ty - 2.2*s], 1*s, '#2b302c'); const tu = new Path2D(); tu.rect(x - 3.5*s, ty - 3.4*s, 6*s, 3*s); blob(tu, col); if (fighting) flash(x + 9*s, ty - 2.2*s, s*0.7, now, seed); }
-}
-function artySprite(x, y, s, col, fighting, now, seed){
-  const rec = fighting ? recoilOf(seed, now, s) : 0;
-  seg2([x - 9*s, y, x + 2*s, y - 3*s], 1.8*s, shade(col, -0.3));
-  seg2([x, y - 4*s, x + 11*s - rec, y - 11*s + rec*0.6], 2.2*s, '#2b302c');
-  const sh = new Path2D(); sh.moveTo(x - 3*s, y - 2*s); sh.lineTo(x + 4*s, y - 7*s); sh.lineTo(x + 5*s, y - 3*s); sh.lineTo(x + 1*s, y); sh.closePath(); blob(sh, col);
-  for (const dx of [-2.5, 3]){ ctx.beginPath(); ctx.arc(x + dx*s, y + 0.5*s, 2.8*s, 0, Math.PI*2); ctx.fillStyle = '#2a2d29'; ctx.fill(); ctx.strokeStyle = DARK; ctx.lineWidth = 1.2; ctx.stroke(); }
-  if (fighting) flash(x + 12*s, y - 12*s, s, now, seed);
-}
-function samSprite(x, y, s, col, fighting, now, seed){
-  for (const dx of [-6, -1, 5]){ ctx.beginPath(); ctx.arc(x + dx*s, y + 0.5*s, 2*s, 0, Math.PI*2); ctx.fillStyle = '#2a2d29'; ctx.fill(); ctx.strokeStyle = DARK; ctx.lineWidth = 1; ctx.stroke(); }
-  const bed = new Path2D(); bed.rect(x - 9*s, y - 4*s, 13*s, 3.5*s); blob(bed, shade(col, -0.15));
-  const cab = new Path2D(); cab.rect(x + 4*s, y - 7*s, 5*s, 6.5*s); blob(cab, col);
-  for (const o of [0, 2.4]) seg2([x - 7*s, y - (5 + o)*s, x + 1*s, y - (12 + o)*s], 1.7*s, '#e6e0cf');
-  if (fighting && ((now/120 + seed) % 7) < 1){ ctx.save(); ctx.strokeStyle = 'rgba(255,240,200,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 2*s, y - 13*s); ctx.lineTo(x + 10*s, y - 26*s); ctx.stroke(); ctx.restore(); }
-}
-function jetSprite(x, y, s, col, ang, kind){
-  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-  const b = new Path2D();
-  if (kind === 'int'){ b.moveTo(13*s, 0); b.lineTo(0, 2*s); b.lineTo(-9*s, 9*s); b.lineTo(-9*s, 2.2*s); b.lineTo(-12*s, 4.5*s); b.lineTo(-12*s, 1.6*s); b.lineTo(-10*s, 0); b.lineTo(-12*s, -1.6*s); b.lineTo(-12*s, -4.5*s); b.lineTo(-9*s, -2.2*s); b.lineTo(-9*s, -9*s); b.lineTo(0, -2*s); b.closePath(); }
-  else { b.moveTo(13*s, 0); b.lineTo(3*s, 1.6*s); b.lineTo(-3*s, 10*s); b.lineTo(-6*s, 10*s); b.lineTo(-4*s, 2*s); b.lineTo(-9*s, 2*s); b.lineTo(-12*s, 5*s); b.lineTo(-12*s, -5*s); b.lineTo(-9*s, -2*s); b.lineTo(-4*s, -2*s); b.lineTo(-6*s, -10*s); b.lineTo(-3*s, -10*s); b.lineTo(3*s, -1.6*s); b.closePath(); }
-  ctx.fillStyle = col; ctx.fill(b); ctx.lineWidth = 1.2; ctx.strokeStyle = DARK; ctx.stroke(b);
-  ctx.fillStyle = '#9fc6dc'; ctx.beginPath(); ctx.ellipse(6*s, 0, 2.2*s, 0.9*s, 0, 0, Math.PI*2); ctx.fill();
-  if (kind !== 'int'){ ctx.fillStyle = '#1a1d1b'; for (const sy2 of [-5.5, 5.5]){ ctx.beginPath(); ctx.ellipse(-1*s, sy2*s, 2.2*s, 0.9*s, 0, 0, Math.PI*2); ctx.fill(); } }
-  ctx.restore();
-}
-function shipSprite(x, y, s, col, ang, kind, moving, now){
-  animAmb(); ctx.save(); ctx.translate(x, y + Math.sin(now/600 + x*0.05)*0.8*s); ctx.rotate(ang);
-  const k = kind === 'crui' ? 1.25 : 1;
-  if (moving){ ctx.strokeStyle = 'rgba(220,235,240,.45)'; ctx.lineWidth = 1.2; const w0 = (now/80) % 6; for (const side of [-1, 1]){ ctx.beginPath(); ctx.moveTo(-11*s*k, side*2*s); ctx.lineTo(-(22 + w0)*s*k, side*(6 + w0*0.5)*s); ctx.stroke(); } }
-  const h = new Path2D();
-  if (kind === 'sub'){ h.ellipse(0, 0, 12*s, 2.4*s, 0, 0, Math.PI*2); }
-  else { h.moveTo(14*s*k, 0); h.quadraticCurveTo(6*s*k, 4*s*k, -11*s*k, 3.2*s*k); h.lineTo(-11*s*k, -3.2*s*k); h.quadraticCurveTo(6*s*k, -4*s*k, 14*s*k, 0); h.closePath(); }
-  ctx.fillStyle = shade(col, -0.15); ctx.fill(h); ctx.lineWidth = 2.6; ctx.strokeStyle = 'rgba(220,235,240,.35)'; ctx.stroke(h); ctx.lineWidth = 1.2; ctx.strokeStyle = DARK; ctx.stroke(h);
-  ctx.fillStyle = shade(col, 0.25);
-  if (kind === 'sub'){ ctx.fillRect(-1.5*s, -1.2*s, 4*s, 2.4*s); }
-  else { ctx.fillRect(-4*s*k, -1.8*s*k, 7*s*k, 3.6*s*k); ctx.beginPath(); ctx.arc(8*s*k, 0, 1.6*s*k, 0, Math.PI*2); ctx.fill(); if (kind === 'crui'){ ctx.beginPath(); ctx.arc(-8*s*k, 0, 1.6*s*k, 0, Math.PI*2); ctx.fill(); } }
-  ctx.restore();
-}
-function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
-  const phase = now/95 + seed;
-  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.translate(-x, -y);
-  if (t === 'inf' || t === 'at'){ const m = Math.min(3, Math.max(1, n)); for (let i = 0; i < m; i++){ const ox = (i - (m - 1)/2)*7*s, oy = (i % 2)*1.5*s; soldier(x + ox, y + oy, s, col, phase + i*1.7, moving, t);
-      if (fighting && t === 'inf') flash(x + ox + 7*s, y + oy - 10*s, s*0.6, now, seed + i);
-      if (fighting && t === 'at'){ flash(x + ox + 7*s, y + oy - 11.4*s, s*0.8, now, seed + i); const ph = shotPhase(seed + i, now); if (ph < 220){ ctx.save(); ctx.globalAlpha = 0.6*(1 - ph/220); ctx.fillStyle = '#d8d0b8'; ctx.beginPath(); ctx.arc(x + ox - 7*s - ph/220*5*s, y + oy - 11.4*s, (2 + ph/220*4)*s, 0, Math.PI*2); ctx.fill(); ctx.restore(); } } } }
-  else if (t === 'tank' || t === 'ifv') tankSprite(x, y, s, col, phase, moving, fighting, now, seed, t === 'ifv');
-  else if (t === 'art') artySprite(x, y, s, col, fighting, now, seed);
-  else if (t === 'sam') samSprite(x, y, s, col, fighting, now, seed);
-  else if (t === 'jet' || t === 'int') jetSprite(x, y - 6*s, s, col, 0, t);
-  else if (UNITS[t] && UNITS[t].cls === 'air') jetSprite(x, y - 6*s, s, col, 0, isBmb(t) || t === 'mpa' || t === 'awacs' ? 'jet' : 'int');
-  else if (UNITS[t] && UNITS[t].cls !== 'naval') samSprite(x, y, s, col, fighting, now, seed);
-  else shipSprite(x, y - 2*s, s, col, 0, t, moving, now);
-  ctx.restore();
-}
 const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max(2, hexPx/20)) : 1.35, hexPx/12))*zx(hexPx);   // past the old max zoom figures keep growing
-/* ---------------- Troop models on the map (CoN-style): from the city zoom on, 3D models of each force's main unit types stand on the map
-   right under its counter (a rifleman and a 4x4 for motorized infantry, a tank, a howitzer, a frigate in the water, a jet parked at its base...),
-   so the counter reads as their label. The models are original procedural three.js designs (units3d.js) in shader-made camouflage, rendered at
-   twice the size with soft sun and sky shadows and a contact shade, baked once per direction into sheets at two levels (assets/units/m-<type>.webp
-   and the sharper m-<type>-hi.webp, fetched the first time a model of that type is wanted; the hi sheet only when the model is drawn large on the
-   screen, and dropped again when it has not been drawn for a while); the level is picked by the model's size in device pixels.
+/* ---------------- The forces on the map close in (CoN-style): from the crossover zoom (tmFade) each force's main unit types stand on the map as the
+   owner's top-down pictures (tmArt, tmArtDraw: a tank, a squad, a howitzer, a frigate in the water, a jet parked at its base...) with its flag tag
+   pinned just above them, while its diamond counter fades out (the two cross-fade over one band of zoom). A type without a picture of its own yet
+   shows its 3D map model instead: original procedural three.js designs (units3d.js) in shader-made camouflage, baked once per direction into sheets
+   at two levels (assets/units/m-<type>.webp and the sharper m-<type>-hi.webp, fetched the first time a model of that type is wanted; the hi sheet only
+   when the model is drawn large, dropped again when it has not been drawn for a while).
    WORLD-ANCHORED, like the cities: every force has a spot on the map in world units (provLayout: its province's spot plus a slot of its own,
    chosen once for the forces standing there, clear of the city's point, its name and your HQ; a marching force: its smoothed position, easing
-   off its old slot and onto its new one). Its models stand on the ground just under that spot in a rigid formation (world units: slot 0 the
-   most numerous type in front, the others left and right a little back; up to four models, fewer in a small province, all fading in together
-   from the zoom where a soldier is ~16 css px tall) and its counter is pinned PLATE_GAP px above the top of them at one pixel size: the spot is a
-   pure function of the game state, never of the zoom, so zooming only scales the models with the map (they grow like the cities), the counter
-   keeps labelling its troops and nothing ever slides. Counters that would touch fade in place (plateFade). They face the way they
-   march, their enemy in a battle or a fixed bearing of their own at rest (16 directions with hysteresis), are never offset per frame, and are
-   lit like the map (drawNight's daylight lift, dusk glow and night multiply). Drawn over the path lines and under the names,
-   the HQ and the counters. Independent garrisons show none unless selected or fighting; wings in flight keep their flat icons.
-   Settings: 'Troop models'. */
+   off its old slot and onto its new one). Its pictures stand on the ground just under that spot in a rigid formation (world units: slot 0 the
+   most numerous type in front, the others left and right a little back; up to four, fewer in a small province, all fading in together; each
+   one's footprint is that of its picture turned to every heading) and its tag is pinned PLATE_GAP px above the top of them at one pixel size: the
+   spot is a pure function of the game state, never of the zoom, so zooming only scales the pictures with the map (they grow like the cities) and
+   nothing ever slides. Counters that would touch fade in place (plateFade). The pictures face the way they march, their enemy in a battle or a
+   fixed bearing of their own at rest (turning smoothly, never offset per frame); night darkens them like the map. Drawn over the path lines and
+   under the names, the HQ and the counters; only what is on screen (and a margin) is drawn, at most 40 groups (24 with low effects) a frame,
+   those nearest the middle of the view first. Wings in flight keep their flat icons. Settings: 'Troop models' (off: the counters only). */
 const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
   jet:['jet'], bomb:['jet'], stealth:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
@@ -5414,8 +5091,8 @@ function tmUnits(list){ const u = {}; for (const q of list){ if (!q.air && G.P[q
 // models (the 4x4 of motorized infantry) while there is room; never a model of a type it does not have
 function tmRank(u, cls, nMax = 3, prim = false){ const hp = t => UNITS[t] ? UNITS[t].hp : 10, out = [];
   const ts = Object.keys(u).filter(t => TMM[t] && u[t] > 0).sort((a, b) => (u[b] - u[a]) || (u[b]*hp(b) - u[a]*hp(a)) || (a < b ? -1 : 1));
-  for (const pass of prim ? [0] : [0, 1]) for (const t of ts){ const m = TMM[t][pass]; if (m && TM_CLS(m) === cls && !out.includes(m) && out.length < nMax) out.push(m); }
-  return out; }
+  const src = {}; for (const pass of prim ? [0] : [0, 1]) for (const t of ts){ const m = TMM[t][pass]; if (m && TM_CLS(m) === cls && !out.includes(m) && out.length < nMax){ out.push(m); src[m] = t; } }
+  out.src = src; return out; }   // (src: the unit type each model stands for, for its picture)
 // a model type's extent round its ground origin over all 16 views (world px: [left, top, right, bottom]), from the baked sheet's boxes
 function tmExt(t){ const key = t + '|' + tmRW(); let e = TMEX.get(key); if (e) return e; const m = window.U3D && U3D.mapMeta ? U3D.mapMeta(t) : null;
   if (!m) return [-3, -3.6, 3, 2.2];
@@ -5424,7 +5101,8 @@ function tmExt(t){ const key = t + '|' + tmRW(); let e = TMEX.get(key); if (e) r
 const TM_GAP = 0;   // world px: the group's top on its anchor (the counter is pinned PLATE_GAP css px above it)
 // a model type's tight box in each of its 16 views, round its ground origin (world px); '*g', '*s', '*a': the union over a kind's types (for the layout)
 const TMVB = new Map(), TMFORM = new Map();
-function tmVB(t){ const key = t + '|' + tmRW(); let e = TMVB.get(key); if (e) return e;
+function tmVB(t){ const key = t + '|' + tmRW() + '|' + TMAS; let e = TMVB.get(key); if (e) return e;
+  const A = t[0] !== '*' && TMAS ? tmArtDef(t) : null; if (A){ e = Array.from({length:16}, (_, d) => { const [hx, hy] = tmArtHalf(A, d*Math.PI/8); return [-hx, -hy, hx, hy]; }); TMVB.set(key, e); return e; }   // (a picture: its footprint turned to each of the 16 headings)
   if (t[0] === '*'){ const vs = TM_CT[t[1]].map(tmVB); e = vs[0].map((_, d) => [Math.min(...vs.map(v => v[d][0])), Math.min(...vs.map(v => v[d][1])), Math.max(...vs.map(v => v[d][2])), Math.max(...vs.map(v => v[d][3]))]); }
   else { const m = window.U3D && U3D.mapMeta ? U3D.mapMeta(t) : null; if (!m){ const x = tmExt(t); return Array.from({length:16}, () => x); }
     const w = tmWpm(t)/m.ppm; e = m.bb.map(q => [(q[0] - m.ox)*w, (q[1] - m.oy)*w, (q[2] - m.ox)*w, (q[3] - m.oy)*w]); }
@@ -5433,7 +5111,7 @@ function tmVB(t){ const key = t + '|' + tmRW(); let e = TMVB.get(key); if (e) re
 // relative to the force's anchor (world px), and the ground the group covers. Each model stands as near the lead as it can without its box
 // overlapping another's (with a little ground between them) by more than 3% in any of the 16 views (all of a group face one way), so the group stays compact and rigid as it turns;
 // the whole group is centred under the counter and its back row's tallest view clears it. Worked out once per set of types (kept while it stays).
-function tmForm(sl){ const key = sl.map(t => t || '-').join('.') + '|' + tmRW(); let F = TMFORM.get(key); if (F) return F;
+function tmForm(sl){ const key = sl.map(t => t || '-').join('.') + '|' + tmRW() + '|' + TMAS; let F = TMFORM.get(key); if (F) return F;
   const V = sl.map(t => t ? tmVB(t) : null), ar = q => (q[2] - q[0])*(q[3] - q[1]), rel = [[0, 0]], mg = 0.05*tmRW();   // (mg: a little ground between two models)
   const okAt = (i, dx, dy) => { for (let j = 0; j < i; j++){ if (!V[j]) continue; for (let d = 0; d < 16; d++){ const A = V[j][d], B = V[i][d], ax = rel[j][0], ay = rel[j][1];
       const ox = Math.min(A[2] + ax, B[2] + dx) - Math.max(A[0] + ax, B[0] + dx) + mg, oy = Math.min(A[3] + ay, B[3] + dy) - Math.max(A[1] + ay, B[1] + dy) + mg;
@@ -5450,7 +5128,7 @@ function tmForm(sl){ const key = sl.map(t => t || '-').join('.') + '|' + tmRW();
 const tmSlot = (i, sl) => tmForm(sl).slots[i] || [0, 0];
 // the ground a force of a kind may cover (the layout reserves it for any of the kind's formations: a spot never changes with the make-up)
 // (for any order of its model types: the slots go by count, which may change while the set stays)
-function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW(); let E = TMFORM.get('F|' + key); if (E) return E;
+function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW() + '|' + TMAS; let E = TMFORM.get('F|' + key); if (E) return E;
   const pm = a => a.length <= 1 ? [a] : a.flatMap((x, i) => pm(a.slice(0, i).concat(a.slice(i + 1))).map(r => [x].concat(r))), perms = pm(ts.slice(0, 4));
   const b = [Infinity, Infinity, -Infinity, -Infinity], feet = [];
   for (const o of perms){ const F = tmForm(o); b[0] = Math.min(b[0], F.b[0]); b[1] = Math.min(b[1], F.b[1]); b[2] = Math.max(b[2], F.b[2]); b[3] = Math.max(b[3], F.b[3]); for (const f of F.feet) feet.push([f[0], f[1], f[2]/perms.length]); }
@@ -5471,7 +5149,8 @@ const roleOwner = r => +r.slice(1, r.indexOf(':'));
 // how many models a force shows: up to four, fewer in a small province (two forces and a battle's gap must fit inside it) or with low effects
 const tmNMax = p => { if (SET.fx === 'low') return 2; const P = G.P[p]; if (!P || P.sea) return 4; const A = P.cells.length*HS*HS; return A >= 120 ? 4 : A >= 60 ? 3 : 2; };
 const tmPrim = p => { const P = G.P[p]; return !!P && !P.sea && P.cells.length*HS*HS < 60; };   // (a small province: no second models, the 4x4 beside a rifleman)
-const roleStr = (cls, owner, u, p) => { const ts = tmRank(u, cls, tmNMax(p), tmPrim(p)); return cls + owner + ':' + (ts.length ? ts.slice().sort().join('.') : TM_CT[cls][0]); };
+const tmPrimO = (p, o) => tmPrim(p) || o === NEUTRAL;   // (independent garrisons show their main types only: no 4x4 beside the riflemen)
+const roleStr = (cls, owner, u, p) => { const ts = tmRank(u, cls, tmNMax(p), tmPrimO(p, owner)); return cls + owner + ':' + (ts.length ? ts.slice().sort().join('.') : TM_CT[cls][0]); };
 const roleTypes = r => r.slice(r.indexOf(':') + 1).split('.').filter(Boolean);
 const roleBase = r => r.slice(0, r.indexOf(':'));
 const roleSort = rs => rs.slice().sort((a, b) => { const oa = roleOwner(a), ob = roleOwner(b); return ((ob === PLAYER) - (oa === PLAYER)) || (oa - ob) || ('gsa'.indexOf(a[0]) - 'gsa'.indexOf(b[0])); });
@@ -5527,7 +5206,7 @@ function layoutCompute(p, roles){
   for (const r of order){ const cls = r[0], ow = roleOwner(r), FT = tmFoot(roleTypes(r)), fb = FT.b, feet = FT.feet;
     // the boxes its models will stand in (the formation it is drawn with: its types most numerous first, each box over all 16 views)
     const SB = (() => { const M = LAY_R && LAY_R.get(p); let e0 = null; if (M) for (const e of M.values()) if (roleOf(p, e) === r){ e0 = e; break; }
-      const ts = e0 ? tmRank(tmUnits(e0.list), cls, tmNMax(p), tmPrim(p)) : roleTypes(r), Fm = tmForm(ts);
+      const ts = e0 ? tmRank(tmUnits(e0.list), cls, tmNMax(p), tmPrimO(p, e0.owner)) : roleTypes(r), Fm = tmForm(ts);
       return ts.map((t, i) => { const V = tmVB(t), o = Fm.slots[i] || [0, 0]; return [o[0] + Math.min(...V.map(q => q[0])), o[1] + Math.min(...V.map(q => q[1])), o[0] + Math.max(...V.map(q => q[2])), o[1] + Math.max(...V.map(q => q[3]))]; }); })();
     const oth = mine.concat(near), cand = [], pg = keepG(r);
     // in a battle the attacker stands on the side it came from (toward its own land next door, else its capital), the holder on the other side
@@ -5565,7 +5244,7 @@ function layoutCompute(p, roles){
     /*@TEST*/if (TMDBG.on) (mine.bc || (mine.bc = [])).push([r, Math.round(bc), (best[0] - P.x).toFixed(1), (best[1] - P.y).toFixed(1), near.length, [...new Set(near.map(q => q.p))].join(' ')]);/*@ENDTEST*/
     out.set(r, best); mine.push({p, ax:best[0], ay:best[1], fb, ow, sb:SB}); }
   return {out, items:mine}; }
-const layoutKey = (p, roles) => roleSort(roles).join(',') + '|' + (hqBoxPx(p) ? 1 : 0) + '|' + tmRW() + '|' + (S.battles.includes(p) ? 1 : 0);
+const layoutKey = (p, roles) => roleSort(roles).join(',') + '|' + (hqBoxPx(p) ? 1 : 0) + '|' + tmRW() + '|' + (S.battles.includes(p) ? 1 : 0) + '|' + TMAS;
 // the provinces with forces near p (within 90 world px) with a lower id: p is laid out after them and round them (kept per frame)
 const LDEP = new Map(); let LDEP_R = null, PLAY_V = 0;
 function nearDeps(p){ if (LDEP_R !== LAY_R){ LDEP.clear(); LDEP_R = LAY_R; } let L = LDEP.get(p); if (L) return L; L = []; const P = G.P[p];
@@ -5629,8 +5308,8 @@ const PF = new Map(), PF_IN = 10, PF_OUT = 20, PF_UP = 160, PF_DN = 70;   // (fa
 const pbQuiet = c => { const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]); return a.owner !== PLAYER && !pbFight(c) && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)); };
 const pbFight = c => !c.moving && !c.air && S.battles.includes(c.at);
 // a counter's box on screen (css px): the plate with its flag, marks, bars and battle badge
-function pfBox(c, k, n = c.n){ const q = pbQuiet(c), D = plateDims(n, k, q, false), r = plateRect(c.x, c.y, n, k, q, false);
-  return [r.x, r.y, r.x + r.w + (pbFight(c) ? 0.72*D.h + 2 : 0), r.y + r.h]; }
+function pfBox(c, k, n = c.n){ const q = pbQuiet(c), r = plateRect(c.x, c.y, n, k, q, c.tag);
+  return [r.x, r.y, r.x + r.w + (pbFight(c) ? 14 : 0), r.y + r.h]; }
 const hudCover = (b, hud) => { const A = Math.max(1, (b[2] - b[0])*(b[3] - b[1])); for (const o of hud){ const ox = Math.min(b[2], o[2]) - Math.max(b[0], o[0]), oy = Math.min(b[3], o[3]) - Math.max(b[1], o[1]); if (ox > 0 && oy > 0 && ox*oy > 0.1*A) return true; } return false; };
 const PF_HUD = 0.25, PF_S = {S:null, t:0};
 const pfFresh = now => { if (PF_S.S !== S){ PF_S.S = S; PF_S.t = now; } return now - PF_S.t < 400; };   // (the first moments of a game or a load: everything is simply there)
@@ -5638,13 +5317,14 @@ function plateFade(clusters, k, now){ const hud = hudRects(), mg = 300, shown = 
   const near = q => { const out = []; for (let gx = Math.floor(q[0]/cell); gx <= Math.floor(q[2]/cell); gx++) for (let gy = Math.floor(q[1]/cell); gy <= Math.floor(q[3]/cell); gy++){ const L = grid.get(gx + ',' + gy); if (L) for (const o of L) if (!out.includes(o)) out.push(o); } return out; };
   const put = o => { const q = o.b; for (let gx = Math.floor(q[0]/cell); gx <= Math.floor(q[2]/cell); gx++) for (let gy = Math.floor(q[1]/cell); gy <= Math.floor(q[3]/cell); gy++){ const kk = gx + ',' + gy; let L = grid.get(kk); if (!L) grid.set(kk, L = []); L.push(o); } };
   const pri = c => (c.owner === PLAYER ? 8e6 : 0) + (pbFight(c) ? 4e6 : 0) + (c.owner >= 0 && c.owner !== PLAYER && atWar(PLAYER, c.owner) ? 2e6 : 0) + (c.pinned ? 1e6 : 0) + c.n*1000 - c.list[0].id/1e4;
-  for (const c of clusters){ c.pv = true; c.mlist = null; c.mn = 0; }
+  for (const c of clusters){ c.pv = true; c.mlist = null; c.mn = 0; c.pips = null; }
   const ord = clusters.filter(c => !c.moving && c.wx != null && c.x > -mg && c.y > -mg && c.x < cw + mg && c.y < ch + mg).sort((p, q) => pri(q) - pri(p));
   for (const c of ord){ const key = c.list[0].id, E = PF.get(key), was = !E || E.S !== S ? true : E.on, b = pfBox(c, k), m = was ? PF_IN/2 : PF_OUT/2, bt = [b[0] - m, b[1] - m, b[2] + m, b[3] + m];
     let hit = null; for (const o of near(bt)){ const q = o.b; if (bt[0] < q[2] + o.m && bt[2] > q[0] - o.m && bt[1] < q[3] + o.m && bt[3] > q[1] - o.m){ hit = o; break; } }
     if (!hit){ const o = {c, b, m}; shown.push(o); put(o); continue; }
     c.pv = false; const L = hit.c;
-    if (L.owner === c.owner && !pbFight(c) && !pbFight(L)){ (L.mlist || (L.mlist = [])).push(...c.list); L.mn += c.n; } }   // a power's own counter hands its strength to the one that covers it
+    if (L.owner === c.owner && !pbFight(c) && !pbFight(L)){ (L.mlist || (L.mlist = [])).push(...c.list); L.mn += c.n; }   // a power's own counter hands its strength to the one that covers it
+    else if (!L.pips || L.pips.length < 3) (L.pips || (L.pips = [])).push(c); }   // another side's shows as a pip on it (never hidden)
   // the fades (in place), and the HUD's cover
   for (const c of clusters){ const key = c.list[0].id; let E = PF.get(key); const tgt = c.pv ? 1 : 0;
     if (!E || E.S !== S || now - E.t > 1500){ E = {a:!c.pv || pfFresh(now) ? tgt : 0, on:c.pv, S, t:now}; PF.set(key, E); if (PF.size > 4000) PF.clear(); }   // (a counter new to the map fades in)
@@ -5669,21 +5349,21 @@ function tmSingle(t, key, x, y, ang, alpha, now){ const hexPx = view.s*HS0, k = 
 const TMTOP = new Map(), TMGA = new Map();
 function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
   for (const c of clusters){ c.form = null; c.pinY = c.wy; if (!on || c.wx == null || (c.air && c.moving)) continue;
-    const cls = c.cls || (c.air ? 'a' : 'g'), want = tmRank(tmUnits(c.list), cls, c.moving ? Math.min(3, tmNMax(-1)) : tmNMax(c.at), !c.moving && tmPrim(c.at)); if (!want.length) continue;
+    const cls = c.cls || (c.air ? 'a' : 'g'), want = tmRank(tmUnits(c.list), cls, c.moving ? Math.min(3, tmNMax(-1)) : tmNMax(c.at), !c.moving && tmPrimO(c.at, c.owner)); if (!want.length) continue;
     const lead = c.list[0], mS = c.air ? null : movOwn(lead.id);   // (the group goes by its oldest force, which stays while others come and go)
     const foe = !c.air && !c.moving && S.battles.includes(c.at) ? clusters.find(o => o.at === c.at && o !== c && !o.air && !o.moving && o.wx != null && atWar(o.owner, c.owner)) : null;
     let ang = foe ? Math.atan2(foe.wy - c.wy, foe.wx - c.wx) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // in a battle at the enemy; marching (or at rest) the way it went
     if (mS && (c.moving || mS.halt != null) && isFinite(mS.hd)){ TMH.set(lead.id, mS.hd); if (TMH.size > 3000) TMH.clear(); }
     if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B && Math.hypot(B.x - c.wx, B.y - c.wy) > 0.2) ang = Math.atan2(B.y - c.wy, B.x - c.wx); }   // ordered off but not yet under way
     if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
-    const F = tmForm(want), d = want.map(t => tmDir(lead.id, t, ang, now)); let top = Infinity;
-    for (let i = 0; i < want.length; i++) if (F.slots[i]) top = Math.min(top, F.slots[i][1] + tmVB(want[i])[d[i]][1]);
+    const F = tmForm(want), d = want.map(t => tmDir(lead.id, t, ang, now)), src = want.src || {}, arts = want.map(t => tmOn() ? tmArt(t, src[t], c.owner) : null); let top = Infinity, ys = 0, ny = 0;
+    for (let i = 0; i < want.length; i++) if (F.slots[i]){ top = Math.min(top, F.slots[i][1] + (arts[i] ? -tmArtHalf(arts[i], ang)[1] : tmVB(want[i])[d[i]][1])); ys += F.slots[i][1]; ny++; }
     if (!isFinite(top)) top = 0; let E = TMTOP.get(lead.id);
     if (!E || E.S !== S || now - E.t > 1500){ E = {v:top, t:now, S}; TMTOP.set(lead.id, E); if (TMTOP.size > 3000) TMTOP.clear(); }
     else { const dt = Math.max(0, Math.min(100, now - E.t)); E.v += (top - E.v)*(1 - Math.exp(-dt/120)); if (Math.abs(top - E.v) < 1e-3) E.v = top; else animFast(); E.t = now; }
     let G0 = TMGA.get(lead.id); if (!G0 || G0.S !== S || now - G0.t > 1500){ G0 = {a:pfFresh(now) ? 1 : 0, t:now, S}; TMGA.set(lead.id, G0); if (TMGA.size > 3000) TMGA.clear(); }   // (a group new to the map fades in)
     G0.a = Math.min(1, G0.a + Math.max(0, Math.min(100, now - G0.t))/220); G0.t = now; if (G0.a < 1) animFast();
-    c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a}; c.pinY = c.wy + E.v; } }
+    c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a, arts, mid:ny ? ys/ny : 0}; c.pinY = c.wy + E.v; } }   // (mid: the middle of its pictures, world px below the spot: where its diamond stands)
 // the models each force shows this frame (from the zoom they are big enough to read: all of a group's models fade in together), planned before
 // the names, the HQ and the counters are placed (they keep clear of them): c.fm = {ents:[{t, d, s, x, y, box, slot}], box, a} in screen px
 function tmPlan(clusters, hexPx, now){
@@ -5695,12 +5375,12 @@ function tmPlan(clusters, hexPx, now){
   const cand = clusters.filter(c => { if (!c.form) return false; const [sx, sy] = toScreen(c.wx, c.wy); return !(sx < -m0 || sy < -m0 || sx > cw + m0 || sy > ch + m0); });
   if (cand.length > left) cand.sort((a, b) => pri(a) - pri(b));
   for (const c of cand){ if (left <= 0) break;
-    if (c.owner === NEUTRAL && !(sel.prov === c.at || sel.target === c.at || S.battles.includes(c.at))) continue;   // independent garrisons: their plate alone
     const {sl, d, F, id} = c.form, ents = [], gb = [Infinity, Infinity, -Infinity, -Infinity];
-    for (let i = 0; i < sl.length; i++){ const t = sl[i], M = U3D.mapMeta(t); if (!M || !F.slots[i]) continue;
-      const [dx, dy] = tmGlide(c, id, t, F.slots[i], now), s = tmScale(t, hexPx), k = s/M.ppm, b = M.bb[d[i]], [x, y] = toScreen(c.wx + dx, c.wy + dy);
-      const box = [x + (b[0] - M.ox)*k, y + (b[1] - M.oy)*k, x + (b[2] - M.ox)*k, y + (b[3] - M.oy)*k];
-      ents.push({t, d:d[i], s, x, y, box, slot:i, sea:!!M.sea, air:!!M.air}); gb[0] = Math.min(gb[0], box[0]); gb[1] = Math.min(gb[1], box[1]); gb[2] = Math.max(gb[2], box[2]); gb[3] = Math.max(gb[3], box[3]); }
+    for (let i = 0; i < sl.length; i++){ const t = sl[i], M = U3D.mapMeta(t), A = c.form.arts && c.form.arts[i]; if ((!M && !A) || !F.slots[i]) continue;
+      const [dx, dy] = tmGlide(c, id, t, F.slots[i], now), s = tmScale(t, hexPx), [x, y] = toScreen(c.wx + dx, c.wy + dy); let box;
+      if (A){ const [hx, hy] = tmArtHalf(A, c.form.ang); box = [x - hx*view.s, y - hy*view.s, x + hx*view.s, y + hy*view.s]; }
+      else { const k = s/M.ppm, b = M.bb[d[i]]; box = [x + (b[0] - M.ox)*k, y + (b[1] - M.oy)*k, x + (b[2] - M.ox)*k, y + (b[3] - M.oy)*k]; }
+      ents.push({t, d:d[i], s, x, y, box, slot:i, sea:TM_CLS(t) === 's', air:TM_CLS(t) === 'a', art:A || null}); gb[0] = Math.min(gb[0], box[0]); gb[1] = Math.min(gb[1], box[1]); gb[2] = Math.max(gb[2], box[2]); gb[3] = Math.max(gb[3], box[3]); }
     if (!ents.length) continue; left--;
     c.fm = {ents, box:gb, id, ang:c.form.ang, a:fa*c.form.ga*(ents.some(e => hudCover(e.box, hud)) ? PF_HUD : 1)}; } }
 // a model's place in its group, gliding (in world space, at most 1.6 px a frame on screen) when its slot changes as forces join or leave, and
@@ -5728,21 +5408,61 @@ function troopModels(clusters, clBox, hexPx, now){
   // under the hull (and, under way, the Kelvin V behind its stern); land models and parked aircraft carry their own baked contact shadows
   const night = viewLight().day < 0.5;
   for (const q of groups){ const al = q.a; if (al <= 0.01) continue; const bw = q.box[2] - q.box[0], bh = q.box[3] - q.box[1], cx = (q.box[0] + q.box[2])/2;
-    if (!q.sea){ const gw = Math.max(bw*1.15, 10), gh = gw*0.36; ctx.globalAlpha = al*(night ? 0.38 : 0.5); ctx.drawImage(tmGlow(mapCol(q.c.owner)), cx - gw/2, q.y - gh*0.45, gw, gh); continue; }
+    if (!q.sea){ if (q.art){ const gw = Math.max(bw, bh)*1.15; ctx.globalAlpha = al*(night ? 0.3 : 0.4); ctx.drawImage(tmGlow(sideT(forceSide(q.c.list[0]))[0]), cx - gw/2, (q.box[1] + q.box[3])/2 - gw*0.42, gw, gw*0.84); continue; }
+      const gw = Math.max(bw*1.15, 10), gh = gw*0.36; ctx.globalAlpha = al*(night ? 0.38 : 0.5); ctx.drawImage(tmGlow(sideT(forceSide(q.c.list[0]))[0]), cx - gw/2, q.y - gh*0.45, gw, gh); continue; }
     if (q.c.moving){ const Ls = bw*0.75; ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.ang + Math.PI/2); ctx.globalAlpha = 0.7*al; ctx.drawImage(kelvinSprite(), -Ls*0.4, -Ls*0.1, Ls*0.8, Ls*1.5); ctx.restore(); }
     // in the water, not on it: the hull's own footprint on the sea (the sheet's camera looks down at 0.82 rad, so the ground is squashed by its
     // sine; a ground ellipse along the hull, turned with the drawn view): a soft dark shade under it, a thin glow in the holder's tone and a
     // ring of white foam where the hull meets the water, all centred on the hull
-    const an = q.d*Math.PI/8, L = tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2)*view.s*0.98, B = L*(TM_BEAM[q.t] || 0.15);
-    ctx.save(); ctx.translate(q.x, q.y); ctx.transform(1, 0, 0, TM_SIN_EL, 0, 0); ctx.rotate(an);
+    const an = q.art ? q.ang : q.d*Math.PI/8, L = (q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2))*view.s*0.98, B = L*(TM_BEAM[q.t] || 0.15);
+    ctx.save(); ctx.translate(q.x, q.y); if (!q.art) ctx.transform(1, 0, 0, TM_SIN_EL, 0, 0); ctx.rotate(an);   // (a picture is seen from straight above: no squash)
     ctx.globalAlpha = 0.34*al; ctx.drawImage(tmShadow(), -L*0.56, -B*0.95, L*1.12, B*1.9);
-    ctx.globalAlpha = al*(night ? 0.2 : 0.28); ctx.drawImage(tmGlow(mapCol(q.c.owner)), -L*0.62, -B*1.5, L*1.24, B*3);
+    ctx.globalAlpha = al*(night ? 0.2 : 0.28); ctx.drawImage(tmGlow(sideT(forceSide(q.c.list[0]))[0]), -L*0.62, -B*1.5, L*1.24, B*3);
     ctx.globalAlpha = al*(night ? 0.42 : 0.62); ctx.drawImage(tmFoam(), -L*0.555, -B*0.95, L*1.11, B*1.9); ctx.restore(); }
   ctx.globalAlpha = 1;
-  for (const q of groups){ const r = tmDraw(q.t, q.d, q.x, q.y, q.s, lut, now, q.a, !q.c.moving); const box = r ? r.box : q.box; if (r && TMBX.length < 200) TMBX.push(box);
-    /*@TEST*/if (TMDBG.on){ const [wx, wy] = screenToWorld(q.x, q.y); TMDBG.push({t:q.t, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:+wx.toFixed(3), wy:+wy.toFixed(3), box:box.map(v => +v.toFixed(1)), w:Math.round(box[2] - box[0]), h:Math.round(box[3] - box[1]), d:q.d, lvl:r ? r.lvl : null, a:+q.a.toFixed(3),
+  const nightK = Math.round((1 - viewLight().day)*4)/4;
+  for (const q of groups){ let r = null; if (q.art){ ctx.globalAlpha = q.a; if (tmArtDraw(q, nightK)) r = {box:q.box, lvl:'art'}; ctx.globalAlpha = 1; } else r = tmDraw(q.t, q.d, q.x, q.y, q.s, lut, now, q.a, !q.c.moving);
+    const box = r ? r.box : q.box; if (r && TMBX.length < 200) TMBX.push(box);
+    /*@TEST*/if (TMDBG.on){ const [wx, wy] = screenToWorld(q.x, q.y); TMDBG.push({t:q.t, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:+wx.toFixed(3), wy:+wy.toFixed(3), box:box.map(v => +v.toFixed(1)), w:Math.round(box[2] - box[0]), h:Math.round(box[3] - box[1]), d:q.d, lvl:r ? r.lvl : null, art:q.art ? q.art.n : null, len:q.art ? +(q.art.Lw*view.s).toFixed(1) : null, a:+q.a.toFixed(3),
       id:q.id, ids:q.c.list.map(a => a.id), tiny:!q.c.moving && tmPrim(q.c.at) ? 1 : 0, owner:q.c.owner, moving:q.c.moving ? 1 : 0, air:q.c.air ? 1 : 0, sea:q.sea ? 1 : 0, core:clBox(q.c).core.map(v => +v.toFixed(1)), tp:[q.c.x, q.c.y].map(v => +v.toFixed(1)), spot:q.slot, aw:[+q.c.wx.toFixed(3), +q.c.wy.toFixed(3)], gl:[+(q.x - toScreen(q.c.wx, q.c.wy)[0]).toFixed(2), +(q.y - toScreen(q.c.wx, q.c.wy)[1]).toFixed(2)]}); }/*@ENDTEST*/ }
   ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
+/* ---------------- The forces close in: the owner's top-down pictures ----------------
+   From the crossover zoom (tmFade) each force's formation (tmForm: its unit types most numerous first, up to four) stands on the map as the owner's
+   pictures (assets/art/u-*.webp, seen from above, nose up), each at world scale (it grows with the map like the cities; below the crossover the
+   diamond shows instead, so a picture is never drawn small), turned to the force's heading (the drawn heading turns at a capped rate: smooth), with a
+   soft shadow and a faint glow of its side's colour on the ground. Infantry shows u-infantry-figure once that picture is supplied (ART_SUPPLIED),
+   u-infantry until then. A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the
+   4x4 beside motorized infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place. */
+const TMART = {sol:{inf:'@inf', para:'u-infantry', spec:'u-special-forces', at:'u-infantry'}, hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
+  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-bomber', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
+  int:{int:'u-jet', asf:'u-air-superiority'}, heli:'u-attack-heli', drone:{drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'}};
+const TMART_K = {sol:1.08, hmv:0.9, jet:0.9, int:0.9, heli:0.9, drone:0.95}, TMART_K0 = 0.9;   // a picture's length as a share of its model's (the squad is wider than one soldier)
+const TMARTC = new Map(), TMART_DEF = {sol:'inf', jet:'jet', int:'int', drone:'drone', frig:'frig'};   // (the unit type whose picture sets a model's footprint in the formations and the layout)
+// which of the pictures have arrived (a signature, set once a frame): the formations and the force spots are worked out again when it changes
+let TMAS = 0; const tmArtSig = () => { let k = 0, i = 0; for (const m in TMART){ i++; if (tmArtDef(m)) k += 2**i; } return k; };
+// the footprint a model type's picture gives it in the formations and the layout: known from the start (not as each picture loads), so the
+// force spots are not worked out again while the pictures arrive; none for a type whose picture is a stand-in or failed (its 3D model shows)
+const tmArtDef = m => { if (!tmOn()) return null; let n = TMART[m]; if (n && typeof n === 'object') n = n[TMART_DEF[m]]; if (!n) return null;
+  n = n === '@inf' ? 'u-infantry' : n === '@drone' ? 'u-uav-recon' : n; return ART.standIn(n) || ART.failed(n) ? null : tmArtGeom(m, n); };
+// the picture model type m shows for unit type ut of owner o: {n (picture), Lw (its length in world px), hw (half its width, world px), k (the square
+// it is drawn in, world px)}; null where that type has no picture of its own yet (its 3D model stands in)
+function tmArt(m, ut, o){ let n = TMART[m]; if (n && typeof n === 'object') n = n[ut]; if (!n) return null;
+  if (n === '@inf') n = ART.ready('u-infantry-figure') ? 'u-infantry-figure' : 'u-infantry';
+  else if (n === '@bomb') n = heavyBomberArt(markOf(o, 'bomb'));
+  else if (n === '@drone') n = artT('drone', o) === 'drone4' ? 'u-uav-armed' : 'u-uav-recon';
+  return ART.ready(n) && !ART.standIn(n) ? tmArtGeom(m, n) : null; }
+// a picture's measures as model type m (its opaque box from the table tools/prep-art.py measured, so they are known before it loads)
+function tmArtGeom(m, n){ const key = m + '|' + n + '|' + tmRW(); let A = TMARTC.get(key); if (A) return A;
+  const im = ART.img(n), pb = PICBOX[n] || (im ? picBox(im) : [0.9, 0.9]), Lw = tmRW()*(TMG[m] || [8, 0.8])[1]*(TMART_K[m] || TMART_K0); A = {n, Lw, hw:Lw*pb[0]/pb[1]/2, k:Lw/pb[1]}; TMARTC.set(key, A); return A; }
+// half the extent of a picture turned to heading ang (screen radians, 0 = east), world px: [across, down]. The ellipse inscribed in its box: a
+// hull's corners are bevelled and a squad or an aircraft fills its box even less, so a group turned 45 degrees is not spread wider than it looks
+const tmArtHalf = (A, ang) => { const c = Math.cos(ang), s0 = Math.sin(ang), a = A.Lw/2, b = A.hw; return [Math.hypot(a*c, b*s0), Math.hypot(a*s0, b*c)]; };
+// one picture centred on its model's spot (x, y), turned to the force's heading, with its soft shadow; night darkens it like the map
+function tmArtDraw(q, night){ const A = q.art, D = A.k*view.s, px = figBucket(D*dpr), rot = q.ang + Math.PI/2;
+  const im = ART.sprite(A.n, px, night > 0.02 ? {clean:1, tint:'#0a1622', tintA:+(night*0.42).toFixed(2)} : {clean:1}); if (!im) return false;
+  const sh = figShadow(A.n, px), ga = ctx.globalAlpha; ctx.save(); ctx.translate(q.x, q.y);
+  if (sh){ const o = Math.max(1, D*0.035)*(q.air ? 2.2 : 1), S2 = D*(1 + 2*sh.pad); ctx.globalAlpha = ga*(night > 0.5 ? 0.38 : 0.55); ctx.save(); ctx.translate(o*0.7, o); ctx.rotate(rot); ctx.drawImage(sh, -S2/2, -S2/2, S2, S2); ctx.restore(); ctx.globalAlpha = ga; }
+  ctx.rotate(rot); ctx.drawImage(im, -D/2, -D/2, D, D); ctx.restore(); return true; }
 /* ---------------- Unit art: top-down pictures (assets/art/u-*.webp) ----------------
    UART[type] = [image, faces down, size as a share of a formation figure's height]. The pictures are drawn nose up, except the self-propelled gun,
    the launchers and the IFV, whose gun or cab is at the bottom of the picture: those turn half a circle more. 'drop' = an airborne drop in flight. */
@@ -5756,18 +5476,9 @@ Object.assign(UART, {drone:['u-uav-recon', 0, 0.58], drone4:['u-uav-armed', 0, 0
 // enemy stealth UAV (level III+) seen in flight: near your SAMs or jammers, or under your AWACS
 function uavSpotted(v){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 < 0) return false; if (aewCover(PLAYER).has(p0)) return true;
   for (const b of S.armies) if (b.owner === PLAYER && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
-// on the map every type is drawn from its picture. Infantry, paratroopers and special forces: the squad picture (soldiers seen from above),
-// two squads per figure, abreast when holding and one behind the other on the march. The baked 3D models (U3D) and the drawn figures (unitFigure) are only a last resort, for a type whose
-// picture failed to load (figFB)
-const FOOT = {inf:1, para:1, spec:1};
-const mArt = uArt;
-const figFB = t => !UART[t] || ART.failed(UART[t][0]);
-const SQUAD = [[[-0.06, -0.54], [0.08, 0.54]], [[-0.56, 0.07], [0.56, -0.07]]];   // squads of a foot figure, holding / marching: (forward, lateral) offsets in squad sizes
-const FOOTFP = [[1.55, 1.0], [0.95, 1.55]];   // the footprint of such a figure (across, along the heading) in figure sizes, holding / marching
-const FIG_NIGHT = {tint:'#0a1622', tintA:0.4}, FIG_WRECK = {tint:'#16130f', tintA:0.72}, FIG_FOOT = {boost:'contrast(1.14) brightness(0.92)'}, FIGSH = new Map();
-window.addEventListener('im-art', () => { FIGSH.clear(); if (typeof FIGC !== 'undefined') FIGC.clear(); });   // a promised picture arrived: drop the stand-in figures
-// a picture's footprint as a share of its figure size: [across, along the heading] (the opaque part of the picture, measured for stand-ins)
-const figFoot = t => { const im = UART[t] && ART.img(UART[t][0]); return im && typeof picBox === 'function' ? picBox(im) : [0.6, 0.94]; };
+// the pictures' soft shadows (tmArtDraw), dropped when a promised picture arrives
+const FIGSH = new Map();
+window.addEventListener('im-art', () => { FIGSH.clear(); TMARTC.clear(); });
 const figBucket = px => Math.round(2**(Math.ceil(Math.log2(Math.max(8, px))*4)/4));   // cached sizes in steps of 2^(1/4): drawImage never scales by more than 19%
 // soft silhouette of a picture for its drop shadow (blurred once, cached)
 function figShadow(name, px){ const key = name + '|' + px + '|c'; let c = FIGSH.get(key); if (c) return c; const sp = ART.sprite(name, px, {clean:1}); if (!sp) return null;
@@ -5775,13 +5486,6 @@ function figShadow(name, px){ const key = name + '|' + px + '|c'; let c = FIGSH.
   const pad = Math.ceil(px*0.08); c = document.createElement('canvas'); c.width = c.height = px + pad*2; const g = c.getContext('2d');
   g.filter = `blur(${Math.max(1, px*0.022).toFixed(1)}px)`; g.drawImage(sp, pad, pad); g.filter = 'none'; g.globalCompositeOperation = 'source-in'; g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   c.pad = pad/px; FIGSH.set(key, c); return c; }
-// foam wake behind a hull that points up (stern at the top of this sprite)
-let WAKE = null;
-function wakeSprite(){ if (WAKE) return WAKE; const c = document.createElement('canvas'); c.width = 64; c.height = 160; const g = c.getContext('2d');
-  const gr = g.createLinearGradient(0, 0, 0, 160); gr.addColorStop(0, 'rgba(236,246,250,.8)'); gr.addColorStop(0.3, 'rgba(220,236,245,.38)'); gr.addColorStop(1, 'rgba(220,236,245,0)');
-  g.filter = 'blur(2px)'; g.fillStyle = gr; g.beginPath(); g.moveTo(25, 4); g.lineTo(39, 4); g.lineTo(60, 156); g.lineTo(50, 156); g.lineTo(32, 34); g.lineTo(14, 156); g.lineTo(4, 156); g.closePath(); g.fill();
-  g.beginPath(); g.moveTo(27, 4); g.lineTo(37, 4); g.lineTo(40, 104); g.lineTo(24, 104); g.closePath(); g.fill(); g.filter = 'none';
-  return (WAKE = c); }
 // Kelvin wake of a ship under way (stern at the top): two thin foam arms spreading at ~18 degrees, a fainter inner pair, the churned
 // centre line fading fast, and a few transverse ripples between the arms
 function kelvinSprite(){ if (SPR.kelvin) return SPR.kelvin; const W = 160, H = 320, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), m = W/2;
@@ -5795,69 +5499,6 @@ function kelvinSprite(){ if (SPR.kelvin) return SPR.kelvin; const W = 160, H = 3
   g.strokeStyle = 'rgba(232,244,248,1)'; g.lineWidth = 1.4;
   for (let i = 1; i <= 5; i++){ const y = i*H/6.2, hw = 7 + (74 - 7)*Math.pow(y/H, 1.25)*0.92; g.globalAlpha = 0.28*(1 - i/6); g.beginPath(); g.moveTo(m - hw*0.9, y + 6); g.quadraticCurveTo(m, y - 10, m + hw*0.9, y + 6); g.stroke(); }
   g.globalAlpha = 1; g.filter = 'none'; return (SPR.kelvin = c); }
-// ground figure composite: a soft ground decal in the holder's colour (relation tone: yours green, foes red, others grey, so friend and foe read
-// apart), a thin dark contact line and the picture (without its baked shadow, lightly washed in the holder's colour) in one cached canvas (all
-// rotation-invariant around the centre), so a figure on the map is one rotated drawImage. Its sun shadow is drawn apart, in screen space (drawFig).
-const FIGC = new Map();
-function figComp(t, u, px, vk, color){
-  const key = u[0] + '|' + px + '|' + vk + '|' + (color || '') + '|v3'; let c = FIGC.get(key); if (c) return c;
-  const im = ART.sprite(u[0], px, {...(vk === 'w' ? FIG_WRECK : vk === 'n' ? FIG_NIGHT : FOOT[t] ? FIG_FOOT : {}), clean:1}); if (!im) return null;
-  if (FIGC.size > 400) FIGC.clear();
-  const S2 = Math.ceil(px*1.14), m = S2/2; c = document.createElement('canvas'); c.width = c.height = S2; const g = c.getContext('2d');
-  const own = color && color[0] === '#' && color.length === 7 && vk !== 'w';
-  if (own){ const fp = figFoot(t), rx = Math.max(1, Math.min(m - 0.5, fp[0]*px*0.7)), ry = Math.max(1, Math.min(m - 0.5, fp[1]*px*0.62)), a0 = vk === 'n' ? 0.22 : 0.34;   // soft owner decal on the ground
-    const rgb = [1, 3, 5].map(k => parseInt(color.slice(k, k + 2), 16)).join(','), gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
-    gr.addColorStop(0, `rgba(${rgb},${a0})`); gr.addColorStop(0.66, `rgba(${rgb},${(a0*0.9).toFixed(3)})`); gr.addColorStop(1, `rgba(${rgb},0)`);   // (a plateau: the ring that shows past the hull's edge carries the tone)
-    g.save(); g.translate(m, m); g.scale(1, ry/rx); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI*2); g.fill(); g.restore(); }
-  { const tn = document.createElement('canvas'); tn.width = im.width; tn.height = im.height; const t3 = tn.getContext('2d');   // thin dark contact line (+-1 px)
-    t3.drawImage(im, 0, 0); t3.globalCompositeOperation = 'source-in'; t3.fillStyle = '#000'; t3.fillRect(0, 0, tn.width, tn.height);
-    // vehicles, aircraft and ships: a thin crisp keyline in the relation colour hugging the hull (1.2-2 px, not the old thick sticker), with the
-    // dark contact line just outside it; the decal alone is mostly under the hull and friend or foe was lost. Foot squads keep the decal only.
-    const kln = own && !FOOT[t], rw = Math.max(1.2, Math.min(2, px*0.022)), dk = kln ? rw + 0.9 : 1;
-    g.globalAlpha = kln ? 0.3 : 0.28; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.drawImage(tn, m - im.width/2 + dx*dk, m - im.height/2 + dy*dk);
-    if (kln){ t3.fillStyle = color; t3.fillRect(0, 0, tn.width, tn.height); g.globalAlpha = vk === 'n' ? 0.7 : 0.85;
-      for (let i = 0; i < 8; i++){ const a = i*Math.PI/4; g.drawImage(tn, m - im.width/2 + Math.cos(a)*rw, m - im.height/2 + Math.sin(a)*rw); } }
-    g.globalAlpha = 1; }
-  let pic = im;
-  if (own){ pic = document.createElement('canvas'); pic.width = im.width; pic.height = im.height; const t2 = pic.getContext('2d');   // light wash of the holder's colour
-    // soft-light keeps the paint's darks and contrast (a plain wash lifted them and the vehicles read as ghosts), then clip back to the picture
-    t2.drawImage(im, 0, 0); t2.globalCompositeOperation = 'soft-light'; t2.globalAlpha = vk === 'n' ? 0.12 : 0.2; t2.fillStyle = color; t2.fillRect(0, 0, pic.width, pic.height);
-    t2.globalAlpha = 1; t2.globalCompositeOperation = 'destination-in'; t2.drawImage(im, 0, 0); }
-  g.drawImage(pic, m - im.width/2, m - im.height/2);
-  c.k = S2/px; FIGC.set(key, c); return c;
-}
-// one top-down figure centred on (x, y), D px across, heading ang (screen radians, 0 = east). o: color + base (thin disc in the nation colour under
-// ground units), alt (0 parked .. 1 cruising: the ground shadow drifts away), wake (0..1, ships), night, wreck, kick (recoil px). false = no picture.
-function drawFig(t, x, y, D, ang, o = {}){
-  let u = uArt(t); if (!u || !(D > 2)) return false;
-  if (FOOT[t] && !o.sq){ const Ds = D*0.72, ca = Math.cos(ang), sa = Math.sin(ang), now = o.now || 0, sd = o.seed || 0; let ok = false;
-    if (Ds*dpr < 48) return drawFig(t, x, y, Ds*1.1, ang + 0.08*Math.sin(sd*3.7), {...o, sq:1, kick:0});   // small: one compact squad (its three-soldier cut) at the centre
-    if (o.walk) animFast(); else animAmb();
-    SQUAD[o.walk ? 1 : 0].forEach(([f, l], i) => { const st = o.walk ? Math.sin(now/110 + sd + i*2.1)*Ds*0.05 : 0, fx = (f + (o.walk ? 0 : 0.02*Math.sin(now/1700 + sd + i)))*Ds + st, lx = l*Ds*1.15;   // marching squads step, resting ones barely shift
-      ok = drawFig(t, x + ca*fx - sa*lx, y + sa*fx + ca*lx, Ds*(i ? 0.97 : 1), ang + (i ? 0.18 : -0.1) + 0.12*Math.sin(sd*7.3 + i*2.9), {...o, sq:1, kick:0}) || ok; });
-    return ok; }
-  if (o.sq && SQI[u[0]] && D*dpr < Math.min(150, SQI[u[0]]) && ART.ready('i' + u[0].slice(1))) u = ['i' + u[0].slice(1), u[1], u[2]];   // a squad smaller than ~150 device px: its three-soldier cut (nine soldiers that small read as speckles)
-  const px = Math.min(figBucket(D*dpr), 362), vk = o.wreck ? 'w' : o.night ? 'n' : '', rot = ang + Math.PI/2 + (u[1] ? Math.PI : 0), alt = o.alt || 0, ga = ctx.globalAlpha;
-  if (o.wake){ ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-    if (o.wake > 0.5){ const rmq = afxReduced(), sh = rmq ? 0.92 : 0.85 + 0.15*Math.sin((o.now || 0)/340 + x*0.01);   // under way: a long Kelvin V spreading behind the stern, the narrow churn inside it and foam at the bow
-      ctx.globalAlpha = ga*o.wake*0.9*sh; ctx.drawImage(kelvinSprite(), -D*0.75, D*0.32, D*1.5, D*2.6);
-      ctx.globalAlpha = ga*o.wake*0.7; ctx.drawImage(FOAM(), -D*0.2, -D*0.56, D*0.4, D*0.22); }
-    else { ctx.globalAlpha = ga*o.wake; ctx.drawImage(wakeSprite(), -D*0.2, D*0.3, D*0.4, D*1.15);   // at rest: a short slick astern and a slow swell of light water around the hull (reads on a dark sea)
-      ctx.globalAlpha = ga*(0.2 + (afxReduced() ? 0 : 0.07*Math.sin((o.now || 0)/1300 + x*0.013))); ctx.drawImage(FOAM(), -D*0.3, -D*0.55, D*0.6, D*1.1); }
-    ctx.restore(); }
-  const k = o.kick || 0, cx = x - Math.cos(ang)*k, cy = y - Math.sin(ang)*k;
-  if (alt <= 0.05){ const c = figComp(t, u, px, vk, o.base ? o.color : null); if (!c) return false; const Dc = D*c.k, sh = figShadow(u[0], px);
-    if (sh){ const Ds = D*(1 + 2*sh.pad); ctx.save(); ctx.globalAlpha = ga*(vk === 'n' ? 0.22 : 0.42); ctx.translate(cx + D*0.045, cy + D*0.065); ctx.rotate(rot); ctx.drawImage(sh, -Ds/2, -Ds/2, Ds, Ds); ctx.restore(); }   // the sun's shadow: always to the SE (the terrain's light is from the NW), whatever the heading
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.drawImage(c, -Dc/2, -Dc/2, Dc, Dc); ctx.restore(); return true; }
-  // aloft: the ground shadow is offset by altitude, drawn on its own
-  const im = ART.sprite(u[0], px, vk === 'n' ? FIG_NIGHT : undefined); if (!im) return false;
-  const sh = figShadow(u[0], px);
-  if (sh){ const off = D*(0.05 + alt*0.45), Ds = D*(1 + 2*sh.pad)*(1 - alt*0.2); ctx.save(); ctx.globalAlpha = ga*0.3; ctx.translate(x + off*0.55 + (o.shx || 0), y + off + (o.shy || 0)); ctx.rotate(rot); ctx.drawImage(sh, -Ds/2, -Ds/2, Ds, Ds); ctx.restore(); }
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.drawImage(im, -D/2, -D/2, D, D);
-  if (o.rotor){ const R = D*0.5, sp = afxReduced() ? 0.6 : (o.now || 0)/38; ctx.translate(0, -D*0.04); ctx.rotate(sp); ctx.globalAlpha = ga*0.9*o.rotor; ctx.drawImage(rotorDisc(), -R, -R, R*2, R*2); }   // spinning main rotor: a blur disc over the blades
-  ctx.restore();
-  return true;
-}
 /* ---------------- Motion and posture cues ----------------
    moving: dust behind ground figures (tinted by the ground they cross), a long V wake behind ships, a rotor blur disc over helicopters and
    short contrails behind jets; standing still: a very gentle breathing pulse; dug in: a sandbag ring around the formation (close zoom) and a
@@ -5873,13 +5514,6 @@ function dustSprite(i, tn){ const key = 'dust' + i + tn; if (SPR[key]) return SP
     gr.addColorStop(0, `rgba(${a[0]},${a[1]},${a[2]},.5)`); gr.addColorStop(0.6, `rgba(${b[0]},${b[1]},${b[2]},.26)`); gr.addColorStop(1, `rgba(${b[0]},${b[1]},${b[2]},0)`);
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill(); }
   return (SPR[key] = c); }
-// rotor blur: a faint disc with a brighter rim and two motion-smeared blades (drawn rotated by the caller)
-function rotorDisc(){ if (SPR.rotor) return SPR.rotor; const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), m = N/2;
-  const gr = g.createRadialGradient(m, m, N*0.06, m, m, m - 1); gr.addColorStop(0, 'rgba(30,34,36,.06)'); gr.addColorStop(0.7, 'rgba(40,44,46,.17)'); gr.addColorStop(0.92, 'rgba(200,206,210,.17)'); gr.addColorStop(1, 'rgba(200,206,210,0)');
-  g.fillStyle = gr; g.beginPath(); g.arc(m, m, m - 1, 0, Math.PI*2); g.fill();
-  for (const a0 of [0, Math.PI]){ g.beginPath(); g.moveTo(m, m); g.arc(m, m, m - 2, a0 - 0.28, a0 + 0.02); g.closePath(); const bl = g.createRadialGradient(m, m, 0, m, m, m); bl.addColorStop(0, 'rgba(20,22,24,.0)'); bl.addColorStop(0.5, 'rgba(20,22,24,.22)'); bl.addColorStop(1, 'rgba(20,22,24,.32)'); g.fillStyle = bl; g.fill(); }
-  g.beginPath(); g.arc(m, m, N*0.04, 0, Math.PI*2); g.fillStyle = 'rgba(16,18,20,.7)'; g.fill();
-  return (SPR.rotor = c); }
 // sandbag shield for a plate: a small dark shield with a khaki rim and three stacked sandbags (cached per device size)
 const SBM = new Map();
 function sandbagMark(x, y, ps){ const W = Math.max(9, Math.round(11*ps*dpr)), H = Math.round(W*1.14), key = W; let c = SBM.get(key);
@@ -6941,7 +6575,7 @@ function wrenchMark(x, y, ps){ const r = 4.6*ps; ctx.save(); ctx.beginPath(); ct
 const PLATE_TW = new Map();
 // the count's face: a bold italic condensed sans (Barlow Condensed when it has loaded, else the body face); the plate caches are dropped when fonts arrive
 const plateFont = fz => `italic 800 ${fz}px "Barlow Condensed", ${BODY}`;
-try { if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { PLATE_TW.clear(); if (typeof PLATEC !== 'undefined') PLATEC.clear(); if (typeof redraw === 'function') redraw(); }); } catch (e) {}   // (a font arriving while the map is idle must still repaint the counters)
+try { if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { PLATE_TW.clear(); if (typeof UCD !== 'undefined'){ UCD.clear(); UCC.clear(); } if (typeof redraw === 'function') redraw(); }); } catch (e) {}   // (a font arriving while the map is idle must still repaint the counters)
 const plateGrow = () => 1, PLATE_K = 1;   // (no growth with zoom: one size everywhere)
 let HUDR = {t:0, r:[]};
 let RAILR = {t:-1e9, r:[]}, RAILT = 0; const TMBX = [];   // TMBX: this frame's troop model boxes (screen css px)
@@ -6957,19 +6591,23 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   const k = out.map(b => b.map(Math.round).join(',')).join(';');   // v: bumped whenever the boxes change, so the names placed against them are placed again (NAMEC)
   return (HUDR = {t:now, r:out, k, v:k === k0 ? v0 : v0 + 1}).r; }
-// h: plate height, C: icon cell width, tab: count tab width, r: corner radius, bars: what the health and morale bars add below (full plates)
-function plateDims(n, s, minor, two){ const ps = PLATE_K;   // the owner's rule: counters keep one pixel size at every zoom (s is ignored)
-  const h = minor ? 15 : Math.round(22*ps), fz = Math.round((minor ? 0.76 : 0.82)*h), key = fz + ':' + n;   // the number keeps one size on every plate (a mixed stack too)
-  let tw = PLATE_TW.get(key); if (tw == null){ ctx.font = plateFont(fz); tw = ctx.measureText(String(n)).width; if (PLATE_TW.size > 400) PLATE_TW.clear(); PLATE_TW.set(key, tw); }
-  const sk = Math.round(h*0.21), C = Math.round(h*1.3), i2 = two ? Math.round(0.6*h) : 0, tab = Math.round(Math.max(0.8*h, tw + 0.46*h + (two ? i2 - 0.08*h : 0))), HB = Math.max(2, Math.round(0.14*h*2)/2);
-  const fh = Math.round(h*(minor ? 0.62 : 0.6)), fw = Math.round(fh*4/3);
-  return {ps, fz, tw, i2, C, T:C, tab, sk, w:C + tab + sk, h, r:Math.max(2, 0.14*h), fh, fw, up:Math.max(6*ps, fh + 1), bars:minor ? 0 : 2 + barH(h) + 1.5 + 0.5}; }
+// counter sizes (css px, one size at every zoom; on a touch screen a little larger): DIA the diamond's width, TAG_H the flag tag's height
+const UC_TOUCH = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })(), DIA = UC_TOUCH ? 32 : 28, TAG_H = UC_TOUCH ? 20 : 18;
+const UCD = new Map();
+// a counter's measures for strength n: the diamond (tag false) or the flag tag (tag true); minor = a quiet foreign or independent force (a little
+// smaller). w, h: the shape (C + tab = w), bars: the health strip below it, up: the marks above it; the diamond's count badge: bw x bh centred at (bx, by)
+function plateDims(n, s, minor, tag){ const key = (tag ? 't' : 'd') + (minor ? 'm' : '') + n; let D = UCD.get(key); if (D) return D; if (UCD.size > 600) UCD.clear();
+  if (!tag){ const d = minor ? Math.round(DIA*0.82) : DIA, fz = minor ? 9.5 : 11; ctx.font = plateFont(fz); const tw = ctx.measureText(String(n)).width, bh = minor ? 11 : 13, bw = Math.max(bh, Math.ceil(tw + (minor ? 5 : 7)));
+    D = {tag:false, d, w:d, h:d, C:d/2, tab:d/2, sk:0, ps:1, fz, tw, bw, bh, bx:Math.round(d*0.36), by:Math.round(d*0.3), up:3, bars:minor ? 0 : 3 + barH(TAG_H) + 1}; }
+  else { const h = minor ? TAG_H - 2 : TAG_H, fh = Math.round(h*0.56), fw = Math.round(fh*4/3), ic = Math.round(h*0.8), fz = Math.round(h*0.7*2)/2; ctx.font = plateFont(fz); const tw = ctx.measureText(String(n)).width;
+    const w = Math.round(3 + fw + 3 + ic + 2 + tw + 5); D = {tag:true, w, h, C:w/2, tab:w/2, sk:0, ps:1, fz, tw, fh, fw, ic, up:2, bars:minor ? 0 : 2 + barH(TAG_H) + 1}; }
+  UCD.set(key, D); return D; }
 const snapD = v => Math.round(v*dpr)/dpr;   // to whole device pixels
-// the box plateCounter returns for a plate centred at (x, y), without drawing it (marks above it, bars below)
-function plateRect(x, y, n, s, minor, two){ const D = plateDims(n, s, minor, two), ps = D.ps, x0 = snapD(x - D.w/2), y0 = snapD(y - D.h/2);
-  return minor ? {x:x0 - 1, y:y0 - D.fh - 1, w:D.w + 3, h:D.h + D.fh + 4} : {x:x0 - 3, y:y0 - D.up, w:D.w + 6 + 4*ps, h:D.h + D.up + D.bars + 3}; }
-/* The owner's unit pictures (assets/art/i-*.webp, u-*.webp) are portraits for the menus and panels only (recruit cards, army panel, unit info, tooltips);
-   on the map every force is a flat plate with a vector icon (ICON). */
+// the screen box of a counter (diamond or tag) centred at (x, y), its marks, badge and bars included, without drawing it
+function plateRect(x, y, n, s, minor, tag){ const D = plateDims(n, s, minor, tag);
+  if (!tag){ const r = D.d/2, x0 = x - r - 2, x1 = Math.max(x + r + 2, x + D.bx + D.bw/2 + 1); return {x:x0, y:y - r - D.up, w:x1 - x0, h:2*r + D.up + D.bars + 2}; }
+  return {x:x - D.w/2 - 2, y:y - D.h/2 - D.up, w:D.w + 4, h:D.h + D.up + D.bars + 3}; }
+/* The owner's unit pictures (assets/art/i-*.webp, u-*.webp): portraits in the menus and panels, and close in the forces themselves on the map (troopModels). */
 // opaque extent of each supplied picture as a share of its square (width, height): unitPic trims and centres them with this
 const PICBOX = {'u-infantry':[0.84, 0.94], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.88, 0.52], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
   'u-anti-air':[0.44, 0.94], 'u-missile-launcher':[0.36, 0.94], 'u-supply-truck':[0.44, 0.94], 'u-jet':[0.73, 0.94], 'u-bomber':[0.79, 0.94], 'u-attack-heli':[0.65, 0.94],
@@ -6984,21 +6622,22 @@ function picBox(src){ let b = PICBB.get(src); if (b) return b;
         for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (d[(y*W + x)*4 + 3] > 40){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
         if (x1 > x0 && y1 > y0) b = [(x1 - x0 + 2)/W, (y1 - y0 + 2)/H, (x0 + x1 + 1)/2/W, (y0 + y1 + 1)/2/H]; } } catch (e) {} }
   PICBB.set(src, b); return b; }
-/* ---------------- Flat unit counters (CoN manner, original art) ----------------
-   One marker at every zoom, a flat slanted plate (a parallelogram leaning forward): the owner's small national flag standing on its top-left corner,
-   a white cut-corner tab on the left holding the lead type's dark vector silhouette (SLK; always facing right, never flipped, rotated or animated; a stack
-   of more than one unit type shows the stacked-sheets glyph instead), and the
-   unit count as a big bold italic white number with a dark outline on the plate in the relation colour (yours green, at war red, everyone else grey).
-   A thin dark edge and a soft drop shadow; a slim health bar (and your morale line) under it. It keeps one size on screen at every zoom.
-   Status marks: commander star and dug-in sandbags beside the flag, out of supply top right, a crossed-bars badge in battle, a heading chevron on the march. */
-const PLATE_GR = new Map();
-function plateGrad(h, c0, c1){ const k = h + c0 + c1; let g = PLATE_GR.get(k); if (!g){ g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, c0); g.addColorStop(1, c1); if (PLATE_GR.size > 80) PLATE_GR.clear(); PLATE_GR.set(k, g); } return g; }
-// plate colours (top, bottom, edge): brighter than the old icon cells, like CoN's counters
-const PLATE_TONES = {own:['#62b34a', '#3c8a2d', '#1c4a14'], war:['#d0473c', '#9c2a23', '#4a100c'], other:['#8a9194', '#61686b', '#262c2f'], neu:['#7d8385', '#585e60', '#24292b']},
-  PLATE_TONES_CB = {own:['#4f97dc', '#2c6aa8', '#123660'], war:['#e08f36', '#b0661c', '#5a300a'], other:['#8a9194', '#61686b', '#262c2f'], neu:['#7d8385', '#585e60', '#24292b']};
-// the skew used for every plate shape: (u, v) -> (u + sk*(1 - v/h), v), so the top edge sits sk to the right of the bottom edge
-const plateSkew = (sk, h) => ctx.transform(1, 0, -sk/h, 1, sk, 0);
-function cutRect(g, x, y, w, h, c){ g.beginPath(); g.moveTo(x + c, y); g.lineTo(x + w, y); g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.lineTo(x, y + c); g.closePath(); }
+// the HQ's plinth tones (top, bottom, edge): your relation tone
+const PLATE_TONES = {own:['#62b34a', '#3c8a2d', '#1c4a14']}, PLATE_TONES_CB = {own:['#4f97dc', '#2c6aa8', '#123660']};
+// a force's side as you see it: yours, an ally's (an alliance, or a partner in your coalition), at war with you, or anyone else (other powers at
+// peace, independents). Kept for the frame (draw clears it), so a declaration shows at once
+const SIDEC = new Map();
+function sideOf(o){ if (o === PLAYER) return 'own'; if (o == null || o < 0 || !S || !S.nations[o]) return 'other'; let k = SIDEC.get(o); if (k) return k;
+  k = atWar(PLAYER, o) ? 'war' : rel(PLAYER, o).st === 'ally' || sameBloc(PLAYER, o) ? 'ally' : 'other'; SIDEC.set(o, k); return k; }
+const forceSide = a => !a ? 'own' : a.rebel ? 'war' : sideOf(a.owner);
+// the side colours of the counters, tags and forces (top, bottom, edge): yours green, allies blue, at war red, everyone else grey; the colour-blind
+// setting (like the map's) makes yours blue and the enemy orange, and allies purple
+const SIDE_T = {own:['#62b34a', '#3c8a2d', '#173f10'], ally:['#4c8fd6', '#2b63a4', '#10305a'], war:['#d0473c', '#9c2a23', '#4a100c'], other:['#8a9194', '#61686b', '#23292c']},
+  SIDE_T_CB = {own:['#4f97dc', '#2c6aa8', '#123660'], ally:['#ad84cf', '#7d55a3', '#3b2253'], war:['#e08f36', '#b0661c', '#5a300a'], other:['#8a9194', '#61686b', '#23292c']};
+const SIDE_HI = {own:'#c4ecb0', ally:'#b9d6f4', war:'#f0a39a', other:'#d8d9d2'}, SIDE_HI_CB = {own:'#b6d8f6', ally:'#dcc6ee', war:'#f5c48f', other:'#d8d9d2'};
+const sideT = k => (SET.cb ? SIDE_T_CB : SIDE_T)[k] || SIDE_T.other;
+const sideHi = k => (SET.cb ? SIDE_HI_CB : SIDE_HI)[k] || SIDE_HI.other;
+const sideCol = o => sideT(sideOf(o))[0];
 // a small national flag (4:3, from the flag atlas) with a dark 1 px frame and a faint sheen, fh css px high; cached per nation and size
 const FLAGC = new Map(); let FLAGC_D = 0;
 function flagCanvas(n, fh){ if (n == null) return null;
@@ -7113,127 +6752,139 @@ function hqCanvas(){ const i = flagIdx(PLAYER), im = ART.img('flags');
   if (i >= 0 && !im && !ART.failed('flags')) return null;   // the atlas is still loading: try again next frame
   const CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES).own, key = dpr + '|' + HQ_KB + '|' + i + '|' + CT[0]; let c = HQ_C.get(key);
   if (!c){ c = hqPaint(dpr*HQ_KB, im, i, CT); if (HQ_C.size > 8) HQ_C.clear(); HQ_C.set(key, c); } return c; }
-// the counter's still parts (flag, drop shadow, plate, bevel, tab, glyph, count, selection ring, battle edge) painted once per look into a device-pixel
-// canvas and blitted (a soft blurred shadow costs nothing per frame); E.ox / E.oy: where the plate's top-left corner sits in it (whole css px)
-const PLATEC = new Map(); let PLATEC_D = 0, FLAGK = 0;
-function plateBody(D, CT, n, glyph, selected, fighting, minor, fc){
+/* ---------------- Unit counters by zoom (Conflict of Nations manner, original art) ----------------
+   ZOOMED OUT every force is a small DIAMOND (a square turned 45 degrees) of one pixel size at every zoom, in its side's colour (sideOf: yours green,
+   allies blue, at war red, everyone else grey), with a thin dark edge, a soft shadow, the white silhouette of its main unit type (the UICON set) and
+   its strength in a small dark badge on its lower right; a stack of more than one unit type shows a second diamond's edge behind it. Marks: the
+   commander's star and dug-in sandbags at its upper left, out of supply at its upper right, a red breathing edge and a crossed-bars badge in battle,
+   a heading chevron on the march, a gold ring when selected. ZOOMED IN the force's own pictures stand on the map (troopModels) and a small FLAG
+   TAG (its flag, the type icon and the strength, in the side colour, the health strip under it) is pinned PLATE_GAP px above them. The two
+   cross-fade over one band of zoom (tmFade: a pure function of the zoom, so nothing pops or flickers); a force with no pictures on screen keeps its
+   diamond. Each diamond stands on its force's world spot (provLayout: from the game state only, never from the zoom), centred on where its
+   pictures stand; each tag on the top of its pictures. Their still parts are painted once per look into device-pixel canvases and blitted. */
+const UCC = new Map(); let FLAGK = 0;
+// a diamond path round (x, y), r from the centre to each corner, corners rounded by rc
+function diaPath(g, x, y, r, rc){ const P = [[x, y - r], [x + r, y], [x, y + r], [x - r, y]]; g.beginPath(); g.moveTo((P[3][0] + P[0][0])/2, (P[3][1] + P[0][1])/2);
+  for (let i = 0; i < 4; i++){ const A = P[i], B = P[(i + 1) % 4]; g.arcTo(A[0], A[1], B[0], B[1], rc); } g.closePath(); }
+// the stack's main unit type (by strength x hit points; troops embarked at sea: their transport) and whether it holds more than one type
+function ucTypes(L){ const wt = {}; for (const q of L){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ wt.lst = (wt.lst || 0) + count(q); continue; }
+    for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) wt[t] = (wt[t] || 0) + q.u[t]*UNITS[t].hp; }
+  const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); return [ts[0] || 'inf', ts.length > 1]; }
+// the icon for unit type t of owner o (the armed UAV from UAV IV; embarked troops: the transport)
+const ucIcon = (t, o) => t === 'lst' ? 'cargo' : artT(t, o);
+function diaBody(tk, icon, n, mixed, selected, fighting, minor){
+  const key = 'd' + tk + '|' + icon + '|' + n + '|' + (mixed ? 1 : 0) + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + dpr + (SET.cb ? 'c' : '');
+  let E = UCC.get(key); if (E) return E; if (UCC.size > 500) UCC.clear();
+  const D = plateDims(n, 1, minor, false), CT = sideT(tk), r = D.d/2, P = 7, L = r + P, R = Math.max(r + P, D.bx + D.bw/2 + 3), px = 1/dpr;
+  const c = document.createElement('canvas'); c.width = Math.ceil((L + R)*dpr); c.height = Math.ceil(2*L*dpr); const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(L, L);
+  const rc = Math.max(1.5, r*0.16), lw = Math.max(1, Math.round(0.9*dpr))*px;
+  if (mixed){ g.save(); g.translate(3.4, -3.4); g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 2*dpr; diaPath(g, 0, 0, r, rc); g.fillStyle = CT[2]; g.fill(); g.restore();   // a second diamond's edge behind: more than one unit type
+    g.save(); g.translate(3.4, -3.4); diaPath(g, 0, 0, r - lw, rc); g.fillStyle = CT[1]; g.fill(); g.restore(); }
+  g.save(); g.shadowColor = minor ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.55)'; g.shadowBlur = (minor ? 2.2 : 3.2)*dpr; g.shadowOffsetY = (minor ? 1 : 1.6)*dpr; diaPath(g, 0, 0, r, rc); g.fillStyle = CT[2]; g.fill(); g.restore();   // soft drop shadow
+  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; diaPath(g, 0, 0, r + 2.4, rc + 0.6); g.lineWidth = 2; g.strokeStyle = '#f2b843'; g.stroke(); g.restore(); }
+  diaPath(g, 0, 0, r, rc); g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fill();   // the edge (red in battle, with an inner dark line)
+  let ins = lw; if (fighting){ diaPath(g, 0, 0, r - 1.2, rc); g.fillStyle = '#3a0c08'; g.fill(); ins = 1.2 + lw; }
+  let gr = g.createLinearGradient(0, -r, 0, r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); diaPath(g, 0, 0, r - ins, rc); g.fillStyle = gr; g.fill();
+  g.save(); diaPath(g, 0, 0, r - ins, rc); g.clip(); gr = g.createLinearGradient(0, -r, 0, 0.15*r); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(-r, -r, 2*r, 1.15*r);
+  g.beginPath(); g.moveTo(-r, 0); g.lineTo(0, -r + ins); g.lineTo(r, 0); g.lineWidth = 2*lw; g.strokeStyle = 'rgba(255,255,255,.32)'; g.stroke(); g.restore();   // a lit upper edge
+  const iw = Math.round(D.d*(minor ? 0.6 : 0.62)*dpr), ic = uiconC(icon, iw, '#ffffff', 1.4); g.drawImage(ic, -iw/dpr/2, -iw/dpr/2, iw/dpr, iw/dpr);   // the type's white silhouette
+  { const bw = D.bw, bh = D.bh, x0 = D.bx - bw/2, y0 = D.by - bh/2;   // the strength badge
+    g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 2*dpr; g.shadowOffsetY = 0.8*dpr; roundRect(g, x0, y0, bw, bh, bh/2); g.fillStyle = 'rgba(9,13,12,.95)'; g.fill(); g.restore();
+    roundRect(g, x0 + 0.5, y0 + 0.5, bw - 1, bh - 1, bh/2 - 0.5); g.lineWidth = 1; g.strokeStyle = CT[0]; g.stroke();
+    g.font = plateFont(D.fz); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffffff'; g.fillText(String(n), D.bx + 0.2, D.by + 0.7); }
+  E = {c, ox:L, oy:L}; UCC.set(key, E); return E; }
+function tagBody(tk, icon, n, fc, selected, fighting, minor){
   if (fc && !fc.__k) fc.__k = ++FLAGK;
-  const key = CT[0] + CT[2] + '|' + n + '|' + glyph + '|' + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + (fc ? fc.__k : 0) + '|' + D.h + '|' + D.tab + '|' + D.fz + '|' + dpr;
-  let E = PLATEC.get(key); if (E) return E;
-  const {h, C, sk, tab} = D, W0 = C + tab, fw = fc ? (fc.width - 2)/dpr : 0, fh = fc ? (fc.height - 2)/dpr : 0, px = 1/dpr, sn = v => Math.round(v*dpr)/dpr;
-  const L = 4, T = Math.ceil(Math.max(fh + 2, 4)), R = 6, B = 6;   // room round the plate: the selection glow, the shadow below and to the right, the flag above
-  const c = document.createElement('canvas'); c.width = Math.ceil((L + sk + W0 + R)*dpr); c.height = Math.ceil((T + h + B)*dpr); const g = c.getContext('2d');
-  g.scale(dpr, dpr); g.translate(L, T); g.lineJoin = 'miter';
-  const skew = () => g.transform(1, 0, -sk/h, 1, sk, 0);   // (u, v) -> (u + sk*(1 - v/h), v): the top edge sits sk right of the bottom edge
-  const lw = Math.max(1, Math.round(0.8*dpr))*px, hl = Math.max(1, Math.round(0.67*dpr))*px;   // outline and bevel line widths: whole device pixels, thinner at 2-3x
-  // the flag stands on the plate's top-left corner (its foot hidden under the plate's top edge), with a faint shadow of its own
-  if (fc){ const fx = sn(sk + 1), fy = sn(-fh + 0.5); g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(fx + 0.8, fy + 1, fw + 2*px, fh); g.drawImage(fc, fx - px, fy - px, fw + 2*px, fh + 2*px); }
-  g.save(); skew();
-  // soft drop shadow (blur and offset are in device pixels)
-  g.save(); g.shadowColor = minor ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.55)'; g.shadowBlur = (minor ? 2 : 3.2)*dpr; g.shadowOffsetX = 0.5*dpr; g.shadowOffsetY = (minor ? 1 : 1.6)*dpr;
-  g.fillStyle = CT[2]; g.fillRect(-lw, -lw, W0 + 2*lw, h + 2*lw); g.restore();
-  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; g.fillStyle = '#f2b843'; g.fillRect(-lw - 1.5, -lw - 1.5, W0 + 2*lw + 3, h + 2*lw + 3); g.restore(); }
-  // the outline: a thin dark edge round the plate (red in battle), filled under the body so its straight edges stay crisp
-  g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fillRect(-lw, -lw, W0 + 2*lw, h + 2*lw);
-  if (!fighting){ g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(-lw, -lw, W0 + 2*lw, h + 2*lw); }
-  if (fighting){ g.fillStyle = '#4a100c'; g.fillRect(0, 0, W0, h); }
-  const ins = fighting ? Math.max(1, Math.round(0.7*dpr))*px : 0;   // (in battle a second, inner dark line separates the red edge from the body)
-  // the body: the relation tone, lighter at the top, with a soft gloss over the top half and a thin bevel (lit top and left edges, a darker foot)
-  let gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); g.fillStyle = gr; g.fillRect(ins, ins, W0 - 2*ins, h - 2*ins);
-  gr = g.createLinearGradient(0, 0, 0, h*0.55); gr.addColorStop(0, 'rgba(255,255,255,.16)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(ins, ins, W0 - 2*ins, h*0.55);
-  g.fillStyle = 'rgba(255,255,255,.42)'; g.fillRect(ins, ins, W0 - 2*ins, hl);
-  g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(ins, ins + hl, hl, h - 2*ins - 2*hl);
-  g.fillStyle = 'rgba(0,0,0,.24)'; g.fillRect(ins, h - ins - hl, W0 - 2*ins, hl);
-  // the white cut-corner tab: a faint inset line on the plate, a white-to-pale-grey fill, a lit top line and a soft foot
-  const ti = sn(minor ? 1.5 : 2), cut = Math.round(0.3*h), tx1 = C - (minor ? 0.5 : 1), ty0 = ti, ty1 = h - ti;
-  const tabP = (o) => { g.beginPath(); g.moveTo(ti - o + cut, ty0 - o); g.lineTo(tx1 + o, ty0 - o); g.lineTo(tx1 + o, ty1 + o); g.lineTo(ti - o, ty1 + o); g.lineTo(ti - o, ty0 - o + cut); g.closePath(); };
-  tabP(px); g.fillStyle = 'rgba(0,0,0,.3)'; g.fill();
-  tabP(0); gr = g.createLinearGradient(0, ty0, 0, ty1); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, '#f1f4f2'); gr.addColorStop(1, '#d3dad7'); g.fillStyle = gr; g.fill();
-  g.save(); tabP(0); g.clip(); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(ti, ty1 - hl, tx1 - ti, hl); g.restore();
-  g.restore();
-  const at = v => sk*(1 - v/h);   // the skew's shift at height v
-  // the glyph: upright (never skewed), 20 css px wide on a full plate, centred in the tab at whole device pixels
-  const stk = glyph === 'stack', GW = minor ? (stk ? 14 : 13) : stk ? 22 : 20, Wd = Math.round(GW*dpr), gc = stk ? '#1a2a44' : '#151b19', ic = SLK[glyph] ? slkC(glyph, Wd, gc) : iconC(glyph, Wd, gc);   // (the stack's tiles a dark navy, a little larger)
-  if (ic){ const iw = ic.width/dpr, ih = ic.height/dpr, icx = (ti + tx1)/2 + at(h/2) + 0.4; g.drawImage(ic, sn(icx - iw/2), sn(h/2 - ih/2 + (minor ? 0 : 0.2)), iw, ih); }
-  // the count: bold italic condensed white with a crisp thin dark outline and a soft shadow under it
-  g.textBaseline = 'middle'; g.textAlign = 'center'; g.lineJoin = 'round'; g.font = plateFont(D.fz);
-  const cy = h/2 + 0.6, X = C + tab/2 + at(cy) - (minor ? 0 : 0.5), v = String(n), ow = minor ? 1.8 : 2.2;
-  g.lineWidth = ow + 1; g.strokeStyle = 'rgba(0,0,0,.3)'; g.strokeText(v, X + 0.4, cy + 1);
-  g.lineWidth = ow; g.strokeStyle = 'rgba(8,16,10,.95)'; g.strokeText(v, X, cy); g.fillStyle = '#ffffff'; g.fillText(v, X, cy);
-  E = {c, ox:L, oy:T}; if (PLATEC.size > 400) PLATEC.clear(); PLATEC.set(key, E); return E; }
-function plateCounter(x, y, a, n, color, selected, moving, s, fighting, main, now, minor){
-  const D = plateDims(n, s, minor, false), ps = D.ps, w = D.w, h = D.h, C = D.C, sk = D.sk, W0 = C + D.tab;
-  const x0 = moving ? x - w/2 : snapD(x - w/2), y0 = moving ? y - h/2 : snapD(y - h/2);   // (on the march: no snapping, so the glide has no 1 px stair-steps)
-  const tk = a ? (a.rebel ? 'war' : toneOf(a.owner)) : 'own', CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES)[tk];
-  const fc = flagCanvas(plateFlagOf(a), D.fh), fw = fc ? (fc.width - 2)/dpr : 0, fh = fc ? (fc.height - 2)/dpr : 0;
-  const E = plateBody(D, CT, n, main || 'inf', selected, fighting, minor, fc);
-  ctx.save(); ctx.translate(x0, y0); if (minor) ctx.globalAlpha = 0.92;
-  ctx.drawImage(E.c, -E.ox, -E.oy, E.c.width/dpr, E.c.height/dpr);
-  // in battle the red edge breathes (a faint outer glow; steady with reduced effects)
-  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); ctx.transform(1, 0, -sk/h, 1, sk, 0); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.strokeRect(-2, -2, W0 + 4, h + 4); ctx.restore(); }
-  ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
-  if (minor){ ctx.restore(); return {x:x0 - 1, y:y0 - (fc ? fh : 0) - 1, w:w + 3, h:h + (fc ? fh : 0) + 4}; }
-  const cmd = counter.list && counter.list.some(cmdOf), mx = sk + (fc ? fw + 2 : 0);
-  if (cmd){ ctx.font = `700 ${Math.round(10*ps)}px ${BODY}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', mx + 5*ps, -4*ps); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', mx + 5*ps, -4*ps); }
-  if (counter.dug && !moving) sandbagMark(mx + (cmd ? 10.5 : 0.5)*ps, -Math.max(fh, 9*ps) + 0.5*ps, ps);   // dug in
-  const ang = counter.ang;
-  if (moving && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = Math.min((w/2 + 4*ps)/Math.max(1e-3, Math.abs(ca)), (h/2 + (sa > 0 ? D.bars + 1.5*ps : sa < 0 && fc ? fh*0.6 : 0) + 4*ps)/Math.max(1e-3, Math.abs(sa))), cx = w/2 + ca*t, cy = h/2 + sa*t, q = Math.max(4.5, 0.26*h);
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(q, 0); ctx.lineTo(-q*0.8, -q*0.9); ctx.lineTo(-q*0.35, 0); ctx.lineTo(-q*0.8, q*0.9); ctx.closePath();
-    ctx.lineJoin = 'round'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(5,8,10,.85)'; ctx.stroke(); ctx.fillStyle = (SET.cb ? CHEV_CB : CHEV)[tk]; ctx.fill(); ctx.restore(); }   // heading chevron: only the chevron turns
-  if (a && a.owner === PLAYER && !supplied(a)){ const tx2 = w - 1*ps, ty = -1*ps, q = 5*ps;   // out of supply
-    ctx.beginPath(); ctx.moveTo(tx2, ty - q); ctx.lineTo(tx2 + q*0.95, ty + q*0.7); ctx.lineTo(tx2 - q*0.95, ty + q*0.7); ctx.closePath(); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
-    ctx.fillStyle = '#14100a'; ctx.font = `800 ${Math.round(7*ps)}px ${BODY}`; ctx.fillText('!', tx2, ty + q*0.22); }
-  unitBars(a, 0, h + 2, W0, ps, now, h);
-  if (fighting){ const R = 0.36*h, bx = w - sk/2 + R + 2, by = h/2, L = R*0.5;   // battle badge: steady, just right of the plate (clear of its edge and number)
-    ctx.beginPath(); ctx.arc(bx, by, R, 0, Math.PI*2); ctx.fillStyle = '#1a0f0e'; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = '#e0574f'; ctx.stroke();
-    ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.2, 0.07*h); ctx.strokeStyle = '#f3c9b8'; ctx.beginPath(); ctx.moveTo(bx - L, by - L); ctx.lineTo(bx + L, by + L); ctx.moveTo(bx + L, by - L); ctx.lineTo(bx - L, by + L); ctx.stroke(); }
-  ctx.restore(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
-  const R0 = 0.36*h, bg = fighting ? {x:x0 + w - sk/2 + 1, y:y0 + h/2 - R0 - 1, w:2*R0 + 2, h:2*R0 + 2} : null;   // (the battle badge pokes out past the box: effects keep off it too)
-  return {x:x0 - 3, y:y0 - D.up, w:w + 6 + 4*ps + (fighting ? 2*R0 + 2 - sk/2 : 0), h:h + D.up + D.bars + 3, bg}; }
-// the icon for unit type t of owner o (armed UAVs from level IV get their own)
-const plateIcon = (t, o) => { const k = artT(t, o); return ICONP[k] ? k : ICONP[t] ? t : 'inf'; };
-// plate types: the cluster's dominant type by weight (strength x hit points) and a second type when it holds at least a quarter of that weight
-// does a stack's plate carry a second unit type (the wider number tab)? the layout sizes plates with it; cached on the cluster
-function clTwo(c){ return false; }   // (the mini second icon is gone: a mixed stack shows the stack glyph instead)
-function plateTypes(a, main){ const L = counter.list && counter.list.length ? counter.list : a ? [a] : [];
-  if (!a || L.length < 1) return [main, null];
-  const wt = {}; let tot = 0;
-  for (const q of L){ if (G.P[q.at].sea && !shipsN(q) && !q.air){ wt.lst = (wt.lst || 0) + count(q); tot += count(q); continue; }   // embarked troops: a landing ship
-    for (const t in q.u) if (q.u[t] > 0 && UNITS[t]){ const v = q.u[t]*UNITS[t].hp; wt[t] = (wt[t] || 0) + v; tot += v; } }
-  const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); if (!ts.length) return [main, null, false];
-  const t2 = ts[1] && wt[ts[1]] >= tot*0.25 && ICONP[ts[1]] ? ts[1] : null;
-  return [ts[0], t2, ts.length > 1]; }   // [lead type, a second type holding a quarter of the weight, more than one type at all (a mixed stack)]
-// a stack's quiet flag (independents and powers at peace that are neither fighting nor selected: mini plates), cached on the cluster
+  const key = 't' + tk + '|' + icon + '|' + n + '|' + (fc ? fc.__k : 0) + '|' + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + dpr + (SET.cb ? 'c' : '');
+  let E = UCC.get(key); if (E) return E; if (UCC.size > 500) UCC.clear();
+  const D = plateDims(n, 1, minor, true), CT = sideT(tk), {w, h} = D, P = 6, px = 1/dpr, sn = v => Math.round(v*dpr)/dpr, rr = Math.max(2, h*0.2);
+  const c = document.createElement('canvas'); c.width = Math.ceil((w + 2*P)*dpr); c.height = Math.ceil((h + 2*P)*dpr); const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(P, P);
+  const lw = Math.max(1, Math.round(0.8*dpr))*px;
+  g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 3*dpr; g.shadowOffsetY = 1.4*dpr; roundRect(g, -lw, -lw, w + 2*lw, h + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();
+  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; roundRect(g, -2.4, -2.4, w + 4.8, h + 4.8, rr + 2); g.lineWidth = 2; g.strokeStyle = '#f2b843'; g.stroke(); g.restore(); }
+  roundRect(g, -lw, -lw, w + 2*lw, h + 2*lw, rr); g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fill();
+  const ins = fighting ? 1 : 0; if (fighting){ roundRect(g, 0, 0, w, h, rr); g.fillStyle = '#3a0c08'; g.fill(); }
+  let gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(g, ins, ins, w - 2*ins, h - 2*ins, rr - ins); g.fillStyle = gr; g.fill();
+  gr = g.createLinearGradient(0, 0, 0, h*0.55); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); roundRect(g, ins, ins, w - 2*ins, h*0.55, rr - ins); g.fillStyle = gr; g.fill();
+  const fw = D.fw, fh = D.fh, fx = sn(3), fy = sn((h - fh)/2);
+  if (fc) g.drawImage(fc, fx - px, fy - px, fw + 2*px, fh + 2*px); else { g.fillStyle = 'rgba(8,12,10,.9)'; g.fillRect(fx - px, fy - px, fw + 2*px, fh + 2*px); g.fillStyle = CT[1]; g.fillRect(fx, fy, fw, fh); }
+  const iw = Math.round(D.ic*dpr), ic = uiconC(icon, iw, '#ffffff', 1.2); g.drawImage(ic, sn(3 + fw + 3), sn((h - D.ic)/2), D.ic, D.ic);
+  g.font = plateFont(D.fz); g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineJoin = 'round'; const X = 3 + fw + 3 + D.ic + 2, Y = h/2 + 0.7, v = String(n);
+  g.lineWidth = 2.2; g.strokeStyle = 'rgba(8,16,10,.9)'; g.strokeText(v, X, Y); g.fillStyle = '#ffffff'; g.fillText(v, X, Y);
+  E = {c, ox:P, oy:P}; UCC.set(key, E); return E; }
+// the battle badge (crossed bars on a dark disc) centred at (x, y), radius R
+function battleBadge(x, y, R){ ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fillStyle = '#1a0f0e'; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = '#e0574f'; ctx.stroke();
+  const L = R*0.5; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.2, 0.3*R); ctx.strokeStyle = '#f3c9b8'; ctx.beginPath(); ctx.moveTo(x - L, y - L); ctx.lineTo(x + L, y + L); ctx.moveTo(x + L, y - L); ctx.lineTo(x - L, y + L); ctx.stroke(); ctx.lineCap = 'butt'; }
+// out of supply: a small amber warning triangle centred at (x, y)
+function supplyMark(x, y){ const q = 5; ctx.beginPath(); ctx.moveTo(x, y - q); ctx.lineTo(x + q*0.95, y + q*0.7); ctx.lineTo(x - q*0.95, y + q*0.7); ctx.closePath(); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
+  ctx.fillStyle = '#14100a'; ctx.font = `800 7px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', x, y + q*0.22); }
+// the diamond centred at (x, y): returns its box (bg: the battle badge, which pokes out past it)
+function diaDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now){
+  const D = plateDims(n, 1, minor, false), r = D.d/2, X = moving ? x : snapD(x), Y = moving ? y : snapD(y), E = diaBody(tk, icon, n, mixed, selected, fighting, minor);
+  ctx.drawImage(E.c, X - E.ox, Y - E.oy, E.c.width/dpr, E.c.height/dpr);
+  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); diaPath(ctx, X, Y, r + 2, Math.max(1.5, r*0.16) + 0.5); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
+  let bg = null;
+  if (!minor){ const cmd = L.some(cmdOf), mx = X - r*0.62, my = Y - r*0.62;
+    if (cmd){ ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', mx - 1, my - 1); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', mx - 1, my - 1); }
+    if (counter.dug && !moving) sandbagMark(mx - 9 - (cmd ? 9 : 0), my - 4, 0.9);   // dug in
+    if (a && a.owner === PLAYER && !supplied(a)) supplyMark(X + r*0.62, Y - r*0.66);   // out of supply
+    const ang = counter.ang;
+    if (moving && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = (r + 5)/Math.max(0.7, Math.abs(ca) + Math.abs(sa)), cx = X + ca*t, cy = Y + sa*t, q = 4.6;   // heading chevron: just off the diamond's edge
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(q, 0); ctx.lineTo(-q*0.8, -q*0.9); ctx.lineTo(-q*0.35, 0); ctx.lineTo(-q*0.8, q*0.9); ctx.closePath();
+      ctx.lineJoin = 'round'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(5,8,10,.85)'; ctx.stroke(); ctx.fillStyle = sideHi(tk); ctx.fill(); ctx.restore(); }
+    unitBars(a, X - r*0.95, Y + r + 2, r*1.9, 1, now, TAG_H);
+    if (fighting){ const R0 = 5.6, bx = X + r + 3, by = Y - r*0.42; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
+  const rc = plateRect(X, Y, n, 1, minor, false); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; return rc; }
+// the flag tag centred at (x, y): returns its box
+function tagDraw(x, y, a, L, n, tk, icon, selected, moving, fighting, minor, now){
+  const D = plateDims(n, 1, minor, true), X = moving ? x : snapD(x), Y = moving ? y : snapD(y), fc = flagCanvas(plateFlagOf(a), D.fh), E = tagBody(tk, icon, n, fc, selected, fighting, minor), x0 = X - D.w/2, y0 = Y - D.h/2;
+  ctx.drawImage(E.c, x0 - E.ox, y0 - E.oy, E.c.width/dpr, E.c.height/dpr);
+  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, D.w + 4, D.h + 4, Math.max(2, D.h*0.2) + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
+  let bg = null;
+  if (!minor){ const cmd = L.some(cmdOf);
+    if (cmd){ ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', x0 + 4, y0 - 4); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', x0 + 4, y0 - 4); }
+    if (counter.dug && !moving) sandbagMark(x0 + (cmd ? 10 : 1), y0 - 9, 0.9);
+    if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + D.w - 1, y0 - 2);
+    unitBars(a, x0, y0 + D.h + 2, D.w, 1, now, TAG_H);
+    if (fighting){ const R0 = 5.6, bx = x0 + D.w + R0 + 2, by = Y; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
+  const rc = plateRect(X, Y, n, 1, minor, true); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; return rc; }
+// a stack's quiet flag (independents and powers at peace, neither fighting nor selected: smaller counters), cached on the cluster
 function clQuiet(c){ if (c.pq != null) return c.pq; const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), fighting = !c.moving && !c.air && S.battles.includes(c.at), selected = c.list.some(q => q.id === sel.army || sel.group.includes(q.id));
   return (c.pq = a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); }
-// the box of a stack's plate relative to its spot (from hexPx FORM_PX up); bb = r = the plate with marks and bars
-function formBox(c){ const k = zoomK(view.s*HS0), q = clQuiet(c), r = plateRect(0, 0, c.n, k, q, !q && clTwo(c)), b = [r.x, r.y, r.x + r.w, r.y + r.h]; return {bb:b, r:b}; }
-function counter(x, y, a, n, color, selected, moving, s, stack = false, fighting = false, dir = 1, now = performance.now()){
-  s = Math.max(0.75, s);
-  // level of detail: forces that don't concern you (independents, powers at peace) are quiet mini plates
+// a force's counter: the diamond at (c.dx, c.dy) and the flag tag at (c.tx, c.ty), cross-faded by c.art (0: diamond, 1: tag over the pictures).
+// Returns the box of the one that leads at this zoom (c.tag)
+function counter(c, a, L, n, selected, fighting, now){
   const quiet = a && a.owner !== PLAYER && !fighting && !selected && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)), o = a ? a.owner : PLAYER;
-  // the tab's glyph: the lead type's silhouette, or for a stack of more than one unit type the stacked-sheets glyph
-  const pt = plateTypes(a, 'inf'), main = pt[2] && !(a && a.air) ? 'stack' : plateIcon(pt[0], o);   // (a parked wing of mixed aircraft keeps its lead aircraft's silhouette) counter.second = null;
-  const close = view.s*HS0 >= FORM_PX, D = plateDims(n, s, quiet, false), bdy = 0, cy = y, mv = moving && !quiet, ang = counter.ang;
-  // on the march, close in: a faint wake behind a ship's plate, a little dust behind a ground force's (world-anchored particles)
-  if (mv && close && ang != null && a && !a.air && !afxReduced()){ const ca = Math.cos(ang), sa = Math.sin(ang), t = Math.min((D.w/2 + 1)/Math.max(1e-3, Math.abs(ca)), (D.h/2 + 1)/Math.max(1e-3, Math.abs(sa))), bx = x - ca*t, by = cy - sa*t;
-    if (G.P[a.at].sea){ const L = D.w*0.85; ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(232,240,244,.3)'; ctx.lineWidth = 1.3; ctx.beginPath();
-      for (const sg of [-1, 1]){ const a2 = ang + Math.PI + sg*0.3; ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a2)*L, by + Math.sin(a2)*L); } ctx.stroke(); ctx.restore(); }
-    else if (counter.dust) counter.dust(main, ang, (t + 3)/0.32); }
-  const pr = plateCounter(x, cy, a, n, color, quiet ? false : selected, mv, s, quiet ? false : fighting, main, now, quiet);
-  return close ? {x:pr.x, y:pr.y, w:pr.w, h:pr.h, bb:[pr.x, pr.y, pr.x + pr.w, pr.y + pr.h], bdy, bg:pr.bg} : pr;
-}
-// a flat aircraft icon in flight: the relation's light tone with a dark casing, turned to its heading (side-view helicopters and trucks stay level, facing their way)
+  const [t0, mixed] = ucTypes(L), icon = ucIcon(t0, o), tk = forceSide(a), mv = c.moving && !quiet, sl = quiet ? false : selected, fi = quiet ? false : fighting, ang = counter.ang;
+  // on the march, close in: a faint wake behind a ship's diamond, a little dust behind a ground force (world-anchored particles)
+  if (mv && view.s*HS0 >= FORM_PX && ang != null && a && !a.air && !afxReduced()){ const D = plateDims(n, 1, false, false), ca = Math.cos(ang), sa = Math.sin(ang), t = (D.d/2 + 1)/Math.max(0.7, Math.abs(ca) + Math.abs(sa)), bx = c.dx - ca*t, by = c.dy - sa*t;
+    if (G.P[a.at].sea){ if (c.art < 0.5){ const Lw = D.d*0.9; ctx.save(); ctx.globalAlpha *= 1 - c.art; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(232,240,244,.3)'; ctx.lineWidth = 1.3; ctx.beginPath();
+        for (const sg of [-1, 1]){ const a2 = ang + Math.PI + sg*0.3; ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a2)*Lw, by + Math.sin(a2)*Lw); } ctx.stroke(); ctx.restore(); } }
+    else if (counter.dust) counter.dust(icon, ang, (t + 3)/0.32); }
+  const ga = ctx.globalAlpha, ta = c.art || 0; let rd = null, rt = null;
+  if (ta < 0.997){ ctx.globalAlpha = ga*(1 - ta); rd = diaDraw(c.dx, c.dy, a, L, n, tk, icon, mixed && !(a && a.air), sl, mv, fi, quiet, now); }
+  if (ta > 0.003){ ctx.globalAlpha = ga*ta; rt = tagDraw(c.tx, c.ty, a, L, n, tk, icon, sl, mv, fi, quiet, now); }
+  ctx.globalAlpha = ga;
+  const r = c.tag ? rt : rd; if (r) return r;
+  const rc = plateRect(c.x, c.y, n, 1, quiet, c.tag); rc.bg = null; return rc; }
+// a covered counter of another side (zoomed out, where counters would touch): a small diamond in its colour with its strength on the corner of
+// the counter that covers it, so no side is ever hidden; a tap on it is a tap on that force
+function pipDraw(x, y, c, n){ const tk = forceSide(c.list[0]), CT = sideT(tk), r = 6.5; ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 2; ctx.shadowOffsetY = 1;
+  diaPath(ctx, x, y, r, 1.4); ctx.fillStyle = CT[2]; ctx.fill(); ctx.restore(); diaPath(ctx, x, y, r - 1, 1.2); ctx.fillStyle = CT[0]; ctx.fill();
+  ctx.font = plateFont(n > 99 ? 7 : 8.5); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(8,12,10,.85)'; const v = n > 999 ? '+' : String(n); ctx.strokeText(v, x, y + 0.5); ctx.fillStyle = '#fff'; ctx.fillText(v, x, y + 0.5);
+  return {x:x - r - 1, y:y - r - 1, w:2*r + 2, h:2*r + 2}; }
+// a flat aircraft icon in flight: the unit's silhouette (UICON) in its side's light tone with a dark casing, turned to its heading (the icons are
+// drawn nose up; the side-on helicopter and truck stay level, facing their way)
 const AIRC = new Map();
-function casedIconC(t, W, col){ const key = t + '|' + W + '|' + col + '|' + dpr; let c = AIRC.get(key); if (c) return c; const ic = iconC(t, W, col), dk = iconC(t, W, '#05080a'); if (!ic) return null;
+function casedIconC(t, W, col){ const key = t + '|' + W + '|' + col + '|' + dpr; let c = AIRC.get(key); if (c) return c; const ic = uiconC(t, W, col), dk = uiconC(t, W, '#05080a');
   const p = Math.max(1, Math.round(1.2*dpr)); c = document.createElement('canvas'); c.width = ic.width + 2*p; c.height = ic.height + 2*p; const g = c.getContext('2d');
   for (let i = 0; i < 8; i++){ const an = i*Math.PI/4; g.drawImage(dk, p + Math.round(Math.cos(an)*p), p + Math.round(Math.sin(an)*p)); }
   g.drawImage(ic, p, p); if (AIRC.size > 160) AIRC.clear(); AIRC.set(key, c); return c; }
-function flatAir(t, x, y, L, ang, col, sh){ const W = Math.max(8, Math.round(L*dpr)), c = casedIconC(t, W, col); if (!c) return false;
-  const side = t === 'heli' || t === 'truck', flip = side && Math.cos(ang) < 0, rot = side ? 0 : ang, w = c.width/dpr, h = c.height/dpr;
-  if (sh && !side){ const s0 = iconC(t, W, '#000000'); ctx.save(); ctx.globalAlpha *= 0.22; ctx.translate(x + sh[0], y + sh[1]); ctx.rotate(rot); ctx.drawImage(s0, -s0.width/dpr/2, -s0.height/dpr/2, s0.width/dpr, s0.height/dpr); ctx.restore(); }
+function flatAir(t, x, y, L, ang, col, sh){ const W = Math.max(8, Math.round(L*1.25*dpr)), c = casedIconC(t, W, col); if (!c) return false;
+  const side = t === 'heli' || t === 'truck', flip = side && Math.cos(ang) < 0, rot = side ? 0 : ang + Math.PI/2, w = c.width/dpr, h = c.height/dpr;
+  if (sh && !side){ const s0 = uiconC(t, W, '#000000'); ctx.save(); ctx.globalAlpha *= 0.22; ctx.translate(x + sh[0], y + sh[1]); ctx.rotate(rot); ctx.drawImage(s0, -s0.width/dpr/2, -s0.height/dpr/2, s0.width/dpr, s0.height/dpr); ctx.restore(); }
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot); if (flip) ctx.scale(-1, 1); ctx.drawImage(c, -w/2, -h/2, w, h); ctx.restore(); return true; }
-const airTone = o => (SET.cb ? CHEV_CB : CHEV)[toneOf(o)];
+const airTone = o => sideHi(sideOf(o));
 let MONO = 'IBM Plex Mono, monospace', BODY = 'Barlow, sans-serif', DISPLAY = 'Impact, sans-serif';
 function clampView(){
   const m = 80, ww = WORLD_W*view.s, wh = WORLD_H*view.s;
@@ -7870,7 +7521,7 @@ function draw(now){ draw.now = now;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const boxes0 = [];   // screen boxes claimed so far: counters and map controls first, then country and sea names, then city and province names
   const showNeutral = GS > 1 ? hexPx >= 49 : hexPx >= 11, items = [];   // (they fade in where they show)   // independent garrisons stay hidden until zoomed in (or selected / fighting)
-  const unkA = [], ROLES = new Map(); LAY_R = ROLES;
+  const unkA = [], ROLES = new Map(); LAY_R = ROLES; SIDEC.clear(); TMAS = tmArtSig();
   for (const a of S.armies){ if (!armyVisible(a, vis)){ if (vis.loc.size && armyLocated(a, vis)) unkA.push(a); continue; } tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
     if (a.fly) continue;
     let [wx, wy] = armyPos(a); const mv = a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id));
@@ -7910,16 +7561,19 @@ function draw(now){ draw.now = now;
   if (LASTSLOT.size > 4000) LASTSLOT.clear();
   if (now - PLAY_SW > 3000){ PLAY_SW = now; for (const p of [...PREG.keys()]) if (!ROLES.has(p)){ PREG.delete(p); PLAY.delete(p); } }   // (the spots of provinces left empty are forgotten)
   for (let i = clusters.length - 1; i >= 0; i--) if (clusters[i].dead) clusters.splice(i, 1);
-  tmForms(clusters, now);   // every force's formation (at every zoom): its counter's pin is the top of it
-  // the counter: pinned PLATE_GAP px above the top of its troops (a world point: no screen-space shuffling, it never moves against the map)
-  for (const c of clusters){ c.pq = null; const [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), d = plateDims(c.n, k, plateQuiet(c), false); c.sx = sx; c.sy = sy; c.x = sx; c.y = sy - PLATE_GAP - (d.h/2 + d.bars + 3); c.bdy = 0; }
-  plateFade(clusters, k, now);   // out where counters would touch: the lesser ones fade out in place (a power's own hand theirs to the one that covers them)
+  tmForms(clusters, now);   // every force's formation (at every zoom): its tag's pin is the top of it, its diamond stands in its middle
+  tmPlan(clusters, hexPx, now);   // the pictures' places, from the crossover zoom (the names, the HQ and the power names keep clear of them too)
+  // the counter: zoomed out the diamond on the force's spot (the middle of where its pictures stand), zoomed in the flag tag pinned PLATE_GAP px above
+  // the top of its pictures (world points: no screen-space shuffling, nothing moves against the map); c.art: the crossover (0 diamond .. 1 tag)
+  const UZ = tmOn() ? tmFade(hexPx) : 0;
+  for (const c of clusters){ c.pq = null; const q = plateQuiet(c), [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), dT = plateDims(c.n, k, q, true), [dx, dy] = toScreen(c.wx, c.wy + (c.form ? c.form.mid : 0));
+    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = c.art >= 0.5; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); c.dx = dx; c.dy = dy; c.x = c.tag ? c.tx : dx; c.y = c.tag ? c.ty : dy; c.bdy = 0; }
+  plateFade(clusters, k, now);   // out where counters would touch: the lesser ones fade out in place (a power's own hand theirs to the one that covers them, another side's shows as a pip on it)
   clusters.sort((a, b) => ((b.moving ? 1 : 0) - (a.moving ? 1 : 0)) || ((a.owner === PLAYER) - (b.owner === PLAYER)) || ((a.air ? 0 : 1) - (b.air ? 0 : 1)));   // (marching ones under the standing: one setting off slides out from under the counter it leaves)
-  tmPlan(clusters, hexPx, now);   // the troop models' places (the names, the HQ and the power names keep clear of them too)
   // the screen box a counter claims: the whole drawn counter (marks above it: commander, dug-in, supply; the bars below) and its core (the plate
   // itself with its strength number, icons and bars, which nothing may cover), and the ground its models stand on
-  const clBox = c => { const d = plateDims(c.n, k, plateQuiet(c), false), b = [c.x - d.w/2 - 3, c.y - d.h/2 - d.up, c.x + d.w/2 + 3 + 4*d.ps + (c.list.some(a => S.battles.includes(a.at)) ? 16 : 0), c.y + d.h/2 + d.bars + 4];
-    b.core = [c.x - d.w/2 - 1, c.y - d.h/2 - 1, c.x + d.w/2 + 1, c.y + d.h/2 + d.bars + 1];
+  const clBox = c => { const r = plateRect(c.x, c.y, c.n, k, plateQuiet(c), c.tag), b = [r.x - 1, r.y, r.x + r.w + 1 + (c.list.some(a => S.battles.includes(a.at)) ? 14 : 0), r.y + r.h + 1];
+    b.core = [r.x + 1, r.y + 1, r.x + r.w - 1, r.y + r.h - 1];
     if (c.fm){ const f = c.fm.box; b[0] = Math.min(b[0], f[0]); b[1] = Math.min(b[1], f[1]); b[2] = Math.max(b[2], f[2]); b[3] = Math.max(b[3], f[3]); b.fmb = c.fm.ents.map(e => e.box); }
     b.unit = true; b.at = c.moving ? -1 : c.at; return b; };
   // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital, on your own land (your capital's
@@ -7976,7 +7630,7 @@ function draw(now){ draw.now = now;
   // a battle's strength balance: a slim bar right under one of its counters (yours, else the holder's), part of that counter, never adrift between
   // the two sides; the names keep clear of it too
   const BATB = []; for (const p of S.battles){ const cs0 = clusters.filter(c => c.at === p && !c.moving && !c.air), cs = cs0.filter(c => c.pv); if (cs0.length < 2 || !cs.length) continue;
-    const h0 = cs.find(c => c.owner === PLAYER) || cs.find(c => c.owner === S.owner[p]) || cs[0]; if (h0.x < -100 || h0.y < -100 || h0.x > cw + 100 || h0.y > ch + 100) continue; const D = plateDims(h0.n, k, plateQuiet(h0), false), x0 = snapD(h0.x - D.w/2) + 3, w = D.C + D.tab - 6, y = snapD(h0.y + D.h/2 + D.bars + 1.5), h = 2.5;
+    const h0 = cs.find(c => c.owner === PLAYER) || cs.find(c => c.owner === S.owner[p]) || cs[0]; if (h0.x < -100 || h0.y < -100 || h0.x > cw + 100 || h0.y > ch + 100) continue; const D = plateDims(h0.n, k, plateQuiet(h0), h0.tag), x0 = snapD(h0.x - D.w/2) + 3, w = D.C + D.tab - 6, y = snapD(h0.y + D.h/2 + D.bars + 1.5), h = 2.5;
     const bb = [x0 - 2, y - 2, x0 + w + 2, y + h + 2]; bb.unit = true; bb.at = p; boxes0.push(bb); BATB.push({p, x0, y, w, h, c:h0}); }
   for (const q of HQBOX || []){ const tb = [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); }   // your HQ: the names keep a little clear of it
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
@@ -8150,7 +7804,7 @@ function draw(now){ draw.now = now;
   tutDraw(now, kl);   // the tutorial ring goes under the counters, so it never runs across a stack's number
   // counters (clustered per owner at low zoom)
   const hitsPrev = hits;   // last frame's plates: smoke and bursts spawn off them (AFX.avoid)
-  hits = [];
+  hits = []; HITX = [];
   drawTrade(now, vis);
   drawConvoys(now, vis);
   drawSupplyRun(now);
@@ -8194,10 +7848,14 @@ function draw(now){ draw.now = now;
     let fa0 = 1; if (c.moving){ const b = clBox(c).core, A0 = (b[2] - b[0])*(b[3] - b[1]); let ov = 0; for (const o of clusters){ if (o.moving || !o.pv || o === c || Math.abs(o.x - c.x) > 120 || Math.abs(o.y - c.y) > 80) continue; const q = clBox(o).core;
         ov = Math.max(ov, Math.max(0, Math.min(b[2], q[2]) - Math.max(b[0], q[0]))*Math.max(0, Math.min(b[3], q[3]) - Math.max(b[1], q[1]))/Math.max(1, A0)); } fa0 = 1 - 0.85*smooth01(Math.min(1, ov*1.6)); }
     ctx.globalAlpha = fa0*pa; const L = c.mlist ? c.list.concat(c.mlist) : c.list;
-    const r = counter(c.x, c.y, lead, c.n + (c.mn || 0), mapCol(c.owner), L.some(a => a.id === sel.army || sel.group.includes(a.id)), c.moving, k, L.length > 1, fighting, dir, now);
+    const r = counter(c, lead, L, c.n + (c.mn || 0), L.some(a => a.id === sel.army || sel.group.includes(a.id)), fighting, now);
+    // another side's counters it covers: a pip each on its left (zoomed out, where counters would touch), tapped as that force
+    if (c.pips && c.pv){ let px0 = r.x - 4; for (const o of c.pips){ if ((o.pa ?? 0) > 0.6) continue; const ol = o.mlist ? o.list.concat(o.mlist) : o.list, pr = pipDraw(px0 - 3, c.y - 2, o, o.n + (o.mn || 0)); px0 -= 15;
+        HITX.push({...pr, ids:ol.map(a => a.id), own:o.list.map(a => a.id), cx:o.sx, cy:o.sy, spread:ol.some(a => a.at !== o.at), pip:1}); } }
     ctx.globalAlpha = 1;
-    const hb = {...r, ids:L.map(a => a.id), own:c.list.map(a => a.id), cx:c.sx, cy:c.sy, spread:L.some(a => a.at !== c.at), a:+(fa0*pa).toFixed(3)};
-    if (c.pv) hits.push(hb); /*@TEST*/else if (TMDBG.on) PGHOST.push(hb);/*@ENDTEST*/   // (a counter fading out is no tap target)
+    const hb = {...r, ids:L.map(a => a.id), own:c.list.map(a => a.id), cx:c.tag ? c.sx : c.dx, cy:c.tag ? c.sy : c.dy, spread:L.some(a => a.at !== c.at), a:+(fa0*pa*(c.tag ? c.art : 1 - c.art)).toFixed(3), tag:c.tag ? 1 : 0};   // (cx, cy: its world point on screen, the diamond's centre or the tag's pin; a: as drawn, the cross-fade included; tag: the flag tag over its pictures, else the diamond)
+    if (c.pv){ hits.push(hb); if (c.fm && c.art >= 0.5) HITX.push({x:c.fm.box[0], y:c.fm.box[1], w:c.fm.box[2] - c.fm.box[0], h:c.fm.box[3] - c.fm.box[1], ids:hb.ids, own:hb.own, cx:c.sx, cy:c.sy, spread:hb.spread, art:1}); }   // close in its pictures are tapped as it too
+    /*@TEST*/else if (TMDBG.on) PGHOST.push(hb);/*@ENDTEST*/   // (a counter fading out is no tap target)
     if (volFx && fighting && c.enemy && c.mt && r && r.w > 0 && (volN.get(c.at) || 0) < 2){ const pcx = r.x + r.w/2, pcy = r.y + r.h/2, ex = c.enemy[0] - pcx, ey = c.enemy[1] - pcy, an = Math.atan2(ey, ex), ca = Math.cos(an), sa = Math.sin(an);
       const t = Math.min((r.w/2)/Math.max(1e-3, Math.abs(ca)), (r.h/2)/Math.max(1e-3, Math.abs(sa))) + 4;   // the plate's rim toward the enemy, just outside the effects' 3 px clip pad
       const nv = lastVolley.get(c.list[0].id); volley(c, volType(c), an, now, 20, pcx + ca*t, pcy + sa*t, false); if (lastVolley.get(c.list[0].id) !== nv) volN.set(c.at, (volN.get(c.at) || 0) + 1); }
@@ -8211,7 +7869,7 @@ function draw(now){ draw.now = now;
     const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500; if (fresh > 0) animFast(); else animAmb();
     for (const h of hits){ if (h.unk || !(h.ids.includes(sel.army) || (sel.group.length && h.ids.some(id => sel.group.includes(id))))) continue;
       ctx.save(); ctx.strokeStyle = '#f0b44e';
-      for (const [q, a0] of fresh > 0 ? [[1 - fresh, 0.9*fresh]] : []){ const g = 2 + q*9; ctx.globalAlpha = a0*(1 - q); ctx.lineWidth = 2 - q; roundRect(ctx, h.x - g, h.y - g, h.w + g*2, h.h + g*2, 5 + g*0.6); ctx.stroke(); }
+      for (const [q, a0] of fresh > 0 ? [[1 - fresh, 0.9*fresh]] : []){ const g = 2 + q*9; ctx.globalAlpha = a0*(1 - q); ctx.lineWidth = 2 - q; if (h.tag === 0) diaPath(ctx, h.cx, h.cy, DIA/2 + g*1.3, 2 + g*0.4); else roundRect(ctx, h.x - g, h.y - g, h.w + g*2, h.h + g*2, 5 + g*0.6); ctx.stroke(); }   // (round the diamond, or the tag)
       ctx.restore(); } } else if (sel.army === null) SELFX.a = null;
   // unidentified contacts (AWACS): one '?' plate per province (moving forces each get their own), no nation colour, type or size
   if (unkA.length){ const grp = new Map(); for (const a of unkA){ const key = a.to !== null ? 'm' + a.id : 'p' + a.at; if (!grp.has(key)) grp.set(key, []); grp.get(key).push(a); }
@@ -8256,7 +7914,7 @@ function draw(now){ draw.now = now;
       // bank: the plane narrows across its heading while it turns, and its shadow slips sideways
       const bq = 1 - 0.2*Math.abs(bank), bsh = Math.max(3, 0.1*Dp)*bank, shx = -sa0*bsh, shy = ca0*bsh, banked = Math.abs(bank) > 0.02;
       if (banked){ ctx.save(); ctx.translate(px0, py0); ctx.rotate(ang); ctx.scale(1, bq); ctx.rotate(-ang); ctx.translate(-px0, -py0); }
-      if (!flatAir(kind, px0, py0, Dp, ang, airTone(a.owner), [shx + 2 + 7*alt, shy + 3 + 14*alt]) && figFB(kind)) jetSprite(px0, py0, sc*0.9, col, ang, kind);
+      flatAir(kind, px0, py0, Dp, ang, airTone(a.owner), [shx + 2 + 7*alt, shy + 3 + 14*alt]);
       if (banked) ctx.restore(); }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreen(T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(phB ? toScreen(B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }
     // strength in a small pill edged in the owner's colour; pills of wings flying side by side are nudged apart so '6' and '1' never read as '61'
@@ -8419,7 +8077,7 @@ function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a 
 function cityAt(x, y){ let best = null, bd = 1e9; for (const m of cityPts){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
 // the city whose drawn name is at (x, y): a plain tap on a city's name picks that city (the name is what marks a city on the map)
 function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ const b = cityNames[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return cityNames[i]; } return null; }
-function hitAt(x, y){ for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }
+function hitAt(x, y){ for (const L of [hits, HITX]) for (let i = L.length - 1; i >= 0; i--){ const h = L[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }   // (the counters first, then the pictures and pips)
 function tap(x, y, shift = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   closeChooser(); lastClickW = screenToWorld(x, y);
@@ -10435,7 +10093,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3c:{splitRows:a => splitRows(a), splitPlan:(a, pl) => splitPlan(a, pl), halfPlan:a => halfPlan(a), evenPlan:(a, n) => evenPlan(a, n), typePlan:a => typePlan(a), onePlan:a => onePlan(a), splitArmy:a => splitArmy(a),
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
-  armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
+  armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)

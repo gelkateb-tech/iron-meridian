@@ -626,7 +626,7 @@ if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_S
 
 # tell the game which promised V3 pictures now exist (it draws code stand-ins for the rest and never requests a missing file)
 import re
-V3 = ['u-heavy-bomber-1', 'u-heavy-bomber-2']
+V3 = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber', 'u-infantry-figure']   # (promised pictures: fetched only once the file exists)
 have = [n for n in V3 if os.path.exists(os.path.join(OUT, n + '.webp'))]
 idx = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT))), 'index.html')
 if os.path.exists(idx):
