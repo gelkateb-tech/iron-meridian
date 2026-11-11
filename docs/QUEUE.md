@@ -21,8 +21,7 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | Unit display by zoom: code-drawn unit icons; diamond counters when zoomed out, unit pictures with flag tags close in | Opus | Repair pass, then its last review |
-| Research redesign: CoN-like categories, unit lines by day, generations, stat upgrades with levels (from docs/RESEARCH-REFERENCE.md) | Opus (design was done on Fable) | Repair pass, then its last review |
-| Research follow-up: dark military category banners, sharp Higgsfield unit pictures, list of categories with no picture | Opus | Runs right after the research repair, then research is merged |
+| Research follow-up: dark military category banners, sharp Higgsfield unit pictures, list of categories with no picture | Opus | Running (the redesign itself is built and reviewed on its branch; this step also fixes 3 small review points), then research is merged |
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Step 1 of 8 (plumbing) |
 | Battle effects: gunfire from the unit models, smoke and fire fixed to the map, sharp layered smoke, only crossed swords when zoomed out | Opus | Started at the owner's request as an extra job |
 
@@ -50,7 +49,7 @@ Last updated: 2026-11-11.
 ## Waiting for the owner
 
 - **Battle pace:** the army bar job will propose damage-per-tick numbers (even fights several hours, big ones a day or more) in docs/COMBAT-PACE.md; nothing is applied until approved.
-- **New units and weapons** from the research design's "NEEDS OWNER APPROVAL" list (proposed only, not built).
+- **Research design approvals** (docs/RESEARCH.md section 12 on branch research-redesign; nothing below is built): A. balance changes in the new tree (unit unlocks get first days 1-14, Marks become Firepower/Protection research, generations add health, IFV/Special Forces/Rocket Artillery cheaper stand-alone unlocks, 289 steps); B. new ground units (APC, Tank Destroyer, Towed Artillery, AA Gun Vehicle, Scout Vehicle); C. new aircraft (Scout Helicopter, Naval Helicopter); D. new ships (Patrol Boat, Destroyer, Ballistic-Missile Submarine); E. new weapons (sub-launched cruise and ballistic missiles, chemical and tactical nuclear warheads, ICBM); F. Officers (replace commanders, keep both, or a smaller Staff College step); G. elite marking of 4 existing units.
 - **Infantry counter icon:** pick one of the 3 options (standing soldier, helmet bust, crossed rifles) or keep today's.
 - **Pictures to make on Higgsfield:** u-heavy-bomber-1, u-heavy-bomber-2, u-stealth-bomber (optional u-infantry-figure); plus any research categories the banner step finds without a good picture.
 - **Netlify token** for the phone app.
