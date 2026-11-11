@@ -78,6 +78,16 @@ function mktFix(){ const M = S.mkt; if (!M) return; for (const o of [M.p, M.prev
   M.prev = M.prev || {}; M.hist = M.hist || {}; M.press = M.press || {};
   for (const k of MKT_K){ if (!(M.p[k] > 0)) M.p[k] = MKT_BASE[k]; if (!(M.prev[k] > 0)) M.prev[k] = M.p[k]; if (!Array.isArray(M.hist[k])) M.hist[k] = []; if (typeof M.press[k] !== 'number') M.press[k] = 0; } }
 const embargoes = n => S.nations.filter(m => m.alive && m.id !== n && mkt().emb[m.id + '>' + n]).length;
+// EMBARGO (a real rule): emb['a>b'] = a has an embargo on b. It is not war and changes no map colour or fog; it shuts all trade between the two:
+// no trade routes (existing ones close with a notice), no order-book deals either way, and b's market prices worsen (sanctionF).
+// Coalition partners can join: M.join['p>b'] = the partner whose embargo p follows (an AI follower lifts it when that partner does).
+// (the value is the hour + 1: hour 0 is the first hour of the game and must still count as "on")
+const embargoed = (a, b) => !!(mkt().emb[a + '>' + b] || mkt().emb[b + '>' + a]);
+const embargoLeaders = (n, m) => S.nations.filter(p => p.alive && p.id !== n && p.id !== m && mkt().emb[p.id + '>' + m] && blocIdOf(p.id) && blocIdOf(p.id) === blocIdOf(n)).map(p => p.id);
+function setEmbargo(n, m, on, lead = null){ const M = mkt(), key = n + '>' + m; M.join = M.join || {};
+  if (on){ if (M.emb[key] || n === m) return false; M.emb[key] = S.hour + 1; if (lead != null) M.join[key] = lead; else delete M.join[key]; trCutEmbargo(); }
+  else { if (!M.emb[key]) return false; delete M.emb[key]; delete M.join[key]; }
+  return true; }
 const sanctionF = n => Math.min(3, embargoes(n))*0.15;
 const buyPrice = (n, k) => mkt().p[k]*1.1*(1 + sanctionF(n));
 const sellPrice = (n, k) => mkt().p[k]*0.9*(1 - sanctionF(n));
@@ -96,8 +106,11 @@ function marketDay(){ const M = mkt(), incs = S.nations.map(N => N.alive ? incom
   for (const N of S.nations){ if (!N.alive || isSeat(N.id)) continue; const cap = stockCap(N.id);
     void cap;
     for (const O of S.nations){ if (!O.alive || O.id === N.id) continue; const key = N.id + '>' + O.id, op = opinion(N.id, O.id), war = atWar(N.id, O.id);
-      if (!M.emb[key] && (op < -45 || war) && rng() < 0.25){ M.emb[key] = S.hour; if (isSeat(O.id)) tell(O.id, `${N.name} imposes an embargo on you: your market prices worsen by 15% per embargo (${embargoes(O.id)} now).`, 'bad', null); }
-      else if (M.emb[key] && op > -20 && !war && rng() < 0.2){ delete M.emb[key]; if (isSeat(O.id)) tell(O.id, `${N.name} lifts its embargo on you.`, 'good', null); } } }
+      if (!M.emb[key] && (op < -45 || war) && rng() < 0.25){ M.emb[key] = S.hour + 1; if (isSeat(O.id)) tell(O.id, `${N.name} imposes an embargo on you: your market prices worsen by 15% per embargo (${embargoes(O.id)} now).`, 'bad', null); }
+      else if (M.emb[key] && M.join && M.join[key] != null){ const ld = M.join[key]; if (!M.emb[ld + '>' + O.id] || blocIdOf(ld) !== blocIdOf(N.id) || !blocIdOf(N.id)){ setEmbargo(N.id, O.id, false); if (isSeat(O.id)) tell(O.id, `${N.name} lifts its embargo on you.`, 'good', null); } }   // a joined embargo ends when the partner's does
+      else if (M.emb[key] && op > -20 && !war && rng() < 0.2){ delete M.emb[key]; if (isSeat(O.id)) tell(O.id, `${N.name} lifts its embargo on you.`, 'good', null); }
+      else if (!M.emb[key] && !war && rng() < 0.08 && blocIdOf(N.id) && blocIdOf(N.id) !== blocIdOf(O.id) && opinion(N.id, O.id) < 25){ const ls = embargoLeaders(N.id, O.id);   // coalition partners join an embargo (AI)
+        if (ls.length){ setEmbargo(N.id, O.id, true, ls[0]); if (isSeat(O.id)) tell(O.id, `${N.name} joins ${S.nations[ls[0]].name}'s embargo on you: your market prices worsen by 15% per embargo (${embargoes(O.id)} now).`, 'bad', null); } } } }
 }
 /* ---- market: only what nations list. Sell offers (goods held) and buy offers (money held); nothing else ---- */
 const isBid = o => o.type === 'buy';
@@ -125,11 +138,11 @@ function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty >
       else if (N[k] < AI_BID_LO[k] && N.cash > 260 && rng() < 0.5 && !S.book.some(o => o.seller === N.id && o.res === k && isBid(o))){ const price = +(M.p[k]*(1 + rng()*0.22)).toFixed(2), qty = Math.round(Math.min(60, 25 + rng()*40, (N.cash - 200)/price)); if (qty < 10) continue;
         N.cash -= qty*price; mine++; S.book.push({id:S.nid++, type:'buy', seller:N.id, res:k, qty, price, exp:S.hour + 72}); } } }
   // matching between listings (never between nations at war); the earlier listing's price stands
-  for (const bid of S.book.filter(isBid)){ for (const ask of S.book.filter(o => !isBid(o) && o.res === bid.res && o.price <= bid.price && o.seller !== bid.seller && !atWar(o.seller, bid.seller) && canSee(o, bid.seller) && canSee(bid, o.seller)).sort((x, y) => x.price - y.price)){
+  for (const bid of S.book.filter(isBid)){ for (const ask of S.book.filter(o => !isBid(o) && o.res === bid.res && o.price <= bid.price && o.seller !== bid.seller && !atWar(o.seller, bid.seller) && !embargoed(o.seller, bid.seller) && canSee(o, bid.seller) && canSee(bid, o.seller)).sort((x, y) => x.price - y.price)){
       if (bid.qty <= 0) break; if (ask.qty <= 0 || isSeat(bid.seller) || isSeat(ask.seller)) continue; const q = Math.min(bid.qty, ask.qty); settle(bid.seller, ask.seller, bid.res, q, ask.price); S.nations[bid.seller].cash += q*(bid.price - ask.price); bid.qty -= q; ask.qty -= q; } }
   // AIs short of a resource (metal for units and buildings above all) fill other AIs' sell listings at a fair price; never an enemy's
   for (const ask of S.book){ if (isBid(ask) || ask.qty <= 0 || isSeat(ask.seller) || ask.price > M.p[ask.res]*1.15) continue;
-    for (const N of S.nations){ if (ask.qty <= 0) break; if (!N.alive || isSeat(N.id) || N.id === ask.seller || atWar(N.id, ask.seller) || M.emb[ask.seller + '>' + N.id] || !canSee(ask, N.id) || rng() > 0.6) continue;
+    for (const N of S.nations){ if (ask.qty <= 0) break; if (!N.alive || isSeat(N.id) || N.id === ask.seller || atWar(N.id, ask.seller) || embargoed(ask.seller, N.id) || !canSee(ask, N.id) || rng() > 0.6) continue;
       // oil: a big consumer keeps about 25 days of fuel; running out of it, a power buys with less money in hand
       const need = (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1), dry = ask.res === 'oil' && N.oil < 80 && income(N.id).net.oil < 0;
       if (N[ask.res] >= need || N.cash < (dry ? 120 : 230)) continue;
@@ -137,13 +150,13 @@ function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty >
       N.cash -= q*ask.price; N[ask.res] += q; S.nations[ask.seller].cash += q*ask.price; ask.qty -= q; } }
   // AI fills your listings when the price suits it
   for (const o of S.book){ const me = o.seller; if (!isSeat(me)) continue;   // a seat's offers: the AI nations may take them
-    for (const N of S.nations){ if (!N.alive || isSeat(N.id) || atWar(N.id, me) || mkt().emb[N.id + '>' + me] || o.qty <= 0 || !canSee(o, N.id) || rng() > 0.5) continue;
+    for (const N of S.nations){ if (!N.alive || isSeat(N.id) || atWar(N.id, me) || embargoed(N.id, me) || o.qty <= 0 || !canSee(o, N.id) || rng() > 0.5) continue;
       if (!isBid(o)){ if (N[o.res] > 60 || o.price > M.p[o.res]*1.12) continue; const q = Math.min(o.qty, 40, Math.floor((N.cash - 150)/o.price)); if (q < 5) continue; N.cash -= q*o.price; N[o.res] += q; S.nations[me].cash += q*o.price; o.qty -= q; tell(me, `${N.name} bought ${q} ${rlbl(o.res)} from your offer for $${fmt(q*o.price)}M.`, 'good', null); }
       else { if (N[o.res] < 120 || o.price < M.p[o.res]*0.95) continue; const q = Math.min(o.qty, 40, Math.floor(N[o.res] - 80)); if (q < 5) continue; N[o.res] -= q; N.cash += q*o.price; S.nations[me][o.res] += q; o.qty -= q; tell(me, `${N.name} sold you ${q} ${rlbl(o.res)} through your buy offer for $${fmt(q*o.price)}M.`, 'good', null); } } }
   S.book = S.book.filter(o => o.qty > 0); }
 // nation n takes q units of order-book offer id (buys from a sell offer, sells into a buy offer); returns the amount traded
 function fillOffer(n, id, q){ const o = (S.book || []).find(x => x.id === id), N = S.nations[n]; if (!o || o.seller === n || !canSee(o, n)) return 0;
-  if (mkt().emb[o.seller + '>' + n]) return 0;
+  if (embargoed(o.seller, n)) return 0;   // an embargo either way closes the deal
   if (!isBid(o)){ q = Math.min(q, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[o.res])); if (q <= 0) return 0; N.cash -= q*o.price; N[o.res] += q; S.nations[o.seller].cash += q*o.price; }
   else { q = Math.min(q, o.qty, Math.floor(N[o.res])); if (q <= 0) return 0; N[o.res] -= q; N.cash += q*o.price; S.nations[o.seller][o.res] += q; }
   o.qty -= q; addMem(o.seller, n, 1); if (o.qty <= 0) S.book = S.book.filter(x => x !== o); return q; }

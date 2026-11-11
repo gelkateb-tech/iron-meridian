@@ -287,7 +287,7 @@ const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awac
 // an AI buys from other AIs' sell listings on the order book (cheapest first, up to 1.15x the world price; never an enemy's or an embargoing power's):
 // goods change hands between nations without moving the world price. Returns what it got.
 function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
-  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && !isSeat(o.seller) && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
+  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && !isSeat(o.seller) && S.nations[o.seller].alive && !atWar(n, o.seller) && !embargoed(o.seller, n) && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
   for (const o of asks){ const r = Math.min(q - got, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[k])); if (r <= 0) break;
     N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r; if (got >= q) break; }
   if (got) S.book = S.book.filter(o => o.qty > 0); return got; }
