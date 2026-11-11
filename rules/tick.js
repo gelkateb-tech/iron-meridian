@@ -9,7 +9,7 @@ function tick(){
   for (let p = 0; p < G.P.length; p++) if (S.queue[p].length) prodHour(p);
   // construction
   for (let p = 0; p < G.P.length; p++) if (S.cons[p]) consHour(p);
-  // unit upgrades (one at a time, parallel to research)
+  // a Mark upgrade left running by a save from before the research redesign (it ends as Firepower and Protection levels)
   for (const N of S.nations) if (N.alive && N.eng) engHour(N);
   // research
   for (const N of S.nations) if (N.alive && (N.research || N.research2)) researchHour(N);   // both slots
@@ -170,9 +170,6 @@ function daily(){
   for (const N of S.nations){ if (!N.alive || isSeat(N.id) || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
     const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
   for (const c of (S.cmds || [])){ if (!c.alive || c.army == null) continue; const a = armyById(c.army); if (!a || a.cmd !== c.id) c.army = null; }
-  for (const N of S.nations){ if (!N.alive || isSeat(N.id) || N.eng || N.cash < 300 || rng() > 0.4) continue;
-    const tot = {}; for (const a of S.armies) if (a.owner === N.id) for (const t of UT) tot[t] = (tot[t] || 0) + a.u[t];
-    const t = UT.filter(t => tot[t] && markOf(N.id, t) < 4).sort((x, y) => tot[y]*UNITS[y].cost - tot[x]*UNITS[x].cost)[0]; if (t) startUpgrade(N.id, t); }
   // the advisor: each seat is warned of a build-up on its border and of idle cities in wartime
   for (const me of seats()) if (S.nations[me].alive){ const D = desk(me), W = D.warn || (D.warn = {}), day = dayOf(S.hour);
     const border = G.P.filter(P => !P.sea && S.owner[P.id] === me && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== me));

@@ -57,6 +57,7 @@ function newGame(seed, pick, humans = []){
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
+  S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
   linksSync();
   for (const n of S.nations){
     const np = S.owner.filter(o => o === n.id).length;
@@ -131,6 +132,7 @@ function restore(data){
   rqueueMigrate();
   mobMigrate();
   ecoMigrate();
+  researchMigrate();
   IM.emit('restored');
   return true;
 }
@@ -161,7 +163,8 @@ function addArmy(owner, at, units){
   for (const t of UT) if (units[t]) a.u[t] = units[t];
   S.armies.push(a); return a;
 }
-const has = (n, id) => n >= 0 && !!(S.nations[n].tech && S.nations[n].tech[id]);
+// nation n holds research node id (at any level); also true for the kept bonuses of the removed Economy branch (eco1-3)
+const has = (n, id) => rLevel(n, id) > 0;
 const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'UAV Squadron', swarm:'Drone Swarm Group', sdrone:'Strike Drone Squadron', bomb:'Bomber Wing', stealth:'Stealth Bomber Wing', mpa:'Maritime Patrol Squadron', awacs:'Early Warning Squadron', asf:'Fighter Wing', jam:'Electronic Warfare Battalion', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
 function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
   let k = a.air ? (['heli', 'drone', 'swarm', 'sdrone', 'bomb', 'stealth', 'mpa', 'awacs', 'asf'].find(t => a.u[t]) || 'air') : shipsOnly(a) ? (a.u.carr ? 'carr' : a.u.sub === count(a) ? 'sub' : 'sea') : null;
@@ -172,19 +175,21 @@ function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === 
 const armyLabel = (a, me) => a.owner === me ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
 const STC = [];
 function st(o, t, k){
-  if (o < 0) return UNITS[t][k];
+  if (o < 0) return UNITS[t][k] || 0;
   const N = S.nations[o], T = N.tech || {}, sh = N.short || {}, key = (N.tv || 0)*8 + (sh.oil ? 1 : 0) + (sh.iron ? 2 : 0) + (sh.elec ? 4 : 0);
   let c = STC[o];
   if (!c || c.key !== key || c.S !== S){ c = STC[o] = {key, S, v:{}};
-    for (const u of UT){ const r = {}; for (const kk of ['atk', 'def', 'spd', 'hp']){ let v = UNITS[u][kk];
-        for (const id in T){ const fx = TECH_BY[id] && TECH_BY[id].fx[u]; if (fx && fx[kk]) v += fx[kk]; }
+    for (const u of UT){ const r = {}, NU = RNODES_U[u] || []; for (const kk of ['atk', 'def', 'spd', 'hp', 'rng']){ let v = UNITS[u][kk] || 0;   // (rng: extra mission radius in hexes, from research only)
+        for (const nd of NU){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++){ const x = nd.lv[i].fx[kk]; if (x) v += x; } }   // flat bonuses: every researched level of the unit's upgrades and generations
         if (sh.oil && UNITS[u].fuel){ if (kk === 'atk') v *= 0.7; if (kk === 'spd') v *= 0.6; }
         if (sh.iron && MAINT[u].iron >= 0.05){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.85; }   // no spare parts: armor, guns and warships fight worse
         if (sh.elec && MAINT[u].elec >= 0.05){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.9; }   // no avionics or radar spares: aircraft, drones, air defence and warships
-        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[(N.mk && N.mk[u]) || 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }
+        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[Math.min(3, +T[u + (kk === 'atk' ? '_fp' : '_pr')] || 0) + 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }   // Firepower / Protection, then the doctrine
         r[kk] = v; } c.v[u] = r; } }
   return c.v[t][k];
 }
+// the stat nation o would have with research node id at level lv (the research screen's before and after); nothing is changed
+function stIf(o, t, k, id, lv){ const N = S.nations[o], T = N.tech || (N.tech = {}), keep = T[id]; T[id] = lv; N.tv = (N.tv || 0) + 1; const v = st(o, t, k); if (keep === undefined) delete T[id]; else T[id] = keep; N.tv++; return v; }
 const unlocked = (n, t) => !UNITS[t].tech || has(n, UNITS[t].tech);
 // buildings knocked out by a precision strike (strike drone, armed UAV) work again after a while: S.bdis[p] = {<building>: hour it is back, ...},
 // one entry per building type, so knocking out a second building keeps the first one down (old saves held a single {k, h}: converted on read)
@@ -203,7 +208,7 @@ const armyHP = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i
 const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t) => s + a.w[t], 0)/hp : 0; };
 // remaining strength against the force's recent peak (units lost count, not just wounds)
 const strengthFrac = a => { const cur = effHP(a), pk = Math.max(a.peak || 0, cur); return pk ? cur/pk : 0; };
-const power = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*UNITS[t].hp/10; } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
+const power = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*st(a.owner, t, 'hp')/10; } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
 const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*(has(a.owner, 'log1') ? 1.2 : 1)*(1 + 0.15*cmdF(a, 'blitz'));
 const armyById = id => S.armies.find(a => a.id === id);
 const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;

@@ -6,11 +6,12 @@ const AIR_SPF = {bomb:0.6, stealth:0.67, mpa:0.85, awacs:0.85, sdrone:0.75, swar
 // UAV levels (research UAV I..V): vision radius (old hexes), loiter hours, range (hexes), stealth (share of air-defence hits that land), missile salvos per sortie
 const UAV_LV = [null, {vis:6.7, loiter:12, range:18, stealth:1.0, salvos:0}, {vis:8.5, loiter:16, range:20, stealth:0.8, salvos:0}, {vis:10, loiter:20, range:22, stealth:0.6, salvos:0},
   {vis:10.5, loiter:20, range:22, stealth:0.6, salvos:1}, {vis:12, loiter:24, range:27, stealth:0.45, salvos:2}];
-const UAV_TECH = ['drone1', 'uav2', 'uav3', 'uav4', 'uav5'];
+const UAV_TECH = ['u_drone', 'drone_g2', 'drone_g3', 'drone_g4', 'drone_g5'];   // UAV I is the Recon UAV's unlock; II to V are its generations
 function uavLv(n){ if (n < 0 || !S || !S.nations[n]) return 1; let l = 0; for (const id of UAV_TECH){ if (has(n, id)) l++; else break; } return Math.max(1, l); }
 const uavOf = n => UAV_LV[uavLv(n)];
-const BOMB2_RANGE = 4;   // Strategic Bomber Upgrade: the Heavy Bomber reaches this many hexes farther
-const airRangeT = (n, t) => t === 'drone' ? uavOf(n).range : (AIR_RANGE[t] || 12) + (t === 'bomb' && has(n, 'bomb2') ? BOMB2_RANGE : 0);
+const BOMB2_RANGE = 4;   // Strategic Bomber Upgrade: the Heavy Bomber reaches this many hexes farther (the node's own rng bonus)
+// mission radius in hexes: the type's own, plus what research adds (Drop Tanks, Long-Range Tanks, Satellite Link ...: the rng bonus of st())
+const airRangeT = (n, t) => t === 'drone' ? uavOf(n).range : (AIR_RANGE[t] || 12) + (n >= 0 ? st(n, t, 'rng') : 0);
 const STRIKE = 8;                     // a strike delivers this many combat-hours of firepower
 /* ---------------- Air power ---------------- */
 const wingRange = a => Math.min(...UT.filter(t => a.u[t] && UNITS[t].cls === 'air').map(t => airRangeT(a.owner, t)), 99) + (a.air && a.air.base != null && G.P[a.air.base] && !G.P[a.air.base].sea ? Math.max(0, (S.bld[a.air.base].air || 0) - 1) : 0);

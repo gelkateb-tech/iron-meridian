@@ -145,52 +145,215 @@ const MAIN_NAME = {cash:'money', oil:'oil', metal:'materials', iron:'iron', elec
 const ECO_OLD = {ref:{name:'Refinery', cost:50, metal:10, iron:5}, fdy:{name:'Foundry', cost:50, metal:10, iron:0}, mine:{name:'Rare Earth Mine', cost:55, metal:10, iron:0}};
 const ECO_OLD_TECH = {eco1:'Industrial Automation', eco2:'National Service', eco3:'Oil Refining'};   // the removed Economy research branch: a nation that researched one keeps its bonus (has(n, 'eco1') ...)
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
-// every unit can be unlocked from day one; a tech only needs another when it upgrades that same unit (UAV I to V, Infantry, Armor, Artillery, jets),
-// or for the missile line (Cruise, then Ballistic, Anti-Missile Shield and satellites)
-const TECH = [
-  {id:'inf1',  branch:'Infantry',  name:'Ceramic Body Armor',   cost:60,  days:3, req:null,    desc:'Infantry and anti-tank defense +1',       fx:{inf:{def:1}, at:{def:1}}},
-  {id:'inf2',  branch:'Infantry',  name:'Mechanized Infantry',  cost:110, days:5, req:'inf1',  desc:'Infantry attack +2 and speed +1',      fx:{inf:{atk:2, spd:1}, at:{atk:1}}},
-  {id:'inf3',  branch:'Infantry',  name:'Special Forces',       cost:180, days:7, req:'inf2',  desc:'Infantry attack +1 and defense +1',    fx:{inf:{atk:1, def:1}}},
-  {id:'tank1', branch:'Armor',     name:'Composite Armor',      cost:90,  days:4, req:null,    desc:'Armor defense +2',                     fx:{tank:{def:2}}},
-  {id:'tank2', branch:'Armor',     name:'Smoothbore Main Gun',  cost:150, days:6, req:'tank1', desc:'Armor attack +3, IFV attack +2, anti-tank attack +1', fx:{tank:{atk:3}, ifv:{atk:2}, at:{atk:1}}},
-  {id:'tank3', branch:'Armor',     name:'Turbine Engines',      cost:200, days:7, req:'tank2', desc:'Armor speed +2 and attack +1',         fx:{tank:{spd:2, atk:1}}},
-  {id:'art1',  branch:'Artillery', name:'Counter-Battery Radar',cost:80,  days:4, req:null,    desc:'Artillery attack +2',                  fx:{art:{atk:2}}},
-  {id:'art2',  branch:'Artillery', name:'Rocket Artillery',     cost:150, days:6, req:'art1',  desc:'Artillery attack +3 and defense +2',   fx:{art:{atk:3, def:2}}},
-  {id:'art3',  branch:'Artillery', name:'Guided Shells',        cost:210, days:8, req:'art2',  desc:'Artillery attack +2 and speed +1',     fx:{art:{atk:2, spd:1}}},
-  {id:'air1',  branch:'Air',       name:'Jet Engines',          cost:120, days:5, req:null,    desc:'Unlocks strike fighters and interceptors',                  fx:{}},
-  {id:'air2',  branch:'Air',       name:'Precision Munitions',  cost:180, days:6, req:'air1',  desc:'Jet attack +2 (Strikers and Interceptors)', fx:{jet:{atk:2}, int:{atk:2}}},
-  {id:'air3',  branch:'Air',       name:'Stealth Airframes',    cost:260, days:8, req:'air2',  desc:'Strike Jet defense +3',                fx:{jet:{def:3}}},
-  {id:'log1',  branch:'Logistics', name:'Motorized Supply',     cost:110, days:4, req:null,    desc:'All forces move 20% faster',           fx:{}},
-  {id:'log2',  branch:'Logistics', name:'Combat Engineers',     cost:130, days:5, req:null,  desc:'Capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build',  fx:{}},
-  {id:'log3',  branch:'Logistics', name:'Field Hospitals',      cost:170, days:7, req:null,  desc:'Your forces take 15% less damage',     fx:{}},
-  {id:'msl1',  branch:'Strategic', name:'Cruise Missiles',      cost:160, days:6, req:null,    desc:'Missile Silos can build Cruise Missiles', fx:{}},
-  {id:'msl2',  branch:'Strategic', name:'Ballistic Missiles',   cost:240, days:8, req:'msl1',  desc:'Silos can build Ballistic Missiles',   fx:{}},
-  {id:'msl3',  branch:'Strategic', name:'Anti-Missile Shield',  cost:220, days:7, req:'msl2',  desc:'Your SAMs and Frigates intercept missiles twice as well', fx:{}},
-  {id:'sat1',  branch:'Strategic', name:'Reconnaissance Satellites', cost:200, days:6, req:'msl1', desc:'Launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day, revealing a wide swath', fx:{}},
-  {id:'nav1',  branch:'Naval',     name:'Naval Gunnery',       cost:90,  days:4, req:null,    desc:'Frigates +1 attack, Cruisers +2 attack', fx:{frig:{atk:1}, crui:{atk:2}}},
-  {id:'nav2',  branch:'Naval',     name:'Carrier Aviation',    cost:170, days:7, req:null,  desc:'Unlocks aircraft carriers (Naval Yard II): mobile airbases at sea', fx:{}},
-  {id:'nav3',  branch:'Naval',     name:'Amphibious Doctrine', cost:190, days:7, req:null,  desc:'Troops landing from the sea fight at 90% instead of 67% on their first day', fx:{}},
-  {id:'asf1',  branch:'Air',       name:'Air Superiority Fighters', cost:190, days:7, req:null, desc:'Unlocks air superiority fighters (Airbase II): patrols cover neighbouring provinces and beat bombers, AWACS, patrol planes and drones', fx:{}},
-  {id:'awacs1', branch:'Air',      name:'Airborne Early Warning', cost:170, days:6, req:null, desc:'Unlocks AWACS aircraft (Airbase II): locate every enemy force in a huge radius, as unidentified contacts', fx:{}},
-  {id:'mpa1',  branch:'Air',       name:'Maritime Patrol',      cost:140, days:5, req:null,  desc:'Unlocks maritime patrol aircraft: find submerged submarines and hunt ships', fx:{}},
-  {id:'bomb1', branch:'Air',       name:'Strategic Bombers',    cost:230, days:8, req:null,  desc:'Unlocks heavy bombers (Airbase II): very long range, wreck cities and buildings', fx:{}},
-  {id:'bomb2', branch:'Air',       name:'Strategic Bomber Upgrade', cost:260, days:8, req:'bomb1', desc:'Heavy Bomber range +720 km and attack +1', fx:{bomb:{atk:1}}},
-  {id:'bomb3', branch:'Air',       name:'Stealth Bombers',      cost:420, days:11, req:'bomb2', req2:'air3', desc:'Unlocks stealth bombers (Airbase III): the Heavy Bomber\u2019s reach with 60% of its bombs; SAMs hit them 35% as often, fighters 40% as often, and only a SAM or jammer close by sees them. Needs Stealth Airframes too', fx:{}},
-  {id:'drone1', branch:'Drones',   name:'UAV I · Unmanned Recon', cost:90, days:4, req:null, desc:'Unlocks recon UAVs: loiter over any area in range and identify every enemy force around it (recon only, no weapons)', fx:{}},
-  {id:'uav2',  branch:'Drones',    name:'UAV II · Long-Endurance Optics', cost:110, days:4, req:'drone1', desc:'UAVs see farther, loiter 16 h, reach farther and are harder to shoot down', fx:{drone:{def:1}}},
-  {id:'uav3',  branch:'Drones',    name:'UAV III · Low-Observable Airframe', cost:140, days:5, req:'uav2', desc:'UAVs loiter 20 h with a wider view; stealthy airframe: air defences hit 40% less', fx:{drone:{def:1}}},
-  {id:'uav4',  branch:'Drones',    name:'UAV IV · Armed UAV', cost:170, days:6, req:'uav3', desc:'UAVs carry light missiles: one precise salvo per sortie on units (and sometimes a building), still spotting', fx:{drone:{atk:3}}},
-  {id:'uav5',  branch:'Drones',    name:'UAV V · Hunter-Killer', cost:210, days:7, req:'uav4', desc:'Two salvos per sortie, heavier missiles, longer range and loiter, best survivability', fx:{drone:{atk:2, def:2}}},
-  {id:'jam1',  branch:'Drones',    name:'Counter-Drone Jamming', cost:80, days:3, req:null,   desc:'Unlocks Static Jammers: down and jam drones over a province and its neighbours', fx:{}},
-  {id:'swarm1', branch:'Drones',   name:'Swarm Drones',         cost:120, days:5, req:null, desc:'Unlocks swarm drones (six per card, Army Base II): saturate air defences, shred light units', fx:{}},
-  {id:'sdrone1', branch:'Drones',  name:'Strike Drones',        cost:150, days:6, req:null,  desc:'Unlocks strike drones: long-range precision hits on units and buildings', fx:{}},
-  {id:'heli1',  branch:'Airmobile', name:'Rotary Wing',         cost:150, days:6, req:null, desc:'Unlocks attack helicopters: short-range attack helicopters that shred armor', fx:{}},
-  {id:'para1',  branch:'Airmobile', name:'Airborne Forces',     cost:190, days:7, req:null,  desc:'Unlocks paratroopers, air-dropped behind enemy lines', fx:{}},
+// ---------- the research tree (docs/RESEARCH.md): organised by unit. Ten categories; inside a category one column ("line") per unit type.
+// A node sits on a day (it cannot be started before that day) and has one or more levels, each with its own day, price and research time.
+// Node kinds: unlock (lets you build the unit; units known from day one are "standard issue"), eng (Firepower / Protection, three levels:
+// attack or defense +12%, +25%, +40%, the old unit Marks), kit (one named upgrade, some with levels), gen (a newer model of the same unit).
+// A node only needs another node of its own unit line (the spine: unlock, generation 2, generation 3), or of the missile line; the one
+// exception is the Stealth Bomber, which needs two lines. N.tech[id] holds the level a nation has researched (rules/research.js).
+const RCATS = [
+  {id:'inf',  name:'Infantry Corps',           role:'Takes ground and holds it',                       art:'u-infantry'},
+  {id:'arm',  name:'Armoured Forces',          role:'Breaks the line and carries the infantry forward', art:'u-tank'},
+  {id:'sup',  name:'Artillery & Air Defence',  role:'Long reach on the ground, a roof over the army',   art:'u-rocket-artillery'},
+  {id:'aas',  name:'Air Assault',              role:'Short reach from the air: gunships and airborne troops', art:'u-attack-heli'},
+  {id:'tac',  name:'Tactical Air',             role:'Fighters and strike jets, medium reach',           art:'u-air-superiority'},
+  {id:'uns',  name:'Unmanned Systems',         role:'Cheap eyes and expendable strikes',                art:'u-strike-drone'},
+  {id:'str',  name:'Strategic Air',            role:'Bombers and the big sensors, long reach',          art:'u-bomber'},
+  {id:'nav',  name:'Navy',                     role:'Sea control, convoys and the silent service',      art:'u-destroyer'},
+  {id:'msl',  name:'Strategic Weapons',        role:'Missiles, the shield against them, eyes in orbit', art:'u-missile-launcher'},
+  {id:'cmd',  name:'Command & Logistics',      role:'Advantages for every force you field',             art:'u-supply-truck'},
 ];
-// research prices: money, materials and rare materials (the main research resource: by tier, a little more for the dearer projects); no project costs oil
-for (const t of TECH){ const tier = t.req ? (TECH.find(x => x.id === t.req).req ? 3 : 2) : 1, base = t.cost; t.tier = tier; t.cost = Math.round(base*0.6); t.metal = [0, 20, 35, 60][tier]; t.rare = [0, 18, 44, 78][tier] + Math.round(base/12); t.oil = 0; }
-const techCost = T => ({cash:T.cost, metal:T.metal, rare:T.rare, oil:T.oil});
-const TECH_BY = Object.fromEntries(TECH.map(t => [t.id, t]));
+const RCAT_BY = Object.fromEntries(RCATS.map(c => [c.id, c]));
+// price formulas on the unit's own money price (docs/RESEARCH.md section 5)
+const R_GEN_F = [1, 1.7, 2.2, 2.6], R_GEN_C = [1, 1.5, 2, 2.4];
+const R_PRICE = {
+  unlock:(U, days) => ({cash:Math.round(30 + 0.9*U.cost), metal:20, rare:12 + Math.round(U.cost/4), days}),
+  eng:(U, L) => ({cash:Math.round(0.8*U.cost*(L + 1)), metal:6*(L + 1) + Math.ceil((U.metal || 0)*(L + 1)/2), iron:Math.ceil((U.iron || 0)*(L + 1)/2), elec:Math.round((U.elec || 0)*(L + 1)*0.4), rare:[3, 5, 8][L - 1], days:[2, 2, 3][L - 1]}),
+  kit:(U, L) => ({cash:Math.round(25 + 0.6*U.cost*L), metal:[20, 30, 45][L - 1], rare:[12, 18, 26][L - 1] + Math.round(U.cost/20), days:[3, 4, 5][L - 1]}),
+  gen:(U, g) => ({cash:Math.round((60 + 2.2*U.cost)*R_GEN_C[g - 2]), metal:g === 2 ? 50 : 80, iron:2*(U.iron || 0), elec:2*(U.elec || 0), rare:Math.round((30 + U.cost/4)*R_GEN_F[g - 2]), days:g === 2 ? 6 : g === 3 ? 8 : g === 4 ? 8 : 9}),
+};
+// the unit lines, one column each. u: unit, cat, day: the day the unlock opens, ud: days to research the unlock, std: known from day one,
+// elite: star-and-wings badge, fam: the related unit it came out of (a dashed family line on the screen, no requirement), noFp: no Firepower node
+// k: upgrades [id, name, icon, [[day, fx, text], ...levels]]; g: generations [[generation, day, name, fx, text]]
+// fx: flat changes to the unit's own stats (atk, def, hp, spd) and rng (mission radius in hexes); the text says the rest (rules read the level)
+const R_LINES = [
+  {u:'inf', cat:'inf', day:1, std:1, k:[
+    ['armor', 'Ceramic Body Armour', 'hp', [[2, {def:1}, 'defense +1']]],
+    ['build', 'Rapid Mobilisation', 'build', [[5, {}, 'trains 15% faster'], [14, {}, 'trains 30% faster']]],
+    ['terr', 'Rough-Ground Drills', 'terr', [[6, {}, 'half the speed penalty in forest and hills'], [12, {}, 'and in mountains and jungle']]]],
+   g:[[2, 9, 'Mechanized Infantry', {atk:2, spd:1, hp:2}, 'attack +2, speed +1, health +2'], [3, 17, 'Assault Infantry', {atk:1, def:1, hp:2}, 'attack +1, defense +1, health +2']]},
+  {u:'at', cat:'inf', day:1, std:1, k:[
+    ['armor', 'Ceramic Body Armour', 'hp', [[2, {def:1}, 'defense +1']]],
+    ['warhead', 'Tandem Warheads', 'dmg', [[5, {atk:1}, 'attack +1'], [11, {atk:1}, 'attack +1 more']]],
+    ['eye', 'Thermal Sights', 'eye', [[8, {}, 'sees half a province farther']]]],
+   g:[[2, 12, 'Guided Missile Teams', {atk:1, hp:2}, 'attack +1, health +2, damage to armor 3.5x to 4x']]},
+  {u:'spec', cat:'inf', day:4, ud:4, elite:1, fam:'inf', k:[
+    ['terr', 'Mountain & Arctic Training', 'terr', [[7, {}, 'rough-terrain attack bonus 40% to 50%'], [13, {}, 'to 60%']]],
+    ['eye', 'Night Optics', 'eye', [[8, {}, 'sees half a province farther']]],
+    ['airlift', 'Air-Transportable', 'airlift', [[10, {}, 'can be air-dropped from an airbase province, up to 6 hexes']]]],
+   g:[[2, 16, 'Tier-One Operators', {atk:2, def:1, hp:2}, 'attack +2, defense +1, health +2']]},
+
+  {u:'ifv', cat:'arm', day:1, ud:3, k:[
+    ['gun', '30 mm Autocannon', 'dmg', [[5, {atk:2}, 'attack +2']]],
+    ['spd', 'Uprated Powerpack', 'spd', [[8, {spd:1}, 'speed +1']]],
+    ['terr', 'Amphibious Kit', 'terr', [[10, {}, 'no penalty for attacking across a river']]]],
+   g:[[2, 13, 'Heavy IFV', {atk:1, def:1, hp:3}, 'attack +1, defense +1, health +3']]},
+  {u:'tank', cat:'arm', day:1, std:1, k:[
+    ['armor', 'Composite Armour', 'hp', [[3, {def:2}, 'defense +2']]],
+    ['gun', 'Smoothbore Main Gun', 'dmg', [[7, {atk:3}, 'attack +3']]],
+    ['terr', 'Wide Tracks', 'terr', [[9, {}, 'half the speed penalty on rough ground']]],
+    ['eng', 'Turbine Engines', 'spd', [[11, {spd:2, atk:1}, 'speed +2, attack +1']]]],
+   g:[[2, 14, 'Third-Generation MBT', {def:1, hp:4}, 'defense +1, health +4'], [3, 22, 'Next-Generation MBT', {atk:2, def:1, hp:3}, 'attack +2, defense +1, health +3']]},
+
+  {u:'art', cat:'sup', day:1, std:1, k:[
+    ['radar', 'Counter-Battery Radar', 'eye', [[3, {atk:2}, 'attack +2']]],
+    ['shell', 'Extended-Range Shells', 'rng', [[8, {atk:3, def:2}, 'attack +3, defense +2']]],
+    ['guided', 'Guided Shells', 'dmg', [[13, {atk:2, spd:1}, 'attack +2, speed +1']]]],
+   g:[[2, 15, 'Long-Barrel Howitzer', {atk:1, hp:3}, 'attack +1, health +3']]},
+  {u:'mlrs', cat:'sup', day:5, ud:4, fam:'art', k:[
+    ['reload', 'Rapid Reload', 'dmg', [[9, {atk:2}, 'attack +2']]],
+    ['rng', 'Extended-Range Rockets', 'rng', [[12, {}, 'shells enemies up to 3 provinces away (was 2)']]]],
+   g:[[2, 16, 'Guided Rocket System', {atk:2, hp:2}, 'attack +2, health +2, damage to armor 0.9x to 1.2x']]},
+  {u:'sam', cat:'sup', day:1, std:1, k:[
+    ['seek', 'Improved Seekers', 'dmg', [[4, {atk:1}, 'attack +1'], [10, {atk:1}, 'attack +1 more']]],
+    ['spd', 'Shoot-and-Scoot', 'spd', [[7, {spd:1, def:1}, 'speed +1, defense +1']]]],
+   g:[[2, 13, 'Long-Range SAM', {atk:2, hp:2}, 'attack +2, health +2, covers neighbouring provinces at full strength']]},
+  {u:'jam', cat:'sup', day:3, ud:3, k:[
+    ['band', 'Wideband Jamming', 'eye', [[7, {}, 'downs and jams 20% more drones'], [13, {}, '40% more']]]],
+   g:[[2, 16, 'Counter-UAV Laser', {atk:2, def:1, hp:2}, 'attack +2, defense +1, health +2']]},
+
+  {u:'heli', cat:'aas', day:2, ud:4, k:[
+    ['rng', 'Long-Range Tanks', 'rng', [[6, {rng:1}, 'range +1 hex (7)'], [12, {rng:1}, 'range +1 more (8)']]],
+    ['atgm', 'Fire-and-Forget Missiles', 'dmg', [[8, {atk:1}, 'attack +1']]]],
+   g:[[2, 14, 'Heavy Gunship', {atk:2, def:1, hp:3}, 'attack +2, defense +1, health +3']]},
+  {u:'para', cat:'aas', day:3, ud:4, elite:1, k:[
+    ['airlift', 'Long-Range Airlift', 'airlift', [[7, {}, 'drop range 9 to 11 hexes'], [13, {}, 'to 13 hexes']]]],
+   g:[[2, 15, 'Air Assault Brigade', {atk:1, def:1, hp:2}, 'attack +1, defense +1, health +2']]},
+
+  {u:'int', cat:'tac', day:1, ud:4, k:[
+    ['msl', 'Radar-Guided Missiles', 'dmg', [[5, {atk:2}, 'attack +2']]],
+    ['rng', 'Drop Tanks', 'rng', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]]],
+   g:[[2, 12, 'Fourth-Generation Interceptor', {atk:1, def:1, hp:2, spd:2}, 'attack +1, defense +1, health +2, speed +2']]},
+  {u:'jet', cat:'tac', day:1, ud:4, k:[
+    ['pgm', 'Precision Munitions', 'dmg', [[5, {atk:2}, 'attack +2']]],
+    ['rng', 'Drop Tanks', 'rng', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]],
+    ['lo', 'Stealth Airframes', 'hp', [[10, {def:3}, 'defense +3; with the Strategic Bomber Upgrade it opens the Stealth Bomber']]]],
+   g:[[2, 14, 'Multirole Strike Fighter', {atk:2, hp:2}, 'attack +2, health +2, damage to armor 1.6x to 1.8x']]},
+  {u:'asf', cat:'tac', day:4, ud:5, elite:1, fam:'int', k:[
+    ['rng', 'Drop Tanks', 'rng', [[8, {rng:1}, 'range +1 hex'], [14, {rng:1}, 'range +1 more']]],
+    ['radar', 'Look-Down Radar', 'eye', [[10, {atk:1}, 'attack +1']]]],
+   g:[[2, 17, 'Fifth-Generation Fighter', {atk:2, def:2, hp:2}, 'attack +2, defense +2, health +2']]},
+
+  {u:'drone', cat:'uns', day:2, ud:3, k:[],
+   g:[[2, 5, 'UAV II · Long-Endurance Optics', {def:1}, 'sees farther, loiters 16 h, reaches farther, harder to shoot down'], [3, 9, 'UAV III · Low-Observable Airframe', {def:1}, 'loiters 20 h, wider view, air defences hit 40% less'],
+      [4, 13, 'UAV IV · Armed UAV', {atk:3}, 'light missiles: one salvo per sortie'], [5, 18, 'UAV V · Hunter-Killer', {atk:2, def:2}, 'two salvos, heavier missiles, longer range and loiter']]},
+  {u:'swarm', cat:'uns', day:4, ud:4, k:[
+    ['rng', 'Booster Rockets', 'rng', [[8, {rng:1}, 'range +1 hex'], [14, {rng:1}, 'range +1 more']]],
+    ['pack', 'Bigger Salvo', 'msl', [[9, {}, 'eight drones per card (was six), same price']]]],
+   g:[[2, 15, 'Networked Swarm', {atk:0.6, hp:1}, 'attack +0.6, health +1, damage to armor 0.35x to 0.6x']]},
+  {u:'sdrone', cat:'uns', day:6, ud:4, fam:'drone', k:[
+    ['rng', 'Satellite Link', 'rng', [[10, {rng:2}, 'range +2 hexes'], [15, {rng:2}, 'range +2 more']]],
+    ['hit', 'Bunker-Buster Warhead', 'dmg', [[12, {}, 'knocks a building out for 36 h (was 24 h)']]]],
+   g:[[2, 17, 'Low-Observable Strike Drone', {atk:2, hp:2}, 'attack +2, health +2, air defences hit 30% less']]},
+
+  {u:'bomb', cat:'str', day:6, ud:6, k:[
+    ['ecm', 'Defensive Jammers', 'hp', [[9, {def:2}, 'defense +2']]],
+    ['up', 'Strategic Bomber Upgrade', 'rng', [[11, {atk:1, rng:4}, 'range +4 hexes (+720 km), attack +1; with Stealth Airframes it opens the Stealth Bomber']]]],
+   g:[[2, 17, 'Supersonic Bomber', {atk:2, hp:3, spd:3}, 'attack +2, health +3, speed +3']]},
+  {u:'stealth', cat:'str', day:14, ud:9, elite:1, req:['bomb_up', 'jet_lo'], k:[
+    ['bay', 'Enlarged Bomb Bay', 'msl', [[19, {}, 'bomb load 60% to 75% of a Heavy Bomber’s']]],
+    ['rng', 'Flying-Wing Tanks', 'rng', [[21, {rng:4}, 'range +4 hexes']]]],
+   g:[]},
+  {u:'mpa', cat:'str', day:4, ud:4, k:[
+    ['sonar', 'Sonobuoy Field', 'eye', [[8, {}, 'detection radius +20%'], [14, {}, '+40%']]],
+    ['torp', 'Homing Torpedoes', 'dmg', [[10, {atk:2}, 'attack +2']]]],
+   g:[[2, 15, 'Long-Endurance Patrol Aircraft', {atk:1, hp:2}, 'attack +1, health +2, patrols 18 h (was 12 h)']]},
+  {u:'awacs', cat:'str', day:5, ud:5, noFp:1, k:[
+    ['radar', 'High-Power Radar', 'eye', [[9, {}, 'radar radius +15%'], [15, {}, '+30%']]],
+    ['link', 'Fighter Data Link', 'dmg', [[12, {}, 'fighters under it fight 35% better (was 25%)']]]],
+   g:[[2, 17, 'Phased-Array AWACS', {def:1, hp:2}, 'defense +1, health +2, identifies forces within half its radius']]},
+
+  {u:'frig', cat:'nav', day:1, std:1, k:[
+    ['gun', 'Naval Gunnery', 'dmg', [[3, {atk:1}, 'attack +1']]],
+    ['sonar', 'Towed Sonar', 'eye', [[6, {}, 'hears submarines two sea zones away']]],
+    ['aa', 'Area Air Defence', 'hp', [[9, {def:1}, 'defense +1, damage to aircraft 1.8x to 2.1x']]]],
+   g:[[2, 14, 'Guided-Missile Frigate', {atk:2, def:1, hp:3}, 'attack +2, defense +1, health +3']]},
+  {u:'crui', cat:'nav', day:1, std:1, k:[
+    ['gun', 'Naval Gunnery', 'dmg', [[3, {atk:2}, 'attack +2']]],
+    ['rng', 'Long-Range Bombardment', 'rng', [[11, {}, 'coastal bombardment 30% stronger']]]],
+   g:[[2, 15, 'Missile Cruiser', {atk:2, hp:4}, 'attack +2, health +4']]},
+  {u:'carr', cat:'nav', day:7, ud:6, fam:'crui', k:[
+    ['deck', 'Flight-Deck Crews', 'deck', [[11, {}, 'wings aboard repair 25% a day (was 20%)'], [16, {}, '30% a day']]],
+    ['spd', 'Nuclear Propulsion', 'spd', [[13, {spd:0.8}, 'speed +0.8']]]],
+   g:[[2, 18, 'Supercarrier', {def:2, hp:6}, 'defense +2, health +6']]},
+  {u:'sub', cat:'nav', day:1, std:1, k:[
+    ['torp', 'Heavy Torpedoes', 'dmg', [[4, {atk:1}, 'attack +1'], [10, {atk:1}, 'attack +1 more']]],
+    ['quiet', 'Quiet Drive', 'hp', [[7, {def:1}, 'defense +1'], [13, {def:1}, 'defense +1 more']]]],
+   g:[[2, 14, 'Nuclear Attack Submarine', {atk:1, hp:3, spd:1.2}, 'attack +1, health +3, speed +1.2']]},
+];
+// the two categories that are not unit lines. The first level of each keeps the id, price and time it had before the redesign.
+const R_SPECIAL = [
+  {cat:'msl', line:'Cruise Missile', pic:'cm', nodes:[
+    {id:'msl1', name:'Cruise Missiles', kind:'unlock', ic:'cm', lv:[[2, 'Missile Silos can build Cruise Missiles', {cash:96, metal:20, rare:31, days:6}]]},
+    {id:'cm_rng', name:'Cruise Missile Range', kind:'kit', ic:'rng', req:['msl1'], lv:[[7, 'range 28 to 32 hexes', {cash:90, metal:30, rare:20, days:4}], [13, 'to 36 hexes', {cash:130, metal:45, rare:30, days:5}]]},
+    {id:'cm_spd', name:'Cruise Missile Speed', kind:'kit', ic:'spd', req:['msl1'], lv:[[9, 'speed 9 to 11: less time for the defences', {cash:90, metal:30, rare:20, days:4}], [15, 'to 13', {cash:130, metal:45, rare:30, days:5}]]}]},
+  {cat:'msl', line:'Ballistic Missile', pic:'bm', nodes:[
+    {id:'msl2', name:'Ballistic Missiles', kind:'unlock', ic:'bm', req:['msl1'], lv:[[6, 'Silos can build Ballistic Missiles', {cash:144, metal:35, rare:64, days:8}]]},
+    {id:'bm_rng', name:'Ballistic Missile Range', kind:'kit', ic:'rng', req:['msl2'], lv:[[11, 'range 90 to 102 hexes', {cash:140, metal:45, rare:34, days:5}], [17, 'to 114 hexes', {cash:190, metal:60, rare:46, days:6}]]},
+    {id:'bm_pow', name:'Heavier Warhead', kind:'kit', ic:'dmg', req:['msl2'], lv:[[14, 'power 16 to 19', {cash:170, metal:60, rare:44, days:6}]]}]},
+  {cat:'msl', line:'Missile Defence', pic:'def', nodes:[
+    {id:'msl3', name:'Anti-Missile Shield', kind:'kit', ic:'hp', req:['msl2'], lv:[[9, 'your SAMs and Frigates intercept missiles twice as well', {cash:132, metal:60, rare:96, days:7}], [15, '2.5 times as well', {cash:170, metal:60, rare:60, days:6}], [21, '3 times as well', {cash:220, metal:80, rare:80, days:7}]]}]},
+  {cat:'msl', line:'Satellites', pic:'sat', nodes:[
+    {id:'sat1', name:'Reconnaissance Satellites', kind:'kit', ic:'eye', req:['msl1'], lv:[[5, 'launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day', {cash:120, metal:35, rare:61, days:6}], [11, 'up to 4 satellites', {cash:150, metal:50, rare:48, days:5}], [17, 'up to 5, each with a wider swath', {cash:200, metal:70, rare:64, days:6}]]}]},
+  {cat:'cmd', line:'Supply', pic:'truck', nodes:[{id:'log1', name:'Motorized Supply', kind:'kit', ic:'spd', lv:[[3, 'all forces move 20% faster; opens high-speed rail', {cash:66, metal:20, rare:27, days:4}]]}]},
+  {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'build', lv:[[4, 'capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}]]}]},
+  {cat:'cmd', line:'Landings', pic:'anchor', nodes:[{id:'nav3', name:'Amphibious Doctrine', kind:'kit', ic:'terr', lv:[[5, 'troops landing from the sea fight at 90% instead of 67% on their first day', {cash:114, metal:20, rare:34, days:7}]]}]},
+  {cat:'cmd', line:'Medical', pic:'cross', nodes:[{id:'log3', name:'Field Hospitals', kind:'kit', ic:'hp', lv:[[6, 'your forces take 15% less damage', {cash:102, metal:20, rare:32, days:7}]]}]},
+];
+// the node list. node: {id, cat, line, u, kind, name, ic, req:[node ids], req3 (Firepower / Protection level 3 needs it), std, elite, fam, gen, pic,
+// lv:[{day, c:{cash, metal, iron, elec, rare, days}, fx, txt}]}
+const R_PCT = [12, 25, 40];
+const RNODES = [], RN = {};
+{ const add = n => { n.i = RNODES.length; RNODES.push(n); RN[n.id] = n; return n; };
+  for (const L of R_LINES){ const U = UNITS[L.u], u = L.u, g2 = (L.g.find(g => g[0] === 2) || [])[1];
+    add({id:'u_' + u, cat:L.cat, line:u, u, kind:'unlock', name:U.name, ic:'unit', pic:u, std:!!L.std, elite:!!L.elite, fam:L.fam || null, req:L.req || [],
+      lv:[{day:L.day, c:L.std ? {cash:0, metal:0, rare:0, days:0} : R_PRICE.unlock(U, L.ud), fx:{}, txt:L.std ? 'standard issue: known from day one' : 'unlocks the ' + U.name}]});
+    const eDay = [Math.max(3, L.day + 2), L.day + 9, Math.max(g2 ? g2 + 3 : 0, L.day + 15)];
+    for (const [k, nm, ic, off] of [['fp', 'Firepower', 'dmg', 0], ['pr', 'Protection', 'hp', 1]]){ if (k === 'fp' && L.noFp) continue;
+      add({id:u + '_' + k, cat:L.cat, line:u, u, kind:'eng', eng:k, name:nm, ic, req:['u_' + u], req3:g2 ? u + '_g2' : null,
+        lv:[1, 2, 3].map(l => ({day:eDay[l - 1] + off, c:R_PRICE.eng(U, l), fx:{}, txt:`${k === 'fp' ? 'attack' : 'defense'} +${R_PCT[l - 1]}% in all`}))}); }
+    for (const [k, nm, ic, lv] of L.k)
+      add({id:u + '_' + k, cat:L.cat, line:u, u, kind:'kit', name:nm, ic, req:[lv[0][0] > (g2 || 99) ? u + '_g2' : 'u_' + u], lv:lv.map(([day, fx, txt], i) => ({day, c:R_PRICE.kit(U, i + 1), fx, txt}))});
+    for (const [g, day, nm, fx, txt] of L.g)
+      add({id:u + '_g' + g, cat:L.cat, line:u, u, kind:'gen', gen:g, name:nm, ic:'unit', pic:u, req:[g === 2 ? 'u_' + u : `${u}_g${g - 1}`], lv:[{day, c:R_PRICE.gen(U, g), fx, txt}]}); }
+  for (const Sx of R_SPECIAL) for (const n of Sx.nodes)
+    add({id:n.id, cat:Sx.cat, line:Sx.line, u:null, kind:n.kind, name:n.name, ic:n.ic, pic:Sx.pic, req:n.req || [], lv:n.lv.map(([day, txt, c]) => ({day, c, fx:{}, txt}))});
+  for (const L of R_LINES) UNITS[L.u].tech = L.std ? null : 'u_' + L.u;   // the research a unit needs: its own unlock node
+}
+const RNODES_U = {};   // the nodes of each unit's line (what st() sums)
+for (const n of RNODES) if (n.u) (RNODES_U[n.u] || (RNODES_U[n.u] = [])).push(n);
+const R_STEPS = RNODES.reduce((s, n) => s + (n.std ? 0 : n.lv.length), 0);   // research steps in the whole tree (standard-issue unlocks are not steps)
+const rLineName = n => n.u ? UNITS[n.u].name : n.line;
+// a node's name for one level: "Firepower 2 · Main Battle Tank", "Cruise Missile Range 1", "Heavy IFV"
+const rName = (n, lv) => n.name + (n.lv.length > 1 ? ' ' + lv : '') + (n.kind === 'eng' ? ' · ' + UNITS[n.u].name : '');
+const rCost = (n, lv) => { const c = n.lv[lv - 1].c; return {cash:c.cash || 0, metal:c.metal || 0, iron:c.iron || 0, elec:c.elec || 0, rare:c.rare || 0}; };
+// ---------- the projects of the old tree (before the research redesign): what each converts to when an old save is loaded.
+// 'node' sets that node to level 1; 'node@' adds one level to it. Projects whose id did not change (log1, msl1, sat1 ...) are not listed.
+const R_LEGACY = {
+  inf1:['inf_armor', 'at_armor'], inf2:['inf_g2', 'at_warhead@', 'u_ifv'], inf3:['inf_g3', 'u_spec'],
+  tank1:['tank_armor'], tank2:['tank_gun', 'ifv_gun', 'at_warhead@'], tank3:['tank_eng'],
+  art1:['art_radar'], art2:['art_shell', 'u_mlrs'], art3:['art_guided'],
+  air1:['u_jet', 'u_int'], air2:['jet_pgm', 'int_msl'], air3:['jet_lo'],
+  nav1:['frig_gun', 'crui_gun'], nav2:['u_carr'],
+  asf1:['u_asf'], awacs1:['u_awacs'], mpa1:['u_mpa'], bomb1:['u_bomb'], bomb2:['bomb_up'], bomb3:['u_stealth'],
+  drone1:['u_drone'], uav2:['drone_g2'], uav3:['drone_g3'], uav4:['drone_g4'], uav5:['drone_g5'],
+  jam1:['u_jam'], swarm1:['u_swarm'], sdrone1:['u_sdrone'], heli1:['u_heli'], para1:['u_para'],
+};
+const R_LEGACY_NAME = {inf1:'Ceramic Body Armor', inf2:'Mechanized Infantry', inf3:'Special Forces', tank1:'Composite Armor', tank2:'Smoothbore Main Gun', tank3:'Turbine Engines',
+  art1:'Counter-Battery Radar', art2:'Rocket Artillery', art3:'Guided Shells', air1:'Jet Engines', air2:'Precision Munitions', air3:'Stealth Airframes', nav1:'Naval Gunnery', nav2:'Carrier Aviation',
+  asf1:'Air Superiority Fighters', awacs1:'Airborne Early Warning', mpa1:'Maritime Patrol', bomb1:'Strategic Bombers', bomb2:'Strategic Bomber Upgrade', bomb3:'Stealth Bombers',
+  drone1:'UAV I · Unmanned Recon', uav2:'UAV II · Long-Endurance Optics', uav3:'UAV III · Low-Observable Airframe', uav4:'UAV IV · Armed UAV', uav5:'UAV V · Hunter-Killer',
+  jam1:'Counter-Drone Jamming', swarm1:'Swarm Drones', sdrone1:'Strike Drones', heli1:'Rotary Wing', para1:'Airborne Forces'};
 // national doctrines, chosen at the start of a campaign
 const DOCTRINES = {
   precision:{name:'Precision', tag:'Fewer, better forces', desc:'Units attack 10% harder and research runs 15% faster, but every unit costs 15% more.', atk:1.10, def:1, cost:1.15, build:1, res:0.85},
@@ -198,10 +361,8 @@ const DOCTRINES = {
   bastion:{name:'Defence in Depth', tag:'Hold every inch', desc:'Forces defending your own provinces take 15% less damage, fortifications build twice as fast, and upkeep is 10% lower.', atk:1, def:1, cost:1, build:1, res:1, home:0.85, fort:0.5, upk:0.9},
 };
 const docOf = n => n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] || null : null;
-// unit Marks: each unit type can be upgraded to Mk II, III and IV (+12% attack and defense per mark)
+// Firepower and Protection levels 1 to 3 multiply attack and defense by MARK_F[level + 1] (they were the unit Marks II to IV before the research redesign)
 const MARK_F = [1, 1, 1.12, 1.25, 1.4];
-const markOf = (n, t) => n >= 0 && S.nations[n] && S.nations[n].mk ? S.nations[n].mk[t] || 1 : 1;
-const markCost = (t, m) => { const U = UNITS[t]; return {cash:Math.round(U.cost*1.6*m), metal:12*m + (U.metal || 0)*m, iron:(U.iron || 0)*m, elec:Math.round((U.elec || 0)*m*0.8), rare:2*(m - 1), days:1 + m}; };
 const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 const cap1 = w => w[0].toUpperCase() + w.slice(1);
 const NEUTRAL = -1, SEA = -2;

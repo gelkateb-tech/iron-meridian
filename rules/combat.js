@@ -93,7 +93,8 @@ function hurt(a, d, f){
   // d: damage per defender class for the whole side; each unit type takes its HP share of its class's value
   if (a.air && a.air.wear) f *= 1 + 0.4*a.air.wear;   // worn airframes
   for (const t of UT){ const n = a.u[t]; if (!n) continue; const dv = d[UK[t]];
-    a.w[t] += (dv !== undefined ? dv : d[UNITS[t].cls])*f*(n*UNITS[t].hp)*4/(4 + st(a.owner, t, 'def'));
+    // (health from research, a newer generation, is taken as less damage: wounds stay in the unit's base health, so nothing else changes)
+    a.w[t] += (dv !== undefined ? dv : d[UNITS[t].cls])*f*(n*UNITS[t].hp)*4/(4 + st(a.owner, t, 'def'))*UNITS[t].hp/st(a.owner, t, 'hp');
     while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; }
     if (!a.u[t]) a.w[t] = 0; }
 }
