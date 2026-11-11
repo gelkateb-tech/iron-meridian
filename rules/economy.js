@@ -64,7 +64,7 @@ function income0(n){
     const m = (S.home[p] === n ? boost : 1)*capHit;
     // (a catch-up below 1 holds money back in full and goods by its square root only: a big country keeps about the goods of the others)
     const mg = boost < 1 && S.home[p] === n ? Math.sqrt(boost)*capHit : m;
-    for (const k in g) g[k] += y[k]*(k === 'cash' ? m : k === 'mp' ? (bM != null ? (S.home[p] === n ? bM : 1)*capHit : m) : mg); if (S.nations[n].capital === p){ const c = ECO_CAPITAL; g.oil += c.oil; g.metal += c.metal; g.iron += c.iron; g.elec += c.elec; g.rare += c.rare; } }   // the capital: state industry, labs and recycling
+    for (const k in g) g[k] += y[k]*(k === 'cash' ? m : k === 'mp' ? (bM != null ? (S.home[p] === n ? bM : 1)*capHit : m) : mg); if (N0.capital === p){ const c = ECO_CAPITAL, rs = N0.reserve; for (const k in c) g[k] += c[k]*(rs && rs.includes(k) ? ECO_RESERVE : 1); } }   // the capital: state industry, labs and recycling (a nations-world reserve doubles a good its cities lack)
   const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
   for (const k in g) g[k] *= eff;
   g.cash *= has(n, 'eco1') ? 1.2 : ECO_CASH_ALL; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;   // eco1-3: the old Economy research (now part of buildings); a nation that researched one keeps its bonus

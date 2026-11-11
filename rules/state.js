@@ -124,6 +124,7 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     const cities = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id);
     for (const k of ['cash', 'mp', 'oil', 'metal', 'iron', 'elec']) N[k] = kit[k];
     N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40 : 60;   // no rare-earth city: a little more in stock for the first weeks
+    { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0)
     S.bld[N.capital].fac = 1; for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;
     if (kit.fortCap) S.bld[N.capital].fort = 1;
     addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
