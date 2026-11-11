@@ -133,20 +133,24 @@ function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty >
   // matching between listings (never between nations at war); the earlier listing's price stands
   for (const bid of S.book.filter(isBid)){ for (const ask of S.book.filter(o => !isBid(o) && o.res === bid.res && o.price <= bid.price && o.seller !== bid.seller && !atWar(o.seller, bid.seller) && canSee(o, bid.seller) && canSee(bid, o.seller)).sort((x, y) => x.price - y.price)){
       if (bid.qty <= 0) break; if (ask.qty <= 0 || isSeat(bid.seller) || isSeat(ask.seller)) continue; const q = Math.min(bid.qty, ask.qty); settle(bid.seller, ask.seller, bid.res, q, ask.price); S.nations[bid.seller].cash += q*(bid.price - ask.price); bid.qty -= q; ask.qty -= q; } }
-  // AIs short of a resource (metal for units and buildings above all) fill other AIs' sell listings at a fair price; never an enemy's
-  for (const ask of S.book){ if (isBid(ask) || ask.qty <= 0 || isSeat(ask.seller) || ask.price > M.p[ask.res]*1.15) continue;
-    for (const N of S.nations){ if (ask.qty <= 0) break; if (!N.alive || isSeat(N.id) || N.id === ask.seller || atWar(N.id, ask.seller) || M.emb[ask.seller + '>' + N.id] || !canSee(ask, N.id) || rng() > 0.6) continue;
+  // AIs short of a resource (metal for units and buildings above all) fill sell listings at a fair price (up to 1.15x the world price), another AI's and
+  // a seat's alike (the seat is told of each sale); never an enemy's, never across an embargo
+  for (const ask of S.book){ if (isBid(ask) || ask.qty <= 0 || ask.price > M.p[ask.res]*1.15) continue; const seat = isSeat(ask.seller);
+    for (const N of S.nations){ if (ask.qty <= 0) break; if (!N.alive || isSeat(N.id) || N.id === ask.seller || atWar(N.id, ask.seller) || M.emb[ask.seller + '>' + N.id] || (seat && M.emb[N.id + '>' + ask.seller]) || !canSee(ask, N.id) || rng() > 0.6) continue;
       // oil: a big consumer keeps about 25 days of fuel; running out of it, a power buys with less money in hand
-      const need = (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1), dry = ask.res === 'oil' && N.oil < 80 && income(N.id).net.oil < 0;
+      const need = aiBookNeed(N, ask), dry = ask.res === 'oil' && N.oil < 80 && income(N.id).net.oil < 0;
       if (N[ask.res] >= need || N.cash < (dry ? 120 : 230)) continue;
       const q = Math.min(ask.qty, 50, Math.floor((N.cash - (dry ? 80 : 160))/ask.price), Math.floor(stockCap(N.id) - N[ask.res])); if (q < 5) continue;
-      N.cash -= q*ask.price; N[ask.res] += q; S.nations[ask.seller].cash += q*ask.price; ask.qty -= q; } }
-  // AI fills your listings when the price suits it
+      N.cash -= q*ask.price; N[ask.res] += q; S.nations[ask.seller].cash += q*ask.price; ask.qty -= q;
+      if (seat) tell(ask.seller, `${N.name} bought ${q} ${rlbl(ask.res)} from your offer for $${fmt(q*ask.price)}M.`, 'good', null); } }
+  // AI nations sell into a seat's buy offer when the price suits them (a seat's sell offer is taken above, like any other listing)
   for (const o of S.book){ const me = o.seller; if (!isSeat(me)) continue;   // a seat's offers: the AI nations may take them
     for (const N of S.nations){ if (!N.alive || isSeat(N.id) || atWar(N.id, me) || mkt().emb[N.id + '>' + me] || o.qty <= 0 || !canSee(o, N.id) || rng() > 0.5) continue;
-      if (!isBid(o)){ if (N[o.res] > 60 || o.price > M.p[o.res]*1.12) continue; const q = Math.min(o.qty, 40, Math.floor((N.cash - 150)/o.price)); if (q < 5) continue; N.cash -= q*o.price; N[o.res] += q; S.nations[me].cash += q*o.price; o.qty -= q; tell(me, `${N.name} bought ${q} ${rlbl(o.res)} from your offer for $${fmt(q*o.price)}M.`, 'good', null); }
-      else { if (N[o.res] < 120 || o.price < M.p[o.res]*0.95) continue; const q = Math.min(o.qty, 40, Math.floor(N[o.res] - 80)); if (q < 5) continue; N[o.res] -= q; N.cash += q*o.price; S.nations[me][o.res] += q; o.qty -= q; tell(me, `${N.name} sold you ${q} ${rlbl(o.res)} through your buy offer for $${fmt(q*o.price)}M.`, 'good', null); } } }
+      if (!isBid(o)) continue;
+      { if (N[o.res] < 120 || o.price < M.p[o.res]*0.95) continue; const q = Math.min(o.qty, 40, Math.floor(N[o.res] - 80)); if (q < 5) continue; N[o.res] -= q; N.cash += q*o.price; S.nations[me][o.res] += q; o.qty -= q; tell(me, `${N.name} sold you ${q} ${rlbl(o.res)} through your buy offer for $${fmt(q*o.price)}M.`, 'good', null); } } }
   S.book = S.book.filter(o => o.qty > 0); }
+// the stock below which an AI takes a sell listing: oil about 25 days of fuel for a big consumer, twice the usual line when the listing is cheap
+function aiBookNeed(N, ask){ return (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1); }
 // nation n takes q units of order-book offer id (buys from a sell offer, sells into a buy offer); returns the amount traded
 function fillOffer(n, id, q){ const o = (S.book || []).find(x => x.id === id), N = S.nations[n]; if (!o || o.seller === n || !canSee(o, n)) return 0;
   if (mkt().emb[o.seller + '>' + n]) return 0;
@@ -154,11 +158,11 @@ function fillOffer(n, id, q){ const o = (S.book || []).find(x => x.id === id), N
   else { q = Math.min(q, o.qty, Math.floor(N[o.res])); if (q <= 0) return 0; N[o.res] -= q; N.cash += q*o.price; S.nations[o.seller][o.res] += q; }
   o.qty -= q; addMem(o.seller, n, 1); if (o.qty <= 0) S.book = S.book.filter(x => x !== o); return q; }
 const buyOffer = fillOffer;
-// nation n posts an offer on the order book
-function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0)) return false;
-  if (type === 'sell'){ qty = Math.min(qty, Math.floor(N[k])); if (qty <= 0) return false; N[k] -= qty; }
-  else { qty = Math.min(qty, Math.floor(N.cash/price)); if (qty <= 0) return false; N.cash -= qty*price; }
-  (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, price:+price.toFixed(2), exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return true; }
+// nation n posts an offer on the order book; returns the quantity listed (what it holds or can pay for), 0 when nothing was
+function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0)) return 0;
+  if (type === 'sell'){ qty = Math.min(qty, Math.floor(N[k])); if (qty <= 0) return 0; N[k] -= qty; }
+  else { qty = Math.min(qty, Math.floor(N.cash/price)); if (qty <= 0) return 0; N.cash -= qty*price; }
+  (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, price:+price.toFixed(2), exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return qty; }
 /* ---------------- Occupation unrest ---------------- */
 const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
 function unrestDay(){

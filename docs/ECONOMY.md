@@ -578,3 +578,14 @@ Single seeds at day 30: money -13..+9%, oil -12..+5%, materials 0..+11%, iron -4
 
 Checks: `node tools/eco-check.js` (city resources, buildings, every playable nation of the three scenarios, an old save),
 `node tools/headless.js --check`, tools/golden-12345.txt regenerated.
+
+### Repair 1: a person can export too
+
+The AI import code skipped a person's sell offers, so a seat's exports hardly sold (Australia, 60 materials on offer at 5%
+under the world price for 30 days: 0, 26 and 0 units sold on seeds 12345, 7 and 2024). A seat's sell offer is now an
+ordinary listing: AI importers fill it in their own turn (cheapest first, up to 1.15x the world price) and the daily
+order-book pass takes it by the same need rule as another AI's listing; the seat gets a dispatch for each sale. Same lab
+after the change: 204, 245 and 205 units sold ($514M, $665M, $522M). What limits it now is demand: the AI world wants about
+7 materials a day from one more exporter, so the biggest producer (+50 a day) still fills its storage near day 30 unless it
+spends the materials. Games without a seat (the tables above) are unchanged: same state hash.
+Lab: node tools/export-lab.js (options --nation, --res, --qty, --disc, --days).

@@ -269,12 +269,15 @@ function aiAsfWant(n, provs, inc){ if (!has(n, 'asf1') || !warsOf(n).length || i
   return Math.max(0, goal - have); }
 // what the AI holds back: the link project it saves for (cash), and the counter unit it saves for (all of its costs)
 const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awacs']);   // counters, and the heavy aircraft it rarely picks: saved for, not swapped
-// an AI buys from other AIs' sell listings on the order book (cheapest first, up to 1.15x the world price; never an enemy's or an embargoing power's):
+// an AI buys from sell listings on the order book, other AIs' and a person's alike (cheapest first, up to 1.15x the world price; never an enemy's or an
+// embargoing power's; a person is told of each sale):
 // goods change hands between nations without moving the world price. Returns what it got.
 function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
-  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && !isSeat(o.seller) && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
+  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
   for (const o of asks){ const r = Math.min(q - got, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[k])); if (r <= 0) break;
-    N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r; if (got >= q) break; }
+    N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r;
+    if (isSeat(o.seller)) tell(o.seller, `${N.name} bought ${r} ${rlbl(k)} from your offer for $${fmt(r*o.price)}M.`, 'good', null);
+    if (got >= q) break; }
   if (got) S.book = S.book.filter(o => o.qty > 0); return got; }
 // AI market thresholds: buys when a stock is below AI_LOW (and tops up what is below AI_SHORT, AI_BUYQ at most); never a hoard
 const AI_KEEP = {iron:180, elec:130, rare:170};   // AI stock kept back from a sale into a strong market (plus 25 days of maintenance and what it saves for)
