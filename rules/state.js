@@ -53,7 +53,7 @@ function newGame(seed, pick, humans = []){
     G.P[capital].city = true;
     return {id:k, power:pi, name:P0.name, color:P0.color, ai:!humans.includes(k), cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
   });
-  S = {v:4, scn:SCN, len:DAY_LIMIT, persist:!!newGame.persist, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
+  S = {v:4, scn:SCN, len:DAY_LIMIT, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
