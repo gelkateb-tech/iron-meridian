@@ -3670,6 +3670,18 @@ const SLK = (() => {
     return out; })(),
   }; })();
 SLK.stealth = SLK.bomb;
+// INFANTRY COUNTER GLYPH OPTIONS (owner to pick): INF_ICON 0 = the current advancing rifleman (default), 1 = front-facing standing soldier, rifle at the order,
+// 2 = helmeted head-and-shoulders bust, 3 = crossed rifles insignia. Switch with this one constant; the options live beside the others as SLK.inf1..inf3.
+const INF_ICON = 0;
+SLK.inf1 = [['f', 'M7.9 2.6C7.9 .9 8.8 .3 10 .3S12.1 .9 12.1 2.6H12.9V3.2H7.1V2.6z'], ['f', 'M8.6 3.4H11.4V4.4Q11.4 5 10.8 5H9.2Q8.6 5 8.6 4.4z'],
+  ['f', 'M6.8 5.7H13.2L13.7 9.3H6.3z'], ['s', 'M6.3 6.3L5.2 9.6', 1.7], ['s', 'M13.7 6.3L15.6 6.4', 1.7], ['s', 'M8.5 9L8.1 12.4', 2.2], ['s', 'M11.5 9L11.9 12.4', 2.2], ['b', 'M6.7 13.2H9.2M10.8 13.2H13.3', 1],
+  ['b', 'M16.4 1.2V12.8', 1.1], ['f', 'M15.6 5.6H17.2V6.8H15.6z']];
+SLK.inf2 = [['f', 'M4.9 6.8C4.9 2.2 7.2 .6 10 .6S15.1 2.2 15.1 6.8z'], ['f', 'M3.5 6.8H16.5V7.9H3.5z'], ['x', 'M5 4.7H15V5.3H5z'],
+  ['f', 'M6.6 8.4H13.4V10.2Q13.4 11.7 10 11.7S6.6 11.7 6.6 10.2z'], ['x', 'M7.7 9.2H9.1V9.8H7.7zM10.9 9.2H12.3V9.8H10.9z'],
+  ['f', 'M1.6 13.6Q1.8 12 5.2 11.6L6.6 11.2Q10 12.6 13.4 11.2L14.8 11.6Q18.2 12 18.4 13.6z']];
+SLK.inf3 = [['s', 'M2.8 12.4L7 9.2', 2.4], ['b', 'M6.6 9.5L17.8 1.4', 1.1], ['f', 'M17.2 .6L18.6 .9L18.2 2.2z'],
+  ['xs', 'M17.2 12.4L3 1.6', 2.2], ['s', 'M17.2 12.4L13 9.2', 2.4], ['b', 'M13.4 9.5L2.2 1.4', 1.1], ['f', 'M2.8 .6L1.4 .9L1.8 2.2z'], ['f', 'M8.85 7.2a1.15 1.15 0 1 0 2.3 0a1.15 1.15 0 1 0 -2.3 0z']];
+if (INF_ICON) SLK.inf = SLK['inf' + INF_ICON];
 // a sleek glyph of type t, W device px wide (20 design units: at the counter's 20 css px every whole and half unit lands on a device pixel), in colour col;
 // painted once into an offscreen canvas (dropped when the pixel ratio changes)
 const SLKC = new Map(); let SLKC_D = 0;
@@ -10413,6 +10425,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:id => techCost(TECH_BY[id]), TECH:() => TECH.map(T => ({id:T.id, req:T.req || null, days:T.days})), html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
+if (location.protocol === 'file:' && window.__im) window.__im.plate = {plateBody, plateDims, PLATE_TONES, SLK, get dpr(){ return dpr; }};   // glyph preview sheets
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
