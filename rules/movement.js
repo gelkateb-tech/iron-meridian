@@ -216,7 +216,9 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1){
 }
 // ground forces do not march through independent land on the way to somewhere else (every garrison there is a battle): they embark at a port
 // instead when the sea allows it, and only cross independents when there is no other way
-const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a.owner, v) && (!so || portOk(a.owner, v)); if (!ok(to)) return []; const mt = pathMT(a);
+const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a.owner, v) && (!so || portOk(a.owner, v)); if (!ok(to)) return [];
+  const mt = pathMT(a);
+  if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner);   // ships sail over water only: a port is where a route ends, never a way through land
   if (so || a.air) return findPath(from, to, ok, mt, a.owner);
   const p = findPath(from, to, ok, mt, a.owner); let k = 0; for (let i = 0; i < p.length - 1; i++) if (!G.P[p[i]].sea && S.owner[p[i]] === NEUTRAL){ k = 1; break; } if (!k) return p;
   const p2 = findPath(from, to, v => v === to || G.P[v].sea || S.owner[v] !== NEUTRAL ? ok(v) : false, mt, a.owner); return p2.length ? p2 : p; };
@@ -237,7 +239,7 @@ function haltArmy(a){
     const A = G.P[a.at], B = G.P[a.to], p1 = a.legFrom || [A.x, A.y], p2 = !a.path.length && a.dest && a.dest.p === a.to ? [a.dest.x, a.dest.y] : [B.x, B.y], t = Math.max(0, Math.min(1, a.t)), spot = [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t];
     const near = t >= 0.5 && !!B.sea === !!A.sea ? a.to : a.at;
     if (near !== a.at){ a.from = a.at; a.froms = [a.at]; a.at = near; }
-    a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = spot; }
+    a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && (A.sea !== B.sea) ? null : spot; }   // (a fleet halting on a leg between a port and the sea has no exact spot: it holds its zone or its dock)
   a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort;
   IM.emit('halted', a);   // (display only)
   return true;

@@ -176,7 +176,10 @@ const GROUND_T = Object.keys(UNITS).filter(t => UNITS[t].cls === 'soft' || UNITS
 const groundN = a => { const u = a.u; let s = 0; for (let i = 0; i < GROUND_T.length; i++){ const v = u[GROUND_T[i]]; if (v) s += v; } return s; };
 const shipsN = a => { const u = a.u; let s = 0; for (let i = 0; i < NAVAL_T.length; i++){ const v = u[NAVAL_T[i]]; if (v) s += v; } return s; };
 const shipsOnly = a => shipsN(a) > 0 && shipsN(a) === count(a);
-const portOk = (n, v) => G.P[v].sea || (G.P[v].coast && (S.owner[v] === n || friendly(n, S.owner[v])));
+// SHIPS NEVER ON LAND: a fleet may only be in a sea zone or docked in a PORT (a coastal city of its own or a friendly power); never in other land
+const portOk = (n, v) => G.P[v].sea || (G.P[v].coast && G.P[v].city && (S.owner[v] === n || friendly(n, S.owner[v])));
+// a ships-only force's place is lawful: water, or a port city on the coast (any owner: a captured port keeps its fleet until the next move). Used by dev spawn and the tests
+const shipPlaceOk = p => { const P = G.P[p]; return !!P && (P.sea || (!!P.coast && !!P.city)); };
 const ground = a => groundN(a) > 0;
 const armyHP = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp; } return s; };
 const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t) => s + a.w[t], 0)/hp : 0; };

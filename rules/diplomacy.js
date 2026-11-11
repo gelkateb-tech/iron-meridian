@@ -74,7 +74,7 @@ function surpriseWar(a, b){ if (a === b || atWar(a, b)) return;
     else if (borders(me, a) || borders(me, b)) tell(me, `${S.nations[a].name} launched a surprise attack on ${S.nations[b].name}.`, '', null); }
   relVer++; }
 // a route that ignores peace borders, and the nations it would violate
-function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].sea || S.owner[v] !== SEA) && (!so || portOk(a.owner, v) || G.P[v].sea);
+function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].sea || S.owner[v] !== SEA) && (!so || G.P[v].sea || (v === to && portOk(a.owner, v)));
   const pth = findPath(from, to, ok, pathMT(a), a.owner); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
   return {pth, viol}; }
 function declareWar(a, b){

@@ -20,6 +20,7 @@ How it works from now on:
 - NAP button tooltip: says the pact lasts 20 days, breaking it marks you as a treaty breaker, and it does not give right of passage.
 - No war delay: a formal war declaration now starts the fighting at once (it used to wait 24 hours); it still avoids the surprise-attack penalty, allies are called in immediately, and saves with a pending declaration start that war on load.
 - Stances: checked Hold, Defend and Preserve and they do differ (Defend digs in at once and sorties against weaker enemies within 3 provinces; Hold only digs in after 12 h; Preserve falls back to a city below 40% health), so all three stay; each now has a one-line tooltip describing what it really does.
+- Ships never on land: a fleet in port now sits on the water off the city's shore with ship models (before, it stood on land among the tanks and soldiers); ships may only be in a sea zone or docked at a port city, and their routes only cross water (the dev spawn too).
 
 ## Released
 - v3.12 (commit 5b47dd8, public 2026-11-11):

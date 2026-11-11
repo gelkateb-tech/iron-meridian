@@ -128,8 +128,8 @@ function devResearchAll(n){ const N = S.nations[n]; if (!N || !N.alive) return 0
   for (const s of R_SLOTS) if (N[s]){ N[s].h = 1; researchSlotHour(N, s); k++; }
   for (let go = true; go;){ go = false; for (const T of TECH){ devFill(N); if (startResearch(n, T.id)){ for (const s of R_SLOTS) if (N[s] && N[s].id === T.id){ N[s].h = 1; researchSlotHour(N, s); } k++; go = true; } } }
   Object.assign(N, keep); visCache = null; return k; }
-// spawn: a new force of k units of type t for nation n in province p (ground and air on land, ships at sea or on a coast), built by addArmy
-function devSpawnOk(p, t){ const U = UNITS[t], P = G.P[p]; return !!U && !!P && (U.cls === 'naval' ? !!(P.sea || P.coast) : !P.sea); }
+// spawn: a new force of k units of type t for nation n in province p (ground and air on land, ships at sea or in a port city), built by addArmy
+function devSpawnOk(p, t){ const U = UNITS[t], P = G.P[p]; return !!U && !!P && (U.cls === 'naval' ? shipPlaceOk(p) : !P.sea); }
 function devSpawn(n, p, t, k){ if (!S.nations[n] || !S.nations[n].alive || !devSpawnOk(p, t)) return null;
   const a = addArmy(n, p, {[t]:Math.max(1, Math.min(999, Math.round(k) || 1))}); if (UNITS[t].cls === 'air') a.air = {base:p, cd:0}; visCache = null; return a; }
 /*@ENDDEV*/

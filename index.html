@@ -5440,9 +5440,11 @@ const roleTypes = r => r.slice(r.indexOf(':') + 1).split('.').filter(Boolean);
 const roleBase = r => r.slice(0, r.indexOf(':'));
 const roleSort = rs => rs.slice().sort((a, b) => { const oa = roleOwner(a), ob = roleOwner(b); return ((ob === PLAYER) - (oa === PLAYER)) || (oa - ob) || ('gsa'.indexOf(a[0]) - 'gsa'.indexOf(b[0])); });
 // this frame's roles: province -> Map(holder key -> {air, owner, u}), from every force you can see standing (not marching) there
+// a force's key in its province: air 'a'; a fleet docked in a port (land) 's' (its own force, shown as ships on the water, never merged with the garrison); the rest 'x'
+const fkey = (a, p) => a.air ? 'a' : !G.P[p].sea && shipsOnly(a) ? 's' : 'x';
 function tmRoleAdd(R, a){ if (a.fly || a.pos || a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id))) return;
   const p = a.air ? (a.air.base ?? a.at) : a.at; if (p == null || !G.P[p]) return; let M = R.get(p); if (!M) R.set(p, M = new Map());
-  const k = (a.air ? 'a' : 'x') + a.owner; let e = M.get(k); if (!e) M.set(k, e = {air:!!a.air, owner:a.owner, list:[]}); e.list.push(a); }
+  const k = fkey(a, p) + a.owner; let e = M.get(k); if (!e) M.set(k, e = {air:!!a.air, owner:a.owner, list:[]}); e.list.push(a); }
 function roleOf(p, e){ if (e.r) return e.r; const u = tmUnits(e.list), naval = Object.keys(u).every(t => t === 'lst' || (UNITS[t] && UNITS[t].cls === 'naval'));
   const cls = e.air ? 'a' : G.P[p].sea || naval ? 's' : 'g'; return (e.r = roleStr(cls, e.owner, u, p)); }
 function rolesAt(R, p){ const M = R.get(p); return M ? [...M.values()].map(e => roleOf(p, e)) : []; }
@@ -5462,6 +5464,14 @@ const TM_ZS = [TM_F0 + TM_F1, 160, 240], TM_KEEP = 1200;   // (the zooms a spot 
 function tmGround(p, cls, wx, wy, w){ const ce = worldToCell(wx, wy), q = ce >= 0 ? G.prov[ce] : -1;
   if (cls === 'g' || cls === 'a'){ if (isWet(wx, wy)) return w*3200; if (q === p) return 0; if (q < 0) return w*3200; const Q = G.P[q]; if (Q.sea) return w*3200; return S.owner[q] === S.owner[p] && S.owner[p] >= 0 ? w*(1500 + 18*Math.hypot(wx - G.P[p].x, wy - G.P[p].y)) : w*2600; }   // (a neighbour's ground only where its own has no room: the dearer the further out)
   if (!isWet(wx, wy)) return w*3200; if (q === p) return 0; return q >= 0 && G.P[q].sea ? w*90 : w*600; }
+// SHIPS NEVER ON LAND (display): where a port's fleet is moored: the nearest water to the city's point (rings outward, sides checked so a hull fits),
+// as candidate offsets from the city; the layout's own cost then prefers the one in the sea zone next door. Kept per game state.
+const DOCK = new Map(); let DOCK_G = null;
+function dockCands(p){ if (DOCK_G !== G){ DOCK.clear(); DOCK_G = G; } let L = DOCK.get(p); if (L) return L; const P = G.P[p]; L = [];
+  for (let r = 3; r <= 120 && !L.length; r += 2){ for (let k = 0; k < 36; k++){ const th = k/36*Math.PI*2, wx = P.x + Math.cos(th)*r, wy = P.y + Math.sin(th)*r;
+      if (isWet(wx, wy) && isWet(wx - 4, wy) && isWet(wx + 4, wy) && isWet(wx, wy - 3) && isWet(wx, wy + 3)) L.push([wx - P.x, wy - P.y, 0]); } }
+  if (L.length){ const base = L.slice(0, 6); L = []; for (const b of base) for (let dy = -8; dy <= 8; dy += 4) for (let dx = -8; dx <= 8; dx += 4) L.push([b[0] + dx, b[1] + dy, 0]); }
+  DOCK.set(p, L); return L; }
 function layoutCompute(p, roles){
   const P = G.P[p], cap = isCapital(p), city = !P.sea && (P.city || cap), tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, obs = [];
   const cityObs = (q, own) => { const Q = G.P[q], cq = isCapital(q), tq = Q.pop0 >= 8 ? 2 : Q.pop0 >= 2.5 ? 1 : 0, r = (cq ? 8.7 + tq : [2.8, 3.6, 4.6][tq] + 1.8)*2 + 2;
@@ -5497,6 +5507,7 @@ function layoutCompute(p, roles){
     // in a battle the attacker stands on the side it came from (toward its own land next door, else its capital), the holder on the other side
     let ux = 0, uy = 0; if (bat && cls === 'g' && BU){ const sg = ow === S.owner[p] ? -1 : 1; ux = BU[0]*sg; uy = BU[1]*sg; }
     for (let dy = -24; dy <= 12; dy += 2) for (let dx = -22; dx <= 22; dx += 2) cand.push([dx, dy, 0]);
+    if (cls === 's' && !P.sea) for (const q of dockCands(p)) cand.push(q);   // a fleet docked in a port: on the water off the city's shore (the grid above rarely reaches it)
     if (pg) cand.unshift([pg.tx - P.x, pg.ty - P.y, -TM_KEEP]);   // where it stands now (its glide's end), while that is still a fair spot: a force coming or going leaves the others in place
     // a spot's cost (B: an optional breakdown, for the tests)
     const ev = (dx, dy, bonus, bc, B) => { let c = 0; const add = B ? (k, v) => { c += v; B[k] = Math.round((B[k] || 0) + v); } : (k, v) => { c += v; };
@@ -5563,11 +5574,11 @@ function moveAnchor(R, a, wx, wy){ let o0 = [0, 0], o1 = null, f0 = 0, f1 = 0; c
   SPLITS.delete(a.id);
   if (L0){ o0 = [L0.ox, L0.oy];
     // a force leaving a garrison behind never shares its spot: it sets off from beside it, on the side it marches to (and eases onto its own path)
-    const gM = L0.p != null && R.get(L0.p), gE = gM && gM.get('x' + a.owner), nx = a.to ?? a.path[0];
+    const gM = L0.p != null && R.get(L0.p), gE = gM && gM.get(fkey(a, L0.p) + a.owner), nx = a.to ?? a.path[0];
     if (gE && !gE.list.includes(a) && nx != null && G.P[nx]){ const gb = tmFoot(roleTypes(roleOf(L0.p, gE))).b, ts = tmRank(tmUnits([a]), G.P[a.at].sea ? 's' : 'g'), mb = ts.length ? tmFoot(ts).b : [-1, 0, 1, 0];
       o0 = [L0.ox + (G.P[nx].x >= L0.x ? 1 : -1)*((gb[2] - gb[0])/2 + (mb[2] - mb[0])/2 + 0.8), L0.oy]; SPLITS.add(a.id); }
     f0 = lin(Math.hypot(wx - L0.x, wy - L0.y)/Math.min(0.5*D, Math.max(8, 2.5*Math.hypot(o0[0], o0[1])))); }
-  if (q != null && G.P[q] && !(a.dest && a.dest.p === q)){ const Q = G.P[q], M = R.get(q), k = 'x' + a.owner, rs = rolesAt(R, q);
+  if (q != null && G.P[q] && !(a.dest && a.dest.p === q)){ const Q = G.P[q], M = R.get(q), k = fkey(a, q) + a.owner, rs = rolesAt(R, q);
     let T = null; if (M && M.has(k)) T = anchorOf(R, q, roleOf(q, M.get(k)), performance.now());
     else { const u = tmUnits([a]), naval = Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval'), cls = Q.sea || naval ? 's' : 'g', r = roleStr(cls, a.owner, u, q); T = provLayoutH(q, rs.concat([r])).out.get(r); }
     if (T){ o1 = [T[0] - Q.x, T[1] - Q.y]; f1 = lin(Math.hypot(wx - Q.x, wy - Q.y)/Math.min(0.5*D, Math.max(8, 2.5*Math.hypot(o1[0], o1[1])))); } }
@@ -7844,26 +7855,26 @@ function draw(now){ draw.now = now;
     const [x, y] = toScreen(wx, wy), cm = 40 + 26*view.s, far = x < -cm || y < -cm || x > cw + cm || y > ch + cm;
     if (!far && ((mv && S.speed && !S.over) || (mvm && (!mvm.rest || mvm.halt != null)))) animFast();   // marching on screen, or its spring still settling
     if (far && (mv || a.pos)) continue;
-    items.push({a, x, y, wx, wy, owner:a.owner, moving:mv, air:!!a.air, far}); }
+    items.push({a, x, y, wx, wy, owner:a.owner, moving:mv, air:!!a.air, far, dock:!a.air && fkey(a, a.at) === 's'}); }
   movSweep(now);
   const clusters = [];
   const plateQuiet = clQuiet;
   const R2 = 0, plateM = false, MW = 0, MH = 0;   // (counters that would overlap fade in place: plateFade)   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
-    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0) || (plateM && Math.abs(c.x - it.x) < MW && Math.abs(c.y - it.y) < MH)));
+    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && c.dock === it.dock && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0) || (plateM && Math.abs(c.x - it.x) < MW && Math.abs(c.y - it.y) < MH)));
     if (it.moving) c = null;
     if (c){ c.list.push(it.a); c.n += count(it.a); }
-    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.air && it.a.air && it.a.air.base != null ? it.a.air.base : it.a.at, moving:it.moving, air:it.air, list:[it.a], n:count(it.a), pinned:!!it.a.pos, it, far:it.far});
+    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.air && it.a.air && it.a.air.base != null ? it.a.air.base : it.a.at, moving:it.moving, air:it.air, dock:it.dock, list:[it.a], n:count(it.a), pinned:!!it.a.pos, it, far:it.far});
   }
   // WORLD ANCHORS: each force's spot on the map (world units): its province's slot for it (provLayout), its pinned spot, or on the march its
   // smoothed position easing between its old and new slots. The counter is pinned just above it at one pixel size; its models stand just under it.
   const farT0 = performance.now();
   for (const c of clusters){ const it = c.it, a = c.list[0]; let A;
     if (c.far){ const L0 = PLAY.get(c.at); if (!(L0 && L0.S === S) && performance.now() - farT0 > 6){ c.dead = true; continue; } }   // (an off-screen province not laid out yet waits for a frame with time to spare)
-    if (c.pinned){ A = [it.wx, it.wy]; c.cls = c.air ? 'a' : G.P[a.at] && G.P[a.at].sea ? 's' : 'g'; }
+    if (c.pinned && !c.dock){ A = [it.wx, it.wy]; c.cls = c.air ? 'a' : G.P[a.at] && G.P[a.at].sea ? 's' : 'g'; }
     else if (c.moving){ A = moveAnchor(ROLES, a, it.wx, it.wy); c.split = SPLITS.has(a.id); const u = tmUnits([a]); c.cls = G.P[a.at].sea || Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval') ? 's' : 'g'; }
-    else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : 'x') + c.owner);
+    else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : c.dock ? 's' : 'x') + c.owner);
       if (e){ const r = roleOf(c.at, e), P0 = G.P[c.at]; c.cls = r[0]; A = anchorOf(ROLES, c.at, r, now);
         const mS = !c.air && a.at === c.at ? movOwn(a.id) : null;   // (a stack that absorbs an arriving column keeps its spot)
         if (mS){ A = [A[0] + it.wx - P0.x, A[1] + it.wy - P0.y]; }   // still settling after a march: its spring's lag rides along
@@ -8500,7 +8511,7 @@ function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; 
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
     + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : ''); }   // no Close button: tap empty map (or Esc) to deselect
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || dropFor !== null || !!aimMsl); }
-function sendToTarget(a, keep = false){ if (sel.target !== null && sel.targetPt){ groupArmies().forEach((x, i) => { if (!x.air) x.dest = {p:sel.target, x:sel.targetPt[0] + (i % 3 - 1)*7*i/Math.max(1, i), y:sel.targetPt[1] + Math.floor(i/3)*6}; }); }
+function sendToTarget(a, keep = false){ if (sel.target !== null && sel.targetPt){ groupArmies().forEach((x, i) => { if (!x.air) x.dest = shipsOnly(x) && !G.P[sel.target].sea ? null : {p:sel.target, x:sel.targetPt[0] + (i % 3 - 1)*7*i/Math.max(1, i), y:sel.targetPt[1] + Math.floor(i/3)*6}; }); }
   else if (sel.target !== null) groupArmies().forEach(x => { if (!x.air) x.dest = null; });
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
@@ -10412,6 +10423,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:id => techCost(TECH_BY[id]), TECH:() => TECH.map(T => ({id:T.id, req:T.req || null, days:T.days})), html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
+if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });
