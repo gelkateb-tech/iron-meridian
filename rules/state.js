@@ -38,8 +38,8 @@ let POWERS = WORLD_POWERS, SCN = 'world';
 function useScenario(k){ SCN = SCENARIOS[k] ? k : 'world'; POWERS = SCENARIOS[SCN].powers; WIN_CAPS = SCENARIOS[SCN].caps; scnLandCache = null; scnInCache = null; }
 const tiered = () => !!SCENARIOS[SCN].tiers;
 // the cities of the nations world: the lists of nations.js, plus the cities world.js gives every country that is not (yet) a playable nation
-function nationsWorld(){ const play = new Set(NATIONS.nations.map(n => n.country)), cities = [], names = {};
-  for (let id = 0; id < WORLD.provinces.length; id++){ const d = WORLD.provinces[id]; if (d[1] >= 0 && (d[2] & 1) && !play.has(WORLD.countries[d[1]])) cities.push(id); }
+function nationsWorld(){ const play = new Set(NATIONS.nations.map(n => n.country)), cities = [], names = {};   // (on the map in use: G.D, its province rows)
+  for (let id = 0; id < G.D.length; id++){ const d = G.D[id]; if (d[1] >= 0 && (d[2] & 1) && !play.has(WORLD.countries[d[1]])) cities.push(id); }
   for (const n of NATIONS.nations){ for (const c of n.cities) cities.push(c); if (n.names) for (const id in n.names) names[id] = n.names[id]; }
   return {v:NATIONS.v, cities:cities.sort((a, b) => a - b), names}; }
 // a power's strength index, from the map alone (the money its land earns at the opening, before any catch-up): used to face border guards
@@ -65,8 +65,8 @@ const powerCountry = p => WORLD.countries.indexOf(p.country);
 function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = new Set(); visCache = null; borderCache = null; trLastH = -1; NEUP = null; SEAA = new Map(); IM.emit('reset'); }
 // seed: the dice; pick: the power that takes nation 0; humans: the nations people play (the seats, none unless given); the AI plays the rest
 function newGame(seed, pick, humans = []){
-  if (!G){ G = loadWorld(); IM.emit('world'); }
-  const T = tiered(), W64 = T ? nationsWorld() : null, mode = T && TIER_MODES[newGame.mode] ? newGame.mode : 'normal';
+  const T = tiered(); useMap(T ? MAP_NEW : 0);   // the nations world: the map with the province split (when nations.js has one); any other world: world.js
+  const W64 = T ? nationsWorld() : null, mode = T && TIER_MODES[newGame.mode] ? newGame.mode : 'normal';
   useWorld(T ? {cities:W64.cities, caps:POWERS.map(p => p.capital), names:W64.names} : null);
   resetCaches();
   const order = [pick, ...POWERS.map((_, i) => i).filter(i => i !== pick)];
@@ -84,7 +84,7 @@ function newGame(seed, pick, humans = []){
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
-  if (T){ S.w64 = W64; S.mode = mode; }   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
+  if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
   if (T) tierStart(mode);
   else for (const n of S.nations){
@@ -179,12 +179,14 @@ function saveJSON(){ const BLD = S.bld; return JSON.stringify({...S, battles:[]}
   return v; }); }
 function restore(data){
   if (!data || data.v !== 4 || typeof data.seed !== 'number') return false;
-  if (!G){ G = loadWorld(); IM.emit('world'); }
-  if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
+  // the map the save was made on (data.map; none: world.js), checked before anything changes: a refused save leaves the game in play as it was
+  restore.why = ''; const mv = data.map || 0, g = mapOf(mv);
+  if (!g){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
+  if (!Array.isArray(data.owner) || data.owner.length !== g.P.length) return false;
   // a save of the nations world carries its own cities (data.w64); it needs a build that has that world and knows its format
   const n64 = data.scn === 'world64';
-  restore.why = '';
   if (n64 && (!SCENARIOS.world64 || !data.w64 || !Array.isArray(data.w64.cities) || data.w64.v > NATIONS.v)){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
+  useMap(mv);
   S = data; S.battles = []; S.bt = {}; S.speed = 0; S.started = true;
   useWorld(n64 ? {cities:S.w64.cities, caps:S.nations.map(N => N.cap0 ?? N.capital), names:S.w64.names} : null);
   linksSync();

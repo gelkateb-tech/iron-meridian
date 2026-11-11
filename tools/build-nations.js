@@ -15,8 +15,9 @@ const OUT = path.join(ROOT, 'nations.js'), MODE = process.argv[2] || '';
 const REGIONS = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];
 const OPEN = [];   // regions rolled out so far (step 0, plumbing: none; today's 15 powers play with today's cities)
 // world.js country name, tier (S superpower, A major, B regional, C minor: table A of the plan, hand corrections included), region.
-// split: the country is too small on today's map; it becomes playable only after its provinces are cut smaller (owner's answer 1: Israel,
-// Greece, Cuba and Belarus must be playable; 68 nations in all). Such a nation is left out until its new provinces exist.
+// split (*): the country is too small on world.js; its provinces are cut smaller on the nations world's map (owner's answer 1: Israel, Greece,
+// Cuba and Belarus must be playable; 68 nations in all; tools/build-provsplit.js). It opens with its region like the others; the size of its
+// smallest member does not set the scale of the city counts (TC below), so the other nations keep the cities of the plan.
 const ROSTER = {
   'Europe': {'United Kingdom':'A', 'France':'A', 'Germany':'A', 'Italy':'B', 'Spain':'B', 'Poland':'B', 'Ukraine':'B', 'Romania':'C', 'Sweden':'C', 'Norway':'C', 'Finland':'C', 'Russia':'S', 'Greece':'C*', 'Belarus':'C*'},
   'Middle East': {'Turkey':'A', 'Iran':'A', 'Saudi Arabia':'B', 'Iraq':'B', 'Syria':'C', 'Yemen':'C', 'Egypt':'B', 'Israel':'C*'},
@@ -42,13 +43,18 @@ const SWAPS = {};
 const NAMES = {};
 
 /* ---------- the map and the rules ---------- */
+// the province split (tools/build-provsplit.js writes tools/provsplit.json; docs/NATIONS-PLAN.md 4.6): copied into nations.js as NATIONS.map. The
+// cities are chosen on that map (the nations world's), where Israel, Greece, Cuba and Belarus have their new provinces
+const SPLIT = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'provsplit.json'), 'utf8'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
+globalThis.NATIONS = {v:1, regions:[], open:[], nations:[], map:SPLIT};   // (only the map: the rules see no playable nations here)
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const IM = new Function("'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + '\nreturn IM;')();
-IM.api.newGame(12345, 0, []);   // the classic world: loads the map (people, deposits, coasts, neighbours)
-const G = IM.api.G, WORLD = globalThis.WORLD;
-const flag = P => WORLD.provinces[P.id][2];   // bit 1: a city of today, bit 2: a capital of today
+IM.api.newGame(12345, 0, []);   // the classic world (rules set up)
+if (IM.api.mapNew !== SPLIT.v) throw new Error('the rules did not take the province split of tools/provsplit.json');
+const G = IM.api.mapOf(IM.api.mapNew), WORLD = globalThis.WORLD;   // the nations world's map: people, deposits, coasts, neighbours, the split provinces
+const flag = P => G.D[P.id][2];   // bit 1: a city of today, bit 2: a capital of today
 const C = G.countries.map((c, k) => ({k, name:c.name, provs:c.provs.map(id => G.P[id]).filter(P => !P.sea)})).filter(c => c.provs.length);
 for (const c of C){ c.n = c.provs.length; c.cities = c.provs.filter(P => flag(P) & 1); c.cap = c.provs.find(P => flag(P) & 2) || null; c.pop = c.provs.reduce((s, P) => s + P.pop0, 0); }
 const byName = new Map(C.map(c => [c.name, c]));
@@ -95,11 +101,11 @@ function entry(e, open){ const c = e.c, list = open ? pickCities(c) : todayCitie
   return {name:DISPLAY[c.name] || c.name, country:c.name, region:e.region, tier:e.tier, color:COLORS[c.name], capital:list[0].id, cities:list.map(P => P.id), names, swaps}; }
 
 if (MODE === '--preview'){
-  for (const e of all){ if (e.split){ console.log(`${e.region.padEnd(12)} ${(DISPLAY[e.c.name] || e.c.name).padEnd(16)} ${e.tier}  ${e.c.n} provinces: waits for the province split`); continue; }
+  for (const e of all){
     const L = pickCities(e.c); console.log(`${e.region.padEnd(12)} ${(DISPLAY[e.c.name] || e.c.name).padEnd(16)} ${e.tier}  ${String(L.length).padStart(2)}  ${L.map(cname).join(', ')}`); }
   process.exit(0); }
 
-const isOpen = e => OPEN.includes(e.region) && !e.split;
+const isOpen = e => OPEN.includes(e.region);
 const live = [...TODAY15.map(n => all.find(e => e.c.name === n)), ...all.filter(e => !TODAY15.includes(e.c.name) && isOpen(e))];
 const nations = live.map(e => entry(e, isOpen(e)));
 // checks on what is written: capital first, no province twice, cities inside the country, colours apart where nations touch
@@ -108,6 +114,11 @@ for (const n of nations){ const c = byName.get(n.country), ids = new Set(c.provs
   if (n.cities[0] !== n.capital) fails.push(n.name + ': the capital is not its first city');
   for (const id of n.cities){ if (!ids.has(id)) fails.push(`${n.name}: city ${id} is not its land`); if (seen.has(id)) fails.push(`${n.name}: city ${id} listed twice`); seen.add(id); }
   if (OPEN.includes(n.region) && (n.cities.length < 7 || n.cities.length > 14)) fails.push(`${n.name}: ${n.cities.length} cities (7 to 14 wanted)`); }
+// the four nations of the province split (owner's answer 1) must hold 7 cities on the split map whether their region is open or not: at least 9
+// provinces (Israel: 8, its one-cell provinces are the finest the map grid allows; tools/build-provsplit.js) and 7 to 14 cities with the method
+for (const e of all.filter(e => e.split)){ const L = pickCities(e.c), need = e.c.name === 'Israel' ? 8 : 9;
+  if (e.c.n < need) fails.push(`${e.c.name}: ${e.c.n} provinces on the split map (${need} wanted)`);
+  if (L.length < 7 || L.length > 14) fails.push(`${e.c.name}: ${L.length} cities on the split map (7 to 14 wanted)`); }
 { const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), dist = (a, b) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i])), ofC = new Map(nations.map(n => [byName.get(n.country).k, n]));
   const pairs = new Set(); for (const P of G.P){ const a = ofC.get(P.country); if (!a || P.sea) continue; for (const v of P.nbs){ const Q = G.P[v];
       const reach = Q.sea ? Q.nbs.filter(w => !G.P[w].sea) : [v];   // by land, or across one sea zone (a strait)
@@ -117,9 +128,10 @@ for (const n of nations){ const c = byName.get(n.country), ids = new Set(c.provs
 const text = '// Generated by tools/build-nations.js (roster and city-choice method of docs/NATIONS-PLAN.md). Do not edit: change the tool and run it again.\n'
   + '// The playable nations of the nations world: tier, region, capital and cities (province numbers of world.js, capital first), names of promoted\n'
   + '// cities, hand swaps. Every other country on the map is independent land. Regions are opened one rollout step at a time (open).\n'
-  + 'window.NATIONS = {"v":1,"regions":' + JSON.stringify(REGIONS) + ',"open":' + JSON.stringify(OPEN) + ',"nations":[\n' + nations.map(n => JSON.stringify(n)).join(',\n') + '\n]};\n';
+  + '// map: the province split of the nations world (tools/build-provsplit.js; new provinces appended after those of world.js, each with its parent).\n'
+  + 'window.NATIONS = {"v":1,"regions":' + JSON.stringify(REGIONS) + ',"open":' + JSON.stringify(OPEN) + ',"nations":[\n' + nations.map(n => JSON.stringify(n)).join(',\n') + '\n],\n"map":' + JSON.stringify(SPLIT) + '};\n';
 if (fails.length){ console.log('NATIONS FAILED\n  ' + fails.join('\n  ')); process.exit(1); }
 if (MODE === '--check'){ const same = fs.existsSync(OUT) && fs.readFileSync(OUT, 'utf8') === text;
   console.log(same ? `nations.js is up to date: ${nations.length} nations, regions open: ${OPEN.join(', ') || 'none'}` : 'nations.js DIFFERS from what tools/build-nations.js writes: run the tool'); process.exit(same ? 0 : 1); }
 fs.writeFileSync(OUT, text);
-console.log(`nations.js: ${nations.length} nations (${REGIONS.map(r => r + ' ' + nations.filter(n => n.region === r).length).join(', ')}), ${nations.reduce((s, n) => s + n.cities.length, 0)} cities, regions open: ${OPEN.join(', ') || 'none'}; roster ${all.length} (${all.filter(e => e.split).length} wait for the province split)`);
+console.log(`nations.js: ${nations.length} nations (${REGIONS.map(r => r + ' ' + nations.filter(n => n.region === r).length).join(', ')}), ${nations.reduce((s, n) => s + n.cities.length, 0)} cities, regions open: ${OPEN.join(', ') || 'none'}; roster ${all.length} (${all.filter(e => e.split).length} on split provinces: ${SPLIT.provinces.length} new provinces in the map)`);

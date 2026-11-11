@@ -8,6 +8,8 @@ IM.api = {
   newGame, restore, saveJSON, tick,
   // which world the next new game is (a scenario key: 'world' the classic 15 powers, 'world64' the nations world of nations.js)
   useScenario,
+  // the maps (0 world.js; mapNew the nations world's, with the province split): a map's provinces without switching to it, or the switch itself
+  mapOf, useMap, get mapNew(){ return MAP_NEW; },
   get S(){ return S; }, get G(){ return G; },
   // seats and what a seat sees
   seats, isSeat, desk, visibleSet, armyVisible,

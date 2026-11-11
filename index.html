@@ -2641,7 +2641,7 @@ const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSO
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
 // the drawable half of the world: river, road and railway paths by class (the rules half, the links between provinces, is loadWorld in rules/map.js)
-function worldLines(G){ const P = G.P, LK = loadWorld.LK;
+function worldLines(G){ const P = G.P, LK = G.LK;
   const lines = {rivers:[new Path2D(), new Path2D(), new Path2D()], roads:new Path2D()}, rPolys = [[], [], []], dPolys = [[], [], [], []], qPolys = [];
   if (LINES){ const L = LINES;
     const toW = (fx, fy) => [OX + HS*SQ3*fx/20, OY + HS*1.5*fy/20];
@@ -2916,12 +2916,26 @@ function lakePath(){ if (G.lakeP !== undefined) return G.lakeP; if (!window.LAKE
   G.lakeBox = []; G.lakeRing = [];   // world boxes and rings, so a render only clips to the lakes in view
   for (const R of window.LAKES){ let x = 0, y = 0; const b = [Infinity, Infinity, -Infinity, -Infinity], ring = []; for (let i = 0; i < R.length; i += 2){ x += R[i]; y += R[i + 1]; const X = OX + sx*x/10, Y = OY + sy*y/10; i ? lp.lineTo(X, Y) : lp.moveTo(X, Y); ring.push(X, Y); if (X < b[0]) b[0] = X; if (Y < b[1]) b[1] = Y; if (X > b[2]) b[2] = X; if (Y > b[3]) b[3] = Y; } lp.closePath(); G.lakeBox.push(b); G.lakeRing.push(ring); }
   return (G.lakeP = lp); }
-function bakeLakes(){ if (G.lakesBaked) return; /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
+// the map in use changed (rules/map.js useMap: the first map, or a new game or a load on the other one; maps 0 and the nations world's split).
+// What the maps share is handed over, not made twice: the terrain texture with its baked lakes, the land mask, the sea, the lake outlines (land
+// and sea are the same on both). What hangs on provinces is made again: the drawable lines (gap-fill tracks run centre to centre), the lake-side
+// labels, every town's footprint and bakes (a cut province's town has new ground and links), the trays, the seas' label list, the cached layer.
+const MAP_SHARE = ['terrain', 'landMask', 'seaTex', 'lakeP', 'lakeBox', 'lakeRing', 'lakesBaked'];
+function mapSwitched(){
+  for (const k in MAPS){ const g = MAPS[k]; if (g === G) continue; for (const f of MAP_SHARE){ if (G[f] === undefined && g[f] !== undefined) G[f] = g[f]; else if (g[f] === undefined && G[f] !== undefined) g[f] = G[f]; } }
+  worldLines(G);
+  if (!booted && !CINFO.size) return;   // (the first map of the page: nothing drawn yet)
+  for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, TRAYC, LDEP, HQ_NEAR, HQ_DIR]) M.clear();
+  CBAKE_PX = 0; CLOW_PX = 0; SEAL = null; NAMEC.k = ''; layerKey = ''; geoDirty = true; }
+function bakeLakes(){ if (G.lakesBaked){ if (!G.lakeLab) lakeLabels(); return; } /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
   const T = G.terrain, k = T.width/WORLD_W, g = T.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.lineJoin = 'round';
   g.strokeStyle = 'rgba(70,110,104,0.5)'; g.lineWidth = 1.6; g.stroke(lp); g.fillStyle = '#0a1c27'; g.fill(lp);   // the texture's own sea tone, so a lake reads like the open sea
   g.save(); g.clip(lp); g.strokeStyle = 'rgba(36,80,92,0.6)'; g.lineWidth = 2; g.stroke(lp); g.restore(); g.restore();
   const M = G.landMask, km = M.width/WORLD_W, mg = M.getContext('2d'); mg.save(); mg.setTransform(km, 0, 0, km, 0, 0); mg.globalCompositeOperation = 'destination-out'; mg.fill(lp); mg.restore();
-  // province-name anchors: a land province whose centre lies in a lake labels at its cell deepest inland (nearest the centre among the deepest)
+  lakeLabels(); }
+// province-name anchors: a land province whose centre lies in a lake labels at its cell deepest inland (nearest the centre among the deepest).
+// Per map (G.lakeLab): the lakes themselves are baked once and shared by the maps (see mapSwitched)
+function lakeLabels(){ const lp = lakePath(); if (!lp) return;
   const hc = document.createElement('canvas'); hc.width = hc.height = 1; const hg = hc.getContext('2d'), inL = (x, y) => hg.isPointInPath(lp, x, y), cap = HS*SQ3*6; G.lakeLab = new Map();
   for (const P of G.P){ if (P.sea || !inL(P.x, P.y)) continue; const wet = [], dry = [];
     for (const ci of P.cells){ const q = cellCenter(ci); (inL(q[0], q[1]) ? wet : dry).push(q); }
@@ -9997,16 +10011,16 @@ function showHelp(){ openModal(helpHTML(), 'help'); }
 // the start screen. Two worlds while the nations world is being rolled out: the nations world (tiers, regions; nations.js) and the classic
 // 15-power world. The picker only reads the lists: the scenario in use changes when a campaign begins (a running game keeps its own)
 const TIER_NAME = {S:'Superpower', A:'Major power', B:'Regional power', C:'Minor power'};
-const provsOf = P0 => { const ci = powerCountry(P0); return ci >= 0 ? G.countries[ci].provs : []; };
+const provsOf = P0 => onMap(P0.tier ? MAP_NEW : 0, () => { const ci = powerCountry(P0); return ci >= 0 ? G.countries[ci].provs : []; });   // (a nation of the nations world: on its map)
 function showPicker(){
-  if (!G){ G = loadWorld(); worldLines(G); }
+  if (!G) useMap(0);
   if (!SCENARIOS[pickScn]) pickScn = 'world';
   const SC = SCENARIOS[pickScn], L = SC.powers, nat = !!SC.tiers; if (pickSel >= L.length) pickSel = 0;
   const regs = nat ? NATIONS.regions.filter(r => L.some(p => p.region === r)) : [], reg = nat ? L[pickSel].region : null;
-  const cards = L.map((P0, i) => { if (nat && P0.region !== reg) return null; const n = provsOf(P0).length, cities = P0.cities ? P0.cities.length : provsOf(P0).filter(id => G.base.city[id]).length;
+  const cards = onMap(nat ? MAP_NEW : 0, () => L.map((P0, i) => { if (nat && P0.region !== reg) return null; const n = provsOf(P0).length, cities = P0.cities ? P0.cities.length : provsOf(P0).filter(id => G.base.city[id]).length;
     const diff = nat ? powerDifficulty(L, i) : DIFF[P0.name] || 'Hard';
     return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}">${flagHTML(P0.name, 40, 'big')}<span class="pt"><b>${P0.name}</b>${nat ? `<span class="tier t-${P0.tier}">${TIER_NAME[P0.tier] || ''}</span>` : ''}<span>${n} provinces · ${cities} cities</span><span class="diff d-${String(diff).toLowerCase().replace(/\s+/g, '')}">${diff}</span></span></button>`}; })
-    .filter(Boolean).sort((a, b) => b.n - a.n).map(c => c.html).join('');
+    .filter(Boolean).sort((a, b) => b.n - a.n).map(c => c.html).join(''));
   const caps = nat ? winCapsFor(L.length) : SC.caps, share = nat ? winShareFor(L.length) : WIN_SHARE, shareW = share === 0.25 ? 'a quarter' : share === 0.2 ? 'a fifth' : Math.round(share*100) + '%';
   const nW = NUMW[L.length] || String(L.length), capW = NUMW[caps] || String(caps);
   openModal(`${LOGO}<div class="eyebrow" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
@@ -10471,8 +10485,8 @@ IM.on('toast', (n, text, kind, p) => { if (n === PLAYER) toastShow(text, kind, p
 IM.on('sfx', (n, name) => { if (n == null || n === PLAYER) sfxPlay(name); });
 IM.on('fx', (type, p, extra, who) => { if (who.to != null ? who.to === PLAYER : who.by == null || who.by === PLAYER || visibleSet(PLAYER).has(p)) fxAdd(type, p, extra); });
 IM.on('geo', () => { geoDirty = true; });
-// the world was just built (first new game or load): make its drawable lines
-IM.on('world', () => worldLines(G));
+// the map in use was just built or changed (the first new game or load; a game on the other map: classic or the nations world's split)
+IM.on('world', () => mapSwitched());
 IM.on('cities', () => { geoDirty = true; });   // the set of cities changed with the world in use (classic or nations): the geometry is rebuilt with the new game or the load that follows
 // a move order was given (rules/movement.js orderMove): mark where the counter starts from
 IM.on('ordered', a => { try { if (GO.S !== S){ GO.clear(); GO.S = S; } goMark(a, S.speed ? Math.min(0.99, acc) : 0); } catch (e) {} });
