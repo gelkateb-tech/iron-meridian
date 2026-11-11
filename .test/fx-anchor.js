@@ -42,9 +42,17 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
     im.SET.fx = 'high'; im.SET.saver = false; w.W.list.length = 0;
     const off = w.start('bm', P.x + 4000, P.y + 4000) === null; return { out, off }; }, P);
   console.log('caps', JSON.stringify(caps));
-  for (const [k, [h, hc, l, lc]] of Object.entries(caps.out)) if (h > hc || l > lc) errors.push(`cap ${k}: ${h}/${hc} heavy, ${l}/${lc} light`);
+  // (12 strikes then 20 blasts: exactly the cap of each stays live; the blasts never cut a live strike, the list's hard limit drops fading entries first)
+  for (const [k, [h, hc, l, lc]] of Object.entries(caps.out)) if (h !== hc || l !== lc) errors.push(`cap ${k}: ${h}/${hc} heavy, ${l}/${lc} light live`);
   if (caps.out.high[1] !== 6 || caps.out.low[1] !== 3 || !(caps.out['high+saver'][1] < 6)) errors.push('caps not 6 High / 3 Low / fewer with saver: ' + JSON.stringify(caps.out));
   if (!caps.off) errors.push('an off-screen strike was started');
+  // names under a live blast fade: a cruise fireball on the spot hides it (last frame's dense parts), and nothing is hidden once it has ended
+  const lab = await p.evaluate(async P => { const im = window.__im, w = im.wfx, fr = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    w.W.list.length = 0; const t = performance.now(); w.freeze(t); const e = w.start('cm', P.x, P.y, { force: true }); e.t0 = t; w.freeze(t + 300); await fr();
+    const sx = P.x*im.view.s + im.view.x, sy = P.y*im.view.s + im.view.y, under = w.cover(sx, sy, 60), beside = w.cover(sx + 400, sy, 60);
+    w.freeze(t + e.d + 10); await fr(); await fr(); const after = w.cover(sx, sy, 60); w.freeze(0); return { under, beside, after }; }, P);
+  console.log('names', JSON.stringify(lab));
+  if (!(lab.under > 0.7) || lab.beside > 0.01 || lab.after > 0) errors.push('a name under a live blast is not hidden, or one beside it / after it is: ' + JSON.stringify(lab));
   // idle: one cruise blast runs to its end, then the map stops drawing (the burning ground lies still on the paused clock)
   const idle = await p.evaluate(async P => { const im = window.__im, w = im.wfx; w.W.list.length = 0; w.W.burn.length = 0; w.AFX.puff.length = 0; w.PART.length = 0; w.WRECKS.length = 0; w.W.flash = null; w.AFX.heat.clear();
     w.start('cm', P.x, P.y, { force: true }); const rd = im.rd, n0 = rd.n; await new Promise(r => setTimeout(r, 1000)); const during = rd.n - n0;

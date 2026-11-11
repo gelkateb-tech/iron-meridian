@@ -3979,18 +3979,30 @@ function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: t
    ground after an ICBM moves on the paused game clock (animAmb). Low: fewer parts, no smoke column, no ripple, shorter.
    The rules can trigger the warheads they do not have yet with IM.emit('fxWarhead', {kind, p, by}) (kind cm, bm, chem, tac, icbm), and a blast
    with IM.emit('fxBlast', {size:'S'|'M'|'L', p}); the page's own entry points are FXW.cruise / ballistic / chemical / tactical / icbm / blast. */
-const WFX = {list:[], burn:[], flash:null, veil:null, area:0, bud:0, S:null, id:0, ks:1/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};
+const WFX = {list:[], burn:[], flash:null, veil:null, area:0, bud:0, S:null, id:0, ks:1, occ:[], og:null/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};   // occ: last frame's dense fire and smoke (wfxOcc), og: the group being drawn
 const WFX_R = {cm:2.6, bm:4.2, chem:0.9, tac:4.5, icbm:12, exS:1.6, exM:2.4, exL:3.6};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
-const WFX_MP = {cm:18, bm:28, chem:9, tac:20, icbm:26, exS:9, exM:12, exL:16};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
+const WFX_MP = {cm:18, bm:28, chem:9, tac:20, icbm:26, exS:12, exM:14, exL:16};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
+// on a phone-sized map those floors grow (up to 1.5x on a 430 px screen), so a cruise blast or a small combat blast still reads at mid zoom
+const wfxPh = () => { const m = Math.min(cw, ch); return m >= 640 ? 1 : m <= 440 ? 1.5 : 1 + 0.5*(640 - m)/200; };
+const wfxKr = e => Math.max(view.s, WFX_MP[e.k]*wfxPh()/e.R);   // an effect's world-to-screen scale: the map's, or bigger about its spot far out (the floor)
 const wfxHeavy = k => k[0] !== 'e';
 const wfxCap = heavy => { const low = SET.fx === 'low', sv = saverOn(); return heavy ? (low ? 3 : 6) - (sv ? (low ? 1 : 2) : 0) : (low ? 6 : 12) - (sv ? (low ? 2 : 4) : 0); };
-const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.length = 0; WFX.flash = null; wfxVeil(0); } };
+const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.length = 0; WFX.occ = []; WFX.flash = null; wfxVeil(0); } };
 // ---- sprites: noise-textured, baked once per variant at 128 px and 48 px (the small one for small draws: no sparkle from a big texture shrunk)
 function wfxNoise(seed){ const n = makeNoise(mulberry(seed)); return (x, y) => n(x, y)*0.55 + n(x*2.03 + 17.3, y*2.03 + 5.1)*0.3 + n(x*4.1 + 31.7, y*4.1 + 11.9)*0.15; }
 const wfxSm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
-function wfxBake(key, N, mk){ if (SPR[key]) return SPR[key]; const px = mk(), c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data;
+function wfxBake(key, N, mk, br){ if (SPR[key]) return SPR[key]; const px = mk(), c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data;
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ const o = (y*N + x)*4, q = px((x + 0.5)/N*2 - 1, (y + 0.5)/N*2 - 1); if (!q) continue; d[o] = q[0]; d[o + 1] = q[1]; d[o + 2] = q[2]; d[o + 3] = q[3]; }
-  g.putImageData(im, 0, 0); return (SPR[key] = c); }
+  if (br) wfxBlur(d, N, br); g.putImageData(im, 0, 0); return (SPR[key] = c); }
+// a soft copy: the sprite blurred in place (premultiplied, a box of radius br px run twice each way, so about a tent twice as wide), for smoke
+// that has spread and lost its edges
+function wfxBlur(d, N, br){ const n = N*N, a = new Float32Array(n*4), b = new Float32Array(n*4), w = 2*br + 1;
+  for (let i = 0; i < n*4; i += 4){ const al = d[i + 3]/255; a[i] = d[i]*al; a[i + 1] = d[i + 1]*al; a[i + 2] = d[i + 2]*al; a[i + 3] = d[i + 3]; }
+  const run = (src, dst, st, ln) => { for (let l = 0; l < N; l++) for (let ch = 0; ch < 4; ch++){ const o0 = l*ln + ch; let s = 0;
+      for (let i = 0; i <= br && i < N; i++) s += src[o0 + i*st];
+      for (let i = 0; i < N; i++){ dst[o0 + i*st] = s/w; if (i - br >= 0) s -= src[o0 + (i - br)*st]; if (i + br + 1 < N) s += src[o0 + (i + br + 1)*st]; } } };
+  for (let k = 0; k < 2; k++){ run(a, b, 4, N*4); run(b, a, N*4, 4); }
+  for (let i = 0; i < n*4; i += 4){ const al = a[i + 3], f = al > 0.5 ? 255/al : 0; d[i] = a[i]*f; d[i + 1] = a[i + 1]*f; d[i + 2] = a[i + 2]*f; d[i + 3] = al; } }
 // a billow: 11 overlapping spheres (seeded per variant) seen from above, the sample point warped by noise so no outline is round; per pixel the
 // blended top surface (a soft maximum of the spheres' heights, so there is no seam where two meet), its normal and how far inside the union
 // it lies. Smoke shades that surface by its normal (puffs lit from the upper left), fire colours it by heat
@@ -4007,21 +4019,32 @@ function wfxFire(v, small){ const key = 'wf' + v + (small ? 's' : ''); if (SPR[k
   return wfxBake(key, small ? 48 : 128, () => { const nz = wfxNoise(7100 + v*31), bl = wfxBillow(7150 + v*13); return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null; const n = nz((dx + 1)*2.4, (dy + 1)*2.4), nf = nz((dx + 1)*7 + 13, (dy + 1)*7 + 7), b = bl(dx*1.1, dy*1.1); if (!b) return null;
     const dn = b.cov + (nf - 0.5)*0.45; if (dn <= 0) return null; const t = Math.max(0, Math.min(1, 0.12 + 0.62*b.nz*(1 - 0.5*r) + (n - 0.5)*0.7 + (nf - 0.5)*0.35)), c = wfxRamp(WFX_FIRE, t);
     return [c[0], c[1], c[2], 255*wfxSm(0, 0.36, dn)*wfxSm(1, 0.9, r)]; }; }); }
-// smoke: a billow lit from the upper left (sky light: each sphere shaded by its normal), soft and frayed at the rim; tones [shadow, lit];
-// at night dimmed and a little warm
+// smoke: a billow lit from the upper left (sky light: each sphere shaded by its normal), soft and frayed at the rim; tones [shadow, lit].
+// soft: the same billow blurred (smoke that has spread and lost its edges; drawn cross-faded in as a puff ages)
 const WFX_TONE = {dark:[[22, 20, 18], [104, 96, 86]], grey:[[56, 53, 49], [168, 162, 152]], mush:[[64, 46, 36], [212, 194, 170]], light:[[104, 99, 94], [240, 236, 228]],
-  dust:[[86, 70, 50], [198, 178, 142]], gas:[[80, 104, 20], [212, 226, 104]], spray:[[150, 166, 174], [252, 253, 253]]};
-function wfxSmoke(tone, v, night, small){ const key = 'ws' + tone + v + (night ? 'n' : '') + (small ? 's' : ''); if (SPR[key]) return SPR[key];
-  return wfxBake(key, small ? 48 : 128, () => { const T = WFX_TONE[tone] || WFX_TONE.dark, nz = wfxNoise(7300 + v*37), gas = tone === 'gas', bl = wfxBillow(7350 + v*17 + (gas ? 5 : 0)), L = [-0.46, -0.62, 0.64]; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null; const n = nz((dx + 1)*3.2, (dy + 1)*3.2), nf = nz((dx + 1)*8 + 21, (dy + 1)*8 + 5), b = bl(dx*1.08, dy*1.08); if (!b) return null;
-    const dn = b.cov + (n - 0.5)*0.35 + (nf - 0.5)*0.3; if (dn <= 0) return null; const dif = Math.max(0, b.nx*L[0] + b.ny*L[1] + b.nz*L[2]), li = Math.max(0, Math.min(1, (gas ? 0.36 : 0.18) + (gas ? 0.5 : 0.7)*dif + (n - 0.5)*0.35 + (nf - 0.5)*0.4)), k = night ? 0.62 : 1, wm = night ? 1 - li : 0;
-    return [(T[0][0] + (T[1][0] - T[0][0])*li)*k + (night ? 26*wm + 10 : 0), (T[0][1] + (T[1][1] - T[0][1])*li)*k + (night ? 10*wm + 6 : 0), (T[0][2] + (T[1][2] - T[0][2])*li)*k + (night ? 4 : 0), 255*(gas ? 0.78 : 0.94)*wfxSm(0, 0.65, dn)*wfxSm(1, 0.86, r)]; }; }); }
-// gas: a low, flat sheet of noise (no shading: it lies on the ground), denser in wisps, pale sickly yellow-green with deeper olive in its
-// dense parts; at night only a little dimmed (it must still read on the dark map)
+  dust:[[86, 70, 50], [198, 178, 142]], spray:[[150, 166, 174], [252, 253, 253]]};
+// a tone's colour at light li (0 shadow .. 1 lit): by day the tone's own; at night dimmed to the night map's level, the lit side a little cool
+// (moonlight). Never lifted or warmed: smoke gives off no light of its own (a fire's glow is drawn by the fire), so dark smoke stays dark
+const wfxTone = (T, li, night) => { const c = [0, 1, 2].map(i => T[0][i] + (T[1][i] - T[0][i])*li); return night ? [c[0]*0.44 + 6 + 2*li, c[1]*0.44 + 6 + 5*li, c[2]*0.44 + 7 + 11*li] : c; };
+function wfxSmoke(tone, v, night, small, soft){ const key = 'ws' + tone + v + (night ? 'n' : '') + (small ? 's' : '') + (soft ? 'f' : ''); if (SPR[key]) return SPR[key];
+  return wfxBake(key, small ? 48 : 128, () => { const T = WFX_TONE[tone] || WFX_TONE.dark, nz = wfxNoise(7300 + v*37), bl = wfxBillow(7350 + v*17), L = [-0.46, -0.62, 0.64]; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null; const n = nz((dx + 1)*3.2, (dy + 1)*3.2), nf = nz((dx + 1)*8 + 21, (dy + 1)*8 + 5), b = bl(dx*1.08, dy*1.08); if (!b) return null;
+    const dn = b.cov + (n - 0.5)*0.35 + (nf - 0.5)*0.3; if (dn <= 0) return null; const dif = Math.max(0, b.nx*L[0] + b.ny*L[1] + b.nz*L[2]), li = Math.max(0, Math.min(1, 0.18 + 0.7*dif + (n - 0.5)*0.35 + (nf - 0.5)*0.4)), c = wfxTone(T, li, night);
+    return [c[0], c[1], c[2], 255*0.94*wfxSm(0, 0.65, dn)*wfxSm(1, 0.86, r)]; }; }, soft ? Math.round((small ? 48 : 128)*0.05) : 0); }
+// a mushroom stem's puff: a soft blob shaded as a piece of a column (lit from the left by x alone, so a stack of them reads as one smooth
+// column, without a bright top on each piece), streaked by noise stretched up the stem; drawn taller than wide
+function wfxStemP(tone, v, night, small){ const key = 'wt' + tone + (v & 1) + (night ? 'n' : '') + (small ? 's' : ''); if (SPR[key]) return SPR[key];
+  return wfxBake(key, small ? 40 : 96, () => { const T = WFX_TONE[tone] || WFX_TONE.dark, nz = wfxNoise(7800 + (v & 1)*41), nf = wfxNoise(7850 + (v & 1)*43); return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null;
+    const n = nz((dx + 1)*2.2, (dy + 1)*1.2), f = nf((dx + 1)*6 + 5, (dy + 1)*2.4 + 3), dn = 1 - r + (n - 0.5)*0.75 + (f - 0.5)*0.4; if (dn <= 0) return null;
+    const cz = Math.sqrt(Math.max(0, 1 - dx*dx)), li = Math.max(0, Math.min(1, 0.14 + 0.62*Math.max(0, -dx*0.6 + cz*0.8) + (n - 0.5)*0.7 + (f - 0.5)*0.5)), c = wfxTone(T, li, night);
+    return [c[0], c[1], c[2], 255*0.92*wfxSm(0, 0.55, dn)*wfxSm(1, 0.8, r)]; }; }); }
+// gas: a low, flat sheet of noise lying on the ground (no shading), a dull sickly olive: paler khaki-yellow where it is dense, darker olive at
+// its thin edge, so the cloud shows on green fields by its colour and its rim; at night only dimmed with the map (it gives off no light)
+const WFX_GAS = [[0, 66, 72, 26], [0.4, 124, 132, 50], [1, 186, 186, 96]];
 function wfxGas(v, night, small){ const key = 'wg' + v + (night ? 'n' : '') + (small ? 's' : ''); if (SPR[key]) return SPR[key];
-  return wfxBake(key, small ? 48 : 128, () => { const nz = wfxNoise(7600 + v*23), nf = wfxNoise(7650 + v*29), k = night ? 0.9 : 1; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null;
+  return wfxBake(key, small ? 48 : 128, () => { const nz = wfxNoise(7600 + v*23), nf = wfxNoise(7650 + v*29), k = night ? 0.42 : 1; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null;
     const n = nz((dx + 1)*1.7 + v, (dy + 1)*1.7), f = nf((dx + 1)*4.6 + 3, (dy + 1)*4.6 + 9), dn = 1 - r*1.02 + (n - 0.5)*0.8 + (f - 0.5)*0.3; if (dn <= 0) return null;
-    const de = wfxSm(0, 0.7, dn), t = Math.max(0, Math.min(1, 0.25 + 0.9*(f - 0.5) + 0.5*(1 - de))), c = [152 + 64*t, 178 + 50*t, 48 + 76*t];
-    return [c[0]*k + (night ? 12 : 0), c[1]*k + (night ? 10 : 0), c[2]*k, 255*0.86*Math.pow(de, 0.8)*wfxSm(1, 0.8, r)]; }; }); }
+    const de = wfxSm(0, 0.7, dn), c = wfxRamp(WFX_GAS, Math.max(0, Math.min(1, 0.08 + 0.84*de + 0.5*(f - 0.5))));
+    return [c[0]*k, c[1]*k, c[2]*k, 255*0.86*Math.pow(de, 0.5)*wfxSm(1, 0.8, r)]; }; }); }
 // rings (256 px): the shock front (a thin bright band, soft inside) and the base surge (a broad, broken dust band); the burnt-ground decal
 function wfxRing(dust){ const key = dust ? 'wrd' : 'wrs'; if (SPR[key]) return SPR[key];
   return wfxBake(key, 256, () => { const nz = wfxNoise(dust ? 7700 : 7710), T = WFX_TONE.dust; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null;
@@ -4041,23 +4064,25 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
   // fire lobes: born within rr of the spot, flung out up to `spread` and up by `rise`, growing from r0 to r1
   const fire = (cnt, rr, t0, t1, life, rise, spread, r0, r1, a = 1) => { for (let i = 0; i < n(cnt); i++){ const th = ang(), d0 = rr*Math.sqrt(r()), d1 = spread*(0.4 + 0.6*r());
     E.push({k:'F', t0:t0 + (t1 - t0)*r(), d:life*(0.75 + 0.5*r())*tl, x:Math.cos(th)*d0, y:Math.sin(th)*d0*0.6, dx:Math.cos(th)*d1, dy:Math.sin(th)*d1*0.6 - rise*(0.6 + 0.8*r()), r0:r0*(0.8 + 0.4*r()), r1:r1*(0.8 + 0.4*r()), a, v:r()*4 | 0}); } };
-  // smoke lobes (o: w the share of the wind drift, sq a squash for smoke lying on the ground, p the spread's ease, fi/fo fade in/out)
+  // smoke lobes (o: w the share of the wind drift, sq a squash for smoke lying on the ground, p the spread's ease, fi/fo fade in/out, sf the
+  // span of its life over which it goes soft, its edges blurring as it spreads; gas lies as a sheet and stays as it is)
   const smoke = (cnt, tone, rr, t0, t1, life, rise, spread, r0, r1, a, o = {}) => { for (let i = 0; i < n(cnt); i++){ const th = ang(), d0 = rr*Math.sqrt(r()), d1 = spread*(o.even ? Math.sqrt(0.08 + 0.92*r()) : 0.3 + 0.7*r());
     E.push({k:'S', tone, t0:t0 + (t1 - t0)*(o.late ? r()*r() : r()), d:life*(0.8 + 0.4*r())*tl, x:Math.cos(th)*d0, y:Math.sin(th)*d0*0.6, dx:Math.cos(th)*d1, dy:Math.sin(th)*d1*(o.sq ? 0.62 : 0.6) - rise*(0.7 + 0.6*r()),
-      r0:r0*(0.8 + 0.4*r()), r1:r1*(0.8 + 0.4*r()), a:a*(0.8 + 0.3*r()), v:r()*4 | 0, w:o.w ?? 1, sq:o.sq || 1, p:o.p || 1.7, fi:o.fi || 0.12, fo:o.fo || 0.45}); } };
+      r0:r0*(0.8 + 0.4*r()), r1:r1*(0.8 + 0.4*r()), a:a*(0.8 + 0.3*r()), v:r()*4 | 0, w:o.w ?? 1, sq:o.sq || 1, p:o.p || 1.7, fi:o.fi || 0.12, fo:o.fo || 0.45, sf:tone === 'gas' ? null : o.sf || [0.12, 0.7]}); } };
   // sparks (hot) and debris: thrown out at up to sp world/s, falling at g world/s2
   const sparks = (cnt, sp, g, life, hot = true) => { if (red) return; for (let i = 0; i < n(cnt); i++){ const th = ang(), v = sp*(0.4 + 0.6*r()), up = sp*(0.25 + 0.85*r());
     E.push({k:hot ? 'K' : 'D', t0:40*r(), d:life*(0.6 + 0.6*r())*tl, vx:Math.cos(th)*v, vy:Math.sin(th)*v*0.55 - up, g}); } };
   const core = (d, r0, r1, rise, a = 1) => E.push({k:'F', t0:0, d:d*tl, x:0, y:0, dx:0, dy:-rise, r0, r1, a, v:r()*4 | 0});   // the fireball's main body
   const mush = (d, H, Rc, nc, ns) => E.push({k:'M', t0:0, d:d*tl, H, Rc, nc:n(nc), ns:n(ns), sd:r()*1e6 | 0});
   if (k === 'cm'){ light(0, 140, R*0.9, R*2.4, 1); light(0, 800, R*2, R*3.2, 0.5, true); ring('dust', 30, 1000, R*1.7, 0.32);
-    core(560, R*0.5, R*1.0, R*0.3); fire(8, R*0.2, 0, 70, 700, R*0.4, R*0.42, R*0.36, R*0.8); smoke(7, 'dark', R*0.3, 140, 420, 4400, R*1.4, R*0.55, R*0.45, R*1.3, 0.95, {fi:0.06, fo:0.5});
+    core(560, R*0.5, R*1.0, R*0.3); fire(8, R*0.2, 0, 70, 700, R*0.4, R*0.42, R*0.36, R*0.8);
+    smoke(6, 'dark', R*0.28, 140, 420, 4000, R*1.5, R*0.45, R*0.4, R*0.95, 0.86, {fi:0.06, fo:0.36, sf:[0.06, 0.45]});   // a small dark puff, rising and thinning, soft within a second or two
     sparks(12, R*7, R*15, 520); sparks(5, R*4.5, R*13, 750, false); }
   else if (k === 'bm'){ light(0, 220, R*1.1, R*3.2, 1); light(0, 1400, R*2.4, R*4, 0.6, true); ring('rip', 0, 950, R*3.8, 1); ring('shock', 0, 760, R*3.4, 0.28); ring('dust', 80, 3000, R*3.3, 0.6);
     smoke(7, 'dust', R*0.7, 160, 600, 3400, R*0.25, R*1.5, R*0.4, R*1.05, 0.42, {w:0.4, sq:0.58});
     core(1100, R*0.55, R*1.05, R*0.5); fire(14, R*0.28, 0, 130, 1300, R*0.65, R*0.48, R*0.4, R*0.9);
     if (!L) for (let i = 0, N = 16; i < N; i++){ const f = i/(N - 1); E.push({k:'S', tone:f < 0.2 ? 'dust' : 'dark', t0:180 + f*1000 + 80*r(), d:(6800 + 1600*r())*tl, x:j(R*0.18), y:-R*0.15, dx:j(R*0.28)*f, dy:-R*(0.3 + 4.1*f),
-      r0:R*0.42, r1:R*(0.58 + 0.55*f)*(0.9 + 0.2*r()), a:0.78, v:r()*4 | 0, w:0.25 + 1.3*f, sq:1, p:1.35, fi:0.08, fo:0.55}); }   // the smoke column: lobes stacked to 4.4 R, widening up, leaning downwind
+      r0:R*0.42, r1:R*(0.58 + 0.55*f)*(0.9 + 0.2*r()), a:0.78, v:r()*4 | 0, w:0.25 + 1.3*f, sq:1, p:1.35, fi:0.08, fo:0.55, sf:[0.65, 1]}); }   // the smoke column: lobes stacked to 4.4 R, widening up, leaning downwind (going soft late)
     else smoke(8, 'dark', R*0.3, 150, 500, 3600, R*1.7, R*0.6, R*0.4, R*1.0, 0.64);
     sparks(16, R*6, R*12, 800); sparks(7, R*4, R*10, 1000, false); }
   else if (k === 'chem'){ light(0, 130, R, R*2.4, 0.85); light(0, 600, R*1.5, R*2.4, 0.4, true); core(420, R*0.5, R*1.1, R*0.2); fire(4, R*0.2, 0, 50, 460, R*0.3, R*0.3, R*0.3, R*0.72); sparks(8, R*5, R*14, 460);
@@ -4076,7 +4101,7 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
     if (big) fire(4, R*0.5, 200, 450, 620, R*0.4, R*0.4, R*0.25, R*0.6, 0.9);   // a secondary blast (magazine, fuel)
     sparks(big ? 14 : med ? 10 : 7, R*6, R*15, big ? 650 : 480); if (big || med) sparks(big ? 8 : 5, R*4, R*12, 800, false);
     if (e.sea) smoke(big ? 7 : 4, 'spray', R*0.25, 0, 120, 1500, R*1.7, R*0.45, R*0.3, R*0.8, 0.7, {w:0.2, p:2.2, fo:0.35});   // a white water plume
-    smoke(big ? 5 : med ? 3 : 2, 'dark', R*0.3, 100, 320, big ? 3900 : med ? 2700 : 1900, R*(big ? 1.9 : 1.3), R*0.45, R*0.32, R*(big ? 1.15 : 0.95), 0.6); }
+    smoke(big ? 5 : med ? 3 : 2, 'dark', R*0.3, 100, 320, big ? 3900 : med ? 2700 : 1900, R*(big ? 1.9 : 1.3), R*0.45, R*0.32, R*(big ? 1.15 : 0.95), big || med ? 0.6 : 0.72, {sf:[0.1, 0.6]}); }
   const rk = {G:0, R:1, S:2, M:3, F:4, K:5, D:5, L:6}; E.forEach((o, i) => { o.i = i; o.rk = o.kind === 'rip' ? -1 : rk[o.k] + (o.k === 'S' && o.sq === 1 ? 1 : 0); });   // (the ripple first: it bends the map only, not the blast's own light)
   E.sort((a, b) => a.rk - b.rk || a.i - b.i);   // ground light, rings, ground smoke and gas, then smoke and the cloud, fire over them, sparks, the flash on top
   let d = 0, ext = R*2, top = R; for (const o of E){ d = Math.max(d, o.t0 + o.d);
@@ -4085,13 +4110,19 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
     else if (o.k === 'M'){ ext = Math.max(ext, o.Rc*1.8); top = Math.max(top, o.H + o.Rc*1.4); }
     else top = Math.max(top, R*4); }
   e.d = d; e.ext = ext*1.15; e.top = top*1.2; }
+// the hard limit on the list (24): past it the entries already fading out go first (the ones soonest gone), then the oldest combat blasts; a
+// live heavy effect (a strike, a mushroom cloud) is never cut (the caps keep at most 6 of them live, so the limit never reaches one)
+function wfxTrim(keep){ const L = WFX.list; let over = L.length - 24; if (over <= 0) return;
+  const dying = L.filter(q => q.die != null && q !== keep).sort((a, b) => a.die - b.die);
+  for (const q of dying){ if (over <= 0) break; L.splice(L.indexOf(q), 1); over--; }
+  for (let i = 0; i < L.length && over > 0; i++) if (!wfxHeavy(L[i].k) && L[i] !== keep){ L.splice(i--, 1); over--; } }
 // ---- starting one: o.sea (a blast at sea: a water plume), o.force (start it even off screen: the developer buttons). Returns the effect or null
 function wfxStart(k, wx, wy, o = {}){ if (!booted || !S || !WFX_R[k]) return null; wfxSync(); const now = performance.now(), R = WFX_R[k], heavy = wfxHeavy(k);
   const [sx, sy] = toScreen(wx, wy), mg = Math.max(R*6*view.s, 120); if (!o.force && (sx < -mg || sy < -mg || sx > cw + mg || sy > ch + mg*1.6)) return null;   // off screen: not started
   const live = WFX.list.filter(e => wfxHeavy(e.k) === heavy && e.die == null), cap = wfxCap(heavy);
   for (let i = 0; i <= live.length - cap; i++) live[i].die = now + 350;   // over the cap: the oldest fade out over 0.35 s
   const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1, e = {k, wx, wy, R, t0:now, id:++WFX.id, seed:(Math.random()*2**31) | 0, low:SET.fx === 'low', red:afxReduced(), sea:o.sea ?? (p >= 0 && G.P[p].sea), night:fxNight(wx, wy), els:[]};
-  wfxBuild(e); WFX.list.push(e); if (WFX.list.length > 24) WFX.list.splice(0, WFX.list.length - 24);
+  wfxBuild(e); WFX.list.push(e); wfxTrim(e);
   if (k === 'icbm' || k === 'tac'){ const a = (k === 'icbm' ? 1 : 0.42)*(e.red ? 0.3 : 1);   // the flash: the whole map whitens (an ICBM) or a strong white veil (tactical)
     if (!WFX.flash || a > WFX.flash.a*(1 - (now - WFX.flash.t0)/WFX.flash.d)){ WFX.flash = {t0:now, d:k === 'icbm' ? (e.low ? 650 : 950) : 450, a}; wfxVeil(k === 'icbm' ? a*0.85 : 0, WFX.flash.d*0.8); } }
   if (k === 'icbm'){ WFX.burn.push({wx, wy, r:R*1.5, h0:S.hour + (S.speed && !S.over ? acc : 0), life:10, seed:e.seed}); if (WFX.burn.length > 6) WFX.burn.shift(); }   // burning ground: ten game hours
@@ -4108,17 +4139,35 @@ const FXW = {cruise:(x, y, o) => wfxStrike('cm', x, y, o), ballistic:(x, y, o) =
 function wfxSpr(big, small, x, y, rx, ry, a, op, budget){ if (a < 0.004 || rx < 0.3 || x + rx < 0 || x - rx > cw || y + ry < 0 || y - ry > ch) return;
   if (budget){ if (WFX.area > WFX.bud) return; WFX.area += Math.min(2*rx, cw)*Math.min(2*ry, ch); }
   ctx.globalAlpha = Math.min(1, a); ctx.globalCompositeOperation = op || 'source-over'; ctx.drawImage(small && rx*dpr < 34 ? small : big, x - rx, y - ry, 2*rx, 2*ry); }
-const wfxS = (e, o, night, small) => o.tone === 'gas' ? wfxGas(o.v, night, small) : wfxSmoke(o.tone, o.v, night, small);
-function wfxDrawOne(e, tau, now){ const ks = view.s, kr = Math.max(ks, WFX_MP[e.k]/e.R), [bx, by] = toScreen(e.wx, e.wy), nt = e.night > 0.5, WD = windSync(), fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1;
+// a dense part of an effect drawn this frame (css px; rx, ry where it hides what lies under it, alpha a), kept in world units for the next
+// frame's names (wfxCover), grouped per effect with the group's box
+function wfxOcc(x, y, rx, ry, a){ const g = WFX.og; if (!g || rx < 2.5 || a < 0.25) return; const s = view.s, wx = (x - view.x)/s, wy = (y - view.y)/s, qx = rx/s, qy = ry/s, B = g.b;
+  g.o.push(wx, wy, qx, qy, Math.min(1, a)); if (wx - qx < B[0]) B[0] = wx - qx; if (wy - qy < B[1]) B[1] = wy - qy; if (wx + qx > B[2]) B[2] = wx + qx; if (wy + qy > B[3]) B[3] = wy + qy; }
+// how much of a name centred at (x, y) css px, w wide, last frame's live blasts and clouds hide (0 clear .. 1 hidden), tested at its middle and
+// near both ends: a name under a fireball or a thick smoke cloud fades out with it (and back as it thins), so the fire never reads as a decal
+// under a crisp label. The gas sheet and the flashes hide nothing (the names show through them)
+function wfxCover(x, y, w){ if (!WFX.list.length || !WFX.occ.length) return 0; const s = view.s, wx = (x - view.x)/s, wy = (y - view.y)/s, hw = 0.35*w/s; let hid = 0;
+  for (const px of [wx - hw, wx, wx + hw]){ let clr = 1;
+    for (const g of WFX.occ){ const B = g.b, O = g.o; if (px < B[0] || px > B[2] || wy < B[1] || wy > B[3]) continue;
+      for (let i = 0; i < O.length; i += 5){ const dx = (px - O[i])/O[i + 2], dy = (wy - O[i + 1])/O[i + 3], d = dx*dx + dy*dy; if (d < 1) clr *= 1 - O[i + 4]*wfxSm(1, 0.35, Math.sqrt(d)); } }
+    hid = Math.max(hid, 1 - clr); }
+  return hid; }
+function wfxDrawOne(e, tau, now){ const ks = view.s, kr = wfxKr(e), [bx, by] = toScreen(e.wx, e.wy), nt = e.night > 0.5, WD = windSync(), fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1;
   // (far out, where the floor kr > ks holds, the whole blast is drawn bigger about its spot: offsets and sizes alike, so its shape stays;
   // from the zoom where kr = ks every part sits on its own world spot. The gas sheet keeps its own, lower floor.)
   const kg = Math.max(ks, 5.5), sx = (s, k = kr) => bx + s*k, sy = (s, k = kr) => by + s*k; /*@TEST*/const dbg = WFX.dbg, dk = k => dbg && k === ks;/*@ENDTEST*/
+  const og = WFX.og = {b:[Infinity, Infinity, -Infinity, -Infinity], o:[]};
   for (const o of e.els){ const t = tau - o.t0; if (t < 0 || t >= o.d) continue; const u = t/o.d, ts = t/1000;
-    if (o.k === 'S'){ const m = 1 - Math.pow(1 - u, o.p), dw = (o.w || 0)*e.R*0.12*ts, kk = o.tone === 'gas' ? kg : kr, x = sx(o.x + o.dx*m + WD.wx*dw, kk), y = sy(o.y + o.dy*m + WD.wy*dw, kk), rr = (o.r0 + (o.r1 - o.r0)*(1 - (1 - u)*(1 - u)))*kk;
-      const a = fd*o.a*Math.min(1, u/o.fi)*(u > o.fo ? Math.pow((1 - u)/(1 - o.fo), 1.2) : 1); wfxSpr(wfxS(e, o, nt), wfxS(e, o, nt, true), x, y, rr, rr*o.sq, a, 'source-over', true);
+    if (o.k === 'S'){ const gas = o.tone === 'gas', m = 1 - Math.pow(1 - u, o.p), dw = (o.w || 0)*e.R*0.12*ts, kk = gas ? kg : kr, x = sx(o.x + o.dx*m + WD.wx*dw, kk), y = sy(o.y + o.dy*m + WD.wy*dw, kk), rr = (o.r0 + (o.r1 - o.r0)*(1 - (1 - u)*(1 - u)))*kk;
+      const a = fd*o.a*Math.min(1, u/o.fi)*(u > o.fo ? Math.pow((1 - u)/(1 - o.fo), 1.2) : 1);
+      if (gas) wfxSpr(wfxGas(o.v, nt), wfxGas(o.v, nt, true), x, y, rr, rr*o.sq, a, 'source-over', true);
+      else { const sv = o.sf ? wfxSm(o.sf[0], o.sf[1], u) : 0, c = a*(1 - sv);   // spreading smoke loses its edges: cross-faded into its blurred copy as it ages (the pair as dense as the one)
+        if (c > 0.004) wfxSpr(wfxSmoke(o.tone, o.v, nt), wfxSmoke(o.tone, o.v, nt, true), x, y, rr, rr*o.sq, c, 'source-over', true);
+        if (sv > 0.01) wfxSpr(wfxSmoke(o.tone, o.v, nt, false, true), wfxSmoke(o.tone, o.v, nt, true, true), x, y, rr, rr*o.sq, (a - c)/Math.max(0.01, 1 - c), 'source-over', true);
+        wfxOcc(x, y, rr*0.78, rr*o.sq*0.78, a*(1 - 0.35*sv)); }
       /*@TEST*/if (dk(kk)) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
     if (o.k === 'F'){ const m = 1 - Math.pow(1 - u, 2.4), x = sx(o.x + o.dx*m), y = sy(o.y + o.dy*m), rr = (o.r0 + (o.r1 - o.r0)*(1 - Math.pow(1 - u, 3)))*kr, at = fd*o.a*Math.min(1, u/0.06);
-      wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr, rr, at*Math.pow(1 - u, 0.9), 'source-over');
+      wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr, rr, at*Math.pow(1 - u, 0.9), 'source-over'); wfxOcc(x, y, rr*0.8, rr*0.8, at*Math.pow(1 - u, 0.9));
       if (u > 0.18) wfxSpr(wfxSmoke('dark', o.v, nt), wfxSmoke('dark', o.v, nt, true), x, y - rr*0.1, rr*0.98, rr*0.98, at*0.9*Math.pow((u - 0.18)/0.82, 1.1)*Math.pow(1 - u, 0.35), 'source-over');   // cooling into smoke
       wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr*0.62, rr*0.62, at*0.85*Math.pow(1 - u, 2.5), 'lighter');   // the hot core
       /*@TEST*/if (dk(kr)) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
@@ -4152,16 +4201,21 @@ function wfxMush(e, o, t, bx, by, ks, kr, fd, nt){ const T = o.d, u = t/T, s = t
   // (the cloud is the effect's centrepiece: never cut by the frame's smoke budget, which would leave it full of holes; its lobe count is fixed)
   const puff = (tone, v, x, y, rx, ry, a) => { if (pale > 0 && tone === 'mush'){ wfxSpr(wfxSmoke('mush', v, nt), wfxSmoke('mush', v, nt, true), x, y, rx, ry, a*(1 - pale*0.6), 'source-over'); wfxSpr(wfxSmoke('light', v, nt), wfxSmoke('light', v, nt, true), x, y, rx, ry, a*pale, 'source-over'); }
     else wfxSpr(wfxSmoke(tone, v, nt), wfxSmoke(tone, v, nt, true), x, y, rx, ry, a, 'source-over'); };
-  // the stem: from the ground up to under the cap, once the cap has lifted off it; one column, narrow in the middle, flared at the foot
-  for (let k = 0; k < o.ns; k++){ const f = (k + 0.5)/o.ns, h = hc*f*0.92, rs = R*(0.34 + 0.8*Math.pow(1 - f, 4) + 0.1*f*f + 0.04*Math.sin(k*1.7 + s*0.6)), a = fade*0.86*wfxSm(R*0.4, R*1.2, hc*f), v = (k + (o.sd & 3)) & 3;
-    const x = X(sh*f*f + Math.sin(s*0.7 + k*1.3)*rs*0.06), y = Y(-h), tone = f < 0.3 ? 'dust' : 'mush';
-    puff(tone, v, x, y, rs*kr*1.4, rs*kr*1.25, a);
-    if (warm > 0.05 && f > 0.4) wfxSpr(wfxFire(v), wfxFire(v, true), x, y, rs*kr*0.75, rs*kr*0.75, fade*0.45*warm*f, 'lighter');
+  // the stem: from the ground up to under the cap, once the cap has lifted off it: one continuous column of column-shaded puffs drawn taller
+  // than wide, each overlapping its neighbours several times on every effects level (no beads), narrow in the middle, flared into the dust
+  // skirt at its foot (round there)
+  const ns = Math.max(12, o.ns), stem = (tone, v, x, y, rx, ry, a) => { const P = (tn, aa) => wfxSpr(wfxStemP(tn, v, nt), wfxStemP(tn, v, nt, true), x, y, rx, ry, aa, 'source-over');
+    if (pale > 0 && tone === 'mush'){ P('mush', a*(1 - pale*0.6)); P('light', a*pale); } else P(tone, a); wfxOcc(x, y, rx*0.75, ry*0.8, a); };
+  for (let k = 0; k < ns; k++){ const f = (k + 0.5)/ns, h = hc*f*0.92, rs = R*(0.3 + 0.8*Math.pow(1 - f, 4) + 0.3*wfxSm(0.72, 1, f) + 0.03*Math.sin(k*1.7 + s*0.6)), a = fade*0.86*wfxSm(R*0.4, R*1.2, hc*f), v = (k + (o.sd & 3)) & 3;
+    const x = X(sh*f*f + Math.sin(s*0.7 + k*1.3)*rs*0.05), y = Y(-h), tone = f < 0.28 ? 'dust' : 'mush', rx = rs*kr*1.25*(0.88 + 0.24*fxh(o.sd + k*7)), ry = rx*(1 + 0.8*wfxSm(0.1, 0.4, f));
+    stem(tone, v, x, y, rx, ry, a);
+    if (warm > 0.05 && f > 0.4) wfxSpr(wfxFire(v), wfxFire(v, true), x, y, rs*kr*0.7, rs*kr*0.7*ry/rx, fade*0.45*warm*f*Math.min(1, 14/ns), 'lighter');
     /*@TEST*/if (dbg) dbg.push([e.id + ':m' + k, x, y, ks, view.x, view.y]);/*@ENDTEST*/ }
   const cx = X(sh), cy = Yc(0), ca = fade*(1 - heat*0.6);
   // the cap's body first: broad overlapping masses (its shadowed underside, then its middle), so the rolling lobes over it read as one cloud
   puff('grey', (o.sd >> 3) & 3, cx, Yc(rc*0.26), rc*kr*1.02, rc*kr*0.42, ca*0.95);
   for (let j = -1; j <= 1; j++) puff('mush', (j + 2 + (o.sd & 1)) & 3, X(sh + j*rc*0.42), Yc(-rc*0.08 + Math.abs(j)*rc*0.06), rc*kr*(j ? 0.66 : 0.82), rc*kr*(j ? 0.5 : 0.6), ca);
+  wfxOcc(cx, Yc(0), rc*kr*0.95, rc*kr*0.55, ca*0.95);
   // the rolling torus: lobes round its rim (up through the middle, down the outside), the far side first; no lobe strays off the cap
   const L = [], rho = rc*0.6, rm = rc*0.3, om = -0.42;
   for (let j = 0; j < o.nc; j++){ const th = j/o.nc*Math.PI*2 + (rnd() - 0.5)*0.18, ph = rnd()*Math.PI*2 + s*om*(0.9 + 0.2*rnd()), lr = rc*0.4*(0.92 + 0.16*rnd()), v = rnd()*4 | 0;
@@ -4169,7 +4223,7 @@ function wfxMush(e, o, t, bx, by, ks, kr, fd, nt){ const T = o.d, u = t/T, s = t
   for (let j = 0; j < 5; j++){ const a0 = j/5*Math.PI*2 + rnd()*0.5, d0 = (0.2 + 0.5*rnd())*rho, z = d0*Math.sin(a0); L.push({x:d0*Math.cos(a0), y:-rm*(0.75 + 0.2*rnd()) - z*0.2, z, lr:rc*(0.36 + 0.06*rnd()), up:1, v:j & 3, id:'d' + j}); }   // its dome
   L.sort((a, b) => b.z - a.z);
   for (const q of L){ const x = X(q.x + sh), y = Yc(q.y), lr = q.lr*kr, lit = q.up > -0.3;
-    puff(lit ? 'mush' : 'grey', q.v, x, y, lr, lr*0.9, ca*0.95);
+    puff(lit ? 'mush' : 'grey', q.v, x, y, lr, lr*0.9, ca*0.95); wfxOcc(x, y, lr*0.75, lr*0.68, ca*0.95);
     if (heat > 0.02) wfxSpr(wfxFire(q.v), wfxFire(q.v, true), x, y, lr*1.05, lr*1.05, fade*Math.min(1, heat*1.4), 'source-over');
     if (warm > 0.04 && !lit) wfxSpr(wfxFire(q.v), wfxFire(q.v, true), x, y, lr*0.7, lr*0.7, fade*0.5*warm, 'lighter');   // the underside still glows from the fire below
     /*@TEST*/if (dbg) dbg.push([e.id + ':c' + q.id, x, y, ks, view.x, view.y]);/*@ENDTEST*/ }
@@ -4195,10 +4249,11 @@ function wfxDrawBurn(){ const h0 = S.hour + (S.speed && !S.over ? acc : 0), gt =
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; return on; }
 function drawWFX(now){ wfxSync(); if (!WFX.list.length && !WFX.burn.length) return; const t0 = /*@TEST*/WFX.fz ||/*@ENDTEST*/ now;
   WFX.area = 0; WFX.bud = (SET.fx === 'low' ? 3 : 5)*cw*ch*Math.max(0.5, FXG.k); ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const burn = WFX.burn.length ? wfxDrawBurn() : false; let run = false;
+  const burn = WFX.burn.length ? wfxDrawBurn() : false, occ = []; let run = false;
   for (let i = 0; i < WFX.list.length; i++){ const e = WFX.list[i], tau = Math.max(0, t0 - e.t0); if (tau >= e.d || (e.die != null && now >= e.die)){ WFX.list.splice(i--, 1); continue; }
-    const [x, y] = toScreen(e.wx, e.wy), kr = Math.max(view.s, WFX_MP[e.k]/e.R), ex = e.ext*kr, up = e.top*kr; if (x + ex < 0 || x - ex > cw || y + ex*0.6 < 0 || y - up > ch) continue;   // off screen: not drawn (its clock runs on)
-    run = true; wfxDrawOne(e, tau, now); }
+    const [x, y] = toScreen(e.wx, e.wy), kr = wfxKr(e), ex = e.ext*kr, up = e.top*kr; if (x + ex < 0 || x - ex > cw || y + ex*0.6 < 0 || y - up > ch) continue;   // off screen: not drawn (its clock runs on)
+    run = true; wfxDrawOne(e, tau, now); if (WFX.og.o.length) occ.push(WFX.og); }
+  WFX.occ = occ; WFX.og = null;   // (what this frame's effects hide: the next frame's names fade under it)
   ctx.restore(); if (run) animFast(); else if (burn && S.speed && !S.over) animAmb(); }
 // (the veil fades on its own clock, so it can never stay up when the map stops drawing: a menu, the globe, the tab hidden)
 function wfxVeil(a, d){ let v = WFX.veil; if (!v){ if (!(a > 0)) return; v = WFX.veil = document.createElement('div'); v.id = 'wfxveil'; v.setAttribute('aria-hidden', 'true');
@@ -4482,10 +4537,12 @@ function isNight(p){ return G.P[p] ? sunSinEl(p) < -0.04 : viewLight().day < 0.3
 function fxAdd(type, p, extra = {}){ if (!booted) return;
   if (type === 'dmg' && extra.owner != null && extra.val != null){ const now = performance.now(), f0 = FX.find(f => f.type === 'dmg' && f.p === p && f.owner === extra.owner && now - f.t0 < 1000 && now - (f.born || f.t0) < 3500);
     if (f0){ f0.val += extra.val; f0.text = `−${Math.round(f0.val)}`; f0.t0 = now - 120; return; } }
-  if (type === 'dmg' || type === 'hits'){ const now = performance.now(); if (FX.some(f => f.type === type && f.p === p && now - f.t0 < 280 && (f.dx || 0) === (extra.dx || 0))) return; } FX.push({type, p, t0:performance.now(), born:performance.now(), ...extra}); if (FX.length > 90) FX.shift(); }
+  if (type === 'dmg'){ const now = performance.now(); if (FX.some(f => f.type === type && f.p === p && now - f.t0 < 280 && (f.dx || 0) === (extra.dx || 0))) return; } FX.push({type, p, t0:performance.now(), born:performance.now(), ...extra}); if (FX.length > 90) FX.shift(); }
+// the province's flashes and numbers over the map: a capture, a unit ready, a damage number (hits, strikes and wrecks are the strike and blast
+// effects, WFX: no drawn discs)
 function drawFX(now){
   for (let i = FX.length - 1; i >= 0; i--){ const f = FX[i], age = now - f.t0, P = G.P[f.p];
-    const dur = f.type === 'cap' ? 1400 : f.type === 'ready' ? 900 : f.type === 'dmg' ? 1300 : f.type === 'hits' ? 700 : f.type === 'strike' ? 1300 : f.type === 'bombs' ? 900 : 1100; if (age > dur){ FX.splice(i, 1); continue; }
+    const dur = f.type === 'cap' ? 1400 : f.type === 'ready' ? 900 : f.type === 'dmg' ? 1300 : 1100; if (age > dur){ FX.splice(i, 1); continue; }
     const k = Math.max(0, age/dur), [x, y] = toScreen(P.x, P.y);
     if (f.type === 'cap'){
       ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.globalAlpha = (1 - k)*0.9;
@@ -4497,21 +4554,6 @@ function drawFX(now){
     } else if (f.type === 'dmg'){
       ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k)*1.6); ctx.font = `800 ${Math.round(14 + (1 - k)*3)}px ${BODY}`; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.9)';
       const kz = Math.min(2, zoomK(view.s*HS0)), cp = f.owner != null && CLPOS.get(f.p + ':' + f.owner), [ax, ay] = cp ? toScreen(cp[0], cp[1]) : f.wx != null ? toScreen(f.wx, f.wy) : [x + (f.dx || 0)*kz, y], tx = ax + (cp ? 22*kz : 0), ty = ay + (cp ? -34 : (f.dy || -30))*kz - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
-    } else if (f.type === 'hits'){
-      ctx.save(); plateClipOn(); ctx.globalCompositeOperation = 'lighter';
-      for (let j = 0; j < 5; j++){ const r0 = ((f.seed*(j + 1)*9301 + 49297) % 233280)/233280, r1 = ((f.seed*(j + 3)*7919 + 104729) % 233280)/233280;
-        const px2 = x + (r0 - 0.5)*44, py2 = y - 6 + (r1 - 0.5)*24, kk = Math.min(1, Math.max(0, (k - j*0.12)/0.5)); if (kk <= 0 || kk >= 1) continue;
-        ctx.globalAlpha = 1 - kk; ctx.fillStyle = kk < 0.3 ? '#fff1c4' : '#ff9a4a'; ctx.beginPath(); ctx.arc(px2, py2, 2 + kk*7, 0, Math.PI*2); ctx.fill(); }
-      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.35*(1 - k); ctx.fillStyle = '#3a3a36'; ctx.beginPath(); ctx.arc(x + Math.sin(f.seed)*10, y - 18 - k*14, 6 + k*10, 0, Math.PI*2); ctx.fill(); ctx.restore();
-    } else if (f.type === 'bombs'){
-      ctx.save(); plateClipOn(); for (let j = 0; j < 5; j++){ const kk = Math.min(1, Math.max(0, (k - j*0.08)/0.5)); if (kk >= 1) continue; ctx.fillStyle = '#1a1c1a'; ctx.beginPath(); ctx.arc(x - 14 + j*7, y - 60 + kk*56, 1.8, 0, Math.PI*2); ctx.fill(); } ctx.restore();
-    } else if (f.type === 'strike'){
-      ctx.save(); plateClipOn(); ctx.globalCompositeOperation = 'lighter';
-      for (let j = 0; j < 7; j++){ const ang = j*0.9 + 0.3, rr = 8 + j*3, kk = Math.min(1, Math.max(0, (k - j*0.07)/0.6)); if (kk <= 0 || kk >= 1) continue;
-        ctx.globalAlpha = 1 - kk; ctx.fillStyle = kk < 0.35 ? '#fff4d0' : '#ff8a3a'; ctx.beginPath(); ctx.arc(x + Math.cos(ang)*rr, y - 4 + Math.sin(ang)*rr*0.5, 3 + kk*9, 0, Math.PI*2); ctx.fill(); }
-      ctx.restore();
-    } else if (f.type === 'boom'){
-      ctx.save(); plateClipOn(); ctx.globalAlpha = (1 - k)*0.8; ctx.fillStyle = '#ffb08a'; ctx.beginPath(); ctx.arc(x, y - 24, 6 + k*20, 0, Math.PI*2); ctx.fill(); ctx.restore();
     } } }
 let booted = false;
 function toastShow(text, kind, p){
@@ -4935,7 +4977,7 @@ const FXQ = []; FXQ.clk = 0; FXQ.gt = 0;   // clk: the queue's clock; gt: the am
 function fxLater(ms, fn){ if (FXQ.length > 400) FXQ.shift(); FXQ.push({t:FXQ.clk + ms, fn}); }
 function fxDrain(now){ const dt = Math.min(250, Math.max(0, now - (FXQ.last || now))); FXQ.last = now; if (S && S.speed > 0 && !S.over) FXQ.gt += dt; if (!S || !(S.speed > 0) || !FXQ.length) return; FXQ.clk += dt;
   for (let i = 0; i < FXQ.length; i++){ const q = FXQ[i]; if (q.t > FXQ.clk) continue; FXQ.splice(i--, 1); try { q.fn(); } catch (e){ console.error(e); } } }
-function strikeFX(p, v, bld){ fx('strike', p); const P = G.P[p]; afxMark(p, 24);   // (bld: buildings were hit: large blasts)
+function strikeFX(p, v, bld){ const P = G.P[p]; afxMark(p, 24);   // (bld: buildings were hit: large blasts)
   for (let i = 0; i < 5; i++) fxLater(120 + i*170, () => { const [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*9, 6); FXW.blast(bld && i % 2 === 0 ? 'L' : 'M', ex, ey, {sea:P.sea}); });
   sfx('boom'); }
 function wingPos(a){
@@ -8051,7 +8093,7 @@ function draw(now){ draw.now = now;
       const lx = x + best.dx, ly = y + best.dy, sz = best.ss, ww = best.ww; pnFont(sz);
       { const pb = boxOf(best); pb.you = you; pnB.push(pb); boxes0.push(pb); /*@TEST*/if (pnDbg) pnDbg.push({n:S.nations[n].name, x:Math.round(lx), y:Math.round(ly), sz, w:Math.round(ww), b:pb.map(Math.round), a:+pa.toFixed(2)});/*@ENDTEST*/ }
       // a soft shadow lifts it off the relief instead of a heavy outline; yours a little brighter, the rest a quiet warm grey
-      ctx.globalAlpha = pa; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = Math.min(4, 1.5 + sz*0.12); ctx.shadowOffsetY = 1;
+      ctx.globalAlpha = pa*(1 - Math.min(1, wfxCover(lx, ly, ww)*1.15)); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = Math.min(4, 1.5 + sz*0.12); ctx.shadowOffsetY = 1;
       ctx.fillStyle = you ? 'rgba(246,242,228,.8)' : 'rgba(226,222,208,.56)'; ctx.fillText(txt, lx + sz*0.125, ly); ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
     ctx.letterSpacing = '0px'; ctx.restore(); };
   // place labels: highest rank first, skip any that would overlap one already placed
@@ -8090,9 +8132,10 @@ function draw(now){ draw.now = now;
           if (bs > 0 && !(mine && bs < 1e7)) { if (!mine) continue; bk = b0; }
           for (let i = 0; i < 4; i++) b[i] = bk[i]; lx = b[0] + w/2; ly = b[1] + 1; late = !coreA(b); } }
       if (L.city || L.cap){ b.city = true; cityNames.push({p:L.p, b}); } boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; }
-      /*@TEST*/if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0});/*@ENDTEST*/
+      { const hid = wfxCover(lx, ly + f/2, w); if (hid > 0) L.a *= 1 - Math.min(1, hid*1.15); }   // (a name under a live blast or cloud fades with it; its place is kept)
+      /*@TEST*/if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0, a:+L.a.toFixed(3)});/*@ENDTEST*/
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
-      else { labNight(L, lx, ly); ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
+      else if (L.a > 0.01){ labNight(L, lx, ly); ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
     if (!trCity) trays = placeTrays(trq, boxes, LPL, true, hexPx); trays = trays.concat(placeTrays(trq, boxes, LPL, false, hexPx));
     ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   if (!pnDone) placePN(false);   // (once the province names are up, the other powers' names come last)
@@ -8167,7 +8210,7 @@ function draw(now){ draw.now = now;
       const nv = lastVolley.get(c.list[0].id); volley(c, volType(c), an, now, 20, pcx + ca*t, pcy + sa*t, false); if (lastVolley.get(c.list[0].id) !== nv) volN.set(c.at, (volN.get(c.at) || 0) + 1); }
   } } finally { counter.defer = null; VOLA = 1; }
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
-  if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ ctx.font = font; labNight(L, lx, ly); ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
+  if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ if (L.a <= 0.01) continue; ctx.font = font; labNight(L, lx, ly); ctx.globalAlpha = L.a; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = '#f4eedc'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   /*@TEST*/if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null, tba:capTagAt ? capTagAt.a ?? 1 : null,
     pn:pnDbg, lab:labDbg, mk:cityPts.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:BATB.map(B => [B.x0, B.y, B.w, B.h, B.p])};/*@ENDTEST*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
@@ -10402,7 +10445,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get figc(){ return FIGC.size; }, get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx === 'low' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
-if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
+if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BLOD:{get:() => BLOD}, hits:{get:() => hits}, season:{value:p => season(p)}});   // battle LOD booms and shells (fix 4-3)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
@@ -10496,14 +10539,13 @@ function battleBlasts(p, owners, sides, lostBy){ const B = S.bt && S.bt[p], P = 
   jobs.slice(0, cap).forEach(([z, at], i, J) => fxLater(i*span/J.length + Math.random()*span*0.25/J.length, () => FXW.blast(z, ...fxOff(at[0] + (Math.random() - 0.5)*5, at[1] + (Math.random() - 0.5)*3, 2), {sea:P.sea}))); }
 IM.on('fxBattle', (p, owners, sides, list) => { const showFx = owners.includes(PLAYER) || visibleSet(PLAYER).has(p), lostBy = [];
   if (showFx) owners.forEach((o, i) => { const lost = lostBy[i] = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
-  if (showFx) fx('hits', p, {seed:Math.random()*1000});
-  if (showFx && booted) battleBlasts(p, owners, sides, lostBy);   // a blast for each kind of unit lost this hour, sized by its class
+  if (showFx && booted) battleBlasts(p, owners, sides, lostBy);   // the hour's hits: a blast for each kind of unit lost, sized by its class (the only blasts of the hour: no drawn discs or sprite pops beside them)
   if (showFx && booted){ const P = G.P[p], nB = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0);   // visual only (Math.random, never rng)
-    for (let j = 0; j < 2; j++) afxBoom(P.x + (Math.random() - 0.5)*12, P.y + (Math.random() - 0.5)*7, 0.7 + Math.random()*0.4, true);
     if (!P.sea && nB >= 6 && Math.random() < Math.min(0.7, nB/30)) afxCrater(P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8, 2 + Math.min(2.5, nB/12), {a:0.7, life:60});
     if (!P.sea && P.coast) for (const sz of P.nbs){ if (!G.P[sz].sea) continue; const sh = S.armies.find(a => a.at === sz && a.to === null && owners.includes(a.owner) && shipsN(a) > 0); if (!sh) continue;
       const Z = G.P[sz]; for (let j = 0; j < Math.min(3, shipsN(sh)); j++) setTimeout(() => shoot('shell', [Z.x + (Math.random() - 0.5)*6, Z.y + (Math.random() - 0.5)*4], [P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8], {dur:1100, arc:44, big:1.15}), j*260); break; } } });
-IM.on('fxWreck', (p, owners) => { if (!(owners.includes(PLAYER) || visibleSet(PLAYER).has(p))) return; fx('boom', p); if (booted){ const P = G.P[p]; WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); FXW.blast(P.sea ? 'L' : 'M', ...fxOff(P.x, P.y, 6), {sea:P.sea}); } });
+IM.on('fxWreck', (p, owners) => { if (!(owners.includes(PLAYER) || visibleSet(PLAYER).has(p)) || !booted) return; const P = G.P[p];   // the wreck burns on; its blast (no drawn disc beside it)
+  WRECKS.push({wx:P.x + (Math.random() - 0.5)*10, wy:P.y + (Math.random() - 0.5)*6, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); FXW.blast(P.sea ? 'L' : 'M', ...fxOff(P.x, P.y, 6), {sea:P.sea}); });
 // the hour is over: mark the forces that set off next hour, so their counters keep rolling
 IM.on('hour', goScan);
 // the morning paper was printed: show the front page on a big day; the day's achievements; the midnight autosave
