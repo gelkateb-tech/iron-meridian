@@ -37,3 +37,4 @@ How it works from now on:
 - v3.10 — Test build with developer mode and a public build with all dev/test code stripped at build time.
 - v3.9 — Sleek counters, mixed-stack icon, troop models, nothing moves while zooming.
 - War declarations and the Diplomacy list no longer say whose army is stronger unless you have intel on them (an identified force in sight: recon drones, satellites, units that have seen them); otherwise they say 'Strength unknown without intel', and the war-warning border list says the same.
+- Troops at sea now sail at transport speed, about 325 km/day (under half their land speed, was almost the same); warships keep their speeds.
