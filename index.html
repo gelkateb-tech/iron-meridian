@@ -1294,17 +1294,37 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .mk i.on{background:rgba(79,208,222,.25); border-color:var(--cn-teal)}
 /* cities list */
 .clist{display:flex; flex-direction:column; gap:0; border-top:1px solid var(--sep)}
-.crow{display:grid; grid-template-columns:auto minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); align-items:center; gap:12px; width:100%; padding:9px 8px; text-align:left;
+.crow{display:grid; grid-template-columns:44px minmax(150px, 1.1fr) minmax(190px, 1.25fr) minmax(190px, 1.25fr) auto; align-items:center; gap:12px; width:100%; padding:10px 10px; text-align:left;
   border:0; border-radius:0; border-bottom:1px solid var(--sep); background:transparent; color:var(--fg); cursor:pointer; transition:background .15s}
 .crow:hover{background:var(--hov); box-shadow:inset 2px 0 0 var(--cn-teal)}
+.crow:focus-visible{outline:2px solid var(--cn-teal); outline-offset:-2px}
+.crow .cf{display:grid; place-items:center; width:44px; height:44px}
 .crow .cn{display:flex; flex-direction:column; gap:3px; min-width:0}
-.crow .cn b{font-size:14.5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .crow .capst{font-style:normal; color:var(--cn-gold)}
+.crow .cn b{font-size:15px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .crow .capst{font-style:normal; color:var(--cn-gold)}
 .crow .cl{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--cn-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.crow .cl > span{overflow:hidden; text-overflow:ellipsis}
 .crow .clv{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 3px; font:700 11px/1 var(--body); font-style:normal; color:#fff; background:#2b3c43; box-shadow:inset 0 0 0 1px var(--cn-edge); border-radius:2px}
-.crow .cq, .crow .cc{display:flex; align-items:center; gap:7px; min-width:0; font-size:12.5px} .crow .cq > span, .crow .cc > span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.crow .cc .bi{margin:0}
+.crow .cbx{display:flex; align-items:center; gap:10px; min-width:0}
+.crow .cbx .cs-bi{width:44px; height:44px} .crow .cbx .cs-bi svg{width:26px; height:26px} .crow .cbx .cs-mi.tr > .ut{--us:44px}
+.crow .ct{display:flex; flex-direction:column; gap:2px; min-width:0}
+.crow .ct b{font-size:13px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.crow .ct em{font-style:normal; font-size:12px; color:var(--cn-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.crow .sl{display:inline-flex; align-items:center; gap:3px; margin-top:1px}
+.crow .sl i{width:8px; height:8px; border:1.5px solid #86b0ba; border-radius:50%; box-sizing:border-box} .crow .sl i.on{background:var(--cn-teal); border-color:var(--cn-teal)}
+.crow .sl small{margin-left:3px; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--cn-fg2)} .crow .sl.full small{color:#ffcf7a}
+.crow .ca{display:flex; gap:6px}
+.crow .cbtn{padding:8px 13px; min-height:36px; font-size:13px; font-weight:600; white-space:nowrap}
 .crow .idle, .rhead .idle{color:#ff9d95; font-weight:600}
-@media (max-width:640px){ .crow{grid-template-columns:auto minmax(0, 1fr); gap:4px 10px} .crow .cf{grid-row:span 3} .crow .cq, .crow .cc{grid-column:2} }
+.crow.idle .ct b.idle{color:#ffb4ac}
+.csort{display:flex; align-items:center; gap:0; flex-wrap:wrap; padding:9px 10px; border-top:1px solid var(--sep)}
+.csort .cslbl{margin-right:10px; font:700 11px/1 var(--body); letter-spacing:.14em; text-transform:uppercase; color:var(--cn-fg2)}
+.csort button{padding:7px 14px; min-height:34px; font:600 13px/1 var(--body); color:var(--cn-fg2); background:rgba(12,18,22,.45); border:1px solid var(--cn-edge); border-radius:0; cursor:pointer}
+.csort button + button{margin-left:-1px} .csort button:hover{color:#fff; background:rgba(79,208,222,.12)}
+.csort button.on{color:#fff; background:linear-gradient(180deg, #2a8696, #1d6674); border-color:#7fd3df}
+.csort button:focus-visible{outline:2px solid var(--cn-teal); outline-offset:1px; position:relative}
+@media (max-width:1000px){ .crow{grid-template-columns:44px minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr)} .crow .ca{grid-column:2 / -1} }
+@media (max-width:640px){ .crow{grid-template-columns:44px minmax(0, 1fr); gap:8px 10px; padding:11px 8px} .crow .cbx{grid-column:1 / -1} .crow .ca{grid-column:1 / -1} .crow .ca .btn{flex:1}
+  .crow .cbx .cs-bi{width:40px; height:40px} .crow .cbx .cs-mi.tr > .ut{--us:40px} .csort{flex-wrap:nowrap} .csort button{flex:1; padding:8px 4px} .csort .cslbl{margin-right:8px} }
 
 /* ---- overlays ---- */
 .toast::before{background:var(--cn-teal); box-shadow:0 0 8px rgba(79,208,222,.6)}
@@ -8729,16 +8749,30 @@ document.addEventListener('pointerdown', e => { const t = e.target;
 document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; let hit = false;
   if ($('mslmenu') && !$('mslmenu').hidden){ mslDD(false); hit = true; } if ($('morepop') && !$('morepop').hidden){ morePop(false); hit = true; }
   if (hit){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
-/* Cities (bottom nav): every city you hold, its level and population and what it is training and building; a row flies there and selects it */
-function citiesHTML(){ const N = S.nations[PLAYER], cities = G.P.filter(P => S.owner[P.id] === PLAYER && P.city).sort((a, b) => (b.id === N.capital) - (a.id === N.capital) || popOf(b.id) - popOf(a.id));
+/* Cities (bottom nav): every city you hold with its main resource, level, population and morale, what it is building and training (the same squares as the city
+   sheet's BUILD and MOBILIZE UNIT, with the free slots: one construction slot, queueMax training slots), and Build / Mobilize buttons that open that city's
+   lists right here (Back returns to this list). The rest of a row flies to the city. Sort: by city (capital first, then size), by main resource, idle first. */
+const CITY_SORTS = [['city', 'City', 'Capital first, then the biggest cities'], ['res', 'Resource', 'Grouped by main resource'], ['idle', 'Idle first', 'Cities with a free build or training slot on top']];
+let CITY_SORT = 'city'; try { const v = localStorage.getItem('im-cities-sort'); if (CITY_SORTS.some(x => x[0] === v)) CITY_SORT = v; } catch (e) {}
+let CMOD_FROM = '';   // 'cities' while the Build / Mobilize list of a city was opened from the Cities tab: its Back button returns there
+function citySort(cities, N){ const QM = queueMax(PLAYER), RK = RES.map(r => r.k), big = (a, b) => (b.id === N.capital) - (a.id === N.capital) || popOf(b.id) - popOf(a.id) || String(a.cityName).localeCompare(b.cityName),
+    free = P => (S.cons[P.id] ? 0 : 1) + (QM - Math.min(QM, queueUsed(P.id)))/QM;   // 2 = nothing built or trained, 0 = every slot busy
+  return cities.slice().sort(CITY_SORT === 'res' ? (a, b) => RK.indexOf(cityMain(a.id)) - RK.indexOf(cityMain(b.id)) || big(a, b) : CITY_SORT === 'idle' ? (a, b) => free(b) - free(a) || big(a, b) : big); }
+// slot pips: filled for each slot in use, hollow for each free one ("Train 1/2")
+const slotPips = (used, max, what) => `<span class="sl${used >= max ? ' full' : ''}" title="${what}: ${used} of ${max} slot${max === 1 ? '' : 's'} in use${used < max ? ', ' + (max - used) + ' free' : ''}">${'<i class="on"></i>'.repeat(Math.min(used, max))}${'<i></i>'.repeat(Math.max(0, max - used))}<small>${what} ${used}/${max}</small></span>`;
+function citiesHTML(){ const N = S.nations[PLAYER], cities = citySort(G.P.filter(P => S.owner[P.id] === PLAYER && P.city), N), QM = queueMax(PLAYER);
   const idle = cities.filter(P => !S.queue[P.id].length).length;
-  const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], lv = cityLevel(p);
-    const tr = q.length ? `${q[0].msl ? mslIcon(q[0].t, 18) : unitPic(q[0].t, 'xs')}<span>${(UNITS[q[0].t] || MISSILES[q[0].t]).name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1}` : ''}</span>` : '<span class="idle">Nothing in training</span>';
-    return `<button class="crow${q.length ? '' : ' idle'}" data-act="goto" data-id="${p}" title="Fly to ${P.cityName} and open it">
-      <span class="cf">${provFlagHTML(p, 22)}</span><span class="cn"><b>${P.cityName}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl"><i class="clv">${lv}</i>${p === N.capital ? 'Capital' : 'City'} · <span class="res-${cityMain(p)}" title="Main resource">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></span>
-      <span class="cq">${tr}</span><span class="cc">${c ? `${bimg(c.k, c.lvl, 18)}<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} · ${c.h} h</span>` : '<span class="muted">No construction</span>'}</span></button>`; }).join('');
+  const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], lv = cityLevel(p), mk = cityMain(p), used = queueUsed(p), q0 = q[0];
+    const bTxt = c ? `<b>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</b><em>${csTime(c.h)} left</em>` : `<b class="idle">No construction</b>${BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? '' : '<em>Fully built</em>'}`;
+    const tTxt = q0 ? `<b>${(UNITS[q0.t] || MISSILES[q0.t]).name}</b><em>${csTime(q0.h)} left${q.length > 1 ? ` · +${q.length - 1} waiting` : ''}</em>` : `<b class="idle">${csMobIdle(p)}</b>${used < QM ? '' : '<em>Queue full</em>'}`;
+    return `<div class="crow${q.length || c ? '' : ' idle'}" data-act="goto" data-id="${p}" role="button" tabindex="0" title="Fly to ${P.cityName} and open it">
+      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${P.cityName}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl"><i class="clv">${lv}</i>${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></span>
+      <span class="cbx" title="Construction${c ? '' : ': nothing is being built'}">${csBldIcon(p, c)}<span class="ct">${bTxt}${slotPips(c ? 1 : 0, 1, 'Build')}</span></span>
+      <span class="cbx" title="Training${q0 ? '' : ': nothing is being trained'}">${csMobIcon(q0)}<span class="ct">${tTxt}${slotPips(used, QM, 'Train')}</span></span>
+      <span class="ca"><button class="btn cbtn" data-act="cities-bld" data-id="${p}" title="Open ${P.cityName}'s construction list">Build</button><button class="btn cbtn" data-act="cities-mob" data-id="${p}" title="Open ${P.cityName}'s recruit list">Mobilize</button></span></div>`; }).join('');
+  const sortBar = `<div class="csort" role="group" aria-label="Sort the cities"><span class="cslbl">Sort</span>${CITY_SORTS.map(([k, nm, tip]) => `<button class="${CITY_SORT === k ? 'on' : ''}" data-act="cities-sort" data-v="${k}" aria-pressed="${CITY_SORT === k}" title="${tip}">${nm}</button>`).join('')}</div>`;
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} ${cities.length === 1 ? 'city' : 'cities'}${idle ? ` · <span class="idle">${idle} idle</span>` : ''}</div><h1>Cities</h1></div></div>
-    <div class="clist">${rows || '<p class="muted">You hold no cities.</p>'}</div>
+    ${sortBar}<div class="clist">${rows || '<p class="muted">You hold no cities.</p>'}</div>
     <div class="row"><button class="btn" data-act="prod-open">Production overview</button><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
 /* ---------------- v3.8: the city sheet (CoN layout) ----------------
    Selecting a land province slides a sheet up over the lower map: the holder's flag banner with the name and status, the morale bar and the
@@ -8851,12 +8885,12 @@ function csReveal(p){ setTimeout(() => requestAnimationFrame(() => { const el = 
 function csInfo(){ if (innerWidth <= 820){ CS.det = true; renderSide(true); const sd = $('side'); if (sd) sd.scrollTop = 0; return; }
   if (tab !== 'cmd'){ setTab('cmd'); renderSide(true); } const sd = $('side'), cx = $('ctx'); if (sd) sd.scrollTo({top:0, behavior:afxReduced() ? 'auto' : 'smooth'}); if (cx){ cx.classList.remove('cs-flash'); void cx.offsetWidth; cx.classList.add('cs-flash'); } }
 // a building card: its row in the BUILD panel (the city card and foreign cards open the detail)
-function csCard(k){ const p = sel.prov; if (p === null) return; if (k === 'city' || S.owner[p] !== PLAYER){ csInfo(); return; }
+function csCard(k){ const p = sel.prov; if (p === null) return; CMOD_FROM = ''; if (k === 'city' || S.owner[p] !== PLAYER){ csInfo(); return; }
   openModal(cbldHTML(p), 'cbld'); const r = $('sheet').querySelector(`.bld[data-bk="${k}"]`); if (r){ r.scrollIntoView({block:'center'}); r.classList.add('cs-flash'); } }
 // MOBILIZE UNIT and BUILD: the research-style title band over the city's recruit cards / construction list
 function cmodHead(p, title){ const N = S.nations[PLAYER], P = G.P[p], inc = income(PLAYER);
   const rk = k => { const R0 = RES.find(x => x.k === k), d = inc.net[k]; return `<div class="chip res-${k}" title="${R0.name}: ${R0.pre}${fmt(N[k])}${R0.unit}, ${d >= 0 ? '+' : ''}${fmt(d)} a day">${icon(k, 16)}<span class="cv"><span class="vv"><b>${R0.pre}${fmt(N[k])}${R0.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; };
-  return `<div class="rs-top"><div class="rs-head"><button class="rs-back" data-act="resume" aria-label="Back to the city" title="Back to ${P.city ? P.cityName : P.name}">${rg('back', 22)}</button>
+  return `<div class="rs-top"><div class="rs-head"><button class="rs-back" data-act="${CMOD_FROM === 'cities' ? 'cities-back' : 'resume'}" aria-label="Back to the ${CMOD_FROM === 'cities' ? 'Cities list' : 'city'}" title="Back to ${CMOD_FROM === 'cities' ? 'the Cities list' : P.city ? P.cityName : P.name}">${rg('back', 22)}</button>
       <div class="rs-ttl${title !== 'Build' && recHead(p) ? ' l3' : ''}"><h1>${title}</h1><span class="rs-cnt">${P.city ? P.cityName : P.name} · ${csStatus(p)}${P.city ? ' · level ' + ROMAN[cityLevel(p)] : ''}</span>${title !== 'Build' && recHead(p) ? `<span class="rs-cnt rs-rec">${recHead(p)}</span>` : ''}</div>
       <div class="rs-stk">${(title === 'Build' ? ['cash', 'metal', 'iron'] : ['cash', 'metal', 'mp']).map(rk).join('')}</div>
       <span class="rs-emb" aria-hidden="true"><span class="rs-embi">${flagHTML(PLAYER, 46)}</span></span>
@@ -9862,6 +9896,10 @@ document.addEventListener('click', e => {
     case 'start-tut-again': closeModal(); clearSel(); tutStart(); break;
     case 'research-open': if (modalKind !== 'research' || $('modal').hidden){ RV.br = null; RV.sel = null; } openModal(researchHTML(), 'research'); break;
     case 'cities-open': openModal(citiesHTML(), 'cities'); break;
+    case 'cities-sort': { const v = b.dataset.v; if (CITY_SORTS.some(x => x[0] === v)){ CITY_SORT = v; try { localStorage.setItem('im-cities-sort', v); } catch (e) {} setHTML($('sheet'), citiesHTML()); } break; }
+    case 'cities-bld': case 'cities-mob': { const p = +b.dataset.id, P = G.P[p]; if (!P || S.owner[p] !== PLAYER || (act === 'cities-mob' && !P.city)) break;
+      selectProv(p); CMOD_FROM = 'cities'; openModal(act === 'cities-mob' ? mobHTML(p) : cbldHTML(p), act === 'cities-mob' ? 'mob' : 'cbld'); break; }   // (the city's own lists, without leaving for the map; Back returns to the list)
+    case 'cities-back': CMOD_FROM = ''; openModal(citiesHTML(), 'cities'); break;
     case 'msl-dd': mslDD(); break;
     case 'more': morePop(); break;
     case 'msl-cell': { const k = b.dataset.k, M0 = MISSILES[k], sp = mslDDSync.silos || [];
@@ -9872,8 +9910,8 @@ document.addEventListener('click', e => {
     case 'airguide': openModal(airGuideHTML(), 'airguide'); break;
     case 'diplo-open': openModal(diploHTML(), 'diplo'); break;
     case 'prod-open': openModal(prodHTML(), 'prod'); break;
-    case 'cs-mob': if (sel.prov !== null && S.owner[sel.prov] === PLAYER && G.P[sel.prov].city) openModal(mobHTML(sel.prov), 'mob'); break;
-    case 'cs-bld': if (sel.prov !== null && S.owner[sel.prov] === PLAYER) openModal(cbldHTML(sel.prov), 'cbld'); break;
+    case 'cs-mob': CMOD_FROM = ''; if (sel.prov !== null && S.owner[sel.prov] === PLAYER && G.P[sel.prov].city) openModal(mobHTML(sel.prov), 'mob'); break;
+    case 'cs-bld': CMOD_FROM = ''; if (sel.prov !== null && S.owner[sel.prov] === PLAYER) openModal(cbldHTML(sel.prov), 'cbld'); break;
     case 'cs-card': csCard(b.dataset.k); break;
     case 'cs-info': csInfo(); break;
     case 'cs-back': CS.det = false; renderSide(true); break;
@@ -10001,6 +10039,7 @@ document.addEventListener('change', e => { const el = e.target; if (!el || !el.d
   if (el.dataset.act === 'deal-res'){ DEAL[side][el.dataset.k] = Math.max(0, Math.round(+el.value || 0)); openModal(nationHTML(NATV), 'nation'); }
   else if (el.dataset.act === 'deal-prov' && el.value){ DEAL[side].provs.push(+el.value); openModal(nationHTML(NATV), 'nation'); }
   else if (el.dataset.act === 'deal-tr'){ const k = el.dataset.k; DEAL[side].treaty = el.checked ? [...new Set([...DEAL[side].treaty, k])] : DEAL[side].treaty.filter(x => x !== k); openModal(nationHTML(NATV), 'nation'); } });
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('crow')){ e.preventDefault(); e.target.click(); } });   // a Cities row is a div with role=button
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'chatin'){ e.preventDefault(); const b0 = document.querySelector('[data-act="chat-send"]'); if (b0) b0.click(); } });
 document.addEventListener('focusout', e => { if (e.target.classList && e.target.classList.contains('rn')) setTimeout(() => { if (renaming !== null){ renaming = null; renderSide(true); } }, 0); });
 document.addEventListener('change', e => { const el = e.target;
@@ -10093,10 +10132,10 @@ let pickDiff = 'regular', pickDoc = null, pickScn = 'world', pickLen = Infinity,
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel', 'cities', 'mob', 'cbld'];
-function openModal(html, kind = ''){ modalKind = kind;
+function openModal(html, kind = ''){ modalKind = kind; if (kind !== 'mob' && kind !== 'cbld') CMOD_FROM = '';
   // a bar tab still holding focus (More after its menu, or the last tab used) lets it go when another window opens, so only that window's tab reads as active
   { const fe = document.activeElement; if (fe && fe.closest && fe.closest('#dock') && fe.dataset.kind !== kind) fe.blur(); }
-  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research'){ ftipAsk('research'); rHint(); } $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
+  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'cities' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research'){ ftipAsk('research'); rHint(); } $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
 // in-game panels with a title band get CoN's red close box in it (added after each render, so every panel has one without touching its markup)
 new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
   const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
@@ -10108,7 +10147,7 @@ function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || af
   Object.assign(g.style, {left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px', maxHeight:'none'}); const st = sh.scrollTop;
   const bd = document.createElement('div'); bd.className = 'mghost'; if (m.classList.contains('docked')) bd.style.left = m.getBoundingClientRect().left + 'px';
   document.body.append(bd, g); g.scrollTop = st; setTimeout(() => { g.remove(); bd.remove(); }, 240); }
-function closeModal(restore = true){ sheetGhost(); $('modal').hidden = true; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
+function closeModal(restore = true){ sheetGhost(); $('modal').hidden = true; CMOD_FROM = ''; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
 // small line icons (own art, 24x24, stroke) for the briefing tips and the first-time tips
 const TIP_ICO = {
   recruit:'<path d="M3 20V10l4-2v12M7 20V6l5-2v16M12 20V9l4 2v9M16 20h5M2 20h20"/><path d="M19 5v5M16.5 7.5h5" />',
