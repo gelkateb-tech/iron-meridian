@@ -8492,7 +8492,7 @@ function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; 
   if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') + '<span class="sep"></span>' + b('clear', '✕', 'Deselect', 'Esc');
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
   return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
-    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null)
+    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null, 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
     + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : '') + b('clear', '✕', 'Close', 'Esc'); }
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || dropFor !== null || !!aimMsl); }
@@ -9412,7 +9412,7 @@ function armyHTML(a){
       <button class="btn" data-act="split-open" ${count(a) < 2 ? 'disabled' : ''} title="Choose exactly which units leave: per unit type, damaged units apart, several groups at once">Split…</button>
       <button class="btn" data-act="split" ${count(a) < 2 ? 'disabled' : ''}>Split in half</button>
       <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one."`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
-      <button class="btn" data-act="stop" ${!a.path.length ? 'disabled' : ''}>Halt</button>
+      <button class="btn" data-act="stop" ${!a.path.length && a.to === null ? 'disabled' : ''} title="Stop right now, where the force stands">Halt</button>
       <button class="btn" data-act="prov" data-id="${a.to !== null ? a.to : a.at}" ${G.P[a.to !== null ? a.to : a.at].sea ? 'disabled' : ''}>${a.to === null && S.owner[a.at] === PLAYER ? (G.P[a.at].city ? 'Recruit / build here' : 'Build here') : 'Province'}</button>
       <button class="btn" data-act="clear">Deselect</button>
     </div>
@@ -9601,7 +9601,7 @@ document.addEventListener('click', e => {
     case 'sp-inc': case 'sp-dec': if (a && SPLIT){ const k = b.dataset.k; spSet(a, k, (SPLIT.plan[SPLIT.g][k] || 0) + (act === 'sp-inc' ? 1 : -1)); renderSide(true); } break;
     case 'sp-go': if (a && SPLIT){ const n0 = count(a), out = splitPlan(a, SPLIT.plan, counterSpot(a)); SPLIT = null; if (out.length){ sfx('order'); toast(`Split ${n0} units into ${out.length + 1} forces: ${[a, ...out].map(count).join(' · ')}.`, 'info', null); selectArmy(out[0].id); } else renderSide(true); } break;
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty(); renderSide(true); } break;
-    case 'stop': if (a){ a.path = []; delete a.join; delete a.escort; renderSide(true); } break;
+    case 'stop': if (a){ haltArmy(a); redraw(); renderSide(true); } break;
     case 'recruit': if (sel.prov !== null){ const why = canMobilize(PLAYER, sel.prov, b.dataset.t); if (why){ toast(`${UNITS[b.dataset.t].name}: ${why}.`, 'info', sel.prov); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; } }
       if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
       if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
@@ -9786,7 +9786,7 @@ document.addEventListener('keydown', e => { INCC.v = -1;
   else if (e.key === 'a' || e.key === 'A'){ if (modalKind === 'armies') closeModal(); else if ($('modal').hidden) openModal(armiesHTML(), 'armies'); }
   else if ((e.key === 'm' || e.key === 'M') && sel.army !== null && $('modal').hidden){ cmdMode = cmdMode === 'move' ? null : 'move'; renderSide(true); }
   else if ((e.key === 'k' || e.key === 'K') && sel.army !== null && $('modal').hidden){ cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); }
-  else if ((e.key === 'x' || e.key === 'X') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a){ a.path = []; a.chase = null; renderSide(true); } }
+  else if ((e.key === 'x' || e.key === 'X') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a && a.owner === PLAYER){ haltArmy(a); redraw(); renderSide(true); } }
   else if ((e.key === 'l' || e.key === 'L') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } }
   else if (e.key === '.' || e.key === 'Tab'){ if ($('modal').hidden){ e.preventDefault(); nextIdle(); } }
   else if (e.key === 'p' || e.key === 'P'){ if (modalKind === 'prod') closeModal(); else if ($('modal').hidden) openModal(prodHTML(), 'prod'); }

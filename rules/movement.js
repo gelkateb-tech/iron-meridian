@@ -227,6 +227,21 @@ function orderMove(a, target){
   else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
   IM.emit('ordered', a);   // (display only: the client marks where the counter starts from)
 }
+// HALT: stop a force right now, exactly where it is. Movement is province to province (a.at -> a.to, a.t = 0..1 along the leg), but an idle force
+// may stand at any point (a.pos), so a force on the road halts AT that point: it becomes the nearer province's force (like a head-on clash does)
+// with a.pos set to the exact spot, so the unfinished leg is dropped and it does not walk on to the far end. If the nearer province is of the other
+// kind (land vs sea) the force stays registered in the province it left, still standing at the exact spot. Also cancels queued legs and chase/join/escort.
+function haltArmy(a){
+  if (a.air){ if (a.fly) return false; a.path = []; return true; }
+  if (a.to !== null){
+    const A = G.P[a.at], B = G.P[a.to], p1 = a.legFrom || [A.x, A.y], p2 = !a.path.length && a.dest && a.dest.p === a.to ? [a.dest.x, a.dest.y] : [B.x, B.y], t = Math.max(0, Math.min(1, a.t)), spot = [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t];
+    const near = t >= 0.5 && !!B.sea === !!A.sea ? a.to : a.at;
+    if (near !== a.at){ a.from = a.at; a.froms = [a.at]; a.at = near; }
+    a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = spot; }
+  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort;
+  IM.emit('halted', a);   // (display only)
+  return true;
+}
 function canProceed(a){
   if (a.delay > 0) return false;
   if (a.forced) return true;
