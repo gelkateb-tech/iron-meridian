@@ -8980,13 +8980,16 @@ function settingsHTML(){
     <div class="small muted">Keys: Space pause · 1–3 speed · P production · R research · D diplomacy · T market · A army · S statistics · N newspaper · O settings · V map mode · M sound · H home · ? manual ${itip('Mouse: left-click selects, a second click on the same target sends; right-click with a force selected moves or attacks at once; click an enemy force to pursue it. Keys: M move · K attack · L delay · X halt · Ctrl+4…9 save a group, 4…9 recall it.')}</div>
     <div class="row"><button class="btn primary" data-act="resume">Done</button><button class="btn" data-act="tut-start">Replay tutorial</button></div>`;
 }
+// WAR DECLARATIONS / DIPLOMACY: an enemy's strength is shown only with intel (an identified force of theirs in sight: recon drone, satellite, units that have seen them);
+// AWACS 'located' contacts do not count. Otherwise the text says 'Strength unknown without intel'.
+function haveIntelOn(n){ const vis = visibleSet(PLAYER); return S.armies.some(a => a.owner === n && armyVisible(a, vis)); }
 function diploHTML(){
   const me = PLAYER, myP = natPower(me);
   const offers = S.offers.map(o => o.kind === 'trade' ? `<div class="offer"><span>${flagSVG(o.from)} <b style="color:${S.nations[o.from].color}">${S.nations[o.from].name}</b> proposes a trade: ${dealText(o.deal, 'they')}. Expires in ${o.exp - S.hour} h.</span><button class="btn primary" data-act="offer-yes" data-id="${o.id}">Accept</button><button class="btn" data-act="offer-no" data-id="${o.id}">Decline</button></div>` : `<div class="offer"><span>${flagSVG(o.from)} <b style="color:${S.nations[o.from].color}">${S.nations[o.from].name}</b> proposes ${{peace:'peace (10-day truce)', nap:'a non-aggression pact', pass:'right of passage', ally:'an alliance'}[o.kind]}${o.kind === 'peace' ? `. Terms: ${termsText(PLAYER, o.from, warTerms(PLAYER, o.from), PLAYER)}` : ''}. Expires in ${o.exp - S.hour} h.</span><button class="btn primary" data-act="offer-yes" data-id="${o.id}">Accept</button><button class="btn" data-act="offer-no" data-id="${o.id}">Decline</button></div>`).join('');
   const incoming = S.decl.filter(d => d.to === me).map(d => `<div class="offer" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)"><span><b>${S.nations[d.by].name}</b> has declared war on you. Fighting starts in ${d.at - S.hour} h.</span></div>`).join('');
   const rows = S.nations.filter(N => N.id !== me && N.alive).map(N => {
     const r = rel(me, N.id), op = opinion(N.id, me), parts = opinionParts(N.id, me), pend = S.decl.find(d => (d.by === me && d.to === N.id) || (d.by === N.id && d.to === me));
-    const ratio = natPower(N.id)/Math.max(1, myP), strength = ratio < 0.7 ? 'Weaker' : ratio > 1.4 ? 'Stronger' : 'Similar';
+    const ratio = natPower(N.id)/Math.max(1, myP), strength = !haveIntelOn(N.id) ? 'Strength unknown without intel' : (ratio < 0.7 ? 'Weaker' : ratio > 1.4 ? 'Stronger' : 'Similar') + ' military';
     const wars = warsOf(N.id).filter(m => m !== me).map(m => S.nations[m].name);
     const left = r.until ? ` · ${Math.ceil((r.until - S.hour)/24)}d` : '';
     const opW = Math.abs(op)/2, opL = op >= 0 ? 50 : 50 - opW;
@@ -9018,7 +9021,7 @@ function diploHTML(){
       bs.forEach(x => { if (x !== prim) x.classList.remove('primary'); }); direct.forEach(x => { x.classList.toggle('primary', !prim || !prim.classList.contains('primary') ? x.dataset.k === 'chat' : false); x.style.cssText = 'padding:3px 9px;font-size:12px'; });   // one amber action per row
       acts = direct.map(x => x.outerHTML).join('') + (prim ? prim.outerHTML : '') + (bs.length > 1 ? `<details class="more"><summary class="btn">More ▾</summary><div class="morebox">${bs.filter(x => x !== prim).map(x => x.outerHTML).join('')}</div></details>` : ''); }
     return {op, war:r.st === 'war' || !!pend, nb:borders(me, N.id), html:`<div class="drow" style="--c:${N.color}">
-      <div class="nm"><b>${flagHTML(N.id, 18)} ${N.name}${(B => B ? ` <span class="bmark" title="${B.name}">${blocEmbHTML(B.id, 18)}</span>` : '')(blocOf(N.id))}${S.unread && S.unread[N.id] ? ` <span class="badge">${S.unread[N.id]}</span>` : ''}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength} military${wars.length ? ' · at war with ' + wars.join(', ') : ''}${(tr0 => tr0 ? ` · trade +$${fmt1(trSide(tr0, me).cash*tr0.f)}M/day${tr0.f < 1 ? ' (cut)' : ''}` : '')(S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)))}</span></div>
+      <div class="nm"><b>${flagHTML(N.id, 18)} ${N.name}${(B => B ? ` <span class="bmark" title="${B.name}">${blocEmbHTML(B.id, 18)}</span>` : '')(blocOf(N.id))}${S.unread && S.unread[N.id] ? ` <span class="badge">${S.unread[N.id]}</span>` : ''}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength}${wars.length ? ' · at war with ' + wars.join(', ') : ''}${(tr0 => tr0 ? ` · trade +$${fmt1(trSide(tr0, me).cash*tr0.f)}M/day${tr0.f < 1 ? ' (cut)' : ''}` : '')(S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)))}</span></div>
       <div><span class="rel" style="--rc:${REL_COLOR[r.st]}">${REL[r.st]}${left}</span><div class="opbar" title="${tipTxt}"><i style="left:${opL}%;width:${opW}%;background:${op >= 0 ? 'var(--ok)' : 'var(--danger)'}"></i></div><span class="small muted">Opinion of you: ${op > 0 ? '+' : ''}${Math.round(op)}</span></div>
       <div class="dacts">${acts}${hint ? `<span class="hint">${hint}</span>` : ''}</div></div>`};
   });
@@ -10021,11 +10024,12 @@ function warWarning(a){
   const E = S.nations[a];
   const front = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && P.nbs.some(v => S.owner[v] === a));
   const near = P => { const seen = new Set([P.id]); let fr = [P.id]; for (let d = 0; d < 3; d++){ const nx = []; for (const u of fr) for (const v of G.P[u].nbs) if (!seen.has(v)){ seen.add(v); nx.push(v); } fr = nx; } return seen; };
-  const threat = front.map(P => ({P, foe:(ns => S.armies.filter(x => x.owner === a && !x.air && ns.has(x.at)).reduce((s1, x) => s1 + power(x), 0))(near(P)),
+  const vis0 = visibleSet(PLAYER), intel = haveIntelOn(a);   // only identified enemy forces are counted; no intel, no strength figures
+  const threat = front.map(P => ({P, foe:(ns => S.armies.filter(x => x.owner === a && !x.air && ns.has(x.at) && armyVisible(x, vis0)).reduce((s1, x) => s1 + power(x), 0))(near(P)),
     mine:S.armies.filter(x => x.owner === PLAYER && x.at === P.id && x.to === null).reduce((s1, x) => s1 + power(x), 0)})).sort((x, y) => (y.foe - y.mine) - (x.foe - x.mine));
-  const list = threat.slice(0, 5).map(t => `<li><b>${t.P.cityName || t.P.name}</b>: enemy strength within 3 provinces ${Math.round(t.foe)}, yours here ${Math.round(t.mine)}${t.foe > t.mine*1.2 ? ' <span style="color:var(--danger-t)">· at risk</span>' : ''}</li>`).join('');
+  const list = threat.slice(0, 5).map(t => `<li><b>${t.P.cityName || t.P.name}</b>: ${intel || t.foe > 0 ? `enemy strength within 3 provinces ${Math.round(t.foe)}` : 'enemy strength unknown without intel'}, yours here ${Math.round(t.mine)}${t.foe > t.mine*1.2 ? ' <span style="color:var(--danger-t)">· at risk</span>' : ''}</li>`).join('');
   openModal(`<div class="eyebrow" style="color:var(--danger-t)">War declared</div><h1>${E.name} attacks</h1>
-    <p>${E.name} declared war on you. Fighting starts in 24 hours. Their military is ${natPower(a) > natPower(PLAYER)*1.4 ? 'stronger than' : natPower(a) < natPower(PLAYER)*0.7 ? 'weaker than' : 'similar to'} yours.</p>
+    <p>${E.name} declared war on you. Fighting starts in 24 hours. ${intel ? `Their military is ${natPower(a) > natPower(PLAYER)*1.4 ? 'stronger than' : natPower(a) < natPower(PLAYER)*0.7 ? 'weaker than' : 'similar to'} yours.` : 'Strength unknown without intel (recon drones, AWACS, or units that have seen them).'}</p>
     ${front.length ? `<div class="eyebrow">Threatened border provinces</div><ul>${list}</ul>` : `<p>You share no land border, so expect them by sea or through allies.</p>`}
     <p class="small muted">Move forces onto the threatened provinces (defenders get +25% on home soil and Fortifications help), recruit in nearby cities, or try diplomacy: peace for tribute, or allies against ${E.name}.</p>
     <div class="row">${threat[0] ? `<button class="btn primary" data-act="goto" data-id="${threat[0].P.id}">Go to ${threat[0].P.cityName || threat[0].P.name}</button>` : ''}<button class="btn" data-act="diplo-open">Diplomacy</button><button class="btn" data-act="resume">Back to the map</button></div>`, 'war');
