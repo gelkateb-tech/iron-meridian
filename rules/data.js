@@ -233,7 +233,10 @@ const TIER_MODES = {normal:{name:'Normal', spread:0.3, floor:0.3}, competitive:{
 const tierMode = k => TIER_MODES[k] || TIER_MODES.normal;
 function tierKit(tier, mode){ const F = TIER_FULL[tier] || TIER_FULL.B, M = tierMode(mode), k = {};
   for (const key in TIER_EVEN) k[key] = Math.round(TIER_EVEN[key] + M.spread*(F[key] - TIER_EVEN[key]));
-  k.floor = M.floor; k.fortCap = tier === 'C'; k.fortGuards = tier === 'B' || tier === 'C'; k.yard = tier === 'S' || tier === 'A'; return k; }
+  k.floor = M.floor; k.fortCap = tier === 'C'; k.fortGuards = tier === 'B' || tier === 'C'; k.yard = tier === 'S' || tier === 'A';
+  // the Naval Yard of a coastal S or A nation takes the place of border guards only as starts grow distinct: none in normal mode (spread 0.3; with
+  // 2 guards gone a major power opened with fewer units than a regional one of as many cities), one at spread 0.6, two in the full table (plan 3.2)
+  k.yardGuards = k.yard ? Math.floor(2*M.spread + 1e-9) : 0; return k; }
 const tierGap = (a, b) => (TIER_RANK[b] ?? 2) - (TIER_RANK[a] ?? 2);   // how many tiers b stands below a
 const TIER_WARS = {S:2, A:1, B:1, C:0};
 // choosing a victim in the nations world: land beyond TIER_LAND provinces does not make a nation more tempting (with close-to-equal incomes a big

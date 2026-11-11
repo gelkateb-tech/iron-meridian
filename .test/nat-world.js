@@ -18,8 +18,8 @@ const { chromium } = require('playwright'); const path = require('path');
   await p.evaluate(() => { for (let i = 0; i < 120; i++) window.__im.tick(); }); await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   const before = await p.evaluate(() => ({hour:S.hour, cash:Math.round(S.nations[0].cash), owner:S.owner.filter(o => o === 0).length, saved:!!localStorage.getItem('iron-meridian-save-v5')}));
   await p.reload(); await p.waitForTimeout(700); await p.click('[data-act="continue"]'); await p.waitForTimeout(500);
-  const after = await p.evaluate(() => ({provs:G.P.length, hour:S.hour, cash:Math.round(S.nations[0].cash), owner:S.owner.filter(o => o === 0).length, scn:SCN, tier:S.nations[0].tier, caps:WIN_CAPS, cities:G.P.filter(P => P.city).length, capFlags:G.P.filter(P => P.capFlag).length}));
-  if (after.hour !== before.hour || after.cash !== before.cash || after.owner !== before.owner || after.scn !== 'world64' || after.tier !== 'A' || after.caps !== 5 || after.capFlags !== 15 || after.provs !== 3486) bad.push('reload: ' + JSON.stringify({before, after}));
+  const after = await p.evaluate(() => ({provs:G.P.length, hour:S.hour, cash:Math.round(S.nations[0].cash), owner:S.owner.filter(o => o === 0).length, scn:SCN, tier:S.nations[0].tier, caps:WIN_CAPS, cities:G.P.filter(P => P.city).length, capFlags:G.P.filter(P => P.capFlag).length, nn:S.nations.length}));
+  if (after.hour !== before.hour || after.cash !== before.cash || after.owner !== before.owner || after.scn !== 'world64' || after.tier !== 'A' || after.caps !== 5 || after.capFlags !== after.nn || after.provs !== 3486) bad.push('reload: ' + JSON.stringify({before, after}));
   await p.evaluate(() => { for (let i = 0; i < 48; i++) window.__im.tick(); });
   // a save of a newer nations format: refused, with the reason, and the running game is untouched
   const ref = await p.evaluate(() => { const d = JSON.parse(saveJSON()); d.w64.v = 99; const h = S.hour, ok = restore(d); return {ok, why:restore.why, same:S.hour === h && S.scn === 'world64'}; });

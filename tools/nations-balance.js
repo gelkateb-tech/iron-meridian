@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Balance tests of the nations world (scenario world64; docs/NATIONS-PLAN.md 5.2). All-computer games without a browser, like tools/headless.js.
 // One PASS or FAIL line per test; exit 1 on any FAIL.
-//   node tools/nations-balance.js                 T1 T2 T3 T4 T5 T7 T8 T9 and the step's own checks: 5 seeds, 60 game days each
+//   node tools/nations-balance.js                 T1 T2 T3 T4 T5 T7 T8 T9 and the checks of each step done (plan 5.4): 5 seeds, 60 game days each
 //   node tools/nations-balance.js --quick         T1 T2 T9 only (seconds)
 //   node tools/nations-balance.js --long          T6: two seeds, 300 days (slow)
 //   node tools/nations-balance.js --jobs 2        games played at the same time (default 3)
@@ -26,11 +26,12 @@ const unitsOf = S => { const c = S.nations.map(() => 0); for (const a of S.armie
 function playOne(seed, days, scn, seat){ const R = load(), api = R.IM.api; let logs = 0; R.IM.on('log', () => logs++);
   api.useScenario(scn); api.newGame(seed, 0, seat >= 0 ? [seat] : []); const S = api.S, G = api.G; S.started = true;
   const nat = () => { const c = S.nations.map(() => 0); for (let p = 0; p < S.owner.length; p++) if (S.owner[p] >= 0 && S.own0[p] >= 0) c[S.owner[p]]++; return c; };   // land that was a nation's at the start, by who holds it now
-  const out = {seed, scn, names:S.nations.map(N => N.name), tiers:S.nations.map(N => N.tier || ''), p0:provs(S), free0:S.own0.filter(o => o === -1).length, land:G.landCount, at:{}, nat:{}, dead:{}, over:null, wars:{}};
+  const free = () => { const c = S.nations.map(() => 0); for (let p = 0; p < S.owner.length; p++) if (S.owner[p] >= 0 && S.own0[p] === -1) c[S.owner[p]]++; return c; };   // independent land at the start, by who holds it now
+  const out = {seed, scn, names:S.nations.map(N => N.name), tiers:S.nations.map(N => N.tier || ''), p0:provs(S), free0:S.own0.filter(o => o === -1).length, land:G.landCount, at:{}, nat:{}, free:{}, dead:{}, over:null, wars:{}};
   const t0 = Date.now(); let h = 0;
   for (; h < days*24 && !S.over; h++){ api.tick();
     if (S.hour % 24 === 0){ const d = S.hour/24; for (const N of S.nations) if (!N.alive && out.dead[N.id] == null) out.dead[N.id] = d;
-      if ([21, 30, 45, 60, 120, 250, 300].includes(d)){ out.at[d] = provs(S); out.nat[d] = nat(); out.wars[d] = Object.keys(S.rel).filter(k => S.rel[k] && S.rel[k].st === 'war').map(k => k.split(',').map(Number)); } } }
+      if ([21, 30, 45, 60, 120, 250, 300].includes(d)){ out.at[d] = provs(S); out.nat[d] = nat(); out.free[d] = free(); out.wars[d] = Object.keys(S.rel).filter(k => S.rel[k] && S.rel[k].st === 'war').map(k => k.split(',').map(Number)); } } }
   if (S.over) out.over = {day:Math.ceil(S.hour/24), what:S.over, who:S.overReason};
   out.ms = Math.round((Date.now() - t0)/Math.max(1, h/24)); out.logs = logs; out.end = provs(S); out.cash = S.nations.map(N => Math.round(N.cash));
   const o = JSON.parse(api.saveJSON()); delete o.savedAt; out.hash = hash(JSON.stringify(o));
@@ -72,11 +73,14 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
   { const bad = [], tiers = TIERS.filter(t => open.some(o => o.N.tier === t));
     for (const o of open){ const r = o.cash/o.kit.day; if (r < 0.9 || r > 1.3 || (r > 1.105 && o.N.boost > o.kit.floor + 1e-9)) bad.push(`${o.N.name} $${o.cash.toFixed(0)} a day (target ${o.kit.day})`); }
     const tg = tiers.map(t => R.tierKit(t, mode).day), spread = Math.max(...tg)/Math.min(...tg); if (spread > 1.25) bad.push(`tier targets ${spread.toFixed(2)} apart`);
-    const mm = tiers.map(t => med(open.filter(o => o.N.tier === t).map(o => o.mp))), mu = tiers.map(t => med(open.filter(o => o.N.tier === t).map(o => o.units)));
+    // (the medians count the nations of the regions rolled out, with their planned cities, once a region is open: a nation still on today's
+    // cities, Turkey's 4 or Japan's 5, opens with fewer units because it has fewer cities, not because of its tier)
+    const done = NAT.open.length ? open.filter(o => NAT.open.includes(R.POWERS[o.N.power].region)) : open, tt = tiers.filter(t => done.some(o => o.N.tier === t));
+    const mm = tt.map(t => med(done.filter(o => o.N.tier === t).map(o => o.mp))), mu = tt.map(t => med(done.filter(o => o.N.tier === t).map(o => o.units)));
     const inOrder = a => a.every((v, i) => i === 0 || v <= a[i - 1] + 1e-9) && (a.length < 2 || a[0] > a[a.length - 1]);
-    if (!inOrder(mm)) bad.push('median manpower a day not in tier order: ' + tiers.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', '));
-    if (!inOrder(mu)) bad.push('median opening units not in tier order: ' + tiers.map((t, i) => t + ' ' + mu[i]).join(', '));
-    say('T2 Opening', !bad.length, bad.length ? bad.join('; ') : `money a day ${Math.min(...open.map(o => o.cash)).toFixed(0)} to ${Math.max(...open.map(o => o.cash)).toFixed(0)} (targets ${tiers.map((t, i) => t + ' ' + tg[i]).join(', ')}); median manpower ${tiers.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', ')}; median units ${tiers.map((t, i) => t + ' ' + mu[i]).join(', ')}`); }
+    if (!inOrder(mm)) bad.push('median manpower a day not in tier order: ' + tt.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', '));
+    if (!inOrder(mu)) bad.push('median opening units not in tier order: ' + tt.map((t, i) => t + ' ' + mu[i]).join(', '));
+    say('T2 Opening', !bad.length, bad.length ? bad.join('; ') : `money a day ${Math.min(...open.map(o => o.cash)).toFixed(0)} to ${Math.max(...open.map(o => o.cash)).toFixed(0)} (targets ${tiers.map((t, i) => t + ' ' + tg[i]).join(', ')}); median manpower ${tt.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', ')}; median units ${tt.map((t, i) => t + ' ' + mu[i]).join(', ')}${NAT.open.length ? ` (medians over the ${done.length} nations of ${NAT.open.join(', ')})` : ''}`); }
 
   // T9 seats: a nation started as a seat nobody plays, 3 days: no error and it receives its dispatches (every new nation of the step; at step 0 two of the 15)
   { const newOnes = S.nations.filter(N => NAT.open.includes(R.POWERS[N.power].region)).map(N => N.id), list = newOnes.length ? newOnes : [0, 6], bad = [];
@@ -119,8 +123,19 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
         notes.push(`${t} ${Math.round(Math.min(...rs)*100)}-${Math.round(Math.max(...rs)*100)}%`); plain.push(`${t} ${Math.round(Math.min(...rp)*100)}-${Math.round(Math.max(...rp)*100)}%`); }
       say('T5 Tier fairness', !bad.length, (bad.length ? bad.join('; ') + '; ' : '') + 'land on day 60 against the start: ' + notes.join(', ') + mode5 + (own ? ` (with independent land: ${plain.join(', ')})` : '')); }
     // the step's own checks (plan 5.4)
-    { const giants = ['Russia', 'China', 'United States', 'India'].filter(nm => id(nm) >= 0), bad = giants.filter(nm => games.filter(g => g.at[60] && g.at[60][id(nm)] >= g.p0[id(nm)]).length < Math.min(3, games.length));
+    // step 0 (no region open): the four giants are not smaller on day 60 than at the start in at least 3 seeds of 5
+    if (!NAT.open.length){ const giants = ['Russia', 'China', 'United States', 'India'].filter(nm => id(nm) >= 0), bad = giants.filter(nm => games.filter(g => g.at[60] && g.at[60][id(nm)] >= g.p0[id(nm)]).length < Math.min(3, games.length));
       say('Step 0  giants hold', !bad.length, giants.map(nm => `${nm} ${games.map(g => `${g.p0[id(nm)]}>${(g.at[60] || g.end)[id(nm)]}`).join(' ')}`).join('; ') + (bad.length ? `  (smaller in too many seeds: ${bad.join(', ')})` : '')); }
+    // step 1, Europe (from then on): Norway and Finland alive on day 45 in at least 4 seeds of 5, Poland and Ukraine on day 30 in at least 4 (and
+    // Greece and Belarus, the two small nations of the split, the same); Russia holds at least 85% of its start on day 60 in 3 of 5; Germany,
+    // hemmed in by six independent states, has taken at least 3 independent provinces by day 30 in at least 4 of 5 (it must not sit still)
+    if (NAT.open.includes('Europe')){ const need = k => Math.min(k, games.length), alive = (nm, d) => games.filter(g => !(g.dead[id(nm)] != null && g.dead[id(nm)] <= d)).length;
+      const surv = [['Norway', 45], ['Finland', 45], ['Poland', 30], ['Ukraine', 30], ['Greece', 30], ['Belarus', 30]], low = surv.filter(([nm, d]) => alive(nm, d) < need(4));
+      say('Step 1  Europe survives', !low.length, surv.map(([nm, d]) => `${nm} alive on day ${d} in ${alive(nm, d)} of ${games.length}`).join(', '));
+      const ru = id('Russia'), held = games.filter(g => g.at[60][ru] >= 0.85*g.p0[ru]).length;
+      say('Step 1  Russia holds', held >= need(3), `Russia at least 85% of its start on day 60 in ${held} of ${games.length} (${games.map(g => `${g.p0[ru]}>${g.at[60][ru]}`).join(' ')})`);
+      const de = id('Germany'), took = games.filter(g => g.free[30][de] >= 3).length;
+      say('Step 1  Germany moves', took >= need(4), `Germany holds 3 or more provinces that were independent, on day 30, in ${took} of ${games.length} (${games.map(g => g.free[30][de]).join(', ')})`); }
   } else console.log(`(T4, T5 and the step checks need 60 days: skipped at ${DAYS})`);
 
   // T7 speed: milliseconds a game day, all computer, against the budget of the step (500 with 15 nations when the classic world takes 444 on the

@@ -13,7 +13,7 @@ const OUT = path.join(ROOT, 'nations.js'), MODE = process.argv[2] || '';
 
 /* ---------- the plan ---------- */
 const REGIONS = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];
-const OPEN = [];   // regions rolled out so far (step 0, plumbing: none; today's 15 powers play with today's cities)
+const OPEN = ['Europe'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map)
 // world.js country name, tier (S superpower, A major, B regional, C minor: table A of the plan, hand corrections included), region.
 // split (*): the country is too small on world.js; its provinces are cut smaller on the nations world's map (owner's answer 1: Israel, Greece,
 // Cuba and Belarus must be playable; 68 nations in all; tools/build-provsplit.js). It opens with its region like the others; the size of its
@@ -35,12 +35,32 @@ const TODAY15 = ['United States of America', 'Canada', 'Brazil', 'United Kingdom
 // map colours. A step that opens a region adds the colours of its nations here; no two nations that share a border or face each other across
 // a strait may be closer than COLOR_MIN (checked below for the nations written)
 const COLORS = {'United States of America':'#3f7fe0', 'Canada':'#c8323c', 'Brazil':'#3fae5a', 'United Kingdom':'#9370e6', 'France':'#36bcc4', 'Germany':'#5672a6', 'Russia':'#a3283f', 'Turkey':'#b45aa8',
-  'Iran':'#7cc04a', 'Egypt':'#c2a070', 'South Africa':'#2ea48d', 'India':'#ff8a3d', 'China':'#e8cf47', 'Japan':'#b65acc', 'Australia':'#1fa3a3'};
+  'Iran':'#7cc04a', 'Egypt':'#c2a070', 'South Africa':'#2ea48d', 'India':'#ff8a3d', 'China':'#e8cf47', 'Japan':'#b65acc', 'Australia':'#1fa3a3',
+  // step 1, Europe
+  'Italy':'#5cb04a', 'Spain':'#e0a13a', 'Poland':'#d8c440', 'Ukraine':'#3a9be0', 'Romania':'#c96a2e', 'Sweden':'#4a86e0', 'Norway':'#e06a5a', 'Finland':'#6fcf97',
+  'Greece':'#6aa8e8', 'Belarus':'#c05a8a'};
 const COLOR_MIN = 60;
 // hand swaps (plan 2.5): at most one city per nation, each with its reason: {country: {out:'city or province name', in:'province name', why:'...'}}
 const SWAPS = {};
 // names of promoted cities (the largest town inside the province): {country: {'province name': 'city name'}}. Filled in by the step that opens the region
-const NAMES = {};
+const NAMES = {
+  // step 1, Europe: the largest town inside each promoted province (Natural Earth populated places, on the nations world's map), in its usual
+  // English spelling; a province already named after its town keeps that name. Moselle's largest town on the grid is Saarbrücken (Germany): its
+  // own prefecture, Metz, is used. Belarus: the piece called Kobryn holds Brest itself; the Brest piece's largest town is Baranovichi.
+  'United Kingdom':{'Leicestershire':'Nottingham', 'Suffolk':'Ipswich', 'Buckinghamshire':'Oxford', 'Cumbria':'Carlisle', 'North Yorkshire':'Leeds', 'East Sussex':'Brighton'},
+  'France':{'Moselle':'Metz', 'Seine-Maritime':'Rouen', 'Nord':'Lille', 'Guyane française':'Cayenne', 'Cher':'Bourges', 'Haute-Garonne':'Toulouse'},
+  'Germany':{'Sachsen':'Dresden', 'Hessen':'Frankfurt'},
+  'Italy':{'Firenze':'Florence', 'Macerata':'Ancona'},
+  'Spain':{'Sevilla':'Seville', 'Bizkaia':'Bilbao', 'Pontevedra':'Vigo'},
+  'Poland':{'Silesian':'Katowice', 'West Pomeranian':'Szczecin', 'Lower Silesian':'Wrocław', 'Subcarpathian':'Rzeszów', 'Pomeranian':'Gdańsk', 'Greater Poland':'Poznań', 'Lesser Poland':'Kraków', 'Warmian-Masurian':'Olsztyn'},
+  'Ukraine':{"Donets'k":'Donetsk', "L'viv":'Lviv', "Luhans'k":'Luhansk', "Dnipropetrovs'k":'Dnipro', "Khmel'nyts'kyy":'Khmelnytskyi', 'Zaporizhzhya':'Zaporizhzhia'},
+  'Romania':{'Bihor':'Oradea', 'Dolj':'Craiova', 'Iasi':'Iași', 'Braila':'Galați', 'Mures':'Târgu Mureș', 'Covasna':'Brașov', 'Olt':'Pitești', 'Bacau':'Bacău'},
+  'Sweden':{'Västra Götaland':'Jönköping', 'Västmanland':'Västerås', 'Kronoberg':'Växjö', 'Östergötland':'Linköping', 'Västerbotten':'Umeå', 'Värmland':'Karlstad'},
+  'Norway':{'Troms':'Tromsø', 'Vest-Agder':'Kristiansand', 'Buskerud':'Drammen', 'Sør-Trøndelag':'Trondheim', 'Hordaland':'Bergen', 'Hedmark':'Hamar'},
+  'Finland':{'North Karelia':'Joensuu', 'Päijät-Häme':'Lahti', 'Central Ostrobothnia':'Kokkola', 'Satakunta':'Pori', 'Northern Ostrobothnia':'Oulu'},
+  'Greece':{'Kentriki Makedonia':'Thessaloniki', 'Voreio Aigaio':'Chios', 'Kriti':'Heraklion', 'Anatoliki Makedonia kai Thraki':'Kavala', 'Ipeiros':'Ioannina', 'Thessalia':'Larissa'},
+  'Belarus':{'Kobryn':'Brest', 'Brest':'Baranovichi'},
+};
 
 /* ---------- the map and the rules ---------- */
 // the province split (tools/build-provsplit.js writes tools/provsplit.json; docs/NATIONS-PLAN.md 4.6): copied into nations.js as NATIONS.map. The
@@ -104,6 +124,9 @@ if (MODE === '--preview'){
   for (const e of all){
     const L = pickCities(e.c); console.log(`${e.region.padEnd(12)} ${(DISPLAY[e.c.name] || e.c.name).padEnd(16)} ${e.tier}  ${String(L.length).padStart(2)}  ${L.map(cname).join(', ')}`); }
   process.exit(0); }
+if (MODE === '--preview-ids'){   // the same, as province numbers (tab-separated: region, nation, ids): for tools that name promoted cities
+  for (const e of all) console.log(`${e.region}\t${DISPLAY[e.c.name] || e.c.name}\t${pickCities(e.c).map(P => P.id).join(',')}`);
+  process.exit(0); }
 
 const isOpen = e => OPEN.includes(e.region);
 const live = [...TODAY15.map(n => all.find(e => e.c.name === n)), ...all.filter(e => !TODAY15.includes(e.c.name) && isOpen(e))];
@@ -113,7 +136,9 @@ const fails = [], seen = new Set();
 for (const n of nations){ const c = byName.get(n.country), ids = new Set(c.provs.map(P => P.id));
   if (n.cities[0] !== n.capital) fails.push(n.name + ': the capital is not its first city');
   for (const id of n.cities){ if (!ids.has(id)) fails.push(`${n.name}: city ${id} is not its land`); if (seen.has(id)) fails.push(`${n.name}: city ${id} listed twice`); seen.add(id); }
-  if (OPEN.includes(n.region) && (n.cities.length < 7 || n.cities.length > 14)) fails.push(`${n.name}: ${n.cities.length} cities (7 to 14 wanted)`); }
+  if (OPEN.includes(n.region) && (n.cities.length < 7 || n.cities.length > 14)) fails.push(`${n.name}: ${n.cities.length} cities (7 to 14 wanted)`);
+  // every name given for an open nation names one of its promoted cities (a typo would leave a city under its province's name)
+  if (OPEN.includes(n.region)) for (const pn in NAMES[n.country] || {}) if (!n.cities.some(id => G.P[id].name === pn && n.names[id])) fails.push(`${n.name}: no promoted city in province ${pn} to name`); }
 // the four nations of the province split (owner's answer 1) must hold 7 cities on the split map whether their region is open or not: at least 9
 // provinces (Israel: 8, its one-cell provinces are the finest the map grid allows; tools/build-provsplit.js) and 7 to 14 cities with the method
 for (const e of all.filter(e => e.split)){ const L = pickCities(e.c), need = e.c.name === 'Israel' ? 8 : 9;

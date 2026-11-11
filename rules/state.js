@@ -111,7 +111,7 @@ function newGame(seed, pick, humans = []){
 // ---- the nations world: the start by tier (docs/NATIONS-PLAN.md 3.2 to 3.5; the numbers are tierKit's, rules/data.js)
 // Every nation: its tier's stocks, an Army Base and a Recruiting Office in the capital, more offices in its biggest cities, the capital force,
 // 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest neighbour first (in a level 1 fort for tiers
-// B and C), a Naval Yard in the biggest port in place of 2 guards for coastal nations of tiers S and A, a level 1 fort in a tier C capital.
+// B and C), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards), a level 1 fort in a tier C capital.
 // Neighbours of the same giant (a land neighbour more than 3 times their strength) start as friends. No dice are used.
 function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L.map(powerStrength), nbs = L.map((_, i) => powerNeighbours(L, i));   // by nation id
   for (const N of S.nations){ const n = N.id, kit = tierKit(N.tier, mode);
@@ -124,7 +124,7 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
     cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
     let guards = kit.guards;
-    if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - 2); } }
+    if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - kit.yardGuards); } }
     // border provinces that are not cities, by the neighbour they face: playable neighbours strongest first, then independent land; one guard per neighbour in turn
     const face = new Map();
     for (const P of G.P){ if (S.owner[P.id] !== n || P.city) continue; for (const v of P.nbs){ const o = S.owner[v]; if (G.P[v].sea || o === n || o === SEA) continue; const f = face.get(o) || face.set(o, []).get(o); if (!f.includes(P.id)) f.push(P.id); } }
