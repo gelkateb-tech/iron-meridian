@@ -40,3 +40,4 @@ How it works from now on:
 - War declarations and the Diplomacy list no longer say whose army is stronger unless you have intel on them (an identified force in sight: recon drones, satellites, units that have seen them); otherwise they say 'Strength unknown without intel', and the war-warning border list says the same.
 - Troops at sea now sail at transport speed, about 325 km/day (under half their land speed, was almost the same); warships keep their speeds.
 - Unit training is limited to 2 queued per city for everyone (the computer players too); old saves with longer queues keep them but cannot add more until below 2, and the city panel shows 'x/2 in training' and greys the unit buttons with the reason.
+- Tapping a city now opens its city sheet straight away, with Build and Mobilize unit one tap each; the 'city or troops' menu is gone, and your troops in a city are reached by tapping their counter.

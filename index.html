@@ -5596,7 +5596,7 @@ function haltAnchor(a, A, now, wx, wy){ const E = OFS.get(a.id); if (!E) return 
    Every counter is pinned to its force's world spot (provLayout, from the game state alone) at one pixel size, at every zoom: the zoom never moves
    one. Out where the spots are too close to hold one-pixel-size counters apart, the counters that would touch fade out IN PLACE: the most
    important (yours, a battle's, a foe's, the biggest) stays, and a power's own counter it covers hands it its strength (the summed count and the
-   mixed-stack glyph, a tap opens the chooser); as you zoom in each fades back in at its own spot. A counter is hidden while it comes within
+   mixed-stack glyph, a tap opens its stack); as you zoom in each fades back in at its own spot. A counter is hidden while it comes within
    PF_IN px of a shown one and shown again only past PF_OUT (hysteresis: a slow zoom never flickers). Under the HUD (the shield rail, the map
    controls, the minimap) a counter and its troops fade to a quarter instead of moving. */
 /*@TEST*/const PGHOST = [];/*@ENDTEST*/
@@ -8384,13 +8384,8 @@ mini.addEventListener('pointerdown', e => { if (GLOBE) GLOBE.leave(); miniDrag =
 mini.addEventListener('pointermove', e => { if (!miniDrag) return; if (!miniDrag.moved && Math.hypot(e.clientX - miniDrag.x, e.clientY - miniDrag.y) < 5) return; miniDrag.moved = true; miniJump(e); });
 mini.addEventListener('pointerup', () => { miniDrag = false; });
 
-// clicking a city where your troops stand asks what you meant: the city or one of the forces
+// (the old city-or-troops menu is gone: a tap on a city opens its sheet at once, troops are reached by tapping their counter)
 function closeChooser(){ const el = $('chooser'); if (el && !el.hidden){ el.hidden = true; el.innerHTML = ''; } }
-function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a => a.owner === PLAYER), el = $('chooser'); if (!el) return false;
-  const nm = P.cityName || P.name;
-  el.innerHTML = `<div class="ct">${nm}</div><button data-act="choose-prov" data-id="${p}">${bimg('city', cityLevel(p), 22) || '<i>🏙</i>'}City · ${nm}<span class="small">${S.owner[p] === PLAYER ? 'recruit, build' : 'details'}</span></button>`
-    + own.map(a => `<button data-act="choose-army" data-id="${a.id}">${leadT(a) ? unitPic(leadT(a), 'sm') : '<i>⚔</i>'}${armyName(a)}<span class="small">${pluN(count(a), 'unit')}</span></button>`).join('');
-  el.hidden = false; tipHide(); const w = 240, h = 46 + own.length*38; el.style.left = Math.max(8, Math.min(cw - w - 8, x + 12)) + 'px'; el.style.top = Math.max(8, Math.min(ch - h - 8, y - 20)) + 'px'; return true; }
 function cityAt(x, y){ let best = null, bd = 1e9; for (const m of cityPts){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
 // the city whose drawn name is at (x, y): a plain tap on a city's name picks that city (the name is what marks a city on the map)
 function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ const b = cityNames[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return cityNames[i]; } return null; }
@@ -8399,15 +8394,12 @@ function tap(x, y, shift = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   closeChooser(); lastClickW = screenToWorld(x, y);
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
+  const cityTap = plain && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
   const mk = cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
-  if (plain){
-    let p = mk ? mk.p : -1; if (!mk) for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const a0 = h.ids.map(armyById).find(Boolean); if (a0 && !a0.fly && a0.to === null) p = a0.at; break; } }
-    if (p < 0) p = provAt(x, y);
-    if (p >= 0 && !G.P[p].sea && G.P[p].city && stationaryAt(p).some(a => a.owner === PLAYER) && openChooser(p, x, y)) return; }
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
       const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast('No route there.', 'bad', null); renderSide(true); } } return; }
-  for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i];
+  if (!cityTap) for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
       if (mk && !h.ids.some(id => { const a = armyById(id); return a && a.at === mk.p; })) break;
       if (h.spread){ zoomAt(2.4, h.cx, h.cy); return; }
@@ -8931,9 +8923,9 @@ let TUT = null;
 const TUT_STEPS = [
   {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b>.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
-  {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map, then choose <b>City</b> in the little menu.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
+  {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Recruit', d:() => `Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.`, el:'#csheet:not([hidden]) .cs-mob, #ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
-  {t:'Select your army', d:() => 'Now tap your capital again and choose one of your forces in the menu (or tap the soldiers and their number badge).', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
+  {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
   {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
@@ -9664,8 +9656,6 @@ document.addEventListener('click', e => {
     case 'cm-attack': cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); break;
     case 'cm-delay': if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } break;
     case 'cm-stance': if (a){ const ks = Object.keys(STANCES); a.stance = ks[(ks.indexOf(a.stance || 'hold') + 1) % ks.length]; a.home = null; toast(`${armyName(a)}: ${STANCES[a.stance][0]}. ${STANCES[a.stance][1]}`, 'info', null); renderSide(true); } break;
-    case 'choose-prov': closeChooser(); selectProv(+b.dataset.id); break;
-    case 'choose-army': closeChooser(); selectArmy(+b.dataset.id); break;
     case 'sat': if (launchSat(PLAYER, +b.dataset.id)) renderSide(true); break;
     case 'nat-open': NATV_TAB = b.dataset.k || 'chat'; DEAL = null; GIFT = null; openModal(nationHTML(+b.dataset.id), 'nation'); setTimeout(() => { const cb = $('chatbox'); if (cb) cb.scrollTop = cb.scrollHeight; }, 0); break;
     case 'nat-tab': NATV_TAB = b.dataset.k; openModal(nationHTML(NATV), 'nation'); break;
