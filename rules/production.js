@@ -22,6 +22,15 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words
 function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : ''; }
 const reqText = (p, t, n) => canMobilize(n, p, t);
+// ---------- training queue limit: at most QUEUE_MAX units waiting or training per city, for everyone (the AI too). A future premium pass gives
+// extra slots (LATER.md): ask queueMax(n), not the constant. Old saves with longer queues keep them but cannot add more until below the limit.
+// Missiles (silo) are not unit training and do not count.
+const QUEUE_MAX = 2;
+const queueMax = n => QUEUE_MAX;
+const queueUsed = p => S.queue[p].reduce((c, it) => c + (it.msl ? 0 : 1), 0);
+const queueFull = (n, p) => queueUsed(p) >= queueMax(n);
+// '' when city p can take another unit, else the reason in words
+const queueWhy = (n, p) => queueFull(n, p) ? `Training queue full (${queueMax(n)}/${queueMax(n)})` : '';
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 // ---------- Recruiting Office (levels I-V): every unit trained in its city trains 10% faster per level, and the city gives 3k manpower a day at level I
 // and 1.5k more per level. recPct / recMp are per level (the page words its tooltips from them), recSpeed is the city's training-time factor
@@ -54,7 +63,7 @@ const MINE_T = {hills:1, mountain:1, desert:1, tundra:1, plains:0.5, forest:0.5,
 const mineLv = P => P.rare ? Math.max(1.5, 0.6*P.rare) : (MINE_T[P.terrain || 'plains'] || 0);
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast) || (B.where === 'mine' && mineLv(P) > 0)); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
-const canRecruit = (n, p, t) => !canMobilize(n, p, t) && canAfford(n, t);
+const canRecruit = (n, p, t) => !canMobilize(n, p, t) && !queueFull(n, p) && canAfford(n, t);
 function recruit(n, p, t){
   if (!canRecruit(n, p, t)) return false;
   const N = S.nations[n], c = ucost(n, t); payC(N, c);
