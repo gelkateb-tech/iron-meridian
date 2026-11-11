@@ -13,7 +13,8 @@ const OUT = path.join(ROOT, 'nations.js'), MODE = process.argv[2] || '';
 
 /* ---------- the plan ---------- */
 const REGIONS = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];
-const OPEN = ['Europe'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map)
+const OPEN = ['Europe', 'Middle East'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
+// step 2: the Middle East, with Israel on the split map)
 // world.js country name, tier (S superpower, A major, B regional, C minor: table A of the plan, hand corrections included), region.
 // split (*): the country is too small on world.js; its provinces are cut smaller on the nations world's map (owner's answer 1: Israel, Greece,
 // Cuba and Belarus must be playable; 68 nations in all; tools/build-provsplit.js). It opens with its region like the others; the size of its
@@ -38,7 +39,9 @@ const COLORS = {'United States of America':'#3f7fe0', 'Canada':'#c8323c', 'Brazi
   'Iran':'#7cc04a', 'Egypt':'#c2a070', 'South Africa':'#2ea48d', 'India':'#ff8a3d', 'China':'#e8cf47', 'Japan':'#b65acc', 'Australia':'#1fa3a3',
   // step 1, Europe
   'Italy':'#5cb04a', 'Spain':'#e0a13a', 'Poland':'#d8c440', 'Ukraine':'#3a9be0', 'Romania':'#c96a2e', 'Sweden':'#4a86e0', 'Norway':'#e06a5a', 'Finland':'#6fcf97',
-  'Greece':'#6aa8e8', 'Belarus':'#c05a8a'};
+  'Greece':'#6aa8e8', 'Belarus':'#c05a8a',
+  // step 2, the Middle East
+  'Saudi Arabia':'#2f9e6b', 'Iraq':'#d8b03c', 'Syria':'#d0584a', 'Yemen':'#8a6fd6', 'Israel':'#4a7fd0'};
 const COLOR_MIN = 60;
 // hand swaps (plan 2.5): at most one city per nation, each with its reason: {country: {out:'city or province name', in:'province name', why:'...'}}
 const SWAPS = {};
@@ -60,6 +63,17 @@ const NAMES = {
   'Finland':{'North Karelia':'Joensuu', 'Päijät-Häme':'Lahti', 'Central Ostrobothnia':'Kokkola', 'Satakunta':'Pori', 'Northern Ostrobothnia':'Oulu'},
   'Greece':{'Kentriki Makedonia':'Thessaloniki', 'Voreio Aigaio':'Chios', 'Kriti':'Heraklion', 'Anatoliki Makedonia kai Thraki':'Kavala', 'Ipeiros':'Ioannina', 'Thessalia':'Larissa'},
   'Belarus':{'Kobryn':'Brest', 'Brest':'Baranovichi'},
+  // step 2, the Middle East: the same rule. By hand: Artvin's largest town on the grid is Batumi (Georgia): the largest Turkish
+  // town in it, Kars, names it; Syria's Hasaka piece holds Nusaybin (Turkey) first: Al-Hasakah itself; Yemen's Abyan
+  // and Al Jawf hold no town of the data set: their seats, Zinjibar and Al Hazm. Israel's eight provinces are named after their towns already
+  // (the split); its capital province, Tel Aviv, also holds Jerusalem (as Morocco's Casablanca holds Rabat)
+  'Turkey':{'Eskisehir':'Eskişehir', 'Sakarya':'Adapazarı', 'Artvin':'Kars', 'Kirklareli':'Tekirdağ'},
+  'Iran':{'Gilan':'Rasht', 'Markazi':'Arak', 'Hormozgan':'Bandar Abbas'},
+  'Saudi Arabia':{'`Asir':'Abha', 'Halat Ammar':'Tabuk'},
+  'Iraq':{'Al-Basrah':'Basra', 'Babil':'Hillah', "At-Ta'mim":'Kirkuk', 'Ar Ramadi':'Ramadi', 'As-Sulaymaniyah':'Sulaymaniyah', 'Sala ad-Din':'Samarra', 'Arbil':'Erbil', 'Wasit':'Kut'},
+  'Syria':{'Hasaka (Al Haksa)':'Al-Hasakah', 'Hamah':'Hama', 'Dar`a':'Daraa', 'Ar Raqqah':'Raqqa'},
+  'Yemen':{'Lahij':'Aden', 'Al Hudaydah':'Hodeidah', 'Ta`izz':'Taiz', 'Hadramawt':'Mukalla', 'Abyan':'Zinjibar', 'Al Jawf':'Al Hazm'},
+  'Egypt':{'Ad Daqahliyah':'Mansoura', "Shamal Sina'":'Arish', 'Al Minufiyah':'Tanta', 'Al Minya':'Minya', 'Kafr ash Shaykh':'Rosetta', 'As Suways':'Suez', 'Ash Sharqiyah':'Zagazig'},
 };
 
 /* ---------- the map and the rules ---------- */

@@ -160,8 +160,10 @@ function typePlan(a){ const rows = splitRows(a), types = [...new Set(rows.map(r 
   return plan; }
 // one healthy unit of the most numerous type leaves
 function onePlan(a){ const rows = splitRows(a).filter(r => !r.dmg), r = rows.sort((x, y) => y.n - x.n)[0] || splitRows(a)[0]; return r ? [{[r.k]:1}] : [{}]; }
+// count(a) > 0, stopping at the first unit found (unit counts are never negative; were one ever, the full sum decides)
+function hasUnits(a){ const u = a.u; for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v > 0) return true; if (v < 0) return count(a) > 0; } return false; }
 function removeEmpty(){
-  { let any = false; for (const a of S.armies) if (!(count(a) > 0)){ any = true; break; } if (!any) return; }   // the usual case: nothing to remove, no new array
+  { let any = false; for (const a of S.armies) if (!hasUnits(a)){ any = true; break; } if (!any) return; }   // the usual case: nothing to remove, no new array
   for (const a of S.armies){ if (count(a) > 0 || !a.air || !a.air.pend) continue; const pend = a.air.pend; a.air.pend = null; const base = S.owner[a.air.base] === a.owner ? a.air.base : nearestAirbase(a.owner, a.air.base); if (base < 0) continue;
     const w = addArmy(a.owner, base, {}); w.air = {base, cd:0}; for (const t in pend) w.u[t] = pend[t]; }
   S.armies = S.armies.filter(a => count(a) > 0); }

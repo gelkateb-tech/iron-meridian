@@ -17,7 +17,7 @@ const TIERS = ['S', 'A', 'B', 'C'];
 function load(){ globalThis.window = globalThis; if (!globalThis.WORLD){ require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js')); }
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
   return new Function("'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
-    + '\nreturn {IM, income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
+    + '\nreturn {IM, income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, ECO_CAPITAL, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
 const hash = s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = Math.imul(h2 + c, 0x85ebca6b) ^ (h2 >>> 13); } return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0'); };
 const provs = S => { const c = S.nations.map(() => 0); for (const o of S.owner) if (o >= 0) c[o]++; return c; };
 const unitsOf = S => { const c = S.nations.map(() => 0); for (const a of S.armies) if (a.owner >= 0) for (const k in a.u) c[a.owner] += a.u[k] || 0; return c; };
@@ -27,10 +27,14 @@ function playOne(seed, days, scn, seat){ const R = load(), api = R.IM.api; let l
   api.useScenario(scn); api.newGame(seed, 0, seat >= 0 ? [seat] : []); const S = api.S, G = api.G; S.started = true;
   const nat = () => { const c = S.nations.map(() => 0); for (let p = 0; p < S.owner.length; p++) if (S.owner[p] >= 0 && S.own0[p] >= 0) c[S.owner[p]]++; return c; };   // land that was a nation's at the start, by who holds it now
   const free = () => { const c = S.nations.map(() => 0); for (let p = 0; p < S.owner.length; p++) if (S.owner[p] >= 0 && S.own0[p] === -1) c[S.owner[p]]++; return c; };   // independent land at the start, by who holds it now
-  const out = {seed, scn, names:S.nations.map(N => N.name), tiers:S.nations.map(N => N.tier || ''), p0:provs(S), free0:S.own0.filter(o => o === -1).length, land:G.landCount, at:{}, nat:{}, free:{}, dead:{}, over:null, wars:{}};
+  const out = {seed, scn, names:S.nations.map(N => N.name), tiers:S.nations.map(N => N.tier || ''), p0:provs(S), free0:S.own0.filter(o => o === -1).length, land:G.landCount, at:{}, nat:{}, free:{}, dead:{}, over:null, wars:{}, oil:{}};
+  const took = S.nations.map(() => new Set());
   const t0 = Date.now(); let h = 0;
   for (; h < days*24 && !S.over; h++){ api.tick();
     if (S.hour % 24 === 0){ const d = S.hour/24; for (const N of S.nations) if (!N.alive && out.dead[N.id] == null) out.dead[N.id] = d;
+      if (d <= 30) for (let p = 0; p < S.owner.length; p++) if (S.own0[p] === -1 && S.owner[p] >= 0) took[S.owner[p]].add(p);   // independent land taken by day 30, held or lost again since
+      if (d === 30) out.took30 = took.map(t => t.size);
+      if (d === 1 || d === 60) out.oil[d] = S.mkt && S.mkt.p ? +S.mkt.p.oil.toFixed(3) : null;   // the world oil price (step 2's check)
       if ([21, 30, 45, 60, 120, 250, 300].includes(d)){ out.at[d] = provs(S); out.nat[d] = nat(); out.free[d] = free(); out.wars[d] = Object.keys(S.rel).filter(k => S.rel[k] && S.rel[k].st === 'war').map(k => k.split(',').map(Number)); } } }
   if (S.over) out.over = {day:Math.ceil(S.hour/24), what:S.over, who:S.overReason};
   out.ms = Math.round((Date.now() - t0)/Math.max(1, h/24)); out.logs = logs; out.end = provs(S); out.cash = S.nations.map(N => Math.round(N.cash));
@@ -134,8 +138,22 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       say('Step 1  Europe survives', !low.length, surv.map(([nm, d]) => `${nm} alive on day ${d} in ${alive(nm, d)} of ${games.length}`).join(', '));
       const ru = id('Russia'), held = games.filter(g => g.at[60][ru] >= 0.85*g.p0[ru]).length;
       say('Step 1  Russia holds', held >= need(3), `Russia at least 85% of its start on day 60 in ${held} of ${games.length} (${games.map(g => `${g.p0[ru]}>${g.at[60][ru]}`).join(' ')})`);
-      const de = id('Germany'), took = games.filter(g => g.free[30][de] >= 3).length;
-      say('Step 1  Germany moves', took >= need(4), `Germany holds 3 or more provinces that were independent, on day 30, in ${took} of ${games.length} (${games.map(g => g.free[30][de]).join(', ')})`); }
+      // (taken by day 30, as the plan words it: a province taken and lost again in a war with a neighbour still shows Germany did not sit still)
+      const de = id('Germany'), took = games.filter(g => g.took30[de] >= 3).length;
+      say('Step 1  Germany moves', took >= need(4), `Germany has taken 3 or more independent provinces by day 30 in ${took} of ${games.length} (${games.map(g => g.took30[de]).join(', ')}; still held on day 30: ${games.map(g => g.free[30][de]).join(', ')})`); }
+    // step 2, the Middle East (from then on): Syria and Yemen alive on day 30 in at least 4 seeds of 5 (and Israel, the small nation of the split,
+    // the same); Turkey and Iran, which lost half their land in the plan's trial, hold at least 75% of their start on day 60 in 3 of 5; every
+    // nation of the region has an oil city or oil in the capital trickle; the world oil price on day 60 is within half and double its day-1 value
+    if (NAT.open.includes('Middle East')){ const need = k => Math.min(k, games.length), alive = (nm, d) => games.filter(g => !(g.dead[id(nm)] != null && g.dead[id(nm)] <= d)).length;
+      const surv = [['Syria', 30], ['Yemen', 30], ['Israel', 30]], low = surv.filter(([nm, d]) => alive(nm, d) < need(4));
+      say('Step 2  Middle East survives', !low.length, surv.map(([nm, d]) => `${nm} alive on day ${d} in ${alive(nm, d)} of ${games.length}`).join(', '));
+      const hold = ['Turkey', 'Iran'].map(nm => { const n = id(nm); return {nm, k:games.filter(g => g.at[60][n] >= 0.75*g.p0[n]).length, l:games.map(g => `${g.p0[n]}>${g.at[60][n]}`).join(' ')}; });
+      say('Step 2  Turkey and Iran hold', hold.every(h => h.k >= need(3)), hold.map(h => `${h.nm} at least 75% of its start on day 60 in ${h.k} of ${games.length} (${h.l})`).join('; '));
+      const me = open.filter(o => R.POWERS[o.N.power].region === 'Middle East'), oilC = me.filter(o => o.cities.some(P => R.cityMain(P.id) === 'oil')).map(o => o.N.name), trickle = R.ECO_CAPITAL.oil > 0;
+      const dry = me.filter(o => !oilC.includes(o.N.name) && !trickle).map(o => o.N.name);
+      say('Step 2  oil for all', !dry.length, `${oilC.length} of ${me.length} with an oil city` + (oilC.length < me.length ? ` (${me.filter(o => !oilC.includes(o.N.name)).map(o => o.N.name).join(', ')} on the capital's oil, ${R.ECO_CAPITAL.oil} a day)` : '') + `; every capital makes ${R.ECO_CAPITAL.oil} oil a day`);
+      const pr = games.map(g => g.oil[60]/g.oil[1]), wild = games.filter((g, i) => !(pr[i] >= 0.5 && pr[i] <= 2));
+      say('Step 2  oil price', !wild.length, `world oil price day 60 against day 1: ${games.map((g, i) => `${g.oil[1]}>${g.oil[60]} (x${pr[i].toFixed(2)})`).join(', ')}`); }
   } else console.log(`(T4, T5 and the step checks need 60 days: skipped at ${DAYS})`);
 
   // T7 speed: milliseconds a game day, all computer, against the budget of the step (500 with 15 nations when the classic world takes 444 on the

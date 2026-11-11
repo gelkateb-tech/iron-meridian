@@ -26,8 +26,8 @@ const { chromium } = require('playwright'); const path = require('path');
     const st = await p.evaluate(() => { const view = window.__im.view, NAT = NATIONS.nations.filter(n => n.region === 'Europe'), miss = [];
       for (const n of NAT){ const N = S.nations.find(x => x.name === n.name); if (!N){ miss.push(n.name + ': not in the game'); continue; }
         for (const id of n.cities){ const P = G.P[id]; if (!P.city || S.owner[id] !== N.id) miss.push(`${n.name}: ${P.name} is not its city`); if (n.names[id] && P.cityName !== n.names[id]) miss.push(`${n.name}: ${P.name} named ${P.cityName}, not ${n.names[id]}`); } }
-      return {me:S.nations[0].name, s:+view.s.toFixed(2), n:S.nations.length, europe:NAT.length, cities:G.P.filter(P => P.city).length, miss}; });
-    if (st.me !== 'Poland' || st.n !== 25 || st.europe !== 14 || st.miss.length) bad.push('game: ' + JSON.stringify(st));
+      return {me:S.nations[0].name, s:+view.s.toFixed(2), n:S.nations.length, all:NATIONS.nations.length, europe:NAT.length, cities:G.P.filter(P => P.city).length, miss}; });
+    if (st.me !== 'Poland' || st.n !== st.all || st.europe !== 14 || st.miss.length) bad.push('game: ' + JSON.stringify(st));
     console.log(JSON.stringify(st));
     await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove()); window.__im.redraw(); }); await p.waitForTimeout(1200);
     await p.screenshot({ path: `${out}/${tag}-opening.png` });

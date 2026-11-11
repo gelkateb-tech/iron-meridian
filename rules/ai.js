@@ -151,6 +151,9 @@ let AIRM = {v:-1, S:null, m:new Map()};
 function airMine(n){ if (AIRM.v !== tickVer || AIRM.S !== S) AIRM = {v:tickVer, S, m:new Map()}; let m = AIRM.m.get(n); if (m) return m; m = {};
   for (const a of S.armies) if (a.owner === n && a.air) for (const t of AIR_T) if (a.u[t]) m[t] = (m[t] || 0) + a.u[t]; AIRM.m.set(n, m); return m; }
 const AI_SCARCE = ['iron', 'elec', 'rare'];
+let AIPC = {v:-1, S:null, m:[]};
+function aiCountsOf(n){ if (AIPC.v !== tickVer || AIPC.S !== S) AIPC = {v:tickVer, S, m:[]}; let c = AIPC.m[n]; if (c) return c;
+  let ships = 0, allU = 0, jamN = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } return (AIPC.m[n] = {ships, allU, jamN}); }
 function aiPickUnit(n, p){
   const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.2, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
   // terrain counter-pick: rough fronts (forest, hills, mountains, marsh, ice) want infantry and special forces, open ones armor
@@ -158,7 +161,8 @@ function aiPickUnit(n, p){
   // trade war: convoys sunk lately want frigates (escorts); enemy trade routes in the world invite submarines (raiders)
   const trHit = S.trade ? Math.min(4, S.trade.hit[n] || 0) : 0, foeTr = S.trade && warsOf(n).length ? S.trade.routes.filter(r => r.kind === 'sea' && !trMine(r, n) && trHostile(r, n)).length : 0;
   w.frig += 1.3*trHit; w.crui += 0.3*trHit; w.sub += 0.2*Math.min(8, foeTr);
-  let allU = 0, jamN = 0; { let ships = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } if (ships > allU*(trHit >= 1 ? 0.28 : 0.2)){ w.frig = w.sub = w.crui = 0; } }
+  // (the nation's ships, units and jammers: counted once an hour per nation; its forces do not change between the cities of one turn, which only queue)
+  const AC = aiCountsOf(n), allU = AC.allU, jamN = AC.jamN; if (AC.ships > allU*(trHit >= 1 ? 0.28 : 0.2)){ w.frig = w.sub = w.crui = 0; }
   // V3 air: drones, the jammer, specialised aircraft, with counter-picks against what the enemy fields and what has been hitting us
   { const H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, mine = airMine(n);
     const rich = S.nations[n].cash > 400, wars = warsOf(n).length > 0, coast = G.P[p].coast;
@@ -366,7 +370,7 @@ function aiTurn(n){
         if (N.cash > tc.cash + 30 && startResearch(n, pick.id)) N.rPick = null; } }
   }
   const inc = income(n), provs = S.owner.filter(o => o === n).length;
-  const units = S.armies.reduce((s, a) => s + (a.owner === n ? count(a) : 0), 0) + S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.length : 0), 0);
+  const units = aiCountsOf(n).allU + S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.length : 0), 0);   // (its forces have not changed yet this turn)
   const canGrow = inc.net.cash > 4 && inc.upkeep.cash < inc.gross.cash*0.7 && units < aiArmyCap(n);
   // economy buildings: one new project per turn where it is needed most; a rich power stuck on a resource runs up to three at once.
   // The Arms Industry raises a city's main resource, so only goods one of its own cities produces can be raised at home: rare materials first (research),

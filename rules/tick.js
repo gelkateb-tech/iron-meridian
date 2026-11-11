@@ -134,8 +134,8 @@ function tick(){
     } else if (owners.size === 0) S.cap[p] = null;
   }
   if (S.hour % 24 === 0){ diploDay(); daily(); }
-  // the AI plays every nation that is not a seat
-  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
+  // the AI plays every nation that is not a seat (in the nations world a nation far from the fighting plans every other turn: aiAway)
+  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); if (!((S.hour + n) % 8 === 4 && aiAway(n))) aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
   IM.emit('hour');
   visCache = null;
 }
@@ -161,6 +161,11 @@ function recordStats(){
     const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id)).findIndex(N => N.id === me) + 1;
     if (rank && (!st0.bestRank || rank < st0.bestRank)){ st0.bestRank = rank; st0.bestRankDay = day + 1; } }
 }
+// thinking in turns (docs/NATIONS-PLAN.md 3.7), the nations world only: a computer nation at peace whose land touches no person's land plans its
+// economy, recruits and moves every 8 hours instead of every 4 (one turn in two); at war, or next to a person's nation, every 4 as before. Its
+// trade, links, aircraft, missiles and agents keep their hours. The rules are the same for every nation; only the planning of the quiet ones is
+// spread out, so 30 to 68 computer nations cost little more than 15. The classic world and the theatres are untouched.
+function aiAway(n){ if (!tiered() || warsOf(n).length) return false; for (const s of seats()) if (borders(n, s) || borders(s, n)) return false; return true; }
 function daily(){
   if (S.airHit) for (const k in S.airHit){ const H = S.airHit[k]; for (const j in H) if (typeof H[j] === 'number') H[j] *= 0.7; if (H.bp) for (const q in H.bp) if (S.hour - H.bp[q] > 96) delete H.bp[q]; }   // air-raid memory fades
   marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay(); tradeDay(); INCC.v = -1;
