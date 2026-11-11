@@ -81,12 +81,15 @@ function trInvalid(r){ const T = trS(), M = mkt();
   if (!S.nations[r.a].alive || S.owner[S.nations[r.a].capital] !== r.a) return 'gone';
   if (r.b >= 0){ if (!S.nations[r.b].alive || S.owner[S.nations[r.b].capital] !== r.b) return 'gone';
     if (atWar(r.a, r.b) || S.decl.some(d => (d.by === r.a && d.to === r.b) || (d.by === r.b && d.to === r.a))) return 'war';
-    if (M.emb[r.a + '>' + r.b] || M.emb[r.b + '>' + r.a]) return 'embargo';
+    if (embargoed(r.a, r.b)) return 'embargo';
     for (const me of [r.a, r.b]) if (isSeat(me) && opinion(trOther(r, me), me) < -50) return 'refused';   // a seat's partner breaks off when it comes to dislike the seat
     if (r.kind === 'land' && !borders(r.a, r.b)) return 'border'; }
   else if (!(neuPorts().get(r.nc) || []).length) return 'gone';
   if (T.closed[r.key]) return 'closed';
   return null; }
+// an embargo takes effect at once: routes between the two powers close now (with the usual notice), not at the next daily check
+function trCutEmbargo(){ const T = trS(), gone = T.routes.filter(r => r.b >= 0 && embargoed(r.a, r.b)); if (!gone.length) return;
+  T.routes = T.routes.filter(r => !gone.includes(r)); for (const r of gone) trEnded(r, 'embargo'); T.ver = (T.ver || 0) + 1; INCC.v = -1; }
 const TR_WHY = {war:'war broke out', embargo:'an embargo', refused:'they no longer trade with you', border:'the border closed', gone:'the partner is gone', closed:'you closed it', port:'no port is left to trade through'};
 function trMake(a, b, kind, nc = null){ const T = trS(), r = {id:T.nid++, a, b, nc:b === NEUTRAL ? nc : null, kind, key:trKey(a, b, nc), t0:S.hour, f:1, why:'', by:-1, bz:-1, raid:-1e9, raidZ:-1, acc:0, accN:0, va:null, vb:null, sunk:0};
   if (trInvalid(r) || !trPlace(r)) return null; T.routes.push(r); T.ver = (T.ver || 0) + 1; trStatus(r); return r; }
@@ -221,7 +224,7 @@ function tradeGen(){ const T = trS(); NEUP = null;
 // nation n opens a route with nation b (or with the unaligned country nc), or closes its route id
 function tradeOpen(n, b, nc = null, kind = null){ const T = trS(), key = trKey(n, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
   if (T.routes.some(r => r.key === key)) return true;
-  if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (mkt().emb[n + '>' + b] || mkt().emb[b + '>' + n]) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
+  if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (embargoed(n, b)) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
   const r = trMake(n, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(n, b) ? trMake(n, b, 'land') : null);
   if (!r) return 'no route can be laid: no port or sea path';
   trValue(r); INCC.v = -1; tell(n, `Trade route opened with ${trName(r, n)}: +$${fmt1(r.va.cash)}M and ${r.va.q} ${rlbl(r.va.k)} a day while it runs.`, 'good', r.path[Math.floor(r.path.length/2)]); return true; }

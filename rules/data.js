@@ -116,9 +116,10 @@ function fitOf(w, k, atk, cold){ if (!w.length) return 1; const T = tuf(k, atk, 
 function terrFit(a, p, atk){ if (G.P[p].sea || !count(a)) return 1; return fitOf(fitW(a), G.P[p].terrain || 'plains', atk, !arctic(a.owner)); }
 // roughness of a terrain for armor (0 open ground .. 1 tank trap), used by the AI's recruiting
 const rough = k => Math.max(0, Math.min(1, (1 - (TERRAIN[k] || TERRAIN.plains).armor)/0.3));
-/* Speeds on water (hexes/day, one hex ~180 km), slowest to fastest: embarked ground troops (transports) 3.6 < carriers 5 < submarines 5.4 <
+/* Speeds on water (hexes/day, one hex ~180 km), slowest to fastest: embarked ground troops (transports) 1.8 < carriers 5 < submarines 5.4 <
    cruisers 5.8 < frigates 6, against 4 for infantry on land. Escorted convoys +15%; sea lanes (major shipping routes) +12%. */
-const SEA_SPEED = 3.6;                // hexes/day for embarked ground units (troop transports)
+// Embarked troops sail in slow, loaded transports: 1.8 hexes/day (~325 km/day), 45% of infantry's land speed (it was 3.6, 90%: troops at sea were almost as fast as on land).
+const SEA_SPEED = 1.8;                // hexes/day for embarked ground units (troop transports)
 const LANE_F = 1.12;                  // sea-lane bonus for every force at sea
 const KM_HEX = 180;                   // one map hex is roughly 180 km
 // Recruiting Office, levels I-V: what it costs to reach each level (money $M, materials, iron, electronics) and how many days it takes.

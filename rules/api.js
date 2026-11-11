@@ -11,7 +11,7 @@ IM.api = {
   seats, isSeat, desk, visibleSet, armyVisible,
   // orders (first argument: the nation, or its force)
   recruit, build, buildMissile, startResearch, buildLink,
-  orderMove, splitArmy, splitPlan, merge,
+  orderMove, haltArmy, splitArmy, splitPlan, merge,
   orderAir, orderDrop, launchMissile, launchSat, startSpy,
   declareWar, surpriseWar, acceptOffer, applyDeal,
   tradeOpen, tradeClose, postOffer, fillOffer, escortSet,

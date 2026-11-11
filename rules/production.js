@@ -22,6 +22,15 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words
 function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : ''; }
 const reqText = (p, t, n) => canMobilize(n, p, t);
+// ---------- training queue limit: at most QUEUE_MAX units waiting or training per city, for everyone (the AI too). A future premium pass gives
+// extra slots (LATER.md): ask queueMax(n), not the constant. Old saves with longer queues keep them but cannot add more until below the limit.
+// Missiles (silo) are not unit training and do not count.
+const QUEUE_MAX = 2;
+const queueMax = n => QUEUE_MAX;
+const queueUsed = p => S.queue[p].reduce((c, it) => c + (it.msl ? 0 : 1), 0);
+const queueFull = (n, p) => queueUsed(p) >= queueMax(n);
+// '' when city p can take another unit, else the reason in words
+const queueWhy = (n, p) => queueFull(n, p) ? `Training queue full (${queueMax(n)}/${queueMax(n)})` : '';
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 // ---------- Recruiting Office (levels I-V): every unit trained in its city trains 10% faster per level, and the city gives 3k manpower a day at level I
 // and 1.5k more per level. recPct / recMp are per level (the page words its tooltips from them), recSpeed is the city's training-time factor
@@ -55,7 +64,7 @@ const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t,
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && P.city && P.coast)); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
-const canRecruit = (n, p, t) => !canMobilize(n, p, t) && canAfford(n, t);
+const canRecruit = (n, p, t) => !canMobilize(n, p, t) && !queueFull(n, p) && canAfford(n, t);
 function recruit(n, p, t){
   if (!canRecruit(n, p, t)) return false;
   const N = S.nations[n], c = ucost(n, t); payC(N, c);
@@ -120,8 +129,8 @@ function devResearchAll(n){ const N = S.nations[n]; if (!N || !N.alive) return 0
   for (const s of R_SLOTS) if (N[s]){ N[s].h = 1; researchSlotHour(N, s); k++; }
   for (let go = true; go;){ go = false; for (const T of TECH){ devFill(N); if (startResearch(n, T.id)){ for (const s of R_SLOTS) if (N[s] && N[s].id === T.id){ N[s].h = 1; researchSlotHour(N, s); } k++; go = true; } } }
   Object.assign(N, keep); visCache = null; return k; }
-// spawn: a new force of k units of type t for nation n in province p (ground and air on land, ships at sea or on a coast), built by addArmy
-function devSpawnOk(p, t){ const U = UNITS[t], P = G.P[p]; return !!U && !!P && (U.cls === 'naval' ? !!(P.sea || P.coast) : !P.sea); }
+// spawn: a new force of k units of type t for nation n in province p (ground and air on land, ships at sea or in a port city), built by addArmy
+function devSpawnOk(p, t){ const U = UNITS[t], P = G.P[p]; return !!U && !!P && (U.cls === 'naval' ? shipPlaceOk(p) : !P.sea); }
 function devSpawn(n, p, t, k){ if (!S.nations[n] || !S.nations[n].alive || !devSpawnOk(p, t)) return null;
   const a = addArmy(n, p, {[t]:Math.max(1, Math.min(999, Math.round(k) || 1))}); if (UNITS[t].cls === 'air') a.air = {base:p, cd:0}; visCache = null; return a; }
 /*@ENDDEV*/

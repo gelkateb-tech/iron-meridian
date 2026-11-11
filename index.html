@@ -3669,6 +3669,18 @@ const SLK = (() => {
     return out; })(),
   }; })();
 SLK.stealth = SLK.bomb;
+// INFANTRY COUNTER GLYPH OPTIONS (owner to pick): INF_ICON 0 = the current advancing rifleman (default), 1 = front-facing standing soldier, rifle at the order,
+// 2 = helmeted head-and-shoulders bust, 3 = crossed rifles insignia. Switch with this one constant; the options live beside the others as SLK.inf1..inf3.
+const INF_ICON = 0;
+SLK.inf1 = [['f', 'M7.9 2.6C7.9 .9 8.8 .3 10 .3S12.1 .9 12.1 2.6H12.9V3.2H7.1V2.6z'], ['f', 'M8.6 3.4H11.4V4.4Q11.4 5 10.8 5H9.2Q8.6 5 8.6 4.4z'],
+  ['f', 'M6.8 5.7H13.2L13.7 9.3H6.3z'], ['s', 'M6.3 6.3L5.2 9.6', 1.7], ['s', 'M13.7 6.3L15.6 6.4', 1.7], ['s', 'M8.5 9L8.1 12.4', 2.2], ['s', 'M11.5 9L11.9 12.4', 2.2], ['b', 'M6.7 13.2H9.2M10.8 13.2H13.3', 1],
+  ['b', 'M16.4 1.2V12.8', 1.1], ['f', 'M15.6 5.6H17.2V6.8H15.6z']];
+SLK.inf2 = [['f', 'M4.9 6.8C4.9 2.2 7.2 .6 10 .6S15.1 2.2 15.1 6.8z'], ['f', 'M3.5 6.8H16.5V7.9H3.5z'], ['x', 'M5 4.7H15V5.3H5z'],
+  ['f', 'M6.6 8.4H13.4V10.2Q13.4 11.7 10 11.7S6.6 11.7 6.6 10.2z'], ['x', 'M7.7 9.2H9.1V9.8H7.7zM10.9 9.2H12.3V9.8H10.9z'],
+  ['f', 'M1.6 13.6Q1.8 12 5.2 11.6L6.6 11.2Q10 12.6 13.4 11.2L14.8 11.6Q18.2 12 18.4 13.6z']];
+SLK.inf3 = [['s', 'M2.8 12.4L7 9.2', 2.4], ['b', 'M6.6 9.5L17.8 1.4', 1.1], ['f', 'M17.2 .6L18.6 .9L18.2 2.2z'],
+  ['xs', 'M17.2 12.4L3 1.6', 2.2], ['s', 'M17.2 12.4L13 9.2', 2.4], ['b', 'M13.4 9.5L2.2 1.4', 1.1], ['f', 'M2.8 .6L1.4 .9L1.8 2.2z'], ['f', 'M8.85 7.2a1.15 1.15 0 1 0 2.3 0a1.15 1.15 0 1 0 -2.3 0z']];
+if (INF_ICON) SLK.inf = SLK['inf' + INF_ICON];
 // a sleek glyph of type t, W device px wide (20 design units: at the counter's 20 css px every whole and half unit lands on a device pixel), in colour col;
 // painted once into an offscreen canvas (dropped when the pixel ratio changes)
 const SLKC = new Map(); let SLKC_D = 0;
@@ -4747,8 +4759,8 @@ function tradeTip(k){ const rs = routesOf(PLAYER); if (!rs.length) return ''; le
   if (!lines.length) return ''; return `&#10;Trade routes +${k === 'cash' ? '$' : ''}${fmt1(s)}${k === 'cash' ? 'M' : ''}/day&#10;${lines.slice(0, 8).join('&#10;')}`; }
 const spark = (h, w = 120, ht = 28, col = 'var(--accent)') => { if (h.length < 2) return `<svg width="${w}" height="${ht}"></svg>`; const mn = Math.min(...h), mx = Math.max(...h), r = mx - mn || 1;
   return `<svg width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}" aria-hidden="true"><polyline fill="none" stroke="${col}" stroke-width="1.6" points="${h.map((v, i) => `${(i/(h.length - 1)*(w - 2) + 1).toFixed(1)},${(ht - 2 - (v - mn)/r*(ht - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
-function offerRows(list, bid){ return list.map(o => { const N = S.nations[o.seller], enemy = o.seller !== PLAYER && atWar(PLAYER, o.seller), mine = o.seller === PLAYER, emb = !mine && mkt().emb[o.seller + '>' + PLAYER], R = RES.find(r => r.k === o.res);
-    const tip = enemy ? `This offer is made by an enemy: ${N.name}. ${bid ? 'Selling to them supplies their war.' : 'Buying from them funds their war.'}` : emb ? `${N.name} has an embargo on you and will not trade.` : `${bid ? 'Buy offer' : 'Sell offer'} by ${N.name}`;
+function offerRows(list, bid){ return list.map(o => { const N = S.nations[o.seller], enemy = o.seller !== PLAYER && atWar(PLAYER, o.seller), mine = o.seller === PLAYER, emb = !mine && embargoed(o.seller, PLAYER), R = RES.find(r => r.k === o.res);
+    const tip = enemy ? `This offer is made by an enemy: ${N.name}. ${bid ? 'Selling to them supplies their war.' : 'Buying from them funds their war.'}` : emb ? `${mkt().emb[o.seller + '>' + PLAYER] ? N.name + ' has an embargo on you' : 'You have an embargo on ' + N.name} and no deals are made.` : `${bid ? 'Buy offer' : 'Sell offer'} by ${N.name}`;
     const act = mine ? `<button class="btn" data-act="book-cancel" data-id="${o.id}" style="padding:3px 8px;font-size:12px">Withdraw</button>`
       : emb ? '<span class="small muted">Embargo</span>'
       : `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="10" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} 10</button><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="9999" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} all · $${fmt(o.qty*o.price)}M</button></div>`;
@@ -4791,11 +4803,11 @@ let pendingSurprise = null;
 function confirmSurprise(viol, go){ pendingSurprise = {viol, go};
   const names = viol.map(n => `<b style="color:${S.nations[n].color}">${S.nations[n].name}</b>`).join(' and '), tr = viol.filter(n => ['nap', 'ally', 'pass', 'truce'].includes(rel(PLAYER, n).st));
   openModal(`<div class="eyebrow">Border crossing</div><h1>Declare war?</h1>
-    <p>This move enters the territory of ${names}. Continuing will <b>declare war immediately</b>: a surprise attack, with no 24-hour warning.</p>
+    <p>This move enters the territory of ${names}. Continuing will <b>declare war immediately</b>: a surprise attack, with no declaration.</p>
     <ul class="small" style="margin:0 0 10px 18px;line-height:1.6"><li>${viol.map(n => S.nations[n].name).join(' and ')} will see you as an aggressor (opinion −60); other nations think less of you too.</li>
       ${tr.length ? `<li style="color:var(--danger-t)">You have a treaty with ${tr.map(n => S.nations[n].name).join(', ')}: breaking it marks you as a treaty breaker.</li>` : ''}
       ${viol.flatMap(n => alliesOf(n)).filter(x => x !== PLAYER).length ? `<li>Their allies (${[...new Set(viol.flatMap(n => alliesOf(n)).filter(x => x !== PLAYER))].map(x => S.nations[x].name).join(', ')}) may join against you.</li>` : ''}
-      <li>A formal declaration from Diplomacy avoids the surprise penalty but gives them 24 hours to prepare.</li></ul>
+      <li>A formal declaration from Diplomacy avoids the surprise penalty; the war starts at once.</li></ul>
     <div class="row"><button class="btn war" data-act="surprise-go">Continue: declare war</button><button class="btn primary" data-act="surprise-cancel">Cancel move</button></div>`, 'surprise'); }
 let DEAL = null, NATV = null;
 function nationHTML(n){ const N = S.nations[n], r = rel(PLAYER, n), L = chatLog(PLAYER, n); if (S.unread) S.unread[n] = 0; NATV = n; if (!DEAL || DEAL.n !== n) DEAL = {n, give:emptySide(), get:emptySide()};
@@ -5482,9 +5494,11 @@ const roleTypes = r => r.slice(r.indexOf(':') + 1).split('.').filter(Boolean);
 const roleBase = r => r.slice(0, r.indexOf(':'));
 const roleSort = rs => rs.slice().sort((a, b) => { const oa = roleOwner(a), ob = roleOwner(b); return ((ob === PLAYER) - (oa === PLAYER)) || (oa - ob) || ('gsa'.indexOf(a[0]) - 'gsa'.indexOf(b[0])); });
 // this frame's roles: province -> Map(holder key -> {air, owner, u}), from every force you can see standing (not marching) there
+// a force's key in its province: air 'a'; a fleet docked in a port (land) 's' (its own force, shown as ships on the water, never merged with the garrison); the rest 'x'
+const fkey = (a, p) => a.air ? 'a' : !G.P[p].sea && shipsOnly(a) ? 's' : 'x';
 function tmRoleAdd(R, a){ if (a.fly || a.pos || a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id))) return;
   const p = a.air ? (a.air.base ?? a.at) : a.at; if (p == null || !G.P[p]) return; let M = R.get(p); if (!M) R.set(p, M = new Map());
-  const k = (a.air ? 'a' : 'x') + a.owner; let e = M.get(k); if (!e) M.set(k, e = {air:!!a.air, owner:a.owner, list:[]}); e.list.push(a); }
+  const k = fkey(a, p) + a.owner; let e = M.get(k); if (!e) M.set(k, e = {air:!!a.air, owner:a.owner, list:[]}); e.list.push(a); }
 function roleOf(p, e){ if (e.r) return e.r; const u = tmUnits(e.list), naval = Object.keys(u).every(t => t === 'lst' || (UNITS[t] && UNITS[t].cls === 'naval'));
   const cls = e.air ? 'a' : G.P[p].sea || naval ? 's' : 'g'; return (e.r = roleStr(cls, e.owner, u, p)); }
 function rolesAt(R, p){ const M = R.get(p); return M ? [...M.values()].map(e => roleOf(p, e)) : []; }
@@ -5504,6 +5518,14 @@ const TM_ZS = [TM_F0 + TM_F1, 160, 240], TM_KEEP = 1200;   // (the zooms a spot 
 function tmGround(p, cls, wx, wy, w){ const ce = worldToCell(wx, wy), q = ce >= 0 ? G.prov[ce] : -1;
   if (cls === 'g' || cls === 'a'){ if (isWet(wx, wy)) return w*3200; if (q === p) return 0; if (q < 0) return w*3200; const Q = G.P[q]; if (Q.sea) return w*3200; return S.owner[q] === S.owner[p] && S.owner[p] >= 0 ? w*(1500 + 18*Math.hypot(wx - G.P[p].x, wy - G.P[p].y)) : w*2600; }   // (a neighbour's ground only where its own has no room: the dearer the further out)
   if (!isWet(wx, wy)) return w*3200; if (q === p) return 0; return q >= 0 && G.P[q].sea ? w*90 : w*600; }
+// SHIPS NEVER ON LAND (display): where a port's fleet is moored: the nearest water to the city's point (rings outward, sides checked so a hull fits),
+// as candidate offsets from the city; the layout's own cost then prefers the one in the sea zone next door. Kept per game state.
+const DOCK = new Map(); let DOCK_G = null;
+function dockCands(p){ if (DOCK_G !== G){ DOCK.clear(); DOCK_G = G; } let L = DOCK.get(p); if (L) return L; const P = G.P[p]; L = [];
+  for (let r = 3; r <= 120 && !L.length; r += 2){ for (let k = 0; k < 36; k++){ const th = k/36*Math.PI*2, wx = P.x + Math.cos(th)*r, wy = P.y + Math.sin(th)*r;
+      if (isWet(wx, wy) && isWet(wx - 4, wy) && isWet(wx + 4, wy) && isWet(wx, wy - 3) && isWet(wx, wy + 3)) L.push([wx - P.x, wy - P.y, 0]); } }
+  if (L.length){ const base = L.slice(0, 6); L = []; for (const b of base) for (let dy = -8; dy <= 8; dy += 4) for (let dx = -8; dx <= 8; dx += 4) L.push([b[0] + dx, b[1] + dy, 0]); }
+  DOCK.set(p, L); return L; }
 function layoutCompute(p, roles){
   const P = G.P[p], cap = isCapital(p), city = !P.sea && (P.city || cap), tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0, obs = [];
   const cityObs = (q, own) => { const Q = G.P[q], cq = isCapital(q), tq = Q.pop0 >= 8 ? 2 : Q.pop0 >= 2.5 ? 1 : 0, r = (cq ? 8.7 + tq : [2.8, 3.6, 4.6][tq] + 1.8)*2 + 2;
@@ -5539,6 +5561,7 @@ function layoutCompute(p, roles){
     // in a battle the attacker stands on the side it came from (toward its own land next door, else its capital), the holder on the other side
     let ux = 0, uy = 0; if (bat && cls === 'g' && BU){ const sg = ow === S.owner[p] ? -1 : 1; ux = BU[0]*sg; uy = BU[1]*sg; }
     for (let dy = -24; dy <= 12; dy += 2) for (let dx = -22; dx <= 22; dx += 2) cand.push([dx, dy, 0]);
+    if (cls === 's' && !P.sea) for (const q of dockCands(p)) cand.push(q);   // a fleet docked in a port: on the water off the city's shore (the grid above rarely reaches it)
     if (pg) cand.unshift([pg.tx - P.x, pg.ty - P.y, -TM_KEEP]);   // where it stands now (its glide's end), while that is still a fair spot: a force coming or going leaves the others in place
     // a spot's cost (B: an optional breakdown, for the tests)
     const ev = (dx, dy, bonus, bc, B) => { let c = 0; const add = B ? (k, v) => { c += v; B[k] = Math.round((B[k] || 0) + v); } : (k, v) => { c += v; };
@@ -5605,11 +5628,11 @@ function moveAnchor(R, a, wx, wy){ let o0 = [0, 0], o1 = null, f0 = 0, f1 = 0; c
   SPLITS.delete(a.id);
   if (L0){ o0 = [L0.ox, L0.oy];
     // a force leaving a garrison behind never shares its spot: it sets off from beside it, on the side it marches to (and eases onto its own path)
-    const gM = L0.p != null && R.get(L0.p), gE = gM && gM.get('x' + a.owner), nx = a.to ?? a.path[0];
+    const gM = L0.p != null && R.get(L0.p), gE = gM && gM.get(fkey(a, L0.p) + a.owner), nx = a.to ?? a.path[0];
     if (gE && !gE.list.includes(a) && nx != null && G.P[nx]){ const gb = tmFoot(roleTypes(roleOf(L0.p, gE))).b, ts = tmRank(tmUnits([a]), G.P[a.at].sea ? 's' : 'g'), mb = ts.length ? tmFoot(ts).b : [-1, 0, 1, 0];
       o0 = [L0.ox + (G.P[nx].x >= L0.x ? 1 : -1)*((gb[2] - gb[0])/2 + (mb[2] - mb[0])/2 + 0.8), L0.oy]; SPLITS.add(a.id); }
     f0 = lin(Math.hypot(wx - L0.x, wy - L0.y)/Math.min(0.5*D, Math.max(8, 2.5*Math.hypot(o0[0], o0[1])))); }
-  if (q != null && G.P[q] && !(a.dest && a.dest.p === q)){ const Q = G.P[q], M = R.get(q), k = 'x' + a.owner, rs = rolesAt(R, q);
+  if (q != null && G.P[q] && !(a.dest && a.dest.p === q)){ const Q = G.P[q], M = R.get(q), k = fkey(a, q) + a.owner, rs = rolesAt(R, q);
     let T = null; if (M && M.has(k)) T = anchorOf(R, q, roleOf(q, M.get(k)), performance.now());
     else { const u = tmUnits([a]), naval = Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval'), cls = Q.sea || naval ? 's' : 'g', r = roleStr(cls, a.owner, u, q); T = provLayoutH(q, rs.concat([r])).out.get(r); }
     if (T){ o1 = [T[0] - Q.x, T[1] - Q.y]; f1 = lin(Math.hypot(wx - Q.x, wy - Q.y)/Math.min(0.5*D, Math.max(8, 2.5*Math.hypot(o1[0], o1[1])))); } }
@@ -5627,7 +5650,7 @@ function haltAnchor(a, A, now, wx, wy){ const E = OFS.get(a.id); if (!E) return 
    Every counter is pinned to its force's world spot (provLayout, from the game state alone) at one pixel size, at every zoom: the zoom never moves
    one. Out where the spots are too close to hold one-pixel-size counters apart, the counters that would touch fade out IN PLACE: the most
    important (yours, a battle's, a foe's, the biggest) stays, and a power's own counter it covers hands it its strength (the summed count and the
-   mixed-stack glyph, a tap opens the chooser); as you zoom in each fades back in at its own spot. A counter is hidden while it comes within
+   mixed-stack glyph, a tap opens its stack); as you zoom in each fades back in at its own spot. A counter is hidden while it comes within
    PF_IN px of a shown one and shown again only past PF_OUT (hysteresis: a slow zoom never flickers). Under the HUD (the shield rail, the map
    controls, the minimap) a counter and its troops fade to a quarter instead of moving. */
 /*@TEST*/const PGHOST = [];/*@ENDTEST*/
@@ -7882,26 +7905,26 @@ function draw(now){ draw.now = now;
     const [x, y] = toScreen(wx, wy), cm = 40 + 26*view.s, far = x < -cm || y < -cm || x > cw + cm || y > ch + cm;
     if (!far && ((mv && S.speed && !S.over) || (mvm && (!mvm.rest || mvm.halt != null)))) animFast();   // marching on screen, or its spring still settling
     if (far && (mv || a.pos)) continue;
-    items.push({a, x, y, wx, wy, owner:a.owner, moving:mv, air:!!a.air, far}); }
+    items.push({a, x, y, wx, wy, owner:a.owner, moving:mv, air:!!a.air, far, dock:!a.air && fkey(a, a.at) === 's'}); }
   movSweep(now);
   const clusters = [];
   const plateQuiet = clQuiet;
   const R2 = 0, plateM = false, MW = 0, MH = 0;   // (counters that would overlap fade in place: plateFade)   // plate mode: one owner's stationary plates that would overlap merge   // counters that would overlap on screen merge until provinces are big enough to hold them apart
   // stationary armies of one owner in one province always merge; nearby ones merge when zoomed out
   for (const it of items){
-    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0) || (plateM && Math.abs(c.x - it.x) < MW && Math.abs(c.y - it.y) < MH)));
+    let c = clusters.find(c => c.owner === it.owner && !c.moving && !it.moving && c.air === it.air && c.dock === it.dock && ((c.at === it.a.at && !it.a.pos && !c.pinned) || (c.x - it.x)**2 + (c.y - it.y)**2 < Math.max(R2, it.a.pos ? 100 : 0) || (plateM && Math.abs(c.x - it.x) < MW && Math.abs(c.y - it.y) < MH)));
     if (it.moving) c = null;
     if (c){ c.list.push(it.a); c.n += count(it.a); }
-    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.air && it.a.air && it.a.air.base != null ? it.a.air.base : it.a.at, moving:it.moving, air:it.air, list:[it.a], n:count(it.a), pinned:!!it.a.pos, it, far:it.far});
+    else clusters.push({owner:it.owner, x:it.x, y:it.y, at:it.air && it.a.air && it.a.air.base != null ? it.a.air.base : it.a.at, moving:it.moving, air:it.air, dock:it.dock, list:[it.a], n:count(it.a), pinned:!!it.a.pos, it, far:it.far});
   }
   // WORLD ANCHORS: each force's spot on the map (world units): its province's slot for it (provLayout), its pinned spot, or on the march its
   // smoothed position easing between its old and new slots. The counter is pinned just above it at one pixel size; its models stand just under it.
   const farT0 = performance.now();
   for (const c of clusters){ const it = c.it, a = c.list[0]; let A;
     if (c.far){ const L0 = PLAY.get(c.at); if (!(L0 && L0.S === S) && performance.now() - farT0 > 6){ c.dead = true; continue; } }   // (an off-screen province not laid out yet waits for a frame with time to spare)
-    if (c.pinned){ A = [it.wx, it.wy]; c.cls = c.air ? 'a' : G.P[a.at] && G.P[a.at].sea ? 's' : 'g'; }
+    if (c.pinned && !c.dock){ A = [it.wx, it.wy]; c.cls = c.air ? 'a' : G.P[a.at] && G.P[a.at].sea ? 's' : 'g'; }
     else if (c.moving){ A = moveAnchor(ROLES, a, it.wx, it.wy); c.split = SPLITS.has(a.id); const u = tmUnits([a]); c.cls = G.P[a.at].sea || Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval') ? 's' : 'g'; }
-    else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : 'x') + c.owner);
+    else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : c.dock ? 's' : 'x') + c.owner);
       if (e){ const r = roleOf(c.at, e), P0 = G.P[c.at]; c.cls = r[0]; A = anchorOf(ROLES, c.at, r, now);
         const mS = !c.air && a.at === c.at ? movOwn(a.id) : null;   // (a stack that absorbs an arriving column keeps its spot)
         if (mS){ A = [A[0] + it.wx - P0.x, A[1] + it.wy - P0.y]; }   // still settling after a march: its spring's lag rides along
@@ -8412,13 +8435,8 @@ mini.addEventListener('pointerdown', e => { if (GLOBE) GLOBE.leave(); miniDrag =
 mini.addEventListener('pointermove', e => { if (!miniDrag) return; if (!miniDrag.moved && Math.hypot(e.clientX - miniDrag.x, e.clientY - miniDrag.y) < 5) return; miniDrag.moved = true; miniJump(e); });
 mini.addEventListener('pointerup', () => { miniDrag = false; });
 
-// clicking a city where your troops stand asks what you meant: the city or one of the forces
+// (the old city-or-troops menu is gone: a tap on a city opens its sheet at once, troops are reached by tapping their counter)
 function closeChooser(){ const el = $('chooser'); if (el && !el.hidden){ el.hidden = true; el.innerHTML = ''; } }
-function openChooser(p, x, y){ const P = G.P[p], own = stationaryAt(p).filter(a => a.owner === PLAYER), el = $('chooser'); if (!el) return false;
-  const nm = P.cityName || P.name;
-  el.innerHTML = `<div class="ct">${nm}</div><button data-act="choose-prov" data-id="${p}">${bimg('city', cityLevel(p), 22) || '<i>🏙</i>'}City · ${nm}<span class="small">${S.owner[p] === PLAYER ? 'recruit, build' : 'details'}</span></button>`
-    + own.map(a => `<button data-act="choose-army" data-id="${a.id}">${leadT(a) ? unitPic(leadT(a), 'sm') : '<i>⚔</i>'}${armyName(a)}<span class="small">${pluN(count(a), 'unit')}</span></button>`).join('');
-  el.hidden = false; tipHide(); const w = 240, h = 46 + own.length*38; el.style.left = Math.max(8, Math.min(cw - w - 8, x + 12)) + 'px'; el.style.top = Math.max(8, Math.min(ch - h - 8, y - 20)) + 'px'; return true; }
 function cityAt(x, y){ let best = null, bd = 1e9; for (const m of cityPts){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
 // the city whose drawn name is at (x, y): a plain tap on a city's name picks that city (the name is what marks a city on the map)
 function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ const b = cityNames[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return cityNames[i]; } return null; }
@@ -8427,15 +8445,12 @@ function tap(x, y, shift = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   closeChooser(); lastClickW = screenToWorld(x, y);
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
+  const cityTap = plain && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
   const mk = cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
-  if (plain){
-    let p = mk ? mk.p : -1; if (!mk) for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const a0 = h.ids.map(armyById).find(Boolean); if (a0 && !a0.fly && a0.to === null) p = a0.at; break; } }
-    if (p < 0) p = provAt(x, y);
-    if (p >= 0 && !G.P[p].sea && G.P[p].city && stationaryAt(p).some(a => a.owner === PLAYER) && openChooser(p, x, y)) return; }
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
       const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast('No route there.', 'bad', null); renderSide(true); } } return; }
-  for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i];
+  if (!cityTap) for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
       if (mk && !h.ids.some(id => { const a = armyById(id); return a && a.at === mk.p; })) break;
       if (h.spread){ zoomAt(2.4, h.cx, h.cy); return; }
@@ -8467,7 +8482,10 @@ function tap(x, y, shift = false){
     if (a.to === null && p === a.at){ selectProv(p); return; }
     if (sel.target === p && a.air){ sendToTarget(a); return; }
     if (sel.target === p){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner)); if (odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
-    setTarget(a, p); return;
+    setTarget(a, p);
+    // tap that is not a valid order target (a land force and a province it can never reach, not merely a diplomatic block, which the plan panel explains) = tap away: deselect
+    if (!a.air && !(targetPath && targetPath.length) && canEnter(PLAYER, p)) clearSel();
+    return;
   }
   selectProv(p); csReveal(p);
 }
@@ -8494,7 +8512,8 @@ function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null;
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
 const groupArmies = () => (sel.group.length ? sel.group : [sel.army]).map(armyById).filter(Boolean);
-const STANCES = {hold:['Hold', 'Stays where you put it.'], defend:['Defend', 'Marches to fight enemies that enter your land within 3 provinces, then returns.'], retreat:['Preserve', 'Falls back to the nearest city of yours when health drops below 40%.']};
+// one-line tooltips written from what the rules do (rules/combat.js: dugIn and stanceHour)
+const STANCES = {hold:['Hold', 'Stays put and takes no standing orders; digs in only after 12 h on your own ground.'], defend:['Defend', 'Dug in at once for the defence bonus, and sorties against weaker enemies within 3 provinces of your land, then returns.'], retreat:['Preserve', 'Falls back to your nearest city to recover when health drops below 40%.']};
 function idleArmies(){ return S.armies.filter(a => a.owner === PLAYER && !a.fly && count(a) && a.to === null && !a.path.length && !S.battles.includes(a.at) && (!a.stance || a.stance === 'hold') && !(a.air && a.air.cd > 0)); }
 function nextIdle(){ const L = idleArmies(); if (!L.length){ toast('Every force has orders.', 'info', null); return; }
   const i = (L.findIndex(a => a.id === sel.army) + 1) % L.length, a = L[i], P = G.P[a.at]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.6)); selectArmy(a.id); }
@@ -8520,7 +8539,7 @@ function armiesHTML(){
       <td><span class="stx ${st0.cls}">${st0.short}</span>${a.air ? (wornWing(a) ? ' <span class="small" style="color:var(--accent)">🔧 needs maintenance</span>' : '') : supplied(a) ? '' : ' <span class="small" style="color:var(--danger-t)">cut off</span>'}</td>
       <td>${a.air || shipsOnly(a) ? '<span class="small muted">—</span>' : `<select class="stsel" data-act="stance" data-id="${a.id}" title="Stance">${Object.entries(STANCES).map(([k, v]) => `<option value="${k}" ${(a.stance || 'hold') === k ? 'selected' : ''} title="${v[1]}">${v[0]}</option>`).join('')}</select>`}</td></tr>`; }).join('');
   return `<div class="rhead"><div><div class="eyebrow">${S.nations[PLAYER].name} · ${L.length} force${L.length === 1 ? '' : 's'} · ${tot} unit${tot === 1 ? '' : 's'}</div><h1>Armies</h1></div><div class="chip">${idle} idle</div></div>
-    <div class="tblwrap"><table class="ptab armt"><thead><tr><th>Force</th><th>Units</th><th>Health</th><th>Status</th><th title="Hold stays put · Defend reacts to enemies within 3 provinces of your land · Preserve pulls back to a city below 40% health">Stance</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">You have no forces.</td></tr>'}</tbody></table></div>
+    <div class="tblwrap"><table class="ptab armt"><thead><tr><th>Force</th><th>Units</th><th>Health</th><th>Status</th><th title="Hold: stays put, digs in after 12 h · Defend: dug in at once, sorties against weaker enemies within 3 provinces · Preserve: falls back to a city below 40% health">Stance</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">You have no forces.</td></tr>'}</tbody></table></div>
     <div class="small muted">Click a force to select it · <kbd>.</kbd> jumps to the next idle force</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${idle ? '<button class="btn" data-act="next-idle">Next idle force</button>' : ''}</div>`;
 }
@@ -8528,14 +8547,14 @@ function armiesHTML(){
 let cmdMode = null;
 function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.owner !== PLAYER) return '';
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
-  if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') + '<span class="sep"></span>' + b('clear', '✕', 'Deselect', 'Esc');
+  if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
   return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
-    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null)
+    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null, 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
-    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : '') + b('clear', '✕', 'Close', 'Esc'); }
+    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : ''); }   // no Close button: tap empty map (or Esc) to deselect
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || dropFor !== null || !!aimMsl); }
-function sendToTarget(a, keep = false){ if (sel.target !== null && sel.targetPt){ groupArmies().forEach((x, i) => { if (!x.air) x.dest = {p:sel.target, x:sel.targetPt[0] + (i % 3 - 1)*7*i/Math.max(1, i), y:sel.targetPt[1] + Math.floor(i/3)*6}; }); }
+function sendToTarget(a, keep = false){ if (sel.target !== null && sel.targetPt){ groupArmies().forEach((x, i) => { if (!x.air) x.dest = shipsOnly(x) && !G.P[sel.target].sea ? null : {p:sel.target, x:sel.targetPt[0] + (i % 3 - 1)*7*i/Math.max(1, i), y:sel.targetPt[1] + Math.floor(i/3)*6}; }); }
   else if (sel.target !== null) groupArmies().forEach(x => { if (!x.air) x.dest = null; });
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
@@ -8948,7 +8967,7 @@ function prodHTML(){
     const qtxt = q.length ? `${(UNITS[q[0].t] || MISSILES[q[0].t]).name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || 24))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
     // queue buttons: the unit's picture and its price (full name and costs in the tooltip), not cryptic code chips
     const btns = UT.filter(t => !canMobilize(PLAYER, p, t)).map(t => { const uc = ucost(PLAYER, t);   // the price you actually pay (doctrine-adjusted), same as the Recruit list
-      return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: ${costTxt(uc, ', ')} (shift-click: 5)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
+      return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="${queueWhy(PLAYER, p) ? queueWhy(PLAYER, p) + '. ' : ''}Queue ${UNITS[t].name}: ${costTxt(uc, ', ')} (shift-click: queue to the limit)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted"><span class="res-${cityMain(p)}" title="Main resource: ${MAIN_NAME[cityMain(p)]}">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${BK.filter(k => S.bld[p][k]).map(k => (k === 'fac' ? 'Base' : k === 'arms' ? 'Industry' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '<span class="muted">—</span>'}</td>
@@ -8966,9 +8985,9 @@ let TUT = null;
 const TUT_STEPS = [
   {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b>.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
-  {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map, then choose <b>City</b> in the little menu.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
+  {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Recruit', d:() => `Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.`, el:'#csheet:not([hidden]) .cs-mob, #ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
-  {t:'Select your army', d:() => 'Now tap your capital again and choose one of your forces in the menu (or tap the soldiers and their number badge).', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
+  {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
   {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
@@ -9027,46 +9046,54 @@ function settingsHTML(){
     <div class="small muted">Keys: Space pause · 1–3 speed · P production · R research · D diplomacy · T market · A army · S statistics · N newspaper · O settings · V map mode · M sound · H home · ? manual ${itip('Mouse: left-click selects, a second click on the same target sends; right-click with a force selected moves or attacks at once; click an enemy force to pursue it. Keys: M move · K attack · L delay · X halt · Ctrl+4…9 save a group, 4…9 recall it.')}</div>
     <div class="row"><button class="btn primary" data-act="resume">Done</button><button class="btn" data-act="tut-start">Replay tutorial</button></div>`;
 }
+// WAR DECLARATIONS / DIPLOMACY: an enemy's strength is shown only with intel (an identified force of theirs in sight: recon drone, satellite, units that have seen them);
+// AWACS 'located' contacts do not count. Otherwise the text says 'Strength unknown without intel'.
+function haveIntelOn(n){ const vis = visibleSet(PLAYER); return S.armies.some(a => a.owner === n && armyVisible(a, vis)); }
 function diploHTML(){
   const me = PLAYER, myP = natPower(me);
   const offers = S.offers.map(o => o.kind === 'trade' ? `<div class="offer"><span>${flagSVG(o.from)} <b style="color:${S.nations[o.from].color}">${S.nations[o.from].name}</b> proposes a trade: ${dealText(o.deal, 'they')}. Expires in ${o.exp - S.hour} h.</span><button class="btn primary" data-act="offer-yes" data-id="${o.id}">Accept</button><button class="btn" data-act="offer-no" data-id="${o.id}">Decline</button></div>` : `<div class="offer"><span>${flagSVG(o.from)} <b style="color:${S.nations[o.from].color}">${S.nations[o.from].name}</b> proposes ${{peace:'peace (10-day truce)', nap:'a non-aggression pact', pass:'right of passage', ally:'an alliance'}[o.kind]}${o.kind === 'peace' ? `. Terms: ${termsText(PLAYER, o.from, warTerms(PLAYER, o.from), PLAYER)}` : ''}. Expires in ${o.exp - S.hour} h.</span><button class="btn primary" data-act="offer-yes" data-id="${o.id}">Accept</button><button class="btn" data-act="offer-no" data-id="${o.id}">Decline</button></div>`).join('');
-  const incoming = S.decl.filter(d => d.to === me).map(d => `<div class="offer" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)"><span><b>${S.nations[d.by].name}</b> has declared war on you. Fighting starts in ${d.at - S.hour} h.</span></div>`).join('');
+  const incoming = S.decl.filter(d => d.to === me).map(d => `<div class="offer" style="border-left-color:var(--danger);background:rgba(224,87,79,.12)"><span><b>${S.nations[d.by].name}</b> has declared war on you.</span></div>`).join('');
   const rows = S.nations.filter(N => N.id !== me && N.alive).map(N => {
     const r = rel(me, N.id), op = opinion(N.id, me), parts = opinionParts(N.id, me), pend = S.decl.find(d => (d.by === me && d.to === N.id) || (d.by === N.id && d.to === me));
-    const ratio = natPower(N.id)/Math.max(1, myP), strength = ratio < 0.7 ? 'Weaker' : ratio > 1.4 ? 'Stronger' : 'Similar';
+    const ratio = natPower(N.id)/Math.max(1, myP), strength = !haveIntelOn(N.id) ? 'Strength unknown without intel' : (ratio < 0.7 ? 'Weaker' : ratio > 1.4 ? 'Stronger' : 'Similar') + ' military';
     const wars = warsOf(N.id).filter(m => m !== me).map(m => S.nations[m].name);
     const left = r.until ? ` · ${Math.ceil((r.until - S.hour)/24)}d` : '';
     const opW = Math.abs(op)/2, opL = op >= 0 ? 50 : 50 - opW;
     const tipTxt = parts.length ? parts.map(x => `${x[0]}: ${x[1] > 0 ? '+' : ''}${x[1]}`).join('&#10;') : 'Neutral';
-    const btn = (kind, label, cls = '') => { const a = acceptOffer(N.id, me, kind); return `<button class="btn ${a.ok ? 'primary' : ''} ${cls}" data-act="propose" data-k="${kind}" data-id="${N.id}" title="${a.ok ? 'Likely accepted: ' : 'Likely refused: '}${a.why}">${label}${a.ok ? '' : ' ✕'}</button>`; };
+    const btn = (kind, label, cls = '', tip = '') => { const a = acceptOffer(N.id, me, kind); return `<button class="btn ${a.ok ? 'primary' : ''} ${cls}" data-act="propose" data-k="${kind}" data-id="${N.id}" title="${tip ? tip + ' ' : ''}${a.ok ? 'Likely accepted: ' : 'Likely refused: '}${a.why}">${label}${a.ok ? '' : ' ✕'}</button>`; };
     let acts = '', hint = '';
     if (pend) hint = pend.by === me ? `War begins in ${pend.at - S.hour} h.` : `They attack in ${pend.at - S.hour} h.`;
     else if (r.st === 'war'){ acts += btn('peace', 'Propose peace'); { const tr = tribute(PLAYER, N.id); acts += `<button class="btn ${S.nations[me].cash >= tr && tributeOk(PLAYER, N.id) ? 'primary' : ''}" data-act="tribute" data-id="${N.id}" ${S.nations[me].cash >= tr ? '' : 'disabled'} title="${tributeOk(PLAYER, N.id) ? 'Likely accepted' : 'Likely refused: they are winning too clearly'}">Pay $${tr}M for peace${tributeOk(PLAYER, N.id) ? '' : ' ✕'}</button>`; } hint = acceptOffer(N.id, me, 'peace').ok ? 'Peace would likely be accepted.' : 'Peace refused: ' + acceptOffer(N.id, me, 'peace').why + '.'; }
     else {
-      if (r.st !== 'truce') acts += `<button class="btn war" data-act="declare" data-id="${N.id}" title="War starts in 24 h. −50 opinion with them${['nap', 'ally', 'pass'].includes(r.st) ? ', and breaking a treaty makes everyone distrust you' : ''}.${alliesOf(N.id).length ? ' Their allies may join: ' + alliesOf(N.id).map(x => S.nations[x].name).join(', ') + '.' : ''}">Declare war</button>`;
-      if (r.st === 'peace' || r.st === 'truce') acts += btn('nap', 'Offer NAP');
+      if (r.st !== 'truce') acts += `<button class="btn war" data-act="declare" data-id="${N.id}" title="War starts at once. −50 opinion with them${['nap', 'ally', 'pass'].includes(r.st) ? ', and breaking a treaty makes everyone distrust you' : ''}.${alliesOf(N.id).length ? ' Their allies may join: ' + alliesOf(N.id).map(x => S.nations[x].name).join(', ') + '.' : ''}">Declare war</button>`;
+      if (r.st === 'peace' || r.st === 'truce') acts += btn('nap', 'Offer NAP', '', 'Non-aggression pact: lasts 20 days. Breaking it marks you as a treaty breaker. It does not give right of passage (ask for that separately).');
       if (r.st === 'peace' || r.st === 'nap') acts += btn('pass', 'Ask passage');
       if (r.st !== 'ally') acts += btn('ally', 'Propose alliance');
       if (r.st === 'truce') hint = 'Truce: war cannot be declared until it ends.';
     }
     acts += `<button class="btn primary" data-act="nat-open" data-id="${N.id}" data-k="chat">Message</button><button class="btn" data-act="nat-open" data-id="${N.id}" data-k="trade">Trade deal</button>${sameBloc(PLAYER, N.id) ? `<button class="btn" data-act="nat-open" data-id="${N.id}" data-k="give">Give</button>` : ''}`;
-    acts += `<button class="btn" data-act="gift" data-id="${N.id}" ${S.nations[me].cash >= 50 ? '' : 'disabled'} title="Improves their opinion of you by 5">Gift $50M</button>`;
+    // Gift $50M only for allies and coalition partners
+    if (r.st === 'ally' || sameBloc(PLAYER, N.id)) acts += `<button class="btn" data-act="gift" data-id="${N.id}" ${S.nations[me].cash >= 50 ? '' : 'disabled'} title="Improves their opinion of you by 5">Gift $50M</button>`;
     { const tr0 = S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)); acts += tr0 ? `<button class="btn" data-act="trade-close" data-id="${tr0.id}" title="Close the trade route (−$${fmt1(trSide(tr0, me).cash)}M a day, −4 opinion)">Close trade route</button>` : r.st !== 'war' && !pend ? `<button class="btn" data-act="trade-open1" data-id="${N.id}" title="Open a trade route: money and goods for both sides every day">Open trade route</button>` : ''; }
-    { const e = mkt().emb[me + '>' + N.id]; acts += `<button class="btn" data-act="embargo" data-id="${N.id}" title="${e ? 'Lift the embargo: +5 opinion' : 'Their market prices worsen 15%; −15 opinion with them'}">${e ? 'Lift embargo' : 'Embargo'}</button>`; }
-    if (mkt().emb[N.id + '>' + me]) hint = (hint ? hint + ' ' : '') + 'They embargo you.';
+    { const e = mkt().emb[me + '>' + N.id], ls = e ? [] : embargoLeaders(me, N.id), EMB_TIP = 'An embargo is not war: map colours and what you see stay as they are. It stops all trade between the two countries (trade routes close, no market deals either way), their market prices worsen 15%, and they like you 15 less. Coalition partners can join.';
+      acts += e ? `<button class="btn" data-act="embargo" data-id="${N.id}" title="Lift the embargo: trade can resume, +5 opinion. ${EMB_TIP}">Lift embargo</button>`
+        : ls.length ? `<button class="btn" data-act="embargo" data-id="${N.id}" data-join="1" title="Join ${S.nations[ls[0]].name}'s embargo on ${N.name}: no trade routes or market deals between you and them. ${EMB_TIP}">Join embargo</button>`
+        : `<button class="btn" data-act="embargo" data-id="${N.id}" title="${EMB_TIP}">Embargo</button>`;
+      if (e) hint = (hint ? hint + ' ' : '') + 'Your embargo is in force: no trade with them.'; else if (ls.length) hint = (hint ? hint + ' ' : '') + `${ls.map(x => S.nations[x].name).join(', ')} (your coalition) embargo them: you can join.`; }
+    if (mkt().emb[N.id + '>' + me]) hint = (hint ? hint + ' ' : '') + 'They embargo you: no trade with them.';
     // one primary action up front, the rest behind More
     { const tmp = document.createElement('div'); tmp.innerHTML = acts; const all = [...tmp.querySelectorAll('button')], direct = all.filter(x => x.dataset.act === 'nat-open'), bs = all.filter(x => x.dataset.act !== 'nat-open');
       const prim = bs.find(x => x.classList.contains('primary') && x.dataset.act !== 'gift') || bs.find(x => x.dataset.k === 'peace') || bs.find(x => x.dataset.act !== 'declare') || bs[0];
       bs.forEach(x => { if (x !== prim) x.classList.remove('primary'); }); direct.forEach(x => { x.classList.toggle('primary', !prim || !prim.classList.contains('primary') ? x.dataset.k === 'chat' : false); x.style.cssText = 'padding:3px 9px;font-size:12px'; });   // one amber action per row
       acts = direct.map(x => x.outerHTML).join('') + (prim ? prim.outerHTML : '') + (bs.length > 1 ? `<details class="more"><summary class="btn">More ▾</summary><div class="morebox">${bs.filter(x => x !== prim).map(x => x.outerHTML).join('')}</div></details>` : ''); }
     return {op, war:r.st === 'war' || !!pend, nb:borders(me, N.id), html:`<div class="drow" style="--c:${N.color}">
-      <div class="nm"><b>${flagHTML(N.id, 18)} ${N.name}${(B => B ? ` <span class="bmark" title="${B.name}">${blocEmbHTML(B.id, 18)}</span>` : '')(blocOf(N.id))}${S.unread && S.unread[N.id] ? ` <span class="badge">${S.unread[N.id]}</span>` : ''}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength} military${wars.length ? ' · at war with ' + wars.join(', ') : ''}${(tr0 => tr0 ? ` · trade +$${fmt1(trSide(tr0, me).cash*tr0.f)}M/day${tr0.f < 1 ? ' (cut)' : ''}` : '')(S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)))}</span></div>
+      <div class="nm"><b>${flagHTML(N.id, 18)} ${N.name}${(B => B ? ` <span class="bmark" title="${B.name}">${blocEmbHTML(B.id, 18)}</span>` : '')(blocOf(N.id))}${S.unread && S.unread[N.id] ? ` <span class="badge">${S.unread[N.id]}</span>` : ''}</b><span>${G.P.filter(P => S.owner[P.id] === N.id).length} provinces · ${strength}${wars.length ? ' · at war with ' + wars.join(', ') : ''}${(tr0 => tr0 ? ` · trade +$${fmt1(trSide(tr0, me).cash*tr0.f)}M/day${tr0.f < 1 ? ' (cut)' : ''}` : '')(S.trade && S.trade.routes.find(x => x.key === trKey(me, N.id)))}</span></div>
       <div><span class="rel" style="--rc:${REL_COLOR[r.st]}">${REL[r.st]}${left}</span><div class="opbar" title="${tipTxt}"><i style="left:${opL}%;width:${opW}%;background:${op >= 0 ? 'var(--ok)' : 'var(--danger)'}"></i></div><span class="small muted">Opinion of you: ${op > 0 ? '+' : ''}${Math.round(op)}</span></div>
       <div class="dacts">${acts}${hint ? `<span class="hint">${hint}</span>` : ''}</div></div>`};
   });
   const grp = (title, list) => list.length ? `<div class="eyebrow" style="margin-top:6px">${title}</div>` + list.map(x => x.html).join('') : '';
   const rowsHTML = grp('At war', rows.filter(x => x.war)) + grp('Neighbours', rows.filter(x => !x.war && x.nb)) + grp('Others', rows.filter(x => !x.war && !x.nb));
-  return `<div class="rhead"><div><div class="eyebrow">${S.nations[me].name} · Foreign affairs ${itip("Powers at peace cannot enter each other's land. War starts 24 hours after a declaration. Independent countries can always be attacked. Hover an opinion bar for the reasons; buttons marked ✕ would likely be refused.")}</div><h1>Diplomacy</h1></div>
+  return `<div class="rhead"><div><div class="eyebrow">${S.nations[me].name} · Foreign affairs ${itip("Powers at peace cannot enter each other's land. A declaration starts the war at once. Independent countries can always be attacked. Hover an opinion bar for the reasons; buttons marked ✕ would likely be refused.")}</div><h1>Diplomacy</h1></div>
     <button class="btn" data-act="relmode">${relMode ? 'Hide' : 'Show'} relations on map</button></div>
     ${incoming}${offers}${tradeHTML()}${(BL => BL.length ? `<div class="eyebrow" style="margin-top:6px">Coalitions</div><div class="blocs">${BL.map(B => `<div class="bloc${B.members.includes(me) ? ' mine' : ''}">${blocEmbHTML(B.id, 40, B.name)}<div class="bt"><b>${B.name}</b><span class="bmem">${B.members.map(m => `<span>${flagHTML(m, 13)} ${S.nations[m].name}${m === B.leader ? ' ★' : ''}</span>`).join('')}</span><span class="small muted">${B.focus != null ? `Common enemy: ${S.nations[B.focus].name}` : 'No common enemy yet'} · ${B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0)} provinces · ${B.members.reduce((s0, m) => s0 + capsHeld(m), 0)} capitals</span></div></div>`).join('')}</div>${blocOf(me) ? `<div class="row" style="align-items:center"><span class="small muted">Your coalition:</span><input id="blocname" class="rn2" maxlength="28" value="${blocOf(me).name}" style="width:200px"><button class="btn" data-act="bloc-rename">Rename</button><button class="btn war" data-act="bloc-leave">Leave coalition</button></div>` : `<p class="small muted">To found a coalition, form an alliance (Diplomacy or a trade deal with “Alliance”); allied nations form a coalition automatically. Invite more members by allying with them.</p>`}
     <p class="small muted">A coalition wins together by holding ${WIN_CAPS + 3} starting capitals or ${Math.ceil(landNeed(me)*1.8)} provinces. Peace treaties hand every province a side occupies to it for good.</p>` : '')(blocs())}<div class="dip">${rowsHTML}</div>
@@ -9357,8 +9384,7 @@ function groupHTML(){
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
     <dl class="kv"><dt>Total strength</dt><dd>${Math.round(pw)}</dd><dt>Saved groups</dt><dd>Ctrl+4…9 to save, 4…9 to recall</dd></dl>
     <div class="armylist">${g.map(a => `<button data-act="gsel" data-id="${a.id}" ${a.id === sel.army ? 'style="border-color:var(--accent)"' : ''}><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span><span class="muted">${pluN(count(a), 'unit')} · ${a.air ? 'air wing' : statusText(a).short}</span></button>`).join('')}</div>
-    <p class="small muted" style="margin:0">Tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>
-    <div class="row"><button class="btn" data-act="clear">Deselect</button></div>`;
+    <p class="small muted" style="margin:0">Tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>`;
 }
 // airframe condition of a wing: bar, repair rate where it is parked and the maintenance warning
 function condHTML(a){ const c = wingCond(a), pc = Math.round(c*100), mr = maintRate(a), B = G.P[a.air.base], col = c > 0.6 ? 'var(--ok)' : c >= WEAR_WARN ? 'var(--accent)' : 'var(--danger)';
@@ -9396,7 +9422,7 @@ function wingHTML(a){
     ${condHTML(a)}
     <dl class="kv"><dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Speed</dt><dd>${fmtK(Math.round(wingSpd(a)*24*KM_HEX/100)*100)} km/day in flight</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
     <p class="small muted" style="margin:0">Tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol; UAVs watch, AWACS orbit, patrol planes hunt ships; tapping one of your airbases rebases the wing.</p>
-    <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button><button class="btn" data-act="clear">Deselect</button></div>`;
+    <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button></div>`;
 }
 // ---- split panel: every unit row (damaged units apart), a slider and +/- per row for the group being edited, quick plans, several groups at once
 let SPLIT = null;   // {id, plan:[{rowKey:n}], g: group being edited, n: 'evenly into' count}
@@ -9451,8 +9477,7 @@ function armyHTML(a){
     <div class="status ${st0.cls}">${st0.long}</div>
     <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${speedHTML(a)}</dd>
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
-    ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div><button class="btn" data-act="cmd-off" style="padding:2px 7px;font-size:12px">Relieve</button></div>`
-      : (free => `<div class="row" style="align-items:center"><span class="small muted">Commander</span>${free.length ? free.map(f => `<button class="btn" data-act="cmd-on" data-id="${f.id}" title="${TRAITS[f.trait].desc}" style="padding:3px 8px;font-size:12px">${TRAITS[f.trait].icon} ${f.name}</button>`).join('') : ''}${cmdList(PLAYER).length < CMD_MAX ? `<button class="btn" data-act="cmd-new" ${S.nations[PLAYER].cash >= CMD_COST ? '' : 'disabled'} style="padding:3px 8px;font-size:12px" title="Appoint a new commander with a random trait (max ${CMD_MAX})">Appoint · $${CMD_COST}M</button>` : ''}</div>`)(cmdList(PLAYER).filter(f => f.army == null)))(cmdOf(a))}
+    ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div></div>` : '')(cmdOf(a))}
     ${a.u.art || a.u.mlrs ? `<div class="row" style="align-items:center"><span class="small muted">Artillery${a.u.mlrs ? ' · range 2' : ''}</span><button class="btn ${a.fire !== 'hold' ? 'primary' : ''}" data-act="fire" data-v="free" style="padding:3px 9px;font-size:12px" title="Shell enemy forces in neighbouring provinces every hour">Fire at will</button><button class="btn ${a.fire === 'hold' ? 'primary' : ''}" data-act="fire" data-v="hold" style="padding:3px 9px;font-size:12px">Hold fire</button></div>` : ''}
     ${a.chase != null && armyById(a.chase) ? `<div class="status move">Pursuing ${armyLabel(armyById(a.chase), PLAYER)}</div>` : ''}
     ${shipsOnly(a) && !a.air && a.owner === PLAYER ? escortRowHTML(a) : ''}
@@ -9460,11 +9485,8 @@ function armyHTML(a){
     <div class="row">
       ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE*KM_HEX} km away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
       <button class="btn" data-act="split-open" ${count(a) < 2 ? 'disabled' : ''} title="Choose exactly which units leave: per unit type, damaged units apart, several groups at once">Split…</button>
-      <button class="btn" data-act="split" ${count(a) < 2 ? 'disabled' : ''}>Split in half</button>
       <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one."`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
-      <button class="btn" data-act="stop" ${!a.path.length ? 'disabled' : ''}>Halt</button>
-      <button class="btn" data-act="prov" data-id="${a.to !== null ? a.to : a.at}" ${G.P[a.to !== null ? a.to : a.at].sea ? 'disabled' : ''}>${a.to === null && S.owner[a.at] === PLAYER ? (G.P[a.at].city ? 'Recruit / build here' : 'Build here') : 'Province'}</button>
-      <button class="btn" data-act="clear">Deselect</button>
+      <button class="btn" data-act="stop" ${!a.path.length && a.to === null ? 'disabled' : ''} title="Stop right now, where the force stands">Halt</button>
     </div>
     ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}`;
 }
@@ -9549,14 +9571,14 @@ function airGuideHTML(){ const L = uavLv(PLAYER);
 // MOBILIZE UNIT / BUILD panels of the city sheet show the same blocks
 function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html = '';
     const card = t => { const U = UNITS[t];
-      const why = canMobilize(PLAYER, p, t);
+      const why = canMobilize(PLAYER, p, t) || queueWhy(PLAYER, p);
       const h = trainH(p, t, PLAYER);
-      return `<button class="btn unit hasp${why ? ' blk' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)} Shift-click to queue 5." ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
+      return `<button class="btn unit hasp${why ? ' blk' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)} Shift-click to queue to the limit." ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
     const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b)));
     const open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), locked = UT.filter(t => blk(t) && !near(blk(t)));
-    html += `<div class="eyebrow">Recruit${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
+    html += `<div class="eyebrow">Recruit<span class="rec-b"> · ${queueUsed(p)}/${queueMax(PLAYER)} in training</span>${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
-    html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to queue 5. <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
+    html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city). <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
     html += `<div class="row"><button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px">${S.rally && S.rally[p] != null ? 'Rally: ' + (G.P[S.rally[p]].cityName || G.P[S.rally[p]].name) + ' (change)' : 'Set rally point'}</button></div>`;
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
@@ -9640,7 +9662,6 @@ document.addEventListener('click', e => {
     case 'send': if (a){ delete a.escort; sendToTarget(a); } break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
     case 'drop': if (a){ dropFor = dropFor === a.id ? null : a.id; if (dropFor !== null) toast(`Tap a drop zone up to ${PARA_RANGE*KM_HEX} km away.`, 'info', null); renderSide(true); } break;
-    case 'split': if (a){ SPLIT = null; const nb = splitArmy(a, counterSpot(a)); if (nb) selectArmy(nb.id); } break;
     case 'split-open': if (a){ if (SPLIT && SPLIT.id === a.id){ SPLIT = null; renderSide(true); } else splitOpen(a); } break;
     case 'sp-close': SPLIT = null; renderSide(true); break;
     case 'sp-reset': if (SPLIT){ SPLIT.plan = [{}]; SPLIT.g = 0; renderSide(true); } break;
@@ -9654,8 +9675,8 @@ document.addEventListener('click', e => {
     case 'sp-inc': case 'sp-dec': if (a && SPLIT){ const k = b.dataset.k; spSet(a, k, (SPLIT.plan[SPLIT.g][k] || 0) + (act === 'sp-inc' ? 1 : -1)); renderSide(true); } break;
     case 'sp-go': if (a && SPLIT){ const n0 = count(a), out = splitPlan(a, SPLIT.plan, counterSpot(a)); SPLIT = null; if (out.length){ sfx('order'); toast(`Split ${n0} units into ${out.length + 1} forces: ${[a, ...out].map(count).join(' · ')}.`, 'info', null); selectArmy(out[0].id); } else renderSide(true); } break;
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty(); renderSide(true); } break;
-    case 'stop': if (a){ a.path = []; delete a.join; delete a.escort; renderSide(true); } break;
-    case 'recruit': if (sel.prov !== null){ const why = canMobilize(PLAYER, sel.prov, b.dataset.t); if (why){ toast(`${UNITS[b.dataset.t].name}: ${why}.`, 'info', sel.prov); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; } }
+    case 'stop': if (a){ haltArmy(a); redraw(); renderSide(true); } break;
+    case 'recruit': if (sel.prov !== null){ const why = canMobilize(PLAYER, sel.prov, b.dataset.t) || queueWhy(PLAYER, sel.prov); if (why){ toast(`${UNITS[b.dataset.t].name}: ${why}.`, 'info', sel.prov); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; } }
       if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
       if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
     case 'build': if (sel.prov !== null && build(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
@@ -9688,9 +9709,6 @@ document.addEventListener('click', e => {
     case 'armies-open': openModal(armiesHTML(), 'armies'); break;
     case 'army-go': { const a = armyById(+b.dataset.id); if (a){ closeModal(); const P = G.P[a.at]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.6)); selectArmy(a.id); } break; }
     case 'mob': S.nations[PLAYER].mob = +b.dataset.v; setHTML($('sheet'), prodHTML()); renderSide(true); break;
-    case 'cmd-new': if (S.nations[PLAYER].cash >= CMD_COST && cmdList(PLAYER).length < CMD_MAX){ S.nations[PLAYER].cash -= CMD_COST; const c = newCommander(PLAYER); if (a && !a.air && a.cmd == null){ a.cmd = c.id; c.army = a.id; } log(`${c.name} appointed (${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc}).`, 'good', null); renderSide(true); } break;
-    case 'cmd-on': if (a){ const c = (S.cmds || []).find(x => x.id === +b.dataset.id); if (c){ const old = cmdOf(a); if (old) old.army = null; a.cmd = c.id; c.army = a.id; renderSide(true); } } break;
-    case 'cmd-off': if (a){ const c = cmdOf(a); if (c) c.army = null; a.cmd = null; renderSide(true); } break;
     case 'replay-open': openModal(replayHTML(), 'replay'); setTimeout(replayStart, 30); break;
     case 'rp-play': if (REPLAY){ if (REPLAY.day >= REPLAY.n){ REPLAY.day = 0; } REPLAY.playing = !REPLAY.playing; b.textContent = REPLAY.playing ? 'Pause' : 'Play'; } break;
     case 'set-ui': SET.ui = +b.dataset.v; saveSet(); openModal(settingsHTML(), 'settings'); break;
@@ -9703,8 +9721,6 @@ document.addEventListener('click', e => {
     case 'cm-attack': cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); break;
     case 'cm-delay': if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } break;
     case 'cm-stance': if (a){ const ks = Object.keys(STANCES); a.stance = ks[(ks.indexOf(a.stance || 'hold') + 1) % ks.length]; a.home = null; toast(`${armyName(a)}: ${STANCES[a.stance][0]}. ${STANCES[a.stance][1]}`, 'info', null); renderSide(true); } break;
-    case 'choose-prov': closeChooser(); selectProv(+b.dataset.id); break;
-    case 'choose-army': closeChooser(); selectArmy(+b.dataset.id); break;
     case 'sat': if (launchSat(PLAYER, +b.dataset.id)) renderSide(true); break;
     case 'nat-open': NATV_TAB = b.dataset.k || 'chat'; DEAL = null; GIFT = null; openModal(nationHTML(+b.dataset.id), 'nation'); setTimeout(() => { const cb = $('chatbox'); if (cb) cb.scrollTop = cb.scrollHeight; }, 0); break;
     case 'nat-tab': NATV_TAB = b.dataset.k; openModal(nationHTML(NATV), 'nation'); break;
@@ -9749,7 +9765,7 @@ document.addEventListener('click', e => {
     case 'tribute': { const m = +b.dataset.id, tr = tribute(PLAYER, m); if (S.nations[PLAYER].cash >= tr){ if (tributeOk(PLAYER, m)){ S.nations[PLAYER].cash -= tr; S.nations[m].cash += tr; applyDeal(PLAYER, m, 'peace'); } else log(`${S.nations[m].name} refused your tribute: they think they can take more by force.`, 'info', null); } renderSide(true); break; }
     case 'trade': { const k = b.dataset.k, q = +b.dataset.q, done = trade(PLAYER, k, q); if (done){ toast(`${done > 0 ? 'Bought' : 'Sold'} ${Math.abs(done)} ${rlbl(k)} on the anonymous exchange (no nation involved).`, 'info', null); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
     case 'market-open': openModal(marketHTML(), 'market'); break;
-    case 'embargo': { const m = +b.dataset.id, key = PLAYER + '>' + m; if (mkt().emb[key]){ delete mkt().emb[key]; addMem(m, PLAYER, 5); log(`You lifted your embargo on ${S.nations[m].name}.`, '', null); } else { mkt().emb[key] = S.hour; addMem(m, PLAYER, -15); log(`You imposed an embargo on ${S.nations[m].name}.`, '', null); } setHTML($('sheet'), diploHTML()); break; }
+    case 'embargo': { const m = +b.dataset.id, key = PLAYER + '>' + m; if (mkt().emb[key]){ setEmbargo(PLAYER, m, false); addMem(m, PLAYER, 5); log(`You lifted your embargo on ${S.nations[m].name}.`, '', null); } else { const ls = b.dataset.join ? embargoLeaders(PLAYER, m) : []; setEmbargo(PLAYER, m, true, ls.length ? ls[0] : null); addMem(m, PLAYER, -15); log(ls.length ? `You joined ${S.nations[ls[0]].name}'s embargo on ${S.nations[m].name}: no trade routes or market deals with them.` : `You imposed an embargo on ${S.nations[m].name}: no trade routes or market deals with them.`, '', null); } setHTML($('sheet'), diploHTML()); break; }
     case 'trade-escort': { const r = routeById(+b.dataset.id), f = r ? escortPick(r) : null; if (!f) toast('No idle fleet with warships: build frigates at a Naval Yard, or free a fleet.', 'bad', null); else escortSet(f, r.id); setHTML($('sheet'), diploHTML()); renderSide(true); break; }
     case 'trade-close': tradeClose(PLAYER, +b.dataset.id); setHTML($('sheet'), diploHTML()); renderSide(true); break;
     case 'trade-reopen': { const k = b.dataset.k, [x, y] = k.split(':'), o = +x === PLAYER ? y : x; const res = o[0] === 'n' ? tradeOpen(PLAYER, NEUTRAL, +o.slice(1)) : tradeOpen(PLAYER, +o); if (res !== true){ delete trS().closed[k]; toast(`Route reopened: it will form when possible (${res}).`, 'info', null); } setHTML($('sheet'), diploHTML()); renderSide(true); break; }
@@ -9839,7 +9855,7 @@ document.addEventListener('keydown', e => { INCC.v = -1;
   else if (e.key === 'a' || e.key === 'A'){ if (modalKind === 'armies') closeModal(); else if ($('modal').hidden) openModal(armiesHTML(), 'armies'); }
   else if ((e.key === 'm' || e.key === 'M') && sel.army !== null && $('modal').hidden){ cmdMode = cmdMode === 'move' ? null : 'move'; renderSide(true); }
   else if ((e.key === 'k' || e.key === 'K') && sel.army !== null && $('modal').hidden){ cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); }
-  else if ((e.key === 'x' || e.key === 'X') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a){ a.path = []; a.chase = null; renderSide(true); } }
+  else if ((e.key === 'x' || e.key === 'X') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a && a.owner === PLAYER){ haltArmy(a); redraw(); renderSide(true); } }
   else if ((e.key === 'l' || e.key === 'L') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } }
   else if (e.key === '.' || e.key === 'Tab'){ if ($('modal').hidden){ e.preventDefault(); nextIdle(); } }
   else if (e.key === 'p' || e.key === 'P'){ if (modalKind === 'prod') closeModal(); else if ($('modal').hidden) openModal(prodHTML(), 'prod'); }
@@ -10010,7 +10026,7 @@ const HELP_SEC = [
     <li><b>Raids</b>: once a day each convoy runs the gauntlet: enemy submarines (the worst), warships and patrol or strike aircraft over its zones may sink it, and that day's income is lost.</li>
     <li><b>Escorts</b>: warships on or next to a route cut the raid odds and fight the raiders. Select a fleet and choose <b>Escort route</b>, or press <b>Escort</b> beside a route in Diplomacy; escorts are resupplied by the convoys. At war, send submarines to raid the enemy's lanes.</li></ul>`],
   ['dip', 'Diplomacy and coalitions', `<ul>
-    <li><b>War</b>: declare it (it starts after 24 h) or order troops across a border and confirm a <b>surprise attack</b>, which starts it at once but angers the world. Rivals may attack you from day 8.</li>
+    <li><b>War</b>: declare it (it starts at once, with no penalty for surprise) or order troops across a border and confirm a <b>surprise attack</b>, which starts it at once but angers the world. Rivals may attack you from day 8.</li>
     <li><b>Pacts</b>: Right of Way, non-aggression and Shared Intel alliances. Allied powers form a <b>coalition</b> with its own emblem, and can win together.</li>
     <li><b>Coalition gifts</b>: open a partner's window from Diplomacy and choose <b>Give (coalition)</b> to send money, oil, materials, iron, electronics, rare materials, manpower or even provinces: free and instant, limited by what they can store. AI partners also send you supplies when you run short.</li>
     <li><b>Market</b> (T): nations list goods for sale or wanted; you can post your own offers. Embargoes worsen your prices.</li></ul>`],
@@ -10075,11 +10091,12 @@ function warWarning(a){
   const E = S.nations[a];
   const front = G.P.filter(P => !P.sea && S.owner[P.id] === PLAYER && P.nbs.some(v => S.owner[v] === a));
   const near = P => { const seen = new Set([P.id]); let fr = [P.id]; for (let d = 0; d < 3; d++){ const nx = []; for (const u of fr) for (const v of G.P[u].nbs) if (!seen.has(v)){ seen.add(v); nx.push(v); } fr = nx; } return seen; };
-  const threat = front.map(P => ({P, foe:(ns => S.armies.filter(x => x.owner === a && !x.air && ns.has(x.at)).reduce((s1, x) => s1 + power(x), 0))(near(P)),
+  const vis0 = visibleSet(PLAYER), intel = haveIntelOn(a);   // only identified enemy forces are counted; no intel, no strength figures
+  const threat = front.map(P => ({P, foe:(ns => S.armies.filter(x => x.owner === a && !x.air && ns.has(x.at) && armyVisible(x, vis0)).reduce((s1, x) => s1 + power(x), 0))(near(P)),
     mine:S.armies.filter(x => x.owner === PLAYER && x.at === P.id && x.to === null).reduce((s1, x) => s1 + power(x), 0)})).sort((x, y) => (y.foe - y.mine) - (x.foe - x.mine));
-  const list = threat.slice(0, 5).map(t => `<li><b>${t.P.cityName || t.P.name}</b>: enemy strength within 3 provinces ${Math.round(t.foe)}, yours here ${Math.round(t.mine)}${t.foe > t.mine*1.2 ? ' <span style="color:var(--danger-t)">· at risk</span>' : ''}</li>`).join('');
+  const list = threat.slice(0, 5).map(t => `<li><b>${t.P.cityName || t.P.name}</b>: ${intel || t.foe > 0 ? `enemy strength within 3 provinces ${Math.round(t.foe)}` : 'enemy strength unknown without intel'}, yours here ${Math.round(t.mine)}${t.foe > t.mine*1.2 ? ' <span style="color:var(--danger-t)">· at risk</span>' : ''}</li>`).join('');
   openModal(`<div class="eyebrow" style="color:var(--danger-t)">War declared</div><h1>${E.name} attacks</h1>
-    <p>${E.name} declared war on you. Fighting starts in 24 hours. Their military is ${natPower(a) > natPower(PLAYER)*1.4 ? 'stronger than' : natPower(a) < natPower(PLAYER)*0.7 ? 'weaker than' : 'similar to'} yours.</p>
+    <p>${E.name} declared war on you. Fighting starts now. ${intel ? `Their military is ${natPower(a) > natPower(PLAYER)*1.4 ? 'stronger than' : natPower(a) < natPower(PLAYER)*0.7 ? 'weaker than' : 'similar to'} yours.` : 'Strength unknown without intel (recon drones, AWACS, or units that have seen them).'}</p>
     ${front.length ? `<div class="eyebrow">Threatened border provinces</div><ul>${list}</ul>` : `<p>You share no land border, so expect them by sea or through allies.</p>`}
     <p class="small muted">Move forces onto the threatened provinces (defenders get +25% on home soil and Fortifications help), recruit in nearby cities, or try diplomacy: peace for tribute, or allies against ${E.name}.</p>
     <div class="row">${threat[0] ? `<button class="btn primary" data-act="goto" data-id="${threat[0].P.id}">Go to ${threat[0].P.cityName || threat[0].P.name}</button>` : ''}<button class="btn" data-act="diplo-open">Diplomacy</button><button class="btn" data-act="resume">Back to the map</button></div>`, 'war');
@@ -10461,6 +10478,8 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:id => techCost(TECH_BY[id]), TECH:() => TECH.map(T => ({id:T.id, req:T.req || null, days:T.days})), html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
+if (location.protocol === 'file:' && window.__im) window.__im.plate = {plateBody, plateDims, PLATE_TONES, SLK, get dpr(){ return dpr; }};   // glyph preview sheets
+if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });

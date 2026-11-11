@@ -31,7 +31,7 @@ function tick(){
     if (a.to !== null){ const lh = legHours(a, a.at, a.to); a.t += 1/lh;
       if (a.t >= 1){ if (a.path.length && ground(a) && legMode(a, a.at, a.to) === 'rail'){ a.carry = Math.min(1, (a.t - 1)*lh); a.carryH = S.hour; } else a.carry = 0;
         if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; a.legFrom = null;
-        if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; } }
+        if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; } }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land)
   }
   // head-on clash: hostile columns marching in opposite directions on the same road meet and fight at the nearer province
   { const edge = new Map(); for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)) edge.set(a.at + '>' + a.to, [...(edge.get(a.at + '>' + a.to) || []), a]);

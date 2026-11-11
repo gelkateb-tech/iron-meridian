@@ -288,7 +288,7 @@ const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awac
 // embargoing power's; a person is told of each sale):
 // goods change hands between nations without moving the world price. Returns what it got.
 function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
-  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && S.nations[o.seller].alive && !atWar(n, o.seller) && !M.emb[o.seller + '>' + n] && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
+  const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && S.nations[o.seller].alive && !atWar(n, o.seller) && !embargoed(o.seller, n) && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
   for (const o of asks){ const r = Math.min(q - got, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[k])); if (r <= 0) break;
     N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r;
     if (isSeat(o.seller)) tell(o.seller, `${N.name} bought ${r} ${rlbl(k)} from your offer for $${fmt(r*o.price)}M.`, 'good', null);
