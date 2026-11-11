@@ -154,13 +154,13 @@ const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 const RCATS = [
   {id:'inf',  name:'Infantry Corps',           role:'Takes ground and holds it',                       art:'u-infantry'},
   {id:'arm',  name:'Armoured Forces',          role:'Breaks the line and carries the infantry forward', art:'u-tank'},
-  {id:'sup',  name:'Artillery & Air Defence',  role:'Long reach on the ground, a roof over the army',   art:'u-rocket-artillery'},
+  {id:'sup',  name:'Artillery & Air Defence',  role:'Long reach on the ground, a roof over the army',   art:'u-artillery'},
   {id:'aas',  name:'Air Assault',              role:'Short reach from the air: gunships and airborne troops', art:'u-attack-heli'},
   {id:'tac',  name:'Tactical Air',             role:'Fighters and strike jets, medium reach',           art:'u-air-superiority'},
   {id:'uns',  name:'Unmanned Systems',         role:'Cheap eyes and expendable strikes',                art:'u-strike-drone'},
-  {id:'str',  name:'Strategic Air',            role:'Bombers and the big sensors, long reach',          art:'u-bomber'},
-  {id:'nav',  name:'Navy',                     role:'Sea control, convoys and the silent service',      art:'u-destroyer'},
-  {id:'msl',  name:'Strategic Weapons',        role:'Missiles, the shield against them, eyes in orbit', art:'u-missile-launcher'},
+  {id:'str',  name:'Strategic Air',            role:'Bombers and the big sensors, long reach',          art:'u-awacs'},
+  {id:'nav',  name:'Navy',                     role:'Sea control, convoys and the silent service',      art:'u-carrier'},
+  {id:'msl',  name:'Strategic Weapons',        role:'Missiles, the shield against them, eyes in orbit', art:'u-ballistic-missile'},
   {id:'cmd',  name:'Command & Logistics',      role:'Advantages for every force you field',             art:'u-supply-truck'},
 ];
 const RCAT_BY = Object.fromEntries(RCATS.map(c => [c.id, c]));
@@ -312,7 +312,7 @@ const R_SPECIAL = [
   {cat:'cmd', line:'Medical', pic:'cross', nodes:[{id:'log3', name:'Field Hospitals', kind:'kit', ic:'cross', lv:[[4, 'your forces take 15% less damage', {cash:102, metal:20, rare:32, days:7}], [13, '20% less damage', {cash:150, metal:30, rare:40, days:7}]]}]},
 ];
 // the node list. node: {id, cat, line, u, kind, name, ic, req:[node ids], req3 (Firepower / Protection level 3 needs it), std, elite, fam, gen, pic,
-// lv:[{day, c:{cash, metal, iron, elec, rare, days}, fx, txt}]}
+// lv:[{day, c:{cash, metal, iron, elec, rare, days}, fx, txt, rq (a later level of an upgrade dated after generation 2: [that generation])}]}
 const R_PCT = [12, 25, 40];
 const RNODES = [], RN = {};
 { const add = n => { n.i = RNODES.length; RNODES.push(n); RN[n.id] = n; return n; };
@@ -324,7 +324,8 @@ const RNODES = [], RN = {};
       add({id:u + '_' + k, cat:L.cat, line:u, u, kind:'eng', eng:k, name:nm, ic, req:['u_' + u], req3:g2 ? u + '_g2' : null,
         lv:[1, 2, 3].map(l => ({day:eDay[l - 1] + off, c:R_PRICE.eng(U, l), fx:{}, txt:`${k === 'fp' ? 'attack' : 'defense'} +${R_PCT[l - 1]}% in all`}))}); }
     for (const [k, nm, ic, lv] of L.k)
-      add({id:u + '_' + k, cat:L.cat, line:u, u, kind:'kit', name:nm, ic, req:[lv[0][0] > (g2 || 99) ? u + '_g2' : 'u_' + u], lv:lv.map(([day, fx, txt], i) => ({day, c:R_PRICE.kit(U, i + 1), fx, txt}))});
+      add({id:u + '_' + k, cat:L.cat, line:u, u, kind:'kit', name:nm, ic, req:[lv[0][0] > (g2 || 99) ? u + '_g2' : 'u_' + u],
+        lv:lv.map(([day, fx, txt], i) => ({day, c:R_PRICE.kit(U, i + 1), fx, txt, ...(i && g2 && day > g2 && lv[0][0] <= g2 ? {rq:[u + '_g2']} : {})}))});   // rq: a later level dated after generation 2 needs it
     for (const [g, day, nm, fx, txt] of L.g)
       add({id:u + '_g' + g, cat:L.cat, line:u, u, kind:'gen', gen:g, name:nm, ic:'unit', pic:u, req:[g === 2 ? 'u_' + u : `${u}_g${g - 1}`], lv:[{day, c:R_PRICE.gen(U, g), fx, txt}]}); }
   for (const Sx of R_SPECIAL) for (const n of Sx.nodes)

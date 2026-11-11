@@ -14,8 +14,9 @@ const rLevel = (n, id) => { if (n < 0 || !S || !S.nations[n]) return 0; const v 
 const rDay = () => dayOf(S.hour);                                   // the game day the top bar shows: day 1 is the first 24 hours
 const rNextLv = (n, id) => { const nd = RN[id], l = rLevel(n, id); return nd && l < nd.lv.length ? l + 1 : 0; };   // the level a nation would research next (0: all done)
 // what level lv of a node needs: level 1 the node's own prerequisites (its spine node; the missile line; two lines for the Stealth Bomber),
-// level 3 of Firepower and Protection generation 2 where the line has one; every level needs the level before it (levels are researched in order)
-const rReqs = (nd, lv) => lv <= 1 ? nd.req : lv === 3 && nd.req3 ? [nd.req3] : [];
+// level 3 of Firepower and Protection generation 2 where the line has one, a later level of an upgrade dated after generation 2 that generation (rq);
+// every level needs the level before it (levels are researched in order)
+const rReqs = (nd, lv) => lv <= 1 ? nd.req : lv === 3 && nd.req3 ? [nd.req3] : nd.lv[lv - 1].rq || [];
 const rReqsOk = (n, nd, lv) => rReqs(nd, lv).every(q => rLevel(n, q) > 0);
 // the next level of node id is open to nation n: its day has come and what it needs is researched (money and slots aside)
 const rOpen = (n, id) => { const lv = rNextLv(n, id), nd = RN[id]; return !!lv && nd.lv[lv - 1].day <= rDay() && rReqsOk(n, nd, lv); };

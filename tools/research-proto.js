@@ -66,6 +66,8 @@ for (const n of NODES){
     if (m.lv[0].day > n.lv[0].day) errs.push(`${n.id}: opens on day ${n.lv[0].day}, before its prerequisite ${q} (day ${m.lv[0].day})`); }
   for (let i = 1; i < n.lv.length; i++) if (n.lv[i].day <= n.lv[i - 1].day) errs.push(`${n.id}: level ${i + 1} does not open after level ${i}`);
   if (n.kind === 'eng' && n.req3 && BY[n.req3].lv[0].day > n.lv[2].day) errs.push(`${n.id}: level 3 opens before generation 2`);
+  // a later level of an upgrade dated after generation 2 needs that generation (docs/RESEARCH.md 2.4)
+  n.lv.forEach((l, i) => { for (const q of l.rq || []){ if (!BY[q] || BY[q].line !== n.line) errs.push(`${n.id}: level ${i + 1} needs ${q}, not of its line`); else if (BY[q].lv[0].day >= l.day) errs.push(`${n.id}: level ${i + 1} opens before ${q}`); } });
 }
 for (const T of TECH){ const m = LEGACY[T.id]; if (!m){ errs.push(`today's project ${T.id} has no equivalent`); continue; }
   const got = {}; for (const s of m){ const {id, l} = ref(s), n = BY[id]; if (!n || !n.lv[l - 1]){ errs.push(`${T.id}: no node ${s}`); continue; }
@@ -94,7 +96,7 @@ const ARCH = [
 function simulate(A, want, DAYS){ const lvl = {}, done = []; let rare = A.rare0, cash = A.cash0; const slots = [null, null], Q = want.slice();
   for (const n of NODES) if (n.std && n.kind === 'unlock') lvl[n.id] = 1;
   const open = (s, day) => { const n = s.n; if ((lvl[n.id] || 0) !== s.i) return false; if (s.l.day > day) return false;
-    if (n.req.some(q => !lvl[q])) return false; if (n.kind === 'eng' && s.i === 2 && n.req3 && !lvl[n.req3]) return false; return true; };
+    if (n.req.some(q => !lvl[q])) return false; if (n.kind === 'eng' && s.i === 2 && n.req3 && !lvl[n.req3]) return false; if (s.i > 0 && (s.l.rq || []).some(q => !lvl[q])) return false; return true; };
   for (let h = 0; h < DAYS*24; h++){ const day = 1 + h/24;
     rare += A.rare/24; cash += A.cash/24;
     for (let k = 0; k < 2; k++){ const R0 = slots[k]; if (R0 && --R0.h <= 0){ lvl[R0.s.n.id] = R0.s.i + 1; done.push({s:R0.s, day:Math.ceil(day*10)/10}); slots[k] = null; } }
@@ -121,7 +123,7 @@ const cTxt = c => [c.cash ? `$${c.cash}M` : '', c.metal ? `${c.metal} mat` : '',
 const KIND = {unlock:'Unlock', eng:'Levels', kit:'Upgrade', gen:'Generation'};
 function md(){ let o = '';
   for (const C of CATS){ const ns = NODES.filter(n => n.cat === C.id), lines = [...new Set(ns.map(n => n.line))];
-    o += `\n### ${C.name}\n\n*${C.role}.* Banner picture: \`${C.art}\`.\n\n`;
+    o += `\n### ${C.name}\n\n*${C.role}.* Banner picture: \`rb-${C.id}\`, from \`${C.art}\`.\n\n`;
     // the day grid: one column per line, one row per day that holds a node
     const days = [...new Set(ns.flatMap(n => n.lv.map(l => l.day)))].sort((a, b) => a - b);
     const short = (n, i) => n.kind === 'unlock' ? (n.std ? '(standard)' : 'UNLOCK') : n.kind === 'gen' ? 'GEN ' + n.gen : n.kind === 'eng' ? `${n.name} ${i + 1}` : n.name + (n.lv.length > 1 ? ` ${i + 1}` : '');
@@ -131,7 +133,7 @@ function md(){ let o = '';
       o += `\n**${U ? U.name : l}**${U && BY['u_' + l].elite ? ' (elite badge)' : ''}: ${t.steps} steps, ${t.rare} rare materials, $${t.cash}M, ${t.days} research days in all.` + (U && BY['u_' + l].fam ? ` Family line (dashed, no requirement) from the ${UNITS[BY['u_' + l].fam].name}.` : '') + '\n\n';
       o += `| Day | Node (id) | Type | Effect | Price | Days |\n|---|---|---|---|---|---|\n`;
       const rows = ln.flatMap(n => n.lv.map((x, i) => ({n, i, x}))).sort((a, b) => a.x.day - b.x.day);
-      for (const {n, i, x} of rows){ const need = [...(i === 0 ? n.req.filter(q => !(BY[q].std && BY[q].kind === 'unlock')).map(q => BY[q].name + (BY[q].u && BY[q].u !== n.u ? ` (${UNITS[BY[q].u].name})` : '')) : []), ...(n.kind === 'eng' && i === 2 && n.req3 ? ['generation 2'] : [])];
+      for (const {n, i, x} of rows){ const need = [...(i === 0 ? n.req.filter(q => !(BY[q].std && BY[q].kind === 'unlock')).map(q => BY[q].name + (BY[q].u && BY[q].u !== n.u ? ` (${UNITS[BY[q].u].name})` : '')) : []), ...(n.kind === 'eng' && i === 2 && n.req3 ? ['generation 2'] : []), ...(i > 0 && x.rq ? ['generation 2'] : [])];
         o += `| ${x.day} | ${n.name}${n.lv.length > 1 ? ` ${i + 1}/${n.lv.length}` : ''} (\`${n.id}\`)${n.kind === 'gen' ? `, picture \`u-${n.u}-${n.gen}\`` : ''} | ${KIND[n.kind]} | ${x.txt}${need.length ? `. Needs ${need.join(' and ')}` : ''} | ${cTxt(x.c)} | ${x.c.days || '-'} |\n`; } }
   }
   return o; }

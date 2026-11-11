@@ -8,7 +8,7 @@ Contents: 1 what changes, 2 how the tree works, 3 categories, 4 the tree, 5 pric
 
 ## 1. What changes, in short
 
-- Research is organised **by unit**. Every unit type has its own column ("line"): the unit's unlock at the top, upgrades below it, a second generation further down. Today's 38 projects in 9 branches become 170 nodes (285 research steps) in 10 categories.
+- Research is organised **by unit**. Every unit type has its own column ("line"): the unit's unlock at the top, upgrades below it, a second generation further down. Today's 38 projects in 9 branches become 170 nodes (289 research steps) in 10 categories.
 - Every node sits on a **day**. It cannot be started before that day. Unit unlocks open between day 1 and day 14; second generations between day 9 and day 18 (the Recon UAV's later models from day 5); the last steps on day 30.
 - **Unit Marks I to IV move into the tree.** Each unit line gets two levelled nodes, Firepower and Protection, three levels each, worth exactly what Marks II, III and IV are worth today. The separate engineering slot goes away; the two research slots do all the work.
 - **Generations** are new: Generation 2 (and 3 for infantry and tanks) upgrades every unit of that type you field, mostly in health, and gives the unit a new picture.
@@ -96,7 +96,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Infantry Corps
 
-*Takes ground and holds it.* Banner picture: `u-infantry`.
+*Takes ground and holds it.* Banner picture: `rb-inf`, from `u-infantry`.
 
 | Day | Motorized Infantry | Anti-Tank Infantry | Special Forces (elite) |
 |---|---|---|---|
@@ -131,8 +131,8 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 9 | Mechanized Infantry (`inf_g2`), picture `u-inf-2` | Generation | attack +2, speed +1, health +2 | $115M, 50 mat, 36 rare | 6 |
 | 10 | Firepower 2/3 (`inf_fp`) | Levels | attack +25% in all | $60M, 18 mat, 5 rare | 2 |
 | 11 | Protection 2/3 (`inf_pr`) | Levels | defense +25% in all | $60M, 18 mat, 5 rare | 2 |
-| 12 | Rough-Ground Drills 2/2 (`inf_terr`) | Upgrade | and in mountains and jungle | $55M, 30 mat, 19 rare | 4 |
-| 14 | Rapid Mobilisation 2/2 (`inf_build`) | Upgrade | trains 30% faster | $55M, 30 mat, 19 rare | 4 |
+| 12 | Rough-Ground Drills 2/2 (`inf_terr`) | Upgrade | and in mountains and jungle. Needs generation 2 | $55M, 30 mat, 19 rare | 4 |
+| 14 | Rapid Mobilisation 2/2 (`inf_build`) | Upgrade | trains 30% faster. Needs generation 2 | $55M, 30 mat, 19 rare | 4 |
 | 16 | Firepower 3/3 (`inf_fp`) | Levels | attack +40% in all. Needs generation 2 | $80M, 24 mat, 8 rare | 3 |
 | 17 | Protection 3/3 (`inf_pr`) | Levels | defense +40% in all. Needs generation 2 | $80M, 24 mat, 8 rare | 3 |
 | 17 | Assault Infantry (`inf_g3`), picture `u-inf-3` | Generation | attack +1, defense +1, health +2. Needs Mechanized Infantry | $173M, 80 mat, 62 rare | 8 |
@@ -173,7 +173,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Armoured Forces
 
-*Breaks the line and carries the infantry forward.* Banner picture: `u-tank`.
+*Breaks the line and carries the infantry forward.* Banner picture: `rb-arm`, from `u-tank`.
 
 | Day | Infantry Fighting Vehicle | Main Battle Tank |
 |---|---|---|
@@ -229,7 +229,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Artillery & Air Defence
 
-*Long reach on the ground, a roof over the army.* Banner picture: `u-rocket-artillery`.
+*Long reach on the ground, a roof over the army.* Banner picture: `rb-sup`, from `u-artillery`.
 
 | Day | Mobile Artillery | Rocket Artillery | Mobile SAM | Mobile Jammer |
 |---|---|---|---|---|
@@ -318,7 +318,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Air Assault
 
-*Short reach from the air: gunships and airborne troops.* Banner picture: `u-attack-heli`.
+*Short reach from the air: gunships and airborne troops.* Banner picture: `rb-aas`, from `u-attack-heli`.
 
 | Day | Attack Helicopter | Paratroopers (elite) |
 |---|---|---|
@@ -372,7 +372,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Tactical Air
 
-*Fighters and strike jets, medium reach.* Banner picture: `u-air-superiority`.
+*Fighters and strike jets, medium reach.* Banner picture: `rb-tac`, from `u-air-superiority`.
 
 | Day | Interceptor | Strike Fighter | Air Superiority Fighter (elite) |
 |---|---|---|---|
@@ -406,7 +406,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 10 | Firepower 2/3 (`int_fp`) | Levels | attack +25% in all | $149M, 30 mat, 10 elec, 5 rare | 2 |
 | 11 | Protection 2/3 (`int_pr`) | Levels | defense +25% in all | $149M, 30 mat, 10 elec, 5 rare | 2 |
 | 12 | Fourth-Generation Interceptor (`int_g2`), picture `u-int-2` | Generation | attack +1, defense +1, health +2, speed +2. Needs Interceptor | $196M, 50 mat, 16 elec, 46 rare | 6 |
-| 13 | Drop Tanks 2/2 (`int_rng`) | Upgrade | range +1 more | $99M, 30 mat, 21 rare | 4 |
+| 13 | Drop Tanks 2/2 (`int_rng`) | Upgrade | range +1 more. Needs generation 2 | $99M, 30 mat, 21 rare | 4 |
 | 16 | Firepower 3/3 (`int_fp`) | Levels | attack +40% in all. Needs generation 2 | $198M, 40 mat, 13 elec, 8 rare | 3 |
 | 17 | Protection 3/3 (`int_pr`) | Levels | defense +40% in all. Needs generation 2 | $198M, 40 mat, 13 elec, 8 rare | 3 |
 
@@ -445,7 +445,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Unmanned Systems
 
-*Cheap eyes and expendable strikes.* Banner picture: `u-strike-drone`.
+*Cheap eyes and expendable strikes.* Banner picture: `rb-uns`, from `u-strike-drone`.
 
 | Day | Recon UAV | Swarm Drones | Strike Drone |
 |---|---|---|---|
@@ -521,7 +521,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Strategic Air
 
-*Bombers and the big sensors, long reach.* Banner picture: `u-bomber`.
+*Bombers and the big sensors, long reach.* Banner picture: `rb-str`, from `u-awacs`.
 
 | Day | Heavy Bomber | Stealth Bomber (elite) | Maritime Patrol Aircraft | AWACS |
 |---|---|---|---|---|
@@ -607,7 +607,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Navy
 
-*Sea control, convoys and the silent service.* Banner picture: `u-destroyer`.
+*Sea control, convoys and the silent service.* Banner picture: `rb-nav`, from `u-carrier`.
 
 | Day | Frigate | Cruiser | Aircraft Carrier | Attack Submarine |
 |---|---|---|---|---|
@@ -696,7 +696,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Strategic Weapons
 
-*Missiles, the shield against them, eyes in orbit.* Banner picture: `u-missile-launcher`.
+*Missiles, the shield against them, eyes in orbit.* Banner picture: `rb-msl`, from `u-ballistic-missile`.
 
 | Day | Cruise Missile | Ballistic Missile | Missile Defence | Satellites |
 |---|---|---|---|---|
@@ -749,7 +749,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Command & Logistics
 
-*Advantages for every force you field.* Banner picture: `u-supply-truck`.
+*Advantages for every force you field.* Banner picture: `rb-cmd`, from `u-supply-truck`.
 
 | Day | Supply | Engineers | Landings | Medical |
 |---|---|---|---|---|
@@ -881,7 +881,7 @@ The tables are in section 5 (written by the tool). Read them like this:
 - **Nation without rare earth**: three unlocks by day 30 if it insists on new units, or twelve steps if it hones what it has (Firepower and Protection for infantry and artillery, then tank upgrades). It has a real choice instead of nothing to do.
 - **Whole tree**: 12% (typical) to 15% (rich) by day 60. Out of reach in a normal game.
 
-Compared with today: by day 30 the middle nation has 7 of 38 projects (18% of the tree) and 15 of 38 by day 60 (39%); a long game finishes the tree. After the redesign it has 10 to 16 steps of 285 by day 30, and choosing what to research matters all game.
+Compared with today: by day 30 the middle nation has 7 of 38 projects (18% of the tree) and 15 of 38 by day 60 (39%); a long game finishes the tree. After the redesign it has 10 to 16 steps of 289 by day 30, and choosing what to research matters all game.
 
 ### 6.3 What the tool checks
 
@@ -974,7 +974,7 @@ SLOT #1 (teal edge) and SLOT #2 (gold edge), side by side. A running slot shows 
 
 ### 9.2 Category list
 
-Ten banners in the order of section 3. Each: diamond icon on the left, name, role line, the category picture behind, and on the right `researched / total steps`, a thin progress bar, a green "N open" chip when something can be started now, and the "Slot #1" / "Slot #2" chips when a project of that category is running. The "Unit upgrades" banner (Marks) goes away. The note under the list about rare materials stays, and adds: "Firepower and Protection cost few rare materials."
+Ten banners in the order of section 3. Each: diamond icon on the left, name, role line, the category's unit picture between the name and the count (whole, its left edge fading into the banner), and on the right `researched / total steps`, a thin progress bar, a green "N open" chip when something can be started now, and the "Slot #1" / "Slot #2" chips when a project of that category is running. The "Unit upgrades" banner (Marks) goes away. The note under the list about rare materials stays, and adds: "Firepower and Protection cost few rare materials."
 
 ### 9.3 Inside a category: the grid
 
@@ -1069,7 +1069,7 @@ These are part of the design above; say no to any of them and the tree still wor
 | Marks become research | a third, separate slot; no computer player uses it | Firepower and Protection in the two research slots |
 | Generations | none | 24 lines get a Generation 2, infantry and tanks a Generation 3; mostly health |
 | IFV, Special Forces, Rocket Artillery | at the end of chains (76, 169 and 82 rare materials) | stand-alone unlocks (20, 25 and 25) |
-| Size of the tree | 38 projects, a long game finishes it | 285 steps, 12 to 15% reachable by day 60 |
+| Size of the tree | 38 projects, a long game finishes it | 289 steps, 12 to 15% reachable by day 60 |
 
 ### 12.2 New ground units
 
@@ -1134,3 +1134,7 @@ What the build does differently from, or adds to, the plan above.
   - **Old saves with a queued project** (`N.rqueue`, saves from before two slots) are read after the conversion (`rqueueMigrate` now runs after `researchMigrate`): an old project becomes the first of its new nodes that can start, which starts in slot #2; when none can (its day has not come, the money is short), a person's nation gets a dispatch that names the new node and why.
   - **Computer players.** A nation that flies Heavy Bombers weighs the Strategic Bomber Upgrade at 30 or more (it was about 2 against about 100 in all), one that has the Heavy Bomber but flies none yet at 16 with an Airbase II (6 without), and Stealth Airframes at 8 once it has the upgrade. A generation of a unit type that makes up a fifth or more of the forces is saved for (three days: recruiting holds its price back, its goods may be bought at up to twice the base price), and a slot no longer sits idle while the pick waits: with both slots free one takes a cheaper step, with one free a pick that is not saved for lets a cheaper step have it, and no step eats the goods a saved-for pick needs. Measured over three seeds (12345, 7, 99), headless: on day 30 the middle nation holds 15 to 16 steps and 12 to 13 of the 15 nations hold a generation (4 to 5 before). By day 60: 1, 5 and 3 nations hold the Heavy Bomber (4, 5 and 2 before), the Strategic Bomber Upgrade is in 2 nations on seed 7 (from day 45) and in none on the other two, Air Superiority Fighters in 5 to 7 (6 to 12 before), and no nation has the Stealth Bomber yet. The bomber line is now held back mostly by how few nations take the Heavy Bomber itself, a question for the next balance pass. About 30% of the computer's slot-hours are still idle by day 30, mostly for want of materials.
   - **Screen.** Category banners show an aerial photo of the branch's ground (the building pictures) under a slate wash, with the unit picture and a short role line on phones. In a category the top is compact (on a wide screen the two slots sit in the title band) and rows are 84 px (74 on a phone), so a 1280 x 720 laptop shows four to five day rows. Names wrap at spaces only; phones show short names (`RSN`) instead of icons alone; every kind of upgrade has its own white icon; locked nodes no longer repeat the row's day or the line's prerequisite. Unit diamonds are upright and cropped to fill the diamond (one soldier of the squad pictures). The spine is blue only below a researched spine node. Column headers keep the elite badge and the step count on phones; an arrow shows when more columns wait to the right. The first-time research tip sits under the slots instead of over the tree. With nothing selected, the side pane lists what to research next in that category. On a phone a selected node scrolls clear of the bottom sheet.
+- **Banners and small repairs (the owner's follow-up).**
+  - **Banners** are dark steel: a steel-grey to charcoal gradient with a fine grain drawn in code (SVG noise and brushed lines), a faint wash of the category's own colour from the left that also tints the diamond, a thin gold line along the foot and dark seams between the rows (the bright dusk gradient, the light separators and the aerial photos are gone). Each banner shows one unit picture, `assets/art/rb-<category>.webp`, cut from the unit's 512 px picture, turned to face the name and 176 px high (sharp at 2x) by `tools/prep-banners.py`: whole inside the banner, between the name and the count (it takes the room the name leaves, so it never covers either; a long name takes two lines on a phone), its left edge fading into the steel, with nothing over it. Pictures: Infantry Corps the infantry squad, Armoured Forces the Main Battle Tank, Artillery & Air Defence Mobile Artillery, Air Assault the Attack Helicopter, Tactical Air the Air Superiority Fighter, Unmanned Systems the Strike Drone, Strategic Air AWACS (no Heavy or Stealth Bomber picture exists yet), Navy the Aircraft Carrier, Strategic Weapons the Ballistic Missile, Command & Logistics the supply truck.
+  - **Later levels after Generation 2.** A later level of an upgrade dated after its line's Generation 2 now needs Generation 2 too, as section 2.4 says (before, only a node's first level was checked): Rough-Ground Drills 2 and Rapid Mobilisation 2 need Mechanized Infantry, Drop Tanks 2 the Interceptor's Generation 2 (`rq` on the level in `rules/data.js`, read by `rReqs`).
+  - **Phone grid.** A side diamond at the grid's outer edge writes its name inward from that edge, so no name in the first column runs under the sticky day column ("Mobilisation" read "obilisation"); a day-1 upgrade beside an unlock in the last column moves to the inner side when that side is free, so its diamond is not pushed off the screen (Composite Armour).

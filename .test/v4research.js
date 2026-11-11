@@ -18,8 +18,14 @@ const T0 = Date.now();
   ck('the tree: 162 researchable nodes, 289 steps, ten categories', T.n === 162 && T.steps === 289 && T.cats.length === 10 && T.done0 === 0, T);
   // ---- category list
   await p.click('[data-act="research-open"]'); await p.waitForTimeout(350);
-  const list = await p.evaluate(() => [...document.querySelectorAll('.rs-ban')].map(e => ({ b: e.dataset.b, name: e.querySelector('.rs-bt b').textContent, role: e.querySelector('.rs-bt span').textContent, dm: !!e.querySelector('.rs-dm svg'), pic: !!e.querySelector('.rs-bimg') && !!e.querySelector('.rs-bph'), cnt: e.querySelector('.rs-bpt > b').textContent, open: (e.querySelector('.rs-open') || {}).textContent || '' })));
-  ck('list: ten category banners with a diamond icon, a name, a role line, a photo and a unit picture', list.length === 10 && list.every(x => x.dm && x.pic && x.name && x.role) && list[0].name === 'Infantry Corps' && list[9].name === 'Command & Logistics', list.map(x => x.name));
+  const list = await p.evaluate(() => [...document.querySelectorAll('.rs-ban')].map(e => ({ b: e.dataset.b, name: e.querySelector('.rs-bt b').textContent, role: e.querySelector('.rs-bt span').textContent, dm: !!e.querySelector('.rs-dm svg'), pic: (e.querySelector('.rs-bpic') || {}).getAttribute && e.querySelector('.rs-bpic').getAttribute('src') === `assets/art/rb-${e.dataset.b}.webp` && !e.querySelector('.rs-bph, .rs-bimg'), cnt: e.querySelector('.rs-bpt > b').textContent, open: (e.querySelector('.rs-open') || {}).textContent || '' })));
+  // the banner pictures: loaded, whole inside the banner, clear of the name and the count, not darkened (no filter, nothing over them but the fade)
+  const pics = await p.evaluate(async () => { const out = []; for (const e of document.querySelectorAll('.rs-ban')){ const im = e.querySelector('.rs-bpic'); if (!im.complete) await new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 2000); });
+      const B = e.getBoundingClientRect(), I = im.getBoundingClientRect(), T = e.querySelector('.rs-bt').getBoundingClientRect(), P = e.querySelector('.rs-bp').getBoundingClientRect(), cs = getComputedStyle(im);
+      out.push({ b: e.dataset.b, ok: im.naturalWidth > 0, inside: I.left >= B.left - 0.5 && I.right <= B.right + 0.5 && I.top >= B.top - 0.5 && I.bottom <= B.bottom + 0.5, clear: I.right <= P.left + 0.5 && I.left >= T.right - 12, h: Math.round(I.height), filter: cs.filter, bg: getComputedStyle(e).backgroundImage.includes('rgba(var') || /255, 226, 196|180, 118, 88|29, 90, 134/.test(getComputedStyle(e).backgroundImage) }); }
+    return out; });
+  ck('banners: each unit picture (rb-<category>) is loaded, whole inside its banner, clear of the name and the count, undimmed; no dusk gradient', pics.length === 10 && pics.every(x => x.ok && x.inside && x.clear && x.h >= 70 && x.filter === 'none' && !x.bg), pics);
+  ck('list: ten category banners with a diamond icon, a name, a role line and the unit picture', list.length === 10 && list.every(x => x.dm && x.pic && x.name && x.role) && list[0].name === 'Infantry Corps' && list[9].name === 'Command & Logistics', list.map(x => x.name));
   ck('list: steps count and the green "open" chip (day 1: the IFV and Composite Armour, two fighters, the Frigate\'s gunnery; nine categories have one, Strategic Air opens on day 2)', list[1].cnt === '0/23' && /2 open/i.test(list[1].open) && /2 open/i.test(list[4].open) && /1 open/i.test(list[7].open) && list.filter(x => x.open).length === 9 && !list[6].open, list.map(x => [x.b, x.cnt, x.open]));
   ck('list: no Unit upgrades banner (Marks are in the tree)', await p.evaluate(() => !document.querySelector('.rs-ban.marks') && !/Marks/.test(document.querySelector('.rs-list').innerText)), null);
   ck('list: the note says Firepower and Protection cost few rare materials', await p.evaluate(() => /Firepower and Protection cost few rare materials/.test(document.querySelector('.rs-note').innerText)), null);
@@ -70,7 +76,11 @@ const T0 = Date.now();
     // health is taken as less damage
     const cap = N.capital, a = im.addArmy(0, cap, { tank: 10 }), a2 = im.addArmy(1, S.nations[1].capital, { tank: 10 }); rs.hurt(a, { armored: 0.02, soft: 0, air: 0, naval: 0 }, 1); rs.hurt(a2, { armored: 0.02, soft: 0, air: 0, naval: 0 }, 1);
     o.hurt = [a.w.tank + (10 - a.u.tank)*14, a2.w.tank + (10 - a2.u.tank)*14, (4 + rs.st(1, 'tank', 'def'))/(4 + rs.st(0, 'tank', 'def'))*14/21];
+    // a later level dated after generation 2 needs it too (docs/RESEARCH.md 2.4): Rough-Ground Drills 2 (day 12) after Mechanized Infantry (day 9)
+    S.hour = 12*24 + 1; N.research = N.research2 = null; o.terr1 = rs.why(0, 'inf_terr');   // level 1 (day 6) needs only the unlock
+    rs.grant(0, 'inf_terr', 1); o.terr2 = rs.why(0, 'inf_terr'); rs.grant(0, 'inf_g2', 1); o.terr2b = rs.why(0, 'inf_terr');
     return o; });
+  ck('levels: a later level dated after generation 2 needs it (Rough-Ground Drills 2 needs Mechanized Infantry; level 1 only the unlock)', R.terr2 === 'Needs Mechanized Infantry' && R.terr2b === '' && R.terr1 === '', [R.terr2, R.terr2b, R.terr1]);
   ck('days: a node cannot be started before its day (the tank\'s Firepower opens on day 3)', R.day1[0] === false && R.day1[1] === 'Opens on day 3' && R.day3[0] === true && R.day3[2] === 3, [R.day1, R.day3]);
   ck('levels: Firepower 1 takes 2 days and gives +12% attack', R.slot.id === 'tank_fp' && R.slot.lv === 1 && R.slot.h === 48 && R.fp1[0] === 1 && Math.abs(R.fp1[1] - R.atk0*1.12) < 1e-9 && R.fp1[2] === null, [R.slot, R.fp1]);
   ck('levels: each level has its own day; level 3 needs generation 2', R.fp2 === 'Opens on day 10' && R.fp3 === 'Needs Third-Generation MBT' && R.fp3b === '' && R.done === 'Researched', [R.fp2, R.fp3, R.fp3b, R.done]);
@@ -133,6 +143,19 @@ const T0 = Date.now();
   await q.evaluate(() => { document.querySelector('[data-act="rback"]').click(); }); await q.waitForTimeout(150); await q.click('[data-act="rbranch"][data-b="cmd"]'); await q.waitForTimeout(300);
   const ph4 = await q.evaluate(() => ({ cols: document.querySelectorAll('.rt-hd').length, cards: document.querySelectorAll('.rsolo').length, ftip: !document.getElementById('ftip').hidden, w: document.documentElement.scrollWidth }));
   ck('phone: Command & Logistics shows two columns with a card for each doctrine; no tip card over the tree', ph4.cols === 2 && ph4.cards === 4 && !ph4.ftip && ph4.w <= 431, ph4);
+  // a 390 px phone: the banner pictures stay whole and clear of the names; no name in the first column runs under the sticky day column, none off the right edge
+  const r3 = await boot({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await r3.click('[data-act="research-open"]'); await r3.waitForTimeout(500);
+  const pb = await r3.evaluate(async () => { const out = []; for (const e of document.querySelectorAll('.rs-ban')){ const im = e.querySelector('.rs-bpic'); if (!im.complete) await new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 2000); });
+    const B = e.getBoundingClientRect(), I = im.getBoundingClientRect(), T = e.querySelector('.rs-bt').getBoundingClientRect(), P = e.querySelector('.rs-bp').getBoundingClientRect();
+    out.push({ b: e.dataset.b, inside: I.left >= B.left - 0.5 && I.right <= B.right + 0.5 && I.top >= B.top - 0.5 && I.bottom <= B.bottom + 0.5, clear: I.right <= P.left + 0.5 && I.left >= T.right - 10, w: Math.round(I.width), name: e.querySelector('.rs-bt b').scrollWidth <= e.querySelector('.rs-bt b').clientWidth + 1 }); } return out; });
+  ck('phone 390: every banner picture whole, clear of the name and the count, at least 60 px wide; names not cut', pb.every(x => x.inside && x.clear && x.w >= 60 && x.name), pb);
+  const lab = [];
+  for (const c of ['inf', 'arm', 'sup', 'tac', 'uns', 'nav']){ await r3.evaluate(c => { const x = document.querySelector('[data-act="rback"]'); if (x) x.click(); }, c); await r3.waitForTimeout(120); await r3.click(`[data-act="rbranch"][data-b="${c}"]`); await r3.waitForTimeout(250);
+    lab.push(...await r3.evaluate(c => { const d = document.querySelector('.rt-days').getBoundingClientRect(), sc = document.getElementById('rtscroll').getBoundingClientRect(), W = document.documentElement.clientWidth;
+      return [...document.querySelectorAll('.rnode')].filter(n => +getComputedStyle(n).getPropertyValue('--c') === 0 || n.classList.contains('eR')).flatMap(n => [...n.querySelectorAll('.rn b')].filter(b => b.offsetWidth).map(b => { const r = b.getBoundingClientRect(); return { c, id: n.dataset.id, l: Math.round(r.left - d.right), rOut: n.classList.contains('eR') && sc.width >= document.getElementById('rtscroll').scrollWidth - 1 ? Math.round(r.right - Math.min(W, sc.right)) : -1 }; })); }, c)); }
+  ck('phone 390: no project name in the first column starts under the day column (Rapid Mobilisation reads in full), none runs off the right edge', lab.length > 10 && lab.every(x => x.l >= 0 && x.rOut <= 0), lab.filter(x => x.l < 0 || x.rOut > 0));
+  await r3.close();
   await q.close();
   const bad = checks.filter(c => !c.ok);
   console.log(JSON.stringify({ checks: checks.length, failed: bad, errors: errs }, null, 1)); await b.close(); process.exit(bad.length || errs.length ? 1 : 0); })();
