@@ -206,6 +206,7 @@ function aiFleet(a, n){
 const focusOf = n => { const R = S.blocReg && Object.values(S.blocReg).find(R => R.members && R.members.includes(n)); return R ? R.focus : null; };
 // pick one offensive objective against the main enemy and the own provinces next to it to gather in
 function aiPlan(n){ const P0 = (S.plans || (S.plans = {}))[n];
+  if (isSated(n)){ delete S.plans[n]; return null; }   // the nations world: grown enough for now, no offensive (rules/diplomacy.js isSated)
   if (P0 && S.owner[P0.tgt] !== n && atWar(n, S.owner[P0.tgt] ?? -1) && S.hour - P0.made < 24*8) return P0;
   const wars = warsOf(n); if (!wars.length){ delete S.plans[n]; return null; }
   const foe = focusOf(n) != null && wars.includes(focusOf(n)) ? focusOf(n) : wars.slice().sort((x, y) => natPower(x) - natPower(y))[0];
@@ -496,6 +497,9 @@ function aiTurn(n){
     if (city < 0) continue; const pth = pathFor(a, a.at, city); if (!pth.length || pth.length > 5) continue;
     const [b] = splitPlan(a, [Object.fromEntries(dr.map(r => [r.k, r.n]))]); if (b){ b.path = pth; b.forced = true; } }
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
+  // the nations world: independent provinces it may still go for (TIER_FREE times its start, less what it holds and the independent ones already marched on)
+  let freeLeft = Infinity; if (tiered() && N.prov0){ freeLeft = Math.floor(TIER_FREE*N.prov0) - provs; for (const v of targeted) if (S.owner[v] < 0 && S.home[v] !== n) freeLeft--; }
+  const sated = tiered() && N.prov0 && provs >= TIER_SATED*N.prov0;   // grown enough for now (isSated): only its own lost land is a target
   const planned = aiOperate(n, [...idle.values()].filter(a => count(a) && !a.air && !shipsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   for (const a of idle.values()){
     if (planned.has(a)) continue;
@@ -521,6 +525,7 @@ function aiTurn(n){
         if (G.P[v].sea || S.owner[v] === n || targeted.has(v)) continue;
         if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
         if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
+        if (S.home[v] !== n && (sated || (S.owner[v] < 0 && freeLeft <= 0))) continue;
         const fv = fitAt(v)*(riverX(u, v) ? RIVER_ATK : 1); if (pw*fv < defPower(v, n)*1.3 + 4) continue;
         let val = (G.P[v].city ? 3 : 1)*(S.owner[v] >= 0 && focusOf(n) === S.owner[v] ? 1.8 : 1); if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
         if (S.owner[v] >= 0 && atWar(n, S.owner[v])){ val *= 1.6; let rj = 0; for (const lk of G.P[v].lk.values()) if (lk.rail) rj++; if (rj >= 3) val += 0.8; }
@@ -531,6 +536,7 @@ function aiTurn(n){
     a.path = pathFor(a, a.at, best);
     if (!a.path.length) continue;
     targeted.add(best);
+    if (S.owner[best] < 0 && S.home[best] !== n) freeLeft--;
     // oversized stacks split and send half around to a second side of the target (frontage + flank bonus)
     if (count(a) > frontage(best) + 4){ const last = a.path.length > 1 ? a.path[a.path.length - 2] : a.at;
       const alt = G.P[best].nbs.filter(w => w !== last && !G.P[w].sea && (S.owner[w] === n || (S.owner[w] >= 0 && atWar(n, S.owner[w]) && defPower(w, n) < pw*0.25)));

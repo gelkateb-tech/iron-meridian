@@ -13,8 +13,8 @@ const OUT = path.join(ROOT, 'nations.js'), MODE = process.argv[2] || '';
 
 /* ---------- the plan ---------- */
 const REGIONS = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];
-const OPEN = ['Europe', 'Middle East'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
-// step 2: the Middle East, with Israel on the split map)
+const OPEN = ['Europe', 'Middle East', 'Africa'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
+// step 2: the Middle East, with Israel on the split map; step 3: Africa)
 // world.js country name, tier (S superpower, A major, B regional, C minor: table A of the plan, hand corrections included), region.
 // split (*): the country is too small on world.js; its provinces are cut smaller on the nations world's map (owner's answer 1: Israel, Greece,
 // Cuba and Belarus must be playable; 68 nations in all; tools/build-provsplit.js). It opens with its region like the others; the size of its
@@ -41,7 +41,10 @@ const COLORS = {'United States of America':'#3f7fe0', 'Canada':'#c8323c', 'Brazi
   'Italy':'#5cb04a', 'Spain':'#e0a13a', 'Poland':'#d8c440', 'Ukraine':'#3a9be0', 'Romania':'#c96a2e', 'Sweden':'#4a86e0', 'Norway':'#e06a5a', 'Finland':'#6fcf97',
   'Greece':'#6aa8e8', 'Belarus':'#c05a8a',
   // step 2, the Middle East
-  'Saudi Arabia':'#2f9e6b', 'Iraq':'#d8b03c', 'Syria':'#d0584a', 'Yemen':'#8a6fd6', 'Israel':'#4a7fd0'};
+  'Saudi Arabia':'#2f9e6b', 'Iraq':'#d8b03c', 'Syria':'#d0584a', 'Yemen':'#8a6fd6', 'Israel':'#4a7fd0',
+  // step 3, Africa
+  'Algeria':'#2e8b57', 'Morocco':'#c8443c', 'Libya':'#e8a03c', 'Nigeria':'#38a050', 'Ethiopia':'#d8b440', 'Sudan':'#b85a3a', 'Dem. Rep. Congo':'#4a6fc0',
+  'Angola':'#d05050', 'Kenya':'#c03a3a', 'Tanzania':'#6cae3e', 'Mali':'#c8a050', 'Chad':'#6a7fd0', 'Mozambique':'#e0b030', 'Cameroon':'#c04a8a'};
 const COLOR_MIN = 60;
 // hand swaps (plan 2.5): at most one city per nation, each with its reason: {country: {out:'city or province name', in:'province name', why:'...'}}
 const SWAPS = {};
@@ -74,6 +77,27 @@ const NAMES = {
   'Syria':{'Hasaka (Al Haksa)':'Al-Hasakah', 'Hamah':'Hama', 'Dar`a':'Daraa', 'Ar Raqqah':'Raqqa'},
   'Yemen':{'Lahij':'Aden', 'Al Hudaydah':'Hodeidah', 'Ta`izz':'Taiz', 'Hadramawt':'Mukalla', 'Abyan':'Zinjibar', 'Al Jawf':'Al Hazm'},
   'Egypt':{'Ad Daqahliyah':'Mansoura', "Shamal Sina'":'Arish', 'Al Minufiyah':'Tanta', 'Al Minya':'Minya', 'Kafr ash Shaykh':'Rosetta', 'As Suways':'Suez', 'Ash Sharqiyah':'Zagazig'},
+  // step 3, Africa: the same rule (usual English spelling: Jimma, Hawassa, Dessie, El Obeid, Tobruk, Misrata). By hand: the largest town in
+  // Cameroon's Sud-Ouest on the grid is Calabar (Nigeria): the largest Cameroonian town in it, Kumba; Cabinda's is Moanda (DR Congo): Cabinda
+  // itself (the province keeps its name). Grand Erg Oriental, Degehabur Zone and Afar hold no town of the data set: the town nearest the
+  // province, Hassi Messaoud, and the seats, Degehabur and Semera. Near ties or a village first, the seat instead: Tigray Mekelle (Adigrat by
+  // 8,000 people), Ondo Akure (the data set's Ikare counts its whole district), Angola's Cuanza Sul Sumbe, Lunda Norte Dundo, Cuanza Norte
+  // Ndalatando (the data set's largest are villages). A province already named after its town keeps that name (Oran, Batna, Kano, Kolwezi,
+  // Bloemfontein, Benguela and so on)
+  'Algeria':{'El Tarf':'Annaba', 'Skikda':'Constantine', 'Grand Erg Oriental':'Hassi Messaoud'},
+  'Morocco':{'Marrakech - Tensift - Al Haouz':'Marrakesh', 'Taza - Al Hoceima - Taounate':'Fez', 'Tanger - Tétouan':'Tangier', 'Guelmim - Es-Semara':'Guelmim', 'Oriental':'Oujda',
+    'Chaouia - Ouardigha':'Settat', 'Doukkala - Abda':'Safi', 'Meknès - Tafilalet':'Errachidia', 'Gharb - Chrarda - Béni Hssen':'Ouezzane'},
+  'Libya':{'Al Butnan':'Tobruk', 'Misratah':'Misrata'},
+  'Nigeria':{'Rivers':'Port Harcourt', 'Delta':'Warri', 'Kwara':'Ilorin', 'Zamfara':'Gusau', 'Ondo':'Akure'},
+  'Ethiopia':{'Degehabur Zone':'Degehabur', 'Jima':'Jimma', 'Tigray':'Mekelle', 'Southern Nations, Nationalities and Peoples':'Hawassa', 'Dese':'Dessie', 'Afar':'Semera'},
+  'Sudan':{'Al-Ubayyid':'El Obeid', 'Southern Darfur':'Nyala', 'Gezira':'Wad Medani', 'White Nile':'Kosti'},
+  'Dem. Rep. Congo':{'Nord-Kivu':'Beni'},
+  'Angola':{'Cuanza Sul':'Sumbe', 'Namibe':'Moçâmedes', 'Lunda Norte':'Dundo', 'Cuanza Norte':'Ndalatando'},
+  'Kenya':{'Coast':'Mombasa', 'Western':'Kisumu', 'Central':'Thika'},
+  'Tanzania':{'Pwani':'Kibiti', 'Kilimanjaro':'Moshi', 'Kagera':'Bukoba'},
+  'Chad':{'Mayo-Kebbi Est':'Bongor', 'Ouaddaï':'Abéché', 'Logone Oriental':'Moundou', 'Kanem':'Mao', 'Moyen-Chari':'Sarh', 'Lac':'Bol', 'Ennedi':'Fada', 'Tibesti':'Zouar'},
+  'Mozambique':{'Sofala':'Beira', 'Zambezia':'Quelimane', 'Manica':'Chimoio', 'Niassa':'Lichinga', 'Cabo Delgado':'Pemba', 'Gaza':'Xai-Xai'},
+  'Cameroon':{'Sud-Ouest':'Kumba', 'Nord':'Garoua', 'Littoral':'Douala', 'Ouest':'Bamenda', 'Sud':'Ebolowa', 'Est':'Bertoua', 'Adamaoua':'Ngaoundéré'},
 };
 
 /* ---------- the map and the rules ---------- */

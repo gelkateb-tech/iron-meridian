@@ -243,6 +243,10 @@ const TIER_WARS = {S:2, A:1, B:1, C:0};
 // country has the most land per soldier, and every neighbour went for it), and a computer nation already in TIER_GANG wars is left alone
 // (two equal neighbours at once take any nation apart)
 const TIER_LAND = 60, TIER_GANG = 1;   // an AI nation starts a war only while it is in at most this many wars of its own making
+// growth of a computer nation in the nations world (step 3, Africa: nations of 9 to 15 provinces amid wide independent land tripled or quadrupled
+// in 60 days). It goes for independent provinces only while it holds less than TIER_FREE times its starting land (it still fights nations, and
+// takes back its own lost land, beyond that); holding TIER_SATED times its start it makes peace with its enemies and starts no new war
+const TIER_FREE = 1.5, TIER_SATED = 2;
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
 const CAP_MIN = 2;                    // ground units needed to capture
 const OX = HS*SQ3/2 + 8, OY = HS + 8;

@@ -25,12 +25,19 @@ function opinionParts(a, b){
   if (mem(a, b)) parts.push([mem(a, b) > 0 ? 'Past dealings' : 'Grievances', Math.round(mem(a, b))]);
   if (borders(a, b)) parts.push(['Shares a border', -5]);
   const r = rel(a, b).st; if (r === 'ally') parts.push(['Allies', 30]); if (r === 'nap' || r === 'pass') parts.push(['Treaty', 10]); if (r === 'war') parts.push(['At war', -30]);
-  if (S.nations.some(c => c.alive && c.id !== a && c.id !== b && atWar(a, c.id) && atWar(b, c.id))) parts.push(['Common enemy', 20]);
+  if (commonEnemy(a, b)) parts.push(['Common enemy', 20]);
   if (r !== 'ally' && S.blocReg && Object.values(S.blocReg).some(R => R.members && R.members.includes(a) && R.members.includes(b))) parts.push(['Same coalition', 10]);
   const N = S.nations[b]; if (N.breaker != null && S.hour - N.breaker < 50*24) parts.push(['Treaty breaker', -Math.round(25*(1 - (S.hour - N.breaker)/(50*24)))]);
   if (score(b) > 1.5*score(a) && score(b) > 40) parts.push(['Fears its power', -15]);
   return parts;
 }
+// the nations world: a computer nation holding TIER_SATED times its starting land has grown enough for now (rules/data.js): it seeks peace,
+// starts no war, and its forces only hold its land and take back its own lost provinces
+function isSated(n){ const N = S.nations[n]; if (!N || !N.tier || !N.prov0 || !N.ai) return false; let c = 0; for (const o of S.owner) if (o === n) c++; return c >= TIER_SATED*N.prov0; }
+// a third nation both are at war with (under QM, each nation's enemies are listed once: the same answer)
+function commonEnemy(a, b){ if (!QM) return S.nations.some(c => c.alive && c.id !== a && c.id !== b && atWar(a, c.id) && atWar(b, c.id));
+  const foes = n => QM.foes[n] || (QM.foes[n] = S.nations.map(c => c.alive && c.id !== n && atWar(n, c.id))), fa = foes(a), fb = foes(b);
+  for (let c = 0; c < fa.length; c++) if (fa[c] && fb[c] && c !== a && c !== b) return true; return false; }
 const opinion = (a, b) => Math.max(-100, Math.min(100, opinionParts(a, b).reduce((s0, x) => s0 + x[1], 0)));
 function setRel(a, b, st, days = null){
   const prev = rel(a, b).st;
@@ -193,21 +200,23 @@ function diploDay(){
   blocDay();
   const day = S.hour/24;
   for (const N of S.nations){ if (!N.ai || !N.alive) continue; const n = N.id, wars = warsOf(n);
-    // peace with the weakest enemy when stretched, or after a long war
+    // the nations world: a computer nation holding TIER_SATED times its starting land has grown enough for now: it makes peace and starts no war
+    const sated = isSated(n);
+    // peace with the weakest enemy when stretched, or after a long war (or, sated, with any enemy)
     for (const m of wars){ const age = (S.hour - rel(n, m).since)/24;
       const lostTo = wars.length >= 3 ? G.P.reduce((c, P) => c + (S.home[P.id] === n && S.owner[P.id] === m ? 1 : 0), 0) : 0;   // fighting on three fronts: cede what one attacker holds to end that war
-      if (age < 5 || !((wars.length >= 2 && natPower(m) === Math.min(...wars.map(natPower))) || age > 20 || natPower(n) < 0.7*natPower(m) || lostTo >= 5)) continue;
+      if (age < 5 || !(sated || (wars.length >= 2 && natPower(m) === Math.min(...wars.map(natPower))) || age > 20 || natPower(n) < 0.7*natPower(m) || lostTo >= 5)) continue;
       if (!acceptOffer(n, m, 'peace').ok) continue;
       if (isSeat(m)) offerSeat(m, n, 'peace');
       else if (acceptOffer(m, n, 'peace').ok){ applyDeal(n, m, 'peace'); break; } }
     // declare war
     const pending = S.decl.some(d => d.by === n);
     // (the nations world: a nation starts a war only while it is in at most TIER_WARS wars of its own making; wars declared on it do not count)
-    if (day >= 8 && (N.tier ? warsOf(n).filter(m => (N.wby || []).includes(m)).length <= TIER_WARS[N.tier] : warsOf(n).length <= 1) && !pending && rng() < 0.22*diffOf().war){
+    if (day >= 8 && !sated && (N.tier ? warsOf(n).filter(m => (N.wby || []).includes(m)).length <= TIER_WARS[N.tier] : warsOf(n).length <= 1) && !pending && rng() < 0.22*diffOf().war){
       let best = -1, bs = 0; const myP = natPower(n);
       for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || graceOn(n, m)) continue;
         if (opinion(n, m) >= 0 || myP < 1.1*natPower(m)) continue;
-        if (N.tier && warsOf(m).length >= (isSeat(m) ? TIER_GANG + 1 : TIER_GANG)) continue;   // (the nations world: the computer does not join in on a nation already at war; a person's nation may get a second enemy, never a third)
+        if (N.tier && warsOf(m).length + S.decl.filter(d => d.to === m && !atWar(d.by, m)).length >= (isSeat(m) ? TIER_GANG + 1 : TIER_GANG)) continue;   // (the nations world: the computer does not join in on a nation already at war, or about to be (a declaration takes a day); a person's nation may get a second enemy, never a third)
         const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = ((N.tier ? Math.min(cnt, TIER_LAND) : cnt) + 5)/(natPower(m) + 10)*(isSeat(m) ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1)*(N.tier && tierGap(N.tier, M.tier) >= 2 ? 0.5 : 1);   // (the nations world: a victim two tiers below is half as attractive)
         if (sc > bs){ bs = sc; best = m; } }
       if (best >= 0){ if (natPower(n) > 1.6*natPower(best) && opinion(n, best) < -25 && rng() < 0.35) surpriseWar(n, best); else declareWar(n, best);

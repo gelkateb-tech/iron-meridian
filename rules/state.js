@@ -56,7 +56,12 @@ function powerDifficulty(L, i){ const s0 = powerStrength(L[i]), r = Math.max(0, 
   return r > 3 ? 'Very hard' : r > 2 ? 'Hard' : (t === 'S' || t === 'A') && r <= 1.5 ? 'Easy' : 'Normal'; }
 let scnLandCache = null, scnInCache = null;
 function inScn(p){ if (!scnInCache || scnInCache.S !== SCN){ const box = SCENARIOS[SCN].box; scnInCache = {S:SCN, a:G.P.map(P => !P.sea && (!box || box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})))}; } return scnInCache.a[p]; }
-const landHeld = n => { let c = 0; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] === n && inScn(p)) c++; return c; };
+// QM: a pass that changes no owner and no relation, and asks for many nations' land, score or wars (checkEnd every hour; the market's n x n opinions
+// once a day), counts each of them once for every nation instead of once per question (quietly: the same numbers, the same game)
+let QM = null;
+function quietly(fn){ const prev = QM; QM = {land:null, score:null, foes:[]}; try { return fn(); } finally { QM = prev; } }
+const landHeld = n => { if (QM){ if (!QM.land){ const c = new Array(S.nations.length).fill(0); for (let p = 0; p < S.owner.length; p++){ const o = S.owner[p]; if (o >= 0 && inScn(p)) c[o]++; } QM.land = c; } return QM.land[n] || 0; }
+  let c = 0; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] === n && inScn(p)) c++; return c; };
 function scnLand(){ if (scnLandCache) return scnLandCache; const box = SCENARIOS[SCN].box; if (!box) return (scnLandCache = G.landCount);
   return (scnLandCache = G.P.filter(P => !P.sea && box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})).length); }
 /* ---------------- State ---------------- */
@@ -304,7 +309,9 @@ function checkNation(n, by = NEUTRAL){
     tellAll(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 40% for 14 days.`, me => n === me ? 'bad' : 'info', nc.id);
   }
 }
-function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
+function score(n){ if (QM && n >= 0){ if (!QM.score){ const c = new Array(S.nations.length).fill(0); for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (o >= 0) c[o] += G.P[p].city ? 4 : 1; }
+    for (const N of S.nations){ const o = S.owner[N.cap0]; if (o >= 0) c[o] += 10; } QM.score = c; } return QM.score[n] || 0; }
+  let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
 const winShare = () => tiered() ? winShareFor(S.nations.length) : WIN_SHARE;
 const coalCaps = () => tiered() ? Math.round(WIN_CAPS*1.5) : WIN_CAPS + 3;   // capitals a coalition needs together
 const landNeed = n => SCN === 'world' || tiered() ? Math.max(Math.ceil(scnLand()*winShare()), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra)
@@ -325,7 +332,7 @@ function verdict(me){
 // With no seat at all the game ends when a nation reaches the victory conditions: S.over 'end', S.overReason its name
 function checkEnd(){
   if (S.over) return;
-  const L = seats(); for (const me of L){ verdict(me); if (S.over) break; }
-  if (!L.length){ const top = S.nations.find(n => n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (top){ S.over = 'end'; S.overReason = top.name; } }
+  quietly(() => { const L = seats(); for (const me of L){ verdict(me); if (S.over) break; }
+    if (!L.length){ const top = S.nations.find(n => n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (top){ S.over = 'end'; S.overReason = top.name; } } });
   if (S.over) IM.emit('over');
 }

@@ -103,12 +103,12 @@ function marketDay(){ const M = mkt(), incs = S.nations.map(N => N.alive ? incom
     const ratio = dem/Math.max(1, sup), target = MKT_BASE[k]*Math.max(0.7, Math.min(2.6, 0.6 + 1.0*ratio + 4*M.press[k]));
     M.prev[k] = M.p[k]; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k] + (target - M.p[k])*0.2 + M.p[k]*(rng() - 0.5)*0.06));
     M.press[k] *= 0.7; M.hist[k].push(+M.p[k].toFixed(2)); if (M.hist[k].length > 60) M.hist[k].shift(); }
-  // AI trading and sanctions
-  for (const N of S.nations){ if (!N.alive || isSeat(N.id)) continue; const cap = stockCap(N.id);
+  // AI trading and sanctions (no owner or relation changes here: every nation's land and enemies are counted once, quietly)
+  quietly(() => { for (const N of S.nations){ if (!N.alive || isSeat(N.id)) continue; const cap = stockCap(N.id);
     void cap;
     for (const O of S.nations){ if (!O.alive || O.id === N.id) continue; const key = N.id + '>' + O.id, op = opinion(N.id, O.id), war = atWar(N.id, O.id);
       if (!M.emb[key] && (op < -45 || war) && rng() < 0.25){ M.emb[key] = S.hour; if (isSeat(O.id)) tell(O.id, `${N.name} imposes an embargo on you: your market prices worsen by 15% per embargo (${embargoes(O.id)} now).`, 'bad', null); }
-      else if (M.emb[key] && op > -20 && !war && rng() < 0.2){ delete M.emb[key]; if (isSeat(O.id)) tell(O.id, `${N.name} lifts its embargo on you.`, 'good', null); } } }
+      else if (M.emb[key] && op > -20 && !war && rng() < 0.2){ delete M.emb[key]; if (isSeat(O.id)) tell(O.id, `${N.name} lifts its embargo on you.`, 'good', null); } } } });
 }
 /* ---- market: only what nations list. Sell offers (goods held) and buy offers (money held); nothing else ---- */
 const isBid = o => o.type === 'buy';

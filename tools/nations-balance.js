@@ -34,6 +34,7 @@ function playOne(seed, days, scn, seat){ const R = load(), api = R.IM.api; let l
     if (S.hour % 24 === 0){ const d = S.hour/24; for (const N of S.nations) if (!N.alive && out.dead[N.id] == null) out.dead[N.id] = d;
       if (d <= 30) for (let p = 0; p < S.owner.length; p++) if (S.own0[p] === -1 && S.owner[p] >= 0) took[S.owner[p]].add(p);   // independent land taken by day 30, held or lost again since
       if (d === 30) out.took30 = took.map(t => t.size);
+      if (d === 30){ out.cash30 = S.nations.map(N => Math.round(N.cash)); out.net30 = S.nations.map(N => N.alive ? Math.round(R.income(N.id).net.cash) : null); }   // treasury and money a day on day 30 (step 3's check)
       if (d === 1 || d === 60) out.oil[d] = S.mkt && S.mkt.p ? +S.mkt.p.oil.toFixed(3) : null;   // the world oil price (step 2's check)
       if ([21, 30, 45, 60, 120, 250, 300].includes(d)){ out.at[d] = provs(S); out.nat[d] = nat(); out.free[d] = free(); out.wars[d] = Object.keys(S.rel).filter(k => S.rel[k] && S.rel[k].st === 'war').map(k => k.split(',').map(Number)); } } }
   if (S.over) out.over = {day:Math.ceil(S.hour/24), what:S.over, who:S.overReason};
@@ -154,6 +155,17 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       say('Step 2  oil for all', !dry.length, `${oilC.length} of ${me.length} with an oil city` + (oilC.length < me.length ? ` (${me.filter(o => !oilC.includes(o.N.name)).map(o => o.N.name).join(', ')} on the capital's oil, ${R.ECO_CAPITAL.oil} a day)` : '') + `; every capital makes ${R.ECO_CAPITAL.oil} oil a day`);
       const pr = games.map(g => g.oil[60]/g.oil[1]), wild = games.filter((g, i) => !(pr[i] >= 0.5 && pr[i] <= 2));
       say('Step 2  oil price', !wild.length, `world oil price day 60 against day 1: ${games.map((g, i) => `${g.oil[1]}>${g.oil[60]} (x${pr[i].toFixed(2)})`).join(', ')}`); }
+    // step 3, Africa (from then on): no African nation more than doubles its provinces by day 60 in more than 1 seed of 5 (Mali tripled in the
+    // plan's trial); the two landlocked desert nations, Mali and Chad, have money in the treasury (above zero) on day 30 in every seed
+    if (NAT.open.includes('Africa')){ const af = names.map((_, n) => n).filter(n => R.POWERS[S.nations[n].power].region === 'Africa');
+      const dbl = af.map(n => ({n, k:games.filter(g => g.at[60][n] > 2*g.p0[n]).length})), many = dbl.filter(x => x.k > 1), some = dbl.filter(x => x.k);
+      const anySeed = games.filter(g => af.some(n => g.at[60][n] > 2*g.p0[n])).length;
+      say('Step 3  Africa no doubling', !many.length, (some.length ? some.map(x => `${names[x.n]} more than doubled in ${x.k} of ${games.length} (${games.map(g => `${g.p0[x.n]}>${g.at[60][x.n]}`).join(' ')})`).join('; ') : `no African nation more than doubled by day 60`)
+        + `; seeds with any African nation doubled: ${anySeed} of ${games.length}; largest growth: ${af.map(n => ({n, r:Math.max(...games.map(g => g.at[60][n]/g.p0[n]))})).sort((x, y) => y.r - x.r).slice(0, 4).map(x => `${names[x.n]} x${x.r.toFixed(2)}`).join(', ')}`);
+      // (positive money: money coming in on day 30, more than its upkeep, in every seed, and a treasury not in debt; a computer nation spends its
+      // treasury down to what it keeps, so the treasury alone says little)
+      const dry = ['Mali', 'Chad'].map(nm => ({nm, c:games.map(g => g.cash30[id(nm)]), net:games.map(g => g.net30[id(nm)]), dead:games.filter(g => g.dead[id(nm)] != null && g.dead[id(nm)] <= 30).length}));
+      say('Step 3  Mali and Chad solvent', dry.every(x => !x.dead && x.net.every(v => v > 0) && x.c.every(c => c >= 0)), dry.map(x => `${x.nm} on day 30: money a day ${x.net.map(v => (v > 0 ? '+' : '') + v).join(', ')}, treasury ${x.c.join(', ')}` + (x.dead ? ` (eliminated by day 30 in ${x.dead})` : '')).join('; ')); }
   } else console.log(`(T4, T5 and the step checks need 60 days: skipped at ${DAYS})`);
 
   // T7 speed: milliseconds a game day, all computer, against the budget of the step (500 with 15 nations when the classic world takes 444 on the
