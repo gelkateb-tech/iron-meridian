@@ -53,7 +53,7 @@ const RES = [
   {k:'iron',  name:'Iron',     ab:'Iron',  unit:'',  pre:'', use:'armor, artillery, warships, Arms Factories, forts and railways; those units also use 4% of their iron a day in maintenance (a shortage weakens them)', src:'ore deposits, iron hills, cities (steel mills), your capital, Foundries (+1.2 a level, +2.4 on ore)', map:'ore deposits, iron hills, cities'},
   {k:'elec',  name:'Electronics', ab:'Elec.', unit:'', pre:'', use:'aircraft, drones, air defence, missiles, satellites and high-speed rail; those units also use 2% of their electronics a day in maintenance (a shortage weakens them)', src:'big cities by population, more with Arms Factories (+25% a level)', map:'big cities'},
   {k:'rare',  name:'Rare Materials', ab:'Rare Mat.', unit:'', pre:'', use:'research: every technology costs it (more each tier); also advanced aircraft, carriers and missiles', src:'rare-earth deposits and Rare Earth Mines (+1 on hills, mountains, desert or tundra), your capital', map:'rare-earth deposits'},
-  {k:'mp',    name:'Manpower', ab:'Manp.', unit:'k', pre:'', use:'crews for every unit', src:'population, Recruiting Offices (+3 a day), Mobilisation', map:'populous countryside'},
+  {k:'mp',    name:'Manpower', ab:'Manp.', unit:'k', pre:'', use:'crews for every unit', src:'population, Recruiting Offices (+3k to +9k a day by level), Mobilisation', map:'populous countryside'},
 ];
 const RLBL = {cash:'money', oil:'oil', metal:'materials', iron:'iron', elec:'electronics', rare:'rare materials', mp:'manpower'}, rlbl = k => RLBL[k] || k;   // player-facing resource words (the save key stays 'metal')
 const yword = (k, v) => v === 1 && k === 'metal' ? 'material' : v === 1 && k === 'rare' ? 'rare material' : rlbl(k);   // '1 material', '3 materials'
@@ -111,13 +111,16 @@ const rough = k => Math.max(0, Math.min(1, (1 - (TERRAIN[k] || TERRAIN.plains).a
 const SEA_SPEED = 3.6;                // hexes/day for embarked ground units (troop transports)
 const LANE_F = 1.12;                  // sea-lane bonus for every force at sea
 const KM_HEX = 180;                   // one map hex is roughly 180 km
+// Recruiting Office, levels I-V: what it costs to reach each level (money $M, materials, iron, electronics) and how many days it takes.
+// A building with such a table (BUILD[k].lv) is priced from it, not from the 1.6x-per-level rule (buildCost in rules/production.js)
+const REC_LV = [null, {cash:40, days:2}, {cash:75, metal:10, days:3}, {cash:130, metal:20, iron:10, days:4}, {cash:220, metal:35, iron:20, days:5}, {cash:360, metal:55, iron:30, elec:15, days:6}];
 const BUILD = {
   fac:  {name:'Arms Factory',      max:5, cost:25, ecost:55, metal:12, iron:12, days:3, where:'city', desc:'Level I unlocks mobile artillery, main battle tanks, IFVs and jammers; level II unlocks mobile SAMs. Each level: +20% money and +25% electronics here and one more training line; units train 20% faster per level up to III, then 5% faster per level. Each Arms Factory you already own in another province makes the next one cost 40% more.'},
   air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:'Needed for strike fighters and interceptors (with Jet Engines research). Levels II\u2013V: aircraft build 10% faster and wings based here reach 1 hex farther per level above I.'},
   ref:  {name:'Refinery',          max:2, cost:50, metal:10, iron:5, days:3, where:'oil',  desc:'+60% oil from this field per level.'},
   fdy:  {name:'Foundry',           max:2, cost:50, metal:10, days:3, where:'any',  desc:'Per level: +1.2 iron and +1.4 materials (+2.4 iron and +1.8 materials on ore deposits).'},
   mine: {name:'Rare Earth Mine',   max:2, cost:55, metal:10, days:3, where:'mine', desc:'Rare materials per level: +60% of a rare-earth deposit\u2019s output (at least +1.5); +1 on other hard-rock ground (hills, mountains, desert, tundra), +0.5 elsewhere. Not in cities on urban ground or in marshes.'},
-  rec:  {name:'Recruiting Office', max:1, cost:30, metal:0,  days:2, where:'any',  desc:'Needed to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. +3 manpower per day.'},
+  rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:'Needed to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
   fort: {name:'Fortifications',    max:3, cost:36, metal:8, iron:8, days:2, where:'any',  desc:'Defenders here take 20% less damage per level.'},
   silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores cruise and ballistic missiles (needs Strategic research). Levels II\u2013V: missiles build 10% faster per level above I.'},
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},

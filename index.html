@@ -1379,6 +1379,11 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .rs-ttl{display:flex; flex-direction:column; gap:2px; min-width:0}
 .sheet.rsch .rs-ttl h1{margin:0; font:800 31px/1 var(--display); letter-spacing:.04em; text-transform:uppercase; color:#15222a; text-shadow:0 1px 0 rgba(255,255,255,.6)}
 .rs-cnt{font:600 11px/1.1 var(--body); letter-spacing:.08em; text-transform:uppercase; color:#3f5961; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rs-cnt.rs-rec{align-self:flex-start; max-width:100%; margin-top:1px; padding:2px 5px; border-radius:3px; background:rgba(255,255,255,.82); color:#1d5a3a; font-weight:800; letter-spacing:.03em}
+.rs-ttl.l3{padding:5px 0}
+.sheet.rsch .rs-ttl.l3 h1{font-size:24px}
+.cs-mmod .eyebrow .rec-b{display:none}   /* the Mobilize panel says it in its header */
+.eyebrow .rec-b{color:var(--good, #7fd39a)}
 .rs-stk{display:flex; gap:6px; margin-left:auto; min-width:0}
 .rs-stk .chip{height:auto; padding:5px 9px; gap:6px; border-radius:2px; background:rgba(22,36,43,.85); box-shadow:inset 0 0 0 1px rgba(143,163,170,.45)}
 .rs-stk .chip .vv{display:flex; align-items:baseline; gap:5px} .rs-stk .chip b{font:700 14px/1 var(--body); color:#fff; text-shadow:var(--cn-num)}
@@ -8681,7 +8686,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
       <span class="cs-pp" title="Population ${popOf(p).toFixed(1)}M · manpower ${Math.round(y.mp || 0)}k a day">${CS_ICO.pop}<b>${popOf(p).toFixed(1)}M</b>${(y.mp || 0) >= 0.5 ? `<span class="cs-mp res-mp">${icon('mp', 15)}<b>${Math.round(y.mp)}k</b></span>` : ''}</span></div>`;
   // building cards: the city first, then what stands here, then (yours) what can still be built
   const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = k === 'city' ? (isCapital(p) ? 'Capital' : 'City') : BUILD[k].name, tag = o0.btn ? 'button' : 'span';
-    const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
+    const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${k === 'rec' && mine ? '\n' + recTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
     return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
@@ -8718,10 +8723,18 @@ function csCard(k){ const p = sel.prov; if (p === null) return; if (k === 'city'
 function cmodHead(p, title){ const N = S.nations[PLAYER], P = G.P[p], inc = income(PLAYER);
   const rk = k => { const R0 = RES.find(x => x.k === k), d = inc.net[k]; return `<div class="chip res-${k}" title="${R0.name}: ${R0.pre}${fmt(N[k])}${R0.unit}, ${d >= 0 ? '+' : ''}${fmt(d)} a day">${icon(k, 16)}<span class="cv"><span class="vv"><b>${R0.pre}${fmt(N[k])}${R0.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; };
   return `<div class="rs-top"><div class="rs-head"><button class="rs-back" data-act="resume" aria-label="Back to the city" title="Back to ${P.city ? P.cityName : P.name}">${rg('back', 22)}</button>
-      <div class="rs-ttl"><h1>${title}</h1><span class="rs-cnt">${P.city ? P.cityName : P.name} · ${csStatus(p)}${P.city ? ' · level ' + ROMAN[cityLevel(p)] : ''}</span></div>
+      <div class="rs-ttl${title !== 'Build' && recHead(p) ? ' l3' : ''}"><h1>${title}</h1><span class="rs-cnt">${P.city ? P.cityName : P.name} · ${csStatus(p)}${P.city ? ' · level ' + ROMAN[cityLevel(p)] : ''}</span>${title !== 'Build' && recHead(p) ? `<span class="rs-cnt rs-rec">${recHead(p)}</span>` : ''}</div>
       <div class="rs-stk">${(title === 'Build' ? ['cash', 'metal', 'iron'] : ['cash', 'metal', 'mp']).map(rk).join('')}</div>
       <span class="rs-emb" aria-hidden="true"><span class="rs-embi">${flagHTML(PLAYER, 46)}</span></span>
       <button class="rs-x" data-act="resume" aria-label="Close" title="Back to the map">${rg('x', 18)}</button></div></div>`; }
+// Recruiting Office wording (the numbers come from the rules: recPct, recMp). recTip: the building's tooltip and build-list line at its level in p;
+// recHead: the Mobilize panel's header line ('' without an office)
+const recK = l => '+' + (+recMp(l).toFixed(1)) + 'k';
+const recTip = p => { const l = S.bld[p].rec || 0, M = BUILD.rec.max;
+  return l ? `${BUILD.rec.name} ${ROMAN[l]}: needed to mobilize infantry here. ${recPct(l)}% faster training and ${recK(l)} manpower a day in this city. ${l < M ? `Next level: ${recPct(l + 1)}% faster, ${recK(l + 1)}/day.` : 'Highest level.'}`
+    : `${BUILD.rec.name}: needed to mobilize infantry here (Motorized Infantry, Anti-Tank Infantry, Special Forces and, with an Airbase, Paratroopers). Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
+const recHead = p => S.bld[p].rec ? `${BUILD.rec.name}: ${recPct(S.bld[p].rec)}% faster training` : '';
+const bldDesc = (p, k) => k === 'rec' ? recTip(p) : BUILD[k].desc;
 const csPic = (k, lv) => { const A = csArt(k, lv); return `<i class="bi${lv ? '' : ' dim'}${A.art ? '' : ' gl'}" style="--bi:url(${A.u});--bs:54px" aria-hidden="true"></i>`; };
 const mobHTML = p => `${cmodHead(p, 'Mobilize unit')}<div class="cs-mbody cs-mmod">${cityRecruitHTML(p)}</div>`;
 const cbldHTML = p => `${cmodHead(p, 'Build')}<div class="cs-mbody cs-bmod">${cityConsHTML(p, true)}${S.bld[p].silo ? citySiloHTML(p) : ''}</div>`;
@@ -9455,7 +9468,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
       return `<button class="btn unit hasp${why ? ' blk' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)} Shift-click to queue 5." ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
     const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b)));
     const open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), locked = UT.filter(t => blk(t) && !near(blk(t)));
-    html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
+    html += `<div class="eyebrow">Recruit${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
     html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (Arms Factory adds more). Shift-click a card to queue 5. <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
     html += `<div class="row"><button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px">${S.rally && S.rally[p] != null ? 'Rally: ' + (G.P[S.rally[p]].cityName || G.P[S.rally[p]].name) + ' (change)' : 'Set rally point'}</button></div>`;
@@ -9472,7 +9485,7 @@ function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '
       const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc);
       return `<div class="bld" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
         ${maxed ? '<span class="lv">Max</span>' : `<button class="btn" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${!ok && !c && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${Math.round(cc.h/2.4)/10} d</span>${costHTML(cc, N)}</button>`}
-        <span class="ds">${B.desc}</span></div>`; }).join('')}</div>`;
+        <span class="ds">${bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
   return html; }
 function provHTML(p){
   const P = G.P[p], o = S.owner[p], N = S.nations[PLAYER], mine = o === PLAYER;
@@ -9857,7 +9870,7 @@ const HELP_SEC = [
     <li><span class="res-iron">${icon('iron', 12)}</span> <b>Iron</b>: ore deposits, iron-bearing hills, cities and your capital, and Foundries (+1.2 a level, +2.4 on ore). Armor, artillery, warships, Arms Factories, forts and railways. Those units also use 4% of their iron a day for spare parts; run dry and they fight worse.</li>
     <li><span class="res-elec">${icon('elec', 12)}</span> <b>Electronics</b>: big cities by population, +25% per Arms Factory level there. Aircraft, drones, air defence, missiles, satellites and high-speed rail. Those units also use 2% of their electronics a day in maintenance; run dry and they fight worse.</li>
     <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>: every technology costs money, materials and rare materials (about 30 at tier 1, 65 at tier 2, 110 at tier 3), paid when it starts. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from rare-earth deposits and <b>Rare Earth Mines</b> (best on a deposit, +1 on hills, mountains, desert or tundra), plus a little from your capital. Advanced aircraft, carriers and missiles need some too.</li>
-    <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3 a day); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
+    <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> The Resources map mode shows each province's main output, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
     <li><b>Recruit</b> in your cities: units take a day or more to train; each Arms Factory level adds a training line. Cities can have a rally point for new units.</li>

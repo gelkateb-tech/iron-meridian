@@ -286,6 +286,14 @@ function aiSite(n, k){ let best = -1, bv = 0;
     const v = k === 'mine' ? (lv < BUILD.mine.max ? mineLv(P)*(1 - 0.25*lv)*(S.home[p] === n ? 1 : 0.7) : 0) : k === 'fdy' ? (lv < BUILD.fdy.max ? (P.ore ? 2 : 1)/(1 + lv)*(S.home[p] === n ? 1 : 0.6)*(1 + 0.1*rng()) : 0) : (lv < 3 ? (1 + popOf(p))/(1 + lv) : 0);
     if (v > bv){ bv = v; best = p; } }
   return best; }
+// Recruiting Office for an AI short of manpower: a new office first (the first province without one, +3k a day for $40M); only when every province
+// has one, the next level of its lowest office (cities first). No upgrades otherwise, except where training speed is the limit (aiRecSlow)
+function aiRecSite(n){ let best = -1, bl = 99;
+  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, 'rec')) continue; const l = S.bld[p].rec || 0;
+    if (!l) return p; if (l >= BUILD.rec.max) continue; const v = l - (G.P[p].city ? 0.5 : 0); if (v < bl){ bl = v; best = p; } }
+  return best; }
+// training speed limits the AI in city p: it is at war, the city's queue is full (two or more waiting) and the money for the next level is spare
+function aiRecSlow(n, p){ const l = S.bld[p].rec || 0; return l >= 1 && l < BUILD.rec.max && S.queue[p].length >= 2 && warsOf(n).length > 0 && S.nations[n].cash > buildCost(n, 'rec', l + 1, p).cash + 300; }
 const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U = N.uSave;
   // at war, troops come first: the link project only holds its money back once there is twice that much in the bank
   let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
@@ -343,6 +351,7 @@ function aiTurn(n){
     if (needs.length) for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && S.cons[p]) busy[S.cons[p].k] = (busy[S.cons[p].k] || 0) + 1;
     const ord = needs[0] === 'mine' ? ['mine', ...needs.slice(1).map((x, i, a) => a[(j0 + i) % a.length])] : needs.map((x, i, a) => a[(j0 + i) % a.length]);
     for (let j = 0; j < ord.length && done < jobs && N.cash > 90; j++){ const need = ord[j]; if (need !== 'mine' && (busy[need] || 0) >= (provs > 150 ? 2 : 1)) continue;
+      if (need === 'rec'){ const p = aiRecSite(n); if (p >= 0 && build(n, p, 'rec')){ done++; busy.rec = (busy.rec || 0) + 1; } continue; }
       if (need === 'mine' || need === 'fac' || need === 'fdy'){ const p = aiSite(n, need); if (p >= 0 && build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; } continue; }
       for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || !canBuildHere(p, need) || S.bld[p][need] >= BUILD[need].max) continue;
         if (build(n, p, need)){ done++; busy[need] = (busy[need] || 0) + 1; break; } } }
@@ -399,6 +408,7 @@ function aiTurn(n){
       else if (S.bld[p].yard === 1 && N.cash > 220 && rng() < 0.2 && !G.P.some(P => S.owner[P.id] === n && S.bld[P.id].yard >= 2)) build(n, p, 'yard');
       else if (S.bld[p].air === 1 && (has(n, 'asf1') || has(n, 'bomb1') || has(n, 'awacs1')) && N.cash > 200 && rng() < (has(n, 'bomb1') || has(n, 'asf1') ? 0.6 : 0.4) && G.P.filter(P => S.owner[P.id] === n && S.bld[P.id].air >= 2).length < 2) build(n, p, 'air');   // Airbase II (up to two) for the heavy aircraft
       else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
+      else if (aiRecSlow(n, p) && rng() < 0.15) build(n, p, 'rec');   // training speed is the limit here: the next Recruiting Office level
       else if (S.bld[p].air >= 1 && S.bld[p].air < 3 && N.cash > 300 + 120*S.bld[p].air && rng() < 0.2 && S.armies.filter(w => w.owner === n && w.air && w.air.base === p && count(w)).length >= 2 && S.armies.some(w => w.owner === n && w.air && w.air.base === p && (w.air.wear || 0) > 0.2)) build(n, p, 'air');   // worn wings: faster repairs
       else if ((canGrow || N.cash > 900) && N.cash > 700 && rng() < (N.cash > 1000 ? 0.2 : 0.08)){ const up = ['fac', 'air', 'yard', 'silo'].find(k => S.bld[p][k] > 0 && S.bld[p][k] < BUILD[k].max && N.cash > buildCost(n, k, S.bld[p][k] + 1, p).cash + 450); if (up) build(n, p, up); }
     }
