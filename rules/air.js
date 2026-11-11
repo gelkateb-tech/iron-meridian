@@ -147,7 +147,7 @@ function dogfight(a, cap, p, scale){ const o = a.owner, mine = effHP(a), theirs 
 // what air raids did to each nation lately (drives the AI's counter-buys): S.airHit[n] = {drone, bomb, air}, decays daily
 function noteHit(n, t, p = -1){ if (n < 0) return; const H = (S.airHit || (S.airHit = {}))[n] || (S.airHit[n] = {drone:0, bomb:0, air:0}); H[UNITS[t] && UNITS[t].dr ? 'drone' : isBmb(t) ? 'bomb' : 'air'] += 1;
   if (isBmb(t) && p >= 0) (H.bp || (H.bp = {}))[p] = S.hour; }   // H.bp: where bombers struck lately (fighter patrols go there)
-const BLD_VAL = {silo:5, air:4, fac:4, yard:3, ref:2.5, fdy:2, mine:2, rec:1.2, fort:1.5};
+const BLD_VAL = {silo:5, air:4, fac:4, yard:3, arms:2.5, rec:1.2, fort:1.5};
 const bestBld = p => BK.filter(k => S.bld[p][k] > 0 && !bdis(p, k)).sort((x, y) => BLD_VAL[y]*(1 + 0.2*S.bld[p][y]) - BLD_VAL[x]*(1 + 0.2*S.bld[p][x]))[0] || null;
 // precision hit: the most valuable building is knocked out for hrs (and with probability pLevel loses a level)
 function preciseHit(p, pLevel, hrs){ const k = bestBld(p); if (!k) return '';

@@ -56,11 +56,12 @@ function newGame(seed, pick, humans = []){
   S = {v:4, scn:SCN, len:DAY_LIMIT, persist:!!newGame.persist, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
+  S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   linksSync();
   for (const n of S.nations){
     const np = S.owner.filter(o => o === n.id).length;
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
-    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 200/Math.max(1, income(n.id).gross.cash)));
+    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, income(n.id).gross.cash)));
     S.bld[n.capital].fac = 1;
     for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // infantry needs a Recruiting Office: the capital and the two biggest other cities start with one
     addArmy(n.id, n.capital, {inf:4, tank:1});
@@ -83,6 +84,25 @@ function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.own
 function mobMigrate(){ if (S.mob) return; S.mob = 1; const got = new Set();
   for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].rec) continue; S.bld[c].rec = 1; got.add(N.id); }
   for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, text:`New rule: infantry is mobilized only in cities with a Recruiting Office.${got.has(me) ? ' Your capital has been given one' : ' Your capital has one'}; build more in your other cities. Units already in training carry on.`, kind:'info', p:S.nations[me].capital}); } }
+// saves from before the city-resource economy (each city one main resource; Arms Factory -> Army Base under the same key; Arms Industry new):
+// Refineries, Foundries and Rare Earth Mines are gone. Every level built is refunded to the province's owner at the un-raised price (money, materials
+// and iron), one under construction is cancelled and refunded, a knocked-out one forgotten. Materials and iron that would not fit in the stores are
+// paid in money at the base price. The Economy research branch is gone too: what was researched keeps its effect (income0), a project still running
+// is completed at once (it was paid for). City main resources come from the map, so there is nothing to migrate for them.
+function ecoMigrate(){ if (S.eco) return; S.eco = 1; const got = {};
+  const refund = (o, k, lvl) => { if (o == null || o < 0 || !S.nations[o]) return; const B = ECO_OLD[k], m = Math.pow(1.6, lvl - 1), r = got[o] || (got[o] = {lv:0, cash:0, metal:0, iron:0}); r.lv++; r.cash += Math.round(B.cost*m); r.metal += Math.round(B.metal*m); r.iron += Math.round(B.iron*m); };
+  for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p], o = S.owner[p], d = bdisOf(p);
+    for (const k in ECO_OLD){ if (b && b[k] > 0) for (let l = 1; l <= b[k]; l++) refund(o, k, l); if (b) delete b[k]; if (d && typeof d === 'object') delete d[k]; }
+    const c = S.cons[p]; if (c && ECO_OLD[c.k]){ refund(o, c.k, c.lvl || 1); S.cons[p] = null; } }
+  for (const o in got){ const N = S.nations[o], r = got[o], cap = stockCap(+o); N.cash += r.cash; r.paid = r.cash;
+    for (const k of ['metal', 'iron']){ const fit = Math.max(0, Math.min(r[k], Math.floor(cap - N[k]))); N[k] += fit; if (r[k] > fit){ const x = (r[k] - fit)*MKT_BASE[k]; N.cash += x; r.paid += x; r[k] = fit; } } }
+  for (const N of S.nations){ if (!N.tech) N.tech = {}; for (const s of R_SLOTS){ const R = N[s]; if (R && ECO_OLD_TECH[R.id]){ N.tech[R.id] = 1; N.tv = (N.tv || 0) + 1; N[s] = null; } } if (N.rPick && ECO_OLD_TECH[N.rPick.id]) N.rPick = null; }
+  if (S.trade && Array.isArray(S.trade.routes)) for (const r of S.trade.routes) trValue(r);
+  INCC.v = -1;
+  for (const me of seats()){ const D = desk(me), r = got[me], N = S.nations[me], kept = Object.keys(ECO_OLD_TECH).filter(id => N.tech && N.tech[id]).map(id => ECO_OLD_TECH[id]);
+    if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:'New economy: every city now produces one main resource (money, oil, materials, iron, electronics or rare materials); build an Arms Industry in a city to raise what it produces by 25% per level. Arms Factories are now Army Bases: they mobilize ground units and give no income.'
+      + (r ? ` Refineries, Foundries and Rare Earth Mines are gone: ${r.lv} level${r.lv > 1 ? 's' : ''} refunded ($${fmt(r.paid)}M${r.metal ? ', ' + fmt(r.metal) + ' materials' : ''}${r.iron ? ', ' + fmt(r.iron) + ' iron' : ''}).` : '')
+      + (kept.length ? ` The Economy research branch moved into buildings; you keep the bonus of ${kept.join(', ')}.` : '')}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
 // the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded
@@ -110,6 +130,7 @@ function restore(data){
   resMigrate();
   rqueueMigrate();
   mobMigrate();
+  ecoMigrate();
   IM.emit('restored');
   return true;
 }
@@ -119,7 +140,7 @@ function resMigrate(){
   // Farms are gone: each level is refunded ($20M), a farm under construction is cancelled (refunded), a knocked-out one forgotten
   for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p], o = S.owner[p], N = o >= 0 ? S.nations[o] : null;
     if (b && b.farm){ if (N) N.cash += 20*b.farm; } if (b) delete b.farm;
-    const c = S.cons[p]; if (c && !BUILD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
+    const c = S.cons[p]; if (c && !BUILD[c.k] && !ECO_OLD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
     if (S.bdis && S.bdis[p] && typeof S.bdis[p] === 'object') delete S.bdis[p].farm; }
   // food listings: a sell offer's food is gone, a buy offer's money goes back to its owner
   if (Array.isArray(S.book)) S.book = S.book.filter(o => { if (MKT_K.includes(o.res)) return true; if (isBid(o) && S.nations[o.seller]) S.nations[o.seller].cash += o.qty*o.price; return false; });

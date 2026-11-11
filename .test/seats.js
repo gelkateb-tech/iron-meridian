@@ -23,7 +23,7 @@ ok(S.armies.some(a => a.owner === 3 && (a.path.length || a.to !== null)) || S.qu
 // orders by nation: seat 5 recruits, posts a market offer, opens a trade route, splits and moves a force
 const cap = S.nations[5].capital, a5 = S.armies.find(a => a.owner === 5 && a.at === cap && !a.air);
 ok(api.recruit(5, cap, 'inf') === true && S.queue[cap].length === 1, 'seat 5 recruits in its capital');
-ok(api.postOffer(5, 'oil', 10, 3) === true && S.book.some(o => o.seller === 5), 'seat 5 posts an offer');
+ok(api.postOffer(5, 'oil', 10, 3) === 10 && api.postOffer(5, 'oil', 0, 3) === 0 && S.book.some(o => o.seller === 5), 'seat 5 posts an offer');
 const got = api.fillOffer(2, S.book.find(o => o.seller === 5).id, 4); ok(got === 4, 'seat 2 buys 4 from seat 5: ' + got);
 const half = api.splitArmy(a5, [G.P[cap].x + 3, G.P[cap].y]); ok(half && half.owner === 5 && Array.isArray(half.pos), 'seat 5 splits a force; the new one stands beside the given spot');
 const nb = G.P[cap].nbs.find(v => !G.P[v].sea && S.owner[v] === 5); if (nb != null){ api.orderMove(half, nb); ok(half.path.length > 0, 'seat 5 moves the new force'); }

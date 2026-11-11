@@ -40,19 +40,20 @@ const trainEff = (p, t, n) => Math.max(TRAIN_MIN, trainF(p, t)*(docOf(n) ? docOf
 const recBefore = p => S.queue[p].map(it => it.msl ? 1 : trainEff(p, it.t, S.owner[p]));
 function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i] > 0)) return; const r = trainEff(p, it.t, S.owner[p])/f0[i]; if (!(r < 1)) return;
   it.h = Math.max(1, Math.round(it.h*r)); it.h0 = Math.max(it.h, Math.round((it.h0 || it.h)*r)); }); }
-// Arms Factory price rises 40% for every OTHER province of the nation that already has one (built, or under construction at level 1+), cash, materials and iron alike
+// Army Base and Arms Industry prices rise 40% for every OTHER province of the nation that already has one of the same kind (built, or under construction),
+// cash, materials and iron alike; the two do not raise each other's price
 const FAC_RISE = 1.4;
-function facOthers(n, p){ let c = 0; for (let q = 0; q < G.P.length; q++) if (q !== p && S.owner[q] === n && ((S.bld[q].fac || 0) >= 1 || (S.cons[q] && S.cons[q].k === 'fac'))) c++; return c; }
-function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(k === 'fac' ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), iron:Math.round((B.iron || 0)*m*half), elec:Math.round(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1 : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
-// training time factors from the buildings in province p: Arms Factory (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
+const RISE_K = {fac:1, arms:1};
+function facOthers(n, p, k = 'fac'){ let c = 0; for (let q = 0; q < G.P.length; q++) if (q !== p && S.owner[q] === n && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
+function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(RISE_K[k] ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p, k)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), iron:Math.round((B.iron || 0)*m*half), elec:Math.round(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1 : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
+// training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
+// (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
-function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return facF(B.fac || 0)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
+const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
+function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
 const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
-// Rare Earth Mine output per level: 60% of a deposit (at least 1.5); hard-rock ground 1, other open ground 0.5; none in urban districts or marshes
-const MINE_T = {hills:1, mountain:1, desert:1, tundra:1, plains:0.5, forest:0.5, snow:0.5};
-const mineLv = P => P.rare ? Math.max(1.5, 0.6*P.rare) : (MINE_T[P.terrain || 'plains'] || 0);
-function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'oil' && P.oil) || (B.where === 'port' && P.city && P.coast) || (B.where === 'mine' && mineLv(P) > 0)); }
+function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && P.city && P.coast)); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
 const canRecruit = (n, p, t) => !canMobilize(n, p, t) && canAfford(n, t);
 function recruit(n, p, t){
@@ -88,7 +89,7 @@ function buildMissile(n, p, k){ if (!canBuildMissile(n, p, k)) return false; con
 function prodHour(p){ const q = S.queue[p];
     if (S.owner[p] < 0){ q.length = 0; return; }
     { const it0 = q[0]; if (it0.msl ? bdis(p, 'silo') : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits
-    const lines = 1 + S.bld[p].fac;            // each Arms Factory level adds a training line
+    const lines = 1 + S.bld[p].fac;            // each Army Base level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
     if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);

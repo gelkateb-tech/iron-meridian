@@ -486,6 +486,9 @@ kbd{font-family:var(--mono); font-size:10px; color:var(--muted); border:1px soli
 .ub .btn{padding:4px 7px; font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px}
 .rep{display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); white-space:nowrap}
 .tblwrap{overflow-x:auto}
+#sheet .tblwrap:has(> .book){flex:none; height:auto; max-height:none; overflow-y:visible}   /* the Market: every offer in the sheet's own scroll (a squeezed list hid most of them) */
+.good[data-act]{cursor:pointer} .good[data-act]:hover{background:rgba(255,255,255,.07)} .good.on{background:rgba(255,255,255,.09); box-shadow:inset 0 0 0 2px currentColor}
+.good .gn{font-size:10.5px; color:#f0c77e} .bkf{font:600 11px var(--body); letter-spacing:0; text-transform:none; margin-left:8px}
 .stocks{display:flex; align-items:center; gap:22px; flex-wrap:wrap; padding:6px 0} .stocks .sl{font:600 10px var(--body); letter-spacing:.16em; text-transform:uppercase; color:#c5d2d6}
 .stk{position:relative; display:inline-flex; align-items:center; gap:6px; padding-bottom:5px; font-variant-numeric:tabular-nums} .stk b{font-size:14px; color:#f4f8f9} .stk svg{width:16px; height:16px}
 .goods{display:grid; grid-template-columns:repeat(auto-fit, minmax(136px, 1fr)); gap:8px; margin:8px 0 4px}
@@ -1378,6 +1381,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .rs-back svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
 .rs-ttl{display:flex; flex-direction:column; gap:2px; min-width:0}
 .sheet.rsch .rs-ttl h1{margin:0; font:800 31px/1 var(--display); letter-spacing:.04em; text-transform:uppercase; color:#15222a; text-shadow:0 1px 0 rgba(255,255,255,.6)}
+.rs-kept{max-width:none; margin:2px 10px 4px; font:500 12px/1.35 var(--body); color:#1c2a30} .rs-kept b{color:#0f1a1f}
 .rs-cnt{font:600 11px/1.1 var(--body); letter-spacing:.08em; text-transform:uppercase; color:#3f5961; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .rs-cnt.rs-rec{align-self:flex-start; max-width:100%; margin-top:1px; padding:2px 5px; border-radius:3px; background:rgba(255,255,255,.82); color:#1d5a3a; font-weight:800; letter-spacing:.03em}
 .rs-ttl.l3{padding:5px 0}
@@ -1594,6 +1598,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .cs-st{display:flex; align-items:center; gap:7px; min-width:0; font:600 13.5px/1.1 var(--body); color:#2f444c; white-space:nowrap; overflow:hidden}
 .cs-st .cs-on{overflow:hidden; text-overflow:ellipsis; color:#4a6068}
 .cs-rel{flex:none; padding:2px 7px; border-radius:2px; font:700 10.5px/1.2 var(--body); letter-spacing:.05em; text-transform:uppercase; color:#fff; background:var(--rc); text-shadow:0 1px 0 rgba(0,0,0,.35); box-shadow:inset 0 -1px 0 rgba(0,0,0,.2)}
+.cs-main{flex:none; display:inline-flex; align-items:center; gap:4px; padding:2px 7px 2px 5px; border-radius:2px; font:700 10.5px/1.2 var(--body); letter-spacing:.05em; text-transform:uppercase; color:#f3ecd6; background:rgba(12,18,22,.55); box-shadow:inset 0 0 0 1px rgba(233,196,106,.45)} .cs-main svg{flex:none}
 .cs-clv{flex:none; padding:2px 7px; border-radius:2px; font:700 10.5px/1.2 var(--body); letter-spacing:.05em; text-transform:uppercase; color:#e9fbfd; background:linear-gradient(180deg, #4aa7b6, #2a7f8f); text-shadow:0 1px 0 rgba(0,0,0,.35)}
 .cs-i{flex:none; display:grid; place-items:center; width:38px; height:38px; padding:0; border:2px solid #fff; border-radius:50%; color:#fff; cursor:pointer; font:italic 700 21px/1 Georgia, 'Times New Roman', serif;
   background:radial-gradient(circle at 38% 30%, #8be4ee, #2f99a8 62%, #1f6f7b); box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 5px rgba(0,0,0,.4); text-shadow:0 1px 1px rgba(0,0,0,.45); transition:transform .12s var(--ease), filter .15s}
@@ -1678,7 +1683,7 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   .cs-body{border-radius:0; box-shadow:0 -4px 16px rgba(0,0,0,.5)}
   .cs-ban{height:58px; gap:10px; padding-right:7px}
   .cs-fl{width:96px} .cs-fl .flg{left:-18px}
-  .cs-nm{font-size:21px} .cs-st{font-size:12px; gap:5px} .cs-rel, .cs-clv{font-size:9.5px; padding:2px 5px}
+  .cs-nm{font-size:21px} .cs-st{font-size:12px; gap:5px} .cs-rel, .cs-clv, .cs-main{font-size:9.5px; padding:2px 5px}
   .cs-i{width:32px; height:32px; font-size:18px} .cs-x{width:30px; height:30px}
   .cs-stat{height:34px}
   .cs-mor{flex-basis:30%; min-width:92px; padding:0 8px 0 5px} .cs-mor svg{width:19px; height:19px} .cs-mor b{font-size:14px}
@@ -2035,7 +2040,7 @@ html.reduced .cs-mi.live .cs-mf::after{animation:none}
 .cs-mi.idle::before{content:""; width:14px; height:14px; opacity:.4; background:linear-gradient(#d7f4f8, #d7f4f8) 50% 50%/100% 2px no-repeat, linear-gradient(#d7f4f8, #d7f4f8) 50% 50%/2px 100% no-repeat}
 @media (max-width: 820px){ .cs-mi.tr > .ut{--us:36px} .cs-mi.tr > svg{width:24px; height:24px} .cs-mi.idle::before{width:12px; height:12px} }
 @media (prefers-reduced-motion: reduce){ .cs-mi.live .cs-mf::after{animation:none} }
-/* a unit the city cannot mobilize yet (no Recruiting Office, Arms Factory level, research...): greyed, the reason in amber; a tap says why */
+/* a unit the city cannot mobilize yet (no Recruiting Office, Army Base level, research...): greyed, the reason in amber; a tap says why */
 .unit.blk{cursor:not-allowed}
 .unit.blk > .ut, .unit.blk > .nm, .unit.blk > .st{opacity:.42} .unit.blk > .ut{filter:grayscale(.85)}
 .unit.blk > .cost{color:#ffd27a; font-weight:600; transform-origin:0 50%}
@@ -4754,14 +4759,15 @@ function offerRows(list, bid){ return list.map(o => { const N = S.nations[o.sell
       : emb ? '<span class="small muted">Embargo</span>'
       : `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="10" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} 10</button><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="9999" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} all · $${fmt(o.qty*o.price)}M</button></div>`;
     return `<tr class="${enemy ? 'enemy' : ''}${o.priv ? ' priv' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}"><td>${flagSVG(o.seller)} <b>${mine ? 'You' : N.name}</b>${enemy ? ' <span class="etag">ENEMY</span>' : ''}${o.priv ? ' <span class="ptag">🔒 COALITION</span>' : ''}</td><td><span class="res-${o.res}">${icon(o.res)}</span> ${R.name}</td><td>${o.qty}</td><td>$${o.price.toFixed(2)}M</td><td class="small muted">${Math.max(1, Math.ceil((o.exp - S.hour)/24))} d</td><td>${act}</td></tr>`; }).join(''); }
+let BK_FILT = null;   // the good the offer lists are narrowed to (a goods card was clicked), null = every good
 let BK_RES = 'oil';   // the good last chosen in the offer form (its world price is the default asking price)
 const BK_F = {type:'sell', qty:50, price:null};   // the rest of the offer form as the player left it (price null = the chosen good's world price), so a rebuild of the market sheet keeps it
-function bookHTML(){ const all = (S.book || []).filter(o => canSee(o, PLAYER)), sells = all.filter(o => !isBid(o)).sort((a, b) => a.res.localeCompare(b.res) || a.price - b.price), bids = all.filter(isBid).sort((a, b) => a.res.localeCompare(b.res) || b.price - a.price);
+function bookHTML(){ const F = BK_FILT, all = (S.book || []).filter(o => canSee(o, PLAYER) && (!F || o.res === F)), fl = F ? ` · ${rlbl(F)} only <button class="btn bkf" data-act="mk-filter" data-k="" style="padding:1px 8px">Show all goods</button>` : '', early = dayOf(S.hour) <= 5, sells = all.filter(o => !isBid(o)).sort((a, b) => a.res.localeCompare(b.res) || a.price - b.price), bids = all.filter(isBid).sort((a, b) => a.res.localeCompare(b.res) || b.price - a.price);
   const head = '<thead><tr><th>Nation</th><th>Goods</th><th>Qty</th><th>Price / unit</th><th>Ends</th><th></th></tr></thead>';
-  return `<div class="eyebrow" style="margin-top:6px">Sell offers · nations selling</div>
-    ${sells.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(sells, false)}</tbody></table></div>` : '<p class="small muted">No nation is selling right now.</p>'}
-    <div class="eyebrow" style="margin-top:12px">Buy offers · nations buying</div>
-    ${bids.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(bids, true)}</tbody></table></div>` : '<p class="small muted">No nation is buying right now.</p>'}
+  return `<div class="eyebrow" style="margin-top:6px">Sell offers · nations selling${fl}${!F && sells.length > 6 ? ' · <span class="bkf muted">click a goods card above to show one good</span>' : ''}</div>
+    ${sells.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(sells, false)}</tbody></table></div>` : `<p class="small muted">No nation is selling${F ? ' ' + rlbl(F) : ''} right now.${early ? ' In the first days nobody has a surplus yet: sellers usually appear from about day 4, and a buy offer posted before then may run out unfilled.' : F ? ' Post a buy offer below: sellers fill it when the price suits them.' : ''}</p>`}
+    <div class="eyebrow" style="margin-top:12px">Buy offers · nations buying${fl}</div>
+    ${bids.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(bids, true)}</tbody></table></div>` : `<p class="small muted">No nation is buying${F ? ' ' + rlbl(F) : ''} right now.</p>`}
     <div class="eyebrow" style="margin-top:12px">Post your own offer (3 days)</div>
     <div class="row" style="align-items:center"><select id="bk-type" aria-label="Offer type"><option value="sell">I sell</option><option value="buy" ${BK_F.type === 'buy' ? 'selected' : ''}>I want to buy</option></select><input id="bk-qty" type="number" min="10" step="10" value="${BK_F.qty}" style="width:70px" aria-label="Quantity">
       <select id="bk-res" aria-label="Goods">${MKT_K.map(k => `<option value="${k}" ${k === BK_RES ? 'selected' : ''}>${RES.find(r => r.k === k).name}</option>`).join('')}</select><span class="bkgrp"><span class="small muted">at $</span><input id="bk-price" type="number" min="0.1" step="0.1" value="${BK_F.price != null ? BK_F.price : mkt().p[BK_RES].toFixed(1)}" style="width:70px" aria-label="Price per unit"><span class="small muted">M each</span>
@@ -4770,12 +4776,12 @@ function bookHTML(){ const all = (S.book || []).filter(o => canSee(o, PLAYER)), 
 // one card per traded good: world reference price and its change since yesterday, a 30-day sparkline, your stock against storage and your daily net
 function goodsHTML(){ const M = mkt(), N = S.nations[PLAYER], cap = stockCap(PLAYER), inc = income(PLAYER), all = (S.book || []).filter(o => canSee(o, PLAYER));
   return `<div class="goods">${MKT_K.map(k => { const R = RES.find(r => r.k === k), pr = M.p[k], d = pr - (M.prev[k] || pr), ch = d/pr*100, net = inc.net[k], ns = all.filter(o => o.res === k && !isBid(o)).length, nb = all.filter(o => o.res === k && isBid(o)).length;
-    return `<div class="good res-${k}" title="${R.name}: world reference price $${pr.toFixed(2)}M a unit (base $${MKT_BASE[k].toFixed(2)}M). Used for ${R.use}. From ${R.src}."><div class="gh">${icon(k, 16)}<b>${R.name}</b></div>
+    return `<div class="good res-${k}${BK_FILT === k ? ' on' : ''}" data-act="mk-filter" data-k="${k}" role="button" tabindex="0" aria-pressed="${BK_FILT === k}" title="${R.name}: world reference price $${pr.toFixed(2)}M a unit (base $${MKT_BASE[k].toFixed(2)}M). Used for ${R.use}. From ${R.src}.${noCityOf(k) ? '&#10;' + noCityTxt(k) : ''}&#10;Click to show only ${rlbl(k)} offers."><div class="gh">${icon(k, 16)}<b>${R.name}</b></div>
       <div class="gp"><b>$${pr.toFixed(2)}</b><small>M</small><span class="${Math.abs(ch) < 0.05 ? 'fl' : ch > 0 ? 'up' : 'dn'}">${Math.abs(ch) < 0.05 ? '–' : (ch > 0 ? '▲' : '▼') + Math.abs(ch).toFixed(1) + '%'}</span></div>
       ${spark((M.hist[k] || []).slice(-30), 132, 20, RCOL[k])}
       <div class="gs"><span>You <b>${fmt(N[k])}</b><span class="muted">/${fmt(cap)}</span></span><span class="${net < 0 ? 'neg' : 'pos'}">${net >= 0 ? '+' : ''}${fmt1(net)}/d</span></div>
       <i class="gf" style="--f:${Math.min(100, Math.round(N[k]/cap*100))}%"></i>
-      <div class="go small muted">${ns ? `${ns} selling` : 'none selling'} · ${nb ? `${nb} buying` : 'none buying'}</div></div>`; }).join('')}</div>`; }
+      <div class="go small muted">${ns ? `${ns} selling` : 'none selling'} · ${nb ? `${nb} buying` : 'none buying'}</div>${noCityOf(k) ? `<div class="gn">No city of yours makes it</div>` : ''}</div>`; }).join('')}</div>`; }
 function marketHTML(){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), emb = S.nations.filter(m => m.alive && mkt().emb[m.id + '>' + PLAYER]); void cap;
   return `<div class="rhead"><div><div class="eyebrow">Open market · day ${dayOf(S.hour)} ${itip('Nations list what they want to sell or buy. Trades happen only between nations: your money goes to the seller, and selling pays you. Offers from nations at war with you are marked red.')}</div><h1>Market</h1></div><div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
     ${goodsHTML()}
@@ -5048,7 +5054,7 @@ let dpr = 1, cw = 0, ch = 0, hits = [], cityPts = [], cityNames = [], hoverProv 
 const RMAP_K = ['oil', 'rare', 'iron', 'metal', 'elec', 'mp', 'cash'], RMAP_W = {cash:12, oil:5, metal:3, iron:2.5, elec:2, rare:1.2, mp:2};
 const RMAP_C = {oil:'rgba(28,30,36,.78)', metal:'rgba(150,165,178,.6)', iron:'rgba(200,120,80,.62)', elec:'rgba(80,195,220,.55)', rare:'rgba(178,128,240,.68)', mp:'rgba(210,165,120,.5)', cash:'rgba(222,192,92,.5)'};
 // the Resources map legend: each colour is the province's main output (weighted so a little rare material outranks a lot of money)
-function resLegendHTML(){ return `<div class="lh">Resources · main output</div>` + RMAP_K.map(k => { const R = RES.find(r => r.k === k); return `<div class="lr"><i style="background:${RMAP_C[k]}"></i><span class="res-${k}">${icon(k, 12)}</span><span>${R.name}</span><span class="muted">${R.map}</span></div>`; }).join('') + `<div class="lr lx"><span class="muted">Hover a province for its yields</span></div>`; }
+function resLegendHTML(){ return `<div class="lh">Resources · each city's main resource</div><div class="lr lx" style="margin:0 0 4px"><span class="muted">Cities: strong colour, light outline · countryside: faint</span></div>` + RMAP_K.map(k => { const R = RES.find(r => r.k === k); return `<div class="lr"><i style="background:${RMAP_C[k]}"></i><span class="res-${k}">${icon(k, 12)}</span><span>${R.name}</span><span class="muted">${R.map}</span></div>`; }).join('') + `<div class="lr lx"><span class="muted">Hover a province for its yields</span></div>`; }
 const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources'], ['stability', 'Stability']];
 const sel = {army:null, prov:null, target:null, group:[]};
 let boxSel = null, rallyFor = null, aimMsl = null;
@@ -5955,14 +5961,14 @@ function isWet(wx, wy, th = 128){ if (LMA === null) bakeWet();   // (the coverag
 const FORM_PX = 46, FIG_PX = 66;   // hexPx thresholds: from FORM_PX the plates sit just above a force's spot and grow a little; FIG_PX: the old close-zoom size
 /* ---------------- Buildings on the map: clean symbols under the city name ----------------
    From the mid zoom on, a city's (or province's) buildings show as one compact tray of small, original vector symbols under its name:
-   Arms Factory (factory), Airbase (jet), Naval Yard (anchor), Missile Silo (missile), Fortifications (star fort), Refinery (columns with a
-   flare), Foundry (anvil), Rare Earth Mine (an ore cart of crystals) and Recruiting Office (helmet), each with level pips (filled up to its level, out of the building's
+   Army Base (factory hall), Arms Industry (cog wheel), Airbase (jet), Naval Yard (anchor), Missile Silo (missile), Fortifications (star fort)
+   and Recruiting Office (helmet), each with level pips (filled up to its level, out of the building's
    maximum). The tray keeps a fixed screen size like the names, takes the first free spot under or beside the name and is left out rather
    than cover a name, a unit plate, a control or another city. Construction: the symbol dimmed inside a thin progress arc, its next pip
    blinking. A level rise pops the symbol with a bright ring. The building pictures stay in the city panel and the build menu. Each tray is
    one cached canvas (rebuilt only when its buildings, levels, owner or size change). */
 const TRAY_PX = 18, TRAY_PX2 = 26, TRAY_ANIM = 1200;   // hexPx from which city / countryside trays show; length of the upgrade pop (ms)
-const TRAY_K = ['fac', 'air', 'yard', 'silo', 'fort', 'ref', 'fdy', 'mine', 'rec'];
+const TRAY_K = ['fac', 'arms', 'air', 'yard', 'silo', 'fort', 'rec'];
 // the symbols, drawn in a 24 x 24 box with the caller's fill (and stroke) colour
 const BGLYPH = {
   fac(g){ g.fill(new Path2D('M2 21V10.5l5 3.2v-3.2l5 3.2v-3.2l5 3.2V3h3.6v18Z M4.6 16.4h2.2v2.2H4.6Z M9.4 16.4h2.2v2.2H9.4Z M14.2 16.4h2.2v2.2h-2.2Z'), 'evenodd'); },
@@ -5976,14 +5982,9 @@ const BGLYPH = {
     g.save(); g.globalAlpha *= 0.85; g.fill(new Path2D('M10.4 21.4H13.6L12 23.6Z')); g.restore(); },
   fort(g){ const q = new Path2D(), st = (R, r) => { for (let i = 0; i < 10; i++){ const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r : R, px = 12 + Math.cos(a)*rr, py = 12.6 + Math.sin(a)*rr; if (i) q.lineTo(px, py); else q.moveTo(px, py); } q.closePath(); };
     st(11.2, 6.6); st(6.8, 4.0); g.fill(q, 'evenodd'); g.beginPath(); g.arc(12, 12.6, 1.8, 0, Math.PI*2); g.fill(); },
-  ref(g){ g.fill(new Path2D('M4.5 21V6.2C4.5 5 5.4 4.2 6.6 4.2S8.7 5 8.7 6.2V21Z M10.6 21V10.4C10.6 9.3 11.4 8.6 12.5 8.6S14.4 9.3 14.4 10.4V21Z M15.9 21V16.2C15.9 14.6 17.4 13.6 19.1 13.6S22.3 14.6 22.3 16.2V21Z M2 21H23V22.6H2Z M8.7 12.2H10.6V13.4H8.7Z M14.4 16.6H15.9V17.8H14.4Z'));
-    g.fill(new Path2D('M6.6 0.6C7.9 1.8 8.1 2.6 7.6 3.5C7.3 2.9 6.9 2.7 6.6 2.4C6.3 2.9 5.9 3 5.6 3.5C5.1 2.4 5.6 1.6 6.6 0.6Z')); },
-  fdy(g){ g.fill(new Path2D('M1 6.6H22.8V10.4H18.2C17.2 10.4 16.6 11 16.6 12V14.6L19.2 17.6H20V20.8H6.4V17.6H7.2L9.8 14.6V12.4C6.4 12.2 2.8 10.4 1 6.6Z'));   // anvil with sparks
-    g.save(); g.lineWidth = 1.3; g.lineCap = 'round'; g.beginPath(); g.moveTo(13.6, 1.4); g.lineTo(14.2, 4.2); g.moveTo(18.4, 2.2); g.lineTo(16.8, 4.6); g.moveTo(9.6, 2.4); g.lineTo(11.4, 4.8); g.stroke(); g.restore(); },
-  mine(g){ // an ore cart of rare-earth crystals on a rail
-    g.fill(new Path2D('M1.6 9.8H22.4L19.8 17.6H4.2Z M1 21.4H23V22.9H1Z'));
-    g.beginPath(); g.arc(7.6, 19.3, 2.1, 0, Math.PI*2); g.arc(16.4, 19.3, 2.1, 0, Math.PI*2); g.fill();
-    g.fill(new Path2D('M12 1.2L14.6 4.4V8.4H9.4V4.4Z M6.4 4.2L8.4 6.2V8.4H4.4V6.2Z M17.6 4.2L19.6 6.2V8.4H15.6V6.2Z')); },
+  arms(g){ // a cog wheel: eight teeth around a ring with a hub
+    const q = new Path2D(), n = 8; for (let i = 0; i < n*4; i++){ const a = -Math.PI/2 + (i - 0.5)*Math.PI/(n*2), rr = (i % 4) < 2 ? 10.6 : 7.9, px = 12 + Math.cos(a)*rr, py = 12 + Math.sin(a)*rr; if (i) q.lineTo(px, py); else q.moveTo(px, py); } q.closePath();
+    q.moveTo(16.4, 12); q.arc(12, 12, 4.4, 0, Math.PI*2, true); q.closePath(); g.fill(q, 'evenodd'); g.beginPath(); g.arc(12, 12, 2, 0, Math.PI*2); g.fill(); },
   rec(g){ g.fill(new Path2D('M3.4 16.6C3.4 10 7.2 5 12.2 5C17.2 5 20.8 10 20.8 16.6H22.8V19.2H1.4V16.6Z M3.6 13.4H20.6V14.7H3.6Z'), 'evenodd'); },
 };
 const trayOn = (P, p, hexPx, vis) => vis.has(p) && hexPx >= (P.city || isCapital(p) ? TRAY_PX : TRAY_PX2);
@@ -6044,11 +6045,11 @@ function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.
         for (let n = 0; n < 6; n++) emit('spark', wx, wy, {vx:(Math.random() - 0.5)*sp0*2.4, vy:-(sp0*(0.7 + Math.random())), s0:2.2, s1:0.5, life:450 + Math.random()*300}); } } });
   ctx.globalAlpha = 1; }
 /* ---------------- Building art: the five-level pictures (city panel and build menu) ----------------
-   Arms Factory, Airbase, Naval Yard and Missile Silo pictures at their level (b-<art>-1..5) and the city pictures (b-city-1..5) show in the
+   Army Base, Arms Industry, Airbase, Naval Yard and Missile Silo pictures at their level (b-<art>-1..5) and the city pictures (b-city-1..5) show in the
    city panel and the build menu. On the map the buildings are symbols (see 'Buildings on the map' above) and the city is part of the map
    (see 'Cities on the map' below). */
 // building -> picture name; pictures b-<name>-<level>. BART_N: how many levels have a picture (default 5): the Recruiting Office has one (every level uses it),
-// Fortifications three (levels I-III). 'arms' (Arms Industry, five levels) is registered for the buildings rework: the building does not exist yet.
+// Fortifications three (levels I-III). The Army Base (key 'fac', once the Arms Factory) keeps the military-base pictures.
 const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'missile-silo', rec:'recruiting-office', fort:'fortifications', arms:'arms-industry'}, BART_N = {rec:1, fort:3};
 const ART_PX = 46;   // close zoom: ground patterns on the map
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
@@ -7430,8 +7431,9 @@ function renderLayer(vis, lite = false, R = null){
     if (mapMode === 'terrain'){ c.fillStyle = rgba((TERRAIN[P.terrain] || TERRAIN.plains).col, 0.66); c.fill(GEO.fill[p], 'evenodd'); }
     else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p], 'evenodd'); }
     else if (mapMode === 'stability'){ const u = unrestOf(p); c.fillStyle = o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'; c.fill(GEO.fill[p], 'evenodd'); }
-    else if (mapMode === 'resources'){ const y = provYield(p), top = RMAP_K.reduce((b0, k) => y[k]/RMAP_W[k] > y[b0]/RMAP_W[b0] ? k : b0, 'cash');
-      c.fillStyle = RMAP_C[top]; c.fill(GEO.fill[p], 'evenodd'); }
+    else if (mapMode === 'resources'){ const y = provYield(p), top = P.city ? cityMain(p) : RMAP_K.reduce((b0, k) => y[k]/RMAP_W[k] > y[b0]/RMAP_W[b0] ? k : b0, 'cash');
+      c.fillStyle = RMAP_C[top]; if (!P.city) c.globalAlpha = 0.42; c.fill(GEO.fill[p], 'evenodd'); c.globalAlpha = 1;
+      if (P.city){ c.fill(GEO.fill[p], 'evenodd'); c.strokeStyle = 'rgba(255,250,235,.9)'; c.lineWidth = Math.min(1.6, hexPx/7)*px; c.lineJoin = 'round'; c.stroke(GEO.fill[p]); } }
     else if (o >= 0 && relMode){ c.fillStyle = o === PLAYER ? rgba(tones().ownHi, 0.55) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5); c.fill(GEO.fill[p], 'evenodd'); }   // relations: your land the pale own tone (the ally green is mid green, so the two stay apart); political: the nation tint is a colour-blend pass below (keeps the ground's light and shade)
     if (season(p) === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }   // (winter snow is the soft sheet, next)
   // winter snow: the cached world-space sheet (snowCover) laid over the fills, as the old per-province snow was (so it reads white over the political
@@ -8596,7 +8598,7 @@ function tipShow(x, y){
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
   let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p), tk = P.terrain || 'plains', [sg, wk] = terrUnitsText(tk); h += `<div class="r"><span style="white-space:nowrap">${ticon(tk, 13)} ${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}</span></div>`;
-    h += `<div class="small tline">${T0.spd < 1 ? 'Movement ' + pctS(T0.spd) : 'Normal movement'}${P.river.size ? ' · river line: crossing slower, attackers −20%' : ''}${sg.length ? `<br><span class="tg">▲ ${sg.slice(0, 2).join(', ')}</span>` : ''}${wk.length ? `<br><span class="tb">▼ ${wk.slice(0, 2).join(', ')}</span>` : ''}</div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.oil ? ' · Oil' : ''}${P.ore ? ' · Ore' : ''}${P.iron ? ' · Iron' : ''}${P.rare >= 0.5 ? ' · Rare earths' : ''}</span><span>${yieldStr(y)}</span></div>`;
+    h += `<div class="small tline">${T0.spd < 1 ? 'Movement ' + pctS(T0.spd) : 'Normal movement'}${P.river.size ? ' · river line: crossing slower, attackers −20%' : ''}${sg.length ? `<br><span class="tg">▲ ${sg.slice(0, 2).join(', ')}</span>` : ''}${wk.length ? `<br><span class="tb">▼ ${wk.slice(0, 2).join(', ')}</span>` : ''}</div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.city ? ' · ' + mainLabel(p) : (P.oil ? ' · Oil field' : '') + (P.ore ? ' · Ore' : '') + (P.iron ? ' · Iron hills' : '')}</span><span>${yieldStr(y)}</span></div>`;
     h += `<div class="r"><span>Population</span><span>${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></div>`;
     { const sz = season(p), w = stormAt(p); if (sz || w) h += `<div class="r"><span>Weather</span><span>${[sz ? `${SEASON_FX[sz].name} (${SEASON_FX[sz].tip})` : '', w ? `${w.kind === 'blizzard' ? 'Blizzard' : 'Storm'} (air grounded, −20% speed)` : ''].filter(Boolean).join(' · ')}</span></div>`; }
     if (unrestOf(p) > 10) h += `<div class="r"><span>Unrest</span><span style="color:${unrestOf(p) > 60 ? 'var(--danger)' : 'var(--accent)'}">${Math.round(unrestOf(p))}%</span></div>`;
@@ -8696,7 +8698,7 @@ function citiesHTML(){ const N = S.nations[PLAYER], cities = G.P.filter(P => S.o
   const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], lv = cityLevel(p);
     const tr = q.length ? `${q[0].msl ? mslIcon(q[0].t, 18) : unitPic(q[0].t, 'xs')}<span>${(UNITS[q[0].t] || MISSILES[q[0].t]).name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1}` : ''}</span>` : '<span class="idle">Nothing in training</span>';
     return `<button class="crow${q.length ? '' : ' idle'}" data-act="goto" data-id="${p}" title="Fly to ${P.cityName} and open it">
-      <span class="cf">${provFlagHTML(p, 22)}</span><span class="cn"><b>${P.cityName}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl"><i class="clv">${lv}</i>${p === N.capital ? 'Capital' : 'City'} · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></span>
+      <span class="cf">${provFlagHTML(p, 22)}</span><span class="cn"><b>${P.cityName}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl"><i class="clv">${lv}</i>${p === N.capital ? 'Capital' : 'City'} · <span class="res-${cityMain(p)}" title="Main resource">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></span>
       <span class="cq">${tr}</span><span class="cc">${c ? `${bimg(c.k, c.lvl, 18)}<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} · ${c.h} h</span>` : '<span class="muted">No construction</span>'}</span></button>`; }).join('');
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} ${cities.length === 1 ? 'city' : 'cities'}${idle ? ` · <span class="idle">${idle} idle</span>` : ''}</div><h1>Cities</h1></div></div>
     <div class="clist">${rows || '<p class="muted">You hold no cities.</p>'}</div>
@@ -8713,6 +8715,17 @@ const csMobF = q0 => q0 ? Math.max(0, Math.min(1, 1 - q0.h/(q0.h0 || 24))) : -1;
 const csMobY = f => ((1 - f)*100).toFixed(1) + '%';   // the fill's top edge: 100% (empty) down to 0 (done)
 const csMobIcon = q0 => q0 ? `<span class="cs-bi cs-mi tr${saverOn() || afxReduced() ? '' : ' live'}">${q0.msl ? mslIcon(q0.t, 30) : unitPic(q0.t, 'lg')}<i class="cs-mf" style="transform:translateY(${csMobY(csMobF(q0))})"></i></span>` : '<span class="cs-bi cs-mi idle"></span>';
 // what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a Recruiting Office says so
+// a city's main resource in words ("Oil city") and as the chip of the city sheet (with today's output and what the Arms Industry adds)
+// goods none of your cities produce (the city-resource economy: buy them or take a city)
+const noCityOf = k => MKT_K.includes(k) && !G.P.some(P => P.city && S.owner[P.id] === PLAYER && cityMain(P.id) === k);
+const noCityTxt = k => `You have no ${MAIN_NAME[k]} city: buy ${k === 'rare' ? 'them' : 'it'} on the Market (T) or capture one.`;
+// the old Economy research an old save keeps (its bonus still applies; the projects are no longer in the tree)
+const ECO_KEPT = {eco1:['cash', 'money +20% instead of +10%, trade routes +10%'], eco2:['mp', 'manpower +40%'], eco3:['oil', 'oil +50%']};
+const keptEco = N => Object.keys(ECO_OLD_TECH).filter(id => N.tech && N.tech[id]);
+const mainLabel = p => { const k = cityMain(p); return k ? cap1(MAIN_NAME[k]) + ' city' : ''; };
+const mainOutTxt = o => o.k === 'cash' ? '$' + Math.round(o.y) + 'M' : fmtY(o.y) + ' ' + MAIN_NAME[o.k];
+function mainChip(p){ const o = cityOut(p); if (!o) return ''; const A = BUILD.arms;
+  return `<span class="cs-main res-${o.k}" title="Main resource: ${MAIN_NAME[o.k]}, ${mainOutTxt(o)} a day.&#10;${A.name}${o.lv ? ' ' + ROMAN[o.lv] + ': +' + Math.round(ARMS_PCT*100*o.lv) + '% of it' : ': +' + Math.round(ARMS_PCT*100) + '% of it per level'}.">${icon(o.k, 12)}<b>${o.k === 'rare' ? 'Rare mat.' : cap1(MAIN_NAME[o.k])}</b></span>`; }
 const csMobIdle = p => UT.some(t => !canMobilize(PLAYER, p, t)) || S.bld[p].rec ? 'Nothing in training' : `No ${BUILD.rec.name}`;
 const CS_ICO = {
   bld:`<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><path d="M15 18h7.4v4.2H15zM23.6 18H31v4.2h-7.4zM19.3 23.4h7.4v4.2h-7.4zM15 23.4h3.1v4.2H15zM27.9 23.4H31v4.2h-3.1zM15 28.8h7.4V31H15zM23.6 28.8H31V31h-7.4zM19.3 12.6h7.4v4.2h-7.4z"/>
@@ -8751,7 +8764,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   else if (o >= 0) acts = `<div class="cs-acts">${big('diplo-open', 'dip', 'Diplomacy', `${REL[r.st]} with ${nationName(o)}`, null)}${big('intel', 'intel', 'Intel', `${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}`, null)}</div>`;
   const st = csStatus(p);
   const ban = `<div class="cs-ban"><span class="cs-fl">${fl}</span><span class="cs-tt"><b class="cs-nm">${name}${isCapital(p) ? '<i class="cs-star" title="Capital">★</i>' : ''}</b>
-      <span class="cs-st"><span>${st}</span>${mine ? '' : `<span class="cs-on">· ${placeOwner(p)}</span>`}${r ? `<span class="cs-rel" style="--rc:${REL_COLOR[r.st]}">${REL[r.st]}</span>` : ''}${P.city ? `<span class="cs-clv" title="City level ${ROMAN[lv]}">Level ${ROMAN[lv]}</span>` : ''}</span></span>
+      <span class="cs-st"><span>${st}</span>${mine ? '' : `<span class="cs-on">· ${placeOwner(p)}</span>`}${r ? `<span class="cs-rel" style="--rc:${REL_COLOR[r.st]}">${REL[r.st]}</span>` : ''}${P.city ? `<span class="cs-clv" title="City level ${ROMAN[lv]}">Level ${ROMAN[lv]}</span>${mainChip(p)}` : ''}</span></span>
       <button class="cs-i" data-act="cs-info" aria-label="Province details" title="Province details">i</button><button class="cs-x" data-act="clear" aria-label="Close" title="Close (Esc)">${rg('x', 16)}</button></div>`;
   const yl = YK.filter(k => k !== 'mp' && y[k] >= (k === 'rare' ? 0.25 : 0.5)).map(k => { const v = k === 'cash' ? Math.round(y[k]) : fmtY(y[k]), R0 = RES.find(x => x.k === k);
     return `<span class="cs-y res-${k}" title="${k === 'cash' ? '$' + v + 'M' : v} ${R0.name.toLowerCase()} a day">${icon(k, 17)}<b>${k === 'cash' ? '$' + v + 'M' : v}</b></span>`; }).join('');
@@ -8855,7 +8868,7 @@ function renderSide(force){
     RES.map(R => { const v = N[R.k], d = inc.net[R.k], short = N.short && N.short[R.k];
       const fv = x => R.pre + fmt(x) + R.unit, up = inc.upkeep[R.k] || 0;
       const cap = stockCap(PLAYER), full = R.k !== 'cash' && v >= cap - 1, fill = R.k !== 'cash' && d > 0.05 && !full ? Math.ceil((cap - v)/d) : 0;
-      const tipTxt = `${R.name}: ${fv(v)}${R.k !== 'cash' ? ' / ' + fmt(cap) + R.unit + ' storage' : ''}&#10;Net ${d >= 0 ? '+' : '-'}${fv(Math.abs(d))}/day${full ? ' · storage full: sell or gift the surplus' : fill && fill <= 30 ? ` · storage full in ${fill} d` : ''}&#10;Production +${fv(inc.gross[R.k] - (inc.trade && inc.trade[R.k] || 0))}/day${tradeTip(R.k)}${fmt(up) !== '0' ? `&#10;Upkeep -${fv(up)}/day${R.k === 'cash' ? ' (armed forces)' : R.k === 'oil' ? ' (fuel)' : R.k === 'iron' || R.k === 'elec' ? ' (maintenance)' : ''}` : ''}${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? `&#10;SHORTAGE${R.k === 'oil' ? ': armor, aircraft and ships slowed and weakened' : R.k === 'iron' ? ': armor, artillery and warships weakened' : R.k === 'elec' ? ': aircraft, drones, air defence and warships weakened' : R.k === 'cash' ? ': upkeep unpaid' : ''}` : ''}&#10;Used for ${R.use}.&#10;From ${R.src}.${MKT_K.includes(R.k) ? `&#10;Market price $${mkt().p[R.k].toFixed(2)}M a unit` : ''}`;
+      const tipTxt = `${R.name}: ${fv(v)}${R.k !== 'cash' ? ' / ' + fmt(cap) + R.unit + ' storage' : ''}&#10;Net ${d >= 0 ? '+' : '-'}${fv(Math.abs(d))}/day${full ? ' · storage full: sell or gift the surplus' : fill && fill <= 30 ? ` · storage full in ${fill} d` : ''}&#10;Production +${fv(inc.gross[R.k] - (inc.trade && inc.trade[R.k] || 0))}/day${tradeTip(R.k)}${fmt(up) !== '0' ? `&#10;Upkeep -${fv(up)}/day${R.k === 'cash' ? ' (armed forces)' : R.k === 'oil' ? ' (fuel)' : R.k === 'iron' || R.k === 'elec' ? ' (maintenance)' : ''}` : ''}${inc.eff < 1 ? `&#10;Administration ${Math.round(inc.eff*100)}%` : ''}${short ? `&#10;SHORTAGE${R.k === 'oil' ? ': armor, aircraft and ships slowed and weakened' : R.k === 'iron' ? ': armor, artillery and warships weakened' : R.k === 'elec' ? ': aircraft, drones, air defence and warships weakened' : R.k === 'cash' ? ': upkeep unpaid' : ''}` : ''}${noCityOf(R.k) ? '&#10;' + noCityTxt(R.k) : ''}${keptEco(N).filter(id => ECO_KEPT[id][0] === R.k).map(id => `&#10;Kept from the old Economy research: ${ECO_OLD_TECH[id]}, ${ECO_KEPT[id][1]}`).join('')}&#10;Used for ${R.use}.&#10;From ${R.src}.${MKT_K.includes(R.k) ? `&#10;Market price $${mkt().p[R.k].toFixed(2)}M a unit` : ''}`;
       resTips.push(tipTxt.replace(/&#10;/g, '\n'));
       return `<div class="chip res-${R.k} ${short ? 'short' : ''}">${resIco(R.k)}<span class="cv"><span class="lbl"><span class="lf">${R.name}</span><span class="la">${R.ab}</span></span><span class="vv"><b class="rv"></b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; }).join(''));
   resSync(N, resTips);
@@ -8929,9 +8942,9 @@ function checklist(){
   const T = S.tut || (S.tut = {});
   if (T.hide) return '';
   if (T.recruit && T.capture && T.research){
-    const grown = S.owner.filter(o => o === PLAYER).length - (S.nations[PLAYER].prov0 || 0), mines = G.P.some(P => S.owner[P.id] === PLAYER && (S.bld[P.id].mine || S.bld[P.id].fdy)), wars = !!T.survived;
+    const grown = S.owner.filter(o => o === PLAYER).length - (S.nations[PLAYER].prov0 || 0), mines = G.P.some(P => S.owner[P.id] === PLAYER && S.bld[P.id].arms), wars = !!T.survived;
     if (grown >= 5 && mines && wars) return '';
-    return `<div class="eyebrow" style="display:flex;justify-content:space-between">Next objectives <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(grown >= 5, `Grow by 5 provinces (${Math.max(0, grown)}/5)`)}${row(mines, 'Build a Foundry or a Rare Earth Mine: iron for armor and ships, rare materials for research')}${row(wars, 'Survive a war: end one with a truce or peace')}</div>`;
+    return `<div class="eyebrow" style="display:flex;justify-content:space-between">Next objectives <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(grown >= 5, `Grow by 5 provinces (${Math.max(0, grown)}/5)`)}${row(mines, 'Build an Arms Industry: +25% of a city\u2019s main resource per level')}${row(wars, 'Survive a war: end one with a truce or peace')}</div>`;
   }
   return `<div class="eyebrow" style="display:flex;justify-content:space-between">First steps <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Merge forces into one stack, then capture a weak independent neighbour (look for a Favourable odds chip)')}${row(T.research, 'Start a research project (R)')}</div>`;
 }
@@ -8943,9 +8956,9 @@ function prodHTML(){
     const btns = UT.filter(t => !canMobilize(PLAYER, p, t)).map(t => { const uc = ucost(PLAYER, t);   // the price you actually pay (doctrine-adjusted), same as the Recruit list
       return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: ${costTxt(uc, ', ')} (shift-click: 5)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
     const rp = S.repeat && S.repeat[p];
-    return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted">${BK.filter(k => S.bld[p][k]).map(k => (k === 'mine' ? 'Mine' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
+    return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted"><span class="res-${cityMain(p)}" title="Main resource: ${MAIN_NAME[cityMain(p)]}">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${BK.filter(k => S.bld[p][k]).map(k => (k === 'fac' ? 'Base' : k === 'arms' ? 'Industry' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '<span class="muted">—</span>'}</td>
-      <td class="qcell"><div class="ub">${btns || `<span class="small muted">${S.bld[p].rec ? 'Needs an Arms Factory or research' : 'Build a Recruiting Office first'}</span>`}</div></td>
+      <td class="qcell"><div class="ub">${btns || `<span class="small muted">${S.bld[p].rec ? 'Needs an Army Base or research' : 'Build a Recruiting Office first'}</span>`}</div></td>
       <td class="rcell"><label class="rep" title="Repeat: keep training the last unit queued here while you can afford it"><input type="checkbox" data-act="repeat" data-p="${p}" ${rp ? 'checked' : ''}><i aria-hidden="true"></i><span>${rp ? UNIT_NICK[rp] || UNITS[rp].short : 'Repeat'}</span></label></td></tr>`; }).join('');
   const idle = cities.filter(P => !S.queue[P.id].length).length;
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} cities</div><h1>Production</h1></div>
@@ -8965,7 +8978,7 @@ const TUT_STEPS = [
   {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
-  {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Jet Engines unlocks aircraft; Industrial Automation boosts money.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
+  {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Jet Engines unlocks aircraft; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
   {t:'You are ready', d:() => 'The bar along the bottom opens Diplomacy (war, peace, trade routes), Market, Cities, Research, Army and Production (P); More holds Intelligence, Settings, Sound and “How to play” (or press ?), which explains roads and railways, drones, trade and coalitions. The crate at the left of the resource strip lists your missiles; the shields on the right of the map fly home, open the dispatches and toggle the relations map. Good luck, commander.', el:'#dock', next:true, last:true},
 ];
 // the weakest independent province the selected army can reach and win against
@@ -9066,7 +9079,7 @@ function diploHTML(){
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
 }
 function researchLine(){
-  const N = S.nations[PLAYER], done = Object.keys(N.tech).length, run = R_SLOTS.map(k => N[k]).filter(Boolean), fr = rFreeN(N);
+  const N = S.nations[PLAYER], done = Object.keys(N.tech).filter(k => TECH_BY[k]).length, run = R_SLOTS.map(k => N[k]).filter(Boolean), fr = rFreeN(N);
   if (run.length){ const row = R => { const T = TECH_BY[R.id], f = 1 - R.h/(R.h0 || T.days*24); return `<div class="qi"><span>Researching ${T.name}</span><span class="muted">${rDur(R.h)}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.round(f*100)}%"></i></div>`; };
     return `<div class="status move">${run.map(row).join('<div style="height:6px"></div>')}${fr ? `<div class="small muted" style="margin-top:4px">A research slot is free: start a second project.</div>` : ''}</div>
       <div class="row"><button class="btn${fr ? ' primary' : ''}" data-act="research-open">Research tree · ${done}/${TECH.length}</button></div>`; }
@@ -9087,7 +9100,6 @@ const RB = {
   Naval:{ut:'frig', art:'u-destroyer', g:'ship', tag:'Rule the sea lanes'},
   Strategic:{ut:'bomb', art:'u-missile-launcher', g:'missile', tag:'Reach across the world'},
   Logistics:{ut:null, art:'u-supply-truck', g:'truck', tag:'Move faster, fight longer'},
-  Economy:{ut:null, art:'b-city-4', g:'factory', tag:'Fuel the war machine'},
 };
 const RB_ORDER = [...Object.keys(RB).filter(b => BRANCHES.includes(b)), ...BRANCHES.filter(b => !RB[b])];
 // white line glyphs (24 px grid), drawn for this game
@@ -9124,7 +9136,7 @@ const rg = (k, sz = 22, cls = '') => `<svg class="rg ${cls}" width="${sz}" heigh
 const techStep = (id, g = 0) => { const T = TECH_BY[id]; return !T || g > 20 ? 0 : techReqs(T).reduce((d, q) => Math.max(d, 1 + techStep(q, g + 1)), 0); };   // (the longest chain of prerequisites leading to it)
 const techUnit = T => Object.keys(UNITS).find(t => UNITS[t].tech === T.id) || null;
 // the picture in a node: the unit the project unlocks, else a glyph for what it does
-const TGLY = {eco1:'factory', eco2:'mp', eco3:'oil', log1:'truck', log2:'wrench', log3:'cross', msl1:'cm', msl2:'bm', msl3:'def', sat1:'sat', nav3:'anchor', drone1:null, jam1:'jam', air1:null};
+const TGLY = {log1:'truck', log2:'wrench', log3:'cross', msl1:'cm', msl2:'bm', msl3:'def', sat1:'sat', nav3:'anchor', drone1:null, jam1:'jam', air1:null};
 const TBADGE = {uav2:'eye', art1:'eye'};   // a badge other than the stat's own (atk / def / spd)
 function techFace(T){ const ut = techUnit(T); if (ut) return {ut};
   { const fx = T.fx || {}, k0 = Object.keys(fx).find(k => UNITS[k]), st = k0 && fx[k0]; if (!TGLY[T.id] && st){ const up = TBADGE[T.id] || (st.atk ? 'atk' : st.def ? 'def' : 'spd'); return {g:up, up, base:k0}; } }
@@ -9167,6 +9179,7 @@ function researchHTML(){
   if (view === 'list'){
     const t1 = TECH.filter(T => !has(PLAYER, T.id) && techOpen(PLAYER, T)).map(T => techCost(T).rare).sort((a, b) => a - b)[0];
     h += `<div class="rs-list">`;
+    { const kept = keptEco(N); if (kept.length) h += `<p class="rs-kept" title="The Economy research branch is now part of buildings (Arms Industry). What you had researched still applies.">Kept from the old Economy research: ${kept.map(id => `<b>${ECO_OLD_TECH[id]}</b> (${ECO_KEPT[id][1]})`).join(' · ')}</p>`; }
     for (const br of RB_ORDER){ const M = RB[br] || {g:'atk', tag:''}, L = TECH.filter(T => T.branch === br), dn = L.filter(T => has(PLAYER, T.id)).length;
       const open = L.filter(T => !has(PLAYER, T.id) && techOpen(PLAYER, T) && !slotOf(T.id)).length;
       const run = R && TECH_BY[R.id] && TECH_BY[R.id].branch === br, qd = R2 && TECH_BY[R2.id] && TECH_BY[R2.id].branch === br;
@@ -9177,7 +9190,7 @@ function researchHTML(){
     const E = N.eng, nm = UT.filter(t => unlocked(PLAYER, t)), mk = nm.filter(t => markOf(PLAYER, t) >= 4).length;
     h += `<button class="rs-ban marks" data-act="rbranch" data-b="marks" title="Unit upgrades, Marks I to IV">${rbImg('u-special-forces')}<span class="rs-dm"><span class="dmi">${rg('marks', 30)}</span></span>
         <span class="rs-bt"><b>Unit upgrades</b><span>Hone what you field · Marks I–IV</span></span><span class="rs-bp"><span class="rs-bpt">${E ? `<em class="rs-run">${UNITS[E.t].short} Mk ${ROMAN[E.m]}</em>` : ''}<b>${mk}<small>/${nm.length}</small></b></span><span class="rs-pb"><i style="width:${nm.length ? Math.round(mk/nm.length*100) : 0}%"></i></span></span></button></div>
-      <p class="rnote rs-note">${icon('rare', 13)}<span><b>Rare materials drive research.</b> Every project costs money, materials and rare materials, more each tier. ${t1 != null && N.rare < t1 ? `You need ${Math.ceil(t1 - N.rare)} more for the cheapest open project${inc.net.rare > 0.05 ? ` (about ${Math.ceil((t1 - N.rare)/inc.net.rare)} d at +${fmt1(inc.net.rare)} a day)` : ''}. ` : ''}Get more from Rare Earth Mines, provinces with rare-earth deposits (Resources map), trade routes and the Market.</span></p>`;
+      <p class="rnote rs-note">${icon('rare', 13)}<span><b>Rare materials drive research.</b> Every project costs money, materials and rare materials, more each tier. ${t1 != null && N.rare < t1 ? `You need ${Math.ceil(t1 - N.rare)} more for the cheapest open project${inc.net.rare > 0.05 ? ` (about ${Math.ceil((t1 - N.rare)/inc.net.rare)} d at +${fmt1(inc.net.rare)} a day)` : ''}. ` : ''}They come from rare-earth cities (Resources map; an Arms Industry there adds 25% per level), your capital, trade routes and the Market.</span></p>`;
     return h;
   }
   if (view === 'marks'){ const E = N.eng, D = docOf(PLAYER);
@@ -9505,8 +9518,8 @@ const COUNTER_TXT = {
 };
 const AG_T = ['drone', 'swarm', 'sdrone', 'jam', 'sam', 'int', 'asf', 'jet', 'heli', 'bomb', 'stealth', 'mpa', 'awacs', 'sub'];
 function uavBadge(n = PLAYER){ const L = uavLv(n), on = has(n, 'drone1'); return `<span class="uavb ${L >= 4 ? 'arm' : ''}">UAV ${ROMAN[L]} · ${L >= 4 ? (L >= 5 ? 'Armed · 2 salvos' : 'Armed') : 'Recon only'}</span>${L < 4 ? '<span class="small muted">Weapons unlock at UAV IV</span>' : ''}${on ? '' : ' <span class="small muted">(research UAV I to build)</span>'}`; }
-// research card picture: the unit a technology unlocks or improves (top-down art), or a building for economy and missile work
-const TECH_BLD = {eco1:'fac', eco2:'city', eco3:'fac', msl1:'silo', msl2:'silo', msl3:'silo', sat1:'silo', log2:'fac', log3:'city'};
+// research card picture: the unit a technology unlocks or improves (top-down art), or a building for logistics and missile work
+const TECH_BLD = {msl1:'silo', msl2:'silo', msl3:'silo', sat1:'silo', log2:'fac', log3:'city'};
 function techArt(T, bt){ const ut = Object.keys(UNITS).find(t => UNITS[t].tech === T.id) || Object.keys(T.fx || {}).find(t => UNITS[t]) || bt;
   const bk = TECH_BLD[T.id], bi = bk ? bimg(bk, 3, 40) : '';
   if (bi) return `<span class="tart">${bi}</span>`;
@@ -9549,13 +9562,16 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
     const open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), locked = UT.filter(t => blk(t) && !near(blk(t)));
     html += `<div class="eyebrow">Recruit${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
-    html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (Arms Factory adds more). Shift-click a card to queue 5. <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
+    html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to queue 5. <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
     html += `<div class="row"><button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px">${S.rally && S.rally[p] != null ? 'Rally: ' + (G.P[S.rally[p]].cityName || G.P[S.rally[p]].name) + ' (change)' : 'Set rally point'}</button></div>`;
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
     return html; }
 function citySiloHTML(p){ let html = ''; const st = mstock(p);
     html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.entries(MISSILES).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${st[k]}</b></span></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + TECH_BY[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`;  return html; }
+// the Arms Industry line of the build menu: what it raises in this city, now and with the next level
+function armsHere(p, lv){ const o = cityOut(p); if (!o) return ''; const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), mainOutTxt = x => x.k === 'cash' ? '$' + d1(x.y) + 'M' : d1(x.y) + ' ' + MAIN_NAME[x.k]; const nx = lv < BUILD.arms.max ? {...o, y:o.base*(1 + ARMS_PCT*(lv + 1))} : null;
+  return `<b class="res-${o.k}">${icon(o.k, 11)} +${Math.round(ARMS_PCT*100)}% ${MAIN_NAME[o.k]} here per level</b> (now ${mainOutTxt(o)} a day${nx ? ', ' + mainOutTxt(nx) + ' at level ' + ROMAN[lv + 1] : ''}).`; }
 function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '';
     const c = S.cons[p];
     html += `<div class="eyebrow">Construction</div>`;
@@ -9564,7 +9580,7 @@ function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '
       const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc);
       return `<div class="bld" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
         ${maxed ? '<span class="lv">Max</span>' : `<button class="btn" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${!ok && !c && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${Math.round(cc.h/2.4)/10} d</span>${costHTML(cc, N)}</button>`}
-        <span class="ds">${bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
+        <span class="ds">${k === 'arms' ? armsHere(p, lv) + ' Each Arms Industry you already own in another province makes the next one cost 40% more.' : bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
   return html; }
 function provHTML(p){
   const P = G.P[p], o = S.owner[p], N = S.nations[PLAYER], mine = o === PLAYER;
@@ -9575,7 +9591,7 @@ function provHTML(p){
   const y = provYield(p);
   let html = `${CS.det && innerWidth <= 820 && !P.sea ? '<button class="btn cs-back" data-act="cs-back">‹ City view</button>' : ''}<div class="eyebrow">${kind} · ${P.sea ? '' : ticon(P.terrain || 'plains', 12) + ' '}${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || linkSummary(p)) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (crossing +30% time, +10% on a bridge; attackers −20%)` : ''}${P.river.size && linkSummary(p) ? ' · ' : ''}${linkSummary(p)}</div>` : ''}
     <div class="sub">${P.city ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
-    <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger-t)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}${(d => d ? `<dt>Deposits</dt><dd>${d}</dd>` : '')([P.oil ? `<span class="res-oil">${icon('oil', 11)}</span> oil field` : '', P.ore ? `<span class="res-metal">${icon('metal', 11)}</span> ore` : '', P.iron ? `<span class="res-iron">${icon('iron', 11)}</span> iron hills` : '', P.rare >= 0.5 ? `<span class="res-rare">${icon('rare', 11)}</span> rare earths${P.rare >= 2 ? ' (rich)' : ''}` : ''].filter(Boolean).join(' · '))}<dt>Daily yield</dt><dd class="ycs">${yieldChips(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
+    <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger-t)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}${(d => d ? `<dt>Deposits</dt><dd>${d}</dd>` : '')([P.oil ? `<span class="res-oil">${icon('oil', 11)}</span> oil field` : '', P.ore ? `<span class="res-metal">${icon('metal', 11)}</span> ore` : '', P.iron ? `<span class="res-iron">${icon('iron', 11)}</span> iron hills` : ''].filter(Boolean).join(' · '))}${P.city && !P.sea ? (o => `<dt>Produces</dt><dd><span class="res-${o.k}">${icon(o.k, 11)}</span> <b>${cap1(MAIN_NAME[o.k])}</b>: ${mainOutTxt(o)} a day${o.lv ? ` (${BUILD.arms.name} ${ROMAN[o.lv]}: +${Math.round(ARMS_PCT*100*o.lv)}%)` : ` · ${BUILD.arms.name}: +${Math.round(ARMS_PCT*100)}% per level`}</dd>`)(cityOut(p)) : ''}<dt>Daily yield</dt><dd class="ycs">${yieldChips(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
     ${P.city && !P.sea ? (L => `<dt>City</dt><dd>${bimg('city', L, 34)}Level ${ROMAN[L]}${isCapital(p) ? ' · capital' : ''}</dd>`)(cityLevel(p)) : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => `<span class="bl">${bimg(k, S.bld[p][k], 30)}${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : ''}${bdis(p, k) ? ` <span style="color:var(--danger-t)" title="Knocked out by a precision strike: works again when repaired">knocked out · ${bdisH(p, k)} h</span>` : ''}</span>`).join('') || 'None'}</dd>
     <dt>Capture time</dt><dd>${Math.round(capNeed(p, PLAYER))} h</dd>
@@ -9711,8 +9727,9 @@ document.addEventListener('click', e => {
     case 'book-buy': { const o0 = (S.book || []).find(x => x.id === +b.dataset.id); if (!o0) break; const sel0 = o0.seller, res0 = o0.res, pr0 = o0.price, bid0 = isBid(o0); const q = fillOffer(PLAYER, +b.dataset.id, +b.dataset.q);
       if (q){ const msg = bid0 ? `Sold ${q} ${rlbl(res0)} to ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(q*pr0)}M.` : `Bought ${q} ${rlbl(res0)} from ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(q*pr0)}M.`; toast(msg, atWar(PLAYER, sel0) ? 'bad' : 'good', null); log(msg, '', null); }
       else toast(bid0 ? 'You do not have any to sell.' : 'Not enough money or storage.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'mk-filter': { const k = b.dataset.k || null; BK_FILT = k && BK_FILT !== k ? k : null; if (BK_FILT){ BK_RES = BK_FILT; BK_F.price = null; } setHTML($('sheet'), marketHTML()); break; }
     case 'book-cancel': { const o = (S.book || []).find(x => x.id === +b.dataset.id); if (o){ if (isBid(o)) S.nations[PLAYER].cash += o.qty*o.price; else S.nations[PLAYER][o.res] += o.qty; S.book = S.book.filter(x => x !== o); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
-    case 'book-post': { const ty = $('bk-type').value, k = $('bk-res').value, q = Math.round(+$('bk-qty').value), pr = +$('bk-price').value; if (postOffer(PLAYER, k, q, pr, ty)) toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${q} ${rlbl(k)} at $${pr.toFixed(2)}M each for 3 days.`, 'good', null); else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'book-post': { const ty = $('bk-type').value, k = $('bk-res').value, q = Math.round(+$('bk-qty').value), pr = +$('bk-price').value; const got = postOffer(PLAYER, k, q, pr, ty); if (got) toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${got} ${rlbl(k)} at $${pr.toFixed(2)}M each for 3 days${ty === 'buy' ? ` ($${fmt(got*pr)}M held)` : ''}.${got < q ? (ty === 'buy' ? ` You asked for ${q}: your money pays for ${got}.` : ` You asked for ${q}: you hold ${got}.`) : ''}`, 'good', null); else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
     case 'bloc-rename': { const B = blocOf(PLAYER), v = ($('blocname') ? $('blocname').value : '').trim().replace(/[<>&"]/g, '').slice(0, 28); if (B && v){ S.blocReg[B.id].name = v; log(`Your coalition is now called the ${v}.`, 'good', null); } setHTML($('sheet'), diploHTML()); break; }
     case 'bloc-leave': { const B = blocOf(PLAYER); if (B){ for (const m of alliesOf(PLAYER)) { setRel(PLAYER, m, 'peace'); addMem(m, PLAYER, -10); } log(`You left the ${B.name}.`, 'info', null); } setHTML($('sheet'), diploHTML()); break; }
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
@@ -9942,17 +9959,18 @@ const HELP_SEC = [
     <li><b>Map</b>: map modes top right (<kbd>V</kbd> cycles Political, Relations, Supply, Terrain, Resources, Stability); zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
     <li><b>Keys</b>: Space pause · 1, 2, 3 for 1×, 2×, 4× (8× from the bar) · S statistics · N newspaper · Tab next idle force · Esc deselect.</li></ul>`],
   ['res', 'Resources and research', `<ul>
+    <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip beside its level, and the Resources map). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
     <li><b>Seven resources</b>, all in the top bar (hover one for today's breakdown, what it is for and where it comes from). Everything but money is capped by storage (400 + 15 per province).</li>
-    <li><span class="res-cash">${icon('cash', 12)}</span> <b>Money</b>: taxes from your provinces (cities above all), +20% per Arms Factory level, trade routes. Pays for everything and for your forces' daily upkeep.</li>
-    <li><span class="res-oil">${icon('oil', 12)}</span> <b>Oil</b>: oil fields, +60% per Refinery level. Vehicles, aircraft and ships burn it every day; run dry and they are slowed and weakened.</li>
-    <li><span class="res-metal">${icon('metal', 12)}</span> <b>Materials</b>: ore deposits, cities and Foundries. Nearly every unit, building, road and research project uses them.</li>
-    <li><span class="res-iron">${icon('iron', 12)}</span> <b>Iron</b>: ore deposits, iron-bearing hills, cities and your capital, and Foundries (+1.2 a level, +2.4 on ore). Armor, artillery, warships, Arms Factories, forts and railways. Those units also use 4% of their iron a day for spare parts; run dry and they fight worse.</li>
-    <li><span class="res-elec">${icon('elec', 12)}</span> <b>Electronics</b>: big cities by population, +25% per Arms Factory level there. Aircraft, drones, air defence, missiles, satellites and high-speed rail. Those units also use 2% of their electronics a day in maintenance; run dry and they fight worse.</li>
-    <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>: every technology costs money, materials and rare materials (about 30 at tier 1, 65 at tier 2, 110 at tier 3), paid when it starts. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from rare-earth deposits and <b>Rare Earth Mines</b> (best on a deposit, +1 on hills, mountains, desert or tundra), plus a little from your capital. Advanced aircraft, carriers and missiles need some too.</li>
+    <li><span class="res-cash">${icon('cash', 12)}</span> <b>Money</b>: taxes from your provinces (cities above all; a money city pays 60% more), trade routes. Pays for everything and for your forces' daily upkeep.</li>
+    <li><span class="res-oil">${icon('oil', 12)}</span> <b>Oil</b>: oil cities, a little from oil fields in the countryside and your capital. Vehicles, aircraft and ships burn it every day; run dry and they are slowed and weakened.</li>
+    <li><span class="res-metal">${icon('metal', 12)}</span> <b>Materials</b>: materials cities, a little from ore deposits and your capital. Nearly every unit, building, road and research project uses them.</li>
+    <li><span class="res-iron">${icon('iron', 12)}</span> <b>Iron</b>: iron cities, a little from ore deposits, iron-bearing hills and your capital. Armor, artillery, warships, Army Bases, forts and railways. Those units also use 4% of their iron a day for spare parts; run dry and they fight worse.</li>
+    <li><span class="res-elec">${icon('elec', 12)}</span> <b>Electronics</b>: electronics cities and your capital. Aircraft, drones, air defence, missiles, satellites and high-speed rail. Those units also use 2% of their electronics a day in maintenance; run dry and they fight worse.</li>
+    <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>: every technology costs money, materials and rare materials (about 27 at tier 1, 55 at tier 2, 95 at tier 3), paid when it starts. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from <b>rare-earth cities</b> (a country has one or two at most, many have none) and a little from your capital: trade or fight for the rest. Advanced aircraft, carriers and missiles need some too.</li>
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> The Resources map mode shows each province's main output, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
-    <li><b>Recruit</b> in your cities: units take a day or more to train; each Arms Factory level adds a training line. Cities can have a rally point for new units.</li>
+    <li><b>Recruit</b> in your cities: units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
     <li><b>Capture</b> a province by parking ground units in it with no defenders left; cities and capitals take longer. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more.</li>
@@ -10079,7 +10097,7 @@ function showEnd(){
   openModal(`<div class="endhead">${flagHTML(PLAYER, 66, 'big')}<div><div class="eyebrow">Iron Meridian: World War III · ${localClock(S.hour)}</div><h1>${win ? 'Victory' : 'Defeat'}</h1><div class="small muted" style="margin-top:6px">${S.nations[PLAYER].name}</div></div></div>
     <p>${S.overReason === 'time' ? `Day ${DAY_LIMIT} has ended. ${win ? `${S.nations[PLAYER].name} grew the most (+${growth(PLAYER)} score).` : `${S.nations[PLAYER].name} grew ${growth(PLAYER) >= 0 ? '+' : ''}${growth(PLAYER)}, behind the leader.`}` : ''}
     ${S.overReason === 'coalition' ? `Your coalition${blocOf(PLAYER) ? `, the ${blocOf(PLAYER).name},` : ''} dominates the world together.` : S.overReason && S.overReason !== 'time' ? `${S.overReason} has achieved world dominance.` : ''}
-    ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? (N0 => { const short = [['mp', 20, 'manpower'], ['metal', 15, 'materials'], ['iron', 15, 'iron'], ['oil', 10, 'oil'], ['elec', 10, 'electronics'], ['rare', 10, 'rare materials']].find(([k, lim]) => N0[k] < lim); return short ? ` You had $${fmt(N0.cash)}M but ran out of ${short[2]}: ${short[0] === 'elec' ? 'grow your cities and their Arms Factories' : 'build ' + ({mp:'Recruiting Offices', metal:'Foundries', iron:'Foundries', oil:'Refineries', rare:'Rare Earth Mines'})[short[0]]} early, capture provinces that produce it and buy it on the Market.` : ` You had $${fmt(N0.cash)}M unspent: next time, turn money into troops and research early.`; })(S.nations[PLAYER]) : ''}</p>
+    ${!S.overReason ? (win ? `${S.nations[PLAYER].name} controls ${mine} of ${G.landCount} land provinces and ${capsHeld(PLAYER)} capitals. The world is yours.` : `${S.nations[PLAYER].name} has lost its last city.`) : ''}${!win && S.nations[PLAYER].cash > 200 ? (N0 => { const short = [['mp', 20, 'manpower'], ['metal', 15, 'materials'], ['iron', 15, 'iron'], ['oil', 10, 'oil'], ['elec', 10, 'electronics'], ['rare', 10, 'rare materials']].find(([k, lim]) => N0[k] < lim); return short ? ` You had $${fmt(N0.cash)}M but ran out of ${short[2]}: ${short[0] === 'mp' ? 'build Recruiting Offices early and capture populous provinces' : `build an Arms Industry in ${/^[aeio]/.test(MAIN_NAME[short[0]]) ? 'an' : 'a'} ${MAIN_NAME[short[0]]} city early, capture such a city, or buy it on the Market`}.` : ` You had $${fmt(N0.cash)}M unspent: next time, turn money into troops and research early.`; })(S.nations[PLAYER]) : ''}</p>
     ${(() => { const st0 = S.stats || {}; return `<div class="statgrid">${[['Days', dayOf(S.hour)], ['Provinces taken', st0.taken || 0], ['Enemy units destroyed', st0.unitsKilled || 0], ['Units lost', st0.unitsLost || 0], ['Peak army', st0.peakArmy || 0], ['Technologies', Object.keys(S.nations[PLAYER].tech).length], ['Rare materials into research', fmt(st0.rareRes || 0)], ['Best rank', st0.bestRank ? '#' + st0.bestRank : '—']].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>${st0.bigBattle ? `<p class="small muted">Biggest battle: ${st0.bigBattle} units at ${st0.bigBattleAt} on day ${st0.bigBattleDay}.</p>` : ''}${chartSVG(0, 'Score over the campaign')}`; })()}
     <div class="row"><button class="btn primary" data-act="newgame">New campaign</button><button class="btn" data-act="stats-open">Full statistics</button><button class="btn" data-act="replay-open">Watch replay</button><button class="btn" data-act="resume">View the map</button></div>${achHTML()}`, 'end');
   if (win) unlock('victory'); if (Math.floor(S.hour/24) >= SURVIVOR_DAY - 1 && S.nations[PLAYER].alive) unlock('survivor');

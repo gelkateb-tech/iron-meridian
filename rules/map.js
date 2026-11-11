@@ -76,6 +76,7 @@ function loadWorld(){
     p.pop0 = +((0.07*p.cells.length*(TF[p.terrain] || 1)*asia*asia*latF + 0.34*Math.sqrt(towns)*asia*latF + (p.city ? 2.4*asia : 0) + (p.capFlag ? 3.5 : 0))).toFixed(2); }
   const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
   const landCount = P.filter(p => !p.sea).length, PF = Math.min(1, 740/landCount);   // PF: per-province base yields shrink as provinces get smaller
+  cityMains(P, countries);
   return {prov, P, countries, landCount, PF, LK};
 }
 /* Sea lanes: the sea-zone links along the world's major shipping routes (North Atlantic, Mediterranean–Suez–Indian Ocean–Malacca–East Asia,
@@ -132,3 +133,35 @@ const NEARC = new Map();
 function nearList(p, r){ const key = p*1024 + Math.round(r*4); let l = NEARC.get(key); if (l) return l; const P0 = G.P[p], R = r*HS0*SQ3, seen = new Set([p]), q = [p];
   for (let i = 0; i < q.length; i++) for (const v of G.P[q[i]].nbs){ if (seen.has(v)) continue; const P = G.P[v]; if (q[i] === p || Math.hypot(P.x - P0.x, P.y - P0.y) <= R){ seen.add(v); q.push(v); } }
   l = [...seen]; NEARC.set(key, l); return l; }
+// Each city's ONE main resource (P.main: 'cash' | 'oil' | 'metal' | 'iron' | 'elec' | 'rare'; null outside cities). From map data only: no dice, no game
+// state, nothing saved, so old saves get it too. Per country: the capital is a money city (a one-city country's only city takes its best resource);
+// rare earth goes to the city nearest each big deposit (at most one city, two for a country of eight cities or more; none without a deposit);
+// the other cities take, greedily, the resource their surroundings suit best, spread over several goods so that every country lacks something.
+function cityMains(P, countries){ const KS = ['cash', 'oil', 'metal', 'iron', 'elec'], cities = P.filter(p => p.city && !p.sea), used = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0};
+  const sorted = cities.map(p => p.pop0).sort((a, b) => a - b), pct = v => { let lo = 0, hi = sorted.length; while (lo < hi){ const m = (lo + hi) >> 1; if (sorted[m] < v) lo = m + 1; else hi = m; } return lo/Math.max(1, sorted.length - 1); };
+  const ring = p => { const r1 = p.nbs.filter(v => !P[v].sea), s1 = new Set([p.id, ...r1]), r2 = []; for (const v of r1) for (const w of P[v].nbs) if (!P[w].sea && !s1.has(w)){ s1.add(w); r2.push(w); } return [r1.map(v => P[v]), r2.map(v => P[v])]; };
+  const lonOf = p => ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180;
+  const feat = new Map();
+  for (const p of cities){ const [r1, r2] = ring(p), sum = f => (f(p) ? 2 : 0) + r1.filter(f).length + 0.5*r2.filter(f).length, lon = lonOf(p), hilly = q => q.terrain === 'hills' || q.terrain === 'mountain';
+    feat.set(p.id, {oil:sum(q => q.oil), ore:sum(q => q.ore), iron:sum(q => q.iron), hill:r1.filter(hilly).length + (hilly(p) ? 1 : 0), gulf:p.lat > 12 && p.lat < 38 && lon > 35 && lon < 62, pq:pct(p.pop0)}); }
+  const score = (p, k) => { const F = feat.get(p.id);
+    return k === 'oil' ? (F.oil > 0 ? 0.6 + 0.7*Math.min(3, F.oil) : 0.15) + (F.gulf ? 1.2 : 0)
+      : k === 'metal' ? 0.7 + 0.5*Math.min(3, F.ore)
+      : k === 'iron' ? 0.5 + 0.6*Math.min(3, F.iron + 0.5*F.ore) + 0.2*Math.min(2, F.hill)
+      : k === 'elec' ? 0.3 + 1.7*F.pq
+      : 0.3 + 1.2*F.pq + (p.coast ? 0.3 : 0); };
+  let done = 0;
+  for (const c of countries){ const cs = c.provs.map(v => P[v]).filter(p => p.city && !p.sea); if (!cs.length) continue;
+    const n = cs.length, cap = cs.find(p => p.capFlag) || cs[0], loc = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0}, left = new Set(cs.map(p => p.id));
+    const take = (p, k) => { p.main = k; loc[k]++; used[k]++; done++; left.delete(p.id); };
+    const rares = () => { if (n < 2) return; const deps = c.provs.map(v => P[v]).filter(p => p.rare >= RARE_DEP).sort((x, y) => y.rare - x.rare || x.id - y.id), maxR = n >= 8 ? 2 : 1;
+      for (const d of deps){ if (loc.rare >= maxR) break; let bc = null, bd = 12;
+        for (const p of cs){ if (p === cap) continue; const dl = ((lonOf(p) - lonOf(d) + 540) % 360) - 180, dist = Math.hypot(dl*Math.cos(d.lat*Math.PI/180), p.lat - d.lat); if (dist < bd){ bd = dist; bc = p; } }
+        if (bc && left.has(bc.id)) take(bc, 'rare'); } };
+    rares(); if (n >= 2) take(cap, 'cash');
+    while (left.size){ let best = null, bv = -1;
+      for (const id of left){ const p = P[id]; for (const k of KS){
+        const wb = Math.max(0.6, Math.min(1.6, Math.sqrt(ECO_SHARE[k]*(done + 6)/(used[k] + 6*ECO_SHARE[k]))));
+        const v = score(p, k)*wb/(1 + 1.5*loc[k]); if (v > bv + 1e-9){ bv = v; best = [p, k]; } } }
+      take(best[0], best[1]); } }
+  for (const p of P) if (!p.main) p.main = null; }

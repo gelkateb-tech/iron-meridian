@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
     o.y = [0, 1, 2, 3, 4, 5].map(l => { B.rec = l; return provYield(cap).mp; }); B.rec = 1;
     // training hours by level, no factory: infantry (24 h) and a tank
     B.fac = 0; o.inf = [0, 1, 2, 3, 4, 5].map(l => { B.rec = l; return trainH(cap, 'inf', 0); }); o.tank = [0, 1, 2, 3, 4, 5].map(l => { B.rec = l; return trainH(cap, 'tank', 0); }); o.base = {inf:UNITS.inf.build, tank:UNITS.tank.build};
-    // stacking with the Arms Factory: they multiply (Factory I 0.8 x Office II 0.8 = 0.64)
+    // stacking with the Army Base: they multiply (Base I 0.8 x Office II 0.8 = 0.64)
     B.fac = 1; B.rec = 2; o.stack = trainF(cap, 'tank');
     // the floor: every unit, every level of every building, every doctrine: never under 30% of the base time
     let worst = 9, bad = [];
@@ -57,9 +57,9 @@ const { chromium } = require('playwright');
   { const d = r.y.map(v => v - r.y[0]), u = d[1]/3; ok('the city really yields that much more manpower by level', u > 0 && d.every((v, i) => Math.abs(v - r.mp[i]*u) < 1e-6), r.y); }
   ok('training 10% faster per level (infantry 24 h: 22, 19, 17, 14, 12)', JSON.stringify(r.inf) === JSON.stringify([0, 1, 2, 3, 4, 5].map(l => Math.round(r.base.inf*(1 - 0.1*l)))) && r.inf[5] === 12, r.inf);
   ok('every unit trained there, not only infantry (tank)', JSON.stringify(r.tank) === JSON.stringify([0, 1, 2, 3, 4, 5].map(l => Math.round(r.base.tank*(1 - 0.1*l)))), r.tank);
-  ok('Arms Factory and Recruiting Office multiply', Math.abs(r.stack - 0.64) < 1e-9, r.stack);
+  ok('Army Base and Recruiting Office multiply', Math.abs(r.stack - 0.64) < 1e-9, r.stack);
   ok('no unit ever trains under 30% of its base time (all buildings, levels, doctrines)', r.bad.length === 0 && r.worst >= 0.29 && r.min === 0.3, { worst: r.worst, bad: r.bad });
-  ok('Factory V + Office V tank sits at the floor', r.floorTank === Math.round(r.base.tank*0.3) && r.fac5Tank === Math.round(r.base.tank*0.3), r);
+  ok('Army Base V + Office V tank sits at the floor', r.floorTank === Math.round(r.base.tank*0.3) && r.fac5Tank === Math.round(r.base.tank*0.3), r);
   ok('upgrade to II: paid $75M + 10 materials, 3 days', r.built === true && r.cons.k === 'rec' && r.cons.lvl === 2 && r.cons.h === 72 && r.paid.cash === 75 && r.paid.metal === 10, r);
   { const f = 0.8/0.9, exp = r.q0.map(([t, h, h0]) => t === 'cm' ? [t, h, h0] : [t, Math.max(1, Math.round(h*f)), Math.round(h0*f)]);
     ok('level done: remaining time of the unit in training and the queued ones cut by the new ratio (a missile is not a unit)', r.lvl === 2 && r.consAfter === null && JSON.stringify(r.q1) === JSON.stringify(exp) && r.q1[0][1] < r.q0[0][1] && r.q1[1][1] < r.q0[1][1] && Math.abs(r.q1[1][1] - r.newInf) <= 1, { q0: r.q0, q1: r.q1, exp }); }
