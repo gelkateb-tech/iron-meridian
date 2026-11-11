@@ -296,7 +296,7 @@ function checkNation(n, by = NEUTRAL){
   const cities = G.P.filter(p => S.owner[p.id] === n && p.city);
   if (!cities.length){
     N.alive = false;
-    const annex = by >= 0 && S.nations[by].alive;
+    const annex = by >= 0 && S.nations[by].alive && !isSated(by);   // (the nations world: a computer nation that has grown enough for now leaves the rest independent)
     for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
       if (annex){ S.owner[p] = by; S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
@@ -315,7 +315,8 @@ function score(n){ if (QM && n >= 0){ if (!QM.score){ const c = new Array(S.nati
   let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
 const winShare = () => tiered() ? winShareFor(S.nations.length) : WIN_SHARE;
 const coalCaps = () => tiered() ? Math.round(WIN_CAPS*1.5) : WIN_CAPS + 3;   // capitals a coalition needs together
-const landNeed = n => SCN === 'world' || tiered() ? Math.max(Math.ceil(scnLand()*winShare()), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra)
+const landNeed = n => tiered() ? Math.max(Math.ceil(scnLand()*winShare()), (N0 => N0 + Math.max(SCENARIOS[SCN].extra, Math.ceil(N0*TIER_WIN_UP)))(S.nations[n].prov0 || 0))
+  : SCN === 'world' ? Math.max(Math.ceil(scnLand()*winShare()), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra)
   : Math.max(Math.ceil(scnLand()*0.4), (S.nations[n].prov0In ?? S.nations[n].prov0 ?? 0) + SCENARIOS[SCN].extra);
 const growth = n => score(n) - (S.nations[n].score0 || 0);
 const capsHeld = n => S.nations.filter(N => S.owner[N.cap0] === n).length;

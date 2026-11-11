@@ -17,27 +17,37 @@ const TIERS = ['S', 'A', 'B', 'C'];
 function load(){ globalThis.window = globalThis; if (!globalThis.WORLD){ require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js')); }
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
   return new Function("'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
-    + '\nreturn {IM, income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, ECO_CAPITAL, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
+    + '\nreturn {IM, UNITS, income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, ECO_CAPITAL, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
 const hash = s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = Math.imul(h2 + c, 0x85ebca6b) ^ (h2 >>> 13); } return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0'); };
 const provs = S => { const c = S.nations.map(() => 0); for (const o of S.owner) if (o >= 0) c[o]++; return c; };
 const unitsOf = S => { const c = S.nations.map(() => 0); for (const a of S.armies) if (a.owner >= 0) for (const k in a.u) c[a.owner] += a.u[k] || 0; return c; };
 
 // ---- one game (child process): plays `days` days of seed `seed`, all computer, and prints one JSON line
-function playOne(seed, days, scn, seat){ const R = load(), api = R.IM.api; let logs = 0; R.IM.on('log', () => logs++);
+function playOne(seed, days, scn, seat){ const R = load(), api = R.IM.api, UNITS = R.UNITS; let logs = 0; R.IM.on('log', () => logs++);
   api.useScenario(scn); api.newGame(seed, 0, seat >= 0 ? [seat] : []); const S = api.S, G = api.G; S.started = true;
   const nat = () => { const c = S.nations.map(() => 0); for (let p = 0; p < S.owner.length; p++) if (S.owner[p] >= 0 && S.own0[p] >= 0) c[S.owner[p]]++; return c; };   // land that was a nation's at the start, by who holds it now
   const free = () => { const c = S.nations.map(() => 0); for (let p = 0; p < S.owner.length; p++) if (S.owner[p] >= 0 && S.own0[p] === -1) c[S.owner[p]]++; return c; };   // independent land at the start, by who holds it now
   const out = {seed, scn, names:S.nations.map(N => N.name), tiers:S.nations.map(N => N.tier || ''), p0:provs(S), free0:S.own0.filter(o => o === -1).length, land:G.landCount, at:{}, nat:{}, free:{}, dead:{}, over:null, wars:{}, oil:{}};
   const took = S.nations.map(() => new Set());
+  // ships of each nation, counted once a day: a day with more than the day before means it built some (step 4's check of the sea nations)
+  const navy = () => { const c = S.nations.map(() => 0); for (const a of S.armies) if (a.owner >= 0) for (const k in a.u) if (UNITS[k] && UNITS[k].cls === 'naval') c[a.owner] += a.u[k] || 0; return c; };
+  let nav = navy(); out.navBuilt = S.nations.map(() => 0);
   const t0 = Date.now(); let h = 0;
   for (; h < days*24 && !S.over; h++){ api.tick();
     if (S.hour % 24 === 0){ const d = S.hour/24; for (const N of S.nations) if (!N.alive && out.dead[N.id] == null) out.dead[N.id] = d;
+      { const v = navy(); v.forEach((k, n) => { if (k > nav[n]) out.navBuilt[n] += k - nav[n]; }); nav = v; }
+      if (d >= 30 && d <= 60){ const F = out.foes || (out.foes = S.nations.map(() => [])); for (const k in S.rel) if (S.rel[k] && S.rel[k].st === 'war'){ const [a, b] = k.split(',').map(Number);   // every enemy of each nation in the second month (step 4's check)
+        if (a >= 0 && b >= 0){ if (!F[a].includes(b)) F[a].push(b); if (!F[b].includes(a)) F[b].push(a); } } }
+      if (d === 60){ out.gain60 = S.nations.map(() => 0); for (let p = 0; p < S.owner.length; p++) if (S.owner[p] >= 0 && S.own0[p] !== S.owner[p]) out.gain60[S.owner[p]]++; }   // provinces held on day 60 that it did not start with
       if (d <= 30) for (let p = 0; p < S.owner.length; p++) if (S.own0[p] === -1 && S.owner[p] >= 0) took[S.owner[p]].add(p);   // independent land taken by day 30, held or lost again since
       if (d === 30) out.took30 = took.map(t => t.size);
       if (d === 30){ out.cash30 = S.nations.map(N => Math.round(N.cash)); out.net30 = S.nations.map(N => N.alive ? Math.round(R.income(N.id).net.cash) : null); }   // treasury and money a day on day 30 (step 3's check)
       if (d === 1 || d === 60) out.oil[d] = S.mkt && S.mkt.p ? +S.mkt.p.oil.toFixed(3) : null;   // the world oil price (step 2's check)
       if ([21, 30, 45, 60, 120, 250, 300].includes(d)){ out.at[d] = provs(S); out.nat[d] = nat(); out.free[d] = free(); out.wars[d] = Object.keys(S.rel).filter(k => S.rel[k] && S.rel[k].st === 'war').map(k => k.split(',').map(Number)); } } }
-  if (S.over) out.over = {day:Math.ceil(S.hour/24), what:S.over, who:S.overReason};
+  if (S.over){ out.over = {day:Math.ceil(S.hour/24), what:S.over, who:S.overReason};   // a game won early: the later checkpoints hold the final state
+    for (const d of [21, 30, 45, 60, 120, 250, 300]) if (d <= days && !out.at[d]){ out.at[d] = provs(S); out.nat[d] = nat(); out.free[d] = free(); out.wars[d] = []; }
+    if (!out.took30) out.took30 = took.map(t => t.size); if (!out.cash30) out.cash30 = S.nations.map(N => Math.round(N.cash)); if (!out.net30) out.net30 = S.nations.map(() => 0);
+    if (!out.gain60) out.gain60 = S.nations.map(() => 0); if (out.oil[60] == null) out.oil[60] = S.mkt && S.mkt.p ? +S.mkt.p.oil.toFixed(3) : null; }
   out.ms = Math.round((Date.now() - t0)/Math.max(1, h/24)); out.logs = logs; out.end = provs(S); out.cash = S.nations.map(N => Math.round(N.cash));
   const o = JSON.parse(api.saveJSON()); delete o.savedAt; out.hash = hash(JSON.stringify(o));
   return out; }
@@ -166,6 +176,21 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       // treasury down to what it keeps, so the treasury alone says little)
       const dry = ['Mali', 'Chad'].map(nm => ({nm, c:games.map(g => g.cash30[id(nm)]), net:games.map(g => g.net30[id(nm)]), dead:games.filter(g => g.dead[id(nm)] != null && g.dead[id(nm)] <= 30).length}));
       say('Step 3  Mali and Chad solvent', dry.every(x => !x.dead && x.net.every(v => v > 0) && x.c.every(c => c >= 0)), dry.map(x => `${x.nm} on day 30: money a day ${x.net.map(v => (v > 0 ? '+' : '') + v).join(', ')}, treasury ${x.c.join(', ')}` + (x.dead ? ` (eliminated by day 30 in ${x.dead})` : '')).join('; ')); }
+    // step 4, Asia (from then on): North Korea, Mongolia and Bangladesh, the three weakest pairings on the map, alive on day 30 in at least 4
+    // seeds of 5; China and India at war with each other or with a tier S or A nation, not only with smaller ones, in at least 3 of 5: in the
+    // second month (days 30 to 60; a war between computer nations lasts about three weeks, so one day's look, day 60, is printed beside it);
+    // the sea nations Japan, Indonesia and the Philippines each hold on day 60 a province they did not start with, or have built ships, in at
+    // least 3 of 5 (the computer must not be stuck on its islands)
+    if (NAT.open.includes('Asia')){ const need = k => Math.min(k, games.length), alive = (nm, d) => games.filter(g => !(g.dead[id(nm)] != null && g.dead[id(nm)] <= d)).length;
+      const surv = [['North Korea', 30], ['Mongolia', 30], ['Bangladesh', 30]], low = surv.filter(([nm, d]) => alive(nm, d) < need(4));
+      say('Step 4  Asia survives', !low.length, surv.map(([nm, d]) => `${nm} alive on day ${d} in ${alive(nm, d)} of ${games.length}`).join(', '));
+      const big = ['China', 'India'].map(nm => { const n = id(nm), on60 = g => (g.wars[60] || []).filter(w => w.includes(n)).map(w => w[0] === n ? w[1] : w[0]), month = g => (g.foes || [])[n] || [];
+        const peer = m => tiers[m] === 'S' || tiers[m] === 'A', ok = games.filter(g => month(g).some(peer)).length, ok60 = games.filter(g => on60(g).some(peer)).length;
+        return {nm, ok, ok60, l:games.map(g => (month(g).map(m => `${names[m]} ${tiers[m]}`).join('+') || 'peace') + ` [day 60: ${on60(g).map(m => names[m]).join('+') || 'peace'}]`).join('; ')}; });
+      say('Step 4  China and India fight their weight', big.every(b => b.ok >= need(3)), big.map(b => `${b.nm} at war with ${b.nm === 'China' ? 'India' : 'China'} or a tier S or A nation in days 30 to 60 in ${b.ok} of ${games.length}, on day 60 in ${b.ok60} (${b.l})`).join('; '));
+      const sea = ['Japan', 'Indonesia', 'Philippines'].map(nm => { const n = id(nm), ok = games.filter(g => g.gain60[n] > 0 || g.navBuilt[n] > 0).length;
+        return {nm, ok, l:games.map(g => `${g.gain60[n]} new, ${g.navBuilt[n]} ships`).join('; ')}; });
+      say('Step 4  sea nations move', sea.every(x => x.ok >= need(3)), sea.map(x => `${x.nm} took land or built ships in ${x.ok} of ${games.length} (${x.l})`).join('; ')); }
   } else console.log(`(T4, T5 and the step checks need 60 days: skipped at ${DAYS})`);
 
   // T7 speed: milliseconds a game day, all computer, against the budget of the step (500 with 15 nations when the classic world takes 444 on the

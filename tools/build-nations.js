@@ -13,8 +13,8 @@ const OUT = path.join(ROOT, 'nations.js'), MODE = process.argv[2] || '';
 
 /* ---------- the plan ---------- */
 const REGIONS = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];
-const OPEN = ['Europe', 'Middle East', 'Africa'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
-// step 2: the Middle East, with Israel on the split map; step 3: Africa)
+const OPEN = ['Europe', 'Middle East', 'Africa', 'Asia'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
+// step 2: the Middle East, with Israel on the split map; step 3: Africa; step 4: Asia)
 // world.js country name, tier (S superpower, A major, B regional, C minor: table A of the plan, hand corrections included), region.
 // split (*): the country is too small on world.js; its provinces are cut smaller on the nations world's map (owner's answer 1: Israel, Greece,
 // Cuba and Belarus must be playable; 68 nations in all; tools/build-provsplit.js). It opens with its region like the others; the size of its
@@ -44,7 +44,10 @@ const COLORS = {'United States of America':'#3f7fe0', 'Canada':'#c8323c', 'Brazi
   'Saudi Arabia':'#2f9e6b', 'Iraq':'#d8b03c', 'Syria':'#d0584a', 'Yemen':'#8a6fd6', 'Israel':'#4a7fd0',
   // step 3, Africa
   'Algeria':'#2e8b57', 'Morocco':'#c8443c', 'Libya':'#e8a03c', 'Nigeria':'#38a050', 'Ethiopia':'#d8b440', 'Sudan':'#b85a3a', 'Dem. Rep. Congo':'#4a6fc0',
-  'Angola':'#d05050', 'Kenya':'#c03a3a', 'Tanzania':'#6cae3e', 'Mali':'#c8a050', 'Chad':'#6a7fd0', 'Mozambique':'#e0b030', 'Cameroon':'#c04a8a'};
+  'Angola':'#d05050', 'Kenya':'#c03a3a', 'Tanzania':'#6cae3e', 'Mali':'#c8a050', 'Chad':'#6a7fd0', 'Mozambique':'#e0b030', 'Cameroon':'#c04a8a',
+  // step 4, Asia
+  'Pakistan':'#2f8f4e', 'Bangladesh':'#3a8fd0', 'Indonesia':'#d04040', 'South Korea':'#4a7fe0', 'North Korea':'#5a9a4a', 'Vietnam':'#d84a3a', 'Thailand':'#4a6ad0',
+  'Myanmar':'#3aa070', 'Philippines':'#3a5ad0', 'Malaysia':'#a874c8', 'Kazakhstan':'#38b0c8', 'Uzbekistan':'#9a5ac0', 'Afghanistan':'#9a6a4a', 'Mongolia':'#5a7ad0'};
 const COLOR_MIN = 60;
 // hand swaps (plan 2.5): at most one city per nation, each with its reason: {country: {out:'city or province name', in:'province name', why:'...'}}
 const SWAPS = {};
@@ -98,6 +101,29 @@ const NAMES = {
   'Chad':{'Mayo-Kebbi Est':'Bongor', 'Ouaddaï':'Abéché', 'Logone Oriental':'Moundou', 'Kanem':'Mao', 'Moyen-Chari':'Sarh', 'Lac':'Bol', 'Ennedi':'Fada', 'Tibesti':'Zouar'},
   'Mozambique':{'Sofala':'Beira', 'Zambezia':'Quelimane', 'Manica':'Chimoio', 'Niassa':'Lichinga', 'Cabo Delgado':'Pemba', 'Gaza':'Xai-Xai'},
   'Cameroon':{'Sud-Ouest':'Kumba', 'Nord':'Garoua', 'Littoral':'Douala', 'Ouest':'Bamenda', 'Sud':'Ebolowa', 'Est':'Bertoua', 'Adamaoua':'Ngaoundéré'},
+  // step 4, Asia: the same rule. By hand: where the seat of a province falls in a sea cell of the map grid, the seat names it (Ishikawa Kanazawa,
+  // the grid's largest there being Fukui of the next prefecture; Sumatera Barat Padang; Jawa Tengah Semarang; Kangwon-do Wonsan; Pahang Kuantan);
+  // Mie's near tie (Otsu of Shiga 537,000, Tsu 500,000) and Gangwon's (Wonju 243,000, Chuncheon 227,000) go to the seat, Tsu and Chuncheon;
+  // the data set's Saidu (1.86 million) counts the whole Swat valley: Peshawar, the province's real city; Kashkadarya's Shahrisabz counts its
+  // district: the seat, Qarshi; Kedah's largest, Butterworth, belongs to Penang: the seat, Alor Setar; Mindoro Oriental and Quezon hold no town of
+  // the data set: their seats, Calapan and Lucena; Paktika's Zareh Sharan is the seat Sharana. Kazakh towns in their usual English spelling
+  // (Aktobe, Kostanay, Karaganda, Karazhal; Mangyshlak is the region, its town Aktau). A province already named after its town keeps that name
+  // (Bhopal, Kanpur, Multan, Chattogram, Rajshahi, Palembang, Busan, Daegu, Sóc Trăng, Chiang Mai, Bago, Sibu, Shymkent, Samarkand, Kandahar and
+  // so on), also in a near tie (Udon Thani against Khon Kaen, Suphan Buri against Kanchanaburi, Trang against Surat Thani, Ferghana against Namangan)
+  'Japan':{'Aichi':'Nagoya', 'Ehime':'Matsuyama', 'Hyōgo':'Kobe', 'Ishikawa':'Kanazawa', 'Mie':'Tsu'},
+  'Pakistan':{'F.A.T.A.':'Parachinar', 'Saidu':'Peshawar'},
+  'Indonesia':{'Jawa Tengah':'Semarang', 'Sumatera Barat':'Padang', 'Nusa Tenggara Barat':'Mataram', 'Sulawesi Utara':'Manado', 'Maluku':'Ambon'},
+  'South Korea':{'South Jeolla':'Gwangju', 'North Chungcheong':'Daejeon', 'Gangwon':'Chuncheon', 'South Chungcheong':'Iksan'},
+  'North Korea':{'Hamgyŏng-bukto':'Chongjin', 'Hwanghae-namdo':'Haeju', "P'yŏngan-namdo":'Nampo', 'Kangwŏn-do':'Wonsan', 'Chagang-do':'Kanggye', "P'yŏngan-bukto":'Chongju'},
+  'Vietnam':{'Đà Nẵng':'Da Nang', 'Đông Nam Bộ':'Biên Hòa', 'Son La':'Sơn La', 'An Giang':'Long Xuyên', 'Ninh Bình':'Nam Định', 'Nghệ An':'Vinh', 'Thái Bình':'Haiphong'},
+  'Thailand':{'Songkhla':'Hat Yai', 'Buri Ram':'Surin', 'Samut Sakhon':'Nakhon Pathom', 'Chachoengsao':'Prachin Buri', 'Nakhon Nayok':'Nonthaburi'},
+  'Myanmar':{'Kachin':'Myitkyina', 'Chin':'Hakha', 'Tanintharyi':'Myeik', 'Kayin':'Mawlamyine'},
+  'Philippines':{'Negros Occidental':'Bacolod', 'Mindoro Oriental':'Calapan', 'Dagupan':'Baguio', 'Basilan':'Zamboanga', 'Laguna':'San Pablo', 'Albay':'Legazpi', 'Pampanga':'Angeles', 'Leyte':'Tacloban', 'Quezon':'Lucena'},
+  'Malaysia':{'Sabah':'Kota Kinabalu', 'Johor':'Johor Bahru', 'Kedah':'Alor Setar', 'Terengganu':'Kuala Terengganu', 'Pahang':'Kuantan', 'Perak':'Ipoh', 'Melaka':'Malacca'},
+  'Kazakhstan':{'Aqtobe':'Aktobe', 'Oostanay':'Kostanay', 'Mangyshlak':'Aktau', 'Qarazhal':'Karazhal', 'Qaraghandy':'Karaganda'},
+  'Uzbekistan':{'Kashkadarya':'Qarshi', 'Ferghana':'Fergana', 'Surkhandarya':'Denau', 'Bukhoro':'Bukhara'},
+  'Afghanistan':{'Hirat':'Herat', 'Nangarhar':'Jalalabad', 'Nimroz':'Zaranj', 'Paktika':'Sharana', 'Samangan':'Mazar-i-Sharif', 'Badakhshan':'Fayzabad'},
+  'Mongolia':{'Bayan-Ölgiy':'Ölgii', 'Bayanhongor':'Bayankhongor', 'Dornod':'Choibalsan', 'Selenge':'Darkhan', 'Övörhangay':'Arvaikheer', 'Hövsgöl':'Mörön'},
 };
 
 /* ---------- the map and the rules ---------- */

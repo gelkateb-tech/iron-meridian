@@ -216,7 +216,9 @@ const WIN_SHARE = 0.25;               // share of land provinces needed to win
 let WIN_CAPS = 5;                     // or hold this many starting capitals (5 of 15; 4 of 8 in theatre scenarios)
 // The nations world (scenario world64, docs/NATIONS-PLAN.md): victory numbers follow the number of playable nations in the game
 const winCapsFor = k => Math.max(5, Math.round(k/6));               // starting capitals to hold: a sixth of the nations, never fewer than 5
-const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : 0.2;    // share of the world's land provinces to hold
+// share of the world's land provinces to hold. From 50 nations a tenth (step 4, Asia: with 58 nations no nation held more than 384 provinces in
+// two 300-day games, a fifth is 615; a tenth, 308, decided both between day 120 and day 250, the plan's aim in 3.6)
+const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : 0.1;
 // Tiers (S superpower, A major, B regional, C minor): what a nation starts with. TIER_FULL is the plan's wide table (3.2), TIER_EVEN an equal
 // start for everyone; a game mode sits between the two by its spread (0 = everyone equal, 1 = the wide table). Normal mode is close to equal
 // (the owner's rule: big countries are bigger, not much richer at the start); a later competitive mode is mildly more distinctive.
@@ -248,6 +250,15 @@ const TIER_LAND = 60, TIER_GANG = 1;   // an AI nation starts a war only while i
 // in 60 days). It goes for independent provinces only while it holds less than TIER_FREE times its starting land (it still fights nations, and
 // takes back its own lost land, beyond that); holding TIER_SATED times its start it makes peace with its enemies and starts no new war
 const TIER_FREE = 1.5, TIER_SATED = 2;
+// (step 4, Asia: with the two limits for good no computer nation could win, by land or capitals, in 300 days.) "For now" ends: from day TIER_LATE
+// both limits grow by their first value every TIER_LATE days (day 90: 1.5 times, day 120: twice), so the land race opens up once the opening is over
+const TIER_LATE = 60, tierGrow = h => 1 + Math.max(0, h/24 - TIER_LATE)/TIER_LATE;
+// a war between peers (step 4, Asia: China and India, among equals, never had the 1.1 times the power the computer wants against any victim): a
+// computer nation of tier S or A attacks a nation of tier S or A with TIER_PEER times its power, and counts it TIER_PEER_W times as tempting
+const TIER_PEER = 0.95, TIER_PEER_W = 1.5;
+// land to win in the nations world: the share of the world (winShareFor), or the starting land plus 90 provinces or plus TIER_WIN_UP of it if
+// that is more (step 4: with a tenth of the world, 308, the United States, 230 provinces, won on day 25 on independent land alone; now it needs 368)
+const TIER_WIN_UP = 0.6;
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
 const CAP_MIN = 2;                    // ground units needed to capture
 const OX = HS*SQ3/2 + 8, OY = HS + 8;

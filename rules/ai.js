@@ -498,8 +498,12 @@ function aiTurn(n){
     const [b] = splitPlan(a, [Object.fromEntries(dr.map(r => [r.k, r.n]))]); if (b){ b.path = pth; b.forced = true; } }
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
   // the nations world: independent provinces it may still go for (TIER_FREE times its start, less what it holds and the independent ones already marched on)
-  let freeLeft = Infinity; if (tiered() && N.prov0){ freeLeft = Math.floor(TIER_FREE*N.prov0) - provs; for (const v of targeted) if (S.owner[v] < 0 && S.home[v] !== n) freeLeft--; }
-  const sated = tiered() && N.prov0 && provs >= TIER_SATED*N.prov0;   // grown enough for now (isSated): only its own lost land is a target
+  let freeLeft = Infinity; if (tiered() && N.prov0){ freeLeft = Math.floor(TIER_FREE*tierGrow(S.hour)*N.prov0) - provs; for (const v of targeted) if (S.owner[v] < 0 && S.home[v] !== n) freeLeft--; }
+  const sated = tiered() && N.prov0 && provs >= TIER_SATED*tierGrow(S.hour)*N.prov0;   // grown enough for now (isSated): only its own lost land is a target
+  // (and the columns already marching on foreign land stop where they are: in step 4 a Kenya sated on day 17 marched on through DR Congo to
+  // three times its start, along paths given before)
+  if (sated) for (const a of S.armies) if (a.owner === n && a.path.length && !a.air && !a.forced && !G.P[a.at].sea){ const last = a.path[a.path.length - 1];
+    if (S.owner[last] !== n && S.home[last] !== n){ a.path = []; a.dest = null; targeted.delete(last); } }
   const planned = aiOperate(n, [...idle.values()].filter(a => count(a) && !a.air && !shipsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   for (const a of idle.values()){
     if (planned.has(a)) continue;

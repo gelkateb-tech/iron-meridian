@@ -33,7 +33,7 @@ function opinionParts(a, b){
 }
 // the nations world: a computer nation holding TIER_SATED times its starting land has grown enough for now (rules/data.js): it seeks peace,
 // starts no war, and its forces only hold its land and take back its own lost provinces
-function isSated(n){ const N = S.nations[n]; if (!N || !N.tier || !N.prov0 || !N.ai) return false; let c = 0; for (const o of S.owner) if (o === n) c++; return c >= TIER_SATED*N.prov0; }
+function isSated(n){ const N = S.nations[n]; if (!N || !N.tier || !N.prov0 || !N.ai) return false; let c = 0; for (const o of S.owner) if (o === n) c++; return c >= TIER_SATED*tierGrow(S.hour)*N.prov0; }
 // a third nation both are at war with (under QM, each nation's enemies are listed once: the same answer)
 function commonEnemy(a, b){ if (!QM) return S.nations.some(c => c.alive && c.id !== a && c.id !== b && atWar(a, c.id) && atWar(b, c.id));
   const foes = n => QM.foes[n] || (QM.foes[n] = S.nations.map(c => c.alive && c.id !== n && atWar(n, c.id))), fa = foes(a), fb = foes(b);
@@ -215,9 +215,10 @@ function diploDay(){
     if (day >= 8 && !sated && (N.tier ? warsOf(n).filter(m => (N.wby || []).includes(m)).length <= TIER_WARS[N.tier] : warsOf(n).length <= 1) && !pending && rng() < 0.22*diffOf().war){
       let best = -1, bs = 0; const myP = natPower(n);
       for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || graceOn(n, m)) continue;
-        if (opinion(n, m) >= 0 || myP < 1.1*natPower(m)) continue;
+        const peer = N.tier && TIER_RANK[N.tier] <= 1 && TIER_RANK[M.tier] <= 1;   // (the nations world: two nations of tier S or A, TIER_PEER)
+        if (opinion(n, m) >= 0 || myP < (peer ? TIER_PEER : 1.1)*natPower(m)) continue;
         if (N.tier && warsOf(m).length + S.decl.filter(d => d.to === m && !atWar(d.by, m)).length >= (isSeat(m) ? TIER_GANG + 1 : TIER_GANG)) continue;   // (the nations world: the computer does not join in on a nation already at war, or about to be (a declaration takes a day); a person's nation may get a second enemy, never a third)
-        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = ((N.tier ? Math.min(cnt, TIER_LAND) : cnt) + 5)/(natPower(m) + 10)*(isSeat(m) ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1)*(N.tier && tierGap(N.tier, M.tier) >= 2 ? 0.5 : 1);   // (the nations world: a victim two tiers below is half as attractive)
+        const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = ((N.tier ? Math.min(cnt, TIER_LAND) : cnt) + 5)/(natPower(m) + 10)*(isSeat(m) ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1)*(N.tier && tierGap(N.tier, M.tier) >= 2 ? 0.5 : 1)*(peer ? TIER_PEER_W : 1);   // (the nations world: a victim two tiers below is half as attractive, a peer more)
         if (sc > bs){ bs = sc; best = m; } }
       if (best >= 0){ if (natPower(n) > 1.6*natPower(best) && opinion(n, best) < -25 && rng() < 0.35) surpriseWar(n, best); else declareWar(n, best);
         if (N.tier){ N.wby = (N.wby || []).filter(m => atWar(n, m) || S.decl.some(d => d.by === n && d.to === m)); if (!N.wby.includes(best)) N.wby.push(best); } }
