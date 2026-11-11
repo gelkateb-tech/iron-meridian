@@ -18,6 +18,7 @@ How it works from now on:
 - Unit panel cleanup: removed Commander (appointing or assigning one for cash; commanders already on a force stay and keep their bonus, computer players unchanged), Split in half, Build here and Deselect; Split (choose amounts), Merge forces here, stances and Halt stay; tapping or clicking away from a force (empty map, or a province it can never reach) deselects it, while a tap on a reachable province is still a move order.
 - Embargo is now a real rule and no longer looks like war: it cannot change map colours or show their units; it closes trade routes (with a notice) and blocks market deals between the two countries in both directions, coalition partners can use Join embargo (computer partners join too, and drop it when the leader lifts it), and the Diplomacy buttons explain it in a tooltip.
 - NAP button tooltip: says the pact lasts 20 days, breaking it marks you as a treaty breaker, and it does not give right of passage.
+- No war delay: a formal war declaration now starts the fighting at once (it used to wait 24 hours); it still avoids the surprise-attack penalty, allies are called in immediately, and saves with a pending declaration start that war on load.
 
 ## Released
 - v3.12 (commit 5b47dd8, public 2026-11-11):

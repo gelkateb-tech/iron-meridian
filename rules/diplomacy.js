@@ -82,16 +82,24 @@ function declareWar(a, b){
   const r = rel(a, b);
   if (r.st === 'truce') return false;
   if (r.st === 'nap' || r.st === 'ally' || r.st === 'pass' || (r.st === 'peace' && r.afterTruce && S.hour - r.since < 20*24)) S.nations[a].breaker = S.hour;
-  S.decl.push({by:a, to:b, at:S.hour + 24}); relVer++;
   addMem(b, a, -50);
   for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b && opinion(c.id, b) >= 25) addMem(c.id, a, -15);
-  if (isSeat(b) && desk(b).chat !== undefined) say(b, a, a, 'Our patience is at an end. In 24 hours, we will be at war.');
+  if (isSeat(b) && desk(b).chat !== undefined) say(b, a, a, 'Our patience is at an end. We are at war.');
   for (const me of seats()){
-    if (b === me){ tell(me, `${S.nations[a].name} has formally declared war on you: their attack can begin in 24 hours. You may strike first at any time.`, 'bad', S.nations[a].capital); alarm(me); IM.emit('war', me, a); }
-    else if (a === me) tell(me, `You formally declared war on ${S.nations[b].name}: war begins in 24 hours, without the surprise-attack penalty.`, 'info', S.nations[b].capital);
+    if (b === me){ tell(me, `${S.nations[a].name} has formally declared war on you. Fighting starts now.`, 'bad', S.nations[a].capital); alarm(me); IM.emit('war', me, a); }
+    else if (a === me) tell(me, `You formally declared war on ${S.nations[b].name}: you are at war now, without the surprise-attack penalty.`, 'info', S.nations[b].capital);
     else if (S.hour > 0 && (borders(me, a) || borders(me, b) || rel(me, a).st === 'ally' || rel(me, b).st === 'ally')) tell(me, `${S.nations[a].name} declared war on ${S.nations[b].name}.`, '', null); }
-  return true;
+  startWar(a, b);   // no waiting period: a formal declaration starts the war at once (it only spares the surprise-attack penalty)
+  relVer++; return true;
 }
+// the war itself, plus allies' calls to arms (also flushes declarations pending in saves from before the 24 h delay was removed)
+function startWar(by, to){
+  if (!S.nations[by].alive || !S.nations[to].alive || atWar(by, to)) return;
+  setRel(by, to, 'war');
+  for (const al of alliesOf(to)){ if (al === by || atWar(al, by) || ['truce', 'ally', 'nap', 'pass'].includes(rel(al, by).st)) continue;
+    if (isSeat(al)){ tell(al, `Your ally ${S.nations[to].name} is under attack by ${S.nations[by].name}. You may join the war from Diplomacy.`, 'info', null); continue; }
+    if (opinion(al, to) < 30) continue;
+    setRel(al, by, 'war'); tellAll(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[by].name}.`, me => by === me ? 'bad' : '', null); } }
 function acceptOffer(ai, from, kind){
   const op = opinion(ai, from), wars = warsOf(ai);
   if (kind === 'peace'){
@@ -138,13 +146,7 @@ function applyDeal(a, b, kind){
     else if (kind === 'ally' || ((kind === 'peace') && (borders(me, a) || borders(me, b)))) tell(me, `${S.nations[a].name} and ${S.nations[b].name} ${word}.`, '', null); }
 }
 function diploHour(){
-  for (let i = S.decl.length - 1; i >= 0; i--){ const d = S.decl[i]; if (S.hour < d.at) continue; S.decl.splice(i, 1);
-    if (!S.nations[d.by].alive || !S.nations[d.to].alive) continue;
-    setRel(d.by, d.to, 'war');
-    for (const al of alliesOf(d.to)){ if (al === d.by || atWar(al, d.by) || ['truce', 'ally', 'nap', 'pass'].includes(rel(al, d.by).st)) continue;
-      if (isSeat(al)){ tell(al, `Your ally ${S.nations[d.to].name} is under attack by ${S.nations[d.by].name}. You may join the war from Diplomacy.`, 'info', null); continue; }
-      if (opinion(al, d.to) < 30) continue;
-      setRel(al, d.by, 'war'); tellAll(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[d.by].name}.`, me => d.by === me ? 'bad' : '', null); } }
+  while (S.decl.length){ const d = S.decl.pop(); startWar(d.by, d.to); }   // old saves: a pending declaration starts its war now
   for (const k in S.rel){ const r = S.rel[k]; if (r.until == null || S.hour < r.until) continue;
     if (r.st === 'truce'){ r.st = 'peace'; r.until = null; r.since = S.hour; r.afterTruce = true; } else if (r.st === 'nap'){ r.st = 'peace'; r.until = null; r.since = S.hour; const [x, y] = k.split(',').map(Number); for (const me of [x, y]) if (isSeat(me)) tell(me, `Your non-aggression pact with ${S.nations[x === me ? y : x].name} has expired.`, 'info', null); } }
   for (const me of seats()){ const D = desk(me); D.offers = (D.offers || []).filter(o => o.exp > S.hour && S.nations[o.from].alive); }
