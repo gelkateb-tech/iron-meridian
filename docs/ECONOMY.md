@@ -145,7 +145,7 @@ above gives the same result. Acceptance check: the table in 3.3 must come out ex
 
 ### 3.3 Result on today's map (211 cities in 95 countries)
 
-World: materials 44, iron 42, money 38, electronics 38, oil 34, rare 15.
+World: materials 43, iron 42, money 38, electronics 38, oil 35, rare 15 (after the follow-ups; before them materials 44, oil 34).
 Rare cities (15, in 10 countries; 85 countries have none): Los Angeles, Denver (USA); Yellowknife, Halifax (Canada);
 Sao Paulo (Brazil); Murmansk, Yakutsk (Russia); Istanbul (Turkey); Cape Town (South Africa); Bangalore (India);
 Hohhot, Guangzhou (China); Perth, Alice Springs (Australia); Ho Chi Minh City (Vietnam, not playable: a prize).
@@ -166,7 +166,7 @@ Hohhot, Guangzhou (China); Perth, Alice Springs (Australia); Ho Chi Minh City (V
 | India (7) | New Delhi: money. Kolkata: oil. Chennai: materials. Ahmedabad, Hyderabad: iron. Mumbai: electronics. Bangalore: rare | - |
 | China (14) | Beijing, Shanghai: money. Harbin, Chengdu: oil. Urumqi, Lanzhou, Lhasa: materials. Kashgar, Xi'an, Kunming: iron. Shenyang, Wuhan: electronics. Hohhot, Guangzhou: rare | - |
 | Japan (5) | Tokyo: money. Fukuoka: oil. Sendai: materials. Sapporo: iron. Osaka: electronics | rare |
-| Australia (11) | Canberra, Hobart: money. Brisbane, Cairns, Darwin, Port Hedland: materials. Adelaide, Sydney: iron. Melbourne: electronics. Perth, Alice Springs: rare | oil |
+| Australia (11) | Canberra, Hobart: money. Port Hedland: oil (follow-ups: a country with eight or more cities gets one oil city). Brisbane, Cairns, Darwin: materials. Adelaide, Sydney: iron. Melbourne: electronics. Perth, Alice Springs: rare | - |
 
 Scenario powers: Italy (3) money, iron, materials. Spain (2) money, materials. Poland (1) electronics. Indonesia (5) money,
 oil, materials, electronics x2. Mexico (3) money, iron, materials.
@@ -269,18 +269,19 @@ already registered (`BART.arms`).
 
 | Level | Money | Materials | Iron | Electronics | Build time | Total bonus |
 |---|---|---|---|---|---|---|
-| I | 40 | 12 | 6 | 0 | 72 h | +25% |
+| I | 20 | 6 | 3 | 0 | 72 h | +25% |  (half price since the follow-ups; was 40 / 12 / 6)
 | II | 64 | 19 | 10 | 0 | 72 h | +50% |
 | III | 102 | 31 | 15 | 0 | 72 h | +75% |
 | IV | 164 | 49 | 25 | 16 | 90 h | +100% |
 | V | 262 | 79 | 39 | 26 | 108 h | +125% |
 
 (From today's buildCost: x1.6^(level-1); from level IV electronics = 10% of the base money x the same factor and +25% time
-per level above III. Multiply the three prices by 1.4 per other city that has one: second city 56 / 17 / 8, third 78 / 24 / 12.)
+per level above III. Multiply the three prices by 1.4 per other city that has one: level I in a second city 28 / 8 / 4, in a third 39 / 12 / 6.)
 
 What one level I is worth a day in a median city at base prices, before the national factors: oil +2.3 ($7.4), rare +1.1 ($7.0),
-money +$4.9, materials +1.9 ($4.6), iron +1.7 ($3.8), electronics +0.9 ($3.7); the first one costs about $82 with its
-materials and iron, so it pays back in 11 to 22 days (faster for a small power with a home boost, slower for each extra city).
+money +$4.9, materials +1.9 ($4.6), iron +1.7 ($3.8), electronics +0.9 ($3.7); the first one cost about $82 with its
+materials and iron and paid back in 11 to 22 days. Since the follow-ups level I is half price (about $41 in all): 6 to 11 days
+before the national factors, 4 to 7 days for a small power with its home boost (see Follow-ups at the end).
 
 Text: `'Raises this city's main resource by 25% per level. Each Arms Industry you already own in another province makes the next one cost 40% more.'`
 The build menu should say the city's resource: "Arms Industry: +25% oil here".
@@ -613,3 +614,43 @@ World gross income a day after the merge, three-seed mean (12345, 7, 2024), pre-
 
 Single seeds at day 30: money -11..+7%, oil -9..+8%, materials -1..+12%, iron -2..+1%, electronics -14..+7%, rare -11..-8%,
 manpower -9..+2%. Day 30 means: units 1496 > 1420, techs 98 > 99.
+
+### Follow-ups from the economy review (branch eco-followups)
+
+Measured headless, seeds 12345, 7 and 2024, 30 days, against master 15466ee.
+
+1. **Iron for powers without an iron city.** The Market is the order book only, and AI powers listed iron only above 140 in
+   stock plus 25 days of upkeep, so nobody sold iron before day 11 to 18. Now a power with an iron city and a net iron income
+   of 3 a day or more lists small lots (up to 40) as soon as its stock is above 90 plus what it saves for and 10 days of
+   upkeep (AI_XEARLY in rules/ai.js); the full export line is unchanged. Iron on sale by day 10: 0 / 0 / 0 before,
+   260 / 182 / 197 after; first iron offer on day 14 / 11 / 12 before, day 3 / 2 / 4 after. A scripted Egypt (a seat that
+   builds Army Bases, keeps tanks and artillery in training and buys iron offers up to 1.5x the world price) saw its first
+   iron offer on day 18 / 11 / 11 before and day 3 / 3 / 3 after, bought 196 / 381 / 461 iron by day 30 before and
+   543 / 553 / 623 after, and could not pay for a tank on 24 / 23 / 15 of the 30 days before, 2 / 5 / 2 after (iron shortage
+   from day 21 in one seed before, none after). The iron price at day 30 stays near base (2.33 to 2.58 before, 2.44 to 2.55 after).
+2. **Expired offers.** A seat's sell or buy offer that runs out after three days gives a dispatch: what and how much, how
+   much of it was sold or bought, and that the goods are back in stock or the held money back in the treasury.
+3. **Arms Industry level I at half price** ($20M, 6 materials, 3 iron; BUILD.arms.first = 0.5; levels II to V unchanged).
+   Payback of the first level I in a median city at base prices, before the national factors: oil 11 > 6 days, rare 12 > 6,
+   money 17 > 8, materials 18 > 9, iron 22 > 11, electronics 22 > 11; for a small power with its home boost about 4 to 7 days
+   (Egypt, day 1: oil 5, money 6, electronics 12).
+4. **City strip hover text** for the Army Base and the Arms Industry says what the next level does in this city, its price,
+   its build time and, for the Arms Industry, today's and the next output and the payback in days.
+5. **Resources map colours** follow the resource pictures: money light green, oil red, materials olive, iron steel grey-blue,
+   electronics teal, rare materials orange, manpower dark helmet green.
+6. **France and Australia.**
+   France (48 provinces) was just over the 40-province line of the compact powers, so it started with 13 units and no forts
+   beside Germany (38 units, 12 forts) and Britain, and was open to attack from day 8 while they were safe for 21 days: in all
+   three seeds Britain and Germany (and Brazil) declared war on it between day 8 and 14. Now powers of 41 to 55 provinces
+   (France, Turkey, Iran: nation.mid) start with 3 more infantry and 1 artillery in the capital and AI powers leave them alone
+   for 14 days. France at day 30, units: 12 / 58 / 45 (mean 38) before, 41 / 62 / 53 (mean 52) after; provinces 64 > 73.
+   Turkey 70 > 51 and Iran 50 > 42 units are inside the seed-to-seed spread (their wars differ run to run).
+   Australia had no oil city (5.7 oil a day). A country with eight or more cities and no oil city now turns the smallest city
+   of its most common resource into an oil city: Port Hedland (was materials). Day-1 income oil 5.7 > 16.2, materials
+   50.2 > 40.9. An AI power also imports a good its cities produce when its forces use more than they make. Day 30: oil balance
+   -6.3 / -13.2 / -13.6 (mean -11.0) before, -4.0 / -1.0 / -11.7 (mean -5.6) after; oil imported 167 / 205 / 319 before,
+   0 / 0 / 103 after; no day without oil either way; units 88 > 86.
+
+World gross income a day, three-seed mean, before > after: day 1 oil 510 > 521, materials 348 > 338, the rest unchanged;
+day 30 money 3951 > 4036, oil 426 > 444, materials 318 > 334, iron 278 > 278, electronics 79 > 83, rare 119 > 114,
+units 1392 > 1460.

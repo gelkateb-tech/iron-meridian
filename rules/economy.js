@@ -1,6 +1,6 @@
 // Iron Meridian rules: economy. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
-const graceFor = o => o >= 0 && S.nations[o].small ? 24*21 : GRACE_H;
+const graceFor = o => o >= 0 && S.nations[o].small ? 24*21 : o >= 0 && S.nations[o].mid ? 24*14 : GRACE_H;   // AI powers leave a compact power alone for three weeks, a medium one for two, the rest for eight days
 const inGrace = o => o >= 0 && S.hour < graceFor(o);
 const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
 let BLOCK = new Set();
@@ -131,7 +131,12 @@ const AI_BID_LO = {oil:40, metal:40, iron:40, elec:30, rare:35}, AI_NEED = {oil:
 const BOOK_HI = {oil:600, metal:900, iron:300, elec:260, rare:240}, BOOK_LO = {oil:380, metal:600, iron:200, elec:170, rare:150};
 function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty > 0 && S.nations[o.seller].alive); for (const o of S.book) o.priv = null;
   // expired listings: goods (sell) or money (buy) go back to their owner
-  for (const o of S.book) if (o.exp <= S.hour){ const N = S.nations[o.seller]; if (isBid(o)) N.cash += o.qty*o.price; else N[o.res] += o.qty; o.qty = 0; }
+  for (const o of S.book) if (o.exp <= S.hour){ const N = S.nations[o.seller]; if (isBid(o)) N.cash += o.qty*o.price; else N[o.res] += o.qty;
+    // a seat is told what lapsed and what came back: the goods of a sell offer, the money held for a buy offer
+    if (isSeat(o.seller)){ const q = fmt(o.qty), g = rlbl(o.res), part = o.q0 > o.qty ? ` (${fmt(o.q0 - o.qty)} of the ${fmt(o.q0)} were ${isBid(o) ? 'bought' : 'sold'})` : '', full = !isBid(o) && N[o.res] > stockCap(o.seller);
+      tell(o.seller, isBid(o) ? `Your buy offer for ${q} ${g} at $${o.price.toFixed(2)}M each expired unfilled${part}. The $${fmt(o.qty*o.price)}M held for it is back in your treasury.`
+        : `Your sell offer of ${q} ${g} at $${o.price.toFixed(2)}M each expired unsold${part}. The ${q} ${g} are back in your stock${full ? ', which is now over your storage limit: use or sell them before the next day, or the excess is lost' : ''}.`, 'info', null); }
+    o.qty = 0; }
   S.book = S.book.filter(o => o.qty > 0);
   // the biggest surplus first (a nation holds at most five listings); a hoard well above the line goes in bigger lots (up to 250) and a little cheaper,
   // so a rare-earth giant's stock reaches the nations short of it instead of piling up all game
@@ -175,7 +180,7 @@ const buyOffer = fillOffer;
 function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0)) return 0;
   if (type === 'sell'){ qty = Math.min(qty, Math.floor(N[k])); if (qty <= 0) return 0; N[k] -= qty; }
   else { qty = Math.min(qty, Math.floor(N.cash/price)); if (qty <= 0) return 0; N.cash -= qty*price; }
-  (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, price:+price.toFixed(2), exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return qty; }
+  (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, q0:qty, price:+price.toFixed(2), exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return qty; }
 /* ---------------- Occupation unrest ---------------- */
 const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
 function unrestDay(){

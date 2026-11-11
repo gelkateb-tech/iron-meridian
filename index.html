@@ -5261,7 +5261,9 @@ const view = {s:1, x:0, y:0};
 let dpr = 1, cw = 0, ch = 0, hits = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, relMode = false, mapMode = 'political';
 // resources map: each province tinted by its strongest output against a typical yield of that good
 const RMAP_K = ['oil', 'rare', 'iron', 'metal', 'elec', 'mp', 'cash'], RMAP_W = {cash:12, oil:5, metal:3, iron:2.5, elec:2, rare:1.2, mp:2};
-const RMAP_C = {oil:'rgba(28,30,36,.78)', metal:'rgba(150,165,178,.6)', iron:'rgba(200,120,80,.62)', elec:'rgba(80,195,220,.55)', rare:'rgba(178,128,240,.68)', mp:'rgba(210,165,120,.5)', cash:'rgba(222,192,92,.5)'};
+// Resources map colours, after the resource pictures: money banknote green, oil jerrycan red, materials crate olive, iron steel grey-blue, electronics circuit teal,
+// rare materials orange glow, manpower dark helmet green. Seven hues kept apart in hue AND lightness, so they still differ where the countryside is drawn faint
+const RMAP_C = {oil:'rgba(214,48,40,.74)', metal:'rgba(160,160,40,.76)', iron:'rgba(166,186,214,.74)', elec:'rgba(0,206,198,.72)', rare:'rgba(255,146,22,.78)', mp:'rgba(44,122,72,.76)', cash:'rgba(112,214,98,.66)'};
 // the Resources map legend: each colour is the province's main output (weighted so a little rare material outranks a lot of money)
 function resLegendHTML(){ return `<div class="lh">Resources · each city's main resource</div><div class="lr lx" style="margin:0 0 4px"><span class="muted">Cities: strong colour, light outline · countryside: faint</span></div>` + RMAP_K.map(k => { const R = RES.find(r => r.k === k); return `<div class="lr"><i style="background:${RMAP_C[k]}"></i><span class="res-${k}">${icon(k, 12)}</span><span>${R.name}</span><span class="muted">${R.map}</span></div>`; }).join('') + `<div class="lr lx"><span class="muted">Hover a province for its yields</span></div>`; }
 const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources'], ['stability', 'Stability']];
@@ -8851,7 +8853,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
       <span class="cs-pp" title="Population ${popOf(p).toFixed(1)}M · manpower ${Math.round(y.mp || 0)}k a day">${CS_ICO.pop}<b>${popOf(p).toFixed(1)}M</b>${(y.mp || 0) >= 0.5 ? `<span class="cs-mp res-mp">${icon('mp', 15)}<b>${Math.round(y.mp)}k</b></span>` : ''}</span></div>`;
   // building cards: the city first, then what stands here, then (yours) what can still be built
   const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = k === 'city' ? (isCapital(p) ? 'Capital' : 'City') : BUILD[k].name, tag = o0.btn ? 'button' : 'span';
-    const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${k === 'rec' && mine ? '\n' + recTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
+    const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && k === 'arms' ? '\n' + armsTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
     return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
@@ -8902,6 +8904,20 @@ const recTip = p => { const l = S.bld[p].rec || 0, M = BUILD.rec.max;
   return l ? `${BUILD.rec.name} ${ROMAN[l]}: needed to mobilize infantry here. ${recPct(l)}% faster training and ${recK(l)} manpower a day in this city. ${l < M ? `Next level: ${recPct(l + 1)}% faster, ${recK(l + 1)}/day.` : 'Highest level.'}`
     : `${BUILD.rec.name}: needed to mobilize infantry here (Motorized Infantry, Anti-Tank Infantry, Special Forces and, with an Airbase, Paratroopers). Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
 const recHead = p => S.bld[p].rec ? `${BUILD.rec.name}: ${recPct(S.bld[p].rec)}% faster training` : '';
+// Army Base and Arms Industry in city p, in words: what the next level does here and what it costs (the city strip's hover text, built or not)
+const bldPrice = (p, k) => { const l = S.bld[p][k] || 0; if (l >= BUILD[k].max) return 'Highest level.'; const c = buildCost(PLAYER, k, l + 1, p); return `Level ${ROMAN[l + 1]} costs ${costTxt(c, ', ')} and takes ${csTime(c.h)}.`; };
+const facUnits = l => UT.filter(t => reqsOf(t).some(r => r.b === 'fac' && r.l === l)).map(t => UNITS[t].name).join(', ');
+const facPct = l => Math.round((1 - facF(l))*100);
+const facTip = p => { const l = S.bld[p].fac || 0, M = BUILD.fac.max, others = facOthers(PLAYER, p, 'fac');
+  return (l ? `${BUILD.fac.name} ${ROMAN[l]}: ground units train ${facPct(l)}% faster here, ${1 + l} training lines.${l < M ? ` Level ${ROMAN[l + 1]}: ${facPct(l + 1)}% faster, one more training line${l === 1 ? `, and unlocks ${facUnits(2)}` : ''}.` : ''}`
+    : `${BUILD.fac.name}: needed to mobilize vehicles here. Level I unlocks ${facUnits(1)}; ground units train ${facPct(1)}% faster and a second training line opens. Level II unlocks ${facUnits(2)}. Up to level ${ROMAN[M]} (${facPct(M)}% faster). No income.`)
+    + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each other Army Base you own: ${others} now.)` : ''); };
+const armsTip = p => { const o = cityOut(p); if (!o) return BUILD.arms.desc; const l = S.bld[p].arms || 0, M = BUILD.arms.max, pc = Math.round(ARMS_PCT*100), nm = MAIN_NAME[o.k], others = facOthers(PLAYER, p, 'arms');
+  const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), out = y => o.k === 'cash' ? '$' + d1(y) + 'M' : d1(y) + ' ' + nm, at = lv => out(o.base*(1 + ARMS_PCT*lv)), gain = o.base*ARMS_PCT, c = l < M ? buildCost(PLAYER, 'arms', l + 1, p) : null;
+  const pay = c && gain > 0 ? Math.max(1, Math.round((c.cash + c.metal*mkt().p.metal + c.iron*mkt().p.iron + (c.elec || 0)*mkt().p.elec)/(gain*(o.k === 'cash' ? 1 : mkt().p[o.k])))) : 0;
+  return (l ? `${BUILD.arms.name} ${ROMAN[l]}: +${pc*l}% ${nm} in this city, now ${out(o.y)} a day.${l < M ? ` Level ${ROMAN[l + 1]}: +${pc*(l + 1)}%, ${at(l + 1)} a day.` : ''}`
+    : `${BUILD.arms.name}: +${pc}% of this city’s main resource (${nm}) per level, up to +${pc*M}% at level ${ROMAN[M]}. Now ${out(o.y)} a day; with level I ${at(1)} a day.`)
+    + ' ' + bldPrice(p, 'arms') + (pay ? ` At today’s prices it pays for itself in about ${pay} day${pay > 1 ? 's' : ''}.` : '') + (others && l < M ? ` (That includes 40% more for each other Arms Industry you own: ${others} now.)` : ''); };
 const bldDesc = (p, k) => k === 'rec' ? recTip(p) : BUILD[k].desc;
 const csPic = (k, lv) => { const A = csArt(k, lv); return `<i class="bi${lv ? '' : ' dim'}${A.art ? '' : ' gl'}" style="--bi:url(${A.u});--bs:54px" aria-hidden="true"></i>`; };
 const mobHTML = p => `${cmodHead(p, 'Mobilize unit')}<div class="cs-mbody cs-mmod">${cityRecruitHTML(p)}</div>`;
@@ -9801,7 +9817,7 @@ function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '
       const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc);
       return `<div class="bld" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
         ${maxed ? '<span class="lv">Max</span>' : `<button class="btn" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${!ok && !c && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${Math.round(cc.h/2.4)/10} d</span>${costHTML(cc, N)}</button>`}
-        <span class="ds">${k === 'arms' ? armsHere(p, lv) + ' Each Arms Industry you already own in another province makes the next one cost 40% more.' : bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
+        <span class="ds">${k === 'arms' ? armsHere(p, lv) + ' Level I is half price. Each Arms Industry you already own in another province makes the next one cost 40% more.' : bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
   return html; }
 function provHTML(p){
   const P = G.P[p], o = S.owner[p], N = S.nations[PLAYER], mine = o === PLAYER;
@@ -10182,7 +10198,7 @@ const HELP_SEC = [
     <li><b>Map</b>: map modes top right (<kbd>V</kbd> cycles Political, Relations, Supply, Terrain, Resources, Stability); zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
     <li><b>Keys</b>: Space pause · 1, 2, 3 for 1×, 2×, 4× (8× from the bar) · S statistics · N newspaper · Tab next idle force · Esc deselect.</li></ul>`],
   ['res', 'Resources and research', `<ul>
-    <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip beside its level, and the Resources map). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
+    <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip beside its level, and the Resources map). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); level I is half price and pays for itself in about a week, and each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
     <li><b>Seven resources</b>, all in the top bar (hover one for today's breakdown, what it is for and where it comes from). Everything but money is capped by storage (400 + 15 per province).</li>
     <li><span class="res-cash">${icon('cash', 12)}</span> <b>Money</b>: taxes from your provinces (cities above all; a money city pays 60% more), trade routes. Pays for everything and for your forces' daily upkeep.</li>
     <li><span class="res-oil">${icon('oil', 12)}</span> <b>Oil</b>: oil cities, a little from oil fields in the countryside and your capital. Vehicles, aircraft and ships burn it every day; run dry and they are slowed and weakened.</li>
