@@ -1383,6 +1383,11 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .sheet.rsch .rs-ttl h1{margin:0; font:800 31px/1 var(--display); letter-spacing:.04em; text-transform:uppercase; color:#15222a; text-shadow:0 1px 0 rgba(255,255,255,.6)}
 .rs-kept{max-width:none; margin:2px 10px 4px; font:500 12px/1.35 var(--body); color:#1c2a30} .rs-kept b{color:#0f1a1f}
 .rs-cnt{font:600 11px/1.1 var(--body); letter-spacing:.08em; text-transform:uppercase; color:#3f5961; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rs-cnt.rs-rec{align-self:flex-start; max-width:100%; margin-top:1px; padding:2px 5px; border-radius:3px; background:rgba(255,255,255,.82); color:#1d5a3a; font-weight:800; letter-spacing:.03em}
+.rs-ttl.l3{padding:5px 0}
+.sheet.rsch .rs-ttl.l3 h1{font-size:24px}
+.cs-mmod .eyebrow .rec-b{display:none}   /* the Mobilize panel says it in its header */
+.eyebrow .rec-b{color:var(--good, #7fd39a)}
 .rs-stk{display:flex; gap:6px; margin-left:auto; min-width:0}
 .rs-stk .chip{height:auto; padding:5px 9px; gap:6px; border-radius:2px; background:rgba(22,36,43,.85); box-shadow:inset 0 0 0 1px rgba(143,163,170,.45)}
 .rs-stk .chip .vv{display:flex; align-items:baseline; gap:5px} .rs-stk .chip b{font:700 14px/1 var(--body); color:#fff; text-shadow:var(--cn-num)}
@@ -2338,6 +2343,7 @@ const STANDIN = (() => {
     E(g, 128, 40, 6, 10, C.glass, C.line, 1.6); seam(g, 128, 52, 128, 240); seam(g, 113, 104, 30, 174, 0.25); seam(g, 143, 104, 226, 174, 0.25);
     for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) E(g, x, y - 13, 4.5, 3, '#1c1f1a', null);
     light(g); };
+  D['u-stealth-bomber'] = D['u-heavy-bomber-1'];   // (the Stealth Bomber's picture is still to come: the Heavy Bomber's stand-in until its file arrives)
   D['u-heavy-bomber-2'] = D['u-heavy-bomber-1'];   // (the second bomber picture, levels 5-8, uses the same stand-in until its file arrives)
   return D;
 })();
@@ -2389,7 +2395,7 @@ const ART = (() => {
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
   const ART_SUPPLIED = [];
-  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
+  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
   const imgs = new Map(), waits = new Map(), failed = new Set(), cache = new Map(), stand = new Set(), durl = new Map();
   // until a promised picture arrives, an older supplied picture of the same thing beats the code-drawn stand-in (the recon UAV keeps u-drone)
   const ALT = {'u-uav-recon':'u-drone'}, rn = name => stand.has(name) && ALT[name] && imgs.has(ALT[name]) && !stand.has(ALT[name]) ? ALT[name] : name;
@@ -2541,6 +2547,7 @@ const USVG = {
   awacs: '<path d="M27 8L15.5 6.8 11 2H9.4l2.6 4.7-7 .4L3 5.4H2l.6 2.6L2 10.6h1L5 8.9l7 .4L9.4 14H11l4.5-4.8z"/><ellipse cx="10" cy="8" rx="4.2" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.3"/>',
   asf: '<path d="M27 8l-12-1.6L10 1H8.6l1.6 5.5-5 .6L3 4H2v8h1l2.2-3.1 5 .6L8.6 15H10l5-5.4z"/><path d="M5 5.4l-1.4-2M5 10.6l-1.4 2" stroke="currentColor" stroke-width="1"/>',
 };
+USVG.stealth = USVG.bomb;   // (the Stealth Bomber shares the bomber's glyphs and models until it has its own)
 const unitSVG0 = t => `<svg width="28" height="16" viewBox="0 0 28 16" fill="currentColor" aria-hidden="true">${USVG[t] || ''}</svg>`;
 // the UAV's picture follows its level: unarmed recon airframe for UAV I-III, the armed one from UAV IV (per owner)
 // The Heavy Bomber's picture by level: u-heavy-bomber-1 for levels 1-4, u-heavy-bomber-2 for levels 5-8. Today the level is the nation's Mark of the type
@@ -3547,6 +3554,7 @@ const ICON = (() => { const Wh = (cx, r) => `M${cx - r} 13a${r} ${r} 0 1 0 ${2*r
   lst: [['f', 'M1 9.2h19.4l3.2-1.2-2 5H2.6z'], ['f', 'M2.4 4.6h4.4v4.6H2.4z'], ['f', 'M3.6 2.6h1v2h-1z'], ['f', 'M8 7.4h12v1.8H8z']],
   truck:[['f', Wh(5.4, 1.7) + Wh(17.8, 1.7)], ['f', 'M2.4 10.2h19.8v1.6H2.4z'], ['f', 'M17.6 10.2V6.4h3l1.6 2.2v1.6z'], ['f', 'M2.4 4.8h14.6v5.4H2.4z']],   // supply truck (the supply run)
 }; })();
+ICON.stealth = ICON.bomb;   // (the Stealth Bomber shares the bomber's glyph until it has its own)
 // ICONP[type] = runs of [op, joined Path2D, the parts' Path2Ds]
 const ICONP = (() => { const out = {}; for (const k in ICON){ const L = []; for (const [op, d] of ICON[k]){ const last = L[L.length - 1]; if (last && last[0] === op){ last[1] += d; last[2].push(d); } else L.push([op, d, [d]]); }
   out[k] = L.map(([op, d, parts]) => [op, new Path2D(d), parts.map(q => new Path2D(q))]); } return out; })();
@@ -3666,6 +3674,7 @@ const SLK = (() => {
     L.forEach(([cx, cy], i) => { if (i) out.push(['x', slab(cx, cy, 0.75)]); out.push(['f', slab(cx, cy, 0)], ['xb', rim(cx, cy), 0.5]); });
     return out; })(),
   }; })();
+SLK.stealth = SLK.bomb;
 // a sleek glyph of type t, W device px wide (20 design units: at the counter's 20 css px every whole and half unit lands on a device pixel), in colour col;
 // painted once into an offscreen canvas (dropped when the pixel ratio changes)
 const SLKC = new Map(); let SLKC_D = 0;
@@ -3965,20 +3974,22 @@ function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: t
    fireball, fast shock ring, small mushroom cloud); icbm: the biggest (a screen-wide flash, huge fireball, large shock ring, tall mushroom
    cloud, then burning ground for several game hours); and combat blasts by size: exS (infantry, drones), exM (tanks, aircraft), exL (ships,
    buildings). Every part lives in WORLD units round its world spot: its offset, rise, spread and size, so an effect stays fixed to the map and
-   scales with it while zooming and panning (sprites only keep a few px minimum, so a far blast still reads). Each part is a pure function of the
-   effect's age (no per-frame state), drawn from cached noise sprites: fire over a hot additive core, smoke lit from above (dimmed at night),
-   ring sprites for shock fronts and base surges; on High a shock front also bends the map under it (the canvas copied onto itself, magnified, in
-   an elliptic band: a canvas 2D 'shader'). Battery: at most wfxCap() heavy and light effects at once (fewer on Low and with the Battery saver:
+   scales with it while zooming and panning (far out a blast keeps a minimum size, drawn bigger about its spot, so it still reads; close in a
+   mushroom cloud is drawn smaller about its foot, so it stays on screen). Each part is a pure function of the effect's age (no per-frame
+   state), drawn from cached noise sprites: fire over a hot additive core, smoke lit from above (lifted and warmed at night, so it still shows),
+   gas as a flat translucent sheet, soft dust bands for shock fronts and base surges; on High (and without the Battery saver) a shock front also
+   bends the map under it (the canvas copied onto itself, magnified, in an elliptic band: a canvas 2D 'shader'). An ICBM's flash also whitens
+   the page round the map (a veil that fades on its own clock). Battery: at most wfxCap() heavy and light effects at once (fewer on Low and with the Battery saver:
    the oldest fades out), none started off screen, off-screen ones not drawn, frames asked (animFast) only while one on screen runs; the burning
    ground after an ICBM moves on the paused game clock (animAmb). Low: fewer parts, no smoke column, no ripple, shorter.
    The rules can trigger the warheads they do not have yet with IM.emit('fxWarhead', {kind, p, by}) (kind cm, bm, chem, tac, icbm), and a blast
    with IM.emit('fxBlast', {size:'S'|'M'|'L', p}); the page's own entry points are FXW.cruise / ballistic / chemical / tactical / icbm / blast. */
-const WFX = {list:[], burn:[], flash:null, area:0, bud:0, S:null, id:0, ks:1/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};
-const WFX_R = {cm:2, bm:3.5, chem:0.9, tac:4.5, icbm:12, exS:0.6, exM:1, exL:1.7};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
-const WFX_MP = {cm:7, bm:10, chem:6, tac:12, icbm:16, exS:4.5, exM:6, exL:8};   // the fireball's smallest drawn radius (css px): far out a blast still reads
+const WFX = {list:[], burn:[], flash:null, veil:null, area:0, bud:0, S:null, id:0, ks:1/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};
+const WFX_R = {cm:2.6, bm:4.2, chem:0.9, tac:4.5, icbm:12, exS:1.6, exM:2.4, exL:3.6};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
+const WFX_MP = {cm:18, bm:28, chem:9, tac:20, icbm:26, exS:9, exM:12, exL:16};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
 const wfxHeavy = k => k[0] !== 'e';
 const wfxCap = heavy => { const low = SET.fx === 'low', sv = saverOn(); return heavy ? (low ? 3 : 6) - (sv ? (low ? 1 : 2) : 0) : (low ? 6 : 12) - (sv ? (low ? 2 : 4) : 0); };
-const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.length = 0; WFX.flash = null; } };
+const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.length = 0; WFX.flash = null; wfxVeil(0); } };
 // ---- sprites: noise-textured, baked once per variant at 128 px and 48 px (the small one for small draws: no sparkle from a big texture shrunk)
 function wfxNoise(seed){ const n = makeNoise(mulberry(seed)); return (x, y) => n(x, y)*0.55 + n(x*2.03 + 17.3, y*2.03 + 5.1)*0.3 + n(x*4.1 + 31.7, y*4.1 + 11.9)*0.15; }
 const wfxSm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
@@ -4007,12 +4018,20 @@ const WFX_TONE = {dark:[[22, 20, 18], [104, 96, 86]], grey:[[56, 53, 49], [168, 
   dust:[[86, 70, 50], [198, 178, 142]], gas:[[80, 104, 20], [212, 226, 104]], spray:[[150, 166, 174], [252, 253, 253]]};
 function wfxSmoke(tone, v, night, small){ const key = 'ws' + tone + v + (night ? 'n' : '') + (small ? 's' : ''); if (SPR[key]) return SPR[key];
   return wfxBake(key, small ? 48 : 128, () => { const T = WFX_TONE[tone] || WFX_TONE.dark, nz = wfxNoise(7300 + v*37), gas = tone === 'gas', bl = wfxBillow(7350 + v*17 + (gas ? 5 : 0)), L = [-0.46, -0.62, 0.64]; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null; const n = nz((dx + 1)*3.2, (dy + 1)*3.2), nf = nz((dx + 1)*8 + 21, (dy + 1)*8 + 5), b = bl(dx*1.08, dy*1.08); if (!b) return null;
-    const dn = b.cov + (n - 0.5)*0.35 + (nf - 0.5)*0.3; if (dn <= 0) return null; const dif = Math.max(0, b.nx*L[0] + b.ny*L[1] + b.nz*L[2]), li = Math.max(0, Math.min(1, (gas ? 0.36 : 0.18) + (gas ? 0.5 : 0.7)*dif + (n - 0.5)*0.35 + (nf - 0.5)*0.4)), k = night ? 0.42 : 1;
-    return [(T[0][0] + (T[1][0] - T[0][0])*li)*k + (night ? 8 : 0), (T[0][1] + (T[1][1] - T[0][1])*li)*k + (night ? 3 : 0), (T[0][2] + (T[1][2] - T[0][2])*li)*k, 255*(gas ? 0.78 : 0.94)*wfxSm(0, 0.65, dn)*wfxSm(1, 0.86, r)]; }; }); }
+    const dn = b.cov + (n - 0.5)*0.35 + (nf - 0.5)*0.3; if (dn <= 0) return null; const dif = Math.max(0, b.nx*L[0] + b.ny*L[1] + b.nz*L[2]), li = Math.max(0, Math.min(1, (gas ? 0.36 : 0.18) + (gas ? 0.5 : 0.7)*dif + (n - 0.5)*0.35 + (nf - 0.5)*0.4)), k = night ? 0.62 : 1, wm = night ? 1 - li : 0;
+    return [(T[0][0] + (T[1][0] - T[0][0])*li)*k + (night ? 26*wm + 10 : 0), (T[0][1] + (T[1][1] - T[0][1])*li)*k + (night ? 10*wm + 6 : 0), (T[0][2] + (T[1][2] - T[0][2])*li)*k + (night ? 4 : 0), 255*(gas ? 0.78 : 0.94)*wfxSm(0, 0.65, dn)*wfxSm(1, 0.86, r)]; }; }); }
+// gas: a low, flat sheet of noise (no shading: it lies on the ground), denser in wisps, pale sickly yellow-green with deeper olive in its
+// dense parts; at night only a little dimmed (it must still read on the dark map)
+function wfxGas(v, night, small){ const key = 'wg' + v + (night ? 'n' : '') + (small ? 's' : ''); if (SPR[key]) return SPR[key];
+  return wfxBake(key, small ? 48 : 128, () => { const nz = wfxNoise(7600 + v*23), nf = wfxNoise(7650 + v*29), k = night ? 0.9 : 1; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null;
+    const n = nz((dx + 1)*1.7 + v, (dy + 1)*1.7), f = nf((dx + 1)*4.6 + 3, (dy + 1)*4.6 + 9), dn = 1 - r*1.02 + (n - 0.5)*0.8 + (f - 0.5)*0.3; if (dn <= 0) return null;
+    const de = wfxSm(0, 0.7, dn), t = Math.max(0, Math.min(1, 0.25 + 0.9*(f - 0.5) + 0.5*(1 - de))), c = [152 + 64*t, 178 + 50*t, 48 + 76*t];
+    return [c[0]*k + (night ? 12 : 0), c[1]*k + (night ? 10 : 0), c[2]*k, 255*0.86*Math.pow(de, 0.8)*wfxSm(1, 0.8, r)]; }; }); }
 // rings (256 px): the shock front (a thin bright band, soft inside) and the base surge (a broad, broken dust band); the burnt-ground decal
 function wfxRing(dust){ const key = dust ? 'wrd' : 'wrs'; if (SPR[key]) return SPR[key];
   return wfxBake(key, 256, () => { const nz = wfxNoise(dust ? 7700 : 7710), T = WFX_TONE.dust; return (dx, dy) => { const r = Math.hypot(dx, dy); if (r >= 1) return null;
-    if (!dust){ const a = r < 0.94 ? 0.22*wfxSm(0.55, 0.9, r) + 0.78*Math.pow(wfxSm(0.78, 0.94, r), 3) : wfxSm(1, 0.96, r); return a > 0.003 ? [255, 252, 244, 255*a] : null; }
+    if (!dust){ const an = Math.atan2(dy, dx), n = nz(Math.cos(an)*4 + 6 + r*3, Math.sin(an)*4 + 6 + r*3), b = (r - 0.84)/(r < 0.84 ? 0.2 : 0.09), a = Math.exp(-b*b)*(0.45 + 0.7*n)*wfxSm(1, 0.97, r); if (a < 0.006) return null;
+      const li = 0.55 + 0.45*n; return [196 + 46*li, 186 + 50*li, 168 + 56*li, 255*Math.min(1, a*0.9)]; }
     const an = Math.atan2(dy, dx), n = nz(Math.cos(an)*3 + 4 + r*5, Math.sin(an)*3 + 4 + r*5), a = wfxSm(0.45, 0.82, r)*wfxSm(1, 0.9, r)*(0.45 + 0.75*n); if (a < 0.01) return null;
     const li = Math.min(1, 0.3 + 0.9*n); return [T[0][0] + (T[1][0] - T[0][0])*li, T[0][1] + (T[1][1] - T[0][1])*li, T[0][2] + (T[1][2] - T[0][2])*li, 255*Math.min(1, a)]; }; }); }
 function wfxScorch(){ if (SPR.wsc) return SPR.wsc;
@@ -4023,7 +4042,7 @@ const WGLOW = () => softSprite('wglow', 'rgba(255,255,252,1)', 'rgba(255,238,206
 function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, red = e.red, q = (L ? 0.5 : 1)*Math.max(0.55, FXG.k)*(saverOn() ? 0.8 : 1), n = m => Math.max(1, Math.round(m*q)), tl = L ? 0.7 : 1, E = e.els;
   const ang = () => r()*Math.PI*2, j = s => (r() - 0.5)*2*s;
   const light = (t0, d, r0, r1, a, gr) => E.push({k:gr ? 'G' : 'L', t0, d, r0, r1, a});
-  const ring = (kind, t0, d, r1, a) => { if (kind === 'rip' && (L || red)) return; E.push({k:'R', kind, t0, d:d*tl, r1, a}); };
+  const ring = (kind, t0, d, r1, a) => { if (kind === 'rip' && (L || red || saverOn())) return; E.push({k:'R', kind, t0, d:d*tl, r1, a}); };
   // fire lobes: born within rr of the spot, flung out up to `spread` and up by `rise`, growing from r0 to r1
   const fire = (cnt, rr, t0, t1, life, rise, spread, r0, r1, a = 1) => { for (let i = 0; i < n(cnt); i++){ const th = ang(), d0 = rr*Math.sqrt(r()), d1 = spread*(0.4 + 0.6*r());
     E.push({k:'F', t0:t0 + (t1 - t0)*r(), d:life*(0.75 + 0.5*r())*tl, x:Math.cos(th)*d0, y:Math.sin(th)*d0*0.6, dx:Math.cos(th)*d1, dy:Math.sin(th)*d1*0.6 - rise*(0.6 + 0.8*r()), r0:r0*(0.8 + 0.4*r()), r1:r1*(0.8 + 0.4*r()), a, v:r()*4 | 0}); } };
@@ -4037,7 +4056,7 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
   const core = (d, r0, r1, rise, a = 1) => E.push({k:'F', t0:0, d:d*tl, x:0, y:0, dx:0, dy:-rise, r0, r1, a, v:r()*4 | 0});   // the fireball's main body
   const mush = (d, H, Rc, nc, ns) => E.push({k:'M', t0:0, d:d*tl, H, Rc, nc:n(nc), ns:n(ns), sd:r()*1e6 | 0});
   if (k === 'cm'){ light(0, 140, R*0.9, R*2.4, 1); light(0, 800, R*2, R*3.2, 0.5, true); ring('dust', 30, 1000, R*1.7, 0.32);
-    core(560, R*0.5, R*1.0, R*0.3); fire(8, R*0.2, 0, 70, 700, R*0.4, R*0.42, R*0.36, R*0.8); smoke(5, 'dark', R*0.3, 180, 460, 3400, R*1.5, R*0.5, R*0.4, R*1.05, 0.7);
+    core(560, R*0.5, R*1.0, R*0.3); fire(8, R*0.2, 0, 70, 700, R*0.4, R*0.42, R*0.36, R*0.8); smoke(7, 'dark', R*0.3, 140, 420, 4400, R*1.4, R*0.55, R*0.45, R*1.3, 0.95, {fi:0.06, fo:0.5});
     sparks(12, R*7, R*15, 520); sparks(5, R*4.5, R*13, 750, false); }
   else if (k === 'bm'){ light(0, 220, R*1.1, R*3.2, 1); light(0, 1400, R*2.4, R*4, 0.6, true); ring('rip', 0, 950, R*3.8, 1); ring('shock', 0, 760, R*3.4, 0.28); ring('dust', 80, 3000, R*3.3, 0.6);
     smoke(7, 'dust', R*0.7, 160, 600, 3400, R*0.25, R*1.5, R*0.4, R*1.05, 0.42, {w:0.4, sq:0.58});
@@ -4048,14 +4067,14 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
     sparks(16, R*6, R*12, 800); sparks(7, R*4, R*10, 1000, false); }
   else if (k === 'chem'){ light(0, 130, R, R*2.4, 0.85); light(0, 600, R*1.5, R*2.4, 0.4, true); core(420, R*0.5, R*1.1, R*0.2); fire(4, R*0.2, 0, 50, 460, R*0.3, R*0.3, R*0.3, R*0.72); sparks(8, R*5, R*14, 460);
     smoke(2, 'dark', R*0.2, 120, 260, 1700, R*1.1, R*0.3, R*0.3, R*0.85, 0.5);
-    const G = 8.5, life = L ? 15000 : 26000;   // the gas: low, translucent lobes that spread over about a province, drift with the wind and linger
-    smoke(10, 'gas', R*0.3, 40, 400, life*0.55, 0.5, G*0.4, R*1.1, 2.4, 0.4, {even:true, w:0.35, sq:0.7, p:2.2, fi:0.015, fo:0.45});   // the first cloud, rolling out of the burst
-    smoke(28, 'gas', R*0.45, 250, 2600, life, -0.2, G, R*0.7, 3.2, 0.28, {even:true, late:true, w:0.5, sq:0.62, p:1.25, fi:0.1, fo:0.58});   // then spreading over the area,
-    smoke(7, 'gas', R*0.5, 900, 3500, life*1.05, -0.1, G*0.75, 2.5, G*0.55, 0.14, {even:true, w:0.55, sq:0.55, p:1.15, fi:0.18, fo:0.6}); }   // a thin haze joining the lobes
+    const G = 10, life = L ? 15000 : 26000;   // the gas: a low, translucent sheet that spreads over about a province and a half, drifts with the wind and lingers
+    smoke(10, 'gas', R*0.3, 40, 400, life*0.55, 0.4, G*0.4, R*1.2, 3, 0.6, {even:true, w:0.35, sq:0.6, p:2.2, fi:0.015, fo:0.45});   // the first cloud, rolling out of the burst
+    smoke(30, 'gas', R*0.45, 250, 2600, life, -0.2, G, R*0.8, 5.4, 0.42, {even:true, late:true, w:0.5, sq:0.55, p:1.25, fi:0.1, fo:0.58});   // then spreading over the area,
+    smoke(8, 'gas', R*0.5, 900, 3500, life*1.05, -0.1, G*0.7, 3, G*0.75, 0.3, {even:true, w:0.55, sq:0.5, p:1.15, fi:0.18, fo:0.6}); }   // a thin haze joining the lobes
   else if (k === 'tac'){ light(0, 340, R*2, R*9, 1); light(0, 2800, R*3, R*6.2, 0.85, true); ring('rip', 0, 1150, R*5.6, 1); ring('shock', 0, 900, R*5, 0.32); ring('shock', 140, 1350, R*6.6, 0.12); ring('dust', 160, 4400, R*3.7, 0.55);
-    smoke(10, 'dust', R*1.1, 250, 900, 5200, R*0.35, R*2.3, R*0.5, R*1.3, 0.48, {w:0.4, sq:0.56}); mush(red ? 6000 : 10500, R*4, R*1.6, 26, 16); sparks(20, R*5, R*8, 1150); }
+    smoke(10, 'dust', R*1.1, 250, 900, 5200, R*0.35, R*2.3, R*0.5, R*1.3, 0.48, {w:0.4, sq:0.56}); mush(red ? 6000 : 10500, R*4, R*1.6, 18, 16); sparks(20, R*5, R*8, 1150); }
   else if (k === 'icbm'){ light(0, 520, R*2, R*7, 1); light(0, 5200, R*2.6, R*5.2, 0.9, true); ring('rip', 0, 1950, R*5.6, 1); ring('shock', 0, 1650, R*5, 0.32); ring('shock', 220, 2300, R*6.6, 0.12); ring('dust', 300, 7200, R*3.4, 0.6);
-    smoke(14, 'dust', R*1.1, 300, 1300, 8000, R*0.35, R*2.6, R*0.5, R*1.4, 0.5, {w:0.4, sq:0.55}); mush(red ? 8000 : 15500, R*4.2, R*1.75, 32, 18); sparks(26, R*3.5, R*5, 1500); }
+    smoke(14, 'dust', R*1.1, 300, 1300, 8000, R*0.35, R*2.6, R*0.5, R*1.4, 0.5, {w:0.4, sq:0.55}); mush(red ? 8000 : 15500, R*4.2, R*1.75, 22, 18); sparks(26, R*3.5, R*5, 1500); }
   else { const sz = k[2], big = sz === 'L', med = sz === 'M';   // combat blasts: infantry and drones (S), tanks and aircraft (M), ships and buildings (L)
     light(0, big ? 150 : 90, R*0.8, R*(big ? 2.2 : 1.8), 0.95); if (!e.sea || big) light(0, big ? 900 : 500, R*1.6, R*2.6, 0.45, true);
     core(big ? 650 : med ? 480 : 340, R*0.5, R*0.95, R*0.25); fire(big ? 9 : med ? 6 : 4, R*0.2, 0, 50, big ? 850 : med ? 600 : 400, R*0.3, R*0.38, R*0.32, R*0.75);
@@ -4079,7 +4098,7 @@ function wfxStart(k, wx, wy, o = {}){ if (!booted || !S || !WFX_R[k]) return nul
   const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1, e = {k, wx, wy, R, t0:now, id:++WFX.id, seed:(Math.random()*2**31) | 0, low:SET.fx === 'low', red:afxReduced(), sea:o.sea ?? (p >= 0 && G.P[p].sea), night:fxNight(wx, wy), els:[]};
   wfxBuild(e); WFX.list.push(e); if (WFX.list.length > 24) WFX.list.splice(0, WFX.list.length - 24);
   if (k === 'icbm' || k === 'tac'){ const a = (k === 'icbm' ? 1 : 0.42)*(e.red ? 0.3 : 1);   // the flash: the whole map whitens (an ICBM) or a strong white veil (tactical)
-    if (!WFX.flash || a > WFX.flash.a*(1 - (now - WFX.flash.t0)/WFX.flash.d)) WFX.flash = {t0:now, d:k === 'icbm' ? (e.low ? 650 : 950) : 450, a}; }
+    if (!WFX.flash || a > WFX.flash.a*(1 - (now - WFX.flash.t0)/WFX.flash.d)){ WFX.flash = {t0:now, d:k === 'icbm' ? (e.low ? 650 : 950) : 450, a}; wfxVeil(k === 'icbm' ? a*0.85 : 0, WFX.flash.d*0.8); } }
   if (k === 'icbm'){ WFX.burn.push({wx, wy, r:R*1.5, h0:S.hour + (S.speed && !S.over ? acc : 0), life:10, seed:e.seed}); if (WFX.burn.length > 6) WFX.burn.shift(); }   // burning ground: ten game hours
   redraw(); return e; }
 // a strike: the effect, the crater and the burning city it leaves, the shake and the sound (o.p: the province hit)
@@ -4094,29 +4113,30 @@ const FXW = {cruise:(x, y, o) => wfxStrike('cm', x, y, o), ballistic:(x, y, o) =
 function wfxSpr(big, small, x, y, rx, ry, a, op, budget){ if (a < 0.004 || rx < 0.3 || x + rx < 0 || x - rx > cw || y + ry < 0 || y - ry > ch) return;
   if (budget){ if (WFX.area > WFX.bud) return; WFX.area += Math.min(2*rx, cw)*Math.min(2*ry, ch); }
   ctx.globalAlpha = Math.min(1, a); ctx.globalCompositeOperation = op || 'source-over'; ctx.drawImage(small && rx*dpr < 34 ? small : big, x - rx, y - ry, 2*rx, 2*ry); }
-const wfxS = (e, o, night, small) => wfxSmoke(o.tone, o.v, night, small);
+const wfxS = (e, o, night, small) => o.tone === 'gas' ? wfxGas(o.v, night, small) : wfxSmoke(o.tone, o.v, night, small);
 function wfxDrawOne(e, tau, now){ const ks = view.s, kr = Math.max(ks, WFX_MP[e.k]/e.R), [bx, by] = toScreen(e.wx, e.wy), nt = e.night > 0.5, WD = windSync(), fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1;
-  const sx = s => bx + s*ks, sy = s => by + s*ks; /*@TEST*/const dbg = WFX.dbg;/*@ENDTEST*/
+  // (far out, where the floor kr > ks holds, the whole blast is drawn bigger about its spot: offsets and sizes alike, so its shape stays;
+  // from the zoom where kr = ks every part sits on its own world spot. The gas sheet keeps its own, lower floor.)
+  const kg = Math.max(ks, 5.5), sx = (s, k = kr) => bx + s*k, sy = (s, k = kr) => by + s*k; /*@TEST*/const dbg = WFX.dbg, dk = k => dbg && k === ks;/*@ENDTEST*/
   for (const o of e.els){ const t = tau - o.t0; if (t < 0 || t >= o.d) continue; const u = t/o.d, ts = t/1000;
-    if (o.k === 'S'){ const m = 1 - Math.pow(1 - u, o.p), dw = (o.w || 0)*e.R*0.12*ts, x = sx(o.x + o.dx*m + WD.wx*dw), y = sy(o.y + o.dy*m + WD.wy*dw), rr = (o.r0 + (o.r1 - o.r0)*(1 - (1 - u)*(1 - u)))*kr;
+    if (o.k === 'S'){ const m = 1 - Math.pow(1 - u, o.p), dw = (o.w || 0)*e.R*0.12*ts, kk = o.tone === 'gas' ? kg : kr, x = sx(o.x + o.dx*m + WD.wx*dw, kk), y = sy(o.y + o.dy*m + WD.wy*dw, kk), rr = (o.r0 + (o.r1 - o.r0)*(1 - (1 - u)*(1 - u)))*kk;
       const a = fd*o.a*Math.min(1, u/o.fi)*(u > o.fo ? Math.pow((1 - u)/(1 - o.fo), 1.2) : 1); wfxSpr(wfxS(e, o, nt), wfxS(e, o, nt, true), x, y, rr, rr*o.sq, a, 'source-over', true);
-      /*@TEST*/if (dbg) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
+      /*@TEST*/if (dk(kk)) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
     if (o.k === 'F'){ const m = 1 - Math.pow(1 - u, 2.4), x = sx(o.x + o.dx*m), y = sy(o.y + o.dy*m), rr = (o.r0 + (o.r1 - o.r0)*(1 - Math.pow(1 - u, 3)))*kr, at = fd*o.a*Math.min(1, u/0.06);
       wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr, rr, at*Math.pow(1 - u, 0.9), 'source-over');
       if (u > 0.18) wfxSpr(wfxSmoke('dark', o.v, nt), wfxSmoke('dark', o.v, nt, true), x, y - rr*0.1, rr*0.98, rr*0.98, at*0.9*Math.pow((u - 0.18)/0.82, 1.1)*Math.pow(1 - u, 0.35), 'source-over');   // cooling into smoke
       wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr*0.62, rr*0.62, at*0.85*Math.pow(1 - u, 2.5), 'lighter');   // the hot core
-      /*@TEST*/if (dbg) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
+      /*@TEST*/if (dk(kr)) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
     if (o.k === 'K' || o.k === 'D'){ const pt = s => [sx(o.vx*s), sy(o.vy*s + 0.5*o.g*s*s)], [x, y] = pt(ts), [x0, y0] = pt(Math.max(0, ts - 0.035)), l = Math.hypot(x - x0, y - y0) || 1, ml = Math.max(1.5, l);
       ctx.globalAlpha = fd*(1 - u)*(o.k === 'K' ? 1 : 0.85); ctx.globalCompositeOperation = o.k === 'K' ? 'lighter' : 'source-over'; ctx.strokeStyle = o.k === 'K' ? (u < 0.4 ? '#ffe7b0' : '#ff9d4a') : '#1f1c19';
       ctx.lineWidth = o.k === 'K' ? 1 : 1.3; ctx.beginPath(); ctx.moveTo(x - (x - x0)/l*ml, y - (y - y0)/l*ml); ctx.lineTo(x, y); ctx.stroke();
-      /*@TEST*/if (dbg) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
+      /*@TEST*/if (dk(kr)) dbg.push([e.id + ':' + o.i, x, y, ks, view.x, view.y]);/*@ENDTEST*/ continue; }
     if (o.k === 'L' || o.k === 'G'){ const rr = (o.r0 + (o.r1 - o.r0)*Math.min(1, u*3))*kr, a = fd*o.a*(u < 0.04 ? u/0.04 : Math.pow(1 - u, o.k === 'L' ? 2 : 1.5))*(o.k === 'G' ? 0.45 + 0.55*e.night : 1);
-      wfxSpr(o.k === 'L' ? WGLOW() : GLOW(), null, bx, by - (o.k === 'L' ? e.R*0.2*ks : 0), rr, rr*(o.k === 'G' ? 0.46 : 1), a, 'lighter'); continue; }
+      wfxSpr(o.k === 'L' ? WGLOW() : GLOW(), null, bx, by - (o.k === 'L' ? e.R*0.2*kr : 0), rr, rr*(o.k === 'G' ? 0.46 : 1), a, 'lighter'); continue; }
     if (o.k === 'R'){ const m = 1 - Math.pow(1 - u, o.kind === 'dust' ? 2.6 : 2.2), rr = o.r1*m*kr; if (rr < 1) continue;
       if (o.kind === 'rip'){ wfxRipple(bx, by, rr, Math.max(4, rr*0.09), 0.05*(1 - u)); continue; }
-      if (o.kind === 'shock'){ const a = fd*o.a*Math.pow(1 - u, 1.4); if (a > 0.005 && bx + rr > 0 && bx - rr < cw && by + rr*0.5 > 0 && by - rr*0.5 < ch){   // the shock front: a thin pale line in a soft band, not a painted ring
-        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgb(255,248,232)'; ctx.beginPath(); ctx.ellipse(bx, by, rr, rr*0.5, 0, 0, Math.PI*2);
-        ctx.globalAlpha = a*0.35; ctx.lineWidth = Math.max(3, rr*0.05); ctx.stroke(); ctx.globalAlpha = a; ctx.lineWidth = Math.max(1, Math.min(2.2, rr*0.012)); ctx.stroke(); } }
+      if (o.kind === 'shock'){ const a = fd*o.a*Math.min(1, u/0.04)*Math.pow(1 - u, 1.3)*(1 - 0.45*e.night);   // the shock front: a soft pale band of raised dust, broken by noise, no line
+        wfxSpr(wfxRing(false), null, bx, by, rr, rr*0.5, a*1.6, 'source-over', true); if (u < 0.3) wfxSpr(wfxRing(false), null, bx, by, rr, rr*0.5, a*0.5*(1 - u/0.3), 'lighter'); }
       else wfxSpr(wfxRing(true), null, bx, by, rr, rr*0.5, fd*o.a*Math.min(1, u/0.1)*Math.pow(1 - u, 1.2), 'source-over', true);
       continue; }
     if (o.k === 'M') wfxMush(e, o, t, bx, by, ks, kr, fd, nt); }
@@ -4128,32 +4148,39 @@ function wfxRipple(x, y, rr, w, amp){ if (amp < 0.004 || ctx !== MCTX) return; c
   ctx.globalAlpha = 0.9; ctx.drawImage(c, x0, y0, x1 - x0, y1 - y0, x*d + (x0 - x*d)*m, y*d + (y0 - y*d)*m, (x1 - x0)*m, (y1 - y0)*m); ctx.restore(); }
 // the mushroom cloud: the fireball rises and spreads into a cap that rolls (a torus of lobes: up through the middle, down the outside, the
 // far side drawn first), on a stem of dusty smoke wide at the foot; glowing orange at first, then brown-grey and pale, leaning downwind, fading
-function wfxMush(e, o, t, bx, by, ks, kr, fd, nt){ const T = o.d, u = t/T, s = t/1000, R = e.R, rnd = mulberry(o.sd), fade = fd*(u < 0.55 ? 1 : Math.pow((1 - u)/0.45, 1.3));
-  const hc = o.H*(1 - Math.exp(-t/(T*0.16))), rc = R*0.72 + (o.Rc - R*0.72)*(1 - Math.exp(-t/(T*0.2))), heat = Math.exp(-t/(T*0.07)), warm = Math.exp(-t/(T*0.28)), WD = windSync(), sh = WD.wx*R*0.5*u*u;
-  const X = v => bx + v*ks, Y = v => by + v*ks; /*@TEST*/const dbg = WFX.dbg;/*@ENDTEST*/
-  // the stem: from the ground up to under the cap, once the cap has lifted off it
-  for (let k = 0; k < o.ns; k++){ const f = (k + 0.5)/o.ns, h = hc*f*0.9, rs = R*(0.4 + 0.75*Math.pow(1 - f, 3) + 0.06*Math.sin(k*1.7 + s*0.6)), a = fade*0.82*wfxSm(R*0.4, R*1.2, hc*f), v = (k + (o.sd & 3)) & 3;
-    const x = X(sh*f*f + Math.sin(s*0.7 + k*1.3)*rs*0.12), y = Y(-h), tone = f < 0.3 ? 'dust' : 'mush';
-    wfxSpr(wfxSmoke(tone, v, nt), wfxSmoke(tone, v, nt, true), x, y, rs*kr*1.45, rs*kr*1.3, a, 'source-over', true);
-    if (warm > 0.05 && f > 0.4) wfxSpr(wfxFire(v), wfxFire(v, true), x, y, rs*kr*0.8, rs*kr*0.8, fade*0.5*warm*f, 'lighter');
+function wfxMush(e, o, t, bx, by, ks, kr, fd, nt){ const T = o.d, u = t/T, s = t/1000, R = e.R, rnd = mulberry(o.sd), fade = fd*(1 - wfxSm(0.55, 0.97, u));   // (it thins as a whole, without a long faint tail)
+  // close in the cloud would leave the top of the screen: it is drawn smaller about its foot (which stays on its world spot), at most 55% of the map's height
+  const fit = Math.min(1, ch*0.55/((o.H + o.Rc*1.3)*kr)), k0 = kr === ks, kv = kr*fit; kr *= Math.sqrt(fit);   // (kv: the rise; kr: widths and sizes)
+  const hc = o.H*(1 - Math.exp(-t/(T*0.16))), rc = R*0.72 + (o.Rc - R*0.72)*(1 - Math.exp(-t/(T*0.2))), heat = Math.exp(-t/(T*0.07)), warm = Math.exp(-t/(T*0.28)), WD = windSync(), sh = WD.wx*R*0.35*u*u;
+  const X = v => bx + v*kr, Y = v => by + v*kv, Yc = d => by - hc*kv + d*kr; /*@TEST*/const dbg = fit === 1 && k0 && WFX.dbg;/*@ENDTEST*/   // (Yc: inside the cap, about its centre)
+  const pale = wfxSm(0.35, 0.85, u)*0.45;   // the cloud pales from brown-grey towards light grey (a cross-fade, never all the way)
+  // (the cloud is the effect's centrepiece: never cut by the frame's smoke budget, which would leave it full of holes; its lobe count is fixed)
+  const puff = (tone, v, x, y, rx, ry, a) => { if (pale > 0 && tone === 'mush'){ wfxSpr(wfxSmoke('mush', v, nt), wfxSmoke('mush', v, nt, true), x, y, rx, ry, a*(1 - pale*0.6), 'source-over'); wfxSpr(wfxSmoke('light', v, nt), wfxSmoke('light', v, nt, true), x, y, rx, ry, a*pale, 'source-over'); }
+    else wfxSpr(wfxSmoke(tone, v, nt), wfxSmoke(tone, v, nt, true), x, y, rx, ry, a, 'source-over'); };
+  // the stem: from the ground up to under the cap, once the cap has lifted off it; one column, narrow in the middle, flared at the foot
+  for (let k = 0; k < o.ns; k++){ const f = (k + 0.5)/o.ns, h = hc*f*0.92, rs = R*(0.34 + 0.8*Math.pow(1 - f, 4) + 0.1*f*f + 0.04*Math.sin(k*1.7 + s*0.6)), a = fade*0.86*wfxSm(R*0.4, R*1.2, hc*f), v = (k + (o.sd & 3)) & 3;
+    const x = X(sh*f*f + Math.sin(s*0.7 + k*1.3)*rs*0.06), y = Y(-h), tone = f < 0.3 ? 'dust' : 'mush';
+    puff(tone, v, x, y, rs*kr*1.4, rs*kr*1.25, a);
+    if (warm > 0.05 && f > 0.4) wfxSpr(wfxFire(v), wfxFire(v, true), x, y, rs*kr*0.75, rs*kr*0.75, fade*0.45*warm*f, 'lighter');
     /*@TEST*/if (dbg) dbg.push([e.id + ':m' + k, x, y, ks, view.x, view.y]);/*@ENDTEST*/ }
-  // the cap's lobes, round the torus
-  const L = [], rho = rc*0.58, rm = rc*0.42, om = -0.42;
-  for (let j = 0; j < o.nc; j++){ const th = j/o.nc*Math.PI*2 + (rnd() - 0.5)*0.4, ph = rnd()*Math.PI*2 + s*om*(0.8 + 0.4*rnd()), lr = rc*0.42*(0.85 + 0.3*rnd()), v = rnd()*4 | 0;
-    const rad = rho + rm*Math.cos(ph), z = rad*Math.sin(th); L.push({x:rad*Math.cos(th), y:-hc - rm*Math.sin(ph)*0.85 - z*0.22, z, lr:lr*(1 + 0.12*Math.sin(ph)), up:Math.sin(ph), v, id:j}); }
-  for (let j = 0; j < 3; j++) L.push({x:(j - 1)*rc*0.32, y:-hc - rm*0.25, z:0, lr:rc*0.5, up:0.5, v:j, id:'c' + j});   // the cap's middle, so it never reads hollow
-  for (let j = 0; j < 6; j++){ const a0 = rnd()*Math.PI*2, d0 = Math.sqrt(rnd())*rho, z = d0*Math.sin(a0); L.push({x:d0*Math.cos(a0), y:-hc - rm*(0.55 + 0.25*rnd()) - z*0.22, z, lr:rc*(0.34 + 0.1*rnd()), up:1, v:j & 3, id:'d' + j}); }   // its dome
+  const cx = X(sh), cy = Yc(0), ca = fade*(1 - heat*0.6);
+  // the cap's body first: broad overlapping masses (its shadowed underside, then its middle), so the rolling lobes over it read as one cloud
+  puff('grey', (o.sd >> 3) & 3, cx, Yc(rc*0.26), rc*kr*1.02, rc*kr*0.42, ca*0.95);
+  for (let j = -1; j <= 1; j++) puff('mush', (j + 2 + (o.sd & 1)) & 3, X(sh + j*rc*0.42), Yc(-rc*0.08 + Math.abs(j)*rc*0.06), rc*kr*(j ? 0.66 : 0.82), rc*kr*(j ? 0.5 : 0.6), ca);
+  // the rolling torus: lobes round its rim (up through the middle, down the outside), the far side first; no lobe strays off the cap
+  const L = [], rho = rc*0.6, rm = rc*0.3, om = -0.42;
+  for (let j = 0; j < o.nc; j++){ const th = j/o.nc*Math.PI*2 + (rnd() - 0.5)*0.18, ph = rnd()*Math.PI*2 + s*om*(0.9 + 0.2*rnd()), lr = rc*0.4*(0.92 + 0.16*rnd()), v = rnd()*4 | 0;
+    const rad = rho + rm*Math.cos(ph)*0.7, z = rad*Math.sin(th); L.push({x:rad*Math.cos(th), y:-rm*Math.sin(ph)*0.5 - z*0.24, z, lr:lr*(1 + 0.08*Math.sin(ph)), up:Math.sin(ph), v, id:j}); }
+  for (let j = 0; j < 5; j++){ const a0 = j/5*Math.PI*2 + rnd()*0.5, d0 = (0.2 + 0.5*rnd())*rho, z = d0*Math.sin(a0); L.push({x:d0*Math.cos(a0), y:-rm*(0.75 + 0.2*rnd()) - z*0.2, z, lr:rc*(0.36 + 0.06*rnd()), up:1, v:j & 3, id:'d' + j}); }   // its dome
   L.sort((a, b) => b.z - a.z);
-  const pale = lit => lit ? wfxSm(0.3, 0.6, u) : 0;   // the lit lobes pale from brown-grey to light grey (a cross-fade)
-  for (const q of L){ const x = X(q.x + sh), y = Y(q.y), lr = q.lr*kr, lit = q.up > -0.2, pl = pale(lit), tone = lit ? 'mush' : 'grey', ca = fade*(1 - heat*0.6);
-    if (pl < 1) wfxSpr(wfxSmoke(tone, q.v, nt), wfxSmoke(tone, q.v, nt, true), x, y, lr, lr*0.92, ca*(pl > 0 ? 1 - pl*0.5 : 1), 'source-over', true);
-    if (pl > 0) wfxSpr(wfxSmoke('light', q.v, nt), wfxSmoke('light', q.v, nt, true), x, y, lr, lr*0.92, ca*pl, 'source-over', true);
+  for (const q of L){ const x = X(q.x + sh), y = Yc(q.y), lr = q.lr*kr, lit = q.up > -0.3;
+    puff(lit ? 'mush' : 'grey', q.v, x, y, lr, lr*0.9, ca*0.95);
     if (heat > 0.02) wfxSpr(wfxFire(q.v), wfxFire(q.v, true), x, y, lr*1.05, lr*1.05, fade*Math.min(1, heat*1.4), 'source-over');
-    if (warm > 0.04 && !lit) wfxSpr(wfxFire(q.v), wfxFire(q.v, true), x, y, lr*0.7, lr*0.7, fade*0.55*warm, 'lighter');   // the underside still glows from the fire below
+    if (warm > 0.04 && !lit) wfxSpr(wfxFire(q.v), wfxFire(q.v, true), x, y, lr*0.7, lr*0.7, fade*0.5*warm, 'lighter');   // the underside still glows from the fire below
     /*@TEST*/if (dbg) dbg.push([e.id + ':c' + q.id, x, y, ks, view.x, view.y]);/*@ENDTEST*/ }
-  if (heat > 0.03){ const fr = (rc + rm*0.4)*kr; wfxSpr(wfxFire((o.sd >> 2) & 3), wfxFire((o.sd >> 2) & 3, true), X(sh), Y(-hc), fr, fr, fade*Math.min(1, heat*1.6), 'source-over');   // the fireball's body,
-    wfxSpr(wfxFire(o.sd & 3), wfxFire(o.sd & 3, true), X(sh), Y(-hc), rc*kr*0.8, rc*kr*0.8, fade*heat*0.9, 'lighter'); }   // its white-hot heart
-  if (warm > 0.03) wfxSpr(GLOW(), null, X(sh), Y(-hc + rm*0.7), rc*kr*1.2, rc*kr*0.6, fade*0.5*warm, 'lighter'); }
+  if (warm > 0.05) wfxSpr(GLOW(), null, cx, Yc(rc*0.3), rc*kr*1.1, rc*kr*0.5, fade*0.55*warm, 'lighter');   // the fire under the cap lights it from below
+  if (heat > 0.03){ const fr = rc*1.05*kr; wfxSpr(wfxFire((o.sd >> 2) & 3), wfxFire((o.sd >> 2) & 3, true), cx, cy, fr, fr*0.92, fade*Math.min(1, heat*1.6), 'source-over');   // the fireball's body,
+    wfxSpr(wfxFire(o.sd & 3), wfxFire(o.sd & 3, true), cx, cy, rc*kr*0.75, rc*kr*0.7, fade*heat*0.9, 'lighter'); } }   // its white-hot heart
 // the ground still burning after an ICBM: a charred patch (multiplied in) with fires flickering over it and wisps of smoke, on the paused game
 // clock (still while paused); it fades over its game hours. Returns whether one is on screen
 function wfxDrawBurn(){ const h0 = S.hour + (S.speed && !S.over ? acc : 0), gt = FXQ.gt, ks = view.s; let on = false;
@@ -4172,14 +4199,20 @@ function wfxDrawBurn(){ const h0 = S.hour + (S.speed && !S.over ? acc : 0), gt =
       wfxSpr(wfxSmoke('dark', k & 3, ni > 0.5), wfxSmoke('dark', k & 3, ni > 0.5, true), px, py, Math.max(3, sr*ks), Math.max(3, sr*ks), a, 'source-over', true); } }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; return on; }
 function drawWFX(now){ wfxSync(); if (!WFX.list.length && !WFX.burn.length) return; const t0 = /*@TEST*/WFX.fz ||/*@ENDTEST*/ now;
-  WFX.area = 0; WFX.bud = (SET.fx === 'low' ? 2.5 : 4)*cw*ch*Math.max(0.5, FXG.k); ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  WFX.area = 0; WFX.bud = (SET.fx === 'low' ? 3 : 5)*cw*ch*Math.max(0.5, FXG.k); ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const burn = WFX.burn.length ? wfxDrawBurn() : false; let run = false;
-  for (let i = 0; i < WFX.list.length; i++){ const e = WFX.list[i], tau = t0 - e.t0; if (tau >= e.d || (e.die != null && now >= e.die)){ WFX.list.splice(i--, 1); continue; }
+  for (let i = 0; i < WFX.list.length; i++){ const e = WFX.list[i], tau = Math.max(0, t0 - e.t0); if (tau >= e.d || (e.die != null && now >= e.die)){ WFX.list.splice(i--, 1); continue; }
     const [x, y] = toScreen(e.wx, e.wy), kr = Math.max(view.s, WFX_MP[e.k]/e.R), ex = e.ext*kr, up = e.top*kr; if (x + ex < 0 || x - ex > cw || y + ex*0.6 < 0 || y - up > ch) continue;   // off screen: not drawn (its clock runs on)
     run = true; wfxDrawOne(e, tau, now); }
   ctx.restore(); if (run) animFast(); else if (burn && S.speed && !S.over) animAmb(); }
-function drawWFXFlash(now){ const F = WFX.flash; if (!F) return; const k = ((/*@TEST*/WFX.fz ||/*@ENDTEST*/ now) - F.t0)/F.d; if (k >= 1 || k < 0){ WFX.flash = null; return; }
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = F.a*(k < 0.05 ? 1 : Math.pow(1 - (k - 0.05)/0.95, 2.2)); ctx.fillStyle = '#fffaf0'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore(); animFast(); }
+// (the veil fades on its own clock, so it can never stay up when the map stops drawing: a menu, the globe, the tab hidden)
+function wfxVeil(a, d){ let v = WFX.veil; if (!v){ if (!(a > 0)) return; v = WFX.veil = document.createElement('div'); v.id = 'wfxveil'; v.setAttribute('aria-hidden', 'true');
+    v.style.cssText = 'position:fixed;inset:0;background:#fffaf0;pointer-events:none;z-index:2147483000;opacity:0'; document.body.appendChild(v); }
+  try { if (v.an) v.an.cancel(); v.an = null; if (a > 0 && v.animate) v.an = v.animate([{opacity:a}, {opacity:a, offset:0.05}, {opacity:0}], {duration:d, easing:'ease-in'}); } catch (e) {} }
+function drawWFXFlash(now){ const F = WFX.flash; if (!F) return; const k = Math.max(0, ((/*@TEST*/WFX.fz ||/*@ENDTEST*/ now) - F.t0)/F.d); if (k >= 1){ WFX.flash = null; return; }
+  const a = F.a*(k < 0.05 ? 1 : Math.pow(1 - (k - 0.05)/0.95, 2.2));
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a; ctx.fillStyle = '#fffaf0'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore();
+  animFast(); }
 let VOLA = 1;   // the cross-fade share of the unit fire being emitted (volley: smoothstep 56-76 px a hex), stored on its shots and muzzle stars
 function shoot(kind, from, to, opt = {}){ while (PROJ.length >= 160) PROJ.shift(); PROJ.push({kind, from, to, u:kzNow()/view.s, t0:performance.now() + (opt.delay || 0), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite, a:VOLA, fz:opt.fz || 1}); }
 let lastPart = 0, PKZ = 1;
@@ -4468,7 +4501,7 @@ function drawFX(now){
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y - 8, 10 + k*22, 0, Math.PI*2); ctx.stroke(); ctx.restore();
     } else if (f.type === 'dmg'){
       ctx.save(); ctx.globalAlpha = Math.min(1, (1 - k)*1.6); ctx.font = `800 ${Math.round(14 + (1 - k)*3)}px ${BODY}`; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.9)';
-      const kz = Math.min(2, zoomK(view.s*HS0)), cp = f.owner != null && CLPOS.get(f.p + ':' + f.owner), [ax, ay] = cp ? toScreen(cp[0], cp[1]) : [x + (f.dx || 0)*kz, y], tx = ax + (cp ? 22*kz : 0), ty = ay + (cp ? -34 : (f.dy || -30))*kz - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
+      const kz = Math.min(2, zoomK(view.s*HS0)), cp = f.owner != null && CLPOS.get(f.p + ':' + f.owner), [ax, ay] = cp ? toScreen(cp[0], cp[1]) : f.wx != null ? toScreen(f.wx, f.wy) : [x + (f.dx || 0)*kz, y], tx = ax + (cp ? 22*kz : 0), ty = ay + (cp ? -34 : (f.dy || -30))*kz - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
     } else if (f.type === 'hits'){
       ctx.save(); plateClipOn(); ctx.globalCompositeOperation = 'lighter';
       for (let j = 0; j < 5; j++){ const r0 = ((f.seed*(j + 1)*9301 + 49297) % 233280)/233280, r1 = ((f.seed*(j + 3)*7919 + 104729) % 233280)/233280;
@@ -5159,7 +5192,7 @@ function glyph(x, y, t, s){
   else if (t === 'swarm'){ for (const [dx, dy] of [[-0.26, 0.12], [0, -0.18], [0.26, 0.12]]){ ctx.moveTo(x + w*dx, y + h*dy - 1.6*s); ctx.lineTo(x + w*dx + 1.5*s, y + h*dy + 1.2*s); ctx.lineTo(x + w*dx - 1.5*s, y + h*dy + 1.2*s); ctx.closePath(); } ctx.fill(); }
   else if (t === 'sdrone'){ chev(-0.8*s); ctx.moveTo(x - w*0.2, y + h*0.34); ctx.lineTo(x + w*0.2, y + h*0.34); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y + h*0.05, 1.3*s, 0, Math.PI*2); ctx.fill(); }
   else if (t === 'jam'){ ctx.moveTo(x - w*0.34, y + h*0.1); ctx.lineTo(x - w*0.14, y - h*0.25); ctx.lineTo(x, y + h*0.25); ctx.lineTo(x + w*0.14, y - h*0.25); ctx.lineTo(x + w*0.34, y + h*0.1); ctx.stroke(); }
-  else if (t === 'bomb'){ ctx.moveTo(x - w*0.36, y + h*0.28); ctx.lineTo(x, y - h*0.32); ctx.lineTo(x + w*0.36, y + h*0.28); ctx.closePath(); ctx.fill(); }
+  else if (t === 'bomb' || t === 'stealth'){ ctx.moveTo(x - w*0.36, y + h*0.28); ctx.lineTo(x, y - h*0.32); ctx.lineTo(x + w*0.36, y + h*0.28); ctx.closePath(); ctx.fill(); }
   else if (t === 'mpa'){ chev(-1.2*s); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - w*0.32, y + h*0.3); ctx.quadraticCurveTo(x - w*0.16, y + h*0.1, x, y + h*0.3); ctx.quadraticCurveTo(x + w*0.16, y + h*0.5, x + w*0.32, y + h*0.3); ctx.stroke(); }
   else if (t === 'awacs'){ ctx.ellipse(x, y, w*0.26, h*0.24, 0, 0, Math.PI*2); ctx.moveTo(x - w*0.26, y); ctx.lineTo(x + w*0.26, y); ctx.stroke(); }
   else if (t === 'asf'){ chev(-2.4*s); chev(0); chev(2.4*s); ctx.stroke(); }
@@ -5253,7 +5286,7 @@ function unitFigure(t, x, y, s, col, now, moving, fighting, dir, seed, n){
   else if (t === 'art') artySprite(x, y, s, col, fighting, now, seed);
   else if (t === 'sam') samSprite(x, y, s, col, fighting, now, seed);
   else if (t === 'jet' || t === 'int') jetSprite(x, y - 6*s, s, col, 0, t);
-  else if (UNITS[t] && UNITS[t].cls === 'air') jetSprite(x, y - 6*s, s, col, 0, t === 'bomb' || t === 'mpa' || t === 'awacs' ? 'jet' : 'int');
+  else if (UNITS[t] && UNITS[t].cls === 'air') jetSprite(x, y - 6*s, s, col, 0, isBmb(t) || t === 'mpa' || t === 'awacs' ? 'jet' : 'int');
   else if (UNITS[t] && UNITS[t].cls !== 'naval') samSprite(x, y, s, col, fighting, now, seed);
   else shipSprite(x, y - 2*s, s, col, 0, t, moving, now);
   ctx.restore();
@@ -5277,7 +5310,7 @@ const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max
    the HQ and the counters. Independent garrisons show none unless selected or fighting; wings in flight keep their flat icons.
    Settings: 'Troop models'. */
 const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
-  jet:['jet'], bomb:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
+  jet:['jet'], bomb:['jet'], stealth:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
 const TMG = {sol:[1.8, 0.5], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
   frig:[7.4, 1.25], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[17, 0.9], int:[17, 0.9], heli:[17, 0.82], drone:[10.6, 0.66]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter)
@@ -5689,7 +5722,7 @@ const UART = {inf:['u-infantry', 0, 0.62], para:['u-infantry', 0, 0.62], spec:['
   frig:['u-corvette', 0, 0.62], crui:['u-destroyer', 0, 0.7], sub:['u-submarine', 0, 0.6], carr:['u-carrier', 0, 0.8], drop:['u-transport-heli', 0, 0.72], truck:['u-supply-truck', 0, 0.5]};
 const uArt = t => { const u = UART[t]; return u && ART.ready(u[0]) ? u : null; };
 Object.assign(UART, {drone:['u-uav-recon', 0, 0.58], drone4:['u-uav-armed', 0, 0.62], swarm:['u-swarm-drone', 0, 0.74], sdrone:['u-strike-drone', 0, 0.72], jam:['u-anti-drone', 0, 0.6],
-  bomb:['u-heavy-bomber-1', 0, 0.92], bomb2:['u-heavy-bomber-2', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
+  bomb:['u-heavy-bomber-1', 0, 0.92], bomb2:['u-heavy-bomber-2', 0, 0.92], stealth:['u-stealth-bomber', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
 // enemy stealth UAV (level III+) seen in flight: near your SAMs or jammers, or under your AWACS
 function uavSpotted(v){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 < 0) return false; if (aewCover(PLAYER).has(p0)) return true;
   for (const b of S.armies) if (b.owner === PLAYER && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
@@ -8155,12 +8188,15 @@ function draw(now){ draw.now = now;
   // aircraft in flight: formation of jets with contrails
   const dtV = Math.min(0.1, (now - (draw.lastT || now))/1000), airLbl = []; draw.lastT = now;
   for (const a of S.armies){ if (!a.air || !count(a)) continue; const v = wingVis(a, now, dtV); if (!v) continue; animFast();
-    if ((!armyVisible(a, vis) && !vis.has(v.tgt)) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v))){   // stealthy UAVs (III+) only show near your air defence or under your AWACS
-      if (vis.loc.size && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && vis.loc.has(p0) && !(a.u.drone && uavLv(a.owner) >= 3)){ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, spread:false, unk:true}); } }
+    const pU = a.owner !== PLAYER && loWing(a) ? (c0 => c0 >= 0 ? G.prov[c0] : -1)(worldToCell(v.x, v.y)) : -1, lo = a.owner !== PLAYER && loHidden(a, PLAYER, pU);   // a foreign Stealth Bomber wing no SAM or jammer of yours is close to
+    if ((!armyVisible(a, vis) && !vis.has(v.tgt)) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v)) || lo){   // stealthy UAVs (III+) only show near your air defence or under your AWACS; stealth bombers only near your SAMs and jammers
+      /*@TEST*/(window.__airSeen || (window.__airSeen = {}))[a.id] = 'hidden';/*@ENDTEST*/
+      if ((lo || vis.loc.size) && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && (lo ? loLocated(PLAYER, p0) : vis.loc.has(p0)) && !(a.u.drone && uavLv(a.owner) >= 3)){   /* AWACS: a '?' contact; a stealth bomber only inside half the radar's range */ /*@TEST*/window.__airSeen[a.id] = 'contact';/*@ENDTEST*/ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, spread:false, unk:true}); } }
       continue; }
+    /*@TEST*/(window.__airSeen || (window.__airSeen = {}))[a.id] = 'drawn';/*@ENDTEST*/
     const [x, y] = toScreen(v.x, v.y), T = G.P[v.tgt], B = G.P[a.air.base], ang = v.hd ?? 0, phB = v.stage === 'back', alt = v.alt ?? 1, bank = v.bank || 0, ca0 = Math.cos(ang), sa0 = Math.sin(ang);
     const col = mapCol(a.owner), kind = artT(wingT(a), a.owner), nPl = 1, sc = Math.max(0.9, Math.min(k, 2.2*zx(hexPx)))*1.1, bob = 0;   // one flat aircraft icon per wing (the pill gives the count), gliding without bob
-    const Lf = (22 + 8*smooth01((hexPx - 20)/100))*(/bomb|awacs|mpa/.test(kind) ? 1.2 : /drone|swarm/.test(kind) ? 0.9 : 1)*(0.9 + 0.1*alt);
+    const Lf = (22 + 8*smooth01((hexPx - 20)/100))*(/bomb|stealth|awacs|mpa/.test(kind) ? 1.2 : /drone|swarm/.test(kind) ? 0.9 : 1)*(0.9 + 0.1*alt);
     // contrail history on screen (world-anchored, so it curves through turns and stays put while panning); far out only the last 0.9 s
     const trS = []; if (v.tr && v.tr.length){ const tMin = hexPx < 40 ? now - 900 : -Infinity; for (const q of v.tr){ if (q[3] < tMin) continue; const [sx, sy] = toScreen(q[0], q[1]); trS.push(sx, sy + bob, Math.cos(q[2]), Math.sin(q[2])); }
       trS.push(x, y + bob, ca0, sa0); }
@@ -8169,7 +8205,7 @@ function draw(now){ draw.now = now;
       const px0 = x + ox, py0 = y + oy + bob, L0 = 8*sc;
       // contrails: a tapered trail along this plane's own flight history, in three age buckets that widen and fade (3 strokes per plane);
       // multi-engine heavies leave two lines, drones a thin one, helicopters none (their rotor spins instead)
-      const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = Lf;
+      const rotor = kind === 'heli', heavy = kind === 'jet' || kind === 'bomb' || kind === 'stealth' || kind === 'awacs' || kind === 'mpa', dr = /drone|swarm/.test(kind), Dp = Lf;
       if (!rotor){ const wc = (dr ? 1.2 : 2.2)*Math.min(2, sc/1.1);
         if (nTr >= 3){ const los = heavy ? [-0.2, 0.2] : [0], b1 = Math.floor(nTr/3), b2 = Math.floor(nTr*2/3);
           ctx.save(); plateClipOn(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgb(235,240,245)';   // (never across a plate)
@@ -8694,7 +8730,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
       <span class="cs-pp" title="Population ${popOf(p).toFixed(1)}M · manpower ${Math.round(y.mp || 0)}k a day">${CS_ICO.pop}<b>${popOf(p).toFixed(1)}M</b>${(y.mp || 0) >= 0.5 ? `<span class="cs-mp res-mp">${icon('mp', 15)}<b>${Math.round(y.mp)}k</b></span>` : ''}</span></div>`;
   // building cards: the city first, then what stands here, then (yours) what can still be built
   const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = k === 'city' ? (isCapital(p) ? 'Capital' : 'City') : BUILD[k].name, tag = o0.btn ? 'button' : 'span';
-    const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
+    const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${k === 'rec' && mine ? '\n' + recTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
     return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
@@ -8731,10 +8767,18 @@ function csCard(k){ const p = sel.prov; if (p === null) return; if (k === 'city'
 function cmodHead(p, title){ const N = S.nations[PLAYER], P = G.P[p], inc = income(PLAYER);
   const rk = k => { const R0 = RES.find(x => x.k === k), d = inc.net[k]; return `<div class="chip res-${k}" title="${R0.name}: ${R0.pre}${fmt(N[k])}${R0.unit}, ${d >= 0 ? '+' : ''}${fmt(d)} a day">${icon(k, 16)}<span class="cv"><span class="vv"><b>${R0.pre}${fmt(N[k])}${R0.unit}</b><span class="d ${d < 0 ? 'neg' : ''}">${d >= 0 ? '+' : ''}${fmt(d)}</span></span></span></div>`; };
   return `<div class="rs-top"><div class="rs-head"><button class="rs-back" data-act="resume" aria-label="Back to the city" title="Back to ${P.city ? P.cityName : P.name}">${rg('back', 22)}</button>
-      <div class="rs-ttl"><h1>${title}</h1><span class="rs-cnt">${P.city ? P.cityName : P.name} · ${csStatus(p)}${P.city ? ' · level ' + ROMAN[cityLevel(p)] : ''}</span></div>
+      <div class="rs-ttl${title !== 'Build' && recHead(p) ? ' l3' : ''}"><h1>${title}</h1><span class="rs-cnt">${P.city ? P.cityName : P.name} · ${csStatus(p)}${P.city ? ' · level ' + ROMAN[cityLevel(p)] : ''}</span>${title !== 'Build' && recHead(p) ? `<span class="rs-cnt rs-rec">${recHead(p)}</span>` : ''}</div>
       <div class="rs-stk">${(title === 'Build' ? ['cash', 'metal', 'iron'] : ['cash', 'metal', 'mp']).map(rk).join('')}</div>
       <span class="rs-emb" aria-hidden="true"><span class="rs-embi">${flagHTML(PLAYER, 46)}</span></span>
       <button class="rs-x" data-act="resume" aria-label="Close" title="Back to the map">${rg('x', 18)}</button></div></div>`; }
+// Recruiting Office wording (the numbers come from the rules: recPct, recMp). recTip: the building's tooltip and build-list line at its level in p;
+// recHead: the Mobilize panel's header line ('' without an office)
+const recK = l => '+' + (+recMp(l).toFixed(1)) + 'k';
+const recTip = p => { const l = S.bld[p].rec || 0, M = BUILD.rec.max;
+  return l ? `${BUILD.rec.name} ${ROMAN[l]}: needed to mobilize infantry here. ${recPct(l)}% faster training and ${recK(l)} manpower a day in this city. ${l < M ? `Next level: ${recPct(l + 1)}% faster, ${recK(l + 1)}/day.` : 'Highest level.'}`
+    : `${BUILD.rec.name}: needed to mobilize infantry here (Motorized Infantry, Anti-Tank Infantry, Special Forces and, with an Airbase, Paratroopers). Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
+const recHead = p => S.bld[p].rec ? `${BUILD.rec.name}: ${recPct(S.bld[p].rec)}% faster training` : '';
+const bldDesc = (p, k) => k === 'rec' ? recTip(p) : BUILD[k].desc;
 const csPic = (k, lv) => { const A = csArt(k, lv); return `<i class="bi${lv ? '' : ' dim'}${A.art ? '' : ' gl'}" style="--bi:url(${A.u});--bs:54px" aria-hidden="true"></i>`; };
 const mobHTML = p => `${cmodHead(p, 'Mobilize unit')}<div class="cs-mbody cs-mmod">${cityRecruitHTML(p)}</div>`;
 const cbldHTML = p => `${cmodHead(p, 'Build')}<div class="cs-mbody cs-bmod">${cityConsHTML(p, true)}${S.bld[p].silo ? citySiloHTML(p) : ''}</div>`;
@@ -9046,7 +9090,7 @@ const RGLY = {
   clock:'<circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M11 6.6h2v6.2l3.6 2.2-1 1.7-4.6-2.8z"/>',
 };
 const rg = (k, sz = 22, cls = '') => `<svg class="rg ${cls}" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${RGLY[k] || ''}</svg>`;
-const techStep = id => { let d = 0, T = TECH_BY[id]; while (T && T.req && d < 20){ d++; T = TECH_BY[T.req]; } return d; };
+const techStep = (id, g = 0) => { const T = TECH_BY[id]; return !T || g > 20 ? 0 : techReqs(T).reduce((d, q) => Math.max(d, 1 + techStep(q, g + 1)), 0); };   // (the longest chain of prerequisites leading to it)
 const techUnit = T => Object.keys(UNITS).find(t => UNITS[t].tech === T.id) || null;
 // the picture in a node: the unit the project unlocks, else a glyph for what it does
 const TGLY = {log1:'truck', log2:'wrench', log3:'cross', msl1:'cm', msl2:'bm', msl3:'def', sat1:'sat', nav3:'anchor', drone1:null, jam1:'jam', air1:null};
@@ -9090,11 +9134,11 @@ function researchHTML(){
       <button class="rs-x" data-act="resume" aria-label="Close research" title="Back to the map">${rg('x', 18)}</button></div>
     <div class="rs-slots">${s1}${s2}</div></div>`;
   if (view === 'list'){
-    const t1 = TECH.filter(T => !has(PLAYER, T.id) && (!T.req || has(PLAYER, T.req))).map(T => techCost(T).rare).sort((a, b) => a - b)[0];
+    const t1 = TECH.filter(T => !has(PLAYER, T.id) && techOpen(PLAYER, T)).map(T => techCost(T).rare).sort((a, b) => a - b)[0];
     h += `<div class="rs-list">`;
     { const kept = keptEco(N); if (kept.length) h += `<p class="rs-kept" title="The Economy research branch is now part of buildings (Arms Industry). What you had researched still applies.">Kept from the old Economy research: ${kept.map(id => `<b>${ECO_OLD_TECH[id]}</b> (${ECO_KEPT[id][1]})`).join(' · ')}</p>`; }
     for (const br of RB_ORDER){ const M = RB[br] || {g:'atk', tag:''}, L = TECH.filter(T => T.branch === br), dn = L.filter(T => has(PLAYER, T.id)).length;
-      const open = L.filter(T => !has(PLAYER, T.id) && (!T.req || has(PLAYER, T.req)) && !slotOf(T.id)).length;
+      const open = L.filter(T => !has(PLAYER, T.id) && techOpen(PLAYER, T) && !slotOf(T.id)).length;
       const run = R && TECH_BY[R.id] && TECH_BY[R.id].branch === br, qd = R2 && TECH_BY[R2.id] && TECH_BY[R2.id].branch === br;
       h += `<button class="rs-ban${dn === L.length ? ' full' : ''}" data-act="rbranch" data-b="${br}" title="${br}: ${dn} of ${L.length} researched${open ? `, ${open} open now` : ''}">
         ${M.art ? rbImg(M.art) : ''}<span class="rs-dm"><span class="dmi">${rg(M.g, 30)}</span></span>
@@ -9117,11 +9161,13 @@ function researchHTML(){
   // the branch tree
   const br = RV.br, M = RB[br] || {g:'atk'}, Ly = rLayout(br), L = Ly.L, dn = L.filter(T => has(PLAYER, T.id)).length;
   if (RV.sel && (!TECH_BY[RV.sel] || TECH_BY[RV.sel].branch !== br)) RV.sel = null;
-  const st = T => has(PLAYER, T.id) ? 'done' : slotOf(T.id) ? 'run' : (!T.req || has(PLAYER, T.req)) ? 'open' : 'lock';
+  const st = T => has(PLAYER, T.id) ? 'done' : slotOf(T.id) ? 'run' : techOpen(PLAYER, T) ? 'open' : 'lock';
   const INFO = Ly.cols === 1, CV = INFO ? 3 : Ly.cols < 3 ? Ly.cols + 2 : Ly.cols, CO = INFO ? 0 : CV > Ly.cols ? 1 : 0;   // shown columns, and the offset of the branch's own (a single lane: nodes on the left, a card beside each)
   const X = c => (c + CO + .5)*100, Y = r => (r - Ly.r0 + .36)*100;
   let lines = '';
-  for (const T of L){ const p = Ly.pos[T.id], lit = !T.req || has(PLAYER, T.req), cls = lit ? (has(PLAYER, T.id) ? 'on' : 'av') : '';
+  for (const T of L){ const p = Ly.pos[T.id], lit = techOpen(PLAYER, T), cls = lit ? (has(PLAYER, T.id) ? 'on' : 'av') : '';
+    if (T.req2 && Ly.inB.has(T.req2)){ const q = Ly.pos[T.req2], ym = Y(p.r) - 21, c2 = has(PLAYER, T.req2) ? (has(PLAYER, T.id) ? 'on' : 'av') : '';   // the second prerequisite: its own line, joining a little lower
+      lines += `<path class="${c2}" d="M${X(q.c)} ${Y(q.r)}V${ym}H${X(p.c)}V${Y(p.r)}"/>`; }
     if (T.req && Ly.inB.has(T.req)){ const q = Ly.pos[T.req], ym = Y(p.r) - 29;
       lines += `<path class="${cls}" d="${q.c === p.c ? `M${X(q.c)} ${Y(q.r)}V${Y(p.r)}` : `M${X(q.c)} ${Y(q.r)}V${ym}H${X(p.c)}V${Y(p.r)}`}"/>`; }
     else if (T.req) lines += `<path class="${cls} ext" d="M${X(p.c)} 0V${Y(p.r)}"/>`;
@@ -9130,7 +9176,7 @@ function researchHTML(){
     return `<button class="rnode st-${s}${RV.sel === T.id ? ' sel' : ''}${q ? ' q' : ''}${s === 'open' && busy ? ' busy' : ''}${F.ut ? ' unit' : F.up ? ' upg' : ' gly'}" data-act="rsel" data-id="${T.id}"${sn ? ` id="rring${sn}"` : ''} style="--c:${p.c + CO};--r:${p.r - Ly.r0}" title="${T.name}: ${T.desc}${s === 'open' ? ` · ${costTxt(techCost(T), ', ')} · ${T.days} d` : ''}${why ? ` · ${why}` : ''}">
       <span class="dm"><span class="dmi">${faceHTML(F, 26)}</span></span>${F.up && F.ut ? `<i class="rup up-${F.up}" title="${F.up === 'atk' ? 'Attack' : F.up === 'def' ? 'Defense' : F.up === 'spd' ? 'Speed' : 'Detection'} upgrade">${rg(F.up, 12)}</i>` : ''}
       ${s === 'done' ? `<i class="rbdg ok">${rg('check', 11)}</i>` : s === 'lock' ? `<i class="rbdg lk">${rg('lock', 11)}</i>` : s === 'run' ? (q ? `<i class="rbdg qd">#2</i>` : `<i class="rbdg run">#1</i>`) : ''}
-      <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}</button>` +
+      <span class="rn">${(([a, b0]) => `<b>${a}</b>${b0 ? `<small>${b0}</small>` : ''}`)(T.name.split(' · '))}</span>${ext ? `<span class="rx">after ${ext.name.split(' · ')[0]} (${ext.branch})</span>` : ''}${T.req2 ? `<span class="rx">and ${TECH_BY[T.req2].name.split(' · ')[0]}${Ly.inB.has(T.req2) ? '' : ` (${TECH_BY[T.req2].branch})`}</span>` : ''}</button>` +
       (INFO ? (() => { const ut = techUnit(T), rq = T.req ? TECH_BY[T.req] : null, tc = techCost(T);
         const m = s === 'done' ? `<span class="ri-s ok">${rg('check', 11)} Researched</span>` : s === 'run' ? `<span class="ri-s ${q ? 'qd' : 'run'}">In slot #${sn}</span>` : s === 'lock' && rq ? `<span class="ri-s lk">${rg('lock', 11)} ${rRunning(N, rq.id) ? why : `After ${rq.name.split(' · ')[0]}`}</span>` : `${costHTML(tc, N)}<span class="ri-t">${T.days} d</span>${busy ? '<span class="ri-s lk">Both slots busy</span>' : ''}`;
         return `<button class="rinfo st-${s}${RV.sel === T.id ? ' sel' : ''}" data-act="rsel" data-id="${T.id}" style="--r:${p.r - Ly.r0}" tabindex="-1" aria-hidden="true"><b>${T.name}</b><span class="ri-d">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span><span class="ri-m">${m}</span></button>`; })() : ''); }).join('');
@@ -9148,7 +9194,7 @@ function researchHTML(){
       btns = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${T.id}" ${cr ? '' : 'disabled'} title="${cr ? `Starts in slot #${rSlotNo(rFree(N))}. Costs ${costTxt(tc, ', ')}; takes ${T.days} days` : why}">${lbl}</button>`; }
     h += `<div class="rs-det st-${s}"><span class="rs-dm lg"><span class="dmi">${faceHTML(F, 30)}</span></span>
       <div class="rs-dt"><span class="rs-dk">${br} · Step ${techStep(T.id) + 1} · ${T.days} days${d0 !== T.days*24 ? ` (${rDur(d0)} for you)` : ''}</span><b>${T.name}</b><span class="rs-dd">${T.desc}${ut ? `. Unlocks the ${UNITS[ut].name}` : ''}.</span>
-        ${req ? `<span class="rs-dr ${has(PLAYER, req.id) ? 'ok' : ''}">${rg(has(PLAYER, req.id) ? 'check' : 'lock', 11)} Requires ${req.name}${req.branch !== br ? ` (${req.branch})` : ''}</span>` : ''}</div>
+        ${techReqs(T).map(q => TECH_BY[q]).map(req => `<span class="rs-dr ${has(PLAYER, req.id) ? 'ok' : ''}">${rg(has(PLAYER, req.id) ? 'check' : 'lock', 11)} Requires ${req.name}${req.branch !== br ? ` (${req.branch})` : ''}</span>`).join('')}</div>
       <div class="rs-da">${s === 'done' ? '' : `<div class="tcost">${costHTML(tc, N)}<span class="td">${T.days} d</span></div>`}<div class="rs-db">${btns}</div></div></div>`;
   } else h += `<div class="rs-det hint">${rg('plus', 14)} Tap a project to see what it does and what it costs. Two projects run at once, one in each slot${busy ? ': both slots are busy now' : (R || R2) ? '; pick an open project and press Research to start it in the free slot' : ''}.</div>`;
   return h;
@@ -9294,7 +9340,8 @@ function wingHTML(a){
   let plan = '';
   if (sel.target !== null){ const c = airCheck(a, sel.target, sel.surprise);
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned mission</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br>
-      <span class="small">${c.ok ? (c.kind === 'strike' ? (T === 'bomb' ? `Bombing raid: fly out ${c.hours} h (bombers are slow), wreck building levels and roads, hit troops there (50% harder in a city). Fighter patrols and SAMs are its bane: a raid that loses half turns back.`
+      <span class="small">${c.ok ? (c.kind === 'strike' ? (T === 'stealth' ? `Stealth raid: fly out ${c.hours} h, wreck building levels and roads (60% of a Heavy Bomber's load), hit troops there (25% harder in a city). SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often; in flight the enemy sees it only from a SAM or jammer in or next to the province under it. A raid that loses half turns back.`
+        : T === 'bomb' ? `Bombing raid: fly out ${c.hours} h (bombers are slow), wreck building levels and roads, hit troops there (50% harder in a city). Fighter patrols and SAMs are its bane: a raid that loses half turns back.`
         : T === 'swarm' ? `Swarm attack in ${c.hours} h: jammers and SAMs down some drones first and jamming blunts the rest; survivors saturate the air defence for hours and shred infantry, guns and SAMs.`
         : T === 'sdrone' ? `Precision strike in ${c.hours} h: hits units hard and knocks out the most valuable building for 24 h (sometimes a whole level). SAMs, fighters and jammers fire first.`
         : `Strike: fly out ${c.hours} h, hit everything hostile there with ${STRIKE}× firepower, then return and rearm 6 h. Air defence (SAMs, Interceptors, Frigates) fires back.`)
@@ -9303,7 +9350,7 @@ function wingHTML(a){
         : c.kind === 'orbit' ? `Radar orbit for 16 h after ${c.hours} h: every enemy force within ${Math.round(AEW_R*KM_HEX/100)*100} km shows as an unidentified contact (?); your fighters under it cover neighbouring provinces and fight 25% better. Keep it away from enemy fighters.`
         : c.kind === 'hunt' ? `Patrol the sea for 12 h after ${c.hours} h: spots every ship and submerged submarine within ${Math.round(MPA_R*KM_HEX/100)*100} km and attacks hostile ships (subs first) every 3 h. Frigates fire back.`
         : `Move this wing to the airbase here.`) : c.why}</span></div>
-      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (T === 'bomb' ? 'Launch raid' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
+      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (isBmb(T) ? 'Launch raid' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
   return `<div class="uhd">${unitPic(T, 'xl')}<div class="uht"><div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2></div></div>${plan}
     <div class="status ${f ? 'move' : ''}">${status}</div>
     ${T === 'drone' ? `<div>${uavBadge(a.owner)}</div><div class="small muted">Vision ${Math.round(L0.vis*KM_HEX/50)*50} km · loiter ${L0.loiter} h · stealth ${Math.round((1 - L0.stealth)*100)}%</div>` : ''}
@@ -9421,11 +9468,12 @@ const COUNTER_TXT = {
   jet:['Armor and ground forces', 'Fighters, SAMs, frigates'],
   heli:['Armor and infantry at short range', 'SAMs, fighters'],
   bomb:['Cities and buildings, troops in cities, roads and railways', 'Fighters (raids break up), SAMs'],
+  stealth:['Cities and buildings behind heavy air defence: SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often', 'Its price and upkeep; fighter patrols over the target; a SAM or jammer close by still sees it coming'],
   mpa:['Submarines above all, surface ships; finds subs in a wide sea area', 'Frigates and cruisers, fighters'],
   awacs:['Nothing: locates every enemy force over a huge area as unidentified contacts; your fighters under it fight better and farther', 'Fighters, SAMs if it orbits too close'],
   sub:['Surface ships and convoys; invisible unless found', 'Maritime patrol aircraft, frigates (sonar)'],
 };
-const AG_T = ['drone', 'swarm', 'sdrone', 'jam', 'sam', 'int', 'asf', 'jet', 'heli', 'bomb', 'mpa', 'awacs', 'sub'];
+const AG_T = ['drone', 'swarm', 'sdrone', 'jam', 'sam', 'int', 'asf', 'jet', 'heli', 'bomb', 'stealth', 'mpa', 'awacs', 'sub'];
 function uavBadge(n = PLAYER){ const L = uavLv(n), on = has(n, 'drone1'); return `<span class="uavb ${L >= 4 ? 'arm' : ''}">UAV ${ROMAN[L]} · ${L >= 4 ? (L >= 5 ? 'Armed · 2 salvos' : 'Armed') : 'Recon only'}</span>${L < 4 ? '<span class="small muted">Weapons unlock at UAV IV</span>' : ''}${on ? '' : ' <span class="small muted">(research UAV I to build)</span>'}`; }
 // research card picture: the unit a technology unlocks or improves (top-down art), or a building for logistics and missile work
 const TECH_BLD = {msl1:'silo', msl2:'silo', msl3:'silo', sat1:'silo', log2:'fac', log3:'city'};
@@ -9452,6 +9500,7 @@ function airGuideHTML(){ const L = uavLv(PLAYER);
       <tr><td>Strike drones</td><td>SAMs</td><td>Fighters, jammers</td></tr>
       <tr><td>Recon / armed UAVs</td><td>Jammers</td><td>SAMs, Air Superiority patrols</td></tr>
       <tr><td>Heavy bombers</td><td>Fighter patrols (raids that lose half turn back)</td><td>SAMs in the target city (they fire before the drop: only survivors bomb)</td></tr>
+      <tr><td>Stealth bombers</td><td>Fighter patrols over the likely target (they still hit it, at 40% of the rate)</td><td>SAMs and jammers in or next to the province (the only things that see it in flight); an AWACS shows it as a ? at half range</td></tr>
       <tr><td>AWACS, patrol planes</td><td>Air Superiority Fighters</td><td>Interceptors</td></tr>
       <tr><td>Fighters</td><td>SAMs</td><td>Air Superiority Fighters</td></tr>
       <tr><td>SAMs</td><td>Swarm drones (then jets)</td><td>Artillery, strike drones</td></tr>
@@ -9468,7 +9517,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
       return `<button class="btn unit hasp${why ? ' blk' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)} Shift-click to queue 5." ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
     const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b)));
     const open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), locked = UT.filter(t => blk(t) && !near(blk(t)));
-    html += `<div class="eyebrow">Recruit</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
+    html += `<div class="eyebrow">Recruit${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
     html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to queue 5. <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
     html += `<div class="row"><button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px">${S.rally && S.rally[p] != null ? 'Rally: ' + (G.P[S.rally[p]].cityName || G.P[S.rally[p]].name) + ' (change)' : 'Set rally point'}</button></div>`;
@@ -9488,7 +9537,7 @@ function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '
       const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc);
       return `<div class="bld" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
         ${maxed ? '<span class="lv">Max</span>' : `<button class="btn" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${!ok && !c && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${Math.round(cc.h/2.4)/10} d</span>${costHTML(cc, N)}</button>`}
-        <span class="ds">${k === 'arms' ? armsHere(p, lv) + ' Each Arms Industry you already own in another province makes the next one cost 40% more.' : B.desc}</span></div>`; }).join('')}</div>`;
+        <span class="ds">${k === 'arms' ? armsHere(p, lv) + ' Each Arms Industry you already own in another province makes the next one cost 40% more.' : bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
   return html; }
 function provHTML(p){
   const P = G.P[p], o = S.owner[p], N = S.nations[PLAYER], mine = o === PLAYER;
@@ -9875,7 +9924,7 @@ const HELP_SEC = [
     <li><span class="res-iron">${icon('iron', 12)}</span> <b>Iron</b>: iron cities, a little from ore deposits, iron-bearing hills and your capital. Armor, artillery, warships, Army Bases, forts and railways. Those units also use 4% of their iron a day for spare parts; run dry and they fight worse.</li>
     <li><span class="res-elec">${icon('elec', 12)}</span> <b>Electronics</b>: electronics cities and your capital. Aircraft, drones, air defence, missiles, satellites and high-speed rail. Those units also use 2% of their electronics a day in maintenance; run dry and they fight worse.</li>
     <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>: every technology costs money, materials and rare materials (about 27 at tier 1, 55 at tier 2, 95 at tier 3), paid when it starts. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from <b>rare-earth cities</b> (a country has one or two at most, many have none) and a little from your capital: trade or fight for the rest. Advanced aircraft, carriers and missiles need some too.</li>
-    <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3 a day); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
+    <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> The Resources map mode shows each province's main output, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
     <li><b>Recruit</b> in your cities: units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
@@ -9905,6 +9954,7 @@ const HELP_SEC = [
     <li><b>Wings</b> live at your airbases (or on a carrier). Select one and tap a target inside its range ring: strike missions hit everything hostile there and fly home to rearm; patrols guard a province for 12 h.</li>
     <li><b>Interceptor</b>: patrols one province and shoots down strikes, bombers and drones. <b>Air Superiority Fighter</b> (Airbase II): covers the province and all its neighbours, hits aircraft hardest and hunts UAVs, AWACS and patrol planes. Countered by SAMs.</li>
     <li><b>Heavy Bomber</b> (Airbase II): very long range; wrecks cities, buildings, roads and rail. Easy prey for fighters and SAMs: escort it or clear the sky first.</li>
+    <li><b>Stealth Bomber</b> (Airbase III; research Strategic Bomber Upgrade, then Stealth Bombers, which also needs Stealth Airframes): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
     <li><b>AWACS</b> (Airbase II) locates enemy forces over a huge area and lets your fighters under it fight better and farther. <b>Maritime Patrol</b> finds submerged submarines and hunts ships and convoys. <b>Gunships</b> hit armor and infantry at short range.</li>
     <li><b>Wear and maintenance</b>: every mission wears a wing 3–6% (more for long or loitering missions), even unopposed. Wings repair only on the ground at your airbases (10% + 6% per base level a day) or on a carrier (20%), and not in the 6 h after a sortie, so back-to-back strikes grind them down. Below 50% they show <b>Needs maintenance</b> and fight worse; below 20% they are grounded.</li></ul>`],
   ['drones', 'Drones, UAVs, AWACS and jammers', `<ul>
@@ -10430,32 +10480,42 @@ IM.on('fxCapture', (p, O, prev) => {
 // air war (rules/air.js): paradrop dust, satellite launch smoke, the strike animation queue, missile blasts: shown for the player's own and for what the player can see
 IM.on('fxDrop', (a, p) => { if (booted && (a.owner === PLAYER || visibleSet(PLAYER).has(p))){ const P = G.P[p]; for (let i = 0; i < 7; i++) emit('smoke', P.x + (Math.random() - 0.5)*18, P.y - 14 - Math.random()*8, {vy:3, s0:5, s1:7, life:1500}); } });
 IM.on('fxSat', (p, n) => { if (booted && n === PLAYER){ const P = G.P[p]; for (let i = 0; i < 6; i++) emit('smokel', P.x, P.y, {vx:(Math.random() - 0.5)*10, vy:-20 - Math.random()*10, s0:6, s1:24, life:2600}); } });
-IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : 20); if (E.T === 'bomb') shake(4, 400); }
+IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : E.T === 'stealth' ? 30 : 20); if (isBmb(E.T)) shake(E.T === 'bomb' ? 4 : 3, 400); }
   STRIKEQ.set(E.a.id, {p:E.p, t:performance.now(), dealt:E.dealt, owner:E.owner, bnote:!!E.bnote}); });
 IM.on('fxMissile', E => { const m = E.m, P = G.P[m.to]; if (!booted || !(m.owner === PLAYER || E.owner === PLAYER || visibleSet(PLAYER).has(m.to))) return;
   if (!E.hit){ const [ix, iy] = [P.x, P.y - 40]; for (let j = 0; j < 2; j++) explode(ix + (Math.random() - 0.5)*10, iy, 0.9, true); return; }
   const dealt = E.dealt, [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*6, P.y + (Math.random() - 0.5)*4, 6);
   wfxStrike(m.k === 'bm' ? 'bm' : 'cm', ex, ey, {p:m.to});   // the blast, its crater, the burning city, the shake and the boom
-  WRECKS.push({wx:P.x, wy:P.y, t0:performance.now()}); if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', dy:-62}); });
+  if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', wx:ex, wy:ey, dy:-20}); });   // (the number over the blast itself; no wreck fire: the burning city's smoke is enough)
 // warheads the rules do not have yet (chemical, tactical nuclear, ICBM) and cruise or ballistic ones by kind: IM.emit('fxWarhead', {kind, p, by})
 // shows the strike at province p (or at E.x, E.y) where the player struck or can see; IM.emit('fxBlast', {size:'S'|'M'|'L', p}) a combat blast
 IM.on('fxWarhead', E => { const P = G.P[E.p]; if (!booted || !P || !FXW_K[E.kind] || !(E.by === PLAYER || S.owner[E.p] === PLAYER || visibleSet(PLAYER).has(E.p))) return; FXW[FXW_K[E.kind]](E.x ?? P.x, E.y ?? P.y, {p:E.p}); });
 IM.on('fxBlast', E => { const P = G.P[E.p]; if (!booted || !P || !visibleSet(PLAYER).has(E.p)) return; FXW.blast(E.size || 'M', ...fxOff(E.x ?? P.x, E.y ?? P.y, 4), {sea:P.sea}); });
 // the hourly step (rules/tick.js): battle numbers, hits, blasts, craters and shore fire where the player fights or can see; the wreck of a destroyed force
-// combat blasts by what was lost: the battle's running losses by unit type (S.bt, read only) against what was already shown; small for infantry
-// and drones, medium for vehicles, guns and aircraft, large for ships; up to 4 an hour per battle, by the side's counter, over about a second
+// combat blasts, sized by class (small for infantry and drones, medium for vehicles, guns and aircraft, large for ships): each side of a battle
+// the player can see takes hits every hour, by its counter on the side that faces the enemy: one or two blasts of the size of what it mostly
+// fields as it loses strength, plus one for each kind of unit it lost (S.bt's running losses, read only, against what was already shown);
+// spread over the game hour (at most about 3.5 s), at most 6 a battle an hour (3 on Low or with the Battery saver)
 const BLOSS = new Map(), FXW_K = {cm:'cruise', bm:'ballistic', chem:'chemical', tac:'tactical', icbm:'icbm'};
 const blastSize = t => { const U = UNITS[t]; return !U ? 'S' : U.cls === 'naval' ? 'L' : U.dr ? 'S' : U.cls === 'air' || U.cls === 'armored' || t === 'art' || t === 'sam' || t === 'jam' ? 'M' : 'S'; };
-function battleBlasts(p, owners){ const B = S.bt && S.bt[p], P = G.P[p]; if (!B || !P) return; if (BLOSS.size > 600) BLOSS.clear(); let left = 4;
-  for (const o of owners){ const bs = B.s[o]; if (!bs || !bs.lost) continue; const key = p + ':' + o, seen = BLOSS.get(key), same = seen && seen.h0 === B.h0, got = {L:0, M:0, S:0};
-    for (const t in bs.lost){ const d = bs.lost[t] - (same ? seen.l[t] || 0 : 0); if (d > 0.2) got[blastSize(t)] += d; } BLOSS.set(key, {h0:B.h0, l:{...bs.lost}});
-    const c = CLPOS.get(key) || [P.x, P.y];
-    for (const sz of ['L', 'M', 'S']) for (let i = 0; i < Math.min(2, Math.ceil(got[sz] - 0.2)) && left > 0; i++, left--){ const dl = (4 - left)*170 + Math.random()*120;
-      fxLater(dl, () => FXW.blast(sz, ...fxOff(c[0] + (Math.random() - 0.5)*6, c[1] + (Math.random() - 0.5)*4, 4), {sea:P.sea})); } } }
-IM.on('fxBattle', (p, owners, sides, list) => { const showFx = owners.includes(PLAYER) || visibleSet(PLAYER).has(p);
-  if (showFx) owners.forEach((o, i) => { const lost = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
+function battleBlasts(p, owners, sides, lostBy){ const B = S.bt && S.bt[p], P = G.P[p]; if (!P) return; if (BLOSS.size > 600) BLOSS.clear();
+  const cap = SET.fx === 'low' || saverOn() ? 3 : 6, span = Math.min(3500, 850/(HOURS_PER_SEC[S.speed] || HOURS_PER_SEC[1])), jobs = [];
+  owners.forEach((o, oi) => { const sz = [], bs = B && B.s[o], key = p + ':' + o;
+    if (bs && bs.lost){ const seen = BLOSS.get(key), same = seen && seen.h0 === B.h0, got = {L:0, M:0, S:0};
+      for (const t in bs.lost){ const d = bs.lost[t] - (same ? seen.l[t] || 0 : 0); if (d > 0.2) got[blastSize(t)] += d; } BLOSS.set(key, {h0:B.h0, l:{...bs.lost}});
+      for (const z of ['L', 'M', 'S']) for (let i = 0; i < Math.min(2, Math.ceil(got[z] - 0.2)); i++) sz.push(z); }
+    const lost = lostBy ? lostBy[oi] || 0 : 0, W = {S:0, M:0, L:0}; for (const a of sides.get(o) || []) for (const t in a.u) if (a.u[t] > 0 && UNITS[t]) W[blastSize(t)] += a.u[t]*UNITS[t].hp;
+    const main = W.L > 0 && W.L >= W.M*0.5 ? 'L' : W.M > W.S*0.6 ? 'M' : 'S';
+    for (let i = 0, n = lost >= 0.3 ? (lost >= 4 ? 2 : 1) : 0; i < n; i++) sz.push(main);   // the hits it takes
+    const c = CLPOS.get(key) || [P.x, P.y], fo = owners.find(q => q !== o && CLPOS.has(p + ':' + q)), f = fo != null ? CLPOS.get(p + ':' + fo) : null;
+    const at = f ? [c[0] + (f[0] - c[0])*0.3, c[1] + (f[1] - c[1])*0.3] : c;   // (a third of the way towards the enemy's counter)
+    sz.forEach(z => jobs.push([z, at])); });
+  for (let i = jobs.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [jobs[i], jobs[j]] = [jobs[j], jobs[i]]; }   // (both sides' blasts mixed through the hour)
+  jobs.slice(0, cap).forEach(([z, at], i, J) => fxLater(i*span/J.length + Math.random()*span*0.25/J.length, () => FXW.blast(z, ...fxOff(at[0] + (Math.random() - 0.5)*5, at[1] + (Math.random() - 0.5)*3, 2), {sea:P.sea}))); }
+IM.on('fxBattle', (p, owners, sides, list) => { const showFx = owners.includes(PLAYER) || visibleSet(PLAYER).has(p), lostBy = [];
+  if (showFx) owners.forEach((o, i) => { const lost = lostBy[i] = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
   if (showFx) fx('hits', p, {seed:Math.random()*1000});
-  if (showFx && booted) battleBlasts(p, owners);   // a blast for each kind of unit lost this hour, sized by its class
+  if (showFx && booted) battleBlasts(p, owners, sides, lostBy);   // a blast for each kind of unit lost this hour, sized by its class
   if (showFx && booted){ const P = G.P[p], nB = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0);   // visual only (Math.random, never rng)
     for (let j = 0; j < 2; j++) afxBoom(P.x + (Math.random() - 0.5)*12, P.y + (Math.random() - 0.5)*7, 0.7 + Math.random()*0.4, true);
     if (!P.sea && nB >= 6 && Math.random() < Math.min(0.7, nB/30)) afxCrater(P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8, 2 + Math.min(2.5, nB/12), {a:0.7, life:60});

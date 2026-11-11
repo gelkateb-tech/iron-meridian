@@ -31,7 +31,7 @@ console.log('cities ' + cities.length + '  ' + KS.map(k => k + ' ' + cnt[k]).joi
 ok(!R.BUILD.ref && !R.BUILD.fdy && !R.BUILD.mine, 'Refinery, Foundry or Rare Earth Mine still in BUILD');
 ok(R.BUILD.fac.name === 'Army Base' && R.BUILD.arms && R.BUILD.arms.max === 5, 'Army Base / Arms Industry missing');
 ok(!R.TECH.some(T => T.branch === 'Economy') && !R.TECH_BY.eco1, 'the Economy research branch is still there');
-ok(R.BUILD.rec.max === 1 && R.BUILD.rec.cost === 30, 'the Recruiting Office changed');
+ok(R.BUILD.rec.max === 5 && R.BUILD.rec.cost === 40 && R.buildCost(0, 'rec', 5, 0).cash === 360, 'the Recruiting Office is not the five-level one');
 for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owner[q.id] >= 0), p = P.id, y0 = R.provYield(p), keep = {...S.bld[p]};
   S.bld[p].fac = 3; const y1 = R.provYield(p); ok(Object.keys(y0).every(r => near(y0[r], y1[r])), `Army Base changes the income of ${P.cityName}`);
   S.bld[p].fac = keep.fac; S.bld[p].arms = 2; const y2 = R.provYield(p);
@@ -43,7 +43,8 @@ for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owne
   S.bld[cs[1]].arms = 1; const d1 = R.buildCost(n, 'arms', 1, cs[0]); ok(d1.cash === 56 && d1.metal === 17 && d1.iron === 8, 'second Arms Industry price ' + JSON.stringify(d1));
   const f0 = R.buildCost(n, 'fac', 1, cs[2]).cash; ok(f0 === Math.round(25*1.4), 'an Arms Industry must not raise the Army Base price: ' + f0); S.bld[cs[1]].arms = 0;   // (the capital's Army Base raises it once)
   ok(cs.every(p => R.canBuildHere(p, 'arms')) && !R.canBuildHere(G.P.find(P => S.owner[P.id] === n && !P.city).id, 'arms'), 'Arms Industry: cities only');
-  const cap = S.nations[n].capital; S.bld[cap].fac = 2; ok(near(R.trainF(cap, 'tank'), 0.6) && near(R.trainF(cap, 'inf'), 0.6) && near(R.trainF(cap, 'jet'), 1) && near(R.trainF(cap, 'frig'), 1), 'Army Base II: ground units 40% faster, aircraft and ships not'); S.bld[cap].fac = 1; }
+  const cap = S.nations[n].capital, rec0 = S.bld[cap].rec; S.bld[cap].fac = 2; S.bld[cap].rec = 0; ok(near(R.trainF(cap, 'tank'), 0.6) && near(R.trainF(cap, 'inf'), 0.6) && near(R.trainF(cap, 'jet'), 1) && near(R.trainF(cap, 'frig'), 1), 'Army Base II: ground units 40% faster, aircraft and ships not');
+  S.bld[cap].rec = 2; ok(near(R.trainF(cap, 'tank'), 0.48) && near(R.trainF(cap, 'jet'), 0.8) && near(R.trainF(cap, 'frig'), 0.8), 'Recruiting Office II: every unit 20% faster on top'); S.bld[cap].rec = rec0; S.bld[cap].fac = 1; }
 
 // ---- 3. every playable nation can field its basic units
 for (const scn of Object.keys(R.SCENARIOS)){ const Q = load(); Q.useScenario(scn); Q.IM.api.newGame(12345, 0, []); const S2 = Q.IM.api.S; let low = {};

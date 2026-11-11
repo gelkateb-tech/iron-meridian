@@ -589,3 +589,27 @@ after the change: 204, 245 and 205 units sold ($514M, $665M, $522M). What limits
 7 materials a day from one more exporter, so the biggest producer (+50 a day) still fills its storage near day 30 unless it
 spends the materials. Games without a seat (the tables above) are unchanged: same state hash.
 Lab: node tools/export-lab.js (options --nation, --res, --qty, --disc, --days).
+
+### Merge with master: five-level Recruiting Office and the Stealth Bomber
+
+Master's Recruiting Office rework and Stealth Bomber are merged into this economy. What changed against the tables above:
+
+- Recruiting Office: levels I-V priced from its own table ($40M at level I to $360M at level V, no 40% rise). Manpower a day
+  is `recMp(level)` = 3k at level I, +1.5k per level (9k at level V) instead of a flat 3 per office; the city manpower base
+  stays 2.0. Every unit trained in its city trains 10% faster per level.
+- Training time: the Army Base factor (ground units only) times the Naval Yard or Airbase factor times the Recruiting Office
+  factor, with a floor of 30% of the base time (`trainEff`).
+- AI: Recruiting Offices by master's site rule (a new office first, upgrades when every province has one or where training
+  speed is the limit); Arms Industry by payback as before. The Stealth Bomber needs Airbase III; the bomb2 / bomb3 research
+  costs rare materials at this economy's research prices.
+
+World gross income a day after the merge, three-seed mean (12345, 7, 2024), pre-economy baseline > merged:
+
+| Day | Money | Oil | Materials | Iron | Electronics | Rare | Manpower |
+|---|---|---|---|---|---|---|---|
+| 1 | 4117 > 4494 (+9%) | 502 > 510 (+2%) | 319 > 348 (+9%) | 295 > 296 (0%) | 86 > 90 (+5%) | 89 > 101 (+13%) | 901 > 959 (+6%) |
+| 10 | 4158 > 4261 (+2%) | 463 > 481 (+4%) | 299 > 324 (+8%) | 277 > 280 (+1%) | 90 > 86 (-4%) | 139 > 128 (-8%) | 1000 > 1038 (+4%) |
+| 30 | 3869 > 3750 (-3%) | 449 > 433 (-3%) | 291 > 306 (+5%) | 274 > 272 (-1%) | 79 > 77 (-2%) | 135 > 124 (-9%) | 1086 > 1033 (-5%) |
+
+Single seeds at day 30: money -11..+7%, oil -9..+8%, materials -1..+12%, iron -2..+1%, electronics -14..+7%, rare -11..-8%,
+manpower -9..+2%. Day 30 means: units 1496 > 1420, techs 98 > 99.

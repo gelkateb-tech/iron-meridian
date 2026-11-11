@@ -1,19 +1,20 @@
 // Iron Meridian rules: air. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 const AIR_SPEED = 2.5;                // hexes per hour for aircraft on missions
-const AIR_RANGE = {jet:16, int:12, heli:6, drone:18, swarm:6, sdrone:20, bomb:34, mpa:22, awacs:18, asf:14};   // mission radius in hexes from the home airbase
-const AIR_SPF = {bomb:0.6, mpa:0.85, awacs:0.85, sdrone:0.75, swarm:0.8};   // slower aircraft: share of AIR_SPEED
+const AIR_RANGE = {jet:16, int:12, heli:6, drone:18, swarm:6, sdrone:20, bomb:34, mpa:22, awacs:18, asf:14, stealth:34};   // mission radius in hexes from the home airbase
+const AIR_SPF = {bomb:0.6, stealth:0.67, mpa:0.85, awacs:0.85, sdrone:0.75, swarm:0.8};   // slower aircraft: share of AIR_SPEED
 // UAV levels (research UAV I..V): vision radius (old hexes), loiter hours, range (hexes), stealth (share of air-defence hits that land), missile salvos per sortie
 const UAV_LV = [null, {vis:6.7, loiter:12, range:18, stealth:1.0, salvos:0}, {vis:8.5, loiter:16, range:20, stealth:0.8, salvos:0}, {vis:10, loiter:20, range:22, stealth:0.6, salvos:0},
   {vis:10.5, loiter:20, range:22, stealth:0.6, salvos:1}, {vis:12, loiter:24, range:27, stealth:0.45, salvos:2}];
 const UAV_TECH = ['drone1', 'uav2', 'uav3', 'uav4', 'uav5'];
 function uavLv(n){ if (n < 0 || !S || !S.nations[n]) return 1; let l = 0; for (const id of UAV_TECH){ if (has(n, id)) l++; else break; } return Math.max(1, l); }
 const uavOf = n => UAV_LV[uavLv(n)];
-const airRangeT = (n, t) => t === 'drone' ? uavOf(n).range : (AIR_RANGE[t] || 12);
+const BOMB2_RANGE = 4;   // Strategic Bomber Upgrade: the Heavy Bomber reaches this many hexes farther
+const airRangeT = (n, t) => t === 'drone' ? uavOf(n).range : (AIR_RANGE[t] || 12) + (t === 'bomb' && has(n, 'bomb2') ? BOMB2_RANGE : 0);
 const STRIKE = 8;                     // a strike delivers this many combat-hours of firepower
 /* ---------------- Air power ---------------- */
 const wingRange = a => Math.min(...UT.filter(t => a.u[t] && UNITS[t].cls === 'air').map(t => airRangeT(a.owner, t)), 99) + (a.air && a.air.base != null && G.P[a.air.base] && !G.P[a.air.base].sea ? Math.max(0, (S.bld[a.air.base].air || 0) - 1) : 0);
-const isStriker = a => a.u.jet > 0 || a.u.heli > 0 || a.u.bomb > 0 || a.u.sdrone > 0 || a.u.swarm > 0;
+const isStriker = a => a.u.jet > 0 || a.u.heli > 0 || a.u.bomb > 0 || a.u.stealth > 0 || a.u.sdrone > 0 || a.u.swarm > 0;
 const isDrone = a => a.u.drone > 0 && UT.every(t => t === 'drone' || !a.u[t]);
 // swarm drones fly from truck launchers: any own city can host a swarm wing (field repairs only, see maintRate)
 const swarmPad = (a, p) => a.u.swarm > 0 && UT.every(t => t === 'swarm' || !a.u[t]) && S.owner[p] === a.owner && G.P[p].city && !G.P[p].sea;
@@ -31,7 +32,7 @@ const WEAR_MAX = 0.85, WEAR_WARN = 0.5, WEAR_GROUND = 0.2;
 const wingCond = a => a && a.air ? 1 - (a.air.wear || 0) : 1;
 const wornWing = a => !!(a && a.air && wingCond(a) < WEAR_WARN);
 function wearWing(a, kind, d, hrs = 0){ if (!a || !a.air || !count(a)) return 0; const T = wingT(a), r = Math.max(1, wingRange(a));
-  let k = kind === 'rebase' ? 0.01 : (0.03 + 0.03*Math.min(1, d/r) + 0.0015*hrs)*(UNITS[T].dr ? 0.9 : T === 'bomb' ? 1.15 : 1);
+  let k = kind === 'rebase' ? 0.01 : (0.03 + 0.03*Math.min(1, d/r) + 0.0015*hrs)*(UNITS[T].dr ? 0.9 : isBmb(T) ? 1.15 : 1);
   a.air.wear = Math.min(WEAR_MAX, (a.air.wear || 0) + k); return k; }
 // maintenance per day for a wing parked where it is (0: no repairs here)
 function maintRate(a){ if (!a || !a.air || a.fly) return 0; if (a.air.car != null){ const cv = armyById(a.air.car); return cv && cv.u.carr > 0 && cv.owner === a.owner ? 0.2 : 0; }
@@ -144,19 +145,21 @@ function dogfight(a, cap, p, scale){ const o = a.owner, mine = effHP(a), theirs 
   for (const b of cap){ const v = sideAV([b], b.owner, scale*(0.8 + rng()*0.4)*aw(b.owner)); for (const k in v) vb[k] = (vb[k] || 0) + v[k]; }
   hurt(a, vb, 1/Math.max(1, mine)); for (const b of cap) hurt(b, va, 1/Math.max(1, theirs)); }
 // what air raids did to each nation lately (drives the AI's counter-buys): S.airHit[n] = {drone, bomb, air}, decays daily
-function noteHit(n, t, p = -1){ if (n < 0) return; const H = (S.airHit || (S.airHit = {}))[n] || (S.airHit[n] = {drone:0, bomb:0, air:0}); H[UNITS[t] && UNITS[t].dr ? 'drone' : t === 'bomb' ? 'bomb' : 'air'] += 1;
-  if (t === 'bomb' && p >= 0) (H.bp || (H.bp = {}))[p] = S.hour; }   // H.bp: where bombers struck lately (fighter patrols go there)
+function noteHit(n, t, p = -1){ if (n < 0) return; const H = (S.airHit || (S.airHit = {}))[n] || (S.airHit[n] = {drone:0, bomb:0, air:0}); H[UNITS[t] && UNITS[t].dr ? 'drone' : isBmb(t) ? 'bomb' : 'air'] += 1;
+  if (isBmb(t) && p >= 0) (H.bp || (H.bp = {}))[p] = S.hour; }   // H.bp: where bombers struck lately (fighter patrols go there)
 const BLD_VAL = {silo:5, air:4, fac:4, yard:3, arms:2.5, rec:1.2, fort:1.5};
 const bestBld = p => BK.filter(k => S.bld[p][k] > 0 && !bdis(p, k)).sort((x, y) => BLD_VAL[y]*(1 + 0.2*S.bld[p][y]) - BLD_VAL[x]*(1 + 0.2*S.bld[p][x]))[0] || null;
 // precision hit: the most valuable building is knocked out for hrs (and with probability pLevel loses a level)
 function preciseHit(p, pLevel, hrs){ const k = bestBld(p); if (!k) return '';
   if (rng() < pLevel){ S.bld[p][k]--; return `${BUILD[k].name} lost a level`; } knockOut(p, k, hrs); return `${BUILD[k].name} knocked out for ${hrs} h`; }
-// heavy bombers wreck building levels (and any construction) in proportion to the bombers over the target
-function bombBuildings(p, n){ let lv = Math.min(4, Math.floor(n*0.75 + rng())); const hit = [];
+// bombers wreck building levels (and any construction) in proportion to the bombers over the target and their bomb load (f: 1 Heavy Bomber, 0.6 Stealth Bomber)
+function bombBuildings(p, n, f = 1){ let lv = Math.min(4, Math.floor(n*0.75*f + rng())); const hit = [];
   if (S.cons[p] && rng() < 0.5){ S.cons[p] = null; hit.push('construction'); }
   while (lv-- > 0){ const ks = BK.filter(k => S.bld[p][k] > 0); if (!ks.length) break; const w = ks.map(k => BLD_VAL[k]*S.bld[p][k]), tot = w.reduce((x, y) => x + y, 0); let r = rng()*tot, k = ks[0]; for (let i = 0; i < ks.length; i++){ r -= w[i]; if (r <= 0){ k = ks[i]; break; } }
     S.bld[p][k]--; hit.push(BUILD[k].name); }
   return hit.length ? `wrecked ${hit.join(', ')}` : ''; }
+// how much harder a bomber hits the troops sheltering in a city: +50% for the Heavy Bomber, +25% for the Stealth Bomber
+const bombCityF = t => t === 'stealth' ? 1.25 : 1.5;
 // return fire of the defenders' air defence at a manned wing (saturated SAMs fire less)
 function aaFire(a, defs, scale){ const aa = {}; for (const b of defs){ const v = sideAV([b], b.owner, scale*(0.8 + rng()*0.4)*(1 - (b.sat || 0))); for (const k in v) aa[k] = (aa[k] || 0) + v[k]; }
   aa.soft = aa.armored = aa.naval = 0; hurt(a, aa, 1/Math.max(1, effHP(a))); }
@@ -201,7 +204,7 @@ function resolveStrike(a, p){
   if (cap.length){ dogfight(a, cap, p, 2);
     fxAt('dmg', p, {text:'dogfight', color:'#f3ead2', dy:-34}, o);
     for (const me of seats()) if (o === me || cap.some(b => b.owner === me)) tell(me, `Dogfight over ${where}: ${o === me ? `your ${UNITS[T].dr ? 'drones were' : 'strike was'} intercepted (${n00 - count(a)} lost)` : `your fighters intercepted an enemy ${(T === 'awacs' ? 'AWACS' : UNITS[T].name.toLowerCase())} raid (${n00 - count(a)} shot down)`}.`, 'info', p);
-    if (T === 'bomb' && count(a) && count(a) <= n00*0.5){ if (isSeat(o)) tell(o, `Your bombers jettisoned their loads over ${where} and turned back.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your fighters broke up a ${nationName(o)} bomber raid on ${where}.`, 'good', p); removeEmpty(); return; } }
+    if (isBmb(T) && count(a) && count(a) <= n00*0.5){ if (isSeat(o)) tell(o, `Your bombers jettisoned their loads over ${where} and turned back.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your fighters broke up a ${nationName(o)} bomber raid on ${where}.`, 'good', p); removeEmpty(); return; } }
   if (!count(a)) { removeEmpty(); return; }
   // drones run the gauntlet of jammers, SAMs and guns before they reach the target; jamming also blunts the survivors
   let jamF = 1, adLost = 0;
@@ -212,25 +215,26 @@ function resolveStrike(a, p){
       fxAt('dmg', p, {text:'shot down', color:'#9fd2ff', dy:-34}, o); removeEmpty(); return; } }
   const city = G.P[p].city, defs = stationaryAt(p).filter(b => atWar(o, b.owner) && count(b) > 0);
   // bombers run the target's air defence on the way in: only the survivors drop (the rest of the fire comes after the drop)
-  let preLost = 0; if (T === 'bomb'){ const aaD = defs.filter(b => (b.u.sam || 0) + (b.u.frig || 0) + (b.u.crui || 0) > 0); if (aaD.length){ const b0 = count(a); aaFire(a, aaD, 1.2); preLost = b0 - count(a);
+  const BF = UNITS[T].bmb || 0;   // bomb load: 1 Heavy Bomber, 0.6 Stealth Bomber, 0 anything else
+  let preLost = 0; if (BF){ const aaD = defs.filter(b => (b.u.sam || 0) + (b.u.frig || 0) + (b.u.crui || 0) > 0); if (aaD.length){ const b0 = count(a); aaFire(a, aaD, 1.2); preLost = b0 - count(a);
       if (!count(a)){ if (isSeat(o)) tell(o, `Your bombers were all shot down over ${where} before they could drop.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your air defence shot down ${artA(nationName(o))} bomber raid on ${where} before it could drop.`, 'good', p); removeEmpty(); return; } } }
-  warDamage(p, T === 'bomb' ? (city ? 6 : 3)*a.u.bomb : 5);
+  warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
   const enemyLand = S.owner[p] >= 0 && S.owner[p] !== o && atWar(o, S.owner[p]);
   let bnote = '';
-  if (enemyLand){ if (T === 'bomb') bnote = bombBuildings(p, a.u.bomb); else if (T === 'sdrone') bnote = preciseHit(p, a.u.sdrone >= 2 ? 0.35 : 0.15, 24); if (bnote) noteHit(S.owner[p], T, p); }
+  if (enemyLand){ if (BF) bnote = bombBuildings(p, a.u[T], BF); else if (T === 'sdrone') bnote = preciseHit(p, a.u.sdrone >= 2 ? 0.35 : 0.15, 24); if (bnote) noteHit(S.owner[p], T, p); }
   const cut = S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
   if (cut && !defs.length) for (const me of new Set([o, S.owner[p]])) if (isSeat(me)) tell(me, o === me ? `Strike on ${G.P[p].cityName || G.P[p].name} cut ${cut} road and rail link${cut > 1 ? 's' : ''} for ${LINK_DMG.strike} h.` : `${nationName(o)} bombed the roads and railways at ${G.P[p].cityName || G.P[p].name}: ${cut} link${cut > 1 ? 's' : ''} out for ${LINK_DMG.strike} h.`, o === me ? 'good' : 'bad', p);
-  const label = T === 'bomb' ? 'Bombing raid' : T === 'swarm' ? 'Swarm attack' : T === 'sdrone' ? 'Drone strike' : 'Air strike';
+  const label = T === 'stealth' ? 'Stealth raid' : BF ? 'Bombing raid' : T === 'swarm' ? 'Swarm attack' : T === 'sdrone' ? 'Drone strike' : 'Air strike';
   if (!defs.length){ if (isSeat(o) && (bnote || !cut)) tell(o, bnote ? `${label} on ${where}: ${bnote}${adLost ? `; ${adLost} drones lost to air defence` : ''}.` : `Strike on ${where} found no targets.`, bnote ? 'good' : 'info', p);
     if (S.owner[p] !== o && bnote && isSeat(S.owner[p])) tell(S.owner[p], `${nationName(o)} ${label.toLowerCase()} on ${where}: ${bnote}.`, 'bad', p);
     if (bnote) IM.emit('fxStrike', {a, p, T, by:o, bnote:true, dealt:0, owner:S.owner[p]}); removeEmpty(); return; }
   const hpBefore = defs.map(effHP), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), myBefore = count(a) + adLost + preLost;
-  // bombers over a city hit the troops sheltering there 50% harder
-  const av = avScale(sideAV([a], o, STRIKE*(0.8 + rng()*0.4)), jamF*(T === 'bomb' && city ? 1.5 : 1)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
+  // bombers over a city hit the troops sheltering there 50% harder (a Stealth Bomber 25%: bombCityF)
+  const av = avScale(sideAV([a], o, STRIKE*(0.8 + rng()*0.4)), jamF*(BF && city ? bombCityF(T) : 1)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
   for (const b of defs){ let f = 1/tot; if (b.owner === S.owner[p]) f *= Math.pow(0.8, S.bld[p].fort); hurt(b, av, f); }
   noteHit(defs[0].owner, T, p);
   // air defence fires back at manned aircraft (drones already ran the gauntlet)
-  if (!UNITS[T].dr) aaFire(a, defs, T === 'bomb' ? 1.2 : 2);
+  if (!UNITS[T].dr) aaFire(a, defs, BF ? 1.2 : 2);
   const dealt = Math.round(hpBefore.reduce((s0, h, i) => s0 + h - effHP(defs[i]), 0)), killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), lost = myBefore - count(a);
   IM.emit('fxStrike', {a, p, T, by:o, bnote:!!bnote, dealt, owner:defs[0] ? defs[0].owner : null});   // the client shows it where its seat struck or can see
   if (isSeat(o)){ tell(o, `${label} on ${where}: ${dealt} damage${killed ? `, ${killed} enemy unit${killed > 1 ? 's' : ''} destroyed` : ''}${bnote ? ', ' + bnote : ''}${lost ? `, ${lost} ${UNITS[T].dr ? 'drone' : 'aircraft'}${lost > 1 && UNITS[T].dr ? 's' : ''} lost` : ''}.`, killed || dealt > 20 || bnote ? 'good' : 'info', p); cue(o, 'battle'); bump(o, 'unitsKilled', killed); bump(o, 'unitsLost', lost); }

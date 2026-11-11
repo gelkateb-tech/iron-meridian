@@ -23,18 +23,35 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
 function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : ''; }
 const reqText = (p, t, n) => canMobilize(n, p, t);
 const nextLvl = (p, k) => S.bld[p][k] + 1;
+// ---------- Recruiting Office (levels I-V): every unit trained in its city trains 10% faster per level, and the city gives 3k manpower a day at level I
+// and 1.5k more per level. recPct / recMp are per level (the page words its tooltips from them), recSpeed is the city's training-time factor
+const REC_MAX = 5;
+const recLv = p => Math.max(0, Math.min(REC_MAX, (S.bld[p] && S.bld[p].rec) || 0));
+const recPct = l => 10*Math.max(0, Math.min(REC_MAX, l || 0));
+const recMp = l => l > 0 ? 1.5*(Math.min(REC_MAX, l) + 1) : 0;
+const recSpeed = p => 1 - recPct(recLv(p))/100;
+// the cost of a building priced from a table of levels (BUILD[k].lv): the same fields as buildCost
+function lvCost(k, lvl){ const L = BUILD[k].lv[Math.max(1, Math.min(BUILD[k].max, lvl))]; return {cash:L.cash, metal:L.metal || 0, iron:L.iron || 0, elec:L.elec || 0, h:L.days*24}; }
+// all the speed bonuses multiply, but no unit trains in less than 30% of its base time
+const TRAIN_MIN = 0.3;
+const trainEff = (p, t, n) => Math.max(TRAIN_MIN, trainF(p, t)*(docOf(n) ? docOf(n).build : 1));
+// a Recruiting Office level is finished in p: every unit queued or in training there has its REMAINING time cut by the new ratio at once
+// (f0: each queued item's training factor before the level, from recBefore)
+const recBefore = p => S.queue[p].map(it => it.msl ? 1 : trainEff(p, it.t, S.owner[p]));
+function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i] > 0)) return; const r = trainEff(p, it.t, S.owner[p])/f0[i]; if (!(r < 1)) return;
+  it.h = Math.max(1, Math.round(it.h*r)); it.h0 = Math.max(it.h, Math.round((it.h0 || it.h)*r)); }); }
 // Army Base and Arms Industry prices rise 40% for every OTHER province of the nation that already has one of the same kind (built, or under construction),
 // cash, materials and iron alike; the two do not raise each other's price
 const FAC_RISE = 1.4;
 const RISE_K = {fac:1, arms:1};
 function facOthers(n, p, k = 'fac'){ let c = 0; for (let q = 0; q < G.P.length; q++) if (q !== p && S.owner[q] === n && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
-function buildCost(n, k, lvl, p){ const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(RISE_K[k] ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p, k)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), iron:Math.round((B.iron || 0)*m*half), elec:Math.round(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1 : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
+function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(RISE_K[k] ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p, k)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), iron:Math.round((B.iron || 0)*m*half), elec:Math.round(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1 : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
 // training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
 // (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
 const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
-function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1); }
-const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainF(p, t)*(docOf(n) ? docOf(n).build : 1)));
+function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
+const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && P.city && P.coast)); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
@@ -80,7 +97,8 @@ function prodHour(p){ const q = S.queue[p];
         if (RP && RP[p] && !q.length && !recruit(o, p, RP[p])){ const why = canMobilize(o, p, RP[p]); tell(o, `Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[RP[p]].name}.`, 'info', p); } } } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
-    if (--c.h <= 0){ S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
+    if (--c.h <= 0){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0);
+      if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.${f0 && f0.length ? ' Units in training there will be ready sooner.' : ''}`, 'good', p); } }
 function engHour(N){
     if (--N.eng.h <= 0){ const {t, m} = N.eng; (N.mk || (N.mk = {}))[t] = m; N.tv = (N.tv || 0) + 1; N.eng = null;
       if (isSeat(N.id)){ tell(N.id, `${UNITS[t].name} upgraded to Mk ${ROMAN[m]}: +${Math.round((MARK_F[m] - 1)*100)}% attack and defense for every one you field.`, 'good'); cue(N.id, 'research'); } } }
