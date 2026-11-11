@@ -256,6 +256,10 @@ const TIER_LATE = 60, tierGrow = h => 1 + Math.max(0, h/24 - TIER_LATE)/TIER_LAT
 // a war between peers (step 4, Asia: China and India, among equals, never had the 1.1 times the power the computer wants against any victim): a
 // computer nation of tier S or A attacks a nation of tier S or A with TIER_PEER times its power, and counts it TIER_PEER_W times as tempting
 const TIER_PEER = 0.95, TIER_PEER_W = 1.5;
+// rivals (step 4 repair: China, weaker in arms than India and Russia through most of the second month, and with both always at war with somebody
+// so the TIER_GANG limit shut them out, fought only smaller nations on day 60 in 3 seeds of 5): a computer nation of tier S attacks another of
+// tier S with TIER_RIVAL times its power, and may be that nation's second enemy (the TIER_GANG limit is one more, as for a person's nation)
+const TIER_RIVAL = 0.85;
 // land to win in the nations world: the share of the world (winShareFor), or the starting land plus 90 provinces or plus TIER_WIN_UP of it if
 // that is more (step 4: with a tenth of the world, 308, the United States, 230 provinces, won on day 25 on independent land alone; now it needs 368)
 const TIER_WIN_UP = 0.6;

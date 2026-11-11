@@ -127,7 +127,9 @@ function tick(){
     if (owners.size >= 1 && hostileToOwner.length === 1 && ![...owners].some(o => o !== hostileToOwner[0] && atWar(o, hostileToOwner[0]))){
       const O = hostileToOwner[0];
       const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
-      if (O !== NEUTRAL && gN >= CAP_MIN){
+      // (the nations world: a computer nation that has grown enough for now, isSated, takes back its own lost land but no more: in the step 4
+      // repair Chad, sated at 28 provinces in the middle of overrunning Sudan, took 3 more with the forces already standing in them)
+      if (O !== NEUTRAL && gN >= CAP_MIN && !(S.home[p] !== O && isSated(O))){
         if (!S.cap[p] || S.cap[p].by !== O){ S.cap[p] = {by:O, h:0}; if (isSeat(S.owner[p])){ tell(S.owner[p], `${nationName(O)} is occupying ${G.P[p].cityName || G.P[p].name}. Retake it before the capture completes.`, 'bad', p); alarm(S.owner[p]); } }
         S.cap[p].h += 1 + 0.25*Math.max(0, ...list.filter(a => a.owner === O).map(a => cmdF(a, 'siege'))); if (S.cap[p].h >= capNeed(p, O)) capture(p, O);
       } else S.cap[p] = null;

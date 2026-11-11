@@ -177,8 +177,8 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       const dry = ['Mali', 'Chad'].map(nm => ({nm, c:games.map(g => g.cash30[id(nm)]), net:games.map(g => g.net30[id(nm)]), dead:games.filter(g => g.dead[id(nm)] != null && g.dead[id(nm)] <= 30).length}));
       say('Step 3  Mali and Chad solvent', dry.every(x => !x.dead && x.net.every(v => v > 0) && x.c.every(c => c >= 0)), dry.map(x => `${x.nm} on day 30: money a day ${x.net.map(v => (v > 0 ? '+' : '') + v).join(', ')}, treasury ${x.c.join(', ')}` + (x.dead ? ` (eliminated by day 30 in ${x.dead})` : '')).join('; ')); }
     // step 4, Asia (from then on): North Korea, Mongolia and Bangladesh, the three weakest pairings on the map, alive on day 30 in at least 4
-    // seeds of 5; China and India at war with each other or with a tier S or A nation, not only with smaller ones, in at least 3 of 5: in the
-    // second month (days 30 to 60; a war between computer nations lasts about three weeks, so one day's look, day 60, is printed beside it);
+    // seeds of 5; China and India at war with each other or with a tier S or A nation, not only with smaller ones, in at least 3 of 5 on
+    // day 60, as the plan words it (the enemies of the whole second month, days 30 to 60, are printed beside it);
     // the sea nations Japan, Indonesia and the Philippines each hold on day 60 a province they did not start with, or have built ships, in at
     // least 3 of 5 (the computer must not be stuck on its islands)
     if (NAT.open.includes('Asia')){ const need = k => Math.min(k, games.length), alive = (nm, d) => games.filter(g => !(g.dead[id(nm)] != null && g.dead[id(nm)] <= d)).length;
@@ -187,7 +187,7 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       const big = ['China', 'India'].map(nm => { const n = id(nm), on60 = g => (g.wars[60] || []).filter(w => w.includes(n)).map(w => w[0] === n ? w[1] : w[0]), month = g => (g.foes || [])[n] || [];
         const peer = m => tiers[m] === 'S' || tiers[m] === 'A', ok = games.filter(g => month(g).some(peer)).length, ok60 = games.filter(g => on60(g).some(peer)).length;
         return {nm, ok, ok60, l:games.map(g => (month(g).map(m => `${names[m]} ${tiers[m]}`).join('+') || 'peace') + ` [day 60: ${on60(g).map(m => names[m]).join('+') || 'peace'}]`).join('; ')}; });
-      say('Step 4  China and India fight their weight', big.every(b => b.ok >= need(3)), big.map(b => `${b.nm} at war with ${b.nm === 'China' ? 'India' : 'China'} or a tier S or A nation in days 30 to 60 in ${b.ok} of ${games.length}, on day 60 in ${b.ok60} (${b.l})`).join('; '));
+      say('Step 4  China and India fight their weight', big.every(b => b.ok60 >= need(3)), big.map(b => `${b.nm} at war with ${b.nm === 'China' ? 'India' : 'China'} or a tier S or A nation on day 60 in ${b.ok60} of ${games.length}, in days 30 to 60 in ${b.ok} (${b.l})`).join('; '));
       const sea = ['Japan', 'Indonesia', 'Philippines'].map(nm => { const n = id(nm), ok = games.filter(g => g.gain60[n] > 0 || g.navBuilt[n] > 0).length;
         return {nm, ok, l:games.map(g => `${g.gain60[n]} new, ${g.navBuilt[n]} ships`).join('; ')}; });
       say('Step 4  sea nations move', sea.every(x => x.ok >= need(3)), sea.map(x => `${x.nm} took land or built ships in ${x.ok} of ${games.length} (${x.l})`).join('; ')); }
