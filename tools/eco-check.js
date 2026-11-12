@@ -6,18 +6,21 @@
 // 3. every playable nation of every scenario has money, manpower, materials and iron income on day 1 and can pay for its basic units
 // 4. an old save (Refinery II, Foundry under construction, knocked-out Mine, eco1 researched, eco3 running) loads with the refunds,
 //    without the old buildings, with the eco1 bonus kept and eco3 complete; a second load changes nothing more
+// 5. the resource scale (RES_K): a save from before it (no S.rk, goods in the old units) loads with every stored quantity of goods times RES_K
+//    (stocks, Market lots, trade cargo, deals, statistics) and plays on as the same game; a second load scales nothing again
+// Goods are counted at the resource scale: every goods number below is written in the old units times K (RES_K)
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') +
-  '\nreturn {IM, income, provYield, buildCost, ucost, cityMain, cityOut, canBuildHere, trainF, stockCap, has, useScenario, SCENARIOS, UNITS, BUILD, RNODES, RCATS, RN, BK, MKT_BASE, ARMS_PCT};';
+  '\nreturn {IM, income, provYield, buildCost, ucost, cityMain, cityOut, canBuildHere, trainF, stockCap, has, useScenario, SCENARIOS, UNITS, BUILD, RNODES, RCATS, RN, BK, MKT_BASE, ARMS_PCT, RES_K, GOODS};';
 const load = () => new Function(SRC)();
 let bad = 0; const ok = (c, msg) => { if (!c){ bad++; console.log('FAIL  ' + msg); } }, near = (a, b, e = 1e-6) => Math.abs(a - b) <= e*Math.max(1, Math.abs(a), Math.abs(b));
 
 // ---- 1. city main resources
-const R = load(), api = R.IM.api; api.newGame(12345, 0, []); let S = api.S, G = api.G;
+const R = load(), api = R.IM.api, K = R.RES_K; api.newGame(12345, 0, []); let S = api.S, G = api.G;
 const cities = G.P.filter(P => P.city && !P.sea), KS = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare'], cnt = Object.fromEntries(KS.map(k => [k, 0]));
 for (const P of cities){ const k = R.cityMain(P.id); ok(KS.includes(k), `${P.cityName} has no main resource`); cnt[k]++; }
 ok(G.P.every(P => P.city || P.main == null), 'a province that is not a city has a main resource');
@@ -42,8 +45,8 @@ for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owne
   ok(Object.keys(y0).filter(r => r !== 'cash' && r !== 'mp' && y0[r] > 0).every(r => r === k), `${P.cityName} yields more than its main resource`);
   S.bld[p].arms = keep.arms; }
 { const n = 0, cs = G.P.filter(P => S.owner[P.id] === n && P.city).map(P => P.id), c1 = R.buildCost(n, 'arms', 1, cs[0]), c2 = R.buildCost(n, 'arms', 2, cs[0]), c5 = R.buildCost(n, 'arms', 5, cs[0]);
-  ok(c1.cash === 20 && c1.metal === 6 && c1.iron === 3 && c2.cash === 64 && c2.metal === 19 && c2.iron === 10 && c5.cash === 262 && c5.elec === 26, 'Arms Industry prices (level I at half price) ' + JSON.stringify([c1, c2, c5]));
-  S.bld[cs[1]].arms = 1; const d1 = R.buildCost(n, 'arms', 1, cs[0]); ok(d1.cash === 28 && d1.metal === 8 && d1.iron === 4, 'second Arms Industry price ' + JSON.stringify(d1));
+  ok(c1.cash === 20 && c1.metal === 6*K && c1.iron === 3*K && c2.cash === 64 && c2.metal === 19*K && c2.iron === 10*K && c5.cash === 262 && c5.elec === 26*K, 'Arms Industry prices (level I at half price) ' + JSON.stringify([c1, c2, c5]));
+  S.bld[cs[1]].arms = 1; const d1 = R.buildCost(n, 'arms', 1, cs[0]); ok(d1.cash === 28 && d1.metal === 8*K && d1.iron === 4*K, 'second Arms Industry price ' + JSON.stringify(d1));
   const f0 = R.buildCost(n, 'fac', 1, cs[2]).cash; ok(f0 === Math.round(25*1.4), 'an Arms Industry must not raise the Army Base price: ' + f0); S.bld[cs[1]].arms = 0;   // (the capital's Army Base raises it once)
   ok(cs.every(p => R.canBuildHere(p, 'arms')) && !R.canBuildHere(G.P.find(P => S.owner[P.id] === n && !P.city).id, 'arms'), 'Arms Industry: cities only');
   const cap = S.nations[n].capital, rec0 = S.bld[cap].rec; S.bld[cap].fac = 2; S.bld[cap].rec = 0; ok(near(R.trainF(cap, 'tank'), 0.6) && near(R.trainF(cap, 'inf'), 0.6) && near(R.trainF(cap, 'jet'), 1) && near(R.trainF(cap, 'frig'), 1), 'Army Base II: ground units 40% faster, aircraft and ships not');
@@ -52,16 +55,16 @@ for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owne
 // ---- 3. every playable nation can field its basic units
 for (const scn of Object.keys(R.SCENARIOS)){ const Q = load(); Q.useScenario(scn); Q.IM.api.newGame(12345, 0, []); const S2 = Q.IM.api.S; let low = {};
   for (const N of S2.nations){ const g = Q.income(N.id).gross;
-    for (const k of ['cash', 'mp', 'metal', 'iron', 'oil']){ ok(g[k] > (k === 'cash' ? 150 : k === 'mp' ? 30 : 4), `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
-    for (const k of ['elec', 'rare']){ ok(g[k] > 1, `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
+    for (const k of ['cash', 'mp', 'metal', 'iron', 'oil']){ ok(g[k] > (k === 'cash' ? 150 : k === 'mp' ? 30 : 4*K), `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
+    for (const k of ['elec', 'rare']){ ok(g[k] > 1*K, `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
     for (const t of ['inf', 'at', 'tank', 'art']){ const c = Q.ucost(N.id, t); ok(Object.keys(c).every(k => N[k] >= c[k]), `${scn}: ${N.name} cannot pay for ${t} on day 1`); } }
   console.log(`${scn}: ${S2.nations.length} nations; lowest day-1 income  ` + Object.entries(low).map(([k, v]) => `${k} ${v[0].toFixed(1)} (${v[1]})`).join('  ')); }
 
 // ---- 3b. the follow-ups: a seat's expired offers come back with a dispatch; medium powers get two weeks before an AI attacks them
-{ const Q = load(), a2 = Q.IM.api; a2.newGame(11, 0, [0]); const T = a2.S, N = T.nations[0]; T.started = true; N.oil = 200; N.cash = 500;
-  ok(a2.postOffer(0, 'oil', 60, 90, 'sell') === 60 && a2.postOffer(0, 'iron', 40, 0.1, 'buy') === 40 && N.oil === 140 && near(N.cash, 496), 'posting the two offers');
+{ const Q = load(), a2 = Q.IM.api; a2.newGame(11, 0, [0]); const T = a2.S, N = T.nations[0]; T.started = true; N.oil = 200*K; N.cash = 500;
+  ok(a2.postOffer(0, 'oil', 60*K, 90, 'sell') === 60*K && a2.postOffer(0, 'iron', 40*K, 0.1, 'buy') === 40*K && N.oil === 140*K && near(N.cash, 496), 'posting the two offers');
   for (let h = 0; h < 96; h++) a2.tick(); const L = a2.desk(0).log.map(e => e.text).filter(t => /expired/.test(t));
-  ok(!T.book.some(o => o.seller === 0) && L.length === 2 && L.some(t => /^Your sell offer of 60 oil at \$90\.00M each expired unsold\. The 60 oil are back in your stock/.test(t)) && L.some(t => /^Your buy offer for 40 iron at \$0\.10M each expired unfilled\. The \$4M held for it is back in your treasury\.$/.test(t)), 'expired offers: ' + JSON.stringify(L));
+  ok(!T.book.some(o => o.seller === 0) && L.length === 2 && L.some(t => /^Your sell offer of 60,000 oil at \$90\.00M per 1,000 barrels expired unsold\. The 60,000 oil are back in your stock/.test(t)) && L.some(t => /^Your buy offer for 40,000 iron at \$0\.10M per 1,000 tons expired unfilled\. The \$4M held for it is back in your treasury\.$/.test(t)), 'expired offers: ' + JSON.stringify(L));
   const mid = T.nations.filter(M => M.mid).map(M => M.name).sort().join(), sm = T.nations.filter(M => M.small && M.mid).length;
   ok(mid === 'France,Iran,Turkey' && !sm, 'medium powers: ' + mid); }
 
@@ -71,14 +74,14 @@ for (const scn of Object.keys(R.SCENARIOS)){ const Q = load(); Q.useScenario(scn
   const old = JSON.parse(a2.saveJSON()); delete old.eco;
   old.bld[mineP[0]].ref = 2; old.bld[mineP[1]].mine = 1; old.bdis = {[mineP[1]]:{mine:old.hour + 20}}; old.cons[mineP[2]] = {k:'fdy', lvl:1, h:30, h0:72};
   old.bld[own[0]].fdy = 2; old.bld[N.capital].fac = 3;
-  old.nations[me].tech.eco1 = 1; old.nations[me].research = {id:'eco3', h:50, h0:144}; old.nations[1].tech.eco2 = 1; old.nations[me].metal = Q.stockCap(me) - 10;
+  old.nations[me].tech.eco1 = 1; old.nations[me].research = {id:'eco3', h:50, h0:144}; old.nations[1].tech.eco2 = 1; old.nations[me].metal = Q.stockCap(me) - 10*K;
   const before = {cash:old.nations[me].cash, metal:old.nations[me].metal, iron:old.nations[me].iron, cash1:old.nations[1].cash};
   ok(a2.restore(JSON.parse(JSON.stringify(old))), 'the old save does not load'); T = a2.S; const M = T.nations[me];
   ok(T.eco === 1 && T.bld.every(b => !('ref' in b) && !('fdy' in b) && !('mine' in b)), 'old buildings left in the save');
   ok(T.bld.every(b => b.arms === 0) && T.bld[M.capital].fac === 3, 'Arms Factory III must load as Army Base III, Arms Industry 0');
   ok(T.cons[mineP[2]] === null && !(T.bdis[mineP[1]] && T.bdis[mineP[1]].mine), 'Foundry under construction or knocked-out Mine left');
-  // Refinery I + II: $130M, 26 materials, 13 iron; Mine I: $55M, 10; Foundry (cancelled): $50M, 10 materials. 46 materials: 10 fit, 36 paid at 2.4
-  ok(near(M.metal, before.metal + 10) && near(M.iron, before.iron + 13) && near(M.cash, before.cash + 130 + 55 + 50 + 36*Q.MKT_BASE.metal, 1e-9), `refund: money ${before.cash} -> ${M.cash}, materials ${before.metal} -> ${M.metal}, iron ${before.iron} -> ${M.iron}`);
+  // Refinery I + II: $130M, 26 materials, 13 iron; Mine I: $55M, 10; Foundry (cancelled): $50M, 10 materials. 46 materials: 10 fit, 36 paid at 2.4 (all of it K times)
+  ok(near(M.metal, before.metal + 10*K) && near(M.iron, before.iron + 13*K) && near(M.cash, before.cash + 130 + 55 + 50 + 36*Q.MKT_BASE.metal, 1e-9), `refund: money ${before.cash} -> ${M.cash}, materials ${before.metal} -> ${M.metal}, iron ${before.iron} -> ${M.iron}`);
   ok(near(T.nations[1].cash, before.cash1 + 50 + 80), 'the other nation\'s Foundry II refund: ' + (T.nations[1].cash - before.cash1));
   ok(Q.has(me, 'eco1') && Q.has(me, 'eco3') && M.research === null && Q.has(1, 'eco2'), 'economy research not kept / not completed');
   ok(T.log.some(e => /New economy/.test(e.text) && /4 levels refunded/.test(e.text) && /Industrial Automation/.test(e.text)), 'no dispatch about the new economy: ' + JSON.stringify(T.log.slice(0, 2).map(e => e.text)));
@@ -87,6 +90,23 @@ for (const scn of Object.keys(R.SCENARIOS)){ const Q = load(); Q.useScenario(scn
 // eco1 keeps +20% money (against the +10% everyone has), eco3 +50% oil, eco2 +40% manpower
 { const Q = load(), a2 = Q.IM.api; a2.newGame(5, 0, []); const T = a2.S, g0 = {...Q.income(2).gross}; T.nations[2].tech = {eco1:1, eco2:1, eco3:1}; const o = JSON.parse(a2.saveJSON()); a2.restore(o); const tr = Q.income(2).trade, g1 = Q.income(2).gross;
   ok(near((g1.cash - tr.cash)/(g0.cash - tr.cash), 1.2/1.1, 0.02) && near((g1.oil - tr.oil)/(g0.oil - tr.oil), 1.5, 0.02) && near(g1.mp/g0.mp, 1.4, 0.02), `legacy economy research: money x${(g1.cash/g0.cash).toFixed(3)} oil x${(g1.oil/g0.oil).toFixed(3)} manpower x${(g1.mp/g0.mp).toFixed(3)}`); }
+
+// ---- 5. a save from before the resource scale
+{ const Q = load(), a2 = Q.IM.api; a2.newGame(4242, 0, [0]); const T = a2.S; T.started = true; for (let h = 0; h < 8*24; h++) a2.tick();
+  const N0 = T.nations[0]; N0.oil = 123.4*K; a2.postOffer(0, 'iron', 20*K, 2.5, 'sell'); a2.postOffer(0, 'rare', 10*K, 7, 'buy');
+  const now = JSON.parse(a2.saveJSON()), old = JSON.parse(a2.saveJSON()), G0 = Q.GOODS;
+  // the same save as the build before the scale wrote it: no marker, every goods quantity K times smaller
+  const xs = o => { if (o) for (const k of G0) if (typeof o[k] === 'number') o[k] /= K; };
+  delete old.rk; for (const M of old.nations){ xs(M); xs(M.xB); xs(M.surS); if (typeof M.sold === 'number') M.sold /= K; }
+  for (const o of old.book || []){ o.qty /= K; if (o.q0 != null) o.q0 /= K; } if (old.mkt){ xs(old.mkt.use); xs(old.mkt.dem); }
+  for (const r of old.trade.routes) for (const v of [r.va, r.vb]) if (v) v.q /= K; xs(old.stats && old.stats.made); if (old.stats && old.stats.rareRes) old.stats.rareRes /= K;
+  ok(a2.restore(old) && a2.S.rk === K, 'the save from before the resource scale does not load');
+  const back = JSON.parse(a2.saveJSON()); let diffs = 0; const cmp = (a, b, at) => { if (typeof a === 'number' && typeof b === 'number'){ if (!near(a, b, 1e-12)){ if (diffs++ < 3) console.log('  ' + at + ': ' + a + ' vs ' + b); } return; }
+    if (a && b && typeof a === 'object') for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) cmp(a[k], b[k], at + '.' + k); };
+  for (const f of ['nations', 'book', 'mkt', 'trade', 'stats']) cmp(now[f], back[f], f);
+  ok(!diffs && near(a2.S.nations[0].oil, 123.4*K) && a2.S.book.some(o => o.seller === 0 && o.res === 'iron' && o.qty === 20*K && o.price === 2.5), `the old save's goods are not K times what they were (${diffs} differences)`);
+  ok(a2.restore(JSON.parse(a2.saveJSON())) && near(a2.S.nations[0].oil, 123.4*K), 'a second load scales the goods again');
+  for (let h = 0; h < 24; h++) a2.tick(); ok(a2.S.hour === now.hour + 24 && a2.S.nations[0].oil > 0, 'the scaled save does not play on'); }
 
 console.log(bad ? `ECO CHECK FAILED: ${bad} problem${bad > 1 ? 's' : ''}` : 'ECO CHECK OK');
 process.exit(bad ? 1 : 0);

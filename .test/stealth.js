@@ -10,7 +10,7 @@ const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.en
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
-const NAMES = ['IM', 'UNITS', 'RN', 'rCost', 'rLevel', 'AIR_RANGE', 'airRangeT', 'wingRange', 'st', 'multU', 'mult', 'addArmy', 'aaFire', 'dogfight', 'resolveStrike', 'bombBuildings', 'bombCityF', 'effHP', 'count',
+const NAMES = ['IM', 'RES_K', 'GOODS', 'UNITS', 'RN', 'rCost', 'rLevel', 'AIR_RANGE', 'airRangeT', 'wingRange', 'st', 'multU', 'mult', 'addArmy', 'aaFire', 'dogfight', 'resolveStrike', 'bombBuildings', 'bombCityF', 'effHP', 'count',
   'canResearch', 'researchWhy', 'startResearch', 'canMobilize', 'ucost', 'trainH', 'loWing', 'loSpotted', 'loLocated', 'loHidden', 'nearList', 'AEW_R', 'hexDist', 'aiStealthWant', 'aiStealthOk', 'aiStealthSite',
   'aiFoeSams', 'visAewKm', 'KM_W', 'visLocAt', 'aiTurn', 'income', 'isStriker', 'airMissionKind', 'armyName', 'removeEmpty', 'stationaryAt', 'isBmb', 'AI_STEALTH_MAX', 'armyVisible', 'visibleSet'];
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + '\nreturn {' + NAMES.join(', ') + ', get S(){ return S; }, get G(){ return G; }, clearVis(){ visCache = null; }};';
@@ -21,13 +21,13 @@ function fresh(seed){ const R = new Function(SRC)(); R.IM.api.newGame(seed, 0, [
 { const R = fresh(777), {UNITS, RN, S, G} = R, U = UNITS.stealth;
   // ---- 1. numbers
   ok(U && U.name === 'Stealth Bomber' && U.short === 'STB' && U.cls === 'air', 'the unit exists');
-  const want = {cost:330, oil:26, metal:34, iron:6, elec:40, rare:8, mp:8, build:168, upk:14, fuel:3.5, atk:8, def:4, hp:12, spd:10};
+  const K = R.RES_K, want = {cost:330, oil:26*K, metal:34*K, iron:6*K, elec:40*K, rare:8*K, mp:8, build:168, upk:14, fuel:3.5*K, atk:8, def:4, hp:12, spd:10};   // (goods at the resource scale)
   for (const k in want) ok(U[k] === want[k], `stealth.${k} is ${want[k]}`, U[k]);
   ok(U.vs.soft === 1 && U.vs.armored === 0.7 && U.vs.naval === 0.6 && U.vs.air === 0.2, 'damage by target class', U.vs);
   ok(U.req.b === 'air' && U.req.l === 3 && U.tech === 'u_stealth', 'needs Airbase III and its own unlock', U.req);
   ok(R.AIR_RANGE.stealth === R.AIR_RANGE.bomb && R.AIR_RANGE.stealth === 34, 'range 34 hexes, the Heavy Bomber\'s');
   ok(U.bmb === 0.6 && UNITS.bomb.bmb === 1, 'bomb load 60% of the Heavy Bomber\'s');
-  const c = R.ucost(0, 'stealth'), d = S.nations[0].doc; info.cost = c; ok(d || (c.cash === 330 && c.elec === 40 && c.rare === 8 && c.mp === 8), 'price', c);
+  const c = R.ucost(0, 'stealth'), d = S.nations[0].doc; info.cost = c; ok(d || (c.cash === 330 && c.elec === 40*K && c.rare === 8*K && c.mp === 8), 'price', c);
   // detection table: each shooter against the stealth bomber, as a share of what it does to a Heavy Bomber
   const share = t => R.multU(t, 'stealth')/R.multU(t, 'bomb');
   info.share = Object.fromEntries(['sam', 'frig', 'crui', 'int', 'asf', 'jet', 'inf', 'tank', 'carr'].map(t => [t, r2(share(t))]));
@@ -36,10 +36,10 @@ function fresh(seed){ const R = new Function(SRC)(); R.IM.api.newGame(seed, 0, [
   ok(near(R.multU('asf', 'stealth'), 0.4*R.multU('asf', 'bomb'), 0.03) && R.multU('asf', 'bomb') === 3.0 && R.multU('int', 'bomb') === 6.0, 'fighters hit a Stealth Bomber at 40% of their anti-bomber bonus (ASF 3.0 to 1.2, Interceptor 6.0 to 2.4)', R.multU('asf', 'stealth'));
   ok(share('inf') === 1 && share('tank') === 1, 'guns hit it like any aircraft');
   // ---- research (the tree by unit): the Strategic Bomber Upgrade on the Heavy Bomber's line, the Stealth Bomber's unlock needs it AND Stealth Airframes
-  const N = S.nations[0], B2 = RN.bomb_up, B3 = RN.u_stealth; N.research = N.research2 = null; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 50000;
+  const N = S.nations[0], B2 = RN.bomb_up, B3 = RN.u_stealth; N.research = N.research2 = null; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 50000*(R.GOODS.includes(k) ? K : 1);
   ok(B2 && B2.name === 'Strategic Bomber Upgrade' && B2.lv[0].day === 11 && B2.req.join() === 'u_bomb', 'the Strategic Bomber Upgrade is there', B2);
   ok(B3 && B3.name === 'Stealth Bomber' && B3.lv[0].c.days === 9 && B3.lv[0].day === 14 && B3.req.join() === 'bomb_up,jet_lo' && B3.elite, 'the Stealth Bomber unlock is there', B3);
-  ok(R.rCost(B3, 1).cash === Math.round(30 + 0.9*330) && R.rCost(B3, 1).rare === 12 + Math.round(330/4), 'priced from the unit\'s own price', R.rCost(B3, 1));
+  ok(R.rCost(B3, 1).cash === Math.round(30 + 0.9*330) && R.rCost(B3, 1).rare === (12 + Math.round(330/4))*K, 'priced from the unit\'s own price', R.rCost(B3, 1));
   N.tech = {}; N.tv = (N.tv || 0) + 1; S.hour = 5*24;
   ok(!R.canResearch(0, 'bomb_up') && /Opens on day 11/.test(R.researchWhy(0, 'bomb_up')), 'the upgrade opens on day 11', R.researchWhy(0, 'bomb_up'));
   S.hour = 20*24; ok(!R.canResearch(0, 'bomb_up') && /Needs Heavy Bomber/.test(R.researchWhy(0, 'bomb_up')), 'the upgrade needs the Heavy Bomber', R.researchWhy(0, 'bomb_up'));
@@ -131,7 +131,7 @@ function arena(seed){ const R = fresh(seed), {S, G} = R; let E = -1, fp = -1, gp
 
 // ---- 5. the AI
 { const A = arena(99), {R, S, G, E} = A, n = E, N = S.nations[n], cap = N.capital, foe = 0;
-  const rich = () => { for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 40000; };
+  const rich = () => { for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 40000*(R.GOODS.includes(k) ? R.RES_K : 1); };
   const mine = () => ({wings:S.armies.filter(a => a.owner === n && a.air && a.u.stealth > 0).length, planes:S.armies.reduce((s, a) => s + (a.owner === n ? a.u.stealth || 0 : 0), 0), queued:S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.filter(j => j.t === 'stealth').length : 0), 0)});
   const turns = k => { for (let i = 0; i < k; i++){ rich(); R.aiTurn(n); } };
   N.tech = {...N.tech, u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}; N.tv = (N.tv || 0) + 1; S.bld[cap].air = 3; S.bld[cap].fac = Math.max(1, S.bld[cap].fac); rich();
@@ -162,7 +162,7 @@ if (!QUICK){ const R = fresh(12345), {S, G} = R; let err = null, first = null, m
     S.queue.forEach((l, p) => { for (const j of l) if (j.t === 'stealth') q[S.owner[p]] = (q[S.owner[p]] || 0) + 1; }); return {w, q}; };
   try { for (let h = 0; h < 80*24 && !S.over; h++){
       if (h === 49*24) for (const N of S.nations){ if (!N.alive) continue; Object.assign(N.tech, {u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}); N.tv = (N.tv || 0) + 1; S.bld[N.capital].air = 3; }
-      if (h >= 49*24 && h % 24 === 0) for (const N of S.nations) if (N.alive){ N.cash = Math.max(N.cash, 1500); for (const k of ['oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = Math.max(N[k], 400); }
+      if (h >= 49*24 && h % 24 === 0) for (const N of S.nations) if (N.alive){ N.cash = Math.max(N.cash, 1500); for (const k of ['oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = Math.max(N[k], 400*(R.GOODS.includes(k) ? R.RES_K : 1)); }
       const q0 = census().q; R.IM.api.tick(); const c = census();
       for (const n in c.w) maxW = Math.max(maxW, c.w[n]);
       for (const n in c.q) if ((c.q[n] || 0) > (q0[n] || 0)){ built++; per[S.nations[n].name] = (per[S.nations[n].name] || 0) + 1; if (first == null) first = S.hour; if (!R.aiFoeSams(+n)) noSam++; }

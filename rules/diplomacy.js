@@ -265,7 +265,7 @@ const emptySide = () => ({cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, provs:
 // an old save's deal side: food dropped, the new goods filled in
 function sideFix(sd){ if (!sd) return emptySide(); delete sd.food; for (const k of DEAL_K) if (!(sd[k] >= 0)) sd[k] = 0; sd.provs = sd.provs || []; sd.treaty = sd.treaty || []; return sd; }
 function dealValueFor(me, ai, D){ // value of the deal to the AI: what it receives minus what it gives
-  const M = mkt(), res = side => DEAL_K.reduce((s0, k) => s0 + (side[k] || 0)*(k === 'cash' ? 1 : M.p[k]), 0);
+  const M = mkt(), res = side => DEAL_K.reduce((s0, k) => s0 + (k === 'cash' ? side[k] || 0 : lotCash(side[k] || 0, M.p[k])), 0);
   let v = res(D.give) - res(D.get)*1.05;
   for (const p of D.give.provs) v += (isCapital(p) ? 1e6 : provValue(p))*(G.P[p].nbs.some(q => S.owner[q] === ai) ? 1 : 0.55);
   for (const p of D.get.provs){ v -= (isCapital(p) ? 1e6 : provValue(p))*1.6; if (S.owner.filter(o => o === ai).length - D.get.provs.length < 2) v -= 1e6; }
@@ -274,7 +274,7 @@ function dealValueFor(me, ai, D){ // value of the deal to the AI: what it receiv
   for (const k of new Set([...D.give.treaty, ...D.get.treaty])) v += k === 'pass' ? (D.get.treaty.includes(k) ? tv(k, true) : 0) + (D.give.treaty.includes(k) ? tv(k, false) : 0) : tv(k, true);
   return v + opinion(ai, me)*1.2; }
 function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
-  for (const k of DEAL_K){ if ((D.give[k] || 0) > N[k] + 0.01) return `you do not have ${D.give[k]} ${rlbl(k)}`; if ((D.get[k] || 0) > A[k] + 0.01) return `they do not have ${D.get[k]} ${rlbl(k)}`; }
+  for (const k of DEAL_K){ const e = 0.01*(isGood(k) ? RES_K : 1); if ((D.give[k] || 0) > N[k] + e) return `you do not have ${k === 'cash' ? '$' + fmt(D.give[k]) + 'M' : resFull(k, D.give[k])}`; if ((D.get[k] || 0) > A[k] + e) return `they do not have ${k === 'cash' ? '$' + fmt(D.get[k]) + 'M' : resFull(k, D.get[k])}`; }
   if (D.give.provs.some(p => S.owner[p] !== me) || D.get.provs.some(p => S.owner[p] !== ai)) return 'a province changed hands';
   if (D.give.provs.some(p => isCapital(p)) ) return 'you cannot hand over your capital';
   if (D.get.provs.length) return `${A.name} never sells territory`;   // land is sold in the Territory tab (rules/territory.js), never by a computer-run nation
@@ -288,19 +288,19 @@ function applyTrade(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
   for (const p of D.give.provs) cedeTo(p, ai); for (const p of D.get.provs) cedeTo(p, me);
   for (const k of new Set([...D.give.treaty, ...D.get.treaty])) if (k !== 'peace') applyDeal(ai, me, k);
   addMem(ai, me, 4); checkEnd(); }
-function dealText(D, who){ const part = (side, ownerName) => [...DEAL_K.map(k => !side[k] ? '' : k === 'cash' ? `$${fmt(side.cash)}M` : `${side[k]} ${yword(k, side[k])}`), ...side.provs.map(p => G.P[p].cityName || G.P[p].name), ...side.treaty.map(k => ({peace:'peace', pass:'Right of Way', nap:'non-aggression', ally:'alliance'})[k])].filter(Boolean).join(', ') || 'nothing';
+function dealText(D, who){ const part = (side, ownerName) => [...DEAL_K.map(k => !side[k] ? '' : k === 'cash' ? `$${fmt(side.cash)}M` : `${fmt(side[k])} ${yword(k, side[k])}`), ...side.provs.map(p => G.P[p].cityName || G.P[p].name), ...side.treaty.map(k => ({peace:'peace', pass:'Right of Way', nap:'non-aggression', ally:'alliance'})[k])].filter(Boolean).join(', ') || 'nothing';
   return `you give ${part(D.give)}; ${who} ${who === "they" || who === "you" ? "give" : "gives"} ${part(D.get)}`; }
 // AI nation n proposes a trade to seat `me`
 function aiProposeTrade(n, me){ const DK = desk(me); if ((DK.offers || (DK.offers = [])).some(o => o.from === n)) return; const N = S.nations[n], M = mkt(), D = {give:emptySide(), get:emptySide()};
   // (computer-run nations never sell land: they only buy it, rules/territory.js terrDay)
-  { const k = MKT_K[Math.floor(rng()*MKT_K.length)], q = M.p[k] > 4 ? 20 : 40; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(q*M.p[k]*0.95); }
+  { const k = MKT_K[Math.floor(rng()*MKT_K.length)], lots = M.p[k] > 4 ? 20 : 40, q = lots*MKT_LOT; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(lots*M.p[k]*0.95); }
   if (dealOK(me, n, D)) return; DK.offers.push({id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}); say(me, n, n, `Proposal: ${dealText(D, 'we').replace('you give', 'you give us')}.`); }
 const sameBloc = (me, n) => { blocs(); const a = blocIdOf(me); return !!a && n !== me && a === blocIdOf(n); };   // fresh: alliances can break mid-day
 const GIFT_K = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'];
-const giftRoom = (n, k) => k === 'cash' ? 1e9 : Math.max(0, Math.floor(stockCap(n) - S.nations[n][k]));   // what the recipient can store
+const giftRoom = (n, k) => k === 'cash' ? 1e9 : k === 'mp' ? Math.max(0, Math.floor(stockCap(n, k) - S.nations[n][k])) : Math.max(0, kFloor(stockCap(n) - S.nations[n][k]));   // what the recipient can store (goods in whole RES_K)
 // nation `me` gives stocks and provinces (g) to its coalition partner n
 function sendGift(me, n, g){ const M0 = S.nations[me], N = S.nations[n]; if (!g || !sameBloc(me, n)) return false; const parts = [];
-  for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, Math.floor(M0[k]), giftRoom(n, k))); if (!q) continue; M0[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${q} ${rlbl(k)}`); }
+  for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, isGood(k) ? kFloor(M0[k]) : Math.floor(M0[k]), giftRoom(n, k))); if (!q) continue; M0[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${fmt(q)} ${rlbl(k)}`); }
   for (const p of g.provs){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
   if (!parts.length) return false; addMem(n, me, Math.min(15, 2 + parts.length*2));
   if (isSeat(me)){ say(me, n, me, `Sending you ${parts.join(', ')}.`); say(me, n, n, 'Received with thanks. The coalition stands together.'); const D = desk(me); if (D.unread) D.unread[n] = 0; }
@@ -308,12 +308,13 @@ function sendGift(me, n, g){ const M0 = S.nations[me], N = S.nations[n]; if (!g 
 // AI partners offer supplies when you run short, and send them if you say yes
 // AI partners send supplies straight to coalition members who run short (the player included); nothing goes through the market
 const AID = {cash:{low:40, rich:700, keep:450, max:150}, oil:{low:25, rich:150, keep:100, max:60}, metal:{low:25, rich:150, keep:100, max:60}, iron:{low:20, rich:150, keep:100, max:50}, elec:{low:15, rich:120, keep:80, max:40}, rare:{low:15, rich:120, keep:80, max:30}, mp:{low:15, rich:140, keep:90, max:40}};
+for (const k of GOODS) resK(AID[k]);   // the goods at the resource scale RES_K
 function coalitionAid(){ const BL = blocs(), ask = S.aidAsk || (S.aidAsk = {});
   for (const B of BL) for (const m of B.members){ const R = S.nations[m]; if (!R.alive) continue;
     for (const k of GIFT_K){ const A = AID[k]; if (R[k] > A.low && !(R.short && R.short[k])) continue;
       const donor = B.members.map(x => S.nations[x]).find(N => N.alive && N.id !== m && !isSeat(N.id) && N[k] > A.rich && !(ask[N.id] > S.hour)); if (!donor || rng() >= 0.5) continue;
-      const q = Math.min(A.max, Math.floor(donor[k] - A.keep), giftRoom(m, k)); if (q < 1) continue; donor[k] -= q; R[k] += q; ask[donor.id] = S.hour + 72; addMem(m, donor.id, 3);
-      const what = k === 'cash' ? `$${q}M` : k === 'mp' ? `${q}k manpower` : `${q} ${rlbl(k)}`;
+      const q = Math.min(A.max, isGood(k) ? kFloor(donor[k] - A.keep) : Math.floor(donor[k] - A.keep), giftRoom(m, k)); if (q < (isGood(k) ? RES_K : 1)) continue; donor[k] -= q; R[k] += q; ask[donor.id] = S.hour + 72; addMem(m, donor.id, 3);
+      const what = k === 'cash' ? `$${q}M` : k === 'mp' ? `${q}k manpower` : `${fmt(q)} ${rlbl(k)}`;
       if (isSeat(m)){ say(m, donor.id, donor.id, `We saw you were short of ${rlbl(k)}, so we sent you ${what}. That is what partners are for.`); tell(m, `${donor.name} sent you ${what} as coalition aid.`, 'good', null); }
       for (const me of B.members) if (me !== m && isSeat(me)) tell(me, `${donor.name} sent ${what} to your coalition partner ${R.name}.`, '', null); } } }
 // AI nation `from` puts a treaty offer on the desk of seat `me` (one open offer per nation, at most one every five days)

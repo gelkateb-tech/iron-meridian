@@ -81,7 +81,7 @@ function newGame(seed, pick, humans = []){
     for (const id of provs) owner[id] = k;
     const capital = (T ? P0.capital : null) ?? provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
     G.P[capital].city = true;
-    const N = {id:k, power:pi, name:P0.name, color:P0.color, ai:!humans.includes(k), cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
+    const N = {id:k, power:pi, name:P0.name, color:P0.color, ai:!humans.includes(k), cash:220, oil:40*RES_K, metal:60*RES_K, iron:70*RES_K, elec:30*RES_K, rare:40*RES_K, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
     if (T){ N.tier = P0.tier || 'B'; N.region = P0.region || ''; }
     return N;
   });
@@ -90,6 +90,7 @@ function newGame(seed, pick, humans = []){
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
+  S.rk = RES_K;   // goods counted at the resource scale RES_K (see resKMigrate)
   if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
   if (T) tierStart(mode);
@@ -127,7 +128,7 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     N.cap0 = N.capital;
     const cities = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id);
     for (const k of ['cash', 'mp', 'oil', 'metal', 'iron', 'elec']) N[k] = kit[k];
-    N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40 : 60;   // no rare-earth city: a little more in stock for the first weeks
+    N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40*RES_K : 60*RES_K;   // no rare-earth city: a little more in stock for the first weeks
     { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0); after the big-country oil city of cityMains (rules/map.js), so oil is reserved only for a nation of under 8 cities without one
     S.bld[N.capital].fac = 1; for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;
     if (kit.fortCap) S.bld[N.capital].fort = 1;
@@ -166,12 +167,12 @@ function mobMigrate(){ if (S.mob) return; S.mob = 1; const got = new Set();
 // paid in money at the base price. The Economy research branch is gone too: what was researched keeps its effect (income0), a project still running
 // is completed at once (it was paid for). City main resources come from the map, so there is nothing to migrate for them.
 function ecoMigrate(){ if (S.eco) return; S.eco = 1; const got = {};
-  const refund = (o, k, lvl) => { if (o == null || o < 0 || !S.nations[o]) return; const B = ECO_OLD[k], m = Math.pow(1.6, lvl - 1), r = got[o] || (got[o] = {lv:0, cash:0, metal:0, iron:0}); r.lv++; r.cash += Math.round(B.cost*m); r.metal += Math.round(B.metal*m); r.iron += Math.round(B.iron*m); };
+  const refund = (o, k, lvl) => { if (o == null || o < 0 || !S.nations[o]) return; const B = ECO_OLD[k], m = Math.pow(1.6, lvl - 1), r = got[o] || (got[o] = {lv:0, cash:0, metal:0, iron:0}); r.lv++; r.cash += Math.round(B.cost*m); r.metal += kRound(B.metal*m); r.iron += kRound(B.iron*m); };
   for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p], o = S.owner[p], d = bdisOf(p);
     for (const k in ECO_OLD){ if (b && b[k] > 0) for (let l = 1; l <= b[k]; l++) refund(o, k, l); if (b) delete b[k]; if (d && typeof d === 'object') delete d[k]; }
     const c = S.cons[p]; if (c && ECO_OLD[c.k]){ refund(o, c.k, c.lvl || 1); S.cons[p] = null; } }
   for (const o in got){ const N = S.nations[o], r = got[o], cap = stockCap(+o); N.cash += r.cash; r.paid = r.cash;
-    for (const k of ['metal', 'iron']){ const fit = Math.max(0, Math.min(r[k], Math.floor(cap - N[k]))); N[k] += fit; if (r[k] > fit){ const x = (r[k] - fit)*MKT_BASE[k]; N.cash += x; r.paid += x; r[k] = fit; } } }
+    for (const k of ['metal', 'iron']){ const fit = Math.max(0, Math.min(r[k], kFloor(cap - N[k]))); N[k] += fit; if (r[k] > fit){ const x = (r[k] - fit)/MKT_LOT*MKT_BASE[k]; N.cash += x; r.paid += x; r[k] = fit; } } }
   for (const N of S.nations){ if (!N.tech) N.tech = {}; for (const s of R_SLOTS){ const R = N[s]; if (R && ECO_OLD_TECH[R.id]){ N.tech[R.id] = 1; N.tv = (N.tv || 0) + 1; N[s] = null; } } if (N.rPick && ECO_OLD_TECH[N.rPick.id]) N.rPick = null; }
   if (S.trade && Array.isArray(S.trade.routes)) for (const r of S.trade.routes) trValue(r);
   INCC.v = -1;
@@ -223,6 +224,7 @@ function restore(data){
   useScenario(n64 ? 'world64' : 'world'); DAY_LIMIT = Infinity;   // older saves with a scenario or a day limit continue as an open-ended world war
   if (n64) WIN_CAPS = winCapsFor(S.nations.length);   // (the save's own number of nations, not this build's)
   resetCaches();
+  resKMigrate();   // first: everything below (trade routes laid out now, the migrations) counts goods at RES_K
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
   if (!Array.isArray(S.own0) || S.own0.length !== S.owner.length) S.own0 = (Array.isArray(S.home) && S.home.length === S.owner.length ? S.home : S.owner).slice();   // very old saves: who held each province at the start, from its home owner (territory sales)
@@ -240,16 +242,29 @@ function restore(data){
   IM.emit('restored');
   return true;
 }
+// saves from before the resource scale (S.rk unset: goods counted in the old units, RES_K times smaller): every stored quantity of oil, materials,
+// iron, electronics and rare materials is multiplied, once (S.rk records the scale, so a save is never scaled twice): the nations' stocks and the
+// computer's daily trade counters, Market listings (their lots; prices stay, they are per MKT_LOT units as they were per unit), the Market's
+// record of what was spent, trade routes' cargo, pending deals' goods and a seat's statistics. Money, manpower and the territory offers (money
+// only) are as they were
+function resKMigrate(){ const f = RES_K/(S.rk > 0 ? S.rk : 1); S.rk = RES_K; if (f === 1) return;
+  const xs = o => { if (o && typeof o === 'object') for (const k of GOODS) if (typeof o[k] === 'number') o[k] *= f; };
+  for (const N of S.nations){ xs(N); xs(N.xB); xs(N.surS); if (typeof N.sold === 'number') N.sold *= f; }
+  for (const o of Array.isArray(S.book) ? S.book : []){ if (typeof o.qty === 'number') o.qty *= f; if (typeof o.q0 === 'number') o.q0 *= f; }
+  if (S.mkt){ xs(S.mkt.use); xs(S.mkt.dem); }
+  if (S.trade && Array.isArray(S.trade.routes)) for (const r of S.trade.routes) for (const v of [r.va, r.vb]) if (v && typeof v.q === 'number') v.q *= f;
+  for (const D of [S, ...Object.values(S.desks || {})]){ for (const o of Array.isArray(D.offers) ? D.offers : []) if (o && o.deal){ xs(o.deal.give); xs(o.deal.get); }
+    const st0 = D.stats; if (st0){ xs(st0.made); if (typeof st0.rareRes === 'number') st0.rareRes *= f; } } }
 // saves from before iron, electronics and rare materials (and with food): food is dropped everywhere, the new goods start at the new-game stocks
 function resMigrate(){
-  for (const N of S.nations){ delete N.food; if (N.short) delete N.short.food; for (const [k, v] of [['iron', 50], ['elec', 30], ['rare', 40]]) if (typeof N[k] !== 'number' || !isFinite(N[k])) N[k] = v; }
+  for (const N of S.nations){ delete N.food; if (N.short) delete N.short.food; for (const [k, v] of [['iron', 50], ['elec', 30], ['rare', 40]]) if (typeof N[k] !== 'number' || !isFinite(N[k])) N[k] = v*RES_K; }
   // Farms are gone: each level is refunded ($20M), a farm under construction is cancelled (refunded), a knocked-out one forgotten
   for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p], o = S.owner[p], N = o >= 0 ? S.nations[o] : null;
     if (b && b.farm){ if (N) N.cash += 20*b.farm; } if (b) delete b.farm;
     const c = S.cons[p]; if (c && !BUILD[c.k] && !ECO_OLD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
     if (S.bdis && S.bdis[p] && typeof S.bdis[p] === 'object') delete S.bdis[p].farm; }
   // food listings: a sell offer's food is gone, a buy offer's money goes back to its owner
-  if (Array.isArray(S.book)) S.book = S.book.filter(o => { if (MKT_K.includes(o.res)) return true; if (isBid(o) && S.nations[o.seller]) S.nations[o.seller].cash += o.qty*o.price; return false; });
+  if (Array.isArray(S.book)) S.book = S.book.filter(o => { if (MKT_K.includes(o.res)) return true; if (isBid(o) && S.nations[o.seller]) S.nations[o.seller].cash += o.qty/MKT_LOT*o.price; return false; });
   mktFix();
   // a pending trade offer that moved food no longer balances once the food is gone (and one that only sold food would ask money for nothing): drop it; the rest just lose the food key
   const hadFood = sd => !!(sd && sd.food > 0);
@@ -286,8 +301,8 @@ function st(o, t, k){
     for (const u of UT){ const r = {}, NU = RNODES_U[u] || []; for (const kk of ['atk', 'def', 'spd', 'hp', 'rng']){ let v = UNITS[u][kk] || 0;   // (rng: extra mission radius in hexes, from research only)
         for (const nd of NU){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++){ const x = nd.lv[i].fx[kk]; if (x) v += x; } }   // flat bonuses: every researched level of the unit's upgrades and generations
         if (sh.oil && UNITS[u].fuel){ if (kk === 'atk') v *= 0.7; if (kk === 'spd') v *= 0.6; }
-        if (sh.iron && MAINT[u].iron >= 0.05){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.85; }   // no spare parts: armor, guns and warships fight worse
-        if (sh.elec && MAINT[u].elec >= 0.05){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.9; }   // no avionics or radar spares: aircraft, drones, air defence and warships
+        if (sh.iron && MAINT[u].iron >= 0.05*RES_K){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.85; }   // no spare parts: armor, guns and warships fight worse
+        if (sh.elec && MAINT[u].elec >= 0.05*RES_K){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.9; }   // no avionics or radar spares: aircraft, drones, air defence and warships
         if (kk === 'atk' || kk === 'def'){ v *= MARK_F[Math.min(3, +T[u + (kk === 'atk' ? '_fp' : '_pr')] || 0) + 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }   // Firepower / Protection, then the doctrine
         r[kk] = v; } c.v[u] = r; } }
   return c.v[t][k];

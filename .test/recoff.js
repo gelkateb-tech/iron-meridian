@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
     B.fac = 5; B.rec = 5; B.air = 0; B.yard = 0; o.floorTank = trainH(cap, 'tank', 0); B.fac = 5; B.rec = 0; o.fac5Tank = trainH(cap, 'tank', 0);
     Object.assign(B, keep);
     // ---- a level completes: units queued or in training get their remaining time cut by the new ratio at once
-    B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500; N.iron = 500; N.elec = 500;
+    B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500*RES_K; N.iron = 500*RES_K; N.elec = 500*RES_K;
     recruit(0, cap, 'inf'); recruit(0, cap, 'inf'); recruit(0, cap, 'at'); S.queue[cap].push({t:'cm', h:36, h0:36, msl:true});
     S.queue[cap][0].h = 15;   // the first one is part trained
     o.q0 = S.queue[cap].map(it => [it.t, it.h, it.h0]);
@@ -51,7 +51,8 @@ const { chromium } = require('playwright');
     Object.assign(B, keep); S.queue[cap].length = 0; S.cons[cap] = null;
     return o; });
   ok('five levels', r.max === 5, r.max);
-  const want = [{cash:40, metal:0, iron:0, elec:0, h:48}, {cash:75, metal:10, iron:0, elec:0, h:72}, {cash:130, metal:20, iron:10, elec:0, h:96}, {cash:220, metal:35, iron:20, elec:0, h:120}, {cash:360, metal:55, iron:30, elec:15, h:144}];
+  const K = await p.evaluate(() => RES_K);   // goods at the resource scale
+  const want = [{cash:40, metal:0, iron:0, elec:0, h:48}, {cash:75, metal:10*K, iron:0, elec:0, h:72}, {cash:130, metal:20*K, iron:10*K, elec:0, h:96}, {cash:220, metal:35*K, iron:20*K, elec:0, h:120}, {cash:360, metal:55*K, iron:30*K, elec:15*K, h:144}];
   ok('costs and build times per level', JSON.stringify(r.cost) === JSON.stringify(want), r.cost);
   ok('manpower +3k / +4.5k / +6k / +7.5k / +9k a day', JSON.stringify(r.mp) === '[0,3,4.5,6,7.5,9]' && JSON.stringify(r.pct) === '[0,10,20,30,40,50]', r);
   { const d = r.y.map(v => v - r.y[0]), u = d[1]/3; ok('the city really yields that much more manpower by level', u > 0 && d.every((v, i) => Math.abs(v - r.mp[i]*u) < 1e-6), r.y); }
@@ -60,14 +61,14 @@ const { chromium } = require('playwright');
   ok('Army Base and Recruiting Office multiply', Math.abs(r.stack - 0.64) < 1e-9, r.stack);
   ok('no unit ever trains under 30% of its base time (all buildings, levels, doctrines)', r.bad.length === 0 && r.worst >= 0.29 && r.min === 0.3, { worst: r.worst, bad: r.bad });
   ok('Army Base V + Office V tank sits at the floor', r.floorTank === Math.round(r.base.tank*0.3) && r.fac5Tank === Math.round(r.base.tank*0.3), r);
-  ok('upgrade to II: paid $75M + 10 materials, 3 days', r.built === true && r.cons.k === 'rec' && r.cons.lvl === 2 && r.cons.h === 72 && r.paid.cash === 75 && r.paid.metal === 10, r);
+  ok('upgrade to II: paid $75M + 10 materials, 3 days', r.built === true && r.cons.k === 'rec' && r.cons.lvl === 2 && r.cons.h === 72 && r.paid.cash === 75 && r.paid.metal === 10*K, r);
   { const f = 0.8/0.9, exp = r.q0.map(([t, h, h0]) => t === 'cm' ? [t, h, h0] : [t, Math.max(1, Math.round(h*f)), Math.round(h0*f)]);
     ok('level done: remaining time of the unit in training and the queued ones cut by the new ratio (a missile is not a unit)', r.lvl === 2 && r.consAfter === null && JSON.stringify(r.q1) === JSON.stringify(exp) && r.q1[0][1] < r.q0[0][1] && r.q1[1][1] < r.q0[1][1] && Math.abs(r.q1[1][1] - r.newInf) <= 1, { q0: r.q0, q1: r.q1, exp }); }
   ok('already at the 30% floor: the level changes nothing', r.floorKeep[0] === r.floorKeep[1] && r.floorKeep[2] === 5, r.floorKeep);
   ok('another building finishing leaves the queue alone', r.other[0] === r.other[1], r.other);
   ok('no level VI; infantry needs level I (any level will do)', r.sixth === false && r.need === 'Build a Recruiting Office first' && r.need3 === '', r);
   // ---- the whole thing through real game hours: queue, upgrade, watch the units come out sooner
-  const flow = await p.evaluate(() => { const im = window.__im, N = S.nations[0], cap = N.capital, B = S.bld[cap]; B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500;
+  const flow = await p.evaluate(() => { const im = window.__im, N = S.nations[0], cap = N.capital, B = S.bld[cap]; B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500*RES_K;
     for (let i = 0; i < 3; i++) recruit(0, cap, 'inf'); const before = S.queue[cap].map(it => it.h); build(0, cap, 'rec'); S.cons[cap].h = 3;
     const seen = []; for (let i = 0; i < 4; i++){ im.tick(); seen.push([B.rec, S.queue[cap].map(it => it.h)]); } S.speed = 0;
     const o = {before, seen}; S.queue[cap].length = 0; return o; });

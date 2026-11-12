@@ -234,12 +234,13 @@ const trGdp = n => { const i = income(n); return Math.max(40, i.gross.cash - (i.
 function neuGdp(nc){ const c = G.countries[nc]; let s = 0; for (const p of c.provs) if (S.owner[p] === NEUTRAL) s += G.P[p].city ? 12 : 3; return Math.max(30, Math.min(260, 30 + s)); }
 function neuGood(nc){ let oil = 0, ore = 0, rare = 0, city = 0; for (const p of G.countries[nc].provs) if (S.owner[p] === NEUTRAL){ const P = G.P[p]; if (P.oil) oil++; if (P.ore) ore++; if (P.rare >= 1.5) rare++; if (P.city) city++; } return rare >= 1 ? 'rare' : oil >= 2 ? 'oil' : ore >= 2 ? 'iron' : city >= 3 ? 'elec' : 'metal'; }
 // what a partner ships besides money: a little of the resource it produces most of relative to its needs
-// (by value: a unit of rare materials or electronics weighs more than one of iron); a neutral partner ships 1.5 of its typical good (half that of rare materials)
+// (by value: a unit of rare materials or electronics weighs more than one of iron); a neutral partner ships 1.5 RES_K of its typical good (half that of rare
+// materials). A partner ships 4% of its output of it, 0.5 to 4 RES_K, rounded to a tenth of RES_K
 const TR_GOODS = ['oil', 'metal', 'iron', 'elec', 'rare'], TR_W = {oil:1, metal:1, iron:1, elec:1.6, rare:2.4};
-function trGoods(n){ const i = income(n); let k = 'metal', bv = -1e9; for (const q of TR_GOODS){ const v = (i.net[q] + i.gross[q]*0.3)*TR_W[q]; if (v > bv){ bv = v; k = q; } } return [k, Math.max(0.5, Math.min(4, Math.round(i.gross[k]*0.04*10)/10))]; }
+function trGoods(n){ const i = income(n); let k = 'metal', bv = -1e9; for (const q of TR_GOODS){ const v = (i.net[q] + i.gross[q]*0.3)*TR_W[q]; if (v > bv){ bv = v; k = q; } } return [k, Math.max(5, Math.min(40, Math.round(i.gross[k]/RES_K*0.04*10)))*(RES_K/10)]; }
 function trValue(r){ const ga = trGdp(r.a), gb = r.b >= 0 ? trGdp(r.b) : neuGdp(r.nc);
   const base = TR_K*Math.sqrt(ga*gb)*(r.kind === 'land' ? TR_LAND : 0.9 + 0.25*Math.min(1, (r.len || 1)/40))*(r.b === NEUTRAL ? TR_NEU : 1)*(has(r.a, 'eco1') ? 1.1 : 1);
-  const ka = r.b >= 0 ? trGoods(r.b) : (g => [g, g === 'rare' ? 0.8 : 1.5])(neuGood(r.nc));
+  const ka = r.b >= 0 ? trGoods(r.b) : (g => [g, (g === 'rare' ? 0.8 : 1.5)*RES_K])(neuGood(r.nc));
   r.va = {cash:Math.round(base*10)/10, k:ka[0], q:ka[1]};
   if (r.b >= 0){ const kb = trGoods(r.a); r.vb = {cash:Math.round(base*(has(r.b, 'eco1') ? 1.1 : 1)/(has(r.a, 'eco1') ? 1.1 : 1)*10)/10, k:kb[0], q:kb[1]}; } else r.vb = null; }
 const trSide = (r, n) => r.a === n ? r.va : r.b === n ? r.vb : null;
@@ -332,9 +333,9 @@ function trRaid(r){ if (r.kind !== 'sea' || r.f <= 0 || r.pause != null) return 
 const TR_CAP = [0.25, 0.5];
 function trCapture(r, n){ const c = TR_CAP[0] + (TR_CAP[1] - TR_CAP[0])*rng(), N = S.nations[n], cap = stockCap(n), got = {f:c, cash:Math.round(((r.va ? r.va.cash : 0) + (r.vb ? r.vb.cash : 0))*c*10)/10};
   N.cash += got.cash;
-  for (const v of [r.va, r.vb]){ if (!v || !v.q) continue; const q = Math.round(v.q*c*10)/10, take = Math.min(q, Math.max(0, cap - (N[v.k] || 0))); if (take > 0){ N[v.k] = (N[v.k] || 0) + take; got[v.k] = Math.round(((got[v.k] || 0) + take)*10)/10; } }
+  for (const v of [r.va, r.vb]){ if (!v || !v.q) continue; const q = Math.round(v.q/RES_K*c*10)*(RES_K/10), take = Math.min(q, Math.max(0, cap - (N[v.k] || 0))); if (take > 0){ N[v.k] = (N[v.k] || 0) + take; got[v.k] = Math.round(((got[v.k] || 0) + take)/RES_K*10)*(RES_K/10); } }   // (a tenth of RES_K)
   return got; }
-const capText = g => [g.cash ? `$${fmt1(g.cash)}M` : '', ...TR_GOODS.filter(k => g[k]).map(k => `${fmt1(g[k])} ${rlbl(k)}`)].filter(Boolean).join(' and ') || 'nothing';
+const capText = g => [g.cash ? `$${fmt1(g.cash)}M` : '', ...TR_GOODS.filter(k => g[k]).map(k => resFull(k, Math.round(g[k])))].filter(Boolean).join(' and ') || 'nothing';
 // daily settlement: the day's blockade average, the convoy's run, then new routes and values
 function tradeDay(){ const T = trS(); seaIndex(); let news = 0;
   for (const k in T.hit) T.hit[k] = Math.round(T.hit[k]*0.7*100)/100;
@@ -395,7 +396,7 @@ function tradeOpen(n, b, nc = null, kind = null){ const T = trS(), key = trKey(n
   if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (embargoed(n, b)) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
   const r = trMake(n, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(n, b) ? trMake(n, b, 'land') : null);
   if (!r) return 'no route can be laid: no port or sea path';
-  trValue(r); INCC.v = -1; tell(n, `Trade route opened with ${trName(r, n)}: +$${fmt1(r.va.cash)}M and ${r.va.q} ${rlbl(r.va.k)} a day while it runs.`, 'good', r.path[Math.floor(r.path.length/2)]); return true; }
+  trValue(r); INCC.v = -1; tell(n, `Trade route opened with ${trName(r, n)}: +$${fmt1(r.va.cash)}M and ${fmt(r.va.q)} ${rlbl(r.va.k)} a day while it runs.`, 'good', r.path[Math.floor(r.path.length/2)]); return true; }
 function tradeClose(n, id){ const T = trS(), r = routeById(id); if (!r || !trMine(r, n)) return; T.closed[r.key] = 1; delete T.want[r.key]; T.routes = T.routes.filter(x => x !== r); trEnded(r, 'closed'); INCC.v = -1;
   { const o = trOther(r, n); if (o >= 0) addMem(o, n, -4); } tell(n, `You closed the ${trName(r, n)} trade route.`, 'info', null); }
 // escorts: fleets ordered to escort a route sail to its most threatened zone (else its middle) and guard it

@@ -12,7 +12,14 @@ const HASH = `s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s
   const o = await mk(OLD); await pickNation(o, 'Germany'); await o.click('[data-act="begin"]'); await o.click('[data-act="start"]');
   const save = await o.evaluate(() => { newGame(4242, 5, [0]); S.started = true; S.diff = 'regular'; for (let i = 0; i < 96; i++) tick(); return saveJSON(); });
   const play = `(sv) => { const ok = restore(JSON.parse(sv)); if (!ok) return {ok}; for (let i = 0; i < 120; i++) tick(); const o = JSON.parse(saveJSON()); delete o.savedAt;
-    return {ok, hour:S.hour, scn:S.scn, w64:!!S.w64, nations:S.nations.length, tier:S.nations[0].tier || null, caps:WIN_CAPS, need:landNeed(0), cities:G.P.filter(P => P.city).length, hash:(${HASH})(JSON.stringify(o))}; }`;
+    // (the resource scale, RES_K: the new build counts goods 1,000 times larger. Both states are compared in the old units: goods divided back, the
+    // numbers to 10 significant digits, the figures in the dispatch and chat texts left out)
+    const K = typeof RES_K === 'number' ? RES_K : 1, G0 = ['oil', 'metal', 'iron', 'elec', 'rare'], xs = v => { if (v && typeof v === 'object') for (const k of G0) if (typeof v[k] === 'number') v[k] /= K; };
+    delete o.rk; for (const N of o.nations){ xs(N); xs(N.xB); xs(N.surS); if (typeof N.sold === 'number') N.sold /= K; } for (const x of o.book || []){ x.qty /= K; if (typeof x.q0 === 'number') x.q0 /= K; }
+    if (o.mkt){ xs(o.mkt.use); xs(o.mkt.dem); } if (o.trade && o.trade.routes) for (const r of o.trade.routes) for (const v of [r.va, r.vb]) if (v && typeof v.q === 'number') v.q /= K;
+    for (const D of [o, ...Object.values(o.desks || {})]){ for (const f of (D.offers || [])) if (f && f.deal){ xs(f.deal.give); xs(f.deal.get); } if (D.stats){ xs(D.stats.made); if (typeof D.stats.rareRes === 'number') D.stats.rareRes /= K; } }
+    const norm = JSON.stringify(o, (k, v) => typeof v === 'number' ? +v.toPrecision(10) : typeof v === 'string' && k === 'text' ? v.replace(/[\d][\d,.]*/g, '#') : v);
+    return {ok, hour:S.hour, scn:S.scn, w64:!!S.w64, nations:S.nations.length, tier:S.nations[0].tier || null, caps:WIN_CAPS, need:landNeed(0), cities:G.P.filter(P => P.city).length, hash:(${HASH})(norm)}; }`;
   const ro = await o.evaluate(`(${play})(${JSON.stringify(save)})`);
   // the current build: through the real Continue button, then the same 5 days
   const n = await mk(NEW); await n.evaluate(sv => localStorage.setItem('iron-meridian-save-v5', sv), save); await n.reload(); await n.waitForTimeout(700);

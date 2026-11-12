@@ -28,6 +28,7 @@ const LINK_MT = {wheel:(ROAD_F.wheel - 1)/0.35, track:(ROAD_F.track - 1)/0.35, f
 const roadMul = (mt, lv) => 1 + (LINK_SPD[lv] - 1)*(LINK_MT[mt] ?? 1);
 const LINK_DMG = {strike:36, cm:48, bm:72};            // hours a strike puts a province's links out
 const LINK_COST = {road:[null, {cash:10, metal:2, iron:1, d:1}, {cash:34, metal:5, iron:4, d:2}, {cash:85, metal:12, iron:10, d:4}], rail:[null, {cash:100, metal:10, iron:12, d:5}, {cash:220, metal:20, iron:25, elec:10, d:8}]};
+for (const k in LINK_COST) for (const C of LINK_COST[k]) if (C) for (const g of GOODS) if (C[g]) C[g] *= RES_K;   // the goods at the resource scale RES_K
 const LINK_ROUGH = {mountain:1.6, hills:1.25, marsh:1.35, snow:1.3, forest:1.12, tundra:1.15, urban:1.1};
 const SUP_LINK = [1, 0.92, 0.8, 0.68], SUP_RAIL = 0.45, SUP_DMG = 1.35;   // supply step cost multipliers along links
 let LINKV = 1, LINKD = 1;                               // LINKV: link speeds changed (paths, supply); LINKD: the drawn network changed (map layer)
@@ -57,7 +58,7 @@ function damageLinks(p, h){ if (!G.P[p] || G.P[p].sea) return 0; let n = 0;
   for (const r of G.P[p].lk.values()){ if (!r.road && !r.rail) continue; const was = r.dmg > 0; r.dmg = Math.max(r.dmg, h); if (!was) n++; linkSave(r, !was); }
   return n; }
 function linkCost(n, a, b, k, lv){ const C = LINK_COST[k][lv], w = Math.max(0.6, Math.min(2.2, G.P[a].nb.get(b) || 1)), rough = Math.max(LINK_ROUGH[G.P[a].terrain] || 1, LINK_ROUGH[G.P[b].terrain] || 1), eng = rRoadF(n);
-  return {cash:Math.round(C.cash*w*rough*eng), metal:Math.round(C.metal*w*rough*eng), iron:Math.round((C.iron || 0)*w*rough*eng), elec:Math.round((C.elec || 0)*w*rough*eng), h:Math.max(12, Math.round(C.d*24*Math.sqrt(w)*Math.sqrt(rough)*eng))}; }
+  return {cash:Math.round(C.cash*w*rough*eng), metal:kRound(C.metal*w*rough*eng), iron:kRound((C.iron || 0)*w*rough*eng), elec:kRound((C.elec || 0)*w*rough*eng), h:Math.max(12, Math.round(C.d*24*Math.sqrt(w)*Math.sqrt(rough)*eng))}; }
 const linkProjects = n => { let c = 0; for (const k in S.links){ const d = S.links[k]; if (d.bld && d.bld.n === n) c++; } return c; };
 const linkMaxProj = n => { const M = linkMaxProj.m || (linkMaxProj.m = {}); if (M.h !== S.hour || M.S !== S){ M.h = S.hour; M.S = S; M.v = {}; }
   return M.v[n] ?? (M.v[n] = Math.min(6, 2 + Math.floor(S.owner.filter(o => o === n).length/40))); };

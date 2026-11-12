@@ -3,6 +3,17 @@
 const WORLD = globalThis.WORLD, LINES = globalThis.LINES;   // the map data (world.js, lines.js), loaded before this file
 const NATIONS = globalThis.NATIONS || null;   // the playable nations of the nations world (nations.js); null when a host does not load it
 /* ---------------- Rules ---------------- */
+// RES_K, the resource scale (owner's request: "resource numbers feel too small"). Every quantity of oil, materials, iron, electronics and rare
+// materials (GOODS) is RES_K times what it was: stocks, yields, storage, upkeep, fuel and every price. Money and manpower are not scaled (manpower
+// is already counted in thousands of people: 80k). The tables below are written in the old units and multiplied once, at the end of this file
+// (the "resource scale" pass); a rule that rounds a goods quantity rounds it to RES_K (kFloor, kRound, kCeil), so the game plays exactly as before.
+// The Market quotes its prices per RES_K units (MKT_LOT: $3.20M per 1,000 barrels), the price it had per unit before, and trades in whole lots.
+const RES_K = 1000, MKT_LOT = RES_K;
+const GOODS = ['oil', 'metal', 'iron', 'elec', 'rare'], isGood = k => GOODS.includes(k);
+const kFloor = v => Math.floor(v/RES_K)*RES_K, kRound = v => Math.round(v/RES_K)*RES_K, kCeil = v => Math.ceil(v/RES_K)*RES_K;
+const resK = o => { for (const k in o) o[k] *= RES_K; return o; };   // a table of goods quantities written in the old units, scaled
+// the Market: money for q units at a price per MKT_LOT units, and the units a sum of money buys (whole lots)
+const lotCash = (q, price) => q/MKT_LOT*price, lotsFor = (cash, price) => Math.floor(cash/price)*MKT_LOT;
 // req (and req2 for the few that need two): the building, and its level, a city must have to mobilize the unit; tech: the research it needs (null: known from day one).
 // Foot units (infantry, anti-tank, special forces, paratroopers) come from a Recruiting Office, vehicles from an Army Base, aircraft from an Airbase,
 // ships from a Naval Yard. The rule itself is canMobilize()
@@ -73,10 +84,10 @@ const CK = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'], SPEND_K = ['m
 // a price {cash, oil, metal, iron, elec, rare, mp} (any subset): can nation N pay it, pay it, and say it in words
 function hasC(N, c){ for (let i = 0; i < CK.length; i++){ const k = CK[i], q = c[k]; if (q > 0 && !((N[k] || 0) >= q)) return false; } return true; }
 function payC(N, c){ for (let i = 0; i < CK.length; i++){ const k = CK[i], q = c[k]; if (q > 0){ N[k] = (N[k] || 0) - q; if (SPEND_K.includes(k)) useRes(k, q); } } }
-const costParts = c => CK.filter(k => c[k] > 0).map(k => k === 'cash' ? `$${c[k]}M` : k === 'mp' ? `${c[k]}k manpower` : `${c[k]} ${yword(k, c[k])}`);
+const costParts = c => CK.filter(k => c[k] > 0).map(k => k === 'cash' ? `$${c[k]}M` : k === 'mp' ? `${c[k]}k manpower` : `${fmt(c[k])} ${yword(k, c[k])}`);
 const costTxt = (c, sep = ' · ') => costParts(c).join(sep);
 // what is missing to pay c, in words ('12 more electronics'), or ''
-const missTxt = (N, c) => CK.filter(k => c[k] > 0 && (N[k] || 0) < c[k]).map(k => { const q = Math.ceil(c[k] - (N[k] || 0)); return k === 'cash' ? `$${q}M more` : k === 'mp' ? `${q}k more manpower` : `${q} more ${yword(k, q)}`; }).join(', ');
+const missTxt = (N, c) => CK.filter(k => c[k] > 0 && (N[k] || 0) < c[k]).map(k => { const q = Math.ceil(c[k] - (N[k] || 0)); return k === 'cash' ? `$${q}M more` : k === 'mp' ? `${q}k more manpower` : `${fmt(q)} more ${yword(k, q)}`; }).join(', ');
 const pluN = (n, w, p) => `${n} ${n === 1 ? w : (p || w + 's')}`;   // '1 unit', '6 units'
 const artA = w => (/^[aeiou]/i.test(String(w)) ? 'an ' : 'a ') + w;   // 'an Iran–Indonesia convoy'
 const UT = Object.keys(UNITS);
@@ -447,7 +458,7 @@ const TIER_FULL = {
 const TIER_MODES = {normal:{name:'Normal', spread:0.3, floor:0.3}, competitive:{name:'Competitive', spread:0.6, floor:0.75}};
 const tierMode = k => TIER_MODES[k] || TIER_MODES.normal;
 function tierKit(tier, mode){ const F = TIER_FULL[tier] || TIER_FULL.B, M = tierMode(mode), k = {};
-  for (const key in TIER_EVEN) k[key] = Math.round(TIER_EVEN[key] + M.spread*(F[key] - TIER_EVEN[key]));
+  for (const key in TIER_EVEN) k[key] = Math.round(TIER_EVEN[key] + M.spread*(F[key] - TIER_EVEN[key]))*(isGood(key) ? RES_K : 1);   // (the stocks in RES_K units)
   k.floor = M.floor; k.fortCap = tier === 'C'; k.fortGuards = tier === 'B' || tier === 'C'; k.yard = tier === 'S' || tier === 'A';
   // the Naval Yard of a coastal S or A nation takes the place of border guards only as starts grow distinct: none in normal mode (spread 0.3; with
   // 2 guards gone a major power opened with fewer units than a regional one of as many cities), one at spread 0.6, two in the full table (plan 3.2)
@@ -506,6 +517,18 @@ let DAY_LIMIT = Infinity;             // no day limit: the war runs until someon
 const CAP_MIN = 2;                    // ground units needed to capture
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
 const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
+/* ---------------- Resource scale ---------------- */
+// the one place the tables above are scaled to RES_K (see RES_K at the top): units (prices, fuel, maintenance), missiles, buildings and their
+// level tables, every research price (computed in the old units first, so its rounding is unchanged), the yields of cities, the countryside and the
+// capital, and the refunds of the removed buildings. Starting stocks: tierKit (above) and newGame / tierStart (rules/state.js); storage: stockCap,
+// the market and the AI's thresholds: rules/economy.js, rules/ai.js; links, satellites, aid: their own files, each with RES_K beside the number.
+{ const seen = new Set(), xK = o => { if (!o || seen.has(o)) return; seen.add(o); for (const k of GOODS) if (typeof o[k] === 'number') o[k] *= RES_K; };
+  for (const t in UNITS){ xK(UNITS[t]); UNITS[t].fuel *= RES_K; MAINT[t].iron *= RES_K; MAINT[t].elec *= RES_K; }
+  for (const k in MISSILES) xK(MISSILES[k]);
+  for (const k in BUILD) xK(BUILD[k]); for (const L of REC_LV) xK(L);
+  for (const k in ECO_OLD) xK(ECO_OLD[k]);
+  for (const nd of RNODES) for (const l of nd.lv) xK(l.c);
+  xK(ECO_Y); xK(ECO_CAPITAL); for (const k in ECO_RUR) ECO_RUR[k] *= RES_K; }
 /* ---------------- RNG / noise ---------------- */
 function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function rng(){ let a = (S.rs = (S.rs + 0x6D2B79F5) | 0); let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
@@ -536,4 +559,14 @@ const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd',
 const fmt1 = v => Math.abs(v) >= 10 ? String(Math.round(v)) : String(Math.round(v*10)/10);
 const fmt = n => Math.floor(n).toLocaleString('en-US');
 const YK = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'], fmtY = v => v < 1.95 ? Math.round(v*10)/10 : Math.round(v);   // small yields (rare materials) keep a decimal
-const yieldStr = y => YK.filter(k => y[k] >= (k === 'rare' ? 0.25 : 0.5)).map(k => k === 'cash' ? `$${Math.round(y[k])}M` : k === 'mp' ? `${Math.round(y[k])}k manpower` : `${fmtY(y[k])} ${yword(k, fmtY(y[k]))}`).join(' · ') || '—';
+const yieldStr = y => YK.filter(k => y[k] >= (k === 'rare' ? 0.25 : 0.5)*(isGood(k) ? RES_K : 1)).map(k => k === 'cash' ? `$${Math.round(y[k])}M` : k === 'mp' ? `${Math.round(y[k])}k manpower` : `${fmt(Math.round(y[k]))} ${rlbl(k)}`).join(' · ') || '—';
+// goods in numbers and words (RES_K). RES_UNIT: what one unit of a good is. Electronics come in crates (a crate of avionics, radios, sensors);
+// manpower is kept in thousands of people (80k) and said as people
+const RES_UNIT = {oil:['barrel', 'barrels'], metal:['ton', 'tons'], iron:['ton', 'tons'], elec:['crate', 'crates'], rare:['ton', 'tons'], mp:['person', 'people']};
+// the short form where space is tight: 950, 9.5K, 40K, 950K, 1.2M, 12M (cut, not rounded up: 39,960 is 39K, never a 40K it does not have)
+const fmtQ = v => { const a = Math.abs(v), s = v <= -1 ? '-' : '', d1 = x => String(Math.floor(x*10 + 1e-9)/10);
+  return s + (a < 1e3 ? String(Math.floor(a + 1e-9)) : a < 1e4 ? d1(a/1e3) + 'K' : a < 1e6 ? Math.floor(a/1e3 + 1e-9) + 'K' : a < 1e7 ? d1(a/1e6) + 'M' : Math.floor(a/1e6 + 1e-9) + 'M'); };
+// the full amount with its unit: '40,000 barrels of oil', '70,000 tons of iron', '80,000 people' (manpower), '$220M'
+const resFull = (k, v) => { if (k === 'cash') return `$${fmt(v)}M`; if (k === 'mp') return `${fmt(v*1000)} people`; const u = RES_UNIT[k] || ['unit', 'units'], q = Math.floor(v); return `${fmt(q)} ${q === 1 ? u[0] : u[1]} of ${rlbl(k)}`; };
+// a Market price, quoted per MKT_LOT units: '$3.20M per 1,000 barrels'
+const lotPriceTxt = (k, price) => `$${(+price).toFixed(2)}M per ${fmt(MKT_LOT)} ${(RES_UNIT[k] || ['unit', 'units'])[1]}`;

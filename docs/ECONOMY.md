@@ -1,5 +1,12 @@
 # Economy v1: one main resource per city
 
+> **Resource scale (x1000, owner request).** Every quantity of oil, materials, iron, electronics and rare materials in the game is now 1,000
+> times the number written in this document: starting stocks, yields, storage (400,000 + 15,000 per province), upkeep, fuel and maintenance,
+> every unit, building, link, missile, satellite and research price, Market lots, trade cargo, AI thresholds. Money and manpower are unchanged
+> (manpower was already counted in thousands of people: 80k). Market prices keep their numbers but are now per 1,000 units ($3.20M per 1,000
+> barrels). One constant does it, `RES_K` in `rules/data.js`; the game plays exactly as before (`node tools/x1000-check.js`). The numbers
+> below are in the old units: multiply goods by 1,000.
+
 Design for owner task 6 and the buildings rework. Everything here is rules (rules/*.js); the UI only reads it.
 All numbers were measured with a text-patch prototype of the rules run headless (all-AI world game, 30 days, six seeds:
 12345, 7, 2024, 99, 31337, 555). "Today" means branch base 140d490.

@@ -202,9 +202,9 @@ function aiPickUnit(n, p){
     if (manned > Math.max(4, allU*(H.bomb + H.air > 1 ? 0.16 : 0.1))){ const quota = {asf:H.bomb + H.air > 0 ? 6 : 4, awacs:1, mpa:2};
       for (const t of ['int', 'asf', 'jet', 'awacs', 'mpa', 'heli']) if (!((mine[t] || 0) < (quota[t] || 0))) w[t] = (w[t] || 0)*0.25; w.sam *= 0.7; } }
   { const N = S.nations[n], inc = income(n); if (inc.net.oil < 0 || (N.short && N.short.oil)){ w.tank *= 0.3; w.jet *= 0.3; w.int *= 0.5; w.crui *= 0.5; w.ifv *= 0.5; w.bomb *= 0.2; w.asf *= 0.5; w.mpa *= 0.5; w.awacs *= 0.5; }
-    else if (N.oil > 450 && inc.net.oil > 4){ w.tank *= 1.35; w.ifv *= 1.35; w.jet *= 1.3; w.frig *= 1.2; w.crui *= 1.2; } }   // fuel to spare: more of the units that burn it
+    else if (N.oil > 450*RES_K && inc.net.oil > 4*RES_K){ w.tank *= 1.35; w.ifv *= 1.35; w.jet *= 1.3; w.frig *= 1.2; w.crui *= 1.2; } }   // fuel to spare: more of the units that burn it
   { const N = S.nations[n], inc = income(n);   // iron or electronics running out (a shortage, or maintenance eating the last two weeks of stock): fewer of the units that use most of it
-    for (const k of ['iron', 'elec']){ const d = -inc.net[k]; if (!((N.short && N.short[k]) || (d > 0 && N[k] < 14*d))) continue; for (const t in w) if (MAINT[t]) w[t] *= MAINT[t][k] >= (k === 'iron' ? 0.24 : 0.12) ? 0.3 : MAINT[t][k] > 0 ? 0.65 : 1.15; } }   // the heavy users: 6 or more of it in the price
+    for (const k of ['iron', 'elec']){ const d = -inc.net[k]; if (!((N.short && N.short[k]) || (d > 0 && N[k] < 14*d))) continue; for (const t in w) if (MAINT[t]) w[t] *= MAINT[t][k] >= (k === 'iron' ? 0.24 : 0.12)*RES_K ? 0.3 : MAINT[t][k] > 0 ? 0.65 : 1.15; } }   // the heavy users: 6 or more of it in the price
   { const N = S.nations[n], av = {}; for (const k of AI_SCARCE) av[k] = N[k] - aiKeepRes(n, k);   // what is left above the maintenance reserve
     for (const t in w){ const U = UNITS[t]; if (!U) continue; for (const k of AI_SCARCE){ const q = U[k] || 0; if (q && av[k] < q*3) w[t] *= av[k] < q ? 0.15 : 0.5; } } }
   const opts = UT.filter(t => bldOk(p, t) && unlocked(n, t));
@@ -280,7 +280,7 @@ function aiLinks(n){ const N = S.nations[n]; if (!N.alive) return 'dead'; if (N.
   if (!ck.ok){ N.lkSave = null; return 'check:' + ck.why; } if (N.cash < ck.c.cash + 20){ if (!N.lkSave) N.lkSave = {job, c:ck.c.cash + 20, until:S.hour + 48}; return 'save'; }
   N.lkSave = null; return buildLink(n, job[0], job[1], job[2]) ? 'built:' + job[2] : 'fail'; }
 // how many heavy bombers the AI still wants: at war, Strategic Bombers researched, an Airbase II standing, oil not running dry; 2 for a small power, up to 4 for a big one
-function aiBomberWant(n, provs, inc){ if (!has(n, 'u_bomb') || !warsOf(n).length || inc.net.oil < -2) return 0;
+function aiBomberWant(n, provs, inc){ if (!has(n, 'u_bomb') || !warsOf(n).length || inc.net.oil < -2*RES_K) return 0;
   if (!G.P.some(P => S.owner[P.id] === n && P.city && S.bld[P.id].air >= 2 && !bdis(P.id, 'air'))) return 0;
   const goal = provs > 160 ? 4 : provs > 70 ? 3 : 2, have = (airMine(n).bomb || 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'bomb').length : 0), 0);
   return Math.max(0, goal - have); }
@@ -295,13 +295,13 @@ function aiStealthSite(n){ const w = S.armies.find(a => a.owner === n && a.air &
   if (p < 0) p = S.queue.findIndex((q, pp) => S.owner[pp] === n && q.some(j => j.t === 'stealth'));
   if (p >= 0) return S.owner[p] === n && !G.P[p].sea && bldOk(p, 'stealth') ? p : -1;
   const P = G.P.find(q => S.owner[q.id] === n && q.city && bldOk(q.id, 'stealth')); return P ? P.id : -1; }
-function aiStealthWant(n, inc){ if (!has(n, 'u_stealth') || !aiStealthOk(n) || inc.net.oil < -2) return 0;
+function aiStealthWant(n, inc){ if (!has(n, 'u_stealth') || !aiStealthOk(n) || inc.net.oil < -2*RES_K) return 0;
   const wings = S.armies.filter(a => a.owner === n && a.air && a.u.stealth > 0); if (wings.length > 1) return 0;
   const have = wings.reduce((s0, a) => s0 + a.u.stealth + ((a.air.pend && a.air.pend.stealth) || 0), 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'stealth').length : 0), 0);
   return have < AI_STEALTH_MAX && aiStealthSite(n) >= 0 ? AI_STEALTH_MAX - have : 0; }
 // Air Superiority Fighters wanted: with the research and an Airbase II, at war with powers that fly bombers, AWACS, patrol planes or drones
 // (or hit by air), a small fighter force: 2 + up to 4 more with the threat, bigger empires a little more
-function aiAsfWant(n, provs, inc){ if (!has(n, 'u_asf') || !warsOf(n).length || inc.net.oil < -2) return 0;
+function aiAsfWant(n, provs, inc){ if (!has(n, 'u_asf') || !warsOf(n).length || inc.net.oil < -2*RES_K) return 0;
   if (!G.P.some(P => S.owner[P.id] === n && P.city && S.bld[P.id].air >= 2 && !bdis(P.id, 'air'))) return 0;
   const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, thr = 18*mx.bomb + 14*mx.sup + 6*mx.drone + 4*(mx.airm || 0) + (H.bomb + H.air > 0 ? 1.5 : 0);
   if (thr < 0.4) return 0;
@@ -314,22 +314,23 @@ const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awac
 // goods change hands between nations without moving the world price. Returns what it got.
 function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
   const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && S.nations[o.seller].alive && !atWar(n, o.seller) && !embargoed(o.seller, n) && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
-  for (const o of asks){ const r = Math.min(q - got, o.qty, Math.floor(N.cash/o.price), Math.floor(stockCap(n) - N[k])); if (r <= 0) break;
-    N.cash -= r*o.price; N[k] += r; S.nations[o.seller].cash += r*o.price; o.qty -= r; got += r;
-    if (isSeat(o.seller)) tell(o.seller, `${N.name} bought ${r} ${rlbl(k)} from your offer for $${fmt(r*o.price)}M.`, 'good', null);
+  for (const o of asks){ const r = Math.min(q - got, o.qty, lotsFor(N.cash, o.price), kFloor(stockCap(n) - N[k])); if (r <= 0) break;
+    N.cash -= lotCash(r, o.price); N[k] += r; S.nations[o.seller].cash += lotCash(r, o.price); o.qty -= r; got += r;
+    if (isSeat(o.seller)) tell(o.seller, `${N.name} bought ${fmt(r)} ${rlbl(k)} from your offer for $${fmt(lotCash(r, o.price))}M.`, 'good', null);
     if (got >= q) break; }
   if (got) S.book = S.book.filter(o => o.qty > 0); return got; }
 // AI market thresholds: buys when a stock is below AI_LOW (and tops up what is below AI_SHORT, AI_BUYQ at most); never a hoard
-const AI_KEEP = {iron:180, elec:130, rare:170};   // AI stock kept back from a sale into a strong market (plus 25 days of maintenance and what it saves for)
-const AI_LOW = {oil:40, metal:60, iron:50, elec:35, rare:40}, AI_SHORT = {oil:90, metal:90, iron:80, elec:60, rare:70}, AI_BUYQ = {oil:120, metal:120, iron:100, elec:60, rare:50};
+const AI_KEEP = resK({iron:180, elec:130, rare:170});   // AI stock kept back from a sale into a strong market (plus 25 days of maintenance and what it saves for)
+// (every goods table here is written in the old units and scaled to RES_K by resK)
+const AI_LOW = resK({oil:40, metal:60, iron:50, elec:35, rare:40}), AI_SHORT = resK({oil:90, metal:90, iron:80, elec:60, rare:70}), AI_BUYQ = resK({oil:120, metal:120, iron:100, elec:60, rare:50});
 // AI economy constants (the city-resource economy): an Arms Industry level must pay for itself within AI_PAY_NEED days when the good is really short,
 // AI_PAY_FREE days as a plain investment; its rare-earth city is taken to Arms Industry AI_RARE_LV first; AI_XKEEP: the stock an exporter keeps before it
 // sells; AI_IMP: what an importer buys a day at most; exporters sell while the world price is at least AI_XPX of the base
 const AI_PAY_NEED = 40, AI_PAY_FREE = 20, AI_RARE_LV = 3, AI_XPX = 0.75, AI_BASE_Q = 0.34;
-const AI_XKEEP = {oil:200, metal:120, iron:140, elec:110, rare:40}, AI_IMP = {oil:40, metal:40, iron:35, elec:20, rare:30};
+const AI_XKEEP = resK({oil:200, metal:120, iron:140, elec:110, rare:40}), AI_IMP = resK({oil:40, metal:40, iron:35, elec:20, rare:30});
 // iron reaches the powers without an iron city from the first week: a power with an iron city and iron to spare (a net income of AI_XEARLY.net a day or more)
 // lists small lots (up to lot) as soon as its stock is above keep (plus what it saves for and 10 days of upkeep), long before the full export line (AI_XKEEP)
-const AI_XEARLY = {iron:{keep:90, net:3, lot:40}};
+const AI_XEARLY = {iron:resK({keep:90, net:3, lot:40})};
 // where the AI builds an Arms Industry for resource k: its own city whose main resource is k, the lowest level first, big cities and home cities first
 function aiSite(n, k){ let best = -1, bv = 0;
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n || S.cons[p] || cityMain(p) !== k) continue; const lv = S.bld[p].arms; if (lv >= BUILD.arms.max) continue;
@@ -338,7 +339,7 @@ function aiSite(n, k){ let best = -1, bv = 0;
 // days until the next Arms Industry level for resource k pays for itself: its price (money, plus materials and iron at base prices) against the daily
 // value of the +25% (at base prices; money at par). 1e9 when the nation has no city for it
 function aiArmsPay(n, k){ const p = aiSite(n, k); if (p < 0) return 1e9; const c = buildCost(n, 'arms', S.bld[p].arms + 1, p), y0 = provYield(p)[k]/(1 + ARMS_PCT*S.bld[p].arms);
-  return (c.cash + c.metal*MKT_BASE.metal + c.iron*MKT_BASE.iron)/Math.max(0.01, ARMS_PCT*y0*(k === 'cash' ? 1 : MKT_BASE[k])); }
+  return (c.cash + c.metal/MKT_LOT*MKT_BASE.metal + c.iron/MKT_LOT*MKT_BASE.iron)/Math.max(0.01, ARMS_PCT*(k === 'cash' ? y0 : y0/MKT_LOT)*(k === 'cash' ? 1 : MKT_BASE[k])); }   // (MKT_BASE: per MKT_LOT units)
 // the main resources of the nation's cities (what it can raise at home and export; the rest it must buy or conquer)
 function aiMains(n){ const m = new Set(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && G.P[p].city) m.add(cityMain(p)); return m; }
 // Recruiting Office for an AI short of manpower: a new office first (the first province without one, +3k a day for $40M); only when every province
@@ -357,9 +358,9 @@ const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U 
   if (rFree(N) && N.rPick && N.rPick.until > S.hour && RN[N.rPick.id] && rNextLv(n, N.rPick.id) && (N.rPick.save || k === 'rare')) r += rCost(RN[N.rPick.id], rNextLv(n, N.rPick.id))[k] || 0;   // saving for a counter tech (all of it); rare materials always wait for the next research
   return r; };
 // buy what a cost lacks in traded goods (plus a few spare) on the world market, if every price is at most mx times the base and the money covers it all
-function aiBuyFor(n, c, mx, spare = 20){ const N = S.nations[n], miss = MKT_K.map(k => [k, Math.ceil((c[k] || 0) - N[k])]).filter(([, q]) => q > 0); if (!miss.length) return true;
-  let tot = c.cash || 0; for (const [k, q] of miss){ if (buyPrice(n, k) > MKT_BASE[k]*mx*(k === 'iron' || k === 'elec' ? 1.25 : 1)) return false; tot += (q + 5)*buyPrice(n, k); }
-  if (N.cash < tot + spare + aiReserve(n)) return false; for (const [k, q] of miss) trade(n, k, q + 5); return true; }
+function aiBuyFor(n, c, mx, spare = 20){ const N = S.nations[n], miss = MKT_K.map(k => [k, kCeil((c[k] || 0) - N[k])]).filter(([, q]) => q > 0); if (!miss.length) return true;
+  let tot = c.cash || 0; for (const [k, q] of miss){ if (buyPrice(n, k) > MKT_BASE[k]*mx*(k === 'iron' || k === 'elec' ? 1.25 : 1)) return false; tot += lotCash(q + 5*RES_K, buyPrice(n, k)); }
+  if (N.cash < tot + spare + aiReserve(n)) return false; for (const [k, q] of miss) trade(n, k, q + 5*RES_K); return true; }
 // iron and electronics kept back from new units for maintenance: the shortage line plus three days of it (a new unit that would dig into it waits)
 const aiKeepRes = (n, k) => k === 'iron' || k === 'elec' ? AI_LOW[k] + 3*Math.max(0, income(n).upkeep[k]) : 0;
 const aiSpare = (n, t, keep) => { const N = S.nations[n], c = ucost(n, t); if (!canAfford(n, t) || N.cash < c.cash + 15 + aiReserve(n)) return false; for (const k of CK) if (k !== 'cash' && c[k] > 0 && N[k] - c[k] < aiReserve(n, k) + (keep ? aiKeepRes(n, k) : 0)) return false; return true; };   // only what this unit itself uses is checked against the savings
@@ -415,7 +416,7 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   // buy what the step lacks (never above 1.6x the base price) when the money is there, then start it
   // (for a step it has been saving for, the computer pays up to twice the base price: a generation's 50 materials are often dear)
   const go = x => { const tc = rCost(x.nd, x.lv), mx = N.rPick && N.rPick.save && N.rPick.id === x.nd.id ? 2 : 1.6, res = N.rPick && N.rPick.id === x.nd.id ? 0 : aiReserve(n);
-    for (const k of ['rare', 'metal', 'iron', 'elec']){ const miss = Math.ceil((tc[k] || 0) - N[k]); if (miss > 0 && buyPrice(n, k) <= MKT_BASE[k]*mx && N.cash > tc.cash + 60 + (miss + 3)*buyPrice(n, k) + res) trade(n, k, miss + 3); }
+    for (const k of ['rare', 'metal', 'iron', 'elec']){ const miss = kCeil((tc[k] || 0) - N[k]); if (miss > 0 && buyPrice(n, k) <= MKT_BASE[k]*mx && N.cash > tc.cash + 60 + lotCash(miss + 3*RES_K, buyPrice(n, k)) + res) trade(n, k, miss + 3*RES_K); }
     return N.cash > tc.cash + 30 && startResearch(n, x.nd.id); };
   // the pick sticks for a day: an expensive step (bombers, fighters) is saved for instead of losing every roll to the cheap ones
   let pick = N.rPick && N.rPick.until > S.hour ? av.find(x => x.nd.id === N.rPick.id) : null;
@@ -445,9 +446,9 @@ function aiTurn(n){
   // accepts AI_PAY_NEED days, and a power with money to spare also adds the single best investment under AI_PAY_FREE days (exporters grow what they are
   // good at). What does not pay is imported instead (the structural trade below). One Arms Industry at a time (two for a big power)
   { const u0 = inc.upkeep, rareLv = G.P.reduce((m, P) => S.owner[P.id] === n && P.city && P.main === 'rare' ? Math.min(m, S.bld[P.id].arms + (S.cons[P.id] && S.cons[P.id].k === 'arms' ? 1 : 0)) : m, 9),
-      needs = [(inc.net.rare < 6 && N.rare < 140) || rareLv < AI_RARE_LV ? 'rare' : null,
-      inc.net.iron < -1 || (N.iron < aiKeepRes(n, 'iron') + 30 && inc.net.iron < Math.max(4, 0.8*u0.iron + 2)) ? 'iron' : null, inc.net.metal < 4 && N.metal < 80 ? 'metal' : null, inc.net.oil < 3 ? 'oil' : null, inc.net.mp < 5 && N.mp < 60 ? 'rec' : null,
-      inc.net.elec < -1 || (N.elec < aiKeepRes(n, 'elec') + 50 && inc.net.elec < Math.max(3, u0.elec + 2)) ? 'elec' : null, inc.net.cash < 25 || N.cash > 500 ? 'cash' : null].filter(Boolean);
+      needs = [(inc.net.rare < 6*RES_K && N.rare < 140*RES_K) || rareLv < AI_RARE_LV ? 'rare' : null,
+      inc.net.iron < -1*RES_K || (N.iron < aiKeepRes(n, 'iron') + 30*RES_K && inc.net.iron < Math.max(4*RES_K, 0.8*u0.iron + 2*RES_K)) ? 'iron' : null, inc.net.metal < 4*RES_K && N.metal < 80*RES_K ? 'metal' : null, inc.net.oil < 3*RES_K ? 'oil' : null, inc.net.mp < 5 && N.mp < 60 ? 'rec' : null,
+      inc.net.elec < -1*RES_K || (N.elec < aiKeepRes(n, 'elec') + 50*RES_K && inc.net.elec < Math.max(3*RES_K, u0.elec + 2*RES_K)) ? 'elec' : null, inc.net.cash < 25 || N.cash > 500 ? 'cash' : null].filter(Boolean);
     for (let i = needs.length - 1; i >= 0; i--) if (needs[i] !== 'rec' && aiArmsPay(n, needs[i]) > AI_PAY_NEED) needs.splice(i, 1);
     if (N.cash > 200){ let bk = null, bv = AI_PAY_FREE; for (const k of ['cash', ...MKT_K]){ if (needs.includes(k)) continue; const v = aiArmsPay(n, k)*(1 + 0.1*rng()); if (v < bv){ bv = v; bk = k; } } if (bk) needs.push(bk); }
     const rich = N.cash > 600 && !canGrow, jobs = rich ? 3 : 1, busy = {}, j0 = Math.floor(S.hour/4) + n; let done = 0;
@@ -463,12 +464,12 @@ function aiTurn(n){
     // cap goes to the order book instead (bookDay), sold nation to nation without moving the world price
     // A real hoard (over 1,000) held by a power short of cash is unloaded too, AI_HOARD_DAY a day and more for bigger hoards, while the price is
     // above 0.6x the base or 85% of the last two weeks' average, whichever is lower (never below 0.5x): hoards of 1,000-3,000 no longer sit idle all game while the price never reaches 0.8x
-    if (N.metal > 1000) N.mHoard = 1; else if (N.metal < 650) N.mHoard = 0;   // once over 1,000 the hoard is sold down to about 650
+    if (N.metal > 1000*RES_K) N.mHoard = 1; else if (N.metal < 650*RES_K) N.mHoard = 0;   // once over 1,000 the hoard is sold down to about 650
     const hoard = !!N.mHoard && N.cash < 500;
     if (N.cash < 260 || hoard){ const day = Math.floor(S.hour/24); if (N.sellD !== day){ N.sellD = day; N.sold = 0; }
-      const M = mkt(), sur = N.metal - (hoard ? 620 : 420) - aiReserve(n, 'metal'), h14 = M.hist.metal.slice(-14), avg = h14.length ? h14.reduce((a, b) => a + b, 0)/h14.length : M.p.metal;
-      const floor = hoard ? Math.max(MKT_BASE.metal*0.5, Math.min(MKT_BASE.metal*0.6, avg*0.85)) : MKT_BASE.metal*0.8, cap = hoard ? Math.min(90, Math.max(AI_HOARD_DAY, 0.9*inc.gross.metal) + Math.max(0, N.metal - 1000)/20) : AI_SELL_DAY;   // a big producer (~60 a day) sells about its output, bigger hoards a bit more
-      if (sur >= 30 && (inc.net.metal >= 0 || hoard) && M.p.metal >= floor){ const q = Math.floor(Math.min(sur, cap - (N.sold || 0), hoard ? 40 : 30)); if (q >= 10) N.sold = (N.sold || 0) - trade(n, 'metal', -q); } }
+      const M = mkt(), sur = N.metal - (hoard ? 620 : 420)*RES_K - aiReserve(n, 'metal'), h14 = M.hist.metal.slice(-14), avg = h14.length ? h14.reduce((a, b) => a + b, 0)/h14.length : M.p.metal;
+      const floor = hoard ? Math.max(MKT_BASE.metal*0.5, Math.min(MKT_BASE.metal*0.6, avg*0.85)) : MKT_BASE.metal*0.8, cap = hoard ? Math.min(90*RES_K, Math.max(AI_HOARD_DAY, 0.9*inc.gross.metal) + Math.max(0, N.metal - 1000*RES_K)/20) : AI_SELL_DAY;   // a big producer (~60 a day) sells about its output, bigger hoards a bit more
+      if (sur >= 30*RES_K && (inc.net.metal >= 0 || hoard) && M.p.metal >= floor){ const q = kFloor(Math.min(sur, cap - (N.sold || 0), (hoard ? 40 : 30)*RES_K)); if (q >= 10*RES_K) N.sold = (N.sold || 0) - trade(n, 'metal', -q); } }
     // structural trade, good by good. What one of its own cities produces and it holds too much of (above AI_XKEEP, what it saves for and
     // 25 days of upkeep) is offered while the world price is at least AI_XPX of the base: one listing of up to 120 on the order book just under the
     // world price (nation to nation: exports are never dumped on the world market, which flattened prices for everyone). What none of its cities produce is bought up to the
@@ -478,30 +479,30 @@ function aiTurn(n){
     { const mains = aiMains(n), M = mkt(), day = Math.floor(S.hour/24); if (N.xD !== day){ N.xD = day; N.xB = {}; }
       for (const k of MKT_K){ const px = M.p[k]/MKT_BASE[k];
         if (mains.has(k) && inc.net[k] >= 0){ const res = aiReserve(n, k), upk = Math.max(0, inc.upkeep[k]), over = N[k] - AI_XKEEP[k] - res - 25*upk, E = AI_XEARLY[k], early = E && inc.net[k] >= E.net ? N[k] - E.keep - res - 10*upk : 0;
-          const q = over >= 15 ? Math.floor(Math.min(over, 120)) : early >= 10 ? Math.floor(Math.min(early, E.lot)) : 0; if (!q || px < AI_XPX) continue;
+          const q = over >= 15*RES_K ? kFloor(Math.min(over, 120*RES_K)) : early >= 10*RES_K ? kFloor(Math.min(early, E.lot)) : 0; if (!q || px < AI_XPX) continue;
           if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ N[k] -= q; (S.book || (S.book = [])).push({id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:+(M.p[k]*0.98).toFixed(2), exp:S.hour + 72}); } }
         else { const want = AI_SHORT[k] + aiReserve(n, k) + 10*Math.max(0, inc.upkeep[k]); if (N[k] >= want || px > 1.5) continue;
-          const q = Math.floor(Math.min(want - N[k], AI_IMP[k] - (N.xB[k] || 0), (N.cash - 120)/buyPrice(n, k))); if (q >= 5){ const got = aiBookBuy(n, k, q); N.xB[k] = (N.xB[k] || 0) + got + (q - got >= 5 ? trade(n, k, q - got) : 0); } } } }
+          const q = kFloor(Math.min(want - N[k], AI_IMP[k] - (N.xB[k] || 0), (N.cash - 120)/buyPrice(n, k)*MKT_LOT)); if (q >= 5*RES_K){ const got = aiBookBuy(n, k, q); N.xB[k] = (N.xB[k] || 0) + got + (q - got >= 5*RES_K ? trade(n, k, q - got) : 0); } } } }
     // hoarded cash buys the scarce resources on the world market (up to 1.4× the going price)
     if (N.cash > 450 && (!canGrow || MKT_K.some(k => N[k] < AI_LOW[k]))){ const M = mkt(), cap = stockCap(n);
       for (const k of MKT_K){ const short = N[k] < AI_SHORT[k] || inc.net[k] < 0; if (!short || buyPrice(n, k) > M.p[k]*1.4) continue;
-        const q = Math.floor(Math.min(cap*0.6 - N[k], (N.cash - 320)/buyPrice(n, k), AI_BUYQ[k])); if (q >= 10) trade(n, k, q); } }
+        const q = kFloor(Math.min(cap*0.6 - N[k], (N.cash - 320)/buyPrice(n, k)*MKT_LOT, AI_BUYQ[k])); if (q >= 10*RES_K) trade(n, k, q); } }
     // fuel or maintenance running the oil, iron or electronics stock down: buy about two and a half weeks of the deficit, first from other powers' listings
     // on the order book (an oil producer's surplus), the rest on the world market while the price is fair (up to 1.5x the base)
-    for (const k of ['oil', 'iron', 'elec']){ const d = -inc.net[k]; if (d < 0.3 || N[k] > 12*d + 25) continue;
-        const dry = N[k] < 3*d, q = Math.floor(Math.min(AI_BUYQ[k], 18*d + 30 - N[k], stockCap(n) - N[k], (N.cash - (dry ? 50 : 110) - aiReserve(n))/buyPrice(n, k))); if (q < 8) continue;   // all but run dry: before any new unit
-        const got = aiBookBuy(n, k, q); if (q - got >= 8 && buyPrice(n, k) <= MKT_BASE[k]*1.5) trade(n, k, q - got); }
+    for (const k of ['oil', 'iron', 'elec']){ const d = -inc.net[k]; if (d < 0.3*RES_K || N[k] > 12*d + 25*RES_K) continue;
+        const dry = N[k] < 3*d, q = kFloor(Math.min(AI_BUYQ[k], 18*d + 30*RES_K - N[k], stockCap(n) - N[k], (N.cash - (dry ? 50 : 110) - aiReserve(n))/buyPrice(n, k)*MKT_LOT)); if (q < 8*RES_K) continue;   // all but run dry: before any new unit
+        const got = aiBookBuy(n, k, q); if (q - got >= 8*RES_K && buyPrice(n, k) <= MKT_BASE[k]*1.5) trade(n, k, q - got); }
     // the other way round: a big stock of iron, electronics or rare materials (above AI_KEEP, plus what it saves for) is sold on the world market while the
     // price is high (1.1x the base or more), 60 a day at most. It only ever pulls a dear price back towards the base,
     // so it never floods the market, and it is what keeps these goods trading once the opening scramble is over
     { const M = mkt(), day = Math.floor(S.hour/24); if (N.surD !== day){ N.surD = day; N.surS = {}; }
-      for (const k of ['iron', 'elec', 'rare']){ const keep = AI_KEEP[k] + aiReserve(n, k) + 25*Math.max(0, inc.upkeep[k]), over = N[k] - keep; if (over < 15 || M.p[k] < MKT_BASE[k]*1.1) continue;
-        const q = Math.floor(Math.min(over, 10 + over/10, 60 - (N.surS[k] || 0))); if (q >= 8) N.surS[k] = (N.surS[k] || 0) - trade(n, k, -q); } }
+      for (const k of ['iron', 'elec', 'rare']){ const keep = AI_KEEP[k] + aiReserve(n, k) + 25*Math.max(0, inc.upkeep[k]), over = N[k] - keep; if (over < 15*RES_K || M.p[k] < MKT_BASE[k]*1.1) continue;
+        const q = kFloor(Math.min(over, 10*RES_K + over/10, 60*RES_K - (N.surS[k] || 0))); if (q >= 8*RES_K) N.surS[k] = (N.surS[k] || 0) - trade(n, k, -q); } }
     // cheap iron, electronics or rare materials (world price under 0.85x the base): a power with money stocks up to twice its shortage line,
     // which keeps these goods trading after the opening months and their price off the floor
     if (N.cash > 350){ const M = mkt(), cap = stockCap(n);
       for (const k of ['iron', 'elec', 'rare']){ if (M.p[k] >= MKT_BASE[k]*0.85 || N[k] >= 2*AI_SHORT[k]) continue;
-        const q = Math.floor(Math.min(cap*0.6 - N[k], 2*AI_SHORT[k] - N[k], (N.cash - 300)/buyPrice(n, k), 40)); if (q >= 10) trade(n, k, q); } }
+        const q = kFloor(Math.min(cap*0.6 - N[k], 2*AI_SHORT[k] - N[k], (N.cash - 300)/buyPrice(n, k)*MKT_LOT, 40*RES_K)); if (q >= 10*RES_K) trade(n, k, q); } }
     void done; }
   // heavy-aircraft research but no Airbase II yet: save up for one (like a link project) and build it as soon as the money is there
   { const B2 = N.bSave; if (B2 && (B2.until <= S.hour || S.owner[B2.p] !== n || S.bld[B2.p].air !== 1)) N.bSave = null;
@@ -517,7 +518,7 @@ function aiTurn(n){
       if (P && N.cash > buildCost(n, 'air', 3, P.id).cash + 150 && rng() < 0.3) build(n, P.id, 'air'); }
     else if (ok && aiStealthWant(n, inc) && !(N.uSave && N.uSave.until > S.hour) && rng() < 0.3) N.uSave = {t:'stealth', p:aiStealthSite(n), until:S.hour + 72}; }
   { const U = N.uSave; if (U && U.until > S.hour && UNITS[U.t]){ const c = ucost(n, U.t);
-      for (const k of MKT_K){ const miss = Math.ceil(c[k] - N[k]); if (miss <= 0) continue; const q = miss + 5; if (N.cash >= c.cash + q*buyPrice(n, k) + 20) trade(n, k, q); } } }
+      for (const k of MKT_K){ const miss = kCeil(c[k] - N[k]); if (miss <= 0) continue; const q = miss + 5*RES_K; if (N.cash >= c.cash + lotCash(q, buyPrice(n, k)) + 20) trade(n, k, q); } } }
   for (let p = 0; p < G.P.length; p++){
     if (S.owner[p] !== n || !G.P[p].city) continue;
     if (!S.cons[p]){

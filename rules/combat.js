@@ -77,8 +77,8 @@ const STR_ROWS = [{k:'inf', name:'Infantry', t:'inf'}, {k:'armor', name:'Armour'
 // the part of a stat st() takes off for a shortage of fuel, iron or electronics (mirrors st() in rules/state.js)
 function shortFx(o, t, k){ if (o < 0 || !S.nations[o]) return 1; const sh = S.nations[o].short || {}, U = UNITS[t]; let f = 1;
   if (sh.oil && U.fuel && k === 'atk') f *= 0.7;
-  if (sh.iron && MAINT[t].iron >= 0.05){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.85; }
-  if (sh.elec && MAINT[t].elec >= 0.05){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.9; }
+  if (sh.iron && MAINT[t].iron >= 0.05*RES_K){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.85; }
+  if (sh.elec && MAINT[t].elec >= 0.05*RES_K){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.9; }
   return f; }
 function armyStrength(a, blind = false){   // blind: a force that is not yours: the base stats of its unit types only (its research, morale and condition are not known to you)
   const o = a.owner, p = a.at, P = G.P[p], sea = !!P.sea, holder = S.owner[p], atkr = o !== holder, mine = o >= 0 && holder === o, N = o >= 0 ? S.nations[o] : null;
