@@ -1028,7 +1028,26 @@ function snd(slot, kind, x, y, always){ const c = PG.AC; if (!c || PG.muted || !
       e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(kind === 'alert' ? 0.4 : 1, t + 0.01); e.gain.exponentialRampToValueAtTime(0.0001, t + D[4]); o.connect(e); e.connect(out); o.start(t); o.stop(t + D[4] + 0.05); }
   } catch (e) {} }
 
-return {AFX, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+/* ================= Aircraft flight (Part 3): no gliding =================
+   The page's drawn flight (index.html wingVis) moves with flightStep: the aircraft flies along its own heading and turns towards its goal (the
+   rules' position at the hour, flightPos / wingPos, the target, a point ahead on its patrol loop, its base) at a capped turn rate, so its path is
+   a smooth curve and its nose points along it; it speeds up after take-off and slows down to land (within ~26 world px of its base); when the
+   rules' position runs ahead it catches up and is never more than `lim` behind (a steady pull, no jump); v.turn (rad/s) gives the bank. */
+const smooth01f = t => t <= 0 ? 0 : t >= 1 ? 1 : t*t*(3 - 2*t);
+function flightStep(v, gx, gy, dt, o){ const dx = wdx(v.x, gx), dy = gy - v.y, d = Math.hypot(dx, dy); if (!(dt > 0)){ v.turn = 0; return d < 0.05; }
+  if (v.hd === undefined || !isFinite(v.hd)) v.hd = d > 1e-4 ? Math.atan2(dy, dx) : 0;
+  let spd = o.spd; if (o.base){ const dB = Math.hypot(wdx(v.x, o.base[0]), v.y - o.base[1]); spd *= 0.28 + 0.72*smooth01f(dB/26); }   // slow near its base: the take-off run and the landing
+  if (o.chase && d > 4) spd *= Math.min(2.2, 1 + (d - 4)/18);   // behind the rules' position: it catches up
+  const da = Math.atan2(Math.sin(Math.atan2(dy, dx) - v.hd), Math.cos(Math.atan2(dy, dx) - v.hd)), w = Math.max(1.6, Math.min(8, spd/Math.max(2, d)*1.6)), lim = w*dt;
+  const turn = d > 1e-4 ? Math.max(-lim, Math.min(lim, da)) : 0; v.hd = Math.atan2(Math.sin(v.hd + turn), Math.cos(v.hd + turn)); v.turn = turn/dt; v.want = v.hd;
+  const step = spd*dt*(Math.abs(da) > 2 && d < 8 ? 0.45 : 1);   // (a sharp turn close to its goal: it slows rather than overshoots)
+  if (d <= step*1.1){ v.x += dx; v.y = gy; return true; }
+  v.x += Math.cos(v.hd)*step; v.y += Math.sin(v.hd)*step;
+  if (o.lim){ const ex = wdx(v.x, gx), ey = gy - v.y, e = Math.hypot(ex, ey); if (e > o.lim){ const k = (e - o.lim)/e; v.x += ex*k; v.y += ey*k; } }
+  v.x = gx - wdx(v.x, gx);   // (on the copy of the world nearest its goal: across the seam its distances stay short)
+  return false; }
+
+return {AFX, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,
