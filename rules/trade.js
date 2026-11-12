@@ -431,10 +431,9 @@ function escortSet(a, id){ if (!a || !shipsOnly(a)) return; if (id == null){ if 
 // the point of a route's track in zone z nearest that zone's centre (where a raider waits), else null
 function trSpot(r, z){ const D = trDetour(r); if (!D) return null; const t = D.track, P = G.P[z]; let best = null, bd = Infinity;
   for (let i = 0; i < t.cells.length; i++){ if (G.prov[t.cells[i]] !== z) continue; const d = Math.hypot(t.pts[i][0] - P.x, t.pts[i][1] - P.y); if (d < bd){ bd = d; best = {x:t.pts[i][0], y:t.pts[i][1]}; } } return best; }
-// send fleet a to wait at spot (x, y) of zone z: sail there through the zones, or across its own zone
-function fleetGo(a, z, x, y){ if (a.sail){ a.pos = sailXY(a); delete a.sail; }
-  if (z === a.at){ a.path = []; a.dest = null; orderSpot(a, x, y); return true; }
-  const p = pathFor(a, a.at, z); if (!p.length) return false; delete a.tgt; a.path = p; a.forced = true; a.dest = {p:z, x, y}; return true; }
+// send fleet a to wait at spot (x, y) of zone z: sail there through the zones, or across its own zone (a pinpoint move, rules/movement.js orderMove)
+function fleetGo(a, z, x, y){ const from = a.to ?? a.at; if (z !== from && !pathFor(a, from, z).length){ if (a.sail){ a.pos = sailXY(a); delete a.sail; } return false; }
+  orderMove(a, z, [x, y]); if (a.path.length || a.to !== null) a.forced = true; return true; }
 // the enemy (hostile) sea routes fleet a could raid, nearest first: [{r, d (km to its track)}]
 function raidTargets(a){ const [x, y] = armyXY(a), out = []; if (!S.trade) return out;
   for (const r of S.trade.routes){ if (r.kind !== 'sea' || !trHostile(r, a.owner)) continue; const D = trDetour(r); if (!D) continue; out.push({r, d:trNear(D.track, x, y).d}); }

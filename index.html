@@ -5477,22 +5477,20 @@ function armyPos(a){
   if (a.air) return wingPos(a);
   if (a.fly && a.fly.kind === 'drop'){ const A = G.P[a.fly.from], B = G.P[a.fly.tgt], t = Math.min(1, a.fly.t + (S.speed && !S.over ? acc : 0)*a.fly.dt); return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t]; }
   const A = G.P[a.at];
-  if (a.sail){ const q = a.sail, t = Math.min(1, q.t + (S.speed && !S.over ? acc : 0)/q.h); return [q.f[0] + (q.to[0] - q.f[0])*t, q.f[1] + (q.to[1] - q.f[1])*t]; }   // (a fleet sailing to a spot in its own zone, rules/movement.js orderSpot)
+  if (a.sail){ const q = a.sail, held = !A.sea && S.battles.includes(a.at), t = Math.min(1, q.t + (S.speed && !S.over && !held ? acc : 0)/q.h); return [q.f[0] + (q.to[0] - q.f[0])*t, q.f[1] + (q.to[1] - q.f[1])*t]; }   // (a force walking, or a fleet sailing, to a spot in its own province, rules/movement.js orderSpot; a ground force in a battle there waits)
   if (a.to === null){ if (!(a.path.length && GO.S === S && GO.has(a.id) && S.speed && !S.over)) return a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y];
     // between legs: already easing toward the next province, on the very curve the next leg will follow (continuous when the hour turns)
     // (the leg's first hour is this one: a train running through carries the last hour's spare time into it, so it may cover more)
-    const n0 = a.path[0], B = G.P[n0], a0 = GO.get(a.id) || 0, c0 = a.carry && a.carryH === S.hour && legMode(a, a.at, n0) === 'rail' ? a.carry : 0, t = Math.max(0, (acc - a0)/(1 - a0))/Math.max(1, Math.ceil(legHours(a, a.at, n0) - c0 - 1e-6)), p1 = a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y], p2 = (a.path.length === 1 && a.dest && a.dest.p === n0) ? [a.dest.x, a.dest.y] : [B.x, B.y];
+    const n0 = a.path[0], B = G.P[n0], a0 = GO.get(a.id) || 0, c0 = a.carry && a.carryH === S.hour && legMode(a, a.at, n0) === 'rail' ? a.carry : 0, t = Math.max(0, (acc - a0)/(1 - a0))/Math.max(1, Math.ceil(nextLegH(a) - c0 - 1e-6)), [p1, p2] = nextLegEnds(a);   // (rules/movement.js: from its spot to the exact point on the final leg; hours by the leg's real length)
     const prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]], nx = a.path.length > 1 ? G.P[a.path[1]] : null, p3 = nx ? [nx.x, nx.y] : [2*p2[0] - p1[0], 2*p2[1] - p1[1]];
     return catmull(prevP, p1, p2, p3, t); }
   // eased so the force reaches the end of its leg exactly when the hour that completes it turns (no early arrival and an hour's halt), at an even pace:
   // the leg's drawn progress is spread evenly over the whole hours it takes (the hour before it started included: j done, R to go), instead of
   // covering 1/lh an hour and crawling through a short last one (with lh constant this meets the between-legs curve exactly when the hour turns)
-  const live = S.speed && !S.over ? acc : 0, lh = legHours(a, a.at, a.to), rem = (1 - a.t)*lh, j = Math.max(0, Math.floor(a.t*lh + 1e-6)), R = Math.max(1, Math.ceil(rem - 1e-6)), t = rem < 1e-6 ? 1 : Math.min(1, (j + live)/(j + R));
-  const p1 = a.legFrom || [A.x, A.y], p2 = legEnd(a), prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]];
+  const live = S.speed && !S.over ? acc : 0, lh = legH(a), rem = (1 - a.t)*lh, j = Math.max(0, Math.floor(a.t*lh + 1e-6)), R = Math.max(1, Math.ceil(rem - 1e-6)), t = rem < 1e-6 ? 1 : Math.min(1, (j + live)/(j + R));
+  const [p1, p2] = legEnds(a), prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]];
   const nx = a.path.length ? G.P[a.path[0]] : null, p3 = nx ? [nx.x, nx.y] : [2*p2[0] - p1[0], 2*p2[1] - p1[1]];
   return catmull(prevP, p1, p2, p3, t); }
-// end point of the current leg: the exact destination on the final leg, otherwise the next province centre
-function legEnd(a){ const B = G.P[a.to]; return (!a.path.length && a.dest && a.dest.p === a.to) ? [a.dest.x, a.dest.y] : [B.x, B.y]; }
 function catmull(p0, p1, p2, p3, t){ const t2 = t*t, t3 = t2*t, f = (a0, a1, a2, a3) => 0.5*((2*a1) + (-a0 + a2)*t + (2*a0 - 5*a1 + 4*a2 - a3)*t2 + (-a0 + 3*a1 - 3*a2 + a3)*t3);
   // keep the curve gentle: blend toward the straight line so it never overshoots badly
   const cx = f(p0[0], p1[0], p2[0], p3[0]), cy = f(p0[1], p1[1], p2[1], p3[1]), lx = p1[0] + (p2[0] - p1[0])*t, ly = p1[1] + (p2[1] - p1[1])*t; return [lx*0.45 + cx*0.55, ly*0.45 + cy*0.55]; }
@@ -8178,16 +8176,21 @@ function draw(now){ draw.now = now;
   // paths (under the troop models, the names and the counters)
   const sa = sel.army !== null ? armyById(sel.army) : null;
   const antOn = (S.speed && !S.over) || !!sa; if (antOn || RD.antT == null) RD.antT = now; const antT = RD.antT;   // (paused with nothing selected: the dashes rest)
-  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || !path.length) return; const pts = [toScreen(...dispPos(a))]; if (antOn) animAmb();
-    if (a.to !== null && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
-    path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
+  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || (!path.length && !endPt)) return; const pts = [toScreen(...dispPos(a))]; if (antOn) animAmb();
+    if (a.to !== null && path.length && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
+    let exact = !path.length; if (exact) pts.push(toScreen(endPt[0], endPt[1]));   // (a walk inside the province: straight to its point)
+    path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; if (e) exact = true; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
     const lastPt = pts[pts.length - 1];
     ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(antT/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    const [lx, ly] = lastPt; ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
+    const [lx, ly] = lastPt; if (!exact){ ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); return; }
+    // an exact destination (rules/movement.js a.dest): a small ring with a dot and four ticks on the very point
+    ctx.beginPath(); ctx.arc(lx, ly, 6.5, 0, Math.PI*2); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.stroke(); ctx.lineWidth = 1.8; ctx.strokeStyle = style; ctx.stroke();
+    ctx.beginPath(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ ctx.moveTo(lx + dx*8.5, ly + dy*8.5); ctx.lineTo(lx + dx*11.5, ly + dy*11.5); } ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = style; ctx.stroke();
+    ctx.beginPath(); ctx.arc(lx, ly, 2.2, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
   { const lo = sel.lastOrder && now - sel.lastOrder.t < 6000 ? sel.lastOrder : null, k0 = lo ? 1 - Math.max(0, (now - lo.t - 3000)/3000) : 0; if (lo){ if (now - lo.t >= 3000) animFast(); else animIn(3000 - (now - lo.t)); }
-    wrapEach(() => { for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null)){ const hot = lo && lo.ids.includes(a.id);
-      drawPath(a, a.path.length ? a.path : [a.to], hot ? `rgba(226,162,61,${(0.5 + 0.45*k0).toFixed(2)})` : 'rgba(226,162,61,0.5)', hot ? 1.8 + 1.0*k0 : 1.6); } }, 40 + 120/view.s); }   // (routes: once per copy on screen)
+    wrapEach(() => { for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null || a.sail)){ const hot = lo && lo.ids.includes(a.id);
+      drawPath(a, a.path.length ? a.path : a.to !== null ? [a.to] : [], hot ? `rgba(226,162,61,${(0.5 + 0.45*k0).toFixed(2)})` : 'rgba(226,162,61,0.5)', hot ? 1.8 + 1.0*k0 : 1.6, a.sail && a.to === null && !a.path.length ? a.sail.to : null); } }, 40 + 120/view.s); }   // (routes: once per copy on screen)
   // the selected force's attack range (rules/combat.js rangedStep): ph 0 = a soft circle per range, world-anchored on where it stands, coloured by unit
   // type and labelled (under the counters); ph 1 = a ring on each enemy force it can fire at now, its Bombard target brighter. Drawn only while the
   // force is selected; nothing animates (battery saver)
@@ -8218,7 +8221,7 @@ function draw(now){ draw.now = now;
         roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
       return; }
     if (ph === 1){ if (sel.target !== null && targetPath && targetPath.length) routeChip(sa, sel.target, targetPath); return; }
-    if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3);
+    if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3); else if (sa.sail) drawPath(sa, [], '#e2a23d', 3, sa.sail.to);
     if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3, sel.targetPt); if (!sa.air){ riverMarks(sa, targetPath); railMarks(sa, targetPath); } }
     else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   wrapEach(() => drawSelPaths(0), 40 + 120/view.s); drawRange(0);
@@ -8538,7 +8541,7 @@ function railMarks(a, path){ if (a.air || !ground(a)) return; let u = a.to ?? a.
   ctx.restore(); }
 function routeChip(a, t, path){
   const [x, y] = toScreen(G.P[t].x, G.P[t].y), foes = stationaryAt(t).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
-  const fw = a.air ? 0 : fightsOnWay(a, path), r = odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path)} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}`;
+  const fw = a.air ? 0 : fightsOnWay(a, path), r = odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path, tgtEnd(t))} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}`;
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(txt).width + 14;
   roundRect(ctx, x - w/2, y - 38, w, 20, 4); ctx.fillStyle = !foes.length ? (fw ? '#4a3a1a' : '#1b2a2e') : r >= 1.5 ? '#24452a' : r >= 0.9 ? '#4a3a1a' : '#4a1d1a'; ctx.fill();
   ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y - 28);
@@ -8606,7 +8609,7 @@ cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag =
 let udrag = null;   // a counter being dragged: {id, x, y} (screen)
 function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) return;
   const h = hitAt(x, y), b = h && !h.unk ? h.ids.map(armyById).filter(q => q && q !== a && q.owner === PLAYER && !q.air && !q.fly && count(q)).sort((p0, q0) => count(q0) - count(p0))[0] : null;
-  if (!b){ toast('Drop the force onto another of your forces to merge them.', 'info', null); return; }
+  if (!b){ dragMove(a, x, y); return; }   // onto the map: move there
   joinForces(a, b); }
 // a into b: at once when both stand in the same province, otherwise a marches to b and merges on arrival
 function joinForces(a, b){ if (!a || !b || a === b) return false;
@@ -8617,13 +8620,20 @@ function joinForces(a, b){ if (!a || !b || a === b) return false;
   const dest = b.to ?? b.at; orderMove(a, dest); if (!a.path.length && a.to === null){ toast('No route to that force.', 'bad', null); return false; }
   a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.${warn}`, sp.over ? 'bad' : 'info', null);
   if (sel.army === a.id){ sel.army = null; sel.group = []; } renderSide(true); return true; }
+// a move to a spot in the force's own province (rules/movement.js orderMove → orderSpot): it walks, or a fleet sails, there and takes the time
+function spotMove(a, p, w){ orderMove(a, p, pinPt(a, p, w)); visCache = null; sfx('order'); if (a.sail) toast(`${armyName(a)} ${shipsOnly(a) || G.P[p].sea ? 'sails' : 'moves'} to the new position: about ${sailHours(a)} h.`, 'info', null); renderSide(true); }
+// a counter dragged onto the map (not onto a force of yours): a move order to that exact point, as a right-click there gives
+function dragMove(a, x, y){ const p = provAt(x, y), w = screenToWorld(x, y); if (p < 0) return;
+  if (a.to === null && p === a.at){ if (G.P[p].sea && !shipsOnly(a)) return; spotMove(a, p, w); return; }
+  if (sel.army !== a.id && !sel.group.includes(a.id)) selectArmy(a.id);
+  lastClickW = w; setTarget(a, p); if (targetPath && targetPath.length) sendToTarget(a); else { sel.target = null; targetPath = null; toast('No route there.', 'bad', null); renderSide(true); } }
 function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) return; const [ax, ay] = toScreen(...dispPos(a)), h = hitAt(udrag.x, udrag.y);
   const b = h && !h.unk ? h.ids.map(armyById).find(q => q && q !== a && q.owner === PLAYER && !q.air && !q.fly && count(q)) : null;
   ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = b ? 'rgba(116,194,122,.95)' : 'rgba(243,234,210,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(udrag.x, udrag.y); ctx.stroke(); ctx.setLineDash([]);
   if (b){ ctx.strokeStyle = '#74c27a'; ctx.lineWidth = 2.5; roundRect(ctx, h.x - 3, h.y - 3, h.w + 6, h.h + 6, 5); ctx.stroke(); }
   ctx.globalAlpha = 0.85; ctx.fillStyle = 'rgba(16,22,24,.92)'; roundRect(ctx, udrag.x - 22, udrag.y - 13, 44, 26, 5); ctx.fill(); ctx.strokeStyle = mapCol(PLAYER); ctx.lineWidth = 1.5; ctx.stroke();
   ctx.globalAlpha = 1; ctx.fillStyle = '#f3ead2'; ctx.font = `700 12px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(count(a)), udrag.x, udrag.y);
-  const lbl = b ? (b.at === a.at && a.to === null && b.to === null ? `Merge into ${armyName(b)}` : `Join ${armyName(b)}`) : 'Drop on a force to merge';
+  const lbl = b ? (b.at === a.at && a.to === null && b.to === null ? `Merge into ${armyName(b)}` : `Join ${armyName(b)}`) : provAt(udrag.x, udrag.y) >= 0 ? 'Move here' : 'Drop on a force to merge';
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(lbl).width + 14; roundRect(ctx, udrag.x - w/2, udrag.y + 17, w, 18, 4); ctx.fillStyle = b ? '#24452a' : '#1b2a2e'; ctx.fill(); ctx.fillStyle = '#f3ead2'; ctx.fillText(lbl, udrag.x, udrag.y + 26);
   const sp = b ? stackPenaltyIf(b, a) : null;   // merging would go over the stack limit: the penalty under the label
   if (sp && sp.over){ const t2 = stackText(sp), w2 = ctx.measureText(t2).width + 14; roundRect(ctx, udrag.x - w2/2, udrag.y + 38, w2, 18, 4); ctx.fillStyle = '#5a1d17'; ctx.fill(); ctx.fillStyle = '#ffd9cf'; ctx.fillText(t2, udrag.x, udrag.y + 47); }
@@ -8687,8 +8697,8 @@ function tap(x, y, shift = false){
       const ext = pathFor(a, end, p); if (ext.length){ for (const x of groupArmies()) if (!x.air && x !== a && (x.path.length || x.to !== null)){ const e2 = x.path.length ? x.path[x.path.length - 1] : x.to, px = pathFor(x, e2, p); if (px.length) x.path = x.path.concat(px); }
         a.path = a.path.concat(ext); a.forced = true; sfx('order'); toast(`Waypoint added: ${armyName(a)} continues to ${G.P[p].cityName || G.P[p].name}.`, 'info', null); renderSide(true); } else toast('No route from the last waypoint to there.', 'bad', null);
       return; }
-    if (a.to === null && p === a.at && !a.air && (!G.P[p].sea || shipsOnly(a)) && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.sail ? a.sail.to : a.pos || [G.P[p].x, G.P[p].y];   // (a fleet: anywhere in its sea zone; it sails there)
-      if (Math.hypot(w0[0] - cur[0], w0[1] - cur[1]) > 6){ orderSpot(a, w0[0], w0[1]); visCache = null; sfx('order'); if (a.sail) toast(`${armyName(a)} sails to the new position: about ${sailHours(a)} h.`, 'info', null); renderSide(true); return; } selectProv(p); return; }
+    if (a.to === null && p === a.at && !a.air && (!G.P[p].sea || shipsOnly(a)) && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.sail ? a.sail.to : a.pos || [G.P[p].x, G.P[p].y];   // (anywhere in its province or sea zone: it walks, or sails, there)
+      if (Math.hypot(w0[0] - cur[0], w0[1] - cur[1]) > 6){ spotMove(a, p, w0); return; } selectProv(p); return; }
     if (a.to === null && p === a.at){ selectProv(p); return; }
     if (sel.target === p && a.air){ sendToTarget(a); return; }
     if (sel.target === p){ if (bombardTry(a)) return;   // in range: tapping the target again bombards it (the force stays where it is)
@@ -8718,10 +8728,19 @@ function setRally(city, p){
   sel.prov = city; renderSide(true);
 }
 let lastClickW = null;
-function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p && (!G.P[p].sea || shipsOnly(a)) ? lastClickW.slice() : null; lastClickW = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
+// the exact point a move order goes to in province p, from the tap w (canonical world x, screenToWorld): on dry land in a land province and on
+// water in a sea zone (as the coast is drawn: isWet), else the nearest such point of p within about 200 km; the rules keep it inside p
+// (rules/movement.js orderMove, ptIn: a zone's cells are water). null for a ship sent to a port (it docks at the quay)
+function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].sea)) return null; const want = !!G.P[p].sea, ok = (x, y) => { const c = worldToCell(x, y); return c >= 0 && G.prov[c] === p && isWet(x, y) === want; };
+  if (ok(w[0], w[1])) return [w[0], w[1]];
+  for (let r = 1; r <= 24; r++) for (let k = 0; k < 16; k++){ const an = (k + (r & 1)*0.5)*Math.PI/8, x = w[0] + Math.cos(an)*r, y = w[1] + Math.sin(an)*r; if (ok(x, y)) return [x, y]; }
+  return [w[0], w[1]]; }
+function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
+// the exact end of the route being planned to province t (rules/movement.js etaHours: the last leg's time by its real length)
+const tgtEnd = t => sel.targetPt && t === sel.target ? {p:t, x:sel.targetPt[0], y:sel.targetPt[1]} : null;
 const groupArmies = () => (sel.group.length ? sel.group : [sel.army]).map(armyById).filter(Boolean);
 // one-line tooltips written from what the rules do (rules/combat.js: dugIn and stanceHour)
 const STANCES = {hold:['Hold', 'Stays put and takes no standing orders; digs in only after 12 h on your own ground.'], defend:['Defend', 'Dug in at once for the defence bonus, and sorties against weaker enemies within 3 provinces of your land, then returns.'], retreat:['Preserve', 'Falls back to your nearest city to recover when health drops below 40%.']};
@@ -8761,16 +8780,18 @@ function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; 
   if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
   return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
-    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null, 'Stop right now, where the force stands')
+    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null && !a.sail, 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
     + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : ''); }   // no Close button: tap empty map (or Esc) to deselect
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || dropFor !== null || !!aimMsl); }
-function sendToTarget(a, keep = false){ if (sel.target !== null && sel.targetPt){ groupArmies().forEach((x, i) => { if (!x.air) x.dest = shipsOnly(x) && !G.P[sel.target].sea ? null : {p:sel.target, x:sel.targetPt[0] + (i % 3 - 1)*7*i/Math.max(1, i), y:sel.targetPt[1] + Math.floor(i/3)*6}; }); }
-  else if (sel.target !== null) groupArmies().forEach(x => { if (!x.air) x.dest = null; });
+function sendToTarget(a, keep = false){
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
   let ok = 0, g = [];
-  if (sel.target !== null){ g = groupArmies(); for (const x of g){ delete x.join; if (x.air){ if (orderAir(x, sel.target)) ok++; } else { orderMove(x, sel.target); if (x.path.length || x.to !== null) ok++; } } if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
+  if (sel.target !== null){ g = groupArmies(); const T = sel.target, P0 = sel.targetPt;
+    // the exact point (rules/movement.js orderMove): a group's forces stand round it, each on its own spot (the first on the point itself)
+    const ptOf = i => !P0 ? null : i ? pinPt(g[i], T, [P0[0] + Math.cos(i*2.4)*6, P0[1] + Math.sin(i*2.4)*5]) : pinPt(g[i], T, P0);
+    g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
   sel.target = null; targetPath = null;
   // auto-deselect: once an order is given the force (or the whole group) is released; its route stays drawn, brighter for a few seconds
   if (ok && !keep){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; sel.army = null; sel.group = []; sel.prov = null; hoverPath = null; cmdMode = null; }
@@ -9732,7 +9753,7 @@ function statusText(a){
   if (a.blk){ const n = S.trade ? S.trade.routes.filter(r => r.bk === a.id) : [], cut = n.filter(r => r.f0 === 0).length, [x, y] = armyXY(a), ch = chokeAt(x, y, fleetKm(a)), here = ch ? chokeByKey(ch).name : P[a.at].name;
     if (a.to !== null || a.path.length || a.sail || !P[a.at].sea) return {cls:'move', short:'to blockade', long:`Blockade order: it blockades once it stands at sea${a.to !== null || a.path.length || a.sail ? `, about ${a.sail ? sailHours(a) : etaHours(a)} h` : ''}`};
     return {cls:'battle', short:'blockading', long:`Blockading ${here} (${fleetKm(a)} km)${n.length ? `: ${cut ? `${cut} enemy route${cut > 1 ? 's' : ''} cut` : ''}${cut && n.length > cut ? ', ' : ''}${n.length > cut ? `${n.length - cut} rerouted` : ''}` : ': no enemy convoys pass here now'}`}; }
-  if (a.sail) return {cls:'move', short:'at sea', long:`Sailing to a new position in ${P[a.at].name}, about ${sailHours(a)} h`};
+  if (a.sail) return P[a.at].sea ? {cls:'move', short:'at sea', long:`Sailing to a new position in ${P[a.at].name}, about ${sailHours(a)} h`} : {cls:'move', short:'marching', long:`Moving to a new position in ${P[a.at].name}, about ${sailHours(a)} h`};
   if (a.to !== null || a.path.length){ const dest = a.path.length ? a.path[a.path.length - 1] : a.to; const blocked = a.to === null && !canProceed(a);
     if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${P[dest].name}, about ${etaHours(a)} h`}; }
   if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${P[a.at].name}. Ground units take extra damage at sea.`};
@@ -9758,7 +9779,7 @@ function groupHTML(){
   const g = groupArmies(); sel.group = g.map(a => a.id); if (g.length < 2) return armyHTML(g[0]);
   const units = g.reduce((s0, a) => s0 + count(a), 0), pw = g.reduce((s0, a) => s0 + power(a), 0);
   let plan = '';
-  if (sel.target !== null){ const eta = Math.max(...g.map(a => a.air ? (airCheck(a, sel.target, sel.surprise).hours || 0) : etaHours(a, pathFor(a, a.to !== null ? a.to : a.at, sel.target)))), reach = g.filter(a => a.air ? airCheck(a, sel.target, sel.surprise).ok : pathFor(a, a.to !== null ? a.to : a.at, sel.target).length).length;
+  if (sel.target !== null){ const eta = Math.max(...g.map(a => a.air ? (airCheck(a, sel.target, sel.surprise).hours || 0) : etaHours(a, pathFor(a, a.to !== null ? a.to : a.at, sel.target), tgtEnd(sel.target)))), reach = g.filter(a => a.air ? airCheck(a, sel.target, sel.surprise).ok : pathFor(a, a.to !== null ? a.to : a.at, sel.target).length).length;
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Group order</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br><span class="small">${reach} of ${g.length} forces can get there · slowest arrives in about ${eta} h</span></div>
       <div class="row"><button class="btn primary" data-act="send" ${reach ? '' : 'disabled'}>Send all</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
@@ -9935,7 +9956,7 @@ function armyHTML(a){
     const ok = targetPath && targetPath.length, fb = sel.chase != null ? armyById(sel.chase) : null, rk = rangedOf(a).length ? bombardInfo(a, t, fb) : null, rkOn = !!rk && (rk.seen || !!fb), bomb = rkOn && rk.ok;
     const rkHTML = rkOn ? `<div class="rngp ${bomb ? 'in' : 'out'}"><b>${bomb ? 'In range: bombard' : 'Out of range'}</b> · ${fmt(rk.km)} km, range ${rk.range} km${bomb ? ' · it fires from where it stands every 15 minutes, without moving in' : rk.moving ? ' · it is on the move: it fires once it stands' : !rk.seen ? ' · no enemy force seen there' : ' · move closer, or march in'}</div>` : '';
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned route</div>
-      <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath)} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}${(mx => mx ? ` · <span title="Share of the route by rail (×2.6, friendly lines only) and by road">${mx}</span>` : '')(a.air ? '' : mixText(routeMix(a, targetPath)))}${!a.air && riverLegs(a, targetPath).length ? (n0 => ` · crosses ${n0} river${n0 > 1 ? 's' : ''} (slower)`)(riverLegs(a, targetPath).length) : ''}` : !canEnter(PLAYER, t) ? `<br><span class="small">You are at ${REL[rel(PLAYER, S.owner[t]).st].toLowerCase()} with ${nationName(S.owner[t])}. Declare war in Diplomacy (D) to attack.</span>` : ' · no route'}${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? `<div class="small" style="color:var(--danger-t);margin-top:4px">⚠ This route crosses into ${sel.surprise.filter(n => !atWar(PLAYER, n)).map(nationName).join(' and ')}: sending it declares war (surprise attack).</div>` : ''}
+      <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath, tgtEnd(t))} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}${(mx => mx ? ` · <span title="Share of the route by rail (×2.6, friendly lines only) and by road">${mx}</span>` : '')(a.air ? '' : mixText(routeMix(a, targetPath)))}${!a.air && riverLegs(a, targetPath).length ? (n0 => ` · crosses ${n0} river${n0 > 1 ? 's' : ''} (slower)`)(riverLegs(a, targetPath).length) : ''}` : !canEnter(PLAYER, t) ? `<br><span class="small">You are at ${REL[rel(PLAYER, S.owner[t]).st].toLowerCase()} with ${nationName(S.owner[t])}. Declare war in Diplomacy (D) to attack.</span>` : ' · no route'}${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? `<div class="small" style="color:var(--danger-t);margin-top:4px">⚠ This route crosses into ${sel.surprise.filter(n => !atWar(PLAYER, n)).map(nationName).join(' and ')}: sending it declares war (surprise attack).</div>` : ''}
       ${oddsHTML(a, t, foes)}${rkHTML}</div>
       <div class="row">${bomb ? '<button class="btn primary" data-act="bombard" title="Fire at this target from where the force stands; it does not move">Bombard</button>' : ''}<button class="btn ${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'war' : bomb ? '' : 'primary'}" data-act="send" ${ok ? '' : 'disabled'}>${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'Attack (declares war)' : odds(a, t, foes, undefined, viaOf(a)) < 0.9 ? 'Attack anyway' : 'Send force here'}</button>
       <button class="btn" data-act="prov" data-id="${t}" ${G.P[t].sea ? 'disabled' : ''}>View province</button>

@@ -25,34 +25,34 @@ function tickHour(){
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
-    if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a); continue; } }   // (a fleet sailing to a spot inside its zone)
+    if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)
     if (a.to === null && a.path.length && canProceed(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;
-      if (a.carry && a.carryH === S.hour - 1 && legMode(a, a.at, a.to) === 'rail') a.t = a.carry/legHours(a, a.at, a.to); a.carry = 0; }   // trains run through: no stop at every station
-    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.to = null; a.t = 0; a.path = []; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
-    if (a.to !== null){ const lh = legHours(a, a.at, a.to); a.t += 1/lh;
+      if (a.carry && a.carryH === S.hour - 1 && legMode(a, a.at, a.to) === 'rail') a.t = a.carry/legH(a); a.carry = 0; }   // trains run through: no stop at every station
+    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
+    if (a.to !== null){ const lh = legH(a); a.t += 1/lh;   // (a leg takes time in proportion to its real length: rules/movement.js legRatio)
       if (a.t >= 1){ if (a.path.length && ground(a) && legMode(a, a.at, a.to) === 'rail'){ a.carry = Math.min(1, (a.t - 1)*lh); a.carryH = S.hour; } else a.carry = 0;
-        if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; a.legFrom = null;
-        if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; } }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land)
+        legArrive(a); }
+      else if (!(shipsOnly(a) && !G.P[a.to].sea)) legCross(a, lh); }   // a pinpoint move's last leg: the hour it crosses into its province it arrives there and walks on to the point
   }
   // head-on clash: hostile columns marching in opposite directions on the same road meet and fight at the nearer province
   { const edge = new Map(); for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)) edge.set(a.at + '>' + a.to, [...(edge.get(a.at + '>' + a.to) || []), a]);
     for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(a.to + '>' + a.at); if (!opp) continue;
       const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
-      const meet = a.t >= 0.5 ? a.to : a.at, A0 = G.P[a.at], B0 = G.P[a.to], mx = A0.x + (B0.x - A0.x)*a.t, my = A0.y + (B0.y - A0.y)*a.t;
-      for (const x of [a, b]){ x.from = x.at; x.at = meet; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = meet === a.at || meet === a.to ? [ (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2 ] : null; x.forced = false; }
+      const meet = a.t >= 0.5 ? a.to : a.at, [mx, my] = legSpot(a);
+      for (const x of [a, b]){ x.from = x.at; x.at = meet; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
       for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
   // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets), as long as
   // the joined force stays within its stack limit (STACK_LIM); a join order (dragged onto the counter) merges anyway, with the stack-limit warning
   for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || !count(a)) continue;
     if (a.lastAt === a.at) continue; a.lastAt = a.at;
     if (S.owner[a.at] !== me && !(S.owner[a.at] >= 0 && rel(me, S.owner[a.at]).st === 'ally')) continue;
-    const jt = a.join != null ? armyById(a.join) : null;   // a join order picks its partner
-    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over);
+    const jt = a.join != null ? armyById(a.join) : null, pin = a.sail ? a.sail.to : a.pos;   // a join order picks its partner; a force sent to an exact point joins only a force standing at (or by) that point
+    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over && (!pin || Math.hypot(pin[0] - (b.pos ? b.pos[0] : G.P[b.at].x), pin[1] - (b.pos ? b.pos[1] : G.P[b.at].y)) < JOIN_R));
     if (into) delete a.join;
     if (into){ merge(into, a); IM.emit('merged', a.id, into.id, true); const sp = stackPenalty(into); if (sp.over) tell(me, `${armyName(into)} at ${G.P[into.at].cityName || G.P[into.at].name}: ${stackText(sp)} (${sp.size} ${sp.dom} units, limit ${sp.limit}). Split it to fight at full strength.`, 'bad', into.at); }
   }
   // dug in: the hour each force came to a stop (display only: the sandbag mark on its plate and the sandbag ring at close zoom)
-  for (const a of S.armies){ if (a.to !== null || a.path.length || a.fly || a.air){ if (a.still != null) delete a.still; } else if (a.still == null) a.still = S.hour; }
+  for (const a of S.armies){ if (a.to !== null || a.path.length || a.fly || a.air || (a.sail && !G.P[a.at].sea)){ if (a.still != null) delete a.still; } else if (a.still == null) a.still = S.hour; }
   if (S.hour % 2 === 0) stanceHour();
   visCache = null;   // forces moved this hour: what each side sees is worked out again (ranged fire needs sight)
   rangedStep(true); chaseHour(); joinHour(); for (const a of S.armies) if (a.delay > 0) a.delay--;

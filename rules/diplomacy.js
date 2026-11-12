@@ -42,7 +42,7 @@ function setRel(a, b, st, days = null){
 // a force left standing in land it may not be in (peace, or too small to capture) walks to its nearest own province
 function sendHome(a){ const seen = new Set([a.at]), q = [a.at]; let dest = -1;
   for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === a.owner){ dest = v; break; } q.push(v); }
-  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (pth.length){ a.path = pth; a.forced = true; return true; } a.at = dest; a.path = []; return true; } return false; }
+  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (pth.length){ a.path = pth; if (a.dest) a.dest = null; a.forced = true; return true; } a.at = dest; a.path = []; if (a.pos) a.pos = null; if (a.dest) a.dest = null; delete a.sail; return true; } return false; }
 function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.path.length || !count(a) || G.P[a.at].sea || shipsN(a)) continue;
     const o = S.owner[a.at]; if (o === a.owner) continue;
     const peaceful = o >= 0 && !atWar(a.owner, o) && !['pass', 'ally'].includes(rel(a.owner, o).st);
@@ -52,11 +52,11 @@ function evict(n, host){
   // forces of n standing in host's land go to their nearest own province
   for (let p = 0; p < G.P.length; p++) if (S.cap[p] && S.cap[p].by === n && S.owner[p] === host) S.cap[p] = null;
   for (const a of S.armies){ if (a.owner !== n) continue;
-    if (a.to !== null){ if (S.owner[a.to] === host){ a.to = null; a.t = 0; } else if (S.owner[a.at] !== host) continue; }
+    if (a.to !== null){ if (S.owner[a.to] === host){ a.to = null; a.t = 0; if (a.legFrom) a.legFrom = null; if (a.pos) a.pos = null; } else if (S.owner[a.at] !== host) continue; }
     if (S.owner[a.at] !== host) continue;
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-    if (dest >= 0){ a.at = dest; a.to = null; a.t = 0; a.path = []; } else for (const t of UT) a.u[t] = 0; }
+    if (dest >= 0){ a.at = dest; a.to = null; a.t = 0; a.path = []; if (a.pos) a.pos = null; if (a.legFrom) a.legFrom = null; if (a.dest) a.dest = null; delete a.sail; } else for (const t of UT) a.u[t] = 0; }
   removeEmpty();
 }
 // crossing a peaceful border or striking a nation you are not at war with starts the war at once
