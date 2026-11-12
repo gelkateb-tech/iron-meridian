@@ -21,23 +21,22 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
+| Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | Started |
 | Attack range in km: artillery, rocket launchers and warships fire from where they stand at visible enemies in range, a Bombard order, range circles when selected (missiles too) | Opus | Started |
-| Building level pictures on the map: each building's Higgsfield level picture next to its city, visible to all, changing as it levels up | Sonnet | Started |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill) | Opus (after building pictures, to avoid clashing map drawing) |
-| 2 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
-| 3 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
-| 4 | Aircraft in flight drawn with their own unit pictures (rotated, shadow, contrail) | Opus |
-| 5 | Each aircraft type gets its own 3D shape | Opus |
-| 6 | Territory sales in diplomacy (captured territory only, price from the province's value, 25% / 10% coalition floors, 3-day no-resale; the AI never sells) | Opus |
-| 7 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
-| 8 | Strike effects, optional small repair 3: chemical cloud easier to read at mid zoom, ICBM ground fires, blast size order, sparks, seams in battle smoke | Opus |
-| 9 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 10 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
+| 2 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
+| 3 | Aircraft in flight drawn with their own unit pictures (rotated, shadow, contrail) | Opus |
+| 4 | Each aircraft type gets its own 3D shape | Opus |
+| 5 | Territory sales in diplomacy (captured territory only, price from the province's value, 25% / 10% coalition floors, 3-day no-resale; the AI never sells) | Opus |
+| 6 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
+| 7 | Strike effects, optional small repair 3: chemical cloud easier to read at mid zoom, ICBM ground fires, blast size order, sparks, seams in battle smoke | Opus |
+| 8 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 9 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
@@ -49,6 +48,7 @@ Last updated: 2026-11-11.
 - **Netlify token** for the phone app.
 - **"Move to public"** for everything under "Waiting for public" in RELEASES.md.
 - **Resource-bar button:** the storage case went on the button at the left of the resource bar, which opens the missile stocks (there is no separate all-resources list). Keep it, or add an all-resources list there?
+- **Building pictures size:** at play zoom the clusters are fairly big and can sit a little away from their city (e.g. Hamburg's below it toward Hanover). Smaller tiles, or fewer at play zoom?
 - **Fog decision:** a foreign country's building under construction is hidden (finished buildings show for everyone); show it too?
 - **Fable:** no Fable tasks left; new ones only if the owner says so.
 
@@ -83,6 +83,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| Building level pictures on the map: each building's level picture in a framed cluster next to its city, visible to all, level-up animation, own construction shown faintly with progress | Sonnet |
 | Fog follow-ups: fog clearly visible outside your sight with soft circle edges, the Stealth Bomber test fixed, fog circles across the Pacific seam | Sonnet |
 | Army bar and Army Info like CoN (one health bar with numbers, stats row with tick countdown, unit diamonds with Mark badges, i button with the Strength table and arrows), no health bars on the map, combat every 15 in-game minutes, healing shown with a Hospital hook, AWACS combat cover 500 km | Sonnet |
 | Stack limits like CoN: land 10, air 5, sea 5; damage 1 − 0.56 × ln(size ÷ limit) with a 25% floor, speed 1 − 0.15 × ln(size ÷ limit) (min 50%); merge warnings; AI stacks at the limit, attacking from several sides (biggest AI stack 45-62 → 10); split stacks beat a 128-stack in all six duel cases | Opus |
