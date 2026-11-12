@@ -28,14 +28,13 @@ Last updated: 2026-11-11.
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
-| 2 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
-| 3 | Aircraft in flight drawn with their own unit pictures (rotated, shadow, contrail) | Opus |
+| 1 | Realistic combat and flight animations (dev build): firing effects per unit type (tanks, artillery arcs, rocket salvos, infantry, warships, cruise/ballistic/ICBM, strafing and bomb lines, drones, interceptions), impacts sized by weapon, hit flashes, scorch marks, subtle screen shake; aircraft accelerate, curve, bank, contrails, shadows, oval patrols, helicopters bob; attack markers, range ring and target on tap, missile warnings, sound slots with a mute toggle; Effects quality High/Low/Off, ~150 particles, one loop, simple flashes far out; separate effects module; Effects test panel; proof that results are identical on High/Low/Off. Replaces 'aircraft pictures in flight' and 'strike effects repair 3' | Opus (starts after the map wrap is merged; one review, at most one repair) |
+| 2 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
+| 3 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
 | 4 | Each aircraft type gets its own 3D shape | Opus |
 | 5 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
-| 6 | Strike effects, optional small repair 3: chemical cloud easier to read at mid zoom, ICBM ground fires, blast size order, sparks, seams in battle smoke | Opus |
-| 7 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 6 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 7 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
