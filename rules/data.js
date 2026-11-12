@@ -186,11 +186,11 @@ const R_LINES = [
   {u:'at', cat:'inf', day:1, std:1, k:[
     ['armor', 'Ceramic Body Armour', 'armor', [[1, {def:1}, 'defense +1']]],
     ['warhead', 'Tandem Warheads', 'warhead', [[5, {atk:1}, 'attack +1'], [11, {atk:1}, 'attack +1 more']]],
-    ['eye', 'Thermal Sights', 'scope', [[8, {}, 'sees half a province farther']]]],
+    ['eye', 'Thermal Sights', 'scope', [[8, {}, 'sees 50% farther']]]],
    g:[[2, 12, 'Guided Missile Teams', {atk:1, hp:2}, 'attack +1, health +2, damage to armor 3.5x to 4x']]},
   {u:'spec', cat:'inf', day:4, ud:4, elite:1, fam:'inf', k:[
     ['terr', 'Mountain & Arctic Training', 'terr', [[7, {}, 'rough-terrain attack bonus 40% to 50%'], [13, {}, 'to 60%']]],
-    ['eye', 'Night Optics', 'scope', [[8, {}, 'sees half a province farther']]],
+    ['eye', 'Night Optics', 'scope', [[8, {}, 'sees 50% farther']]],
     ['airlift', 'Air-Transportable', 'airlift', [[10, {}, 'can be air-dropped from an airbase province, up to 6 hexes']]]],
    g:[[2, 16, 'Tier-One Operators', {atk:2, def:1, hp:2}, 'attack +2, defense +1, health +2']]},
 
@@ -370,6 +370,14 @@ const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'ei
 const cap1 = w => w[0].toUpperCase() + w.slice(1);
 const NEUTRAL = -1, SEA = -2;
 const W = WORLD.W, H = WORLD.H, GS = WORLD.GS || 1, HS0 = 12, HS = HS0/GS, SQ3 = Math.sqrt(3);   // GS: cells per old map hex
+const KM_W = HS0*SQ3/KM_HEX;          // world units per km (an old map hex is about 180 km across; one world unit is about 8.7 km)
+// sight ranges in km (rules/vision.js measures them from where each unit, city or mission actually is). Places and missions here; each unit type
+// carries its own (UNITS[t].vis): ground forces and fleets 50, recon/scout units (VIS_RECON) 100, aircraft in flight 150, drones (VIS_DRONE) 200.
+// patrol: fighter patrols and any wing on a recon mission see at least this far; aew/mpa: AWACS orbit (location only) and maritime patrol (sea only)
+// before research; sat: half the width of a satellite's strip. The UAV on station sees by its level (UAV_LV vis, rules/air.js).
+const VIS_KM = {city:80, airbase:100, ground:50, recon:100, air:150, drone:200, patrol:200, aew:500, mpa:400, sat:150};
+const VIS_RECON = ['spec'], VIS_DRONE = ['drone', 'sdrone', 'swarm'];
+for (const t in UNITS) if (UNITS[t].vis == null) UNITS[t].vis = VIS_RECON.includes(t) ? VIS_KM.recon : VIS_DRONE.includes(t) ? VIS_KM.drone : UNITS[t].cls === 'air' ? VIS_KM.air : VIS_KM.ground;
 const K = 0.25;                       // combat damage per hour factor
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
 const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];

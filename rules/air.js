@@ -3,9 +3,9 @@
 const AIR_SPEED = 2.5;                // hexes per hour for aircraft on missions
 const AIR_RANGE = {jet:16, int:12, heli:6, drone:18, swarm:6, sdrone:20, bomb:34, mpa:22, awacs:18, asf:14, stealth:34};   // mission radius in hexes from the home airbase
 const AIR_SPF = {bomb:0.6, stealth:0.67, mpa:0.85, awacs:0.85, sdrone:0.75, swarm:0.8};   // slower aircraft: share of AIR_SPEED
-// UAV levels (research UAV I..V): vision radius (old hexes), loiter hours, range (hexes), stealth (share of air-defence hits that land), missile salvos per sortie
-const UAV_LV = [null, {vis:6.7, loiter:12, range:18, stealth:1.0, salvos:0}, {vis:8.5, loiter:16, range:20, stealth:0.8, salvos:0}, {vis:10, loiter:20, range:22, stealth:0.6, salvos:0},
-  {vis:10.5, loiter:20, range:22, stealth:0.6, salvos:1}, {vis:12, loiter:24, range:27, stealth:0.45, salvos:2}];
+// UAV levels (research UAV I..V): vision radius on station (km, around the target point), loiter hours, range (hexes), stealth (share of air-defence hits that land), missile salvos per sortie
+const UAV_LV = [null, {vis:250, loiter:12, range:18, stealth:1.0, salvos:0}, {vis:300, loiter:16, range:20, stealth:0.8, salvos:0}, {vis:350, loiter:20, range:22, stealth:0.6, salvos:0},
+  {vis:400, loiter:20, range:22, stealth:0.6, salvos:1}, {vis:500, loiter:24, range:27, stealth:0.45, salvos:2}];
 const UAV_TECH = ['u_drone', 'drone_g2', 'drone_g3', 'drone_g4', 'drone_g5'];   // UAV I is the Recon UAV's unlock; II to V are its generations
 function uavLv(n){ if (n < 0 || !S || !S.nations[n]) return 1; let l = 0; for (const id of UAV_TECH){ if (has(n, id)) l++; else break; } return Math.max(1, l); }
 const uavOf = n => UAV_LV[uavLv(n)];
@@ -43,7 +43,7 @@ function maintRate(a){ if (!a || !a.air || a.fly) return 0; if (a.air.car != nul
 function maintBase(a){ const B = G.P[a.air.base], r = wingRange(a); let best = -1, bv = maintRate(a) + 0.03;
   for (const P of G.P){ if (P.sea || S.owner[P.id] !== a.owner || !S.bld[P.id].air || P.id === a.air.base || hexDist(B.cc, P.cc) > r || bdis(P.id, 'air')) continue; const v = 0.1 + 0.06*S.bld[P.id].air - hexDist(B.cc, P.cc)*0.002; if (v > bv){ bv = v; best = P.id; } }
   return best; }
-const AEW_R = 16.6, MPA_R = 11;   // AWACS radar and maritime patrol search radius, old hexes (about 3,000 and 2,000 km)
+const AEW_R = 16.6, MPA_R = 11;   // AWACS fighter-control cover and maritime patrol attack radius, old hexes (about 3,000 and 2,000 km); what they SEE is VIS_KM.aew / .mpa (rules/vision.js)
 function nearestAirbase(n, from){
   let best = -1, bd = 1e9; for (const P of G.P){ if (S.owner[P.id] !== n || !S.bld[P.id].air) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
   if (best < 0) for (const P of G.P){ if (S.owner[P.id] !== n || !P.city) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
@@ -255,11 +255,11 @@ function airTick(){
         if (f.kind === 'rebase'){ const cv = G.P[f.tgt].sea ? carrierAt(a.owner, f.tgt) : null; if (G.P[f.tgt].sea && !cv){ f.ph = 'back'; f.t = 0; continue; } a.air.base = f.tgt; a.at = f.tgt; a.air.car = cv ? cv.id : null; a.fly = null; a.air.cd = 2;
           if (isSeat(a.owner) && cv) tell(a.owner, `${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
-        else if (f.kind === 'recon'){ const L = uavOf(a.owner), seen = nearList(f.tgt, L.vis); S.reveal = S.reveal || {};
+        else if (f.kind === 'recon'){ const L = uavOf(a.owner), seen = visProvsAt(G.P[f.tgt].x, G.P[f.tgt].y, L.vis); S.reveal = S.reveal || {};
           for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + L.loiter + 12); visCache = null; f.ph = 'over'; f.hrs = f.h0 = L.loiter; f.t = 0; f.salvo = L.salvos;
           if (isSeat(a.owner)){ const foes = seen.reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== a.owner).reduce((s1, b) => s1 + count(b), 0), 0); tell(a.owner, `UAV ${ROMAN[uavLv(a.owner)]} over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: identifying everything in ${seen.length} provinces for ${L.loiter} h, ${foes} foreign units spotted.`, 'info', f.tgt); }
           if (f.salvo > 0){ f.salvo--; uavSalvo(a, f.tgt); } }
-        else if (f.kind === 'orbit'){ f.ph = 'over'; f.hrs = 16; f.t = 0; visCache = null; if (isSeat(a.owner)) tell(a.owner, `Early warning orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: enemy forces within ${Math.round(AEW_R*KM_HEX/100)*100} km show as unidentified contacts for 16 h.`, 'info', f.tgt); }
+        else if (f.kind === 'orbit'){ f.ph = 'over'; f.hrs = 16; f.t = 0; visCache = null; if (isSeat(a.owner)) tell(a.owner, `Early warning orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: enemy forces within ${Math.round(visAewKm(a.owner)/10)*10} km show as unidentified contacts for 16 h.`, 'info', f.tgt); }
         else if (f.kind === 'hunt'){ f.ph = 'over'; f.hrs = rMpaH(a.owner); f.t = 0; f.nx = 0; visCache = null; mpaHunt(a, f.tgt); }
         else { f.ph = 'patrol'; f.hrs = 12; f.t = 0; } } }
     else if (f.ph === 'patrol' || f.ph === 'over'){
@@ -318,12 +318,15 @@ function missileImpact(m){
   if (isSeat(m.owner)){ tell(m.owner, `${M0.name} hit ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} destroyed` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'good', m.to); bump(m.owner, 'unitsKilled', killed); }
   for (const me of seatsBut(m.owner)) if (S.owner[m.to] === me || defs.some(b => b.owner === me)){ tell(me, `Enemy ${M0.name} struck ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${wrecked ? `, ${wrecked} damaged` : ''}.`, 'bad', m.to); bump(me, 'unitsLost', killed); }
 }
-// satellites: a sinusoidal ground track crossing the map once per game day; the footprint reveals everything under it
-const SAT_MAX = 3, SAT_COST = 220, SAT_C = {cash:SAT_COST, elec:25, rare:10}, SAT_R = 78;   // a launch: money, electronics and rare materials
+// satellites: a sinusoidal ground track crossing the map once per game day; the footprint, a strip along this hour's stretch of the track
+// (VIS_KM.sat to each side, SAT_R in world units), identifies everything under it
+const SAT_MAX = 3, SAT_COST = 220, SAT_C = {cash:SAT_COST, elec:25, rare:10}, SAT_R = VIS_KM.sat*KM_W;   // a launch: money, electronics and rare materials
 function satPos(st, hr = S.hour){ const u = ((st.ph + (hr - st.h0)/24) % 1 + 1) % 1, x = u*WORLD_W, y = WORLD_H*0.5 + Math.sin(u*Math.PI*2*st.k + st.ph*6)*WORLD_H*st.amp; return [x, Math.max(OY, Math.min(WORLD_H - OY, y))]; }
-function satSwath(st){ if (st.cache && st.cache.h === S.hour) return st.cache.a; const [x, y] = satPos(st, S.hour), a = [], R0 = rSatR(st.owner);
-  for (const P of G.P){ let dx = Math.abs(P.x - x); dx = Math.min(dx, WORLD_W - dx); if (dx < R0 && Math.abs(P.y - y) < R0*0.8 && dx*dx + ((P.y - y)/0.8)**2 < R0*R0) a.push(P.id); }
-  st.cache = {h:S.hour, a}; return a; }
+// the strip a satellite sees this hour: the stretch of track it covers from the hour mark to the next, rSatR to each side ([x1, y1, x2, y2, r], world units;
+// x2 is unwrapped next to x1 where the track crosses the map's edge)
+function satStrip(st){ const [x1, y1] = satPos(st, S.hour); let [x2, y2] = satPos(st, S.hour + 1); if (x2 - x1 > WORLD_W/2) x2 -= WORLD_W; else if (x1 - x2 > WORLD_W/2) x2 += WORLD_W;
+  return [x1, y1, x2, y2, rSatR(st.owner)]; }
+const satSwath = st => visProvsIn(satStrip(st));   // the provinces whose point lies in the strip
 function launchSat(n, p){ const N = S.nations[n]; S.sats = S.sats || []; if (!has(n, 'sat1') || S.sats.filter(x => x.owner === n).length >= rSatMax(n) || !hasC(N, SAT_C) || S.owner[p] !== n || !(S.bld[p].silo || p === N.capital)) return false;
   payC(N, SAT_C); S.sats.push({id:S.nid++, owner:n, ph:rng(), amp:0.18 + rng()*0.2, k:1 + Math.floor(rng()*2), h0:S.hour}); visCache = null;
   if (isSeat(n)){ tell(n, 'Reconnaissance satellite launched: it sweeps the globe once a day, revealing everything beneath its track.', 'good', p); cue(n, 'launch'); IM.emit('fxSat', p, n); }
