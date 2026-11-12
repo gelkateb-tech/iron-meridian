@@ -14,15 +14,17 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
   - Big ones get one review and at most one repair.
 - **Commits:** one commit after each finished task.
 
-Last updated: 2026-11-11.
+Last updated: 2026-11-12 (04:10 UTC).
+
+**Handover:** a new session took over this list on 2026-11-12. The three jobs below were started by the previous session and run in its container (their worktrees and unpushed branches are only there), so that session has to finish and push them; this session starts the queued jobs from here on.
 
 ## Running
 
 | Task | Model | Where it is |
 |---|---|---|
-| 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
-| Territory sales in diplomacy: sell captured provinces (never home provinces), price from the province's value, floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept, the AI buys but never sells, troops move out | Opus | Started |
-| Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | Started |
+| 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Steps 0-5 done on branch `nations-68`, not merged: plumbing, province split, Europe, Middle East, Africa (with the oil reserve repair), Asia (with the rivals repair) and the Americas. Oceania and the merge are left. No commit since 01:34 UTC and no sign of the job in the previous session's last half hour, so it may have stopped |
+| Territory sales in diplomacy: sell captured provinces (never home provinces), price from the province's value, floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept, the AI buys but never sells, troops move out | Opus | Started 03:44 UTC in the previous session (branch `territory-sales`, not pushed yet); writing its tests |
+| Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | In the previous session (branch not pushed yet); taking screenshots of the result |
 
 ## Queued (in this order)
 
@@ -48,6 +50,8 @@ Last updated: 2026-11-11.
 - **Resource-bar button:** the storage case went on the button at the left of the resource bar, which opens the missile stocks (there is no separate all-resources list). Keep it, or add an all-resources list there?
 - **Building pictures size:** at play zoom the clusters are fairly big and can sit a little away from their city (e.g. Hamburg's below it toward Hanover). Smaller tiles, or fewer at play zoom?
 - **Fog decision:** a foreign country's building under construction is hidden (finished buildings show for everyone); show it too?
+- **Fleet moves inside a sea zone:** these happen instantly, as land moves inside a province already do, which can be a long jump in a big sea zone. Should they take sailing time? (asked when attack range was merged)
+- **Attack range on the Dev Build:** merged into master at 03:43 UTC. The previous session was running the full tests and was to publish the Dev Build after they passed. It has not said whether it published.
 - **Fable:** no Fable tasks left; new ones only if the owner says so.
 
 ## Planned for later (in LATER.md, not built yet)
