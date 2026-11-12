@@ -2887,7 +2887,8 @@ function worldLines(G){ const P = G.P, LK = G.LK;
     const RD = dPolys.map(q => chainPolys(q).map(p => [naturalLine(p, CW*0.4, CW*2.2, CW*0.22, 20), len(p)])), RL = chainPolys(qPolys).map(p => [naturalLine(p, CW*0.45, CW*3.6, CW*0.24, 30), len(p)]);
     lines.roadsT = RD.map((q, i) => tiledPath(q.map(e => e[0]), 96, 16, i >= 2));   // (the highways' and main roads' runs kept: the lamps along them through a town at night, cityLinesNight)
     lines.roadsMain = tiledPath(RD[2].filter(e => e[1] >= CW*5).map(e => e[0]), 96, 16, true);   // the longer local roads: shown a little earlier than the rest
-    lines.railsT = tiledPath(RL.map(e => e[0]), 96, 16); lines.railsMain = tiledPath(RL.filter(e => e[1] >= CW*6).map(e => e[0]), 96, 16); }
+    lines.railsT = tiledPath(RL.map(e => e[0]), 96, 16); lines.railsMain = tiledPath(RL.filter(e => e[1] >= CW*6).map(e => e[0]), 96, 16);
+    lines.roadPl = RD.flatMap(q => q.map(e => e[0])); lines.railPl = RL.map(e => e[0]); RNET.road = RNET.rail = null; RROUTE.clear(); RLEG.clear(); rnetSoon(); }   // (the drawn lines, for the forces on the road: roadRoute)
   loadWorld.lines = lines;
 }
 function applyPalette(){ if (!S || !S.nations) return; for (const N of S.nations){ if (!N.color0) N.color0 = N.color; N.color = SET.cb ? CB_PAL[N.id % CB_PAL.length] : N.color0; } geoDirty = true; layerKey = ''; }
@@ -3847,7 +3848,7 @@ const FXH = {get AC(){ return AC; },
   get wrapSX(){ return wrapSX; },
   get zx(){ return zx; }};
 const FXM = window.IMFX(FXH);
-const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx} = FXM;
+const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx, turnTo, moveFig} = FXM;
 const CGLOW = () => softSprite('cglow', 'rgba(255,214,150,1)', 'rgba(255,176,84,.5)', 'rgba(255,130,30,0)');   // a city's haze at night: warm amber, never white
 // ---- day / night ----
 let NIGHT = null;
@@ -4498,9 +4499,12 @@ function snowBuild(m){
 const VW = new Map(), STRIKEQ = new Map(), VW_SPEED = 70;     // world units per real second at 1x
 /* drawn motion of ground forces and ships (display only; the sim is untouched): army id -> {x, y, vx, vy, hd, t, tr, trT, halt, ms, px, py, ang}
    The drawn spot follows armyPos (the target) on a critically damped spring, which evens out the curve's per-leg speed and the leg seams and eases
-   into a halt; a pop (one frame's step over 3x the running mean speed) is clipped and a teleport (load, time skip, over 2 hexes) snaps. The heading
-   turns toward the drawn velocity at a capped rate, and the trail (world points every 60 ms) lets a column snake along its own route. */
-const MOV = new Map(), MOV_W = 9, MOV_TURN = 2.5, MOV_HALT = 900, MOV_FLOOR = 1.2;
+   into a halt; a pop (one frame's step over 3x the running mean speed) is clipped and a teleport (load, time skip, over 2 hexes) snaps. Setting
+   off, the spring starts soft and firms up over MOV_EASE_IN ms (the force eases into its march, a little behind, and catches up); arriving, the
+   final stretch is eased out by armyPos itself (easeArrive). The heading turns toward the drawn velocity at fx.js's turn rate (turnTo), and the
+   trail (world points every 60 ms) lets a column snake along its own route. run (0..1): how much it is moving now (its drawn speed against its
+   usual pace), for the march look (fx.js moveFig: dust, wakes, the bob and the rock). */
+const MOV = new Map(), MOV_W = 9, MOV_HALT = 900, MOV_FLOOR = 1.2, MOV_EASE_IN = 800;
 const lerpAng = (a0, b0, t) => a0 + Math.atan2(Math.sin(b0 - a0), Math.cos(b0 - a0))*t;
 const smooth01 = t => { t = Math.max(0, Math.min(1, t)); return t*t*(3 - 2*t); };
 function movStep(a, tx, ty, moving, now){
@@ -4509,20 +4513,22 @@ function movStep(a, tx, ty, moving, now){
     // a force just setting off starts from its standing heading (the rest angle) and turns onto the road; one already under way (out of the fog, a load) points along it
     const A = a.pos ? {x:a.pos[0], y:a.pos[1]} : G.P[a.at], B = G.P[a.path.length && a.to === null ? a.path[0] : a.to ?? a.at];
     const near = Math.hypot(tx - A.x, ty - A.y) < 2*HS0, x0 = near ? A.x : tx, y0 = near ? A.y : ty;   // (from where it stood: an order that lands with the hour's move already made glides off instead of popping forward)
-    m = {id:a.id, x:x0, y:y0, vx:0, vy:0, hd:Math.hypot(tx - A.x, ty - A.y) < 1.5 ? 0.15*Math.PI : Math.atan2(B.y - ty, B.x - tx), t:now, tr:[], trT:now, halt:null, ms:0, px:x0, py:y0};
+    m = {id:a.id, x:x0, y:y0, vx:0, vy:0, hd:Math.hypot(tx - A.x, ty - A.y) < 1.5 ? 0.15*Math.PI : Math.atan2(B.y - ty, B.x - tx), t:now, t0:now, tr:[], trT:now, halt:null, ms:0, vr:0, run:0, px:x0, py:y0};
     MOV.set(a.id, m); return m; }
   if (moving) m.halt = null; else if (m.halt == null) m.halt = now;
   const dtR = (now - m.t)/1000, dt = Math.min(0.1, Math.max(0, dtR)); m.t = now;
   if (dtR > 0.4 || Math.hypot(tx - m.x, ty - m.y) > 2*HS0){ m.x = m.px = tx; m.y = m.py = ty; m.vx = m.vy = 0; m.tr.length = 0; m.ms = 0; m.rest = true; return m; }   // a teleport, a load or a time skip: snap
   if (dt <= 0) return m;
   const tv = Math.hypot(tx - m.px, ty - m.py)/dt; m.px = tx; m.py = ty; m.ms += (Math.min(tv, 3*m.ms + MOV_FLOOR) - m.ms)*Math.min(1, dt/0.6);   // running mean of the target's speed (each sample capped, so one pop cannot inflate it)
+  if (moving && tv > 1e-4) m.vr += (Math.min(tv, 3*m.vr + MOV_FLOOR) - m.vr)*Math.min(1, dt/1.5);   // its usual pace (kept while it stands: paused or halted)
   const x0 = m.x, y0 = m.y, calm = afxReduced();
   if (calm){ m.x = tx; m.y = ty; }
-  else { const w = MOV_W; m.vx += (w*w*(tx - m.x) - 2*w*m.vx)*dt; m.vy += (w*w*(ty - m.y) - 2*w*m.vy)*dt; m.x += m.vx*dt; m.y += m.vy*dt;
+  else { const w = MOV_W*(0.4 + 0.6*smooth01((now - (m.t0 ?? 0))/MOV_EASE_IN)); m.vx += (w*w*(tx - m.x) - 2*w*m.vx)*dt; m.vy += (w*w*(ty - m.y) - 2*w*m.vy)*dt; m.x += m.vx*dt; m.y += m.vy*dt;
     const sx = m.x - x0, sy = m.y - y0, sl = Math.hypot(sx, sy), lim = (3*m.ms + MOV_FLOOR)*dt;
     if (sl > lim){ const f = lim/sl; m.x = x0 + sx*f; m.y = y0 + sy*f; m.vx = sx*f/dt; m.vy = sy*f/dt; } }
   const vx = calm ? (m.x - x0)/dt : m.vx, vy = calm ? (m.y - y0)/dt : m.vy;
-  if (Math.hypot(vx, vy) > 0.15){ const da = Math.atan2(Math.sin(Math.atan2(vy, vx) - m.hd), Math.cos(Math.atan2(vy, vx) - m.hd)), lim = MOV_TURN*dt; m.hd += Math.max(-lim, Math.min(lim, da)); m.hd = Math.atan2(Math.sin(m.hd), Math.cos(m.hd)); }
+  const sp = Math.hypot(vx, vy); m.run = m.vr > 1e-4 ? Math.min(1, sp/(0.6*m.vr)) : 0;
+  if (sp > Math.max(0.004, 0.25*m.vr)) m.hd = turnTo(m.hd, Math.atan2(vy, vx), dt);   // (it faces the way it goes, turning at the fx.js rate)
   if (now - m.trT >= 60){ m.trT = now; const L = m.tr[m.tr.length - 1]; if (!L || Math.hypot(m.x - L[0], m.y - L[1]) > 0.05){ m.tr.push([m.x, m.y]); if (m.tr.length > 30) m.tr.shift(); } }
   m.rest = Math.hypot(m.vx, m.vy) < 0.05 && Math.hypot(tx - m.x, ty - m.y) < 0.05;
   if (!moving && now - m.halt > MOV_HALT && m.rest){ MOV.delete(a.id); return null; }   // settled: back to the standing layout
@@ -4819,20 +4825,79 @@ function armyPos(a){
   if (a.air) return wingPos(a);
   if (a.fly && a.fly.kind === 'drop'){ const A = G.P[a.fly.from], B = G.P[a.fly.tgt], t = Math.min(1, a.fly.t + (S.speed && !S.over ? acc : 0)*a.fly.dt); return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t]; }
   const A = G.P[a.at];
-  if (a.sail){ const q = a.sail, held = !A.sea && S.battles.includes(a.at), t = Math.min(1, q.t + (S.speed && !S.over && !held ? acc : 0)/q.h); return [q.f[0] + (q.to[0] - q.f[0])*t, q.f[1] + (q.to[1] - q.f[1])*t]; }   // (a force walking, or a fleet sailing, to a spot in its own province, rules/movement.js orderSpot; a ground force in a battle there waits)
-  if (a.to === null){ if (!(a.path.length && GO.S === S && GO.has(a.id) && S.speed && !S.over)) return a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y];
+  if (a.sail){ const q = a.sail, held = !A.sea && S.battles.includes(a.at), t = easeArrive(Math.min(1, q.t + (!S.over && !held ? acc : 0)/q.h), q.h); return [q.f[0] + (q.to[0] - q.f[0])*t, q.f[1] + (q.to[1] - q.f[1])*t]; }   // (a force walking, or a fleet sailing, to a spot in its own province, rules/movement.js orderSpot; a ground force in a battle there waits)
+  if (a.to === null){ if (!(a.path.length && GO.S === S && GO.has(a.id) && !S.over)) return a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y];
     // between legs: already easing toward the next province, on the very curve the next leg will follow (continuous when the hour turns)
     // (the leg's first hour is this one: a train running through carries the last hour's spare time into it, so it may cover more)
     const n0 = a.path[0], B = G.P[n0], a0 = GO.get(a.id) || 0, c0 = a.carry && a.carryH === S.hour && legMode(a, a.at, n0) === 'rail' ? a.carry : 0, t = Math.max(0, (acc - a0)/(1 - a0))/Math.max(1, Math.ceil(nextLegH(a) - c0 - 1e-6)), [p1, p2] = nextLegEnds(a);   // (rules/movement.js: from its spot to the exact point on the final leg; hours by the leg's real length)
     const prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]], nx = a.path.length > 1 ? G.P[a.path[1]] : null, p3 = nx ? [nx.x, nx.y] : [2*p2[0] - p1[0], 2*p2[1] - p1[1]];
-    return catmull(prevP, p1, p2, p3, t); }
+    return legCurve(a, a.at, n0, prevP, p1, p2, p3, t); }
   // eased so the force reaches the end of its leg exactly when the hour that completes it turns (no early arrival and an hour's halt), at an even pace:
   // the leg's drawn progress is spread evenly over the whole hours it takes (the hour before it started included: j done, R to go), instead of
   // covering 1/lh an hour and crawling through a short last one (with lh constant this meets the between-legs curve exactly when the hour turns)
-  const live = S.speed && !S.over ? acc : 0, lh = legH(a), rem = (1 - a.t)*lh, j = Math.max(0, Math.floor(a.t*lh + 1e-6)), R = Math.max(1, Math.ceil(rem - 1e-6)), t = rem < 1e-6 ? 1 : Math.min(1, (j + live)/(j + R));
+  const live = S.over ? 0 : acc, lh = legH(a), rem = (1 - a.t)*lh, j = Math.max(0, Math.floor(a.t*lh + 1e-6)), R = Math.max(1, Math.ceil(rem - 1e-6)), t0 = rem < 1e-6 ? 1 : Math.min(1, (j + live)/(j + R));
+  const t = a.path.length || a.sail ? t0 : easeArrive(t0, j + R);   // (the final leg eases out onto its end)
   const [p1, p2] = legEnds(a), prevP = a.from != null && a.from !== a.at ? [G.P[a.from].x, G.P[a.from].y] : [2*p1[0] - p2[0], 2*p1[1] - p2[1]];
   const nx = a.path.length ? G.P[a.path[0]] : null, p3 = nx ? [nx.x, nx.y] : [2*p2[0] - p1[0], 2*p2[1] - p1[1]];
-  return catmull(prevP, p1, p2, p3, t); }
+  return legCurve(a, a.at, a.to, prevP, p1, p2, p3, t); }
+/* ---------------- On the road (display only) ----------------
+   A leg run by road or rail (legMode 'hw', 'road', 'track' or 'rail') is drawn along the road or railway line the map shows between the two
+   provinces (worldLines keeps their drawn polylines), not straight across: the way is found once per link over the lines' points that lie in
+   those two provinces, and kept (RROUTE). Cross-country and at sea it stays the gentle curve (catmull). The rules' leg time and the spot on each
+   hour are unchanged (the drawn way starts and ends on the leg's own two points): only the drawn way between them. */
+const RNET = {road:null, rail:null, t:0}, RROUTE = new Map(), RLEG = new Map(), RLKIND = new Map(), RN_CS = 24;
+// (the two networks are built once, off the frame, a little after the map is ready: until then a leg is drawn on its gentle curve)
+function rnetSoon(){ if (RNET.t) return; RNET.t = setTimeout(() => { RNET.t = 0; try { rnetBuild('road'); rnetBuild('rail'); } catch (e) {} }, 1200); }
+function rnetBuild(kind){ let N = RNET[kind]; if (N) return N; const L = loadWorld.lines, PL = L && (kind === 'rail' ? L.railPl : L.roadPl);
+  N = RNET[kind] = {X:[], Y:[], adj:[], prov:null, grid:new Map()}; if (!PL) return N; const id = new Map();
+  const node = p => { const k = Math.round(p[0]*100) + ',' + Math.round(p[1]*100); let i = id.get(k); if (i != null) return i; i = N.X.length; id.set(k, i); N.X.push(p[0]); N.Y.push(p[1]); N.adj.push([]);
+    const gk = Math.floor(p[0]/RN_CS)*4096 + Math.floor(p[1]/RN_CS); let g = N.grid.get(gk); if (!g) N.grid.set(gk, g = []); g.push(i); return i; };
+  for (const pl of PL){ let pr = -1; for (const p of pl){ const i = node(p); if (pr >= 0 && pr !== i){ N.adj[pr].push(i); N.adj[i].push(pr); } pr = i; } }
+  N.prov = new Int32Array(N.X.length).fill(-2); return N; }
+// the drawn way of a road or rail link from province `from`'s centre to `to`'s (world points), or null where the lines do not join them well
+function roadFind(N, from, to){ const A = G.P[from], B = G.P[to], d = Math.hypot(B.x - A.x, B.y - A.y); if (!N.X.length || d < 1 || Math.abs(B.x - A.x) > WORLD_W/2) return null;
+  const pv = i => { let p = N.prov[i]; if (p === -2){ const c = worldToCell(N.X[i], N.Y[i]); p = N.prov[i] = c >= 0 ? G.prov[c] : -1; } return p; };
+  const m = d*0.5, x0 = Math.min(A.x, B.x) - m, x1 = Math.max(A.x, B.x) + m, y0 = Math.min(A.y, B.y) - m, y1 = Math.max(A.y, B.y) + m, ids = [];
+  for (let gx = Math.floor(x0/RN_CS); gx <= Math.floor(x1/RN_CS); gx++) for (let gy = Math.floor(y0/RN_CS); gy <= Math.floor(y1/RN_CS); gy++){ const g = N.grid.get(gx*4096 + gy); if (!g) continue;
+    for (const i of g){ const x = N.X[i], y = N.Y[i]; if (x < x0 || x > x1 || y < y0 || y > y1) continue; const p = pv(i); if (p === from || p === to) ids.push(i); } }
+  if (ids.length < 2 || ids.length > 4000) return null;
+  // Dijkstra over those points, from the ones near A's centre (the walk from a centre to the line costs K times its length) to those near B's
+  const r0 = Math.max(HS0*0.5, d*0.45), K = 2.5, inS = new Set(ids), dist = new Map(), prev = new Map(), done = new Set(), H = [];   // (H: a binary heap of [cost, node])
+  const hPush = e => { H.push(e); let i = H.length - 1; while (i > 0){ const j = (i - 1) >> 1; if (H[j][0] <= H[i][0]) break; [H[i], H[j]] = [H[j], H[i]]; i = j; } };
+  const hPop = () => { const top = H[0], e = H.pop(); if (H.length){ H[0] = e; let i = 0; for (;;){ const l = 2*i + 1, r = l + 1; let m = i; if (l < H.length && H[l][0] < H[m][0]) m = l; if (r < H.length && H[r][0] < H[m][0]) m = r; if (m === i) break; [H[i], H[m]] = [H[m], H[i]]; i = m; } } return top; };
+  for (const i of ids){ const da = Math.hypot(N.X[i] - A.x, N.Y[i] - A.y); if (da <= r0){ dist.set(i, da*K); prev.set(i, -1); hPush([da*K, i]); } }
+  while (H.length){ const [du, u] = hPop(); if (done.has(u) || du > dist.get(u)) continue; done.add(u);
+    for (const v of N.adj[u]){ if (!inS.has(v) || done.has(v)) continue; const nv = du + Math.hypot(N.X[v] - N.X[u], N.Y[v] - N.Y[u]); if (nv < (dist.get(v) ?? Infinity)){ dist.set(v, nv); prev.set(v, u); hPush([nv, v]); } } }
+  let best = -1, bc = Infinity; for (const i of done){ const db = Math.hypot(N.X[i] - B.x, N.Y[i] - B.y); if (db > r0) continue; const c = dist.get(i) + db*K; if (c < bc){ bc = c; best = i; } }
+  if (best < 0) return null; const nodes = []; for (let i = best; i >= 0; i = prev.get(i)) nodes.push(i); nodes.reverse(); if (nodes.length < 2) return null;
+  const pts = [[A.x, A.y], ...nodes.map(i => [N.X[i], N.Y[i]]), [B.x, B.y]], ux = (B.x - A.x)/d, uy = (B.y - A.y)/d; let L = 0, Lr = 0, dev = 0;
+  for (let i = 1; i < pts.length; i++){ const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); L += l; if (i > 1 && i < pts.length - 1) Lr += l; dev = Math.max(dev, Math.abs((pts[i][0] - A.x)*uy - (pts[i][1] - A.y)*ux)); }
+  return L <= d*1.7 && Lr >= d*0.35 && dev <= d*0.45 ? pts : null; }   // (a way much longer than the leg, wandering far off it, or hardly on the line: none)
+function roadRoute(kind, from, to){ const key = kind + from + '>' + to; let r = RROUTE.get(key); if (r !== undefined) return r; if (!RNET[kind]){ rnetSoon(); return null; }
+  const rv = RROUTE.get(kind + to + '>' + from); if (rv !== undefined) r = rv && rv.slice().reverse(); else { try { r = roadFind(rnetBuild(kind), from, to); } catch (e) { r = null; } }
+  RROUTE.set(key, r); return r; }
+// the drawn point at share t of a leg from p1 to p2 (provinces from, to): along its road or railway where it has one, else the gentle curve. A
+// leg's kind is taken once (a change of weather mid-leg does not switch the drawn way); the line is cut to the leg's own two ends
+function legCurve(a, from, to, p0, p1, p2, p3, t){ let kind = null;
+  if (to != null && from !== to && !G.P[from].sea && !G.P[to].sea && !a.air){ const kk = from + '>' + to; let E = RLKIND.get(a.id);
+    if (!E || E.k !== kk){ const md = legMode(a, from, to); E = {k:kk, kind:md === 'rail' ? 'rail' : md === 'hw' || md === 'road' || md === 'track' ? 'road' : null}; RLKIND.set(a.id, E); if (RLKIND.size > 3000) RLKIND.clear(); }
+    kind = E.kind; }
+  const R = kind ? roadRoute(kind, from, to) : null; if (!R) return catmull(p0, p1, p2, p3, t);
+  const key = kind + from + '>' + to + '|' + p1[0].toFixed(3) + ',' + p1[1].toFixed(3) + '|' + p2[0].toFixed(3) + ',' + p2[1].toFixed(3); let W = RLEG.get(key);
+  if (!W){ const n = R.length, near = (p, i0, i1) => { let bi = i0, bd = Infinity; for (let i = i0; i <= i1; i++){ const q = R[i], dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd){ bd = dd; bi = i; } } return bi; };
+    const i0 = near(p1, 0, Math.floor((n - 1)*0.4)), i1 = near(p2, Math.ceil((n - 1)*0.6), n - 1), pts = [p1, ...R.slice(i0 + 1, i1), p2], cum = [0];   // (a pinpoint spot joins the line where it is nearest)
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    W = {pts, cum}; RLEG.set(key, W); if (RLEG.size > 600) RLEG.clear(); }
+  const {pts, cum} = W, L = cum[cum.length - 1]; if (!(L > 0)) return [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t];
+  const d = Math.max(0, Math.min(1, t))*L; let lo = 1, hi = cum.length - 1; while (lo < hi){ const mi = (lo + hi) >> 1; if (cum[mi] < d) lo = mi + 1; else hi = mi; }
+  const f = (d - cum[lo - 1])/Math.max(1e-9, cum[lo] - cum[lo - 1]); return [pts[lo - 1][0] + (pts[lo][0] - pts[lo - 1][0])*f, pts[lo - 1][1] + (pts[lo][1] - pts[lo - 1][1])*f]; }
+// arriving: the last stretch of a force's final leg (or of its walk inside a province) eases out instead of stopping dead. The drawn share t
+// is remapped over about MOV_EASE_S real seconds before the end, h(u) = u + u^2 - u^3: the same pace going in, slowing to a stop exactly on the
+// end point when the hour that completes it turns (at most 4/27 of that stretch ahead of the even pace). hrs: the hours the share 0..1 spans
+const MOV_EASE_S = 1.6;
+let EASE_SP = 1;   // (the last running speed: a pause keeps the eased spot where it was)
+function easeArrive(t, hrs){ if (!(t > 0) || t >= 1 || !S || S.over) return t; if (S.speed) EASE_SP = S.speed; const w = Math.min(0.6, MOV_EASE_S*HOURS_PER_SEC[EASE_SP]/Math.max(1e-6, hrs)); if (!(w > 0) || t <= 1 - w) return t;
+  const u = (t - (1 - w))/w; return 1 - w + w*(u + u*u - u*u*u); }
 function catmull(p0, p1, p2, p3, t){ const t2 = t*t, t3 = t2*t, f = (a0, a1, a2, a3) => 0.5*((2*a1) + (-a0 + a2)*t + (2*a0 - 5*a1 + 4*a2 - a3)*t2 + (-a0 + 3*a1 - 3*a2 + a3)*t3);
   // keep the curve gentle: blend toward the straight line so it never overshoots badly
   const cx = f(p0[0], p1[0], p2[0], p3[0]), cy = f(p0[1], p1[1], p2[1], p3[1]), lx = p1[0] + (p2[0] - p1[0])*t, ly = p1[1] + (p2[1] - p1[1])*t; return [lx*0.45 + cx*0.55, ly*0.45 + cy*0.55]; }
@@ -5260,6 +5325,13 @@ function tmDraw(t, d, x, y, s, lut, now, alpha, snap){ const L = tmLevel(t, s*dp
 function tmSingle(t, key, x, y, ang, alpha, now){ const hexPx = view.s*HS0, k = tmFade(hexPx); if (!tmOn() || k <= 0 || !window.U3D || !U3D.map || !U3D.map(t)) return 0;
   const ga = ctx.globalAlpha, sm = ctx.imageSmoothingQuality; ctx.imageSmoothingQuality = 'high'; TMNEW = Math.max(TMNEW, 1);
   const r = tmDraw(t, tmDir(key, t, ang, now), x, y, tmScale(t, hexPx), tmLut(viewLight()), now, alpha*k, false); ctx.globalAlpha = ga; ctx.imageSmoothingQuality = sm; return r ? k : 0; }
+// the facing a force's pictures are drawn at: turned (fx.js turnTo, the firing turn rate) from the way it was drawn toward the way it should face
+// now (its march heading; stopped, its last heading or the enemy in its province), so it never snaps round; a force not drawn for a while starts on it
+const TMFACE = new Map();
+function tmFaceTurn(id, want, now){ let E = TMFACE.get(id);
+  if (!E || E.S !== S || now - E.t > 1500 || !isFinite(E.a)){ E = {a:want, t:now, S}; TMFACE.set(id, E); if (TMFACE.size > 3000) TMFACE.clear(); return want; }
+  const dt = Math.min(0.1, Math.max(0, (now - E.t)/1000)); E.t = now; E.a = turnTo(E.a, want, dt);
+  if (Math.abs(Math.atan2(Math.sin(want - E.a), Math.cos(want - E.a))) > 1e-3) animFast(); else E.a = want; return E.a; }
 // every force's formation, at every zoom (a pure function of its make-up and its facing; its counter's pin is the top of it): c.form =
 // {sl (the model types, most numerous first, up to four), d (each one's view of 16), F (tmForm), top (world px below the anchor, eased when
 // the facing or the make-up changes), id, ang}
@@ -5274,6 +5346,7 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B && Math.hypot(B.x - c.wx, B.y - c.wy) > 0.2) ang = Math.atan2(B.y - c.wy, B.x - c.wx); }   // ordered off but not yet under way
     if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
     if (!foe && !c.moving && !c.air){ const ua = unitAnim(c.list, now, ang); if (ua && ua.face != null) ang = ua.face; }   // (fx.js: a force firing at a target turns smoothly to face it, then back)
+    ang = tmFaceTurn(lead.id, ang, now); c.run = mS ? mS.run || 0 : 0; c.pv = mS ? Math.hypot(mS.vx, mS.vy)*view.s : 0;   // (the drawn facing turns onto it: a force stopping turns to its rest or to the enemy, never snaps; run: the march look)
     const F = tmForm(want), d = want.map(t => tmDir(lead.id, t, ang, now)), src = want.src || {}, arts = want.map(t => tmOn() ? tmArt(t, src[t], c.owner) : null); let top = Infinity, ys = 0, ny = 0;
     for (let i = 0; i < want.length; i++) if (F.slots[i]){ top = Math.min(top, F.slots[i][1] + (arts[i] ? -tmArtHalf(arts[i], ang)[1] : tmVB(want[i])[d[i]][1])); ys += F.slots[i][1]; ny++; }
     if (!isFinite(top)) top = 0; let E = TMTOP.get(lead.id);
@@ -5339,6 +5412,8 @@ function troopModels(clusters, clBox, hexPx, now){
   ctx.globalAlpha = 1;
   const nightK = Math.round((1 - viewLight().day)*4)/4;
   for (const q of groups){ let r = null; const ua = unitAnim(q.c.list, now); if (ua && (ua.dx || ua.dy || ua.rot)){ q.x += ua.dx; q.y += ua.dy; q.box = [q.box[0] + ua.dx, q.box[1] + ua.dy, q.box[2] + ua.dx, q.box[3] + ua.dy]; q.ang += ua.rot; }   // (fx.js: recoil, the hit shake, a ship's rock)
+    if (q.c.run > 0.02 && !q.air){ const wl = q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2), L = moveFig({id:q.id, key:q.id + '|' + q.slot, x:q.x, y:q.y, ang:q.art ? q.ang : q.d*Math.PI/8, len:wl*view.s, wl, run:q.c.run, pv:q.c.pv, sea:q.sea, foot:q.t === 'sol', top:!!q.art, tn:dustTone(q.c.list[0].at)}, now);
+      if (L.dy){ q.y += L.dy; q.box = [q.box[0], q.box[1] + L.dy, q.box[2], q.box[3] + L.dy]; } if (L.rot) q.ang += L.rot; }   // (fx.js: on the move, dust behind vehicles, a ship's wake, an infantry bob and a ship's rock)
     if (q.art){ ctx.globalAlpha = q.a; if (tmArtDraw(q, nightK)) r = {box:q.box, lvl:'art'}; ctx.globalAlpha = 1; } else r = tmDraw(q.t, q.d, q.x, q.y, q.s, lut, now, q.a, !q.c.moving);
     if (ua && ua.red > 0.02) unitHitMark(q.box[0], q.box[1], q.box[2] - q.box[0], q.box[3] - q.box[1], ua.red*q.a);
     const box = r ? r.box : q.box; if (r && TMBX.length < 200) TMBX.push(box);
@@ -6864,7 +6939,7 @@ function counter(c, a, L, n, selected, fighting, now){
   if (mv && view.s*HS0 >= FORM_PX && ang != null && a && !a.air && !afxReduced()){ const D = plateDims(n, 1, false, false), ca = Math.cos(ang), sa = Math.sin(ang), t = (D.d/2 + 1)/Math.max(0.7, Math.abs(ca) + Math.abs(sa)), bx = c.dx - ca*t, by = c.dy - sa*t;
     if (G.P[a.at].sea){ if (!c.tag){ const Lw = D.d*0.9; ctx.save(); ctx.globalAlpha *= c.da ?? 1; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(232,240,244,.3)'; ctx.lineWidth = 1.3; ctx.beginPath();
         for (const sg of [-1, 1]){ const a2 = ang + Math.PI + sg*0.3; ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a2)*Lw, by + Math.sin(a2)*Lw); } ctx.stroke(); ctx.restore(); } }
-    else if (counter.dust) counter.dust(icon, ang, (t + 3)/0.32); }
+  }   // (no dust round a diamond: dust comes from the vehicles' pictures close in)
   const ga = ctx.globalAlpha, da = c.da ?? 1, ta = c.ta || 0; let rd = null, rt = null;
   if (da > 0.003){ ctx.globalAlpha = ga*da; rd = diaDraw(c.dx, c.dy, a, L, n, tk, icon, mixed && !(a && a.air), sl, mv, fi, quiet, now); }
   if (ta > 0.003){ ctx.globalAlpha = ga*ta; rt = tagDraw(c.tx, c.ty, a, L, n, tk, icon, sl, mv, fi, quiet, now); }
@@ -7760,7 +7835,6 @@ function draw(now){ draw.now = now;
       if (!(volFx && bfxOwn(c) && bfxFoes(c))) volley(c, mt, now, c.x); }   // battle sound only (no figures drawn: counters only, no fire on the map); with figures they fire themselves (below)
     counter.vol = null; counter.list = c.mlist ? c.list.concat(c.mlist) : c.list; counter.share = c.share || 1;
     if (!c.air && !(c.dock && !c.moving)) CLPOS.set(c.at + ':' + c.owner, screenToWorld(c.x, c.y));
-    counter.dust = (main, ang, hpx) => { const key = c.list[0].id, lt = lastDust.get(key) || 0; if (now - lt < 240) return; lastDust.set(key, now); const [wx, wy] = screenToWorld(c.sx - Math.cos(ang)*hpx*0.32, c.sy + hpx*0.05 - Math.sin(ang)*hpx*0.1);   /* (behind the force's own spot, where its models drive) */ emit('dust', wx, wy, {vx:-Math.cos(ang)*8 + (Math.random() - 0.5)*6, vy:-3 - Math.random()*4, s0:4, s1:16, life:1400, tn:dustTone(c.list[0].at)}); };
     counter.dug = !c.moving && !c.air && dugIn(lead); counter.bdy = plateM ? 0 : (c.bdy || 0);
     return {lead, dir, fighting}; };
   counter.defer = null;
@@ -10331,7 +10405,7 @@ GLOBE = (() => {
 })();
 
 /* ---------------- Loop & boot ---------------- */
-let last = 0, acc = 0, uiAcc = 0, abTickT = 0;
+let last = 0, acc = 0, uiAcc = 0, abTickT = 0;   // (acc: the share of the hour run so far; a new or loaded game starts it at its own step, so a paused force is drawn where it is)
 // one map frame (see 'Redraw scheduling'): the registrations of this draw decide whether and when the next one comes
 function rdDraw(now){ const gap = now - (RD.dn || now); RD.dn = now; if (gap > 250) rdShift(gap - 50);
   RD.dirty = false; RD.f = RD.a = 0; RD.nx = Infinity; RD.n++;
@@ -10395,7 +10469,7 @@ function start(data){
 }
 /*@TEST*/
 // test hooks (test build only: tools/build.js strips every @TEST block from the public build). window.__im exists on file:// pages.
-if (location.protocol === 'file:') window.__im = {hexPx: () => view.s*HS0, bpic:{get dbg(){ return BPIC_DBG; }, get on(){ return BPIC_ON; }, get cache(){ return BPICC; }}, coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, get FADE(){ return FADE; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(PLAYER), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, PROJ, MUZZ, FXG, LTN, stormLight: (x, y) => stormLight(x, y), nightAtX: x => nightAtX(x), armyPos: a => armyPos(a), MOV, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), tickQ: () => tickQ(), selectFoe: id => selectFoe(id), abTick: () => abTickText(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet(PLAYER)), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st, S.hour + (S.speed && !S.over ? acc : 0)), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(PLAYER); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p, sel.surprise), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f, undefined, viaOf(a)), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l, p) => buildCost(n, k, l, p), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|'))cbakeDrop(k, CBAKE.get(k)); if (CLOW.has(p)){ CLOW.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } if (CLOWN.has(p)){ CLOWN.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } for (const k of [...CJOB.keys()]) if (k === 'i' + p || k === 'l' + p || k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CJOB.delete(k); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I), n = Math.ceil(S/CCH); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityChunk(p, S, i, j); } else cityBake(p, S); const t2 = performance.now(); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityLightsChunk(p, S, i, j); } else cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {exact:ks ? ks.every(k => CBAKE.has(k[0])) : CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S, chunks:ks ? ks.length : 0}; }, geo(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), dev = 2*I.E*view.s*dpr, real = 2*I.E*view.s*(window.devicePixelRatio || 1); return {E:I.E, S, dev:Math.round(dev), tpp:S/dev, dpr, ddpr:window.devicePixelRatio || 1, tppReal:S/real}; }, jobs: () => [...CJOB.keys()], night(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {S, exact:ks ? ks.every(k => CBAKE.has('n' + k[0].slice(1))) : CBAKE.has('n' + p + '|' + S), tpp:S/(2*I.E*view.s*(window.devicePixelRatio || 1))}; }, stats: () => CBT, mem: () => cityMem(), gains: p => { const I = CINFO.get(p); return I && I.gain ? [...I.gain].map(([k, v]) => k + ':' + (+v).toFixed(3)) : null; }, lum(p, S, n, f, N = 96){ CITY_DL = Infinity; const I = cityInfo(p), r = I.r*f, X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E, u0 = (I.x - r - X)/E2, u1 = (I.x + r - X)/E2;
+if (location.protocol === 'file:') window.__im = {hexPx: () => view.s*HS0, bpic:{get dbg(){ return BPIC_DBG; }, get on(){ return BPIC_ON; }, get cache(){ return BPICC; }}, coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, get FADE(){ return FADE; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(PLAYER), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, PROJ, MUZZ, FXG, LTN, stormLight: (x, y) => stormLight(x, y), nightAtX: x => nightAtX(x), armyPos: a => armyPos(a), MOV, roads:{route:(k, f, t) => roadRoute(k, f, t), net:k => rnetBuild(k), get RL(){ return RLEG; }, left:a => { if (a.to === null || a.path.length || !S.speed) return null; const lh = legH(a), rem = (1 - a.t)*lh; return (Math.max(1, Math.ceil(rem - 1e-6)) - acc)/HOURS_PER_SEC[S.speed]; }}, TMFACE, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), tickQ: () => tickQ(), selectFoe: id => selectFoe(id), abTick: () => abTickText(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet(PLAYER)), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st, S.hour + (S.speed && !S.over ? acc : 0)), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(PLAYER); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p, sel.surprise), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), sel, odds: (a, t, f) => odds(a, t, f, undefined, viaOf(a)), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l, p) => buildCost(n, k, l, p), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|'))cbakeDrop(k, CBAKE.get(k)); if (CLOW.has(p)){ CLOW.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } if (CLOWN.has(p)){ CLOWN.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } for (const k of [...CJOB.keys()]) if (k === 'i' + p || k === 'l' + p || k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CJOB.delete(k); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I), n = Math.ceil(S/CCH); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityChunk(p, S, i, j); } else cityBake(p, S); const t2 = performance.now(); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityLightsChunk(p, S, i, j); } else cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {exact:ks ? ks.every(k => CBAKE.has(k[0])) : CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S, chunks:ks ? ks.length : 0}; }, geo(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), dev = 2*I.E*view.s*dpr, real = 2*I.E*view.s*(window.devicePixelRatio || 1); return {E:I.E, S, dev:Math.round(dev), tpp:S/dev, dpr, ddpr:window.devicePixelRatio || 1, tppReal:S/real}; }, jobs: () => [...CJOB.keys()], night(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {S, exact:ks ? ks.every(k => CBAKE.has('n' + k[0].slice(1))) : CBAKE.has('n' + p + '|' + S), tpp:S/(2*I.E*view.s*(window.devicePixelRatio || 1))}; }, stats: () => CBT, mem: () => cityMem(), gains: p => { const I = CINFO.get(p); return I && I.gain ? [...I.gain].map(([k, v]) => k + ':' + (+v).toFixed(3)) : null; }, lum(p, S, n, f, N = 96){ CITY_DL = Infinity; const I = cityInfo(p), r = I.r*f, X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E, u0 = (I.x - r - X)/E2, u1 = (I.x + r - X)/E2;
     if (S > CCH){ const m = Math.ceil(S/CCH); for (let j = 0; j < m; j++) for (let i = 0; i < m; i++){ if ((i + 1)*CCH/S < u0 || i*CCH/S > u1 || (j + 1)*CCH/S < u0 || j*CCH/S > u1) continue; if (n) cityLightsChunk(p, S, i, j); else cityChunk(p, S, i, j); } } else if (n) cityLightsBake(p, S); else cityBake(p, S);
     const c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, N, N); g.imageSmoothingQuality = 'high'; g.setTransform(N/(2*r), 0, 0, N/(2*r), -(I.x - r)*N/(2*r), -(I.y - r)*N/(2*r));
     cityFill(g, p, I, n, [S], 0, u0, u0 + 0*u1, u1, u1, w => w, w => w); CITY_DL = 0; const d = g.getImageData(0, 0, N, N).data; let R = 0, G0 = 0, B = 0; for (let q = 0; q < d.length; q += 4){ R += d[q]; G0 += d[q + 1]; B += d[q + 2]; } const k = N*N;
@@ -10455,7 +10529,7 @@ IM.on('geo', () => { geoDirty = true; });
 IM.on('world', () => mapSwitched());
 IM.on('cities', () => { geoDirty = true; });   // the set of cities changed with the world in use (classic or nations): the geometry is rebuilt with the new game or the load that follows
 // a move order was given (rules/movement.js orderMove): mark where the counter starts from
-IM.on('ordered', a => { try { if (GO.S !== S){ GO.clear(); GO.S = S; } goMark(a, S.speed ? Math.min(0.99, acc) : 0); } catch (e) {}
+IM.on('ordered', a => { try { if (GO.S !== S){ GO.clear(); GO.S = S; } goMark(a, Math.min(0.99, acc)); } catch (e) {}
   // an attack order (the route ends on enemy forces the player can see): the target marker, the dashed line, the force turns to face it (fx.js)
   if (booted && a.owner === PLAYER && !a.air && a.path.length){ const d = a.path[a.path.length - 1], vis = visibleSet(PLAYER), foe = S.armies.find(b => b.at === d && count(b) && !b.air && atWar(PLAYER, b.owner) && armyVisible(b, vis));
     if (foe) orderMark({aid:a.id, bid:foe.id}); } });
@@ -10536,8 +10610,8 @@ IM.on('paper', (me, paper) => { if (me === PLAYER && SET.paper && paper.big >= 8
 IM.on('statsDay', () => achDaily());
 IM.on('day', () => save());
 IM.on('reset', () => { seenHour = -1; FX.length = 0; lastRes = null; if (TRD) TRD.ver = -1; MOV.clear(); });
-IM.on('newGame', () => { if (SET.cb) applyPalette(); buildGeometry(); });
-IM.on('restored', () => { if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette(); buildGeometry(); });
+IM.on('newGame', () => { acc = 0; if (SET.cb) applyPalette(); buildGeometry(); });
+IM.on('restored', () => { acc = ((S && S.q) || 0)/BATTLE_Q; if (SET.cb || S.nations.some(N => N.color0 && N.color0 !== N.color)) applyPalette(); buildGeometry(); });
 IM.on('over', () => { setSpeed(0); save(); showEnd(); });
 const boot = data => preload().then(() => start(data));
 if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});

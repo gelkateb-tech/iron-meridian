@@ -50,7 +50,7 @@ const PFREE = [], PART_CAP = [0, 60, 150], SMOKE_CAP = [0, 300, 900], PCNT = {s:
 function partDrop(i){ const q = PART[i], L = PART.length - 1; if (i < L) PART[i] = PART[L]; PART.pop(); if (PFREE.length < 300) PFREE.push(q); }
 function emit(kind, wx, wy, opt = {}){
   const lv = fxLv(); if (!lv) return;
-  const soft = kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris';
+  const soft = kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris' || kind === 'wake';
   if (soft && lv < 2 && Math.random() < (PG.afxReduced() ? 0.8 : 0.6)) return;
   if (soft && Math.random() > FXG.k) return;   // the governor thins smoke and dust when frames get slow
   const sm = kind === 'smoke' || kind === 'smokel', cap = (sm ? SMOKE_CAP : PART_CAP)[lv], n = sm ? PCNT.s : PCNT.f;   // smoke: its own budget (as dense as before); the firing particles: about 150
@@ -59,7 +59,7 @@ function emit(kind, wx, wy, opt = {}){
   const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, core:60, ring:500, splash:900}[kind] || 800);
   const q = PFREE.pop() || {}; q.kind = kind; q.wx = wx; q.wy = wy; q.u = kzNow()/PG.view.s; q.ws = !!opt.ws; q.g = opt.g; q.ox = opt.ox || 0; q.oy = opt.oy || 0;
   q.vx = opt.vx ?? (Math.random() - 0.5)*12; q.vy = opt.vy ?? -(8 + Math.random()*14); q.life = life; q.t = 0; q.s0 = opt.s0 || 6; q.s1 = opt.s1 || 26; q.rot = Math.random()*6; q.spin = (Math.random() - 0.5)*0.6;
-  q.v = (Math.random()*4) | 0; q.tn = opt.tn; q.die = null; q.id = 0; PART.push(q);
+  q.v = (Math.random()*4) | 0; q.tn = opt.tn; q.a = opt.a; if (opt.rot != null) q.rot = opt.rot; q.die = null; q.id = 0; PART.push(q);
 }
 /* ---- art combat effects: fx-explosion bursts, fx-smoke puffs and fx-crater ground decals (assets/art) ----
    Each image is cut once into four cached sizes (mips), so a frame only scales a small canvas. Bursts and puffs are screen-sized like the
@@ -598,11 +598,14 @@ function plateClip(rs){ const P = new Path2D(); P.rect(0, 0, PG.cw, PG.ch); if (
   return P; }
 let PLATECLIP = null, PLATEBOX = null;   // the clip is built from this frame's plate boxes on first use
 const plateClipOn = () => { if (!PLATECLIP && PLATEBOX){ PLATECLIP = plateClip(PLATEBOX); PLATEBOX = null; } if (PLATECLIP) PG.ctx.clip(PLATECLIP, 'evenodd'); };
-// march dust (tinted puffs left by moving figures) lies on the ground: drawn before the counters so it never veils the vehicles that raise it
+// march dust (tinted puffs left by moving figures) and ship wakes (white foam left on the water behind a hull) lie on the ground: drawn before
+// the counters and the figures, so they never veil the vehicles and ships that raise them
 function drawTrailDust(){ const kz = Math.max(0.6, Math.min(2, PG.view.s*HS0/12))*PG.zx(); PG.ctx.setTransform(PG.dpr, 0, 0, PG.dpr, 0, 0);
-  for (const q of PART){ if (q.kind !== 'dust' || !q.tn) continue; const k = q.t/q.life; if (k >= 1) continue;
-    const f = kzF(q, kz), [bx, by] = PG.toScreen(q.wx, q.wy), x = bx + q.ox*f, y = by + q.oy*f, sz = (q.s0 + (q.s1 - q.s0)*Math.sqrt(k))*kzS(f, kz); if (x < -sz || y < -sz || x > PG.cw + sz || y > PG.ch + sz) continue;
-    PG.ctx.globalAlpha = (q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1)*0.42*(k < 0.12 ? k/0.12 : Math.pow(1 - k, 1.4)); PG.ctx.drawImage(rotSpr(PG.dustSprite(q.v, q.tn), q.rot), x - sz, y - sz*0.62, sz*2, sz*2*0.62); }
+  for (const q of PART){ const wk = q.kind === 'wake'; if (!wk && (q.kind !== 'dust' || !q.tn)) continue; const k = q.t/q.life; if (k >= 1) continue;
+    const f = q.ws ? PG.view.s : kzF(q, kz), [bx, by] = PG.toScreen(q.wx, q.wy), x = bx + q.ox*f, y = by + q.oy*f, sz = (q.s0 + (q.s1 - q.s0)*Math.sqrt(k))*(q.ws ? PG.view.s : kzS(f, kz)); if (x < -sz || y < -sz || x > PG.cw + sz || y > PG.ch + sz) continue;
+    const fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1;
+    if (wk){ PG.ctx.globalAlpha = fd*(q.a || 0.5)*(k < 0.04 ? k/0.04 : Math.pow(1 - k, 1.15)); const im = rotSpr(FOAM(), q.rot, 0.5), fx = im.fx || 1, fy = im.fy || 1; PG.ctx.drawImage(im, x - sz*fx, y - sz*fy, sz*2*fx, sz*2*fy); continue; }   // (white foam, long along the track: spreads and fades)
+    PG.ctx.globalAlpha = Math.min(1, fd*0.42*(q.a || 1)*(k < 0.12 ? k/0.12 : Math.pow(1 - k, 1.4))); PG.ctx.drawImage(rotSpr(PG.dustSprite(q.v, q.tn), q.rot), x - sz, y - sz*0.62, sz*2, sz*2*0.62); }
   PG.ctx.globalAlpha = 1; PG.ctx.setTransform(PG.dpr, 0, 0, PG.dpr, 0, 0); }
 // battle sound for a fighting cluster that is not firing on the map (no figures drawn: counters only), once per volley cycle
 const lastVolley = new Map(), lastDust = new Map(), SCORCH = [], MUZZ = [], CLPOS = new Map();
@@ -806,12 +809,39 @@ function unitAnim(ids, now, cur){ /*@TEST*/if (!RX.on) return null;/*@ENDTEST*/ 
   if (!A) return null; UA.dx = UA.dy = UA.rot = UA.red = 0; UA.face = null; let live = false;
   // the facing turns smoothly (FACE_W rad/s) from the way it was drawn (cur) to its target, holds 8 s, then turns back and lets go
   if (cur != null && isFinite(cur) && (A.fd != null || (now - A.ft < 8000 && isFinite(A.fa)))){ const hold = now - A.ft < 8000 && isFinite(A.fa), want = hold ? A.fa : cur, dt = Math.min(0.1, Math.max(0, (now - (A.fl || now))/1000));
-    if (A.fd == null) A.fd = cur; const d = Math.atan2(Math.sin(want - A.fd), Math.cos(want - A.fd)), st = FACE_W*dt; A.fd += Math.max(-st, Math.min(st, d)); A.fl = now;
+    if (A.fd == null) A.fd = cur; const d = Math.atan2(Math.sin(want - A.fd), Math.cos(want - A.fd)); A.fd = turnTo(A.fd, want, dt); A.fl = now;
     if (!hold && Math.abs(d) < 0.02) A.fd = null; else { UA.face = A.fd; if (Math.abs(d) > 0.01) live = true; } }
   const tr = now - A.rk; if (tr >= 0 && tr < 170){ live = true; const k = tr < 30 ? tr/30 : Math.pow(1 - (tr - 30)/140, 2); UA.dx -= Math.cos(A.ra)*A.rp*k; UA.dy -= Math.sin(A.ra)*A.rp*k; }   // kicks back, springs back (~150 ms)
   const th = now - A.hit; if (th >= 0 && th < 360){ live = true; const k = 1 - th/360, am = 1.3*A.hz*k; UA.dx += Math.sin(th*0.11)*am; UA.dy += Math.cos(th*0.17)*am*0.6; UA.red = Math.min(1, k*1.25); }
   const tk = now - A.rock; if (tk >= 0 && tk < 1100){ live = true; UA.rot = Math.sin(tk/1100*Math.PI*3)*0.075*(1 - tk/1100); }
   if (live) PG.animFast(); if (!live && UA.face == null) return null; return UA; }
+// the turn helper: from the drawn angle cur toward want by at most w rad/s over dt seconds (the shorter way round). Facing a target (unitAnim)
+// and the forces on the move (the page's march heading, a force turning back to its resting facing when it stops) all turn with it
+function turnTo(cur, want, dt, w = FACE_W){ if (!isFinite(cur)) return want; if (!isFinite(want)) return cur; const d = Math.atan2(Math.sin(want - cur), Math.cos(want - cur)), st = w*Math.max(0, dt);
+  return Math.abs(d) <= st ? want : Math.atan2(Math.sin(cur + Math.sign(d)*st), Math.cos(cur + Math.sign(d)*st)); }
+// ---- the march look (display only): one figure of a force on the move, drawn this frame. o: {id, key (the figure's own key), x, y (its ground
+// point, css px), ang (its heading, screen rad), len (its length, css px), wl (its length, world px), run (0..1: how much it is moving now, from its
+// drawn speed: it eases to 0 as it stops), pv (its drawn speed, css px/s), sea (a ship, or troops embarked: the ship look), foot (infantry), top (a picture seen from straight
+// above), tn (the dust tone of the ground under it)}. Vehicles on land raise a light dust trail (High only), ships leave a white wake that
+// spreads and fades (fewer puffs on Low, none with the Battery saver: the wake drawn at the stern stays); infantry bob a little and ships rock
+// (not with reduced motion). Effects Off: nothing. Returns the shared {dy (css px), rot (rad)} to add to the figure this frame.
+const MLOOK = {dy:0, rot:0}, MLT = new Map();
+// the next puff of a figure's trail: about every quarter of its length travelled (o.pv: its drawn speed, css px/s), within lo..hi ms
+const mlDue = (o, now, lo, hi) => { const gap = Math.max(lo, Math.min(hi, o.pv > 1 ? o.len*0.25/o.pv*1000 : hi)), lt = MLT.get(o.key) || 0; if (now - lt < gap) return false; MLT.set(o.key, now); if (MLT.size > 600) MLT.clear(); return true; };
+function moveFig(o, now){ MLOOK.dy = MLOOK.rot = 0; const lv = fxLv(), run = o.run || 0; if (!lv || run < 0.02) return MLOOK;
+  const red = PG.afxReduced(), ph = now/1000 + ((o.id || 0) % 97)*0.37, ca = Math.cos(o.ang), sa = Math.sin(o.ang), sq = o.top ? 1 : 0.55, W = o.wl || 1;
+  if (o.sea){ if (!red){ MLOOK.rot = Math.sin(ph*1.9)*0.04*run; MLOOK.dy = Math.sin(ph*1.3 + 0.8)*Math.max(0.3, o.len*0.012)*run; }   // a slight rock and heave under way
+    if (PG.saverOn() || run < 0.3 || !mlDue(o, now, lv > 1 ? 70 : 160, lv > 1 ? 240 : 420)) return MLOOK;
+    const [wx, wy] = PG.screenToWorld(o.x - ca*o.len*0.42, o.y - sa*o.len*0.42*sq); if (!seaAt(wx, wy)) return MLOOK;   // (the stern, on the water)
+    const life = lv > 1 ? 6500 : 4000;
+    emit('wake', wx, wy, {ws:true, vx:-ca*W*0.06, vy:-sa*W*0.06*sq, s0:W*0.16, s1:W*0.62, life, a:0.62, rot:o.ang});   // the churned track behind the stern
+    if (lv > 1) for (const sd of [-1, 1]) emit('wake', wx, wy, {ws:true, ox:-sa*sd*W*0.06, oy:ca*sd*W*0.06*sq, vx:-sa*sd*W*0.17 - ca*W*0.03, vy:(ca*sd*W*0.17 - sa*W*0.03)*sq, s0:W*0.1, s1:W*0.42, life:life*0.8, a:0.42, rot:o.ang + sd*0.4});   // the two arms spreading out
+    return MLOOK; }
+  if (o.foot){ if (!red) MLOOK.dy = -Math.abs(Math.sin(ph*Math.PI*1.7))*Math.max(0.5, o.len*0.035)*run; return MLOOK; }   // infantry: a subtle march bob
+  if (lv < 2 || run < 0.3 || !mlDue(o, now, 80, 260)) return MLOOK;   // vehicles on land: a light dust trail (High only)
+  const [wx, wy] = PG.screenToWorld(o.x - ca*o.len*0.46, o.y - sa*o.len*0.46*sq); if (seaAt(wx, wy)) return MLOOK;
+  emit('dust', wx, wy, {ws:true, vx:-ca*W*0.16 + (Math.random() - 0.5)*W*0.1, vy:(-sa*W*0.16 + (Math.random() - 0.5)*W*0.1)*sq - W*0.04, s0:W*0.22, s1:W*0.7, life:1700, a:1.35, tn:o.tn || 'earth'});
+  return MLOOK; }
 // the red of a hit, over a figure or a counter's box (css px)
 function unitHitMark(x, y, w, h, red){ if (!(red > 0.02)) return; const g = PG.ctx, r = Math.max(w, h)*0.7; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55*red;
   g.drawImage(softSprite('hitred', 'rgba(255,60,40,1)', 'rgba(255,40,30,.45)', 'rgba(255,30,20,0)'), x + w/2 - r, y + h/2 - r, r*2, r*2); g.restore(); }
@@ -1110,7 +1140,7 @@ function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANI
    on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
 const fxStats = () => ({part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
 
-return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ fxLive, bigShake, mslOn:() => MSL.on || 0, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ turnTo, moveFig, fxLive, bigShake, mslOn:() => MSL.on || 0, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,
