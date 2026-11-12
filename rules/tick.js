@@ -40,14 +40,15 @@ function tick(){
       const meet = a.t >= 0.5 ? a.to : a.at, A0 = G.P[a.at], B0 = G.P[a.to], mx = A0.x + (B0.x - A0.x)*a.t, my = A0.y + (B0.y - A0.y)*a.t;
       for (const x of [a, b]){ x.from = x.at; x.at = meet; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = meet === a.at || meet === a.to ? [ (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2 ] : null; x.forced = false; }
       for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
-  // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets)
+  // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets), as long as
+  // the joined force stays within its stack limit (STACK_LIM); a join order (dragged onto the counter) merges anyway, with the stack-limit warning
   for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || !count(a)) continue;
     if (a.lastAt === a.at) continue; a.lastAt = a.at;
     if (S.owner[a.at] !== me && !(S.owner[a.at] >= 0 && rel(me, S.owner[a.at]).st === 'ally')) continue;
     const jt = a.join != null ? armyById(a.join) : null;   // a join order picks its partner
-    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a));
+    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over);
     if (into) delete a.join;
-    if (into){ merge(into, a); IM.emit('merged', a.id, into.id, true); }
+    if (into){ merge(into, a); IM.emit('merged', a.id, into.id, true); const sp = stackPenalty(into); if (sp.over) tell(me, `${armyName(into)} at ${G.P[into.at].cityName || G.P[into.at].name}: ${stackText(sp)} (${sp.size} ${sp.dom} units, limit ${sp.limit}). Split it to fight at full strength.`, 'bad', into.at); }
   }
   // dug in: the hour each force came to a stop (display only: the sandbag mark on its plate and the sandbag ring at close zoom)
   for (const a of S.armies){ if (a.to !== null || a.path.length || a.fly || a.air){ if (a.still != null) delete a.still; } else if (a.still == null) a.still = S.hour; }
@@ -81,14 +82,14 @@ function tick(){
       const bs = B.s[o] || (B.s[o] = {peak:0, lost:{}, dirs:0, hp:[]}); bs.peak = Math.max(bs.peak, nU); bs.dirs = Math.max(bs.dirs, dirs); bs.dcur = dirs; bs.F = F; bs.n = nU;
       const sznA = o !== S.owner[p] && season(p) ? SEASON_FX[season(p)].atk : 1;
       for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? rLandF(o) : 1)*sznA, riv = o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? RIVER_ATK : 1;   // (riv: attacking across a river; an IFV with the Amphibious Kit is exempt)
-        const mf = moraleF(a);
+        const mf = moraleF(a), se = stackEffs(a);   // se: stack efficiency per domain (over the stack limit the force's units deal less)
         const TFo = G.P[p].sea ? null : tuf(G.P[p].terrain || 'plains', o !== S.owner[p], !arctic(o));
         const cB = o !== S.owner[p] ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner');
-        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*(t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv)*r*mf*(TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1)*cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1); a._dealt0 += base; for (const k of CLASSES) av[k] += base*multO(o, t, k); } }
+        a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*(t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv)*r*mf*(TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1)*cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1)*se[DOM_T[t]]; a._dealt0 += base; for (const k of CLASSES) av[k] += base*multO(o, t, k); } }
       // shore bombardment: this side's ships in adjacent sea zones add half their firepower to coastal land battles
       if (!G.P[p].sea && G.P[p].coast) for (const sz of G.P[p].nbs){ if (!G.P[sz].sea) continue;
-        for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null) continue;
-          for (const t of UT){ if (!a.u[t] || UNITS[t].cls !== 'naval') continue; const base = 0.5*(t === 'crui' && has(o, 'crui_rng') ? 1.3 : 1)*a.u[t]*st(o, t, 'atk')*r*moraleF(a); for (const k of CLASSES) av[k] += base*multO(o, t, k); } } }
+        for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null || !shipsN(a)) continue; const se = stackEffs(a).sea;
+          for (const t of UT){ if (!a.u[t] || UNITS[t].cls !== 'naval') continue; const base = 0.5*(t === 'crui' && has(o, 'crui_rng') ? 1.3 : 1)*a.u[t]*st(o, t, 'atk')*r*moraleF(a)*se; for (const k of CLASSES) av[k] += base*multO(o, t, k); } } }
       const foes = owners.filter(e => atWar(o, e)), tot = foes.reduce((s, e) => s + hp.get(e), 0);
       for (const e of foes){ const d = dmg.get(e); for (const k of CLASSES) d[k] += av[k]*hp.get(e)/tot; }
     }

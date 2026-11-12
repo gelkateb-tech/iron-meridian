@@ -81,8 +81,10 @@ function spawn(n, p, t){
   const RL = isSeat(n) ? desk(n).rally : null;   // a seat's rally points: new ground units march there on their own
   if (!air && RL && RL[p] != null && RL[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, RL[p]); if (!na.path.length) delete RL[p]; return; }
   const k = rPack(n, t);   // (a card of swarm drones holds six, eight with the Bigger Salvo upgrade)
-  if (air){ const w = S.armies.find(x => x.owner === n && x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u])); if (w && !S.armies.some(x => x.owner === n && x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
-  let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])));
+  // new units join an idle force of the same kind here that has room under its stack limit (STACK_LIM), otherwise they form a new force
+  const dm = DOM_T[t], room = x => stackSizes(x)[dm] + (dm === 'air' ? 1 + Object.values((x.air && x.air.pend) || {}).reduce((s0, v) => s0 + Math.ceil(v/k), 0) : k) <= STACK_LIM[dm];
+  if (air){ const w = S.armies.find(x => x.owner === n && x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u]) && room(x)); if (w && !S.armies.some(x => x.owner === n && x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
+  let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])) && room(x));
   if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp*k)/(h0 + UNITS[t].hp*k) : 80;
   a.u[t] += k;

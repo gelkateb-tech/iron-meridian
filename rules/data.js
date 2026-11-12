@@ -379,6 +379,10 @@ const VIS_KM = {city:80, airbase:100, ground:50, recon:100, air:150, drone:200, 
 const VIS_RECON = ['spec'], VIS_DRONE = ['drone', 'sdrone', 'swarm'];
 for (const t in UNITS) if (UNITS[t].vis == null) UNITS[t].vis = VIS_RECON.includes(t) ? VIS_KM.recon : VIS_DRONE.includes(t) ? VIS_KM.drone : UNITS[t].cls === 'air' ? VIS_KM.air : VIS_KM.ground;
 const K = 0.25;                       // combat damage per hour factor
+// Stack limits (stack efficiency, see rules/combat.js stackPenalty and docs/COMBAT.md): units of one domain in one force above its limit fight
+// worse and move slower. Damage: 1 − STACK_K·ln(n ÷ limit), never below STACK_FLOOR; speed: 1 − STACK_SPD_K·ln(n ÷ limit), never below STACK_SPD_FLOOR
+const STACK_LIM = {land:10, air:5, sea:5};
+const STACK_K = 0.56, STACK_FLOOR = 0.25, STACK_SPD_K = 0.15, STACK_SPD_FLOOR = 0.5;
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
 const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week

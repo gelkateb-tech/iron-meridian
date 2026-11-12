@@ -1,6 +1,6 @@
 // Iron Meridian rules: movement. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
-const seaSpeed = a => ground(a) ? SEA_SPEED*rMoveF(a.owner)*(shipsN(a) ? 1.15 : 1) : landSpeed(a);   // open water, no lane
+const seaSpeed = a => ground(a) ? SEA_SPEED*rMoveF(a.owner)*(shipsN(a) ? 1.15 : 1)*stackSpd(a) : landSpeed(a);   // open water, no lane
 const legSpeed = (a, from, to) => (G.P[from].sea || G.P[to].sea) ? seaSpeed(a)*(isLane(from, to) ? LANE_F : 1) : landSpeed(a);
 // one unit type's base speeds in km/day: [land or null, water] (land: plains, no road; water: open sea, no lane; ships on land only enter ports)
 function unitKmd(o, t){ const U = UNITS[t], v = st(o, t, 'spd')*rMoveF(o); if (U.cls === 'air') return [null, null];

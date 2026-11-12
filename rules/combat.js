@@ -14,6 +14,37 @@ function plannedDirs(a, t, via = null){ const d = new Set(), last = x => { const
   return d.size; }
 const flankF = d => 1 + 0.15*Math.min(3, Math.max(0, d - 1));
 const sideFront = (p, dirs) => Math.round(frontage(p)*(1 + 0.5*Math.max(0, dirs - 1)));
+/* Stack efficiency (limits and factors: STACK_* in rules/data.js; the table: docs/COMBAT.md).
+   Size is counted per domain inside one force: land = its ground units (embarked troops at sea count as land), sea = its ships, air = its
+   aircraft in cards (a card of swarm drones counts once). Over its limit a domain's units deal stackEffN of their damage and the force moves
+   at stackSpdN of its speed (the worst domain sets the pace). It scales each FORCE's damage; frontage still scales each SIDE's damage in a
+   province: side damage = Σ_forces (unit damage × stackEff(force)) × frontScale(side units, front) × flank bonus. Both sides of a fight see the
+   same frontage for the same number of units, so one stack of 128 deals 25% of what thirteen stacks of 10 deal in the same place: splitting never
+   loses. Splitting helps fully only when the front is wide enough: attack from several provinces (sideFront) to bring more units into line. */
+const stackEffN = (n, L) => n <= L ? 1 : Math.max(STACK_FLOOR, 1 - STACK_K*Math.log(n/L));
+const stackSpdN = (n, L) => n <= L ? 1 : Math.max(STACK_SPD_FLOOR, 1 - STACK_SPD_K*Math.log(n/L));
+const domT = t => UNITS[t].cls === 'air' ? 'air' : UNITS[t].cls === 'naval' ? 'sea' : 'land', DOM_T = Object.fromEntries(UT.map(t => [t, domT(t)]));
+// a force's size per domain: {land, sea, air}
+function stackSizes(a){ const r = {land:0, sea:0, air:0}; if (!a || !a.u) return r;
+  for (const t of UT){ const v = a.u[t]; if (!v) continue; const d = DOM_T[t]; r[d] += d === 'air' ? Math.ceil(v/rPack(a.owner >= 0 ? a.owner : 0, t) - 1e-9) : v; }
+  return r; }
+// damage factors per domain of force a: {land, sea, air} (1 at or under the limit); index with DOM_T[unit type]
+const STACK_ONE = Object.freeze({land:1, sea:1, air:1});
+const stackEffs = a => { if (count(a) <= 5) return STACK_ONE; const z = stackSizes(a); return {land:stackEffN(z.land, STACK_LIM.land), sea:stackEffN(z.sea, STACK_LIM.sea), air:stackEffN(z.air, STACK_LIM.air)}; };
+// the stack penalty of a force, for the rules and the panels: the domain that is furthest over its limit (or the force's main domain), its limit
+// and size, the damage and speed factors (1 = no penalty), and the per-domain detail
+function stackPenalty(a){ const z = stackSizes(a); let dom = null, dmg = 1, spd = 1;
+  for (const d of ['land', 'sea', 'air']){ if (!z[d]) continue; const e = stackEffN(z[d], STACK_LIM[d]), s = stackSpdN(z[d], STACK_LIM[d]);
+    if (!dom || e < dmg || (e === dmg && z[d]/STACK_LIM[d] > z[dom]/STACK_LIM[dom])) dom = d; dmg = Math.min(dmg, e); spd = Math.min(spd, s); }
+  dom = dom || (a && a.air ? 'air' : 'land');
+  return {dom, limit:STACK_LIM[dom], size:z[dom], dmg, spd, over:z[dom] > STACK_LIM[dom], sizes:z}; }
+// what forces a and b would be merged together (the merge warning)
+function stackPenaltyIf(a, b){ const m = {owner:a.owner, air:a.air || b.air, u:{}}; for (const t of UT) m.u[t] = (a.u[t] || 0) + (b.u[t] || 0); return stackPenalty(m); }
+// the force's damage and speed factors as a short text: "Over stack limit: −39% damage, −10% speed" ('' when within the limit)
+const stackText = P => P.over ? `Over stack limit: −${Math.round((1 - P.dmg)*100)}% damage, −${Math.round((1 - P.spd)*100)}% speed` : '';
+const stackSpd = a => { if (count(a) <= 5) return 1; const z = stackSizes(a); return Math.min(stackSpdN(z.land, STACK_LIM.land), stackSpdN(z.sea, STACK_LIM.sea), stackSpdN(z.air, STACK_LIM.air)); };   // (no domain is over its limit in a force of 5 or fewer)
+// the weighted damage factor of a whole force (the odds preview and the AI's estimates)
+function stackDmg(a){ const e = stackEffs(a); if (e.land === 1 && e.sea === 1 && e.air === 1) return 1; let s = 0, w = 0; for (const t of UT){ const v = a.u[t]; if (!v) continue; const k = v*(UNITS[t].atk || 0.1); s += k*e[DOM_T[t]]; w += k; } return w ? s/w : 1; }
 /* ---------------- Commanders ---------------- */
 const TRAITS = {
   blitz:{name:'Blitz', icon:'»', desc:'+15% speed; +10% attack when attacking (×rank)'},
@@ -68,7 +99,7 @@ function rangedHour(){ let by = null;   // stationary forces per province, built
     if (best < 0) continue;
     const foes = stAt(best).filter(b => b.owner >= 0 && atWar(a.owner, b.owner) && count(b) > 0), tot = foes.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
     const av = {soft:0, armored:0, air:0, naval:0}, shooters = (near.has(best) ? [['art', a.u.art], ['mlrs', a.u.mlrs]] : [['mlrs', a.u.mlrs]]).filter(e => e[1]);
-    const cov = Math.min(1, terr(best).art); let base = 0; for (const [t, n] of shooters){ const b0 = n*st(a.owner, t, 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4)*cov; base += b0; for (const k of CLASSES) av[k] += b0*multO(a.owner, t, k); }
+    const cov = Math.min(1, terr(best).art), se = stackEffs(a).land; let base = 0; for (const [t, n] of shooters){ const b0 = n*st(a.owner, t, 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4)*cov*se; base += b0; for (const k of CLASSES) av[k] += b0*multO(a.owner, t, k); }
     if (!base) continue;
     for (const b of foes){ const h0 = effHP(b), u0 = count(b); hurt(b, av, (b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort) : 1)/tot); const lost = Math.max(0, h0 - effHP(b));
       if (lost >= 0.5) IM.emit('fxRanged', a, b, best, lost);   // the client shows the damage number
@@ -82,7 +113,7 @@ function rangedHour(){ let by = null;   // stationary forces per province, built
 function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a)) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }
     if (a.to !== null || a.path.length) continue;
-    if (a.at === b.at && b.to === null){ delete a.join; merge(b, a); any = true; if (isSeat(a.owner)){ tell(a.owner, `${armyName(a)} joined ${armyName(b)} at ${G.P[b.at].cityName || G.P[b.at].name}: ${pluN(count(b), 'unit')}.`, 'good', b.at); IM.emit('merged', a.id, b.id); } continue; }
+    if (a.at === b.at && b.to === null){ delete a.join; merge(b, a); any = true; if (isSeat(a.owner)){ const sp = stackPenalty(b); tell(a.owner, `${armyName(a)} joined ${armyName(b)} at ${G.P[b.at].cityName || G.P[b.at].name}: ${pluN(count(b), 'unit')}.${sp.over ? ` ${stackText(sp)}.` : ''}`, sp.over ? 'bad' : 'good', b.at); IM.emit('merged', a.id, b.id); } continue; }
     const pth = pathFor(a, a.at, b.to ?? b.at); if (pth.length){ a.path = pth; a.forced = true; } else delete a.join; }
   if (any) removeEmpty(); }
 function chaseHour(){ for (const a of S.armies){ if (a.chase == null) continue; const e = armyById(a.chase);
@@ -134,12 +165,13 @@ function stanceHour(){
   }
 }
 function oddsParts(a, t, foes, dirs, via = null){ if (dirs === undefined) dirs = plannedDirs(a, t, via);
-  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b), 0);
+  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b)*stackDmg(b), 0);   // (stack efficiency per force)
   const defOwn = foes.some(b => b.owner === S.owner[t]), ownBonus = (G.P[t].sea ? 1 : terr(t).def)*1.25/Math.pow(0.8, S.bld[t].fort || 0);
   let d = raw*frontScale(fn, F)*(defOwn ? ownBonus : 1);
   const pv = via != null ? via : (a.to ?? a.at), river = !G.P[t].sea && G.P[t].river.has(pv) && S.owner[t] !== a.owner;
-  const fitA = terrFit(a, t, S.owner[t] !== a.owner), fitD = foes.length ? foes.reduce((s, b) => s + power(b)*terrFit(b, t, S.owner[t] !== b.owner), 0)/Math.max(1e-6, raw) : 1; d *= fitD;
-  return {mine:power(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs)*(river ? RIVER_ATK : 1)*(S.owner[t] === a.owner ? ownBonus : 1)*fitA, theirs:d, raw, river, dirs, defOwn, fitA, fitD};
+  const fitA = terrFit(a, t, S.owner[t] !== a.owner), fitD = foes.length ? foes.reduce((s, b) => s + power(b)*stackDmg(b)*terrFit(b, t, S.owner[t] !== b.owner), 0)/Math.max(1e-6, raw) : 1; d *= fitD;
+  const sk = stackPenalty(a);
+  return {stack:sk, mine:power(a)*stackDmg(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs)*(river ? RIVER_ATK : 1)*(S.owner[t] === a.owner ? ownBonus : 1)*fitA, theirs:d, raw, river, dirs, defOwn, fitA, fitD};
 }
 function odds(a, t, foes, dirs, via){
   if (!foes.length) return Infinity;

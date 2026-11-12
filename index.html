@@ -7130,6 +7130,10 @@ function tagBody(tk, icon, n, fc, selected, fighting, minor){
   g.font = badgeFont(D.fz); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round'; const X = sn(3 + fw + 3 + D.ic + 2), Y = sn(h/2 + D.fz*0.36), v = String(n);
   g.lineWidth = 2.2; g.strokeStyle = 'rgba(8,16,10,.9)'; g.strokeText(v, X, Y); g.fillStyle = '#ffffff'; g.fillText(v, X, Y);
   E = {c, ox:P, oy:P}; UCC.set(key, E); return E; }
+// over the stack limit: a small red badge with three stacked bars centred at (x, y)
+function stackMark(x, y){ ctx.save(); roundRect(ctx, x - 5, y - 5, 10, 10, 2.5); ctx.fillStyle = '#d8473a'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
+  ctx.fillStyle = '#fff3ea'; for (let i = 0; i < 3; i++) ctx.fillRect(x - 3, y - 3.2 + i*2.4, 6, 1.4); ctx.restore(); }
+const overStack = L => L.some(q => q && count(q) && stackPenalty(q).over);
 // out of supply: a small amber warning triangle centred at (x, y)
 function supplyMark(x, y){ const q = 5; ctx.beginPath(); ctx.moveTo(x, y - q); ctx.lineTo(x + q*0.95, y + q*0.7); ctx.lineTo(x - q*0.95, y + q*0.7); ctx.closePath(); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
   ctx.fillStyle = '#14100a'; ctx.font = `800 7px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', x, y + q*0.22); }
@@ -7146,6 +7150,7 @@ function diaDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, min
     if (cmd){ ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', mx - 1, my - 1); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', mx - 1, my - 1); }
     if (counter.dug && !moving) sandbagMark(mx - 9 - (cmd ? 9 : 0), my - 4, 0.9);   // dug in
     if (a && a.owner === PLAYER && !supplied(a)) supplyMark(X + r*0.62, Y - r*0.66);   // out of supply
+    if (overStack(L)) stackMark(X - r*0.95, Y + r*0.35);   // over the stack limit
     unitBars(a, X - r*0.95, Y + r + 2, r*1.9, 1, now, TAG_H);
     if (fighting){ const R0 = 5.6, bx = X + r + 3, by = Y - r*0.42; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
   const rc = plateRect(X, Y, n, 1, minor, false); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; rc.d = D.d; return rc; }   // (d: the diamond's width)
@@ -7159,6 +7164,7 @@ function tagDraw(x, y, a, L, n, tk, icon, selected, moving, fighting, minor, now
     if (cmd){ ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', x0 + 4, y0 - 4); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', x0 + 4, y0 - 4); }
     if (counter.dug && !moving) sandbagMark(x0 + (cmd ? 10 : 1), y0 - 9, 0.9);
     if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + D.w - 1, y0 - 2);
+    if (overStack(L)) stackMark(x0 - 4, y0 + D.h - 3);   // over the stack limit
     unitBars(a, x0, y0 + D.h + 2, D.w, 1, now, TAG_H);
     if (fighting){ const R0 = 5.6, bx = x0 + D.w + R0 + 2, by = Y; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
   const rc = plateRect(X, Y, n, 1, minor, true); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; return rc; }
@@ -8215,11 +8221,12 @@ function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) ret
   joinForces(a, b); }
 // a into b: at once when both stand in the same province, otherwise a marches to b and merges on arrival
 function joinForces(a, b){ if (!a || !b || a === b) return false;
+  const sp = stackPenaltyIf(b, a), warn = sp.over ? ` ${stackWarn(sp)}` : '';   // over the stack limit: say what it costs
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];
-    sfx('order'); toast(`Merged ${pluN(n0, 'unit')} into ${armyName(b)}: ${pluN(count(b), 'unit')}.`, 'good', null); renderSide(true); return true; }
+    sfx('order'); toast(`Merged ${pluN(n0, 'unit')} into ${armyName(b)}: ${pluN(count(b), 'unit')}.${warn}`, sp.over ? 'bad' : 'good', null); renderSide(true); return true; }
   const dest = b.to ?? b.at; orderMove(a, dest); if (!a.path.length && a.to === null){ toast('No route to that force.', 'bad', null); return false; }
-  a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.`, 'info', null);
+  a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.${warn}`, sp.over ? 'bad' : 'info', null);
   if (sel.army === a.id){ sel.army = null; sel.group = []; } renderSide(true); return true; }
 function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) return; const [ax, ay] = toScreen(...dispPos(a)), h = hitAt(udrag.x, udrag.y);
   const b = h && !h.unk ? h.ids.map(armyById).find(q => q && q !== a && q.owner === PLAYER && !q.air && !q.fly && count(q)) : null;
@@ -8228,7 +8235,10 @@ function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) 
   ctx.globalAlpha = 0.85; ctx.fillStyle = 'rgba(16,22,24,.92)'; roundRect(ctx, udrag.x - 22, udrag.y - 13, 44, 26, 5); ctx.fill(); ctx.strokeStyle = mapCol(PLAYER); ctx.lineWidth = 1.5; ctx.stroke();
   ctx.globalAlpha = 1; ctx.fillStyle = '#f3ead2'; ctx.font = `700 12px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(count(a)), udrag.x, udrag.y);
   const lbl = b ? (b.at === a.at && a.to === null && b.to === null ? `Merge into ${armyName(b)}` : `Join ${armyName(b)}`) : 'Drop on a force to merge';
-  ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(lbl).width + 14; roundRect(ctx, udrag.x - w/2, udrag.y + 17, w, 18, 4); ctx.fillStyle = b ? '#24452a' : '#1b2a2e'; ctx.fill(); ctx.fillStyle = '#f3ead2'; ctx.fillText(lbl, udrag.x, udrag.y + 26); ctx.restore(); }
+  ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(lbl).width + 14; roundRect(ctx, udrag.x - w/2, udrag.y + 17, w, 18, 4); ctx.fillStyle = b ? '#24452a' : '#1b2a2e'; ctx.fill(); ctx.fillStyle = '#f3ead2'; ctx.fillText(lbl, udrag.x, udrag.y + 26);
+  const sp = b ? stackPenaltyIf(b, a) : null;   // merging would go over the stack limit: the penalty under the label
+  if (sp && sp.over){ const t2 = stackText(sp), w2 = ctx.measureText(t2).width + 14; roundRect(ctx, udrag.x - w2/2, udrag.y + 38, w2, 18, 4); ctx.fillStyle = '#5a1d17'; ctx.fill(); ctx.fillStyle = '#ffd9cf'; ctx.fillText(t2, udrag.x, udrag.y + 47); }
+  ctx.restore(); }
 cv.addEventListener('pointerleave', () => { hoverProv = -1; hoverPath = null; mouse = null; tipHide(); redraw(); });   // (a frame clears the hover outline and route preview)
 cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = localXY(e);
   if (GLOBE){ if (e.deltaY > 0 && zoomGoal() <= minScale()*1.001){ if (GLOBE.pushOut(e.deltaY)){ ZTW = null; tipHide(); return; } } else GLOBE.resetPush(); }   // past the minimum: the globe
@@ -8801,7 +8811,7 @@ function checklist(){
     if (grown >= 5 && mines && wars) return '';
     return `<div class="eyebrow" style="display:flex;justify-content:space-between">Next objectives <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(grown >= 5, `Grow by 5 provinces (${Math.max(0, grown)}/5)`)}${row(mines, 'Build an Arms Industry: +25% of a city\u2019s main resource per level')}${row(wars, 'Survive a war: end one with a truce or peace')}</div>`;
   }
-  return `<div class="eyebrow" style="display:flex;justify-content:space-between">First steps <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Merge forces into one stack, then capture a weak independent neighbour (look for a Favourable odds chip)')}${row(T.research, 'Start a research project (R)')}</div>`;
+  return `<div class="eyebrow" style="display:flex;justify-content:space-between">First steps <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Merge forces into one stack (up to 10 ground units fight at full strength), then capture a weak independent neighbour (look for a Favourable odds chip)')}${row(T.research, 'Start a research project (R)')}</div>`;
 }
 function prodHTML(){
   const N = S.nations[PLAYER], cities = G.P.filter(P => S.owner[P.id] === PLAYER && P.city).sort((a, b) => (b.id === N.capital) - (a.id === N.capital) || a.cityName.localeCompare(b.cityName));
@@ -9336,8 +9346,8 @@ function oddsHTML(a, t, foes){
   const r = odds(a, t, foes, undefined, viaOf(a)), cls = r >= 1.5 ? 'good' : r >= 0.9 ? 'even' : 'bad', label = r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even fight' : 'Likely defeat';
   const T0 = G.P[t].sea ? null : terr(t);
   const F = frontage(t), extra = count(a) > F ? `<br><span class="small">Only ${F} of your ${count(a)} units fit this front; the rest fight at 25%. Attack from a second province to widen it.</span>` : '';
-  const op = oddsParts(a, t, foes, undefined, viaOf(a));
-  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${op.defOwn ? `${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}` : S.owner[t] === a.owner ? '; the defence bonuses here are yours' : ''}${T0 && Math.abs(op.fitA - 1) > 0.01 ? `; ${T0.name.toLowerCase()} suits your mix ${op.fitA > 1 ? 'well' : 'badly'}: ${pctS(op.fitA)}${T0.armor < 1 ? ` (armor ${pctS(T0.armor)})` : ''}` : ''}${T0 && Math.abs(op.fitD - 1) > 0.01 ? `; theirs ${pctS(op.fitD)}` : ''}${op.river ? '; you attack across a river: −20%' : ''}${season(t) ? `; ${SEASON_FX[season(t)].name.toLowerCase()}: attackers ${SEASON_FX[season(t)].atk < 0.9 ? '−15%' : '−5%'}` : ''})${op.dirs > 1 ? `<br><span class="small">Attacking from ${op.dirs} directions with your other ordered forces: front ${sideFront(t, op.dirs)} units, +${Math.round((flankF(op.dirs) - 1)*100)}% attack.</span>` : ''}${extra}</div>`;
+  const op = oddsParts(a, t, foes, undefined, viaOf(a)), stk = op.stack.over ? `<br><span class="small">Your force is over the stack limit: ${Math.round(op.stack.dmg*100)}% damage (${op.stack.size} ${STACK_W[op.stack.dom]}, limit ${op.stack.limit}). Split it and attack with several stacks, from several sides.</span>` : '', stkF = foes.some(b => stackPenalty(b).over) ? `<br><span class="small">Their ${foes.filter(b => stackPenalty(b).over).length > 1 ? 'stacks are' : 'stack is'} over the stack limit and fight weaker.</span>` : '';
+  return `<div class="odds ${cls}"><b>${label}</b> · your ${Math.round(op.mine)} vs their effective ${Math.round(op.theirs)} <span class="small">(${Math.round(op.raw)} base${op.defOwn ? `${S.bld[t].fort ? ' + fortifications' : ''}, +25% defending home soil${T0 && T0.def > 1 ? `, ${T0.name.toLowerCase()} +${Math.round((T0.def - 1)*100)}%` : ''}` : S.owner[t] === a.owner ? '; the defence bonuses here are yours' : ''}${T0 && Math.abs(op.fitA - 1) > 0.01 ? `; ${T0.name.toLowerCase()} suits your mix ${op.fitA > 1 ? 'well' : 'badly'}: ${pctS(op.fitA)}${T0.armor < 1 ? ` (armor ${pctS(T0.armor)})` : ''}` : ''}${T0 && Math.abs(op.fitD - 1) > 0.01 ? `; theirs ${pctS(op.fitD)}` : ''}${op.river ? '; you attack across a river: −20%' : ''}${season(t) ? `; ${SEASON_FX[season(t)].name.toLowerCase()}: attackers ${SEASON_FX[season(t)].atk < 0.9 ? '−15%' : '−5%'}` : ''})${op.dirs > 1 ? `<br><span class="small">Attacking from ${op.dirs} directions with your other ordered forces: front ${sideFront(t, op.dirs)} units, +${Math.round((flankF(op.dirs) - 1)*100)}% attack.</span>` : ''}${extra}${stk}${stkF}</div>`;
 }
 function unitRows(a){
   return `<div class="urows">${UT.filter(t => a.u[t]).map(t => { const U = UNITS[t], max = a.u[t]*U.hp, cur = Math.max(0, max - a.w[t]), f = cur/max;
@@ -9388,9 +9398,9 @@ function wingHTML(a){
     <div class="status ${f ? 'move' : ''}">${status}</div>
     ${T === 'drone' ? `<div>${uavBadge(a.owner)}</div><div class="small muted">Vision ${L0.vis} km · loiter ${L0.loiter} h · stealth ${Math.round((1 - L0.stealth)*100)}%</div>` : ''}
     ${!G.P[a.air.base].sea && bdis(a.air.base, 'air') ? `<div class="status battle">Airbase knocked out: grounded for ${bdisH(a.air.base, 'air')} h</div>` : ''}
-    ${unitRows(a)}
+    ${unitRows(a)}${stackLine(a)}
     ${condHTML(a)}
-    <dl class="kv"><dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Speed</dt><dd>${fmtK(Math.round(wingSpd(a)*24*KM_HEX/100)*100)} km/day in flight</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
+    <dl class="kv">${stackHTML(a)}<dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Speed</dt><dd>${fmtK(Math.round(wingSpd(a)*24*KM_HEX/100)*100)} km/day in flight</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
     <p class="small muted" style="margin:0">Tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol; UAVs watch, AWACS orbit, patrol planes hunt ships; tapping one of your airbases rebases the wing.</p>
     <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button></div>`;
 }
@@ -9424,6 +9434,13 @@ function splitHTML(a){
     <div class="tblwrap"><table class="ptab spmat">${head}${body}${foot}</table></div>
     <p class="small muted" style="margin:0">Hit points go with the units that carry them (damaged units, below 60%, are listed apart); morale and orders are shared${cmdOf(a) ? `; ★ marks the group the commander ${cmdOf(a).name} stays with (the largest)` : ''}. Merge again with Merge forces here, or drag one counter onto another.</p>
     <div class="row"><button class="btn primary" data-act="sp-go" ${moving ? '' : 'disabled'}>${moving ? `Split into ${moving + (cols[0].u ? 1 : 0)} forces` : 'Choose units to split off'}</button><button class="btn" data-act="sp-reset">Reset</button><button class="btn" data-act="sp-close">Cancel</button></div>`; }
+// the stack limit (rules/combat.js stackPenalty): the domain's word, the warning text, and the panel line
+const STACK_W = {land:'ground units', sea:'ships', air:'aircraft'};
+const stackWarn = sp => `${stackText(sp)} (${sp.size} ${STACK_W[sp.dom]}, limit ${sp.limit}). Split into stacks of ${sp.limit} or fewer to fight at full strength.`;
+function stackHTML(a){ const sp = stackPenalty(a), w = STACK_W[sp.dom];
+  if (!sp.over) return `<dt>Stack</dt><dd title="Up to ${STACK_LIM.land} ground units, ${STACK_LIM.sea} ships or ${STACK_LIM.air} aircraft (a card of swarm drones counts once) fight at full strength in one force; bigger stacks deal less damage and move slower.">${sp.size} / ${sp.limit} ${w} · full strength</dd>`;
+  return `<dt>Stack</dt><dd class="stk-over" style="color:var(--danger-t)" title="Damage ×${sp.dmg.toFixed(2)} (1 − ${STACK_K} × ln(${sp.size} ÷ ${sp.limit}), at least ${Math.round(STACK_FLOOR*100)}%), speed ×${sp.spd.toFixed(2)}. Split it into stacks of ${sp.limit} or fewer.">${sp.size} / ${sp.limit} ${w} · ${stackText(sp)}</dd>`; }
+const stackLine = a => { const sp = stackPenalty(a); return sp.over ? `<div class="status battle stk-warn">⚠ ${stackWarn(sp)}</div>` : ''; };
 // speeds of a force: land (plains, no road) and water (open sea, no lane), km/day
 function speedHTML(a){ const L = Math.round(landSpeed(a)*KM_HEX/10)*10, Wt = Math.round(seaSpeed(a)*KM_HEX/10)*10;
   return shipsOnly(a) ? `<span title="Open water; +${Math.round((LANE_F - 1)*100)}% on sea lanes. Ships enter land only at ports.">water ${kmd(Wt)}</span>`
@@ -9444,8 +9461,8 @@ function armyHTML(a){
   }
   return `<div class="uhd">${leadT(a) ? unitPic(leadT(a), 'xl') : ''}<div class="uht"><div class="eyebrow">Your force · ${pluN(count(a), 'unit')}</div>${renaming === a.id ? `<input class="rn" data-id="${a.id}" maxlength="32" value="${armyName(a)}" aria-label="Force name" style="font:inherit;font-size:20px;width:100%;margin:2px 0 6px">` : `<h2 class="aname" data-act="rename" data-id="${a.id}" title="Click to rename">${armyName(a)} <span class="small muted">✎</span></h2>`}</div></div>${plan}
     ${unitRows(a)}
-    <div class="status ${st0.cls}">${st0.long}</div>
-    <dl class="kv"><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${speedHTML(a)}</dd>
+    <div class="status ${st0.cls}">${st0.long}</div>${stackLine(a)}
+    <dl class="kv">${stackHTML(a)}<dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Health</dt><dd>${Math.round(healthFrac(a)*100)}%</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%${(a.m ?? 80) < 30 ? ' · shaken' : ''}</dd><dt>Supply</dt><dd style="color:${supplied(a) ? 'var(--ok)' : 'var(--danger)'}">${supplied(a) ? (S.battles.includes(a.at) ? 'Supplied · fighting' : `Supplied · healing ${S.owner[a.at] === PLAYER && G.P[a.at].city ? 25 : 10}%/day`) : 'Cut off · −4% HP/day'}</dd><dt>Speed</dt><dd>${speedHTML(a)}</dd>
     ${enemies.length ? `<dt>Enemy here</dt><dd>${Math.round(enemies.reduce((s, b) => s + power(b), 0))} strength</dd>` : ''}</dl>
     ${a.air || shipsOnly(a) ? '' : (c => c ? `<div class="cmd"><span class="ins">${'★'.repeat(c.rank)}</span><div><b>${RANKS[c.rank]} ${c.name}</b><div class="small muted">${TRAITS[c.trait].icon} ${TRAITS[c.trait].name}: ${TRAITS[c.trait].desc} · XP ${Math.round(c.xp)}${c.rank < 3 ? "/" + [0, 200, 600][c.rank] : ""}</div></div></div>` : '')(cmdOf(a))}
     ${a.u.art || a.u.mlrs ? `<div class="row" style="align-items:center"><span class="small muted">Artillery${a.u.mlrs ? ' · range 2' : ''}</span><button class="btn ${a.fire !== 'hold' ? 'primary' : ''}" data-act="fire" data-v="free" style="padding:3px 9px;font-size:12px" title="Shell enemy forces in neighbouring provinces every hour">Fire at will</button><button class="btn ${a.fire === 'hold' ? 'primary' : ''}" data-act="fire" data-v="hold" style="padding:3px 9px;font-size:12px">Hold fire</button></div>` : ''}
@@ -9455,7 +9472,7 @@ function armyHTML(a){
     <div class="row">
       ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE*KM_HEX} km away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
       <button class="btn" data-act="split-open" ${count(a) < 2 ? 'disabled' : ''} title="Choose exactly which units leave: per unit type, damaged units apart, several groups at once">Split…</button>
-      <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one."`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
+      <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one.${(sp => sp.over ? ` ${stackText(sp)}.` : '')(stackPenalty({owner:PLAYER, u:Object.fromEntries(UT.map(t => [t, here.reduce((s0, b) => s0 + (b.u[t] || 0), 0)]))}))}"`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
       <button class="btn" data-act="stop" ${!a.path.length && a.to === null ? 'disabled' : ''} title="Stop right now, where the force stands">Halt</button>
     </div>
     ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}`;
@@ -9644,7 +9661,8 @@ document.addEventListener('click', e => {
     case 'sp-tab': if (SPLIT){ SPLIT.g = Math.max(0, Math.min(SPLIT.plan.length - 1, +b.dataset.g)); renderSide(true); } break;
     case 'sp-inc': case 'sp-dec': if (a && SPLIT){ const k = b.dataset.k; spSet(a, k, (SPLIT.plan[SPLIT.g][k] || 0) + (act === 'sp-inc' ? 1 : -1)); renderSide(true); } break;
     case 'sp-go': if (a && SPLIT){ const n0 = count(a), out = splitPlan(a, SPLIT.plan, counterSpot(a)); SPLIT = null; if (out.length){ sfx('order'); toast(`Split ${n0} units into ${out.length + 1} forces: ${[a, ...out].map(count).join(' · ')}.`, 'info', null); selectArmy(out[0].id); } else renderSide(true); } break;
-    case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty(); renderSide(true); } break;
+    case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty();
+        { const sp = stackPenalty(a); toast(`Merged into ${armyName(a)}: ${pluN(count(a), 'unit')}.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); } renderSide(true); } break;
     case 'stop': if (a){ haltArmy(a); redraw(); renderSide(true); } break;
     case 'recruit': if (sel.prov !== null){ const why = canMobilize(PLAYER, sel.prov, b.dataset.t) || queueWhy(PLAYER, sel.prov); if (why){ toast(`${UNITS[b.dataset.t].name}: ${why}.`, 'info', sel.prov); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; } }
       if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
@@ -9969,6 +9987,7 @@ const HELP_SEC = [
     <li><b>Select many</b>: shift-click or shift-drag a box. <kbd>Ctrl</kbd>+4…9 saves a group, 4…9 recalls it.</li>
     <li><b>Split…</b> picks exactly which units leave, per unit type with damaged units listed apart, into one or several new groups. Presets: in half, evenly into 2–6, one group per type, or a single unit. <b>Split in half</b> does it in one click.</li>
     <li><b>Merge</b>: drag one of your counters onto another, or use Merge in the command bar.</li>
+    <li><b>Stack limit</b>: up to 10 ground units, 5 ships or 5 aircraft (a card of swarm drones counts once) fight at full strength in one force. A bigger stack deals 1 − 0.56 × ln(size ÷ limit) of its damage (20 ground units 61%, 30 38%, never below 25%) and moves slower (20: 90%, 50: 76%, never below 50%). Forces arriving in the same province merge only while they stay within the limit; merging past it warns you, and the counter gets a red stack mark. Attack with several stacks from several provinces: the front widens too.</li>
     <li><b>Moving or holding</b>: marching forces raise dust and show their heading; a force that has held its own ground for 12 h, or is on Defend stance, is dug in and gets a sandbag marker.</li></ul>`],
   ['terrain', 'Terrain', `<ul>
     <li><b>Defence</b>: mountains +30%, cities +25%, hills +20%, forest and marsh +15%. Open plains and desert give no cover.</li>
