@@ -29,14 +29,14 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await go(16); await p.evaluate(() => { window.__im.S.speed = 1; });
   const fire = await p.evaluate(async () => { const im = window.__im, raf = () => new Promise(r => requestAnimationFrame(() => r())), seen = new Set(); let n = 0, bad = [], kinds = {}, pts = 0;
     const t0 = performance.now(); while (performance.now() - t0 < 4000){ await raf(); const M = im.BFX.pts.get(im.S.battles[0]); if (!M) continue; const all = []; for (const [o, L] of M) for (const q of L){ all.push([o, q]); } pts = Math.max(pts, all.length);
-      for (const pr of im.PROJ){ if (seen.has(pr) || !pr.ws) continue; seen.add(pr); n++; kinds[pr.kind] = (kinds[pr.kind] || 0) + 1;
+      for (const pr of im.PROJ){ if (seen.has(pr.sn ?? pr) || !pr.ws) continue; seen.add(pr.sn ?? pr); n++; kinds[pr.kind] = (kinds[pr.kind] || 0) + 1;
         const src = all.find(([o, q]) => Math.hypot(q.mx - pr.from[0], q.my - pr.from[1]) < 1e-6); if (!src){ bad.push('from ' + pr.from.map(v => v.toFixed(2))); continue; }
         const near = all.some(([o, q]) => o !== src[0] && Math.hypot(q.wx - pr.to[0], q.wy - pr.to[1]) < q.r*1.5); if (!near) bad.push('to ' + pr.to.map(v => v.toFixed(2))); } }
     return { n, bad: bad.slice(0, 5), nbad: bad.length, kinds, pts, plate: im.PROJ.filter(q => !q.ws).length }; });
   console.log('fire', JSON.stringify(fire));
   if (!(fire.n >= 10)) errors.push('too few shots from the figures: ' + fire.n);
   if (fire.nbad) errors.push(`${fire.nbad} shots not from a figure's muzzle or not landing round an enemy figure: ` + fire.bad.join('; '));
-  if (!(fire.kinds.tracer && fire.kinds.shell)) errors.push('expected tracers and shells: ' + JSON.stringify(fire.kinds));
+  if (!(fire.kinds.tracer && (fire.kinds.shell || fire.kinds.trc))) errors.push('expected tracers and shells: ' + JSON.stringify(fire.kinds));
   // (S) pause, freeze the effects' clock, zoom and pan round the battle: every smoke puff keeps its world spot
   const anc = await p.evaluate(async P => { const im = window.__im, w = im.wfx, fr = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     im.S.speed = 0; w.freeze(performance.now()); await fr(); const sd = document.getElementById('side'), r = sd && sd.getBoundingClientRect(), cw = r && r.left > innerWidth*0.5 ? r.left : innerWidth, ch = document.getElementById('map').getBoundingClientRect().height;

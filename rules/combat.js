@@ -226,8 +226,8 @@ function rangedStep(hourly){ let grid = null, gone = false;
     let G0 = a.tgt ? T.filter(e => a.tgt.id != null ? e.b.id === a.tgt.id : e.b.at === a.tgt.p) : [];
     if (!G0.length){ const pw = new Map(); for (const e of T) pw.set(e.b.at, (pw.get(e.b.at) || 0) + power(e.b)); let bp = -1, bv = -1; for (const [p, v] of pw) if (v > bv){ bv = v; bp = p; } G0 = T.filter(e => e.b.at === bp); }
     const best = G0[0].b.at, land = !G.P[best].sea, cov = land ? Math.min(1, terr(best).art) : 1, se = stackEffs(a), mf = moraleF(a), cG = 1 + 0.2*cmdF(a, 'gunner'), av = new Map();
-    let base = 0;
-    for (const [t, n] of rangedOf(a)){ const hit = G0.filter(e => e.ts.includes(t)); if (!hit.length) continue;
+    let base = 0; const fired = [];   // (fired: the unit types that fired, for the client's effects only)
+    for (const [t, n] of rangedOf(a)){ const hit = G0.filter(e => e.ts.includes(t)); if (!hit.length) continue; fired.push(t);
       const tot = hit.reduce((s0, e) => s0 + armyHP(e.b), 0) || 1;
       const b0 = n*st(a.owner, t, 'atk')*K*RANGED_F/BATTLE_Q*mf*(RANGE_HIT[t] === 'land' ? cG : 1)*(t === 'crui' && land && has(a.owner, 'crui_rng') ? 1.3 : 1)*(0.8 + rng()*0.4)*cov*se[DOM_T[t]];
       base += b0;
@@ -239,7 +239,7 @@ function rangedStep(hourly){ let grid = null, gone = false;
       if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); if (!count(b)) gone = true; } }
     cmdXP(a, base*0.4); if (land) warDamage(best, 1.2/BATTLE_Q);
     const e0 = G0.reduce((m, e) => power(e.b) > power(m.b) ? e : m, G0[0]);
-    IM.emit('fxRanged', a, null, best, 0, [e0.x, e0.y]);   // the client draws the shells (or the naval salvo)
+    IM.emit('fxRanged', a, null, best, 0, [e0.x, e0.y], {types:fired, b:e0.b.id, kill:!count(e0.b)});   // the client draws the shells (or the naval salvo): which unit types fired, at which force, and whether it was destroyed
     if (!a.lastFireLog || S.hour - a.lastFireLog > 12){ a.lastFireLog = S.hour; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} is ${shipsOnly(a) ? 'bombarding' : 'shelling'} enemy forces ${G.P[best].sea ? 'at sea in' : 'in'} ${G.P[best].cityName || G.P[best].name}.`, 'info', best); }
   }
   if (hourly){ for (const R of RANGED_SHOWN.values()) if (R.lost >= 0.5) IM.emit('fxRanged', R.a, R.b, R.p, R.lost, [R.x, R.y]); RANGED_SHOWN.clear(); }   // the client shows the damage numbers
