@@ -48,8 +48,7 @@ function flightPos(a){ const f = a.fly, T = G.P[f.tgt];
 // where force a is at the hour mark (world units): in flight, at its airbase, at its exact spot, or on the road of the leg it is marching
 function armyXY(a){ if (a.fly) return flightPos(a); if (a.air){ const B = G.P[a.air.base]; return [B.x, B.y]; }
   const A = G.P[a.at]; if (a.to === null) return a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y];
-  const p1 = a.legFrom || [A.x, A.y], B = G.P[a.to], p2 = !a.path.length && a.dest && a.dest.p === a.to ? [a.dest.x, a.dest.y] : [B.x, B.y], t = Math.max(0, Math.min(1, a.t));
-  return [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t]; }
+  return legSpot(a); }   // (rules/movement.js: from a.legFrom or the centre to the exact point on the final leg or the next centre)
 // the range a force on the ground or at sea sees (km): its farthest-seeing unit type
 function armyVisKm(a){ let k = 0; for (const t of UT) if (a.u[t] > 0) k = Math.max(k, UNITS[t].vis*rSightF(a.owner, t)); return k || VIS_KM.ground; }
 const visAewKm = n => VIS_KM.aew*rAewK(n), visMpaKm = n => VIS_KM.mpa*rMpaK(n);

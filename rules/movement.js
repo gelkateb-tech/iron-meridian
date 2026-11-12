@@ -226,45 +226,96 @@ const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a
   const p2 = findPath(from, to, v => v === to || G.P[v].sea || S.owner[v] !== NEUTRAL ? ok(v) : false, mt, a.owner); return p2.length ? p2 : p; };
 // provinces on the way (not the destination) where the force will have to fight: independent land, and land of powers you are at war with
 const fightsOnWay = (a, path) => path.slice(0, -1).filter(v => !G.P[v].sea && S.owner[v] !== a.owner && (S.owner[v] < 0 || atWar(a.owner, S.owner[v]))).length;
-function orderMove(a, target){ delete a.tgt;   // (a move ends a Bombard order, rules/combat.js orderBombard)
-  if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // (a fleet sailing inside its zone sets off from where it is now)
-  if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target); }
+/* ---------------- Pinpoint movement ----------------
+   A move order targets an exact point (a.dest {p, x, y}: the province or sea zone p that holds the point). The route runs province to province as
+   always; only its last leg ends at the point instead of the centre. A force belongs to the province it stands in (a.at) for combat, supply,
+   capture, vision, stack limits and frontage, so on that last leg, the hour its spot crosses into p it ARRIVES there (as at the end of any leg:
+   capture, battle, landing) and walks the rest of the way inside p (a.sail, below). Every leg takes time in proportion to its real length
+   (legRatio: from where the force stands, or the province centre, to the point, or the next centre), so a short last leg is quick and a
+   long one slow, never a free jump. Ships do the same inside sea zones, on water only (a point on land is moved to the nearest water of the
+   zone); air units fly missions and take no point. Old saves (no a.dest, no a.pos) keep the province centres. */
+const JOIN_R = 6;   // world units (about 50 km): a force arriving at an exact point merges only with a force of its own standing that close (rules/tick.js)
+const provOfPt = (x, y) => { const c = worldToCell(x, y); return c >= 0 ? G.prov[c] : -1; };
+// the point (x, y) if it lies in province (or sea zone) p, else the nearest point of p (the centre of its nearest cell): a zone's cells are water
+function ptIn(p, x, y){ if (!G.P[p] || !Number.isFinite(x) || !Number.isFinite(y)) return null; if (provOfPt(x, y) === p) return [x, y];
+  let best = G.P[p].cc, bd = Infinity; for (const c of G.P[p].cells){ const [cx, cy] = cellCenter(c), d = (cx - x)*(cx - x) + (cy - y)*(cy - y); if (d < bd){ bd = d; best = c; } }
+  return cellCenter(best); }
+const lerpPt = (p1, p2, t) => [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t];
+// the two ends of force a's current leg: where it set out from (its spot, else the centre) and the exact point on the final leg, else the next centre
+function legEnds(a){ const A = G.P[a.at], B = G.P[a.to]; return [a.legFrom || [A.x, A.y], !a.path.length && a.dest && a.dest.p === a.to ? [a.dest.x, a.dest.y] : [B.x, B.y]]; }
+// the ends of the leg an idle force with a route starts next
+function nextLegEnds(a){ const A = G.P[a.at], n0 = a.path[0], B = G.P[n0]; return [a.sail ? sailXY(a) : a.pos || [A.x, A.y], a.path.length === 1 && a.dest && a.dest.p === n0 ? [a.dest.x, a.dest.y] : [B.x, B.y]]; }
+// a leg's real length over the centre-to-centre length its time is reckoned on (1 between centres)
+function legRatio(from, to, p1, p2){ const A = G.P[from], B = G.P[to]; if (p1[0] === A.x && p1[1] === A.y && p2[0] === B.x && p2[1] === B.y) return 1;
+  const D = Math.hypot(B.x - A.x, B.y - A.y); return D > 1e-9 ? Math.max(0.02, Math.min(3, Math.hypot(p2[0] - p1[0], p2[1] - p1[1])/D)) : 1; }
+// hours of force a's current leg / of the leg it starts next (the leg's speed, times its real length)
+const legH = a => { const [p1, p2] = legEnds(a); return legHours(a, a.at, a.to)*legRatio(a.at, a.to, p1, p2); };
+const nextLegH = a => { const [p1, p2] = nextLegEnds(a); return legHours(a, a.at, a.path[0])*legRatio(a.at, a.path[0], p1, p2); };
+// where on its leg a moving force is now
+const legSpot = a => { const [p1, p2] = legEnds(a); return lerpPt(p1, p2, Math.max(0, Math.min(1, a.t))); };
+// pt: the exact point to go to ([x, y], or omitted for the province centre). A ship's point is water (in a sea zone); a ship sent to a port docks
+// at the quay. A point in the force's own province is a walk inside it (orderSpot).
+function orderMove(a, target, pt = null){ delete a.tgt;   // (a move ends a Bombard order, rules/combat.js orderBombard)
+  const q = pt && !a.air && G.P[target] && !(shipsOnly(a) && !G.P[target].sea) ? ptIn(target, pt[0], pt[1]) : null;
+  if (q && a.to === null && target === a.at){ a.dest = null; orderSpot(a, q[0], q[1]); IM.emit('ordered', a); return; }
+  if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // (a force walking or sailing inside its province sets off from where it is now)
+  const end0 = a.to !== null ? legEnds(a)[1] : null;
+  if (q) a.dest = {p:target, x:q[0], y:q[1]}; else if (a.dest) a.dest = null;
+  if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target);
+    const end1 = legEnds(a)[1]; if (end1[0] !== end0[0] || end1[1] !== end0[1]){ a.legFrom = legSpot(a); a.t = 0; } }   // the leg now ends elsewhere: it runs on from where the force is
   else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
   IM.emit('ordered', a);   // (display only: the client marks where the counter starts from)
 }
 // HALT: stop a force right now, exactly where it is. Movement is province to province (a.at -> a.to, a.t = 0..1 along the leg), but an idle force
-// may stand at any point (a.pos), so a force on the road halts AT that point: it becomes the nearer province's force (like a head-on clash does)
-// with a.pos set to the exact spot, so the unfinished leg is dropped and it does not walk on to the far end. If the nearer province is of the other
-// kind (land vs sea) the force stays registered in the province it left, still standing at the exact spot. Also cancels queued legs and chase/join/escort.
+// may stand at any point (a.pos), so a force on the road halts AT that point and becomes the force of the province that point lies in (the one it
+// left or the one ahead; when the point lies in neither, the nearer of the two, and it stands at that province's nearest point). A force on a leg
+// between land and sea stays registered where it set out from, at the point of that province nearest its spot. Fleets always stop on water:
+// a fleet halting between two sea zones holds the water of one of them, and one halting on a leg between a port and the sea has no exact spot
+// (it holds its zone or its dock). Also cancels queued legs and chase/join/escort.
 function haltArmy(a){
   if (a.air){ if (a.fly) return false; a.path = []; return true; }
   if (a.to !== null){
-    const A = G.P[a.at], B = G.P[a.to], p1 = a.legFrom || [A.x, A.y], p2 = !a.path.length && a.dest && a.dest.p === a.to ? [a.dest.x, a.dest.y] : [B.x, B.y], t = Math.max(0, Math.min(1, a.t)), spot = [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t];
-    const near = t >= 0.5 && !!B.sea === !!A.sea ? a.to : a.at;
+    const A = G.P[a.at], B = G.P[a.to], t = Math.max(0, Math.min(1, a.t)), spot = legSpot(a), same = !!B.sea === !!A.sea, inP = provOfPt(spot[0], spot[1]);
+    const near = !same ? a.at : inP === a.at || inP === a.to ? inP : t >= 0.5 ? a.to : a.at;
     if (near !== a.at){ a.from = a.at; a.froms = [a.at]; a.at = near; }
-    a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && (A.sea !== B.sea) ? null : spot; }   // (a fleet halting on a leg between a port and the sea has no exact spot: it holds its zone or its dock)
-  if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // a fleet sailing inside its zone stops where it is
+    a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && !same ? null : ptIn(a.at, spot[0], spot[1]); }
+  if (a.sail){ const s = sailXY(a); a.pos = ptIn(a.at, s[0], s[1]); delete a.sail; }   // a force walking or a fleet sailing inside its province stops where it is
   a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt; delete a.raid;
   IM.emit('halted', a);   // (display only)
   return true;
 }
-/* A move to another spot inside the force's own province (a.pos: forces may stand anywhere in it). A ground force steps there at once. A fleet
-   in its sea zone SAILS there (a.sail {f: from, to: the spot, t: 0..1, h: hours}): at its sea speed (km a day: the slowest ship, research and
-   the stack penalty, as abSpd shows it), drawn on the move (armyXY), and until it arrives it is under way: it does not fire, blockade, escort
-   or raid (rules/combat.js rangedStep, rules/trade.js seaIndex and trBlkIndex skip it). Halt stops it where it is; a move order sails on from
-   there. Deterministic: whole hours, advanced in the hourly movement step (rules/tick.js sailHour). */
+/* A move to another spot inside the force's own province or sea zone (a.pos: forces may stand anywhere in it), and the rest of a pinpoint move
+   once the force has crossed into the province of its point: the force WALKS (a fleet SAILS) there (a.sail {f: from, to: the spot, t: 0..1,
+   h: hours}): a fleet at its sea speed (km a day: the slowest ship, research and the stack penalty, as abSpd shows it), a ground force at its
+   speed over that province's terrain and weather (no roads inside a province), drawn on the move (armyXY), and until it arrives it is under
+   way: it does not fire, blockade, escort or raid (rules/combat.js rangedStep, rules/trade.js seaIndex and trBlkIndex skip it). It already
+   counts in the province for battles, supply and capture; a ground force caught in a battle there stops walking until the battle ends. Halt
+   stops it where it is; a move order sets off from there. Deterministic: advanced once an hour in the movement step (rules/tick.js). */
 const sailXY = a => { const s = a.sail, t = Math.max(0, Math.min(1, s.t)); return [s.f[0] + (s.to[0] - s.f[0])*t, s.f[1] + (s.to[1] - s.f[1])*t]; };
 const sailing = a => !!a.sail;
+// a force's speed inside province p (old map hexes a day)
+const walkSpeed = (a, p) => G.P[p].sea || !ground(a) ? seaSpeed(a) : landSpeed(a)*terr(p).spd*weatherSpd(p)*moveF(a, p, p);
 function orderSpot(a, x, y){ if (!a || a.air || a.fly || a.to !== null) return false;
-  if (!(shipsOnly(a) && G.P[a.at].sea)){ delete a.sail; a.pos = [x, y]; return true; }
+  const q = ptIn(a.at, x, y); if (!q) return false; [x, y] = q;
   const [x0, y0] = armyXY(a), km = Math.hypot(x - x0, y - y0)/KM_W; a.path = []; a.dest = null; delete a.tgt;
   if (km < 1){ delete a.sail; a.pos = [x, y]; return true; }
-  a.sail = {f:[x0, y0], to:[x, y], t:0, h:Math.max(1, Math.round(km*24/(seaSpeed(a)*KM_HEX)))}; a.pos = [x0, y0]; return true; }
-// hours left for a sailing fleet
-const sailHours = a => a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h)) : 0;
-// the hourly step of a fleet sailing inside its zone (rules/tick.js movement)
-function sailHour(a){ const s = a.sail; if (!s) return; if (a.to !== null || a.path.length || !G.P[a.at].sea){ delete a.sail; return; }
+  a.sail = {f:[x0, y0], to:[x, y], t:0, h:Math.max(1, Math.round(km*24/(walkSpeed(a, a.at)*KM_HEX)))}; a.pos = [x0, y0]; return true; }
+// hours left for a force walking or sailing inside its province
+const sailHours = a => a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h - 1e-9)) : 0;
+// the hourly step of a force walking or sailing inside its province (rules/tick.js movement)
+function sailHour(a){ const s = a.sail; if (!s) return; if (a.to !== null || a.path.length || (shipsOnly(a) && !G.P[a.at].sea)){ delete a.sail; return; }
+  if (!G.P[a.at].sea && S.battles.includes(a.at)) return;   // (a ground force fighting where it stands stops walking until the battle ends)
   s.t = Math.min(1, s.t + 1/s.h); a.pos = sailXY(a); if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; delete a.sail; } }
+// the end of a leg (rules/tick.js movement): the force reaches the province it was heading for and stands at its exact point on the final leg
+function legArrive(a){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; a.legFrom = null;
+  if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land)
+// the final leg of a pinpoint move crossing into its province (rules/tick.js movement, after the hour's progress lh): the force arrives there now,
+// at the spot it has reached, and walks the rest of the leg's time inside it. Not for ships docking in a port (no point on land)
+function legCross(a, lh){ if (a.path.length || !a.dest || a.dest.p !== a.to || a.t >= 1) return false;
+  const s = legSpot(a); if (provOfPt(s[0], s[1]) !== a.to) return false;
+  const to = [a.dest.x, a.dest.y], rem = (1 - a.t)*lh; legArrive(a);
+  if (Math.hypot(to[0] - s[0], to[1] - s[1])/KM_W < 1 || rem < 1e-6){ a.pos = to; return true; }
+  a.pos = s; a.sail = {f:s, to, t:0, h:rem}; return true; }
 function canProceed(a){
   if (a.delay > 0) return false;
   if (a.forced) return true;
@@ -273,11 +324,12 @@ function canProceed(a){
   return true;
 }
 function capNeed(p, by = NEUTRAL){ const P = G.P[p]; return (16 + (P.city ? 16 : 0) + (isCapital(p) ? 16 : 0))*(1 + 0.25*S.bld[p].fort)*rCapF(by)*(S.home && S.home[p] === by ? 0.5 : 1); }
-function etaHours(a, path = a.path){
-  if (a.to === null && !path.length) return 0;
-  let h = 0, from = a.at;
-  if (a.to !== null){ h += (1 - a.t)*legHours(a, a.at, a.to); from = a.to; }
-  for (const p of path){ h += legHours(a, from, p); from = p; }
+// hours to the end of a route (path: a.path, or a route the player is weighing; end: its exact point, else the province centre)
+function etaHours(a, path = a.path, end = path === a.path ? a.dest : null){
+  if (a.to === null && !path.length) return sailHours(a);
+  let h = 0, from = a.at, p1 = a.sail ? sailXY(a) : a.pos || [G.P[a.at].x, G.P[a.at].y];
+  if (a.to !== null){ h += (1 - a.t)*legH(a); from = a.to; p1 = [G.P[a.to].x, G.P[a.to].y]; }
+  for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 && end && end.p === p ? [end.x, end.y] : [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2); from = p; p1 = p2; }
   return Math.ceil(h);
 }
 /* ---------------- Supply & morale ---------------- */
@@ -326,7 +378,7 @@ function armyUpkeep(prevBattles){
       for (let h = 0; h < q.length && dest < 0; h++){ const [u, du] = q[h]; if (du >= 6) continue;
         for (const v of G.P[u].nbs){ if (seen.has(v) || !canEnter(a.owner, v)) continue; seen.add(v);
           if (S.owner[v] === a.owner && SUP[a.owner] && SUP[a.owner][v] && !S.battles.includes(v)){ dest = v; break; } q.push([v, du + 1]); } }
-      if (dest >= 0){ a.path = pathFor(a, a.at, dest); a.forced = true; a.retreating = true;
+      if (dest >= 0){ a.path = pathFor(a, a.at, dest); if (a.dest) a.dest = null; a.forced = true; a.retreating = true;
         if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} broke at ${G.P[a.at].name} and is retreating to ${G.P[dest].name}.`, 'bad', a.at); }
       else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (isSeat(a.owner)) tell(a.owner, `Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
     }
