@@ -22,7 +22,7 @@ Last updated: 2026-11-11.
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
 | Realistic combat and flight animations (effects module, firing per unit type, impacts, aircraft flight, markers and warnings, sound slots, Effects High/Low/Off, test panel, proof results are identical) | Opus | Started |
-| Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Started |
+| Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 | Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 
 ## Queued (in this order)
