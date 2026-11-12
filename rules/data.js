@@ -388,6 +388,25 @@ for (const t in UNITS) if (UNITS[t].vis == null) UNITS[t].vis = VIS_RECON.includ
 const RANGE_KM = {art:80, mlrs:150, frig:80, crui:150, sub:40}, RANGE_ER = 50;
 const RANGE_HIT = {art:'land', mlrs:'land', frig:'any', crui:'any', sub:'ships'};
 const RANGED_T = Object.keys(RANGE_KM);
+// Trade war reach (km, rules/trade.js): how far around its actual spot (armyXY) a warship stops convoys when its fleet is ordered to Blockade, and
+// attacks the convoys of a route that passes within it (Raid). Frigates and cruisers use their gun range (RANGE_KM); a carrier's air wing covers
+// 120 km; a submarine only its torpedo range (40 km), so submarines raid but blockade only a narrow strait or a port's approach.
+// A fleet covers the longest reach among its ship types. The sea map's cells are 60 km across (rules/trade.js trCell*).
+const BLOCKADE_KM = {frig:RANGE_KM.frig, crui:RANGE_KM.crui, carr:120, sub:RANGE_KM.sub};
+// Chokepoints: the narrow seas the trade lanes squeeze through (one or two blockading warships close them; the open ocean needs a screen of
+// several spread out). p: the passage itself (lon, lat; snapped to the nearest sea cell, where the map labels it and where a fleet blockades it);
+// a, b: open water on either side (rules/trade.js chokeClosed checks the way through between them, within CHOKE_KM of the passage).
+// Suez and Panama are canals: merchant convoys pass Suez (rules/trade.js TR_CANALS; warships do not: fleet movement is unchanged); Panama is open water on the grid.
+const CHOKEPOINTS = [
+  {k:'hormuz', name:'Strait of Hormuz', p:[56.4, 26.4], a:[52.5, 26.8], b:[58.8, 24.6]},
+  {k:'malacca', name:'Strait of Malacca', p:[100.8, 2.9], a:[98.6, 4.6], b:[103.6, 1.4]},
+  {k:'gibraltar', name:'Strait of Gibraltar', p:[-5.6, 35.95], a:[-2.5, 36.2], b:[-8.5, 36.0]},
+  {k:'suez', name:'Suez Canal', p:[32.4, 30.6], a:[32.2, 31.8], b:[33.0, 28.8]},
+  {k:'mandeb', name:'Bab-el-Mandeb', p:[43.4, 12.6], a:[41.8, 14.6], b:[45.5, 12.1]},
+  {k:'bosporus', name:'Bosporus', p:[29.1, 41.2], a:[26.0, 40.0], b:[30.5, 42.4]},
+  {k:'panama', name:'Panama Canal', p:[-79.7, 9.1], a:[-79.6, 10.2], b:[-79.4, 7.8]},
+  {k:'danish', name:'Danish Straits', p:[11.6, 55.9], a:[10.6, 57.6], b:[13.5, 55.0]}];
+const CHOKE_KM = 600;
 // ranged damage per game hour, as a share of what the same units deal fighting in a battle (the old artillery shelling factor, kept)
 const RANGED_F = 0.28;
 const K = 0.25;                       // combat damage per hour factor

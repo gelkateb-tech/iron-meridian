@@ -214,7 +214,7 @@ function rangedNear(g, x, y, km){ const NC = Math.ceil(WORLD_W/RG_C), r = Math.c
 const RANGED_SHOWN = new Map();
 // one battle step of ranged fire (hourly: the hour's own step, which also shows the hour's damage numbers)
 function rangedStep(hourly){ let grid = null, gone = false;
-  for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || !count(a)) continue;
+  for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.sail || !count(a)) continue;   // (a fleet sailing to a spot in its zone fires once there)
     let gun = false; for (const t of RANGED_T) if (a.u[t]){ gun = true; break; } if (!gun) continue;
     if (a.tgt && a.tgt.id != null){ const tb = armyById(a.tgt.id); if (!tb || !count(tb) || !atWar(a.owner, tb.owner)) delete a.tgt; }   // the ordered target is gone
     if (a.tgt && a.path.length) delete a.tgt;   // (a route given since ends the order)
@@ -247,7 +247,7 @@ function rangedStep(hourly){ let grid = null, gone = false;
 // the Bombard order, for the order preview: can force a fire at force b (or, with b null, at the enemy forces in province p) from where it stands?
 // {ok, km (to the target or the nearest enemy force seen there; the province point when none is seen), range (its longest, km), n (forces in range),
 //  seen (an enemy force is seen there), ranged (it has a unit with a range that can fire where it is), moving}
-function bombardInfo(a, p, b = null){ const R = rangedOf(a), range = R.reduce((m, e) => Math.max(m, e[2]), 0), moving = a.to !== null;
+function bombardInfo(a, p, b = null){ const R = rangedOf(a), range = R.reduce((m, e) => Math.max(m, e[2]), 0), moving = a.to !== null || !!a.sail;
   if (b) p = b.at; const [x, y] = armyXY(a), vis = visibleSet(a.owner);
   const foes = S.armies.filter(f => (b ? f === b : f.at === p) && rangedFoe(a.owner, f) && armyVisible(f, vis));
   const hit = range && !moving ? rangedTargets(a, x, y, foes) : [];

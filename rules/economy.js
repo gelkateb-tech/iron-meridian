@@ -10,7 +10,7 @@ function computeBlockade(){ BLOCK = new Set(); const by = new Map(); for (const 
 function blockNews(me, by){ if (!S.started) return; const D = desk(me), was = new Set(Array.isArray(D.blk) ? D.blk : []), now = [...by.keys()], nw = now.filter(p => !was.has(p)), gone = [...was].filter(p => !by.has(p));
   const nm = p => G.P[p].cityName || G.P[p].name, list = ps => ps.length === 1 ? nm(ps[0]) : ps.length === 2 ? nm(ps[0]) + ' and ' + nm(ps[1]) : `${nm(ps[0])}, ${nm(ps[1])} and ${ps.length - 2} more`;
   if (nw.length && (nw.some(p => G.P[p].city) || S.hour - (D.blkT ?? -1e9) >= 24)){ D.blkT = S.hour; const ps = nw.sort((x, y) => (G.P[y].city ? 1 : 0) - (G.P[x].city ? 1 : 0)), foes = [...new Set(nw.map(p => by.get(p)))].map(nationName).join(' and ');
-    tell(me, `Blockade! ${foes} warships off ${list(ps)}: output there falls 25% and trade routes through ${ps.length > 1 ? 'these ports' : 'the port'} are cut. Send ships to break it.`, 'bad', ps[0]); }
+    tell(me, `Blockade! ${foes} warships off ${list(ps)}: output there falls 25%. Send ships to break it.`, 'bad', ps[0]); }
   if (gone.length && !now.length) tell(me, `Blockade lifted at ${list(gone)}.`, 'good', gone[0]);
   D.blk = now; }
 const popOf = p => (S.pop && S.pop[p] != null) ? S.pop[p] : G.P[p].pop0;

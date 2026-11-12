@@ -227,6 +227,7 @@ const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a
 // provinces on the way (not the destination) where the force will have to fight: independent land, and land of powers you are at war with
 const fightsOnWay = (a, path) => path.slice(0, -1).filter(v => !G.P[v].sea && S.owner[v] !== a.owner && (S.owner[v] < 0 || atWar(a.owner, S.owner[v]))).length;
 function orderMove(a, target){ delete a.tgt;   // (a move ends a Bombard order, rules/combat.js orderBombard)
+  if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // (a fleet sailing inside its zone sets off from where it is now)
   if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target); }
   else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
   IM.emit('ordered', a);   // (display only: the client marks where the counter starts from)
@@ -242,10 +243,28 @@ function haltArmy(a){
     const near = t >= 0.5 && !!B.sea === !!A.sea ? a.to : a.at;
     if (near !== a.at){ a.from = a.at; a.froms = [a.at]; a.at = near; }
     a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && (A.sea !== B.sea) ? null : spot; }   // (a fleet halting on a leg between a port and the sea has no exact spot: it holds its zone or its dock)
-  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt;
+  if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // a fleet sailing inside its zone stops where it is
+  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt; delete a.raid;
   IM.emit('halted', a);   // (display only)
   return true;
 }
+/* A move to another spot inside the force's own province (a.pos: forces may stand anywhere in it). A ground force steps there at once. A fleet
+   in its sea zone SAILS there (a.sail {f: from, to: the spot, t: 0..1, h: hours}): at its sea speed (km a day: the slowest ship, research and
+   the stack penalty, as abSpd shows it), drawn on the move (armyXY), and until it arrives it is under way: it does not fire, blockade, escort
+   or raid (rules/combat.js rangedStep, rules/trade.js seaIndex and trBlkIndex skip it). Halt stops it where it is; a move order sails on from
+   there. Deterministic: whole hours, advanced in the hourly movement step (rules/tick.js sailHour). */
+const sailXY = a => { const s = a.sail, t = Math.max(0, Math.min(1, s.t)); return [s.f[0] + (s.to[0] - s.f[0])*t, s.f[1] + (s.to[1] - s.f[1])*t]; };
+const sailing = a => !!a.sail;
+function orderSpot(a, x, y){ if (!a || a.air || a.fly || a.to !== null) return false;
+  if (!(shipsOnly(a) && G.P[a.at].sea)){ delete a.sail; a.pos = [x, y]; return true; }
+  const [x0, y0] = armyXY(a), km = Math.hypot(x - x0, y - y0)/KM_W; a.path = []; a.dest = null; delete a.tgt;
+  if (km < 1){ delete a.sail; a.pos = [x, y]; return true; }
+  a.sail = {f:[x0, y0], to:[x, y], t:0, h:Math.max(1, Math.round(km*24/(seaSpeed(a)*KM_HEX)))}; a.pos = [x0, y0]; return true; }
+// hours left for a sailing fleet
+const sailHours = a => a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h)) : 0;
+// the hourly step of a fleet sailing inside its zone (rules/tick.js movement)
+function sailHour(a){ const s = a.sail; if (!s) return; if (a.to !== null || a.path.length || !G.P[a.at].sea){ delete a.sail; return; }
+  s.t = Math.min(1, s.t + 1/s.h); a.pos = sailXY(a); if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; delete a.sail; } }
 function canProceed(a){
   if (a.delay > 0) return false;
   if (a.forced) return true;
