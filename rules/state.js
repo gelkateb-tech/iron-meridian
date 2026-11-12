@@ -177,14 +177,33 @@ function ecoMigrate(){ if (S.eco) return; S.eco = 1; const got = {};
       + (kept.length ? ` The Economy research branch moved into buildings; you keep the bonus of ${kept.join(', ')}.` : '')}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
-// the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded
-function saveJSON(){ const BLD = S.bld; return JSON.stringify({...S, battles:[]}, function(k, v){
+// the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded.
+// A nations-world save is also packed (S.pk 1; plan 4.5 and test T11: under 300 KB at the start with 68 nations): a relation is stored only
+// once it differs from the default peace (2,278 records between 68 nations, nearly all at peace), and the per-province lists of building
+// work, capture and occupation, mostly empty, only where they hold something. restore unpacks it exactly as it was (packIn). The classic
+// world and the theatres save as before, byte for byte
+const REL0 = r => r && r.st === 'peace' && r.since === 0 && r.until == null && Object.keys(r).length === 3;
+const PK_SPARSE = ['cons', 'cap', 'occ'];
+function packOut(o){ const rel = {}; for (const k in S.rel) if (!REL0(S.rel[k])) rel[k] = S.rel[k]; o.rel = rel;
+  for (const f of PK_SPARSE){ const a = S[f], at = {}; for (let i = 0; i < a.length; i++) if (a[i] != null) at[i] = a[i]; o[f] = {n:a.length, at}; }
+  o.pk = 1; return o; }
+// a packed save back to the state the game had: every pair of nations' relation in the order a new game makes them (a < b), the default where
+// none is stored, so the same game plays on to the same state; the sparse lists back to full lists
+function packIn(d){ if (!d || d.pk !== 1) return d; const n = Array.isArray(d.nations) ? d.nations.length : 0, old = d.rel || {}, rel = {};
+  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++){ const k = a + ',' + b; rel[k] = old[k] || {st:'peace', since:0, until:null}; }
+  for (const k in old) if (!(k in rel)) rel[k] = old[k];
+  d.rel = rel;
+  for (const f of PK_SPARSE){ const v = d[f]; if (!v || Array.isArray(v)) continue; const a = new Array(v.n).fill(null); for (const i in v.at) a[+i] = v.at[i]; d[f] = a; }
+  delete d.pk; return d; }
+function saveJSON(){ const BLD = S.bld, o = {...S, battles:[]}; if (S.scn === 'world64') packOut(o); return JSON.stringify(o, function(k, v){
   if (v && typeof v === 'object' && !Array.isArray(v)){
     if ((k === 'u' || k === 'w') && this && this.id != null && this.at != null){ const o = {}; for (const t in v){ const x = v[t]; if (x) o[t] = k === 'w' ? Math.round(x*1000)/1000 : x; } return o; }
     if (this === BLD){ const o = {}; for (const t in v) if (v[t]) o[t] = v[t]; return o; } }
   return v; }); }
 function restore(data){
   if (!data || data.v !== 4 || typeof data.seed !== 'number') return false;
+  if (data.pk != null && data.pk !== 1){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
+  data = packIn(data);
   // the map the save was made on (data.map; none: world.js), checked before anything changes: a refused save leaves the game in play as it was
   restore.why = ''; const mv = data.map || 0, g = mapOf(mv);
   if (!g){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }

@@ -219,8 +219,11 @@ const winCapsFor = k => Math.max(5, Math.round(k/6));               // starting 
 // share of the world's land provinces to hold. From 50 nations a tenth (step 4, Asia: with 58 nations no nation held more than 384 provinces in
 // two 300-day games, a fifth is 615; a tenth, 308, decided both between day 120 and day 250, the plan's aim in 3.6). From 60 nations 7% (step 5,
 // the Americas: with 67 nations the land Brazil and Canada had won on in step 4 is nations of its own, and neither 300-day game had a winner; on
-// day 150 the nearest were Russia at 317 of its 460, Canada at 202 of its 308 and India at 175 of 308)
-const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 59 ? 0.1 : 0.07;
+// day 150 the nearest were Russia at 317 of its 460, Canada at 202 of its 308 and India at 175 of 308). With all 68 nations 6% (step 6, the full
+// world; with TIER_WIN_UP 0.5 below): the war rules of step 6 keep the giants whole and neither 300-day game had a winner with 7% and 0.6 (on day
+// 180 Brazil at 199 of its 216, Russia at 401 of its 460); measured on the same games, 6% and 0.5 decide one of the two on day 235 (Russia) and
+// nobody before day 160 in either
+const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 59 ? 0.1 : k <= 67 ? 0.07 : 0.06;
 // Tiers (S superpower, A major, B regional, C minor): what a nation starts with. TIER_FULL is the plan's wide table (3.2), TIER_EVEN an equal
 // start for everyone; a game mode sits between the two by its spread (0 = everyone equal, 1 = the wide table). Normal mode is close to equal
 // (the owner's rule: big countries are bigger, not much richer at the start); a later competitive mode is mildly more distinctive.
@@ -243,7 +246,10 @@ function tierKit(tier, mode){ const F = TIER_FULL[tier] || TIER_FULL.B, M = tier
   // 2 guards gone a major power opened with fewer units than a regional one of as many cities), one at spread 0.6, two in the full table (plan 3.2)
   k.yardGuards = k.yard ? Math.floor(2*M.spread + 1e-9) : 0; return k; }
 const tierGap = (a, b) => (TIER_RANK[b] ?? 2) - (TIER_RANK[a] ?? 2);   // how many tiers b stands below a
-const TIER_WARS = {S:2, A:1, B:1, C:0};
+// (step 6, the full world: S was 2. A computer superpower in three wars of its own making, most of them across the sea against small nations with
+// armies near its own, left its long borders bare: the United States lost 6 to 16% of its land in 3 seeds of 5, to Canada, Mexico and a
+// Venezuelan landing that marched from Savannah to New York)
+const TIER_WARS = {S:1, A:1, B:1, C:0};
 // choosing a victim in the nations world: land beyond TIER_LAND provinces does not make a nation more tempting (with close-to-equal incomes a big
 // country has the most land per soldier, and every neighbour went for it), and a computer nation already in TIER_GANG wars is left alone
 // (two equal neighbours at once take any nation apart)
@@ -271,10 +277,24 @@ const TIER_FRONT = 1;
 // the long war of two rivals (step 5: with the Americas open, India fought China or a peer on day 60 in 2 seeds of 5, though in all 5 in the second
 // month: computer nations tire of a war after 20 days, and the rivals' wars of the first month were over by day 60): two computer nations of tier
 // S tire of their war only after TIER_RIVAL_WAR days (being outmatched, losing land or fighting on three fronts still ends it sooner)
-const TIER_RIVAL_WAR = 40, warTires = (a, b) => S.nations[a].tier === 'S' && S.nations[b].tier === 'S' && S.nations[a].ai && S.nations[b].ai ? TIER_RIVAL_WAR : 20;
+// (step 6, the full world: 40 before. With 68 nations China's wars with India and Russia began in the first two weeks and were over before day 60
+// in 4 seeds of 5)
+const TIER_RIVAL_WAR = 60, warTires = (a, b) => S.nations[a].tier === 'S' && S.nations[b].tier === 'S' && S.nations[a].ai && S.nations[b].ai ? TIER_RIVAL_WAR : 20;
+// whom a computer nation may attack, by tier (step 6, the full world: the United States held 95% of its land on day 60 in 2 seeds of 5 and China
+// fought a peer on day 60 in 1). With close-to-equal incomes a big country has no bigger army than a small one and the most border to hold, so a
+// war it starts at near-even odds costs it its home: the United States declared on Mexico at 1.16 times Mexico's power, on Cuba at 1.2 and on
+// Venezuela at 1.5, lost the army it had, and its other neighbour took the bare border. The peer threshold (TIER_PEER) is for nations of one tier
+// and an attacker one tier above; besides it:
+//   TIER_DOWN_A  a computer superpower attacks a nation of tier A only with this many times its power (a major power is no easy war)
+//   TIER_UP      a computer nation that is not a superpower attacks one only with this many times its power (Canada declared at 0.98)
+//   TIER_BULLY   a computer nation two or more tiers above its victim (S against B or C, A against C) attacks only with this many times its power
+//                (plan 3.5: giants are steered toward each other; a small nation fights for its life). Tried at 1.5: the United States took on
+//                Venezuela at 1.51 and lost 42 provinces in one seed
+const TIER_DOWN_A = 1.6, TIER_UP = 1.3, TIER_BULLY = 2;
 // land to win in the nations world: the share of the world (winShareFor), or the starting land plus 90 provinces or plus TIER_WIN_UP of it if
-// that is more (step 4: with a tenth of the world, 308, the United States, 230 provinces, won on day 25 on independent land alone; now it needs 368)
-const TIER_WIN_UP = 0.6;
+// that is more (step 4: with a tenth of the world, 308, the United States, 230 provinces, won on day 25 on independent land alone; then it needed 368;
+// step 6: 0.6 before, the United States now needs 345, Russia 431, China 372)
+const TIER_WIN_UP = 0.5;
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
 const CAP_MIN = 2;                    // ground units needed to capture
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
