@@ -14,16 +14,15 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
   - Big ones get one review and at most one repair.
 - **Commits:** one commit after each finished task.
 
-Last updated: 2026-11-12 (04:10 UTC).
+Last updated: 2026-11-12 (04:25 UTC).
 
-**Handover:** a new session took over this list on 2026-11-12. The three jobs below were started by the previous session and run in its container (their worktrees and unpushed branches are only there), so that session has to finish and push them; this session starts the queued jobs from here on.
+**Handover:** a new session took over this list on 2026-11-12. The jobs below were started by the previous session and run in its container (their worktrees and unpushed branches are only there), so that session has to finish and push them; this session starts the queued jobs from here on.
 
 ## Running
 
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Steps 0-5 done on branch `nations-68`, not merged: plumbing, province split, Europe, Middle East, Africa (with the oil reserve repair), Asia (with the rivals repair) and the Americas. Oceania and the merge are left. No commit since 01:34 UTC and no sign of the job in the previous session's last half hour, so it may have stopped |
-| Territory sales in diplomacy: sell captured provinces (never home provinces), price from the province's value, floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept, the AI buys but never sells, troops move out | Opus | Started 03:44 UTC in the previous session (branch `territory-sales`, not pushed yet); writing its tests |
 | Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | In the previous session (branch not pushed yet); taking screenshots of the result |
 
 ## Queued (in this order)
@@ -47,7 +46,7 @@ All branches were fetched. Two hold finished work that master does not have:
 | `research-slots` | 1 commit (99b9ec0), research panel only (index.html, RELEASES.md): slot #2's bar, tag, glow and hover are gold, slot #1's are teal, also on empty slots (they were red); "Both slots busy" now says when a slot frees, e.g. "a slot frees in 1 d 5 h" (card button, tooltips, the next-up header). Replay hash unchanged, lint and build pass, desktop and phone screenshots checked | Done 04:20 UTC (Sonnet, part of queued task 6). Not merged. The map parts of task 6 (night city cores, Sweden snow edge, Berlin garrison) wait for the map wrap |
 | `nations-68` | 10 commits, 30 files (+1,635 / −79): step 0 plumbing (nations.js, the world switch, tiers, victory by number of nations, start screen with regions) and its review; step 0b province split (Israel, Greece, Cuba, Belarus); step 1 Europe (10 nations); step 2 Middle East (5); step 3 Africa (14) and its oil-reserve repair; step 4 Asia (14) and its rivals repair; step 5 the Americas (9) | Oceania (step 6) and the merge are not done. The branch is 71 commits behind master, so the merge needs care. Last commit 01:34 UTC |
 
-Not on GitHub yet: `territory-sales` and the map wrap branch. The old session's agents are still working on them in its own container.
+Not on GitHub yet: the map wrap branch. The old session's agent is still working on it in its own container. (`territory-sales` was merged into master at 04:19 UTC.)
 
 Old `wip/*` snapshots, nothing to merge: `wip/merge-ud`, `wip/research`, `wip/strike-fx`, `wip/rules-split`, `wip/city-markers`, `wip/mobilize-fix`, `wip/city-polish`, `wip/battery-saver`, `wip/zoom-repair`. Each is a saved in-progress state from an earlier job whose finished version is already on master (unit display, research redesign, strike effects repair 2, rules split, city markers, mobilization fix, city polish, battery saver, world-anchored effects). `wip/city-markers`' change is already on master word for word; the others were overtaken by later versions. They can be deleted when the owner wants.
 
@@ -77,6 +76,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| Territory sales in Diplomacy (Territory tab): sell captured land (never home provinces, a capital, a province in battle or the last city) at a price from its land, city, people, oil and buildings; floor 25% of value, 10% between coalition partners allied 3+ days; 3-day resale lock; offer / counter / accept / decline / withdraw; the AI buys but never sells and answers at once; troops leave a sold province; provinces left the trade deal tab; Captured from and Value on the province sheet. Merged 04:19 UTC (b0af89c); results of play without land sales unchanged | Opus |
 | Strike and blast effects per weapon (cruise, ballistic, chemical, tactical nuclear, ICBM) and battle blasts, with repairs 1 and 2 | Opus |
 | 64-nation plan (docs/NATIONS-PLAN.md) and the owner's decisions (68 playable) | Fable 5.2 |
 | Recruiting Office with 5 levels | Sonnet |
