@@ -13,7 +13,7 @@ function tickHour(){
   for (const N of S.nations) if (N.alive && N.eng) engHour(N);
   // research
   for (const N of S.nations) if (N.alive && (N.research || N.research2)) researchHour(N);   // both slots
-  diploHour(); reqHour(); weatherHour(); dropTick(); linkHour(); if (S.hour % 6 === 0) strandedHour(); if (S.hour % 3 === 0) escortHour();
+  diploHour(); terrHour(); reqHour(); weatherHour(); dropTick(); linkHour(); if (S.hour % 6 === 0) strandedHour(); if (S.hour % 3 === 0) escortHour();
   airTick();
   missileTick();
   spyHour();
@@ -175,7 +175,7 @@ function recordStats(){
 }
 function daily(){
   if (S.airHit) for (const k in S.airHit){ const H = S.airHit[k]; for (const j in H) if (typeof H[j] === 'number') H[j] *= 0.7; if (H.bp) for (const q in H.bp) if (S.hour - H.bp[q] > 96) delete H.bp[q]; }   // air-raid memory fades
-  marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay(); tradeDay(); INCC.v = -1;
+  marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay(); tradeDay(); terrDay(); INCC.v = -1;
   if (S.dmg) for (let p = 0; p < S.dmg.length; p++) if (S.dmg[p] > 0) S.dmg[p] = Math.max(0, S.dmg[p] - 2.5);
   { S.pop = S.pop || G.P.map(P => P.pop0); for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; if (moraleOf(p) > 70) S.pop[p] = Math.min(G.P[p].pop0*1.25, S.pop[p]*1.0004); } }
   for (const N of S.nations){ if (!N.alive || isSeat(N.id) || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }

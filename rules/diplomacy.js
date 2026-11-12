@@ -246,12 +246,11 @@ function chatDay(){ for (const me of seats()) for (const N of S.nations){ if (!N
 const emptySide = () => ({cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, provs:[], treaty:[]});
 // an old save's deal side: food dropped, the new goods filled in
 function sideFix(sd){ if (!sd) return emptySide(); delete sd.food; for (const k of DEAL_K) if (!(sd[k] >= 0)) sd[k] = 0; sd.provs = sd.provs || []; sd.treaty = sd.treaty || []; return sd; }
-function provValue(p, holder){ const P = G.P[p]; return (P.city ? 90 : 28) + (P.oil ? 30 : 0) + (P.ore ? 12 : 0) + (isCapital(p) ? 1e6 : 0) + P.cells.length*2/(GS*GS); }
 function dealValueFor(me, ai, D){ // value of the deal to the AI: what it receives minus what it gives
   const M = mkt(), res = side => DEAL_K.reduce((s0, k) => s0 + (side[k] || 0)*(k === 'cash' ? 1 : M.p[k]), 0);
   let v = res(D.give) - res(D.get)*1.05;
-  for (const p of D.give.provs) v += provValue(p)*(G.P[p].nbs.some(q => S.owner[q] === ai) ? 1 : 0.55);
-  for (const p of D.get.provs){ v -= provValue(p)*1.6; if (S.owner.filter(o => o === ai).length - D.get.provs.length < 2) v -= 1e6; }
+  for (const p of D.give.provs) v += (isCapital(p) ? 1e6 : provValue(p))*(G.P[p].nbs.some(q => S.owner[q] === ai) ? 1 : 0.55);
+  for (const p of D.get.provs){ v -= (isCapital(p) ? 1e6 : provValue(p))*1.6; if (S.owner.filter(o => o === ai).length - D.get.provs.length < 2) v -= 1e6; }
   const tv = (k, aiGives) => { const a = acceptOffer(ai, me, k); if (k === 'peace') return a.ok ? 60 : -(140 + natPower(ai)*0.4);
     if (k === 'pass') return aiGives ? (a.ok ? -10 : opinion(ai, me) >= 0 ? -90 : -300) : 30; if (k === 'nap') return a.ok ? 20 : -110; if (k === 'ally') return a.ok ? 40 : -1e6; return 0; };
   for (const k of new Set([...D.give.treaty, ...D.get.treaty])) v += k === 'pass' ? (D.get.treaty.includes(k) ? tv(k, true) : 0) + (D.give.treaty.includes(k) ? tv(k, false) : 0) : tv(k, true);
@@ -260,6 +259,8 @@ function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
   for (const k of DEAL_K){ if ((D.give[k] || 0) > N[k] + 0.01) return `you do not have ${D.give[k]} ${rlbl(k)}`; if ((D.get[k] || 0) > A[k] + 0.01) return `they do not have ${D.get[k]} ${rlbl(k)}`; }
   if (D.give.provs.some(p => S.owner[p] !== me) || D.get.provs.some(p => S.owner[p] !== ai)) return 'a province changed hands';
   if (D.give.provs.some(p => isCapital(p)) ) return 'you cannot hand over your capital';
+  if (D.get.provs.length) return `${A.name} never sells territory`;   // land is sold in the Territory tab (rules/territory.js), never by a computer-run nation
+  if (D.give.provs.length) return 'land is sold in the Territory tab, for money';
   if (D.give.treaty.includes('peace') && !atWar(ai, me)) return 'you are not at war';
   return null; }
 function applyTrade(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
@@ -273,9 +274,8 @@ function dealText(D, who){ const part = (side, ownerName) => [...DEAL_K.map(k =>
   return `you give ${part(D.give)}; ${who} ${who === "they" || who === "you" ? "give" : "gives"} ${part(D.get)}`; }
 // AI nation n proposes a trade to seat `me`
 function aiProposeTrade(n, me){ const DK = desk(me); if ((DK.offers || (DK.offers = [])).some(o => o.from === n)) return; const N = S.nations[n], M = mkt(), D = {give:emptySide(), get:emptySide()};
-  const myBorder = G.P.filter(P => !P.sea && S.owner[P.id] === n && !isCapital(P.id) && !P.city && P.nbs.some(q => S.owner[q] === me));
-  if (myBorder.length && N.cash < 120 && S.nations[me].cash > 300 && rng() < 0.4){ const p = myBorder[0].id; D.get.provs = [p]; D.give.cash = Math.round(provValue(p)*1.8/10)*10; }
-  else { const k = MKT_K[Math.floor(rng()*MKT_K.length)], q = M.p[k] > 4 ? 20 : 40; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(q*M.p[k]*0.95); }
+  // (computer-run nations never sell land: they only buy it, rules/territory.js terrDay)
+  { const k = MKT_K[Math.floor(rng()*MKT_K.length)], q = M.p[k] > 4 ? 20 : 40; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(q*M.p[k]*0.95); }
   if (dealOK(me, n, D)) return; DK.offers.push({id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}); say(me, n, n, `Proposal: ${dealText(D, 'we').replace('you give', 'you give us')}.`); }
 const sameBloc = (me, n) => { blocs(); const a = blocIdOf(me); return !!a && n !== me && a === blocIdOf(n); };   // fresh: alliances can break mid-day
 const GIFT_K = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'];
