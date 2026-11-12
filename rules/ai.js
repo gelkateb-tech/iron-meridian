@@ -1,30 +1,48 @@
 // Iron Meridian rules: ai. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
-// AI: escort its own threatened routes, raid its enemies' trade with submarines and warships
+// AI: escort its own threatened routes, raid its enemies' trade with submarines and warships, blockade their lanes at a chokepoint or off
+// their ports, and pause its own routes whose convoys would be lost
 function aiTrade(n){ const T = S.trade; if (!T || !S.nations[n].alive) return; const mine = T.routes.filter(r => trMine(r, n) && r.kind === 'sea');
-  const fleets = S.armies.filter(a => a.owner === n && shipsOnly(a) && a.to === null && !a.path.length && count(a) && !S.battles.includes(a.at));
-  for (const a of fleets){ if (healthFrac(a) < 0.5 && (a.escort != null || a.raid)){ delete a.escort; delete a.raid; const y = G.P.find(P => S.owner[P.id] === n && S.bld[P.id].yard); if (y) a.path = pathFor(a, a.at, y.id); } }
+  const fleets = S.armies.filter(a => a.owner === n && shipsOnly(a) && a.to === null && !a.path.length && !a.sail && count(a) && !S.battles.includes(a.at));
+  for (const a of fleets){ if (healthFrac(a) < 0.5 && (a.escort != null || a.raid || a.blk)){ delete a.escort; delete a.raid; delete a.blk; const y = G.P.find(P => S.owner[P.id] === n && S.bld[P.id].yard); if (y) a.path = pathFor(a, a.at, y.id); } }
   // 1. escort the most valuable routes raided in the last three days or blockaded now
   const threat = mine.filter(r => S.hour - r.raid < 72 || r.f < 1).sort((x, y) => (trSide(y, n) || {cash:0}).cash - (trSide(x, n) || {cash:0}).cash);
   for (const r of threat.slice(0, 2)){ if (S.armies.some(a => a.owner === n && a.escort === r.id)) continue; let pick = null, bd = 1e9;
-    for (const a of fleets){ if (a.escort != null || a.path.length || healthFrac(a) < 0.5 || !(a.u.frig || a.u.crui)) continue; const d = hexDist(G.P[a.at].cc, G.P[r.path[Math.floor(r.path.length/2)]].cc); if (d < bd && d < 40){ bd = d; pick = a; } }
+    for (const a of fleets){ if (a.escort != null || a.blk || a.path.length || healthFrac(a) < 0.5 || !(a.u.frig || a.u.crui)) continue; const d = hexDist(G.P[a.at].cc, G.P[r.path[Math.floor(r.path.length/2)]].cc); if (d < bd && d < 40){ bd = d; pick = a; } }
     if (pick){ pick.escort = r.id; delete pick.raid; } }
-  // 2. raid: at war, idle fleets with submarines or frigates hunt enemy convoys within reach (half of them at most while own trade is threatened)
+  // 2. pause an own route whose next convoy is likely lost (raid risk above 55%, no escort on it); resume it once the risk is below 30% or an
+  // escort guards it (checked every AI trade turn, so a paused route does not stay paused when the raiders leave)
+  for (const r of mine){ if (r.pause != null && r.pause !== n) continue; const risk = trRisk(r), esc = S.armies.some(a => a.escort === r.id && count(a));
+    if (r.pause == null && risk > 0.55 && !esc && r.f0 > 0) tradePause(n, r.id, true);
+    else if (r.pause === n && (risk < 0.3 || esc)) tradePause(n, r.id, false); }
+  // 3. raid: at war, idle fleets with submarines or frigates hunt enemy convoys within reach (half of them at most while own trade is threatened)
   // a raid ends when the route is gone or at peace, or after six quiet days on station (then the fleet looks for a better hunting ground)
   for (const a of fleets) if (a.raid && (!routeById(a.raid.r) || !trHostile(routeById(a.raid.r), n) || (a.raid.t != null && S.hour - a.raid.t > 24*6 && S.hour - routeById(a.raid.r).raid > 24*3))) delete a.raid;
-  if (!warsOf(n).length) return;
+  if (!warsOf(n).length){ for (const a of fleets) if (a.blk && a.blk.ai) delete a.blk; return; }
   const foe = T.routes.filter(r => r.kind === 'sea' && !trMine(r, n) && trHostile(r, n)); if (!foe.length) return;
   const zv = new Map(); for (const r of foe){ const v = ((r.va ? r.va.cash : 0) + (r.vb ? r.vb.cash : 0)); for (const z of r.path) zv.set(z, (zv.get(z) || 0) + v); }
+  const guardAt = (x, y, km) => { let g = 0; for (const l of SEAA.values()) for (const b of l) if (b.owner >= 0 && atWar(n, b.owner)){ const [bx, by] = armyXY(b); if (Math.hypot(bx - x, by - y)/KM_W <= km) g += navPw(b); } return g; };
+  // 4. blockade: one fleet of frigates or cruisers (two for a navy of four fleets or more) closes the chokepoint, or the port approach, that
+  // carries the most enemy trade within reach; it lifts the blockade when it has stopped nothing for four days or the war is over
+  { for (const a of fleets) if (a.blk && a.blk.ai && S.hour - a.blk.t > 96 && !T.routes.some(r => r.bk === a.id)) delete a.blk;
+    const want = fleets.length >= 4 ? 2 : fleets.length >= 2 ? 1 : 0; let have = S.armies.filter(a => a.owner === n && a.blk).length;
+    if (have < want){ const sites = [];
+      for (const q of chokes()){ let v = 0; for (const r of foe){ const D = trDetour(r); if (D && trNear(D.B, q.x, q.y).d <= 150) v += (r.va ? r.va.cash : 0) + (r.vb ? r.vb.cash : 0); } if (v > 0) sites.push({x:q.x, y:q.y, z:G.prov[q.c], v:v*1.5}); }
+      for (const r of foe){ const D = trDetour(r); if (!D || D.cut) continue; const B = D.B, ends = [[r.a, B.cells[0]], [r.b, B.cells[B.cells.length - 1]]];
+        for (const [o, c] of ends){ if (o < 0 || !atWar(n, o)) continue; const C = trCells(); sites.push({x:C.cx[c], y:C.cy[c], z:G.prov[c], v:(r.va ? r.va.cash : 0) + (r.vb ? r.vb.cash : 0)}); } }
+      for (const s of sites.sort((p, q) => q.v - p.v)){ if (have >= want) break; if (S.armies.some(b => b.owner === n && b.blk && b.dest && Math.hypot(b.dest.x - s.x, b.dest.y - s.y) < 1)) continue;
+        let pick = null, bd = 1e9; for (const a of fleets){ if (a.escort != null || a.raid || a.blk || a.path.length || healthFrac(a) < 0.6 || !(a.u.frig || a.u.crui)) continue; const d = hexDist(G.P[a.at].cc, G.P[s.z].cc); if (d < bd && d < 30){ bd = d; pick = a; } }
+        if (!pick || guardAt(s.x, s.y, 300) > navPw(pick)*1.2 || !fleetGo(pick, s.z, s.x, s.y)) continue; pick.blk = {t:S.hour, ai:1}; have++; } } }
   let raiding = fleets.filter(a => a.raid).length; const cap = Math.max(1, Math.ceil(fleets.length*(threat.length ? 0.5 : 0.7)));
-  for (const a of fleets){ if (raiding >= cap) break; if (a.escort != null || a.raid || a.path.length || healthFrac(a) < 0.6 || !(a.u.sub || a.u.frig || a.u.crui)) continue;
+  for (const a of fleets){ if (raiding >= cap) break; if (a.escort != null || a.raid || a.blk || a.path.length || healthFrac(a) < 0.6 || !(a.u.sub || a.u.frig || a.u.crui)) continue;
     if (!G.P[a.at].sea && rng() < 0.4) continue;   // some fleets keep the old coastal patrol duty
     const pw = navPw(a), seen = new Map([[a.at, 0]]), q = [a.at]; let best = -1, bs = 0;
     for (let h = 0; h < q.length; h++){ const u = q[h], du = seen.get(u); if (du >= 14) continue;
       for (const v of G.P[u].nbs){ if (seen.has(v) || !G.P[v].sea) continue; seen.set(v, du + 1); q.push(v); const val = zv.get(v); if (!val) continue;
         let guard = 0; for (const w of [v, ...G.P[v].nbs]) for (const x of SEAA.get(w) || []) if (x.owner >= 0 && atWar(n, x.owner)) guard += navPw(x);
         if (guard > pw*1.2) continue; const sc = val/(1 + du*0.25)*(a.u.sub ? 1.2 : 1); if (sc > bs){ bs = sc; best = v; } } }
-    if (best < 0) continue; const p = best === a.at ? [] : pathFor(a, a.at, best); if (best !== a.at && !p.length) continue;
-    a.path = p; a.raid = {r:foe.find(r => r.path.includes(best)).id, z:best, t:S.hour}; raiding++; } }
+    if (best < 0) continue; const fr = foe.find(r => r.path.includes(best)), sp = trSpot(fr, best) || {x:G.P[best].x, y:G.P[best].y};
+    if (!fleetGo(a, best, sp.x, sp.y)) continue; a.raid = {r:fr.id, z:best, t:S.hour}; raiding++; } }
 // AI patrol aircraft: an enemy route zone (convoys to hit) or an own raided route (subs to find) when no ships are in sight
 function aiTradeHunt(n, B, r){ if (!S.trade) return -1; let best = -1, bs = 0;
   for (const R of S.trade.routes){ if (R.kind !== 'sea') continue; const own = trMine(R, n), foe = !own && trHostile(R, n); if (!foe && !(own && S.hour - R.raid < 72)) continue;
@@ -552,7 +570,7 @@ function aiTurn(n){
   const ready = [];   // stacks free for an offensive of their own
   for (const a of idleAll()){
     if (planned.has(a) || enemiesAt(a.at, n) || a.air) continue;
-    if (shipsOnly(a)){ if (a.escort == null && !a.raid) aiFleet(a, n); continue; }
+    if (shipsOnly(a)){ if (a.escort == null && !a.raid && !a.blk && !a.sail) aiFleet(a, n); continue; }
     if (G.P[a.at].sea || (S.owner[a.at] !== n && !atWar(n, S.owner[a.at]))){
       // stranded at sea or in land it may not fight in: head to the nearest own province
       const seen = new Set([a.at]), q = [a.at]; let dest = -1;
@@ -633,7 +651,7 @@ function aiFireSpot(a, p, foes = null){ const R = rangedOf(a); if (!R.length) re
   for (const [b, bx, by, r] of C){ let best = null, bd = -1; for (const q of spots){ const d = kmBetween(q[0], q[1], bx, by); if (d <= r && d > bd){ bd = d; best = q; } } if (best) return {x:best[0], y:best[1], b}; }
   return null; }
 // stand force a on spot sp (a firing spot in its own province or sea zone), fire at will (what its side sees changes with it)
-function aiSetSpot(a, sp){ if (!a.pos || Math.abs(a.pos[0] - sp.x) > 1e-6 || Math.abs(a.pos[1] - sp.y) > 1e-6){ a.pos = [sp.x, sp.y]; visCache = null; } a.fire = 'free'; }
+function aiSetSpot(a, sp){ const at = a.sail ? a.sail.to : a.pos; if (!at || Math.abs(at[0] - sp.x) > 1e-6 || Math.abs(at[1] - sp.y) > 1e-6){ if (shipsOnly(a) && G.P[a.at].sea) orderSpot(a, sp.x, sp.y); else a.pos = [sp.x, sp.y]; visCache = null; } a.fire = 'free'; }   // (a fleet sails there: rules/movement.js orderSpot)
 // a stack sent to attack province t leaves its land guns behind on a firing spot in its own province when they can shell the defenders of t from
 // there: the stack that marches (null when it was all guns and stays, on the spot)
 function aiGunsStay(a, t){ if (a.air || a.to !== null || G.P[a.at].sea || S.owner[a.at] !== a.owner || shipsN(a)) return a;
@@ -647,7 +665,7 @@ function aiGunsStay(a, t){ if (a.air || a.to !== null || G.P[a.at].sea || S.owne
 // each AI turn: batteries and idle fleets take firing spots; batteries with nothing in reach move up to the front
 function aiGuns(n){ if (!warsOf(n).length) return;
   for (const a of S.armies.slice()){ if (a.owner !== n || a.air || a.fly || a.to !== null || a.path.length || !count(a) || S.battles.includes(a.at)) continue;
-    const fleet = shipsOnly(a); if (fleet ? a.escort != null || a.raid || !G.P[a.at].sea || healthFrac(a) < 0.5 : S.owner[a.at] !== n) continue;
+    const fleet = shipsOnly(a); if (fleet ? a.escort != null || a.raid || a.blk || a.sail || !G.P[a.at].sea || healthFrac(a) < 0.5 : S.owner[a.at] !== n) continue;
     if (!fleet && !gunsOnly(a)){   // a mixed stack on the front: its guns become a battery on a firing spot when an enemy force they can see is in reach
       const g = {}; let gn = 0; for (const k of UT) if (a.u[k] && RANGE_HIT[k] === 'land'){ g[k] = a.u[k]; gn += a.u[k]; }
       if (!gn || groundN(a) - gn < CAP_MIN || !G.P[a.at].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && atWar(n, S.owner[w]))) continue;
