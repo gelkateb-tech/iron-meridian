@@ -226,7 +226,7 @@ function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = ne
   const stage = plan.stage.filter(v => S.owner[v] === n); if (!stage.length){ delete S.plans[n]; return used; }
   const atStage = S.armies.filter(a => a.owner === n && !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a) && (a.at !== N.capital || idle.includes(a)));   // (not the capital's garrison)
   const massed = atStage.reduce((s0, a) => s0 + power(a)*terrFit(a, plan.tgt, true)*(riverX(a.at, plan.tgt) ? RIVER_ATK : 1), 0), need = defPower(plan.tgt, n)*1.5 + 10;
-  if (massed >= need){ for (const a of atStage){ orderMove(a, plan.tgt); used.add(a); } plan.launched = S.hour;
+  if (massed >= need){ for (const a of atStage){ const m = aiGunsStay(a, plan.tgt); if (m) orderMove(m, plan.tgt); used.add(a); } plan.launched = S.hour;   // (guns that can shell the target stay behind)
     { const eta = atStage.filter(a => a.path.length).map(a => [a, etaHours(a)]), slow = Math.max(0, ...eta.map(e => e[1])); for (const [a, h] of eta) if (slow - h >= 3) a.delay = Math.min(36, Math.round(slow - h)); }   // all arrive together
     if (isSeat(S.owner[plan.tgt])) tell(S.owner[plan.tgt], `${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${(n0 => n0 + (n0 === 1 ? ' direction' : ' directions'))(new Set(atStage.map(a => a.at)).size)}!`, 'bad', plan.tgt);
     return used; }
@@ -531,7 +531,7 @@ function aiTurn(n){
   const idleBy = new Map();
   for (const a of S.armies){ if (a.owner !== n || a.to !== null || a.path.length || a.air || S.owner[a.at] !== n || !count(a)) continue;
     let list = idleBy.get(a.at); if (!list) idleBy.set(a.at, list = []);
-    const into = list.find(b => count(b) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }
+    const into = list.find(b => count(b) && gunsOnly(b) === gunsOnly(a) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }   // (batteries stay batteries)
   removeEmpty();
   for (const list of idleBy.values()){ for (const a of list.slice()) list.push(...aiSplitToLimit(a)); }
   const idleAll = () => [...idleBy.values()].flat().filter(a => count(a) && !a.path.length && a.to === null);
@@ -548,7 +548,7 @@ function aiTurn(n){
     if (city < 0) continue; const pth = pathFor(a, a.at, city); if (!pth.length || pth.length > 5) continue;
     const [b] = splitPlan(a, [Object.fromEntries(dr.map(r => [r.k, r.n]))]); if (b){ b.path = pth; b.forced = true; } }
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
-  const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
+  const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !gunsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   const ready = [];   // stacks free for an offensive of their own
   for (const a of idleAll()){
     if (planned.has(a) || enemiesAt(a.at, n) || a.air) continue;
@@ -563,6 +563,7 @@ function aiTurn(n){
     if (S.owner[a.at] !== n) continue;
     if (a.at === N.capital && threatNear(a.at, n)) continue;
     if ((a.m ?? 80) < 50 || (a.resting && a.m < 70)){ a.resting = true; continue; } a.resting = false;
+    if (gunsOnly(a)) continue;   // batteries fire from range (aiGuns), they do not march into battles
     ready.push(a); }
   // offensives: the ready stacks of one province pick a target together (their summed strength), and stacks standing next to that target in other own
   // provinces join from their own side. Each stack stays within the stack limit; they go in from several directions (the target's own neighbours),
@@ -597,7 +598,7 @@ function aiTurn(n){
       const nat = (pth, a) => pth.length > 1 ? pth[pth.length - 2] : a.at;
       const sides = [nat(direct.get(go[0]), go[0])]; for (const w of G.P[best].nbs){ if (sides.includes(w) || G.P[w].sea) continue; if (S.owner[w] === n || (S.owner[w] >= 0 && atWar(n, S.owner[w]) && defPower(w, n) < sent*0.15)) sides.push(w); }
       const legs = []; let k = 0;
-      for (const a of go){ used.add(a); let pth = direct.get(a); if (!pth.length) continue;
+      for (const a of go){ used.add(a); let pth = direct.get(a); if (!pth.length || !aiGunsStay(a, best)) continue;   // (guns that can shell the target stay behind)
         const own = a.at !== p0 && G.P[best].nbs.includes(a.at);   // a helper next to the target attacks from where it stands
         if (!own && go.length > 1){ const w = sides[k++ % Math.min(3, sides.length)]; if (w !== nat(pth, a)){ const alt = w === a.at ? [] : pathFor(a, a.at, w); if ((alt.length || w === a.at) && alt.length + 1 <= pth.length + 3) pth = alt.concat([best]); } }
         a.path = pth; legs.push([a, etaHours(a, pth)]); }
@@ -612,7 +613,57 @@ function aiTurn(n){
     for (let h = 0; h < q.length; h++){ const u = q[h], du = seen.get(u); if (du >= 2) continue; for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); q.push(v); if (!S.battles.includes(v)) cand.push(v); } }
     for (const a of rest.slice(2)){ let bv = -1e9, dst = -1; for (const v of cand){ const c = stacksAt.get(v) || 0; if (c >= 2) continue; const sc = (front(v) ? 2 : 0) + (G.P[v].city ? 0.5 : 0) - seen.get(v)*0.4 - c; if (sc > bv){ bv = sc; dst = v; } }
       if (dst < 0) break; const pth = pathFor(a, a.at, dst); if (!pth.length) continue; a.path = pth; stacksAt.set(dst, (stacksAt.get(dst) || 0) + 1); stacksAt.set(p0, (stacksAt.get(p0) || 1) - 1); } }
+  aiGuns(n);   // batteries and fleets: firing spots
 }
+/* Ranged units (rules/combat.js rangedStep: guns and warships fire at what they can see within their range). The AI fires from range and keeps its guns
+   out of the battles: a battery (a force of land guns only) or an idle fleet takes a firing spot in its own province (or sea zone) from which the
+   strongest enemy force it can see is within 90% of its range, as far back from that force as the range allows; a stack sent to attack leaves its
+   guns behind on such a spot when they can shell the target's defenders from there, and an idle stack on the front turns its guns into such a
+   battery when an enemy force they can see is in reach; a battery with nothing in reach moves up to an own front province (one held by its own
+   troops first). Batteries are not merged into other stacks, sent on offensives or used as front reinforcements. */
+const gunsOnly = a => !a.air && !a.fly && count(a) > 0 && UT.every(t => !a.u[t] || RANGE_HIT[t] === 'land');
+// the spot in province p (its point or a cell centre) from which force a can fire at the strongest of the enemy forces `foes` (default: those it can
+// see) within 90% of its range, the farthest from that force: {x, y, b}; null when none is in reach from anywhere in p
+function aiFireSpot(a, p, foes = null){ const R = rangedOf(a); if (!R.length) return null; const P = G.P[p], spots = [[P.x, P.y], ...P.cells.map(cellCenter)];
+  let rad = 0; for (const q of spots) rad = Math.max(rad, kmBetween(q[0], q[1], P.x, P.y));
+  const mx = R.reduce((m, e) => Math.max(m, e[2]), 0)*0.9, vis = foes ? null : visibleSet(a.owner), C = [];
+  for (const b of foes || S.armies){ if (!rangedFoe(a.owner, b)) continue; const [bx, by] = armyXY(b); if (kmBetween(P.x, P.y, bx, by) > mx + rad) continue;
+    const r = R.reduce((m, e) => rangedHits(e[0], b) ? Math.max(m, e[2]*0.9) : m, 0); if (!r || (vis && !armyVisible(b, vis))) continue; C.push([b, bx, by, r]); }
+  C.sort((x, y) => power(y[0]) - power(x[0]) || x[0].id - y[0].id);
+  for (const [b, bx, by, r] of C){ let best = null, bd = -1; for (const q of spots){ const d = kmBetween(q[0], q[1], bx, by); if (d <= r && d > bd){ bd = d; best = q; } } if (best) return {x:best[0], y:best[1], b}; }
+  return null; }
+// stand force a on spot sp (a firing spot in its own province or sea zone), fire at will (what its side sees changes with it)
+function aiSetSpot(a, sp){ if (!a.pos || Math.abs(a.pos[0] - sp.x) > 1e-6 || Math.abs(a.pos[1] - sp.y) > 1e-6){ a.pos = [sp.x, sp.y]; visCache = null; } a.fire = 'free'; }
+// a stack sent to attack province t leaves its land guns behind on a firing spot in its own province when they can shell the defenders of t from
+// there: the stack that marches (null when it was all guns and stays, on the spot)
+function aiGunsStay(a, t){ if (a.air || a.to !== null || G.P[a.at].sea || S.owner[a.at] !== a.owner || shipsN(a)) return a;
+  const g = {}; let gn = 0; for (const k of UT) if (a.u[k] && RANGE_HIT[k] === 'land'){ g[k] = a.u[k]; gn += a.u[k]; } if (!gn) return a;
+  const foes = S.armies.filter(b => b.at === t && b.to === null && rangedFoe(a.owner, b)); if (!foes.length) return a;   // nobody to shell: the guns go along
+  const sp = aiFireSpot({owner:a.owner, at:a.at, u:g, air:null, fly:null}, a.at, foes); if (!sp) return a;
+  if (gn >= count(a)){ aiSetSpot(a, sp); return null; }
+  if (groundN(a) - gn < CAP_MIN) return a;   // (the rest must still be able to take the province)
+  const plan = {}; for (const k in g) Object.assign(plan, aiTakePlan(a, k, g[k])); const [bat] = splitPlan(a, [plan]); if (bat) aiSetSpot(bat, sp);
+  return a; }
+// each AI turn: batteries and idle fleets take firing spots; batteries with nothing in reach move up to the front
+function aiGuns(n){ if (!warsOf(n).length) return;
+  for (const a of S.armies.slice()){ if (a.owner !== n || a.air || a.fly || a.to !== null || a.path.length || !count(a) || S.battles.includes(a.at)) continue;
+    const fleet = shipsOnly(a); if (fleet ? a.escort != null || a.raid || !G.P[a.at].sea || healthFrac(a) < 0.5 : S.owner[a.at] !== n) continue;
+    if (!fleet && !gunsOnly(a)){   // a mixed stack on the front: its guns become a battery on a firing spot when an enemy force they can see is in reach
+      const g = {}; let gn = 0; for (const k of UT) if (a.u[k] && RANGE_HIT[k] === 'land'){ g[k] = a.u[k]; gn += a.u[k]; }
+      if (!gn || groundN(a) - gn < CAP_MIN || !G.P[a.at].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && atWar(n, S.owner[w]))) continue;
+      const sp = aiFireSpot({owner:n, at:a.at, u:g, air:null, fly:null}, a.at); if (!sp) continue;
+      const plan = {}; for (const k in g) Object.assign(plan, aiTakePlan(a, k, g[k])); const [bat] = splitPlan(a, [plan]); if (bat) aiSetSpot(bat, sp); continue; }
+    if (!rangeOf(a)) continue;
+    const sp = aiFireSpot(a, a.at); if (sp){ aiSetSpot(a, sp); continue; }
+    if (fleet) continue;   // (aiFleet takes fleets to an enemy coast)
+    const front = v => G.P[v].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && atWar(n, S.owner[w]));
+    if (front(a.at)) continue;   // already at the front: it waits there for a target
+    const seen = new Map([[a.at, 0]]), q = [a.at]; let dst = -1, guarded = false;
+    for (let h = 0; h < q.length && !guarded; h++){ const u = q[h], du = seen.get(u); if (du >= 4) continue;
+      for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); q.push(v);
+        if (!front(v) || S.battles.includes(v)) continue; const g0 = S.armies.some(b => b.owner === n && b.at === v && b.to === null && !b.air && !gunsOnly(b) && groundN(b) >= 3);
+        if (dst < 0 || (g0 && !guarded)){ dst = v; guarded = g0; if (g0) break; } } }
+    if (dst >= 0){ const pth = pathFor(a, a.at, dst); if (pth.length && pth.length <= 5) a.path = pth; } } }
 // the healthiest k units of type t of force a, as a split plan (row keys, see splitRows)
 function aiTakePlan(a, t, k){ const g = {}; for (const r of splitRows(a).filter(r0 => r0.t === t).sort((x, y) => y.hf - x.hf)){ if (k <= 0) break; const v = Math.min(r.n, k); g[r.k] = v; k -= v; } return g; }
 // a force over its stack limit split into limit-sized forces (the new ones are returned; the force itself keeps one share)

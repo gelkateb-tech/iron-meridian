@@ -71,7 +71,7 @@ const MSL_VS = {soft:1.2, armored:1, air:0.4, naval:0.9};
      drones -> class air (a Strike Drone)       ships -> class naval (a Frigate)      submarines -> class naval (a Submarine; patrol planes hit them hardest)
      missiles: attack = the chance this force's SAMs and frigates shoot down a cruise missile; defence = the damage a missile does to its units (MSL_VS)
      buildings: attack = bomb load (a Heavy Bomber = 1; no other unit wrecks buildings by combat); defence = none (a dash)
-     population: attack = war damage a strike adds (bombers 3 per bomber, artillery shelling 1.2); defence = none (a dash) */
+     population: attack = war damage a strike adds (bombers 3 per bomber, artillery shelling 1.2 a game hour); defence = none (a dash) */
 const STR_ROWS = [{k:'inf', name:'Infantry', t:'inf'}, {k:'armor', name:'Armour', t:'tank'}, {k:'jet', name:'Jets', t:'jet'}, {k:'heli', name:'Helicopters', t:'heli'}, {k:'drone', name:'Drones', t:'sdrone'},
   {k:'msl', name:'Missiles', t:null}, {k:'ship', name:'Ships', t:'frig'}, {k:'sub', name:'Submarines', t:'sub'}, {k:'bld', name:'Buildings', t:null}, {k:'pop', name:'Population', t:null}];
 // the part of a stat st() takes off for a shortage of fuel, iron or electronics (mirrors st() in rules/state.js)
@@ -170,25 +170,94 @@ function battleReport(p, B, os, me){ const D = desk(me);
   const e = tell(me, `Battle of ${nm} ${res === 'win' ? 'won' : res === 'loss' ? 'lost' : 'ended'} after ${hrs} h: you lost ${mine} unit${mine === 1 ? '' : 's'}, they lost ${theirs}. Click for the report.`, res === 'win' ? 'good' : res === 'loss' ? 'bad' : 'info', p);
   e.rep = S.hour*10000 + p;  R.id = e.rep;
 }
-function rangedHour(){ let by = null;   // stationary forces per province, built once per hour on first use (stationaryAt scans every army)
-  for (const a of S.armies){ if (a.owner < 0 || !(a.u.art || a.u.mlrs) || a.air || a.fly || a.to !== null || G.P[a.at].sea || S.battles.includes(a.at) || a.fire === 'hold') continue;
-    if (!by) by = index(); const stAt = v => by[v];
-    const near = new Set(G.P[a.at].nbs.filter(v => !G.P[v].sea)), far = new Set(); if (a.u.mlrs){ for (const v of near) for (const w of G.P[v].nbs) if (!G.P[w].sea && w !== a.at && !near.has(w)) far.add(w);
-      if (rMlrsReach(a.owner) > 2) for (const v of [...far]) for (const w of G.P[v].nbs) if (!G.P[w].sea && w !== a.at && !near.has(w)) far.add(w); }   // Extended-Range Rockets: one province farther
-    let best = -1, bp = 0; for (const v of [...near, ...far]){ const foes = stAt(v).filter(b => b.owner >= 0 && atWar(a.owner, b.owner) && count(b) > 0); const pw = foes.reduce((s0, b) => s0 + power(b), 0)*(near.has(v) ? 1.1 : 1); if (pw > bp){ bp = pw; best = v; } }
-    if (best < 0) continue;
-    const foes = stAt(best).filter(b => b.owner >= 0 && atWar(a.owner, b.owner) && count(b) > 0), tot = foes.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
-    const av = {soft:0, armored:0, air:0, naval:0}, shooters = (near.has(best) ? [['art', a.u.art], ['mlrs', a.u.mlrs]] : [['mlrs', a.u.mlrs]]).filter(e => e[1]);
-    const cov = Math.min(1, terr(best).art), se = stackEffs(a).land; let base = 0; for (const [t, n] of shooters){ const b0 = n*st(a.owner, t, 'atk')*K*0.28*moraleF(a)*(1 + 0.2*cmdF(a, 'gunner'))*(0.8 + rng()*0.4)*cov*se; base += b0; for (const k of CLASSES) av[k] += b0*multO(a.owner, t, k); }
+/* ---------------- Ranged fire: the attack range (Conflict of Nations) ----------------
+   Mobile Artillery, Rocket Artillery and the warships (RANGE_KM, RANGE_HIT in rules/data.js; the table: docs/COMBAT.md) fire from where they stand
+   (armyXY: their exact spot, not the province centre) at enemy forces whose own spot lies within their range AND that their side can see
+   (rules/vision.js armyVisible: no firing blind), without moving into the province. Land guns fire from land at forces on land; frigates and
+   cruisers at ships and at forces on the coast (shore bombardment); submarines torpedo ships only. A shooter fires while it stands (not marching,
+   not fighting a battle in its own province, fire not on 'hold'); its targets may stand, fight or march.
+   It runs in every 15-minute battle step (rules/tick.js), each step a quarter (1/BATTLE_Q) of the hourly damage; BATTLE_PACE does not apply.
+   Damage per hour of a unit type: n × attack × K × RANGED_F (the old artillery shelling factor), × morale and supply, × the Artillerist commander
+   (guns), × the force's stack efficiency, × a ±20% roll, × the target province's cover for shells (terrain .art, at most 1; none at sea), and the
+   holder's fortifications; Long-Range Bombardment (crui_rng) +30% for cruisers against the coast. Each unit type's damage is shared by the forces
+   of the fired-at group that it reaches, by their health, as in a battle.
+   Target: the player's Bombard order (a.tgt: {id} one force, {p} the forces in one province; orderBombard) while it is in range and seen; else
+   the province holding the strongest visible enemy power in range (as the old rule chose a province). */
+// the ranged unit types of force a that can fire where it is: [[type, count, km]] (land guns only from land: embarked guns at sea do not fire)
+function rangedOf(a){ const r = []; if (!a || !a.u || a.air || a.fly) return r; const sea = G.P[a.at].sea;
+  for (const t of RANGED_T){ const n = a.u[t]; if (!n || (RANGE_HIT[t] === 'land' && sea)) continue; r.push([t, n, rRangeKm(a.owner, t)]); } return r; }
+// a force's longest attack range in km (0: no ranged unit that can fire where it is)
+const rangeOf = a => rangedOf(a).reduce((m, e) => Math.max(m, e[2]), 0);
+// km between two points of the map, across its east-west seam
+function kmBetween(x1, y1, x2, y2){ let dx = Math.abs(x1 - x2); dx = Math.min(dx, WORLD_W - dx); return Math.hypot(dx, y1 - y2)/KM_W; }
+// can a unit of type t hit force b: land guns hit forces on land, torpedoes only warships at sea, naval guns both
+function rangedHits(t, b){ const sea = G.P[b.at].sea, h = RANGE_HIT[t]; return h === 'land' ? !sea : h === 'ships' ? sea && shipsN(b) > 0 : true; }
+// is force b an enemy of nation o that ranged fire can aim at (a force on the ground or at sea, not an air wing)
+const rangedFoe = (o, b) => b.owner >= 0 && b.owner !== o && !b.air && !b.fly && count(b) > 0 && atWar(o, b.owner);
+// the enemy forces force a can fire at from (x, y) (default: where it stands), out of `list` (default: every force): visible ones only,
+// [{b, km, x, y, ts: the unit types of a that reach and can hit it}]
+function rangedTargets(a, x, y, list){ const R = rangedOf(a); if (!R.length) return []; if (x == null) [x, y] = armyXY(a);
+  const mx = R.reduce((m, e) => Math.max(m, e[2]), 0), out = []; let vis = null;
+  for (const b of list || S.armies){ if (!rangedFoe(a.owner, b)) continue; const [bx, by] = armyXY(b), km = kmBetween(x, y, bx, by); if (km > mx) continue;
+    const ts = []; for (const e of R) if (e[2] >= km && rangedHits(e[0], b)) ts.push(e[0]); if (!ts.length) continue;
+    if (!armyVisible(b, vis || (vis = visibleSet(a.owner)))) continue; out.push({b, km, x:bx, y:by, ts}); }
+  return out; }
+// the forces ranged fire may aim at, in a grid of RG_C world units by where they stand (built once per step, only when something can fire)
+const RG_C = 24;
+function rangedGrid(){ const g = new Map(), NC = Math.ceil(WORLD_W/RG_C);
+  for (const b of S.armies){ if (b.owner < 0 || b.air || b.fly || !count(b)) continue; const [x, y] = armyXY(b), k = (((Math.floor(x/RG_C) % NC) + NC) % NC)*65536 + Math.floor(y/RG_C) + 1024; let l = g.get(k); if (!l) g.set(k, l = []); l.push(b); }
+  return g; }
+function rangedNear(g, x, y, km){ const NC = Math.ceil(WORLD_W/RG_C), r = Math.ceil(km*KM_W/RG_C), cx = Math.floor(x/RG_C), cy = Math.floor(y/RG_C), out = [];
+  for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++){ const l = g.get((((cx + i) % NC) + NC) % NC*65536 + cy + j + 1024); if (l) for (const b of l) out.push(b); }
+  return out; }
+// what the client shows of ranged fire: the damage dealt to each force, summed over the hour's steps and shown on the hour (display only, never saved)
+const RANGED_SHOWN = new Map();
+// one battle step of ranged fire (hourly: the hour's own step, which also shows the hour's damage numbers)
+function rangedStep(hourly){ let grid = null, gone = false;
+  for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || !count(a)) continue;
+    let gun = false; for (const t of RANGED_T) if (a.u[t]){ gun = true; break; } if (!gun) continue;
+    if (a.tgt && a.tgt.id != null){ const tb = armyById(a.tgt.id); if (!tb || !count(tb) || !atWar(a.owner, tb.owner)) delete a.tgt; }   // the ordered target is gone
+    if (a.tgt && a.path.length) delete a.tgt;   // (a route given since ends the order)
+    if (a.fire === 'hold' || S.battles.includes(a.at)) continue;
+    const km = rangeOf(a); if (!km) continue;
+    if (!grid) grid = rangedGrid();
+    const [x, y] = armyXY(a), T = rangedTargets(a, x, y, rangedNear(grid, x, y, km)); if (!T.length) continue;
+    // the group fired at: the ordered target while it is in range and seen, else the province with the strongest visible enemy power in range
+    let G0 = a.tgt ? T.filter(e => a.tgt.id != null ? e.b.id === a.tgt.id : e.b.at === a.tgt.p) : [];
+    if (!G0.length){ const pw = new Map(); for (const e of T) pw.set(e.b.at, (pw.get(e.b.at) || 0) + power(e.b)); let bp = -1, bv = -1; for (const [p, v] of pw) if (v > bv){ bv = v; bp = p; } G0 = T.filter(e => e.b.at === bp); }
+    const best = G0[0].b.at, land = !G.P[best].sea, cov = land ? Math.min(1, terr(best).art) : 1, se = stackEffs(a), mf = moraleF(a), cG = 1 + 0.2*cmdF(a, 'gunner'), av = new Map();
+    let base = 0;
+    for (const [t, n] of rangedOf(a)){ const hit = G0.filter(e => e.ts.includes(t)); if (!hit.length) continue;
+      const tot = hit.reduce((s0, e) => s0 + armyHP(e.b), 0) || 1;
+      const b0 = n*st(a.owner, t, 'atk')*K*RANGED_F/BATTLE_Q*mf*(RANGE_HIT[t] === 'land' ? cG : 1)*(t === 'crui' && land && has(a.owner, 'crui_rng') ? 1.3 : 1)*(0.8 + rng()*0.4)*cov*se[DOM_T[t]];
+      base += b0;
+      for (const e of hit){ let d = av.get(e); if (!d) av.set(e, d = {soft:0, armored:0, air:0, naval:0}); for (const k of CLASSES) d[k] += b0*multO(a.owner, t, k)/tot; } }
     if (!base) continue;
-    for (const b of foes){ const h0 = effHP(b), u0 = count(b); hurt(b, av, (b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort) : 1)/tot); const lost = Math.max(0, h0 - effHP(b));
-      if (lost >= 0.5) IM.emit('fxRanged', a, b, best, lost);   // the client shows the damage number
-      if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); } }
-    cmdXP(a, base*0.4); warDamage(best, 1.2);
-    IM.emit('fxRanged', a, null, best, 0);   // the client draws the shells
-    if (!a.lastFireLog || S.hour - a.lastFireLog > 12){ a.lastFireLog = S.hour; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} is shelling enemy forces in ${G.P[best].cityName || G.P[best].name}.`, 'info', best); }
+    for (const [e, d] of av){ const b = e.b, h0 = effHP(b), u0 = count(b);
+      hurt(b, d, land && b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort || 0) : 1);
+      const lost = Math.max(0, h0 - effHP(b)), k = a.id + ':' + b.id, R = RANGED_SHOWN.get(k); if (R) R.lost += lost; else RANGED_SHOWN.set(k, {a, b, p:b.at, lost, x:e.x, y:e.y});
+      if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); if (!count(b)) gone = true; } }
+    cmdXP(a, base*0.4); if (land) warDamage(best, 1.2/BATTLE_Q);
+    const e0 = G0.reduce((m, e) => power(e.b) > power(m.b) ? e : m, G0[0]);
+    IM.emit('fxRanged', a, null, best, 0, [e0.x, e0.y]);   // the client draws the shells (or the naval salvo)
+    if (!a.lastFireLog || S.hour - a.lastFireLog > 12){ a.lastFireLog = S.hour; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} is ${shipsOnly(a) ? 'bombarding' : 'shelling'} enemy forces ${G.P[best].sea ? 'at sea in' : 'in'} ${G.P[best].cityName || G.P[best].name}.`, 'info', best); }
   }
-  removeEmpty(); }
+  if (hourly){ for (const R of RANGED_SHOWN.values()) if (R.lost >= 0.5) IM.emit('fxRanged', R.a, R.b, R.p, R.lost, [R.x, R.y]); RANGED_SHOWN.clear(); }   // the client shows the damage numbers
+  if (gone) removeEmpty(); }
+// the Bombard order, for the order preview: can force a fire at force b (or, with b null, at the enemy forces in province p) from where it stands?
+// {ok, km (to the target or the nearest enemy force seen there; the province point when none is seen), range (its longest, km), n (forces in range),
+//  seen (an enemy force is seen there), ranged (it has a unit with a range that can fire where it is), moving}
+function bombardInfo(a, p, b = null){ const R = rangedOf(a), range = R.reduce((m, e) => Math.max(m, e[2]), 0), moving = a.to !== null;
+  if (b) p = b.at; const [x, y] = armyXY(a), vis = visibleSet(a.owner);
+  const foes = S.armies.filter(f => (b ? f === b : f.at === p) && rangedFoe(a.owner, f) && armyVisible(f, vis));
+  const hit = range && !moving ? rangedTargets(a, x, y, foes) : [];
+  let km = Infinity; for (const f of foes){ const [fx, fy] = armyXY(f); km = Math.min(km, kmBetween(x, y, fx, fy)); }
+  if (km === Infinity) km = kmBetween(x, y, G.P[p].x, G.P[p].y);
+  return {ok:hit.length > 0, km, range, n:hit.length, seen:foes.length > 0, ranged:R.length > 0, moving}; }
+// order force a to stay where it is and fire at force b (or at the enemy forces in province p) while they are in range and seen. False, with
+// nothing changed, when nothing there is in range now. A move order or Halt ends it; meanwhile, with the target out of range, it fires at will.
+function orderBombard(a, p, b = null){ if (!bombardInfo(a, p, b).ok) return false;
+  a.path = []; a.chase = null; a.dest = null; delete a.join; a.tgt = b ? {id:b.id} : {p}; if (a.fire === 'hold') a.fire = 'free'; return true; }
 // a force sent to join another (dragged onto its counter) merges into it on arrival; it follows if the other force moved on
 function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a)) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }

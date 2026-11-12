@@ -226,7 +226,7 @@ const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a
   const p2 = findPath(from, to, v => v === to || G.P[v].sea || S.owner[v] !== NEUTRAL ? ok(v) : false, mt, a.owner); return p2.length ? p2 : p; };
 // provinces on the way (not the destination) where the force will have to fight: independent land, and land of powers you are at war with
 const fightsOnWay = (a, path) => path.slice(0, -1).filter(v => !G.P[v].sea && S.owner[v] !== a.owner && (S.owner[v] < 0 || atWar(a.owner, S.owner[v]))).length;
-function orderMove(a, target){
+function orderMove(a, target){ delete a.tgt;   // (a move ends a Bombard order, rules/combat.js orderBombard)
   if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target); }
   else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
   IM.emit('ordered', a);   // (display only: the client marks where the counter starts from)
@@ -242,7 +242,7 @@ function haltArmy(a){
     const near = t >= 0.5 && !!B.sea === !!A.sea ? a.to : a.at;
     if (near !== a.at){ a.from = a.at; a.froms = [a.at]; a.at = near; }
     a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && (A.sea !== B.sea) ? null : spot; }   // (a fleet halting on a leg between a port and the sea has no exact spot: it holds its zone or its dock)
-  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort;
+  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt;
   IM.emit('halted', a);   // (display only)
   return true;
 }

@@ -278,7 +278,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 7 | Firepower 1/3 (`mlrs_fp`) | Levels | attack +12% in all. Needs Rocket Artillery | $83M, 17 mat, 10 iron, 2 elec, 3 rare | 2 |
 | 8 | Protection 1/3 (`mlrs_pr`) | Levels | defense +12% in all. Needs Rocket Artillery | $83M, 17 mat, 10 iron, 2 elec, 3 rare | 2 |
 | 9 | Rapid Reload (`mlrs_reload`) | Upgrade | attack +2. Needs Rocket Artillery | $56M, 20 mat, 15 rare | 3 |
-| 12 | Extended-Range Rockets (`mlrs_rng`) | Upgrade | shells enemies up to 3 provinces away (was 2). Needs Rocket Artillery | $56M, 20 mat, 15 rare | 3 |
+| 12 | Extended-Range Rockets (`mlrs_rng`) | Upgrade | range 150 to 200 km (attack range, docs/COMBAT.md). Needs Rocket Artillery | $56M, 20 mat, 15 rare | 3 |
 | 14 | Firepower 2/3 (`mlrs_fp`) | Levels | attack +25% in all | $125M, 26 mat, 15 iron, 4 elec, 5 rare | 2 |
 | 15 | Protection 2/3 (`mlrs_pr`) | Levels | defense +25% in all | $125M, 26 mat, 15 iron, 4 elec, 5 rare | 2 |
 | 16 | Guided Rocket System (`mlrs_g2`), picture `u-mlrs-2` | Generation | attack +2, health +2, damage to armor 0.9x to 1.2x. Needs Rocket Artillery | $174M, 50 mat, 20 iron, 6 elec, 43 rare | 6 |
@@ -656,7 +656,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 4 | Protection 1/3 (`crui_pr`) | Levels | defense +12% in all | $106M, 22 mat, 20 iron, 5 elec, 3 rare | 2 |
 | 10 | Firepower 2/3 (`crui_fp`) | Levels | attack +25% in all | $158M, 33 mat, 30 iron, 7 elec, 5 rare | 2 |
 | 11 | Protection 2/3 (`crui_pr`) | Levels | defense +25% in all | $158M, 33 mat, 30 iron, 7 elec, 5 rare | 2 |
-| 11 | Long-Range Bombardment (`crui_rng`) | Upgrade | coastal bombardment 30% stronger | $65M, 20 mat, 15 rare | 3 |
+| 11 | Long-Range Bombardment (`crui_rng`) | Upgrade | coastal bombardment 30% stronger (a cruiser's ranged fire at forces on land) | $65M, 20 mat, 15 rare | 3 |
 | 15 | Missile Cruiser (`crui_g2`), picture `u-crui-2` | Generation | attack +2, health +4 | $205M, 50 mat, 40 iron, 12 elec, 47 rare | 6 |
 | 18 | Firepower 3/3 (`crui_fp`) | Levels | attack +40% in all. Needs generation 2 | $211M, 44 mat, 40 iron, 10 elec, 8 rare | 3 |
 | 19 | Protection 3/3 (`crui_pr`) | Levels | defense +40% in all. Needs generation 2 | $211M, 44 mat, 40 iron, 10 elec, 8 rare | 3 |
@@ -1125,7 +1125,7 @@ What the build does differently from, or adds to, the plan above.
 - **`has(n, id)`** means "holds node `id` at any level". No call site uses an old id any more, so there is no translation table at run time; `R_LEGACY` is used only by the conversion and by a project that was still running in a slot.
 - **Rows.** The grid has a row for each day that holds a diamond (a levelled node sits on the day of its first level), not for every day a later level opens; the later levels' days are in the detail card.
 - **Lanes.** Inside a column the spine (unlock, generations) is the middle lane, Firepower hangs to its left, Protection to its right, upgrades alternate. A family tie is a dashed line over the top of the columns; the Stealth Bomber's requirement inside Strategic Air is a solid line, its requirement from Tactical Air a tag on the node and a link in the card.
-- **Worded upgrades** (phase 4) are all in, one small rule each in `rules/research.js` (`multO`, `rTrainF`, `rDrilled`, `rSpecTerr`, `rSightF`, `rMlrsReach`, `rSamNear`, `rJamF`, `rPack`, `rKoHours`, `rAdF`, `rBombF`, `rMpaR`, `rMpaH`, `rAewR`, `rAewF`, `rDeckRate`, `mslOf`, `rShield`, `rSatMax`, `rSatR`, `dropOnly`, `dropRange`). Rough-ground training applies to a force made up only of trained types. "Sees half a province farther" is a sight radius of 1.3 legs instead of 0.8.
+- **Worded upgrades** (phase 4) are all in, one small rule each in `rules/research.js` (`multO`, `rTrainF`, `rDrilled`, `rSpecTerr`, `rSightF`, `rRangeKm`, `rSamNear`, `rJamF`, `rPack`, `rKoHours`, `rAdF`, `rBombF`, `rMpaR`, `rMpaH`, `rAewR`, `rAewF`, `rDeckRate`, `mslOf`, `rShield`, `rSatMax`, `rSatR`, `dropOnly`, `dropRange`). Rough-ground training applies to a force made up only of trained types. "Sees half a province farther" is a sight radius of 1.3 legs instead of 0.8.
 - **Computer players.** As section 8, with two softenings: a line whose unit needs a kind of building the nation has none of at any level (not "no Airbase II") is the one that is held back, so bombers and fighters are still researched before the bigger airbase is built; and upgrades of a unit type the nation does not field are weighted at a quarter rather than zero.
 - **Generation pictures.** The Heavy Bomber's generation 2 uses the second bomber picture and UAV IV the armed UAV picture, as before. Every other generation shows the unit's picture in a new paint scheme (generation 2 desert, generation 3 dark grey: `rGenTone` in `index.html`) beside the "II" / "III" tag, in the tree and side by side in the detail card, until its own art (`u-<unit>-<generation>`) exists.
 - **Repair 1 (the review of the first build).**
