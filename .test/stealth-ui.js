@@ -55,9 +55,11 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   // ---- fog on the map (the page records what each frame did with every wing in flight: window.__airSeen[id] = drawn / hidden / contact)
   await p.keyboard.press('Escape'); await p.waitForTimeout(150);
   const F = await p.evaluate(({ c, E }) => { const im = window.__im, S = im.S, G = im.G;
-    const own = G.P.filter(P => S.owner[P.id] === 0 && !P.sea && P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea).length >= 2); const P = own.sort((x, y) => Math.hypot(x.x - G.P[c].x, x.y - G.P[c].y) - Math.hypot(y.x - G.P[c].x, y.y - G.P[c].y))[1];
+    const own = G.P.filter(P => S.owner[P.id] === 0 && !P.sea && P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea).length >= 2); const orbit = Q => { const o = new Set(); for (let k = 0; k < 24; k++){ const t = k/24*Math.PI*2, c1 = worldToCell(Q.x + Math.cos(t)*16, Q.y + Math.sin(t)*16*0.55); o.add(c1 >= 0 ? G.prov[c1] : -1); } return o; };   // the wing orbits its target on a 16 x 8.8 ellipse (index.html wingVis), so it passes over every province that ellipse touches: the SAM must be in or next to all of them
+    const okP = Q => { const o = orbit(Q); return Q.nbs.some(v => S.owner[v] === 0 && !G.P[v].sea && [...o].every(q => q === v || G.P[v].nbs.includes(q))); };
+    const sorted = own.sort((x, y) => Math.hypot(x.x - G.P[c].x, x.y - G.P[c].y) - Math.hypot(y.x - G.P[c].x, y.y - G.P[c].y)), P = sorted.slice(1).find(okP) || sorted[1];
     for (const a of S.armies) if (a.owner === 0 && (a.u.sam || a.u.jam)){ a.u.sam = 0; a.u.jam = 0; } removeEmpty();
-    const nbs = P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea), km = q => Math.hypot(G.P[q].x - P.x, G.P[q].y - P.y)/KM_W, ring = G.P.filter(Q => km(Q.id) > visAewKm(0)/2 + 10 && km(Q.id) < visAewKm(0) - 10).map(Q => Q.id).sort((x, y) => km(x) - km(y));   // beyond half the AWACS radar (250 of 500 km), still inside it
+    const o0 = orbit(P), nb0 = P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea), good = nb0.filter(v => [...o0].every(q => q === v || G.P[v].nbs.includes(q))), nbs = [nb0.find(v => v !== good[0]), good[0]], km = q => Math.hypot(G.P[q].x - P.x, G.P[q].y - P.y)/KM_W, ring = G.P.filter(Q => km(Q.id) > visAewKm(0)/2 + 10 + 16/KM_W && km(Q.id) < visAewKm(0) - 10).map(Q => Q.id).sort((x, y) => km(x) - km(y));   // beyond half the AWACS radar (250 of 500 km), still inside it
     im.v3c.centerOn(P.x, P.y, 3); return { p: P.id, base: nbs[0], nb: nbs[1], far: ring[0], E }; }, { c: cap, E: R.E });
   const seenAs = async (t, o, setup) => { const id = await p.evaluate(({ t, F, o, setup }) => { const im = window.__im, S = im.S;
       for (const a of S.armies) if (a.tag === 'tw') for (const k in a.u) a.u[k] = 0; removeEmpty();
