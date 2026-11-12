@@ -293,8 +293,8 @@ const effHP = a => { const u = a.u, w = a.w; let s = 0; for (let i = 0; i < UT.l
 function armyUpkeep(prevBattles){
   for (const a of S.armies){ if (a.owner < 0 || !count(a) || a.fly) continue;
     const N = S.nations[a.owner], here = a.to === null, inBattle = here && S.battles.includes(a.at);
-    if (inBattle){ const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m -= 1 + 40*lost; }
-    else if (a.air || supplied(a) || cmdF(a, 'supply')){ const own = here && S.owner[a.at] === a.owner, r = a.air ? maintRate(a)*1.2 : (own && S.bld[a.at].yard && shipsN(a) ? 0.4*(1 + 0.2*Math.max(0, S.bld[a.at].yard - 2)) : own && G.P[a.at].city ? 0.25 : 0.10)*(1 + 0.5*cmdF(a, 'supply'));
+    if (inBattle){ /* morale falls in battleStep, every 15 minutes: no healing, no rest here */ }
+    else if (a.air || supplied(a) || cmdF(a, 'supply')){ const r = healPerDay(a);   // (healPerDay, rules/combat.js: slow in the field, faster in an own city; the hook for a future Hospital)
       for (const t of UT) if (a.u[t]) a.w[t] = Math.max(0, a.w[t] - a.u[t]*UNITS[t].hp*r/24);
       a.m += 2; if (here && prevBattles.has(a.at)) a.m += 10; }
     else { for (const t of UT){ if (!a.u[t]) continue; a.w[t] += a.u[t]*UNITS[t].hp*0.04/24; while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; } if (!a.u[t]) a.w[t] = 0; }

@@ -4,9 +4,9 @@
 // seats (the nations people play); what the rules report is addressed to a seat (see rules/core.js), and visibleSet(n) is nation n's fog of war.
 'use strict';
 IM.api = {
-  // the game: start, load, save, one hour
-  newGame, restore, saveJSON, tick,
-  get S(){ return S; }, get G(){ return G; },
+  // the game: start, load, save, one quarter hour (tickQ: three of four are battle-only steps, the fourth is the hour's tick; S.q counts them) and a whole hour (tick)
+  newGame, restore, saveJSON, tickQ, tick,
+  get S(){ return S; }, get G(){ return G; }, get BATTLE_Q(){ return BATTLE_Q; },
   // seats and what a seat sees
   seats, isSeat, desk, visibleSet, armyVisible,
   // orders (first argument: the nation, or its force)

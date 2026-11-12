@@ -28,7 +28,7 @@ function play(seed, days){
   // no seats: the AI plays every nation. With --seat N nation N is a seat nobody plays: the AI leaves it alone and the rules address its dispatches to it
   api.newGame(seed, 0, SEAT >= 0 ? [SEAT] : []); const S = api.S, G = api.G; S.started = true;
   const t0 = Date.now(); let hours = 0;
-  while (hours < days*24 && !S.over){ api.tick(); hours++; }
+  while (hours < days*24 && !S.over){ for (let q = 0; q < api.BATTLE_Q; q++) api.tickQ(); hours++; }   // a game hour = four quarter-hour steps (battles resolve every 15 minutes)
   const prov = S.nations.map(() => 0); for (const o of S.owner) if (o >= 0 && o < prov.length) prov[o]++;
   const alive = S.nations.map((N, n) => n).filter(n => S.nations[n].alive !== false && prov[n] > 0);
   const wars = []; for (const k in S.rel){ const r = S.rel[k]; if (r && r.st === 'war') wars.push(k); }
