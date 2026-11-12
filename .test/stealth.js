@@ -33,7 +33,7 @@ function fresh(seed){ const R = new Function(SRC)(); R.IM.api.newGame(seed, 0, [
   info.share = Object.fromEntries(['sam', 'frig', 'crui', 'int', 'asf', 'jet', 'inf', 'tank', 'carr'].map(t => [t, r2(share(t))]));
   for (const t of ['sam', 'frig', 'crui']) ok(near(share(t), 0.35, 1e-9), `${t} hits it 35% as often`, share(t));
   for (const t of ['int', 'asf', 'jet']) ok(near(share(t), 0.4, 1e-9), `${t} hits it 40% as often`, share(t));
-  ok(near(R.multU('asf', 'stealth'), 1.5, 0.03) && R.multU('asf', 'bomb') === 3.8, 'the ASF anti-bomber bonus 3.8 becomes 1.5', R.multU('asf', 'stealth'));
+  ok(near(R.multU('asf', 'stealth'), 0.4*R.multU('asf', 'bomb'), 0.03) && R.multU('asf', 'bomb') === 3.0 && R.multU('int', 'bomb') === 6.0, 'fighters hit a Stealth Bomber at 40% of their anti-bomber bonus (ASF 3.0 to 1.2, Interceptor 6.0 to 2.4)', R.multU('asf', 'stealth'));
   ok(share('inf') === 1 && share('tank') === 1, 'guns hit it like any aircraft');
   // ---- research (the tree by unit): the Strategic Bomber Upgrade on the Heavy Bomber's line, the Stealth Bomber's unlock needs it AND Stealth Airframes
   const N = S.nations[0], B2 = RN.bomb_up, B3 = RN.u_stealth; N.research = N.research2 = null; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 50000;
