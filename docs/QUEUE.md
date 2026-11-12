@@ -21,24 +21,23 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
+| Attack range in km: artillery, rocket launchers and warships fire from where they stand at visible enemies in range, a Bombard order, range circles when selected (missiles too) | Opus | Started |
 | Building level pictures on the map: each building's Higgsfield level picture next to its city, visible to all, changing as it levels up | Sonnet | Started |
-| Fog follow-ups: fog clearly visible outside your sight (darker veil, soft circle edges), the Stealth Bomber SAM check, fog circles across the Pacific seam | Sonnet | Started |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill) | Opus |
-| 2 | Attack range: artillery, rocket launchers, warships and missiles hit targets in range without moving in; range circles | Opus |
-| 3 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
-| 4 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
-| 5 | Aircraft in flight drawn with their own unit pictures (rotated, shadow, contrail) | Opus |
-| 6 | Each aircraft type gets its own 3D shape | Opus |
-| 7 | Territory sales in diplomacy (captured territory only, price from the province's value, 25% / 10% coalition floors, 3-day no-resale; the AI never sells) | Opus |
-| 8 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
-| 9 | Strike effects, optional small repair 3: chemical cloud easier to read at mid zoom, ICBM ground fires, blast size order, sparks, seams in battle smoke | Opus |
-| 10 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 11 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill) | Opus (after building pictures, to avoid clashing map drawing) |
+| 2 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
+| 3 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
+| 4 | Aircraft in flight drawn with their own unit pictures (rotated, shadow, contrail) | Opus |
+| 5 | Each aircraft type gets its own 3D shape | Opus |
+| 6 | Territory sales in diplomacy (captured territory only, price from the province's value, 25% / 10% coalition floors, 3-day no-resale; the AI never sells) | Opus |
+| 7 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
+| 8 | Strike effects, optional small repair 3: chemical cloud easier to read at mid zoom, ICBM ground fires, blast size order, sparks, seams in battle smoke | Opus |
+| 9 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 10 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
@@ -84,6 +83,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| Fog follow-ups: fog clearly visible outside your sight with soft circle edges, the Stealth Bomber test fixed, fog circles across the Pacific seam | Sonnet |
 | Army bar and Army Info like CoN (one health bar with numbers, stats row with tick countdown, unit diamonds with Mark badges, i button with the Strength table and arrows), no health bars on the map, combat every 15 in-game minutes, healing shown with a Hospital hook, AWACS combat cover 500 km | Sonnet |
 | Stack limits like CoN: land 10, air 5, sea 5; damage 1 − 0.56 × ln(size ÷ limit) with a 25% floor, speed 1 − 0.15 × ln(size ÷ limit) (min 50%); merge warnings; AI stacks at the limit, attacking from several sides (biggest AI stack 45-62 → 10); split stacks beat a 128-stack in all six duel cases | Opus |
 | Fog of war: vision in km from where things are (city 80, airbase 100, forces 50, recon 100, aircraft 150, drones and patrols 200, UAV 250-500, AWACS 500 locate-only, maritime patrol 400, satellite strip 150), no free neighbouring provinces, no city radar; every country's buildings visible to all | Opus |
