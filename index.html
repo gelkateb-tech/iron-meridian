@@ -5290,16 +5290,19 @@ function roundRect(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x + r, y); c.arcTo
 // fog of war in one fill: the dark veil with the hatch already composited on top ('over' is associative, so this matches veil-then-hatch)
 // a: hatch opacity (the map used to soften it with a blur at close zoom, so callers fade it the same way); one cached pattern per level
 const fogPat = new Map();
-// a sight range cut out of the fog: the world rectangle with the range's circle (or a satellite's capsule) in it, for an even-odd clip; kept on the range
-function fogHole(s){ if (s.hole) return s.hole; const q = new Path2D(), [x1, y1, x2, y2, r] = s; q.rect(-WORLD_W, -WORLD_H, 3*WORLD_W, 3*WORLD_H);
+// a sight range cut out of the fog with a soft edge: nested capsules (circles when x1,y1 = x2,y2) of falling radius, each clearing part of the veil
+// (destination-out), so the veil fades out over about a tenth of the radius round the range's edge; kept on the range
+const FOG_EDGE = [[1.07, 0.2], [1.03, 0.3], [0.99, 0.5], [0.95, 1]];
+function fogHole(s){ if (s.hole) return s.hole; return s.hole = FOG_EDGE.map(([k, a]) => { const q = new Path2D(), [x1, y1, x2, y2, r0] = s, r = r0*k;
   if (x1 === x2 && y1 === y2){ q.moveTo(x1 + r, y1); q.arc(x1, y1, r, 0, Math.PI*2); }
-  else { const a = Math.atan2(y2 - y1, x2 - x1); q.moveTo(x2 + r*Math.cos(a - Math.PI/2), y2 + r*Math.sin(a - Math.PI/2)); q.arc(x2, y2, r, a - Math.PI/2, a + Math.PI/2); q.arc(x1, y1, r, a + Math.PI/2, a + Math.PI*1.5); q.closePath(); }
-  return s.hole = q; }
+  else { const an = Math.atan2(y2 - y1, x2 - x1); q.moveTo(x2 + r*Math.cos(an - Math.PI/2), y2 + r*Math.sin(an - Math.PI/2)); q.arc(x2, y2, r, an - Math.PI/2, an + Math.PI/2); q.arc(x1, y1, r, an + Math.PI/2, an + Math.PI*1.5); q.closePath(); }
+  return [q, a]; }); }
+// the land veil as a repeating tile: a grey, desaturating veil with diagonal hatching on it; a: hatch opacity (callers fade it as the zoom changes)
 function fogPattern(c2 = ctx, a = 0.07){
   a = Math.round(a*200)/200; if (fogPat.has(a)) return fogPat.get(a);
   const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d');
-  g.fillStyle = 'rgba(6,10,14,0.15)'; g.fillRect(0, 0, 8, 8);   // light: land out of sight keeps its power's colour
-  g.strokeStyle = `rgba(255,255,255,${(a*0.6).toFixed(3)})`; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
+  g.fillStyle = 'rgba(62,68,74,0.5)'; g.fillRect(0, 0, 8, 8);   // land out of sight: a grey veil, its power's colour still faintly there
+  g.strokeStyle = `rgba(235,240,245,${Math.min(0.34, a*3.4).toFixed(3)})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
   const pat = c2.createPattern(c, 'repeat'); fogPat.set(a, pat); return pat;
 }
 function shade(col, f){ let r, g, b; if (col[0] === '#'){ const n = parseInt(col.slice(1), 16); r = n >> 16; g = n >> 8 & 255; b = n & 255; } else { const m = col.match(/\d+(\.\d+)?/g) || [0, 0, 0]; [r, g, b] = m.map(Number); }
@@ -7440,12 +7443,6 @@ function renderLayer(vis, lite = false, R = null){
       if (cityFade(hexPx) > 0){ c.globalCompositeOperation = 'destination-out'; c.globalAlpha = 0.65*cityFade(hexPx);   // cleared streets and roofs read darker than the snowfields
         cityEach(Math.max(wx0, x0), Math.max(wy0, y0), Math.min(wx1, x1), Math.min(wy1, y1), p => { if (season(p) !== 'snow') return; const I = CGEO.get(p); if (!I) return; const img = CBAKE.get('d' + p + '|' + Math.min(CCH, cityTier(I))) || cityAnyBake(p, cityTier(I), false); if (img) c.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); });
         c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; } } } }
-  // the fog: land outside what you see. A province wholly in sight (yours or an ally's, revealed, or where a force of yours is going) stays clear;
-  // any other is veiled except inside the sight ranges that reach into it (visTouch: circles, a satellite's strip), the same test armyVisible makes
-  c.fillStyle = hp;
-  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; const T = visTouch(vis, p);
-    if (!T.length){ c.fill(GEO.fill[p], 'evenodd'); continue; }
-    c.save(); c.clip(GEO.fill[p], 'evenodd'); for (const s of T) c.clip(fogHole(s), 'evenodd'); c.fill(GEO.fill[p], 'evenodd'); c.restore(); }
   // rivers and roads go on the same overlay, above the fills, so they share the single coast clip
   c.lineJoin = 'round'; c.lineCap = 'round';
   { const LN = loadWorld.lines; if (LN){
@@ -7482,6 +7479,22 @@ function renderLayer(vis, lite = false, R = null){
     for (const L of SNOWC.ice){ const b = L.b; if (b[2] < wx0 || b[0] > wx1 || b[3] < wy0 || b[1] > wy1) continue;
       c.fillStyle = `rgba(208,222,232,${(0.8*L.a).toFixed(3)})`; c.fill(L.path); c.strokeStyle = `rgba(150,170,182,${(0.7*L.a).toFixed(3)})`; c.stroke(L.path); } }
   if (hexPx >= 3 && LV){ { c.save(); c.clip(LV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(214,218,204,0.35)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1)); c.restore(); } }   // national borders across the lakes in view: a faint dashed line
+  // the fog, over everything on the overlay (ground, roads, rivers, borders, snow): its own cached canvas, redrawn with the layer (the layer is rebuilt when
+  // what you see changes). Land outside sight gets the grey hatched veil, sea outside sight a lighter plain one; a province wholly in sight (yours or an
+  // ally's, revealed, where a force of yours is going) stays clear, and every sight range (circles, a satellite's strip) is cut out with a soft edge,
+  // on both sides of the map's east-west seam. Maritime patrol ranges (VK.sea) clear the sea only.
+  { if (!layer.fg) layer.fg = document.createElement('canvas'); const fgc = layer.fg; if (fgc.width !== layer.width || fgc.height !== layer.height){ fgc.width = layer.width; fgc.height = layer.height; }
+    const g = fgc.getContext('2d'); g.save(); clipR(g); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(dx0, dy0, dw, dh); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
+    const cut = sea => { if (vis.ids) for (const s of vis.ids){ if ((s[5] === VK.sea) !== sea) continue; const r = s[4]*1.07, xa = Math.min(s[0], s[2]) - r, xb = Math.max(s[0], s[2]) + r, ya = Math.min(s[1], s[3]) - r, yb = Math.max(s[1], s[3]) + r;
+        if (yb < wy0 || ya > wy1) continue; const H = fogHole(s);
+        for (const o of [-WORLD_W, 0, WORLD_W]){ if (xb + o < wx0 || xa + o > wx1) continue; g.save(); if (o) g.translate(o, 0); for (const [q, a] of H){ g.globalAlpha = a; g.fill(q); } g.restore(); } } };
+    g.fillStyle = 'rgba(34,46,56,0.24)';   // sea: lighter, no hatching
+    if (CV && hexPx >= 7 && SEAV) g.fill(SEAV, 'evenodd'); else { g.fillRect(-WORLD_W, -WORLD_H, 3*WORLD_W, 3*WORLD_H); g.save(); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy); g.globalCompositeOperation = 'destination-out'; g.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); g.restore(); }
+    g.globalCompositeOperation = 'destination-out'; cut(true); g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over'; g.fillStyle = hp;
+    for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; g.fill(GEO.fill[p], 'evenodd'); }
+    g.globalCompositeOperation = 'destination-out'; cut(false); g.restore();
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(fgc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); c.restore(); }
   c.restore();   // the overlay's R clip
   // political tint: each power's land in its colour, laid on the ground with a 'color' blend (hue and saturation from the power, light and shade from the terrain)
   // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
@@ -7520,7 +7533,7 @@ function shiftLayer(vis, lite, ax = true, ay = true){ FADE.length = 0; const L =
   let A = L.alt; if (!A) A = document.createElement('canvas'); if (A.width !== w || A.height !== h){ A.width = w; A.height = h; }
   const g = A.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'copy'; g.drawImage(L, sx, sy); g.globalCompositeOperation = 'source-over';
   A.mx = L.mx; A.my = L.my; A.vx = L.vx + sx/dpr; A.vy = L.vy + sy/dpr; A.s = L.s; A.lite = L.lite; A.full = L.full; A.strips = L.strips;
-  A.fl = L.fl; A.tc = L.tc; L.fl = L.tc = null; L.alt = null; A.alt = L; layer = A;
+  A.fl = L.fl; A.tc = L.tc; A.fg = L.fg; L.fl = L.tc = L.fg = null; L.alt = null; A.alt = L; layer = A;
   A.seaOK = false; if (L.seaOK && L.seaM){ const SM = A.seaM || (A.seaM = document.createElement('canvas')); if (SM.width !== L.seaM.width || SM.height !== L.seaM.height){ SM.width = L.seaM.width; SM.height = L.seaM.height; }
     const e = L.seaE || 0, k2x = Math.round(sx/2 - e), k2y = Math.round(sy/2 - (L.seaEy || 0)), m = SM.getContext('2d'); m.setTransform(1, 0, 0, 1, 0, 0); m.globalAlpha = 1;
     m.globalCompositeOperation = 'copy'; m.drawImage(L.seaM, k2x, k2y); m.globalCompositeOperation = 'source-over'; A.seaE = e + k2x - sx/2; A.seaEy = (L.seaEy || 0) + k2y - sy/2; A.seaOK = true; }
