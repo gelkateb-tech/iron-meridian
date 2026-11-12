@@ -22,7 +22,7 @@ Last updated: 2026-11-11.
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
 | Stack limits like CoN: land 10, air 5, sea 5; damage 1 − 0.56 × ln(size ÷ limit) with a 25% floor (owner's choice); speed 1 − 0.15 × ln(size ÷ limit), never below 50%; merge warning; AI keeps stacks at the limit and attacks from several sides; 128-stack vs 10-stacks test | Opus | Started |
-| Fog of war: the owner's vision ranges in km from where things actually are, per unit type, no automatic neighbouring provinces, no city radar; every country's buildings visible to all | Opus | Started |
+| Fog follow-ups: fog clearly visible outside your sight (darker veil, soft circle edges), the Stealth Bomber SAM check, fog circles across the Pacific seam | Sonnet | Started |
 
 ## Queued (in this order)
 
@@ -51,6 +51,7 @@ Last updated: 2026-11-11.
 - **Netlify token** for the phone app.
 - **"Move to public"** for everything under "Waiting for public" in RELEASES.md.
 - **Resource-bar button:** the storage case went on the button at the left of the resource bar, which opens the missile stocks (there is no separate all-resources list). Keep it, or add an all-resources list there?
+- **Fog decision:** a foreign country's building under construction is hidden (finished buildings show for everyone); show it too?
 - **Fable:** no Fable tasks left; new ones only if the owner says so.
 
 ## Planned for later (in LATER.md, not built yet)
@@ -84,6 +85,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| Fog of war: vision in km from where things are (city 80, airbase 100, forces 50, recon 100, aircraft 150, drones and patrols 200, UAV 250-500, AWACS 500 locate-only, maritime patrol 400, satellite strip 150), no free neighbouring provinces, no city radar; every country's buildings visible to all | Opus |
 | Battle effects: gunfire and shells from the unit models onto the enemy's, smoke and fire fixed to the map and sharp at every zoom, only crossed swords when zoomed out | Opus |
 
 ## Done and public (v3.12 and earlier)
