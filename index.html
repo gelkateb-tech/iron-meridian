@@ -3156,7 +3156,7 @@ function mapSwitched(){
   for (const k in MAPS){ const g = MAPS[k]; if (g === G) continue; for (const f of MAP_SHARE){ if (G[f] === undefined && g[f] !== undefined) G[f] = g[f]; else if (g[f] === undefined && G[f] !== undefined) g[f] = G[f]; } }
   worldLines(G);
   if (!booted && !CINFO.size) return;   // (the first map of the page: nothing drawn yet)
-  for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, TRAYC, LDEP, HQ_NEAR, HQ_DIR, STKSLOT, BPICC]) M.clear();
+  for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, TRAYC, LDEP, HQ_NEAR, HQ_DIR, STKSLOT, BPICC, RLKIND]) M.clear();
   CBAKE_PX = 0; CLOW_PX = 0; SEAL = null; NAMEC.k = ''; layerKey = ''; geoDirty = true; }
 function bakeLakes(){ if (G.lakesBaked){ if (!G.lakeLab) lakeLabels(); return; } /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
   const T = G.terrain, k = T.width/WORLD_W, g = T.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.lineJoin = 'round';
