@@ -371,6 +371,10 @@ const cap1 = w => w[0].toUpperCase() + w.slice(1);
 const NEUTRAL = -1, SEA = -2;
 const W = WORLD.W, H = WORLD.H, GS = WORLD.GS || 1, HS0 = 12, HS = HS0/GS, SQ3 = Math.sqrt(3);   // GS: cells per old map hex
 const K = 0.25;                       // combat damage per hour factor
+// Stack limits (stack efficiency, see rules/combat.js stackPenalty and docs/COMBAT.md): units of one domain in one force above its limit fight
+// worse and move slower. Damage: 1 − STACK_K·ln(n ÷ limit), never below STACK_FLOOR; speed: 1 − STACK_SPD_K·ln(n ÷ limit), never below STACK_SPD_FLOOR
+const STACK_LIM = {land:10, air:5, sea:5};
+const STACK_K = 0.56, STACK_FLOOR = 0.25, STACK_SPD_K = 0.15, STACK_SPD_FLOOR = 0.5;
 const DIFFS = [{k:'recruit', name:'Recruit', inc:0.75, war:0.6}, {k:'regular', name:'Regular', inc:1, war:1}, {k:'veteran', name:'Veteran', inc:1.2, war:1.3}, {k:'elite', name:'Elite', inc:1.45, war:1.6}];
 const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week

@@ -217,15 +217,17 @@ function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = ne
     if (P.city && S.battles.includes(P.id)) threat += stationaryAt(P.id).filter(b => b.owner >= 0 && atWar(n, b.owner)).reduce((s0, b) => s0 + power(b), 0)*1.5;   // a city already under attack
     // the capital is defended against any raid (small strike groups now race along captured rail lines), and from further away
     const capP = P.id === N.capital; if (threat < (capP ? 5 : 20)) continue; const here = stationaryAt(P.id).filter(b => b.owner === n).reduce((s0, b) => s0 + power(b), 0) + S.armies.filter(b => b.owner === n && b.path.length && b.path[b.path.length - 1] === P.id).reduce((s0, b) => s0 + power(b), 0);
-    if (here >= threat*(capP ? 1.4 : 0.8)) continue;
-    let pick = null, bd = 1e9; for (const a of idle){ if (used.has(a) || a.at === P.id || a.at === N.capital && threatNear(a.at, n) || power(a) < (capP ? 6 : 10)) continue; const d = hexDist(G.P[a.at].cc, P.cc); if (d < bd && d <= (capP ? 16 : 8)){ bd = d; pick = a; } }
-    if (pick){ const pth = pathFor(pick, pick.at, P.id); if (pth.length){ pick.path = pth; used.add(pick); } } }
+    // (stacks stay within the stack limit, so up to four of the nearest are sent until the province is held strongly enough)
+    let have = here; const tried = new Set(); for (let k = 0; k < 4 && have < threat*(capP ? 1.4 : 0.8); k++){
+      let pick = null, bd = 1e9; for (const a of idle){ if (used.has(a) || tried.has(a) || a.at === P.id || a.at === N.capital && threatNear(a.at, n) || power(a) < (capP ? 6 : 10)) continue; const d = hexDist(G.P[a.at].cc, P.cc); if (d < bd && d <= (capP ? 16 : 8)){ bd = d; pick = a; } }
+      if (!pick) break; tried.add(pick); const pth = pathFor(pick, pick.at, P.id); if (pth.length){ pick.path = pth; used.add(pick); have += power(pick); } } }
   if (!plan) return used;
   // 2. gather at the staging provinces, then strike together from every side once strong enough
   const stage = plan.stage.filter(v => S.owner[v] === n); if (!stage.length){ delete S.plans[n]; return used; }
-  const atStage = S.armies.filter(a => a.owner === n && !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a));
+  const atStage = S.armies.filter(a => a.owner === n && !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a) && (a.at !== N.capital || idle.includes(a)));   // (not the capital's garrison)
   const massed = atStage.reduce((s0, a) => s0 + power(a)*terrFit(a, plan.tgt, true)*(riverX(a.at, plan.tgt) ? RIVER_ATK : 1), 0), need = defPower(plan.tgt, n)*1.5 + 10;
   if (massed >= need){ for (const a of atStage){ orderMove(a, plan.tgt); used.add(a); } plan.launched = S.hour;
+    { const eta = atStage.filter(a => a.path.length).map(a => [a, etaHours(a)]), slow = Math.max(0, ...eta.map(e => e[1])); for (const [a, h] of eta) if (slow - h >= 3) a.delay = Math.min(36, Math.round(slow - h)); }   // all arrive together
     if (isSeat(S.owner[plan.tgt])) tell(S.owner[plan.tgt], `${N.name} launches a coordinated assault on ${G.P[plan.tgt].cityName || G.P[plan.tgt].name} from ${(n0 => n0 + (n0 === 1 ? ' direction' : ' directions'))(new Set(atStage.map(a => a.at)).size)}!`, 'bad', plan.tgt);
     return used; }
   let i = 0; for (const a of idle){ if (used.has(a) || stage.includes(a.at) || power(a) < 14 || (a.at === N.capital && threatNear(a.at, n))) continue;
@@ -524,26 +526,32 @@ function aiTurn(n){
         if (t && aiSpare(n, t, true)) recruit(n, p, t); }
     }
   }
-  const idle = new Map();
-  for (const a of S.armies){ if (a.owner !== n || a.to !== null || a.path.length || a.air || S.owner[a.at] !== n) continue;
-    if (idle.has(a.at)) merge(idle.get(a.at), a); else idle.set(a.at, a); }
+  // idle forces per own province, packed into stacks within the stack limit (STACK_LIM): forces merge only while the result stays within it, and an
+  // idle stack over the limit (an old save, units built before the limit) is split into limit-sized forces. idleBy: province -> its idle stacks
+  const idleBy = new Map();
+  for (const a of S.armies){ if (a.owner !== n || a.to !== null || a.path.length || a.air || S.owner[a.at] !== n || !count(a)) continue;
+    let list = idleBy.get(a.at); if (!list) idleBy.set(a.at, list = []);
+    const into = list.find(b => count(b) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }
   removeEmpty();
-  // at war the capital's infantry garrison (4-12 by army size) is split off first: neither the offensive planner nor the idle moves below take it
-  if (warsOf(n).length){ const ca = idle.get(N.capital); if (ca && !ca.air && !shipsOnly(ca)){ const keep = Math.max(4, Math.min(12, Math.round(units*0.07))), g = Math.min(ca.u.inf || 0, keep);
-      if (g >= 1 && count(ca) - g >= 4) splitPlan(ca, [{inf:g}]); else if (g >= 1) idle.delete(N.capital); } }
+  for (const list of idleBy.values()){ for (const a of list.slice()) list.push(...aiSplitToLimit(a)); }
+  const idleAll = () => [...idleBy.values()].flat().filter(a => count(a) && !a.path.length && a.to === null);
+  // at war the capital's infantry garrison (4-10 by army size) is set apart first: neither the offensive planner nor the idle moves below take it
+  if (warsOf(n).length){ const list = idleBy.get(N.capital); if (list){ const keep = Math.min(STACK_LIM.land, Math.max(4, Math.min(12, Math.round(units*0.07)))); let got = 0;
+      for (const ca of list.filter(x => !x.air && !shipsOnly(x) && x.u.inf > 0).sort((x, y) => y.u.inf - x.u.inf || x.id - y.id)){ if (got >= keep) break; const g = Math.min(ca.u.inf, keep - got);
+        if (count(ca) - g >= 4){ const [b] = splitPlan(ca, [aiTakePlan(ca, 'inf', g)]); if (b) got += b.u.inf; }   // the garrison is the new force (not in the idle lists)
+        else { got += ca.u.inf; list.splice(list.indexOf(ca), 1); } } } }
   // badly damaged units (the split panel's damaged rows, below 45%) leave idle field stacks for the nearest own city within 4 provinces, where they heal 2.5× faster
-  if (rng() < 0.5) for (const a of [...idle.values()]){ if (count(a) < 4 || G.P[a.at].city || G.P[a.at].sea || S.battles.includes(a.at) || enemiesAt(a.at, n)) continue;
+  if (rng() < 0.5) for (const a of idleAll()){ if (count(a) < 4 || G.P[a.at].city || G.P[a.at].sea || S.battles.includes(a.at) || enemiesAt(a.at, n)) continue;
     const dr = splitRows(a).filter(r => r.dmg && r.hf < 0.45); if (!dr.length || dr.reduce((s0, r) => s0 + r.n, 0) >= count(a)) continue;
     const seen = new Map([[a.at, 0]]), q = [a.at]; let city = -1;
     for (let h = 0; h < q.length && city < 0; h++){ const u = q[h], du = seen.get(u); if (du >= 4) continue; for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); if (G.P[v].city && !S.battles.includes(v)){ city = v; break; } q.push(v); } }
     if (city < 0) continue; const pth = pathFor(a, a.at, city); if (!pth.length || pth.length > 5) continue;
     const [b] = splitPlan(a, [Object.fromEntries(dr.map(r => [r.k, r.n]))]); if (b){ b.path = pth; b.forced = true; } }
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
-  const planned = aiOperate(n, [...idle.values()].filter(a => count(a) && !a.air && !shipsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
-  for (const a of idle.values()){
-    if (planned.has(a)) continue;
-    if (count(a) === 0 || enemiesAt(a.at, n)) continue;
-    if (a.air) continue;
+  const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
+  const ready = [];   // stacks free for an offensive of their own
+  for (const a of idleAll()){
+    if (planned.has(a) || enemiesAt(a.at, n) || a.air) continue;
     if (shipsOnly(a)){ if (a.escort == null && !a.raid) aiFleet(a, n); continue; }
     if (G.P[a.at].sea || (S.owner[a.at] !== n && !atWar(n, S.owner[a.at]))){
       // stranded at sea or in land it may not fight in: head to the nearest own province
@@ -555,29 +563,61 @@ function aiTurn(n){
     if (S.owner[a.at] !== n) continue;
     if (a.at === N.capital && threatNear(a.at, n)) continue;
     if ((a.m ?? 80) < 50 || (a.resting && a.m < 70)){ a.resting = true; continue; } a.resting = false;
-    let pw = power(a); if (pw < 14) continue;
-    const dist = new Map([[a.at, 0]]), q = [a.at], maxD = warsOf(n).length ? 10 : 7, fw = fitW(a), cold = !arctic(n), fc = {};
-    const fitAt = v => { const k = G.P[v].terrain || 'plains'; return fc[k] ?? (fc[k] = fitOf(fw, k, true, cold)); };
-    let best = -1, bestScore = 0;
-    for (let h = 0; h < q.length; h++){ const u = q[h], du = dist.get(u); if (du >= maxD) continue;
-      for (const v of G.P[u].nbs){ if (dist.has(v)) continue; const step = G.P[v].sea ? 2 : 1; dist.set(v, du + step); q.push(v);
-        if (G.P[v].sea || S.owner[v] === n || targeted.has(v)) continue;
-        if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
-        if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
-        const fv = fitAt(v)*(riverX(u, v) ? RIVER_ATK : 1); if (pw*fv < defPower(v, n)*1.3 + 4) continue;
-        let val = (G.P[v].city ? 3 : 1)*(S.owner[v] >= 0 && focusOf(n) === S.owner[v] ? 1.8 : 1); if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
-        if (S.owner[v] >= 0 && atWar(n, S.owner[v])){ val *= 1.6; let rj = 0; for (const lk of G.P[v].lk.values()) if (lk.rail) rj++; if (rj >= 3) val += 0.8; }
-        const sc = val/(1 + (du + step)*0.7)*(0.5 + 0.5*Math.min(1.2, fv)); if (sc > bestScore){ bestScore = sc; best = v; } } }
-    if (best < 0) continue;
-    // the capital keeps a garrison when the force there marches out: two infantry in peace, more at war (rail lets enemies strike deep along captured lines)
-    if (a.at === N.capital && !warsOf(n).length){ const k2 = Math.min(2, a.u.inf - 2); if (k2 >= 2){ addArmy(n, a.at, {inf:k2}); a.u.inf -= k2; } }   // at war the garrison was split off above
-    a.path = pathFor(a, a.at, best);
-    if (!a.path.length) continue;
-    targeted.add(best);
-    // oversized stacks split and send half around to a second side of the target (frontage + flank bonus)
-    if (count(a) > frontage(best) + 4){ const last = a.path.length > 1 ? a.path[a.path.length - 2] : a.at;
-      const alt = G.P[best].nbs.filter(w => w !== last && !G.P[w].sea && (S.owner[w] === n || (S.owner[w] >= 0 && atWar(n, S.owner[w]) && defPower(w, n) < pw*0.25)));
-      for (const w of alt){ const pth = pathFor(a, a.at, w); if (!pth.length || pth.length > a.path.length + 3) continue;
-        const b = splitArmy(a); if (!b) break; b.path = pth.concat([best]); break; } }
-  }
+    ready.push(a); }
+  // offensives: the ready stacks of one province pick a target together (their summed strength), and stacks standing next to that target in other own
+  // provinces join from their own side. Each stack stays within the stack limit; they go in from several directions (the target's own neighbours),
+  // and the quicker ones wait (a.delay) so that all arrive within a few hours of each other. Stacks left over pick a further target.
+  const used = new Set(), byAt = new Map(); for (const a of ready){ let l = byAt.get(a.at); if (!l) byAt.set(a.at, l = []); l.push(a); }
+  for (const [p0, grp0] of byAt){ let left = grp0.filter(a => !used.has(a));
+    for (let round = 0; round < 3 && left.length; round++){
+      const pw = left.reduce((s0, a) => s0 + power(a)*stackDmg(a), 0); if (pw < 14) break;
+      const lead = left.reduce((x, y) => power(y) > power(x) ? y : x, left[0]);
+      const dist = new Map([[p0, 0]]), q = [p0], maxD = warsOf(n).length ? 10 : 7, fw = fitW(lead), cold = !arctic(n), fc = {};
+      const fitAt = v => { const k = G.P[v].terrain || 'plains'; return fc[k] ?? (fc[k] = fitOf(fw, k, true, cold)); };
+      let best = -1, bestScore = 0;
+      for (let h = 0; h < q.length; h++){ const u = q[h], du = dist.get(u); if (du >= maxD) continue;
+        for (const v of G.P[u].nbs){ if (dist.has(v)) continue; const step = G.P[v].sea ? 2 : 1; dist.set(v, du + step); q.push(v);
+          if (G.P[v].sea || S.owner[v] === n || targeted.has(v)) continue;
+          if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
+          if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
+          const fv = fitAt(v)*(riverX(u, v) ? RIVER_ATK : 1); if (pw*fv < defPower(v, n)*1.3 + 4) continue;
+          let val = (G.P[v].city ? 3 : 1)*(S.owner[v] >= 0 && focusOf(n) === S.owner[v] ? 1.8 : 1); if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
+          if (S.owner[v] >= 0 && atWar(n, S.owner[v])){ val *= 1.6; let rj = 0; for (const lk of G.P[v].lk.values()) if (lk.rail) rj++; if (rj >= 3) val += 0.8; }
+          const sc = val/(1 + (du + step)*0.7)*(0.5 + 0.5*Math.min(1.2, fv)); if (sc > bestScore){ bestScore = sc; best = v; } } }
+      if (best < 0) break;
+      // the capital keeps a garrison when the force there marches out: two infantry in peace (at war the garrison was set apart above)
+      if (p0 === N.capital && !warsOf(n).length && round === 0){ const g0 = left.find(a => (a.u.inf || 0) >= 4); if (g0){ addArmy(n, p0, {inf:2}); g0.u.inf -= 2; } }
+      // the force: strongest stacks first, until about twice what the target needs (the rest stay for another target), then helpers from other sides
+      const need = defPower(best, n)*1.3 + 4, go = []; let sent = 0;
+      for (const a of left.slice().sort((x, y) => power(y) - power(x) || x.id - y.id)){ if (sent >= need*2) break; go.push(a); sent += power(a)*stackDmg(a); }
+      if (sent < need*2.5) for (const v of G.P[best].nbs){ if (v === p0 || S.owner[v] !== n || G.P[v].sea) continue;
+        for (const a of byAt.get(v) || []){ if (used.has(a) || sent >= need*2.5) continue; go.push(a); sent += power(a)*stackDmg(a); } }
+      // approaches: the natural last step first, then the target's other own (or weakly held hostile) neighbours
+      const direct = new Map(go.map(a => [a, pathFor(a, a.at, best)])); if (!direct.get(go[0]).length){ targeted.add(best); continue; }   // (no route: try another target)
+      const nat = (pth, a) => pth.length > 1 ? pth[pth.length - 2] : a.at;
+      const sides = [nat(direct.get(go[0]), go[0])]; for (const w of G.P[best].nbs){ if (sides.includes(w) || G.P[w].sea) continue; if (S.owner[w] === n || (S.owner[w] >= 0 && atWar(n, S.owner[w]) && defPower(w, n) < sent*0.15)) sides.push(w); }
+      const legs = []; let k = 0;
+      for (const a of go){ used.add(a); let pth = direct.get(a); if (!pth.length) continue;
+        const own = a.at !== p0 && G.P[best].nbs.includes(a.at);   // a helper next to the target attacks from where it stands
+        if (!own && go.length > 1){ const w = sides[k++ % Math.min(3, sides.length)]; if (w !== nat(pth, a)){ const alt = w === a.at ? [] : pathFor(a, a.at, w); if ((alt.length || w === a.at) && alt.length + 1 <= pth.length + 3) pth = alt.concat([best]); } }
+        a.path = pth; legs.push([a, etaHours(a, pth)]); }
+      if (legs.length) targeted.add(best);
+      const slow = Math.max(0, ...legs.map(e => e[1])); for (const [a, h] of legs) if (slow - h >= 3) a.delay = Math.min(36, Math.round(slow - h));
+      left = left.filter(a => !used.has(a)); } }
+  // the rest spread out: a province holding more than two idle stacks sends the extra ones to nearby own provinces (front line first) that hold fewer
+  const stacksAt = new Map(); for (const a of S.armies) if (a.owner === n && !a.air && ground(a) && count(a)){ const p = a.path.length ? a.path[a.path.length - 1] : a.to ?? a.at; stacksAt.set(p, (stacksAt.get(p) || 0) + 1); }
+  for (const [p0, list] of idleBy){ const rest = list.filter(a => count(a) && !used.has(a) && !planned.has(a) && !a.path.length && a.to === null && ground(a) && !shipsOnly(a)); if (rest.length <= 2 || S.battles.includes(p0) || enemiesAt(p0, n) || (G.P[p0].city && threatNear(p0, n))) continue;   // a threatened city keeps its stacks
+    const front = v => G.P[v].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && S.owner[w] !== n && (atWar(n, S.owner[w]) || !warsOf(n).length));
+    const seen = new Map([[p0, 0]]), q = [p0], cand = [];
+    for (let h = 0; h < q.length; h++){ const u = q[h], du = seen.get(u); if (du >= 2) continue; for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); q.push(v); if (!S.battles.includes(v)) cand.push(v); } }
+    for (const a of rest.slice(2)){ let bv = -1e9, dst = -1; for (const v of cand){ const c = stacksAt.get(v) || 0; if (c >= 2) continue; const sc = (front(v) ? 2 : 0) + (G.P[v].city ? 0.5 : 0) - seen.get(v)*0.4 - c; if (sc > bv){ bv = sc; dst = v; } }
+      if (dst < 0) break; const pth = pathFor(a, a.at, dst); if (!pth.length) continue; a.path = pth; stacksAt.set(dst, (stacksAt.get(dst) || 0) + 1); stacksAt.set(p0, (stacksAt.get(p0) || 1) - 1); } }
 }
+// the healthiest k units of type t of force a, as a split plan (row keys, see splitRows)
+function aiTakePlan(a, t, k){ const g = {}; for (const r of splitRows(a).filter(r0 => r0.t === t).sort((x, y) => y.hf - x.hf)){ if (k <= 0) break; const v = Math.min(r.n, k); g[r.k] = v; k -= v; } return g; }
+// a force over its stack limit split into limit-sized forces (the new ones are returned; the force itself keeps one share)
+function aiSplitToLimit(a){ const z = stackSizes(a), need = Math.max(Math.ceil(z.land/STACK_LIM.land), Math.ceil(z.sea/STACK_LIM.sea));
+  if (need < 2 || a.air) return [];
+  const plan = Array.from({length:need - 1}, () => ({})); let off = 0;   // evenly, every unit type spread over the shares (as evenPlan, without its limit of 8)
+  for (const r of splitRows(a)){ const base = Math.floor(r.n/need), ex = r.n % need; for (let gi = 0; gi < need; gi++){ const v = base + (((gi - off) % need + need) % need < ex ? 1 : 0); if (gi > 0 && v) plan[gi - 1][r.k] = v; } off = (off + ex) % need; }
+  return splitPlan(a, plan); }

@@ -215,7 +215,7 @@ const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t)
 // remaining strength against the force's recent peak (units lost count, not just wounds)
 const strengthFrac = a => { const cur = effHP(a), pk = Math.max(a.peak || 0, cur); return pk ? cur/pk : 0; };
 const power = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*st(a.owner, t, 'hp')/10; } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
-const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*rMoveF(a.owner)*(1 + 0.15*cmdF(a, 'blitz'));
+const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*rMoveF(a.owner)*(1 + 0.15*cmdF(a, 'blitz'))*stackSpd(a);   // (stackSpd: over the stack limit, slower)
 const armyById = id => S.armies.find(a => a.id === id);
 const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;
 const placeOwner = p => G.P[p].sea ? 'Open sea' : S.owner[p] === NEUTRAL ? `${G.countries[G.P[p].country].name} · Independent` : S.nations[S.owner[p]].name;

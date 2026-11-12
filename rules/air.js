@@ -22,7 +22,7 @@ const swarmPad = (a, p) => a.u.swarm > 0 && UT.every(t => t === 'swarm' || !a.u[
 const AIR_T = UT.filter(t => UNITS[t].cls === 'air');
 // a wing's aircraft type (wings hold one type; mixed old wings report the most numerous)
 const wingT = a => { let b = null; for (const t of AIR_T) if (a.u[t] && (!b || a.u[t] > a.u[b])) b = t; return b || 'jet'; };
-const wingSpd = a => AIR_SPEED*Math.min(1, ...AIR_T.filter(t => a.u[t]).map(t => AIR_SPF[t] || 1));
+const wingSpd = a => AIR_SPEED*Math.min(1, ...AIR_T.filter(t => a.u[t]).map(t => AIR_SPF[t] || 1))*stackSpd(a);   // (a wing over its stack limit flies slower)
 const isFighterWing = b => b.u.int > 0 || b.u.asf > 0;
 /* Strike wear and maintenance: every mission wears a wing's airframes, even unopposed: 3–6% per strike (more the farther it flies), patrols,
    orbits and loitering add 0.15% per hour aloft, rebasing 1%. Wear (a.air.wear, 0..WEAR_MAX) is repaired only on the ground at your own airbase
@@ -104,9 +104,9 @@ function dropTick(){ for (const a of S.armies){ const f = a.fly; if (!f || f.kin
     IM.emit('fxDrop', a, p);
     if (isSeat(a.owner)) tell(a.owner, `Paratroopers landed at ${G.P[p].cityName || G.P[p].name}${lossF > 0 ? `, losing ${Math.round(lossF*100)}% to air defences` : ''}.`, lossF > 0.3 ? 'bad' : 'good', p); }
   removeEmpty(); }
-function sideAV(armies, owner, scale){
+function sideAV(armies, owner, scale){   // (se: stack efficiency per force: air wings over 5 cards, fleets over 5 ships, ground forces over 10 units)
   const av = {soft:0, armored:0, air:0, naval:0}; for (const u of VSU_T) av[UK[u]] = 0;
-  for (const a of armies){ const mf = moraleF(a); for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(owner, t, 'atk')*K*scale*mf; for (const k of CLASSES) av[k] += base*multO(owner, t, k); for (const u of VSU_T) av[UK[u]] += base*multUO(owner, t, u); } }
+  for (const a of armies){ const mf = moraleF(a), se = stackEffs(a); for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(owner, t, 'atk')*K*scale*mf*se[DOM_T[t]]; for (const k of CLASSES) av[k] += base*multO(owner, t, k); for (const u of VSU_T) av[UK[u]] += base*multUO(owner, t, u); } }
   return av;
 }
 const avScale = (av, f) => { const r = {}; for (const k in av) r[k] = av[k]*f; return r; };
