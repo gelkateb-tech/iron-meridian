@@ -21,6 +21,7 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
+| Territory sales in diplomacy: sell captured provinces (never home provinces), price from the province's value, floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept, the AI buys but never sells, troops move out | Opus | Started |
 | Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | Started |
 
 ## Queued (in this order)
@@ -31,11 +32,10 @@ Last updated: 2026-11-11.
 | 2 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
 | 3 | Aircraft in flight drawn with their own unit pictures (rotated, shadow, contrail) | Opus |
 | 4 | Each aircraft type gets its own 3D shape | Opus |
-| 5 | Territory sales in diplomacy (captured territory only, price from the province's value, 25% / 10% coalition floors, 3-day no-resale; the AI never sells) | Opus |
-| 6 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
-| 7 | Strike effects, optional small repair 3: chemical cloud easier to read at mid zoom, ICBM ground fires, blast size order, sparks, seams in battle smoke | Opus |
-| 8 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 9 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 5 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
+| 6 | Strike effects, optional small repair 3: chemical cloud easier to read at mid zoom, ICBM ground fires, blast size order, sparks, seams in battle smoke | Opus |
+| 7 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
