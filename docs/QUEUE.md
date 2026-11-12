@@ -21,8 +21,8 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
-| Pinpoint movement for land units and ships: move to the exact tapped spot, count in the province you stand in, Halt for ships | Opus | Started |
-| Realistic combat and flight animations (effects module, firing per unit type, impacts, aircraft flight, markers and warnings, sound slots, Effects High/Low/Off, test panel, proof results are identical) | Opus | Started |
+| Small polish: research slot colours and 'next free' time, night city cores, Sweden snow edge, Berlin garrison placement, the two flaky map tests (v3r2, battery) | Sonnet | Started |
+| Realistic combat and flight animations (effects module, firing per unit type, impacts, aircraft flight, markers and warnings, sound slots, Effects High/Low/Off, test panel, proof results are identical) | Opus | Built; its review is running |
 | Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 | Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 
@@ -33,8 +33,7 @@ Last updated: 2026-11-11.
 | 1 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), hover shows the full amount with a unit (40,000 barrels of oil); before/after examples | Opus (after the 68 nations are merged, since both touch every number) |
 | 2 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
 | 3 | Each aircraft type gets its own 3D shape | Opus |
-| 4 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 5 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 4 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
@@ -81,6 +80,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| Pinpoint movement: moves go to the exact tapped spot (last leg timed by its length), forces count in the province they stand in from the moment they cross, moving inside a province takes time, ships stop on water, Halt anywhere | Opus |
 | Map wrap: the map wraps east-west across the Pacific with no seam, zoom-out and pan limits, filled edges (no black band over the Arctic) | Opus |
 | Blockade and trade rework: ordered blockades by reach (frigate 80 km, cruiser 150, carrier 120, sub 40), convoys reroute around blockades, 8 chokepoints closed by 1 cruiser or 2 frigates, raids capture 25-50% of cargo, pause routes, fleets sail inside their sea zone, trade routes hidden by default with a Trade map mode, cut routes always marked red | Opus |
 | Territory sales: Territory tab in Diplomacy, sell captured land (never home land or the capital), value-based price with floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept/decline, the AI buys its lost or border land but never sells, troops move out | Opus |
