@@ -2339,6 +2339,16 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 .ab-ud .uh{display:flex; gap:9px; align-items:flex-start} .ab-ud .un2{flex:1; min-width:0} .ab-ud .un2 .small{margin-top:2px}
 .ab-x{flex:none; width:24px; height:24px; padding:0; border-radius:50%; border:1px solid rgba(255,255,255,.25); background:transparent; color:#cfd9dc; font:600 16px/1 var(--body); cursor:pointer}
 .ab-ud .kv dd{text-align:right}
+/* a fleet's trade-war orders in its army bar: Escort, Raid, Blockade (big, one tap; the lit one is the order it has) */
+.ab-ord{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px}
+.abo{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:60px; padding:6px 4px 5px; border-radius:6px; border:1.5px solid rgba(159,178,184,.6); background:linear-gradient(180deg, #2c414a, #1c2b31); color:#eef4f5; cursor:pointer; font:inherit; text-align:center; min-width:0}
+.abo svg{width:22px; height:22px; flex:none}
+.abo b{font:700 13.5px/1.1 var(--body); letter-spacing:.02em}
+.abo small{font-size:10.5px; color:#a9bcc1; line-height:1.15; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.abo:hover:not(:disabled){border-color:var(--accent); background:linear-gradient(180deg, #34505a, #22363d)}
+.abo.on{border-color:#ecb65a; color:#ffe1a6; box-shadow:inset 0 0 0 1px #ecb65a, 0 0 10px rgba(236,182,90,.28)} .abo.on small{color:#f0d29a}
+.abo.blockade.on{border-color:#e0574f; color:#ffb9ae; box-shadow:inset 0 0 0 1px #e0574f, 0 0 10px rgba(224,87,79,.32)} .abo.blockade.on small{color:#ffb2a6}
+.abo:disabled{opacity:.42; cursor:not-allowed}
 /* Army Info: the Strength table */
 .si-h{display:flex; align-items:center; gap:8px; margin:0 0 4px}
 .sitab{width:100%; border-collapse:collapse; margin:2px 0 8px; font-size:13px}
@@ -4680,7 +4690,7 @@ function cvGeo(c){ let g = CVGEO.get(c); if (g) return g; const r = c.route, key
   if (CVGEO_R.G !== G || CVGEO_R.m.size > 400){ CVGEO_R.G = G; CVGEO_R.m = new Map(); } g = CVGEO_R.m.get(key); if (g){ CVGEO.set(c, g); return g; } let P0 = [[G.P[r[0]].x, G.P[r[0]].y]]; for (let i = 1; i < r.length; i++) P0.push(trGate(r[i - 1], r[i])); P0.push([G.P[r[r.length - 1]].x, G.P[r[r.length - 1]].y]);
   for (let it = 0; it < 2; it++){ const o = [P0[0]]; for (let i = 0; i < P0.length - 1; i++){ const [x0, y0] = P0[i], [x1, y1] = P0[i + 1]; o.push([x0*0.75 + x1*0.25, y0*0.75 + y1*0.25], [x0*0.25 + x1*0.75, y0*0.25 + y1*0.75]); } o.push(P0[P0.length - 1]); P0 = o; }
   g = trWater(P0); CVGEO.set(c, g); CVGEO_R.m.set(key, g); return g; }
-function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length) return; const live = S.speed && !S.over ? acc : 0;
+function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length || !tradeOn()) return; const live = S.speed && !S.over ? acc : 0;
   for (const c of S.convoys){ const r = c.route, dur = 12, tt = (S.hour + live - c.t0)/dur; if (tt < 0 || tt > 1) continue;
     let pos = tt*(r.length - 1); if (c.raidAt >= 0 && pos >= c.raidAt){ if (!c.boom && booted && vis.has(r[c.raidAt])){ c.boom = true; const P = G.P[r[c.raidAt]], [ex, ey] = fxOff(P.x, P.y, 6); explode(ex, ey, 1.2); emit('smoke', ex, ey, {vy:-6, s0:6, s1:26, life:3000}); } continue; }
     const i = Math.min(r.length - 2, Math.floor(pos)); if (!vis.has(r[i]) && !vis.has(r[i + 1]) && c.owner !== PLAYER) continue;
@@ -4693,14 +4703,20 @@ function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length) return; con
     ctx.fillStyle = mapCol(c.owner); ctx.fillRect(-5*k0, -1.6*k0, 3*k0, 3.2*k0); ctx.fillStyle = '#b8a06a'; ctx.fillRect(-1*k0, -1.6*k0, 3.5*k0, 3.2*k0); ctx.restore(); } }
 /* ---- drawing: dashed lanes over the sea (along the roads for land routes) and cargo convoys moving on them ---- */
 var TRD = {ver:-1, S:null, sea:null, mine:null, cut:null, land:null, geo:new Map()};
-function trGeo(r){ const k = r.id + ':' + r.path.join(','); let g = TRD.geo.get(r.id); if (g && g.k === k) return g;
+function trGeo(r){ const D = r.kind === 'sea' && r.bs0 === 'det' ? trDetour(r) : null, dt = D && D.det ? D.track : null;
+  const k = r.id + ':' + r.path.join(',') + (dt ? ':d' + dt.cells.length + '.' + dt.cells[dt.cells.length >> 1] : ''); let g = TRD.geo.get(r.id); if (g && g.k === k) return g;
   // sea lanes pass through the "gates" where consecutive sea zones meet (not their centres), so they keep to the water
   let pts; if (r.kind === 'land') pts = r.path.map(p => [G.P[p].x, G.P[p].y]);
+  else if (dt) pts = [[G.P[r.pa].x, G.P[r.pa].y], ...dt.pts.map(q => [q[0], q[1]]), [G.P[r.pb].x, G.P[r.pb].y]];   // rerouted: along the detour's sea cells
   else { pts = [[G.P[r.pa].x, G.P[r.pa].y], trGate(r.pa, r.path[0])]; if (r.path.length === 1) pts.push([G.P[r.path[0]].x, G.P[r.path[0]].y]); for (let i = 1; i < r.path.length; i++) pts.push(trGate(r.path[i - 1], r.path[i])); pts.push(trGate(r.pb, r.path[r.path.length - 1]), [G.P[r.pb].x, G.P[r.pb].y]); }
   // smooth sea lanes: corner-cut the zone-centre polyline twice (Chaikin)
   let P0 = pts; if (r.kind === 'sea') for (let it = 0; it < 2; it++){ const o = [P0[0]]; for (let i = 0; i < P0.length - 1; i++){ const [x0, y0] = P0[i], [x1, y1] = P0[i + 1]; o.push([x0*0.75 + x1*0.25, y0*0.75 + y1*0.25], [x0*0.25 + x1*0.75, y0*0.25 + y1*0.75]); } o.push(P0[P0.length - 1]); P0 = o; }
   const cum = [0]; for (let i = 1; i < P0.length; i++) cum.push(cum[i - 1] + Math.hypot(P0[i][0] - P0[i - 1][0], P0[i][1] - P0[i - 1][1]));
-  g = r.kind === 'sea' ? trWater(P0) : trBox({pts:P0, cum, L:cum[cum.length - 1]}); g.k = k; TRD.geo.set(r.id, g); return g; }
+  g = r.kind === 'sea' ? trWater(P0) : trBox({pts:P0, cum, L:cum[cum.length - 1]}); g.k = k;
+  // the detour's own stretches (cells off the route's usual track), as s ranges along the drawn lane (by their share of the track's length)
+  g.det = []; if (dt){ const L0 = dt.cum[dt.cum.length - 1] || 1; let i0 = -1; for (let i = 0; i <= dt.cells.length; i++){ const off = i < dt.cells.length && !D.B.set.has(dt.cells[i]);
+      if (off && i0 < 0) i0 = Math.max(0, i - 1); if (!off && i0 >= 0){ g.det.push([dt.cum[i0]/L0*g.L, dt.cum[Math.min(i, dt.cells.length - 1)]/L0*g.L]); i0 = -1; } } }
+  TRD.geo.set(r.id, g); return g; }
 function trBox(g){ let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of g.pts){ if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } g.box = [x0, y0, x1, y1]; return g; }
 function trCum(P){ const cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); return cum; }
 /* Sea lanes on the water (visual only: the route, its zones, income and timing are untouched). The zone-gate polyline, smoothed, still cuts
@@ -4769,24 +4785,33 @@ function trPathAdd(P2, g){ P2.moveTo(g.pts[0][0], g.pts[0][1]); for (let i = 1; 
 // the lane from s = a to b (end points interpolated)
 function trPathAddRange(P2, g, a, b){ if (b - a < 0.5) return; const A = trAt(g, a), B = trAt(g, b); P2.moveTo(A[0], A[1]); for (let i = 0; i < g.pts.length; i++) if (g.cum[i] > a && g.cum[i] < b) P2.lineTo(g.pts[i][0], g.pts[i][1]); P2.lineTo(B[0], B[1]); }
 // a sea lane over its wet span only, broken where it still crosses land
-function trPathAddSea(P2, g){ let a = g.s0; for (const [d0, d1] of g.dry){ trPathAddRange(P2, g, a, d0 - 1); a = d1 + 1; } trPathAddRange(P2, g, a, g.s1); }
+function trPathAddSea(P2, g, skip = []){ let a = g.s0; for (const [d0, d1] of [...g.dry.map(([x, y]) => [x - 1, y + 1]), ...skip].sort((x, y) => x[0] - y[0])){ if (d1 <= a) continue; trPathAddRange(P2, g, a, d0); a = Math.max(a, d1); } trPathAddRange(P2, g, a, g.s1); }
 // how much of a ship shows at s on a sea lane: faded in and out near the dry stretches still left inside the span (canals, closed straits)
 function trDryFade(g, s){ let f = 1; for (const [d0, d1] of g.dry){ const d = s < d0 ? d0 - s : s > d1 ? s - d1 : 0; f = Math.min(f, Math.max(0, Math.min(1, (d - 2)/8))); } return f; }
 function trAt(g, s){ s = Math.max(0, Math.min(g.L, s)); let lo = 0, hi = g.cum.length - 1; while (hi - lo > 1){ const m = (lo + hi) >> 1; if (g.cum[m] <= s) lo = m; else hi = m; }
   const A = g.pts[lo], B = g.pts[hi], f = (s - g.cum[lo])/Math.max(1e-6, g.cum[hi] - g.cum[lo]); return [A[0] + (B[0] - A[0])*f, A[1] + (B[1] - A[1])*f, Math.atan2(B[1] - A[1], B[0] - A[0])]; }
 // world-space lanes (called under the world transform)
 function drawTradeLanes(now){ if (!S.trade || !S.trade.routes.length) return; const T = S.trade, px = 1/view.s, hexPx = view.s*HS0;
-  if (TRD.ver !== T.ver || TRD.S !== S){ TRD.ver = T.ver; TRD.S = S; const sea = new Path2D(), mine = new Path2D(), cut = new Path2D(), land = new Path2D(), feed = new Path2D();
+  if (TRD.ver !== T.ver || TRD.S !== S){ TRD.ver = T.ver; TRD.S = S; const sea = new Path2D(), mine = new Path2D(), cut = new Path2D(), land = new Path2D(), feed = new Path2D(), det = new Path2D(), paused = new Path2D(), blk = new Path2D();
     const live = new Set(T.routes.map(r => r.id)); for (const k of TRD.geo.keys()) if (!live.has(k)) TRD.geo.delete(k);
-    for (const r of T.routes){ const g = trGeo(r), P2 = r.f0 < 1 || r.why === 'sunk' ? cut : r.kind === 'land' ? land : trMine(r, PLAYER) ? mine : sea;
-      if (r.kind === 'land') trPathAdd(P2, g); else { trPathAddSea(P2, g); trPathAddRange(feed, g, Math.max(0, g.s0 - 12), g.s0); trPathAddRange(feed, g, g.s1, Math.min(g.L, g.s1 + 12)); } }   // (feed: a faint spur on toward each port)
-    Object.assign(TRD, {sea, mine, cut, land, feed}); }
+    // red: cut (blockaded with no way around, a port closed, a convoy sunk today, the road cut); grey dots: paused; orange dashes: a detour's own stretch
+    for (const r of T.routes){ const g = trGeo(r), red = r.why === 'sunk' || (r.f0 === 0 && r.why !== 'paused') || (r.why === 'contested' && r.bk < 0) || (r.kind === 'land' && r.f0 < 1), P2 = r.why === 'paused' ? paused : red ? cut : r.kind === 'land' ? land : trMine(r, PLAYER) ? mine : sea;
+      if (r.kind === 'land') trPathAdd(P2, g); else { const sk = P2 === cut || P2 === paused ? [] : g.det || []; trPathAddSea(P2, g, sk); for (const [a0, a1] of sk) trPathAddRange(det, g, Math.max(g.s0, a0), Math.min(g.s1, a1));
+        if (r.bs0 === 'cut') trPathAddSea(blk, g);
+        trPathAddRange(feed, g, Math.max(0, g.s0 - 12), g.s0); trPathAddRange(feed, g, g.s1, Math.min(g.L, g.s1 + 12)); } }   // (feed: a faint spur on toward each port)
+    Object.assign(TRD, {sea, mine, cut, land, feed, det, paused, blk, nblk:T.routes.some(r => r.bs0 === 'cut')}); }
   const z = Math.max(0.75, Math.min(1.5, hexPx/12)), a0 = Math.max(0.5, Math.min(1, hexPx/8));
+  if (!tradeOn()){ ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'butt';   // routes hidden: only the blockaded ones (red, cut; orange, the detours)
+    ctx.setLineDash([11*z*px, 5*z*px]); ctx.lineWidth = 2.1*z*px; ctx.strokeStyle = `rgba(255,164,64,${0.88*a0})`; ctx.stroke(TRD.det);
+    if (TRD.nblk){ animAmb(); ctx.setLineDash([4*z*px, 5*z*px]); ctx.lineDashOffset = -((now/90) % 9)*z*px; ctx.lineWidth = 1.8*z*px; ctx.strokeStyle = `rgba(236,96,80,${0.75*a0})`; ctx.stroke(TRD.blk); }
+    ctx.restore(); return; }
   ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
   ctx.setLineDash([3*z*px, 4*z*px]); ctx.lineWidth = 1.2*z*px; ctx.strokeStyle = `rgba(206,226,234,${0.15*a0})`; ctx.stroke(TRD.feed);
   ctx.setLineDash([6*z*px, 6*z*px]); ctx.lineWidth = 1.3*z*px; ctx.strokeStyle = `rgba(196,222,232,${0.34*a0})`; ctx.stroke(TRD.sea);
   ctx.strokeStyle = `rgba(214,190,120,${0.5*a0})`; ctx.stroke(TRD.land);
   ctx.setLineDash([8*z*px, 5*z*px]); ctx.lineWidth = 1.7*z*px; ctx.strokeStyle = `rgba(236,196,108,${0.62*a0})`; ctx.stroke(TRD.mine);
+  ctx.setLineDash([1.5*z*px, 4*z*px]); ctx.lineWidth = 1.6*z*px; ctx.strokeStyle = `rgba(170,180,186,${0.55*a0})`; ctx.stroke(TRD.paused);
+  ctx.setLineDash([11*z*px, 5*z*px]); ctx.lineWidth = 2.1*z*px; ctx.strokeStyle = `rgba(255,164,64,${0.88*a0})`; ctx.stroke(TRD.det);
   if (T.routes.some(r => r.f0 < 1 || r.why === 'sunk')) animAmb(); ctx.setLineDash([4*z*px, 5*z*px]); ctx.lineDashOffset = -((now/90) % 9)*z*px; ctx.lineWidth = 1.8*z*px; ctx.strokeStyle = `rgba(236,96,80,${0.75*a0})`; ctx.stroke(TRD.cut);
   ctx.restore(); }
 let CONTRAIL = null;   // a 64×4 strip fading from white to clear, for aircraft contrails
@@ -4798,18 +4823,42 @@ function trShipIcon(col){ let c = TRSHIP.get(col); if (c) return c; c = document
   g.fillStyle = '#5b6062'; g.strokeStyle = '#0d1214'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(8, 2); g.quadraticCurveTo(14, 9, 13.5, 16); g.lineTo(13.5, 35); g.quadraticCurveTo(13, 38, 8, 38.5); g.quadraticCurveTo(3, 38, 2.5, 35); g.lineTo(2.5, 16); g.quadraticCurveTo(2, 9, 8, 2); g.closePath(); g.fill(); g.stroke();
   const box = ['#9a6b4a', '#6f7f86', '#b39a62', '#7d5a48']; for (let i = 0; i < 4; i++){ g.fillStyle = box[i]; g.fillRect(4.2, 10 + i*5, 7.6, 4); }
   g.fillStyle = col; g.fillRect(4.5, 30, 7, 3.4); g.fillStyle = '#d9d6cc'; g.fillRect(5, 34.2, 6, 1.6); TRSHIP.set(col, c); return c; }
+// the blockade icon (screen space): a red disc with a barrier where a blockade cuts a route, orange where convoys sail around it; label above
+function blkIcon(x, y, k, cut, lab){ if (x < -30 || y < -30 || x > cw + 30 || y > ch + 30) return; const R = 9*k; ctx.save();
+  ctx.fillStyle = cut ? 'rgba(206,52,44,.95)' : 'rgba(226,128,36,.95)'; ctx.strokeStyle = 'rgba(12,8,6,.85)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fillRect(x - R*0.66, y - R*0.2, R*1.32, R*0.4); ctx.fillRect(x - R*0.42, y - R*0.55, R*0.16, R*1.1); ctx.fillRect(x + R*0.26, y - R*0.55, R*0.16, R*1.1);
+  if (lab){ ctx.font = `700 ${Math.round(9.5*Math.min(1.3, k))}px ${BODY}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(6,8,10,.8)'; ctx.strokeText(lab, x, y - R - 5); ctx.fillStyle = cut ? 'rgba(255,170,150,.95)' : 'rgba(255,200,140,.95)'; ctx.fillText(lab, x, y - R - 5); }
+  ctx.restore(); }
+// the reach of every blockading fleet you can see (world space): a dashed circle, red for a foe's, amber for yours and your allies'
+function drawBlockZones(now){ if (!S.armies.some(a => a.blk)) return; const vis = visibleSet(PLAYER), px = 1/view.s;
+  for (const a of S.armies){ if (!a.blk || a.to !== null || a.sail || a.air || a.fly || !G.P[a.at].sea || !count(a)) continue; const km = fleetKm(a); if (!km || !(a.owner === PLAYER || friendly(PLAYER, a.owner) || armyVisible(a, vis))) continue;
+    const [x, y] = armyXY(a), foe = a.owner !== PLAYER && !friendly(PLAYER, a.owner), R = km*KM_W; ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2);
+    ctx.fillStyle = foe ? 'rgba(224,72,60,.10)' : 'rgba(236,182,90,.09)'; ctx.fill(); ctx.setLineDash([5*px, 4*px]); ctx.lineDashOffset = -((now/120) % 9)*px; ctx.lineWidth = 1.6*px; ctx.strokeStyle = foe ? 'rgba(240,96,80,.85)' : 'rgba(236,182,90,.85)'; ctx.stroke(); ctx.restore(); }
+  animAmb(); }
+// chokepoint names at play zoom (screen space) while routes show (a fleet selected, the Trade mode); one closed by a blockade, always and in red. Closure is worked out when the trade picture changes
+var CHKD = {ver:-1, S:null, m:new Map()};
+function drawChokes(now){ const hexPx = view.s*HS0; if (hexPx < 8 || !G) return; const T = S.trade;
+  if (T && (CHKD.ver !== T.ver || CHKD.S !== S)){ CHKD = {ver:T.ver, S, m:new Map()}; const bl = trBlks(); if (bl.length) for (const q of chokes()) if (bl.some(b => Math.hypot(b.x - q.x, b.y - q.y)/KM_W <= CHOKE_KM) && chokeClosed(q, bl)) CHKD.m.set(q.k, 1); }
+  const a = Math.min(1, (hexPx - 8)/4), f = Math.round(10.5*Math.max(1, Math.min(1.35, hexPx/16))); ctx.save(); ctx.font = `italic 600 ${f}px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const on = tradeOn(); for (const q of chokes()){ const [x, y] = toScreen(q.x, q.y); if (x < -120 || y < -20 || x > cw + 120 || y > ch + 20) continue; const shut = CHKD.m.has(q.k); if (!on && !shut) continue;   // (names while routes show; a closed one always)
+    const t = shut ? `${q.name} · closed` : q.name, ty = y + 24;
+    ctx.globalAlpha = a; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,10,16,.75)'; ctx.strokeText(t, x, ty); ctx.fillStyle = shut ? '#ff9c8c' : 'rgba(186,220,236,.92)'; ctx.fillText(t, x, ty);
+    ctx.globalAlpha = a*0.9; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI*2); ctx.fillStyle = shut ? '#ff6b5a' : 'rgba(186,220,236,.9)'; ctx.fill(); }
+  ctx.restore(); }
 // screen-space convoys: small ship icons at mid zoom, the cargo-ship picture at close zoom, dots at world zoom
 function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; const T = S.trade, hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, t = S.hour + live;
   const vx0 = -view.x/view.s - 40, vy0 = -view.y/view.s - 40, vx1 = (cw - view.x)/view.s + 40, vy1 = (ch - view.y)/view.s + 40;
-  const close = hexPx >= 26, mid = hexPx >= 5.5, img = null, k = Math.max(0.8, Math.min(1.6, hexPx/16));
+  const close = hexPx >= 26, mid = hexPx >= 5.5, img = null, k = Math.max(0.8, Math.min(1.6, hexPx/16)), on = tradeOn(), seen = visibleSet(PLAYER);
   for (const r of T.routes){ const g = trGeo(r), b = g.box; if (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1) continue;
     // blockade marker at the blocking zone / port, and a burning wreck where today's convoy was sunk
-    if (r.bz >= 0 && r.f0 < 1 && mid){ const P = G.P[r.bz], [x, y] = toScreen(P.x, P.y); ctx.save(); ctx.strokeStyle = 'rgba(236,96,80,.85)'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(x, y, 11*k, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    if (r.bk >= 0 && r.f0 < 1 && mid && r.why !== 'paused'){ const f = armyById(r.bk), D = f ? trDetour(r) : null; if (f && D && (on || r.f0 === 0)){ const own = f.owner === PLAYER || friendly(PLAYER, f.owner) || armyVisible(f, seen);
+        const [bx, by] = own ? armyXY(f) : (q => [q.x, q.y])(trNear(D.B, ...armyXY(f))), [x, y] = toScreen(bx, by); blkIcon(x, y - (own ? 24*k : 0), k, r.f0 === 0, hexPx >= 12 ? (r.f0 === 0 ? 'BLOCKADE' : 'DETOUR') : ''); } }
+    else if (r.bz >= 0 && r.f0 < 1 && mid && r.why !== 'paused' && on){ const P = G.P[r.bz], [x, y] = toScreen(P.x, P.y); ctx.save(); ctx.strokeStyle = 'rgba(236,96,80,.85)'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(x, y, 11*k, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(x - 4*k, y - 4*k); ctx.lineTo(x + 4*k, y + 4*k); ctx.moveTo(x + 4*k, y - 4*k); ctx.lineTo(x - 4*k, y + 4*k); ctx.stroke();
       if (hexPx >= 12){ ctx.font = `700 ${Math.round(9.5*Math.min(1.3, k))}px ${BODY}`; ctx.fillStyle = 'rgba(255,170,150,.92)'; ctx.textAlign = 'center'; ctx.fillText(r.why === 'contested' ? 'CONTESTED' : 'BLOCKADE', x, y - 15*k); } ctx.restore(); }
-    if (r.raidZ >= 0 && S.hour - r.raid < 12 && mid){ const P = G.P[r.raidZ], [x, y] = toScreen(P.x, P.y), fl = 0.6 + 0.4*Math.sin(now/120); if (x > -20 && y > -20 && x < cw + 20 && y < ch + 20) animFast();   // (the flickering wreck asks for frames only on screen)
+    if (r.raidZ >= 0 && S.hour - r.raid < 12 && mid && on){ const P = G.P[r.raidZ], [x, y] = toScreen(P.x, P.y), fl = 0.6 + 0.4*Math.sin(now/120); if (x > -20 && y > -20 && x < cw + 20 && y < ch + 20) animFast();   // (the flickering wreck asks for frames only on screen)
       ctx.save(); ctx.fillStyle = `rgba(255,${120 + 60*fl},60,${0.7*fl})`; ctx.beginPath(); ctx.arc(x, y, 4.5*k, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = 'rgba(40,40,40,.5)'; ctx.beginPath(); ctx.arc(x + 3*k, y - 6*k, 5*k, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
-    if (r.f <= 0 || g.L < 1) continue;
+    if (r.f <= 0 || g.L < 1 || !on) continue;   // (cargo ships only while routes show)
     const n = Math.max(1, Math.min(6, Math.round(g.L/260))), per = 2*g.L/TR_SPD, ph = ((t/per) % 1 + (r.id*0.137) % 1) % 1;
     for (let i = 0; i < n*2; i++){ const back = i % 2 === 1, sea = r.kind === 'sea'; let f = (ph + Math.floor(i/2)/n) % 1; if (back) f = 1 - f;
       // sea lanes: ships sail the wet span only (they turn back at the coast, fading in and out there), not the run inland to the port city
@@ -4827,24 +4876,39 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
       else { const ic = trShipIcon(col), L = 20*k; if (al < 1) ctx.globalAlpha = al; ctx.drawImage(ic, -L*0.2, -L/2, L*0.4, L); }
       ctx.restore(); } } }
 function tradeHTML(){ const T = trS(), me = PLAYER, mine = routesOf(me), tot = tradeIncome(me), ico = k => icon(k, 13);
-  const rows = mine.map(r => { const v = trSide(r, me), o = trOther(r, me), [cls, txt] = trStateText(r), risk = trRisk(r), mid = r.path[Math.floor(r.path.length/2)];
+  const rows = mine.map(r => { const v = trSide(r, me), o = trOther(r, me), [cls, txt] = trStateText(r, me), risk = trRisk(r), mid = r.path[Math.floor(r.path.length/2)];
     const via = r.via && (r.via[0] != null || r.via[1] != null) ? ` <span title="Shipped through a partner's or an independent port">(via ${pName(r.a === me ? r.pa : r.pb)})</span>` : '';
     return `<div class="trr"><div class="nm">${flagHTML(o >= 0 ? o : G.countries[r.nc].name, 15)}<b>${trName(r, PLAYER)}</b><span class="small muted">${r.kind === 'land' ? '⛟ Land route' : '⚓ Sea route'} · ${pName(r.a === me ? r.pa : r.pb)} → ${pName(r.a === me ? r.pb : r.pa)}${via}${r.kind === 'sea' ? ` · ${r.len} sea zones` : ''}</span></div>
       <div class="v" title="Per day while the route runs: money and goods from the partner. Full value $${fmt1(v.cash)}M + ${fmt1(v.q)} ${rlbl(v.k)}."><b>+$${fmt1(v.cash*r.f)}M</b>${r.f < 1 ? `<span class="small muted"> of $${fmt1(v.cash)}M</span>` : ''} <span class="res-${v.k}">${ico(v.k)}</span> +${fmt1(v.q*r.f)} <span class="small muted">${rlbl(v.k)}</span></div>
       <div class="st ${cls}">${txt}${risk > 0.05 && cls === 'ok' ? ` · <span style="color:var(--danger-t)" title="Chance the next convoy is attacked (escorts can still save it)">raid risk ${Math.round(risk*100)}%</span>` : ''}</div>
-      <div class="acts"><button class="btn" data-act="goto" data-id="${mid}" style="padding:2px 8px;font-size:12px">Show</button>${r.kind === 'sea' ? `<button class="btn" data-act="trade-escort" data-id="${r.id}" style="padding:2px 8px;font-size:12px" title="Send your nearest idle fleet with warships to escort this route">Escort</button>` : ''}<button class="btn" data-act="trade-close" data-id="${r.id}" style="padding:2px 8px;font-size:12px" title="Stop trading with ${trName(r, PLAYER)} (−4 opinion). You can reopen it later.">Close</button></div></div>`; }).join('');
+      <div class="acts"><button class="btn" data-act="goto" data-id="${mid}" style="padding:2px 8px;font-size:12px">Show</button>${r.kind === 'sea' ? `<button class="btn" data-act="trade-escort" data-id="${r.id}" style="padding:2px 8px;font-size:12px" title="Send your nearest idle fleet with warships to escort this route">Escort</button>` : ''}${r.pause === me ? `<button class="btn primary" data-act="trade-pause" data-id="${r.id}" data-v="0" style="padding:2px 8px;font-size:12px" title="Send convoys again: the route earns again (and can be raided again)">Resume</button>` : r.pause == null ? `<button class="btn" data-act="trade-pause" data-id="${r.id}" data-v="1" style="padding:2px 8px;font-size:12px" title="Hold the convoys in port: nothing can be sunk or captured, and the route earns nothing until you resume it. No opinion cost.">Pause route</button>` : ''}<button class="btn" data-act="trade-close" data-id="${r.id}" style="padding:2px 8px;font-size:12px" title="Stop trading with ${trName(r, PLAYER)} (−4 opinion). You can reopen it later.">Close</button></div></div>`; }).join('');
   const closed = Object.keys(T.closed).filter(k => { const [x, y] = k.split(':'); return +x === me || +y === me; }).map(k => { const [x, y] = k.split(':'), nm = y[0] === 'n' ? G.countries[+y.slice(1)].name : S.nations[+x === me ? +y : +x].name;
     return `<span class="chipx">${nm} · closed <button data-act="trade-reopen" data-k="${k}" aria-label="Reopen" title="Reopen this route">↺</button></span>`; }).join('');
   // partners you could open a route with: powers not at war (no embargo) and the biggest independent ports
   const cands = S.nations.filter(N => N.alive && N.id !== me && !atWar(me, N.id) && !T.routes.some(r => r.key === trKey(me, N.id))).map(N => `<option value="n${N.id}">${N.name} · ships ${rlbl(trGoods(N.id)[0])}${opinion(N.id, me) < -30 ? ' (refuses)' : ''}</option>`);
   const C = G.P[S.nations[me].capital], neu = [...neuPorts()].filter(([nc]) => !T.routes.some(r => r.key === trKey(me, NEUTRAL, nc))).map(([nc, ps]) => [nc, neuGdp(nc)/(1 + hexDist(C.cc, G.P[ps[0]].cc)/60)]).sort((x, y) => y[1] - x[1]).slice(0, 10).map(([nc]) => `<option value="c${nc}">${G.countries[nc].name} (independent) · ships ${rlbl(neuGood(nc))}</option>`);
-  return `<div class="eyebrow" style="margin-top:6px">Trade routes · +$${fmt1(tot.cash)}M a day${tot.cut ? ` · <span style="color:var(--danger-t)">${tot.cut} cut</span>` : ''} ${itip("Routes pay both partners every day: money, plus some of what the partner produces. Sea routes run through the sea zones on the map: enemy warships holding a zone (or a port) blockade them, and submarines, warships and patrol aircraft can sink a day's convoy. Keep warships on or next to your lanes, or select a fleet and give it Escort route.")}</div>
+  return `<div class="eyebrow" style="margin-top:6px">Trade routes · +$${fmt1(tot.cash)}M a day${tot.cut ? ` · <span style="color:var(--danger-t)">${tot.cut} cut or slowed</span>` : ''}${tot.paused ? ` · ${tot.paused} paused` : ''} ${itip("Routes pay both partners every day: money, plus some of what the partner produces. Enemy fleets ordered to Blockade stop convoys within their reach: convoys sail around them (a longer, poorer route, dashed on the map) or, at a strait or a port with no way around, the route is cut (red). Submarines, warships and patrol aircraft can sink a day's convoy and capture part of its cargo. Select a fleet for Escort, or Pause a route to keep its convoys in port.")}</div>
     <div class="trl">${rows || '<p class="small muted">No trade routes: you are at war with everyone, or have no port.</p>'}</div>
     ${closed ? `<div class="chips">${closed}</div>` : ''}
     <div class="row" style="align-items:center"><select id="tropen" ${mine.length >= TR_MAX ? 'disabled' : ''}><option value="">Open a route with…</option>${cands.join('')}${neu.join('')}</select><button class="btn" data-act="trade-open" ${mine.length >= TR_MAX ? `disabled title="At most ${TR_MAX} routes"` : ''}>Open route</button><span class="small muted">${mine.length}/${TR_MAX} routes</span></div>`; }
 function escortRowHTML(a){ const rs = routesOf(PLAYER).filter(r => r.kind === 'sea'); const r0 = a.escort != null ? routeById(a.escort) : null;
   return `<div class="row" style="align-items:center"><span class="small muted" title="The fleet sails to the route's most threatened sea zone (else its middle) and guards the convoys: raids there are less likely to succeed and the raiders take damage. On station it is resupplied at sea by the convoys, so it does not suffer supply attrition even far from port.">Escort route</span>
-    <select data-act="escort-set" style="max-width:240px"><option value="">${rs.length ? '— none —' : 'No sea trade routes'}</option>${rs.map(r => `<option value="${r.id}" ${a.escort === r.id ? 'selected' : ''}>${trName(r, PLAYER)} · ${pName(r.a === PLAYER ? r.pa : r.pb)} → ${pName(r.a === PLAYER ? r.pb : r.pa)}${r.f < 1 ? ' (under threat)' : ''}</option>`).join('')}</select>${r0 ? (escortSup(a) || supplied(a) ? `<span class="small" style="color:var(--ok-t)" title="Resupplied at sea by the convoys while on (or next to) the route">escorting · resupplied by its convoys</span>` : `<span class="small" style="color:var(--danger-t)" title="Out of supply until it reaches the route; on the route the convoys resupply it">escorting · no supply until it reaches the route</span>`) : ''}</div>`; }
+    <select data-act="escort-set" style="max-width:240px"><option value="">${rs.length ? '— none —' : 'No sea trade routes'}</option>${rs.map(r => `<option value="${r.id}" ${a.escort === r.id ? 'selected' : ''}>${trName(r, PLAYER)} · ${pName(r.a === PLAYER ? r.pa : r.pb)} → ${pName(r.a === PLAYER ? r.pb : r.pa)}${r.f < 1 ? ' (under threat)' : ''}</option>`).join('')}</select>${r0 ? (escortSup(a) || supplied(a) ? `<span class="small" style="color:var(--ok-t)" title="Resupplied at sea by the convoys while on (or next to) the route">escorting · resupplied by its convoys</span>` : `<span class="small" style="color:var(--danger-t)" title="Out of supply until it reaches the route; on the route the convoys resupply it">escorting · no supply until it reaches the route</span>`) : ''}</div>${(fs => fs.length ? `<div class="row" style="align-items:center"><span class="small muted" title="The fleet sails to the nearest point of that route's lane and attacks its convoys">Raid route</span><select data-act="raid-set" style="max-width:240px"><option value="">— none —</option>${fs.map(({r, d}) => `<option value="${r.id}" ${a.raid && a.raid.r === r.id ? 'selected' : ''}>${S.nations[r.a].name}–${trName(r, r.a)} · ${fmt(Math.round(d/10)*10)} km away</option>`).join('')}</select></div>` : '')(raidTargets(a))}`; }
+// the Escort / Raid / Blockade buttons of a fleet's army bar
+const ORD_IC = {escort:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l7.5 2.8v5.9c0 4.6-3.2 8.6-7.5 10.3-4.3-1.7-7.5-5.7-7.5-10.3V5.3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.3 12.2l2.6 2.6 4.8-5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  raid:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  blockade:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3.2 2.4"/><rect x="4.5" y="10" width="15" height="4" rx="1" fill="currentColor"/><path d="M8 6.5v11M16 6.5v11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'};
+function fleetOrdersHTML(a){ const km = fleetKm(a), own = routesOf(PLAYER).filter(r => r.kind === 'sea'), foes = raidTargets(a), er = a.escort != null ? routeById(a.escort) : null, rr = a.raid ? routeById(a.raid.r) : null, cut = n => n.length > 15 ? n.slice(0, 14) + '…' : n;
+  const b = (k, on, dis, label, sub, tip) => `<button class="abo ${k}${on ? ' on' : ''}" data-act="fleet-${k}" data-id="${a.id}" ${dis ? 'disabled' : ''} aria-pressed="${on}" title="${tip}">${ORD_IC[k]}<b>${label}</b><small>${sub}</small></button>`;
+  return `<div class="ab-ord" role="group" aria-label="Trade war orders">
+    ${b('escort', !!er, !er && !own.length, 'Escort', er ? cut(trName(er, PLAYER)) : own.length ? 'guard your trade' : 'no sea routes', er ? 'Escorting this route: tap to stop. Choose another route below.' : `Guard your most threatened sea trade route: raids on it fail more often and the raiders take damage.${own.length ? '' : ' You have no sea trade routes.'}`)}
+    ${b('raid', !!rr, !rr && (!foes.length || !km), 'Raid', rr ? cut(trName(rr, rr.a)) : foes.length ? 'hunt convoys' : 'no enemy trade', rr ? 'Raiding: tap to stop.' : foes.length ? `Sail to the nearest enemy trade lane and attack convoys passing within ${km} km. A sunk convoy's cargo is 25–50% yours.` : 'No enemy trade routes to raid: you are not at war with a trading power.')}
+    ${b('blockade', !!a.blk, !a.blk && !km, 'Blockade', a.blk ? `on · ${km} km` : `${km} km reach`, a.blk ? 'Blockading: tap to lift it.' : `Stop enemy convoys within ${km} km of where the fleet stands: they sail around it, or their route is cut. One or two ships close a strait.`)}
+  </div>`; }
+// the route a fleet's Escort button takes: the most threatened of your sea routes (blockaded, raided lately, at risk), then the nearest
+function fleetEscortPick(a){ const [x, y] = armyXY(a), rs = routesOf(PLAYER).filter(r => r.kind === 'sea'); if (!rs.length) return null;
+  const th = r => (r.f0 < 1 ? 2 : 0) + (S.hour - r.raid < 72 ? 2 : 0) + trRisk(r)*3, d = r => { const D = trDetour(r); return D ? trNear(D.track, x, y).d : 1e9; };
+  return rs.slice().sort((p, q) => th(q) - th(p) || d(p) - d(q))[0]; }
 // the nearest idle fleet of yours (warships, not already escorting) for a route
 function escortPick(r){ let best = null, bd = 1e9; const mid = G.P[r.path[Math.floor(r.path.length/2)]];
   for (const a of S.armies){ if (a.owner !== PLAYER || !shipsOnly(a) || a.air || a.fly || a.escort != null || a.path.length || a.to !== null || !count(a) || !navPw(a)) continue; const d = hexDist(G.P[a.at].cc, mid.cc); if (d < bd){ bd = d; best = a; } }
@@ -5234,7 +5298,11 @@ const RMAP_K = ['oil', 'rare', 'iron', 'metal', 'elec', 'mp', 'cash'], RMAP_W = 
 const RMAP_C = {oil:'rgba(214,48,40,.74)', metal:'rgba(160,160,40,.76)', iron:'rgba(166,186,214,.74)', elec:'rgba(0,206,198,.72)', rare:'rgba(255,146,22,.78)', mp:'rgba(44,122,72,.76)', cash:'rgba(112,214,98,.66)'};
 // the Resources map legend: each colour is the province's main output (weighted so a little rare material outranks a lot of money)
 function resLegendHTML(){ return `<div class="lh">Resources · each city's main resource</div><div class="lr lx" style="margin:0 0 4px"><span class="muted">Cities: strong colour, light outline · countryside: faint</span></div>` + RMAP_K.map(k => { const R = RES.find(r => r.k === k); return `<div class="lr"><i style="background:${RMAP_C[k]}"></i><span class="res-${k}">${icon(k, 12)}</span><span>${R.name}</span><span class="muted">${R.map}</span></div>`; }).join('') + `<div class="lr lx"><span class="muted">Hover a province for its yields</span></div>`; }
-const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources'], ['stability', 'Stability']];
+const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources'], ['stability', 'Stability'], ['trade', 'Trade']];
+// the Trade map mode draws the political map with every trade route and convoy on it; the other modes show routes only while one of your
+// fleets is selected (so you see what to raid or blockade), and blockaded routes always (red, with the blockade icon)
+const polMode = () => mapMode === 'political' || mapMode === 'trade';
+const tradeOn = () => mapMode === 'trade' || (sel.army != null && (a => !!a && a.owner === PLAYER && !a.air && shipsN(a) > 0)(armyById(sel.army)));
 const sel = {army:null, prov:null, target:null, group:[], foe:null};   // foe: a foreign force you tapped (its read-only army bar)
 let boxSel = null, rallyFor = null, aimMsl = null;
 let targetPath = null;
@@ -5364,6 +5432,7 @@ function armyPos(a){
   if (a.air) return wingPos(a);
   if (a.fly && a.fly.kind === 'drop'){ const A = G.P[a.fly.from], B = G.P[a.fly.tgt], t = Math.min(1, a.fly.t + (S.speed && !S.over ? acc : 0)*a.fly.dt); return [A.x + (B.x - A.x)*t, A.y + (B.y - A.y)*t]; }
   const A = G.P[a.at];
+  if (a.sail){ const q = a.sail, t = Math.min(1, q.t + (S.speed && !S.over ? acc : 0)/q.h); return [q.f[0] + (q.to[0] - q.f[0])*t, q.f[1] + (q.to[1] - q.f[1])*t]; }   // (a fleet sailing to a spot in its own zone, rules/movement.js orderSpot)
   if (a.to === null){ if (!(a.path.length && GO.S === S && GO.has(a.id) && S.speed && !S.over)) return a.pos ? [a.pos[0], a.pos[1]] : [A.x, A.y];
     // between legs: already easing toward the next province, on the very curve the next leg will follow (continuous when the hour turns)
     // (the leg's first hour is this one: a train running through carries the last hour's spare time into it, so it may cover more)
@@ -7596,7 +7665,7 @@ function renderLayer(vis, lite = false, R = null){
       c.globalCompositeOperation = 'source-over'; c.fillStyle = gp.micro;
       for (const [oc, w] of [[o0, 1 - f], [o0 + 1, f]]){ if (0.3*zm*w < 0.06) continue;   /* a faint octave costs a full-layer fill for nothing */ gp.micro.setTransform(new DOMMatrix().rotate(-23).scale(0.08/Math.pow(2, oc))); c.globalAlpha = 0.3*zm*w; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); } }
     c.restore(); }
-  if (hexPx >= ART_PX && SET.fx !== 'low' && mapMode === 'political' && DT.fail){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (CV) c.clip(CV, 'evenodd');
+  if (hexPx >= ART_PX && SET.fx !== 'low' && polMode() && DT.fail){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (CV) c.clip(CV, 'evenodd');
     for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const t = P.terrain === 'urban' ? provGround(P) : P.terrain || 'plains', wooded = t === 'mountain' && Math.abs(P.lat) > 24 && Math.abs(P.lat) < 55, pt = t === 'forest' || wooded ? GP.forest : t === 'plains' || t === 'urban' ? GP.fields : null; if (!pt) continue;   // temperate ranges (Appalachians, Alps' flanks) are wooded
       c.globalAlpha = (t === 'forest' ? 0.7 : wooded ? 0.5 : 0.62)*zg; c.fillStyle = pt; c.fill(GEO.fill[p], 'evenodd');
       if (wooded){ c.globalAlpha = 0.42*zg; c.fillStyle = '#4a6a3c'; c.fill(GEO.fill[p], 'evenodd'); } }   // their grey rock and white ridge highlights take the green of the woods
@@ -7617,7 +7686,7 @@ function renderLayer(vis, lite = false, R = null){
     if (season(p) === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }   // (winter snow is the soft sheet, next)
   // winter snow: the cached world-space sheet (snowCover) laid over the fills, as the old per-province snow was (so it reads white over the political
   // tint and the terrain-mode colours, and relief still shows through), only the part in the painted rect; then thinned over the towns
-  if (mapMode === 'political' || mapMode === 'terrain'){ const SC = snowCover(), bb = SNOWC.bb; if (SC && bb){ const x0 = Math.max(vx0, bb[0]), y0 = Math.max(vy0, bb[1]), x1 = Math.min(vx1, bb[2]), y1 = Math.min(vy1, bb[3]);
+  if (polMode() || mapMode === 'terrain'){ const SC = snowCover(), bb = SNOWC.bb; if (SC && bb){ const x0 = Math.max(vx0, bb[0]), y0 = Math.max(vy0, bb[1]), x1 = Math.min(vx1, bb[2]), y1 = Math.min(vy1, bb[3]);
     if (x1 > x0 && y1 > y0){ const kx = SC.width/WORLD_W, ky = SC.height/WORLD_H; c.globalAlpha = 0.72; c.drawImage(SC, x0*kx, y0*ky, (x1 - x0)*kx, (y1 - y0)*ky, x0, y0, x1 - x0, y1 - y0); c.globalAlpha = 1;   // (the overlay is cut to the coast below)
       if (cityFade(hexPx) > 0){ c.globalCompositeOperation = 'destination-out'; c.globalAlpha = 0.65*cityFade(hexPx);   // cleared streets and roofs read darker than the snowfields
         cityEach(Math.max(wx0, x0), Math.max(wy0, y0), Math.min(wx1, x1), Math.min(wy1, y1), p => { if (season(p) !== 'snow') return; const I = CGEO.get(p); if (!I) return; const img = CBAKE.get('d' + p + '|' + Math.min(CCH, cityTier(I))) || cityAnyBake(p, cityTier(I), false); if (img) c.drawImage(img, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); });
@@ -7636,7 +7705,7 @@ function renderLayer(vis, lite = false, R = null){
   if (hexPx >= 3){ const z = Math.min(1, (hexPx - 3)/9), zf = 1 - 0.5*Math.max(0, Math.min(1, (hexPx - 24)/40)); c.strokeStyle = `rgba(0,0,0,${(0.17 + 0.07*z)*zf})`; const PE = tiledIn(GEO.provT, wx0, wy0, wx1, wy1); c.lineWidth = (0.7 + 0.3*z)*px; c.stroke(PE);
     if (hexPx >= 8){ c.strokeStyle = `rgba(236,230,212,${0.08*z*zf})`; c.lineWidth = 0.6*px; c.stroke(PE); } }
   c.strokeStyle = 'rgba(200,205,190,0.22)'; c.lineWidth = Math.max(0.6*px, 0.9); c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1));
-  if (hexPx >= 2.5 && mapMode === 'political') for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !GEO.nation[n] || !nOn(n)) continue;
+  if (hexPx >= 2.5 && polMode()) for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !GEO.nation[n] || !nOn(n)) continue;
     // a soft band just inside the border (clipped to the nation's own land): green on yours, red on an enemy's, a faint grey on the rest
     const tn = toneOf(n); if (tn === 'other' && hexPx < 6) continue;
     const area = NA(n), tc0 = mapCol(n), ka = tn === 'own' ? 1 : tn === 'war' ? 0.75 : 0.3;
@@ -7654,7 +7723,7 @@ function renderLayer(vis, lite = false, R = null){
   const clipLand = () => { c.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ c.fillStyle = '#000'; c.fill(CV, 'evenodd'); } else c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over'; };
   clipLand();
   // frozen lakes inside the snow (after the land clip, which cuts the lakes out of the overlay): a pale ice skin at the sheet's weight there, a darker rim
-  if ((mapMode === 'political' || mapMode === 'terrain') && SNOWC.ice && SNOWC.S === S && SNOWC.cv){ c.lineJoin = 'round'; c.lineWidth = 0.6*px;
+  if ((polMode() || mapMode === 'terrain') && SNOWC.ice && SNOWC.S === S && SNOWC.cv){ c.lineJoin = 'round'; c.lineWidth = 0.6*px;
     for (const L of SNOWC.ice){ const b = L.b; if (b[2] < wx0 || b[0] > wx1 || b[3] < wy0 || b[1] > wy1) continue;
       c.fillStyle = `rgba(208,222,232,${(0.8*L.a).toFixed(3)})`; c.fill(L.path); c.strokeStyle = `rgba(150,170,182,${(0.7*L.a).toFixed(3)})`; c.stroke(L.path); } }
   if (hexPx >= 3 && LV){ { c.save(); c.clip(LV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(214,218,204,0.35)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1)); c.restore(); } }   // national borders across the lakes in view: a faint dashed line
@@ -7677,7 +7746,7 @@ function renderLayer(vis, lite = false, R = null){
   c.restore();   // the overlay's R clip
   // political tint: each power's land in its colour, laid on the ground with a 'color' blend (hue and saturation from the power, light and shade from the terrain)
   // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
-  if (mapMode === 'political' && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
+  if (polMode() && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
     const t = tc.getContext('2d'); t.save(); clipR(t); t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(dx0, dy0, dw, dh); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
     { const TN = tones(); for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; const tn = toneOf(n); t.fillStyle = rgba(TN[tn], TONE_A[tn]); t.fill(NA(n)); }
       t.fillStyle = rgba(TN.neu, TONE_A.neu); t.fill(NEU()); }   // independents: the same quiet grey
@@ -7893,6 +7962,7 @@ function draw(now){ draw.now = now;
   if (hoverProv >= 0 && hoverProv !== sel.prov && !G.P[hoverProv].sea){ ctx.strokeStyle = 'rgba(255,248,230,0.55)'; ctx.lineWidth = 1.6*px; ctx.stroke(GEO.outline[hoverProv]); }
   drawLinkFx(now, vis);
   drawTradeLanes(now);
+  drawBlockZones(now);
   if (sel.target !== null){ const o = S.owner[sel.target]; if (!G.P[sel.target].sea && o !== PLAYER && (o < 0 || atWar(PLAYER, o))){ ctx.fillStyle = 'rgba(224,87,79,0.2)'; ctx.fill(GEO.fill[sel.target], 'evenodd'); }
     ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(GEO.outline[sel.target]); ctx.setLineDash([]); }
   if (sel.prov !== null){ const calm = afxReduced(); if (SELFX.p !== sel.prov){ SELFX.p = sel.prov; SELFX.pt = now; }
@@ -7922,7 +7992,7 @@ function draw(now){ draw.now = now;
   const unkA = [], ROLES = new Map(); LAY_R = ROLES; SIDEC.clear(); TMAS = tmArtSig();
   for (const a of S.armies){ if (!armyVisible(a, vis)){ if (vis.locs && vis.locs.length && armyLocated(a, vis)) unkA.push(a); continue; } tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
     if (a.fly) continue;
-    let [wx, wy] = armyPos(a); const mv = a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id));
+    let [wx, wy] = armyPos(a); const mv = a.to !== null || !!a.sail || (a.path.length > 0 && GO.S === S && GO.has(a.id));
     let mvm = null; if (!a.air){ const m = mvm = movStep(a, wx, wy, mv, now); if (m){ wx = m.x; wy = m.y; } }   // marching or settling: the spring's spot
     // (standing forces off screen count too: the zoom bands are resolved over every force you can see, so a counter never shifts as others come
     // into view; a province not laid out yet waits for a frame with time to spare)
@@ -8226,6 +8296,7 @@ function draw(now){ draw.now = now;
   const hitsPrev = hits;   // last frame's plates: smoke and bursts spawn off them (AFX.avoid)
   hits = []; HITX = [];
   drawTrade(now, vis);
+  drawChokes(now);
   drawConvoys(now, vis);
   drawSupplyRun(now);
   if (PART.length) drawTrailDust();
@@ -8544,8 +8615,8 @@ function tap(x, y, shift = false){
       const ext = pathFor(a, end, p); if (ext.length){ for (const x of groupArmies()) if (!x.air && x !== a && (x.path.length || x.to !== null)){ const e2 = x.path.length ? x.path[x.path.length - 1] : x.to, px = pathFor(x, e2, p); if (px.length) x.path = x.path.concat(px); }
         a.path = a.path.concat(ext); a.forced = true; sfx('order'); toast(`Waypoint added: ${armyName(a)} continues to ${G.P[p].cityName || G.P[p].name}.`, 'info', null); renderSide(true); } else toast('No route from the last waypoint to there.', 'bad', null);
       return; }
-    if (a.to === null && p === a.at && !a.air && (!G.P[p].sea || shipsOnly(a)) && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.pos || [G.P[p].x, G.P[p].y];   // (a fleet: anywhere in its sea zone)
-      if (Math.hypot(w0[0] - cur[0], w0[1] - cur[1]) > 6){ a.pos = w0; visCache = null; sfx('order'); renderSide(true); return; } selectProv(p); return; }
+    if (a.to === null && p === a.at && !a.air && (!G.P[p].sea || shipsOnly(a)) && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.sail ? a.sail.to : a.pos || [G.P[p].x, G.P[p].y];   // (a fleet: anywhere in its sea zone; it sails there)
+      if (Math.hypot(w0[0] - cur[0], w0[1] - cur[1]) > 6){ orderSpot(a, w0[0], w0[1]); visCache = null; sfx('order'); if (a.sail) toast(`${armyName(a)} sails to the new position: about ${sailHours(a)} h.`, 'info', null); renderSide(true); return; } selectProv(p); return; }
     if (a.to === null && p === a.at){ selectProv(p); return; }
     if (sel.target === p && a.air){ sendToTarget(a); return; }
     if (sel.target === p){ if (bombardTry(a)) return;   // in range: tapping the target again bombards it (the force stays where it is)
@@ -9585,6 +9656,11 @@ function statusText(a){
   const P = G.P;
   if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${P[a.at].name}`};
   if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${P[a.at].name}, resupplied at sea by the convoys`}`}; }
+  if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${P[a.at].name}: it attacks any convoy within ${fleetKm(a)} km`}; }
+  if (a.blk){ const n = S.trade ? S.trade.routes.filter(r => r.bk === a.id) : [], cut = n.filter(r => r.f0 === 0).length, [x, y] = armyXY(a), ch = chokeAt(x, y, fleetKm(a)), here = ch ? chokeByKey(ch).name : P[a.at].name;
+    if (a.to !== null || a.path.length || a.sail || !P[a.at].sea) return {cls:'move', short:'to blockade', long:`Blockade order: it blockades once it stands at sea${a.to !== null || a.path.length || a.sail ? `, about ${a.sail ? sailHours(a) : etaHours(a)} h` : ''}`};
+    return {cls:'battle', short:'blockading', long:`Blockading ${here} (${fleetKm(a)} km)${n.length ? `: ${cut ? `${cut} enemy route${cut > 1 ? 's' : ''} cut` : ''}${cut && n.length > cut ? ', ' : ''}${n.length > cut ? `${n.length - cut} rerouted` : ''}` : ': no enemy convoys pass here now'}`}; }
+  if (a.sail) return {cls:'move', short:'at sea', long:`Sailing to a new position in ${P[a.at].name}, about ${sailHours(a)} h`};
   if (a.to !== null || a.path.length){ const dest = a.path.length ? a.path[a.path.length - 1] : a.to; const blocked = a.to === null && !canProceed(a);
     if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${P[dest].name}, about ${etaHours(a)} h`}; }
   if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${P[a.at].name}. Ground units take extra damage at sea.`};
@@ -9744,6 +9820,7 @@ function armyBarHTML(a, ro = false){
     ${hl[0] ? `<div class="ab-heal ${hl[1]}">${hl[0]}</div>` : ''}
     <div class="ab-stats">${knownMorale ? cell('Morale', mor + '%', 'Morale: it drops in a fight and recovers when supplied. Broken forces retreat.', mor < 30 ? 'warn' : '') : ''}${cell('Speed', abSpd(a) + '<small> km/d</small>', ro ? 'Marching speed on open ground' : 'Marching speed on open ground without roads (km a day). ' + speedHTML(a).replace(/<[^>]+>/g, ''))}${cell('Strength', (ro ? '≈ ' : '') + Math.round(power(a)), 'Total strength: attack and defence of every unit, health and morale included')}${(rr => rr.length ? cell('Range', Math.max(...rr.map(e => e[1])) + '<small> km</small>', `Attack range: ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km`).join(', ')}. Fires at enemy forces its side can see within range, without moving in.`, 'arng') : '')(rangeRows(a, ro))}${sw}</div>
     <div class="ab-dias">${types.map(t => diaHTML(a, t, ro)).join('')}</div>
+    ${!ro && a.owner === PLAYER && shipsOnly(a) && !a.air && !a.fly ? fleetOrdersHTML(a) : ''}
     ${sp.over ? `<div class="ab-stk" title="${stackText(sp)}. Split it into stacks of ${sp.limit} or fewer.">⚠ ${sp.size} / ${sp.limit} ${STACK_W[sp.dom]}: −${Math.round((1 - sp.dmg)*100)}% damage, −${Math.round((1 - sp.spd)*100)}% speed</div>` : ''}
     ${abUnit && abUnit.id === a.id && a.u[abUnit.t] > 0 ? unitDetailHTML(a, abUnit.t, ro) : ''}</div>`; }
 const abHP = a => { const max = Math.round(armyHP(a)), cur = Math.round(effHP(a)); return {cur, max, f:max ? Math.min(1, cur/max) : 0}; };
@@ -9808,7 +9885,7 @@ function armyHTML(a){
       ${paraOnly(a) ? `<button class="btn ${dropFor === a.id ? 'primary' : ''}" data-act="drop" ${canDrop(a, a.at).why && !S.bld[a.at].air ? 'disabled title="Paratroopers take off from a province with your airbase."' : `title="Then tap a province up to ${PARA_RANGE*KM_HEX} km away."`}>${dropFor === a.id ? 'Choose drop zone…' : 'Air drop'}</button>` : ''}
       <button class="btn" data-act="split-open" ${count(a) < 2 ? 'disabled' : ''} title="Choose exactly which units leave: per unit type, damaged units apart, several groups at once">Split…</button>
       <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one.${(sp => sp.over ? ` ${stackText(sp)}.` : '')(stackPenalty({owner:PLAYER, u:Object.fromEntries(UT.map(t => [t, here.reduce((s0, b) => s0 + (b.u[t] || 0), 0)]))}))}"`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
-      <button class="btn" data-act="stop" ${!a.path.length && a.to === null ? 'disabled' : ''} title="Stop right now, where the force stands">Halt</button>
+      <button class="btn" data-act="stop" ${!a.path.length && a.to === null && !a.sail ? 'disabled' : ''} title="Stop right now, where the force stands">Halt</button>
     </div>
     ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}`;
 }
@@ -9982,7 +10059,7 @@ document.addEventListener('click', e => {
     case 'side-open': { if (innerWidth > 820){ if (sel.army !== null || sel.prov !== null) clearSel(); setTab('cmd'); renderSide(true); const sd = $('side'); if (sd){ sd.scrollTop = 0; slideIn($('ctx'), -16); } break; }   // desktop: the panel is always there
       const on = !document.body.classList.contains('side-on'); if (on){ sideOpen = true; if (tab !== 'cmd' && sel.army === null && sel.prov === null) setTab('cmd'); } else { sideOpen = false; if (sel.army !== null || sel.prov !== null){ clearSel(); break; } } renderSide(true); break; }
     case 'side-x': sideOpen = false; if (sel.army !== null || sel.prov !== null) clearSel(); else renderSide(true); break;
-    case 'send': if (a){ delete a.escort; sendToTarget(a); } break;
+    case 'send': if (a){ delete a.escort; delete a.raid; sendToTarget(a); } break;
     case 'untarget': sel.target = null; targetPath = null; renderSide(true); break;
     case 'drop': if (a){ dropFor = dropFor === a.id ? null : a.id; if (dropFor !== null) toast(`Tap a drop zone up to ${dropRange(a)*KM_HEX} km away.`, 'info', null); renderSide(true); } break;
     case 'split-open': if (a){ if (SPLIT && SPLIT.id === a.id){ SPLIT = null; renderSide(true); } else splitOpen(a); } break;
@@ -10000,6 +10077,11 @@ document.addEventListener('click', e => {
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty();
         { const sp = stackPenalty(a); toast(`Merged into ${armyName(a)}: ${pluN(count(a), 'unit')}.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); } renderSide(true); } break;
     case 'stop': if (a){ haltArmy(a); redraw(); renderSide(true); } break;
+    case 'fleet-escort': case 'fleet-raid': case 'fleet-blockade': { const f = armyById(+b.dataset.id); if (!f || f.owner !== PLAYER) break; let done = true;
+      if (act === 'fleet-escort'){ if (f.escort != null) escortSet(f, null); else { const r = fleetEscortPick(f); if (r) escortSet(f, r.id); else done = false; } }
+      else if (act === 'fleet-raid'){ if (f.raid) raidSet(f, null); else { const t = raidTargets(f)[0]; done = !!t && raidSet(f, t.r.id); if (!done) toast(t ? 'No sea route to that lane from here.' : 'No enemy trade routes to raid.', 'bad', null); } }
+      else done = blockadeSet(f, !f.blk);
+      if (done) sfx('order'); redraw(); renderSide(true); break; }
     case 'recruit': if (sel.prov !== null){ const why = canMobilize(PLAYER, sel.prov, b.dataset.t) || queueWhy(PLAYER, sel.prov); if (why){ toast(`${UNITS[b.dataset.t].name}: ${why}.`, 'info', sel.prov); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; } }
       if (sel.prov !== null && e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, sel.prov, b.dataset.t);
       if (sel.prov !== null && recruit(PLAYER, sel.prov, b.dataset.t)){ (S.lastUnit || (S.lastUnit = {}))[sel.prov] = b.dataset.t; if (S.repeat && S.repeat[sel.prov]) S.repeat[sel.prov] = b.dataset.t; renderSide(true); } break;
@@ -10109,6 +10191,7 @@ document.addEventListener('click', e => {
     case 'embargo': { const m = +b.dataset.id, key = PLAYER + '>' + m; if (mkt().emb[key]){ setEmbargo(PLAYER, m, false); addMem(m, PLAYER, 5); log(`You lifted your embargo on ${S.nations[m].name}.`, '', null); } else { const ls = b.dataset.join ? embargoLeaders(PLAYER, m) : []; setEmbargo(PLAYER, m, true, ls.length ? ls[0] : null); addMem(m, PLAYER, -15); log(ls.length ? `You joined ${S.nations[ls[0]].name}'s embargo on ${S.nations[m].name}: no trade routes or market deals with them.` : `You imposed an embargo on ${S.nations[m].name}: no trade routes or market deals with them.`, '', null); } setHTML($('sheet'), diploHTML()); break; }
     case 'trade-escort': { const r = routeById(+b.dataset.id), f = r ? escortPick(r) : null; if (!f) toast('No idle fleet with warships: build frigates at a Naval Yard, or free a fleet.', 'bad', null); else escortSet(f, r.id); setHTML($('sheet'), diploHTML()); renderSide(true); break; }
     case 'trade-close': tradeClose(PLAYER, +b.dataset.id); setHTML($('sheet'), diploHTML()); renderSide(true); break;
+    case 'trade-pause': tradePause(PLAYER, +b.dataset.id, b.dataset.v === '1'); setHTML($('sheet'), diploHTML()); renderSide(true); redraw(); break;
     case 'trade-reopen': { const k = b.dataset.k, [x, y] = k.split(':'), o = +x === PLAYER ? y : x; const res = o[0] === 'n' ? tradeOpen(PLAYER, NEUTRAL, +o.slice(1)) : tradeOpen(PLAYER, +o); if (res !== true){ delete trS().closed[k]; toast(`Route reopened: it will form when possible (${res}).`, 'info', null); } setHTML($('sheet'), diploHTML()); renderSide(true); break; }
     case 'trade-open': case 'trade-open1': { const v = b.dataset.act === 'trade-open1' ? 'n' + b.dataset.id : ($('tropen') || {}).value; if (!v){ toast('Choose a partner first.', 'info', null); break; }
       if (routesOf(PLAYER).length >= TR_MAX){ toast(`You can run at most ${TR_MAX} trade routes: close one first.`, 'bad', null); break; }
@@ -10159,6 +10242,7 @@ function bkSync(){ if (modalKind === 'market' && !$('modal').hidden) lastSig.she
 function bkForm(el){ if (el.id === 'bk-type') BK_F.type = el.value === 'buy' ? 'buy' : 'sell'; else if (el.id === 'bk-qty') BK_F.qty = String(el.value).replace(/[^0-9.]/g, ''); else if (el.id === 'bk-price') BK_F.price = String(el.value).replace(/[^0-9.]/g, ''); bkSync(); }
 document.addEventListener('input', e => { const el = e.target; if (el && (el.id === 'bk-qty' || el.id === 'bk-price')) bkForm(el); });
 document.addEventListener('change', e => { const el = e.target; if (!el) return;
+  if (el.dataset && el.dataset.act === 'raid-set'){ const a = sel.army != null ? armyById(sel.army) : null; if (a && a.owner === PLAYER){ if (!raidSet(a, el.value ? +el.value : null)) toast('No sea route to that lane from here.', 'bad', null); } el.blur(); renderSide(true); return; }
   if (el.dataset && el.dataset.act === 'escort-set'){ const a = sel.army != null ? armyById(sel.army) : null; if (a && a.owner === PLAYER) escortSet(a, el.value ? +el.value : null); el.blur(); renderSide(true); return; }
   if (el.classList && el.classList.contains('sp-rng')){ el.blur(); renderSide(true); return; }
   if (el.id === 'bk-res' && MKT_K.includes(el.value)){ BK_RES = el.value; BK_F.price = null; const pr = $('bk-price'); if (pr) pr.value = mkt().p[el.value].toFixed(1); bkSync(); return; }
@@ -10313,7 +10397,7 @@ const HELP_SEC = [
     <li><b>Top bar</b>: your flag and nation; money, oil, materials, iron, electronics, rare materials and manpower with today's net change (hover a resource for the breakdown); the date, clock and victory progress; pause and 1×–8× speed; Dispatches (the bell) on the right.</li>
     <li><b>Dock</b> (left edge; a bottom bar on phones): Production <kbd>P</kbd>, Market <kbd>T</kbd>, Army <kbd>A</kbd>, Research <kbd>R</kbd>, Diplomacy <kbd>D</kbd>, Intelligence; at the bottom Settings <kbd>O</kbd>, Sound <kbd>M</kbd> and this manual <kbd>?</kbd>. A dot means something waits for you (no research running, idle cities, idle agents); a number counts unread diplomacy.</li>
     <li><b>Right column</b>: Command (the selected province, force or air wing), Powers (every nation ranked) and Dispatches (the war log: click an entry to fly there).</li>
-    <li><b>Map</b>: map modes top right (<kbd>V</kbd> cycles Political, Relations, Supply, Terrain, Resources, Stability); zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
+    <li><b>Map</b>: map modes top right (<kbd>V</kbd> cycles Political, Relations, Supply, Terrain, Resources, Stability, Trade: every trade route and convoy; otherwise routes show while a fleet of yours is selected, and blockaded ones always); zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
     <li><b>Keys</b>: Space pause · 1, 2, 3 for 1×, 2×, 4× (8× from the bar) · S statistics · N newspaper · Tab next idle force · Esc deselect.</li></ul>`],
   ['res', 'Resources and research', `<ul>
     <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip beside its level, and the Resources map). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); level I is half price and pays for itself in about a week, and each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
@@ -10370,10 +10454,11 @@ const HELP_SEC = [
     <li><b>Speeds at sea</b>: carriers about 900 km a day, submarines 970, cruisers 1,040, frigates 1,080 (infantry marches about 720 on land). Major sea lanes add 12%. Every force panel shows its land and water speed.</li>
     <li>Warships bombard coastal battles and blockade enemy ports.</li></ul>`],
   ['trade', 'Trade, blockades, raids and escorts', `<ul>
-    <li><b>Trade routes</b> link you with powers at peace and with independent ports: mostly sea lanes, some land routes. Each pays both partners every day (money plus some of the partner's goods). Open and close them in Diplomacy; the map draws each lane with its cargo convoys.</li>
-    <li><b>Blockades</b>: enemy surface warships holding a sea zone on a route, or blockading one of its ports, stop its income; your own warships there contest it (half income).</li>
-    <li><b>Raids</b>: once a day each convoy runs the gauntlet: enemy submarines (the worst), warships and patrol or strike aircraft over its zones may sink it, and that day's income is lost.</li>
-    <li><b>Escorts</b>: warships on or next to a route cut the raid odds and fight the raiders. Select a fleet and choose <b>Escort route</b>, or press <b>Escort</b> beside a route in Diplomacy; escorts are resupplied by the convoys. At war, send submarines to raid the enemy's lanes.</li></ul>`],
+    <li><b>Trade routes</b> link you with powers at peace and with independent ports: mostly sea lanes, some land routes. Each pays both partners every day (money plus some of the partner's goods). Open, close, <b>pause</b> and resume them in Diplomacy. The map shows the lanes and their cargo ships while one of your fleets is selected, or in the <b>Trade</b> map mode; blockaded routes always show.</li>
+    <li><b>Fleet orders</b>: select a fleet and use the big <b>Escort</b>, <b>Raid</b> and <b>Blockade</b> buttons in its army bar. A fleet works around where it actually stands, within its reach: frigates 80 km, cruisers 150 km, carriers 120 km, submarines 40 km.</li>
+    <li><b>Blockades</b> are ordered, never automatic: a blockading fleet stops the convoys of the powers it is at war with within its reach. In open water they sail around it (a longer route pays less, by the extra distance; the detour is dashed on the map); where there is no way around (a strait such as Hormuz, Malacca, Gibraltar, Suez, Bab-el-Mandeb, the Bosporus, Panama or the Danish straits, or a port's approach) the route is cut and drawn red with a blockade icon. One or two ships close a strait; the open ocean needs a screen of several. Your own warships inside the circle contest it (half income).</li>
+    <li><b>Raids</b>: once a day each convoy runs the gauntlet along its lane: enemy warships within their reach of it (full strength with the Raid order, half without) and patrol or strike aircraft over its zones may sink it, and that day's income is lost. Ships that sink it capture 25–50% of its cargo. A paused route sends no convoys: nothing to lose, nothing earned.</li>
+    <li><b>Escorts</b>: warships near a raid cut its odds and fight the raiders; a fleet ordered to Escort guards the whole route and is resupplied by the convoys. A fleet moved to another spot in its own sea zone sails there at its sea speed: it fires, blockades and escorts from the new spot once it arrives.</li></ul>`],
   ['dip', 'Diplomacy and coalitions', `<ul>
     <li><b>War</b>: declare it (it starts at once, with no penalty for surprise) or order troops across a border and confirm a <b>surprise attack</b>, which starts it at once but angers the world. Rivals may attack you from day 8.</li>
     <li><b>Pacts</b>: Right of Way, non-aggression and Shared Intel alliances. Allied powers form a <b>coalition</b> with its own emblem, and can win together.</li>
@@ -10815,7 +10900,7 @@ if (location.protocol === 'file:') window.__im = {hexPx: () => view.s*HS0, bpic:
     return [+(R/k).toFixed(1), +(G0/k).toFixed(1), +(B/k).toFixed(1), +((0.2126*R + 0.7152*G0 + 0.0722*B)/k).toFixed(2)]; }, prof(p, S, i, j, n){ CITY_DL = Infinity; const I = cityInfo(p); cityPlan(I); const cv = document.createElement('canvas'), ax = i*CCH, ay = j*CCH; cv.width = Math.min(CCH, S - ax) + 2*CGUT; cv.height = Math.min(CCH, S - ay) + 2*CGUT;
     let day = null; if (n){ day = document.createElement('canvas'); day.width = cv.width; day.height = day.height; const it0 = cityPaint(day, I, S, ax - CGUT, ay - CGUT); while (!it0.next().done); cityFlush(day); }
     const it = n ? cityLightsPaint(cv, I, S, ax - CGUT, ay - CGUT, day) : cityPaint(cv, I, S, ax - CGUT, ay - CGUT), out = []; let t = performance.now(), r;
-    do { r = it.next(); cityFlush(cv); const t1 = performance.now(); out.push(+(t1 - t).toFixed(1)); t = t1; } while (!r.done); CITY_DL = 0; return out; }, plan(p){ CITY_DL = Infinity; const I = cityInfo(p); CITY_DL = 0; I.plan = null; I.planIt = null; const t0 = performance.now(), P = cityPlan(I); return {ms:performance.now() - t0, n:P.nb, t:P.nt, M:I.M, E:I.E/KM_W}; }, warmLeft: () => CWARM ? CWARM.length : -1, want: () => [...CWANT.keys()], state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size, max:cbakeMax()}), keys: p => [...CBAKE.keys()].filter(k => k.slice(1).startsWith(p + '|')), nr: p => { const I = CGEO.get(p); return I ? {nr:I.nr, gc:I.gc, gw:I.gw} : null; }, nf: p => { const F = CNF.get(p); return F ? {S:F.S, shown:F.shown, hold:F.hold, fd:F.fd, sb:F.sb} : null; }}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f, undefined, viaOf(a)), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(PLAYER, b, nc), close:id => tradeClose(PLAYER, id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => { const ok = sendGift(PLAYER, n, GIFT); if (ok) GIFT = null; return ok; }, giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+    do { r = it.next(); cityFlush(cv); const t1 = performance.now(); out.push(+(t1 - t).toFixed(1)); t = t1; } while (!r.done); CITY_DL = 0; return out; }, plan(p){ CITY_DL = Infinity; const I = cityInfo(p); CITY_DL = 0; I.plan = null; I.planIt = null; const t0 = performance.now(), P = cityPlan(I); return {ms:performance.now() - t0, n:P.nb, t:P.nt, M:I.M, E:I.E/KM_W}; }, warmLeft: () => CWARM ? CWARM.length : -1, want: () => [...CWANT.keys()], state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size, max:cbakeMax()}), keys: p => [...CBAKE.keys()].filter(k => k.slice(1).startsWith(p + '|')), nr: p => { const I = CGEO.get(p); return I ? {nr:I.nr, gc:I.gc, gw:I.gw} : null; }, nf: p => { const F = CNF.get(p); return F ? {S:F.S, shown:F.shown, hold:F.hold, fd:F.fd, sb:F.sb} : null; }}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f, undefined, viaOf(a)), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(PLAYER, b, nc), close:id => tradeClose(PLAYER, id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => { const ok = sendGift(PLAYER, n, GIFT); if (ok) GIFT = null; return ok; }, giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs(), pause:(n, id, on) => tradePause(n, id, on), blockade:(a, on) => blockadeSet(a, on), raidSet:(a, id) => raidSet(a, id), refresh:() => trRefresh(), detour:r => trDetour(r), base:r => trBase(r), chokes:() => chokes(), chokeClosed:(k, c) => chokeClosed(k, c), fleetKm:a => fleetKm(a), orderSpot:(a, x, y) => orderSpot(a, x, y), cells:() => trCells()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n, PLAYER), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet(PLAYER)).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p, sel.surprise).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   tables:() => ({UNITS, BUILD, TECH:RNODES.filter(T => !T.std).map(T => ({id:T.id, name:T.name, branch:RCAT_BY[T.cat].name, cat:T.cat, kind:T.kind, tier:1, days:T.lv[0].c.days, day:T.lv[0].day, c:rCost(T, 1), lv:T.lv.map((x, i) => ({day:x.day, days:x.c.days, c:rCost(T, i + 1)}))})), LINK_COST, MISSILES, SAT_C}), riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; redraw(); return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
