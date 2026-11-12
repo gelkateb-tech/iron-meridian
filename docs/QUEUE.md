@@ -21,8 +21,6 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations: merging into master (big merge, Opus, in its own copy) | Opus | Merging |
-| Movement look: units turn to face where they go, ease in and out, follow roads on screen, dust, wakes, bob | Opus | Started |
-| Small polish: research slot colours and 'next free' time, night city cores, Sweden snow edge, Berlin garrison placement, the two flaky map tests (v3r2, battery) | Sonnet | Started |
 | Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 | Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 
@@ -31,7 +29,7 @@ Last updated: 2026-11-11.
 | # | Task | Model |
 |---|---|---|
 | 1 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), hover shows the full amount with a unit (40,000 barrels of oil); before/after examples | Opus (after the 68 nations are merged, since both touch every number) |
-| 2 | Each aircraft type gets its own 3D shape | Opus |
+| 2 | Each aircraft type gets its own 3D shape | Opus (after the research and icons job is merged: it built new aircraft models for the research pictures) |
 | 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
@@ -79,6 +77,8 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| Movement look: forces turn to face where they go, ease in and out, follow roads and rails on screen, dust behind vehicles, ship wakes, infantry bob | Opus |
+| Small polish: matching research slots with 'next free' time, warm night city cores, smooth Scandinavian snow, v3r2 and battery tests fixed | Sonnet |
 | Realistic combat and flight animations: effects module fx.js, firing per weapon, impacts sized by weapon, hit flashes, 20 s scorch marks, settings-aware screen shake, aircraft pictures in flight with curves, bank, contrails and shadows, oval patrols, attack markers, missile warnings, sound slots, Effects High/Low/Off (phones Low), test panel with real shooters; results proven identical on High/Low/Off | Opus |
 | Pinpoint movement: moves go to the exact tapped spot (last leg timed by its length), forces count in the province they stand in from the moment they cross, moving inside a province takes time, ships stop on water, Halt anywhere | Opus |
 | Map wrap: the map wraps east-west across the Pacific with no seam, zoom-out and pan limits, filled edges (no black band over the Arctic) | Opus |
