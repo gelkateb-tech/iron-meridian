@@ -40,10 +40,11 @@ Last updated: 2026-11-12 (04:10 UTC).
 
 ## Done but not merged yet (branches on GitHub, checked 2026-11-12 04:15 UTC)
 
-All branches were fetched. Only one holds finished work that master does not have:
+All branches were fetched. Two hold finished work that master does not have:
 
 | Branch | What it holds | State |
 |---|---|---|
+| `research-slots` | 1 commit (99b9ec0), research panel only (index.html, RELEASES.md): slot #2's bar, tag, glow and hover are gold, slot #1's are teal, also on empty slots (they were red); "Both slots busy" now says when a slot frees, e.g. "a slot frees in 1 d 5 h" (card button, tooltips, the next-up header). Replay hash unchanged, lint and build pass, desktop and phone screenshots checked | Done 04:20 UTC (Sonnet, part of queued task 6). Not merged. The map parts of task 6 (night city cores, Sweden snow edge, Berlin garrison) wait for the map wrap |
 | `nations-68` | 10 commits, 30 files (+1,635 / −79): step 0 plumbing (nations.js, the world switch, tiers, victory by number of nations, start screen with regions) and its review; step 0b province split (Israel, Greece, Cuba, Belarus); step 1 Europe (10 nations); step 2 Middle East (5); step 3 Africa (14) and its oil-reserve repair; step 4 Asia (14) and its rivals repair; step 5 the Americas (9) | Oceania (step 6) and the merge are not done. The branch is 71 commits behind master, so the merge needs care. Last commit 01:34 UTC |
 
 Not on GitHub yet: `territory-sales` and the map wrap branch. The old session's agents are still working on them in its own container.
