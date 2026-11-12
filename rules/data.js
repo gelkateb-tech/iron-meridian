@@ -1,6 +1,7 @@
 // Iron Meridian rules: data. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 const WORLD = globalThis.WORLD, LINES = globalThis.LINES;   // the map data (world.js, lines.js), loaded before this file
+const NATIONS = globalThis.NATIONS || null;   // the playable nations of the nations world (nations.js); null when a host does not load it
 /* ---------------- Rules ---------------- */
 // req (and req2 for the few that need two): the building, and its level, a city must have to mobilize the unit; tech: the research it needs (null: known from day one).
 // Foot units (infantry, anti-tank, special forces, paratroopers) come from a Recruiting Office, vehicles from an Army Base, aircraft from an Airbase,
@@ -139,6 +140,7 @@ const BK = Object.keys(BUILD);
 const ECO_Y = {cash:1.6, oil:9.4, metal:8.2, iron:7.6, elec:3.3, rare:4.7};   // a city's main resource a day: money is a factor on the city's money, the rest are units (times the city-size factor)
 const ECO_RUR = {oil:2.4, metal:0.8, ironOre:0.5, iron:0.6};                  // the countryside trickle: an oil field, an ore deposit (materials and iron), iron hills
 const ECO_CAPITAL = {oil:3, metal:6, iron:4.5, elec:1.5, rare:2.5};           // the capital's state industry, labs and recycling
+const ECO_RESERVE = 2;   // the nations world: the capital makes twice its share of an industrial good that none of the nation's cities produces at the start (N.reserve; the minimum-access rule's fourth good, docs/NATIONS-PLAN.md 3.3)
 const ARMS_PCT = 0.25, ECO_CASH_ALL = 1.10, ECO_MP_CITY = 2.0;                // Arms Industry: +25% of the city's main resource per level; every nation's money +10%; a city's manpower base
 const ECO_SHARE = {cash:0.17, oil:0.19, metal:0.21, iron:0.19, elec:0.17, rare:0.07}, RARE_DEP = 1.4;   // world mix the city resources aim at; a rare-earth district is a deposit of 1.4 or more
 const MAIN_NAME = {cash:'money', oil:'oil', metal:'materials', iron:'iron', elec:'electronics', rare:'rare materials'};
@@ -419,6 +421,87 @@ const diffOf = () => DIFFS.find(d => d.k === (S && S.diff)) || DIFFS[1];
 const GRACE_H = 24*8;                 // AI powers stay out of other powers' land for the first week
 const WIN_SHARE = 0.25;               // share of land provinces needed to win
 let WIN_CAPS = 5;                     // or hold this many starting capitals (5 of 15; 4 of 8 in theatre scenarios)
+// The nations world (scenario world64, docs/NATIONS-PLAN.md): victory numbers follow the number of playable nations in the game
+const winCapsFor = k => Math.max(5, Math.round(k/6));               // starting capitals to hold: a sixth of the nations, never fewer than 5
+// share of the world's land provinces to hold. From 50 nations a tenth (step 4, Asia: with 58 nations no nation held more than 384 provinces in
+// two 300-day games, a fifth is 615; a tenth, 308, decided both between day 120 and day 250, the plan's aim in 3.6). From 60 nations 7% (step 5,
+// the Americas: with 67 nations the land Brazil and Canada had won on in step 4 is nations of its own, and neither 300-day game had a winner; on
+// day 150 the nearest were Russia at 317 of its 460, Canada at 202 of its 308 and India at 175 of 308). With all 68 nations 6% (step 6, the full
+// world; with TIER_WIN_UP 0.5 below): the war rules of step 6 keep the giants whole and neither 300-day game had a winner with 7% and 0.6 (on day
+// 180 Brazil at 199 of its 216, Russia at 401 of its 460); measured on the same games, 6% and 0.5 decide one of the two on day 235 (Russia) and
+// nobody before day 160 in either
+const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 59 ? 0.1 : k <= 67 ? 0.07 : 0.06;
+// Tiers (S superpower, A major, B regional, C minor): what a nation starts with. TIER_FULL is the plan's wide table (3.2), TIER_EVEN an equal
+// start for everyone; a game mode sits between the two by its spread (0 = everyone equal, 1 = the wide table). Normal mode is close to equal
+// (the owner's rule: big countries are bigger, not much richer at the start); a later competitive mode is mildly more distinctive.
+//   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; inf/tank/art: the capital's force;
+//   cityTanks: that many of the biggest other cities get a tank; guards: border guards (2 infantry each); recs: Recruiting Offices outside the capital
+const TIER_RANK = {S:0, A:1, B:2, C:3};
+const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
+const TIER_FULL = {
+  S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, inf:6, tank:3, art:2, cityTanks:4, guards:5, recs:4},
+  A:{day:262, mpDay:70, cash:260, mp:110, oil:50, metal:70, iron:80, elec:35, inf:5, tank:2, art:1, cityTanks:2, guards:4, recs:3},
+  B:{day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:1, cityTanks:0, guards:3, recs:2},
+  C:{day:201, mpDay:52, cash:200, mp:80, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2}};
+// floor: how far the catch-up may hold a rich nation back (income multiplier, home provinces only)
+const TIER_MODES = {normal:{name:'Normal', spread:0.3, floor:0.3}, competitive:{name:'Competitive', spread:0.6, floor:0.75}};
+const tierMode = k => TIER_MODES[k] || TIER_MODES.normal;
+function tierKit(tier, mode){ const F = TIER_FULL[tier] || TIER_FULL.B, M = tierMode(mode), k = {};
+  for (const key in TIER_EVEN) k[key] = Math.round(TIER_EVEN[key] + M.spread*(F[key] - TIER_EVEN[key]));
+  k.floor = M.floor; k.fortCap = tier === 'C'; k.fortGuards = tier === 'B' || tier === 'C'; k.yard = tier === 'S' || tier === 'A';
+  // the Naval Yard of a coastal S or A nation takes the place of border guards only as starts grow distinct: none in normal mode (spread 0.3; with
+  // 2 guards gone a major power opened with fewer units than a regional one of as many cities), one at spread 0.6, two in the full table (plan 3.2)
+  k.yardGuards = k.yard ? Math.floor(2*M.spread + 1e-9) : 0; return k; }
+const tierGap = (a, b) => (TIER_RANK[b] ?? 2) - (TIER_RANK[a] ?? 2);   // how many tiers b stands below a
+// (step 6, the full world: S was 2. A computer superpower in three wars of its own making, most of them across the sea against small nations with
+// armies near its own, left its long borders bare: the United States lost 6 to 16% of its land in 3 seeds of 5, to Canada, Mexico and a
+// Venezuelan landing that marched from Savannah to New York)
+const TIER_WARS = {S:1, A:1, B:1, C:0};
+// choosing a victim in the nations world: land beyond TIER_LAND provinces does not make a nation more tempting (with close-to-equal incomes a big
+// country has the most land per soldier, and every neighbour went for it), and a computer nation already in TIER_GANG wars is left alone
+// (two equal neighbours at once take any nation apart)
+const TIER_LAND = 60, TIER_GANG = 1;   // an AI nation starts a war only while it is in at most this many wars of its own making
+// growth of a computer nation in the nations world (step 3, Africa: nations of 9 to 15 provinces amid wide independent land tripled or quadrupled
+// in 60 days). It goes for independent provinces only while it holds less than TIER_FREE times its starting land (it still fights nations, and
+// takes back its own lost land, beyond that); holding TIER_SATED times its start it makes peace with its enemies and starts no new war
+const TIER_FREE = 1.5, TIER_SATED = 2;
+// (step 4, Asia: with the two limits for good no computer nation could win, by land or capitals, in 300 days.) "For now" ends: from day TIER_LATE
+// both limits grow by their first value every TIER_LATE days (day 90: 1.5 times, day 120: twice), so the land race opens up once the opening is over
+const TIER_LATE = 60, tierGrow = h => 1 + Math.max(0, h/24 - TIER_LATE)/TIER_LATE;
+// a war between peers (step 4, Asia: China and India, among equals, never had the 1.1 times the power the computer wants against any victim): a
+// computer nation of tier S or A attacks a nation of tier S or A with TIER_PEER times its power, and counts it TIER_PEER_W times as tempting
+const TIER_PEER = 0.95, TIER_PEER_W = 1.5;
+// rivals (step 4 repair: China, weaker in arms than India and Russia through most of the second month, and with both always at war with somebody
+// so the TIER_GANG limit shut them out, fought only smaller nations on day 60 in 3 seeds of 5): a computer nation of tier S attacks another of
+// tier S with TIER_RIVAL times its power, and may be that nation's second enemy (the TIER_GANG limit is one more, as for a person's nation)
+const TIER_RIVAL = 0.85;
+// a second front against a major power (step 5, the Americas: the United States declared war on Canada and on Mexico a day or two apart, at 1.1
+// to 1.5 times the power of each but less than both, and lost a fifth of its land in 4 seeds of 5): a computer nation of tier S or A already at
+// war with a nation of tier A attacks another nation of tier S or A (not its rival of tier S) only with the power for all of them: its thresholds
+// above against the new peer's power plus TIER_FRONT times the power of the tier A nations it already fights. A war of two rivals of tier S is
+// not counted as a front (counting it too, India, at war with China, no longer took on Pakistan: on day 60 it fought China or a peer in 1 seed of 5)
+const TIER_FRONT = 1;
+// the long war of two rivals (step 5: with the Americas open, India fought China or a peer on day 60 in 2 seeds of 5, though in all 5 in the second
+// month: computer nations tire of a war after 20 days, and the rivals' wars of the first month were over by day 60): two computer nations of tier
+// S tire of their war only after TIER_RIVAL_WAR days (being outmatched, losing land or fighting on three fronts still ends it sooner)
+// (step 6, the full world: 40 before. With 68 nations China's wars with India and Russia began in the first two weeks and were over before day 60
+// in 4 seeds of 5)
+const TIER_RIVAL_WAR = 60, warTires = (a, b) => S.nations[a].tier === 'S' && S.nations[b].tier === 'S' && S.nations[a].ai && S.nations[b].ai ? TIER_RIVAL_WAR : 20;
+// whom a computer nation may attack, by tier (step 6, the full world: the United States held 95% of its land on day 60 in 2 seeds of 5 and China
+// fought a peer on day 60 in 1). With close-to-equal incomes a big country has no bigger army than a small one and the most border to hold, so a
+// war it starts at near-even odds costs it its home: the United States declared on Mexico at 1.16 times Mexico's power, on Cuba at 1.2 and on
+// Venezuela at 1.5, lost the army it had, and its other neighbour took the bare border. The peer threshold (TIER_PEER) is for nations of one tier
+// and an attacker one tier above; besides it:
+//   TIER_DOWN_A  a computer superpower attacks a nation of tier A only with this many times its power (a major power is no easy war)
+//   TIER_UP      a computer nation that is not a superpower attacks one only with this many times its power (Canada declared at 0.98)
+//   TIER_BULLY   a computer nation two or more tiers above its victim (S against B or C, A against C) attacks only with this many times its power
+//                (plan 3.5: giants are steered toward each other; a small nation fights for its life). Tried at 1.5: the United States took on
+//                Venezuela at 1.51 and lost 42 provinces in one seed
+const TIER_DOWN_A = 1.6, TIER_UP = 1.3, TIER_BULLY = 2;
+// land to win in the nations world: the share of the world (winShareFor), or the starting land plus 90 provinces or plus TIER_WIN_UP of it if
+// that is more (step 4: with a tenth of the world, 308, the United States, 230 provinces, won on day 25 on independent land alone; then it needed 368;
+// step 6: 0.6 before, the United States now needs 345, Russia 431, China 372)
+const TIER_WIN_UP = 0.5;
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
 const CAP_MIN = 2;                    // ground units needed to capture
 const OX = HS*SQ3/2 + 8, OY = HS + 8;

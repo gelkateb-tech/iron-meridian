@@ -3,6 +3,7 @@
 // 5 in-game days while it exercises spawn (land, sea and air units for you and an AI nation), instant research (one project and
 // "research all"), instant building / training / missiles, reveal map and unlimited resources. Prints the checks, the days played
 // and the console errors; exits 1 if any check fails or any error was logged. Screenshots: .test/dev-*.png
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
 const ROOT = path.join(__dirname, '..'), PAGE = path.join(ROOT, 'dist', 'test', 'play.html'), OUT = __dirname;
@@ -16,7 +17,7 @@ const THREE_LOCAL = '/home/user/iron-meridian/tools/vendor/three.min.js';
   p.on('pageerror', e => errs.push('pageerror: ' + e.message));
   p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|ERR_|net::/.test(m.text())) errs.push('console: ' + m.text()); });
   await p.goto('file://' + PAGE); await p.waitForTimeout(800);
-  if (await p.locator('[data-act="pick"]').count()){ await p.click('[data-act="pick"][data-p="0"]'); await p.click('[data-act="begin"]'); }
+  if (await p.locator('[data-act="pick"]').count()){ await pickNation(p, 'United States'); await p.click('[data-act="begin"]'); }
   await p.click('[data-act="start"]'); await p.click('#sp0'); await p.waitForTimeout(500);
   ok('test hooks present', await p.evaluate(() => !!window.__im));
   ok('DEV badge shown', await p.locator('#devbadge').isVisible());

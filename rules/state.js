@@ -29,11 +29,39 @@ const SCENARIOS = {
   pacific:{name:'Pacific Rim', desc:'Eight powers contest the Pacific and East Asia.', caps:4, extra:45, box:L => ((L.lon >= 70 || L.lon <= -95) && L.lat >= -48 && L.lat <= 66),
     powers:[PW('United States'), PW('China'), PW('Japan'), PW('Australia'), PW('India'), PW('Russia'), {name:'Indonesia', country:'Indonesia', color:'#c8323c'}, {name:'Mexico', country:'Mexico', color:'#3fae5a'}]},
 };
+// The nations world (key world64, docs/NATIONS-PLAN.md): its playable nations come from nations.js (NATIONS: the regions rolled out so far), each
+// with a tier, a region, a capital and its list of cities; everything else on the map is independent land. It runs on the tier rules (start kit,
+// catch-up, border guards, grace by tier gap, victory numbers by the number of nations). The classic 15-power world above stays as it was.
+const HAS_NATIONS = !!NATIONS && Array.isArray(NATIONS.nations) && NATIONS.nations.length > 1;
+if (HAS_NATIONS) SCENARIOS.world64 = {name:'World War III', desc:'The nations of the world, close to equal at the start.', powers:NATIONS.nations, caps:winCapsFor(NATIONS.nations.length), box:null, extra:90, tiers:true};
 let POWERS = WORLD_POWERS, SCN = 'world';
 function useScenario(k){ SCN = SCENARIOS[k] ? k : 'world'; POWERS = SCENARIOS[SCN].powers; WIN_CAPS = SCENARIOS[SCN].caps; scnLandCache = null; scnInCache = null; }
+const tiered = () => !!SCENARIOS[SCN].tiers;
+// the cities of the nations world: the lists of nations.js, plus the cities world.js gives every country that is not (yet) a playable nation
+function nationsWorld(){ const play = new Set(NATIONS.nations.map(n => n.country)), cities = [], names = {};   // (on the map in use: G.D, its province rows)
+  for (let id = 0; id < G.D.length; id++){ const d = G.D[id]; if (d[1] >= 0 && (d[2] & 1) && !play.has(WORLD.countries[d[1]])) cities.push(id); }
+  for (const n of NATIONS.nations){ for (const c of n.cities) cities.push(c); if (n.names) for (const id in n.names) names[id] = n.names[id]; }
+  return {v:NATIONS.v, cities:cities.sort((a, b) => a - b), names}; }
+// a power's strength index, from the map alone (the money its land earns at the opening, before any catch-up): used to face border guards
+// toward the strongest neighbour, to make friends of the neighbours of a giant and for the difficulty shown on the start screen
+function powerStrength(P0){ const ci = powerCountry(P0), cs = new Set(P0.cities || []); let v = 0; if (ci < 0) return 0;
+  for (const id of G.countries[ci].provs){ const P = G.P[id], city = P0.cities ? cs.has(id) : G.base.city[id]; v += (city ? 8.5 : 1.8*G.PF) + 0.68*Math.pow(Math.max(0, P.pop0), 0.75); } return v; }
+// the powers of list L that touch power i by land on its home landmass (the one of its capital; overseas parts are left out)
+function powerNeighbours(L, i){ const ci = powerCountry(L[i]); if (ci < 0) return []; const ids = new Set(G.countries[ci].provs), byC = new Map(L.map((p, k) => [powerCountry(p), k]));
+  const c0 = L[i].capital ?? G.countries[ci].provs.find(id => G.base.cap[id]) ?? G.countries[ci].provs.find(id => G.base.city[id]) ?? G.countries[ci].provs[0], seen = new Set([c0]), q = [c0], out = new Set();
+  for (let h = 0; h < q.length; h++) for (const v of G.P[q[h]].nbs){ const Q = G.P[v]; if (Q.sea) continue; if (ids.has(v)){ if (!seen.has(v)){ seen.add(v); q.push(v); } } else if (byC.has(Q.country) && byC.get(Q.country) !== i) out.add(byC.get(Q.country)); }
+  return [...out]; }
+// how hard a nation of the nations world is to play: its tier and its strongest land neighbour against its own strength
+function powerDifficulty(L, i){ const s0 = powerStrength(L[i]), r = Math.max(0, ...powerNeighbours(L, i).map(k => powerStrength(L[k])/Math.max(1, s0))), t = L[i].tier;
+  return r > 3 ? 'Very hard' : r > 2 ? 'Hard' : (t === 'S' || t === 'A') && r <= 1.5 ? 'Easy' : 'Normal'; }
 let scnLandCache = null, scnInCache = null;
 function inScn(p){ if (!scnInCache || scnInCache.S !== SCN){ const box = SCENARIOS[SCN].box; scnInCache = {S:SCN, a:G.P.map(P => !P.sea && (!box || box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})))}; } return scnInCache.a[p]; }
-const landHeld = n => { let c = 0; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] === n && inScn(p)) c++; return c; };
+// QM: a pass that changes no owner and no relation, and asks for many nations' land, score or wars (checkEnd every hour; the market's n x n opinions
+// once a day), counts each of them once for every nation instead of once per question (quietly: the same numbers, the same game)
+let QM = null;
+function quietly(fn){ const prev = QM; QM = {land:null, score:null, foes:[]}; try { return fn(); } finally { QM = prev; } }
+const landHeld = n => { if (QM){ if (!QM.land){ const c = new Array(S.nations.length).fill(0); for (let p = 0; p < S.owner.length; p++){ const o = S.owner[p]; if (o >= 0 && inScn(p)) c[o]++; } QM.land = c; } return QM.land[n] || 0; }
+  let c = 0; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] === n && inScn(p)) c++; return c; };
 function scnLand(){ if (scnLandCache) return scnLandCache; const box = SCENARIOS[SCN].box; if (!box) return (scnLandCache = G.landCount);
   return (scnLandCache = G.P.filter(P => !P.sea && box({lat:P.lat, lon:((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180})).length); }
 /* ---------------- State ---------------- */
@@ -42,24 +70,30 @@ const powerCountry = p => WORLD.countries.indexOf(p.country);
 function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = new Set(); visCache = null; borderCache = null; trLastH = -1; NEUP = null; SEAA = new Map(); IM.emit('reset'); }
 // seed: the dice; pick: the power that takes nation 0; humans: the nations people play (the seats, none unless given); the AI plays the rest
 function newGame(seed, pick, humans = []){
-  if (!G){ G = loadWorld(); IM.emit('world'); }
+  const T = tiered(); useMap(T ? MAP_NEW : 0);   // the nations world: the map with the province split (when nations.js has one); any other world: world.js
+  const W64 = T ? nationsWorld() : null, mode = T && TIER_MODES[newGame.mode] ? newGame.mode : 'normal';
+  useWorld(T ? {cities:W64.cities, caps:POWERS.map(p => p.capital), names:W64.names} : null);
   resetCaches();
   const order = [pick, ...POWERS.map((_, i) => i).filter(i => i !== pick)];
   const owner = G.P.map(p => p.sea ? SEA : NEUTRAL);
   const nations = order.map((pi, k) => {
     const P0 = POWERS[pi], ci = powerCountry(P0), provs = ci >= 0 ? G.countries[ci].provs : [];
     for (const id of provs) owner[id] = k;
-    const capital = provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
+    const capital = (T ? P0.capital : null) ?? provs.find(id => G.P[id].capFlag) ?? provs.find(id => G.P[id].city) ?? provs[0];
     G.P[capital].city = true;
-    return {id:k, power:pi, name:P0.name, color:P0.color, ai:!humans.includes(k), cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
+    const N = {id:k, power:pi, name:P0.name, color:P0.color, ai:!humans.includes(k), cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
+    if (T){ N.tier = P0.tier || 'B'; N.region = P0.region || ''; }
+    return N;
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], q:0, nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
+  if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
-  for (const n of S.nations){
+  if (T) tierStart(mode);
+  else for (const n of S.nations){
     const np = S.owner.filter(o => o === n.id).length;
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, income(n.id).gross.cash)));
@@ -79,9 +113,47 @@ function newGame(seed, pick, humans = []){
   for (const me of seats()) desk(me).sunOff = sunOffFor(me);   // display only: the seat's opening view over its capital is in daylight
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
   INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
+  if (T){ tierCatchUp(mode); INCC.v = -1; }
   tellAll(me => `${S.nations[me].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   IM.emit('newGame');
 }
+// ---- the nations world: the start by tier (docs/NATIONS-PLAN.md 3.2 to 3.5; the numbers are tierKit's, rules/data.js)
+// Every nation: its tier's stocks, an Army Base and a Recruiting Office in the capital, more offices in its biggest cities, the capital force,
+// 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest neighbour first (in a level 1 fort for tiers
+// B and C), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards), a level 1 fort in a tier C capital.
+// Neighbours of the same giant (a land neighbour more than 3 times their strength) start as friends. No dice are used.
+function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L.map(powerStrength), nbs = L.map((_, i) => powerNeighbours(L, i));   // by nation id
+  for (const N of S.nations){ const n = N.id, kit = tierKit(N.tier, mode);
+    N.cap0 = N.capital;
+    const cities = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id);
+    for (const k of ['cash', 'mp', 'oil', 'metal', 'iron', 'elec']) N[k] = kit[k];
+    N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40 : 60;   // no rare-earth city: a little more in stock for the first weeks
+    { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0); after the big-country oil city of cityMains (rules/map.js), so oil is reserved only for a nation of under 8 cities without one
+    S.bld[N.capital].fac = 1; for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;
+    if (kit.fortCap) S.bld[N.capital].fort = 1;
+    addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
+    cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
+    let guards = kit.guards;
+    if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - kit.yardGuards); } }
+    // border provinces that are not cities, by the neighbour they face: playable neighbours strongest first, then independent land; one guard per neighbour in turn
+    const face = new Map();
+    for (const P of G.P){ if (S.owner[P.id] !== n || P.city) continue; for (const v of P.nbs){ const o = S.owner[v]; if (G.P[v].sea || o === n || o === SEA) continue; const f = face.get(o) || face.set(o, []).get(o); if (!f.includes(P.id)) f.push(P.id); } }
+    const order = [...face.keys()].sort((a, b) => (b < 0 ? -1 : str[b]) - (a < 0 ? -1 : str[a]) || a - b), used = new Set();
+    for (const f of face.values()) f.sort((a, b) => popOf(b) - popOf(a) || a - b);
+    for (let g = 0, turn = 0, idle = 0; g < guards && order.length && idle < order.length; turn++){ const p = face.get(order[turn % order.length]).find(q => !used.has(q));
+      if (p == null){ idle++; continue; } idle = 0; used.add(p); addArmy(n, p, {inf:2}); if (kit.fortGuards) S.bld[p].fort = 1; g++; }
+  }
+  // friends of a shared giant
+  const giants = S.nations.map(N => nbs[N.id].filter(k => str[k] > 3*str[N.id]));
+  for (const A of S.nations) for (const B of S.nations) if (A.id < B.id && giants[A.id].some(k => giants[B.id].includes(k))){ addMem(A.id, B.id, 25); addMem(B.id, A.id, 25); }
+}
+// the opening catch-up by tier: money and manpower a day are brought to the tier's targets by a multiplier on the nation's home provinces (boost
+// for money and goods, boostM for manpower), between the mode's floor and 2.5; a nation already between its target and 10% above is left alone,
+// a richer one is held to 10% above (as far as the floor allows). Conquests are worth the same to everyone.
+function tierCatchUp(mode){ const mult = (raw, trade, T, floor) => { const home = Math.max(1, raw - trade), lo = T - trade, hi = 1.1*T - trade; return Math.max(floor, Math.min(2.5, home < lo ? lo/home : home > hi ? hi/home : 1)); };
+  for (const N of S.nations){ N.boost = 1; N.boostM = 1; } INCC.v = -1;
+  const raw = S.nations.map(N => income(N.id).gross), tr = S.nations.map(N => tradeIncome(N.id).cash);
+  for (const N of S.nations){ const kit = tierKit(N.tier, mode); N.boost = mult(raw[N.id].cash, tr[N.id], kit.day, kit.floor); N.boostM = mult(raw[N.id].mp, 0, kit.mpDay, kit.floor); } }
 // where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
 function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
 // saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
@@ -109,19 +181,47 @@ function ecoMigrate(){ if (S.eco) return; S.eco = 1; const got = {};
       + (kept.length ? ` The Economy research branch moved into buildings; you keep the bonus of ${kept.join(', ')}.` : '')}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
-// the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded
-function saveJSON(){ const BLD = S.bld; return JSON.stringify({...S, battles:[]}, function(k, v){
+// the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded.
+// A nations-world save is also packed (S.pk 1; plan 4.5 and test T11: under 300 KB at the start with 68 nations): a relation is stored only
+// once it differs from the default peace (2,278 records between 68 nations, nearly all at peace), and the per-province lists of building
+// work, capture and occupation, mostly empty, only where they hold something. restore unpacks it exactly as it was (packIn). The classic
+// world and the theatres save as before, byte for byte
+const REL0 = r => r && r.st === 'peace' && r.since === 0 && r.until == null && Object.keys(r).length === 3;
+const PK_SPARSE = ['cons', 'cap', 'occ'];
+function packOut(o){ const rel = {}; for (const k in S.rel) if (!REL0(S.rel[k])) rel[k] = S.rel[k]; o.rel = rel;
+  for (const f of PK_SPARSE){ const a = S[f], at = {}; for (let i = 0; i < a.length; i++) if (a[i] != null) at[i] = a[i]; o[f] = {n:a.length, at}; }
+  o.pk = 1; return o; }
+// a packed save back to the state the game had: every pair of nations' relation in the order a new game makes them (a < b), the default where
+// none is stored, so the same game plays on to the same state; the sparse lists back to full lists
+function packIn(d){ if (!d || d.pk !== 1) return d; const n = Array.isArray(d.nations) ? d.nations.length : 0, old = d.rel || {}, rel = {};
+  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++){ const k = a + ',' + b; rel[k] = old[k] || {st:'peace', since:0, until:null}; }
+  for (const k in old) if (!(k in rel)) rel[k] = old[k];
+  d.rel = rel;
+  for (const f of PK_SPARSE){ const v = d[f]; if (!v || Array.isArray(v)) continue; const a = new Array(v.n).fill(null); for (const i in v.at) a[+i] = v.at[i]; d[f] = a; }
+  delete d.pk; return d; }
+function saveJSON(){ const BLD = S.bld, o = {...S, battles:[]}; if (S.scn === 'world64') packOut(o); return JSON.stringify(o, function(k, v){
   if (v && typeof v === 'object' && !Array.isArray(v)){
     if ((k === 'u' || k === 'w') && this && this.id != null && this.at != null){ const o = {}; for (const t in v){ const x = v[t]; if (x) o[t] = k === 'w' ? Math.round(x*1000)/1000 : x; } return o; }
     if (this === BLD){ const o = {}; for (const t in v) if (v[t]) o[t] = v[t]; return o; } }
   return v; }); }
 function restore(data){
   if (!data || data.v !== 4 || typeof data.seed !== 'number') return false;
-  if (!G){ G = loadWorld(); IM.emit('world'); }
-  if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
-  S = data; S.battles = []; S.bt = {}; S.q = S.q || 0; S.speed = 0; S.started = true; linksSync();
+  if (data.pk != null && data.pk !== 1){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
+  data = packIn(data);
+  // the map the save was made on (data.map; none: world.js), checked before anything changes: a refused save leaves the game in play as it was
+  restore.why = ''; const mv = data.map || 0, g = mapOf(mv);
+  if (!g){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
+  if (!Array.isArray(data.owner) || data.owner.length !== g.P.length) return false;
+  // a save of the nations world carries its own cities (data.w64); it needs a build that has that world and knows its format
+  const n64 = data.scn === 'world64';
+  if (n64 && (!SCENARIOS.world64 || !data.w64 || !Array.isArray(data.w64.cities) || data.w64.v > NATIONS.v)){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
+  useMap(mv);
+  S = data; S.battles = []; S.bt = {}; S.q = S.q || 0; S.speed = 0; S.started = true;
+  useWorld(n64 ? {cities:S.w64.cities, caps:S.nations.map(N => N.cap0 ?? N.capital), names:S.w64.names} : null);
+  linksSync();
   { const nc = c => c && OLD_COLORS[String(c).toLowerCase()]; for (const N of S.nations){ if (nc(N.color)) N.color = nc(N.color); if (nc(N.color0)) N.color0 = nc(N.color0); } }   // old palette entries -> current ones
-  useScenario('world'); DAY_LIMIT = Infinity;   // older saves with a scenario or a day limit continue as an open-ended world war
+  useScenario(n64 ? 'world64' : 'world'); DAY_LIMIT = Infinity;   // older saves with a scenario or a day limit continue as an open-ended world war
+  if (n64) WIN_CAPS = winCapsFor(S.nations.length);   // (the save's own number of nations, not this build's)
   resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
@@ -227,7 +327,7 @@ function checkNation(n, by = NEUTRAL){
   const cities = G.P.filter(p => S.owner[p.id] === n && p.city);
   if (!cities.length){
     N.alive = false;
-    const annex = by >= 0 && S.nations[by].alive;
+    const annex = by >= 0 && S.nations[by].alive && !isSated(by);   // (the nations world: a computer nation that has grown enough for now leaves the rest independent)
     for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
       if (annex){ S.owner[p] = by; S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
@@ -241,8 +341,13 @@ function checkNation(n, by = NEUTRAL){
     tellAll(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 40% for 14 days.`, me => n === me ? 'bad' : 'info', nc.id);
   }
 }
-function score(n){ let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
-const landNeed = n => SCN === 'world' ? Math.max(Math.ceil(scnLand()*WIN_SHARE), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra)
+function score(n){ if (QM && n >= 0){ if (!QM.score){ const c = new Array(S.nations.length).fill(0); for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (o >= 0) c[o] += G.P[p].city ? 4 : 1; }
+    for (const N of S.nations){ const o = S.owner[N.cap0]; if (o >= 0) c[o] += 10; } QM.score = c; } return QM.score[n] || 0; }
+  let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
+const winShare = () => tiered() ? winShareFor(S.nations.length) : WIN_SHARE;
+const coalCaps = () => tiered() ? Math.round(WIN_CAPS*1.5) : WIN_CAPS + 3;   // capitals a coalition needs together
+const landNeed = n => tiered() ? Math.max(Math.ceil(scnLand()*winShare()), (N0 => N0 + Math.max(SCENARIOS[SCN].extra, Math.ceil(N0*TIER_WIN_UP)))(S.nations[n].prov0 || 0))
+  : SCN === 'world' ? Math.max(Math.ceil(scnLand()*winShare()), (S.nations[n].prov0 || 0) + SCENARIOS[SCN].extra)
   : Math.max(Math.ceil(scnLand()*0.4), (S.nations[n].prov0In ?? S.nations[n].prov0 ?? 0) + SCENARIOS[SCN].extra);
 const growth = n => score(n) - (S.nations[n].score0 || 0);
 const capsHeld = n => S.nations.filter(N => S.owner[N.cap0] === n).length;
@@ -251,16 +356,16 @@ function verdict(me){
   const mine = landHeld(me);
   if (!S.nations[me].alive) S.over = 'lose';
   else if (S.nations.every(n => n.id === me || !n.alive) || mine >= landNeed(me) || capsHeld(me) >= WIN_CAPS) S.over = 'win';
-  else if ((B => B && (B.members.reduce((s0, m) => s0 + landHeld(m), 0) >= Math.ceil(landNeed(me)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3))(blocOf(me))){ S.over = 'win'; S.overReason = 'coalition'; }
+  else if ((B => B && (B.members.reduce((s0, m) => s0 + landHeld(m), 0) >= Math.ceil(landNeed(me)*1.8) || B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= coalCaps()))(blocOf(me))){ S.over = 'win'; S.overReason = 'coalition'; }
   else if (Number.isFinite(DAY_LIMIT) && S.hour >= DAY_LIMIT*24){ const top = S.nations.filter(n => n.alive).sort((a, b) => growth(b.id) - growth(a.id))[0]; S.over = top.id === me ? 'win' : 'lose'; S.overReason = 'time'; }
   else { const rival = S.nations.find(n => n.id !== me && n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (rival){ S.over = 'lose'; S.overReason = rival.name; }
-    else { const RB = blocs().find(B => !B.members.includes(me) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= WIN_CAPS + 3)); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
+    else { const RB = blocs().find(B => !B.members.includes(me) && (B.members.reduce((s0, m) => s0 + capsHeld(m), 0) >= coalCaps())); if (RB){ S.over = 'lose'; S.overReason = `the ${RB.name}`; } } }
 }
 // the game ends with the first seat's verdict (S.over is kept once per game: one seat today; a game with several seats needs one each).
 // With no seat at all the game ends when a nation reaches the victory conditions: S.over 'end', S.overReason its name
 function checkEnd(){
   if (S.over) return;
-  const L = seats(); for (const me of L){ verdict(me); if (S.over) break; }
-  if (!L.length){ const top = S.nations.find(n => n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (top){ S.over = 'end'; S.overReason = top.name; } }
+  quietly(() => { const L = seats(); for (const me of L){ verdict(me); if (S.over) break; }
+    if (!L.length){ const top = S.nations.find(n => n.alive && (landHeld(n.id) >= landNeed(n.id) || capsHeld(n.id) >= WIN_CAPS)); if (top){ S.over = 'end'; S.overReason = top.name; } } });
   if (S.over) IM.emit('over');
 }

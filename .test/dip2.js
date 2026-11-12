@@ -1,10 +1,11 @@
 // diplomacy chat, trade deals, open market offers
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1300, height: 860 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(400);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.click('#sp0');
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.click('#sp0');
   const ids = await p.evaluate(() => { const S = window.__im.S; S.nations[0].cash = 3000; return { fr: S.nations.findIndex(n => n.name === 'France'), pl: S.nations.findIndex(n => n.name === 'Russia') }; });
   await p.keyboard.press('d'); await p.waitForTimeout(200);
   await p.click(`[data-act="nat-open"][data-id="${ids.fr}"][data-k="chat"]`); await p.waitForTimeout(150);

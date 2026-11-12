@@ -1,9 +1,10 @@
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1400, height: 860 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForSelector('[data-act="pick"]');
-  await p.click('[data-act="pickdiff"][data-k="veteran"]'); await p.click('[data-act="pick"][data-p="0"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.evaluate(() => window.__im.tutGo(0));
+  await p.click('[data-act="pickdiff"][data-k="veteran"]'); await pickNation(p, 'United States'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.evaluate(() => window.__im.tutGo(0));
   const step = () => p.evaluate(() => document.querySelector('#tut .tp')?.textContent || 'none');
   const out = [await step()];
   await p.click('[data-act="tut-next"]'); out.push(await step()); await p.click('[data-act="tut-next"]'); out.push(await step());

@@ -4,6 +4,7 @@
 //  (S) the battle smoke (plumes and short puffs) is drawn, and with the clock paused and the effects' clock frozen every puff keeps its
 //      world spot while zooming and panning (< 0.05 world px); two screenshots of the same smoke at two zooms (OUT/after-anchor-*.png, OUT defaults to .test)
 //  (C) zoomed out to counters only: no firing points, no new shots, no battle smoke drawn, and the plates carry the battle badge
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
 const OUT = process.env.OUT || __dirname;
@@ -12,7 +13,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, hasTouch: PHONE, isMobile: PHONE });
   const p = await ctx.newPage(), errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await p.goto('file://' + path.join(__dirname, 'page.html')); await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
   await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 }); await p.waitForTimeout(1200);
   const P = await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove()); const im = window.__im, S = im.S, G = im.G; im.SET.fx = 'high'; im.SET.saver = false; im.SET.tipsOff = true;
     const cap = S.nations[0].capital, C = G.P[cap], busy = new Set(S.armies.map(a => a.at)); let P = null, bd = Infinity;

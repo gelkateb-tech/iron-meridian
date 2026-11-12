@@ -1,4 +1,5 @@
 // CoN layout pass: full UI playthrough at desktop and phone sizes. Usage: node .test/con-verify.js [w h tag]
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), TAG = process.argv[4] || (W > 820 ? 'desk' : 'phone');
 const fails = [], notes = [];
@@ -19,7 +20,7 @@ const ok = (c, msg, extra) => { if (!c) fails.push(msg + (extra !== undefined ? 
   const hscroll = () => p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || document.body.scrollWidth > innerWidth + 1);
 
   await p.goto('file://' + __dirname + '/page.html');   // this checkout's own test page (bash tools/mkpage.sh) await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
   await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 }); await p.waitForTimeout(400);
   const nat = await p.evaluate(() => window.__im.S.nations[0].name); notes.push('playing ' + nat);
   ok(!(await hscroll()), 'no horizontal scroll at start');

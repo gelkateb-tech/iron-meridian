@@ -2,6 +2,7 @@
 // Serves dist/public over http (python3 -m http.server on a free port), loads it on a desktop and a phone viewport, starts a game,
 // runs about a game day at 8x through the real speed control, and checks: no window.__im test hooks, no DEV badge / panel /
 // developer speeds, no developer markup in the page, no console errors. Exits 1 on any failure. Screenshots: .test/public-*.png
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs'), net = require('net'), { spawn } = require('child_process');
 const ROOT = path.join(__dirname, '..'), DIR = path.join(ROOT, 'dist', 'public'), OUT = __dirname;
@@ -26,7 +27,11 @@ const up = port => new Promise(r => { const t0 = Date.now(); const go = () => { 
     p.on('pageerror', e => errs.push(name + ' pageerror: ' + e.message));
     p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR_/.test(m.text())) errs.push(name + ' console: ' + m.text()); });
     await p.goto(`http://127.0.0.1:${port}/play.html`); await p.waitForTimeout(1200);
-    if (await p.locator('[data-act="pick"]').count()){ await p.click('[data-act="pick"][data-p="0"]'); await p.click('[data-act="begin"]'); }
+    // the start screen offers the nations world only (nations step 6): no switch to the classic 15-power world, every region's tab
+    const pick = await p.evaluate(() => ({ wsel: document.querySelectorAll('[data-act="pickscn"]').length, tabs: document.querySelectorAll('[data-act="pickreg"]').length, oldText: /15 powers|old rules/i.test((document.getElementById('modal') || {}).innerText || '') }));
+    ok(name + ': start screen offers the nations world only', !pick.wsel && pick.tabs === 6 && !pick.oldText, pick);
+    await p.screenshot({ path: OUT + '/public-' + name + '-start.png' });
+    if (await p.locator('[data-act="pick"]').count()){ await pickNation(p, 'United States'); await p.click('[data-act="begin"]'); }
     await p.click('[data-act="start"]'); await p.waitForTimeout(400);
     const dom = await p.evaluate(() => ({ im: typeof window.__im, unders: Object.keys(window).filter(k => /^__/.test(k) && k !== '__THREE__'),   /* (three.js sets __THREE__ itself) */ badge: !!document.getElementById('devbadge'), panel: !!document.getElementById('devpanel'), devsp: document.querySelectorAll('[data-speed="5"],[data-speed="6"],[data-speed="7"],.devsp').length,
       speeds: [...document.querySelectorAll('#speed [data-speed]')].map(b => b.dataset.speed).join(','), devText: /\bDEV\b|Developer mode/.test(document.body.innerText) }));

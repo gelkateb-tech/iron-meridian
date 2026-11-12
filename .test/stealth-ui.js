@@ -1,13 +1,14 @@
 // Stealth Bomber in the page: research tree (bomb_up, and the unlock u_stealth with two prerequisites), Mobilize list, unit guide, a wing's mission panel,
 // and the fog rule on the map (an enemy stealth wing in flight is drawn only near your SAMs / jammers; AWACS gives a '?' at half range, 250 of its 500 km).
 //   node .test/stealth-ui.js   (bash tools/mkpage.sh first; screenshots .test/stealth-*.png; exits 1 on a failed check or a page error)
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const out = n => __dirname + '/stealth-' + n + '.png';
 (async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1400, height: 900 } }); const errs = [], checks = [];
   const ck = (name, ok, info) => checks.push({ name, ok: !!ok, info });
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="4"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(900);
+  await pickNation(p, 'France'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(900);
   // ---- research: the Air branch
   await p.evaluate(() => { const S = window.__im.S, N = S.nations[0]; window.__h0 = S.hour; S.hour = 20*24; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 5000; for (const id of ['u_jet', 'jet_pgm', 'u_bomb']) N.tech[id] = 1; N.tv = (N.tv || 0) + 1; N.research = N.research2 = null; });
   await p.click('[data-act="research-open"]'); await p.waitForTimeout(300); await p.click('[data-act="rbranch"][data-b="str"]'); await p.waitForTimeout(300);

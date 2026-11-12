@@ -1,6 +1,7 @@
 // Taps on the unit display (Part 2 repair): zoomed in a tap on a force's PICTURE selects it (not only its flag tag); zoomed out a tap on a
 // counter stacked beside the one that covers it (another side's, HITX sat) acts on that force: yours selects it, a foe's (with one of yours
 // selected) is targeted. node .test/unit-taps.js [W H dpr]   prints JSON {checks, errors} and exits 1 on any failure.
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
 (async () => {
@@ -10,7 +11,7 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await p.addInitScript(() => { let s = 0x2f6b1d3; Math.random = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0)/4294967296; }; });
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
   await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 });
   const sc = await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove());
     const im = window.__im, S = im.S, G = im.G, N = S.nations, by = n => G.P.find(P => P.cityName === n), nat = n => N.findIndex(q => q.name === n), rk = (a, b) => Math.min(a, b) + ',' + Math.max(a, b);

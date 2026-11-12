@@ -3,6 +3,7 @@
 // battle close in (figures firing, shells, impacts, missiles, strikes all drawn), once each with Effects High, Low and Off and with the Battery
 // saver on and off. After every game day it records one hash of the whole saved rules state (as tools/split-golden.js does). All runs must give
 // the same hashes, the same dice state (S.rs) and no page errors; exit 1 otherwise. It also reports how many effects each run drew.
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright'); const path = require('path');
 const DAYS = +(process.argv[2] || 3), SEED = +(process.argv[3] || 12345);
 const RUNS = [['high', false], ['low', false], ['off', false], ['high', true], ['low', true]];
@@ -10,7 +11,7 @@ const RUNS = [['high', false], ['low', false], ['off', false], ['high', true], [
   for (const [fx, saver] of RUNS){ const p = await (await b.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
     p.on('pageerror', e => errors.push(`${fx}${saver ? '+saver' : ''}: ${e.message}`)); p.on('console', m => { if (m.type() === 'error') errors.push(`${fx}: ${m.text()}`); });
     await p.goto('file://' + path.join(__dirname, 'page.html')); await p.waitForTimeout(500);
-    await p.click('[data-act="pick"][data-p="0"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
+    await pickNation(p, 'United States'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
     await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 }); await p.waitForTimeout(800);
     const r = await p.evaluate(async ([days, seed, fx, saver]) => { const im = window.__im; newGame(seed, 0, [0]); S.started = true; S.speed = 0; im.SET.fx = fx; im.SET.saver = saver;
       const hash = s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = Math.imul(h2 + c, 0x85ebca6b) ^ (h2 >>> 13); } return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0'); };

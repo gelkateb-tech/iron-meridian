@@ -1,10 +1,18 @@
 // Iron Meridian rules: map. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
 /* ---------------- World map ---------------- */
-function loadWorld(){
-  const N = W*H, prov = WORLD.prov || new Int16Array(N);
+// map: null for the map of world.js as it is (the classic world, the theatres, every old save), or a province split laid over it (NATIONS.map,
+// written by tools/build-provsplit.js; the nations world): new provinces appended after the last one of world.js (each with the province it was
+// cut from, P.parent), the cells they take, the cut provinces' new name, people and terrain, and the river, road and rail pairs that touch them.
+// base0: the map of world.js, loaded (needed with a split): every province of world.js keeps its deposits, its share of city ground and the sea
+// straits exactly as there (a cut province keeps them all), so the split changes nothing outside the cut countries; new provinces draw their own.
+function loadWorld(map = null, base0 = null){ const NB = map ? WORLD.provinces.length : Infinity, old = p => p.id < NB;
+  const N = W*H, D = map ? WORLD.provinces.map((d, k) => map.parents[k] ? [map.parents[k][0], d[1], d[2], d[3], map.parents[k][1], map.parents[k][2]] : d).concat(map.provinces) : WORLD.provinces;
+  let prov = WORLD.prov || new Int16Array(N);
   if (!WORLD.prov) for (let i = 0; i < N; i++){ const s = WORLD.cells.substr(i*2, 2); prov[i] = s === '..' ? -1 : parseInt(s, 36); }
-  const P = WORLD.provinces.map((d, k) => ({id:k, name:d[0], country:d[1], sea:d[1] < 0, city:!!(d[2] & 1), capFlag:!!(d[2] & 2), cityName:d[3], cells:[], nb:new Map()}));
+  if (map){ prov = Int32Array.from(prov); for (let i = 0; i < map.cells.length; i += 2) prov[map.cells[i]] = map.cells[i + 1]; }
+  const P = D.map((d, k) => ({id:k, name:d[0], country:d[1], sea:d[1] < 0, city:!!(d[2] & 1), capFlag:!!(d[2] & 2), cityName:d[3], cells:[], nb:new Map()}));
+  if (map) for (let k = WORLD.provinces.length; k < D.length; k++) P[k].parent = D[k][6];
   for (let i = 0; i < N; i++) if (prov[i] >= 0) P[prov[i]].cells.push(i);
   for (const p of P){
     let sx = 0, sy = 0; for (const c of p.cells){ const [x, y] = cellCenter(c); sx += x; sy += y; }
@@ -22,6 +30,7 @@ function loadWorld(){
     for (const p of P){ if (p.sea) continue; const ss = [...p.nb.keys()].filter(v => P[v].sea && !lake(P[v]));
       for (let i = 0; i < ss.length; i++) for (let j = i + 1; j < ss.length; j++) if (find(ss[i]) !== find(ss[j])) cand.push([ss[i], ss[j], hexDist(P[ss[i]].cc, P[ss[j]].cc)]); }
     cand.sort((x, y) => x[2] - y[2]); loadWorld.straits = [];
+    if (base0) cand.length = 0; for (const [a, b] of base0 ? base0.straits : []){ const w = P[a].nb.get(b) ?? base0.P[a].nb.get(b); P[a].nb.set(b, w); P[b].nb.set(a, w); loadWorld.straits.push([a, b]); }
     for (const [a, b, d] of cand){ if (find(a) === find(b)) continue; par[find(a)] = find(b); const w = Math.max(GS > 1 ? 0.35 : 1, d); P[a].nb.set(b, w); P[b].nb.set(a, w); loadWorld.straits.push([a, b]); } }
   for (const p of P){ p.nbs = [...p.nb.keys()]; p.coast = !p.sea && p.nbs.some(v => P[v].sea); p.river = new Set(); p.road = new Set(); p.lk = new Map(); }
   // rivers, roads and railways (Natural Earth): river lines between provinces, road and rail links between neighbours, drawable paths by class
@@ -29,15 +38,16 @@ function loadWorld(){
   // road/rail/dmg/bld the live state (reset from S.links by linksSync)
   const LK = new Map();
   const mk = (a, b) => { let r = P[a].lk.get(b); if (!r){ r = {a:Math.min(a, b), b:Math.max(a, b), k:Math.min(a, b) + ',' + Math.max(a, b), r0:0, q0:0, road:0, rail:0, dmg:0, bld:null, gap:false}; LK.set(r.k, r); P[a].lk.set(b, r); P[b].lk.set(a, r); } return r; };
-  if (LINES){ const L = LINES;
+  if (LINES){ const T = map ? new Set(map.touch) : null, mine = l => T ? l.filter(q => !T.has(q[0]) && !T.has(q[1])) : l;   // pairs touching a cut province: the split's own
+    const L = map ? {riverPairs:mine(LINES.riverPairs).concat(map.riverPairs), roadPairs:mine(LINES.roadPairs).concat(map.roadPairs), railPairs:mine(LINES.railPairs || []).concat(map.railPairs)} : LINES;
     for (const [a, b] of L.riverPairs) if (P[a] && P[b] && P[a].nb.has(b)){ P[a].river.add(b); P[b].river.add(a); }
     for (const [a, b, lv, gap] of L.roadPairs) if (P[a] && P[b] && P[a].nb.has(b) && !P[a].sea && !P[b].sea){ const r = mk(a, b); r.r0 = Math.max(r.r0, lv || 2); if (gap) r.gap = true; if (r.r0 >= 2){ P[a].road.add(b); P[b].road.add(a); } }
     for (const [a, b, lv] of (L.railPairs || [])) if (P[a] && P[b] && P[a].nb.has(b) && !P[a].sea && !P[b].sea) mk(a, b).q0 = Math.max(mk(a, b).q0, lv || 1); }
   for (const r of LK.values()){ r.road = r.r0; r.rail = r.q0; }
   loadWorld.LK = LK;
   // oil fields: deserts and seas known for crude, by latitude band and region, deterministic
-  const r = mulberry(7);
-  for (const p of P){ if (p.sea) continue;
+  const r = mulberry(map ? 707 : 7);
+  for (const p of P){ if (p.sea) continue; if (base0 && old(p)){ p.oil = base0.P[p.id].oil; p.ore = base0.P[p.id].ore; continue; }
     const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0;
     const gulf = p.lat > 12 && p.lat < 38 && lon > 35 && lon < 62, arctic = p.lat > 58, sahara = p.lat > 18 && p.lat < 34 && lon > -10 && lon < 35;
     const fk = GS > 1 ? 0.3 : 1;   // fine maps: fewer, richer fields (yields are not scaled down), same world totals
@@ -48,11 +58,12 @@ function loadWorld(){
   const MTN = [[70, 103, 27, 40], [-80, -65, -55, 10], [-125, -104, 32, 60], [5, 17, 44, 48], [38, 50, 40, 44], [56, 62, 50, 68], [44, 62, 27, 38], [35, 42, 5, 15], [-8, 10, 30, 36], [5, 20, 59, 70], [30, 44, 37, 41], [66, 80, 35, 45], [-110, -97, 17, 28], [140, 180, 55, 70], [96, 110, 22, 30]];
   const FOR = [[-75, -45, -15, 5], [10, 30, -5, 5], [95, 125, -8, 20], [-130, -60, 50, 64], [30, 140, 52, 64], [10, 30, 58, 66], [-90, -70, 30, 45], [125, 140, 30, 45]];
   const DES = [[-15, 35, 16, 32], [35, 58, 15, 30], [90, 115, 38, 46], [118, 145, -32, -20], [15, 27, -28, -20], [-118, -104, 30, 37], [-72, -68, -28, -18], [55, 70, 36, 45], [58, 75, 24, 30]];
-  const tr = mulberry(23), TCODE = {p:'plains', f:'forest', m:'mountain', d:'desert', t:'tundra', h:'hills', w:'marsh', s:'snow'};
+  const tr = mulberry(map ? 2323 : 23), TCODE = {p:'plains', f:'forest', m:'mountain', d:'desert', t:'tundra', h:'hills', w:'marsh', s:'snow'};
   for (const p of P){ if (p.sea) continue;
-    const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = tr(), d5 = WORLD.provinces[p.id][5];
-    if (d5){ p.terrain = p.city && r < 0.85 ? 'urban' : TCODE[d5] || 'plains'; continue; }
-    p.terrain = p.city && r < 0.7 ? 'urban' : MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; }
+    const lon = ((p.cc % W) + 0.5)/W*360 + WORLD.lon0, L = ((lon + 540) % 360) - 180, lat = p.lat, r = base0 && old(p) ? (base0.P[p.id].urb ? 0 : 1) : tr(), d5 = D[p.id][5];   // (a province of world.js: its city ground as there)
+    // ter0: the ground without a city on it; urb: whether a city here covers it (useWorld re-applies both when the set of cities changes)
+    if (d5){ p.ter0 = TCODE[d5] || 'plains'; p.urb = r < 0.85; p.terrain = p.city && p.urb ? 'urban' : p.ter0; continue; }
+    p.urb = r < 0.7; p.ter0 = MTN.some(b => BOX(L, lat, ...b)) && r < 0.8 ? 'mountain' : FOR.some(b => BOX(L, lat, ...b)) && r < 0.85 ? 'forest' : DES.some(b => BOX(L, lat, ...b)) && r < 0.9 ? 'desert' : Math.abs(lat) > 64 ? 'tundra' : r < 0.12 ? 'forest' : r < 0.18 ? 'mountain' : 'plains'; p.terrain = p.city && p.urb ? 'urban' : p.ter0; }
   // rare-earth deposits (P.rare: output a day before buildings): the real rare-earth districts (approximate boxes and richness), then scattered
   // minor finds on ore-bearing hard rock. Iron-mining country (P.iron): a share of the hills and mountains without an ore deposit. Own random stream.
   const RARE_BOX = [[106, 114, 39, 44, 3.5], [109, 118, 22, 28, 2.2], [100, 104, 26, 30, 1.8], [96, 99.5, 23, 27.5, 2.5], [102, 105.5, 21, 23.5, 1.5],   // China: Bayan Obo, southern clays, Sichuan; Myanmar (Kachin); Vietnam
@@ -60,25 +71,49 @@ function loadWorld(){
     [24, 29, -12, -7, 2.2], [17.5, 20, -32, -29.5, 1.8], [29.5, 31.5, -25, -23, 1.5], [44, 48, -26, -20, 1.2], [75, 79, 8, 11.5, 1.6], [84, 87.5, 18.5, 21.5, 1.4],   // DR Congo (Katanga); South Africa (Steenkampskraal, Phalaborwa); Madagascar; India's monazite coasts
     [-117, -114.5, 34, 36.5, 4], [-106, -103.5, 43, 45.5, 1.8], [-106, -104, 30.5, 32, 1.5], [-133, -131, 54.5, 56.5, 1.5], [-48, -44, 60, 62, 3],   // USA (Mountain Pass, Bear Lodge, Round Top, Bokan); Greenland (Kvanefjeld)
     [-115, -111, 61, 63.5, 1.6], [-66, -63, 55, 57, 1.5], [68, 76, 45, 50, 1.2], [30, 32, 39, 40.5, 1.6], [14, 21, 58, 68.5, 1.2], [30, 32, 31, 31.6, 1], [54, 56.5, 31, 32.5, 1]];   // Canada; Kazakhstan; Turkey (Beylikova); Sweden; Egypt (Nile sands); Iran (Yazd)
-  { const rr = mulberry(41), inBox = RARE_BOX.map(() => []);   // per district: the nearest land province and its distance (degrees)
-    for (const p of P){ if (p.sea) continue; const lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180, t = p.terrain, hard = t === 'hills' || t === 'mountain' || t === 'desert' || t === 'tundra';
+  { const rr = mulberry(map ? 4141 : 41), inBox = RARE_BOX.map(() => []);   // per district: the nearest land province and its distance (degrees)
+    for (const p of P){ if (p.sea) continue; if (base0 && old(p)){ p.rare = base0.P[p.id].rare; p.iron = base0.P[p.id].iron; continue; } const lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180, t = p.terrain, hard = t === 'hills' || t === 'mountain' || t === 'desert' || t === 'tundra';
       let rv = 0; RARE_BOX.forEach((B, i) => { const d = Math.hypot(lon - (B[0] + B[1])/2, p.lat - (B[2] + B[3])/2); if (!inBox[i][0] || d < inBox[i][1]) inBox[i] = [p, d]; if (BOX(lon, p.lat, B[0], B[1], B[2], B[3]) && rr() < (hard || p.ore ? 0.42 : 0.2)) rv = Math.max(rv, Math.max(0.8, 0.5*B[4])); });   // the district's lesser finds: half its main deposit (the big districts were giving one power most of the world's output)
       if (!rv && hard && rr() < (p.ore ? 0.3 : 0.02)) rv = 0.8;
       p.rare = rv; p.iron = !p.ore && (t === 'hills' || t === 'mountain') && rr() < 0.14; }
     // every district has its main deposit in the province nearest its centre (small districts can fall between province centres)
-    RARE_BOX.forEach((B, i) => { const c = inBox[i][0]; if (c && inBox[i][1] < 4) c.rare = Math.max(c.rare, B[4]); }); }
+    if (!base0) RARE_BOX.forEach((B, i) => { const c = inBox[i][0]; if (c && inBox[i][1] < 4) c.rare = Math.max(c.rare, B[4]); }); }   // (with a split: they stay where world.js has them)
   // population (millions): known towns, area and terrain, cities and capitals; dense river plains of South and East Asia weighted up
   const TF = {plains:1, forest:0.6, mountain:0.5, desert:0.22, tundra:0.1, urban:1.4}, POPK = 1;
-  for (const p of P){ if (p.sea){ p.pop0 = 0; continue; } const d = WORLD.provinces[p.id], towns = d[4] || 0, lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180;
+  for (const p of P){ if (p.sea){ p.pop0 = 0; continue; } const d = D[p.id], towns = d[4] || 0, lon = ((((p.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180;
     const asia = lon > 65 && lon < 125 && p.lat > 5 && p.lat < 42 ? 3.2 : lon > -20 && lon < 50 && p.lat > -35 && p.lat < 15 ? 1.6 : 1;
     const al = Math.abs(p.lat), latF = al > 64 ? 0.04 : al > 56 ? 0.3 : al > 48 ? 0.75 : 1;
     if (WORLD.v >= 2){ p.pop0 = +(d[4]/1000*POPK).toFixed(3); continue; }
     p.pop0 = +((0.07*p.cells.length*(TF[p.terrain] || 1)*asia*asia*latF + 0.34*Math.sqrt(towns)*asia*latF + (p.city ? 2.4*asia : 0) + (p.capFlag ? 3.5 : 0))).toFixed(2); }
   const countries = WORLD.countries.map((name, k) => ({name, provs:P.filter(p => p.country === k).map(p => p.id)}));
-  const landCount = P.filter(p => !p.sea).length, PF = Math.min(1, 740/landCount);   // PF: per-province base yields shrink as provinces get smaller
+  const landCount = P.filter(p => !p.sea).length, PF = base0 ? base0.PF : Math.min(1, 740/landCount);   // PF: per-province base yields shrink as provinces get smaller (a split keeps world.js's)
   cityMains(P, countries);
-  return {prov, P, countries, landCount, PF, LK};
+  // base: the classic world's cities, capitals, city names and main resources as world.js gives them (useWorld switches between it and the nations world)
+  const base = {city:P.map(p => p.city), cap:P.map(p => p.capFlag), name:P.map(p => p.cityName), main:P.map(p => p.main)};
+  return {prov, P, D, straits:loadWorld.straits, countries, landCount, PF, LK, base, worldKey:'classic', map:map ? map.v : 0};
 }
+// Which provinces are cities and capitals depends on the world in use. def null: the classic world (the flags of world.js: the 15-power world,
+// the two theatres and every old save). def {cities, caps, names}: the nations world (province ids of every city, of the nations' capitals, and
+// the names of promoted cities). Sets P.city, P.capFlag, P.cityName, the urban ground and each city's main resource, afresh on every new game
+// and every load, so nothing a game did to the flags leaks into the next one. Deposits and people do not depend on it.
+function useWorld(def){ const P = G.P, B = G.base, key = def ? 'n:' + def.cities.join(',') + '|' + def.caps.join(',') + '|' + JSON.stringify(def.names || {}) : 'classic';
+  if (!def){ for (const p of P){ p.city = B.city[p.id]; p.capFlag = B.cap[p.id]; p.cityName = B.name[p.id]; p.main = B.main[p.id]; if (!p.sea) p.terrain = p.city && p.urb ? 'urban' : p.ter0; } }
+  else { const cs = new Set(def.cities), cp = new Set(def.caps), nm = def.names || {};
+    for (const p of P){ p.city = !p.sea && cs.has(p.id); p.capFlag = p.city && cp.has(p.id); p.cityName = nm[p.id] || B.name[p.id] || (p.city ? p.name : B.name[p.id]); p.main = undefined; if (!p.sea) p.terrain = p.city && p.urb ? 'urban' : p.ter0; }
+    cityMains(P, G.countries); }
+  if (G.worldKey !== key){ G.worldKey = key; IM.emit('cities'); } }
+// The maps a game is played on. 0: the map of world.js (the classic world, the theatres, every old save, and a nations-world save made before
+// the province split). MAP_NEW: world.js with the province split of nations.js (NATIONS.map, docs/NATIONS-PLAN.md 4.6), the map of every new
+// nations-world game. Each is loaded once, when first needed, and kept; G is the one in use. A save names its map (S.map), so it keeps it.
+const MAP_SPLIT = NATIONS && NATIONS.map && NATIONS.map.base === WORLD.provinces.length ? NATIONS.map : null, MAP_NEW = MAP_SPLIT ? MAP_SPLIT.v : 0;
+const MAPS = {};
+function mapOf(v = 0){ if (v && (!MAP_SPLIT || v !== MAP_SPLIT.v)) return null; return MAPS[v] || (MAPS[v] = v ? loadWorld(MAP_SPLIT, mapOf(0)) : loadWorld()); }
+// make map v the one in use; false when this build does not have it. The province-keyed caches of the rules are dropped and the client hears
+// 'world' (it rebuilds what it draws from the map: lines, labels, towns). A switch happens only with a new game or a load.
+function useMap(v = 0){ const g = mapOf(v); if (!g) return false; if (G === g) return true;
+  G = g; NEARC.clear(); LANES = null; SZC = {d:-1, S:null, a:null}; SUPF = SUPFA = SUPE = null; SUPV = -1; scnLandCache = null; scnInCache = null; IM.emit('world'); return true; }
+// fn run with map v in place of the one in use, to read it only (the start screen's counts for a world not in play); nothing is switched or kept
+function onMap(v, fn){ const g = mapOf(v), g0 = G; if (!g || g === g0) return fn(); G = g; try { return fn(); } finally { G = g0; } }
 /* Sea lanes: the sea-zone links along the world's major shipping routes (North Atlantic, Mediterranean–Suez–Indian Ocean–Malacca–East Asia,
    Persian Gulf, trans-Pacific, Panama, the Cape, Australia, South America). Waypoints (lon, lat) snap to the nearest sea zone and are joined by
    the shortest all-water route. Fixed per map; trade lanes and convoy routes can build on the same set. */
@@ -165,7 +200,10 @@ function cityMains(P, countries){ const KS = ['cash', 'oil', 'metal', 'iron', 'e
         const v = score(p, k)*wb/(1 + 1.5*loc[k]); if (v > bv + 1e-9){ bv = v; best = [p, k]; } } }
       take(best[0], best[1]); }
     // no big country is left without oil of its own: with eight or more cities and no oil city, the smallest city of its most common resource
-    // (never the capital) becomes an oil city. On today's map that is Australia alone (Port Hedland, off the North West Shelf)
+    // (never the capital) becomes an oil city. In the classic world that is Australia alone (Port Hedland, off the North West Shelf); in the nations
+    // world (its own cities, useWorld) the same rule gives the eleven nations of 8 to 11 cities without one theirs (Australia, Spain, Poland, Romania,
+    // Greece, Mozambique, South Korea, Myanmar, the Philippines, Bolivia, Cuba). The one oil rule of both worlds: what a nation's cities still lack
+    // after it (smaller nations) is covered by the nations world's state reserve (N.reserve, rules/state.js tierStart)
     if (n >= 8 && !loc.oil){ const top = KS.filter(k => k !== 'cash').reduce((x, y) => loc[y] > loc[x] ? y : x), c0 = cs.filter(p => p !== cap && p.main === top).sort((x, y) => x.pop0 - y.pop0 || y.id - x.id)[0];
       if (c0){ c0.main = 'oil'; loc[top]--; loc.oil++; } } }
   for (const p of P) if (!p.main) p.main = null; }

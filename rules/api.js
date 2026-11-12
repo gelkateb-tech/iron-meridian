@@ -6,6 +6,10 @@
 IM.api = {
   // the game: start, load, save, one quarter hour (tickQ: three of four are battle-only steps, the fourth is the hour's tick; S.q counts them) and a whole hour (tick)
   newGame, restore, saveJSON, tickQ, tick,
+  // which world the next new game is (a scenario key: 'world' the classic 15 powers, 'world64' the nations world of nations.js)
+  useScenario,
+  // the maps (0 world.js; mapNew the nations world's, with the province split): a map's provinces without switching to it, or the switch itself
+  mapOf, useMap, get mapNew(){ return MAP_NEW; },
   get S(){ return S; }, get G(){ return G; }, get BATTLE_Q(){ return BATTLE_Q; },
   // seats and what a seat sees
   seats, isSeat, desk, visibleSet, armyVisible,

@@ -86,7 +86,7 @@ function trCells(){ if (TRC.G === G) return TRC; const N = W*H, sea = new Uint8A
   const br = new Map(), pairs = [], canal = [];
   const link = (a, b, k) => { const w = Math.hypot(cx[a] - cx[b], cy[a] - cy[b])/(HS*SQ3); for (const [x, y] of [[a, b], [b, a]]){ let l = br.get(x); if (!l) br.set(x, l = []); l.push([y, w]); } pairs.push([a, b, k]); };
   const coastal = z => G.P[z].cells.filter(c => { if (!sea[c]) return false; for (let d = 0; d < 6; d++){ const m = nbr(c, d); if (m >= 0 && !sea[m]) return true; } return false; });
-  for (const [za, zb] of loadWorld.straits || []){ const A = coastal(za), B = coastal(zb); let best = null, bd = 1e18;
+  for (const [za, zb] of G.straits || loadWorld.straits || []){ const A = coastal(za), B = coastal(zb); let best = null, bd = 1e18;
     for (const a of A) for (const b of B){ const d = (cx[a] - cx[b])**2 + (cy[a] - cy[b])**2; if (d < bd){ bd = d; best = [a, b]; } }
     if (best) link(best[0], best[1], 'strait'); }
   for (const C of TR_CANALS){ const a = llCell(C.a[0], C.a[1], sea), b = llCell(C.b[0], C.b[1], sea); if (a >= 0 && b >= 0 && G.prov[a] !== G.prov[b]){ link(a, b, C.k); canal.push([G.prov[a], G.prov[b], a, b, C.k]); } }

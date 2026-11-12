@@ -1,6 +1,7 @@
 // Recruiting Office levels I-V: node .test/recoff.js  (run tools/mkpage.sh first).
 // Costs and build times per level, manpower per level, faster training for every unit in the city, the 30% floor, queued units sped up when a level
 // completes, saves, the AI's upgrade rule, and the wording in the building tooltip and the Mobilize panel.
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] }); const ctx = await b.newContext({ viewport: { width: 430, height: 932 }, deviceScaleFactor: 2, hasTouch: true });
@@ -8,8 +9,7 @@ const { chromium } = require('playwright');
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   const ok = (name, v, info) => { checks.push({ name, ok: !!v, ...(v ? {} : { info }) }); };
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(600);
-  const idx = await p.evaluate(() => { const r = [...document.querySelectorAll('[data-act="pick"]')].find(x => /Russia/i.test(x.textContent)); return r.dataset.p; });
-  await p.click(`[data-act="pick"][data-p="${idx}"]`); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(1200);
+  await pickNation(p, 'Russia'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(1200);
   /* global S, G, BUILD, UNITS, UT, buildCost, build, consHour, trainH, trainF, recMp, recPct, recSpeed, provYield, recruit, saveJSON, restore, aiRecSlow, aiRecSite, canMobilize, TRAIN_MIN */
   const r = await p.evaluate(() => { const o = {}, N = S.nations[0], cap = N.capital, B = S.bld[cap]; S.speed = 0; N.doc = null;
     const keep = {...B};

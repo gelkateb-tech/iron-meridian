@@ -1,13 +1,14 @@
 // The research tree by unit, in the page (docs/RESEARCH.md): category list, a category's day grid, colours and badges, the detail card,
 // a project in each slot, day gates, levels, connectors, the worded upgrades' rules, the computer's picks, and the phone layout.
 //   node .test/v4research.js   (bash tools/mkpage.sh first; exits 1 on a failed check or a page error)
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const T0 = Date.now();
 (async () => { const b = await chromium.launch(); const errs = [], checks = [];
   const ck = (name, ok, info) => { checks.push({ name, ok: !!ok, info }); if (process.env.V) console.log(((Date.now() - T0)/1000).toFixed(1), ok ? 'ok  ' : 'FAIL', name); };
   const boot = async vp => { const p = await b.newPage(vp); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
     await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
-    await p.click('[data-act="pick"][data-p="4"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(800);
+    await pickNation(p, 'France'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(800);
     await p.evaluate(() => { const N = window.__im.S.nations[0]; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 4000; N.research = N.research2 = null; }); return p; };
   const p = await boot({ viewport: { width: 1440, height: 900 } });
   const node = id => p.evaluate(id => { const e = document.querySelector(`.rnode[data-id="${id}"]`); if (!e) return null; const cs = getComputedStyle(e.querySelector('.dm')); return { cls: e.className, title: e.title, text: e.innerText.replace(/\s+/g, ' ').trim(), bg: cs.backgroundImage, row: +getComputedStyle(e).getPropertyValue('--r'), col: +getComputedStyle(e).getPropertyValue('--c'), lane: +getComputedStyle(e).getPropertyValue('--l'), elite: !!e.querySelector('.rbadge-e'), lv: (e.querySelector('.rlv') || {}).textContent || '', mark: (e.querySelector('.rbdg') || {}).className || '' }; }, id);

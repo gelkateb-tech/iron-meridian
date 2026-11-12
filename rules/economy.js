@@ -2,6 +2,9 @@
 'use strict';
 const graceFor = o => o >= 0 && S.nations[o].small ? 24*21 : o >= 0 && S.nations[o].mid ? 24*14 : GRACE_H;   // AI powers leave a compact power alone for three weeks, a medium one for two, the rest for eight days
 const inGrace = o => o >= 0 && S.hour < graceFor(o);
+// may AI nation a not yet declare war on nation b? The classic world: b's own grace (three weeks for a small power). The nations world: 8 days
+// for everyone, 21 days when the attacker stands two or more tiers above its victim (S against B or C, A against C)
+const graceOn = (a, b) => S.nations[a].tier ? S.hour < (tierGap(S.nations[a].tier, S.nations[b].tier) >= 2 ? 24*21 : GRACE_H) : inGrace(b);
 const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
 let BLOCK = new Set();
 function computeBlockade(){ BLOCK = new Set(); const by = new Map(); for (const a of S.armies){ if (a.to !== null || !G.P[a.at].sea || !shipsN(a) || a.owner < 0) continue; for (const v of G.P[a.at].nbs){ const o = S.owner[v]; if (!G.P[v].sea && o >= 0 && atWar(a.owner, o)){ BLOCK.add(v); if (isSeat(o)){ const m = by.get(o) || by.set(o, new Map()).get(o); if (!m.has(v)) m.set(v, a.owner); } } } } tradeBlockade(); for (const me of seats()) blockNews(me, by.get(me) || new Map()); }
@@ -56,10 +59,12 @@ let INCC = {v:-1, S:null, m:[]};
 function income(n){ if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
 function income0(n){
   const g = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}, u = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}; let provs = 0;
-  const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1;
+  const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1, bM = N0.boostM;   // boostM: the nations world's own catch-up for manpower
   for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
     const m = (S.home[p] === n ? boost : 1)*capHit;
-    for (const k in g) g[k] += y[k]*m; if (S.nations[n].capital === p){ const c = ECO_CAPITAL; g.oil += c.oil; g.metal += c.metal; g.iron += c.iron; g.elec += c.elec; g.rare += c.rare; } }   // the capital: state industry, labs and recycling
+    // (a catch-up below 1 holds money back in full and goods by its square root only: a big country keeps about the goods of the others)
+    const mg = boost < 1 && S.home[p] === n ? Math.sqrt(boost)*capHit : m;
+    for (const k in g) g[k] += y[k]*(k === 'cash' ? m : k === 'mp' ? (bM != null ? (S.home[p] === n ? bM : 1)*capHit : m) : mg); if (N0.capital === p){ const c = ECO_CAPITAL, rs = N0.reserve; for (const k in c) g[k] += c[k]*(rs && rs.includes(k) ? ECO_RESERVE : 1); } }   // the capital: state industry, labs and recycling (a nations-world reserve doubles a good its cities lack)
   const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
   for (const k in g) g[k] *= eff;
   g.cash *= has(n, 'eco1') ? 1.2 : ECO_CASH_ALL; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;   // eco1-3: the old Economy research (now part of buildings); a nation that researched one keeps its bonus
@@ -108,15 +113,15 @@ function marketDay(){ const M = mkt(), incs = S.nations.map(N => N.alive ? incom
     const ratio = dem/Math.max(1, sup), target = MKT_BASE[k]*Math.max(0.7, Math.min(2.6, 0.6 + 1.0*ratio + 4*M.press[k]));
     M.prev[k] = M.p[k]; M.p[k] = Math.max(MKT_BASE[k]*0.4, Math.min(MKT_BASE[k]*3.5, M.p[k] + (target - M.p[k])*0.2 + M.p[k]*(rng() - 0.5)*0.06));
     M.press[k] *= 0.7; M.hist[k].push(+M.p[k].toFixed(2)); if (M.hist[k].length > 60) M.hist[k].shift(); }
-  // AI trading and sanctions
-  for (const N of S.nations){ if (!N.alive || isSeat(N.id)) continue; const cap = stockCap(N.id);
+  // AI trading and sanctions (no owner or relation changes here: every nation's land and enemies are counted once, quietly)
+  quietly(() => { for (const N of S.nations){ if (!N.alive || isSeat(N.id)) continue; const cap = stockCap(N.id);
     void cap;
     for (const O of S.nations){ if (!O.alive || O.id === N.id) continue; const key = N.id + '>' + O.id, op = opinion(N.id, O.id), war = atWar(N.id, O.id);
       if (!M.emb[key] && (op < -45 || war) && rng() < 0.25){ M.emb[key] = S.hour + 1; if (isSeat(O.id)) tell(O.id, `${N.name} imposes an embargo on you: your market prices worsen by 15% per embargo (${embargoes(O.id)} now).`, 'bad', null); }
       else if (M.emb[key] && M.join && M.join[key] != null){ const ld = M.join[key]; if (!M.emb[ld + '>' + O.id] || blocIdOf(ld) !== blocIdOf(N.id) || !blocIdOf(N.id)){ setEmbargo(N.id, O.id, false); if (isSeat(O.id)) tell(O.id, `${N.name} lifts its embargo on you.`, 'good', null); } }   // a joined embargo ends when the partner's does
       else if (M.emb[key] && op > -20 && !war && rng() < 0.2){ delete M.emb[key]; if (isSeat(O.id)) tell(O.id, `${N.name} lifts its embargo on you.`, 'good', null); }
       else if (!M.emb[key] && !war && rng() < 0.08 && blocIdOf(N.id) && blocIdOf(N.id) !== blocIdOf(O.id) && opinion(N.id, O.id) < 25){ const ls = embargoLeaders(N.id, O.id);   // coalition partners join an embargo (AI)
-        if (ls.length){ setEmbargo(N.id, O.id, true, ls[0]); if (isSeat(O.id)) tell(O.id, `${N.name} joins ${S.nations[ls[0]].name}'s embargo on you: your market prices worsen by 15% per embargo (${embargoes(O.id)} now).`, 'bad', null); } } } }
+        if (ls.length){ setEmbargo(N.id, O.id, true, ls[0]); if (isSeat(O.id)) tell(O.id, `${N.name} joins ${S.nations[ls[0]].name}'s embargo on you: your market prices worsen by 15% per embargo (${embargoes(O.id)} now).`, 'bad', null); } } } } });
 }
 /* ---- market: only what nations list. Sell offers (goods held) and buy offers (money held); nothing else ---- */
 const isBid = o => o.type === 'buy';

@@ -4,15 +4,16 @@
 //   node tools/headless.js                    30 days, seed 12345
 //   node tools/headless.js --days 10 --seed 7
 //   node tools/headless.js --seat 3           nation 3 is a seat (a person's nation) that gives no orders: the AI plays the others
+//   node tools/headless.js --nations          the nations world (scenario world64, nations.js) instead of the classic 15-power world
 //   node tools/headless.js --check            plays the same seed twice from scratch; exit 1 unless both summaries and state hashes are equal
 // The state hash is for Node against Node only: Node and Chromium differ in the last digit of a few floats.
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 && process.argv[i + 1] !== undefined ? +process.argv[i + 1] : d; };
-const DAYS = arg('days', 30), SEED = arg('seed', 12345), SEAT = arg('seat', -1), CHECK = process.argv.includes('--check');
+const DAYS = arg('days', 30), SEED = arg('seed', 12345), SEAT = arg('seat', -1), CHECK = process.argv.includes('--check'), NATIONS_WORLD = process.argv.includes('--nations');
 
 // the map data scripts set window.WORLD and window.LINES; in Node "window" is the global object and nothing else of a browser exists
-globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
+globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
 
 // the rules files, in the order the page loads them (its <script src="rules/x.js"> tags)
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -26,6 +27,7 @@ function play(seed, days){
   const IM = new Function(SRC)(), api = IM.api, events = {};
   for (const t of ['log', 'fxCapture', 'over']) IM.on(t, () => { events[t] = (events[t] || 0) + 1; });
   // no seats: the AI plays every nation. With --seat N nation N is a seat nobody plays: the AI leaves it alone and the rules address its dispatches to it
+  if (NATIONS_WORLD) api.useScenario('world64');
   api.newGame(seed, 0, SEAT >= 0 ? [SEAT] : []); const S = api.S, G = api.G; S.started = true;
   const t0 = Date.now(); let hours = 0;
   while (hours < days*24 && !S.over){ for (let q = 0; q < api.BATTLE_Q; q++) api.tickQ(); hours++; }   // a game hour = four quarter-hour steps (battles resolve every 15 minutes)
@@ -36,7 +38,7 @@ function play(seed, days){
   for (const a of S.armies){ let u = 0; if (a.u) for (const k in a.u) u += a.u[k] || 0; units += u; if (a.owner >= 0) perN[a.owner] += u; }
   const o = JSON.parse(api.saveJSON()); delete o.savedAt;
   const lines = [
-    `seed ${seed}  day ${(S.hour/24).toFixed(S.hour % 24 ? 2 : 0)} of ${days}${S.over ? '  (game over)' : ''}  provinces ${G.P.length}`,
+    `${NATIONS_WORLD ? 'nations world  ' : ''}seed ${seed}  day ${(S.hour/24).toFixed(S.hour % 24 ? 2 : 0)} of ${days}${S.over ? '  (game over)' : ''}  provinces ${G.P.length}`,
     `nations alive ${alive.length} of ${S.nations.length}`,
     'provinces per nation  ' + S.nations.map((N, n) => `${N.name} ${prov[n]}`).join(', '),
     `wars ${wars.length}` + (wars.length ? '  ' + wars.map(k => k.split(/[^0-9]+/).filter(Boolean).map(i => S.nations[+i] ? S.nations[+i].name : i).join(' v ')).join(', ') : ''),

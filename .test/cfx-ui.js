@@ -5,6 +5,7 @@
 //  (M) an enemy missile at the player's capital: the red warning marker (INCOMING), drawn every frame until impact, the frames keep coming
 //  (Q) Effects Off: firing makes no particles and no shots; Settings shows High / Low / Off, Screen shake and Effect sounds
 // Screenshots: the panel, the order marker, the missile warning. Exit 1 on a failure or a page error.
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright'); const path = require('path'), fs = require('fs');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), OUT = process.argv[5] || path.join(__dirname, 'cfx-shots'), PHONE = W <= 820;
 fs.mkdirSync(OUT, { recursive: true });
@@ -12,7 +13,7 @@ fs.mkdirSync(OUT, { recursive: true });
   const p = await (await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, hasTouch: PHONE, isMobile: PHONE })).newPage(), errors = [], res = {};
   p.on('pageerror', e => errors.push(e.message + ' ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));
   await p.goto('file://' + path.join(__dirname, 'page.html')); await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
   await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 }); await p.waitForTimeout(1200);
   const P = await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove()); const im = window.__im; im.S.speed = 0; im.SET.fx = 'high'; im.SET.saver = false;
     const B = im.G.P.find(q => q.cityName === 'Berlin'), s = 12; im.view.s = s; im.view.x = innerWidth/2 - (B.x + 2)*s; im.view.y = document.getElementById('map').getBoundingClientRect().height/2 - B.y*s; im.redraw(); return { id: B.id, x: B.x, y: B.y }; });

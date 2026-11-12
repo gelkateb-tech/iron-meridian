@@ -23,6 +23,7 @@
 // Scene (seeded): Germany. Berlin: three German stacks + a British stack + a parked jet and helicopter; Wiesbaden (631): a battle, German
 // vs French; a French stack at Karlsruhe (632); ships off Jutland (North Sea III, 3346); Munich: a garrison and a stack that departs;
 // Sachsen-Anhalt (564): a lone mixed stack.
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
 const HPMIN = 6, HPMAX = 240;
@@ -47,7 +48,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
   // checks are made for the full overlay at every frame (like dpr 2, which never passed them), so they run with it off unless SAVER=on
   await p.addInitScript(on => { try { const k = 'iron-meridian-settings', o = JSON.parse(localStorage.getItem(k) || '{}'); o.saver = on; localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }, process.env.SAVER === 'on');
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
   await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 });
   const sc = await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove()); window.__dbgBoxes = window.__dbgBoxes || {};
     const im = window.__im, S = im.S, G = im.G, N = S.nations, by = n => G.P.find(P => P.cityName === n), out = {};

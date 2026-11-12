@@ -169,6 +169,9 @@ let AIRM = {v:-1, S:null, m:new Map()};
 function airMine(n){ if (AIRM.v !== tickVer || AIRM.S !== S) AIRM = {v:tickVer, S, m:new Map()}; let m = AIRM.m.get(n); if (m) return m; m = {};
   for (const a of S.armies) if (a.owner === n && a.air) for (const t of AIR_T) if (a.u[t]) m[t] = (m[t] || 0) + a.u[t]; AIRM.m.set(n, m); return m; }
 const AI_SCARCE = ['iron', 'elec', 'rare'];
+let AIPC = {v:-1, S:null, m:[]};
+function aiCountsOf(n){ if (AIPC.v !== tickVer || AIPC.S !== S) AIPC = {v:tickVer, S, m:[]}; let c = AIPC.m[n]; if (c) return c;
+  let ships = 0, allU = 0, jamN = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } return (AIPC.m[n] = {ships, allU, jamN}); }
 function aiPickUnit(n, p){
   const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.2, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
   // terrain counter-pick: rough fronts (forest, hills, mountains, marsh, ice) want infantry and special forces, open ones armor
@@ -176,7 +179,8 @@ function aiPickUnit(n, p){
   // trade war: convoys sunk lately want frigates (escorts); enemy trade routes in the world invite submarines (raiders)
   const trHit = S.trade ? Math.min(4, S.trade.hit[n] || 0) : 0, foeTr = S.trade && warsOf(n).length ? S.trade.routes.filter(r => r.kind === 'sea' && !trMine(r, n) && trHostile(r, n)).length : 0;
   w.frig += 1.3*trHit; w.crui += 0.3*trHit; w.sub += 0.2*Math.min(8, foeTr);
-  let allU = 0, jamN = 0; { let ships = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } if (ships > allU*(trHit >= 1 ? 0.28 : 0.2)){ w.frig = w.sub = w.crui = 0; } }
+  // (the nation's ships, units and jammers: counted once an hour per nation; its forces do not change between the cities of one turn, which only queue)
+  const AC = aiCountsOf(n), allU = AC.allU, jamN = AC.jamN; if (AC.ships > allU*(trHit >= 1 ? 0.28 : 0.2)){ w.frig = w.sub = w.crui = 0; }
   // V3 air: drones, the jammer, specialised aircraft, with counter-picks against what the enemy fields and what has been hitting us
   { const H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, mine = airMine(n);
     const rich = S.nations[n].cash > 400, wars = warsOf(n).length > 0, coast = G.P[p].coast;
@@ -220,6 +224,7 @@ function aiFleet(a, n){
 const focusOf = n => { const R = S.blocReg && Object.values(S.blocReg).find(R => R.members && R.members.includes(n)); return R ? R.focus : null; };
 // pick one offensive objective against the main enemy and the own provinces next to it to gather in
 function aiPlan(n){ const P0 = (S.plans || (S.plans = {}))[n];
+  if (isSated(n)){ delete S.plans[n]; return null; }   // the nations world: grown enough for now, no offensive (rules/diplomacy.js isSated)
   if (P0 && S.owner[P0.tgt] !== n && atWar(n, S.owner[P0.tgt] ?? -1) && S.hour - P0.made < 24*8) return P0;
   const wars = warsOf(n); if (!wars.length){ delete S.plans[n]; return null; }
   const foe = focusOf(n) != null && wars.includes(focusOf(n)) ? focusOf(n) : wars.slice().sort((x, y) => natPower(x) - natPower(y))[0];
@@ -431,7 +436,7 @@ function aiTurn(n){
   const N = S.nations[n]; if (!N.alive) return;
   aiResearch(n);
   const inc = income(n), provs = S.owner.filter(o => o === n).length;
-  const units = S.armies.reduce((s, a) => s + (a.owner === n ? count(a) : 0), 0) + S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.length : 0), 0);
+  const units = aiCountsOf(n).allU + S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.length : 0), 0);   // (its forces have not changed yet this turn)
   const canGrow = inc.net.cash > 4 && inc.upkeep.cash < inc.gross.cash*0.7 && units < aiArmyCap(n);
   // economy buildings: one new project per turn where it is needed most; a rich power stuck on a resource runs up to three at once.
   // The Arms Industry raises a city's main resource, so only goods one of its own cities produces can be raised at home: rare materials first (research),
@@ -566,6 +571,13 @@ function aiTurn(n){
     if (city < 0) continue; const pth = pathFor(a, a.at, city); if (!pth.length || pth.length > 5) continue;
     const [b] = splitPlan(a, [Object.fromEntries(dr.map(r => [r.k, r.n]))]); if (b){ b.path = pth; b.forced = true; } }
   const targeted = new Set(S.armies.filter(a => a.owner === n && a.path.length).map(a => a.path[a.path.length - 1]));
+  // the nations world: independent provinces it may still go for (TIER_FREE times its start, less what it holds and the independent ones already marched on)
+  let freeLeft = Infinity; if (tiered() && N.prov0){ freeLeft = Math.floor(TIER_FREE*tierGrow(S.hour)*N.prov0) - provs; for (const v of targeted) if (S.owner[v] < 0 && S.home[v] !== n) freeLeft--; }
+  const sated = tiered() && N.prov0 && provs >= TIER_SATED*tierGrow(S.hour)*N.prov0;   // grown enough for now (isSated): only its own lost land is a target
+  // (and the columns already marching on foreign land stop where they are: in step 4 a Kenya sated on day 17 marched on through DR Congo to
+  // three times its start, along paths given before)
+  if (sated) for (const a of S.armies) if (a.owner === n && a.path.length && !a.air && !a.forced && !G.P[a.at].sea){ const last = a.path[a.path.length - 1];
+    if (S.owner[last] !== n && S.home[last] !== n){ a.path = []; a.dest = null; targeted.delete(last); } }
   const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !gunsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   const ready = [];   // stacks free for an offensive of their own
   for (const a of idleAll()){
@@ -599,6 +611,7 @@ function aiTurn(n){
           if (G.P[v].sea || S.owner[v] === n || targeted.has(v)) continue;
           if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
           if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
+          if (S.home[v] !== n && (sated || (S.owner[v] < 0 && freeLeft <= 0))) continue;   // (the nations world: grown enough for now, or no more independent land to take)
           const fv = fitAt(v)*(riverX(u, v) ? RIVER_ATK : 1); if (pw*fv < defPower(v, n)*1.3 + 4) continue;
           let val = (G.P[v].city ? 3 : 1)*(S.owner[v] >= 0 && focusOf(n) === S.owner[v] ? 1.8 : 1); if (G.P[v].oil) val += 1.5; if (isCapital(v)) val += 3; if (S.home[v] === n) val *= 3;
           if (S.owner[v] >= 0 && atWar(n, S.owner[v])){ val *= 1.6; let rj = 0; for (const lk of G.P[v].lk.values()) if (lk.rail) rj++; if (rj >= 3) val += 0.8; }
@@ -620,7 +633,7 @@ function aiTurn(n){
         const own = a.at !== p0 && G.P[best].nbs.includes(a.at);   // a helper next to the target attacks from where it stands
         if (!own && go.length > 1){ const w = sides[k++ % Math.min(3, sides.length)]; if (w !== nat(pth, a)){ const alt = w === a.at ? [] : pathFor(a, a.at, w); if ((alt.length || w === a.at) && alt.length + 1 <= pth.length + 3) pth = alt.concat([best]); } }
         a.path = pth; legs.push([a, etaHours(a, pth)]); }
-      if (legs.length) targeted.add(best);
+      if (legs.length){ targeted.add(best); if (S.owner[best] < 0 && S.home[best] !== n) freeLeft--; }
       const slow = Math.max(0, ...legs.map(e => e[1])); for (const [a, h] of legs) if (slow - h >= 3) a.delay = Math.min(36, Math.round(slow - h));
       left = left.filter(a => !used.has(a)); } }
   // the rest spread out: a province holding more than two idle stacks sends the extra ones to nearby own provinces (front line first) that hold fewer

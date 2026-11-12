@@ -1,6 +1,7 @@
 // The army bar and Army Info (owner request): a battle on the map (crossed swords, no health bars), the army bar of a mixed stack in a fight
 // (health 192/192-style, stats row, diamonds with Mark badges, countdown, i button), a unit's own details, Army Info with the Strength table
 // (a modified value with its arrow and base), a foreign force's read-only bar. node .test/army-bar.js [outDir]   (run bash tools/mkpage.sh first)
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const OUT = process.argv[2] || __dirname;
 const RES = [['desk', 1440, 900, 2], ['phone', 390, 844, 2]];
@@ -12,7 +13,7 @@ const RES = [['desk', 1440, 900, 2], ['phone', 390, 844, 2]];
     const p = await ctx.newPage();
     p.on('pageerror', e => errors.push(TAG + ' pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|ERR_|net::/.test(m.text())) errors.push(TAG + ' console: ' + m.text()); });
     await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
-    await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
+    await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
     await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 });
     const sc = await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove());
       const im = window.__im, S = im.S, G = im.G, N = S.nations, nat = n => N.findIndex(q => q.name === n), rk = (a, b) => Math.min(a, b) + ',' + Math.max(a, b), fr = nat('France'), WI = 631;

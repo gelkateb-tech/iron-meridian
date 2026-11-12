@@ -2,13 +2,14 @@
 // The fixture .test/fixtures/eco-v1-save.json was made by the old rules (commit 1eb7231): nation 0 has researched projects, unit Marks,
 // a project in each slot and a Mark upgrade running; its "stats" are st() of every unit type under the old rules.
 //   node .test/v4research-oldsave.js   (bash tools/mkpage.sh first; exits 1 on a failed check or a page error)
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright'); const fs = require('fs');
 const FX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/eco-v1-save.json', 'utf8'));
 (async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 860 } }); const errs = [], checks = [];
   const ck = (name, ok, info) => checks.push({ name, ok: !!ok, info });
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="4"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(700);
+  await pickNation(p, 'France'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(700);
   const r = await p.evaluate(save => { const im = window.__im, ok = im.restore(JSON.parse(JSON.stringify(save))), S = im.S, N = S.nations[0], out = {ok, rsv:S.rsv, day:im.rs.day(), stats:{}, lv:{}};
     for (const n of [0, 3]){ out.stats[n] = {}; for (const t of im.mob.UT()) out.stats[n][t] = {atk:im.rs.st(n, t, 'atk'), def:im.rs.st(n, t, 'def'), spd:im.rs.st(n, t, 'spd'), hp:im.rs.st(n, t, 'hp'), can:im.rs.unlocked(n, t)}; }
     for (const id of ['inf_armor', 'at_armor', 'inf_g2', 'inf_g3', 'at_warhead', 'u_ifv', 'u_spec', 'tank_armor', 'tank_gun', 'ifv_gun', 'u_jet', 'u_int', 'jet_pgm', 'int_msl', 'jet_lo', 'u_bomb', 'bomb_up', 'u_drone', 'drone_g2', 'frig_gun', 'crui_gun', 'u_carr', 'log1', 'msl1', 'sat1', 'art_radar', 'art_shell', 'u_mlrs', 'u_jam', 'u_heli', 'eco1',

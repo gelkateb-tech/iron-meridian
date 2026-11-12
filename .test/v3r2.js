@@ -1,12 +1,13 @@
 // V3 systems repair 2: rivers drawn again (tile data + pixels), AI heavy-bomber doctrine and its counters, buying missing oil/metal for a save,
 // surplus sales, manned-aircraft cap, capital garrison, peace for land against a power fighting on three fronts.
 // node .test/v3r2.js  -> exits 0 with an empty errors array; screenshot .test/v3r2-Kyiv-3.2.png
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1400, height: 860 } }); const errs = [], cons = [];
   p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error') cons.push(m.text()); });
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(1500);
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(1500);
   const checks = [], ck = (name, ok, info) => checks.push({name, ok:!!ok, info});
   // 1. river tiles: every river class has tiles with real bounds (the broken build had none: map(tiledPath) passed the index as the tile size)
   const rv = await p.evaluate(() => window.__im.r2.rivers());

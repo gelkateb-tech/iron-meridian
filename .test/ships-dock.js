@@ -1,11 +1,12 @@
 // SHIPS NEVER ON LAND (display): a fleet docked in a port (with a garrison of tanks and infantry in the same city) is its own force: ship models
 // (never tank or soldier models), standing on water off the city's shore, never on land.   node .test/ships-dock.js   (needs bash tools/mkpage.sh first)
+const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1300, height: 820 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(900);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.click('#sp0'); await p.waitForFunction(() => window.__im && !window.__im.camFly, null, { timeout: 20000 }); await p.waitForTimeout(1500);
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.click('#sp0'); await p.waitForFunction(() => window.__im && !window.__im.camFly, null, { timeout: 20000 }); await p.waitForTimeout(1500);
   const ports = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G, out = [];
     for (const P of G.P) if (!P.sea && P.city && P.coast && S.owner[P.id] === 0 && out.length < 8){ out.push(P.id); im.addArmy(0, P.id, {tank:4, inf:6}); im.addArmy(0, P.id, {frig:2, sub:1, crui:1, carr:1}); } return out; });
   const res = [];

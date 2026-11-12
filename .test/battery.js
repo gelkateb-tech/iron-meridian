@@ -15,13 +15,17 @@ const path = require('path'), fs = require('fs'), http = require('http');
 const PAGE = process.env.PAGE || 'page.html', DIR = __dirname, quick = process.argv[2] === 'quick', IDLE_S = quick ? 5 : 10, RUN_S = quick ? 6 : 10;
 const VPS = { desktop: { viewport: { width: 1400, height: 860 } }, phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } };
 const errs = [], OFF = {};   // OFF: the saver-off results per device (the machine's own limit for a case)
+// pick a nation card by name; on the nations world (http pages) the cards sit behind region tabs, so try each tab until it shows
+async function pickNation(p, name){ const card = () => p.locator('[data-act="pick"]').filter({ has: p.locator('b', { hasText: new RegExp('^' + name + '$') }) });
+  if (!await card().count()) for (const k of await p.$$eval('[data-act="pickreg"]', a => a.map(x => x.dataset.k))){ await p.click('[data-act="pickreg"][data-k="' + k + '"]'); if (await card().count()) break; }
+  await card().first().click(); }
 async function page(b, vp, saver){
   const ctx = await b.newContext(vp); const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
   await p.addInitScript(sv => { try { if (sv != null) localStorage.setItem('iron-meridian-settings', JSON.stringify({saver: sv})); } catch (e) {}
     window.__rafN = 0; const raf = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = f => raf(t => { if (f.name === 'frame') window.__rafN++; f(t); }); }, saver);
   await p.goto('file://' + DIR + '/' + PAGE); await p.waitForTimeout(900);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.waitForTimeout(300); await p.click('[data-act="start"]');
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.waitForTimeout(300); await p.click('[data-act="start"]');
   await p.waitForFunction(() => window.__im && !window.__im.camFly, null, { timeout: 20000 }); await p.waitForTimeout(2500);
   await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove()); const m = document.getElementById('modal'); if (m && !m.hidden && !m.classList.contains('docked')) document.querySelector('[data-act="resume"]')?.click(); });
   const cdp = await ctx.newCDPSession(p); await cdp.send('Performance.enable');
@@ -149,19 +153,19 @@ function serve(){ return new Promise(r => { const srv = http.createServer((q, s)
 async function startup(b, name){ const srv = await serve(), port = srv.address().port, ctx = await b.newContext(VPS[name]), p = await ctx.newPage(), log = [];
   p.on('requestfinished', async rq => { if (rq.resourceType() !== 'image' && !/\.(webp|png|jpg)$/.test(rq.url())) return; let n = 0; try { const r = await rq.response(); n = +(r.headers()['content-length'] || 0); } catch (e) {} log.push({ u: rq.url().replace(/^.*\/\/[^/]+\//, ''), n, t: Date.now() }); });
   const t0 = Date.now(); await p.goto(`http://127.0.0.1:${port}/${PAGE}`); await p.waitForTimeout(3000); const menuN = log.length, menuB = log.reduce((s, x) => s + x.n, 0);
-  await p.click('[data-act="pick"][data-p="5"]'); await p.click('[data-act="begin"]'); await p.waitForTimeout(300); await p.click('[data-act="start"]'); await p.waitForTimeout(8000);
+  await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.waitForTimeout(300); await p.click('[data-act="start"]'); await p.waitForTimeout(8000);
   const bld = log.filter(x => /\/b-/.test(x.u));
   const r = { menu: { images: menuN, kB: Math.round(menuB/1024) }, afterStart8s: { images: log.length, kB: Math.round(log.reduce((s, x) => s + x.n, 0)/1024) }, buildingArt: { images: bld.length, kB: Math.round(bld.reduce((s, x) => s + x.n, 0)/1024), files: bld.map(x => x.u.replace('assets/art/', '').replace('.webp', '')).join(' ') } };
   await ctx.close(); srv.close(); return r; }
 (async () => {
   const b = await chromium.launch(), res = {};
   const hasSaver = fs.readFileSync(DIR + '/' + PAGE, 'utf8').includes('saver:');
-  const only = process.env.ONLY;   // ONLY=stuck: just section (f); ONLY=measure: just (a)-(d)
+  const only = process.env.ONLY;   // ONLY=stuck: just section (f); ONLY=measure: just (a)-(d); ONLY=background or startup: just that section
   if (!only || only === 'measure') for (const name of ['desktop', 'phone']){ res[name] = {};
     for (const sv of hasSaver ? [false, true] : [null]) res[name][sv == null ? 'before' : sv ? 'saverOn' : 'saverOff'] = await measure(b, name, sv); }
-  if (hasSaver && only !== 'measure') res.stuck = { desktopSaverOff: await stuck(b, 'desktop', false), desktopSaverOn: await stuck(b, 'desktop', true), phoneSaverOn: await stuck(b, 'phone', true) };
-  if (hasSaver && !only) res.background = { desktop: await background(b, 'desktop'), phone: await background(b, 'phone') };
-  if (!only) res.startup = { desktop: await startup(b, 'desktop'), phone: await startup(b, 'phone') };
+  if (hasSaver && (!only || only === 'stuck')) res.stuck = { desktopSaverOff: await stuck(b, 'desktop', false), desktopSaverOn: await stuck(b, 'desktop', true), phoneSaverOn: await stuck(b, 'phone', true) };
+  if (hasSaver && (!only || only === 'background')) res.background = { desktop: await background(b, 'desktop'), phone: await background(b, 'phone') };
+  if (!only || only === 'startup') res.startup = { desktop: await startup(b, 'desktop'), phone: await startup(b, 'phone') };
   await b.close();
   console.log(JSON.stringify(res, null, 1).replace(/\n\s+(?=[^\s{\[])/g, " ").replace(/\n\s+}/g, " }"));
   console.log('ERRORS', errs.length ? errs : 'none');
