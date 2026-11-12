@@ -9881,7 +9881,13 @@ document.addEventListener('change', e => { const el = e.target; if (!el || !el.c
 function setSpeed(s){ if (S.over && s) return; const open = !$('modal').hidden; if (s && open && !(S.started && $('modal').classList.contains('docked'))) return; S.speed = s; if (open) speedBefore = s; renderSide(); redraw(); }   // (the clock starting or stopping changes what moves on the map: one frame, so the moving things register again)
 
 /* ---------------- Modal ---------------- */
-let pickDiff = 'regular', pickDoc = null, pickScn = 'world', pickLen = Infinity, pickPersist = false, modalKind = '', pickSel = WORLD_POWERS.findIndex(p => p.name === 'Brazil');
+let pickDiff = 'regular', pickDoc = null, pickScn = 'world64', pickLen = Infinity, pickPersist = false, modalKind = '', pickSel = WORLD_POWERS.findIndex(p => p.name === 'Brazil');   // (Brazil: the same index in both worlds)
+// the start screen offers the nations world only (nations step 6, owner's answer 3: the classic 15-power world left it once all the nations
+// were in). The classic world itself stays in the rules: every old save is a classic game and loads and plays on as before (Continue, the save
+// slots). Test pages (file://, test build only) keep the switch between the two worlds and open on the classic one, so the classic-world tests
+// can still start a classic game; page.html?start=nations shows them the start screen as players see it
+let pickClassic = false;
+/*@TEST*/if (location.protocol === 'file:' && !/[?&]start=nations\b/.test(location.search)){ pickClassic = true; pickScn = 'world'; }/*@ENDTEST*/
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel', 'cities', 'mob', 'cbld'];
@@ -10008,8 +10014,8 @@ function helpHTML(){ const me = S && S.nations ? S.nations[PLAYER] : null;
     <div class="hgrid">${HELP_SEC.map(([k, t, body], i) => `<section class="hsec" id="h-${k}"><h3><i>${String(i + 1).padStart(2, '0')}</i>${t}</h3>${typeof body === 'function' ? body() : body}</section>`).join('')}</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="airguide">Air &amp; drone guide</button><button class="btn" data-act="start-tut-again">Replay the tutorial</button><button class="btn" data-act="newgame">New campaign…</button></div>`; }
 function showHelp(){ openModal(helpHTML(), 'help'); }
-// the start screen. Two worlds while the nations world is being rolled out: the nations world (tiers, regions; nations.js) and the classic
-// 15-power world. The picker only reads the lists: the scenario in use changes when a campaign begins (a running game keeps its own)
+// the start screen: the nations world (tiers, regions; nations.js). The classic 15-power world is offered only on test pages (pickClassic).
+// The picker only reads the lists: the scenario in use changes when a campaign begins (a running game keeps its own)
 const TIER_NAME = {S:'Superpower', A:'Major power', B:'Regional power', C:'Minor power'};
 const provsOf = P0 => onMap(P0.tier ? MAP_NEW : 0, () => { const ci = powerCountry(P0); return ci >= 0 ? G.countries[ci].provs : []; });   // (a nation of the nations world: on its map)
 function showPicker(){
@@ -10024,7 +10030,7 @@ function showPicker(){
   const caps = nat ? winCapsFor(L.length) : SC.caps, share = nat ? winShareFor(L.length) : WIN_SHARE, shareW = share === 0.25 ? 'a quarter' : share === 0.2 ? 'a fifth' : share === 0.1 ? 'a tenth' : Math.round(share*100) + '%';
   const nW = NUMW[L.length] || String(L.length), capW = NUMW[caps] || String(caps);
   openModal(`${LOGO}<div class="eyebrow" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
-    ${SCENARIOS.world64 ? `<div class="row wsel" role="group" aria-label="World"><button class="btn ${nat ? 'primary' : ''}" data-act="pickscn" data-k="world64" aria-pressed="${nat}">Nations of the world<small>${SCENARIOS.world64.powers.length} nations · new rules</small></button><button class="btn ${!nat ? 'primary' : ''}" data-act="pickscn" data-k="world" aria-pressed="${!nat}">Classic<small>15 powers · old rules</small></button></div>` : ''}
+    ${pickClassic && SCENARIOS.world64 ? `<div class="row wsel" role="group" aria-label="World"><button class="btn ${nat ? 'primary' : ''}" data-act="pickscn" data-k="world64" aria-pressed="${nat}">Nations of the world<small>${SCENARIOS.world64.powers.length} nations · new rules</small></button><button class="btn ${!nat ? 'primary' : ''}" data-act="pickscn" data-k="world" aria-pressed="${!nat}">Classic<small>15 powers · old rules</small></button></div>` : ''}
     ${nat ? `<p>${cap1(nW)} nations fight for the world. Win by holding ${shareW} of the world's land${share <= 0.1 ? ' (more for a big country)' : ''} or ${capW} starting capitals; there is no time limit. Nations start close to equal: a big country has more land and cities, not much more money. Every other country is independent and can be taken.</p>
     <div class="row regs" role="tablist" aria-label="Regions">${regs.map(r => `<button class="btn ${r === reg ? 'primary' : ''}" role="tab" aria-selected="${r === reg}" data-act="pickreg" data-k="${r}">${r}<small>${L.filter(p => p.region === r).length}</small></button>`).join('')}</div>`
     : `<p>${cap1(nW)} powers fight for the world. Win by holding a quarter of the world's land or five starting capitals; there is no time limit. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>`}

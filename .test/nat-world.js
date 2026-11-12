@@ -1,6 +1,7 @@
 // The nations world in the page (nations step 0): start it from the start screen, play, save, reload and continue; the classic world after it
 // in the same page; a save from a newer nations format is refused with a message. Province split (step 0b): the nations world plays on the map
-// with the split provinces (3486), the classic world on world.js (3465), and the page goes back and forth between them by new games and loads. node .test/nat-world.js
+// with the split provinces (3486), the classic world on world.js (3465), and the page goes back and forth between them by new games and loads. Step 6:
+// the start screen as players see it offers the nations world only, and a classic save still continues and plays. node .test/nat-world.js
 const { chromium } = require('playwright'); const path = require('path');
 (async () => { const b = await chromium.launch(), errs = [], bad = [];
   const ctx = await b.newContext({ viewport: { width: 1300, height: 820 } }), p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
@@ -35,5 +36,24 @@ const { chromium } = require('playwright'); const path = require('path');
   const back2 = await p.evaluate(() => { useScenario('world'); newGame(6, 2, [0]); for (let i = 0; i < 48; i++) window.__im.tick(); return {provs:G.P.length, scn:S.scn}; });
   await p.waitForTimeout(600);
   if (!back.ok || back.provs !== 3486 || back.own !== 3486 || back.scn !== 'world64' || !back.lines || back2.provs !== 3465) bad.push('maps back and forth: ' + JSON.stringify({back, back2}));
-  console.log(JSON.stringify({def, tab, g0, before, after, ref, cl, back, back2}, null, 1)); console.log('BAD', bad.length ? bad : 'none'); console.log('ERRORS', errs.length ? errs : 'none');
+  // step 6: the start screen as players see it (page.html?start=nations; the public build always): the nations world only, no Classic button; a
+  // classic save (an old 15-power game) still continues from the title screen and plays on 5 days in the classic world
+  const p2 = await ctx.newPage(); p2.on('pageerror', e => errs.push('shipped: ' + e.message)); p2.on('console', m => { if (m.type() === 'error') errs.push('shipped console: ' + m.text()); });
+  await p2.goto('file://' + path.join(__dirname, 'page.html') + '?start=nations'); await p2.waitForTimeout(700);
+  if (await p2.locator('[data-act="continue"]').count()) await p2.click('[data-act="newgame"]'), await p2.waitForTimeout(300);   // (the save of the game above: a new campaign)
+  const ship = await p2.evaluate(() => ({classic:document.querySelectorAll('[data-act="pickscn"]').length, text:/15 powers|old rules/i.test(document.querySelector('#modal').innerText) || [...document.querySelectorAll('#modal button')].some(b => /classic/i.test(b.textContent) && b.dataset.act !== 'pickmode'),
+    tabs:[...document.querySelectorAll('.regs .btn')].map(e => e.textContent), n:[...document.querySelectorAll('.regs .btn small')].reduce((s, e) => s + +e.textContent, 0), lead:document.querySelector('[data-act="begin"]').textContent}));
+  if (ship.classic || ship.text || ship.tabs.length !== 6 || ship.n !== 68 || ship.lead !== 'Lead Brazil') bad.push('shipped start screen: ' + JSON.stringify(ship));
+  await p2.click('[data-act="begin"]'); await p2.waitForTimeout(1500);
+  const sg = await p2.evaluate(() => ({scn:S.scn, me:S.nations[0].name, n:S.nations.length}));
+  if (sg.scn !== 'world64' || sg.me !== 'Brazil' || sg.n !== 68) bad.push('shipped new game: ' + JSON.stringify(sg));
+  // a classic save in the browser's save slot, as an old game left it
+  await p2.evaluate(() => { useScenario('world'); newGame(4242, 5, [0]); S.started = true; S.diff = 'regular'; for (let i = 0; i < 48; i++) window.__im.tick(); localStorage.setItem('iron-meridian-save-v5', saveJSON()); });
+  await p2.reload(); await p2.waitForTimeout(800);
+  const title = await p2.evaluate(() => ({cont:!!document.querySelector('[data-act="continue"]'), text:document.querySelector('#modal').innerText.slice(0, 120).replace(/\s+/g, ' ')}));
+  await p2.click('[data-act="continue"]'); await p2.waitForTimeout(600);
+  const old = await p2.evaluate(() => { const h0 = S.hour; for (let i = 0; i < 120; i++) window.__im.tick(); return {scn:S.scn, n:S.nations.length, me:S.nations[0].name, provs:G.P.length, h0, hour:S.hour, over:S.over, mine:S.owner.filter(o => o === 0).length}; });
+  await p2.waitForTimeout(600);
+  if (!title.cont || old.scn !== 'world' || old.n !== 15 || old.me !== 'Germany' || old.provs !== 3465 || old.h0 !== 48 || old.hour !== 168 || old.mine < 1) bad.push('classic save continued: ' + JSON.stringify({title, old}));
+  console.log(JSON.stringify({def, tab, g0, before, after, ref, cl, back, back2, ship, sg, title, old}, null, 1)); console.log('BAD', bad.length ? bad : 'none'); console.log('ERRORS', errs.length ? errs : 'none');
   await b.close(); process.exit(errs.length || bad.length ? 1 : 0); })();
