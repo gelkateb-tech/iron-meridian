@@ -14,7 +14,7 @@ const h1 = S.hour; R.tick(); ok('tick() is one whole hour', S.hour === h1 + 1 &&
 const P = G.P.find(q => !q.sea && S.owner[q.id] === 1 && !q.city && q.nbs.length), p = P.id; S.rel['0,1'] = S.rel['0,1'] || {}; R.setRel(0, 1, 'war');
 for (const a of S.armies.slice()) if (a.at === p) for (const t in a.u) a.u[t] = 0;
 const A = R.addArmy(0, p, {inf: 8, tank: 4}), D = R.addArmy(1, p, {inf: 8, tank: 4}); R.tick();
-const hp = []; for (let i = 0; i < 8; i++){ R.tickQ(); hp.push(Math.round(R.effHP(A) + R.effHP(D))); }
+const hp = []; for (let i = 0; i < 8; i++){ R.tickQ(); hp.push(Math.round((R.effHP(A) + R.effHP(D))*1000)/1000); }
 ok('both sides lose health at every 15 minute step', hp.every((v, i) => i === 0 || v < hp[i - 1]), hp);
 const hr = hp[3] - hp[7]; ok('about the same total per hour as one step a quarter at a time (no step deals the whole hour)', (hp[0] - hp[1]) < hr*0.5, [hp, hr]);
 ok('an old save without S.q restores to 0', (() => { const o = JSON.parse(R.saveJSON()); delete o.q; const r = R.restore(o); return r && R.S.q === 0; })());

@@ -48,7 +48,7 @@ function stackDmg(a){ const e = stackEffs(a); if (e.land === 1 && e.sea === 1 &&
 /* Battle pace. Battles resolve in BATTLE_Q steps per game hour (one every 15 in-game minutes, rules/tick.js: battleStep); each step deals BATTLE_DMG of the
    old hourly damage, so the damage per hour is the old one times BATTLE_PACE. BATTLE_PACE is THE slowdown knob: 1 = today's pace; docs/COMBAT-PACE.md proposes a
    lower value (fights last several hours; big ones a day or more). Air strikes, missiles, artillery shelling and buildings do not use it. */
-const BATTLE_Q = 4, BATTLE_PACE = 1, BATTLE_DMG = BATTLE_PACE/BATTLE_Q;
+const BATTLE_Q = 4, BATTLE_PACE = 0.5, BATTLE_DMG = BATTLE_PACE/BATTLE_Q;
 // healing: a hospital building (planned, LATER.md) will multiply the healing in its city: the one place to hook it in
 const hospitalF = p => 1;
 // units' healing per day, as a share of their health: 25% in an own city (ships 40% and more in an own shipyard city), 10% in the field, aircraft by maintenance; the Logistician commander +50% per rank

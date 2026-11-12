@@ -1,7 +1,7 @@
 # Combat pace: how long battles last, and a proposal (NOT applied)
 
 Status: **proposal for the owner. Nothing is slowed down yet.** The 15-minute battle ticks are in (each tick deals a quarter of the old hourly damage, so
-today's pace is unchanged). The slowdown is one number, `BATTLE_PACE` in `rules/combat.js` (now `1`). Applying the proposal is the one-line change
+today's pace is unchanged). The slowdown is one number, `BATTLE_PACE` in `rules/combat.js` (now `0.5`, approved by the owner). Applying the proposal is the one-line change
 `BATTLE_PACE = 0.5`.
 
 ## How a battle works now

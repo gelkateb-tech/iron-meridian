@@ -6086,7 +6086,7 @@ const BGLYPH = {
 };
 const trayOn = (P, p, hexPx) => hexPx >= (P.city || isCapital(p) ? TRAY_PX : TRAY_PX2);   // buildings and their levels are public: every nation's tray shows, fog or not
 // the tray's buildings: the built ones at their level, plus (your own and your allies' only) the one under construction (c) at its current level (0 for a new one)
-function trayItems(p){ const B = S.bld[p], o = S.owner[p], cons = o === PLAYER || (o >= 0 && rel(PLAYER, o).st === 'ally') ? S.cons[p] : null, out = [];
+function trayItems(p){ const B = S.bld[p], o = S.owner[p], cons = o >= 0 ? S.cons[p] : null, out = [];
   for (const k of TRAY_K){ const lv = B[k] || 0, c = cons && cons.k === k ? cons : null; if (lv > 0 || c) out.push({k, lvl:lv, c}); } return out; }
 // glyph size (css px) grows a little with the zoom; cells (glyph + margins), pips and padding follow it. rows: 1, or 2 where a long tray
 // finds no room on one line
