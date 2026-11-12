@@ -21,7 +21,7 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
-| Territory sales in diplomacy: sell captured provinces (never home provinces), price from the province's value, floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept, the AI buys but never sells, troops move out | Opus | Started |
+| Blockade and trade rework: warships in range blockade or raid, Blockade button next to Escort and Raid, raids capture 25-50% of cargo, pause a route, red marked blocked routes, convoys reroute around blockades, chokepoints (Hormuz, Malacca, Gibraltar, Suez, Bab-el-Mandeb, Bosporus, Panama, Danish straits), slower and poorer detours | Opus | Started |
 | Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | Started |
 
 ## Queued (in this order)
@@ -32,9 +32,8 @@ Last updated: 2026-11-11.
 | 2 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
 | 3 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
 | 4 | Each aircraft type gets its own 3D shape | Opus |
-| 5 | Blockade and trade rework: Blockade button next to Escort and Raid, warships in range can blockade or raid, raids capture 25-50% of cargo, pause a route, marked blocked routes, convoys reroute around stacks, chokepoints (Hormuz, Malacca, Gibraltar, Suez), slower and poorer detours | Opus (was Fable) |
-| 6 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 7 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 5 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 6 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
@@ -81,6 +80,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| Territory sales: Territory tab in Diplomacy, sell captured land (never home land or the capital), value-based price with floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept/decline, the AI buys its lost or border land but never sells, troops move out | Opus |
 | Attack range in km: artillery 80, rocket launchers 150 (200 with research), frigate 80, cruiser 150, submarine 40 vs ships; fire from where they stand at visible enemies, Bombard order, range circles and target rings, AI keeps guns behind the front | Opus |
 | Building level pictures on the map: each building's level picture in a framed cluster next to its city, visible to all, level-up animation, own construction shown faintly with progress | Sonnet |
 | Fog follow-ups: fog clearly visible outside your sight with soft circle edges, the Stealth Bomber test fixed, fog circles across the Pacific seam | Sonnet |
