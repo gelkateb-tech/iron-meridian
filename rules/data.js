@@ -8,16 +8,16 @@ const WORLD = globalThis.WORLD, LINES = globalThis.LINES;   // the map data (wor
 const UNITS = {
   inf:  {name:'Motorized Infantry',short:'INF', cls:'soft',    cost:25, oil:0, metal:0, iron:0, elec:0, rare:0, mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, fuel:0,   req:{b:'rec', l:1},          tech:null,  role:'Cheap line infantry. Holds ground, captures.'},
   at:   {name:'Anti-Tank Infantry',short:'ATI', cls:'soft',    cost:32, oil:0, metal:3, iron:3, elec:0, rare:0, mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, fuel:0,   req:{b:'rec', l:1}, tech:null,  vs:{armored:3.5}, role:'Anti-tank infantry: 3.5× damage to armor.'},
-  art:  {name:'Mobile Artillery',  short:'ART', cls:'soft',    cost:36, oil:3, metal:4, iron:7, elec:0, rare:0, mp:10, atk:7, def:3, hp:9,  spd:3,  build:48, upk:2, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{soft:1.4}, role:'Artillery: shreds infantry, fragile.'},
+  art:  {name:'Mobile Artillery',  short:'ART', cls:'soft',    cost:36, oil:3, metal:4, iron:7, elec:0, rare:0, mp:10, atk:7, def:3, hp:9,  spd:3,  build:48, upk:2, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{soft:1.4}, role:'Artillery: shells enemy forces it can see up to 80 km away without moving in; shreds infantry, fragile.'},
   sam:  {name:'Mobile SAM',        short:'SAM', cls:'soft',    cost:44, oil:2, metal:6, iron:3, elec:7, rare:0, mp:8,  atk:5, def:2, hp:8,  spd:4,  build:48, upk:2, fuel:0,   req:{b:'fac', l:2}, tech:null,  vs:{air:3.0, soft:0.3, armored:0.3}, vsU:{swarm:1.4, sdrone:3.2, bomb:4.0}, role:'Air defense: triple damage to aircraft; shoots down strike drones and covers its neighbours a little. Swarms saturate it.'},
   ifv:  {name:'Infantry Fighting Vehicle',short:'IFV', cls:'armored', cost:32, oil:4, metal:4, iron:7, elec:0, rare:0, mp:10, atk:4, def:4, hp:12, spd:7,  build:36, upk:2, fuel:0.5, req:{b:'fac', l:1}, tech:'inf2', role:'Fast armored infantry carrier.'},
   tank: {name:'Main Battle Tank',  short:'MBT', cls:'armored', cost:40, oil:6, metal:5, iron:11, elec:0, rare:0, mp:12, atk:6, def:4, hp:14, spd:6,  build:48, upk:3, fuel:1,   req:{b:'fac', l:1}, tech:null,  role:'Main battle tank: strong all-rounder.'},
   jet:  {name:'Strike Fighter',    short:'STK', cls:'air',     cost:70, oil:12, metal:10, iron:0, elec:10, rare:0, mp:6,  atk:8, def:3, hp:9,  spd:18, build:72, upk:6, fuel:2,   req:{b:'air', l:1}, tech:'air1', vs:{armored:1.6}, role:'Strike jet: hunts armor. Cannot capture.'},
   int:  {name:'Interceptor',       short:'INT', cls:'air',     cost:62, oil:10, metal:8, iron:0, elec:8, rare:0, mp:5,  atk:6, def:4, hp:9,  spd:20, build:60, upk:5, fuel:2,   req:{b:'air', l:1}, tech:'air1', vs:{air:2.0, soft:0.4, armored:0.4, naval:0.6}, vsU:{swarm:1.2, sdrone:2.2, drone:1.8, bomb:2.4, awacs:2.6, mpa:2.4}, role:'Fighter: double damage to aircraft; patrols intercept strikes, bombers and drones over one province.'},
-  frig: {name:'Frigate',           short:'FRG', cls:'naval',   cost:52, oil:6, metal:6, iron:12, elec:4, rare:0, mp:6,  atk:4, def:5, hp:14, spd:6,  build:60, upk:3, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{air:1.8, soft:0.5, armored:0.4}, vsU:{swarm:1.0, sdrone:1.8}, role:'Escort: protects troop convoys, shoots down aircraft and patrol planes.'},
-  sub:  {name:'Attack Submarine',  short:'SUB', cls:'naval',   cost:48, oil:4, metal:5, iron:10, elec:4, rare:0, mp:5,  atk:6, def:2, hp:9,  spd:5.4, build:60, upk:2, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else.'},
-  crui: {name:'Cruiser',           short:'CRU', cls:'naval',   cost:66, oil:10, metal:10, iron:20, elec:6, rare:0, mp:8,  atk:7, def:6, hp:20, spd:5.8, build:96, upk:5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: bombards coasts next to its sea zone.'},
-  mlrs: {name:'Rocket Artillery',  short:'MRL', cls:'armored', cost:52, oil:5, metal:5, iron:10, elec:3, rare:0, mp:8,  atk:8, def:2, hp:9,  spd:7,  build:54, upk:3, fuel:1, req:{b:'fac', l:2}, tech:'art2', vs:{soft:1.5, armored:0.9}, role:'Rocket artillery on wheels: shells enemies up to 2 provinces away. Fragile in close combat.'},
+  frig: {name:'Frigate',           short:'FRG', cls:'naval',   cost:52, oil:6, metal:6, iron:12, elec:4, rare:0, mp:6,  atk:4, def:5, hp:14, spd:6,  build:60, upk:3, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{air:1.8, soft:0.5, armored:0.4}, vsU:{swarm:1.0, sdrone:1.8}, role:'Escort: protects troop convoys, shoots down aircraft and patrol planes; its guns hit ships and coastal forces up to 80 km away.'},
+  sub:  {name:'Attack Submarine',  short:'SUB', cls:'naval',   cost:48, oil:4, metal:5, iron:10, elec:4, rare:0, mp:5,  atk:6, def:2, hp:9,  spd:5.4, build:60, upk:2, fuel:1,   req:{b:'yard', l:1}, tech:null,  vs:{naval:2.0, soft:0, armored:0, air:0}, role:'Hunter: double damage to ships, harmless to everything else; torpedoes ships up to 40 km away.'},
+  crui: {name:'Cruiser',           short:'CRU', cls:'naval',   cost:66, oil:10, metal:10, iron:20, elec:6, rare:0, mp:8,  atk:7, def:6, hp:20, spd:5.8, build:96, upk:5, fuel:2,   req:{b:'yard', l:2}, tech:null,  vs:{naval:1.3, soft:1.1, armored:0.8, air:0.6}, role:'Capital ship: its guns hit ships and coastal forces up to 150 km away without moving in.'},
+  mlrs: {name:'Rocket Artillery',  short:'MRL', cls:'armored', cost:52, oil:5, metal:5, iron:10, elec:3, rare:0, mp:8,  atk:8, def:2, hp:9,  spd:7,  build:54, upk:3, fuel:1, req:{b:'fac', l:2}, tech:'art2', vs:{soft:1.5, armored:0.9}, role:'Rocket artillery on wheels: shells enemy forces it can see up to 150 km away without moving in. Fragile in close combat.'},
   spec: {name:'Special Forces', short:'SOF', cls:'soft', cost:50, oil:0, metal:5, iron:0, elec:2, rare:0, mp:8,  atk:5, def:4, hp:10, spd:5,  build:42, upk:2, fuel:0,   req:{b:'rec', l:1}, tech:'inf3', role:'Elite raiders: hidden from radar and satellites, +40% attack in forest, mountains and cities, cross rough ground fast.'},
   carr: {name:'Aircraft Carrier', short:'CVN', cls:'naval',   cost:124, oil:14, metal:15, iron:32, elec:10, rare:3, mp:10, atk:3, def:6, hp:26, spd:5, build:120, upk:7, fuel:2, req:{b:'yard', l:2}, tech:'nav2', vs:{air:1.4, soft:0.4, armored:0.3, naval:0.6}, role:'Mobile airbase: air wings can base on it and strike far from home. Weak alone; escort it.'},
   heli: {name:'Attack Helicopter', short:'GUN', cls:'air',     cost:56, oil:8, metal:8, iron:0, elec:7, rare:0, mp:6,  atk:7, def:4, hp:10, spd:12, build:54, upk:4, fuel:1.5, req:{b:'air', l:1}, tech:'heli1', vs:{armored:2.2, soft:1.3, air:0.3, naval:0.5}, role:'Attack helicopter: short range (6 hexes), tears through armor and infantry.'},
@@ -213,7 +213,7 @@ const R_LINES = [
    g:[[2, 15, 'Long-Barrel Howitzer', {atk:1, hp:3}, 'attack +1, health +3']]},
   {u:'mlrs', cat:'sup', day:5, ud:4, fam:'art', k:[
     ['reload', 'Rapid Reload', 'reload', [[9, {atk:2}, 'attack +2']]],
-    ['rng', 'Extended-Range Rockets', 'rng', [[12, {}, 'shells enemies up to 3 provinces away (was 2)']]]],
+    ['rng', 'Extended-Range Rockets', 'rng', [[12, {}, 'range 150 to 200 km']]]],
    g:[[2, 16, 'Guided Rocket System', {atk:2, hp:2}, 'attack +2, health +2, damage to armor 0.9x to 1.2x']]},
   {u:'sam', cat:'sup', day:1, std:1, k:[
     ['seek', 'Improved Seekers', 'seeker', [[4, {atk:1}, 'attack +1'], [10, {atk:1}, 'attack +1 more']]],
@@ -378,6 +378,18 @@ const KM_W = HS0*SQ3/KM_HEX;          // world units per km (an old map hex is a
 const VIS_KM = {city:80, airbase:100, ground:50, recon:100, air:150, drone:200, patrol:200, aew:500, mpa:400, sat:150};
 const VIS_RECON = ['spec'], VIS_DRONE = ['drone', 'sdrone', 'swarm'];
 for (const t in UNITS) if (UNITS[t].vis == null) UNITS[t].vis = VIS_RECON.includes(t) ? VIS_KM.recon : VIS_DRONE.includes(t) ? VIS_KM.drone : UNITS[t].cls === 'air' ? VIS_KM.air : VIS_KM.ground;
+// Attack range (km, Conflict of Nations style): these units fire from where they stand (armyXY) at enemy forces whose spot lies within this distance AND
+// that their side can see (rules/vision.js armyVisible), without moving into the province (rules/combat.js rangedStep; the table and the reasons:
+// docs/COMBAT.md). Scaled to the sight ranges above (ground forces see 50 km, recon 100): artillery reaches a little past its own sight, so it
+// needs a spotter (a city, own land, another force, a UAV, a satellite); rockets and a cruiser's guns reach about one province.
+// RANGE_HIT: what each can hit: land = forces on land (guns fire only from land), any = at sea and on land (shore bombardment), ships = only forces
+// with warships at sea (torpedoes). Extended-Range Rockets research adds RANGE_ER km to Rocket Artillery (rRangeKm in rules/research.js). The
+// Aircraft Carrier has no gun range (its air wings strike); missiles keep their own ranges (MISSILES range, in hexes).
+const RANGE_KM = {art:80, mlrs:150, frig:80, crui:150, sub:40}, RANGE_ER = 50;
+const RANGE_HIT = {art:'land', mlrs:'land', frig:'any', crui:'any', sub:'ships'};
+const RANGED_T = Object.keys(RANGE_KM);
+// ranged damage per game hour, as a share of what the same units deal fighting in a battle (the old artillery shelling factor, kept)
+const RANGED_F = 0.28;
 const K = 0.25;                       // combat damage per hour factor
 // Stack limits (stack efficiency, see rules/combat.js stackPenalty and docs/COMBAT.md): units of one domain in one force above its limit fight
 // worse and move slower. Damage: 1 − STACK_K·ln(n ÷ limit), never below STACK_FLOOR; speed: 1 − STACK_SPD_K·ln(n ÷ limit), never below STACK_SPD_FLOOR

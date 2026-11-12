@@ -1,6 +1,6 @@
-# Combat: stack limits and frontage
+# Combat: stack limits, frontage and attack range
 
-How many units fight, and how well, when forces meet. The rules live in `rules/combat.js` (frontage, `stackPenalty`), the hourly
+How many units fight, and how well, when forces meet, and how guns and warships fire from a distance. The rules live in `rules/combat.js` (frontage, `stackPenalty`), the hourly
 battle in `rules/tick.js`, the constants in `rules/data.js` (`STACK_LIM`, `STACK_K`, `STACK_FLOOR`, `STACK_SPD_K`, `STACK_SPD_FLOOR`).
 
 ## 1. Stack limits (stack efficiency)
@@ -80,8 +80,8 @@ Open plains (front 14), the same units as one stack, as stacks of 10 from one si
 Past 10 units a bigger single stack adds almost nothing (and past the front, less than nothing until the 25% floor): never put more
 than 10 ground units in one force.
 
-The same factor applies everywhere a force deals damage: the hourly battle (land and sea), artillery and rocket fire into neighbouring
-provinces, shore bombardment by fleets, air strikes, dogfights and patrols, air defence fire and convoy escorts and raiders
+The same factor applies everywhere a force deals damage: the hourly battle (land and sea), the ranged fire of guns and warships
+(attack range, section 5), air strikes, dogfights and patrols, air defence fire and convoy escorts and raiders
 (`sideAV`). The odds preview and the AI's strength estimates use `stackDmg(a)` (the force's damage-weighted efficiency).
 
 ## 3. Forces, merging and the AI
@@ -136,3 +136,74 @@ and retreats. \* informational: two stacks of 10 attacking a 20-stack in a city 
 The same duel on the build before the stack limits (`IM_ROOT=<old build> node tools/stack-duel.js`): the 128-stack and the 13 stacks
 fought about even (13 stacks attacking one side: neither held, 44% vs 46% left; in the city the 128-stack held), and the split side
 lost or drew 5 of the 11 required cases.
+
+## 5. Attack range (ranged fire)
+
+Like Conflict of Nations: artillery, rocket launchers and warships attack enemy forces **within their range without moving into the
+province**. Rules: `rangedStep`, `rangedTargets`, `bombardInfo`, `orderBombard` in `rules/combat.js`; the table `RANGE_KM` / `RANGE_HIT`
+(and `RANGED_F`) in `rules/data.js`; `rRangeKm` in `rules/research.js`; the AI in `rules/ai.js` (`aiGunsStay`, `aiGuns`, `aiFireSpot`).
+
+| unit | range | hits | notes |
+|---|---:|---|---|
+| Mobile Artillery | **80 km** | forces on land | fires only from land (not embarked) |
+| Rocket Artillery (MLRS) | **150 km** (200 km with Extended-Range Rockets) | forces on land | fires only from land |
+| Frigate | **80 km** | ships at sea and forces on the coast | |
+| Cruiser | **150 km** | ships at sea and forces on the coast | Long-Range Bombardment: +30% against the coast |
+| Submarine | **40 km** | warships at sea only (torpedoes) | not embarked troops, not land |
+| Aircraft Carrier | none | | its air wings strike |
+| Cruise / Ballistic Missile | own range (`MISSILES` range, research) | | the launch picker shows its range circle |
+
+**Why these values.** They are scaled to the km sight ranges (`VIS_KM`, rules/vision.js): forces see 50 km, recon (Special Forces) 100,
+cities 80, airbases 100, UAVs 250-500. Artillery reaches a little past its own sight (80 vs 50), so it needs a spotter (your land, a city,
+another force, a UAV, a satellite), as in Conflict of Nations; rockets and a cruiser's guns reach about one province (land provinces'
+points are 120-470 km apart, median 216 km; a coastal province's point is 60-260 km from the nearest water of its sea zone, median 104 km),
+the frigate's guns as far as artillery, a submarine's torpedoes only close by. All of it is one table to tune.
+
+**How it fires.**
+
+- From where the unit **actually stands** (`armyXY`: its spot `a.pos`, or on the road while marching), to where each target stands, in
+  km across the map's seam. Only enemy forces (at war, not air wings) whose spot is within the range of a unit type that can hit them
+  (`RANGE_HIT`), and that the shooter's side **can see** (`armyVisible`: no firing blind; a submerged submarine or special forces only as
+  the fog rules allow).
+- A shooter fires while it **stands** (not marching), is **not fighting a battle in its own province** (then it fights there instead), and
+  its fire is not on **Hold** (Fire at will / Hold fire, as before). Its targets may stand, fight in a battle elsewhere, or march.
+- Every **15-minute battle step** (rules/tick.js: `tickQ`, and the hour's own step in `tickHour`), each a quarter of the hourly damage, so
+  the per-hour totals are the old shelling's (measured: 4 artillery on 10 infantry 60 km away deal 1.10 health an hour, the old rule
+  1.06 on the same force one province away; 3 MLRS 0.97 vs 0.94; 5 games each). `BATTLE_PACE` does not apply.
+- Damage per hour of a unit type: `n × attack × K × RANGED_F (0.28) × morale and supply × Artillerist commander (guns) × stack
+  efficiency × roll (0.8-1.2) × cover`, cover = the target province's `terrain.art` (at most 1; none at sea), then the holder's
+  fortifications (×0.8 a level). Each type's damage is shared by the forces of the target group it reaches, by their health; the damage
+  classes (`multO`) decide what it does to each unit (a submarine does nothing to troops). War damage to the province: 1.2 a game hour.
+- **Target**: by default the province holding the strongest visible enemy power in range, all forces there that each type reaches (as the
+  old rule chose a province). The player's **Bombard** order picks a target instead (`a.tgt`: one force `{id}` or the forces of one
+  province `{p}`): tap an enemy force or province with the unit selected; the order preview says **In range: bombard** or **Out of
+  range**. The unit does not move. A move order or Halt ends the order; while the target is out of range or unseen the unit fires at will;
+  a destroyed target ends it.
+- Removed: the province-step rule (artillery shelled the neighbouring provinces, MLRS two or three provinces away, at any distance) and
+  the shore support in the battle step (every warship in a sea zone next to a coastal battle added half its fire, at any distance): both
+  are now this one rule.
+- Fleets can stand anywhere in their sea zone: tap the zone with the fleet selected to move it there (as forces do in their own province).
+
+**The AI.** It never marches guns into a battle it can shell: a stack ordered to attack leaves its artillery and rockets behind, on a
+firing spot in its own province, when they can reach the target's defenders from there (the rest still has the 2 ground units to take
+the province); an idle stack on the front turns its guns into a battery on a firing spot when an enemy force they can see is in reach. A
+**battery** (a force of guns only) stands on the spot of its province from which the strongest enemy force it sees is within 90% of its
+range, **as far back as that allows**; with nothing in reach it moves up to an own front province (one held by its own troops first). It
+is never merged into other stacks, sent on offensives or used as a front reinforcement. An idle fleet at sea takes the same kind of spot
+in its zone. Like everything else, its fire needs sight.
+
+**Balance** (headless, every nation AI, 30 days, seeds 12345 / 7 / 99; before → after):
+
+| | 12345 | 7 | 99 |
+|---|---|---|---|
+| battles | 581 → 594 | 634 → 643 | 613 → 640 |
+| units lost a day | 49.5 → 50.1 | 50.8 → 48.6 | 49.8 → 48.7 |
+| provinces taken | 1119 → 1148 | 1202 → 1163 | 1251 → 1202 |
+| ranged fire, shooter-hours | 477 → 148 | 166 → 156 | 295 → 196 |
+| ranged fire, health dealt in 30 days | 183 → 37 | 89 → 19 | 111 → 31 |
+| artillery and rockets in service, day 30 | 52 → 60 | 59 → 49 | 54 → 45 |
+
+Ranged fire was and stays a small share of the fighting (about 1,500 units are lost in 30 days; 183 health is some 18 infantry). It is not
+overpowered: per hour a battery deals what it did, but now only at what is in range and seen, so it fires less often; the AI's guns no
+longer shell provinces 200-400 km away. Battles, losses and conquests stay within the seed-to-seed spread. Headless cost: about 5% more
+time a game day.

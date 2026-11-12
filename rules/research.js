@@ -61,7 +61,7 @@ function rDrilled(a, terrain){ const o = a.owner; if (o < 0) return false; let a
   return any; }
 const rSpecTerr = (n, f) => f > 1 ? 1 + (f - 1)*[1, 1.25, 1.5][rLevel(n, 'spec_terr')] : f;             // Mountain & Arctic Training: the rough-terrain attack bonus 40% -> 50% -> 60%
 const rSightF = (n, t) => n >= 0 && ((t === 'at' && has(n, 'at_eye')) || (t === 'spec' && has(n, 'spec_eye'))) ? 1.5 : 1;   // Thermal Sights, Night Optics: that unit type sees 50% farther
-const rMlrsReach = n => has(n, 'mlrs_rng') ? 3 : 2;                                                   // Extended-Range Rockets: provinces
+const rRangeKm = (n, t) => (RANGE_KM[t] || 0) + (t === 'mlrs' && n >= 0 && has(n, 'mlrs_rng') ? RANGE_ER : 0);   // attack range in km (RANGE_KM); Extended-Range Rockets: Rocket Artillery +50 km
 const rSamNear = n => has(n, 'sam_g2') ? 1 : 0.35;                                                    // Long-Range SAM: neighbouring provinces at full strength
 const rJamF = n => [1, 1.2, 1.4][rLevel(n, 'jam_band')] || 1;                                         // Wideband Jamming
 const rPack = (n, t) => (UNITS[t].pack || 1) + (t === 'swarm' && has(n, 'swarm_pack') ? 2 : 0);       // Bigger Salvo: eight swarm drones per card

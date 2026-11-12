@@ -53,7 +53,8 @@ function tickHour(){
   // dug in: the hour each force came to a stop (display only: the sandbag mark on its plate and the sandbag ring at close zoom)
   for (const a of S.armies){ if (a.to !== null || a.path.length || a.fly || a.air){ if (a.still != null) delete a.still; } else if (a.still == null) a.still = S.hour; }
   if (S.hour % 2 === 0) stanceHour();
-  rangedHour(); chaseHour(); joinHour(); for (const a of S.armies) if (a.delay > 0) a.delay--;
+  visCache = null;   // forces moved this hour: what each side sees is worked out again (ranged fire needs sight)
+  rangedStep(true); chaseHour(); joinHour(); for (const a of S.armies) if (a.delay > 0) a.delay--;
   // combat: the hour's own battle step (the last of its four); then morale, upkeep and healing
   if (S.hour - supHour >= 6 || !SUP){ computeSupply(); computeBlockade(); }
   const prevH = new Set(S.battles);   // the fights of the steps just before this one
@@ -83,7 +84,7 @@ function tickHour(){
 }
 // One 15-minute step of game time. S.q counts the battle steps already run this hour (0..3, saved; old saves have none = 0): three steps are battle-only,
 // the fourth is the hour's tick. The game loop and tools/headless.js call tickQ; tick() plays a whole game hour (what the tests and tools use).
-function tickQ(){ const q = S.q || 0; if (q + 1 < BATTLE_Q){ S.q = q + 1; battleStep(false); return; } S.q = 0; tickHour(); }
+function tickQ(){ const q = S.q || 0; if (q + 1 < BATTLE_Q){ S.q = q + 1; rangedStep(false); battleStep(false); return; } S.q = 0; tickHour(); }   // (ranged fire, rules/combat.js, before each battle step)
 function tick(){ do tickQ(); while (S.q); }
 /* One battle step: every force fighting in a province deals and takes damage. Battles resolve BATTLE_Q (4) times per game hour, one step every 15 in-game minutes,
    each dealing BATTLE_DMG (a quarter of the hourly damage, times the pace constant BATTLE_PACE in rules/combat.js). The hour's own tick runs the last one (hourly = true);
@@ -119,10 +120,7 @@ function battleStep(hourly){
         const TFo = G.P[p].sea ? null : tuf(G.P[p].terrain || 'plains', o !== S.owner[p], !arctic(o));
         const cB = o !== S.owner[p] ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner');
         a._dealt0 = 0; for (const t of UT){ if (!a.u[t]) continue; const base = a.u[t]*st(o, t, 'atk')*m*(t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv)*r*mf*(TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1)*cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1)*se[DOM_T[t]]; a._dealt0 += base; for (const k of CLASSES) av[k] += base*multO(o, t, k); } }
-      // shore bombardment: this side's ships in adjacent sea zones add half their firepower to coastal land battles
-      if (!G.P[p].sea && G.P[p].coast) for (const sz of G.P[p].nbs){ if (!G.P[sz].sea) continue;
-        for (const a of S.armies){ if (a.owner !== o || a.at !== sz || a.to !== null || !shipsN(a)) continue; const se = stackEffs(a).sea;
-          for (const t of UT){ if (!a.u[t] || UNITS[t].cls !== 'naval') continue; const base = 0.5*(t === 'crui' && has(o, 'crui_rng') ? 1.3 : 1)*a.u[t]*st(o, t, 'atk')*r*moraleF(a)*se; for (const k of CLASSES) av[k] += base*multO(o, t, k); } } }
+      // (warships no longer add fire to coastal battles from a neighbouring sea zone: they hit what lies within their range, rules/combat.js rangedStep)
       const foes = owners.filter(e => atWar(o, e)), tot = foes.reduce((s, e) => s + hp.get(e), 0);
       for (const e of foes){ const d = dmg.get(e); for (const k of CLASSES) d[k] += av[k]*hp.get(e)/tot; }
     }
