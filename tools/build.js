@@ -19,7 +19,7 @@ const SKIP_ASSETS = new Set(['art-src']);   // source art for tools/prep-art.py:
 // names that exist only in developer mode or the test hooks: none of them may survive in the public build
 const DEV_NAMES = ['DEV', 'DEV_KEY', 'DEV_FILL', 'DEV_SPEEDS', 'DEV_TOG', 'DEVUI', 'devSave', 'devFill', 'devDone', 'devHour', 'devResearchAll', 'devSpawn', 'devSpawnOk',
   'devPanel', 'devPanelHTML', 'devRender', 'devSync', 'devTap', 'devKey', 'devbadge', 'devpanel', 'devsp', 'devpick', 'devb', 'devp', 'iron-meridian-dev', 'sp5', 'sp6', 'sp7',
-  '__im', '__glog', '__dbgAll', '__dbgBoxes', 'tagDbg', 'pnDbg', 'labDbg', 'TMDBG', 'PGHOST', 'LAYEV', '__BAKE', 'artall', 'PLAY_MS', 'PLAY_N', 'DBGBOX', 'Developer mode', '@DEV', '@ENDDEV', '@TEST', '@ENDTEST'];
+  '__im', '__glog', '__dbgAll', '__dbgBoxes', 'tagDbg', 'pnDbg', 'labDbg', 'TMDBG', 'PGHOST', 'LAYEV', 'devCfx', 'DEV_CFX', '__BAKE', 'artall', 'PLAY_MS', 'PLAY_N', 'DBGBOX', 'Developer mode', '@DEV', '@ENDDEV', '@TEST', '@ENDTEST'];
 // window.__<name> globals are test / debug switches by convention: the public build may not read or set any of them (this list stays empty
 // unless a real game global with that prefix is ever added)
 const PUBLIC_GLOBALS_OK = [];

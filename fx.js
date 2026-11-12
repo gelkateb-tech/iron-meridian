@@ -641,13 +641,13 @@ function figVolley(c, main, now, F, T){
   const f = (cand.length ? cand : F)[Math.floor(Math.random()*(cand.length || F.length))], k = f.k, tq = T[Math.floor(Math.random()*T.length)];
   const tgt = (q = tq) => { const th = Math.random()*Math.PI*2, d = q.r*(0.45 + 0.9*Math.random()); return [q.wx + Math.cos(th)*d, q.wy + Math.sin(th)*d*0.7]; };   // round the figure, not on it
   const A0 = Math.min(1, f.a), dist = Math.hypot(tq.wx - f.mx, tq.wy - f.my), an = Math.atan2(tq.wy - f.my, tq.wx - f.mx), sx = PG.wrapSX(f.mx*PG.view.s + PG.view.x), nt0 = fxNight(f.mx, f.my);
-  VOLA = A0; const sh = (kind, to, o) => shoot(kind, [f.mx, f.my], to, Object.assign(o, {ws:true})), sh2 = (kind, to, o) => { const pr = shot2(kind, [f.mx, f.my], to, o); if (pr) pr.a = A0; return pr; };
+  VOLA = A0; const sh = (kind, to, o) => shoot(kind, [f.mx, f.my], to, Object.assign(o, {ws:true})), sh2 = (kind, to, o) => { const pr = shot2(kind, [f.mx, f.my], to, o); if (pr){ pr.a = A0; pr.ws = true; } return pr; };   // (ws: a figure's shot)
   const fsea = (() => { const q = tgt(); return seaAt(q[0], q[1]); })();
   if (!PG.muted && PG.AC && now - (PG.shotAt.last || 0) > 70){ PG.shotAt.last = now; PG.shotAt(sx, k === 'gun' || k === 'rocket' || k === 'ship' ? 'art' : k === 'barrel' || k === 'sam' ? 'tank' : 'inf'); }
   const heavy = k === 'barrel' || k === 'gun' || k === 'ship' || k === 'rocket';
   MUZZ.push({wx:f.mx, wy:f.my, ang:an, wl:f.fl, big:heavy ? 0.9 : 0.45, t0:now, a:A0});
   emit('flash', f.mx, f.my, {ws:1, s0:f.fl*(heavy ? 0.9 : 0.7)*(1 + 0.5*nt0), s1:f.fl*0.3, life:heavy ? 110 : 70, vx:0, vy:0});
-  const fid = a.id; unitFace(fid, an);   // (the force faces the enemy it fires at)
+  const fid = a.id;   // (in a battle the force already faces the enemy: tmForms)
   if (k === 'rifle' || k === 'cannon'){ const n = k === 'cannon' ? 3 : 3 + (Math.random() < 0.5 ? 1 : 0);   // short bursts of tracer dots, dust kicked up round the enemy
     for (let i = 0; i < n; i++){ const to = tgt(Math.random() < 0.7 ? tq : T[Math.floor(Math.random()*T.length)]); sh('tracer', to, {dur:(130 + Math.random()*90)*(1 + dist/40), delay:i*(k === 'cannon' ? 110 : 60) + Math.random()*25, hit:k === 'cannon' && i === n - 1 ? 'small' : 'kick', dots:k === 'rifle'}); }
     if (main === 'at') sh('missile', tgt(), {dur:520 + dist*8, arc:0.6, hit:'small'}); snd('fire', k === 'cannon' ? 'tank' : 'gun', f.mx, f.my); }
@@ -793,7 +793,8 @@ function unitRock(id){ if (id == null || fxLv() === 0) return; anim(id).rock = p
 // what the page applies to a force's drawn figures or counter this frame (one shared object, filled per call): dx, dy (css px), rot (rad),
 // red (0..1, the hit flash), face (the world angle to face, or null). null when nothing applies.
 const UA = {dx:0, dy:0, rot:0, red:0, face:null};
-function unitAnim(ids, now){ let A = null; for (const id of ids){ const q = ANIM.get(typeof id === 'object' ? id.id : id); if (q && (!A || Math.max(q.rk, q.hit, q.rock, q.ft) > Math.max(A.rk, A.hit, A.rock, A.ft))) A = q; }
+/*@TEST*/const RX = {on:true};   // (tests of the layout's stability hold the reactions still: setReact(false))/*@ENDTEST*/
+function unitAnim(ids, now){ /*@TEST*/if (!RX.on) return null;/*@ENDTEST*/ let A = null; for (const id of ids){ const q = ANIM.get(typeof id === 'object' ? id.id : id); if (q && (!A || Math.max(q.rk, q.hit, q.rock, q.ft) > Math.max(A.rk, A.hit, A.rock, A.ft))) A = q; }
   if (!A) return null; UA.dx = UA.dy = UA.rot = UA.red = 0; UA.face = now - A.ft < 8000 && isFinite(A.fa) ? A.fa : null; let live = false;
   const tr = now - A.rk; if (tr >= 0 && tr < 170){ live = true; const k = tr < 30 ? tr/30 : Math.pow(1 - (tr - 30)/140, 2); UA.dx -= Math.cos(A.ra)*A.rp*k; UA.dy -= Math.sin(A.ra)*A.rp*k; }   // kicks back, springs back (~150 ms)
   const th = now - A.hit; if (th >= 0 && th < 360){ live = true; const k = 1 - th/360, am = 1.3*A.hz*k; UA.dx += Math.sin(th*0.11)*am; UA.dy += Math.cos(th*0.17)*am*0.6; UA.red = Math.min(1, k*1.25); }
@@ -811,7 +812,7 @@ function projGet(){ const lv = fxLv(); if (!lv) return null; while (PROJ.length 
 // a new-style shot. o: delay (ms), dur (ms), arc (world px: the top of its path), size, ev (its events: a strafing run, a bomb line), z (impact size
 // S M L XL), sea, kill, bid (the force hit), miss, end (called at the end instead of the impact), cut (it is stopped at that share of its path)
 function shot2(kind, from, to, o = {}){ const pr = projGet(); if (!pr) return null; const now = performance.now();
-  pr.v2 = true; pr.ws = true; pr.sn = ++PRSN; pr.kind = kind; pr.from = from; pr.to = [from[0] + wdx(from[0], to[0]), to[1]]; pr.t0 = now + (o.delay || 0); pr.dur = o.dur || 600; pr.arc = o.arc || 0;
+  pr.v2 = true; pr.sn = ++PRSN; pr.kind = kind; pr.from = from; pr.to = [from[0] + wdx(from[0], to[0]), to[1]]; pr.t0 = now + (o.delay || 0); pr.dur = o.dur || 600; pr.arc = o.arc || 0;
   pr.size = o.size || 1; pr.z = o.z; pr.sea = o.sea; pr.kill = !!o.kill; pr.bid = o.bid; pr.end = o.end; pr.cut = o.cut; pr.ev = o.ev; pr.n = 0; pr.seed = Math.random()*6.28;
   pr.img = o.img; pr.a = 1; pr.snd = o.snd; pr.miss = !!o.miss; if (o.snd) snd('flight', o.snd, from[0], from[1]); PG.animFast(); return pr; }
 // its point at share k of the way: [x, y, h] (world px; h the height above the ground)
@@ -1090,7 +1091,7 @@ function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANI
    on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
 const fxStats = () => ({part:PART.length, proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
 
-return {AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,

@@ -2861,7 +2861,10 @@ const FX_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches && 
 const SET = {vol:0.35, toasts:'all', fx:FX_DEF, shake:true, fxSnd:true, paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, saver:SAVER_DEF, tipsOff:false, tipSeen:{}};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
 if (!SET.tipSeen || typeof SET.tipSeen !== 'object') SET.tipSeen = {};
-if (!SET.fxPick) SET.fx = FX_DEF;   // (Effects never chosen by hand: the device's default, also over settings saved before there was one)   // first-time tips: which ones were shown (old settings: none yet)
+if (!SET.fxPick) SET.fx = FX_DEF;
+// the map's own detail (terrain detail, coast, sea, weather, the figures' budget) is lightened only by an Effects setting chosen by hand: a phone's
+// default Low thins the effects, not the map
+const mapLite = () => SET.fx !== 'high' && !!SET.fxPick;   // (Effects never chosen by hand: the device's default, also over settings saved before there was one)   // first-time tips: which ones were shown (old settings: none yet)
 const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} applySet(); };
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
@@ -3538,7 +3541,7 @@ function dtStep(J, end){ for (;;){
 // the game month (the parcel palette) and its tile variant, kept in DT.mv
 function dtMonth(){ const m = S ? calDate(S.hour).m : 5; DT.mv = DT_MV[m]*5 + DT_MV[(m + 6) % 12]; return m; }
 function dtBucket(s = view.s){ const t = s*Math.min(dpr, 1.5); let k = 0; while (k < 3 && DT_R[k]*1.41 < t) k++; return k; }
-function dtAlpha(s = view.s){ return SET.fx !== 'high' || DT.fail ? 0 : dtSm((s - 1.35)/1.15); }   // fades in from z1.35 to z2.5 (the start view and normal play); nothing below (the far view is untouched)
+function dtAlpha(s = view.s){ return mapLite() || DT.fail ? 0 : dtSm((s - 1.35)/1.15); }   // fades in from z1.35 to z2.5 (the start view and normal play); nothing below (the far view is untouched)
 const dtCap = (k = dtBucket()) => k === 0 ? (dpr > 1 ? 64 : 48) : dpr > 1 ? 56 : 36;   // (the coarsest tiles serve the widest views, z1.35-3.5: more of them on screen and in the margin)
 // the tiles under the layer's painted rect, each clipped to its own whole-device-px box (the boxes meet exactly, so no seam and no double blend);
 // a tile not made yet is noted (its box is redrawn when it arrives) and a cached coarser or finer one stands in
@@ -3896,7 +3899,7 @@ function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex 
         for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[9 + (i + 1) % 3], px - sz*0.78 + sg*sz*0.32, py - sz*0.7, sz*1.56, sz*0.94); }
         ctx.globalCompositeOperation = 'source-over'; } } }
   ctx.restore();
-  if (hexPx < 10 || afxReduced() || SET.fx !== 'high') return;
+  if (hexPx < 10 || afxReduced() || mapLite()) return;
   const t = FXQ.gt; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
   for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), snow = w.kind === 'blizzard', Ly = stormLay(w), c = Ly.c, sn = Ly.s;
     const A = w.r*view.s*1.25, B = w.r*view.s*0.5, Rx = Math.sqrt(A*A*c*c + B*B*sn*sn), Ry = Math.sqrt(A*A*sn*sn + B*B*c*c), n = Math.min(120, Math.round(Rx*0.5)), sk = Math.round(w.seed*1000)*977; let L = -1;
@@ -4983,7 +4986,7 @@ const PLATE_GAP = 6, TM_PLATE = [-34, -50 - PLATE_GAP, 37, 1 - PLATE_GAP], TM_PL
 const roleOwner = r => +r.slice(1, r.indexOf(':'));
 // a role: kind, holder and the model types it shows (as a set: a spot changes only when a type comes or goes, not with the counts)
 // how many models a force shows: up to four, fewer in a small province (two forces and a battle's gap must fit inside it) or with low effects
-const tmNMax = p => { if (SET.fx !== 'high') return 2; const P = G.P[p]; if (!P || P.sea) return 4; const A = P.cells.length*HS*HS; return A >= 120 ? 4 : A >= 60 ? 3 : 2; };
+const tmNMax = p => { if (mapLite()) return 2; const P = G.P[p]; if (!P || P.sea) return 4; const A = P.cells.length*HS*HS; return A >= 120 ? 4 : A >= 60 ? 3 : 2; };
 const tmPrim = p => { const P = G.P[p]; return !!P && !P.sea && P.cells.length*HS*HS < 60; };   // (a small province: no second models, the 4x4 beside a rifleman)
 const tmPrimO = (p, o) => tmPrim(p) || o === NEUTRAL;   // (independent garrisons show their main types only: no 4x4 beside the riflemen)
 const roleStr = (cls, owner, u, p) => { const ts = tmRank(u, cls, tmNMax(p), tmPrimO(p, owner)); return cls + owner + ':' + (ts.length ? ts.slice().sort().join('.') : TM_CT[cls][0]); };
@@ -5247,7 +5250,7 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     const lead = c.list[0], mS = c.air ? null : movOwn(lead.id);   // (the group goes by its oldest force, which stays while others come and go)
     const foe = !c.air && !c.moving && S.battles.includes(c.at) ? clusters.find(o => o.at === c.at && o !== c && !o.air && !o.moving && o.wx != null && atWar(o.owner, c.owner)) : null;
     const ua = !c.moving && !c.air ? unitAnim(c.list, now) : null;   // (fx.js: a force firing at a target turns to face it)
-    let ang = ua && ua.face != null ? ua.face : foe ? Math.atan2(foe.wy - c.wy, foe.wx - c.wx) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // firing at a target: facing it; in a battle at the enemy; marching (or at rest) the way it went
+    let ang = !foe && ua && ua.face != null ? ua.face : foe ? Math.atan2(foe.wy - c.wy, foe.wx - c.wx) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // firing at a target: facing it; in a battle at the enemy; marching (or at rest) the way it went
     if (mS && (c.moving || mS.halt != null) && isFinite(mS.hd)){ TMH.set(lead.id, mS.hd); if (TMH.size > 3000) TMH.clear(); }
     if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B && Math.hypot(B.x - c.wx, B.y - c.wy) > 0.2) ang = Math.atan2(B.y - c.wy, B.x - c.wx); }   // ordered off but not yet under way
     if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
@@ -5264,7 +5267,7 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
 function tmPlan(clusters, hexPx, now){
   for (const c of clusters) c.fm = null;
   const fa = tmOn() && S && window.U3D && U3D.mapMeta ? tmFade(hexPx) : 0; if (fa <= 0) return;
-  let left = SET.fx !== 'high' || afxReduced() ? 24 : 40; const hud = hudRects();
+  let left = mapLite() || afxReduced() ? 24 : 40; const hud = hudRects();
   // (when there are more groups than the budget, those nearest the middle of the view come first, yours a little ahead: what you look at is complete)
   const m0 = 30*view.s, pri = c => { const [sx, sy] = toScreen(c.wx, c.wy); return Math.hypot(sx - cw/2, sy - ch/2) - (c.owner === PLAYER ? 120 : 0); };
   const cand = clusters.filter(c => { if (!c.form) return false; const [sx, sy] = toScreen(c.wx, c.wy); return !(sx < -m0 || sy < -m0 || sx > cw + m0 || sy > ch + m0); });
@@ -7027,8 +7030,8 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   const NB = n => SG ? SG.nation(n) : GEO.nation[n], NA = n => SG ? SG.nArea(n) : nAreaOf(n), NEU = () => SG ? SG.neuArea() : neuArea(), MINE = SG ? SG.mine : GEO.mine;
   // fine coast: land colour on the texture's sea slivers inside it. Baked off the frame once the zoom nears the fine coast; until then every render
   // (full or strip) goes without, and the bake forces one full render, so strips never mix the two
-  if (SET.fx === 'high' && hexPx >= 24 && COASTR_HI.length && G.terrain && G.terrain.cbl === undefined && !coastBleed.t) coastBleed.t = setTimeout(() => { coastBleed.t = 0; if (!G || !G.terrain) return; coastBleed(); layerKey = ''; }, 60);
-  if (CV && SET.fx === 'high' && coastRings(hexPx) !== COASTR && G.terrain && G.terrain.cbl){ c.save(); c.clip(CV, 'evenodd'); c.drawImage(G.terrain.cbl, 0, 0, WORLD_W, WORLD_H); c.restore(); }
+  if (!mapLite() && hexPx >= 24 && COASTR_HI.length && G.terrain && G.terrain.cbl === undefined && !coastBleed.t) coastBleed.t = setTimeout(() => { coastBleed.t = 0; if (!G || !G.terrain) return; coastBleed(); layerKey = ''; }, 60);
+  if (CV && !mapLite() && coastRings(hexPx) !== COASTR && G.terrain && G.terrain.cbl){ c.save(); c.clip(CV, 'evenodd'); c.drawImage(G.terrain.cbl, 0, 0, WORLD_W, WORLD_H); c.restore(); }
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
     // wash the sea with its own colour so the raster texture's soft land edge does not bleed past the real shore, then shallow-water bands
     // (the baked depth: shallow shelf, slope and abyss; the flat wash only if it could not be baked)
@@ -7045,13 +7048,13 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   const onScreen = P => { const b = provBox(P); return b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1; }, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
     nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
-  if (hexPx >= 12 && SET.fx === 'high' && !ZRND){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
+  if (hexPx >= 12 && !mapLite() && !ZRND){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
     if (zc > 0 && gp.fine && DTa < 0.98){ c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.34*zc*(1 - DTa); c.fillStyle = gp.fine; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // close up: a second, fine ground grain (fields, scrub) so the land is not a smooth smear
     if (!lite && hexPx > ZOLD && DTa < 0.02 && gp.micro && gp.micro.setTransform){ const zm = Math.min(1, (hexPx - ZOLD)/50), lo = Math.max(0, Math.log2(view.s/(ZOLD*0.9/HS0))), o0 = Math.floor(lo), f = lo - o0;   // past the old max zoom the texture is upscaled: a micro grain in world space keeps it from smearing
       c.globalCompositeOperation = 'source-over'; c.fillStyle = gp.micro;
       for (const [oc, w] of [[o0, 1 - f], [o0 + 1, f]]){ if (0.3*zm*w < 0.06) continue;   /* a faint octave costs a full-layer fill for nothing */ gp.micro.setTransform(new DOMMatrix().rotate(-23).scale(0.08/Math.pow(2, oc))); c.globalAlpha = 0.3*zm*w; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); } }
     c.restore(); }
-  if (hexPx >= ART_PX && SET.fx === 'high' && polMode() && DT.fail){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (CV) c.clip(CV, 'evenodd');
+  if (hexPx >= ART_PX && !mapLite() && polMode() && DT.fail){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (CV) c.clip(CV, 'evenodd');
     for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const t = P.terrain === 'urban' ? provGround(P) : P.terrain || 'plains', wooded = t === 'mountain' && Math.abs(P.lat) > 24 && Math.abs(P.lat) < 55, pt = t === 'forest' || wooded ? GP.forest : t === 'plains' || t === 'urban' ? GP.fields : null; if (!pt) continue;   // temperate ranges (Appalachians, Alps' flanks) are wooded
       c.globalAlpha = (t === 'forest' ? 0.7 : wooded ? 0.5 : 0.62)*zg; c.fillStyle = pt; c.fill(GEO.fill[p], 'evenodd');
       if (wooded){ c.globalAlpha = 0.42*zg; c.fillStyle = '#4a6a3c'; c.fill(GEO.fill[p], 'evenodd'); } }   // their grey rock and white ridge highlights take the green of the woods
@@ -7153,7 +7156,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   if (vy0 < 0 || vy1 > WORLD_H){ base.save(); base.beginPath(); base.rect(vx0, vy0, vx1 - vx0, vy1 - vy0); base.rect(vx0, 0, vx1 - vx0, WORLD_H); base.clip('evenodd'); polarFill(base, vx0, vy0, vx1, vy1); base.restore(); }   // (past the top and bottom edges, over the sea wash)
   base.restore();   // the base's R clip
   // the layer's sea as a half-resolution alpha mask (white sea, clear land and lakes' shores as drawn) for the live wave surface in draw(); one fill
-  if (CV && hexPx >= 20 && SET.fx === 'high' && !ZRND){ const SM = layer.seaM || (layer.seaM = document.createElement('canvas')), w2 = Math.ceil(layer.width/2), h2 = Math.ceil(layer.height/2);
+  if (CV && hexPx >= 20 && !mapLite() && !ZRND){ const SM = layer.seaM || (layer.seaM = document.createElement('canvas')), w2 = Math.ceil(layer.width/2), h2 = Math.ceil(layer.height/2);
     if (SM.width !== w2 || SM.height !== h2){ SM.width = w2; SM.height = h2; layer.seaOK = false; }
     if (!R || full || layer.seaOK){ const m = SM.getContext('2d'), hx0 = Math.floor(dx0/2), hy0 = Math.floor(dy0/2), hw = Math.ceil(dx1/2) - hx0, hh = Math.ceil(dy1/2) - hy0;
       m.save(); m.setTransform(1, 0, 0, 1, 0, 0); m.globalCompositeOperation = 'source-over'; m.globalAlpha = 1; if (R){ m.beginPath(); m.rect(hx0, hy0, hw, hh); m.clip(); }
@@ -7237,7 +7240,7 @@ function seaOnScreen(lx, ly, w2, h2){ const c = SEAFX.wc || (SEAFX.wc = document
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.imageSmoothingEnabled = true; g.setTransform(w/w2, 0, 0, h/h2, 0, 0); g.drawImage(layer.seaM, lx/2 - (layer.seaE || 0), ly/2 - (layer.seaEy || 0));
   try { const d = g.getImageData(0, 0, w, h).data; for (let i = 3; i < d.length; i += 4) if (d[i] > 6) return true; return false; } catch (e){ return true; } }
 function drawSeaSurface(now, moving){
-  const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || SET.fx !== 'high' || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || layer.dp !== dpr || !GEO) return;
+  const hexPx = view.s*HS0; if (hexPx < 20 || moving || camFly || mapLite() || afxReduced() || !layer || !layer.seaOK || !layer.seaM || layer.s !== view.s || layer.dp !== dpr || !GEO) return;
   const day = viewLight().day, w2 = Math.ceil(cw*dpr/2), h2 = Math.ceil(ch*dpr/2), Wc = SEAFX.cv || (SEAFX.cv = document.createElement('canvas'));
   if (Wc.width !== w2 || Wc.height !== h2){ Wc.width = w2; Wc.height = h2; SEAFX.k = ''; }
   const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr), key = view.x + ',' + view.y + ',' + view.s + ',' + lx + ',' + ly + ',' + layer.full + ',' + (layer.strips || 0);
@@ -10312,7 +10315,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
-if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return SET.fx !== 'high' || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
+if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return mapLite() || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stats:() => fxStats(), dev:w => devCfx(w), get VW(){ return VW; }, fire:(w, A, B, o) => cfxFire(w, A, B, o), intercept:(A, B, o) => intercept(A, B, o), get PROJ(){ return PROJ; }, get PART(){ return PART; }, get WARN(){ return FXM.WARN; }, get CQ(){ return FXM.CQ; }};
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}});   // the battle fire hook (figures' firing points) and the battle smoke

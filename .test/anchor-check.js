@@ -242,7 +242,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
 
   if (QUICK){ M.fails = fails; M.errors = errors; console.log(JSON.stringify(M, null, 1)); await b.close(); process.exit(fails.length || errors.length ? 1 : 0); }
   // (8) JITTER: game running at 1x, fixed camera, 60 frames
-  { await p.evaluate(() => { window.__im.S.speed = 1; }); const out = {};
+  { await p.evaluate(() => { window.__im.S.speed = 1; window.__im.cfx.M.setReact(false); }); const out = {};   // (the forces' combat reactions, recoil and the hit shake, are meant to move them: held still here)
     for (const [nm, xy, hp] of [['berlin110', sc.ber, 110], ['berlin200', sc.ber, 200], ['wiesbaden160', sc.wi, 160], ['jutland130', sc.sea, 130]]){
       await setView(xy[0], xy[1], hp, W/2, H/2); await p.waitForTimeout(1500);
       const fr = await p.evaluate(() => new Promise(res => { const o = []; let n = 0; const f = () => { const c = window.__acCap(); if (c) o.push(c); if (++n < 60) requestAnimationFrame(f); else res(o); }; requestAnimationFrame(f); }));
