@@ -45,6 +45,86 @@ const stackText = P => P.over ? `Over stack limit: −${Math.round((1 - P.dmg)*1
 const stackSpd = a => { if (count(a) <= 5) return 1; const z = stackSizes(a); return Math.min(stackSpdN(z.land, STACK_LIM.land), stackSpdN(z.sea, STACK_LIM.sea), stackSpdN(z.air, STACK_LIM.air)); };   // (no domain is over its limit in a force of 5 or fewer)
 // the weighted damage factor of a whole force (the odds preview and the AI's estimates)
 function stackDmg(a){ const e = stackEffs(a); if (e.land === 1 && e.sea === 1 && e.air === 1) return 1; let s = 0, w = 0; for (const t of UT){ const v = a.u[t]; if (!v) continue; const k = v*(UNITS[t].atk || 0.1); s += k*e[DOM_T[t]]; w += k; } return w ? s/w : 1; }
+/* Battle pace. Battles resolve in BATTLE_Q steps per game hour (one every 15 in-game minutes, rules/tick.js: battleStep); each step deals BATTLE_DMG of the
+   old hourly damage, so the damage per hour is the old one times BATTLE_PACE. BATTLE_PACE is THE slowdown knob: 1 = today's pace; docs/COMBAT-PACE.md proposes a
+   lower value (fights last several hours; big ones a day or more). Air strikes, missiles, artillery shelling and buildings do not use it. */
+const BATTLE_Q = 4, BATTLE_PACE = 1, BATTLE_DMG = BATTLE_PACE/BATTLE_Q;
+// healing: a hospital building (planned, LATER.md) will multiply the healing in its city: the one place to hook it in
+const hospitalF = p => 1;
+// units' healing per day, as a share of their health: 25% in an own city (ships 40% and more in an own shipyard city), 10% in the field, aircraft by maintenance; the Logistician commander +50% per rank
+function healPerDay(a){ const own = a.to === null && S.owner[a.at] === a.owner;
+  return (a.air ? maintRate(a)*1.2 : (own && S.bld[a.at].yard && shipsN(a) ? 0.4*(1 + 0.2*Math.max(0, S.bld[a.at].yard - 2)) : own && G.P[a.at].city ? 0.25 : 0.10)*(1 + 0.5*cmdF(a, 'supply')))*(own ? hospitalF(a.at) : 1); }
+// what a force's wounds are doing now, for the army bar: {kind:'fight'|'cut'|'heal'|'full'|'move', rate (share of health a day), city}
+function healInfo(a){ const hurtN = UT.some(t => a.w[t] > 0.01);
+  if (a.to === null && S.battles.includes(a.at)) return {kind:'fight', rate:0, city:false};
+  if (!a.air && !supplied(a) && !cmdF(a, 'supply')) return {kind:'cut', rate:0.04, city:false};
+  if (!hurtN) return {kind:'full', rate:0, city:false};
+  const own = a.to === null && S.owner[a.at] === a.owner && !!G.P[a.at].city; return {kind:'heal', rate:healPerDay(a), city:own}; }
+// damage factors of the missiles against each class of unit (a missile's strength times these)
+const MSL_VS = {soft:1.2, armored:1, air:0.4, naval:0.9};
+/* ---------------- Army Info: the Strength table ----------------
+   For each kind of target (the owner's ten rows) the average attack, and the average defence against an attacker of that kind, of one unit of the force as it is NOW
+   (current, after every modifier the rules apply in a fight in the force's province: terrain, morale and supply, stack efficiency, commander, landing, season, river,
+   shortages of fuel, iron and electronics, home soil, fortifications) and as it would be with none of them (base: the unit's research-boosted stat times the damage class table).
+   It reads the same numbers battleStep reads; it is a pure function (armyStrength(a) -> {rows, ctx}). Class mapping (what the rules have for each row):
+     infantry -> class soft (an Infantry unit as the target)      armour -> class armored (a Tank)       jets -> class air (a Strike Jet)    helicopters -> class air (an Attack Helicopter)
+     drones -> class air (a Strike Drone)       ships -> class naval (a Frigate)      submarines -> class naval (a Submarine; patrol planes hit them hardest)
+     missiles: attack = the chance this force's SAMs and frigates shoot down a cruise missile; defence = the damage a missile does to its units (MSL_VS)
+     buildings: attack = bomb load (a Heavy Bomber = 1; no other unit wrecks buildings by combat); defence = none (a dash)
+     population: attack = war damage a strike adds (bombers 3 per bomber, artillery shelling 1.2); defence = none (a dash) */
+const STR_ROWS = [{k:'inf', name:'Infantry', t:'inf'}, {k:'armor', name:'Armour', t:'tank'}, {k:'jet', name:'Jets', t:'jet'}, {k:'heli', name:'Helicopters', t:'heli'}, {k:'drone', name:'Drones', t:'sdrone'},
+  {k:'msl', name:'Missiles', t:null}, {k:'ship', name:'Ships', t:'frig'}, {k:'sub', name:'Submarines', t:'sub'}, {k:'bld', name:'Buildings', t:null}, {k:'pop', name:'Population', t:null}];
+// the part of a stat st() takes off for a shortage of fuel, iron or electronics (mirrors st() in rules/state.js)
+function shortFx(o, t, k){ if (o < 0 || !S.nations[o]) return 1; const sh = S.nations[o].short || {}, U = UNITS[t]; let f = 1;
+  if (sh.oil && U.fuel && k === 'atk') f *= 0.7;
+  if (sh.iron && MAINT[t].iron >= 0.05){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.85; }
+  if (sh.elec && MAINT[t].elec >= 0.05){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.9; }
+  return f; }
+function armyStrength(a, blind = false){   // blind: a force that is not yours: the base stats of its unit types only (its research, morale and condition are not known to you)
+  const o = a.owner, p = a.at, P = G.P[p], sea = !!P.sea, holder = S.owner[p], atkr = o !== holder, mine = o >= 0 && holder === o, N = o >= 0 ? S.nations[o] : null;
+  const stv = (t, k) => blind ? UNITS[t][k] : st(o, t, k), shF = (t, k) => blind ? 1 : shortFx(o, t, k), types = UT.filter(t => a.u[t] > 0), n = types.reduce((s0, t) => s0 + a.u[t], 0);
+  const TFo = sea ? null : tuf(P.terrain || 'plains', atkr, !arctic(o)), se = stackEffs(a), mrl = a.owner < 0 ? 1 : 0.5 + 0.5*(a.m ?? 80)/100, sup = a.owner < 0 || supplied(a) ? 1 : 0.85, wear = a.air && a.air.wear ? 1 - 0.45*a.air.wear : 1;
+  const cB = atkr ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner'), land = a.landed != null && S.hour - a.landed < 24 ? rLandF(o) : 1, szn = atkr && season(p) ? SEASON_FX[season(p)].atk : 1;
+  const riv = atkr && a.from != null && !sea && P.river.has(a.from) ? RIVER_ATK : 1;
+  // factors on the attack of one unit of type t: name -> factor
+  const aF = t => blind ? {} : ({morale:mrl*wear, supply:sup, terrain:TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1, stack:se[DOM_T[t]], commander:cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1),
+    landing:land, season:szn, river:t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv, shortage:shortFx(o, t, 'atk')});
+  // the damage taken is scaled by dF (the product of these): the defence is its inverse
+  const fort = mine ? S.bld[p].fort || 0 : 0, dd = docOf(o), sea1 = sea && ground(a) ? (shipsN(a) > 0 ? 0.75 : 1.5) : 1;
+  const dTake = t => blind ? {} : ({'home soil':mine ? 1/1.25 : 1, fortifications:mine ? Math.pow(0.8, fort) : 1, doctrine:mine && dd && dd.home && S.home[p] === o ? dd.home : 1, terrain:!sea && (mine || (holder < 0 && o < 0)) ? 1/terr(p).def : 1,
+    'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1});
+  const out = [];
+  for (const R of STR_ROWS){
+    const row = {k:R.k, name:R.name, atk:{base:null, cur:null, why:[], unit:'', total:false}, def:{base:null, cur:null, why:[], unit:'', immune:false}};
+    // weighted mean of each factor: why[label] = [sum(w*f), sum(w)]
+    const wa = {}, wd = {}, add = (W, nm, f, w) => { const e = W[nm] || (W[nm] = [0, 0]); e[0] += w*f; e[1] += w; };
+    if (R.t){
+      let aB = 0, aC = 0, aN = 0, dB = 0, dC = 0, dN = 0, imm = true;
+      for (const t of types){ const c = a.u[t], U = UNITS[t];
+        const a0 = stv(t, 'atk')/shF(t, 'atk'), M = multU(t, R.t);
+        if (a0 > 0){ const f = aF(t); let prod = 1; for (const k in f) prod *= f[k]; const b = a0*M; aB += c*b; aC += c*b*prod; aN += c; for (const k in f) add(wa, k, f[k], c*b); }
+        const Md = multU(R.t, t), d0 = stv(t, 'def')/shF(t, 'def');
+        if (Md > 0.001){ imm = false; const f = dTake(t), sf = shF(t, 'def'); let prod = 1; for (const k in f) prod *= f[k]; const b = d0/Md; dB += c*b; dC += c*b*sf/prod; dN += c; for (const k in f) add(wd, k, 1/f[k], c*b); add(wd, 'shortage', sf, c*b); }
+        else { dN += c; } }
+      if (aN){ row.atk.base = aB/aN; row.atk.cur = aC/aN; }
+      if (dN && !imm){ row.def.base = dB/dN; row.def.cur = dC/dN; } else if (imm && dN) row.def.immune = true;
+    } else if (R.k === 'msl'){
+      const sams = (a.u.sam || 0) + 0.6*(a.u.frig || 0), sh = blind ? 1 : rShield(o), sat = blind ? 1 : 1 - (a.sat || 0);
+      if (sams > 0){ row.atk.unit = '%'; row.atk.total = true; row.atk.base = 100*(1 - Math.pow(1 - 0.12, sams*sh)); row.atk.cur = 100*(1 - Math.pow(1 - 0.12, sams*sh*sat)); if (sat < 1) add(wa, 'saturated', sat, 1); }
+      let dB = 0, dN = 0, dC = 0; for (const t of types){ const c = a.u[t], d0 = stv(t, 'def')/shF(t, 'def'), Md = MSL_VS[UNITS[t].cls], f = dTake(t), sf = shF(t, 'def'); let prod = 1; for (const k in f) prod *= f[k]; dB += c*d0/Md; dC += c*d0/Md*sf/prod; dN += c; for (const k in f) add(wd, k, 1/f[k], c*d0/Md); add(wd, 'shortage', sf, c*d0/Md); }
+      if (dN){ row.def.base = dB/dN; row.def.cur = dC/dN; }
+    } else if (R.k === 'bld'){
+      let bB = 0, bC = 0; for (const t of types){ const c = a.u[t]; if (!UNITS[t].bmb) continue; bB += c*UNITS[t].bmb; bC += c*(blind ? UNITS[t].bmb : rBombF(o, t)); }
+      if (bB){ row.atk.base = bB; row.atk.cur = bC; row.atk.total = true; row.atk.unit = ' bomb load'; }
+    } else if (R.k === 'pop'){
+      let w = 0; for (const t of types) if (UNITS[t].bmb) w += a.u[t]*3*(blind ? UNITS[t].bmb : rBombF(o, t)); if (a.u.art || a.u.mlrs) w += 1.2;
+      if (w){ row.atk.base = w; row.atk.cur = w; row.atk.total = true; row.atk.unit = ' war damage'; }
+    }
+    const fin = (W, why) => { for (const k in W){ const [sw, w] = W[k], f = w > 0 ? sw/w : 1; if (Math.abs(f - 1) > 0.004) why.push([k, f]); } };
+    fin(wa, row.atk.why); fin(wd, row.def.why);
+    out.push(row); }
+  return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), supplied:sup === 1}};
+}
 /* ---------------- Commanders ---------------- */
 const TRAITS = {
   blitz:{name:'Blitz', icon:'»', desc:'+15% speed; +10% attack when attacking (×rank)'},

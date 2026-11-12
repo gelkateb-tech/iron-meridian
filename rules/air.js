@@ -43,7 +43,7 @@ function maintRate(a){ if (!a || !a.air || a.fly) return 0; if (a.air.car != nul
 function maintBase(a){ const B = G.P[a.air.base], r = wingRange(a); let best = -1, bv = maintRate(a) + 0.03;
   for (const P of G.P){ if (P.sea || S.owner[P.id] !== a.owner || !S.bld[P.id].air || P.id === a.air.base || hexDist(B.cc, P.cc) > r || bdis(P.id, 'air')) continue; const v = 0.1 + 0.06*S.bld[P.id].air - hexDist(B.cc, P.cc)*0.002; if (v > bv){ bv = v; best = P.id; } }
   return best; }
-const AEW_R = 16.6, MPA_R = 11;   // AWACS fighter-control cover and maritime patrol attack radius, old hexes (about 3,000 and 2,000 km); what they SEE is VIS_KM.aew / .mpa (rules/vision.js)
+const AEW_R = VIS_KM.aew/KM_HEX, MPA_R = 11;   // AWACS fighter-control cover (hexes: the same 500 km as what it sees, VIS_KM.aew, with the same radar research multipliers: rAewK) and maritime patrol attack radius (about 2,000 km); what the patrol SEES is VIS_KM.mpa (rules/vision.js)
 function nearestAirbase(n, from){
   let best = -1, bd = 1e9; for (const P of G.P){ if (S.owner[P.id] !== n || !S.bld[P.id].air) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
   if (best < 0) for (const P of G.P){ if (S.owner[P.id] !== n || !P.city) continue; const d = hexDist(G.P[from].cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
@@ -309,7 +309,7 @@ function missileImpact(m){
   warDamage(m.to, m.k === 'bm' ? 22 : 12); if (S.owner[m.to] !== m.owner) damageLinks(m.to, LINK_DMG[m.k] || 48);
   const M0 = mslOf(m.owner, m.k), defs = stationaryAt(m.to).filter(b => atWar(m.owner, b.owner) && count(b) > 0), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), hpBefore = defs.reduce((s0, b) => s0 + effHP(b), 0);
   if (defs.length){ const tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1, f0 = K*M0.power*(0.85 + rng()*0.3)*12;
-    const av = {soft:f0*1.2, armored:f0, air:f0*0.4, naval:f0*0.9}; for (const b of defs){ hurt(b, av, 1/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }
+    const av = {soft:f0*MSL_VS.soft, armored:f0*MSL_VS.armored, air:f0*MSL_VS.air, naval:f0*MSL_VS.naval}; for (const b of defs){ hurt(b, av, 1/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }
   let wrecked = '';
   if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)]; S.bld[m.to][k]--; wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));

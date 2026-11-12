@@ -54,7 +54,7 @@ function newGame(seed, pick, humans = []){
     return {id:k, power:pi, name:P0.name, color:P0.color, ai:!humans.includes(k), cash:220, oil:40, metal:60, iron:70, elec:30, rare:40, mp:80, short:{}, alive:true, capital, tech:{}, research:null, research2:null, mk:{}, eng:null, doc:null};   // no national doctrines
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
-       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], nations, links:{}};
+       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], q:0, nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
@@ -119,7 +119,7 @@ function restore(data){
   if (!data || data.v !== 4 || typeof data.seed !== 'number') return false;
   if (!G){ G = loadWorld(); IM.emit('world'); }
   if (!Array.isArray(data.owner) || data.owner.length !== G.P.length) return false;
-  S = data; S.battles = []; S.bt = {}; S.speed = 0; S.started = true; linksSync();
+  S = data; S.battles = []; S.bt = {}; S.q = S.q || 0; S.speed = 0; S.started = true; linksSync();
   { const nc = c => c && OLD_COLORS[String(c).toLowerCase()]; for (const N of S.nations){ if (nc(N.color)) N.color = nc(N.color); if (nc(N.color0)) N.color0 = nc(N.color0); } }   // old palette entries -> current ones
   useScenario('world'); DAY_LIMIT = Infinity;   // older saves with a scenario or a day limit continue as an open-ended world war
   resetCaches();
