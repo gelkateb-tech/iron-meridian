@@ -34,7 +34,7 @@ function researchWhy(n, id){ const N = S.nations[n], nd = RN[id];
   { const miss = rReqs(nd, lv).filter(q => !rLevel(n, q)), idle = miss.filter(q => !rRunning(N, q));
     if (idle.length) return `Needs ${idle.map(q => RN[q].name.split(' · ')[0]).join(' and ')}`;
     if (miss.length) return `Waits for ${miss.map(q => `${RN[q].name.split(' · ')[0]} (slot #${rSlotNo(rRunning(N, q))})`).join(' and ')}`; }
-  if (!rFree(N)) return 'Both slots busy';
+  if (!rFree(N)){ const h = Math.max(1, Math.ceil(Math.min(N.research.h, N.research2.h))); return `Both slots busy · next free in ${h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`}`; }
   return hasC(N, rCost(nd, lv)) ? '' : `Needs ${missTxt(N, rCost(nd, lv))}`; }
 function canResearch(n, id){ const N = S.nations[n], nd = RN[id]; return !!nd && !!N && N.alive && !!rFree(N) && !rRunning(N, id) && rOpen(n, id) && hasC(N, rCost(nd, rNextLv(n, id))); }
 // start the next level of node id in the free slot (paying its price); returns false when it cannot start

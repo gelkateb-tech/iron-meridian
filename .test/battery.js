@@ -27,6 +27,9 @@ async function page(b, vp, saver){
   const cdp = await ctx.newCDPSession(p); await cdp.send('Performance.enable');
   return { ctx, p, cdp };
 }
+// the map's own finite work after a view change (detail tiles, the layer's bands, city bakes) takes longer on a loaded machine than any fixed wait: wait until
+// the map reports no work (__im.mapBusy false) for 1.2 s in a row, 40 s at most, before looking for stray redraws or counting frames
+const settle = (p, max = 40000) => p.evaluate(max => new Promise(res => { const t0 = performance.now(); let ok = 0; const iv = setInterval(() => { const im = window.__im; ok = im.mapBusy ? (im.mapBusy() ? 0 : ok + 1) : 99; if (ok >= 6 || performance.now() - t0 > max){ clearInterval(iv); res(); } }, 200); }), max);
 const draws = p => p.evaluate(() => window.__im.rd ? window.__im.rd.n : window.__rafN);
 const busy = async cdp => { const m = (await cdp.send('Performance.getMetrics')).metrics; return (m.find(x => x.name === 'TaskDuration') || {}).value || 0; };
 async function window_(P, ms, during){ const d0 = await draws(P.p), b0 = await busy(P.cdp), t0 = Date.now();
@@ -45,10 +48,11 @@ async function measure(b, name, saver){
   // game-clock changes asked for frames (animIn: the lights and the close-zoom tint every 3 game minutes) is measured. There the map must
   // redraw only on those sim ticks: at 1x a game hour is 15 s, so one frame every 0.75 s (about 1.3 a second), saver on or off.
   const cands = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, out = [], seas = G.P.filter(q => q.sea);
-    for (const P of G.P){ if (P.sea) continue; let d = Infinity, w = Infinity; for (const a of S.armies){ const A = G.P[a.at]; d = Math.min(d, (A.x - P.x)**2 + (A.y - P.y)**2); }
+    const hw = innerWidth/4/2 + 30, hh = innerHeight/4/2 + 30, lakes = G.lakeBox || [], lakeNear = P => lakes.some(b => b[0] < P.x + hw && b[2] > P.x - hw && b[1] < P.y + hh && b[3] > P.y - hh);   // (a lake in view has live waves: a real, wanted ambient source, so views with water of any kind in them are not candidates)
+    for (const P of G.P){ if (P.sea || lakeNear(P)) continue; let d = Infinity, w = Infinity; for (const a of S.armies){ const A = G.P[a.at]; d = Math.min(d, (A.x - P.x)**2 + (A.y - P.y)**2); }
       for (const Q of seas) w = Math.min(w, (Q.x - P.x)**2 + (Q.y - P.y)**2); out.push([P.id, d, Math.min(d, w)]); }
     out.sort((a, b) => b[2] - a[2]); const pick = [];   // (far from every force and from the sea: deep inland)
-    for (const c of ['Kashgar', 'Denver']){ const P = G.P.find(q => q.cityName === c); if (P) pick.push([P.id, out.find(o => o[0] === P.id)[1]]); }
+    for (const c of ['Kashgar', 'Denver']){ const P = G.P.find(q => q.cityName === c), o = P && out.find(o => o[0] === P.id); if (o) pick.push([P.id, o[1]]); }
     for (const [id, d] of out){ const P = G.P[id]; if (pick.every(([j]) => Math.hypot(G.P[j].x - P.x, G.P[j].y - P.y) > 120)) pick.push([id, d]); if (pick.length >= 14) break; } return pick; });
   const goQ = (id, s) => p.evaluate(([id, s]) => { const im = window.__im, P = im.G.P[id], v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; im.S.speed = 1; return P.name; }, [id, s]);
   const tally = ms => p.evaluate(ms => new Promise(r => { const RD = window.__im.rd; if (!RD) return r({}); RD.dbg = {}; setTimeout(() => { const d = RD.dbg; RD.dbg = null; r(d); }, ms); }), ms);
@@ -57,7 +61,7 @@ async function measure(b, name, saver){
   // screen or a convoy that comes into view during the window makes it a window where something moved: the next quiet view is measured instead
   const tallyOn = () => p.evaluate(() => { const RD = window.__im.rd; if (RD) RD.dbg = {}; }), tallyOff = () => p.evaluate(() => { const RD = window.__im.rd; if (!RD) return {}; const d = RD.dbg || {}; RD.dbg = null; return d; });
   let q = null; const skipped = [];
-  for (const [id, d] of cands){ const name = await goQ(id, 4); await p.waitForTimeout(2500); const why = await tally(1200), mv = moving(why);
+  for (const [id, d] of cands){ const name = await goQ(id, 4); await p.waitForTimeout(1500); await settle(p); const why = await tally(1200), mv = moving(why);
     if (mv.length){ skipped.push(name + ' (' + mv.join(' ') + ')'); continue; }
     await tallyOn(); const w = await window_(P, RUN_S*1000), why2 = await tallyOff(), mv2 = moving(why2);
     if (mv2.length){ skipped.push(name + ' (during the window: ' + mv2.join(' ') + ')'); continue; }
@@ -117,8 +121,9 @@ async function measure(b, name, saver){
 async function background(b, name){ const P = await page(b, VPS[name], null), p = P.p, out = {};
   const st = () => p.evaluate(() => ({ hour: +(window.__im.S.hour).toFixed(0), speed: window.__im.S.speed, draws: window.__im.rd.n, bg: window.__im.rd.bg }));
   const hide = h => p.evaluate(h => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => h ? 'hidden' : 'visible' }); document.dispatchEvent(new Event('visibilitychange')); }, h);
+  // (the baseline is read just after hiding: an hour that ticked between a read before it and the hide, on a slow machine, is not game time running while hidden)
   for (const sp of [4, 0]){ await p.evaluate(sp => { window.__im.S.speed = sp; }, sp); await p.waitForTimeout(1500);
-    const a = await st(); await hide(true); await p.waitForTimeout(4000); const h = await st(); await hide(false); await p.waitForTimeout(300); const c = await st(); await p.waitForTimeout(4000); const d = await st();
+    await hide(true); await p.waitForTimeout(400); const a = await st(); await p.waitForTimeout(4000); const h = await st(); await hide(false); await p.waitForTimeout(300); const c = await st(); await p.waitForTimeout(4000); const d = await st();
     const ok = h.bg && h.hour === a.hour && h.draws - a.draws <= 1 && !c.bg && c.speed === sp && c.hour - h.hour <= 1 && (sp ? d.hour > c.hour : d.hour === c.hour);
     out['speed' + sp] = { ok, before: a, hidden4s: h, back: c, back4s: d }; if (!ok) errs.push(name + ' background at speed ' + sp + ': ' + JSON.stringify(out['speed' + sp])); }
   if (name === 'phone'){ await p.evaluate(() => { window.__im.S.speed = 4; }); await p.waitForTimeout(500); const a = await st();
@@ -132,6 +137,7 @@ async function stuck(b, name, saver){ const P = await page(b, VPS[name], saver),
   await p.waitForTimeout(700); for (let i = 0; i < 10; i++){ await p.mouse.wheel(0, 120); await p.waitForTimeout(60); }
   await p.evaluate(() => { window.__im.S.speed = 0; window.__im.v3c.clearSel(); });
   await p.evaluate(() => new Promise(r => { const im = window.__im; const f = () => performance.now() - im.rd.inp > im.ambIdle() + 1500 ? r() : setTimeout(f, 200); f(); }));
+  await settle(p);   // (the bakes and bands that a zoom out leaves to do finish first: they ask for frames while they run, then none)
   out.zoomOutIdle = { ...(await window_(P, IDLE_S*1000)), dtReady: await p.evaluate(() => window.__im.dt.ready.length) };
   if (out.zoomOutIdle.drawsPerS > 1) errs.push(name + ' saver ' + saver + ': the map keeps redrawing after a zoom out: ' + JSON.stringify(out.zoomOutIdle));
   if (name === 'desktop'){   // hover a land province, then leave the window straight from it: one frame clears the outline
