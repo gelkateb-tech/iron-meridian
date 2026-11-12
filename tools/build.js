@@ -12,7 +12,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 
 const ROOT = path.join(__dirname, '..'), DIST = path.join(ROOT, 'dist');
-const BASE_SCRIPTS = ['world.js', 'lines.js', 'coast.js', 'coast-hi.js', 'units3d.js'];
+const BASE_SCRIPTS = ['world.js', 'lines.js', 'coast.js', 'coast-hi.js', 'units3d.js', 'fx.js'];
 let SCRIPTS = BASE_SCRIPTS;   // main() adds the rules files the page loads (<script src="rules/x.js">)
 const QUIET = process.argv.includes('--quiet');
 const SKIP_ASSETS = new Set(['art-src']);   // source art for tools/prep-art.py: never loaded by the game, so left out of both builds
@@ -93,7 +93,7 @@ function main(){
   const onDisk = fs.existsSync(path.join(ROOT, 'rules')) ? fs.readdirSync(path.join(ROOT, 'rules')).filter(f => /\.js$/.test(f)).map(f => 'rules/' + f) : [];
   for (const f of onDisk) if (!RULES.includes(f)) fails.push(`${f} is not loaded by index.html (add its <script> tag or remove the file)`);
   for (const f of RULES) if (!pub.html.includes(`<script src="${f}"></script>`)) fails.push(`public build: the <script> tag of ${f} is missing`);
-  // the map/model scripts: the ones with markers (units3d.js) are stripped the same way, the rest are linked as they are
+  // the map/model/effects scripts: the ones with markers (units3d.js, fx.js) are stripped the same way, the rest are linked as they are
   const jsT = {}, jsP = {}, jsSrc = {};
   for (const f of SCRIPTS){ const a = path.join(ROOT, f); if (!fs.existsSync(a)) throw new Error('missing ' + f);
     const code = fs.readFileSync(a, 'utf8'); jsSrc[f] = code;

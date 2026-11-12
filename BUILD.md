@@ -11,7 +11,7 @@ node tools/build.js
 | Test | `dist/test/` | the game, developer mode, and the test hooks (`window.__im` on `file://`) | playtesting and the automated tests |
 | Public | `dist/public/` | the game only. Every developer and test block is removed at build time. | **publishing** |
 
-Each folder is a complete copy: `index.html` (the page to publish), `play.html` (the same page in a full HTML document, so you can open it locally), `world.js lines.js coast.js coast-hi.js units3d.js`, the rules files `rules/*.js`, and `assets/` (without `assets/art-src`, the source art the game never loads). The assets are hard-linked to the source files where the file system allows, so they take no extra disk space. Do not edit files inside `dist/`, because a hard-linked file is the source file. `dist/` is in `.gitignore`.
+Each folder is a complete copy: `index.html` (the page to publish), `play.html` (the same page in a full HTML document, so you can open it locally), `world.js lines.js coast.js coast-hi.js units3d.js fx.js`, the rules files `rules/*.js`, and `assets/` (without `assets/art-src`, the source art the game never loads). The assets are hard-linked to the source files where the file system allows, so they take no extra disk space. Do not edit files inside `dist/`, because a hard-linked file is the source file. `dist/` is in `.gitignore`.
 
 **To publish, use `dist/public`:** publish `index.html` as the page, plus these files at the same relative paths. Do not publish `play.html`.
 
@@ -20,6 +20,7 @@ Each folder is a complete copy: `index.html` (the page to publish), `play.html` 
 | `world.js` `lines.js` `coast.js` `coast-hi.js` | map data |
 | `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` `rules/economy.js` `rules/trade.js` `rules/movement.js` `rules/diplomacy.js` `rules/territory.js` `rules/combat.js` `rules/air.js` `rules/vision.js` `rules/ai.js` `rules/tick.js` `rules/api.js` | the game rules, 17 files (publish every `.js` file in `dist/public/rules/`) |
 | `units3d.js` | unit models |
+| `fx.js` | the map effects (battle fire, strikes and blasts, particles, battle smoke) |
 | `assets/` | pictures, flags and sounds |
 
 ## Rules files
@@ -63,11 +64,19 @@ The checks:
 - `bash tools/mkpage.sh` copies `rules/` to `.test/rules/` for the tests.
 - `tools/split-plan.js`, `tools/split-move.js` and `tools/split-perf.js` are the tools the split was done with (which declaration went to which file, the verbatim mover, a speed comparison); they are kept for reference.
 
-To publish, upload from `dist/public/`: `index.html`, `world.js`, `lines.js`, `coast.js`, `coast-hi.js`, `units3d.js`, every file in `rules/` (17 files, at `rules/<name>.js`), and `assets/`.
+To publish, upload from `dist/public/`: `index.html`, `world.js`, `lines.js`, `coast.js`, `coast-hi.js`, `units3d.js`, `fx.js`, every file in `rules/` (17 files, at `rules/<name>.js`), and `assets/`.
+
+## Effects module
+
+The map effects live in `fx.js`, not in `index.html`: the particle system (smoke, fire, flashes, dust, sparks), tracers, shells and missiles in flight, the art bursts and craters, the strike and blast effects (WFX), the battle fire from the figures (BFX), the battle smoke (BSM) and the crossed-swords badge. `fx.js` is a plain script loaded after `units3d.js`; it defines one global, `IMFX(PG)`, which the page calls once (`const FXM = window.IMFX(FXH)`, where the effects code used to be).
+
+- `PG` (the page's `FXH`) is the effects' read-only view of the page: getters for the camera (`view`, `toScreen`, `screenToWorld`, `zx`, `wrapSX`, `wrapPx`), the canvas (`ctx`, `MCTX`, `cv`, `cw`, `ch`, `dpr`, `layer`), the settings (`SET`, `saverOn`, `afxReduced`), the redraw scheduler (`redraw`, `animFast`, `animAmb`), the sound (`AC`, `muted`, `shotAt`, `sfx`), the light (`sunSinEl`, `nightAtX`) and a few drawing helpers. Every page name the module reads is written `PG.<name>`.
+- `IMFX` returns the effects' functions and tables (`emit`, `explode`, `shoot`, `FXW`, `wfxStrike`, `drawWFX`, `bfxFigure`, `figVolley`, `drawBattleSmoke`, `battleBadge`, ...); the page destructures them and calls them as before. The rules' map events (`IM.on('fxRanged' ...)` and the rest) are wired to them in the page's RULES EVENTS block.
+- The rules state (`S`, `G`, the fog of war `visibleSet` / `armyVisible`) is read directly (they are globals); the effects never change it and never call `rng()`. `.test/fx-determinism.js` checks it: the same seeded game gives the same state hash with Effects High, Low and Off and with the Battery saver on or off.
 
 ## Markers
 
-Code that only the test build may contain goes between markers in `index.html`, `units3d.js` and `rules/*.js` (the build strips all of them; the other map scripts have no markers and are copied as they are):
+Code that only the test build may contain goes between markers in `index.html`, `units3d.js`, `fx.js` and `rules/*.js` (the build strips all of them; the other map scripts have no markers and are copied as they are):
 
 | Kind | JS / CSS | HTML |
 |---|---|---|
