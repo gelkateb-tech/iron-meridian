@@ -3,7 +3,7 @@
 // 1. the unit's numbers, its research (the unlock needs BOTH the Strategic Bomber Upgrade and Stealth Airframes, from day 14) and its building (Airbase III)
 // 2. detection: Mobile SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often (measured over many raids)
 // 3. bomb load: 60% of the Heavy Bomber's on cities and buildings, +25% (not +50%) on troops sheltering in a city
-// 4. fog of war: in flight only a SAM or jammer in or next to the province sees it; an AWACS only locates it, at half range
+// 4. fog of war: in flight only a SAM or jammer in or next to the province sees it; an AWACS only locates it, at half range (250 of its 500 km)
 // 5. the AI: no stealth bomber before day 60, none without enemy SAM stacks, never more than one wing per nation (scenario + a played game)
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
@@ -12,7 +12,7 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const NAMES = ['IM', 'UNITS', 'RN', 'rCost', 'rLevel', 'AIR_RANGE', 'airRangeT', 'wingRange', 'st', 'multU', 'mult', 'addArmy', 'aaFire', 'dogfight', 'resolveStrike', 'bombBuildings', 'bombCityF', 'effHP', 'count',
   'canResearch', 'researchWhy', 'startResearch', 'canMobilize', 'ucost', 'trainH', 'loWing', 'loSpotted', 'loLocated', 'loHidden', 'nearList', 'AEW_R', 'hexDist', 'aiStealthWant', 'aiStealthOk', 'aiStealthSite',
-  'aiFoeSams', 'aiTurn', 'income', 'isStriker', 'airMissionKind', 'armyName', 'removeEmpty', 'stationaryAt', 'isBmb', 'AI_STEALTH_MAX', 'armyVisible', 'visibleSet'];
+  'aiFoeSams', 'visAewKm', 'KM_W', 'visLocAt', 'aiTurn', 'income', 'isStriker', 'airMissionKind', 'armyName', 'removeEmpty', 'stationaryAt', 'isBmb', 'AI_STEALTH_MAX', 'armyVisible', 'visibleSet'];
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + '\nreturn {' + NAMES.join(', ') + ', get S(){ return S; }, get G(){ return G; }, clearVis(){ visCache = null; }};';
 const QUICK = process.argv.includes('quick'), errors = [], info = {}, ok = (c, msg, v) => { if (!c) errors.push(msg + (v !== undefined ? ' ' + JSON.stringify(v) : '')); };
 const near = (v, t, tol) => Math.abs(v - t) <= tol, r2 = v => Math.round(v*1000)/1000;
@@ -121,10 +121,11 @@ function arena(seed){ const R = fresh(seed), {S, G} = R; let E = -1, fp = -1, gp
     w.fly = null; ok(!R.loHidden(w, E, gp), 'on the ground it is seen like any wing');
     w.fly = {tgt:gp, kind:'strike', ph:'out', t:0.9, hrs:0};
     // AWACS: location only, at half range
-    const R0 = R.AEW_R, inHalf = R.nearList(gp, R0/2), full = R.nearList(gp, R0), ring = full.filter(q => !inHalf.includes(q) && !G.P[q].sea);
+    const km = q => Math.hypot(G.P[q].x - G.P[gp].x, G.P[q].y - G.P[gp].y)/R.KM_W, ring = G.P.filter(P => !P.sea && km(P.id) > 260 && km(P.id) < 490).map(P => P.id);   // (the orbit's radar: 500 km before research)
     const aw = wing(E, S.nations[E].capital, {awacs:1}); aw.fly = {tgt:gp, kind:'orbit', ph:'over', t:0, hrs:10}; R.clearVis();
     ok(R.loLocated(E, gp) && R.loHidden(w, E, gp), 'under an AWACS: located, never identified');
-    ok(ring.length > 0 && !R.loLocated(E, ring[0]) && R.visibleSet(E).loc && full.includes(ring[0]), 'beyond half the radar range the AWACS does not find it (other forces there are still contacts)', ring.length);
+    ok(R.visAewKm(E) === 500, 'the AWACS radar reaches 500 km', R.visAewKm(E));
+    ok(ring.length > 0 && !R.loLocated(E, ring[0]) && R.visLocAt(R.visibleSet(E), G.P[ring[0]].x, G.P[ring[0]].y), 'beyond half the radar range (250 km) the AWACS does not find it (other forces there, within 500 km, are still contacts)', ring.length);
     aw.fly.ph = 'out'; ok(!R.loLocated(E, gp), 'an AWACS on its way is not orbiting yet'); drop(aw, w); }
 }
 

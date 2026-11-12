@@ -60,7 +60,7 @@ function rDrilled(a, terrain){ const o = a.owner; if (o < 0) return false; let a
   for (const t of UT){ if (!a.u[t]) continue; if (t === 'spec') continue; if (t === 'inf'){ const D = R_DRILL[rLevel(o, 'inf_terr')]; if (!D || !D[terrain]) return false; any = true; } else if (t === 'tank'){ if (!has(o, 'tank_terr')) return false; any = true; } else return false; }
   return any; }
 const rSpecTerr = (n, f) => f > 1 ? 1 + (f - 1)*[1, 1.25, 1.5][rLevel(n, 'spec_terr')] : f;             // Mountain & Arctic Training: the rough-terrain attack bonus 40% -> 50% -> 60%
-const rSightF = a => a.owner >= 0 && ((a.u.at && has(a.owner, 'at_eye')) || (a.u.spec && has(a.owner, 'spec_eye'))) ? 1.3 : 0.8;   // Thermal Sights, Night Optics: half a province farther (in legs)
+const rSightF = (n, t) => n >= 0 && ((t === 'at' && has(n, 'at_eye')) || (t === 'spec' && has(n, 'spec_eye'))) ? 1.5 : 1;   // Thermal Sights, Night Optics: that unit type sees 50% farther
 const rMlrsReach = n => has(n, 'mlrs_rng') ? 3 : 2;                                                   // Extended-Range Rockets: provinces
 const rSamNear = n => has(n, 'sam_g2') ? 1 : 0.35;                                                    // Long-Range SAM: neighbouring provinces at full strength
 const rJamF = n => [1, 1.2, 1.4][rLevel(n, 'jam_band')] || 1;                                         // Wideband Jamming
@@ -68,8 +68,8 @@ const rPack = (n, t) => (UNITS[t].pack || 1) + (t === 'swarm' && has(n, 'swarm_p
 const rKoHours = n => has(n, 'sdrone_hit') ? 36 : 24;                                                 // Bunker-Buster Warhead
 const rAdF = (n, t) => t === 'sdrone' && has(n, 'sdrone_g2') ? 0.7 : 1;                               // Low-Observable Strike Drone: air defences hit 30% less
 const rBombF = (n, t) => t === 'stealth' && has(n, 'stealth_bay') ? 0.75 : UNITS[t].bmb || 0;         // Enlarged Bomb Bay
-const rMpaR = n => MPA_R*([1, 1.2, 1.4][rLevel(n, 'mpa_sonar')] || 1), rMpaH = n => has(n, 'mpa_g2') ? 18 : 12;   // Sonobuoy Field; Long-Endurance Patrol Aircraft
-const rAewR = n => AEW_R*([1, 1.15, 1.3][rLevel(n, 'awacs_radar')] || 1), rAewF = n => has(n, 'awacs_link') ? 1.35 : 1.25;   // High-Power Radar; Fighter Data Link
+const rMpaK = n => [1, 1.2, 1.4][rLevel(n, 'mpa_sonar')] || 1, rMpaR = n => MPA_R*rMpaK(n), rMpaH = n => has(n, 'mpa_g2') ? 18 : 12;   // Sonobuoy Field; Long-Endurance Patrol Aircraft
+const rAewK = n => [1, 1.15, 1.3][rLevel(n, 'awacs_radar')] || 1, rAewR = n => AEW_R*rAewK(n), rAewF = n => has(n, 'awacs_link') ? 1.35 : 1.25;   // High-Power Radar; Fighter Data Link
 const rDeckRate = n => [0.2, 0.25, 0.3][rLevel(n, 'carr_deck')] || 0.2;                               // Flight-Deck Crews: repairs aboard a carrier, per day
 // Command & Logistics, by level: Motorized Supply (speed), Combat Engineers (capture work, road and rail price), Amphibious Doctrine (first day ashore), Field Hospitals (damage taken)
 const rMoveF = n => [1, 1.2, 1.3][rLevel(n, 'log1')] || 1, rCapF = n => [1, 0.7, 0.6][rLevel(n, 'log2')] || 1, rRoadF = n => [1, 0.75, 0.65][rLevel(n, 'log2')] || 1;

@@ -1,5 +1,5 @@
 // Stealth Bomber in the page: research tree (bomb_up, and the unlock u_stealth with two prerequisites), Mobilize list, unit guide, a wing's mission panel,
-// and the fog rule on the map (an enemy stealth wing in flight is drawn only near your SAMs / jammers; AWACS gives a '?' at half range).
+// and the fog rule on the map (an enemy stealth wing in flight is drawn only near your SAMs / jammers; AWACS gives a '?' at half range, 250 of its 500 km).
 //   node .test/stealth-ui.js   (bash tools/mkpage.sh first; screenshots .test/stealth-*.png; exits 1 on a failed check or a page error)
 const { chromium } = require('playwright');
 const out = n => __dirname + '/stealth-' + n + '.png';
@@ -57,7 +57,7 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   const F = await p.evaluate(({ c, E }) => { const im = window.__im, S = im.S, G = im.G;
     const own = G.P.filter(P => S.owner[P.id] === 0 && !P.sea && P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea).length >= 2); const P = own.sort((x, y) => Math.hypot(x.x - G.P[c].x, x.y - G.P[c].y) - Math.hypot(y.x - G.P[c].x, y.y - G.P[c].y))[1];
     for (const a of S.armies) if (a.owner === 0 && (a.u.sam || a.u.jam)){ a.u.sam = 0; a.u.jam = 0; } removeEmpty();
-    const nbs = P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea), half = nearList(P.id, AEW_R/2), ring = nearList(P.id, AEW_R).filter(q => !half.includes(q));
+    const nbs = P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea), km = q => Math.hypot(G.P[q].x - P.x, G.P[q].y - P.y)/KM_W, ring = G.P.filter(Q => km(Q.id) > visAewKm(0)/2 + 10 && km(Q.id) < visAewKm(0) - 10).map(Q => Q.id).sort((x, y) => km(x) - km(y));   // beyond half the AWACS radar (250 of 500 km), still inside it
     im.v3c.centerOn(P.x, P.y, 3); return { p: P.id, base: nbs[0], nb: nbs[1], far: ring[0], E }; }, { c: cap, E: R.E });
   const seenAs = async (t, o, setup) => { const id = await p.evaluate(({ t, F, o, setup }) => { const im = window.__im, S = im.S;
       for (const a of S.armies) if (a.tag === 'tw') for (const k in a.u) a.u[k] = 0; removeEmpty();
