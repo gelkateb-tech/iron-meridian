@@ -210,6 +210,7 @@ function resolveStrike(a, p){
   // drones run the gauntlet of jammers, SAMs and guns before they reach the target; jamming also blunts the survivors
   let jamF = 1, adLost = 0;
   if (UNITS[T].dr){ const r = droneAD(a, p, 1); adLost = r.lost; jamF = 1/(1 + (UNITS[T].dr === 'sdrone' ? 0.15 : 0.3)*r.jam);
+    if (r.lost > 0) IM.emit('fxAD', {a, p, T, by:o, lost:r.lost, ids:r.ad.armies.map(b => b.id), owner:S.owner[p]});   // (for the client's effects: the drones air defence shot down, and by whom)
     if (T === 'swarm') saturate(r.ad, count(a));
     if (!count(a)){ if (isSeat(o)) tell(o, `Your ${UNITS[T].name}s were all shot down over ${where} by ${r.jam >= r.ad.sam ? 'jammers' : 'air defence'}.`, 'bad', p);
       for (const me of seatsBut(o)) if (S.owner[p] === me || r.ad.armies.some(b => b.owner === me)) tell(me, `Air defences destroyed ${artA(nationName(o))} ${UNITS[T].name.toLowerCase()} raid on ${where} (${adLost} downed).`, 'good', p);
@@ -237,7 +238,7 @@ function resolveStrike(a, p){
   // air defence fires back at manned aircraft (drones already ran the gauntlet)
   if (!UNITS[T].dr) aaFire(a, defs, BF ? 1.2 : 2);
   const dealt = Math.round(hpBefore.reduce((s0, h, i) => s0 + h - effHP(defs[i]), 0)), killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), lost = myBefore - count(a);
-  IM.emit('fxStrike', {a, p, T, by:o, bnote:!!bnote, dealt, owner:defs[0] ? defs[0].owner : null});   // the client shows it where its seat struck or can see
+  IM.emit('fxStrike', {a, p, T, by:o, bnote:!!bnote, dealt, killed, owner:defs[0] ? defs[0].owner : null, ids:defs.map(b => b.id)});   // the client shows it where its seat struck or can see
   if (isSeat(o)){ tell(o, `${label} on ${where}: ${dealt} damage${killed ? `, ${killed} enemy unit${killed > 1 ? 's' : ''} destroyed` : ''}${bnote ? ', ' + bnote : ''}${lost ? `, ${lost} ${UNITS[T].dr ? 'drone' : 'aircraft'}${lost > 1 && UNITS[T].dr ? 's' : ''} lost` : ''}.`, killed || dealt > 20 || bnote ? 'good' : 'info', p); cue(o, 'battle'); bump(o, 'unitsKilled', killed); bump(o, 'unitsLost', lost); }
   for (const me of seatsBut(o)) if (defs.some(b => b.owner === me)){ tell(me, `${nationName(o)} ${label.toLowerCase()} hit your forces at ${where} (${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${bnote ? ', ' + bnote : ''}${adLost ? `; ${adLost} drones downed` : ''}).`, 'bad', p); bump(me, 'unitsLost', killed); }
   removeEmpty();
@@ -295,6 +296,10 @@ function interceptChance(m){
   for (const a of S.armies){ if (a.to !== null || a.fly || !near.includes(a.at) || !atWar(a.owner, m.owner)) continue; const def = ((a.u.sam || 0) + 0.6*(a.u.frig || 0))*(1 - (a.sat || 0)); sams += def*rShield(a.owner)*(a.at === m.to ? 1 : 0.5); }
   const per = m.k === 'cm' ? 0.12 : 0.05; return Math.min(0.85, 1 - Math.pow(1 - per, sams));
 }
+// for the client's effects only (no dice, no change): the force whose air defence stopped missile m (the strongest in or next to its target)
+function interceptorOf(m){ const near = [m.to, ...G.P[m.to].nbs]; let best = null, bv = 0;
+  for (const a of S.armies){ if (a.to !== null || a.fly || !near.includes(a.at) || !atWar(a.owner, m.owner)) continue; const v = ((a.u.sam || 0) + 0.6*(a.u.frig || 0))*(a.at === m.to ? 1 : 0.5); if (v > bv){ bv = v; best = a; } }
+  return best ? best.id : null; }
 function missileTick(){
   if (!S.inflight || !S.inflight.length) return;
   for (let i = S.inflight.length - 1; i >= 0; i--){ const m = S.inflight[i]; m.t += m.dt; if (m.t < 1) continue; S.inflight.splice(i, 1); missileImpact(m); }
@@ -302,7 +307,7 @@ function missileTick(){
 function missileImpact(m){
   const P = G.P[m.to];   // the blast events go to every client: each shows them for its own seat's missile, its own land, or what its seat can see
   if (rng() < interceptChance(m)){
-    IM.emit('fxMissile', {m, hit:false, owner:S.owner[m.to]});
+    IM.emit('fxMissile', {m, hit:false, owner:S.owner[m.to], by:interceptorOf(m)});
     if (isSeat(m.owner)) tell(m.owner, `Your ${MISSILES[m.k].name} was intercepted over ${P.cityName || P.name}.`, 'info', m.to);
     if (S.owner[m.to] !== m.owner && isSeat(S.owner[m.to])) tell(S.owner[m.to], `Air defences intercepted an enemy ${MISSILES[m.k].name} over ${P.cityName || P.name}.`, 'good', m.to);
     return; }

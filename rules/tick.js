@@ -142,7 +142,7 @@ function battleStep(hourly){
     const here = owners.filter(isSeat);   // the seats fighting here: their statistics and dispatches
     for (const me of here){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const D = desk(me), st0 = D.stats || (D.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
     for (const me of here) for (const a of list){ const lost = (a._n0 ?? count(a)) - count(a); if (lost > 0) bump(me, a.owner === me ? 'unitsLost' : 'unitsKilled', lost); }
-    for (const a of list) if (count(a) === 0) IM.emit('fxWreck', p, owners);   // the client draws the wreck where its seat fought or can see
+    for (const a of list) if (count(a) === 0) IM.emit('fxWreck', p, owners, a);   // the client draws the wreck where its seat fought or can see
     for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
     for (const a of list) if (count(a) === 0) for (const me of here){
       if (a.owner === me) tell(me, `${armyName(a)} was destroyed at ${G.P[p].name}.`, 'bad', p);
