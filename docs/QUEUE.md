@@ -21,20 +21,20 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
+| Realistic combat and flight animations (effects module, firing per unit type, impacts, aircraft flight, markers and warnings, sound slots, Effects High/Low/Off, test panel, proof results are identical) | Opus | Started |
 | Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Started |
-| Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Started |
+| Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
 | 1 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), hover shows the full amount with a unit (40,000 barrels of oil); before/after examples | Opus (after the 68 nations are merged, since both touch every number) |
-| 2 | Realistic combat and flight animations (dev build): firing effects per unit type (tanks, artillery arcs, rocket salvos, infantry, warships, cruise/ballistic/ICBM, strafing and bomb lines, drones, interceptions), impacts sized by weapon, hit flashes, scorch marks, subtle screen shake; aircraft accelerate, curve, bank, contrails, shadows, oval patrols, helicopters bob; attack markers, range ring and target on tap, missile warnings, sound slots with a mute toggle; Effects quality High/Low/Off, ~150 particles, one loop, simple flashes far out; separate effects module; Effects test panel; proof that results are identical on High/Low/Off. Replaces 'aircraft pictures in flight' and 'strike effects repair 3' | Opus (next free slot; one review, at most one repair) |
-| 3 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
-| 4 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
-| 5 | Each aircraft type gets its own 3D shape | Opus |
-| 6 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 7 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 2 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
+| 3 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
+| 4 | Each aircraft type gets its own 3D shape | Opus |
+| 5 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 6 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
