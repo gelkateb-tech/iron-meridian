@@ -2,12 +2,13 @@
 // Balance tests of the nations world (scenario world64; docs/NATIONS-PLAN.md 5.2). All-computer games without a browser, like tools/headless.js.
 // One PASS or FAIL line per test; exit 1 on any FAIL.
 //   node tools/nations-balance.js                 T1 T2 T3 T4 T5 T7 T8 T9 and the checks of each step done (plan 5.4): 5 seeds, 60 game days each
-//   node tools/nations-balance.js --quick         T1 T2 T9 only (seconds)
+//   node tools/nations-balance.js --quick         T1 T2 T9 T11 only (seconds)
 //   node tools/nations-balance.js --long          T6: two seeds, 300 days (slow)
 //   node tools/nations-balance.js --jobs 2        games played at the same time (default 3)
 //   node tools/nations-balance.js --seeds 3 --days 30    a shorter look (the tests that need day 60 are skipped)
+//   node tools/nations-balance.js --all-seats     T9 for every nation of the open regions (default: those of the region opened last)
 //   node tools/nations-balance.js --table         the opening of every nation (tier, money and manpower a day, units) and stop
-// T10 (browser tests) and T11 (save size at the last step) are run by hand; the old world against tools/golden-12345.txt is tools/split-golden.js.
+// T10 (browser tests) is run by hand; T11 (save size) is in the quick part; the old world against tools/golden-12345.txt is tools/split-golden.js.
 'use strict';
 const fs = require('fs'), path = require('path'), cp = require('child_process'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 const has = k => process.argv.includes('--' + k), arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 && process.argv[i + 1] !== undefined ? +process.argv[i + 1] : d; };
@@ -42,11 +43,13 @@ function playOne(seed, days, scn, seat){ const R = load(), api = R.IM.api, UNITS
       if (d <= 30) for (let p = 0; p < S.owner.length; p++) if (S.own0[p] === -1 && S.owner[p] >= 0) took[S.owner[p]].add(p);   // independent land taken by day 30, held or lost again since
       if (d === 30) out.took30 = took.map(t => t.size);
       if (d === 30){ out.cash30 = S.nations.map(N => Math.round(N.cash)); out.net30 = S.nations.map(N => N.alive ? Math.round(R.income(N.id).net.cash) : null); }   // treasury and money a day on day 30 (step 3's check)
+      if (d === 60){ out.cash60 = S.nations.map(N => Math.round(N.cash)); out.net60 = S.nations.map(N => N.alive ? Math.round(R.income(N.id).net.cash) : null); }   // the same on day 60 (step 6's check)
       if (d === 1 || d === 60) out.oil[d] = S.mkt && S.mkt.p ? +S.mkt.p.oil.toFixed(3) : null;   // the world oil price (step 2's check)
       if ([21, 30, 45, 60, 120, 250, 300].includes(d)){ out.at[d] = provs(S); out.nat[d] = nat(); out.free[d] = free(); out.wars[d] = Object.keys(S.rel).filter(k => S.rel[k] && S.rel[k].st === 'war').map(k => k.split(',').map(Number)); } } }
   if (S.over){ out.over = {day:Math.ceil(S.hour/24), what:S.over, who:S.overReason};   // a game won early: the later checkpoints hold the final state
     for (const d of [21, 30, 45, 60, 120, 250, 300]) if (d <= days && !out.at[d]){ out.at[d] = provs(S); out.nat[d] = nat(); out.free[d] = free(); out.wars[d] = []; }
     if (!out.took30) out.took30 = took.map(t => t.size); if (!out.cash30) out.cash30 = S.nations.map(N => Math.round(N.cash)); if (!out.net30) out.net30 = S.nations.map(() => 0);
+    if (!out.cash60) out.cash60 = S.nations.map(N => Math.round(N.cash)); if (!out.net60) out.net60 = S.nations.map(() => 0);
     if (!out.gain60) out.gain60 = S.nations.map(() => 0); if (out.oil[60] == null) out.oil[60] = S.mkt && S.mkt.p ? +S.mkt.p.oil.toFixed(3) : null; }
   out.ms = Math.round((Date.now() - t0)/Math.max(1, h/24)); out.logs = logs; out.end = provs(S); out.cash = S.nations.map(N => Math.round(N.cash));
   const o = JSON.parse(api.saveJSON()); delete o.savedAt; out.hash = hash(JSON.stringify(o));
@@ -98,10 +101,16 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
     say('T2 Opening', !bad.length, bad.length ? bad.join('; ') : `money a day ${Math.min(...open.map(o => o.cash)).toFixed(0)} to ${Math.max(...open.map(o => o.cash)).toFixed(0)} (targets ${tiers.map((t, i) => t + ' ' + tg[i]).join(', ')}); median manpower ${tt.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', ')}; median units ${tt.map((t, i) => t + ' ' + mu[i]).join(', ')}${NAT.open.length ? ` (medians over the ${done.length} nations of ${NAT.open.join(', ')})` : ''}`); }
 
   // T9 seats: a nation started as a seat nobody plays, 3 days: no error and it receives its dispatches (every new nation of the step; at step 0 two of the 15)
-  { const newOnes = S.nations.filter(N => NAT.open.includes(R.POWERS[N.power].region)).map(N => N.id), list = newOnes.length ? newOnes : [0, 6], bad = [];
+  // (the plan: each new nation of the step, the nations of the region opened last; --all-seats: every nation of the open regions)
+  { const newOnes = S.nations.filter(N => has('all-seats') ? NAT.open.includes(R.POWERS[N.power].region) : R.POWERS[N.power].region === NAT.open[NAT.open.length - 1]).map(N => N.id), list = newOnes.length ? newOnes : [0, 6], bad = [];
     const res = await pool(list.map(n => () => child(12345, 3, 'world64', n).catch(e => ({err:String(e.message).slice(0, 200)}))), JOBS);
     res.forEach((r, i) => { if (r.err) bad.push(`${S.nations[list[i]].name}: ${r.err}`); else if (!r.logs) bad.push(`${S.nations[list[i]].name}: no dispatches`); });
     say('T9 Seats', !bad.length, bad.length ? bad.join('; ') : `${list.length} seats played 3 days, dispatches ${res.map(r => r.logs).join(', ')}`); }
+  // T11 save size: a new game's save text is under 300 KB once every region is open (step 6; plan 4.5: relations stored only once they differ
+  // from the default). Measured as the page saves it, a new game with nation 0 as the player's seat
+  { const Q = load(), a2 = Q.IM.api; a2.useScenario('world64'); a2.newGame(12345, 0, [0]); a2.S.started = true; const kb = a2.saveJSON().length/1024;
+    a2.useScenario('world'); a2.newGame(12345, 0, [0]); a2.S.started = true; const kb15 = a2.saveJSON().length/1024, last = NAT.open.length === NAT.regions.length;
+    say('T11 Save size', !last || kb < 300, `a new game's save ${kb.toFixed(1)} KB with ${S.nations.length} nations (the classic world ${kb15.toFixed(1)} KB)` + (last ? ' (budget 300)' : ' (checked at the last step)')); }
   if (has('quick')){ console.log(failed ? `${failed} FAILED` : 'ALL PASS (quick)'); process.exit(failed ? 1 : 0); }
 
   if (has('long')){   // T6 length: two seeds, 300 days: no win before day 60; the day of the win is noted (from step 4 on one of the two must be decided by day 250)
@@ -201,6 +210,10 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       say('Step 5  United States holds', usK === games.length, `United States at least 95% of its start on day 60 in ${usK} of ${games.length} (${games.map(g => `${g.p0[us]}>${g.at[60][us]}`).join(' ')})`);
       const br = id('Brazil'), brK = games.filter(g => g.at[60][br] >= 0.85*g.p0[br]).length;
       say('Step 5  Brazil holds', brK >= need(3), `Brazil at least 85% of its start on day 60 in ${brK} of ${games.length} (${games.map(g => `${g.p0[br]}>${g.at[60][br]}`).join(' ')})`); }
+    // step 6, Oceania: New Zealand alive on day 60 in 5 of 5 (every seed) and with positive money: money coming in on day 60 (net income a day
+    // above zero) and a treasury not in debt, read as step 3 reads it for Mali and Chad
+    if (NAT.open.includes('Oceania')){ const nz = id('New Zealand'), dead = games.filter(g => g.dead[nz] != null && g.dead[nz] <= 60).length, poor = games.filter(g => !(g.net60[nz] > 0 && g.cash60[nz] >= 0)).length;
+      say('Step 6  New Zealand holds', !dead && !poor, `New Zealand alive on day 60 in ${games.length - dead} of ${games.length}; on day 60: provinces ${games.map(g => `${g.p0[nz]}>${g.at[60][nz]}`).join(' ')}, money a day ${games.map(g => (g.net60[nz] > 0 ? '+' : '') + g.net60[nz]).join(', ')}, treasury ${games.map(g => g.cash60[nz]).join(', ')}`); }
   } else console.log(`(T4, T5 and the step checks need 60 days: skipped at ${DAYS})`);
 
   // T7 speed: milliseconds a game day, all computer, against the budget of the step (500 with 15 nations when the classic world takes 444 on the

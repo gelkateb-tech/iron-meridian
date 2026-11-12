@@ -13,8 +13,8 @@ const OUT = path.join(ROOT, 'nations.js'), MODE = process.argv[2] || '';
 
 /* ---------- the plan ---------- */
 const REGIONS = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];
-const OPEN = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
-// step 2: the Middle East, with Israel on the split map; step 3: Africa; step 4: Asia; step 5: the Americas, with Cuba on the split map)
+const OPEN = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
+// step 2: the Middle East, with Israel on the split map; step 3: Africa; step 4: Asia; step 5: the Americas, with Cuba on the split map; step 6: Oceania)
 // world.js country name, tier (S superpower, A major, B regional, C minor: table A of the plan, hand corrections included), region.
 // split (*): the country is too small on world.js; its provinces are cut smaller on the nations world's map (owner's answer 1: Israel, Greece,
 // Cuba and Belarus must be playable; 68 nations in all; tools/build-provsplit.js). It opens with its region like the others; the size of its
@@ -50,7 +50,9 @@ const COLORS = {'United States of America':'#3f7fe0', 'Canada':'#c8323c', 'Brazi
   'Myanmar':'#3aa070', 'Philippines':'#3a5ad0', 'Malaysia':'#a874c8', 'Kazakhstan':'#38b0c8', 'Uzbekistan':'#9a5ac0', 'Afghanistan':'#9a6a4a', 'Mongolia':'#5a7ad0',
   // step 5, the Americas
   'Mexico':'#2e9a6a', 'Argentina':'#74b4e0', 'Colombia':'#e0c03a', 'Venezuela':'#c0405a', 'Peru':'#d0603a', 'Chile':'#a050c0', 'Bolivia':'#8a9a2a', 'Ecuador':'#3a8ac8',
-  'Cuba':'#c84050'};
+  'Cuba':'#c84050',
+  // step 6, Oceania
+  'New Zealand':'#3a5fc8'};
 const COLOR_MIN = 60;
 // hand swaps (plan 2.5): at most one city per nation, each with its reason: {country: {out:'city or province name', in:'province name', why:'...'}}
 const SWAPS = {};
@@ -146,6 +148,8 @@ const NAMES = {
   'Bolivia':{'Santa Ana':'Trinidad', 'Chuquisaca':'Sucre'},
   'Ecuador':{'Guayas':'Guayaquil', 'Manabi':'Portoviejo', 'Chimborazo':'Ambato', 'Azuay':'Cuenca', 'Carchi':'Ibarra', 'El Oro':'Machala', 'Cotopaxi':'Latacunga', 'Morona Santiago':'Macas'},
   'Cuba':{'Granma':'Bayamo'},
+  // step 6, Oceania: the same rule (Australia keeps the eleven cities world.js gives it today)
+  'New Zealand':{'Otago':'Dunedin', 'Manawatu-Wanganui':'Palmerston North', 'Waikato':'Hamilton', 'Canterbury':'Christchurch', 'Bay of Plenty':'Tauranga'},
 };
 
 /* ---------- the map and the rules ---------- */
