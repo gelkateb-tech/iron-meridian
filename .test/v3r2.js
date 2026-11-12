@@ -25,10 +25,11 @@ const { chromium } = require('playwright');
   const diff = await p.evaluate(async ([a, c, d]) => { const load = u => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = 'data:image/png;base64,' + u; });
     const [A, B, C] = await Promise.all([load(a), load(c), load(d)]); const cv = document.createElement('canvas'); cv.width = A.width; cv.height = A.height; const g = cv.getContext('2d');
     const px = I => { g.clearRect(0, 0, cv.width, cv.height); g.drawImage(I, 0, 0); return g.getImageData(0, 0, cv.width, cv.height).data; };
-    const pa = px(A), pb = px(B), pc = px(C); let blue = 0, blue0 = 0, same = 0; const isRiver = (q, i) => q[i + 2] > q[i] + 45 && q[i + 1] > q[i] + 25 && q[i + 2] > 120;
-    for (let i = 0; i < pa.length; i += 4){ if (isRiver(pa, i) && !isRiver(pb, i)) blue++; if (isRiver(pb, i) && !isRiver(pa, i)) blue0++; if (Math.abs(pa[i] - pc[i]) + Math.abs(pa[i + 1] - pc[i + 1]) + Math.abs(pa[i + 2] - pc[i + 2]) < 12) same++; }
-    return {riverPx:blue, extraWithout:blue0, restoredSame:+(same/(pa.length/4)).toFixed(3)}; }, [withR.toString('base64'), noR.toString('base64'), back.toString('base64')]);
-  ck('rivers are drawn: river-blue pixels appear over Kyiv that are absent with the river tiles emptied', diff.riverPx > 1500, diff);
+    const pa = px(A), pb = px(B), pc = px(C); let blue = 0, blue0 = 0, same = 0, chg = 0; const isRiver = (q, i) => q[i + 2] > q[i] + 45 && q[i + 1] > q[i] + 25 && q[i + 2] > 120;
+    for (let i = 0; i < pa.length; i += 4){ if (isRiver(pa, i) && !isRiver(pb, i)) blue++; if (isRiver(pb, i) && !isRiver(pa, i)) blue0++; if (Math.abs(pa[i] - pb[i]) + Math.abs(pa[i + 1] - pb[i + 1]) + Math.abs(pa[i + 2] - pb[i + 2]) > 36) chg++; if (Math.abs(pa[i] - pc[i]) + Math.abs(pa[i + 1] - pc[i + 1]) + Math.abs(pa[i + 2] - pc[i + 2]) < 12) same++; }
+    return {riverPx:blue, riverChanged:chg, extraWithout:blue0, restoredSame:+(same/(pa.length/4)).toFixed(3)}; }, [withR.toString('base64'), noR.toString('base64'), back.toString('base64')]);
+  // (Kyiv is outside Germany's sight, so the fog veil greys the map: the river is drawn but no longer 'blue' pixel by pixel. The check is the pixels the river tiles change, which the veil does not hide)
+  ck('rivers are drawn: pixels over Kyiv change when the river tiles are emptied (blue ones too when the map is not fogged)', diff.riverChanged > 800 || diff.riverPx > 1500, diff);
   ck('restoring the river tiles restores the picture', diff.restoredSame > 0.97, diff);
 
   const R = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G, F = im.fix, A = im.air, out = {}, checks = []; const ck = (name, ok, info) => checks.push({name, ok:!!ok, info});
