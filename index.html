@@ -2167,10 +2167,12 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
 .dmi{position:relative}
 .rface.rfb{position:absolute; inset:-21%; display:block; transform:none!important; overflow:visible}
 .rfb i{position:absolute; display:block; background:center / 100% 100% no-repeat; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
+.rfb.rnp i{inset:0; width:100%; height:100%; filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}   /* the research pictures: trimmed and padded already, the box is the picture */
 /* newer generations: the same picture in a new paint scheme until their own art exists (g2 desert, g3 dark grey) */
 .rfb.g2 i, .rgv.g2 .ut{filter:sepia(.62) saturate(1.9) hue-rotate(-16deg) brightness(1.12) contrast(1.06) drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
 .rfb.g3 i, .rgv.g3 .ut{filter:grayscale(.75) sepia(.22) hue-rotate(172deg) saturate(1.5) brightness(.8) contrast(1.4) drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
 .rgv{display:inline-grid}
+.ut.rnpic{background:var(--rn) center / 112% no-repeat, radial-gradient(circle at 50% 44%, rgba(196,204,186,.2), rgba(196,204,186,0) 64%), linear-gradient(180deg, #2c353a, #10161a)} .ut.rnpic::after{display:none}   /* (the picture is padded for a diamond: in a square it may grow a little) */
 /* column headers: picture, name, then the elite badge and the count */
 .rt-hn{display:flex; align-items:center; gap:7px; min-width:0}
 .rt-hn > b{font:700 12.5px/1.1 var(--body); letter-spacing:.02em; text-shadow:var(--cn-num); min-width:0; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
@@ -9363,14 +9365,21 @@ const RSTAT = {atk:'Attack', def:'Defense', spd:'Speed', hp:'Health'};
 function rFace(nd, sz){ if (nd.u && (nd.kind === 'unlock' || nd.kind === 'gen')){ const g = nd.gen || 1; return rUnitFace(nd.u, rGenArt(nd.u, g), rGenTone(nd.u, g)); }
   if (nd.ic === 'cm' || nd.ic === 'bm') return `<span class="rface g">${mslIcon(nd.ic, Math.round(sz*1.25))}</span>`;
   return `<span class="rface g">${rg(nd.ic, sz)}</span>`; }
-// a unit's picture in a diamond: upright and cropped to what reads at that size (the squad pictures show one soldier, a long hull fills the
-// diamond's height), drawn in a box the size of the diamond's diagonals. RFCROP: [cx, cy, height] of the part shown, as shares of the picture
+// a unit's picture in a diamond: its research picture (assets/art/rn-<key>.webp, tools/research-pics.js: the unit's 3D model from the same 3/4
+// angle, cut out, centred and padded so it sits whole inside the diamond, the same size for every unit) in a box the size of the diamond's
+// diagonals. A key without one falls back to the top-down picture, upright and cropped to what reads at that size (the squad pictures show one
+// soldier, a long hull fills the diamond's height). RFCROP: [cx, cy, height] of the part shown, as shares of the picture
+const RN_PIC = new Set(['inf', 'at', 'spec', 'para', 'ifv', 'tank', 'art', 'mlrs', 'sam', 'jam', 'heli', 'int', 'jet', 'asf', 'drone', 'drone4', 'swarm', 'sdrone',
+  'bomb', 'bomb2', 'stealth', 'mpa', 'awacs', 'frig', 'crui', 'carr', 'sub']);
 const RFCROP = {inf:[0.5, 0.25, 0.44], para:[0.5, 0.25, 0.44]};
-function rUnitFace(t, k, tone){ const u = UART[k], im = u && ART.img(u[0]);
+function rUnitFace(t, k, tone){ if (RN_PIC.has(k)) return `<span class="rface u rfb rnp${tone ? ' ' + tone : ''}"><i style="background-image:url('assets/art/rn-${k}.webp')"></i></span>`;
+  const u = UART[k], im = u && ART.img(u[0]);
   if (!im) return `<span class="rface u">${unitPic(t, 'lg', k)}</span>`;
   const b = picBox(im), cr = RFCROP[t], cx = cr ? cr[0] : b[2], cy = cr ? cr[1] : b[3], hh = cr ? cr[2] : Math.max(b[0], b[1]), tall = !cr && b[1] > b[0]*1.4;
   const X = (cr ? 0.84 : tall ? 0.94 : 0.8)/hh*100, f = v => +v.toFixed(2);
   return `<span class="rface u rfb${tone ? ' ' + tone : ''}"><i style="width:${f(X)}%;height:${f(X)}%;left:${f(50 - cx*X)}%;top:${f(50 - cy*X)}%;transform-origin:${f(cx*100)}% ${f(cy*100)}%;${u[1] ? 'transform:rotate(180deg);' : ''}background-image:url('${ART.url(u[0])}')"></i></span>`; }
+// the same research picture on a portrait tile (the card's generation before and after); a key without one shows the top-down picture
+const rnTile = (t, k) => RN_PIC.has(k) ? `<i class="ut xl rnpic" style="--rn:url('assets/art/rn-${k}.webp')" aria-hidden="true"></i>` : unitPic(t, 'xl', k);
 // a newer generation's picture until its own art exists: the type's picture in a new paint scheme (g2 desert, g3 dark grey). A generation that
 // already has a picture of its own (the armed UAV) is shown as it is
 const R_TONE = ['', '', 'g2', 'g3', '', 'g3'];
@@ -9540,7 +9549,7 @@ function rCardHTML(nd, busy, cat){
   else if (s.s === 'done') btn = `<span class="rs-state ok">${rg('check', 14)} Researched</span>`;
   else if (s.s === 'run') btn = `<span class="rs-state run${s.slot === 2 ? ' q' : ''}">In slot #${s.slot} · <span id="rleftd${s.slot}"></span></span>`;
   else btn = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${nd.id}" ${cr ? '' : 'disabled'} title="${cr ? `Starts in slot #${rSlotNo(rFree(N))}. Costs ${costTxt(c, ', ')}; takes ${rDur(h0)}` : s.why}">${cr ? `<span class="rb1">Research in slot #${rSlotNo(rFree(N))}</span>` : `<span class="rbw">${s.why}</span>`}</button>`;
-  const gp = nd.kind === 'gen' ? `<div class="rc-gen"><figure><span class="rgv ${rGenTone(nd.u, nd.gen - 1)}">${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen - 1))}</span><figcaption>${nd.gen - 1 > 1 ? 'Generation ' + ROMAN[nd.gen - 1] : 'Today'}</figcaption></figure>${rg('spd', 16)}<figure class="new"><span class="rgv ${rGenTone(nd.u, nd.gen)}">${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen))}</span><figcaption>Generation ${ROMAN[nd.gen]}</figcaption></figure></div>` : '';
+  const gp = nd.kind === 'gen' ? `<div class="rc-gen"><figure><span class="rgv ${rGenTone(nd.u, nd.gen - 1)}">${rnTile(nd.u, rGenArt(nd.u, nd.gen - 1))}</span><figcaption>${nd.gen - 1 > 1 ? 'Generation ' + ROMAN[nd.gen - 1] : 'Today'}</figcaption></figure>${rg('spd', 16)}<figure class="new"><span class="rgv ${rGenTone(nd.u, nd.gen)}">${rnTile(nd.u, rGenArt(nd.u, nd.gen))}</span><figcaption>Generation ${ROMAN[nd.gen]}</figcaption></figure></div>` : '';
   return `<aside class="rs-card st-${s.s}${s.lv && s.nx ? ' part' : ''}" aria-live="polite"><button class="rc-x" data-act="rcard-x" aria-label="Close the details" title="Close">${rg('x', 14)}</button>
     <div class="rc-top"><span class="rs-dm lg"><span class="dmi">${rFace(nd, 30)}</span></span>
       <div class="rs-dt"><span class="rs-dk">${C.name} · ${rLineName(nd)} · ${RKIND[nd.kind]}</span><b>${nd.name}${nlv > 1 ? ` <em>${s.lv}/${nlv}</em>` : ''}${nd.elite ? ` ${eliteSVG(28)}` : ''}</b>
