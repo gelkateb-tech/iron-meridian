@@ -191,6 +191,16 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       const sea = ['Japan', 'Indonesia', 'Philippines'].map(nm => { const n = id(nm), ok = games.filter(g => g.gain60[n] > 0 || g.navBuilt[n] > 0).length;
         return {nm, ok, l:games.map(g => `${g.gain60[n]} new, ${g.navBuilt[n]} ships`).join('; ')}; });
       say('Step 4  sea nations move', sea.every(x => x.ok >= need(3)), sea.map(x => `${x.nm} took land or built ships in ${x.ok} of ${games.length} (${x.l})`).join('; ')); }
+    // step 5, the Americas (from then on): Bolivia alive on day 30 in at least 4 seeds of 5 (and Cuba, the small nation of the split, the same);
+    // the United States not below 95% of its start on day 60 (in every seed); Brazil, which fell from 119 to 84 provinces in the plan's trial,
+    // holds at least 85% of its start on day 60 in 3 of 5
+    if (NAT.open.includes('Americas')){ const need = k => Math.min(k, games.length), alive = (nm, d) => games.filter(g => !(g.dead[id(nm)] != null && g.dead[id(nm)] <= d)).length;
+      const surv = [['Bolivia', 30], ['Cuba', 30]], low = surv.filter(([nm, d]) => alive(nm, d) < need(4));
+      say('Step 5  Americas survives', !low.length, surv.map(([nm, d]) => `${nm} alive on day ${d} in ${alive(nm, d)} of ${games.length}`).join(', '));
+      const us = id('United States'), usK = games.filter(g => g.at[60][us] >= 0.95*g.p0[us]).length;
+      say('Step 5  United States holds', usK === games.length, `United States at least 95% of its start on day 60 in ${usK} of ${games.length} (${games.map(g => `${g.p0[us]}>${g.at[60][us]}`).join(' ')})`);
+      const br = id('Brazil'), brK = games.filter(g => g.at[60][br] >= 0.85*g.p0[br]).length;
+      say('Step 5  Brazil holds', brK >= need(3), `Brazil at least 85% of its start on day 60 in ${brK} of ${games.length} (${games.map(g => `${g.p0[br]}>${g.at[60][br]}`).join(' ')})`); }
   } else console.log(`(T4, T5 and the step checks need 60 days: skipped at ${DAYS})`);
 
   // T7 speed: milliseconds a game day, all computer, against the budget of the step (500 with 15 nations when the classic world takes 444 on the

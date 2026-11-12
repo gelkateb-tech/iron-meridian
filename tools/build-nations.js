@@ -13,8 +13,8 @@ const OUT = path.join(ROOT, 'nations.js'), MODE = process.argv[2] || '';
 
 /* ---------- the plan ---------- */
 const REGIONS = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas', 'Oceania'];
-const OPEN = ['Europe', 'Middle East', 'Africa', 'Asia'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
-// step 2: the Middle East, with Israel on the split map; step 3: Africa; step 4: Asia)
+const OPEN = ['Europe', 'Middle East', 'Africa', 'Asia', 'Americas'];   // regions rolled out so far (step 0, plumbing: none; step 1: Europe, with Greece and Belarus on the split map;
+// step 2: the Middle East, with Israel on the split map; step 3: Africa; step 4: Asia; step 5: the Americas, with Cuba on the split map)
 // world.js country name, tier (S superpower, A major, B regional, C minor: table A of the plan, hand corrections included), region.
 // split (*): the country is too small on world.js; its provinces are cut smaller on the nations world's map (owner's answer 1: Israel, Greece,
 // Cuba and Belarus must be playable; 68 nations in all; tools/build-provsplit.js). It opens with its region like the others; the size of its
@@ -47,7 +47,10 @@ const COLORS = {'United States of America':'#3f7fe0', 'Canada':'#c8323c', 'Brazi
   'Angola':'#d05050', 'Kenya':'#c03a3a', 'Tanzania':'#6cae3e', 'Mali':'#c8a050', 'Chad':'#6a7fd0', 'Mozambique':'#e0b030', 'Cameroon':'#c04a8a',
   // step 4, Asia
   'Pakistan':'#2f8f4e', 'Bangladesh':'#3a8fd0', 'Indonesia':'#d04040', 'South Korea':'#4a7fe0', 'North Korea':'#5a9a4a', 'Vietnam':'#d84a3a', 'Thailand':'#4a6ad0',
-  'Myanmar':'#3aa070', 'Philippines':'#3a5ad0', 'Malaysia':'#a874c8', 'Kazakhstan':'#38b0c8', 'Uzbekistan':'#9a5ac0', 'Afghanistan':'#9a6a4a', 'Mongolia':'#5a7ad0'};
+  'Myanmar':'#3aa070', 'Philippines':'#3a5ad0', 'Malaysia':'#a874c8', 'Kazakhstan':'#38b0c8', 'Uzbekistan':'#9a5ac0', 'Afghanistan':'#9a6a4a', 'Mongolia':'#5a7ad0',
+  // step 5, the Americas
+  'Mexico':'#2e9a6a', 'Argentina':'#74b4e0', 'Colombia':'#e0c03a', 'Venezuela':'#c0405a', 'Peru':'#d0603a', 'Chile':'#a050c0', 'Bolivia':'#8a9a2a', 'Ecuador':'#3a8ac8',
+  'Cuba':'#c84050'};
 const COLOR_MIN = 60;
 // hand swaps (plan 2.5): at most one city per nation, each with its reason: {country: {out:'city or province name', in:'province name', why:'...'}}
 const SWAPS = {};
@@ -124,6 +127,25 @@ const NAMES = {
   'Uzbekistan':{'Kashkadarya':'Qarshi', 'Ferghana':'Fergana', 'Surkhandarya':'Denau', 'Bukhoro':'Bukhara'},
   'Afghanistan':{'Hirat':'Herat', 'Nangarhar':'Jalalabad', 'Nimroz':'Zaranj', 'Paktika':'Sharana', 'Samangan':'Mazar-i-Sharif', 'Badakhshan':'Fayzabad'},
   'Mongolia':{'Bayan-Ölgiy':'Ölgii', 'Bayanhongor':'Bayankhongor', 'Dornod':'Choibalsan', 'Selenge':'Darkhan', 'Övörhangay':'Arvaikheer', 'Hövsgöl':'Mörön'},
+  // step 5, the Americas: the same rule. By hand: Canada's London holds Detroit (United States) first: London itself (the province keeps its
+  // name); Argentina's Misiones holds Encarnación (Paraguay) first: Posadas; Formosa's San Lorenzo is Paraguay's: Formosa keeps its name;
+  // Venezuela's Táchira holds Cúcuta (Colombia) first: San Cristóbal; Peru's Oyon holds no town of the data set: Huacho, the largest of the
+  // towns beside it; Bolivia's Santa Ana is a village the data set counts with its district: the seat, Trinidad. Usual short forms: Poza Rica
+  // (Poza Rica de Hidalgo), Jujuy and Tucumán (their seats San Salvador de Jujuy and San Miguel de Tucumán). A province already named after its
+  // town keeps that name (Torreón, Oaxaca, Puebla, Hermosillo, Belém, Curitiba, Rosario, Mendoza, Medellín, Iquitos, Arequipa, Valparaíso,
+  // Cochabamba, Oruro, Camagüey, Holguín and so on), also in a near tie (Coquimbo against La Serena, Cienfuegos against Santa Clara, whose own
+  // province is Villa Clara)
+  'Canada':{'New Brunswick':'Moncton'},
+  'Mexico':{'Yucatán':'Mérida', 'Poza Rica de Hidalgo':'Poza Rica'},
+  'Brazil':{'Espírito Santo':'Vitória'},
+  'Argentina':{'Misiones':'Posadas'},
+  'Colombia':{'Atlántico':'Barranquilla', 'Cauca':'Cali', 'Cesar':'Valledupar', 'Chocó':'Quibdó', 'Risaralda':'Pereira', 'Magdalena':'Santa Marta', 'Tolima':'Ibagué', 'Santander':'Bucaramanga'},
+  'Venezuela':{'Monagas':'Maturín', 'Carabobo':'Valencia', 'Táchira':'San Cristóbal', 'Portuguesa':'Acarigua', 'Nueva Esparta':'Porlamar', 'Anzoátegui':'Barcelona', 'Aragua':'Maracay', 'Lara':'Barquisimeto'},
+  'Peru':{'Áncash':'Chimbote', 'Junín':'Huancayo', 'Oyon':'Huacho'},
+  'Chile':{"Libertador General Bernardo O'Higgins":'Rancagua', 'Tarapacá':'Iquique', 'La Araucanía':'Temuco', 'Los Lagos':'Puerto Montt', 'Maule':'Talca'},
+  'Bolivia':{'Santa Ana':'Trinidad', 'Chuquisaca':'Sucre'},
+  'Ecuador':{'Guayas':'Guayaquil', 'Manabi':'Portoviejo', 'Chimborazo':'Ambato', 'Azuay':'Cuenca', 'Carchi':'Ibarra', 'El Oro':'Machala', 'Cotopaxi':'Latacunga', 'Morona Santiago':'Macas'},
+  'Cuba':{'Granma':'Bayamo'},
 };
 
 /* ---------- the map and the rules ---------- */

@@ -217,8 +217,10 @@ let WIN_CAPS = 5;                     // or hold this many starting capitals (5 
 // The nations world (scenario world64, docs/NATIONS-PLAN.md): victory numbers follow the number of playable nations in the game
 const winCapsFor = k => Math.max(5, Math.round(k/6));               // starting capitals to hold: a sixth of the nations, never fewer than 5
 // share of the world's land provinces to hold. From 50 nations a tenth (step 4, Asia: with 58 nations no nation held more than 384 provinces in
-// two 300-day games, a fifth is 615; a tenth, 308, decided both between day 120 and day 250, the plan's aim in 3.6)
-const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : 0.1;
+// two 300-day games, a fifth is 615; a tenth, 308, decided both between day 120 and day 250, the plan's aim in 3.6). From 60 nations 7% (step 5,
+// the Americas: with 67 nations the land Brazil and Canada had won on in step 4 is nations of its own, and neither 300-day game had a winner; on
+// day 150 the nearest were Russia at 317 of its 460, Canada at 202 of its 308 and India at 175 of 308)
+const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 59 ? 0.1 : 0.07;
 // Tiers (S superpower, A major, B regional, C minor): what a nation starts with. TIER_FULL is the plan's wide table (3.2), TIER_EVEN an equal
 // start for everyone; a game mode sits between the two by its spread (0 = everyone equal, 1 = the wide table). Normal mode is close to equal
 // (the owner's rule: big countries are bigger, not much richer at the start); a later competitive mode is mildly more distinctive.
@@ -260,6 +262,16 @@ const TIER_PEER = 0.95, TIER_PEER_W = 1.5;
 // so the TIER_GANG limit shut them out, fought only smaller nations on day 60 in 3 seeds of 5): a computer nation of tier S attacks another of
 // tier S with TIER_RIVAL times its power, and may be that nation's second enemy (the TIER_GANG limit is one more, as for a person's nation)
 const TIER_RIVAL = 0.85;
+// a second front against a major power (step 5, the Americas: the United States declared war on Canada and on Mexico a day or two apart, at 1.1
+// to 1.5 times the power of each but less than both, and lost a fifth of its land in 4 seeds of 5): a computer nation of tier S or A already at
+// war with a nation of tier A attacks another nation of tier S or A (not its rival of tier S) only with the power for all of them: its thresholds
+// above against the new peer's power plus TIER_FRONT times the power of the tier A nations it already fights. A war of two rivals of tier S is
+// not counted as a front (counting it too, India, at war with China, no longer took on Pakistan: on day 60 it fought China or a peer in 1 seed of 5)
+const TIER_FRONT = 1;
+// the long war of two rivals (step 5: with the Americas open, India fought China or a peer on day 60 in 2 seeds of 5, though in all 5 in the second
+// month: computer nations tire of a war after 20 days, and the rivals' wars of the first month were over by day 60): two computer nations of tier
+// S tire of their war only after TIER_RIVAL_WAR days (being outmatched, losing land or fighting on three fronts still ends it sooner)
+const TIER_RIVAL_WAR = 40, warTires = (a, b) => S.nations[a].tier === 'S' && S.nations[b].tier === 'S' && S.nations[a].ai && S.nations[b].ai ? TIER_RIVAL_WAR : 20;
 // land to win in the nations world: the share of the world (winShareFor), or the starting land plus 90 provinces or plus TIER_WIN_UP of it if
 // that is more (step 4: with a tenth of the world, 308, the United States, 230 provinces, won on day 25 on independent land alone; now it needs 368)
 const TIER_WIN_UP = 0.6;

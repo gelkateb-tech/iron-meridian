@@ -108,7 +108,7 @@ function acceptOffer(ai, from, kind){
     if (lost >= 3) return {ok:true, why:'they have lost land'};
     // against a power fighting on three fronts, one that has taken a good piece of its home land settles once the war is a week old: the peace terms make that land its own
     if (age >= 7 && warsOf(from).length >= 3 && G.P.reduce((c, P) => c + (S.home[P.id] === from && S.owner[P.id] === ai ? 1 : 0), 0) >= 5) return {ok:true, why:'they would keep the land they hold'};
-    if (age > 20 && op > -40) return {ok:true, why:'they are tired of war'};
+    if (age > warTires(ai, from) && op > -40) return {ok:true, why:'they are tired of war'};   // (two computer rivals of tier S: TIER_RIVAL_WAR days)
     return {ok:false, why:`they think they are winning (opinion ${Math.round(op)})`};
   }
   if (atWar(ai, from)) return {ok:false, why:'you are at war'};
@@ -205,7 +205,7 @@ function diploDay(){
     // peace with the weakest enemy when stretched, or after a long war (or, sated, with any enemy)
     for (const m of wars){ const age = (S.hour - rel(n, m).since)/24;
       const lostTo = wars.length >= 3 ? G.P.reduce((c, P) => c + (S.home[P.id] === n && S.owner[P.id] === m ? 1 : 0), 0) : 0;   // fighting on three fronts: cede what one attacker holds to end that war
-      if (age < 5 || !(sated || (wars.length >= 2 && natPower(m) === Math.min(...wars.map(natPower))) || age > 20 || natPower(n) < 0.7*natPower(m) || lostTo >= 5)) continue;
+      if (age < 5 || !(sated || (wars.length >= 2 && natPower(m) === Math.min(...wars.map(natPower))) || age > warTires(n, m) || natPower(n) < 0.7*natPower(m) || lostTo >= 5)) continue;
       if (!acceptOffer(n, m, 'peace').ok) continue;
       if (isSeat(m)) offerSeat(m, n, 'peace');
       else if (acceptOffer(m, n, 'peace').ok){ applyDeal(n, m, 'peace'); break; } }
@@ -214,10 +214,12 @@ function diploDay(){
     // (the nations world: a nation starts a war only while it is in at most TIER_WARS wars of its own making; wars declared on it do not count)
     if (day >= 8 && !sated && (N.tier ? warsOf(n).filter(m => (N.wby || []).includes(m)).length <= TIER_WARS[N.tier] : warsOf(n).length <= 1) && !pending && rng() < 0.22*diffOf().war){
       let best = -1, bs = 0; const myP = natPower(n);
+      // (the nations world, TIER_FRONT: the power of the nations of tier A it already fights, counted against a new peer that is not its rival)
+      const front = N.tier && TIER_RANK[N.tier] <= 1 ? TIER_FRONT*warsOf(n).filter(e => S.nations[e].tier === 'A').reduce((s, e) => s + natPower(e), 0) : 0;
       for (const M of S.nations){ const m = M.id; if (m === n || !M.alive || !borders(n, m) || rel(n, m).st !== 'peace' || graceOn(n, m)) continue;
         const peer = N.tier && TIER_RANK[N.tier] <= 1 && TIER_RANK[M.tier] <= 1;   // (the nations world: two nations of tier S or A, TIER_PEER)
         const rival = peer && N.tier === 'S' && M.tier === 'S';   // (two nations of tier S: TIER_RIVAL)
-        if (opinion(n, m) >= 0 || myP < (rival ? TIER_RIVAL : peer ? TIER_PEER : 1.1)*natPower(m)) continue;
+        if (opinion(n, m) >= 0 || myP < (rival ? TIER_RIVAL : peer ? TIER_PEER : 1.1)*(natPower(m) + (peer && !rival ? front : 0))) continue;
         if (N.tier && warsOf(m).length + S.decl.filter(d => d.to === m && !atWar(d.by, m)).length >= (isSeat(m) || rival ? TIER_GANG + 1 : TIER_GANG)) continue;   // (the nations world: the computer does not join in on a nation already at war, or about to be (a declaration takes a day); a person's nation may get a second enemy, never a third)
         const cnt = G.P.filter(P => S.owner[P.id] === m).length, sc = ((N.tier ? Math.min(cnt, TIER_LAND) : cnt) + 5)/(natPower(m) + 10)*(isSeat(m) ? ({recruit:0.55, regular:0.8, veteran:1.05, elite:1.3}[diffOf().k] || 0.8) : 1)*(N.tier && tierGap(N.tier, M.tier) >= 2 ? 0.5 : 1)*(peer ? TIER_PEER_W : 1);   // (the nations world: a victim two tiers below is half as attractive, a peer more)
         if (sc > bs){ bs = sc; best = m; } }
