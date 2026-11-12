@@ -20,6 +20,7 @@ Last updated: 2026-11-11.
 
 | Task | Model | Where it is |
 |---|---|---|
+| URGENT: Dev Build fixes. A: play test at 1x/4x/8x, the AI never starts a war (only fights back), fix what the 68-nations merge broke. B: profile and speed up (target 60 fps, well under 0.5 s per game day with 68 nations). All other merges are frozen until these pass | Opus (two jobs) | Started |
 | Resources x1000 except money (stocks, production, storage, all costs) with short forms (40K, 1.2M) and full amounts with units on hover; play proven identical | Opus | Started |
 | Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
 | Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
