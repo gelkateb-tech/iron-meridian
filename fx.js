@@ -786,7 +786,7 @@ function cqRun(now){ if (!CQ.length) return; for (let i = 0; i < CQ.length; i++)
 // per force (army id): fa the world angle it faces to fire (held 8 s), rk/ra/rp its recoil (start, angle, px), hit/hz its hit flash, rock a ship's roll
 const ANIM = new Map();
 function anim(id){ let A = ANIM.get(id); if (!A){ A = {fa:NaN, ft:-1e9, rk:-1e9, ra:0, rp:0, hit:-1e9, hz:1, rock:-1e9}; ANIM.set(id, A); if (ANIM.size > 400) ANIM.delete(ANIM.keys().next().value); } return A; }
-function unitFace(id, ang){ if (id == null) return; const A = anim(id); A.fa = ang; A.ft = performance.now(); PG.redraw(); }
+function unitFace(id, ang, T){ if (id == null) return; const A = anim(id); A.fa = ang; A.ft = performance.now(); if (T){ A.tx = T[0]; A.ty = T[1]; } PG.redraw(); }   // (T: the world point it aims at, for a tap)
 function unitRecoil(id, ang, px){ if (id == null || fxLv() === 0) return; const A = anim(id); A.rk = performance.now(); A.ra = ang; A.rp = px; PG.animFast(); }
 function unitHit(id, z){ if (id == null || fxLv() === 0) return; const A = anim(id); A.hit = performance.now(); A.hz = z === 'S' ? 1 : z === 'M' ? 1.5 : 2.2; PG.animFast(); }
 function unitRock(id){ if (id == null || fxLv() === 0) return; anim(id).rock = performance.now(); PG.animFast(); }
@@ -919,6 +919,9 @@ function warnMark(x, y, now, big, urgent, label){ const g = PG.ctx, p = 0.5 + 0.
   g.fillStyle = `rgba(232,72,60,${0.12 + 0.12*p})`; g.beginPath(); g.arc(x, y, R, 0, Math.PI*2); g.fill();
   if (label){ g.font = `800 10px ${PG.BODY}`; g.textAlign = 'center'; g.textBaseline = 'middle'; const w = g.measureText(label).width + 10, ly = y - R - 12; g.fillStyle = 'rgba(70,12,10,.9)'; g.fillRect(x - w/2, ly - 8, w, 16); g.fillStyle = '#ffd9d4'; g.fillText(label, x, ly); }
   g.restore(); }
+// a target of the player's off screen: a red arrow on the edge of the map pointing at it
+function edgeArrow(tx, ty, now){ const g = PG.ctx, cx = PG.cw/2, cy = PG.ch/2, an = Math.atan2(ty - cy, tx - cx), m = 26, k = Math.min((cx - m)/Math.max(1e-6, Math.abs(Math.cos(an))), (cy - m)/Math.max(1e-6, Math.abs(Math.sin(an)))), x = cx + Math.cos(an)*k, y = cy + Math.sin(an)*k, p = 0.6 + 0.4*Math.sin(now/120);
+  g.save(); g.translate(x, y); g.rotate(an); g.globalAlpha = p; g.fillStyle = '#e8483c'; g.strokeStyle = 'rgba(3,6,8,.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-4, 0); g.lineTo(-8, 10); g.closePath(); g.stroke(); g.fill(); g.restore(); }
 function drawWarn(now){ for (let i = WARN.length - 1; i >= 0; i--){ const W0 = WARN[i]; if (now > W0.t1 + 200){ WARN.splice(i, 1); continue; } if (W0.t1 - now > 3500 && !W0.mine) continue;
     const [x, y] = PG.toScreen(W0.wx, W0.wy); if (!onScr(x, y)) continue; warnMark(x, y, now, W0.big, W0.t1 - now < 3500, W0.mine && now - W0.t0 < 4000 ? 'INCOMING' : ''); }
   if (WARN.length) PG.animFast(); }
@@ -938,7 +941,7 @@ function cfxFire(w, A, B, o = {}){ const lv = fxLv(); if (!lv || w === 'recon') 
   const sea = o.sea ?? seaAt(B[0], B[1]), miss = o.hit === false, kill = !!o.kill && !miss, bid = miss ? null : o.bid;
   const spot = (r) => { const th = Math.random()*Math.PI*2, d = miss ? r*(1.4 + Math.random()*1.3) : r*Math.sqrt(Math.random()); return [B[0] + Math.cos(th)*d, B[1] + Math.sin(th)*d*0.7]; };
   const from = vis ? A : [A[0] + dx*0.55, A[1] + dy*0.55];   // (an unseen shooter: the fire shows from halfway)
-  const turn = vis && o.aid != null && ['tank', 'art', 'mlrs', 'ship', 'inf', 'sam'].includes(w) ? 240 : 0; if (turn) unitFace(o.aid, ang);   // it turns to face the target first
+  const turn = vis && o.aid != null && ['tank', 'art', 'mlrs', 'ship', 'inf', 'sam'].includes(w) ? 240 : 0; if (turn) unitFace(o.aid, ang, B);   // it turns to face the target first
   const far = fxFar();
   if (far){ cqAdd(turn, () => { if (vis) flashAt(A[0], A[1], 0.6); }); const tt = turn + Math.min(2500, 300 + dist*20); cqAdd(tt, () => { const z = w === 'icbm' ? 'XL' : w === 'cruise' || w === 'ballistic' ? 'L' : w === 'inf' || w === 'swarm' ? 'S' : 'M';
       if (w === 'cruise' || w === 'ballistic' || w === 'icbm') strikeAt(w === 'icbm' ? 'icbm' : w === 'ballistic' ? 'bm' : 'cm', B[0], B[1], {bid, sea}); else impact(z, ...spot(1), {sea, kill, bid}); }); return true; }
@@ -1000,6 +1003,7 @@ function drawMissiles(now, vis){ const L = S.inflight; if (!L || !L.length){ if 
       if (mp){ g.rotate(Math.PI/2); g.drawImage(mp, -MQ/2, -MQ/2, MQ, MQ); } else { g.fillStyle = '#e8e4da'; g.strokeStyle = '#1a1c1b'; g.lineWidth = 1; g.beginPath(); g.moveTo(L0/2, 0); g.lineTo(-L0/2, -2.2); g.lineTo(-L0/2, 2.2); g.closePath(); g.fill(); g.stroke(); }
       g.restore(); }
     // the target: a pulsing red marker when it is the player's (all through the flight, INCOMING for the first 4 s), and for any missile in the last seconds
+    if (mine && m.owner !== PG.PLAYER){ const [tx, ty] = PG.toScreen(B.x, B.y); if (!onScr(tx, ty, -10)) edgeArrow(tx, ty, now); }
     if ((mine && m.owner !== PG.PLAYER) || left < 4000){ const [tx, ty] = PG.toScreen(B.x, B.y); if (onScr(tx, ty)) warnMark(tx, ty, now, m.k === 'bm' ? 1 : 0.6, left < 4000, mine && m.owner !== PG.PLAYER && now - MSL.seen.get(m.id) < 4000 ? 'INCOMING' : ''); } }
   PG.animFast(); }
 
@@ -1047,7 +1051,46 @@ function flightStep(v, gx, gy, dt, o){ const dx = wdx(v.x, gx), dy = gy - v.y, d
   v.x = gx - wdx(v.x, gx);   // (on the copy of the world nearest its goal: across the seam its distances stay short)
   return false; }
 
-return {AFX, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+/* ================= Orders and taps (Part 4): target marker, dashed line, range ring =================
+   An attack order (a Bombard, or a move onto enemy forces) shows a target marker on the target and a dashed line from the attacker to it for
+   3.5 s, and the attacker turns to face it; tapping a force in combat shows its range ring and its current target for 2.5 s; the Effects test
+   panel marks its test target. The markers are static with Effects Off (the dashes do not run), and are drawn over the counters. */
+const MARKS = [];   // {aid, bid: forces (their drawn spot), A, B: world points when no force, r: a range ring round the attacker (world px), t0, dur, kind}
+function orderMark(o){ const m = Object.assign({t0:performance.now(), dur:3500, kind:'order'}, o); MARKS.push(m); if (MARKS.length > 12) MARKS.shift();
+  const A = markPt(m.aid, m.A), B = markPt(m.bid, m.B); if (m.kind === 'order' && m.aid != null && A && B) unitFace(m.aid, Math.atan2(B[1] - A[1], wdx(A[0], B[0])), B);
+  PG.redraw(); PG.animFast(); return m; }
+function markPt(id, P){ if (id != null){ const a = armyById(id); if (a && count(a)) return PG.dispPos(a); } return P || null; }
+// the target marker: a ring with four brackets (css px)
+function targetMark(g, x, y, R, col, a){ g.save(); g.globalAlpha = a; g.lineWidth = 3.5; g.strokeStyle = 'rgba(3,6,8,.55)'; const path = () => { g.beginPath(); g.arc(x, y, R, 0, Math.PI*2);
+    for (let i = 0; i < 4; i++){ const an = Math.PI/4 + i*Math.PI/2, c = Math.cos(an), s0 = Math.sin(an); g.moveTo(x + c*R*1.25, y + s0*R*1.25); g.lineTo(x + c*R*1.7, y + s0*R*1.7); }
+    g.moveTo(x - 3, y); g.lineTo(x + 3, y); g.moveTo(x, y - 3); g.lineTo(x, y + 3); }; path(); g.stroke(); g.lineWidth = 1.8; g.strokeStyle = col; path(); g.stroke(); g.restore(); }
+function drawMarks(now){ if (!MARKS.length) return; const g = PG.ctx, s = PG.view.s, lv = fxLv();
+  for (let i = MARKS.length - 1; i >= 0; i--){ const m = MARKS[i], age = now - m.t0; if (age > m.dur){ MARKS.splice(i, 1); continue; }
+    const a = Math.min(1, age/150, (m.dur - age)/600), A = markPt(m.aid, m.A), B = markPt(m.bid, m.B); if (!A && !B) continue;
+    const [ax, ay] = A ? PG.toScreen(A[0], A[1]) : [0, 0], [bx, by] = B ? (A ? [ax + wdx(A[0], B[0])*s, ay + (B[1] - A[1])*s] : PG.toScreen(B[0], B[1])) : [0, 0];
+    const col = m.kind === 'tap' ? 'rgba(255,214,120,.95)' : 'rgba(255,120,96,.95)';
+    if (A && m.r > 0){ g.save(); g.globalAlpha = a*0.9; g.setLineDash([6, 5]); g.lineWidth = 1.6; g.strokeStyle = 'rgba(255,214,120,.85)'; g.beginPath(); g.arc(ax, ay, Math.max(8, m.r*s), 0, Math.PI*2); g.stroke(); g.setLineDash([]); g.restore(); }
+    if (A && B && Math.hypot(bx - ax, by - ay) > 6){ g.save(); g.globalAlpha = a; g.lineCap = 'round'; g.setLineDash([8, 6]); g.lineDashOffset = lv ? -now/40 : 0;   // the dashes run towards the target
+      g.lineWidth = 3.4; g.strokeStyle = 'rgba(3,6,8,.45)'; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.lineWidth = 1.8; g.strokeStyle = col; g.stroke(); g.setLineDash([]); g.restore(); }
+    if (B) targetMark(g, bx, by, 11 + (lv ? 2*Math.sin(age/140) : 0), col, a); }
+  if (MARKS.length){ if (lv) PG.animFast(); else PG.redraw(250); } }
+// tapping a force in combat (fighting in a battle, firing at a target, or fired at in the last 8 s): its range ring and its current target, briefly
+function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANIM.get(a.id), now = performance.now(), fighting = S.battles.includes(a.at);
+  let bid = null, B = null;
+  if (a.tgt){ if (a.tgt.id != null && armyById(a.tgt.id)) bid = a.tgt.id; else if (a.tgt.p != null) B = [G.P[a.tgt.p].x, G.P[a.tgt.p].y]; }
+  if (bid == null && !B && A && now - A.ft < 8000 && A.tx != null) B = [A.tx, A.ty];
+  if (bid == null && !B && fighting){ const foe = S.armies.find(b => b.at === a.at && b !== a && count(b) && !b.air && atWar(a.owner, b.owner)); if (foe) bid = foe.id; }
+  if (!fighting && bid == null && !B) return false;
+  const km = rangeOf(a); orderMark({aid:a.id, bid, B, r:km > 0 ? km*KM_W : 3, dur:2500, kind:'tap'}); return true; }
+
+/* ================= Phones and battery (Part 5) =================
+   One animation loop for everything: the page's redraw scheduler (RD). Every effect registers a fast frame only while it runs (PROJ, PART, CQ,
+   WARN, MARKS, the strike effects ...), so the loop stops drawing when nothing is active (Battery saver: no draws when static). Off-screen
+   effects are not drawn (their clocks run on). Effects quality: SET.fx 'high' | 'low' | 'off' (fxLv); the default is High on a desktop, Low
+   on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
+const fxStats = () => ({part:PART.length, proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
+
+return {AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,
