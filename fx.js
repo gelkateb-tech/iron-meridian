@@ -46,15 +46,16 @@ const FOAM = () => softSprite('foam', 'rgba(244,250,252,.85)', 'rgba(230,242,247
 const GLOW = () => softSprite('glow', 'rgba(255,240,190,1)', 'rgba(255,200,90,.5)', 'rgba(255,150,40,0)');
 // the particles are a pool of reused objects (PFREE), at most PART_CAP live (about 150 on High, 60 on Low, none with Effects Off); past the cap
 // soft ones (smoke, dust, debris) are dropped and the oldest are faded out. (The strike effects, WFX, have their own caps and are never thinned here.)
-const PFREE = [], PART_CAP = [0, 60, 150];
+const PFREE = [], PART_CAP = [0, 60, 150], SMOKE_CAP = [0, 300, 900], PCNT = {s:0, f:0};   // (PCNT: live smoke and other particles, counted each frame)
 function partDrop(i){ const q = PART[i], L = PART.length - 1; if (i < L) PART[i] = PART[L]; PART.pop(); if (PFREE.length < 300) PFREE.push(q); }
 function emit(kind, wx, wy, opt = {}){
   const lv = fxLv(); if (!lv) return;
   const soft = kind === 'smoke' || kind === 'smokel' || kind === 'dust' || kind === 'debris';
   if (soft && lv < 2 && Math.random() < (PG.afxReduced() ? 0.8 : 0.6)) return;
   if (soft && Math.random() > FXG.k) return;   // the governor thins smoke and dust when frames get slow
-  const cap = PART_CAP[lv];
-  if (PART.length >= cap){ const now = performance.now(); if (now > FXG.ret){ FXG.ret = now + 350; fxRetire(PART, Math.ceil(cap*0.2), now, true); } if (soft || PART.length >= cap*1.3) return; }
+  const sm = kind === 'smoke' || kind === 'smokel', cap = (sm ? SMOKE_CAP : PART_CAP)[lv], n = sm ? PCNT.s : PCNT.f;   // smoke: its own budget (as dense as before); the firing particles: about 150
+  if (n >= cap){ const now = performance.now(); if (now > FXG.ret){ FXG.ret = now + 350; fxRetire(PART, Math.ceil(cap*0.2), now, true); } if (soft || n >= cap*1.3) return; }
+  if (sm) PCNT.s++; else PCNT.f++;
   const life = opt.life || ({smoke:2600, smokel:1800, fire:520, spark:600, dust:1100, debris:900, flash:120, core:60, ring:500, splash:900}[kind] || 800);
   const q = PFREE.pop() || {}; q.kind = kind; q.wx = wx; q.wy = wy; q.u = kzNow()/PG.view.s; q.ws = !!opt.ws; q.g = opt.g; q.ox = opt.ox || 0; q.oy = opt.oy || 0;
   q.vx = opt.vx ?? (Math.random() - 0.5)*12; q.vy = opt.vy ?? -(8 + Math.random()*14); q.life = life; q.t = 0; q.s0 = opt.s0 || 6; q.s1 = opt.s1 || 26; q.rot = Math.random()*6; q.spin = (Math.random() - 0.5)*0.6;
@@ -84,7 +85,7 @@ function afxBoom(wx, wy, big = 1, small = false, wr = 0){   // wr: a world radiu
   if (!PG.booted || !PG.ART.ready('fx-explosion') || !fxLv()) return false; const now = performance.now(), low = PG.SET.fx !== 'high', red = PG.afxReduced();
   if (small){ if (low || red || now - AFX.pop < 90) return false; AFX.pop = now; }
   if (afxOff(wx, wy, 240)) return true;
-  const cap = low ? 10 : 30; if (AFX.boom.length >= cap) AFX.boom.splice(0, AFX.boom.length - cap + 1);
+  const cap = low ? 12 : 44; if (AFX.boom.length >= cap) AFX.boom.splice(0, AFX.boom.length - cap + 1);
   AFX.boom.push({wx, wy, t0:now, dur:(small ? 460 : 640 + 180*Math.min(2, big))*(red ? 0.75 : 1), s:(small ? 8 + 4*big : 15*Math.min(2.3, big)), wr, rot:(Math.random() - 0.5)*0.8, sp:(Math.random() - 0.5)*0.25, red});
   return true; }
 // rising, drifting smoke puff (o: s0/s1 screen radius at kz 1, a peak alpha, dur ms, vx/vy px per s, dark)
@@ -92,12 +93,15 @@ function afxPuff(wx, wy, o = {}){
   if (!PG.booted || !PG.ART.ready('fx-smoke') || PG.afxReduced() || !fxLv()) return false; if (afxOff(wx, wy, 200) || Math.random() > FXG.k) return true;
   let bp = o.bp ?? -1; if (bp < 0 && S && S.battles.length){ const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1; if (p >= 0 && S.battles.includes(p)) bp = p; }   // smoke in a battle counts toward that battle
   if (bp >= 0){ const hx = PG.view.s*HS0, n = AFX.bpn.get(bp) || 0; if (n >= (hx < 26 ? 4 : hx < 76 ? 8 : 12)) return true; AFX.bpn.set(bp, n + 1); if (o.bp != null) AFX.bpa.set(bp, (AFX.bpa.get(bp) || 0) + 1); }   // live puffs per battle, by zoom (last frame's count)
-  const low = PG.SET.fx !== 'high', cap = low ? 20 : 60; if (AFX.puff.length >= cap){ fxRetire(AFX.puff, Math.max(8, AFX.puff.length - cap + 1), performance.now()); if (AFX.puff.length >= cap*1.3) return true; }
+  const low = PG.SET.fx !== 'high', cap = low ? 30 : 150; if (AFX.puff.length >= cap){ fxRetire(AFX.puff, Math.max(8, AFX.puff.length - cap + 1), performance.now()); if (AFX.puff.length >= cap*1.3) return true; }
   AFX.puff.push({wx, wy, u:kzNow()/PG.view.s, t0:performance.now(), bp, amb:o.bp != null, delay:o.delay || 0, dur:o.dur || 3600 + Math.random()*1800, s0:o.s0 || 5, s1:o.s1 || 22, a:o.a || 0.32,
     vx:o.vx ?? windX(3, 5), vy:o.vy ?? -(6 + Math.random()*6) + windY(3, 5), ox:o.ox || 0, oy:o.oy || 0, rot:Math.random()*6.28, spin:(Math.random() - 0.5)*0.5, dark:o.dark ?? (fxNight(wx, wy) > 0.45)});
   return true; }
 // ground crater (world radius r, at most 2.5, or o.cap: a missile's 3.5) on land; a hit inside a crater adds a new small one elsewhere in the
 // province while it holds fewer than 6, else deepens that crater (never grows it), so a long fight leaves several small craters, not one huge disc
+// scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS); only the tactical nuke's and the ICBM's craters
+// keep their long life in game hours (o.keep), with their burning ground
+const CRATER_MS = 20000, crRT = (q, now) => !q.rl ? 1 : Math.max(0, Math.min(1, (q.rl - (now - q.t0))/6000));
 function afxCrater(wx, wy, r, o = {}){
   if (!PG.booted || !PG.ART.ready('fx-crater') || !S) return false; afxSync(); const c = worldToCell(wx, wy); if (c < 0 || G.prov[c] < 0 || G.P[G.prov[c]].sea) return true;
   const h = S.hour + (S.speed && !S.over ? PG.acc : 0), life = o.life || 72, land = (x, y) => { const c1 = worldToCell(x, y); return c1 >= 0 && G.prov[c1] >= 0 && !G.P[G.prov[c1]].sea; };
@@ -109,11 +113,11 @@ function afxCrater(wx, wy, r, o = {}){
         const x = cc[0] + (fxh(hh*1e9 + 3) - 0.5)*1.4*HS, y = cc[1] + (fxh(hh*1e9 + 5) - 0.5)*1.2*HS, d = Math.hypot(x - wx, y - wy);
         if (d >= bd || !land(x, y) || worldToCell(x, y) < 0 || G.prov[worldToCell(x, y)] !== pv || AFX.crater.some(q => inQ(q, x, y, 1.6))) continue; best = [x, y]; bd = d; }
       if (best){ wx = best[0]; wy = best[1]; r *= 0.7 + 0.3*fxh(bd*97); }
-      else { hitQ.h = h; hitQ.life = Math.max(hitQ.life, life); hitQ.a = Math.min(0.95, hitQ.a + 0.08); AFX.cv++; return true; } } }
+      else { hitQ.h = h; hitQ.life = Math.max(hitQ.life, life); hitQ.a = Math.min(0.95, hitQ.a + 0.08); if (hitQ.rl) hitQ.rl = performance.now() - hitQ.t0 + CRATER_MS; if (o.keep) hitQ.rl = 0; AFX.cv++; return true; } } }
   let ok = false; for (let n = 0; n < 7 && r >= 1.2; n++){ ok = true; for (let j = 0; j < 8 && ok; j++) ok = land(wx + Math.cos(j*0.785)*r*0.75, wy + Math.sin(j*0.785)*r*0.6); if (ok) break; r *= 0.78; }   // keep the decal on land at coasts
   if (!ok) return true;   // no room on a tiny island or a sliver of coast: no crater rather than one covering the land
   const cap = PG.SET.fx !== 'high' ? 50 : 120; if (AFX.crater.length >= cap){ AFX.crater.splice(0, AFX.crater.length - cap + 1); AFX.cv++; }
-  AFX.crater.push({wx, wy, r, h, life, p:pv, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85}); return true; }
+  AFX.crater.push({wx, wy, r, h, life, p:pv, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85, rl:o.keep ? 0 : CRATER_MS}); return true; }   // (rl: its real-time life, ms; 0: game hours, a nuclear crater)
 // a city burns for a while after it is bombarded or captured (smoke drawn by afxAmbient)
 function afxMark(p, hours){ if (!PG.booted || !S || G.P[p].sea) return; afxSync(); const h = S.hour, m = AFX.heat.get(p); if (!m || h + hours > m.h + m.d) AFX.heat.set(p, {h, d:hours}); }
 function afxTimer(key, now, ms){ const t = AFX.tm.get(key) || 0; if (now - t < ms) return false; if (AFX.tm.size > 400) AFX.tm.clear(); AFX.tm.set(key, now); return true; }
@@ -143,13 +147,13 @@ function crdBuild(m, h0, now, full){ const L = PG.layer, dp = L.dp || PG.dpr; le
   if (full){ if (C.width !== L.width || C.height !== L.height){ C.width = L.width; C.height = L.height; CRD.tw = Math.ceil(C.width/CRD_T); CRD.th = Math.ceil(C.height/CRD_T); CRD.tl = new Uint8Array(CRD.tw*CRD.th); }
     else if (CRD.any) for (let i = 0; i < CRD.tl.length; i++) if (CRD.tl[i]){ CRD.tl[i] = 0; g.clearRect((i % CRD.tw)*CRD_T, Math.floor(i/CRD.tw)*CRD_T, CRD_T, CRD_T); }
     CRD.any = false; CRD.gen++; }
-  for (const q of AFX.crater) if (q.dc !== CRD.gen && now - q.t0 >= 300) crdDraw(g, q, m, h0, L, dp);
+  for (const q of AFX.crater) if (!q.rl && q.dc !== CRD.gen && now - q.t0 >= 300) crdDraw(g, q, m, h0, L, dp);   // (the fading ones are drawn live)
   g.globalAlpha = 1; g.setTransform(1, 0, 0, 1, 0, 0); }
 function drawCraters(now){
   afxSync(); if (!AFX.crater.length || !S) return; const hexPx = PG.view.s*HS0, m = hexPx >= 6 ? afxMips('fx-crater') : null; if (!m) return;
   const h0 = S.hour + (S.speed && !S.over ? PG.acc : 0), zin = Math.min(1, (hexPx - 6)/5), red = PG.afxReduced(), L = PG.layer;
-  let add = false, live = 0; for (let i = AFX.crater.length - 1; i >= 0; i--){ const q = AFX.crater[i], age = h0 - q.h; if (age > q.life || age < -2){ AFX.crater.splice(i, 1); AFX.cv++; continue; }
-    if (now - q.t0 < 300) live++; else if (q.dc !== CRD.gen) add = true; }
+  let add = false, live = 0, fading = 0; for (let i = AFX.crater.length - 1; i >= 0; i--){ const q = AFX.crater[i], age = h0 - q.h; if (age > q.life || age < -2 || (q.rl && now - q.t0 > q.rl)){ AFX.crater.splice(i, 1); AFX.cv++; continue; }
+    if (q.rl){ live++; fading++; } else if (now - q.t0 < 300) live++; else if (q.dc !== CRD.gen) add = true; }
   if (!L || L.s*HS0 < 6) return;
   const key = L.full + '|' + (L.strips || 0) + '|' + L.vx + ',' + L.vy + '|' + L.s + '|' + (L.dp || PG.dpr) + '|' + L.width + 'x' + L.height + '|' + AFX.cv + '|' + Math.floor(h0);
   if (key !== CRD.key){ CRD.key = key; crdBuild(m, h0, now, true); } else if (add) crdBuild(m, h0, now, false);
@@ -161,9 +165,10 @@ function drawCraters(now){
         let x0 = tx*CRD_T, x1 = Math.min(C.width, (te + 1)*CRD_T); tx = te; if (lx + x1*g <= 0 || lx + x0*g >= PG.cv.width) continue;
         if (!sc){ x0 = Math.max(x0, -lx); x1 = Math.min(x1, PG.cv.width - lx); const ya = Math.max(y0, -ly), yb = Math.min(y1, PG.cv.height - ly); if (x1 > x0 && yb > ya) PG.ctx.drawImage(C, x0, ya, x1 - x0, yb - ya, lx + x0, ly + ya, x1 - x0, yb - ya); }
         else PG.ctx.drawImage(C, x0, y0, x1 - x0, y1 - y0, lx + x0*g, ly + y0*g, (x1 - x0)*g, (y1 - y0)*g); } } }
-  if (live) for (const q of AFX.crater){ if (now - q.t0 >= 300) continue;   // the grow-in, live
+  if (fading) PG.animAmb();   // (the fading scorch marks: a gentle frame now and then)
+  if (live) for (const q of AFX.crater){ if (now - q.t0 >= 300 && !q.rl) continue;   // the grow-in, live; the fading ones
     const rs = Math.min(35, Math.max(q.r*PG.view.s, q.r*1.5)*(red ? 1 : 1 + 0.25*Math.max(0, 1 - (now - q.t0)/260))), [x, y] = PG.toScreen(q.wx, q.wy); if (rs < 1.5 || x < -rs || y < -rs || x > PG.cw + rs || y > PG.ch + rs) continue;
-    PG.ctx.globalAlpha = crdA(q, h0 - q.h, zin); const co = Math.cos(q.rot)*PG.dpr, si = Math.sin(q.rot)*PG.dpr;
+    PG.ctx.globalAlpha = crdA(q, h0 - q.h, zin)*crRT(q, now); const co = Math.cos(q.rot)*PG.dpr, si = Math.sin(q.rot)*PG.dpr;
     PG.ctx.setTransform(co, si, -si, co, x*PG.dpr, y*PG.dpr); PG.ctx.drawImage(afxPick(m, rs*2*PG.dpr), -rs, -rs*q.sq, rs*2, rs*2*q.sq); }
   PG.ctx.globalAlpha = 1; PG.ctx.globalCompositeOperation = 'source-over'; PG.ctx.setTransform(1, 0, 0, 1, 0, 0); }
 function drawArtFx(now, kz){
@@ -364,7 +369,7 @@ function wfxStart(k, wx, wy, o = {}){ if (!PG.booted || !S || !WFX_R[k] || !fxLv
   PG.redraw(); return e; }
 // a strike: the effect, the crater and the burning city it leaves, the shake and the sound (o.p: the province hit)
 function wfxStrike(k, wx, wy, o = {}){ const e = wfxStart(k, wx, wy, o), p = o.p ?? (() => { const c = worldToCell(wx, wy); return c >= 0 ? G.prov[c] : -1; })(), land = p >= 0 && !G.P[p].sea;
-  if (land && k !== 'chem') afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, {a:0.95, life:k === 'icbm' ? 160 : k === 'tac' ? 120 : 96, cap:3.5});
+  if (land && k !== 'chem') afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, {a:0.95, life:k === 'icbm' ? 160 : k === 'tac' ? 120 : 96, cap:3.5, keep:k === 'icbm' || k === 'tac'});
   if (land && k !== 'chem') afxMark(p, {cm:30, bm:48, tac:72, icbm:120}[k] || 24);
   if (e) bigShake(wx, wy, k); PG.sfx('boom'); return e; }   // (the shake: only for a big blast near the middle of the view, see bigShake)
 const FXW = {cruise:(x, y, o) => wfxStrike('cm', x, y, o), ballistic:(x, y, o) => wfxStrike('bm', x, y, o), chemical:(x, y, o) => wfxStrike('chem', x, y, o),
@@ -500,7 +505,8 @@ function drawWFXFlash(now){ const F = WFX.flash; if (!F) return; const k = Math.
   PG.animFast(); }
 let VOLA = 1;   // the fade-in of the figures firing (figVolley: their alpha as they appear), stored on their shots
 function shoot(kind, from, to, opt = {}){ const pr = projGet(); if (!pr) return; Object.assign(pr, {sn:++PRSN, kind, from, to, u:opt.ws ? 1 : kzNow()/PG.view.s, ws:!!opt.ws, hit:opt.hit, t0:performance.now() + (opt.delay || 0), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite, a:VOLA, fz:opt.fz || 1, dots:!!opt.dots}); }   // (ws: from, to and arc in world px: world-sized, like the figures that fire it)
-let lastPart = 0, PKZ = 1; const PRJEND = [];
+let lastPart = 0, PKZ = 1; const PRJEND = []; let PLIVE = 0, PRLIVE = 0;   // (PLIVE, PRLIVE: particles and shots on screen this frame: only they keep the loop running)
+const fxLive = () => (PART.length ? PLIVE : 0) + (PROJ.length ? PRLIVE : 0);
 // battle effects in two passes. drawParticlesUnder runs before the counters (scorch, wreck fires, smoke, fire, flashes, rings, dust, the night
 // ground glow and the art bursts and puffs: the plates always sit on top of them); drawParticlesOver runs after them, clipped off every plate
 // (tracers, shells and missiles in flight, muzzle stars, sparks and debris). PART is advanced once per frame, in the first pass.
@@ -514,12 +520,13 @@ function drawParticlesUnder(now){
   // wrecks: their smoke plume and fire are drawn by drawBattleSmoke (world-anchored, for 26 s)
   for (let i = WRECKS.length - 1; i >= 0; i--) if (now - WRECKS[i].t0 > 26000) WRECKS.splice(i, 1);
   // particles (sparks and debris are drawn by drawParticlesOver)
-  let nl = 0;   // night light pass: at most 24 ground glows per frame
+  let nl = 0; PCNT.s = PCNT.f = 0; PLIVE = 0;   // night light pass: at most 24 ground glows per frame; the live counts
   for (let i = PART.length - 1; i >= 0; i--){ const q = PART[i]; q.t += dt*1000; if (q.t >= q.life || (q.die != null && q.t >= q.die)){ partDrop(i); continue; }
+    if (q.kind === 'smoke' || q.kind === 'smokel') PCNT.s++; else PCNT.f++;
     const k = q.t/q.life, fd = q.die != null ? Math.min(1, Math.max(0, (q.die - q.t)/300)) : 1; q.ox += q.vx*dt; q.oy += q.vy*dt;
     if (q.kind === 'debris'){ q.vy += (q.ws ? q.g || 20 : 220)*dt; } else if (q.kind === 'smoke' || q.kind === 'smokel'){ q.vx *= 0.99; q.vy *= 0.985; }
     const f = q.ws ? PG.view.s : kzF(q, kz), [bx, by] = PG.toScreen(q.wx, q.wy), x = bx + q.ox*f, y = by + q.oy*f, sz = (q.s0 + (q.s1 - q.s0)*k)*(q.ws ? PG.view.s : kzS(f, kz));   // (ws: a world-sized particle: offsets, speeds and sizes in world px)
-    if (x < -60 || y < -60 || x > PG.cw + 60 || y > PG.ch + 60) continue;
+    if (x < -60 || y < -60 || x > PG.cw + 60 || y > PG.ch + 60) continue; PLIVE++;
     /*@TEST*/if (WFX.dbg) WFX.dbg.push(['p' + (q.id || (q.id = ++WFX.id)), x, y, PG.view.s, PG.view.x, PG.view.y]);/*@ENDTEST*/
     if (q.kind === 'smoke' || q.kind === 'smokel'){ if (!fxBudget(sz*sz*4)) continue; PG.ctx.globalAlpha = fd*0.55*(k < 0.12 ? k/0.12 : 1 - (k - 0.12)/0.88); PG.ctx.drawImage(rotSpr(q.kind === 'smoke' ? SMOKE(q) : SMOKEL(q), q.rot), x - sz, y - sz, sz*2, sz*2); }
     else if (q.kind === 'core'){ PG.ctx.globalCompositeOperation = 'lighter'; PG.ctx.globalAlpha = 0.9*fd*(1 - k*k); PG.ctx.drawImage(PG.BCORE(), x - sz, y - sz, sz*2, sz*2); PG.ctx.globalCompositeOperation = 'source-over'; }
@@ -544,10 +551,10 @@ function drawParticlesUnder(now){
 function drawParticlesOver(now){
   const kz = PKZ;
   // projectiles
-  const ENDQ = PRJEND; ENDQ.length = 0;
-  for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur; if (k < 0) continue;   // (a burst's later rounds wait)
-    if (pr.v2){ const kc = pr.cut != null ? Math.min(k, pr.cut) : k; prEvents(pr, Math.min(1, kc)); if (k >= 1 || (pr.cut != null && k >= pr.cut)){ const L = PROJ.length - 1; if (i < L) PROJ[i] = PROJ[L]; PROJ.pop(); ENDQ.push(pr); continue; } prDraw(pr, k, now); continue; }
-    const [fx0, fy0] = PG.toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = PG.toScreen(pr.to[0], pr.to[1]);
+  const ENDQ = PRJEND; ENDQ.length = 0; PRLIVE = 0;
+  for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur; if (k < 0){ if (prOn(pr)) PRLIVE++; continue; }   // (a burst's later rounds wait)
+    if (pr.v2){ const kc = pr.cut != null ? Math.min(k, pr.cut) : k; prEvents(pr, Math.min(1, kc)); if (k >= 1 || (pr.cut != null && k >= pr.cut)){ const L = PROJ.length - 1; if (i < L) PROJ[i] = PROJ[L]; PROJ.pop(); ENDQ.push(pr); continue; } if (prDraw(pr, k, now)) PRLIVE++; continue; }
+    PRLIVE++; const [fx0, fy0] = PG.toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = PG.toScreen(pr.to[0], pr.to[1]);
     if (k >= 1){ { const L = PROJ.length - 1; if (i < L) PROJ[i] = PROJ[L]; PROJ.pop(); ENDQ.push(pr); } if (pr.hit === 'kick') kick(pr.to[0], pr.to[1]); else if (pr.hit) bfxHit(pr.to[0], pr.to[1], pr.hit); else if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big, false, pr.lite, pr.fz || 1); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
     const ak = pr.arc*kzF(pr, kz), x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*ak; PG.ctx.globalAlpha = pr.a ?? 1;
     if (pr.kind === 'tracer' && pr.dots){ const an = Math.atan2(ty0 - fy0, tx0 - fx0), x2 = x - Math.cos(an)*Math.max(2.5, 0.45*PG.view.s), y2 = y - Math.sin(an)*Math.max(2.5, 0.45*PG.view.s), r = Math.max(0.8, 0.07*PG.view.s);   // a rifle burst: small tracer dots
@@ -696,7 +703,7 @@ function bsmDraw(x, y, R, rot, v, sq, T, a, warm){ if (R < 0.6 || a < 0.01 || x 
   layer(0, 0, 1, bsmRGB(T[0]), a); layer(-0.12, -0.15, 0.8, bsmRGB(T[1]), a); layer(-0.24, -0.3, 0.6, bsmRGB(T[2]), a*0.9, 0.05);
   if (warm > 0.02){ layer(0.03, 0.26, 0.66, 'rgb(196,84,30)', a*0.6*warm, null); layer(0.03, 0.4, 0.4, 'rgb(255,160,64)', a*0.5*warm, null); } }
 // a short-lived puff (gun smoke, an impact's smoke, dust): world radii r0 -> r1, drift vx, vy world px a second, on the real clock
-function bsmPuff(wx, wy, o){ if (!PG.booted || PG.afxReduced() || !fxLv()) return; const lo = PG.SET.fx !== 'high' || PG.saverOn(), cap = lo ? 30 : 70; if (BSM.puffs.length >= cap) BSM.puffs.splice(0, BSM.puffs.length - cap + 1);
+function bsmPuff(wx, wy, o){ if (!PG.booted || PG.afxReduced() || !fxLv()) return; const lo = PG.SET.fx !== 'high' || PG.saverOn(), cap = lo ? 50 : 140; if (BSM.puffs.length >= cap) BSM.puffs.splice(0, BSM.puffs.length - cap + 1);
   if (afxOff(wx, wy, 80)) return;
   BSM.puffs.push({wx, wy, t0:performance.now() + (o.delay || 0), dur:o.dur || 2400, r0:o.r0 || 0.3, r1:o.r1 || 1, vx:(o.vx || 0) + windSync().wx*0.5, vy:(o.vy ?? -0.6) + windSync().wy*0.5, tone:o.tone || 'dark', a:o.a ?? 0.8, sq:o.sq || 1, v:(Math.random()*16) | 0, rot:Math.random()*6.28, id:++BSM.id}); }
 // a plume's spot for cycle ci of slot k of battle p: on the ground between the two sides (most) or among one side's figures, clear of them
@@ -786,16 +793,21 @@ function cqRun(now){ if (!CQ.length) return; for (let i = 0; i < CQ.length; i++)
 // per force (army id): fa the world angle it faces to fire (held 8 s), rk/ra/rp its recoil (start, angle, px), hit/hz its hit flash, rock a ship's roll
 const ANIM = new Map();
 function anim(id){ let A = ANIM.get(id); if (!A){ A = {fa:NaN, ft:-1e9, rk:-1e9, ra:0, rp:0, hit:-1e9, hz:1, rock:-1e9}; ANIM.set(id, A); if (ANIM.size > 400) ANIM.delete(ANIM.keys().next().value); } return A; }
-function unitFace(id, ang, T){ if (id == null) return; const A = anim(id); A.fa = ang; A.ft = performance.now(); if (T){ A.tx = T[0]; A.ty = T[1]; } PG.redraw(); }   // (T: the world point it aims at, for a tap)
+function unitFace(id, ang, T){ if (id == null) return 0; const A = anim(id); A.fa = ang; A.ft = performance.now(); if (T){ A.tx = T[0]; A.ty = T[1]; } PG.animFast();
+  return A.fd != null ? Math.abs(Math.atan2(Math.sin(ang - A.fd), Math.cos(ang - A.fd)))/FACE_W*1000 : 0; }   // (ms the turn takes from its drawn facing)   // (T: the world point it aims at, for a tap)
 function unitRecoil(id, ang, px){ if (id == null || fxLv() === 0) return; const A = anim(id); A.rk = performance.now(); A.ra = ang; A.rp = px; PG.animFast(); }
 function unitHit(id, z){ if (id == null || fxLv() === 0) return; const A = anim(id); A.hit = performance.now(); A.hz = z === 'S' ? 1 : z === 'M' ? 1.5 : 2.2; PG.animFast(); }
 function unitRock(id){ if (id == null || fxLv() === 0) return; anim(id).rock = performance.now(); PG.animFast(); }
 // what the page applies to a force's drawn figures or counter this frame (one shared object, filled per call): dx, dy (css px), rot (rad),
 // red (0..1, the hit flash), face (the world angle to face, or null). null when nothing applies.
-const UA = {dx:0, dy:0, rot:0, red:0, face:null};
+const UA = {dx:0, dy:0, rot:0, red:0, face:null}, FACE_W = 4.5;   // (FACE_W: the turn rate when facing a target, rad/s)
 /*@TEST*/const RX = {on:true};   // (tests of the layout's stability hold the reactions still: setReact(false))/*@ENDTEST*/
-function unitAnim(ids, now){ /*@TEST*/if (!RX.on) return null;/*@ENDTEST*/ let A = null; for (const id of ids){ const q = ANIM.get(typeof id === 'object' ? id.id : id); if (q && (!A || Math.max(q.rk, q.hit, q.rock, q.ft) > Math.max(A.rk, A.hit, A.rock, A.ft))) A = q; }
-  if (!A) return null; UA.dx = UA.dy = UA.rot = UA.red = 0; UA.face = now - A.ft < 8000 && isFinite(A.fa) ? A.fa : null; let live = false;
+function unitAnim(ids, now, cur){ /*@TEST*/if (!RX.on) return null;/*@ENDTEST*/ let A = null; for (const id of ids){ const q = ANIM.get(typeof id === 'object' ? id.id : id); if (q && (!A || Math.max(q.rk, q.hit, q.rock, q.ft) > Math.max(A.rk, A.hit, A.rock, A.ft))) A = q; }
+  if (!A) return null; UA.dx = UA.dy = UA.rot = UA.red = 0; UA.face = null; let live = false;
+  // the facing turns smoothly (FACE_W rad/s) from the way it was drawn (cur) to its target, holds 8 s, then turns back and lets go
+  if (cur != null && isFinite(cur) && (A.fd != null || (now - A.ft < 8000 && isFinite(A.fa)))){ const hold = now - A.ft < 8000 && isFinite(A.fa), want = hold ? A.fa : cur, dt = Math.min(0.1, Math.max(0, (now - (A.fl || now))/1000));
+    if (A.fd == null) A.fd = cur; const d = Math.atan2(Math.sin(want - A.fd), Math.cos(want - A.fd)), st = FACE_W*dt; A.fd += Math.max(-st, Math.min(st, d)); A.fl = now;
+    if (!hold && Math.abs(d) < 0.02) A.fd = null; else { UA.face = A.fd; if (Math.abs(d) > 0.01) live = true; } }
   const tr = now - A.rk; if (tr >= 0 && tr < 170){ live = true; const k = tr < 30 ? tr/30 : Math.pow(1 - (tr - 30)/140, 2); UA.dx -= Math.cos(A.ra)*A.rp*k; UA.dy -= Math.sin(A.ra)*A.rp*k; }   // kicks back, springs back (~150 ms)
   const th = now - A.hit; if (th >= 0 && th < 360){ live = true; const k = 1 - th/360, am = 1.3*A.hz*k; UA.dx += Math.sin(th*0.11)*am; UA.dy += Math.cos(th*0.17)*am*0.6; UA.red = Math.min(1, k*1.25); }
   const tk = now - A.rock; if (tk >= 0 && tk < 1100){ live = true; UA.rot = Math.sin(tk/1100*Math.PI*3)*0.075*(1 - tk/1100); }
@@ -828,21 +840,23 @@ function prAt(pr, k){ const dx = pr.to[0] - pr.from[0], dy = pr.to[1] - pr.from[
   } return [x, y, h]; }
 // drawing one (screen px: the shot's own point by toScreen, the rest of it laid out from there, so it never breaks at the seam)
 function prDraw(pr, k, now){ const g = PG.ctx, s = PG.view.s, [x, y, h] = prAt(pr, k), [sx, sy] = PG.toScreen(x, y), hx = sx, hy = sy - h*s;
-  if (!onScr(sx, sy, 80 + h*s) && !onScr(hx, hy, 80)) return;
+  if (!onScr(sx, sy, 80 + h*s) && !onScr(hx, hy, 80)) return false;
   const rel = (q) => [sx + (q[0] - x)*s, sy + (q[1] - y)*s - q[2]*s];   // another point of its path, laid out from this one
   const vel = () => { const q = prAt(pr, Math.min(1, k + 0.01)), p = prAt(pr, Math.max(0, k - 0.01)); return Math.atan2((q[1] - q[2]) - (p[1] - p[2]), wdx(p[0], q[0])); };
   const trail = (span, n, w0, col, a0, grow) => { if (k <= 0.001) return; g.lineCap = 'round'; let [px, py] = [hx, hy];   // a fading trail back along the path
     for (let j = 1; j <= n; j++){ const kk = k - span*j/n; if (kk < 0) break; const [qx, qy] = rel(prAt(pr, kk)), f = 1 - j/n; g.globalAlpha = a0*f*pr.a; g.strokeStyle = col; g.lineWidth = Math.max(1, w0*s*(1 + (grow || 0)*(1 - f))); g.beginPath(); g.moveTo(px, py); g.lineTo(qx, qy); g.stroke(); px = qx; py = qy; } };
   const glow = (r, a) => { g.globalCompositeOperation = 'lighter'; g.globalAlpha = a*pr.a; g.drawImage(GLOW(), hx - r, hy - r, r*2, r*2); g.globalCompositeOperation = 'source-over'; };
-  const shade = (r) => { if (h <= 0.05) return; g.globalAlpha = 0.28*pr.a; g.fillStyle = '#0b0c0b'; g.beginPath(); g.ellipse(sx, sy, r, r*0.5, 0, 0, Math.PI*2); g.fill(); };   // a soft shadow on the ground under it, in a straight line
+  const shade = (r) => { if (h <= 0.05) return; g.globalAlpha = 0.42*pr.a; g.fillStyle = '#060706'; g.beginPath(); g.ellipse(sx, sy, r, r*0.55, 0, 0, Math.PI*2); g.fill(); g.globalAlpha = 0.18*pr.a; g.beginPath(); g.ellipse(sx, sy, r*1.8, r*1, 0, 0, Math.PI*2); g.fill(); };   // (a clear core and a soft rim)   // a soft shadow on the ground under it, in a straight line
   const pic = (name, L, ang) => { const im = name && PG.ART.sprite(name, Math.round(L*PG.dpr)); if (!im) return false; g.save(); g.globalAlpha = pr.a; g.translate(hx, hy); g.rotate(ang + Math.PI/2); g.drawImage(im, -L/2, -L/2, L, L); g.restore(); return true; };
   switch (pr.kind){
-    case 'trc': { const L = Math.max(8, 2.6*s*pr.size), an = Math.atan2(pr.to[1] - pr.from[1], pr.to[0] - pr.from[0]);   // a fast, flat tank tracer
-      g.globalAlpha = pr.a; g.strokeStyle = 'rgba(255,214,130,.95)'; g.lineWidth = Math.max(1.6, 0.22*s*pr.size); g.lineCap = 'round'; g.beginPath(); g.moveTo(hx - Math.cos(an)*L, hy - Math.sin(an)*L); g.lineTo(hx, hy); g.stroke(); glow(Math.max(3, 0.4*s), 0.7); break; }
-    case 'dots': { const an = Math.atan2(pr.to[1] - pr.from[1], pr.to[0] - pr.from[0]), d = Math.max(3, 0.6*s); g.globalAlpha = pr.a; g.fillStyle = 'rgba(255,226,150,.95)';   // a rifle burst: two small tracer dots
-      for (let j = 0; j < 2; j++){ const r = Math.max(1.1, 0.1*s); g.beginPath(); g.arc(hx - Math.cos(an)*d*j, hy - Math.sin(an)*d*j, r, 0, Math.PI*2); g.fill(); } break; }
+    case 'trc': { const L = Math.max(14, 2.6*s*pr.size), an = Math.atan2(pr.to[1] - pr.from[1], pr.to[0] - pr.from[0]);   // a fast, flat tank tracer: a bright streak with a glow
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55*pr.a; g.strokeStyle = 'rgba(255,170,70,1)'; g.lineWidth = Math.max(4, 0.5*s*pr.size); g.lineCap = 'round'; g.beginPath(); g.moveTo(hx - Math.cos(an)*L, hy - Math.sin(an)*L); g.lineTo(hx, hy); g.stroke(); g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = pr.a; g.strokeStyle = '#fff2c0'; g.lineWidth = Math.max(1.8, 0.22*s*pr.size); g.beginPath(); g.moveTo(hx - Math.cos(an)*L*0.8, hy - Math.sin(an)*L*0.8); g.lineTo(hx, hy); g.stroke(); glow(Math.max(5, 0.6*s), 0.9); break; }
+    case 'dots': { const an = Math.atan2(pr.to[1] - pr.from[1], pr.to[0] - pr.from[0]), d = Math.max(4, 0.6*s), r = Math.max(1.4, Math.min(2.2, 0.12*s));   // a rifle burst: two bright tracer dots with a glow
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.6*pr.a; for (let j = 0; j < 2; j++) g.drawImage(GLOW(), hx - Math.cos(an)*d*j - r*3, hy - Math.sin(an)*d*j - r*3, r*6, r*6);
+      g.globalAlpha = pr.a; g.fillStyle = '#fff4c8'; for (let j = 0; j < 2; j++){ g.beginPath(); g.arc(hx - Math.cos(an)*d*j, hy - Math.sin(an)*d*j, r, 0, Math.PI*2); g.fill(); } g.globalCompositeOperation = 'source-over'; break; }
     case 'shell': { const hn = pr.arc > 0 ? h/pr.arc : 0, r0 = Math.max(1.6, 0.3*s*pr.size);   // grows as it climbs, shrinks as it falls; its shadow runs straight beneath
-      shade(Math.max(1.6, 0.4*s*pr.size)*(1 - 0.35*hn)); trail(0.06, 4, 0.14*pr.size, 'rgba(255,230,190,.8)', 0.5);
+      shade(Math.max(2.4, 0.45*s*pr.size)*(1 - 0.35*hn)); trail(0.06, 4, 0.14*pr.size, 'rgba(255,230,190,.8)', 0.5);
       g.globalAlpha = pr.a; g.fillStyle = '#3a3630'; g.beginPath(); g.arc(hx, hy, r0*(1 + 1.1*hn), 0, Math.PI*2); g.fill(); glow(r0*(2.2 + 1.5*hn), 0.55); break; }
     case 'rkt': trail(0.32, 8, 0.16*pr.size, 'rgba(206,200,190,1)', 0.5, 1.4); glow(Math.max(2.5, 0.45*s), 0.9); g.globalAlpha = pr.a; g.fillStyle = '#fff0c8'; g.beginPath(); g.arc(hx, hy, Math.max(1, 0.1*s), 0, Math.PI*2); g.fill(); break;
     case 'cm': { const L = Math.max(10, 2.6*s*pr.size), an = vel(); shade(Math.max(1.2, 0.3*s)); trail(0.22, 9, 0.12, 'rgba(222,220,214,1)', 0.45, 1); glow(Math.max(3, 0.5*s), 0.8);
@@ -853,14 +867,16 @@ function prDraw(pr, k, now){ const g = PG.ctx, s = PG.view.s, [x, y, h] = prAt(p
     case 'icpt': trail(0.35, 8, 0.07, 'rgba(240,244,248,1)', 0.7); glow(Math.max(3, 0.45*s), 0.95); break;   // the interceptor's streak
     case 'drn': { const L = Math.max(13, 2.6*s*pr.size), an = vel(); shade(Math.max(1, 0.25*s)); trail(0.15, 4, 0.05, 'rgba(200,200,200,1)', 0.35);
       if (!pic(pr.img || 'u-strike-drone', L, an)){ g.save(); g.translate(hx, hy); g.rotate(an); g.globalAlpha = pr.a; g.fillStyle = '#2b2d2a'; g.beginPath(); g.moveTo(L/2, 0); g.lineTo(-L/2, -L*0.45); g.lineTo(-L*0.25, 0); g.lineTo(-L/2, L*0.45); g.closePath(); g.fill(); g.restore(); } break; }
-    case 'dot': trail(0.12, 3, 0.05, 'rgba(40,42,40,1)', 0.45); g.globalAlpha = pr.a; g.fillStyle = '#1e201e'; g.beginPath(); g.arc(hx, hy, Math.max(1.8, 0.22*s), 0, Math.PI*2); g.fill(); break;   // a swarm drone
+    case 'dot': { const r = Math.max(2.6, Math.min(4, 0.24*s)); trail(0.14, 4, 0.08, 'rgba(235,238,240,1)', 0.55); shade(r*0.8); g.globalAlpha = pr.a; g.fillStyle = '#e9edf0'; g.strokeStyle = '#141614'; g.lineWidth = 1.3; g.beginPath(); g.arc(hx, hy, r, 0, Math.PI*2); g.fill(); g.stroke(); break; }   // a swarm drone: a light dot with a dark outline
     case 'bomb': { const r = Math.max(1.2, 0.18*s)*(0.6 + 0.6*(pr.arc > 0 ? h/pr.arc : 0)); shade(r*1.1); g.globalAlpha = pr.a; g.fillStyle = '#22231f'; g.beginPath(); g.ellipse(hx, hy, r, r*1.5, 0, 0, Math.PI*2); g.fill(); break; }
     case 'jet': { const L = Math.max(16, 4.2*s*pr.size), an = Math.atan2(pr.to[1] - pr.from[1], wdx(pr.from[0], pr.to[0]));   // a strafing fighter or a bomber over the target: its picture, its shadow below
       const im = PG.ART.sprite(pr.img || 'u-jet', Math.round(L*PG.dpr)); g.save(); g.translate(sx + h*s*0.35, sy); g.rotate(an + Math.PI/2); g.globalAlpha = 0.25*pr.a;
       if (im){ g.filter = 'brightness(0)'; g.drawImage(im, -L/2, -L/2, L, L); g.filter = 'none'; } else { g.fillStyle = '#000'; g.beginPath(); g.moveTo(0, -L/2); g.lineTo(L*0.4, L*0.3); g.lineTo(-L*0.4, L*0.3); g.closePath(); g.fill(); } g.restore();
       g.save(); g.translate(hx, hy); g.rotate(an + Math.PI/2); g.globalAlpha = pr.a; if (im) g.drawImage(im, -L/2, -L/2, L, L); else { g.fillStyle = '#cfd3d6'; g.strokeStyle = '#1a1c1b'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, -L/2); g.lineTo(L*0.42, L*0.28); g.lineTo(0, L*0.12); g.lineTo(-L*0.42, L*0.28); g.closePath(); g.fill(); g.stroke(); } g.restore(); break; }
   }
-  g.globalAlpha = 1; }
+  g.globalAlpha = 1; return true; }
+// a shot waiting to start: is its path on screen?
+const prOn = pr => { const [ax, ay] = PG.toScreen(pr.from[0], pr.from[1]), s = PG.view.s; return onScr(ax, ay, 120) || onScr(ax + (pr.to[0] - pr.from[0])*s, ay + (pr.to[1] - pr.from[1])*s, 120); };
 // a strafing run (fighters: bursts down along the target) or a bomb line (bombers: bombs that walk across it), on the shot's own clock
 function prEvents(pr, k){ if (!pr.ev || pr.kind !== 'jet') return; const E = pr.ev, lo = fxLv() < 2;
   if (E.t === 'strafe'){ const step = lo ? 0.09 : 0.05; while (k >= E.k0 + pr.n*step && E.k0 + pr.n*step <= E.k1){ const kk = E.k0 + pr.n*step; pr.n++; const [x, y, h] = prAt(pr, kk), dx = pr.to[0] - pr.from[0], dy = pr.to[1] - pr.from[1], L = Math.hypot(dx, dy) || 1, gx = x + dx/L*2.2 + (Math.random() - 0.5)*0.6, gy = y + dy/L*2.2 + (Math.random() - 0.5)*0.6;
@@ -903,13 +919,14 @@ function airBurst(x, y, r){ if (!fxLv()) return; if (fxFar()){ flashAt(x, y, 1.2
   for (let i = 0; i < (fxLv() < 2 ? 3 : 7); i++) emit('spark', x, y, {ws:1, s0:0.12, s1:0.06, life:500, vx:(Math.random() - 0.5)*14*r, vy:(Math.random() - 0.3)*10*r});
   bsmPuff(x, y, {r0:0.4*r, r1:1.4*r, dur:2400, vx:0.3, vy:-0.2, tone:'grey', a:0.7}); snd('impact', 'S', x, y); }
 // dust kicked up by small-arms fire (a spark on water)
-function kick(x, y, sea){ if (fxFar()) return; if (sea ?? seaAt(x, y)){ emit('splash', x, y, {ws:1, s0:0.18, s1:0.3, life:420, vx:0, vy:0}); return; }
-  emit('dust', x, y, {ws:1, s0:0.2, s1:0.65, life:650, vx:(Math.random() - 0.5)*0.8, vy:-0.4}); if (Math.random() < 0.5) emit('spark', x, y, {ws:1, s0:0.1, s1:0.05, life:200, vx:(Math.random() - 0.5)*4, vy:-2}); }
+function kick(x, y, sea){ if (fxFar()) return; const k = Math.max(1, 3/Math.max(1, PG.view.s/4));   // (k: a little bigger at play zoom, so a kick reads)
+  if (sea ?? seaAt(x, y)){ emit('splash', x, y, {ws:1, s0:0.18*k, s1:0.3*k, life:420, vx:0, vy:0}); return; }
+  emit('dust', x, y, {ws:1, s0:0.25*k, s1:0.8*k, life:700, vx:(Math.random() - 0.5)*0.8, vy:-0.4}); emit('flash', x, y, {ws:1, s0:0.25*k, s1:0.1*k, life:90, vx:0, vy:0}); if (Math.random() < 0.5) emit('spark', x, y, {ws:1, s0:0.1, s1:0.05, life:200, vx:(Math.random() - 0.5)*4, vy:-2}); }
 // white water: a plume that climbs and falls back, a ring of foam (world radius r)
 function splash(x, y, r){ emit('splash', x, y, {ws:1, s0:r*0.55, s1:r*1.1, life:900 + 300*r, vx:0, vy:0}); emit('ring', x, y, {ws:1, s0:r*0.4, s1:r*2.2, life:800, vx:0, vy:0}); if (fxLv() > 1) for (let i = 0; i < 3; i++) emit('splash', x + (Math.random() - 0.5)*r, y + (Math.random() - 0.5)*r*0.5, {ws:1, s0:r*0.25, s1:r*0.45, life:600, vx:0, vy:0}); }
 // screen shake: only for big blasts, on screen and near the middle of the view; never on Low or Off, with reduced motion, or when turned off
 function bigShake(x, y, k){ if (fxLv() < 2 || PG.SET.shake === false) return; const [sx, sy] = PG.toScreen(x, y), d = Math.hypot(sx - PG.cw/2, sy - PG.ch/2)/Math.max(1, Math.min(PG.cw, PG.ch));
-  if (!onScr(sx, sy, 0) || d > 0.45) return; const f = 1 - d/0.45, amp = ({cm:3, bm:5, tac:7, icbm:9, chem:1.5}[k] || 2.5)*f; if (amp >= 1) PG.shake(amp, k === 'icbm' ? 1100 : 600); }
+  if (!onScr(sx, sy, 0) || d > 0.45) return; const f = 1 - d/0.45, amp = ({cm:3, bm:5, tac:7, icbm:9, chem:1.5, bomb:4, stealth:3}[k] || 2.5)*f; if (amp >= 1) PG.shake(amp, k === 'icbm' ? 1100 : k === 'bomb' || k === 'stealth' ? 400 : 600); }
 
 // ---- the missile warning: a pulsing red marker on the target (from a few seconds before impact; always for a missile aimed at the player) ----
 const WARN = [];   // {wx, wy, t1 (impact, performance clock), t0, big, mine}
@@ -935,28 +952,30 @@ const CFX_W = ['tank', 'art', 'mlrs', 'inf', 'ship', 'cruise', 'ballistic', 'icb
 const weaponOf = t => ({tank:'tank', ifv:'tank', art:'art', mlrs:'mlrs', inf:'inf', at:'inf', spec:'inf', para:'inf', jam:'inf', sam:'sam', frig:'ship', crui:'ship', sub:'ship', carr:'ship', lst:'ship',
   jet:'fighter', int:'fighter', asf:'fighter', heli:'fighter', bomb:'bomber', stealth:'bomber', sdrone:'drone', swarm:'swarm', drone:'recon', awacs:'recon', mpa:'recon'})[t] || 'inf';
 // the picture of an aircraft type (assets/art), for its strafing pass or bomb run
-const AIR_IMG = {jet:'u-jet', int:'u-jet', asf:'u-air-superiority', heli:'u-attack-heli', bomb:'u-bomber', stealth:'u-bomber', sdrone:'u-strike-drone', swarm:'u-swarm-drone', drone:'u-uav-recon', mpa:'u-naval-patrol', awacs:'u-awacs'};
+const AIR_IMG = {jet:'u-bomber', int:'u-jet', asf:'u-air-superiority', heli:'u-attack-heli', bomb:'u-heavy-bomber-1', stealth:'u-stealth-bomber', sdrone:'u-strike-drone', swarm:'u-swarm-drone', drone:'u-uav-recon', mpa:'u-naval-patrol', awacs:'u-awacs'};
 const airImg = t => AIR_IMG[t] || null;
 function cfxFire(w, A, B, o = {}){ const lv = fxLv(); if (!lv || w === 'recon') return false;
-  B = [A[0] + wdx(A[0], B[0]), B[1]]; const dx = B[0] - A[0], dy = B[1] - A[1], dist = Math.hypot(dx, dy) || 1, ang = Math.atan2(dy, dx), lo = lv < 2, vis = o.from !== false;
+  B = [A[0] + wdx(A[0], B[0]), B[1]];
+  { const [ax, ay] = PG.toScreen(A[0], A[1]), s0 = PG.view.s, bx = ax + (B[0] - A[0])*s0, by = ay + (B[1] - A[1])*s0; if (!onScr(ax, ay, 150) && !onScr(bx, by, 150) && !onScr((ax + bx)/2, (ay + by)/2, 150)) return false; }   /* (nothing of it on screen: not started) */
+  const dx = B[0] - A[0], dy = B[1] - A[1], dist = Math.hypot(dx, dy) || 1, ang = Math.atan2(dy, dx), lo = lv < 2, vis = o.from !== false;
   const sea = o.sea ?? seaAt(B[0], B[1]), miss = o.hit === false, kill = !!o.kill && !miss, bid = miss ? null : o.bid;
   const spot = (r) => { const th = Math.random()*Math.PI*2, d = miss ? r*(1.4 + Math.random()*1.3) : r*Math.sqrt(Math.random()); return [B[0] + Math.cos(th)*d, B[1] + Math.sin(th)*d*0.7]; };
   const from = vis ? A : [A[0] + dx*0.55, A[1] + dy*0.55];   // (an unseen shooter: the fire shows from halfway)
-  const turn = vis && o.aid != null && ['tank', 'art', 'mlrs', 'ship', 'inf', 'sam'].includes(w) ? 240 : 0; if (turn) unitFace(o.aid, ang, B);   // it turns to face the target first
+  let turn = vis && o.aid != null && ['tank', 'art', 'mlrs', 'ship', 'inf', 'sam'].includes(w) ? 240 : 0; if (turn) turn = Math.max(turn, Math.min(900, 80 + unitFace(o.aid, ang, B)));   // it turns to face the target first (as long as the turn takes)
   const far = fxFar();
   if (far){ cqAdd(turn, () => { if (vis) flashAt(A[0], A[1], 0.6); }); const tt = turn + Math.min(2500, 300 + dist*20); cqAdd(tt, () => { const z = w === 'icbm' ? 'XL' : w === 'cruise' || w === 'ballistic' ? 'L' : w === 'inf' || w === 'swarm' ? 'S' : 'M';
       if (w === 'cruise' || w === 'ballistic' || w === 'icbm') strikeAt(w === 'icbm' ? 'icbm' : w === 'ballistic' ? 'bm' : 'cm', B[0], B[1], {bid, sea}); else impact(z, ...spot(1), {sea, kill, bid}); }); return true; }
   const muzzle = (big, wl) => { if (!vis) return; MUZZ.push({wx:A[0], wy:A[1], ang, wl, big, t0:performance.now(), a:1}); emit('flash', A[0], A[1], {ws:1, s0:wl*1.6*big, s1:wl*0.5, life:120, vx:0, vy:0}); };
   switch (w){
     case 'tank': cqAdd(turn, () => { muzzle(1, 1.1); unitRecoil(o.aid, ang, 3); if (vis) emit('dust', A[0] - Math.cos(ang)*0.6, A[1] - Math.sin(ang)*0.4, {ws:1, s0:0.5, s1:1.5, life:800, vx:-Math.cos(ang)*0.6, vy:-0.3}); snd('fire', 'tank', A[0], A[1]);
-      shot2('trc', from, spot(0.8), {dur:Math.min(600, 110 + dist*8), z:'M', sea, kill, bid}); }); break;
+      shot2('trc', from, spot(0.8), {dur:Math.max(260, Math.min(600, 120 + dist*14)), z:'M', sea, kill, bid}); }); break;
     case 'art': cqAdd(turn, () => { muzzle(1.5, 1.5); unitRecoil(o.aid, ang, 5); if (vis && !lo) bsmPuff(A[0], A[1], {r0:0.5, r1:1.8, dur:2800, vx:Math.cos(ang)*0.5, vy:-0.9, tone:'grey', a:0.8}); snd('fire', 'art', A[0], A[1]);
       shot2('shell', from, spot(1.2), {dur:Math.max(1000, Math.min(3000, 900 + dist*40)), arc:Math.max(4, Math.min(45, dist*0.42)), z:'M', sea, kill, bid, snd:'shell'}); }); break;   // a long shot takes longer to land (1-3 s)
     case 'mlrs': { const n = lo ? 6 : 6 + Math.floor(Math.random()*7), du = Math.max(900, Math.min(2600, 800 + dist*30)), sp = Math.max(1.5, dist*0.07);   // a ripple salvo, 80 ms apart
       cqAdd(turn, () => { unitRecoil(o.aid, ang, 2); if (vis && !lo) bsmPuff(A[0], A[1], {r0:0.5, r1:2.2, dur:3000, vx:-Math.cos(ang)*0.8, vy:-0.3, tone:'grey', a:0.7}); snd('fire', 'rocket', A[0], A[1]); });
       for (let i = 0; i < n; i++){ const T = spot(sp); cqAdd(turn + i*80, () => { muzzle(0.6, 0.7); shot2('rkt', [from[0] + (Math.random() - 0.5)*0.6, from[1] + (Math.random() - 0.5)*0.4], T, {dur:du, arc:Math.max(2, Math.min(28, dist*0.3)), z:'M', sea, kill:kill && i === n - 1, bid:i === 0 ? bid : null}); }); } break; }
     case 'inf': { const nb = lo ? 2 : 3; for (let b = 0; b < nb; b++) for (let i = 0; i < 4; i++){ const T = spot(0.9), last = b === nb - 1 && i === 3;
-        cqAdd(turn + b*360 + i*60, () => { if (i === 0){ muzzle(0.5, 0.45); snd('fire', 'gun', A[0], A[1]); } shot2('dots', from, T, {dur:Math.min(420, 90 + dist*6), end:(x, y) => { kick(x, y, sea); if (last && !miss) impact('S', x, y, {sea, kill, bid}); }}); }); } break; }
+        cqAdd(turn + b*360 + i*60, () => { if (i === 0){ muzzle(0.5, 0.45); snd('fire', 'gun', A[0], A[1]); } shot2('dots', from, T, {dur:Math.max(200, Math.min(420, 90 + dist*8)), end:(x, y) => { kick(x, y, sea); if (last && !miss) impact('S', x, y, {sea, kill, bid}); }}); }); } break; }
     case 'ship': { const n = lo ? 2 : 3; cqAdd(turn, () => { muzzle(1.3, 1.4); unitRock(o.aid); if (vis && !lo) bsmPuff(A[0], A[1], {r0:0.5, r1:1.6, dur:2200, vy:-0.6, tone:'grey', a:0.7}); snd('fire', 'art', A[0], A[1]); });
       for (let i = 0; i < n; i++){ const T = spot(1.4); cqAdd(turn + i*140, () => shot2('shell', from, T, {dur:Math.max(900, Math.min(2600, 800 + dist*30)), arc:Math.max(3, Math.min(30, dist*0.3)), z:'M', sea:o.sea ?? seaAt(T[0], T[1]), kill:kill && i === n - 1, bid:i === 0 ? bid : null})); } break; }   // a hit on water: white plumes; a miss lands nearby
     case 'cruise': { const du = Math.max(2000, Math.min(5000, 1600 + dist*28)); if (vis){ bsmPuff(A[0], A[1], {r0:0.4, r1:1.6, dur:2400, vy:-0.5, tone:'grey', a:0.7}); snd('fire', 'rocket', A[0], A[1]); }
@@ -975,7 +994,7 @@ function cfxFire(w, A, B, o = {}){ const lv = fxLv(); if (!lv || w === 'recon') 
   return true; }
 // air defence: an interceptor streak climbs from A and meets an incoming missile (or drone) over B; both burst. The incoming one is drawn on its
 // last stretch (it flies in from the far side), so the player sees the shot being stopped
-function intercept(A, B, o = {}){ if (!fxLv()) return false; B = [A[0] + wdx(A[0], B[0]), B[1]]; const k = o.kind || 'cm', hM = k === 'bm' ? 9 : k === 'dot' ? 2 : 3, du = 900;
+function intercept(A, B, o = {}){ if (!fxLv()) return false; B = [A[0] + wdx(A[0], B[0]), B[1]]; { const [bx, by] = PG.toScreen(B[0], B[1]); if (!onScr(bx, by, 200)) return false; } const k = o.kind || 'cm', hM = k === 'bm' ? 9 : k === 'dot' ? 2 : 3, du = 900;
   const dir = o.dir ?? (Math.atan2(B[1] - A[1], B[0] - A[0]) + Math.PI*0.6), inA = [B[0] + Math.cos(dir)*14, B[1] + Math.sin(dir)*10];
   if (fxFar()){ cqAdd(du, () => airBurst(B[0], B[1] - hM, 1)); return true; }
   const inc = shot2(k === 'bm' ? 'bm' : k === 'dot' ? 'drn' : 'cm', inA, B, {dur:du/0.8, arc:1, cut:0.8}); if (inc) inc.arc = hM/Math.max(0.05, prAt(inc, 0.8)[2]);   // stopped at 80 % of its run, at height hM
@@ -987,7 +1006,7 @@ function intercept(A, B, o = {}){ if (!fxLv()) return false; B = [A[0] + wdx(A[0
 // over its smoke column, the launch plume; the warning on a target of the player's (a pulsing red marker, INCOMING at first). Shown when the
 // player launched it, can see where it flies from or to, or is its target (always) ----
 const MSL = {seen:new Map()};   // missile id -> when first drawn (its launch plume, the alert)
-function drawMissiles(now, vis){ const L = S.inflight; if (!L || !L.length){ if (MSL.seen.size) MSL.seen.clear(); return; } const g = PG.ctx, s = PG.view.s, lv = fxLv();
+function drawMissiles(now, vis){ MSL.on = 0; const L = S.inflight; if (!L || !L.length){ if (MSL.seen.size) MSL.seen.clear(); return; } const g = PG.ctx, s = PG.view.s, lv = fxLv();
   for (const m of L){ const B = G.P[m.to], mine = S.owner[m.to] === PG.PLAYER || stationaryAt(m.to).some(b => b.owner === PG.PLAYER);
     if (!(m.owner === PG.PLAYER || mine || vis.has(m.to) || vis.has(m.from))) continue;
     const q0 = PG.missilePos(m), A = q0.A, first = !MSL.seen.has(m.id); if (first){ MSL.seen.set(m.id, now); if (MSL.seen.size > 200) MSL.seen.delete(MSL.seen.keys().next().value);
@@ -996,7 +1015,7 @@ function drawMissiles(now, vis){ const L = S.inflight; if (!L || !L.length){ if 
     const [x, y] = PG.toScreen(q0.x, q0.y), t = q0.t, d = Math.hypot(B.x - A.x, B.y - A.y), hpx = PG.HOURS_PER_SEC[S.speed] || 0, left = hpx > 0 ? (1 - t)/m.dt/hpx*1000 : Infinity;
     const at = tt => { tt = Math.max(0, Math.min(1, tt)); let px = A.x + (B.x - A.x)*tt, py = A.y + (B.y - A.y)*tt - Math.sin(tt*Math.PI)*q0.arc; if (m.k !== 'bm'){ const w = Math.sin(tt*Math.PI*9 + m.id)*Math.min(1.2, d*0.01)*Math.sin(tt*Math.PI); px += -(B.y - A.y)/(d || 1)*w; py += (B.x - A.x)/(d || 1)*w; } return [x + (px - q0.x)*s, y + (py - q0.y)*s]; };
     const [hx, hy] = at(t);
-    if (onScr(hx, hy, 60)){ if (lv){ const span = m.k === 'bm' ? Math.min(t, 0.3) : 0.12, n = lv < 2 ? 6 : 12; g.lineCap = 'round'; let [px, py] = [hx, hy];   // the trail (no particles: a fading line back along the path)
+    if (onScr(hx, hy, 60)){ MSL.on++; if (lv){ const span = m.k === 'bm' ? Math.min(t, 0.3) : 0.12, n = lv < 2 ? 6 : 12; g.lineCap = 'round'; let [px, py] = [hx, hy];   // the trail (no particles: a fading line back along the path)
         for (let j = 1; j <= n; j++){ const [qx, qy] = at(t - span*j/n), f = 1 - j/n; g.globalAlpha = (m.k === 'bm' ? 0.6 : 0.45)*f; g.strokeStyle = 'rgb(226,224,218)'; g.lineWidth = Math.max(1, (m.k === 'bm' ? 0.35 : 0.14)*s*(1 + 1.5*(1 - f))); g.beginPath(); g.moveTo(px, py); g.lineTo(qx, qy); g.stroke(); px = qx; py = qy; } g.globalAlpha = 1; }
       const [nx, ny] = at(t + 0.01), ang = Math.atan2(ny - hy, nx - hx);
       g.save(); g.translate(hx, hy); g.rotate(ang); g.globalCompositeOperation = 'lighter'; g.drawImage(GLOW(), -22, -9, 22, 18); g.globalCompositeOperation = 'source-over';
@@ -1004,9 +1023,9 @@ function drawMissiles(now, vis){ const L = S.inflight; if (!L || !L.length){ if 
       if (mp){ g.rotate(Math.PI/2); g.drawImage(mp, -MQ/2, -MQ/2, MQ, MQ); } else { g.fillStyle = '#e8e4da'; g.strokeStyle = '#1a1c1b'; g.lineWidth = 1; g.beginPath(); g.moveTo(L0/2, 0); g.lineTo(-L0/2, -2.2); g.lineTo(-L0/2, 2.2); g.closePath(); g.fill(); g.stroke(); }
       g.restore(); }
     // the target: a pulsing red marker when it is the player's (all through the flight, INCOMING for the first 4 s), and for any missile in the last seconds
-    if (mine && m.owner !== PG.PLAYER){ const [tx, ty] = PG.toScreen(B.x, B.y); if (!onScr(tx, ty, -10)) edgeArrow(tx, ty, now); }
-    if ((mine && m.owner !== PG.PLAYER) || left < 4000){ const [tx, ty] = PG.toScreen(B.x, B.y); if (onScr(tx, ty)) warnMark(tx, ty, now, m.k === 'bm' ? 1 : 0.6, left < 4000, mine && m.owner !== PG.PLAYER && now - MSL.seen.get(m.id) < 4000 ? 'INCOMING' : ''); } }
-  PG.animFast(); }
+    if (mine && m.owner !== PG.PLAYER){ MSL.on++; const [tx, ty] = PG.toScreen(B.x, B.y); if (!onScr(tx, ty, -10)) edgeArrow(tx, ty, now); }
+    if ((mine && m.owner !== PG.PLAYER) || left < 4000){ const [tx, ty] = PG.toScreen(B.x, B.y); if (onScr(tx, ty)){ MSL.on++; } if (onScr(tx, ty)) warnMark(tx, ty, now, m.k === 'bm' ? 1 : 0.6, left < 4000, mine && m.owner !== PG.PLAYER && now - MSL.seen.get(m.id) < 4000 ? 'INCOMING' : ''); } }
+  if (MSL.on) PG.animFast(); else if (L.length) PG.animAmb(); }
 
 // ---- sound: each effect has three slots, fire, flight and impact, played by synthesized placeholders (WebAudio noise and oscillator envelopes,
 // original), louder near the middle of the view and when zoomed in, silent far off screen; off with the game's mute or the Effect sounds setting ----
@@ -1042,7 +1061,7 @@ const smooth01f = t => t <= 0 ? 0 : t >= 1 ? 1 : t*t*(3 - 2*t);
 function flightStep(v, gx, gy, dt, o){ const dx = wdx(v.x, gx), dy = gy - v.y, d = Math.hypot(dx, dy); if (!(dt > 0)){ v.turn = 0; return d < 0.05; }
   if (v.hd === undefined || !isFinite(v.hd)) v.hd = d > 1e-4 ? Math.atan2(dy, dx) : 0;
   let spd = o.spd; if (o.base){ const dB = Math.hypot(wdx(v.x, o.base[0]), v.y - o.base[1]); spd *= 0.28 + 0.72*smooth01f(dB/26); }   // slow near its base: the take-off run and the landing
-  if (o.chase && d > 4) spd *= Math.min(2.2, 1 + (d - 4)/18);   // behind the rules' position: it catches up
+  if (o.chase && d > 2) spd *= Math.min(3, 1 + (d - 2)/4);   // behind the rules' position: it catches up (up to 3x)
   const da = Math.atan2(Math.sin(Math.atan2(dy, dx) - v.hd), Math.cos(Math.atan2(dy, dx) - v.hd)), w = Math.max(1.6, Math.min(8, spd/Math.max(2, d)*1.6)), lim = w*dt;
   const turn = d > 1e-4 ? Math.max(-lim, Math.min(lim, da)) : 0; v.hd = Math.atan2(Math.sin(v.hd + turn), Math.cos(v.hd + turn)); v.turn = turn/dt; v.want = v.hd;
   const step = spd*dt*(Math.abs(da) > 2 && d < 8 ? 0.45 : 1);   // (a sharp turn close to its goal: it slows rather than overshoots)
@@ -1089,9 +1108,9 @@ function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANI
    WARN, MARKS, the strike effects ...), so the loop stops drawing when nothing is active (Battery saver: no draws when static). Off-screen
    effects are not drawn (their clocks run on). Effects quality: SET.fx 'high' | 'low' | 'off' (fxLv); the default is High on a desktop, Low
    on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
-const fxStats = () => ({part:PART.length, proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
+const fxStats = () => ({part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
 
-return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ fxLive, bigShake, mslOn:() => MSL.on || 0, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,

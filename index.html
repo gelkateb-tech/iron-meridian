@@ -2861,11 +2861,11 @@ const FX_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches && 
 const SET = {vol:0.35, toasts:'all', fx:FX_DEF, shake:true, fxSnd:true, paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, saver:SAVER_DEF, tipsOff:false, tipSeen:{}};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
 if (!SET.tipSeen || typeof SET.tipSeen !== 'object') SET.tipSeen = {};
-if (!SET.fxPick) SET.fx = FX_DEF;
+if (!SET.fxPick){ let had = false; try { had = 'fx' in (JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}') || {}); } catch (e) {} if (had) SET.fxPick = true; else SET.fx = FX_DEF; }   // (a stored Effects setting is the player's choice; none stored: the device's default)
 // the map's own detail (terrain detail, coast, sea, weather, the figures' budget) is lightened only by an Effects setting chosen by hand: a phone's
 // default Low thins the effects, not the map
 const mapLite = () => SET.fx !== 'high' && !!SET.fxPick;   // (Effects never chosen by hand: the device's default, also over settings saved before there was one)   // first-time tips: which ones were shown (old settings: none yet)
-const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET)); } catch (e) {} applySet(); };
+const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET.fxPick ? SET : {...SET, fx:undefined})); } catch (e) {} applySet(); };   // (Effects kept only once chosen: the device default is not stored)
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
 // the drawable half of the world: river, road and railway paths by class (the rules half, the links between provinces, is loadWorld in rules/map.js)
@@ -3787,6 +3787,7 @@ const FX = [];
 // ---- the map effects (fx.js): the module gets the page's view (FXH: getters, read-only except the few it sets) and returns its drawing and
 // effect functions; the rules' map events are wired to them in RULES EVENTS ----
 const FXH = {get AC(){ return AC; },
+  get missileAlert(){ return missileAlert; },
   get dispPos(){ return dispPos; },
   get master(){ return master; },
   get PLAYER(){ return PLAYER; },
@@ -3830,7 +3831,7 @@ const FXH = {get AC(){ return AC; },
   get wrapSX(){ return wrapSX; },
   get zx(){ return zx; }};
 const FXM = window.IMFX(FXH);
-const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx} = FXM;
+const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx} = FXM;
 // ---- day / night ----
 let NIGHT = null;
 function nightTexture(){ const day = Math.floor(S.hour/24); if (NIGHT && NIGHT.day === day) return NIGHT;
@@ -4531,9 +4532,9 @@ function wingVis(a, now, dt){
   const T = G.P[v.tgt], B = G.P[a.air.base], spd = VW_SPEED*Math.sqrt(Math.max(1, S.speed || 1)), heli = wingT(a) === 'heli';
   // the drawn flight (fx.js flightStep): it flies along its heading and steers towards its goal at a capped turn rate, so it follows smooth
   // curves with its nose along the path; it speeds up after take-off and slows down to land; behind the rules' position it catches up, never
-  // more than 30 world px behind (a steady pull, no jump)
+  // more than 7 world px (about 60 km) behind (a steady pull, no jump)
   const go = (tx, ty) => flightStep(v, tx, ty, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y]});
-  const follow = (wx, wy) => { flightStep(v, wx, wy, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y], chase:true, lim:30}); };
+  const follow = (wx, wy) => { flightStep(v, wx, wy, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y], chase:true, lim:7}); };
   const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); const w = weaponOf(q.T || 'jet'), tb = q.ids && q.ids.length ? armyById(q.ids[0]) : null, B = tb ? dispPos(tb) : [T.x, T.y];
       if (booted){ cfxFire(w, [v.x, v.y], B, {bid:tb ? tb.id : null, kill:q.killed > 0, img:airImg(q.T), sea:G.P[q.p].sea});   // (fx.js)
         if (w === 'fighter'){ const nm = 1 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], fxOff(T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10, 6), {dur:450 + i*80, arc:4, big:0.9}); } }
@@ -4557,6 +4558,9 @@ const FXQ = []; FXQ.clk = 0; FXQ.gt = 0;   // clk: the queue's clock; gt: the am
 function fxLater(ms, fn){ if (FXQ.length > 400) FXQ.shift(); FXQ.push({t:FXQ.clk + ms, fn}); }
 function fxDrain(now){ const dt = Math.min(250, Math.max(0, now - (FXQ.last || now))); FXQ.last = now; if (S && S.speed > 0 && !S.over) FXQ.gt += dt; if (!S || !(S.speed > 0) || !FXQ.length) return; FXQ.clk += dt;
   for (let i = 0; i < FXQ.length; i++){ const q = FXQ[i]; if (q.t > FXQ.clk) continue; FXQ.splice(i--, 1); try { q.fn(); } catch (e){ console.error(e); } } }
+// a missile heading for the player's unit or city, first seen: a short vibration where the device has one (fx.js plays the alert sound and draws
+// the INCOMING marker; the rules' launch dispatch is the written alert, so no second toast)
+function missileAlert(m){ try { if (navigator.vibrate && SET.motion !== 'reduced') navigator.vibrate([90, 60, 90]); } catch (e) {} }
 function strikeFX(p, v, bld){ const P = G.P[p]; afxMark(p, 24);   // (bld: buildings were hit: large blasts)
   for (let i = 0; i < 5; i++) fxLater(120 + i*170, () => { const [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*16, P.y + (Math.random() - 0.5)*9, 6); FXW.blast(bld && i % 2 === 0 ? 'L' : 'M', ex, ey, {sea:P.sea}); });
   sfx('boom'); }
@@ -5249,11 +5253,11 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     const cls = c.cls || (c.air ? 'a' : 'g'), want = tmRank(tmUnits(c.list), cls, c.moving ? Math.min(3, tmNMax(-1)) : tmNMax(c.at), !c.moving && tmPrimO(c.at, c.owner)); if (!want.length) continue;
     const lead = c.list[0], mS = c.air ? null : movOwn(lead.id);   // (the group goes by its oldest force, which stays while others come and go)
     const foe = !c.air && !c.moving && S.battles.includes(c.at) ? clusters.find(o => o.at === c.at && o !== c && !o.air && !o.moving && o.wx != null && atWar(o.owner, c.owner)) : null;
-    const ua = !c.moving && !c.air ? unitAnim(c.list, now) : null;   // (fx.js: a force firing at a target turns to face it)
-    let ang = !foe && ua && ua.face != null ? ua.face : foe ? Math.atan2(foe.wy - c.wy, foe.wx - c.wx) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // firing at a target: facing it; in a battle at the enemy; marching (or at rest) the way it went
+    let ang = foe ? Math.atan2(foe.wy - c.wy, foe.wx - c.wx) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // in a battle at the enemy; marching (or at rest) the way it went
     if (mS && (c.moving || mS.halt != null) && isFinite(mS.hd)){ TMH.set(lead.id, mS.hd); if (TMH.size > 3000) TMH.clear(); }
     if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B && Math.hypot(B.x - c.wx, B.y - c.wy) > 0.2) ang = Math.atan2(B.y - c.wy, B.x - c.wx); }   // ordered off but not yet under way
     if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
+    if (!foe && !c.moving && !c.air){ const ua = unitAnim(c.list, now, ang); if (ua && ua.face != null) ang = ua.face; }   // (fx.js: a force firing at a target turns smoothly to face it, then back)
     const F = tmForm(want), d = want.map(t => tmDir(lead.id, t, ang, now)), src = want.src || {}, arts = want.map(t => tmOn() ? tmArt(t, src[t], c.owner) : null); let top = Infinity, ys = 0, ny = 0;
     for (let i = 0; i < want.length; i++) if (F.slots[i]){ top = Math.min(top, F.slots[i][1] + (arts[i] ? -tmArtHalf(arts[i], ang)[1] : tmVB(want[i])[d[i]][1])); ys += F.slots[i][1]; ny++; }
     if (!isFinite(top)) top = 0; let E = TMTOP.get(lead.id);
@@ -6845,6 +6849,18 @@ function counter(c, a, L, n, selected, fighting, now){
   ctx.globalAlpha = ga;
   const r = c.tag ? rt : rd; if (r) return r;
   const rc = plateRect(c.x, c.y, n, 1, quiet, c.tag); rc.bg = null; return rc; }
+// an aircraft in flight as its own picture (assets/art u-*.webp by UART; the Heavy and Stealth Bombers' stand-ins until their files come), nose along its
+// heading, with a soft dark copy of it on the ground below (sh: its offset, css px; it slips sideways in a bank). False while the picture is not
+// loaded: the flat icon stands in
+const AIRSH = new Map();
+function airPic(kind, x, y, L, ang, sh){ const n = UART[kind] && UART[kind][0]; if (!n) return false; const Lp = L*1.6, px = Math.max(8, Math.round(Lp*dpr)), im = ART.sprite(n, px); if (!im) return false;
+  const key = n + '|' + px; let sc = AIRSH.get(key);
+  if (!sc){ const t = document.createElement('canvas'); t.width = im.width; t.height = im.height; const g = t.getContext('2d'); g.drawImage(im, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#000'; g.fillRect(0, 0, t.width, t.height);
+    sc = document.createElement('canvas'); const pd = Math.ceil(t.width*0.08); sc.width = t.width + 2*pd; sc.height = t.height + 2*pd; sc.pd = pd; const g2 = sc.getContext('2d'); g2.filter = `blur(${Math.max(1, t.width*0.025)}px)`; g2.drawImage(t, pd, pd);
+    if (AIRSH.size > 80) AIRSH.clear(); AIRSH.set(key, sc); }
+  const f = Lp/im.width, pd = sc.pd*f;
+  if (sh){ ctx.save(); ctx.translate(x + sh[0], y + sh[1]); ctx.rotate(ang + Math.PI/2); ctx.globalAlpha *= 0.3; ctx.drawImage(sc, -Lp/2 - pd, -Lp/2 - pd, Lp + 2*pd, Lp + 2*pd); ctx.restore(); }
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang + Math.PI/2); ctx.drawImage(im, -Lp/2, -Lp/2, Lp, Lp); ctx.restore(); return true; }
 // a flat aircraft icon in flight: the unit's silhouette (UICON) in its side's light tone with a dark casing, turned to its heading (the icons are
 // drawn nose up; the side-on helicopter and truck stay level, facing their way)
 const AIRC = new Map();
@@ -7804,7 +7820,7 @@ function draw(now){ draw.now = now;
       // bank: the plane narrows across its heading while it turns, and its shadow slips sideways
       const bq = 1 - 0.2*Math.abs(bank), bsh = Math.max(3, 0.1*Dp)*bank, shx = -sa0*bsh, shy = ca0*bsh, banked = Math.abs(bank) > 0.02;
       if (banked){ ctx.save(); ctx.translate(px0, py0); ctx.rotate(ang); ctx.scale(1, bq); ctx.rotate(-ang); ctx.translate(-px0, -py0); }
-      flatAir(kind, px0, py0, Dp, ang, airTone(a.owner), [shx + 2 + 7*alt, shy + 3 + 14*alt]);
+      if (!(hexPx >= 14 && airPic(kind, px0, py0, Dp, ang, [shx + 2 + 7*alt, shy + 3 + 14*alt]))) flatAir(kind, px0, py0, Dp, ang, airTone(a.owner), [shx + 2 + 7*alt, shy + 3 + 14*alt]);
       if (banked) ctx.restore(); }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreenFrom(v.x, x, T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(phB ? toScreenFrom(v.x, x, B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }   // (from the wing's own copy: the line keeps to its flight)
     // strength in a small pill edged in the owner's colour; pills of wings flying side by side are nudged apart so '6' and '1' never read as '61'
@@ -7836,8 +7852,8 @@ function draw(now){ draw.now = now;
   // effects still alive: shells, flashes, booms, impacts growing in, floating numbers, missiles, queued effects; particles, smoke puffs and wrecks
   // (paused, only drifting smoke is left: gentle ambient motion); scorch marks fade over 20 s
   const fxRun = S.speed && !S.over;
-  if (PROJ.length || MUZZ.length || AFX.boom.length || FX.length || (S.inflight && S.inflight.length) || (FXQ.length && fxRun) || AFX.crater.some(q => now - q.t0 < 300)) animFast();
-  else if (PART.length || AFX.puff.length || WRECKS.length){ if (fxRun) animFast(); else animAmb(); }
+  if (FXM.fxLive() || MUZZ.length || AFX.boom.length || FX.length || FXM.mslOn() || (FXQ.length && fxRun) || AFX.crater.some(q => now - q.t0 < 300)) animFast();   // (fx.js: only what is on screen)
+  else if (AFX.puff.length || WRECKS.length){ if (fxRun) animFast(); else animAmb(); }
   else if (SCORCH.length) animAmb();
   if (WFX.flash) drawWFXFlash(now);   // a nuclear flash whitens the whole map, counters too
   ovOut();
@@ -7988,7 +8004,7 @@ function tap(x, y, shift = false){
       const own = h.ids.map(armyById).filter(a => a && a.owner === PLAYER);
       if (own.length){
         if (shift && sel.army !== null){ selectArmy(own[0].id, true); return; }
-        if (own.some(a => a.id === sel.army)){
+        if (own.some(a => a.id === sel.army)){ tapCombat(armyById(sel.army));   // (fx.js: in combat, its range ring and target again)
           if (own.length > 1){ const i2 = own.findIndex(a => a.id === sel.army); selectArmy(own[(i2 + 1) % own.length].id); }
           else { const a = armyById(sel.army); selectProv(a.to === null ? a.at : null); }
         } else selectArmy(own[0].id, shift);
@@ -9705,19 +9721,34 @@ function devPanelHTML(){ const al = S.nations.filter(N => N.alive), U = UNITS[DE
     <div class="dv-r"><select id="devo" aria-label="Owner">${al.map(N => `<option value="${N.id}"${N.id === DEVUI.o ? ' selected' : ''}>${N.name}${N.id === PLAYER ? ' (you)' : ''}</option>`).join('')}</select><input id="devk" type="number" min="1" max="999" value="${DEVUI.k}" aria-label="Count"></div>
     <div class="dv-r"><button class="dv-b go" data-dev="pick" aria-pressed="${DEVUI.pick}">${DEVUI.pick ? 'Click provinces to place · Esc stops' : 'Place: click a province'}</button></div>
     <div class="dv-n${DEVUI.note ? DEVUI.ok ? ' ok' : ' bad' : ''}">${DEVUI.note || (U.cls === 'naval' ? 'Ships: a sea zone or a coastal province.' : 'Ground and air: any land province.')}</div></div>
-  <div class="dv-s"><div class="dv-l">Effects test</div>${DEV_CFX.map(r => `<div class="dv-r">${r.map(([k, t]) => `<button class="dv-b" data-dev="cfx" data-k="${k}">${t}</button>`).join('')}</div>`).join('')}<div class="dv-n">Fires at the selected province (or the middle of the view) from a test shooter beside it.</div></div>
+  <div class="dv-s"><div class="dv-l">Effects test</div>${DEV_CFX.map(r => `<div class="dv-r">${r.map(([k, t]) => `<button class="dv-b" data-dev="cfx" data-k="${k}">${t}</button>`).join('')}</div>`).join('')}<div class="dv-r">${[['hit', 'Hit'], ['miss', 'Miss'], ['kill', 'Kill']].map(([k, t]) => `<button class="dv-b" data-dev="cfxv" data-k="${k}" aria-pressed="${(DEVUI.fxv || 'hit') === k}">${t}</button>`).join('')}</div><div class="dv-n">Each button places a real shooter of that type beside the selected province (or the middle of the view) and an enemy target force there (a frigate at sea for the warship), then fires: Hit flashes and shakes the target, Kill destroys it.</div></div>
   <div class="dv-s"><div class="dv-l">Strike effects</div>${DEV_FX.map(r => `<div class="dv-r">${r.map(([k, t]) => `<button class="dv-b" data-dev="wfx" data-k="${k}">${t}</button>`).join('')}</div>`).join('')}
     <div class="dv-n">At the selected province, else the map centre.</div></div>`; }
 // the strike-effect test buttons: each fires one effect where the developer looks (the selected province, else the middle of the map)
-const DEV_CFX = [[['tank', 'Tank'], ['art', 'Artillery'], ['mlrs', 'Rockets']], [['inf', 'Infantry'], ['ship', 'Warship'], ['sam', 'Air defence']], [['cruise', 'Cruise'], ['ballistic', 'Ballistic'], ['icbm', 'ICBM']],
-  [['fighter', 'Fighter'], ['bomber', 'Bomber'], ['drone', 'Strike drone']], [['swarm', 'Swarm'], ['recon', 'Recon (no fire)'], ['all', 'All in turn']]];
+const DEV_CFX = [[['tank', 'Tank'], ['art', 'Artillery'], ['mlrs', 'Rockets']], [['inf', 'Infantry'], ['ship', 'Warship'], ['cruise', 'Cruise']], [['ballistic', 'Ballistic'], ['icbm', 'ICBM'], ['fighter', 'Fighter']],
+  [['bomber', 'Bomber'], ['drone', 'Strike drone'], ['swarm', 'Swarm']], [['sam', 'Air defence: missile'], ['samd', 'Air defence: drone'], ['samw', 'Anti-drone: swarm']], [['recon', 'Recon (no fire)'], ['all', 'All in turn']]];
 // the Effects test: weapon w fires at the test target (the selected province, else the middle of the view) from a shooter beside it, at a range that
 // suits it; the target is marked. 'all' fires every weapon in turn
 function devCfx(w){ if (!S || !S.started) return; const p = sel.prov != null && sel.prov >= 0 && G.P[sel.prov] ? sel.prov : -1, B = p >= 0 ? [G.P[p].x, G.P[p].y] : screenToWorld(cw/2, ch/2);
-  if (w === 'all'){ DEV_CFX.flat().filter(([k]) => k !== 'all' && k !== 'recon').forEach(([k], i) => setTimeout(() => devCfx(k), i*1600)); return; }
-  const far = w === 'cruise' || w === 'ballistic' || w === 'icbm' ? 16 : w === 'art' || w === 'mlrs' || w === 'ship' || w === 'sam' ? 9 : 5, A = [B[0] - far, B[1] + far*0.35];
-  orderMark({A, B, dur:w === 'icbm' ? 9000 : w === 'ballistic' ? 6000 : 3500, kind:'test'});
-  if (w === 'sam') intercept([B[0] - 3, B[1] + 3], B, {kind:'cm'}); else cfxFire(w, A, B, {mine:true}); }
+  if (w === 'all'){ DEV_CFX.flat().filter(([k]) => k !== 'all' && k !== 'recon').forEach(([k], i) => setTimeout(() => devCfx(k), i*2200)); return; }
+  const v = DEVUI.fxv || 'hit', foeN = S.nations.findIndex((N, i) => i !== PLAYER && N.alive), naval = w === 'ship', T0 = DEV_CFX_T[w];
+  const near = (x, y, ok, not) => { let best = -1, bd = Infinity; for (const q of G.P){ if (q.id === not || !ok(q)) continue; const d = Math.hypot(wdx(x, q.x), q.y - y); if (d < bd){ bd = d; best = q.id; } } return best; };
+  const okT = naval ? q => q.sea && devSpawnOk(q.id, 'frig') : q => !q.sea, pB = near(B[0], B[1], okT);   // the target force: a frigate at sea for the warship (so the splashes show), else a tank group on land
+  const tgt = pB >= 0 && foeN >= 0 && w !== 'sam' && w !== 'samd' && w !== 'samw' ? devSpawn(foeN, pB, naval ? 'frig' : 'tank', 3) : null, Bp = tgt ? dispPos(tgt) : B;
+  const far = w === 'cruise' || w === 'ballistic' || w === 'icbm' ? 16 : w === 'art' || w === 'mlrs' || naval ? 10 : 6;
+  // the shooter: a force of the weapon's type in a province beside it (a cruiser at sea or on the coast); missiles and aircraft fly in from that side
+  const pA = T0 ? near(Bp[0] - far, Bp[1] + far*0.3, q => devSpawnOk(q.id, T0) && (!naval || q.sea), pB) : -1, att = pA >= 0 ? devSpawn(PLAYER, pA, T0, 3) : null;
+  const A = att ? dispPos(att) : [Bp[0] - far, Bp[1] + far*0.35];
+  { const [tx, ty] = toScreen(Bp[0], Bp[1]); if (tx < 30 || ty < 30 || tx > cw - 30 || ty > ch - 30){ view.x = cw/2 - ((A[0] + Bp[0])/2)*view.s; view.y = ch/2 - ((A[1] + Bp[1])/2)*view.s; redraw(); } }   // (a target off screen, a sea zone far from the middle: the camera goes to the fight)
+  DEVUI.note = `Effects test: ${w}${att ? ' from ' + (G.P[pA].cityName || G.P[pA].name) : ''}${tgt ? ' at ' + (G.P[pB].cityName || G.P[pB].name) : ''} (${v}).`; DEVUI.ok = true; devRender();
+  orderMark({A, B:Bp, bid:tgt ? tgt.id : null, dur:w === 'icbm' ? 9000 : w === 'ballistic' ? 6000 : 3500, kind:'test'});
+  setTimeout(() => { const A2 = att && count(att) ? dispPos(att) : A, B2 = tgt && count(tgt) ? dispPos(tgt) : Bp;   // (once the new forces are drawn)
+    if (w === 'sam' || w === 'samd' || w === 'samw'){ const s0 = pB >= 0 ? devSpawn(PLAYER, near(B[0], B[1], q => !q.sea), 'sam', 2) : null; setTimeout(() => intercept(s0 ? dispPos(s0) : [B[0] - 3, B[1] + 3], [B[0] + 2, B[1]], {kind:w === 'samd' ? 'drn' : w === 'samw' ? 'dot' : 'cm', aid:s0 ? s0.id : null}), 400); return; }
+    cfxFire(w, A2, B2, {mine:true, aid:att ? att.id : null, bid:tgt ? tgt.id : null, hit:v !== 'miss', kill:v === 'kill', img:airImg(T0 || '')}); }, 500);
+  if (v === 'kill' && tgt) setTimeout(() => { for (const t of UT) tgt.u[t] = 0; removeEmpty(); visCache = null; redraw(); }, (DEV_CFX_KILL[w] || 3000) + 500); }   // (the destroyed target leaves once its blast has gone up)
+// the shooter's unit type for each test weapon (none: a missile or an aircraft from off the map) and when a killed target is taken off (ms)
+const DEV_CFX_T = {tank:'tank', art:'art', mlrs:'mlrs', inf:'inf', ship:'crui', sam:'sam', samd:'sam', samw:'jam'};
+const DEV_CFX_KILL = {tank:900, art:3300, mlrs:3200, inf:1600, ship:3200, cruise:5000, ballistic:7500, icbm:12500, fighter:1500, bomber:2800, drone:1500, swarm:1700};
 const DEV_FX = [[['cm', 'Cruise'], ['bm', 'Ballistic'], ['chem', 'Chemical']], [['tac', 'Tactical nuke'], ['icbm', 'ICBM']], [['exS', 'Blast S'], ['exM', 'Blast M'], ['exL', 'Blast L']]];
 function devFx(k){ if (!S || !S.started) return; const p = sel.prov != null && sel.prov >= 0 && G.P[sel.prov] ? sel.prov : -1, [wx, wy] = p >= 0 ? [G.P[p].x, G.P[p].y] : screenToWorld(cw/2, ch/2);
   if (k[0] === 'e'){ const c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1; wfxStart(k, wx, wy, {force:true, sea:q >= 0 && G.P[q].sea}); } else wfxStrike(k, wx, wy, {force:true, p:p >= 0 ? p : undefined}); }
@@ -9743,6 +9774,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-dev]
     else if (k === 'pick'){ DEVUI.pick = !DEVUI.pick; DEVUI.note = ''; devRender(); }
     else if (k === 'wfx') devFx(b.dataset.k);
     else if (k === 'cfx') devCfx(b.dataset.k);
+    else if (k === 'cfxv'){ DEVUI.fxv = b.dataset.k; devRender(); }
     return; }
   if (e.target.closest('[data-speed]') && DEVUI.open) devSync();
   if ((DEV.instant || DEV.research) && S && S.started && !S.over && e.target.closest('[data-act]') && devDone(PLAYER)){ renderSide(true); if (modalKind === 'research' && !$('modal').hidden) rRender(); } });
@@ -10386,7 +10418,12 @@ IM.on('fxCapture', (p, O, prev) => {
 // air war (rules/air.js): paradrop dust, satellite launch smoke, the strike animation queue, missile blasts: shown for the player's own and for what the player can see
 IM.on('fxDrop', (a, p) => { if (booted && (a.owner === PLAYER || visibleSet(PLAYER).has(p))){ const P = G.P[p]; for (let i = 0; i < 7; i++) emit('smoke', P.x + (Math.random() - 0.5)*18, P.y - 14 - Math.random()*8, {vy:3, s0:5, s1:7, life:1500}); } });
 IM.on('fxSat', (p, n) => { if (booted && n === PLAYER){ const P = G.P[p]; for (let i = 0; i < 6; i++) emit('smokel', P.x, P.y, {vx:(Math.random() - 0.5)*10, vy:-20 - Math.random()*10, s0:6, s1:24, life:2600}); } });
-IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : E.T === 'stealth' ? 30 : 20); if (isBmb(E.T)) shake(E.T === 'bomb' ? 4 : 3, 400); }
+IM.on('fxAD', E => { if (!booted) return; const vis = visibleSet(PLAYER), P = G.P[E.p]; if (!P || !(E.by === PLAYER || E.owner === PLAYER || vis.has(E.p))) return;
+  const B0 = E.a && E.a.air ? G.P[E.a.air.base] : P, dir = Math.atan2(B0.y - P.y, wdx(P.x, B0.x)), kind = E.T === 'swarm' ? 'dot' : 'drn';
+  const sh = (E.ids || []).map(armyById).filter(b => b && count(b) && (b.owner === PLAYER || armyVisible(b, vis)));
+  for (let i = 0; i < Math.min(4, E.lost); i++){ const b = sh.length ? sh[i % sh.length] : null, A = b ? dispPos(b) : [P.x + 4, P.y + 3];   // (fx.js intercept: the streak meets the drone, both burst)
+    setTimeout(() => intercept(A, [P.x + (Math.random() - 0.5)*6, P.y + (Math.random() - 0.5)*4], {kind, from:!!b, aid:b ? b.id : null, dir:dir + (Math.random() - 0.5)*0.7}), i*260); } });
+IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : E.T === 'stealth' ? 30 : 20); if (isBmb(E.T)){ const P = G.P[E.p]; bigShake(P.x, P.y, E.T); } }   // (fx.js bigShake)
   STRIKEQ.set(E.a.id, {p:E.p, t:performance.now(), dealt:E.dealt, owner:E.owner, bnote:!!E.bnote, T:E.T, ids:E.ids, killed:E.killed}); });
 IM.on('fxMissile', E => { const m = E.m, P = G.P[m.to]; if (!booted || !(m.owner === PLAYER || E.owner === PLAYER || visibleSet(PLAYER).has(m.to))) return;
   if (!E.hit){ const ia = E.by != null ? armyById(E.by) : null, seeI = ia && (ia.owner === PLAYER || armyVisible(ia, visibleSet(PLAYER))), F = G.P[m.from];   // (fx.js: the interceptor's streak meets the missile over its target; both burst)

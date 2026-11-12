@@ -6,7 +6,7 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
 const OUT = process.argv[5] || path.join(__dirname, 'cfx-shots'), ONLY = process.argv[6] ? process.argv[6].split(',') : null, Z = +(process.argv[7] || 12);
 fs.mkdirSync(OUT, { recursive: true });
 // weapon -> [frame times in ms after firing]
-const PLAN = { tank: [290, 380, 700], art: [330, 1100, 2700], mlrs: [400, 1200, 2500], inf: [330, 520, 900], ship: [330, 1100, 2400], cruise: [200, 1700, 3700],
+const PLAN = { tank: [40, 150, 420], art: [80, 900, 2500], mlrs: [150, 1000, 2300], inf: [80, 300, 800], ship: [90, 900, 2200], cruise: [200, 1700, 3700],
   ballistic: [250, 2500, 5300], icbm: [400, 5000, 8700], fighter: [150, 600, 1300], bomber: [300, 1300, 2600], drone: [100, 600, 1300], swarm: [150, 600, 1300], sam: [250, 650, 1000] };
 (async () => { const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, hasTouch: PHONE, isMobile: PHONE });
@@ -17,7 +17,7 @@ const PLAN = { tank: [290, 380, 700], art: [330, 1100, 2700], mlrs: [400, 1200, 
   const P = await p.evaluate(Z => { document.querySelectorAll('.toast').forEach(t => t.remove()); const im = window.__im; im.S.speed = 0; im.SET.fx = 'high'; im.SET.saver = false;
     const B = im.G.P.find(q => q.cityName === 'Berlin'); const s = Z, cw = innerWidth, ch = document.getElementById('map').getBoundingClientRect().height; im.view.s = s; im.view.x = cw/2 - (B.x + 2)*s; im.view.y = ch/2 - (B.y + 1)*s; im.redraw();
     return { x: B.x, y: B.y }; }, Z);
-  await p.waitForTimeout(1500);
+  await p.waitForTimeout(5000);   // (the city and terrain bakes for the view first: frames are slow until they are done)
   for (const w of Object.keys(PLAN)){ if (ONLY && !ONLY.includes(w)) continue;
     const far = w === 'cruise' || w === 'ballistic' || w === 'icbm' ? 14 : w === 'art' || w === 'mlrs' || w === 'ship' ? 9 : 5;
     await p.evaluate(([w, P, far]) => { const im = window.__im, A = [P.x - far, P.y + far*0.35], B = [P.x + 4, P.y]; if (w === 'sam') im.cfx.intercept([P.x - 3, P.y + 3], B, { kind: 'cm' }); else im.cfx.fire(w, A, B, { mine: true }); }, [w, P, far]);

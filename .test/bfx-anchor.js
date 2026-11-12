@@ -26,7 +26,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const go = (s, dx = 0, dy = 0) => p.evaluate(([P, s, dx, dy]) => { const im = window.__im, sd = document.getElementById('side'), r = sd && sd.getBoundingClientRect(), cw = r && r.left > innerWidth*0.5 ? r.left : innerWidth, ch = document.getElementById('map').getBoundingClientRect().height;
     im.view.s = s; im.view.x = cw/2 + dx - P.x*s; im.view.y = ch/2 + dy - P.y*s; im.redraw(); }, [P, s, dx, dy]);
   // (F) the clock runs at close zoom: sample every new shot against this frame's firing points
-  await go(16); await p.evaluate(() => { window.__im.S.speed = 1; });
+  await go(16); await p.evaluate(() => { window.__im.S.speed = 1; window.__im.cfx.M.setReact(false); });   // (the combat reactions, recoil and the hit shake, move the figures between frames: held still here)
   const fire = await p.evaluate(async () => { const im = window.__im, raf = () => new Promise(r => requestAnimationFrame(() => r())), seen = new Set(); let n = 0, bad = [], kinds = {}, pts = 0;
     const t0 = performance.now(); while (performance.now() - t0 < 4000){ await raf(); const M = im.BFX.pts.get(im.S.battles[0]); if (!M) continue; const all = []; for (const [o, L] of M) for (const q of L){ all.push([o, q]); } pts = Math.max(pts, all.length);
       for (const pr of im.PROJ){ if (seen.has(pr.sn ?? pr) || !pr.ws) continue; seen.add(pr.sn ?? pr); n++; kinds[pr.kind] = (kinds[pr.kind] || 0) + 1;

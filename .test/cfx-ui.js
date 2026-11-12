@@ -20,14 +20,24 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.click('#devbadge'); await p.waitForTimeout(300);
   const btns = await p.$$eval('[data-dev="cfx"]', L => L.map(e => e.dataset.k)); res.buttons = btns;
   const fired = {};
-  for (const k of btns){ if (k === 'all') continue; await p.evaluate(() => { const c = window.__im.cfx; c.PROJ.length = 0; c.PART.length = 0; });
-    await p.click(`[data-dev="cfx"][data-k="${k}"]`); await p.waitForTimeout(k === 'icbm' || k === 'ballistic' ? 700 : 450);
-    fired[k] = await p.evaluate(() => { const st = window.__im.cfx.stats(); return st.proj + st.part + st.cq; }); if (k === 'tank') await p.screenshot({ path: path.join(OUT, `${W}x${H}-ui-panel.png`) }); }
-  res.fired = fired; for (const k of btns) if (k !== 'all' && k !== 'recon' && !(fired[k] > 0)) errors.push('the ' + k + ' button fired nothing');
+  const nA0 = await p.evaluate(() => window.__im.S.armies.length);
+  for (const k of btns){ if (k === 'all' || k === 'cfxv') continue; await p.evaluate(() => { const c = window.__im.cfx; c.PROJ.length = 0; c.PART.length = 0; });
+    await p.click(`[data-dev="cfx"][data-k="${k}"]`);
+    fired[k] = await p.evaluate(() => new Promise(res => { let mx = 0; const t0 = performance.now(); const f = () => { const st = window.__im.cfx.stats(); mx = Math.max(mx, st.proj + st.partFx + st.cq); if (performance.now() - t0 < 1800) setTimeout(f, 50); else res(mx); }; f(); }));   // (the most effects alive at once)
+    if (k === 'tank') await p.screenshot({ path: path.join(OUT, `${W}x${H}-ui-panel.png`) }); }
+  res.fired = fired; res.spawned = (await p.evaluate(() => window.__im.S.armies.length)) - nA0; if (!(res.spawned >= 10)) errors.push('the test panel placed too few forces: ' + res.spawned); for (const k of btns) if (k !== 'all' && k !== 'recon' && !(fired[k] > 0)) errors.push('the ' + k + ' button fired nothing');
   if (fired.recon > 0 && fired.recon !== undefined) { /* the recon UAV never fires: only the earlier shots fading */ }
+  // the real forces the panel places: a tank hit (recoil, the target's red flash), a warship's kill at sea (splashes, the blast and smoke column)
+  await p.evaluate(() => { const im = window.__im, B = im.G.P.find(q => q.cityName === 'Berlin'), s = 16; im.view.s = s; im.view.x = innerWidth/2 - (B.x - 3)*s; im.view.y = 420 - B.y*s; im.redraw(); }); await p.waitForTimeout(2500);
+  await p.click('[data-dev="cfxv"][data-k="hit"]'); await p.click('[data-dev="cfx"][data-k="tank"]'); await p.waitForTimeout(900); await p.screenshot({ path: path.join(OUT, `${W}x${H}-ui-panel-tank-hit.png`) });
+  await p.waitForTimeout(2500); await p.evaluate(() => { const im = window.__im, Ps = im.G.P.filter(q => q.sea), B = im.G.P.find(q => q.cityName === 'Hamburg'); let best = null, bd = Infinity; for (const q of Ps){ const d = Math.hypot(q.x - B.x, q.y - B.y); if (d < bd){ bd = d; best = q; } }
+    const s = 10; im.view.s = s; im.view.x = innerWidth/2 - best.x*s; im.view.y = 420 - best.y*s; im.redraw(); }); await p.waitForTimeout(2500);
+  await p.click('[data-dev="cfxv"][data-k="kill"]'); await p.click('[data-dev="cfx"][data-k="ship"]'); await p.waitForTimeout(2300); await p.screenshot({ path: path.join(OUT, `${W}x${H}-ui-panel-ship-kill.png`) });
+  await p.click('[data-dev="cfxv"][data-k="hit"]');
   await p.click('#devbadge'); await p.waitForTimeout(4000);
   // (O) Bombard: a German artillery force next to an enemy force (made for the test: at war with Poland)
-  const ord = await p.evaluate(async () => { const im = window.__im, S = im.S, G = im.G; const B0 = G.P.find(q => q.cityName === 'Berlin'); let e0 = null, bd = Infinity; for (const x of S.armies){ if (x.owner <= 0 || x.air || !count(x)) continue; const q = G.P[x.at], d = Math.hypot(q.x - B0.x, q.y - B0.y); if (d < bd){ bd = d; e0 = x; } } if (!e0) return { err: 'no enemy' }; const pl = e0.owner;
+  const ord = await p.evaluate(async () => { const im = window.__im, S = im.S, G = im.G; const B0 = G.P.find(q => q.cityName === 'Berlin'), pl = S.nations.findIndex((N, i) => i > 0 && N.alive); let pq = null, bd = Infinity;   // an enemy force in a land province next to Berlin's, so the marker is on screen
+    for (const q of G.P){ if (q.sea || q.id === B0.id) continue; const d = Math.hypot(q.x - B0.x - 9, q.y - B0.y); if (d < bd){ bd = d; pq = q; } } const e0 = addArmy(pl, pq.id, { tank: 3 });
     rel(0, pl).st = 'war';
     const B = G.P.find(q => q.cityName === 'Berlin'), a = addArmy(0, B.id, { art: 3 }); const e = e0;
     visCache = null;

@@ -210,6 +210,7 @@ function resolveStrike(a, p){
   // drones run the gauntlet of jammers, SAMs and guns before they reach the target; jamming also blunts the survivors
   let jamF = 1, adLost = 0;
   if (UNITS[T].dr){ const r = droneAD(a, p, 1); adLost = r.lost; jamF = 1/(1 + (UNITS[T].dr === 'sdrone' ? 0.15 : 0.3)*r.jam);
+    if (r.lost > 0) IM.emit('fxAD', {a, p, T, by:o, lost:r.lost, ids:r.ad.armies.map(b => b.id), owner:S.owner[p]});   // (for the client's effects: the drones air defence shot down, and by whom)
     if (T === 'swarm') saturate(r.ad, count(a));
     if (!count(a)){ if (isSeat(o)) tell(o, `Your ${UNITS[T].name}s were all shot down over ${where} by ${r.jam >= r.ad.sam ? 'jammers' : 'air defence'}.`, 'bad', p);
       for (const me of seatsBut(o)) if (S.owner[p] === me || r.ad.armies.some(b => b.owner === me)) tell(me, `Air defences destroyed ${artA(nationName(o))} ${UNITS[T].name.toLowerCase()} raid on ${where} (${adLost} downed).`, 'good', p);

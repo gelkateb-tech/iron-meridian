@@ -17,13 +17,13 @@ const RUNS = [['high', false], ['low', false], ['off', false], ['high', true], [
       const fr = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const sig = []; let maxP = 0, maxJ = 0, shots = 0;
       const look = () => { const p = S.battles[0] ?? (S.inflight && S.inflight[0] ? S.inflight[0].to : null); if (p == null) return; const P = G.P[p], s = 12; im.view.s = s; im.view.x = innerWidth/2 - P.x*s; im.view.y = 400 - P.y*s; };
       const fire = () => { if (!S.battles.length) return; const P = G.P[S.battles[0]]; for (const w of ['tank', 'art', 'mlrs', 'inf', 'ship', 'fighter', 'bomber', 'drone', 'swarm']) im.cfx.fire(w, [P.x - 6, P.y + 2], [P.x + 2, P.y], { hit: Math.random() < 0.7 }); im.cfx.fire('cruise', [P.x - 12, P.y], [P.x, P.y]); im.cfx.intercept([P.x - 3, P.y + 3], [P.x, P.y], { kind: 'cm' }); shots++; };
-      for (let h = 0; h < days*24; h++){ if (h % 3 === 0){ look(); fire(); } for (let q = 0; q < 4; q++){ tickQ(); im.redraw(); await fr(); maxP = Math.max(maxP, im.cfx.PART.length); maxJ = Math.max(maxJ, im.cfx.PROJ.length); }
+      for (let h = 0; h < days*24; h++){ if (h % 3 === 0){ look(); fire(); } for (let q = 0; q < 4; q++){ tickQ(); im.redraw(); await fr(); maxP = Math.max(maxP, im.cfx.stats().partFx); maxJ = Math.max(maxJ, im.cfx.PROJ.length); }
         if (h % 24 === 23){ const o = JSON.parse(saveJSON()); delete o.savedAt; sig.push(`day ${S.hour/24} ${hash(JSON.stringify(o))} rs ${S.rs} forces ${S.armies.length}`); } }
       return { sig, maxP, maxJ, shots, battles: S.battles.length }; }, [DAYS, SEED, fx, saver]);
-    out.push({ run: fx + (saver ? '+saver' : ''), ...r }); console.log(out[out.length - 1].run, JSON.stringify({ maxPart: r.maxP, maxProj: r.maxJ, volleys: r.shots, battles: r.battles }), '\n  ' + r.sig.join('\n  '));
+    out.push({ run: fx + (saver ? '+saver' : ''), ...r }); console.log(out[out.length - 1].run, JSON.stringify({ maxFiringParticles: r.maxP, maxProj: r.maxJ, volleys: r.shots, battles: r.battles }), '\n  ' + r.sig.join('\n  '));
     await p.context().close(); }
   const ref = out[0].sig.join('|'), same = out.every(o => o.sig.join('|') === ref && o.sig.length === DAYS);
   console.log(same ? `SAME: ${out.length} runs (Effects High, Low, Off; Battery saver on/off) give identical rules state hashes for ${DAYS} days` : 'DIFFERENT: the effects changed the rules state');
   if ((out.find(o => o.run === 'off') || {}).maxP > 0) errors.push('Effects Off still made particles');
-  if (out.some(o => o.maxP > 150*1.3)) errors.push('particle cap exceeded: ' + out.map(o => o.maxP).join(' '));
+  if (out.some(o => o.maxP > 150*1.3)) errors.push('firing-particle cap (about 150) exceeded: ' + out.map(o => o.maxP).join(' '));
   console.log('ERRORS', errors.length ? errors.slice(0, 8) : 'none'); await b.close(); process.exit(same && !errors.length ? 0 : 1); })();

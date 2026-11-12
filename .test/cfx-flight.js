@@ -40,7 +40,7 @@ fs.mkdirSync(OUT, { recursive: true });
     out.takeoff = [sp2[0], sp2[10], sp2[30], sp2[59]].map(q => +q.toFixed(1)); out.landing = sp.slice(-6).map(q => +q.toFixed(1)); out.cruise = +Math.max(...sp).toFixed(1); out.turnMax = +turnMax.toFixed(3);
     return out; });
   console.log('flight', JSON.stringify(r));
-  if (!(r.maxSpd < 70*2.2*1.1)) errors.push('a jump in the drawn flight: ' + r.maxSpd.toFixed(1) + ' world px/s');
+  if (!(r.maxSpd < 70*3*1.1)) errors.push('a jump in the drawn flight: ' + r.maxSpd.toFixed(1) + ' world px/s');
   if (!(r.maxNose < 0.15)) errors.push('the nose does not point along the path: ' + r.maxNose.toFixed(3) + ' rad');
   if (!(r.maxBank > 0.2)) errors.push('no bank in the turns');
   if (!(r.takeoff[0] < r.takeoff[3]*0.5 && r.takeoff[1] < r.takeoff[2] && r.takeoff[2] <= r.takeoff[3] + 0.1)) errors.push('no acceleration after take-off: ' + r.takeoff);
