@@ -38,6 +38,20 @@ Last updated: 2026-11-12 (04:10 UTC).
 | 6 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
 | 7 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
+## Done but not merged yet (branches on GitHub, checked 2026-11-12 04:15 UTC)
+
+All branches were fetched. Only one holds finished work that master does not have:
+
+| Branch | What it holds | State |
+|---|---|---|
+| `nations-68` | 10 commits, 30 files (+1,635 / −79): step 0 plumbing (nations.js, the world switch, tiers, victory by number of nations, start screen with regions) and its review; step 0b province split (Israel, Greece, Cuba, Belarus); step 1 Europe (10 nations); step 2 Middle East (5); step 3 Africa (14) and its oil-reserve repair; step 4 Asia (14) and its rivals repair; step 5 the Americas (9) | Oceania (step 6) and the merge are not done. The branch is 71 commits behind master, so the merge needs care. Last commit 01:34 UTC |
+
+Not on GitHub yet: `territory-sales` and the map wrap branch. The old session's agents are still working on them in its own container.
+
+Old `wip/*` snapshots, nothing to merge: `wip/merge-ud`, `wip/research`, `wip/strike-fx`, `wip/rules-split`, `wip/city-markers`, `wip/mobilize-fix`, `wip/city-polish`, `wip/battery-saver`, `wip/zoom-repair`. Each is a saved in-progress state from an earlier job whose finished version is already on master (unit display, research redesign, strike effects repair 2, rules split, city markers, mobilization fix, city polish, battery saver, world-anchored effects). `wip/city-markers`' change is already on master word for word; the others were overtaken by later versions. They can be deleted when the owner wants.
+
+Every other feature branch (attack-range, building-pics, fog-followups, fog-vision, army-bar, stack-limits, eco-followups, cities-tab, unit-display, research-redesign, battle-fx, remove-mode, small-fixes, economy-v1, recruit-stealth, nations-plan, mobilize-fix) is fully merged.
+
 ## Waiting for the owner
 
 - **Battle pace** (docs/COMBAT-PACE.md): measured, even fights already last 14-21 h (small) and 31-40 h (big); the quick ones are lopsided (3:1 over in 7-12 h). Proposal: BATTLE_PACE = 0.5 (one line; 3:1 on 10 units 7 → 12 h, 100v50 13 → 22 h, even 100v100 31 → 46 h; about 10% fewer losses a day). Approve 0.5, 0.35, or keep 1?
