@@ -18,7 +18,7 @@ Each folder is a complete copy: `index.html` (the page to publish), `play.html` 
 | Files | What they are |
 |---|---|
 | `world.js` `lines.js` `coast.js` `coast-hi.js` | map data |
-| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` `rules/economy.js` `rules/trade.js` `rules/movement.js` `rules/diplomacy.js` `rules/combat.js` `rules/air.js` `rules/vision.js` `rules/ai.js` `rules/tick.js` `rules/api.js` | the game rules, 16 files (publish every `.js` file in `dist/public/rules/`) |
+| `rules/core.js` `rules/data.js` `rules/map.js` `rules/state.js` `rules/research.js` `rules/production.js` `rules/economy.js` `rules/trade.js` `rules/movement.js` `rules/diplomacy.js` `rules/territory.js` `rules/combat.js` `rules/air.js` `rules/vision.js` `rules/ai.js` `rules/tick.js` `rules/api.js` | the game rules, 17 files (publish every `.js` file in `dist/public/rules/`) |
 | `units3d.js` | unit models |
 | `assets/` | pictures, flags and sounds |
 
@@ -35,6 +35,7 @@ The game rules live in plain scripts in `rules/`, not in `index.html` (owner tas
 | `rules/research.js` `rules/production.js` | research slots; costs, building, mobilizing, training |
 | `rules/economy.js` `rules/trade.js` | yields, income, market and order book, unrest; trade routes, raids, escorts |
 | `rules/movement.js` `rules/diplomacy.js` | speeds, roads and rail, paths, orders, split and merge, supply; relations, wars, peace, coalitions, spies |
+| `rules/territory.js` | territory sales: a province's value, what may be sold, the price floors, the resale lock, offers and answers, the AI as a buyer |
 | `rules/combat.js` `rules/air.js` `rules/vision.js` | battles and captures; air wings, drops, missiles, satellites; fog of war |
 | `rules/ai.js` `rules/tick.js` | the computer players; the hourly step `tick()` |
 | `rules/api.js` | `IM.api`: the names a host calls (`newGame` `restore` `saveJSON` `tick` `S` `G` and the order functions). Names only, no logic |
@@ -62,7 +63,7 @@ The checks:
 - `bash tools/mkpage.sh` copies `rules/` to `.test/rules/` for the tests.
 - `tools/split-plan.js`, `tools/split-move.js` and `tools/split-perf.js` are the tools the split was done with (which declaration went to which file, the verbatim mover, a speed comparison); they are kept for reference.
 
-To publish, upload from `dist/public/`: `index.html`, `world.js`, `lines.js`, `coast.js`, `coast-hi.js`, `units3d.js`, every file in `rules/` (16 files, at `rules/<name>.js`), and `assets/`.
+To publish, upload from `dist/public/`: `index.html`, `world.js`, `lines.js`, `coast.js`, `coast-hi.js`, `units3d.js`, every file in `rules/` (17 files, at `rules/<name>.js`), and `assets/`.
 
 ## Markers
 

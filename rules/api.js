@@ -16,5 +16,7 @@ IM.api = {
   declareWar, surpriseWar, acceptOffer, applyDeal,
   tradeOpen, tradeClose, postOffer, fillOffer, escortSet,
   // a seat's dealings with an AI nation (first argument: the seat)
-  say, aiReply, dealOK, dealValueFor, applyTrade, sendGift, tribute, tributeOk
+  say, aiReply, dealOK, dealValueFor, applyTrade, sendGift, tribute, tributeOk,
+  // territory sales (rules/territory.js): a nation offers or answers; the value, the floor and what may be sold
+  terrOffer, terrAnswer, provValue, terrMin, terrFloor, terrWhyNot, capturedFrom
 };

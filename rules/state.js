@@ -125,6 +125,7 @@ function restore(data){
   resetCaches();
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
+  if (!Array.isArray(S.own0) || S.own0.length !== S.owner.length) S.own0 = (Array.isArray(S.home) && S.home.length === S.owner.length ? S.home : S.owner).slice();   // very old saves: who held each province at the start, from its home owner (territory sales)
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
