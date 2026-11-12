@@ -21,19 +21,22 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
-| Blockade and trade rework: warships in range blockade or raid, Blockade button next to Escort and Raid, raids capture 25-50% of cargo, pause a route, red marked blocked routes, convoys reroute around blockades, chokepoints (Hormuz, Malacca, Gibraltar, Suez, Bab-el-Mandeb, Bosporus, Panama, Danish straits), slower and poorer detours | Opus | Started |
+| Blockade and trade rework (plus: trade routes and cargo ships hidden by default, shown with a warship selected, the Blockade button or a new Trade map mode, blockaded routes always marked; fleets take sailing time inside their sea zone): warships in range blockade or raid, Blockade button next to Escort and Raid, raids capture 25-50% of cargo, pause a route, red marked blocked routes, convoys reroute around blockades, chokepoints (Hormuz, Malacca, Gibraltar, Suez, Bab-el-Mandeb, Bosporus, Panama, Danish straits), slower and poorer detours | Opus | Started |
 | Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | Started |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Realistic combat and flight animations (dev build): firing effects per unit type (tanks, artillery arcs, rocket salvos, infantry, warships, cruise/ballistic/ICBM, strafing and bomb lines, drones, interceptions), impacts sized by weapon, hit flashes, scorch marks, subtle screen shake; aircraft accelerate, curve, bank, contrails, shadows, oval patrols, helicopters bob; attack markers, range ring and target on tap, missile warnings, sound slots with a mute toggle; Effects quality High/Low/Off, ~150 particles, one loop, simple flashes far out; separate effects module; Effects test panel; proof that results are identical on High/Low/Off. Replaces 'aircraft pictures in flight' and 'strike effects repair 3' | Opus (starts after the map wrap is merged; one review, at most one repair) |
-| 2 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
-| 3 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
-| 4 | Each aircraft type gets its own 3D shape | Opus |
-| 5 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 6 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Building pictures on the map, fix: no frames or square backgrounds (cut-out buildings sitting on the map), much smaller and right at their own city, grouped tightly (or only the most important one zoomed out), hidden zoomed out (city marker only), small level dots kept, full pictures stay in the city panel; the capital building anchored exactly on the capital (no zoom drift) and restyled to match the building art; every building marker checked for zoom drift; screenshots at three zoom levels before committing | Opus (after the map wrap is merged) |
+| 2 | Infantry icons redrawn in code from the res-manpower helmet (same shape, shading and colours, simpler), motorized = the helmet on wheels, side colours kept; screenshot before committing | Sonnet (next free slot) |
+| 3 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), hover shows the full amount with a unit (40,000 barrels of oil); before/after examples | Opus (after the 68 nations are merged, since both touch every number) |
+| 4 | Realistic combat and flight animations (dev build): firing effects per unit type (tanks, artillery arcs, rocket salvos, infantry, warships, cruise/ballistic/ICBM, strafing and bomb lines, drones, interceptions), impacts sized by weapon, hit flashes, scorch marks, subtle screen shake; aircraft accelerate, curve, bank, contrails, shadows, oval patrols, helicopters bob; attack markers, range ring and target on tap, missile warnings, sound slots with a mute toggle; Effects quality High/Low/Off, ~150 particles, one loop, simple flashes far out; separate effects module; Effects test panel; proof that results are identical on High/Low/Off. Replaces 'aircraft pictures in flight' and 'strike effects repair 3' | Opus (starts after the map wrap is merged; one review, at most one repair) |
+| 5 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
+| 6 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
+| 7 | Each aircraft type gets its own 3D shape | Opus |
+| 8 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 9 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
@@ -86,6 +89,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Fog follow-ups: fog clearly visible outside your sight with soft circle edges, the Stealth Bomber test fixed, fog circles across the Pacific seam | Sonnet |
 | Army bar and Army Info like CoN (one health bar with numbers, stats row with tick countdown, unit diamonds with Mark badges, i button with the Strength table and arrows), no health bars on the map, combat every 15 in-game minutes, healing shown with a Hospital hook, AWACS combat cover 500 km | Sonnet |
 | Stack limits like CoN: land 10, air 5, sea 5; damage 1 − 0.56 × ln(size ÷ limit) with a 25% floor, speed 1 − 0.15 × ln(size ÷ limit) (min 50%); merge warnings; AI stacks at the limit, attacking from several sides (biggest AI stack 45-62 → 10); split stacks beat a 128-stack in all six duel cases | Opus |
+| Battle pace 0.5 (owner approved), foreign buildings under construction shown, fighters: Interceptor the anti-bomber/anti-drone shield, Air Superiority Fighter wins dogfights | Opus (direct edits) |
 | Fog of war: vision in km from where things are (city 80, airbase 100, forces 50, recon 100, aircraft 150, drones and patrols 200, UAV 250-500, AWACS 500 locate-only, maritime patrol 400, satellite strip 150), no free neighbouring provinces, no city radar; every country's buildings visible to all | Opus |
 | Battle effects: gunfire and shells from the unit models onto the enemy's, smoke and fire fixed to the map and sharp at every zoom, only crossed swords when zoomed out | Opus |
 
