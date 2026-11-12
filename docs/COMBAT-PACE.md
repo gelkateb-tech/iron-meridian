@@ -92,3 +92,9 @@ before kills).
 1. `rules/combat.js`: `BATTLE_PACE = 1` -> `0.5`.
 2. Re-record `tools/golden-12345.txt` (`bash tools/mkpage.sh; node tools/split-golden.js 10 12345`).
 3. Update tests that assert how fast a fight ends (none do today).
+
+## Balance check of the tick change itself (BATTLE_PACE 1, before = hourly battles at master 3be574b)
+
+AI-only games, battles that ended, units lost in them per game day: seed 12345 30 days 48.6 -> 51.8 (648 -> 578 battles, mean 12.5 -> 12.8 h);
+seed 1 20 days 40.1 -> 40.4 (317 -> 313, 14.1 -> 13.3 h); seed 2 20 days 43.2 -> 42.6 (357 -> 338, 13.7 -> 13.6 h). Provinces captured in the 30-day game 1,110 -> 1,119.
+The rules output changes (more dice draws), so `tools/golden-12345.txt` was re-recorded.
