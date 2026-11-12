@@ -10,7 +10,7 @@ the canvas map, so the icons stay sharp at every size.
   python3 tools/icons.py --write    replaces the block between the UICON markers in index.html
 
 Ground vehicles and ships are seen from the side facing right; aircraft and drones from above, nose up; infantry is a
-helmet. Needs shapely (pip install shapely).
+helmet (the Manpower picture's, with two shading layers: UICON_SH). Needs shapely (pip install shapely).
 """
 import math, re, sys, os
 from shapely.geometry import Polygon, Point, LineString, MultiPolygon, box
@@ -80,19 +80,37 @@ def truck(x0=2.5, x1=29.5, bed_y=17.8, cab_w=7.0, wheels=(7.2, 12.8, 25.2), wr=3
 # ---------- the icons ----------
 I = {}
 
-# INFANTRY: a plain helmet
-I['inf'] = helmet(16, 17.2, 1.12).difference(L([(4.6, 17.4), (16, 15.6), (26.6, 16.8)], 1.5, 'flat'))
+# INFANTRY: the combat helmet of the Manpower resource picture (assets/art-src/res-manpower.png), simplified: a high-cut dome seen from the side
+# facing right, the brow low over the front, the edge cut up over the ear, the back flared down, an accessory rail along the side and a night-vision
+# mount on the front. Shading (UICON_SH, drawn over the white silhouette in black at low opacity, light from the top left like the picture): a soft
+# shade along the lower right of the dome, and a darker tone for the rail, the mount and the rim's inside.
+def helmet2(x=16, y=17, s=1.0):
+    """{'base': silhouette, 'shade': soft shade, 'deep': darker details} of the high-cut helmet, centre (x, y), about 23 s long and 16 s high"""
+    X = lambda v: x + v*s; Y = lambda v: y + v*s
+    dome = bez((X(11.0), Y(2.0)), (X(11.6), Y(-14.6)), (X(-11.2), Y(-15.0)), (X(-11.6), Y(2.8)), 28)   # front edge, over the top, to the back
+    rim = [(X(-11.6), Y(4.2)), (X(-6.6), Y(4.4)), (X(-4.4), Y(3.6)), (X(-3.0), Y(1.6)),                   # the flared back, then up into the cut
+           (X(2.4), Y(1.4)), (X(4.2), Y(3.0)), (X(9.0), Y(3.2)), (X(11.6), Y(2.9))]                       # over the ear, down to the brow
+    base = Polygon(dome + rim).buffer(0.6*s, quad_segs=Q).buffer(-0.6*s, quad_segs=Q)                     # (rounded corners)
+    shade = base.difference(mv(base, -1.7*s, -2.0*s))
+    rail = RR(X(-8.6), Y(-3.4), 9.4*s, 1.8*s, 0.6*s).intersection(base.buffer(-0.8*s))
+    mount = RR(X(5.2), Y(-9.4), 3.4*s, 4.6*s, 1.0*s).intersection(base.buffer(-0.7*s))
+    lip = L([(X(-11.0), Y(3.4)), (X(-6.6), Y(3.6)), (X(-4.6), Y(2.9))], 1.0*s, 'round').intersection(base)
+    return {'base': base, 'shade': shade, 'deep': unary_union([rail, mount, lip])}
 
-# MOTORIZED INFANTRY: the helmet riding over a small wheeled vehicle
+_H = helmet2(16, 17.4, 1.06)
+I['inf'] = _H['base']
+SH = {'inf': [(0.2, _H['shade']), (0.42, _H['deep'])]}   # shading layers: (opacity of black over the icon, shape), in the icon's own box
+
+# MOTORIZED INFANTRY: the same helmet on a simple wheeled base (a low hull, two big wheels)
 def _mot():
-    h = sc(helmet(16, 9.4, 0.72), 1.0)
-    veh = U(Polygon([(3, 23.6), (3, 18.6), (5, 16.8), (24, 16.8), (29.4, 20.2), (29.4, 23.6)]))
-    gap = unary_union([C(x, 24.6, 3.9) for x in (8.6, 23.4)])
-    veh = veh.difference(gap)
-    w = tyres((8.6, 23.4), 24.6, 3.0, 0.38)
-    slot = R(5.2, 18.8, 16.6, 1.3)
-    return U(h, veh.difference(slot), w)
-I['mot'] = _mot()
+    h = {k: affinity.translate(affinity.scale(v, 0.8, 0.8, origin=(16, 17.4)), -0.6, -5.0) for k, v in helmet2(16, 17.4, 1.06).items()}
+    hull = P((3.0, 24.4), (3.0, 20.6), (4.6, 19.0), (24.4, 19.0), (29.2, 21.6), (29.2, 24.4))
+    gap = unary_union([C(x, 25.0, 4.0) for x in (9.0, 23.0)])
+    w = tyres((9.0, 23.0), 25.0, 3.1, 0.36)
+    body = hull.difference(gap)
+    base = U(h['base'].difference(hull.buffer(1.0)), body, w)
+    return base, [(0.2, h['shade'].intersection(base)), (0.42, U(h['deep'].intersection(base), R(3.0, 22.6, 26.2, 1.8).intersection(body)))]
+I['mot'], SH['mot'] = _mot()
 
 # ANTI-TANK INFANTRY: helmet with a shoulder launcher across it, warhead forward
 def _at():
@@ -438,12 +456,15 @@ I['truck'] = U(truck(), R(2.6, 9.6, 18.6, 8.4).difference(R(4.0, 11.2, 15.8, 1.1
 ORDER = ['inf', 'mot', 'at', 'spec', 'para', 'ifv', 'tank', 'art', 'mlrs', 'sam', 'jam', 'heli', 'jet', 'int', 'asf', 'bomb', 'stealth', 'mpa', 'awacs',
          'drone', 'drone4', 'sdrone', 'swarm', 'frig', 'crui', 'carr', 'sub', 'cargo', 'cm', 'bm', 'icbm', 'stack', 'truck']
 
-def fit(g, m=1.0):
-    """scale and centre a shape to fill the box, m units from its edges (wide shapes span the width, tall ones the height)"""
+def fit_tf(g, m=1.0):
+    """the scale and shift that fit a shape in the box, m units from its edges (wide shapes span the width, tall ones the height)"""
     minx, miny, maxx, maxy = g.bounds
     f = (32 - 2*m)/max(maxx - minx, maxy - miny)
-    g = affinity.scale(g, f, f, origin=(minx, miny))
-    return affinity.translate(g, 16 - (minx + (maxx - minx)*f/2) , 16 - (miny + (maxy - miny)*f/2))
+    return lambda h: affinity.translate(affinity.scale(h, f, f, origin=(minx, miny)), 16 - (minx + (maxx - minx)*f/2), 16 - (miny + (maxy - miny)*f/2))
+
+def fit(g, m=1.0):
+    """scale and centre a shape to fill the box, m units from its edges"""
+    return fit_tf(g, m)(g)
 
 def path_d(g, tol=0.035):
     g = g.buffer(0).simplify(tol, preserve_topology=True)
@@ -459,11 +480,12 @@ def path_d(g, tol=0.035):
     return ''.join(out)
 
 def table():
-    rows = []
+    rows, shs = [], []
     for k in ORDER:
-        g = fit(I[k])
-        rows.append("  %s:'%s'," % (k if re.match(r'^[a-z_]\w*$', k) else repr(k), path_d(g)))
-    return 'const UICON_D = {\n' + '\n'.join(rows) + '\n};'
+        tf = fit_tf(I[k])
+        rows.append("  %s:'%s'," % (k if re.match(r'^[a-z_]\w*$', k) else repr(k), path_d(tf(I[k]))))
+        if k in SH: shs.append("  %s:[%s]," % (k, ', '.join("[%s, '%s']" % (('%.2f' % a).lstrip('0'), path_d(tf(g))) for a, g in SH[k] if not g.is_empty)))
+    return 'const UICON_D = {\n' + '\n'.join(rows) + '\n};\n// shading drawn over a few icons (the helmets): [opacity of black, path] layers, in the same box\nconst UICON_SH = {\n' + '\n'.join(shs) + '\n};'
 
 if __name__ == '__main__':
     js = table()
