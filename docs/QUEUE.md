@@ -21,21 +21,20 @@ Last updated: 2026-11-11.
 | Task | Model | Where it is |
 |---|---|---|
 | 68 playable nations, region by region (plumbing, province split for Israel, Greece, Cuba and Belarus, then Europe, Middle East, Africa, Asia, Americas, Oceania) | Opus | Province split step done, regions next |
+| Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Started |
 | Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Started |
-| Map fills the screen and wraps left to right like a globe (no black edges, ocean and Antarctica fill, zoom and pan limits) | Opus | Started |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Building pictures on the map, fix: no frames or square backgrounds (cut-out buildings sitting on the map), much smaller and right at their own city, grouped tightly (or only the most important one zoomed out), hidden zoomed out (city marker only), small level dots kept, full pictures stay in the city panel; the capital building anchored exactly on the capital (no zoom drift) and restyled to match the building art; every building marker checked for zoom drift; screenshots at three zoom levels before committing | Opus (after the map wrap is merged) |
-| 2 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), hover shows the full amount with a unit (40,000 barrels of oil); before/after examples | Opus (after the 68 nations are merged, since both touch every number) |
-| 3 | Realistic combat and flight animations (dev build): firing effects per unit type (tanks, artillery arcs, rocket salvos, infantry, warships, cruise/ballistic/ICBM, strafing and bomb lines, drones, interceptions), impacts sized by weapon, hit flashes, scorch marks, subtle screen shake; aircraft accelerate, curve, bank, contrails, shadows, oval patrols, helicopters bob; attack markers, range ring and target on tap, missile warnings, sound slots with a mute toggle; Effects quality High/Low/Off, ~150 particles, one loop, simple flashes far out; separate effects module; Effects test panel; proof that results are identical on High/Low/Off. Replaces 'aircraft pictures in flight' and 'strike effects repair 3' | Opus (starts after the map wrap is merged; one review, at most one repair) |
-| 4 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
-| 5 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
-| 6 | Each aircraft type gets its own 3D shape | Opus |
-| 7 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
-| 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), hover shows the full amount with a unit (40,000 barrels of oil); before/after examples | Opus (after the 68 nations are merged, since both touch every number) |
+| 2 | Realistic combat and flight animations (dev build): firing effects per unit type (tanks, artillery arcs, rocket salvos, infantry, warships, cruise/ballistic/ICBM, strafing and bomb lines, drones, interceptions), impacts sized by weapon, hit flashes, scorch marks, subtle screen shake; aircraft accelerate, curve, bank, contrails, shadows, oval patrols, helicopters bob; attack markers, range ring and target on tap, missile warnings, sound slots with a mute toggle; Effects quality High/Low/Off, ~150 particles, one loop, simple flashes far out; separate effects module; Effects test panel; proof that results are identical on High/Low/Off. Replaces 'aircraft pictures in flight' and 'strike effects repair 3' | Opus (next free slot; one review, at most one repair) |
+| 3 | Pinpoint movement for land units and ships (move to the exact spot; Halt for ships) | Opus |
+| 4 | Movement look: units turn to face where they go, dust, wakes, contrails, follow roads on screen | Opus |
+| 5 | Each aircraft type gets its own 3D shape | Opus |
+| 6 | Small polish: research slot colours and "Both slots busy" time, night city cores, Sweden snow edge, Berlin garrison placement | Sonnet |
+| 7 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
@@ -82,6 +81,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| Map wrap: the map wraps east-west across the Pacific with no seam, zoom-out and pan limits, filled edges (no black band over the Arctic) | Opus |
 | Blockade and trade rework: ordered blockades by reach (frigate 80 km, cruiser 150, carrier 120, sub 40), convoys reroute around blockades, 8 chokepoints closed by 1 cruiser or 2 frigates, raids capture 25-50% of cargo, pause routes, fleets sail inside their sea zone, trade routes hidden by default with a Trade map mode, cut routes always marked red | Opus |
 | Territory sales: Territory tab in Diplomacy, sell captured land (never home land or the capital), value-based price with floors 25% / 10% for coalition partners after 3 days, 3-day resale lock, offer/counter/accept/decline, the AI buys its lost or border land but never sells, troops move out | Opus |
 | Attack range in km: artillery 80, rocket launchers 150 (200 with research), frigate 80, cruiser 150, submarine 40 vs ships; fire from where they stand at visible enemies, Bombard order, range circles and target rings, AI keeps guns behind the front | Opus |
