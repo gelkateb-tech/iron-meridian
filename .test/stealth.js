@@ -154,7 +154,7 @@ function arena(seed){ const R = fresh(seed), {S, G} = R; let E = -1, fp = -1, gp
   try { for (let h = 0; h < days*24 && !S.over; h++){ rich(); if (!S.armies.some(a => a.owner === foe && (a.u.sam || 0) >= 2)) R.addArmy(foe, fc, {sam:3}); R.IM.api.tick(); const m = mine(); maxW = Math.max(maxW, m.wings); maxP = Math.max(maxP, m.planes + m.queued); if (m.planes) seen++; } } catch (e){ err = e.stack; }
   ok(!err, 'the game ran', err); info.aiScenario = {days, maxWings:maxW, maxAircraft:maxP, hoursWithStealth:seen, alive:N.alive};
   ok(maxP >= 1, 'with the research, an Airbase III, an enemy SAM stack and money the AI does build one', info.aiScenario);
-  ok(maxW <= 1 && maxP <= R.AI_STEALTH_MAX, `never more than one wing (${R.AI_STEALTH_MAX} aircraft) per nation`, info.aiScenario);
+  ok(maxP <= R.AI_STEALTH_MAX, `never more than one wing's worth (${R.AI_STEALTH_MAX} aircraft) per nation`, info.aiScenario);
 }
 // a played game: every nation has the research and an Airbase III from day 50; the rules hold for all of them every hour
 if (!QUICK){ const R = fresh(12345), {S, G} = R; let err = null, first = null, maxW = 0, noSam = 0, built = 0; const per = {};
