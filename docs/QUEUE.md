@@ -21,7 +21,7 @@ Last updated: 2026-11-13 (overnight run).
 | Task | Model | Where it is |
 |---|---|---|
 | Picture audit: every unit, building and research item against assets and assets/art-src (read-only) | Opus (workflow) | Running |
-| Real borders: every country and province border drawn from Natural Earth 1:10m with no shape-changing simplification (game logic stays on the cells), every country clearly coloured, all borders visible; screenshots of the Middle East, Europe and the US next to a real map before merging | Opus | Started (branch borders-real) |
+| Real borders: every country and province border drawn from Natural Earth 1:10m with no shape-changing simplification (game logic stays on the cells), every country clearly coloured in plain solid colours (no diagonal hatching over other countries; your own country stands out by its colour and border), all borders visible; screenshots of the Middle East, Europe and the US next to a real map before merging | Opus | Started (branch borders-real) |
 | Map modes: switching Political/Relations/Supply/Terrain/... glitches the map; find and fix the cause, test every switch and fast switching; screenshots before merging | Opus | Started (branch map-modes) |
 | Research tree pictures, research unit cards, infantry icons | Opus | Done on branch research-cards; waiting for the owner |
 
