@@ -17,8 +17,7 @@ Last updated: 2026-11-13 (overnight run).
 | URGENT: the map goes black on its own (find the commit, fix, free caches, rebuild a lost map) | Opus | branch fix-black (merges first) |
 | Map modes: only Political and Terrain as full modes; Relations and Supply as overlays on Political; other modes removed; mode switch + zoom glitch fixed | Opus | branch map-modes |
 | Night city lights: small separate glows at real cities, dark gaps, dimmer; colours and borders on top | Opus | branch night-lights |
-| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real |
-| Unit look: square badge (flag, upright icon, count), infantry figures, dug-in shield redesigned with a tooltip and a real bonus | Opus | branch unit-look |
+| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused by a container restart (work saved on branch borders-real); resumes when a slot frees |
 
 **Merge order for the map jobs (owner):** one at a time, black map first, then map modes, night lights and real borders, each merged with master and re-tested before the next.
 
@@ -72,6 +71,9 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
 | URGENT map fix: every country its own strong colour (no two neighbours alike), allies blue, tint and province/country borders clear at every zoom, sea outline (straight lines) removed, real country borders (Syria checked: data correct, wiggle removed) | Opus |
 |---|---|
+| Unit look: square unit badge (flag, upright icon, count), 3D infantry squads with soft shadows, dug-in shield with a tooltip, Army Info and tutorial, and a real dug-in defence bonus (damage taken x0.8) (Dev Build v34) | Opus |
+| New resource icons: money, oil, iron, electronics (Dev Build v33) | Opus |
+| Research slot colours (Dev Build v31) | Opus |
 | Strike and blast effects per weapon (cruise, ballistic, chemical, tactical nuclear, ICBM) and battle blasts, with repairs 1 and 2 | Opus |
 | 64-nation plan (docs/NATIONS-PLAN.md) and the owner's decisions (68 playable) | Fable 5.2 |
 | Recruiting Office with 5 levels | Sonnet |
