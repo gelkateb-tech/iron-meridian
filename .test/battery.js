@@ -74,7 +74,7 @@ async function measure(b, name, saver){
     await tallyOn(); const w = await window_(P, RUN_S*1000), why2 = await tallyOff(), mv2 = moving(why2);
     if (mv2.length){ skipped.push(name + ' (during the window: ' + mv2.join(' ') + ')'); continue; }
     q = { id, prov: name }; out.run1x = { ...w, view: name, zoom: 4, asked: Object.keys(why2).join(' '), passedOver: skipped.join(', ') || 'none' };
-    if (w.drawsPerS > 2) errs.push(name + ' saver ' + saver + ': running at 1x with nothing on screen moving, the map redrew more than on sim ticks: ' + JSON.stringify(out.run1x));
+    if (w.drawsPerS > (waves(why2) ? (saver ? 12 : 62) : 2)) errs.push(name + ' saver ' + saver + ': running at 1x with nothing on screen moving' + (waves(why2) ? ' but the sea waves' : '') + ', the map redrew more than ' + (waves(why2) ? 'the wave rate' : 'on sim ticks') + ': ' + JSON.stringify(out.run1x));
     break; }
   if (!q && waveFallback != null){   // every quiet view had sea waves on screen: measure one; the waves are the only ambient source, so the map may redraw at their rate (10 fps with the saver, the display rate without) and no faster
     const name = await goQ(waveFallback, 4); await p.waitForTimeout(1500); await settle(p); await tallyOn(); const w = await window_(P, RUN_S*1000), why2 = await tallyOff();
