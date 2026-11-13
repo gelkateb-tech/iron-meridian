@@ -37,3 +37,4 @@
 {"name": "ri-cat-inf", "file": "assets/art-src/ri-cat-inf.png", "batch": true, "usd_est": 0.0384, "tokens": {"promptTokenCount": 427, "candidatesTokenCount": 1947, "thoughtsTokenCount": 605}}
 {"name": "ri-u_tank", "file": "assets/art-src/ri-u_tank.png", "batch": true, "usd_est": 0.0383, "tokens": {"promptTokenCount": 404, "candidatesTokenCount": 1540, "thoughtsTokenCount": 1004}}
 {"name": "ri-art_shell", "file": "assets/art-src/ri-art_shell.png", "batch": true, "usd_est": 0.0339, "tokens": {"promptTokenCount": 440, "candidatesTokenCount": 1515, "thoughtsTokenCount": 739}}
+{"name": "ri-art_shell", "file": "assets/art-src/ri-art_shell.png", "batch": true, "usd_est": 0.0433, "tokens": {"promptTokenCount": 770, "candidatesTokenCount": 1606, "thoughtsTokenCount": 1268}}

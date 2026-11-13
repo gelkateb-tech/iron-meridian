@@ -225,22 +225,43 @@ R_STYLE = ("Style: a realistic, cinematic but clean photograph-like render of mo
            "subject is lit from the left with a gentle golden rim on its left edges and long soft shadows falling to the "
            "right. Palette: muted military colours (olive drab, khaki, sand, slate and steel grey, dusty blue-grey sky), low "
            "saturation, no bright or neon colours. Low clutter: one clear subject, few elements, no debris, no explosions, no "
-           "fire, no smoke plumes, no people's faces in close-up. All equipment is an original, generic modern design that "
-           "copies no real product. Plain unmarked paint: no text, no letters, no numbers, no hull or tail numbers, no logos, "
+           "fire, no smoke plumes, no people's faces in close-up. Original designs only: every vehicle, ship, aircraft and "
+           "weapon is a fictional, generic modern design made for this game, NOT a copy of any real-world model, so no one "
+           "can recognise a real product from its silhouette (for example: not an Abrams, Leopard, T-72 or T-90 tank, not an "
+           "F-35, F-22, Su-57 or Rafale jet, not a Nimitz or Ford class carrier, not an Arleigh Burke destroyer, not a "
+           "Paladin, PzH 2000 or M777 gun); blend generic features and keep the proportions plausible. Plain unmarked paint: no text, no letters, no numbers, no hull or tail numbers, no logos, "
            "no flags, no national insignia, no roundels, no unit badges, no camouflage brand patterns, no watermark.")
-R_BANNER = ("Framing: an ultra-wide cinematic panorama for a long, thin title banner (it is cropped to a strip about 4 to 13 "
-            "times as wide as it is tall). The whole subject sits in one horizontal band through the vertical middle of the "
-            "picture, within the middle third of its height, nothing important above or below it, so it survives the crop. "
-            "The subject is placed centre-right and spans about the right half of the width; the left third of the picture is "
-            "quiet, empty and darker (open ground or sea in shadow, plain sky) because the banner's title sits there. A "
-            "darker vignette around all edges, strongest on the left. Simple, calm sky above and simple ground or sea below. "
-            "21:9 image.")
-R_ICON = ("Framing: a square game icon that is a small scene, shown at about 50 pixels inside a diamond-shaped frame. One "
-          "single subject, large and centred, filling about 70 percent of the width of the frame, fully visible, with nothing "
-          "important near the corners (the corners are cut away). A close three-quarter view from slightly above. The "
-          "background is the subject's own setting, filling the frame to every edge (no plain or white background, no "
-          "border, no frame), simple and softly out of focus and a little darker toward the edges, so the subject's bold "
-          "silhouette stands out clearly at a tiny size. Square 1:1 image.")
+R_BANNER = ("Framing: an ultra-wide cinematic panorama for a long, thin title banner. Only a horizontal strip through the "
+            "vertical middle of the picture is shown (about the middle 40 percent of its height; on a wide screen even less), "
+            "so: the main subject is LARGE and close to the camera, filling most of the height of that middle band (about a "
+            "third of the whole picture's height; the main vehicle, ship or aircraft is the biggest thing), and it sits "
+            "ENTIRELY inside that band, centred on the picture's horizontal centre line, with nothing important "
+            "in the top 30 percent or the bottom 30 percent of the picture (only plain sky above and plain ground or sea "
+            "below). The subject is never small, distant or near the top or bottom edge. It is placed centre-right and "
+            "spans about the right half of the width; the left third of the picture is quiet, empty and darker (open "
+            "ground or sea in shadow, plain sky) because the banner's title sits there. A darker vignette around all "
+            "edges, strongest on the left. Simple, calm sky and simple ground or sea. 21:9 image.")
+R_ICON = ("Framing: a square game icon, shown at about 50 pixels inside a diamond-shaped frame. The main unit or piece of "
+          "equipment is shown close up and is by far the largest thing in the picture: it fills most of the box (about 80 "
+          "percent of the width and most of the height), fully visible and centred, with only its tips or ends allowed "
+          "near the edges and nothing important in the corners (the corners are cut away). Camera: a three-quarter front "
+          "side view, slightly above, like a close product shot of the vehicle: its front (and its gun or nose) points "
+          "toward the right of the picture and we see its front and its left side. The picture is never "
+          "mostly background, sky or ground, and never mostly ammunition or small parts: any secondary items are small "
+          "and beside the main subject. The background is the subject's own setting, visible only around it, filling the "
+          "frame to every edge (no plain or white background, no border, no frame), simple, softly out of focus and a "
+          "little darker toward the edges, so the subject's bold silhouette stands out clearly at a tiny size. Square 1:1 "
+          "image.")
+# the look of each unit, written once and used in its icon and in any banner that shows it, so they agree (an original, generic design)
+R_LOOK = {
+    'tank': ("a generic modern main battle tank of an original design: a low, wide, angular welded turret with flat add-on armour "
+             "blocks on its front and sides, a long smoothbore gun with a plain thermal sleeve, six road wheels a side under "
+             "plain side skirts, olive-khaki paint"),
+    'art': ("a generic modern tracked self-propelled howitzer of an original design: a long tank-like tracked hull with six "
+            "road wheels a side, a large flat-sided boxy armoured turret set toward the rear of the hull, and a very long "
+            "155 mm gun barrel with a plain slotted muzzle brake, raised at a low angle and pointing forward over the "
+            "front of the hull; olive-khaki paint"),
+}
 R_BANNERS = {   # rbs-<category>: one wide scene per research category
     'rbs-arm': ("Armoured Forces: a column of four modern main battle tanks driving along a straight, dusty desert road from "
                 "the left toward the right, seen from the side at a slight three-quarter angle and from some distance, a thin "
@@ -258,13 +279,23 @@ R_ICONS = {   # ri-<key>: cat-<category> (the category icon), a research node id
                    "the knees up; the face is in the shadow of the helmet."),
     'ri-u_tank': ("Main Battle Tank: one modern main battle tank seen from the front left in three-quarter view, its long main "
                   "gun pointing slightly to the right, standing on dusty open ground."),
-    'ri-art_shell': ("Extended-Range Shells (an artillery upgrade): three long, slender modern artillery shells with sharply "
-                     "pointed noses and a tapered base, standing upright side by side, close up, plain olive paint with one "
-                     "plain brass band (no markings), on the ground beside the big wheel of a gun; a long gun barrel raised "
-                     "high behind them, softly out of focus."),
+    'ri-art_shell': ("Extended-Range Shells (an upgrade of the Mobile Artillery, a self-propelled howitzer): the artillery gun "
+                     "itself is the main subject: " + R_LOOK['art'] + ", seen from the front left in a three-quarter front "
+                     "side view (the same angle as a close product shot of a tank), close up and filling most of the box, "
+                     "standing on dusty open ground. Beside its front left track stand only three small, slender artillery "
+                     "shells with pointed noses, upright, plain olive with one plain brass band, each only about as tall as a "
+                     "road wheel, small next to the gun: a small detail, not a subject."),
 }
 R_FOCUS = {'rbs-arm': 0.57}   # a banner's vertical centre for its strip crop, as a share of the height (0.5 when not listed)
 R_BANNER_OUT, R_ICON_OUT = (2240, 560), 256
+
+def grain(im, sigma, seed):
+    """adds a light, fixed (seeded by the name) monochrome grain of about sigma levels: a dither against colour banding"""
+    import numpy as np, zlib
+    from PIL import Image
+    a = np.asarray(im, dtype=np.float32); rng = np.random.default_rng(zlib.crc32(seed.encode()))
+    a = a + rng.normal(0, sigma, a.shape[:2])[..., None]
+    return Image.fromarray(np.clip(np.rint(a), 0, 255).astype(np.uint8))
 
 def prep_research(names):
     """crops a research banner to a 4:1 strip around its focus and shrinks it to R_BANNER_OUT; shrinks an icon to
@@ -277,6 +308,7 @@ def prep_research(names):
             im = im.crop((0, y0, w, y0 + sh)).resize(R_BANNER_OUT, Image.LANCZOS); q = 80
         else:
             s0 = min(w, h); im = im.crop(((w - s0) // 2, (h - s0) // 2, (w + s0) // 2, (h + s0) // 2)).resize((R_ICON_OUT, R_ICON_OUT), Image.LANCZOS); q = 84
+        im = grain(im, 1.6 if n in R_BANNERS else 1.0, n)   # a light grain so smooth skies do not band in the webp
         dst = os.path.join(ROOT, 'assets', 'art', f'{n}.webp'); im.save(dst, 'WEBP', quality=q, method=6)
         print(f'{os.path.relpath(dst, ROOT)}  {im.size[0]}x{im.size[1]}  {os.path.getsize(dst) // 1024} KB')
 
