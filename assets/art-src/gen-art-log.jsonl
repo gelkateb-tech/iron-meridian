@@ -1,1 +1,8 @@
 {"note": "the calls made before this log existed (Naval Yard 1-5 tries, 2026-11-13), all standard rate, at about $0.0336 each", "calls": 44, "usd_est": 1.48}
+{"name": "naval-yard-5", "file": "assets/art-src/ba-naval-yard-5.png", "batch": true, "usd_est": 0.0483, "tokens": {"promptTokenCount": 1413, "candidatesTokenCount": 1638, "thoughtsTokenCount": 1559}}
+{"name": "icon-infantry", "file": "assets/art-src/icon-infantry.png", "batch": true, "usd_est": 0.0387, "tokens": {"promptTokenCount": 177, "candidatesTokenCount": 2046, "thoughtsTokenCount": 530}}
+{"name": "icon-infantry", "file": "assets/art-src/icon-infantry.v2.png", "batch": true, "usd_est": 0.0335, "tokens": {"promptTokenCount": 177, "candidatesTokenCount": 1656, "thoughtsTokenCount": 577}}
+{"name": "icon-infantry", "file": "assets/art-src/icon-infantry.v3.png", "batch": true, "usd_est": 0.0341, "tokens": {"promptTokenCount": 177, "candidatesTokenCount": 1657, "thoughtsTokenCount": 615}}
+{"name": "icon-infantry-motorized", "file": "assets/art-src/icon-infantry-motorized.png", "batch": true, "usd_est": 0.0392, "tokens": {"promptTokenCount": 215, "candidatesTokenCount": 1932, "thoughtsTokenCount": 681}}
+{"name": "icon-infantry-motorized", "file": "assets/art-src/icon-infantry-motorized.v2.png", "batch": true, "usd_est": 0.041, "tokens": {"promptTokenCount": 215, "candidatesTokenCount": 1776, "thoughtsTokenCount": 952}}
+{"name": "icon-infantry-motorized", "file": "assets/art-src/icon-infantry-motorized.v3.png", "batch": true, "usd_est": 0.0362, "tokens": {"promptTokenCount": 215, "candidatesTokenCount": 1742, "thoughtsTokenCount": 671}}
