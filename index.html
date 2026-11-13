@@ -2687,7 +2687,10 @@ const ART = (() => {
   const url = name => { name = rn(name); if (!stand.has(name)) return BASE + name + '.webp'; let u = durl.get(name); if (!u){ try { u = imgs.get(name).toDataURL('image/png'); } catch (e) { u = ''; } durl.set(name, u); } return u; };
   // a lazily loaded picture: fetched once on first want; when it arrives the panels showing its placeholder redraw ('im-bart') and so does the map
   const want = name => { if (imgs.has(name) || failed.has(name) || waits.has(name)) return; load(name).then(im => { if (im) try { window.dispatchEvent(new Event('im-bart')); } catch (e) {} }); };
-  return {img:name => imgs.get(rn(name)) || null, ready:name => imgs.has(name), failed:name => failed.has(name), standIn:name => stand.has(rn(name)), load, want, sprite, scaled, first, rest, url, OPT, L5};
+  // the canvases' pixels were dropped (a lost graphics context, see gfxReset): the sized sprites and cleaned copies are made again from the pictures
+  // (decoded pictures are kept by the browser), and the code-drawn stand-ins are drawn again
+  function gfx(){ cache.clear(); cleanC.clear(); for (const n of [...stand]){ stand.delete(n); imgs.delete(n); standIn(n); } }
+  return {img:name => imgs.get(rn(name)) || null, ready:name => imgs.has(name), failed:name => failed.has(name), standIn:name => stand.has(rn(name)), load, want, sprite, scaled, first, rest, url, OPT, L5, gfx};
 })();
 // coalition emblems: every coalition (bloc) carries one of four crests, stable by its id (b1 eagle, b2 bear, b3 lion, b4 star, b5 eagle...)
 const BLOC_EMB = ['eagle', 'bear', 'lion', 'star'];
@@ -3179,7 +3182,7 @@ function mapSwitched(){
   worldLines(G);
   if (!booted && !CINFO.size) return;   // (the first map of the page: nothing drawn yet)
   for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, TRAYC, LDEP, HQ_NEAR, HQ_DIR, STKSLOT, BPICC, RLKIND]) M.clear();
-  CBAKE_PX = 0; CLOW_PX = 0; SEAL = null; NAMEC.k = ''; layerKey = ''; geoDirty = true; }
+  CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; SEAL = null; NAMEC.k = ''; layerKey = ''; geoDirty = true; }
 function bakeLakes(){ if (G.lakesBaked){ if (!G.lakeLab) lakeLabels(); return; } /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
   const T = G.terrain, k = T.width/WORLD_W, g = T.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.lineJoin = 'round';
   g.strokeStyle = 'rgba(70,110,104,0.5)'; g.lineWidth = 1.6; g.stroke(lp); g.fillStyle = '#0a1c27'; g.fill(lp);   // the texture's own sea tone, so a lake reads like the open sea
@@ -3641,7 +3644,7 @@ function dtScreenMissing(){ if (!DT.miss.size) return false; const k = dtBucket(
 // instead of switching in one frame. Pooled canvases (at most 10); none while the view moves or the layer is drawn scaled.
 // (the boxes of one refresh are held at their old look until the last of them is redrawn, then all start their fade on the same frame: a town
 // or a tile row never shows half old, half new; a hold lasts at most FADE_HOLD ms)
-const FADE = [], FADEP = [], FADE_MS = 420, FADE_HOLD = 1500;
+const FADE = [], FADEP = [], FADE_MS = 420, FADE_HOLD = 1500; let FADE_T = 0;   // FADE_T: when a fade canvas was last taken (the pool is let go after a few idle seconds: fadeFree)
 const fadeA = (E, now) => E.t0 === Infinity ? 1 : 1 - dtSm((now - E.t0)/FADE_MS);
 function fadeGo(now){ for (const E of FADE) if (E.t0 === Infinity) E.t0 = now; }
 // a dissolve under way: while it runs no more boxes are redrawn and no bakes made (each frame of it stays light, so it plays smoothly)
@@ -3650,8 +3653,10 @@ const fadeLX = L => [Math.round((view.x - L.vx - L.mx)*dpr), Math.round((view.y 
 function fadeTrim(now){ const L = layer; for (let i = FADE.length - 1; i >= 0; i--){ const E = FADE[i]; if (E.t0 === Infinity && now - E.h0 > FADE_HOLD) E.t0 = now; if (E.L !== L || E.full !== L.full || now - E.t0 >= FADE_MS) FADE.splice(i, 1); } }
 function fadeCv(w, h){ let c = null; const used = new Set(FADE.map(E => E.cv));
   for (const p of FADEP) if (!used.has(p) && (!c || (p.width === w && p.height === h))) c = p;
-  if (!c){ if (FADEP.length < 10) FADEP.push(c = document.createElement('canvas')); else c = FADE.shift().cv; }
+  FADE_T = performance.now(); if (!c){ if (FADEP.length < 10) FADEP.push(c = document.createElement('canvas')); else c = FADE.shift().cv; }
   if (c.width !== w || c.height !== h){ c.width = w; c.height = h; } return c; }
+// the pool let go when no fade ran for a few seconds (up to 10 screen-sized canvases, some 10-20 MP held for nothing between fades)
+function fadeFree(now){ if (FADE.length || !FADEP.length || now - FADE_T < 4000) return; for (const c of FADEP) c.width = c.height = 0; FADEP.length = 0; }
 // the fades still running over the box (x0, y0)-(x1, y1) (layer device px) laid over its copy in g at their alpha now; those inside it are dropped
 function fadeFold(g, x0, y0, x1, y1, now){ for (let i = 0; i < FADE.length; i++){ const E = FADE[i]; if (E.x1 <= x0 || E.x0 >= x1 || E.y1 <= y0 || E.y0 >= y1) continue;
     g.globalAlpha = fadeA(E, now); g.drawImage(E.cv, E.x0 - x0, E.y0 - y0); if (E.x0 >= x0 && E.y0 >= y0 && E.x1 <= x1 && E.y1 <= y1){ FADE.splice(i, 1); i--; } } g.globalAlpha = 1; }
@@ -4679,6 +4684,7 @@ function ovIn(){ if (!OV.on || ctx === OV.g) return; const m = MCTX, g = OV.g; O
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.font = m.font; g.textAlign = m.textAlign; g.textBaseline = m.textBaseline; g.lineJoin = m.lineJoin; g.lineCap = m.lineCap; g.setLineDash([]); g.filter = 'none'; }
 function ovOut(){ if (ctx !== OV.g) return; ctx = MCTX; dpr = OV.md; }
 const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
+gfxWatch(cv); gfxWatch(OV.cv); gfxWatch(mini);   // (a lost graphics context: see gfxReset)
 const view = {s:1, x:0, y:0};
 let dpr = 1, cw = 0, ch = 0, hits = [], HITX = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, relMode = false, mapMode = 'political';
 // resources map: each province tinted by its strongest output against a typical yield of that good
@@ -5847,7 +5853,7 @@ const GTILE = new Map(); let GTILE_PX = 0;
 function gradedTile(key, t, filt){ let c = GTILE.get(key); if (c){ GTILE.delete(key); GTILE.set(key, c); return c; }
   c = document.createElement('canvas'); c.width = t.width; c.height = t.height; const g = c.getContext('2d'); g.filter = filt; g.drawImage(t, 0, 0); g.filter = 'none';
   GTILE.set(key, c); GTILE_PX += c.width*c.height;
-  for (const [k0, c0] of GTILE){ if (GTILE_PX <= 3e6 || k0 === key) break; GTILE.delete(k0); GTILE_PX -= c0.width*c0.height; }
+  for (const [k0, c0] of GTILE){ if ((GTILE_PX <= 3e6 && GTILE.size <= 400) || k0 === key) break; GTILE.delete(k0); GTILE_PX -= c0.width*c0.height; }
   return c; }
 const CSCR = new Map();   // scratch canvas per bake size (a filter or composite over a scratch far bigger than the bake would pay for its whole area)
 const cscr = S => { let c = CSCR.get(S); if (!c){ c = document.createElement('canvas'); c.width = c.height = S; CSCR.set(S, c); } return c; };
@@ -5855,6 +5861,16 @@ const cityArtState = () => [1, 2, 3, 4, 5].reduce((n, l) => n + (ART.ready('b-ci
 // static description of a city's urban area (size, seed, textures, grade, sprawl corridors) and its masks; cached per city
 const CINFO = new Map(), CGEO = new Map();   // CGEO: just centre and size per city, kept for good (CINFO with its masks is an LRU)
 const cityGeo = p => CGEO.get(p) || cityInfo(p);
+// the canvases kept per city (CGEO's small masks, the low tiers CLOW and CLOWN, the glows CLGL) share one budget of device pixels: they used to
+// be kept for every city ever seen (the idle warm-up baked all ~700 of them), a few hundred MB of canvas that grew all game long with every
+// zoom and mode switch; past the budget the cities no recent render used are forgotten, least recently used first (made again when wanted)
+let CGEO_PX = 0;
+const cityKeepMax = () => saverOn() ? 8e6 : 12e6, cityKeepPx = () => CGEO_PX + CLOW_PX;
+function cityForget(p){ const I = CGEO.get(p); if (I){ CGEO_PX -= I.px || 0; CGEO.delete(p); } CINFO.delete(p);
+  if (CLOW.has(p)){ CLOW.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } if (CLOWN.has(p)){ CLOWN.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } if (CLGL.has(p)){ CLGL.delete(p); CLOW_PX -= CLGL_S*CLGL_S; } }
+function cityKeepTrim(p0){ const mx = cityKeepMax(); if (cityKeepPx() <= mx) return;
+  const old = [...CGEO].filter(([p, I]) => p !== p0 && !(I._u >= CITY_GEN - 1)).sort((a, b) => (a[1]._u || 0) - (b[1]._u || 0));   // (the current and the last render's towns stay)
+  for (const [p] of old){ if (cityKeepPx() <= mx*0.85) break; cityForget(p); } }
 function cityInfo(p, lo = false){ let I = CINFO.get(p); if (I){ CINFO.delete(p); CINFO.set(p, I); return I; } const P = G.P[p]; if (!P || !P.city || P.sea) return null;   // lo: for the low tier only (a coarse footprint, not cached)
   const J = cityRun((lo ? 'l' : 'i') + p, () => ({it:cityInfoGen(p, P, lo)})); return J ? J.v : null; }   // over this render's budget: the rest in a later one
 function* cityInfoGen(p, P, lo){ let I;
@@ -5885,7 +5901,8 @@ function* cityInfoGen(p, P, lo){ let I;
   // (each of the small canvases the map and the lights draw from is rasterised here, a slice each, not in the frame that first draws the town:
   // a canvas only records its drawing until it is used)
   cityFlush(dk); cityFlush(ms); cityFlush(gl); yield; const lift = cityLiftMask(I); cityFlush(lift); yield; const shd = I.shade || cityShade(I); cityFlush(shd); yield;
-  CGEO.set(p, {x:I.x, y:I.y, r:I.r, E:I.E, dk, ms, gl, gc:CGEO.get(p)?.gc, occ:cityOcc(I), pale:I.pale, lift, shd}); if (!lo) CINFO.set(p, I);   // ms, gl: the soft footprint (a grey) and the core's glow, small: what the low tier of the lights is made from   // dk: the footprint in night shadow (kept with the size: concrete is unlit at night, only its lights show)
+  { const o = CGEO.get(p), px = dk.width*dk.height + ms.width*ms.height + gl.width*gl.height + lift.width*lift.height + shd.width*shd.height; if (o) CGEO_PX -= o.px || 0;
+    CGEO.set(p, {x:I.x, y:I.y, r:I.r, E:I.E, dk, ms, gl, gc:o?.gc, occ:cityOcc(I), pale:I.pale, lift, shd, px, _u:CITY_GEN}); CGEO_PX += px; cityKeepTrim(p); } if (!lo) CINFO.set(p, I);   // ms, gl: the soft footprint (a grey) and the core's glow, small: what the low tier of the lights is made from   // dk: the footprint in night shadow (kept with the size: concrete is unlit at night, only its lights show)
   if (!lo && CINFO.size > 80) for (const k0 of CINFO.keys()){ if (k0 !== p){ CINFO.delete(k0); break; } }   // masks of far-away cities are dropped (rebuilt when needed)
   return I; }
 // pale ground around a city (sand, the dry tan plains of the subtropics, tundra, snow), as the terrain raster paints it from the cells'
@@ -5953,8 +5970,8 @@ function cityOccAny(G0, u0, v0, u1, v1){ const o = G0 && G0.occ; if (!o) return 
 const CBAKE = new Map(); let CBAKE_PX = 0;
 // device pixels kept across all city canvases: with the Battery saver all of the city art (these, the low tiers and the graded tiles) stays
 // under about 76 MB, without it about 124 MB
-const cbakeMax = () => (saverOn() ? 19e6 : 31e6) - CLOW_PX - GTILE_PX;
-const CLOW = new Map(), CLOW_S = 128;   // the low tier of every city, baked in idle time and never dropped: what a jump shows until the right tier is made
+const cbakeMax = () => (saverOn() ? 19e6 : 31e6) - CLOW_PX - GTILE_PX - CGEO_PX;
+const CLOW = new Map(), CLOW_S = 128;   // the low tier of the cities, baked in idle time (while the kept budget lasts, cityKeepMax): what a jump shows until the right tier is made
 const CLOWN = new Map(); let CLOW_PX = 0;   // CLOWN: the low tier of the night lights (every city, kept): what the lights show until the right tier is made, and what every tier's brightness is matched to
 const CCH = 512;   // a bake up to this size is one canvas; a bigger one is made in chunks of this size, only those in view (each a short job)
 // CITY_GEN: the full layer render the canvases were last used by; the ones the current view uses are never dropped for room (a view that needs
@@ -6338,7 +6355,7 @@ function cityBake(p, S){ if (S === CLOW_S && CLOW.has(p)) return CLOW.get(p); S 
   if ((!CJOB.has(key) && !cityCan()) || (CITY_QUICK && S !== CLOW_S && cityDetailK(CGEO.get(p) || {E:1e9}, S) > 0)){ CITY_PEND = true; return null; }   // (a bake with just the arterials is quick: made while moving too)
   const I = cityInfo(p, S === CLOW_S); if (!I) return null;
   const J = cityRun(key, () => { const cv = document.createElement('canvas'); cv.width = cv.height = S; return {it:cityPaint(cv, I, S, 0, 0), c:cv}; }); if (!J) return null;
-  c = J.v; cbtLog(S, J.ms); if (S === CLOW_S){ CLOW.set(p, c); CLOW_PX += S*S; } else cbakePut(key, c); return c; }
+  c = J.v; cbtLog(S, J.ms); if (S === CLOW_S){ CLOW.set(p, c); CLOW_PX += S*S; cityKeepTrim(p); } else cbakePut(key, c); return c; }
 // one chunk (i, j) of a big city's bake at tier S (a gutter of CGUT px round it, from the same paint)
 const CGUT = 2;
 function cityChunk(p, S, i, j){ const key = 'd' + p + '|' + S + '|' + i + '|' + j; let c = cbakeGet(key); if (c) return c;
@@ -6463,7 +6480,7 @@ function cityLightsChunk(p, S, i, j){ const dk = 'd' + p + '|' + S + '|' + i + '
 function cityLightsLow(p){ let c = CLOWN.get(p); if (c) return c; const day = CLOW.get(p), G0 = CGEO.get(p); if (!day || !G0 || !G0.ms) return null;
   const S = CLOW_S; c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
   cityNightBase(g, G0, S, 0, 0, S, S, day, 0, G0.gl, G0.ms); cityNightGain(c, CN_LOWG*Math.max(0.85, Math.min(1.6, Math.pow(20/G0.E, 0.6)))); cityNightCompact(c, p, G0, S, 0, 0); cityNightWarm(c, G0, S, 0, 0);   // (the soft low tier made as bright as the sharp tiers are on their own: they are matched to it; a smaller town a little brighter, so it reads as lit)
-  CLOWN.set(p, c); CLOW_PX += S*S; return c; }
+  CLOWN.set(p, c); CLOW_PX += S*S; cityKeepTrim(p); return c; }
 // the lights' common steps (g: an opaque canvas W x H, the part of the town's square at S px whose corner is (X0, Y0)): the day picture's
 // brightest bits (a share a of it), then after the plan's lights (cityLightsPaint) the warm fall-off, the core's glow, the rivers' dark
 // bands and the soft footprint; base: before the plan, else after it
@@ -6604,11 +6621,11 @@ function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0
 // cityWarm runs from the loop, not from draw: it is preparation, not motion, so it never keeps the map redrawing and it does not stop when the
 // ambient motion rests (a paused, untouched map still finishes it); a few ms a frame (every 50 ms with the Battery saver) until every city has
 // its low tier; a town on screen just baked asks for one frame (the layer picks it up)
-function cityWarmPump(now){ if (CWARM && !CWARM.length) return; if (view.s*HS0 < 9 || now - (cityWarmPump.t || 0) < (saverOn() ? 50 : 0)) return; cityWarmPump.t = now;
+function cityWarmPump(now){ if (CWARM && !CWARM.length) return; if (view.s*HS0 < 9 || cityKeepPx() > 0.8*cityKeepMax() || now - (cityWarmPump.t || 0) < (saverOn() ? 50 : 0)) return; cityWarmPump.t = now;
   const p0 = CITY_PEND; cityWarm(now); if (CITY_PEND && !p0) redraw(); }
 // world-space bounds of what the layer or the screen shows
 function cityEach(x0, y0, x1, y1, fn){ for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (!P.city || P.sea) continue; const I = CGEO.get(p), e = I ? I.E : 22;
-    if (P.x + e < x0 || P.x - e > x1 || P.y + e < y0 || P.y - e > y1) continue; fn(p, P); } }
+    if (P.x + e < x0 || P.x - e > x1 || P.y + e < y0 || P.y - e > y1) continue; if (I) I._u = CITY_GEN; fn(p, P); } }   // (_u: the towns in use stay in the kept budget)
 // layer pass (world transform set, coast clip on): the urban areas laid on the ground
 function drawCitiesLayer(c, x0, y0, x1, y1, hexPx, lite){ const fa = cityFade(hexPx); if (fa <= 0) return;
   const st = cityArtState(); if (st < 5) return; const bud = typeof lite === 'number' ? lite : lite ? 6 : 45; CITY_DL = performance.now() + bud; CITY_QUICK = bud <= 6; CITY_GO = !CITY_QUICK;
@@ -7131,7 +7148,7 @@ function stripGeo(x0, y0, x1, y1){ const inB = b => b[2] >= x0 && b[0] <= x1 && 
 // R (optional, layer CSS px {x0, y0, x1, y1}): render only that rect of the existing layer, at its own origin (the strips a pan exposes, see shiftLayer).
 // Every pass is in world space and clipped to R, so a strip matches a full render pixel for pixel; R is snapped to whole device pixels.
 function renderLayer(vis, lite = false, R = null){
-  if (!layer) layer = document.createElement('canvas');
+  if (!layer){ layer = document.createElement('canvas'); gfxWatch(layer); }
   let mx, my;
   if (R){ mx = layer.mx; my = layer.my; layer.lite = layer.lite || lite; layer.strips = (layer.strips || 0) + 1; }
   else { const lm = FLYMARGIN || LM; FLYMARGIN = 0; mx = Math.round(Math.max(cw*lm, 224)); my = Math.round(Math.max(ch*lm, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
@@ -7489,6 +7506,45 @@ function drawSeaSurface(now, moving){
       if (fp.setTransform){ fp.setTransform(new DOMMatrix([ts, 0, 0, ts, d, 0.4*d])); ctx.strokeStyle = fp; ctx.globalAlpha = Math.min(1, (0.13 + 0.13*day)*2.2); ctx.lineWidth = 2.6*px; ctx.stroke(SEAFX.fp);
         fp.setTransform(new DOMMatrix([0, ts*1.4, -ts*1.4, 0, 37*px - 0.7*d, 23*px + 0.3*d])); ctx.globalAlpha = Math.min(1, (0.06 + 0.07*day)*2.2); ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); }
       ctx.restore(); } } }
+/* A lost graphics context. The browser keeps every canvas's pixels on the GPU; when the GPU process is reset (a driver reset, a laptop switching
+   GPUs, the GPU running out of memory) every canvas loses them at once: 'contextlost', then 'contextrestored' with the canvases blank. The map
+   keeps its expensive pictures in canvases and draws from them until something changes (the layer, the terrain texture, the towns, the detail
+   tiles, the sprites), so after a reset it showed a black map with only the per-frame names and glows (the glows smeared into squares over the
+   uncleared screen). gfxReset makes them again: every canvas cache dropped, the terrain and sea textures rebuilt, the layer rendered anew. */
+const GFX = {lost:false, n:0, t:-1e9, chk:0, pt:0, noProbe:false};
+function gfxWatch(c){ if (!c || c.__gfx) return; c.__gfx = true; c.addEventListener('contextlost', () => { GFX.lost = true; redraw(); });
+  c.addEventListener('contextrestored', () => { GFX.lost = true; redraw(); }); }   // (the reset runs on the next frame, once, whichever canvases fired)
+// once a second, and before each frame while a loss is pending: a context still lost waits; a restored one (or a loss no event reported) resets
+function gfxCheck(now){ const lost = !!(MCTX.isContextLost && MCTX.isContextLost()); if (lost){ GFX.lost = true; return; } if (GFX.lost) return gfxReset();
+  // the layer read back at its middle (1 px): every render paints it opaque first, so a transparent pixel means its pixels were dropped without an
+  // event (a loss the browser did not report, or the canvas memory ran out: Safari refuses canvases past its limit and they stay blank)
+  // (every 5 s, into a fresh 1 px canvas: a copy on the GPU and a 1 px read, never a read of the layer itself, which would move it off the GPU)
+  const L = layer; if (GFX.noProbe || !L || !L.full || !L.width || !L.height || now - GFX.t < 5000 || now - GFX.pt < 5000) return; GFX.pt = now;
+  const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); if (!g) return gfxReset();   // (no context for even 1 px: out of canvas memory)
+  g.drawImage(L, L.width >> 1, L.height >> 1, 1, 1, 0, 0, 1, 1); let a = 255;
+  try { a = g.getImageData(0, 0, 1, 1).data[3]; } catch (e) { GFX.noProbe = true; return; }   // (a layer that drew a picture from another origin cannot be read: no probe then)
+  if (a === 0) gfxReset(); }
+function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
+  const drop = c => { if (c && c.width) c.width = c.height = 0; };   // (frees the memory at once instead of at the next garbage collection)
+  try { ART.gfx(); } catch (e) {}
+  for (const c of CBAKE.values()) drop(c); for (const E of DT.cache.values()) drop(E.cv);   // (the biggest caches let go at once: Safari counts a canvas against its limit until it is collected)
+  for (const M of [UICONC, UIPC, TRSHIP, fogPat, TMMIP, TMCELL, TMLAST, ARTRIM, FIGSH, SBM, SBR, AIRSH, AIRC, FLAGC, UCC, HQ_C, TRAYC, BPICC, CTILE, GTILE, CSCR,
+    CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CLGL, CJOB, CWANT, CITY_MISS, CNF]) M.clear();
+  TMCB = 0; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
+  GRAIN = null; GROUND = null; NIGHT = null; CGLOWC = null; CLOUDS = null; CONTRAIL = null; TMSH = null; TMFOAM = null;
+  for (const k of ['cv', 'tile', 'pat', 'fp', 'fc', 'foam', 'fpat', 'wc']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = ''; SEAFX.g = -1;
+  DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0;
+  for (const c of FADEP) drop(c); FADEP.length = 0; FADE.length = 0;
+  if (layer){ for (const c of [layer.fl, layer.tc, layer.fg, layer.seaM, layer.alt && layer.alt.seaM, layer.alt, layer]) drop(c); } layer = null; layerKey = '';
+  try { FXM.gfxReset(); } catch (e) {}
+  try { if (window.U3D && U3D.gfxReset) U3D.gfxReset(); } catch (e) {}
+  // the terrain, land mask and sea depth textures (shared by the maps) are made again from the loaded pictures, the lakes baked into them again
+  if (G){ for (const k in MAPS){ const g = MAPS[k]; for (const f of ['terrain', 'landMask', 'seaTex']) g[f] = undefined; g.lakesBaked = false; }
+    G.terrain = undefined; G.landMask = undefined; G.seaTex = undefined; G.lakesBaked = false;
+    try { if (GEO){ if (GEO.miniC) drop(GEO.miniC); GEO.miniC = null; GEO.terrain = buildTerrain(); gfxWatch(GEO.terrain); bakeLakes(); GEO.seaTex = bakeSeaDepth(); } } catch (e) {}
+    for (const k in MAPS){ const g = MAPS[k]; if (g !== G) for (const f of MAP_SHARE) g[f] = G[f]; } }
+  SNOWC = {m:-1, S:null, cv:null, bb:null, ice:null}; try { snowCover(true); } catch (e) {}
+  redraw(600); }
 function draw(now){ draw.now = now;
   ovOut(); ovClear(); clampView(); if (!camFly && !ZTW && !drag && !pinch && !udrag && !miniDrag) wrapNorm();   // (the camera at rest: back into the canonical turn)
   { const fdt = now - (FXG.t || now); FXG.t = now; if (fdt > 0 && fdt < 250) FXG.ema = 0.9*FXG.ema + 0.1*fdt; FXG.k = Math.max(0.3, Math.min(1, 1 - (FXG.ema - 20)/25)); FXG.area = FXG.pa = 0;
@@ -10570,6 +10626,7 @@ function rdShift(ms){ const sh = (M, ...ks) => { for (const E of M.values()) for
     TMSW += ms; PLAY_SW += ms; if (MOV.sw) MOV.sw += ms; if (PF_S.t != null) PF_S.t += ms; if (window.U3D && U3D.mapShift) U3D.mapShift(ms); } catch (e) {} }
 function frame(now){
   RD.raf = 0; if (RD.bg) return;   // in the background: the loop stops (bgResume starts it again)
+  if (GFX.lost || now - GFX.chk > 1000){ GFX.chk = now; gfxCheck(now); fadeFree(now); }   // a lost graphics context: the map's canvases are made again once it is back
   const fd = now - (last || now), dt = Math.min(0.25, fd/1000); last = now; if (fd > 3 && fd < 60) RD.fi += (fd - RD.fi)*0.05;   // (RD.fi: the display's frame time, smoothed)
   // game time runs in quarter hours: a battle step every 15 game minutes (tickQ, rules/tick.js), the hour's tick on the fourth. acc is the hour's progress (0..1), S.q the steps already run
   // (a long hour is spread over frames: its steps run while this frame has TICK_MS left, and the next frames go on with it, paused or not;
@@ -10648,6 +10705,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
+if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ return GFX.n; }, get lost(){ return GFX.lost; }, reset:() => gfxReset(), mem:() => cityMem(), caches:() => ({cities:G.P.filter(P => P.city && !P.sea).length, CBAKE:CBAKE.size, CLOW:CLOW.size, CLOWN:CLOWN.size, CLGL:CLGL.size, CGEO:CGEO.size, CINFO:CINFO.size, GTILE:GTILE.size, DT:DT.cache.size, FADEP:FADEP.length, FADEPmp:+(FADEP.reduce((a, c) => a + c.width*c.height, 0)/1e6).toFixed(1), UCC:UCC.size, FLAGC:FLAGC.size, BPICC:BPICC.size, FIGSH:FIGSH.size})};   // a lost graphics context and its recovery (.test/black-map.js)
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)

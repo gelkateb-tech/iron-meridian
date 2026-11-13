@@ -843,7 +843,11 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     const types = Object.keys(META);
     await Promise.all(types.map(async t => { const [b, m] = await Promise.all([loadImg(dir + t + '.png'), loadImg(dir + t + '_m.png')]); const meta = META[t], sc = SZ/BAKE_SZ;
       const mk = im => { const c = document.createElement('canvas'); c.width = Math.round(im.width*sc); c.height = Math.round(im.height*sc); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height); return c; };
-      cache[t] = {base:mk(b), mask:mk(m), dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea}; }));
+      // the sheets are drawn to canvases only when a sprite is first drawn (the map draws its models from the map atlases, U3D.map): 32 sheet
+      // canvases made up front held some 80 MB of canvas memory that nothing drew (and a lost graphics context blanks them: see gfxReset)
+      const A = {dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea, bc:null, mc:null};
+      Object.defineProperty(A, 'base', {get:() => A.bc || (A.bc = mk(b))}); Object.defineProperty(A, 'mask', {get:() => A.mc || (A.mc = mk(m))});
+      cache[t] = A; }));
     return true;
   }
   const mapAt = {}; let mapDir = 'assets/units/';
@@ -879,6 +883,10 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     mapMeta: type => MAPMETA[type] || (mapAt[type] && mapAt[type].m) || null,
     exportMap(type){ if (!mapFn) return null; const A = mapFn(type); return {hi:A.hi.toDataURL('image/webp', 0.88), img:A.mid.toDataURL('image/webp', 0.9), meta:{w:A.w, h:A.h, ox:A.ox, oy:A.oy, ppm:A.ppm, air:A.air, sea:A.sea, bb:A.bb}}; },
     SZ, has: type => !!cache[ALIAS[type] || type], warmup, loadBaked, canRender: () => !!buildFn,
+    // a lost graphics context blanked every canvas: the sheets drawn from the baked pictures are drawn again when next wanted, the tinted and
+    // night copies too; sheets rendered here (no baked pictures) are rendered again
+    gfxReset(){ tinted.clear(); for (const k in shadowSheets) delete shadowSheets[k]; scratch = null;
+      let gone = 0; for (const t in cache){ const a = cache[t]; if ('bc' in a){ a.bc = a.mc = null; } else { delete cache[t]; gone++; } } if (gone && buildFn){ warm = false; warmup(); } },
     exportAtlas(type){ if (!cache[type] && buildFn) buildFn(type); const a = cache[type]; return a ? {base:a.base.toDataURL('image/png'), mask:a.mask.toDataURL('image/png')} : null; },
     // draw a unit sprite centred on (x, y) at on-screen height h; ang in radians (screen space)
     draw(ctx, type, color, x, y, h, ang, frame = 0, night = false){

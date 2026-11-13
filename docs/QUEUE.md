@@ -25,13 +25,13 @@ Last updated: 2026-11-13 (overnight run).
 
 | # | Task | Model |
 |---|---|---|
+| 0b | Speed, round 2 (owner: 'the game is laggy, raise the fps'): frame rate first (panning, zooming, 1x-8x, phone), then rules time, identical results | Opus (right after the capture rules, before the borders rebuild resumes) |
 | 1 | Research tab redo: fix the empty category/header icons; merge the research unit cards (i button with full stats); Gemini scene banners and square scene icons, 3 + 3 samples for the owner first | Opus |
 | 2 | Unit controls like Conflict of Nations: pinpoint movement fixed, tap to select, tap to move, path line, tap empty space to deselect; Waypoint button with dots and undo | Opus |
 | 3 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
 | 4 | Resource balance rule: all 6 resources per nation, max 2 cities each, real geography, Syria first, per-nation list | Opus |
 | 5 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities | Sonnet |
 | 6 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 7 | Speed, round 2 with identical results | Opus |
 | 8 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
 | 9 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
 | 10 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
@@ -71,6 +71,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
 | URGENT map fix: every country its own strong colour (no two neighbours alike), allies blue, tint and province/country borders clear at every zoom, sea outline (straight lines) removed, real country borders (Syria checked: data correct, wiggle removed) | Opus |
 |---|---|
+| URGENT black map fixed: canvas caches bounded (memory flat over 3 days at 8x) and the map rebuilds itself after the browser drops its graphics memory (Dev Build v35) | Opus |
 | Unit look: square unit badge (flag, upright icon, count), 3D infantry squads with soft shadows, dug-in shield with a tooltip, Army Info and tutorial, and a real dug-in defence bonus (damage taken x0.8) (Dev Build v34) | Opus |
 | New resource icons: money, oil, iron, electronics (Dev Build v33) | Opus |
 | Research slot colours (Dev Build v31) | Opus |
