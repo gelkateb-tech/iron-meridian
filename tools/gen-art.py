@@ -1,7 +1,8 @@
 """Generates building pictures with the Gemini API (Nano Banana 2.1, 1K, square) into assets/art-src/ba-<name>.png.
 
-The pictures are the angled building set: one shared STYLE paragraph (the same one as the 8 Higgsfield prompts for the HQ,
-Airbase 1-5 and Recruiting Office 2-3) after a short description of each building level (SUBJECTS below).
+The pictures are the angled building set: one shared STYLE paragraph (the 8 Higgsfield prompts' style for the HQ,
+Airbase 1-5 and Recruiting Office 2-3, minus their base pad: buildings stand straight on the grey background) after
+a short description of each building level (SUBJECTS below).
 
 The API key is never read, printed or stored here: the session's network proxy adds it to every request to
 generativelanguage.googleapis.com (header x-goog-api-key). Run elsewhere, set GEMINI_API_KEY and it is sent in that header.
@@ -23,19 +24,24 @@ STYLE = ("Style: a clean, simplified 3D game-asset render of a modern military f
          "unit models. Few large, clear shapes with crisp edges and low clutter, so it stays readable when shown very small. "
          "Matte materials in a muted palette: pale sand-grey concrete, olive-green and slate-grey roofs, dark asphalt, small "
          "touches of khaki. Camera: orthographic three-quarter view from above, about 45 degrees down, looking at the compound's "
-         "front corner so its square footprint reads as a diamond. Lighting: soft, even daylight from the upper left with short, "
-         "soft shadows falling to the lower right. The compound sits on its own clean concrete pad with crisp edges and is "
-         "centred, filling about 80 percent of the frame. Background: a plain, flat, uniform light grey (#D9D9D9) with no ground, "
-         "grass, horizon or scenery around the pad. Square 1:1 image. No text, no letters, no numbers, no flags, no emblems, "
-         "no logos, no watermark.")
+         "front corner so its layout runs diagonally across the frame. Lighting: soft, even daylight from the upper left with "
+         "short, soft shadows falling to the lower right. The buildings and vehicles stand directly on the plain grey background, "
+         "each with only its own soft contact shadow, as loose cut-out game pieces. Cropped tight and centred: the facility "
+         "fills about 90 percent of the frame. Background: a plain, flat, uniform light grey (#D9D9D9) everywhere around and "
+         "between the buildings. Square 1:1 image. No base platform, no slab, no square tile, no ground plane, no terrain, no "
+         "horizon. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.")
 
 # one entry per building level; the HQ, Airbase 1-5 and Recruiting Office 2-3 come from Higgsfield, not from here
 SUBJECTS = {
     'naval-yard-1': (
-        "A small naval yard, level 1 of 5: a concrete quay pad whose front half is a rectangular basin of calm, flat, dark "
-        "blue-grey water held inside the pad's crisp concrete edges, one short straight concrete pier reaching into the basin, "
-        "a single small grey frigate moored alongside the pier, one low warehouse shed with an olive-green roof on the quay, and "
-        "one small slim dockside crane at the water's edge."),
+        "A small naval yard on a coast, level 1 of 5, shown as a soft-edged vignette. The land is only a thin, gently curved "
+        "band of pale sandy-grey shore, barely wider than the warehouse, running diagonally from the upper left to the right; "
+        "it is flat with no visible thickness, and every edge of it, including both ends and the inland side, feathers out "
+        "softly into the plain grey background. Below the shore a small rounded patch of calm blue-grey water, whose whole "
+        "outer edge feathers out softly and evenly into the plain grey background, like a soft vignette, with no straight or "
+        "hard edges anywhere. One short straight concrete pier reaches from the shore into the water, with a single small grey "
+        "frigate moored alongside it. On the shore: one low warehouse shed with an olive-green roof and one small slim dockside "
+        "crane at the water's edge. The pier, frigate, warehouse and crane are large in the frame and span most of its width."),
 }
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLE
