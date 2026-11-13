@@ -23,3 +23,9 @@
 {"name": "hospital-4", "file": "assets/art-src/ba-hospital-4.png", "batch": true, "usd_est": 0.0491, "tokens": {"promptTokenCount": 1324, "candidatesTokenCount": 2141, "thoughtsTokenCount": 1107}}
 {"name": "fortifications-5", "file": "assets/art-src/ba-fortifications-5.png", "batch": true, "usd_est": 0.0326, "tokens": {"promptTokenCount": 1333, "candidatesTokenCount": 1608, "thoughtsTokenCount": 543}}
 {"name": "hospital-5", "file": "assets/art-src/ba-hospital-5.png", "batch": true, "usd_est": 0.0442, "tokens": {"promptTokenCount": 1328, "candidatesTokenCount": 1562, "thoughtsTokenCount": 1362}}
+{"name": "hq-eastern-europe", "file": "assets/art-src/ba-hq-eastern-europe.png", "batch": true, "usd_est": 0.0253, "tokens": {"promptTokenCount": 1321, "candidatesTokenCount": 1610, "thoughtsTokenCount": 52}}
+{"name": "hq-middle-east", "file": "assets/art-src/ba-hq-middle-east.png", "batch": true, "usd_est": 0.0263, "tokens": {"promptTokenCount": 1311, "candidatesTokenCount": 1505, "thoughtsTokenCount": 224}}
+{"name": "hq-east-asia", "file": "assets/art-src/ba-hq-east-asia.png", "batch": true, "usd_est": 0.0362, "tokens": {"promptTokenCount": 1323, "candidatesTokenCount": 1492, "thoughtsTokenCount": 897}}
+{"name": "hq-south-asia", "file": "assets/art-src/ba-hq-south-asia.png", "batch": true, "usd_est": 0.0287, "tokens": {"promptTokenCount": 1312, "candidatesTokenCount": 1684, "thoughtsTokenCount": 210}}
+{"name": "hq-africa", "file": "assets/art-src/ba-hq-africa.png", "batch": true, "usd_est": 0.0287, "tokens": {"promptTokenCount": 1313, "candidatesTokenCount": 1561, "thoughtsTokenCount": 331}}
+{"name": "hq-latin-america", "file": "assets/art-src/ba-hq-latin-america.png", "batch": true, "usd_est": 0.0351, "tokens": {"promptTokenCount": 1313, "candidatesTokenCount": 1510, "thoughtsTokenCount": 808}}
