@@ -140,7 +140,7 @@ function splitPlan(a, plan, spot = null){
   const pk = a.peak, h0 = effHP(a), out = [];
   G0.forEach((g, i) => { const b = addArmy(a.owner, a.at, {});
     b.to = a.to; b.t = a.t; b.path = a.path.slice(); b.m = a.m; b.stance = a.stance; b.from = a.from; b.froms = a.froms ? a.froms.slice() : undefined; b.landed = a.landed;
-    b.forced = a.forced; b.fire = a.fire; b.delay = a.delay; b.home = a.home; b.retreating = a.retreating; b.chase = a.chase; b.legFrom = a.legFrom; if (a.dest) b.dest = {...a.dest};
+    b.forced = a.forced; b.fire = a.fire; b.delay = a.delay; b.home = a.home; b.retreating = a.retreating; b.chase = a.chase; b.legFrom = a.legFrom; if (a.dest) b.dest = {...a.dest}; if (a.wp) b.wp = a.wp.map(q => ({...q}));
     if (a.emb != null) b.emb = a.emb; if (a.land > 0) b.land = a.land; if (a.hrt != null) b.hrt = a.hrt;   // (embarking, landing, and the heart reached: rules below)
     if (a.to === null && isSeat(a.owner)) b.pos = splitSpot(a, i, spot);   // a seat's groups get places of their own (the AI's stay on the province centre)
     for (const k in g){ const r = R.get(k), v = g[k]; b.u[r.t] += v; b.w[r.t] += v*r.wu; a.u[r.t] -= v; a.w[r.t] = Math.max(0, a.w[r.t] - v*r.wu); if (!a.u[r.t]) a.w[r.t] = 0; }
@@ -267,7 +267,7 @@ const nextLegH = a => { const [p1, p2] = nextLegEnds(a); return legHours(a, a.at
 const legSpot = a => { const [p1, p2] = legEnds(a); return lerpPt(p1, p2, Math.max(0, Math.min(1, a.t))); };
 // pt: the exact point to go to ([x, y], or omitted for the province centre). A ship's point is water (in a sea zone); a ship sent to a port docks
 // at the quay. A point in the force's own province is a walk inside it (orderSpot).
-function orderMove(a, target, pt = null){ delete a.tgt;   // (a move ends a Bombard order, rules/combat.js orderBombard)
+function orderMove(a, target, pt = null){ delete a.tgt; if (a.wp) delete a.wp;   // (a move ends a Bombard order, rules/combat.js orderBombard, and drops planned stops: waypoints below)
   const q = pt && !a.air && G.P[target] && !(shipsOnly(a) && !G.P[target].sea) ? ptIn(target, pt[0], pt[1]) : null;
   if (q && a.to === null && target === a.at){ a.dest = null; orderSpot(a, q[0], q[1]); IM.emit('ordered', a); return; }
   if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // (a force walking or sailing inside its province sets off from where it is now)
@@ -292,10 +292,52 @@ function haltArmy(a){
     if (near !== a.at){ a.from = a.at; a.froms = [a.at]; atMove(a, near); }
     a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && !same ? null : ptIn(a.at, spot[0], spot[1]); }
   if (a.sail){ const s = sailXY(a); a.pos = ptIn(a.at, s[0], s[1]); delete a.sail; }   // a force walking or a fleet sailing inside its province stops where it is
-  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt; delete a.raid; delete a.emb;   // (a landing goes on: a.land)
+  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt; delete a.raid; delete a.emb; if (a.wp) delete a.wp;   // (a landing goes on: a.land)
   IM.emit('halted', a);   // (display only)
   return true;
 }
+/* ---------------- Waypoints ----------------
+   A seat's move order may run through several stops in order (the Waypoint button: each tap adds one). The first stop is the order the force is
+   carrying out (a.dest, a.path, a.sail, as any pinpoint move); a.wp holds the stops after it, [{p, x, y}] (the province or sea zone p holding the
+   exact point x, y). When the force has reached a stop and stands idle (rules/tick.js movement: not landing, not in a battle), the next stop is
+   taken off the list and ordered like any move (orderMove: routed province to province, by a port to embark, by the heart of land to capture);
+   a stop it cannot reach is skipped. Halt, a plain move order, a retreat, a clash on the road and every rule that sends a force elsewhere drop
+   the stops. Each stop is a point routed on its own, so a route through enemy land captures only at the heart, as any order. The AI gives no
+   stops; a force without a.wp (every old save) moves exactly as before. */
+// the stop the force is heading for now (its exact point, else the centre of the last province of its route), or null when it has no order
+function stopNow(a){ if (a.dest) return {p:a.dest.p, x:a.dest.x, y:a.dest.y}; if (a.path.length){ const P = G.P[a.path[a.path.length - 1]]; return {p:P.id, x:P.x, y:P.y}; }
+  if (a.to !== null){ const P = G.P[a.to]; return {p:P.id, x:P.x, y:P.y}; } if (a.sail){ const q = a.sail.nx || a.sail.to; return {p:a.at, x:q[0], y:q[1]}; } return null; }
+// every stop of the force's plan, in order: the one it is heading for, then a.wp
+const stopsOf = a => { const s0 = stopNow(a); return s0 ? [s0, ...(a.wp || [])] : (a.wp || []).slice(); };   // (at a stop, before the hour it sets off for the next: the stops to come)
+// add a stop at point pt of province (or sea zone) p: an idle force sets off for it at once (a plain move), one under way goes there after its
+// last stop. Returns false when the stop cannot be added (no route from the last stop, or not a force that marches)
+function addStop(a, p, pt){ if (!a || a.air || a.fly || !G.P[p] || !pt) return false;
+  const q = ptIn(p, pt[0], pt[1]); if (!q) return false; const last = stopNow(a) || (a.wp && a.wp.length ? a.wp[a.wp.length - 1] : null);
+  if (!last){ orderMove(a, p, q); return a.to !== null || a.path.length > 0 || !!a.sail; }
+  const L = a.wp && a.wp.length ? a.wp[a.wp.length - 1] : last, sea = shipsOnly(a) && !G.P[p].sea;
+  if (sea || (L.p !== p && !pathFor(a, L.p, p).length)) return false;
+  (a.wp || (a.wp = [])).push({p, x:q[0], y:q[1]}); return true; }
+// remove the last stop; with only the stop it is heading for left, the order is cancelled (Halt: it stops where it is). False when there is none
+function undoStop(a){ if (!a) return false; if (a.wp && a.wp.length){ a.wp.pop(); if (!a.wp.length) delete a.wp; return true; }
+  if (a.to !== null || a.path.length || a.sail) return haltArmy(a); return false; }
+// the hourly step (rules/tick.js movement): an idle force with stops left sets off for the next one (skipping any it can no longer reach)
+function stopNext(a){ if (!a.wp || a.to !== null || a.path.length || a.sail || a.land > 0 || a.air || a.fly || S.battles.includes(a.at)) return;
+  while (a.wp && a.wp.length){ const q = a.wp.shift(), rest = a.wp; if (!rest.length) delete a.wp;
+    orderMove(a, q.p, [q.x, q.y]); if (rest.length) a.wp = rest;   // (orderMove drops the stops: the rest are kept)
+    if (a.to !== null || a.path.length || a.sail) return;
+    if (a.at === q.p && (a.pos ? Math.hypot(a.pos[0] - q.x, a.pos[1] - q.y) < 1e-6 : true)) continue;   // (already there)
+    a.dest = null; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} skipped a waypoint in ${G.P[q.p].cityName || G.P[q.p].name}: no route there now.`, 'info', a.at); } }
+// the hours to each stop of the plan (a forecast, as etaHours: the route of each stop from the one before, its last leg by its real length;
+// embarking and landing count). null for a stop with no route now
+function stopsEta(a){ const S0 = stopsOf(a); if (!S0.length) return []; const gr = ground(a), now = stopNow(a), out = now ? [etaHours(a)] : [];
+  let h = now ? out[0] : (a.land > 0 ? a.land : 0), from = now ? S0[0].p : a.at, p1 = now ? [S0[0].x, S0[0].y] : a.pos || [G.P[a.at].x, G.P[a.at].y];   // (at a stop: the next one from where it stands)
+  for (let k = now ? 1 : 0; k < S0.length; k++){ const q = S0[k], p2e = [q.x, q.y];
+    if (q.p === from){ h += Math.max(1, Math.hypot(p2e[0] - p1[0], p2e[1] - p1[1])/KM_W*24/(walkSpeed(a, from)*KM_HEX)); out.push(Math.ceil(h)); p1 = p2e; continue; }
+    const path = pathFor(a, from, q.p); if (!path.length){ out.push(null); continue; }
+    for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 ? p2e : [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2);
+      if (gr && !G.P[from].sea && G.P[p].sea) h += embarkH(a); else if (gr && G.P[from].sea && !G.P[p].sea) h += landH(a, p); from = p; p1 = p2; }
+    out.push(Math.ceil(h)); }
+  return out; }
 /* A move to another spot inside the force's own province or sea zone (a.pos: forces may stand anywhere in it), and the rest of a pinpoint move
    once the force has crossed into the province of its point: the force WALKS (a fleet SAILS) there (a.sail {f: from, to: the spot, t: 0..1,
    h: hours}): a fleet at its sea speed (km a day: the slowest ship, research and the stack penalty, as abSpd shows it), a ground force at its
@@ -442,7 +484,7 @@ function armyUpkeep(prevBattles){
       for (let h = 0; h < q.length && dest < 0; h++){ const [u, du] = q[h]; if (du >= 6) continue;
         for (const v of G.P[u].nbs){ if (seen.has(v) || !canEnter(a.owner, v)) continue; seen.add(v);
           if (S.owner[v] === a.owner && SUP[a.owner] && SUP[a.owner][v] && !S.battles.includes(v)){ dest = v; break; } q.push([v, du + 1]); } }
-      if (dest >= 0){ a.path = pathFor(a, a.at, dest); if (a.dest) a.dest = null; a.forced = true; a.retreating = true;
+      if (dest >= 0){ a.path = pathFor(a, a.at, dest); if (a.dest) a.dest = null; if (a.wp) delete a.wp; a.forced = true; a.retreating = true;
         if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} broke at ${G.P[a.at].name} and is retreating to ${G.P[dest].name}.`, 'bad', a.at); }
       else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (isSeat(a.owner)) tell(a.owner, `Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
     }

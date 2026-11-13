@@ -313,7 +313,7 @@ function bombardInfo(a, p, b = null){ const R = rangedOf(a), range = R.reduce((m
 // order force a to stay where it is and fire at force b (or at the enemy forces in province p) while they are in range and seen. False, with
 // nothing changed, when nothing there is in range now. A move order or Halt ends it; meanwhile, with the target out of range, it fires at will.
 function orderBombard(a, p, b = null){ if (!bombardInfo(a, p, b).ok) return false;
-  a.path = []; a.chase = null; a.dest = null; delete a.join; a.tgt = b ? {id:b.id} : {p}; if (a.fire === 'hold') a.fire = 'free'; return true; }
+  a.path = []; a.chase = null; a.dest = null; if (a.wp) delete a.wp; delete a.join; a.tgt = b ? {id:b.id} : {p}; if (a.fire === 'hold') a.fire = 'free'; return true; }
 // a force sent to join another (dragged onto its counter) merges into it on arrival; it follows if the other force moved on
 function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a)) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }
