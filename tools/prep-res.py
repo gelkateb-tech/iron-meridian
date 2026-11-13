@@ -10,9 +10,9 @@ ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src=ROOT+'/assets/art-src/'
 names=['money','oil','iron','electronics','materials','rare-materials','manpower','storage']
 if len(sys.argv)>1: names=[n for n in names if n in sys.argv[1:]]
-SRC={'electronics':'icon-electronics.png', 'iron':'icon-iron.png'}   # owner's newer pictures (else res-<name>.png)
-WIDE={'electronics', 'iron'}   # kept as wide as their shape when wider than tall
-TH={'electronics':130}   # light grey background (not white): a lower threshold, also drops the soft drop shadow
+SRC={'electronics':'icon-electronics.png', 'iron':'icon-iron.png', 'money':'icon-cash.png', 'oil':'icon-oil.png'}   # owner's newer pictures (else res-<name>.png)
+WIDE={'electronics', 'iron', 'money', 'oil'}   # kept as wide as their shape when wider than tall
+TH={'electronics':130, 'money':130, 'oil':130}   # light grey background (not white): a lower threshold, also drops the soft drop shadow
 out={}
 for n in names:
     im=Image.open(src+SRC.get(n,f'res-{n}.png')).convert('RGB'); a=np.asarray(im).astype(np.float32)
