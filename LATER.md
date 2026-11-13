@@ -52,9 +52,11 @@ Each one needs pictures later, in the same angled style as the other buildings: 
   - Upgrades cost a lot, so a real air defence network is a big investment, and players still need Mobile SAMs and fighters.
   - Enemies can target and destroy it.
 - **Forward Airstrip.** A small airfield buildable in any province, not only in cities, so aircraft can refuel, rearm and fly from closer to the front (planes have limited range).
-  - Cheaper and weaker than a city Airbase, and holds fewer aircraft.
+  - Cheaper and weaker than a city Airbase.
+  - Has levels like the other buildings. Level 1 is small and holds few aircraft; each upgrade holds more, and the top level holds about double what level 1 does.
+  - Each upgrade costs more than the one before.
   - Enemies can capture or destroy it.
-  - Needs its own pictures later.
+  - Each level needs its own picture later.
 - **Field Hospital.** Buildable in any province near the front, so damaged units heal there instead of going back to a city.
   - Heals slower than a city Hospital.
   - Enemies can capture or destroy it.
