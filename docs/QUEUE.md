@@ -30,6 +30,7 @@ Last updated: 2026-11-13 (overnight run).
 | # | Task | Model |
 |---|---|---|
 | 1 | Night city lights: small separate glows at real city locations sized by population, dark gaps between cities, dimmer overall; country colours and borders clearly visible on top at night; Egypt and the Levant at night before/after before merging | Opus (next free slot) |
+| 1a | Unit look: the unit label becomes a small square badge (flag on top, unit icon in the middle, count below), readable at every zoom; infantry drawn as small clear soldier figures matching the tanks in style and scale, with soft shadows; screenshots before merging | Opus |
 | 1b | Building pictures in the game: the angled pictures (regional capital HQs; Airbase, Naval Yard, Recruiting Office, Fortifications, Hospital levels) cut out and cropped, replacing the old ones on the map and in the city panel; Naval Yard on the real coast, mirrored so its piers face the sea; no level numbers or badges on the map (level only in the info panel); screenshots of Berlin and a coastal city at 3 zooms before merging | Opus (next free slot, after the audit) |
 | 2 | Speed, round 2 with identical results: the targets not yet met (well under 0.5 s per game day; steady 60 fps while panning) | Opus (after the border rebuild, which changes the map drawing) |
 | 3 | Small fixes: 'BERLIN · BERLIN' map labels, phone Market table and cards, battery.js and v3air test robustness | Sonnet |
