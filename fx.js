@@ -1140,7 +1140,9 @@ function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANI
    on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
 const fxStats = () => ({part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
 
-return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ turnTo, moveFig, fxLive, bigShake, mslOn:() => MSL.on || 0, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+// a lost graphics context (index.html gfxReset): the canvases' pixels are gone, so the sprites and the crater canvas are made again
+const gfxReset = () => { for (const k in SPR) delete SPR[k]; AFX.mips.clear(); if (CRD.cv) CRD.cv.width = CRD.cv.height = 0; CRD.cv = null; CRD.key = ''; };
+return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, moveFig, fxLive, bigShake, mslOn:() => MSL.on || 0, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,
