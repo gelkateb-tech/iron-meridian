@@ -5404,7 +5404,7 @@ function tmFaceTurn(id, want, now){ let E = TMFACE.get(id);
 // every force's formation, at every zoom (a pure function of its make-up and its facing; its counter's pin is the top of it): c.form =
 // {sl (the model types, most numerous first, up to four), d (each one's view of 16), F (tmForm), top (world px below the anchor, eased when
 // the facing or the make-up changes), id, ang}
-const TMTOP = new Map(), TMGA = new Map(), TMCEN = new Map(); /*@TEST*/const PATHDBG = {};/*@ENDTEST*/   // (PATHDBG: the selected force's drawn route, stops and ETA chip, for .test/controls.js)
+const TMTOP = new Map(), TMGA = new Map(), TMCEN = new Map(), TMCEN_V = 0.006; /*@TEST*/const PATHDBG = {};/*@ENDTEST*/   // (TMCEN_V: world units a ms the centring shift moves; PATHDBG: the selected force's drawn route, stops and ETA chip, for .test/controls.js)
 function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
   for (const c of clusters){ c.form = null; c.pinY = c.wy; if (!on || c.wx == null || (c.air && c.moving)) continue;
     const cls = c.cls || (c.air ? 'a' : 'g'), want = tmRank(tmUnits(c.list), cls, c.moving ? Math.min(3, tmNMax(-1)) : tmNMax(c.at), !c.moving && tmPrimO(c.at, c.owner)); if (!want.length) continue;
@@ -5424,13 +5424,15 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     let G0 = TMGA.get(lead.id); if (!G0 || G0.S !== S || now - G0.t > 1500){ G0 = {a:pfFresh(now) ? 1 : 0, t:now, S}; TMGA.set(lead.id, G0); if (TMGA.size > 3000) TMGA.clear(); }   // (a group new to the map fades in)
     G0.a = Math.min(1, G0.a + Math.max(0, Math.min(100, now - G0.t))/220); G0.t = now; if (G0.a < 1) animFast();
     const mid = ny ? ys/ny : 0;
-    // a force standing on an exact point (a pinpoint move: the spot the player tapped) or on the march is drawn CENTRED on its spot: its diamond
-    // (the middle of its pictures) on the very point, its pictures round it; a force in its province's layout keeps its slot at the top of its
-    // group, as before. The shift eases (in time, never by zoom), so a force setting off or arriving does not jump
-    { const want0 = (c.pinned && !c.dock) || c.moving ? mid : 0; let Q = TMCEN.get(lead.id);
-      if (!Q || Q.S !== S || now - Q.t > 1500){ Q = {v:want0, t:now, S}; TMCEN.set(lead.id, Q); if (TMCEN.size > 3000) TMCEN.clear(); }
-      else { const dt = Math.max(0, Math.min(100, now - Q.t)); Q.v += (want0 - Q.v)*(1 - Math.exp(-dt/140)); if (Math.abs(want0 - Q.v) < 1e-3) Q.v = want0; else animFast(); Q.t = now; }
-      c.wy -= Q.v; }
+    // a force standing on an exact point (a pinpoint move: the spot the player tapped) or marching to one is drawn CENTRED on its spot: its
+    // diamond (the middle of its pictures) on the very point, its pictures round it; a force in its province's layout, or marching to a
+    // province's centre (a column that joins a stack there), keeps its slot at the top of its group, as before. The shift glides (in time, never by zoom), so a force setting off or arriving does not jump
+    // (kept per force: a group takes the largest shift of its forces, so a column joining a stack glides down with it instead of dropping)
+    { const want0 = (c.pinned && !c.dock) || (c.moving && (lead.dest || lead.sail)) ? mid : 0; let Q = null;
+      for (const q0 of c.list){ const e = TMCEN.get(q0.id); if (e && e.S === S && now - e.t <= 1500 && (!Q || e.v > Q.v)) Q = e; }
+      if (TMCEN.size > 3000) TMCEN.clear();
+      if (!Q) Q = {v:want0, t:now, S}; else { Q = {v:Q.v, t:Q.t, S}; const dt = Math.max(0, Math.min(100, now - Q.t)), dv = want0 - Q.v, st = TMCEN_V*dt; Q.v = Math.abs(dv) <= st ? want0 : Q.v + Math.sign(dv)*st; if (Q.v !== want0) animFast(); Q.t = now; }   // (at an even, slow rate: about a px a frame, so the pictures never jump against the force's own motion)
+      for (const q0 of c.list) TMCEN.set(q0.id, Q); c.wy -= Q.v; }
     c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a, arts, mid}; c.pinY = c.wy + E.v; } }   // (mid: the middle of its pictures, world px below the anchor: where its diamond stands)
 // the models each force shows this frame (from the zoom they are big enough to read: all of a group's models fade in together), planned before
 // the names, the HQ and the counters are placed (they keep clear of them): c.fm = {ents:[{t, d, s, x, y, box, slot}], box, a} in screen px
@@ -8270,7 +8272,7 @@ function stopRoutes(a){ const st = stopsOf(a), now = stopNow(a); if (st.length <
     if (!pth.length && heartVia(a, q.p, wp, [q.x, q.y])) pts.push([G.P[q.p].x, G.P[q.p].y]); pts.push([q.x, q.y]); segs.push({pts, ok:f.p === q.p || pth.length > 0}); }
   E = {k, S, st, segs, eta:stopsEta(a)}; WPR.set(a.id, E); if (WPR.size > 300) WPR.clear(); return E; }
 // the selected force's order: a chip over its last stop with the hours to get there (and the number of stops of a waypoint plan)
-function etaChip(a){ if (a.air || a.fly) return; const st = stopsOf(a); if (!st.length) return; const q = st[st.length - 1], E = st.length > 1 ? stopRoutes(a) : null, h = E ? E.eta[E.eta.length - 1] : etaHours(a);
+function etaChip(a){ if (a.air || a.fly) return; const st = stopsOf(a); if (!st.length) return; const q = st[st.length - 1], E = st.length > 1 || !stopNow(a) ? stopRoutes(a) : null, h = E ? E.eta[E.eta.length - 1] : etaHours(a);   // (standing at a stop: the hours from there)
   if (h == null) return; const [x, y] = toScreen(q.x, q.y), txt = `${h} h${st.length > 1 ? ` · ${st.length} stops` : ''}`; if (x < -60 || y < -40 || x > cw + 60 || y > ch + 40) return;
   ctx.save(); ctx.font = `700 11px ${BODY}`; const w = ctx.measureText(txt).width + 14; roundRect(ctx, x - w/2, y - 34, w, 19, 9.5); ctx.fillStyle = 'rgba(20,16,10,.9)'; ctx.fill(); ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 1.2; ctx.stroke();
   ctx.fillStyle = '#f6e7c4'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y - 24.5); ctx.restore(); /*@TEST*/PATHDBG.eta = {txt, x:Math.round(x), y:Math.round(y)};/*@ENDTEST*/ }
