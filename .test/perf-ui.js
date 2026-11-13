@@ -11,7 +11,7 @@ const PHONE = process.argv.includes('--phone'), DAYS = +arg('days', 10), SEED = 
 const PHASES = {
   'draw (all)': ['draw'], 'map layer': ['renderLayer', 'shiftLayer', 'layerBands', 'layerCityRefresh', 'renderPart'], 'detail tiles': ['dtWork', 'dtDraw'],
   'fog': ['fogHole', 'fogPattern', 'visibleSet', 'armyVisible', 'armyLocated'], 'cities/buildings': ['drawCitiesLayer', 'drawCitiesIn', 'drawCityLights', 'cityPump', 'cityWarmPump', 'cityDraw', 'cityBake', 'cityChunk'],
-  'counters/pictures': ['placeTrays', 'drawTray', 'placePics', 'drawPics', 'counter', 'tmUnits', 'tmDraw', 'tmArtDraw', 'airPic'], 'effects fx': ['drawFX', '@fx.js', 'fxDrain', 'drawBattleSmoke'],
+  'counters/pictures': ['drawBuildings', 'counter', 'tmUnits', 'tmDraw', 'tmArtDraw', 'airPic'], 'effects fx': ['drawFX', '@fx.js', 'fxDrain', 'drawBattleSmoke'],
   'labels': ['labNight', 'lakeLabels', 'nameOverSea', 'tagDraw'], 'sea/night/weather': ['drawSeaSurface', 'drawNight', 'drawNightWorld', 'drawWeather', 'drawLightning'],
   'trade/links': ['drawTrade', 'drawTradeLanes', 'drawConvoys', 'drawLinkFx', 'drawChokes', 'drawBlockZones'], 'side panel/UI': ['renderSide', 'ambience', 'abTickPatch', 'drawMini'],
   'rules (tickQ)': ['tickQ', 'tickQSlice'], 'GC': ['(garbage collector)'] };
