@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const path = require('path');
   if (await p.locator('[data-act="pickscn"][data-k="world64"]').count()) await p.click('[data-act="pickscn"][data-k="world64"]');
   const pk = await p.evaluate(nm => { const L = SCENARIOS.world64.powers, i = L.findIndex(P => P.name === nm); return {i, region:i >= 0 ? L[i].region : null}; }, who);
   if (pk.i < 0){ console.log('no such nation: ' + who); await b.close(); process.exit(1); }
-  await p.click(`[data-act="pickreg"][data-k="${pk.region}"]`); await p.click(`[data-act="pick"][data-p="${pk.i}"]`); await p.click('[data-act="begin"]'); await p.waitForTimeout(1500); await p.click('[data-act="start"]'); await p.waitForTimeout(800);
+  await p.click(`[data-act="pick"][data-p="${pk.i}"]`); await p.click('[data-act="begin"]'); await p.waitForTimeout(1500); await p.click('[data-act="start"]'); await p.waitForTimeout(800);
   const out = [];
   for (let d = 0; d < days; d += 5){
     await p.evaluate(() => { for (let i = 0; i < 120 && !S.over; i++) window.__im.tick(); }); await p.waitForTimeout(300);
