@@ -1,0 +1,1402 @@
+[
+{
+"r": "me",
+"lon": 35.388362,
+"lat": 31.009297,
+"a": "Jordan",
+"b": "Israel"
+},
+{
+"r": "me",
+"lon": 58.722803,
+"lat": 37.657083,
+"a": "Iran",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 54.252275,
+"lat": 37.349892,
+"a": "Iran",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 60.122355,
+"lat": 41.638725,
+"a": "Uzbekistan",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 61.829435,
+"lat": 28.600672,
+"a": "Iran",
+"b": "Pakistan"
+},
+{
+"r": "me",
+"lon": 59.940558,
+"lat": 37.044691,
+"a": "Iran",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 45.893637,
+"lat": 35.833524,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 45.732381,
+"lat": 41.338873,
+"a": "Azerbaijan",
+"b": "Georgia"
+},
+{
+"r": "me",
+"lon": 46.481121,
+"lat": 38.992195,
+"a": "Azerbaijan",
+"b": "Armenia"
+},
+{
+"r": "me",
+"lon": 35.373376,
+"lat": 33.061756,
+"a": "Lebanon",
+"b": "Israel"
+},
+{
+"r": "me",
+"lon": 44.402695,
+"lat": 38.380734,
+"a": "Turkey",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 62.447382,
+"lat": 40.022597,
+"a": "Uzbekistan",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 42.560068,
+"lat": 41.55873,
+"a": "Georgia",
+"b": "Turkey"
+},
+{
+"r": "me",
+"lon": 43.690859,
+"lat": 40.239536,
+"a": "Armenia",
+"b": "Turkey"
+},
+{
+"r": "me",
+"lon": 35.025748,
+"lat": 29.787705,
+"a": "Jordan",
+"b": "Israel"
+},
+{
+"r": "me",
+"lon": 56.206874,
+"lat": 25.225715,
+"a": "Oman",
+"b": "United Arab Emirates"
+},
+{
+"r": "me",
+"lon": 44.851892,
+"lat": 36.851499,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 47.176118,
+"lat": 16.953178,
+"a": "Saudi Arabia",
+"b": "Yemen"
+},
+{
+"r": "me",
+"lon": 60.833733,
+"lat": 33.444859,
+"a": "Iran",
+"b": "Afghanistan"
+},
+{
+"r": "me",
+"lon": 35.945071,
+"lat": 32.680861,
+"a": "Syria",
+"b": "Jordan"
+},
+{
+"r": "me",
+"lon": 44.575087,
+"lat": 37.551559,
+"a": "Turkey",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 45.182027,
+"lat": 40.997163,
+"a": "Armenia",
+"b": "Azerbaijan"
+},
+{
+"r": "me",
+"lon": 48.303935,
+"lat": 39.024708,
+"a": "Azerbaijan",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 47.074625,
+"lat": 32.484478,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 43.649485,
+"lat": 40.531222,
+"a": "Armenia",
+"b": "Turkey"
+},
+{
+"r": "me",
+"lon": 26.330775,
+"lat": 41.217951,
+"a": "Turkey",
+"b": "Greece"
+},
+{
+"r": "me",
+"lon": 46.496675,
+"lat": 38.910778,
+"a": "Azerbaijan",
+"b": "Armenia"
+},
+{
+"r": "me",
+"lon": 36.171828,
+"lat": 35.887371,
+"a": "Turkey",
+"b": "Syria"
+},
+{
+"r": "me",
+"lon": 60.088662,
+"lat": 41.788161,
+"a": "Uzbekistan",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 45.970506,
+"lat": 35.479748,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 44.619322,
+"lat": 39.747394,
+"a": "Turkey",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 43.223413,
+"lat": 41.176583,
+"a": "Georgia",
+"b": "Turkey"
+},
+{
+"r": "me",
+"lon": 60.387404,
+"lat": 41.255803,
+"a": "Uzbekistan",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 35.604576,
+"lat": 33.244277,
+"a": "Israel",
+"b": "Lebanon"
+},
+{
+"r": "me",
+"lon": 36.185264,
+"lat": 13.197038,
+"a": "Sudan",
+"b": "Ethiopia"
+},
+{
+"r": "me",
+"lon": 46.687568,
+"lat": 41.269007,
+"a": "Azerbaijan",
+"b": "Georgia"
+},
+{
+"r": "me",
+"lon": 36.982787,
+"lat": 14.268975,
+"a": "Eritrea",
+"b": "Ethiopia"
+},
+{
+"r": "me",
+"lon": 44.339004,
+"lat": 41.211801,
+"a": "Georgia",
+"b": "Armenia"
+},
+{
+"r": "me",
+"lon": 43.175224,
+"lat": 16.715854,
+"a": "Saudi Arabia",
+"b": "Yemen"
+},
+{
+"r": "me",
+"lon": 48.409324,
+"lat": 30.18622,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 45.186343,
+"lat": 39.568929,
+"a": "Armenia",
+"b": "Azerbaijan"
+},
+{
+"r": "me",
+"lon": 44.987827,
+"lat": 36.745355,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 55.224256,
+"lat": 37.97789,
+"a": "Iran",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 42.902476,
+"lat": 16.426906,
+"a": "Saudi Arabia",
+"b": "Yemen"
+},
+{
+"r": "me",
+"lon": 45.590477,
+"lat": 40.866163,
+"a": "Azerbaijan",
+"b": "Armenia"
+},
+{
+"r": "me",
+"lon": 43.191917,
+"lat": 17.358864,
+"a": "Saudi Arabia",
+"b": "Yemen"
+},
+{
+"r": "me",
+"lon": 44.083076,
+"lat": 39.23125,
+"a": "Turkey",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 41.679243,
+"lat": 31.28171,
+"a": "Iraq",
+"b": "Saudi Arabia"
+},
+{
+"r": "me",
+"lon": 62.429941,
+"lat": 40.145742,
+"a": "Uzbekistan",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 40.199799,
+"lat": 31.966422,
+"a": "Iraq",
+"b": "Saudi Arabia"
+},
+{
+"r": "me",
+"lon": 30.090778,
+"lat": 21.994524,
+"a": "Egypt",
+"b": "Sudan"
+},
+{
+"r": "me",
+"lon": 44.067987,
+"lat": 39.27626,
+"a": "Turkey",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 52.871532,
+"lat": 17.115985,
+"a": "Oman",
+"b": "Yemen"
+},
+{
+"r": "me",
+"lon": 62.619955,
+"lat": 26.590032,
+"a": "Iran",
+"b": "Pakistan"
+},
+{
+"r": "me",
+"lon": 47.097363,
+"lat": 39.304114,
+"a": "Azerbaijan",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 43.396917,
+"lat": 41.181182,
+"a": "Georgia",
+"b": "Turkey"
+},
+{
+"r": "me",
+"lon": 36.317039,
+"lat": 35.994496,
+"a": "Turkey",
+"b": "Syria"
+},
+{
+"r": "me",
+"lon": 60.50812,
+"lat": 41.21268,
+"a": "Uzbekistan",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 45.327909,
+"lat": 39.171512,
+"a": "Azerbaijan",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 55.838741,
+"lat": 24.211844,
+"a": "United Arab Emirates",
+"b": "Oman"
+},
+{
+"r": "me",
+"lon": 39.136091,
+"lat": 14.591888,
+"a": "Eritrea",
+"b": "Ethiopia"
+},
+{
+"r": "me",
+"lon": 51.067172,
+"lat": 24.560027,
+"a": "Saudi Arabia",
+"b": "Qatar"
+},
+{
+"r": "me",
+"lon": 61.421036,
+"lat": 30.452406,
+"a": "Iran",
+"b": "Afghanistan"
+},
+{
+"r": "me",
+"lon": 46.154655,
+"lat": 35.174779,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 46.227441,
+"lat": 35.714565,
+"a": "Iraq",
+"b": "Iran"
+},
+{
+"r": "me",
+"lon": 60.06205,
+"lat": 41.767271,
+"a": "Uzbekistan",
+"b": "Turkmenistan"
+},
+{
+"r": "me",
+"lon": 46.630437,
+"lat": 41.345838,
+"a": "Azerbaijan",
+"b": "Georgia"
+},
+{
+"r": "me",
+"lon": 61.469147,
+"lat": 29.038823,
+"a": "Iran",
+"b": "Pakistan"
+},
+{
+"r": "me",
+"lon": 35.561115,
+"lat": 32.542485,
+"a": "Jordan",
+"b": "Israel"
+},
+{
+"r": "me",
+"lon": 42.840465,
+"lat": 12.584685,
+"a": "Eritrea",
+"b": "Djibouti"
+},
+{
+"r": "eu",
+"lon": 14.789309,
+"lat": 45.479163,
+"a": "Croatia",
+"b": "Slovenia"
+},
+{
+"r": "eu",
+"lon": 20.63319,
+"lat": 45.830149,
+"a": "Romania",
+"b": "Republic of Serbia"
+},
+{
+"r": "eu",
+"lon": 27.938584,
+"lat": 47.053847,
+"a": "Moldova",
+"b": "Romania"
+},
+{
+"r": "eu",
+"lon": -0.742969,
+"lat": 42.914811,
+"a": "Spain",
+"b": "France"
+},
+{
+"r": "eu",
+"lon": 26.249281,
+"lat": 48.067622,
+"a": "Ukraine",
+"b": "Romania"
+},
+{
+"r": "eu",
+"lon": 18.596415,
+"lat": 45.841803,
+"a": "Croatia",
+"b": "Hungary"
+},
+{
+"r": "eu",
+"lon": 20.774369,
+"lat": 45.475959,
+"a": "Romania",
+"b": "Republic of Serbia"
+},
+{
+"r": "eu",
+"lon": 29.494484,
+"lat": 55.683295,
+"a": "Belarus",
+"b": "Russia"
+},
+{
+"r": "eu",
+"lon": 26.97412,
+"lat": 42.030679,
+"a": "Turkey",
+"b": "Bulgaria"
+},
+{
+"r": "eu",
+"lon": 29.297932,
+"lat": 46.461816,
+"a": "Ukraine",
+"b": "Moldova"
+},
+{
+"r": "eu",
+"lon": 21.481769,
+"lat": 48.542632,
+"a": "Slovakia",
+"b": "Hungary"
+},
+{
+"r": "eu",
+"lon": 5.063494,
+"lat": 51.395081,
+"a": "Belgium",
+"b": "Netherlands"
+},
+{
+"r": "eu",
+"lon": 29.033608,
+"lat": 51.620106,
+"a": "Belarus",
+"b": "Ukraine"
+},
+{
+"r": "eu",
+"lon": 16.243432,
+"lat": 46.4513,
+"a": "Croatia",
+"b": "Slovenia"
+},
+{
+"r": "eu",
+"lon": 26.971201,
+"lat": 51.753535,
+"a": "Belarus",
+"b": "Ukraine"
+},
+{
+"r": "eu",
+"lon": 21.492207,
+"lat": 46.785143,
+"a": "Hungary",
+"b": "Romania"
+},
+{
+"r": "eu",
+"lon": 29.076886,
+"lat": 47.974967,
+"a": "Ukraine",
+"b": "Moldova"
+},
+{
+"r": "eu",
+"lon": 19.185836,
+"lat": 49.432462,
+"a": "Poland",
+"b": "Slovakia"
+},
+{
+"r": "eu",
+"lon": 28.176915,
+"lat": 51.639149,
+"a": "Belarus",
+"b": "Ukraine"
+},
+{
+"r": "eu",
+"lon": 18.333123,
+"lat": 49.927703,
+"a": "Czech Republic",
+"b": "Poland"
+},
+{
+"r": "eu",
+"lon": 22.935323,
+"lat": 41.581753,
+"a": "Macedonia",
+"b": "Bulgaria"
+},
+{
+"r": "eu",
+"lon": 19.198704,
+"lat": 44.582861,
+"a": "Bosnia and Herzegovina",
+"b": "Republic of Serbia"
+},
+{
+"r": "eu",
+"lon": 15.479654,
+"lat": 45.810874,
+"a": "Croatia",
+"b": "Slovenia"
+},
+{
+"r": "eu",
+"lon": 15.461102,
+"lat": 48.94076,
+"a": "Czech Republic",
+"b": "Austria"
+},
+{
+"r": "eu",
+"lon": 25.475375,
+"lat": 54.29524,
+"a": "Lithuania",
+"b": "Belarus"
+},
+{
+"r": "eu",
+"lon": -6.911046,
+"lat": 39.930044,
+"a": "Portugal",
+"b": "Spain"
+},
+{
+"r": "eu",
+"lon": -6.757748,
+"lat": 41.139402,
+"a": "Portugal",
+"b": "Spain"
+},
+{
+"r": "eu",
+"lon": -7.597231,
+"lat": 41.824877,
+"a": "Portugal",
+"b": "Spain"
+},
+{
+"r": "eu",
+"lon": 27.010113,
+"lat": 48.359078,
+"a": "Ukraine",
+"b": "Moldova"
+},
+{
+"r": "eu",
+"lon": 15.435403,
+"lat": 45.77893,
+"a": "Croatia",
+"b": "Slovenia"
+},
+{
+"r": "eu",
+"lon": 15.989184,
+"lat": 50.61996,
+"a": "Czech Republic",
+"b": "Poland"
+},
+{
+"r": "eu",
+"lon": 22.890881,
+"lat": 41.866799,
+"a": "Macedonia",
+"b": "Bulgaria"
+},
+{
+"r": "eu",
+"lon": 23.974764,
+"lat": 43.786592,
+"a": "Romania",
+"b": "Bulgaria"
+},
+{
+"r": "eu",
+"lon": -7.189556,
+"lat": 54.321337,
+"a": "United Kingdom",
+"b": "Ireland"
+},
+{
+"r": "eu",
+"lon": 22.445638,
+"lat": 42.674825,
+"a": "Republic of Serbia",
+"b": "Bulgaria"
+},
+{
+"r": "eu",
+"lon": 29.468361,
+"lat": 47.315098,
+"a": "Ukraine",
+"b": "Moldova"
+},
+{
+"r": "eu",
+"lon": 0.3451,
+"lat": 42.715094,
+"a": "Spain",
+"b": "France"
+},
+{
+"r": "eu",
+"lon": 22.876102,
+"lat": 43.847467,
+"a": "Romania",
+"b": "Bulgaria"
+},
+{
+"r": "eu",
+"lon": 19.026969,
+"lat": 45.409296,
+"a": "Republic of Serbia",
+"b": "Croatia"
+},
+{
+"r": "eu",
+"lon": 25.642548,
+"lat": 54.128532,
+"a": "Lithuania",
+"b": "Belarus"
+},
+{
+"r": "eu",
+"lon": 15.687807,
+"lat": 46.019647,
+"a": "Croatia",
+"b": "Slovenia"
+},
+{
+"r": "eu",
+"lon": 12.186263,
+"lat": 46.888082,
+"a": "Austria",
+"b": "Italy"
+},
+{
+"r": "eu",
+"lon": -8.657891,
+"lat": 42.020667,
+"a": "Portugal",
+"b": "Spain"
+},
+{
+"r": "eu",
+"lon": 19.12863,
+"lat": 44.510436,
+"a": "Bosnia and Herzegovina",
+"b": "Republic of Serbia"
+},
+{
+"r": "eu",
+"lon": 16.221934,
+"lat": 50.453511,
+"a": "Czech Republic",
+"b": "Poland"
+},
+{
+"r": "eu",
+"lon": 20.419663,
+"lat": 45.95115,
+"a": "Romania",
+"b": "Republic of Serbia"
+},
+{
+"r": "eu",
+"lon": 23.443613,
+"lat": 52.180795,
+"a": "Poland",
+"b": "Belarus"
+},
+{
+"r": "eu",
+"lon": 5.160336,
+"lat": 49.691593,
+"a": "Belgium",
+"b": "France"
+},
+{
+"r": "eu",
+"lon": 6.165856,
+"lat": 46.170956,
+"a": "France",
+"b": "Switzerland"
+},
+{
+"r": "eu",
+"lon": 23.42842,
+"lat": 47.982202,
+"a": "Ukraine",
+"b": "Romania"
+},
+{
+"r": "eu",
+"lon": -0.552804,
+"lat": 42.777777,
+"a": "Spain",
+"b": "France"
+},
+{
+"r": "eu",
+"lon": 29.039136,
+"lat": 47.95042,
+"a": "Ukraine",
+"b": "Moldova"
+},
+{
+"r": "eu",
+"lon": 19.507367,
+"lat": 43.246289,
+"a": "Republic of Serbia",
+"b": "Montenegro"
+},
+{
+"r": "eu",
+"lon": -6.98285,
+"lat": 39.038626,
+"a": "Portugal",
+"b": "Spain"
+},
+{
+"r": "eu",
+"lon": 17.842817,
+"lat": 42.835048,
+"a": "Croatia",
+"b": "Bosnia and Herzegovina"
+},
+{
+"r": "eu",
+"lon": 18.955824,
+"lat": 49.454915,
+"a": "Poland",
+"b": "Slovakia"
+},
+{
+"r": "eu",
+"lon": 19.099743,
+"lat": 46.015901,
+"a": "Republic of Serbia",
+"b": "Hungary"
+},
+{
+"r": "eu",
+"lon": 15.882058,
+"lat": 48.834074,
+"a": "Czech Republic",
+"b": "Austria"
+},
+{
+"r": "eu",
+"lon": 16.379651,
+"lat": 45.079652,
+"a": "Bosnia and Herzegovina",
+"b": "Croatia"
+},
+{
+"r": "eu",
+"lon": -6.974092,
+"lat": 39.018485,
+"a": "Portugal",
+"b": "Spain"
+},
+{
+"r": "eu",
+"lon": 8.743476,
+"lat": 47.694816,
+"a": "Germany",
+"b": "Switzerland"
+},
+{
+"r": "eu",
+"lon": -7.191442,
+"lat": 37.98931,
+"a": "Portugal",
+"b": "Spain"
+},
+{
+"r": "eu",
+"lon": 27.576332,
+"lat": 47.390597,
+"a": "Moldova",
+"b": "Romania"
+},
+{
+"r": "eu",
+"lon": 19.87799,
+"lat": 43.09303,
+"a": "Republic of Serbia",
+"b": "Montenegro"
+},
+{
+"r": "eu",
+"lon": 23.509087,
+"lat": 47.995935,
+"a": "Ukraine",
+"b": "Romania"
+},
+{
+"r": "eu",
+"lon": 26.77762,
+"lat": 55.251952,
+"a": "Lithuania",
+"b": "Belarus"
+},
+{
+"r": "eu",
+"lon": 21.233551,
+"lat": 42.100588,
+"a": "Macedonia",
+"b": "Kosovo"
+},
+{
+"r": "eu",
+"lon": 27.051429,
+"lat": 57.562056,
+"a": "Latvia",
+"b": "Estonia"
+},
+{
+"r": "eu",
+"lon": 16.810116,
+"lat": 46.386188,
+"a": "Croatia",
+"b": "Hungary"
+},
+{
+"r": "eu",
+"lon": 17.081159,
+"lat": 48.031462,
+"a": "Austria",
+"b": "Slovakia"
+},
+{
+"r": "us",
+"lon": -105.171043,
+"lat": 30.782567,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -104.853544,
+"lat": 30.443802,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -95.160182,
+"lat": 49.268183,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.791546,
+"lat": 31.327391,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -82.411955,
+"lat": 44.767837,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.215095,
+"lat": 31.668662,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -82.47518,
+"lat": 42.849543,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -102.267228,
+"lat": 29.871511,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -79.06411,
+"lat": 43.10122,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -77.649416,
+"lat": 43.628255,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -98.733064,
+"lat": 26.303822,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -104.931291,
+"lat": 30.605033,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -103.896121,
+"lat": 29.287192,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -117.487772,
+"lat": 48.992515,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.214966,
+"lat": 31.549083,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -68.616763,
+"lat": 47.262517,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -102.151447,
+"lat": 29.820119,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -98.054811,
+"lat": 26.045491,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -113.531115,
+"lat": 48.992515,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -72.152387,
+"lat": 45.010561,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -120.345234,
+"lat": 48.992515,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -104.841244,
+"lat": 30.397551,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -79.774699,
+"lat": 42.533537,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -99.174833,
+"lat": 26.588817,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -89.754633,
+"lat": 48.015533,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -121.664055,
+"lat": 48.992515,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -103.687801,
+"lat": 29.180713,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -83.158253,
+"lat": 42.02338,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -96.8257,
+"lat": 48.99267,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -105.398239,
+"lat": 48.992618,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -68.739804,
+"lat": 47.241135,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -104.630676,
+"lat": 29.864742,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -76.177542,
+"lat": 44.23402,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -106.299295,
+"lat": 31.614376,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.214941,
+"lat": 31.44356,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -99.708183,
+"lat": 27.666643,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -101.3019,
+"lat": 29.64168,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -82.4723,
+"lat": 42.794366,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.215018,
+"lat": 31.577247,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -100.397924,
+"lat": 28.580686,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -100.038308,
+"lat": 28.088545,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -97.669744,
+"lat": 26.032649,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.098668,
+"lat": 31.777468,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.492494,
+"lat": 31.327391,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -104.700091,
+"lat": 30.065297,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -104.178081,
+"lat": 29.432843,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -107.376529,
+"lat": 48.992618,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -73.748285,
+"lat": 45.002707,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -101.218391,
+"lat": 29.597238,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -100.01079,
+"lat": 28.04201,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -102.555725,
+"lat": 29.757914,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -105.241918,
+"lat": 30.800317,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -85.446136,
+"lat": 47.137331,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -71.151027,
+"lat": 45.249048,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -105.918427,
+"lat": 31.321732,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.214863,
+"lat": 31.401314,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -104.299146,
+"lat": 48.992618,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -98.364314,
+"lat": 48.99267,
+"a": "Canada",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -108.215018,
+"lat": 31.619466,
+"a": "Mexico",
+"b": "United States of America"
+},
+{
+"r": "us",
+"lon": -105.954859,
+"lat": 31.366123,
+"a": "Mexico",
+"b": "United States of America"
+}
+]

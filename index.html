@@ -2481,6 +2481,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 <script src="lines.js"></script>
 <script src="coast.js"></script>
 <script src="coast-hi.js"></script>
+<script src="borders.js"></script>
 <script src="rules/core.js"></script>
 <!--@TEST-->
 <script>if (/[?&]bake\b/.test(location.search)){ window.__BAKE = true; document.write('<script src="three.min.js"><\/script><script src="landpoly.js"><\/script><script src="terrcells.js"><\/script>'); }</script>
@@ -2982,10 +2983,104 @@ function buildChains(){
       const t1 = worldToCell(P[i][0] - ty/L*HS*0.6, P[i][1] + tx/L*HS*0.6), t2 = worldToCell(P[i][0] + ty/L*HS*0.6, P[i][1] - tx/L*HS*0.6); vote += (t1 >= 0 && G.prov[t1] === seaId ? 1 : 0) - (t2 >= 0 && G.prov[t2] === seaId ? 1 : 0); }
     const d = HS*0.9*(vote >= 0 ? 1 : -1);
     c.pts = P.map((q, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], ux = b[0] - a[0], uy = b[1] - a[1], l = Math.hypot(ux, uy) || 1; return [q[0] - uy/l*d, q[1] + ux/l*d]; }); }
-  return chains;
+  // real borders (borders.js): the land is drawn from its real shapes; of the cell chains only the ones with the sea stay (the sea zones'
+  // outlines, the cell coast). Each arc whose two sides differ on this map is a chain {a: province on its left, b: on its right, vec}; an arc
+  // across the map's east-west seam gets a copy a turn of the world away (dup: drawn, never walked into an outline)
+  const M = bvMap(); if (!M) return chains;
+  const landP = v => v >= 0 && !G.P[v].sea, out = chains.filter(c => !(landP(c.a) && landP(c.b))), dups = [];
+  for (let i = 0; i < M.l.length; i++){ const a = M.l[i], b = M.r[i]; if (a === b) continue; const pts = BV.p0[i], c = {a, b, vec:true, i, pts, k0:BV.k0[i], k1:BV.k1[i], closed:BV.k0[i] === BV.k1[i] && pts.length > 2}; out.push(c);
+    const x0 = BV.bb[4*i], x1 = BV.bb[4*i + 2]; if (x0 >= WRAP_X0 && x1 <= WRAP_X0 + WRAP_W) continue; const sh = x0 < WRAP_X0 ? WRAP_W : -WRAP_W;
+    const d = {a, b, vec:true, i, dup:true, sh, pts:pts.map(q => [q[0] + sh, q[1]]), k0:-1, k1:-1, closed:false}; out.push(d); dups.push(d); }
+  BV.dups = dups; return out;
 }
 const chainTo = (path, c, rev = false, move = true) => { const P = c.pts, n = P.length; for (let i = 0; i < n; i++){ const q = P[rev ? n - 1 - i : i]; if (i === 0 && move) path.moveTo(q[0], q[1]); else path.lineTo(q[0], q[1]); } };
 function chainsPath(list){ const path = new Path2D(); for (const c of list) chainTo(path, c); return path; }
+/* ---------------- Real borders (borders.js, borders-hi.js: tools/build-borders.py) ---------------- */
+// Provinces and countries are drawn from their real shapes (Natural Earth admin-1 1:10m), not from the cell edges; the cells still decide
+// everything in the rules. Each border is one shared arc with the province on its left (l) and on its right (r) on each map (-1 sea, -2 land
+// of a country the map leaves out); a province's outline is its arcs walked with the province on the left, so its rings come out oriented
+// (outer rings one way, holes the other: a non-zero fill of several provinces is their union with every enclave left out). Three levels of
+// detail, each well under a css px off the full shape at the zooms it is drawn at: band 0 (hexPx < 16) thinned here from borders.js, band 1
+// (hexPx < 48) borders.js as it is, band 2 every point (borders-hi.js, loaded when the zoom first comes near). An arc keeps its ends at every level.
+const BV = {ok:false, f1:null, f2:null, p0:null, k0:null, k1:null, bb:null, hiReq:false, maps:null};
+const BV_ALPH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', BV_VAL = new Int8Array(128);
+for (let i = 0; i < 64; i++) BV_VAL[BV_ALPH.charCodeAt(i)] = i;
+const BV_KEY = (qx, qy) => (qx + 2097152)*4194304 + (qy + 2097152);   // an arc end: its quantised point (shared exactly by the arcs meeting there)
+// one arc: zigzag varints, 5 bits a character, the first point absolute, then deltas (grid units at 1/q cell) -> world coords, flat [x, y, ...]
+function bvDec(s, q, ends){ const out = []; let x = 0, y = 0, v = 0, sh = 0, t = 0; const kx = HS*SQ3/q, ky = HS*1.5/q;
+  for (let i = 0; i < s.length; i++){ const c = BV_VAL[s.charCodeAt(i)]; v += (c & 31)*Math.pow(2, sh); sh += 5; if (c & 32) continue;
+    const d = v % 2 ? -(v + 1)/2 : v/2; v = 0; sh = 0; if (!t){ x += d; t = 1; } else { y += d; t = 0; out.push(OX + kx*x, OY + ky*y); if (ends){ if (out.length === 2){ ends[0] = x; ends[1] = y; } ends[2] = x; ends[3] = y; } } }
+  return Float64Array.from(out); }
+// Douglas-Peucker on a flat polyline, ends kept (band 0 from band 1)
+function bvThin(f, tol){ const n = f.length/2; if (n < 3) return f; const keep = new Uint8Array(n), t2 = tol*tol; keep[0] = keep[n - 1] = 1; const st = [0, n - 1];
+  while (st.length){ const b = st.pop(), a = st.pop(); if (b - a < 2) continue; const ax = f[2*a], ay = f[2*a + 1], dx = f[2*b] - ax, dy = f[2*b + 1] - ay, L2 = dx*dx + dy*dy; let m = -1, md = t2;
+    for (let i = a + 1; i < b; i++){ const px = f[2*i] - ax, py = f[2*i + 1] - ay, c = px*dy - py*dx, d = L2 > 1e-12 ? c*c/L2 : px*px + py*py; if (d > md){ md = d; m = i; } }
+    if (m >= 0){ keep[m] = 1; st.push(a, m, m, b); } }
+  const o = []; for (let i = 0; i < n; i++) if (keep[i]) o.push(f[2*i], f[2*i + 1]); return Float64Array.from(o); }
+function bvInit(){ if (BV.ok || BV.bad) return BV.ok; const D = window.BORDERS;
+  try { if (!D || !Array.isArray(D.arcs) || !D.q) throw 0; const n = D.arcs.length, e = [0, 0, 0, 0]; BV.f1 = new Array(n); BV.p0 = new Array(n); BV.k0 = new Float64Array(n); BV.k1 = new Float64Array(n); BV.bb = new Float32Array(4*n);
+    for (let i = 0; i < n; i++){ const f = bvDec(D.arcs[i], D.q, e); BV.f1[i] = f; BV.k0[i] = BV_KEY(e[0], e[1]); BV.k1[i] = BV_KEY(e[2], e[3]);
+      const f0 = bvThin(f, 0.15), pts = new Array(f0.length/2); for (let j = 0; j < pts.length; j++) pts[j] = [f0[2*j], f0[2*j + 1]]; BV.p0[i] = pts;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (let j = 0; j < f.length; j += 2){ const x = f[j], y = f[j + 1]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      BV.bb.set([x0, y0, x1, y1], 4*i); }
+    BV.maps = D.maps; BV.ok = true; } catch (err) { BV.bad = true; BV.ok = false; }
+  return BV.ok; }
+// the full detail: borders-hi.js, asked for once when the zoom first nears band 2 (a script tag, like the page's other map data); until it is
+// there band 2 draws band 1
+function bvWantHi(){ if (BV.f2 || BV.hiReq || !BV.ok) return; BV.hiReq = true;
+  const done = () => { const D = window.BORDERS_HI; if (!D || !Array.isArray(D.arcs) || D.arcs.length !== BV.f1.length) return; const f2 = new Array(D.arcs.length);
+    for (let i = 0; i < f2.length; i++) f2[i] = bvDec(D.arcs[i], D.q); BV.f2 = f2; window.BORDERS_HI = null; if (BV.coast){ const r2 = bvCoastRings(2); COASTR_HI.length = 0; COASTR_HI.push(...r2); if (GEO) GEO.coastK = ''; SEAFX.fk = ''; } if (GEO){ GEO.olB[2] = []; GEO.tB[2] = null; } for (const c of BV.dups || []) c.f2 = null; layerKey = ''; redraw(); };
+  if (window.BORDERS_HI) return done(); const s = document.createElement('script'); s.src = 'borders-hi.js'; s.async = true; s.onload = done; s.onerror = () => { BV.hiReq = false; }; document.head.appendChild(s); }
+// the level of detail for a zoom (hexPx: px per old hex)
+const lodBand = hexPx => !GEO || !GEO.bv || hexPx < 16 ? 0 : hexPx < 48 || !BV.f2 ? 1 : 2;
+// this map's labels of the arcs: {v, l, r} of borders.js, checked once against the map (every land label a land province); null: draw the cells
+function bvMap(){ if (!bvInit()) return null; if (G.bvm !== undefined) return G.bvm; G.bvm = null;
+  const v = G === mapOf(0) ? 0 : typeof MAP_NEW !== 'undefined' && G === mapOf(MAP_NEW) ? MAP_NEW : -1, M = BV.maps.find(m => m.v === v); if (!M || M.l.length !== BV.f1.length) return null;
+  const okL = x => x === -1 || x === -2 || (x >= 0 && x < G.P.length && !G.P[x].sea); if (!M.l.every(okL) || !M.r.every(okL)) return null;
+  const seen = new Uint8Array(G.P.length); for (let i = 0; i < M.l.length; i++){ if (M.l[i] >= 0) seen[M.l[i]] = 1; if (M.r[i] >= 0) seen[M.r[i]] = 1; }
+  if (G.P.some(P => !P.sea && P.cells.length && !seen[P.id])) return null;   // a land province with no shape: the data is not for this map
+  return (G.bvm = M); }
+// an arc's points at a band (flat), moved by its seam shift (a copy a turn of the world away, for shapes across the map's east-west seam)
+function chainF(c, band){ if (!c.vec) return null; const k = band === 2 && BV.f2 ? 'f2' : band ? 'f1' : 'f0'; if (c[k]) return c[k];
+  let f = k === 'f2' ? BV.f2[c.i] : k === 'f1' ? BV.f1[c.i] : Float64Array.from(c.pts.flat()); if (c.sh && k !== 'f0'){ f = Float64Array.from(f); for (let j = 0; j < f.length; j += 2) f[j] += c.sh; }
+  return (c[k] = f); }
+const chainToF = (path, f, rev = false, move = true) => { const n = f.length/2; for (let i = 0; i < n; i++){ const j = rev ? n - 1 - i : i; if (i === 0 && move) path.moveTo(f[2*j], f[2*j + 1]); else path.lineTo(f[2*j], f[2*j + 1]); } };
+const chainAt = (path, c, band) => band && c.vec ? chainToF(path, chainF(c, band)) : chainTo(path, c);
+function chainsPathB(list, band){ const path = new Path2D(); for (const c of list) chainAt(path, c, band); return path; }
+// a province's real outline at a band: its arcs walked end to end with the province on the left (one subpath per ring), copied a turn of the
+// world east or west when it crosses the seam
+function ringPathV(p, band){ const list = (GEO.byProv[p] || []).filter(c => c.vec && !c.dup && c.a !== c.b), path = new Path2D(), from = new Map(), used = new Uint8Array(list.length);
+  const fw = c => c.a === p, st = c => fw(c) ? c.k0 : c.k1, en = c => fw(c) ? c.k1 : c.k0;
+  list.forEach((c, i) => { const k = st(c); let l = from.get(k); if (!l) from.set(k, l = []); l.push(i); });
+  for (let s0 = 0; s0 < list.length; s0++){ if (used[s0]) continue; used[s0] = 1; const c0 = list[s0], k0 = st(c0), f0 = chainF(c0, band), j0 = fw(c0) ? 0 : f0.length - 2; chainToF(path, f0, !fw(c0), true); let end = en(c0);
+    for (let g = 0; end !== k0 && g < list.length; g++){ const nx = (from.get(end) || []).find(i => !used[i]); if (nx === undefined) break; used[nx] = 1; const c = list[nx]; chainToF(path, chainF(c, band), !fw(c), false); end = en(c); }
+    path.lineTo(f0[j0], f0[j0 + 1]); }   // (closed by a line back to its start: Path2D.closePath costs as much as the whole path so far)
+  const b = G.P[p].vbox; if (!b || (b[0] >= WRAP_X0 && b[2] <= WRAP_X0 + WRAP_W)) return path;
+  const o = new Path2D(); o.addPath(path); o.addPath(path, new DOMMatrix().translate(b[0] < WRAP_X0 ? WRAP_W : -WRAP_W, 0)); return o; }
+// the outline of province p for the zoom's band (band 0: the cached GEO.outline; sea provinces: their cells)
+function provFill(p, band){ if (!band || !GEO.bv || !G.P[p] || G.P[p].sea) return GEO.fill[p]; const A = GEO.olB[band]; return A[p] || (A[p] = ringPathV(p, band)); }
+const provOutline = p => provFill(p, lodBand(view.s*HS0));
+// plain fills, every item [path, style, alpha]: the real shapes' coasts are the coast drawn (bvCoast), so a fill meets the coastline exactly
+function fillsAll(c, items){ for (const it of items){ c.fillStyle = it[1]; c.globalAlpha = it[2] === undefined ? 1 : it[2]; c.fill(it[0]); } c.globalAlpha = 1; }
+// tiled stroke paths per band (province borders, country borders): band 0 is GEO.provT / countryT; the finer bands cut long arcs into runs of
+// 48 points in smaller buckets, so a close-up stroke takes only what is near the view
+function tiledPathF(flats, TPB, run){ const m = new Map();
+  for (const f0 of flats){ const n0 = f0.length/2; for (let s = 0; s < n0 - 1; s += run - 1){ const e = Math.min(n0, s + run), f = f0.subarray(2*s, 2*e);
+    const k = Math.floor(f[0]/TPB) + ',' + Math.floor(f[1]/TPB); let t = m.get(k); if (!t) m.set(k, t = {p:new Path2D(), x0:Infinity, y0:Infinity, x1:-Infinity, y1:-Infinity});
+    for (let i = 0; i < f.length; i += 2){ const x = f[i], y = f[i + 1]; if (i) t.p.lineTo(x, y); else t.p.moveTo(x, y); if (x < t.x0) t.x0 = x; if (x > t.x1) t.x1 = x; if (y < t.y0) t.y0 = y; if (y > t.y1) t.y1 = y; } } }
+  return {tiles:[...m.values()], k:null, p:null}; }
+function provTB(band, kind){ if (!band || !GEO.bv) return kind === 'c' ? GEO.countryT : GEO.provT; const T = GEO.tB[band] || (GEO.tB[band] = {});
+  return T[kind] || (T[kind] = tiledPathF((kind === 'c' ? GEO.countryL : GEO.provL).map(c => chainF(c, band)), band === 2 ? 48 : 128, 48)); }
+// province under a screen point as drawn: the real shape containing it (the shapes near it, from a coarse grid of their boxes), else the cell's
+const BVPICK = {g:null, G:null, cx:null};
+function provAtV(sx, sy){ const [wx0, wy] = screenToWorld(sx, sy), wx = wrapWX(wx0), c = worldToCell(wx, wy), p0 = c >= 0 ? G.prov[c] : -1; if (!GEO || !GEO.bv) return p0;
+  if (BVPICK.G !== GEO){ const g = new Map(), B = 48; for (const P of G.P){ const b = !P.sea && P.vbox; if (!b) continue;
+      for (const o of [0, -WRAP_W, WRAP_W]){ if (o && !(b[0] + o < WRAP_X0 + WRAP_W && b[2] + o > WRAP_X0)) continue; for (let i = Math.floor((b[0] + o)/B); i <= Math.floor((b[2] + o)/B); i++) for (let j = Math.floor(b[1]/B); j <= Math.floor(b[3]/B); j++){ const k = i + ',' + j; let l = g.get(k); if (!l) g.set(k, l = []); l.push(P.id); } } }
+    BVPICK.g = g; BVPICK.G = GEO; if (!BVPICK.cx){ const cv0 = document.createElement('canvas'); cv0.width = cv0.height = 1; BVPICK.cx = cv0.getContext('2d'); } }
+  const l = BVPICK.g.get(Math.floor(wx/48) + ',' + Math.floor(wy/48)); if (!l) return p0; const band = lodBand(view.s*HS0), cx = BVPICK.cx;
+  if (p0 >= 0 && !G.P[p0].sea && l.includes(p0) && cx.isPointInPath(provFill(p0, band), wx, wy, 'nonzero')) return p0;
+  for (const q of l) if (q !== p0 && cx.isPointInPath(provFill(q, band), wx, wy, 'nonzero')) return q;
+  return p0; }
 // natural line shapes: a smooth, deterministic displacement field (two octaves of value noise per axis). Every line passing a spot moves the
 // same way, so the shared points of province edges, both sides of a border and road/rail corridors stay together while straight runs bend
 function vnoise(x, y, sd){ const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
@@ -3029,7 +3124,7 @@ function tiledNear(T, x0, y0, x1, y1){ const P = new Path2D(); if (!T || !T.tile
 function tiledIn(T, x0, y0, x1, y1){ let k = ''; for (let i = 0; i < T.tiles.length; i++){ const t = T.tiles[i]; if (t.x1 >= x0 && t.x0 <= x1 && t.y1 >= y0 && t.y0 <= y1) k += i + ','; }
   if (k !== T.k){ T.k = k; T.p = new Path2D(); for (const i of k.split(',')) if (i) T.p.addPath(T.tiles[+i].p); } return T.p; }
 // a province's outline: its chains joined end to end into closed rings
-function ringPath(p){ const list = GEO.byProv[p] || [], path = new Path2D(), open = [];
+function ringPath(p){ if (GEO.bv && G.P[p] && !G.P[p].sea) return ringPathV(p, 0); const list = GEO.byProv[p] || [], path = new Path2D(), open = [];
   for (const c of list){ if (c.closed){ chainTo(path, c); path.closePath(); } else open.push(c); }
   const at = new Map(); open.forEach((c, i) => { for (const k of [c.k0, c.k1]){ let l = at.get(k); if (!l) at.set(k, l = []); l.push(i); } });
   const used = new Uint8Array(open.length);
@@ -3114,14 +3209,33 @@ function chaikinRing(R, n){ let P = R.r;
 function coastPath(){ if (!window.COAST) return null; const path = new Path2D(); COASTR.length = 0;   // (runs again for every new or loaded game)
   decodeRings(window.COAST, 10, COASTR, path);
   // close zoom (coastRings): the 1:10m coast, smoothed once here (not at draw time, so a pan strip cuts the very polyline a full render strokes)
-  if (Array.isArray(window.COAST_HI) && !COASTR_HI.length) try {   /* (the same for every game: built once) */ decodeRings(window.COAST_HI, 40, COASTR_HI1, null); for (const R of COASTR_HI1){ chaikinRing(R, 1); COASTR_HI.push(chaikinRing({b:R.b, r:R.r}, 1)); COASTR_MID.push({b:R.b, r:simplifyRing(R.r, 0.35)}); COASTR_GL.push({b:R.b, r:simplifyRing(R.r, 0.9)}); } } catch (e) { COASTR_HI.length = COASTR_HI1.length = COASTR_MID.length = COASTR_GL.length = 0; }
+  if (Array.isArray(window.COAST_HI) && !COASTR_HI.length) try {   /* (the same for every game: built once) */ decodeRings(window.COAST_HI, 40, COASTR_HI1, null); for (const R of COASTR_HI1){ chaikinRing(R, 1); COASTR_HI.push(chaikinRing({b:R.b, r:R.r}, 1)); COASTR_MID.push({b:R.b, r:simplifyRing(R.r, 0.35)}); COASTR_GL.push({b:R.b, r:simplifyRing(R.r, 0.9)}); }
+    bvCoast(); } catch (e) { COASTR_HI.length = COASTR_HI1.length = COASTR_MID.length = COASTR_GL.length = 0; }
   return path; }
+// with the real borders the coast drawn at every zoom with a coast clip (hexPx 7 up) is their own: the outline of all land as the provinces have
+// it, at the same level of detail as the fills (lodBand: band 0 below hexPx 16, then borders.js, then borders-hi.js), so a province's tint, its
+// fog and the map modes' fills meet the coastline exactly (no gap, nothing out at sea). The soft shallow-water glow keeps the thinned 1:10m
+// coast (COASTR_GL) below hexPx 48: a wide blur needs no exact shape
+function bvCoast(){ if (!bvInit()) return; const r1 = bvCoastRings(1); if (!r1.length) return; COASTR_HI1.length = 0; COASTR_HI1.push(...r1); COASTR_HI.length = 0; COASTR_HI.push(...(BV.f2 ? bvCoastRings(2) : r1));
+  COASTR_B0.length = 0; COASTR_B0.push(...bvCoastRings(0)); BV.coast = true; }
+function bvCoastRings(band){ const M = BV.maps[0], out = [], from = new Map(), list = [], P0 = [], fl = i => band === 2 && BV.f2 ? BV.f2[i] : band ? BV.f1[i] : P0[i] || (P0[i] = Float64Array.from(BV.p0[i].flat()));
+  for (let i = 0; i < M.l.length; i++){ const ll = M.l[i] !== -1, rl = M.r[i] !== -1; if (ll !== rl) list.push([i, ll]); }   // (arcs with the sea on one side; -2, land of no province, is land)
+  list.forEach((e, j) => { const k = e[1] ? BV.k0[e[0]] : BV.k1[e[0]]; let a = from.get(k); if (!a) from.set(k, a = []); a.push(j); });
+  const used = new Uint8Array(list.length);
+  for (let s0 = 0; s0 < list.length; s0++){ if (used[s0]) continue; used[s0] = 1; let [i, fw] = list[s0]; const k0 = fw ? BV.k0[i] : BV.k1[i], r = [];
+    for (let g = 0; g <= list.length; g++){ const f = fl(i), n = f.length/2; for (let t = 0; t < n - 1; t++){ const j = fw ? t : n - 1 - t; r.push(f[2*j], f[2*j + 1]); }   // (each arc without its last point: the next one starts there)
+      const end = fw ? BV.k1[i] : BV.k0[i]; if (end === k0) break; const nx = (from.get(end) || []).find(q => !used[q]); if (nx === undefined) break; used[nx] = 1; [i, fw] = list[nx]; }
+    if (r.length < 6) continue; const b = [Infinity, Infinity, -Infinity, -Infinity]; for (let j = 0; j < r.length; j += 2){ if (r[j] < b[0]) b[0] = r[j]; if (r[j] > b[2]) b[2] = r[j]; if (r[j + 1] < b[1]) b[1] = r[j + 1]; if (r[j + 1] > b[3]) b[3] = r[j + 1]; }
+    out.push({b, r});
+    for (const o of [WRAP_W, -WRAP_W]){ if (o > 0 ? b[0] >= WRAP_X0 : b[2] <= WRAP_X0 + WRAP_W) continue; const q = r.slice(); for (let j = 0; j < q.length; j += 2) q[j] += o; out.push({b:[b[0] + o, b[1], b[2] + o, b[3]], r:q}); } }   // (a copy a turn away where it crosses the seam)
+  return out; }
 const COASTR = [], COASTR_MID = [], COASTR_GL = [], COASTR_HI1 = [], COASTR_HI = [];   // the coast rings as emitted by coastPath (world coords, with their boxes): 1:50m, and 1:10m (thinned for play zoom; smoothed once and twice for close zoom)
 // play zoom (hexPx 24-40, z2-3.3) takes the 1:10m shape thinned to 0.35 world units (under a px at z2-3): estuaries and bays (the Wash, the Thames) without the full point count
-const coastRings = hexPx => hexPx < 24 || !COASTR_HI.length ? COASTR : hexPx < 40 ? COASTR_MID : hexPx < 150 ? COASTR_HI1 : COASTR_HI;   // the set every coast clip, mask, wash and foam of a render reads (one corner-cut pass is smooth enough below 150 px a hex, at half the points)
+const COASTR_B0 = [];   // (real borders: the coast at band 0)
+const coastRings = hexPx => BV.coast ? (hexPx < 16 ? COASTR_B0 : hexPx < 48 ? COASTR_HI1 : COASTR_HI) : hexPx < 24 || !COASTR_HI.length ? COASTR : hexPx < 40 ? COASTR_MID : hexPx < 150 ? COASTR_HI1 : COASTR_HI;   // (real borders: the bands of lodBand)   // the set every coast clip, mask, wash and foam of a render reads (one corner-cut pass is smooth enough below 150 px a hex, at half the points)
 // the wide soft shallow-water glow (round-joined strokes many px wide) needs no sub-px shape: at play zoom it follows the same coast thinned to 0.9 units
-const coastGlowRings = RS => RS === COASTR_MID && COASTR_GL.length ? COASTR_GL : RS;
-const coastRingsId = RS => RS === COASTR ? 'L' : RS === COASTR_MID ? 'H0' : RS === COASTR_HI ? 'H2' : 'H1';
+const coastGlowRings = RS => (RS === COASTR_MID || RS === COASTR_B0 || (BV.coast && RS === COASTR_HI1)) && COASTR_GL.length ? COASTR_GL : RS;
+const coastRingsId = RS => RS === COASTR ? 'L' : RS === COASTR_B0 ? 'B0' : RS === COASTR_MID ? 'H0' : RS === COASTR_HI ? 'H2' : 'H1';
 // Douglas-Peucker on a closed flat ring (kept points within tol of the dropped ones); small rings unchanged
 function simplifyRing(r, tol){ const n = r.length/2; if (n < 8) return r; const keep = new Uint8Array(n), t2 = tol*tol; keep[0] = 1; let f = 0, fd = -1;
   for (let i = 1; i < n; i++){ const d = (r[2*i] - r[0])**2 + (r[2*i + 1] - r[1])**2; if (d > fd){ fd = d; f = i; } } keep[f] = 1;
@@ -3178,29 +3292,37 @@ function lakeLabels(){ const lp = lakePath(); if (!lp) return;
     G.lakeLab.set(P.id, best); }
   console.log('lakes: ' + window.LAKES.length + ' baked; ' + G.lakeLab.size + ' province labels moved ashore'); }
 function buildGeometry(){
-  const chains = buildChains(), byProv = G.P.map(() => []);
-  for (const c of chains){ if (c.a >= 0) byProv[c.a].push(c); if (c.b >= 0 && c.b !== c.a) byProv[c.b].push(c); }
+  const chains = buildChains(), byProv = G.P.map(() => []), bv = !!G.bvm, coastOf = G.P.map(() => []);
   const land = v => v >= 0 && !G.P[v].sea;
+  for (const c of chains){ if (c.dup) continue; if (c.a >= 0 && (!bv || c.vec || !land(c.a))) byProv[c.a].push(c); if (c.b >= 0 && c.b !== c.a && (!bv || c.vec || !land(c.b))) byProv[c.b].push(c); }
   const provL = [], seaL = [], coastL = [], countryL = [];
-  for (const c of chains){ if (c.a < 0 || c.b < 0) continue; const A = G.P[c.a], B = G.P[c.b];
+  for (const c of chains){
+    // real borders: between two provinces (a country border when their countries differ, or with the land of a country the map leaves out);
+    // a province's coast arcs are kept per province (the hover outline keeps such a province to the land)
+    if (c.vec){ const la = land(c.a), lb = land(c.b); if (la && lb) (G.P[c.a].country !== G.P[c.b].country ? countryL : provL).push(c); else if ((la && c.b === -2) || (lb && c.a === -2)) countryL.push(c); else if (la || lb) coastOf[la ? c.a : c.b].push(c); continue; }
+    if (c.a < 0 || c.b < 0) continue; const A = G.P[c.a], B = G.P[c.b];
     if (A.sea !== B.sea) coastL.push(c); else if (A.sea) seaL.push(c); else if (A.country !== B.country) countryL.push(c); else provL.push(c); }
+  // each land province's box takes in its real shape (G.P[p].vbox), for culling, the boxes a capture redraws and the tap test
+  for (const P of G.P){ P.box = undefined; P.vbox = undefined; if (!bv || P.sea) continue; let b = null; for (const c of byProv[P.id]){ if (!c.vec) continue; const i = 4*c.i; if (!b) b = [Infinity, Infinity, -Infinity, -Infinity]; b[0] = Math.min(b[0], BV.bb[i] - 0.2); b[1] = Math.min(b[1], BV.bb[i + 1] - 0.2); b[2] = Math.max(b[2], BV.bb[i + 2] + 0.2); b[3] = Math.max(b[3], BV.bb[i + 3] + 0.2); } P.vbox = b || undefined; }
+  G.cpal = null;   // (the country colours are checked against the real borders' neighbours too: ctryPal)
   const lazy = make => new Proxy([], {get:(arr, k) => { if (typeof k !== 'string' || !/^\d+$/.test(k)) return arr[k]; return arr[k] || (arr[k] = make(+k)); }});
   const outline = lazy(p => ringPath(p));
-  GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), provT:tiledPath(provL.map(c => c.pts)), seaT:tiledPath(seaL.map(c => c.pts)), countryT:tiledPath(countryL.map(c => c.pts)), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land, coastV:coastPath()};
+  GEO = {chains, byProv, fill:outline, outline, provEdges:chainsPath(provL), seaEdges:chainsPath(seaL), coast:chainsPath(coastL), countryEdges:chainsPath(countryL), provT:tiledPath(provL.map(c => c.pts)), seaT:tiledPath(seaL.map(c => c.pts)), countryT:tiledPath(countryL.map(c => c.pts)), nation:[], mine:null, labels:[], clabels:[], terrain:buildTerrain(), mini:document.createElement('canvas'), land, coastV:coastPath(),
+    bv, provL, countryL, coastOf, olB:[null, [], []], tB:[null, null, null]};
   GEO.coast0 = GEO.coastV; bakeLakes(); GEO.seaTex = bakeSeaDepth();
   rebuildOwnerGeo(); if (S) snowCover(true);
 }
 let geoVer = 0, FRONT = {k:'', p:null};
 function frontPath(){ if (!GEO || !GEO.chains || !S.nations[PLAYER].alive) return null; const foes = S.nations.filter(N => N.id !== PLAYER && N.alive && atWar(PLAYER, N.id)).map(N => N.id); if (!foes.length) return null;
-  const k = geoVer + '|' + foes.join(','); if (FRONT.k === k) return FRONT.p; const fs = new Set(foes), own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
-  FRONT = {k, p:chainsPath(GEO.chains.filter(c => { const oa = own(c.a), ob = own(c.b); return (oa === PLAYER && fs.has(ob)) || (ob === PLAYER && fs.has(oa)); }))}; return FRONT.p; }
+  const band = lodBand(view.s*HS0), k = geoVer + '|' + band + '|' + foes.join(','); if (FRONT.k === k) return FRONT.p; const fs = new Set(foes), own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
+  FRONT = {k, p:chainsPathB(GEO.chains.filter(c => { const oa = own(c.a), ob = own(c.b); return (oa === PLAYER && fs.has(ob)) || (ob === PLAYER && fs.has(oa)); }), band)}; return FRONT.p; }
 function rebuildOwnerGeo(){
   geoVer++;
-  const per = S.nations.map(() => []), mineL = [], own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : -9;
+  const per = S.nations.map(() => []), mineL = [], own = v => v >= 0 && !G.P[v].sea ? S.owner[v] : v === -2 ? -8 : -9;   // (-8: land of a country the map leaves out: its border is a national border too)
   for (const c of GEO.chains){ const oa = own(c.a), ob = own(c.b); if (oa === ob || (window.COAST && (oa === -9 || ob === -9))) continue;   // coasts are drawn by the real shoreline
     if (oa >= 0) per[oa].push(c); if (ob >= 0) per[ob].push(c); if (oa === PLAYER || ob === PLAYER) mineL.push(c); }
   GEO.nation = per.map(chainsPath); GEO.mine = chainsPath(mineL); GEO.nArea = []; GEO.perL = per; GEO.mineL = mineL;   // (the chain lists: a layer strip strokes only the chains near it)
-  const pbb = P => P.cbb || (P.cbb = P.cells.reduce((b, c) => { const [x, y] = cellCenter(c); if (x - HS < b[0]) b[0] = x - HS; if (y - HS < b[1]) b[1] = y - HS; if (x + HS > b[2]) b[2] = x + HS; if (y + HS > b[3]) b[3] = y + HS; return b; }, [Infinity, Infinity, -Infinity, -Infinity]));   // a province's box (world units), worked out once
+  const pbb = P => provBox(P);   // a province's box (world units, its cells and its real shape), worked out once
   GEO.nBox = per.map(list => { const b = [Infinity, Infinity, -Infinity, -Infinity]; for (const c of list) for (const q of c.pts){ if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[0] > b[2]) b[2] = q[0]; if (q[1] > b[3]) b[3] = q[1]; } return b; });
   // the box of each nation's land, for the political tint (nBox above only spans land borders, and an island power such as Japan or Australia has none)
   GEO.nLBox = S.nations.map(() => [Infinity, Infinity, -Infinity, -Infinity]);
@@ -4017,7 +4139,7 @@ function drawFX(now){
     const k = Math.max(0, age/dur), [x, y] = toScreen(P.x, P.y);
     if (f.type === 'cap'){
       ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*(x - P.x*view.s), dpr*view.y); ctx.globalAlpha = (1 - k)*0.9;   // (the province's copy by its point's)
-      ctx.fillStyle = rgba(f.color, 0.55*(1 - k)); ctx.fill(GEO.fill[f.p], 'evenodd'); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3/view.s; ctx.stroke(GEO.outline[f.p]); ctx.restore();
+      ctx.fillStyle = rgba(f.color, 0.55*(1 - k)); ctx.fill(provOutline(f.p), 'evenodd'); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3/view.s; ctx.stroke(provOutline(f.p)); ctx.restore();
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.font = `700 13px ${BODY}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.85)';
       const ty = y - 30 - k*26; ctx.strokeText(f.text, x, ty); ctx.fillStyle = f.good ? '#a8dcab' : '#f2a29c'; ctx.fillText(f.text, x, ty); ctx.restore();
     } else if (f.type === 'ready'){
@@ -4908,9 +5030,6 @@ function catmull(p0, p1, p2, p3, t){ const t2 = t*t, t3 = t2*t, f = (a0, a1, a2,
   // keep the curve gentle: blend toward the straight line so it never overshoots badly
   const cx = f(p0[0], p1[0], p2[0], p3[0]), cy = f(p0[1], p1[1], p2[1], p3[1]), lx = p1[0] + (p2[0] - p1[0])*t, ly = p1[1] + (p2[1] - p1[1])*t; return [lx*0.45 + cx*0.55, ly*0.45 + cy*0.55]; }
 function roundRect(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
-// fog of war in one fill: the dark veil with the hatch already composited on top ('over' is associative, so this matches veil-then-hatch)
-// a: hatch opacity (the map used to soften it with a blur at close zoom, so callers fade it the same way); one cached pattern per level
-const fogPat = new Map();
 // a sight range cut out of the fog with a soft edge: nested capsules (circles when x1,y1 = x2,y2) of falling radius, each clearing part of the veil
 // (destination-out), so the veil fades out over about a tenth of the radius round the range's edge; kept on the range
 const FOG_EDGE = [[1.07, 0.2], [1.03, 0.3], [0.99, 0.5], [0.95, 1]];
@@ -4918,14 +5037,9 @@ function fogHole(s){ if (s.hole) return s.hole; return s.hole = FOG_EDGE.map(([k
   if (x1 === x2 && y1 === y2){ q.moveTo(x1 + r, y1); q.arc(x1, y1, r, 0, Math.PI*2); }
   else { const an = Math.atan2(y2 - y1, x2 - x1); q.moveTo(x2 + r*Math.cos(an - Math.PI/2), y2 + r*Math.sin(an - Math.PI/2)); q.arc(x2, y2, r, an - Math.PI/2, an + Math.PI/2); q.arc(x1, y1, r, an + Math.PI/2, an + Math.PI*1.5); q.closePath(); }
   return [q, a]; }); }
-// the land veil as a repeating tile: a grey, desaturating veil with diagonal hatching on it; a: hatch opacity (callers fade it as the zoom changes)
-function fogPattern(c2 = ctx, a = 0.07){
-  a = Math.round(a*200)/200; if (fogPat.has(a)) return fogPat.get(a);
-  const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d');
-  g.fillStyle = 'rgba(62,68,74,0.5)'; g.fillRect(0, 0, 8, 8);   // land out of sight: a grey veil, its power's colour still faintly there
-  g.strokeStyle = `rgba(235,240,245,${Math.min(0.34, a*3.4).toFixed(3)})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
-  const pat = c2.createPattern(c, 'repeat'); fogPat.set(a, pat); return pat;
-}
+// the land veil out of sight: one plain, light grey veil (owner: no diagonal stripes over any country; every country's own colour still reads
+// through it, plain and solid; your own land, always in sight, stands out by its green and its border)
+const FOG_LAND = 'rgba(52,58,66,0.3)';
 function shade(col, f){ let r, g, b; if (col[0] === '#'){ const n = parseInt(col.slice(1), 16); r = n >> 16; g = n >> 8 & 255; b = n & 255; } else { const m = col.match(/\d+(\.\d+)?/g) || [0, 0, 0]; [r, g, b] = m.map(Number); }
   const c = v => Math.max(0, Math.min(255, Math.round(v*(1 + f)))); return `rgb(${c(r)},${c(g)},${c(b)})`; }
 const DARK = '#0b1012';
@@ -6986,7 +7100,7 @@ function clampView(){
 }
 let SHIFTING = false;   // a pan strip is being rendered (shiftLayer)
 let layer = null, layerKey = '', geoDirty = false, lastPanT = 0, FLYMARGIN = 0;   // FLYMARGIN: the next full render's margin (the start flight's layer, see draw)
-function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; } return P.box; }
+function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; const v = P.vbox; if (v){ const b = P.box; b[0] = Math.min(b[0], v[0]); b[1] = Math.min(b[1], v[1]); b[2] = Math.max(b[2], v[2]); b[3] = Math.max(b[3], v[3]); } } return P.box; }
 const LM = 0.22;                                        // layer margin, as a share of the viewport on each side
 const ZRES = 0.5;                                       // a layer rendered mid-zoom (drawn scaled, soon replaced) is made at this share of the pixel ratio
 let ZRND = false;                                       // such a render is under way: it leaves out the faint passes (shallow-water bands, ground grain) and new city bakes
@@ -7061,6 +7175,14 @@ function provGround(P){ if (P.ground) return P.ground; const TC = window.TERRCEL
 // into the box, and the coast and lake rings cut to it. Nothing left out can touch a pixel of the strip, so it paints the same pixels as the whole
 // paths; Skia's work per fill, clip or stroke follows the size of the path, so a strip no longer pays for the whole world's coast and borders.
 // (the cut rings run along the box edge, outside the strip, where their strokes are clipped away)
+// a ring object {b, r} cut to a rect without walking all of a long ring (the real borders' coast: Eurasia and Africa are one ring of a few hundred
+// thousand points): each run of 64 points whose box (with the next run's first point) misses the rect is replaced by its first point; the chord
+// then stays inside that box, so nothing inside the rect changes
+function ringCut(Rr, X0, Y0, X1, Y1){ const r = Rr.r, n = r.length; if (n < 4096) return clipRing(r, X0, Y0, X1, Y1);
+  if (!Rr.runs){ const R = []; for (let i = 0; i < n; i += 128){ const e = Math.min(n, i + 128); let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+      for (let j = i; j <= e; j += 2){ const jj = j % n, x = r[jj], y = r[jj + 1]; if (x < a) a = x; if (x > c) c = x; if (y < b) b = y; if (y > d) d = y; } R.push(i, e, a, b, c, d); } Rr.runs = R; }
+  const R = Rr.runs, q = []; for (let k = 0; k < R.length; k += 6){ const i = R[k], e = R[k + 1]; if (R[k + 4] < X0 || R[k + 2] > X1 || R[k + 5] < Y0 || R[k + 3] > Y1){ q.push(r[i], r[i + 1]); continue; } for (let j = i; j < e; j++) q.push(r[j]); }
+  return clipRing(q, X0, Y0, X1, Y1); }
 function clipRing(r, X0, Y0, X1, Y1){ let P = r;
   for (let e = 0; e < 4 && P.length >= 6; e++){ const Q = [], n = P.length, ins = (x, y) => e === 0 ? x >= X0 : e === 1 ? x <= X1 : e === 2 ? y >= Y0 : y <= Y1;
     const cut = (ax, ay, bx, by) => { if (e < 2){ const X = e ? X1 : X0; Q.push(X, ay + (by - ay)*(X - ax)/(bx - ax)); } else { const Y = e === 2 ? Y0 : Y1; Q.push(ax + (bx - ax)*(Y - ay)/(by - ay), Y); } };
@@ -7068,21 +7190,23 @@ function clipRing(r, X0, Y0, X1, Y1){ let P = r;
     for (let i = 0; i < n; i += 2){ const x = P[i], y = P[i + 1], cin = ins(x, y); if (cin !== pin) cut(px, py, x, y); if (cin) Q.push(x, y); px = x; py = y; pin = cin; }
     P = Q; }
   return P; }
-function stripGeo(x0, y0, x1, y1){ const inB = b => b[2] >= x0 && b[0] <= x1 && b[3] >= y0 && b[1] <= y1;
-  const cbb = c => c.bb || (c.bb = c.pts.reduce((b, q) => { if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[0] > b[2]) b[2] = q[0]; if (q[1] > b[3]) b[3] = q[1]; return b; }, [Infinity, Infinity, -Infinity, -Infinity]));
-  const near = list => { const path = new Path2D(); for (const c of list) if (inB(cbb(c))) chainTo(path, c); return path; };
+// band: the level of detail of the real borders (lodBand); coast: also the coast and lakes cut to the rect (a pan strip; a full render at a fine
+// band takes only the borders and areas near the layer from here)
+function stripGeo(x0, y0, x1, y1, band = 0, coast = true){ const inB = b => b[2] >= x0 && b[0] <= x1 && b[3] >= y0 && b[1] <= y1;
+  const cbb = c => c.bb || (c.bb = c.pts.reduce((b, q) => { if (q[0] - 0.2 < b[0]) b[0] = q[0] - 0.2; if (q[1] - 0.2 < b[1]) b[1] = q[1] - 0.2; if (q[0] + 0.2 > b[2]) b[2] = q[0] + 0.2; if (q[1] + 0.2 > b[3]) b[3] = q[1] + 0.2; return b; }, [Infinity, Infinity, -Infinity, -Infinity]));
+  const near = list => { const path = new Path2D(); for (const c of list) if (inB(cbb(c))) chainAt(path, c, band); return path; };
   const SG = {nb:[], area:null, neu:null};
   SG.nation = n => SG.nb[n] || (SG.nb[n] = GEO.perL && GEO.perL[n] ? near(GEO.perL[n]) : GEO.nation[n]);
   SG.mine = GEO.mineL ? near(GEO.mineL) : GEO.mine;
-  const areas = () => { SG.area = []; SG.neu = new Path2D(); SG.neuC = new Map(); for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !inB(provBox(P))) continue; const o = S.owner[p];
-      if (o >= 0) (SG.area[o] || (SG.area[o] = new Path2D())).addPath(GEO.outline[p]); else if (o === NEUTRAL){ SG.neu.addPath(GEO.outline[p]); let a = SG.neuC.get(P.country); if (!a) SG.neuC.set(P.country, a = new Path2D()); a.addPath(GEO.outline[p]); } } };
+  const areas = () => { SG.area = []; SG.neu = new Path2D(); SG.neuC = new Map(); for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !inB(provBox(P))) continue; const o = S.owner[p], F = provFill(p, band);
+      if (o >= 0) (SG.area[o] || (SG.area[o] = new Path2D())).addPath(F); else if (o === NEUTRAL){ SG.neu.addPath(F); let a = SG.neuC.get(P.country); if (!a) SG.neuC.set(P.country, a = new Path2D()); a.addPath(F); } } };
   SG.nArea = n => { if (!SG.area) areas(); return SG.area[n] || (SG.area[n] = new Path2D()); };
   SG.neuArea = () => { if (!SG.area) areas(); return SG.neu; };
   SG.neuByCtry = () => { if (!SG.area) areas(); return SG.neuC; };
-  if (GEO.coast0 && COASTR.length){ const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(); let nl = 0;
-    const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
-    const cutR = (r, b) => b[0] >= x0 && b[2] <= x1 && b[1] >= y0 && b[3] <= y1 ? r : clipRing(r, x0, y0, x1, y1);
-    const RS = coastRings(view.s*HS0), RG = coastGlowRings(RS); for (const RR of RG === RS ? [RS] : [RS, RG]) for (const R of RR) if (inB(R.b)){ const r = cutR(R.r, R.b); if (RR === RS) ringTo(cv, r); if (RR === RG) ringTo(gv, r); }
+  if (coast && GEO.coast0 && COASTR.length){ const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(); let nl = 0;
+    const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.lineTo(r[0], r[1]); };   // (closed by a line back to its start: Path2D.closePath costs as much as the whole path so far)
+    const cutR = (r, b, R) => b[0] >= x0 && b[2] <= x1 && b[1] >= y0 && b[3] <= y1 ? r : R ? ringCut(R, x0, y0, x1, y1) : clipRing(r, x0, y0, x1, y1);
+    const RS = coastRings(view.s*HS0), RG = coastGlowRings(RS); for (const RR of RG === RS ? [RS] : [RS, RG]) for (const R of RR) if (inB(R.b)){ const r = cutR(R.r, R.b, R); if (RR === RS) ringTo(cv, r); if (RR === RG) ringTo(gv, r); }
     if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (!inB(b)) continue; const r = cutR(G.lakeRing[i], b); if (r.length < 6) continue;
       ringTo(cv, r); ringTo(lv, r); nl++; if (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64) ringTo(gv, r); }
     SG.coastV = cv; SG.coastG = gv; SG.lakeV = nl ? lv : null; SG.seaV = new Path2D(); SG.seaV.rect(x0, y0, x1 - x0, y1 - y0); SG.seaV.addPath(cv); }
@@ -7129,7 +7253,10 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   const DTa = dtAlpha(); if (DTa >= 0.02) try { dtDraw(c, vx0, vy0, vx1, vy1, ox, oy, DTa); } catch (e) { DT.fail = true; }   // close zoom: the sharp detail tiles over the texture (any failure: the plain texture, as on low effects)
   // culling bounds: the painted rect plus a margin wider than any stroke and than a shore chain pushed out to sea past its province's box
   const wm = Math.max(40*px, 3*HS), wx0 = vx0 - wm, wy0 = vy0 - wm, wx1 = vx1 + wm, wy1 = vy1 + wm;
-  const SG = R ? stripGeo(wx0, wy0, wx1, wy1) : null;
+  // real borders at the zoom's level of detail (lodBand): band 0 the world-wide paths of GEO; a finer band takes the borders and areas near the
+  // rect (stripGeo), as a pan strip always does; FILL(p): a province's outline at the band
+  const LB = lodBand(hexPx); if (hexPx >= 36) bvWantHi(); const FILL = p => provFill(p, LB);
+  const SG = R || LB ? stripGeo(wx0, wy0, wx1, wy1, LB, !!R) : null, SGC = R ? SG : null;
   // the land path for this render: the coast rings and big lakes in view (lakes as evenodd holes, so the sea wash, shore glow, land clips and tint mask
   // all treat them as water). Rings wholly outside the layer cannot change a pixel in it, and leaving them out keeps the strokes and clips cheap.
   if (!R && GEO.coast0 && COASTR.length){ const m0 = 24*px0, bx0 = -ox/view.s - m0, by0 = -oy/view.s - m0, bx1 = (cw + 2*mx - ox)/view.s + m0, by1 = (ch + 2*my - oy)/view.s + m0, inV = b => b[2] >= bx0 && b[0] <= bx1 && b[3] >= by0 && b[1] <= by1;
@@ -7140,18 +7267,18 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     if (!hi) for (let i = 0; i < RS.length; i++) if (inV(RS[i].b)) k += i + ',';
     k += '|'; if (lakePath()) for (let i = 0; i < G.lakeBox.length; i++){ const b = G.lakeBox[i]; if (inV(b)) k += i + (Math.max(b[2] - b[0], b[3] - b[1])*view.s >= 64 ? 'b,' : ','); }
     if (k !== GEO.coastK){ GEO.coastK = k; const cv = new Path2D(), gv = new Path2D(), lv = new Path2D(), kl = k.split('|')[1]; let nl = 0;
-      const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.closePath(); };
-      if (hi){ const RG = coastGlowRings(RS); for (const RR of RG === RS ? [RS] : [RS, RG]) for (const Rr of RR){ const b = Rr.b; if (b[2] < cx0 || b[0] > cx1 || b[3] < cy0 || b[1] > cy1) continue; const r = b[0] >= cx0 && b[2] <= cx1 && b[1] >= cy0 && b[3] <= cy1 ? Rr.r : clipRing(Rr.r, cx0, cy0, cx1, cy1); if (RR === RS) ringTo(cv, r); if (RR === RG) ringTo(gv, r); } }
+      const ringTo = (q, r) => { if (r.length < 6) return; q.moveTo(r[0], r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j], r[j + 1]); q.lineTo(r[0], r[1]); };   // (closed by a line back to its start: Path2D.closePath costs as much as the whole path so far)
+      if (hi){ const RG = coastGlowRings(RS); for (const RR of RG === RS ? [RS] : [RS, RG]) for (const Rr of RR){ const b = Rr.b; if (b[2] < cx0 || b[0] > cx1 || b[3] < cy0 || b[1] > cy1) continue; const r = b[0] >= cx0 && b[2] <= cx1 && b[1] >= cy0 && b[3] <= cy1 ? Rr.r : ringCut(Rr, cx0, cy0, cx1, cy1); if (RR === RS) ringTo(cv, r); if (RR === RG) ringTo(gv, r); } }
       else for (const i of k.slice(1).split('|')[0].split(',')) if (i){ ringTo(cv, RS[+i].r); ringTo(gv, RS[+i].r); }
       for (const i of kl.split(',')) if (i){ const r = G.lakeRing[parseInt(i)]; ringTo(cv, r); ringTo(lv, r); nl++; if (i.endsWith('b')) ringTo(gv, r); }   // the wide shallow-water glow rings only lakes big on screen (it would flood a small one)
       GEO.coastV = cv; GEO.coastG = gv; GEO.lakeV = nl ? lv : null; GEO.seaV = null; } }
   if (!R && GEO.coastV && !GEO.seaV){ GEO.seaV = new Path2D(); GEO.seaV.rect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); GEO.seaV.addPath(GEO.coastV); }
-  const CV = SG ? SG.coastV : GEO.coastV, CG = SG ? SG.coastG : GEO.coastG || GEO.coastV, LV = SG ? SG.lakeV : GEO.lakeV, SEAV = SG ? SG.seaV : GEO.seaV;
+  const CV = SGC ? SGC.coastV : GEO.coastV, CG = SGC ? SGC.coastG : GEO.coastG || GEO.coastV, LV = SGC ? SGC.lakeV : GEO.lakeV, SEAV = SGC ? SGC.seaV : GEO.seaV;
   const NB = n => SG ? SG.nation(n) : GEO.nation[n], NA = n => SG ? SG.nArea(n) : nAreaOf(n), NEUC = () => SG ? SG.neuByCtry() : neuByCtry(), MINE = SG ? SG.mine : GEO.mine;
   // fine coast: land colour on the texture's sea slivers inside it. Baked off the frame once the zoom nears the fine coast; until then every render
   // (full or strip) goes without, and the bake forces one full render, so strips never mix the two
   if (!mapLite() && hexPx >= 24 && COASTR_HI.length && G.terrain && G.terrain.cbl === undefined && !coastBleed.t) coastBleed.t = setTimeout(() => { coastBleed.t = 0; if (!G || !G.terrain) return; coastBleed(); layerKey = ''; }, 60);
-  if (CV && !mapLite() && coastRings(hexPx) !== COASTR && G.terrain && G.terrain.cbl){ c.save(); c.clip(CV, 'evenodd'); c.drawImage(G.terrain.cbl, 0, 0, WORLD_W, WORLD_H); c.restore(); }
+  if (CV && !mapLite() && hexPx >= 24 && coastRings(hexPx) !== COASTR && G.terrain && G.terrain.cbl){ c.save(); c.clip(CV, 'evenodd'); c.drawImage(G.terrain.cbl, 0, 0, WORLD_W, WORLD_H); c.restore(); }
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
     // wash the sea with its own colour so the raster texture's soft land edge does not bleed past the real shore, then shallow-water bands
     // (the baked depth: shallow shelf, slope and abyss; the flat wash only if it could not be baked)
@@ -7176,23 +7303,24 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     c.restore(); }
   if (hexPx >= ART_PX && !mapLite() && polMode() && DT.fail){ const zg = Math.min(1, (hexPx - ART_PX)/24), GP = groundPatterns(c); c.save(); if (CV) c.clip(CV, 'evenodd');
     for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const t = P.terrain === 'urban' ? provGround(P) : P.terrain || 'plains', wooded = t === 'mountain' && Math.abs(P.lat) > 24 && Math.abs(P.lat) < 55, pt = t === 'forest' || wooded ? GP.forest : t === 'plains' || t === 'urban' ? GP.fields : null; if (!pt) continue;   // temperate ranges (Appalachians, Alps' flanks) are wooded
-      c.globalAlpha = (t === 'forest' ? 0.7 : wooded ? 0.5 : 0.62)*zg; c.fillStyle = pt; c.fill(GEO.fill[p], 'evenodd');
-      if (wooded){ c.globalAlpha = 0.42*zg; c.fillStyle = '#4a6a3c'; c.fill(GEO.fill[p], 'evenodd'); } }   // their grey rock and white ridge highlights take the green of the woods
+      c.globalAlpha = (t === 'forest' ? 0.7 : wooded ? 0.5 : 0.62)*zg; c.fillStyle = pt; c.fill(FILL(p), 'evenodd');
+      if (wooded){ c.globalAlpha = 0.42*zg; c.fillStyle = '#4a6a3c'; c.fill(FILL(p), 'evenodd'); } }   // their grey rock and white ridge highlights take the green of the woods
     c.restore(); }
   if (hexPx >= 9){ c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = 'rgba(140,180,190,0.06)'; c.lineWidth = 0.8*px; c.setLineDash([4*px, 6*px]); c.stroke(tiledIn(GEO.seaT, wx0, wy0, wx1, wy1)); c.setLineDash([]); }
-  const hp = fogPattern(c, 0.07*Math.min(1, 0.4/Math.max(0.5, Math.min(4, (GS > 1 ? 0.12 : 0.075)*HS*view.s*dpr)))); if (hp.setTransform) hp.setTransform(new DOMMatrix([px, 0, 0, px, 0, 0]));
   const base = c; if (!layer.fl) layer.fl = document.createElement('canvas'); const flc = layer.fl; if (flc.width !== layer.width || flc.height !== layer.height){ flc.width = layer.width; flc.height = layer.height; }
   c = flc.getContext('2d'); c.save(); clipR(c); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(dx0, dy0, dw, dh); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   const washK = 1 - 0.7*Math.max(0, Math.min(1, (hexPx - 14)/46));   // the political tint thins as you zoom in so the ground shows (the border band keeps the colour)
-  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
-    if (mapMode === 'terrain'){ c.fillStyle = rgba((TERRAIN[P.terrain] || TERRAIN.plains).col, 0.66); c.fill(GEO.fill[p], 'evenodd'); }
-    else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p], 'evenodd'); }
-    else if (mapMode === 'stability'){ const u = unrestOf(p); c.fillStyle = o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'; c.fill(GEO.fill[p], 'evenodd'); }
-    else if (mapMode === 'resources'){ const y = provYield(p), top = P.city ? cityMain(p) : RMAP_K.reduce((b0, k) => y[k]/RMAP_W[k] > y[b0]/RMAP_W[b0] ? k : b0, 'cash');
-      c.fillStyle = RMAP_C[top]; if (!P.city) c.globalAlpha = 0.42; c.fill(GEO.fill[p], 'evenodd'); c.globalAlpha = 1;
-      if (P.city){ c.fill(GEO.fill[p], 'evenodd'); c.strokeStyle = 'rgba(255,250,235,.9)'; c.lineWidth = Math.min(1.6, hexPx/7)*px; c.lineJoin = 'round'; c.stroke(GEO.fill[p]); } }
-    else if (o >= 0 && relMode){ c.fillStyle = o === PLAYER ? rgba(tones().ownHi, 0.55) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5); c.fill(GEO.fill[p], 'evenodd'); }   // relations: your land the pale own tone (the ally green is mid green, so the two stay apart); political: the nation tint is a colour-blend pass below (keeps the ground's light and shade)
-    if (season(p) === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }   // (winter snow is the soft sheet, next)
+  // the map modes' fills, one plain colour per province over its real shape (no pattern in any mode)
+  { const MF = [], CS = [], MUD = [];
+    for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p], F = FILL(p), add = (col, a) => MF.push([F, col, a]);
+      if (mapMode === 'terrain') add(rgba((TERRAIN[P.terrain] || TERRAIN.plains).col, 0.66));
+      else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; add(o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'); }
+      else if (mapMode === 'stability'){ const u = unrestOf(p); add(o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'); }
+      else if (mapMode === 'resources'){ const y = provYield(p), top = P.city ? cityMain(p) : RMAP_K.reduce((b0, k) => y[k]/RMAP_W[k] > y[b0]/RMAP_W[b0] ? k : b0, 'cash');
+        add(RMAP_C[top], P.city ? 1 : 0.42); if (P.city){ add(RMAP_C[top], 1); CS.push(F); } }
+      else if (o >= 0 && relMode) add(o === PLAYER ? rgba(tones().ownHi, 0.55) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5));   // relations: your land the pale own tone (the ally green is mid green, so the two stay apart); political: the nation tint is a colour-blend pass below (keeps the ground's light and shade)
+      if (season(p) === 'mud') MUD.push([F, 'rgba(92,70,40,0.22)']); }   // (winter snow is the soft sheet, next)
+    fillsAll(c, MF); if (CS.length){ c.strokeStyle = 'rgba(255,250,235,.9)'; c.lineWidth = Math.min(1.6, hexPx/7)*px; c.lineJoin = 'round'; for (const F of CS) c.stroke(F); } fillsAll(c, MUD); }
   // winter snow: the cached world-space sheet (snowCover) laid over the fills, as the old per-province snow was (so it reads white over the political
   // tint and the terrain-mode colours, and relief still shows through), only the part in the painted rect; then thinned over the towns
   if (polMode() || mapMode === 'terrain'){ const SC = snowCover(), bb = SNOWC.bb; if (SC && bb){ const x0 = Math.max(vx0, bb[0]), y0 = Math.max(vy0, bb[1]), x1 = Math.min(vx1, bb[2]), y1 = Math.min(vy1, bb[3]);
@@ -7236,38 +7364,39 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     g.fillStyle = 'rgba(34,46,56,0.24)';   // sea: lighter, no hatching
     if (CV && hexPx >= 7 && SEAV) g.fill(SEAV, 'evenodd'); else { g.fillRect(-WORLD_W, -WORLD_H, 3*WORLD_W, 3*WORLD_H); g.save(); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy); g.globalCompositeOperation = 'destination-out'; g.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); g.restore(); }
     g.globalCompositeOperation = 'destination-out'; cut(true); g.globalAlpha = 1;
-    g.globalCompositeOperation = 'source-over'; g.fillStyle = hp;
-    for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; g.fill(GEO.fill[p], 'evenodd'); }
+    // land out of sight: one plain veil (owner: no hatching over anyone's land), every such province's real shape in one fill (no seams between them)
+    g.globalCompositeOperation = 'source-over'; { const FA = new Path2D(); for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; FA.addPath(FILL(p)); } g.fillStyle = FOG_LAND; g.fill(FA); }
     g.globalCompositeOperation = 'destination-out'; cut(false); g.restore();
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(fgc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); c.restore(); }
   // borders, over the fog (owner, fix-map: every border clear at every zoom, in sight or not): province borders of every country, country borders
   // (between any two countries, powers or independent), national borders by relation (yours green, an ally's blue, an enemy's red, the others as a
   // country border), all at one css width whatever the zoom; kept to the land (the coast clip close in, the lakes cut out further out)
+  let BLN = 7; /*@TEST*/if (window.__bvLines !== undefined) BLN = window.__bvLines;/*@ENDTEST*/   // (tests: 1 province, 2 country, 4 national borders)
   c.save(); if (CV && hexPx >= 7) c.clip(CV, 'evenodd'); else if (LV){ const q = new Path2D(); q.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); q.addPath(LV); c.clip(q, 'evenodd'); }
   c.lineJoin = 'round'; c.lineCap = 'round';
   // province borders: a dark line with a faint light casing (roads and rails are light lines: a border never reads as one), from the world view in
-  if (hexPx >= 1.6){ const z = Math.min(1, (hexPx - 1.6)/10), PE = tiledIn(GEO.provT, wx0, wy0, wx1, wy1);
+  if (hexPx >= 1.6 && (BLN & 1)){ const z = Math.min(1, (hexPx - 1.6)/10), PE = tiledIn(provTB(LB, 'p'), wx0, wy0, wx1, wy1);
     if (hexPx >= 6){ c.strokeStyle = 'rgba(232,228,212,0.2)'; c.lineWidth = 2.6*px; c.stroke(PE); }
     c.strokeStyle = `rgba(8,10,8,${(0.3 + 0.3*z).toFixed(3)})`; c.lineWidth = (0.7 + 0.6*z)*px; c.stroke(PE); }
   // country borders (any two countries, powers or independent): a broad dark line with a strong light core
-  { const CE = tiledIn(GEO.countryT, wx0, wy0, wx1, wy1); c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 3.2*px; c.stroke(CE); c.strokeStyle = 'rgba(238,234,220,0.82)'; c.lineWidth = 1.3*px; c.stroke(CE); }
+  if (BLN & 2){ const CE = tiledIn(provTB(LB, 'c'), wx0, wy0, wx1, wy1); c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 3.2*px; c.stroke(CE); c.strokeStyle = 'rgba(238,234,220,0.82)'; c.lineWidth = 1.3*px; c.stroke(CE); }
   // national borders by relation: the others as the country borders, blue round an ally, red round an enemy, green round yours (drawn in that order so yours and the enemy's win the shared edges)
-  { const TN = tones(), rank = {neu:0, other:0, ally:1, war:2, own:3}, ord = [];
+  if (BLN & 4){ const TN = tones(), rank = {neu:0, other:0, ally:1, war:2, own:3}, ord = [];
     for (let n = 0; n < S.nations.length; n++) if (S.nations[n].alive && GEO.nation[n] && nOn(n)) ord.push(n);
     ord.sort((a, b) => rank[mapTone(a)] - rank[mapTone(b)]);
     for (const n of ord){ const tn = mapTone(n);
       if (tn === 'other'){ c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 3.2*px; c.stroke(NB(n)); c.strokeStyle = 'rgba(238,234,220,0.82)'; c.lineWidth = 1.3*px; c.stroke(NB(n)); continue; }
-      c.strokeStyle = 'rgba(3,6,8,0.6)'; c.lineWidth = 3.4*px; c.stroke(NB(n));
-      c.strokeStyle = tn === 'own' ? TN.own : rgba(TN[tn], 0.95); c.lineWidth = (tn === 'own' ? 2 : 1.8)*px; c.stroke(NB(n)); }
-    if (S.nations[PLAYER].alive){ c.strokeStyle = rgba(TN.ownHi, 0.85); c.lineWidth = 0.9*px; c.stroke(MINE); } }
+      c.strokeStyle = 'rgba(3,6,8,0.6)'; c.lineWidth = (tn === 'own' ? 4.2 : 3.4)*px; c.stroke(NB(n));   // (yours a little broader and brighter than the rest: your land stands out by its border and its green)
+      c.strokeStyle = tn === 'own' ? TN.own : rgba(TN[tn], 0.95); c.lineWidth = (tn === 'own' ? 2.6 : 1.8)*px; c.stroke(NB(n)); }
+    if (S.nations[PLAYER].alive){ c.strokeStyle = rgba(TN.ownHi, 0.95); c.lineWidth = 1.1*px; c.stroke(MINE); } }
   c.restore();
-  if (hexPx >= 3 && LV){ c.save(); c.clip(LV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(222,224,214,0.5)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1)); c.restore(); }   // country borders across the lakes in view: a dashed line
+  if (hexPx >= 3 && LV){ c.save(); c.clip(LV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(222,224,214,0.5)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(provTB(LB, 'c'), wx0, wy0, wx1, wy1)); c.restore(); }   // country borders across the lakes in view: a dashed line
   c.restore();   // the overlay's R clip
   // political tint: each power's land in its colour, laid on the ground with a 'color' blend (hue and saturation from the power, light and shade from the terrain)
   // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
   if (polMode() && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
     const t = tc.getContext('2d'); t.save(); clipR(t); t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(dx0, dy0, dw, dh); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
-    { for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = rgba(tintOf(n), TONE_A[mapTone(n)]); t.fill(NA(n)); }
+    { for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = rgba(tintOf(n), TONE_A[mapTone(n)]); t.fill(NA(n)); }   // (each power's real shapes, one plain colour)
       for (const [ci, a] of NEUC()){ t.fillStyle = rgba(tintOf(NEUTRAL, ci), TONE_A.neu); t.fill(a); } }   // independents: each country its own colour, drawn toward the quiet grey
     t.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(CV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over'; t.restore();
     // world view and play zoom: clear national colours over the relief; close in it eases off a little (tk, then tf past hexPx 80) so the ground and
@@ -7328,7 +7457,8 @@ function layerBands(){ const L = layer, h = L.height, W = L.width/dpr, n = 6, c 
 // they would cover much of the layer (a full render is then as quick)
 function visDirty(A, B, own){ const g = visGrid(), bb = g.bb, L = layer, m = Math.max(40/view.s, 3*HS), W = [];
   const box = (x0, y0, x1, y1, e = 0) => { W.push([x0 - m - e, y0 - m - e, x1 + m + e, y1 + m + e]); };
-  const prov = (p, nb, e) => { const b = bb[p]; if (b) box(b[0], b[1], b[2], b[3], e); if (nb && G.P[p]) for (const q of G.P[p].nbs){ const c = bb[q]; if (c) box(c[0], c[1], c[2], c[3], e); } };
+  const vb = p => { const a = bb[p], v = G.P[p] && G.P[p].vbox; return !v ? a : !a ? v : [Math.min(a[0], v[0]), Math.min(a[1], v[1]), Math.max(a[2], v[2]), Math.max(a[3], v[3])]; };   // (cells and real shape)
+  const prov = (p, nb, e) => { const b = vb(p); if (b) box(b[0], b[1], b[2], b[3], e); if (nb && G.P[p]) for (const q of G.P[p].nbs){ const c = vb(q); if (c) box(c[0], c[1], c[2], c[3], e); } };
   // provinces that changed hands (with their neighbours: the borders on both sides, the tint, a town's look, the links through them)
   if (own && own !== S.owner) for (let p = 0; p < own.length; p++) if (own[p] !== S.owner[p]) prov(p, true, 24);
   for (const p of A) if (!B.has(p)) prov(p, true); for (const p of B) if (!A.has(p)) prov(p, true);
@@ -7369,9 +7499,10 @@ const neuArea = () => GEO.nArea.neu || (GEO.nArea.neu = (() => { const a = new P
 // colouring over the countries' land borders, the largest first). A power's land takes the colour of its home country (wherever it spreads); an
 // independent country's colour is drawn further toward the quiet grey, so free land still reads as free. The palette keeps clear of the
 // relation green, blue and red. Display only (the map, the minimap)
-const CPAL = ['#dccb45', '#e8923a', '#2ec4c0', '#a06cf0', '#dc5fcf'], TONE_MIX = {other:0.04, neu:0.25};   // (five hues well apart, none near the relation green, blue or red: enough for the map's countries, no two neighbours alike)
+const CPAL = ['#dccb45', '#e8923a', '#2ec4c0', '#a06cf0', '#e05cb4'], TONE_MIX = {other:0.04, neu:0.25};   // (five hues well apart, none near the relation green, blue or red: enough for the map's countries, no two neighbours alike)
 function ctryPal(){ if (G.cpal) return G.cpal; const n = G.countries.length, nb = G.countries.map(() => new Set()), sz = new Array(n).fill(0);
   for (const P of G.P){ if (P.sea || !(P.country >= 0)) continue; sz[P.country] += P.cells.length; for (const q of P.nbs){ const Q = G.P[q]; if (!Q.sea && Q.country >= 0 && Q.country !== P.country) nb[P.country].add(Q.country); } }
+  if (GEO && GEO.bv) for (const c of GEO.countryL){ if (c.a < 0 || c.b < 0) continue; const ca = G.P[c.a].country, cb = G.P[c.b].country; if (ca >= 0 && cb >= 0 && ca !== cb){ nb[ca].add(cb); nb[cb].add(ca); } }   // (countries whose real shapes meet)
   const pal = new Int8Array(n).fill(-1), ord = [...Array(n).keys()].sort((a, b) => sz[b] - sz[a] || a - b);
   for (const c of ord){ const used = new Set([...nb[c]].map(d => pal[d])); let k = c % CPAL.length; for (let j = 0; j < CPAL.length && used.has(k); j++) k = (k + 1) % CPAL.length; pal[c] = k; }
   return (G.cpal = pal); }
@@ -7438,8 +7569,8 @@ function drawSeaSurface(now, moving){
   if (hexPx >= 30 && GEO.coast0 && COASTR.length){ const px = 1/view.s, m0 = 12*px, X0 = -view.x/view.s - m0, Y0 = -view.y/view.s - m0, X1 = (cw - view.x)/view.s + m0, Y1 = (ch - view.y)/view.s + m0, RS = coastRings(hexPx), fk = [X0, Y0, view.s, cw, ch, coastRingsId(RS)].join(',');
     if (fk !== SEAFX.fk){ SEAFX.fk = fk; const fp = new Path2D(), fc = new Path2D(); fc.rect(X0, Y0, X1 - X0, Y1 - Y0); let n = 0;
       for (const Rr of RS){ const b = Rr.b; if (b[3] < Y0 || b[1] > Y1 || wrapWX((b[0] + b[2])/2) !== (b[0] + b[2])/2) continue;   // (a ring the coast data repeats a turn away for the seam: once)
-        for (const o of wrapOffs(b[0], b[2], X0, X1)){ const r = b[0] + o >= X0 && b[2] + o <= X1 && b[1] >= Y0 && b[3] <= Y1 ? Rr.r : clipRing(Rr.r, X0 - m0 - o, Y0 - m0, X1 + m0 - o, Y1 + m0); if (r.length < 6) continue;   // (each copy of it on screen)
-          for (const q of [fp, fc]){ q.moveTo(r[0] + o, r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j] + o, r[j + 1]); q.closePath(); } n++; } }
+        for (const o of wrapOffs(b[0], b[2], X0, X1)){ const r = b[0] + o >= X0 && b[2] + o <= X1 && b[1] >= Y0 && b[3] <= Y1 ? Rr.r : ringCut(Rr, X0 - m0 - o, Y0 - m0, X1 + m0 - o, Y1 + m0); if (r.length < 6) continue;   // (each copy of it on screen)
+          for (const q of [fp, fc]){ q.moveTo(r[0] + o, r[1]); for (let j = 2; j < r.length; j += 2) q.lineTo(r[j] + o, r[j + 1]); q.lineTo(r[0] + o, r[1]); } n++; } }
       SEAFX.fp = n ? fp : null; SEAFX.fc = fc; }
     if (SEAFX.fp){ ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.clip(SEAFX.fc, 'evenodd'); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       // the foam sheet, anchored to the world (about 60 screen px a tile) and drifting slowly: a narrow bright line, then a wider fainter one drifting
@@ -7542,20 +7673,20 @@ function draw(now){ draw.now = now;
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   // a land province's outline runs out over the sea where its cells do (the shore chains are pushed out to sea and the land fills clipped to the
   // coast): the hover, target and selection outlines of a coastal province are kept to the land too, so no straight hex edges show out at sea
-  const landOnly = p => { const P = G.P[p]; if (P && !P.sea && GEO.coastV && P.nbs.some(q => G.P[q].sea)) ctx.clip(GEO.coastV, 'evenodd'); };
-  if (hoverProv >= 0 && hoverProv !== sel.prov && !G.P[hoverProv].sea){ ctx.save(); landOnly(hoverProv); ctx.strokeStyle = 'rgba(255,248,230,0.55)'; ctx.lineWidth = 1.6*px; ctx.stroke(GEO.outline[hoverProv]); ctx.restore(); }
+  const landOnly = p => { const P = G.P[p]; if (P && !P.sea && GEO.coastV && (P.nbs.some(q => G.P[q].sea) || (GEO.coastOf && GEO.coastOf[p] && GEO.coastOf[p].length))) ctx.clip(GEO.coastV, 'evenodd'); };
+  if (hoverProv >= 0 && hoverProv !== sel.prov && !G.P[hoverProv].sea){ ctx.save(); landOnly(hoverProv); ctx.strokeStyle = 'rgba(255,248,230,0.55)'; ctx.lineWidth = 1.6*px; ctx.stroke(provOutline(hoverProv)); ctx.restore(); }
   drawLinkFx(now, vis);
   drawTradeLanes(now);
   drawBlockZones(now);
-  if (sel.target !== null){ ctx.save(); landOnly(sel.target); const o = S.owner[sel.target]; if (!G.P[sel.target].sea && o !== PLAYER && (o < 0 || atWar(PLAYER, o))){ ctx.fillStyle = 'rgba(224,87,79,0.2)'; ctx.fill(GEO.fill[sel.target], 'evenodd'); }
-    ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(GEO.outline[sel.target]); ctx.setLineDash([]); ctx.restore(); }
+  if (sel.target !== null){ ctx.save(); landOnly(sel.target); const o = S.owner[sel.target]; if (!G.P[sel.target].sea && o !== PLAYER && (o < 0 || atWar(PLAYER, o))){ ctx.fillStyle = 'rgba(224,87,79,0.2)'; ctx.fill(provOutline(sel.target), 'evenodd'); }
+    ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(provOutline(sel.target)); ctx.setLineDash([]); ctx.restore(); }
   if (sel.prov !== null){ const calm = afxReduced(); if (SELFX.p !== sel.prov){ SELFX.p = sel.prov; SELFX.pt = now; }
     // a soft highlight pulse: a bright flash on selection settling into a slow breathing glow (one fill and two strokes)
     const k = calm ? 1 : Math.min(1, (now - SELFX.pt)/650), br = calm ? 0.5 : 0.5 + 0.5*Math.sin((now - SELFX.pt)/380); if (!calm){ if (k < 1) animFast(); else animAmb(); }
     ctx.save(); landOnly(sel.prov);
-    if (GEO.fill[sel.prov] && !G.P[sel.prov].sea){ ctx.fillStyle = `rgba(226,162,61,${(0.05 + 0.05*br + 0.2*(1 - k)).toFixed(3)})`; ctx.fill(GEO.fill[sel.prov], 'evenodd'); }
-    ctx.strokeStyle = `rgba(226,162,61,${(0.14 + 0.12*br + 0.3*(1 - k)).toFixed(3)})`; ctx.lineWidth = (5 + 2.5*br + 8*(1 - k))*px; ctx.stroke(GEO.outline[sel.prov]);
-    ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.4*px; ctx.stroke(GEO.outline[sel.prov]); ctx.restore(); } else SELFX.p = null;
+    const SO = provOutline(sel.prov); if (SO && !G.P[sel.prov].sea){ ctx.fillStyle = `rgba(226,162,61,${(0.05 + 0.05*br + 0.2*(1 - k)).toFixed(3)})`; ctx.fill(SO, 'evenodd'); }
+    ctx.strokeStyle = `rgba(226,162,61,${(0.14 + 0.12*br + 0.3*(1 - k)).toFixed(3)})`; ctx.lineWidth = (5 + 2.5*br + 8*(1 - k))*px; ctx.stroke(SO);
+    ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 2.4*px; ctx.stroke(SO); ctx.restore(); } else SELFX.p = null;
   // front lines: your borders with powers you are at war with: a soft red glow under one clean solid line that breathes gently (no dashed 'zipper')
   { const F = frontPath(); if (F){ const z = Math.min(1.6, Math.max(0.7, hexPx/14)), br = afxReduced() ? 0.5 : 0.5 + 0.5*Math.sin(now/700); if (!afxReduced()) animAmb(); ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       ctx.strokeStyle = `rgba(224,87,79,${(0.12 + 0.08*br).toFixed(3)})`; ctx.lineWidth = 8*z*px; ctx.stroke(F); ctx.strokeStyle = 'rgba(30,6,4,0.55)'; ctx.lineWidth = 2.8*z*px; ctx.stroke(F);
@@ -8106,7 +8237,7 @@ cv.addEventListener('pointermove', e => {
     zoomAt(pinch.s*(d/pinch.d)/view.s, (a.x + b.x)/2, (a.y + b.y)/2); return; }
   if (boxSel){ boxSel.x1 = x; boxSel.y1 = y; showBox(); return; }
   if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > 6) drag.moved = true; if (drag.moved && drag.unit != null){ closeChooser(); tipHide(); udrag = {id:drag.unit, x, y}; return; } if (drag.moved){ closeChooser(); view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
-  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
+  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAtV(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
 });
 function endPointer(e){
   const [x, y] = localXY(e);
@@ -8119,7 +8250,7 @@ function endPointer(e){
 cv.addEventListener('pointerup', endPointer);
 cv.addEventListener('contextmenu', e => { e.preventDefault(); if (sel.army === null) return; const [x, y] = localXY(e), a = armyById(sel.army); if (!a) return; lastClickW = screenToWorld(x, y);
   const TL = tapList(); for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a, e.shiftKey); renderSide(true); return; } break; } }
-  const p = provAt(x, y); if (p < 0) return; if (a.to === null && p === a.at && !a.air) return; setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a, e.shiftKey); renderSide(true); });
+  const p = provAtV(x, y); if (p < 0) return; if (a.to === null && p === a.at && !a.air) return; setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a, e.shiftKey); renderSide(true); });
 cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag = null; pinch = null; udrag = null; });
 let udrag = null;   // a counter being dragged: {id, x, y} (screen)
 function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) return;
@@ -8138,7 +8269,7 @@ function joinForces(a, b){ if (!a || !b || a === b) return false;
 // a move to a spot in the force's own province (rules/movement.js orderMove → orderSpot): it walks, or a fleet sails, there and takes the time
 function spotMove(a, p, w){ orderMove(a, p, pinPt(a, p, w)); visCache = null; sfx('order'); if (a.sail) toast(`${armyName(a)} ${shipsOnly(a) || G.P[p].sea ? 'sails' : 'moves'} to the new position: about ${sailHours(a)} h.`, 'info', null); renderSide(true); }
 // a counter dragged onto the map (not onto a force of yours): a move order to that exact point, as a right-click there gives
-function dragMove(a, x, y){ const p = provAt(x, y), w = screenToWorld(x, y); if (p < 0) return;
+function dragMove(a, x, y){ const p = provAtV(x, y), w = screenToWorld(x, y); if (p < 0) return;
   if (a.to === null && p === a.at){ if (G.P[p].sea && !shipsOnly(a)) return; spotMove(a, p, w); return; }
   if (sel.army !== a.id && !sel.group.includes(a.id)) selectArmy(a.id);
   lastClickW = w; setTarget(a, p); if (targetPath && targetPath.length) sendToTarget(a); else { sel.target = null; targetPath = null; toast('No route there.', 'bad', null); renderSide(true); } }
@@ -8148,7 +8279,7 @@ function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) 
   if (b){ ctx.strokeStyle = '#74c27a'; ctx.lineWidth = 2.5; roundRect(ctx, h.x - 3, h.y - 3, h.w + 6, h.h + 6, 5); ctx.stroke(); }
   ctx.globalAlpha = 0.85; ctx.fillStyle = 'rgba(16,22,24,.92)'; roundRect(ctx, udrag.x - 22, udrag.y - 13, 44, 26, 5); ctx.fill(); ctx.strokeStyle = mapCol(PLAYER); ctx.lineWidth = 1.5; ctx.stroke();
   ctx.globalAlpha = 1; ctx.fillStyle = '#f3ead2'; ctx.font = `700 12px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(count(a)), udrag.x, udrag.y);
-  const lbl = b ? (b.at === a.at && a.to === null && b.to === null ? `Merge into ${armyName(b)}` : `Join ${armyName(b)}`) : provAt(udrag.x, udrag.y) >= 0 ? 'Move here' : 'Drop on a force to merge';
+  const lbl = b ? (b.at === a.at && a.to === null && b.to === null ? `Merge into ${armyName(b)}` : `Join ${armyName(b)}`) : provAtV(udrag.x, udrag.y) >= 0 ? 'Move here' : 'Drop on a force to merge';
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(lbl).width + 14; roundRect(ctx, udrag.x - w/2, udrag.y + 17, w, 18, 4); ctx.fillStyle = b ? '#24452a' : '#1b2a2e'; ctx.fill(); ctx.fillStyle = '#f3ead2'; ctx.fillText(lbl, udrag.x, udrag.y + 26);
   const sp = b ? stackPenaltyIf(b, a) : null;   // merging would go over the stack limit: the penalty under the label
   if (sp && sp.over){ const t2 = stackText(sp), w2 = ctx.measureText(t2).width + 14; roundRect(ctx, udrag.x - w2/2, udrag.y + 38, w2, 18, 4); ctx.fillStyle = '#5a1d17'; ctx.fill(); ctx.fillStyle = '#ffd9cf'; ctx.fillText(t2, udrag.x, udrag.y + 47); }
@@ -8183,7 +8314,7 @@ function tap(x, y, shift = false){
   const mk = hs ? null : cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
-      const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast('No route there.', 'bad', null); renderSide(true); } } return; }
+      const p = provAtV(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast('No route there.', 'bad', null); renderSide(true); } } return; }
   if (!cityTap) for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
       if (mk && !h.ids.some(id => { const a = armyById(id); return a && a.at === mk.p; })) break;
@@ -8202,7 +8333,7 @@ function tap(x, y, shift = false){
       if (foe && !h.unk && !cmdMode && sel.army === null && !shift && armyVisible(foe, visibleSet(PLAYER))){ selectFoe(foe.id); return; }   // a foreign force you can see: its read-only army bar
       break;
     } }
-  const p = mk ? mk.p : provAt(x, y);
+  const p = mk ? mk.p : provAtV(x, y);
   if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
   if (p < 0 || (G.P[p].sea && sel.army === null)){ clearSel(); return; }
@@ -8250,7 +8381,7 @@ function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].se
   if (ok(w[0], w[1])) return [w[0], w[1]];
   for (let r = 1; r <= 24; r++) for (let k = 0; k < 16; k++){ const an = (k + (r & 1)*0.5)*Math.PI/8, x = w[0] + Math.cos(an)*r, y = w[1] + Math.sin(an)*r; if (ok(x, y)) return [x, y]; }
   return [w[0], w[1]]; }
-function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
+function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAtV(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
@@ -8354,7 +8485,7 @@ function tipShow(x, y){
   if (HQBOX && HQBOX.some(q => x >= q[0] && x <= q[2] && y >= q[1] && y <= q[3])){ const N = S.nations[PLAYER], C = G.P[N.capital];
     tip.innerHTML = `<b>Headquarters</b><div class="small muted">${flagHTML(PLAYER, 12)} ${C.cityName || C.name} · your capital</div><div class="small" style="margin-top:2px">The seat of your government and high command.</div>`;
     tip.hidden = false; const tw = 230, th = tip.offsetHeight; let tx = x + 14, ty = y + 14; if (tx + tw > cw - 6) tx = x - tw - 14; if (ty + th > ch - 6) ty = y - th - 14; tip.style.left = Math.max(6, tx) + 'px'; tip.style.top = Math.max(6, ty) + 'px'; return; }
-  const p = provAt(x, y); if (p < 0){ tipHide(); return; }
+  const p = provAtV(x, y); if (p < 0){ tipHide(); return; }
   const P = G.P[p], vis = visibleSet(PLAYER), here = stationaryAt(p).filter(a => armyVisible(a, vis));
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
   let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
@@ -9972,7 +10103,7 @@ function devRender(){ const el = $('devpanel'); if (!el) return; el.hidden = !DE
 function devSync(){ for (const i of DEV_SPEEDS){ const b = $('sp' + i); if (b) b.setAttribute('aria-pressed', String(S.speed === i)); }
   const el = $('devpanel'); if (el && !el.hidden) for (const b of el.querySelectorAll('[data-speed]')) b.setAttribute('aria-pressed', String(S.speed === +b.dataset.speed)); }
 function devPanel(open){ DEVUI.open = open == null ? !DEVUI.open : open; if (!DEVUI.open) DEVUI.pick = false; devRender(); }
-function devTap(x, y){ if (!DEVUI.pick || !S || !S.started) return false; const p = provAt(x, y); if (p < 0) return true;
+function devTap(x, y){ if (!DEVUI.pick || !S || !S.started) return false; const p = provAtV(x, y); if (p < 0) return true;
   const a = devSpawn(DEVUI.o, p, DEVUI.t, DEVUI.k), P = G.P[p];
   DEVUI.ok = !!a; DEVUI.note = a ? `Placed ${DEVUI.k} × ${UNITS[DEVUI.t].name} for ${nationName(DEVUI.o)} in ${P.cityName || P.name}.` : `${UNITS[DEVUI.t].name} cannot stand in ${P.name}${P.sea ? ' (sea)' : ''}.`;
   if (a) fx('ready', p); devRender(); renderSide(true); return true; }
@@ -10594,6 +10725,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, 
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BV:{get:() => BV}, GEO:{get:() => GEO}, lodBand:{value:h => lodBand(h)}, provAtV:{value:(x, y) => provAtV(x, y)}, provFill:{value:(p, b) => provFill(p, b)}, bvWantHi:{value:() => bvWantHi()}, bvHiWanted:{value:() => !GEO || !GEO.bv || view.s*HS0 < 36 || !!BV.f2}, coastSets:{value:() => ({L:COASTR, B0:COASTR_B0, H1:COASTR_HI1, H2:COASTR_HI, MID:COASTR_MID})}});   // real borders (.test/borders-real.js)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });

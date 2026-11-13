@@ -85,9 +85,11 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
       // (B) borders: chain points in view: the line differs from the ground just beside it
       const br = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, M = window.__mc, I = M.img(), GEO = im.geo, L = I.L, s = L.s, res = {prov:[0, 0], country:[0, 0], nation:[0, 0]};
         const lum = q => q ? 0.3*q[0] + 0.59*q[1] + 0.11*q[2] : null, o = (pt, k) => S.owner[k];
-        for (const c of GEO.chains){ if (c.a < 0 || c.b < 0) continue; const A = G.P[c.a], B = G.P[c.b]; if (A.sea || B.sea || c.pts.length < 6) continue;
+        // (real borders: a chain's points as drawn at the zoom's level of detail)
+        const band = im.lodBand ? im.lodBand(im.hexPx()) : 0, ptsOf = c => { if (!c.vec || !band) return c.pts; const f = band === 2 && im.BV.f2 ? im.BV.f2[c.i] : im.BV.f1[c.i], o = []; for (let j = 0; j < f.length; j += 2) o.push([f[j] + (c.sh || 0), f[j + 1]]); return o; };
+        for (const c of GEO.chains){ if (c.a < 0 || c.b < 0 || c.dup || c.a === c.b) continue; const A = G.P[c.a], B = G.P[c.b]; if (A.sea || B.sea) continue; const pts = ptsOf(c); if (pts.length < 6) continue;
           const kind = A.country !== B.country ? 'country' : S.owner[c.a] !== S.owner[c.b] ? 'nation' : 'prov', R = res[kind]; if (R[1] >= 40) continue;
-          const i = c.pts.length >> 1, q = c.pts[i], q0 = c.pts[i - 2], q1 = c.pts[i + 2]; if (!M.onScr(q[0], q[1], 60) || im.isWet(q[0], q[1])) continue;   // (across a lake a border is dashed)
+          const i = pts.length >> 1, q = pts[i], q0 = pts[i - 2], q1 = pts[i + 2]; if (!M.onScr(q[0], q[1], 60) || im.isWet(q[0], q[1])) continue;   // (across a lake a border is dashed)
           const tx = q1[0] - q0[0], ty = q1[1] - q0[1], tl = Math.hypot(tx, ty) || 1, nx = -ty/tl, ny = tx/tl, d = 5/s;   // 5 css px either side
           const l0 = lum(M.px(I, q[0], q[1])), la = lum(M.px(I, q[0] + nx*d, q[1] + ny*d)), lb = lum(M.px(I, q[0] - nx*d, q[1] - ny*d)); if (l0 == null || la == null || lb == null) continue;
           // the strongest step along the normal (the line has a dark edge and, on country and national borders, a light core)
