@@ -14,6 +14,7 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
+| Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities (building pictures wait for the speed job: both change map drawing) | Sonnet | branch cities-panel |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (the other 186 pictures, about $6.9): waits for the owner to approve the 3 sample banners and 3 sample icons | Opus | samples on branch research-tab (8a24f63) |
 | Unit controls like Conflict of Nations: exact-spot movement fixed, tap to select / tap map to move / clear path line / tap empty space to deselect, Waypoint button with dots and undo | Opus | branch unit-controls |
@@ -26,15 +27,14 @@ Last updated: 2026-11-13 (overnight run).
 | # | Task | Model |
 |---|---|---|
 | 1 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
-| 2 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities | Sonnet |
-| 3 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 4 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
-| 5 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
-| 6 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
-| 7 | Nations balance re-check now that the AI never starts wars | Sonnet |
-| 8 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
-| 9 | Each aircraft type its own 3D shape | Opus |
-| 10 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 2 | Roads: every province linked to a neighbour, real roads first | Opus |
+| 3 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
+| 4 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
+| 5 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
+| 6 | Nations balance re-check now that the AI never starts wars | Sonnet |
+| 7 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
+| 8 | Each aircraft type its own 3D shape | Opus |
+| 9 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
 
