@@ -187,6 +187,37 @@ and one nation in one run (Australia, oil) had an empty stock with a negative ba
 
 ---
 
+### 3.4 Resource balance (the nations world; the owner's rule)
+
+The owner's rule, verbatim: "Playable nations have 7-14 cities. Keep this range. 6 resources (cash included). Every nation has at least
+1 city of each resource; none may be missing. No resource in more than 2 cities, for any nation. Nations with 13-14 cities: the 1-2
+cities beyond 12 get whichever resource fits that real region best (that resource may reach 3). Match real geography where you can
+(oil in real oil regions, etc.). Fix Syria first (currently 4 of 8 on oil, no rare materials). At the end, list the resource split per
+nation so I can review it."
+
+As built (branch resource-balance):
+- **Where.** The six goods are money, oil, materials (`metal`), iron, electronics (`elec`) and rare materials (`rare`). Every city of
+  every playable nation of the nations world has its main resource set by hand in `tools/build-nations.js` (table `MAINS`: a note on
+  the region's geography, then the cities of each good), written to `nations.js` as `mains`, one letter per city in the order of
+  `cities` (c o m i e r). `nationsWorld()` (rules/state.js) carries them into `S.w64.mains`, so a save keeps the resources it was made
+  with; `useWorld` (rules/map.js) runs the map method of 3.1 first, as before, then sets the playable nations' cities from `mains`.
+- **The limits.** At least 1 city of each of the six goods; at most 2 of any good; a nation of 13 or 14 cities may lift one good
+  (13 cities) or two goods (14 cities: 12 + 2 cannot be spread otherwise) to 3, never higher. So a 12-city nation has exactly 2 of
+  each, a 7-city nation one of each and a second city of its best-fitting good. The capital is a money city in all 68.
+- **Unchanged.** The classic 15-power world, independent land and every save made before the rule (no `S.w64.mains`) keep the map
+  method's resources exactly (`.test/resource-rule.js`; `.test/x1000-oldsave.js` plays a master save of the nations world 5 days to
+  the same state hash). The big-country oil city and the state reserve (`N.reserve`) of the map method no longer come into play in a
+  new nations-world game: no nation lacks a good.
+- **Checks.** `node tools/build-nations.js` refuses a table that breaks the rule; `node .test/resource-rule.js` checks a new game, the
+  saves and the classic world; `node tools/resources-list.js` writes `docs/RESOURCES-PER-NATION.md`, the list for the owner (before and
+  after, the changed cities marked, a geography note per nation).
+- **Effect** (seeds 12345 and 7, 30 days, all computer, against master): 435 of 684 cities changed resource; rare-material cities 19 to
+  89, iron 139 to 110, electronics 123 to 107, oil 134 to 125. World output a day on day 1: rare materials x2.4 (x3.1 by day 30),
+  oil -11% (-21% by day 30), iron -20%, electronics -12%, materials and money about the same. Market prices on day 30: rare materials
+  5.6 against 9-10 on master (below its base 6.5), oil, materials, iron and electronics within 10% of master. Nations short of rare
+  materials (under 5k): 0 against 1-5 on master; research a little faster (+1-3% projects done by day 30). The lowest day-1 income of
+  every good in the nations world rises (`tools/eco-check.js`).
+
 ## 4. Yields
 
 ### 4.1 Province yield (replaces the body of provYield; `f`, `pp`, `pf`, `b` as today)

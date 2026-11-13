@@ -38,10 +38,12 @@ let POWERS = WORLD_POWERS, SCN = 'world';
 function useScenario(k){ SCN = SCENARIOS[k] ? k : 'world'; POWERS = SCENARIOS[SCN].powers; WIN_CAPS = SCENARIOS[SCN].caps; scnLandCache = null; scnInCache = null; }
 const tiered = () => !!SCENARIOS[SCN].tiers;
 // the cities of the nations world: the lists of nations.js, plus the cities world.js gives every country that is not (yet) a playable nation
-function nationsWorld(){ const play = new Set(NATIONS.nations.map(n => n.country)), cities = [], names = {};   // (on the map in use: G.D, its province rows)
+// mains: each city's main resource as nations.js sets it for the playable nations (one letter per city of cities, '.' for a city left to the map
+// method of cityMains, rules/map.js: independent land), so a save keeps the resources it was made with; a save made before has none (the map method)
+function nationsWorld(){ const play = new Set(NATIONS.nations.map(n => n.country)), cities = [], names = {}, mk = new Map();   // (on the map in use: G.D, its province rows)
   for (let id = 0; id < G.D.length; id++){ const d = G.D[id]; if (d[1] >= 0 && (d[2] & 1) && !play.has(WORLD.countries[d[1]])) cities.push(id); }
-  for (const n of NATIONS.nations){ for (const c of n.cities) cities.push(c); if (n.names) for (const id in n.names) names[id] = n.names[id]; }
-  return {v:NATIONS.v, cities:cities.sort((a, b) => a - b), names}; }
+  for (const n of NATIONS.nations){ n.cities.forEach((c, i) => { cities.push(c); if (n.mains) mk.set(c, n.mains[i]); }); if (n.names) for (const id in n.names) names[id] = n.names[id]; }
+  cities.sort((a, b) => a - b); const w = {v:NATIONS.v, cities, names}; if (mk.size) w.mains = cities.map(c => mk.get(c) || '.').join(''); return w; }
 // a power's strength index, from the map alone (the money its land earns at the opening, before any catch-up): used to face border guards
 // toward the strongest neighbour, to make friends of the neighbours of a giant and for the difficulty shown on the start screen
 function powerStrength(P0){ const ci = powerCountry(P0), cs = new Set(P0.cities || []); let v = 0; if (ci < 0) return 0;
@@ -72,7 +74,7 @@ function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = n
 function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page was running over frames is finished in the old game first)
   const T = tiered(); useMap(T ? MAP_NEW : 0);   // the nations world: the map with the province split (when nations.js has one); any other world: world.js
   const W64 = T ? nationsWorld() : null, mode = T && TIER_MODES[newGame.mode] ? newGame.mode : 'normal';
-  useWorld(T ? {cities:W64.cities, caps:POWERS.map(p => p.capital), names:W64.names} : null);
+  useWorld(T ? {cities:W64.cities, caps:POWERS.map(p => p.capital), names:W64.names, mains:W64.mains} : null);
   resetCaches();
   const order = [pick, ...POWERS.map((_, i) => i).filter(i => i !== pick)];
   const owner = G.P.map(p => p.sea ? SEA : NEUTRAL);
@@ -220,7 +222,7 @@ function restore(data){
   if (n64 && (!SCENARIOS.world64 || !data.w64 || !Array.isArray(data.w64.cities) || data.w64.v > NATIONS.v)){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
   useMap(mv);
   S = data; S.battles = []; S.bt = {}; S.q = S.q || 0; S.speed = 0; S.started = true;
-  useWorld(n64 ? {cities:S.w64.cities, caps:S.nations.map(N => N.cap0 ?? N.capital), names:S.w64.names} : null);
+  useWorld(n64 ? {cities:S.w64.cities, caps:S.nations.map(N => N.cap0 ?? N.capital), names:S.w64.names, mains:S.w64.mains} : null);
   linksSync();
   { const nc = c => c && OLD_COLORS[String(c).toLowerCase()]; for (const N of S.nations){ if (nc(N.color)) N.color = nc(N.color); if (nc(N.color0)) N.color0 = nc(N.color0); } }   // old palette entries -> current ones
   useScenario(n64 ? 'world64' : 'world'); DAY_LIMIT = Infinity;   // older saves with a scenario or a day limit continue as an open-ended world war
