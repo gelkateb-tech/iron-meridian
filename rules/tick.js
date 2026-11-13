@@ -2,7 +2,12 @@
 'use strict';
 /* ---------------- Simulation ---------------- */
 let tickVer = 0;
-function tickHour(){
+// the hour runs as a list of steps (tickHourG yields between them: after the morning's chores, after movement and ranged fire, after the battle
+// and upkeep, after the captures, around the daily round and after each computer nation's turn). tickHour runs them all at once, as it always did;
+// the page may run them over several frames instead (tickQSlice), so no frame waits long for the rules. The steps and their order are the same
+// either way: an hour spread over frames gives the same game as one run at once (the page only reads between the steps: rules/core.js keep())
+function tickHour(){ const g = tickHourG(); while (!g.next().done){} }
+function* tickHourG(){
   S.hour++; tickVer++;
   /*@DEV*/if (DEV.instant || DEV.research || DEV.res) for (const me of seats()) devHour(me);/*@ENDDEV*/
   // production
@@ -18,6 +23,7 @@ function tickHour(){
   missileTick();
   spyHour();
   rebelHour();
+  yield;
   // movement
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
@@ -35,11 +41,12 @@ function tickHour(){
       else if (!(shipsOnly(a) && !G.P[a.to].sea)) legCross(a, lh); }   // a pinpoint move's last leg: the hour it crosses into its province it arrives there and walks on to the point
   }
   // head-on clash: hostile columns marching in opposite directions on the same road meet and fight at the nearer province
-  { const edge = new Map(); for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)) edge.set(a.at + '>' + a.to, [...(edge.get(a.at + '>' + a.to) || []), a]);
-    for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(a.to + '>' + a.at); if (!opp) continue;
+  { const edge = new Map(), ek = (u, v) => (u | 0) === u && (v | 0) === v && u >= 0 && v >= 0 && u < 1048576 && v < 1048576 ? u*1048576 + v : u + '>' + v;   // (a number for the road from u to v)
+    for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)){ const k = ek(a.at, a.to), l = edge.get(k); if (l) l.push(a); else edge.set(k, [a]); }
+    for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(ek(a.to, a.at)); if (!opp) continue;
       const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
       const meet = a.t >= 0.5 ? a.to : a.at, [mx, my] = legSpot(a);
-      for (const x of [a, b]){ x.from = x.at; x.at = meet; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
+      for (const x of [a, b]){ x.from = x.at; atMove(x, meet); x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
       for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
   // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets), as long as
   // the joined force stays within its stack limit (STACK_LIM); a join order (dragged onto the counter) merges anyway, with the stack-limit warning
@@ -56,15 +63,19 @@ function tickHour(){
   if (S.hour % 2 === 0) stanceHour();
   visCache = null;   // forces moved this hour: what each side sees is worked out again (ranged fire needs sight)
   rangedStep(true); chaseHour(); joinHour(); for (const a of S.armies) if (a.delay > 0) a.delay--;
+  yield;
   // combat: the hour's own battle step (the last of its four); then morale, upkeep and healing
   if (S.hour - supHour >= 6 || !SUP){ computeSupply(); computeBlockade(); }
   const prevH = new Set(S.battles);   // the fights of the steps just before this one
   battleStep(true);
   armyUpkeep(prevH);
+  yield;
   // capture
   let by = index();
   for (let p = 0; p < by.length; p++){
     if (G.P[p].sea) continue;
+    if (!by[p].length){ S.cap[p] = null; continue; }   // (no force here: what the lines below come to for an empty province)
+    { const ow = S.owner[p]; if (by[p].every(a => a.owner === ow)) continue; }   // (only the owner's forces here: nothing below changes anything)
     const list = by[p], owners = new Set(list.map(a => a.owner));
     let hostileToOwner = [...owners].filter(o => o !== S.owner[p] && atWar(o, S.owner[p]));
     if (hostileToOwner.length > 1 && !hostileToOwner.some(x => hostileToOwner.some(y => x !== y && atWar(x, y)))){ const sz = o => list.filter(a => a.owner === o).reduce((s0, a) => s0 + groundN(a), 0); hostileToOwner = [hostileToOwner.sort((x, y) => sz(y) - sz(x))[0]]; }
@@ -79,16 +90,30 @@ function tickHour(){
       } else S.cap[p] = null;
     } else if (owners.size === 0) S.cap[p] = null;
   }
-  if (S.hour % 24 === 0){ diploDay(); daily(); }
+  yield;
+  if (S.hour % 24 === 0){ yield* diploDayG(); yield; yield* dailyG(); yield; }
   // the AI plays every nation that is not a seat (in the nations world a nation far from the fighting plans every other turn: aiAway)
-  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); if (!((S.hour + n) % 8 === 4 && aiAway(n))) aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); }
+  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); if (!((S.hour + n) % 8 === 4 && aiAway(n))) aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); yield; }
   IM.emit('hour');
   visCache = null;
 }
 // One 15-minute step of game time. S.q counts the battle steps already run this hour (0..3, saved; old saves have none = 0): three steps are battle-only,
 // the fourth is the hour's tick. The game loop and tools/headless.js call tickQ; tick() plays a whole game hour (what the tests and tools use).
-function tickQ(){ const q = S.q || 0; if (q + 1 < BATTLE_Q){ S.q = q + 1; rangedStep(false); battleStep(false); return; } S.q = 0; tickHour(); }   // (ranged fire, rules/combat.js, before each battle step)
-function tick(){ do tickQ(); while (S.q); }
+function tickQ(){ if (TQP !== null){ tickFinish(); return; }   // (an hour the page left half run is this step: it is finished)
+  tickDepth++; tickSess++; try { const q = S.q || 0; if (q + 1 < BATTLE_Q){ S.q = q + 1; rangedStep(false); battleStep(false); return; } S.q = 0; tickHour(); } finally { tickDepth--; } }
+// the page's game loop: one tickQ step, run a part at a time while more() says the frame has time left (the quarter-hour battle steps run whole; the
+// hour pauses between its steps, tickHourG). Returns true when the step is done; false: the hour goes on at the next call (tickPending()).
+// Anything else that runs game time, saves or loads first finishes it (tickQ, tick, saveJSON, newGame, restore)
+let TQP = null;
+const tickPending = () => TQP !== null;
+function tickQSlice(more){
+  if (TQP === null){ const q = S.q || 0; if (q + 1 < BATTLE_Q){ tickQ(); return true; } S.q = 0; TQP = tickHourG(); }
+  tickDepth++; tickSess++;
+  try { for (;;){ if (TQP.next().done){ TQP = null; return true; } if (!more()) return false; } }
+  catch (e){ TQP = null; throw e; }
+  finally { tickDepth--; } }
+function tickFinish(){ if (TQP === null || tickDepth > 0) return; tickQSlice(() => true); }   // (ranged fire, rules/combat.js, before each battle step)
+function tick(){ if (TQP !== null) tickFinish(); else do tickQ(); while (S.q); }
 /* One battle step: every force fighting in a province deals and takes damage. Battles resolve BATTLE_Q (4) times per game hour, one step every 15 in-game minutes,
    each dealing BATTLE_DMG (a quarter of the hourly damage, times the pace constant BATTLE_PACE in rules/combat.js). The hour's own tick runs the last one (hourly = true);
    the other three run between hours (tickQ). Movement, supply, the economy and the capture clock stay hourly. */
@@ -98,6 +123,7 @@ function battleStep(hourly){
   let by = index();
   for (let p = 0; p < by.length; p++){
     const list = by[p]; if (list.length < 2) continue;
+    { const o0 = list[0].owner; let i = 1; while (i < list.length && list[i].owner === o0) i++; if (i === list.length) continue; }   // (one side only: what sides.size < 2 below comes to)
     const sides = new Map(); for (const a of list){ if (!sides.has(a.owner)) sides.set(a.owner, []); sides.get(a.owner).push(a); }
     if (sides.size < 2) continue;
     const owners = [...sides.keys()].filter(o => [...sides.keys()].some(e => atWar(o, e)));
@@ -170,7 +196,7 @@ function recordStats(){
   { if (!S.own0) S.own0 = S.owner.slice(); const R = S.rec || (S.rec = {last:S.own0.slice(), d:[]}); const diff = []; for (let p = 0; p < S.owner.length; p++) if (S.owner[p] !== R.last[p]){ diff.push(p, S.owner[p]); R.last[p] = S.owner[p]; } R.d.push(diff); }
   IM.emit('statsDay');
   S.hist = S.hist || [];
-  S.hist.push({d:day, n:S.nations.map(N => N.alive ? [score(N.id), S.owner.filter(o => o === N.id).length, Math.round(natPower(N.id)), Math.round(income(N.id).net.cash)] : null)});
+  S.hist.push({d:day, n:S.nations.map(N => N.alive ? [score(N.id), ownedBy(N.id).length, Math.round(natPower(N.id)), Math.round(income(N.id).net.cash)] : null)});
   if (S.hist.length > 200) S.hist.shift();
   for (const me of seats()){ const D = desk(me), st0 = D.stats || (D.stats = {}); st0.peakArmy = Math.max(st0.peakArmy || 0, Math.round(natPower(me)));
     const rank = S.nations.filter(N => N.alive).sort((a, b) => score(b.id) - score(a.id)).findIndex(N => N.id === me) + 1;
@@ -181,21 +207,25 @@ function recordStats(){
 // trade, links, aircraft, missiles and agents keep their hours. The rules are the same for every nation; only the planning of the quiet ones is
 // spread out, so 30 to 68 computer nations cost little more than 15. The classic world and the theatres are untouched.
 function aiAway(n){ if (!tiered() || warsOf(n).length) return false; for (const s of seats()) if (borders(n, s) || borders(s, n)) return false; return true; }
-function daily(){
+// (a generator, as the hour: pauses between its rounds)
+function daily(){ const g = dailyG(); while (!g.next().done){} }
+function* dailyG(){
   if (S.airHit) for (const k in S.airHit){ const H = S.airHit[k]; for (const j in H) if (typeof H[j] === 'number') H[j] *= 0.7; if (H.bp) for (const q in H.bp) if (S.hour - H.bp[q] > 96) delete H.bp[q]; }   // air-raid memory fades
-  marketDay(); bookDay(); chatDay(); coalitionAid(); convoyDay(); tradeDay(); terrDay(); INCC.v = -1;
+  marketDay(); bookDay(); chatDay(); coalitionAid(); yield; convoyDay(); yield; tradeDay(); terrDay(); INCC.v = -1; yield;
   if (S.dmg) for (let p = 0; p < S.dmg.length; p++) if (S.dmg[p] > 0) S.dmg[p] = Math.max(0, S.dmg[p] - 2.5);
   { S.pop = S.pop || G.P.map(P => P.pop0); for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; if (moraleOf(p) > 70) S.pop[p] = Math.min(G.P[p].pop0*1.25, S.pop[p]*1.0004); } }
   for (const N of S.nations){ if (!N.alive || isSeat(N.id) || !has(N.id, 'sat1') || N.cash < 450 || rng() > 0.1) continue; launchSat(N.id, N.capital); }
   for (const N of S.nations){ if (!N.alive || isSeat(N.id) || N.cash < 300 || cmdList(N.id).length >= 2 || rng() > 0.15) continue; N.cash -= CMD_COST; const c = newCommander(N.id);
-    const a = S.armies.filter(x => x.owner === N.id && !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
+    const a = armiesOf(N.id).filter(x => !x.air && !shipsOnly(x) && x.cmd == null).sort((x, y) => power(y) - power(x))[0]; if (a){ a.cmd = c.id; c.army = a.id; } }
   for (const c of (S.cmds || [])){ if (!c.alive || c.army == null) continue; const a = armyById(c.army); if (!a || a.cmd !== c.id) c.army = null; }
+  yield;
   // the advisor: each seat is warned of a build-up on its border and of idle cities in wartime
   for (const me of seats()) if (S.nations[me].alive){ const D = desk(me), W = D.warn || (D.warn = {}), day = dayOf(S.hour);
     const border = G.P.filter(P => !P.sea && S.owner[P.id] === me && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== me));
-    const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === me || x.air || !S.nations[x.owner].alive) continue; const r = rel(me, x.owner).st; if (r === 'ally') continue;
+    // (a computer nation at peace is left out: it never starts a war, AI_STARTS_WARS, and its forces near the border are its own cities' garrisons)
+    const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === me || x.air || !S.nations[x.owner].alive) continue; const r = rel(me, x.owner).st; if (r === 'ally' || (!AI_STARTS_WARS && r !== 'war' && !isSeat(x.owner))) continue;
       if (border.some(P => P.nbs.includes(x.at) || P.id === x.at)) mass.set(x.owner, (mass.get(x.owner) || 0) + power(x)); }
-    const mine = border.reduce((s0, P) => s0 + S.armies.filter(x => x.owner === me && x.at === P.id && !x.air).reduce((s1, x) => s1 + power(x), 0), 0);
+    const mine = border.reduce((s0, P) => s0 + armiesOf(me).filter(x => x.at === P.id && !x.air).reduce((s1, x) => s1 + power(x), 0), 0);
     for (const [o, pw] of mass){ const grew = pw > (W['p' + o] ?? pw)*1.2; W['p' + o] = Math.max(pw*0.9, Math.min(W['p' + o] ?? pw, pw));
       if (day >= 3 && grew && pw > 40 && pw > mine*1.4 && (!W[o] || day - W[o] >= 5)){ W[o] = day; const r = rel(me, o).st;
       tell(me, `${nationName(o)} ${r === 'war' ? 'has' : 'is massing'} ${Math.round(pw)} strength on your border against your ${Math.round(mine)}. ${r === 'war' ? 'Reinforce the front.' : 'Recruit defenders or seek a pact in Diplomacy.'}`, 'bad', border[0].id); } }
@@ -213,6 +243,7 @@ function daily(){
     for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(R.k === 'mp' ? capMp : cap, v); }
     if (isSeat(N.id)){ const D = desk(N.id), st0 = D.stats || (D.stats = {}), mk = st0.made || (st0.made = {}); for (const R of RES) mk[R.k] = (mk[R.k] || 0) + Math.max(0, inc.gross[R.k]); }   // produced over the campaign (statistics)
     if (isSeat(N.id)){ for (const k of ['oil', 'iron', 'elec', 'cash']) if (N.short[k] && !was[k]) tell(N.id, SHORT_MSG[k], 'bad'); } }
+  yield;
   unrestDay();
   recordStats();
   makePaper();

@@ -6,6 +6,8 @@
 IM.api = {
   // the game: start, load, save, one quarter hour (tickQ: three of four are battle-only steps, the fourth is the hour's tick; S.q counts them) and a whole hour (tick)
   newGame, restore, saveJSON, tickQ, tick,
+  // the same quarter hour run a part at a time (the page's game loop: tickQSlice(more) runs while more() is true, returns true when done; tickPending)
+  tickQSlice, tickPending,
   // which world the next new game is (a scenario key: 'world' the classic 15 powers, 'world64' the nations world of nations.js)
   useScenario,
   // the maps (0 world.js; mapNew the nations world's, with the province split): a map's provinces without switching to it, or the switch itself

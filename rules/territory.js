@@ -124,17 +124,17 @@ function terrAnswer(n, id, act, price){ const T = S.terr, o = T && T.offers.find
 function terrMoveOut(p, seller, buyer){ let dest = -1;
   const near = (n, ok) => { const seen = new Set([p]), q = [p]; for (let h = 0; h < q.length; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n && !G.P[v].sea && ok(v)) return v; q.push(v); } return -1; };
   for (const a of S.armies){ if (a.owner < 0 || a.owner === buyer || friendly(a.owner, buyer) || !count(a)) continue;
-    if (a.air){ if (a.fly || a.air.base !== p) continue; const nb = nearestAirbase(a.owner, p); if (nb >= 0 && nb !== p){ a.air.base = nb; a.at = nb; a.air.cd = Math.max(a.air.cd || 0, 2); } else for (const t of UT) a.u[t] = 0; continue; }
+    if (a.air){ if (a.fly || a.air.base !== p) continue; const nb = nearestAirbase(a.owner, p); if (nb >= 0 && nb !== p){ a.air.base = nb; atMove(a, nb); a.air.cd = Math.max(a.air.cd || 0, 2); } else for (const t of UT) a.u[t] = 0; continue; }
     if (a.to === p){ a.to = null; a.t = 0; a.path = []; a.legFrom = null; a.dest = null; a.forced = false; continue; }   // on the way in: it stays where it set out from
     if (a.at !== p || a.to !== null) continue;   // (leaving already: it goes on)
     const d = shipsOnly(a) ? (G.P[p].nbs.find(v => G.P[v].sea) ?? near(a.owner, v => portOk(a.owner, v))) : near(a.owner, () => true);
     if (d < 0 || d == null){ for (const t of UT) a.u[t] = 0; continue; }
-    a.at = d; a.to = null; a.t = 0; a.path = []; a.pos = null; a.legFrom = null; a.dest = null; a.forced = false; if (a.owner === seller && dest < 0) dest = d; }
+    atMove(a, d); a.to = null; a.t = 0; a.path = []; a.pos = null; a.legFrom = null; a.dest = null; a.forced = false; if (a.owner === seller && dest < 0) dest = d; }
   removeEmpty(); return dest; }
 // the sale itself: money, the province with its buildings, the troops out, the 3-day resale lock, the log and a dispatch to each side
 function terrSell(seller, buyer, p, price){ const A = S.nations[seller], B = S.nations[buyer], value = provValue(p), back = origOwner(p) === buyer, T = terrS();
   B.cash -= price; A.cash += price;
-  S.owner[p] = buyer; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null;
+  S.owner[p] = buyer; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null;
   // the seller's title passes on: land it held by treaty becomes the buyer's by treaty; land it only occupied stays occupied land (the occupation
   // clock and the unrest carry over). Land sold back to the country it was taken from is home again: no occupation, unrest down to 5% at most
   if (back || S.home[p] === seller) S.home[p] = buyer;

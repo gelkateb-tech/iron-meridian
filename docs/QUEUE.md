@@ -14,36 +14,34 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
   - Big ones get one review and at most one repair.
 - **Commits:** one commit after each finished task.
 
-Last updated: 2026-11-11.
+Last updated: 2026-11-13.
 
 ## Running
 
 | Task | Model | Where it is |
 |---|---|---|
-| 68 playable nations: merging into master (big merge, Opus, in its own copy) | Opus | Merging |
-| Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
-| Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
+| Resources x1000 except money (stocks, production, storage, all costs) with short forms (40K, 1.2M) and full amounts with units on hover; play proven identical | Opus | Done on its branch; now being merged with the speed-ups and map fix (play must stay identical) |
+| Buildings on the map as small 3D models at their city, like the units (every building picture tile removed from the map; pictures only in the city panel), changing by level, an HQ model at the capital, pinned with no zoom drift; screenshots at 3 zooms before merging. (The cut-out picture version was rejected and is not merged.) | Opus | Started |
+| Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; infantry icon redone as a flat helmeted head (owner to pick: with wheel or plain); waiting for the owner's 'merge' |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), hover shows the full amount with a unit (40,000 barrels of oil); before/after examples | Opus (after the 68 nations are merged, since both touch every number) |
+| 1 | Nations balance pass on today's combat rules: Iran and the United States lose too much land in some games; make battery.js robust to ambient sea waves | Opus (after resources x1000) |
 | 2 | Each aircraft type gets its own 3D shape | Opus (after the research and icons job is merged: it built new aircraft models for the research pictures) |
 | 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
-- **Battle pace** (docs/COMBAT-PACE.md): measured, even fights already last 14-21 h (small) and 31-40 h (big); the quick ones are lopsided (3:1 over in 7-12 h). Proposal: BATTLE_PACE = 0.5 (one line; 3:1 on 10 units 7 → 12 h, 100v50 13 → 22 h, even 100v100 31 → 46 h; about 10% fewer losses a day). Approve 0.5, 0.35, or keep 1?
-- **Battle balance bar:** the army bar job removed the red/green balance bar over battles on the map along with the health bars (the crossed swords and red edge stay). Keep it removed?
+- **Infantry map icon:** A (flat helmeted head; motorized gets a wheel under it) or B (plain head for both), and "merge" for the research cards and pictures job.
+- **Faster game days:** reaching well under 0.5 s per game day needs changes that alter how computer nations play (quiet nations plan every 8 hours, a shorter attack-target search, reusing routes across hours). Want any of them?
+- **Market prices** in the x1000 job are shown per 1,000 units (for example '$0.04M per 1,000 barrels'). OK?
 - **Research design approvals** (docs/RESEARCH.md section 12 on branch research-redesign; nothing below is built): A. balance changes in the new tree (unit unlocks get first days 1-14, Marks become Firepower/Protection research, generations add health, IFV/Special Forces/Rocket Artillery cheaper stand-alone unlocks, 289 steps); B. new ground units (APC, Tank Destroyer, Towed Artillery, AA Gun Vehicle, Scout Vehicle); C. new aircraft (Scout Helicopter, Naval Helicopter); D. new ships (Patrol Boat, Destroyer, Ballistic-Missile Submarine); E. new weapons (sub-launched cruise and ballistic missiles, chemical and tactical nuclear warheads, ICBM); F. Officers (replace commanders, keep both, or a smaller Staff College step); G. elite marking of 4 existing units.
-- **Infantry art:** the code-drawn infantry icon is a helmet (a motorized version exists); close in, infantry squads still need a u-infantry-figure picture.
 - **Pictures to make on Higgsfield:** u-heavy-bomber-1, u-heavy-bomber-2, u-stealth-bomber (optional u-infantry-figure); plus for the research banners: a heavy or stealth bomber seen from above (Strategic Air, now uses the AWACS), a command or logistics picture (Command & Logistics, now the supply truck), optional paratroopers (Air Assault).
 - **Netlify token** for the phone app.
 - **"Move to public"** for everything under "Waiting for public" in RELEASES.md.
-- **Resource-bar button:** the storage case went on the button at the left of the resource bar, which opens the missile stocks (there is no separate all-resources list). Keep it, or add an all-resources list there?
-- **Building pictures size:** at play zoom the clusters are fairly big and can sit a little away from their city (e.g. Hamburg's below it toward Hanover). Smaller tiles, or fewer at play zoom?
-- **Fog decision:** a foreign country's building under construction is hidden (finished buildings show for everyone); show it too?
+- **Nations balance tests:** T4/T5 now count only land taken from other nations while more than a quarter of the world is unowned (docs/NATIONS-PLAN.md section 7); China's 'fights a big rival by day 60' check relaxed. OK?
 - **Fable:** no Fable tasks left; new ones only if the owner says so.
 
 ## Planned for later (in LATER.md, not built yet)
@@ -53,6 +51,9 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 ## Done (on the Dev Build, waiting for public)
 
 | Task | Model |
+| URGENT Dev Build fix A: computer nations never start a war (they fight back fully; allies join only to defend), play test at 1x/4x/8x, merge breakage (v3r1) | Opus |
+| URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
+| URGENT map fix: every country its own strong colour (no two neighbours alike), allies blue, tint and province/country borders clear at every zoom, sea outline (straight lines) removed, real country borders (Syria checked: data correct, wiggle removed) | Opus |
 |---|---|
 | Strike and blast effects per weapon (cruise, ballistic, chemical, tactical nuclear, ICBM) and battle blasts, with repairs 1 and 2 | Opus |
 | 64-nation plan (docs/NATIONS-PLAN.md) and the owner's decisions (68 playable) | Fable 5.2 |
@@ -77,6 +78,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | Unit display by zoom: code-drawn unit icons everywhere, diamond counters zoomed out (mine green, allies blue, enemies red), unit pictures with flag tags zoomed in | Opus |
 | New resource icons from the owner's pictures, Build box with the building's picture and countdown, Cities tab with Build and Mobilize per row, slots and sorting | Sonnet |
 | Economy follow-ups: iron for nations without an iron city, offer-expired dispatches, Arms Industry I half price, clear Army Base and Arms Industry hover text, distinct resource map colours, France and Australia balanced | Fable 5.2 (last Fable task) |
+| 68 playable nations (Fable 5.2 plan, Opus build): six regions plus the province split for Israel, Greece, Cuba and Belarus, near-equal tier starts, war limits by tier, victory by number of nations (land to win 6% with 68), region tabs on the start screen (classic world removed, old saves still load), merged with everything since | Opus |
 | Movement look: forces turn to face where they go, ease in and out, follow roads and rails on screen, dust behind vehicles, ship wakes, infantry bob | Opus |
 | Small polish: matching research slots with 'next free' time, warm night city cores, smooth Scandinavian snow, v3r2 and battery tests fixed | Sonnet |
 | Realistic combat and flight animations: effects module fx.js, firing per weapon, impacts sized by weapon, hit flashes, 20 s scorch marks, settings-aware screen shake, aircraft pictures in flight with curves, bank, contrails and shadows, oval patrols, attack markers, missile warnings, sound slots, Effects High/Low/Off (phones Low), test panel with real shooters; results proven identical on High/Low/Off | Opus |

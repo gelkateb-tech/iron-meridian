@@ -51,7 +51,7 @@ function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i]
 // cash, materials and iron alike; the two do not raise each other's price
 const FAC_RISE = 1.4;
 const RISE_K = {fac:1, arms:1};
-function facOthers(n, p, k = 'fac'){ let c = 0; for (let q = 0; q < G.P.length; q++) if (q !== p && S.owner[q] === n && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
+function facOthers(n, p, k = 'fac'){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
 function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*(RISE_K[k] ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p, k)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
 // training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
 // (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
@@ -83,8 +83,8 @@ function spawn(n, p, t){
   const k = rPack(n, t);   // (a card of swarm drones holds six, eight with the Bigger Salvo upgrade)
   // new units join an idle force of the same kind here that has room under its stack limit (STACK_LIM), otherwise they form a new force
   const dm = DOM_T[t], room = x => stackSizes(x)[dm] + (dm === 'air' ? 1 + Object.values((x.air && x.air.pend) || {}).reduce((s0, v) => s0 + Math.ceil(v/k), 0) : k) <= STACK_LIM[dm];
-  if (air){ const w = S.armies.find(x => x.owner === n && x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u]) && room(x)); if (w && !S.armies.some(x => x.owner === n && x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
-  let a = S.armies.find(x => x.owner === n && x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])) && room(x));
+  if (air){ const w = armiesOf(n).find(x => x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u]) && room(x)); if (w && !armiesOf(n).some(x => x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
+  let a = armiesOf(n).find(x => x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])) && room(x));
   if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp*k)/(h0 + UNITS[t].hp*k) : 80;
   a.u[t] += k;

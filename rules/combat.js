@@ -146,9 +146,27 @@ function cmdLost(a){ const c = cmdOf(a); if (!c) return; c.army = null; a.cmd = 
   else if (isSeat(a.owner)) tell(a.owner, `${RANKS[c.rank]} ${c.name} escaped when ${armyName(a)} was destroyed and awaits a new command.`, 'info', S.nations[a.owner].capital); }
 function cmdXP(a, dealt){ const c = cmdOf(a); if (!c || dealt <= 0) return; c.xp += dealt; const need = [0, 200, 600, 1e9][c.rank];
   if (c.xp >= need && c.rank < 3){ c.rank++; if (isSeat(a.owner)) tell(a.owner, `${c.name} promoted to ${RANKS[c.rank]}: the ${TRAITS[c.trait].name} trait is now ${c.rank}× as strong.`, 'good', a.at); } }
-function stationaryAt(p){ return S.armies.filter(a => a.at === p && a.to === null && !a.fly && !a.air); }
-function enemiesAt(p, owner){ return S.armies.some(a => a.at === p && a.to === null && !a.fly && !a.air && atWar(a.owner, owner) && count(a) > 0); }
-function index(){ const by = G.P.map(() => []); for (const a of S.armies) if (a.to === null && !a.fly && !a.air) by[a.at].push(a); return by; }
+// the forces in each province (a.at), in S.armies order: a tick's lookup (rules/core.js), made again when the list of forces changes (a new list,
+// or forces added to it: addArmy appends them) or a force changed province (atMove). byAt(p) is S.armies.filter(a => a.at === p), p a province
+let AX = null;
+const axOk = () => AX !== null && AX.A === S.armies && AX.n === S.armies.length && AX.v === ATV && AX.t === tickSess && AX.G === G;
+function armiesAt(){ if (axOk()) return AX.by; const A = S.armies;
+  const by = new Array(G.P.length).fill(NONE); let up = true, last = -Infinity;
+  for (const a of A){ if (!(a.id > last)) up = false; last = a.id; const p = a.at; if ((p | 0) !== p) continue; const l = by[p]; if (l === undefined) continue; if (l === NONE) by[p] = [a]; else l.push(a); }
+  AX = {A, n:A.length, v:ATV, t:tickSess, G, by, up, last}; return by; }
+// a force moves to province p: while the lookup is current and S.armies runs in id order (addArmy numbers the forces in turn, so it does), the
+// force leaves its old list and joins the new one at its place by id: the lists stay S.armies.filter(a => a.at === p)
+function atMove(a, p){ const o = a.at, ok = axOk() && AX.up; a.at = p; ATV++; if (!ok) return;
+  const L = AX.by[o], N = AX.by[p], i = L ? L.indexOf(a) : -1; if ((o | 0) !== o || (p | 0) !== p || i < 0 || N === undefined) return;
+  if (L.length === 1) AX.by[o] = NONE; else L.splice(i, 1);
+  if (N === NONE) AX.by[p] = [a]; else { let lo = 0, hi = N.length; while (lo < hi){ const m = (lo + hi) >> 1; if (N[m].id < a.id) lo = m + 1; else hi = m; } N.splice(lo, 0, a); }
+  AX.v = ATV; }
+const byAt = p => { if (tickDepth > 0 && (p | 0) === p){ const l = armiesAt()[p]; if (l !== undefined) return l; } return null; };   // null: scan S.armies
+function stationaryAt(p){ const l = byAt(p); return (l || S.armies).filter(a => a.at === p && a.to === null && !a.fly && !a.air); }
+function enemiesAt(p, owner){ const l = byAt(p); return (l || S.armies).some(a => a.at === p && a.to === null && !a.fly && !a.air && atWar(a.owner, owner) && count(a) > 0); }
+// (provinces with no such force share one empty, frozen list: the callers only read the lists)
+const IDX0 = Object.freeze([]);
+function index(){ const by = new Array(G.P.length).fill(IDX0); for (const a of S.armies) if (a.to === null && !a.fly && !a.air){ const l = by[a.at]; if (l === IDX0) by[a.at] = [a]; else l.push(a); } return by; }
 // a force is dug in when it has stood 12 game hours or more on its own ground (or in a friendly fortified province), or holds the Defend stance
 const DIG_H = 12;
 const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length && !G.P[a.at].sea && count(a) > 0 &&
@@ -203,9 +221,11 @@ function rangedTargets(a, x, y, list){ const R = rangedOf(a); if (!R.length) ret
     if (!armyVisible(b, vis || (vis = visibleSet(a.owner)))) continue; out.push({b, km, x:bx, y:by, ts}); }
   return out; }
 // the forces ranged fire may aim at, in a grid of RG_C world units by where they stand (built once per step, only when something can fire)
-const RG_C = 24;
+const RG_C = 24, RT_ROLL = RANGED_T.join(',') === 'art,mlrs,frig,crui,sub';   // (RT_ROLL: the ranged types written out below)
 function rangedGrid(){ const g = new Map(), NC = Math.ceil(WORLD_W/RG_C);
-  for (const b of S.armies){ if (b.owner < 0 || b.air || b.fly || !count(b)) continue; const [x, y] = armyXY(b), k = (((Math.floor(x/RG_C) % NC) + NC) % NC)*65536 + Math.floor(y/RG_C) + 1024; let l = g.get(k); if (!l) g.set(k, l = []); l.push(b); }
+  for (const b of S.armies){ if (b.owner < 0 || b.air || b.fly || !count(b)) continue;
+    let x, y; if (b.to === null){ const ps = b.pos; if (ps){ x = ps[0]; y = ps[1]; } else { const A = G.P[b.at]; x = A.x; y = A.y; } } else [x, y] = legSpot(b);   // (armyXY for a force on the ground or at sea, without its new array)
+    const k = (((Math.floor(x/RG_C) % NC) + NC) % NC)*65536 + Math.floor(y/RG_C) + 1024; let l = g.get(k); if (!l) g.set(k, l = []); l.push(b); }
   return g; }
 function rangedNear(g, x, y, km){ const NC = Math.ceil(WORLD_W/RG_C), r = Math.ceil(km*KM_W/RG_C), cx = Math.floor(x/RG_C), cy = Math.floor(y/RG_C), out = [];
   for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++){ const l = g.get((((cx + i) % NC) + NC) % NC*65536 + cy + j + 1024); if (l) for (const b of l) out.push(b); }
@@ -215,7 +235,7 @@ const RANGED_SHOWN = new Map();
 // one battle step of ranged fire (hourly: the hour's own step, which also shows the hour's damage numbers)
 function rangedStep(hourly){ let grid = null, gone = false;
   for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.sail || !count(a)) continue;   // (a fleet sailing to a spot in its zone fires once there)
-    let gun = false; for (const t of RANGED_T) if (a.u[t]){ gun = true; break; } if (!gun) continue;
+    let gun = false; if (RT_ROLL){ const u = a.u; gun = !!(u.art || u.mlrs || u.frig || u.crui || u.sub); } else for (const t of RANGED_T) if (a.u[t]){ gun = true; break; } if (!gun) continue;
     if (a.tgt && a.tgt.id != null){ const tb = armyById(a.tgt.id); if (!tb || !count(tb) || !atWar(a.owner, tb.owner)) delete a.tgt; }   // the ordered target is gone
     if (a.tgt && a.path.length) delete a.tgt;   // (a route given since ends the order)
     if (a.fire === 'hold' || S.battles.includes(a.at)) continue;
@@ -282,14 +302,14 @@ function hurt(a, d, f){
 function capture(p, O){
   const prev = S.owner[p], wasCap = isCapital(p);
   IM.emit('fxCapture', p, O, prev);   // before the owner changes: the client marks the capture on the map
-  S.owner[p] = O; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1);
+  S.owner[p] = O; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1);
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
   S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = S.home[p] === O ? 0 : Math.max(unrestOf(p), G.P[p].city ? 30 : 15);
   geoChanged();
   const nm = G.P[p].name;
   if (isSeat(O)){ const D = desk(O); (D.tut || (D.tut = {})).capture = true; bump(O, 'taken'); cue(O, 'capture'); }
-  for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p); if (nb >= 0 && nb !== p){ w.air.base = nb; w.at = nb; w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${G.P[p].cityName || G.P[p].name} to ${G.P[nb].cityName || G.P[nb].name}.`, 'info', nb); } else { for (const t of UT) w.u[t] = 0; if (isSeat(w.owner)) tell(w.owner, `Your air wing was destroyed on the ground at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p); } }
+  for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p); if (nb >= 0 && nb !== p){ w.air.base = nb; atMove(w, nb); w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${G.P[p].cityName || G.P[p].name} to ${G.P[nb].cityName || G.P[nb].name}.`, 'info', nb); } else { for (const t of UT) w.u[t] = 0; if (isSeat(w.owner)) tell(w.owner, `Your air wing was destroyed on the ground at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p); } }
   if (isSeat(prev)){ bump(prev, 'lost'); cue(prev, 'lose'); }
   tellAll(me => O === me ? `You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.` : prev === me ? `${nationName(O)} captured ${nm}.` : wasCap ? `${nationName(O)} took ${nm}, capital of ${nationName(prev)}.` : null, me => O === me ? 'good' : prev === me ? 'bad' : '', p);
   if (prev >= 0) checkNation(prev, O);
