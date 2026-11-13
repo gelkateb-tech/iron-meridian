@@ -1,5 +1,7 @@
 # Resource pictures: assets/art-src/res-*.png (white background) -> assets/art/res-<name>.webp (64 px) and @2x.webp (128 px), transparent, trimmed, centred.
-# Run: python3 -I tools/prep-res.py   (needs Pillow, numpy, scipy)
+# Run: python3 -I tools/prep-res.py [name ...]   (needs Pillow, numpy, scipy; names limit the run, e.g. electronics)
+# electronics comes from the owner's icon-electronics.png (a wide chip on light grey, 2026-11-13): it is cut out the same way but kept WIDE
+# (64 px / 128 px tall, width from its shape) so it stands as tall as the other icons; the page shows it with img.ri.wide (width auto).
 import sys, numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage as ndi
@@ -7,11 +9,15 @@ import os
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src=ROOT+'/assets/art-src/'
 names=['money','oil','iron','electronics','materials','rare-materials','manpower','storage']
+if len(sys.argv)>1: names=[n for n in names if n in sys.argv[1:]]
+SRC={'electronics':'icon-electronics.png'}   # owner's newer pictures (else res-<name>.png)
+WIDE={'electronics'}
+TH={'electronics':130}   # light grey background (not white): a lower threshold, also drops the soft drop shadow
 out={}
 for n in names:
-    im=Image.open(src+f'res-{n}.png').convert('RGB'); a=np.asarray(im).astype(np.float32)
+    im=Image.open(src+SRC.get(n,f'res-{n}.png')).convert('RGB'); a=np.asarray(im).astype(np.float32)
     mn=a.min(axis=2)
-    bgc = mn>=236
+    bgc = (mn>=TH[n]) & (a.max(axis=2)-mn<=14) if n in TH else mn>=236
     lab,_=ndi.label(bgc)
     edge=set(np.unique(np.concatenate([lab[0],lab[-1],lab[:,0],lab[:,-1]])))-{0}
     bg=np.isin(lab,list(edge))
@@ -39,8 +45,12 @@ for n in names:
 
 for n,a in out.items():
     im=Image.fromarray(a,'RGBA'); bb=im.getchannel('A').point(lambda v:255 if v>10 else 0).getbbox()
-    im=im.crop(bb); w,h=im.size; side=max(w,h); pad=round(side*0.05); cv=side+2*pad
-    c=Image.new('RGBA',(cv,cv),(0,0,0,0)); c.paste(im,((cv-w)//2,(cv-h)//2))
+    im=im.crop(bb); w,h=im.size
+    if n in WIDE:   # as tall as the others (the same 5% margin of its height), as wide as its shape
+        pad=round(h*0.05); cw,ch=w+2*pad,h+2*pad
+    else:
+        side=max(w,h); pad=round(side*0.05); cw=ch=side+2*pad
+    c=Image.new('RGBA',(cw,ch),(0,0,0,0)); c.paste(im,((cw-w)//2,(ch-h)//2))
     for px,suf in((64,''),(128,'@2x')):
-        r=c.convert('RGBa').resize((px,px),Image.LANCZOS).convert('RGBA')
+        r=c.convert('RGBa').resize((round(px*cw/ch),px),Image.LANCZOS).convert('RGBA')
         r.save(f'{ROOT}/assets/art/res-{n}{suf}.webp','WEBP',quality=88,method=6)
