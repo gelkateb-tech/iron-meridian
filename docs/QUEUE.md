@@ -14,6 +14,8 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
+| Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet | branch bomber-pictures |
+| Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet | branch start-screen |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (owner approved with fixes: bigger banner subjects in the middle band, icons close up, one shared icon per upgrade type): new artillery icon first for the owner, then the rest on Gemini | Opus | branch research-tab |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused on branch borders-real; resumes when the speed job is merged (both rewrite map drawing) |
@@ -26,12 +28,10 @@ Last updated: 2026-11-13 (overnight run).
 |---|---|---|
 | 1 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
 | 2 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 3 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
-| 4 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
-| 5 | Nations balance re-check now that the AI never starts wars | Sonnet |
-| 6 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
-| 7 | Each aircraft type its own 3D shape | Opus |
-| 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 3 | Nations balance re-check now that the AI never starts wars | Sonnet |
+| 4 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
+| 5 | Each aircraft type its own 3D shape | Opus |
+| 6 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
 
