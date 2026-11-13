@@ -3,6 +3,7 @@
 //  (T) TINT     several owned provinces (the US round New York and Chicago, Germany, Russia round Moscow) are tinted all over at 3 zooms after a pan:
 //               the layer's pixels at cells inside each province change clearly when the province is handed to another nation (its tint shows)
 //  (C) COLOURS  no two neighbouring countries share a tint (the per-country palette), and the tint is the power's or the country's own
+//  (A) ALLY     an ally's land turns blue (Canada allied: the tint and the layer's pixels round Ottawa)
 //  (B) BORDERS  at every zoom the borders are drawn: on the layer, points on province borders, country borders and national borders in view
 //               stand out from the ground beside them (luminance step), for most points sampled
 //  (M) MODELS   every 3D model / picture on screen keeps its world offset from its force's spot (it moves with its counter, < 2 css px)
@@ -45,6 +46,20 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
       let nclash = 0; const tint = S.nations.map((N, n) => im.tintOf(n)); for (const P of G.P){ if (P.sea) continue; const o = S.owner[P.id]; if (o < 0) continue; for (const q of P.nbs){ const o2 = S.owner[q]; if (o2 >= 0 && o2 !== o && tint[o] === tint[o2] && o !== 0 && o2 !== 0) nclash++; } }
       return {pairs, clash, nclash, own:im.tintOf(0), others:new Set(tint.slice(1)).size}; });
     checks.colours = r; if (r.clash || r.nclash || r.others < 5) fail('colours', r); }
+
+  // (A) ALLY  an ally's land is blue (owner rule: mine green, allies blue, enemies red): Canada round Ottawa allied, then at peace again
+  { const c = await cityXY('Ottawa'); await p.evaluate(() => { window.__im.S.hour = 0; }); await setView(c[0], c[1], 4.5); await settle();   // (daylight over Ontario)
+    const pick = () => p.evaluate(ca => { const im = window.__im, G = im.G, S = im.S, M = window.__mc, I = M.img(), out = [];
+      for (const P of G.P){ if (P.sea || S.owner[P.id] !== ca || !M.onScr(P.x, P.y, 60)) continue; for (const q of M.cells(P.id, 3)) out.push(M.px(I, q[0], q[1])); if (out.length >= 24) break; }
+      return out.filter(Boolean); }, G0.ca);
+    const peace = await pick();
+    await p.evaluate(ca => { rel(0, ca).st = 'ally'; window.__im.geoDirty(); window.__im.redraw(); }, G0.ca); await settle();
+    const ally = await pick(), tint = await p.evaluate(ca => window.__im.tintOf(ca), G0.ca);
+    if (process.env.OUT) await p.screenshot({ path: process.env.OUT + '/ally-ottawa-z4.5.png' });
+    await p.evaluate(ca => { rel(0, ca).st = 'peace'; window.__im.S.hour = 18; window.__im.geoDirty(); window.__im.redraw(); }, G0.ca); await settle();
+    const bl = L => L.reduce((a, q) => a + q[2] - q[0], 0)/Math.max(1, L.length);   // blue over red, on average
+    checks.ally = {tint, n:ally.length, bluePeace:+bl(peace).toFixed(1), blueAlly:+bl(ally).toFixed(1)};
+    if (tint !== '#3f6fe8' || ally.length < 6 || bl(ally) < bl(peace) + 8) fail('ally not blue', checks.ally); }
 
   // (T) tint and (B) borders at 3 zooms after a pan, in three regions
   checks.tint = []; checks.borders = [];

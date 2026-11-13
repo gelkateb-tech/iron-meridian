@@ -3733,12 +3733,15 @@ function clearSave(){ try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
 const colorOf = o => o >= 0 ? S.nations[o].color : '#7d7a6c';
 // the map goes by relation to you, as in Conflict of Nations: your land a light green, powers at war with you red, everyone else (other powers, independents,
 // allies) a quiet grey; the colour-blind setting swaps the green and red for blue and orange. Nation colours stay in the panels (accents, charts).
-const TONES = {own:'#7fc36a', ownHi:'#c4ecb0', war:'#d9534a', other:'#a7a99f', neu:'#8f918a'}, TONES_CB = {own:'#4f97d8', ownHi:'#b6d8f6', war:'#e8913a', other:'#a7a99f', neu:'#8f918a'};
+const TONES = {own:'#7fc36a', ownHi:'#c4ecb0', war:'#d9534a', ally:'#3f6fe8', other:'#a7a99f', neu:'#8f918a'}, TONES_CB = {own:'#4f97d8', ownHi:'#b6d8f6', war:'#e8913a', ally:'#b48be0', other:'#a7a99f', neu:'#8f918a'};
 const toneOf = o => o === PLAYER ? 'own' : o >= 0 && S.rel[rkey(PLAYER, o)] && S.rel[rkey(PLAYER, o)].st === 'war' ? 'war' : o >= 0 ? 'other' : 'neu';
 const tones = () => SET.cb ? TONES_CB : TONES;
 const mapCol = o => tones()[toneOf(o)];
 // what the map's colours depend on beyond ownership (who is at war with you, the palette): a change re-renders the layer, minimap and globe
-const toneSig = () => { let k = SET.cb ? 'cb:' : ':'; if (S && S.nations) for (const N of S.nations) if (N.id !== PLAYER && toneOf(N.id) === 'war') k += N.id + ','; return k; };
+const toneSig = () => { let k = SET.cb ? 'cb:' : ':'; if (S && S.nations) for (const N of S.nations){ if (N.id === PLAYER) continue; const t = mapTone(N.id); if (t === 'war' || t === 'ally') k += t[0] + N.id + ','; } return k; };
+// the political map's tone of owner o (owner, fix-map: mine green, allies blue, enemies red; every other country its own colour, see tintOf)
+// (read-only: rel() and blocs() would create relation and coalition records, a change of the game state the rules never made)
+const mapTone = o => { const t = toneOf(o); if (t !== 'other') return t; const r = S.rel[rkey(PLAYER, o)], b = blocIdOf(PLAYER); return (r && r.st === 'ally') || (b && b === blocIdOf(o)) ? 'ally' : t; };
 // run every frame from the main loop (also while the globe covers the map, so its overlay recolours on war or peace): a change bumps the geometry version
 function toneSync(){ const ts = toneSig(); if (ts !== toneSync.ts){ toneSync.ts = ts; geoVer++; buildMini(); } }
 let AC = null, master = null, muted = false;
@@ -7209,11 +7212,11 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   // the soft bands inside the national borders, on the same overlay (clipped to the real coastline once with it, so nothing bulges into the sea);
   // the border lines themselves are drawn over the fog, below
   if (hexPx >= 2.5 && polMode()) for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !GEO.nation[n] || !nOn(n)) continue;
-    // a soft band just inside the border (clipped to the nation's own land): green on yours, red on an enemy's, a faint grey on the rest
-    const tn = toneOf(n); if (tn === 'other' && hexPx < 6) continue;
-    const area = NA(n), tc0 = mapCol(n), ka = tn === 'own' ? 1 : tn === 'war' ? 0.75 : 0.3;
-    c.save(); c.clip(area); const bw = Math.min(4.5, 1.6 + hexPx*0.08);
-    c.strokeStyle = rgba(tc0, 0.24*ka); c.lineWidth = bw*2*px; c.stroke(NB(n)); c.strokeStyle = rgba(tc0, 0.27*ka); c.lineWidth = bw*0.8*px; c.stroke(NB(n)); c.restore(); }
+    // a coloured band just inside the border (clipped to the nation's own land), in its map colour: green on yours, blue on an ally's, red on an
+    // enemy's, every other power's own colour; one css width at every zoom, so ownership reads close in too, over forest and towns
+    const tn = mapTone(n), area = NA(n), tc0 = tintOf(n), ka = tn === 'own' ? 1 : tn === 'other' ? 0.75 : 0.9;
+    c.save(); c.clip(area); const bw = Math.min(5, 2.2 + hexPx*0.02);
+    c.strokeStyle = rgba(tc0, 0.3*ka); c.lineWidth = bw*2.4*px; c.stroke(NB(n)); c.strokeStyle = rgba(tc0, 0.5*ka); c.lineWidth = bw*0.9*px; c.stroke(NB(n)); c.restore(); }
   const clipLand = () => { c.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ c.fillStyle = '#000'; c.fill(CV, 'evenodd'); } else c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over'; };
   clipLand();
   // frozen lakes inside the snow (after the land clip, which cuts the lakes out of the overlay): a pale ice skin at the sheet's weight there, a darker rim
@@ -7237,21 +7240,24 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     g.globalCompositeOperation = 'destination-out'; cut(false); g.restore();
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(fgc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); c.restore(); }
   // borders, over the fog (owner, fix-map: every border clear at every zoom, in sight or not): province borders of every country, country borders
-  // (between any two countries, powers or independent), national borders by relation (yours green, an enemy's red, the others a dark line with a
-  // light core), all at one css width whatever the zoom; kept to the land (the coast clip close in, the lakes cut out further out)
+  // (between any two countries, powers or independent), national borders by relation (yours green, an ally's blue, an enemy's red, the others as a
+  // country border), all at one css width whatever the zoom; kept to the land (the coast clip close in, the lakes cut out further out)
   c.save(); if (CV && hexPx >= 7) c.clip(CV, 'evenodd'); else if (LV){ const q = new Path2D(); q.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); q.addPath(LV); c.clip(q, 'evenodd'); }
   c.lineJoin = 'round'; c.lineCap = 'round';
-  if (hexPx >= 1.6){ const z = Math.min(1, (hexPx - 1.6)/10), PE = tiledIn(GEO.provT, wx0, wy0, wx1, wy1); c.strokeStyle = `rgba(0,0,0,${(0.14 + 0.16*z).toFixed(3)})`; c.lineWidth = (0.6 + 0.45*z)*px; c.stroke(PE);
-    if (hexPx >= 8){ c.strokeStyle = 'rgba(236,230,212,0.12)'; c.lineWidth = 0.5*px; c.stroke(PE); } }
-  { const CE = tiledIn(GEO.countryT, wx0, wy0, wx1, wy1); c.strokeStyle = 'rgba(3,6,8,0.42)'; c.lineWidth = 2*px; c.stroke(CE); c.strokeStyle = 'rgba(222,224,212,0.55)'; c.lineWidth = 0.9*px; c.stroke(CE); }
-  // national borders by relation: a dark line with a light core between the others, red round an enemy, green round yours (drawn in that order so yours and the enemy's win the shared edges)
-  { const TN = tones(), rank = {neu:0, other:0, war:1, own:2}, ord = [];
+  // province borders: a dark line with a faint light casing (roads and rails are light lines: a border never reads as one), from the world view in
+  if (hexPx >= 1.6){ const z = Math.min(1, (hexPx - 1.6)/10), PE = tiledIn(GEO.provT, wx0, wy0, wx1, wy1);
+    if (hexPx >= 6){ c.strokeStyle = 'rgba(232,228,212,0.2)'; c.lineWidth = 2.6*px; c.stroke(PE); }
+    c.strokeStyle = `rgba(8,10,8,${(0.3 + 0.3*z).toFixed(3)})`; c.lineWidth = (0.7 + 0.6*z)*px; c.stroke(PE); }
+  // country borders (any two countries, powers or independent): a broad dark line with a strong light core
+  { const CE = tiledIn(GEO.countryT, wx0, wy0, wx1, wy1); c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 3.2*px; c.stroke(CE); c.strokeStyle = 'rgba(238,234,220,0.82)'; c.lineWidth = 1.3*px; c.stroke(CE); }
+  // national borders by relation: the others as the country borders, blue round an ally, red round an enemy, green round yours (drawn in that order so yours and the enemy's win the shared edges)
+  { const TN = tones(), rank = {neu:0, other:0, ally:1, war:2, own:3}, ord = [];
     for (let n = 0; n < S.nations.length; n++) if (S.nations[n].alive && GEO.nation[n] && nOn(n)) ord.push(n);
-    ord.sort((a, b) => rank[toneOf(a)] - rank[toneOf(b)]);
-    for (const n of ord){ const tn = toneOf(n);
-      if (tn === 'other'){ c.strokeStyle = 'rgba(3,6,8,0.5)'; c.lineWidth = 2.3*px; c.stroke(NB(n)); c.strokeStyle = 'rgba(226,228,218,0.62)'; c.lineWidth = 1*px; c.stroke(NB(n)); continue; }
-      c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 2.6*px; c.stroke(NB(n));
-      c.strokeStyle = tn === 'own' ? TN.own : rgba(TN.war, 0.9); c.lineWidth = (tn === 'own' ? 1.7 : 1.35)*px; c.stroke(NB(n)); }
+    ord.sort((a, b) => rank[mapTone(a)] - rank[mapTone(b)]);
+    for (const n of ord){ const tn = mapTone(n);
+      if (tn === 'other'){ c.strokeStyle = 'rgba(3,6,8,0.55)'; c.lineWidth = 3.2*px; c.stroke(NB(n)); c.strokeStyle = 'rgba(238,234,220,0.82)'; c.lineWidth = 1.3*px; c.stroke(NB(n)); continue; }
+      c.strokeStyle = 'rgba(3,6,8,0.6)'; c.lineWidth = 3.4*px; c.stroke(NB(n));
+      c.strokeStyle = tn === 'own' ? TN.own : rgba(TN[tn], 0.95); c.lineWidth = (tn === 'own' ? 2 : 1.8)*px; c.stroke(NB(n)); }
     if (S.nations[PLAYER].alive){ c.strokeStyle = rgba(TN.ownHi, 0.85); c.lineWidth = 0.9*px; c.stroke(MINE); } }
   c.restore();
   if (hexPx >= 3 && LV){ c.save(); c.clip(LV); c.lineCap = 'butt'; c.setLineDash([5*px, 4*px]); c.strokeStyle = 'rgba(222,224,214,0.5)'; c.lineWidth = 1.2*px; c.stroke(tiledIn(GEO.countryT, wx0, wy0, wx1, wy1)); c.restore(); }   // country borders across the lakes in view: a dashed line
@@ -7260,18 +7266,21 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
   if (polMode() && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
     const t = tc.getContext('2d'); t.save(); clipR(t); t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(dx0, dy0, dw, dh); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
-    { for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = rgba(tintOf(n), TONE_A[toneOf(n)]); t.fill(NA(n)); }
+    { for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = rgba(tintOf(n), TONE_A[mapTone(n)]); t.fill(NA(n)); }
       for (const [ci, a] of NEUC()){ t.fillStyle = rgba(tintOf(NEUTRAL, ci), TONE_A.neu); t.fill(a); } }   // independents: each country its own colour, drawn toward the quiet grey
     t.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(CV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over'; t.restore();
     // world view and play zoom: clear national colours over the relief; close in it eases off a little (tk, then tf past hexPx 80) so the ground and
     // the city art lead, but every owned province stays clearly tinted at every zoom (owner, fix-map: it used to fade to almost nothing close in)
-    base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/70)), tf = Math.max(0.75, 1 - Math.max(0, hexPx - 80)/320);
-    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.42 - 0.1*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh);
-    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.22 - 0.07*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
+    base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/70)), tf = Math.max(0.85, 1 - Math.max(0, hexPx - 80)/320);
+    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.52 - 0.06*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh);
+    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.27 - 0.04*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
   if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : !R ? 24 : full ? 12 : 3); base.restore(); }   // (bake budget, ms: short in a pan strip or a box redrawn: the bake pump makes what is left over, between the frames)
+  // the towns take a light coat of the same tint (their own art and colours still lead), so a big city reads as yours, an ally's or a rival's too
+  if (anyC && polMode() && !relMode && hexPx >= 1 && layer.tc){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.globalCompositeOperation = 'color'; base.globalAlpha = 0.22;
+    base.drawImage(layer.tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore(); }
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
@@ -7328,14 +7337,14 @@ function layerCityRefresh(){ const L = layer, W = L.width/dpr, H = L.height/dpr,
     q.unshift(r); }
   if (q.length > 24) layerBands(); }
 // how strongly each relation tints the ground (the alpha of its fill in the tint canvas): yours and the enemy's full, the others their own muted colour
-const TONE_A = {own:1, war:1, other:0.85, neu:0.66};
+const TONE_A = {own:1, war:1, ally:1, other:1, neu:0.85};
 const neuArea = () => GEO.nArea.neu || (GEO.nArea.neu = (() => { const a = new Path2D(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === NEUTRAL && !G.P[p].sea) a.addPath(GEO.outline[p]); return a; })());
 // every country stands out from its neighbours (owner, fix-map): yours keeps its green and an enemy its red; every other power and every
 // independent country is tinted in a muted colour of its own, picked once per map so that no two neighbouring countries share one (a greedy
 // colouring over the countries' land borders, the largest first). A power's land takes the colour of its home country (wherever it spreads); an
 // independent country's colour is drawn further toward the quiet grey, so free land still reads as free. The palette keeps clear of the
-// relation green and red. Display only (the map, the minimap)
-const CPAL = ['#4f9be0', '#d6c94a', '#7c74e4', '#3fbfa8', '#bb6ad8', '#d9963f'], TONE_MIX = {other:0.15, neu:0.4};   // (six hues well apart, none near the relation green or red: enough for the map's countries, no two neighbours alike)
+// relation green, blue and red. Display only (the map, the minimap)
+const CPAL = ['#dccb45', '#e8923a', '#2ec4c0', '#a06cf0', '#dc5fcf'], TONE_MIX = {other:0.04, neu:0.25};   // (five hues well apart, none near the relation green, blue or red: enough for the map's countries, no two neighbours alike)
 function ctryPal(){ if (G.cpal) return G.cpal; const n = G.countries.length, nb = G.countries.map(() => new Set()), sz = new Array(n).fill(0);
   for (const P of G.P){ if (P.sea || !(P.country >= 0)) continue; sz[P.country] += P.cells.length; for (const q of P.nbs){ const Q = G.P[q]; if (!Q.sea && Q.country >= 0 && Q.country !== P.country) nb[P.country].add(Q.country); } }
   const pal = new Int8Array(n).fill(-1), ord = [...Array(n).keys()].sort((a, b) => sz[b] - sz[a] || a - b);
@@ -7348,7 +7357,7 @@ function natCtry(n){ const N = S.nations[n]; if (!N) return -1; const c = HOMEC.
 const TINTC = new Map();
 const hexMix = (a, b, t) => '#' + mix([1, 3, 5].map(k => parseInt(a.slice(k, k + 2), 16)), [1, 3, 5].map(k => parseInt(b.slice(k, k + 2), 16)), t).map(v => v.toString(16).padStart(2, '0')).join('');
 // the political tint of owner o (a nation; or NEUTRAL, with ci the country of the independent land)
-function tintOf(o, ci){ const tn = o >= 0 ? toneOf(o) : 'neu', T = tones(); if (tn === 'own' || tn === 'war') return T[tn];
+function tintOf(o, ci){ const tn = o >= 0 ? mapTone(o) : 'neu', T = tones(); if (tn === 'own' || tn === 'war' || tn === 'ally') return T[tn];
   const c = o >= 0 ? natCtry(o) : ci; if (!(c >= 0) || !G.countries[c]) return T[tn]; const base = CPAL[ctryPal()[c]], k = tn + T[tn] + base; let v = TINTC.get(k);
   if (!v){ v = hexMix(base, T[tn], TONE_MIX[tn]); TINTC.set(k, v); } return v; }
 // independent land by country (one path each), for the tint
