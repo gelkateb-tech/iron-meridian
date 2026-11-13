@@ -39,7 +39,7 @@ Plan the code for these, but don't build them yet. (Owner's spec; this replaces 
 - A script that makes each season's skins and flags with Google's Gemini API (Nano Banana) and waits for the owner's approval before they go live.
 
 ## New buildings (planned, don't build yet; these don't need the multiplayer server)
-Each one needs pictures later, in the same angled style as the other buildings: one picture per level for each of the three.
+Each one needs pictures later, in the same angled style as the other buildings: one picture per level for each of them.
 - **Radar station.** Buildable in any province, not only in cities. About 300 km vision, more with each level. Enemies can see it, target it and destroy it, so players have to build their vision and protect it.
 - **Coastal naval battery.** Buildable in coastal provinces. Fires at enemy ships within its range, protecting ports and chokepoints. Upgradeable in levels. Ships and missiles can target and destroy it.
 - **Hospital (faster healing in its city).** Buildable in cities, with 5 levels like the other buildings.
@@ -51,3 +51,11 @@ Each one needs pictures later, in the same angled style as the other buildings: 
   - Strong only when upgraded to high levels and several are stacked in the same area.
   - Upgrades cost a lot, so a real air defence network is a big investment, and players still need Mobile SAMs and fighters.
   - Enemies can target and destroy it.
+- **Forward Airstrip.** A small airfield buildable in any province, not only in cities, so aircraft can refuel, rearm and fly from closer to the front (planes have limited range).
+  - Cheaper and weaker than a city Airbase, and holds fewer aircraft.
+  - Enemies can capture or destroy it.
+  - Needs its own pictures later.
+- **Field Hospital.** Buildable in any province near the front, so damaged units heal there instead of going back to a city.
+  - Heals slower than a city Hospital.
+  - Enemies can capture or destroy it.
+  - Needs its own pictures later.
