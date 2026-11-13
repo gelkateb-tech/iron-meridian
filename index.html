@@ -2338,6 +2338,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 .abs.warn b{color:var(--danger-t, #ff8a80)}
 .abs.fight{flex-direction:row; gap:5px; background:rgba(224,87,79,.14); box-shadow:inset 0 0 0 1px rgba(224,87,79,.55)}
 .abs.fight canvas{width:24px; height:24px; flex:none}
+.ab-emb{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(111,176,232,.12); border-left:3px solid #6fb0e8; color:#cfe4f5} .ab-emb b{color:#fff}
 .ab-stk{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(224,87,79,.12); border-left:3px solid var(--danger, #e0574f); color:var(--danger-t, #ff9a90)}
 .ab-dias{display:flex; flex-wrap:wrap; gap:0 4px}
 .dia{position:relative; flex:none; width:58px; height:64px; padding:0; background:none; border:0; border-radius:6px; cursor:pointer; color:#fff}
@@ -7766,9 +7767,11 @@ function draw(now){ draw.now = now;
   const sa = sel.army !== null ? armyById(sel.army) : null;
   const antOn = (S.speed && !S.over) || !!sa; if (antOn || RD.antT == null) RD.antT = now; const antT = RD.antT;   // (paused with nothing selected: the dashes rest)
   const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || (!path.length && !endPt)) return; const pts = [toScreen(...dispPos(a))]; if (antOn) animAmb();
-    if (a.to !== null && path.length && path[0] !== a.to) pts.push(toScreen(G.P[a.to].x, G.P[a.to].y));
-    let exact = !path.length; if (exact) pts.push(toScreen(endPt[0], endPt[1]));   // (a walk inside the province: straight to its point)
-    path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; if (e) exact = true; pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); });
+    let wp = dispPos(a); if (a.to !== null && path.length && path[0] !== a.to){ pts.push(toScreen(G.P[a.to].x, G.P[a.to].y)); wp = [G.P[a.to].x, G.P[a.to].y]; }
+    let exact = !path.length; if (exact){ pts.push(toScreen(endPt[0], endPt[1])); if (a.sail && a.sail.nx && endPt === a.sail.to) pts.push(toScreen(a.sail.nx[0], a.sail.nx[1])); }   // (a walk inside the province: straight to its point, by the city when it goes there first)
+    path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; if (e) exact = true;
+      if (e && heartVia(a, p, wp, e)) pts.push(toScreen(G.P[p].x, G.P[p].y));   // (a point beyond the heart of land to capture: the route goes by the city, rules/movement.js sailTo)
+      pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); wp = e || [G.P[p].x, G.P[p].y]; });
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
     const lastPt = pts[pts.length - 1];
     ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(antT/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
@@ -7854,8 +7857,6 @@ function draw(now){ draw.now = now;
     if (hexPx >= TRAY_PX && trayOn(P, p, hexPx, vis)){ const its = trayItems(p); if (its.length) trq.push({p, items:its, city:!!(P.city || cap), x, y, my:y + CITY_DY*kl, ly:y + (CITY_DY + 11)*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl, col:mapCol(S.owner[p]),
       pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (S.owner[p] === PLAYER ? 1e5 : 0)}); }   // its buildings as a tray of symbols (placed with the names)
     ctx.globalAlpha = 1;
-    const c = S.cap[p];
-    if (c){ const f = Math.min(1, c.h/capNeed(p, c.by)); ctx.beginPath(); ctx.arc(x, y, 15*kl, -Math.PI/2, -Math.PI/2 + f*Math.PI*2); ctx.lineWidth = 3; ctx.strokeStyle = mapCol(c.by); ctx.stroke(); }
   }
   const ovl = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
   ctx.globalAlpha = 1;
@@ -8126,9 +8127,19 @@ function railMarks(a, path){ if (a.air || !ground(a)) return; let u = a.to ?? a.
       for (const dx of [-2.4, 0, 2.4]){ ctx.moveTo(x + dx, y - 3); ctx.lineTo(x + dx, y + 3); } ctx.stroke(); }
     u = v; }
   ctx.restore(); }
+// what a planned route does at ports and at the province's heart (rules/movement.js: embarking only in a naval port, landing time, capture at the heart):
+// short notes for the route chip and the plan panel. pt: the order's exact point (none: the province centre, which is its heart)
+function routeNotes(a, t, path, pt){ if (!a || a.air || !ground(a) || !path.length) return []; const out = []; let u = a.to ?? a.at, emb = false, land = false;
+  for (let i = 0; i < path.length; i++){ const v = path[i];
+    if (!emb && !G.P[u].sea && G.P[v].sea){ emb = true; out.push(`⚓ embarks at ${G.P[u].cityName || G.P[u].name} (${i === 0 && a.to === null && a.emb != null ? a.emb : embarkH(a)} h)`); }
+    else if (!land && G.P[u].sea && !G.P[v].sea){ land = true; out.push(`lands in ${G.P[v].name} (${landH(a, v)} h)`); }
+    u = v; }
+  if (pt && capturable(a.owner, t) && Math.hypot(pt[0] - G.P[t].x, pt[1] - G.P[t].y) > HEART_R){ const q = path.length > 1 ? path[path.length - 2] : a.to ?? null, f = q != null ? [G.P[q].x, G.P[q].y] : dispPos(a);
+    out.push(heartVia(a, t, f, pt) ? 'via the city: captures it' : '⚠ stops short of the city: no capture'); }
+  return out; }
 function routeChip(a, t, path){
-  const [x, y] = toScreen(G.P[t].x, G.P[t].y), foes = stationaryAt(t).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
-  const fw = a.air ? 0 : fightsOnWay(a, path), r = odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path, tgtEnd(t))} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}`;
+  const [x, y] = toScreen(G.P[t].x, G.P[t].y), foes = stationaryAt(t).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner)), rn = routeNotes(a, t, path, sel.targetPt);
+  const fw = a.air ? 0 : fightsOnWay(a, path), r = odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path, tgtEnd(t))} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}${rn.length ? ' · ' + rn.join(' · ') : ''}`;
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(txt).width + 14;
   roundRect(ctx, x - w/2, y - 38, w, 20, 4); ctx.fillStyle = !foes.length ? (fw ? '#4a3a1a' : '#1b2a2e') : r >= 1.5 ? '#24452a' : r >= 0.9 ? '#4a3a1a' : '#4a1d1a'; ctx.fill();
   ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y - 28);
@@ -8191,7 +8202,7 @@ function endPointer(e){
 cv.addEventListener('pointerup', endPointer);
 cv.addEventListener('contextmenu', e => { e.preventDefault(); if (sel.army === null) return; const [x, y] = localXY(e), a = armyById(sel.army); if (!a) return; lastClickW = screenToWorld(x, y);
   const TL = tapList(); for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a, e.shiftKey); renderSide(true); return; } break; } }
-  const p = provAt(x, y); if (p < 0) return; if (a.to === null && p === a.at && !a.air) return; setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a, e.shiftKey); renderSide(true); });
+  const p = provAt(x, y); if (p < 0) return; if (a.to === null && p === a.at && !a.air) return; setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a, e.shiftKey); else if (!a.air && embarkWhy(a, p)) toast(embarkWhy(a, p), 'bad', null); renderSide(true); });
 cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag = null; pinch = null; udrag = null; });
 let udrag = null;   // a counter being dragged: {id, x, y} (screen)
 function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) return;
@@ -8213,7 +8224,7 @@ function spotMove(a, p, w){ orderMove(a, p, pinPt(a, p, w)); visCache = null; sf
 function dragMove(a, x, y){ const p = provAt(x, y), w = screenToWorld(x, y); if (p < 0) return;
   if (a.to === null && p === a.at){ if (G.P[p].sea && !shipsOnly(a)) return; spotMove(a, p, w); return; }
   if (sel.army !== a.id && !sel.group.includes(a.id)) selectArmy(a.id);
-  lastClickW = w; setTarget(a, p); if (targetPath && targetPath.length) sendToTarget(a); else { sel.target = null; targetPath = null; toast('No route there.', 'bad', null); renderSide(true); } }
+  lastClickW = w; setTarget(a, p); if (targetPath && targetPath.length) sendToTarget(a); else { sel.target = null; targetPath = null; toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } }
 function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) return; const [ax, ay] = toScreen(...dispPos(a)), h = hitAt(udrag.x, udrag.y);
   const b = h && !h.unk ? h.ids.map(armyById).find(q => q && q !== a && q.owner === PLAYER && !q.air && !q.fly && count(q)) : null;
   ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = b ? 'rgba(116,194,122,.95)' : 'rgba(243,234,210,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(udrag.x, udrag.y); ctx.stroke(); ctx.setLineDash([]);
@@ -8257,7 +8268,7 @@ function tap(x, y, shift = false){
   const mk = hs ? null : cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
-      const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast('No route there.', 'bad', null); renderSide(true); } } return; }
+      const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } } return; }
   if (!cityTap) for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
       if (mk && !h.ids.some(id => { const a = armyById(id); return a && a.at === mk.p; })) break;
@@ -8294,7 +8305,7 @@ function tap(x, y, shift = false){
       const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner)); if (odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
     setTarget(a, p);
     // tap that is not a valid order target (a land force and a province it can never reach, not merely a diplomatic block, which the plan panel explains) = tap away: deselect
-    if (!a.air && !(targetPath && targetPath.length) && canEnter(PLAYER, p)) clearSel();
+    if (!a.air && !(targetPath && targetPath.length) && canEnter(PLAYER, p)){ const why = embarkWhy(a, p); if (why){ toast(why, 'bad', null); sel.target = null; targetPath = null; renderSide(true); } else clearSel(); }   // (troops board ships only in a naval port: say so, keep the force selected)
     return;
   }
   selectProv(p); csReveal(p);
@@ -8324,7 +8335,9 @@ function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].se
   if (ok(w[0], w[1])) return [w[0], w[1]];
   for (let r = 1; r <= 24; r++) for (let k = 0; k < 16; k++){ const an = (k + (r & 1)*0.5)*Math.PI/8, x = w[0] + Math.cos(an)*r, y = w[1] + Math.sin(an)*r; if (ok(x, y)) return [x, y]; }
   return [w[0], w[1]]; }
-function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null; targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
+function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
+  if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea){ const [hx, hy] = toScreen(G.P[p].x, G.P[p].y), [tx, ty] = toScreen(sel.targetPt[0], sel.targetPt[1]); if (Math.hypot(tx - hx, ty - hy) < 16) sel.targetPt = [G.P[p].x, G.P[p].y]; }   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
+  targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
@@ -8865,7 +8878,7 @@ const TUT_STEPS = [
   {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Recruit', d:() => `Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.`, el:'#csheet:not([hidden]) .cs-mob, #ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
   {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
-  {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
+  {t:'Plan an attack', d:() => tutPick() != null ? `Tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its heart. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
   {t:'Dug in', d:() => `A small yellow shield with a sandbag line on a force's badge means it is <b>dug in</b>: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage). A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
@@ -9292,7 +9305,7 @@ function ctxHTML(){
     ${researchLine()}
     <div class="status intel" style="border-left-color:#8a7ad8">Intelligence: ${agentsOf(PLAYER).length}/5 agents (${idleAgents(PLAYER).length} idle) <button class="btn" data-act="train-agent" ${S.nations[PLAYER].cash >= 60 && agentsOf(PLAYER).length < 5 ? '' : 'disabled'} style="padding:2px 7px;font-size:12px;margin-left:4px">Train agent · $60M</button> <button class="btn" data-act="intel" style="padding:2px 7px;font-size:12px">Open</button></div>
     ${N.cash > 300 && S.queue.every((q, p) => S.owner[p] !== PLAYER || !q.length) ? `<div class="nudge">You have $${fmt(N.cash)}M and nothing in training. Money only wins wars once it is spent. <button class="btn" data-act="prov" data-id="${N.capital}" style="padding:2px 7px;font-size:12px">Recruit in ${G.P[N.capital].cityName}</button></div>` : ''}
-    <div class="eyebrow">Your forces · ${mine.length} ${itip('Tap a province to inspect it or recruit in your cities. Tap one of your counters to command that force. Forces cross water by embarking from coastal provinces.')}</div>
+    <div class="eyebrow">Your forces · ${mine.length} ${itip('Tap a province to inspect it or recruit in your cities. Tap one of your counters to command that force. Forces cross water by boarding ships in a naval port (a coastal city of yours).')}</div>
     <div class="armylist">${mine.slice(0, 40).map(a => `<button data-act="army" data-id="${a.id}"><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span class="an"><b>${armyName(a)}</b><span class="muted">${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span></span><span class="muted">${pluN(count(a), 'unit')} · ${statusText(a).short}</span></button>`).join('') || '<span class="muted small">You have no forces in the field.</span>'}</div>`;
 }
 function chartSVG(idx, title){
@@ -9371,11 +9384,15 @@ function statusText(a){
   if (a.blk){ const n = S.trade ? S.trade.routes.filter(r => r.bk === a.id) : [], cut = n.filter(r => r.f0 === 0).length, [x, y] = armyXY(a), ch = chokeAt(x, y, fleetKm(a)), here = ch ? chokeByKey(ch).name : P[a.at].name;
     if (a.to !== null || a.path.length || a.sail || !P[a.at].sea) return {cls:'move', short:'to blockade', long:`Blockade order: it blockades once it stands at sea${a.to !== null || a.path.length || a.sail ? `, about ${a.sail ? sailHours(a) : etaHours(a)} h` : ''}`};
     return {cls:'battle', short:'blockading', long:`Blockading ${here} (${fleetKm(a)} km)${n.length ? `: ${cut ? `${cut} enemy route${cut > 1 ? 's' : ''} cut` : ''}${cut && n.length > cut ? ', ' : ''}${n.length > cut ? `${n.length - cut} rerouted` : ''}` : ': no enemy convoys pass here now'}`}; }
-  if (a.sail) return P[a.at].sea ? {cls:'move', short:'at sea', long:`Sailing to a new position in ${P[a.at].name}, about ${sailHours(a)} h`} : {cls:'move', short:'marching', long:`Moving to a new position in ${P[a.at].name}, about ${sailHours(a)} h`};
+  if (a.land > 0 && a.to === null) return {cls:'move', short:'landing', long:`Landing at ${P[a.at].cityName || P[a.at].name}: ${a.land} h left before it is ashore. Until then it cannot move on or capture, and fights at ${Math.round(rLandF(a.owner)*100)}%.`};
+  if (a.sail) return P[a.at].sea ? {cls:'move', short:'at sea', long:`Sailing to a new position in ${P[a.at].name}, about ${sailHours(a)} h`} : {cls:'move', short:'marching', long:`Moving to a new position in ${P[a.at].name}, about ${sailHours(a)} h${capturable(a.owner, a.at) && ground(a) ? (a.sail.nx || Math.hypot(a.sail.to[0] - P[a.at].x, a.sail.to[1] - P[a.at].y) <= HEART_R ? ': it takes the province on reaching the city' : ': it stops short of the city, so it will not capture the province') : ''}`};
+  if (a.emb != null && a.to === null && a.path.length && !S.battles.includes(a.at)) return {cls:'move', short:'embarking', long:`Embarking at ${P[a.at].cityName || P[a.at].name}: ${a.emb} h left, then it sails for ${P[a.path[a.path.length - 1]].name}. It cannot move until it is aboard.`};
   if (a.to !== null || a.path.length){ const dest = a.path.length ? a.path[a.path.length - 1] : a.to; const blocked = a.to === null && !canProceed(a);
     if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${P[dest].name}, about ${etaHours(a)} h`}; }
   if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${P[a.at].name}. Ground units take extra damage at sea.`};
-  if (S.cap[a.at] && S.cap[a.at].by === a.owner) return {cls:'cap', short:'capturing', long:`Capturing ${P[a.at].name}: ${Math.round(S.cap[a.at].h/capNeed(a.at, a.owner)*100)}%`};
+  if (a.to === null && !a.path.length && ground(a) && capturable(a.owner, a.at)){ const nm = P[a.at].cityName || P[a.at].name;   // (rules/movement.js atHeart: capture is at once at the heart)
+    if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${P[a.at].name}: a province becomes yours the moment ground troops reach its heart (${P[a.at].city ? nm : 'its centre'}) with no defenders left. Tap the city to march there.`};
+    if (S.armies.filter(b => b.owner === a.owner && b.at === a.at && b.to === null).reduce((s0, b) => s0 + groundN(b), 0) < CAP_MIN) return {cls:'cap', short:'too few', long:`At the city, but ${CAP_MIN} ground units are needed to capture ${P[a.at].name}.`}; }
   if (S.owner[a.at] !== a.owner && !ground(a)) return {cls:'', short:'airborne', long:'Air units cannot capture ground. Add ground units.'};
   if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
   { const own = S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && friendly(a.owner, S.owner[a.at])), h = a.still != null ? S.hour - a.still : 0;
@@ -9531,6 +9548,7 @@ function armyBarHTML(a, ro = false){
     <div class="ab-top">${o >= 0 ? flagHTML(o, 18) : ''}<div class="ab-nm">${nm}<div class="ab-sub">${ro ? 'Foreign force' : 'Your force'} · ${pluN(count(a), 'unit')}</div></div><button class="ab-i" data-act="army-info" data-id="${a.id}" aria-label="Army Info" title="Army Info: attack and defence against each kind of target">i</button></div>
     <div class="ab-hp" role="img" aria-label="Health ${hp.cur} of ${hp.max}" title="Health of the whole force: ${hp.cur} of ${hp.max} health points"><i style="width:${Math.round(hf*100)}%;background:${col}"></i><b>${ro ? Math.round(hf*100) + '%' : hp.cur + '/' + hp.max}</b></div>
     ${hl[0] ? `<div class="ab-heal ${hl[1]}">${hl[0]}</div>` : ''}
+    ${a.land > 0 && a.to === null ? `<div class="ab-emb" title="Troops coming ashore from the sea: they cannot move on or capture until they have landed, and fight at ${Math.round(rLandF(o)*100)}% on their first day ashore">⚓ <b>Landing</b> · ${a.land} h left</div>` : a.emb != null && a.to === null && a.path.length ? `<div class="ab-emb" title="Ground forces board ships only in a naval port. The force stays in the port until it is aboard, then sails.">⚓ <b>Embarking</b> · ${a.emb} h left</div>` : ''}
     <div class="ab-stats">${knownMorale ? cell('Morale', mor + '%', 'Morale: it drops in a fight and recovers when supplied. Broken forces retreat.', mor < 30 ? 'warn' : '') : ''}${cell('Speed', abSpd(a) + '<small> km/d</small>', ro ? 'Marching speed on open ground' : 'Marching speed on open ground without roads (km a day). ' + speedHTML(a).replace(/<[^>]+>/g, ''))}${cell('Strength', (ro ? '≈ ' : '') + Math.round(power(a)), 'Total strength: attack and defence of every unit, health and morale included')}${(rr => rr.length ? cell('Range', Math.max(...rr.map(e => e[1])) + '<small> km</small>', `Attack range: ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km`).join(', ')}. Fires at enemy forces its side can see within range, without moving in.`, 'arng') : '')(rangeRows(a, ro))}${sw}</div>
     <div class="ab-dias">${types.map(t => diaHTML(a, t, ro)).join('')}</div>
     ${!ro && a.owner === PLAYER && shipsOnly(a) && !a.air && !a.fly ? fleetOrdersHTML(a) : ''}
@@ -9577,7 +9595,7 @@ function armyHTML(a){
     const ok = targetPath && targetPath.length, fb = sel.chase != null ? armyById(sel.chase) : null, rk = rangedOf(a).length ? bombardInfo(a, t, fb) : null, rkOn = !!rk && (rk.seen || !!fb), bomb = rkOn && rk.ok;
     const rkHTML = rkOn ? `<div class="rngp ${bomb ? 'in' : 'out'}"><b>${bomb ? 'In range: bombard' : 'Out of range'}</b> · ${fmt(rk.km)} km, range ${rk.range} km${bomb ? ' · it fires from where it stands every 15 minutes, without moving in' : rk.moving ? ' · it is on the move: it fires once it stands' : !rk.seen ? ' · no enemy force seen there' : ' · move closer, or march in'}</div>` : '';
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned route</div>
-      <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath, tgtEnd(t))} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}${(mx => mx ? ` · <span title="Share of the route by rail (×2.6, friendly lines only) and by road">${mx}</span>` : '')(a.air ? '' : mixText(routeMix(a, targetPath)))}${!a.air && riverLegs(a, targetPath).length ? (n0 => ` · crosses ${n0} river${n0 > 1 ? 's' : ''} (slower)`)(riverLegs(a, targetPath).length) : ''}` : !canEnter(PLAYER, t) ? `<br><span class="small">You are at ${REL[rel(PLAYER, S.owner[t]).st].toLowerCase()} with ${nationName(S.owner[t])}. Declare war in Diplomacy (D) to attack.</span>` : ' · no route'}${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? `<div class="small" style="color:var(--danger-t);margin-top:4px">⚠ This route crosses into ${sel.surprise.filter(n => !atWar(PLAYER, n)).map(nationName).join(' and ')}: sending it declares war (surprise attack).</div>` : ''}
+      <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath, tgtEnd(t))} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}${(mx => mx ? ` · <span title="Share of the route by rail (×2.6, friendly lines only) and by road">${mx}</span>` : '')(a.air ? '' : mixText(routeMix(a, targetPath)))}${!a.air && riverLegs(a, targetPath).length ? (n0 => ` · crosses ${n0} river${n0 > 1 ? 's' : ''} (slower)`)(riverLegs(a, targetPath).length) : ''}` : !canEnter(PLAYER, t) ? `<br><span class="small">You are at ${REL[rel(PLAYER, S.owner[t]).st].toLowerCase()} with ${nationName(S.owner[t])}. Declare war in Diplomacy (D) to attack.</span>` : embarkWhy(a, t) ? `<br><span class="small">${embarkWhy(a, t)}</span>` : ' · no route'}${ok && routeNotes(a, t, targetPath, sel.targetPt).length ? `<br><span class="small">${routeNotes(a, t, targetPath, sel.targetPt).join(' · ')}</span>` : ''}${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? `<div class="small" style="color:var(--danger-t);margin-top:4px">⚠ This route crosses into ${sel.surprise.filter(n => !atWar(PLAYER, n)).map(nationName).join(' and ')}: sending it declares war (surprise attack).</div>` : ''}
       ${oddsHTML(a, t, foes)}${rkHTML}</div>
       <div class="row">${bomb ? '<button class="btn primary" data-act="bombard" title="Fire at this target from where the force stands; it does not move">Bombard</button>' : ''}<button class="btn ${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'war' : bomb ? '' : 'primary'}" data-act="send" ${ok ? '' : 'disabled'}>${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'Attack (declares war)' : odds(a, t, foes, undefined, viaOf(a)) < 0.9 ? 'Attack anyway' : 'Send force here'}</button>
       <button class="btn" data-act="prov" data-id="${t}" ${G.P[t].sea ? 'disabled' : ''}>View province</button>
@@ -9724,13 +9742,12 @@ function provHTML(p){
     ${P.city && !P.sea ? (L => `<dt>City</dt><dd>${bimg('city', L, 34)}Level ${ROMAN[L]}${isCapital(p) ? ' · capital' : ''}</dd>`)(cityLevel(p)) : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => `<span class="bl">${bimg(k, S.bld[p][k], 30)}${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : ''}${bdis(p, k) ? ` <span style="color:var(--danger-t)" title="Knocked out by a precision strike: works again when repaired">knocked out · ${bdisH(p, k)} h</span>` : ''}</span>`).join('') || 'None'}</dd>
     ${!P.sea && o >= 0 ? (f => `${f != null ? `<dt>Captured from</dt><dd>${terrFrom(p)}</dd>` : ''}<dt>Value</dt><dd><b>$${fmt(provValue(p))}M</b>${mine && f != null ? (w => w ? ` <span class="muted">· ${terrLockH(p) ? `bought: resale in ${hrsTxt(terrLockH(p))}` : 'cannot be sold: ' + w}</span>` : ` <span class="muted">· can be sold in Diplomacy (Territory)</span>`)(terrWhyNot(PLAYER, p)) : ''}</dd>`)(capturedFrom(p)) : ''}
-    <dt>Capture time</dt><dd>${Math.round(capNeed(p, PLAYER))} h</dd>
+    <dt>Capture</dt><dd>At once when ground troops reach ${P.city ? 'the city' : 'its centre'}</dd>
     <dt>Garrison</dt><dd>${foe.length && !foeKnown.length && foe.some(a => armyLocated(a, vis)) ? '<span style="color:#9fd8ff" title="Detected by AWACS: location only">? Unidentified contact (AWACS)</span>' : foe.length && !foeKnown.length ? 'Unknown' : foeKnown.length ? pluN(foeKnown.reduce((s, a) => s + count(a), 0), 'hostile unit') : mine ? (own.length ? own.reduce((s, a) => s + count(a), 0) + ' of yours' : 'Empty') : 'None seen'}</dd></dl>`;
   if (o >= 0 && o !== PLAYER){ const r = rel(PLAYER, o); html += `<div class="status" style="border-left-color:${REL_COLOR[r.st]}">${REL[r.st]} with ${nationName(o)}${r.st === 'war' ? '' : '. Declare war in Diplomacy to attack.'} <button class="btn" data-act="diplo-open" style="padding:2px 7px;font-size:12px">Diplomacy</button></div>`; }
   if (!P.sea && (o === PLAYER && unrestOf(p) > 0 || o !== PLAYER && unrestOf(p) > 20)){ const u = Math.round(unrestOf(p));
     html += `<div class="status" style="border-left-color:${u > 60 ? 'var(--danger)' : u > 30 ? 'var(--accent)' : 'var(--ok)'}">Unrest ${u}%${u > 60 ? ' · revolt risk' : ''} · output −${Math.round(u/2)}% <div class="bar" style="margin-top:4px"><i style="width:${u}%;background:${u > 60 ? 'var(--danger)' : 'var(--accent)'}"></i></div>${o === PLAYER ? `<div class="row" style="margin-top:6px"><button class="btn" data-act="pacify" data-id="${p}" ${S.nations[PLAYER].cash >= 40 ? '' : 'disabled'} style="padding:3px 8px;font-size:12px">Pacify · $40M (−25%)</button><span class="small muted">Garrisons lower unrest every day.</span></div>` : ''}</div>`; }
   if (!P.sea && o !== PLAYER){ html += `<div class="eyebrow">Intelligence · ${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}</div><div class="row">${Object.entries(SPY_OPS).map(([k, O]) => { const c = spyCheck(PLAYER, p, k); return `<button class="btn" data-act="spy" data-k="${k}" data-id="${p}" ${c.ok ? '' : 'disabled'} title="${O.desc}${c.ok ? ` ${Math.round(c.chance*100)}% chance.` : ' ' + c.why}" style="padding:4px 8px;font-size:11.5px">${O.name} · $${O.cost}M</button>`; }).join('')}</div>`; }
-  if (S.cap[p]) html += `<div class="status cap">${nationName(S.cap[p].by)} capturing: ${Math.round(S.cap[p].h/capNeed(p, S.cap[p].by)*100)}%</div>`;
   if (S.battles.includes(p)){ const B = S.bt && S.bt[p];
     html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${pluN(frontage(p), 'unit')}${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => { const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br>${o >= 0 ? flagHTML(o, 11) : `<span style="color:${shade(colorOf(o), 0.35)}">■</span>`} ${o === PLAYER ? 'You' : nationName(o)}: ${pluN(b.n, 'unit')}${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
   if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
@@ -10132,8 +10149,8 @@ const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production
 const startHTML = () => { const me = S && S.nations ? S.nations[PLAYER] : null; return `<ul class="qs">
   <li><b>Your goal</b>: ${me ? `you command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${!SCENARIOS[SCN].box ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}. ` : ''}Take independent land, out-produce your rivals and hold ${me ? landNeed(PLAYER) : 'a quarter of the world’s'} land provinces or ${WIN_CAPS} starting capitals.</li>
   <li><b>Recruit</b> in your cities and <b>research</b> new arms; every unit costs money and manpower plus, by type, oil, materials, iron (armor, guns, ships), electronics (aircraft, drones, air defence) and rare materials (advanced arms); research costs money, materials and rare materials, and two projects run at the same time.</li>
-  <li><b>Move</b>: tap a force, then a destination (tap again or press Send). Troops embark on their own to cross water; roads and railways speed them up.</li>
-  <li><b>Capture</b> provinces by parking ground troops in them. Terrain, rivers, supply and morale decide battles.</li>
+  <li><b>Move</b>: tap a force, then a destination (tap again or press Send). Troops cross water by boarding ships in a naval port (a coastal city of yours): about ${EMBARK_H} h to embark, ${LAND_H} h to land on a coast (${LAND_PORT_H} h into your own port). Roads and railways speed them up.</li>
+  <li><b>Capture</b>: a province becomes yours the moment your ground troops reach its city (its heart) with no defenders left. Terrain, rivers, supply and morale decide battles.</li>
   <li><b>Air, drones and navy</b>: wings strike or patrol from airbases; UAVs and AWACS find the enemy; fleets guard your trade and raid theirs.</li>
   <li><b>Diplomacy</b>: everyone starts at peace. Trade routes pay both partners; allies form coalitions that share supplies.</li>
   <li><b>Finding your way</b>: your land has a bright outline and your capital has a headquarters building flying your flag. Drag to pan, scroll or pinch to zoom, use the minimap to jump. ${KEYS_TXT} Progress saves in this browser each game day.</li>
@@ -10161,7 +10178,7 @@ const HELP_SEC = [
   ['basics', 'Recruit, move, capture', `<ul>
     <li><b>Recruit</b> in your cities: units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
-    <li><b>Capture</b> a province by parking ground units in it with no defenders left; cities and capitals take longer. Air units fight but never capture.</li>
+    <li><b>Capture</b>: a province is yours the moment your ground units reach its heart, the city (or the province centre without a city), with no defenders left; ${CAP_MIN} units are needed. Crossing the border or stopping elsewhere in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more.</li>
     <li><b>Supply</b> reaches about 4,800 km over land from your cities (half across sea). Cut-off troops lose strength daily and get a red dashed outline.</li>
     <li><b>Occupation</b>: conquered land grows unrest unless garrisoned; above 60% partisans may hand it back. Pacify it or keep troops there.</li></ul>`],
@@ -10198,7 +10215,8 @@ const HELP_SEC = [
     <li>The <b>Air &amp; drone guide</b> (button in any city panel) lists every air unit, its range and its counters.</li></ul>`],
   ['navy', 'Navy, speeds and transports', `<ul>
     <li><b>Ships</b> come from a Naval Yard in a coastal city: frigates (air defence, find submarines nearby), submarines (hidden convoy and fleet killers), cruisers, carriers (a mobile airbase).</li>
-    <li><b>Transports</b>: ground troops sent across water embark by themselves and ride slow transports, about 650 km a day. Ships in the same zone escort them: they take less damage.</li>
+    <li><b>Transports</b>: ground troops board ships only in a <b>naval port</b>, a coastal city of yours or a friend's; from a coast without one the order to sea is refused (march to a port). Embarking takes ${EMBARK_H} h in the port; then they ride slow transports, about 650 km a day. Ships in the same zone escort them: they take less damage.</li>
+    <li><b>Landings</b> work on any coast: ${LAND_H} h to come ashore (${LAND_PORT_H} h into a port you or a friend hold; Amphibious Doctrine halves both). Meanwhile the troops cannot move on or capture, and fight at a disadvantage on their first day ashore. The army bar counts the hours down.</li>
     <li><b>Speeds at sea</b>: carriers about 900 km a day, submarines 970, cruisers 1,040, frigates 1,080 (infantry marches about 720 on land). Major sea lanes add 12%. Every force panel shows its land and water speed.</li>
     <li>Warships bombard coastal battles and blockade enemy ports.</li></ul>`],
   ['trade', 'Trade, blockades, raids and escorts', `<ul>

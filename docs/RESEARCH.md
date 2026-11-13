@@ -773,14 +773,14 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 2 | Combat Engineers 1/2 (`log2`) | Upgrade | capture 30% faster; forts cost half; roads and railways 25% cheaper and faster to build | $78M, 20 mat, 29 rare | 5 |
-| 11 | Combat Engineers 2/2 (`log2`) | Upgrade | capture 40% faster; roads and railways 35% cheaper and faster to build | $120M, 30 mat, 32 rare | 5 |
+| 2 | Combat Engineers 1/2 (`log2`) | Upgrade | troops embark at ports 30% faster; forts cost half; roads and railways 25% cheaper and faster to build | $78M, 20 mat, 29 rare | 5 |
+| 11 | Combat Engineers 2/2 (`log2`) | Upgrade | troops embark 40% faster; roads and railways 35% cheaper and faster to build | $120M, 30 mat, 32 rare | 5 |
 
 **Landings**: 2 steps, 70 rare materials, $254M, 13 research days in all.
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|
-| 3 | Amphibious Doctrine 1/2 (`nav3`) | Upgrade | troops landing from the sea fight at 90% instead of 67% on their first day | $114M, 20 mat, 34 rare | 7 |
+| 3 | Amphibious Doctrine 1/2 (`nav3`) | Upgrade | landings from the sea take half the time, and the troops fight at 90% instead of 67% on their first day ashore | $114M, 20 mat, 34 rare | 7 |
 | 12 | Amphibious Doctrine 2/2 (`nav3`) | Upgrade | they fight at full strength on their first day | $140M, 30 mat, 36 rare | 6 |
 
 **Medical**: 2 steps, 72 rare materials, $252M, 14 research days in all.
