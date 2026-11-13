@@ -68,7 +68,7 @@ const TIP = 'Dug in: +defence. The unit has held position for 12+ hours, or is i
   // (3) the dug-in shield: its own hit box, the exact tooltip, a tap that selects nothing; the badge elsewhere still selects
   await p.evaluate(() => { window.__im.sel.army = null; }); await view(sc.ber, zs[2]); await p.waitForTimeout(1500);
   const dh = await p.evaluate(() => window.__im.uicon.dughit.map(r => ({ x: r.x, y: r.y, w: r.w, h: r.h, own: r.own })));
-  const sh = dh.find(r => r.own && r.x > 20 && r.y > 20 && r.x < W - 200 && r.y < H - 200);
+  const sh = dh.find(r => r.own && r.x > 20 && r.y > 60 && r.x < W - (PHONE ? 60 : 200) && r.y < H - (PHONE ? 160 : 200));
   checks.shieldBox = { ok: !!sh && sh.w <= 16 && sh.h <= 18 && sh.w >= 9, n: dh.length, box: sh };
   if (sh){ const cx = sh.x + sh.w/2, cy = sh.y + sh.h/2;
     if (!PHONE){ await p.mouse.move(off[0] + cx - 4, off[1] + cy - 4); await p.mouse.move(off[0] + cx, off[1] + cy); await p.waitForTimeout(300);
