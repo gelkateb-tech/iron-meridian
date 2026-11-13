@@ -15,7 +15,7 @@ Last updated: 2026-11-13 (overnight run).
 | Task | Model | Where it is |
 |---|---|---|
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
-| Research tab redo, phase 1: fix the 9 empty category icons, merge the research unit cards, then 3 sample banners and 3 sample icons for the owner (Gemini, batch, one try each) | Opus | branch research-tab |
+| Research tab redo, phase 2 (the other 186 pictures, about $6.9): waits for the owner to approve the 3 sample banners and 3 sample icons | Opus | samples on branch research-tab (8a24f63) |
 | Map modes: only Political and Terrain as full modes; Relations and Supply as overlays on Political; other modes removed; mode switch + zoom glitch fixed | Opus | branch map-modes |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused by a container restart (work saved on branch borders-real); resumes when a slot frees |
 
@@ -39,6 +39,8 @@ Last updated: 2026-11-13 (overnight run).
 | 12 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Research art samples:** 3 scene banners (Armoured Forces, Tactical Air, Navy) and 3 scene icons (Infantry Corps, Main Battle Tank, Extended-Range Shells). Approve to make the other 186 (about $6.9), or ask for changes. Also: one shared Firepower/Protection picture instead of 49 per-unit ones (139 pictures, about $5.2)?
 
 - **Infantry map icon:** three candidates: A flat helmeted head with a wheel for motorized, B plain head (both on branch research-cards), C the green side-view helmet (branch claude/zen-cori-mae3e9, and the uploaded helmet-icons.png). Pick one. (The research cards are being merged in the research tab redo; the research pictures will be replaced by the new Gemini art.)
 - **Building art:** the angled set now has Airbase, Naval Yard (branch claude/zen-cori-mae3e9), Recruiting Office, Fortifications and Hospital levels 1-5 and the 7 regional HQs. Still missing: Army Base, Missile Silo and Arms Industry 1-5 (until then the map shows nothing for them and the city panel keeps their old pictures). Who makes them?
