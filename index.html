@@ -1334,8 +1334,8 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .mk i.on{background:rgba(79,208,222,.25); border-color:var(--cn-teal)}
 /* cities list */
 .clist{display:flex; flex-direction:column; gap:0; border-top:1px solid var(--sep)}
-.crow{display:grid; grid-template-columns:44px minmax(150px, 1.1fr) minmax(190px, 1.25fr) minmax(190px, 1.25fr) auto; align-items:center; gap:12px; width:100%; padding:10px 10px; text-align:left;
-  border:0; border-radius:0; border-bottom:1px solid var(--sep); background:transparent; color:var(--fg); cursor:pointer; transition:background .15s}
+.crow{display:grid; grid-template-columns:30px 44px minmax(150px, 1.1fr) minmax(190px, 1.25fr) minmax(190px, 1.25fr) auto; align-items:center; gap:12px; width:100%; padding:10px 10px; text-align:left;
+  border:0; border-radius:0; border-bottom:1px solid var(--sep); background:transparent; color:var(--fg); transition:background .15s}
 .crow:hover{background:var(--hov); box-shadow:inset 2px 0 0 var(--cn-teal)}
 .crow:focus-visible{outline:2px solid var(--cn-teal); outline-offset:-2px}
 .crow .cf{display:grid; place-items:center; width:44px; height:44px}
@@ -1362,8 +1362,36 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .csort button + button{margin-left:-1px} .csort button:hover{color:#fff; background:rgba(79,208,222,.12)}
 .csort button.on{color:#fff; background:linear-gradient(180deg, #2a8696, #1d6674); border-color:#7fd3df}
 .csort button:focus-visible{outline:2px solid var(--cn-teal); outline-offset:1px; position:relative}
-@media (max-width:1000px){ .crow{grid-template-columns:44px minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr)} .crow .ca{grid-column:2 / -1} }
-@media (max-width:640px){ .crow{grid-template-columns:44px minmax(0, 1fr); gap:8px 10px; padding:11px 8px} .crow .cbx{grid-column:1 / -1} .crow .ca{grid-column:1 / -1} .crow .ca .btn{flex:1}
+/* Cities panel: ticks, select all, the multi-select bar and the options that open under a row */
+.cw{border-bottom:1px solid var(--sep)} .cw .crow{border-bottom:0}
+.cw.sel .crow{background:rgba(79,208,222,.08); box-shadow:inset 2px 0 0 var(--cn-teal)} .cw.open .crow{background:rgba(79,208,222,.05)}
+.crow .ccb{display:grid; place-items:center; width:30px; height:44px; margin:0; cursor:pointer} .crow .ccb input, .ctool input{width:18px; height:18px; margin:0; accent-color:#4fd0de; cursor:pointer}
+.crow .cbtn[aria-expanded="true"], .cpbb .cbtn.on{background:linear-gradient(180deg, #2a8696, #1d6674); border-color:#7fd3df}
+.crow .cgo{padding:8px 10px; display:inline-grid; place-items:center} .crow .cn, .crow .cf{cursor:default}
+.ctool{display:flex; align-items:center; gap:12px; padding:8px 10px; border-top:1px solid var(--sep); font-size:13px; color:var(--cn-fg2)}
+.ctool .cpall{display:inline-flex; align-items:center; gap:8px; min-height:34px; cursor:pointer; color:#fff; font-weight:600} .ctool .cpcount{flex:1}
+.cpx{padding:6px 12px; min-height:32px; font-size:12.5px}
+.cpbarw{margin:0 0 6px; padding:10px 12px 12px; background:rgba(79,208,222,.07); border:1px solid rgba(79,208,222,.4); border-left-width:3px}
+.cpbh{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px} .cpbh b{font-size:15px; color:#fff} .cpbb{display:flex; gap:6px}
+.cpbhint{margin:4px 0 0}
+.cppicks{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0} .cpick{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; min-height:34px; font-size:12.5px} .cpick em{font-style:normal; color:var(--cn-fg2); font-size:11.5px} .cpick.on{background:linear-gradient(180deg, #2a8696, #1d6674); border-color:#7fd3df} .cpick.blk{opacity:.55}
+.cpplan{margin-top:8px; padding-top:8px; border-top:1px solid var(--sep)} .cpph{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:15px; color:#fff}
+.cptot{display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; margin:6px 0 8px; padding:6px 8px; background:rgba(12,18,22,.5)} .cptl{font:700 11px/1 var(--body); letter-spacing:.1em; text-transform:uppercase; color:var(--cn-fg2)} .cpshort{flex-basis:100%; color:#ff8a80; font-size:12px}
+.cpcols{display:grid; grid-template-columns:1fr 1fr; gap:12px} .cplh{font:700 11px/1 var(--body); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px} .cplh.ok{color:#8fe0a0} .cplh.sk{color:#ffb98a}
+.cplist{list-style:none; margin:0 0 8px; padding:0; font-size:12.5px} .cplist li{display:flex; flex-direction:column; gap:1px; padding:4px 0; border-top:1px solid var(--sep)} .cplist li:first-child{border-top:0} .cplist li b{color:#fff} .cplist li.none{color:var(--cn-fg2)} .cplist .why{color:#ffcf9a} .cplist .cpt{margin-left:8px}
+.cpgo[aria-disabled="true"], .cpb[aria-disabled="true"]{opacity:.5; cursor:not-allowed}
+.cpi{margin:0 0 0 30px; padding:10px 12px 12px; background:rgba(8,13,16,.55); border-top:1px solid var(--sep); box-shadow:inset 3px 0 0 var(--cn-teal)}
+.cpih{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px} .cpih b{font-size:14px; color:#fff} .cpih .muted{flex:1; font-size:12px}
+.cpq{margin-bottom:8px; padding:6px 8px; background:rgba(12,18,22,.5)} .cpqh{display:flex; align-items:center; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:var(--cn-fg2)} .cpqh b{color:#fff; font-size:12px}
+.cpqi{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:2px 8px; padding:4px 0; font-size:12.5px; color:#fff} .cpqi em{font-style:normal; color:var(--cn-fg2)} .cpqi.none{display:block; color:var(--cn-fg2)} .cpbar{grid-column:1 / -1; height:4px; background:rgba(255,255,255,.12)} .cpbar i{display:block; height:100%; background:var(--cn-teal)}
+.cpl{display:grid; grid-template-columns:1fr 1fr; gap:0 18px} .cpo{display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:3px 8px; padding:7px 0; border-top:1px solid var(--sep); font-size:12.5px}
+.cpn{display:flex; align-items:center; gap:8px; min-width:0} .cpn > span{display:flex; flex-direction:column; min-width:0} .cpn b{color:#fff; font-size:13px} .cpn small{color:var(--cn-fg2); font-size:11px; text-transform:capitalize}
+.cpc{grid-column:1; display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px} .cpt{font-style:normal; color:#cfe3e8; font-weight:600; white-space:nowrap} .cpt::before{content:"\23F1\FE0E  "; opacity:.7}
+.cpb{grid-column:2; grid-row:1 / span 2; align-self:center; padding:8px 14px; min-height:36px; font-size:13px; font-weight:600} .cpw{grid-column:1 / -1; color:#ffb98a; font-size:12px} .cpo.blk .cpn b{color:#c3cfd3}
+.cpnone{margin:6px 0} .cpi details.locked{margin-top:8px}
+@media (max-width:640px){ .cpi{margin-left:0; padding:10px 8px 12px} .cpl, .cpcols{grid-template-columns:1fr} .ctool{padding:6px 8px; gap:8px} .cpbarw{padding:8px 8px 10px} .cpb{min-width:74px} }
+@media (max-width:1000px){ .crow{grid-template-columns:30px 44px minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr)} .crow .ca{grid-column:2 / -1} }
+@media (max-width:640px){ .crow{grid-template-columns:34px 44px minmax(0, 1fr); gap:8px 8px; padding:11px 6px} .crow .cgo{flex:none !important} .crow .cbx{grid-column:1 / -1} .crow .ca{grid-column:1 / -1} .crow .ca .btn{flex:1}
   .crow .cbx .cs-bi{width:40px; height:40px} .crow .cbx .cs-mi.tr > .ut{--us:40px} .csort{flex-wrap:nowrap} .csort button{flex:1; padding:8px 4px} .csort .cslbl{margin-right:8px} }
 
 /* ---- overlays ---- */
@@ -8726,6 +8754,7 @@ document.addEventListener('pointerdown', e => { const t = e.target;
   if ($('morepop') && !$('morepop').hidden && !t.closest('#morepop, #morebtn')) morePop(false); }, true);
 document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; let hit = false;
   if ($('mslmenu') && !$('mslmenu').hidden){ mslDD(false); hit = true; } if ($('morepop') && !$('morepop').hidden){ morePop(false); hit = true; }
+  if (!hit && modalKind === 'cities' && !$('modal').hidden && (CP.open || CP.bulk.menu)){ if (CP.open){ const o = CP.open; CP.open = null; cpSet(); const r = $('sheet').querySelector(`[data-act="cp-open"][data-kind="${o.kind}"][data-id="${o.p}"]`); if (r) r.focus({preventScroll:true}); } else { CP.bulk.menu = false; cpSet(); } hit = true; }   // Esc closes the inline options (or the bar's pick list) before the panel
   if (!hit && RV.stats && modalKind === 'research' && !$('modal').hidden){ RV.stats = null; rRender(); hit = true; }   // the research stats view closes before the research screen
   if (hit){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 /* Cities (bottom nav): every city you hold with its main resource, level, population and morale, what it is building and training (the same squares as the city
@@ -8739,20 +8768,127 @@ function citySort(cities, N){ const QM = queueMax(PLAYER), RK = RES.map(r => r.k
   return cities.slice().sort(CITY_SORT === 'res' ? (a, b) => RK.indexOf(cityMain(a.id)) - RK.indexOf(cityMain(b.id)) || big(a, b) : CITY_SORT === 'idle' ? (a, b) => free(b) - free(a) || big(a, b) : big); }
 // slot pips: filled for each slot in use, hollow for each free one ("Train 1/2")
 const slotPips = (used, max, what) => `<span class="sl${used >= max ? ' full' : ''}" title="${what}: ${used} of ${max} slot${max === 1 ? '' : 's'} in use${used < max ? ', ' + (max - used) + ' free' : ''}">${'<i class="on"></i>'.repeat(Math.min(used, max))}${'<i></i>'.repeat(Math.max(0, max - used))}<small>${what} ${used}/${max}</small></span>`;
-function citiesHTML(){ const N = S.nations[PLAYER], cities = citySort(G.P.filter(P => S.owner[P.id] === PLAYER && P.city), N), QM = queueMax(PLAYER);
-  const idle = cities.filter(P => !S.queue[P.id].length).length;
-  const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], lv = cityLevel(p), mk = cityMain(p), used = queueUsed(p), q0 = q[0];
+/* Cities panel, inline options and multi-select. CP holds what the panel remembers while it is open (cleared when it closes):
+   sel   the ticked cities (survive re-sorting and refreshes), open {p, kind:'bld'|'trn'} the row whose Build / Train options are expanded under it,
+   bulk  {kind, menu, pick} the top bar for 2+ ticked cities (menu: the pick list is open, pick: the building / unit chosen).
+   Everything is queued through build() and recruit() (the rules the city sheet calls), so the refusals are the same. */
+const CP = {sel:new Set(), open:null, bulk:{kind:'', menu:false, pick:''}, lock:false};
+function cpReset(){ CP.sel.clear(); CP.open = null; CP.bulk = {kind:'', menu:false, pick:''}; CP.lock = false; }
+const cpCities = () => citySort(G.P.filter(P => S.owner[P.id] === PLAYER && P.city), S.nations[PLAYER]);
+const cpName = p => G.P[p].cityName || G.P[p].name;
+// why city p cannot take building k at its next level, resources aside ('' when it can)
+function buildWhy(p, k){ const B = BUILD[k], P = G.P[p], lv = S.bld[p][k] || 0, c = S.cons[p];
+  if (k === 'silo' && !has(PLAYER, 'msl1')) return `Research required: ${RN.msl1.name}`;
+  if (!canBuildHere(p, k)) return B.where === 'port' && P.city && !P.coast ? `No coast: a ${B.name} needs a coastal city` : B.where === 'city' && !P.city ? `${B.name} needs a city` : `Cannot be built here`;
+  if (lv >= B.max) return B.max > 1 ? `Already at max level (${ROMAN[B.max]})` : 'Already built';
+  if (c) return c.k === k ? `Already building it (${csTime(c.h)} left)` : `Busy building ${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} (${csTime(c.h)} left)`;
+  return ''; }
+const trainWhy = (p, t) => canMobilize(PLAYER, p, t) || queueWhy(PLAYER, p);
+const cpCost = (p, kind, k) => kind === 'bld' ? buildCost(PLAYER, k, nextLvl(p, k), p) : ucost(PLAYER, k);
+const cpAdd = (a, c) => { for (const k of CK) if (c[k] > 0) a[k] = (a[k] || 0) + c[k]; return a; };
+// the plan for queueing k (a building or a unit) in the ticked cities, in the order of the list: {ok:[{p, c, h}], skip:[{p, why}], total}. Cities that cannot take it
+// at all are skipped with the reason; the rest are queued in order while the stock lasts, and the first one it cannot pay and every one after it are skipped for resources.
+// total = what every city that can take it would cost (for building, with the Army Base / Arms Industry price rise of the ones queued before it).
+function cpPlan(kind, k, ids){ const N = S.nations[PLAYER], have = {}, total = {}, ok = [], skip = [], tmp = []; for (const x of CK) have[x] = N[x] || 0; let dry = false;
+  try { for (const p of ids){ const why = kind === 'bld' ? buildWhy(p, k) : trainWhy(p, k); if (why){ skip.push({p, why}); continue; }
+      const c = cpCost(p, kind, k), h = kind === 'bld' ? c.h : trainH(p, k, PLAYER); cpAdd(total, c);
+      if (!dry && hasC(have, c)){ ok.push({p, c, h}); for (const x of CK) if (c[x] > 0) have[x] -= c[x]; }
+      else { dry = true; skip.push({p, why:`Not enough resources: needs ${missTxt(have, c)}`, res:true}); }
+      if (kind === 'bld' && RISE_K[k]){ S.cons[p] = {k, lvl:nextLvl(p, k), h:1, h0:1}; tmp.push(p); } }
+  } finally { for (const p of tmp) S.cons[p] = null; }
+  return {ok, skip, total}; }
+// queue one unit like the city sheet's card does (the same side effects: last unit, repeat order)
+function cpTrain(p, t){ if (!recruit(PLAYER, p, t)) return false; (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; return true; }
+const cpTime = h => csTime(h);
+function cpSlots(p){ const c = S.cons[p], q = S.queue[p], QM = queueMax(PLAYER);
+  return `<div class="cpq"><div class="cpqh"><b>Already queued here</b>${slotPips(c ? 1 : 0, 1, 'Build')}${slotPips(queueUsed(p), QM, 'Train')}</div>`
+    + (c ? `<div class="cpqi">${bimg(c.k, c.lvl, 22)}<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${cpTime(c.h)} left</em><span class="cpbar"><i style="width:${Math.round((1 - c.h/(c.h0 || c.h || 1))*100)}%"></i></span></div>` : '')
+    + q.map((it, i) => `<div class="cpqi">${it.msl ? mslIcon(it.t, 18) : unitPic(it.t, 'xs')}<span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><em>${i === 0 ? cpTime(it.h) + ' left' : 'waiting'}</em>${i === 0 ? `<span class="cpbar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></span>` : ''}</div>`).join('')
+    + (!c && !q.length ? '<div class="cpqi none">Nothing is being built or trained here.</div>' : '') + '</div>'; }
+function cpBldOpt(p, k){ const N = S.nations[PLAYER], B = BUILD[k], lv = S.bld[p][k] || 0, nl = Math.min(B.max, lv + 1), cc = buildCost(PLAYER, k, nl, p), why = buildWhy(p, k), miss = !why && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : '', w = why || miss;
+  return `<div class="cpo${w ? ' blk' : ''}" data-bk="${k}"><span class="cpn">${bimg(k, Math.max(1, lv), 30, !lv)}<span><b>${B.name}${B.max > 1 ? ' ' + ROMAN[nl] : ''}</b><small>${lv ? (B.max > 1 ? `now level ${ROMAN[lv]}` : 'built') : 'not built'}</small></span></span>
+    <span class="cpc">${lv >= B.max ? '' : `${costHTML(cc, N)}<i class="cpt" title="Build time">${cpTime(cc.h)}</i>`}</span>
+    <button class="btn cpb" data-act="cp-build" data-id="${p}" data-k="${k}" ${w ? 'aria-disabled="true"' : ''} title="${w || (lv ? 'Upgrade' : 'Build') + ' ' + B.name + ' in ' + cpName(p)}">${lv ? 'Upgrade' : 'Build'}</button>${w ? `<span class="cpw">${w}</span>` : ''}</div>`; }
+function cpUnitOpt(p, t){ const N = S.nations[PLAYER], U = UNITS[t], c = ucost(PLAYER, t), why = trainWhy(p, t), miss = !why && !hasC(N, c) ? 'Needs ' + missTxt(N, c) : '', w = why || miss;
+  return `<div class="cpo${w ? ' blk' : ''}" data-ut="${t}"><span class="cpn">${unitPic(t, 'sm')}<span><b>${U.name}${U.pack ? ` ×${U.pack}` : ''}</b><small>${U.dr ? 'drone' : U.cls}</small></span></span>
+    <span class="cpc">${costHTML(c, N)}<i class="cpt" title="Training time">${cpTime(trainH(p, t, PLAYER))}</i></span>
+    <button class="btn cpb" data-act="cp-train" data-id="${p}" data-t="${t}" ${w ? 'aria-disabled="true"' : ''} title="${w || 'Train ' + U.name + ' in ' + cpName(p)}">Train</button>${w ? `<span class="cpw">${w}</span>` : ''}</div>`; }
+// the options expanded under a row
+function cpInlineHTML(p, kind){ let list;
+  if (kind === 'bld') list = `<div class="cpl">${BK.map(k => cpBldOpt(p, k)).join('')}</div>`;
+  else { const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b))), open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), far = UT.filter(t => blk(t) && !near(blk(t)));
+    list = `<div class="cpl">${open.map(t => cpUnitOpt(p, t)).join('') || '<p class="muted cpnone">Nothing can be trained here yet.</p>'}</div>${far.length ? `<details class="locked cplock" ${CP.lock ? 'open' : ''}><summary>${far.length} locked unit${far.length > 1 ? 's' : ''} ▸</summary><div class="cpl">${far.map(t => cpUnitOpt(p, t)).join('')}</div></details>` : ''}`; }
+  return `<div class="cpi" id="cpi" role="region" aria-label="${kind === 'bld' ? 'Build' : 'Train'} options for ${cpName(p)}"><div class="cpih"><b>${kind === 'bld' ? 'Build' : 'Train'} in ${cpName(p)}</b><span class="muted">${kind === 'bld' ? 'one construction at a time' : `${queueUsed(p)}/${queueMax(PLAYER)} training slots used`}</span><button class="btn cpx" data-act="cp-close" title="Close the options (Esc)" aria-label="Close the options">Close</button></div>${cpSlots(p)}${list}</div>`; }
+// the bar for 2+ ticked cities
+function cpBarHTML(ids){ const B = CP.bulk, N = S.nations[PLAYER], n = ids.length;
+  let h = `<div class="cpbarw" role="group" aria-label="Queue in all ${n} ticked cities"><div class="cpbh"><b>${n} cities ticked</b><span class="cpbb"><button class="btn cbtn${B.kind === 'bld' ? ' on' : ''}" data-act="cp-bulk" data-kind="bld" aria-pressed="${B.kind === 'bld'}">Build…</button><button class="btn cbtn${B.kind === 'trn' ? ' on' : ''}" data-act="cp-bulk" data-kind="trn" aria-pressed="${B.kind === 'trn'}">Train…</button></span></div>`;
+  if (!B.kind) return h + `<p class="small muted cpbhint">Pick Build or Train to queue the same building or unit in every ticked city. Cities that cannot take it are skipped, with the reason.</p></div>`;
+  const items = B.kind === 'bld' ? BK : UT, nm = k => B.kind === 'bld' ? BUILD[k].name : UNITS[k].name;
+  if (B.menu || !B.pick){
+    const cnt = k => ids.filter(p => !(B.kind === 'bld' ? buildWhy(p, k) : trainWhy(p, k))).length, rows = items.map(k => ({k, c:cnt(k)})), good = rows.filter(r => r.c), none = rows.filter(r => !r.c);
+    const btn = r => `<button class="btn cpick${B.pick === r.k ? ' on' : ''}${r.c ? '' : ' blk'}" data-act="cp-pick" data-k="${r.k}" aria-pressed="${B.pick === r.k}">${B.kind === 'bld' ? bimg(r.k, 1, 22) : unitPic(r.k, 'xs')}<span>${nm(r.k)}</span><em>${r.c}/${n}</em></button>`;
+    h += `<div class="cpmenu"><div class="small muted">${B.kind === 'bld' ? 'Which building?' : 'Which unit?'} (how many of the ${n} cities can take it)</div><div class="cppicks">${good.map(btn).join('')}</div>${none.length ? `<details class="locked cplock" ${CP.lock ? 'open' : ''}><summary>${none.length} that none of them can take ▸</summary><div class="cppicks">${none.map(btn).join('')}</div></details>` : ''}</div>`; }
+  if (B.pick && items.includes(B.pick)){ const pl = cpPlan(B.kind, B.pick, ids), full = pl.ok.length + pl.skip.filter(s => s.res).length, short = !hasC(N, pl.total), lbl = nm(B.pick);
+    const line = (x, bad) => `<li class="${bad ? 'sk' : 'ok'}"><b>${cpName(x.p)}</b>${bad ? `<span class="why">${x.why}</span>` : `<span>${costHTML(x.c, N)}<i class="cpt">${cpTime(x.h)}</i></span>`}</li>`;
+    h += `<div class="cpplan"><div class="cpph"><b>${lbl}</b>${B.menu ? '' : '<button class="btn cpx" data-act="cp-bulk-menu">Change</button>'}</div>
+      <div class="cptot"><span class="cptl">Total cost${full ? ` for ${full} ${full === 1 ? 'city' : 'cities'}` : ''}</span>${full ? costHTML(pl.total, N) : '<span class="muted">nothing to queue</span>'}${short && full ? '<span class="cpshort">Not enough for all: ' + missTxt(N, pl.total) + '</span>' : ''}</div>
+      <div class="cpcols"><div><div class="cplh ok">Will queue (${pl.ok.length})</div><ul class="cplist">${pl.ok.map(x => line(x, false)).join('') || '<li class="none">None</li>'}</ul></div>
+      <div><div class="cplh sk">Skipped (${pl.skip.length})</div><ul class="cplist">${pl.skip.map(x => line(x, true)).join('') || '<li class="none">None</li>'}</ul></div></div>
+      <div class="row"><button class="btn primary cpgo" data-act="cp-confirm" ${pl.ok.length ? '' : 'aria-disabled="true"'}>${pl.ok.length ? `Queue ${lbl} in ${pl.ok.length} ${pl.ok.length === 1 ? 'city' : 'cities'}` : 'Nothing to queue'}</button><button class="btn" data-act="cp-bulk-off">Cancel</button></div></div>`; }
+  return h + '</div>'; }
+const GOICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/></svg>';
+function citiesHTML(){ const N = S.nations[PLAYER], cities = cpCities(), QM = queueMax(PLAYER);
+  const mine = new Set(cities.map(P => P.id)); for (const p of [...CP.sel]) if (!mine.has(p)) CP.sel.delete(p); if (CP.open && !mine.has(CP.open.p)) CP.open = null;
+  const idle = cities.filter(P => !S.queue[P.id].length).length, ticked = cities.filter(P => CP.sel.has(P.id)).map(P => P.id);
+  const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], lv = cityLevel(p), mk = cityMain(p), used = queueUsed(p), q0 = q[0], on = CP.open && CP.open.p === p ? CP.open.kind : '', nm = P.cityName;
     const bTxt = c ? `<b>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</b><em>${csTime(c.h)} left</em>` : `<b class="idle">No construction</b>${BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? '' : '<em>Fully built</em>'}`;
     const tTxt = q0 ? `<b>${(UNITS[q0.t] || MISSILES[q0.t]).name}</b><em>${csTime(q0.h)} left${q.length > 1 ? ` · +${q.length - 1} waiting` : ''}</em>` : `<b class="idle">${csMobIdle(p)}</b>${used < QM ? '' : '<em>Queue full</em>'}`;
-    return `<div class="crow${q.length || c ? '' : ' idle'}" data-act="goto" data-id="${p}" role="button" tabindex="0" title="Fly to ${P.cityName} and open it">
-      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${P.cityName}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl"><i class="clv">${lv}</i>${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></span>
+    return `<div class="cw${CP.sel.has(p) ? ' sel' : ''}${on ? ' open' : ''}" data-id="${p}"><div class="crow${q.length || c ? '' : ' idle'}" data-id="${p}">
+      <label class="ccb" title="Tick ${nm} to queue in several cities at once"><input type="checkbox" data-act="cp-chk" data-id="${p}" ${CP.sel.has(p) ? 'checked' : ''} aria-label="Select ${nm}"></label>
+      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${nm}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl"><i class="clv">${lv}</i>${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></span>
       <span class="cbx" title="Construction${c ? '' : ': nothing is being built'}">${csBldIcon(p, c)}<span class="ct">${bTxt}${slotPips(c ? 1 : 0, 1, 'Build')}</span></span>
       <span class="cbx" title="Training${q0 ? '' : ': nothing is being trained'}">${csMobIcon(q0)}<span class="ct">${tTxt}${slotPips(used, QM, 'Train')}</span></span>
-      <span class="ca"><button class="btn cbtn" data-act="cities-bld" data-id="${p}" title="Open ${P.cityName}'s construction list">Build</button><button class="btn cbtn" data-act="cities-mob" data-id="${p}" title="Open ${P.cityName}'s recruit list">Mobilize</button></span></div>`; }).join('');
+      <span class="ca"><button class="btn cbtn${on === 'bld' ? ' on' : ''}" data-act="cp-open" data-kind="bld" data-id="${p}" aria-expanded="${on === 'bld'}" ${on === 'bld' ? 'aria-controls="cpi"' : ''} title="Build in ${nm}: the options open here">Build</button><button class="btn cbtn${on === 'trn' ? ' on' : ''}" data-act="cp-open" data-kind="trn" data-id="${p}" aria-expanded="${on === 'trn'}" ${on === 'trn' ? 'aria-controls="cpi"' : ''} title="Train in ${nm}: the options open here">Train</button><button class="btn cbtn cgo" data-act="goto" data-id="${p}" aria-label="Go to ${nm}" title="Go to ${nm} on the map">${GOICO}</button></span></div>${on ? cpInlineHTML(p, on) : ''}</div>`; }).join('');
   const sortBar = `<div class="csort" role="group" aria-label="Sort the cities"><span class="cslbl">Sort</span>${CITY_SORTS.map(([k, nm, tip]) => `<button class="${CITY_SORT === k ? 'on' : ''}" data-act="cities-sort" data-v="${k}" aria-pressed="${CITY_SORT === k}" title="${tip}">${nm}</button>`).join('')}</div>`;
+  const all = cities.length && ticked.length === cities.length;
+  const tool = `<div class="ctool"><label class="cpall"><input type="checkbox" data-act="cp-all" ${all ? 'checked' : ''} aria-label="Select all cities"><span>Select all</span></label><span class="cpcount" aria-live="polite">${ticked.length ? `${ticked.length} of ${cities.length} selected` : 'None selected'}</span>${ticked.length ? '<button class="btn cpx" data-act="cp-clear">Clear</button>' : ''}</div>`;
+  const bar = ticked.length >= 2 ? cpBarHTML(ticked) : '';
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} ${cities.length === 1 ? 'city' : 'cities'}${idle ? ` · <span class="idle">${idle} idle</span>` : ''}</div><h1>Cities</h1></div></div>
-    ${sortBar}<div class="clist">${rows || '<p class="muted">You hold no cities.</p>'}</div>
+    ${sortBar}${tool}${bar}<div class="clist">${rows || '<p class="muted">You hold no cities.</p>'}</div>
     <div class="row"><button class="btn" data-act="prod-open">Production overview</button><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
+// redraw the open panel; the focused control (found again by what it does) keeps the focus
+function cpSet(){ const ae = document.activeElement, d = ae && ae.dataset && $('sheet').contains(ae) ? {...ae.dataset} : null, before = lastSig.sheet;
+  setHTML($('sheet'), citiesHTML());
+  if (d && lastSig.sheet !== before){ const m = [...$('sheet').querySelectorAll('[data-act="' + d.act + '"]')].find(e => Object.keys(d).every(k => e.dataset[k] === d[k])); if (m) m.focus({preventScroll:true}); } }
+function cpDo(act, b, e){
+  const p = +b.dataset.id;
+  switch (act){
+    case 'cp-chk': if (b.checked) CP.sel.add(p); else CP.sel.delete(p); break;
+    case 'cp-all': { const ids = cpCities().map(P => P.id); if (b.checked) for (const x of ids) CP.sel.add(x); else CP.sel.clear(); break; }
+    case 'cp-clear': CP.sel.clear(); CP.bulk = {kind:'', menu:false, pick:''}; break;
+    case 'cp-open': { const kind = b.dataset.kind; if (!G.P[p] || S.owner[p] !== PLAYER || (kind === 'trn' && !G.P[p].city)) return; CP.open = CP.open && CP.open.p === p && CP.open.kind === kind ? null : {p, kind}; cpSet();
+      const sh = $('sheet'), el = CP.open && sh.querySelector('#cpi'); if (el){ const r = el.getBoundingClientRect(), s = sh.getBoundingClientRect(); if (r.bottom > s.bottom) sh.scrollTop += Math.min(r.bottom - s.bottom + 8, r.top - s.top - 70); }   // (scrolls the list, never the map)
+      return; }
+    case 'cp-close': { const o = CP.open; CP.open = null; cpSet(); if (o){ const r = $('sheet').querySelector(`[data-act="cp-open"][data-kind="${o.kind}"][data-id="${o.p}"]`); if (r) r.focus({preventScroll:true}); } return; }
+    case 'cp-build': { const k = b.dataset.k, why = buildWhy(p, k) || (hasC(S.nations[PLAYER], buildCost(PLAYER, k, nextLvl(p, k), p)) ? '' : 'Needs ' + missTxt(S.nations[PLAYER], buildCost(PLAYER, k, nextLvl(p, k), p)));
+      if (why){ toast(`${BUILD[k].name} in ${cpName(p)}: ${why}.`, 'info', null); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; }
+      if (!build(PLAYER, p, k)){ toast(`${BUILD[k].name} in ${cpName(p)}: not possible now.`, 'info', null); break; } sfx('ready'); renderSide(true); break; }
+    case 'cp-train': { const t = b.dataset.t, why = trainWhy(p, t) || (hasC(S.nations[PLAYER], ucost(PLAYER, t)) ? '' : 'Needs ' + missTxt(S.nations[PLAYER], ucost(PLAYER, t)));
+      if (why){ toast(`${UNITS[t].name} in ${cpName(p)}: ${why}.`, 'info', null); b.classList.remove('why'); void b.offsetWidth; b.classList.add('why'); break; }
+      let n = 0; for (let i = 0; i < (e && e.shiftKey ? 4 : 1); i++) if (cpTrain(p, t)) n++; else break;
+      if (!n){ toast(`${UNITS[t].name} in ${cpName(p)}: not possible now.`, 'info', null); break; } renderSide(true); break; }
+    case 'cp-bulk': { const kind = b.dataset.kind; CP.bulk = CP.bulk.kind === kind ? {kind:'', menu:false, pick:''} : {kind, menu:true, pick:''}; break; }
+    case 'cp-bulk-off': CP.bulk = {kind:'', menu:false, pick:''}; break;
+    case 'cp-bulk-menu': CP.bulk.menu = true; break;
+    case 'cp-pick': CP.bulk.pick = b.dataset.k; CP.bulk.menu = false; break;
+    case 'cp-confirm': { const B = CP.bulk, ids = cpCities().filter(P => CP.sel.has(P.id)).map(P => P.id); if (!B.pick || b.getAttribute('aria-disabled') === 'true'){ toast('Nothing can be queued: every ticked city is skipped (see the reasons below).', 'info', null); return; }
+      const pl = cpPlan(B.kind, B.pick, ids), nm = B.kind === 'bld' ? BUILD[B.pick].name : UNITS[B.pick].name; let n = 0;
+      for (const x of pl.ok){ if (!(B.kind === 'bld' ? build(PLAYER, x.p, B.pick) : cpTrain(x.p, B.pick))) break; n++; }
+      const left = pl.skip.length + (pl.ok.length - n);
+      toast(`${nm}: queued in ${n} of ${ids.length} ${ids.length === 1 ? 'city' : 'cities'}${left ? `, ${left} skipped` : ''}.`, n ? 'good' : 'info', null); if (n) sfx('ready');
+      CP.bulk.pick = ''; CP.bulk.menu = true; renderSide(true); break; }
+  }
+  cpSet(); }
 /* ---------------- v3.8: the city sheet (CoN layout) ----------------
    Selecting a land province slides a sheet up over the lower map: the holder's flag banner with the name and status, the morale bar and the
    daily production, then a row of building cards (picture, level badge, build progress, '+' cards for what can still be built). On your land two
@@ -8996,7 +9132,7 @@ function renderSide(force){
   $('inteldot').hidden = !(N.alive && idleAgents(PLAYER).length);
   { const idleC = N.alive ? G.P.filter(P => P.city && S.owner[P.id] === PLAYER && !S.queue[P.id].length).length : 0, cb = $('citybadge'); cb.hidden = !idleC; cb.textContent = idleC > 99 ? '99+' : idleC;
     cb.title = idleC ? `${idleC} ${idleC === 1 ? 'city has' : 'cities have'} nothing in training` : ''; }
-  if (modalKind === 'cities' && !$('modal').hidden) setHTML($('sheet'), citiesHTML());
+  if (modalKind === 'cities' && !$('modal').hidden) cpSet();
   for (const d of document.querySelectorAll('#dock .dk[data-kind]')){ const on = !$('modal').hidden && d.dataset.kind === modalKind; d.classList.toggle('on', on); if (on) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); }
   { const mb = $('morebtn'), inMore = !$('modal').hidden && !!document.querySelector(`#morepop .dk[data-kind="${modalKind}"]`); mb.classList.toggle('cur', inMore);
     $('moredot').hidden = !$('morebadge').hidden || ($('proddot').hidden && $('inteldot').hidden); }
@@ -10050,10 +10186,9 @@ document.addEventListener('click', e => {
     case 'help-sec': { const el = document.getElementById('h-' + b.dataset.k); if (el) el.scrollIntoView({block:'start', behavior:afxReduced() ? 'auto' : 'smooth'}); } break;
     case 'start-tut-again': closeModal(); clearSel(); tutStart(); break;
     case 'research-open': if (modalKind !== 'research' || $('modal').hidden){ RV.br = null; RV.sel = null; RV.stats = null; } openModal(researchHTML(), 'research'); break;
-    case 'cities-open': openModal(citiesHTML(), 'cities'); break;
-    case 'cities-sort': { const v = b.dataset.v; if (CITY_SORTS.some(x => x[0] === v)){ CITY_SORT = v; try { localStorage.setItem('im-cities-sort', v); } catch (e) {} setHTML($('sheet'), citiesHTML()); } break; }
-    case 'cities-bld': case 'cities-mob': { const p = +b.dataset.id, P = G.P[p]; if (!P || S.owner[p] !== PLAYER || (act === 'cities-mob' && !P.city)) break;
-      selectProv(p); CMOD_FROM = 'cities'; openModal(act === 'cities-mob' ? mobHTML(p) : cbldHTML(p), act === 'cities-mob' ? 'mob' : 'cbld'); break; }   // (the city's own lists, without leaving for the map; Back returns to the list)
+    case 'cities-open': cpReset(); openModal(citiesHTML(), 'cities'); break;
+    case 'cities-sort': { const v = b.dataset.v; if (CITY_SORTS.some(x => x[0] === v)){ CITY_SORT = v; try { localStorage.setItem('im-cities-sort', v); } catch (e) {} cpSet(); } break; }
+    case 'cp-chk': case 'cp-all': case 'cp-clear': case 'cp-open': case 'cp-close': case 'cp-build': case 'cp-train': case 'cp-bulk': case 'cp-bulk-off': case 'cp-bulk-menu': case 'cp-pick': case 'cp-confirm': cpDo(act, b, e); break;   // (the Cities panel: inline Build / Train options and multi-select, see CP)
     case 'cities-back': CMOD_FROM = ''; openModal(citiesHTML(), 'cities'); break;
     case 'msl-dd': mslDD(); break;
     case 'more': morePop(); break;
@@ -10218,7 +10353,7 @@ document.addEventListener('change', e => { const el = e.target; if (!el || !el.d
   if (el.dataset.act === 'deal-res'){ DEAL[side][el.dataset.k] = Math.max(0, Math.round(+el.value || 0)); openModal(nationHTML(NATV), 'nation'); }
   else if (el.dataset.act === 'deal-prov' && el.value){ DEAL[side].provs.push(+el.value); openModal(nationHTML(NATV), 'nation'); }
   else if (el.dataset.act === 'deal-tr'){ const k = el.dataset.k; DEAL[side].treaty = el.checked ? [...new Set([...DEAL[side].treaty, k])] : DEAL[side].treaty.filter(x => x !== k); openModal(nationHTML(NATV), 'nation'); } });
-document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('crow')){ e.preventDefault(); e.target.click(); } });   // a Cities row is a div with role=button
+document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('cplock')) CP.lock = e.target.open; }, true);   // (the locked-units list of the Cities panel stays open across redraws)
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'chatin'){ e.preventDefault(); const b0 = document.querySelector('[data-act="chat-send"]'); if (b0) b0.click(); } });
 document.addEventListener('focusout', e => { if (e.target.classList && e.target.classList.contains('rn')) setTimeout(() => { if (renaming !== null){ renaming = null; renderSide(true); } }, 0); });
 document.addEventListener('change', e => { const el = e.target;
@@ -10346,7 +10481,7 @@ let pickClassic = false;
 const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel', 'cities', 'mob', 'cbld'];
-function openModal(html, kind = ''){ modalKind = kind; if (kind !== 'mob' && kind !== 'cbld') CMOD_FROM = '';
+function openModal(html, kind = ''){ if (kind !== 'cities' && openModal.kind === 'cities') cpReset(); modalKind = kind; if (kind !== 'mob' && kind !== 'cbld') CMOD_FROM = '';
   // a bar tab still holding focus (More after its menu, or the last tab used) lets it go when another window opens, so only that window's tab reads as active
   { const fe = document.activeElement; if (fe && fe.closest && fe.closest('#dock') && fe.dataset.kind !== kind) fe.blur(); }
   $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'cities' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research'){ ftipAsk('research'); rHint(); } $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
@@ -10361,7 +10496,7 @@ function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || af
   Object.assign(g.style, {left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px', maxHeight:'none'}); const st = sh.scrollTop;
   const bd = document.createElement('div'); bd.className = 'mghost'; if (m.classList.contains('docked')) bd.style.left = m.getBoundingClientRect().left + 'px';
   document.body.append(bd, g); g.scrollTop = st; setTimeout(() => { g.remove(); bd.remove(); }, 240); }
-function closeModal(restore = true){ sheetGhost(); $('modal').hidden = true; CMOD_FROM = ''; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
+function closeModal(restore = true){ sheetGhost(); if (modalKind === 'cities') cpReset(); $('modal').hidden = true; CMOD_FROM = ''; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
 // small line icons (own art, 24x24, stroke) for the briefing tips and the first-time tips
 const TIP_ICO = {
   recruit:'<path d="M3 20V10l4-2v12M7 20V6l5-2v16M12 20V9l4 2v9M16 20h5M2 20h20"/><path d="M19 5v5M16.5 7.5h5" />',
@@ -10937,6 +11072,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () =>
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor) => badgeBody(side, t, n, flagCanvas(o, plateDims(n, 1, !!minor, true).fh), !!mixed, false, false, !!minor), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
+if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {cp:{get CP(){ return CP; }, plan:(kind, k, ids) => cpPlan(kind, k, ids), buildWhy:(p, k) => buildWhy(p, k), trainWhy:(p, t) => trainWhy(p, t), buildCost:(k, p) => buildCost(PLAYER, k, nextLvl(p, k), p), ucost:t => ucost(PLAYER, t), cities:() => cpCities().map(P => P.id), units:() => UT.slice(), render:() => renderSide(true)}});
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });

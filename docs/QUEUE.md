@@ -14,7 +14,6 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities (building pictures wait for the speed job: both change map drawing) | Sonnet | branch cities-panel |
 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet | branch small-fixes-2 |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (the other 186 pictures, about $6.9): waits for the owner to approve the 3 sample banners and 3 sample icons | Opus | samples on branch research-tab (8a24f63) |
@@ -36,6 +35,8 @@ Last updated: 2026-11-13 (overnight run).
 | 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Cities panel multi-select:** the ticked-cities bar shows from 2 ticked cities (show it with 1?); when resources run out it stops at the first city that cannot pay and skips the rest (or skip only that city and carry on?).
 
 - **Unit controls, deselect:** with a force selected, a tap on empty land is a move order (as in Conflict of Nations); deselect is a tap on the force again, a second tap on its destination, or Esc. Do you want a tap on empty land to deselect instead (then moving needs the Move button or a drag)?
 
