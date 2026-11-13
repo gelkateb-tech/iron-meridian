@@ -6499,7 +6499,7 @@ const cityGlowR = p => (cityNightR(p), Math.max(CNR.r[p] || KM_W*14, Math.min(3.
 // a light canvas (the part whose corner is (X0, Y0) of town p's square at S px) kept to the town's reach: brightest on its point, fading to black at
 // cityNightR round the town's point (multiplied: black adds no light). Done before the matching to the low tier, which has it too
 function cityNightCompact(c, p, I, S, X0, Y0){ const g = c.getContext('2d'), k = S/(2*I.E), mx = S/2 - X0, my = S/2 - Y0, R = cityNightR(p)*k, m = g.createRadialGradient(mx, my, 0, mx, my, R);
-  m.addColorStop(0, '#fff'); m.addColorStop(0.08, 'rgb(232,232,232)'); m.addColorStop(0.25, 'rgb(160,160,160)'); m.addColorStop(0.5, 'rgb(72,72,72)'); m.addColorStop(0.75, 'rgb(20,20,20)'); m.addColorStop(1, '#000');
+  m.addColorStop(0, '#fff'); m.addColorStop(0.06, 'rgb(228,228,228)'); m.addColorStop(0.18, 'rgb(150,150,150)'); m.addColorStop(0.35, 'rgb(72,72,72)'); m.addColorStop(0.55, 'rgb(24,24,24)'); m.addColorStop(0.78, 'rgb(6,6,6)'); m.addColorStop(1, '#000');
   g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = 'none'; g.globalCompositeOperation = 'multiply'; g.fillStyle = m; g.fillRect(0, 0, c.width, c.height); g.restore(); }
 function cityNightWarm(c, I, S, X0, Y0){ const g = c.getContext('2d'), mx = S/2 - X0, my = S/2 - Y0, R = I.r*S/(2*I.E), w = g.createRadialGradient(mx, my, 0, mx, my, R*1.1);
   w.addColorStop(0, 'rgb(255,214,150)'); w.addColorStop(0.35, 'rgb(255,226,176)'); w.addColorStop(0.7, 'rgb(255,242,214)'); w.addColorStop(1, 'rgb(255,255,255)');
@@ -6623,7 +6623,7 @@ function drawCitiesIn(c, x0, y0, x1, y1, fa){
     c.globalAlpha = fa; if (cityDraw(c, p, I, cityTier(I), x0, y0, x1, y1, false, true)) cityLift(c, CGEO.get(p), cityLegK(1.3*2*I.E*view.s*cityDpr()*cityOver()), fa); }   // (1.3: about the tier a town of that size had, rounded up)
   c.restore(); }
 // live pass after the night tint (world transform): city lights, each by the darkness over its own province
-const CN_A = 0.4, CN_GLOW = 0.36;   // the lights' strength and the glow's on its point (dimmed: the owner asked for subtle lights)
+const CN_A = 0.34, CN_GLOW = 0.36;   // the lights' strength and the glow's on its point (dimmed: the owner asked for subtle lights)
 const cityLightsOn = () => SET.cityLights !== false;   // Settings: 'City lights at night' (off: night still darkens the map, no lights or glows)
 function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityArtState() < 5) return; const lit = cityLightsOn();
   const x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s, now = performance.now(), still = now - (lastPanT || 0) > 150; let saved = false, low = 0;
@@ -6652,7 +6652,7 @@ function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityA
     let on; if (F.hold || F.fd >= 0){ ctx.globalAlpha = F.hold ? a0 : a0*(1 - F.fd); on = cityNightStand(ctx, p, I, S, F, x0, y0, x1, y1, sx, sy); if (!F.hold){ ctx.globalAlpha = a0*F.fd; animFast(); } }
     if (!F.hold) on = cityDraw(ctx, p, I, S, x0, y0, x1, y1, true, false) || on;   // its lights (pieces newly in view at a tier already shown: from the best canvas there is while they are made)
     { const lgV = cityLegK(2*I.E*view.s*dpr*1.41*cityOver()), gc = lgV > 0 ? cityLgGlow(p, true) : null; if (gc){ ctx.globalAlpha = a0*0.3*lgV; ctx.drawImage(gc, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); } }
-    const G0 = CGLOW(), gr = cityGlowR(p); ctx.globalAlpha = nf*fa*(on ? CN_GLOW*0.9 : CN_GLOW); ctx.drawImage(G0, I.x - gr, I.y - gr, gr*2, gr*2); });   // a small glow on the town's point, inside its reach (alone until its lights are made)
+    const G0 = CGLOW(), gr = cityGlowR(p); ctx.globalAlpha = nf*fa*(on ? CN_GLOW*1.1 : CN_GLOW); ctx.drawImage(G0, I.x - gr, I.y - gr, gr*2, gr*2); });   // a small glow on the town's point, inside its reach (alone until its lights are made)
   CITY_GO = false; if (saved) ctx.restore(); }
 // a town's lights cross-fade from the stand-in to the right canvas when that lands (CNF_MS); a new tier (the view zoomed) shows what there is
 // at once. Returns the share of the right canvas while fading, else -1
