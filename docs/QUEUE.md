@@ -25,6 +25,7 @@ Last updated: 2026-11-13 (overnight run).
 
 | # | Task | Model |
 |---|---|---|
+| 0 | Capture and landing rules: a province becomes yours the moment your force reaches its heart (no occupation wait); embarking only at naval ports, with an embarking time; landing from the sea takes time too | Opus (first free slot) |
 | 1 | Research tab redo: fix the empty category/header icons; merge the research unit cards (i button with full stats); Gemini scene banners and square scene icons, 3 + 3 samples for the owner first | Opus |
 | 2 | Unit controls like Conflict of Nations: pinpoint movement fixed, tap to select, tap to move, path line, tap empty space to deselect; Waypoint button with dots and undo | Opus |
 | 3 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
