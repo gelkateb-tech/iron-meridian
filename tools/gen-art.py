@@ -1,26 +1,32 @@
 """Generates building pictures with the Gemini API (Nano Banana 2.1, 1K, square) into assets/art-src/ba-<name>.png.
 
-The pictures are the angled building set: one shared STYLE paragraph (the 8 Higgsfield prompts' style for the HQ,
-Airbase 1-5 and Recruiting Office 2-3, minus their base pad: buildings stand straight on the grey background) after
-a short description of each building level (SUBJECTS below).
+Two kinds of picture:
+- SUBJECTS: a short description of the building level, then one shared STYLE paragraph (the 8 Higgsfield prompts' style
+  for the HQ, Airbase 1-5 and Recruiting Office 2-3, minus their base pad: buildings stand straight on the grey background)
+- ICONS: map icons, a full prompt each, saved as assets/art-src/<name>.png
+- GROWS: the next level of a building made from the picture of the level before (ba-<before>.png, shrunk to SHRINK in
+  the middle of the frame) with a list of additions, so the levels share their pieces and grow visibly
+
+One try per name per run, never an automatic retry. Every call is logged with its tokens and estimated cost in
+assets/art-src/gen-art-log.jsonl (--cost sums it).
 
 The API key is never read, printed or stored here: the session's network proxy adds it to every request to
 generativelanguage.googleapis.com (header x-goog-api-key). Run elsewhere, set GEMINI_API_KEY and it is sent in that header.
 
-usage: python3 -I tools/gen-art.py <name> [<name> ...]     e.g. naval-yard-1
-       python3 -I tools/gen-art.py --list                  the names and whether their picture exists
-options: --force         overwrite an existing picture (otherwise the new one is saved as ba-<name>.v2.png, .v3 ...)
-         --ref <file>    a style reference picture sent with the prompt (repeatable, e.g. a Higgsfield picture)
-         --print         print the prompt and stop (no API call)
-       python3 -I tools/gen-art.py --edit <picture> <name> "<change>"   a small change to a picture, everything else kept;
-                                                                       saved as the next free ba-<name>.vN.png
+usage: python3 -I tools/gen-art.py [options] <name> [<name> ...]     e.g. naval-yard-1
+       python3 -I tools/gen-art.py --list | --cost
+       python3 -I tools/gen-art.py [--batch] --edit <picture> <name> "<change>"   a small change, everything else kept
+options: --batch         send the pictures as one batch job (half price, slower; waits for it; --collect if interrupted)
+         --collect <job> save the pictures of a batch job sent earlier (batches/...)
+         --force         overwrite an existing picture (otherwise the new one is saved as ba-<name>.v2.png, .v3 ...)
+         --ref <file>    a style reference picture sent with a SUBJECTS prompt (repeatable)
+         --print         print the prompts and stop (no API call)
 """
-import sys, os, json, base64, io, urllib.request, urllib.error
+import sys, os, json, base64, io, time, urllib.request, urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'assets', 'art-src')
 MODEL = 'gemini-nano-banana-2.1'   # "Nano Banana 2.1"
-URL = f'https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent'
 
 STYLE = ("Style: a clean, simplified 3D game-asset render of a modern military facility, in the same look as a strategy game's "
          "unit models. Few large, clear shapes with crisp edges and low clutter, so it stays readable when shown very small. "
@@ -49,72 +55,187 @@ SUBJECTS = {
         "frame and the group spans most of its width. No coastline, no beach, no land strip, no water, no waves."),
 }
 
-def prompt(name): return SUBJECTS[name] + '\n\n' + STYLE
+# map icons: a full prompt each (no STYLE), saved as <name>.png
+ICON = ("A minimal flat game map icon, an original design: {} Everything is one single solid white (#FFFFFF) shape with no "
+        "shading, no gradient, no outline, no inner lines and no detail, a bold simple silhouette that stays readable at 16 "
+        "pixels. Centred in the frame and filling about 70 percent of it. Background: a plain, flat, uniform light grey "
+        "(#D9D9D9). Square 1:1 image. No text, no letters, no numbers, no border, no badge, no circle behind it, no shadow.")
+HEAD = ("the silhouette of a soldier's head in side profile facing right, wearing a modern rounded combat helmet: a smooth "
+        "helmet dome with a short brim over the brow and the rim curving down behind the ear, a simple face profile with brow, "
+        "nose and chin, and a short neck cut off straight at the bottom.")
+ICONS = {
+    'icon-infantry': ICON.format(HEAD.capitalize()),
+    'icon-infantry-motorized': ICON.format(HEAD.capitalize()[:-1] + ", and directly under the neck one small wheel: a plain "
+        "circle with a round hole in its centre, about a third as wide as the head, separated from the neck by a thin gap."),
+}
 
-def free_path(name, force):
-    p = os.path.join(OUT, f'ba-{name}.png')
-    if force or not os.path.exists(p): return p
-    v = 2
-    while os.path.exists(os.path.join(OUT, f'ba-{name}.v{v}.png')): v += 1
-    return os.path.join(OUT, f'ba-{name}.v{v}.png')
+# the next level from the level before: (level before, additions). New piers and ships keep the level 1 direction.
+GROWS = {
+    'naval-yard-2': ('naval-yard-1',
+        "two more long concrete piers of the same kind, continuing the row of piers toward the upper right, each with a ship "
+        "docked alongside (one grey frigate and one dark grey submarine); a fourth grey warehouse continuing the warehouse "
+        "row; one round white fuel tank beside the command building"),
+    'naval-yard-3': ('naval-yard-2',
+        "a second dry dock beside the first one, holding a grey warship hull, with one more gantry crane at its inner end; two "
+        "more long concrete piers continuing the row of piers, each with a large grey destroyer docked alongside; a second row "
+        "of three grey warehouses behind the first row; a second round white fuel tank; the command building one storey taller"),
+    'naval-yard-4': ('naval-yard-3',
+        "two more long concrete piers continuing the row of piers toward the upper right, parallel to the others, one with a "
+        "big grey cruiser docked alongside and one with a dark grey submarine; one more large gantry crane by the dry docks; "
+        "two more grey warehouses; a white radar dome on the command building's roof; a third round white fuel tank"),
+    'naval-yard-5': ('naval-yard-4',
+        "a new, longest concrete pier continuing the row of piers toward the upper right, parallel to the others, with a large "
+        "grey aircraft carrier (flat flight deck, small island on its side) docked alongside it, bow to the lower right, and "
+        "one more parallel pier with a big grey cruiser; one more dry dock holding a big grey warship hull, with one more "
+        "gantry crane; two more grey warehouses; a second white radar dome by the command building; a fourth round white "
+        "fuel tank"),
+}
 
 EDIT = ("Edit the attached picture. Change only this: {}. Keep everything else exactly as it is: every building, pier, "
         "crane, ship and the dry dock, their shapes, positions, sizes and directions, the camera angle, framing, lighting, "
         "shadows, colours and the plain flat light grey background. Do not add or remove anything.")
+GROW = ("The attached picture shows a facility drawn small in the middle of the frame, with empty light grey space around it. "
+        "Turn it into the next, clearly larger level of the same base: keep every existing piece exactly where it is and at "
+        "exactly its current size, and build the additions in the empty space around it so the larger base fills the frame "
+        "with a small margin; every piece stays fully inside the frame, none touching or crossing its edge. Add: {}. New "
+        "pieces have the same scale as the existing ones and the same rendering style, camera angle, lighting, shadow "
+        "direction, colours and layout direction: every new pier is parallel to the existing piers and joins the same row of "
+        "piers, its long axis running from the upper left to the lower right, and every new ship lies parallel to the "
+        "existing ships, bow to the lower right. The background stays a plain flat uniform light grey. No coastline, no "
+        "water, no ground slab, no text, no flags.")
+SHRINK = 0.8   # a GROWS picture: the level before is shrunk to this in the middle of the frame, leaving room for the additions
 
-def generate(text, refs, edit=False):
-    parts = [{'text': text}]
-    for r in refs:
-        ext = os.path.splitext(r)[1].lower().lstrip('.')
-        mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'webp': 'image/webp'}.get(ext, 'image/png')
-        parts.append({'inlineData': {'mimeType': mime, 'data': base64.b64encode(open(r, 'rb').read()).decode()}})
-    if refs and not edit: parts[0]['text'] = ('Match the rendering style, camera angle, palette, lighting and plain grey background of the '
-                                 'attached reference picture(s), but draw the facility described here.\n\n') + text
-    body = {'contents': [{'parts': parts}],
+API = 'https://generativelanguage.googleapis.com/v1beta/'
+LOG = os.path.join(OUT, 'gen-art-log.jsonl')
+# estimate only (third-party listings of the Gemini API prices, Nov 2026): output and thinking tokens $30 per million
+# (a 1K picture is about 1,120 tokens, $0.0336), input $0.50 per million; batch jobs half price. The real bill is in Google AI Studio.
+OUT_USD, IN_USD, BATCH = 30e-6, 0.5e-6, 0.5
+
+def prompt(name): return SUBJECTS[name] + '\n\n' + STYLE
+
+def stem(name): return name if name in ICONS else f'ba-{name}'
+
+def free_path(name, force):
+    p = os.path.join(OUT, f'{stem(name)}.png')
+    if force or not os.path.exists(p): return p
+    v = 2
+    while os.path.exists(os.path.join(OUT, f'{stem(name)}.v{v}.png')): v += 1
+    return os.path.join(OUT, f'{stem(name)}.v{v}.png')
+
+def shrunk(src):
+    """the picture shrunk to SHRINK, centred on its own background grey (the median of its border), as PNG bytes"""
+    from PIL import Image
+    im = Image.open(src).convert('RGB'); w, h = im.size
+    border = [im.getpixel((x, y)) for x in range(0, w, 8) for y in (0, h - 1)] + [im.getpixel((x, y)) for y in range(0, h, 8) for x in (0, w - 1)]
+    bg = tuple(sorted(c[i] for c in border)[len(border) // 2] for i in range(3))
+    out = Image.new('RGB', (w, h), bg); sm = im.resize((round(w * SHRINK), round(h * SHRINK)), Image.LANCZOS)
+    out.paste(sm, ((w - sm.width) // 2, (h - sm.height) // 2)); b = io.BytesIO(); out.save(b, 'PNG'); return b.getvalue()
+
+def image_part(r):
+    if isinstance(r, bytes): return {'inlineData': {'mimeType': 'image/png', 'data': base64.b64encode(r).decode()}}
+    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'webp': 'image/webp'}.get(os.path.splitext(r)[1].lower().lstrip('.'), 'image/png')
+    return {'inlineData': {'mimeType': mime, 'data': base64.b64encode(open(r, 'rb').read()).decode()}}
+
+def request(name, refs, change=None):
+    """the generateContent request body for a name (SUBJECTS or GROWS), or for an --edit (change set)"""
+    if change is not None: text, images = EDIT.format(change), refs
+    elif name in GROWS:
+        before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
+        if not os.path.exists(src): raise SystemExit(f'{name} grows from {os.path.relpath(src, ROOT)}, which is not there yet')
+        text, images = GROW.format(add), [shrunk(src)]
+    elif name in ICONS: text, images = ICONS[name], []
+    else:
+        text, images = prompt(name), refs
+        if refs: text = ('Match the rendering style, camera angle, palette, lighting and plain grey background of the attached '
+                         'reference picture(s), but draw the facility described here.\n\n') + text
+    return {'contents': [{'parts': [{'text': text}] + [image_part(r) for r in images]}],
             'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': '1:1', 'imageSize': '1K'}}}
+
+def call(method, path, body=None):
     headers = {'Content-Type': 'application/json'}
     if os.environ.get('GEMINI_API_KEY'): headers['x-goog-api-key'] = os.environ['GEMINI_API_KEY']
-    req = urllib.request.Request(URL, json.dumps(body).encode(), headers)
+    req = urllib.request.Request(API + path, json.dumps(body).encode() if body is not None else None, headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=300) as r: d = json.load(r)
+        with urllib.request.urlopen(req, timeout=300) as r: return json.load(r)
     except urllib.error.HTTPError as e:
         try: msg = json.load(e).get('error', {}).get('message', '')
         except Exception: msg = ''
         raise SystemExit(f'API error {e.code}: {msg}')
-    for c in d.get('candidates', []):
-        for p in c.get('content', {}).get('parts', []):
-            if 'inlineData' in p and not p.get('thought'): return base64.b64decode(p['inlineData']['data'])
-    raise SystemExit('no picture in the reply: ' + json.dumps({k: d.get(k) for k in ('promptFeedback',)} |
-                     {'finish': [c.get('finishReason') for c in d.get('candidates', [])]}))
+
+def save(name, reply, force, batch):
+    """saves the picture of one reply, logs its cost; returns the path or None"""
+    u = reply.get('usageMetadata', {})
+    usd = ((u.get('candidatesTokenCount', 0) + u.get('thoughtsTokenCount', 0)) * OUT_USD + u.get('promptTokenCount', 0) * IN_USD) * (BATCH if batch else 1)
+    data = next((base64.b64decode(p['inlineData']['data']) for c in reply.get('candidates', [])
+                 for p in c.get('content', {}).get('parts', []) if 'inlineData' in p and not p.get('thought')), None)
+    p = None
+    if data:
+        from PIL import Image   # saved as a true PNG whatever format the API returns
+        p = free_path(name, force); Image.open(io.BytesIO(data)).save(p)
+    with open(LOG, 'a') as f:
+        f.write(json.dumps({'name': name, 'file': p and os.path.relpath(p, ROOT), 'batch': batch, 'usd_est': round(usd, 4),
+                            'tokens': {k: u.get(k) for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount')}}) + '\n')
+    if p: print(f'{os.path.relpath(p, ROOT)}  (~${usd:.4f})')
+    else: print(f'{name}: no picture in the reply, finish {[c.get("finishReason") for c in reply.get("candidates", [])]} '
+                f'{reply.get("promptFeedback", "")}  (~${usd:.4f})')
+    return p
+
+def batch_run(jobs, force):
+    """jobs: [(name, request body)] sent as one batch job; waits for it and saves the pictures"""
+    body = {'batch': {'display_name': 'gen-art ' + ' '.join(n for n, _ in jobs)[:100],
+                      'input_config': {'requests': {'requests': [{'request': r, 'metadata': {'key': n}} for n, r in jobs]}}}}
+    op = call('POST', f'models/{MODEL}:batchGenerateContent', body)
+    job = op.get('name') or op.get('metadata', {}).get('name')
+    print(f'batch job {job} sent ({len(jobs)} pictures); waiting (if stopped: --collect {job})', flush=True)
+    collect(job, force)
+
+def collect(job, force):
+    t0 = time.time()
+    while True:
+        op = call('GET', job)
+        state = op.get('metadata', {}).get('state') or op.get('state', '')
+        if op.get('done') or state.endswith(('SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED')): break
+        print(f'  {state or "pending"} after {int(time.time() - t0)} s', flush=True); time.sleep(30)
+    if op.get('error'): raise SystemExit(f'batch job failed: {op["error"].get("message", op["error"])}')
+    out = op.get('response') or op.get('metadata', {}).get('output') or {}
+    items = out.get('inlinedResponses', {}).get('inlinedResponses', [])
+    if not items: raise SystemExit(f'batch job {job} ended ({state}) with no inline replies')
+    for it in items:
+        name = it.get('metadata', {}).get('key', 'unknown')
+        if 'error' in it: print(f'{name}: error {it["error"].get("message", it["error"])}'); continue
+        save(name, it.get('response', {}), force, True)
 
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
     if a[0] == '--list':
-        for n in SUBJECTS: print(('done ' if os.path.exists(os.path.join(OUT, f'ba-{n}.png')) else '     ') + n)
+        for n in list(SUBJECTS) + list(GROWS) + list(ICONS):
+            print(('done ' if os.path.exists(os.path.join(OUT, f'{stem(n)}.png')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
         return
-    if a[0] == '--edit':
-        src, name, change = a[1], a[2], a[3]
-        data = generate(EDIT.format(change), [src], edit=True)
-        p = free_path(name, False)
-        from PIL import Image
-        Image.open(io.BytesIO(data)).save(p)
-        print(os.path.relpath(p, ROOT)); return
-    force, show, refs, names = False, False, [], []
+    if a[0] == '--cost':
+        rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
+        calls = sum(r.get('calls', 1) for r in rows); usd = sum(r.get('usd_est', 0) for r in rows)
+        print(f'{calls} calls, about ${usd:.2f} (estimate; the real bill is in Google AI Studio)'); return
+    force = show = batch = False; refs, names, edits = [], [], []
     i = 0
     while i < len(a):
         if a[i] == '--force': force = True
         elif a[i] == '--print': show = True
+        elif a[i] == '--batch': batch = True
         elif a[i] == '--ref': i += 1; refs.append(a[i])
-        elif a[i] in SUBJECTS: names.append(a[i])
+        elif a[i] == '--collect': collect(a[i + 1], force); return
+        elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
+        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS: names.append(a[i])   # repeat a name for more tries
         else: raise SystemExit(f'unknown name or option: {a[i]} (see --list)')
         i += 1
+    if batch and any(n in GROWS and GROWS[n][0] in names for n in names):
+        raise SystemExit('a level that grows from another level in the same batch has to wait for it: send them one after the other')
+    jobs = [(n, request(n, refs)) for n in names] + [(n, request(n, r, c)) for n, r, c in edits]
+    if show:
+        for n, r in jobs: print(f'--- {n}\n{r["contents"][0]["parts"][0]["text"]}\n')
+        return
     os.makedirs(OUT, exist_ok=True)
-    for n in names:
-        if show: print(f'--- {n}\n{prompt(n)}\n'); continue
-        data = generate(prompt(n), refs)
-        p = free_path(n, force)
-        from PIL import Image   # saved as a true PNG whatever format the API returns
-        Image.open(io.BytesIO(data)).save(p)
-        print(os.path.relpath(p, ROOT))
+    if batch: batch_run(jobs, force)
+    else:
+        for n, r in jobs: save(n, call('POST', f'models/{MODEL}:generateContent', r), force, False)
 
 main(sys.argv[1:])
