@@ -6,6 +6,8 @@ Two kinds of picture:
 - REDRAWS: a picture redrawn with another architecture, everything else kept (the regional capital HQs)
 - ICONS: map icons, a full prompt each (or ICON_EDITS: an edit of another icon), drawn on grey and saved as
   assets/art-src/<name>.grey.png plus a transparent cut-out <name>.png
+- RES_ICONS: resource icons for the top bar (assets/art-src/icon-<name>.png, raw on light grey: tools/prep-res.py cuts them
+  out), drawn in the style of the owner's icon-iron.png and icon-electronics.png, sent as references
 - GROWS: the next level of a building made from the picture of the level before (ba-<before>.png, shrunk to SHRINK in
   the middle of the frame) with a list of additions, so the levels share their pieces and grow visibly
 
@@ -129,6 +131,21 @@ ICONS = {
     'icon-infantry': HELMET,
     'icon-infantry-motorized': None,   # see ICON_EDITS
 }
+RES_REFS = ['icon-iron.png', 'icon-electronics.png']   # the owner's resource icons: the style to match
+RES_STYLE = ("Match exactly the attached reference icons: the same realistic, glossy product-render look with shiny highlights, the "
+             "same soft studio lighting from the upper left, the same three-quarter view from slightly above, the same framing "
+             "(one object, centred, filling most of the frame with a small even margin) and the same plain, flat, uniform light "
+             "grey background with only a faint soft contact shadow under the object. One single object, cropped tight. No text, "
+             "no letters, no numbers, no logos, no symbols, no portraits, no watermark. Square 1:1 image.")
+RES_ICONS = {
+    'icon-cash': ("A game resource icon for money: one neat stack of green banknotes held together by a plain cream paper band "
+                  "around the middle, seen at a three-quarter angle so the top and two sides of the stack show. The notes are "
+                  "plain green with subtle generic engraved patterns only (no faces, no numbers, no real currency)."),
+    'icon-oil': ("A game resource icon for oil: one red metal jerry can (a classic fuel canister) with its three-bar carrying "
+                 "handle and a short spout cap on top, the embossed X-shaped stiffening ribs on its side, glossy red paint with "
+                 "a few small worn edges, standing upright at a three-quarter angle."),
+}
+
 ICON_EDITS = {
     'icon-infantry-motorized': ('icon-infantry',
         "Edit the attached picture. Add only one small wheel directly under the middle of the helmet: a simple dark grey tyre "
@@ -227,7 +244,7 @@ def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE)
 
-def stem(name): return name if name in ICONS else f'ba-{name}'
+def stem(name): return name if name in ICONS or name in RES_ICONS else f'ba-{name}'
 
 def free_path(name, force):
     p = os.path.join(OUT, f'{stem(name)}.png')
@@ -286,6 +303,7 @@ def request(name, refs, change=None):
         if not os.path.exists(src): raise SystemExit(f'{name} is made from {os.path.relpath(src, ROOT)}, which is not there yet')
         images = [src]
     elif name in ICONS: text, images = ICONS[name], []
+    elif name in RES_ICONS: text, images = RES_ICONS[name] + '\n\n' + RES_STYLE, [os.path.join(OUT, r) for r in RES_REFS]
     else:
         text, images = prompt(name), refs
         if refs and building(name) in STYLES:   # a detail reference only (e.g. a top-down crop of another base)
@@ -356,7 +374,7 @@ def collect(job, force):
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
     if a[0] == '--list':
-        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS):
+        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS):
             print(('done ' if os.path.exists(os.path.join(OUT, f'{stem(n)}.png')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
         return
     if a[0] == '--cost':
@@ -372,7 +390,7 @@ def main(a):
         elif a[i] == '--ref': i += 1; refs.append(a[i])
         elif a[i] == '--collect': collect(a[i + 1], force); return
         elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
-        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS: names.append(a[i])   # repeat a name for more tries
+        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS: names.append(a[i])   # repeat a name for more tries
         else: raise SystemExit(f'unknown name or option: {a[i]} (see --list)')
         i += 1
     if batch and any(n in GROWS and GROWS[n][0] in names for n in names):

@@ -29,3 +29,5 @@
 {"name": "hq-south-asia", "file": "assets/art-src/ba-hq-south-asia.png", "batch": true, "usd_est": 0.0287, "tokens": {"promptTokenCount": 1312, "candidatesTokenCount": 1684, "thoughtsTokenCount": 210}}
 {"name": "hq-africa", "file": "assets/art-src/ba-hq-africa.png", "batch": true, "usd_est": 0.0287, "tokens": {"promptTokenCount": 1313, "candidatesTokenCount": 1561, "thoughtsTokenCount": 331}}
 {"name": "hq-latin-america", "file": "assets/art-src/ba-hq-latin-america.png", "batch": true, "usd_est": 0.0351, "tokens": {"promptTokenCount": 1313, "candidatesTokenCount": 1510, "thoughtsTokenCount": 808}}
+{"name": "icon-cash", "file": "assets/art-src/icon-cash.png", "batch": false, "usd_est": 0.0727, "tokens": {"promptTokenCount": 2423, "candidatesTokenCount": 1448, "thoughtsTokenCount": 935}}
+{"name": "icon-oil", "file": "assets/art-src/icon-oil.png", "batch": false, "usd_est": 0.0602, "tokens": {"promptTokenCount": 2422, "candidatesTokenCount": 1476, "thoughtsTokenCount": 491}}
