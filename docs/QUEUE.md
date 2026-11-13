@@ -14,30 +14,29 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| URGENT: the map goes black on its own (find the commit, fix, free caches, rebuild a lost map) | Opus | branch fix-black (merges first) |
+| Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
+| Research tab redo, phase 1: fix the 9 empty category icons, merge the research unit cards, then 3 sample banners and 3 sample icons for the owner (Gemini, batch, one try each) | Opus | branch research-tab |
 | Map modes: only Political and Terrain as full modes; Relations and Supply as overlays on Political; other modes removed; mode switch + zoom glitch fixed | Opus | branch map-modes |
-| Night city lights: small separate glows at real cities, dark gaps, dimmer; colours and borders on top | Opus | branch night-lights |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused by a container restart (work saved on branch borders-real); resumes when a slot frees |
 
-**Merge order for the map jobs (owner):** one at a time, black map first, then map modes, night lights and real borders, each merged with master and re-tested before the next.
+**Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), then map modes and real borders, each merged with master and re-tested before the next.
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Research tab redo: fix the empty category/header icons; merge the research unit cards (i button with full stats); Gemini scene banners and square scene icons, 3 + 3 samples for the owner first | Opus |
-| 2 | Unit controls like Conflict of Nations: pinpoint movement fixed, tap to select, tap to move, path line, tap empty space to deselect; Waypoint button with dots and undo | Opus |
-| 3 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
-| 4 | Resource balance rule: all 6 resources per nation, max 2 cities each, real geography, Syria first, per-nation list | Opus |
-| 5 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities | Sonnet |
-| 6 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 8 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
-| 9 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
-| 10 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
-| 11 | Nations balance re-check now that the AI never starts wars | Sonnet |
-| 12 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
-| 13 | Each aircraft type its own 3D shape | Opus |
-| 14 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Unit controls like Conflict of Nations: pinpoint movement fixed, tap to select, tap to move, path line, tap empty space to deselect; Waypoint button with dots and undo | Opus |
+| 2 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
+| 3 | Resource balance rule: all 6 resources per nation, max 2 cities each, real geography, Syria first, per-nation list | Opus |
+| 4 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities | Sonnet |
+| 5 | Roads: every province linked to a neighbour, real roads first | Opus |
+| 6 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
+| 7 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
+| 8 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
+| 9 | Nations balance re-check now that the AI never starts wars | Sonnet |
+| 10 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
+| 11 | Each aircraft type its own 3D shape | Opus |
+| 12 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
 
@@ -66,11 +65,11 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 ## Done (on the Dev Build, waiting for public)
 
 | Task | Model |
+|---|---|
 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), full amounts with units on hover, market prices per 1,000 units; merged with the fixes, play proven identical (6 games, 30 days), old saves scaled once (Dev Build v30) | Opus |
 | URGENT Dev Build fix A: computer nations never start a war (they fight back fully; allies join only to defend), play test at 1x/4x/8x, merge breakage (v3r1) | Opus |
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
 | URGENT map fix: every country its own strong colour (no two neighbours alike), allies blue, tint and province/country borders clear at every zoom, sea outline (straight lines) removed, real country borders (Syria checked: data correct, wiggle removed) | Opus |
-|---|---|
 | Capture and landing: a province is taken the moment a ground force reaches its heart (no occupation clock); embarking only at naval ports (6 h); landing 12 h on a coast, 6 h into a port, halved by Amphibious Doctrine (Dev Build v36) | Opus |
 | URGENT black map fixed: canvas caches bounded (memory flat over 3 days at 8x) and the map rebuilds itself after the browser drops its graphics memory (Dev Build v35) | Opus |
 | Unit look: square unit badge (flag, upright icon, count), 3D infantry squads with soft shadows, dug-in shield with a tooltip, Army Info and tutorial, and a real dug-in defence bonus (damage taken x0.8) (Dev Build v34) | Opus |
