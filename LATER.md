@@ -39,12 +39,25 @@ Plan the code for these, but don't build them yet. (Owner's spec; this replaces 
 - A script that makes each season's skins and flags with Google's Gemini API (Nano Banana) and waits for the owner's approval before they go live.
 
 ## New buildings (planned, don't build yet; these don't need the multiplayer server)
-Each one needs pictures later, in the same aerial style as the other buildings: one picture per level for each of the three.
+Each one needs pictures later, in the same angled style as the other buildings: one picture per level for each of them.
 - **Radar station.** Buildable in any province, not only in cities. About 300 km vision, more with each level. Enemies can see it, target it and destroy it, so players have to build their vision and protect it.
 - **Coastal naval battery.** Buildable in coastal provinces. Fires at enemy ships within its range, protecting ports and chokepoints. Upgradeable in levels. Ships and missiles can target and destroy it.
-- **Hospital (faster healing in its city).** Buildable in cities. Wounded forces in its city heal faster, more with each level (the rules already have the hook: `hospitalF(p)` in rules/combat.js, now 1; field healing is 10% a day, an own city 25%). Needs pictures like the other buildings.
+- **Hospital (faster healing in its city).** Buildable in cities, with 5 levels like the other buildings.
+  - Each level makes wounded forces in that city heal faster than the level before. The rules already have the hook: `hospitalF(p)` in rules/combat.js, now 1; field healing is 10% a day, an own city 25%.
+  - Each level costs more than the one before.
+  - Each of the 5 levels needs its own picture, in the same new angled style as the other buildings.
 - **Province anti-air site.** Buildable in provinces to defend against aircraft, drones and missiles flying overhead.
   - Weak at low levels: short range and limited damage, so one site alone can't stop an air strike.
   - Strong only when upgraded to high levels and several are stacked in the same area.
   - Upgrades cost a lot, so a real air defence network is a big investment, and players still need Mobile SAMs and fighters.
   - Enemies can target and destroy it.
+- **Forward Airstrip.** A small airfield buildable in any province, not only in cities, so aircraft can refuel, rearm and fly from closer to the front (planes have limited range).
+  - Cheaper and weaker than a city Airbase.
+  - Has levels like the other buildings. Level 1 is small and holds few aircraft; each upgrade holds more, and the top level holds about double what level 1 does.
+  - Each upgrade costs more than the one before.
+  - Enemies can capture or destroy it.
+  - Each level needs its own picture later.
+- **Field Hospital.** Buildable in any province near the front, so damaged units heal there instead of going back to a city.
+  - Heals slower than a city Hospital.
+  - Enemies can capture or destroy it.
+  - Needs its own pictures later.

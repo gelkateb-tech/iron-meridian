@@ -30,6 +30,7 @@ Last updated: 2026-11-13.
 | 1 | Nations balance pass on today's combat rules: Iran and the United States lose too much land in some games; make battery.js robust to ambient sea waves | Opus (after resources x1000) |
 | 2 | Each aircraft type gets its own 3D shape | Opus (after the research and icons job is merged: it built new aircraft models for the research pictures) |
 | 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 4 | Capital HQ flag: once the new building pictures are uploaded and placed on the map, put the owning country's real flag on the capital HQ's flagpoles, drawn in code so it changes when the capital is captured (don't start yet) | Opus (after the new building pictures are on the map) |
 
 ## Waiting for the owner
 
