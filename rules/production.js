@@ -1,7 +1,7 @@
 // Iron Meridian rules: production. No DOM, canvas, window, storage, audio or camera in this file (node tools/split-lint.js checks it).
 'use strict';
-function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = {cash:Math.round(U.cost*f), oil:U.oil, metal:Math.round(U.metal*f), iron:Math.round((U.iron || 0)*f), elec:Math.round((U.elec || 0)*f), rare:U.rare || 0, mp:U.mp};
-  if (t === 'drone' && n >= 0 && S && S.nations[n]){ const lv = uavLv(n); c.elec += lv - 1; if (lv >= 4) c.rare += 2*(lv - 3); }   // better UAVs: more electronics, rare materials from the armed UAV IV
+function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = {cash:Math.round(U.cost*f), oil:U.oil, metal:kRound(U.metal*f), iron:kRound((U.iron || 0)*f), elec:kRound((U.elec || 0)*f), rare:U.rare || 0, mp:U.mp};   // (goods rounded to RES_K)
+  if (t === 'drone' && n >= 0 && S && S.nations[n]){ const lv = uavLv(n); c.elec += (lv - 1)*RES_K; if (lv >= 4) c.rare += 2*(lv - 3)*RES_K; }   // better UAVs: more electronics, rare materials from the armed UAV IV
   return c; }
 // ---------- mobilization rules (no drawing, no UI): what a city needs before it can train a unit.
 // A unit must be researched (units with no tech are known from day one) AND its city must have the unit's building(s) at the needed level, working.
@@ -52,7 +52,7 @@ function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i]
 const FAC_RISE = 1.4;
 const RISE_K = {fac:1, arms:1};
 function facOthers(n, p, k = 'fac'){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
-function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*(RISE_K[k] ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p, k)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:Math.round(B.metal*m*half), iron:Math.round((B.iron || 0)*m*half), elec:Math.round(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1 : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
+function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*(RISE_K[k] ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p, k)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
 // training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
 // (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
@@ -111,7 +111,7 @@ function consHour(p){ const c = S.cons[p];
 /*@DEV*/
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
 // consHour, prodHour, engHour, addArmy. devHour runs at the top of every game hour; devDone also runs right after a click (instant while paused).
-function devFill(N){ for (const k of CK) if (!((N[k] || 0) >= DEV_FILL)) N[k] = DEV_FILL; }   // unlimited resources: all seven topped up
+function devFill(N){ for (const k of CK){ const v = DEV_FILL*(isGood(k) ? RES_K : 1); if (!((N[k] || 0) >= v)) N[k] = v; } }   // unlimited resources: all seven topped up
 function devDone(n){ const N = S && S.nations[n]; if (!N || !N.alive) return 0; let k = 0;
   if (DEV.research) for (const s of R_SLOTS) if (N[s]){ N[s].h = 1; researchSlotHour(N, s); k++; }
   if (DEV.instant){

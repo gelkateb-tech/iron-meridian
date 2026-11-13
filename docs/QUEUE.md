@@ -20,7 +20,6 @@ Last updated: 2026-11-13.
 
 | Task | Model | Where it is |
 |---|---|---|
-| Resources x1000 except money (stocks, production, storage, all costs) with short forms (40K, 1.2M) and full amounts with units on hover; play proven identical | Opus | Done on its branch; now being merged with the speed-ups and map fix (play must stay identical) |
 | Buildings on the map as small 3D models at their city, like the units (every building picture tile removed from the map; pictures only in the city panel), changing by level, an HQ model at the capital, pinned with no zoom drift; screenshots at 3 zooms before merging. (The cut-out picture version was rejected and is not merged.) | Opus | Started |
 | Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; infantry icon redone as a flat helmeted head (owner to pick: with wheel or plain); waiting for the owner's 'merge' |
 
@@ -36,7 +35,7 @@ Last updated: 2026-11-13.
 
 - **Infantry map icon:** A (flat helmeted head; motorized gets a wheel under it) or B (plain head for both), and "merge" for the research cards and pictures job.
 - **Faster game days:** reaching well under 0.5 s per game day needs changes that alter how computer nations play (quiet nations plan every 8 hours, a shorter attack-target search, reusing routes across hours). Want any of them?
-- **Market prices** in the x1000 job are shown per 1,000 units (for example '$0.04M per 1,000 barrels'). OK?
+- **Market prices** (now on the Dev Build) are shown per 1,000 units (for example '$0.04M per 1,000 barrels'). OK?
 - **Research design approvals** (docs/RESEARCH.md section 12 on branch research-redesign; nothing below is built): A. balance changes in the new tree (unit unlocks get first days 1-14, Marks become Firepower/Protection research, generations add health, IFV/Special Forces/Rocket Artillery cheaper stand-alone unlocks, 289 steps); B. new ground units (APC, Tank Destroyer, Towed Artillery, AA Gun Vehicle, Scout Vehicle); C. new aircraft (Scout Helicopter, Naval Helicopter); D. new ships (Patrol Boat, Destroyer, Ballistic-Missile Submarine); E. new weapons (sub-launched cruise and ballistic missiles, chemical and tactical nuclear warheads, ICBM); F. Officers (replace commanders, keep both, or a smaller Staff College step); G. elite marking of 4 existing units.
 - **Pictures to make on Higgsfield:** u-heavy-bomber-1, u-heavy-bomber-2, u-stealth-bomber (optional u-infantry-figure); plus for the research banners: a heavy or stealth bomber seen from above (Strategic Air, now uses the AWACS), a command or logistics picture (Command & Logistics, now the supply truck), optional paratroopers (Air Assault).
 - **Netlify token** for the phone app.
@@ -51,6 +50,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 ## Done (on the Dev Build, waiting for public)
 
 | Task | Model |
+| Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), full amounts with units on hover, market prices per 1,000 units; merged with the fixes, play proven identical (6 games, 30 days), old saves scaled once (Dev Build v30) | Opus |
 | URGENT Dev Build fix A: computer nations never start a war (they fight back fully; allies join only to defend), play test at 1x/4x/8x, merge breakage (v3r1) | Opus |
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
 | URGENT map fix: every country its own strong colour (no two neighbours alike), allies blue, tint and province/country borders clear at every zoom, sea outline (straight lines) removed, real country borders (Syria checked: data correct, wiggle removed) | Opus |

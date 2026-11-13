@@ -325,7 +325,7 @@ function missileImpact(m){
 }
 // satellites: a sinusoidal ground track crossing the map once per game day; the footprint, a strip along this hour's stretch of the track
 // (VIS_KM.sat to each side, SAT_R in world units), identifies everything under it
-const SAT_MAX = 3, SAT_COST = 220, SAT_C = {cash:SAT_COST, elec:25, rare:10}, SAT_R = VIS_KM.sat*KM_W;   // a launch: money, electronics and rare materials
+const SAT_MAX = 3, SAT_COST = 220, SAT_C = {cash:SAT_COST, elec:25*RES_K, rare:10*RES_K}, SAT_R = VIS_KM.sat*KM_W;   // a launch: money, electronics and rare materials
 function satPos(st, hr = S.hour){ const u = ((st.ph + (hr - st.h0)/24) % 1 + 1) % 1, x = u*WORLD_W, y = WORLD_H*0.5 + Math.sin(u*Math.PI*2*st.k + st.ph*6)*WORLD_H*st.amp; return [x, Math.max(OY, Math.min(WORLD_H - OY, y))]; }
 // the strip a satellite sees this hour: the stretch of track it covers from the hour mark to the next, rSatR to each side ([x1, y1, x2, y2, r], world units;
 // x2 is unwrapped next to x1 where the track crosses the map's edge)

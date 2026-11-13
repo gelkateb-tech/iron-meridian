@@ -7,9 +7,9 @@ const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.en
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
-const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + '\nreturn IM;';
+const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + '\nIM.RES_K = RES_K; return IM;';
 const days = +(process.argv[2] || 12), errors = [], ok = (c, msg) => { if (!c) errors.push(msg); };
-const IM = new Function(SRC)(), api = IM.api, told = {}, cues = {};
+const IM = new Function(SRC)(), api = IM.api, K = IM.RES_K, told = {}, cues = {};   // (K: goods at the resource scale RES_K)
 IM.on('log', n => { told[n] = (told[n] || 0) + 1; }); IM.on('sfx', n => { cues[n] = (cues[n] || 0) + 1; });
 api.newGame(4242, 0, [2, 5]); const S = api.S, G = api.G; S.started = true;
 ok(api.seats().join() === '2,5', 'seats are 2 and 5: ' + api.seats().join());
@@ -23,8 +23,8 @@ ok(S.armies.some(a => a.owner === 3 && (a.path.length || a.to !== null)) || S.qu
 // orders by nation: seat 5 recruits, posts a market offer, opens a trade route, splits and moves a force
 const cap = S.nations[5].capital, a5 = S.armies.find(a => a.owner === 5 && a.at === cap && !a.air);
 ok(api.recruit(5, cap, 'inf') === true && S.queue[cap].length === 1, 'seat 5 recruits in its capital');
-ok(api.postOffer(5, 'oil', 10, 3) === 10 && api.postOffer(5, 'oil', 0, 3) === 0 && S.book.some(o => o.seller === 5), 'seat 5 posts an offer');
-const got = api.fillOffer(2, S.book.find(o => o.seller === 5).id, 4); ok(got === 4, 'seat 2 buys 4 from seat 5: ' + got);
+ok(api.postOffer(5, 'oil', 10*K, 3) === 10*K && api.postOffer(5, 'oil', 0, 3) === 0 && S.book.some(o => o.seller === 5), 'seat 5 posts an offer');
+const got = api.fillOffer(2, S.book.find(o => o.seller === 5).id, 4*K); ok(got === 4*K, 'seat 2 buys 4,000 from seat 5: ' + got);
 const half = api.splitArmy(a5, [G.P[cap].x + 3, G.P[cap].y]); ok(half && half.owner === 5 && Array.isArray(half.pos), 'seat 5 splits a force; the new one stands beside the given spot');
 const nb = G.P[cap].nbs.find(v => !G.P[v].sea && S.owner[v] === 5); if (nb != null){ api.orderMove(half, nb); ok(half.path.length > 0, 'seat 5 moves the new force'); }
 // fog of war per nation

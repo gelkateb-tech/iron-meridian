@@ -10,7 +10,7 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
   await pickNation(p, 'France'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(900);
   // ---- research: the Air branch
-  await p.evaluate(() => { const S = window.__im.S, N = S.nations[0]; window.__h0 = S.hour; S.hour = 20*24; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 5000; for (const id of ['u_jet', 'jet_pgm', 'u_bomb']) N.tech[id] = 1; N.tv = (N.tv || 0) + 1; N.research = N.research2 = null; });
+  await p.evaluate(() => { const S = window.__im.S, N = S.nations[0]; window.__h0 = S.hour; S.hour = 20*24; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 5000*(isGood(k) ? RES_K : 1); for (const id of ['u_jet', 'jet_pgm', 'u_bomb']) N.tech[id] = 1; N.tv = (N.tv || 0) + 1; N.research = N.research2 = null; });
   await p.click('[data-act="research-open"]'); await p.waitForTimeout(300); await p.click('[data-act="rbranch"][data-b="str"]'); await p.waitForTimeout(300);
   const node = id => p.evaluate(id => { const e = document.querySelector(`.rnode[data-id="${id}"]`); return e ? { cls: e.className, title: e.title, text: e.innerText.replace(/\s+/g, ' ').trim(), row: getComputedStyle(e).getPropertyValue('--r').trim() } : null; }, id);
   let n2 = await node('bomb_up'), n3 = await node('u_stealth');

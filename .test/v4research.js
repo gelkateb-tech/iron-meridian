@@ -9,7 +9,7 @@ const T0 = Date.now();
   const boot = async vp => { const p = await b.newPage(vp); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
     await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
     await pickNation(p, 'France'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(800);
-    await p.evaluate(() => { const N = window.__im.S.nations[0]; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 4000; N.research = N.research2 = null; }); return p; };
+    await p.evaluate(() => { const N = window.__im.S.nations[0]; for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 4000*(isGood(k) ? RES_K : 1); N.research = N.research2 = null; }); return p; };
   const p = await boot({ viewport: { width: 1440, height: 900 } });
   const node = id => p.evaluate(id => { const e = document.querySelector(`.rnode[data-id="${id}"]`); if (!e) return null; const cs = getComputedStyle(e.querySelector('.dm')); return { cls: e.className, title: e.title, text: e.innerText.replace(/\s+/g, ' ').trim(), bg: cs.backgroundImage, row: +getComputedStyle(e).getPropertyValue('--r'), col: +getComputedStyle(e).getPropertyValue('--c'), lane: +getComputedStyle(e).getPropertyValue('--l'), elite: !!e.querySelector('.rbadge-e'), lv: (e.querySelector('.rlv') || {}).textContent || '', mark: (e.querySelector('.rbdg') || {}).className || '' }; }, id);
   const cat = async c => { await p.evaluate(() => { const x = document.querySelector('[data-act="rback"]'); if (x) x.click(); }); await p.waitForTimeout(120); await p.click(`[data-act="rbranch"][data-b="${c}"]`); await p.waitForTimeout(250); };
@@ -90,13 +90,13 @@ const T0 = Date.now();
   ck('a fully researched tank: attack 16.8, defense 11.2, health 21, speed 8 (the plan, section 6.4)', Math.abs(R.full[0] - 16.8) < 1e-6 && Math.abs(R.full[1] - 11.2) < 1e-6 && R.full[2] === 21 && R.full[3] === 8, R.full);
   ck('health counts in battle: the same hit wounds the upgraded tanks less, by health and defense', R.hurt[0] < R.hurt[1] && Math.abs(R.hurt[0]/R.hurt[1] - R.hurt[2]) < 1e-6, R.hurt);
   // ---- the screen after research: partly levelled, done, the card's level list and before / after
-  await p.evaluate(() => { const im = window.__im; im.S.nations[0].tech.tank_fp = 2; im.S.nations[0].tech.tank_pr = 1; im.S.nations[0].tv++; im.S.hour = 10*24 + 2; im.S.nations[0].rare = 1; });
+  await p.evaluate(() => { const im = window.__im; im.S.nations[0].tech.tank_fp = 2; im.S.nations[0].tech.tank_pr = 1; im.S.nations[0].tv++; im.S.hour = 10*24 + 2; im.S.nations[0].rare = 1*RES_K; });
   await cat('arm'); fp = await node('tank_fp'); const pr = await node('tank_pr'), gun = await node('tank_gun');
   ck('badges: a partly levelled node is blue with done/total; the next level locked until generation 2 is named', /part/.test(fp.cls) && fp.lv === '2/3' && /90, 169, 214/.test(fp.bg), fp);
   ck('badges: green ring when the next level is open (Protection 2 on day 11), a coin mark when it cannot be paid for', /part/.test(pr.cls) && /nxt/.test(pr.cls) && /cn/.test(pr.mark) && pr.lv === '1/3', pr);
   await p.click('.rnode[data-id="tank_pr"]'); await p.waitForTimeout(200); c = await card();
-  ck('card: every level with its day, price and time; before and after for your nation; rare materials short in days of income', /1\/3/.test(c.text) && /Defense \+12% in all/.test(c.text) && /Defense \+25% in all/.test(c.text) && /Day 18/.test(c.text) && /Defense [\d.]+ [\d.]+/.test(c.text.replace(/\s+/g, ' ')) && /rare materials? short/.test(c.text) && c.dis && /Needs \d+ more rare materials?/.test(c.btn), c);
-  await p.evaluate(() => { window.__im.S.nations[0].rare = 4000; });
+  ck('card: every level with its day, price and time; before and after for your nation; rare materials short in days of income', /1\/3/.test(c.text) && /Defense \+12% in all/.test(c.text) && /Defense \+25% in all/.test(c.text) && /Day 18/.test(c.text) && /Defense [\d.]+ [\d.]+/.test(c.text.replace(/\s+/g, ' ')) && /rare materials? short/.test(c.text) && c.dis && /Needs [\d,]+ more rare materials?/.test(c.btn), c);
+  await p.evaluate(() => { window.__im.S.nations[0].rare = 4000*RES_K; });
   // ---- Strategic Air: the Stealth Bomber's two requirements
   await cat('str'); const stl = await node('u_stealth'), up = await node('bomb_up');
   ck('Stealth Bomber: a solid line from the Strategic Bomber Upgrade and a tag for Stealth Airframes (Tactical Air)', stl && /Stealth Airframes \(Tactical Air\)/.test(stl.text) && stl.elite && up.lane === 1 && await p.evaluate(() => document.querySelectorAll('.rs-lines path.xr').length === 1), stl);
@@ -118,7 +118,7 @@ const T0 = Date.now();
   if (W.heli != null) ck('gunship range grows with Long-Range Tanks (6 to 8 hexes)', W.heli0 === 6 && W.heli === 8, [W.heli0, W.heli]);
   // ---- the computer: it researches, with science in one slot and engineering in the other
   const A = await p.evaluate(() => { const im = window.__im, S = im.S, rs = im.rs, o = { kinds: [], steps: [] }, K = Object.fromEntries(rs.TECH().map(t => [t.id, t.kind]));
-    for (const n of [1, 2, 3]){ const N = S.nations[n]; N.research = N.research2 = null; N.rPick = null; for (const k of ['cash', 'metal', 'iron', 'elec', 'rare']) N[k] = 3000; for (let i = 0; i < 6 && (!N.research || !N.research2); i++) rs.aiTurn(n);
+    for (const n of [1, 2, 3]){ const N = S.nations[n]; N.research = N.research2 = null; N.rPick = null; for (const k of ['cash', 'metal', 'iron', 'elec', 'rare']) N[k] = 3000*(k === 'cash' ? 1 : RES_K); for (let i = 0; i < 6 && (!N.research || !N.research2); i++) rs.aiTurn(n);
       o.kinds.push([N.research && K[N.research.id], N.research2 && K[N.research2.id]]); }
     return o; });
   ck('computer players fill both slots: one with science, one with engineering', A.kinds.every(k => k[0] && k[1] && (k[0] === 'eng') !== (k[1] === 'eng')), A.kinds);

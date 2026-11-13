@@ -27,16 +27,16 @@ const origOwner = p => (S.own0 && S.own0[p] != null) ? S.own0[p] : S.home[p];
 const capturedFrom = p => { const o = S.owner[p]; if (o < 0 || G.P[p].sea) return null; const f = origOwner(p); return f !== o ? f : null; };
 // what a building's levels cost to build (money, and goods at base prices), for the value
 function bldWorth(k, l){ const B = BUILD[k], m = Math.pow(1.6, l - 1)*(l === 1 && B.first ? B.first : 1), c = B.lv ? lvCost(k, l) : {cash:B.cost*m, metal:B.metal*m, iron:(B.iron || 0)*m, elec:(B.elec || 0)*m};
-  return c.cash + (c.metal || 0)*MKT_BASE.metal + (c.iron || 0)*MKT_BASE.iron + (c.elec || 0)*MKT_BASE.elec; }
+  return c.cash + (c.metal || 0)/MKT_LOT*MKT_BASE.metal + (c.iron || 0)/MKT_LOT*MKT_BASE.iron + (c.elec || 0)/MKT_LOT*MKT_BASE.elec; }   // (MKT_BASE: per MKT_LOT units)
 // what the province yields in a normal day (provYield without occupation, blockade, morale, convoy or knocked-out buildings): money and goods
 function terrYield(p){ const P = G.P[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75), b = S.bld[p] || {}, y = {cash:(P.city ? 8.5 : 1.8*G.PF) + ECO.cash*pp, oil:0, metal:0, iron:0, elec:0, rare:0};
   if (P.city){ const k = P.main || 'cash', a = 1 + ARMS_PCT*(b.arms || 0); if (k === 'cash') y.cash *= ECO_Y.cash*a; else y[k] = ECO_Y[k]*citySize(pp)*a; }
-  else { y.oil = P.oil ? ECO_RUR.oil : 0; y.metal = P.ore ? ECO_RUR.metal : 0; y.iron = (P.ore ? ECO_RUR.ironOre : 0) + (P.iron ? ECO_RUR.iron : 0); y.elec = 0.004*pp; }
+  else { y.oil = P.oil ? ECO_RUR.oil : 0; y.metal = P.ore ? ECO_RUR.metal : 0; y.iron = (P.ore ? ECO_RUR.ironOre : 0) + (P.iron ? ECO_RUR.iron : 0); y.elec = 0.004*RES_K*pp; }
   return y; }
 // the province's value in $M, the suggested price: land, city, population, oil field, output and buildings (the city level follows its buildings)
 function provValue(p){ const P = G.P[p]; if (!P || P.sea) return 0; const pp = Math.pow(Math.max(0, popOf(p)), 0.75), y = terrYield(p), b = S.bld[p] || {};
   let v = TERR.vLand + P.cells.length*2/(GS*GS) + (P.city ? TERR.vCity : 0) + TERR.vPop*pp + (P.oil ? TERR.vOil : 0);
-  v += TERR.vDays*(y.cash + MKT_K.reduce((s0, k) => s0 + y[k]*MKT_BASE[k], 0));
+  v += TERR.vDays*(y.cash + MKT_K.reduce((s0, k) => s0 + y[k]/MKT_LOT*MKT_BASE[k], 0));
   for (const k of BK) for (let l = 1; l <= (b[k] || 0); l++) v += TERR.vBld*bldWorth(k, l);
   return Math.max(10, Math.round(v/5)*5); }
 // since when nations a and b have been in the same coalition (linked by alliances), from the hour each alliance was signed (S.rel since):
