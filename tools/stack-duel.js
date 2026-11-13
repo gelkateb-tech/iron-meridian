@@ -41,14 +41,14 @@ function setup(city){
 // stacks: the attacker's forces (each a unit mix) and from how many directions they come; defence: the defender's forces
 function duel(city, atk, def, dirs = 1, label = ''){
   const {R, S, G, p, sides} = setup(city);
-  const D = def.map(m => { const a = R.addArmy(1, p, {...m}); a.still = S.hour - 48; return a; });
+  const D = def.map(m => { const a = R.addArmy(1, p, {...m}); a.still = S.hour; return a; });   // (never dug in: the duel weighs the stack limit alone; the dug-in bonus, DIG_DEF, would help either defender alike)
   const A = atk.map((m, i) => { const a = R.addArmy(0, sides[i % Math.min(dirs, sides.length)], {...m}); return a; });
   for (const a of A){ R.orderMove(a, p); a.path = [p]; a.forced = true; }   // (straight in from its own side, not round by a faster road through another)
   { const slow = Math.max(...A.map(a => R.etaHours(a))); for (const a of A) a.delay = slow - R.etaHours(a); }   // from several sides they set off so as to arrive together
   const hp0A = A.reduce((s0, a) => s0 + R.armyHP(a), 0), hp0D = D.reduce((s0, a) => s0 + R.armyHP(a), 0), n0A = A.reduce((s0, a) => s0 + R.count(a), 0), n0D = D.reduce((s0, a) => s0 + R.count(a), 0);
   let h0 = -1, h = 0, m0 = null;
   // the battle is over when no fight is left in the province (a side destroyed, or broken and retreating): the side still standing there won
-  let h1 = -1; for (; h < 24*20; h++){ R.tick(); if (h0 < 0 && S.battles.includes(p)){ h0 = S.hour; m0 = [A, D].map(L => Math.round(L.reduce((s0, a) => s0 + (a.m ?? 80), 0)/L.length)); } if (h0 >= 0 && !S.battles.includes(p) && S.hour - h0 > 1){ h1 = S.hour; break; } }
+  let h1 = -1; for (; h < 24*20; h++){ for (const a of D) if (a.still != null) a.still = S.hour; R.tick(); if (h0 < 0 && S.battles.includes(p)){ h0 = S.hour; m0 = [A, D].map(L => Math.round(L.reduce((s0, a) => s0 + (a.m ?? 80), 0)/L.length)); } if (h0 >= 0 && !S.battles.includes(p) && S.hour - h0 > 1){ h1 = S.hour; break; } }
   const eh = a => R.count(a) > 0 ? R.effHP(a) : 0, holds = L => L.some(a => R.count(a) > 0 && a.at === p && a.to === null);
   const hpA = A.reduce((s0, a) => s0 + eh(a), 0), hpD = D.reduce((s0, a) => s0 + eh(a), 0), nA = A.reduce((s0, a) => s0 + R.count(a), 0), nD = D.reduce((s0, a) => s0 + R.count(a), 0);
   const winner = holds(A) && !holds(D) ? 'attacker' : holds(D) && !holds(A) ? 'defender' : 'none';

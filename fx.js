@@ -624,7 +624,7 @@ function volley(c, main, now, sx){
    Everything is world-anchored and world-sized (shoot/emit with ws: world px, so it moves and scales with the map like the figures). */
 const BFX = {pts:new Map()};   // battle province -> Map(owner -> [{wx, wy, mx, my, ang, t, k, r, a, c}])
 // the weapon of each model type: [forward of the model's centre, height above the ground (both in its own metres), kind, flash length (m)]
-const BFX_GUN = {sol:[0.55, 1.3, 'rifle', 1], hmv:[0.2, 2.2, 'rifle', 1.2], ifv:[2.7, 2.3, 'cannon', 1.8], tank:[5, 2.2, 'barrel', 3.2], art:[5.3, 3.3, 'gun', 4],
+const BFX_GUN = {sol:[0.55, 1.3, 'rifle', 1], sat:[0.55, 1.3, 'rifle', 1], ssf:[0.55, 1.3, 'rifle', 1], hmv:[0.2, 2.2, 'rifle', 1.2], ifv:[2.7, 2.3, 'cannon', 1.8], tank:[5, 2.2, 'barrel', 3.2], art:[5.3, 3.3, 'gun', 4],
   mlrs:[-1.6, 3, 'rocket', 2.6], sam:[-0.6, 3.2, 'sam', 2], frig:[2.4, 0.9, 'ship', 2], crui:[2.9, 1.1, 'ship', 2.4], carr:[1, 1.4, 'ship', 1.4]};
 // one figure drawn this frame: c its cluster (at, owner), t its model type, (x, y) its ground spot on screen (css px), ang its facing (screen
 // radians, 0 east), a its alpha. o.top: a picture seen from straight above (no camera tilt: the muzzle lies on the ground plane); o.len: its

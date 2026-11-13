@@ -233,7 +233,7 @@ function resolveStrike(a, p){
   const hpBefore = defs.map(effHP), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), myBefore = count(a) + adLost + preLost;
   // bombers over a city hit the troops sheltering there 50% harder (a Stealth Bomber 25%: bombCityF)
   const av = avScale(sideAV([a], o, STRIKE*(0.8 + rng()*0.4)), jamF*(BF && city ? bombCityF(T) : 1)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
-  for (const b of defs){ let f = 1/tot; if (b.owner === S.owner[p]) f *= Math.pow(0.8, S.bld[p].fort); hurt(b, av, f); }
+  for (const b of defs){ let f = 1/tot; if (b.owner === S.owner[p]) f *= Math.pow(0.8, S.bld[p].fort); hurt(b, av, f*digF(b)); }
   noteHit(defs[0].owner, T, p);
   // air defence fires back at manned aircraft (drones already ran the gauntlet)
   if (!UNITS[T].dr) aaFire(a, defs, BF ? 1.2 : 2);

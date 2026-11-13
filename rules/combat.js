@@ -92,7 +92,7 @@ function armyStrength(a, blind = false){   // blind: a force that is not yours: 
   // the damage taken is scaled by dF (the product of these): the defence is its inverse
   const fort = mine ? S.bld[p].fort || 0 : 0, dd = docOf(o), sea1 = sea && ground(a) ? (shipsN(a) > 0 ? 0.75 : 1.5) : 1;
   const dTake = t => blind ? {} : ({'home soil':mine ? 1/1.25 : 1, fortifications:mine ? Math.pow(0.8, fort) : 1, doctrine:mine && dd && dd.home && S.home[p] === o ? dd.home : 1, terrain:!sea && (mine || (holder < 0 && o < 0)) ? 1/terr(p).def : 1,
-    'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1});
+    'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1, 'dug in':digF(a)});
   const out = [];
   for (const R of STR_ROWS){
     const row = {k:R.k, name:R.name, atk:{base:null, cur:null, why:[], unit:'', total:false}, def:{base:null, cur:null, why:[], unit:'', immune:false}};
@@ -123,7 +123,7 @@ function armyStrength(a, blind = false){   // blind: a force that is not yours: 
     const fin = (W, why) => { for (const k in W){ const [sw, w] = W[k], f = w > 0 ? sw/w : 1; if (Math.abs(f - 1) > 0.004) why.push([k, f]); } };
     fin(wa, row.atk.why); fin(wd, row.def.why);
     out.push(row); }
-  return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), supplied:sup === 1}};
+  return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, dug:!blind && digF(a) < 1, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), supplied:sup === 1}};
 }
 /* ---------------- Commanders ---------------- */
 const TRAITS = {
@@ -171,6 +171,11 @@ function index(){ const by = new Array(G.P.length).fill(IDX0); for (const a of S
 const DIG_H = 12;
 const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length && !G.P[a.at].sea && count(a) > 0 &&
   (a.stance === 'defend' || (a.still != null && S.hour - a.still >= DIG_H && (S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && a.owner >= 0 && friendly(a.owner, S.owner[a.at])))));
+// a dug-in force defending where it stands takes DIG_DEF times the damage (0.8: about +25% defence), like home soil and fortifications: in its
+// battles (tick.js battleStep), under ranged fire (rangedStep), under air strikes (air.js) and in the odds. Only while it defends its own or a
+// friend's province: a force on the move is never dug in (dugIn), and one with the Defend stance in a province held by a foe is attacking
+const DIG_DEF = 0.8;
+const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? DIG_DEF : 1;
 function endBattle(p){
   const B = S.bt && S.bt[p]; if (!B) return; delete S.bt[p];
   const os = Object.keys(B.s).map(Number);
@@ -254,7 +259,7 @@ function rangedStep(hourly){ let grid = null, gone = false;
       for (const e of hit){ let d = av.get(e); if (!d) av.set(e, d = {soft:0, armored:0, air:0, naval:0}); for (const k of CLASSES) d[k] += b0*multO(a.owner, t, k)/tot; } }
     if (!base) continue;
     for (const [e, d] of av){ const b = e.b, h0 = effHP(b), u0 = count(b);
-      hurt(b, d, land && b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort || 0) : 1);
+      hurt(b, d, (land && b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort || 0) : 1)*digF(b));
       const lost = Math.max(0, h0 - effHP(b)), k = a.id + ':' + b.id, R = RANGED_SHOWN.get(k); if (R) R.lost += lost; else RANGED_SHOWN.set(k, {a, b, p:b.at, lost, x:e.x, y:e.y});
       if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); if (!count(b)) gone = true; } }
     cmdXP(a, base*0.4); if (land) warDamage(best, 1.2/BATTLE_Q);
@@ -334,7 +339,7 @@ function stanceHour(){
   }
 }
 function oddsParts(a, t, foes, dirs, via = null){ if (dirs === undefined) dirs = plannedDirs(a, t, via);
-  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b)*stackDmg(b), 0);   // (stack efficiency per force)
+  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b)*stackDmg(b)/digF(b), 0);   // (a dug-in defender: DIG_DEF)   // (stack efficiency per force)
   const defOwn = foes.some(b => b.owner === S.owner[t]), ownBonus = (G.P[t].sea ? 1 : terr(t).def)*1.25/Math.pow(0.8, S.bld[t].fort || 0);
   let d = raw*frontScale(fn, F)*(defOwn ? ownBonus : 1);
   const pv = via != null ? via : (a.to ?? a.at), river = !G.P[t].sea && G.P[t].river.has(pv) && S.owner[t] !== a.owner;
