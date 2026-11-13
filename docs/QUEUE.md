@@ -26,6 +26,8 @@ Last updated: 2026-11-13 (overnight run).
 | Map modes: switching Political/Relations/Supply/Terrain/... glitches the map; find and fix the cause, test every switch and fast switching; screenshots before merging | Opus | Started (branch map-modes) |
 | Research tree pictures, research unit cards, infantry icons | Opus | Done on branch research-cards; waiting for the owner |
 
+**Merge order for the map jobs (owner):** one at a time, black map first, then map modes, night lights and real borders, each merged with master and re-tested before the next.
+
 ## Queued (in this order)
 
 | # | Task | Model |
