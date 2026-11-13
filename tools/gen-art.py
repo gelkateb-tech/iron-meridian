@@ -3,6 +3,7 @@
 Two kinds of picture:
 - SUBJECTS: a short description of the building level, then one shared STYLE paragraph (the 8 Higgsfield prompts' style
   for the HQ, Airbase 1-5 and Recruiting Office 2-3, minus their base pad: buildings stand straight on the grey background)
+- REDRAWS: a picture redrawn with another architecture, everything else kept (the regional capital HQs)
 - ICONS: map icons, a full prompt each (or ICON_EDITS: an edit of another icon), drawn on grey and saved as
   assets/art-src/<name>.grey.png plus a transparent cut-out <name>.png
 - GROWS: the next level of a building made from the picture of the level before (ba-<before>.png, shrunk to SHRINK in
@@ -84,6 +85,35 @@ SUBJECTS['recruiting-office-1'] = (
     "a glass front entrance with a short canopy and a blank sign board above the door (no lettering), a few steps and a "
     "short paved path in front, and beside the entrance a tall white flagpole flying a plain olive-green flag with no "
     "emblem. Two small shrubs by the door.")
+
+# the regional capital HQs: the owner's western HQ (ba-hq-western.png) redrawn with another architecture, everything else kept
+REDRAW = ("The attached picture is the capital headquarters of one region in a strategy game. Make the matching headquarters "
+          "for another region by changing only the architecture of the building to this: {}. Keep exactly everything else: "
+          "the same camera angle and three-quarter view from above, the same footprint (the same outline, size and position of "
+          "the building in the frame), about the same height, the same eight empty flagpoles in two rows of four at the same "
+          "places at the lower left (bare poles, no flags on them), the same simple clean rendering style and level of detail, "
+          "the same soft daylight from the upper left with shadows to the lower right, and the same plain flat light grey "
+          "background with no ground, slab or outline. No text, no letters, no flags, no emblems, no logos.")
+REDRAWS = {   # name: (the picture it is redrawn from, the new architecture)
+    'hq-eastern-europe': ('ba-hq-western.png',
+        "a large Stalinist-style government building of pale stone: a massive symmetrical stepped block whose tall central "
+        "tower rises in tiers to a slim spire, tall vertical pilasters along the walls and a pillared main entrance"),
+    'hq-middle-east': ('ba-hq-western.png',
+        "a palace of sand-coloured stone with a large central dome and smaller domes on the wings, rows of pointed arches "
+        "along the facades and a tall arched main entrance"),
+    'hq-east-asia': ('ba-hq-western.png',
+        "a government hall with layered, gently curved dark grey tiled roofs, stacked in two tiers on the central hall and "
+        "single curved roofs on the wings, red-brown columns along the front and a wide stone staircase at the entrance"),
+    'hq-south-asia': ('ba-hq-western.png',
+        "a grand building of red sandstone with a large pale stone central dome, small domed pavilions on the corners of the "
+        "wings, and arched colonnades along the front"),
+    'hq-africa': ('ba-hq-western.png',
+        "a modern government building of warm ochre and sand-coloured stone, with a tall row of slim columns across the "
+        "front under a flat projecting roof, and clean modern lines"),
+    'hq-latin-america': ('ba-hq-western.png',
+        "a colonial-style palace with white and pale yellow walls, a central dome, a portico of columns at the entrance, "
+        "terracotta tile roofs on the wings and arched windows"),
+}
 
 # map icons: a full prompt each (no STYLE), drawn on plain grey; saved as <name>.grey.png and cut out into a transparent
 # <name>.png (cutout). ICON_EDITS: an icon made by editing another icon's grey picture, so the two match exactly.
@@ -247,6 +277,10 @@ def request(name, refs, change=None):
         before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
         if not os.path.exists(src): raise SystemExit(f'{name} grows from {os.path.relpath(src, ROOT)}, which is not there yet')
         text, images = GROW.format(add, GROW_END.get(building(name), GROW_END['recruiting-office'])), [shrunk(src)]
+    elif name in REDRAWS:
+        src, desc = REDRAWS[name]; src = os.path.join(OUT, src)
+        if not os.path.exists(src): raise SystemExit(f'{name} is redrawn from {os.path.relpath(src, ROOT)}, which is not there')
+        text, images = REDRAW.format(desc), [src]
     elif name in ICON_EDITS:
         before, text = ICON_EDITS[name]; src = os.path.join(OUT, f'{before}.grey.png')
         if not os.path.exists(src): raise SystemExit(f'{name} is made from {os.path.relpath(src, ROOT)}, which is not there yet')
@@ -322,7 +356,7 @@ def collect(job, force):
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
     if a[0] == '--list':
-        for n in list(SUBJECTS) + list(GROWS) + list(ICONS):
+        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS):
             print(('done ' if os.path.exists(os.path.join(OUT, f'{stem(n)}.png')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
         return
     if a[0] == '--cost':
@@ -338,7 +372,7 @@ def main(a):
         elif a[i] == '--ref': i += 1; refs.append(a[i])
         elif a[i] == '--collect': collect(a[i + 1], force); return
         elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
-        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS: names.append(a[i])   # repeat a name for more tries
+        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS: names.append(a[i])   # repeat a name for more tries
         else: raise SystemExit(f'unknown name or option: {a[i]} (see --list)')
         i += 1
     if batch and any(n in GROWS and GROWS[n][0] in names for n in names):
