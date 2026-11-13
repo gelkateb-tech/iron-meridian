@@ -5432,7 +5432,7 @@ function tmFaceTurn(id, want, now){ let E = TMFACE.get(id);
 // every force's formation, at every zoom (a pure function of its make-up and its facing; its counter's pin is the top of it): c.form =
 // {sl (the model types, most numerous first, up to four), d (each one's view of 16), F (tmForm), top (world px below the anchor, eased when
 // the facing or the make-up changes), id, ang}
-const TMTOP = new Map(), TMGA = new Map();
+const TMTOP = new Map(), TMGA = new Map(), TMCEN = new Map(), TMCEN_V = 0.006; /*@TEST*/const PATHDBG = {};/*@ENDTEST*/   // (TMCEN_V: world units a ms the centring shift moves; PATHDBG: the selected force's drawn route, stops and ETA chip, for .test/controls.js)
 function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
   for (const c of clusters){ c.form = null; c.pinY = c.wy; if (!on || c.wx == null || (c.air && c.moving)) continue;
     const cls = c.cls || (c.air ? 'a' : 'g'), want = tmRank(tmUnits(c.list), cls, c.moving ? Math.min(3, tmNMax(-1)) : tmNMax(c.at), !c.moving && tmPrimO(c.at, c.owner)); if (!want.length) continue;
@@ -5451,7 +5451,17 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     else { const dt = Math.max(0, Math.min(100, now - E.t)); E.v += (top - E.v)*(1 - Math.exp(-dt/120)); if (Math.abs(top - E.v) < 1e-3) E.v = top; else animFast(); E.t = now; }
     let G0 = TMGA.get(lead.id); if (!G0 || G0.S !== S || now - G0.t > 1500){ G0 = {a:pfFresh(now) ? 1 : 0, t:now, S}; TMGA.set(lead.id, G0); if (TMGA.size > 3000) TMGA.clear(); }   // (a group new to the map fades in)
     G0.a = Math.min(1, G0.a + Math.max(0, Math.min(100, now - G0.t))/220); G0.t = now; if (G0.a < 1) animFast();
-    c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a, arts, mid:ny ? ys/ny : 0}; c.pinY = c.wy + E.v; } }   // (mid: the middle of its pictures, world px below the spot: where its diamond stands)
+    const mid = ny ? ys/ny : 0;
+    // a force standing on an exact point (a pinpoint move: the spot the player tapped) or marching to one is drawn CENTRED on its spot: its
+    // diamond (the middle of its pictures) on the very point, its pictures round it; a force in its province's layout, or marching to a
+    // province's centre (a column that joins a stack there), keeps its slot at the top of its group, as before. The shift glides (in time, never by zoom), so a force setting off or arriving does not jump
+    // (kept per force: a group takes the largest shift of its forces, so a column joining a stack glides down with it instead of dropping)
+    { const want0 = (c.pinned && !c.dock) || (c.moving && (lead.dest || lead.sail)) ? mid : 0; let Q = null;
+      for (const q0 of c.list){ const e = TMCEN.get(q0.id); if (e && e.S === S && now - e.t <= 1500 && (!Q || e.v > Q.v)) Q = e; }
+      if (TMCEN.size > 3000) TMCEN.clear();
+      if (!Q) Q = {v:want0, t:now, S}; else { Q = {v:Q.v, t:Q.t, S}; const dt = Math.max(0, Math.min(100, now - Q.t)), dv = want0 - Q.v, st = TMCEN_V*dt; Q.v = Math.abs(dv) <= st ? want0 : Q.v + Math.sign(dv)*st; if (Q.v !== want0) animFast(); Q.t = now; }   // (at an even, slow rate: about a px a frame, so the pictures never jump against the force's own motion)
+      for (const q0 of c.list) TMCEN.set(q0.id, Q); c.wy -= Q.v; }
+    c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a, arts, mid}; c.pinY = c.wy + E.v; } }   // (mid: the middle of its pictures, world px below the anchor: where its diamond stands)
 // the models each force shows this frame (from the zoom they are big enough to read: all of a group's models fade in together), planned before
 // the names, the HQ and the counters are placed (they keep clear of them): c.fm = {ents:[{t, d, s, x, y, box, slot}], box, a} in screen px
 function tmPlan(clusters, hexPx, now){
@@ -7896,25 +7906,36 @@ function draw(now){ draw.now = now;
   for (const q of HQBOX || []){ const tb = [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); }   // your HQ: the names keep a little clear of it
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
   // paths (under the troop models, the names and the counters)
-  const sa = sel.army !== null ? armyById(sel.army) : null;
+  const sa = sel.army !== null ? armyById(sel.army) : null; /*@TEST*/PATHDBG.sel = null; PATHDBG.dots = null; PATHDBG.eta = null;/*@ENDTEST*/
   const antOn = (S.speed && !S.over) || !!sa; if (antOn || RD.antT == null) RD.antT = now; const antT = RD.antT;   // (paused with nothing selected: the dashes rest)
-  const drawPath = (a, path, style, w = 2.2, endPt = null) => { if (!path || (!path.length && !endPt)) return; const pts = [toScreen(...dispPos(a))]; if (antOn) animAmb();
+  const drawPath = (a, path, style, w = 2.2, endPt = null, noEnd = false) => { if (!path || (!path.length && !endPt)) return; const pts = [toScreen(...dispPos(a))]; if (antOn) animAmb();
     let wp = dispPos(a); if (a.to !== null && path.length && path[0] !== a.to){ pts.push(toScreen(G.P[a.to].x, G.P[a.to].y)); wp = [G.P[a.to].x, G.P[a.to].y]; }
     let exact = !path.length; if (exact){ pts.push(toScreen(endPt[0], endPt[1])); if (a.sail && a.sail.nx && endPt === a.sail.to) pts.push(toScreen(a.sail.nx[0], a.sail.nx[1])); }   // (a walk inside the province: straight to its point, by the city when it goes there first)
     path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; if (e) exact = true;
       if (e && heartVia(a, p, wp, e)) pts.push(toScreen(G.P[p].x, G.P[p].y));   // (a point beyond the heart of land to capture: the route goes by the city, rules/movement.js sailTo)
       pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); wp = e || [G.P[p].x, G.P[p].y]; });
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
-    const lastPt = pts[pts.length - 1];
+    const lastPt = pts[pts.length - 1]; /*@TEST*/if (a === sa && style === '#e2a23d') PATHDBG.sel = {id:a.id, pts:pts.map(q => [Math.round(q[0]*10)/10, Math.round(q[1]*10)/10]), exact, noEnd};/*@ENDTEST*/
     ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(antT/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    const [lx, ly] = lastPt; if (!exact){ ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); return; }
-    // an exact destination (rules/movement.js a.dest): a small ring with a dot and four ticks on the very point
-    ctx.beginPath(); ctx.arc(lx, ly, 6.5, 0, Math.PI*2); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.stroke(); ctx.lineWidth = 1.8; ctx.strokeStyle = style; ctx.stroke();
+    const [lx, ly] = lastPt; if (noEnd) return; if (!exact){ ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); return; }
+    endMark(lx, ly, style); };
+  // an exact destination (rules/movement.js a.dest): a small ring with a dot and four ticks on the very point
+  const endMark = (lx, ly, style) => { ctx.beginPath(); ctx.arc(lx, ly, 6.5, 0, Math.PI*2); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.stroke(); ctx.lineWidth = 1.8; ctx.strokeStyle = style; ctx.stroke();
     ctx.beginPath(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ ctx.moveTo(lx + dx*8.5, ly + dy*8.5); ctx.lineTo(lx + dx*11.5, ly + dy*11.5); } ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = style; ctx.stroke();
     ctx.beginPath(); ctx.arc(lx, ly, 2.2, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill(); };
+  // waypoints (rules/movement.js stopsOf): the route from each stop to the next (dashed like the rest), a numbered dot on every stop (small and
+  // plain for a force that is not selected), the exact-point ring on the last one
+  const drawStops = (a, style, w, big) => { const E = stopRoutes(a); if (!E) return;
+    for (const sg of E.segs){ if (!sg.ok) continue; const pts = sg.pts.map(q => toScreen(q[0], q[1])); ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
+      ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(antT/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; }
+    const n = E.st.length; /*@TEST*/if (big && a === sa) PATHDBG.dots = E.st.map(q => toScreen(q.x, q.y).map(v => Math.round(v*10)/10));/*@ENDTEST*/ E.st.forEach((q, i) => { const [x, y] = toScreen(q.x, q.y); if (i === n - 1) endMark(x, y, style);
+      const r = big ? 8 : 3.6; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = 'rgba(3,6,8,.85)'; ctx.fill(); ctx.beginPath(); ctx.arc(x, y, r - 1.4, 0, Math.PI*2); ctx.fillStyle = style; ctx.fill();
+      if (big){ ctx.font = `700 10.5px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#14100a'; ctx.fillText(String(i + 1), x, y + 0.5); } }); };
   { const lo = sel.lastOrder && now - sel.lastOrder.t < 6000 ? sel.lastOrder : null, k0 = lo ? 1 - Math.max(0, (now - lo.t - 3000)/3000) : 0; if (lo){ if (now - lo.t >= 3000) animFast(); else animIn(3000 - (now - lo.t)); }
     wrapEach(() => { for (const a of S.armies) if (a.owner === PLAYER && a !== sa && (a.path.length || a.to !== null || a.sail)){ const hot = lo && lo.ids.includes(a.id);
-      drawPath(a, a.path.length ? a.path : a.to !== null ? [a.to] : [], hot ? `rgba(226,162,61,${(0.5 + 0.45*k0).toFixed(2)})` : 'rgba(226,162,61,0.5)', hot ? 1.8 + 1.0*k0 : 1.6, a.sail && a.to === null && !a.path.length ? a.sail.to : null); } }, 40 + 120/view.s); }   // (routes: once per copy on screen)
+      const st0 = hot ? `rgba(226,162,61,${(0.5 + 0.45*k0).toFixed(2)})` : 'rgba(226,162,61,0.5)', w0 = hot ? 1.8 + 1.0*k0 : 1.6, many = !!(a.wp && a.wp.length);
+      drawPath(a, a.path.length ? a.path : a.to !== null ? [a.to] : [], st0, w0, a.sail && a.to === null && !a.path.length ? a.sail.to : null, many); if (many) drawStops(a, st0, w0, false); } }, 40 + 120/view.s); }   // (routes: once per copy on screen)
   // the selected force's attack range (rules/combat.js rangedStep): ph 0 = a soft circle per range, world-anchored on where it stands, coloured by unit
   // type and labelled (under the counters); ph 1 = a ring on each enemy force it can fire at now, its Bombard target brighter. Drawn only while the
   // force is selected; nothing animates (battery saver)
@@ -7944,8 +7965,8 @@ function draw(now){ draw.now = now;
         ctx.font = `600 11px ${BODY}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
         roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
       return; }
-    if (ph === 1){ if (sel.target !== null && targetPath && targetPath.length) routeChip(sa, sel.target, targetPath); return; }
-    if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3); else if (sa.sail) drawPath(sa, [], '#e2a23d', 3, sa.sail.to);
+    if (ph === 1){ if (sel.target !== null && targetPath && targetPath.length) routeChip(sa, sel.target, targetPath); else etaChip(sa); return; }
+    { const many = !!(sa.wp && sa.wp.length); if (sa.path.length || sa.to !== null) drawPath(sa, sa.path.length ? sa.path : [sa.to], '#e2a23d', 3, null, many); else if (sa.sail) drawPath(sa, [], '#e2a23d', 3, sa.sail.to, many); if (many) drawStops(sa, '#e2a23d', 3, true); }
     if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3, sel.targetPt); if (!sa.air){ riverMarks(sa, targetPath); railMarks(sa, targetPath); } }
     else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   wrapEach(() => drawSelPaths(0), 40 + 120/view.s); drawRange(0);
@@ -8269,6 +8290,20 @@ function routeNotes(a, t, path, pt){ if (!a || a.air || !ground(a) || !path.leng
   if (pt && capturable(a.owner, t) && Math.hypot(pt[0] - G.P[t].x, pt[1] - G.P[t].y) > HEART_R){ const q = path.length > 1 ? path[path.length - 2] : a.to ?? null, f = q != null ? [G.P[q].x, G.P[q].y] : dispPos(a);
     out.push(heartVia(a, t, f, pt) ? 'via the city: captures it' : '⚠ stops short of the city: no capture'); }
   return out; }
+// the route of each stop of a force's plan from the one before (rules/movement.js stopsOf, pathFor), and the hours to each (stopsEta): worked out
+// once per change of the plan, the hour or the road network (display only)
+const WPR = new Map();
+function stopRoutes(a){ const st = stopsOf(a), now = stopNow(a); if (st.length < (now ? 2 : 1)) return null; const k = JSON.stringify(st) + '|' + S.hour + '|' + LINKV + '|' + a.at + '|' + a.to + '|' + (a.pos || '');
+  let E = WPR.get(a.id); if (E && E.k === k && E.S === S) return E; const segs = [], from = now ? st : [{p:a.at, x:(a.pos || [G.P[a.at].x])[0], y:(a.pos || [0, G.P[a.at].y])[1]}, ...st];   // (standing at a stop until the hour turns: the line to the next one starts at the force)
+  for (let i = 1; i < from.length; i++){ const f = from[i - 1], q = from[i], pth = f.p === q.p ? [] : pathFor(a, f.p, q.p), pts = [[f.x, f.y]]; let wp = [f.x, f.y];
+    for (let j = 0; j < pth.length; j++){ const p = pth[j]; if (j === pth.length - 1){ if (heartVia(a, p, wp, [q.x, q.y])) pts.push([G.P[p].x, G.P[p].y]); } else { pts.push([G.P[p].x, G.P[p].y]); wp = [G.P[p].x, G.P[p].y]; } }
+    if (!pth.length && heartVia(a, q.p, wp, [q.x, q.y])) pts.push([G.P[q.p].x, G.P[q.p].y]); pts.push([q.x, q.y]); segs.push({pts, ok:f.p === q.p || pth.length > 0}); }
+  E = {k, S, st, segs, eta:stopsEta(a)}; WPR.set(a.id, E); if (WPR.size > 300) WPR.clear(); return E; }
+// the selected force's order: a chip over its last stop with the hours to get there (and the number of stops of a waypoint plan)
+function etaChip(a){ if (a.air || a.fly) return; const st = stopsOf(a); if (!st.length) return; const q = st[st.length - 1], E = st.length > 1 || !stopNow(a) ? stopRoutes(a) : null, h = E ? E.eta[E.eta.length - 1] : etaHours(a);   // (standing at a stop: the hours from there)
+  if (h == null) return; const [x, y] = toScreen(q.x, q.y), txt = `${h} h${st.length > 1 ? ` · ${st.length} stops` : ''}`; if (x < -60 || y < -40 || x > cw + 60 || y > ch + 40) return;
+  ctx.save(); ctx.font = `700 11px ${BODY}`; const w = ctx.measureText(txt).width + 14; roundRect(ctx, x - w/2, y - 34, w, 19, 9.5); ctx.fillStyle = 'rgba(20,16,10,.9)'; ctx.fill(); ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = '#f6e7c4'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y - 24.5); ctx.restore(); /*@TEST*/PATHDBG.eta = {txt, x:Math.round(x), y:Math.round(y)};/*@ENDTEST*/ }
 function routeChip(a, t, path){
   const [x, y] = toScreen(G.P[t].x, G.P[t].y), foes = stationaryAt(t).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner)), rn = routeNotes(a, t, path, sel.targetPt);
   const fw = a.air ? 0 : fightsOnWay(a, path), r = odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path, tgtEnd(t))} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}${rn.length ? ' · ' + rn.join(' · ') : ''}`;
@@ -8299,15 +8334,18 @@ function drawMini(){
 }
 
 /* ---------------- Input ---------------- */
-const pointers = new Map(); let drag = null, pinch = null;
+const pointers = new Map(); let drag = null, pinch = null, lastPT = 'mouse';
+// what counts as a tap on the map (unit controls): the pointer moved less than TAP_SLOP px (a finger 10, a mouse 6) and was held less than
+// TAP_LONG ms. A longer press never gives a move order (resting a finger is not an order), a pan or a pinch never taps
+const TAP_SLOP = {mouse:6, pen:8, touch:10}, TAP_LONG = 650;
 function screenToWorld(sx, sy){ return [wrapWX((sx - view.x)/view.s), (sy - view.y)/view.s]; }   // (in the canonical copy: taps across the seam hit what is there)
 function screenToWorldRaw(sx, sy){ return [(sx - view.x)/view.s, (sy - view.y)/view.s]; }   // (the copy on screen: a zoom's anchor)
 function provAt(sx, sy){ const c = worldToCell(...screenToWorld(sx, sy)); return c >= 0 ? G.prov[c] : -1; }
 function localXY(e){ const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 cv.addEventListener('pointerdown', e => {
-  cv.setPointerCapture(e.pointerId); const [x, y] = localXY(e); pointers.set(e.pointerId, {x, y});
+  cv.setPointerCapture(e.pointerId); const [x, y] = localXY(e); pointers.set(e.pointerId, {x, y}); lastPT = e.pointerType || 'mouse';
   if (pointers.size === 1 && e.shiftKey && e.pointerType === 'mouse'){ boxSel = {x0:x, y0:y, x1:x, y1:y}; drag = null; return; }
-  if (pointers.size === 1){ drag = {x, y, vx:view.x, vy:view.y, moved:false}; ZTW = null;
+  if (pointers.size === 1){ drag = {x, y, vx:view.x, vy:view.y, moved:false, t0:performance.now(), slop:TAP_SLOP[e.pointerType] || 8}; ZTW = null;
     // pressing on your own force's counter (with a mouse, or a selected one by touch) drags that force: drop it on another force to merge
     const h = hitAt(x, y, true), own = h && !h.spread && !h.unk ? h.ids.map(armyById).filter(b => b && b.owner === PLAYER && !b.air && !b.fly && count(b)) : [];
     if (own.length && e.button === 0 && !cmdMode && !aimMsl && dropFor === null && (e.pointerType === 'mouse' || own.some(b => b.id === sel.army || sel.group.includes(b.id)))) drag.unit = (own.find(b => b.id === sel.army) || own[0]).id; }
@@ -8320,21 +8358,22 @@ cv.addEventListener('pointermove', e => {
     if (GLOBE && GLOBE.ok() && view.s <= minScale()*1.001 && pinch.s*(d/pinch.d) < minScale()*0.72 && GLOBE.enter('zoom')){ pointers.clear(); pinch = null; drag = null; return; }
     zoomAt(pinch.s*(d/pinch.d)/view.s, (a.x + b.x)/2, (a.y + b.y)/2); return; }
   if (boxSel){ boxSel.x1 = x; boxSel.y1 = y; showBox(); return; }
-  if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > 6) drag.moved = true; if (drag.moved && drag.unit != null){ closeChooser(); tipHide(); udrag = {id:drag.unit, x, y}; return; } if (drag.moved){ closeChooser(); view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
+  if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > drag.slop) drag.moved = true; if (drag.moved && drag.unit != null){ closeChooser(); tipHide(); udrag = {id:drag.unit, x, y}; return; } if (drag.moved){ closeChooser(); view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
   if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
 });
 function endPointer(e){
   const [x, y] = localXY(e);
   if (boxSel){ finishBox(); }
   else if (drag && drag.moved && udrag && pointers.size === 1) dropUnit(x, y);
-  else if (drag && !drag.moved && pointers.size === 1 && e.button !== 2) tap(x, y, e.shiftKey);   // a right-click is an order (contextmenu), not a tap
+  else if (drag && !drag.moved && pointers.size === 1 && e.button !== 2) tap(x, y, e.shiftKey, performance.now() - drag.t0 > TAP_LONG);   // a right-click is an order (contextmenu), not a tap
   udrag = null;
   pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) drag = null;
 }
 cv.addEventListener('pointerup', endPointer);
-cv.addEventListener('contextmenu', e => { e.preventDefault(); if (sel.army === null) return; const [x, y] = localXY(e), a = armyById(sel.army); if (!a) return; lastClickW = screenToWorld(x, y);
+cv.addEventListener('contextmenu', e => { e.preventDefault(); if (sel.army === null || lastPT !== 'mouse' || (drag && drag.moved)) return; const [x, y] = localXY(e), a = armyById(sel.army); if (!a) return; lastClickW = screenToWorld(x, y);   // (a long press by touch is no order)
   const TL = tapList(); for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a, e.shiftKey); renderSide(true); return; } break; } }
-  const p = provAt(x, y); if (p < 0) return; if (a.to === null && p === a.at && !a.air) return; setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a, e.shiftKey); else if (!a.air && embarkWhy(a, p)) toast(embarkWhy(a, p), 'bad', null); renderSide(true); });
+  const p = provAt(x, y); if (p < 0) return; if ((e.shiftKey || wpMode) && !a.air){ stopTap(a, p, x, y); return; }   // Shift + right-click (or the Waypoint button on): one more stop
+  if (a.to === null && p === a.at && !a.air){ if (!G.P[p].sea || shipsOnly(a)) spotMove(a, p, screenToWorld(x, y)); return; } setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a, e.shiftKey); else if (!a.air && embarkWhy(a, p)) toast(embarkWhy(a, p), 'bad', null); renderSide(true); });
 cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag = null; pinch = null; udrag = null; });
 let udrag = null;   // a counter being dragged: {id, x, y} (screen)
 function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) return;
@@ -8389,15 +8428,16 @@ function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ cons
 // theirs (HITX, sat) on top, then the counters (hits), then the pictures close in (HITX, art), which their own tags and counters overlap
 function tapList(){ if (!HITX.length) return hits; const A = [], B = []; for (const h of HITX) (h.art ? A : B).push(h); return A.concat(hits, B); }
 function hitAt(x, y, noArt = false){ const L = tapList(); for (let i = L.length - 1; i >= 0; i--){ const h = L[i]; if (noArt && h.art) continue; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }   // (noArt: not the pictures: a drag that starts on one pans the map)
-function tap(x, y, shift = false){
+function tap(x, y, shift = false, long = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   if (tip.classList.contains('dugtip')) tipHide();
   { const dh = dugHitAt(x, y); if (dh && !cmdMode && !aimMsl && dropFor === null && rallyFor === null && (sel.army === null || dh.own)){ closeChooser(); dugTip(x, y, true); return; } }   // a tap (or a long press) on the dug-in shield explains it; the rest of the badge still opens the army bar
   closeChooser(); lastClickW = screenToWorld(x, y); const TL = tapList();   // (the counters, the stacked ones beside them and the pictures)
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
   const hs = TL.length !== hits.length && TL.find(h => h.sat && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);   // (a counter stacked beside another stands where it does to be tapped: it wins over a city's point under it)
-  const cityTap = plain && !hs && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
-  const mk = hs ? null : cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
+  const core = !hs && coreAt(x, y);   // (a counter's own square drawn over a city's point: the counter is what was tapped)
+  const cityTap = plain && !hs && !core && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
+  const mk = hs || core ? null : cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
       const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } } return; }
@@ -8409,13 +8449,18 @@ function tap(x, y, shift = false){
       if (own.length){
         if (shift && sel.army !== null){ selectArmy(own[0].id, true); return; }
         if (own.some(a => a.id === sel.army)){ tapCombat(armyById(sel.army));   // (fx.js: in combat, its range ring and target again)
-          if (own.length > 1){ const i2 = own.findIndex(a => a.id === sel.army); selectArmy(own[(i2 + 1) % own.length].id); }
-          else { const a = armyById(sel.army); selectProv(a.to === null ? a.at : null); }
+          if (own.length > 1){ const i2 = own.findIndex(a => a.id === sel.army); if (i2 === own.length - 1) clearSel(); else selectArmy(own[i2 + 1].id); }   // (a stack of several of yours: each in turn, then released)
+          else clearSel();   // tapping the selected force again releases it (Conflict of Nations)
         } else selectArmy(own[0].id, shift);
         return;
       }
       const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0);
-      if (foe && sel.army !== null){ const a = armyById(sel.army); if (a && !a.air){ if (sel.chase === foe.id && bombardTry(a)) return; setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; renderSide(true); return; } }   // (tapped again and in range: Bombard)
+      // with one of yours selected, a tap on a foe is the order (Conflict of Nations): in range it fires from where it stands (Bombard), else it
+      // marches on it and pursues it (a.chase); a likely defeat or a war to declare waits for a second look in the panel, as a tap on its province
+      if (foe && sel.army !== null){ const a = armyById(sel.army); if (a && !a.air && a.owner === PLAYER){ if (long) return; setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; if (bombardTry(a)) return;
+        const t = sel.target, foes = stationaryAt(t).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
+        if (!(targetPath && targetPath.length) || (foes.length && odds(a, t, foes, undefined, viaOf(a)) < 0.9) || (sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)))){ renderSide(true); return; }
+        sendToTarget(a, true); return; } }
       if (foe && !h.unk && !cmdMode && sel.army === null && !shift && armyVisible(foe, visibleSet(PLAYER))){ selectFoe(foe.id); return; }   // a foreign force you can see: its read-only army bar
       break;
     } }
@@ -8425,17 +8470,21 @@ function tap(x, y, shift = false){
   if (p < 0 || (G.P[p].sea && sel.army === null)){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (a){
-    if (shift && !a.air && (a.path.length || a.to !== null)){ const end = a.path.length ? a.path[a.path.length - 1] : a.to; if (p === end) return;
-      const ext = pathFor(a, end, p); if (ext.length){ for (const x of groupArmies()) if (!x.air && x !== a && (x.path.length || x.to !== null)){ const e2 = x.path.length ? x.path[x.path.length - 1] : x.to, px = pathFor(x, e2, p); if (px.length) x.path = x.path.concat(px); }
-        a.path = a.path.concat(ext); a.forced = true; sfx('order'); toast(`Waypoint added: ${armyName(a)} continues to ${G.P[p].cityName || G.P[p].name}.`, 'info', null); renderSide(true); } else toast('No route from the last waypoint to there.', 'bad', null);
-      return; }
-    if (a.to === null && p === a.at && !a.air && (!G.P[p].sea || shipsOnly(a)) && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.sail ? a.sail.to : a.pos || [G.P[p].x, G.P[p].y];   // (anywhere in its province or sea zone: it walks, or sails, there)
-      if (Math.hypot(w0[0] - cur[0], w0[1] - cur[1]) > 6){ spotMove(a, p, w0); return; } selectProv(p); return; }
+    if (long) return;   // a long press is no order (a resting finger)
+    if ((shift || wpMode) && !a.air){ stopTap(a, p, x, y); return; }   // the Waypoint button on (or Shift on a desktop): one more stop
+    if (a.to === null && p === a.at && !a.air && (!G.P[p].sea || shipsOnly(a)) && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.sail ? a.sail.nx || a.sail.to : a.pos || [G.P[p].x, G.P[p].y], [cx, cy] = toScreen(cur[0], cur[1]);   // (anywhere in its province or sea zone: it walks, or sails, there)
+      if (Math.hypot(cx - x, cy - y) > 14){ spotMove(a, p, w0); return; } clearSel(); return; }   // (on its own spot or the end of its walk: released)
     if (a.to === null && p === a.at){ selectProv(p); return; }
     if (sel.target === p && a.air){ sendToTarget(a); return; }
     if (sel.target === p){ if (bombardTry(a)) return;   // in range: tapping the target again bombards it (the force stays where it is)
       const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner)); if (odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
+    if (!a.air && atPlanEnd(a, x, y)){ clearSel(); return; }   // a second tap on the destination it already has: released (the order stands)
     setTarget(a, p);
+    // Conflict of Nations: the tap IS the order (to that exact point), the force stays selected with its route drawn. A likely defeat waits for a
+    // second look (the plan and its odds in the panel: press Attack anyway); a surprise attack asks first (sendToTarget)
+    if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
+      if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; }
+      sendToTarget(a, true); return; }
     // tap that is not a valid order target (a land force and a province it can never reach, not merely a diplomatic block, which the plan panel explains) = tap away: deselect
     if (!a.air && !(targetPath && targetPath.length) && canEnter(PLAYER, p)){ const why = embarkWhy(a, p); if (why){ toast(why, 'bad', null); sel.target = null; targetPath = null; renderSide(true); } else clearSel(); }   // (troops board ships only in a naval port: say so, keep the force selected)
     return;
@@ -8510,16 +8559,18 @@ function armiesHTML(){
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button>${idle ? '<button class="btn" data-act="next-idle">Next idle force</button>' : ''}</div>`;
 }
 // ---- bottom command bar for the selected force (move / attack / delay / split / merge / halt / stance)
-let cmdMode = null;
+let cmdMode = null, wpMode = false;   // wpMode: the Waypoint button is on (each tap on the map adds a stop: stopTap)
 function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.owner !== PLAYER) return '';
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
   if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
-  return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
+  const nst = stopsOf(a).length;
+  return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-wp', '⋯', 'Waypoint', 'W', wpMode, false, 'Waypoints: while on, each tap on the map adds a stop, and the force moves through the stops in order. Turn it off to keep the stops')
+    + (wpMode || (a.wp && a.wp.length) ? b('cm-undo', '↶', 'Undo', '', false, !nst, `Remove the last stop${matchMedia('(pointer: fine)').matches ? ' (Backspace)' : ''}; with one stop left it cancels the order`) : '') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
     + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null && !a.sail, 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
     + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : ''); }   // no Close button: tap empty map (or Esc) to deselect
-function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || dropFor !== null || !!aimMsl); }
+function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || wpMode || dropFor !== null || !!aimMsl); }
 function sendToTarget(a, keep = false){
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
@@ -8529,14 +8580,33 @@ function sendToTarget(a, keep = false){
     const ptOf = i => !P0 ? null : i ? pinPt(g[i], T, [P0[0] + Math.cos(i*2.4)*6, P0[1] + Math.sin(i*2.4)*5]) : pinPt(g[i], T, P0);
     g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
   sel.target = null; targetPath = null;
-  // auto-deselect: once an order is given the force (or the whole group) is released; its route stays drawn, brighter for a few seconds
-  if (ok && !keep){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; sel.army = null; sel.group = []; sel.prov = null; hoverPath = null; cmdMode = null; }
+  // as in Conflict of Nations the force (or the whole group) stays selected once the order is given, its route drawn to the point with the ETA:
+  // another tap on the map changes the order; a tap on the force, on its destination, or Esc releases it. Its route stays brighter for a few seconds
+  if (ok){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; hoverPath = null; cmdMode = null; }
   renderSide(true); }
+// Waypoint button on (or Shift): a tap adds a stop at that exact point (rules/movement.js addStop): an idle force sets off for it, one with orders
+// goes there after its last stop. A group: each force adds its own stop round the point (as sendToTarget spreads a group's points)
+function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '';
+  g.forEach((q, i) => { let pt = pinPt(q, p, i ? [w[0] + Math.cos(i*2.4)*6, w[1] + Math.sin(i*2.4)*5] : w);
+    if (pt && ground(q) && !G.P[p].sea){ const [hx, hy] = toScreen(G.P[p].x, G.P[p].y); if (Math.hypot(hx - x, hy - y) < 16) pt = [G.P[p].x, G.P[p].y]; }   // (a tap on or by the city: its heart, where a province is captured)
+    if (pt && addStop(q, p, pt)){ ok++; delete q.join; return; }
+    if (!why) why = !pt || (shipsOnly(q) && !G.P[p].sea) ? 'A fleet\'s stops are on water.' : !canEnter(PLAYER, p) ? `${placeOwner(p)} is not open to you: tap with Waypoint off to plan an attack.` : embarkWhy(q, p) || 'No route there from the last stop.'; });
+  if (ok){ sfx('order'); visCache = null; sel.target = null; targetPath = null; hoverPath = null; sel.lastOrder = {ids:g.map(q => q.id), t:performance.now()}; ftipAsk('move'); }
+  else toast(why, 'bad', null);
+  renderSide(true); return ok > 0; }
+// Undo (Backspace): the last stop of the selected force (or group) goes; with one stop left the order is cancelled (rules/movement.js undoStop)
+function undoTap(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.owner !== PLAYER || a.air) return false; let any = false;
+  for (const q of groupArmies()) if (q.owner === PLAYER && !q.air && undoStop(q)) any = true;
+  if (any){ sfx('order'); visCache = null; redraw(); } renderSide(true); return any; }
+// a tap on (or by) the end of the selected force's plan: its last stop, within 14 px on screen
+function atPlanEnd(a, x, y){ const st = stopsOf(a); if (!st.length) return false; const q = st[st.length - 1], [ex, ey] = toScreen(q.x, q.y); return Math.hypot(ex - x, ey - y) < 14; }
+// a drawn counter's own square (not its marks or margins) under the tap: it wins over a city's point under it (a force pinned on a city is tapped by its badge)
+function coreAt(x, y){ for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (h.unk) continue; const mx = h.w*0.22, my = h.h*0.22; if (x >= h.x + mx && x <= h.x + h.w - mx && y >= h.y + my && y <= h.y + h.h - my) return h; } return null; }
 function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
-  sel.group = []; sel.foe = null; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
-function selectFoe(id){ if (tab !== 'cmd') setTab('cmd'); sel.group = []; sel.army = null; sel.prov = null; sel.target = null; sel.foe = id; targetPath = null; hoverPath = null; renderSide(true); }
-function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); sel.group = []; sel.foe = null; CS.det = false; if (rallyFor !== null){ setRally(rallyFor, p); return; }
+  if (id !== sel.army) wpMode = false; sel.group = []; sel.foe = null; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
+function selectFoe(id){ wpMode = false; if (tab !== 'cmd') setTab('cmd'); sel.group = []; sel.army = null; sel.prov = null; sel.target = null; sel.foe = id; targetPath = null; hoverPath = null; renderSide(true); }
+function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); wpMode = false; sel.group = []; sel.foe = null; CS.det = false; if (rallyFor !== null){ setRally(rallyFor, p); return; }
   if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (G.P[p].city) ftipAsk('city'); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 let sideOpen = false;   // phones: the command panel opened by hand (advisor shield, dispatches), until closed or the selection clears
 function sideSync(){ const phone = innerWidth <= 820, b = document.body; if (!phone){ if (b.classList.contains('side-on')) b.classList.remove('side-on'); return; }
@@ -8551,7 +8621,7 @@ function sideReveal(id){ setTimeout(() => requestAnimationFrame(() => { if (inne
   const sd = $('side'), cb = $('cmdbar'), cr = cv.getBoundingClientRect(); let top = sd.getBoundingClientRect().top - cr.top; if (cb && !cb.hidden) top = Math.min(top, cb.getBoundingClientRect().top - cr.top);
   const [ax, ay] = armyPos(a), [, sy] = toScreen(ax, ay); if (top < 140 || sy < top - 50) return;
   const [cx] = screenToWorld(cw/2, ch/2); camGo(cx, ay + (ch/2 - top*0.45)/view.s, view.s); }), 120); }
-function clearSel(){ sel.group = []; sel.foe = null; rallyFor = null; aimMsl = null; sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
+function clearSel(){ wpMode = false; cmdMode = null; sel.group = []; sel.foe = null; rallyFor = null; aimMsl = null; sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 
 /* ---------------- Tooltip ---------------- */
 const tip = document.getElementById('tip');
@@ -9080,7 +9150,8 @@ function renderSide(force){
   if (aimMsl) hint = `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${mslOf(PLAYER, aimMsl.k).range*KM_HEX} km). Esc to cancel.`;
   else if (rallyFor !== null) hint = `Tap where units trained in ${G.P[rallyFor].cityName} should gather.`;
   else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Tap a province inside the blue ring to plan an air mission.';
-  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap empty map or press Esc to deselect.` : `Tap ${G.P[sel.target].name} again or press Send to march. Tap empty map or press Esc to deselect.`) : rangedOf(a).length ? 'Tap an enemy force or province in the ring to bombard it, or a province or sea zone to plan a route. Press Esc to deselect.' : 'Tap a province or sea zone to plan a route. Press Esc to deselect.';
+  else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
+  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Tap the map to move there, an enemy force in the ring to bombard it. Tap the force again or press Esc to deselect.' : 'Tap the map to move there. Tap the force again (or its destination) or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
   setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
 }
@@ -9656,6 +9727,7 @@ function achHTML(){ const keys = Object.keys(ACH), got = keys.filter(k => ACHS[k
 function statusText(a){
   const P = G.P;
   if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${P[a.at].name}`};
+  if (a.wp && a.wp.length && a.to === null && !a.path.length && !a.sail) return {cls:'move', short:'at a stop', long:`At a waypoint in ${P[a.at].cityName || P[a.at].name}: it sets off for the next stop within the hour (${pluN(a.wp.length, 'stop')} to go)`};
   if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${P[a.at].name}, resupplied at sea by the convoys`}`}; }
   if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${P[a.at].name}: it attacks any convoy within ${fleetKm(a)} km`}; }
   if (a.blk){ const n = S.trade ? S.trade.routes.filter(r => r.bk === a.id) : [], cut = n.filter(r => r.f0 === 0).length, [x, y] = armyXY(a), ch = chokeAt(x, y, fleetKm(a)), here = ch ? chokeByKey(ch).name : P[a.at].name;
@@ -10136,7 +10208,9 @@ document.addEventListener('click', e => {
     case 'fire': if (a){ a.fire = b.dataset.v; renderSide(true); } break;
     case 'bombard': if (a && !bombardTry(a)){ toast('Out of range now.', 'bad', null); renderSide(true); } break;
     case 'bombard-stop': if (a){ delete a.tgt; renderSide(true); } break;
-    case 'cm-move': cmdMode = cmdMode === 'move' ? null : 'move'; renderSide(true); break;
+    case 'cm-move': cmdMode = cmdMode === 'move' ? null : 'move'; wpMode = false; renderSide(true); break;
+    case 'cm-wp': wpMode = !wpMode; cmdMode = null; sel.target = null; targetPath = null; renderSide(true); break;
+    case 'cm-undo': undoTap(); break;
     case 'cm-attack': cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); break;
     case 'cm-delay': if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } break;
     case 'cm-stance': if (a){ const ks = Object.keys(STANCES); a.stance = ks[(ks.indexOf(a.stance || 'hold') + 1) % ks.length]; a.home = null; toast(`${armyName(a)}: ${STANCES[a.stance][0]}. ${STANCES[a.stance][1]}`, 'info', null); renderSide(true); } break;
@@ -10299,6 +10373,8 @@ document.addEventListener('keydown', e => { INCC.v = -1;
   else if (e.key === 'a' || e.key === 'A'){ if (modalKind === 'armies') closeModal(); else if ($('modal').hidden) openModal(armiesHTML(), 'armies'); }
   else if ((e.key === 'm' || e.key === 'M') && sel.army !== null && $('modal').hidden){ cmdMode = cmdMode === 'move' ? null : 'move'; renderSide(true); }
   else if ((e.key === 'k' || e.key === 'K') && sel.army !== null && $('modal').hidden){ cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); }
+  else if ((e.key === 'w' || e.key === 'W') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a && a.owner === PLAYER && !a.air){ wpMode = !wpMode; cmdMode = null; sel.target = null; targetPath = null; renderSide(true); } }
+  else if (e.key === 'Backspace' && sel.army !== null && $('modal').hidden){ e.preventDefault(); undoTap(); }
   else if ((e.key === 'x' || e.key === 'X') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a && a.owner === PLAYER){ haltArmy(a); redraw(); renderSide(true); } }
   else if ((e.key === 'l' || e.key === 'L') && sel.army !== null && $('modal').hidden){ const a = armyById(sel.army); if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } }
   else if (e.key === '.' || e.key === 'Tab'){ if ($('modal').hidden){ e.preventDefault(); nextIdle(); } }
@@ -10975,6 +11051,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stat
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, ctryPal:{value:() => ctryPal()}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, wrap:{value:{W:WRAP_W, X0:WRAP_X0, WW:WORLD_W, WH:WORLD_H, minScale:() => minScale(), ks:() => wrapKs(0)}}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {pathDbg:{get:() => PATHDBG}, clearSel:{value:() => clearSel()}, wpMode:{get:() => wpMode, set:v => { wpMode = !!v; renderSide(true); }}, stopTap:{value:(a, p, x, y) => stopTap(a, p, x, y)}, undoTap:{value:() => undoTap()}, coreAt:{value:(x, y) => coreAt(x, y)}, stopRoutes:{value:a => stopRoutes(a)}, cmdMode:{get:() => cmdMode}, lastPT:{get:() => lastPT}});   // (unit controls and waypoints: .test/controls.js, .test/waypoints.js)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)

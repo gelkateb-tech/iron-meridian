@@ -17,7 +17,6 @@ Last updated: 2026-11-13 (overnight run).
 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities (building pictures wait for the speed job: both change map drawing) | Sonnet | branch cities-panel |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (the other 186 pictures, about $6.9): waits for the owner to approve the 3 sample banners and 3 sample icons | Opus | samples on branch research-tab (8a24f63) |
-| Unit controls like Conflict of Nations: exact-spot movement fixed, tap to select / tap map to move / clear path line / tap empty space to deselect, Waypoint button with dots and undo | Opus | branch unit-controls |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused on branch borders-real; resumes when the speed job is merged (both rewrite map drawing) |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
@@ -37,6 +36,8 @@ Last updated: 2026-11-13 (overnight run).
 | 9 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Unit controls, deselect:** with a force selected, a tap on empty land is a move order (as in Conflict of Nations); deselect is a tap on the force again, a second tap on its destination, or Esc. Do you want a tap on empty land to deselect instead (then moving needs the Move button or a drag)?
 
 - **Resource balance review:** docs/RESOURCES-PER-NATION.md. (1) 14-city nations need two resources on 3 cities, not one. (2) Rare materials go from 19 to 89 cities, so their market price roughly halves: lower rare output per city? (3) Weak spots where the map has no better city: Mongolia and Chad electronics, Israel iron (Nitzana), Saudi rare (As Sulayyil) and electronics (Abha), Venezuela rare (Barcelona), Thailand iron (Surin), Vietnam money (Soc Trang).
 
