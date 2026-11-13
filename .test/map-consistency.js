@@ -9,6 +9,7 @@
 //  (M) MODELS   every 3D model / picture on screen keeps its world offset from its force's spot (it moves with its counter, < 2 css px)
 //               across 3 zooms and pans, and its counter (the diamond or the tag) is pinned on the same spot (< 2 css px), including forces
 //               just either side of the map's east-west seam (Chukotka, and Alaska seen from the copy east of the seam)
+//  (P) PARTIAL  a capture's partial layer redraw (visDirty) matches a full render of the view (tint, bands, borders)
 //  (O) OUTLINE  a coastal province's hover outline is kept to the land (no pixels of it out at sea)
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -96,6 +97,23 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
       checks.borders.push({tag, s, ...br});
       for (const k of ['prov', 'country', 'nation']){ const [ok, n] = br[k]; if (n >= 6 && ok < n*0.7) fail(`borders ${tag} z${s} ${k}`, br[k]); }
       if (br.prov[1] < 6) fail(`borders ${tag} z${s}: too few province borders in view`, br.prov); } }
+
+  // (P) PARTIAL  a capture redraws only the parts of the layer round it (visDirty), with the same tint, bands and borders as a full render:
+  //               a Canadian province next to the US handed to the US, the layer as the partial redraw left it against a full render of the view
+  { const r0 = await p.evaluate(([us, ca]) => { const im = window.__im, G = im.G, S = im.S;
+      // (a small one, with small neighbours: the redrawn parts must stay under the share of the layer past which a full render is made instead)
+      const area = P => P.cells.length + P.nbs.reduce((a, n) => a + G.P[n].cells.length, 0);
+      const q = G.P.filter(P => !P.sea && S.owner[P.id] === ca && P.nbs.some(n => S.owner[n] === us) && P.cells.length >= 8).sort((a, b) => area(a) - area(b))[0]; return q ? {p:q.id, x:q.x, y:q.y, name:q.name} : null; }, [G0.us, G0.ca]);
+    if (!r0) fail('partial: no Canadian province next to the US', null); else {
+      await setView(r0.x, r0.y, 4); await settle(); await p.mouse.move(MAP.x + 4, MAP.y + 4); await settle();
+      const f0 = await p.evaluate(() => window.__im.layer.full);
+      await p.evaluate(([q, us]) => { const im = window.__im; window.__mcQ = im.S.owner[q]; im.S.owner[q] = us; im.geoDirty(); im.redraw(); }, [r0.p, G0.us]); await settle();
+      const cmp = await p.evaluate(() => { const im = window.__im, L = im.layer, full = L.full, a = L.getContext('2d').getImageData(0, 0, L.width, L.height).data.slice(); im.renderLayer();
+        const b = im.layer.getContext('2d').getImageData(0, 0, L.width, L.height).data; let n = 0, big = 0; for (let i = 0; i < a.length; i += 4){ n++; if (Math.abs(a[i] - b[i]) > 6 || Math.abs(a[i + 1] - b[i + 1]) > 6 || Math.abs(a[i + 2] - b[i + 2]) > 6) big++; }
+        return {full, n, differ:big, share:+(big/n).toFixed(5)}; });
+      await p.evaluate(q => { const im = window.__im; im.S.owner[q] = window.__mcQ; im.geoDirty(); im.redraw(); }, r0.p); await settle();
+      checks.partial = {prov:r0.name, partialUsed:cmp.full === f0, ...cmp};
+      if (cmp.share > 0.002) fail('partial redraw differs from a full render', checks.partial); if (!checks.partial.partialUsed) fail('partial: the capture was not redrawn in part (visDirty)', checks.partial); } }
 
   // (O) the hover outline of a coastal province stays on land (New York at z14)
   { const c = await cityXY('New York'); await setView(c[0], c[1], 14); await settle();

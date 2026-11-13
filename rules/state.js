@@ -69,7 +69,7 @@ let G = null, S = null;
 const powerCountry = p => WORLD.countries.indexOf(p.country);
 function resetCaches(){ if (S){ S.bt = {}; } SUP = null; supHour = -1; BLOCK = new Set(); visCache = null; borderCache = null; trLastH = -1; NEUP = null; SEAA = new Map(); IM.emit('reset'); }
 // seed: the dice; pick: the power that takes nation 0; humans: the nations people play (the seats, none unless given); the AI plays the rest
-function newGame(seed, pick, humans = []){
+function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page was running over frames is finished in the old game first)
   const T = tiered(); useMap(T ? MAP_NEW : 0);   // the nations world: the map with the province split (when nations.js has one); any other world: world.js
   const W64 = T ? nationsWorld() : null, mode = T && TIER_MODES[newGame.mode] ? newGame.mode : 'normal';
   useWorld(T ? {cities:W64.cities, caps:POWERS.map(p => p.capital), names:W64.names} : null);
@@ -199,12 +199,14 @@ function packIn(d){ if (!d || d.pk !== 1) return d; const n = Array.isArray(d.na
   d.rel = rel;
   for (const f of PK_SPARSE){ const v = d[f]; if (!v || Array.isArray(v)) continue; const a = new Array(v.n).fill(null); for (const i in v.at) a[+i] = v.at[i]; d[f] = a; }
   delete d.pk; return d; }
-function saveJSON(){ const BLD = S.bld, o = {...S, battles:[]}; if (S.scn === 'world64') packOut(o); return JSON.stringify(o, function(k, v){
+function saveJSON(){ tickFinish();   // (an hour the page is running over frames is finished first: rules/tick.js)
+  const BLD = S.bld, o = {...S, battles:[]}; if (S.scn === 'world64') packOut(o); return JSON.stringify(o, function(k, v){
   if (v && typeof v === 'object' && !Array.isArray(v)){
     if ((k === 'u' || k === 'w') && this && this.id != null && this.at != null){ const o = {}; for (const t in v){ const x = v[t]; if (x) o[t] = k === 'w' ? Math.round(x*1000)/1000 : x; } return o; }
     if (this === BLD){ const o = {}; for (const t in v) if (v[t]) o[t] = v[t]; return o; } }
   return v; }); }
 function restore(data){
+  tickFinish();   // (an hour the page was running over frames is finished first: the load may fail and the game go on)
   if (!data || data.v !== 4 || typeof data.seed !== 'number') return false;
   if (data.pk != null && data.pk !== 1){ restore.why = 'This save is from a newer version of the nations world than this build has. Update the game to load it.'; return false; }
   data = packIn(data);
@@ -265,8 +267,17 @@ function resMigrate(){
 function addArmy(owner, at, units){
   const a = {id:S.nid++, owner, at, to:null, t:0, path:[], forced:false, m:80, u:{}, w:{}}; for (const t of UT){ a.u[t] = 0; a.w[t] = 0; }
   for (const t of UT) if (units[t]) a.u[t] = units[t];
-  S.armies.push(a); return a;
+  S.armies.push(a); armyAdded(a); return a;
 }
+// the forces of each nation, in S.armies order: S.armies.filter(a => a.owner === n) (a force's owner never changes). A tick's lookup (rules/core.js),
+// made again when S.armies is a new list; a force added (addArmy) is appended to it, as to the forces by province (rules/combat.js armiesAt)
+let AOC = null;
+function armiesOf(n){ if (tickDepth === 0) return S.armies.filter(a => a.owner === n);
+  const A = S.armies; if (AOC === null || AOC.A !== A || AOC.n !== A.length || AOC.t !== tickSess){ const by = new Map(); for (const a of A){ let l = by.get(a.owner); if (l === undefined) by.set(a.owner, l = []); l.push(a); } AOC = {A, n:A.length, t:tickSess, by}; }
+  let l = AOC.by.get(n); if (l === undefined) AOC.by.set(n, l = []); return l; }
+function armyAdded(a){ const A = S.armies;
+  if (AOC !== null && AOC.A === A && AOC.n === A.length - 1){ AOC.n++; const l = AOC.by.get(a.owner); if (l !== undefined) l.push(a); else AOC.by.set(a.owner, [a]); }
+  if (AX !== null && AX.A === A && AX.n === A.length - 1){ AX.n++; if (!(a.id > AX.last)) AX.up = false; AX.last = a.id; const p = a.at; if ((p | 0) === p){ const l = AX.by[p]; if (l !== undefined){ if (l === NONE) AX.by[p] = [a]; else l.push(a); } } } }
 // nation n holds research node id (at any level); also true for the kept bonuses of the removed Economy branch (eco1-3)
 const has = (n, id) => rLevel(n, id) > 0;
 const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'UAV Squadron', swarm:'Drone Swarm Group', sdrone:'Strike Drone Squadron', bomb:'Bomber Wing', stealth:'Stealth Bomber Wing', mpa:'Maritime Patrol Squadron', awacs:'Early Warning Squadron', asf:'Fighter Wing', jam:'Electronic Warfare Battalion', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
@@ -280,6 +291,9 @@ const armyLabel = (a, me) => a.owner === me ? armyName(a) : `${nationName(a.owne
 const STC = [];
 function st(o, t, k){
   if (o < 0) return UNITS[t][k] || 0;
+  return stRows(o)[t][k]; }
+// every unit type's stats for nation o >= 0 ({type: {atk, def, spd, hp, rng}}): what st(o, t, k) reads, worked out again when its research or shortages change
+function stRows(o){
   const N = S.nations[o], T = N.tech || {}, sh = N.short || {}, key = (N.tv || 0)*8 + (sh.oil ? 1 : 0) + (sh.iron ? 2 : 0) + (sh.elec ? 4 : 0);
   let c = STC[o];
   if (!c || c.key !== key || c.S !== S){ c = STC[o] = {key, S, v:{}};
@@ -290,8 +304,10 @@ function st(o, t, k){
         if (sh.elec && MAINT[u].elec >= 0.05){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.9; }   // no avionics or radar spares: aircraft, drones, air defence and warships
         if (kk === 'atk' || kk === 'def'){ v *= MARK_F[Math.min(3, +T[u + (kk === 'atk' ? '_fp' : '_pr')] || 0) + 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }   // Firepower / Protection, then the doctrine
         r[kk] = v; } c.v[u] = r; } }
-  return c.v[t][k];
+  return c.v;
 }
+// the stats of the independents (st with o < 0)
+const ST_NEU = (() => { const v = {}; for (const u of UT){ const r = {}; for (const kk of ['atk', 'def', 'spd', 'hp', 'rng']) r[kk] = UNITS[u][kk] || 0; v[u] = r; } return v; })();
 // the stat nation o would have with research node id at level lv (the research screen's before and after); nothing is changed
 function stIf(o, t, k, id, lv){ const N = S.nations[o], T = N.tech || (N.tech = {}), keep = T[id]; T[id] = lv; N.tv = (N.tv || 0) + 1; const v = st(o, t, k); if (keep === undefined) delete T[id]; else T[id] = keep; N.tv++; return v; }
 const unlocked = (n, t) => !UNITS[t].tech || has(n, UNITS[t].tech);
@@ -301,47 +317,64 @@ const bdisOf = p => { const d = S.bdis && S.bdis[p]; if (d && typeof d.k === 'st
 const bdis = (p, k) => { const d = bdisOf(p); return !!d && (d[k] || 0) > S.hour; };
 const bdisH = (p, k) => { const d = bdisOf(p); if (!d) return 0; let h = 0; for (const b in d) if ((k == null || b === k) && d[b] - S.hour > h) h = d[b] - S.hour; return h; };
 function knockOut(p, k, h){ const d = bdisOf(p) || ((S.bdis || (S.bdis = {}))[p] = {}); for (const b in d) if (d[b] <= S.hour) delete d[b]; d[k] = Math.max(S.hour + h, d[k] || 0); }
-const count = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v) s += v; } return s; };
 const GROUND_T = Object.keys(UNITS).filter(t => UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored'), NAVAL_T = Object.keys(UNITS).filter(t => UNITS[t].cls === 'naval');
-const groundN = a => { const u = a.u; let s = 0; for (let i = 0; i < GROUND_T.length; i++){ const v = u[GROUND_T[i]]; if (v) s += v; } return s; };
-const shipsN = a => { const u = a.u; let s = 0; for (let i = 0; i < NAVAL_T.length; i++){ const v = u[NAVAL_T[i]]; if (v) s += v; } return s; };
+// the unit counts and health of a force, the hottest helpers of the rules: written out type by type (a named property is read many times faster than
+// u[UT[i]]), in UT order, so every sum is the same as the loop's. Used only while the unit types are exactly these (UT_ROLL), else the loops
+const UT_ROLL = UT.join(',') === 'inf,at,art,sam,ifv,tank,jet,int,frig,sub,crui,mlrs,spec,carr,heli,drone,para,swarm,sdrone,jam,bomb,mpa,awacs,asf,stealth' && GROUND_T.join(',') === 'inf,at,art,sam,ifv,tank,mlrs,spec,para,jam' && NAVAL_T.join(',') === 'frig,sub,crui,carr';
+const count = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v; v = u.at; if (v) s += v; v = u.art; if (v) s += v; v = u.sam; if (v) s += v; v = u.ifv; if (v) s += v; v = u.tank; if (v) s += v; v = u.jet; if (v) s += v; v = u.int; if (v) s += v; v = u.frig; if (v) s += v; v = u.sub; if (v) s += v; v = u.crui; if (v) s += v; v = u.mlrs; if (v) s += v; v = u.spec; if (v) s += v; v = u.carr; if (v) s += v; v = u.heli; if (v) s += v; v = u.drone; if (v) s += v; v = u.para; if (v) s += v; v = u.swarm; if (v) s += v; v = u.sdrone; if (v) s += v; v = u.jam; if (v) s += v; v = u.bomb; if (v) s += v; v = u.mpa; if (v) s += v; v = u.awacs; if (v) s += v; v = u.asf; if (v) s += v; v = u.stealth; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v) s += v; } return s; };
+const groundN = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v; v = u.at; if (v) s += v; v = u.art; if (v) s += v; v = u.sam; if (v) s += v; v = u.ifv; if (v) s += v; v = u.tank; if (v) s += v; v = u.mlrs; if (v) s += v; v = u.spec; if (v) s += v; v = u.para; if (v) s += v; v = u.jam; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < GROUND_T.length; i++){ const v = u[GROUND_T[i]]; if (v) s += v; } return s; };
+const shipsN = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.frig; if (v) s += v; v = u.sub; if (v) s += v; v = u.crui; if (v) s += v; v = u.carr; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < NAVAL_T.length; i++){ const v = u[NAVAL_T[i]]; if (v) s += v; } return s; };
 const shipsOnly = a => shipsN(a) > 0 && shipsN(a) === count(a);
 // SHIPS NEVER ON LAND: a fleet may only be in a sea zone or docked in a PORT (a coastal city of its own or a friendly power); never in other land
 const portOk = (n, v) => G.P[v].sea || (G.P[v].coast && G.P[v].city && (S.owner[v] === n || friendly(n, S.owner[v])));
 // a ships-only force's place is lawful: water, or a port city on the coast (any owner: a captured port keeps its fleet until the next move). Used by dev spawn and the tests
 const shipPlaceOk = p => { const P = G.P[p]; return !!P && (P.sea || (!!P.coast && !!P.city)); };
 const ground = a => groundN(a) > 0;
-const armyHP = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp; } return s; };
+const armyHP = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v*UNITS.inf.hp; v = u.at; if (v) s += v*UNITS.at.hp; v = u.art; if (v) s += v*UNITS.art.hp; v = u.sam; if (v) s += v*UNITS.sam.hp; v = u.ifv; if (v) s += v*UNITS.ifv.hp; v = u.tank; if (v) s += v*UNITS.tank.hp; v = u.jet; if (v) s += v*UNITS.jet.hp; v = u.int; if (v) s += v*UNITS.int.hp; v = u.frig; if (v) s += v*UNITS.frig.hp; v = u.sub; if (v) s += v*UNITS.sub.hp; v = u.crui; if (v) s += v*UNITS.crui.hp; v = u.mlrs; if (v) s += v*UNITS.mlrs.hp; v = u.spec; if (v) s += v*UNITS.spec.hp; v = u.carr; if (v) s += v*UNITS.carr.hp; v = u.heli; if (v) s += v*UNITS.heli.hp; v = u.drone; if (v) s += v*UNITS.drone.hp; v = u.para; if (v) s += v*UNITS.para.hp; v = u.swarm; if (v) s += v*UNITS.swarm.hp; v = u.sdrone; if (v) s += v*UNITS.sdrone.hp; v = u.jam; if (v) s += v*UNITS.jam.hp; v = u.bomb; if (v) s += v*UNITS.bomb.hp; v = u.mpa; if (v) s += v*UNITS.mpa.hp; v = u.awacs; if (v) s += v*UNITS.awacs.hp; v = u.asf; if (v) s += v*UNITS.asf.hp; v = u.stealth; if (v) s += v*UNITS.stealth.hp; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp; } return s; };
 const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t) => s + a.w[t], 0)/hp : 0; };
 // remaining strength against the force's recent peak (units lost count, not just wounds)
 const strengthFrac = a => { const cur = effHP(a), pk = Math.max(a.peak || 0, cur); return pk ? cur/pk : 0; };
-const power = a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*(st(a.owner, t, 'atk') + st(a.owner, t, 'def'))*st(a.owner, t, 'hp')/10; } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
+const power = a => { const u = a.u, V = a.owner < 0 ? ST_NEU : stRows(a.owner); let s = 0; if (UT_ROLL){ let v, r; v = u.inf; if (v){ r = V.inf; s += v*(r.atk + r.def)*r.hp/10; } v = u.at; if (v){ r = V.at; s += v*(r.atk + r.def)*r.hp/10; } v = u.art; if (v){ r = V.art; s += v*(r.atk + r.def)*r.hp/10; } v = u.sam; if (v){ r = V.sam; s += v*(r.atk + r.def)*r.hp/10; } v = u.ifv; if (v){ r = V.ifv; s += v*(r.atk + r.def)*r.hp/10; } v = u.tank; if (v){ r = V.tank; s += v*(r.atk + r.def)*r.hp/10; } v = u.jet; if (v){ r = V.jet; s += v*(r.atk + r.def)*r.hp/10; } v = u.int; if (v){ r = V.int; s += v*(r.atk + r.def)*r.hp/10; } v = u.frig; if (v){ r = V.frig; s += v*(r.atk + r.def)*r.hp/10; } v = u.sub; if (v){ r = V.sub; s += v*(r.atk + r.def)*r.hp/10; } v = u.crui; if (v){ r = V.crui; s += v*(r.atk + r.def)*r.hp/10; } v = u.mlrs; if (v){ r = V.mlrs; s += v*(r.atk + r.def)*r.hp/10; } v = u.spec; if (v){ r = V.spec; s += v*(r.atk + r.def)*r.hp/10; } v = u.carr; if (v){ r = V.carr; s += v*(r.atk + r.def)*r.hp/10; } v = u.heli; if (v){ r = V.heli; s += v*(r.atk + r.def)*r.hp/10; } v = u.drone; if (v){ r = V.drone; s += v*(r.atk + r.def)*r.hp/10; } v = u.para; if (v){ r = V.para; s += v*(r.atk + r.def)*r.hp/10; } v = u.swarm; if (v){ r = V.swarm; s += v*(r.atk + r.def)*r.hp/10; } v = u.sdrone; if (v){ r = V.sdrone; s += v*(r.atk + r.def)*r.hp/10; } v = u.jam; if (v){ r = V.jam; s += v*(r.atk + r.def)*r.hp/10; } v = u.bomb; if (v){ r = V.bomb; s += v*(r.atk + r.def)*r.hp/10; } v = u.mpa; if (v){ r = V.mpa; s += v*(r.atk + r.def)*r.hp/10; } v = u.awacs; if (v){ r = V.awacs; s += v*(r.atk + r.def)*r.hp/10; } v = u.asf; if (v){ r = V.asf; s += v*(r.atk + r.def)*r.hp/10; } v = u.stealth; if (v){ r = V.stealth; s += v*(r.atk + r.def)*r.hp/10; } } else for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v){ const r = V[t]; s += v*(r.atk + r.def)*r.hp/10; } } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
 const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*rMoveF(a.owner)*(1 + 0.15*cmdF(a, 'blitz'))*stackSpd(a);   // (stackSpd: over the stack limit, slower)
 const armyById = id => S.armies.find(a => a.id === id);
 const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;
 const placeOwner = p => G.P[p].sea ? 'Open sea' : S.owner[p] === NEUTRAL ? `${G.countries[G.P[p].country].name} · Independent` : S.nations[S.owner[p]].name;
-const isCapital = p => S.nations.some(n => n.alive && n.capital === p && S.owner[p] === n.id);
+// (in a tick: the set of standing capitals, kept until an owner, a capital or a nation's fall changes it: ownChanged, relChanged)
+let CAPC = null;
+const isCapital = p => { if (tickDepth === 0) return S.nations.some(n => n.alive && n.capital === p && S.owner[p] === n.id);
+  if (CAPC === null || CAPC.S !== S || CAPC.o !== OWNV || CAPC.r !== RELV || CAPC.t !== tickSess){ const s = new Set(); for (const n of S.nations) if (n.alive && S.owner[n.capital] === n.id) s.add(n.capital); CAPC = {S, o:OWNV, r:RELV, t:tickSess, s}; }
+  return CAPC.s.has(p); };
 const dayOf = h => Math.floor(h/24) + 1;
 function checkNation(n, by = NEUTRAL){
   const N = S.nations[n]; if (!N.alive) return;
   const cities = G.P.filter(p => S.owner[p.id] === n && p.city);
   if (!cities.length){
-    N.alive = false;
+    N.alive = false; relChanged();
     const annex = by >= 0 && S.nations[by].alive && !isSated(by);   // (the nations world: a computer nation that has grown enough for now leaves the rest independent)
     for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
-      if (annex){ S.owner[p] = by; S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; addArmy(NEUTRAL, p, {inf:2}); } }
+      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; ownChanged(); addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
     removeEmpty(); geoChanged();
     tellAll(me => n === me ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, me => n === me ? 'bad' : by === me ? 'good' : 'info');
   } else if (S.owner[N.capital] !== n){
     const home = cities.filter(c => S.home[c.id] === n);
     const nc = (home.length ? home : cities)[0];
-    N.capital = nc.id; N.capHit = S.hour; nc.city = true;
+    N.capital = nc.id; N.capHit = S.hour; nc.city = true; ownChanged();   // (a new city: the lookups by owner count it)
     for (const a of S.armies) if (a.owner === n) a.m = Math.max(0, (a.m ?? 80) - 15);
     tellAll(`${N.name} lost its capital and moved it to ${nc.cityName || nc.name}. Its income drops 40% for 14 days.`, me => n === me ? 'bad' : 'info', nc.id);
   }
 }
-function score(n){ if (QM && n >= 0){ if (!QM.score){ const c = new Array(S.nations.length).fill(0); for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (o >= 0) c[o] += G.P[p].city ? 4 : 1; }
+// the provinces nation n holds, in province order: what for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n) ... visits (a tick's lookup,
+// rules/core.js: kept until an owner changes, ownChanged; the list is only read). Outside a tick it is made from S.owner every time
+let OWNC = null;
+function ownIndex(){ if (OWNC !== null && OWNC.S === S && OWNC.o === S.owner && OWNC.G === G && OWNC.v === OWNV && OWNC.t === tickSess) return OWNC;
+  const by = new Map(); for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; let l = by.get(o); if (l === undefined) by.set(o, l = []); l.push(p); }
+  return OWNC = {S, o:S.owner, G, v:OWNV, t:tickSess, by, sc:null}; }
+function ownedBy(n){ if (tickDepth > 0){ const l = ownIndex().by.get(n); return l === undefined ? NONE : l; }
+  const l = []; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n) l.push(p); return l; }
+function score(n){ if (tickDepth > 0 && !QM && n >= 0){ const O = ownIndex(); if (!O.sc){ const c = new Array(S.nations.length).fill(0); for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (o >= 0) c[o] += G.P[p].city ? 4 : 1; }
+    for (const N of S.nations){ const o = S.owner[N.cap0]; if (o >= 0) c[o] += 10; } O.sc = c; } return O.sc[n] || 0; }   // (the same sums as below, for every nation at once)
+  if (QM && n >= 0){ if (!QM.score){ const c = new Array(S.nations.length).fill(0); for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (o >= 0) c[o] += G.P[p].city ? 4 : 1; }
     for (const N of S.nations){ const o = S.owner[N.cap0]; if (o >= 0) c[o] += 10; } QM.score = c; } return QM.score[n] || 0; }
   let s0 = 0; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ s0 += G.P[p].city ? 4 : 1; } for (const N of S.nations) if (S.owner[N.cap0] === n) s0 += 10; return s0; }
 const winShare = () => tiered() ? winShareFor(S.nations.length) : WIN_SHARE;

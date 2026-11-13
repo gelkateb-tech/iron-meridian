@@ -33,15 +33,15 @@ const trHostile = (r, o) => o >= 0 && o !== r.a && o !== r.b && (atWar(o, r.a) |
 const trFriend = (r, o) => o >= 0 && (o === r.a || o === r.b || allyOf(o, r.a) || (r.b >= 0 && allyOf(o, r.b)));
 // the ports a power trades through: its own coastal cities, else the nearest allied, passage-partner or independent port to its capital
 var NATP = {h:-1, S:null, m:new Map()};
-function natPorts(n){ if (NATP.h !== S.hour || NATP.S !== S || NATP.v !== tickVer) NATP = {h:S.hour, S, v:tickVer, m:new Map()}; if (NATP.m.has(n)) return NATP.m.get(n); const out = natPorts0(n); NATP.m.set(n, out); return out; }
-function natPorts0(n){ const own = []; for (const P of G.P) if (S.owner[P.id] === n && isPort(P)) own.push(P.id); if (own.length) return own;
+function natPorts(n){ const kp = keep(), ok = NATP.h === S.hour && NATP.S === S && NATP.v === tickVer; if (ok && NATP.m.has(n)) return NATP.m.get(n); if (!kp) return natPorts0(n); if (!ok) NATP = {h:S.hour, S, v:tickVer, m:new Map()}; const out = natPorts0(n); NATP.m.set(n, out); return out; }
+function natPorts0(n){ const own = []; for (const p of ownedBy(n)) if (isPort(G.P[p])) own.push(p); if (own.length) return own;
   const C = G.P[S.nations[n].capital]; let best = -1, bd = 14;
   for (const P of G.P){ if (!isPort(P)) continue; const o = S.owner[P.id]; if (o === n || !(o === NEUTRAL || (o >= 0 && friendly(n, o)))) continue; const d = hexDist(C.cc, P.cc); if (d < bd){ bd = d; best = P.id; } }
   return best >= 0 ? [best] : []; }
 var NEUP = null;   // independent ports by country, rebuilt daily
 function neuPorts(){ if (NEUP && NEUP.h === S.hour && NEUP.S === S) return NEUP.m; const m = new Map();
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL && isPort(P)){ if (!m.has(P.country)) m.set(P.country, []); m.get(P.country).push(P.id); }
-  NEUP = {h:S.hour, S, m}; return m; }
+  if (keep()) NEUP = {h:S.hour, S, m}; return m; }
 const portsOf = (n, nc) => n === NEUTRAL ? (neuPorts().get(nc) || []) : natPorts(n);
 // shortest all-water route between two sea zones; the major shipping lanes count about half as far, so routes follow them
 var TRPC = {G:null, m:new Map()};
