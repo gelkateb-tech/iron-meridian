@@ -656,7 +656,7 @@ function aiTurn0(n, N){
   // the rest spread out: a province holding more than two idle stacks sends the extra ones to nearby own provinces (front line first) that hold fewer
   const stacksAt = new Map(); for (const a of armiesOf(n)) if (!a.air && ground(a) && count(a)){ const p = a.path.length ? a.path[a.path.length - 1] : a.to ?? a.at; stacksAt.set(p, (stacksAt.get(p) || 0) + 1); }
   for (const [p0, list] of idleBy){ const rest = list.filter(a => count(a) && !used.has(a) && !planned.has(a) && !a.path.length && a.to === null && ground(a) && !shipsOnly(a)); if (rest.length <= 2 || S.battles.includes(p0) || enemiesAt(p0, n) || (G.P[p0].city && threatNear(p0, n))) continue;   // a threatened city keeps its stacks
-    const front = v => G.P[v].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && S.owner[w] !== n && (atWar(n, S.owner[w]) || !warsOf(n).length));
+    const front = v => G.P[v].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && S.owner[w] !== n && (atWar(n, S.owner[w]) || (AI_STARTS_WARS && !warsOf(n).length))) || (!AI_STARTS_WARS && aiBorderThreat(n, v));
     const seen = new Map([[p0, 0]]), q = [p0], cand = [];
     for (let h = 0; h < q.length; h++){ const u = q[h], du = seen.get(u); if (du >= 2) continue; for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); q.push(v); if (!S.battles.includes(v)) cand.push(v); } }
     for (const a of rest.slice(2)){ let bv = -1e9, dst = -1; for (const v of cand){ const c = stacksAt.get(v) || 0; if (c >= 2) continue; const sc = (front(v) ? 2 : 0) + (G.P[v].city ? 0.5 : 0) - seen.get(v)*0.4 - c; if (sc > bv){ bv = sc; dst = v; } }
@@ -712,6 +712,12 @@ function aiGuns(n){ if (!warsOf(n).length) return;
         if (!front(v) || S.battles.includes(v)) continue; const g0 = armiesOf(n).some(b => b.at === v && b.to === null && !b.air && !gunsOnly(b) && groundN(b) >= 3);
         if (dst < 0 || (g0 && !guarded)){ dst = v; guarded = g0; if (g0) break; } } }
     if (dst >= 0){ const pth = pathFor(a, a.at, dst); if (pth.length && pth.length <= 5) a.path = pth; } } }
+// (AI_STARTS_WARS false) a border with a nation at peace is no front: the computer stages nothing there and moves no reserves up to it (Canada
+// massed on the United States border by day 5 with the old rule). It may defend its borders: an own province next to a foreign force (not an ally's)
+// stronger than its own there, 1.2 times and over 20, counts as a front for its spare stacks
+function aiBorderThreat(n, v){ const pp = provPowers(); let mine = 0, foe = 0; for (const [o, pw] of pp.get(v) || []) if (o === n) mine += pw;
+  for (const w of G.P[v].nbs){ if (G.P[w].sea || S.owner[w] === n) continue; for (const [o, pw] of pp.get(w) || []) if (o >= 0 && o !== n && rel(n, o).st !== 'ally') foe += pw; }
+  return foe > 20 && foe > mine*1.2; }
 // the healthiest k units of type t of force a, as a split plan (row keys, see splitRows)
 function aiTakePlan(a, t, k){ const g = {}; for (const r of splitRows(a).filter(r0 => r0.t === t).sort((x, y) => y.hf - x.hf)){ if (k <= 0) break; const v = Math.min(r.n, k); g[r.k] = v; k -= v; } return g; }
 // a force over its stack limit split into limit-sized forces (the new ones are returned; the force itself keeps one share)

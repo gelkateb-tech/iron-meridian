@@ -20,17 +20,19 @@ Last updated: 2026-11-11.
 
 | Task | Model | Where it is |
 |---|---|---|
-| Resources x1000 except money (stocks, production, storage, all costs) with short forms (40K, 1.2M) and full amounts with units on hover; play proven identical | Opus | Started |
-| Building pictures fix: cut-out buildings without frames, small and right at their city, grouped tightly (one at mid zoom, none zoomed out), small level dots; capital building anchored on the capital and restyled; zoom drift checked | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
-| Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; waiting for the owner's OK on the screenshots before merging |
+| URGENT: Dev Build fixes. A: play test at 1x/4x/8x, the AI never starts a war (only fights back), fix what the 68-nations merge broke: DONE, merged, Dev Build v27. B: profile and speed up (target 60 fps, well under 0.5 s per game day with 68 nations): running. Other merges stay frozen until B and the map fix pass | Opus | A done, B running |
+| URGENT: map since the nations merge: countries not distinct (restore strong country colours from before the merge, every country standing out from its neighbours), stray straight lines, all country and province borders clear at every zoom, real-world borders checked for every country (Syria wrong), patchy country tint (e.g. only a strip over Connecticut, New York uncoloured), province borders vanishing when zoomed in, 3D army models away from their markers (rotor shapes over the zoom buttons); cause, fix, regression test, US/Europe/Russia at 3 zooms while panning, before/after screenshots | Opus | First pass done (colours per country, sea outline gone, Syria data checked correct); one repair running: tint and borders still too faint close in, colours too muted |
+| Resources x1000 except money (stocks, production, storage, all costs) with short forms (40K, 1.2M) and full amounts with units on hover; play proven identical | Opus | Done on its branch (play proven identical); merge held until the Dev Build fixes are in |
+| Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; infantry icon redone as a flat helmeted head (owner to pick: with wheel or plain); waiting for the owner's 'merge' |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Nations balance pass on today's combat rules: Iran and the United States lose too much land in some games; update v3r1 (the computer no longer offers land) and make battery.js robust to ambient sea waves | Opus (after resources x1000) |
-| 2 | Each aircraft type gets its own 3D shape | Opus (after the research and icons job is merged: it built new aircraft models for the research pictures) |
-| 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Buildings on the map as small 3D models at their city, like the units (every building picture tile removed from the map; pictures only in the city panel), changing by level, an HQ model at the capital, pinned with no zoom drift; screenshots at 3 zooms before merging. (The cut-out picture version was rejected and is not merged.) | Opus (next free slot) |
+| 2 | Nations balance pass on today's combat rules: Iran and the United States lose too much land in some games; update v3r1 (the computer no longer offers land) and make battery.js robust to ambient sea waves | Opus (after resources x1000) |
+| 3 | Each aircraft type gets its own 3D shape | Opus (after the research and icons job is merged: it built new aircraft models for the research pictures) |
+| 4 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting for the owner
 
