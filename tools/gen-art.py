@@ -12,6 +12,8 @@ usage: python3 -I tools/gen-art.py <name> [<name> ...]     e.g. naval-yard-1
 options: --force         overwrite an existing picture (otherwise the new one is saved as ba-<name>.v2.png, .v3 ...)
          --ref <file>    a style reference picture sent with the prompt (repeatable, e.g. a Higgsfield picture)
          --print         print the prompt and stop (no API call)
+       python3 -I tools/gen-art.py --edit <picture> <name> "<change>"   a small change to a picture, everything else kept;
+                                                                       saved as the next free ba-<name>.vN.png
 """
 import sys, os, json, base64, io, urllib.request, urllib.error
 
@@ -34,16 +36,17 @@ STYLE = ("Style: a clean, simplified 3D game-asset render of a modern military f
 # one entry per building level; the HQ, Airbase 1-5 and Recruiting Office 2-3 come from Higgsfield, not from here
 SUBJECTS = {
     'naval-yard-1': (
-        "A country's military naval base, level 1 of 5, the smallest real navy base, shown as a soft-edged vignette. A straight "
-        "concrete waterfront runs diagonally from the upper left to the lower right; its inland side and both ends feather out "
-        "softly into the plain grey background. From the waterfront three long, straight, parallel concrete piers reach out "
-        "into calm blue-grey water, and two grey modern warships (frigates) are docked alongside them. Beside the piers, one "
-        "dry dock: a long narrow concrete basin cut into the waterfront, holding a third grey warship hull. Two large pale-grey "
-        "dockside gantry cranes stand at the water's edge by the dry dock. On the waterfront behind them: a row of three long "
-        "grey warehouses with slate-grey roofs and one two-storey command building of pale concrete with a flat roof and a "
-        "short radio mast. The water around the piers is a broad rounded patch whose whole outer edge feathers out softly and "
-        "evenly into the plain grey background, with no straight or hard edges. The base is large in the frame and spans "
-        "most of its width."),
+        "A country's military naval base, level 1 of 5, drawn as separate cut-out game pieces. Three long, straight, parallel "
+        "concrete piers of equal length all point toward the bottom right of the picture: each pier's long axis runs from the "
+        "upper left down to the lower right, with its free outer end at the lower right. Their inner ends line up along one "
+        "diagonal line running from the lower left to the upper right. Two grey modern frigates lie alongside the piers, "
+        "parallel to them, bows pointing to the lower right. Beside the piers, one dry dock: a long, narrow, open concrete box with low walls, pointing "
+        "the same way, holding a third grey warship hull. Two large pale-grey dockside gantry cranes stand at the inner end of "
+        "the dry dock, and the dry dock also points to the lower right. Behind the piers' inner ends, toward the upper left: a row of three long grey warehouses with slate-grey "
+        "roofs (every roof the same slate grey) and one two-storey command building of pale concrete with a flat roof and a short radio mast. Every piece "
+        "(buildings, cranes, piers, dry dock and ships) sits directly on the same plain flat light grey background, which "
+        "stands in for both land and sea; the game's map supplies the real coast and water later. The pieces are large in the "
+        "frame and the group spans most of its width. No coastline, no beach, no land strip, no water, no waves."),
 }
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLE
@@ -55,13 +58,17 @@ def free_path(name, force):
     while os.path.exists(os.path.join(OUT, f'ba-{name}.v{v}.png')): v += 1
     return os.path.join(OUT, f'ba-{name}.v{v}.png')
 
-def generate(text, refs):
+EDIT = ("Edit the attached picture. Change only this: {}. Keep everything else exactly as it is: every building, pier, "
+        "crane, ship and the dry dock, their shapes, positions, sizes and directions, the camera angle, framing, lighting, "
+        "shadows, colours and the plain flat light grey background. Do not add or remove anything.")
+
+def generate(text, refs, edit=False):
     parts = [{'text': text}]
     for r in refs:
         ext = os.path.splitext(r)[1].lower().lstrip('.')
         mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'webp': 'image/webp'}.get(ext, 'image/png')
         parts.append({'inlineData': {'mimeType': mime, 'data': base64.b64encode(open(r, 'rb').read()).decode()}})
-    if refs: parts[0]['text'] = ('Match the rendering style, camera angle, palette, lighting and plain grey background of the '
+    if refs and not edit: parts[0]['text'] = ('Match the rendering style, camera angle, palette, lighting and plain grey background of the '
                                  'attached reference picture(s), but draw the facility described here.\n\n') + text
     body = {'contents': [{'parts': parts}],
             'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': '1:1', 'imageSize': '1K'}}}
@@ -85,6 +92,13 @@ def main(a):
     if a[0] == '--list':
         for n in SUBJECTS: print(('done ' if os.path.exists(os.path.join(OUT, f'ba-{n}.png')) else '     ') + n)
         return
+    if a[0] == '--edit':
+        src, name, change = a[1], a[2], a[3]
+        data = generate(EDIT.format(change), [src], edit=True)
+        p = free_path(name, False)
+        from PIL import Image
+        Image.open(io.BytesIO(data)).save(p)
+        print(os.path.relpath(p, ROOT)); return
     force, show, refs, names = False, False, [], []
     i = 0
     while i < len(a):
