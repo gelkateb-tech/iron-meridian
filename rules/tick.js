@@ -27,12 +27,18 @@ function* tickHourG(){
   // movement
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
+    if (a.land > 0 && --a.land <= 0) delete a.land;   // a landing from the sea: the hours left before the force is ashore (rules/movement.js legArrive)
     if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (isSeat(a.owner)) tell(a.owner, `Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
+    // ground forces embark only in a naval port (rules/movement.js embWait): a route that would board ships here, where there is no port of the
+    // force's own or a friend's (the port was lost, or an old save's route), is planned again through a port, or the force stops
+    if (embLeg(a) && !portOk(a.owner, a.at)){ const dest = a.path[a.path.length - 1]; a.path = pathFor(a, a.at, dest); delete a.emb;
+      if (!a.path.length){ a.dest = null; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} halted at ${G.P[a.at].cityName || G.P[a.at].name}: no naval port there to embark. March to a port first.`, 'info', a.at); } }
+    if (a.emb != null && !embLeg(a)) delete a.emb;   // (no longer about to board: the embarking starts again next time)
     if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)
-    if (a.to === null && a.path.length && canProceed(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;
+    if (a.to === null && a.path.length && canProceed(a) && !embWait(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;
       if (a.carry && a.carryH === S.hour - 1 && legMode(a, a.at, a.to) === 'rail') a.t = a.carry/legH(a); a.carry = 0; }   // trains run through: no stop at every station
     if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
     if (a.to !== null){ const lh = legH(a); a.t += 1/lh;   // (a leg takes time in proportion to its real length: rules/movement.js legRatio)
@@ -46,11 +52,11 @@ function* tickHourG(){
     for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(ek(a.to, a.at)); if (!opp) continue;
       const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
       const meet = a.t >= 0.5 ? a.to : a.at, [mx, my] = legSpot(a);
-      for (const x of [a, b]){ x.from = x.at; atMove(x, meet); x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
+      for (const x of [a, b]){ x.from = x.at; atMove(x, meet); delete x.hrt; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
       for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
   // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets), as long as
   // the joined force stays within its stack limit (STACK_LIM); a join order (dragged onto the counter) merges anyway, with the stack-limit warning
-  for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || !count(a)) continue;
+  for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || a.land > 0 || !count(a)) continue;   // (troops still landing join once ashore)
     if (a.lastAt === a.at) continue; a.lastAt = a.at;
     if (S.owner[a.at] !== me && !(S.owner[a.at] >= 0 && rel(me, S.owner[a.at]).st === 'ally')) continue;
     const jt = a.join != null ? armyById(a.join) : null, pin = a.sail ? a.sail.to : a.pos;   // a join order picks its partner; a force sent to an exact point joins only a force standing at (or by) that point
@@ -70,11 +76,13 @@ function* tickHourG(){
   battleStep(true);
   armyUpkeep(prevH);
   yield;
-  // capture
+  // capture: at once, the hour a ground force stands at the province's heart with no enemy force there (rules/movement.js atHeart). S.cap, the
+  // occupation clock of older versions, is kept empty (an old save's half-done occupations are dropped: a force at the heart takes the province now)
   let by = index();
   for (let p = 0; p < by.length; p++){
     if (G.P[p].sea) continue;
-    if (!by[p].length){ S.cap[p] = null; continue; }   // (no force here: what the lines below come to for an empty province)
+    if (S.cap[p]) S.cap[p] = null;
+    if (!by[p].length) continue;
     { const ow = S.owner[p]; if (by[p].every(a => a.owner === ow)) continue; }   // (only the owner's forces here: nothing below changes anything)
     const list = by[p], owners = new Set(list.map(a => a.owner));
     let hostileToOwner = [...owners].filter(o => o !== S.owner[p] && atWar(o, S.owner[p]));
@@ -84,11 +92,8 @@ function* tickHourG(){
       const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
       // (the nations world: a computer nation that has grown enough for now, isSated, takes back its own lost land but no more: in the step 4
       // repair Chad, sated at 28 provinces in the middle of overrunning Sudan, took 3 more with the forces already standing in them)
-      if (O !== NEUTRAL && gN >= CAP_MIN && !(S.home[p] !== O && isSated(O))){
-        if (!S.cap[p] || S.cap[p].by !== O){ S.cap[p] = {by:O, h:0}; if (isSeat(S.owner[p])){ tell(S.owner[p], `${nationName(O)} is occupying ${G.P[p].cityName || G.P[p].name}. Retake it before the capture completes.`, 'bad', p); alarm(S.owner[p]); } }
-        S.cap[p].h += 1 + 0.25*Math.max(0, ...list.filter(a => a.owner === O).map(a => cmdF(a, 'siege'))); if (S.cap[p].h >= capNeed(p, O)) capture(p, O);
-      } else S.cap[p] = null;
-    } else if (owners.size === 0) S.cap[p] = null;
+      if (O !== NEUTRAL && gN >= CAP_MIN && !(S.home[p] !== O && isSated(O)) && list.some(a => a.owner === O && atHeart(a))) capture(p, O);
+    }
   }
   yield;
   if (S.hour % 24 === 0){ yield* diploDayG(); yield; yield* dailyG(); yield; }

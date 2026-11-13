@@ -108,7 +108,7 @@ function routeMix(a, path){ const m = {rail:0, road:0, track:0, off:0, sea:0}; l
 const mixText = m => [m.rail >= 0.05 ? `rail ${Math.round(m.rail*100)}%` : '', m.road >= 0.05 ? `road ${Math.round(m.road*100)}%` : ''].filter(Boolean).join(' · ');
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
 function merge(into, from){   // (display: a column absorbed on arrival hands no drawn motion to the stack, which stays put; its models glide into the stack's group)
-  if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
+  if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if ((from.land || 0) > (into.land || 0)) into.land = from.land; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
 /* ---------------- Flexible splitting ----------------
    A force's rows: each unit type, with its damaged units (below 60% health) as a row of their own. A type's wounds are pooled (a.w) and sit on as
    few units as possible: nd = ceil(w/hp) units carry them; when those are below 60% they form the damaged row, otherwise the wounds are spread
@@ -141,6 +141,7 @@ function splitPlan(a, plan, spot = null){
   G0.forEach((g, i) => { const b = addArmy(a.owner, a.at, {});
     b.to = a.to; b.t = a.t; b.path = a.path.slice(); b.m = a.m; b.stance = a.stance; b.from = a.from; b.froms = a.froms ? a.froms.slice() : undefined; b.landed = a.landed;
     b.forced = a.forced; b.fire = a.fire; b.delay = a.delay; b.home = a.home; b.retreating = a.retreating; b.chase = a.chase; b.legFrom = a.legFrom; if (a.dest) b.dest = {...a.dest};
+    if (a.emb != null) b.emb = a.emb; if (a.land > 0) b.land = a.land; if (a.hrt != null) b.hrt = a.hrt;   // (embarking, landing, and the heart reached: rules below)
     if (a.to === null && isSeat(a.owner)) b.pos = splitSpot(a, i, spot);   // a seat's groups get places of their own (the AI's stay on the province centre)
     for (const k in g){ const r = R.get(k), v = g[k]; b.u[r.t] += v; b.w[r.t] += v*r.wu; a.u[r.t] -= v; a.w[r.t] = Math.max(0, a.w[r.t] - v*r.wu); if (!a.u[r.t]) a.w[r.t] = 0; }
     out.push(b); });
@@ -190,11 +191,12 @@ function fpPatch(recs){ const inv = 1/(HS0*SQ3);
     if (qc && !FP.q[u]) FP.q[u] = new Float64Array(FP.adj[u].length); if (FP.q[u]) FP.q[u][j] = qc;
     for (const mt in FP.w){ const W = FP.w[mt], c = w0/legFactor(mt, u, v); W[u][j] = c; if (okH){ W.k = Math.min(W.k, c/hd); if (qc) W.kq = Math.min(W.kq, Math.min(c, qc)/hd); } } } }   // costs only fall with new links: keep the heuristic floor below them
 const pathMT = a => a && ground(a) ? moveType(a) : 'none';
-function findPath(a, b, ok = null, mt = 'foot', owner = -1){
+// emb (ground forces): emb(u) says whether the force may embark in land province u, asked only for legs from land onto water (rules: a naval port)
+function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null){
   if (a === b) return [];
   const n = G.P.length;
   if (!FP || FP.G !== G){ FP = {G, d:new Float64Array(n), prev:new Int32Array(n), gen:new Uint32Array(n), hc:new Float64Array(n), hg:new Uint32Array(n), g:0, hk:new Float64Array(1 << 16), hv:new Int32Array(1 << 16),
-    adj:G.P.map(P => Int32Array.from(P.nb.keys())), lv:-1}; }
+    adj:G.P.map(P => Int32Array.from(P.nb.keys())), sea:Uint8Array.from(G.P.map(P => P.sea ? 1 : 0)), lv:-1}; }
   if (FP.lv !== LINKV){ const ch = FP.q ? linkChangesSince(FP.lv) : null; FP.lv = LINKV;
     if (ch) fpPatch(ch);                               // a few links changed: patch their legs
     else { FP.w = {};                                  // otherwise rebuild leg costs lazily per movement type
@@ -212,8 +214,9 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1){
   gen[a] = g; d[a] = 0; prev[a] = -1; push(h(a), a);
   let found = false;
   while (hn){ const key = hk[0], u = pop(); if (u === b){ found = true; break; } const du = d[u]; if (key > du + h(u) + 1e-9) continue;   // stale heap entry
-    const A = FP.adj[u], Wt = Wm[u], Qt = useRail ? FP.q[u] : null, ru = Qt && isFr(u);
+    const A = FP.adj[u], Wt = Wm[u], Qt = useRail ? FP.q[u] : null, ru = Qt && isFr(u), SEA0 = FP.sea, eL = emb && !SEA0[u]; let eu = -1;
     for (let j = 0; j < A.length; j++){ const v = A[j]; if (ok && v !== b && !ok(v)) continue;
+      if (eL && SEA0[v]){ if (eu < 0) eu = emb(u) ? 1 : 0; if (!eu) continue; }   // (a leg onto water from land: only where the force may embark)
       let c = Wt[j]; if (ru && Qt[j] && Qt[j] < c && isFr(v)) c = Qt[j];
       const nd = du + c; if (gen[v] !== g || nd < d[v]){ gen[v] = g; d[v] = nd; prev[v] = u; push(nd + h(v), v); } } }
   if (!found) return [];
@@ -222,13 +225,17 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1){
 // ground forces do not march through independent land on the way to somewhere else (every garrison there is a battle): they embark at a port
 // instead when the sea allows it, and only cross independents when there is no other way
 // (canEnter per owner once a route: no relation changes while one is found, and the search asks it for every province it reaches)
-const pathFor = (a, from, to) => { const so = shipsOnly(a), n = a.owner, ce = [], enter = v => { if (G.P[v].sea) return true; const o = S.owner[v]; if (o === n || o < 0) return true; if ((o | 0) !== o) return canEnter(n, v);
+// Ground forces board ships only in a naval port of their own or a friend's (portOk, the ports ships dock in: embarkWhy below): a route overseas
+// marches to one first, and a move to a sea zone from land without a port is refused. anyCoast: the old rule (any coast), for embarkWhy only
+const pathFor = (a, from, to, anyCoast = false) => { const so = shipsOnly(a), n = a.owner, ce = [], enter = v => { if (G.P[v].sea) return true; const o = S.owner[v]; if (o === n || o < 0) return true; if ((o | 0) !== o) return canEnter(n, v);
     let r = ce[o]; if (r === undefined) r = ce[o] = atWar(n, o) || friendly(n, o); return r; }, ok = v => enter(v) && (!so || portOk(a.owner, v)); if (!ok(to)) return [];
   const mt = pathMT(a);
   if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner);   // ships sail over water only: a port is where a route ends, never a way through land
   if (so || a.air) return findPath(from, to, ok, mt, a.owner);
-  const p = findPath(from, to, ok, mt, a.owner); let k = 0; for (let i = 0; i < p.length - 1; i++) if (!G.P[p[i]].sea && S.owner[p[i]] === NEUTRAL){ k = 1; break; } if (!k) return p;
-  const p2 = findPath(from, to, v => v === to || G.P[v].sea || S.owner[v] !== NEUTRAL ? ok(v) : false, mt, a.owner); return p2.length ? p2 : p; };
+  const pe = [], emb = anyCoast ? null : u => { let r = pe[u]; if (r === undefined) r = pe[u] = portOk(n, u); return r; };
+  if (emb && G.P[to].sea && !G.P[from].sea && !emb(from)) return [];   // (to sea from land without a port: refused, embarkWhy says why)
+  const p = findPath(from, to, ok, mt, a.owner, emb); let k = 0; for (let i = 0; i < p.length - 1; i++) if (!G.P[p[i]].sea && S.owner[p[i]] === NEUTRAL){ k = 1; break; } if (!k) return p;
+  const p2 = findPath(from, to, v => v === to || G.P[v].sea || S.owner[v] !== NEUTRAL ? ok(v) : false, mt, a.owner, emb); return p2.length ? p2 : p; };
 // provinces on the way (not the destination) where the force will have to fight: independent land, and land of powers you are at war with
 const fightsOnWay = (a, path) => path.slice(0, -1).filter(v => !G.P[v].sea && S.owner[v] !== a.owner && (S.owner[v] < 0 || atWar(a.owner, S.owner[v]))).length;
 /* ---------------- Pinpoint movement ----------------
@@ -285,7 +292,7 @@ function haltArmy(a){
     if (near !== a.at){ a.from = a.at; a.froms = [a.at]; atMove(a, near); }
     a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && !same ? null : ptIn(a.at, spot[0], spot[1]); }
   if (a.sail){ const s = sailXY(a); a.pos = ptIn(a.at, s[0], s[1]); delete a.sail; }   // a force walking or a fleet sailing inside its province stops where it is
-  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt; delete a.raid;
+  a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt; delete a.raid; delete a.emb;   // (a landing goes on: a.land)
   IM.emit('halted', a);   // (display only)
   return true;
 }
@@ -304,37 +311,86 @@ function orderSpot(a, x, y){ if (!a || a.air || a.fly || a.to !== null) return f
   const q = ptIn(a.at, x, y); if (!q) return false; [x, y] = q;
   const [x0, y0] = armyXY(a), km = Math.hypot(x - x0, y - y0)/KM_W; a.path = []; a.dest = null; delete a.tgt;
   if (km < 1){ delete a.sail; a.pos = [x, y]; return true; }
-  a.sail = {f:[x0, y0], to:[x, y], t:0, h:Math.max(1, Math.round(km*24/(walkSpeed(a, a.at)*KM_HEX)))}; a.pos = [x0, y0]; return true; }
+  const ws = walkSpeed(a, a.at); a.sail = sailTo(a, a.at, [x0, y0], [x, y], d => Math.max(1, Math.round(d/KM_W*24/(ws*KM_HEX)))); a.pos = [x0, y0]; return true; }
 // hours left for a force walking or sailing inside its province
-const sailHours = a => a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h - 1e-9)) : 0;
+const sailHours = a => a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h + (a.sail.h2 || 0) - 1e-9)) : 0;   // (h2: the part after the heart, sailTo)
 // the hourly step of a force walking or sailing inside its province (rules/tick.js movement)
 function sailHour(a){ const s = a.sail; if (!s) return; if (a.to !== null || a.path.length || (shipsOnly(a) && !G.P[a.at].sea)){ delete a.sail; return; }
   if (!G.P[a.at].sea && S.battles.includes(a.at)) return;   // (a ground force fighting where it stands stops walking until the battle ends)
-  s.t = Math.min(1, s.t + 1/s.h); a.pos = sailXY(a); if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; delete a.sail; } }
+  if (a.land > 0) return;   // (troops still landing walk on once ashore)
+  const q0 = a.pos || sailXY(a); s.t = Math.min(1, s.t + 1/s.h); a.pos = sailXY(a);
+  { const P = G.P[a.at]; if (!P.sea && a.hrt !== a.at && segD(q0[0], q0[1], a.pos[0], a.pos[1], P.x, P.y) <= HEART_R && ground(a) && capturable(a.owner, a.at)) a.hrt = a.at; }   // the walk passed the heart: it takes the province (rules/tick.js)
+  if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; if (s.nx) a.sail = {f:a.pos, to:s.nx, t:0, h:Math.max(1e-6, s.h2)}; else delete a.sail; } }   // (sailTo: on from the heart to the point)
 // the end of a leg (rules/tick.js movement): the force reaches the province it was heading for and stands at its exact point on the final leg
-function legArrive(a){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; atMove(a, a.to); a.to = null; a.t = 0; a.legFrom = null;
-  if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land)
+// (troops coming ashore from the sea start their landing here: a.land, the hours before they can move on or capture)
+function legArrive(a, cross = false){ const f0 = legEnds(a)[0]; if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); if (ground(a)) a.land = landH(a, a.to); }
+  a.from = a.at; a.froms = [a.at]; atMove(a, a.to); a.to = null; a.t = 0; a.legFrom = null; delete a.hrt;
+  if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null;
+    if (!cross && a.pos && heartVia(a, a.at, f0, a.pos)) a.hrt = a.at; }   // (a leg done within the hour went by the heart on its way to the point beyond it; cross: legCross walks on)
+  else a.pos = null; }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land)
 // the final leg of a pinpoint move crossing into its province (rules/tick.js movement, after the hour's progress lh): the force arrives there now,
 // at the spot it has reached, and walks the rest of the leg's time inside it. Not for ships docking in a port (no point on land)
 function legCross(a, lh){ if (a.path.length || !a.dest || a.dest.p !== a.to || a.t >= 1) return false;
   const s = legSpot(a); if (provOfPt(s[0], s[1]) !== a.to) return false;
-  const to = [a.dest.x, a.dest.y], rem = (1 - a.t)*lh; legArrive(a);
-  if (Math.hypot(to[0] - s[0], to[1] - s[1])/KM_W < 1 || rem < 1e-6){ a.pos = to; return true; }
-  a.pos = s; a.sail = {f:s, to, t:0, h:rem}; return true; }
+  const to = [a.dest.x, a.dest.y], rem = (1 - a.t)*lh; legArrive(a, true);
+  if (Math.hypot(to[0] - s[0], to[1] - s[1])/KM_W < 1 || rem < 1e-6){ a.pos = to; if (heartVia(a, a.at, s, to)) a.hrt = a.at; return true; }
+  const D = Math.hypot(to[0] - s[0], to[1] - s[1]); a.pos = s; a.sail = sailTo(a, a.at, s, to, d => d*rem/D); return true; }   // (by the heart when the point lies beyond it: sailTo)
+/* ---------------- Capture at the heart; embarking and landing ----------------
+   CAPTURE: a land province (independent, or of a power at war with you) becomes yours the hour one of your ground forces stands at its HEART, the
+   city point, which is the province centre the rules use (G.P[p].x, y), while no enemy force holds it (rules/tick.js capture step): there is no
+   occupation clock. A force that only crossed the border, or stands at another spot of the province, does not take it; a walk that passes within
+   HEART_KM of the heart does (a.hrt: the province whose heart it reached), and a pinpoint order to a spot beyond the heart walks by it (sailTo).
+   With defenders there the battle comes first; once they are gone, the force at the heart takes it at once. Air units never capture, and CAP_MIN
+   ground units are needed, as before. Everything a capture does (rules/combat.js capture) is unchanged, only immediate.
+   EMBARKING: ground forces board ships only in a NAVAL PORT, a coastal city of their own or a friend's (portOk: the ports fleets dock in and Naval
+   Yards are built in). It takes EMBARK_H hours there (a.emb: hours left, counted while the force could otherwise set off), the force does not move.
+   LANDING: troops coming ashore from the sea (on any coast, as before, or into a port) take LAND_H hours, LAND_PORT_H into a port of their own or
+   a friend's (a.land: hours left). Meanwhile the force cannot move on, walk or capture, and fights at the landing penalty (rLandF, first day ashore).
+   Amphibious Doctrine halves landings; Combat Engineers load ships faster (rCapF); a Siegemaster commander does both 20% faster per rank. */
+const HEART_KM = 25, HEART_R = HEART_KM*KM_W, EMBARK_H = 6, LAND_H = 12, LAND_PORT_H = 6;
+// whether nation n takes land province p by reaching its heart: independent land, or land of a power it is at war with
+const capturable = (n, p) => n >= 0 && !G.P[p].sea && S.owner[p] !== n && atWar(n, S.owner[p]);
+// a force with ground units ashore at the heart of its province (or that walked past it since it came)
+function atHeart(a){ if (a.to !== null || a.air || a.fly || a.land > 0 || G.P[a.at].sea || !ground(a)) return false; if (a.hrt === a.at) return true;
+  const q = a.pos; if (!q) return true; const P = G.P[a.at]; return Math.hypot(q[0] - P.x, q[1] - P.y) <= HEART_R; }
+// a walk in province p from f to the point `to` goes by the heart first when p is one to capture and the point lies beyond the heart (farther from f)
+const heartVia = (a, p, f, to) => { const P = G.P[p]; if (!ground(a) || !capturable(a.owner, p)) return false; const d1 = Math.hypot(P.x - f[0], P.y - f[1]);
+  return Math.hypot(to[0] - P.x, to[1] - P.y) > HEART_R && d1 < Math.hypot(to[0] - f[0], to[1] - f[1]); };
+// the walk (a.sail) inside province p from f to `to`; hOf(d): the hours for a stretch d world units long. Via the heart: f -> heart, then on (nx, h2)
+function sailTo(a, p, f, to, hOf){ if (heartVia(a, p, f, to)){ const H = [G.P[p].x, G.P[p].y]; return {f, to:H, t:0, h:Math.max(1e-6, hOf(Math.hypot(H[0] - f[0], H[1] - f[1]))), nx:to, h2:hOf(Math.hypot(to[0] - H[0], to[1] - H[1]))}; }
+  return {f, to, t:0, h:Math.max(1e-6, hOf(Math.hypot(to[0] - f[0], to[1] - f[1])))}; }
+const cmdEmbF = a => Math.max(0.4, 1 - 0.2*cmdF(a, 'siege'));
+// hours to embark in the port, and to land in province p from the sea (into a port of your own or a friend's: the short landing)
+const embarkH = a => Math.max(1, Math.round(EMBARK_H*rCapF(a.owner)*cmdEmbF(a)));
+const landH = (a, p) => Math.max(1, Math.round((portOk(a.owner, p) ? LAND_PORT_H : LAND_H)*(rLevel(a.owner, 'nav3') > 0 ? 0.5 : 1)*cmdEmbF(a)));
+// the next leg of an idle force with a route takes its ground units from land onto water: they embark first
+const embLeg = a => a.to === null && a.path.length > 0 && !G.P[a.at].sea && G.P[a.path[0]].sea && ground(a);
+// the embarking count in the port (rules/tick.js movement, once canProceed lets the force set off): true while it must still wait
+function embWait(a){ if (!embLeg(a)) return false;
+  if (a.emb == null){ a.emb = embarkH(a); return true; }
+  if (--a.emb > 0) return true; delete a.emb; return false; }
+// why a ground force cannot be sent to province `to` because of the port rule ('' when that is not the reason): the refusal the page shows
+function embarkWhy(a, to){ if (!a || a.air || !G.P[to] || shipsOnly(a) || !ground(a)) return ''; const from = a.to ?? a.at;
+  if (G.P[to].sea && !G.P[from].sea && !portOk(a.owner, from)) return 'No naval port here: march to a port to embark.';
+  if (from !== to && !pathFor(a, from, to).length && pathFor(a, from, to, true).length) return 'No naval port of yours or a friend\'s to embark at on the way: troops board ships only in a port.';
+  return ''; }
 function canProceed(a){
-  if (a.delay > 0) return false;
+  if (a.delay > 0 || a.land > 0) return false;   // (a force still landing from the sea stays where it came ashore)
   if (a.forced) return true;
   if ((byAt(a.at) || S.armies).some(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner) && count(b) > 0)) return false;
   if (!G.P[a.at].sea && S.owner[a.at] !== a.owner && ground(a) && atWar(a.owner, S.owner[a.at])) return false;
   return true;
 }
-function capNeed(p, by = NEUTRAL){ const P = G.P[p]; return (16 + (P.city ? 16 : 0) + (isCapital(p) ? 16 : 0))*(1 + 0.25*S.bld[p].fort)*rCapF(by)*(S.home && S.home[p] === by ? 0.5 : 1); }
 // hours to the end of a route (path: a.path, or a route the player is weighing; end: its exact point, else the province centre)
+// (embarking in a port and landing from the sea count: embarkH, landH)
 function etaHours(a, path = a.path, end = path === a.path ? a.dest : null){
-  if (a.to === null && !path.length) return sailHours(a);
-  let h = 0, from = a.at, p1 = a.sail ? sailXY(a) : a.pos || [G.P[a.at].x, G.P[a.at].y];
-  if (a.to !== null){ h += (1 - a.t)*legH(a); from = a.to; p1 = [G.P[a.to].x, G.P[a.to].y]; }
-  for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 && end && end.p === p ? [end.x, end.y] : [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2); from = p; p1 = p2; }
+  const lw = a.land > 0 && a.to === null ? a.land : 0, gr = ground(a);
+  if (a.to === null && !path.length) return sailHours(a) + lw;
+  let h = lw, from = a.at, p1 = a.sail ? sailXY(a) : a.pos || [G.P[a.at].x, G.P[a.at].y];
+  if (a.to !== null){ h += (1 - a.t)*legH(a); if (gr && G.P[a.at].sea && !G.P[a.to].sea) h += landH(a, a.to); from = a.to; p1 = [G.P[a.to].x, G.P[a.to].y]; }
+  for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 && end && end.p === p ? [end.x, end.y] : [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2);
+    if (gr && !G.P[from].sea && G.P[p].sea) h += i === 0 && a.to === null && a.emb != null ? a.emb : embarkH(a); else if (gr && G.P[from].sea && !G.P[p].sea) h += landH(a, p);
+    from = p; p1 = p2; }
   return Math.ceil(h);
 }
 /* ---------------- Supply & morale ---------------- */
