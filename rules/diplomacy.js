@@ -101,8 +101,11 @@ function surpriseWar(a, b){ if (a === b || atWar(a, b)) return;
     else if (borders(me, a) || borders(me, b)) tell(me, `${S.nations[a].name} launched a surprise attack on ${S.nations[b].name}.`, '', null); }
   relVer++; }
 // a route that ignores peace borders, and the nations it would violate
+// (ground forces board ships only in a naval port of their own or a friend's, as in pathFor: rules/movement.js embarkWhy)
 function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].sea || S.owner[v] !== SEA) && (!so || G.P[v].sea || (v === to && portOk(a.owner, v)));
-  const pth = findPath(from, to, ok, pathMT(a), a.owner); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
+  const pe = [], emb = so || a.air ? null : u => { let r = pe[u]; if (r === undefined) r = pe[u] = portOk(a.owner, u); return r; };
+  if (emb && G.P[to].sea && !G.P[from].sea && !emb(from)) return {pth:[], viol:[]};
+  const pth = findPath(from, to, ok, pathMT(a), a.owner, emb); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
   return {pth, viol}; }
 function declareWar(a, b){
   if (a === b || atWar(a, b) || S.decl.some(d => d.by === a && d.to === b)) return false;
