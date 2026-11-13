@@ -25,7 +25,6 @@ Last updated: 2026-11-13 (overnight run).
 
 | # | Task | Model |
 |---|---|---|
-| 0b | Speed, round 2 (owner: 'the game is laggy, raise the fps'): frame rate first (panning, zooming, 1x-8x, phone), then rules time, identical results | Opus (right after the capture rules, before the borders rebuild resumes) |
 | 1 | Research tab redo: fix the empty category/header icons; merge the research unit cards (i button with full stats); Gemini scene banners and square scene icons, 3 + 3 samples for the owner first | Opus |
 | 2 | Unit controls like Conflict of Nations: pinpoint movement fixed, tap to select, tap to move, path line, tap empty space to deselect; Waypoint button with dots and undo | Opus |
 | 3 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
@@ -57,6 +56,7 @@ Last updated: 2026-11-13 (overnight run).
 - **Cleanup:** delete the rejected building branches (buildings-3d, building-fix, buildings-cutout) and the old wip/* snapshot branches once checked to be on master?
 - **Dug-in bonus size:** your tooltip says 'Dug in: +defence', but the rules gave dug-in units no bonus at all, so the unit look job adds one: damage taken x0.8 (about +25% defence) while dug in. OK, or another number?
 - **Picture audit (2026-11-13):** done, list sent; nothing fixed yet. Which fixes to queue? Main ones: Anti-Tank Infantry shows a missile truck in research; Paratroopers reuse the infantry picture; empty icons on 9 of 10 research categories and 3 column headers (a code bug); generation nodes show tinted copies; missile pictures loaded but never shown; no satellite picture; bombers/AWACS/patrol plane share the small fighter model on the map; old top-down Airbase 2-4 and Silo 2-3 near-identical; City pictures in porthole frames.
+- **Capture/landing values:** heart radius 25 km, embarking 6 h, landing 12 h (coast) / 6 h (port). Combat Engineers now speed up embarking (30%/40%) and the Siegemaster commander trait speeds embarking and landing (20% per rank), since there is no capture clock any more. Conquest is faster (+3 to +17% provinces changing hands) and a passive player is counter-attacked sooner. OK, or change any of these?
 - **Fable:** no Fable tasks; new ones only if you say so.
 
 ## Planned for later (in LATER.md, not built yet)
@@ -71,6 +71,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
 | URGENT map fix: every country its own strong colour (no two neighbours alike), allies blue, tint and province/country borders clear at every zoom, sea outline (straight lines) removed, real country borders (Syria checked: data correct, wiggle removed) | Opus |
 |---|---|
+| Capture and landing: a province is taken the moment a ground force reaches its heart (no occupation clock); embarking only at naval ports (6 h); landing 12 h on a coast, 6 h into a port, halved by Amphibious Doctrine (Dev Build v36) | Opus |
 | URGENT black map fixed: canvas caches bounded (memory flat over 3 days at 8x) and the map rebuilds itself after the browser drops its graphics memory (Dev Build v35) | Opus |
 | Unit look: square unit badge (flag, upright icon, count), 3D infantry squads with soft shadows, dug-in shield with a tooltip, Army Info and tutorial, and a real dug-in defence bonus (damage taken x0.8) (Dev Build v34) | Opus |
 | New resource icons: money, oil, iron, electronics (Dev Build v33) | Opus |
