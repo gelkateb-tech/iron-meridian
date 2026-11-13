@@ -2822,7 +2822,7 @@ function textUnit(text, sz = 'xs'){ if (!text) return ''; const lo = String(text
    picture at sz css px; the browser picks the 64 or the 128 px file by sz and the screen's pixel ratio (srcset by width), so it is sharp on phones without
    upscaling. Keys are the game's resource keys (cash, oil, metal, iron, elec, rare, mp) and 'storage' (the strip's first button). */
 const RES_PIC = {cash:'money', oil:'oil', metal:'materials', iron:'iron', elec:'electronics', rare:'rare-materials', mp:'manpower', storage:'storage'};
-const RES_WIDE = {elec:163/128};   // pictures wider than tall (as tall as the others: the page shows them at their own width, img.ri.wide)
+const RES_WIDE = {elec:163/128, iron:162/128};   // pictures wider than tall (as tall as the others: the page shows them at their own width, img.ri.wide)
 const icon = (k, sz = 14, cls = '') => { const f = RES_PIC[k], wr = RES_WIDE[k] || 0, w = wr ? Math.round(sz*wr) : sz; return f ? `<img class="ri${wr ? ' wide' : ''}${cls ? ' ' + cls : ''}" src="assets/art/res-${f}.webp" srcset="assets/art/res-${f}.webp ${Math.round(64*(wr || 1))}w, assets/art/res-${f}@2x.webp ${Math.round(128*(wr || 1))}w" sizes="${w}px" width="${w}" height="${sz}" alt="" draggable="false">` : ''; };
 const upkTxt = t => { const U = UNITS[t], k = U.pack || 1, m = MAINT[t], f = x => +(x*k).toFixed(2), g = x => (+(x*k).toFixed(1)).toLocaleString('en-US'); return `Daily upkeep${k > 1 ? ' per card' : ''}: ` + [`$${f(U.upk)}M`, U.fuel ? `${g(U.fuel)} oil` : '', m.iron ? `${g(m.iron)} iron` : '', m.elec ? `${g(m.elec)} electronics` : ''].filter(Boolean).join(', ') + '.'; };
 const TICON = {
