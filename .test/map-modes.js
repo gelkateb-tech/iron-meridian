@@ -1,5 +1,5 @@
 // Map modes and overlays (map-modes): node .test/map-modes.js [W H dpr] [nation] [quick]   (default 1440 900 2 'United States'; a width <= 820 is a phone)
-// Env: ONLY=<letters> runs only those sections (U N O B S P F W M; S the screenshots). OUT=<dir> saves screenshots (the owner's case, the two modes and each overlay); SHOTS=<prefix> names them; SEED=n seeds the random sequence.
+// Env: ONLY=<letters> runs only those sections (U N O B G S P F W M; S the screenshots). OUT=<dir> saves screenshots (the owner's case, the two modes and each overlay); SHOTS=<prefix> names them; SEED=n seeds the random sequence.
 // The map has two modes, Political and Terrain, and two overlays switched on and off over the Political map, Relations and Supply (owner's scope
 // change). A nations-world game; every action goes through the buttons (on a phone the folded pill opens first). Exits 1 on any failure; prints JSON.
 //  (U) UI       exactly two mode tabs and two overlay switches (no Resources, Stability, Trade, or Relations / Supply modes); in Terrain the overlays are
@@ -13,13 +13,15 @@
 //  (F) FAST     50 random actions 0-50 ms apart interleaved with wheel zooms, fast big zoom steps, drags and provinces changing hands near the view
 //               (partial redraws, visDirty), the clock at 8x, at each of 3 zooms; settled, checked as (O)
 //  (B) BACK     an overlay on and off again, Terrain and back, gives the same pixels as before (clock paused)
+//  (G) GFX      after a graphics reset (every canvas cache dropped, fix-black's gfxReset) with both overlays on, the map and the overlay come back
+//               as fresh builds
 //  (W) WRAP     across the map's east-west seam (Alaska / Chukotka) switching, toggling, zooming and panning leaves no stale strip on either copy
 //  (M) MEMORY   flat: the live canvas pixels (every canvas the page made, after a forced GC; the capped town bake and tile caches counted apart)
 //               and the JS heap after all of it against after a warm-up; the overlay canvas no bigger than the layer
 //  (E) ERRORS   no console error or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 2), NATION = process.argv[5] || 'United States', QUICK = process.argv[6] === 'quick', PHONE = W <= 820;
-const ONLY = process.env.ONLY, on = k => !ONLY || ONLY.includes(k);   // ONLY=UNOBSPFWM runs those sections (S: the screenshots)
+const ONLY = process.env.ONLY, on = k => !ONLY || ONLY.includes(k);   // ONLY=UNOBGSPFWM runs those sections (S: the screenshots)
 const OUT = process.env.OUT, TAG = (process.env.SHOTS || 'mm') + (PHONE ? '-phone' : ''), ACTS = ['P', 'T', 'R', 'U'];
 let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 2147483647)/2147483647;
 (async () => { const b = await chromium.launch({ args: ['--allow-file-access-from-files', '--js-flags=--expose-gc'] }), errors = [], checks = {}, fails = [], t0 = Date.now();
@@ -135,6 +137,13 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
       const d = await same(); res.push([seq.join(''), d]); if (d > TH) fail('back', [seq.join(''), d]); }
     checks.back = res; }
 
+  // (G) the graphics memory dropped (fix-black's gfxReset: every canvas cache let go, the layer rendered again): the overlay comes back too, built afresh
+  if (on('G')) { await setView(home[0], home[1], Z[1]); let st = await state(); if (st.mode !== 'political') await act('P'); st = await state(); if (!st.rel) await act('R'); st = await state(); if (!st.sup) await act('U'); await settle();
+    const n0 = await p.evaluate(() => { const g = window.__im.gfx; g.reset(); return g.n; }); await check('gfx reset, both overlays', 'gfx');
+    const r = await p.evaluate(() => { const O = window.__im.ovl.cv, L = window.__im.layer; return {n:window.__im.gfx.n, ow:O ? O.width : 0, lw:L.width}; });
+    checks.gfxReset = {n0, ...r}; if (r.ow !== r.lw) fail('gfx: the overlay is not back after a graphics reset', checks.gfxReset);
+    await act('R'); await act('U'); await settle(); }
+
   // the screenshots: the two modes and each overlay, on one view
   if (OUT && on('S')){ await setView(home[0], home[1], Z[1]*1.15); const st0 = await state();
     const to = async (mode, rel, sup) => { let st = await state(); if (st.mode !== mode && mode === 'terrain') await act('T'); st = await state();
@@ -176,7 +185,7 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
     if (m0.heapMB != null && m1.heapMB > m0.heapMB*1.5 + 40) fail('memory: JS heap grew', {start:m0, end:m1}); }
 
   checks.errors = errors; if (errors.length) fail('errors', errors.slice(0, 5));
-  const summ = {}; for (const k of ['owner', 'pairs', 'fast', 'wrap']) if (checks[k]) summ[k] = {n:checks[k].length, worstBase:Math.max(...checks[k].map(r => r.share)), worstOverlay:Math.max(...checks[k].map(r => r.ovl))};
-  console.log(JSON.stringify({summary:summ, ui:checks.ui, noRebuild:checks.noRebuild, back:checks.back, mem:[checks.memStart, checks.memEnd], game:checks.game, secs:Math.round((Date.now() - t0)/1000), fails, errors}, null, 1));
+  const summ = {}; for (const k of ['owner', 'pairs', 'fast', 'wrap', 'gfx']) if (checks[k]) summ[k] = {n:checks[k].length, worstBase:Math.max(...checks[k].map(r => r.share)), worstOverlay:Math.max(...checks[k].map(r => r.ovl))};
+  console.log(JSON.stringify({summary:summ, ui:checks.ui, noRebuild:checks.noRebuild, back:checks.back, gfxReset:checks.gfxReset, mem:[checks.memStart, checks.memEnd], game:checks.game, secs:Math.round((Date.now() - t0)/1000), fails, errors}, null, 1));
   if (process.env.DUMP) console.log(JSON.stringify(checks));
   await b.close(); process.exit(fails.length ? 1 : 0); })().catch(e => { console.error(e); process.exit(1); });

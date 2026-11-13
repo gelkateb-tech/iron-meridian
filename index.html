@@ -7562,6 +7562,7 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
   for (const k of ['cv', 'tile', 'pat', 'fp', 'fc', 'foam', 'fpat', 'wc']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = ''; SEAFX.g = -1;
   DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0;
   for (const c of FADEP) drop(c); FADEP.length = 0; FADE.length = 0;
+  drop(OVL.cv); OVL.k = ''; OVL.g = null; OVL.c.rel.k = OVL.c.sup.k = '';   // (the Relations / Supply overlay canvas: rebuilt whole on the next frame it shows)
   if (layer){ for (const c of [layer.fl, layer.tc, layer.fg, layer.seaM, layer.alt && layer.alt.seaM, layer.alt, layer]) drop(c); } layer = null; layerKey = '';
   try { FXM.gfxReset(); } catch (e) {}
   try { if (window.U3D && U3D.gfxReset) U3D.gfxReset(); } catch (e) {}
