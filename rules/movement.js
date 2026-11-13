@@ -397,24 +397,28 @@ function etaHours(a, path = a.path, end = path === a.path ? a.dest : null){
 const SUPPLY_RANGE = 8, LEG = GS > 1 ? 3.33 : 1;   // LEG: a supply step is one province of the old map (~3.3 hexes, ~600 km)
 let SUP = null, supHour = -1;
 let SUPF = null, SUPFA = null, SUPE = null, SUPV = -1;   // SUPFA: the same for arctic powers, whose supply columns know the snow
+// each province's neighbours (v) and leg lengths (w) as typed arrays, in the order of its P.nb (made once per map: the graph never changes)
+let NBAC = null;
+function nbArrays(){ if (NBAC && NBAC.G === G) return NBAC; NBAC = {G, v:G.P.map(P => Int32Array.from(P.nb.keys())), w:G.P.map(P => Float64Array.from(P.nb.values()))}; return NBAC; }
 function computeSupply(){
-  if (!SUPF || SUPF.length !== G.P.length){ SUPF = Float32Array.from(G.P.map(P => P.sea ? 2 : terr(P.id).sup)); SUPFA = Float32Array.from(G.P.map(P => P.sea ? 2 : terr(P.id).supA || terr(P.id).sup)); }
+  if (!SUPF || SUPF.length !== G.P.length || SUPF.G !== G){ SUPF = Float32Array.from(G.P.map(P => P.sea ? 2 : terr(P.id).sup)); SUPFA = Float32Array.from(G.P.map(P => P.sea ? 2 : terr(P.id).supA || terr(P.id).sup)); SUPF.G = G; }
   // per-leg multipliers by link (aligned with each province's neighbour order): roads and rail carry supply further, damaged links less
   if (!SUPE || SUPV !== LINKV){ const ch = SUPE ? linkChangesSince(SUPV) : null; SUPV = LINKV;
     const supRow = P => { if (P.sea || !P.lk.size) return null; const E = new Float32Array(P.nb.size); let j = 0;
       for (const v of P.nb.keys()){ const r = P.lk.get(v); E[j++] = !r ? 1 : railLv(r) ? -SUP_RAIL : SUP_LINK[roadLv(r)]*(r.dmg > 0 ? SUP_DMG : 1); } return E; };   // negative: rail (needs a friendly far end)
     if (ch) for (const r of ch){ SUPE[r.a] = supRow(G.P[r.a]); SUPE[r.b] = supRow(G.P[r.b]); } else SUPE = G.P.map(supRow); }
   SUP = S.nations.map(() => null);
-  const CT = []; for (const P of G.P) if (P.city) CT.push(P.id);   // (the cities, in province order: where each nation's supply starts)
+  const CT = []; for (const P of G.P) if (P.city) CT.push(P.id);
+  const NBA = nbArrays();   // (each province's neighbours and leg lengths as arrays, in P.nb's order; SF is 2 at sea, as the leg's own sea test was)   // (the cities, in province order: where each nation's supply starts)
   for (const N of S.nations){ if (!N.alive) continue; const n = N.id, d = new Float32Array(G.P.length).fill(99), sup = new Uint8Array(G.P.length), SF = arctic(n) ? SUPFA : SUPF;
     const fm = [], own = v => { const o = S.owner[v]; if (o === n) return true; if (!(o >= 0)) return friendly(n, o); const f = fm[o]; return f !== undefined ? f : (fm[o] = friendly(n, o)); };   // (friendly per owner once: relations do not change here)
     const q = []; for (const p of CT) if (own(p)){ d[p] = 0; q.push(p); }
     // small graph: repeated relaxation by layers (costs 1 on land, 2 at sea)
     for (let h = 0; h < q.length; h++){ const u = q[h]; if (d[u] > SUPPLY_RANGE) continue; sup[u] = 1;
       if (!G.P[u].sea && !own(u)) continue;              // supply reaches one step into foreign land, no further
-      const E = SUPE[u]; let j = 0;
-      for (const [v, w] of G.P[u].nb){ let m = E ? E[j] : 1; j++; if (m < 0) m = own(v) ? -m : SUP_LINK[roadLv(G.P[u].lk.get(v))];
-        const c = d[u] + (G.P[v].sea ? 2 : SF[v])*w/LEG*m; if (c < d[v] - 1e-6 && c <= SUPPLY_RANGE){ d[v] = c; q.push(v); } } }
+      const E = SUPE[u], V = NBA.v[u], W = NBA.w[u];
+      for (let j = 0; j < V.length; j++){ const v = V[j]; let m = E ? E[j] : 1; if (m < 0) m = own(v) ? -m : SUP_LINK[roadLv(G.P[u].lk.get(v))];
+        const c = d[u] + SF[v]*W[j]/LEG*m; if (c < d[v] - 1e-6 && c <= SUPPLY_RANGE){ d[v] = c; q.push(v); } } }
     SUP[n] = sup; }
   supHour = S.hour;
 }

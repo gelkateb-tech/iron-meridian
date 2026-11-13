@@ -227,8 +227,8 @@ function rangedTargets(a, x, y, list){ const R = rangedOf(a); if (!R.length) ret
   return out; }
 // the forces ranged fire may aim at, in a grid of RG_C world units by where they stand (built once per step, only when something can fire)
 const RG_C = 24, RT_ROLL = RANGED_T.join(',') === 'art,mlrs,frig,crui,sub';   // (RT_ROLL: the ranged types written out below)
-function rangedGrid(){ const g = new Map(), NC = Math.ceil(WORLD_W/RG_C);
-  for (const b of S.armies){ if (b.owner < 0 || b.air || b.fly || !count(b)) continue;
+function rangedGrid(foe = null){ const g = new Map(), NC = Math.ceil(WORLD_W/RG_C);
+  for (const b of S.armies){ if (b.owner < 0 || b.air || b.fly || (foe !== null && !foe(b.owner)) || !count(b)) continue;   // (foe: may the owner be fired at by anyone, rangedStep)
     let x, y; if (b.to === null){ const ps = b.pos; if (ps){ x = ps[0]; y = ps[1]; } else { const A = G.P[b.at]; x = A.x; y = A.y; } } else [x, y] = legSpot(b);   // (armyXY for a force on the ground or at sea, without its new array)
     const k = (((Math.floor(x/RG_C) % NC) + NC) % NC)*65536 + Math.floor(y/RG_C) + 1024; let l = g.get(k); if (!l) g.set(k, l = []); l.push(b); }
   return g; }
@@ -238,14 +238,18 @@ function rangedNear(g, x, y, km){ const NC = Math.ceil(WORLD_W/RG_C), r = Math.c
 // what the client shows of ranged fire: the damage dealt to each force, summed over the hour's steps and shown on the hour (display only, never saved)
 const RANGED_SHOWN = new Map();
 // one battle step of ranged fire (hourly: the hour's own step, which also shows the hour's damage numbers)
-function rangedStep(hourly){ let grid = null, gone = false;
+// A force fires only at the forces of a nation it is at war with, so a nation at war with no nation neither fires nor is fired at: when every pair
+// of nations has its relation (relAll: atWar then creates nothing), its forces are left out of the grid and its guns skip the search (inWar: the
+// nations at war, read off the relation entries once a step, warSetNow). Every force that could fire or be fired at is handled exactly as before: the same targets, in the same order, the same rolls
+function rangedStep(hourly){ let grid = null, gone = false, IW = null;
+  const inWar = n => { if (IW === null) IW = relAll() ? warSetNow() : false; return IW === false || IW.has(n); };
   for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.sail || !count(a)) continue;   // (a fleet sailing to a spot in its zone fires once there)
     let gun = false; if (RT_ROLL){ const u = a.u; gun = !!(u.art || u.mlrs || u.frig || u.crui || u.sub); } else for (const t of RANGED_T) if (a.u[t]){ gun = true; break; } if (!gun) continue;
     if (a.tgt && a.tgt.id != null){ const tb = armyById(a.tgt.id); if (!tb || !count(tb) || !atWar(a.owner, tb.owner)) delete a.tgt; }   // the ordered target is gone
     if (a.tgt && a.path.length) delete a.tgt;   // (a route given since ends the order)
-    if (a.fire === 'hold' || S.battles.includes(a.at)) continue;
+    if (a.fire === 'hold' || S.battles.includes(a.at) || !inWar(a.owner)) continue;
     const km = rangeOf(a); if (!km) continue;
-    if (!grid) grid = rangedGrid();
+    if (!grid) grid = rangedGrid(IW ? inWar : null);
     const [x, y] = armyXY(a), T = rangedTargets(a, x, y, rangedNear(grid, x, y, km)); if (!T.length) continue;
     // the group fired at: the ordered target while it is in range and seen, else the province with the strongest visible enemy power in range
     let G0 = a.tgt ? T.filter(e => a.tgt.id != null ? e.b.id === a.tgt.id : e.b.at === a.tgt.p) : [];

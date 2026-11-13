@@ -5684,7 +5684,7 @@ function trayCanvas(p, its, D, col){ const sig = D.g + '|' + D.cols + col + dpr 
 // beside or above it, else around the city's point; a long tray that finds no room tries again on two lines. A spot over a name, a unit
 // plate, a control or a city's point is never taken: with no free spot the tray is left out.
 function placeTrays(trq, boxes, LPL, cityPass, hexPx){ const out = [];
-  const free = r => !boxes.some(q => !q.pic && q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1]) && !cityPts.some(m => m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3]);
+  const free = r => !bxNear(boxes, r).some(q => !q.pic && q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1]) && !cpNear(r).some(m => m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3]);
   for (const T of trq){ if (!!T.city !== cityPass || (BPIC_ON.has(T.p) && BPIC_AP >= 1)) continue; const b = LPL.get(T.p);
     for (const rows of T.items.length >= 3 ? [1, 2] : [1]){ const D = trayDims(T.items.length, hexPx, rows), w = D.w, h = D.h, cand = [];
       if (b){ const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2; cand.push([cx - w/2, b[3] + 1], [b[0], b[3] + 1], [b[2] - w, b[3] + 1], [b[2] + 3, cy - h/2], [b[0] - 3 - w, cy - h/2], [cx - w/2, b[1] - 1 - h]); }
@@ -5758,7 +5758,7 @@ function bpicCanvas(p, its, B, cols, col){ const n = its.length, sig = B + '|' +
 function placePics(trq, boxes, LPL, cityPass, hexPx){ const out = [], a = bpicA(hexPx); BPIC_AP = a; if (a <= 0) return out;
   const px = bpicPx(hexPx), hard = (q, r) => { if (!(q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1])) return false; if (q.bld && !q.pic) return false; if (q.pic) return true; if (!q.unit || q.hud || q.tag) return true;
       const ov = m => m[0] < r[2] && m[2] > r[0] && m[1] < r[3] && m[3] > r[1]; return (q.core && ov(q.core)) || (q.fmb && q.fmb.some(ov)) || (q.ic && q.ic.some(ov)); },
-    soft = r => { let s = 0; for (const q of boxes){ if (q.bld && !q.pic) continue; const ox = Math.min(r[2], q[2]) - Math.max(r[0], q[0]), oy = Math.min(r[3], q[3]) - Math.max(r[1], q[1]); if (ox > 0 && oy > 0) s += ox*oy; } return s; };
+    soft = r => { let s = 0; for (const q of bxNear(boxes, r)){ if (q.bld && !q.pic) continue; const ox = Math.min(r[2], q[2]) - Math.max(r[0], q[0]), oy = Math.min(r[3], q[3]) - Math.max(r[1], q[1]); if (ox > 0 && oy > 0) s += ox*oy; } return s; };
   for (const T of trq.slice().sort((u, v) => v.pri - u.pri)){ if (!!T.city !== cityPass) continue; const n = T.items.length, b = LPL.get(T.p); let best = null, bs = Infinity;
     const opts = n <= 3 ? [n] : n === 4 ? [4, 2] : [Math.ceil(n/2), Math.ceil(n/3)];
     // the full size first, then smaller ones where the city is crowded; for each size the layouts, and for each layout the spots in order of preference
@@ -5770,9 +5770,9 @@ function placePics(trq, boxes, LPL, cityPass, hexPx){ const out = [], a = bpicA(
           for (const [dx, dy] of [[0, 0.62], [0.75, 0], [-0.75, 0], [0.75, 0.62], [-0.75, 0.62], [0, 1.24], [1.5, 0], [-1.5, 0], [0, -1.4]]) cand.push([bx + dx*w, by + dy*h]); }
         else cand.push([T.x - w/2, T.y - h/2], [T.x - w/2, T.y + 6], [T.x - w/2, T.y - 6 - h], [T.x + 6, T.y - h/2], [T.x - 6 - w, T.y - h/2]);
         for (const [x0, y0] of cand){ const r = [x0 - 3, y0 - 3, x0 + w + 3, y0 + h + 3]; if (r[0] < 2 || r[2] > cw - 2 || r[1] < 2 || r[3] > ch - 2) continue;
-          if (boxes.some(q => hard(q, r)) || cityPts.some(m => m.p !== T.p && m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3])) continue;
+          if (bxNear(boxes, r).some(q => hard(q, r)) || cpNear(r).some(m => m.p !== T.p && m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3])) continue;
           { const ddx = Math.max(r[0] - T.x, 0, T.x - r[2]), ddy = Math.max(r[1] - T.my, 0, T.my - r[3]); if (Math.hypot(ddx, ddy) > Math.max(30, ppx*1.5) + 12) continue; }   // (a cluster stays beside its own city: it must not read as another city's)
-          if (T.city && cityPts.some(m => m.p === T.p && m.x + m.r*0.6 > r[0] && m.x - m.r*0.6 < r[2] && m.y + m.r*0.6 > r[1] && m.y - m.r*0.6 < r[3])) continue;   // (the city's own point stays clear)
+          if (T.city && cpNear(r).some(m => m.p === T.p && m.x + m.r*0.6 > r[0] && m.x - m.r*0.6 < r[2] && m.y + m.r*0.6 > r[1] && m.y - m.r*0.6 < r[3])) continue;   // (the city's own point stays clear)
           const s = soft(r) + (sc < 1 ? 30 : 0) + (cols === opts[0] ? 0 : 20); if (s < bs){ bs = s; best = {x0, y0, L, cols, r}; } if (!s) break scan; }
         if (best && bs < 20) break scan; } }
     if (!best) continue; const r = [best.r[0] + 2, best.r[1] + 2, best.r[2] - 2, best.r[3] - 2]; r.fort = true; r.bld = true; r.pic = true; r.at = -3; boxes.push(r);
@@ -6589,10 +6589,12 @@ function cityAnyBake(p, S, night){ S = Math.min(S, CCH); for (const f of [0.5, 2
 // idle warm-up: the low tier of every city (nearest the view first, from a coarse footprint that is not kept), a few ms a frame while the
 // view is still
 let CWARM = null;
-function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0) < 250 || now - (draw.zt || 0) < 250 || view.s !== RD.vs) return;   // (not while the view zooms: its frames come first) if (!CWARM) CWARM = G.P.filter(P => P.city && !P.sea).map(P => P.id);
+function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0) < 250 || now - (draw.zt || 0) < 250 || view.s !== RD.vs) return;   // (not while the view zooms: its frames come first)
+  if (!CWARM) CWARM = G.P.filter(P => P.city && !P.sea).map(P => P.id);   // (this statement had slipped into the comment above in 'Cities repair 7': CWARM stayed null and the warm-up threw every frame)
   if (!CWARM.length) return; const dl0 = CITY_DL, end = performance.now() + 7, cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s;
   const pend0 = CITY_PEND, go0 = CITY_GO; let on = false; CITY_DL = end; CITY_GO = true;   // (its jobs in slices too: one at least, then while the 7 ms last)
-  while (CWARM.length && cityCan()){ let j = 0, bd = Infinity; for (let i = 0; i < CWARM.length; i++){ const P = G.P[CWARM[i]], d = (wrapNear(P.x, cx) - cx)**2 + (P.y - cy)**2; if (d < bd){ bd = d; j = i; } }
+  while (CWARM.length && cityCan() && cityKeepPx() <= 0.8*cityKeepMax()){ let j = 0, bd = Infinity;   // (within the kept cities' budget, cityKeepMax: the warm-up never makes the least recently used towns be forgotten)
+    for (let i = 0; i < CWARM.length; i++){ const P = G.P[CWARM[i]], d = (wrapNear(P.x, cx) - cx)**2 + (P.y - cy)**2; if (d < bd){ bd = d; j = i; } }
     const p = CWARM[j]; if (CLOW.has(p)){ CWARM.splice(j, 1); continue; }
     if (!cityBake(p, CLOW_S)){ if (CJOB.has('l' + p) || CJOB.has('d' + p + '|' + CLOW_S)) break; CWARM.splice(j, 1); continue; }   // (half made: carried on next time)
     CWARM.splice(j, 1); cityLightsLow(p); const I = CGEO.get(p);   // (and its lights' low tier: a fraction of a ms)
@@ -7018,8 +7020,8 @@ function clampView(){
   const wh = WORLD_H*view.s;
   view.y = wh <= ch ? (ch - wh)/2 : Math.min(0, Math.max(ch - wh, view.y));
 }
-let SHIFTING = false;   // a pan strip is being rendered (shiftLayer)
-let layer = null, layerKey = '', geoDirty = false, lastPanT = 0, FLYMARGIN = 0;   // FLYMARGIN: the next full render's margin (the start flight's layer, see draw)
+let layer = null, layerKey = '', geoDirty = false, lastPanT = 0, FLYMARGIN = 0;
+const RPX = {};   // the small scratch canvases of a strip or box render (renderPart: fl overlay, fg fog, tc tint), the size of the rect   // FLYMARGIN: the next full render's margin (the start flight's layer, see draw)
 function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; } return P.box; }
 const LM = 0.22;                                        // layer margin, as a share of the viewport on each side
 const ZRES = 0.5;                                       // a layer rendered mid-zoom (drawn scaled, soon replaced) is made at this share of the pixel ratio
@@ -7129,7 +7131,7 @@ function renderLayer(vis, lite = false, R = null){
   if (R){ mx = layer.mx; my = layer.my; layer.lite = layer.lite || lite; layer.strips = (layer.strips || 0) + 1; }
   else { const lm = FLYMARGIN || LM; FLYMARGIN = 0; mx = Math.round(Math.max(cw*lm, 224)); my = Math.round(Math.max(ch*lm, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
     if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
-    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.dp = dpr; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; layer.q = []; CITY_MISS.clear(); CITY_GEN++; CWANT.clear(); CITY_RT = performance.now(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; }
+    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.dp = dpr; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; layer.q = []; layer.sq = []; CITY_MISS.clear(); CITY_GEN++; CWANT.clear(); CITY_RT = performance.now(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; }
   // the rect to paint, in device px (the whole layer when R is left out)
   const dx0 = R ? Math.max(0, Math.round(R.x0*dpr)) : 0, dy0 = R ? Math.max(0, Math.round(R.y0*dpr)) : 0, dx1 = R ? Math.min(layer.width, Math.round(R.x1*dpr)) : layer.width, dy1 = R ? Math.min(layer.height, Math.round(R.y1*dpr)) : layer.height;
   if (dx1 <= dx0 || dy1 <= dy0) return;
@@ -7153,6 +7155,13 @@ function polarFill(c, vx0, vy0, vx1, vy1){
     c.strokeStyle = 'rgba(70,96,110,.55)'; c.lineWidth = Math.max(0.6, 1.2/view.s); c.stroke(edge); } }
 function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer.mx, my = layer.my;
   const dw = dx1 - dx0, dh = dy1 - dy0, clipR = g => { g.setTransform(1, 0, 0, 1, 0, 0); if (R){ g.beginPath(); g.rect(dx0, dy0, dw, dh); g.clip(); } };
+  // the overlay, fog and tint scratch canvases: the layer's own (layer size) for a full render or a big rect; for a pan strip or a small box, ones
+  // the size of the rect (RPX; ax, ay: the rect's device px origin, a whole-pixel shift, so every pixel comes out the same), so a strip neither
+  // clears nor copies three layer-sized canvases (a canvas drawn from and then changed again before the frame is shown is copied whole)
+  const small = !!R && dw*dh <= 0.3*layer.width*layer.height, ax = small ? dx0 : 0, ay = small ? dy0 : 0;
+  const auxC = k => { const w = small ? dw : layer.width, h = small ? dh : layer.height, a = small ? RPX[k] || (RPX[k] = document.createElement('canvas')) : layer[k] || (layer[k] = document.createElement('canvas'));
+      if (a.width !== w || a.height !== h){ a.width = w; a.height = h; } return a; },
+    clipA = g => { g.setTransform(1, 0, 0, 1, 0, 0); if (R){ g.beginPath(); g.rect(dx0 - ax, dy0 - ay, dw, dh); g.clip(); } };
   const ox = layer.vx + mx + k*WRAP_W*view.s, oy = layer.vy + my;   // (copy k: the canonical world moved by k turns)
   let c = layer.getContext('2d'); const px = 1/view.s, hexPx = view.s*HS0;
   c.save(); clipR(c); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.fillStyle = '#07141d'; c.fillRect(dx0, dy0, dw, dh);
@@ -7215,8 +7224,8 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     c.restore(); }
   if (hexPx >= 9){ c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = 'rgba(140,180,190,0.06)'; c.lineWidth = 0.8*px; c.setLineDash([4*px, 6*px]); c.stroke(tiledIn(GEO.seaT, wx0, wy0, wx1, wy1)); c.setLineDash([]); }
   const hp = fogPattern(c, 0.07*Math.min(1, 0.4/Math.max(0.5, Math.min(4, (GS > 1 ? 0.12 : 0.075)*HS*view.s*dpr)))); if (hp.setTransform) hp.setTransform(new DOMMatrix([px, 0, 0, px, 0, 0]));
-  const base = c; if (!layer.fl) layer.fl = document.createElement('canvas'); const flc = layer.fl; if (flc.width !== layer.width || flc.height !== layer.height){ flc.width = layer.width; flc.height = layer.height; }
-  c = flc.getContext('2d'); c.save(); clipR(c); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(dx0, dy0, dw, dh); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
+  const base = c, flc = auxC('fl');
+  c = flc.getContext('2d'); c.save(); clipA(c); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(dx0 - ax, dy0 - ay, dw, dh); c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox - ax, dpr*oy - ay);
   const washK = 1 - 0.7*Math.max(0, Math.min(1, (hexPx - 14)/46));   // the political tint thins as you zoom in so the ground shows (the border band keeps the colour)
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
     if (mapMode === 'terrain'){ c.fillStyle = rgba((TERRAIN[P.terrain] || TERRAIN.plains).col, 0.66); c.fill(GEO.fill[p], 'evenodd'); }
@@ -7262,18 +7271,18 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   // what you see changes). Land outside sight gets the grey hatched veil, sea outside sight a lighter plain one; a province wholly in sight (yours or an
   // ally's, revealed, where a force of yours is going) stays clear, and every sight range (circles, a satellite's strip) is cut out with a soft edge,
   // on both sides of the map's east-west seam. Maritime patrol ranges (VK.sea) clear the sea only.
-  { if (!layer.fg) layer.fg = document.createElement('canvas'); const fgc = layer.fg; if (fgc.width !== layer.width || fgc.height !== layer.height){ fgc.width = layer.width; fgc.height = layer.height; }
-    const g = fgc.getContext('2d'); g.save(); clipR(g); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(dx0, dy0, dw, dh); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
+  { const fgc = auxC('fg');
+    const g = fgc.getContext('2d'); g.save(); clipA(g); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(dx0 - ax, dy0 - ay, dw, dh); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox - ax, dpr*oy - ay);
     const cut = sea => { if (vis.ids) for (const s of vis.ids){ if ((s[5] === VK.sea) !== sea) continue; const r = s[4]*1.07, xa = Math.min(s[0], s[2]) - r, xb = Math.max(s[0], s[2]) + r, ya = Math.min(s[1], s[3]) - r, yb = Math.max(s[1], s[3]) + r;
         if (yb < wy0 || ya > wy1) continue; const H = fogHole(s);
         for (const o of [-WRAP_W, 0, WRAP_W]){ if (xb + o < wx0 || xa + o > wx1) continue; g.save(); if (o) g.translate(o, 0); for (const [q, a] of H){ g.globalAlpha = a; g.fill(q); } g.restore(); } } };   // (a sight range across the seam: its part on the other side too, a turn away)
     g.fillStyle = 'rgba(34,46,56,0.24)';   // sea: lighter, no hatching
-    if (CV && hexPx >= 7 && SEAV) g.fill(SEAV, 'evenodd'); else { g.fillRect(-WORLD_W, -WORLD_H, 3*WORLD_W, 3*WORLD_H); g.save(); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy); g.globalCompositeOperation = 'destination-out'; g.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); g.restore(); }
+    if (CV && hexPx >= 7 && SEAV) g.fill(SEAV, 'evenodd'); else { g.fillRect(-WORLD_W, -WORLD_H, 3*WORLD_W, 3*WORLD_H); g.save(); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox - ax, dpr*oy - ay); g.globalCompositeOperation = 'destination-out'; g.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); g.restore(); }
     g.globalCompositeOperation = 'destination-out'; cut(true); g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over'; g.fillStyle = hp;
     for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; g.fill(GEO.fill[p], 'evenodd'); }
     g.globalCompositeOperation = 'destination-out'; cut(false); g.restore();
-    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(fgc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); c.restore(); }
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(fgc, dx0 - ax, dy0 - ay, dw, dh, dx0 - ax, dy0 - ay, dw, dh); c.restore(); }
   // borders, over the fog (owner, fix-map: every border clear at every zoom, in sight or not): province borders of every country, country borders
   // (between any two countries, powers or independent), national borders by relation (yours green, an ally's blue, an enemy's red, the others as a
   // country border), all at one css width whatever the zoom; kept to the land (the coast clip close in, the lakes cut out further out)
@@ -7299,24 +7308,24 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   c.restore();   // the overlay's R clip
   // political tint: each power's land in its colour, laid on the ground with a 'color' blend (hue and saturation from the power, light and shade from the terrain)
   // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
-  if (polMode() && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
-    const t = tc.getContext('2d'); t.save(); clipR(t); t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(dx0, dy0, dw, dh); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
+  let tc = null; if (polMode() && !relMode && hexPx >= 1){ tc = auxC('tc');
+    const t = tc.getContext('2d'); t.save(); clipA(t); t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(dx0 - ax, dy0 - ay, dw, dh); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox - ax, dpr*oy - ay);
     { for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = rgba(tintOf(n), TONE_A[mapTone(n)]); t.fill(NA(n)); }
       for (const [ci, a] of NEUC()){ t.fillStyle = rgba(tintOf(NEUTRAL, ci), TONE_A.neu); t.fill(a); } }   // independents: each country its own colour, drawn toward the quiet grey
     t.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(CV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over'; t.restore();
     // world view and play zoom: clear national colours over the relief; close in it eases off a little (tk, then tf past hexPx 80) so the ground and
     // the city art lead, but every owned province stays clearly tinted at every zoom (owner, fix-map: it used to fade to almost nothing close in)
     base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/70)), tf = Math.max(0.85, 1 - Math.max(0, hexPx - 80)/320);
-    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.52 - 0.06*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh);
-    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.27 - 0.04*tk)*tf; base.drawImage(tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
+    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.52 - 0.06*tk)*tf; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh);
+    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.27 - 0.04*tk)*tf; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
   if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : !R ? 24 : full ? 12 : 3); base.restore(); }   // (bake budget, ms: short in a pan strip or a box redrawn: the bake pump makes what is left over, between the frames)
   // the towns take a light coat of the same tint (their own art and colours still lead), so a big city reads as yours, an ally's or a rival's too
-  if (anyC && polMode() && !relMode && hexPx >= 1 && layer.tc){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.globalCompositeOperation = 'color'; base.globalAlpha = 0.22;
-    base.drawImage(layer.tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore(); }
-  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore();
+  if (anyC && tc){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.globalCompositeOperation = 'color'; base.globalAlpha = 0.22;
+    base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }
+  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
     base.strokeStyle = `rgba(8,14,16,${0.55*z})`; base.lineWidth = 0.9*px; base.stroke(CV);
@@ -7346,9 +7355,24 @@ function shiftLayer(vis, lite, ax = true, ay = true){ FADE.length = 0; const L =
   const W = w/dpr, H = h/dpr;
   A.q = (L.q || []).map(r => ({x0:Math.max(0, r.x0 + sx/dpr), y0:Math.max(0, r.y0 + sy/dpr), x1:Math.min(W, r.x1 + sx/dpr), y1:Math.min(H, r.y1 + sy/dpr)})).filter(r => r.x1 > r.x0 && r.y1 > r.y0);   // bands still to refresh move with the picture
   const ex0 = sx > 0 ? 0 : (w + sx)/dpr, ex1 = sx > 0 ? sx/dpr : W, ey0 = sy > 0 ? 0 : (h + sy)/dpr, ey1 = sy > 0 ? sy/dpr : H;
-  SHIFTING = true; try { if (sx) renderLayer(vis, lite, {x0:ex0, y0:0, x1:ex1, y1:H});
-    if (sy) renderLayer(vis, lite, {x0:sx > 0 ? ex1 : 0, y0:ey0, x1:sx > 0 ? W : ex0, y1:ey1}); } finally { SHIFTING = false; }
+  // the exposed strips lie in the margin, off screen: queued in pieces and rendered a few ms a frame (stripPump), not all in this frame
+  A.sq = (L.sq || []).map(r => ({x0:Math.max(0, r.x0 + sx/dpr), y0:Math.max(0, r.y0 + sy/dpr), x1:Math.min(W, r.x1 + sx/dpr), y1:Math.min(H, r.y1 + sy/dpr)})).filter(r => r.x1 > r.x0 && r.y1 > r.y0); L.sq = null;
+  if (sx) stripQueue(A, {x0:ex0, y0:0, x1:ex1, y1:H});
+  if (sy) stripQueue(A, {x0:sx > 0 ? ex1 : 0, y0:ey0, x1:sx > 0 ? W : ex0, y1:ey1});
   return true; }
+// a strip a pan exposed (layer CSS px), queued in pieces of about STRIP_PX along its length, cut at whole device px (so the pieces meet exactly)
+const STRIP_PX = 360, STRIP_MS = 4;   // (each piece costs a few ms of its own whatever its size: the borders, fills and clips of what it covers)
+function stripQueue(A, R){ const w = R.x1 - R.x0, h = R.y1 - R.y0, n = Math.max(1, Math.round(Math.max(w, h)/STRIP_PX)), cut = v => Math.round(v*dpr)/dpr;
+  for (let i = 0; i < n; i++){ if (h >= w) A.sq.push({x0:R.x0, x1:R.x1, y0:i ? cut(R.y0 + h*i/n) : R.y0, y1:i < n - 1 ? cut(R.y0 + h*(i + 1)/n) : R.y1});
+    else A.sq.push({y0:R.y0, y1:R.y1, x0:i ? cut(R.x0 + w*i/n) : R.x0, x1:i < n - 1 ? cut(R.x0 + w*(i + 1)/n) : R.x1}); } }
+// the queued pieces (layer.sq), nearest the screen first: every piece the screen shows or is about to show (within 96 px) at once; else one
+// piece every other frame (more while this frame's STRIP_MS last); all: every piece (the layer is about to be drawn scaled, margins and all)
+function stripPump(vis, all){ const L = layer, Q = L && L.sq; if (!Q || !Q.length) return;
+  const sx0 = L.mx - (view.x - L.vx), sy0 = L.my - (view.y - L.vy), m = 96, near = r => r.x1 > sx0 - m && r.x0 < sx0 + cw + m && r.y1 > sy0 - m && r.y0 < sy0 + ch + m,
+    d = r => Math.max(0, sx0 - r.x1, r.x0 - sx0 - cw) + Math.max(0, sy0 - r.y1, r.y0 - sy0 - ch);
+  Q.sort((a, b) => d(a) - d(b)); const t0 = performance.now(), skip = L.sqF === RD.n - 1; let n = 0;   // (a frame that rendered a piece is followed by one that need not)
+  while (Q.length && (all || near(Q[0]) || (!n && !skip) || (n && performance.now() - t0 < STRIP_MS))){ renderLayer(vis, false, Q.shift()); n++; }
+  if (n) L.sqF = RD.n; }
 // queue the whole layer for a refresh in four bands (whole device px), the one under the middle of the screen first
 function layerBands(){ const L = layer, h = L.height, W = L.width/dpr, n = 6, c = (L.my + ch/2)*dpr, B = [];
   for (let i = 0; i < n; i++){ const y0 = Math.round(h*i/n), y1 = Math.round(h*(i + 1)/n); B.push({x0:0, y0:y0/dpr, x1:W, y1:y1/dpr, d:Math.abs((y0 + y1)/2 - c)}); }
@@ -7512,6 +7536,7 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
   DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0;
   for (const c of FADEP) drop(c); FADEP.length = 0; FADE.length = 0;
   if (layer){ for (const c of [layer.fl, layer.tc, layer.fg, layer.seaM, layer.alt && layer.alt.seaM, layer.alt, layer]) drop(c); } layer = null; layerKey = '';
+  for (const k in RPX){ drop(RPX[k]); delete RPX[k]; }
   try { FXM.gfxReset(); } catch (e) {}
   try { if (window.U3D && U3D.gfxReset) U3D.gfxReset(); } catch (e) {}
   // the terrain, land mask and sea depth textures (shared by the maps) are made again from the loaded pictures, the lakes baked into them again
@@ -7521,6 +7546,31 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
     for (const k in MAPS){ const g = MAPS[k]; if (g !== G) for (const f of MAP_SHARE) g[f] = G[f]; } }
   SNOWC = {m:-1, S:null, cv:null, bb:null, ice:null}; try { snowCover(true); } catch (e) {}
   redraw(600); }
+// the screen boxes the label pass places against (counters, controls, names, trays, pictures: a few hundred a frame, each tested against every
+// box placed before it) are indexed in a coarse grid as they are pushed (bxNear): a test visits only the boxes in the cells a rect touches, in
+// the order they were pushed, so it gives what a scan of the whole list gives (a box that shares no cell with a rect cannot overlap it), the
+// sums included. A box's corners never change once pushed. Very large boxes, and a rect spanning many cells, fall back to the whole list
+const BXC = 64, BXN = 48, BXO = 8;   // cells of 64 px; a grid of 48 x 48 cells from 8 cells left of and above the screen (a box beyond it: the long list)
+function bxNear(B, r){ let X = B._bx; if (!X){ X = {n:0, c:[], big:[], st:new Int32Array(256), g:0}; Object.defineProperty(B, '_bx', {value:X}); }
+  for (; X.n < B.length; X.n++){ const q = B[X.n], c0 = Math.floor(q[0]/BXC) + BXO, c1 = Math.floor(q[2]/BXC) + BXO, r0 = Math.floor(q[1]/BXC) + BXO, r1 = Math.floor(q[3]/BXC) + BXO; q._bi = X.n;
+    if (!(c1 - c0 <= 6 && r1 - r0 <= 6 && c0 >= 0 && r0 >= 0 && c1 < BXN && r1 < BXN)){ X.big.push(q); continue; }   // (NaN corners land here too)
+    for (let cx = c0; cx <= c1; cx++) for (let cy = r0; cy <= r1; cy++){ const k = cx*BXN + cy, l = X.c[k]; if (l) l.push(q); else X.c[k] = [q]; } }
+  const c0 = Math.floor(r[0]/BXC) + BXO, c1 = Math.floor(r[2]/BXC) + BXO, r0 = Math.floor(r[1]/BXC) + BXO, r1 = Math.floor(r[3]/BXC) + BXO;
+  if (!(c1 - c0 <= 12 && r1 - r0 <= 12 && c0 >= 0 && r0 >= 0 && c1 < BXN && r1 < BXN)) return B;
+  let one = X.big.length ? X.big : null, many = null;
+  for (let cx = c0; cx <= c1; cx++) for (let cy = r0; cy <= r1; cy++){ const l = X.c[cx*BXN + cy]; if (!l) continue; if (!one) one = l; else (many || (many = [one])).push(l); }
+  if (!many) return one || NONE;   // (one list: already in push order; the callers only read it)
+  if (X.st.length < B.length){ X.st = new Int32Array(B.length*2); X.g = 0; } const g = ++X.g, st = X.st, out = [];
+  for (const l of many) for (const q of l){ const i = q._bi; if (st[i] !== g){ st[i] = g; out.push(q); } }
+  return out.sort((a, b) => a._bi - b._bi); }
+// the cities' points (cityPts: x, y, tap radius r) the same way, by their boxes [x - r, y - r, x + r, y + r]
+function cpNear(r){ const C = cityPts; let B = C._b; if (!B){ B = []; Object.defineProperty(C, '_b', {value:B}); } for (let i = B.length; i < C.length; i++){ const m = C[i], b = [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]; b.m = m; B.push(b); }
+  const L = bxNear(B, r); return L === B ? C : L.map(b => b.m); }
+// text widths (the label pass measures a few hundred names a frame): kept per font (f: the font string just set, else the context's), letter
+// spacing and text; forgotten when the web fonts load
+const MTW = new Map();
+const mtw = (t, f = ctx.font) => { const k = f + '\u0001' + ctx.letterSpacing + '\u0001' + t; let w = MTW.get(k); if (w === undefined){ if (MTW.size > 6000) MTW.clear(); w = ctx.measureText(t).width; MTW.set(k, w); } return w; };
+try { document.fonts.addEventListener('loadingdone', () => MTW.clear()); } catch (e) {}
 function draw(now){ draw.now = now;
   ovOut(); ovClear(); clampView(); if (!camFly && !ZTW && !drag && !pinch && !udrag && !miniDrag) wrapNorm();   // (the camera at rest: back into the canonical turn)
   { const fdt = now - (FXG.t || now); FXG.t = now; if (fdt > 0 && fdt < 250) FXG.ema = 0.9*FXG.ema + 0.1*fdt; FXG.k = Math.max(0.3, Math.min(1, 1 - (FXG.ema - 20)/25)); FXG.area = FXG.pa = 0;
@@ -7565,7 +7615,7 @@ function draw(now){ draw.now = now;
   // once still, the view snaps to the layer's device-px grid (under half a pixel), so the live overlays sit exactly on the shifted layer's borders
   if (!flyReuse && settled && !camFly && layer && layer.s === view.s && key === layerKey){ const x0 = view.x, y0 = view.y, sx = layer.vx + Math.round((x0 - layer.vx)*dpr)/dpr, sy = layer.vy + Math.round((y0 - layer.vy)*dpr)/dpr;
     if (sx !== x0 || sy !== y0){ view.x = sx; view.y = sy; clampView(); if (view.x !== sx || view.y !== sy){ view.x = x0; view.y = y0; } draw.pvx = view.x; draw.pvy = view.y; } }
-  if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), kNV = k => k.split('|').filter((v, i) => i < 4 || i > 6).join('|'), ex = Math.abs(dxv) > layer?.mx*0.25, ey = Math.abs(dyv) > layer?.my*0.25;
+  if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), kNV = k => k.split('|').filter((v, i) => i < 4 || i > 6).join('|'), ex = Math.abs(dxv) > layer?.mx*0.5, ey = Math.abs(dyv) > layer?.my*0.5;   // (half the margin: its strips are rendered over the next frames, stripPump)
     // a render made mid-zoom is only drawn scaled until the zoom settles: it gets a wider margin (so the next zoom-out step stays covered) and a
     // lower pixel ratio (a fraction of the cost); a layer made that way is never shifted or patched, the next render replaces it whole
     // during a glide the render is made ahead, part of the way toward the goal scale (around the same anchor), so the one layer serves a longer
@@ -7599,8 +7649,9 @@ function draw(now){ draw.now = now;
     if (T) dtWork(true, T); else dtWork(settled && !flyReuse); } catch (e) { DT.fail = true; DT.job = null; }
   // frames until the view has settled: the camera moving, a light layer, bands or city bakes still to render, dissolves, a shake, detail tiles to lay
   // (tiles still in the workers come back with a redraw; tiles back while the view shows no detail wait for the next zoom in: dtLive, dtPark)
-  RD.st = !!(panning || moved || !settled || zoomLive || camFly || flyReuse || layer.lite || (layer.q && layer.q.length) || (CITY_PEND && !CWANT.size) || FADE.length || now < shakeUntil || ((DT.ready.length || DT.hold.length || DT.job) && dtLive(dtT)));
+  RD.st = !!(panning || moved || !settled || zoomLive || camFly || flyReuse || layer.lite || (layer.q && layer.q.length) || (layer.sq && layer.sq.length) || (CITY_PEND && !CWANT.size) || FADE.length || now < shakeUntil || ((DT.ready.length || DT.hold.length || DT.job) && dtLive(dtT)));
   if (RD.st) animFast(); else if (CITY_PEND) animIn(CWANT.size ? 500 : 250);   // (bakes the pump is making: each asks for a frame as it lands; this only in case one cannot be made)
+  if (layer.sq && layer.sq.length) stripPump(vis, layer.s !== view.s || (layer.dp || dpr) !== dpr);   // the pan's queued strips (all of them before the layer is drawn scaled)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a layer at another scale or pixel ratio (reused mid-zoom, or just rendered ahead of a glide at half resolution) is always drawn scaled to the view;
   // if that scaled copy does not cover the canvas, the uncovered rim is cleared so no stale frame (doubled labels, old counters) shows through
@@ -7820,11 +7871,12 @@ function draw(now){ draw.now = now;
   BFX.pts.clear();   // this frame's figures in battles (filled as they are drawn)
   ovIn(); try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, HQ, paths and counters drawn below
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
-  { const nk = [view.s, Math.round(view.x), Math.round(view.y), cw, ch, geoVer, HUDR.v || 0].join('|'); if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
+  { const nk = [view.s, cw, ch, geoVer, HUDR.v || 0].join('|');   // (a pan keeps them: the spots are offsets from each name's anchor, and what lies under a spot moves with it)
+    if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
   if (hexPx >= 3.2 && hexPx < 15){ const fs0 = Math.round(Math.min(11.5, 8 + hexPx*0.36)*2)/2; ctx.save(); ctx.font = `500 ${fs0}px ${BODY}`; ctx.letterSpacing = (fs0*0.16).toFixed(1) + 'px';
     ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1; ctx.fillStyle = 'rgba(218,214,200,.5)';
     for (const L of GEO.clabelsBySize || (GEO.clabelsBySize = GEO.clabels.filter(Boolean).sort((a, b) => b.cells - a.cells))){ if (L.cells < 2.5*GS*GS) continue; const [x, y] = toScreen(L.x, L.y); if (x < -60 || y < -20 || x > cw + 60 || y > ch + 20) continue;
-      const w0 = ctx.measureText(L.name.toUpperCase()).width + 8, bx = [x - w0/2, y - fs0/2 - 2, x + w0/2, y + fs0/2 + 2]; if (boxes0.some(q => q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue;
+      const w0 = mtw(L.name.toUpperCase()) + 8, bx = [x - w0/2, y - fs0/2 - 2, x + w0/2, y + fs0/2 + 2]; if (bxNear(boxes0, bx).some(q => q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue;
       let fit = NAMEC.cl.get(L.ci); if (fit === undefined) NAMEC.cl.set(L.ci, fit = nameNotForeign(x, y, w0 - 8, fs0, p => p >= 0 && G.P[p].country === L.ci && S.owner[p] === NEUTRAL)); if (!fit) continue;   // the name stays on that country's own free land (or the sea off it)
       boxes0.push(bx);
       ctx.fillText(L.name.toUpperCase(), x + fs0*0.08, y); }   // (nudged by half the trailing letter space, so the name sits centred)
@@ -7832,9 +7884,9 @@ function draw(now){ draw.now = now;
   if (showSea){ ctx.font = `italic 500 11px ${BODY}`; ctx.fillStyle = 'rgba(150,185,195,.38)';
     const placed = [];   // one label per sea name nearby, biggest zones first, never overlapping
     for (const P of SEAL || (SEAL = G.P.filter(q => q.sea && q.cells.length >= 20*GS*GS).sort((a, b) => b.cells.length - a.cells.length))){ const [x, y] = toScreen(P.x, P.y); if (x < -80 || y < -20 || x > cw + 80 || y > ch + 20) continue;
-      const nm = P.name.replace(/ [IVXL]+$/, ''), w = ctx.measureText(nm).width + 16;
+      const nm = P.name.replace(/ [IVXL]+$/, ''), w = mtw(nm) + 16;
       if (placed.some(q => (Math.abs(q.x - x) < (q.w + w)/2 && Math.abs(q.y - y) < 18) || (q.nm === nm && Math.hypot(q.x - x, q.y - y) < 260))) continue;
-      const sb = [x - w/2, y - 8, x + w/2, y + 8]; if (boxes0.some(q => q.unit && q[0] < sb[2] && q[2] > sb[0] && q[1] < sb[3] && q[3] > sb[1])) continue;
+      const sb = [x - w/2, y - 8, x + w/2, y + 8]; if (bxNear(boxes0, sb).some(q => q.unit && q[0] < sb[2] && q[2] > sb[0] && q[1] < sb[3] && q[3] > sb[1])) continue;
       placed.push({x, y, w, nm}); boxes0.push(sb); ctx.fillText(nm, x, y); } }
   cityPts = []; cityNames = [];   // the cities on screen: each one's point with its tap radius (nothing is drawn there), and the boxes of the city names drawn
   const labs = [], lateLabs = [], trq = [], LPL = new Map(); let capLab = null, trays = [], pics = [], trCity = false; BPIC_ON = new Set(); BPIC_AP = bpicA(hexPx); /*@TEST*/BPIC_DBG.clear();/*@ENDTEST*/   // trq: building trays to place, LPL: placed name boxes per province
@@ -7887,7 +7939,7 @@ function draw(now){ draw.now = now;
             E[0] = Math.min(E[0], dx - ww/2 - 4); E[1] = Math.min(E[1], dy - ss*0.55); E[2] = Math.max(E[2], dx + ww/2 + 4); E[3] = Math.max(E[3], dy + ss*0.5); } }
         NAMEC.pn.set(n, C); }
       const own = p => p >= 0 && S.owner[p] === n && !G.P[p].sea, boxOf = c => [x + c.dx - c.ww/2 - 4, y + c.dy - c.ss*0.55, x + c.dx + c.ww/2 + 4, y + c.dy + c.ss*0.5];
-      const E = C.ext, reg = [x + E[0], y + E[1], x + E[2], y + E[3]], blk = boxes0.filter(q => ovl(q, reg)).concat(mk.filter(q => ovl(q, reg)), pnB);   // (only what lies near this name's spots is tested)
+      const E = C.ext, reg = [x + E[0], y + E[1], x + E[2], y + E[3]], blk = bxNear(boxes0, reg).filter(q => ovl(q, reg)).concat(mk.filter(q => ovl(q, reg)), pnB);   // (only what lies near this name's spots is tested)
       let best = null, nB = 0, nE = 0;
       for (const pass of C.narrow || hexPx < 6 ? [0, 1] : [0]){ for (const c of C.list){ const b = boxOf(c); if (b[0] < 2 || b[2] > cw - 2 || b[1] < 2 || b[3] > ch - 2){ nE++; continue; } if (blk.some(q => ovl(q, b))){ nB++; continue; }
           if (pass ? !(c.fitw ?? (c.fitw = nameOverSea(x + c.dx, y + c.dy, c.ww, c.ss, own))) : !(c.fit ?? (c.fit = nameFits(x + c.dx, y + c.dy, c.ww, c.ss, own)))) continue;
@@ -7905,26 +7957,26 @@ function draw(now){ draw.now = now;
   { labs.sort((a, b) => b.pri - a.pri); trq.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
     for (const L of labs){ if (!trCity && !L.cap && !L.city){ trCity = true; pics = pics.concat(placePics(trq, boxes, LPL, true, hexPx)); trays = placeTrays(trq, boxes, LPL, true, hexPx); }   // (the pictures and trays go first, so the power names keep clear of them)
       if (!pnYou && !(L.cap || L.city)) placePN(hexPx >= 15);   // the power names go in after the capital and city names, before the province names (once those are up, only yours)
-      const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; ctx.font = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; const w = ctx.measureText(L.t).width + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
+      const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; const fnt = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; ctx.font = fnt; const w = mtw(L.t, fnt) + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
       const hit = q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
       let lx = L.x, ly = y0, late = false;
       // a name blocked only by counters and troop models keeps its spot (they are laid out round the names, in world space): no name pops in and
       // out or jumps round its city as the view zooms or a force goes by; the plates are drawn over it
       // a standing diamond's middle (its icon) or its strength badge on the name: the name steps aside (or, a small one, is left out) like any blocked
       // name, so no name is half hidden under a counter; one a diamond only grazes (its corners or edge) keeps its spot and is drawn over it
-      const blkN = boxes.filter(hit), coreHit = blkN.some(q => q.ic && q.at !== -1 && q.ic.some(hit)), onlyUnits = blkN.length && !coreHit && blkN.every(q => q.unit && !q.hud && !q.tag);
+      const blkN = bxNear(boxes, b).filter(hit), coreHit = blkN.some(q => q.ic && q.at !== -1 && q.ic.some(hit)), onlyUnits = blkN.length && !coreHit && blkN.every(q => q.unit && !q.hud && !q.tag);
       if (onlyUnits && blkN.every(q => q.ic ? !q.ic.some(hit) : !q.fmb)) late = blkN.some(q => q.ic);
-      if (!onlyUnits && blkN.length){ if (L.cap && boxes.some(q => !q.unit && hit(q))) continue;   // a capital name gives way only to another name; stacks make it step aside
+      if (!onlyUnits && blkN.length){ if (L.cap && blkN.some(q => !q.unit)) continue;   // a capital name gives way only to another name; stacks make it step aside
         const b0 = b.slice();
         // a city name blocked below its city's point (by a stack or a bigger name) tries the right, then the left side of the point, then spots further below;
         // a province name blocked only by stacks steps just above or below them
         let cand;
         if (L.city) cand = [[L.x + L.mr + 2, L.my - f/2], [L.x - L.mr - 2 - w, L.my - f/2], [L.x + L.mr - w, y0], [L.x - L.mr, y0], [L.x + 2, y0], [L.x - 2 - w, y0], [L.x - w/2, y0 + f + 3],
           [L.x + L.mr + 2, L.my - f - 2], [L.x - L.mr - 2 - w, L.my - f - 2], [L.x + L.mr + 2, L.my + 2], [L.x - L.mr - 2 - w, L.my + 2], [L.x - w/2, L.my - L.mr - f - 4], [L.x - w/2, y0 + 2*f + 6], [L.x + L.mr + 6, y0 + f], [L.x - L.mr - 6 - w, y0 + f]];
-        else { const blk = boxes.filter(hit); if (!blk.every(q => q.unit)) continue; const t0 = Math.min(...blk.map(q => q[1])), t1 = Math.max(...blk.map(q => q[3]));
+        else { const blk = blkN; if (!blk.every(q => q.unit)) continue; const t0 = Math.min(...blk.map(q => q[1])), t1 = Math.max(...blk.map(q => q[3]));
           cand = [[L.x - w/2, t0 - f - 3], [L.x - w/2, t1 + 1]].filter(q => Math.abs(q[1] - y0) <= 3*f); }
         let ok = false; for (const [x0, yt] of cand){ b[0] = x0; b[2] = x0 + w; b[1] = yt - 1; b[3] = yt + f + 2;
-          if (b[0] < 0 || b[2] > cw || boxes.some(hit) || cityPts.some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3])) continue;
+          if (b[0] < 0 || b[2] > cw || bxNear(boxes, b).some(hit) || cpNear(b).some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3])) continue;
           lx = x0 + w/2; ly = yt; ok = true; break; }
         if (!ok){ const mine = L.cap && L.p === S.nations[PLAYER].capital; if (!(mine || L.cap || (L.city && L.tier >= 1))) continue;
           // boxed in on every side: a capital or big city may still take its spot (or a nearby one) over the edges of a counter - its marks, padding or figures -
@@ -7932,7 +7984,7 @@ function draw(now){ draw.now = now;
           // shows: with no such spot it takes the nearby one covering the least of the plates and is drawn under the counters, so their numbers stay readable.
           const coreA = bx => { let s0 = 0; for (const q of boxes){ if (q.core){ const ox = Math.min(bx[2], q.core[2]) - Math.max(bx[0], q.core[0]), oy = Math.min(bx[3], q.core[3]) - Math.max(bx[1], q.core[1]); if (ox > 0 && oy > 0) s0 += ox*oy; }
             if (q.fmb) for (const m of q.fmb){ const ox = Math.min(bx[2], m[2]) - Math.max(bx[0], m[0]), oy = Math.min(bx[3], m[3]) - Math.max(bx[1], m[1]); if (ox > 0 && oy > 0) s0 += 1.2*ox*oy; } } return s0; };   // (and the troop models: a name painted over a hull is a last resort)
-          const blocked = bx => bx[0] < 0 || bx[2] > cw || boxes.some(q => ovl(q, bx) && (!q.unit || q.hud || q.tag)) || cityPts.some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3]);
+          const blocked = bx => bx[0] < 0 || bx[2] > cw || bxNear(boxes, bx).some(q => ovl(q, bx) && (!q.unit || q.hud || q.tag)) || cpNear(bx).some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3]);
           let bk = null, bs = Infinity;
           for (const [x0, yt] of [[b0[0], y0], ...cand]){ const bx = [x0, yt - 1, x0 + w, yt + f + 2], s0 = (blocked(bx) ? 1e7 : 0) + coreA(bx); if (s0 < bs){ bs = s0; bk = bx; } if (!s0) break; }
           if (bs > 0 && !(mine && bs < 1e7)) { if (!mine) continue; bk = b0; }

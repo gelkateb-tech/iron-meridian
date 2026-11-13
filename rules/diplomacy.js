@@ -54,9 +54,12 @@ function commonEnemy(a, b){ if (!QM) return S.nations.some(c => c.alive && c.id 
 // every pair of nations has its entry in S.rel (a new game makes them all; a packed nations-world save leaves the default ones out until they are
 // first asked for): then rel() creates nothing and atWar has no side effect, so its answers may be read in any order (checked once a tick step)
 let RAC = null;
-function relAll(){ if (RAC !== null && RAC.R === S.rel && RAC.t === tickSess && RAC.K === S.nations.length) return RAC.ok;
+function relAll(){ if (RAC !== null && RAC.R === S.rel && (RAC.ok || RAC.t === tickSess) && RAC.K === S.nations.length) return RAC.ok;   // (once every pair has its entry it keeps it: entries are never removed)
   const K = S.nations.length; let ok = true; for (let a = 0; a < K && ok; a++) for (let b = a + 1; b < K; b++) if (!S.rel[rkeyC(a, b)]){ ok = false; break; }
   RAC = {R:S.rel, t:tickSess, K, ok}; return ok; }
+// the nations at war with some nation, read off the relation entries (no entry is made: atWar(a, b) is true for nations a, b exactly when the
+// entry of the pair says war)
+function warSetNow(){ const W = new Set(); for (const k in S.rel){ const r = S.rel[k]; if (!r || r.st !== 'war') continue; const i = k.indexOf(','); W.add(+k.slice(0, i)); W.add(+k.slice(i + 1)); } return W; }
 const opinion = (a, b) => Math.max(-100, Math.min(100, opinionParts(a, b).reduce((s0, x) => s0 + x[1], 0)));
 // (by: for a war, the nation that started it, the attacker; a nation that joins to defend an ally is not one: the war it joins is the attacker's)
 function setRel(a, b, st, days = null, by = null){
