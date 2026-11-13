@@ -239,10 +239,11 @@ function rangedNear(g, x, y, km){ const NC = Math.ceil(WORLD_W/RG_C), r = Math.c
 const RANGED_SHOWN = new Map();
 // one battle step of ranged fire (hourly: the hour's own step, which also shows the hour's damage numbers)
 // A force fires only at the forces of a nation it is at war with, so a nation at war with no nation neither fires nor is fired at: when every pair
-// of nations has its relation (relAll: atWar then creates nothing), its forces are left out of the grid and its guns skip the search (inWar: the
-// nations at war, read off the relation entries once a step, warSetNow). Every force that could fire or be fired at is handled exactly as before: the same targets, in the same order, the same rolls
+// of nations has its relation (relAll: atWar then creates nothing), its forces are left out of the grid and its guns skip the search (inWar: once
+// per nation a step). Every force that could fire or be fired at is handled exactly as before: the same targets, in the same order, the same rolls
 function rangedStep(hourly){ let grid = null, gone = false, IW = null;
-  const inWar = n => { if (IW === null) IW = relAll() ? warSetNow() : false; return IW === false || IW.has(n); };
+  const inWar = n => { if (IW === null) IW = relAll() ? new Int8Array(S.nations.length).fill(-1) : false; if (IW === false || !(n >= 0 && n < IW.length)) return true;
+    let w = IW[n]; if (w < 0){ w = 0; for (let j = 0; j < IW.length; j++) if (j !== n && atWar(n, j)){ w = 1; break; } IW[n] = w; } return w === 1; };
   for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.sail || !count(a)) continue;   // (a fleet sailing to a spot in its zone fires once there)
     let gun = false; if (RT_ROLL){ const u = a.u; gun = !!(u.art || u.mlrs || u.frig || u.crui || u.sub); } else for (const t of RANGED_T) if (a.u[t]){ gun = true; break; } if (!gun) continue;
     if (a.tgt && a.tgt.id != null){ const tb = armyById(a.tgt.id); if (!tb || !count(tb) || !atWar(a.owner, tb.owner)) delete a.tgt; }   // the ordered target is gone
