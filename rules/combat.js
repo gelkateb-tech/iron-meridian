@@ -131,7 +131,7 @@ const TRAITS = {
   shield:{name:'Shield', icon:'◆', desc:'Takes 12% less damage when defending (×rank)'},
   gunner:{name:'Artillerist', icon:'✦', desc:'Artillery and SAMs +20% attack (×rank)'},
   supply:{name:'Logistician', icon:'✚', desc:'No attrition when cut off; heals 50% faster (×rank)'},
-  siege:{name:'Siegemaster', icon:'▲', desc:'Captures provinces 25% faster (×rank)'},
+  siege:{name:'Siegemaster', icon:'▲', desc:'Embarks at ports and lands from the sea 20% faster (×rank)'},   // (captures are immediate at a province's heart: rules/movement.js cmdEmbF)
 };
 const CMD_FIRST = ['Adair', 'Bram', 'Calla', 'Dorian', 'Elin', 'Farah', 'Galen', 'Hana', 'Ilya', 'Juno', 'Kasimir', 'Lena', 'Marek', 'Nadia', 'Oren', 'Petra', 'Quinn', 'Rhea', 'Soren', 'Talia', 'Udo', 'Vera', 'Wren', 'Yara', 'Zane'];
 const CMD_LAST = ['Ashford', 'Brandt', 'Corvin', 'Dahl', 'Ekwall', 'Ferro', 'Garrow', 'Hale', 'Ivers', 'Jasko', 'Kell', 'Lorne', 'Marlow', 'Noor', 'Orlov', 'Pryce', 'Quist', 'Rook', 'Sabre', 'Thorne', 'Ulric', 'Voss', 'Wilde', 'Yates', 'Zorin'];
@@ -308,6 +308,7 @@ function capture(p, O){
   const prev = S.owner[p], wasCap = isCapital(p);
   IM.emit('fxCapture', p, O, prev);   // before the owner changes: the client marks the capture on the map
   S.owner[p] = O; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1);
+  for (const a of S.armies) if (a.hrt === p) delete a.hrt;   // (the heart reached: done with, rules/movement.js atHeart)
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
   S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = S.home[p] === O ? 0 : Math.max(unrestOf(p), G.P[p].city ? 30 : 15);

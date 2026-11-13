@@ -71,7 +71,8 @@ const rBombF = (n, t) => t === 'stealth' && has(n, 'stealth_bay') ? 0.75 : UNITS
 const rMpaK = n => [1, 1.2, 1.4][rLevel(n, 'mpa_sonar')] || 1, rMpaR = n => MPA_R*rMpaK(n), rMpaH = n => has(n, 'mpa_g2') ? 18 : 12;   // Sonobuoy Field; Long-Endurance Patrol Aircraft
 const rAewK = n => [1, 1.15, 1.3][rLevel(n, 'awacs_radar')] || 1, rAewR = n => AEW_R*rAewK(n), rAewF = n => has(n, 'awacs_link') ? 1.35 : 1.25;   // High-Power Radar; Fighter Data Link
 const rDeckRate = n => [0.2, 0.25, 0.3][rLevel(n, 'carr_deck')] || 0.2;                               // Flight-Deck Crews: repairs aboard a carrier, per day
-// Command & Logistics, by level: Motorized Supply (speed), Combat Engineers (capture work, road and rail price), Amphibious Doctrine (first day ashore), Field Hospitals (damage taken)
+// Command & Logistics, by level: Motorized Supply (speed), Combat Engineers (embarking time, road and rail price), Amphibious Doctrine (first day ashore; landings
+// take half the time from level I: rules/movement.js landH), Field Hospitals (damage taken)
 const rMoveF = n => [1, 1.2, 1.3][rLevel(n, 'log1')] || 1, rCapF = n => [1, 0.7, 0.6][rLevel(n, 'log2')] || 1, rRoadF = n => [1, 0.75, 0.65][rLevel(n, 'log2')] || 1;
 const rLandF = n => [0.67, 0.9, 1][rLevel(n, 'nav3')] || 0.67, rHospF = n => [1, 0.85, 0.8][rLevel(n, 'log3')] || 1;
 // missiles: range, speed and power by research (Cruise Missile Range / Speed, Ballistic Missile Range, Heavier Warhead)

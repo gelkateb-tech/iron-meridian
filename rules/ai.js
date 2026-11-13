@@ -618,7 +618,8 @@ function aiTurn0(n, N){
       if (dest >= 0) a.path = pathFor(a, a.at, dest);
       continue;
     }
-    if (S.owner[a.at] !== n) continue;
+    if (S.owner[a.at] !== n){   // land it is taking: a force standing off the province's heart (after a clash on the road) walks to the city, which takes it
+      if (!a.sail && !S.battles.includes(a.at) && capturable(n, a.at) && !atHeart(a) && ground(a)) orderSpot(a, G.P[a.at].x, G.P[a.at].y); continue; }
     if (a.at === N.capital && threatNear(a.at, n)) continue;
     if ((a.m ?? 80) < 50 || (a.resting && a.m < 70)){ a.resting = true; continue; } a.resting = false;
     if (gunsOnly(a)) continue;   // batteries fire from range (aiGuns), they do not march into battles
