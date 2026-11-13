@@ -68,7 +68,17 @@ STYLE_REAL = ("Style: a realistic, detailed 3D render of a modern military facil
               "centred: the facility fills about 85 percent of the frame and every piece is fully inside it with a small "
               "margin, nothing cut off. Background: a plain, flat, uniform light grey (#D9D9D9). Square 1:1 image. No text, "
               "no letters, no numbers, no emblems, no logos, no watermark.")
-STYLES = {'recruiting-office': STYLE_REAL}
+# the same realistic look kept simple and clean (Fortifications, Hospital): few elements, a painted roof symbol allowed
+STYLE_CLEAN = STYLE_REAL.replace("No text, no letters, no numbers, no emblems, no logos, no watermark.",
+              "Keep it simple and clean, not overdone: few elements, uncluttered, no extra props or debris. No text, no "
+              "letters, no numbers, no flags, no logos, no watermark.")
+STYLES = {'recruiting-office': STYLE_REAL, 'fortifications': STYLE_CLEAN, 'hospital': STYLE_CLEAN}
+SUBJECTS['fortifications-1'] = (
+    "A small military defensive position, level 1 of 5: one short straight line of stacked khaki sandbag walls, about chest "
+    "high, and at one end of it one small square bunker of sandbags and timber with a low roof and a narrow firing slit.")
+SUBJECTS['hospital-1'] = (
+    "A small military clinic, level 1 of 5: one single-storey building of pale concrete with a flat roof, a red cross on a "
+    "white square painted on the roof, a covered entrance with double doors, and a short paved path in front.")
 SUBJECTS['recruiting-office-1'] = (
     "A small military recruiting office, level 1 of 5: one single-storey office building of pale concrete with a flat roof, "
     "a glass front entrance with a short canopy and a blank sign board above the door (no lettering), a few steps and a "
@@ -114,6 +124,29 @@ GROWS = {
         "turn it into a large training base: three more barracks buildings in a row beside the first, a big paved parade "
         "ground with a large formation of soldiers in rows, a small reviewing stand, more parked vehicles (olive-green trucks, "
         "jeeps and two armoured personnel carriers), and a vehicle shed"),
+    'fortifications-2': ('fortifications-1',
+        "a longer continuation of the same sandbag wall line, and a second small sandbag-and-timber bunker at its other end"),
+    'fortifications-3': ('fortifications-2',
+        "two low concrete bunkers with firing slits, linked to the sandbag line and to each other by narrow zig-zag trenches "
+        "with sandbag and timber walls; along each trench only a thin strip of brown earth, no ground around the position"),
+    'fortifications-4': ('fortifications-3',
+        "a row of steel anti-tank traps (crossed girder hedgehogs) in front of the line, and one sandbagged gun emplacement "
+        "with a field gun pointing forward"),
+    'fortifications-5': ('fortifications-4',
+        "turn it into a strong fortified line: more concrete bunkers along a longer line, more connecting trenches, and a "
+        "long row of concrete anti-tank barriers (dragon's teeth) in front"),
+    'hospital-2': ('hospital-1',
+        "a larger clinic: an extension wing built onto the side of the building, one white ambulance parked by the entrance, "
+        "and a round concrete helipad with a plain painted circle marking beside the clinic"),
+    'hospital-3': ('hospital-2',
+        "replace the clinic with a two-storey military hospital building of pale concrete in the same place, with the red "
+        "cross on its roof, keeping the helipad, and two more white ambulances parked by the entrance"),
+    'hospital-4': ('hospital-3',
+        "an extra two-storey wing joined to the hospital, and a medical helicopter, painted olive green with a red cross, "
+        "standing on the helipad"),
+    'hospital-5': ('hospital-4',
+        "turn it into a big military medical centre: two more wings joined around a small courtyard, a second helipad, and a "
+        "few more ambulances in a small parking area"),
     'naval-yard-2': ('naval-yard-1',
         "two more long concrete piers of the same kind, continuing the row of piers toward the upper right, each with a ship "
         "docked alongside (one grey frigate and one dark grey submarine); a fourth grey warehouse continuing the warehouse "
@@ -213,7 +246,7 @@ def request(name, refs, change=None):
     elif name in GROWS:
         before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
         if not os.path.exists(src): raise SystemExit(f'{name} grows from {os.path.relpath(src, ROOT)}, which is not there yet')
-        text, images = GROW.format(add, GROW_END[building(name)]), [shrunk(src)]
+        text, images = GROW.format(add, GROW_END.get(building(name), GROW_END['recruiting-office'])), [shrunk(src)]
     elif name in ICON_EDITS:
         before, text = ICON_EDITS[name]; src = os.path.join(OUT, f'{before}.grey.png')
         if not os.path.exists(src): raise SystemExit(f'{name} is made from {os.path.relpath(src, ROOT)}, which is not there yet')
