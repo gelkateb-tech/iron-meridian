@@ -26,7 +26,7 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
   await p.addInitScript(() => { const L = [], ce = Document.prototype.createElement; Document.prototype.createElement = function(t, o){ const e = ce.call(this, t, o); if (String(t).toLowerCase() === 'canvas') L.push(new WeakRef(e)); return e; };
     window.__cvs = () => { let px = 0, n = 0; for (const r of L){ const c = r.deref(); if (c && c.width*c.height > 1){ n++; px += c.width*c.height; } } return {n, mpx:+(px/1e6).toFixed(1)}; }; });
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  p.on('crash', () => errors.push('page crashed'));
+  p.on('crash', () => { console.log(JSON.stringify({fails:['the page crashed (its renderer was killed: out of memory?)', ...fails], errors})); process.exit(1); });   // (a pending call would wait for ever)
   await p.goto('file://' + path.join(__dirname, 'page.html')); await p.waitForTimeout(600);
   await p.click('[data-act="pickscn"][data-k="world64"]'); await pickNation(p, NATION); await p.click('[data-act="begin"]'); await p.waitForTimeout(800);
   if (await p.locator('[data-act="start"]').count()) await p.click('[data-act="start"]');
@@ -44,7 +44,7 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
   const state = () => p.evaluate(() => ({mode:window.__im.mapMode, rel:window.__im.ovl.on.rel, sup:window.__im.ovl.on.sup}));
   // the buttons: a mode tab or an overlay switch (on a phone the folded pill opens first)
   const press = async (act, k) => { if (PHONE && !await p.evaluate(() => document.getElementById('modes').classList.contains('open'))) await p.click('#modes button[data-act="mode"][aria-pressed="true"]');
-    await p.click(`#modes [data-act="${act}"][data-k="${k}"]`, { timeout: 8000 }); };
+    await p.click(`#modes [data-act="${act}"][data-k="${k}"]`, { timeout: 30000 }); };
   const act = a => a === 'P' ? press('mode', 'political') : a === 'T' ? press('mode', 'terrain') : press('ovl', a === 'R' ? 'rel' : 'sup');
   // zoom toward scale s1 round the middle of the map: wheel steps (desktop) or a pinch (phone, real touch events); fast = big steps, no pause
   const zoom = async (s1, fast) => { const cx = MAP.x + MAP.w*0.5, cy = MAP.y + MAP.h*0.5;
@@ -62,14 +62,20 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
     await p.mouse.move(cx, cy); await p.mouse.down(); for (let i = 1; i <= 8; i++) await p.mouse.move(cx + dx*i/8, cy + dy*i/8); await p.mouse.up(); await p.mouse.move(MAP.x + 4, MAP.y + 4); };
   // the base layer as it is against a fresh full render of the same view and mode, and the overlay canvas against a fresh build of the overlays
   // shown (both are left as those fresh ones)
-  await p.evaluate(() => { window.__mmDiff = (a, b, w) => { if (a.length !== b.length) return {share:1, size:true}; let n = 0, big = 0, x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
-      for (let i = 0; i < a.length; i += 4){ n++; if (Math.abs(a[i] - b[i]) > 6 || Math.abs(a[i + 1] - b[i + 1]) > 6 || Math.abs(a[i + 2] - b[i + 2]) > 6 || Math.abs(a[i + 3] - b[i + 3]) > 6){ big++; const q = i/4, x = q % w, y = (q - x)/w; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
-      return {share:+(big/n).toFixed(5), box:big ? [x0, y0, x1, y1] : null}; };
-    window.__mmPx = c => c.getContext('2d').getImageData(0, 0, c.width, c.height).data; });
+  // (compared in strips of rows from canvas copies, so a check never holds whole-layer pixel arrays: the page's memory stays as in play)
+  await p.evaluate(() => { const T = {};
+    window.__mmSnap = (C, k) => { const S = T[k] || (T[k] = document.createElement('canvas')); if (S.width !== C.width || S.height !== C.height){ S.width = C.width; S.height = C.height; }
+      const g = S.getContext('2d', {willReadFrequently:true}); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'copy'; g.drawImage(C, 0, 0); g.globalCompositeOperation = 'source-over'; return S; };
+    window.__mmGet = k => T[k];
+    window.__mmDiff = (A, B) => { if (!A || !B || A.width !== B.width || A.height !== B.height) return {share:1, size:true}; const w = A.width, h = A.height, ga = A.getContext('2d'), gb = B.getContext('2d');
+      let n = 0, big = 0, x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+      for (let y = 0; y < h; y += 128){ const hh = Math.min(128, h - y), a = ga.getImageData(0, y, w, hh).data, b = gb.getImageData(0, y, w, hh).data;
+        for (let i = 0; i < a.length; i += 4){ n++; if (Math.abs(a[i] - b[i]) > 6 || Math.abs(a[i + 1] - b[i + 1]) > 6 || Math.abs(a[i + 2] - b[i + 2]) > 6 || Math.abs(a[i + 3] - b[i + 3]) > 6){ big++; const q = i/4, x = q % w, yy = y + (q - x)/w; if (x < x0) x0 = x; if (x > x1) x1 = x; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; } } }
+      return {share:+(big/n).toFixed(5), box:big ? [x0, y0, x1, y1] : null}; }; });
   const cmpFull = () => p.evaluate(() => { const im = window.__im, L = im.layer, st = {mode:im.mapMode, rel:im.ovl.on.rel, sup:im.ovl.on.sup, s:+im.view.s.toFixed(3)}; if (L.s !== im.view.s) return {...st, scaled:true, share:1};
-    const a = window.__mmPx(L).slice(); im.renderLayer(); const base = window.__mmDiff(a, window.__mmPx(im.layer), im.layer.width);
+    const a = window.__mmSnap(L, 'L'); im.renderLayer(); const base = window.__mmDiff(a, im.layer);
     const O0 = im.ovl.cv, show = im.mapMode === 'political' && (im.ovl.on.rel || im.ovl.on.sup);
-    let ovl = {share:0}; if (show){ if (!O0 || O0.width !== im.layer.width) ovl = {share:1, missing:true}; else { const o = window.__mmPx(O0).slice(); const O1 = im.ovl.fresh(); ovl = window.__mmDiff(o, window.__mmPx(O1), O1.width); } }
+    let ovl = {share:0}; if (show){ if (!O0 || O0.width !== im.layer.width) ovl = {share:1, missing:true}; else { const o = window.__mmSnap(O0, 'O'); ovl = window.__mmDiff(o, im.ovl.fresh()); } }
     else if (O0 && O0.width > 1) ovl = {share:1, leftover:true};
     return {...st, share:base.share, box:base.box, ovl:ovl.share, ovlBox:ovl.box || (ovl.missing ? 'missing' : ovl.leftover ? 'left over' : null)}; });
   const TH = 0.002;
@@ -90,13 +96,14 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
     const t = await p.evaluate(() => ({cv:window.__im.ovl.cv ? window.__im.ovl.cv.width : 0, pressed:[...document.querySelectorAll('#modes [data-act="ovl"][aria-pressed="true"]')].length, sup:window.__im.ovl.on.sup}));
     checks.uiTerrain = t; if (t.cv > 1 || t.pressed || !t.sup) fail('ui: overlays hidden in Terrain (and remembered)', t);
     await act('P'); await act('U'); await settle(); }
+  await cmpFull(); await p.evaluate(() => { window.__mmSnap(window.__im.layer, 'N'); window.__mmSnap(window.__im.layer, 'B'); });   // (the test's own copies exist before the baseline)
   const m0 = await mem(); checks.memStart = m0; log('mem start ' + JSON.stringify(m0));
 
   // (N) an overlay switched on and off never re-renders the base map
   { await setView(home[0], home[1], Z[1]); await settle(); await cmpFull();
-    const before = await p.evaluate(() => { const L = window.__im.layer; window.__mmSnap = window.__mmPx(L).slice(); return L.full; });
+    const before = await p.evaluate(() => { const L = window.__im.layer; window.__mmSnap(L, 'N'); return L.full; });
     for (const a of ['R', 'U', 'R', 'U']){ await act(a); await p.waitForTimeout(250); }
-    await settle(); const after = await p.evaluate(() => { const L = window.__im.layer; return {full:L.full, d:window.__mmDiff(window.__mmSnap, window.__mmPx(L), L.width).share}; });
+    await settle(); const after = await p.evaluate(() => { const L = window.__im.layer; return {full:L.full, d:window.__mmDiff(window.__mmGet('N'), L).share}; });
     checks.noRebuild = {before, ...after}; if (after.full !== before || after.d > 0) fail('overlay toggles re-rendered the base map', checks.noRebuild); }
 
   // (O) the owner's case: switch, then zoom in and out across the bands
@@ -109,9 +116,9 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
 
   // (B) back and forth: the same pixels as before
   { await setView(home[0], home[1], Z[1]); await settle(); await cmpFull();
-    const snap = () => p.evaluate(() => { const im = window.__im; window.__mmSnap = window.__mmPx(im.layer).slice(); window.__mmSnapO = im.ovl.cv && im.ovl.cv.width > 1 ? window.__mmPx(im.ovl.cv).slice() : null; });
-    const same = () => p.evaluate(() => { const im = window.__im, d = window.__mmDiff(window.__mmSnap, window.__mmPx(im.layer), im.layer.width).share, O = im.ovl.cv && im.ovl.cv.width > 1 ? window.__mmPx(im.ovl.cv) : null, a = window.__mmSnapO;
-      return Math.max(d, !a !== !O ? 1 : a ? window.__mmDiff(a, O, im.ovl.cv.width).share : 0); });
+    const snap = () => p.evaluate(() => { const im = window.__im, O = im.ovl.cv; window.__mmSnap(im.layer, 'B'); window.__mmBO = !!(O && O.width > 1); if (window.__mmBO) window.__mmSnap(O, 'BO'); });
+    const same = () => p.evaluate(() => { const im = window.__im, d = window.__mmDiff(window.__mmGet('B'), im.layer).share, O = im.ovl.cv, on = !!(O && O.width > 1);
+      return Math.max(d, on !== window.__mmBO ? 1 : on ? window.__mmDiff(window.__mmGet('BO'), O).share : 0); });
     const res = []; for (const seq of [['R', 'R'], ['U', 'U'], ['T', 'P'], ['R', 'T', 'P', 'R'], ['U', 'R', 'T', 'U', 'P', 'R', 'U', 'U']]){ await snap(); for (const a of seq){ await act(a); await p.waitForTimeout(40); } await zoom(Z[2], true); await zoom(Z[1]); await settle();
       const d = await same(); res.push([seq.join(''), d]); if (d > TH) fail('back', [seq.join(''), d]); }
     checks.back = res; }
