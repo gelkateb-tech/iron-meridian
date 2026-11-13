@@ -381,7 +381,6 @@ header .vbar{display:none!important}
 .tlegend:not([hidden]) ~ .ilegend{top:auto; bottom:146px}
 @media (max-width: 700px){ .ilegend, .tlegend:not([hidden]) ~ .ilegend{right:auto; left:8px; top:8px; bottom:auto; width:200px; font-size:10.5px} }
 .tlegend .lr{display:grid; grid-template-columns:12px 14px 70px auto; align-items:center; gap:5px; margin:2px 0}
-.tlegend.rl .lr{grid-template-columns:12px 14px 96px auto} .tlegend.rl .lr span:nth-child(2){display:flex} .tlegend.rl .lr.lx{display:block; margin-top:4px; font-size:10.5px}
 .tlegend .lr i{display:block; width:12px; height:9px; border-radius:2px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
 .tico{vertical-align:-2px; flex:none}
 .terrbox{margin:4px 0 8px; padding:6px 8px; border-left:2px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03); border-radius:0 4px 4px 0}
@@ -404,6 +403,9 @@ header .vbar{display:none!important}
   .modes button[aria-pressed="true"]{display:flex; align-items:center; gap:6px; background:rgba(79,208,222,.16); color:#f0d9a8; box-shadow:none; font-weight:600}
   .modes button[aria-pressed="true"]::after{content:""; width:5px; height:5px; border:solid currentColor; border-width:0 1.5px 1.5px 0; transform:rotate(45deg) translate(-1px, -1px); opacity:.8; margin-left:auto}
   .modes.open{gap:1px; background:rgba(57,62,65,.92)} .modes.open button{display:block} .modes.open button[aria-pressed="true"]{display:flex} .modes.open button[aria-pressed="true"]::after{transform:rotate(-135deg) translate(-1px, -1px)}
+  .modes .msep, .modes button.ovl, .modes button.ovl[aria-pressed="true"]{display:none} .modes.open .msep{display:block; width:auto; height:1px; margin:2px 4px}
+  .modes.open button.ovl, .modes.open button.ovl[aria-pressed="true"]{display:flex; order:0} .modes button.ovl[aria-pressed="true"]::after{content:none}
+  .modes:not(.open) .ovn{display:inline}
   .mapctl{flex-direction:column; left:auto; right:8px; bottom:8px; top:auto; padding:2px; gap:0; border-radius:10px; background:rgba(57,62,65,.66); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
   .mapctl button{width:28px; height:28px} .mapctl button svg{width:15px; height:15px}
   .mapctl #zin + #zout{margin:0 0 3px} .mapctl #zin + #zout::after{left:6px; right:6px; top:auto; bottom:-2px; width:auto; height:1px}
@@ -1233,6 +1235,13 @@ header .tbi .badge{top:-7px; right:-7px}
 .mapctl #zglobe[aria-pressed="true"]{color:#06232a; background:linear-gradient(180deg, #74e4ef, #2ea4b3)}
 /* map modes pill */
 .modes{border-radius:3px; padding:2px; gap:2px; background:rgba(43,60,67,.92); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 6px 16px rgba(0,0,0,.42)}
+/* the two overlay switches after the two modes: a divider, then a check mark that lights while the overlay shows */
+.modes .msep{display:block; width:1px; margin:3px 3px; background:rgba(255,255,255,.2)}
+.modes button.ovl{display:inline-flex; align-items:center; gap:5px}
+.modes button.ovl::before{content:""; width:8px; height:8px; border-radius:2px; box-shadow:inset 0 0 0 1.5px currentColor; opacity:.75}
+.modes button.ovl[aria-pressed="true"]{background:rgba(79,208,222,.16); color:#bff6fb; box-shadow:inset 0 0 0 1px rgba(79,208,222,.55)}
+.modes button.ovl[aria-pressed="true"]::before{background:#74e4ef; box-shadow:none; opacity:1}
+.modes .ovn{display:none; font-weight:500; opacity:.8}
 .modes button{border-radius:2px; color:var(--cn-fg2); font-weight:600}
 .modes button:hover{color:#fff; background:rgba(255,255,255,.08)}
 .modes button[aria-pressed="true"]{background:linear-gradient(180deg, #74e4ef, #2ea4b3); color:#06232a; box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 0 8px rgba(79,208,222,.4)}
@@ -2442,7 +2451,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
         <button class="shd" id="zhome" data-act="home" aria-label="Go to your capital" title="Go to your capital (H)"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M6 9.6v9.9h12V9.6" fill="currentColor" fill-opacity=".22"/><path d="M10 19.5v-5.2h4v5.2"/></svg></button>
         <button class="shd" id="railnotif" data-act="notif" aria-label="Dispatches" title="Dispatches&#10;News, battles and reports from the front"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.5" width="14" height="16.5" rx="1.6" fill="currentColor" fill-opacity=".18"/><path d="M9 4.5V3h6v1.5"/><path d="M8.2 9h7.6M8.2 12.5h7.6M8.2 16h4.6"/></svg><span class="badge" id="railbadge" hidden></span></button>
         <button class="shd adv" id="railside" data-act="side-open" aria-label="Command panel" title="Command panel&#10;Your advisor: first steps, your forces and the selected province"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4.2 21.6c.5-3.9 3.4-5.9 7.8-5.9s7.3 2 7.8 5.9z" fill="#4f6b3a" stroke="#14200d" stroke-width=".9"/><path d="M10 15.9l2 2.6 2-2.6" fill="none" stroke="#e8b923" stroke-width="1"/><circle cx="12" cy="11.4" r="3.7" fill="#e3b48a" stroke="#4a2f1a" stroke-width=".7"/><path d="M7.4 10.4c0-3.6 2-5.9 4.6-5.9s4.6 2.3 4.6 5.9c-1.3-.7-2.9-1-4.6-1s-3.3.3-4.6 1z" fill="#5f7a44" stroke="#14200d" stroke-width=".8"/><path d="M6.6 10.6h10.8" stroke="#2c3b1d" stroke-width="1.2" stroke-linecap="round"/><path d="M11.1 7.2l.9-.9.9.9-.9.9z" fill="#e8b923"/></svg></button>
-        <button class="shd" id="zrel" data-act="relmode" aria-label="Relations map" title="Relations map (V)" aria-pressed="false"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></button>
+        <button class="shd" id="zrel" data-act="relmode" aria-label="Relations overlay" title="Relations overlay" aria-pressed="false"><svg class="shp" viewBox="0 0 52 58" aria-hidden="true"><path class="o" d="M3 3h46v36L26 55 3 39z"/><path class="i" d="M7 7h38v30L26 50 7 37z"/></svg><svg class="si" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></button>
       </div>
       <div id="miniframe" aria-hidden="true"></div>
       <canvas id="mini" aria-label="Minimap"></canvas>
@@ -4657,19 +4666,16 @@ function ovIn(){ if (!OV.on || ctx === OV.g) return; const m = MCTX, g = OV.g; O
 function ovOut(){ if (ctx !== OV.g) return; ctx = MCTX; dpr = OV.md; }
 const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
 const view = {s:1, x:0, y:0};
-let dpr = 1, cw = 0, ch = 0, hits = [], HITX = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, relMode = false, mapMode = 'political';
-// resources map: each province tinted by its strongest output against a typical yield of that good
-const RMAP_K = ['oil', 'rare', 'iron', 'metal', 'elec', 'mp', 'cash'], RMAP_W = {cash:12, oil:5*RES_K, metal:3*RES_K, iron:2.5*RES_K, elec:2*RES_K, rare:1.2*RES_K, mp:2};   // (goods at RES_K)
-// Resources map colours, after the resource pictures: money banknote green, oil jerrycan red, materials crate olive, iron steel grey-blue, electronics circuit teal,
-// rare materials orange glow, manpower dark helmet green. Seven hues kept apart in hue AND lightness, so they still differ where the countryside is drawn faint
-const RMAP_C = {oil:'rgba(214,48,40,.74)', metal:'rgba(160,160,40,.76)', iron:'rgba(166,186,214,.74)', elec:'rgba(0,206,198,.72)', rare:'rgba(255,146,22,.78)', mp:'rgba(44,122,72,.76)', cash:'rgba(112,214,98,.66)'};
-// the Resources map legend: each colour is the province's main output (weighted so a little rare material outranks a lot of money)
-function resLegendHTML(){ return `<div class="lh">Resources · each city's main resource</div><div class="lr lx" style="margin:0 0 4px"><span class="muted">Cities: strong colour, light outline · countryside: faint</span></div>` + RMAP_K.map(k => { const R = RES.find(r => r.k === k); return `<div class="lr"><i style="background:${RMAP_C[k]}"></i><span class="res-${k}">${icon(k, 12)}</span><span>${R.name}</span><span class="muted">${R.map}</span></div>`; }).join('') + `<div class="lr lx"><span class="muted">Hover a province for its yields</span></div>`; }
-const MODES = [['political', 'Political'], ['relations', 'Relations'], ['supply', 'Supply'], ['terrain', 'Terrain'], ['resources', 'Resources'], ['stability', 'Stability'], ['trade', 'Trade']];
-// the Trade map mode draws the political map with every trade route and convoy on it; the other modes show routes only while one of your
-// fleets is selected (so you see what to raid or blockade), and blockaded routes always (red, with the blockade icon)
-const polMode = () => mapMode === 'political' || mapMode === 'trade';
-const tradeOn = () => mapMode === 'trade' || (sel.army != null && (a => !!a && a.owner === PLAYER && !a.air && shipsN(a) > 0)(armyById(sel.army)));
+let dpr = 1, cw = 0, ch = 0, hits = [], HITX = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, mapMode = 'political';
+// the map has two full modes, Political and Terrain (owner, map-modes: fewer modes, fewer map bugs); Relations and Supply are colour overlays
+// toggled on and off over the Political map (both may be on; in Terrain they are hidden), drawn as their own translucent canvas over the layer
+// from cached province colours (ovlDraw), so toggling one never re-renders the base map
+const MODES = [['political', 'Political'], ['terrain', 'Terrain']], OVLS = [['rel', 'Relations'], ['sup', 'Supply']];
+const mapOvl = {rel:false, sup:false};
+const polMode = () => mapMode === 'political';
+const ovlOn = k => mapOvl[k] && polMode();
+// trade routes show while one of your fleets is selected (so you see what to raid or blockade), and blockaded routes always (red, with the blockade icon)
+const tradeOn = () => sel.army != null && (a => !!a && a.owner === PLAYER && !a.air && shipsN(a) > 0)(armyById(sel.army));
 const sel = {army:null, prov:null, target:null, group:[], foe:null};   // foe: a foreign force you tapped (its read-only army bar)
 let boxSel = null, rallyFor = null, aimMsl = null;
 let targetPath = null;
@@ -7186,12 +7192,6 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   const washK = 1 - 0.7*Math.max(0, Math.min(1, (hexPx - 14)/46));   // the political tint thins as you zoom in so the ground shows (the border band keeps the colour)
   for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !onScreen(P)) continue; const o = S.owner[p];
     if (mapMode === 'terrain'){ c.fillStyle = rgba((TERRAIN[P.terrain] || TERRAIN.plains).col, 0.66); c.fill(GEO.fill[p], 'evenodd'); }
-    else if (mapMode === 'supply'){ const sp = SUP && SUP[PLAYER] && SUP[PLAYER][p]; c.fillStyle = o === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; c.fill(GEO.fill[p], 'evenodd'); }
-    else if (mapMode === 'stability'){ const u = unrestOf(p); c.fillStyle = o < 0 ? 'rgba(0,0,0,.2)' : u > 60 ? 'rgba(224,87,79,.6)' : u > 30 ? 'rgba(226,162,61,.5)' : u > 0 ? 'rgba(200,200,120,.35)' : 'rgba(116,194,122,.35)'; c.fill(GEO.fill[p], 'evenodd'); }
-    else if (mapMode === 'resources'){ const y = provYield(p), top = P.city ? cityMain(p) : RMAP_K.reduce((b0, k) => y[k]/RMAP_W[k] > y[b0]/RMAP_W[b0] ? k : b0, 'cash');
-      c.fillStyle = RMAP_C[top]; if (!P.city) c.globalAlpha = 0.42; c.fill(GEO.fill[p], 'evenodd'); c.globalAlpha = 1;
-      if (P.city){ c.fill(GEO.fill[p], 'evenodd'); c.strokeStyle = 'rgba(255,250,235,.9)'; c.lineWidth = Math.min(1.6, hexPx/7)*px; c.lineJoin = 'round'; c.stroke(GEO.fill[p]); } }
-    else if (o >= 0 && relMode){ c.fillStyle = o === PLAYER ? rgba(tones().ownHi, 0.55) : rgba(REL_COLOR[S.decl.some(d => (d.by === o && d.to === PLAYER) || (d.to === o && d.by === PLAYER)) ? 'war' : rel(PLAYER, o).st], 0.5); c.fill(GEO.fill[p], 'evenodd'); }   // relations: your land the pale own tone (the ally green is mid green, so the two stay apart); political: the nation tint is a colour-blend pass below (keeps the ground's light and shade)
     if (season(p) === 'mud'){ c.fillStyle = 'rgba(92,70,40,0.22)'; c.fill(GEO.fill[p], 'evenodd'); } }   // (winter snow is the soft sheet, next)
   // winter snow: the cached world-space sheet (snowCover) laid over the fills, as the old per-province snow was (so it reads white over the political
   // tint and the terrain-mode colours, and relief still shows through), only the part in the painted rect; then thinned over the towns
@@ -7265,7 +7265,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   c.restore();   // the overlay's R clip
   // political tint: each power's land in its colour, laid on the ground with a 'color' blend (hue and saturation from the power, light and shade from the terrain)
   // plus a thin coat of plain colour, so the ground keeps its relief instead of sitting under a pale milky wash; it thins further as you zoom in
-  if (polMode() && !relMode && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
+  if (polMode() && hexPx >= 1){ if (!layer.tc) layer.tc = document.createElement('canvas'); const tc = layer.tc; if (tc.width !== layer.width || tc.height !== layer.height){ tc.width = layer.width; tc.height = layer.height; }
     const t = tc.getContext('2d'); t.save(); clipR(t); t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(dx0, dy0, dw, dh); t.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
     { for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = rgba(tintOf(n), TONE_A[mapTone(n)]); t.fill(NA(n)); }
       for (const [ci, a] of NEUC()){ t.fillStyle = rgba(tintOf(NEUTRAL, ci), TONE_A.neu); t.fill(a); } }   // independents: each country its own colour, drawn toward the quiet grey
@@ -7280,7 +7280,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
   if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : !R ? 24 : full ? 12 : 3); base.restore(); }   // (bake budget, ms: short in a pan strip or a box redrawn: the bake pump makes what is left over, between the frames)
   // the towns take a light coat of the same tint (their own art and colours still lead), so a big city reads as yours, an ally's or a rival's too
-  if (anyC && polMode() && !relMode && hexPx >= 1 && layer.tc){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.globalCompositeOperation = 'color'; base.globalAlpha = 0.22;
+  if (anyC && polMode() && hexPx >= 1 && layer.tc){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.globalCompositeOperation = 'color'; base.globalAlpha = 0.22;
     base.drawImage(layer.tc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore(); }
   base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0, dy0, dw, dh, dx0, dy0, dw, dh); base.restore();
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
@@ -7388,6 +7388,46 @@ function tintOf(o, ci){ const tn = o >= 0 ? mapTone(o) : 'neu', T = tones(); if 
 // independent land by country (one path each), for the tint
 const neuByCtry = () => GEO.nArea.neuC || (GEO.nArea.neuC = (() => { const m = new Map(); for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (S.owner[p] !== NEUTRAL || P.sea) continue; let a = m.get(P.country); if (!a) m.set(P.country, a = new Path2D()); a.addPath(GEO.outline[p]); } return m; })());
 const nAreaOf = n => GEO.nArea[n] || (GEO.nArea[n] = (() => { const a = new Path2D(); for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n && !G.P[p].sea) a.addPath(GEO.outline[p]); return a; })());
+// the Relations and Supply overlays (map-modes): one translucent canvas laid over the layer, the same size and place as it (drawn scaled with it
+// mid-zoom), filled from a colour per province that is cached until what it shows changes (relations, owners, the supply hour). It is redrawn only
+// when that colour list or the layer's place changes, never the layer itself; with no overlay on it is shrunk to nothing
+const OVL = {cv:null, k:'', c:{rel:{k:'', col:null}, sup:{k:'', col:null}}};
+function ovlToggle(k){ if (!polMode()){ mapMode = 'political'; mapOvl[k] = true; } else mapOvl[k] = !mapOvl[k]; redraw(); }
+// the colour of every land province (null: none) for overlay k; recomputed only when its key moves
+function ovlCols(k){ const C = OVL.c[k];
+  if (k === 'rel'){ const key = [relVer, geoVer, S.decl.length, SET.cb ? 1 : 0, G.P.length].join('|'); if (C.k === key && C.col) return C.col;
+    // your land the pale own tone (the ally green is mid green, so the two stay apart), every power by its relation with you; independents bare
+    const col = new Array(G.P.length).fill(null), war = new Set(S.decl.filter(d => d.by === PLAYER || d.to === PLAYER).map(d => d.by === PLAYER ? d.to : d.by)), own = rgba(tones().ownHi, 0.5), byN = [];
+    for (let n = 0; n < S.nations.length; n++){ if (n === PLAYER) continue; const r = S.rel[rkey(PLAYER, n)], st = war.has(n) ? 'war' : r ? r.st : 'peace'; byN[n] = rgba(REL_COLOR[st] || REL_COLOR.peace, 0.45); }   // (read-only: rel() would create a record)
+    for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const o = S.owner[p]; if (o === PLAYER) col[p] = own; else if (o >= 0) col[p] = byN[o]; }
+    C.k = key; return (C.col = col); }
+  // supply: your land green where supplied and red where cut off, the land your supply reaches faint green, the rest dimmed. Before the clock
+  // has run its first hour the rules have no supply map yet: it is worked out here for the overlay alone and the rules' own is left as it was
+  const key = [SUP ? supHour : 'h' + S.hour, geoVer, G.P.length].join('|'); if (C.k === key && C.col) return C.col;
+  let sup = SUP && SUP[PLAYER]; if (!SUP){ const s0 = SUP, h0 = supHour; try { computeSupply(); sup = SUP && SUP[PLAYER]; } finally { SUP = s0; supHour = h0; } }
+  const col = new Array(G.P.length).fill(null);
+  for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const sp = sup && sup[p]; col[p] = S.owner[p] === PLAYER ? (sp ? 'rgba(116,194,122,.45)' : 'rgba(224,87,79,.55)') : sp ? 'rgba(116,194,122,.2)' : 'rgba(0,0,0,.25)'; }
+  C.k = key; return (C.col = col); }
+// the overlay canvas for layer L (null with no overlay on): rebuilt when the overlays' colours or the layer's place change
+function ovlBuild(L){ const on = OVLS.map(o => o[0]).filter(ovlOn);
+  if (!on.length || !L || !L.width || !G){ if (OVL.cv && OVL.cv.width > 1){ OVL.cv.width = OVL.cv.height = 1; } OVL.k = ''; return null; }
+  const cols = on.map(ovlCols), dp = L.dp || dpr, s = L.s, key = [on.map(k => OVL.c[k].k).join(';'), L.vx, L.vy, s, L.mx, L.my, dp, L.width, L.height].join('|');
+  if (!OVL.cv) OVL.cv = document.createElement('canvas'); const O = OVL.cv; if (key === OVL.k && O.width === L.width) return O; OVL.k = key;
+  if (O.width !== L.width || O.height !== L.height){ O.width = L.width; O.height = L.height; }
+  const g = O.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, O.width, O.height);
+  const ox0 = L.vx + L.mx, oy = L.vy + L.my, hexPx = s*HS0, wk = d => Math.floor(((d/dp - ox0)/s - WRAP_X0)/WRAP_W), v0 = view.s;
+  for (let k = wk(0), k1 = wk(O.width - 1); k <= k1; k++){ const a = Math.max(0, Math.round(dp*(ox0 + (WRAP_X0 + k*WRAP_W)*s))), b = Math.min(O.width, Math.round(dp*(ox0 + (WRAP_X0 + (k + 1)*WRAP_W)*s))); if (b <= a) continue;
+    // (each copy of the world in the canvas on its own, clipped to its span, so the copies meet exactly at the seam, as in renderLayer)
+    const m = 3*HS, wx0 = (a/dp - ox0)/s - k*WRAP_W - m, wx1 = (b/dp - ox0)/s - k*WRAP_W + m, wy0 = -oy/s - m, wy1 = (O.height/dp - oy)/s + m;
+    g.save(); g.beginPath(); g.rect(a, 0, b - a, O.height); g.clip(); g.setTransform(dp*s, 0, 0, dp*s, dp*(ox0 + k*WRAP_W*s), dp*oy);
+    for (const col of cols){ const by = new Map();
+      for (let p = 0; p < G.P.length; p++){ const c = col[p]; if (!c) continue; const bb = provBox(G.P[p]); if (bb[2] < wx0 || bb[0] > wx1 || bb[3] < wy0 || bb[1] > wy1) continue; let q = by.get(c); if (!q) by.set(c, q = new Path2D()); q.addPath(GEO.fill[p]); }
+      for (const [c, q] of by){ g.fillStyle = c; g.fill(q, 'evenodd'); } }
+    // kept to the land as the layer's fills are: the coast close in (lakes cut out), the land mask further out
+    g.globalCompositeOperation = 'destination-in'; let SG = null; if (hexPx >= 7){ view.s = s; try { SG = stripGeo(wx0, wy0, wx1, wy1); } finally { view.s = v0; } }
+    if (SG && SG.coastV){ g.fillStyle = '#000'; g.fill(SG.coastV, 'evenodd'); } else g.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H);
+    g.restore(); }
+  return O; }
 // a small white core for an impact's first frames (the particles' 'core')
 const BCORE = () => softSprite('bcore', 'rgba(255,255,250,1)', 'rgba(255,238,200,.62)', 'rgba(255,214,150,0)');
 // the live sea surface: a 256 px tile of thin bright crest arcs (three rotated sine bands bent by tileable noise, broken into arcs), baked once
@@ -7464,7 +7504,7 @@ function draw(now){ draw.now = now;
     // screen changed or was waited for since the towns were last redrawn)
     const wOn = CITY_PEND && cityWantNow(); if (wOn) CITY_SCR = true;
     if (CITY_PEND && !camFly && !ZTW && now - (draw.zt || 0) > 150 && !(drag && drag.moved) && !pinch && draw.pvx === view.x && draw.pvy === view.y && draw.pvs === view.s && now - (lastPanT || 0) > 120 && (!CWANT.size || (!wOn && CITY_SCR) || now - CITY_RT > 2000)){ CITY_PEND = false; CITYV++; CITY_RT = now; CITY_SCR = false; } }
-  const keyOf = vs => [vs, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, relMode ? relVer : 0, mapMode, mapMode === 'supply' ? supHour : mapMode === 'stability' || mapMode === 'resources' ? Math.floor(S.hour/24) : 0, LINKD, SET.fx].join('|');
+  const keyOf = vs => [vs, cw, ch, dpr, geoVer, vis.key, CITYV, calDate(S.hour).m, mapMode, LINKD, SET.fx].join('|');   // (the overlays are not in it: they are their own canvas, ovlDraw)
   const key = keyOf(view.s);   // (a pure pan no longer re-renders the layer, so whatever it shows is in the key)
   const panning = !!(drag && drag.moved) || pinch, dxv = layer ? view.x - layer.vx : 0, dyv = layer ? view.y - layer.vy : 0;
   // any view movement since the last frame (drag, fly-to, keys, tutorial) counts as panning: reuse the shifted layer until it settles
@@ -7533,8 +7573,8 @@ function draw(now){ draw.now = now;
   // if that scaled copy does not cover the canvas, the uncovered rim is cleared so no stale frame (doubled labels, old counters) shows through
   if (layer.s !== view.s || (layer.dp || dpr) !== dpr){ const f = view.s/layer.s, g = f*dpr/(layer.dp || dpr), lx = dpr*(view.x - (layer.vx + layer.mx)*f), ly = dpr*(view.y - (layer.vy + layer.my)*f), lw = layer.width*g, lh = layer.height*g;
     if (lx > 0 || ly > 0 || lx + lw < cv.width || ly + lh < cv.height) ctx.clearRect(0, 0, cv.width, cv.height);
-    ctx.drawImage(layer, lx, ly, lw, lh); FADE.length = 0; }
-  else { const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr); ctx.drawImage(layer, lx, ly); fadeDraw(lx, ly, panning || moved); }
+    ctx.drawImage(layer, lx, ly, lw, lh); FADE.length = 0; const O = ovlBuild(layer); if (O) ctx.drawImage(O, lx, ly, lw, lh); }
+  else { const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr); ctx.drawImage(layer, lx, ly); fadeDraw(lx, ly, panning || moved); const O = ovlBuild(layer); if (O) ctx.drawImage(O, lx, ly); }   // (the overlays over the layer and its fades)
   drawCraters(now);   // impact decals: under outlines, units and labels, and under the night tint
   drawSeaSurface(now, panning || moved);   // live waves and shore foam on the water (static depth only while the view moves)
   wrapEach(() => {   // (world space: once per copy of the world on screen)
@@ -8731,10 +8771,13 @@ function renderSide(force){
   if (modalKind === 'market' && !$('modal').hidden) setHTML($('sheet'), marketHTML());
   if (modalKind === 'stats' && !$('modal').hidden) setHTML($('sheet'), statsHTML());
   const nOff = S.offers.length + S.decl.filter(d => d.to === PLAYER).length + Object.values(S.unread || {}).reduce((a, b) => a + b, 0); $('dipbadge').hidden = !nOff; $('dipbadge').textContent = nOff;
-  relMode = mapMode === 'relations'; $('zrel').setAttribute('aria-pressed', String(relMode));
-  setHTML($('modes'), MODES.map(([k, nm]) => `<button data-act="mode" data-k="${k}" aria-pressed="${mapMode === k}">${nm}</button>`).join(''));
-  { const lg = $('tlegend'); if (lg){ const m = mapMode === 'terrain' || mapMode === 'resources' ? mapMode : ''; lg.hidden = !m;
-      if (m && lg.dataset.m !== m){ lg.dataset.m = m; lg.classList.toggle('rl', m === 'resources'); lg.setAttribute('aria-label', m === 'terrain' ? 'Terrain legend' : 'Resources legend'); lg.innerHTML = m === 'terrain' ? terrLegendHTML() : resLegendHTML(); } } }
+  $('zrel').setAttribute('aria-pressed', String(ovlOn('rel')));
+  // the two modes, then the two overlays (switches: pressed while shown; in Terrain they are hidden, and a press brings the Political map back with it)
+  { const ovn = OVLS.filter(o => ovlOn(o[0])).map(o => o[1]).join(', ');   // (the folded phone pill names the overlays shown after the mode)
+  setHTML($('modes'), MODES.map(([k, nm]) => `<button data-act="mode" data-k="${k}" aria-pressed="${mapMode === k}">${nm}${mapMode === k && ovn ? ` <span class="ovn">+ ${ovn}</span>` : ''}</button>`).join('') + '<i class="msep" aria-hidden="true"></i>' +
+    OVLS.map(([k, nm]) => `<button class="ovl" data-act="ovl" data-k="${k}" aria-pressed="${ovlOn(k)}" title="${nm} overlay on the Political map">${nm}</button>`).join('')); }
+  { const lg = $('tlegend'); if (lg){ const m = mapMode === 'terrain' ? mapMode : ''; lg.hidden = !m;
+      if (m && lg.dataset.m !== m){ lg.dataset.m = m; lg.setAttribute('aria-label', 'Terrain legend'); lg.innerHTML = terrLegendHTML(); } } }
   { const mb = $('mutebtn'); mb.setAttribute('aria-pressed', String(!muted)); mb.classList.toggle('off', muted); const ln = mb.querySelector('.ln'); if (ln) ln.textContent = muted ? 'Sound off' : 'Sound on'; }
   let hint = '';
   const a = sel.army !== null ? armyById(sel.army) : null;
@@ -8893,7 +8936,7 @@ function diploHTML(){
   const grp = (title, list) => list.length ? `<div class="eyebrow" style="margin-top:6px">${title}</div>` + list.map(x => x.html).join('') : '';
   const rowsHTML = grp('At war', rows.filter(x => x.war)) + grp('Neighbours', rows.filter(x => !x.war && x.nb)) + grp('Others', rows.filter(x => !x.war && !x.nb));
   return `<div class="rhead"><div><div class="eyebrow">${S.nations[me].name} · Foreign affairs ${itip("Powers at peace cannot enter each other's land. A declaration starts the war at once. Independent countries can always be attacked. Hover an opinion bar for the reasons; buttons marked ✕ would likely be refused.")}</div><h1>Diplomacy</h1></div>
-    <button class="btn" data-act="relmode">${relMode ? 'Hide' : 'Show'} relations on map</button></div>
+    <button class="btn" data-act="relmode">${ovlOn('rel') ? 'Hide' : 'Show'} relations on map</button></div>
     ${incoming}${offers}${tOffers}${tradeHTML()}${(BL => BL.length ? `<div class="eyebrow" style="margin-top:6px">Coalitions</div><div class="blocs">${BL.map(B => `<div class="bloc${B.members.includes(me) ? ' mine' : ''}">${blocEmbHTML(B.id, 40, B.name)}<div class="bt"><b>${B.name}</b><span class="bmem">${B.members.map(m => `<span>${flagHTML(m, 13)} ${S.nations[m].name}${m === B.leader ? ' ★' : ''}</span>`).join('')}</span><span class="small muted">${B.focus != null ? `Common enemy: ${S.nations[B.focus].name}` : 'No common enemy yet'} · ${B.members.reduce((s0, m) => s0 + S.owner.filter(o => o === m).length, 0)} provinces · ${B.members.reduce((s0, m) => s0 + capsHeld(m), 0)} capitals</span></div></div>`).join('')}</div>${blocOf(me) ? `<div class="row" style="align-items:center"><span class="small muted">Your coalition:</span><input id="blocname" class="rn2" maxlength="28" value="${blocOf(me).name}" style="width:200px"><button class="btn" data-act="bloc-rename">Rename</button><button class="btn war" data-act="bloc-leave">Leave coalition</button></div>` : `<p class="small muted">To found a coalition, form an alliance (Diplomacy or a trade deal with “Alliance”); allied nations form a coalition automatically. Invite more members by allying with them.</p>`}
     <p class="small muted">A coalition wins together by holding ${coalCaps()} starting capitals or ${Math.ceil(landNeed(me)*1.8)} provinces. Peace treaties hand every province a side occupies to it for good.</p>` : '')(blocs())}<div class="dip">${rowsHTML}</div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
@@ -9806,9 +9849,11 @@ document.addEventListener('click', e => {
     case 'mute': setMuted(!muted); renderSide(true); break;
     case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, p, t); if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
     case 'repeat': { const p = +b.dataset.p; S.repeat = S.repeat || {}; if (b.checked) S.repeat[p] = (S.lastUnit && S.lastUnit[p]) || (S.queue[p][0] && S.queue[p][0].t) || 'inf'; else delete S.repeat[p]; renderSide(true); break; }
-    case 'relmode': mapMode = mapMode === 'relations' ? 'political' : 'relations'; renderSide(true); break;
+    case 'relmode': ovlToggle('rel'); renderSide(true); break;
+    case 'ovl': { const md = $('modes'); if (matchMedia('(max-width: 700px), (max-height: 500px)').matches && !md.classList.contains('open')){ md.classList.add('open'); break; }   // phones: the folded pill opens first
+      md.classList.remove('open'); ovlToggle(b.dataset.k); renderSide(true); break; }
     case 'mode': { const md = $('modes'); if (matchMedia('(max-width: 700px), (max-height: 500px)').matches && !md.classList.contains('open')){ md.classList.add('open'); break; }   // phones: the folded pill opens first
-      md.classList.remove('open'); mapMode = b.dataset.k; renderSide(true); break; }
+      md.classList.remove('open'); mapMode = MODES.some(m => m[0] === b.dataset.k) ? b.dataset.k : 'political'; renderSide(true); redraw(); break; }
     case 'declare': { const m = +b.dataset.id; if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = 'Confirm war?'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = 'Declare war'; } }, 3000); return; } declareWar(PLAYER, m); renderSide(true); break; }
     case 'propose': { const m = +b.dataset.id, k = b.dataset.k, r = acceptOffer(m, PLAYER, k); if (r.ok) applyDeal(PLAYER, m, k); else { log(`${S.nations[m].name} refused: ${r.why}.`, 'info', null); addMem(m, PLAYER, -2); } renderSide(true); break; }
     case 'tribute': { const m = +b.dataset.id, tr = tribute(PLAYER, m); if (S.nations[PLAYER].cash >= tr){ if (tributeOk(PLAYER, m)){ S.nations[PLAYER].cash -= tr; S.nations[m].cash += tr; applyDeal(PLAYER, m, 'peace'); } else log(`${S.nations[m].name} refused your tribute: they think they can take more by force.`, 'info', null); } renderSide(true); break; }
@@ -10057,10 +10102,10 @@ const HELP_SEC = [
     <li><b>Top bar</b>: your flag and nation; money, oil, materials, iron, electronics, rare materials and manpower with today's net change (hover a resource for the breakdown); the date, clock and victory progress; pause and 1×–8× speed; Dispatches (the bell) on the right.</li>
     <li><b>Dock</b> (left edge; a bottom bar on phones): Production <kbd>P</kbd>, Market <kbd>T</kbd>, Army <kbd>A</kbd>, Research <kbd>R</kbd>, Diplomacy <kbd>D</kbd>, Intelligence; at the bottom Settings <kbd>O</kbd>, Sound <kbd>M</kbd> and this manual <kbd>?</kbd>. A dot means something waits for you (no research running, idle cities, idle agents); a number counts unread diplomacy.</li>
     <li><b>Right column</b>: Command (the selected province, force or air wing), Powers (every nation ranked) and Dispatches (the war log: click an entry to fly there).</li>
-    <li><b>Map</b>: map modes top right (<kbd>V</kbd> cycles Political, Relations, Supply, Terrain, Resources, Stability, Trade: every trade route and convoy; otherwise routes show while a fleet of yours is selected, and blockaded ones always); zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
+    <li><b>Map</b>: two map modes top right, Political and Terrain (<kbd>V</kbd> switches), and two overlays you switch on and off over the Political map: Relations (your land, allies, enemies and everyone else by relation) and Supply (your land in supply green, cut off red). Trade routes show while a fleet of yours is selected, and blockaded ones always; zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
     <li><b>Keys</b>: Space pause · 1, 2, 3 for 1×, 2×, 4× (8× from the bar) · S statistics · N newspaper · Tab next idle force · Esc deselect.</li></ul>`],
   ['res', 'Resources and research', `<ul>
-    <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip beside its level, and the Resources map). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); level I is half price and pays for itself in about a week, and each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
+    <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip beside its level, and the Cities tab). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); level I is half price and pays for itself in about a week, and each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
     <li><b>Seven resources</b>, all in the top bar (hover one for today's breakdown, what it is for and where it comes from). Everything but money is capped by storage: 400,000 + 15,000 per province of each good (barrels of oil, tons of materials, iron and rare materials, crates of electronics), 400k + 15k manpower. The top bar shows short figures (40K, 1.2M); hover a resource for the full amount.</li>
     <li><span class="res-cash">${icon('cash', 12)}</span> <b>Money</b>: taxes from your provinces (cities above all; a money city pays 60% more), trade routes. Pays for everything and for your forces' daily upkeep.</li>
     <li><span class="res-oil">${icon('oil', 12)}</span> <b>Oil</b>: oil cities, a little from oil fields in the countryside and your capital. Vehicles, aircraft and ships burn it every day; run dry and they are slowed and weakened.</li>
@@ -10069,7 +10114,7 @@ const HELP_SEC = [
     <li><span class="res-elec">${icon('elec', 12)}</span> <b>Electronics</b>: electronics cities and your capital. Aircraft, drones, air defence, missiles, satellites and high-speed rail. Those units also use 2% of their electronics a day in maintenance; run dry and they fight worse.</li>
     <li><span class="res-rare">${icon('rare', 12)}</span> <b>Rare materials drive research</b>. Research is organised by unit: each unit type has its own column with its unlock at the top, upgrades below and a newer generation further down. Unlocks, upgrades and generations cost money, materials and rare materials (about 20 to 45 for an unlock), paid when they start; <b>Firepower</b> and <b>Protection</b> (three levels each: +12%, +25%, +40% attack or defense for that unit type) cost few rare materials. Every project <b>opens on its own day</b>. <b>Two projects run at once</b>, one in each research slot, both at full speed; a project whose prerequisite is still being researched waits until that one is done. They come from <b>rare-earth cities</b> (a country has one or two at most, many have none) and a little from your capital: trade or fight for the rest. Advanced aircraft, carriers and missiles need some too.</li>
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
-    <li><b>Short of something?</b> The Resources map mode shows each province's main output, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
+    <li><b>Short of something?</b> A city's chip and the Cities tab show its main resource, and hovering a province shows its yields, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
     <li><b>Recruit</b> in your cities: units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
@@ -10575,7 +10620,7 @@ if (location.protocol === 'file:') window.__im = {hexPx: () => view.s*HS0, bpic:
     return [+(R/k).toFixed(1), +(G0/k).toFixed(1), +(B/k).toFixed(1), +((0.2126*R + 0.7152*G0 + 0.0722*B)/k).toFixed(2)]; }, prof(p, S, i, j, n){ CITY_DL = Infinity; const I = cityInfo(p); cityPlan(I); const cv = document.createElement('canvas'), ax = i*CCH, ay = j*CCH; cv.width = Math.min(CCH, S - ax) + 2*CGUT; cv.height = Math.min(CCH, S - ay) + 2*CGUT;
     let day = null; if (n){ day = document.createElement('canvas'); day.width = cv.width; day.height = day.height; const it0 = cityPaint(day, I, S, ax - CGUT, ay - CGUT); while (!it0.next().done); cityFlush(day); }
     const it = n ? cityLightsPaint(cv, I, S, ax - CGUT, ay - CGUT, day) : cityPaint(cv, I, S, ax - CGUT, ay - CGUT), out = []; let t = performance.now(), r;
-    do { r = it.next(); cityFlush(cv); const t1 = performance.now(); out.push(+(t1 - t).toFixed(1)); t = t1; } while (!r.done); CITY_DL = 0; return out; }, plan(p){ CITY_DL = Infinity; const I = cityInfo(p); CITY_DL = 0; I.plan = null; I.planIt = null; const t0 = performance.now(), P = cityPlan(I); return {ms:performance.now() - t0, n:P.nb, t:P.nt, M:I.M, E:I.E/KM_W}; }, warmLeft: () => CWARM ? CWARM.length : -1, want: () => [...CWANT.keys()], state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size, max:cbakeMax()}), keys: p => [...CBAKE.keys()].filter(k => k.slice(1).startsWith(p + '|')), nr: p => { const I = CGEO.get(p); return I ? {nr:I.nr, gc:I.gc, gw:I.gw} : null; }, nf: p => { const F = CNF.get(p); return F ? {S:F.S, shown:F.shown, hold:F.hold, fd:F.fd, sb:F.sb} : null; }}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f, undefined, viaOf(a)), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(PLAYER, b, nc), close:id => tradeClose(PLAYER, id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => { const ok = sendGift(PLAYER, n, GIFT); if (ok) GIFT = null; return ok; }, giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs(), pause:(n, id, on) => tradePause(n, id, on), blockade:(a, on) => blockadeSet(a, on), raidSet:(a, id) => raidSet(a, id), refresh:() => trRefresh(), detour:r => trDetour(r), base:r => trBase(r), chokes:() => chokes(), chokeClosed:(k, c) => chokeClosed(k, c), fleetKm:a => fleetKm(a), orderSpot:(a, x, y) => orderSpot(a, x, y), cells:() => trCells()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; },
+    do { r = it.next(); cityFlush(cv); const t1 = performance.now(); out.push(+(t1 - t).toFixed(1)); t = t1; } while (!r.done); CITY_DL = 0; return out; }, plan(p){ CITY_DL = Infinity; const I = cityInfo(p); CITY_DL = 0; I.plan = null; I.planIt = null; const t0 = performance.now(), P = cityPlan(I); return {ms:performance.now() - t0, n:P.nb, t:P.nt, M:I.M, E:I.E/KM_W}; }, warmLeft: () => CWARM ? CWARM.length : -1, want: () => [...CWANT.keys()], state: () => ({pend:CITY_PEND, n:CBAKE.size, px:CBAKE_PX, info:CINFO.size, max:cbakeMax()}), keys: p => [...CBAKE.keys()].filter(k => k.slice(1).startsWith(p + '|')), nr: p => { const I = CGEO.get(p); return I ? {nr:I.nr, gc:I.gc, gw:I.gw} : null; }, nf: p => { const F = CNF.get(p); return F ? {S:F.S, shown:F.shown, hold:F.hold, fd:F.fd, sb:F.sb} : null; }}, TERRAIN, terrFit: (a, p, atk) => terrFit(a, p, atk), legHours: (a, f, t) => legHours(a, f, t), arctic: o => arctic(o), frontRough: n => frontRough(n), aiPickUnit: (n, p) => aiPickUnit(n, p), oddsParts: (a, t, f) => oddsParts(a, t, f, undefined, viaOf(a)), provHTML: p => provHTML(p), trade:{geo:r => trGeo(r), wet:(x, y) => isWet(x, y), cvGeo:c => cvGeo(c), make:(a, b, k, nc) => trMake(a, b, k, nc), place:r => trPlace(r), invalid:r => trInvalid(r), neu:() => [...neuPorts()], seaRoute:(a, b) => seaRoute(a, b), gen:() => tradeGen(), day:() => tradeDay(), block:() => { computeBlockade(); }, income:n => tradeIncome(n), status:r => trStatus(r), raid:r => trRaid(r), escort:(a, id) => escortSet(a, id), escortHour:() => escortHour(), ai:n => aiTrade(n), open:(b, nc) => tradeOpen(PLAYER, b, nc), close:id => tradeClose(PLAYER, id), html:() => tradeHTML(), seaIndex:() => seaIndex(), ports:n => natPorts(n), route:id => routeById(id), air:(o, z, pw) => tradeAirRaid(o, z, pw), hunt:(n, b, r) => aiTradeHunt(n, G.P[b], r), diplo:() => diploHTML(), sendGift:n => { const ok = sendGift(PLAYER, n, GIFT); if (ok) GIFT = null; return ok; }, giftHTML:n => giftHTML(n), setGift:g => { GIFT = g; }, coalitionAid:() => coalitionAid(), blocs:() => blocs(), pause:(n, id, on) => tradePause(n, id, on), blockade:(a, on) => blockadeSet(a, on), raidSet:(a, id) => raidSet(a, id), refresh:() => trRefresh(), detour:r => trDetour(r), base:r => trBase(r), chokes:() => chokes(), chokeClosed:(k, c) => chokeClosed(k, c), fleetKm:a => fleetKm(a), orderSpot:(a, x, y) => orderSpot(a, x, y), cells:() => trCells()}, get mapMode(){ return mapMode; }, set mapMode(v){ mapMode = v; }, ovl:{get on(){ return mapOvl; }, toggle:k => ovlToggle(k), get cv(){ return OVL.cv; }, fresh:() => { OVL.k = ''; OVL.c.rel.k = OVL.c.sup.k = ''; return ovlBuild(layer); }},
   fix:{straits:() => (loadWorld.straits || []).map(([a, b]) => G.P[a].name + ' <-> ' + G.P[b].name), rel:(a, b) => rel(a, b), atWar:(a, b) => atWar(a, b), declareWar:(a, b) => declareWar(a, b), aiProposeTrade:n => aiProposeTrade(n, PLAYER), linkDyn:() => { LDYN = null; visCache = null; return linkDyn(visibleSet(PLAYER)).n || 0; }, supplied:a => supplied(a), escortSup:a => escortSup(a), fightsOnWay:(a, p) => fightsOnWay(a, p), knockOut:(p, k, h) => knockOut(p, k, h), bdis:(p, k) => bdis(p, k), bdisH:(p, k) => bdisH(p, k), provYield:p => provYield(p), aiTurn:n => aiTurn(n), aiAir:n => aiAir(n), swarmPad:(a, p) => swarmPad(a, p), maintRate:a => maintRate(a), airMissionKind:(a, p) => airMissionKind(a, p), terrLegend:() => terrLegendHTML(), ART:n => ({img:ART.img(n), stand:ART.standIn(n), ready:ART.ready(n)}), computeBlockade:() => computeBlockade(), get BLOCK(){ return BLOCK; }, chainPolys:q => chainPolys(q)}};
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {r2:{bombDbg:(a, p) => ({cd:a.air && a.air.cd, cond:+wingCond(a).toFixed(2), hp:+healthFrac(a).toFixed(2), mnt:!!(a.air && a.air.mnt), check:airCheck(a, p, sel.surprise).why || 'ok', pick:aiBombTarget(a.owner, G.P[a.air.base], wingRange(a)), range:wingRange(a)}), rivers:() => (loadWorld.lines && loadWorld.lines.riversT || []).map(T => ({tiles:T.tiles.length, bounded:T.tiles.filter(t => isFinite(t.x0) && t.x1 > t.x0).length})),
   tables:() => ({UNITS, BUILD, TECH:RNODES.filter(T => !T.std).map(T => ({id:T.id, name:T.name, branch:RCAT_BY[T.cat].name, cat:T.cat, kind:T.kind, tier:1, days:T.lv[0].c.days, day:T.lv[0].day, c:rCost(T, 1), lv:T.lv.map((x, i) => ({day:x.day, days:x.c.days, c:rCost(T, i + 1)}))})), LINK_COST, MISSILES, SAT_C}), riverSwap:T => { const L = loadWorld.lines, o = L.riversT; L.riversT = T; geoDirty = true; layerKey = ""; redraw(); return o; }, acceptOffer:(a, b, k) => acceptOffer(a, b, k), bomberWant:n => aiBomberWant(n, S.owner.filter(o => o === n).length, income(n)), diploDay:() => diploDay()}});
