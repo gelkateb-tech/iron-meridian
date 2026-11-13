@@ -7346,7 +7346,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
-  if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : !R ? 12 : full ? 6 : 3); base.restore(); }   // (bake budget, ms: short in a pan strip or a box redrawn, and in a full render: the bake pump makes what is left over, between the frames)
+  if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : !R ? 24 : full ? 12 : 3); base.restore(); }   // (bake budget, ms: short in a pan strip or a box redrawn: the bake pump makes what is left over, between the frames)
   // the towns take a light coat of the same tint (their own art and colours still lead), so a big city reads as yours, an ally's or a rival's too
   if (anyC && tc){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.globalCompositeOperation = 'color'; base.globalAlpha = 0.22;
     base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }
@@ -7663,8 +7663,8 @@ function draw(now){ draw.now = now;
       if ((ex || ey) && shiftLayer(vis, false, ex, ey)){}
       else if (offEdge) rl();
       else if (settled && layer.lite){ layer.lite = false; layerBands(); }
-      else if (settled && layer.q && layer.q.length){ const t0 = performance.now();   // (while a dissolve plays too: waiting for it kept the map redrawing for seconds longer)   // (bands until 8 ms of this frame are spent, one at least: the held boxes still start their fades together, after the last one)
-        do { const r = layer.q.shift(), E = layer.s === view.s && !moved ? fadeSnap(r) : null; renderLayer(vis, false, r); if (E){ E.t0 = Infinity; E.h0 = t0; } } while (layer.q.length && performance.now() - t0 < 8);
+      else if (settled && layer.q && layer.q.length){ const t0 = performance.now();   // (while a dissolve plays too: waiting for it kept the map redrawing for seconds longer)   // (bands until 30 ms of this frame are spent: the towns that came in together show together)
+        do { const r = layer.q.shift(), E = layer.s === view.s && !moved ? fadeSnap(r) : null; renderLayer(vis, false, r); if (E){ E.t0 = Infinity; E.h0 = t0; } } while (layer.q.length && performance.now() - t0 < 30);
         if (!layer.q.length) fadeGo(performance.now()); } } }   // (the last box redrawn: every held box starts its fade now, together)
   // close-zoom detail tiles, made while the view is still; during the start flight or a zoom glide, those of the view it is heading for (prefetch)
   // (and while the briefing of a new campaign is open, those of the home view the flight will land on: DT.pre)

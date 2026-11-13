@@ -192,7 +192,9 @@ function fpPatch(recs){ const inv = 1/(HS0*SQ3);
     for (const mt in FP.w){ const W = FP.w[mt], c = w0/legFactor(mt, u, v); W[u][j] = c; if (okH){ W.k = Math.min(W.k, c/hd); if (qc) W.kq = Math.min(W.kq, Math.min(c, qc)/hd); } } } }   // costs only fall with new links: keep the heuristic floor below them
 const pathMT = a => a && ground(a) ? moveType(a) : 'none';
 // emb (ground forces): emb(u) says whether the force may embark in land province u, asked only for legs from land onto water (rules: a naval port)
-function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null){
+// memo (a Map, optional): only for a route whose answer depends on nothing but the map and the leg costs (ok and emb fixed by the caller, no
+// owner: no rails), such as a sea route between two sea zones: kept per (from, to, the heuristic's floor), handed out as a copy
+function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = null){
   if (a === b) return [];
   const n = G.P.length;
   if (!FP || FP.G !== G){ FP = {G, d:new Float64Array(n), prev:new Int32Array(n), gen:new Uint32Array(n), hc:new Float64Array(n), hg:new Uint32Array(n), g:0, hk:new Float64Array(1 << 16), hv:new Int32Array(1 << 16),
@@ -202,6 +204,7 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null){
     else { FP.w = {};                                  // otherwise rebuild leg costs lazily per movement type
       FP.q = G.P.map(P => { if (P.sea || !P.lk.size) return null; let any = false; const Q = Float64Array.from([...P.nb].map(([v, w0]) => { const rl = railLv(P.lk.get(v)); if (!rl) return 0; any = true; return w0/RAIL_SPD[rl]; })); return any ? Q : null; }); } }
   const Wm = fpWeights(PATH_MT.includes(mt) ? mt : 'foot'), useRail = owner >= 0 && mt !== 'none';
+  let mk = null; if (memo){ if (memo.G !== G || memo.size > 20000){ memo.clear(); memo.G = G; } mk = a + ',' + b + ',' + mt + ',' + (useRail ? Wm.kq : Wm.k); const r = memo.get(mk); if (r) return r.slice(); }
   let fr = null; if (useRail){ fr = new Uint8Array(S.nations.length + 1); for (let i = 0; i < S.nations.length; i++) fr[i] = i === owner || allyOf(owner, i) ? 1 : 0; }
   const isFr = v => { const o = S.owner[v]; return o >= 0 && fr[o] === 1; };
   const d = FP.d, prev = FP.prev, gen = FP.gen, g = ++FP.g, B = G.P[b], inv = (useRail ? Wm.kq : Wm.k)/(HS0*SQ3);
@@ -219,8 +222,8 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null){
       if (eL && SEA0[v]){ if (eu < 0) eu = emb(u) ? 1 : 0; if (!eu) continue; }   // (a leg onto water from land: only where the force may embark)
       let c = Wt[j]; if (ru && Qt[j] && Qt[j] < c && isFr(v)) c = Qt[j];
       const nd = du + c; if (gen[v] !== g || nd < d[v]){ gen[v] = g; d[v] = nd; prev[v] = u; push(nd + h(v), v); } } }
-  if (!found) return [];
-  const path = []; for (let v = b; v !== a; v = prev[v]) path.push(v); return path.reverse();
+  if (!found){ if (mk !== null) memo.set(mk, []); return []; }
+  const path = []; for (let v = b; v !== a; v = prev[v]) path.push(v); path.reverse(); if (mk !== null) memo.set(mk, path.slice()); return path;
 }
 // ground forces do not march through independent land on the way to somewhere else (every garrison there is a battle): they embark at a port
 // instead when the sea allows it, and only cross independents when there is no other way
