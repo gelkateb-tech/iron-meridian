@@ -39,7 +39,7 @@ Last updated: 2026-11-13 (overnight run).
 | 6 | Nations balance pass (Iran and the US losing too much land): re-measure now that computer nations never start wars; battery.js robustness | Sonnet |
 | 7 | Each aircraft type gets its own 3D shape | Opus (after research-cards is merged) |
 | 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
-| 9 | Capital HQ flag drawn in code on the HQ's flagpoles | Opus (after the building pictures are on the map) |
+| 9 | Capital HQ flag: each owner's real country flag on the HQ's flagpoles, drawn in code so it changes when the capital is captured, for every regional HQ version (the building pictures job records each HQ picture's flagpole tops for this); screenshots of Berlin and one captured capital before merging | Opus (right after the building pictures are in the game) |
 
 ## Waiting on me (the owner)
 
