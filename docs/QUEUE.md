@@ -21,6 +21,7 @@ Last updated: 2026-11-13 (overnight run).
 | Task | Model | Where it is |
 |---|---|---|
 | Night city lights: small separate glows at real city locations, dark gaps, dimmer; colours and borders on top at night | Opus | Started (branch night-lights) |
+| URGENT: the map goes black on its own during normal play: find the commit that caused it, console errors, fix, explain | Opus | Started (branch fix-black; extra urgent job) |
 | Real borders: every country and province border drawn from Natural Earth 1:10m with no shape-changing simplification (game logic stays on the cells), every country clearly coloured in plain solid colours (no diagonal hatching over other countries; your own country stands out by its colour and border), all borders visible; screenshots of the Middle East, Europe and the US next to a real map before merging | Opus | Started (branch borders-real) |
 | Map modes: switching Political/Relations/Supply/Terrain/... glitches the map; find and fix the cause, test every switch and fast switching; screenshots before merging | Opus | Started (branch map-modes) |
 | Research tree pictures, research unit cards, infantry icons | Opus | Done on branch research-cards; waiting for the owner |
