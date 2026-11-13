@@ -28,19 +28,20 @@ function* tickHourG(){
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
     if (a.land > 0 && --a.land <= 0) delete a.land;   // a landing from the sea: the hours left before the force is ashore (rules/movement.js legArrive)
-    if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (isSeat(a.owner)) tell(a.owner, `Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; }
+    if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (isSeat(a.owner)) tell(a.owner, `Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; if (a.wp) delete a.wp; }
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
     // ground forces embark only in a naval port (rules/movement.js embWait): a route that would board ships here, where there is no port of the
     // force's own or a friend's (the port was lost, or an old save's route), is planned again through a port, or the force stops
     if (embLeg(a) && !portOk(a.owner, a.at)){ const dest = a.path[a.path.length - 1]; a.path = pathFor(a, a.at, dest); delete a.emb;
-      if (!a.path.length){ a.dest = null; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} halted at ${G.P[a.at].cityName || G.P[a.at].name}: no naval port there to embark. March to a port first.`, 'info', a.at); } }
+      if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} halted at ${G.P[a.at].cityName || G.P[a.at].name}: no naval port there to embark. March to a port first.`, 'info', a.at); } }
     if (a.emb != null && !embLeg(a)) delete a.emb;   // (no longer about to board: the embarking starts again next time)
+    if (a.wp && a.to === null && !a.path.length && !a.sail) stopNext(a);   // waypoints: a force at its stop sets off for the next one (rules/movement.js)
     if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)
     if (a.to === null && a.path.length && canProceed(a) && !embWait(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;
       if (a.carry && a.carryH === S.hour - 1 && legMode(a, a.at, a.to) === 'rail') a.t = a.carry/legH(a); a.carry = 0; }   // trains run through: no stop at every station
-    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
+    if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
     if (a.to !== null){ const lh = legH(a); a.t += 1/lh;   // (a leg takes time in proportion to its real length: rules/movement.js legRatio)
       if (a.t >= 1){ if (a.path.length && ground(a) && legMode(a, a.at, a.to) === 'rail'){ a.carry = Math.min(1, (a.t - 1)*lh); a.carryH = S.hour; } else a.carry = 0;
         legArrive(a); }
@@ -52,7 +53,7 @@ function* tickHourG(){
     for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(ek(a.to, a.at)); if (!opp) continue;
       const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
       const meet = a.t >= 0.5 ? a.to : a.at, [mx, my] = legSpot(a);
-      for (const x of [a, b]){ x.from = x.at; atMove(x, meet); delete x.hrt; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
+      for (const x of [a, b]){ x.from = x.at; atMove(x, meet); delete x.hrt; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; if (x.wp) delete x.wp; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
       for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
   // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets), as long as
   // the joined force stays within its stack limit (STACK_LIM); a join order (dragged onto the counter) merges anyway, with the stack-limit warning
