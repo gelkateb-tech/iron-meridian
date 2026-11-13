@@ -2155,7 +2155,15 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
 .good > svg:empty{display:none}
 @media (max-width: 640px){
   .good{gap:4px}
-  .good > svg{position:absolute; right:10px; top:31px; width:58px; height:18px}
+  .good > svg{width:100%; height:16px}   /* its own line under the price, so the % change and the price line never overlap */
+  /* the order table: each offer is a small card (nation and goods, then quantity, price and end, then the buy buttons) so no column is cut off */
+  #sheet .tblwrap:has(> .book){overflow-x:visible}
+  .ptab.book, .ptab.book tbody{display:block; width:100%} .ptab.book thead{display:none}
+  .ptab.book tr{display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 8px; padding:8px 4px; border-bottom:1px solid var(--line)}
+  .ptab.book td{display:block; padding:0; border:0; min-width:0}
+  .ptab.book td.bk-n{grid-column:1 / 3} .ptab.book td.bk-g{grid-column:3; text-align:right; white-space:nowrap}
+  .ptab.book td[data-l]::before{content:attr(data-l); display:block; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .ptab.book td.bk-a{grid-column:1 / 4} .ptab.book td.bk-a .row{flex-wrap:wrap !important}
 }
 
 /* repair: windows keep their title band (and its close box) pinned while the list scrolls under it; a scrolling table keeps its column heads
@@ -4343,7 +4351,7 @@ function offerRows(list, bid){ return list.map(o => { const N = S.nations[o.sell
     const act = mine ? `<button class="btn" data-act="book-cancel" data-id="${o.id}" style="padding:3px 8px;font-size:12px">Withdraw</button>`
       : emb ? '<span class="small muted">Embargo</span>'
       : `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${10*MKT_LOT}" style="padding:3px 8px;font-size:12px" title="${bid ? 'Sell' : 'Buy'} ${resFull(o.res, 10*MKT_LOT)} for $${fmt(lotCash(10*MKT_LOT, o.price))}M">${bid ? 'Sell' : 'Buy'} ${fmtQ(10*MKT_LOT)}</button><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${o.qty}" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} all · $${fmt(lotCash(o.qty, o.price))}M</button></div>`;
-    return `<tr class="${enemy ? 'enemy' : ''}${o.priv ? ' priv' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}"><td>${flagSVG(o.seller)} <b>${mine ? 'You' : N.name}</b>${enemy ? ' <span class="etag">ENEMY</span>' : ''}${o.priv ? ' <span class="ptag">🔒 COALITION</span>' : ''}</td><td><span class="res-${o.res}">${icon(o.res)}</span> ${R.name}</td><td title="${resFull(o.res, o.qty)}">${fmt(o.qty)}</td><td title="${lotPriceTxt(o.res, o.price)}">$${o.price.toFixed(2)}M</td><td class="small muted">${Math.max(1, Math.ceil((o.exp - S.hour)/24))} d</td><td>${act}</td></tr>`; }).join(''); }
+    return `<tr class="${enemy ? 'enemy' : ''}${o.priv ? ' priv' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}"><td class="bk-n">${flagSVG(o.seller)} <b>${mine ? 'You' : N.name}</b>${enemy ? ' <span class="etag">ENEMY</span>' : ''}${o.priv ? ' <span class="ptag">🔒 COALITION</span>' : ''}</td><td class="bk-g"><span class="res-${o.res}">${icon(o.res)}</span> ${R.name}</td><td class="bk-q" data-l="Qty" title="${resFull(o.res, o.qty)}">${fmt(o.qty)}</td><td class="bk-p" data-l="Price / ${fmt(MKT_LOT)}" title="${lotPriceTxt(o.res, o.price)}">$${o.price.toFixed(2)}M</td><td class="bk-e small muted" data-l="Ends">${Math.max(1, Math.ceil((o.exp - S.hour)/24))} d</td><td class="bk-a">${act}</td></tr>`; }).join(''); }
 let BK_FILT = null;   // the good the offer lists are narrowed to (a goods card was clicked), null = every good
 let BK_RES = 'oil';   // the good last chosen in the offer form (its world price is the default asking price)
 const BK_F = {type:'sell', qty:50*MKT_LOT, price:null};   // the rest of the offer form as the player left it (price null = the chosen good's world price), so a rebuild of the market sheet keeps it
@@ -8603,6 +8611,8 @@ let DUGTIP = 0;
 function dugTip(x, y, tapped){ tip.innerHTML = `<span class="dtt">Dug in: +defence.</span> ${DIG_TIP.replace('Dug in: +defence. ', '')}`; tip.classList.add('dugtip'); tip.hidden = false;
   const tw = Math.min(230, tip.offsetWidth || 230), th = tip.offsetHeight; let tx = x + 14, ty = y + 14; if (tx + tw > cw - 6) tx = x - tw - 14; if (ty + th > ch - 6) ty = y - th - 14; tip.style.left = Math.max(6, tx) + 'px'; tip.style.top = Math.max(6, ty) + 'px';
   clearTimeout(DUGTIP); DUGTIP = tapped ? setTimeout(() => { if (tip.classList.contains('dugtip')) tipHide(); }, 4000) : 0; }
+// a province and its city often share a name: show it once (case- and accent-insensitive compare)
+const sameName = (a, b) => { const n = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(); return n(a) === n(b); };
 function tipShow(x, y){ tip.classList.remove('dugtip');
   if (dugHitAt(x, y)){ dugTip(x, y, false); return; }   // the dug-in shield on a badge: what it means
   const hf = !cityAt(x, y) && hitAt(x, y), fa = hf ? hf.ids.map(armyById).filter(Boolean) : [];
@@ -8626,7 +8636,7 @@ function tipShow(x, y){ tip.classList.remove('dugtip');
   const p = provAt(x, y); if (p < 0){ tipHide(); return; }
   const P = G.P[p], vis = visibleSet(PLAYER), here = stationaryAt(p).filter(a => armyVisible(a, vis));
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
-  let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
+  let h = `<b>${P.city ? `${P.cityName}${sameName(P.cityName, P.name) ? '' : ` <span class="muted" style="font-weight:400">· ${P.name}</span>`}` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p), tk = P.terrain || 'plains', [sg, wk] = terrUnitsText(tk); h += `<div class="r"><span style="white-space:nowrap">${ticon(tk, 13)} ${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}</span></div>`;
     h += `<div class="small tline">${T0.spd < 1 ? 'Movement ' + pctS(T0.spd) : 'Normal movement'}${P.river.size ? ' · river line: crossing slower, attackers −20%' : ''}${sg.length ? `<br><span class="tg">▲ ${sg.slice(0, 2).join(', ')}</span>` : ''}${wk.length ? `<br><span class="tb">▼ ${wk.slice(0, 2).join(', ')}</span>` : ''}</div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.city ? ' · ' + mainLabel(p) : (P.oil ? ' · Oil field' : '') + (P.ore ? ' · Ore' : '') + (P.iron ? ' · Iron hills' : '')}</span><span>${yieldStr(y)}</span></div>`;
     h += `<div class="r"><span>Population</span><span>${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></div>`;
@@ -9950,7 +9960,7 @@ function provHTML(p){
   const foeKnown = foe.filter(a => armyVisible(a, vis));
   const y = provYield(p);
   let html = `${CS.det && innerWidth <= 820 && !P.sea ? '<button class="btn cs-back" data-act="cs-back">‹ City view</button>' : ''}<div class="eyebrow">${kind} · ${P.sea ? '' : ticon(P.terrain || 'plains', 12) + ' '}${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || linkSummary(p)) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (crossing +30% time, +10% on a bridge; attackers −20%)` : ''}${P.river.size && linkSummary(p) ? ' · ' : ''}${linkSummary(p)}</div>` : ''}
-    <div class="sub">${P.city ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
+    <div class="sub">${P.city && !sameName(P.cityName, P.name) ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
     <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger-t)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}${(d => d ? `<dt>Deposits</dt><dd>${d}</dd>` : '')([P.oil ? `<span class="res-oil">${icon('oil', 11)}</span> oil field` : '', P.ore ? `<span class="res-metal">${icon('metal', 11)}</span> ore` : '', P.iron ? `<span class="res-iron">${icon('iron', 11)}</span> iron hills` : ''].filter(Boolean).join(' · '))}${P.city && !P.sea ? (o => `<dt>Produces</dt><dd><span class="res-${o.k}">${icon(o.k, 11)}</span> <b>${cap1(MAIN_NAME[o.k])}</b>: ${mainOutTxt(o)} a day${o.lv ? ` (${BUILD.arms.name} ${ROMAN[o.lv]}: +${Math.round(ARMS_PCT*100*o.lv)}%)` : ` · ${BUILD.arms.name}: +${Math.round(ARMS_PCT*100)}% per level`}</dd>`)(cityOut(p)) : ''}<dt>Daily yield</dt><dd class="ycs">${yieldChips(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
     ${P.city && !P.sea ? (L => `<dt>City</dt><dd>${bimg('city', L, 34)}Level ${ROMAN[L]}${isCapital(p) ? ' · capital' : ''}</dd>`)(cityLevel(p)) : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => `<span class="bl">${bimg(k, S.bld[p][k], 30)}${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : ''}${bdis(p, k) ? ` <span style="color:var(--danger-t)" title="Knocked out by a precision strike: works again when repaired">knocked out · ${bdisH(p, k)} h</span>` : ''}</span>`).join('') || 'None'}</dd>

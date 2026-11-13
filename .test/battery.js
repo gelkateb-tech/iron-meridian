@@ -60,18 +60,26 @@ async function measure(b, name, saver){
     for (const [id, d] of out){ const P = G.P[id]; if (pick.every(([j]) => Math.hypot(G.P[j].x - P.x, G.P[j].y - P.y) > 120)) pick.push([id, d]); if (pick.length >= 14) break; } return pick; });
   const goQ = (id, s) => p.evaluate(([id, s]) => { const im = window.__im, P = im.G.P[id], v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; im.S.speed = 1; return P.name; }, [id, s]);
   const tally = ms => p.evaluate(ms => new Promise(r => { const RD = window.__im.rd; if (!RD) return r({}); RD.dbg = {}; setTimeout(() => { const d = RD.dbg; RD.dbg = null; r(d); }, ms); }), ms);
-  const moving = why => Object.keys(why).filter(k => k[0] === 'a' || k[0] === 'f');
+  // the ambient sea waves (drawSeaSurface: animAmb() right after the SEAFX.wet test) are a wanted, battery-aware ambient layer, not stray motion: they run while the
+  // clock runs on any view with sea on screen (10 fps with the saver), so they are told apart by the scheduler's key (a + the line of that call in the page).
+  const waveKey = (() => { try { const ls = fs.readFileSync(path.join(DIR, PAGE), 'utf8').split('\n'), i = ls.findIndex(l => /SEAFX\.wet\) animAmb\(\)/.test(l)); return i >= 0 ? 'a' + (i + 1) : null; } catch (e) { return null; } })();
+  const moving = why => Object.keys(why).filter(k => (k[0] === 'a' || k[0] === 'f') && k !== waveKey), waves = why => waveKey && why[waveKey] ? 1 : 0;
   // the timed window keeps the tally on (a few stack captures a second at the sim-tick rate: no measurable cost); a storm that drifts onto the
   // screen or a convoy that comes into view during the window makes it a window where something moved: the next quiet view is measured instead
   const tallyOn = () => p.evaluate(() => { const RD = window.__im.rd; if (RD) RD.dbg = {}; }), tallyOff = () => p.evaluate(() => { const RD = window.__im.rd; if (!RD) return {}; const d = RD.dbg || {}; RD.dbg = null; return d; });
-  let q = null; const skipped = [];
+  let q = null, waveFallback = null; const skipped = [];
   for (const [id, d] of cands){ const name = await goQ(id, 4); await p.waitForTimeout(1500); await settle(p); const why = await tally(1200), mv = moving(why);
     if (mv.length){ skipped.push(name + ' (' + mv.join(' ') + ')'); continue; }
+    if (waves(why) && !waveFallback){ waveFallback = id; skipped.push(name + ' (sea waves only)'); continue; }   // (a view with no waves at all is preferred)
     await tallyOn(); const w = await window_(P, RUN_S*1000), why2 = await tallyOff(), mv2 = moving(why2);
     if (mv2.length){ skipped.push(name + ' (during the window: ' + mv2.join(' ') + ')'); continue; }
     q = { id, prov: name }; out.run1x = { ...w, view: name, zoom: 4, asked: Object.keys(why2).join(' '), passedOver: skipped.join(', ') || 'none' };
     if (w.drawsPerS > 2) errs.push(name + ' saver ' + saver + ': running at 1x with nothing on screen moving, the map redrew more than on sim ticks: ' + JSON.stringify(out.run1x));
     break; }
+  if (!q && waveFallback != null){   // every quiet view had sea waves on screen: measure one; the waves are the only ambient source, so the map may redraw at their rate (10 fps with the saver, the display rate without) and no faster
+    const name = await goQ(waveFallback, 4); await p.waitForTimeout(1500); await settle(p); await tallyOn(); const w = await window_(P, RUN_S*1000), why2 = await tallyOff();
+    q = { id: waveFallback, prov: name }; out.run1x = { ...w, view: name, zoom: 4, asked: Object.keys(why2).join(' '), passedOver: skipped.join(', '), wavesOnly: true };
+    if (moving(why2).length || w.drawsPerS > (saver ? 12 : 62)) errs.push(name + ' saver ' + saver + ': only sea waves on screen, but the map moved or redrew more than the wave rate: ' + JSON.stringify(out.run1x)); }
   if (!q){ errs.push(name + ' saver ' + saver + ': no view without motion among ' + skipped.join(', ')); q = { id: cands[0][0], prov: '?' }; }
   // (b2) the same view at a wide zoom (1.2), for information: far more of the world shows, usually with convoys sailing or driving on screen
   // (they move at the full rate, 10 fps with the saver), and the day/night line's soft band drifts (one frame a pixel it moves, 4 px with the saver)
