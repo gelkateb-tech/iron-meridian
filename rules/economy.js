@@ -41,7 +41,7 @@ function homeComponent(n){ const N = S.nations[n], seen = new Set([N.capital]), 
   return seen; }
 function convoyDay(){ CONVOY_LOST = new Set(); S.convoys = (S.convoys || []).filter(c => S.hour - c.t0 < 14);
   for (const N of S.nations){ if (!N.alive || S.owner[N.capital] !== N.id) continue; const n = N.id, home = homeComponent(n);
-    const over = G.P.filter(P => !P.sea && S.owner[P.id] === n && !home.has(P.id)); if (!over.length) continue;
+    const over = ownedBy(n).map(p => G.P[p]).filter(P => !P.sea && !home.has(P.id)); if (!over.length) continue;
     const homePorts = new Set(); for (const p of home) for (const v of G.P[p].nbs) if (G.P[v].sea) homePorts.add(v); if (!homePorts.size) continue;
     const hostile = v => S.armies.some(a => a.at === v && a.to === null && a.owner >= 0 && atWar(n, a.owner) && (a.u.sub || a.u.frig || a.u.crui));
     const groups = new Map(); for (const P of over){ const sz = P.nbs.find(v => G.P[v].sea); if (sz == null) continue; if (!groups.has(sz)) groups.set(sz, []); groups.get(sz).push(P.id); }
@@ -53,14 +53,14 @@ function convoyDay(){ CONVOY_LOST = new Set(); S.convoys = (S.convoys || []).fil
         if (by && isSeat(by.owner)) tell(by.owner, `Your warships in ${G.P[best[raidAt]].name} sank ${artA(N.name)} convoy.`, 'good', best[raidAt]); }
       if (best.length > 1) S.convoys.push({owner:n, route:best, t0:S.hour, raidAt}); } }
   if (S.convoys.length > 60) S.convoys.splice(0, S.convoys.length - 60); }
-const stockCap = n => 400 + 15*S.owner.filter(o => o === n).length;
+const stockCap = n => 400 + 15*ownedBy(n).length;
 const SHORT_MSG = {oil:'Oil shortage: Armor and Strike Jets are slowed and weakened.', iron:'Iron shortage: armor, artillery and warships go without spare parts (-20% attack, -15% defence). Buy iron on the Market (T) or build an Arms Industry in an iron city.', elec:'Electronics shortage: aircraft, drones, air defence and warships go without spares (-20% attack, -10% defence). Buy electronics on the Market (T) or build an Arms Industry in an electronics city.', cash:'Treasury empty: upkeep is unpaid.'};
 let INCC = {v:-1, S:null, m:[]};
-function income(n){ if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
+function income(n){ if (!keep()) return (INCC.v === tickVer && INCC.S === S && INCC.m[n]) || income0(n); if (INCC.v !== tickVer || INCC.S !== S) INCC = {v:tickVer, S, m:[]}; return INCC.m[n] || (INCC.m[n] = income0(n)); }
 function income0(n){
   const g = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}, u = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}; let provs = 0;
   const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1, bM = N0.boostM;   // boostM: the nations world's own catch-up for manpower
-  for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue; const y = provYield(p); provs++;
+  for (const p of ownedBy(n)){ const y = provYield(p); provs++;
     const m = (S.home[p] === n ? boost : 1)*capHit;
     // (a catch-up below 1 holds money back in full and goods by its square root only: a big country keeps about the goods of the others)
     const mg = boost < 1 && S.home[p] === n ? Math.sqrt(boost)*capHit : m;
@@ -72,7 +72,7 @@ function income0(n){
   if (!isSeat(n) && S.diff){ const dm = diffOf().inc; for (const k in g) g[k] *= dm; }
   if (S.rel){ const tired = warsOf(n).filter(m => S.hour - rel(n, m).since > 240).length; g.cash *= 1 - Math.min(0.2, 0.05*tired); }
   const trade = tradeIncome(n); for (const k of DEAL_K) g[k] += trade[k];   // trade routes (after the administration and difficulty factors)
-  for (const a of S.armies) if (a.owner === n) for (const t of UT){ const q = a.u[t]; if (!q) continue; u.cash += q*UNITS[t].upk; u.oil += q*UNITS[t].fuel; u.iron += q*MAINT[t].iron; u.elec += q*MAINT[t].elec; }
+  for (const a of armiesOf(n)) for (const t of UT){ const q = a.u[t]; if (!q) continue; u.cash += q*UNITS[t].upk; u.oil += q*UNITS[t].fuel; u.iron += q*MAINT[t].iron; u.elec += q*MAINT[t].elec; }
   { const dd = n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] : null; if (dd && dd.upk) u.cash *= dd.upk; }
   const net = {}; for (const k in g) net[k] = g[k] - u[k];
   return {gross:g, upkeep:u, net, eff, cash:g.cash, upk:u.cash, trade};
@@ -191,7 +191,7 @@ const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
 function unrestDay(){
   S.unrest = S.unrest || G.P.map(() => 0);
   // mobilisation strains the home front; long garrisons integrate conquests
-  for (const N of S.nations){ if (!N.alive || !N.mob) continue; for (let p = 0; p < G.P.length; p++) if (S.owner[p] === N.id && S.home[p] === N.id) S.unrest[p] = Math.max(unrestOf(p) - 4, Math.min(15*N.mob, unrestOf(p) + 3*N.mob)); }
+  for (const N of S.nations){ if (!N.alive || !N.mob) continue; for (const p of ownedBy(N.id)) if (S.home[p] === N.id) S.unrest[p] = Math.max(unrestOf(p) - 4, Math.min(15*N.mob, unrestOf(p) + 3*N.mob)); }
   S.integ = S.integ || {};
   for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const o = S.owner[p], home = S.home[p];
     if (o < 0 || home === o){ if (!(o >= 0 && S.nations[o].mob)) S.unrest[p] = Math.max(0, unrestOf(p) - 4); continue; }
@@ -212,7 +212,7 @@ function rebelHour(){
     if (S.armies.some(b => b !== a && b.at === p && b.to === null && !b.fly && b.owner === S.owner[p] && count(b))){ a.hold = 0; continue; }
     if (++a.hold < 24) continue;
     const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
-    S.owner[p] = to; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoChanged(); for (const t of UT) a.u[t] = 0;
+    S.owner[p] = to; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoChanged(); for (const t of UT) a.u[t] = 0;
     if (to >= 0) addArmy(to, p, {inf:2});
     if (isSeat(prev)) tell(prev, `${G.P[p].cityName || G.P[p].name} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}.`, 'bad', p);
     if (isSeat(to)) tell(to, `Partisans liberated ${G.P[p].cityName || G.P[p].name} for you!`, 'good', p);

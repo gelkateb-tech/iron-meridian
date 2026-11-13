@@ -59,8 +59,8 @@ function damageLinks(p, h){ if (!G.P[p] || G.P[p].sea) return 0; let n = 0;
 function linkCost(n, a, b, k, lv){ const C = LINK_COST[k][lv], w = Math.max(0.6, Math.min(2.2, G.P[a].nb.get(b) || 1)), rough = Math.max(LINK_ROUGH[G.P[a].terrain] || 1, LINK_ROUGH[G.P[b].terrain] || 1), eng = rRoadF(n);
   return {cash:Math.round(C.cash*w*rough*eng), metal:Math.round(C.metal*w*rough*eng), iron:Math.round((C.iron || 0)*w*rough*eng), elec:Math.round((C.elec || 0)*w*rough*eng), h:Math.max(12, Math.round(C.d*24*Math.sqrt(w)*Math.sqrt(rough)*eng))}; }
 const linkProjects = n => { let c = 0; for (const k in S.links){ const d = S.links[k]; if (d.bld && d.bld.n === n) c++; } return c; };
-const linkMaxProj = n => { const M = linkMaxProj.m || (linkMaxProj.m = {}); if (M.h !== S.hour || M.S !== S){ M.h = S.hour; M.S = S; M.v = {}; }
-  return M.v[n] ?? (M.v[n] = Math.min(6, 2 + Math.floor(S.owner.filter(o => o === n).length/40))); };
+const linkMaxProj = n => { const M = linkMaxProj.m || (linkMaxProj.m = {}), f = () => Math.min(6, 2 + Math.floor(ownedBy(n).length/40)); if (M.h !== S.hour || M.S !== S){ if (!keep()) return f(); M.h = S.hour; M.S = S; M.v = {}; }
+  return M.v[n] ?? (keep() ? (M.v[n] = f()) : f()); };
 function linkCheck(n, a, b, k){ const P = G.P;
   if (!P[a] || !P[b] || !P[a].nb.has(b) || P[a].sea || P[b].sea) return {ok:false, why:'No land link there.'};
   const r = linkOf(a, b), cur = r ? (k === 'rail' ? r.rail : r.road) : 0, max = k === 'rail' ? 2 : 3;
@@ -163,7 +163,7 @@ function typePlan(a){ const rows = splitRows(a), types = [...new Set(rows.map(r 
 // one healthy unit of the most numerous type leaves
 function onePlan(a){ const rows = splitRows(a).filter(r => !r.dmg), r = rows.sort((x, y) => y.n - x.n)[0] || splitRows(a)[0]; return r ? [{[r.k]:1}] : [{}]; }
 // count(a) > 0, stopping at the first unit found (unit counts are never negative; were one ever, the full sum decides)
-function hasUnits(a){ const u = a.u; for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v > 0) return true; if (v < 0) return count(a) > 0; } return false; }
+function hasUnits(a){ const u = a.u; if (UT_ROLL){ let v; v = u.inf; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.at; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.art; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.sam; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.ifv; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.tank; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.jet; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.int; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.frig; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.sub; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.crui; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.mlrs; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.spec; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.carr; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.heli; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.drone; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.para; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.swarm; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.sdrone; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.jam; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.bomb; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.mpa; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.awacs; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.asf; if (v > 0) return true; if (v < 0) return count(a) > 0; v = u.stealth; if (v > 0) return true; if (v < 0) return count(a) > 0; return false; } for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v > 0) return true; if (v < 0) return count(a) > 0; } return false; }
 function removeEmpty(){
   { let any = false; for (const a of S.armies) if (!hasUnits(a)){ any = true; break; } if (!any) return; }   // the usual case: nothing to remove, no new array
   for (const a of S.armies){ if (count(a) > 0 || !a.air || !a.air.pend) continue; const pend = a.air.pend; a.air.pend = null; const base = S.owner[a.air.base] === a.owner ? a.air.base : nearestAirbase(a.owner, a.air.base); if (base < 0) continue;
@@ -192,7 +192,7 @@ const pathMT = a => a && ground(a) ? moveType(a) : 'none';
 function findPath(a, b, ok = null, mt = 'foot', owner = -1){
   if (a === b) return [];
   const n = G.P.length;
-  if (!FP || FP.G !== G){ FP = {G, d:new Float64Array(n), prev:new Int32Array(n), gen:new Uint32Array(n), g:0, hk:new Float64Array(1 << 16), hv:new Int32Array(1 << 16),
+  if (!FP || FP.G !== G){ FP = {G, d:new Float64Array(n), prev:new Int32Array(n), gen:new Uint32Array(n), hc:new Float64Array(n), hg:new Uint32Array(n), g:0, hk:new Float64Array(1 << 16), hv:new Int32Array(1 << 16),
     adj:G.P.map(P => Int32Array.from(P.nb.keys())), lv:-1}; }
   if (FP.lv !== LINKV){ const ch = FP.q ? linkChangesSince(FP.lv) : null; FP.lv = LINKV;
     if (ch) fpPatch(ch);                               // a few links changed: patch their legs
@@ -207,7 +207,7 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1){
     let i = hn++; while (i > 0){ const p = (i - 1) >> 1; if (hk[p] <= k) break; hk[i] = hk[p]; hv[i] = hv[p]; i = p; } hk[i] = k; hv[i] = v; };
   const pop = () => { const v = hv[0]; hn--; if (hn > 0){ const lk = hk[hn], lv = hv[hn]; let i = 0;
       for (;;){ const l = 2*i + 1, r = l + 1; let m = -1, mk = lk; if (l < hn && hk[l] < mk){ m = l; mk = hk[l]; } if (r < hn && hk[r] < mk){ m = r; mk = hk[r]; } if (m < 0) break; hk[i] = hk[m]; hv[i] = hv[m]; i = m; } hk[i] = lk; hv[i] = lv; } return v; };
-  const h = v => { const P = G.P[v]; return Math.hypot(P.x - B.x, P.y - B.y)*inv; };
+  const hc = FP.hc, hg = FP.hg, h = v => { if (hg[v] === g) return hc[v]; const P = G.P[v], r = Math.hypot(P.x - B.x, P.y - B.y)*inv; hg[v] = g; hc[v] = r; return r; };   // (once per province a search)
   gen[a] = g; d[a] = 0; prev[a] = -1; push(h(a), a);
   let found = false;
   while (hn){ const key = hk[0], u = pop(); if (u === b){ found = true; break; } const du = d[u]; if (key > du + h(u) + 1e-9) continue;   // stale heap entry
@@ -220,7 +220,9 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1){
 }
 // ground forces do not march through independent land on the way to somewhere else (every garrison there is a battle): they embark at a port
 // instead when the sea allows it, and only cross independents when there is no other way
-const pathFor = (a, from, to) => { const so = shipsOnly(a), ok = v => canEnter(a.owner, v) && (!so || portOk(a.owner, v)); if (!ok(to)) return [];
+// (canEnter per owner once a route: no relation changes while one is found, and the search asks it for every province it reaches)
+const pathFor = (a, from, to) => { const so = shipsOnly(a), n = a.owner, ce = [], enter = v => { if (G.P[v].sea) return true; const o = S.owner[v]; if (o === n || o < 0) return true; if ((o | 0) !== o) return canEnter(n, v);
+    let r = ce[o]; if (r === undefined) r = ce[o] = atWar(n, o) || friendly(n, o); return r; }, ok = v => enter(v) && (!so || portOk(a.owner, v)); if (!ok(to)) return [];
   const mt = pathMT(a);
   if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner);   // ships sail over water only: a port is where a route ends, never a way through land
   if (so || a.air) return findPath(from, to, ok, mt, a.owner);
@@ -279,7 +281,7 @@ function haltArmy(a){
   if (a.to !== null){
     const A = G.P[a.at], B = G.P[a.to], t = Math.max(0, Math.min(1, a.t)), spot = legSpot(a), same = !!B.sea === !!A.sea, inP = provOfPt(spot[0], spot[1]);
     const near = !same ? a.at : inP === a.at || inP === a.to ? inP : t >= 0.5 ? a.to : a.at;
-    if (near !== a.at){ a.from = a.at; a.froms = [a.at]; a.at = near; }
+    if (near !== a.at){ a.from = a.at; a.froms = [a.at]; atMove(a, near); }
     a.to = null; a.t = 0; a.legFrom = null; a.carry = 0; a.forced = false; a.pos = shipsOnly(a) && !same ? null : ptIn(a.at, spot[0], spot[1]); }
   if (a.sail){ const s = sailXY(a); a.pos = ptIn(a.at, s[0], s[1]); delete a.sail; }   // a force walking or a fleet sailing inside its province stops where it is
   a.path = []; a.dest = null; a.chase = null; delete a.join; delete a.escort; delete a.tgt; delete a.raid;
@@ -309,7 +311,7 @@ function sailHour(a){ const s = a.sail; if (!s) return; if (a.to !== null || a.p
   if (!G.P[a.at].sea && S.battles.includes(a.at)) return;   // (a ground force fighting where it stands stops walking until the battle ends)
   s.t = Math.min(1, s.t + 1/s.h); a.pos = sailXY(a); if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; delete a.sail; } }
 // the end of a leg (rules/tick.js movement): the force reaches the province it was heading for and stands at its exact point on the final leg
-function legArrive(a){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; a.at = a.to; a.to = null; a.t = 0; a.legFrom = null;
+function legArrive(a){ if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); } a.from = a.at; a.froms = [a.at]; atMove(a, a.to); a.to = null; a.t = 0; a.legFrom = null;
   if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null; } else a.pos = null; }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land)
 // the final leg of a pinpoint move crossing into its province (rules/tick.js movement, after the hour's progress lh): the force arrives there now,
 // at the spot it has reached, and walks the rest of the leg's time inside it. Not for ships docking in a port (no point on land)
@@ -321,7 +323,7 @@ function legCross(a, lh){ if (a.path.length || !a.dest || a.dest.p !== a.to || a
 function canProceed(a){
   if (a.delay > 0) return false;
   if (a.forced) return true;
-  if (S.armies.some(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner) && count(b) > 0)) return false;
+  if ((byAt(a.at) || S.armies).some(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner) && count(b) > 0)) return false;
   if (!G.P[a.at].sea && S.owner[a.at] !== a.owner && ground(a) && atWar(a.owner, S.owner[a.at])) return false;
   return true;
 }
@@ -346,9 +348,10 @@ function computeSupply(){
       for (const v of P.nb.keys()){ const r = P.lk.get(v); E[j++] = !r ? 1 : railLv(r) ? -SUP_RAIL : SUP_LINK[roadLv(r)]*(r.dmg > 0 ? SUP_DMG : 1); } return E; };   // negative: rail (needs a friendly far end)
     if (ch) for (const r of ch){ SUPE[r.a] = supRow(G.P[r.a]); SUPE[r.b] = supRow(G.P[r.b]); } else SUPE = G.P.map(supRow); }
   SUP = S.nations.map(() => null);
+  const CT = []; for (const P of G.P) if (P.city) CT.push(P.id);   // (the cities, in province order: where each nation's supply starts)
   for (const N of S.nations){ if (!N.alive) continue; const n = N.id, d = new Float32Array(G.P.length).fill(99), sup = new Uint8Array(G.P.length), SF = arctic(n) ? SUPFA : SUPF;
-    const own = v => S.owner[v] === n || friendly(n, S.owner[v]);
-    const q = []; for (const P of G.P) if (P.city && own(P.id)){ d[P.id] = 0; q.push(P.id); }
+    const fm = [], own = v => { const o = S.owner[v]; if (o === n) return true; if (!(o >= 0)) return friendly(n, o); const f = fm[o]; return f !== undefined ? f : (fm[o] = friendly(n, o)); };   // (friendly per owner once: relations do not change here)
+    const q = []; for (const p of CT) if (own(p)){ d[p] = 0; q.push(p); }
     // small graph: repeated relaxation by layers (costs 1 on land, 2 at sea)
     for (let h = 0; h < q.length; h++){ const u = q[h]; if (d[u] > SUPPLY_RANGE) continue; sup[u] = 1;
       if (!G.P[u].sea && !own(u)) continue;              // supply reaches one step into foreign land, no further
@@ -362,13 +365,15 @@ function computeSupply(){
 const escortSup = a => { if (a.escort == null || !G.P[a.at].sea) return false; const r = routeById(a.escort); return !!r && r.kind === 'sea' && (r.path.includes(a.at) || r.path.some(v => G.P[v].nb.has(a.at))); };
 const supplied = a => a.owner < 0 || (SUP && SUP[a.owner] ? !!SUP[a.owner][a.at] || (a.escort != null && escortSup(a)) : true);
 const moraleF = a => a.owner < 0 ? 1 : (0.5 + 0.5*(a.m ?? 80)/100)*(supplied(a) ? 1 : 0.85)*(a.air && a.air.wear ? 1 - 0.45*a.air.wear : 1);
-const effHP = a => { const u = a.u, w = a.w; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp - w[t]; } return s; };
+const effHP = UT_ROLL ? a => { const u = a.u, w = a.w; let s = 0, v; v = u.inf; if (v) s += v*UNITS.inf.hp - w.inf; v = u.at; if (v) s += v*UNITS.at.hp - w.at; v = u.art; if (v) s += v*UNITS.art.hp - w.art; v = u.sam; if (v) s += v*UNITS.sam.hp - w.sam; v = u.ifv; if (v) s += v*UNITS.ifv.hp - w.ifv; v = u.tank; if (v) s += v*UNITS.tank.hp - w.tank; v = u.jet; if (v) s += v*UNITS.jet.hp - w.jet; v = u.int; if (v) s += v*UNITS.int.hp - w.int; v = u.frig; if (v) s += v*UNITS.frig.hp - w.frig; v = u.sub; if (v) s += v*UNITS.sub.hp - w.sub; v = u.crui; if (v) s += v*UNITS.crui.hp - w.crui; v = u.mlrs; if (v) s += v*UNITS.mlrs.hp - w.mlrs; v = u.spec; if (v) s += v*UNITS.spec.hp - w.spec; v = u.carr; if (v) s += v*UNITS.carr.hp - w.carr; v = u.heli; if (v) s += v*UNITS.heli.hp - w.heli; v = u.drone; if (v) s += v*UNITS.drone.hp - w.drone; v = u.para; if (v) s += v*UNITS.para.hp - w.para; v = u.swarm; if (v) s += v*UNITS.swarm.hp - w.swarm; v = u.sdrone; if (v) s += v*UNITS.sdrone.hp - w.sdrone; v = u.jam; if (v) s += v*UNITS.jam.hp - w.jam; v = u.bomb; if (v) s += v*UNITS.bomb.hp - w.bomb; v = u.mpa; if (v) s += v*UNITS.mpa.hp - w.mpa; v = u.awacs; if (v) s += v*UNITS.awacs.hp - w.awacs; v = u.asf; if (v) s += v*UNITS.asf.hp - w.asf; v = u.stealth; if (v) s += v*UNITS.stealth.hp - w.stealth; return s; } : a => { const u = a.u, w = a.w; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp - w[t]; } return s; };
+// a day's healing at rate r, an hour's share (the loop over UT, written out: see count, rules/state.js)
+const healW = UT_ROLL ? (a, r) => { const u = a.u, w = a.w; let v; v = u.inf; if (v) w.inf = Math.max(0, w.inf - v*UNITS.inf.hp*r/24); v = u.at; if (v) w.at = Math.max(0, w.at - v*UNITS.at.hp*r/24); v = u.art; if (v) w.art = Math.max(0, w.art - v*UNITS.art.hp*r/24); v = u.sam; if (v) w.sam = Math.max(0, w.sam - v*UNITS.sam.hp*r/24); v = u.ifv; if (v) w.ifv = Math.max(0, w.ifv - v*UNITS.ifv.hp*r/24); v = u.tank; if (v) w.tank = Math.max(0, w.tank - v*UNITS.tank.hp*r/24); v = u.jet; if (v) w.jet = Math.max(0, w.jet - v*UNITS.jet.hp*r/24); v = u.int; if (v) w.int = Math.max(0, w.int - v*UNITS.int.hp*r/24); v = u.frig; if (v) w.frig = Math.max(0, w.frig - v*UNITS.frig.hp*r/24); v = u.sub; if (v) w.sub = Math.max(0, w.sub - v*UNITS.sub.hp*r/24); v = u.crui; if (v) w.crui = Math.max(0, w.crui - v*UNITS.crui.hp*r/24); v = u.mlrs; if (v) w.mlrs = Math.max(0, w.mlrs - v*UNITS.mlrs.hp*r/24); v = u.spec; if (v) w.spec = Math.max(0, w.spec - v*UNITS.spec.hp*r/24); v = u.carr; if (v) w.carr = Math.max(0, w.carr - v*UNITS.carr.hp*r/24); v = u.heli; if (v) w.heli = Math.max(0, w.heli - v*UNITS.heli.hp*r/24); v = u.drone; if (v) w.drone = Math.max(0, w.drone - v*UNITS.drone.hp*r/24); v = u.para; if (v) w.para = Math.max(0, w.para - v*UNITS.para.hp*r/24); v = u.swarm; if (v) w.swarm = Math.max(0, w.swarm - v*UNITS.swarm.hp*r/24); v = u.sdrone; if (v) w.sdrone = Math.max(0, w.sdrone - v*UNITS.sdrone.hp*r/24); v = u.jam; if (v) w.jam = Math.max(0, w.jam - v*UNITS.jam.hp*r/24); v = u.bomb; if (v) w.bomb = Math.max(0, w.bomb - v*UNITS.bomb.hp*r/24); v = u.mpa; if (v) w.mpa = Math.max(0, w.mpa - v*UNITS.mpa.hp*r/24); v = u.awacs; if (v) w.awacs = Math.max(0, w.awacs - v*UNITS.awacs.hp*r/24); v = u.asf; if (v) w.asf = Math.max(0, w.asf - v*UNITS.asf.hp*r/24); v = u.stealth; if (v) w.stealth = Math.max(0, w.stealth - v*UNITS.stealth.hp*r/24); } : (a, r) => { for (const t of UT) if (a.u[t]) a.w[t] = Math.max(0, a.w[t] - a.u[t]*UNITS[t].hp*r/24); };
 function armyUpkeep(prevBattles){
   for (const a of S.armies){ if (a.owner < 0 || !count(a) || a.fly) continue;
     const N = S.nations[a.owner], here = a.to === null, inBattle = here && S.battles.includes(a.at);
     if (inBattle){ /* morale falls in battleStep, every 15 minutes: no healing, no rest here */ }
     else if (a.air || supplied(a) || cmdF(a, 'supply')){ const r = healPerDay(a);   // (healPerDay, rules/combat.js: slow in the field, faster in an own city; the hook for a future Hospital)
-      for (const t of UT) if (a.u[t]) a.w[t] = Math.max(0, a.w[t] - a.u[t]*UNITS[t].hp*r/24);
+      healW(a, r);
       a.m += 2; if (here && prevBattles.has(a.at)) a.m += 10; }
     else { for (const t of UT){ if (!a.u[t]) continue; a.w[t] += a.u[t]*UNITS[t].hp*0.04/24; while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; } if (!a.u[t]) a.w[t] = 0; }
       if (a.m > 30) a.m = Math.max(30, a.m - 1); }

@@ -78,7 +78,7 @@ const visProvsAt = (x, y, km) => { const a = visProvsIn([x, y, x, y, km*KM_W]), 
 // what nation n sees (see the notes above): the provinces in sight, with .whole (everything in them seen), .ids (the identifying ranges),
 // .locs (AWACS ranges: location only), .uav .loc .sonar (provinces identified by UAV, only located by AWACS, heard by sonar), .n (whose view)
 function visibleSet(n){
-  const C = visCache || (visCache = new Map()), v0 = C.get(n); if (v0) return v0;
+  const C = keep() ? visCache || (visCache = new Map()) : new Map(), v0 = (visCache || C).get(n); if (v0) return v0;   // (keep: rules/core.js)
   const v = new Set(); v.n = n; C.set(n, v);
   const al = new Set([n, ...alliesOf(n)]), whole = new Set(), ids = [], locs = [], uav = new Set(), loc = new Set(), sonar = new Set();
   const circ = (x, y, km, k = VK.id) => { if (km > 0) ids.push([x, y, x, y, km*KM_W, k]); };
@@ -140,7 +140,7 @@ function visTouch(vis, p){ if (!vis.ids) return []; if (!vis.touch){ const T = v
 // orbit of its own or of an ally gives a location-only contact within half the radar's range (measured from the orbit's point to the wing at x, y;
 // the province point of p0 when not given), never an identification (loLocated). On the ground the wing is seen like any other.
 const loWing = a => !!a.air && count(a) > 0 && AIR_T.every(t => !a.u[t] || !!UNITS[t].lo);
-function loSpotted(n, p0){ if (p0 < 0) return false; for (const b of S.armies) if (b.owner === n && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
+function loSpotted(n, p0){ if (p0 < 0) return false; for (const b of armiesOf(n)) if (!b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
 function loLocated(n, p0, x, y){ if (p0 < 0) return false; if (x == null){ x = G.P[p0].x; y = G.P[p0].y; }
   for (const b of S.armies) if (b.fly && b.fly.kind === 'orbit' && b.fly.ph === 'over' && b.u.awacs && (b.owner === n || (b.owner >= 0 && n >= 0 && rel(n, b.owner).st === 'ally'))){ const T = G.P[b.fly.tgt];
     if (visIn([T.x, T.y, T.x, T.y, visAewKm(b.owner)/2*KM_W], x, y)) return true; }

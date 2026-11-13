@@ -7088,7 +7088,7 @@ function renderLayer(vis, lite = false, R = null){
   if (R){ mx = layer.mx; my = layer.my; layer.lite = layer.lite || lite; layer.strips = (layer.strips || 0) + 1; }
   else { const lm = FLYMARGIN || LM; FLYMARGIN = 0; mx = Math.round(Math.max(cw*lm, 224)); my = Math.round(Math.max(ch*lm, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
     if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
-    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.dp = dpr; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.q = []; CITY_MISS.clear(); CITY_GEN++; CWANT.clear(); CITY_RT = performance.now(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; }
+    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.dp = dpr; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; layer.q = []; CITY_MISS.clear(); CITY_GEN++; CWANT.clear(); CITY_RT = performance.now(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; }
   // the rect to paint, in device px (the whole layer when R is left out)
   const dx0 = R ? Math.max(0, Math.round(R.x0*dpr)) : 0, dy0 = R ? Math.max(0, Math.round(R.y0*dpr)) : 0, dx1 = R ? Math.min(layer.width, Math.round(R.x1*dpr)) : layer.width, dy1 = R ? Math.min(layer.height, Math.round(R.y1*dpr)) : layer.height;
   if (dx1 <= dx0 || dy1 <= dy0) return;
@@ -7300,6 +7300,30 @@ function layerBands(){ const L = layer, h = L.height, W = L.width/dpr, n = 6, c 
   L.q = B.sort((a, b) => a.d - b.d); }
 // the towns drawn without their right bake, queued first for a redraw: one box (layer CSS px, whole device px) per row of the layer round the
 // towns in that row; a box already covered by a queued one is dropped, and one that covers queued boxes replaces them
+// the layer rects (CSS px of the layer, as renderLayer's R) where the layer of fog set A and owners `own` differs from the one of fog set B and the
+// owners now: the provinces that changed hands, then what nation PLAYER sees: the provinces
+// that came into or left sight (with their neighbours: a link built in game shows only when one end is in sight), the provinces wholly in sight
+// that changed, and every sight range that is new or gone (the soft edge of its cut included), on each copy of the world in the layer; null when
+// they would cover much of the layer (a full render is then as quick)
+function visDirty(A, B, own){ const g = visGrid(), bb = g.bb, L = layer, m = Math.max(40/view.s, 3*HS), W = [];
+  const box = (x0, y0, x1, y1, e = 0) => { W.push([x0 - m - e, y0 - m - e, x1 + m + e, y1 + m + e]); };
+  const prov = (p, nb, e) => { const b = bb[p]; if (b) box(b[0], b[1], b[2], b[3], e); if (nb && G.P[p]) for (const q of G.P[p].nbs){ const c = bb[q]; if (c) box(c[0], c[1], c[2], c[3], e); } };
+  // provinces that changed hands (with their neighbours: the borders on both sides, the tint, a town's look, the links through them)
+  if (own && own !== S.owner) for (let p = 0; p < own.length; p++) if (own[p] !== S.owner[p]) prov(p, true, 24);
+  for (const p of A) if (!B.has(p)) prov(p, true); for (const p of B) if (!A.has(p)) prov(p, true);
+  const wa = A.whole || new Set(), wb = B.whole || new Set(); for (const p of wa) if (!wb.has(p)) prov(p, false); for (const p of wb) if (!wa.has(p)) prov(p, false);
+  const rk = s => s.join(','), cnt = new Map(), ia = A.ids || [], ib = B.ids || [];
+  for (const s of ia) cnt.set(rk(s), (cnt.get(rk(s)) || 0) + 1); for (const s of ib) cnt.set(rk(s), (cnt.get(rk(s)) || 0) - 1);
+  const rng = s => { const r = s[4]*1.2; box(Math.min(s[0], s[2]) - r, Math.min(s[1], s[3]) - r, Math.max(s[0], s[2]) + r, Math.max(s[1], s[3]) + r); };
+  for (const s of ia) if (cnt.get(rk(s)) > 0) rng(s); for (const s of ib) if (cnt.get(rk(s)) < 0) rng(s);
+  const lw = L.width/dpr, lh = L.height/dpr, ox = L.vx + L.mx, oy = L.vy + L.my, R = [];
+  for (const b of W) for (let k = -2; k <= 2; k++){ const x0 = Math.max(0, Math.floor(ox + (b[0] + k*WRAP_W)*view.s)), x1 = Math.min(lw, Math.ceil(ox + (b[2] + k*WRAP_W)*view.s)), y0 = Math.max(0, Math.floor(oy + b[1]*view.s)), y1 = Math.min(lh, Math.ceil(oy + b[3]*view.s));
+    if (x1 > x0 && y1 > y0) R.push({x0, y0, x1, y1}); }
+  // overlapping rects become one (until none overlap); many small ones become their bounding box
+  for (let merged = true; merged;){ merged = false; for (let i = 0; i < R.length && !merged; i++) for (let j = i + 1; j < R.length; j++){ const a = R[i], c = R[j];
+    if (a.x0 <= c.x1 && c.x0 <= a.x1 && a.y0 <= c.y1 && c.y0 <= a.y1){ a.x0 = Math.min(a.x0, c.x0); a.y0 = Math.min(a.y0, c.y0); a.x1 = Math.max(a.x1, c.x1); a.y1 = Math.max(a.y1, c.y1); R.splice(j, 1); merged = true; break; } } }
+  if (R.length > 12) R.splice(0, R.length, R.reduce((u, r) => ({x0:Math.min(u.x0, r.x0), y0:Math.min(u.y0, r.y0), x1:Math.max(u.x1, r.x1), y1:Math.max(u.y1, r.y1)})));
+  const area = R.reduce((s0, r) => s0 + (r.x1 - r.x0)*(r.y1 - r.y0), 0); return area > 0.45*lw*lh ? null : R; }
 function layerCityRefresh(){ const L = layer, W = L.width/dpr, H = L.height/dpr, ox = L.vx + L.mx, oy = L.vy + L.my, n = 6, B = [], wait = new Map(), keep = [];
   // (a town whose bakes on screen are not all made yet keeps its stand-in whole for now: all its boxes are redrawn together once they are,
   // so a town never shows two tiers at once)
@@ -7424,7 +7448,7 @@ function draw(now){ draw.now = now;
   // once still, the view snaps to the layer's device-px grid (under half a pixel), so the live overlays sit exactly on the shifted layer's borders
   if (!flyReuse && settled && !camFly && layer && layer.s === view.s && key === layerKey){ const x0 = view.x, y0 = view.y, sx = layer.vx + Math.round((x0 - layer.vx)*dpr)/dpr, sy = layer.vy + Math.round((y0 - layer.vy)*dpr)/dpr;
     if (sx !== x0 || sy !== y0){ view.x = sx; view.y = sy; clampView(); if (view.x !== sx || view.y !== sy){ view.x = x0; view.y = y0; } draw.pvx = view.x; draw.pvy = view.y; } }
-  if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), ex = Math.abs(dxv) > layer?.mx*0.25, ey = Math.abs(dyv) > layer?.my*0.25;
+  if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), kNV = k => k.split('|').filter((v, i) => i < 4 || i > 6).join('|'), ex = Math.abs(dxv) > layer?.mx*0.25, ey = Math.abs(dyv) > layer?.my*0.25;
     // a render made mid-zoom is only drawn scaled until the zoom settles: it gets a wider margin (so the next zoom-out step stays covered) and a
     // lower pixel ratio (a fraction of the cost); a layer made that way is never shifted or patched, the next render replaces it whole
     // during a glide the render is made ahead, part of the way toward the goal scale (around the same anchor), so the one layer serves a longer
@@ -7435,6 +7459,13 @@ function draw(now){ draw.now = now;
         Ls = Math.max(view.s/1.25, Math.min(view.s/fmin, Z.s1)); if (Math.abs(Math.log(Ls/view.s)) < 0.01) Ls = 0; }
       FLYMARGIN = zm; if (zm){ dpr = d0*ZRES; ZRND = true; } if (Ls){ view.s = Ls; view.x = Z.ax - Z.wx*Ls; view.y = Z.ay - Z.wy*Ls; clampView(); }
       draw.rlT = now; try { renderLayer(vis, lt || !!zm); } finally { dpr = d0; FLYMARGIN = 0; ZRND = false; if (Ls){ layerKey = keyOf(view.s); view.s = v0.s; view.x = v0.x; view.y = v0.y; } } };
+    // only what you see (forces moved, an hour passed: the fog and the links shown through it) or who owns some provinces (captures anywhere in the
+    // world, war and peace with you unchanged) changed: the parts of the layer that touches are rendered again in place instead of the whole layer
+    // (visDirty: a full render when they cover much of it); the other keys as below
+    if (layer && ldp === dpr && layer.s === view.s && !layer.lite && !cfR && !zoomLive && layer.vis && layer.own && key !== layerKey && kNV(key) === kNV(layerKey)){ const kA = key.split('|'), kB = layerKey.split('|');
+      if ((kA[4] !== kB[4] || kA[5] !== kB[5]) && (kA[4] === kB[4] || (toneSync.ts === layer.ts && layer.own.length === S.owner.length))){ const D = visDirty(layer.vis, vis, layer.own);
+        if (D){ const fc = settled && !moved && !camFly ? fadeScreen() : null; for (const r of D) renderLayer(vis, false, r); layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; fadeScreenAdopt(fc);
+          layerKey = kB.map((v, i) => i === 4 || i === 5 ? kA[i] : v).join('|'); } } }
     if (!layer || ldp !== dpr || (key !== layerKey && kNC(key) !== kNC(layerKey))){ layerKey = key; const fc = settled && !moved && !camFly && layer ? fadeScreen() : null; rl(); fadeScreenAdopt(fc); }
     else { if (key !== layerKey){ layerKey = key; if (CITY_ALL){ CITY_ALL = false; layerBands(); } else layerCityRefresh(); }   // only the city bakes changed: redraw the towns that were missing theirs
       if ((ex || ey) && shiftLayer(vis, false, ex, ey)){}
@@ -10406,6 +10437,7 @@ GLOBE = (() => {
 
 /* ---------------- Loop & boot ---------------- */
 let last = 0, acc = 0, uiAcc = 0, abTickT = 0;   // (acc: the share of the hour run so far; a new or loaded game starts it at its own step, so a paused force is drawn where it is)
+const TICK_MS = 8;   // the rules' share of a frame while an hour runs over several frames (see frame)
 // one map frame (see 'Redraw scheduling'): the registrations of this draw decide whether and when the next one comes
 function rdDraw(now){ const gap = now - (RD.dn || now); RD.dn = now; if (gap > 250) rdShift(gap - 50);
   RD.dirty = false; RD.f = RD.a = 0; RD.nx = Infinity; RD.n++;
@@ -10420,7 +10452,11 @@ function frame(now){
   RD.raf = 0; if (RD.bg) return;   // in the background: the loop stops (bgResume starts it again)
   const fd = now - (last || now), dt = Math.min(0.25, fd/1000); last = now; if (fd > 3 && fd < 60) RD.fi += (fd - RD.fi)*0.05;   // (RD.fi: the display's frame time, smoothed)
   // game time runs in quarter hours: a battle step every 15 game minutes (tickQ, rules/tick.js), the hour's tick on the fourth. acc is the hour's progress (0..1), S.q the steps already run
-  if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; const NQ = 8*BATTLE_Q; while (acc >= (((S.q || 0) + 1)/BATTLE_Q) - 1e-9 && n < NQ){ tickQ(); if (!S.q) acc -= 1; n++; } if (n >= NQ) acc = (S.q || 0)/BATTLE_Q; if (n) redraw(); }   // a battle step or an hour passed: draw what it changed
+  // (a long hour is spread over frames: its steps run while this frame has TICK_MS left, and the next frames go on with it, paused or not;
+  // tickQSlice, rules/tick.js: the same steps in the same order as an hour run at once)
+  { const t0 = performance.now(), more = () => performance.now() - t0 < TICK_MS;
+    if (tickPending() && tickQSlice(more)){ acc = Math.max(0, acc - 1); redraw(); }
+    if (S.speed && !S.over){ acc += dt*HOURS_PER_SEC[S.speed]; let n = 0; const NQ = 8*BATTLE_Q; while (!tickPending() && acc >= (((S.q || 0) + 1)/BATTLE_Q) - 1e-9 && n < NQ){ const hr = (S.q || 0) + 1 >= BATTLE_Q; if (tickQSlice(more) && hr) acc -= 1; n++; } if (n >= NQ && !tickPending()) acc = (S.q || 0)/BATTLE_Q; if (n) redraw(); } }   // a battle step or an hour passed: draw what it changed
   if (S.started && now - (abTickT || 0) > 180){ abTickT = now; abTickPatch(); }   // the army bar's countdown to the next battle step
   fxDrain(now);   // the effects queue and the ambient-motion clock run on real time, drawn or not
   uiAcc += dt; if (uiAcc > 0.25){ uiAcc = 0; try { ambience(now); } catch (e) {} renderSide(); tutTick(); ftipTick(); if (mouse && !tip.hidden) tipShow(mouse.x, mouse.y); }
