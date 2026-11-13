@@ -20,7 +20,7 @@ Last updated: 2026-11-13.
 
 | Task | Model | Where it is |
 |---|---|---|
-| Buildings on the map: try our own building pictures with the background fully removed (no frame or square), tilted to the units' angled view, small and pinned to their city, same zoom rules as the 3D models; comparison screenshot with the 3D models before merging (the 3D models were rejected: 'they look cheap', kept unmerged on branch buildings-3d) | Opus | Started (branch buildings-cutout) |
+| Buildings on the map: try our own building pictures with the background fully removed (no frame or square), tilted to the units' angled view, small and pinned to their city, same zoom rules as the 3D models; comparison screenshot with the 3D models before merging (the 3D models were rejected: 'they look cheap', kept unmerged on branch buildings-3d) | Opus | Paused before any change (branch buildings-cutout): the owner is reviewing the list of existing building art first |
 | Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; infantry icon redone as a flat helmeted head (owner to pick: with wheel or plain); waiting for the owner's 'merge' |
 
 ## Queued (in this order)
@@ -33,6 +33,7 @@ Last updated: 2026-11-13.
 
 ## Waiting for the owner
 
+- **Building art:** every existing building picture is top-down (none angled). Choose: (a) flat cut-outs of the usable ones plus 13 new pictures (HQ; Airbase 1-5; Recruiting Office 2-5; Naval Yard 1-5 if wanted; Army Base 1; Fortifications 1), or (b) a full new angled set (33 levels + HQ).
 - **Infantry map icon:** A (flat helmeted head; motorized gets a wheel under it) or B (plain head for both), and "merge" for the research cards and pictures job.
 - **Faster game days:** reaching well under 0.5 s per game day needs changes that alter how computer nations play (quiet nations plan every 8 hours, a shorter attack-target search, reusing routes across hours). Want any of them?
 - **Market prices** (now on the Dev Build) are shown per 1,000 units (for example '$0.04M per 1,000 barrels'). OK?
