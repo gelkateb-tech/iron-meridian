@@ -164,6 +164,24 @@ const NAMES = {
   'New Zealand':{'Otago':'Dunedin', 'Manawatu-Wanganui':'Palmerston North', 'Waikato':'Hamilton', 'Canterbury':'Christchurch', 'Bay of Plenty':'Tauranga'},
 };
 
+// Each city's ONE main resource in the nations world (the owner's resource balance rule, docs/ECONOMY.md "Resource balance"): set here by hand for
+// every playable nation, after the real geography of the region, instead of by the map method of rules/map.js cityMains (which still decides the
+// classic world, independent land and every save made before this table: a save carries what it was made with, rules/state.js nationsWorld).
+// The rule (checked below): all six goods (money, oil, materials, iron, electronics, rare materials) in every nation; no good in more than two
+// of its cities, except that a nation of 13 or 14 cities gives its one or two cities beyond 12 the good that best fits its region, so one or two
+// goods (never more than n - 12) reach three. Per nation: a short note on the geography, then 'key City, City | key City | ...'
+// (keys cash oil metal iron elec rare; names as the game shows them). docs/RESOURCES-PER-NATION.md lists the result for the owner.
+const MAIN_KEYS = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare'], MAIN_CH = {cash:'c', oil:'o', metal:'m', iron:'i', elec:'e', rare:'r'};
+const MAINS_ALL = false;   // every open nation must be in MAINS (true once the table covers them all)
+const MAINS = {
+  // Syria first (the owner's example: 4 of 8 cities on oil, no rare materials). Oil where Syria's fields are, the Jazira and the Euphrates (Al-Hasakah:
+  // Rmelan and Suwaydiyah; Raqqa: the fields of the Euphrates valley towards Deir ez-Zor); money in the capital and in Daraa (the Nasib crossing,
+  // the trade road to Jordan and the Gulf); electronics and industry in Aleppo, the industrial capital; materials in Hama (cement works and the
+  // Hama steel rolling mill's heavy industry); iron in Idlib (the Rajo iron ore of the north-western hills by Afrin); rare materials in Homs (the
+  // Palmyra phosphates of the Homs desert carry uranium and rare earths, recovered at the Homs phosphoric acid plant)
+  'Syria':['Jazira and Euphrates oil, Aleppo industry, Palmyra phosphates (uranium, rare earths) at Homs, Rajo iron by Idlib', 'cash Damascus, Daraa | oil Al-Hasakah, Raqqa | metal Hama | iron Idlib | elec Aleppo | rare Homs'],
+};
+
 /* ---------- the map and the rules ---------- */
 // the province split (tools/build-provsplit.js writes tools/provsplit.json; docs/NATIONS-PLAN.md 4.6): copied into nations.js as NATIONS.map. The
 // cities are chosen on that map (the nations world's), where Israel, Greece, Cuba and Belarus have their new provinces
@@ -221,7 +239,21 @@ function entry(e, open){ const c = e.c, list = open ? pickCities(c) : todayCitie
   for (const P of list){ const nm = NAMES[c.name] && NAMES[c.name][P.name]; if (nm && !(flag(P) & 1)) names[P.id] = nm; }
   if (!COLORS[c.name]) throw new Error('no colour for ' + c.name + ': add it to COLORS');
   if (!hqOf.has(c.name)) throw new Error('no HQ style for ' + c.name + ': add it to HQ');
-  return {name:DISPLAY[c.name] || c.name, country:c.name, region:e.region, tier:e.tier, hq:hqOf.get(c.name), color:COLORS[c.name], capital:list[0].id, cities:list.map(P => P.id), names, swaps}; }
+  const out = {name:DISPLAY[c.name] || c.name, country:c.name, region:e.region, tier:e.tier, hq:hqOf.get(c.name), color:COLORS[c.name], capital:list[0].id, cities:list.map(P => P.id), names, swaps};
+  // mains: one letter per city, in the order of cities (c money, o oil, m materials, i iron, e electronics, r rare materials), from MAINS
+  const M = open && MAINS[c.name]; if (M){ const nm = P => names[P.id] || cname(P), at = new Map();
+    for (const part of M[1].split('|')){ const s = part.trim(), k = s.split(' ')[0]; if (!MAIN_CH[k]) throw new Error(`${c.name}: unknown resource ${k}`);
+      for (const city of s.slice(k.length).split(',').map(x => x.trim()).filter(Boolean)){ const P = list.find(Q => nm(Q) === city);
+        if (!P) throw new Error(`${c.name}: no city ${city} (cities: ${list.map(nm).join(', ')})`); if (at.has(P.id)) throw new Error(`${c.name}: ${city} given two resources`); at.set(P.id, k); } }
+    const miss = list.filter(P => !at.has(P.id)); if (miss.length) throw new Error(`${c.name}: no resource for ${miss.map(nm).join(', ')}`);
+    out.mains = list.map(P => MAIN_CH[at.get(P.id)]).join(''); }
+  return out; }
+// the owner's resource balance rule on one nation's letters (n cities): '' when it holds, else what breaks it
+function mainsRule(n, s){ const cnt = {}, bad = []; for (const ch of s) cnt[ch] = (cnt[ch] || 0) + 1;
+  const three = MAIN_KEYS.filter(k => cnt[MAIN_CH[k]] === 3).length;
+  for (const k of MAIN_KEYS){ const v = cnt[MAIN_CH[k]] || 0; if (!v) bad.push('no ' + k); if (v > 3 || (v === 3 && n < 13)) bad.push(`${v} ${k}`); }
+  if (three > Math.max(0, n - 12)) bad.push(`${three} goods on 3 cities (at most ${Math.max(0, n - 12)})`);
+  return bad.join(', '); }
 
 if (MODE === '--preview'){
   for (const e of all){
@@ -242,7 +274,11 @@ for (const n of nations){ const c = byName.get(n.country), ids = new Set(c.provs
   for (const id of n.cities){ if (!ids.has(id)) fails.push(`${n.name}: city ${id} is not its land`); if (seen.has(id)) fails.push(`${n.name}: city ${id} listed twice`); seen.add(id); }
   if (OPEN.includes(n.region) && (n.cities.length < 7 || n.cities.length > 14)) fails.push(`${n.name}: ${n.cities.length} cities (7 to 14 wanted)`);
   // every name given for an open nation names one of its promoted cities (a typo would leave a city under its province's name)
-  if (OPEN.includes(n.region)) for (const pn in NAMES[n.country] || {}) if (!n.cities.some(id => G.P[id].name === pn && n.names[id])) fails.push(`${n.name}: no promoted city in province ${pn} to name`); }
+  if (OPEN.includes(n.region)) for (const pn in NAMES[n.country] || {}) if (!n.cities.some(id => G.P[id].name === pn && n.names[id])) fails.push(`${n.name}: no promoted city in province ${pn} to name`);
+  // the resource balance rule, for every nation MAINS gives its cities' resources (MAINS_ALL: all open nations must have them)
+  if (n.mains){ const why = mainsRule(n.cities.length, n.mains); if (why) fails.push(`${n.name}: resource rule broken: ${why}`); }
+  else if (MAINS_ALL && OPEN.includes(n.region)) fails.push(`${n.name}: no city resources in MAINS`); }
+for (const k in MAINS) if (!nations.some(n => n.country === k)) fails.push(`MAINS names a nation that is not playable: ${k}`);
 // the four nations of the province split (owner's answer 1) must hold 7 cities on the split map whether their region is open or not: at least 9
 // provinces (Israel: 8, its one-cell provinces are the finest the map grid allows; tools/build-provsplit.js) and 7 to 14 cities with the method
 for (const e of all.filter(e => e.split)){ const L = pickCities(e.c), need = e.c.name === 'Israel' ? 8 : 9;
@@ -257,7 +293,9 @@ for (const e of all.filter(e => e.split)){ const L = pickCities(e.c), need = e.c
 const text = '// Generated by tools/build-nations.js (roster and city-choice method of docs/NATIONS-PLAN.md). Do not edit: change the tool and run it again.\n'
   + '// The playable nations of the nations world: tier, region, hq (the style of its capital HQ picture, assets/art-src/ba-hq-<hq>.png), capital and\n'
   + '// cities (province numbers of world.js, capital first), names of promoted\n'
-  + '// cities, hand swaps. Every other country on the map is independent land. Regions are opened one rollout step at a time (open).\n'
+  + '// cities, hand swaps, mains (each city\'s main resource, one letter per city in the order of cities: c money, o oil, m materials, i iron,\n'
+  + '// e electronics, r rare materials; the resource balance rule of docs/ECONOMY.md). Every other country on the map is independent land.\n'
+  + '// Regions are opened one rollout step at a time (open).\n'
   + '// map: the province split of the nations world (tools/build-provsplit.js; new provinces appended after those of world.js, each with its parent).\n'
   + 'window.NATIONS = {"v":1,"regions":' + JSON.stringify(REGIONS) + ',"open":' + JSON.stringify(OPEN) + ',"nations":[\n' + nations.map(n => JSON.stringify(n)).join(',\n') + '\n],\n"map":' + JSON.stringify(SPLIT) + '};\n';
 if (fails.length){ console.log('NATIONS FAILED\n  ' + fails.join('\n  ')); process.exit(1); }
