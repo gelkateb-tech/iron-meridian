@@ -7217,7 +7217,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   // the overlay, fog and tint scratch canvases: the layer's own (layer size) for a full render or a big rect; for a pan strip or a small box, ones
   // the size of the rect (RPX; ax, ay: the rect's device px origin, a whole-pixel shift, so every pixel comes out the same), so a strip neither
   // clears nor copies three layer-sized canvases (a canvas drawn from and then changed again before the frame is shown is copied whole)
-  const small = !!R && dw*dh <= 0.3*layer.width*layer.height, ax = small ? dx0 : 0, ay = small ? dy0 : 0;
+  const small = !!R && dw*dh <= 0.1*layer.width*layer.height, ax = small ? dx0 : 0, ay = small ? dy0 : 0;   // (small: at most a tenth of the layer each)
   const auxC = k => { const w = small ? dw : layer.width, h = small ? dh : layer.height, a = small ? RPX[k] || (RPX[k] = document.createElement('canvas')) : layer[k] || (layer[k] = document.createElement('canvas'));
       if (a.width !== w || a.height !== h){ a.width = w; a.height = h; } return a; },
     clipA = g => { g.setTransform(1, 0, 0, 1, 0, 0); if (R){ g.beginPath(); g.rect(dx0 - ax, dy0 - ay, dw, dh); g.clip(); } };
