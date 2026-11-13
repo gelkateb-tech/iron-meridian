@@ -2622,14 +2622,7 @@ const STANDIN = (() => {
   const light = g => { g.save(); g.globalCompositeOperation = 'source-atop'; const gr = g.createLinearGradient(40, 20, 220, 240); gr.addColorStop(0, 'rgba(255,255,250,.16)'); gr.addColorStop(0.55, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.22)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); g.restore(); };
   const seam = (g, x0, y0, x1, y1, a = 0.35) => { g.strokeStyle = `rgba(20,22,18,${a})`; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
   const D = {};
-  D['u-heavy-bomber-1'] = g => {
-    for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) R(g, x - 7, y - 16, 14, 30, 6, C.dark, C.line, 2);   // engine pods hang ahead of the wing
-    P(g, mirror([[128, 16], [120, 26], [116, 58], [115, 94], [22, 168], [20, 182], [42, 183], [113, 142], [114, 196], [70, 222], [68, 233], [113, 229], [118, 247], [128, 249]]), C.body);
-    E(g, 128, 40, 6, 10, C.glass, C.line, 1.6); seam(g, 128, 52, 128, 240); seam(g, 113, 104, 30, 174, 0.25); seam(g, 143, 104, 226, 174, 0.25);
-    for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) E(g, x, y - 13, 4.5, 3, '#1c1f1a', null);
-    light(g); };
-  D['u-stealth-bomber'] = D['u-heavy-bomber-1'];   // (the Stealth Bomber's picture is still to come: the Heavy Bomber's stand-in until its file arrives)
-  D['u-heavy-bomber-2'] = D['u-heavy-bomber-1'];   // (the second bomber picture, levels 5-8, uses the same stand-in until its file arrives)
+  // (no code-drawn stand-ins are left: the Heavy and Stealth Bombers have their own pictures; add a drawing here for a picture that has not arrived yet)
   return D;
 })();
 /* ---------------- Redraw scheduling and the Battery saver (drawing side only: no game rule reads or calls any of this) ----------------
@@ -2668,9 +2661,9 @@ const ART = (() => {
   const BASE = 'assets/art/', L5 = k => [1, 2, 3, 4, 5].map(i => `b-${k}-${i}`);
   const FIRST = ['menu-background', 'panel-texture', 'flags', 'emblem-bear', 'emblem-eagle', 'emblem-lion', 'emblem-star'];   // needed by the first screen
   const REST = ['u-infantry', 'u-special-forces', 'u-tank', 'u-light-armor', 'u-artillery', 'u-rocket-artillery', 'u-anti-air', 'u-missile-launcher', 'u-supply-truck',
-    'u-jet', 'u-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
+    'u-jet', 'u-strike-fighter', 'u-heavy-bomber', 'u-stealth-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
     'i-infantry', 'i-special-forces', 'i-tank', 'i-light-armor', 'i-artillery', 'i-rocket-artillery', 'i-anti-air', 'i-missile-launcher', 'i-supply-truck',
-    'i-jet', 'i-bomber', 'i-attack-heli', 'i-transport-heli', 'i-drone', 'i-corvette', 'i-destroyer', 'i-submarine', 'i-carrier',
+    'i-jet', 'i-strike-fighter', 'i-heavy-bomber', 'i-stealth-bomber', 'i-attack-heli', 'i-transport-heli', 'i-drone', 'i-corvette', 'i-destroyer', 'i-submarine', 'i-carrier',
     ...['naval-patrol', 'awacs', 'air-superiority', 'uav-recon', 'uav-armed', 'swarm-drone', 'strike-drone', 'anti-drone', 'cargo-ship'].flatMap(n => ['u-' + n, 'i-' + n]),   // the owner's Higgsfield pictures (V3 air, the cargo ship, the missiles' menu pictures)
     'u-cruise-missile', 'i-cruise-missile', 'u-ballistic-missile', 'i-ballistic-missile',
     'fx-explosion', 'fx-smoke', 'fx-crater'];
@@ -2680,7 +2673,7 @@ const ART = (() => {
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
   const ART_SUPPLIED = [];
-  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber', 'u-infantry-figure'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
+  const OPT = ['u-infantry-figure'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
   const imgs = new Map(), waits = new Map(), failed = new Set(), cache = new Map(), stand = new Set(), durl = new Map();
   // until a promised picture arrives, an older supplied picture of the same thing beats the code-drawn stand-in (the recon UAV keeps u-drone)
   const ALT = {'u-uav-recon':'u-drone'}, rn = name => stand.has(name) && ALT[name] && imgs.has(ALT[name]) && !stand.has(ALT[name]) ? ALT[name] : name;
@@ -2866,9 +2859,8 @@ function uiconC(t, W, col, sh = 0){ const key = uiconKey(t) + '|' + W + '|' + co
 // the icon tile for the HTML UI: the same dark square as a picture tile (.ut, size classes xs..lg), the white silhouette on it
 const uIcon = (t, sz = '') => `<i class="ut uic ${sz}" aria-hidden="true">${uiconSVG(t, UIPX[sz] || 28)}</i>`;
 // the UAV's picture follows its level: unarmed recon airframe for UAV I-III, the armed one from UAV IV (per owner)
-// The Heavy Bomber's picture by level: u-heavy-bomber-1 for levels 1-4, u-heavy-bomber-2 for levels 5-8. Today the level is the nation's Mark of the type
-// (the first picture until the Supersonic Bomber, its generation 2, is researched); both pictures are stand-ins until their files arrive.
-const heavyBomberArt = lv => lv >= 5 ? 'u-heavy-bomber-2' : 'u-heavy-bomber-1';
+// The Heavy Bomber's picture (one picture for every level and generation: u-heavy-bomber; the level is kept so a second picture can be told apart again)
+const heavyBomberArt = lv => 'u-heavy-bomber';
 const artT = (t, n) => typeof S === 'undefined' || !S || !S.nations || n < 0 || !S.nations[n] ? t : t === 'drone' && uavLv(n) >= 4 ? 'drone4' : t === 'bomb' && has(n, 'bomb_g2') ? 'bomb2' : t;
 // the picture of generation g of a unit type: the key u-<unit>-<generation> once that art exists; until then the type's own picture (the armed UAV from
 // UAV IV and the second Heavy Bomber picture from its generation 2 are the two that exist today)
@@ -5546,7 +5538,7 @@ function troopModels(clusters, clBox, hexPx, now){
    A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the 4x4 beside motorized
    infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place too. */
 const TMART = {hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
-  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-bomber', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
+  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-strike-fighter', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
   int:{int:'u-jet', asf:'u-air-superiority'}, heli:'u-attack-heli', drone:{drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'}};
 const TMART_K = {hmv:0.9, jet:0.9, int:0.9, heli:0.9, drone:0.95}, TMART_K0 = 0.9;   // a picture's length as a share of its model's (the squad is wider than one soldier)
 // a picture drawn larger than its footprint in the formation (none today: the infantry squads are 3D models)
@@ -5590,11 +5582,11 @@ function tmArtDraw(q, night){ const A = q.art, D = A.k*view.s, px = figBucket(D*
    the launchers and the IFV, whose gun or cab is at the bottom of the picture: those turn half a circle more. 'drop' = an airborne drop in flight. */
 const UART = {inf:['u-infantry', 0, 0.62], para:['u-infantry', 0, 0.62], spec:['u-special-forces', 0, 0.64], at:['u-missile-launcher', 1, 0.6],
   tank:['u-tank', 0, 0.62], ifv:['u-light-armor', 1, 0.6], art:['u-artillery', 1, 0.62], mlrs:['u-rocket-artillery', 1, 0.62], sam:['u-anti-air', 1, 0.6],
-  jet:['u-bomber', 0, 0.8], int:['u-jet', 0, 0.72], heli:['u-attack-heli', 0, 0.72], drone:['u-drone', 0, 0.55],
+  jet:['u-strike-fighter', 0, 0.8], int:['u-jet', 0, 0.72], heli:['u-attack-heli', 0, 0.72], drone:['u-drone', 0, 0.55],
   frig:['u-corvette', 0, 0.62], crui:['u-destroyer', 0, 0.7], sub:['u-submarine', 0, 0.6], carr:['u-carrier', 0, 0.8], drop:['u-transport-heli', 0, 0.72], truck:['u-supply-truck', 0, 0.5]};
 const uArt = t => { const u = UART[t]; return u && ART.ready(u[0]) ? u : null; };
 Object.assign(UART, {drone:['u-uav-recon', 0, 0.58], drone4:['u-uav-armed', 0, 0.62], swarm:['u-swarm-drone', 0, 0.74], sdrone:['u-strike-drone', 0, 0.72], jam:['u-anti-drone', 0, 0.6],
-  bomb:['u-heavy-bomber-1', 0, 0.92], bomb2:['u-heavy-bomber-2', 0, 0.92], stealth:['u-stealth-bomber', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
+  bomb:['u-heavy-bomber', 0, 0.92], bomb2:['u-heavy-bomber', 0, 0.92], stealth:['u-stealth-bomber', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
 // enemy stealth UAV (level III+) seen in flight: near your SAMs or jammers, or under your AWACS
 function uavSpotted(v){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 < 0) return false; if (visLocAt(visibleSet(PLAYER), v.x, v.y)) return true;
   for (const b of S.armies) if (b.owner === PLAYER && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
@@ -6847,7 +6839,7 @@ function plateRect(x, y, n, s, minor, tag){ const D = plateDims(n, s, minor, tag
 /* The owner's unit pictures (assets/art/i-*.webp, u-*.webp): portraits in the menus and panels, and close in the forces themselves on the map (troopModels). */
 // opaque extent of each supplied picture as a share of its square (width, height): unitPic trims and centres them with this
 const PICBOX = {'u-infantry':[0.84, 0.94], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.88, 0.52], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
-  'u-anti-air':[0.44, 0.94], 'u-missile-launcher':[0.36, 0.94], 'u-supply-truck':[0.44, 0.94], 'u-jet':[0.73, 0.94], 'u-bomber':[0.79, 0.94], 'u-attack-heli':[0.65, 0.94],
+  'u-anti-air':[0.44, 0.94], 'u-missile-launcher':[0.36, 0.94], 'u-supply-truck':[0.44, 0.94], 'u-jet':[0.73, 0.94], 'u-strike-fighter':[0.79, 0.94], 'u-heavy-bomber':[0.94, 0.93], 'u-stealth-bomber':[0.97, 0.73], 'u-attack-heli':[0.65, 0.94],
   'u-transport-heli':[0.64, 0.94], 'u-drone':[0.94, 0.86], 'u-corvette':[0.22, 0.94], 'u-destroyer':[0.17, 0.94], 'u-submarine':[0.19, 0.94], 'u-carrier':[0.36, 0.95],
   'u-naval-patrol':[0.94, 0.94], 'u-awacs':[0.95, 0.94], 'u-air-superiority':[0.78, 0.94], 'u-uav-recon':[0.99, 0.81], 'u-uav-armed':[0.99, 0.82], 'u-swarm-drone':[0.95, 0.86], 'u-strike-drone':[0.85, 0.95],
   'u-anti-drone':[0.48, 0.94], 'u-cargo-ship':[0.26, 0.96], 'u-cruise-missile':[0.52, 0.95], 'u-ballistic-missile':[0.28, 0.97], 'u-icbm':[0.12, 0.97]};   // (measured by tools/prep-art.py: HF section)
@@ -9423,7 +9415,7 @@ function rUnitFace(t, k, tone){ const u = UART[k], im = u && ART.img(u[0]);
 // a newer generation's picture until its own art exists: the type's picture in a new paint scheme (g2 desert, g3 dark grey). A generation that
 // already has a picture of its own (the armed UAV) is shown as it is
 const R_TONE = ['', '', 'g2', 'g3', '', 'g3'];
-const rGenTone = (t, g) => { if (g < 2) return ''; const a = rGenArt(t, g), p = rGenArt(t, g - 1); return a !== p && UART[a] && !ART.standIn(UART[a][0]) ? '' : R_TONE[g] || 'g2'; };
+const rGenTone = (t, g) => { if (g < 2) return ''; const a = rGenArt(t, g), p = rGenArt(t, g - 1); return a !== p && UART[a] && UART[p] && UART[a][0] !== UART[p][0] && !ART.standIn(UART[a][0]) ? '' : R_TONE[g] || 'g2'; };
 // short labels for the phone, where a diamond's name has about 70 px (the card always shows the full name)
 const RSN = {'Ceramic Body Armour':'Body Armour', 'Rapid Mobilisation':'Mobilisation', 'Rough-Ground Drills':'Drills', 'Tandem Warheads':'Tandem', 'Thermal Sights':'Thermals',
   'Mountain & Arctic Training':'Mountain', 'Air-Transportable':'Airlift', '30 mm Autocannon':'Autocannon', 'Uprated Powerpack':'Powerpack', 'Amphibious Kit':'Amphibious', 'Composite Armour':'Composite',

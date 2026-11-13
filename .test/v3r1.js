@@ -47,7 +47,7 @@ const { chromium } = require('playwright');
         ck('Bremen -> ' + dn + ' embarks, not through independent land', path.length && path.some(v => G.P[v].sea) && fw === 0, out.route[dn]); a.u.inf = a.u.tank = 0; im.v3c.removeEmpty(); }
       out.straits = F.straits(); ck('the Mediterranean, Baltic and Black Sea connect to the oceans (straits)', ['Mediterranean Sea I <-> North Atlantic XXI', 'North Sea III <-> Baltic Sea III', 'Mediterranean Sea III <-> Mediterranean Sea VI'].every(x => out.straits.includes(x)), out.straits); }
     // 7. UAV picture: the owner's own u-uav-recon picture is used; the Heavy Bomber's two pictures are still code-drawn stand-ins
-    { const x = F.ART('u-uav-recon'), h1 = F.ART('u-heavy-bomber-1'), h2 = F.ART('u-heavy-bomber-2'); out.art = {reconStand:x.stand, reconReady:x.ready, h1:h1.stand, h2:h2.stand};
+    { const x = F.ART('u-uav-recon'), h1 = F.ART('u-heavy-bomber'), h2 = F.ART('u-stealth-bomber'); out.art = {reconStand:x.stand, reconReady:x.ready, h1:h1.stand, h2:h2.stand};
       ck('u-uav-recon is its own supplied picture (not a stand-in)', x.ready && !x.stand, out.art);
       ck('the Heavy Bomber pictures keep their code-drawn stand-ins until the files exist', h1.stand && h1.img && h2.stand && h2.img, out.art); }
     // 8. swarms launch from any own city and get field repairs there; bigger swarms lose more drones to SAMs
