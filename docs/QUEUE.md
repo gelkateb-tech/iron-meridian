@@ -21,31 +21,32 @@ Last updated: 2026-11-13 (overnight run).
 | Task | Model | Where it is |
 |---|---|---|
 | Picture audit: every unit, building and research item against assets and assets/art-src (read-only) | Opus (workflow) | Running |
-| Speed, round 2 with identical results: the targets not yet met (well under 0.5 s per game day; steady 60 fps while panning) | Opus | Starting (branch perf-2) |
-| Small fixes: 'BERLIN · BERLIN' map labels, phone Market table and cards, battery.js and v3air test robustness | Sonnet | Starting (branch small-fixes-2) |
-| Buildings on the map: a full new angled set in a simple clean style (33 levels + Capital HQ); nothing on the map until the art is in | Owner + another session (Gemini API) | Airbase 1-5 and a western HQ uploaded; 20 more on branch claude/zen-cori-mae3e9 |
+| Real borders: every country and province border drawn from Natural Earth 1:10m with no shape-changing simplification (game logic stays on the cells), every country clearly coloured, all borders visible; screenshots of the Middle East, Europe and the US next to a real map before merging | Opus | Started (branch borders-real) |
+| Map modes: switching Political/Relations/Supply/Terrain/... glitches the map; find and fix the cause, test every switch and fast switching; screenshots before merging | Opus | Started (branch map-modes) |
 | Research tree pictures, research unit cards, infantry icons | Opus | Done on branch research-cards; waiting for the owner |
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Nations balance pass on today's combat rules: Iran and the United States lose too much land in some games; make battery.js robust to ambient sea waves | Opus (after resources x1000) |
-| 2 | Each aircraft type gets its own 3D shape | Opus (after the research and icons job is merged: it built new aircraft models for the research pictures) |
-| 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
-| 4 | Strike fighter files renamed (bomber.webp is the Strike Fighter); the B-1 upload as the Heavy Bomber picture and the stealth-bomber upload for the Stealth Bomber, cut out and matched; screenshots before merging | Sonnet (next free slot) |
-| 5 | Start screen: the Iron Meridian menu panel in the centre (not the right side), background picture still visible; new campaign screen without region tabs: all nations on one scrollable A-Z list with flag and name and a search box; right on phones; screenshots before merging | Sonnet (next free slot) |
-| 7 | Capital HQ flag: once the new building pictures are uploaded and placed on the map, put the owning country's real flag on the capital HQ's flagpoles, drawn in code so it changes when the capital is captured (don't start yet) | Opus (after the new building pictures are on the map) |
+| 1 | Building pictures in the game: the angled pictures (regional capital HQs; Airbase, Naval Yard, Recruiting Office, Fortifications, Hospital levels) cut out and cropped, replacing the old ones on the map and in the city panel; Naval Yard on the real coast, mirrored so its piers face the sea; screenshots of Berlin and a coastal city at 3 zooms before merging | Opus (next free slot, after the audit) |
+| 2 | Speed, round 2 with identical results: the targets not yet met (well under 0.5 s per game day; steady 60 fps while panning) | Opus (after the border rebuild, which changes the map drawing) |
+| 3 | Small fixes: 'BERLIN · BERLIN' map labels, phone Market table and cards, battery.js and v3air test robustness | Sonnet |
+| 4 | Strike fighter files renamed (bomber.webp is the Strike Fighter); the B-1 upload as the Heavy Bomber picture and the stealth-bomber upload for the Stealth Bomber, cut out and matched; screenshots before merging | Sonnet |
+| 5 | Start screen: the menu panel in the centre, background still visible; new campaign screen without region tabs: all nations on one scrollable A-Z list with flag, name and a search box; phones too; screenshots before merging | Sonnet |
+| 6 | Nations balance pass (Iran and the US losing too much land): re-measure now that computer nations never start wars; battery.js robustness | Sonnet |
+| 7 | Each aircraft type gets its own 3D shape | Opus (after research-cards is merged) |
+| 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 9 | Capital HQ flag drawn in code on the HQ's flagpoles | Opus (after the building pictures are on the map) |
 
 ## Waiting on me (the owner)
 
 - **Infantry map icon:** three candidates: A flat helmeted head with a wheel for motorized, B plain head (both on branch research-cards), C the green side-view helmet (branch claude/zen-cori-mae3e9, and the uploaded helmet-icons.png). Pick one, and say "merge" for the research cards and pictures.
 - **research-slots** (branch, done 2026-11-12, never merged): slot colours on research bars and tags. Merge?
-- **Building art:** another session (branch claude/zen-cori-mae3e9) made 20 angled pictures with the Gemini API (Naval Yard, Recruiting Office, Fortifications and Hospital, levels 1-5); you uploaded Airbase 1-5 and a western HQ. Should that session carry on with the rest (Army Base, Missile Silo, Arms Industry 1-5, regional HQs)?
-  - Fortifications: the game has 3 levels, the new set has 5. Make the game 5 levels, or use 3 of them?
+- **Building art:** the angled set now has Airbase, Naval Yard (branch claude/zen-cori-mae3e9), Recruiting Office, Fortifications and Hospital levels 1-5 and the 7 regional HQs. Still missing: Army Base, Missile Silo and Arms Industry 1-5 (until then the map shows nothing for them and the city panel keeps their old pictures). Who makes them?
+  - Fortifications: the game has 3 levels, the new set has 5. For now game levels 1-3 use pictures 1, 3 and 5. Make the game 5 levels instead?
   - Hospital pictures show a red cross, a protected emblem the Red Cross asks games not to use: swap it for a green or white medical cross?
   - Recruiting Office level 1 has a flag on a pole although the style says no flags: keep or remove?
-  - The HQ upload is named 'ba-hq-wstern.png..png': rename to ba-hq-western.png?
 - **Forward Airstrip:** 5 levels or 3?
 - **Faster game days:** getting well under 0.5 s per game day may need changes to how computer nations think (quiet nations plan every 8 hours, a shorter attack-target search, reusing routes across hours). Want any of them?
 - **Market prices** are shown per 1,000 units (for example '$2.70M / 1K'). OK?
