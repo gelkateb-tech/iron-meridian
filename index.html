@@ -189,6 +189,11 @@ main{grid-column:2; grid-row:2; min-height:0; min-width:0; display:grid; grid-te
 #mini{position:absolute; right:10px; bottom:10px; width:240px; height:126px; border:1px solid var(--line); border-radius:4px; background:#05090b; cursor:pointer; touch-action:none; box-shadow:0 6px 20px rgba(0,0,0,.5)}
 #tip{position:absolute; z-index:5; width:230px; pointer-events:none; background:linear-gradient(180deg, rgba(67,72,75,.9), rgba(61,66,69,.94)), var(--tex) center / cover, rgba(66,71,74,.96); border:1px solid var(--line); border-radius:5px; padding:9px 11px; font-size:12.5px; display:flex; flex-direction:column; gap:4px; box-shadow:0 8px 24px rgba(0,0,0,.45)}
 #tip b{font-size:13.5px}
+#tip.dugtip{width:auto; max-width:230px; font-size:12.5px; line-height:1.35; border-left:3px solid #d6b66e}
+#tip.dugtip .dtt{font-weight:700; color:#f2cf6a}
+.si-dug{display:flex; gap:7px; align-items:flex-start; padding:6px 8px; border-left:3px solid #6a6450; background:rgba(0,0,0,.14); border-radius:3px}
+.si-dug.on{border-left-color:#d6b66e}
+.si-dug .digsh{flex:none; margin-top:1px}
 #tip .r{display:flex; justify-content:space-between; gap:8px; font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11.5px; color:var(--muted)}
 #tip .r span:last-child{color:var(--fg)}
 
@@ -2769,6 +2774,13 @@ const uiconKey = t => UICON_OF[t] || (UICON_D[t] ? t : 'stack');
 const UICONP = new Map();
 function uiconPath(t){ const k = uiconKey(t); let p = UICONP.get(k); if (!p){ p = new Path2D(UICON_D[k]); UICONP.set(k, p); } return p; }
 const uiconSVG = (t, px = 24, cls = '') => `<svg${cls ? ` class="${cls}"` : ''} width="${px}" height="${px}" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="${UICON_D[uiconKey(t)]}"/></svg>`;
+// the part of the 32 x 32 icon box a type's icon covers: [x0, y0, x1, y1] (measured once per icon)
+const UICONBB = new Map();
+function uiconBox(t){ const k = uiconKey(t); let b = UICONBB.get(k); if (b) return b; b = [3, 3, 29, 29];
+  try { const N = 64, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'); g.scale(N/32, N/32); g.fill(uiconPath(t)); const d = g.getImageData(0, 0, N, N).data; let x0 = N, y0 = N, x1 = -1, y1 = -1;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (d[(y*N + x)*4 + 3] > 60){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 > x0) b = [x0/2, y0/2, (x1 + 1)/2, (y1 + 1)/2]; } catch (e) {}
+  UICONBB.set(k, b); return b; }
 // the icon on a W x W device-pixel canvas in colour col (sh: a soft dark shadow under it, for icons on light or busy ground)
 const UICONC = new Map();
 function uiconC(t, W, col, sh = 0){ const key = uiconKey(t) + '|' + W + '|' + col + '|' + sh; let c = UICONC.get(key); if (c) return c; if (UICONC.size > 400) UICONC.clear();
@@ -4826,12 +4838,12 @@ function drawSats(now){ if (!S.sats || !S.sats.length) return; ctx.save(); ctx.s
 let ILEG = '';
 function drawIntelLegend(vis, nUnk){ const el = document.getElementById('ilegend'); if (!el) return; const k = (vis.locs.length && nUnk) || vis.uav.size ? 'on' : ''; if (k === ILEG) return; ILEG = k; el.hidden = !k; }
 // unidentified contact: the flat plate with a '?' in a neutral cell and a small radar mark in the tab (no type, size or nation colour); static
-function unkPlate(x, y, s, now = performance.now()){ const r = DIA/2*Math.max(0.85, Math.min(1.1, s)), X = snapD(x), Y = snapD(y), CT = SIDE_T.other, rc = Math.max(1.5, r*0.16);   // an unidentified radar contact: a grey diamond with a dashed edge and a '?'
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1.4; diaPath(ctx, X, Y, r, rc); ctx.fillStyle = CT[2]; ctx.fill(); ctx.restore();
-  const gr = ctx.createLinearGradient(0, Y - r, 0, Y + r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); diaPath(ctx, X, Y, r - 1, rc); ctx.fillStyle = gr; ctx.fill();
-  ctx.save(); ctx.setLineDash([3, 2]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.9)'; diaPath(ctx, X, Y, r + 0.5, rc); ctx.stroke(); ctx.restore();
+function unkPlate(x, y, s, now = performance.now()){ const r = BADGE/2*0.86, X = snapD(x), Y = snapD(y), CT = SIDE_T.other, rc = 3;   // an unidentified radar contact: a grey badge with a dashed edge and a '?' (no flag, type or count)
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1.4; roundRect(ctx, X - r, Y - r, 2*r, 2*r, rc); ctx.fillStyle = CT[2]; ctx.fill(); ctx.restore();
+  const gr = ctx.createLinearGradient(0, Y - r, 0, Y + r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(ctx, X - r + 1, Y - r + 1, 2*r - 2, 2*r - 2, rc - 0.5); ctx.fillStyle = gr; ctx.fill();
+  ctx.save(); ctx.setLineDash([3, 2]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.9)'; roundRect(ctx, X - r - 0.5, Y - r - 0.5, 2*r + 1, 2*r + 1, rc + 0.5); ctx.stroke(); ctx.restore();
   ctx.font = `italic 800 ${Math.round(r*1.05)}px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.4; ctx.strokeStyle = 'rgba(8,12,10,.8)'; ctx.strokeText('?', X, Y + 1); ctx.fillStyle = '#ffffff'; ctx.fillText('?', X, Y + 1);
-  const bx = X + r*0.62, by = Y - r*0.62; ctx.beginPath(); ctx.arc(bx, by, 2.2, 0, Math.PI*2); ctx.fillStyle = '#9fd8ff'; ctx.fill(); ctx.beginPath(); ctx.arc(bx, by, 4.4, -Math.PI*0.8, -Math.PI*0.2); ctx.strokeStyle = 'rgba(159,216,255,.7)'; ctx.lineWidth = 1.1; ctx.stroke();
+  const bx = X + r - 1, by = Y - r + 1; ctx.beginPath(); ctx.arc(bx, by, 2.2, 0, Math.PI*2); ctx.fillStyle = '#9fd8ff'; ctx.fill(); ctx.beginPath(); ctx.arc(bx, by, 4.4, -Math.PI*0.8, -Math.PI*0.2); ctx.strokeStyle = 'rgba(159,216,255,.7)'; ctx.lineWidth = 1.1; ctx.stroke();
   return {x:X - r - 2, y:Y - r - 2, w:2*r + 4, h:2*r + 4}; }
 const GO = new Map();
 function armyPos(a){
@@ -4954,10 +4966,10 @@ const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max
    fixed bearing of their own at rest (turning smoothly, never offset per frame); night darkens them like the map. Drawn over the path lines and
    under the names, the HQ and the counters; only what is on screen (and a margin) is drawn, at most 40 groups (24 with low effects) a frame,
    those nearest the middle of the view first. Wings in flight keep their flat icons. Settings: 'Troop models' (off: the counters only). */
-const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['sol'], at:['sol'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
+const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['ssf'], at:['sat'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
   jet:['jet'], bomb:['jet'], stealth:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
-const TMG = {sol:[1.8, 0.5], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
+const TMG = {sol:[1.8, 0.42], sat:[1.8, 0.42], ssf:[1.8, 0.42], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
   frig:[7.4, 1.25], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[17, 0.9], int:[17, 0.9], heli:[17, 0.82], drone:[10.6, 0.66]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter)
 /*@TEST*/const TMDBG = [];/*@ENDTEST*/
 const TMD = new Map(), TMCELL = new Map(), TMLAST = new Map(), TMMIP = new Map(), TMLUT = new Map(), TMH = new Map(), TMSLOT = new Map(), TMEX = new Map(); let TMSH = null, TMSW = 0, TMCB = 0, TMNEW = 0;
@@ -5019,8 +5031,9 @@ let TMFOAM = null; function tmFoam(){ if (TMFOAM) return TMFOAM; const N = 128, 
   g.fillStyle = gr; g.fillRect(0, 0, N, N); g.globalCompositeOperation = 'destination-in'; const m = g.createLinearGradient(0, 0, N, 0); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(0.3, 'rgba(0,0,0,.6)'); m.addColorStop(0.7, 'rgba(0,0,0,.6)'); m.addColorStop(1, 'rgba(0,0,0,1)'); g.fillStyle = m; g.fillRect(0, 0, N, N);
   return (TMFOAM = c); }
 // a model's class: 'g' ground, 's' naval, 'a' air
+const TM_FOOT = new Set(['sol', 'sat', 'ssf']);   // the squads (on the march: a walking bob)
 const TM_CLS = t => /^(frig|sub|crui|carr)$/.test(t) ? 's' : /^(jet|int|heli|drone)$/.test(t) ? 'a' : 'g';
-const TM_CT = {g:['sol', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'sub', 'crui', 'carr'], a:['jet', 'int', 'heli', 'drone']};
+const TM_CT = {g:['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'sub', 'crui', 'carr'], a:['jet', 'int', 'heli', 'drone']};
 // the unit mix of some armies: count per unit type (troops embarked at sea count as their transport, 'lst')
 function tmUnits(list){ const u = {}; for (const q of list){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ u.lst = (u.lst || 0) + count(q); continue; }
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) u[t] = (u[t] || 0) + q.u[t]; } return u; }
@@ -5080,7 +5093,7 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW() + '|' + TMAS; let E
 let LAY_R = null;   // this frame's roles (draw)
 /*@TEST*/const LAYEV = new Map();/*@ENDTEST*/
 const PLAY = new Map(), PLAYH = new Map(), PLAG = new Map(), PREG = new Map(), LASTSLOT = new Map(), WGM = new Map(), OFS = new Map(); let PLAY_SW = 0; /*@TEST*/let PLAY_MS = 0, PLAY_N = 0;/*@ENDTEST*/
-const PLATE_GAP = 6, TM_PLATE = [-34, -50 - PLATE_GAP, 37, 1 - PLATE_GAP], TM_PLATE_C = -26 - PLATE_GAP;   // a counter's box round its anchor (css px): pinned just above the spot its troops stand on
+const PLATE_GAP = 6, TM_PLATE = [-25, -50 - PLATE_GAP, 27, 1 - PLATE_GAP], TM_PLATE_C = -21 - PLATE_GAP;   // a badge's box round its anchor (css px, the touch size with its marks): pinned just above the spot its troops stand on
 const roleOwner = r => +r.slice(1, r.indexOf(':'));
 // a role: kind, holder and the model types it shows (as a set: a spot changes only when a type comes or goes, not with the counts)
 // how many models a force shows: up to four, fewer in a small province (two forces and a battle's gap must fit inside it) or with low effects
@@ -5269,7 +5282,7 @@ const pfFresh = now => { if (PF_S.S !== S){ PF_S.S = S; PF_S.t = now; } return n
    there as its own counter fades back in at its own spot (in place: nothing slides). A tap on it is a tap on that force (HITX, sat). The layout
    never depends on what is selected (a tap must find the stack where it was). */
 const STKSLOT = new Map();
-const STK_R1 = [[-1, -1], [1, -1], [-1, 1], [1, 1]];   // (the four sides of a diamond, in lattice steps: upper left, upper right, lower left, lower right)
+const STK_R1 = [[-1, 0], [1, 0], [0, -1], [0, 1]];   // (the four sides of a badge, in lattice steps: left, right, above, below)
 function satAdd(L, c){ const key = c.owner + (pbFight(c) ? 'f' : ''), S0 = L.sats || (L.sats = []), MX = L.tag ? 8 : STK_R1.length; let q = S0.find(o => o.key === key);
   if (!q){ if (S0.length >= MX) q = S0.find(o => forceSide(o.list[0]) === forceSide(c.list[0])) || S0[S0.length - 1]; else S0.push(q = {key, owner:c.owner, cl:[], list:[], n:0}); }
   q.cl.push(c); q.list.push(...c.list); q.n += c.n; }
@@ -5277,7 +5290,7 @@ function satPlace(shown, near, now){ const placed = [];
   for (const o of shown){ const L = o.c; if (!L.sats) continue; const lid = L.list[0].id, tagM = L.tag;
     const used = new Set(), mem = q => STKSLOT.get(lid + '|' + q.key + (tagM ? 't' : 'd'));
     const quietOf = q => { const a = q.list.reduce((b, z) => count(z) > count(b) ? z : b, q.list[0]); return a.owner !== PLAYER && !q.cl.some(pbFight) && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)); };
-    const at = (q, i) => { const mq = q.mq ?? (q.mq = quietOf(q)); if (!tagM){ const u = DIA/2 + 1.5, [a, b] = STK_R1[i]; return [L.x + a*u, L.y + b*u, mq]; }
+    const at = (q, i) => { const mq = q.mq ?? (q.mq = quietOf(q)); if (!tagM){ const u = plateDims(L.n + (L.mn || 0), 1, clQuiet(L), false).w/2 + plateDims(q.n, 1, mq, false).w/2 + 4, [a, b] = STK_R1[i]; return [L.x + a*u, L.y + b*u, mq]; }
       const D0 = plateDims(L.n + (L.mn || 0), 1, clQuiet(L), true), D1 = plateDims(q.n, 1, mq, true), step = D1.w + 8, j = i >> 1, sd = i & 1 ? 1 : -1;   // (a row: left, right, further left...)
       return [L.x + sd*(D0.w/2 + 6 + D1.w/2 + j*step), L.y, mq]; };
     const boxOf = (x, y, n, mq) => { const r = plateRect(x, y, n, 1, mq, tagM); return [r.x, r.y, r.x + r.w, r.y + r.h]; };
@@ -5299,7 +5312,7 @@ function satPlace(shown, near, now){ const placed = [];
 function satDraw(q, now){ const lead = q.list.reduce((b, z) => count(z) > count(b) ? z : b, q.list[0]), fighting = q.cl.some(pbFight), selected = q.list.some(z => z.id === sel.army || sel.group.includes(z.id));
   const [t0, mixed] = ucTypes(q.list), icon = ucIcon(t0, lead.owner), tk = forceSide(lead), fi = q.quiet ? false : fighting, sl = selected;
   counter.ang = null; counter.dug = dugIn(lead);
-  return q.tag ? tagDraw(q.x, q.y, lead, q.list, q.n, tk, icon, sl, false, fi, q.quiet, now) : diaDraw(q.x, q.y, lead, q.list, q.n, tk, icon, mixed && !lead.air, sl, false, fi, q.quiet, now); }
+  return q.tag ? tagDraw(q.x, q.y, lead, q.list, q.n, tk, icon, sl, false, fi, q.quiet, now, mixed && !lead.air) : diaDraw(q.x, q.y, lead, q.list, q.n, tk, icon, mixed && !lead.air, sl, false, fi, q.quiet, now); }
 function plateFade(clusters, k, now){ const hud = hudRects(), mg = 300, shown = [], cell = 96, grid = new Map();
   const near = q => { const out = []; for (let gx = Math.floor(q[0]/cell); gx <= Math.floor(q[2]/cell); gx++) for (let gy = Math.floor(q[1]/cell); gy <= Math.floor(q[3]/cell); gy++){ const L = grid.get(gx + ',' + gy); if (L) for (const o of L) if (!out.includes(o)) out.push(o); } return out; };
   const put = o => { const q = o.b; for (let gx = Math.floor(q[0]/cell); gx <= Math.floor(q[2]/cell); gx++) for (let gy = Math.floor(q[1]/cell); gy <= Math.floor(q[3]/cell); gy++){ const kk = gx + ',' + gy; let L = grid.get(kk); if (!L) grid.set(kk, L = []); L.push(o); } };
@@ -5307,12 +5320,11 @@ function plateFade(clusters, k, now){ const hud = hudRects(), mg = 300, shown = 
   for (const c of clusters){ c.pv = true; c.mlist = null; c.mn = 0; c.sats = null; }
   const ord = clusters.filter(c => !c.moving && c.wx != null && c.x > -mg && c.y > -mg && c.x < cw + mg && c.y < ch + mg).sort((p, q) => pri(q) - pri(p));
   for (const c of ord){ const key = c.list[0].id, E = PF.get(key), was = !E || E.S !== S ? true : E.on, b = pfBox(c, k), m = was ? PF_IN/2 : PF_OUT/2, bt = [b[0] - m, b[1] - m, b[2] + m, b[3] + m];
-    // (the nearest counter it would touch covers it. Two diamonds touch by their own shape (the sum of their half-widths, measured corner to corner
-    // along both axes), not by their boxes: diamonds that only meet at their bounding boxes' corners both stay. Hysteresis: a hidden one comes
-    // back only 6 px clear of the gap)
+    // (the nearest counter it would touch covers it. Two far badges touch by their own squares (the sum of their half-sides along both axes),
+    // not by their boxes with the marks. Hysteresis: a hidden one comes back only 6 px clear of the gap)
     const dc = c.tag ? 0 : plateDims(c.n, 1, pbQuiet(c), false).d/2;
     let hit = null, hd = Infinity; for (const o of near(bt)){ const q = o.b; let on;
-      if (!c.tag && !o.c.tag){ const ro = plateDims(o.c.n, 1, pbQuiet(o.c), false).d/2; on = Math.abs(o.c.x - c.x) + Math.abs(o.c.y - c.y) < dc + ro + 2 + (was ? 0 : 6); }
+      if (!c.tag && !o.c.tag){ const ro = plateDims(o.c.n, 1, pbQuiet(o.c), false).d/2; on = Math.max(Math.abs(o.c.x - c.x), Math.abs(o.c.y - c.y)) < dc + ro + 1 + (was ? 0 : 6); }
       else on = bt[0] < q[2] + o.m && bt[2] > q[0] - o.m && bt[1] < q[3] + o.m && bt[3] > q[1] - o.m;
       if (on){ const d = (o.c.x - c.x)**2 + (o.c.y - c.y)**2 + (o.c.owner === c.owner && !pbFight(c) && !pbFight(o.c) ? 0 : 1e6); if (d < hd){ hd = d; hit = o; } } }   // (a power's own counter it may join comes first: fewer stand beside)
     if (!hit){ const o = {c, b, m}; shown.push(o); put(o); continue; }
@@ -5425,7 +5437,7 @@ function troopModels(clusters, clBox, hexPx, now){
   ctx.globalAlpha = 1;
   const nightK = Math.round((1 - viewLight().day)*4)/4;
   for (const q of groups){ let r = null; const ua = unitAnim(q.c.list, now); if (ua && (ua.dx || ua.dy || ua.rot)){ q.x += ua.dx; q.y += ua.dy; q.box = [q.box[0] + ua.dx, q.box[1] + ua.dy, q.box[2] + ua.dx, q.box[3] + ua.dy]; q.ang += ua.rot; }   // (fx.js: recoil, the hit shake, a ship's rock)
-    if (q.c.run > 0.02 && !q.air){ const wl = q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2), L = moveFig({id:q.id, key:q.id + '|' + q.slot, x:q.x, y:q.y, ang:q.art ? q.ang : q.d*Math.PI/8, len:wl*view.s, wl, run:q.c.run, pv:q.c.pv, sea:q.sea, foot:q.t === 'sol', top:!!q.art, tn:dustTone(q.c.list[0].at)}, now);
+    if (q.c.run > 0.02 && !q.air){ const wl = q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2), L = moveFig({id:q.id, key:q.id + '|' + q.slot, x:q.x, y:q.y, ang:q.art ? q.ang : q.d*Math.PI/8, len:wl*view.s, wl, run:q.c.run, pv:q.c.pv, sea:q.sea, foot:TM_FOOT.has(q.t), top:!!q.art, tn:dustTone(q.c.list[0].at)}, now);
       if (L.dy){ q.y += L.dy; q.box = [q.box[0], q.box[1] + L.dy, q.box[2], q.box[3] + L.dy]; } if (L.rot) q.ang += L.rot; }   // (fx.js: on the move, dust behind vehicles, a ship's wake, an infantry bob and a ship's rock)
     if (q.art){ ctx.globalAlpha = q.a; if (tmArtDraw(q, nightK)) r = {box:q.box, lvl:'art'}; ctx.globalAlpha = 1; } else r = tmDraw(q.t, q.d, q.x, q.y, q.s, lut, now, q.a, !q.c.moving);
     if (ua && ua.red > 0.02) unitHitMark(q.box[0], q.box[1], q.box[2] - q.box[0], q.box[3] - q.box[1], ua.red*q.a);
@@ -5438,28 +5450,28 @@ function troopModels(clusters, clBox, hexPx, now){
    From the crossover zoom (tmFade) each force's formation (tmForm: its unit types most numerous first, up to four) stands on the map as the owner's
    pictures (assets/art/u-*.webp, seen from above, nose up), each at world scale (it grows with the map like the cities; below the crossover the
    diamond shows instead, so a picture is never drawn small), turned to the force's heading (the drawn heading turns at a capped rate: smooth), with a
-   soft contact shadow (its side shows on its flag tag, not on the ground). Infantry shows u-infantry-figure once that picture is supplied (ART_SUPPLIED),
-   u-infantry until then. A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the
-   4x4 beside motorized infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place. */
-const TMART = {sol:{inf:'@inf', para:'u-infantry', spec:'u-special-forces', at:'u-infantry'}, hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
+   soft contact shadow (its side shows on its badge, not on the ground). Infantry is not a picture: a squad seen from straight above is a ring of
+   helmets that reads as blobs at map size, so riflemen and paratroopers (sol), anti-tank teams (sat) and special forces (ssf) stand as small 3D
+   soldiers (units3d.js mSquad: two or three men each, lit like the vehicle models, each with his own soft shadow; baked to m-sol, m-sat, m-ssf).
+   A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the 4x4 beside motorized
+   infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place too. */
+const TMART = {hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
   frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-bomber', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
   int:{int:'u-jet', asf:'u-air-superiority'}, heli:'u-attack-heli', drone:{drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'}};
-const TMART_K = {sol:1.08, hmv:0.9, jet:0.9, int:0.9, heli:0.9, drone:0.95}, TMART_K0 = 0.9;   // a picture's length as a share of its model's (the squad is wider than one soldier)
-// a picture drawn larger than its footprint in the formation: the squad of four stands in a diamond with open corners, so it is drawn a quarter larger
-// (its soldiers read as soldiers, not gravel) while its place in the formation and the force's spot stay as they are
-const TMART_DRAW = {sol:1.28};
-const TMARTC = new Map(), TMART_DEF = {sol:'inf', jet:'jet', int:'int', drone:'drone', frig:'frig'};   // (the unit type whose picture sets a model's footprint in the formations and the layout)
+const TMART_K = {hmv:0.9, jet:0.9, int:0.9, heli:0.9, drone:0.95}, TMART_K0 = 0.9;   // a picture's length as a share of its model's (the squad is wider than one soldier)
+// a picture drawn larger than its footprint in the formation (none today: the infantry squads are 3D models)
+const TMART_DRAW = {};
+const TMARTC = new Map(), TMART_DEF = {jet:'jet', int:'int', drone:'drone', frig:'frig'};   // (the unit type whose picture sets a model's footprint in the formations and the layout)
 // which of the pictures have arrived (a signature, set once a frame): the formations and the force spots are worked out again when it changes
 let TMAS = 0; const tmArtSig = () => { let k = 0, i = 0; for (const m in TMART){ i++; if (tmArtDef(m)) k += 2**i; } return k; };
 // the footprint a model type's picture gives it in the formations and the layout: known from the start (not as each picture loads), so the
 // force spots are not worked out again while the pictures arrive; none for a type whose picture is a stand-in or failed (its 3D model shows)
 const tmArtDef = m => { if (!tmOn()) return null; let n = TMART[m]; if (n && typeof n === 'object') n = n[TMART_DEF[m]]; if (!n) return null;
-  n = n === '@inf' ? 'u-infantry' : n === '@drone' ? 'u-uav-recon' : n; return ART.standIn(n) || ART.failed(n) ? null : tmArtGeom(m, n); };
+  n = n === '@drone' ? 'u-uav-recon' : n; return ART.standIn(n) || ART.failed(n) ? null : tmArtGeom(m, n); };
 // the picture model type m shows for unit type ut of owner o: {n (picture), Lw (its length in world px), hw (half its width, world px), k (the square
 // it is drawn in, world px)}; null where that type has no picture of its own yet (its 3D model stands in)
 function tmArt(m, ut, o){ let n = TMART[m]; if (n && typeof n === 'object') n = n[ut]; if (!n) return null;
-  if (n === '@inf') n = ART.ready('u-infantry-figure') ? 'u-infantry-figure' : 'u-infantry';
-  else if (n === '@bomb') n = heavyBomberArt(artT('bomb', o) === 'bomb2' ? 5 : 1);   // (the second picture once the Supersonic Bomber, generation 2, is researched)
+  if (n === '@bomb') n = heavyBomberArt(artT('bomb', o) === 'bomb2' ? 5 : 1);   // (the second picture once the Supersonic Bomber, generation 2, is researched)
   else if (n === '@drone') n = artT('drone', o) === 'drone4' ? 'u-uav-armed' : 'u-uav-recon';
   return ART.ready(n) && !ART.standIn(n) ? tmArtGeom(m, n) : null; }
 // a picture's measures as model type m (its opaque box from the table tools/prep-art.py measured, so they are known before it loads)
@@ -5534,16 +5546,28 @@ function dustSprite(i, tn){ const key = 'dust' + i + tn; if (SPR[key]) return SP
     gr.addColorStop(0, `rgba(${a[0]},${a[1]},${a[2]},.5)`); gr.addColorStop(0.6, `rgba(${b[0]},${b[1]},${b[2]},.26)`); gr.addColorStop(1, `rgba(${b[0]},${b[1]},${b[2]},0)`);
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill(); }
   return (SPR[key] = c); }
-// sandbag shield for a plate: a small dark shield with a khaki rim and three stacked sandbags (cached per device size)
-const SBM = new Map();
+// the dug-in shield on a badge (counter.dug: rules/combat.js dugIn): a small dark shield with a khaki-yellow rim and a sandbag line inside it, two
+// bags below and one on top, drawn as whole device-pixel blocks so it stays crisp at 1x, 2x and 3x (cached per device size). Returns its box on
+// screen (css px): a hover or a tap on it explains it (DIG_TIP)
+const SBM = new Map(); let DUGHIT = [];   // DUGHIT: this frame's shields on screen (their own small hit boxes)
+function sbmPaint(W, H){ const c = document.createElement('canvas'); c.width = W + 2; c.height = H + 2; const g = c.getContext('2d'), u = W/10;
+  g.translate(1, 1); g.beginPath(); g.moveTo(0.4*u, 0.6*u); g.lineTo(W - 0.4*u, 0.6*u); g.lineTo(W - 0.4*u, H*0.5); g.quadraticCurveTo(W - 0.6*u, H*0.86, W/2, H - 0.3*u); g.quadraticCurveTo(0.6*u, H*0.86, 0.4*u, H*0.5); g.closePath();
+  g.fillStyle = 'rgba(14,16,12,.95)'; g.fill(); g.lineWidth = Math.max(1, 1.1*u); g.strokeStyle = '#d6b66e'; g.stroke();
+  const bh = Math.max(2, Math.round(2*u)), gp = Math.max(2, Math.round(u)), le = Math.round(5*u) - Math.ceil(gp/2), x0 = Math.round(2*u), yt = Math.round(3*u), yb = Math.round(6*u), rr = u >= 2 ? 0.45*u : 0;
+  const bag = (x, y, w) => { g.fillStyle = '#f2cf6a'; if (rr){ roundRect(g, x, y, w, bh, rr); g.fill(); } else g.fillRect(x, y, w, bh);
+    if (bh >= 4){ g.fillStyle = 'rgba(120,90,30,.85)'; g.fillRect(x + (rr ? 1 : 0), y + bh - 1, w - (rr ? 2 : 0), 1); } };   // (2x and up: a darker underside)
+  bag(Math.round(3*u), yt, Math.round(7*u) - Math.round(3*u));   // the top bag, over the gap between the two below
+  bag(x0, yb, le - x0); bag(W - le, yb, le - x0);
+  return c; }
 function sandbagMark(x, y, ps){ const W = Math.max(9, Math.round(11*ps*dpr)), H = Math.round(W*1.14), key = W; let c = SBM.get(key);
-  if (!c){ c = document.createElement('canvas'); c.width = W + 2; c.height = H + 2; const g = c.getContext('2d'), u = W/10;
-    g.translate(1, 1); g.beginPath(); g.moveTo(0.4*u, 0.6*u); g.lineTo(W - 0.4*u, 0.6*u); g.lineTo(W - 0.4*u, H*0.5); g.quadraticCurveTo(W - 0.6*u, H*0.86, W/2, H - 0.3*u); g.quadraticCurveTo(0.6*u, H*0.86, 0.4*u, H*0.5); g.closePath();
-    g.fillStyle = 'rgba(14,16,12,.94)'; g.fill(); g.lineWidth = Math.max(1, 1.1*u); g.strokeStyle = '#c9ad74'; g.stroke();
-    const bag = (bx, by, bw, bh, tone) => { g.beginPath(); g.ellipse(bx, by, bw/2, bh/2, 0, 0, Math.PI*2); g.fillStyle = tone; g.fill(); g.lineWidth = Math.max(0.6, 0.45*u); g.strokeStyle = 'rgba(30,24,14,.9)'; g.stroke(); };
-    bag(W*0.33, H*0.62, W*0.36, H*0.2, '#cdb27a'); bag(W*0.67, H*0.62, W*0.36, H*0.2, '#bba06a'); bag(W*0.5, H*0.41, W*0.38, H*0.2, '#ddc58e');
-    if (SBM.size > 12) SBM.clear(); SBM.set(key, c); }
-  ctx.drawImage(c, Math.round((x - W/2/dpr)*dpr)/dpr - 1/dpr, Math.round((y - H/2/dpr)*dpr)/dpr - 1/dpr, c.width/dpr, c.height/dpr); }
+  if (!c){ c = sbmPaint(W, H); if (SBM.size > 12) SBM.clear(); SBM.set(key, c); }
+  const X = Math.round((x - W/2/dpr)*dpr)/dpr - 1/dpr, Y = Math.round((y - H/2/dpr)*dpr)/dpr - 1/dpr; ctx.drawImage(c, X, Y, c.width/dpr, c.height/dpr);
+  return {x:X - 1, y:Y - 1, w:c.width/dpr + 2, h:c.height/dpr + 2}; }
+// the same shield as a small picture for the panels (Army Info)
+const digShieldHTML = (px = 14) => { const W = Math.round(px*(window.devicePixelRatio || 1)), H = Math.round(W*1.14); let u = '';
+  try { u = sbmPaint(W, H).toDataURL(); } catch (e) {} return u ? `<img class="digsh" src="${u}" width="${px + 2/(window.devicePixelRatio || 1)}" alt="" aria-hidden="true">` : ''; };
+// the shield under a point (css px), if any
+const dugHitAt = (x, y) => DUGHIT.find(r => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) || null;
 // sandbag ring: an elliptical berm of bags (two tones, dark seams, lit tops) with a soft shadow, rx/ry in css px (cached per bucket)
 const SBR = new Map();
 function sandbagRing(cx, cy, rx, ry, now, alpha = 1){
@@ -6679,22 +6703,25 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   const k = out.map(b => b.map(Math.round).join(',')).join(';');   // v: bumped whenever the boxes change, so the names placed against them are placed again (NAMEC)
   return (HUDR = {t:now, r:out, k, v:k === k0 ? v0 : v0 + 1}).r; }
-// counter sizes (css px, one size at every zoom; on a touch screen a little larger): DIA the diamond's width, TAG_H the flag tag's height
-const UC_TOUCH = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })(), DIA = UC_TOUCH ? 32 : 28, TAG_H = UC_TOUCH ? 20 : 18;
+// counter size (css px, one size at every zoom; on a touch screen a little larger): BADGE the square badge's side (a quiet foreign or independent
+// force's badge is a little smaller)
+const UC_TOUCH = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })(), BADGE = UC_TOUCH ? 36 : 32;
 const UCD = new Map();
-// a counter's measures for strength n: the diamond (tag false) or the flag tag (tag true); minor = a quiet foreign or independent force (a little
-// smaller). w, h: the shape (C + tab = w), bars: the health strip below it, up: the marks above it; the diamond's count badge: bw x bh centred at (bx, by)
-function plateDims(n, s, minor, tag){ const key = (tag ? 't' : 'd') + (minor ? 'm' : '') + n; let D = UCD.get(key); if (D) return D; if (UCD.size > 600) UCD.clear();
-  if (!tag){ const d = minor ? Math.round(DIA*0.82) : DIA, fz = minor ? 11 : 12; ctx.font = badgeFont(fz); const tw = ctx.measureText(String(n)).width, bh = minor ? 13 : 14, bw = Math.max(bh, Math.ceil(tw + 7));   // (the strength in an upright face, never under 11 px: readable at 1x on every side colour)
-    D = {tag:false, d, w:d, h:d, C:d/2, tab:d/2, sk:0, ps:1, fz, tw, bw, bh, bx:Math.round(d*0.4), by:Math.round(d*0.34), up:3, bars:0}; }
-  else { const h = minor ? TAG_H - 2 : TAG_H, fh = Math.round(h*0.56), fw = Math.round(fh*4/3), ic = Math.round(h*0.8), fz = Math.round(h*0.68*2)/2; ctx.font = badgeFont(fz); const tw = ctx.measureText(String(n)).width;
-    const w = Math.round(3 + fw + 3 + ic + 2 + tw + 5); D = {tag:true, w, h, C:w/2, tab:w/2, sk:0, ps:1, fz, tw, fh, fw, ic, up:2, bars:0}; }
+// the count's face on the badge: a bold upright sans (never under 9.5 px: readable at 1x on every side colour)
+const countFont = fz => `700 ${fz}px ${BODY}`;
+// a badge's measures for strength n (the same square zoomed out on the force's spot and zoomed in over its pictures; tag kept for the callers);
+// minor = a quiet foreign or independent force (a little smaller). w = h = d: the square's side; from the top: the flag fh high at fy, the type
+// icon ic square at iy, the count's baseline at ny in a fz px face; rr: the corner radius; up: the marks above it; bars: nothing under it
+function plateDims(n, s, minor, tag){ const key = (minor ? 'm' : 'b') + n; let D = UCD.get(key); if (D) return D; if (UCD.size > 600) UCD.clear();
+  const S0 = minor ? Math.round(BADGE*0.86) : BADGE, k = S0/32, fh = Math.round(8*k), fy = Math.round(2.2*k*2)/2, ic = Math.round(11*k), iy = fy + fh + Math.round(1.1*k*2)/2;
+  let fz = Math.max(9.5, Math.round(11*k*2)/2); ctx.font = countFont(fz); let tw = ctx.measureText(String(n)).width;
+  while (tw > S0 - 5 && fz > 8){ fz -= 0.5; ctx.font = countFont(fz); tw = ctx.measureText(String(n)).width; }   // (a long number: a smaller face, never past the edge)
+  D = {tag, w:S0, h:S0, d:S0, C:S0/2, tab:S0/2, sk:0, ps:1, fz, tw, fh, fw:Math.round(fh*4/3), fy, ic, iy, ny:S0 - Math.round(2.2*k*2)/2, rr:Math.max(2.5, Math.round(S0*0.11*2)/2), up:4, bars:0};
   UCD.set(key, D); return D; }
 const snapD = v => Math.round(v*dpr)/dpr;   // to whole device pixels
-// the screen box of a counter (diamond or tag) centred at (x, y), its marks, badge and bars included, without drawing it
+// the screen box of a badge centred at (x, y), its marks included (the stacked card of a mixed force pokes 3 px out at the upper right), without drawing it
 function plateRect(x, y, n, s, minor, tag){ const D = plateDims(n, s, minor, tag);
-  if (!tag){ const r = D.d/2, x0 = x - r - 2, x1 = Math.max(x + r + 2, x + D.bx + D.bw/2 + 1); return {x:x0, y:y - r - D.up, w:x1 - x0, h:2*r + D.up + D.bars + 2}; }
-  return {x:x - D.w/2 - 2, y:y - D.h/2 - D.up, w:D.w + 4, h:D.h + D.up + D.bars + 3}; }
+  return {x:x - D.w/2 - 2, y:y - D.h/2 - D.up, w:D.w + 5, h:D.h + D.up + 3}; }
 /* The owner's unit pictures (assets/art/i-*.webp, u-*.webp): portraits in the menus and panels, and close in the forces themselves on the map (troopModels). */
 // opaque extent of each supplied picture as a share of its square (width, height): unitPic trims and centres them with this
 const PICBOX = {'u-infantry':[0.84, 0.94], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.88, 0.52], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
@@ -6840,68 +6867,58 @@ function hqCanvas(){ const i = flagIdx(PLAYER), im = ART.img('flags');
   if (i >= 0 && !im && !ART.failed('flags')) return null;   // the atlas is still loading: try again next frame
   const CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES).own, key = dpr + '|' + HQ_KB + '|' + i + '|' + CT[0]; let c = HQ_C.get(key);
   if (!c){ c = hqPaint(dpr*HQ_KB, im, i, CT); if (HQ_C.size > 8) HQ_C.clear(); HQ_C.set(key, c); } return c; }
-/* ---------------- Unit counters by zoom (Conflict of Nations manner, original art) ----------------
-   ZOOMED OUT every force is a small DIAMOND (a square turned 45 degrees) of one pixel size at every zoom, in its side's colour (sideOf: yours green,
-   allies blue, at war red, everyone else grey), with a thin dark edge, a soft shadow, the white silhouette of its main unit type (the UICON set) and
-   its strength in a small dark badge on its lower right; a stack of more than one unit type shows a second diamond's edge behind it. Marks: the
-   commander's star and dug-in sandbags at its upper left, out of supply at its upper right, a red breathing edge and a crossed-bars badge in battle,
-   a heading chevron on the march, a gold ring when selected. ZOOMED IN the force's own pictures stand on the map (troopModels) and a small FLAG
-   TAG (its flag, the type icon and the strength, in the side colour, the health strip under it) is pinned PLATE_GAP px above them. The two
-   cross-fade over one band of zoom (tmFade: a pure function of the zoom, so nothing pops or flickers); a force with no pictures on screen keeps its
-   diamond. Each diamond stands on its force's world spot (provLayout: from the game state only, never from the zoom), centred on where its
-   pictures stand; each tag on the top of its pictures. Their still parts are painted once per look into device-pixel canvases and blitted. */
+/* ---------------- Unit badges by zoom (Conflict of Nations manner, original art) ----------------
+   Every force shows one small SQUARE BADGE of one pixel size at every zoom (a little larger on a touch screen, a little smaller for quiet foreign
+   and independent forces), in its side's colour (sideOf: yours green, allies blue, at war red, everyone else grey), with a thin dark edge and a
+   soft shadow: its flag on top, the upright white icon of its main unit type (the UICON set) in the middle and its unit count below; a stack of
+   more than one unit type shows a second card's edge behind it. Marks: the dug-in shield (with the commander's star beside it) pinned to its
+   upper left corner, out of supply at its upper right, a red breathing edge and a crossed-bars badge in battle, a heading chevron on the march
+   (zoomed out), a gold ring when selected. ZOOMED OUT the badge stands on its force's world spot (provLayout: from the game state only, never
+   from the zoom), centred on where its pictures stand; ZOOMED IN the force's own pictures stand on the map (troopModels) and the badge is pinned
+   PLATE_GAP px above them. The two places cross-fade over one band of zoom (tmFade: a pure function of the zoom, so nothing pops or flickers);
+   a force with no pictures on screen keeps its badge on its spot. Their still parts are painted once per look into device-pixel canvases and blitted. */
 const UCC = new Map(); let FLAGK = 0;
-// a diamond path round (x, y), r from the centre to each corner, corners rounded by rc
-function diaPath(g, x, y, r, rc){ const P = [[x, y - r], [x + r, y], [x, y + r], [x - r, y]]; g.beginPath(); g.moveTo((P[3][0] + P[0][0])/2, (P[3][1] + P[0][1])/2);
-  for (let i = 0; i < 4; i++){ const A = P[i], B = P[(i + 1) % 4]; g.arcTo(A[0], A[1], B[0], B[1], rc); } g.closePath(); }
 // the stack's main unit type (by strength x hit points; troops embarked at sea: their transport) and whether it holds more than one type
 function ucTypes(L){ const wt = {}; for (const q of L){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ wt.lst = (wt.lst || 0) + count(q); continue; }
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) wt[t] = (wt[t] || 0) + q.u[t]*UNITS[t].hp; }
   const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); return [ts[0] || 'inf', ts.length > 1]; }
 // the icon for unit type t of owner o (the armed UAV from UAV IV; embarked troops: the transport)
 const ucIcon = (t, o) => t === 'lst' ? 'cargo' : artT(t, o);
-function diaBody(tk, icon, n, mixed, selected, fighting, minor){
-  const key = 'd' + tk + '|' + icon + '|' + n + '|' + (mixed ? 1 : 0) + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + dpr + (SET.cb ? 'c' : '');
-  let E = UCC.get(key); if (E) return E; if (UCC.size > 500) UCC.clear();
-  const D = plateDims(n, 1, minor, false), CT = sideT(tk), r = D.d/2, P = 7, L = r + P, R = Math.max(r + P, D.bx + D.bw/2 + 3), px = 1/dpr;
-  const c = document.createElement('canvas'); c.width = Math.ceil((L + R)*dpr); c.height = Math.ceil(2*L*dpr); const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(L, L);
-  const rc = Math.max(1.5, r*0.16), lw = Math.max(1, Math.round(0.9*dpr))*px;
-  if (mixed){ g.save(); g.translate(3.4, -3.4); g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 2*dpr; diaPath(g, 0, 0, r, rc); g.fillStyle = CT[2]; g.fill(); g.restore();   // a second diamond's edge behind: more than one unit type
-    g.save(); g.translate(3.4, -3.4); diaPath(g, 0, 0, r - lw, rc); g.fillStyle = CT[1]; g.fill(); g.restore(); }
-  g.save(); g.shadowColor = minor ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.55)'; g.shadowBlur = (minor ? 2.2 : 3.2)*dpr; g.shadowOffsetY = (minor ? 1 : 1.6)*dpr; diaPath(g, 0, 0, r, rc); g.fillStyle = CT[2]; g.fill(); g.restore();   // soft drop shadow
-  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; diaPath(g, 0, 0, r + 2.4, rc + 0.6); g.lineWidth = 2; g.strokeStyle = '#f2b843'; g.stroke(); g.restore(); }
-  diaPath(g, 0, 0, r, rc); g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fill();   // the edge (red in battle, with an inner dark line)
-  let ins = lw; if (fighting){ diaPath(g, 0, 0, r - 1.2, rc); g.fillStyle = '#3a0c08'; g.fill(); ins = 1.2 + lw; }
-  let gr = g.createLinearGradient(0, -r, 0, r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); diaPath(g, 0, 0, r - ins, rc); g.fillStyle = gr; g.fill();
-  if (tk === 'own'){ diaPath(g, 0, 0, r - ins - 0.8, Math.max(1, rc - 0.6)); g.lineWidth = 1.4; g.strokeStyle = 'rgba(240,252,232,.92)'; g.stroke(); }   // yours: a light rim inside the dark edge, so a green counter stands out on your own green land
-  g.save(); diaPath(g, 0, 0, r - ins, rc); g.clip(); gr = g.createLinearGradient(0, -r, 0, 0.15*r); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(-r, -r, 2*r, 1.15*r);
-  g.beginPath(); g.moveTo(-r, 0); g.lineTo(0, -r + ins); g.lineTo(r, 0); g.lineWidth = 2*lw; g.strokeStyle = 'rgba(255,255,255,.32)'; g.stroke(); g.restore();   // a lit upper edge
-  const iw = Math.round(D.d*(minor ? 0.6 : 0.62)*dpr), ic = uiconC(icon, iw, '#ffffff', 1.4); g.drawImage(ic, -iw/dpr/2, -iw/dpr/2, iw/dpr, iw/dpr);   // the type's white silhouette
-  { const bw = D.bw, bh = D.bh, x0 = D.bx - bw/2, y0 = D.by - bh/2;   // the strength badge
-    g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 2*dpr; g.shadowOffsetY = 0.8*dpr; roundRect(g, x0, y0, bw, bh, bh/2); g.fillStyle = 'rgba(9,13,12,.95)'; g.fill(); g.restore();
-    roundRect(g, x0 + 0.5, y0 + 0.5, bw - 1, bh - 1, bh/2 - 0.5); g.lineWidth = 1; g.strokeStyle = 'rgba(255,255,255,.55)'; g.stroke();   // (a light rim: the badge stands off the diamond whatever its colour)
-    g.font = badgeFont(D.fz); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#ffffff'; g.fillText(String(n), Math.round(D.bx*dpr)/dpr, Math.round((D.by + D.fz*0.36)*dpr)/dpr); }
-  E = {c, ox:L, oy:L}; UCC.set(key, E); return E; }
-function tagBody(tk, icon, n, fc, selected, fighting, minor){
+// the badge's still parts, painted once per look into a device-pixel canvas: a rounded square in the side colour (a dark edge, red in battle; yours
+// with a light rim inside it, so a green badge stands out on your own green land), a soft drop shadow; a second card's edge behind it when the force
+// holds more than one unit type; the flag (from the flag atlas, at its own device-pixel size: crisp) centred at the top, the main type's white
+// icon in the middle (whatever icon the UICON set has for the type: a new icon drops in with no change here) and the count below it in white
+// with a dark outline. Cached per side, type, count, flag and state
+function badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor){
   if (fc && !fc.__k) fc.__k = ++FLAGK;
-  const key = 't' + tk + '|' + icon + '|' + n + '|' + (fc ? fc.__k : 0) + '|' + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + dpr + (SET.cb ? 'c' : '');
+  const key = 'b' + tk + '|' + icon + '|' + n + '|' + (fc ? fc.__k : 0) + '|' + (mixed ? 1 : 0) + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + dpr + (SET.cb ? 'c' : '');
   let E = UCC.get(key); if (E) return E; if (UCC.size > 500) UCC.clear();
-  const D = plateDims(n, 1, minor, true), CT = sideT(tk), {w, h} = D, P = 6, px = 1/dpr, sn = v => Math.round(v*dpr)/dpr, rr = Math.max(2, h*0.2);
-  const c = document.createElement('canvas'); c.width = Math.ceil((w + 2*P)*dpr); c.height = Math.ceil((h + 2*P)*dpr); const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(P, P);
-  const lw = Math.max(1, Math.round(0.8*dpr))*px;
-  g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 3*dpr; g.shadowOffsetY = 1.4*dpr; roundRect(g, -lw, -lw, w + 2*lw, h + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();
-  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; roundRect(g, -2.4, -2.4, w + 4.8, h + 4.8, rr + 2); g.lineWidth = 2; g.strokeStyle = '#f2b843'; g.stroke(); g.restore(); }
-  roundRect(g, -lw, -lw, w + 2*lw, h + 2*lw, rr); g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fill();
-  const ins = fighting ? 1 : 0; if (fighting){ roundRect(g, 0, 0, w, h, rr); g.fillStyle = '#3a0c08'; g.fill(); }
-  let gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(g, ins, ins, w - 2*ins, h - 2*ins, rr - ins); g.fillStyle = gr; g.fill();
-  if (tk === 'own'){ roundRect(g, ins + 0.7, ins + 0.7, w - 2*ins - 1.4, h - 2*ins - 1.4, Math.max(1, rr - ins - 0.7)); g.lineWidth = 1.2; g.strokeStyle = 'rgba(240,252,232,.85)'; g.stroke(); }
-  gr = g.createLinearGradient(0, 0, 0, h*0.55); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); roundRect(g, ins, ins, w - 2*ins, h*0.55, rr - ins); g.fillStyle = gr; g.fill();
-  const fw = D.fw, fh = D.fh, fx = sn(3), fy = sn((h - fh)/2);
-  if (fc) g.drawImage(fc, fx - px, fy - px, fw + 2*px, fh + 2*px); else { g.fillStyle = 'rgba(8,12,10,.9)'; g.fillRect(fx - px, fy - px, fw + 2*px, fh + 2*px); g.fillStyle = CT[1]; g.fillRect(fx, fy, fw, fh); }
-  const iw = Math.round(D.ic*dpr), ic = uiconC(icon, iw, '#ffffff', 1.2); g.drawImage(ic, sn(3 + fw + 3), sn((h - D.ic)/2), D.ic, D.ic);
-  g.font = badgeFont(D.fz); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round'; const X = sn(3 + fw + 3 + D.ic + 2), Y = sn(h/2 + D.fz*0.36), v = String(n);
-  g.lineWidth = 2.2; g.strokeStyle = 'rgba(8,16,10,.9)'; g.strokeText(v, X, Y); g.fillStyle = '#ffffff'; g.fillText(v, X, Y);
+  const D = plateDims(n, 1, minor, true), CT = sideT(tk), W = D.w, P = 7, px = 1/dpr, sn = v => Math.round(v*dpr)/dpr, rr = D.rr;
+  const c = document.createElement('canvas'); c.width = Math.ceil((W + 2*P)*dpr); c.height = Math.ceil((W + 2*P)*dpr); const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(P, P);
+  const lw = Math.max(1, Math.round(0.9*dpr))*px;
+  if (mixed){ g.save(); g.translate(3, -3); g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 2*dpr; roundRect(g, -lw, -lw, W + 2*lw, W + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();   // a second card's edge behind: more than one unit type
+    g.save(); g.translate(3, -3); roundRect(g, 0, 0, W, W, rr); g.fillStyle = CT[1]; g.fill(); g.restore(); }
+  g.save(); g.shadowColor = minor ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.55)'; g.shadowBlur = (minor ? 2.2 : 3.2)*dpr; g.shadowOffsetY = (minor ? 1 : 1.6)*dpr; roundRect(g, -lw, -lw, W + 2*lw, W + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();   // soft drop shadow
+  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; roundRect(g, -2.4, -2.4, W + 4.8, W + 4.8, rr + 2); g.lineWidth = 2; g.strokeStyle = '#f2b843'; g.stroke(); g.restore(); }
+  roundRect(g, -lw, -lw, W + 2*lw, W + 2*lw, rr); g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fill();   // the edge (red in battle, with an inner dark line)
+  const ins = fighting ? 1 : 0; if (fighting){ roundRect(g, 0, 0, W, W, rr); g.fillStyle = '#3a0c08'; g.fill(); }
+  let gr = g.createLinearGradient(0, 0, 0, W); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(g, ins, ins, W - 2*ins, W - 2*ins, rr - ins); g.fillStyle = gr; g.fill();
+  if (tk === 'own'){ roundRect(g, ins + 0.7, ins + 0.7, W - 2*ins - 1.4, W - 2*ins - 1.4, Math.max(1, rr - ins - 0.7)); g.lineWidth = 1.2; g.strokeStyle = 'rgba(240,252,232,.85)'; g.stroke(); }
+  gr = g.createLinearGradient(0, 0, 0, W*0.5); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); roundRect(g, ins, ins, W - 2*ins, W*0.5, rr - ins); g.fillStyle = gr; g.fill();
+  // the flag: drawn at its own device-pixel size (its canvas carries a one-pixel dark frame), centred at the top
+  if (fc){ const fw = fc.width*px, fh = fc.height*px; g.drawImage(fc, sn((W - fw)/2), sn(D.fy - px), fw, fh); }
+  else { const fw = D.fw, fx = sn((W - fw)/2), fy = sn(D.fy); g.fillStyle = 'rgba(8,12,10,.9)'; g.fillRect(fx - px, fy - px, fw + 2*px, D.fh + 2*px); g.fillStyle = CT[1]; g.fillRect(fx, fy, fw, D.fh); }
+  // the type icon, upright (it never turns with the force's heading or the map): its drawn part fitted to the room between the flag and the count
+  { const B = uiconBox(icon), y1 = D.ny - D.fz*0.74 - 0.6, sw = W - 9, sh = Math.max(6, y1 - D.iy), f = Math.min(sw/Math.max(1, B[2] - B[0]), sh/Math.max(1, B[3] - B[1]), 0.62*W/32*1.6);
+    const Z = 32*f, iw = Math.max(1, Math.round(Z*dpr)), ic = uiconC(icon, iw, '#ffffff', 1.2), zc = iw/dpr, ix = (W - (B[2] - B[0])*zc/32)/2 - B[0]*zc/32, iy0 = D.iy + (sh - (B[3] - B[1])*zc/32)/2 - B[1]*zc/32;
+    g.drawImage(ic, sn(ix), sn(iy0), zc, zc); }
+  // the count
+  g.font = countFont(D.fz); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round'; const X = sn(W/2), Y = sn(D.ny), v = String(n);
+  g.lineWidth = 2.6; g.strokeStyle = 'rgba(8,16,10,.92)'; g.strokeText(v, X, Y); g.fillStyle = '#ffffff'; g.fillText(v, X, Y);
   E = {c, ox:P, oy:P}; UCC.set(key, E); return E; }
+// (the names the tests and older code use: the far badge and the near badge are the same square)
+const diaBody = (tk, icon, n, mixed, selected, fighting, minor, fc = null) => badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor);
+const tagBody = (tk, icon, n, fc, selected, fighting, minor) => badgeBody(tk, icon, n, fc, false, selected, fighting, minor);
 // over the stack limit: a small red badge with three stacked bars centred at (x, y)
 function stackMark(x, y){ ctx.save(); roundRect(ctx, x - 5, y - 5, 10, 10, 2.5); ctx.fillStyle = '#d8473a'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
   ctx.fillStyle = '#fff3ea'; for (let i = 0; i < 3; i++) ctx.fillRect(x - 3, y - 3.2 + i*2.4, 6, 1.4); ctx.restore(); }
@@ -6909,37 +6926,29 @@ const overStack = L => L.some(q => q && count(q) && stackPenalty(q).over);
 // out of supply: a small amber warning triangle centred at (x, y)
 function supplyMark(x, y){ const q = 5; ctx.beginPath(); ctx.moveTo(x, y - q); ctx.lineTo(x + q*0.95, y + q*0.7); ctx.lineTo(x - q*0.95, y + q*0.7); ctx.closePath(); ctx.fillStyle = '#e2a23d'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
   ctx.fillStyle = '#14100a'; ctx.font = `800 7px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', x, y + q*0.22); }
-// the diamond centred at (x, y): returns its box (bg: the battle badge, which pokes out past it)
-function diaDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now){
-  const D = plateDims(n, 1, minor, false), r = D.d/2, X = moving ? x : snapD(x), Y = moving ? y : snapD(y), E = diaBody(tk, icon, n, mixed, selected, fighting, minor), ang = counter.ang;
-  if (moving && !minor && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = (r + 5)/Math.max(0.7, Math.abs(ca) + Math.abs(sa)), cx = X + ca*t, cy = Y + sa*t, q = 4.6;   // heading chevron: just off the diamond's edge, drawn under it (the strength badge stays on top)
+// the badge centred at (x, y): returns its box (bg: the battle badge, which pokes out past it; d: the square's side). far: zoomed out on the
+// force's own spot (a marching force shows its heading chevron there). Marks round it: the dug-in shield pinned to its upper left corner (with the
+// commander's star beside it), out of supply at its upper right, over the stack limit at its lower left, a worn air wing's wrench at its lower
+// right, the crossed-bars battle badge at its right and a red breathing edge in battle
+function badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now, far){
+  const D = plateDims(n, 1, minor, true), W = D.w, X = moving ? x : snapD(x), Y = moving ? y : snapD(y), fc = flagCanvas(plateFlagOf(a), D.fh), E = badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor), x0 = X - W/2, y0 = Y - W/2, ang = counter.ang;
+  if (far && moving && !minor && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = (W/2 + 5)/Math.max(0.7, Math.max(Math.abs(ca), Math.abs(sa))), cx = X + ca*t, cy = Y + sa*t, q = 4.6;   // heading chevron: just off the badge's edge, drawn under it
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(q, 0); ctx.lineTo(-q*0.8, -q*0.9); ctx.lineTo(-q*0.35, 0); ctx.lineTo(-q*0.8, q*0.9); ctx.closePath();
     ctx.lineJoin = 'round'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(5,8,10,.85)'; ctx.stroke(); ctx.fillStyle = sideHi(tk); ctx.fill(); ctx.restore(); }
-  ctx.drawImage(E.c, X - E.ox, Y - E.oy, E.c.width/dpr, E.c.height/dpr);
-  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); diaPath(ctx, X, Y, r + 2, Math.max(1.5, r*0.16) + 0.5); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
-  let bg = null;
-  if (!minor){ const cmd = L.some(cmdOf), mx = X - r*0.62, my = Y - r*0.62;
-    if (cmd){ ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', mx - 1, my - 1); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', mx - 1, my - 1); }
-    if (counter.dug && !moving) sandbagMark(mx - 9 - (cmd ? 9 : 0), my - 4, 0.9);   // dug in
-    if (a && a.owner === PLAYER && !supplied(a)) supplyMark(X + r*0.62, Y - r*0.66);   // out of supply
-    if (overStack(L)) stackMark(X - r*0.95, Y + r*0.35);   // over the stack limit
-    if (a && wornWing(a) && a.owner === PLAYER) wrenchMark(X + r*0.95 + 5, Y + r + 2, 1);   // (no health strips on the map: the army bar shows the health)
-    if (fighting){ const R0 = 5.6, bx = X + r + 3, by = Y - r*0.42; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
-  const rc = plateRect(X, Y, n, 1, minor, false); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; rc.d = D.d; return rc; }   // (d: the diamond's width)
-// the flag tag centred at (x, y): returns its box
-function tagDraw(x, y, a, L, n, tk, icon, selected, moving, fighting, minor, now){
-  const D = plateDims(n, 1, minor, true), X = moving ? x : snapD(x), Y = moving ? y : snapD(y), fc = flagCanvas(plateFlagOf(a), D.fh), E = tagBody(tk, icon, n, fc, selected, fighting, minor), x0 = X - D.w/2, y0 = Y - D.h/2;
   ctx.drawImage(E.c, x0 - E.ox, y0 - E.oy, E.c.width/dpr, E.c.height/dpr);
-  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, D.w + 4, D.h + 4, Math.max(2, D.h*0.2) + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
+  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, W + 4, W + 4, D.rr + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
   let bg = null;
-  if (!minor){ const cmd = L.some(cmdOf);
-    if (cmd){ ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', x0 + 4, y0 - 4); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', x0 + 4, y0 - 4); }
-    if (counter.dug && !moving) sandbagMark(x0 + (cmd ? 10 : 1), y0 - 9, 0.9);
-    if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + D.w - 1, y0 - 2);
-    if (overStack(L)) stackMark(x0 - 4, y0 + D.h - 3);   // over the stack limit
-    if (a && wornWing(a) && a.owner === PLAYER) wrenchMark(x0 + D.w + 5, y0 + D.h + 2, 1);
-    if (fighting){ const R0 = 5.6, bx = x0 + D.w + R0 + 2, by = Y; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
-  const rc = plateRect(X, Y, n, 1, minor, true); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; return rc; }
+  if (!minor){ const cmd = L.some(cmdOf), dug = counter.dug && !moving;
+    if (dug){ const r = sandbagMark(x0 + 1, y0 - 1, 0.9); if (ctx.globalAlpha > 0.35 && DUGHIT.length < 400){ r.own = !!a && a.owner === PLAYER; DUGHIT.push(r); } }   // dug in: its own small hit box (hover or tap: what it means)
+    if (cmd){ const sx = x0 + (dug ? 12 : 3), sy = y0 - 3; ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', sx, sy); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', sx, sy); }
+    if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + W - 1, y0 - 1);   // out of supply
+    if (overStack(L)) stackMark(x0 - 2, y0 + W - 4);   // over the stack limit
+    if (a && wornWing(a) && a.owner === PLAYER) wrenchMark(x0 + W + 5, y0 + W + 1, 1);   // (no health strips on the map: the army bar shows the health)
+    if (fighting){ const R0 = 5.6, bx = x0 + W + R0 + 2, by = Y; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
+  const rc = plateRect(X, Y, n, 1, minor, true); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; rc.d = W; return rc; }
+// (the far badge on the force's spot and the near one pinned over its pictures: the same square)
+const diaDraw = (x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now) => badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now, true);
+const tagDraw = (x, y, a, L, n, tk, icon, selected, moving, fighting, minor, now, mixed = false) => badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now, false);
 // a stack's quiet flag (independents and powers at peace, neither fighting nor selected: smaller counters), cached on the cluster
 function clQuiet(c){ if (c.pq != null) return c.pq; const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]), fighting = !c.moving && !c.air && S.battles.includes(c.at);
   return (c.pq = a.owner !== PLAYER && !fighting && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); }   // (not what is selected: the layout must not change when you tap)
@@ -6955,7 +6964,7 @@ function counter(c, a, L, n, selected, fighting, now){
   }   // (no dust round a diamond: dust comes from the vehicles' pictures close in)
   const ga = ctx.globalAlpha, da = c.da ?? 1, ta = c.ta || 0; let rd = null, rt = null;
   if (da > 0.003){ ctx.globalAlpha = ga*da; rd = diaDraw(c.dx, c.dy, a, L, n, tk, icon, mixed && !(a && a.air), sl, mv, fi, quiet, now); }
-  if (ta > 0.003){ ctx.globalAlpha = ga*ta; rt = tagDraw(c.tx, c.ty, a, L, n, tk, icon, sl, mv, fi, quiet, now); }
+  if (ta > 0.003){ ctx.globalAlpha = ga*ta; rt = tagDraw(c.tx, c.ty, a, L, n, tk, icon, sl, mv, fi, quiet, now, mixed && !(a && a.air)); }
   ctx.globalAlpha = ga;
   const r = c.tag ? rt : rd; if (r) return r;
   const rc = plateRect(c.x, c.y, n, 1, quiet, c.tag); rc.bg = null; return rc; }
@@ -7635,7 +7644,7 @@ function draw(now){ draw.now = now;
   // itself with its strength number, icons and bars, which nothing may cover), and the ground its models stand on
   const clBox = c => { const r = plateRect(c.x, c.y, c.n, k, plateQuiet(c), c.tag), b = [r.x - 1, r.y, r.x + r.w + 1 + (c.list.some(a => S.battles.includes(a.at)) ? 14 : 0), r.y + r.h + 1];
     b.core = [r.x + 1, r.y + 1, r.x + r.w - 1, r.y + r.h - 1];
-    if (!c.tag){ const D = plateDims(c.n + (c.mn || 0), 1, plateQuiet(c), false), q = D.d*0.3; b.ic = [[c.x - q, c.y - q, c.x + q, c.y + q], [c.x + D.bx - D.bw/2, c.y + D.by - D.bh/2, c.x + D.bx + D.bw/2, c.y + D.by + D.bh/2]]; }   // (a diamond's icon and strength badge: what a name may never be drawn over)
+    if (!c.tag){ const D = plateDims(c.n + (c.mn || 0), 1, plateQuiet(c), false), q = D.w/2 - 1; b.ic = [[c.x - q, c.y - q, c.x + q, c.y + q]]; }   // (a far badge's flag, icon and count: what a name may never be drawn over)
     if (c.fm){ const f = c.fm.box; b[0] = Math.min(b[0], f[0]); b[1] = Math.min(b[1], f[1]); b[2] = Math.max(b[2], f[2]); b[3] = Math.max(b[3], f[3]); b.fmb = c.fm.ents.map(e => e.box); }
     b.unit = true; b.at = c.moving ? -1 : c.at; return b; };
   // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital, on your own land (your capital's
@@ -7892,7 +7901,7 @@ function draw(now){ draw.now = now;
   tutDraw(now, kl);   // the tutorial ring goes under the counters, so it never runs across a stack's number
   // counters (clustered per owner at low zoom)
   const hitsPrev = hits;   // last frame's plates: smoke and bursts spawn off them (AFX.avoid)
-  hits = []; HITX = [];
+  hits = []; HITX = []; DUGHIT = [];
   drawTrade(now, vis);
   drawChokes(now);
   drawConvoys(now, vis);
@@ -7962,7 +7971,7 @@ function draw(now){ draw.now = now;
     const t = now - SELFX.at, fresh = Math.max(0, 1 - t/700), ph = (t % 1500)/1500; if (fresh > 0) animFast(); else animAmb();
     for (const h of HITX.length ? hits.concat(HITX.filter(q => q.sat)) : hits){ if (h.unk || !(h.ids.includes(sel.army) || (sel.group.length && h.ids.some(id => sel.group.includes(id))))) continue;
       ctx.save(); ctx.strokeStyle = '#f0b44e';
-      for (const [q, a0] of fresh > 0 ? [[1 - fresh, 0.9*fresh]] : []){ const g = 2 + q*9; ctx.globalAlpha = a0*(1 - q); ctx.lineWidth = 2 - q; if (h.tag === 0) diaPath(ctx, h.cx, h.cy, DIA/2 + g*1.3, 2 + g*0.4); else roundRect(ctx, h.x - g, h.y - g, h.w + g*2, h.h + g*2, 5 + g*0.6); ctx.stroke(); }   // (round the diamond, or the tag)
+      for (const [q, a0] of fresh > 0 ? [[1 - fresh, 0.9*fresh]] : []){ const g = 2 + q*9; ctx.globalAlpha = a0*(1 - q); ctx.lineWidth = 2 - q; roundRect(ctx, h.x - g, h.y - g, h.w + g*2, h.h + g*2, 5 + g*0.6); ctx.stroke(); }   // (round the badge)
       ctx.restore(); } } else if (sel.army === null) SELFX.a = null;
   // unidentified contacts (AWACS): one '?' plate per province (moving forces each get their own), no nation colour, type or size
   if (unkA.length){ const grp = new Map(); for (const a of unkA){ const key = a.to !== null ? 'm' + a.id : 'p' + a.at; if (!grp.has(key)) grp.set(key, []); grp.get(key).push(a); }
@@ -8183,6 +8192,8 @@ function tapList(){ if (!HITX.length) return hits; const A = [], B = []; for (co
 function hitAt(x, y, noArt = false){ const L = tapList(); for (let i = L.length - 1; i >= 0; i--){ const h = L[i]; if (noArt && h.art) continue; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }   // (noArt: not the pictures: a drag that starts on one pans the map)
 function tap(x, y, shift = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
+  if (tip.classList.contains('dugtip')) tipHide();
+  { const dh = dugHitAt(x, y); if (dh && !cmdMode && !aimMsl && dropFor === null && rallyFor === null && (sel.army === null || dh.own)){ closeChooser(); dugTip(x, y, true); return; } }   // a tap (or a long press) on the dug-in shield explains it; the rest of the badge still opens the army bar
   closeChooser(); lastClickW = screenToWorld(x, y); const TL = tapList();   // (the counters, the stacked ones beside them and the pictures)
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
   const hs = TL.length !== hits.length && TL.find(h => h.sat && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);   // (a counter stacked beside another stands where it does to be tapped: it wins over a city's point under it)
@@ -8265,7 +8276,9 @@ function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null;
 const tgtEnd = t => sel.targetPt && t === sel.target ? {p:t, x:sel.targetPt[0], y:sel.targetPt[1]} : null;
 const groupArmies = () => (sel.group.length ? sel.group : [sel.army]).map(armyById).filter(Boolean);
 // one-line tooltips written from what the rules do (rules/combat.js: dugIn and stanceHour)
-const STANCES = {hold:['Hold', 'Stays put and takes no standing orders; digs in only after 12 h on your own ground.'], defend:['Defend', 'Dug in at once for the defence bonus, and sorties against weaker enemies within 3 provinces of your land, then returns.'], retreat:['Preserve', 'Falls back to your nearest city to recover when health drops below 40%.']};
+const digPct = () => Math.round((1/DIG_DEF - 1)*100);   // the dug-in defence bonus in per cent (rules/combat.js DIG_DEF: damage taken x0.8, +25%)
+const DIG_TIP = 'Dug in: +defence. The unit has held position for 12+ hours, or is in a fortified friendly province.';   // (the owner's words: the shield's tooltip)
+const STANCES = {hold:['Hold', `Stays put and takes no standing orders; digs in after 12 h on your own ground (dug in: +${digPct()}% defence).`], defend:['Defend', `Dug in at once: +${digPct()}% defence where it stands on your or a friend's ground; sorties against weaker enemies within 3 provinces of your land, then returns.`], retreat:['Preserve', 'Falls back to your nearest city to recover when health drops below 40%.']};
 function idleArmies(){ return S.armies.filter(a => a.owner === PLAYER && !a.fly && count(a) && a.to === null && !a.path.length && !S.battles.includes(a.at) && (!a.stance || a.stance === 'hold') && !(a.air && a.air.cd > 0)); }
 function nextIdle(){ const L = idleArmies(); if (!L.length){ toast('Every force has orders.', 'info', null); return; }
   const i = (L.findIndex(a => a.id === sel.army) + 1) % L.length, a = L[i], P = G.P[a.at]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.6)); selectArmy(a.id); }
@@ -8341,8 +8354,14 @@ function clearSel(){ sel.group = []; sel.foe = null; rallyFor = null; aimMsl = n
 
 /* ---------------- Tooltip ---------------- */
 const tip = document.getElementById('tip');
-function tipHide(){ tip.hidden = true; }
-function tipShow(x, y){
+function tipHide(){ tip.hidden = true; tip.classList.remove('dugtip'); }
+// the dug-in shield's tooltip (the owner's words, DIG_TIP), at (x, y) on the map; a tap shows it for a few seconds
+let DUGTIP = 0;
+function dugTip(x, y, tapped){ tip.innerHTML = `<span class="dtt">Dug in: +defence.</span> ${DIG_TIP.replace('Dug in: +defence. ', '')}`; tip.classList.add('dugtip'); tip.hidden = false;
+  const tw = Math.min(230, tip.offsetWidth || 230), th = tip.offsetHeight; let tx = x + 14, ty = y + 14; if (tx + tw > cw - 6) tx = x - tw - 14; if (ty + th > ch - 6) ty = y - th - 14; tip.style.left = Math.max(6, tx) + 'px'; tip.style.top = Math.max(6, ty) + 'px';
+  clearTimeout(DUGTIP); DUGTIP = tapped ? setTimeout(() => { if (tip.classList.contains('dugtip')) tipHide(); }, 4000) : 0; }
+function tipShow(x, y){ tip.classList.remove('dugtip');
+  if (dugHitAt(x, y)){ dugTip(x, y, false); return; }   // the dug-in shield on a badge: what it means
   const hf = !cityAt(x, y) && hitAt(x, y), fa = hf ? hf.ids.map(armyById).filter(Boolean) : [];
   // where the plate is drawn (an aircraft in flight is far from its base; never name the base), and always one 'contact': no count leak
   if (fa.length && hf.unk){ const pq = provAt(hf.cx, hf.cy), at = pq >= 0 ? pq : fa[0].air ? -1 : fa[0].to !== null ? fa[0].to : fa[0].at, air = fa[0].air;
@@ -8793,6 +8812,7 @@ const TUT_STEPS = [
   {t:'Plan an attack', d:() => tutPick() != null ? `Tap the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
+  {t:'Dug in', d:() => `A small yellow shield with a sandbag line on a force's badge means it is <b>dug in</b>: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage). A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Each unit has its own line: its unlock, then upgrades. Every project opens on its own day; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
   {t:'You are ready', d:() => 'The bar along the bottom opens Diplomacy (war, peace, trade routes), Market, Cities, Research, Army and Production (P); More holds Intelligence, Settings, Sound and “How to play” (or press ?), which explains roads and railways, drones, trade and coalitions. The crate at the left of the resource strip lists your missiles; the shields on the right of the map fly home, open the dispatches and toggle the relations map. Good luck, commander.', el:'#dock', next:true, last:true},
 ];
@@ -9301,7 +9321,9 @@ function statusText(a){
   if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${P[a.at].name}. Ground units take extra damage at sea.`};
   if (S.cap[a.at] && S.cap[a.at].by === a.owner) return {cls:'cap', short:'capturing', long:`Capturing ${P[a.at].name}: ${Math.round(S.cap[a.at].h/capNeed(a.at, a.owner)*100)}%`};
   if (S.owner[a.at] !== a.owner && !ground(a)) return {cls:'', short:'airborne', long:'Air units cannot capture ground. Add ground units.'};
-  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}`};
+  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
+  { const own = S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && friendly(a.owner, S.owner[a.at])), h = a.still != null ? S.hour - a.still : 0;
+    if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${P[a.at].name}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct()}% defence; the Defend stance digs in at once)`}; }
   return {cls:'', short:'holding', long:`Holding ${P[a.at].name}`};
 }
 function oddsHTML(a, t, foes){
@@ -9481,6 +9503,7 @@ function armyInfoHTML(a){
   const where = `${C.terrain}${P.sea ? '' : `, ${C.home ? 'on its own ground' : C.attacking ? 'attacking' : 'holding'}`}`;
   return `<div class="eyebrow">Army Info</div><h1 class="si-h">${a.owner >= 0 ? flagHTML(a.owner, 20) : ''} ${mine ? armyName(a) : armyLabel(a, PLAYER)}</h1>
     <p class="small muted" style="margin:0 0 8px">${pluN(count(a), 'unit')} · ${where}${C.blind ? '' : ` · morale ${C.morale}%${C.supplied ? '' : ' · out of supply'}`}</p>
+    ${a.air || shipsOnly(a) || P.sea ? '' : `<p class="small si-dug${C.dug ? ' on' : ''}" style="margin:0 0 8px">${digShieldHTML()}<span><b>${C.dug ? 'Dug in' : 'Not dug in'}</b>: a dug-in force takes ${Math.round((1 - DIG_DEF)*100)}% less damage (+${digPct()}% defence) while it defends where it stands. It digs in by holding position for 12+ hours on its own ground or in a fortified friendly province, or at once with the Defend stance; moving cancels it. The yellow shield on its badge shows it.</span></p>`}
     ${(rr => rr.length ? `<p class="small si-rng" style="margin:0 0 8px"><b>Attack range</b> · ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km (${RANGE_HIT_W[RANGE_HIT[t]]})`).join(' · ')}. It fires at enemy forces ${mine ? 'you' : 'its side'} can see within range, from where it stands, without moving in.</p>` : '')(rangeRows(a, !mine))}
     <div class="eyebrow">Strength</div>
     <table class="sitab"><thead><tr><th>Against</th><th>Attack</th><th>Defence</th></tr></thead><tbody>${X.rows.map(r => `<tr><th scope="row">${siIcon(r.k)}<span>${r.name}</span></th>${siCell(r.atk, C.blind)}${siCell(r.def, C.blind)}</tr>`).join('')}</tbody></table>
@@ -10601,7 +10624,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
-if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
+if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor) => badgeBody(side, t, n, flagCanvas(o, plateDims(n, 1, !!minor, true).fh), !!mixed, false, false, !!minor), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });

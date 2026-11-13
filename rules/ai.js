@@ -137,9 +137,9 @@ function aiSpies(n){
 }
 /* ---------------- AI ---------------- */
 let PPC = {v:-1, m:null};
-function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S || !keep()){ if (PPC.v === tickVer && PPC.S === S) return PPC.m; const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a)]); } if (!keep()) return m; PPC = {v:tickVer, S, m}; } return PPC.m; }
+function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S || !keep()){ if (PPC.v === tickVer && PPC.S === S) return PPC.m; const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a), 1/digF(a)]); } if (!keep()) return m; PPC = {v:tickVer, S, m}; } return PPC.m; }
 function defPower(p, n){
-  let d = 0; for (const [o, pw] of (provPowers().get(p) || [])) if (o !== n) d += pw;
+  let d = 0; for (const [o, pw, dg] of (provPowers().get(p) || [])) if (o !== n) d += pw*(dg || 1);   // (dg: 1/DIG_DEF for a dug-in defender)
   if (S.owner[p] !== n){ d *= 1.25/Math.pow(0.8, S.bld[p].fort)*(G.P[p].sea ? 1 : terr(p).def); }   // the AI reads terrain: dug in on a mountain counts for more
   return d;
 }

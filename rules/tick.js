@@ -161,7 +161,7 @@ function battleStep(hourly){
       const d = dmg.get(o), tot = hp.get(o);
       const escorted = G.P[p].sea && sides.get(o).some(b => shipsN(b) > 0);
       const bs = B.s[o];
-      for (const a of sides.get(o)){ const u0 = {...a.u}; hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot*(o === S.owner[p] ? 1 - 0.12*cmdF(a, 'shield') : 1)); cmdXP(a, (a._dealt0 || 0)*0.5); for (const t of UT) if (u0[t] > a.u[t]) bs.lost[t] = (bs.lost[t] || 0) + u0[t] - a.u[t]; }
+      for (const a of sides.get(o)){ const u0 = {...a.u}; hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot*(o === S.owner[p] ? 1 - 0.12*cmdF(a, 'shield') : 1)*digF(a)); cmdXP(a, (a._dealt0 || 0)*0.5); for (const t of UT) if (u0[t] > a.u[t]) bs.lost[t] = (bs.lost[t] || 0) + u0[t] - a.u[t]; }
       if (hourly){ bs.hp.push(Math.round(sides.get(o).reduce((s0, a) => s0 + armyHP(a), 0))); if (bs.hp.length > 96) bs.hp.shift(); }   // (the history keeps one point per game hour)
     }
     // morale: a force in a fight loses 1 a game hour and 40 × the share of its health lost, spread over the hour's battle steps (the break and retreat check is hourly: armyUpkeep)
