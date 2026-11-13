@@ -14,7 +14,6 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet | branch bomber-pictures |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (owner approved with fixes: bigger banner subjects in the middle band, icons close up, one shared icon per upgrade type): new artillery icon first for the owner, then the rest on Gemini | Opus | branch research-tab |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused on branch borders-real; resumes when the speed job is merged (both rewrite map drawing) |
@@ -33,6 +32,8 @@ Last updated: 2026-11-13 (overnight run).
 | 6 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Bomber pictures:** the new Heavy and Stealth Bomber pictures are a cooler blue-grey than the AWACS and fighters: warm them to match? The Heavy Bomber uses one picture for both generations (a second upload would give generation 2 its own).
 
 - **Nation picker rows:** the A-Z rows show flag, name and tier only; the old cards also showed provinces, cities and EASY/HARD. Bring those back on each row (or only on the selected one)?
 
