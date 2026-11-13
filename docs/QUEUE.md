@@ -20,7 +20,7 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Picture audit: every unit, building and research item against assets and assets/art-src (read-only) | Opus (workflow) | Running |
+| Night city lights: small separate glows at real city locations, dark gaps, dimmer; colours and borders on top at night | Opus | Started (branch night-lights) |
 | Real borders: every country and province border drawn from Natural Earth 1:10m with no shape-changing simplification (game logic stays on the cells), every country clearly coloured in plain solid colours (no diagonal hatching over other countries; your own country stands out by its colour and border), all borders visible; screenshots of the Middle East, Europe and the US next to a real map before merging | Opus | Started (branch borders-real) |
 | Map modes: switching Political/Relations/Supply/Terrain/... glitches the map; find and fix the cause, test every switch and fast switching; screenshots before merging | Opus | Started (branch map-modes) |
 | Research tree pictures, research unit cards, infantry icons | Opus | Done on branch research-cards; waiting for the owner |
@@ -29,7 +29,6 @@ Last updated: 2026-11-13 (overnight run).
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Night city lights: small separate glows at real city locations sized by population, dark gaps between cities, dimmer overall; country colours and borders clearly visible on top at night; Egypt and the Levant at night before/after before merging | Opus (next free slot) |
 | 1a | Unit look: the unit label becomes a small square badge (flag on top, unit icon in the middle, count below), readable at every zoom; infantry drawn as small clear soldier figures matching the tanks in style and scale, with soft shadows; the yellow 'dug in' shield kept at the same size with a clearer trench/sandbag symbol, a tooltip ('Dug in: +defence. ...'), explained in the unit's info panel and the tutorial, and a real dug-in defence bonus in the rules (it had none); screenshots before merging | Opus |
 | 1b | Building pictures in the game: the angled pictures (regional capital HQs; Airbase, Naval Yard, Recruiting Office, Fortifications, Hospital levels) cut out and cropped, replacing the old ones on the map and in the city panel; Naval Yard on the real coast, mirrored so its piers face the sea; no level numbers or badges on the map (level only in the info panel); screenshots of Berlin and a coastal city at 3 zooms before merging | Opus (next free slot, after the audit) |
 | 2 | Speed, round 2 with identical results: the targets not yet met (well under 0.5 s per game day; steady 60 fps while panning) | Opus (after the border rebuild, which changes the map drawing) |
@@ -58,6 +57,7 @@ Last updated: 2026-11-13 (overnight run).
 - **Nations balance tests:** T4/T5 count only land taken from other nations while more than a quarter of the world is unowned; China's 'fights a big rival by day 60' check relaxed. OK?
 - **Cleanup:** delete the rejected building branches (buildings-3d, building-fix, buildings-cutout) and the old wip/* snapshot branches once checked to be on master?
 - **Dug-in bonus size:** your tooltip says 'Dug in: +defence', but the rules gave dug-in units no bonus at all, so the unit look job adds one: damage taken x0.8 (about +25% defence) while dug in. OK, or another number?
+- **Picture audit (2026-11-13):** done, list sent; nothing fixed yet. Which fixes to queue? Main ones: Anti-Tank Infantry shows a missile truck in research; Paratroopers reuse the infantry picture; empty icons on 9 of 10 research categories and 3 column headers (a code bug); generation nodes show tinted copies; missile pictures loaded but never shown; no satellite picture; bombers/AWACS/patrol plane share the small fighter model on the map; old top-down Airbase 2-4 and Silo 2-3 near-identical; City pictures in porthole frames.
 - **Fable:** no Fable tasks; new ones only if you say so.
 
 ## Planned for later (in LATER.md, not built yet)
