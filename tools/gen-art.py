@@ -56,6 +56,25 @@ SUBJECTS = {
         "frame and the group spans most of its width. No coastline, no beach, no land strip, no water, no waves."),
 }
 
+# the realistic look (matches the detail of the Airbase pictures), for the buildings named here; the others use STYLE
+STYLE_REAL = ("Style: a realistic, detailed 3D render of a modern military facility, like a sharp aerial photograph of a real "
+              "base and not a toy or a cartoon: true-to-life materials and textures (weathered concrete, asphalt, corrugated "
+              "metal and tiled roofs, real vehicles, real soldiers in uniform), natural muted colours (sand, khaki, olive, "
+              "grey). Camera: three-quarter view from above, about 45 degrees down, looking at the facility's front corner so "
+              "its layout runs diagonally across the frame. Lighting: soft daylight from the upper left with soft shadows "
+              "falling to the lower right. The buildings, people and vehicles stand directly on the plain grey background with "
+              "only their own soft shadows; paved areas such as yards and parade grounds are separate flat pieces lying on the "
+              "grey. There is no slab, base platform, ground plane or outline around the whole facility. Cropped tight and "
+              "centred: the facility fills about 85 percent of the frame and every piece is fully inside it with a small "
+              "margin, nothing cut off. Background: a plain, flat, uniform light grey (#D9D9D9). Square 1:1 image. No text, "
+              "no letters, no numbers, no emblems, no logos, no watermark.")
+STYLES = {'recruiting-office': STYLE_REAL}
+SUBJECTS['recruiting-office-1'] = (
+    "A small military recruiting office, level 1 of 5: one single-storey office building of pale concrete with a flat roof, "
+    "a glass front entrance with a short canopy and a blank sign board above the door (no lettering), a few steps and a "
+    "short paved path in front, and beside the entrance a tall white flagpole flying a plain olive-green flag with no "
+    "emblem. Two small shrubs by the door.")
+
 # map icons: a full prompt each (no STYLE), drawn on plain grey; saved as <name>.grey.png and cut out into a transparent
 # <name>.png (cutout). ICON_EDITS: an icon made by editing another icon's grey picture, so the two match exactly.
 HELMET = ("A small game map icon, an original design: a modern military combat helmet on its own, seen exactly from the side, "
@@ -82,6 +101,19 @@ ICON_EDITS = {
 
 # the next level from the level before: (level before, additions). New piers and ships keep the level 1 direction.
 GROWS = {
+    'recruiting-office-2': ('recruiting-office-1',
+        "a fenced yard of paved concrete beside the office with a chain-link fence around it, a few soldiers in uniform "
+        "standing and walking in the yard, and a small guard post (a sentry booth with a barrier arm) at the yard's gate"),
+    'recruiting-office-3': ('recruiting-office-2',
+        "a long two-storey barracks building with a pitched roof behind the yard, and a block of about twenty soldiers in "
+        "formation, standing in neat rows on a paved square in front of the barracks"),
+    'recruiting-office-4': ('recruiting-office-3',
+        "a training ground of packed sand on one side with an obstacle course (low walls, wooden hurdles, a climbing frame and "
+        "a rope net), a few soldiers running the course, and a row of four parked olive-green army trucks"),
+    'recruiting-office-5': ('recruiting-office-4',
+        "turn it into a large training base: three more barracks buildings in a row beside the first, a big paved parade "
+        "ground with a large formation of soldiers in rows, a small reviewing stand, more parked vehicles (olive-green trucks, "
+        "jeeps and two armoured personnel carriers), and a vehicle shed"),
     'naval-yard-2': ('naval-yard-1',
         "two more long concrete piers of the same kind, continuing the row of piers toward the upper right, each with a ship "
         "docked alongside (one grey frigate and one dark grey submarine); a fourth grey warehouse continuing the warehouse "
@@ -110,10 +142,16 @@ GROW = ("The attached picture shows a facility drawn small in the middle of the 
         "exactly its current size, and build the additions in the empty space around it so the larger base fills the frame "
         "with a small margin; every piece stays fully inside the frame, none touching or crossing its edge. Add: {}. New "
         "pieces have the same scale as the existing ones and the same rendering style, camera angle, lighting, shadow "
-        "direction, colours and layout direction: every new pier is parallel to the existing piers and joins the same row of "
-        "piers, its long axis running from the upper left to the lower right, and every new ship lies parallel to the "
-        "existing ships, bow to the lower right. The background stays a plain flat uniform light grey. No coastline, no "
-        "water, no ground slab, no text, no flags.")
+        "direction, colours and layout direction{}")
+GROW_END = {   # per building, after "layout direction"
+    'naval-yard': (": every new pier is parallel to the existing piers and joins the same row of piers, its long axis running "
+                   "from the upper left to the lower right, and every new ship lies parallel to the existing ships, bow to the "
+                   "lower right. The background stays a plain flat uniform light grey. No coastline, no water, no ground slab, "
+                   "no text, no flags."),
+    'recruiting-office': (", with the same realistic level of detail: new buildings line up with the existing ones along the "
+                   "same diagonal axes. The background stays a plain flat uniform light grey. No ground slab, base platform "
+                   "or outline around the whole base, no text, no letters, no emblems."),
+}
 SHRINK = 0.8   # a GROWS picture: the level before is shrunk to this in the middle of the frame, leaving room for the additions
 
 API = 'https://generativelanguage.googleapis.com/v1beta/'
@@ -122,7 +160,9 @@ LOG = os.path.join(OUT, 'gen-art-log.jsonl')
 # (a 1K picture is about 1,120 tokens, $0.0336), input $0.50 per million; batch jobs half price. The real bill is in Google AI Studio.
 OUT_USD, IN_USD, BATCH = 30e-6, 0.5e-6, 0.5
 
-def prompt(name): return SUBJECTS[name] + '\n\n' + STYLE
+def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
+
+def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE)
 
 def stem(name): return name if name in ICONS else f'ba-{name}'
 
@@ -173,7 +213,7 @@ def request(name, refs, change=None):
     elif name in GROWS:
         before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
         if not os.path.exists(src): raise SystemExit(f'{name} grows from {os.path.relpath(src, ROOT)}, which is not there yet')
-        text, images = GROW.format(add), [shrunk(src)]
+        text, images = GROW.format(add, GROW_END[building(name)]), [shrunk(src)]
     elif name in ICON_EDITS:
         before, text = ICON_EDITS[name]; src = os.path.join(OUT, f'{before}.grey.png')
         if not os.path.exists(src): raise SystemExit(f'{name} is made from {os.path.relpath(src, ROOT)}, which is not there yet')
@@ -181,8 +221,12 @@ def request(name, refs, change=None):
     elif name in ICONS: text, images = ICONS[name], []
     else:
         text, images = prompt(name), refs
-        if refs: text = ('Match the rendering style, camera angle, palette, lighting and plain grey background of the attached '
-                         'reference picture(s), but draw the facility described here.\n\n') + text
+        if refs and building(name) in STYLES:   # a detail reference only (e.g. a top-down crop of another base)
+            text = ('The attached picture is a top-down detail crop of another military base. Match only its realistic level of '
+                    'detail, its materials and textures; use the camera, background and layout described here, not the '
+                    "picture's.\n\n") + text
+        elif refs: text = ('Match the rendering style, camera angle, palette, lighting and plain grey background of the attached '
+                           'reference picture(s), but draw the facility described here.\n\n') + text
     return {'contents': [{'parts': [{'text': text}] + [image_part(r) for r in images]}],
             'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': '1:1', 'imageSize': '1K'}}}
 
