@@ -7227,7 +7227,7 @@ function renderLayer(vis, lite = false, R = null){
   if (R){ mx = layer.mx; my = layer.my; layer.lite = layer.lite || lite; layer.strips = (layer.strips || 0) + 1; }
   else { const lm = FLYMARGIN || LM; FLYMARGIN = 0; mx = Math.round(Math.max(cw*lm, 224)); my = Math.round(Math.max(ch*lm, 172)); const lw = Math.round((cw + 2*mx)*dpr), lh = Math.round((ch + 2*my)*dpr);
     if (layer.width !== lw || layer.height !== lh){ layer.width = lw; layer.height = lh; }
-    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.dp = dpr; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; layer.q = []; layer.sq = []; CITY_MISS.clear(); CITY_GEN++; CWANT.clear(); CITY_RT = performance.now(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; }
+    layer.mx = mx; layer.my = my; layer.vx = view.x; layer.vy = view.y; layer.s = view.s; layer.dp = dpr; layer.lite = lite; layer.full = (layer.full || 0) + 1; layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; layer.lk = linkSnap(); layer.q = []; layer.sq = []; CITY_MISS.clear(); CITY_GEN++; CWANT.clear(); CITY_RT = performance.now(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; }
   // the rect to paint, in device px (the whole layer when R is left out)
   const dx0 = R ? Math.max(0, Math.round(R.x0*dpr)) : 0, dy0 = R ? Math.max(0, Math.round(R.y0*dpr)) : 0, dx1 = R ? Math.min(layer.width, Math.round(R.x1*dpr)) : layer.width, dy1 = R ? Math.min(layer.height, Math.round(R.y1*dpr)) : layer.height;
   if (dx1 <= dx0 || dy1 <= dy0) return;
@@ -7439,6 +7439,7 @@ function shiftLayer(vis, lite, ax = true, ay = true){ FADE.length = 0; const L =
   let A = L.alt; if (!A) A = document.createElement('canvas'); if (A.width !== w || A.height !== h){ A.width = w; A.height = h; }
   const g = A.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'copy'; g.drawImage(L, sx, sy); g.globalCompositeOperation = 'source-over';
   A.mx = L.mx; A.my = L.my; A.vx = L.vx + sx/dpr; A.vy = L.vy + sy/dpr; A.s = L.s; A.lite = L.lite; A.full = L.full; A.strips = L.strips;
+  A.dp = L.dp; A.vis = L.vis; A.own = L.own; A.ts = L.ts; A.lk = L.lk;   // (what the picture shows: the fog, owners, tones and links it was rendered with, for visDirty; the spare canvas kept those of an older picture)
   A.fl = L.fl; A.tc = L.tc; A.fg = L.fg; L.fl = L.tc = L.fg = null; L.alt = null; A.alt = L; layer = A;
   A.seaOK = false; if (L.seaOK && L.seaM){ const SM = A.seaM || (A.seaM = document.createElement('canvas')); if (SM.width !== L.seaM.width || SM.height !== L.seaM.height){ SM.width = L.seaM.width; SM.height = L.seaM.height; }
     const e = L.seaE || 0, k2x = Math.round(sx/2 - e), k2y = Math.round(sy/2 - (L.seaEy || 0)), m = SM.getContext('2d'); m.setTransform(1, 0, 0, 1, 0, 0); m.globalAlpha = 1;
@@ -7475,12 +7476,17 @@ function layerBands(){ const L = layer, h = L.height, W = L.width/dpr, n = 6, c 
 // that came into or left sight (with their neighbours: a link built in game shows only when one end is in sight), the provinces wholly in sight
 // that changed, and every sight range that is new or gone (the soft edge of its cut included), on each copy of the world in the layer; null when
 // they would cover much of the layer (a full render is then as quick)
-function visDirty(A, B, own){ const g = visGrid(), bb = g.bb, L = layer, m = Math.max(40/view.s, 3*HS), W = [];
+// the road and rail level of every link the game changed (S.links), to find the links whose look changed since (linkDiff: their records)
+function linkSnap(){ const m = new Map(); m.S = S; for (const k in (S.links || {})){ const r = G.LK.get(k); if (r) m.set(k, r.road*8 + r.rail); } return m; }
+function linkDiff(m0){ const m1 = linkSnap(), out = []; for (const [k, v] of m1) if (m0.get(k) !== v) out.push(G.LK.get(k)); for (const k of m0.keys()) if (!m1.has(k)){ const r = G.LK.get(k); if (r) out.push(r); } return out; }
+function visDirty(A, B, own, links = null){ const g = visGrid(), bb = g.bb, L = layer, m = Math.max(40/view.s, 3*HS), W = [];
   const box = (x0, y0, x1, y1, e = 0) => { W.push([x0 - m - e, y0 - m - e, x1 + m + e, y1 + m + e]); };
   const prov = (p, nb, e) => { const b = bb[p]; if (b) box(b[0], b[1], b[2], b[3], e); if (nb && G.P[p]) for (const q of G.P[p].nbs){ const c = bb[q]; if (c) box(c[0], c[1], c[2], c[3], e); } };
   // provinces that changed hands (with their neighbours: the borders on both sides, the tint, a town's look, the links through them)
   if (own && own !== S.owner) for (let p = 0; p < own.length; p++) if (own[p] !== S.owner[p]) prov(p, true, 24);
   for (const p of A) if (!B.has(p)) prov(p, true); for (const p of B) if (!A.has(p)) prov(p, true);
+  // links whose look changed (a road or railway finished: linkDiff): the box round the straight segment between their ends
+  if (links) for (const r of links){ const P = G.P[r.a], Q = G.P[r.b]; if (P && Q) box(Math.min(P.x, Q.x), Math.min(P.y, Q.y), Math.max(P.x, Q.x), Math.max(P.y, Q.y)); }
   const wa = A.whole || new Set(), wb = B.whole || new Set(); for (const p of wa) if (!wb.has(p)) prov(p, false); for (const p of wb) if (!wa.has(p)) prov(p, false);
   const rk = s => s.join(','), cnt = new Map(), ia = A.ids || [], ib = B.ids || [];
   for (const s of ia) cnt.set(rk(s), (cnt.get(rk(s)) || 0) + 1); for (const s of ib) cnt.set(rk(s), (cnt.get(rk(s)) || 0) - 1);
@@ -7757,7 +7763,7 @@ function draw(now){ draw.now = now;
   // once still, the view snaps to the layer's device-px grid (under half a pixel), so the live overlays sit exactly on the shifted layer's borders
   if (!flyReuse && settled && !camFly && layer && layer.s === view.s && key === layerKey){ const x0 = view.x, y0 = view.y, sx = layer.vx + Math.round((x0 - layer.vx)*dpr)/dpr, sy = layer.vy + Math.round((y0 - layer.vy)*dpr)/dpr;
     if (sx !== x0 || sy !== y0){ view.x = sx; view.y = sy; clampView(); if (view.x !== sx || view.y !== sy){ view.x = x0; view.y = y0; } draw.pvx = view.x; draw.pvy = view.y; } }
-  if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), kNV = k => k.split('|').filter((v, i) => i < 4 || i > 6).join('|'), ex = Math.abs(dxv) > layer?.mx*0.5, ey = Math.abs(dyv) > layer?.my*0.5;   // (half the margin: its strips are rendered over the next frames, stripPump)
+  if (!flyReuse){ const lt = !!(panning || moved) && !settled, kNC = k => k.split('|').filter((v, i) => i !== 6).join('|'), kNL = k => k.split('|').filter((v, i) => i < 4 || (i > 6 && i !== 9)).join('|'), ex = Math.abs(dxv) > layer?.mx*0.5, ey = Math.abs(dyv) > layer?.my*0.5;   // (half the margin: its strips are rendered over the next frames, stripPump)
     // a render made mid-zoom is only drawn scaled until the zoom settles: it gets a wider margin (so the next zoom-out step stays covered) and a
     // lower pixel ratio (a fraction of the cost); a layer made that way is never shifted or patched, the next render replaces it whole
     // during a glide the render is made ahead, part of the way toward the goal scale (around the same anchor), so the one layer serves a longer
@@ -7771,10 +7777,13 @@ function draw(now){ draw.now = now;
     // only what you see (forces moved, an hour passed: the fog and the links shown through it) or who owns some provinces (captures anywhere in the
     // world, war and peace with you unchanged) changed: the parts of the layer that touches are rendered again in place instead of the whole layer
     // (visDirty: a full render when they cover much of it); the other keys as below
-    if (layer && ldp === dpr && layer.s === view.s && !layer.lite && !cfR && !zoomLive && layer.vis && layer.own && key !== layerKey && kNV(key) === kNV(layerKey)){ const kA = key.split('|'), kB = layerKey.split('|');
-      if ((kA[4] !== kB[4] || kA[5] !== kB[5]) && (kA[4] === kB[4] || (toneSync.ts === layer.ts && layer.own.length === S.owner.length))){ const D = visDirty(layer.vis, vis, layer.own);
-        if (D){ const fc = settled && !moved && !camFly ? fadeScreen() : null; for (const r of D) renderLayer(vis, false, r); layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; fadeScreenAdopt(fc);
-          layerKey = kB.map((v, i) => i === 4 || i === 5 ? kA[i] : v).join('|'); } } }
+    // a road or railway finished (LINKD) is redrawn the same way, round the links whose road or rail level changed since the layer was made
+    // (linkDiff against the layer's linkSnap; a full render in another game)
+    if (layer && ldp === dpr && layer.s === view.s && !layer.lite && !cfR && !zoomLive && layer.vis && layer.own && key !== layerKey && kNL(key) === kNL(layerKey)){ const kA = key.split('|'), kB = layerKey.split('|'), lk = kA[9] !== kB[9];
+      const LC = lk && layer.lk && layer.lk.S === S ? linkDiff(layer.lk) : null;
+      if ((kA[4] !== kB[4] || kA[5] !== kB[5] || lk) && (!lk || LC) && (kA[4] === kB[4] || (toneSync.ts === layer.ts && layer.own.length === S.owner.length))){ const D = visDirty(layer.vis, vis, layer.own, LC);
+        if (D){ const fc = settled && !moved && !camFly ? fadeScreen() : null; for (const r of D) renderLayer(vis, false, r); layer.vis = vis; layer.own = S.owner.slice(); layer.ts = toneSync.ts; if (lk) layer.lk = linkSnap(); fadeScreenAdopt(fc);
+          layerKey = kB.map((v, i) => i === 4 || i === 5 || i === 9 ? kA[i] : v).join('|'); } } }
     if (!layer || ldp !== dpr || (key !== layerKey && kNC(key) !== kNC(layerKey))){ layerKey = key; const fc = settled && !moved && !camFly && layer ? fadeScreen() : null; rl(); fadeScreenAdopt(fc); }
     else { if (key !== layerKey){ layerKey = key; if (CITY_ALL){ CITY_ALL = false; layerBands(); } else layerCityRefresh(); }   // only the city bakes changed: redraw the towns that were missing theirs
       if ((ex || ey) && shiftLayer(vis, false, ex, ey)){}
