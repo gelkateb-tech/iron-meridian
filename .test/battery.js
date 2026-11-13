@@ -17,7 +17,8 @@ const VPS = { desktop: { viewport: { width: 1400, height: 860 } }, phone: { view
 const errs = [], OFF = {};   // OFF: the saver-off results per device (the machine's own limit for a case)
 // pick a nation card by name; on the nations world (http pages) the cards sit behind region tabs, so try each tab until it shows
 async function pickNation(p, name){ const card = () => p.locator('[data-act="pick"]').filter({ has: p.locator('b', { hasText: new RegExp('^' + name + '$') }) });
-  if (!await card().count()) for (const k of await p.$$eval('[data-act="pickreg"]', a => a.map(x => x.dataset.k))){ await p.click('[data-act="pickreg"][data-k="' + k + '"]'); if (await card().count()) break; }
+  if (!await card().count()) throw new Error('no card for ' + name);
+  if (!await card().first().isVisible()) await p.fill('#pickq', name);
   await card().first().click(); }
 async function page(b, vp, saver){
   const ctx = await b.newContext(vp); const p = await ctx.newPage();
