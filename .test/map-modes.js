@@ -16,8 +16,8 @@
 //  (G) GFX      after a graphics reset (every canvas cache dropped, fix-black's gfxReset) with both overlays on, the map and the overlay come back
 //               as fresh builds
 //  (W) WRAP     across the map's east-west seam (Alaska / Chukotka) switching, toggling, zooming and panning leaves no stale strip on either copy
-//  (M) MEMORY   flat: the live canvas pixels (every canvas the page made, after a forced GC; the capped town bake and tile caches counted apart)
-//               and the JS heap after all of it against after a warm-up; the overlay canvas no bigger than the layer
+//  (M) MEMORY   flat with repeated switching: the live canvas pixels and count (every canvas the page made, after a forced GC, idle) and the
+//               JS heap after the owner's switch-and-zoom workload run twice more against before it, the caches warm; the overlay canvas no bigger than the layer
 //  (E) ERRORS   no console error or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 2), NATION = process.argv[5] || 'United States', QUICK = process.argv[6] === 'quick', PHONE = W <= 820;
@@ -177,15 +177,21 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
     for (const s of [Z[0]*1.4, Z[1], Z[2]]){ await setView(X0 + 2, y, s); await settle();
       for (const a of QUICK ? ['R', 'T'] : ['R', 'T', 'P']){ await act(a); await zoom(s*1.5); await drag(PHONE ? 120 : 260, 0); await zoom(s); await check('seam ' + a + ' z' + s, 'wrap'); } } }
 
-  // (M) memory flat: after all of it against after the warm-up (the same mode and overlays)
-  if (on('M')) { await setView(home[0], home[1], Z[1]); const st = await state(); if (st.mode !== 'political') await act('P'); if ((await state()).rel) await act('R'); if (!(await state()).sup) await act('U'); await settle();
-    const m1 = await mem(); checks.memEnd = m1; log('mem end ' + JSON.stringify(m1));
-    if (m1.rest - m1.ovlMpx > (m0.rest - m0.ovlMpx)*1.1 + 2) fail('memory: canvas pixels grew (outside the capped town caches)', {start:m0, end:m1});
-    if (m1.ovlMpx > m1.layerMpx + 0.1) fail('memory: the overlay canvas is bigger than the layer', m1);
-    if (m0.heapMB != null && m1.heapMB > m0.heapMB*1.5 + 40) fail('memory: JS heap grew', {start:m0, end:m1}); }
+  // (M) memory flat: the switching workload (the owner's sequence with zooms across the bands at home) run twice more once everything above
+  // has warmed the bounded caches (town masks and bakes, ground and detail tiles, the fade pool: fix-black's budgets): the live canvas pixels
+  // after it against before it, both measured idle (the fade pool let go) with the same mode and overlays. The growth from the warm-up start
+  // (new places visited fill those caches up to their budgets) is reported, not judged
+  if (on('M')) { const idle = async () => { await setView(home[0], home[1], Z[1]); let st = await state(); if (st.mode !== 'political') await act('P'); st = await state(); if (st.rel) await act('R'); st = await state(); if (!st.sup) await act('U');
+      await settle(); await p.waitForTimeout(5000); const m = await mem(); m.caches = await p.evaluate(() => window.__im.gfx ? window.__im.gfx.caches() : null); return m; };
+    const m1 = await idle(); checks.memWarm = m1; log('mem warm ' + JSON.stringify(m1));
+    for (let r = 0; r < 2; r++) for (const a of ['R', 'U', 'T', 'P', 'R', 'U']){ await act(a); await p.waitForTimeout(60); await zoom(Z[2]); await zoom(Z[0]); await zoom(Z[1]); }
+    const m2 = await idle(); checks.memEnd = m2; log('mem end ' + JSON.stringify(m2));
+    if (m2.mpx > m1.mpx*1.08 + 2 || m2.n > m1.n*1.1 + 50) fail('memory: canvases grew with repeated switching', {warm:m1, end:m2});
+    if (m2.ovlMpx > m2.layerMpx + 0.1) fail('memory: the overlay canvas is bigger than the layer', m2);
+    if (m0.heapMB != null && m2.heapMB > m1.heapMB*1.3 + 20) fail('memory: JS heap grew with repeated switching', {warm:m1, end:m2}); }
 
   checks.errors = errors; if (errors.length) fail('errors', errors.slice(0, 5));
   const summ = {}; for (const k of ['owner', 'pairs', 'fast', 'wrap', 'gfx']) if (checks[k]) summ[k] = {n:checks[k].length, worstBase:Math.max(...checks[k].map(r => r.share)), worstOverlay:Math.max(...checks[k].map(r => r.ovl))};
-  console.log(JSON.stringify({summary:summ, ui:checks.ui, noRebuild:checks.noRebuild, back:checks.back, gfxReset:checks.gfxReset, mem:[checks.memStart, checks.memEnd], game:checks.game, secs:Math.round((Date.now() - t0)/1000), fails, errors}, null, 1));
+  console.log(JSON.stringify({summary:summ, ui:checks.ui, noRebuild:checks.noRebuild, back:checks.back, gfxReset:checks.gfxReset, mem:{start:checks.memStart, warm:checks.memWarm, end:checks.memEnd}, game:checks.game, secs:Math.round((Date.now() - t0)/1000), fails, errors}, null, 1));
   if (process.env.DUMP) console.log(JSON.stringify(checks));
   await b.close(); process.exit(fails.length ? 1 : 0); })().catch(e => { console.error(e); process.exit(1); });
