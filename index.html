@@ -2310,6 +2310,22 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
   .rs-bp{min-width:56px}
 }
 @media (max-width: 400px){ .rs-ban{padding:0 8px 0 13px; gap:12px} .rs-bpw{flex-basis:90px} }
+/* research scene art (tools/gen-art.py): a category's wide scene (a 4:1 strip) fills its banner. On a wide screen the row is about 13:1, so the
+   scene is drawn at twice the banner's height, just left of the count (its middle half shows, the subject whole), and fades into the dark left
+   where the name sits and the dark right under the count; on a phone it covers the row. Darker toward the count on the right and along the top and bottom edges. A square scene fills a diamond
+   (its corners cut) */
+.rs-ban.scene{--bh:172px; --br:96px;
+  background:linear-gradient(90deg, #0b0d0f 0, #0b0d0f calc(100% - 4*var(--bh) - var(--br) + 2px), rgba(11,13,15,.55) calc(100% - 3.3*var(--bh) - var(--br)), rgba(11,13,15,0) calc(100% - 2.4*var(--bh) - var(--br)),
+      rgba(11,13,15,0) calc(100% - var(--br) - 170px), rgba(11,13,15,.72) calc(100% - var(--br) - 40px), #0b0d0f calc(100% - var(--br) - 2px)),
+    linear-gradient(180deg, rgba(11,13,15,.4) 0, rgba(11,13,15,0) 30%, rgba(11,13,15,0) 64%, rgba(11,13,15,.5) 100%), var(--rbs) right var(--br) center / auto 200% no-repeat, #0b0d0f}
+@media (max-width: 820px){ .rs-ban.scene{background:linear-gradient(90deg, rgba(11,13,15,.9) 0, rgba(11,13,15,.78) 28%, rgba(11,13,15,.4) 52%, rgba(11,13,15,0) 68%, rgba(11,13,15,0) 76%, rgba(11,13,15,.66) 100%),
+  linear-gradient(180deg, rgba(11,13,15,.4) 0, rgba(11,13,15,0) 30%, rgba(11,13,15,0) 64%, rgba(11,13,15,.5) 100%), var(--rbs) center / cover no-repeat, #0b0d0f} }
+.rs-ban.scene::after{display:none}
+.rs-ban.scene:hover{filter:brightness(1.08) saturate(1.05)}
+.rface.p{position:absolute; inset:-21%; display:block; transform:none!important}
+.rface.p i{display:block; width:100%; height:100%; background:center / cover no-repeat}
+.rpic-s{flex:none; display:block; width:28px; height:28px; border-radius:3px; background:center / cover no-repeat; box-shadow:0 0 0 1px rgba(255,255,255,.4), 0 1px 3px rgba(0,0,0,.6)}
+.rs-thead > b .rpic-s{width:26px; height:26px}
 .bkgrp{display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap}
 /*@DEV*/
 /* developer mode (test build only): the DEV badge beside the speed control, the 16x/50x/100x speeds, the developer panel */
@@ -9135,8 +9151,16 @@ const eliteSVG = (w = 30) => `<svg class="relite" width="${w}" height="${Math.ro
 const RCG = {inf:'helmet', arm:'tank', sup:'gun', aas:'heli', tac:'jet', uns:'drone', str:'bomber', nav:'ship', msl:'missile', cmd:'truck'};
 const RKIND = {unlock:'Unlock', eng:'Levels', kit:'Upgrade', gen:'Generation'};
 const RSTAT = {atk:'Attack', def:'Defense', spd:'Speed', hp:'Health'};
-// the picture in a node: the unit (its unlock and its generations), a missile, or a white icon for what the upgrade does
-function rFace(nd, sz){ if (nd.u && (nd.kind === 'unlock' || nd.kind === 'gen')){ const g = nd.gen || 1; return rUnitFace(nd.u, rGenArt(nd.u, g), rGenTone(nd.u, g)); }
+// the research screen's scene pictures (tools/gen-art.py R_BANNERS / R_ICONS, then --prep-research): assets/art/rbs-<category>.webp, a wide scene
+// filling a category's banner, and assets/art/ri-<key>.webp, a square scene filling a diamond (key: cat-<category> for a category, a node id for a
+// research item, the unit's unlock id for its column header). Until an item has its picture it keeps its glyph or unit picture
+const RBS = new Set(['arm', 'nav', 'tac']), RIC = new Set(['cat-inf', 'u_tank', 'art_shell']);
+const rPic = k => `<span class="rface p"><i style="background-image:url('assets/art/ri-${k}.webp')"></i></span>`;   // fills its diamond (the corners are cut)
+const rPicSq = k => `<i class="rpic-s" style="background-image:url('assets/art/ri-${k}.webp')" aria-hidden="true"></i>`;   // a small square: the tree's title and column headers
+const rCatFace = (id, sz) => RIC.has('cat-' + id) ? rPic('cat-' + id) : rg(RCG[id], sz);
+// the picture in a node: its scene picture, else the unit (its unlock and its generations), a missile, or a white icon for what the upgrade does
+function rFace(nd, sz){ if (RIC.has(nd.id)) return rPic(nd.id);
+  if (nd.u && (nd.kind === 'unlock' || nd.kind === 'gen')){ const g = nd.gen || 1; return rUnitFace(nd.u, rGenArt(nd.u, g), rGenTone(nd.u, g)); }
   if (nd.ic === 'cm' || nd.ic === 'bm') return `<span class="rface g">${mslIcon(nd.ic, Math.round(sz*1.25))}</span>`;
   return `<span class="rface g">${rg(nd.ic, sz)}</span>`; }
 // a unit's picture in a diamond: upright and cropped to what reads at that size (the squad pictures show one soldier, a long hull fills the
@@ -9239,10 +9263,10 @@ function researchHTML(){
     for (const C of RCATS){ const L = RNODES.filter(nd => nd.cat === C.id && !nd.std), tot = L.reduce((s0, nd) => s0 + nd.lv.length, 0), dn = L.reduce((s0, nd) => s0 + Math.min(nd.lv.length, rLevel(PLAYER, nd.id)), 0);
       const open = opn.filter(nd => nd.cat === C.id).length, inC = X => X && RN[X.id] && RN[X.id].cat === C.id, run = inC(R), qd = inC(R2);
       const names = [...new Set(RNODES.filter(nd => nd.cat === C.id).map(rLineName))].join(', ');
-      h += `<button class="rs-ban${dn === tot ? ' full' : ''}" data-act="rbranch" data-b="${C.id}" style="--rt:${RBT[C.id] || '120,130,140'}" title="${C.name}: ${names}. ${dn} of ${tot} steps researched${open ? `, ${open} open now` : ''}">
-        <span class="rs-dm"><span class="dmi">${rg(RCG[C.id], 30)}</span></span>
+      h += `<button class="rs-ban${dn === tot ? ' full' : ''}${RBS.has(C.id) ? ' scene' : ''}" data-act="rbranch" data-b="${C.id}" style="--rt:${RBT[C.id] || '120,130,140'}${RBS.has(C.id) ? `;--rbs:url('assets/art/rbs-${C.id}.webp')` : ''}" title="${C.name}: ${names}. ${dn} of ${tot} steps researched${open ? `, ${open} open now` : ''}">
+        <span class="rs-dm"><span class="dmi">${rCatFace(C.id, 30)}</span></span>
         <span class="rs-bt"><b>${C.name}</b><span><span class="rnl">${C.role}</span><span class="rns">${RROLE[C.id] || C.role}</span></span></span>
-        ${rbImg(C.id)}<span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${tot}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/tot*100)}%"></i></span></span></button>`; }
+        ${RBS.has(C.id) ? '<span class="rs-bpw" aria-hidden="true"></span>' : rbImg(C.id)}<span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${tot}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/tot*100)}%"></i></span></span></button>`; }
     h += `</div><p class="rnote rs-note">${icon('rare', 13)}<span><b>Rare materials drive research.</b> Unit unlocks, upgrades and new generations cost money, materials and rare materials. Firepower and Protection cost few rare materials. Every project opens on its own day. ${t1 != null && N.rare < t1 ? `You need ${fmt(Math.ceil(t1 - N.rare))} more for the cheapest open project${inc.net.rare > 0.05*RES_K ? ` (about ${Math.ceil((t1 - N.rare)/inc.net.rare)} d at +${fmt(inc.net.rare)} a day)` : ''}. ` : ''}Rare materials come from rare-earth cities (Resources map; an Arms Industry there adds 25% per level), your capital, trade routes and the Market.</span></p>`;
     return h;
   }
@@ -9285,9 +9309,9 @@ function researchHTML(){
   const nowLine = !Ly.days.includes(today) && nPast > 0 && nPast < nR ? `<i class="rt-now" style="--r:${nPast}"><em>Today · day ${today}</em></i>` : '';
   const heads = Ly.cols.map(K => { const hd = K.head, tot = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), dn = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
     const nm = Ly.solo ? K.ln : rLineName(hd), sn = rShort(nm), gl = Ly.solo ? RCOLG[K.ln] : ({def:'def2', sat:'sat'})[hd.pic] || hd.pic || 'gen';
-    return `<div class="rt-hd${hd.elite ? ' elite' : ''}" title="${nm}${hd.elite ? ' (elite unit)' : ''}: ${dn} of ${tot} steps researched">${hd.u && !Ly.solo ? unitPic(hd.u, 'sm') : `<span class="rt-hg">${rg(gl, 18)}</span>`}<span class="rt-hn"><b><span class="rnl">${nm}</span>${sn !== nm ? `<span class="rns">${sn}</span>` : ''}</b><span class="rt-hm">${hd.elite ? eliteSVG(22) : ''}<small>${dn}/${tot}</small></span></span></div>`; }).join('');
+    return `<div class="rt-hd${hd.elite ? ' elite' : ''}" title="${nm}${hd.elite ? ' (elite unit)' : ''}: ${dn} of ${tot} steps researched">${RIC.has(hd.id) && !Ly.solo ? rPicSq(hd.id) : hd.u && !Ly.solo ? unitPic(hd.u, 'sm') : `<span class="rt-hg">${rg(gl, 18)}</span>`}<span class="rt-hn"><b><span class="rnl">${nm}</span>${sn !== nm ? `<span class="rns">${sn}</span>` : ''}</b><span class="rt-hm">${hd.elite ? eliteSVG(22) : ''}<small>${dn}/${tot}</small></span></span></div>`; }).join('');
   const catT = L.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), catD = L.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
-  h += `<div class="rs-thead"><span class="rs-tc" title="The day a project opens">${rg('clock', 18)}</span><b>${rg(RCG[C.id], 22)} ${C.name}</b><span class="rs-tn">${catD}/${catT} steps</span></div>
+  h += `<div class="rs-thead"><span class="rs-tc" title="The day a project opens">${rg('clock', 18)}</span><b>${RIC.has('cat-' + C.id) ? rPicSq('cat-' + C.id) : rg(RCG[C.id], 22)} ${C.name}</b><span class="rs-tn">${catD}/${catT} steps</span></div>
     <div class="rs-body${RV.sel ? ' hassel' : ''}${Ly.solo ? ' solo' : ''}"><div class="rt-scroll" id="rtscroll"><div class="rt${Ly.solo ? ' solo' : ''}" style="--cols:${nC};--rows:${nR}">
       <div class="rt-corner">Day</div>${heads}
       <div class="rt-days">${dayL}</div>

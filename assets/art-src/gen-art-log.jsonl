@@ -31,3 +31,9 @@
 {"name": "hq-latin-america", "file": "assets/art-src/ba-hq-latin-america.png", "batch": true, "usd_est": 0.0351, "tokens": {"promptTokenCount": 1313, "candidatesTokenCount": 1510, "thoughtsTokenCount": 808}}
 {"name": "icon-cash", "file": "assets/art-src/icon-cash.png", "batch": false, "usd_est": 0.0727, "tokens": {"promptTokenCount": 2423, "candidatesTokenCount": 1448, "thoughtsTokenCount": 935}}
 {"name": "icon-oil", "file": "assets/art-src/icon-oil.png", "batch": false, "usd_est": 0.0602, "tokens": {"promptTokenCount": 2422, "candidatesTokenCount": 1476, "thoughtsTokenCount": 491}}
+{"name": "rbs-arm", "file": "assets/art-src/rbs-arm.png", "batch": true, "usd_est": 0.045, "tokens": {"promptTokenCount": 448, "candidatesTokenCount": 2027, "thoughtsTokenCount": 965}}
+{"name": "rbs-nav", "file": "assets/art-src/rbs-nav.png", "batch": true, "usd_est": 0.0465, "tokens": {"promptTokenCount": 452, "candidatesTokenCount": 2113, "thoughtsTokenCount": 982}}
+{"name": "rbs-tac", "file": "assets/art-src/rbs-tac.png", "batch": true, "usd_est": 0.0446, "tokens": {"promptTokenCount": 438, "candidatesTokenCount": 2077, "thoughtsTokenCount": 889}}
+{"name": "ri-cat-inf", "file": "assets/art-src/ri-cat-inf.png", "batch": true, "usd_est": 0.0384, "tokens": {"promptTokenCount": 427, "candidatesTokenCount": 1947, "thoughtsTokenCount": 605}}
+{"name": "ri-u_tank", "file": "assets/art-src/ri-u_tank.png", "batch": true, "usd_est": 0.0383, "tokens": {"promptTokenCount": 404, "candidatesTokenCount": 1540, "thoughtsTokenCount": 1004}}
+{"name": "ri-art_shell", "file": "assets/art-src/ri-art_shell.png", "batch": true, "usd_est": 0.0339, "tokens": {"promptTokenCount": 440, "candidatesTokenCount": 1515, "thoughtsTokenCount": 739}}

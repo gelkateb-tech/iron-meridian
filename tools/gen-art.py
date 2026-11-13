@@ -8,6 +8,9 @@ Two kinds of picture:
   assets/art-src/<name>.grey.png plus a transparent cut-out <name>.png
 - RES_ICONS: resource icons for the top bar (assets/art-src/icon-<name>.png, raw on light grey: tools/prep-res.py cuts them
   out), drawn in the style of the owner's icon-iron.png and icon-electronics.png, sent as references
+- RESEARCH: the research screen's art (R_BANNERS: one wide scene per category, 21:9 at 2K; R_ICONS: one square scene per
+  category, column header and research item, 1K), every one with the same R_STYLE paragraph; --prep-research crops and
+  shrinks them into assets/art/ (banners rbs-<category>.webp 2240x560, icons ri-<key>.webp 256x256)
 - GROWS: the next level of a building made from the picture of the level before (ba-<before>.png, shrunk to SHRINK in
   the middle of the frame) with a list of additions, so the levels share their pieces and grow visibly
 
@@ -25,6 +28,7 @@ options: --batch         send the pictures as one batch job (half price, slower;
          --force         overwrite an existing picture (otherwise the new one is saved as ba-<name>.v2.png, .v3 ...)
          --ref <file>    a style reference picture sent with a SUBJECTS prompt (repeatable)
          --print         print the prompts and stop (no API call)
+         --prep-research <name> ...   crop and shrink research pictures from assets/art-src/ into assets/art/ (no API call)
 """
 import sys, os, json, base64, io, time, urllib.request, urllib.error
 
@@ -214,6 +218,68 @@ GROWS = {
         "fuel tank"),
 }
 
+# ---- the research screen: one shared style for every banner and icon (owner: realistic, same style and lighting for all)
+R_STYLE = ("Style: a realistic, cinematic but clean photograph-like render of modern military equipment, like a still from a "
+           "high-quality war film or a strategy game's key art: true-to-life materials and scale, crisp detail on the subject, "
+           "soft atmospheric haze in the distance. Lighting: warm late-afternoon sun, low in the sky on the left, so every "
+           "subject is lit from the left with a gentle golden rim on its left edges and long soft shadows falling to the "
+           "right. Palette: muted military colours (olive drab, khaki, sand, slate and steel grey, dusty blue-grey sky), low "
+           "saturation, no bright or neon colours. Low clutter: one clear subject, few elements, no debris, no explosions, no "
+           "fire, no smoke plumes, no people's faces in close-up. All equipment is an original, generic modern design that "
+           "copies no real product. Plain unmarked paint: no text, no letters, no numbers, no hull or tail numbers, no logos, "
+           "no flags, no national insignia, no roundels, no unit badges, no camouflage brand patterns, no watermark.")
+R_BANNER = ("Framing: an ultra-wide cinematic panorama for a long, thin title banner (it is cropped to a strip about 4 to 13 "
+            "times as wide as it is tall). The whole subject sits in one horizontal band through the vertical middle of the "
+            "picture, within the middle third of its height, nothing important above or below it, so it survives the crop. "
+            "The subject is placed centre-right and spans about the right half of the width; the left third of the picture is "
+            "quiet, empty and darker (open ground or sea in shadow, plain sky) because the banner's title sits there. A "
+            "darker vignette around all edges, strongest on the left. Simple, calm sky above and simple ground or sea below. "
+            "21:9 image.")
+R_ICON = ("Framing: a square game icon that is a small scene, shown at about 50 pixels inside a diamond-shaped frame. One "
+          "single subject, large and centred, filling about 70 percent of the width of the frame, fully visible, with nothing "
+          "important near the corners (the corners are cut away). A close three-quarter view from slightly above. The "
+          "background is the subject's own setting, filling the frame to every edge (no plain or white background, no "
+          "border, no frame), simple and softly out of focus and a little darker toward the edges, so the subject's bold "
+          "silhouette stands out clearly at a tiny size. Square 1:1 image.")
+R_BANNERS = {   # rbs-<category>: one wide scene per research category
+    'rbs-arm': ("Armoured Forces: a column of four modern main battle tanks driving along a straight, dusty desert road from "
+                "the left toward the right, seen from the side at a slight three-quarter angle and from some distance, a thin "
+                "trail of dust behind their tracks; flat sand desert with low mesas far away on the horizon."),
+    'rbs-nav': ("Navy: a naval carrier group at sea: a large aircraft carrier with a flat flight deck and its island on the "
+                "right side sails toward the right in the centre-right of the picture, one escorting destroyer ahead of it and "
+                "one frigate behind it, all with gentle white wakes; calm open sea with a long, straight horizon."),
+    'rbs-tac': ("Tactical Air: a flight of three modern twin-tail jet fighters in a loose echelon formation, flying from left "
+                "to right high in the sky, seen from the side at a slight angle, above a broken layer of soft clouds with a "
+                "far, hazy landscape below."),
+}
+R_ICONS = {   # ri-<key>: cat-<category> (the category icon), a research node id (u_tank: the Main Battle Tank unlock)
+    'ri-cat-inf': ("Infantry Corps: a modern infantry soldier in full combat gear (helmet, body armour, rifle held ready), "
+                   "advancing in a slight crouch across a dusty field, seen from the front left in three-quarter view, from "
+                   "the knees up; the face is in the shadow of the helmet."),
+    'ri-u_tank': ("Main Battle Tank: one modern main battle tank seen from the front left in three-quarter view, its long main "
+                  "gun pointing slightly to the right, standing on dusty open ground."),
+    'ri-art_shell': ("Extended-Range Shells (an artillery upgrade): three long, slender modern artillery shells with sharply "
+                     "pointed noses and a tapered base, standing upright side by side, close up, plain olive paint with one "
+                     "plain brass band (no markings), on the ground beside the big wheel of a gun; a long gun barrel raised "
+                     "high behind them, softly out of focus."),
+}
+R_FOCUS = {'rbs-arm': 0.57}   # a banner's vertical centre for its strip crop, as a share of the height (0.5 when not listed)
+R_BANNER_OUT, R_ICON_OUT = (2240, 560), 256
+
+def prep_research(names):
+    """crops a research banner to a 4:1 strip around its focus and shrinks it to R_BANNER_OUT; shrinks an icon to
+    R_ICON_OUT square; both saved as webp in assets/art/"""
+    from PIL import Image
+    for n in names:
+        src = os.path.join(OUT, f'{n}.png'); im = Image.open(src).convert('RGB'); w, h = im.size
+        if n in R_BANNERS:
+            sh = round(w / 4); cy = R_FOCUS.get(n, 0.5) * h; y0 = int(max(0, min(h - sh, cy - sh / 2)))
+            im = im.crop((0, y0, w, y0 + sh)).resize(R_BANNER_OUT, Image.LANCZOS); q = 80
+        else:
+            s0 = min(w, h); im = im.crop(((w - s0) // 2, (h - s0) // 2, (w + s0) // 2, (h + s0) // 2)).resize((R_ICON_OUT, R_ICON_OUT), Image.LANCZOS); q = 84
+        dst = os.path.join(ROOT, 'assets', 'art', f'{n}.webp'); im.save(dst, 'WEBP', quality=q, method=6)
+        print(f'{os.path.relpath(dst, ROOT)}  {im.size[0]}x{im.size[1]}  {os.path.getsize(dst) // 1024} KB')
+
 EDIT = ("Edit the attached picture. Change only this: {}. Keep everything else exactly as it is: every building, pier, "
         "crane, ship and the dry dock, their shapes, positions, sizes and directions, the camera angle, framing, lighting, "
         "shadows, colours and the plain flat light grey background. Do not add or remove anything.")
@@ -244,7 +310,7 @@ def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE)
 
-def stem(name): return name if name in ICONS or name in RES_ICONS else f'ba-{name}'
+def stem(name): return name if name in ICONS or name in RES_ICONS or name in R_BANNERS or name in R_ICONS else f'ba-{name}'
 
 def free_path(name, force):
     p = os.path.join(OUT, f'{stem(name)}.png')
@@ -304,6 +370,10 @@ def request(name, refs, change=None):
         images = [src]
     elif name in ICONS: text, images = ICONS[name], []
     elif name in RES_ICONS: text, images = RES_ICONS[name] + '\n\n' + RES_STYLE, [os.path.join(OUT, r) for r in RES_REFS]
+    elif name in R_BANNERS or name in R_ICONS:   # the research screen: no reference picture, the shared style
+        ban = name in R_BANNERS
+        return {'contents': [{'parts': [{'text': (R_BANNERS if ban else R_ICONS)[name] + '\n\n' + (R_BANNER if ban else R_ICON) + '\n\n' + R_STYLE}]}],
+                'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': '21:9' if ban else '1:1', 'imageSize': '2K' if ban else '1K'}}}
     else:
         text, images = prompt(name), refs
         if refs and building(name) in STYLES:   # a detail reference only (e.g. a top-down crop of another base)
@@ -374,7 +444,7 @@ def collect(job, force):
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
     if a[0] == '--list':
-        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS):
+        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS) + list(R_BANNERS) + list(R_ICONS):
             print(('done ' if os.path.exists(os.path.join(OUT, f'{stem(n)}.png')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
         return
     if a[0] == '--cost':
@@ -389,8 +459,9 @@ def main(a):
         elif a[i] == '--batch': batch = True
         elif a[i] == '--ref': i += 1; refs.append(a[i])
         elif a[i] == '--collect': collect(a[i + 1], force); return
+        elif a[i] == '--prep-research': prep_research(a[i + 1:]); return
         elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
-        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS: names.append(a[i])   # repeat a name for more tries
+        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS or a[i] in R_BANNERS or a[i] in R_ICONS: names.append(a[i])   # repeat a name for more tries
         else: raise SystemExit(f'unknown name or option: {a[i]} (see --list)')
         i += 1
     if batch and any(n in GROWS and GROWS[n][0] in names for n in names):
