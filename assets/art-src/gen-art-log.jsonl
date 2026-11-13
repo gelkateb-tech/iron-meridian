@@ -6,3 +6,5 @@
 {"name": "icon-infantry-motorized", "file": "assets/art-src/icon-infantry-motorized.png", "batch": true, "usd_est": 0.0392, "tokens": {"promptTokenCount": 215, "candidatesTokenCount": 1932, "thoughtsTokenCount": 681}}
 {"name": "icon-infantry-motorized", "file": "assets/art-src/icon-infantry-motorized.v2.png", "batch": true, "usd_est": 0.041, "tokens": {"promptTokenCount": 215, "candidatesTokenCount": 1776, "thoughtsTokenCount": 952}}
 {"name": "icon-infantry-motorized", "file": "assets/art-src/icon-infantry-motorized.v3.png", "batch": true, "usd_est": 0.0362, "tokens": {"promptTokenCount": 215, "candidatesTokenCount": 1742, "thoughtsTokenCount": 671}}
+{"name": "icon-infantry", "file": "assets/art-src/icon-infantry.png", "batch": true, "usd_est": 0.0353, "tokens": {"promptTokenCount": 196, "candidatesTokenCount": 1462, "thoughtsTokenCount": 888}}
+{"name": "icon-infantry-motorized", "file": "assets/art-src/icon-infantry-motorized.png", "batch": true, "usd_est": 0.0239, "tokens": {"promptTokenCount": 1254, "candidatesTokenCount": 1376, "thoughtsTokenCount": 198}}
