@@ -34,14 +34,16 @@ STYLE = ("Style: a clean, simplified 3D game-asset render of a modern military f
 # one entry per building level; the HQ, Airbase 1-5 and Recruiting Office 2-3 come from Higgsfield, not from here
 SUBJECTS = {
     'naval-yard-1': (
-        "A small naval yard on a coast, level 1 of 5, shown as a soft-edged vignette. The land is only a thin, gently curved "
-        "band of pale sandy-grey shore, barely wider than the warehouse, running diagonally from the upper left to the right; "
-        "it is flat with no visible thickness, and every edge of it, including both ends and the inland side, feathers out "
-        "softly into the plain grey background. Below the shore a small rounded patch of calm blue-grey water, whose whole "
-        "outer edge feathers out softly and evenly into the plain grey background, like a soft vignette, with no straight or "
-        "hard edges anywhere. One short straight concrete pier reaches from the shore into the water, with a single small grey "
-        "frigate moored alongside it. On the shore: one low warehouse shed with an olive-green roof and one small slim dockside "
-        "crane at the water's edge. The pier, frigate, warehouse and crane are large in the frame and span most of its width."),
+        "A country's military naval base, level 1 of 5, the smallest real navy base, shown as a soft-edged vignette. A straight "
+        "concrete waterfront runs diagonally from the upper left to the lower right; its inland side and both ends feather out "
+        "softly into the plain grey background. From the waterfront three long, straight, parallel concrete piers reach out "
+        "into calm blue-grey water, and two grey modern warships (frigates) are docked alongside them. Beside the piers, one "
+        "dry dock: a long narrow concrete basin cut into the waterfront, holding a third grey warship hull. Two large pale-grey "
+        "dockside gantry cranes stand at the water's edge by the dry dock. On the waterfront behind them: a row of three long "
+        "grey warehouses with slate-grey roofs and one two-storey command building of pale concrete with a flat roof and a "
+        "short radio mast. The water around the piers is a broad rounded patch whose whole outer edge feathers out softly and "
+        "evenly into the plain grey background, with no straight or hard edges. The base is large in the frame and spans "
+        "most of its width."),
 }
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLE
