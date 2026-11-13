@@ -1454,13 +1454,16 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .rs-slot.empty .rs-sh{flex-basis:100%; text-align:center; font:500 11.5px/1.1 var(--body); color:var(--cn-fg2)}
 .rs-slot.full{justify-content:flex-start; cursor:pointer; transition:background-color .15s, box-shadow .15s}
 .rs-slot.full:hover{background:linear-gradient(180deg, #435b63, #374d55); box-shadow:inset 0 0 0 1px rgba(79,208,222,.55)}
-.rs-slot.s1, .rs-slot.s2{box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 3px 0 0 var(--cn-teal)}
+.rs-slot.s1{box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 3px 0 0 var(--cn-teal)} .rs-slot.s2{box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 3px 0 0 var(--cn-gold)}
+.rs-slot.full.s2:hover{box-shadow:inset 0 0 0 1px rgba(232,185,35,.6)}
 .rs-si{display:flex; flex-direction:column; gap:4px; min-width:0; flex:1}
 .rs-si .rs-tag{align-self:flex-start; padding:2px 11px 2px 7px; font-size:10.5px}
 .rs-si b{font:700 14.5px/1.1 var(--body); color:#fff; text-shadow:var(--cn-num); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .rs-tag{display:inline-block; padding:3px 14px 3px 9px; font:700 12.5px/1.1 var(--body); letter-spacing:.06em; color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.45);
   background:linear-gradient(180deg, #db3c35, #a5211c); clip-path:polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%); white-space:nowrap}
 .rs-bar{display:block; height:7px; border-radius:1px; background:rgba(0,0,0,.4); box-shadow:inset 0 0 0 1px rgba(143,163,170,.35); overflow:hidden}
+.rs-slot.s2 .rs-bar i{background:linear-gradient(180deg, #ffe08a, #c99a14); box-shadow:0 0 6px rgba(232,185,35,.7)}
+.rs-tag.t1{color:#05242a; text-shadow:none; background:linear-gradient(180deg, #7fe6f1, #2aa6b5)} .rs-tag.t2{color:#2a1d00; text-shadow:none; background:linear-gradient(180deg, #ffd766, #c99a14)}
 .rs-bar i{display:block; height:100%; width:0; background:linear-gradient(180deg, #8beff7, #2aa6b5); box-shadow:0 0 6px rgba(79,208,222,.7); transition:width .4s var(--ease)}
 .rs-left, .rs-sub{font:600 11px/1.1 var(--body); color:var(--cn-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 /* diamonds: a turned square with a light frame; the picture inside is turned back upright */
@@ -1611,9 +1614,11 @@ button.rs-dr.jump{cursor:pointer; text-decoration:underline; text-underline-offs
 .rs-db .btn{flex:1; min-height:40px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.15; padding-top:5px; padding-bottom:5px}
 .rs-db .btn .rb1{font-weight:700; font-size:12.5px; letter-spacing:.04em; text-transform:uppercase} .rs-db .btn .rbw{font-weight:600; font-size:12.5px; white-space:normal; text-align:center}
 .rs-slot.fresh{animation:rsFresh 1.3s var(--ease)}
+@keyframes rsFresh2{0%, 35%{background:linear-gradient(180deg, #7a6a3c, #5d4f2a); box-shadow:inset 0 0 0 2px #ffe08a, 0 0 18px rgba(232,185,35,.8)}}
+.rs-slot.fresh.s2{animation-name:rsFresh2}
 @keyframes rsFresh{0%, 35%{background:linear-gradient(180deg, #4f7680, #3c5d66); box-shadow:inset 0 0 0 2px #8ff4fb, 0 0 18px rgba(79,208,222,.8)}}
 .rs-state{display:inline-flex; align-items:center; gap:6px; padding:9px 12px; border-radius:2px; font:700 13px/1 var(--body); background:rgba(0,0,0,.2)}
-.rs-state.ok{color:#8ccdf0; box-shadow:inset 0 0 0 1px rgba(110,190,240,.55)} .rs-state.run{color:#9ff5fb; box-shadow:inset 0 0 0 1px rgba(79,208,222,.55)} 
+.rs-state.ok{color:#8ccdf0; box-shadow:inset 0 0 0 1px rgba(110,190,240,.55)} .rs-state.run{color:#9ff5fb; box-shadow:inset 0 0 0 1px rgba(79,208,222,.55)} .rs-state.run.q{color:#ffe08a; box-shadow:inset 0 0 0 1px rgba(232,185,35,.6)}
 /* phones: a full-screen sheet between the bars */
 @media (max-width: 820px){
   #modal.docked:has(> .sheet.rsch){padding:0}
@@ -9052,17 +9057,19 @@ const RBT = {inf:'125,144,70', arm:'156,132,88', sup:'166,95,60', aas:'63,151,13
 const rbImg = id => `<span class="rs-bpw" aria-hidden="true"><img class="rs-bpic" src="assets/art/rb-${id}.webp" alt="" decoding="async" draggable="false"></span>`;   // the space between the name and the count
 const RROLE = {inf:'Takes ground, holds it', arm:'Breaks the line', sup:'Guns, rockets, air defence', aas:'Gunships, airborne troops', tac:'Fighters and strike jets', uns:'Eyes and cheap strikes',
   str:'Bombers and big sensors', nav:'Sea control, submarines', msl:'Missiles and satellites', cmd:'Every force you field'};   // the role line on a phone
+const rSlotFrees = N => { const hs = R_SLOTS.map(k => N[k] && N[k].h).filter(h => h > 0); return hs.length ? Math.min(...hs) : 0; };   // hours until the first busy slot frees
+const rWhyT = (N, w) => w === 'Both slots busy' ? `${w} · a slot frees in ${rDur(rSlotFrees(N))}` : w;   // the rules' reason, with when the first slot frees added (game time)
 const rDur = h => h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`;
 // the name a slot shows: the node and its level; a project of the old tree (an earlier save) keeps its old name until it finishes
 const rSlotName = R => RN[R.id] && (R.lv || !R_LEGACY[R.id]) ? rName(RN[R.id], R.lv || 1) : R_LEGACY_NAME[R.id] || R.id;
-function rSlotHTML(k, R, extra){ const lbl = `<span class="rs-tag">SLOT #${k}</span>`;
+function rSlotHTML(k, R, extra){ const lbl = `<span class="rs-tag t${k}">SLOT #${k}</span>`;
   if (!R) return `<div class="rs-slot empty" id="rslot${k}"><span class="rs-dm sm"><span class="dmi">${rg('plus', 20)}</span></span>${lbl}<span class="rs-sh">Choose a project</span></div>`;
   const nd = RN[R.id] && (R.lv || !R_LEGACY[R.id]) ? RN[R.id] : null, nm = rSlotName(R);
   if (!nd) return `<div class="rs-slot full s${k}" id="rslot${k}" title="${nm}: a project from your earlier game. It becomes its upgrades in the new tree when it finishes"><span class="rs-dm sm"><span class="dmi">${rg('gen', 20)}</span></span><span class="rs-si">${lbl}<b>${nm}</b>${extra}</span></div>`;
   return `<button class="rs-slot full s${k}" id="rslot${k}" data-act="rsel" data-id="${nd.id}" title="${nm}: ${rTxt(nd, R.lv || 1)}. Tap to see it in ${RCAT_BY[nd.cat].name}"><span class="rs-dm sm"><span class="dmi">${rFace(nd, 22)}</span></span>
     <span class="rs-si">${lbl}<b>${nm}</b>${extra}</span></button>`; }
 // the state of a node for the player: what the diamond shows (docs/RESEARCH.md 9.4)
-function rNodeState(nd){ const N = S.nations[PLAYER], lv = rLevel(PLAYER, nd.id), nx = rNextLv(PLAYER, nd.id), k = rRunning(N, nd.id), open = !k && !!nx && rOpen(PLAYER, nd.id), why = nx && !k ? researchWhy(PLAYER, nd.id) : '';
+function rNodeState(nd){ const N = S.nations[PLAYER], lv = rLevel(PLAYER, nd.id), nx = rNextLv(PLAYER, nd.id), k = rRunning(N, nd.id), open = !k && !!nx && rOpen(PLAYER, nd.id), why = nx && !k ? rWhyT(N, researchWhy(PLAYER, nd.id)) : '';
   const wait = !open && /^Waits/.test(why), pay = open && hasC(N, rCost(nd, nx));
   return {lv, nx, slot:k ? rSlotNo(k) : 0, open, pay, wait, why, s:k ? 'run' : !nx ? 'done' : open ? 'open' : wait ? 'wait' : 'lock'}; }
 function researchHTML(){
@@ -9180,7 +9187,7 @@ function rCardHTML(nd, busy, cat){
 function rNextHTML(cat, busy){ if (!cat) return ''; const N = S.nations[PLAYER], today = rDay();
   const op = rOpenSteps(PLAYER).filter(x => x.nd.cat === cat).map(x => ({...x, c:rCost(x.nd, x.lv), ok:hasC(N, rCost(x.nd, x.lv))})).sort((a, b) => (b.ok - a.ok) || a.c.rare - b.c.rare || a.c.cash - b.c.cash).slice(0, 4);
   const row = (nd, lv, txt, cls) => `<button class="rc-sg ${cls}" data-act="rsel" data-id="${nd.id}" title="${rName(nd, lv)}: ${rTxt(nd, lv)}"><span class="rs-dm sm"><span class="dmi">${rFace(nd, 18)}</span></span><span class="rc-sgt"><b>${rName(nd, lv)}</b><small>${txt}</small></span></button>`;
-  let h = `<div class="rc-next"><span class="rs-dk">${busy ? 'Both slots are busy · next up' : 'What to research next'}</span>`;
+  let h = `<div class="rc-next"><span class="rs-dk">${busy ? `Both slots are busy · a slot frees in ${rDur(rSlotFrees(N))} · next up` : 'What to research next'}</span>`;
   if (op.length) h += op.map(x => row(x.nd, x.lv, `${x.ok ? '' : 'Short of goods · '}$${fmt(x.c.cash)}M · ${fmtQ(x.c.rare)} rare · ${rDur(rHours(PLAYER, x.nd, x.lv))}`, x.ok ? 'ok' : 'short')).join('');
   else { const nx = RNODES.filter(nd => nd.cat === cat && rNextLv(PLAYER, nd.id) && !rRunning(N, nd.id) && rReqsOk(PLAYER, nd, rNextLv(PLAYER, nd.id))).map(nd => ({nd, lv:rNextLv(PLAYER, nd.id)})).sort((a, b) => a.nd.lv[a.lv - 1].day - b.nd.lv[b.lv - 1].day)[0];
     h += nx ? row(nx.nd, nx.lv, `Opens on day ${nx.nd.lv[nx.lv - 1].day}, in ${nx.nd.lv[nx.lv - 1].day - today} day${nx.nd.lv[nx.lv - 1].day - today > 1 ? 's' : ''}`, 'lock') : `<span class="rc-hint">Nothing more to open here: every step is researched or running.</span>`; }
