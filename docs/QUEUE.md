@@ -14,7 +14,6 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet | branch small-fixes-2 |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (owner approved with fixes: bigger banner subjects in the middle band, icons close up, one shared icon per upgrade type): new artillery icon first for the owner, then the rest on Gemini | Opus | branch research-tab |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused on branch borders-real; resumes when the speed job is merged (both rewrite map drawing) |
