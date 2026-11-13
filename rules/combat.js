@@ -125,6 +125,37 @@ function armyStrength(a, blind = false){   // blind: a force that is not yours: 
     out.push(row); }
   return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, dug:!blind && digF(a) < 1, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), supplied:sup === 1}};
 }
+/* ---------------- Unit stats by research (the research card's i button) ----------------
+   unitStrength(n, t, T): the full stats of ONE unit of type t for nation n with the research levels T ({node id: level}; omitted: the nation's own),
+   before any battle modifier, so a player can compare units: health, speed (km/day: marching or sailing speed, aircraft their flight speed), vision
+   (km), attack range (km: the guns' and launchers' reach, or an aircraft's mission radius; null: it fights where it stands), and for each Army Info
+   row but population (STR_ROWS) the attack and the defence the way armyStrength reads its base values: the research-boosted stat (with the nation's
+   doctrine) times the damage class table, with the counters research changes (R_VS). Pure: nothing is changed.
+   unitSteps(n, t): the research steps of t's line that change any of those numbers, in the tree's order (Firepower and Protection by level, the
+   upgrades that change a stat, the generations): [{id, lv, T}], T being the line's unlock plus that step (a generation with the ones before it). */
+function unitStrength(n, t, T){
+  const N = n >= 0 && S.nations[n] ? S.nations[n] : null, U = UNITS[t], dc = N ? DOCTRINES[N.doc] : null; T = T || (N && N.tech) || {};
+  const lv = id => T[id] != null ? +T[id] || 0 : RN[id] && RN[id].std ? 1 : 0, hasT = id => lv(id) > 0, air = U.cls === 'air';
+  const stat = k => { let v = U[k] || 0; for (const nd of RNODES_U[t] || []){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++){ const x = nd.lv[i].fx[k]; if (x) v += x; } }
+    if (k === 'atk' || k === 'def'){ v *= MARK_F[Math.min(3, +T[t + (k === 'atk' ? '_fp' : '_pr')] || 0) + 1]; if (dc) v *= dc[k] || 1; } return v; };   // (as st(), without shortages)
+  const mo = k => { const r = R_VS[t] && R_VS[t][k]; return r && hasT(r[0]) ? r[1] : mult(t, k); }, mU = u => U.vsU && U.vsU[u] != null ? U.vsU[u] : mo(UNITS[u].cls);
+  const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
+  const atk = stat('atk'), def = stat('def');
+  const vis = uav ? uav.vis : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
+    : U.vis*((t === 'at' && hasT('at_eye')) || (t === 'spec' && hasT('spec_eye')) ? 1.5 : 1);
+  const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
+  const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*24 : stat('spd'))*KM_HEX/10)*10;
+  const rows = STR_ROWS.filter(R => R.k !== 'pop').map(R => { const r = {k:R.k, name:R.name, atk:null, def:null, immune:false, unit:''};
+    if (R.t){ if (atk > 0) r.atk = atk*mU(R.t); const Md = multU(R.t, t); if (Md > 0.001) r.def = def/Md; else r.immune = true; }
+    else if (R.k === 'msl'){ const w = t === 'sam' ? 1 : t === 'frig' ? 0.6 : 0; if (w){ r.atk = 100*(1 - Math.pow(1 - 0.12, w*([1, 2, 2.5, 3][lv('msl3')] || 1))); r.unit = '%'; } r.def = def/MSL_VS[U.cls]; }
+    else if (R.k === 'bld' && U.bmb){ r.atk = t === 'stealth' && hasT('stealth_bay') ? 0.75 : U.bmb; r.unit = 'bomb load'; }
+    return r; });
+  return {t, hp:stat('hp'), spd, vis:Math.round(vis), rng:rng == null ? null : Math.round(rng), rngKind:air ? 'mission' : rng == null ? null : 'fire', rows}; }
+function unitSteps(n, t){ const L = (RNODES_U[t] || []).filter(nd => nd.kind !== 'unlock'), base = {['u_' + t]:1}, key = T => JSON.stringify(unitStrength(n, t, T)), k0 = key(base), out = [];
+  for (const nd of L) for (let l = 1; l <= nd.lv.length; l++){ const T = {...base, [nd.id]:l};
+    if (nd.kind === 'gen') for (const m of L) if (m.kind === 'gen' && m.gen < nd.gen) T[m.id] = 1;
+    if (key(T) !== k0) out.push({id:nd.id, lv:l, T}); }
+  return out; }
 /* ---------------- Commanders ---------------- */
 const TRAITS = {
   blitz:{name:'Blitz', icon:'»', desc:'+15% speed; +10% attack when attacking (×rank)'},

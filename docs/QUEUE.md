@@ -14,31 +14,32 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
+| Resource balance: all 6 resources in every nation, at most 2 cities per resource (3 for the 13th/14th city), real geography, Syria first, per-nation list for the owner | Opus | branch resource-balance |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
-| Research tab redo, phase 1: fix the 9 empty category icons, merge the research unit cards, then 3 sample banners and 3 sample icons for the owner (Gemini, batch, one try each) | Opus | branch research-tab |
-| Map modes: only Political and Terrain as full modes; Relations and Supply as overlays on Political; other modes removed; mode switch + zoom glitch fixed | Opus | branch map-modes |
-| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused by a container restart (work saved on branch borders-real); resumes when a slot frees |
+| Research tab redo, phase 2 (the other 186 pictures, about $6.9): waits for the owner to approve the 3 sample banners and 3 sample icons | Opus | samples on branch research-tab (8a24f63) |
+| Unit controls like Conflict of Nations: exact-spot movement fixed, tap to select / tap map to move / clear path line / tap empty space to deselect, Waypoint button with dots and undo | Opus | branch unit-controls |
+| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused on branch borders-real; resumes when the speed job is merged (both rewrite map drawing) |
 
-**Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), then map modes and real borders, each merged with master and re-tested before the next.
+**Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Unit controls like Conflict of Nations: pinpoint movement fixed, tap to select, tap to move, path line, tap empty space to deselect; Waypoint button with dots and undo | Opus |
-| 2 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
-| 3 | Resource balance rule: all 6 resources per nation, max 2 cities each, real geography, Syria first, per-nation list | Opus |
-| 4 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities | Sonnet |
-| 5 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 6 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
-| 7 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
-| 8 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
-| 9 | Nations balance re-check now that the AI never starts wars | Sonnet |
-| 10 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
-| 11 | Each aircraft type its own 3D shape | Opus |
-| 12 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
+| 2 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities | Sonnet |
+| 3 | Roads: every province linked to a neighbour, real roads first | Opus |
+| 4 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
+| 5 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
+| 6 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
+| 7 | Nations balance re-check now that the AI never starts wars | Sonnet |
+| 8 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
+| 9 | Each aircraft type its own 3D shape | Opus |
+| 10 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Research art samples:** 3 scene banners (Armoured Forces, Tactical Air, Navy) and 3 scene icons (Infantry Corps, Main Battle Tank, Extended-Range Shells). Approve to make the other 186 (about $6.9), or ask for changes. Also: one shared Firepower/Protection picture instead of 49 per-unit ones (139 pictures, about $5.2)?
 
 - **Infantry map icon:** three candidates: A flat helmeted head with a wheel for motorized, B plain head (both on branch research-cards), C the green side-view helmet (branch claude/zen-cori-mae3e9, and the uploaded helmet-icons.png). Pick one. (The research cards are being merged in the research tab redo; the research pictures will be replaced by the new Gemini art.)
 - **Building art:** the angled set now has Airbase, Naval Yard (branch claude/zen-cori-mae3e9), Recruiting Office, Fortifications and Hospital levels 1-5 and the 7 regional HQs. Still missing: Army Base, Missile Silo and Arms Industry 1-5 (until then the map shows nothing for them and the city panel keeps their old pictures). Who makes them?
