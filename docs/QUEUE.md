@@ -3,16 +3,10 @@
 Kept up to date as tasks start and finish. Everything goes to the **Dev Build** first
 (https://claude.ai/artifact/EKDR7pckn3hPkoJVuxoe7R); the public build changes only when the owner says "move to public".
 
-**Rules for running jobs (owner, 2026-11-11):**
-- **Models:**
-  - Fable 5.2 only for the economy and buildings rework. No new Fable tasks unless the owner says so.
-  - Opus for big features and design.
-  - Sonnet for routine work.
-- **Limits:**
-  - At most 2 to 3 jobs at once.
-  - Small tasks get one pass with no extra review.
-  - Big ones get one review and at most one repair.
-- **Commits:** one commit after each finished task.
+**Rules for running jobs (owner, 2026-11-11 and 2026-11-13):**
+- **Models:** Opus for big features and design, Sonnet for routine work, no new Fable tasks unless the owner says so.
+- **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
+- **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
 Last updated: 2026-11-13 (overnight run).
 
@@ -20,31 +14,35 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Picture audit: every unit, building and research item against assets and assets/art-src (read-only) | Opus (workflow) | Running |
-| Real borders: every country and province border drawn from Natural Earth 1:10m with no shape-changing simplification (game logic stays on the cells), every country clearly coloured in plain solid colours (no diagonal hatching over other countries; your own country stands out by its colour and border), all borders visible; screenshots of the Middle East, Europe and the US next to a real map before merging | Opus | Started (branch borders-real) |
-| Map modes: switching Political/Relations/Supply/Terrain/... glitches the map; find and fix the cause, test every switch and fast switching; screenshots before merging | Opus | Started (branch map-modes) |
-| Research tree pictures, research unit cards, infantry icons | Opus | Done on branch research-cards; waiting for the owner |
+| URGENT: the map goes black on its own (find the commit, fix, free caches, rebuild a lost map) | Opus | branch fix-black (merges first) |
+| Map modes: only Political and Terrain as full modes; Relations and Supply as overlays on Political; other modes removed; mode switch + zoom glitch fixed | Opus | branch map-modes |
+| Night city lights: small separate glows at real cities, dark gaps, dimmer; colours and borders on top | Opus | branch night-lights |
+| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused by a container restart (work saved on branch borders-real); resumes when a slot frees |
+
+**Merge order for the map jobs (owner):** one at a time, black map first, then map modes, night lights and real borders, each merged with master and re-tested before the next.
 
 ## Queued (in this order)
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Night city lights: small separate glows at real city locations sized by population, dark gaps between cities, dimmer overall; country colours and borders clearly visible on top at night; Egypt and the Levant at night before/after before merging | Opus (next free slot) |
-| 1a | Unit look: the unit label becomes a small square badge (flag on top, unit icon in the middle, count below), readable at every zoom; infantry drawn as small clear soldier figures matching the tanks in style and scale, with soft shadows; the yellow 'dug in' shield kept at the same size with a clearer trench/sandbag symbol, a tooltip ('Dug in: +defence. ...'), explained in the unit's info panel and the tutorial, and a real dug-in defence bonus in the rules (it had none); screenshots before merging | Opus |
-| 1b | Building pictures in the game: the angled pictures (regional capital HQs; Airbase, Naval Yard, Recruiting Office, Fortifications, Hospital levels) cut out and cropped, replacing the old ones on the map and in the city panel; Naval Yard on the real coast, mirrored so its piers face the sea; no level numbers or badges on the map (level only in the info panel); screenshots of Berlin and a coastal city at 3 zooms before merging | Opus (next free slot, after the audit) |
-| 2 | Speed, round 2 with identical results: the targets not yet met (well under 0.5 s per game day; steady 60 fps while panning) | Opus (after the border rebuild, which changes the map drawing) |
-| 3 | Small fixes: 'BERLIN · BERLIN' map labels, phone Market table and cards, battery.js and v3air test robustness | Sonnet |
-| 4 | Strike fighter files renamed (bomber.webp is the Strike Fighter); the B-1 upload as the Heavy Bomber picture and the stealth-bomber upload for the Stealth Bomber, cut out and matched; screenshots before merging | Sonnet |
-| 5 | Start screen: the menu panel in the centre, background still visible; new campaign screen without region tabs: all nations on one scrollable A-Z list with flag, name and a search box; phones too; screenshots before merging | Sonnet |
-| 6 | Nations balance pass (Iran and the US losing too much land): re-measure now that computer nations never start wars; battery.js robustness | Sonnet |
-| 7 | Each aircraft type gets its own 3D shape | Opus (after research-cards is merged) |
-| 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
-| 9 | Capital HQ flag: each owner's real country flag on the HQ's flagpoles, drawn in code so it changes when the capital is captured, for every regional HQ version (the building pictures job records each HQ picture's flagpole tops for this); screenshots of Berlin and one captured capital before merging | Opus (right after the building pictures are in the game) |
+| 1 | Research tab redo: fix the empty category/header icons; merge the research unit cards (i button with full stats); Gemini scene banners and square scene icons, 3 + 3 samples for the owner first | Opus |
+| 2 | Unit controls like Conflict of Nations: pinpoint movement fixed, tap to select, tap to move, path line, tap empty space to deselect; Waypoint button with dots and undo | Opus |
+| 3 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
+| 4 | Resource balance rule: all 6 resources per nation, max 2 cities each, real geography, Syria first, per-nation list | Opus |
+| 5 | Cities panel: inline Build/Train with cost, time and queue; go-to button; multi-select with total cost and skipped cities | Sonnet |
+| 6 | Roads: every province linked to a neighbour, real roads first | Opus |
+| 7 | Speed, round 2 with identical results | Opus |
+| 8 | Small fixes: 'BERLIN · BERLIN' labels, phone Market layout, two flaky tests | Sonnet |
+| 9 | Bomber pictures: B-1 as the Heavy Bomber, the stealth bomber upload, strike fighter files renamed | Sonnet |
+| 10 | Start screen: centred menu panel; A-Z nation list with search instead of region tabs | Sonnet |
+| 11 | Nations balance re-check now that the AI never starts wars | Sonnet |
+| 12 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
+| 13 | Each aircraft type its own 3D shape | Opus |
+| 14 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
 
-- **Infantry map icon:** three candidates: A flat helmeted head with a wheel for motorized, B plain head (both on branch research-cards), C the green side-view helmet (branch claude/zen-cori-mae3e9, and the uploaded helmet-icons.png). Pick one, and say "merge" for the research cards and pictures.
-- **research-slots** (branch, done 2026-11-12, never merged): slot colours on research bars and tags. Merge?
+- **Infantry map icon:** three candidates: A flat helmeted head with a wheel for motorized, B plain head (both on branch research-cards), C the green side-view helmet (branch claude/zen-cori-mae3e9, and the uploaded helmet-icons.png). Pick one. (The research cards are being merged in the research tab redo; the research pictures will be replaced by the new Gemini art.)
 - **Building art:** the angled set now has Airbase, Naval Yard (branch claude/zen-cori-mae3e9), Recruiting Office, Fortifications and Hospital levels 1-5 and the 7 regional HQs. Still missing: Army Base, Missile Silo and Arms Industry 1-5 (until then the map shows nothing for them and the city panel keeps their old pictures). Who makes them?
   - Fortifications: the game has 3 levels, the new set has 5. For now game levels 1-3 use pictures 1, 3 and 5. Make the game 5 levels instead?
   - Hospital pictures show a red cross, a protected emblem the Red Cross asks games not to use: swap it for a green or white medical cross?
@@ -58,6 +56,7 @@ Last updated: 2026-11-13 (overnight run).
 - **Nations balance tests:** T4/T5 count only land taken from other nations while more than a quarter of the world is unowned; China's 'fights a big rival by day 60' check relaxed. OK?
 - **Cleanup:** delete the rejected building branches (buildings-3d, building-fix, buildings-cutout) and the old wip/* snapshot branches once checked to be on master?
 - **Dug-in bonus size:** your tooltip says 'Dug in: +defence', but the rules gave dug-in units no bonus at all, so the unit look job adds one: damage taken x0.8 (about +25% defence) while dug in. OK, or another number?
+- **Picture audit (2026-11-13):** done, list sent; nothing fixed yet. Which fixes to queue? Main ones: Anti-Tank Infantry shows a missile truck in research; Paratroopers reuse the infantry picture; empty icons on 9 of 10 research categories and 3 column headers (a code bug); generation nodes show tinted copies; missile pictures loaded but never shown; no satellite picture; bombers/AWACS/patrol plane share the small fighter model on the map; old top-down Airbase 2-4 and Silo 2-3 near-identical; City pictures in porthole frames.
 - **Fable:** no Fable tasks; new ones only if you say so.
 
 ## Planned for later (in LATER.md, not built yet)
@@ -72,6 +71,9 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
 | URGENT map fix: every country its own strong colour (no two neighbours alike), allies blue, tint and province/country borders clear at every zoom, sea outline (straight lines) removed, real country borders (Syria checked: data correct, wiggle removed) | Opus |
 |---|---|
+| Unit look: square unit badge (flag, upright icon, count), 3D infantry squads with soft shadows, dug-in shield with a tooltip, Army Info and tutorial, and a real dug-in defence bonus (damage taken x0.8) (Dev Build v34) | Opus |
+| New resource icons: money, oil, iron, electronics (Dev Build v33) | Opus |
+| Research slot colours (Dev Build v31) | Opus |
 | Strike and blast effects per weapon (cruise, ballistic, chemical, tactical nuclear, ICBM) and battle blasts, with repairs 1 and 2 | Opus |
 | 64-nation plan (docs/NATIONS-PLAN.md) and the owner's decisions (68 playable) | Fable 5.2 |
 | Recruiting Office with 5 levels | Sonnet |
