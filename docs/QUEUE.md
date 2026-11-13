@@ -14,14 +14,17 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
   - Big ones get one review and at most one repair.
 - **Commits:** one commit after each finished task.
 
-Last updated: 2026-11-13.
+Last updated: 2026-11-13 (overnight run).
 
 ## Running
 
 | Task | Model | Where it is |
 |---|---|---|
-| Buildings on the map: a full new ANGLED set in a simple clean style (33 levels + Capital HQ). Step 1: Higgsfield prompts for the first 8 (HQ, Airbase 1-5, Recruiting Office 2-3) written for the owner; step 2: the other 26 through the Gemini API (Nano Banana) once the key is saved as a secret. Nothing on the map until the art is in (3D models and cut-outs not merged) | Owner (Higgsfield) + Opus | Prompts written; waiting for the owner's pictures and API key |
-| Research tree pictures (angled side views, from the 3D models where needed), research unit cards (one neutral line, i button with full stats per research level), infantry icons from the manpower helmet | Opus | Done on its branch; infantry icon redone as a flat helmeted head (owner to pick: with wheel or plain); waiting for the owner's 'merge' |
+| Picture audit: every unit, building and research item against assets and assets/art-src (read-only) | Opus (workflow) | Running |
+| Speed, round 2 with identical results: the targets not yet met (well under 0.5 s per game day; steady 60 fps while panning) | Opus | Starting (branch perf-2) |
+| Small fixes: 'BERLIN · BERLIN' map labels, phone Market table and cards, battery.js and v3air test robustness | Sonnet | Starting (branch small-fixes-2) |
+| Buildings on the map: a full new angled set in a simple clean style (33 levels + Capital HQ); nothing on the map until the art is in | Owner + another session (Gemini API) | Airbase 1-5 and a western HQ uploaded; 20 more on branch claude/zen-cori-mae3e9 |
+| Research tree pictures, research unit cards, infantry icons | Opus | Done on branch research-cards; waiting for the owner |
 
 ## Queued (in this order)
 
@@ -30,19 +33,28 @@ Last updated: 2026-11-13.
 | 1 | Nations balance pass on today's combat rules: Iran and the United States lose too much land in some games; make battery.js robust to ambient sea waves | Opus (after resources x1000) |
 | 2 | Each aircraft type gets its own 3D shape | Opus (after the research and icons job is merged: it built new aircraft models for the research pictures) |
 | 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
-| 4 | Capital HQ flag: once the new building pictures are uploaded and placed on the map, put the owning country's real flag on the capital HQ's flagpoles, drawn in code so it changes when the capital is captured (don't start yet) | Opus (after the new building pictures are on the map) |
+| 4 | Strike fighter files renamed (bomber.webp is the Strike Fighter); the B-1 upload as the Heavy Bomber picture and the stealth-bomber upload for the Stealth Bomber, cut out and matched; screenshots before merging | Sonnet (next free slot) |
+| 5 | Start screen: the Iron Meridian menu panel in the centre (not the right side), background picture still visible; new campaign screen without region tabs: all nations on one scrollable A-Z list with flag and name and a search box; right on phones; screenshots before merging | Sonnet (next free slot) |
+| 7 | Capital HQ flag: once the new building pictures are uploaded and placed on the map, put the owning country's real flag on the capital HQ's flagpoles, drawn in code so it changes when the capital is captured (don't start yet) | Opus (after the new building pictures are on the map) |
 
-## Waiting for the owner
+## Waiting on me (the owner)
 
-- **Infantry map icon:** A (flat helmeted head; motorized gets a wheel under it) or B (plain head for both), and "merge" for the research cards and pictures job.
-- **Faster game days:** reaching well under 0.5 s per game day needs changes that alter how computer nations play (quiet nations plan every 8 hours, a shorter attack-target search, reusing routes across hours). Want any of them?
-- **Market prices** (now on the Dev Build) are shown per 1,000 units (for example '$0.04M per 1,000 barrels'). OK?
-- **Research design approvals** (docs/RESEARCH.md section 12 on branch research-redesign; nothing below is built): A. balance changes in the new tree (unit unlocks get first days 1-14, Marks become Firepower/Protection research, generations add health, IFV/Special Forces/Rocket Artillery cheaper stand-alone unlocks, 289 steps); B. new ground units (APC, Tank Destroyer, Towed Artillery, AA Gun Vehicle, Scout Vehicle); C. new aircraft (Scout Helicopter, Naval Helicopter); D. new ships (Patrol Boat, Destroyer, Ballistic-Missile Submarine); E. new weapons (sub-launched cruise and ballistic missiles, chemical and tactical nuclear warheads, ICBM); F. Officers (replace commanders, keep both, or a smaller Staff College step); G. elite marking of 4 existing units.
-- **Pictures to make on Higgsfield:** u-heavy-bomber-1, u-heavy-bomber-2, u-stealth-bomber (optional u-infantry-figure); plus for the research banners: a heavy or stealth bomber seen from above (Strategic Air, now uses the AWACS), a command or logistics picture (Command & Logistics, now the supply truck), optional paratroopers (Air Assault).
-- **Netlify token** for the phone app.
-- **"Move to public"** for everything under "Waiting for public" in RELEASES.md.
-- **Nations balance tests:** T4/T5 now count only land taken from other nations while more than a quarter of the world is unowned (docs/NATIONS-PLAN.md section 7); China's 'fights a big rival by day 60' check relaxed. OK?
-- **Fable:** no Fable tasks left; new ones only if the owner says so.
+- **Infantry map icon:** three candidates: A flat helmeted head with a wheel for motorized, B plain head (both on branch research-cards), C the green side-view helmet (branch claude/zen-cori-mae3e9, and the uploaded helmet-icons.png). Pick one, and say "merge" for the research cards and pictures.
+- **research-slots** (branch, done 2026-11-12, never merged): slot colours on research bars and tags. Merge?
+- **Building art:** another session (branch claude/zen-cori-mae3e9) made 20 angled pictures with the Gemini API (Naval Yard, Recruiting Office, Fortifications and Hospital, levels 1-5); you uploaded Airbase 1-5 and a western HQ. Should that session carry on with the rest (Army Base, Missile Silo, Arms Industry 1-5, regional HQs)?
+  - Fortifications: the game has 3 levels, the new set has 5. Make the game 5 levels, or use 3 of them?
+  - Hospital pictures show a red cross, a protected emblem the Red Cross asks games not to use: swap it for a green or white medical cross?
+  - Recruiting Office level 1 has a flag on a pole although the style says no flags: keep or remove?
+  - The HQ upload is named 'ba-hq-wstern.png..png': rename to ba-hq-western.png?
+- **Forward Airstrip:** 5 levels or 3?
+- **Faster game days:** getting well under 0.5 s per game day may need changes to how computer nations think (quiet nations plan every 8 hours, a shorter attack-target search, reusing routes across hours). Want any of them?
+- **Market prices** are shown per 1,000 units (for example '$2.70M / 1K'). OK?
+- **Research design approvals:** item 3 (Generations) and the new ground units list (docs/RESEARCH.md section 12).
+- **Pictures:** the two research banners (Strategic Air now uses the AWACS; Command & Logistics the supply truck).
+- **Netlify token** for the phone app; **"move to public"** for everything under 'Waiting for public' in RELEASES.md.
+- **Nations balance tests:** T4/T5 count only land taken from other nations while more than a quarter of the world is unowned; China's 'fights a big rival by day 60' check relaxed. OK?
+- **Cleanup:** delete the rejected building branches (buildings-3d, building-fix, buildings-cutout) and the old wip/* snapshot branches once checked to be on master?
+- **Fable:** no Fable tasks; new ones only if you say so.
 
 ## Planned for later (in LATER.md, not built yet)
 
