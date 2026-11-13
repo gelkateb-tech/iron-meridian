@@ -80,7 +80,7 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
     const a = window.__mmSnap(L, 'L'), was = {vx:L.vx - im.view.x, vy:L.vy - im.view.y, full:L.full, strips:L.strips || 0, lite:L.lite, dp:L.dp, k:im.layerKey ? im.layerKey() : null};
     // (fresh at the layer's own place: a settled layer is rightly reused a few px off the view after a short pan, e.g. a drag the world's edge clamped)
     { const v = im.view, x0 = v.x, y0 = v.y; v.x = L.vx; v.y = L.vy; try { im.renderLayer(); } finally { v.x = x0; v.y = y0; } } const base = window.__mmDiff(a, im.layer);
-    if (base.share > 0.002 && window.__mmDump){ const h = c => { const d = document.createElement('canvas'); d.width = c.width >> 1; d.height = c.height >> 1; d.getContext('2d').drawImage(c, 0, 0, d.width, d.height); return d.toDataURL('image/png'); }; base.dump = [h(a), h(im.layer)]; base.was = was; }
+    if (base.share > 0.002 && window.__mmDump){ const h = c => c.toDataURL('image/png'); base.dump = [h(a), h(im.layer)]; base.was = was; }
     const O0 = im.ovl.cv, show = im.mapMode === 'political' && (im.ovl.on.rel || im.ovl.on.sup);
     let ovl = {share:0}; if (show){ if (!O0 || O0.width !== im.layer.width) ovl = {share:1, missing:true}; else { const o = window.__mmSnap(O0, 'O'); ovl = window.__mmDiff(o, im.ovl.fresh()); } }
     else if (O0 && O0.width > 1) ovl = {share:1, leftover:true};
