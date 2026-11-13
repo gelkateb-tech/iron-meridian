@@ -164,6 +164,92 @@ const NAMES = {
   'New Zealand':{'Otago':'Dunedin', 'Manawatu-Wanganui':'Palmerston North', 'Waikato':'Hamilton', 'Canterbury':'Christchurch', 'Bay of Plenty':'Tauranga'},
 };
 
+// Each city's ONE main resource in the nations world (the owner's resource balance rule, docs/ECONOMY.md "Resource balance"): set here by hand for
+// every playable nation, after the real geography of the region, instead of by the map method of rules/map.js cityMains (which still decides the
+// classic world, independent land and every save made before this table: a save carries what it was made with, rules/state.js nationsWorld).
+// The rule (checked below): all six goods (money, oil, materials, iron, electronics, rare materials) in every nation; no good in more than two
+// of its cities, except that a nation of 13 or 14 cities gives its one or two cities beyond 12 the good that best fits its region, so one or two
+// goods (never more than n - 12) reach three. Per nation: a short note on the geography, then 'key City, City | key City | ...'
+// (keys cash oil metal iron elec rare; names as the game shows them). docs/RESOURCES-PER-NATION.md lists the result for the owner.
+const MAIN_KEYS = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare'], MAIN_CH = {cash:'c', oil:'o', metal:'m', iron:'i', elec:'e', rare:'r'};
+const MAINS_ALL = true;    // every open nation must be in MAINS (true once the table covers them all)
+const MAINS = {
+  // Syria first (the owner's example: 4 of 8 cities on oil, no rare materials). Oil where Syria's fields are, the Jazira and the Euphrates (Al-Hasakah:
+  // Rmelan and Suwaydiyah; Raqqa: the fields of the Euphrates valley towards Deir ez-Zor); money in the capital and in Daraa (the Nasib crossing,
+  // the trade road to Jordan and the Gulf); electronics and industry in Aleppo, the industrial capital; materials in Hama (cement works and the
+  // Hama steel rolling mill's heavy industry); iron in Idlib (the Rajo iron ore of the north-western hills by Afrin); rare materials in Homs (the
+  // Palmyra phosphates of the Homs desert carry uranium and rare earths, recovered at the Homs phosphoric acid plant)
+  'Syria':['Jazira and Euphrates oil, Aleppo industry, Palmyra phosphates (uranium, rare earths) at Homs, Rajo iron by Idlib', 'cash Damascus, Daraa | oil Al-Hasakah, Raqqa | metal Hama | iron Idlib | elec Aleppo | rare Homs'],
+  // the other 67, A to Z (a short reason each; money in the capital unless the rule needs otherwise)
+  'Afghanistan':['Sheberghan gas in the north, Mes Aynak copper (Logar), Hajigak iron (Bamyan), Khanneshin rare earths (Helmand), Badakhshan gems', 'cash Kabul, Herat | oil Balkh, Mazar-i-Sharif | metal Sharana, Fayzabad | iron Baghlan, Jalalabad | elec Kandahar | rare Zaranj'],
+  'Algeria':['Hassi Messaoud and Hassi R\'Mel (Laghouat) oil and gas, Ouenza iron and El Hadjar steel (Annaba), Gara Djebilet iron, Hoggar uranium and rare earths, Bordj Bou Arreridj electronics', 'cash Algiers, Oran | oil Hassi Messaoud, Djelfa | metal Batna, Chlef | iron Annaba, Adrar | elec Constantine, Aïn Defla | rare Arak'],
+  'Angola':['Cabinda and Kwanza basin oil, Lunda diamonds (Dundo), Kassinga iron by the Namibe railway, Cassala-Kitungo iron (Cuanza Norte), copper and timber in the north and south-east', 'cash Luanda, Benguela | oil Cabinda, Sumbe | metal Uíge, Mavinga | iron Moçâmedes, Ndalatando | elec Huambo | rare Dundo'],
+  'Argentina':['Mendoza oil, Formosa\'s Palmar Largo field, Jujuy lithium, Zapla iron (Tucumán), Sierra Grande iron (Trelew), San Juan mining, Sierra Pintada uranium (San Rafael), Córdoba industry', 'cash Buenos Aires, Posadas | oil Mendoza, Formosa | metal San Juan, San Rafael | iron Trelew, Tucumán | elec Córdoba, Rosario | rare Jujuy'],
+  'Australia':['Pilbara iron (Port Hedland), Whyalla iron (Adelaide), Timor Sea and Queensland gas, Weipa bauxite (Cairns), Tasmanian zinc, Nolans and Mt Weld rare earths, WA lithium', 'cash Canberra, Sydney | oil Darwin, Brisbane | metal Cairns, Hobart | iron Port Hedland, Adelaide | elec Melbourne | rare Alice Springs, Perth'],
+  'Bangladesh':['Bakhrabad and Titas gas (Comilla), Barapukuria coal and Maddhapara granite (Rajshahi), Chattogram ship-breaking steel, Gazipur industry, heavy-mineral beach sands', 'cash Dhaka, Khulna | oil Comilla | metal Rajshahi, Chuadanga | iron Chattogram | elec Mymensingh | rare Barisal'],
+  'Belarus':['Mozyr and Novopolotsk (Vitebsk) refineries, Soligorsk potash, Zhlobin steel (Gomel), Krichev cement (Mogilev)', 'cash Minsk | oil Mozyr, Vitebsk | metal Baranovichi, Mogilev | iron Gomel | elec Grodno | rare Brest'],
+  'Bolivia':['Chaco gas (Tarija, Chuquisaca), Uyuni lithium (Potosí), Huanuni tin (Oruro), Mutún iron (Santa Cruz), Beni timber', 'cash La Paz | oil Tarija, Sucre | metal Oruro, Trinidad | iron Santa Cruz | elec Cochabamba | rare Potosí'],
+  'Brazil':['pre-salt and Bahia oil, Minas Gerais and Carajás iron, Tubarão iron port (Vitória: the third iron city, Brazil\'s best fit), Araxá niobium, Mato Grosso diamonds, São Paulo and Manaus electronics (Curitiba the third)', 'cash Brasília, Fortaleza | oil Rio de Janeiro, Salvador | metal Porto Alegre, Recife | iron Belo Horizonte, Belém, Vitória | elec São Paulo, Manaus, Curitiba | rare Uberlândia, Cuiabá'],
+  'Cameroon':['Rio del Rey oil (Kumba), Kribi-Mbalam iron (Ebolowa), Minim-Martap bauxite (Ngaoundéré), Figuil cement (Garoua), Nkamouna cobalt (East)', 'cash Yaoundé, Bamenda | oil Kumba | metal Ngaoundéré, Garoua | iron Ebolowa | elec Douala | rare Bertoua'],
+  'Canada':['Alberta oil, Labrador iron (St. John\'s), Cape Breton steel (Halifax), BC and New Brunswick forestry, Nechalacho rare earths, Tanco lithium and caesium (Manitoba), Waterloo and Montreal tech', 'cash Ottawa, Toronto | oil Edmonton, Calgary | metal Vancouver, Moncton | iron St. John\'s, Halifax | elec London, Montreal | rare Yellowknife, Winnipeg'],
+  'Chad':['Doba and Bongor basin oil, Lake Chad natron, Tibesti uranium and rare earths (Zouar), cotton industry at Sarh', 'cash N\'Djamena, Abéché | oil Moundou, Bongor | metal Bol, Mao | iron Fada | elec Sarh | rare Zouar'],
+  'Chile':['Magallanes oil, Atacama lithium (Iquique), El Teniente copper (Rancagua), Coquimbo iron belt, Huachipato steel (Concepción, by Talca), southern forestry', 'cash Santiago, Temuco | oil Punta Arenas | metal Rancagua, Puerto Montt | iron Coquimbo, Talca | elec Valparaíso | rare Iquique'],
+  'China':['Daqing (Harbin), Karamay and Tarim oil (Xinjiang: the third oil city), Anshan and Wuhan steel, Bayan Obo (Hohhot) and Sichuan-Yunnan rare earths, Pearl River Delta, Chengdu and Xi\'an electronics (Xi\'an the third)', 'cash Beijing, Shanghai | oil Harbin, Ürümqi, Kashgar | metal Lanzhou, Lhasa | iron Shenyang, Wuhan | elec Guangzhou, Chengdu, Xi\'an | rare Hohhot, Kunming'],
+  'Colombia':['Llanos and Barrancabermeja oil, Cesar and Guajira coal, Cerro Matoso ferronickel, Chocó platinum and gold', 'cash Bogotá, Cali | oil Puerto López, Bucaramanga | metal Valledupar, Santa Marta | iron Medellín, Ibagué | elec Barranquilla, Pereira | rare Quibdó'],
+  'Cuba':['Cienfuegos refinery, Jatibonico oil (Sancti Spíritus), Moa nickel and cobalt (Holguín), Mayarí iron, Nuevitas cement', 'cash Havana, Guantánamo | oil Cienfuegos, Sancti Spíritus | metal Bayamo | iron Santiago de Cuba | elec Camagüey | rare Holguín'],
+  'Dem. Rep. Congo':['Katanga copper (Lubumbashi) and cobalt (Kolwezi), Kasai diamonds (Mbuji-Mayi), Lake Albert and Cuvette oil, Lukuga coal (Kalemie)', 'cash Kinshasa, Kananga | oil Beni, Gemena | metal Lubumbashi, Kalemie | iron Kisangani, Kikwit | elec Kenge | rare Kolwezi, Mbuji-Mayi'],
+  'Ecuador':['Oriente oil, Zaruma-Portovelo gold (Machala), Cotopaxi and Manabí cement, Cuenca appliance industry', 'cash Quito, Guayaquil | oil Macas, Ibarra | metal Latacunga, Portoviejo | iron Ambato | elec Cuenca | rare Machala'],
+  'Egypt':['Gulf of Suez oil, Delta gas, Rosetta black sands (monazite), Bahariya and Aswan iron, Sinai and Upper Egypt quarries, 10th of Ramadan industry', 'cash Cairo, Alexandria | oil Suez, Mansoura | metal Arish, Mallawi | iron Minya, Aswan | elec Zagazig, Tanta | rare Rosetta'],
+  'Ethiopia':['Ogaden gas, Danakil potash (Semera), Messebo cement (Mekelle), Kenticha tantalum (Guji), Bikilal iron, industrial parks', 'cash Addis Ababa, Dire Dawa | oil Degehabur, Gode | metal Semera, Mekelle | iron Jimma, Dessie | elec Hawassa, Bahir Dar | rare Goba'],
+  'Finland':['Porvoo refinery, Oulu tech, Kokkola cobalt, Tornio steel, Karelian forestry, Harjavalta smelter', 'cash Helsinki | oil Lahti | metal Joensuu, Pori | iron Rovaniemi | elec Oulu | rare Kokkola'],
+  'France':['Le Havre and Fos refineries, Lorraine iron and Dunkirk steel, Toulouse aerospace, Kourou, La Rochelle rare-earth plant', 'cash Paris, Lyon | oil Rouen, Marseille | metal Bourges, Brest | iron Metz, Lille | elec Toulouse, Cayenne | rare Bordeaux'],
+  'Germany':['Hamburg refineries and Emsland oil, Ruhr and Upper Palatinate steel, BASF and Dyckerhoff, Munich and Stuttgart electronics, Erzgebirge lithium and tin', 'cash Berlin, Frankfurt | oil Hamburg, Bremen | metal Mannheim, Wiesbaden | iron Cologne, Nürnberg | elec Munich, Stuttgart | rare Dresden'],
+  'Greece':['Epirus oil blocks, Kavala black sands (rare earths), Parnassos bauxite, Ptolemaida lignite, Thessaloniki steel, Chios shipowners', 'cash Athens, Chios | oil Ioannina | metal Lamia, Larissa | iron Thessaloniki | elec Heraklion | rare Kavala'],
+  'India':['Assam and Gujarat oil, Bellary, Jharkhand and Bhilai iron (the third iron city, India\'s best fit), Odisha and Tamil Nadu monazite, Bangalore, Hyderabad and Uttar Pradesh electronics', 'cash New Delhi, Mumbai | oil Guwahati, Ahmedabad | metal Kolkata, Jaipur | iron Hubballi, Patna, Bhopal | elec Bangalore, Hyderabad, Kanpur | rare Bhubaneswar, Chennai'],
+  'Indonesia':['Kalimantan, South Sumatra and Aceh oil and gas (the third oil city, Indonesia\'s best fit), Grasberg and Maluku ores, Sulawesi and Halmahera nickel, Lombok iron sands, Java industry', 'cash Jakarta, Surabaya | oil Samarinda, Palembang, Medan | metal Jayapura, Ambon | iron Padang, Mataram | elec Bandung, Semarang | rare Makassar, Manado'],
+  'Iran':['Khuzestan and Kermanshah oil, Mobarakeh and Sangan iron, Arak aluminium, Gilan forestry, Shiraz electronics (IEI), Bafq rare earths, Sistan minerals, Bandar Abbas port', 'cash Tehran, Bandar Abbas | oil Ahvaz, Kermanshah | metal Arak, Rasht | iron Isfahan, Mashhad | elec Shiraz, Tabriz | rare Yazd, Zahedan'],
+  'Iraq':['Kirkuk and Basra oil, Mishraq sulphur (Mosul), Sulaymaniyah cement, Akashat phosphate and uranium (Anbar), Iskandariya industry', 'cash Baghdad, Erbil | oil Kirkuk, Basra | metal Mosul, Sulaymaniyah | iron Kut, Samarra | elec Hillah | rare Ramadi'],
+  'Israel':['Golan oil (Afek), Haifa\'s tech park, Beersheba cyber park, Negev phosphates and uranium (Dimona), Makhtesh Ramon quarries', 'cash Tel Aviv | oil Tiberias | metal Mitzpe Ramon | iron Nitzana | elec Haifa, Beersheba | rare Dimona'],
+  'Italy':['Basilicata and Sicily oil, Elba-Piombino and Bagnoli steel, Sassuolo ceramics, Apulian quarries, Turin and Marche industry, Sardinian fluorspar', 'cash Rome, Milan | oil Bari, Palermo | metal Bologna, Foggia | iron Florence, Naples | elec Turin, Ancona | rare Cagliari'],
+  'Japan':['Yokkaichi and Wakayama refineries, Yawata and Kobe steel, Mizushima and Niihama works, Chubu and Hokuriku electronics, rare-metal recovery (Kosaka) and Hokkaido mines', 'cash Tokyo, Osaka | oil Tsu, Wakayama | metal Okayama, Matsuyama | iron Fukuoka, Kobe | elec Nagoya, Kanazawa | rare Sendai, Sapporo'],
+  'Kazakhstan':['Mangystau and Aktobe oil, Rudny and Atasu iron, Karaganda coal, Ulba rare metals (Oskemen), Almaty', 'cash Astana, Shymkent | oil Aktau, Aktobe | metal Karaganda, Semey | iron Kostanay, Karazhal | elec Almaty | rare Oskemen'],
+  'Kenya':['Turkana oil, Kwale titanium and Mrima rare earths (Mombasa), Konza tech city, Athi River cement, Rift timber, Homa Bay iron', 'cash Nairobi | oil Marsabit | metal Thika, Eldoret | iron Kisumu | elec Machakos | rare Mombasa'],
+  'Libya':['Sirte basin and Tobruk oil, Misrata steel, Fezzan minerals, Jebel Akhdar and Nafusa cement', 'cash Tripoli | oil Awjilah, Tobruk | metal Al Marj, Mizdah | iron Misrata | elec Benghazi | rare Sabha'],
+  'Malaysia':['Sabah and Sarawak oil, Bukit Besi iron (Terengganu), Kinta tin and cement, Lynas rare-earth plant (Kuantan), Kulim and Johor electronics', 'cash Kuala Lumpur, Malacca | oil Kota Kinabalu, Sibu | metal Ipoh | iron Kuala Terengganu | elec Alor Setar, Johor Bahru | rare Kuantan'],
+  'Mali':['Taoudeni basin, Taoudenni salt, Tilemsi phosphate (Gao), western iron (Kayes), Goulamina lithium (Sikasso)', 'cash Bamako, Mopti | oil Timbuktu, Nara | metal Taoudenni, Gao | iron Kayes | elec Ségou | rare Sikasso'],
+  'Mexico':['Veracruz and Chiapas-Tabasco oil, Monterrey and Monclova steel, Pachuca silver, Oaxaca mines, Guadalajara and Puebla industry, Sonora lithium, Las Cuevas fluorite', 'cash Mexico City, Mérida | oil Poza Rica, Tuxtla Gutiérrez | metal Pachuca, Oaxaca | iron Monterrey, Torreón | elec Guadalajara, Puebla | rare Hermosillo, San Luis Potosí'],
+  'Mongolia':['Tamsagbulag oil (Dornod), Darkhan steel, Oyu Tolgoi copper, Khalzan Buregtei rare earths (west)', 'cash Ulaanbaatar | oil Choibalsan | metal Arvaikheer, Bayankhongor | iron Darkhan | elec Mörön | rare Ölgii'],
+  'Morocco':['Tendrara gas (Oujda), Khouribga and Safi phosphates, Rif and Anti-Atlas iron, Bou Azzer cobalt, Tangier industry', 'cash Casablanca, Marrakesh | oil Oujda | metal Settat, Safi | iron Ouezzane, Guelmim | elec Tangier, Fez | rare Errachidia'],
+  'Mozambique':['Rovuma and Pande gas, Tete coal, Niassa forestry, Manica iron, Moma mineral sands (Nampula)', 'cash Maputo, Beira | oil Pemba, Xai-Xai | metal Tete, Lichinga | iron Chimoio | elec Quelimane | rare Nampula'],
+  'Myanmar':['Myanaung and offshore gas, Letpadaung copper (Monywa), Bago teak, Kachin rare earths and jade, Tanintharyi tin and tungsten', 'cash Yangon, Mandalay | oil Hinthada, Pathein | metal Monywa, Bago | iron Hakha | elec Mawlamyine | rare Myitkyina, Myeik'],
+  'New Zealand':['Taranaki oil and gas, Waikato iron sands (Glenbrook steel), forestry and West Coast coal, Otago gold', 'cash Wellington | oil Palmerston North | metal Tauranga, Christchurch | iron Hamilton | elec Auckland | rare Dunedin'],
+  'Nigeria':['Niger Delta oil, Itakpe and Oshogbo iron and steel, Enugu coal, Ashaka cement, Jos tin and columbite (Kaduna), Zamfara gold, Lagos tech', 'cash Abuja, Kano | oil Port Harcourt, Warri | metal Enugu, Maiduguri | iron Akure, Ilorin | elec Lagos, Ibadan | rare Kaduna, Gusau'],
+  'North Korea':['West Korea Bay oil, Musan and Unnyul iron, Chagang mines, Jongju rare earths (Chongju)', 'cash Pyongyang | oil Nampo | metal Kanggye | iron Chongjin, Haeju | elec Wonsan | rare Chongju'],
+  'Norway':['North Sea oil (Bergen), Rana iron and Sydvaranger, Elkem and nickel refinery, Hedmark forestry, Fen rare earths (Telemark)', 'cash Oslo | oil Bergen | metal Kristiansand, Hamar | iron Tromsø | elec Trondheim | rare Drammen'],
+  'Pakistan':['Sui and lower Sindh gas, Chiniot and Kalabagh iron, Dera Ghazi Khan cement, Gujranwala electrical industry, Khyber gems and copper', 'cash Islamabad, Karachi | oil Sukkur, Hyderabad | metal Multan, Sahiwal | iron Faisalabad, Bannu | elec Lahore, Gujranwala | rare Peshawar, Parachinar'],
+  'Peru':['Loreto and Talara oil, Siderperú and Aceros Arequipa (Marcona iron), La Oroya and Toquepala, Yanacocha and Pasco gold and silver', 'cash Lima | oil Iquitos, Piura | metal Huancayo, Tacna | iron Chimbote, Arequipa | elec Huacho | rare Cajamarca, Huánuco'],
+  'Philippines':['Malampaya gas and Batangas refineries, Benguet mines, Bicol and Samar iron, Laguna and Clark electronics, Mindanao nickel', 'cash Manila, Zamboanga | oil Calapan, Lucena | metal Baguio, Bacolod | iron Tacloban, Legazpi | elec San Pablo, Angeles | rare Davao'],
+  'Poland':['Gdańsk refinery and Wielkopolska gas, Silesian coal, Nowa Huta steel, KGHM silver and rhenium, Łódź and Aviation Valley industry', 'cash Warsaw, Szczecin | oil Gdańsk, Poznań | metal Katowice, Olsztyn | iron Kraków | elec Łódź, Rzeszów | rare Wrocław'],
+  'Romania':['Argeș oil and Transylvanian gas, Galați steel, Oltenia coal, Apuseni gold and bauxite, Iași and Brașov industry', 'cash Bucharest | oil Pitești, Târgu Mureș | metal Craiova, Bacău | iron Galați | elec Iași, Brașov | rare Oradea'],
+  'Russia':['Volga-Urals, West Siberian and Timan-Pechora oil (the third oil city), Urals, Taganrog and Volgograd steel (the third iron city), Norilsk and Bratsk metals, Lovozero and Tomtor rare earths', 'cash Moscow, Vladivostok | oil Kazan, Omsk, Arkhangelsk | metal Krasnoyarsk, Irkutsk | iron Yekaterinburg, Rostov, Volgograd | elec Saint Petersburg, Novosibirsk | rare Yakutsk, Murmansk'],
+  'Saudi Arabia':['Ghawar and Neutral Zone oil, Al Jalamid phosphate and Az Zabirah bauxite, Wadi Sawawin iron, Arabian Shield gold (Mahd adh Dhahab, the south)', 'cash Riyadh, Jeddah | oil Hofuf, Hafar al Batin | metal Arar, Hail | iron Tabuk | elec Abha | rare Medina, As Sulayyil'],
+  'South Africa':['Secunda synfuels, Thabazimbi and Sishen iron, Bushveld platinum (Rustenburg), Phalaborwa rare earths, gold and coal mining, East London and Durban car plants', 'cash Pretoria, Cape Town | oil Middelburg | metal Klerksdorp, Bethlehem | iron Thabazimbi, Bloemfontein | elec East London, Durban | rare Rustenburg, Thohoyandou'],
+  'South Korea':['Ulsan refineries (Busan), Pohang and Gwangyang steel, Gumi and Daedeok electronics, Hwangdeung granite, Hongcheon rare earths', 'cash Seoul | oil Busan | metal Iksan | iron Andong, Gwangju | elec Daegu, Daejeon | rare Chuncheon'],
+  'Spain':['Cartagena and Puertollano refineries, Basque and Asturian steel, Riotinto copper, Galician granite and forestry, Retortillo uranium and tungsten', 'cash Madrid, Málaga | oil Murcia, Ciudad Real | metal Seville, Vigo | iron Bilbao, Lugo | elec Barcelona, Zaragoza | rare Salamanca'],
+  'Sudan':['Kordofan and Darfur oil, Atbara cement, Ingessana chromite, Red Sea hills iron, Nubian and Jebel Amer gold, the GIAD industrial complex', 'cash Khartoum, Kosti | oil El Obeid, Nyala | metal Shendi, Sennar | iron Port Sudan | elec Wad Medani | rare Dongola, El Fasher'],
+  'Sweden':['Kiruna iron (Luleå), Norra Kärr rare earths (Jönköping), Boliden and Värmland forestry, ABB and Saab', 'cash Stockholm | oil Växjö | metal Umeå, Karlstad | iron Luleå | elec Västerås, Linköping | rare Jönköping'],
+  'Tanzania':['Mnazi Bay and Songo Songo gas, Liganga iron, Tanga cement, Geita gold, tanzanite (Arusha), Kabanga nickel (Kagera)', 'cash Dar es Salaam, Kigoma | oil Mtwara, Kibiti | metal Tanga, Mwanza | iron Mbeya | elec Morogoro, Moshi | rare Arusha, Bukoba'],
+  'Thailand':['Gulf of Thailand gas and U Thong oil, Udon potash and Mae Moh lignite, Kanchanaburi and Isan iron, Ayutthaya and Prachin Buri electronics, Phuket tin', 'cash Bangkok, Nakhon Ratchasima | oil Hat Yai, Suphan Buri | metal Udon Thani, Chiang Mai | iron Nakhon Pathom, Surin | elec Nonthaburi, Prachin Buri | rare Trang'],
+  'Turkey':['Batman oil and Thrace gas, Divriği iron and Ereğli steel, Seydişehir aluminium, Kırka and Balıkesir boron, Beylikova rare earths, Manisa electronics', 'cash Ankara, Istanbul | oil Diyarbakır, Tekirdağ | metal Antalya, Kars | iron Malatya, Adapazarı | elec Izmir, Adana | rare Eskişehir, Bursa'],
+  'Ukraine':['Shebelynka and Black Sea gas, Kryvyi Rih and Zaporizhstal, Donbas coal, Zhytomyr titanium, Lviv IT', 'cash Kyiv, Odessa | oil Kharkiv, Kherson | metal Donetsk, Luhansk | iron Dnipro, Zaporizhzhia | elec Lviv | rare Khmelnytskyi'],
+  'United Kingdom':['North Sea oil and gas (Edinburgh, Ipswich by Bacton), Scunthorpe steel and Harland & Wolff, Nottingham coal, Cumbria, Cornish lithium and tin, Oxford and Brighton tech', 'cash London, Manchester | oil Edinburgh, Ipswich | metal Nottingham, Carlisle | iron Leeds, Belfast | elec Oxford, Brighton | rare Bournemouth'],
+  'United States of America':['Texas and Alaska oil (the third oil city), Mesabi iron and Gary steel, Arizona copper and Georgia forestry, Mountain Pass and Colorado, Silicon Valley and Seattle, Miami trade (the third money city)', 'cash Washington, New York, Miami | oil Houston, Dallas, Anchorage | metal Phoenix, Atlanta | iron Minneapolis, Chicago | elec San Francisco, Seattle | rare Los Angeles, Denver'],
+  'Uzbekistan':['Gazli and Ustyurt gas, Muruntau gold and uranium (Navoi), Bekabad steel, Shargun coal and Dehkanabad potash, Fergana valley industry', 'cash Tashkent, Samarkand | oil Bukhara, Nukus | metal Denau, Qarshi | iron Jizzakh | elec Fergana | rare Navoi'],
+  'Venezuela':['Monagas and Barinas oil, SIDOR iron (Ciudad Guayana), Orinoco Mining Arc gold and coltan, Táchira coal and Lara cement', 'cash Caracas, Porlamar | oil Maturín, Acarigua | metal San Cristóbal, Barquisimeto | iron Ciudad Guayana | elec Valencia, Maracay | rare Barcelona'],
+  'Vietnam':['Bach Ho and Ca Mau gas, Thach Khe iron and Da Nang steel, Ninh Binh and Kien Luong cement, Dong Pao rare earths (Son La), Saigon and Haiphong electronics', 'cash Hanoi, Sóc Trăng | oil Biên Hòa, Cà Mau | metal Nam Định, Long Xuyên | iron Vinh, Da Nang | elec Ho Chi Minh City, Haiphong | rare Sơn La'],
+  'Yemen':['Masila and Marib-Jawf oil, Bajil cement, Al Hariqa gold (Hajjah), Taiz industry, Aden port', 'cash Sana\'a, Aden | oil Mukalla, Al Hazm | metal Hodeidah, Zinjibar | iron Ibb | elec Taiz | rare Hajjah'],
+};
+
 /* ---------- the map and the rules ---------- */
 // the province split (tools/build-provsplit.js writes tools/provsplit.json; docs/NATIONS-PLAN.md 4.6): copied into nations.js as NATIONS.map. The
 // cities are chosen on that map (the nations world's), where Israel, Greece, Cuba and Belarus have their new provinces
@@ -221,7 +307,21 @@ function entry(e, open){ const c = e.c, list = open ? pickCities(c) : todayCitie
   for (const P of list){ const nm = NAMES[c.name] && NAMES[c.name][P.name]; if (nm && !(flag(P) & 1)) names[P.id] = nm; }
   if (!COLORS[c.name]) throw new Error('no colour for ' + c.name + ': add it to COLORS');
   if (!hqOf.has(c.name)) throw new Error('no HQ style for ' + c.name + ': add it to HQ');
-  return {name:DISPLAY[c.name] || c.name, country:c.name, region:e.region, tier:e.tier, hq:hqOf.get(c.name), color:COLORS[c.name], capital:list[0].id, cities:list.map(P => P.id), names, swaps}; }
+  const out = {name:DISPLAY[c.name] || c.name, country:c.name, region:e.region, tier:e.tier, hq:hqOf.get(c.name), color:COLORS[c.name], capital:list[0].id, cities:list.map(P => P.id), names, swaps};
+  // mains: one letter per city, in the order of cities (c money, o oil, m materials, i iron, e electronics, r rare materials), from MAINS
+  const M = open && MAINS[c.name]; if (M){ const nm = P => names[P.id] || cname(P), at = new Map();
+    for (const part of M[1].split('|')){ const s = part.trim(), k = s.split(' ')[0]; if (!MAIN_CH[k]) throw new Error(`${c.name}: unknown resource ${k}`);
+      for (const city of s.slice(k.length).split(',').map(x => x.trim()).filter(Boolean)){ const P = list.find(Q => nm(Q) === city);
+        if (!P) throw new Error(`${c.name}: no city ${city} (cities: ${list.map(nm).join(', ')})`); if (at.has(P.id)) throw new Error(`${c.name}: ${city} given two resources`); at.set(P.id, k); } }
+    const miss = list.filter(P => !at.has(P.id)); if (miss.length) throw new Error(`${c.name}: no resource for ${miss.map(nm).join(', ')}`);
+    out.mains = list.map(P => MAIN_CH[at.get(P.id)]).join(''); }
+  return out; }
+// the owner's resource balance rule on one nation's letters (n cities): '' when it holds, else what breaks it
+function mainsRule(n, s){ const cnt = {}, bad = []; for (const ch of s) cnt[ch] = (cnt[ch] || 0) + 1;
+  const three = MAIN_KEYS.filter(k => cnt[MAIN_CH[k]] === 3).length;
+  for (const k of MAIN_KEYS){ const v = cnt[MAIN_CH[k]] || 0; if (!v) bad.push('no ' + k); if (v > 3 || (v === 3 && n < 13)) bad.push(`${v} ${k}`); }
+  if (three > Math.max(0, n - 12)) bad.push(`${three} goods on 3 cities (at most ${Math.max(0, n - 12)})`);
+  return bad.join(', '); }
 
 if (MODE === '--preview'){
   for (const e of all){
@@ -242,7 +342,11 @@ for (const n of nations){ const c = byName.get(n.country), ids = new Set(c.provs
   for (const id of n.cities){ if (!ids.has(id)) fails.push(`${n.name}: city ${id} is not its land`); if (seen.has(id)) fails.push(`${n.name}: city ${id} listed twice`); seen.add(id); }
   if (OPEN.includes(n.region) && (n.cities.length < 7 || n.cities.length > 14)) fails.push(`${n.name}: ${n.cities.length} cities (7 to 14 wanted)`);
   // every name given for an open nation names one of its promoted cities (a typo would leave a city under its province's name)
-  if (OPEN.includes(n.region)) for (const pn in NAMES[n.country] || {}) if (!n.cities.some(id => G.P[id].name === pn && n.names[id])) fails.push(`${n.name}: no promoted city in province ${pn} to name`); }
+  if (OPEN.includes(n.region)) for (const pn in NAMES[n.country] || {}) if (!n.cities.some(id => G.P[id].name === pn && n.names[id])) fails.push(`${n.name}: no promoted city in province ${pn} to name`);
+  // the resource balance rule, for every nation MAINS gives its cities' resources (MAINS_ALL: all open nations must have them)
+  if (n.mains){ const why = mainsRule(n.cities.length, n.mains); if (why) fails.push(`${n.name}: resource rule broken: ${why}`); }
+  else if (MAINS_ALL && OPEN.includes(n.region)) fails.push(`${n.name}: no city resources in MAINS`); }
+for (const k in MAINS) if (!nations.some(n => n.country === k)) fails.push(`MAINS names a nation that is not playable: ${k}`);
 // the four nations of the province split (owner's answer 1) must hold 7 cities on the split map whether their region is open or not: at least 9
 // provinces (Israel: 8, its one-cell provinces are the finest the map grid allows; tools/build-provsplit.js) and 7 to 14 cities with the method
 for (const e of all.filter(e => e.split)){ const L = pickCities(e.c), need = e.c.name === 'Israel' ? 8 : 9;
@@ -257,7 +361,9 @@ for (const e of all.filter(e => e.split)){ const L = pickCities(e.c), need = e.c
 const text = '// Generated by tools/build-nations.js (roster and city-choice method of docs/NATIONS-PLAN.md). Do not edit: change the tool and run it again.\n'
   + '// The playable nations of the nations world: tier, region, hq (the style of its capital HQ picture, assets/art-src/ba-hq-<hq>.png), capital and\n'
   + '// cities (province numbers of world.js, capital first), names of promoted\n'
-  + '// cities, hand swaps. Every other country on the map is independent land. Regions are opened one rollout step at a time (open).\n'
+  + '// cities, hand swaps, mains (each city\'s main resource, one letter per city in the order of cities: c money, o oil, m materials, i iron,\n'
+  + '// e electronics, r rare materials; the resource balance rule of docs/ECONOMY.md). Every other country on the map is independent land.\n'
+  + '// Regions are opened one rollout step at a time (open).\n'
   + '// map: the province split of the nations world (tools/build-provsplit.js; new provinces appended after those of world.js, each with its parent).\n'
   + 'window.NATIONS = {"v":1,"regions":' + JSON.stringify(REGIONS) + ',"open":' + JSON.stringify(OPEN) + ',"nations":[\n' + nations.map(n => JSON.stringify(n)).join(',\n') + '\n],\n"map":' + JSON.stringify(SPLIT) + '};\n';
 if (fails.length){ console.log('NATIONS FAILED\n  ' + fails.join('\n  ')); process.exit(1); }

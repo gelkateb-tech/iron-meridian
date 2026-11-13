@@ -117,11 +117,13 @@ Every file in `tools/` (none of them is published; the game never loads them):
 | `balance.js` | browser balance runs of the classic world |
 | `nations-balance.js` | the nations world's balance tests (`docs/NATIONS-PLAN.md` 5.2 and every step's checks), plain Node |
 | `eco-check.js` | the city-resource economy's checks (`docs/ECONOMY.md`), in the classic and the nations world, plain Node |
+| `.test/resource-rule.js` | the resource balance rule in a new nations-world game (7 to 14 cities, all six goods, at most 2 of a good, 3 only through the cities beyond 12), saves keeping their resources, old saves and the classic world on the map method; plain Node |
 | `export-lab.js` | can a person export: a seat that only keeps a sell offer on the Market |
 | `combat-pace.js` | how long battles last (`BATTLE_PACE`, `docs/COMBAT-PACE.md`) |
 | `stack-duel.js` | the stack-limit duel: one big stack against the same units in stacks of 10 |
 | `research-proto.js` | checks the research tree and writes its tables into `docs/RESEARCH.md` |
-| `build-nations.js` | writes `nations.js` (the playable nations, their tiers, capitals and cities, and the province split `NATIONS.map`) |
+| `build-nations.js` | writes `nations.js` (the playable nations, their tiers, capitals and cities, each city's main resource under the owner's resource balance rule (table `MAINS`, `docs/ECONOMY.md` 3.4; it refuses a table that breaks the rule), and the province split `NATIONS.map`) |
+| `resources-list.js` | writes `docs/RESOURCES-PER-NATION.md`, the owner's list of every nation's cities per resource (before and after the rule, changed cities marked); `--check` |
 | `build-provsplit.js`, `provsplit.json` | the province split of Israel, Greece, Cuba and Belarus for the nations world's map (from Natural Earth) |
 | `border-check.js` | every land cell of both maps against the real countries (Natural Earth admin-1, the file `world.js` was built from): `node tools/border-check.js <ne_10m_admin_1_states_provinces.geojson> [--all]` lists provinces given to the wrong country (exit 1) |
 | `build-world.js`, `build-world2.js` | build `world.js` (the hex map, provinces and countries) from Natural Earth and open data |

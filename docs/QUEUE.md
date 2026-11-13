@@ -14,7 +14,6 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Resource balance: all 6 resources in every nation, at most 2 cities per resource (3 for the 13th/14th city), real geography, Syria first, per-nation list for the owner | Opus | branch resource-balance |
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (the other 186 pictures, about $6.9): waits for the owner to approve the 3 sample banners and 3 sample icons | Opus | samples on branch research-tab (8a24f63) |
 | Unit controls like Conflict of Nations: exact-spot movement fixed, tap to select / tap map to move / clear path line / tap empty space to deselect, Waypoint button with dots and undo | Opus | branch unit-controls |
@@ -38,6 +37,8 @@ Last updated: 2026-11-13 (overnight run).
 | 10 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Resource balance review:** docs/RESOURCES-PER-NATION.md. (1) 14-city nations need two resources on 3 cities, not one. (2) Rare materials go from 19 to 89 cities, so their market price roughly halves: lower rare output per city? (3) Weak spots where the map has no better city: Mongolia and Chad electronics, Israel iron (Nitzana), Saudi rare (As Sulayyil) and electronics (Abha), Venezuela rare (Barcelona), Thailand iron (Surin), Vietnam money (Soc Trang).
 
 - **Research art samples:** 3 scene banners (Armoured Forces, Tactical Air, Navy) and 3 scene icons (Infantry Corps, Main Battle Tank, Extended-Range Shells). Approve to make the other 186 (about $6.9), or ask for changes. Also: one shared Firepower/Protection picture instead of 49 per-unit ones (139 pictures, about $5.2)?
 
