@@ -103,6 +103,7 @@ Every file in `tools/` (none of them is published; the game never loads them):
 | `research-proto.js` | checks the research tree and writes its tables into `docs/RESEARCH.md` |
 | `build-nations.js` | writes `nations.js` (the playable nations, their tiers, capitals and cities, and the province split `NATIONS.map`) |
 | `build-provsplit.js`, `provsplit.json` | the province split of Israel, Greece, Cuba and Belarus for the nations world's map (from Natural Earth) |
+| `border-check.js` | every land cell of both maps against the real countries (Natural Earth admin-1, the file `world.js` was built from): `node tools/border-check.js <ne_10m_admin_1_states_provinces.geojson> [--all]` lists provinces given to the wrong country (exit 1) |
 | `build-world.js`, `build-world2.js` | build `world.js` (the hex map, provinces and countries) from Natural Earth and open data |
 | `build-lines.js` | builds `lines.js` (rivers, roads and railways, and which provinces they link) |
 | `build-coast.js`, `build-lakes.js`, `build-landpoly.js` | build `coast.js` / `coast-hi.js` (coastlines, lakes) and the bake-time land polygons |
