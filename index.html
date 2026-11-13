@@ -9052,7 +9052,10 @@ const RGLY = {
   steps:'<path d="M3 20.6h18v-2.2H3zM3 14.2h12V12H3zM3 7.8h6V5.6H3z"/>',
   clock:'<circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M11 6.6h2v6.2l3.6 2.2-1 1.7-4.6-2.8z"/>',
 };
-const rg = (k, sz = 22, cls = '') => `<svg class="rg ${cls}" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${RGLY[k] || ''}</svg>`;
+// unit glyphs come from the unit icons (UICON): the category diamonds and tree headers (RCG), the Logistics and missile column headers and the
+// Motorized Supply node ask for these keys; any other key missing from RGLY falls back to the generic research glyph, so no icon is ever empty
+const RG_U = {helmet:'inf', tank:'tank', gun:'art', jet:'jet', heli:'heli', drone:'drone', ship:'frig', missile:'bm', truck:'truck', cm:'cm', bm:'bm'};
+const rg = (k, sz = 22, cls = '') => RG_U[k] ? uiconSVG(RG_U[k], sz, ('rg ' + cls).trim()) : `<svg class="rg ${cls}" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${RGLY[k] || RGLY.gen}</svg>`;
 // white upgrade icons for the research tree (24 px grid), drawn for this game: damage, health, range, terrain handling, air-transportable,
 // carrier operations, cheaper or faster to build, more missiles, a newer generation; a bomber for the Strategic Air banner; a coin
 Object.assign(RGLY, {
@@ -9254,7 +9257,7 @@ function researchHTML(){
   const rowsBg = Ly.days.map((d, i) => `<i class="rt-rw ${d === today ? 'now' : d < today ? 'past' : 'fut'}" style="--r:${i}"></i>`).join('');
   const nowLine = !Ly.days.includes(today) && nPast > 0 && nPast < nR ? `<i class="rt-now" style="--r:${nPast}"><em>Today · day ${today}</em></i>` : '';
   const heads = Ly.cols.map(K => { const hd = K.head, tot = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), dn = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
-    const nm = Ly.solo ? K.ln : rLineName(hd), sn = rShort(nm), gl = Ly.solo ? RCOLG[K.ln] : ({cm:'missile', bm:'missile', def:'def2', sat:'sat'})[hd.pic] || hd.pic || 'gen';
+    const nm = Ly.solo ? K.ln : rLineName(hd), sn = rShort(nm), gl = Ly.solo ? RCOLG[K.ln] : ({def:'def2', sat:'sat'})[hd.pic] || hd.pic || 'gen';
     return `<div class="rt-hd${hd.elite ? ' elite' : ''}" title="${nm}${hd.elite ? ' (elite unit)' : ''}: ${dn} of ${tot} steps researched">${hd.u && !Ly.solo ? unitPic(hd.u, 'sm') : `<span class="rt-hg">${rg(gl, 18)}</span>`}<span class="rt-hn"><b><span class="rnl">${nm}</span>${sn !== nm ? `<span class="rns">${sn}</span>` : ''}</b><span class="rt-hm">${hd.elite ? eliteSVG(22) : ''}<small>${dn}/${tot}</small></span></span></div>`; }).join('');
   const catT = L.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), catD = L.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
   h += `<div class="rs-thead"><span class="rs-tc" title="The day a project opens">${rg('clock', 18)}</span><b>${rg(RCG[C.id], 22)} ${C.name}</b><span class="rs-tn">${catD}/${catT} steps</span></div>
