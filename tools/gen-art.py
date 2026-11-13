@@ -3,7 +3,8 @@
 Two kinds of picture:
 - SUBJECTS: a short description of the building level, then one shared STYLE paragraph (the 8 Higgsfield prompts' style
   for the HQ, Airbase 1-5 and Recruiting Office 2-3, minus their base pad: buildings stand straight on the grey background)
-- ICONS: map icons, a full prompt each, saved as assets/art-src/<name>.png
+- ICONS: map icons, a full prompt each (or ICON_EDITS: an edit of another icon), drawn on grey and saved as
+  assets/art-src/<name>.grey.png plus a transparent cut-out <name>.png
 - GROWS: the next level of a building made from the picture of the level before (ba-<before>.png, shrunk to SHRINK in
   the middle of the frame) with a list of additions, so the levels share their pieces and grow visibly
 
@@ -55,18 +56,28 @@ SUBJECTS = {
         "frame and the group spans most of its width. No coastline, no beach, no land strip, no water, no waves."),
 }
 
-# map icons: a full prompt each (no STYLE), saved as <name>.png
-ICON = ("A minimal flat game map icon, an original design: {} Everything is one single solid white (#FFFFFF) shape with no "
-        "shading, no gradient, no outline, no inner lines and no detail, a bold simple silhouette that stays readable at 16 "
-        "pixels. Centred in the frame and filling about 70 percent of it. Background: a plain, flat, uniform light grey "
-        "(#D9D9D9). Square 1:1 image. No text, no letters, no numbers, no border, no badge, no circle behind it, no shadow.")
-HEAD = ("the silhouette of a soldier's head in side profile facing right, wearing a modern rounded combat helmet: a smooth "
-        "helmet dome with a short brim over the brow and the rim curving down behind the ear, a simple face profile with brow, "
-        "nose and chin, and a short neck cut off straight at the bottom.")
+# map icons: a full prompt each (no STYLE), drawn on plain grey; saved as <name>.grey.png and cut out into a transparent
+# <name>.png (cutout). ICON_EDITS: an icon made by editing another icon's grey picture, so the two match exactly.
+HELMET = ("A small game map icon, an original design: a modern military combat helmet on its own, seen exactly from the side, "
+          "with no head, face or person, its front brim to the right. A smooth rounded dome with a short brim at the front and "
+          "the rim curving gently down at the back; plain matte olive-green paint. A simple bold shape with a clean, crisp "
+          "outline and light soft shading only: a gentle highlight on the upper dome and a slightly darker green toward the "
+          "rim. No texture, no camouflage pattern, no netting, no straps, no goggles, no insignia. It must read clearly at 16 "
+          "pixels. Centred in the frame, filling about 75 percent of its width. Background: a plain, flat, uniform light grey "
+          "(#D9D9D9) with no cast shadow and no ground. Square 1:1 image. No text, no letters, no numbers, no flag, no badge, "
+          "no border.")
 ICONS = {
-    'icon-infantry': ICON.format(HEAD.capitalize()),
-    'icon-infantry-motorized': ICON.format(HEAD.capitalize()[:-1] + ", and directly under the neck one small wheel: a plain "
-        "circle with a round hole in its centre, about a third as wide as the head, separated from the neck by a thin gap."),
+    'icon-infantry': HELMET,
+    'icon-infantry-motorized': None,   # see ICON_EDITS
+}
+ICON_EDITS = {
+    'icon-infantry-motorized': ('icon-infantry',
+        "Edit the attached picture. Add only one small wheel directly under the middle of the helmet: a simple dark grey tyre "
+        "seen from the side (a dark grey circle with a lighter grey round hub in its centre), about one third as wide as the "
+        "helmet, separated from the helmet's rim by a small gap, with the same light soft shading. Move the helmet up a little "
+        "only if needed so the helmet and wheel together stay centred in the frame. Keep the helmet exactly as it is: its "
+        "shape, size, colour, shading and outline. The background stays the plain flat uniform light grey, with no cast "
+        "shadow and no ground. No text, no flag."),
 }
 
 # the next level from the level before: (level before, additions). New piers and ships keep the level 1 direction.
@@ -131,6 +142,26 @@ def shrunk(src):
     out = Image.new('RGB', (w, h), bg); sm = im.resize((round(w * SHRINK), round(h * SHRINK)), Image.LANCZOS)
     out.paste(sm, ((w - sm.width) // 2, (h - sm.height) // 2)); b = io.BytesIO(); out.save(b, 'PNG'); return b.getvalue()
 
+def cutout(im, lo=14, hi=48, pad=0.06):
+    """the icon with its plain grey background made transparent: pixels joined to the border whose colour is within hi of
+    the background grey (median of the border) are background, fading from opaque at hi to clear at lo (edges keep their
+    colour, un-mixed from the grey); trimmed to the icon and centred on a square with a small margin"""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    a = np.asarray(im.convert('RGB')).astype(np.float32); h, w, _ = a.shape
+    border = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]]); bg = np.median(border, 0)
+    d = np.sqrt(((a - bg) ** 2).sum(-1))
+    m = Image.fromarray(np.where(d < hi, 255, 0).astype(np.uint8)).copy()   # a copy: floodfill does nothing on the read-only array view
+    for xy in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)):
+        if m.getpixel(xy) == 255: ImageDraw.floodfill(m, xy, 128)
+    joined = np.asarray(m) == 128
+    al = np.where(joined, np.clip((d - lo) / (hi - lo), 0, 1), 1.0)
+    rgb = np.where(al[..., None] > 0.02, (a - (1 - al[..., None]) * bg) / np.maximum(al[..., None], 0.02), 0)
+    out = np.dstack([np.clip(rgb, 0, 255), al * 255]).astype(np.uint8)
+    ys, xs = np.nonzero(al > 0.02); x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+    cut = Image.fromarray(out, 'RGBA').crop((x0, y0, x1, y1)); side = round(max(cut.size) * (1 + 2 * pad))
+    sq = Image.new('RGBA', (side, side), (0, 0, 0, 0)); sq.paste(cut, ((side - cut.width) // 2, (side - cut.height) // 2)); return sq
+
 def image_part(r):
     if isinstance(r, bytes): return {'inlineData': {'mimeType': 'image/png', 'data': base64.b64encode(r).decode()}}
     mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'webp': 'image/webp'}.get(os.path.splitext(r)[1].lower().lstrip('.'), 'image/png')
@@ -143,6 +174,10 @@ def request(name, refs, change=None):
         before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
         if not os.path.exists(src): raise SystemExit(f'{name} grows from {os.path.relpath(src, ROOT)}, which is not there yet')
         text, images = GROW.format(add), [shrunk(src)]
+    elif name in ICON_EDITS:
+        before, text = ICON_EDITS[name]; src = os.path.join(OUT, f'{before}.grey.png')
+        if not os.path.exists(src): raise SystemExit(f'{name} is made from {os.path.relpath(src, ROOT)}, which is not there yet')
+        images = [src]
     elif name in ICONS: text, images = ICONS[name], []
     else:
         text, images = prompt(name), refs
@@ -171,7 +206,9 @@ def save(name, reply, force, batch):
     p = None
     if data:
         from PIL import Image   # saved as a true PNG whatever format the API returns
-        p = free_path(name, force); Image.open(io.BytesIO(data)).save(p)
+        p = free_path(name, force); im = Image.open(io.BytesIO(data))
+        if name in ICONS: im.save(p[:-4] + '.grey.png'); cutout(im).save(p)
+        else: im.save(p)
     with open(LOG, 'a') as f:
         f.write(json.dumps({'name': name, 'file': p and os.path.relpath(p, ROOT), 'batch': batch, 'usd_est': round(usd, 4),
                             'tokens': {k: u.get(k) for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount')}}) + '\n')
