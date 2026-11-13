@@ -17,10 +17,9 @@ Last updated: 2026-11-13 (overnight run).
 | Speed round 2: higher frame rate first (panning, zooming, 1x-8x), then rules time; identical play; city pre-drawing typo fixed | Opus | branch perf-2 |
 | Research tab redo, phase 2 (the other 186 pictures, about $6.9): waits for the owner to approve the 3 sample banners and 3 sample icons | Opus | samples on branch research-tab (8a24f63) |
 | Unit controls like Conflict of Nations: exact-spot movement fixed, tap to select / tap map to move / clear path line / tap empty space to deselect, Waypoint button with dots and undo | Opus | branch unit-controls |
-| Map modes: only Political and Terrain as full modes; Relations and Supply as overlays on Political; other modes removed; mode switch + zoom glitch fixed | Opus | branch map-modes |
-| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused by a container restart (work saved on branch borders-real); resumes when a slot frees |
+| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed after map modes merged) |
 
-**Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), then map modes and real borders, each merged with master and re-tested before the next.
+**Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
 ## Queued (in this order)
 
