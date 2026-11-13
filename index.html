@@ -1314,6 +1314,31 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .sheet > .rhead:first-child .eyebrow .idle{color:#b0201f; font-weight:700}
 .sheet.mid > .row:last-child{background:#2b3c43; border-top:1px solid var(--sep); box-shadow:0 -22px 18px -10px rgba(43,60,67,.96)}
 #modal.menu .sheet{background:linear-gradient(180deg, rgba(54,75,84,.94), rgba(43,60,67,.96)); box-shadow:0 0 0 1px rgba(143,163,170,.5), 0 30px 80px rgba(0,0,0,.7)}
+/* Start screen and nation picker: the menu panel sits in the centre of the screen; the war-room picture stays visible around it and glows through the slightly clear panel */
+#modal.menu{--ws:min(640px, calc(100vw - 64px)); --gc:50vw; justify-content:center; padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-left:max(16px, env(safe-area-inset-left, 0px));
+  background:radial-gradient(ellipse 80% 90% at 50% 45%, transparent 40%, rgba(3,5,6,.7) 100%),
+    linear-gradient(180deg, rgba(3,5,6,.3), transparent 22%, transparent 74%, rgba(3,5,6,.55)),
+    url(assets/art/menu-background.webp) var(--bx) var(--by) / var(--bw) auto no-repeat, #05080a}
+#modal.menu .sheet{background:linear-gradient(180deg, rgba(60,66,69,.8), rgba(46,51,54,.86)), var(--tex) center / cover, rgba(52,57,60,.85); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); box-shadow:0 0 0 1px rgba(143,163,170,.32), 0 30px 80px rgba(0,0,0,.7)}
+#modal.menu .sheet.mid > .row:last-child{background:rgb(50,55,58); box-shadow:0 -22px 18px -10px rgba(50,55,58,.96)}
+@media (min-height:620px){ #modal.menu.mtitle{align-items:flex-end; padding-bottom:max(18px, 5vh)} }   /* the title panel sits low, so the hologram stays visible above it */
+@media (max-width:1060px){
+  #modal.menu{--ws:min(640px, 100%); background:linear-gradient(180deg, rgba(3,5,6,.25), rgba(3,5,6,.6)), url(assets/art/menu-background.webp) center top / cover no-repeat, #05080a}
+}
+@media (max-height:520px){ #modal.menu .sheet .logo, #modal.menu .sheet .pickintro, #modal.menu .sheet .pickeb{display:none} #modal.menu .sheet{padding-top:14px; gap:10px} .pickq{top:-14px} }   /* landscape phones: the list gets the room */
+@media (max-width:600px){ #modal.menu{padding:12px max(12px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px))} #modal.menu .sheet{padding:18px 16px} }
+/* the nation list: A to Z, one row per nation (flag and name), the search box stays at the top while the list scrolls */
+.picks{display:flex; flex-direction:column; gap:4px}
+.pick{padding:6px 12px; gap:12px; min-height:44px}
+.pick .pt{flex:1; min-width:0} .pick b{font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pick .tier{margin-left:auto; flex:none; font:700 9.5px var(--body); letter-spacing:.12em; text-transform:uppercase; color:#9fb4ba} .pick .tier.t-S{color:#e8cf7a} .pick .tier.t-A{color:#b9d6dc}
+.pick[hidden], .pickno[hidden]{display:none}
+.pickq{position:sticky; top:-24px; z-index:3; margin:0 -4px; padding:10px 4px 8px; background:rgb(50,55,58); box-shadow:0 10px 14px -8px rgba(46,51,54,.95)}
+.pickq input{width:100%; box-sizing:border-box; min-height:44px; padding:0 14px; font:500 16px var(--body); color:var(--fg); background:rgba(0,0,0,.28); border:1px solid rgba(143,163,170,.35); border-radius:8px; outline:none}
+.pickq input:focus{border-color:var(--accent); box-shadow:0 0 0 2px rgba(79,208,222,.25)}
+.pickno{margin:6px 2px; color:var(--muted)}
+@media (max-width:600px){ .pickq{top:-18px} }
+
 .ptab th{color:var(--cn-fg2); border-bottom-color:rgba(143,163,170,.4)}
 .chart{background:rgba(0,0,0,.18)}
 .offer{background:linear-gradient(90deg, rgba(79,208,222,.16), rgba(79,208,222,.03) 80%)}
@@ -2183,7 +2208,15 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
 .good > svg:empty{display:none}
 @media (max-width: 640px){
   .good{gap:4px}
-  .good > svg{position:absolute; right:10px; top:31px; width:58px; height:18px}
+  .good > svg{width:100%; height:16px}   /* its own line under the price, so the % change and the price line never overlap */
+  /* the order table: each offer is a small card (nation and goods, then quantity, price and end, then the buy buttons) so no column is cut off */
+  #sheet .tblwrap:has(> .book){overflow-x:visible}
+  .ptab.book, .ptab.book tbody{display:block; width:100%} .ptab.book thead{display:none}
+  .ptab.book tr{display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 8px; padding:8px 4px; border-bottom:1px solid var(--line)}
+  .ptab.book td{display:block; padding:0; border:0; min-width:0}
+  .ptab.book td.bk-n{grid-column:1 / 3} .ptab.book td.bk-g{grid-column:3; text-align:right; white-space:nowrap}
+  .ptab.book td[data-l]::before{content:attr(data-l); display:block; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .ptab.book td.bk-a{grid-column:1 / 4} .ptab.book td.bk-a .row{flex-wrap:wrap !important}
 }
 
 /* repair: windows keep their title band (and its close box) pinned while the list scrolls under it; a scrolling table keeps its column heads
@@ -2614,14 +2647,7 @@ const STANDIN = (() => {
   const light = g => { g.save(); g.globalCompositeOperation = 'source-atop'; const gr = g.createLinearGradient(40, 20, 220, 240); gr.addColorStop(0, 'rgba(255,255,250,.16)'); gr.addColorStop(0.55, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.22)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); g.restore(); };
   const seam = (g, x0, y0, x1, y1, a = 0.35) => { g.strokeStyle = `rgba(20,22,18,${a})`; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
   const D = {};
-  D['u-heavy-bomber-1'] = g => {
-    for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) R(g, x - 7, y - 16, 14, 30, 6, C.dark, C.line, 2);   // engine pods hang ahead of the wing
-    P(g, mirror([[128, 16], [120, 26], [116, 58], [115, 94], [22, 168], [20, 182], [42, 183], [113, 142], [114, 196], [70, 222], [68, 233], [113, 229], [118, 247], [128, 249]]), C.body);
-    E(g, 128, 40, 6, 10, C.glass, C.line, 1.6); seam(g, 128, 52, 128, 240); seam(g, 113, 104, 30, 174, 0.25); seam(g, 143, 104, 226, 174, 0.25);
-    for (const [x, y] of [[88, 122], [58, 146], [168, 122], [198, 146]]) E(g, x, y - 13, 4.5, 3, '#1c1f1a', null);
-    light(g); };
-  D['u-stealth-bomber'] = D['u-heavy-bomber-1'];   // (the Stealth Bomber's picture is still to come: the Heavy Bomber's stand-in until its file arrives)
-  D['u-heavy-bomber-2'] = D['u-heavy-bomber-1'];   // (the second bomber picture, levels 5-8, uses the same stand-in until its file arrives)
+  // (no code-drawn stand-ins are left: the Heavy and Stealth Bombers have their own pictures; add a drawing here for a picture that has not arrived yet)
   return D;
 })();
 /* ---------------- Redraw scheduling and the Battery saver (drawing side only: no game rule reads or calls any of this) ----------------
@@ -2660,9 +2686,9 @@ const ART = (() => {
   const BASE = 'assets/art/', L5 = k => [1, 2, 3, 4, 5].map(i => `b-${k}-${i}`);
   const FIRST = ['menu-background', 'panel-texture', 'flags', 'emblem-bear', 'emblem-eagle', 'emblem-lion', 'emblem-star'];   // needed by the first screen
   const REST = ['u-infantry', 'u-special-forces', 'u-tank', 'u-light-armor', 'u-artillery', 'u-rocket-artillery', 'u-anti-air', 'u-missile-launcher', 'u-supply-truck',
-    'u-jet', 'u-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
+    'u-jet', 'u-strike-fighter', 'u-heavy-bomber', 'u-stealth-bomber', 'u-attack-heli', 'u-transport-heli', 'u-drone', 'u-corvette', 'u-destroyer', 'u-submarine', 'u-carrier',
     'i-infantry', 'i-special-forces', 'i-tank', 'i-light-armor', 'i-artillery', 'i-rocket-artillery', 'i-anti-air', 'i-missile-launcher', 'i-supply-truck',
-    'i-jet', 'i-bomber', 'i-attack-heli', 'i-transport-heli', 'i-drone', 'i-corvette', 'i-destroyer', 'i-submarine', 'i-carrier',
+    'i-jet', 'i-strike-fighter', 'i-heavy-bomber', 'i-stealth-bomber', 'i-attack-heli', 'i-transport-heli', 'i-drone', 'i-corvette', 'i-destroyer', 'i-submarine', 'i-carrier',
     ...['naval-patrol', 'awacs', 'air-superiority', 'uav-recon', 'uav-armed', 'swarm-drone', 'strike-drone', 'anti-drone', 'cargo-ship'].flatMap(n => ['u-' + n, 'i-' + n]),   // the owner's Higgsfield pictures (V3 air, the cargo ship, the missiles' menu pictures)
     'u-cruise-missile', 'i-cruise-missile', 'u-ballistic-missile', 'i-ballistic-missile',
     'fx-explosion', 'fx-smoke', 'fx-crater'];
@@ -2672,7 +2698,7 @@ const ART = (() => {
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
   const ART_SUPPLIED = [];
-  const OPT = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber', 'u-infantry-figure'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
+  const OPT = ['u-infantry-figure'];   // the Heavy Bomber's two pictures (levels 1-4, 5-8) are still to come: stand-ins until tools/prep-art.py adds them
   const imgs = new Map(), waits = new Map(), failed = new Set(), cache = new Map(), stand = new Set(), durl = new Map();
   // until a promised picture arrives, an older supplied picture of the same thing beats the code-drawn stand-in (the recon UAV keeps u-drone)
   const ALT = {'u-uav-recon':'u-drone'}, rn = name => stand.has(name) && ALT[name] && imgs.has(ALT[name]) && !stand.has(ALT[name]) ? ALT[name] : name;
@@ -2858,9 +2884,8 @@ function uiconC(t, W, col, sh = 0){ const key = uiconKey(t) + '|' + W + '|' + co
 // the icon tile for the HTML UI: the same dark square as a picture tile (.ut, size classes xs..lg), the white silhouette on it
 const uIcon = (t, sz = '') => `<i class="ut uic ${sz}" aria-hidden="true">${uiconSVG(t, UIPX[sz] || 28)}</i>`;
 // the UAV's picture follows its level: unarmed recon airframe for UAV I-III, the armed one from UAV IV (per owner)
-// The Heavy Bomber's picture by level: u-heavy-bomber-1 for levels 1-4, u-heavy-bomber-2 for levels 5-8. Today the level is the nation's Mark of the type
-// (the first picture until the Supersonic Bomber, its generation 2, is researched); both pictures are stand-ins until their files arrive.
-const heavyBomberArt = lv => lv >= 5 ? 'u-heavy-bomber-2' : 'u-heavy-bomber-1';
+// The Heavy Bomber's picture (one picture for every level and generation: u-heavy-bomber; the level is kept so a second picture can be told apart again)
+const heavyBomberArt = lv => 'u-heavy-bomber';
 const artT = (t, n) => typeof S === 'undefined' || !S || !S.nations || n < 0 || !S.nations[n] ? t : t === 'drone' && uavLv(n) >= 4 ? 'drone4' : t === 'bomb' && has(n, 'bomb_g2') ? 'bomb2' : t;
 // the picture of generation g of a unit type: the key u-<unit>-<generation> once that art exists; until then the type's own picture (the armed UAV from
 // UAV IV and the second Heavy Bomber picture from its generation 2 are the two that exist today)
@@ -4371,7 +4396,7 @@ function offerRows(list, bid){ return list.map(o => { const N = S.nations[o.sell
     const act = mine ? `<button class="btn" data-act="book-cancel" data-id="${o.id}" style="padding:3px 8px;font-size:12px">Withdraw</button>`
       : emb ? '<span class="small muted">Embargo</span>'
       : `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${10*MKT_LOT}" style="padding:3px 8px;font-size:12px" title="${bid ? 'Sell' : 'Buy'} ${resFull(o.res, 10*MKT_LOT)} for $${fmt(lotCash(10*MKT_LOT, o.price))}M">${bid ? 'Sell' : 'Buy'} ${fmtQ(10*MKT_LOT)}</button><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${o.qty}" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} all · $${fmt(lotCash(o.qty, o.price))}M</button></div>`;
-    return `<tr class="${enemy ? 'enemy' : ''}${o.priv ? ' priv' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}"><td>${flagSVG(o.seller)} <b>${mine ? 'You' : N.name}</b>${enemy ? ' <span class="etag">ENEMY</span>' : ''}${o.priv ? ' <span class="ptag">🔒 COALITION</span>' : ''}</td><td><span class="res-${o.res}">${icon(o.res)}</span> ${R.name}</td><td title="${resFull(o.res, o.qty)}">${fmt(o.qty)}</td><td title="${lotPriceTxt(o.res, o.price)}">$${o.price.toFixed(2)}M</td><td class="small muted">${Math.max(1, Math.ceil((o.exp - S.hour)/24))} d</td><td>${act}</td></tr>`; }).join(''); }
+    return `<tr class="${enemy ? 'enemy' : ''}${o.priv ? ' priv' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}"><td class="bk-n">${flagSVG(o.seller)} <b>${mine ? 'You' : N.name}</b>${enemy ? ' <span class="etag">ENEMY</span>' : ''}${o.priv ? ' <span class="ptag">🔒 COALITION</span>' : ''}</td><td class="bk-g"><span class="res-${o.res}">${icon(o.res)}</span> ${R.name}</td><td class="bk-q" data-l="Qty" title="${resFull(o.res, o.qty)}">${fmt(o.qty)}</td><td class="bk-p" data-l="Price / ${fmt(MKT_LOT)}" title="${lotPriceTxt(o.res, o.price)}">$${o.price.toFixed(2)}M</td><td class="bk-e small muted" data-l="Ends">${Math.max(1, Math.ceil((o.exp - S.hour)/24))} d</td><td class="bk-a">${act}</td></tr>`; }).join(''); }
 let BK_FILT = null;   // the good the offer lists are narrowed to (a goods card was clicked), null = every good
 let BK_RES = 'oil';   // the good last chosen in the offer form (its world price is the default asking price)
 const BK_F = {type:'sell', qty:50*MKT_LOT, price:null};   // the rest of the offer form as the player left it (price null = the chosen good's world price), so a rebuild of the market sheet keeps it
@@ -5538,7 +5563,7 @@ function troopModels(clusters, clBox, hexPx, now){
    A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the 4x4 beside motorized
    infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place too. */
 const TMART = {hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
-  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-bomber', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
+  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-strike-fighter', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
   int:{int:'u-jet', asf:'u-air-superiority'}, heli:'u-attack-heli', drone:{drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'}};
 const TMART_K = {hmv:0.9, jet:0.9, int:0.9, heli:0.9, drone:0.95}, TMART_K0 = 0.9;   // a picture's length as a share of its model's (the squad is wider than one soldier)
 // a picture drawn larger than its footprint in the formation (none today: the infantry squads are 3D models)
@@ -5582,11 +5607,11 @@ function tmArtDraw(q, night){ const A = q.art, D = A.k*view.s, px = figBucket(D*
    the launchers and the IFV, whose gun or cab is at the bottom of the picture: those turn half a circle more. 'drop' = an airborne drop in flight. */
 const UART = {inf:['u-infantry', 0, 0.62], para:['u-infantry', 0, 0.62], spec:['u-special-forces', 0, 0.64], at:['u-missile-launcher', 1, 0.6],
   tank:['u-tank', 0, 0.62], ifv:['u-light-armor', 1, 0.6], art:['u-artillery', 1, 0.62], mlrs:['u-rocket-artillery', 1, 0.62], sam:['u-anti-air', 1, 0.6],
-  jet:['u-bomber', 0, 0.8], int:['u-jet', 0, 0.72], heli:['u-attack-heli', 0, 0.72], drone:['u-drone', 0, 0.55],
+  jet:['u-strike-fighter', 0, 0.8], int:['u-jet', 0, 0.72], heli:['u-attack-heli', 0, 0.72], drone:['u-drone', 0, 0.55],
   frig:['u-corvette', 0, 0.62], crui:['u-destroyer', 0, 0.7], sub:['u-submarine', 0, 0.6], carr:['u-carrier', 0, 0.8], drop:['u-transport-heli', 0, 0.72], truck:['u-supply-truck', 0, 0.5]};
 const uArt = t => { const u = UART[t]; return u && ART.ready(u[0]) ? u : null; };
 Object.assign(UART, {drone:['u-uav-recon', 0, 0.58], drone4:['u-uav-armed', 0, 0.62], swarm:['u-swarm-drone', 0, 0.74], sdrone:['u-strike-drone', 0, 0.72], jam:['u-anti-drone', 0, 0.6],
-  bomb:['u-heavy-bomber-1', 0, 0.92], bomb2:['u-heavy-bomber-2', 0, 0.92], stealth:['u-stealth-bomber', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
+  bomb:['u-heavy-bomber', 0, 0.92], bomb2:['u-heavy-bomber', 0, 0.92], stealth:['u-stealth-bomber', 0, 0.92], mpa:['u-naval-patrol', 0, 0.82], awacs:['u-awacs', 0, 0.82], asf:['u-air-superiority', 0, 0.74], cargo:['u-cargo-ship', 0, 0.7]});   // V3 air units (the Heavy Bomber's two pictures are code-drawn stand-ins until they arrive)
 // enemy stealth UAV (level III+) seen in flight: near your SAMs or jammers, or under your AWACS
 function uavSpotted(v){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 < 0) return false; if (visLocAt(visibleSet(PLAYER), v.x, v.y)) return true;
   for (const b of S.armies) if (b.owner === PLAYER && !b.air && (b.u.sam || b.u.jam) && (b.at === p0 || G.P[b.at].nbs.includes(p0))) return true; return false; }
@@ -6841,7 +6866,7 @@ function plateRect(x, y, n, s, minor, tag){ const D = plateDims(n, s, minor, tag
 /* The owner's unit pictures (assets/art/i-*.webp, u-*.webp): portraits in the menus and panels, and close in the forces themselves on the map (troopModels). */
 // opaque extent of each supplied picture as a share of its square (width, height): unitPic trims and centres them with this
 const PICBOX = {'u-infantry':[0.84, 0.94], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.88, 0.52], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
-  'u-anti-air':[0.44, 0.94], 'u-missile-launcher':[0.36, 0.94], 'u-supply-truck':[0.44, 0.94], 'u-jet':[0.73, 0.94], 'u-bomber':[0.79, 0.94], 'u-attack-heli':[0.65, 0.94],
+  'u-anti-air':[0.44, 0.94], 'u-missile-launcher':[0.36, 0.94], 'u-supply-truck':[0.44, 0.94], 'u-jet':[0.73, 0.94], 'u-strike-fighter':[0.79, 0.94], 'u-heavy-bomber':[0.94, 0.93], 'u-stealth-bomber':[0.97, 0.73], 'u-attack-heli':[0.65, 0.94],
   'u-transport-heli':[0.64, 0.94], 'u-drone':[0.94, 0.86], 'u-corvette':[0.22, 0.94], 'u-destroyer':[0.17, 0.94], 'u-submarine':[0.19, 0.94], 'u-carrier':[0.36, 0.95],
   'u-naval-patrol':[0.94, 0.94], 'u-awacs':[0.95, 0.94], 'u-air-superiority':[0.78, 0.94], 'u-uav-recon':[0.99, 0.81], 'u-uav-armed':[0.99, 0.82], 'u-swarm-drone':[0.95, 0.86], 'u-strike-drone':[0.85, 0.95],
   'u-anti-drone':[0.48, 0.94], 'u-cargo-ship':[0.26, 0.96], 'u-cruise-missile':[0.52, 0.95], 'u-ballistic-missile':[0.28, 0.97], 'u-icbm':[0.12, 0.97]};   // (measured by tools/prep-art.py: HF section)
@@ -8692,6 +8717,8 @@ let DUGTIP = 0;
 function dugTip(x, y, tapped){ tip.innerHTML = `<span class="dtt">Dug in: +defence.</span> ${DIG_TIP.replace('Dug in: +defence. ', '')}`; tip.classList.add('dugtip'); tip.hidden = false;
   const tw = Math.min(230, tip.offsetWidth || 230), th = tip.offsetHeight; let tx = x + 14, ty = y + 14; if (tx + tw > cw - 6) tx = x - tw - 14; if (ty + th > ch - 6) ty = y - th - 14; tip.style.left = Math.max(6, tx) + 'px'; tip.style.top = Math.max(6, ty) + 'px';
   clearTimeout(DUGTIP); DUGTIP = tapped ? setTimeout(() => { if (tip.classList.contains('dugtip')) tipHide(); }, 4000) : 0; }
+// a province and its city often share a name: show it once (case- and accent-insensitive compare)
+const sameName = (a, b) => { const n = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(); return n(a) === n(b); };
 function tipShow(x, y){ tip.classList.remove('dugtip');
   if (dugHitAt(x, y)){ dugTip(x, y, false); return; }   // the dug-in shield on a badge: what it means
   const hf = !cityAt(x, y) && hitAt(x, y), fa = hf ? hf.ids.map(armyById).filter(Boolean) : [];
@@ -8715,7 +8742,7 @@ function tipShow(x, y){ tip.classList.remove('dugtip');
   const p = provAt(x, y); if (p < 0){ tipHide(); return; }
   const P = G.P[p], vis = visibleSet(PLAYER), here = stationaryAt(p).filter(a => armyVisible(a, vis));
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
-  let h = `<b>${P.city ? `${P.cityName} <span class="muted" style="font-weight:400">· ${P.name}</span>` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
+  let h = `<b>${P.city ? `${P.cityName}${sameName(P.cityName, P.name) ? '' : ` <span class="muted" style="font-weight:400">· ${P.name}</span>`}` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p), tk = P.terrain || 'plains', [sg, wk] = terrUnitsText(tk); h += `<div class="r"><span style="white-space:nowrap">${ticon(tk, 13)} ${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}</span></div>`;
     h += `<div class="small tline">${T0.spd < 1 ? 'Movement ' + pctS(T0.spd) : 'Normal movement'}${P.river.size ? ' · river line: crossing slower, attackers −20%' : ''}${sg.length ? `<br><span class="tg">▲ ${sg.slice(0, 2).join(', ')}</span>` : ''}${wk.length ? `<br><span class="tb">▼ ${wk.slice(0, 2).join(', ')}</span>` : ''}</div>`; h += `<div class="r"><span>${isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province'}${P.city ? ' · ' + mainLabel(p) : (P.oil ? ' · Oil field' : '') + (P.ore ? ' · Ore' : '') + (P.iron ? ' · Iron hills' : '')}</span><span>${yieldStr(y)}</span></div>`;
     h += `<div class="r"><span>Population</span><span>${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></div>`;
@@ -9474,7 +9501,7 @@ function rUnitFace(t, k, tone){ const u = UART[k], im = u && ART.img(u[0]);
 // a newer generation's picture until its own art exists: the type's picture in a new paint scheme (g2 desert, g3 dark grey). A generation that
 // already has a picture of its own (the armed UAV) is shown as it is
 const R_TONE = ['', '', 'g2', 'g3', '', 'g3'];
-const rGenTone = (t, g) => { if (g < 2) return ''; const a = rGenArt(t, g), p = rGenArt(t, g - 1); return a !== p && UART[a] && !ART.standIn(UART[a][0]) ? '' : R_TONE[g] || 'g2'; };
+const rGenTone = (t, g) => { if (g < 2) return ''; const a = rGenArt(t, g), p = rGenArt(t, g - 1); return a !== p && UART[a] && UART[p] && UART[a][0] !== UART[p][0] && !ART.standIn(UART[a][0]) ? '' : R_TONE[g] || 'g2'; };
 // short labels for the phone, where a diamond's name has about 70 px (the card always shows the full name)
 const RSN = {'Ceramic Body Armour':'Body Armour', 'Rapid Mobilisation':'Mobilisation', 'Rough-Ground Drills':'Drills', 'Tandem Warheads':'Tandem', 'Thermal Sights':'Thermals',
   'Mountain & Arctic Training':'Mountain', 'Air-Transportable':'Airlift', '30 mm Autocannon':'Autocannon', 'Uprated Powerpack':'Powerpack', 'Amphibious Kit':'Amphibious', 'Composite Armour':'Composite',
@@ -10147,7 +10174,7 @@ function provHTML(p){
   const foeKnown = foe.filter(a => armyVisible(a, vis));
   const y = provYield(p);
   let html = `${CS.det && innerWidth <= 820 && !P.sea ? '<button class="btn cs-back" data-act="cs-back">‹ City view</button>' : ''}<div class="eyebrow">${kind} · ${P.sea ? '' : ticon(P.terrain || 'plains', 12) + ' '}${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || linkSummary(p)) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (crossing +30% time, +10% on a bridge; attackers −20%)` : ''}${P.river.size && linkSummary(p) ? ' · ' : ''}${linkSummary(p)}</div>` : ''}
-    <div class="sub">${P.city ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
+    <div class="sub">${P.city && !sameName(P.cityName, P.name) ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
     <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger-t)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}${(d => d ? `<dt>Deposits</dt><dd>${d}</dd>` : '')([P.oil ? `<span class="res-oil">${icon('oil', 11)}</span> oil field` : '', P.ore ? `<span class="res-metal">${icon('metal', 11)}</span> ore` : '', P.iron ? `<span class="res-iron">${icon('iron', 11)}</span> iron hills` : ''].filter(Boolean).join(' · '))}${P.city && !P.sea ? (o => `<dt>Produces</dt><dd><span class="res-${o.k}">${icon(o.k, 11)}</span> <b>${cap1(MAIN_NAME[o.k])}</b>: ${mainOutTxt(o)} a day${o.lv ? ` (${BUILD.arms.name} ${ROMAN[o.lv]}: +${Math.round(ARMS_PCT*100*o.lv)}%)` : ` · ${BUILD.arms.name}: +${Math.round(ARMS_PCT*100)}% per level`}</dd>`)(cityOut(p)) : ''}<dt>Daily yield</dt><dd class="ycs">${yieldChips(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
     ${P.city && !P.sea ? (L => `<dt>City</dt><dd>${bimg('city', L, 34)}Level ${ROMAN[L]}${isCapital(p) ? ' · capital' : ''}</dd>`)(cityLevel(p)) : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => `<span class="bl">${bimg(k, S.bld[p][k], 30)}${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : ''}${bdis(p, k) ? ` <span style="color:var(--danger-t)" title="Knocked out by a precision strike: works again when repaired">knocked out · ${bdisH(p, k)} h</span>` : ''}</span>`).join('') || 'None'}</dd>
@@ -10380,7 +10407,7 @@ document.addEventListener('click', e => {
   }
 });
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal' && ['research', 'diplo', 'prod', 'stats', 'settings', 'paper', 'help', 'airguide', 'aninfo', 'market', 'armies', 'intel'].includes(modalKind)) closeModal(); });
-document.addEventListener('input', e => { const el = e.target;
+document.addEventListener('input', e => { if (e.target.id === 'pickq'){ pickQ = e.target.value; pickFilter(); return; } const el = e.target;
   if (el.classList && el.classList.contains('sp-rng') && SPLIT){ const a = armyById(SPLIT.id); if (!a) return; const k = el.dataset.k; spSet(a, k, +el.value); const v = SPLIT.plan[SPLIT.g][k] || 0;
     const r = splitRows(a).find(x => x.k === k), q = sel0 => document.querySelector(sel0); if (q(`[data-sv="${k}"]`)) q(`[data-sv="${k}"]`).textContent = v;
     if (r && q(`[data-ss="${k}"]`)) q(`[data-ss="${k}"]`).textContent = `${r.n - spTaken(k, -1)} stay`; if (q(`[data-mc="${k}:${SPLIT.g}"]`)) q(`[data-mc="${k}:${SPLIT.g}"]`).textContent = v; if (r && q(`[data-mc="${k}:s"]`)) q(`[data-mc="${k}:s"]`).textContent = r.n - spTaken(k, -1); return; } });
@@ -10410,6 +10437,8 @@ document.addEventListener('focusout', e => { if (e.target.classList && e.target.
 document.addEventListener('change', e => { const el = e.target;
   if (el && el.classList && el.classList.contains('rn')){ const a = armyById(+el.dataset.id), v = el.value.trim().slice(0, 32).replace(/[<>&"]/g, ''); if (a && v) a.nm = v; renaming = null; el.blur(); renderSide(true); return; } if (el && el.dataset && el.dataset.act === 'stance'){ const a = armyById(+el.dataset.id); if (a){ a.stance = el.value; a.home = null; toast(`${armyName(a)}: ${STANCES[el.value][0]}. ${STANCES[el.value][1]}`, 'info', null); renderSide(true); } } });
 document.addEventListener('keydown', e => { INCC.v = -1;
+  if (e.target.id === 'pickq' && e.key === 'Enter'){ e.preventDefault(); const one = pickFilter(); if (one) one.click(); return; }   // (Enter picks the single match)
+  if (openModal.kind === 'picker' && !$('modal').hidden && $('pickq') && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target.closest && e.target.closest('input,textarea,select,button'))) $('pickq').focus();   // (typing anywhere on the picker goes to the search box)
   if (e.target.closest && e.target.closest('input,textarea')) return;
   /*@DEV*/if (devKey(e)) return;/*@ENDDEV*/
   if (e.code === 'Space'){ e.preventDefault(); setSpeed(S.speed ? 0 : 1); }
@@ -10535,7 +10564,7 @@ const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings',
 function openModal(html, kind = ''){ if (kind !== 'cities' && openModal.kind === 'cities') cpReset(); modalKind = kind; if (kind !== 'mob' && kind !== 'cbld') CMOD_FROM = '';
   // a bar tab still holding focus (More after its menu, or the last tab used) lets it go when another window opens, so only that window's tab reads as active
   { const fe = document.activeElement; if (fe && fe.closest && fe.closest('#dock') && fe.dataset.kind !== kind) fe.blur(); }
-  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background'));   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'cities' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research'){ ftipAsk('research'); rHint(); } $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
+  $('modal').classList.toggle('docked', !!S && DOCK_KINDS.includes(kind)); $('modal').classList.toggle('ingame', !!S && kind !== 'picker' && kind !== 'title'); hdrSync(true); $('modal').classList.toggle('menu', (kind === 'picker' || kind === 'title') && !ART.failed('menu-background')); $('modal').classList.toggle('mtitle', kind === 'title');   /* menu art; without it the old look over the map */ if (S && $('modal').hidden){ speedBefore = S.speed; } if (S) S.speed = 0; $('sheet').className = 'sheet' + (kind === 'research' ? ' rsch' : kind === 'mob' || kind === 'cbld' ? ' rsch cmod' : '') + (kind === 'research' || kind === 'airguide' || kind === 'cities' || kind === 'help' || kind === 'diplo' || kind === 'stats' || kind === 'replay' || kind === 'nation' ? ' wide' : kind === 'picker' || kind === 'prod' || kind === 'armies' || kind === 'market' || kind === 'cities' ? ' mid' : ''); const same = !$('modal').hidden && kind === openModal.kind && kind !== '', top0 = $('sheet').scrollTop; openModal.kind = kind; $('sheet').innerHTML = html; lastSig.sheet = html; $('modal').hidden = false; if (kind === 'research'){ ftipAsk('research'); rHint(); } $('sheet').scrollTop = same ? top0 : 0; if (S) renderSide(); }
 // in-game panels with a title band get CoN's red close box in it (added after each render, so every panel has one without touching its markup)
 new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
   const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
@@ -10662,24 +10691,29 @@ function showHelp(){ openModal(helpHTML(), 'help'); }
 // The picker only reads the lists: the scenario in use changes when a campaign begins (a running game keeps its own)
 const TIER_NAME = {S:'Superpower', A:'Major power', B:'Regional power', C:'Minor power'};
 const provsOf = P0 => onMap(P0.tier ? MAP_NEW : 0, () => { const ci = powerCountry(P0); return ci >= 0 ? G.countries[ci].provs : []; });   // (a nation of the nations world: on its map)
+const PICK_COLL = new Intl.Collator('en', {sensitivity:'base', numeric:true});
+const pickNorm = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const PICK_ALT = {'United States':'usa us u.s. america american united states of america', 'United Kingdom':'uk u.k. britain british great britain england', 'Russia':'russian federation ussr soviet', 'DR Congo':'drc congo democratic republic of the congo kinshasa', 'South Korea':'korea republic of korea rok', 'North Korea':'korea dprk', 'Myanmar':'burma', 'Turkey':'turkiye', 'Iran':'persia', 'Syria':'syrian arab republic', 'Vietnam':'viet nam', 'Saudi Arabia':'ksa arabia', 'South Africa':'rsa', 'Belarus':'byelorussia white russia', 'Germany':'deutschland', 'China':'prc', 'Egypt':'misr', 'Philippines':'filipinas', 'Czechia':'czech republic'};
+const pickMatch = (hay, q) => { q = pickNorm(q); return !q || (' ' + hay).includes(' ' + q); };   // (a word of the name, or of an alternative name, starts with the typed text)
+let pickQ = '';
+function pickFilter(){ const q = pickQ; let n = 0, one = null; document.querySelectorAll('#sheet .pick').forEach(el => { const m = pickMatch(el.dataset.n, q); el.hidden = !m; if (m){ n++; one = el; } }); const no = $('pickno'); if (no) no.hidden = n > 0; return n === 1 ? one : null; }
 function showPicker(){
   if (!G) useMap(0);
   if (!SCENARIOS[pickScn]) pickScn = 'world';
   const SC = SCENARIOS[pickScn], L = SC.powers, nat = !!SC.tiers; if (pickSel >= L.length) pickSel = 0;
-  const regs = nat ? NATIONS.regions.filter(r => L.some(p => p.region === r)) : [], reg = nat ? L[pickSel].region : null;
-  const cards = onMap(nat ? MAP_NEW : 0, () => L.map((P0, i) => { if (nat && P0.region !== reg) return null; const n = provsOf(P0).length, cities = P0.cities ? P0.cities.length : provsOf(P0).filter(id => G.base.city[id]).length;
-    const diff = nat ? powerDifficulty(L, i) : DIFF[P0.name] || 'Hard';
-    return {i, n, html:`<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" aria-pressed="${i === pickSel}">${flagHTML(P0.name, 40, 'big')}<span class="pt"><b>${P0.name}</b>${nat ? `<span class="tier t-${P0.tier}">${TIER_NAME[P0.tier] || ''}</span>` : ''}<span>${n} provinces · ${cities} cities</span><span class="diff d-${String(diff).toLowerCase().replace(/\s+/g, '')}">${diff}</span></span></button>`}; })
-    .filter(Boolean).sort((a, b) => b.n - a.n).map(c => c.html).join(''));
+  if ($('modal').hidden || openModal.kind !== 'picker') pickQ = '';   // (a fresh visit to the picker starts with an empty search)
+  // one A-Z list of every nation (by name, accents ignored); the search box filters it in place (pickFilter), so typing never rebuilds the sheet
+  const cards = L.map((P0, i) => ({i, P0, k:pickNorm(P0.name)})).sort((x, y) => PICK_COLL.compare(x.k, y.k) || x.i - y.i)
+    .map(({i, P0, k}) => `<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" data-n="${(k + ' ' + (PICK_ALT[P0.name] || '')).trim()}" aria-pressed="${i === pickSel}"${pickMatch(k + ' ' + (PICK_ALT[P0.name] || ''), pickQ) ? '' : ' hidden'}>${flagHTML(P0.name, 28, 'big')}<span class="pt"><b>${P0.name}</b></span>${nat && TIER_NAME[P0.tier] ? `<span class="tier t-${P0.tier}">${TIER_NAME[P0.tier]}</span>` : ''}</button>`).join('');
   const caps = nat ? winCapsFor(L.length) : SC.caps, share = nat ? winShareFor(L.length) : WIN_SHARE, shareW = share === 0.25 ? 'a quarter' : share === 0.2 ? 'a fifth' : share === 0.1 ? 'a tenth' : Math.round(share*100) + '%';
   const nW = NUMW[L.length] || String(L.length), capW = NUMW[caps] || String(caps);
-  openModal(`${LOGO}<div class="eyebrow" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
+  openModal(`${LOGO}<div class="eyebrow pickeb" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
     ${pickClassic && SCENARIOS.world64 ? `<div class="row wsel" role="group" aria-label="World"><button class="btn ${nat ? 'primary' : ''}" data-act="pickscn" data-k="world64" aria-pressed="${nat}">Nations of the world<small>${SCENARIOS.world64.powers.length} nations · new rules</small></button><button class="btn ${!nat ? 'primary' : ''}" data-act="pickscn" data-k="world" aria-pressed="${!nat}">Classic<small>15 powers · old rules</small></button></div>` : ''}
-    ${nat ? `<p>${cap1(nW)} nations fight for the world. Win by holding ${shareW} of the world's land${share <= 0.1 ? ' (more for a big country)' : ''} or ${capW} starting capitals; there is no time limit. Nations start close to equal: a big country has more land and cities, not much more money. Every other country is independent and can be taken.</p>
-    <div class="row regs" role="tablist" aria-label="Regions">${regs.map(r => `<button class="btn ${r === reg ? 'primary' : ''}" role="tab" aria-selected="${r === reg}" data-act="pickreg" data-k="${r}">${r}<small>${L.filter(p => p.region === r).length}</small></button>`).join('')}</div>`
-    : `<p>${cap1(nW)} powers fight for the world. Win by holding a quarter of the world's land or five starting capitals; there is no time limit. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>`}
-    <div class="picks">${cards}</div>
+    ${nat ? `<p class="pickintro">${cap1(nW)} nations fight for the world. Win by holding ${shareW} of the world's land${share <= 0.1 ? ' (more for a big country)' : ''} or ${capW} starting capitals; there is no time limit. Nations start close to equal: a big country has more land and cities, not much more money. Every other country is independent and can be taken.</p>`
+    : `<p class="pickintro">${cap1(nW)} powers fight for the world. Win by holding a quarter of the world's land or five starting capitals; there is no time limit. Big nations start with more land and cities; small ones must expand fast. Every other country is independent and can be taken.</p>`}
     <div class="eyebrow">AI difficulty</div><div class="row">${DIFFS.map(d => `<button class="btn ${pickDiff === d.k ? 'primary' : ''}" data-act="pickdiff" data-k="${d.k}">${d.name}</button>`).join('')}</div>
+    <div class="pickq"><input id="pickq" type="search" value="${pickQ.replace(/"/g, '&quot;')}" placeholder="Search ${L.length} nations" aria-label="Search nations" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"></div>
+    <div class="picks" role="list">${cards}</div><p class="pickno" id="pickno" ${L.some(P0 => pickMatch(pickNorm(P0.name) + ' ' + (PICK_ALT[P0.name] || ''), pickQ)) ? 'hidden' : ''}>No nation matches that search.</p>
     <div class="row"><button class="btn primary" data-act="begin">Lead ${L[pickSel].name}</button>${S && S.started && !S.over ? `<button class="btn" data-act="resume">Back</button>` : ''}<span class="psum">AI <b>${(DIFFS.find(d => d.k === pickDiff) || DIFFS[1]).name}</b> · ${nat ? SC.name : 'World War'} · no time limit</span></div>`, 'picker');
 }
 function showBriefing(first, hasSave){

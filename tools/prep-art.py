@@ -377,9 +377,9 @@ def save_icon(arr, name, size=ICON, q=88, gamma=0.85, gain=1.3, sat=1.15, sharp=
     Image.fromarray(np.dstack([rgb, px[..., 3]]), 'RGBA').save(os.path.join(OUT, name), 'WEBP', quality=q, method=6)
 
 UNITS = ['special-forces', 'tank', 'light-armor', 'artillery', 'rocket-artillery', 'anti-air', 'missile-launcher', 'supply-truck',
-         'jet', 'bomber', 'attack-heli', 'transport-heli', 'drone', 'corvette', 'destroyer', 'submarine', 'carrier']
+         'jet', 'strike-fighter', 'attack-heli', 'transport-heli', 'drone', 'corvette', 'destroyer', 'submarine', 'carrier']
 # V3 air (promised art; the game draws code stand-ins until these exist): skipped quietly when the source file is not there yet
-UNITS += ['heavy-bomber']   # the other V3 pictures and the infantry come from the owner's Higgsfield files (HF section)
+# (the other V3 pictures, the infantry, and the Heavy and Stealth Bombers come from white-background files: HF section)
 BUILD = {'city': ['city', 'city-2', 'city-3', 'city-4', 'city-5'], 'airfield': ['airfield', 'airfield-2', 'airfield-3', 'airfield-4', 'airfield-5'],
          'missile-silo': ['missile-silo', 'missile-silo-2', 'missile-silo-3', 'missile-silo-4', 'missile-silo-5'],
          'military-base': ['military-base-%d' % i for i in range(1, 6)], 'naval-port': ['naval-port-%d' % i for i in range(1, 6)]}
@@ -466,7 +466,7 @@ if want('menu'):
 # building patch). usage: python3 -I tools/prep-art.py assets/art-src assets/art hf   (or name them: hf-units, hf-buildings, or one picture, e.g. u-awacs)
 # units -> u-<name>.webp 512 px (transparent, centred, nose up) + i-<name>.webp 128 px icon; buildings -> b-<name>.webp 320 px (feathered edge)
 # ---------------------------------------------------------------------------------------------------------------------------------
-HF_UNITS = ['infantry', 'naval-patrol', 'awacs', 'air-superiority', 'uav-recon', 'uav-armed', 'swarm-drone', 'strike-drone', 'anti-drone',
+HF_UNITS = ['heavy-bomber', 'stealth-bomber', 'infantry', 'naval-patrol', 'awacs', 'air-superiority', 'uav-recon', 'uav-armed', 'swarm-drone', 'strike-drone', 'anti-drone',
             'cargo-ship', 'cruise-missile', 'ballistic-missile', 'icbm']
 HF_ICON_SKIP = {'icbm'}                   # stored for later (no icon needed yet)
 HF_FLAME = {'cruise-missile': False, 'ballistic-missile': True, 'icbm': True}   # rocket exhaust fades into the white: matted as translucent glow
@@ -626,7 +626,7 @@ if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_S
 
 # tell the game which promised V3 pictures now exist (it draws code stand-ins for the rest and never requests a missing file)
 import re
-V3 = ['u-heavy-bomber-1', 'u-heavy-bomber-2', 'u-stealth-bomber', 'u-infantry-figure']   # (promised pictures: fetched only once the file exists)
+V3 = ['u-infantry-figure']   # (promised pictures: fetched only once the file exists)
 have = [n for n in V3 if os.path.exists(os.path.join(OUT, n + '.webp'))]
 idx = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT))), 'index.html')
 if os.path.exists(idx):
