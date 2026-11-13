@@ -193,7 +193,8 @@ function daily(){
   // the advisor: each seat is warned of a build-up on its border and of idle cities in wartime
   for (const me of seats()) if (S.nations[me].alive){ const D = desk(me), W = D.warn || (D.warn = {}), day = dayOf(S.hour);
     const border = G.P.filter(P => !P.sea && S.owner[P.id] === me && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== me));
-    const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === me || x.air || !S.nations[x.owner].alive) continue; const r = rel(me, x.owner).st; if (r === 'ally') continue;
+    // (a computer nation at peace is left out: it never starts a war, AI_STARTS_WARS, and its forces near the border are its own cities' garrisons)
+    const mass = new Map(); for (const x of S.armies){ if (x.owner < 0 || x.owner === me || x.air || !S.nations[x.owner].alive) continue; const r = rel(me, x.owner).st; if (r === 'ally' || (!AI_STARTS_WARS && r !== 'war' && !isSeat(x.owner))) continue;
       if (border.some(P => P.nbs.includes(x.at) || P.id === x.at)) mass.set(x.owner, (mass.get(x.owner) || 0) + power(x)); }
     const mine = border.reduce((s0, P) => s0 + S.armies.filter(x => x.owner === me && x.at === P.id && !x.air).reduce((s1, x) => s1 + power(x), 0), 0);
     for (const [o, pw] of mass){ const grew = pw > (W['p' + o] ?? pw)*1.2; W['p' + o] = Math.max(pw*0.9, Math.min(W['p' + o] ?? pw, pw));

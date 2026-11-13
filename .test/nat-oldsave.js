@@ -1,6 +1,9 @@
 // Old-world proof (nations step 0; since the merge into master, against master as it was before the merge): a save made by the build BEFORE the
 // nations world (master 8d9051c, .test/base8d9; on the nations branch it was 1eb7231) loads in the current build, is the classic 15-power world,
 // plays 5 days without an error, and after those 5 days its state is exactly what the old build itself reaches from the same save.
+// Since the owner's rule that computer nations never start a war (rules/diplomacy.js AI_STARTS_WARS, branch fix-ai-play) the current rules differ
+// from the old build's (its computer nations declare wars from day 8), so the old build's hash is shown, not required: the save must play the
+// same 5 days in the current build twice (also after a nations-world game in the same page), with no war started by a computer nation.
 // node .test/nat-oldsave.js
 // (the old build: mkdir -p .test/base8d9 && git archive 8d9051c | tar -x -C .test/base8d9 && bash .test/base8d9/tools/mkpage.sh)
 const { chromium } = require('playwright'); const pickNation = require('./pick-nation.js'); const path = require('path');
@@ -12,7 +15,7 @@ const HASH = `s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s
   const o = await mk(OLD); await pickNation(o, 'Germany'); await o.click('[data-act="begin"]'); await o.click('[data-act="start"]');
   const save = await o.evaluate(() => { newGame(4242, 5, [0]); S.started = true; S.diff = 'regular'; for (let i = 0; i < 96; i++) tick(); return saveJSON(); });
   const play = `(sv) => { const ok = restore(JSON.parse(sv)); if (!ok) return {ok}; for (let i = 0; i < 120; i++) tick(); const o = JSON.parse(saveJSON()); delete o.savedAt;
-    return {ok, hour:S.hour, scn:S.scn, w64:!!S.w64, nations:S.nations.length, tier:S.nations[0].tier || null, caps:WIN_CAPS, need:landNeed(0), cities:G.P.filter(P => P.city).length, hash:(${HASH})(JSON.stringify(o))}; }`;
+    return {ok, hour:S.hour, scn:S.scn, w64:!!S.w64, nations:S.nations.length, tier:S.nations[0].tier || null, caps:WIN_CAPS, need:landNeed(0), cities:G.P.filter(P => P.city).length, wars:Object.values(S.rel).filter(r => r.st === 'war').length, hash:(${HASH})(JSON.stringify(o))}; }`;
   const ro = await o.evaluate(`(${play})(${JSON.stringify(save)})`);
   // the current build: through the real Continue button, then the same 5 days
   const n = await mk(NEW); await n.evaluate(sv => localStorage.setItem('iron-meridian-save-v5', sv), save); await n.reload(); await n.waitForTimeout(700);
@@ -21,6 +24,6 @@ const HASH = `s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s
   const rn = await n.evaluate(`(${play})(${JSON.stringify(save)})`);
   // and once more after a nations-world game was played in the same page (the world switch must give the old world back)
   const rn2 = await n.evaluate(`(() => { useScenario('world64'); newGame(1, 0, [0]); for (let i = 0; i < 24; i++) tick(); return (${play})(${JSON.stringify(save)}); })()`);
-  const same = ro.ok && rn.ok && ro.hash === rn.hash && rn2.hash === ro.hash, classic = rn.scn === 'world' && !rn.w64 && rn.nations === 15 && rn.tier === null && rn.caps === 5 && rn.cities === ro.cities;
-  console.log(JSON.stringify({saveKB:Math.round(save.length/1024), cont, old:ro, now:rn, afterNationsGame:rn2.hash, same, classic}, null, 1));
+  const sameAsOld = ro.ok && rn.ok && ro.hash === rn.hash, same = ro.ok && rn.ok && rn2.ok && rn2.hash === rn.hash && rn.wars === 0, classic = rn.scn === 'world' && !rn.w64 && rn.nations === 15 && rn.tier === null && rn.caps === 5 && rn.cities === ro.cities;
+  console.log(JSON.stringify({saveKB:Math.round(save.length/1024), cont, old:ro, now:rn, afterNationsGame:rn2.hash, same, sameAsOld, classic}, null, 1));
   console.log('ERRORS', errs.length ? errs : 'none'); await b.close(); process.exit(errs.length || !same || !classic || cont.hour !== 96 ? 1 : 0); })();

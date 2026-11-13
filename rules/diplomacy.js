@@ -2,6 +2,12 @@
 'use strict';
 // relVer counts every change of a relation (the client redraws its relations map when it moves)
 let relVer = 0;
+// The owner's rule: a computer nation never starts a war. It never declares war, never attacks or crosses into the land of a nation it is at
+// peace with, and stages no offensive on a peaceful border. It goes to war only (a) when a nation declares war on it or attacks it (then all of
+// its war AI applies: it fights back fully), (b) when its ally or coalition partner is attacked (a defensive alliance: it joins against the
+// attacker, never against a nation its partner attacked), or (c) when it is already at war (old saves keep their wars). Independent land (no
+// nation's) is not a nation: the computer may still march into it. true brings back the old behaviour (computer nations declared wars on their own).
+const AI_STARTS_WARS = false;
 const rkey = (a, b) => a < b ? a + ',' + b : b + ',' + a;
 function rel(a, b){ if (a === b) return {st:'self'}; if (a < 0 || b < 0) return {st:'war'}; const k = rkey(a, b); return S.rel[k] || (S.rel[k] = {st:'peace', since:0, until:null}); }
 const atWar = (a, b) => a !== b && a !== SEA && b !== SEA && (a < 0 || b < 0 ? true : rel(a, b).st === 'war');
@@ -39,9 +45,10 @@ function commonEnemy(a, b){ if (!QM) return S.nations.some(c => c.alive && c.id 
   const foes = n => QM.foes[n] || (QM.foes[n] = S.nations.map(c => c.alive && c.id !== n && atWar(n, c.id))), fa = foes(a), fb = foes(b);
   for (let c = 0; c < fa.length; c++) if (fa[c] && fb[c] && c !== a && c !== b) return true; return false; }
 const opinion = (a, b) => Math.max(-100, Math.min(100, opinionParts(a, b).reduce((s0, x) => s0 + x[1], 0)));
-function setRel(a, b, st, days = null){
+// (by: for a war, the nation that started it, the attacker; a nation that joins to defend an ally is not one: the war it joins is the attacker's)
+function setRel(a, b, st, days = null, by = null){
   const prev = rel(a, b).st;
-  S.rel[rkey(a, b)] = {st, since:S.hour, until:days ? S.hour + days*24 : null}; relVer++;
+  S.rel[rkey(a, b)] = st === 'war' && by != null ? {st, since:S.hour, until:null, by} : {st, since:S.hour, until:days ? S.hour + days*24 : null}; relVer++;
   for (const me of [a, b]) if (isSeat(me)){ const D = desk(me), o = me === a ? b : a; D.offers = (D.offers || []).filter(x => x.from !== o); }   // a seat's open offers from the other lapse
   if ((prev === 'war' || prev === 'pass' || prev === 'ally') && !['war', 'pass', 'ally'].includes(st)){ evict(a, b); evict(b, a); }
   visCache = null;
@@ -70,11 +77,11 @@ function evict(n, host){
 function surpriseWar(a, b){ if (a === b || atWar(a, b)) return;
   const r = rel(a, b).st; if (['nap', 'ally', 'pass', 'truce'].includes(r)) S.nations[a].breaker = S.hour;
   S.decl = S.decl.filter(d => !((d.by === a && d.to === b) || (d.by === b && d.to === a)));
-  setRel(a, b, 'war'); addMem(b, a, -60);
+  setRel(a, b, 'war', null, a); addMem(b, a, -60);
   for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b) addMem(c.id, a, opinion(c.id, b) >= 0 ? -20 : -8);
   for (const al of alliesOf(b)){ if (al === a || atWar(al, a) || ['truce', 'nap', 'pass'].includes(rel(al, a).st)) continue;
     if (isSeat(al)){ tell(al, `Your ally ${S.nations[b].name} was attacked by ${S.nations[a].name} without warning. You may join the war from Diplomacy.`, 'info', null); continue; }
-    if (opinion(al, b) >= 30){ setRel(al, a, 'war'); tellAll(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[a].name}.`, me => a === me ? 'bad' : '', null); } }
+    if (opinion(al, b) >= 30) joinDefence(al, a); }
   for (const me of seats()){
     if (b === me){ tell(me, `${S.nations[a].name} launched a surprise attack on you! You are at war.`, 'bad', S.nations[a].capital); alarm(me); IM.emit('war', me, a); }
     else if (a === me) tell(me, `Surprise attack: you are now at war with ${S.nations[b].name}. Other nations think less of you.`, 'bad', S.nations[b].capital);
@@ -102,11 +109,21 @@ function declareWar(a, b){
 // the war itself, plus allies' calls to arms (also flushes declarations pending in saves from before the 24 h delay was removed)
 function startWar(by, to){
   if (!S.nations[by].alive || !S.nations[to].alive || atWar(by, to)) return;
-  setRel(by, to, 'war');
+  setRel(by, to, 'war', null, by);
   for (const al of alliesOf(to)){ if (al === by || atWar(al, by) || ['truce', 'ally', 'nap', 'pass'].includes(rel(al, by).st)) continue;
     if (isSeat(al)){ tell(al, `Your ally ${S.nations[to].name} is under attack by ${S.nations[by].name}. You may join the war from Diplomacy.`, 'info', null); continue; }
     if (opinion(al, to) < 30) continue;
-    setRel(al, by, 'war'); tellAll(`${S.nations[al].name} honours its alliance and joins the war against ${S.nations[by].name}.`, me => by === me ? 'bad' : '', null); } }
+    joinDefence(al, by); } }
+// computer nation al joins the war against foe to defend an ally or coalition partner that foe attacked (a defensive war: foe counts as its attacker,
+// so foe's own allies are not called in by it; the old rule called them in when a coalition member declared war). A seat it joins against is warned
+// as for a declaration (when the coalition, not the alliance, brings al in).
+function joinDefence(al, foe, bloc = null){ if (al === foe || atWar(al, foe) || !S.nations[al].alive || !S.nations[foe].alive) return false;
+  setRel(al, foe, 'war', null, foe);
+  tellAll(`${S.nations[al].name} honours its ${bloc ? 'coalition' : 'alliance'} and joins the war against ${S.nations[foe].name}.`, me => foe === me ? 'bad' : '', null);
+  if (bloc && isSeat(foe)){ alarm(foe); IM.emit('war', foe, al); }
+  relVer++; return true; }
+// the attacker in the war between a and b (-1 when they are not at war or the war is older than the record: an old save's war)
+const warBy = (a, b) => { const r = atWar(a, b) && a >= 0 && b >= 0 ? rel(a, b) : null; return r && r.by != null ? r.by : -1; };
 function acceptOffer(ai, from, kind){
   const op = opinion(ai, from), wars = warsOf(ai);
   if (kind === 'peace'){
@@ -153,7 +170,7 @@ function applyDeal(a, b, kind){
     else if (kind === 'ally' || ((kind === 'peace') && (borders(me, a) || borders(me, b)))) tell(me, `${S.nations[a].name} and ${S.nations[b].name} ${word}.`, '', null); }
 }
 function diploHour(){
-  while (S.decl.length){ const d = S.decl.pop(); startWar(d.by, d.to); }   // old saves: a pending declaration starts its war now
+  while (S.decl.length){ const d = S.decl.pop(); if (AI_STARTS_WARS || isSeat(d.by)) startWar(d.by, d.to); }   // old saves: a pending declaration starts its war now (a computer nation's is dropped: AI_STARTS_WARS)
   for (const k in S.rel){ const r = S.rel[k]; if (r.until == null || S.hour < r.until) continue;
     if (r.st === 'truce'){ r.st = 'peace'; r.until = null; r.since = S.hour; r.afterTruce = true; } else if (r.st === 'nap'){ r.st = 'peace'; r.until = null; r.since = S.hour; const [x, y] = k.split(',').map(Number); for (const me of [x, y]) if (isSeat(me)) tell(me, `Your non-aggression pact with ${S.nations[x === me ? y : x].name} has expired.`, 'info', null); } }
   for (const me of seats()){ const D = desk(me); D.offers = (D.offers || []).filter(o => o.exp > S.hour && S.nations[o.from].alive); }
@@ -179,7 +196,9 @@ function blocDay(){ const reg = S.blocReg || (S.blocReg = {}), day = Math.floor(
     let focus = [...cnt.entries()].sort((x, y) => y[1] - x[1] || natPower(x[0]) - natPower(y[0]))[0]?.[0] ?? null;
     if (focus !== R.focus){ R.focus = focus; if (focus != null) for (const me of B.members) if (isSeat(me)) tell(me, `The ${B.name} names ${S.nations[focus].name} as its common enemy.`, 'info', S.nations[focus].capital); }
     if (focus == null) continue;
-    for (const m of B.members){ if (isSeat(m) || atWar(m, focus) || S.decl.some(d => d.by === m && d.to === focus) || ['truce', 'nap', 'ally'].includes(rel(m, focus).st) || rng() > 0.25) continue; declareWar(m, focus); }
+    // (AI_STARTS_WARS false: a member joins only a defensive war, one the common enemy started against a member, and joins it as a defender)
+    const attacked = AI_STARTS_WARS || B.members.some(x => warBy(x, focus) === focus);
+    for (const m of B.members){ if (isSeat(m) || atWar(m, focus) || S.decl.some(d => d.by === m && d.to === focus) || ['truce', 'nap', 'ally'].includes(rel(m, focus).st) || !attacked || rng() > 0.25) continue; if (AI_STARTS_WARS) declareWar(m, focus); else joinDefence(m, focus, B.id); }
     // the AI leader asks a member seat for a coordinated offensive
     for (const me of B.members){ const D = isSeat(me) ? desk(me) : null; if (!D || B.leader === me || isSeat(B.leader) || !(!D.req || D.req.until < S.hour) || !(!R.lastReq || day - R.lastReq >= 4) || !atWar(me, focus)) continue;
       const near = G.P.filter(P => !P.sea && S.owner[P.id] === focus && P.nbs.some(v => S.owner[v] === me)).sort((x, y) => (y.city ? 1 : 0) - (x.city ? 1 : 0));
@@ -214,7 +233,7 @@ function diploDay(){
     // declare war
     const pending = S.decl.some(d => d.by === n);
     // (the nations world: a nation starts a war only while it is in at most TIER_WARS wars of its own making; wars declared on it do not count)
-    if (day >= 8 && !sated && (N.tier ? warsOf(n).filter(m => (N.wby || []).includes(m)).length <= TIER_WARS[N.tier] : warsOf(n).length <= 1) && !pending && rng() < 0.22*diffOf().war){
+    if (AI_STARTS_WARS && day >= 8 && !sated && (N.tier ? warsOf(n).filter(m => (N.wby || []).includes(m)).length <= TIER_WARS[N.tier] : warsOf(n).length <= 1) && !pending && rng() < 0.22*diffOf().war){
       let best = -1, bs = 0; const myP = natPower(n);
       // (the nations world, TIER_FRONT: the power of the nations of tier A it already fights, counted against a new peer that is not its rival)
       const front = N.tier && TIER_RANK[N.tier] <= 1 ? TIER_FRONT*warsOf(n).filter(e => S.nations[e].tier === 'A').reduce((s, e) => s + natPower(e), 0) : 0;
@@ -248,7 +267,12 @@ function aiReply(me, n, text){ const t = text.toLowerCase(), op = opinion(n, me)
   if (/\b(peace|ceasefire|truce|stop)\b/.test(t)){ if (!war) return 'We are not at war with you.'; const a = acceptOffer(n, me, 'peace'); if (a.ok){ applyDeal(n, me, 'peace'); return `Agreed: ${a.why}. Our guns fall silent. ${termsText(me, n, {toA:[], toB:[]}, me) ? '' : ''}`; } return `No peace yet: ${a.why}. Make it worth our while in a trade.`; }
   if (/right of way|passage|cross|transit/.test(t)){ const a = acceptOffer(n, me, 'pass'); if (a.ok){ applyDeal(n, me, 'pass'); return 'You may cross our land and use our airfields.'; } return `Not now (${a.why}).`; }
   if (/\b(ally|alliance|coalition|join)\b/.test(t)){ const a = acceptOffer(n, me, 'ally'); if (a.ok){ applyDeal(n, me, 'ally'); return 'We stand with you. Together we are stronger.'; } return `An alliance is not possible: ${a.why}.`; }
-  if (/\b(help|support|attack|strike)\b/.test(t) && /\b(them|enemy|against|help|support)\b/.test(t)){ const common = warsOf(me).filter(e => !atWar(n, e) && e !== n); if (common.length && op >= 30 && rng() < 0.5){ const e = common[0]; declareWar(n, e); return `Very well. We declare war on ${S.nations[e].name}.`; } return op >= 10 ? 'We sympathise, but we will not risk our people for you.' : 'Fight your own wars.'; }
+  if (/\b(help|support|attack|strike)\b/.test(t) && /\b(them|enemy|against|help|support)\b/.test(t)){
+    if (!AI_STARTS_WARS){   // a computer nation only defends: it joins an ally's (or coalition partner's) war against a nation that attacked that ally
+      const common = warsOf(me).filter(e => !atWar(n, e) && e !== n && warBy(me, e) === e && !['truce', 'nap', 'ally'].includes(rel(n, e).st)), partner = rel(n, me).st === 'ally' || sameBloc(me, n);
+      if (common.length && partner && op >= 30 && rng() < 0.5){ const e = common[0]; joinDefence(n, e); return `Very well. ${S.nations[e].name} attacked you: we stand with you against them.`; }
+      return !partner ? 'We start no wars. Were we allies and you attacked, we would stand with you.' : !common.length ? 'We fight only to defend: we will not join a war you started.' : op >= 10 ? 'We sympathise, but we will not risk our people for you.' : 'Fight your own wars.'; }
+    const common = warsOf(me).filter(e => !atWar(n, e) && e !== n); if (common.length && op >= 30 && rng() < 0.5){ const e = common[0]; declareWar(n, e); return `Very well. We declare war on ${S.nations[e].name}.`; } return op >= 10 ? 'We sympathise, but we will not risk our people for you.' : 'Fight your own wars.'; }
   if (/\b(threat|destroy|crush|surrender|or else|warn)\b/.test(t)){ addMem(n, me, -8); return natPower(n) < natPower(me)*0.6 ? 'We hear you. We have no wish for conflict.' : pick(['Empty words. Come and try.', 'Threats only harden our resolve.', 'We will remember this.']); }
   if (/\b(trade|deal|buy|sell|offer)\b/.test(t)) return 'Send us a proposal in the Trade tab and we will consider it.';
   if (/\b(hello|hi|greetings|hey)\b/.test(t)) return {warm:'Greetings, friend!', friendly:'Hello. Good to hear from you.', neutral:'Greetings.', cold:'What do you want?', hostile:'Speak quickly.'}[m];
