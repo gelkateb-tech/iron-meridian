@@ -5788,7 +5788,7 @@ function cityRing(T, now, a0, kl){ const {p} = T; if (!T.city) return; const r =
    assets/art-src/ba-*.png by tools/cutout-angled.py: background removed, own cast shadow kept as a soft dark layer, cropped tight; BNMETA holds each
    picture's size, ground anchor, the HQ flagpole tops and the Naval Yard's pier side). No frame, tile, badge or level number: the level shows only in
    the city panel, on the map it is the picture itself (a bigger, more built-up base per level). A capital carries its headquarters in its nation's
-   architectural style (nations.js 'hq', by its country; bnHqStyle), standing exactly on the capital's point. Zoomed out (below BN_IN0) no building
+   architectural style (nations.js 'hq', by its country; bnHqStyle), standing exactly on the capital's point; a captured capital keeps it, flying the captor's flag (bnHqScan, bnFlags). Zoomed out (below BN_IN0) no building
    shows, only the city's name; from the mid zoom one picture per city, its most important building with a picture (HQ, Missile Silo, Airbase, Naval
    Yard, Army Base, Arms Industry, Recruiting Office, Fortifications; Army Base, Missile Silo and Arms Industry have no angled picture yet and show none),
    standing on the city's point; from BN_ALL0 the rest fade in round it in a tight cluster, behind and beside it (the name stays clear below). The Naval
