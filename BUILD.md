@@ -134,7 +134,8 @@ Every file in `tools/` (none of them is published; the game never loads them):
 | `bake-assets.js` | bakes the terrain texture, the land mask and the unit sprite sheets into `assets/` |
 | `build-flags.js`, `pack-flags.py` | the flag atlas `assets/art/flags.webp` |
 | `prep-art.py`, `prep-banners.py`, `prep-res.py`, `icons.py` | prepare the unit pictures, the research banners, the resource pictures and the unit icons |
-| `cutout-angled.py` | cuts the angled building pictures (`assets/art-src/ba-*.png`) out of their grey background into `assets/art/bn-*.webp` and writes their anchors (`tools/bn-meta.json`, `BNMETA` in `index.html`): `python3 -I tools/cutout-angled.py assets/art-src assets/art --meta=tools/bn-meta.json --embed` |
+| `cutout-angled.py` | cuts the angled building pictures (`assets/art-src/ba-*.png`) out of their grey background into `assets/art/bn-*.webp` and writes their anchors (`tools/bn-meta.json`, `BNMETA` in `index.html`): `python3 -I tools/cutout-angled.py assets/art-src assets/art --meta=tools/bn-meta.json --embed` (its `SLAB` table trims a picture rendered on a diorama slab, the first construction picture, flat) |
+| `crop-crane.py` | cuts the small tower crane shown behind a building while a level goes up (`assets/art/bn-crane.webp`) out of the second construction picture and adds it to `BNMETA`: `python3 -I tools/crop-crane.py --embed` |
 | `bn-foot.py` | writes each angled building picture's footprint (the solid cells of a 16 x 12 grid, not the see-through shadow) into `index.html` as `BNFOOT`, which keeps the buildings off the water: `python3 -I tools/bn-foot.py assets/art --embed` (run it after `cutout-angled.py` makes new pictures) |
 | `vendor/three.min.js` | a local copy of three.js (the globe view) that `mkpage.sh` puts in the test page so the tests run offline |
 
