@@ -96,6 +96,7 @@ function afxPuff(wx, wy, o = {}){
 // scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS), or o.ms fading over the last o.fade (an
 // explosion's: small 9 s, big 30 s, XFX), down to a world radius o.min (default 1.2); only the tactical nuke's and the ICBM's craters
 // keep their long life in game hours (o.keep), with their burning ground
+const crFade = (q, now) => q.rl > 0 && now - q.t0 >= q.rl - (q.rf || 6000);   // (a real-time crater in its fade)
 const CRATER_MS = 20000, crRT = (q, now) => !q.rl ? 1 : Math.max(0, Math.min(1, (q.rl - (now - q.t0))/(q.rf || 6000)));
 function afxCrater(wx, wy, r, o = {}){
   if (!PG.booted || !PG.ART.ready('fx-crater') || !S) return false; afxSync(); const c = worldToCell(wx, wy); if (c < 0 || G.prov[c] < 0 || G.P[G.prov[c]].sea) return true;
@@ -123,7 +124,8 @@ function afxAmbient(now, vis){
     const P = G.P[p]; if (afxOff(P.x, P.y, 100) || !vis.has(p)) continue; const f = 1 - age/m.d;
     if (afxTimer('c' + p, now, 700 + (1 - f)*1400 + Math.random()*400)) afxPuff(P.x + (Math.random() - 0.5)*5, P.y + (Math.random() - 0.5)*3, {s0:4, s1:13 + 9*f, a:0.22 + 0.14*f, dur:5200 + Math.random()*2400, vx:windX(5, 4), vy:-(8 + Math.random()*5) + windY(5, 4)}); } }
 // crater decals: settled craters (past their 300 ms grow-in) are drawn once into CRD.cv, a canvas aligned with the layer (same margins, origin,
-// scale and pixel ratio), and laid over the map with one 'multiply' blit of the part that holds craters; only the grow-in is drawn live.
+// scale and pixel ratio), and laid over the map with one 'multiply' blit of the part that holds craters; only the grow-in and a real-time
+// crater's fade (its last rf ms: it leaves the canvas then, crFade) are drawn live.
 // The canvas is redone when the layer moves or rescales, a crater is deepened or removed, or the game hour turns (the slow age fade steps
 // hourly); a crater that settles is added to it as it stands
 const CRD = {cv:null, key:'', gen:0, tl:null, tw:0, th:0, any:false}, CRD_T = 64;   // tl: the 64 device-px tiles that hold craters (only those are cleared and blitted)
@@ -142,13 +144,13 @@ function crdBuild(m, h0, now, full){ const L = PG.layer, dp = L.dp || PG.dpr; le
   if (full){ if (C.width !== L.width || C.height !== L.height){ C.width = L.width; C.height = L.height; CRD.tw = Math.ceil(C.width/CRD_T); CRD.th = Math.ceil(C.height/CRD_T); CRD.tl = new Uint8Array(CRD.tw*CRD.th); }
     else if (CRD.any) for (let i = 0; i < CRD.tl.length; i++) if (CRD.tl[i]){ CRD.tl[i] = 0; g.clearRect((i % CRD.tw)*CRD_T, Math.floor(i/CRD.tw)*CRD_T, CRD_T, CRD_T); }
     CRD.any = false; CRD.gen++; }
-  for (const q of AFX.crater) if (!q.rl && q.dc !== CRD.gen && now - q.t0 >= 300) crdDraw(g, q, m, h0, L, dp);   // (the fading ones are drawn live)
+  for (const q of AFX.crater) if (!crFade(q, now) && q.dc !== CRD.gen && now - q.t0 >= 300) crdDraw(g, q, m, h0, L, dp);   // (the fading ones are drawn live)
   g.globalAlpha = 1; g.setTransform(1, 0, 0, 1, 0, 0); }
 function drawCraters(now){
   afxSync(); if (!AFX.crater.length || !S) return; const hexPx = PG.view.s*HS0, m = hexPx >= 6 ? afxMips('fx-crater') : null; if (!m) return;
   const h0 = S.hour + (S.speed && !S.over ? PG.acc : 0), zin = Math.min(1, (hexPx - 6)/5), red = PG.afxReduced(), L = PG.layer;
   let add = false, live = 0, fading = 0; for (let i = AFX.crater.length - 1; i >= 0; i--){ const q = AFX.crater[i], age = h0 - q.h; if (age > q.life || age < -2 || (q.rl && now - q.t0 > q.rl)){ AFX.crater.splice(i, 1); AFX.cv++; continue; }
-    if (q.rl){ live++; fading++; } else if (now - q.t0 < 300) live++; else if (q.dc !== CRD.gen) add = true; }
+    if (crFade(q, now)){ live++; if (q.dc === CRD.gen){ q.dc = -1; AFX.cv++; } if (!afxOff(q.wx, q.wy, 40)) fading++; } else if (now - q.t0 < 300) live++; else if (q.dc !== CRD.gen) add = true; }   // (a crater starting its fade leaves the canvas: it is redone)
   if (!L || L.s*HS0 < 6) return;
   const key = L.full + '|' + (L.strips || 0) + '|' + L.vx + ',' + L.vy + '|' + L.s + '|' + (L.dp || PG.dpr) + '|' + L.width + 'x' + L.height + '|' + AFX.cv + '|' + Math.floor(h0);
   if (key !== CRD.key){ CRD.key = key; crdBuild(m, h0, now, true); } else if (add) crdBuild(m, h0, now, false);
@@ -161,7 +163,7 @@ function drawCraters(now){
         if (!sc){ x0 = Math.max(x0, -lx); x1 = Math.min(x1, PG.cv.width - lx); const ya = Math.max(y0, -ly), yb = Math.min(y1, PG.cv.height - ly); if (x1 > x0 && yb > ya) PG.ctx.drawImage(C, x0, ya, x1 - x0, yb - ya, lx + x0, ly + ya, x1 - x0, yb - ya); }
         else PG.ctx.drawImage(C, x0, y0, x1 - x0, y1 - y0, lx + x0*g, ly + y0*g, (x1 - x0)*g, (y1 - y0)*g); } } }
   if (fading) PG.animAmb();   // (the fading scorch marks: a gentle frame now and then)
-  if (live) for (const q of AFX.crater){ if (now - q.t0 >= 300 && !q.rl) continue;   // the grow-in, live; the fading ones
+  if (live) for (const q of AFX.crater){ if (now - q.t0 >= 300 && !crFade(q, now)) continue;   // the grow-in, live; the fading ones
     const rs = Math.min(35, Math.max(q.r*PG.view.s, q.r*1.5)*(red ? 1 : 1 + 0.25*Math.max(0, 1 - (now - q.t0)/260))), [x, y] = PG.toScreen(q.wx, q.wy); if (rs < 1.5 || x < -rs || y < -rs || x > PG.cw + rs || y > PG.ch + rs) continue;
     PG.ctx.globalAlpha = crdA(q, h0 - q.h, zin)*crRT(q, now); const co = Math.cos(q.rot)*PG.dpr, si = Math.sin(q.rot)*PG.dpr;
     PG.ctx.setTransform(co, si, -si, co, x*PG.dpr, y*PG.dpr); PG.ctx.drawImage(afxPick(m, rs*2*PG.dpr), -rs, -rs*q.sq, rs*2, rs*2*q.sq); }
