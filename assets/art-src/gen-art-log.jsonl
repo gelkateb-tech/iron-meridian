@@ -150,3 +150,5 @@
 {"name": "construction-1", "file": "assets/art-src/ba-construction-1.png", "batch": true, "usd_est": 0.0402, "tokens": {"promptTokenCount": 349, "candidatesTokenCount": 1554, "thoughtsTokenCount": 1122}}
 {"name": "construction-2", "file": "assets/art-src/ba-construction-2.png", "batch": true, "usd_est": 0.028, "tokens": {"promptTokenCount": 332, "candidatesTokenCount": 1521, "thoughtsTokenCount": 342}}
 {"name": "construction-3", "file": "assets/art-src/ba-construction-3.png", "batch": true, "usd_est": 0.0336, "tokens": {"promptTokenCount": 348, "candidatesTokenCount": 1582, "thoughtsTokenCount": 651}}
+{"name": "army-base-2", "file": "assets/art-src/ba-army-base-2.png", "batch": true, "usd_est": 0.0605, "tokens": {"promptTokenCount": 1355, "candidatesTokenCount": 2088, "thoughtsTokenCount": 1922}}
+{"name": "army-base-3", "file": "assets/art-src/ba-army-base-3.png", "batch": true, "usd_est": 0.0274, "tokens": {"promptTokenCount": 1358, "candidatesTokenCount": 1505, "thoughtsTokenCount": 296}}
