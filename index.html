@@ -7169,16 +7169,17 @@ function drawLinksLayer(c, LN, px, hexPx, wx0, wy0, wx1, wy1, vis, lite){ if (!L
   const T = (q) => tiledIn(q, wx0, wy0, wx1, wy1), ramp = (h0, h1) => Math.max(0, Math.min(1, (hexPx - h0)/(h1 - h0)));
   const RM = LN.roadsMain || LN.roadsT[2], LM2 = LN.railsMain || LN.railsT;
   // while the view moves (pan or zoom re-renders), one stroke per class; the casing, tracks and ballast come back once it settles
-  if (lite){ if (hexPx >= 70){ c.strokeStyle = `rgba(206,192,156,${0.05 + 0.13*ramp(70, 120)})`; c.lineWidth = 0.8*px; c.stroke(T(hexPx >= 100 ? LN.roadsT[2] : RM)); c.stroke(D.rd); }
+  if (lite){ if (hexPx >= 40){ c.strokeStyle = `rgba(206,192,156,${0.1 + 0.13*ramp(40, 120)})`; c.lineWidth = 0.8*px; c.stroke(T(hexPx >= 100 ? LN.roadsT[2] : RM)); c.stroke(D.rd); }
     if (hexPx >= 22){ c.strokeStyle = `rgba(222,204,160,${0.08 + 0.26*ramp(22, 70)})`; c.lineWidth = (0.6 + 0.8*ramp(22, 70))*px; c.stroke(T(LN.roadsT[3])); c.stroke(D.hw); }
     if (hexPx >= 40){ c.strokeStyle = `rgba(30,26,22,${0.16 + 0.2*ramp(40, 120)})`; c.lineWidth = (0.6 + 0.5*ramp(40, 120))*px; c.stroke(T(hexPx >= 90 ? LN.railsT : LM2)); c.stroke(D.rail); }
     if (hexPx >= 8){ c.strokeStyle = 'rgba(120,206,236,.9)'; c.lineWidth = 1.2*px; c.stroke(D.hsr); }
     return; }
   if (hexPx >= 140){ const z = ramp(140, 180); c.strokeStyle = `rgba(206,190,150,${0.05 + 0.12*z})`; c.lineWidth = (0.5 + 0.2*z)*px; c.stroke(T(LN.roadsT[1])); c.stroke(D.tr); }
-  else if (hexPx >= 100 && LN.tracksWay){ c.strokeStyle = `rgba(206,190,150,${0.04 + 0.05*ramp(100, 140)})`; c.lineWidth = 0.5*px; c.stroke(T(LN.tracksWay)); }   // (the tracks between provinces come in a little before the local ones)
-  if (hexPx >= 70){ const z = ramp(70, 130), RD = T(hexPx >= 100 ? LN.roadsT[2] : RM);
-    if (hexPx >= 130){ c.strokeStyle = `rgba(20,16,10,${0.24*ramp(130, 170)})`; c.lineWidth = 2.2*px; c.stroke(RD); c.stroke(D.rd); }
-    c.strokeStyle = `rgba(206,192,156,${0.05 + 0.16*z})`; c.lineWidth = (0.55 + 0.35*z)*px; c.stroke(RD); c.stroke(D.rd); }
+  else if (hexPx >= 70 && LN.tracksWay){ c.strokeStyle = `rgba(222,206,166,${0.24 + 0.12*ramp(70, 140)})`; c.lineWidth = 0.65*px; c.stroke(T(LN.tracksWay)); }   // (the tracks between provinces come in before the local ones)
+  // roads: those between provinces (every province has one, MAP-3) and the longer local ones from mid zoom, every local road closer in
+  if (hexPx >= 40){ const z = ramp(40, 130), RD = T(hexPx >= 100 ? LN.roadsT[2] : RM);
+    c.strokeStyle = `rgba(20,16,10,${0.2 + 0.1*ramp(130, 170)})`; c.lineWidth = (2 + 0.4*z)*px; c.stroke(RD); c.stroke(D.rd);   // (a dark casing: the road reads over any tint, and under the fog's wash)
+    c.strokeStyle = `rgba(232,216,176,${0.45 + 0.2*z})`; c.lineWidth = (0.85 + 0.3*z)*px; c.stroke(RD); c.stroke(D.rd); }
   if (hexPx >= 22){ const z = ramp(22, 70), HW = T(LN.roadsT[3]);
     if (hexPx >= 110){ c.strokeStyle = `rgba(22,15,6,${0.32*ramp(110, 150)})`; c.lineWidth = 3*px; c.stroke(HW); c.stroke(D.hw); }
     c.strokeStyle = `rgba(222,204,160,${0.08 + 0.24*z + 0.12*ramp(90, 150)})`; c.lineWidth = (0.6 + 0.7*z + 0.3*ramp(90, 150))*px; c.stroke(HW); c.stroke(D.hw); }
@@ -7187,6 +7188,11 @@ function drawLinksLayer(c, LN, px, hexPx, wx0, wy0, wx1, wy1, vis, lite){ if (!L
     c.strokeStyle = `rgba(46,40,34,${0.16 + 0.18*z + 0.2*zc})`; c.lineWidth = (0.6 + 0.5*z + 0.5*zc)*px; c.stroke(RL); c.stroke(D.rail);
     if (hexPx >= 120){ c.strokeStyle = `rgba(170,160,138,${0.4*zc})`; c.lineWidth = 0.45*px; c.stroke(RL); c.stroke(D.rail); } }
   if (hexPx >= 8){ const z = ramp(8, 24); c.strokeStyle = 'rgba(16,14,12,.9)'; c.lineWidth = (1.4 + 0.8*z)*px; c.stroke(D.hsr); c.strokeStyle = 'rgba(120,206,236,.9)'; c.lineWidth = (0.6 + 0.4*z)*px; c.stroke(D.hsr); } }
+// the roads between provinces (on a link's way) and the longer local roads, stroked again over the fog of the layer: quieter than in sight
+function drawWaysOver(c, LN, px, hexPx, wx0, wy0, wx1, wy1){ const ramp = (h0, h1) => Math.max(0, Math.min(1, (hexPx - h0)/(h1 - h0))), z = ramp(40, 130);
+  const RD = tiledIn(LN.roadsMain, wx0, wy0, wx1, wy1); c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+  if (hexPx >= 70 && LN.tracksWay){ c.strokeStyle = `rgba(214,200,164,${0.16 + 0.08*ramp(70, 140)})`; c.lineWidth = 0.65*px; c.stroke(tiledIn(LN.tracksWay, wx0, wy0, wx1, wy1)); }
+  c.strokeStyle = `rgba(236,222,184,${0.3 + 0.12*z})`; c.lineWidth = (0.9 + 0.3*z)*px; c.stroke(RD); c.restore(); }
 // live link overlay: damaged links red-dashed with a repair badge, works in progress pulsing with their progress
 function drawLinkFx(now, vis){ if (!S.links) return; const hexPx = view.s*HS0; if (hexPx < 4) return; const px = 1/view.s;
   const x0 = -view.x/view.s - 30, y0 = -view.y/view.s - 30, x1 = (cw - view.x)/view.s + 30, y1 = (ch - view.y)/view.s + 30;
@@ -7405,6 +7411,8 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; g.fill(GEO.fill[p], 'evenodd'); }
     g.globalCompositeOperation = 'destination-out'; cut(false); g.restore();
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(fgc, dx0 - ax, dy0 - ay, dw, dh, dx0 - ax, dy0 - ay, dw, dh); c.restore(); }
+  // the roads between provinces once more over the fog (MAP-3), quieter: every province's roads read in land you cannot see too, as its borders do
+  { const LN = loadWorld.lines; if (LN && LN.roadsMain && hexPx >= 40 && !ZRND) drawWaysOver(c, LN, px, hexPx, wx0, wy0, wx1, wy1); }
   // borders, over the fog (owner, fix-map: every border clear at every zoom, in sight or not): province borders of every country, country borders
   // (between any two countries, powers or independent), national borders by relation (yours green, an ally's blue, an enemy's red, the others as a
   // country border), all at one css width whatever the zoom; kept to the land (the coast clip close in, the lakes cut out further out)
