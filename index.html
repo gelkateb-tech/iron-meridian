@@ -8421,6 +8421,7 @@ function tap(x, y, shift = false, long = false){
   const core = !hs && coreAt(x, y);   // (a counter's own square drawn over a city's point: the counter is what was tapped)
   const cityTap = plain && !hs && !core && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
   const mk = hs || core ? null : cityAt(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
+  if (cmdMode && sel.army !== null && long) return;   // (a resting finger is no order: Move stays armed)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
       const p = provAt(x, y); if (p < 0) return;
