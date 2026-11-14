@@ -14,7 +14,7 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Research tab redo, phase 2 (owner approved with fixes: bigger banner subjects in the middle band, icons close up, one shared icon per upgrade type): new artillery icon first for the owner, then the rest on Gemini | Opus | branch research-tab |
+| Research tab redo, phase 2 (owner said go): 107 pictures on Gemini (about $4.1): 10 banners, 9 category icons, 26 unit unlocks, 5 shared upgrade types, 57 unique upgrades; generations reuse their unit picture | Opus | branch research-tab |
 | Building pictures in the game: angled HQs by region; Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications, Hospital levels; no level badges on the map | Opus | branch buildings-angled |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges after the building pictures) |
 
