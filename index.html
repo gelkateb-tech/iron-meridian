@@ -2272,12 +2272,10 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
 .rs-lines path.av{stroke:rgba(110,220,120,.9)}
 /* unit pictures in diamonds: upright, cropped to fill the diamond (drawn in a box the size of its diagonals) */
 .dmi{position:relative}
-.rface.rfb{position:absolute; inset:-21%; display:block; transform:none!important; overflow:visible}
-.rfb i{position:absolute; display:block; background:center / 100% 100% no-repeat; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
-/* newer generations: the same picture in a new paint scheme until their own art exists (g2 desert, g3 dark grey) */
-.rfb.g2 i, .rgv.g2 .ut{filter:sepia(.62) saturate(1.9) hue-rotate(-16deg) brightness(1.12) contrast(1.06) drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
-.rfb.g3 i, .rgv.g3 .ut{filter:grayscale(.75) sepia(.22) hue-rotate(172deg) saturate(1.5) brightness(.8) contrast(1.4) drop-shadow(0 1px 1.5px rgba(0,0,0,.6))}
-.rgv{display:inline-grid}
+/* a generation in its card: the unit's picture with the generation's numeral (generations share their unit's picture) */
+.rgv{position:relative; display:block; width:64px; height:64px; border-radius:4px; background:center / cover no-repeat; box-shadow:0 0 0 1px rgba(255,255,255,.35), 0 2px 5px rgba(0,0,0,.6)}
+.rgv b{position:absolute; right:-6px; top:-6px; min-width:18px; height:16px; padding:0 3px; display:grid; place-items:center; border-radius:2px; background:#e8b923; color:#2a1f00; font:800 10px/1 var(--body)}
+.rc-gen figure.new .rgv{box-shadow:0 0 0 2px #e8b923, 0 2px 5px rgba(0,0,0,.6)}
 /* column headers: picture, name, then the elite badge and the count */
 .rt-hn{display:flex; align-items:center; gap:7px; min-width:0}
 .rt-hn > b{font:700 12.5px/1.1 var(--body); letter-spacing:.02em; text-shadow:var(--cn-num); min-width:0; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
@@ -2349,8 +2347,7 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
 /* ===================== research banners, dark steel =====================
    Each category banner: a steel-grey to charcoal gradient with a fine grain (code: SVG noise and brushed lines, no image), a faint wash of the
    category's own colour from the left (--rt, set per banner) that also tints the diamond, a thin gold accent line along the foot, and dark seams
-   between the rows. The unit picture (assets/art/rb-<category>.webp, made by tools/prep-banners.py) sits whole at the right, in its own light,
-   its left edge fading into the steel; nothing darkens it. */
+   between the rows. Over it each banner shows its category's wide scene (.rs-ban.scene below). */
 .rs-list{gap:2px; padding:2px 0; background:#101315}
 .rs-ban{--rt:120,130,140; height:86px; padding:0 18px 0 26px; border-radius:0;
   background:linear-gradient(90deg, rgba(var(--rt),.2) 0, rgba(var(--rt),.09) 24%, rgba(var(--rt),.025) 44%, rgba(var(--rt),0) 58%),
@@ -2361,12 +2358,9 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
   background:repeating-linear-gradient(180deg, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,0) 1px 3px), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E"); background-size:auto, 180px 180px}
 .rs-ban::before{content:""; position:absolute; left:0; right:0; bottom:1px; height:1px; z-index:1; pointer-events:none;
   background:linear-gradient(90deg, rgba(201,173,96,.9) 0, rgba(201,173,96,.7) 40%, rgba(160,150,92,.32) 100%)}
-.rs-bpw{position:relative; flex:1 0 120px; align-self:stretch; min-width:0; margin-left:-8px}   /* takes the room the name leaves: the picture never covers the name or the count */
-.rs-bpic{position:absolute; z-index:-1; right:0; top:4px; height:calc(100% - 8px); width:auto; max-width:min(100%, 360px); object-fit:contain; object-position:right center;
-  pointer-events:none; user-select:none; -webkit-mask-image:linear-gradient(90deg, transparent 0, rgba(0,0,0,.55) 12%, #000 34%); mask-image:linear-gradient(90deg, transparent 0, rgba(0,0,0,.55) 12%, #000 34%);
-  transition:transform .3s var(--ease)}
+.rs-bpw{position:relative; flex:1 0 120px; align-self:stretch; min-width:0; margin-left:-8px}   /* the room the name leaves, over the scene */
 .rs-bp{min-width:150px; margin-left:0}
-.rs-ban:hover{filter:brightness(1.1)} .rs-ban:hover .rs-bpic{transform:translateX(-5px)}
+.rs-ban:hover{filter:brightness(1.1)}
 .rs-ban .rs-dm{background:linear-gradient(135deg, rgba(var(--rt),.62), rgba(var(--rt),.22) 70%), #1d2225; border-color:#e9ecee; box-shadow:0 0 0 1px rgba(0,0,0,.5), 0 3px 7px rgba(0,0,0,.5)}
 .rs-bt span{color:#d9dfe1}
 .rs-pb{background:rgba(0,0,0,.55); box-shadow:0 0 0 1px rgba(201,173,96,.22)}
@@ -2375,7 +2369,6 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
   .rs-bt{flex:0 1 auto}
   .rs-bt b{white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.04}   /* a long name takes two lines rather than run under the picture */
   .rs-bpw{flex:1 0 96px; margin-left:-6px}
-  .rs-bpic{top:5px; height:calc(100% - 10px)}
   .rs-bp{min-width:56px}
 }
 @media (max-width: 400px){ .rs-ban{padding:0 8px 0 13px; gap:12px} .rs-bpw{flex-basis:90px} }
@@ -9444,8 +9437,7 @@ const RGLY = {
   steps:'<path d="M3 20.6h18v-2.2H3zM3 14.2h12V12H3zM3 7.8h6V5.6H3z"/>',
   clock:'<circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M11 6.6h2v6.2l3.6 2.2-1 1.7-4.6-2.8z"/>',
 };
-// unit glyphs come from the unit icons (UICON): the category diamonds and tree headers (RCG), the Logistics and missile column headers and the
-// Motorized Supply node ask for these keys; any other key missing from RGLY falls back to the generic research glyph, so no icon is ever empty
+// unit glyphs come from the unit icons (UICON) (the research screen's categories, headers and nodes now show scene pictures: rKey); any other key missing from RGLY falls back to the generic research glyph, so no icon is ever empty
 const RG_U = {helmet:'inf', tank:'tank', gun:'art', jet:'jet', heli:'heli', drone:'drone', ship:'frig', missile:'bm', truck:'truck', cm:'cm', bm:'bm'};
 const rg = (k, sz = 22, cls = '') => RG_U[k] ? uiconSVG(RG_U[k], sz, ('rg ' + cls).trim()) : `<svg class="rg ${cls}" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${RGLY[k] || RGLY.gen}</svg>`;
 // white upgrade icons for the research tree (24 px grid), drawn for this game: damage, health, range, terrain handling, air-transportable,
@@ -9496,34 +9488,19 @@ Object.assign(RGLY, {
 });
 // the elite badge: a star between two wings (our own drawing)
 const eliteSVG = (w = 30) => `<svg class="relite" width="${w}" height="${Math.round(w*14/32)}" viewBox="0 0 32 14" fill="currentColor" role="img" aria-label="Elite unit"><path d="M16 .8l1.9 3.9 4.3.6-3.1 3 .7 4.3L16 10.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"/><path d="M10 4C6.4 2.6 3.2 2.8.6 4.2c2 .2 3.5.8 4.5 1.8-1.2-.2-2.3 0-3.1.6 1.6.2 2.9.9 3.7 1.9-.9 0-1.7.2-2.3.7 2.9 1.6 5.6 1.2 7.5-.6z"/><path transform="translate(32 0) scale(-1 1)" d="M10 4C6.4 2.6 3.2 2.8.6 4.2c2 .2 3.5.8 4.5 1.8-1.2-.2-2.3 0-3.1.6 1.6.2 2.9.9 3.7 1.9-.9 0-1.7.2-2.3.7 2.9 1.6 5.6 1.2 7.5-.6z"/></svg>`;
-// the banner glyph of each category, and the word for each node kind
-const RCG = {inf:'helmet', arm:'tank', sup:'gun', aas:'heli', tac:'jet', uns:'drone', str:'bomber', nav:'ship', msl:'missile', cmd:'truck'};
+// the word for each node kind
 const RKIND = {unlock:'Unlock', eng:'Levels', kit:'Upgrade', gen:'Generation'};
 const RSTAT = {atk:'Attack', def:'Defense', spd:'Speed', hp:'Health'};
 // the research screen's scene pictures (tools/gen-art.py R_BANNERS / R_ICONS, then --prep-research): assets/art/rbs-<category>.webp, a wide scene
-// filling a category's banner, and assets/art/ri-<key>.webp, a square scene filling a diamond (key: cat-<category> for a category, a node id for a
-// research item, the unit's unlock id for its column header). Until an item has its picture it keeps its glyph or unit picture
-const RBS = new Set(['arm', 'nav', 'tac']), RIC = new Set(['cat-inf', 'u_tank', 'art_shell']);
+// filling a category's banner, and assets/art/ri-<key>.webp, a square scene filling a diamond. rKey: a unit unlock or a unique upgrade has its own
+// (its node id); an upgrade type found in several lines shares one (R_SHARE, the same table as tools/gen-art.py); a generation shows its unit's
+// unlock picture with its numeral. A category is cat-<category>; a column header shows its first node's picture (Command & Logistics: RCOLP)
+const R_SHARE = {Firepower:'t-fp', Protection:'t-pr', 'Drop Tanks':'t-drop', 'Ceramic Body Armour':'t-armor', 'Naval Gunnery':'t-navgun'};
+const rKey = nd => nd.kind === 'gen' ? 'u_' + nd.u : R_SHARE[nd.name] || nd.id;
+const RCOLP = {Logistics:'log1', Operations:'nav3'};
 const rPic = k => `<span class="rface p"><i style="background-image:url('assets/art/ri-${k}.webp')"></i></span>`;   // fills its diamond (the corners are cut)
 const rPicSq = k => `<i class="rpic-s" style="background-image:url('assets/art/ri-${k}.webp')" aria-hidden="true"></i>`;   // a small square: the tree's title and column headers
-const rCatFace = (id, sz) => RIC.has('cat-' + id) ? rPic('cat-' + id) : rg(RCG[id], sz);
-// the picture in a node: its scene picture, else the unit (its unlock and its generations), a missile, or a white icon for what the upgrade does
-function rFace(nd, sz){ if (RIC.has(nd.id)) return rPic(nd.id);
-  if (nd.u && (nd.kind === 'unlock' || nd.kind === 'gen')){ const g = nd.gen || 1; return rUnitFace(nd.u, rGenArt(nd.u, g), rGenTone(nd.u, g)); }
-  if (nd.ic === 'cm' || nd.ic === 'bm') return `<span class="rface g">${mslIcon(nd.ic, Math.round(sz*1.25))}</span>`;
-  return `<span class="rface g">${rg(nd.ic, sz)}</span>`; }
-// a unit's picture in a diamond: upright and cropped to what reads at that size (the squad pictures show one soldier, a long hull fills the
-// diamond's height), drawn in a box the size of the diamond's diagonals. RFCROP: [cx, cy, height] of the part shown, as shares of the picture
-const RFCROP = {inf:[0.5, 0.25, 0.44], para:[0.5, 0.25, 0.44]};
-function rUnitFace(t, k, tone){ const u = UART[k], im = u && ART.img(u[0]);
-  if (!im) return `<span class="rface u">${unitPic(t, 'lg', k)}</span>`;
-  const b = picBox(im), cr = RFCROP[t], cx = cr ? cr[0] : b[2], cy = cr ? cr[1] : b[3], hh = cr ? cr[2] : Math.max(b[0], b[1]), tall = !cr && b[1] > b[0]*1.4;
-  const X = (cr ? 0.84 : tall ? 0.94 : 0.8)/hh*100, f = v => +v.toFixed(2);
-  return `<span class="rface u rfb${tone ? ' ' + tone : ''}"><i style="width:${f(X)}%;height:${f(X)}%;left:${f(50 - cx*X)}%;top:${f(50 - cy*X)}%;transform-origin:${f(cx*100)}% ${f(cy*100)}%;${u[1] ? 'transform:rotate(180deg);' : ''}background-image:url('${ART.url(u[0])}')"></i></span>`; }
-// a newer generation's picture until its own art exists: the type's picture in a new paint scheme (g2 desert, g3 dark grey). A generation that
-// already has a picture of its own (the armed UAV) is shown as it is
-const R_TONE = ['', '', 'g2', 'g3', '', 'g3'];
-const rGenTone = (t, g) => { if (g < 2) return ''; const a = rGenArt(t, g), p = rGenArt(t, g - 1); return a !== p && UART[a] && UART[p] && UART[a][0] !== UART[p][0] && !ART.standIn(UART[a][0]) ? '' : R_TONE[g] || 'g2'; };
+const rFace = nd => rPic(rKey(nd));   // the picture in a node
 // short labels for the phone, where a diamond's name has about 70 px (the card always shows the full name)
 const RSN = {'Ceramic Body Armour':'Body Armour', 'Rapid Mobilisation':'Mobilisation', 'Rough-Ground Drills':'Drills', 'Tandem Warheads':'Tandem', 'Thermal Sights':'Thermals',
   'Mountain & Arctic Training':'Mountain', 'Air-Transportable':'Airlift', '30 mm Autocannon':'Autocannon', 'Uprated Powerpack':'Powerpack', 'Amphibious Kit':'Amphibious', 'Composite Armour':'Composite',
@@ -9545,7 +9522,6 @@ const RSN = {'Ceramic Body Armour':'Body Armour', 'Rapid Mobilisation':'Mobilisa
 const rShort = nm => RSN[nm] || nm;
 // Command & Logistics shows its four doctrines in two columns (no line joins them: none needs another), each diamond with a card of its levels
 const RDCOL = {Supply:'Logistics', Engineers:'Logistics', Landings:'Operations', Medical:'Operations'};
-const RCOLG = {Logistics:'truck', Operations:'anchor'};
 // what a node does at one level, as a sentence (the unit's role for an unlock)
 const rTxt = (nd, lv) => cap1(nd.lv[lv - 1].txt);
 // per-category layout, computed once: one column per unit line, one row per day that holds a node (a levelled node sits on the day of its
@@ -9571,9 +9547,8 @@ function rLayout(cat){ if (RLAY[cat]) return RLAY[cat];
   // each line's column: its nodes, its first node (the header's picture), its spine nodes top to bottom
   const cols = lines.map(ln => { const ns = L.filter(n => colOf(n) === ln); return {ln, ns, head:ns.find(n => n.kind === 'unlock') || ns[0], sp:solo ? [] : ns.filter(n => pos[n.id].l === 0).sort((a, b) => pos[a.id].r - pos[b.id].r), r1:Math.max(...ns.map(n => pos[n.id].r))}; });
   return (RLAY[cat] = {L, lines, days, pos, cols, solo}); }
-// a banner's picture: the category's unit, cut out and turned to face the name (assets/art/rb-<category>.webp, tools/prep-banners.py), and its faint colour
+// a banner's faint colour (its picture is the category's scene, rbs-<category>.webp)
 const RBT = {inf:'125,144,70', arm:'156,132,88', sup:'166,95,60', aas:'63,151,138', tac:'74,147,184', uns:'138,115,176', str:'93,111,176', nav:'47,111,156', msl:'168,70,74', cmd:'176,138,60'};
-const rbImg = id => `<span class="rs-bpw" aria-hidden="true"><img class="rs-bpic" src="assets/art/rb-${id}.webp" alt="" decoding="async" draggable="false"></span>`;   // the space between the name and the count
 const RROLE = {inf:'Takes ground, holds it', arm:'Breaks the line', sup:'Guns, rockets, air defence', aas:'Gunships, airborne troops', tac:'Fighters and strike jets', uns:'Eyes and cheap strikes',
   str:'Bombers and big sensors', nav:'Sea control, submarines', msl:'Missiles and satellites', cmd:'Every force you field'};   // the role line on a phone
 const rSlotFrees = N => { const hs = R_SLOTS.map(k => N[k] && N[k].h).filter(h => h > 0); return hs.length ? Math.min(...hs) : 0; };   // hours until the first busy slot frees
@@ -9612,10 +9587,10 @@ function researchHTML(){
     for (const C of RCATS){ const L = RNODES.filter(nd => nd.cat === C.id && !nd.std), tot = L.reduce((s0, nd) => s0 + nd.lv.length, 0), dn = L.reduce((s0, nd) => s0 + Math.min(nd.lv.length, rLevel(PLAYER, nd.id)), 0);
       const open = opn.filter(nd => nd.cat === C.id).length, inC = X => X && RN[X.id] && RN[X.id].cat === C.id, run = inC(R), qd = inC(R2);
       const names = [...new Set(RNODES.filter(nd => nd.cat === C.id).map(rLineName))].join(', ');
-      h += `<button class="rs-ban${dn === tot ? ' full' : ''}${RBS.has(C.id) ? ' scene' : ''}" data-act="rbranch" data-b="${C.id}" style="--rt:${RBT[C.id] || '120,130,140'}${RBS.has(C.id) ? `;--rbs:url('assets/art/rbs-${C.id}.webp')` : ''}" title="${C.name}: ${names}. ${dn} of ${tot} steps researched${open ? `, ${open} open now` : ''}">
-        <span class="rs-dm"><span class="dmi">${rCatFace(C.id, 30)}</span></span>
+      h += `<button class="rs-ban scene${dn === tot ? ' full' : ''}" data-act="rbranch" data-b="${C.id}" style="--rt:${RBT[C.id] || '120,130,140'};--rbs:url('assets/art/rbs-${C.id}.webp')" title="${C.name}: ${names}. ${dn} of ${tot} steps researched${open ? `, ${open} open now` : ''}">
+        <span class="rs-dm"><span class="dmi">${rPic('cat-' + C.id)}</span></span>
         <span class="rs-bt"><b>${C.name}</b><span><span class="rnl">${C.role}</span><span class="rns">${RROLE[C.id] || C.role}</span></span></span>
-        ${RBS.has(C.id) ? '<span class="rs-bpw" aria-hidden="true"></span>' : rbImg(C.id)}<span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${tot}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/tot*100)}%"></i></span></span></button>`; }
+        <span class="rs-bpw" aria-hidden="true"></span><span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${tot}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/tot*100)}%"></i></span></span></button>`; }
     h += `</div><p class="rnote rs-note">${icon('rare', 13)}<span><b>Rare materials drive research.</b> Unit unlocks, upgrades and new generations cost money, materials and rare materials. Firepower and Protection cost few rare materials. Every project opens on its own day. ${t1 != null && N.rare < t1 ? `You need ${fmt(Math.ceil(t1 - N.rare))} more for the cheapest open project${inc.net.rare > 0.05*RES_K ? ` (about ${Math.ceil((t1 - N.rare)/inc.net.rare)} d at +${fmt(inc.net.rare)} a day)` : ''}. ` : ''}Rare materials come from rare-earth cities (Resources map; an Arms Industry there adds 25% per level), your capital, trade routes and the Market.</span></p>`;
     return h;
   }
@@ -9657,10 +9632,10 @@ function researchHTML(){
   const rowsBg = Ly.days.map((d, i) => `<i class="rt-rw ${d === today ? 'now' : d < today ? 'past' : 'fut'}" style="--r:${i}"></i>`).join('');
   const nowLine = !Ly.days.includes(today) && nPast > 0 && nPast < nR ? `<i class="rt-now" style="--r:${nPast}"><em>Today · day ${today}</em></i>` : '';
   const heads = Ly.cols.map(K => { const hd = K.head, tot = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), dn = K.ns.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
-    const nm = Ly.solo ? K.ln : rLineName(hd), sn = rShort(nm), gl = Ly.solo ? RCOLG[K.ln] : ({def:'def2', sat:'sat'})[hd.pic] || hd.pic || 'gen';
-    return `<div class="rt-hd${hd.elite ? ' elite' : ''}" title="${nm}${hd.elite ? ' (elite unit)' : ''}: ${dn} of ${tot} steps researched">${RIC.has(hd.id) && !Ly.solo ? rPicSq(hd.id) : hd.u && !Ly.solo ? unitPic(hd.u, 'sm') : `<span class="rt-hg">${rg(gl, 18)}</span>`}<span class="rt-hn"><b><span class="rnl">${nm}</span>${sn !== nm ? `<span class="rns">${sn}</span>` : ''}</b><span class="rt-hm">${hd.elite ? eliteSVG(22) : ''}<small>${dn}/${tot}</small></span></span></div>`; }).join('');
+    const nm = Ly.solo ? K.ln : rLineName(hd), sn = rShort(nm);
+    return `<div class="rt-hd${hd.elite ? ' elite' : ''}" title="${nm}${hd.elite ? ' (elite unit)' : ''}: ${dn} of ${tot} steps researched">${rPicSq(Ly.solo ? RCOLP[K.ln] : rKey(hd))}<span class="rt-hn"><b><span class="rnl">${nm}</span>${sn !== nm ? `<span class="rns">${sn}</span>` : ''}</b><span class="rt-hm">${hd.elite ? eliteSVG(22) : ''}<small>${dn}/${tot}</small></span></span></div>`; }).join('');
   const catT = L.reduce((s0, nd) => s0 + (nd.std ? 0 : nd.lv.length), 0), catD = L.reduce((s0, nd) => s0 + (nd.std ? 0 : Math.min(nd.lv.length, ST[nd.id].lv)), 0);
-  h += `<div class="rs-thead"><span class="rs-tc" title="The day a project opens">${rg('clock', 18)}</span><b>${RIC.has('cat-' + C.id) ? rPicSq('cat-' + C.id) : rg(RCG[C.id], 22)} ${C.name}</b><span class="rs-tn">${catD}/${catT} steps</span></div>
+  h += `<div class="rs-thead"><span class="rs-tc" title="The day a project opens">${rg('clock', 18)}</span><b>${rPicSq('cat-' + C.id)} ${C.name}</b><span class="rs-tn">${catD}/${catT} steps</span></div>
     <div class="rs-body${RV.sel ? ' hassel' : ''}${Ly.solo ? ' solo' : ''}"><div class="rt-scroll" id="rtscroll"><div class="rt${Ly.solo ? ' solo' : ''}" style="--cols:${nC};--rows:${nR}">
       <div class="rt-corner">Day</div>${heads}
       <div class="rt-days">${dayL}</div>
@@ -9693,7 +9668,7 @@ function rStatsHTML(t){ const U = UNITS[t], steps = unitSteps(PLAYER, t), L = RN
       if (w === 'def' && r.immune) return `<td class="sv-d"><span class="si-imm" title="This kind of attacker cannot hurt it">immune</span></td>`;
       return cell(r[w], r0[w], v => n1(v) + (w === 'atk' && r.unit === '%' ? '%' : ''), w); }).join('')}</tr>`).join(''); }
   return `<div class="rs-sv" role="dialog" aria-modal="true" aria-label="${U.name}: full stats"><div class="sv-box">
-    <div class="sv-hd"><span class="rs-dm lg"><span class="dmi">${rUnitFace(t, t, '')}</span></span><div class="sv-t"><span class="rs-dk">Full stats · ${UNITS[t].short}</span><b>${U.name}</b><span class="sv-role">${U.role}</span></div>
+    <div class="sv-hd"><span class="rs-dm lg"><span class="dmi">${rPic('u_' + t)}</span></span><div class="sv-t"><span class="rs-dk">Full stats · ${UNITS[t].short}</span><b>${U.name}</b><span class="sv-role">${U.role}</span></div>
       <button class="rc-x" data-act="rstats-x" aria-label="Close the stats" title="Close">${rg('x', 14)}</button></div>
     <div class="sv-scroll"><table class="sitab svtab"><thead>${hd}</thead><tbody>${body}</tbody></table></div>
     <p class="small si-note"><b>How to read it.</b> One unit, before terrain, morale, supply and the other battle modifiers (Army Info shows those for a force in the field). <b>Attack</b> is the damage it deals to that kind of target, <b>defence</b> what it holds out against that kind of attacker. Each research column is the base unit plus that step; a <b class="up">green</b> number went up, a <b class="dn">red</b> one down. <b>Yours</b> is your unit now${docOf(PLAYER) ? ', with your doctrine (every column has it)' : ''}. Missiles: the chance to shoot down a cruise missile (attack) and how hard a missile hits it (defence). Buildings: bomb load (a Heavy Bomber is 1).</p>
@@ -9722,7 +9697,7 @@ function rCardHTML(nd, busy, cat){
   else if (s.s === 'done') btn = `<span class="rs-state ok">${rg('check', 14)} Researched</span>`;
   else if (s.s === 'run') btn = `<span class="rs-state run${s.slot === 2 ? ' q' : ''}">In slot #${s.slot} · <span id="rleftd${s.slot}"></span></span>`;
   else btn = `<button class="btn ${cr ? 'primary' : ''}" data-act="research" data-id="${nd.id}" ${cr ? '' : 'disabled'} title="${cr ? `Starts in slot #${rSlotNo(rFree(N))}. Costs ${costTxt(c, ', ')}; takes ${rDur(h0)}` : s.why}">${cr ? `<span class="rb1">Research in slot #${rSlotNo(rFree(N))}</span>` : `<span class="rbw">${s.why}</span>`}</button>`;
-  const gp = nd.kind === 'gen' ? `<div class="rc-gen"><figure><span class="rgv ${rGenTone(nd.u, nd.gen - 1)}">${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen - 1))}</span><figcaption>${nd.gen - 1 > 1 ? 'Generation ' + ROMAN[nd.gen - 1] : 'Today'}</figcaption></figure>${rg('spd', 16)}<figure class="new"><span class="rgv ${rGenTone(nd.u, nd.gen)}">${unitPic(nd.u, 'xl', rGenArt(nd.u, nd.gen))}</span><figcaption>Generation ${ROMAN[nd.gen]}</figcaption></figure></div>` : '';
+  const gp = nd.kind === 'gen' ? `<div class="rc-gen"><figure><span class="rgv" style="background-image:url('assets/art/ri-u_${nd.u}.webp')"><b>${ROMAN[nd.gen - 1]}</b></span><figcaption>${nd.gen - 1 > 1 ? 'Generation ' + ROMAN[nd.gen - 1] : 'Today'}</figcaption></figure>${rg('spd', 16)}<figure class="new"><span class="rgv" style="background-image:url('assets/art/ri-u_${nd.u}.webp')"><b>${ROMAN[nd.gen]}</b></span><figcaption>Generation ${ROMAN[nd.gen]}</figcaption></figure></div>` : '';
   return `<aside class="rs-card st-${s.s}${s.lv && s.nx ? ' part' : ''}" aria-live="polite"><button class="rc-x" data-act="rcard-x" aria-label="Close the details" title="Close">${rg('x', 14)}</button>${U ? `<button class="rc-i" data-act="rstats" data-u="${nd.u}" aria-label="Full stats of the ${U.name}" title="Full stats: health, speed, vision, range, attack and defence, by research level">i</button>` : ''}
     <div class="rc-top"><span class="rs-dm lg"><span class="dmi">${rFace(nd, 30)}</span></span>
       <div class="rs-dt"><span class="rs-dk">${C.name} · ${rLineName(nd)} · ${RKIND[nd.kind]}</span><b>${nd.name}${nlv > 1 ? ` <em>${s.lv}/${nlv}</em>` : ''}${nd.elite ? ` ${eliteSVG(28)}` : ''}</b>
