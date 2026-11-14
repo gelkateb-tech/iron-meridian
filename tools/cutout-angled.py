@@ -36,7 +36,7 @@ MAP_PX = 256          # long side of the cut-out (map at 2x screens, city panel 
 SHADOW_MAX = 0.5      # darkest a kept cast shadow gets (alpha of its dark layer)
 SHADOW_RGB = np.array([14, 18, 28], np.float32)   # the shadows' colour (the renders' shadows are slightly blue)
 # file name -> (key, level) of the game: keys as in the game's BUILD (air, rec, yard, fort, hq) plus hospital (not a game building yet)
-KEYS = {'airbase':'air', 'recruiting-office':'rec', 'naval-yard':'yard', 'fortifications':'fort', 'hospital':'hospital'}
+KEYS = {'army-base':'fac', 'construction':'build', 'airbase':'air', 'recruiting-office':'rec', 'naval-yard':'yard', 'fortifications':'fort', 'hospital':'hospital'}
 BRIDGE = ('hq-', 'hospital-', 'recruiting-office-', 'fortifications-')   # pictures whose cast shadows' sharp edges are crossed (see cut)
 # hand corrections of the ground anchor (fractions of the cut-out), applied after the automatic one: (dx, dy)
 ANCHOR_FIX = {}

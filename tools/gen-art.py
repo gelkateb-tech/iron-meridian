@@ -81,6 +81,27 @@ STYLE_CLEAN = STYLE_REAL.replace("No text, no letters, no numbers, no emblems, n
               "Keep it simple and clean, not overdone: few elements, uncluttered, no extra props or debris. No text, no "
               "letters, no numbers, no flags, no logos, no watermark.")
 STYLES = {'recruiting-office': STYLE_REAL, 'fortifications': STYLE_CLEAN, 'hospital': STYLE_CLEAN}
+# the Army Base (building key 'fac') and the construction pictures: the default STYLE (the Airbase look)
+STYLES['construction'] = STYLE.replace("of a modern military facility", "of a building site").replace("the compound's front corner", "the site's front corner").replace("the facility", "the site")
+SUBJECTS['army-base-1'] = (
+    "A temporary army field camp, level 1 of 5: a few green canvas military tents in two short rows, low khaki sandbag walls "
+    "around the tents and at the gate, a chain-link fence around the whole camp with one gate and a small sandbagged guard "
+    "post beside it, bare packed earth inside the fence, and two olive-green army trucks parked beside the tents.")
+SUBJECTS['construction-1'] = (
+    "A building site, generic and for any kind of building: a rectangular excavated pad of bare brown earth with a shallow "
+    "pit and a ramp, a yellow tower crane standing beside it with its jib reaching over the pad, a small white site cabin "
+    "with a flat roof, stacks of building materials (pallets of concrete blocks, a pile of steel beams, a stack of timber) "
+    "and a low orange safety fence along one side. No building yet.")
+SUBJECTS['construction-2'] = (
+    "A building under construction, generic and for any kind of building: a rectangular scaffold frame of steel poles and "
+    "platforms wrapped in green safety netting around the lower floors of a plain concrete building about three storeys "
+    "high, with an open unfinished top; a yellow tower crane standing beside it; a small white site cabin and a few "
+    "stacks of building materials on the ground.")
+SUBJECTS['construction-3'] = (
+    "A half-built building, generic and for any kind of building: the concrete and steel skeleton of a rectangular "
+    "building halfway up (floor slabs and columns, four storeys, no walls yet, rebar sticking out of the top), steel "
+    "scaffolding on one side only, a yellow tower crane beside it lifting a long steel beam on its hook above the frame, "
+    "a small white site cabin and a few stacks of building materials on the ground.")
 SUBJECTS['fortifications-1'] = (
     "A small military defensive position, level 1 of 5: one short straight line of stacked khaki sandbag walls, about chest "
     "high, and at one end of it one small square bunker of sandbags and timber with a low roof and a narrow firing slit.")
@@ -163,6 +184,22 @@ ICON_EDITS = {
 
 # the next level from the level before: (level before, additions). New piers and ships keep the level 1 direction.
 GROWS = {
+    'army-base-2': ('army-base-1',
+        "two more green canvas tents added to the tent rows, and a vehicle park beside the camp: a row of four olive-green "
+        "army trucks and two jeeps parked on packed earth inside an extended fence line, with more sandbag walls"),
+    'army-base-3': ('army-base-2',
+        "the first permanent buildings: two long single-storey barracks with pale concrete walls and olive-green pitched "
+        "roofs, and one large motor pool shed with a grey roof and open vehicle bays holding two trucks, built beside the "
+        "tents; the fence extended around them"),
+    'army-base-4': ('army-base-3',
+        "several more barracks of the same kind lined up in a row, a paved parade ground with painted lines beside them, "
+        "one fuel depot (four round olive-green fuel tanks with pipes inside a low wall), and one tall wooden-and-steel "
+        "watchtower at a corner of the fence; the tents are fewer now, only a few remain at the edge"),
+    'army-base-5': ('army-base-4',
+        "turn it into a full permanent base: more barracks blocks, a two-storey pale concrete headquarters building with a "
+        "flat roof beside the parade ground, two large vehicle sheds holding armoured vehicles (tanks and armoured personnel "
+        "carriers) with more parked outside, a training ground of packed sand with a simple obstacle course, a second "
+        "watchtower, and a solid concrete perimeter wall with a gatehouse replacing the fence; all the tents are gone"),
     'recruiting-office-2': ('recruiting-office-1',
         "a fenced yard of paved concrete beside the office with a chain-link fence around it, a few soldiers in uniform "
         "standing and walking in the yard, and a small guard post (a sentry booth with a barrier arm) at the yard's gate"),
@@ -533,6 +570,9 @@ GROW_END = {   # per building, after "layout direction"
                    "from the upper left to the lower right, and every new ship lies parallel to the existing ships, bow to the "
                    "lower right. The background stays a plain flat uniform light grey. No coastline, no water, no ground slab, "
                    "no text, no flags."),
+    'army-base': (": new buildings line up with the existing ones along the same diagonal axes, in the same clean, simplified "
+                  "3D game-asset look as the existing pieces. The background stays a plain flat uniform light grey. No ground "
+                  "slab, base platform or outline around the whole base, no text, no letters, no flags, no emblems."),
     'recruiting-office': (", with the same realistic level of detail: new buildings line up with the existing ones along the "
                    "same diagonal axes. The background stays a plain flat uniform light grey. No ground slab, base platform "
                    "or outline around the whole base, no text, no letters, no emblems."),

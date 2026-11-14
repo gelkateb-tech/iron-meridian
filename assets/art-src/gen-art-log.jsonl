@@ -146,3 +146,11 @@
 {"name": "rbs-msl", "file": "assets/art-src/rbs-msl.webp", "batch": true, "usd_est": 0.0505, "tokens": {"promptTokenCount": 676, "candidatesTokenCount": 2236, "thoughtsTokenCount": 1119}}
 {"name": "rbs-cmd", "file": "assets/art-src/rbs-cmd.webp", "batch": true, "usd_est": 0.0574, "tokens": {"promptTokenCount": 681, "candidatesTokenCount": 2653, "thoughtsTokenCount": 1165}}
 {"name": "rbs-inf", "file": "assets/art-src/rbs-inf.v2.webp", "batch": true, "usd_est": 0.053, "tokens": {"promptTokenCount": 770, "candidatesTokenCount": 2469, "thoughtsTokenCount": 1051}}
+{"name": "army-base-1", "file": "assets/art-src/ba-army-base-1.png", "batch": true, "usd_est": 0.0475, "tokens": {"promptTokenCount": 340, "candidatesTokenCount": 2049, "thoughtsTokenCount": 1114}}
+{"name": "construction-1", "file": "assets/art-src/ba-construction-1.png", "batch": true, "usd_est": 0.0402, "tokens": {"promptTokenCount": 349, "candidatesTokenCount": 1554, "thoughtsTokenCount": 1122}}
+{"name": "construction-2", "file": "assets/art-src/ba-construction-2.png", "batch": true, "usd_est": 0.028, "tokens": {"promptTokenCount": 332, "candidatesTokenCount": 1521, "thoughtsTokenCount": 342}}
+{"name": "construction-3", "file": "assets/art-src/ba-construction-3.png", "batch": true, "usd_est": 0.0336, "tokens": {"promptTokenCount": 348, "candidatesTokenCount": 1582, "thoughtsTokenCount": 651}}
+{"name": "army-base-2", "file": "assets/art-src/ba-army-base-2.png", "batch": true, "usd_est": 0.0605, "tokens": {"promptTokenCount": 1355, "candidatesTokenCount": 2088, "thoughtsTokenCount": 1922}}
+{"name": "army-base-3", "file": "assets/art-src/ba-army-base-3.png", "batch": true, "usd_est": 0.0274, "tokens": {"promptTokenCount": 1358, "candidatesTokenCount": 1505, "thoughtsTokenCount": 296}}
+{"name": "army-base-4", "file": "assets/art-src/ba-army-base-4.png", "batch": true, "usd_est": 0.0461, "tokens": {"promptTokenCount": 1379, "candidatesTokenCount": 1984, "thoughtsTokenCount": 1065}}
+{"name": "army-base-5", "file": "assets/art-src/ba-army-base-5.png", "batch": true, "usd_est": 0.0299, "tokens": {"promptTokenCount": 1393, "candidatesTokenCount": 1732, "thoughtsTokenCount": 241}}
