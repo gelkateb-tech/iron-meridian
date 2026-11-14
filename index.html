@@ -602,8 +602,6 @@ details.more summary::-webkit-details-marker{display:none}
 .pick .pt > span{font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted)}
 .sheet.mid > .row:last-child{position:sticky; bottom:-22px; background:rgba(64,69,72,.97); padding:10px 0; margin:0; border-top:1px solid var(--line)}
 .pick[aria-pressed="true"]{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; border-left-color:var(--c)}
-.diff{display:inline-flex; align-items:center; gap:5px; font:700 9.5px var(--body); letter-spacing:.14em; text-transform:uppercase; padding:0; background:none; color:#c5d2d6} .diff::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
-.diff.d-easy{color:#8fcf86} .diff.d-normal{color:#e2b45a} .diff.d-hard{color:#ee8a7d} .diff.d-veryhard{color:#f0627a}
 .pick .pt > span.tier{font:700 9.5px var(--body); letter-spacing:.12em; text-transform:uppercase; color:#9fb4ba} .pick .pt > span.tier.t-S{color:#e8cf7a} .pick .pt > span.tier.t-A{color:#b9d6dc}
 .wsel, .regs{flex-wrap:wrap; gap:6px; margin:2px 0 8px} .wsel .btn, .regs .btn{display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; line-height:1.15} .regs .btn{flex-direction:row; align-items:baseline; gap:6px}
 .wsel .btn small, .regs .btn small{font:500 10.5px var(--body); letter-spacing:.02em; text-transform:none; opacity:.75}
@@ -10558,7 +10556,6 @@ let pickDiff = 'regular', pickDoc = null, pickScn = 'world64', pickLen = Infinit
 // can still start a classic game; page.html?start=nations shows them the start screen as players see it
 let pickClassic = false;
 /*@TEST*/if (location.protocol === 'file:' && !/[?&]start=nations\b/.test(location.search)){ pickClassic = true; pickScn = 'world'; }/*@ENDTEST*/
-const DIFF = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};
 let speedBefore = 0;
 const DOCK_KINDS = ['prod', 'market', 'armies', 'research', 'diplo', 'settings', 'help', 'airguide', 'intel', 'cities', 'mob', 'cbld'];
 function openModal(html, kind = ''){ if (kind !== 'cities' && openModal.kind === 'cities') cpReset(); modalKind = kind; if (kind !== 'mob' && kind !== 'cbld') CMOD_FROM = '';
