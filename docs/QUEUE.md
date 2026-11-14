@@ -26,10 +26,10 @@ Last updated: 2026-11-14.
 |---|---|---|
 | 1 | Roads: every province linked to a neighbour, real roads first (map job, starts when real borders merge) | Opus |
 | 2 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| later | Capital lost (owner, 'we'll work on that later'): the HQ is destroyed and the morale of all the nation's homeland cities and its occupied cities starts falling until they rebel (build on the existing unrest and partisan revolts in rules/economy.js); owner to give the details before it starts | Opus |
 
 ## Waiting on me (the owner)
 
-- **HQ flags (branch hq-flags, done, NOT merged; screenshots sent: Berlin, Ottawa captured by the US, all 7 styles):** OK to merge? Choices: (1) a captured capital now keeps its HQ and flies the captor's flag (before, the HQ vanished); (2) independent land shows bare poles (or a plain neutral flag?); (3) flags are a third of the pole, about 5 px at the closest zoom: bigger (0.4)? (4) flags fly back-right and overlap a little in each row of 4: OK? (5) a gentle wave (off with battery saver / reduced motion): keep?
 - **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
 - **Building pictures (merged v48):** (1) Fortifications levels I-III use pictures 1, 3, 5: OK? (2) Army Base, Silo, Arms Industry still need angled pictures (nothing on the map for them yet); (3) Hamburg's Naval Yard sits on the Elbe bank: OK, or always the sea? (4) ports far from water (Berlin, Oslo, Helsinki) keep the yard in the city cluster: OK? (5) cast shadows kept see-through: keep, or a small contact shadow? (6) mid-zoom pictures are small (about 30-40 px): bigger?
 
