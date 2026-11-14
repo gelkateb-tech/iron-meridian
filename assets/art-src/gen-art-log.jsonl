@@ -152,3 +152,4 @@
 {"name": "construction-3", "file": "assets/art-src/ba-construction-3.png", "batch": true, "usd_est": 0.0336, "tokens": {"promptTokenCount": 348, "candidatesTokenCount": 1582, "thoughtsTokenCount": 651}}
 {"name": "army-base-2", "file": "assets/art-src/ba-army-base-2.png", "batch": true, "usd_est": 0.0605, "tokens": {"promptTokenCount": 1355, "candidatesTokenCount": 2088, "thoughtsTokenCount": 1922}}
 {"name": "army-base-3", "file": "assets/art-src/ba-army-base-3.png", "batch": true, "usd_est": 0.0274, "tokens": {"promptTokenCount": 1358, "candidatesTokenCount": 1505, "thoughtsTokenCount": 296}}
+{"name": "army-base-4", "file": "assets/art-src/ba-army-base-4.png", "batch": true, "usd_est": 0.0461, "tokens": {"promptTokenCount": 1379, "candidatesTokenCount": 1984, "thoughtsTokenCount": 1065}}
