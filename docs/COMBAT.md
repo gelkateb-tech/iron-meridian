@@ -207,3 +207,30 @@ Ranged fire was and stays a small share of the fighting (about 1,500 units are l
 overpowered: per hour a battery deals what it did, but now only at what is in range and seen, so it fires less often; the AI's guns no
 longer shell provinces 200-400 km away. Battles, losses and conquests stay within the seed-to-seed spread. Headless cost: about 5% more
 time a game day.
+
+## 6. Capture, embarking and landing
+
+The rules live in `rules/movement.js` (the block before `canProceed`: `atHeart`, `heartVia`, `sailTo`, `embWait`, `embarkWhy`, `landH`) and the
+capture step of the hour in `rules/tick.js`. Everything a capture does (`capture` in `rules/combat.js`: buildings, morale, cores, unrest,
+territory, victory points, dispatches) is unchanged; only the moment changed.
+
+- **Capture at the heart.** A land province (independent, or of a power you are at war with) becomes yours **the hour one of your ground forces
+  stands at its heart**, the city point, which is the province centre the rules use, while no enemy force holds the province. There is no
+  occupation clock any more (`S.cap` stays empty; an old save's half-done occupations are dropped). A force that only crossed the border, or
+  stands at another spot of the province, does not take it (its status reads *Reach the city to capture*); a walk that passes within 25 km
+  (`HEART_KM`) of the heart takes it on the way (`a.hrt`), and a pinpoint order to a spot beyond the heart walks by the city first (`sailTo`,
+  drawn so on the route line). With defenders the battle comes first; the hour the last one is gone, a force at the heart takes the province.
+  `CAP_MIN` (2) ground units are still needed; air units never capture. A tap on or right by a city (16 px) aims at the city itself.
+- **Embarking only in a naval port.** Ground forces board ships only in a **naval port**: a coastal city of their own or a friend's (`portOk`,
+  the same ports fleets dock in and Naval Yards are built in). The route planner (`pathFor`, `surprisePath`) never plans a leg from other land
+  onto water: a route overseas marches to a port first, and a move to a sea zone from land without a port is refused with *No naval port here:
+  march to a port to embark*. Embarking takes **`EMBARK_H` = 6 h** in the port (`a.emb`, hours left, counted while the force could otherwise set
+  off: a battle in the port pauses it); Halt cancels it. A route whose port was lost is planned again or stops.
+- **Landing.** Troops come ashore on any coast, as before, or into a port. A landing takes **`LAND_H` = 12 h**, **`LAND_PORT_H` = 6 h** into a
+  port held by you or a friend (`a.land`, hours left). Meanwhile the force cannot move on, walk or capture, and fights at the landing penalty of
+  its first day ashore (`rLandF`: 67%, 90% with Amphibious Doctrine I, full with II). Stacks they join wait for them.
+- **Research and commanders.** Amphibious Doctrine (any level) halves landings; Combat Engineers cut embarking by 30% / 40% (their old
+  capture-speed effect, `rCapF`); a Siegemaster commander embarks and lands 20% faster per rank (floor 40%).
+- **AI.** The computer plays by the same rules (one planner); a computer force that stands off the heart of land it is taking (after a clash on
+  the road) walks to the city. Tests: `node .test/capture-landing.js`.
+

@@ -94,13 +94,17 @@ function loadWorld(map = null, base0 = null){ const NB = map ? WORLD.provinces.l
 }
 // Which provinces are cities and capitals depends on the world in use. def null: the classic world (the flags of world.js: the 15-power world,
 // the two theatres and every old save). def {cities, caps, names}: the nations world (province ids of every city, of the nations' capitals, and
-// the names of promoted cities). Sets P.city, P.capFlag, P.cityName, the urban ground and each city's main resource, afresh on every new game
+// the names of promoted cities, and mains: the main resource of the playable nations' cities, a letter per city of cities, '.' for the map method).
+// Sets P.city, P.capFlag, P.cityName, the urban ground and each city's main resource, afresh on every new game
 // and every load, so nothing a game did to the flags leaks into the next one. Deposits and people do not depend on it.
-function useWorld(def){ const P = G.P, B = G.base, key = def ? 'n:' + def.cities.join(',') + '|' + def.caps.join(',') + '|' + JSON.stringify(def.names || {}) : 'classic';
+const MAIN_OF = {c:'cash', o:'oil', m:'metal', i:'iron', e:'elec', r:'rare'};
+function useWorld(def){ const P = G.P, B = G.base, mains = def && typeof def.mains === 'string' && def.mains.length === def.cities.length ? def.mains : '';
+  const key = def ? 'n:' + def.cities.join(',') + '|' + def.caps.join(',') + '|' + JSON.stringify(def.names || {}) + '|' + mains : 'classic';
   if (!def){ for (const p of P){ p.city = B.city[p.id]; p.capFlag = B.cap[p.id]; p.cityName = B.name[p.id]; p.main = B.main[p.id]; if (!p.sea) p.terrain = p.city && p.urb ? 'urban' : p.ter0; } }
   else { const cs = new Set(def.cities), cp = new Set(def.caps), nm = def.names || {};
     for (const p of P){ p.city = !p.sea && cs.has(p.id); p.capFlag = p.city && cp.has(p.id); p.cityName = nm[p.id] || B.name[p.id] || (p.city ? p.name : B.name[p.id]); p.main = undefined; if (!p.sea) p.terrain = p.city && p.urb ? 'urban' : p.ter0; }
-    cityMains(P, G.countries); }
+    cityMains(P, G.countries);   // (every city first, as before: independent land keeps the resources it always had)
+    if (mains) def.cities.forEach((id, i) => { const k = MAIN_OF[mains[i]]; if (k && P[id] && P[id].city) P[id].main = k; }); }   // the owner's resource balance rule (tools/build-nations.js MAINS)
   if (G.worldKey !== key){ G.worldKey = key; IM.emit('cities'); } }
 // The maps a game is played on. 0: the map of world.js (the classic world, the theatres, every old save, and a nations-world save made before
 // the province split). MAP_NEW: world.js with the province split of nations.js (NATIONS.map, docs/NATIONS-PLAN.md 4.6), the map of every new

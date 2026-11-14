@@ -624,7 +624,7 @@ function volley(c, main, now, sx){
    Everything is world-anchored and world-sized (shoot/emit with ws: world px, so it moves and scales with the map like the figures). */
 const BFX = {pts:new Map()};   // battle province -> Map(owner -> [{wx, wy, mx, my, ang, t, k, r, a, c}])
 // the weapon of each model type: [forward of the model's centre, height above the ground (both in its own metres), kind, flash length (m)]
-const BFX_GUN = {sol:[0.55, 1.3, 'rifle', 1], hmv:[0.2, 2.2, 'rifle', 1.2], ifv:[2.7, 2.3, 'cannon', 1.8], tank:[5, 2.2, 'barrel', 3.2], art:[5.3, 3.3, 'gun', 4],
+const BFX_GUN = {sol:[0.55, 1.3, 'rifle', 1], sat:[0.55, 1.3, 'rifle', 1], ssf:[0.55, 1.3, 'rifle', 1], hmv:[0.2, 2.2, 'rifle', 1.2], ifv:[2.7, 2.3, 'cannon', 1.8], tank:[5, 2.2, 'barrel', 3.2], art:[5.3, 3.3, 'gun', 4],
   mlrs:[-1.6, 3, 'rocket', 2.6], sam:[-0.6, 3.2, 'sam', 2], frig:[2.4, 0.9, 'ship', 2], crui:[2.9, 1.1, 'ship', 2.4], carr:[1, 1.4, 'ship', 1.4]};
 // one figure drawn this frame: c its cluster (at, owner), t its model type, (x, y) its ground spot on screen (css px), ang its facing (screen
 // radians, 0 east), a its alpha. o.top: a picture seen from straight above (no camera tilt: the muzzle lies on the ground plane); o.len: its
@@ -982,7 +982,7 @@ const CFX_W = ['tank', 'art', 'mlrs', 'inf', 'ship', 'cruise', 'ballistic', 'icb
 const weaponOf = t => ({tank:'tank', ifv:'tank', art:'art', mlrs:'mlrs', inf:'inf', at:'inf', spec:'inf', para:'inf', jam:'inf', sam:'sam', frig:'ship', crui:'ship', sub:'ship', carr:'ship', lst:'ship',
   jet:'fighter', int:'fighter', asf:'fighter', heli:'fighter', bomb:'bomber', stealth:'bomber', sdrone:'drone', swarm:'swarm', drone:'recon', awacs:'recon', mpa:'recon'})[t] || 'inf';
 // the picture of an aircraft type (assets/art), for its strafing pass or bomb run
-const AIR_IMG = {jet:'u-bomber', int:'u-jet', asf:'u-air-superiority', heli:'u-attack-heli', bomb:'u-heavy-bomber-1', stealth:'u-stealth-bomber', sdrone:'u-strike-drone', swarm:'u-swarm-drone', drone:'u-uav-recon', mpa:'u-naval-patrol', awacs:'u-awacs'};
+const AIR_IMG = {jet:'u-strike-fighter', int:'u-jet', asf:'u-air-superiority', heli:'u-attack-heli', bomb:'u-heavy-bomber', stealth:'u-stealth-bomber', sdrone:'u-strike-drone', swarm:'u-swarm-drone', drone:'u-uav-recon', mpa:'u-naval-patrol', awacs:'u-awacs'};
 const airImg = t => AIR_IMG[t] || null;
 function cfxFire(w, A, B, o = {}){ const lv = fxLv(); if (!lv || w === 'recon') return false;
   B = [A[0] + wdx(A[0], B[0]), B[1]];
@@ -1015,7 +1015,7 @@ function cfxFire(w, A, B, o = {}){ const lv = fxLv(); if (!lv || w === 'recon') 
         emit('flash', A[0], A[1], {ws:1, s0:ic ? 4 : 2.6, s1:1, life:400, vx:0, vy:0}); snd('fire', ic ? 'icbm' : 'launch', A[0], A[1]); }
       const pr = shot2(ic ? 'icbm' : 'bm', from, B, {dur:du, arc:ic ? Math.max(120, dist*0.9) : Math.max(40, dist*0.6), sea, bid, kill, snd:'missile'}); if (pr) warnAt(B[0], B[1], pr.t0 + du, ic ? 2 : 1, !!o.mine); return pr; }
     case 'fighter': case 'bomber': { const bomber = w === 'bomber', L = bomber ? 9 : 6, ux = dx/dist, uy = dy/dist, P0 = [B[0] - ux*L, B[1] - uy*L], P1 = [B[0] + ux*L, B[1] + uy*L];   // a pass along the target, coming in from the shooter's side
-      return shot2('jet', P0, P1, {dur:bomber ? 2300 : 1200, arc:bomber ? 4 : 2.4, size:bomber ? 1.3 : 1, img:o.img || (bomber ? 'u-bomber' : 'u-jet'), snd:'jet',
+      return shot2('jet', P0, P1, {dur:bomber ? 2300 : 1200, arc:bomber ? 4 : 2.4, size:bomber ? 1.3 : 1, img:o.img || (bomber ? 'u-strike-fighter' : 'u-jet'), snd:'jet',
         ev:bomber ? {t:'bombs', n:lo ? 4 : 6, k0:0.34, k1:0.66, sea, kill, bid} : {t:'strafe', k0:0.22, k1:0.62, sea}, end:() => { if (!bomber && bid != null && !miss) impact('S', ...spot(0.5), {sea, kill, bid}); }}); }
     case 'drone': { const ux = dx/dist, uy = dy/dist, S0 = [B[0] - ux*4, B[1] - uy*4]; snd('fire', 'drone', B[0], B[1]); return shot2('drn', S0, miss ? spot(1) : B, {dur:1100, arc:6, z:'M', sea, kill, bid, img:o.img}); }   // a strike drone dives straight in
     case 'swarm': { const n = lo ? 4 : 7, a0 = ang + Math.PI; for (let i = 0; i < n; i++){ const th = a0 + (i - (n - 1)/2)*0.55 + (Math.random() - 0.5)*0.3, R = 5 + Math.random()*2, S0 = [B[0] + Math.cos(th)*R, B[1] + Math.sin(th)*R*0.7], T = spot(0.9);   // several small dots converging from different angles
@@ -1140,7 +1140,9 @@ function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANI
    on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
 const fxStats = () => ({part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
 
-return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ turnTo, moveFig, fxLive, bigShake, mslOn:() => MSL.on || 0, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+// a lost graphics context (index.html gfxReset): the canvases' pixels are gone, so the sprites and the crater canvas are made again
+const gfxReset = () => { for (const k in SPR) delete SPR[k]; AFX.mips.clear(); if (CRD.cv) CRD.cv.width = CRD.cv.height = 0; CRD.cv = null; CRD.key = ''; };
+return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, moveFig, fxLive, bigShake, mslOn:() => MSL.on || 0, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,

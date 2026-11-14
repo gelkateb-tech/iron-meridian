@@ -23,6 +23,9 @@ const out = n => __dirname + '/v3-air-' + n + '.png';
     const avg = xs => Math.round(xs.reduce((x, y) => x + y, 0)/xs.length*100)/100;
     const res = {};
     // ---- A. swarm vs an air-defended province (12 swarm drones = 2 cards) against SAMs, jammers or nothing; then jets after the swarm
+    // the strike rolls come from the game's seeded generator (S.rs); a new game starts it from a fresh seed, so the 30-strike averages moved from run to run
+    // (the SAM kill average sat near its 0.3 line). Every scenario starts it from the same fixed value: the same rolls every run, no check loosened.
+    S.rs = 20260519;
     const swarmRun = (def, n = 30) => { const lost = [], adKilled = [], softKilled = [], sat = [];
       for (let i = 0; i < n; i++){ strip(gp); const d = im.addArmy(E, gp, def), d0 = {...d.u}; const w = wing(0, fp, {swarm:12}); A.resolveStrike(w, gp);
         lost.push(12 - (w.u.swarm || 0)); adKilled.push((d0.sam || 0) - (d.u.sam || 0) + (d0.jam || 0) - (d.u.jam || 0)); softKilled.push((d0.inf || 0) - (d.u.inf || 0)); sat.push(d.sat || 0); clear([d.id, w.id]); }

@@ -68,15 +68,21 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
   checks.game = G0; if (!G0.bv || G0.map !== 1) fail('game', G0);
   await go(36, 33.5, 100); checks.hi = await p.evaluate(() => !!window.__im.BV.f2); if (!checks.hi) fail('hi', 'borders-hi.js not loaded at close zoom');
 
-  // (R) real borders: every sample point within 1.5 css px of the drawn country border (geometry and pixels)
-  { const res = {n:0, geomOk:0, pixOk:0, maxPx:0, byRegion:{}}, bad = [];
-    let qi = 0; for (const q of PTS){ if (qi++ % 20 === 0) log('real ' + qi); await p.evaluate(([lon, lat, mw, mh]) => { const B = window.__br, [x, y] = B.ll(lon, lat); B.sun(lon); B.view(x, y, 100, mw, mh); }, [q.lon, q.lat, MAP.side, MAP.h]);
-      const r = await p.evaluate(([lon, lat]) => { const B = window.__br, im = window.__im, [x, y] = B.ll(lon, lat);
-        const t = performance.now(), d = B.distTo(im.GEO.countryL, x, y), m = B.diffPts([[x, y]], 7, 1, 1.5)[0]; return {d, m, wet:im.isWet(x, y), ms:performance.now() - t}; }, [q.lon, q.lat]); if (qi === 1) log('first point ' + JSON.stringify(r));
-      res.n++; const reg = res.byRegion[q.r] || (res.byRegion[q.r] = {n:0, ok:0, maxPx:0}); reg.n++;
-      const ok = r.d <= 1.5 && (r.m >= 60 || r.wet); if (r.wet) res.lake = (res.lake || 0) + 1;
-      if (r.d <= 1.5) res.geomOk++; if (r.m >= 60 || r.wet) res.pixOk++; if (ok) reg.ok++; reg.maxPx = Math.max(reg.maxPx, +r.d.toFixed(3)); res.maxPx = Math.max(res.maxPx, +r.d.toFixed(3));
-      if (!ok) bad.push({...q, d:+r.d.toFixed(2), m:r.m}); }
+  // (R) real borders: every sample point within 1.5 css px of the drawn country border (geometry and pixels). One view per cluster: the view
+  //     is centred on the first point left, and every point left in it (60 css px from its edges) is checked with the same two renders
+  { const res = {n:0, geomOk:0, pixOk:0, maxPx:0, byRegion:{}, views:0}, bad = [], left = PTS.slice();
+    while (left.length){ const q0 = left[0]; if (res.views % 10 === 0) log('real ' + res.n + '/' + PTS.length);
+      const rs = await p.evaluate(([lon, lat, mw, mh, pts]) => { const B = window.__br, im = window.__im, [x0, y0] = B.ll(lon, lat); B.sun(lon); B.view(x0, y0, 100, mw, mh);
+        const inV = pts.map(q => { const [x, y] = B.ll(q.lon, q.lat); return B.onScr(x, y, 60, mw, mh) ? [x, y] : null; }), idx = inV.map((v, i) => v ? i : -1).filter(i => i >= 0); idx.includes(0) || idx.unshift(0); if (!inV[0]) inV[0] = [x0, y0];
+        const xy = idx.map(i => inV[i]), m = B.diffPts(xy, 7, 1, 1.5);
+        return idx.map((i, j) => ({i, d:B.distTo(im.GEO.countryL, xy[j][0], xy[j][1]), m:m[j], wet:im.isWet(xy[j][0], xy[j][1])})); }, [q0.lon, q0.lat, MAP.side, MAP.h, left]);
+      res.views++; const done = new Set();
+      for (const r of rs){ const q = left[r.i]; done.add(r.i);
+        res.n++; const reg = res.byRegion[q.r] || (res.byRegion[q.r] = {n:0, ok:0, maxPx:0}); reg.n++;
+        const ok = r.d <= 1.5 && (r.m >= 60 || r.wet); if (r.wet) res.lake = (res.lake || 0) + 1;
+        if (r.d <= 1.5) res.geomOk++; if (r.m >= 60 || r.wet) res.pixOk++; if (ok) reg.ok++; reg.maxPx = Math.max(reg.maxPx, +r.d.toFixed(3)); res.maxPx = Math.max(res.maxPx, +r.d.toFixed(3));
+        if (!ok) bad.push({...q, d:+r.d.toFixed(2), m:r.m}); }
+      for (let i = left.length - 1; i >= 0; i--) if (done.has(i)) left.splice(i, 1); }
     checks.real = res; if (bad.length) fail('real', bad.slice(0, 12)); }
 
   // (G) tint up to the line on both sides, each side its owner's colour

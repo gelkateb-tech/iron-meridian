@@ -15,7 +15,7 @@
   const cache = {};
   let buildFn = null, mapFn = null;
   // the baked map atlases (assets/units/m-<type>.webp): their crop, ground origin and per-direction model boxes, written by tools/bake-assets.js map
-  const MAPMETA = {"sol":{"w":214,"h":254,"ox":90,"oy":166.49,"ppm":99.2,"air":false,"sea":false,"bb":[[56,31,159,184],[53,24,163,190],[54,17,156,197],[53,10,139,201],[56,5,120,203],[56,3,120,200],[49,3,119,194],[35,7,120,187],[21,12,124,181],[17,19,127,182],[24,26,126,183],[41,23,127,182],[60,22,124,179],[60,23,124,178],[61,26,131,179],[60,32,145,180]]},"hmv":{"w":334,"h":344,"ox":154,"oy":216.05,"ppm":52.2052,"air":false,"sea":false,"bb":[[15,71,295,261],[12,45,298,281],[23,28,287,293],[53,26,257,299],[91,10,217,295],[52,9,255,299],[21,8,285,293],[10,25,296,281],[13,50,293,261],[10,80,295,281],[21,80,285,294],[52,72,256,302],[91,80,217,295],[52,72,256,302],[23,80,287,294],[13,100,299,281]]},"truck":{"w":400,"h":358,"ox":181,"oy":202.54,"ppm":44.8,"air":false,"sea":false,"bb":[[28,74,342,244],[20,48,349,273],[36,21,331,292],[74,10,292,299],[117,16,245,291],[70,10,288,299],[31,21,326,292],[13,48,342,273],[20,74,334,244],[13,41,342,270],[31,14,326,289],[70,3,289,296],[117,8,245,291],[74,3,292,296],[36,14,331,289],[20,41,349,270]]},"tank":{"w":456,"h":368,"ox":218,"oy":196.39,"ppm":29.9518,"air":false,"sea":false,"bb":[[101,89,423,237],[91,74,409,261],[99,76,366,276],[124,71,315,296],[161,78,275,308],[121,71,312,296],[70,76,337,276],[27,74,345,261],[13,82,335,237],[27,94,345,261],[70,46,337,277],[121,14,312,280],[161,2,275,271],[124,14,315,280],[99,46,366,277],[91,94,409,261]]},"ifv":{"w":386,"h":332,"ox":178,"oy":182.73,"ppm":40.2723,"air":false,"sea":false,"bb":[[18,69,341,228],[14,39,344,256],[28,13,328,273],[64,2,292,278],[111,9,245,268],[65,2,292,278],[28,13,328,273],[12,29,343,256],[15,39,338,228],[12,42,342,251],[29,21,328,269],[65,15,292,284],[112,7,244,281],[64,15,291,284],[28,21,327,269],[14,42,344,251]]},"mlrs":{"w":390,"h":346,"ox":180,"oy":196.96,"ppm":43.914,"air":false,"sea":false,"bb":[[30,63,339,238],[25,46,347,265],[40,20,330,284],[75,8,291,289],[123,14,237,284],[70,8,285,290],[30,20,320,284],[13,46,335,265],[21,59,329,238],[13,21,334,264],[30,9,320,281],[70,3,286,287],[123,10,237,283],[75,3,290,287],[40,13,330,281],[25,38,347,264]]},"sam":{"w":428,"h":368,"ox":200,"oy":204.4,"ppm":39.7318,"air":false,"sea":false,"bb":[[37,73,384,244],[35,86,388,278],[58,63,364,302],[101,52,316,315],[146,55,254,315],[84,52,299,315],[36,63,342,302],[12,86,365,278],[16,73,363,244],[12,51,365,272],[36,19,342,292],[84,4,299,304],[146,7,254,303],[102,3,316,304],[58,19,364,292],[35,51,388,272]]},"frig":{"w":418,"h":330,"ox":209,"oy":189.32,"ppm":54.4,"air":false,"sea":true,"bb":[[5,68,413,198],[11,74,397,234],[46,32,353,282],[106,6,290,315],[180,2,238,326],[128,6,312,315],[65,32,372,282],[21,74,407,234],[5,68,413,198],[20,62,407,252],[65,46,372,296],[128,14,312,322],[180,3,238,326],[106,14,290,322],[46,46,353,296],[11,62,397,252]]},"sub":{"w":448,"h":348,"ox":225,"oy":194.04,"ppm":51.2,"air":false,"sea":true,"bb":[[4,129,416,203],[21,102,401,238],[68,50,361,282],[140,15,300,312],[192,3,258,322],[150,15,310,312],[89,50,382,282],[49,102,429,238],[34,129,446,203],[49,107,429,245],[89,81,382,297],[150,54,310,332],[192,43,258,344],[140,54,300,332],[68,81,361,297],[21,105,401,245]]},"crui":{"w":502,"h":398,"ox":251,"oy":229.3,"ppm":54.4,"air":false,"sea":true,"bb":[[4,102,493,241],[16,102,475,285],[59,51,422,342],[131,17,345,380],[218,3,284,393],[157,17,371,380],[80,51,443,342],[27,102,486,285],[9,102,498,241],[27,96,486,305],[80,66,443,357],[157,28,371,389],[218,15,284,394],[131,28,345,389],[59,66,422,357],[16,96,475,305]]},"carr":{"w":544,"h":426,"ox":272,"oy":237.66,"ppm":48,"air":false,"sea":true,"bb":[[6,83,538,282],[11,69,518,304],[50,23,470,364],[120,3,416,407],[166,11,361,421],[140,12,452,407],[79,38,515,364],[26,89,541,310],[6,123,538,270],[26,103,533,336],[74,59,494,385],[128,21,424,417],[183,6,378,421],[92,21,404,417],[29,56,465,385],[3,95,518,328]]},"jet":{"w":392,"h":348,"ox":190,"oy":188.58,"ppm":20.7728,"air":true,"sea":false,"bb":[[25,79,373,260],[26,66,358,238],[38,45,319,271],[60,17,275,303],[77,3,303,314],[105,4,320,303],[61,20,342,271],[22,50,354,238],[7,79,355,260],[22,101,354,274],[61,66,342,290],[105,34,320,303],[77,24,303,306],[60,34,275,300],[38,66,319,290],[26,101,358,274]]},"int":{"w":380,"h":340,"ox":184,"oy":184.23,"ppm":20.1949,"air":true,"sea":false,"bb":[[23,65,361,267],[24,49,348,251],[37,44,310,265],[38,17,290,295],[58,3,310,306],[78,5,330,295],[59,20,331,264],[20,49,344,251],[7,65,345,267],[20,82,344,283],[59,65,331,283],[78,34,330,295],[58,24,310,298],[38,34,290,293],[37,65,309,283],[24,82,348,283]]},"heli":{"w":502,"h":438,"ox":238,"oy":230.76,"ppm":24.3715,"air":true,"sea":false,"bb":[[13,110,360,256],[32,89,352,275],[77,54,360,281],[121,16,354,299],[147,3,329,305],[122,16,355,299],[116,54,401,281],[124,89,448,275],[116,110,463,256],[124,91,444,287],[116,85,399,332],[122,92,355,362],[147,110,329,374],[121,92,354,362],[75,85,360,332],[28,91,352,287]]},"drone":{"w":358,"h":300,"ox":174,"oy":153.63,"ppm":19.2,"air":true,"sea":false,"bb":[[64,3,276,271],[66,13,268,263],[53,41,299,237],[18,43,331,215],[6,39,342,221],[17,41,330,215],[49,41,295,237],[80,13,282,263],[72,3,284,271],[80,12,282,262],[49,37,295,234],[17,65,330,243],[6,59,342,248],[18,65,331,242],[53,37,299,234],[66,12,268,262]]},"art":{"w":446,"h":430,"ox":192,"oy":250.73,"ppm":30.4988,"air":false,"sea":false,"bb":[[63,104,357,281],[60,150,353,301],[77,135,325,314],[111,126,277,327],[150,128,237,333],[114,130,273,328],[82,138,307,314],[43,158,324,301],[27,129,321,281],[31,83,324,304],[59,43,307,329],[107,15,273,341],[147,2,234,339],[111,5,270,341],[77,25,302,329],[60,60,341,305]]}};
+  const MAPMETA = {"hmv":{"w":334,"h":344,"ox":154,"oy":216.05,"ppm":52.2052,"air":false,"sea":false,"bb":[[15,71,295,261],[12,45,298,281],[23,28,287,293],[53,26,257,299],[91,10,217,295],[52,9,255,299],[21,8,285,293],[10,25,296,281],[13,50,293,261],[10,80,295,281],[21,80,285,294],[52,72,256,302],[91,80,217,295],[52,72,256,302],[23,80,287,294],[13,100,299,281]]},"truck":{"w":400,"h":358,"ox":181,"oy":202.54,"ppm":44.8,"air":false,"sea":false,"bb":[[28,74,342,244],[20,48,349,273],[36,21,331,292],[74,10,292,299],[117,16,245,291],[70,10,288,299],[31,21,326,292],[13,48,342,273],[20,74,334,244],[13,41,342,270],[31,14,326,289],[70,3,289,296],[117,8,245,291],[74,3,292,296],[36,14,331,289],[20,41,349,270]]},"tank":{"w":456,"h":368,"ox":218,"oy":196.39,"ppm":29.9518,"air":false,"sea":false,"bb":[[101,89,423,237],[91,74,409,261],[99,76,366,276],[124,71,315,296],[161,78,275,308],[121,71,312,296],[70,76,337,276],[27,74,345,261],[13,82,335,237],[27,94,345,261],[70,46,337,277],[121,14,312,280],[161,2,275,271],[124,14,315,280],[99,46,366,277],[91,94,409,261]]},"ifv":{"w":386,"h":332,"ox":178,"oy":182.73,"ppm":40.2723,"air":false,"sea":false,"bb":[[18,69,341,228],[14,39,344,256],[28,13,328,273],[64,2,292,278],[111,9,245,268],[65,2,292,278],[28,13,328,273],[12,29,343,256],[15,39,338,228],[12,42,342,251],[29,21,328,269],[65,15,292,284],[112,7,244,281],[64,15,291,284],[28,21,327,269],[14,42,344,251]]},"art":{"w":446,"h":430,"ox":192,"oy":250.73,"ppm":30.4988,"air":false,"sea":false,"bb":[[63,104,357,281],[60,150,353,301],[77,135,325,314],[111,126,277,327],[150,128,237,333],[114,130,273,328],[82,138,307,314],[43,158,324,301],[27,129,321,281],[31,83,324,304],[59,43,307,329],[107,15,273,341],[147,2,234,339],[111,5,270,341],[77,25,302,329],[60,60,341,305]]},"mlrs":{"w":390,"h":346,"ox":180,"oy":196.96,"ppm":43.914,"air":false,"sea":false,"bb":[[30,63,339,238],[25,46,347,265],[40,20,330,284],[75,8,291,289],[123,14,237,284],[70,8,285,290],[30,20,320,284],[13,46,335,265],[21,59,329,238],[13,21,334,264],[30,9,320,281],[70,3,286,287],[123,10,237,283],[75,3,290,287],[40,13,330,281],[25,38,347,264]]},"sam":{"w":428,"h":368,"ox":200,"oy":204.4,"ppm":39.7318,"air":false,"sea":false,"bb":[[37,73,384,244],[35,86,388,278],[58,63,364,302],[101,52,316,315],[146,55,254,315],[84,52,299,315],[36,63,342,302],[12,86,365,278],[16,73,363,244],[12,51,365,272],[36,19,342,292],[84,4,299,304],[146,7,254,303],[102,3,316,304],[58,19,364,292],[35,51,388,272]]},"frig":{"w":418,"h":330,"ox":209,"oy":189.32,"ppm":54.4,"air":false,"sea":true,"bb":[[5,68,413,198],[11,74,397,234],[46,32,353,282],[106,6,290,315],[180,2,238,326],[128,6,312,315],[65,32,372,282],[21,74,407,234],[5,68,413,198],[20,62,407,252],[65,46,372,296],[128,14,312,322],[180,3,238,326],[106,14,290,322],[46,46,353,296],[11,62,397,252]]},"sub":{"w":448,"h":348,"ox":225,"oy":194.04,"ppm":51.2,"air":false,"sea":true,"bb":[[4,129,416,203],[21,102,401,238],[68,50,361,282],[140,15,300,312],[192,3,258,322],[150,15,310,312],[89,50,382,282],[49,102,429,238],[34,129,446,203],[49,107,429,245],[89,81,382,297],[150,54,310,332],[192,43,258,344],[140,54,300,332],[68,81,361,297],[21,105,401,245]]},"crui":{"w":502,"h":398,"ox":251,"oy":229.3,"ppm":54.4,"air":false,"sea":true,"bb":[[4,102,493,241],[16,102,475,285],[59,51,422,342],[131,17,345,380],[218,3,284,393],[157,17,371,380],[80,51,443,342],[27,102,486,285],[9,102,498,241],[27,96,486,305],[80,66,443,357],[157,28,371,389],[218,15,284,394],[131,28,345,389],[59,66,422,357],[16,96,475,305]]},"carr":{"w":544,"h":426,"ox":272,"oy":237.66,"ppm":48,"air":false,"sea":true,"bb":[[6,83,538,282],[11,69,518,304],[50,23,470,364],[120,3,416,407],[166,11,361,421],[140,12,452,407],[79,38,515,364],[26,89,541,310],[6,123,538,270],[26,103,533,336],[74,59,494,385],[128,21,424,417],[183,6,378,421],[92,21,404,417],[29,56,465,385],[3,95,518,328]]},"jet":{"w":392,"h":348,"ox":190,"oy":188.58,"ppm":20.7728,"air":true,"sea":false,"bb":[[25,79,373,260],[26,66,358,238],[38,45,319,271],[60,17,275,303],[77,3,303,314],[105,4,320,303],[61,20,342,271],[22,50,354,238],[7,79,355,260],[22,101,354,274],[61,66,342,290],[105,34,320,303],[77,24,303,306],[60,34,275,300],[38,66,319,290],[26,101,358,274]]},"int":{"w":380,"h":340,"ox":184,"oy":184.23,"ppm":20.1949,"air":true,"sea":false,"bb":[[23,65,361,267],[24,49,348,251],[37,44,310,265],[38,17,290,295],[58,3,310,306],[78,5,330,295],[59,20,331,264],[20,49,344,251],[7,65,345,267],[20,82,344,283],[59,65,331,283],[78,34,330,295],[58,24,310,298],[38,34,290,293],[37,65,309,283],[24,82,348,283]]},"heli":{"w":502,"h":438,"ox":238,"oy":230.76,"ppm":24.3715,"air":true,"sea":false,"bb":[[13,110,360,256],[32,89,352,275],[77,54,360,281],[121,16,354,299],[147,3,329,305],[122,16,355,299],[116,54,401,281],[124,89,448,275],[116,110,463,256],[124,91,444,287],[116,85,399,332],[122,92,355,362],[147,110,329,374],[121,92,354,362],[75,85,360,332],[28,91,352,287]]},"drone":{"w":358,"h":300,"ox":174,"oy":153.63,"ppm":19.2,"air":true,"sea":false,"bb":[[64,3,276,271],[66,13,268,263],[53,41,299,237],[18,43,331,215],[6,39,342,221],[17,41,330,215],[49,41,295,237],[80,13,282,263],[72,3,284,271],[80,12,282,262],[49,37,295,234],[17,65,330,243],[6,59,342,248],[18,65,331,242],[53,37,299,234],[66,12,268,262]]},"sol":{"w":276,"h":288,"ox":124,"oy":179.74,"ppm":82.3179,"air":false,"sea":false,"bb":[[67,22,230,241],[61,19,234,238],[42,23,221,228],[33,34,221,234],[35,34,221,238],[45,17,216,234],[43,6,213,223],[38,3,201,227],[18,9,181,238],[14,21,187,242],[27,31,206,241],[27,27,215,233],[27,21,213,217],[32,22,203,213],[35,31,205,228],[47,30,210,238]]},"sat":{"w":302,"h":316,"ox":128,"oy":193.74,"ppm":85.7668,"air":false,"sea":false,"bb":[[37,38,234,238],[33,37,221,247],[42,40,223,253],[59,20,213,252],[58,7,209,242],[52,4,213,226],[37,9,211,238],[22,24,208,246],[22,45,219,248],[35,38,223,246],[33,31,214,238],[43,23,197,249],[47,22,198,255],[43,32,204,253],[45,32,219,245],[48,38,234,234]]},"ssf":{"w":306,"h":288,"ox":134,"oy":166.13,"ppm":83.0024,"air":false,"sea":false,"bb":[[69,7,249,225],[73,7,246,223],[54,14,227,213],[45,26,239,218],[48,43,237,221],[57,34,223,216],[51,20,221,207],[34,10,216,214],[20,7,199,224],[22,7,195,226],[41,15,214,228],[29,11,223,225],[31,2,220,212],[45,4,211,199],[47,18,217,213],[52,11,234,223]]}};
   if (T) (function(){
   let renderer;
   try { renderer = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); } catch (e){ return; }
@@ -352,6 +352,12 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     heli:pbr(0x4c5536, 0.6, 0.2, {camo:[0x2f3621, 0x66704a, 0x23281a], cs:1.7, k3:0.85, dust:0.06, grain:0.14}), heliD:pbr(0x363d27, 0.66, 0.2, {camo:[0x272d1c, 0x4f5838, 0x1d2116], cs:1.7, k3:0.7, dust:0.05, grain:0.14}),
     blade:pbr(0x1c1f1c, 0.5, 0.35, {grain:0.06, dust:0}), tipY:pbr(0xc9a23a, 0.6, 0.1, {grain:0.04, dust:0}),
     bolt:pbr(0x2e302a, 0.55, 0.5, {grain:0.05, dust:0.1}),
+    // the squads' kit: a light multi-terrain camouflage that reads on green land and on sand, coyote gear; special forces in dark grey and black
+    uniS:pbr(0x7b7552, 0.95, 0, {camo:[0x5a5a3b, 0x978b68, 0x46432f], cs:0.14, gs:30, dust:0.3, dh:0.5}), gearS:pbr(0x6f6447, 0.9, 0, {grain:0.2, gs:24, dust:0.2, dh:0.5}),
+    gearSD:pbr(0x4f4834, 0.92, 0, {grain:0.2, gs:24, dust:0.15, dh:0.5}), helS:pbr(0x6d6849, 0.82, 0.04, {camo:[0x56553a, 0x8a7f5e, 0x45422f], cs:0.09, gs:24, dust:0.1}),
+    uniF:pbr(0x3a3e3d, 0.95, 0, {camo:[0x2b2e2e, 0x4a4e4c, 0x222423], cs:0.14, gs:30, dust:0.2, dh:0.5}), gearF:pbr(0x262826, 0.9, 0, {grain:0.18, gs:24, dust:0.1, dh:0.5}),
+    gearFD:pbr(0x1b1c1b, 0.92, 0, {grain:0.18, gs:24, dust:0.08, dh:0.5}), helF:pbr(0x2c2f2e, 0.7, 0.08, {grain:0.1, gs:24, dust:0.05}),
+    tube:pbr(0x535a3a, 0.8, 0.1, {grain:0.12, dust:0.1}),
     foam:new T.MeshBasicMaterial({color:0xe9f2f4, transparent:true, opacity:0.32, depthWrite:false}),
   };
   const ad = (p, o) => { p.add(o); return o; };
@@ -397,46 +403,66 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
   const jerry = (x, y, z, ry = 0) => { const j = rbox(0.17, 0.46, 0.34, 0.03, P.oliveD, x, y, z); j.rotation.y = ry; return j; };
   const smokeL = (x, y, z, ry) => { const g = new T.Group(); for (let i = 0; i < 4; i++){ const t = cyZ(0.05, 0.05, 0.28, P.dark, 0, i*0.11, 0, 8); t.rotation.x = Math.PI/2 - 0.5; g.add(t); } g.position.set(x, y, z); g.rotation.y = ry; return g; };
 
-  // a soldier at the ready (~1.8 m): boots, bent knees, plate carrier with pouches, pack, helmet with cover and goggles, rifle held across the chest
-  function mRifleman(){
-    const g = new T.Group(), U = P.uni, limb = (r0, r1, l, mat) => { const o = new T.Group(), c = cy(r0, r1, l, mat, 10, 0, -l/2, 0); o.add(c); o.add(sph(r0*1.02, mat, 0, 0, 0)); return o; };
-    const leg = (sx, fw) => { const hip = new T.Group(); hip.position.set(sx*0.11, 0.93, 0); const th = limb(0.085, 0.07, 0.46, U); hip.add(th); th.rotation.x = -fw;
-      const kn = new T.Group(); kn.position.y = -0.46; th.add(kn); const sh = limb(0.068, 0.052, 0.44, U); kn.add(sh); sh.rotation.x = fw*1.35 + 0.08;
-      kn.add(rbox(0.1, 0.12, 0.08, 0.03, P.gearD, 0, -0.04, 0.06));   // knee pad
-      const bt = rbox(0.11, 0.11, 0.26, 0.04, P.boot, 0, -0.47, 0.05); sh.add(bt); bt.rotation.x = -(fw*1.35 + 0.08) + fw;
+  // the squads on the map (original designs): two or three soldiers of about 1.8 m in a loose group, standing and walking, each with his own soft
+  // contact shade at his feet (no shade under the whole group: they stand on the ground, not on a disc). The head and helmet are a little larger
+  // than life and the rifles a little thicker, so a soldier a dozen pixels tall still reads as a soldier. o: walk (a stride), kit 'sf' (dark
+  // kit, an assault pack, a suppressed carbine), tube (an anti-tank launcher on the right shoulder, the rifle slung), radio, aim (rifle raised)
+  function mSoldier(o = {}){
+    const sf = o.kit === 'sf', U = sf ? P.uniF : P.uniS, GR = sf ? P.gearF : P.gearS, GD = sf ? P.gearFD : P.gearSD, HM = sf ? P.helF : P.helS, g = new T.Group();
+    const limb = (r0, r1, l, mat) => { const q = new T.Group(), c = cy(r0, r1, l, mat, 10, 0, -l/2, 0); q.add(c); q.add(sph(r0*1.02, mat, 0, 0, 0)); return q; };
+    const leg = (sx, fw) => { const hip = new T.Group(); hip.position.set(sx*0.115, 0.93, 0); const th = limb(0.095, 0.075, 0.46, U); hip.add(th); th.rotation.x = -fw;
+      const kn = new T.Group(); kn.position.y = -0.46; th.add(kn); const shn = limb(0.074, 0.056, 0.44, U); kn.add(shn); const bend = Math.max(0.05, fw*0.9) + 0.06; shn.rotation.x = bend;
+      kn.add(rbox(0.11, 0.12, 0.08, 0.03, GD, 0, -0.04, 0.065));   // knee pad
+      const bt = rbox(0.12, 0.12, 0.28, 0.04, P.boot, 0, -0.47, 0.05); shn.add(bt); bt.rotation.x = -bend + fw;
       return hip; };
-    g.add(leg(-1, 0.32), leg(1, -0.08));
-    g.add(sph(0.16, U, 0, 0.95, 0, 1.15, 0.8, 0.85));                                   // hips
-    const torso = new T.Group(); torso.position.set(0, 0.97, 0); torso.rotation.x = 0.12; g.add(torso);
-    const tb = mk(new T.CylinderGeometry(0.19, 0.155, 0.56, 14), U, 0, 0.3, 0); tb.scale.set(1.05, 1, 0.66); torso.add(tb);
-    torso.add(rbox(0.38, 0.4, 0.13, 0.04, P.gear, 0, 0.32, 0.1));                       // plate carrier, front and back
-    torso.add(rbox(0.36, 0.38, 0.1, 0.04, P.gear, 0, 0.33, -0.1));
-    for (const x of [-0.12, 0, 0.12]) torso.add(rbox(0.1, 0.13, 0.07, 0.02, P.gearD, x, 0.2, 0.18));   // magazine pouches
-    torso.add(rbox(0.1, 0.1, 0.06, 0.02, P.gearD, 0.13, 0.42, 0.17));
-    torso.add(rbox(0.32, 0.36, 0.18, 0.06, P.gearD, 0, 0.32, -0.23));                    // pack
-    torso.add(rbox(0.3, 0.1, 0.12, 0.04, P.tarp, 0, 0.53, -0.25));                       // bed roll
-    torso.add(rbox(0.14, 0.2, 0.08, 0.02, P.dark, -0.1, 0.36, -0.34)); torso.add(ant(-0.13, 0.42, -0.36, 0.7));   // radio and its whip antenna
-    torso.add(cy(0.045, 0.045, 0.13, P.gearD, 10, 0.19, 0.06, -0.12));                     // canteen
-    torso.add(sph(0.2, U, 0, 0.55, 0, 1.15, 0.55, 0.75));                                 // shoulders
-    const neck = cy(0.05, 0.06, 0.1, P.skin, 10, 0, 0.64, 0.01); torso.add(neck);
-    const head = new T.Group(); head.position.set(0, 0.76, 0.02); head.rotation.x = -0.18; torso.add(head);
+    const st = o.walk ? [0.46, -0.36] : o.aim ? [0.34, -0.12] : [0.24, -0.06];
+    g.add(leg(-1, st[0]), leg(1, st[1]));
+    g.add(sph(0.17, U, 0, 0.95, 0, 1.15, 0.8, 0.85));                                   // hips
+    const torso = new T.Group(); torso.position.set(0, 0.97, 0); torso.rotation.x = o.walk ? 0.17 : o.aim ? 0.14 : 0.1; g.add(torso);
+    const tb = mk(new T.CylinderGeometry(0.205, 0.165, 0.56, 14), U, 0, 0.3, 0); tb.scale.set(1.05, 1, 0.68); torso.add(tb);
+    torso.add(rbox(0.4, 0.4, 0.14, 0.04, GR, 0, 0.32, 0.1)); torso.add(rbox(0.38, 0.38, 0.1, 0.04, GR, 0, 0.33, -0.11));   // plate carrier
+    for (const x of [-0.13, 0, 0.13]) torso.add(rbox(0.1, 0.13, 0.07, 0.02, GD, x, 0.2, 0.185));   // magazine pouches
+    if (sf) torso.add(rbox(0.28, 0.3, 0.14, 0.05, GD, 0, 0.36, -0.22));                // a small assault pack
+    else { torso.add(rbox(0.34, 0.38, 0.2, 0.06, GD, 0, 0.32, -0.24)); torso.add(rbox(0.32, 0.1, 0.13, 0.04, P.tarp, 0, 0.54, -0.26)); }   // pack and bed roll
+    if (o.radio){ torso.add(rbox(0.14, 0.2, 0.08, 0.02, P.dark, -0.1, 0.36, -0.36)); torso.add(ant(-0.13, 0.42, -0.38, 0.75)); }
+    torso.add(sph(0.215, U, 0, 0.55, 0, 1.15, 0.55, 0.75));                               // shoulders
+    torso.add(cy(0.055, 0.065, 0.1, P.skin, 10, 0, 0.64, 0.01));
+    const head = new T.Group(); head.position.set(0, 0.79, 0.02); head.rotation.x = o.aim ? 0.05 : -0.16; head.scale.setScalar(1.18); torso.add(head);
     head.add(sph(0.105, P.skin, 0, 0, 0.01, 0.9, 1.05, 1));
-    const hel = mk(new T.SphereGeometry(0.135, 18, 12, 0, Math.PI*2, 0, Math.PI*0.56), P.olive, 0, 0.02, -0.005); hel.scale.set(1, 0.95, 1.08); head.add(hel);
-    const rim = mk(new T.TorusGeometry(0.128, 0.012, 6, 24), P.oliveD, 0, 0.0, -0.005); rim.rotation.x = Math.PI/2; rim.scale.set(1, 1.08, 1); head.add(rim);
-    head.add(rbox(0.13, 0.04, 0.05, 0.015, P.dark, 0, 0.07, 0.12));                    // goggles on the helmet
-    head.add(rbox(0.06, 0.05, 0.04, 0.012, P.dark, 0, 0.11, 0.135));                     // NVG mount
-    // the rifle, held across the body at the ready, muzzle low and forward
-    const rf = new T.Group(); rf.position.set(0.02, 0.27, 0.27); rf.rotation.set(0.32, 0.48, 0); torso.add(rf);
-    rf.add(rbox(0.05, 0.08, 0.34, 0.01, P.gun, 0, 0, 0)); rf.add(cyZ(0.013, 0.013, 0.32, P.gun, 0, 0.01, 0.32, 8)); rf.add(rbox(0.055, 0.06, 0.2, 0.012, P.dark, 0, 0.0, 0.25));
-    ad(rf, rbox(0.035, 0.13, 0.06, 0.01, P.gun, 0, -0.09, 0.05)).rotation.x = 0.25; ad(rf, rbox(0.04, 0.16, 0.07, 0.012, P.dark, 0, -0.1, 0.13)).rotation.x = 0.2;   // grip, curved magazine
-    rf.add(cyZ(0.024, 0.024, 0.12, P.dark, 0, 0.075, 0.08, 10)); rf.add(rbox(0.03, 0.03, 0.04, 0.008, P.glass, 0, 0.075, 0.145));   // optic
-    rf.add(rbox(0.012, 0.012, 0.5, 0.004, P.gearD, 0.03, -0.06, 0.02));   // sling rf.add(rbox(0.045, 0.1, 0.18, 0.015, P.dark, 0, -0.02, -0.24)); rf.add(rbox(0.035, 0.045, 0.1, 0.01, P.gun, 0, 0.07, 0.02));
-    // arms: the right hand on the grip, the left on the handguard
-    const arm = (sx, a1, b1, a2) => { const sh = new T.Group(); sh.position.set(sx*0.2, 0.52, 0); torso.add(sh); const up = limb(0.058, 0.05, 0.28, U); sh.add(up); up.rotation.set(a1, 0, b1);
-      const el = new T.Group(); el.position.y = -0.28; up.add(el); const fo = limb(0.05, 0.04, 0.26, U); el.add(fo); fo.rotation.x = a2; fo.add(sph(0.04, P.skin, 0, -0.27, 0)); return sh; };
-    arm(1, 0.35, 0.18, -1.45); arm(-1, 0.85, -0.3, -1.25);
-    g.add(cy(0.0, 0.0, 0.0, U));
-    return {g, ext:1.45, ppm:62, look:0.95}; }
+    const hel = mk(new T.SphereGeometry(0.14, 18, 12, 0, Math.PI*2, 0, Math.PI*0.56), HM, 0, 0.02, -0.005); hel.scale.set(1, 0.95, 1.08); head.add(hel);
+    const rim = mk(new T.TorusGeometry(0.133, 0.013, 6, 24), sf ? P.gearFD : P.gearSD, 0, 0.0, -0.005); rim.rotation.x = Math.PI/2; rim.scale.set(1, 1.08, 1); head.add(rim);
+    head.add(rbox(0.13, 0.04, 0.05, 0.015, P.dark, 0, 0.075, 0.125));                    // goggles on the helmet
+    if (sf) head.add(rbox(0.07, 0.06, 0.05, 0.012, P.dark, 0, 0.12, 0.13));              // night sight mount
+    // the rifle: across the body at the ready, raised to the shoulder when aiming, slung on the back under a launcher
+    const rf = new T.Group(); torso.add(rf);
+    if (o.tube){ rf.position.set(0.05, 0.36, -0.3); rf.rotation.set(0.2, 0, 1.1); }
+    else if (o.aim){ rf.position.set(0.09, 0.5, 0.2); rf.rotation.set(-0.06, 0.03, 0); }
+    else { rf.position.set(0.02, 0.27, 0.28); rf.rotation.set(0.32, 0.48, 0); }
+    rf.add(rbox(0.06, 0.09, 0.36, 0.012, P.gun, 0, 0, 0)); rf.add(cyZ(0.017, 0.017, sf ? 0.42 : 0.34, P.gun, 0, 0.01, sf ? 0.36 : 0.33, 8)); rf.add(rbox(0.065, 0.065, 0.2, 0.012, P.dark, 0, 0.0, 0.26));
+    ad(rf, rbox(0.04, 0.17, 0.07, 0.012, P.dark, 0, -0.11, 0.13)).rotation.x = 0.2; rf.add(rbox(0.05, 0.1, 0.18, 0.015, P.dark, 0, -0.02, -0.25));   // magazine, stock
+    rf.add(cyZ(0.026, 0.026, 0.12, P.dark, 0, 0.08, 0.08, 10));                       // optic
+    // the launcher: a long olive tube on the right shoulder, sight block on its left
+    if (o.tube){ const L = new T.Group(); L.position.set(0.17, 0.6, 0.02); L.rotation.x = -0.06; torso.add(L);
+      L.add(cyZ(0.075, 0.075, 1.15, P.tube, 0, 0, 0.12, 14)); L.add(cyZ(0.085, 0.085, 0.12, P.dark, 0, 0, 0.66, 14)); L.add(cyZ(0.085, 0.08, 0.1, P.dark, 0, 0, -0.44, 14));
+      L.add(rbox(0.06, 0.08, 0.14, 0.015, P.dark, -0.1, 0.05, 0.2)); L.add(rbox(0.035, 0.12, 0.05, 0.01, P.dark, 0, -0.1, 0.24)); }
+    // arms: at the ready (right hand on the grip, left on the handguard), raised to aim, or holding the launcher
+    const arm = (sx, a1, b1, a2) => { const sh = new T.Group(); sh.position.set(sx*0.21, 0.52, 0); torso.add(sh); const up = limb(0.064, 0.055, 0.28, U); sh.add(up); up.rotation.set(a1, 0, b1);
+      const el = new T.Group(); el.position.y = -0.28; up.add(el); const fo = limb(0.055, 0.045, 0.26, U); el.add(fo); fo.rotation.x = a2; fo.add(sph(0.045, sf ? P.gearFD : P.skin, 0, -0.27, 0)); };
+    if (o.tube){ arm(1, 1.9, 0.1, -1.7); arm(-1, 0.95, -0.25, -1.1); }
+    else if (o.aim){ arm(1, 1.3, 0.35, -1.25); arm(-1, 1.45, -0.3, -0.55); }
+    else { arm(1, 0.35, 0.18, -1.45); arm(-1, 0.85, -0.3, -1.25); }
+    return g; }
+  // a soft dark ellipse on the ground at (x, z), w x d metres (a soldier's own contact shade)
+  function footShade(g, x, z, w, d){ const m = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({map:aoTex(), color:0x000000, transparent:true, opacity:0.62, depthWrite:false}));
+    m.rotation.x = -Math.PI/2; m.scale.set(w, d, 1); m.position.set(x, 0.012, z); m.renderOrder = -1; g.add(m); }
+  // kind: 'inf' a rifle squad (three riflemen, one walking, one with the radio), 'at' an anti-tank team (two launchers and a rifleman), 'sf' a
+  // special forces team (dark kit: one aiming, two at the ready)
+  function mSquad(kind){ const g = new T.Group();
+    const S0 = kind === 'at' ? [[-0.45, 0.45, 0.12, {tube:true}], [0.62, 0.02, -0.18, {tube:true}], [-0.15, -0.72, 0.25, {radio:true}]]
+      : kind === 'sf' ? [[0.05, 0.55, 0.05, {kit:'sf', aim:true}], [-0.72, -0.1, -0.3, {kit:'sf'}], [0.7, -0.3, 0.35, {kit:'sf', walk:true}]]
+      : [[0.08, 0.58, 0.08, {walk:true}], [-0.76, -0.1, -0.28, {radio:true}], [0.72, -0.36, 0.3, {}]];
+    for (const [x, z, r, o] of S0){ const s0 = mSoldier(o); s0.position.set(x, 0, z); s0.rotation.y = r; g.add(s0); footShade(g, x, z + 0.04, 0.78, 0.62); }
+    return {g, ext:2.4, ppm:64, look:0.85, shade:false}; }
 
   // a modern main battle tank (~9.8 m with the gun): skirted hull, wedge turret with stowage basket, cupola sight, MG, smoke dischargers
   function mTank(){
@@ -720,7 +746,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     for (const sx of [-3.5, 3.5]) g.add(cyZ(0.1, 0.1, 1.4, P.white, sx, H + 0.48, 0.3, 8));
     gear(g, [[0, 3.0], [-1.2, -0.5], [1.2, -0.5]], H);
     return {g, ext:10.0, ppm:12, air:true}; }
-  const MAPB = {sol:mRifleman, hmv:mHmv, truck:mTruck, tank:mTank, ifv:mIfv, art:mArt, mlrs:mMlrs, sam:mSam, frig:() => mShip('frig'), crui:() => mShip('crui'), sub:mSub, carr:mCarr, jet:() => mJet('jet'), int:() => mJet('int'), heli:mHeli, drone:mDrone};
+  const MAPB = {sol:() => mSquad('inf'), sat:() => mSquad('at'), ssf:() => mSquad('sf'), hmv:mHmv, truck:mTruck, tank:mTank, ifv:mIfv, art:mArt, mlrs:mMlrs, sam:mSam, frig:() => mShip('frig'), crui:() => mShip('crui'), sub:mSub, carr:mCarr, jet:() => mJet('jet'), int:() => mJet('int'), heli:mHeli, drone:mDrone};
 
   // ---------- the map atlases: one cell per direction (16, no animation) in a 4 x 4 grid, north-west sun (its shadow falls south-east like the
   // terrain's hillshade) plus soft sky shadows and a soft contact shade under the hull, rendered at twice the size and filtered down. Two levels are
@@ -763,7 +789,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     // shadow ever reaches a cell's edge (the last few per cent of each cell fade to nothing as well: no shadow ends in a straight line)
     const bx0 = new T.Box3().setFromObject(model.g); let RR = 0; for (const x of [bx0.min.x, bx0.max.x]) for (const z of [bx0.min.z, bx0.max.z]) RR = Math.max(RR, Math.hypot(x, z));
     const half = Math.max(model.ext, RR + (sea ? 0.3 : 0.66*Math.max(0, bx0.max.y) + 0.7)), ppm = Math.min(model.ppm*MHI, MZMAX/(2*half)), Z = Math.ceil(half*ppm)*2;
-    if (!sea) contactShade(model, air);
+    if (!sea && model.shade !== false) contactShade(model, air);
     const mats = new Set(); model.g.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.pbr) mats.add(o.material); });
     for (const m of mats){ m.clippingPlanes = sea ? CLIP : []; m.needsUpdate = true; }
     renderer.localClippingEnabled = true; renderer.setSize(Z*SS, Z*SS); const ex0 = renderer.toneMappingExposure; renderer.toneMappingExposure = MEXP; renderer.shadowMap.needsUpdate = true;
@@ -817,7 +843,11 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     const types = Object.keys(META);
     await Promise.all(types.map(async t => { const [b, m] = await Promise.all([loadImg(dir + t + '.png'), loadImg(dir + t + '_m.png')]); const meta = META[t], sc = SZ/BAKE_SZ;
       const mk = im => { const c = document.createElement('canvas'); c.width = Math.round(im.width*sc); c.height = Math.round(im.height*sc); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height); return c; };
-      cache[t] = {base:mk(b), mask:mk(m), dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea}; }));
+      // the sheets are drawn to canvases only when a sprite is first drawn (the map draws its models from the map atlases, U3D.map): 32 sheet
+      // canvases made up front held some 80 MB of canvas memory that nothing drew (and a lost graphics context blanks them: see gfxReset)
+      const A = {dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea, bc:null, mc:null};
+      Object.defineProperty(A, 'base', {get:() => A.bc || (A.bc = mk(b))}); Object.defineProperty(A, 'mask', {get:() => A.mc || (A.mc = mk(m))});
+      cache[t] = A; }));
     return true;
   }
   const mapAt = {}; let mapDir = 'assets/units/';
@@ -853,6 +883,10 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     mapMeta: type => MAPMETA[type] || (mapAt[type] && mapAt[type].m) || null,
     exportMap(type){ if (!mapFn) return null; const A = mapFn(type); return {hi:A.hi.toDataURL('image/webp', 0.88), img:A.mid.toDataURL('image/webp', 0.9), meta:{w:A.w, h:A.h, ox:A.ox, oy:A.oy, ppm:A.ppm, air:A.air, sea:A.sea, bb:A.bb}}; },
     SZ, has: type => !!cache[ALIAS[type] || type], warmup, loadBaked, canRender: () => !!buildFn,
+    // a lost graphics context blanked every canvas: the sheets drawn from the baked pictures are drawn again when next wanted, the tinted and
+    // night copies too; sheets rendered here (no baked pictures) are rendered again
+    gfxReset(){ tinted.clear(); for (const k in shadowSheets) delete shadowSheets[k]; scratch = null;
+      let gone = 0; for (const t in cache){ const a = cache[t]; if ('bc' in a){ a.bc = a.mc = null; } else { delete cache[t]; gone++; } } if (gone && buildFn){ warm = false; warmup(); } },
     exportAtlas(type){ if (!cache[type] && buildFn) buildFn(type); const a = cache[type]; return a ? {base:a.base.toDataURL('image/png'), mask:a.mask.toDataURL('image/png')} : null; },
     // draw a unit sprite centred on (x, y) at on-screen height h; ang in radians (screen space)
     draw(ctx, type, color, x, y, h, ang, frame = 0, night = false){
