@@ -81,6 +81,7 @@ img.ri.wide{width:auto !important}   /* a wide resource picture (electronics): a
 .bld .lv{font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted)}
 .bld .btn{font-size:11.5px; padding:5px 8px; white-space:normal; line-height:1.2; text-align:center; max-width:150px} .bld{grid-template-columns:minmax(0,1fr) auto}
 .bi{--bs:22px; display:inline-block; flex:none; width:var(--bs); height:var(--bs); border-radius:calc(var(--bs)*.18); background:var(--bi) center / 128% no-repeat, radial-gradient(circle at 50% 45%, #46503f, #262d27 72%); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.55); vertical-align:middle; margin:-3px 6px -3px 0; image-rendering:auto}
+.bi.ba{background:var(--bi) center / 96% auto no-repeat, radial-gradient(circle at 50% 45%, #46503f, #262d27 72%)}   /* an angled cut-out (bn-*): whole, not zoomed into */
 .bi.dim{opacity:.5; filter:grayscale(.85)}
 .bl{display:flex; justify-content:flex-end; align-items:center; white-space:nowrap; min-height:22px}
 .bh{display:flex; align-items:center; min-width:0} .bh > span{min-width:0; overflow-wrap:break-word}
@@ -2103,6 +2104,7 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 3px 6px rgba(0,0,0,.4)}
 .cs-ci{background-size:96%; background-position:center 46%}
 .cs-ci.gl{background-size:58px; background-position:center 8px}
+.cs-c .cs-ci.ba{background-size:90% auto; background-position:center 44%}   /* an angled cut-out: whole, over the card's ground */
 .cs-cn{padding:3px 3px 3px; font:700 9.5px/1.15 var(--body); letter-spacing:.03em; color:#0f2229; text-shadow:0 1px 0 rgba(255,255,255,.35);
   background:linear-gradient(180deg, #8ccbea, #7abee0 60%, #6cb1d6); box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
 .cs-lvb{top:3px; right:3px; width:21px; height:21px; clip-path:none; background:#0b0f11; border:1px solid #d5dde0; border-radius:1px; filter:none; box-shadow:0 1px 2px rgba(0,0,0,.5)}
@@ -2154,6 +2156,7 @@ html.reduced .cs-mi.live .cs-mf::after{animation:none}
 /* the BUILD square while something goes up: the building's picture at its target level, the level numeral, the same rising fill */
 .cs-bpic > .cs-bp{position:absolute; inset:0; background:center/cover no-repeat}
 .cs-bpic > .cs-bp.gl{background-size:62% auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.cs-bpic > .cs-bp.ba{background-size:88% auto}   /* (an angled cut-out: whole, on the square's own ground) */
 .cs-bpic > .cs-bl{position:absolute; right:3px; bottom:2px; z-index:1; font:700 11px/1 var(--body); color:#fff; text-shadow:0 1px 2px #000, 0 0 3px #000}
 @media (max-width: 820px){ .cs-mi.tr > .ut{--us:36px} .cs-mi.tr > svg{width:24px; height:24px} .cs-mi.idle::before{width:12px; height:12px} }
 @media (prefers-reduced-motion: reduce){ .cs-mi.live .cs-mf::after{animation:none} }
@@ -3272,13 +3275,13 @@ function lakePath(){ if (G.lakeP !== undefined) return G.lakeP; if (!window.LAKE
 // the map in use changed (rules/map.js useMap: the first map, or a new game or a load on the other one; maps 0 and the nations world's split).
 // What the maps share is handed over, not made twice: the terrain texture with its baked lakes, the land mask, the sea, the lake outlines (land
 // and sea are the same on both). What hangs on provinces is made again: the drawable lines (gap-fill tracks run centre to centre), the lake-side
-// labels, every town's footprint and bakes (a cut province's town has new ground and links), the trays, the seas' label list, the cached layer.
+// labels, every town's footprint and bakes (a cut province's town has new ground and links), the building models' spots, the seas' label list, the cached layer.
 const MAP_SHARE = ['terrain', 'landMask', 'seaTex', 'lakeP', 'lakeBox', 'lakeRing', 'lakesBaked'];
 function mapSwitched(){
   for (const k in MAPS){ const g = MAPS[k]; if (g === G) continue; for (const f of MAP_SHARE){ if (G[f] === undefined && g[f] !== undefined) G[f] = g[f]; else if (g[f] === undefined && G[f] !== undefined) g[f] = G[f]; } }
   worldLines(G);
   if (!booted && !CINFO.size) return;   // (the first map of the page: nothing drawn yet)
-  for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, TRAYC, LDEP, HQ_NEAR, HQ_DIR, STKSLOT, BPICC, RLKIND]) M.clear();
+  for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, LDEP, HQ_NEAR, HQ_DIR, STKSLOT, RLKIND]) M.clear();
   CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; SEAL = null; NAMEC.k = ''; layerKey = ''; geoDirty = true; }
 function bakeLakes(){ if (G.lakesBaked){ if (!G.lakeLab) lakeLabels(); return; } /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
   const T = G.terrain, k = T.width/WORLD_W, g = T.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.lineJoin = 'round';
@@ -5217,13 +5220,28 @@ function tmRoleAdd(R, a){ if (a.fly || a.pos || a.to !== null || (a.path.length 
 function roleOf(p, e){ if (e.r) return e.r; const u = tmUnits(e.list), naval = Object.keys(u).every(t => t === 'lst' || (UNITS[t] && UNITS[t].cls === 'naval'));
   const cls = e.air ? 'a' : G.P[p].sea || naval ? 's' : 'g'; return (e.r = roleStr(cls, e.owner, u, p)); }
 function rolesAt(R, p){ const M = R.get(p); return M ? [...M.values()].map(e => roleOf(p, e)) : []; }
-// your HQ's box beside your capital at its own bearing (css px from the capital's point), or null
+// the room beside your capital that your forces keep clear (css px from the capital's point, at its own bearing: where the HQ stood before the
+// angled pictures; the forces' spots round your capital stay as they were), or null
 function hqBoxPx(p){ const N = S.nations[PLAYER]; if (!N || !N.alive || N.capital !== p || S.owner[p] !== PLAYER) return null;
   const K = 1.6, P0 = G.P[p], R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*2, th = hqBearing(p), ux = Math.cos(th), uy = Math.sin(th);
   const parts = [[9, 0.5, 23, 12], [7, 11.5, 24, 22], [3.5, 22, 27, 29], [9.5, 29, 21.5, 34]].map(r => r.map(v => v*K));
   for (let t = 0; t < 90; t++){ const ix = ux*t - 15*K, iy = uy*t - 25*K; if (!parts.some(q => Math.hypot(Math.max(q[0] + ix, 0, -(q[2] + ix)), Math.max(q[1] + iy, 0, -(q[3] + iy))) < R + 0.5)){ const c = t + 2;
       return [ux*c - 15*K - 3, uy*c - 25*K - 3, ux*c + 15*K + 3, uy*c + 9*K + 3]; } }
   return null; }
+const HQ_DIR = new Map(), HQ_NEAR = new Map();   // (per map: mapSwitched clears them)
+function hqNear(cap){ let L = HQ_NEAR.get(cap); if (L) return L; const P0 = G.P[cap]; L = [];   // the cities and capitals round your capital (the provinces it must not read as belonging to)
+  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (p !== cap && !P.sea && (P.city || isCapital(p)) && Math.hypot(P.x - P0.x, P.y - P0.y) < 260) L.push(p); }
+  HQ_NEAR.set(cap, L); return L; }
+function hqBearing(cap){ const key = PLAYER + '|' + cap; let best = HQ_DIR.get(key); if (best !== undefined) return best;
+  const P0 = G.P[cap], near = hqNear(cap).map(p => G.P[p]);
+  const ZS = [[0.35, 0.5], [0.5, 0.8], [0.7, 1], [0.9, 1.2], [1.2, 1.3], [1.6, 1.3], [2.2, 1], [3, 0.8], [4, 0.6]]; let bs = -Infinity; best = 0;
+  for (let i = 0; i < 24; i++){ const an = i*Math.PI/12, ux = Math.cos(an), uy = Math.sin(an); let sc = 0, ws = 0;
+    for (const [s0, w] of ZS) for (const dp of [26, 40]){ const wx = P0.x + ux*dp/s0, wy = P0.y + uy*dp/s0, c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1;
+      sc += w*(q < 0 || G.P[q].sea ? 0 : q === cap ? 3 : S.owner[q] === PLAYER ? 2.3 : 0.6); ws += w;
+      for (const P of near){ const d = Math.hypot(P.x - wx, P.y - wy)*s0; if (d < 26) sc -= w*1.6*(1 - d/26); } }
+    sc += ws*(0.45*ux*ux - (uy > 0.4 ? 4*(uy - 0.4) : 0));
+    if (sc > bs + 1e-6){ bs = sc; best = an; } }
+  HQ_DIR.set(key, best); return best; }
 const tmFr = (a, b) => { const ox = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), oy = Math.min(a[3], b[3]) - Math.max(a[1], b[1]); if (ox <= 0 || oy <= 0) return 0;
   return ox*oy/Math.max(1e-6, Math.min((a[2] - a[0])*(a[3] - a[1]), (b[2] - b[0])*(b[3] - b[1]))); };
 const TM_WP = {mk:250, nm:300, pnm:300, hq:500, omk:150, onm:150, nm2:40}, TM_WF = {mk:420, nm:800, pnm:420, hq:60, omk:260, onm:380, nm2:160}, TM_MG = {mk:6, nm:5, pnm:3, hq:6, omk:3, onm:3, nm2:3};   // (nm: a city's name, pnm: a countryside province's)   // (TM_MG: css px the models keep from each)
@@ -5739,17 +5757,7 @@ function isWet(wx, wy, th = 128){ if (LMA === null) bakeWet();   // (the coverag
     return (a[r0 + x0]*(1 - u) + a[r0 + x1]*u)*(1 - v) + (a[r1 + x0]*(1 - u) + a[r1 + x1]*u)*v < th; }
   const c0 = worldToCell(wx, wy), p0 = c0 >= 0 ? G.prov[c0] : -1; return p0 < 0 || G.P[p0].sea; }
 const FORM_PX = 46, FIG_PX = 66;   // hexPx thresholds: from FORM_PX the plates sit just above a force's spot and grow a little; FIG_PX: the old close-zoom size
-/* ---------------- Buildings on the map: clean symbols under the city name ----------------
-   From the mid zoom on, a city's (or province's) buildings show as one compact tray of small, original vector symbols under its name:
-   Army Base (factory hall), Arms Industry (cog wheel), Airbase (jet), Naval Yard (anchor), Missile Silo (missile), Fortifications (star fort)
-   and Recruiting Office (helmet), each with level pips (filled up to its level, out of the building's
-   maximum). The tray keeps a fixed screen size like the names, takes the first free spot under or beside the name and is left out rather
-   than cover a name, a unit plate, a control or another city. Construction: the symbol dimmed inside a thin progress arc, its next pip
-   blinking. A level rise pops the symbol with a bright ring. From the play zoom on the pictures take over (see 'Building pictures on the map' below); the tray stays where they do not fit. Each tray is
-   one cached canvas (rebuilt only when its buildings, levels, owner or size change). */
-const TRAY_PX = 18, TRAY_PX2 = 26, TRAY_ANIM = 1200;   // hexPx from which city / countryside trays show; length of the upgrade pop (ms)
-const TRAY_K = ['fac', 'arms', 'air', 'yard', 'silo', 'fort', 'rec'];
-// the symbols, drawn in a 24 x 24 box with the caller's fill (and stroke) colour
+// the building symbols (the city panel's), drawn in a 24 x 24 box with the caller's fill (and stroke) colour
 const BGLYPH = {
   fac(g){ g.fill(new Path2D('M2 21V10.5l5 3.2v-3.2l5 3.2v-3.2l5 3.2V3h3.6v18Z M4.6 16.4h2.2v2.2H4.6Z M9.4 16.4h2.2v2.2H9.4Z M14.2 16.4h2.2v2.2h-2.2Z'), 'evenodd'); },
   air(g){ g.fill(new Path2D('M12 1.4C13 1.4 13.6 2.6 13.6 4V9.2L22.4 14.4V16.8L13.6 14.1V19L16.4 21.1V22.9L12 21.9L7.6 22.9V21.1L10.4 19V14.1L1.6 16.8V14.4L10.4 9.2V4C10.4 2.6 11 1.4 12 1.4Z')); },
@@ -5767,149 +5775,189 @@ const BGLYPH = {
     q.moveTo(16.4, 12); q.arc(12, 12, 4.4, 0, Math.PI*2, true); q.closePath(); g.fill(q, 'evenodd'); g.beginPath(); g.arc(12, 12, 2, 0, Math.PI*2); g.fill(); },
   rec(g){ g.fill(new Path2D('M1.4 12.4L10.4 5.2L19.4 12.4H18V21.6H2.8V12.4Z M8.2 15.4H12.6V21.6H8.2Z M20.4 1.4H21.8V21.6H20.4Z M21.8 1.4L24 2.9L21.8 4.4Z'), 'evenodd'); },   // a barracks with its door and a pennant (not a helmet: it must not read as a unit counter)
 };
-const trayOn = (P, p, hexPx) => hexPx >= (P.city || isCapital(p) ? TRAY_PX : TRAY_PX2);   // buildings and their levels are public: every nation's tray shows, fog or not
-// the tray's buildings: the built ones at their level, plus (your own and your allies' only) the one under construction (c) at its current level (0 for a new one)
-function trayItems(p){ const B = S.bld[p], o = S.owner[p], cons = o >= 0 ? S.cons[p] : null, out = [];
-  for (const k of TRAY_K){ const lv = B[k] || 0, c = cons && cons.k === k ? cons : null; if (lv > 0 || c) out.push({k, lvl:lv, c}); } return out; }
-// glyph size (css px) grows a little with the zoom; cells (glyph + margins), pips and padding follow it. rows: 1, or 2 where a long tray
-// finds no room on one line
-function trayDims(n, hexPx, rows = 1){ const g = Math.round(12 + Math.max(0, Math.min(3, (hexPx - 24)/20))), cwd = g + 3, ph = g >= 14 ? 2.4 : 2, rh = g + 1.5 + ph + 2.5, cols = Math.ceil(n/rows);
-  return {g, cwd, ph, rh, cols, w:cols*cwd + 2, h:Math.ceil(n/cols)*rh + 1.5}; }
-const trayCell = (i, D) => [1 + (i % D.cols)*D.cwd + D.cwd/2, Math.floor(i/D.cols)*D.rh + 2];   // centre x and glyph top of cell i, inside the tray
-// level pips under a symbol: one per level up to the building's maximum, filled up to its level (only >= 0: that one pip, highlighted)
-function trayPips(g, k, lvl, cx, top, D, only = -1, hi = '#fff3cf'){ const M = BUILD[k].max, pw = Math.min(3, (D.g + 1 - (M - 1))/M), x0 = cx - (M*pw + M - 1)/2, y = top + D.g + 1.5;
-  for (let i = 0; i < M; i++){ if (only >= 0 && i !== only) continue; g.fillStyle = only >= 0 ? hi : i < lvl ? '#e9c46a' : 'rgba(241,233,210,.2)'; g.fillRect(x0 + i*(pw + 1), y, pw, D.ph); } }
-const TRAYC = new Map();   // province -> {sig, cv}: the tray (plate, symbols, pips) as one canvas
-function trayCanvas(p, its, D, col){ const sig = D.g + '|' + D.cols + col + dpr + its.map(t => t.k + t.lvl + (t.c ? 'c' : '') + (t.an ? 'a' : '')).join(','), e = TRAYC.get(p); if (e && e.sig === sig) return e.cv;
-  const cv = document.createElement('canvas'); cv.width = Math.ceil(D.w*dpr); cv.height = Math.ceil(D.h*dpr); const g = cv.getContext('2d'); g.scale(dpr, dpr);
-  roundRect(g, 0.5, 0.5, D.w - 1, D.h - 1, 3); g.fillStyle = 'rgba(9,13,15,.86)'; g.fill(); g.lineWidth = 1; g.strokeStyle = rgba(col, 0.8); g.stroke();
-  its.forEach((t, i) => { const [cx, top] = trayCell(i, D);
-    if (!t.an){ const sc = t.c ? 0.7 : 1, gs = D.g*sc; g.save(); g.globalAlpha = t.c ? 0.6 : 1; g.translate(cx - gs/2, top + (D.g - gs)/2); g.scale(gs/24, gs/24); g.fillStyle = g.strokeStyle = '#f1e9d2'; BGLYPH[t.k](g); g.restore(); }   // popping symbols are drawn live
-    trayPips(g, t.k, t.lvl, cx, top, D); });
-  TRAYC.set(p, {sig, cv}); return cv; }
-// place the trays (city ones right after the city names, the countryside ones after the province names): under the placed name, else
-// beside or above it, else around the city's point; a long tray that finds no room tries again on two lines. A spot over a name, a unit
-// plate, a control or a city's point is never taken: with no free spot the tray is left out.
-function placeTrays(trq, boxes, LPL, cityPass, hexPx){ const out = [];
-  const free = r => !bxNear(boxes, r).some(q => !q.pic && q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1]) && !cpNear(r).some(m => m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3]);
-  for (const T of trq){ if (!!T.city !== cityPass || (BPIC_ON.has(T.p) && BPIC_AP >= 1)) continue; const b = LPL.get(T.p);
-    for (const rows of T.items.length >= 3 ? [1, 2] : [1]){ const D = trayDims(T.items.length, hexPx, rows), w = D.w, h = D.h, cand = [];
-      if (b){ const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2; cand.push([cx - w/2, b[3] + 1], [b[0], b[3] + 1], [b[2] - w, b[3] + 1], [b[2] + 3, cy - h/2], [b[0] - 3 - w, cy - h/2], [cx - w/2, b[1] - 1 - h]); }
-      if (T.city) cand.push([T.x - w/2, T.ly], [T.x + T.mr + 3, T.my - h/2], [T.x - T.mr - 3 - w, T.my - h/2], [T.x + T.mr + 3, T.my + 2], [T.x - T.mr - 3 - w, T.my + 2],
-        [T.x + T.mr + 3, T.my - 2 - h], [T.x - T.mr - 3 - w, T.my - 2 - h], [T.x - w/2, T.ly + 16], [T.x - w/2, T.my - T.mr - 3 - h]);
-      else cand.push([T.x - w/2, T.y - h/2], [T.x - w/2, T.y + 6], [T.x - w/2, T.y - 6 - h]);
-      const at = cand.find(([x0, y0]) => free([x0, y0, x0 + w, y0 + h])); if (!at) continue;
-      const r = [at[0], at[1], at[0] + w, at[1] + h]; r.unit = true; r.fort = true; r.bld = true; r.at = -3; boxes.push(r); T.D = D; T.x0 = at[0]; T.y0 = at[1]; out.push(T); break; } }
-  return out; }
-// draw a placed tray: the cached plate, then live: construction arcs and blinking pips, upgrade pops (and the city's own level-up ring)
 // a town's name at night: a wide soft dark halo under its outline, so it keeps its contrast over the warm glow of the lit core
 function labNight(L, lx, ly){ if (!(L.city || L.cap) || !cityLightsOn() || view.s*HS0 < 12) return; const nf = Math.max(0, Math.min(1, (-sunSinEl(L.p) + 0.01)/0.13)); if (nf <= 0) return;
   ctx.globalAlpha = L.a*0.4*nf; ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(12,8,4,.9)'; ctx.strokeText(L.t, lx, ly); ctx.lineWidth = 5; ctx.strokeText(L.t, lx, ly); }
-function drawTray(T, now, hexPx, kl){ const {p, items, D} = T, X = Math.round(T.x0*dpr)/dpr, Y = Math.round(T.y0*dpr)/dpr, a0 = Math.max(0, Math.min(1, (hexPx - (T.city ? TRAY_PX : TRAY_PX2))/3 + 0.25))*(BPIC_ON.has(p) ? 1 - BPIC_AP : 1);   // (the pictures take over from the tray as the map zooms in)
-  for (const t of items){ const r = bLevel(p + ':' + t.k, t.lvl, now); let f = r.t0 ? (now - r.t0)/TRAY_ANIM : -1; if (f >= 1){ r.t0 = 0; f = -1; } t.f = f; t.an = f >= 0; t.r = r; if (t.an) animFast(); }
-  if (!BPIC_ON.has(p)) cityRing(T, now, a0, kl);
-  ctx.globalAlpha = a0; ctx.drawImage(trayCanvas(p, items, D, T.col), X, Y, D.w, D.h);
-  items.forEach((t, i) => { const [cx0, top] = trayCell(i, D), cx = X + cx0, cy = Y + top + D.g/2;
-    if (t.c){ const pf = Math.max(0, Math.min(1, 1 - t.c.h/Math.max(1, t.c.h0))), R = D.g*0.5 + 0.6;
-      ctx.lineWidth = 2.4; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
-      ctx.lineWidth = 1.3; ctx.strokeStyle = '#eaa83c'; ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI/2, -Math.PI/2 + Math.max(0.05, pf)*Math.PI*2); ctx.stroke();
-      if (!afxReduced()) animAmb(); ctx.save(); ctx.globalAlpha = a0*(afxReduced() ? 0.85 : 0.5 + 0.45*Math.sin(now/210)); ctx.translate(X, Y); trayPips(ctx, t.k, 0, cx0, top, D, t.c.lvl - 1, '#eaa83c'); ctx.restore(); }   // the level being built blinks
-    if (t.an){ const f = t.f, e = easeOut(f), sc = f < 0.3 ? 1 + 0.5*easeOut(f/0.3) : 1.5 - 0.5*easeOut((f - 0.3)/0.7), gs = D.g*sc;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*0.75*(1 - f); ctx.drawImage(GLOW(), cx - D.g*1.4, cy - D.g*1.4, D.g*2.8, D.g*2.8);
-      ctx.globalAlpha = a0*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, D.g*(0.6 + 1.2*e), 0, Math.PI*2); ctx.stroke(); ctx.restore();
-      ctx.save(); ctx.globalAlpha = a0; ctx.translate(cx - gs/2, cy - gs/2); ctx.scale(gs/24, gs/24); ctx.fillStyle = ctx.strokeStyle = f < 0.45 ? '#fff8e4' : '#f1e9d2'; BGLYPH[t.k](ctx); ctx.restore();
-      ctx.save(); ctx.globalAlpha = a0*(1 - f); ctx.translate(X, Y); trayPips(ctx, t.k, 0, cx0, top, D, t.lvl - 1); ctx.restore();   // the new pip flashes white
-      if (t.r.fresh){ t.r.fresh = false; const [wx, wy] = screenToWorld(cx, cy), sp0 = D.g*1.6/Math.max(0.3, view.s);
-        for (let n = 0; n < 6; n++) emit('spark', wx, wy, {vx:(Math.random() - 0.5)*sp0*2.4, vy:-(sp0*(0.7 + Math.random())), s0:2.2, s1:0.5, life:450 + Math.random()*300}); } } });
-  ctx.globalAlpha = 1; }
-/* ---------------- Building pictures on the map ----------------
-   From the play zoom on, every building of a city (or province) shows as its own level picture (the Higgsfield tile of its level: b-<art>-<level>) in a
-   small framed cluster just under the city's name: a neat row, or two rows for a long list. Pictures are set into rounded tiles with a soft shadow, an
-   owner-colour rim and level pips, so the round and square tiles read as one set. The cluster is world-anchored like the names (it keeps its spot and grows with
-   the map, between a minimum and a maximum size on screen) and takes the first free spot (under the name, beside it, above it, round the city's point); it
-   never covers a name, a plate's core, a troop model, a control or another city's point, and gives way over the soft padding of a counter only when there
-   is no better spot (it is drawn under the counters). With no room it stays a tray of symbols. Between BPIC_PX0 and BPIC_PX1 the tray and the pictures
-   cross-fade. A picture that has not loaded yet is asked for (the existing lazy building art) and shows its drawn symbol in the same tile until it arrives.
-   A rise of a level crossfades the old picture into the new one with a pop and a ring. Construction (yours and your allies' only: the tray's rule) shows the
-   target level faintly with a small progress ring. Each cluster is one cached canvas per size band (rebuilt only when its buildings, levels, owner, art or band change). */
-const BPIC_PX0 = 19, BPIC_PX1 = 25;   // hexPx: the pictures fade in over this band (the tray fades out); below it only the tray shows
-const BPIC_BANDS = [18, 22, 26, 32, 38, 46, 54];   // tile sizes (css px) a cluster is cached at; it is drawn scaled by size/band (never up by more than a step)
-const bpicA = hexPx => Math.max(0, Math.min(1, (hexPx - BPIC_PX0)/(BPIC_PX1 - BPIC_PX0)));
-const bpicPx = hexPx => Math.max(18, Math.min(54, hexPx*0.9));
-const bpicBand = px => BPIC_BANDS.find(b => b >= px - 0.01) || BPIC_BANDS[BPIC_BANDS.length - 1];
-let BPIC_ON = new Set(), BPIC_AP = 0; /*@TEST*/const BPIC_DBG = new Map();/*@ENDTEST*/   // provinces whose cluster is placed this frame, and the pictures' fade (trays of placed ones fade out as it rises)
-const BPIC_GAP = 0.08;
-function bpicLay(n, px, cols){ const gap = px*BPIC_GAP, rows = Math.ceil(n/cols); return {px, gap, cols, rows, w:cols*px + (cols - 1)*gap, h:rows*px + (rows - 1)*gap}; }
-function bpicCell(i, n, L){ const r = Math.floor(i/L.cols), inRow = r === L.rows - 1 ? n - r*L.cols : L.cols; return [(L.cols - inRow)*(L.px + L.gap)/2 + (i - r*L.cols)*(L.px + L.gap), r*(L.px + L.gap)]; }
-// one picture tile (level lvl of building k) with its shadow, rim and pips at (x, y), size sz; dim: under construction
-function bpicTile(g, k, lvl, x, y, sz, col, dim){ const n = BART[k] ? bartName(k, lvl) : '', im = n ? ART.img(n) : null, r = sz*0.2;
-  if (n && !im && !ART.failed(n)) ART.want(n);
-  g.save(); if (dim) g.globalAlpha *= 0.5;
-  g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = sz*0.2; g.shadowOffsetY = sz*0.07; roundRect(g, x, y, sz, sz, r); g.fillStyle = '#161d1f'; g.fill(); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
-  g.save(); roundRect(g, x, y, sz, sz, r); g.clip();
-  if (im){ const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height, c0 = iw*0.03; g.imageSmoothingQuality = 'high'; g.drawImage(im, c0, c0*ih/iw, iw - 2*c0, ih - 2*c0*ih/iw, x, y, sz, sz); }
-  else { const gs = sz*0.62; g.translate(x + (sz - gs)/2, y + (sz - gs)/2 - sz*0.04); g.scale(gs/24, gs/24); g.fillStyle = g.strokeStyle = '#f1e9d2'; if (BGLYPH[k]) BGLYPH[k](g); }
-  g.restore();
-  roundRect(g, x + 0.5, y + 0.5, sz - 1, sz - 1, r); g.lineWidth = Math.max(1.2, sz*0.045); g.strokeStyle = rgba(col, 0.92); g.stroke();
-  const M = BUILD[k].max; if (M > 1 && !dim){ const pw = Math.max(2, Math.min(5, (sz*0.62 - (M - 1))/M)), tw = M*pw + (M - 1), py = y + sz - Math.max(3, sz*0.13) - 1, ph = Math.max(2, sz*0.075);
-    roundRect(g, x + (sz - tw)/2 - 2, py - 1.5, tw + 4, ph + 3, 2); g.fillStyle = 'rgba(8,12,14,.78)'; g.fill();
-    for (let i = 0; i < M; i++){ g.fillStyle = i < lvl ? '#e9c46a' : 'rgba(241,233,210,.28)'; g.fillRect(x + (sz - tw)/2 + i*(pw + 1), py, pw, ph); } }
-  g.restore(); }
-const BPICC = new Map();   // province -> {sig, cv}: the cluster (tiles, shadows, pips) as one canvas at a band size
-function bpicCanvas(p, its, B, cols, col){ const n = its.length, sig = B + '|' + cols + col + dpr + its.map(t => t.k + t.lvl + (t.c ? 'c' + t.c.lvl : '') + (t.an ? 'a' : '') + (BART[t.k] && ART.ready(bartName(t.k, t.c ? t.c.lvl : t.lvl)) ? 'r' : '')).join(','), e = BPICC.get(p);
-  if (e && e.sig === sig){ BPICC.delete(p); BPICC.set(p, e); return e.cv; }
-  const L = bpicLay(n, B, cols), pad = Math.ceil(B*0.3), cv = document.createElement('canvas'); cv.width = Math.ceil((L.w + 2*pad)*dpr); cv.height = Math.ceil((L.h + 2*pad)*dpr); const g = cv.getContext('2d'); g.scale(dpr, dpr);
-  its.forEach((t, i) => { if (t.an) return; const [cx, cy] = bpicCell(i, n, L); bpicTile(g, t.k, t.c ? t.c.lvl : t.lvl, pad + cx, pad + cy, B, col, !!t.c); });
-  BPICC.set(p, {sig, cv}); if (BPICC.size > 160) BPICC.delete(BPICC.keys().next().value); return cv; }
-// place the clusters of the provinces of this pass (city or countryside). Returns the placed ones; fills BPIC_ON.
-function placePics(trq, boxes, LPL, cityPass, hexPx){ const out = [], a = bpicA(hexPx); BPIC_AP = a; if (a <= 0) return out;
-  const px = bpicPx(hexPx), hard = (q, r) => { if (!(q[0] < r[2] && q[2] > r[0] && q[1] < r[3] && q[3] > r[1])) return false; if (q.bld && !q.pic) return false; if (q.pic) return true; if (!q.unit || q.hud || q.tag) return true;
-      const ov = m => m[0] < r[2] && m[2] > r[0] && m[1] < r[3] && m[3] > r[1]; return (q.core && ov(q.core)) || (q.fmb && q.fmb.some(ov)) || (q.ic && q.ic.some(ov)); },
-    soft = r => { let s = 0; for (const q of bxNear(boxes, r)){ if (q.bld && !q.pic) continue; const ox = Math.min(r[2], q[2]) - Math.max(r[0], q[0]), oy = Math.min(r[3], q[3]) - Math.max(r[1], q[1]); if (ox > 0 && oy > 0) s += ox*oy; } return s; };
-  for (const T of trq.slice().sort((u, v) => v.pri - u.pri)){ if (!!T.city !== cityPass) continue; const n = T.items.length, b = LPL.get(T.p); let best = null, bs = Infinity;
-    const opts = n <= 3 ? [n] : n === 4 ? [4, 2] : [Math.ceil(n/2), Math.ceil(n/3)];
-    // the full size first, then smaller ones where the city is crowded; for each size the layouts, and for each layout the spots in order of preference
-    scan: for (const sc of [1, 0.8, 0.64]){ const ppx = Math.max(15, px*sc); if (sc < 1 && ppx >= px - 0.5) continue;
-      for (const cols of opts){ const L = bpicLay(n, ppx, cols), w = L.w, h = L.h, cand = [];
-        if (T.city){ if (b){ const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2; cand.push([cx - w/2, b[3] + 1], [b[0], b[3] + 1], [b[2] - w, b[3] + 1], [b[2] + 3, cy - h/2], [b[0] - 3 - w, cy - h/2], [cx - w/2, b[1] - 2 - h]); }
-          cand.push([T.x - w/2, T.ly], [T.x + T.mr + 4, T.my - h/2], [T.x - T.mr - 4 - w, T.my - h/2], [T.x - w/2, T.my - T.mr - 4 - h]);
-          const by = b ? b[3] + 1 : T.ly, bx = b ? (b[0] + b[2])/2 - w/2 : T.x - w/2;   // further out: under the first spot, then to its sides
-          for (const [dx, dy] of [[0, 0.62], [0.75, 0], [-0.75, 0], [0.75, 0.62], [-0.75, 0.62], [0, 1.24], [1.5, 0], [-1.5, 0], [0, -1.4]]) cand.push([bx + dx*w, by + dy*h]); }
-        else cand.push([T.x - w/2, T.y - h/2], [T.x - w/2, T.y + 6], [T.x - w/2, T.y - 6 - h], [T.x + 6, T.y - h/2], [T.x - 6 - w, T.y - h/2]);
-        for (const [x0, y0] of cand){ const r = [x0 - 3, y0 - 3, x0 + w + 3, y0 + h + 3]; if (r[0] < 2 || r[2] > cw - 2 || r[1] < 2 || r[3] > ch - 2) continue;
-          if (bxNear(boxes, r).some(q => hard(q, r)) || cpNear(r).some(m => m.p !== T.p && m.x + m.r > r[0] && m.x - m.r < r[2] && m.y + m.r > r[1] && m.y - m.r < r[3])) continue;
-          { const ddx = Math.max(r[0] - T.x, 0, T.x - r[2]), ddy = Math.max(r[1] - T.my, 0, T.my - r[3]); if (Math.hypot(ddx, ddy) > Math.max(30, ppx*1.5) + 12) continue; }   // (a cluster stays beside its own city: it must not read as another city's)
-          if (T.city && cpNear(r).some(m => m.p === T.p && m.x + m.r*0.6 > r[0] && m.x - m.r*0.6 < r[2] && m.y + m.r*0.6 > r[1] && m.y - m.r*0.6 < r[3])) continue;   // (the city's own point stays clear)
-          const s = soft(r) + (sc < 1 ? 30 : 0) + (cols === opts[0] ? 0 : 20); if (s < bs){ bs = s; best = {x0, y0, L, cols, r}; } if (!s) break scan; }
-        if (best && bs < 20) break scan; } }
-    if (!best) continue; const r = [best.r[0] + 2, best.r[1] + 2, best.r[2] - 2, best.r[3] - 2]; r.fort = true; r.bld = true; r.pic = true; r.at = -3; boxes.push(r);
-    T.pic = {x0:best.x0, y0:best.y0, L:best.L, cols:best.cols}; BPIC_ON.add(T.p); out.push(T); }
-  return out; }
-// the city's own level-up glow and ring (once, whichever of tray or pictures is shown)
+// the city's own level-up glow and ring (at a city with buildings, from the mid zoom)
 function cityRing(T, now, a0, kl){ const {p} = T; if (!T.city) return; const r = bLevel(p + ':city', cityLevel(p), now); let f = r.t0 ? (now - r.t0)/(TRAY_ANIM*1.4) : -1; if (f >= 1){ r.t0 = 0; f = -1; } if (f >= 0) animFast();
   if (f >= 0){ const e = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*0.5*(1 - f); ctx.drawImage(GLOW(), T.x - 16*kl, T.my - 16*kl, 32*kl, 32*kl);
     ctx.globalAlpha = a0*(1 - f)*(1 - f); ctx.lineWidth = 1.5 + 1.5*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(T.x, T.my, (6 + 20*e)*kl, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
-function drawPics(T, now, hexPx, kl){ const {p, items} = T, {x0, y0, L, cols} = T.pic, a = bpicA(hexPx)*(T.city ? 1 : Math.max(0, Math.min(1, (hexPx - TRAY_PX2)/3 + 0.25))), px = L.px, n = items.length, B = bpicBand(px), f0 = px/B, X = Math.round(x0*dpr)/dpr, Y = Math.round(y0*dpr)/dpr, pad = Math.ceil(B*0.3)*f0;
-  for (const t of items){ const r = bLevel(p + ':' + t.k, t.lvl, now); let f = r.t0 ? (now - r.t0)/TRAY_ANIM : -1; if (f >= 1){ r.t0 = 0; f = -1; } t.f = f; t.an = f >= 0; t.r = r; if (t.an) animFast(); }
-  cityRing(T, now, a, kl);
-  if (T.city){ const qx = Math.max(X, Math.min(T.x, X + L.w)), qy = Math.max(Y, Math.min(T.my, Y + L.h)), dd = Math.hypot(qx - T.x, qy - T.my);   // a cluster that had to stand off its city is tied to it by a thin leader line
-    if (dd > Math.max(26, px*0.7)){ const u = (T.mr + 3)/dd; ctx.save(); ctx.globalAlpha = a*0.8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(T.x + (qx - T.x)*u, T.my + (qy - T.my)*u); ctx.lineTo(qx, qy); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,7,9,.5)'; ctx.stroke(); ctx.lineWidth = 1.3; ctx.strokeStyle = rgba(T.col, 0.95); ctx.stroke(); ctx.restore(); } }
-  const cv = bpicCanvas(p, items, B, cols, T.col); ctx.globalAlpha = a; ctx.drawImage(cv, X - pad, Y - pad, cv.width/dpr*f0, cv.height/dpr*f0);
-  items.forEach((t, i) => { const [cx0, cy0] = bpicCell(i, n, L), cx = X + cx0 + px/2, cy = Y + cy0 + px/2;
-    if (t.c){ const pf = Math.max(0, Math.min(1, 1 - t.c.h/Math.max(1, t.c.h0))), R = Math.max(4.5, px*0.17), rx = X + cx0 + px - R*0.9, ry = Y + cy0 + R*0.9;   // a small progress ring in the tile's corner
-      ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(rx, ry, R + 1.2, 0, Math.PI*2); ctx.fillStyle = 'rgba(8,12,14,.85)'; ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(241,233,210,.25)'; ctx.beginPath(); ctx.arc(rx, ry, R - 0.5, 0, Math.PI*2); ctx.stroke();
-      ctx.strokeStyle = '#eaa83c'; ctx.beginPath(); ctx.arc(rx, ry, R - 0.5, -Math.PI/2, -Math.PI/2 + Math.max(0.06, pf)*Math.PI*2); ctx.stroke(); }
-    if (t.an){ const f = t.f, e = easeOut(f), sc = f < 0.3 ? 1 + 0.16*easeOut(f/0.3) : 1.16 - 0.16*easeOut((f - 0.3)/0.7), sz = px*sc, tx = cx - sz/2, ty = cy - sz/2;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a*0.7*(1 - f); ctx.drawImage(GLOW(), cx - px*1.2, cy - px*1.2, px*2.4, px*2.4);
-      ctx.globalAlpha = a*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, px*(0.55 + 0.9*e), 0, Math.PI*2); ctx.stroke(); ctx.restore();
-      ctx.save(); ctx.globalAlpha = a; bpicTile(ctx, t.k, Math.max(1, t.r.from), tx, ty, sz, T.col, false); ctx.globalAlpha = a*Math.min(1, f/0.45); bpicTile(ctx, t.k, t.lvl, tx, ty, sz, T.col, false); ctx.restore();   // the old picture dissolves into the new one
-      if (t.r.fresh){ t.r.fresh = false; const [wx, wy] = screenToWorld(cx, cy), sp0 = px*0.8/Math.max(0.3, view.s);
-        for (let q = 0; q < 6; q++) emit('spark', wx, wy, {vx:(Math.random() - 0.5)*sp0*2.4, vy:-(sp0*(0.7 + Math.random())), s0:2.2, s1:0.5, life:450 + Math.random()*300}); } } });
-  ctx.globalAlpha = 1; }
+/* ---------------- Buildings on the map: the angled building pictures at their city ----------------
+   Every building stands at its own city (or province) as a small cut-out of the owner's angled pictures (assets/art/bn-<key>-<level>.webp, cut from
+   assets/art-src/ba-*.png by tools/cutout-angled.py: background removed, own cast shadow kept as a soft dark layer, cropped tight; BNMETA holds each
+   picture's size, ground anchor, the HQ flagpole tops and the Naval Yard's pier side). No frame, tile, badge or level number: the level shows only in
+   the city panel, on the map it is the picture itself (a bigger, more built-up base per level). A capital carries its headquarters in its nation's
+   architectural style (nations.js 'hq', by its country; bnHqStyle), standing exactly on the capital's point. Zoomed out (below BN_IN0) no building
+   shows, only the city's name; from the mid zoom one picture per city, its most important building with a picture (HQ, Missile Silo, Airbase, Naval
+   Yard, Army Base, Arms Industry, Recruiting Office, Fortifications; Army Base, Missile Silo and Arms Industry have no angled picture yet and show none),
+   standing on the city's point; from BN_ALL0 the rest fade in round it in a tight cluster, behind and beside it (the name stays clear below). The Naval
+   Yard stands on the real shore next to its city (bnShore: the nearest water from the city point), mirrored when the sea lies to the left so its
+   piers (to the lower right in the pictures) face the sea. Every spot is a world point (the city's point plus an offset worked out once from its
+   buildings: bnLayout), drawn through toScreen every frame, so nothing slides as the map zooms or pans, across the wrap seam too. Sizes follow the
+   map like the troop models between a floor (the mid zoom picture can be seen) and a cap, and never reach a neighbouring city. Construction, shown
+   for every nation: a new building is its construction site (the level I picture pale and see-through, a tower crane and a progress ring), a
+   building raising its level carries the crane at its side and the ring. A level rise flashes a ring (not with reduced motion or the battery saver).
+   Drawn under the troop models, the counters and the names; only provinces on screen; each picture is made once at about its drawn size (BNC, dropped with
+   the graphics, gfxReset). A tap on a picture opens its city (never over a unit badge: tap() asks hitAt and coreAt first). Fog: buildings are public. */
+const BN_K = ['silo', 'air', 'yard', 'fac', 'arms', 'rec', 'fort'];   // the buildings in order of importance (after the HQ)
+const BN_ART = {air:5, rec:5, yard:5, fort:3};   // the buildings with angled pictures (game levels); Fortifications levels I-III use pictures 1, 3 and 5
+const BN_IN0 = 20, BN_IN1 = 26, BN_ALL0 = 50, BN_ALL1 = 62, TRAY_ANIM = 1200;   // hexPx: the main picture fades in over IN0..IN1, the rest over ALL0..ALL1; a level pop (ms)
+const BN_HMIN = 72, BN_HMAX = 176, BN_K0 = 0.62;   // a picture's long side is BN_K0*hexPx css px between hexPx BN_HMIN and BN_HMAX (so it grows with the map), with a soft floor below
+const BN_WPX = BN_K0*HS0;   // ... which is BN_WPX world px (times the picture's own factor: bnF) wherever it grows with the map
+const BN_STYLES = ['western', 'eastern-europe', 'middle-east', 'east-asia', 'south-asia', 'africa', 'latin-america'];
+// each picture's size (px), ground anchor and top of the building (fractions), HQ flagpole tops [x, y, pole length] (fractions; the flags are to be drawn on them)
+// and the Naval Yard's pier side: written by tools/cutout-angled.py --embed
+const BNMETA = {"bn-air-1":{"ax":0.5626,"ay":0.6612,"h":158,"top":0.0036,"w":256},"bn-air-2":{"ax":0.5378,"ay":0.6972,"h":161,"top":0.0034,"w":256},"bn-air-3":{"ax":0.5742,"ay":0.7471,"h":183,"top":0.0029,"w":256},"bn-air-4":{"ax":0.5829,"ay":0.7016,"h":192,"top":0.0026,"w":256},"bn-air-5":{"ax":0.5521,"ay":0.6604,"h":175,"top":0.0029,"w":256},"bn-fort-1":{"ax":0.5875,"ay":0.65,"h":165,"top":0.005,"w":256},"bn-fort-2":{"ax":0.5209,"ay":0.612,"h":178,"top":0.0051,"w":256},"bn-fort-3":{"ax":0.5184,"ay":0.6124,"h":171,"top":0.003,"w":256},"bn-fort-4":{"ax":0.5115,"ay":0.6484,"h":172,"top":0.0044,"w":256},"bn-fort-5":{"ax":0.5001,"ay":0.6515,"h":181,"top":0.0028,"w":256},"bn-hospital-1":{"ax":0.4488,"ay":0.665,"h":178,"top":0.0046,"w":256},"bn-hospital-2":{"ax":0.5263,"ay":0.6319,"h":158,"top":0.0048,"w":256},"bn-hospital-3":{"ax":0.5152,"ay":0.6756,"h":248,"top":0.003,"w":256},"bn-hospital-4":{"ax":0.5031,"ay":0.6434,"h":201,"top":0.0037,"w":256},"bn-hospital-5":{"ax":0.4926,"ay":0.7379,"h":204,"top":0.0025,"w":256},"bn-hq-africa":{"ax":0.4631,"ay":0.6541,"flags":[[0.0093,0.5061,0.1816],[0.0357,0.5286,0.1816],[0.0621,0.5531,0.1816],[0.0884,0.5776,0.1796],[0.2668,0.7469,0.1776],[0.2924,0.7714,0.1776],[0.3195,0.7959,0.1755],[0.3459,0.8204,0.1755]],"h":179,"top":0.0061,"w":256},"bn-hq-east-asia":{"ax":0.445,"ay":0.6655,"flags":[[0.009,0.5425,0.1682],[0.0345,0.5633,0.1682],[0.06,0.586,0.1682],[0.0855,0.6087,0.1664],[0.2579,0.7675,0.1645],[0.2828,0.7902,0.1626],[0.3083,0.7996,0.1739],[0.3345,0.8318,0.1645]],"h":187,"top":0.0038,"w":256},"bn-hq-eastern-europe":{"ax":0.4028,"ay":0.7249,"flags":[[0.0086,0.6248,0.138],[0.0329,0.6419,0.138],[0.0573,0.6605,0.138],[0.0817,0.6791,0.1364],[0.2464,0.8078,0.1364],[0.2701,0.8264,0.1349],[0.2951,0.845,0.1333],[0.3195,0.862,0.1349]],"h":218,"top":0.0047,"w":256},"bn-hq-latin-america":{"ax":0.4529,"ay":0.6713,"flags":[[0.0093,0.5527,0.1645],[0.0356,0.5749,0.1627],[0.062,0.5952,0.1645],[0.0883,0.6174,0.1627],[0.2664,0.7708,0.1627],[0.292,0.793,0.1608],[0.3184,0.8152,0.159],[0.3454,0.8355,0.1608]],"h":197,"top":0.0037,"w":256},"bn-hq-middle-east":{"ax":0.4649,"ay":0.6629,"flags":[[0.0093,0.5236,0.1752],[0.0357,0.5453,0.1752],[0.0621,0.5689,0.1752],[0.0884,0.5925,0.1732],[0.2668,0.7559,0.1732],[0.2924,0.7795,0.1713],[0.3188,0.8031,0.1693],[0.3459,0.8248,0.1713]],"h":186,"top":0.0039,"w":256},"bn-hq-south-asia":{"ax":0.4422,"ay":0.6756,"flags":[[0.0089,0.5468,0.1667],[0.0341,0.5674,0.1667],[0.0593,0.5899,0.1667],[0.0846,0.6124,0.1648],[0.2551,0.7678,0.1648],[0.2797,0.7921,0.161],[0.3056,0.8127,0.161],[0.3308,0.8333,0.1629]],"h":186,"top":0.0056,"w":256},"bn-hq-western":{"ax":0.4603,"ay":0.6778,"flags":[[0.0093,0.5527,0.1645],[0.0357,0.573,0.1645],[0.0621,0.5952,0.1645],[0.0884,0.6174,0.1627],[0.2668,0.7708,0.1627],[0.2924,0.7948,0.159],[0.3195,0.817,0.1571],[0.3459,0.8355,0.1608]],"h":198,"top":0.0055,"w":256},"bn-rec-1":{"ax":0.4877,"ay":0.6607,"h":205,"top":0.004,"w":256},"bn-rec-2":{"ax":0.5413,"ay":0.6419,"h":184,"top":0.0028,"w":256},"bn-rec-3":{"ax":0.5052,"ay":0.6287,"h":176,"top":0.003,"w":256},"bn-rec-4":{"ax":0.4761,"ay":0.5894,"h":214,"top":0.0035,"w":256},"bn-rec-5":{"ax":0.4815,"ay":0.6502,"h":196,"top":0.0025,"w":256},"bn-yard-1":{"ax":0.4514,"ay":0.6268,"h":200,"piers":"right","top":0.0026,"w":256},"bn-yard-2":{"ax":0.4718,"ay":0.5902,"h":172,"piers":"right","top":0.0031,"w":256},"bn-yard-3":{"ax":0.4397,"ay":0.5802,"h":174,"piers":"right","top":0.0032,"w":256},"bn-yard-4":{"ax":0.4566,"ay":0.5906,"h":181,"piers":"right","top":0.0017,"w":256},"bn-yard-5":{"ax":0.4629,"ay":0.6494,"h":170,"piers":"right","top":0.0035,"w":256}};
+const bnA = h => smooth01((h - BN_IN0)/(BN_IN1 - BN_IN0)), bnB = h => smooth01((h - BN_ALL0)/(BN_ALL1 - BN_ALL0));
+const bnL = h => h >= BN_HMIN ? Math.min(h, BN_HMAX)*BN_K0 : BN_HMIN*BN_K0*Math.pow(h/BN_HMIN, 0.35);   // css px of a picture's long side (factor 1) at hexPx h
+// a building's picture name at a game level (null: no angled picture); the HQ by style
+const bnName = (k, lv) => k === 'hq' ? 'bn-hq-' + lv : BN_ART[k] ? `bn-${k}-${k === 'fort' ? [1, 3, 5][Math.max(1, Math.min(3, lv)) - 1] : Math.max(1, Math.min(5, lv))}` : null;
+// a picture's size factor: level I a little smaller than level V, the HQ a bit bigger; a single Recruiting Office building smaller than its compounds
+const bnF = (k, lv) => k === 'hq' ? 1.08 : (k === 'rec' && lv <= 1 ? 0.66 : k === 'fort' ? 0.74 + 0.1*(lv - 1) : 0.8 + 0.065*(Math.max(1, Math.min(5, lv)) - 1));
+// the capital HQ style of a nation: its country's in nations.js (the classic world's powers are all there by country), else by region
+const BN_HQ = new Map(); const BN_REG = {'Europe':'western', 'Americas':'latin-america', 'Middle East':'middle-east', 'Africa':'africa', 'Asia':'east-asia', 'Oceania':'western'};
+function bnHqStyle(n){ const N = S.nations[n]; if (!N) return 'western'; let st = BN_HQ.get(N.name + '|' + N.country); if (st) return st;
+  const L = window.NATIONS && NATIONS.nations || [], e = L.find(q => q.country === N.country) || L.find(q => q.name === N.name);
+  st = e && BN_STYLES.includes(e.hq) ? e.hq : e && BN_REG[e.region] || 'western'; BN_HQ.set(N.name + '|' + N.country, st); return st; }
+let BNL = new Map(), BNSH = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0, BNP = null; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
+// a province's buildings that have a picture, the most important first: {k, lv, nm (picture), c (its construction), site (a new one)}
+function bnItems(p){ const B = S.bld[p], o = S.owner[p], c = o >= 0 ? S.cons[p] : null, out = [], N = o >= 0 ? S.nations[o] : null;
+  if (N && N.alive && N.capital === p) out.push({k:'hq', lv:1, nm:bnName('hq', bnHqStyle(o)), c:null, site:false});
+  for (const k of BN_K){ const lv = Math.min(B[k] || 0, BUILD[k].max), cc = c && c.k === k ? c : null; if (lv > 0 && BN_ART[k]) out.push({k, lv, nm:bnName(k, lv), c:cc, site:false}); }
+  if (c && BN_ART[c.k] && !(B[c.k] > 0)) out.push({k:c.k, lv:1, nm:bnName(c.k, 1), c, site:true});   // a new building: its construction site, after the finished ones
+  return out; }
+const bnHas = (p, caps) => { if (caps.has(p)) return true; const B = S.bld[p], c = S.cons[p]; if (c && BN_ART[c.k]) return true; for (const k in BN_ART) if (B[k] > 0) return true; return false; };
+// world half-distance to the nearest other city or capital (a picture never reaches it), once per map
+function bnNear(p, cheap){ if (BNL_G !== G) bnReset(); let d = BNND.get(p); if (d != null) return d; if (cheap && BN_NEW-- <= 0) return null; const P = G.P[p]; d = 1e9;
+  for (const Q of G.P){ if (Q === P || Q.sea || !Q.city) continue; const dx = Q.x - P.x, dy = Q.y - P.y; if (Math.abs(dx) < d*2 && Math.abs(dy) < d*2) d = Math.min(d, Math.hypot(dx, dy)/2); }
+  BNND.set(p, d); return d; }
+function bnReset(){ BNL.clear(); BNSH.clear(); BNND.clear(); BNL_G = G; }
+// the Naval Yard's spots on the shore next to its city: along rays every 7.5 degrees from the city's point, the first water (out to BN_SHORE world px)
+// and the last dry point before it, a step inland; nearest first. mir: the water lies to the left, so the picture is mirrored and its piers (to the
+// lower right in the pictures) point to it. bnLayout takes the nearest spot that leaves the city's point (its HQ or main building) clear
+const BN_SHORE = 40, BN_FARYARD = 18;
+function bnShore(p){ if (BNL_G !== G) bnReset(); let E = BNSH.get(p); if (E) return E; const P = G.P[p], wet = (x, y) => isWet(x, y) && isWet(x + 1.5, y) && isWet(x - 1.5, y) && isWet(x, y + 1.5) && isWet(x, y - 1.5);
+  E = []; const E2 = [];   // (E2: rays from a city point that is itself on the water's edge)
+  for (let i = 0; i < 48; i++){ const a = i/48*Math.PI*2, ux = Math.cos(a), uy = Math.sin(a); let r = 0;
+    for (r = 1; r <= BN_SHORE; r += 0.75) if (wet(P.x + ux*r, P.y + uy*r)) break;
+    if (r > BN_SHORE) continue; let t = r; while (t > 0 && isWet(P.x + ux*t, P.y + uy*t)) t -= 0.25;   // (back to the land's edge)
+    const t0 = Math.max(0, t - 1), c = {dx:ux*t0, dy:uy*t0, mir:ux < -0.05, sea:[+ux.toFixed(3), +uy.toFixed(3)], r:+r.toFixed(2), d:t0};
+    (t <= 0 && isWet(P.x, P.y) ? E2 : E).push(c); }
+  if (!E.length) E.push(...E2); E.sort((a, b) => a.r - b.r || a.d - b.d);
+  // a port on a big river with the sea far off (Hamburg on the Elbe): the yard stands on the river's bank, on the city's side, its piers to the water
+  if (!E.length || E[0].r > BN_RIVFAR){ const R = bnRivers(), cx = Math.floor(P.x/R.C), cy = Math.floor(P.y/R.C), RV = [];
+    for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) for (const [x0, y0, x1, y1] of R.M.get(i + ':' + j) || []){
+      const vx = x1 - x0, vy = y1 - y0, l2 = vx*vx + vy*vy; if (l2 < 1e-4) continue; const u = Math.max(0, Math.min(1, ((P.x - x0)*vx + (P.y - y0)*vy)/l2)), qx = x0 + vx*u, qy = y0 + vy*u, dq = Math.hypot(P.x - qx, P.y - qy);
+      if (dq > BN_RIVFAR) continue; const l = Math.sqrt(l2); let nx = -vy/l, ny = vx/l; if (nx*(P.x - qx) + ny*(P.y - qy) < 0){ nx = -nx; ny = -ny; }   // (the normal toward the city's bank)
+      const ax = qx + nx*BN_BANK, ay = qy + ny*BN_BANK; RV.push({dx:ax - P.x, dy:ay - P.y, mir:-nx < -0.05, sea:[+(-nx).toFixed(3), +(-ny).toFixed(3)], r:+dq.toFixed(2), d:Math.hypot(ax - P.x, ay - P.y), riv:true}); }
+    if (RV.length){ RV.sort((a, b) => a.r - b.r); E.splice(0, E.length, ...RV); } }
+  BNSH.set(p, E); return E; }
+// the rivers' segments (lines.js: the Natural Earth rivers the map draws) in a coarse grid of world cells, once per map
+const BN_RIVFAR = 9, BN_BANK = 1.6; let BNRIV = null;
+function bnRivers(){ if (BNRIV && BNRIV.g === G) return BNRIV; const M = new Map(), C = 16;
+  if (typeof LINES !== 'undefined' && LINES && LINES.rivers) for (const R of LINES.rivers){ let px = null, py = 0;
+    for (let i = 1; i < R.length; i += 2){ const x = OX + HS*SQ3*R[i]/20, y = OY + HS*1.5*R[i + 1]/20;
+      if (px !== null){ const k = Math.floor((px + x)/2/C) + ':' + Math.floor((py + y)/2/C); let a = M.get(k); if (!a) M.set(k, a = []); a.push([px, py, x, y]); }
+      px = x; py = y; } }
+  return BNRIV = {g:G, M, C}; }
+// a picture's box around its anchor, in units of its long side: [x0, y0, x1, y1]
+function bnBox(nm, mir){ const M = BNMETA[nm]; if (!M) return [-0.5, -0.4, 0.5, 0.25]; const L = Math.max(M.w, M.h), w = M.w/L, h = M.h/L, ax = mir ? 1 - M.ax : M.ax;
+  return [-ax*w, -M.ay*h, (1 - ax)*w, (1 - M.ay)*h]; }
+// where each of a province's pictures stands: world px from the province's point, worked out once for its buildings and levels. The first at the point
+// itself (the HQ exactly), the Naval Yard on its shore, each next one at the nearest free spot beside or behind those placed (in front of the point is
+// the name's), boxes overlapping a little (a tight cluster)
+function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.map(e => e.nm + (e.site ? 's' : '')).join(','); let L = BNL.get(p); if (L && L.sig === sig) return L; if (cheap && BN_NEW-- <= 0) return null;
+  const placed = [], pos = [], mirs = [], yi = its.findIndex(e => e.k === 'yard'); let sh = null;
+  const sz = e => BN_WPX*bnF(e.k, e.lv), bx = (e, x, y, m) => { const b = bnBox(e.nm, m), s = sz(e); return [x + b[0]*s, y + b[1]*s, x + b[2]*s, y + b[3]*s]; };
+  const ov = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0]))*Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+  if (yi >= 0){ const C = bnShore(p), e = its[yi], m0 = its.find(q => q.k !== 'yard'), b0 = m0 ? bx(m0, 0, 0, false) : null, r0 = C.length ? C[0].r : 0;
+    sh = C.find(c => c.r <= r0 + 8 && (!b0 || (() => { const b = bx(e, c.dx, c.dy, c.mir); return ov(b, b0) < 0.12*Math.min((b[2] - b[0])*(b[3] - b[1]), (b0[2] - b0[0])*(b0[3] - b0[1])); })())) || C[0] || {dx:0, dy:BN_WPX*0.5, mir:false, far:true};
+    if (sh.r > BN_FARYARD) sh = Object.assign({}, sh, {far:true}); }   // (the water too far off to look like the city's own: the yard joins its cluster, still turned to the water)
+  const DIRS = [180, 0, 150, 30, 120, 60, 90, 205, -25].map(d => d*Math.PI/180);
+  let first = true, o0 = [0, 0]; const cityish = G.P[p].city || its.some(e => e.k === 'hq');
+  for (const e of its){ let at;
+    if (e.k === 'yard' && !sh.far) at = [sh.dx, sh.dy];
+    else if (first) at = o0 = [0, cityish ? 0 : -BN_WPX*0.5];   // (a province without a town: above its name, which stands on its point)
+    else { let bd = Infinity; at = null; const s = sz(e);
+      DIRS.forEach((a, j) => { const ux = Math.cos(a), uy = -Math.sin(a)*0.62; for (let d = s*0.25; d < s*4; d += s*0.06){ const x = o0[0] + ux*d, y = o0[1] + uy*d, b = bx(e, x, y, false), A = (b[2] - b[0])*(b[3] - b[1]);
+        if (placed.every(q => ov(q, b) < 0.1*Math.min(A, (q[2] - q[0])*(q[3] - q[1])))){ const sc = d + j*s*0.05; if (sc < bd){ bd = sc; at = [x, y]; } break; } } });
+      if (!at) at = [o0[0], o0[1] - s*0.5]; }
+    if (e.k !== 'yard' || sh.far) first = false;
+    const m = e.k === 'yard' && !!sh.mir; placed.push(bx(e, at[0], at[1], m)); pos.push(at); mirs.push(m); }
+  L = {sig, pos, mir:mirs, shore:sh}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
+// a picture px device px on its long side (in steps of 8 px, so it is drawn about 1:1: a plain blit), plain, pale (a construction site) or darkened
+// for the night (lk: 0..8); made from the file by halving steps, a few new ones a frame (BN_MK; meanwhile the last one made for it stands in), kept
+// within BNC_MAX bytes (least recently drawn dropped first). null while the file loads
+const BNC_MAX = 24e6, BNC_LAST = new Map(); let BNC_B = 0, BN_MK = 0;
+function bnPic(nm, px, pale, lk){ const im = ART.img(nm); if (!im){ ART.want(nm); return null; }
+  const W0 = im.naturalWidth || im.width, H0 = im.naturalHeight || im.height, L0 = Math.max(W0, H0), L = Math.min(L0, Math.max(16, Math.ceil(px/8)*8)), lkey = nm + '|' + (pale ? 1 : 0) + '|' + lk;
+  const key = lkey + '|' + L; let c = BNC.get(key); if (c){ BNC.delete(key); BNC.set(key, c); return c; }
+  if (BN_MK-- <= 0){ const o = BNC_LAST.get(lkey); if (o){ animFast(); return o; } }
+  c = L === L0 ? (() => { const o = document.createElement('canvas'); o.width = W0; o.height = H0; o.getContext('2d').drawImage(im, 0, 0); return o; })() : ART.scaled(im, W0*L/L0, H0*L/L0);
+  const g = c.getContext('2d');
+  if (pale){ g.globalCompositeOperation = 'saturation'; g.fillStyle = '#808080'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(214,206,186,.38)'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'destination-in'; g.drawImage(im, 0, 0, c.width, c.height); }
+  if (lk){ g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(8,16,34,${(lk/8*0.55).toFixed(3)})`; g.fillRect(0, 0, c.width, c.height); }
+  g.globalCompositeOperation = 'source-over';
+  BNC.set(key, c); BNC_LAST.set(lkey, c); BNC_B += c.width*c.height*4;
+  for (const [k, v] of BNC){ if (BNC_B <= BNC_MAX) break; BNC.delete(k); BNC_B -= v.width*v.height*4; if (BNC_LAST.get(k.slice(0, k.lastIndexOf('|'))) === v) BNC_LAST.delete(k.slice(0, k.lastIndexOf('|'))); }
+  return c; }
+// a small tower crane (code drawn, original): a yellow lattice mast with its foot at (x, y), H css px tall, the jib reaching toward the side dir
+// (1 right, -1 left) over the building, a counter-jib with its weight, the tie bars and a hook on its cable
+function bnCrane(x, y, H, dir, a){ ctx.save(); ctx.globalAlpha *= a; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const mw = Math.max(2, H*0.07), T = y - H, J = H*0.62*dir, K = -H*0.22*dir, ap = T - H*0.16, Y = '#e3ad35', D = 'rgba(24,20,10,.8)';
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x + mw*0.9, y + mw*0.2, mw*1.6, mw*0.5, 0, 0, Math.PI*2); ctx.fill();   // (its foot's shadow)
+  ctx.strokeStyle = D; ctx.lineWidth = Math.max(1, mw*0.35) + 1.2; ctx.beginPath(); ctx.moveTo(x, ap); ctx.lineTo(x + J, T); ctx.moveTo(x, ap); ctx.lineTo(x + K, T); ctx.stroke();
+  ctx.fillStyle = D; ctx.fillRect(x - mw/2 - 0.7, T - 0.7, mw + 1.4, H + 0.7); ctx.fillRect(Math.min(x + K, x + J) - 0.7, T - mw*0.45 - 0.7, Math.abs(J - K) + 1.4, mw*0.9 + 1.4);
+  ctx.fillStyle = Y; ctx.fillRect(x - mw/2, T, mw, H); ctx.fillRect(Math.min(x + K, x + J), T - mw*0.45, Math.abs(J - K), mw*0.9);
+  ctx.strokeStyle = 'rgba(90,62,10,.85)'; ctx.lineWidth = Math.max(0.6, mw*0.16); ctx.beginPath();   // (the lattice)
+  for (let v = T, k = 0; v < y - mw*0.5; v += mw, k++){ ctx.moveTo(x - mw/2, v); ctx.lineTo(x + mw/2, v + mw); }
+  for (let u = 0; u < Math.abs(J); u += mw){ const px = x + Math.sign(dir)*u; ctx.moveTo(px, T - mw*0.45); ctx.lineTo(px + Math.sign(dir)*mw, T + mw*0.45); } ctx.stroke();
+  ctx.strokeStyle = Y; ctx.lineWidth = Math.max(0.8, mw*0.35); ctx.beginPath(); ctx.moveTo(x, ap); ctx.lineTo(x + J, T); ctx.moveTo(x, ap); ctx.lineTo(x + K, T); ctx.moveTo(x - mw*0.4, T); ctx.lineTo(x, ap); ctx.lineTo(x + mw*0.4, T); ctx.stroke();
+  ctx.fillStyle = '#3b3e3c'; ctx.fillRect(x + K - (dir > 0 ? 0 : mw*1.6) - (dir > 0 ? 0 : 0), T - mw*0.2, mw*1.6, mw*1.3);   // (the counterweight)
+  ctx.fillStyle = '#2f3a40'; ctx.fillRect(x - mw*0.75, T + mw*0.45, mw*1.5, mw*1.1);   // (the cab)
+  const hx = x + J*0.72, hy = T + H*0.42; ctx.strokeStyle = 'rgba(30,30,30,.9)'; ctx.lineWidth = Math.max(0.6, mw*0.14); ctx.beginPath(); ctx.moveTo(hx, T + mw*0.45); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.fillStyle = '#2b2b2b'; ctx.fillRect(hx - mw*0.35, hy, mw*0.7, mw*0.6); ctx.restore(); }
+// the small progress ring of a construction (amber arc on a dark disc) at (x, y)
+function bnRing(x, y, R, pf, a){ ctx.save(); ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, R + 1.4, 0, Math.PI*2); ctx.fillStyle = 'rgba(8,12,14,.85)'; ctx.fill();
+  ctx.lineWidth = Math.max(1.6, R*0.36); ctx.strokeStyle = 'rgba(241,233,210,.25)'; ctx.beginPath(); ctx.arc(x, y, R - 0.4, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = '#eaa83c'; ctx.beginPath(); ctx.arc(x, y, R - 0.4, -Math.PI/2, -Math.PI/2 + Math.max(0.06, pf)*Math.PI*2); ctx.stroke(); ctx.restore(); }
+// every building picture on screen this frame (under the troop models and the names): their boxes go into boxes0 (the names keep their spots over them,
+// the power and sea names keep clear) and into BNHIT (taps)
+function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.length = 0; if (window.__bnOff) return;/*@ENDTEST*/
+  if (!S) return; const a1 = bnA(hexPx); if (a1 <= 0.003) return;
+  const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], caps = new Set(), day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_MK = 6;
+  for (const N of S.nations) if (N.alive && S.owner[N.capital] === N.id) caps.add(N.capital);
+  if (!BNP || BNP.S !== S || BNP.G !== G || now - BNP.t > 400 || now < BNP.t){ const L = []; for (let p = 0; p < G.P.length; p++) if (!G.P[p].sea && bnHas(p, caps)) L.push(p); BNP = {S, G, t:now, L, I:new Map()}; }   // (the provinces with pictures and their buildings, looked at again every 0.4 s)
+  for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y); if (x < -m || y < -m || x > cw + m || y > ch + 2*m) continue;
+    let its = BNP.I.get(p); if (!its) BNP.I.set(p, its = bnItems(p)); if (!its.length) continue; const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }
+    const cap = nd*2*view.s*1.1;   // (a picture's long side stays under the way to the next city)
+    if (P.city || caps.has(p)) cityRing({p, city:true, x, my:y + CITY_DY*kl}, now, a1, kl);
+    for (let i = 0; i < its.length; i++){ const al = i ? a2 : a1; if (al <= 0.003) break; const [dx, dy] = Lo.pos[i], e = its[i];
+      list.push({p, e, mir:Lo.mir[i], x:x + dx*view.s, y:y + dy*view.s, wx:P.x + dx, wy:P.y + dy, a:al, L:Math.min(L1*bnF(e.k, e.lv), cap)}); } }
+  if (more) animFast();   // (the cities left over are worked out in the next frames)
+  list.sort((u, v) => u.y - v.y);   // back to front
+  const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'medium';   // (each picture is made at about its drawn size)
+  for (const q of list){ const {e, p} = q, M = BNMETA[e.nm], c = bnPic(e.nm, q.L*dpr*q0, e.site, lk); if (!c || !M) continue;   // (q0: the battery saver's smaller size)
+    const Lm = Math.max(M.w, M.h), w = q.L*M.w/Lm, h = q.L*M.h/Lm, ax = q.mir ? 1 - M.ax : M.ax; let X = q.x - ax*w, Y = q.y - M.ay*h;
+    if (w*dpr < 96){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
+    const b = [X, Y + M.top*h, X + w, Y + h];
+    ctx.globalAlpha = ga0*q.a*(e.site ? 0.62 : 1);
+    if (q.mir){ ctx.save(); ctx.translate(X + w, Y); ctx.scale(-1, 1); ctx.drawImage(c, 0, 0, w, h); ctx.restore(); } else ctx.drawImage(c, X, Y, w, h);
+    ctx.globalAlpha = ga0;
+    if (e.c){ const H = Math.max(13, Math.min(52, (b[3] - b[1])*0.72)), cx = e.site ? X + w*0.5 : q.mir ? X + w*0.2 : X + w*0.8;   // the tower crane in front of the building (a level going up) or over its pale site
+      bnCrane(cx, Math.min(b[3] - H*0.08, Y + h*0.8), H, (cx > X + w*0.5 ? -1 : 1), q.a);
+      const pf = Math.max(0, Math.min(1, 1 - e.c.h/Math.max(1, e.c.h0))), R = Math.max(4, Math.min(8, w*0.07)); bnRing(b[0] + R*1.4, b[1] + R*1.4, R, pf, q.a); }   // (its progress ring at the upper left corner)
+    { const lr = bLevel(p + ':bn:' + e.k, e.lv, now); let f = lr.t0 ? (now - lr.t0)/TRAY_ANIM : -1; if (f >= 1){ lr.t0 = 0; f = -1; }
+      if (f >= 0 && !saverOn()){ animFast(); const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2, R0 = Math.max(10, w*0.5), E0 = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = q.a*0.7*(1 - f); ctx.drawImage(GLOW(), cx - R0*1.3, cy - R0*1.3, R0*2.6, R0*2.6);
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = q.a*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, R0*(0.5 + 0.8*E0), 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
+    if (q.a > 0.3){ BNHIT.push({p, b, hq:e.k === 'hq'}); const bx = [b[0], b[1], b[2], b[3]]; bx.unit = true; bx.b3 = true; bx.at = -5; boxes0.push(bx); if (e.k === 'hq' && S.owner[p] === PLAYER) HQBOX = [b]; }
+    /*@TEST*/BNDBG.push({p, k:e.k, nm:e.nm, lv:e.lv, site:e.site ? 1 : 0, cons:e.c ? 1 : 0, hq:e.k === 'hq' ? 1 : 0, mir:q.mir ? 1 : 0, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:q.wx, wy:q.wy, a:+q.a.toFixed(3), box:b.map(v => +v.toFixed(1)), L:+q.L.toFixed(2), px:c.width});/*@ENDTEST*/ }
+  ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
+// the building picture at a screen point (the one drawn on top), for taps: {p}
+function bldAt(x, y){ for (let i = BNHIT.length - 1; i >= 0; i--){ const b = BNHIT[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return {p:BNHIT[i].p}; } return null; }
 /* ---------------- Building art: the five-level pictures (city panel and build menu) ----------------
    Army Base, Arms Industry, Airbase, Naval Yard and Missile Silo pictures at their level (b-<art>-1..5) and the city pictures (b-city-1..5) show in the
-   city panel and the build menu. On the map the buildings are these pictures from the play zoom on and symbols below it (see 'Buildings on the map' above and 'Building pictures on the map') and the city is part of the map
+   city panel and the build menu. On the map the buildings are the angled cut-outs instead (bn-*, see 'Buildings on the map' above), never these pictures, and the city is part of the map
    (see 'Cities on the map' below). */
 // building -> picture name; pictures b-<name>-<level>. BART_N: how many levels have a picture (default 5): the Recruiting Office has one (every level uses it),
 // Fortifications three (levels I-III). The Army Base (key 'fac', once the Arms Factory) keeps the military-base pictures.
@@ -5917,8 +5965,9 @@ const BART = {fac:'military-base', air:'airfield', yard:'naval-port', silo:'miss
 const ART_PX = 46;   // close zoom: ground patterns on the map
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
 // (a picture not loaded yet is asked for, and an empty plate of the same size holds its place: no layout jump when it arrives)
-const bimg = (k, l, px = 22, dim = false) => { if (k !== 'city' && !BART[k]) return ''; const n = bartName(k, l); if (ART.failed(n)) return ''; if (!ART.ready(n)) ART.want(n);
-  return `<i class="bi${dim ? ' dim' : ''}" style="--bi:${ART.ready(n) ? `url(${ART.url(n)})` : 'none'};--bs:${px}px" aria-hidden="true"></i>`; };
+// (the angled cut-out where the building has one: bnName; the older picture while it fails)
+const bimg = (k, l, px = 22, dim = false) => { if (k !== 'city' && !BART[k]) return ''; const nb = k !== 'city' && BN_ART[k] ? bnName(k, Math.max(1, l)) : null, ba = !!nb && !ART.failed(nb), n = ba ? nb : bartName(k, l); if (ART.failed(n)) return ''; if (!ART.ready(n)) ART.want(n);
+  return `<i class="bi${ba ? ' ba' : ''}${dim ? ' dim' : ''}" style="--bi:${ART.ready(n) ? `url(${ART.url(n)})` : 'none'};--bs:${px}px" aria-hidden="true"></i>`; };
 /* ---------------- Cities on the map: urban areas in world coordinates ----------------
    Every city is part of the map itself, not a sticker: an irregular built-up area whose size comes from its population (in km, turned into
    world units), drawn into the cached map layer, so it grows and shrinks exactly with the terrain. Each footprint is procedural and seeded by
@@ -6885,8 +6934,6 @@ function picBox(src){ let b = PICBB.get(src); if (b) return b;
         for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (d[(y*W + x)*4 + 3] > 40){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
         if (x1 > x0 && y1 > y0) b = [(x1 - x0 + 2)/W, (y1 - y0 + 2)/H, (x0 + x1 + 1)/2/W, (y0 + y1 + 1)/2/H]; } } catch (e) {} }
   PICBB.set(src, b); return b; }
-// the HQ's plinth tones (top, bottom, edge): your relation tone
-const PLATE_TONES = {own:['#62b34a', '#3c8a2d', '#1c4a14']}, PLATE_TONES_CB = {own:['#4f97dc', '#2c6aa8', '#123660']};
 // a force's side as you see it: yours, an ally's (an alliance, or a partner in your coalition), at war with you, or anyone else (other powers at
 // peace, independents). Kept for the frame (draw clears it), so a declaration shows at once
 const SIDEC = new Map();
@@ -6915,106 +6962,7 @@ function flagCanvas(n, fh){ if (n == null) return null;
   if (FLAGC.size > 300) FLAGC.clear(); FLAGC.set(key, c); return c; }
 // whose flag a force flies: its power, else (independents) the country it stands in
 function plateFlagOf(a){ if (!a) return PLAYER; if (a.owner >= 0) return a.owner; const P0 = G.P[a.at]; return P0 && !P0.sea && G.countries[P0.country] ? G.countries[P0.country].name : null; }
-/* ---------------- Your headquarters (original art) ----------------
-   A small isometric command building beside your capital for the whole game: a squat concrete block with window bands and a rooftop helipad,
-   a lattice radio mast with a dish, and a flag mast flying your real flag (from the flag atlas), on a low plinth in your relation tone with a soft drop
-   shadow. Painted once per device-pixel ratio, flag and tone into an offscreen canvas (HQ_W x HQ_H css px, the same size at every zoom) and blitted
-   at whole device pixels. Its spot is chosen before the counters are laid out (the plates slide clear of it), drawn under the counters. */
-// (the art is drawn in a 30 x 34 design box, scaled by HQ_K: larger on a desktop screen, where it stands beside 50 px counters, than on a phone)
-// and a little smaller at world zoom, where the cities crowd together (painted once at the full size, drawn scaled)
-let HQ_KB = 0, HQ_K = 0, HQ_W = 0, HQ_H = 0, HQ_PARTS = [], HQBOX = null; const HQ_C = new Map();   // HQBOX: this frame's HQ boxes on screen (hover tooltip)
-// the parts that block other things (design units from the image's top-left): the flag and mast tops, the building, the plinth's wide middle and its front tip
-function hqScale(){ HQ_KB = innerWidth <= 820 ? 1.12 : 1.6; const z = Math.max(0, Math.min(1, ((view.s || 1) - 0.5)/0.9)), k = Math.round(HQ_KB*(0.66 + 0.34*z)*50)/50;
-  if (k === HQ_K) return; HQ_K = k; HQ_W = Math.round(30*k); HQ_H = Math.round(34*k);
-  HQ_PARTS = [[9, 0.5, 23, 12], [7, 11.5, 24, 22], [3.5, 22, 27, 29], [9.5, 29, 21.5, 34]].map(r => r.map(v => v*k)); }
-// the HQ's bearing from the capital, fixed per capital (it does not hop round the capital as you zoom): the side where, across the zoom range, the spot beside
-// the capital lies on your capital's own province (else your own land) rather than at sea, abroad or by another city; beside the capital rather than above it,
-// never below it (where the capital's name goes)
-const HQ_DIR = new Map(), HQ_NEAR = new Map();
-function hqNear(cap){ let L = HQ_NEAR.get(cap); if (L) return L; const P0 = G.P[cap]; L = [];   // the cities and capitals round your capital (the provinces it must not read as belonging to)
-  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (p !== cap && !P.sea && (P.city || isCapital(p)) && Math.hypot(P.x - P0.x, P.y - P0.y) < 260) L.push(p); }
-  HQ_NEAR.set(cap, L); return L; }
-function hqBearing(cap){ const key = PLAYER + '|' + cap; let best = HQ_DIR.get(key); if (best !== undefined) return best;
-  const P0 = G.P[cap], near = hqNear(cap).map(p => G.P[p]);
-  const ZS = [[0.35, 0.5], [0.5, 0.8], [0.7, 1], [0.9, 1.2], [1.2, 1.3], [1.6, 1.3], [2.2, 1], [3, 0.8], [4, 0.6]]; let bs = -Infinity; best = 0;
-  for (let i = 0; i < 24; i++){ const an = i*Math.PI/12, ux = Math.cos(an), uy = Math.sin(an); let sc = 0, ws = 0;
-    for (const [s0, w] of ZS) for (const dp of [26, 40]){ const wx = P0.x + ux*dp/s0, wy = P0.y + uy*dp/s0, c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1;
-      sc += w*(q < 0 || G.P[q].sea ? 0 : q === cap ? 3 : S.owner[q] === PLAYER ? 2.3 : 0.6); ws += w;
-      for (const P of near){ const d = Math.hypot(P.x - wx, P.y - wy)*s0; if (d < 26) sc -= w*1.6*(1 - d/26); } }
-    sc += ws*(0.45*ux*ux - (uy > 0.4 ? 4*(uy - 0.4) : 0));
-    if (sc > bs + 1e-6){ bs = sc; best = an; } }
-  HQ_DIR.set(key, best); return best; }
-let HQ_LAST = null, HQ_G = null;   // last frame's choice (a small preference for it keeps the HQ from flickering between two near-equal spots); HQ_G: where it is drawn, as an offset from the capital's point, gliding to a new spot (never a jump when a counter makes it step aside)
-function hqPaint(sc, im, fi, CT, cols = FLAG_COLS, rows = FLAG_ROWS){
-  const DW = 30, DH = 34, c = document.createElement('canvas'); c.width = Math.ceil(DW*sc); c.height = Math.ceil(DH*sc);
-  const g = c.getContext('2d'); g.scale(sc, sc); g.lineJoin = 'round'; g.lineCap = 'round';
-  // isometric helper: (u, v) on the ground (u runs right-down, v left-down), z up; the plinth's back corner at (15, 19)
-  const P = (u, v, z = 0) => [15 + (u - v), 19 + (u + v)*0.5 - z];
-  const poly = pts => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
-  const seg = (a, b) => { g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); };
-  const box = (u0, v0, u1, v1, z0, z1) => ({top:[P(u0, v0, z1), P(u1, v0, z1), P(u1, v1, z1), P(u0, v1, z1)], left:[P(u0, v1, z0), P(u1, v1, z0), P(u1, v1, z1), P(u0, v1, z1)], right:[P(u1, v0, z0), P(u1, v1, z0), P(u1, v1, z1), P(u1, v0, z1)]});
-  const OUT = 'rgba(8,12,14,.92)', PU = 12, PT = 1.5;
-  // soft drop shadow under the plinth
-  g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 2.4*sc; g.shadowOffsetX = 0.7*sc; g.shadowOffsetY = 1.3*sc;
-  poly([P(0, 0, 0), P(PU, 0, 0), P(PU, 0, -PT), P(PU, PU, -PT), P(0, PU, -PT), P(0, PU, 0)]); g.fillStyle = 'rgba(0,0,0,.7)'; g.fill(); g.restore();
-  // plinth: a low slab in the relation tone (two edge faces, a lit top with a pale concrete apron)
-  const pl = box(0, 0, PU, PU, -PT, 0);
-  poly(pl.left); g.fillStyle = CT[1]; g.fill(); poly(pl.right); g.fillStyle = CT[2]; g.fill();
-  { const [ax, ay] = P(0, 0), [bx, by] = P(PU, PU); const gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); poly(pl.top); g.fillStyle = gr; g.fill(); }
-  poly([P(0.9, 0.9), P(PU - 0.9, 0.9), P(PU - 0.9, PU - 0.9), P(0.9, PU - 0.9)]); g.strokeStyle = 'rgba(240,244,232,.4)'; g.lineWidth = 0.45; g.stroke();
-  poly([P(0, 0, 0), P(PU, 0, 0), P(PU, 0, -PT), P(PU, PU, -PT), P(0, PU, -PT), P(0, PU, 0)]); g.strokeStyle = OUT; g.lineWidth = 0.9; g.stroke();
-  g.beginPath(); seg(P(0, PU), P(PU, PU)); seg(P(PU, PU), P(PU, 0)); g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 0.45; g.stroke();
-  // shadow the block casts on the plinth (toward the front right)
-  poly([P(9.6, 1.2), P(11.4, 2.6), P(11.4, 9.6), P(9.6, 8.4)]); g.fillStyle = 'rgba(0,0,0,.2)'; g.fill();
-  // main block: a squat concrete command building
-  const u0 = 1.2, v0 = 1.2, u1 = 9.6, v1 = 8.6, H = 7.2, B = box(u0, v0, u1, v1, 0, H);
-  { const [ax, ay] = P(u0, v1, H), [bx, by] = P(u0, v1, 0); let gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, '#d2cec2'); gr.addColorStop(1, '#aeaa9d'); poly(B.left); g.fillStyle = gr; g.fill();
-    gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, '#94918a'); gr.addColorStop(1, '#75726b'); poly(B.right); g.fillStyle = gr; g.fill(); }
-  { const [ax, ay] = P(u0, v0, H), [bx, by] = P(u1, v1, H); const gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, '#f1eee6'); gr.addColorStop(1, '#d8d4c8'); poly(B.top); g.fillStyle = gr; g.fill(); }
-  // roof parapet
-  poly([P(u0 + 0.6, v0 + 0.6, H), P(u1 - 0.6, v0 + 0.6, H), P(u1 - 0.6, v1 - 0.6, H), P(u0 + 0.6, v1 - 0.6, H)]); g.strokeStyle = 'rgba(80,80,72,.5)'; g.lineWidth = 0.45; g.stroke();
-  // rooftop helipad: a dark disc with a pale ring and an H, laid flat in the roof plane
-  { const cu = 5.6, cv = 4.9, r = 2.45; g.beginPath(); for (let i = 0; i <= 32; i++){ const a = i/32*Math.PI*2, [x, y] = P(cu + Math.cos(a)*r, cv + Math.sin(a)*r, H); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-    g.fillStyle = '#34403f'; g.fill(); g.strokeStyle = '#f3f0e6'; g.lineWidth = 0.5; g.stroke();
-    g.beginPath(); seg(P(cu - 0.9, cv - 1.0, H), P(cu - 0.9, cv + 1.0, H)); seg(P(cu + 0.9, cv - 1.0, H), P(cu + 0.9, cv + 1.0, H)); seg(P(cu - 0.9, cv, H), P(cu + 0.9, cv, H));
-    g.strokeStyle = '#f6d64a'; g.lineWidth = 0.6; g.stroke(); }
-  // window bands: dark glass with mullions and a lit pane or two
-  const fband = (ua, ub, z0, z1) => poly([P(ua, v1, z0), P(ub, v1, z0), P(ub, v1, z1), P(ua, v1, z1)]), sband = (va, vb, z0, z1) => poly([P(u1, va, z0), P(u1, vb, z0), P(u1, vb, z1), P(u1, va, z1)]);
-  for (const [z0, z1] of [[4.0, 5.7], [1.5, 3.2]]){ fband(u0 + 0.7, u1 - 0.7, z0, z1); g.fillStyle = '#22333a'; g.fill(); sband(v0 + 0.7, v1 - 0.7, z0, z1); g.fillStyle = '#18242a'; g.fill(); }
-  g.beginPath(); for (let u = u0 + 1.9; u < u1 - 0.9; u += 1.25) for (const [z0, z1] of [[4.0, 5.7], [1.5, 3.2]]) seg(P(u, v1, z0), P(u, v1, z1));
-  for (let v = v0 + 1.9; v < v1 - 0.9; v += 1.25) for (const [z0, z1] of [[4.0, 5.7], [1.5, 3.2]]) seg(P(u1, v, z0), P(u1, v, z1));
-  g.strokeStyle = 'rgba(190,186,174,.9)'; g.lineWidth = 0.4; g.stroke();
-  fband(3.15, 4.4, 4.05, 5.65); g.fillStyle = 'rgba(255,212,110,.9)'; g.fill(); fband(6.9, 8.15, 1.55, 3.15); g.fillStyle = 'rgba(255,212,110,.7)'; g.fill();
-  sband(4.45, 5.7, 4.05, 5.65); g.fillStyle = 'rgba(255,200,100,.5)'; g.fill();
-  // entrance: a dark doorway under a small canopy on the lit face
-  fband(4.6, 6.0, 0, 1.2); g.fillStyle = '#141c20'; g.fill();
-  // crisp silhouette outline and lit edges
-  poly([P(u0, v0, H), P(u1, v0, H), P(u1, v0, 0), P(u1, v1, 0), P(u0, v1, 0), P(u0, v1, H)]); g.strokeStyle = OUT; g.lineWidth = 0.8; g.stroke();
-  g.beginPath(); seg(P(u0, v1, H), P(u1, v1, H)); seg(P(u1, v1, H), P(u1, v0, H)); g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 0.5; g.stroke();
-  g.beginPath(); seg(P(u1, v1, 0.2), P(u1, v1, H)); g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 0.45; g.stroke();
-  // radio mast at the roof's back corner: a slim lattice with a red beacon
-  { const [bx, by] = P(u1 - 1.0, v0 + 0.9, H), top = by - 10;
-    g.beginPath(); seg([bx - 1.0, by], [bx, top]); seg([bx + 1.0, by], [bx, top]); seg([bx - 0.7, by - 3], [bx + 0.45, by - 5.4]); seg([bx + 0.7, by - 3], [bx - 0.45, by - 5.4]); seg([bx - 0.3, by - 7], [bx + 0.3, by - 7]);
-    g.strokeStyle = OUT; g.lineWidth = 1.25; g.stroke(); g.strokeStyle = '#dcd8cc'; g.lineWidth = 0.5; g.stroke();
-    g.beginPath(); g.arc(bx, top - 0.2, 0.85, 0, Math.PI*2); g.fillStyle = '#ff4b3a'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.4; g.stroke();
-    // a small dish on the roof beside it
-    const [dx, dy] = P(u1 - 2.6, v0 + 0.9, H); g.save(); g.translate(dx, dy - 1.4); g.rotate(-0.5); g.beginPath(); g.ellipse(0, 0, 1.55, 0.8, 0, 0, Math.PI*2); g.fillStyle = '#efece3'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.45; g.stroke();
-    g.beginPath(); g.ellipse(0.15, 0.1, 0.9, 0.42, 0, 0, Math.PI*2); g.fillStyle = 'rgba(120,120,110,.55)'; g.fill(); g.restore(); }
-  // flag mast from the roof's front-left corner, flying the nation's flag
-  { const [mx, my] = P(u0 + 0.8, v1 - 0.8, H), top = 1.6, fw = 11.2, fh = 8.4;
-    g.beginPath(); seg([mx, my + 0.3], [mx, top]); g.strokeStyle = OUT; g.lineWidth = 1.4; g.stroke(); g.strokeStyle = '#ebe7dc'; g.lineWidth = 0.55; g.stroke();
-    g.beginPath(); g.arc(mx, top - 0.2, 0.7, 0, Math.PI*2); g.fillStyle = '#e8b923'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.35; g.stroke();
-    const fx = mx + 0.55, fy = top + 0.4;
-    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(fx + 0.7, fy + 0.9, fw, fh);
-    g.fillStyle = OUT; g.fillRect(fx - 0.4, fy - 0.4, fw + 0.8, fh + 0.8);
-    if (im && fi >= 0){ g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; const cw0 = (im.naturalWidth || im.width)/cols, ch0 = (im.naturalHeight || im.height)/rows; g.drawImage(im, (fi % cols)*cw0, Math.floor(fi/cols)*ch0, cw0, ch0, fx, fy, fw, fh); }
-    else { g.fillStyle = CT[0]; g.fillRect(fx, fy, fw, fh); }
-    const gr = g.createLinearGradient(fx, 0, fx + fw, 0); gr.addColorStop(0, 'rgba(0,0,0,.14)'); gr.addColorStop(0.35, 'rgba(255,255,255,.16)'); gr.addColorStop(0.65, 'rgba(0,0,0,.1)'); gr.addColorStop(1, 'rgba(255,255,255,.1)'); g.fillStyle = gr; g.fillRect(fx, fy, fw, fh); }
-  return c; }
-function hqCanvas(){ const i = flagIdx(PLAYER), im = ART.img('flags');
-  if (i >= 0 && !im && !ART.failed('flags')) return null;   // the atlas is still loading: try again next frame
-  const CT = (SET.cb ? PLATE_TONES_CB : PLATE_TONES).own, key = dpr + '|' + HQ_KB + '|' + i + '|' + CT[0]; let c = HQ_C.get(key);
-  if (!c){ c = hqPaint(dpr*HQ_KB, im, i, CT); if (HQ_C.size > 8) HQ_C.clear(); HQ_C.set(key, c); } return c; }
+let HQBOX = null;   // this frame's box of your HQ model on screen (its hover tooltip): drawBuildings
 /* ---------------- Unit badges by zoom (Conflict of Nations manner, original art) ----------------
    Every force shows one small SQUARE BADGE of one pixel size at every zoom (a little larger on a touch screen, a little smaller for quiet foreign
    and independent forces), in its side's colour (sideOf: yours green, allies blue, at war red, everyone else grey), with a thin dark edge and a
@@ -7707,9 +7655,9 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
   const drop = c => { if (c && c.width) c.width = c.height = 0; };   // (frees the memory at once instead of at the next garbage collection)
   try { ART.gfx(); } catch (e) {}
   for (const c of CBAKE.values()) drop(c); for (const E of DT.cache.values()) drop(E.cv);   // (the biggest caches let go at once: Safari counts a canvas against its limit until it is collected)
-  for (const M of [UICONC, UIPC, TRSHIP, fogPat, TMMIP, TMCELL, TMLAST, ARTRIM, FIGSH, SBM, SBR, AIRSH, AIRC, FLAGC, UCC, HQ_C, TRAYC, BPICC, CTILE, GTILE, CSCR,
+  for (const M of [UICONC, UIPC, TRSHIP, fogPat, TMMIP, TMCELL, TMLAST, ARTRIM, FIGSH, SBM, SBR, AIRSH, AIRC, FLAGC, UCC, BNC, BNC_LAST, CTILE, GTILE, CSCR,
     CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CLGL, CJOB, CWANT, CITY_MISS, CNF]) M.clear();
-  TMCB = 0; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
+  TMCB = 0; BNC_B = 0; BNP = null; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
   GRAIN = null; GROUND = null; NIGHT = null; CGLOWC = null; CLOUDS = null; CONTRAIL = null; TMSH = null; TMFOAM = null;
   for (const k of ['cv', 'tile', 'pat', 'fp', 'fc', 'foam', 'fpat', 'wc']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = ''; SEAFX.g = -1;
   DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0;
@@ -7938,64 +7886,10 @@ function draw(now){ draw.now = now;
     if (!c.tag){ const D = plateDims(c.n + (c.mn || 0), 1, plateQuiet(c), false), q = D.w/2 - 1; b.ic = [[c.x - q, c.y - q, c.x + q, c.y + q]]; }   // (a far badge's flag, icon and count: what a name may never be drawn over)
     if (c.fm){ const f = c.fm.box; b[0] = Math.min(b[0], f[0]); b[1] = Math.min(b[1], f[1]); b[2] = Math.max(b[2], f[2]); b[3] = Math.max(b[3], f[3]); b.fmb = c.fm.ents.map(e => e.box); }
     b.unit = true; b.at = c.moving ? -1 : c.at; return b; };
-  // YOUR HQ (the whole game, while you hold your capital): a headquarters building planted beside the capital, on your own land (your capital's
-  // province first), on the bearing hqBearing() fixed for this capital, the same side at every zoom. It claims its spot before the counters are laid out:
-  // a plate (yours too) that would cover it slides clear of it with a leader line, as plates do for each other, so the HQ is never hidden under a counter
-  // and never pushed out to sea, abroad or beside another city by them. The names (your capital's own name included), the building trays and the power
-  // names keep clear of it too. Where your land is crowded it steps a little further out along its bearing (a short leader line ties it to the capital) or
-  // turns a little round the capital; it is never left out. Only the screen edges and the map's controls rule a spot out; standing off your land (its plinth's
-  // centre at sea or abroad) is a last resort behind everything else, then covering another city's point or standing nearer another city than yours,
-  // then turning and stepping out; displacing a standing counter costs only a little.
-  const NP = S.nations[PLAYER]; let capTagAt = null; /*@TEST*/let tagDbg = null;/*@ENDTEST*/ HQBOX = null;
-  if (hexPx >= 2 && NP.alive && S.owner[NP.capital] === PLAYER){ hqScale(); const cap = NP.capital, P0 = G.P[cap], [x, y0] = toScreen(P0.x, P0.y), cy = y0 + CITY_DY*kl, R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*kl, w = HQ_W, h = HQ_H, K = HQ_K;
-    const hud = hudRects(), ovl = (q, o) => q[0] < o[2] && q[2] > o[0] && q[1] < o[3] && q[3] > o[1];
-    if (!(x < 0 || x > cw || cy < 0 || cy > ch || hud.some(o => x >= o[0] && x <= o[2] && cy >= o[1] && cy <= o[3]))){   // (the capital itself on screen and clear of the controls)
-      const reg = [x - R - 150, cy - R - 150, x + R + 150, cy + R + 150], hudN = hud.filter(o => ovl(o, reg));
-      const cls = clusters.filter(c => !c.moving && c.pv && Math.abs(c.x - x) < 300 && Math.abs(c.y - cy) < 300).map(clBox).filter(o => ovl(o, reg));   // the standing counters where they would be (marching ones pass over it)
-      const mk = []; for (const p of hqNear(cap)){ const P = G.P[p], cp = isCapital(p); if (!((cp && hexPx >= 2) || (P.city && showCity))) continue; const [mx, my] = toScreen(P.x, P.y), tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0;
-        if (Math.abs(mx - x) < R + 170 && Math.abs(my - cy) < R + 170) mk.push({x:mx, y:my + CITY_DY*kl, r:cp ? (8.7 + tier)*kl : ([2.8, 3.6, 4.6][tier] + 1.8)*kl}); }   // the other cities' points nearby
-      const PO = P0.oil && hexPx >= 8 ? [x + 7*kl, cy - 5*kl, x + 13*kl, cy + 4.5*kl] : null, PS = S.bld[cap].silo && hexPx >= 4 ? [x - 13*kl, y0 + 3*kl, x - 5*kl, y0 + 15*kl] : null;
-      const area = (q, o) => { const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); return ox > 0 && oy > 0 ? ox*oy : 0; };
-      const rectsAt = (px, py) => { const ix = Math.round(px - 15*K), iy = Math.round(py - 25*K); return [ix, iy, HQ_PARTS.map(r => [ix + r[0], iy + r[1], ix + r[2], iy + r[3]])]; };   // (px, py): the plinth's centre
-      const provAtS = (px, py) => { const c = worldToCell((px - view.x)/view.s, (py - view.y)/view.s), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea ? -1 : q; };
-      const gcode = (px, py) => { const q = provAtS(px, py); return q < 0 ? 2600 : q === cap ? 0 : S.owner[q] === PLAYER ? 150 : 900; };
-      // on your capital's province, else your own land; the plinth's centre off your land only as a last resort, its corners a little
-      const ground = (px, py) => { const g0 = gcode(px, py); let c0 = g0 > 150 ? 1e6 : g0;
-        for (const [ox, oy] of [[-8.4, 0], [8.4, 0], [0, -4.2], [0, 4.2]]) if (gcode(px + ox*K, py + oy*K) > 150) c0 += 2500;
-        return c0; };
-      const circ = (q, r) => Math.hypot(Math.max(q[0] - x, 0, x - q[2]), Math.max(q[1] - cy, 0, cy - q[3])) < r;
-      const reach = (ux, uy) => { for (let t = 0; t < 90; t++){ if (!rectsAt(x + ux*t, cy + uy*t)[2].some(q => circ(q, R + 0.5))) return t; } return 90; };   // the nearest it can stand to the capital's point without covering it
-      const cost = (px, py, led) => { const [, , qs] = rectsAt(px, py); let c0 = ground(px, py);
-        for (const q of qs){ const ov0 = Math.max(0, 2 - q[0], q[2] - cw + 2, 2 - q[1], q[3] - ch + 2); if (ov0 > 0) c0 += 3000 + ov0*40;   // (cut by the screen's edge: better than standing on a counter)
-          for (const o of hudN) if (ovl(q, o)) return 1e9;
-          for (const o of cls){ const a = area(q, o); if (a) c0 += 5000 + a*4; const ac = area(q, o.core); if (ac) c0 += 8000 + ac*8; }   // a counter it would stand on (counters keep their spots: the HQ steps round them)
-          for (const m of mk){ const a = area(q, [m.x - m.r, m.y - m.r, m.x + m.r, m.y + m.r]); if (a) c0 += 4e4 + a*60; }   // another city's point
-          for (const o of [PO, PS]) if (o){ const a = area(q, o); if (a) c0 += a*20; } }   // (the capital's oil derrick and silo glyphs: better left in view)
-        const qb = qs[2], dq = (mx, my) => Math.hypot(Math.max(qb[0] - mx, 0, mx - qb[2]), Math.max(qb[1] - my, 0, my - qb[3])), d0 = dq(x, cy);   // nearer your capital than any other city's point, so it never reads as theirs
-        for (const m of mk) if (dq(m.x, m.y) - m.r < Math.min(d0 - R + 4, led ? 4 : 10)) { c0 += 3e4; break; }
-        return c0; };
-      // candidates: its own bearing first, then out along it, then turning round the capital in 20 degree steps (each step and each pixel out costs, so it
-      // stays put; far out costs more than turning); below the capital, where the capital's name goes, costs more
-      const th0 = hqBearing(cap), cands = [];
-      for (let d = 0; d <= 9; d++) for (const sg of d && d < 9 ? [1, -1] : [1]) for (const e of [0, 4, 8, 13, 19, 26, 34, 44, 56]){ const dd = d*sg, uy = Math.sin(th0 + dd*Math.PI/9);
-        cands.push([dd, e, d*1500 + e*30 + e*e*3 + (e >= 10 ? 800 : 0) + (uy > 0.35 ? 5000*(uy - 0.35) : 0) - (HQ_LAST && HQ_LAST.k === cap + '|' + K && HQ_LAST.d === dd && HQ_LAST.e === e ? 900 : 0)]); }
-      cands.sort((p1, p2) => p1[2] - p2[2]);
-      let bt = null, bc = Infinity, n = 0; const RC = new Map();
-      for (const [dd, e, base] of cands){ if (base >= bc) break; n++;
-        const an = th0 + dd*Math.PI/9, ux = Math.cos(an), uy = Math.sin(an); let t0 = RC.get(dd); if (t0 === undefined){ t0 = reach(ux, uy); RC.set(dd, t0); }
-        const px = x + ux*(t0 + 2 + e), py = cy + uy*(t0 + 2 + e), c0 = base + cost(px, py, e >= 10); /*@TEST*/if (window.__dbgAll) window.__dbgAll.push([dd, e, Math.round(c0)]);/*@ENDTEST*/ if (c0 < bc){ bc = c0; bt = [px, py, dd, e, ux, uy]; } }
-      if (bt && bc < 1e9){ HQ_LAST = {k:cap + '|' + K, d:bt[2], e:bt[3]};
-        { const gk = cap + '|' + K + '|' + (S.seed ?? 0), tx = bt[0] - x, ty = bt[1] - cy;
-          if (!HQ_G || HQ_G.k !== gk || HQ_G.S !== S || now - HQ_G.t > 800) HQ_G = {k:gk, S, ox:tx, oy:ty, t:now};
-          else { const dt = Math.max(0, Math.min(100, now - HQ_G.t)), f = 1 - Math.exp(-dt/80); HQ_G.ox += (tx - HQ_G.ox)*f; HQ_G.oy += (ty - HQ_G.oy)*f; HQ_G.t = now;
-            if (Math.abs(tx - HQ_G.ox) + Math.abs(ty - HQ_G.oy) < 0.3){ HQ_G.ox = tx; HQ_G.oy = ty; } else animFast(); }
-          bt[0] = x + HQ_G.ox; bt[1] = cy + HQ_G.oy; }
-        const [ix, iy, qs] = rectsAt(bt[0], bt[1]); capTagAt = {tx:ix + w/2, ty:iy, w, h, x, cy, R, ix, iy, lead:bt[3] >= 10 ? [x + bt[4]*(R + 1), cy + bt[5]*(R + 1), bt[0], bt[1]] : null}; HQBOX = qs;
-        /*@TEST*/if (window.__dbgBoxes){ tagDbg = [ix + w/2, iy + h/2, w, h, x, cy]; tagDbg.cc = [Math.round(bc)]; tagDbg.d = bt[2]; tagDbg.e = bt[3]; tagDbg.g = gcode(bt[0], bt[1]); tagDbg.th = Math.round(th0*180/Math.PI); tagDbg.n = n; }/*@ENDTEST*/ } } }
+  /*@TEST*/const tagDbg = null;/*@ENDTEST*/ HQBOX = null;
   // counters claim screen space before labels: city and province names give way to them (capital names always show)
   for (const c of clusters){ if (!c.pv) continue; const b = clBox(c); if (b[2] < -60 || b[3] < -60 || b[0] > cw + 60 || b[1] > ch + 60) continue; boxes0.push(b); }
   // (a battle is marked by the crossed-swords badge on each fighting counter and nothing else: no health or balance bars on the map; the army bar shows the numbers)
-  for (const q of HQBOX || []){ const tb = [q[0] - 2, q[1] - 2, q[2] + 2, q[3] + 2]; tb.unit = true; tb.tag = true; tb.at = -4; boxes0.push(tb); }   // your HQ: the names keep a little clear of it
   for (const r of hudRects()){ const b = r.slice(); b.unit = true; b.hud = true; b.at = -2; boxes0.push(b); }
   // paths (under the troop models, the names and the counters)
   const sa = sel.army !== null ? armyById(sel.army) : null; /*@TEST*/PATHDBG.sel = null; PATHDBG.dots = null; PATHDBG.eta = null;/*@ENDTEST*/
@@ -8063,6 +7957,7 @@ function draw(now){ draw.now = now;
     else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   wrapEach(() => drawSelPaths(0), 40 + 120/view.s); drawRange(0);
   BFX.pts.clear();   // this frame's figures in battles (filled as they are drawn)
+  try { drawBuildings(hexPx, now, kl, boxes0); } catch (e) { if (!drawBuildings.err){ drawBuildings.err = 1; console.warn('building models', e); } }   // the buildings at their cities, under the troop models, the names and the counters
   ovIn(); try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, HQ, paths and counters drawn below
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
   { const nk = [view.s, cw, ch, geoVer, HUDR.v || 0].join('|');   // (a pan keeps them: the spots are offsets from each name's anchor, and what lies under a spot moves with it)
@@ -8083,7 +7978,7 @@ function draw(now){ draw.now = now;
       const sb = [x - w/2, y - 8, x + w/2, y + 8]; if (bxNear(boxes0, sb).some(q => q.unit && q[0] < sb[2] && q[2] > sb[0] && q[1] < sb[3] && q[3] > sb[1])) continue;
       placed.push({x, y, w, nm}); boxes0.push(sb); ctx.fillText(nm, x, y); } }
   cityPts = []; cityNames = [];   // the cities on screen: each one's point with its tap radius (nothing is drawn there), and the boxes of the city names drawn
-  const labs = [], lateLabs = [], trq = [], LPL = new Map(); let capLab = null, trays = [], pics = [], trCity = false; BPIC_ON = new Set(); BPIC_AP = bpicA(hexPx); /*@TEST*/BPIC_DBG.clear();/*@ENDTEST*/   // trq: building trays to place, LPL: placed name boxes per province
+  const labs = [], lateLabs = [], LPL = new Map(); let capLab = null;   // LPL: placed name boxes per province
   for (let p = 0; p < G.P.length; p++){
     const P = G.P[p]; if (P.sea) continue;
     const [x, y] = toScreen(P.x, P.y);
@@ -8091,24 +7986,20 @@ function draw(now){ draw.now = now;
     const cap = isCapital(p), dim = vis.has(p) ? 1 : 0.55;
     ctx.globalAlpha = dim;
     const tier = P.pop0 >= 8 ? 2 : P.pop0 >= 2.5 ? 1 : 0;
-    // no marker is drawn on a city: the city is its artwork on the map and its name. Its point keeps a tap target and a little room the names, trays and your HQ leave free
+    // no marker is drawn on a city: the city is its artwork on the map and its name. Its point keeps a tap target and a little room the names leave free (its building models stand on it: drawBuildings)
     if (cap && hexPx >= 2) cityPts.push({p, x, y:y + CITY_DY*kl, r:(8.7 + tier)*kl});
     else if (P.city && showCity) cityPts.push({p, x, y:y + CITY_DY*kl, r:([2.8, 3.6, 4.6][tier] + 1.8)*kl});
     if (P.oil && hexPx >= 8 && Math.sqrt(P.cells.length)*HS*view.s >= 22){ const ox = x + (P.city || cap ? 10*kl : 0), oy = y + (P.city || cap ? CITY_DY : 9)*kl; ctx.beginPath(); ctx.arc(ox, oy + 1.2*kl, 2.8*kl, 0, Math.PI*2); ctx.moveTo(ox - 2.4*kl, oy); ctx.lineTo(ox, oy - 4.2*kl); ctx.lineTo(ox + 2.4*kl, oy); ctx.fillStyle = '#16140f'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.8)'; ctx.lineWidth = 1; ctx.stroke(); }
-    if (S.bld[p].silo && hexPx >= 4 && !trayOn(P, p, hexPx, vis)){ ctx.fillStyle = '#e0574f'; ctx.strokeStyle = '#0b1012'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 12*kl, y + 14*kl); ctx.lineTo(x - 9*kl, y + 4*kl); ctx.lineTo(x - 6*kl, y + 14*kl); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-    if (S.bld[p].fort && hexPx >= 6 && !trayOn(P, p, hexPx, vis)){ const fx2 = x - 10*kl, fy2 = y + (P.city || cap ? CITY_DY : 9)*kl, r2 = 3.6*kl; ctx.beginPath(); ctx.moveTo(fx2 - r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2 - r2); ctx.lineTo(fx2 + r2, fy2); ctx.quadraticCurveTo(fx2 + r2, fy2 + r2, fx2, fy2 + r2*1.5); ctx.quadraticCurveTo(fx2 - r2, fy2 + r2, fx2 - r2, fy2); ctx.closePath(); ctx.fillStyle = '#5b6a72'; ctx.fill(); ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 1; ctx.stroke(); }
     { const Rpx = Math.sqrt(P.cells.length)*HS*view.s, label = cap && hexPx >= 4 ? P.cityName : P.city && hexPx >= 8 ? P.cityName : hexPx >= 9 && Rpx >= 16 ? P.name : '';
       if (label && label === P.name && !P.city && !cap && G.lakeLab && G.lakeLab.has(p)){ const q = G.lakeLab.get(p), [lx, ly] = toScreen(q[0], q[1]); labs.push({t:label, x:lx, y:ly, pri:P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:ly + CITY_DY*kl, mr:[4.6, 5.4, 6.4][tier]*kl}); }
       else if (label) labs.push({t:label, x, y:y + (P.city ? (CITY_DY + 11)*kl : 0), pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (vis.has(p) ? 1e5 : 0), cap, city:P.city, tier, a:dim, p, my:y + CITY_DY*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl}); }
-    if (hexPx >= TRAY_PX && trayOn(P, p, hexPx, vis)){ const its = trayItems(p); if (its.length) trq.push({p, items:its, city:!!(P.city || cap), x, y, my:y + CITY_DY*kl, ly:y + (CITY_DY + 11)*kl, mr:cap ? (8.7 + tier)*kl : [4.6, 5.4, 6.4][tier]*kl, col:mapCol(S.owner[p]),
-      pri:(cap ? 3e6 : P.city ? 2e6 + tier*2e5 : 0) + P.cells.length + (S.owner[p] === PLAYER ? 1e5 : 0)}); }   // its buildings as a tray of symbols (placed with the names)
     ctx.globalAlpha = 1;
   }
   const ovl = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
   ctx.globalAlpha = 1;
   // power names: big and faint area labels; yours is told apart by its light fill alone. A name lies on its own nation's land (both ends and nearly all of its
   // line over that nation's provinces) and is no wider than the country. They are placed in the label pass, after the capital and city names (after all the
-  // names once the province names are up), and never cover a name, a city's point, a counter, a building tray,
+  // names once the province names are up), and never cover a name, a city's point, a counter, a building model,
   // a control or your HQ building: with no free spot on its own land a name is left out. Only a country too small on screen to hold its name at 11 px, or
   // any at world zoom, may let it hang out over the sea next to its land (never over another country's land).
   const pnB = []; /*@TEST*/const pnDbg = window.__dbgBoxes ? [] : null;/*@ENDTEST*/ let pnDone = hexPx >= 30, pnYou = pnDone; const pnSeen = new Set();   // power names already placed (they keep clear of each other too)
@@ -8146,10 +8037,9 @@ function draw(now){ draw.now = now;
       ctx.fillStyle = you ? 'rgba(246,242,228,.8)' : 'rgba(226,222,208,.56)'; ctx.fillText(txt, lx + sz*0.125, ly); ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
     ctx.letterSpacing = '0px'; ctx.restore(); };
   // place labels: highest rank first, skip any that would overlap one already placed
-  // building trays: city ones once the city names are placed (they give way to names, not to province names), countryside ones last
   /*@TEST*/const labDbg = window.__dbgBoxes ? [] : null;/*@ENDTEST*/
-  { labs.sort((a, b) => b.pri - a.pri); trq.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
-    for (const L of labs){ if (!trCity && !L.cap && !L.city){ trCity = true; pics = pics.concat(placePics(trq, boxes, LPL, true, hexPx)); trays = placeTrays(trq, boxes, LPL, true, hexPx); }   // (the pictures and trays go first, so the power names keep clear of them)
+  { labs.sort((a, b) => b.pri - a.pri); const boxes = boxes0; ctx.textBaseline = 'top';
+    for (const L of labs){
       if (!pnYou && !(L.cap || L.city)) placePN(hexPx >= 15);   // the power names go in after the capital and city names, before the province names (once those are up, only yours)
       const f = L.cap ? 12.5 : L.city ? 10.5 + (L.tier || 0)*0.6 : 10; const fnt = `${L.cap || L.tier === 2 ? 600 : L.city ? 500 : 400} ${f}px ${BODY}`; ctx.font = fnt; const w = mtw(L.t, fnt) + 6, y0 = L.city ? L.y : L.y - f/2, b = [L.x - w/2, y0 - 1, L.x + w/2, y0 + f + 2];
       const hit = q => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
@@ -8188,19 +8078,9 @@ function draw(now){ draw.now = now;
       /*@TEST*/if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0, a:+L.a.toFixed(3)});/*@ENDTEST*/
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else if (L.a > 0.01){ labNight(L, lx, ly); ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); } }
-    if (!trCity){ pics = pics.concat(placePics(trq, boxes, LPL, true, hexPx)); trays = placeTrays(trq, boxes, LPL, true, hexPx); } pics = pics.concat(placePics(trq, boxes, LPL, false, hexPx)); trays = trays.concat(placeTrays(trq, boxes, LPL, false, hexPx));
     ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
   if (!pnDone) placePN(false);   // (once the province names are up, the other powers' names come last)
-  /*@TEST*/BPIC_DBG.set('trays', trays.map(T => T.p + ':' + T.items.length)); BPIC_DBG.set('pics', pics.map(T => T.p + ':' + T.items.length + ':' + Math.round(T.pic.x0) + ',' + Math.round(T.pic.y0)));/*@ENDTEST*/
-  for (const T of pics) drawPics(T, now, hexPx, kl);
-  for (const T of trays) drawTray(T, now, hexPx, kl);
   ctx.globalAlpha = 1;
-  // your headquarters beside your capital (placed before the counters, which keep clear of it; drawn under them)
-  {
-    const hq = capTagAt && hqCanvas(); if (hq){ { const T = [capTagAt.ix, capTagAt.iy, capTagAt.ix + capTagAt.w, capTagAt.iy + capTagAt.h]; ctx.globalAlpha = capTagAt.a = clusters.some(c => c.pv && !c.moving && (c.pa ?? 1) > 0.05 && Math.abs(c.x - T[0]) < 200 && Math.abs(c.y - T[1]) < 200 && (b => T[0] < b[2] + 4 && T[2] > b[0] - 4 && T[1] < b[3] + 4 && T[3] > b[1] - 4)(pfBox(c, k, c.n + (c.mn || 0)))) ? 0.4 : 1; }   // (far out, where it cannot stand clear of every counter, it fades under the one on it)
-      const L = capTagAt.lead; if (L){ ctx.beginPath(); ctx.moveTo(L[0], L[1]); ctx.lineTo(L[2], L[3]); ctx.lineCap = 'round'; ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(4,7,9,.55)'; ctx.stroke();
-        ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(246,239,220,.92)'; ctx.stroke(); ctx.lineCap = 'butt'; }   // a short leader line when it stands further out
-      ctx.drawImage(hq, snapD(capTagAt.ix), snapD(capTagAt.iy), hq.width/dpr*HQ_K/HQ_KB, hq.height/dpr*HQ_K/HQ_KB); ctx.globalAlpha = 1; } }
   tutDraw(now, kl);   // the tutorial ring goes under the counters, so it never runs across a stack's number
   // counters (clustered per owner at low zoom)
   const hitsPrev = hits;   // last frame's plates: smoke and bursts spawn off them (AFX.avoid)
@@ -8267,7 +8147,7 @@ function draw(now){ draw.now = now;
   } } finally { counter.defer = null; FXM.VOLA = 1; }
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ if (L.a <= 0.01) continue; ctx.font = font; labNight(L, lx, ly); ctx.globalAlpha = L.a*(L.city || L.cap ? 1 : 0.85); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city || L.cap ? '#f4eedc' : '#d6d0bf'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
-  /*@TEST*/if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:capTagAt ? [capTagAt.tx - capTagAt.w/2, capTagAt.ty, capTagAt.tx + capTagAt.w/2, capTagAt.ty + capTagAt.h].map(Math.round) : null, tba:capTagAt ? capTagAt.a ?? 1 : null,
+  /*@TEST*/if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:null, tba:null,
     pn:pnDbg, lab:labDbg, mk:cityPts.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:[]};/*@ENDTEST*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
   if (sel.army !== null && !afxReduced()){ if (SELFX.a !== sel.army){ SELFX.a = sel.army; SELFX.at = now; }
@@ -8530,7 +8410,7 @@ function tap(x, y, shift = false, long = false){
   const hs = TL.length !== hits.length && TL.find(h => h.sat && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);   // (a counter stacked beside another stands where it does to be tapped: it wins over a city's point under it)
   const core = !hs && coreAt(x, y);   // (a counter's own square drawn over a city's point: the counter is what was tapped)
   const cityTap = plain && !hs && !core && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
-  const mk = hs || core ? null : cityAt(x, y) || (plain && !hitAt(x, y) && cityNameAt(x, y)) || null;   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
+  const mk = hs || core ? null : cityAt(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
       const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } } return; }
@@ -8990,7 +8870,7 @@ const csMobIcon = q0 => q0 ? `<span class="cs-bi cs-mi tr${saverOn() || afxReduc
 // (S.cons[p].h0); an old save without it takes the time of the build from its data.
 const csBldH0 = (p, c) => c.h0 || (c.k && BUILD[c.k] && (buildCost(PLAYER, c.k, c.lvl, p) || {}).h) || c.h || 1;
 const csBldF = (p, c) => c ? Math.max(0, Math.min(1, 1 - c.h/csBldH0(p, c))) : -1;
-const csBPic = c => { const A = csArt(c.k, c.lvl); return `<span class="cs-bp${A.art ? '' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>`; };
+const csBPic = c => { const A = csArt(c.k, c.lvl); return `<span class="cs-bp${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>`; };
 const csBldIcon = (p, c) => c ? `<span class="cs-bi cs-mi tr cs-bpic${saverOn() || afxReduced() ? '' : ' live'}" title="${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' level ' + ROMAN[c.lvl] : ''}">${csBPic(c)}${BUILD[c.k].max > 1 ? `<b class="cs-bl">${ROMAN[c.lvl]}</b>` : ''}<i class="cs-mf" style="transform:translateY(${csMobY(csBldF(p, c))})"></i></span>` : `<span class="cs-bi">${CS_ICO.bld}</span>`;
 // what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a Recruiting Office says so
 // a city's main resource in words ("Oil city") and as the chip of the city sheet (with today's output and what the Arms Industry adds)
@@ -9025,7 +8905,8 @@ function csGlyph(k){ if (CS_GL[k]) return CS_GL[k]; let u = '';
   try { const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 5; g.shadowOffsetY = 2;
     g.translate(18, 18); g.scale(2.5, 2.5); g.fillStyle = g.strokeStyle = '#f2fbfc'; if (BGLYPH[k]) BGLYPH[k](g); u = c.toDataURL(); } catch (e) {}
   return CS_GL[k] = u; }
-const csArt = (k, lv) => { if (k === 'city' || BART[k]){ const n = bartName(k, Math.max(1, lv)); if (ART.ready(n)) return {u:ART.url(n), art:true}; ART.want(n); } return {u:k === 'city' ? '' : csGlyph(k), art:false}; };   // (the symbol until the picture arrives)
+const csArt = (k, lv) => { if (k !== 'city' && BN_ART[k]){ const n = bnName(k, Math.max(1, lv)); if (ART.ready(n)) return {u:ART.url(n), art:true, ba:true}; if (!ART.failed(n)){ ART.want(n); return {u:csGlyph(k), art:false}; } }   // (the angled cut-out where the building has one)
+  if (k === 'city' || BART[k]){ const n = bartName(k, Math.max(1, lv)); if (ART.ready(n)) return {u:ART.url(n), art:true}; ART.want(n); } return {u:k === 'city' ? '' : csGlyph(k), art:false}; };   // (the symbol until the picture arrives)
 function csWanted(){ const p = sel.prov;
   if (!S || p === null || sel.army !== null || aimMsl || rallyFor !== null || (typeof GLOBE !== 'undefined' && GLOBE && GLOBE.on())) return -1;
   const P = G.P[p]; return P && !P.sea ? p : -1; }
@@ -9052,7 +8933,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   // building cards: the city first, then what stands here, then (yours) what can still be built
   const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = k === 'city' ? (isCapital(p) ? 'Capital' : 'City') : BUILD[k].name, tag = o0.btn ? 'button' : 'span';
     const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && k === 'arms' ? '\n' + armsTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
-    return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
+    return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
   const cards = (P.city ? card('city', lv, {btn:true}) : '') + built.map(k => card(k, S.bld[p][k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
@@ -9117,7 +8998,7 @@ const armsTip = p => { const o = cityOut(p); if (!o) return BUILD.arms.desc; con
     : `${BUILD.arms.name}: +${pc}% of this city’s main resource (${nm}) per level, up to +${pc*M}% at level ${ROMAN[M]}. Now ${out(o.y)} a day; with level I ${at(1)} a day.`)
     + ' ' + bldPrice(p, 'arms') + (pay ? ` At today’s prices it pays for itself in about ${pay} day${pay > 1 ? 's' : ''}.` : '') + (others && l < M ? ` (That includes 40% more for each other Arms Industry you own: ${others} now.)` : ''); };
 const bldDesc = (p, k) => k === 'rec' ? recTip(p) : BUILD[k].desc;
-const csPic = (k, lv) => { const A = csArt(k, lv); return `<i class="bi${lv ? '' : ' dim'}${A.art ? '' : ' gl'}" style="--bi:url(${A.u});--bs:54px" aria-hidden="true"></i>`; };
+const csPic = (k, lv) => { const A = csArt(k, lv); return `<i class="bi${lv ? '' : ' dim'}${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}" style="--bi:url(${A.u});--bs:54px" aria-hidden="true"></i>`; };
 const mobHTML = p => `${cmodHead(p, 'Mobilize unit')}<div class="cs-mbody cs-mmod">${cityRecruitHTML(p)}</div>`;
 const cbldHTML = p => `${cmodHead(p, 'Build')}<div class="cs-mbody cs-bmod">${cityConsHTML(p, true)}${S.bld[p].silo ? citySiloHTML(p) : ''}</div>`;
 addEventListener('resize', () => hdrSync(true));
@@ -11122,7 +11003,7 @@ function start(data){
 }
 /*@TEST*/
 // test hooks (test build only: tools/build.js strips every @TEST block from the public build). window.__im exists on file:// pages.
-if (location.protocol === 'file:') window.__im = {hexPx: () => view.s*HS0, bpic:{get dbg(){ return BPIC_DBG; }, get on(){ return BPIC_ON; }, get cache(){ return BPICC; }}, coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, get FADE(){ return FADE; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(PLAYER), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, PROJ, MUZZ, FXG, LTN, stormLight: (x, y) => stormLight(x, y), nightAtX: x => nightAtX(x), armyPos: a => armyPos(a), MOV, roads:{route:(k, f, t) => roadRoute(k, f, t), net:k => rnetBuild(k), get RL(){ return RLEG; }, left:a => { if (a.to === null || a.path.length || !S.speed) return null; const lh = legH(a), rem = (1 - a.t)*lh; return (Math.max(1, Math.ceil(rem - 1e-6)) - acc)/HOURS_PER_SEC[S.speed]; }}, TMFACE, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), tickQ: () => tickQ(), selectFoe: id => selectFoe(id), abTick: () => abTickText(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet(PLAYER)), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st, S.hour + (S.speed && !S.over ? acc : 0)), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(PLAYER); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p, sel.surprise), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), hitAt: (x, y) => !!hitAt(x, y, true), sel, odds: (a, t, f) => odds(a, t, f, undefined, viaOf(a)), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l, p) => buildCost(n, k, l, p), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|'))cbakeDrop(k, CBAKE.get(k)); if (CLOW.has(p)){ CLOW.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } if (CLOWN.has(p)){ CLOWN.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } for (const k of [...CJOB.keys()]) if (k === 'i' + p || k === 'l' + p || k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CJOB.delete(k); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I), n = Math.ceil(S/CCH); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityChunk(p, S, i, j); } else cityBake(p, S); const t2 = performance.now(); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityLightsChunk(p, S, i, j); } else cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {exact:ks ? ks.every(k => CBAKE.has(k[0])) : CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S, chunks:ks ? ks.length : 0}; }, geo(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), dev = 2*I.E*view.s*dpr, real = 2*I.E*view.s*(window.devicePixelRatio || 1); return {E:I.E, S, dev:Math.round(dev), tpp:S/dev, dpr, ddpr:window.devicePixelRatio || 1, tppReal:S/real}; }, jobs: () => [...CJOB.keys()], night(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {S, exact:ks ? ks.every(k => CBAKE.has('n' + k[0].slice(1))) : CBAKE.has('n' + p + '|' + S), tpp:S/(2*I.E*view.s*(window.devicePixelRatio || 1))}; }, stats: () => CBT, mem: () => cityMem(), gains: p => { const I = CINFO.get(p); return I && I.gain ? [...I.gain].map(([k, v]) => k + ':' + (+v).toFixed(3)) : null; }, lum(p, S, n, f, N = 96){ CITY_DL = Infinity; const I = cityInfo(p), r = I.r*f, X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E, u0 = (I.x - r - X)/E2, u1 = (I.x + r - X)/E2;
+if (location.protocol === 'file:') window.__im = {hexPx: () => view.s*HS0, bn:{get dbg(){ return BNDBG; }, get hits(){ return BNHIT; }, at:(x, y) => bldAt(x, y), items:p => bnItems(p), layout:p => bnLayout(p, bnItems(p)), shore:p => bnShore(p), src:() => [drawBuildings, bnRing, bnCrane, cityRing, bnPic].map(f => f.toString()), hq:n => bnHqStyle(n), L:h => bnL(h), F:(k, l) => bnF(k, l), get meta(){ return BNMETA; }, get cache(){ return BNC; }, bands:{in0:BN_IN0, in1:BN_IN1, all0:BN_ALL0, all1:BN_ALL1}}, coastBleed: () => coastBleed(), get globe(){ return GLOBE; }, get layer(){ return layer; }, get dt(){ return DT; }, get FADE(){ return FADE; }, snow:{get c(){ return SNOWC; }, build:() => { SNOWC.m = -1; return snowCover(true); }}, renderRect: (x0, y0, x1, y1) => renderLayer(visibleSet(PLAYER), false, {x0, y0, x1, y1}), sunSinEl: p => sunSinEl(p), sunOffFor: n => sunOffFor(n), restore: d => restore(d), get SET(){ return SET; }, applySet: () => applySet(), capOver: (p, o) => capOver(p, o), modalKind: () => modalKind, yieldStr: y => yieldStr(y), pluN, artA, hdrSync: f => hdrSync(f), AFX, PART, PROJ, MUZZ, FXG, LTN, stormLight: (x, y) => stormLight(x, y), nightAtX: x => nightAtX(x), armyPos: a => armyPos(a), MOV, roads:{route:(k, f, t) => roadRoute(k, f, t), net:k => rnetBuild(k), get RL(){ return RLEG; }, left:a => { if (a.to === null || a.path.length || !S.speed) return null; const lh = legH(a), rem = (1 - a.t)*lh; return (Math.max(1, Math.ceil(rem - 1e-6)) - acc)/HOURS_PER_SEC[S.speed]; }}, TMFACE, dispPos: a => dispPos(a), dugIn: a => dugIn(a), goHas: id => GO.has(id), canProceed: a => canProceed(a), canEnter: (n, p) => canEnter(n, p), get zmax(){ return ZMAX; }, geoDirty: () => { geoDirty = true; }, get S(){ return S; }, get G(){ return G; }, get VW(){ return VW; }, get FXQ(){ return FXQ; }, view, toScreen: (x, y) => toScreen(x, y), tick: () => tick(), tickQ: () => tickQ(), selectFoe: id => selectFoe(id), abTick: () => abTickText(), findPath: (a, b, mt, owner) => findPath(a, b, null, mt, owner), renderLayer: () => renderLayer(visibleSet(PLAYER)), links:{of:(a, b) => linkOf(a, b), build:(n, a, b, k) => buildLink(n, a, b, k), check:(n, a, b, k) => linkCheck(n, a, b, k), damage:(p, h) => damageLinks(p, h), hour:() => linkHour(), sync:() => linksSync(), mix:(a, path) => routeMix(a, path), mode:(a, u, v) => legMode(a, u, v), cost:(n, a, b, k, lv) => linkCost(n, a, b, k, lv), get v(){ return LINKV; }, get d(){ return LINKD; }}, pathFor:(a, f, t) => pathFor(a, f, t), etaHours:(a, path) => etaHours(a, path), computeSupply:() => computeSupply(), get SUP(){ return SUP; }, aiLinks:n => aiLinks(n), aiInterdict:(n, b, r) => aiInterdict(n, G.P[b], r), orderMove: (a, p) => orderMove(a, p), selectProv: p => selectProv(p), selectArmy: id => selectArmy(id), tutPick: () => tutPick(), satPos: st => satPos(st, S.hour + (S.speed && !S.over ? acc : 0)), income: n => income(n), amb: () => ({amb:!!AMB, mus:MUS ? MUS.step : -1, ac:AC ? AC.state : null}), tap: (x, y, sh) => tap(x, y, sh), orderAir: (a, t) => orderAir(a, t), air:{resolveStrike:(a, p) => resolveStrike(a, p), droneAD:(a, p, k) => droneAD(a, p, k), uavLv:n => uavLv(n), visibleSet:() => { visCache = null; return visibleSet(PLAYER); }, armyVisible:(a, v) => armyVisible(a, v), armyLocated:(a, v) => armyLocated(a, v), airTick:() => airTick(), aiAir:n => aiAir(n), aiPickUnit:(n, p) => aiPickUnit(n, p), enemyMix:n => enemyMix0(n), spawn:(n, p, t) => spawn(n, p, t), bdis:(p, k) => bdis(p, k), wingT:a => wingT(a), airCheck:(a, p) => airCheck(a, p, sel.surprise), capOver:(p, o) => capOver(p, o), aewCover:n => aewCover(n), guide:() => openModal(airGuideHTML(), 'airguide'), unkHits:() => hits.filter(h => h.unk).map(h => [h.x + h.w/2, h.y + h.h/2]), foeHits:() => hits.filter(h => !h.unk && h.ids.some(id => { const a = armyById(id); return a && a.owner > 0 && !a.air; })).map(h => [h.cx, h.cy]), ART:() => ({stand:ART.OPT.filter(n => ART.standIn(n)), ready:ART.OPT.filter(n => ART.ready(n))})}, addArmy: (o, p, u) => addArmy(o, p, u), provAt: (x, y) => provAt(x, y), hitAt: (x, y) => !!hitAt(x, y, true), sel, odds: (a, t, f) => odds(a, t, f, undefined, viaOf(a)), tutGo: i => { if (!TUT) tutStart(); TUT.i = i; tutRender(); }, setTarget: (id, p) => setTarget(armyById(id), p), build: (n, p, k) => build(n, p, k), buildCost: (n, k, l, p) => buildCost(n, k, l, p), recruit: (n, p, t) => recruit(n, p, t), buildMissile: (n, p, k) => buildMissile(n, p, k), wingRange: a => wingRange(a), cityLevel: p => cityLevel(p), cityDbg: {time(p, S0){ CITY_DL = Infinity; CINFO.delete(p); for (const k of [...CBAKE.keys()]) if (k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|'))cbakeDrop(k, CBAKE.get(k)); if (CLOW.has(p)){ CLOW.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } if (CLOWN.has(p)){ CLOWN.delete(p); CLOW_PX -= CLOW_S*CLOW_S; } for (const k of [...CJOB.keys()]) if (k === 'i' + p || k === 'l' + p || k.startsWith('d' + p + '|') || k.startsWith('n' + p + '|')) CJOB.delete(k); const t0 = performance.now(); const I = cityInfo(p); const t1 = performance.now(); const S = S0 || cityTier(I), n = Math.ceil(S/CCH); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityChunk(p, S, i, j); } else cityBake(p, S); const t2 = performance.now(); if (S > CCH){ for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (cityChunkNeed(p, S, i, j)) cityLightsChunk(p, S, i, j); } else cityLightsBake(p, S); const t3 = performance.now(); CITY_DL = 0; return {info:t1 - t0, bake:t2 - t1, night:t3 - t2, S, r:I.r/KM_W, E:I.E}; }, show(p, S, n, i){ CITY_DL = Infinity; const c = n ? cityLightsBake(p, S) : cityBake(p, S); CITY_DL = 0; const o = document.createElement('canvas'); o.width = o.height = S; o.style.cssText = `position:fixed;left:${i*S}px;top:0;z-index:99999;background:${n ? '#0a0d10' : '#4a5434'}`; o.getContext('2d').drawImage(c, 0, 0); document.body.appendChild(o); }, has(p){ const I = CGEO.get(p); if (!I) return {geo:false}; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {exact:ks ? ks.every(k => CBAKE.has(k[0])) : CBAKE.has('d' + p + '|' + S) || (S === CLOW_S && CLOW.has(p)), any:!!cityAnyBake(p, S, false), low:CLOW.has(p), S, chunks:ks ? ks.length : 0}; }, geo(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), dev = 2*I.E*view.s*dpr, real = 2*I.E*view.s*(window.devicePixelRatio || 1); return {E:I.E, S, dev:Math.round(dev), tpp:S/dev, dpr, ddpr:window.devicePixelRatio || 1, tppReal:S/real}; }, jobs: () => [...CJOB.keys()], night(p){ const I = CGEO.get(p); if (!I) return null; const S = cityTier(I), ks = S > CCH ? cityChunkKeys(p, I, S, -view.x/view.s, -view.y/view.s, (cw - view.x)/view.s, (ch - view.y)/view.s) : null; return {S, exact:ks ? ks.every(k => CBAKE.has('n' + k[0].slice(1))) : CBAKE.has('n' + p + '|' + S), tpp:S/(2*I.E*view.s*(window.devicePixelRatio || 1))}; }, stats: () => CBT, mem: () => cityMem(), gains: p => { const I = CINFO.get(p); return I && I.gain ? [...I.gain].map(([k, v]) => k + ':' + (+v).toFixed(3)) : null; }, lum(p, S, n, f, N = 96){ CITY_DL = Infinity; const I = cityInfo(p), r = I.r*f, X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E, u0 = (I.x - r - X)/E2, u1 = (I.x + r - X)/E2;
     if (S > CCH){ const m = Math.ceil(S/CCH); for (let j = 0; j < m; j++) for (let i = 0; i < m; i++){ if ((i + 1)*CCH/S < u0 || i*CCH/S > u1 || (j + 1)*CCH/S < u0 || j*CCH/S > u1) continue; if (n) cityLightsChunk(p, S, i, j); else cityChunk(p, S, i, j); } } else if (n) cityLightsBake(p, S); else cityBake(p, S);
     const c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, N, N); g.imageSmoothingQuality = 'high'; g.setTransform(N/(2*r), 0, 0, N/(2*r), -(I.x - r)*N/(2*r), -(I.y - r)*N/(2*r));
     cityFill(g, p, I, n, [S], 0, u0, u0 + 0*u1, u1, u1, w => w, w => w); CITY_DL = 0; const d = g.getImageData(0, 0, N, N).data; let R = 0, G0 = 0, B = 0; for (let q = 0; q < d.length; q += 4){ R += d[q]; G0 += d[q + 1]; B += d[q + 2]; } const k = N*N;
@@ -11146,7 +11027,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {pics:() => ({nodes:RNODES.map(n => ({id:n.id, kind:n.kind, name:n.name, u:n.u, eng:n.eng, key:rKey(n)})), cats:RCATS.map(c => c.id)}), can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
-if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ return GFX.n; }, get lost(){ return GFX.lost; }, reset:() => gfxReset(), mem:() => cityMem(), caches:() => ({cities:G.P.filter(P => P.city && !P.sea).length, CBAKE:CBAKE.size, CLOW:CLOW.size, CLOWN:CLOWN.size, CLGL:CLGL.size, CGEO:CGEO.size, CINFO:CINFO.size, GTILE:GTILE.size, DT:DT.cache.size, FADEP:FADEP.length, FADEPmp:+(FADEP.reduce((a, c) => a + c.width*c.height, 0)/1e6).toFixed(1), UCC:UCC.size, FLAGC:FLAGC.size, BPICC:BPICC.size, FIGSH:FIGSH.size})};   // a lost graphics context and its recovery (.test/black-map.js)
+if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ return GFX.n; }, get lost(){ return GFX.lost; }, reset:() => gfxReset(), mem:() => cityMem(), caches:() => ({cities:G.P.filter(P => P.city && !P.sea).length, CBAKE:CBAKE.size, CLOW:CLOW.size, CLOWN:CLOWN.size, CLGL:CLGL.size, CGEO:CGEO.size, CINFO:CINFO.size, GTILE:GTILE.size, DT:DT.cache.size, FADEP:FADEP.length, FADEPmp:+(FADEP.reduce((a, c) => a + c.width*c.height, 0)/1e6).toFixed(1), UCC:UCC.size, FLAGC:FLAGC.size, BNC:BNC.size, FIGSH:FIGSH.size})};   // a lost graphics context and its recovery (.test/black-map.js)
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)

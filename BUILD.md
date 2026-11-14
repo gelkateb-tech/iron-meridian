@@ -134,6 +134,7 @@ Every file in `tools/` (none of them is published; the game never loads them):
 | `bake-assets.js` | bakes the terrain texture, the land mask and the unit sprite sheets into `assets/` |
 | `build-flags.js`, `pack-flags.py` | the flag atlas `assets/art/flags.webp` |
 | `prep-art.py`, `prep-banners.py`, `prep-res.py`, `icons.py` | prepare the unit pictures, the research banners, the resource pictures and the unit icons |
+| `cutout-angled.py` | cuts the angled building pictures (`assets/art-src/ba-*.png`) out of their grey background into `assets/art/bn-*.webp` and writes their anchors (`tools/bn-meta.json`, `BNMETA` in `index.html`): `python3 -I tools/cutout-angled.py assets/art-src assets/art --meta=tools/bn-meta.json --embed` |
 | `vendor/three.min.js` | a local copy of three.js (the globe view) that `mkpage.sh` puts in the test page so the tests run offline |
 
 ## Effects module
