@@ -1,10 +1,11 @@
 // Buildings on the map as the angled building cut-outs (drawBuildings in index.html, assets/art/bn-*.webp from tools/cutout-angled.py): no old
 // building picture (b-*, bm-*) and no 3D building sprite (assets/bld3d, U3D.bld) is drawn on the map at any zoom, and no frame or tile round a
 // picture (the corners of every drawn picture's box show the map through); none zoomed out, one per city at the mid zoom, all of a city's at close
-// zoom (the construction site and the crane of a level going up too); every picture stands on a world point drawn through toScreen (0 drift over a
+// zoom (the construction site and a level going up too, at their progress); every picture stands on a world point drawn through toScreen (0 drift over a
 // zoom sweep, a pan, a whole turn of the wrap and at the seam itself), the HQ exactly on the capital in its nation's style; every Naval Yard on the
-// shore next to its city with its piers toward the sea (mirrored when the sea is to the left); the building drawing writes no text (no level
-// numbers or badges on the map); a tap on a picture opens its city. node .test/bldangled.js [W H dpr]  prints JSON {checks, fails, errors}, exit 1 on a failure.
+// real coast at its city with its sheds dry and its piers on the water (Kolkata's too); every picture of every city on land at 5 zooms (small islands
+// listed apart); 15-20% smaller than the first size, the HQ the biggest; the building drawing writes no text (no level numbers or badges on the map);
+// a tap on a picture opens its city. node .test/bldangled.js [W H dpr]  prints JSON {checks, fails, errors}, exit 1 on a failure.
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
@@ -54,6 +55,9 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
     const hq = be.find(e => e.k === 'hq'); if (hq && (hq.wx !== C.be[0] || hq.wy !== C.be[1])) fails.push(`hexPx ${hp}: the HQ is not on Berlin's point`);
     if (hq && hq.nm !== 'bn-hq-western') fails.push(`hexPx ${hp}: Berlin's HQ is ${hq.nm}, not the western style`);
     if (F.L.some(e => /^(fac|silo|arms)$/.test(e.k))) fails.push(`hexPx ${hp}: a building without an angled picture is drawn`); }
+  // sizes (owner's #13): 18% smaller than the first BN_K0 0.62, the HQ the biggest
+  const sz = await p.evaluate(() => { const b = window.__im.bn; return {K0:b.K0, hq100:+(b.L(100)*b.F('hq', 1)).toFixed(2), biggestOther:Math.max(...['air', 'rec', 'yard', 'fort'].flatMap(k => [1, 2, 3, 4, 5].filter(l => l <= BUILD[k].max).map(l => b.F(k, l))))}; });
+  checks.size = Object.assign(sz, {vsFirst:+(sz.K0/0.62).toFixed(3)}); if (sz.K0/0.62 < 0.8 || sz.K0/0.62 > 0.85) fails.push(`pictures ${sz.K0/0.62} of their first size, not 15-20% smaller`); if (sz.biggestOther >= 1.08) fails.push('a building drawn bigger than the HQ');
   checks.berlin = {buildings:C.berlin, hq:C.hqNm}; if (!/^air,fort,hq,rec(,yard)?$/.test(C.berlin)) fails.push('Berlin items: ' + C.berlin);
   checks.sweep = {maxDriftPx:+maxD.toFixed(3), pictureOnAnchorPx:+relMax.toFixed(3), models:world.size};
   if (maxD > 1.5) fails.push(`zoom sweep: a model drawn ${maxD.toFixed(2)} px off its anchor`); if (relMax > 2) fails.push(`zoom sweep: a model's picture moved ${relMax.toFixed(2)} px against its anchor`);
@@ -61,7 +65,8 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   const at = async (q, hp) => { const xy = await p.evaluate(q => [window.__im.G.P[q].x, window.__im.G.P[q].y], q); await look(xy[0], xy[1], hp); await frame(); return frame(); };
   const mu = (await at(C.mu, 100)).L.find(e => e.p === C.mu && e.k === 'air'); await p.evaluate(fr => { const S = window.__im.S; S.bld[fr].fac = 0; S.bld[fr].rec = 2; S.cons[fr] = {k:'rec', lvl:3, h:20, h0:72}; }, C.fr); const fr = (await at(C.fr, 100)).L.find(e => e.p === C.fr && e.k === 'rec');
   await look(C.be[0], C.be[1], 100); const F0 = await frame();
-  checks.construction = {munich:mu ? {k:mu.k, site:mu.site} : null, frankfurt:fr ? {k:fr.k, lv:fr.lv, cons:fr.cons} : null};
+  checks.construction = {munich:mu ? {k:mu.k, site:mu.site, pf:mu.pf} : null, frankfurt:fr ? {k:fr.k, lv:fr.lv, cons:fr.cons, pf:fr.pf} : null};
+  if (mu && Math.abs(mu.pf - (1 - 40/96)) > 0.02) fails.push(`Munich: the site drawn at ${mu.pf} done`); if (fr && Math.abs(fr.pf - (1 - 20/72)) > 0.02) fails.push(`Frankfurt: the level drawn at ${fr.pf} done`);
   if (!mu || !mu.site || mu.k !== 'air') fails.push('Munich: no Airbase construction site'); if (!fr || !fr.cons || fr.lv !== 2) fails.push('Frankfurt: no Recruiting Office raising its level');
   // a pan: every model moves with the map, exactly
   await p.evaluate(() => { const im = window.__im; im.view.x += 137.25; im.view.y -= 41.5; im.redraw(); }); const F1 = await frame(); let panD = 0, panN = 0;
@@ -73,7 +78,8 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   checks.wrapTurn = {models:wN, maxDriftPx:+wD.toFixed(3)}; if (!wN || wD > 1.5) fails.push(`a turn of the wrap: ${wN} models, ${wD.toFixed(2)} px off`);
   // at the seam itself: the seam and the city nearest it on screen (the view's middle between them), the city's model drawn on its anchor (whichever copy is on screen), at two zooms
   const sm = {};
-  for (const hp of [30, 44]){ await p.evaluate(([hp, W, H, X0, y, sx]) => { const im = window.__im, v = im.view, s = hp/12; v.s = s; v.x = W/2 - (X0 + sx)/2*s; v.y = H/2 - y*s; im.redraw(); }, [hp, W, H, C.X0, C.seam[1], C.seamX]); const F = await frame();
+  for (const hp of [30, 44]){ if (C.seamD*hp/12 > W*0.9){ sm['z' + hp] = 'skipped: the seam and the city do not both fit this screen'; continue; }   // (a phone at hexPx 44)
+    await p.evaluate(([hp, W, H, X0, y, sx]) => { const im = window.__im, v = im.view, s = hp/12; v.s = s; v.x = W/2 - (X0 + sx)/2*s; v.y = H/2 - y*s; im.redraw(); }, [hp, W, H, C.X0, C.seam[1], C.seamX]); const F = await frame();
     const L = F.L.filter(e => e.p === C.seamId); sm['z' + hp] = {models:L.length, maxDriftPx:+Math.max(0, ...L.map(e => Math.max(Math.abs(e.dx), Math.abs(e.dy)))).toFixed(3), x:L.map(e => Math.round(e.x))};
     if (L.length < 1) fails.push(`seam hexPx ${hp}: ${C.seamName} shows no model`); if (L.some(e => Math.abs(e.dx) > 1.5 || Math.abs(e.dy) > 1.5)) fails.push(`seam hexPx ${hp}: a model off its anchor`); }
   checks.seam = Object.assign({city:C.seamName, fromSeam:C.seamD}, sm);
@@ -106,19 +112,38 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
     for (const b of boxes) for (const [x, y] of [[b[0] + 1.5, b[1] + 1.5], [b[2] - 1.5, b[1] + 1.5], [b[0] + 1.5, b[3] - 1.5], [b[2] - 1.5, b[3] - 1.5]]){ if (x < 0 || y < 0 || x >= W || y >= cv.height/k) continue; n++; const a = px(D1, x, y), c = px(D0, x, y); if (Math.max(...a.map((v, j) => Math.abs(v - c[j]))) < 24) same++; }
     return {boxes:boxes.length, corners:n, seeThrough:same}; }, W);
   checks.frames = corners; if (!corners.tainted && (corners.corners < 8 || corners.seeThrough < corners.corners*0.7)) fails.push(`picture corners: only ${corners.seeThrough} of ${corners.corners} show the map (a frame or tile?)`);
-  // the Naval Yards: each on the shore of its city (the anchor on land, water a short way off toward its sea side) with the piers toward the sea
+  // the Naval Yards (owner's #14): each on the real coast at its city: its land half (the sheds, cranes and docks) dry at every zoom, its pier half on the
+  // water (the piers face the sea), within BN_YMAX of the city; a river port without water near on its river's bank; else in its city's cluster
   const yards = await p.evaluate(ports => { const im = window.__im, out = []; for (const q of ports){ const it = im.bn.items(q); const i = it.findIndex(e => e.k === 'yard'); if (i < 0) continue;
-      const L = im.bn.layout(q), sh = L.shore, P = im.G.P[q], wx = P.x + L.pos[i][0], wy = P.y + L.pos[i][1];
-      let wetNear = false; if (sh.sea) for (let t = 0.5; t <= 4; t += 0.5) if (im.dock.isWet(wx + sh.sea[0]*t, wy + sh.sea[1]*t)) wetNear = true;
-      out.push({p:q, name:P.cityName, sea:sh.sea, riv:!!sh.riv, far:!!sh.far, mir:L.mir[i] ? 1 : 0, dry:!im.dock.isWet(wx, wy), wetNear, d:+Math.hypot(L.pos[i][0], L.pos[i][1]).toFixed(2), r:sh.r}); } return out; }, C.ports);
-  const noSea = yards.filter(y => !y.sea), wrongSide = yards.filter(y => y.sea && y.mir !== (y.sea[0] < -0.05 ? 1 : 0)), offShore = yards.filter(y => y.sea && !y.riv && !y.far && (!y.dry || !y.wetNear)), riv = yards.filter(y => y.riv), far = yards.filter(y => y.far);
-  checks.yards = {n:yards.length, mirrored:yards.filter(y => y.mir).length, onRivers:riv.length, inCluster:far.length, farOnes:far.slice(0, 8).map(y => y.name), rivers:riv.slice(0, 12).map(y => y.name), noSea:noSea.map(y => y.name), wrongSide:wrongSide.length, offShore:offShore.map(y => y.name + ' ' + y.d), maxFromCity:Math.max(...yards.filter(y => !y.far).map(y => y.d)),
-    hamburg:yards.find(y => y.p === C.ha), examples:yards.filter(y => y.mir).slice(0, 3).map(y => y.name + ' sea ' + y.sea.join(','))};
-  if (yards.some(y => !y.far && y.d > 20)) fails.push('a Naval Yard stands more than 20 world px from its city');
+      const L = im.bn.layout(q), sh = L.shore, P = im.G.P[q], e = it[i], F = im.bn.foot(e.nm), wx = P.x + L.pos[i][0], wy = P.y + L.pos[i][1], m = !!L.mir[i];
+      let lw = 0; for (const h of [56, 80, 140, 240]) lw = Math.max(lw, im.bn.wet(e.nm, F.land, wx, wy, im.bn.wsize(q, i, h), m)); const pw = im.bn.wet(e.nm, F.pier, wx, wy, im.bn.wsize(q, i, 100), m, true);   // (the piers: on the sea or a big lake, at hexPx 100)
+      out.push({p:q, name:P.cityName || P.name, kind:sh.riv ? 'river' : sh.far ? 'cluster' : 'coast', sea:sh.sea, mir:m ? 1 : 0, d:+Math.hypot(L.pos[i][0], L.pos[i][1]).toFixed(2), lw:+lw.toFixed(3), pw:+pw.toFixed(3)}); } return out; }, C.ports);
+  const coast = yards.filter(y => y.kind === 'coast'), riv = yards.filter(y => y.kind === 'river'), far = yards.filter(y => y.kind === 'cluster');
+  const wetLand = coast.concat(riv).filter(y => y.lw > 0.05), piersOff = coast.filter(y => y.pw < 0.3), ds = coast.map(y => y.d).sort((a, b) => a - b);
+  const named = Object.fromEntries(['Kolkata', 'Hamburg', 'Amsterdam', 'Brussels', 'Shanghai', 'Mumbai', 'Istanbul', 'Saint Petersburg', 'Bordeaux', 'Basra', 'Karachi', 'Lagos', 'Buenos Aires', 'Houston', 'Seattle'].map(n => [n, yards.find(y => y.name === n)]).filter(v => v[1]).map(([n, y]) => [n, `${y.kind} ${y.d} px (${Math.round(y.d*8.7)} km), piers ${y.mir ? 'lower left' : 'lower right'}, piers on water ${Math.round(y.pw*100)}%, sheds on water ${Math.round(y.lw*100)}%`]));
+  checks.yards = {n:yards.length, coast:coast.length, onRivers:riv.length, inCluster:far.length, medianFromCity:ds[ds.length >> 1], maxFromCity:ds[ds.length - 1], mirrored:yards.filter(y => y.mir).length,
+    landHalfOnWater:wetLand.map(y => y.name + ' ' + y.lw), piersNotOnWater:piersOff.length, piersNotOnWaterList:piersOff.map(y => y.name), rivers:riv.map(y => y.name), clusters:far.map(y => y.name), named};
+  if (yards.length < 300) fails.push(`only ${yards.length} Naval Yards checked`);
+  if (coast.some(y => y.d > 15.5)) fails.push('a Naval Yard stands more than 15 world px from its city');
+  if (wetLand.length > 2) fails.push(`${wetLand.length} Naval Yards with their sheds on the water: ${wetLand.slice(0, 6).map(y => y.name).join(', ')}`);
+  if (piersOff.length > coast.length*0.12) fails.push(`${piersOff.length} Naval Yards on the coast with their piers off the water`);
   if (far.length > yards.length*0.15) fails.push(`${far.length} Naval Yards too far from the water to stand on it`);
-  if (yards.length < 20) fails.push(`only ${yards.length} Naval Yards checked`); if (wrongSide.length) fails.push(`${wrongSide.length} Naval Yards with the piers away from the sea`);
-  if (offShore.length > yards.length*0.05) fails.push(`${offShore.length} Naval Yards not on the shore: ${offShore.slice(0, 6).map(y => y.name).join(', ')}`);
   if (!yards.some(y => y.mir) || !yards.some(y => !y.mir)) fails.push('the yards are not seen both ways round');
+  { const k = yards.find(y => y.name === 'Kolkata'); if (!k || k.kind !== 'coast' || k.pw < 0.4) fails.push('Kolkata: its Naval Yard is not on the coast'); }
+  // every building on land (owner's #12): every city with buildings (an Airbase, a Recruiting Office and Fortifications everywhere, the yards above),
+  // each picture's footprint at 5 zooms (the first from the mid zoom, the rest from BN_ALL0); small islands (under 40% land within 8 world px) listed apart
+  const land = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G, out = {n:0, items:0, wet:[], island:[]};
+    const caps = new Set(S.nations.filter(N => N.alive).map(N => N.capital));
+    for (const P of G.P){ if (P.sea || !(P.city || caps.has(P.id))) continue; Object.assign(S.bld[P.id], {air:Math.max(1, S.bld[P.id].air || 0), rec:Math.max(1, S.bld[P.id].rec || 0), fort:Math.max(1, S.bld[P.id].fort || 0)}); }
+    for (const P of G.P){ if (P.sea) continue; const it = im.bn.items(P.id); if (!it.length) continue; const L = im.bn.layout(P.id); out.n++;
+      let dry = 0, all = 0; for (let y = -8; y <= 8; y++) for (let x = -8; x <= 8; x++) if (x*x + y*y <= 64){ all++; if (!im.isWet(P.x + x, P.y + y)) dry++; }
+      it.forEach((e, i) => { const F = im.bn.foot(e.nm), pts = e.k === 'yard' ? F.land : F.all, wx = P.x + L.pos[i][0], wy = P.y + L.pos[i][1]; let w = 0; out.items++;
+        for (const h of i ? [56, 80, 140] : [26, 40, 56, 80, 140]) w = Math.max(w, im.bn.wet(e.nm, pts, wx, wy, im.bn.wsize(P.id, i, h), !!L.mir[i]));
+        if (w > 0.05) (dry/all < 0.4 ? out.island : out.wet).push(`${P.cityName || P.name} ${e.k} ${Math.round(w*100)}%`); }); }
+    return out; });
+  checks.onLand = {cities:land.n, pictures:land.items, onWater:land.wet, smallIslands:land.island};
+  if (land.n < 600) fails.push(`only ${land.n} cities with buildings checked`); if (land.wet.length) fails.push(`${land.wet.length} pictures on the water: ${land.wet.slice(0, 6).join(', ')}`);
+  if (land.island.length > 12) fails.push(`${land.island.length} pictures on the water at small islands`);
   // the drawn yard carries its layout's mirror flag
   { const hz = await at(C.ha, 100); const e = hz.L.find(q => q.p === C.ha && q.k === 'yard'), y = yards.find(q => q.p === C.ha); if (!e || !y || e.mir !== y.mir) fails.push('Hamburg: the drawn Naval Yard does not match its coast layout'); }
   // HQ styles: every nation of the nations world has one of the seven

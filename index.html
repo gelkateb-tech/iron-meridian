@@ -5850,29 +5850,42 @@ function bnFoot(nm){ let F = BNFT.get(nm); if (F) return F; const h = BNFOOT[nm]
   F = {all, land, pier}; BNFT.set(nm, F); return F; }
 // the share of the cells pts of picture nm that lie on the water, the picture standing at world (x, y) with its long side s world px (mir: mirrored);
 // past the share stop it returns 1 at once
-function bnWet(nm, pts, x, y, s, mir, stop = 1){ const M = BNMETA[nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, lim = stop*pts.length; let n = 0;
-  for (const [u, v] of pts) if (isWet(x + (mir ? M.ax - u : u - M.ax)*w, y + (v - M.ay)*h) && ++n > lim) return 1;
+function bnWet(nm, pts, x, y, s, mir, stop = 1, wet = isWet){ const M = BNMETA[nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, lim = stop*pts.length; let n = 0;
+  for (const [u, v] of pts) if (wet(x + (mir ? M.ax - u : u - M.ax)*w, y + (v - M.ay)*h) && ++n > lim) return 1;
   return pts.length ? n/pts.length : 0; }
 // the Naval Yard's spot on the real coast at its city (owner's #14): every dry point by the water (water within 2.25 world px) up to BN_YMAX world px
 // from the city's point, on its own country's ground, is tried both ways round (mir: mirrored, the piers to the lower left instead of the lower
 // right), and the nearest whose land half stands dry and whose piers reach over the water wins (a few world px further is worth a dry yard with its
-// piers on the water). An estuary's shore counts (Kolkata's yard on the Hooghly's mouth). No water that near: the bank of the river the city stands
+// piers on the water; on a coast facing up the map, where the pictures' piers cannot point, the waterfront when it is near). An estuary's shore counts
+// (Kolkata's yard on the Hooghly's mouth). No water that near: the bank of the river the city stands
 // on (BN_RIVFAR); else the yard joins its city's cluster (far), turned to the nearest water. Worked out once per province and picture:
 // {dx, dy, mir, sea (the water's direction from the yard), r (world px from the city), lw / pw (wet shares of the land half / the pier half), riv, far}
-const BN_YMAX = 15, BN_RIVFAR = 9, BN_BANK = 1.6, BN_WETTOL = 0.02;
+const BN_YMAX = 15, BN_RIVFAR = 9, BN_BANK = 1.6, BN_WETTOL = 0.02, BN_LAKE = 30;
+// the water a Naval Yard may face: the sea and the big lakes (BN_LAKE world px across or more: the Great Lakes, Victoria, Baikal), not a small lake
+// (Ladoga by St Petersburg). The small lakes' rings in a coarse grid, once per map
+let BNLK = null;
+function bnSmallLake(x, y){ if (!BNLK || BNLK.g !== G){ const M = new Map(), C = 16; lakePath(); (G.lakeBox || []).forEach((b, i) => { if (Math.max(b[2] - b[0], b[3] - b[1]) >= BN_LAKE) return;
+      for (let j = Math.floor(b[1]/C); j <= Math.floor(b[3]/C); j++) for (let k = Math.floor(b[0]/C); k <= Math.floor(b[2]/C); k++){ const key = k + ':' + j; let a = M.get(key); if (!a) M.set(key, a = []); a.push(i); } });
+    BNLK = {g:G, M, C}; }
+  const L = BNLK.M.get(Math.floor(x/BNLK.C) + ':' + Math.floor(y/BNLK.C)); if (!L) return false;
+  for (const i of L){ const b = G.lakeBox[i]; if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) continue; const R = G.lakeRing[i]; let inn = false;
+    for (let a = 0, c = R.length - 2; a < R.length; c = a, a += 2) if ((R[a + 1] > y) !== (R[c + 1] > y) && x < (R[c] - R[a])*(y - R[a + 1])/(R[c + 1] - R[a + 1]) + R[a]) inn = !inn;
+    if (inn) return true; }
+  return false; }
+const bnSea = (x, y) => isWet(x, y) && !bnSmallLake(x, y);
 function bnShore(p, e){ if (BNL_G !== G) bnReset(); if (!e) e = bnItems(p).find(q => q.k === 'yard') || {k:'yard', lv:1, nm:'bn-yard-1'};
   const key = p + '|' + e.nm; let E = BNSH.get(key); if (E) return E; const P = G.P[p], s = Math.min(BN_WPX*bnF('yard', e.lv), bnNear(p)*2.2), F = bnFoot(e.nm), C = [];
   const mine = (x, y) => { const c = worldToCell(x, y), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea || q === p || G.P[q].country === P.country; };
   for (let gy = -BN_YMAX; gy <= BN_YMAX; gy += 0.75) for (let gx = -BN_YMAX; gx <= BN_YMAX; gx += 0.75){ const d = Math.hypot(gx, gy), x = P.x + gx, y = P.y + gy; if (d > BN_YMAX || isWet(x, y)) continue;
-    let w = false; for (let k = 0; k < 8 && !w; k++) w = isWet(x + Math.cos(k*Math.PI/4)*2.25, y + Math.sin(k*Math.PI/4)*2.25); if (w && mine(x, y)) C.push([gx, gy, d]); }
+    let w = false; for (let k = 0; k < 8 && !w; k++) w = bnSea(x + Math.cos(k*Math.PI/4)*2.25, y + Math.sin(k*Math.PI/4)*2.25); if (w && mine(x, y)) C.push([gx, gy, d]); }
   C.sort((a, b) => a[2] - b[2]); let B = null;
   for (const [gx, gy, d] of C){ if (B && d >= B.sc) break;
-    for (const mir of [false, true]){ const lw = Math.max(bnWet(e.nm, F.land, P.x + gx, P.y + gy, s, mir), bnWet(e.nm, F.land, P.x + gx, P.y + gy, s*0.72, mir)); if (B && d + 40*lw >= B.sc) continue;   // (dry zoomed right in too)
+    for (const mir of [false, true]){ const lw = Math.max(bnWet(e.nm, F.land, P.x + gx, P.y + gy, s, mir), bnWet(e.nm, F.land, P.x + gx, P.y + gy, s*0.72, mir)); if (B && d + 100*lw >= B.sc) continue;   // (dry zoomed right in too)
      
-      const pw = bnWet(e.nm, F.pier, P.x + gx, P.y + gy, s, mir), sc = d + 40*lw + 14*Math.max(0, 0.55 - pw); if (!B || sc < B.sc) B = {dx:gx, dy:gy, mir, r:+d.toFixed(2), d, lw:+lw.toFixed(3), pw:+pw.toFixed(3), sc}; } }
-  const seaAt = (x, y) => { let sx = 0, sy = 0; for (let k = 0; k < 24; k++){ const a = k*Math.PI/12, ux = Math.cos(a), uy = Math.sin(a); for (const r of [2, 3.5, 5]) if (isWet(x + ux*r, y + uy*r)){ sx += ux; sy += uy; } }
+      const pw = bnWet(e.nm, F.pier, P.x + gx, P.y + gy, s, mir, 1, bnSea), sc = d + 100*lw + 20*Math.max(0, 0.6 - pw); if (!B || sc < B.sc) B = {dx:gx, dy:gy, mir, r:+d.toFixed(2), d, lw:+lw.toFixed(3), pw:+pw.toFixed(3), sc}; } }
+  const seaAt = (x, y) => { let sx = 0, sy = 0; for (let k = 0; k < 24; k++){ const a = k*Math.PI/12, ux = Math.cos(a), uy = Math.sin(a); for (const r of [2, 3.5, 5]) if (bnSea(x + ux*r, y + uy*r)){ sx += ux; sy += uy; } }
     const l = Math.hypot(sx, sy); return l ? [+(sx/l).toFixed(3), +(sy/l).toFixed(3)] : null; };
-  if (B && B.pw >= 0.2 && B.lw <= 0.5) E = Object.assign(B, {sea:seaAt(P.x + B.dx, P.y + B.dy)});
+  if (B && (B.pw >= 0.2 || B.r <= 6 && B.lw <= BN_WETTOL) && B.lw <= 0.5) E = Object.assign(B, {sea:seaAt(P.x + B.dx, P.y + B.dy)});   // (a coast facing up the map, the sea where no picture's piers point: the yard on the waterfront all the same when it is that near)
   else { // a river port with no open water near (the rivers of lines.js are lines, not water on the mask): on the river's bank, on the city's side, the piers to it
     const R = bnRivers(), cx = Math.floor(P.x/R.C), cy = Math.floor(P.y/R.C);
     for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) for (const [x0, y0, x1, y1, rk] of R.M.get(i + ':' + j) || []){   // (the nearest river, a big one before a small one: rk is its rank, 1 the biggest)
@@ -6029,13 +6042,13 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
     const Lm = Math.max(M.w, M.h), w = q.L*M.w/Lm, h = q.L*M.h/Lm, ax = q.mir ? 1 - M.ax : M.ax; let X = q.x - ax*w, Y = q.y - M.ay*h;
     if (w*dpr < 96){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
     const b = [X, Y + M.top*h, X + w, Y + h];
-    if (e.c){ const pf = bnBuild(q, e, c, M, X, Y, w, h, lk, q0, now, q.a), R = Math.max(4, Math.min(8, w*0.07)); bnRing(b[0] + R*1.4, b[1] + R*1.4, R, pf, q.a); }   // a construction: its stage, its progress ring at the upper left corner
+    let pf = -1; if (e.c){ pf = bnBuild(q, e, c, M, X, Y, w, h, lk, q0, now, q.a); const R = Math.max(4, Math.min(8, w*0.07)); bnRing(b[0] + R*1.4, b[1] + R*1.4, R, pf, q.a); }   // a construction: its stage, its progress ring at the upper left corner
     else { ctx.globalAlpha = ga0*q.a; bnBlit(c, X, Y, w, h, q.mir); ctx.globalAlpha = ga0; }
     { const lr = bLevel(p + ':bn:' + e.k, e.lv, now); let f = lr.t0 ? (now - lr.t0)/TRAY_ANIM : -1; if (f >= 1){ lr.t0 = 0; f = -1; }
       if (f >= 0 && !saverOn()){ animFast(); const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2, R0 = Math.max(10, w*0.5), E0 = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = q.a*0.7*(1 - f); ctx.drawImage(GLOW(), cx - R0*1.3, cy - R0*1.3, R0*2.6, R0*2.6);
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = q.a*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, R0*(0.5 + 0.8*E0), 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
     if (q.a > 0.3){ BNHIT.push({p, b, hq:e.k === 'hq'}); const bx = [b[0], b[1], b[2], b[3]]; bx.unit = true; bx.b3 = true; bx.at = -5; boxes0.push(bx); if (e.k === 'hq' && S.owner[p] === PLAYER) HQBOX = [b]; }
-    /*@TEST*/BNDBG.push({p, k:e.k, nm:e.nm, lv:e.lv, site:e.site ? 1 : 0, cons:e.c ? 1 : 0, hq:e.k === 'hq' ? 1 : 0, mir:q.mir ? 1 : 0, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:q.wx, wy:q.wy, a:+q.a.toFixed(3), box:b.map(v => +v.toFixed(1)), L:+q.L.toFixed(2), px:c.width});/*@ENDTEST*/ }
+    /*@TEST*/BNDBG.push({p, k:e.k, nm:e.nm, lv:e.lv, pf:+pf.toFixed(3), site:e.site ? 1 : 0, cons:e.c ? 1 : 0, hq:e.k === 'hq' ? 1 : 0, mir:q.mir ? 1 : 0, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:q.wx, wy:q.wy, a:+q.a.toFixed(3), box:b.map(v => +v.toFixed(1)), L:+q.L.toFixed(2), px:c.width});/*@ENDTEST*/ }
   ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
 // the building picture at a screen point (the one drawn on top), for taps: {p}
 function bldAt(x, y){ for (let i = BNHIT.length - 1; i >= 0; i--){ const b = BNHIT[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return {p:BNHIT[i].p}; } return null; }
@@ -11117,7 +11130,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ re
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)
-if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m) => bnWet(nm, pts, x, y, s, m), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), src:() => [drawBuildings, bnRing, bnBuild, bnPad, bnDust, bnBlit, cityRing, bnPic].map(f => f.toString())});   // building layout checks (.test/bldangled.js): a picture's drawn long side in world px at hexPx h, the footprints
+if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m, sea) => bnWet(nm, pts, x, y, s, m, 1, sea ? bnSea : isWet), lake:(x, y) => bnSmallLake(x, y), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), src:() => [drawBuildings, bnRing, bnBuild, bnPad, bnDust, bnBlit, cityRing, bnPic].map(f => f.toString())});   // building layout checks (.test/bldangled.js): a picture's drawn long side in world px at hexPx h, the footprints
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor) => badgeBody(side, t, n, flagCanvas(o, plateDims(n, 1, !!minor, true).fh), !!mixed, false, false, !!minor), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
