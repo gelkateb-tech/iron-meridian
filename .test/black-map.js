@@ -23,7 +23,7 @@ const PAGE = process.argv[2], PHONE = process.argv.includes('--phone'), WHO = ar
   await p.goto('file://' + path.resolve(PAGE)); await p.waitForTimeout(900);
   if (await p.locator('[data-act="pickscn"][data-k="world64"]').count()) await p.click('[data-act="pickscn"][data-k="world64"]');
   const pk = await p.evaluate(nm => { const L = SCENARIOS.world64.powers, i = L.findIndex(P => P.name === nm); return {i, region:i >= 0 ? L[i].region : null}; }, WHO);
-  await p.click(`[data-act="pickreg"][data-k="${pk.region}"]`); await p.click(`[data-act="pick"][data-p="${pk.i}"]`); await p.click('[data-act="begin"]'); await p.waitForTimeout(1500);
+  await p.click(`[data-act="pick"][data-p="${pk.i}"]`); await p.click('[data-act="begin"]'); await p.waitForTimeout(1500);
   await p.click('[data-act="start"]'); await p.waitForTimeout(3000);
   // sampler: the visible composition of map canvases, read in the page (map canvas getImageData), else null
   const sample = () => p.evaluate(() => { const cv = document.getElementById('map'); const o = {t:Math.round(performance.now()), hour:S.hour, q:S.q || 0, speed:S.speed, s:+window.__im.view.s.toFixed(4), vx:+window.__im.view.x.toFixed(1), vy:+window.__im.view.y.toFixed(1), cw:cv.width, ch:cv.height};

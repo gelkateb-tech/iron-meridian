@@ -8,9 +8,17 @@ const { chromium } = require('playwright'); const path = require('path');
   await p.goto('file://' + path.join(__dirname, 'page.html')); await p.waitForTimeout(600);
   const def = await p.evaluate(() => ({cards:document.querySelectorAll('.pick').length, world:document.querySelector('.wsel [aria-pressed="true"]').dataset.k}));
   if (def.cards !== 15 || def.world !== 'world') bad.push('the start screen does not open on the classic 15 powers');
-  await p.click('[data-act="pickscn"][data-k="world64"]'); await p.click('[data-act="pickreg"][data-k="Asia"]');
-  const tab = await p.evaluate(() => ({cards:[...document.querySelectorAll('.pick b')].map(e => e.textContent), want:NATIONS.nations.filter(n => n.region === 'Asia').map(n => n.name), tabs:[...document.querySelectorAll('.regs .btn')].map(e => e.textContent)}));
-  if (tab.cards.slice().sort().join() !== tab.want.slice().sort().join() || tab.cards[0] !== 'China') bad.push('Asia tab: ' + tab.cards);   // (every Asian nation of nations.js, the largest first)
+  await p.click('[data-act="pickscn"][data-k="world64"]');
+  const tab = await p.evaluate(() => ({cards:[...document.querySelectorAll('.pick b')].map(e => e.textContent), want:NATIONS.nations.map(n => n.name), tabs:document.querySelectorAll('[data-act="pickreg"]').length}));
+  const az = tab.cards.slice().sort((x, y) => x.localeCompare(y));
+  if (tab.tabs || tab.cards.join() !== az.join() || tab.cards.slice().sort().join() !== tab.want.slice().sort().join() || tab.cards[0] !== 'Afghanistan') bad.push('A-Z list: ' + tab.cards);   // (every nation of nations.js in one list, A to Z, no region tabs)
+  const vis = async () => p.$$eval('.pick:not([hidden]) b', a => a.map(e => e.textContent));
+  await p.fill('#pickq', 'GER'); if ((await vis()).join() !== 'Germany') bad.push('search ger: ' + await vis());
+  await p.fill('#pickq', 'turkiye'); if ((await vis()).join() !== 'Turkey') bad.push('search turkiye (accent/alias): ' + await vis());
+  await p.fill('#pickq', 'usa'); if ((await vis()).join() !== 'United States') bad.push('search usa: ' + await vis());
+  await p.fill('#pickq', 'zzzz'); if ((await vis()).length || await p.locator('#pickno').isHidden()) bad.push('empty search shows no message');
+  await p.fill('#pickq', 'japan'); await p.press('#pickq', 'Enter'); if (await p.$eval('[data-act="pick"][aria-pressed="true"] b', e => e.textContent) !== 'Japan') bad.push('Enter does not pick the single match');
+  await p.fill('#pickq', ''); if ((await vis()).length !== 68) bad.push('clearing the search does not show all nations');
   await p.click('[data-act="pick"][data-p="13"]'); await p.click('[data-act="begin"]'); await p.waitForTimeout(1200); await p.click('[data-act="start"]'); await p.waitForTimeout(400);
   const g0 = await p.evaluate(() => { const N = S.nations[0], u = a => Object.values(a.u).reduce((s, v) => s + v, 0);
     return {scn:S.scn, mode:S.mode, me:N.name, tier:N.tier, region:N.region, small:N.small, boost:+N.boost.toFixed(2), boostM:+N.boostM.toFixed(2), cash:N.cash, mp:N.mp, yard:S.bld.filter((x, q) => S.owner[q] === 0 && x.yard).length, caps:WIN_CAPS, capsWant:winCapsFor(S.nations.length), coal:coalCaps(), need:landNeed(0), needWant:Math.max(Math.ceil(scnLand()*winShareFor(S.nations.length)), (N.prov0 || 0) + Math.max(SCENARIOS.world64.extra, Math.ceil((N.prov0 || 0)*TIER_WIN_UP))),
@@ -42,8 +50,8 @@ const { chromium } = require('playwright'); const path = require('path');
   await p2.goto('file://' + path.join(__dirname, 'page.html') + '?start=nations'); await p2.waitForTimeout(700);
   if (await p2.locator('[data-act="continue"]').count()) await p2.click('[data-act="newgame"]'), await p2.waitForTimeout(300);   // (the save of the game above: a new campaign)
   const ship = await p2.evaluate(() => ({classic:document.querySelectorAll('[data-act="pickscn"]').length, text:/15 powers|old rules/i.test(document.querySelector('#modal').innerText) || [...document.querySelectorAll('#modal button')].some(b => /classic/i.test(b.textContent) && b.dataset.act !== 'pickmode'),
-    tabs:[...document.querySelectorAll('.regs .btn')].map(e => e.textContent), n:[...document.querySelectorAll('.regs .btn small')].reduce((s, e) => s + +e.textContent, 0), lead:document.querySelector('[data-act="begin"]').textContent}));
-  if (ship.classic || ship.text || ship.tabs.length !== 6 || ship.n !== 68 || ship.lead !== 'Lead Brazil') bad.push('shipped start screen: ' + JSON.stringify(ship));
+    tabs:[...document.querySelectorAll('.regs .btn')].map(e => e.textContent), n:document.querySelectorAll('[data-act="pick"]').length, lead:document.querySelector('[data-act="begin"]').textContent}));
+  if (ship.classic || ship.text || ship.tabs.length || ship.n !== 68 || ship.lead !== 'Lead Brazil') bad.push('shipped start screen: ' + JSON.stringify(ship));
   await p2.click('[data-act="begin"]'); await p2.waitForTimeout(1500);
   const sg = await p2.evaluate(() => ({scn:S.scn, me:S.nations[0].name, n:S.nations.length}));
   if (sg.scn !== 'world64' || sg.me !== 'Brazil' || sg.n !== 68) bad.push('shipped new game: ' + JSON.stringify(sg));

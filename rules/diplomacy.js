@@ -54,7 +54,7 @@ function commonEnemy(a, b){ if (!QM) return S.nations.some(c => c.alive && c.id 
 // every pair of nations has its entry in S.rel (a new game makes them all; a packed nations-world save leaves the default ones out until they are
 // first asked for): then rel() creates nothing and atWar has no side effect, so its answers may be read in any order (checked once a tick step)
 let RAC = null;
-function relAll(){ if (RAC !== null && RAC.R === S.rel && RAC.t === tickSess && RAC.K === S.nations.length) return RAC.ok;
+function relAll(){ if (RAC !== null && RAC.R === S.rel && (RAC.ok || RAC.t === tickSess) && RAC.K === S.nations.length) return RAC.ok;   // (once every pair has its entry it keeps it: entries are never removed)
   const K = S.nations.length; let ok = true; for (let a = 0; a < K && ok; a++) for (let b = a + 1; b < K; b++) if (!S.rel[rkeyC(a, b)]){ ok = false; break; }
   RAC = {R:S.rel, t:tickSess, K, ok}; return ok; }
 const opinion = (a, b) => Math.max(-100, Math.min(100, opinionParts(a, b).reduce((s0, x) => s0 + x[1], 0)));

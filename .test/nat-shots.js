@@ -9,7 +9,7 @@ const { chromium } = require('playwright'); const path = require('path');
     await p.screenshot({ path: `${out}/${tag}-start-classic.png` });
     await p.click('[data-act="pickscn"][data-k="world64"]'); await p.waitForTimeout(300);
     await p.screenshot({ path: `${out}/${tag}-start-americas.png` });
-    await p.click('[data-act="pickreg"][data-k="Europe"]'); await p.waitForTimeout(300);
+    await p.waitForTimeout(300);
     await p.screenshot({ path: `${out}/${tag}-start-europe.png` });
     const info = await p.evaluate(() => ({cards:[...document.querySelectorAll('.pick')].map(e => e.innerText.replace(/\n/g, ' | ')), lead:document.querySelector('[data-act="begin"]').innerText, p:document.querySelector('.sheet p').innerText}));
     console.log(JSON.stringify(info, null, 1));
@@ -20,7 +20,7 @@ const { chromium } = require('playwright'); const path = require('path');
     await p.evaluate(() => { for (let i = 0; i < 48; i++) window.__im.tick(); }); await p.waitForTimeout(600);
     await p.screenshot({ path: `${out}/${tag}-europe-day3.png` }); });
   await shot({width:390, height:844, dpr:2, mobile:true}, 'phone', async p => {
-    await p.tap('[data-act="pickscn"][data-k="world64"]'); await p.waitForTimeout(300); await p.tap('[data-act="pickreg"][data-k="Asia"]'); await p.waitForTimeout(300);
+    await p.tap('[data-act="pickscn"][data-k="world64"]'); await p.waitForTimeout(300); await p.waitForTimeout(300);
     await p.screenshot({ path: `${out}/${tag}-phone-start.png` });
     await p.evaluate(() => document.querySelector('[data-act="begin"]').scrollIntoView()); await p.waitForTimeout(200); await p.screenshot({ path: `${out}/${tag}-phone-start2.png` });
     await p.tap('[data-act="begin"]'); await p.waitForTimeout(1500); await p.tap('[data-act="start"]'); await p.waitForTimeout(4000);
