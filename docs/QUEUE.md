@@ -15,6 +15,7 @@ Last updated: 2026-11-14 (playtest notes part 1 and part 2).
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **BLD-RULES** Army Base gate for infantry (one constant switches the Recruiting Office to 'also required' once the owner answers), only capitals start with Fortifications, a Fortifications cost proposal (not applied), HQ/city levels removed; NOT merged until the owner answers and sees it | Opus | bld-rules |
+| **MAP-3** roads for every province meeting at its centre point, a sea-lane network warships follow, capture the moment a unit reaches the centre; NOT merged until the owner sees it (map job, merges after the others) | Opus | map-3 |
 | **FX-2** Explosions: find which two of the four explosion clips don't show and why, fix them; a real gameplay recording on the real map (cruise missile, ballistic missile, chemical strike and nuke fired at cities in a normal game) | Opus | fx-video |
 
 ## Ready, waiting for the owner (done, not merged)
@@ -42,7 +43,7 @@ Owner playtest notes of 2026-11-14: part 1 (#1-#21), the rally point and the Arm
 | (running) | **UNIT-LOOK-2** Units at sea and shipping routes (branch unit-look-2) | P2-6 a "Shipping routes" toggle in the More tab's settings, next to where the Political/Terrain toggle goes: on = the trade routes and the cargo ships on them, a mix of big and smaller ships; off = none; army units at sea never use the cargo picture: they show as a grey military landing ship (a 3D model in units3d.js like the warships, bow ramp, vehicles on deck) with their badge. Screenshots before merging | Sonnet |
 | (running) | **BLD-RULES** Building rules (rules/data.js BUILD, rules/production.js, rules/state.js, build menu) | **Army Base rule**: infantry only in a city with Army Base level I (Train greyed out: "Needs Army Base level 1"), starting units unchanged, computer nations build Army Bases, old saves load; the Recruiting Office's role (owner to confirm: no longer required, keeps its speed and manpower bonuses); P2-3 at game start only the capital has Fortifications (no other city or border province starts with them; today about 150 are handed out); #16 a new Fortifications cost proposed to the owner first; #17 HQ levels removed (the capital's 'Level X' and city pictures; the HQ is one regional building) | Opus |
 | 4 | **MAP-2** Map look and controls | #3 one consistent map texture at every zoom; #4 the Political/Terrain switch moves into the More tab as a toggle (next to Shipping routes). Map job: after MAP-1 merges; screenshots before merging | Opus |
-| 5 | **MAP-3** Movement network and capture | #5 every province gets its roads; #6 warships follow sea lanes; #7 capture at the province centre point where roads meet, no timer. Map job; screenshots before merging | Opus |
+| (running) | **MAP-3** Movement network and capture | #5 every province gets its roads; #6 warships follow sea lanes; #7 capture at the province centre point where roads meet, no timer. Map job; screenshots before merging | Opus |
 | 6 | **REBELS** build | after the owner answers the plan's questions | Opus |
 | 7 | **ART-2** more Gemini pictures from "Pictures still missing", count and cost to the owner before each batch | Sonnet |
 | 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
