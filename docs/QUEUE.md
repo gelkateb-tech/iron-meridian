@@ -14,7 +14,6 @@ Last updated: 2026-11-14 (playtest notes part 1 and part 2).
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **BLD-RULES** Army Base gate for infantry (one constant switches the Recruiting Office to 'also required' once the owner answers), only capitals start with Fortifications, a Fortifications cost proposal (not applied), HQ/city levels removed; NOT merged until the owner answers and sees it | Opus | bld-rules |
 | **MAP-3** roads for every province meeting at its centre point, a sea-lane network warships follow, capture the moment a unit reaches the centre; NOT merged until the owner sees it (map job, merges after the others) | Opus | map-3 |
 | **FX-2** Explosions: find which two of the four explosion clips don't show and why, fix them; a real gameplay recording on the real map (cruise missile, ballistic missile, chemical strike and nuke fired at cities in a normal game) | Opus | fx-video |
 
@@ -29,6 +28,7 @@ Last updated: 2026-11-14 (playtest notes part 1 and part 2).
 | **BLD-MAP + BLD-MAP-2** | buildings on land, 18% smaller; construction shows the 3 Gemini pictures (crane) in turn with the progress ring, a small crane beside a building going up; Army Base 1-5 on the map and in the panel; Naval Yards on the water at their city (Kolkata on the Hooghly 19 km, 36 river ports, 284 coast, 29 in the cluster); screenshots sent | bld-map |
 | Aircraft 3D shapes | every aircraft type its own model (4 choices for the owner) | aircraft-3d |
 | Explosion clips | nuclear, conventional, cruise (chemical refused by the service); being fixed by FX-2 | fx-video |
+| **BLD-RULES** | infantry needs Army Base I (INF_NEEDS switch; Recruiting Office now speed and manpower only), only capitals start with Fortifications (68 instead of 151), HQ/city levels removed (capital shows its regional HQ), a Fortifications cost proposal (not applied); golden re-recorded; balance passes; screenshots sent | bld-rules |
 | **REBELS** plan | docs/REBELS-PLAN.md; 9 questions with suggested answers | rebels |
 
 **Merge rules:** map jobs (MAP-*, BLD-MAP) merge one at a time, each merged with master and re-tested before the next; every look change sends the owner screenshots before it merges.
@@ -76,6 +76,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 - **Aircraft 3D (branch aircraft-3d, done, not merged):** (1) parked aircraft: keep the 2D pictures (3D only as a stand-in while loading) or always the new 3D shapes? (2) bomber, AWACS and patrol plane drawn bigger now (1.2-1.45 tank lengths instead of 0.9): keep? (3) Stealth Bomber humps a bit rounded: flatten? (4) stop loading the unused old jet/int sheets? OK to merge?
 - **BLD-MAP (revision 2 ready):** (1) dock basins drawn under river yards and under coast yards whose piers would stand on land: keep? (2) small rivers count too (Milan, Sapporo, Cairns, Darwin get river yards): keep, or only big rivers (then Bordeaux, Houston, St Petersburg go back to the coast)? (3) construction sites 10% bigger? (4) about 93 port cities have their map point more than 60 km from the sea (Cape Town, Sydney, Los Angeles, Helsinki...): a map-data job to move each city's point to its real location would bring yards (and the city drawing) to the right spot: queue it? OK to merge?
+- **Building rules (BLD-RULES ready):** (1) Army Base only (built), or both buildings for infantry? (2) Fortifications price: 1 double ($72M/16K/16K, 3 days), 2 $50M/12K/12K, 3 days, +25% for each fort you already have (recommended), or 3 $60M/12K/12K, x2 per level, 3 days? (3) each extra Army Base costs 40% more (the 6th about $134M): lower it now that infantry needs one? (4) swap a starting Recruiting Office for an Army Base in the biggest city? (5) city level dropped everywhere (buildings list in the Cities tab instead): OK? OK to merge?
 - **Shipping routes (UNIT-LOOK-2 ready):** (1) selecting a fleet no longer shows trade routes (the setting is the only switch): OK or restore? (2) daily supply convoys to cut-off provinces are hidden too when the setting is off: OK? (3) the coaster and tanker are drawn in code: OK, or pictures later? OK to merge?
 - **Playtest jobs, choices before they start:** (a) Army Base rule: the Recruiting Office stops gating infantry and keeps its training-speed and manpower bonuses (or require both buildings?); (b) the infantry icon for the new badge: A flat helmeted head, B plain head, or C your green side-view helmet (default C); (d) REBELS plan sent (docs/REBELS-PLAN.md): answer its 9 questions (each has a suggested answer) and OK the build. It also found a bug in today's rules: partisans take a province after 1 hour alone, not 24; the build fixes it.
 
