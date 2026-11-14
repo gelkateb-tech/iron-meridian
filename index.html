@@ -5075,10 +5075,12 @@ const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max
    under the names, the HQ and the counters; only what is on screen (and a margin) is drawn, at most 40 groups (24 with low effects) a frame,
    those nearest the middle of the view first. Wings in flight keep their flat icons. Settings: 'Troop models' (off: the counters only). */
 const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['ssf'], at:['sat'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
-  jet:['jet'], bomb:['jet'], stealth:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
+  jet:['jet'], bomb:['bomb'], stealth:['stealth'], mpa:['mpa'], awacs:['awacs'], int:['int'], asf:['asf'], heli:['heli'], drone:['drone'], sdrone:['sdrone'], swarm:['swarm']};   // (every aircraft type its own model)
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
 const TMG = {sol:[1.8, 0.42], sat:[1.8, 0.42], ssf:[1.8, 0.42], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
-  frig:[7.4, 1.25], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[17, 0.9], int:[17, 0.9], heli:[17, 0.82], drone:[10.6, 0.66]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter)
+  frig:[7.4, 1.25], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[16.5, 0.86], int:[17, 0.9], asf:[19.5, 0.98], heli:[17, 0.82], drone:[10.6, 0.66], sdrone:[10, 0.68], swarm:[8, 0.62],
+  bomb:[46, 1.45], awacs:[46, 1.4], mpa:[36, 1.2], stealth:[21, 0.62]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter; the big ones further under it: a
+  // bomber or an AWACS about half as long again as a fighter, never longer than a carrier; the Stealth Bomber by its length, its span about 1.5 tanks)
 /*@TEST*/const TMDBG = [];/*@ENDTEST*/
 const TMD = new Map(), TMCELL = new Map(), TMLAST = new Map(), TMMIP = new Map(), TMLUT = new Map(), TMH = new Map(), TMSLOT = new Map(), TMEX = new Map(); let TMSH = null, TMSW = 0, TMCB = 0, TMNEW = 0;
 const tmOn = () => SET.models !== false;
@@ -5140,8 +5142,8 @@ let TMFOAM = null; function tmFoam(){ if (TMFOAM) return TMFOAM; const N = 128, 
   return (TMFOAM = c); }
 // a model's class: 'g' ground, 's' naval, 'a' air
 const TM_FOOT = new Set(['sol', 'sat', 'ssf']);   // the squads (on the march: a walking bob)
-const TM_CLS = t => /^(frig|sub|crui|carr)$/.test(t) ? 's' : /^(jet|int|heli|drone)$/.test(t) ? 'a' : 'g';
-const TM_CT = {g:['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'sub', 'crui', 'carr'], a:['jet', 'int', 'heli', 'drone']};
+const TM_CLS = t => /^(frig|sub|crui|carr)$/.test(t) ? 's' : /^(jet|int|asf|bomb|stealth|mpa|awacs|heli|drone|sdrone|swarm)$/.test(t) ? 'a' : 'g';
+const TM_CT = {g:['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'sub', 'crui', 'carr'], a:['jet', 'int', 'asf', 'bomb', 'stealth', 'mpa', 'awacs', 'heli', 'drone', 'sdrone', 'swarm']};
 // the unit mix of some armies: count per unit type (troops embarked at sea count as their transport, 'lst')
 function tmUnits(list){ const u = {}; for (const q of list){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ u.lst = (u.lst || 0) + count(q); continue; }
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) u[t] = (u[t] || 0) + q.u[t]; } return u; }
@@ -5589,18 +5591,18 @@ function troopModels(clusters, clBox, hexPx, now){
    A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the 4x4 beside motorized
    infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place too. */
 const TMART = {hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
-  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-strike-fighter', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
-  int:{int:'u-jet', asf:'u-air-superiority'}, heli:'u-attack-heli', drone:{drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'}};
-const TMART_K = {hmv:0.9, jet:0.9, int:0.9, heli:0.9, drone:0.95}, TMART_K0 = 0.9;   // a picture's length as a share of its model's (the squad is wider than one soldier)
+  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:'u-strike-fighter', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs',
+  int:'u-jet', asf:'u-air-superiority', heli:'u-attack-heli', drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'};
+const TMART_K = {hmv:0.9, jet:0.9, int:0.9, asf:0.9, bomb:0.9, mpa:0.9, awacs:0.9, stealth:1.5, heli:0.9, drone:0.95, sdrone:0.95, swarm:0.95}, TMART_K0 = 0.9;   // (the Stealth Bomber's model is sized by its length, its picture is wider than long)   // a picture's length as a share of its model's (the squad is wider than one soldier)
 // a picture drawn larger than its footprint in the formation (none today: the infantry squads are 3D models)
 const TMART_DRAW = {};
-const TMARTC = new Map(), TMART_DEF = {jet:'jet', int:'int', drone:'drone', frig:'frig'};   // (the unit type whose picture sets a model's footprint in the formations and the layout)
+const TMARTC = new Map(), TMART_DEF = {frig:'frig'};   // (the unit type whose picture sets a model's footprint in the formations and the layout)
 // which of the pictures have arrived (a signature, set once a frame): the formations and the force spots are worked out again when it changes
 let TMAS = 0; const tmArtSig = () => { let k = 0, i = 0; for (const m in TMART){ i++; if (tmArtDef(m)) k += 2**i; } return k; };
 // the footprint a model type's picture gives it in the formations and the layout: known from the start (not as each picture loads), so the
 // force spots are not worked out again while the pictures arrive; none for a type whose picture is a stand-in or failed (its 3D model shows)
 const tmArtDef = m => { if (!tmOn()) return null; let n = TMART[m]; if (n && typeof n === 'object') n = n[TMART_DEF[m]]; if (!n) return null;
-  n = n === '@drone' ? 'u-uav-recon' : n; return ART.standIn(n) || ART.failed(n) ? null : tmArtGeom(m, n); };
+  n = n === '@drone' ? 'u-uav-recon' : n === '@bomb' ? heavyBomberArt(1) : n; return ART.standIn(n) || ART.failed(n) ? null : tmArtGeom(m, n); };
 // the picture model type m shows for unit type ut of owner o: {n (picture), Lw (its length in world px), hw (half its width, world px), k (the square
 // it is drawn in, world px)}; null where that type has no picture of its own yet (its 3D model stands in)
 function tmArt(m, ut, o){ let n = TMART[m]; if (n && typeof n === 'object') n = n[ut]; if (!n) return null;

@@ -31,8 +31,8 @@ const LIM = { worldPx: 1, scrPx: 2, gap: [4, 16], tankLen: 75, solTall: 40, solM
   plateOv: 0.03, barGap: 2, groupOv: 0.12, coverOv: 0.10, hudA: 0.3, togetherA: 0.06, departOv: 0.25, ownTol: 10 };   // (ownTol: a model is misread only when another counter is clearly nearer: by more than ~a third of a plate)
 const SQUAD = new Set(['sol', 'sat', 'ssf']);   // (the infantry squads: 3D soldiers, measured by their height)
 const ALLOW = { inf: ['sol', 'hmv'], para: ['sol'], spec: ['ssf'], at: ['sat'], jam: ['hmv', 'truck'], ifv: ['ifv'], tank: ['tank'], art: ['art'], mlrs: ['mlrs'], sam: ['sam'],
-  frig: ['frig'], sub: ['sub'], crui: ['crui'], carr: ['carr'], jet: ['jet'], bomb: ['jet'], mpa: ['jet'], awacs: ['jet'], int: ['int'], asf: ['int'], heli: ['heli'],
-  drone: ['drone'], sdrone: ['drone'], swarm: ['drone'] };
+  frig: ['frig'], sub: ['sub'], crui: ['crui'], carr: ['carr'], jet: ['jet'], bomb: ['bomb'], stealth: ['stealth'], mpa: ['mpa'], awacs: ['awacs'], int: ['int'], asf: ['asf'], heli: ['heli'],
+  drone: ['drone'], sdrone: ['sdrone'], swarm: ['swarm'] };
 const r2 = v => Math.round(v*100)/100, r1 = v => Math.round(v*10)/10;
 const area = b => Math.max(0, b[2] - b[0])*Math.max(0, b[3] - b[1]);
 const ov = (p, q) => Math.max(0, Math.min(p[2], q[2]) - Math.max(p[0], q[0]))*Math.max(0, Math.min(p[3], q[3]) - Math.max(p[1], q[1]));

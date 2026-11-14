@@ -349,6 +349,10 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     navy:pbr(0x7d858a, 0.62, 0.25, CAMO_SEA), navyD:pbr(0x5d656a, 0.66, 0.25, CAMO_SEA), deck:pbr(0x4d5254, 0.85, 0.15, {grain:0.18, gs:6, dust:0}), hullR:pbr(0x5a2b25, 0.7, 0.1, {dust:0}),
     sub:pbr(0x222628, 0.55, 0.2, {grain:0.1, dust:0}), white:pbr(0xd9d7cc, 0.7, 0.05, {grain:0.06, dust:0}),
     air:pbr(0x5d666c, 0.52, 0.35, CAMO_AIR), airD:pbr(0x464d52, 0.56, 0.35, CAMO_AIR), rotor:pbr(0x4a4f4a, 0.6, 0.3, {dust:0}),
+    // the big aircraft: the fighters' grey camouflage in broad patches (bombers), a plain light grey (AWACS, maritime patrol), an even dark grey (stealth)
+    airB:pbr(0x5f676c, 0.5, 0.35, Object.assign({}, CAMO_AIR, {cs:7})), airBD:pbr(0x474e53, 0.55, 0.35, Object.assign({}, CAMO_AIR, {cs:7})),
+    airL:pbr(0x8e959a, 0.46, 0.3, {grain:0.06, dust:0.02}), airLD:pbr(0x6c7479, 0.5, 0.3, {grain:0.06, dust:0.02}),
+    stl:pbr(0x3c4146, 0.6, 0.25, {grain:0.07, dust:0.02}), stlD:pbr(0x2c3034, 0.64, 0.25, {grain:0.06, dust:0.02}),
     heli:pbr(0x4c5536, 0.6, 0.2, {camo:[0x2f3621, 0x66704a, 0x23281a], cs:1.7, k3:0.85, dust:0.06, grain:0.14}), heliD:pbr(0x363d27, 0.66, 0.2, {camo:[0x272d1c, 0x4f5838, 0x1d2116], cs:1.7, k3:0.7, dust:0.05, grain:0.14}),
     blade:pbr(0x1c1f1c, 0.5, 0.35, {grain:0.06, dust:0}), tipY:pbr(0xc9a23a, 0.6, 0.1, {grain:0.04, dust:0}),
     bolt:pbr(0x2e302a, 0.55, 0.5, {grain:0.05, dust:0.1}),
@@ -684,23 +688,154 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     jetOn(-0.6, L*0.3, 0.1); jetOn(0.3, L*0.22, -0.2); jetOn(-0.9, -L*0.28, 0.9); jetOn(-0.3, -L*0.38, 0.95); jetOn(B*0.55, -L*0.32, 0);
     return {g, ext:6.2, ppm:30, sea:true}; }
 
-  // aircraft parked on their gear (they cast a short shadow under them)
-  function gear(g, pts, h){ for (const [x, z] of pts){ g.add(cy(0.05, 0.05, h, P.dark, 6, x, h/2, z)); g.add(cyX(0.16, 0.12, P.rubber, x, 0.16, z)); } }
-  function mJet(kind){
-    const g = new T.Group(), s = 1.0, H = 1.25, A = kind === 'int' ? P.air : P.air, AD = P.airD;   // ~17 m twin-engine fighter
-    const prof = []; for (let i = 0; i <= 18; i++){ const u = i/18, r = (0.08 + Math.sin(Math.min(1, u*1.45)*Math.PI/2)*0.62*(1 - Math.max(0, u - 0.82)*2.2)); prof.push(new T.Vector2(r, (u - 0.5)*15.5)); }
-    const fus = mk(new T.LatheGeometry(prof, 22), A); fus.rotation.x = -Math.PI/2; fus.scale.set(1.1, 1, 0.8); fus.position.y = H + 0.35; g.add(fus);
-    const can = sph(0.5, P.glass, 0, H + 0.82, 3.5, 0.72, 0.62, 2.5); g.add(can);
-    const wing = kind === 'int' ? [[0, 2.4], [6.2, -2.8], [6.2, -3.8], [1.6, -3.9], [0, -4.2], [-1.6, -3.9], [-6.2, -3.8], [-6.2, -2.8]] : [[0, 2.0], [5.3, -2.2], [5.4, -3.2], [1.4, -3.3], [0, -3.6], [-1.4, -3.3], [-5.4, -3.2], [-5.3, -2.2]];
-    g.add(plan(wing, 0.16, A, H + 0.18, 0.04));
-    for (const sx of [-1, 1]){ g.add(plan([[sx*0.8, -5.0], [sx*3.0, -6.6], [sx*3.0, -7.3], [sx*0.8, -7.0]], 0.08, A, H + 0.26, 0.02));
-      const f = side([[-4.6, 0], [-6.9, 0], [-7.5, 2.4], [-6.6, 2.4]], 0.12, AD, 0.02); f.position.set(sx*1.05, H + 0.5, 0); f.rotation.z = sx*0.35; g.add(f);
-      g.add(rbox(0.9, 0.7, 2.6, 0.12, AD, sx*0.95, H + 0.25, 1.2)); g.add(cyZ(0.42, 0.38, 0.6, P.dark, sx*0.62, H + 0.28, -7.65, 14)); }
-    g.add(cyZ(0.02, 0.24, 1.2, AD, 0, H + 0.35, 8.2, 14));
-    if (kind === 'int') for (const sx of [-6.1, 6.1]) g.add(cyZ(0.08, 0.08, 2.8, P.white, sx, H + 0.18, -2.6, 8));
-    else for (const sx of [-2.6, 2.6]){ g.add(cyZ(0.2, 0.2, 2.4, P.dark, sx, H - 0.15, -0.8, 10)); g.add(cy(0.03, 0.03, 0.3, P.dark, 4, sx, H + 0.05, -0.8)); }
-    gear(g, [[0, 5.0], [-1.6, -1.0], [1.6, -1.0]], H);
+  // aircraft parked on their gear (they cast a short shadow under them). Every type its own original, generic shape (nothing copies a real
+  // aircraft's exact outline), told apart first by its silhouette from above: the Strike Fighter has one fin and bombs and tanks under its wings,
+  // the Air Superiority Fighter two canted fins and missiles on its wingtips, the Interceptor a canard delta; the Heavy Bomber a long body under a
+  // swept high wing with four engine pods, the Stealth Bomber a flat flying wing with a saw-tooth trailing edge, the AWACS an airliner with its radar
+  // disc on struts, the Maritime Patrol Aircraft four propellers on a straight wing and a long tail sting; the Strike Drone a cranked delta with a
+  // pusher propeller, the Swarm Drones a cluster of quadcopters. Nose along +z.
+  function gear(g, pts, h, r = 0.16){ for (const [x, z] of pts){ g.add(cy(0.05*r/0.16, 0.05*r/0.16, h, P.dark, 6, x, h/2, z)); g.add(cyX(r, r*0.75, P.rubber, x, r, z)); } }
+  // a body of revolution along z: f(u) its radius from the nose (u = 0) to the tail (u = 1), centred at height y, from z0 - L/2 to z0 + L/2
+  function tube(L, f, mat, y, z0 = 0, seg = 22, n = 24){ const pr = []; for (let i = 0; i <= n; i++){ const u = i/n; pr.push(new T.Vector2(Math.max(0.02, f(u)), (u - 0.5)*L)); }
+    const o = mk(new T.LatheGeometry(pr, seg), mat); o.rotation.x = -Math.PI/2; o.position.set(0, y, z0); return o; }
+  // the radius of a body: a rounded nose over the first share n, a tail cone over the last share t (to tail times the radius), full in between
+  const ogive = (R, n, t, tail = 0.25, tip = 0.06) => u => u < n ? R*(tip + (1 - tip)*Math.sin(u/n*Math.PI/2)) : u > 1 - t ? R*(1 - (1 - tail)*((u - 1 + t)/t)**1.4) : R;
+  // a wing (or tailplane) from its half outline [(x >= 0, z)...] mirrored, root on the axis
+  const both = half => half.concat(half.slice().reverse().map(([x, z]) => [-x, z]));
+  const fin = (pts, w, mat, x, y, cant = 0) => { const o = new T.Group(); o.add(side(pts, w, mat, 0.02)); o.position.set(x, y, 0); o.rotation.z = cant; return o; };   // (canted out round its root)
+  // a jet engine pod: a nacelle with a dark intake and nozzle on a pylon down from the wing (wy: the wing's underside)
+  function pod(g, x, wy, z, r, len, mat){ const y = wy - r - 0.35; g.add(cyZ(r*0.95, r*0.85, len, mat, x, y, z, 16)); g.add(cyZ(r*0.82, r*0.82, 0.06, P.dark, x, y, z + len/2, 14));
+    g.add(cyZ(r*0.55, r*0.7, 0.5, P.dark, x, y, z - len/2 - 0.15, 12)); g.add(rbox(0.22, 0.5, len*0.7, 0.06, mat, x, wy - 0.25, z - len*0.05)); }
+  // a store under a wing: a tank or a bomb (with its fins) on a short pylon
+  function store(g, x, y, z, r, len, mat, fins){ g.add(cyZ(r*0.35, r, len*0.22, mat, x, y, z + len*0.39, 12)); g.add(cyZ(r, r, len*0.56, mat, x, y, z, 12)); g.add(cyZ(r, r*0.5, len*0.22, mat, x, y, z - len*0.39, 12));
+    g.add(rbox(0.06, 0.2, len*0.3, 0.02, P.dark, x, y + r + 0.06, z)); if (fins) for (const a of [0, Math.PI/2]){ const f = rbox(r*2.6, 0.03, len*0.16, 0.01, P.dark, x, y, z - len*0.42); f.rotation.z = a + Math.PI/4; g.add(f); } }
+  // the Strike Fighter (~16.5 m): one fin, a trapezoid wing with two bombs and two tanks under it and a tank on the centre line, side intakes
+  function mStrike(){
+    const g = new T.Group(), H = 1.2, A = P.air, AD = P.airD, Y = H + 0.75;
+    g.add(tube(16.2, ogive(0.78, 0.36, 0.2, 0.55, 0.04), A, Y, 0.4)); g.children[g.children.length - 1].scale.set(1.15, 1, 0.95);
+    g.add(sph(0.5, P.glass, 0, Y + 0.62, 3.6, 0.72, 0.66, 2.4)); g.add(rbox(0.12, 0.08, 1.8, 0.03, AD, 0, Y + 0.95, 3.4));
+    for (const sx of [-1, 1]){ g.add(rbox(0.7, 0.85, 3.4, 0.16, AD, sx*0.95, Y - 0.12, 1.4)); g.add(rbox(0.6, 0.7, 0.06, 0.1, P.dark, sx*0.95, Y - 0.12, 3.12)); }
+    g.add(plan(both([[0.6, 2.2], [5.2, -1.2], [5.2, -2.4], [0.6, -3.4]]), 0.16, A, Y - 0.12, 0.04));
+    g.add(plan(both([[0.5, -5.2], [2.9, -6.7], [2.9, -7.6], [0.5, -7.6]]), 0.08, A, Y - 0.05, 0.02));
+    g.add(fin([[-4.4, 0], [-7.6, 0], [-8.2, 3.0], [-7.0, 3.0]], 0.14, AD, 0, Y + 0.45));
+    g.add(cyZ(0.48, 0.42, 0.7, P.dark, 0, Y, -7.8, 14));
+    for (const sx of [-1, 1]){ store(g, sx*2.4, Y - 0.62, -0.6, 0.32, 3.4, AD, false); store(g, sx*3.9, Y - 0.5, -1.2, 0.2, 2.2, P.dark, true); g.add(cyZ(0.05, 0.05, 1.4, P.white, sx*5.15, Y - 0.12, -1.6, 6)); }
+    store(g, 0, Y - 0.95, 0.6, 0.3, 3.0, AD, false);
+    g.add(cyZ(0.015, 0.04, 1.0, P.dark, 0, Y, 8.9, 6));
+    gear(g, [[0, 5.0], [-1.5, -1.6], [1.5, -1.6]], H);
     return {g, ext:8.8, ppm:13, air:true}; }
+  // the Air Superiority Fighter (~19.5 m): a broad swept wing, two engines side by side, two fins canted out, missiles on the wingtips and under the body
+  function mAsf(){
+    const g = new T.Group(), H = 1.25, A = P.air, AD = P.airD;
+    const prof = []; for (let i = 0; i <= 18; i++){ const u = i/18, r = (0.08 + Math.sin(Math.min(1, u*1.45)*Math.PI/2)*0.62*(1 - Math.max(0, u - 0.82)*2.2)); prof.push(new T.Vector2(r, (u - 0.5)*15.5)); }
+    const fus = mk(new T.LatheGeometry(prof, 22), A); fus.rotation.x = -Math.PI/2; fus.scale.set(1.1, 1, 0.8); fus.position.set(0, H + 0.35, 1.2); g.add(fus);
+    g.add(sph(0.5, P.glass, 0, H + 0.82, 4.7, 0.72, 0.62, 2.5));
+    g.add(plan([[0, 3.2], [6.6, -2.4], [6.6, -3.5], [1.8, -3.8], [0, -4.2], [-1.8, -3.8], [-6.6, -3.5], [-6.6, -2.4]], 0.16, A, H + 0.18, 0.04));
+    for (const sx of [-1, 1]){ g.add(plan([[sx*1.0, -5.0], [sx*3.5, -6.9], [sx*3.5, -7.7], [sx*1.0, -7.4]], 0.08, A, H + 0.26, 0.02));
+      g.add(fin([[-4.4, 0], [-6.9, 0], [-7.7, 2.6], [-6.7, 2.6]], 0.12, AD, sx*1.25, H + 0.5, sx*0.42));
+      g.add(rbox(1.0, 0.75, 3.0, 0.14, AD, sx*1.12, H + 0.25, 1.6)); g.add(rbox(1.0, 0.8, 7.2, 0.3, AD, sx*0.82, H + 0.3, -3.6)); g.add(cyZ(0.46, 0.4, 0.6, P.dark, sx*0.82, H + 0.3, -7.45, 14));
+      g.add(cyZ(0.08, 0.08, 3.0, P.white, sx*6.65, H + 0.2, -2.4, 8)); g.add(cyZ(0.01, 0.08, 0.3, P.dark, sx*6.65, H + 0.2, -0.75, 8));
+      g.add(cyZ(0.1, 0.1, 3.4, P.white, sx*0.55, H - 0.15, 0.4, 8)); }
+    g.add(cyZ(0.02, 0.26, 1.3, AD, 0, H + 0.35, 9.5, 14));
+    gear(g, [[0, 6.0], [-1.7, -1.0], [1.7, -1.0]], H);
+    return {g, ext:9.8, ppm:12, air:true}; }
+  // the Interceptor (~17 m): a canard delta with one tall fin, a long pointed nose, two long-range missiles under the body
+  function mInt(){
+    const g = new T.Group(), H = 1.25, A = P.air, AD = P.airD, Y = H + 0.7;
+    g.add(tube(16.4, ogive(0.74, 0.42, 0.14, 0.62, 0.03), A, Y, 0.6)); g.children[g.children.length - 1].scale.set(1.1, 1, 0.95);
+    g.add(sph(0.48, P.glass, 0, Y + 0.6, 3.9, 0.7, 0.66, 2.2));
+    for (const sx of [-1, 1]){ g.add(rbox(0.75, 0.8, 4.2, 0.16, AD, sx*0.88, Y - 0.15, 0.6)); g.add(rbox(0.62, 0.66, 0.06, 0.1, P.dark, sx*0.88, Y - 0.15, 2.72)); }
+    g.add(plan(both([[0.6, 1.4], [5.6, -5.4], [5.6, -6.0], [0.6, -6.6]]), 0.16, A, Y - 0.12, 0.04));
+    g.add(plan(both([[0.6, 2.8], [2.3, 1.7], [2.3, 1.3], [0.6, 1.5]]), 0.07, AD, Y + 0.2, 0.02));
+    g.add(fin([[-3.2, 0], [-6.7, 0], [-7.6, 3.4], [-6.3, 3.4]], 0.14, AD, 0, Y + 0.45));
+    g.add(cyZ(0.5, 0.44, 0.7, P.dark, 0, Y, -7.75, 14));
+    for (const sx of [-1, 1]){ g.add(cyZ(0.14, 0.14, 3.8, P.white, sx*0.55, Y - 0.82, -0.6, 8)); g.add(cyZ(0.01, 0.14, 0.4, P.dark, sx*0.55, Y - 0.82, 1.5, 8)); g.add(cyZ(0.06, 0.06, 1.5, P.white, sx*5.55, Y - 0.15, -5.2, 6)); }
+    gear(g, [[0, 5.0], [-1.6, -2.4], [1.6, -2.4]], H);
+    return {g, ext:8.8, ppm:13, air:true}; }
+  // the Heavy Bomber (~46 m long, 42 m span): a long slender body, a high wing swept well back with four engine pods under it, a tall swept fin
+  function mBomb(){
+    const g = new T.Group(), H = 1.5, A = P.airB, AD = P.airBD, R = 1.75, Y = H + R;
+    g.add(tube(46, ogive(R, 0.17, 0.26, 0.22, 0.03), A, Y));
+    g.add(rbox(1.5, 0.5, 1.6, 0.22, P.glass, 0, Y + R*0.72, 17.5)); g.add(rbox(1.9, 0.35, 2.4, 0.15, A, 0, Y + R*0.72, 15.6));
+    const wy = Y + R*0.82;   // (a high wing: on top of the body)
+    g.add(plan(both([[0.5, 4.0], [21, -10.2], [21, -12.4], [0.5, -5.0]]), 0.42, A, wy, 0.1));
+    g.add(rbox(3.0, 0.7, 8.5, 0.3, A, 0, wy + 0.1, -0.4));   // (the wing's fairing on the body)
+    for (const [x, z] of [[6.4, -0.8], [12.2, -4.8]]) for (const sx of [-1, 1]) pod(g, sx*x, wy, z, 0.82, 4.4, AD);
+    g.add(plan(both([[0.4, -16.4], [8.0, -21.2], [8.0, -22.6], [0.4, -21.4]]), 0.22, A, Y + 0.3, 0.05));
+    g.add(fin([[-15.6, 0], [-21.6, 0], [-23.6, 7.6], [-21.2, 7.6]], 0.36, AD, 0, Y + R*0.6));
+    g.add(rbox(0.3, 0.12, 9.0, 0.05, AD, 0, Y + R + 0.02, 7.0)); g.add(ant(0, Y + R - 0.05, 3.0, 0.9)); g.add(ant(0, Y + R - 0.05, -6.0, 0.7));
+    for (const z of [-2.5, 3.0]) g.add(rbox(0.04, 0.04, 6.0, 0.01, P.dark, 0, Y - R + 0.02, z));   // (the bomb bay doors' seams)
+    gear(g, [[0, 15.0], [-1.6, -0.4], [1.6, -0.4], [-1.6, -2.2], [1.6, -2.2]], H, 0.42);
+    return {g, ext:24, ppm:8, air:true}; }
+  // the Stealth Bomber (~52 m span, 21 m long): a flat flying wing, leading edges straight to the tips, a saw-tooth trailing edge (three teeth a
+  // side and a short beaver tail), a low hump for the crew and two engine humps with their intakes on top, in an even dark grey
+  function mStealth(){
+    const g = new T.Group(), H = 1.5, A = P.stl, AD = P.stlD, y0 = H + 0.55;
+    g.add(plan(both([[0, 10.6], [26, -4.0], [25.4, -5.6], [19.5, -2.6], [14.5, -6.2], [9.5, -2.4], [4.4, -6.4], [1.6, -5.2], [0, -7.2]]), 0.55, A, y0, 0.12));
+    g.add(plan(both([[0, 9.4], [9.0, 1.2], [8.0, -2.0], [4.0, -4.4], [0, -5.0]]), 0.5, A, y0 + 0.3, 0.2));   // (the thicker middle)
+    g.add(sph(1, A, 0, y0 + 0.75, 2.6, 3.0, 0.85, 6.6)); g.add(rbox(1.7, 0.16, 0.8, 0.07, P.glass, 0, y0 + 1.5, 5.4)); g.add(rbox(1.4, 0.12, 0.5, 0.05, P.glass, 0, y0 + 1.56, 4.6));
+    for (const sx of [-1, 1]){ g.add(sph(1, A, sx*3.4, y0 + 0.75, -0.8, 1.7, 0.5, 4.6)); g.add(rbox(1.7, 0.22, 0.3, 0.07, P.dark, sx*3.4, y0 + 1.12, 2.9));
+      g.add(rbox(2.2, 0.08, 1.2, 0.04, AD, sx*3.4, y0 + 0.92, -4.9)); }
+    gear(g, [[0, 4.0], [-6.2, -1.0], [6.2, -1.0]], H, 0.4);
+    return {g, ext:24, ppm:8, air:true}; }
+  // a propeller seen nose on: a spinner and four blades (axis along z)
+  function prop(g, x, y, z, r){ g.add(cyZ(0.02, 0.28, 0.8, P.dark, x, y, z + 0.4, 12));
+    for (let i = 0; i < 4; i++){ const b = rbox(0.28, r, 0.07, 0.03, P.blade, 0, r/2, 0), a = new T.Group(); a.add(b); a.position.set(x, y, z + 0.1); a.rotation.z = i*Math.PI/2 + 0.4; g.add(a); } }
+  // the Maritime Patrol Aircraft (~36 m long, 31 m span): a stout body, a low straight wing with four turboprops, a conventional tail and a long sting
+  // (the magnetic detector boom) out behind it, a sensor turret under the nose
+  function mMpa(){
+    const g = new T.Group(), H = 1.1, A = P.airL, AD = P.airLD, R = 1.6, Y = H + R;
+    g.add(tube(32, ogive(R, 0.14, 0.3, 0.3, 0.12), A, Y, 1.0));
+    g.add(rbox(1.6, 0.4, 1.0, 0.18, P.glass, 0, Y + R*0.62, 15.3)); g.add(sph(0.45, P.dark, 0, Y - R + 0.15, 13.2));
+    const wy = Y - R*0.55;
+    g.add(plan(both([[0.5, 3.6], [15.4, 1.6], [15.4, -0.6], [0.5, -1.6]]), 0.36, A, wy, 0.08));
+    for (const x of [4.8, 9.8]) for (const sx of [-1, 1]){ const nx = sx*x, ny = wy + 0.3; g.add(cyZ(0.62, 0.7, 6.2, AD, nx, ny, 2.0, 14)); g.add(cyZ(0.68, 0.3, 1.4, AD, nx, ny, -1.7, 12)); prop(g, nx, ny + 0.05, 5.1, 2.0); }
+    g.add(plan(both([[0.4, -11.4], [6.0, -13.0], [6.0, -14.4], [0.4, -14.6]]), 0.18, A, Y + 0.5, 0.04));
+    g.add(fin([[-10.4, 0], [-14.2, 0], [-15.4, 5.4], [-13.4, 5.4]], 0.32, AD, 0, Y + R*0.55));
+    g.add(cyZ(0.12, 0.32, 4.4, AD, 0, Y + 0.45, -17.1, 10));   // (the sting)
+    for (const z of [-4, 0, 4, 8]) for (const sx of [-1, 1]) g.add(sph(0.22, P.glass, sx*R*0.92, Y + 0.3, z, 0.4, 1, 1));   // (observation windows)
+    g.add(ant(0, Y + R - 0.05, 6.0, 0.6)); g.add(ant(0, Y + R - 0.05, -2.0, 0.6));
+    gear(g, [[0, 12.5], [-4.8, 0.6], [4.8, 0.6]], H, 0.42);
+    return {g, ext:20, ppm:9, air:true}; }
+  // the AWACS (~46 m long, 44 m span): an airliner body, a swept low wing with four engine pods, and the big radar disc on two struts over the rear body
+  function mAwacs(){
+    const g = new T.Group(), H = 1.4, A = P.airL, AD = P.airLD, R = 1.9, Y = H + R;
+    g.add(tube(45, ogive(R, 0.12, 0.27, 0.2, 0.1), A, Y));
+    g.add(rbox(1.8, 0.4, 0.9, 0.2, P.glass, 0, Y + R*0.55, 20.6));
+    const wy = Y - R*0.5;
+    g.add(plan(both([[0.5, 6.0], [22, -7.2], [22, -9.0], [6.0, -5.6], [0.5, -6.6]]), 0.42, A, wy, 0.1));
+    for (const [x, z] of [[7.8, 2.6], [14.4, -2.0]]) for (const sx of [-1, 1]) pod(g, sx*x, wy, z, 0.88, 4.6, AD);
+    g.add(plan(both([[0.4, -16.0], [8.4, -21.2], [8.4, -22.6], [0.4, -21.6]]), 0.22, A, Y + 0.4, 0.05));
+    g.add(fin([[-15.0, 0], [-20.6, 0], [-23.2, 7.4], [-20.8, 7.4]], 0.36, AD, 0, Y + R*0.6));
+    const ry = Y + R + 2.4, rz = -8.6;   // the radar disc: a flat drum, a dark band round its rim, a lighter top
+    g.add(cy(4.8, 4.8, 0.95, A, 28, 0, ry, rz)); g.add(cy(4.85, 4.85, 0.32, P.dark, 28, 0, ry, rz)); g.add(cy(3.2, 4.6, 0.12, P.white, 28, 0, ry + 0.52, rz));
+    for (const sx of [-1, 1]){ const s = rbox(0.4, 2.8, 1.4, 0.12, AD, sx*1.1, Y + R + 0.7, rz); s.rotation.z = -sx*0.32; g.add(s); }
+    for (let i = 0; i < 9; i++) for (const sx of [-1, 1]) g.add(rbox(0.04, 0.3, 0.26, 0.02, P.dark, sx*R*0.97, Y + 0.45, 14 - i*2.2));   // (cabin windows)
+    gear(g, [[0, 17.0], [-2.6, -1.2], [2.6, -1.2]], H, 0.45);
+    return {g, ext:24, ppm:8, air:true}; }
+  // the Strike Drone (~10 m long, 14 m span): a cranked delta with small upturned tips, a sensor ball under the nose, a pusher propeller and two
+  // missiles under the wings
+  function mSdrone(){
+    const g = new T.Group(), H = 0.75, A = P.air, AD = P.airD, Y = H + 0.5;
+    g.add(tube(9.6, ogive(0.5, 0.32, 0.22, 0.4, 0.15), A, Y, 0.2));
+    g.add(sph(0.3, P.glass, 0, Y - 0.38, 3.6));
+    g.add(plan(both([[0.4, 2.2], [2.6, -0.6], [7.0, -2.4], [7.0, -3.2], [0.4, -3.6]]), 0.14, A, Y - 0.05, 0.04));
+    for (const sx of [-1, 1]){ g.add(fin([[-2.2, 0], [-3.2, 0], [-3.5, 0.9], [-2.9, 0.9]], 0.06, AD, sx*7.0, Y + 0.05, sx*0.25));
+      g.add(cyZ(0.12, 0.12, 1.7, P.white, sx*3.4, Y - 0.32, -0.6, 8)); g.add(cyZ(0.01, 0.12, 0.22, P.dark, sx*3.4, Y - 0.32, 0.36, 8)); }
+    g.add(cyZ(0.16, 0.1, 0.4, P.dark, 0, Y, -4.75, 10)); g.add(rbox(2.4, 0.05, 0.16, 0.02, P.rotor, 0, Y, -4.95));
+    gear(g, [[0, 2.6], [-1.3, -1.2], [1.3, -1.2]], H);
+    return {g, ext:8.0, ppm:13, air:true}; }
+  // the Swarm Drones: five small quadcopters (each ~1.8 m across, arms crossed, four rotor discs) standing in a loose arrowhead
+  function mSwarm(){
+    const g = new T.Group(), A = P.air, AD = P.airD;
+    const quad = (x, z, r) => { const q = new T.Group(); q.position.set(x, 0, z); q.rotation.y = r; g.add(q); const y = 0.42;
+      q.add(rbox(0.7, 0.36, 1.05, 0.13, A, 0, y, 0)); q.add(sph(0.12, P.glass, 0, y - 0.06, 0.5));
+      for (const a of [Math.PI/4, -Math.PI/4]){ const arm = rbox(1.9, 0.08, 0.12, 0.03, AD, 0, y + 0.1, 0); arm.rotation.y = a; q.add(arm); }
+      for (const [dx, dz] of [[0.67, 0.67], [-0.67, 0.67], [0.67, -0.67], [-0.67, -0.67]]){ q.add(cy(0.07, 0.08, 0.16, P.dark, 8, dx, y + 0.2, dz));
+        q.add(cy(0.44, 0.44, 0.03, P.blade, 18, dx, y + 0.3, dz)); }
+      for (const [dx, dz] of [[0.25, 0.3], [-0.25, 0.3], [0.25, -0.3], [-0.25, -0.3]]) q.add(cy(0.025, 0.025, 0.28, P.dark, 4, dx, 0.14, dz)); };
+    quad(0, 2.7, 0); quad(-2.3, 0.6, 0.12); quad(2.3, 0.6, -0.12); quad(-4.4, -1.6, 0.2); quad(4.4, -1.6, -0.2);
+    return {g, ext:6.4, ppm:15, air:true}; }
   function mHeli(){
     const g = new T.Group(), H = 0.55, A = P.heli, AD = P.heliD;   // ~17 m attack helicopter on its wheels, in a dark olive disruptive scheme with black blades
     const prof = []; for (let i = 0; i <= 14; i++){ const u = i/14, r = 0.12 + Math.sin(Math.min(1, u*1.25)*Math.PI*0.5)*0.85*(1 - Math.max(0, u - 0.62)*2.3); prof.push(new T.Vector2(Math.max(0.1, r), (u - 0.5)*8.0)); }
@@ -746,7 +881,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     for (const sx of [-3.5, 3.5]) g.add(cyZ(0.1, 0.1, 1.4, P.white, sx, H + 0.48, 0.3, 8));
     gear(g, [[0, 3.0], [-1.2, -0.5], [1.2, -0.5]], H);
     return {g, ext:10.0, ppm:12, air:true}; }
-  const MAPB = {sol:() => mSquad('inf'), sat:() => mSquad('at'), ssf:() => mSquad('sf'), hmv:mHmv, truck:mTruck, tank:mTank, ifv:mIfv, art:mArt, mlrs:mMlrs, sam:mSam, frig:() => mShip('frig'), crui:() => mShip('crui'), sub:mSub, carr:mCarr, jet:() => mJet('jet'), int:() => mJet('int'), heli:mHeli, drone:mDrone};
+  const MAPB = {sol:() => mSquad('inf'), sat:() => mSquad('at'), ssf:() => mSquad('sf'), hmv:mHmv, truck:mTruck, tank:mTank, ifv:mIfv, art:mArt, mlrs:mMlrs, sam:mSam, frig:() => mShip('frig'), crui:() => mShip('crui'), sub:mSub, carr:mCarr, jet:mStrike, int:mInt, asf:mAsf, bomb:mBomb, stealth:mStealth, mpa:mMpa, awacs:mAwacs, heli:mHeli, drone:mDrone, sdrone:mSdrone, swarm:mSwarm};
 
   // ---------- the map atlases: one cell per direction (16, no animation) in a 4 x 4 grid, north-west sun (its shadow falls south-east like the
   // terrain's hillshade) plus soft sky shadows and a soft contact shade under the hull, rendered at twice the size and filtered down. Two levels are
