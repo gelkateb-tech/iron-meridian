@@ -374,7 +374,7 @@ function wfxDrawOne(e, tau, now){ const ks = PG.view.s, kr = wfxKr(e), [bx, by] 
     if (o.k === 'L' || o.k === 'G'){ const rr = (o.r0 + (o.r1 - o.r0)*Math.min(1, u*3))*kr, a = fd*o.a*(u < 0.04 ? u/0.04 : Math.pow(1 - u, o.k === 'L' ? 2 : 1.5))*(o.k === 'G' ? 0.45 + 0.55*e.night : 1);
       wfxSpr(o.k === 'L' ? WGLOW() : GLOW(), null, bx, by - (o.k === 'L' ? e.R*0.2*kr : 0), rr, rr*(o.k === 'G' ? 0.46 : 1), a, 'lighter'); continue; }
     if (o.k === 'R'){ const m = 1 - Math.pow(1 - u, o.kind === 'dust' ? 2.6 : 2.2), rr = o.r1*m*kr; if (rr < 1) continue;
-      if (o.kind === 'rip'){ wfxRipple(bx, by, rr, Math.max(4, rr*0.09), 0.05*(1 - u)); continue; }
+      if (o.kind === 'rip'){ if (FXG.k >= 0.6) wfxRipple(bx, by, rr, Math.max(4, rr*0.09), 0.05*(1 - u)); continue; }   // (the map bent under the shock front: left out while frames are slow, the governor)
       if (o.kind === 'shock'){ const a = fd*o.a*Math.min(1, u/0.04)*Math.pow(1 - u, 1.3)*(1 - 0.45*e.night);   // the shock front: a soft pale band of raised dust, broken by noise, no line
         wfxSpr(wfxRing(false), null, bx, by, rr, rr*0.5, a*1.6, 'source-over', true); if (u < 0.3) wfxSpr(wfxRing(false), null, bx, by, rr, rr*0.5, a*0.5*(1 - u/0.3), 'lighter'); }
       else wfxSpr(wfxRing(true), null, bx, by, rr, rr*0.5, fd*o.a*Math.min(1, u/0.1)*Math.pow(1 - u, 1.2), 'source-over', true);
