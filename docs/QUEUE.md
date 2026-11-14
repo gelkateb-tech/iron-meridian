@@ -8,50 +8,74 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
-Last updated: 2026-11-14.
+Last updated: 2026-11-14 (owner playtest notes added).
 
 ## Running
 
 | Task | Model | Where it is |
 |---|---|---|
-| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges next) |
-| Capital HQ flag drawn in code on every regional HQ (the 8 flagpole tops in BNMETA); NOT merged until the owner sees Berlin and a captured capital | Opus | branch hq-flags |
-| Explosion video clips from Gemini Omni 1.2 Flash (720p, one try each, about $1.70): nuclear, chemical, conventional (bombers, ballistic), cruise missile; sprite sheets (black keyed out), played on the map; NOT merged until the owner OKs the clips and recording; then the crater left behind is ported from explosions-code and that branch is deleted (owner dropped the code-animated explosions: too fake in motion) | Opus | branch fx-video |
+| **MAP-1** Real borders from Natural Earth 1:10m; owner playtest 2026-11-14: no diagonal lines over any country anywhere (#1), back to the old look: every other country greyish, mine greenish (#2, replaces 'every country its own colour'), borders kept visible | Opus | branch borders-real (merges next; screenshots first) |
+| HQ flags, revision DONE, NOT merged (screenshots sent): a captured capital's HQ is destroyed (the city's other buildings stay); the new capital gets its HQ and flag; flags drawn as curved cloth with a rolling fold and shading, faint edge, same size; waiting for the owner's OK | Opus | branch hq-flags |
+| **UNIT-CTRL** (queue #1): a tap only selects; moves only after Move; rally point button, preview ghost, flag marker, Clear | Sonnet | branch unit-ctrl |
+| Each aircraft type its own 3D shape (fighter, bomber, stealth bomber, AWACS, naval patrol, others) | Opus | branch aircraft-3d |
+| Explosion video clips from Gemini Omni 1.2 Flash: nuclear, conventional (bombers, ballistic) and cruise made (3 x 5 s, about $1.06); the chemical clip was refused twice by the service ($0), chemical keeps the drawn gas; sprite sheets played on the map, 30 s craters left behind (ported from explosions-code, which is deleted); DONE, NOT merged: waiting for the owner's OK | Opus | branch fx-video |
 
-**Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
+**Merge rules:** map jobs (MAP-*, BLD-MAP) merge one at a time, each merged with master and re-tested before the next; every look change sends the owner screenshots before it merges.
 
 ## Queued (in this order)
 
-| # | Task | Model |
-|---|---|---|
-| 1 | Roads: every province linked to a neighbour, real roads first (map job, starts when real borders merge) | Opus |
-| 2 | Each aircraft type its own 3D shape | Opus |
-| 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+Owner playtest notes of 2026-11-14 (numbers #1-#21), the rally point and the Army Base rule, grouped by code area so each job reads its code once. Sonnet for small fixes, Opus for new rules.
+
+| # | Job | What it covers | Model |
+|---|---|---|---|
+| (running) | **UNIT-CTRL** Unit controls (index.html tap(), command bar, city panel) | #9 a tap on a unit only selects it and opens its bar; it moves only after Move (no tap-to-move on empty land; right-click and drag orders stay for desktop); **Rally point**: remove the automatic ghost unit that walks from the city after training (new units stay in their city by default); a "Rally point" button in the city panel, then a tap on the map sets it, with the ghost unit walking the path as a preview while setting; once set only a small flag marker at the point, no ghost; a button to clear it (builds on the existing S.rally / setRally). Screenshots before merging | Sonnet |
+| 2 | **BLD-RULES** Building rules (rules/data.js BUILD, rules/production.js, build menu) | **Army Base rule**: infantry (all four types) can be trained only in a city with Army Base level I; until then the Train button is greyed out with "Needs Army Base level 1"; starting units unchanged; computer nations build Army Bases; old saves load; a temporary code-drawn Army Base picture (small camp, tents, fence) until the real art exists. Recruiting Office: proposed to stop gating infantry and keep its training-speed and manpower bonuses (owner to confirm). #16 Fortifications cost: propose a new cost to the owner first (today $36M / 8 materials / 8 iron, x1.6 per level; 151 level-I forts exist on day 0, almost all given at the start to tier B/C border provinces and tier C capitals, the AI builds few). #17 HQ levels: the HQ has no levels in the rules; what shows is the city level (capital +1, 'Level X · capital' and the b-city pictures in the panels, from the v2 art integration of 2026-11-05, never an owner request): remove it so the capital shows its one regional HQ, no level | Opus |
+| 3 | **UNIT-LOOK** Units on the map (badge, dug-in, cargo ships) | #8 the unit badge like the Conflict of Nations screenshots: a square badge with a big flag across the top, the unit icon upright under it, the count in a corner; the new infantry icon (owner to pick A, B or C, default C, the owner's green side-view helmet); #10 a new, clearer dug-in icon, 5% bigger and more visible, and the dug-in bonus becomes +10% defence in total (DIG_DEF 0.8 → 1/1.1), replacing the current one, not added on top; #11 the bigger cargo ships back on the sea for trade (u-cargo-ship is now used for troops at sea, the close-zoom cargo picture was switched off in v3.4, and trade ships only show with a fleet selected): trade cargo ships always visible at sea with their own picture, troops keep theirs. Screenshots before merging | Sonnet |
+| 4 | **MAP-2** Map look and controls (terrain drawing, mode switch) | #3 one consistent map texture at every zoom: the detail tiles that fade in at normal play zoom (hexPx 16-30, their colour normaliser is switched off), the grain layers and the lower-detail renders while zooming change colour and style; make every zoom the same colours and style; #4 the Political/Terrain switch leaves the map and becomes a toggle in the More menu (Relations and Supply overlays go with it). Map job: after MAP-1 merges; screenshots before merging | Opus |
+| 5 | **BLD-MAP** Buildings on the map (drawBuildings, bnLayout, bnShore, construction) | #12 every building on land at its city (only the Naval Yard is checked against water today); #13 15-20% smaller; #14 every Naval Yard on the real coast at its city with its piers facing the sea (Kolkata's ends up on a minor river 30-35 km east because the sea is far and the Hooghly spot is taken by the Recruiting Office); #15 construction: foundations first, then the building rising in stages with scaffolding and dust, plus the progress ring (instead of the crane); #16 the new Fortifications pictures once made; the real Army Base pictures once made. Map job: after MAP-2; screenshots before merging | Opus |
+| 6 | **MAP-3** Movement network and capture (rules/movement.js, rules/map.js, tools/build-lines.js, roads drawing) | #5 every province gets its roads (1,045 provinces have no road above a track today; 452 have only invisible straight gap-fill tracks; 98 are islands with no land neighbour); #6 warships follow a network of sea lanes the way land units follow roads (not the cargo routes; today ships take straight hops between sea zones with a small lane bonus); #7 capture as in Conflict of Nations: each province has one centre point where its roads meet, and a unit captures the province the moment it reaches that point, no timer (today: within 25 km of the province's centroid). New rules: play checked before and after. Map job: after BLD-MAP; screenshots before merging | Opus |
+| 7 | **REBELS** New rule, plan first (rules/economy.js unrest and partisans, units3d.js figures) | #18 occupied cities only (not the original ones): when morale drops below 30%, rebels appear and can take the city; keeping soldiers there until morale recovers is the counter, so nobody expands too fast; #19 rebels shown as 3D soldier figures like other units (a new irregulars squad model, visible at the same zoom as other units). Also the 'capital lost' idea: the HQ destroyed and morale of the nation's cities falling until they rebel (the owner said homeland and occupied cities there, but occupied only here: the plan asks which). Builds on what exists: unrest, partisans above 60% unrest that take a province after 24 h alone, morale = 100 - unrest - war damage. **Show the owner the plan before building** | Opus |
+| 8 | **ART-1** Pictures on Gemini (tools/gen-art.py, batch, one try each, cost logged): see "Pictures still missing"; the count and cost go to the owner before each batch; stop if the balance runs low | Sonnet |
+| 9 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+
+## Pictures still missing
+
+Every picture or clip not made yet, with what it is for and its estimated cost at batch prices (about $0.04 a picture, $0.05 a banner, about $0.35 a video clip). Updated after every batch. Owner's Gemini balance: about $3.84 before the explosion clips, about $2.78 after them ($1.06 logged).
+
+| Name | What it's for | Est. cost | Status |
+|---|---|---|---|
+| Army Base 1-5 (bn-fac-1..5) | the Army Base on the map and in the city panel, same style as the Airbase set (until then a code-drawn camp placeholder) | $0.18 | needed now (Army Base rule) |
+| Fortifications 1-5 redo (bn-fort-1..5) | less boxy fortifications (#16) | $0.18 | needed now |
+| Dug-in icon | the new dug-in mark on the unit badge (#10) | $0.04 | needed now (or drawn in code) |
+| Construction stages x3 (foundation, scaffolding, rising) | the construction animation (#15) | $0.11 | needed now (or drawn in code) |
+| Missile Silo 1-5 (bn-silo-1..5) | the Missile Silo on the map (nothing shows today) | $0.18 | waiting |
+| Arms Industry 1-5 (bn-arms-1..5) | the Arms Industry on the map (nothing shows today) | $0.18 | waiting |
+| Research art retries x10 | diamond frame drawn inside 7 icons (ri-cat-sup, ri-msl2, ri-t-pr, ri-at_warhead, ATGM, ri-sdrone_hit, ri-sat1), Strategic Weapons banner cut off (rbs-msl), wrong subject on 2 (ri-spec_airlift, ri-sam_seek) | $0.45 | waiting on the owner |
+| Research icons too close to real products x8 | F-15, MQ-9, F-22/F-35, B-2, Nimitz, AH-1, P-3, Abrams look-alikes | $0.35 | waiting on the owner |
+| Firepower / Protection air and naval variants x4 | the shared upgrade icons show a tank turret on aircraft and ship lines | $0.18 | waiting on the owner |
+| Infantry figure (u-infantry-figure) | the standing infantry figure for the zoomed-in map (still absent) | $0.04 | waiting |
+| Heavy Bomber generation 2 | its own picture instead of sharing generation 1's | $0.04 | waiting on the owner |
+| Hospital 1-5 with a green or white cross | only if the Hospital becomes a building (the red cross is a protected emblem) | $0.18 | waiting on the owner |
+| Recruiting Office 1 without the flag | style says no flags | $0.04 | waiting on the owner |
+| Chemical explosion clip (fxv-chemical) | chemical strikes (the service refused it twice; the owner decides whether to try other wording) | $0.35 | waiting on the owner |
+| Rebel figures | 3D model in units3d.js, no Gemini picture needed | $0 | with REBELS |
+| **Total** | needed now about $0.51; everything listed about $2.15 (the explosion clips are paid separately on the fx-video job) | | |
 
 ## Waiting on me (the owner)
 
+- **Playtest jobs, choices before they start:** (a) Army Base rule: the Recruiting Office stops gating infantry and keeps its training-speed and manpower bonuses (or require both buildings?); (b) the infantry icon for the new badge: A flat helmeted head, B plain head, or C your green side-view helmet (default C); (c) ART-1 first batch: Army Base 1-5, Fortifications 1-5, dug-in icon, 3 construction stages = 14 pictures, about $0.51, OK to spend?; (d) REBELS plan comes to you before it is built.
+
 - **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
 - **Building pictures (merged v48):** (1) Fortifications levels I-III use pictures 1, 3, 5: OK? (2) Army Base, Silo, Arms Industry still need angled pictures (nothing on the map for them yet); (3) Hamburg's Naval Yard sits on the Elbe bank: OK, or always the sea? (4) ports far from water (Berlin, Oslo, Helsinki) keep the yard in the city cluster: OK? (5) cast shadows kept see-through: keep, or a small contact shadow? (6) mid-zoom pictures are small (about 30-40 px): bigger?
-
-- **Research art retries (one try each, not retried):** a diamond frame drawn inside 7 icons (Artillery & Air Defence category, Ballistic Missiles, Protection (25 nodes), Tandem Warheads, ATGM, strike drone hit, satellite); subject cut off on 2 banners (Strategic Weapons missile, Infantry soldiers); wrong subject on 2 (Special Forces airlift, SAM seeker). Still close to real products: F-15, MQ-9, F-22/F-35, B-2, Nimitz, AH-1, P-3, Abrams pictures. Firepower/Protection show a tank turret on every line incl. aircraft and ships. Retry these 11 (about $0.50)?
 
 - **Speed options that change play:** quiet nations plan every 8 h instead of hourly (about -20% rules time); shorter attack-target search (-10 ms/day); reuse land routes across hours (-20 to -25 ms/day); phone map drawn at pixel ratio 1.5 instead of 2 (about 44% fewer pixels: the phone is limited by drawing, not rules).
 
 - **Bomber pictures:** the new Heavy and Stealth Bomber pictures are a cooler blue-grey than the AWACS and fighters: warm them to match? The Heavy Bomber uses one picture for both generations (a second upload would give generation 2 its own).
 
-
 - **Cities panel multi-select:** the ticked-cities bar shows from 2 ticked cities (show it with 1?); when resources run out it stops at the first city that cannot pay and skips the rest (or skip only that city and carry on?).
-
-- **Unit controls, deselect:** with a force selected, a tap on empty land is a move order (as in Conflict of Nations); deselect is a tap on the force again, a second tap on its destination, or Esc. Do you want a tap on empty land to deselect instead (then moving needs the Move button or a drag)?
 
 - **Resource balance review:** docs/RESOURCES-PER-NATION.md. (1) 14-city nations need two resources on 3 cities, not one. (2) Rare materials go from 19 to 89 cities, so their market price roughly halves: lower rare output per city? (3) Weak spots where the map has no better city: Mongolia and Chad electronics, Israel iron (Nitzana), Saudi rare (As Sulayyil) and electronics (Abha), Venezuela rare (Barcelona), Thailand iron (Surin), Vietnam money (Soc Trang).
 
-
-- **Infantry map icon:** three candidates: A flat helmeted head with a wheel for motorized, B plain head (both on branch research-cards), C the green side-view helmet (branch claude/zen-cori-mae3e9, and the uploaded helmet-icons.png). Pick one. (The research cards are being merged in the research tab redo; the research pictures will be replaced by the new Gemini art.)
-- **Building art:** the angled set now has Airbase, Naval Yard (branch claude/zen-cori-mae3e9), Recruiting Office, Fortifications and Hospital levels 1-5 and the 7 regional HQs. Still missing: Army Base, Missile Silo and Arms Industry 1-5 (until then the map shows nothing for them and the city panel keeps their old pictures). Who makes them?
-  - Fortifications: the game has 3 levels, the new set has 5. For now game levels 1-3 use pictures 1, 3 and 5. Make the game 5 levels instead?
-  - Hospital pictures show a red cross, a protected emblem the Red Cross asks games not to use: swap it for a green or white medical cross?
-  - Recruiting Office level 1 has a flag on a pole although the style says no flags: keep or remove?
 - **Forward Airstrip:** 5 levels or 3?
 - **Faster game days:** getting well under 0.5 s per game day may need changes to how computer nations think (quiet nations plan every 8 hours, a shorter attack-target search, reusing routes across hours). Want any of them?
 - **Market prices** are shown per 1,000 units (for example '$2.70M / 1K'). OK?
@@ -60,9 +84,7 @@ Last updated: 2026-11-14.
 - **Netlify token** for the phone app; **"move to public"** for everything under 'Waiting for public' in RELEASES.md.
 - **Nations balance tests:** T4/T5 count only land taken from other nations while more than a quarter of the world is unowned; China's 'fights a big rival by day 60' check relaxed. OK?
 - **Cleanup:** delete the rejected building branches (buildings-3d, building-fix, buildings-cutout) and the old wip/* snapshot branches once checked to be on master?
-- **Dug-in bonus size:** your tooltip says 'Dug in: +defence', but the rules gave dug-in units no bonus at all, so the unit look job adds one: damage taken x0.8 (about +25% defence) while dug in. OK, or another number?
 - **Picture audit (2026-11-13):** done, list sent; nothing fixed yet. Which fixes to queue? Main ones: Anti-Tank Infantry shows a missile truck in research; Paratroopers reuse the infantry picture; empty icons on 9 of 10 research categories and 3 column headers (a code bug); generation nodes show tinted copies; missile pictures loaded but never shown; no satellite picture; bombers/AWACS/patrol plane share the small fighter model on the map; old top-down Airbase 2-4 and Silo 2-3 near-identical; City pictures in porthole frames.
-- **Capture/landing values:** heart radius 25 km, embarking 6 h, landing 12 h (coast) / 6 h (port). Combat Engineers now speed up embarking (30%/40%) and the Siegemaster commander trait speeds embarking and landing (20% per rank), since there is no capture clock any more. Conquest is faster (+3 to +17% provinces changing hands) and a passive player is counter-attacked sooner. OK, or change any of these?
 - **Fable:** no Fable tasks; new ones only if you say so.
 
 ## Planned for later (in LATER.md, not built yet)
