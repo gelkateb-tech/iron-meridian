@@ -5,7 +5,7 @@
 //    after a game) scales it again from the save text only: never twice.
 // 2. That save then plays 5 days in this build (the same save twice: the same state) and its world totals of money and goods, in the old units
 //    (goods / RES_K), stay within 40% of the base build's, for the classic world and the nations world (an exact match is no longer possible: the
-//    rules moved on after the base; tools/x1000-check.js proves 'same game' against the merge commit). A pending computer declaration of war carried by the old save (S.decl) is dropped (rules/diplomacy.js, AI_STARTS_WARS):
+//    rules moved on after the base; the x1000 'same game' proof was tools/x1000-check.js at the merge). A pending computer declaration of war carried by the old save (S.decl) is dropped (rules/diplomacy.js, AI_STARTS_WARS):
 //    no war after the first day, in either build.
 // 3. A save made by this build (S.rk = RES_K) loads unchanged: saveJSON after restore is the same, also after a second save and load (S.bt, the
 //    battle panels' history, left out: every load starts it afresh, in the base build too).
