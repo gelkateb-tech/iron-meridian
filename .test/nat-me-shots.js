@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const path = require('path');
     await p.goto('file://' + path.join(__dirname, 'page.html')); await p.waitForTimeout(900); await fn(p); await p.close(); };
   const tap = async (p, sel, mobile) => mobile ? p.tap(sel) : p.click(sel);
   // a nations-world campaign as `nation` from the start screen's Middle East tab, the briefing closed
-  const start = async (p, nation, mobile) => { await tap(p, '[data-act="pickscn"][data-k="world64"]', mobile); await p.waitForTimeout(250); await tap(p, '[data-act="pickreg"][data-k="Middle East"]', mobile); await p.waitForTimeout(250);
+  const start = async (p, nation, mobile) => { await tap(p, '[data-act="pickscn"][data-k="world64"]', mobile); await p.waitForTimeout(250); await p.waitForTimeout(250);
     const i = await p.evaluate(nm => SCENARIOS.world64.powers.findIndex(P => P.name === nm), nation); await tap(p, `[data-act="pick"][data-p="${i}"]`, mobile); await p.waitForTimeout(250);
     await p.evaluate(() => document.querySelector('[data-act="begin"]').scrollIntoView()); await tap(p, '[data-act="begin"]', mobile); await p.waitForTimeout(1300);
     if (await p.locator('[data-act="start"]').count()) await tap(p, '[data-act="start"]', mobile); await p.waitForTimeout(3200); };
@@ -17,7 +17,7 @@ const { chromium } = require('playwright'); const path = require('path');
     let best = null, bd = 1e9; for (const P of G.P){ if (P.sea) continue; const L = ((((P.cc % WORLD.W) + 0.5)/WORLD.W*360 + WORLD.lon0) + 540) % 360 - 180, d = (L - lon)**2 + (P.lat - lat)**2; if (d < bd){ bd = d; best = P; } }
     const R = document.getElementById('map').getBoundingClientRect(), s = (window.__s0 || (window.__s0 = im.view.s))*k; im.view.s = s; im.view.x = R.width/2 - best.x*s; im.view.y = R.height/2 - best.y*s; im.redraw(); return s; }, [lon, lat, k]);
   await run({width:1400, height:900}, 'desk', async p => {
-    await tap(p, '[data-act="pickscn"][data-k="world64"]'); await p.waitForTimeout(250); await tap(p, '[data-act="pickreg"][data-k="Middle East"]'); await p.waitForTimeout(300);
+    await tap(p, '[data-act="pickscn"][data-k="world64"]'); await p.waitForTimeout(250); await p.waitForTimeout(300);
     await p.screenshot({ path: `${out}/${tag}-start.png` });
     const cards = await p.evaluate(() => [...document.querySelectorAll('.pick b')].map(e => e.textContent));
     const want = ['Turkey', 'Iran', 'Egypt', 'Saudi Arabia', 'Iraq', 'Syria', 'Yemen', 'Israel'];
@@ -36,7 +36,7 @@ const { chromium } = require('playwright'); const path = require('path');
     // the whole region, zoomed out
     await look(p, 43, 28, 0.45); await p.waitForTimeout(1400); await p.screenshot({ path: `${out}/${tag}-region.png` }); });
   await run({width:390, height:844, dpr:2, mobile:true}, 'phone', async p => {
-    await tap(p, '[data-act="pickscn"][data-k="world64"]', true); await p.waitForTimeout(250); await tap(p, '[data-act="pickreg"][data-k="Middle East"]', true); await p.waitForTimeout(300);
+    await tap(p, '[data-act="pickscn"][data-k="world64"]', true); await p.waitForTimeout(250); await p.waitForTimeout(300);
     await p.screenshot({ path: `${out}/${tag}-phone-start.png` });
     await p.reload(); await p.waitForTimeout(900); await start(p, 'Israel', true);
     await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove()); window.__im.redraw(); }); await p.waitForTimeout(1200);

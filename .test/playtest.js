@@ -40,11 +40,10 @@ const tag = (LABEL ? LABEL + '-' : '') + (PHONE ? 'phone' : 'desk') + '-' + NATI
   const T = {}; const tl0 = Date.now();
   // ---- the start screen
   await p.goto('file://' + PAGE + '?start=nations'); await p.waitForSelector('[data-act="pick"]', { timeout: 60000 }); T.startScreenMs = Date.now() - tl0;
-  const regs = await p.$$eval('[data-act="pickreg"]', a => a.map(x => x.dataset.k)); ok('start screen: region tabs', regs.length >= 5, regs);
+  const regs = await p.$$eval('[data-act="pickreg"]', a => a.map(x => x.dataset.k)); ok('start screen: no region tabs, one search box', regs.length === 0 && await p.locator('#pickq').count() === 1, regs);
   await shot('start');
-  // every region tab shows its cards
-  const perReg = {}; for (const k of regs){ await p.click(`[data-act="pickreg"][data-k="${k}"]`); perReg[k] = await p.locator('[data-act="pick"]').count(); }
-  ok('start screen: every region tab shows nations', Object.values(perReg).every(c => c > 0), perReg);
+  // one A-Z list of every nation
+  const names = await p.$$eval('[data-act="pick"] b', a => a.map(x => x.textContent)); ok('start screen: all nations in one A-Z list', names.length === 68 && names.join() === names.slice().sort((x, y) => x.localeCompare(y)).join(), names.length);
   await pickNation(p, NATION); await p.waitForTimeout(150); await shot('picked');
   const tb = Date.now(); await p.click('[data-act="begin"]'); await p.waitForSelector('[data-act="start"]', { timeout: 60000 }); T.beginMs = Date.now() - tb;
   await p.click('[data-act="start"]'); await p.waitForFunction(() => window.__im && window.__im.S && window.__im.S.started && !window.__im.camFly, null, { timeout: 60000 }).catch(() => {});

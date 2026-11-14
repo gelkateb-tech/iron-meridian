@@ -137,9 +137,9 @@ function aiSpies(n){
 }
 /* ---------------- AI ---------------- */
 let PPC = {v:-1, m:null};
-function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S || !keep()){ if (PPC.v === tickVer && PPC.S === S) return PPC.m; const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a)]); } if (!keep()) return m; PPC = {v:tickVer, S, m}; } return PPC.m; }
+function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S || !keep()){ if (PPC.v === tickVer && PPC.S === S) return PPC.m; const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a), 1/digF(a)]); } if (!keep()) return m; PPC = {v:tickVer, S, m}; } return PPC.m; }
 function defPower(p, n){
-  let d = 0; for (const [o, pw] of (provPowers().get(p) || [])) if (o !== n) d += pw;
+  let d = 0; for (const [o, pw, dg] of (provPowers().get(p) || [])) if (o !== n) d += pw*(dg || 1);   // (dg: 1/DIG_DEF for a dug-in defender)
   if (S.owner[p] !== n){ d *= 1.25/Math.pow(0.8, S.bld[p].fort)*(G.P[p].sea ? 1 : terr(p).def); }   // the AI reads terrain: dug in on a mountain counts for more
   return d;
 }
@@ -618,7 +618,8 @@ function aiTurn0(n, N){
       if (dest >= 0) a.path = pathFor(a, a.at, dest);
       continue;
     }
-    if (S.owner[a.at] !== n) continue;
+    if (S.owner[a.at] !== n){   // land it is taking: a force standing off the province's heart (after a clash on the road) walks to the city, which takes it
+      if (!a.sail && !S.battles.includes(a.at) && capturable(n, a.at) && !atHeart(a) && ground(a)) orderSpot(a, G.P[a.at].x, G.P[a.at].y); continue; }
     if (a.at === N.capital && threatNear(a.at, n)) continue;
     if ((a.m ?? 80) < 50 || (a.resting && a.m < 70)){ a.resting = true; continue; } a.resting = false;
     if (gunsOnly(a)) continue;   // batteries fire from range (aiGuns), they do not march into battles

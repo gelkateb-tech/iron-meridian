@@ -92,7 +92,7 @@ function armyStrength(a, blind = false){   // blind: a force that is not yours: 
   // the damage taken is scaled by dF (the product of these): the defence is its inverse
   const fort = mine ? S.bld[p].fort || 0 : 0, dd = docOf(o), sea1 = sea && ground(a) ? (shipsN(a) > 0 ? 0.75 : 1.5) : 1;
   const dTake = t => blind ? {} : ({'home soil':mine ? 1/1.25 : 1, fortifications:mine ? Math.pow(0.8, fort) : 1, doctrine:mine && dd && dd.home && S.home[p] === o ? dd.home : 1, terrain:!sea && (mine || (holder < 0 && o < 0)) ? 1/terr(p).def : 1,
-    'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1});
+    'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1, 'dug in':digF(a)});
   const out = [];
   for (const R of STR_ROWS){
     const row = {k:R.k, name:R.name, atk:{base:null, cur:null, why:[], unit:'', total:false}, def:{base:null, cur:null, why:[], unit:'', immune:false}};
@@ -123,15 +123,46 @@ function armyStrength(a, blind = false){   // blind: a force that is not yours: 
     const fin = (W, why) => { for (const k in W){ const [sw, w] = W[k], f = w > 0 ? sw/w : 1; if (Math.abs(f - 1) > 0.004) why.push([k, f]); } };
     fin(wa, row.atk.why); fin(wd, row.def.why);
     out.push(row); }
-  return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), supplied:sup === 1}};
+  return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, dug:!blind && digF(a) < 1, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), supplied:sup === 1}};
 }
+/* ---------------- Unit stats by research (the research card's i button) ----------------
+   unitStrength(n, t, T): the full stats of ONE unit of type t for nation n with the research levels T ({node id: level}; omitted: the nation's own),
+   before any battle modifier, so a player can compare units: health, speed (km/day: marching or sailing speed, aircraft their flight speed), vision
+   (km), attack range (km: the guns' and launchers' reach, or an aircraft's mission radius; null: it fights where it stands), and for each Army Info
+   row but population (STR_ROWS) the attack and the defence the way armyStrength reads its base values: the research-boosted stat (with the nation's
+   doctrine) times the damage class table, with the counters research changes (R_VS). Pure: nothing is changed.
+   unitSteps(n, t): the research steps of t's line that change any of those numbers, in the tree's order (Firepower and Protection by level, the
+   upgrades that change a stat, the generations): [{id, lv, T}], T being the line's unlock plus that step (a generation with the ones before it). */
+function unitStrength(n, t, T){
+  const N = n >= 0 && S.nations[n] ? S.nations[n] : null, U = UNITS[t], dc = N ? DOCTRINES[N.doc] : null; T = T || (N && N.tech) || {};
+  const lv = id => T[id] != null ? +T[id] || 0 : RN[id] && RN[id].std ? 1 : 0, hasT = id => lv(id) > 0, air = U.cls === 'air';
+  const stat = k => { let v = U[k] || 0; for (const nd of RNODES_U[t] || []){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++){ const x = nd.lv[i].fx[k]; if (x) v += x; } }
+    if (k === 'atk' || k === 'def'){ v *= MARK_F[Math.min(3, +T[t + (k === 'atk' ? '_fp' : '_pr')] || 0) + 1]; if (dc) v *= dc[k] || 1; } return v; };   // (as st(), without shortages)
+  const mo = k => { const r = R_VS[t] && R_VS[t][k]; return r && hasT(r[0]) ? r[1] : mult(t, k); }, mU = u => U.vsU && U.vsU[u] != null ? U.vsU[u] : mo(UNITS[u].cls);
+  const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
+  const atk = stat('atk'), def = stat('def');
+  const vis = uav ? uav.vis : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
+    : U.vis*((t === 'at' && hasT('at_eye')) || (t === 'spec' && hasT('spec_eye')) ? 1.5 : 1);
+  const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
+  const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*24 : stat('spd'))*KM_HEX/10)*10;
+  const rows = STR_ROWS.filter(R => R.k !== 'pop').map(R => { const r = {k:R.k, name:R.name, atk:null, def:null, immune:false, unit:''};
+    if (R.t){ if (atk > 0) r.atk = atk*mU(R.t); const Md = multU(R.t, t); if (Md > 0.001) r.def = def/Md; else r.immune = true; }
+    else if (R.k === 'msl'){ const w = t === 'sam' ? 1 : t === 'frig' ? 0.6 : 0; if (w){ r.atk = 100*(1 - Math.pow(1 - 0.12, w*([1, 2, 2.5, 3][lv('msl3')] || 1))); r.unit = '%'; } r.def = def/MSL_VS[U.cls]; }
+    else if (R.k === 'bld' && U.bmb){ r.atk = t === 'stealth' && hasT('stealth_bay') ? 0.75 : U.bmb; r.unit = 'bomb load'; }
+    return r; });
+  return {t, hp:stat('hp'), spd, vis:Math.round(vis), rng:rng == null ? null : Math.round(rng), rngKind:air ? 'mission' : rng == null ? null : 'fire', rows}; }
+function unitSteps(n, t){ const L = (RNODES_U[t] || []).filter(nd => nd.kind !== 'unlock'), base = {['u_' + t]:1}, key = T => JSON.stringify(unitStrength(n, t, T)), k0 = key(base), out = [];
+  for (const nd of L) for (let l = 1; l <= nd.lv.length; l++){ const T = {...base, [nd.id]:l};
+    if (nd.kind === 'gen') for (const m of L) if (m.kind === 'gen' && m.gen < nd.gen) T[m.id] = 1;
+    if (key(T) !== k0) out.push({id:nd.id, lv:l, T}); }
+  return out; }
 /* ---------------- Commanders ---------------- */
 const TRAITS = {
   blitz:{name:'Blitz', icon:'»', desc:'+15% speed; +10% attack when attacking (×rank)'},
   shield:{name:'Shield', icon:'◆', desc:'Takes 12% less damage when defending (×rank)'},
   gunner:{name:'Artillerist', icon:'✦', desc:'Artillery and SAMs +20% attack (×rank)'},
   supply:{name:'Logistician', icon:'✚', desc:'No attrition when cut off; heals 50% faster (×rank)'},
-  siege:{name:'Siegemaster', icon:'▲', desc:'Captures provinces 25% faster (×rank)'},
+  siege:{name:'Siegemaster', icon:'▲', desc:'Embarks at ports and lands from the sea 20% faster (×rank)'},   // (captures are immediate at a province's heart: rules/movement.js cmdEmbF)
 };
 const CMD_FIRST = ['Adair', 'Bram', 'Calla', 'Dorian', 'Elin', 'Farah', 'Galen', 'Hana', 'Ilya', 'Juno', 'Kasimir', 'Lena', 'Marek', 'Nadia', 'Oren', 'Petra', 'Quinn', 'Rhea', 'Soren', 'Talia', 'Udo', 'Vera', 'Wren', 'Yara', 'Zane'];
 const CMD_LAST = ['Ashford', 'Brandt', 'Corvin', 'Dahl', 'Ekwall', 'Ferro', 'Garrow', 'Hale', 'Ivers', 'Jasko', 'Kell', 'Lorne', 'Marlow', 'Noor', 'Orlov', 'Pryce', 'Quist', 'Rook', 'Sabre', 'Thorne', 'Ulric', 'Voss', 'Wilde', 'Yates', 'Zorin'];
@@ -171,6 +202,11 @@ function index(){ const by = new Array(G.P.length).fill(IDX0); for (const a of S
 const DIG_H = 12;
 const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length && !G.P[a.at].sea && count(a) > 0 &&
   (a.stance === 'defend' || (a.still != null && S.hour - a.still >= DIG_H && (S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && a.owner >= 0 && friendly(a.owner, S.owner[a.at])))));
+// a dug-in force defending where it stands takes DIG_DEF times the damage (0.8: about +25% defence), like home soil and fortifications: in its
+// battles (tick.js battleStep), under ranged fire (rangedStep), under air strikes (air.js) and in the odds. Only while it defends its own or a
+// friend's province: a force on the move is never dug in (dugIn), and one with the Defend stance in a province held by a foe is attacking
+const DIG_DEF = 0.8;
+const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? DIG_DEF : 1;
 function endBattle(p){
   const B = S.bt && S.bt[p]; if (!B) return; delete S.bt[p];
   const os = Object.keys(B.s).map(Number);
@@ -222,8 +258,8 @@ function rangedTargets(a, x, y, list){ const R = rangedOf(a); if (!R.length) ret
   return out; }
 // the forces ranged fire may aim at, in a grid of RG_C world units by where they stand (built once per step, only when something can fire)
 const RG_C = 24, RT_ROLL = RANGED_T.join(',') === 'art,mlrs,frig,crui,sub';   // (RT_ROLL: the ranged types written out below)
-function rangedGrid(){ const g = new Map(), NC = Math.ceil(WORLD_W/RG_C);
-  for (const b of S.armies){ if (b.owner < 0 || b.air || b.fly || !count(b)) continue;
+function rangedGrid(foe = null){ const g = new Map(), NC = Math.ceil(WORLD_W/RG_C);
+  for (const b of S.armies){ if (b.owner < 0 || b.air || b.fly || (foe !== null && !foe(b.owner)) || !count(b)) continue;   // (foe: may the owner be fired at by anyone, rangedStep)
     let x, y; if (b.to === null){ const ps = b.pos; if (ps){ x = ps[0]; y = ps[1]; } else { const A = G.P[b.at]; x = A.x; y = A.y; } } else [x, y] = legSpot(b);   // (armyXY for a force on the ground or at sea, without its new array)
     const k = (((Math.floor(x/RG_C) % NC) + NC) % NC)*65536 + Math.floor(y/RG_C) + 1024; let l = g.get(k); if (!l) g.set(k, l = []); l.push(b); }
   return g; }
@@ -233,14 +269,19 @@ function rangedNear(g, x, y, km){ const NC = Math.ceil(WORLD_W/RG_C), r = Math.c
 // what the client shows of ranged fire: the damage dealt to each force, summed over the hour's steps and shown on the hour (display only, never saved)
 const RANGED_SHOWN = new Map();
 // one battle step of ranged fire (hourly: the hour's own step, which also shows the hour's damage numbers)
-function rangedStep(hourly){ let grid = null, gone = false;
+// A force fires only at the forces of a nation it is at war with, so a nation at war with no nation neither fires nor is fired at: when every pair
+// of nations has its relation (relAll: atWar then creates nothing), its forces are left out of the grid and its guns skip the search (inWar: once
+// per nation a step). Every force that could fire or be fired at is handled exactly as before: the same targets, in the same order, the same rolls
+function rangedStep(hourly){ let grid = null, gone = false, IW = null;
+  const inWar = n => { if (IW === null) IW = relAll() ? new Int8Array(S.nations.length).fill(-1) : false; if (IW === false || !(n >= 0 && n < IW.length)) return true;
+    let w = IW[n]; if (w < 0){ w = 0; for (let j = 0; j < IW.length; j++) if (j !== n && atWar(n, j)){ w = 1; break; } IW[n] = w; } return w === 1; };
   for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.sail || !count(a)) continue;   // (a fleet sailing to a spot in its zone fires once there)
     let gun = false; if (RT_ROLL){ const u = a.u; gun = !!(u.art || u.mlrs || u.frig || u.crui || u.sub); } else for (const t of RANGED_T) if (a.u[t]){ gun = true; break; } if (!gun) continue;
     if (a.tgt && a.tgt.id != null){ const tb = armyById(a.tgt.id); if (!tb || !count(tb) || !atWar(a.owner, tb.owner)) delete a.tgt; }   // the ordered target is gone
     if (a.tgt && a.path.length) delete a.tgt;   // (a route given since ends the order)
-    if (a.fire === 'hold' || S.battles.includes(a.at)) continue;
+    if (a.fire === 'hold' || S.battles.includes(a.at) || !inWar(a.owner)) continue;
     const km = rangeOf(a); if (!km) continue;
-    if (!grid) grid = rangedGrid();
+    if (!grid) grid = rangedGrid(IW ? inWar : null);
     const [x, y] = armyXY(a), T = rangedTargets(a, x, y, rangedNear(grid, x, y, km)); if (!T.length) continue;
     // the group fired at: the ordered target while it is in range and seen, else the province with the strongest visible enemy power in range
     let G0 = a.tgt ? T.filter(e => a.tgt.id != null ? e.b.id === a.tgt.id : e.b.at === a.tgt.p) : [];
@@ -254,7 +295,7 @@ function rangedStep(hourly){ let grid = null, gone = false;
       for (const e of hit){ let d = av.get(e); if (!d) av.set(e, d = {soft:0, armored:0, air:0, naval:0}); for (const k of CLASSES) d[k] += b0*multO(a.owner, t, k)/tot; } }
     if (!base) continue;
     for (const [e, d] of av){ const b = e.b, h0 = effHP(b), u0 = count(b);
-      hurt(b, d, land && b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort || 0) : 1);
+      hurt(b, d, (land && b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort || 0) : 1)*digF(b));
       const lost = Math.max(0, h0 - effHP(b)), k = a.id + ':' + b.id, R = RANGED_SHOWN.get(k); if (R) R.lost += lost; else RANGED_SHOWN.set(k, {a, b, p:b.at, lost, x:e.x, y:e.y});
       if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); if (!count(b)) gone = true; } }
     cmdXP(a, base*0.4); if (land) warDamage(best, 1.2/BATTLE_Q);
@@ -277,7 +318,7 @@ function bombardInfo(a, p, b = null){ const R = rangedOf(a), range = R.reduce((m
 // order force a to stay where it is and fire at force b (or at the enemy forces in province p) while they are in range and seen. False, with
 // nothing changed, when nothing there is in range now. A move order or Halt ends it; meanwhile, with the target out of range, it fires at will.
 function orderBombard(a, p, b = null){ if (!bombardInfo(a, p, b).ok) return false;
-  a.path = []; a.chase = null; a.dest = null; delete a.join; a.tgt = b ? {id:b.id} : {p}; if (a.fire === 'hold') a.fire = 'free'; return true; }
+  a.path = []; a.chase = null; a.dest = null; if (a.wp) delete a.wp; delete a.join; a.tgt = b ? {id:b.id} : {p}; if (a.fire === 'hold') a.fire = 'free'; return true; }
 // a force sent to join another (dragged onto its counter) merges into it on arrival; it follows if the other force moved on
 function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a)) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }
@@ -303,6 +344,7 @@ function capture(p, O){
   const prev = S.owner[p], wasCap = isCapital(p);
   IM.emit('fxCapture', p, O, prev);   // before the owner changes: the client marks the capture on the map
   S.owner[p] = O; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1);
+  for (const a of S.armies) if (a.hrt === p) delete a.hrt;   // (the heart reached: done with, rules/movement.js atHeart)
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
   S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = S.home[p] === O ? 0 : Math.max(unrestOf(p), G.P[p].city ? 30 : 15);
@@ -334,7 +376,7 @@ function stanceHour(){
   }
 }
 function oddsParts(a, t, foes, dirs, via = null){ if (dirs === undefined) dirs = plannedDirs(a, t, via);
-  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b)*stackDmg(b), 0);   // (stack efficiency per force)
+  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b)*stackDmg(b)/digF(b), 0);   // (a dug-in defender: DIG_DEF)   // (stack efficiency per force)
   const defOwn = foes.some(b => b.owner === S.owner[t]), ownBonus = (G.P[t].sea ? 1 : terr(t).def)*1.25/Math.pow(0.8, S.bld[t].fort || 0);
   let d = raw*frontScale(fn, F)*(defOwn ? ownBonus : 1);
   const pv = via != null ? via : (a.to ?? a.at), river = !G.P[t].sea && G.P[t].river.has(pv) && S.owner[t] !== a.owner;

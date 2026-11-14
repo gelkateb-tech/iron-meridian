@@ -13,11 +13,9 @@
   let SZ = (window.devicePixelRatio || 1) > 1.3 && (window.innerWidth || 1000) > 820 ? 136 : 112;   // pixels per frame
   /*@TEST*/if (window.__BAKE) SZ = BAKE_SZ;/*@ENDTEST*/   // (the bake page renders at the baked size)
   const cache = {};
-  let buildFn = null, mapFn = null, bldFn = null;
+  let buildFn = null, mapFn = null;
   // the baked map atlases (assets/units/m-<type>.webp): their crop, ground origin and per-direction model boxes, written by tools/bake-assets.js map
-  // the baked building sheets (assets/bld3d/b3-<type>.webp): px per metre and each cell's place, ground origin, model box, footprint and flag (tools/bake-assets.js bld)
-  const BMETA = {"hq":{"ppm":11,"c":[[0,234,168,114,85.51,29,4,202,145,6.55,143.6,72.4,165,88.6],[234,106,104,34,61.54,13,3,69,77,0.7]]},"fac":{"ppm":11,"c":[[0,142,102,69,54.52,4,3,132,95,4.81],[142,158,114,73,54.52,8,3,153,103,5.42],[300,194,158,106,87.54,12,5,186,152,6.51],[494,212,164,105,86.53,11,4,202,154,7.21],[706,248,172,118,87.53,10,5,227,162,7.91],[954,188,120,70,65.53,5,5,153,106,4.81]]},"air":{"ppm":11,"c":[[0,120,96,77,46.51,9,9,113,92,5.05],[120,160,102,90,47.52,11,10,146,98,5.9],[280,164,116,95,58.54,9,10,151,112,6.49],[444,184,122,99,58.52,9,10,179,114,6.79],[628,206,144,99,74.53,5,8,195,132,7.47],[834,200,116,77,56.52,9,4,163,102,5.05]]},"arms":{"ppm":11,"c":[[0,122,88,60,43.53,7,5,114,80,4.02],[122,142,100,77,56.55,5,10,131,96,4.71],[264,162,122,82,63.51,8,4,155,113,5.5],[426,186,140,90,79.53,4,4,173,132,6.31],[612,216,154,103,78.52,7,3,205,142,7.37],[828,168,112,59,62.53,6,4,132,99,4.02]]},"rec":{"ppm":11,"c":[[0,102,76,51,38.55,6,5,96,70,3.38],[102,122,88,66,47.54,6,8,115,83,4.07],[224,148,106,73,50.52,10,4,142,97,4.99],[372,178,128,88,65.54,6,6,167,119,6.02],[550,200,144,95,74.54,7,4,188,134,6.8],[750,152,106,52,61.52,7,4,116,93,3.38]]},"fort":{"ppm":11,"c":[[0,106,78,53,38.54,7,5,99,71,3.49],[106,132,96,81,46.54,13,13,127,92,5.48],[238,212,152,90,81.54,22,15,171,127,7.56],[450,154,108,52,63.52,6,5,117,96,3.49]]},"silo":{"ppm":11,"c":[[0,108,80,52,41.54,5,3,101,74,3.61],[108,132,92,65,48.51,6,4,123,85,4.42],[240,156,130,71,74.53,8,4,147,119,5.22],[396,178,136,90,73.53,8,3,170,128,6.04],[574,202,174,100,93.53,9,3,192,156,6.84],[776,156,108,52,63.51,5,4,120,96,3.61]]},"yard":{"ppm":11,"c":[[0,148,108,84,55.52,9,5,140,104,4.95],[148,160,116,88,57.54,9,7,155,111,5.46],[308,174,134,96,73.52,8,4,167,129,5.94],[482,200,140,102,73.51,8,4,185,133,6.5],[682,208,148,109,74.51,10,5,200,139,7.15],[890,194,120,83,62.51,8,4,158,111,4.95]]}};
-  const MAPMETA = {"sol":{"w":214,"h":254,"ox":90,"oy":166.49,"ppm":99.2,"air":false,"sea":false,"bb":[[56,31,159,184],[53,24,163,190],[54,17,156,197],[53,10,139,201],[56,5,120,203],[56,3,120,200],[49,3,119,194],[35,7,120,187],[21,12,124,181],[17,19,127,182],[24,26,126,183],[41,23,127,182],[60,22,124,179],[60,23,124,178],[61,26,131,179],[60,32,145,180]]},"hmv":{"w":334,"h":344,"ox":154,"oy":216.05,"ppm":52.2052,"air":false,"sea":false,"bb":[[15,71,295,261],[12,45,298,281],[23,28,287,293],[53,26,257,299],[91,10,217,295],[52,9,255,299],[21,8,285,293],[10,25,296,281],[13,50,293,261],[10,80,295,281],[21,80,285,294],[52,72,256,302],[91,80,217,295],[52,72,256,302],[23,80,287,294],[13,100,299,281]]},"truck":{"w":400,"h":358,"ox":181,"oy":202.54,"ppm":44.8,"air":false,"sea":false,"bb":[[28,74,342,244],[20,48,349,273],[36,21,331,292],[74,10,292,299],[117,16,245,291],[70,10,288,299],[31,21,326,292],[13,48,342,273],[20,74,334,244],[13,41,342,270],[31,14,326,289],[70,3,289,296],[117,8,245,291],[74,3,292,296],[36,14,331,289],[20,41,349,270]]},"tank":{"w":456,"h":368,"ox":218,"oy":196.39,"ppm":29.9518,"air":false,"sea":false,"bb":[[101,89,423,237],[91,74,409,261],[99,76,366,276],[124,71,315,296],[161,78,275,308],[121,71,312,296],[70,76,337,276],[27,74,345,261],[13,82,335,237],[27,94,345,261],[70,46,337,277],[121,14,312,280],[161,2,275,271],[124,14,315,280],[99,46,366,277],[91,94,409,261]]},"ifv":{"w":386,"h":332,"ox":178,"oy":182.73,"ppm":40.2723,"air":false,"sea":false,"bb":[[18,69,341,228],[14,39,344,256],[28,13,328,273],[64,2,292,278],[111,9,245,268],[65,2,292,278],[28,13,328,273],[12,29,343,256],[15,39,338,228],[12,42,342,251],[29,21,328,269],[65,15,292,284],[112,7,244,281],[64,15,291,284],[28,21,327,269],[14,42,344,251]]},"mlrs":{"w":390,"h":346,"ox":180,"oy":196.96,"ppm":43.914,"air":false,"sea":false,"bb":[[30,63,339,238],[25,46,347,265],[40,20,330,284],[75,8,291,289],[123,14,237,284],[70,8,285,290],[30,20,320,284],[13,46,335,265],[21,59,329,238],[13,21,334,264],[30,9,320,281],[70,3,286,287],[123,10,237,283],[75,3,290,287],[40,13,330,281],[25,38,347,264]]},"sam":{"w":428,"h":368,"ox":200,"oy":204.4,"ppm":39.7318,"air":false,"sea":false,"bb":[[37,73,384,244],[35,86,388,278],[58,63,364,302],[101,52,316,315],[146,55,254,315],[84,52,299,315],[36,63,342,302],[12,86,365,278],[16,73,363,244],[12,51,365,272],[36,19,342,292],[84,4,299,304],[146,7,254,303],[102,3,316,304],[58,19,364,292],[35,51,388,272]]},"frig":{"w":418,"h":330,"ox":209,"oy":189.32,"ppm":54.4,"air":false,"sea":true,"bb":[[5,68,413,198],[11,74,397,234],[46,32,353,282],[106,6,290,315],[180,2,238,326],[128,6,312,315],[65,32,372,282],[21,74,407,234],[5,68,413,198],[20,62,407,252],[65,46,372,296],[128,14,312,322],[180,3,238,326],[106,14,290,322],[46,46,353,296],[11,62,397,252]]},"sub":{"w":448,"h":348,"ox":225,"oy":194.04,"ppm":51.2,"air":false,"sea":true,"bb":[[4,129,416,203],[21,102,401,238],[68,50,361,282],[140,15,300,312],[192,3,258,322],[150,15,310,312],[89,50,382,282],[49,102,429,238],[34,129,446,203],[49,107,429,245],[89,81,382,297],[150,54,310,332],[192,43,258,344],[140,54,300,332],[68,81,361,297],[21,105,401,245]]},"crui":{"w":502,"h":398,"ox":251,"oy":229.3,"ppm":54.4,"air":false,"sea":true,"bb":[[4,102,493,241],[16,102,475,285],[59,51,422,342],[131,17,345,380],[218,3,284,393],[157,17,371,380],[80,51,443,342],[27,102,486,285],[9,102,498,241],[27,96,486,305],[80,66,443,357],[157,28,371,389],[218,15,284,394],[131,28,345,389],[59,66,422,357],[16,96,475,305]]},"carr":{"w":544,"h":426,"ox":272,"oy":237.66,"ppm":48,"air":false,"sea":true,"bb":[[6,83,538,282],[11,69,518,304],[50,23,470,364],[120,3,416,407],[166,11,361,421],[140,12,452,407],[79,38,515,364],[26,89,541,310],[6,123,538,270],[26,103,533,336],[74,59,494,385],[128,21,424,417],[183,6,378,421],[92,21,404,417],[29,56,465,385],[3,95,518,328]]},"jet":{"w":392,"h":348,"ox":190,"oy":188.58,"ppm":20.7728,"air":true,"sea":false,"bb":[[25,79,373,260],[26,66,358,238],[38,45,319,271],[60,17,275,303],[77,3,303,314],[105,4,320,303],[61,20,342,271],[22,50,354,238],[7,79,355,260],[22,101,354,274],[61,66,342,290],[105,34,320,303],[77,24,303,306],[60,34,275,300],[38,66,319,290],[26,101,358,274]]},"int":{"w":380,"h":340,"ox":184,"oy":184.23,"ppm":20.1949,"air":true,"sea":false,"bb":[[23,65,361,267],[24,49,348,251],[37,44,310,265],[38,17,290,295],[58,3,310,306],[78,5,330,295],[59,20,331,264],[20,49,344,251],[7,65,345,267],[20,82,344,283],[59,65,331,283],[78,34,330,295],[58,24,310,298],[38,34,290,293],[37,65,309,283],[24,82,348,283]]},"heli":{"w":502,"h":438,"ox":238,"oy":230.76,"ppm":24.3715,"air":true,"sea":false,"bb":[[13,110,360,256],[32,89,352,275],[77,54,360,281],[121,16,354,299],[147,3,329,305],[122,16,355,299],[116,54,401,281],[124,89,448,275],[116,110,463,256],[124,91,444,287],[116,85,399,332],[122,92,355,362],[147,110,329,374],[121,92,354,362],[75,85,360,332],[28,91,352,287]]},"drone":{"w":358,"h":300,"ox":174,"oy":153.63,"ppm":19.2,"air":true,"sea":false,"bb":[[64,3,276,271],[66,13,268,263],[53,41,299,237],[18,43,331,215],[6,39,342,221],[17,41,330,215],[49,41,295,237],[80,13,282,263],[72,3,284,271],[80,12,282,262],[49,37,295,234],[17,65,330,243],[6,59,342,248],[18,65,331,242],[53,37,299,234],[66,12,268,262]]},"art":{"w":446,"h":430,"ox":192,"oy":250.73,"ppm":30.4988,"air":false,"sea":false,"bb":[[63,104,357,281],[60,150,353,301],[77,135,325,314],[111,126,277,327],[150,128,237,333],[114,130,273,328],[82,138,307,314],[43,158,324,301],[27,129,321,281],[31,83,324,304],[59,43,307,329],[107,15,273,341],[147,2,234,339],[111,5,270,341],[77,25,302,329],[60,60,341,305]]}};
+  const MAPMETA = {"hmv":{"w":334,"h":344,"ox":154,"oy":216.05,"ppm":52.2052,"air":false,"sea":false,"bb":[[15,71,295,261],[12,45,298,281],[23,28,287,293],[53,26,257,299],[91,10,217,295],[52,9,255,299],[21,8,285,293],[10,25,296,281],[13,50,293,261],[10,80,295,281],[21,80,285,294],[52,72,256,302],[91,80,217,295],[52,72,256,302],[23,80,287,294],[13,100,299,281]]},"truck":{"w":400,"h":358,"ox":181,"oy":202.54,"ppm":44.8,"air":false,"sea":false,"bb":[[28,74,342,244],[20,48,349,273],[36,21,331,292],[74,10,292,299],[117,16,245,291],[70,10,288,299],[31,21,326,292],[13,48,342,273],[20,74,334,244],[13,41,342,270],[31,14,326,289],[70,3,289,296],[117,8,245,291],[74,3,292,296],[36,14,331,289],[20,41,349,270]]},"tank":{"w":456,"h":368,"ox":218,"oy":196.39,"ppm":29.9518,"air":false,"sea":false,"bb":[[101,89,423,237],[91,74,409,261],[99,76,366,276],[124,71,315,296],[161,78,275,308],[121,71,312,296],[70,76,337,276],[27,74,345,261],[13,82,335,237],[27,94,345,261],[70,46,337,277],[121,14,312,280],[161,2,275,271],[124,14,315,280],[99,46,366,277],[91,94,409,261]]},"ifv":{"w":386,"h":332,"ox":178,"oy":182.73,"ppm":40.2723,"air":false,"sea":false,"bb":[[18,69,341,228],[14,39,344,256],[28,13,328,273],[64,2,292,278],[111,9,245,268],[65,2,292,278],[28,13,328,273],[12,29,343,256],[15,39,338,228],[12,42,342,251],[29,21,328,269],[65,15,292,284],[112,7,244,281],[64,15,291,284],[28,21,327,269],[14,42,344,251]]},"art":{"w":446,"h":430,"ox":192,"oy":250.73,"ppm":30.4988,"air":false,"sea":false,"bb":[[63,104,357,281],[60,150,353,301],[77,135,325,314],[111,126,277,327],[150,128,237,333],[114,130,273,328],[82,138,307,314],[43,158,324,301],[27,129,321,281],[31,83,324,304],[59,43,307,329],[107,15,273,341],[147,2,234,339],[111,5,270,341],[77,25,302,329],[60,60,341,305]]},"mlrs":{"w":390,"h":346,"ox":180,"oy":196.96,"ppm":43.914,"air":false,"sea":false,"bb":[[30,63,339,238],[25,46,347,265],[40,20,330,284],[75,8,291,289],[123,14,237,284],[70,8,285,290],[30,20,320,284],[13,46,335,265],[21,59,329,238],[13,21,334,264],[30,9,320,281],[70,3,286,287],[123,10,237,283],[75,3,290,287],[40,13,330,281],[25,38,347,264]]},"sam":{"w":428,"h":368,"ox":200,"oy":204.4,"ppm":39.7318,"air":false,"sea":false,"bb":[[37,73,384,244],[35,86,388,278],[58,63,364,302],[101,52,316,315],[146,55,254,315],[84,52,299,315],[36,63,342,302],[12,86,365,278],[16,73,363,244],[12,51,365,272],[36,19,342,292],[84,4,299,304],[146,7,254,303],[102,3,316,304],[58,19,364,292],[35,51,388,272]]},"frig":{"w":418,"h":330,"ox":209,"oy":189.32,"ppm":54.4,"air":false,"sea":true,"bb":[[5,68,413,198],[11,74,397,234],[46,32,353,282],[106,6,290,315],[180,2,238,326],[128,6,312,315],[65,32,372,282],[21,74,407,234],[5,68,413,198],[20,62,407,252],[65,46,372,296],[128,14,312,322],[180,3,238,326],[106,14,290,322],[46,46,353,296],[11,62,397,252]]},"sub":{"w":448,"h":348,"ox":225,"oy":194.04,"ppm":51.2,"air":false,"sea":true,"bb":[[4,129,416,203],[21,102,401,238],[68,50,361,282],[140,15,300,312],[192,3,258,322],[150,15,310,312],[89,50,382,282],[49,102,429,238],[34,129,446,203],[49,107,429,245],[89,81,382,297],[150,54,310,332],[192,43,258,344],[140,54,300,332],[68,81,361,297],[21,105,401,245]]},"crui":{"w":502,"h":398,"ox":251,"oy":229.3,"ppm":54.4,"air":false,"sea":true,"bb":[[4,102,493,241],[16,102,475,285],[59,51,422,342],[131,17,345,380],[218,3,284,393],[157,17,371,380],[80,51,443,342],[27,102,486,285],[9,102,498,241],[27,96,486,305],[80,66,443,357],[157,28,371,389],[218,15,284,394],[131,28,345,389],[59,66,422,357],[16,96,475,305]]},"carr":{"w":544,"h":426,"ox":272,"oy":237.66,"ppm":48,"air":false,"sea":true,"bb":[[6,83,538,282],[11,69,518,304],[50,23,470,364],[120,3,416,407],[166,11,361,421],[140,12,452,407],[79,38,515,364],[26,89,541,310],[6,123,538,270],[26,103,533,336],[74,59,494,385],[128,21,424,417],[183,6,378,421],[92,21,404,417],[29,56,465,385],[3,95,518,328]]},"jet":{"w":392,"h":348,"ox":190,"oy":188.58,"ppm":20.7728,"air":true,"sea":false,"bb":[[25,79,373,260],[26,66,358,238],[38,45,319,271],[60,17,275,303],[77,3,303,314],[105,4,320,303],[61,20,342,271],[22,50,354,238],[7,79,355,260],[22,101,354,274],[61,66,342,290],[105,34,320,303],[77,24,303,306],[60,34,275,300],[38,66,319,290],[26,101,358,274]]},"int":{"w":380,"h":340,"ox":184,"oy":184.23,"ppm":20.1949,"air":true,"sea":false,"bb":[[23,65,361,267],[24,49,348,251],[37,44,310,265],[38,17,290,295],[58,3,310,306],[78,5,330,295],[59,20,331,264],[20,49,344,251],[7,65,345,267],[20,82,344,283],[59,65,331,283],[78,34,330,295],[58,24,310,298],[38,34,290,293],[37,65,309,283],[24,82,348,283]]},"heli":{"w":502,"h":438,"ox":238,"oy":230.76,"ppm":24.3715,"air":true,"sea":false,"bb":[[13,110,360,256],[32,89,352,275],[77,54,360,281],[121,16,354,299],[147,3,329,305],[122,16,355,299],[116,54,401,281],[124,89,448,275],[116,110,463,256],[124,91,444,287],[116,85,399,332],[122,92,355,362],[147,110,329,374],[121,92,354,362],[75,85,360,332],[28,91,352,287]]},"drone":{"w":358,"h":300,"ox":174,"oy":153.63,"ppm":19.2,"air":true,"sea":false,"bb":[[64,3,276,271],[66,13,268,263],[53,41,299,237],[18,43,331,215],[6,39,342,221],[17,41,330,215],[49,41,295,237],[80,13,282,263],[72,3,284,271],[80,12,282,262],[49,37,295,234],[17,65,330,243],[6,59,342,248],[18,65,331,242],[53,37,299,234],[66,12,268,262]]},"sol":{"w":276,"h":288,"ox":124,"oy":179.74,"ppm":82.3179,"air":false,"sea":false,"bb":[[67,22,230,241],[61,19,234,238],[42,23,221,228],[33,34,221,234],[35,34,221,238],[45,17,216,234],[43,6,213,223],[38,3,201,227],[18,9,181,238],[14,21,187,242],[27,31,206,241],[27,27,215,233],[27,21,213,217],[32,22,203,213],[35,31,205,228],[47,30,210,238]]},"sat":{"w":302,"h":316,"ox":128,"oy":193.74,"ppm":85.7668,"air":false,"sea":false,"bb":[[37,38,234,238],[33,37,221,247],[42,40,223,253],[59,20,213,252],[58,7,209,242],[52,4,213,226],[37,9,211,238],[22,24,208,246],[22,45,219,248],[35,38,223,246],[33,31,214,238],[43,23,197,249],[47,22,198,255],[43,32,204,253],[45,32,219,245],[48,38,234,234]]},"ssf":{"w":306,"h":288,"ox":134,"oy":166.13,"ppm":83.0024,"air":false,"sea":false,"bb":[[69,7,249,225],[73,7,246,223],[54,14,227,213],[45,26,239,218],[48,43,237,221],[57,34,223,216],[51,20,221,207],[34,10,216,214],[20,7,199,224],[22,7,195,226],[41,15,214,228],[29,11,223,225],[31,2,220,212],[45,4,211,199],[47,18,217,213],[52,11,234,223]]}};
   if (T) (function(){
   let renderer;
   try { renderer = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); } catch (e){ return; }
@@ -354,6 +352,12 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     heli:pbr(0x4c5536, 0.6, 0.2, {camo:[0x2f3621, 0x66704a, 0x23281a], cs:1.7, k3:0.85, dust:0.06, grain:0.14}), heliD:pbr(0x363d27, 0.66, 0.2, {camo:[0x272d1c, 0x4f5838, 0x1d2116], cs:1.7, k3:0.7, dust:0.05, grain:0.14}),
     blade:pbr(0x1c1f1c, 0.5, 0.35, {grain:0.06, dust:0}), tipY:pbr(0xc9a23a, 0.6, 0.1, {grain:0.04, dust:0}),
     bolt:pbr(0x2e302a, 0.55, 0.5, {grain:0.05, dust:0.1}),
+    // the squads' kit: a light multi-terrain camouflage that reads on green land and on sand, coyote gear; special forces in dark grey and black
+    uniS:pbr(0x7b7552, 0.95, 0, {camo:[0x5a5a3b, 0x978b68, 0x46432f], cs:0.14, gs:30, dust:0.3, dh:0.5}), gearS:pbr(0x6f6447, 0.9, 0, {grain:0.2, gs:24, dust:0.2, dh:0.5}),
+    gearSD:pbr(0x4f4834, 0.92, 0, {grain:0.2, gs:24, dust:0.15, dh:0.5}), helS:pbr(0x6d6849, 0.82, 0.04, {camo:[0x56553a, 0x8a7f5e, 0x45422f], cs:0.09, gs:24, dust:0.1}),
+    uniF:pbr(0x3a3e3d, 0.95, 0, {camo:[0x2b2e2e, 0x4a4e4c, 0x222423], cs:0.14, gs:30, dust:0.2, dh:0.5}), gearF:pbr(0x262826, 0.9, 0, {grain:0.18, gs:24, dust:0.1, dh:0.5}),
+    gearFD:pbr(0x1b1c1b, 0.92, 0, {grain:0.18, gs:24, dust:0.08, dh:0.5}), helF:pbr(0x2c2f2e, 0.7, 0.08, {grain:0.1, gs:24, dust:0.05}),
+    tube:pbr(0x535a3a, 0.8, 0.1, {grain:0.12, dust:0.1}),
     foam:new T.MeshBasicMaterial({color:0xe9f2f4, transparent:true, opacity:0.32, depthWrite:false}),
   };
   const ad = (p, o) => { p.add(o); return o; };
@@ -399,46 +403,66 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
   const jerry = (x, y, z, ry = 0) => { const j = rbox(0.17, 0.46, 0.34, 0.03, P.oliveD, x, y, z); j.rotation.y = ry; return j; };
   const smokeL = (x, y, z, ry) => { const g = new T.Group(); for (let i = 0; i < 4; i++){ const t = cyZ(0.05, 0.05, 0.28, P.dark, 0, i*0.11, 0, 8); t.rotation.x = Math.PI/2 - 0.5; g.add(t); } g.position.set(x, y, z); g.rotation.y = ry; return g; };
 
-  // a soldier at the ready (~1.8 m): boots, bent knees, plate carrier with pouches, pack, helmet with cover and goggles, rifle held across the chest
-  function mRifleman(){
-    const g = new T.Group(), U = P.uni, limb = (r0, r1, l, mat) => { const o = new T.Group(), c = cy(r0, r1, l, mat, 10, 0, -l/2, 0); o.add(c); o.add(sph(r0*1.02, mat, 0, 0, 0)); return o; };
-    const leg = (sx, fw) => { const hip = new T.Group(); hip.position.set(sx*0.11, 0.93, 0); const th = limb(0.085, 0.07, 0.46, U); hip.add(th); th.rotation.x = -fw;
-      const kn = new T.Group(); kn.position.y = -0.46; th.add(kn); const sh = limb(0.068, 0.052, 0.44, U); kn.add(sh); sh.rotation.x = fw*1.35 + 0.08;
-      kn.add(rbox(0.1, 0.12, 0.08, 0.03, P.gearD, 0, -0.04, 0.06));   // knee pad
-      const bt = rbox(0.11, 0.11, 0.26, 0.04, P.boot, 0, -0.47, 0.05); sh.add(bt); bt.rotation.x = -(fw*1.35 + 0.08) + fw;
+  // the squads on the map (original designs): two or three soldiers of about 1.8 m in a loose group, standing and walking, each with his own soft
+  // contact shade at his feet (no shade under the whole group: they stand on the ground, not on a disc). The head and helmet are a little larger
+  // than life and the rifles a little thicker, so a soldier a dozen pixels tall still reads as a soldier. o: walk (a stride), kit 'sf' (dark
+  // kit, an assault pack, a suppressed carbine), tube (an anti-tank launcher on the right shoulder, the rifle slung), radio, aim (rifle raised)
+  function mSoldier(o = {}){
+    const sf = o.kit === 'sf', U = sf ? P.uniF : P.uniS, GR = sf ? P.gearF : P.gearS, GD = sf ? P.gearFD : P.gearSD, HM = sf ? P.helF : P.helS, g = new T.Group();
+    const limb = (r0, r1, l, mat) => { const q = new T.Group(), c = cy(r0, r1, l, mat, 10, 0, -l/2, 0); q.add(c); q.add(sph(r0*1.02, mat, 0, 0, 0)); return q; };
+    const leg = (sx, fw) => { const hip = new T.Group(); hip.position.set(sx*0.115, 0.93, 0); const th = limb(0.095, 0.075, 0.46, U); hip.add(th); th.rotation.x = -fw;
+      const kn = new T.Group(); kn.position.y = -0.46; th.add(kn); const shn = limb(0.074, 0.056, 0.44, U); kn.add(shn); const bend = Math.max(0.05, fw*0.9) + 0.06; shn.rotation.x = bend;
+      kn.add(rbox(0.11, 0.12, 0.08, 0.03, GD, 0, -0.04, 0.065));   // knee pad
+      const bt = rbox(0.12, 0.12, 0.28, 0.04, P.boot, 0, -0.47, 0.05); shn.add(bt); bt.rotation.x = -bend + fw;
       return hip; };
-    g.add(leg(-1, 0.32), leg(1, -0.08));
-    g.add(sph(0.16, U, 0, 0.95, 0, 1.15, 0.8, 0.85));                                   // hips
-    const torso = new T.Group(); torso.position.set(0, 0.97, 0); torso.rotation.x = 0.12; g.add(torso);
-    const tb = mk(new T.CylinderGeometry(0.19, 0.155, 0.56, 14), U, 0, 0.3, 0); tb.scale.set(1.05, 1, 0.66); torso.add(tb);
-    torso.add(rbox(0.38, 0.4, 0.13, 0.04, P.gear, 0, 0.32, 0.1));                       // plate carrier, front and back
-    torso.add(rbox(0.36, 0.38, 0.1, 0.04, P.gear, 0, 0.33, -0.1));
-    for (const x of [-0.12, 0, 0.12]) torso.add(rbox(0.1, 0.13, 0.07, 0.02, P.gearD, x, 0.2, 0.18));   // magazine pouches
-    torso.add(rbox(0.1, 0.1, 0.06, 0.02, P.gearD, 0.13, 0.42, 0.17));
-    torso.add(rbox(0.32, 0.36, 0.18, 0.06, P.gearD, 0, 0.32, -0.23));                    // pack
-    torso.add(rbox(0.3, 0.1, 0.12, 0.04, P.tarp, 0, 0.53, -0.25));                       // bed roll
-    torso.add(rbox(0.14, 0.2, 0.08, 0.02, P.dark, -0.1, 0.36, -0.34)); torso.add(ant(-0.13, 0.42, -0.36, 0.7));   // radio and its whip antenna
-    torso.add(cy(0.045, 0.045, 0.13, P.gearD, 10, 0.19, 0.06, -0.12));                     // canteen
-    torso.add(sph(0.2, U, 0, 0.55, 0, 1.15, 0.55, 0.75));                                 // shoulders
-    const neck = cy(0.05, 0.06, 0.1, P.skin, 10, 0, 0.64, 0.01); torso.add(neck);
-    const head = new T.Group(); head.position.set(0, 0.76, 0.02); head.rotation.x = -0.18; torso.add(head);
+    const st = o.walk ? [0.46, -0.36] : o.aim ? [0.34, -0.12] : [0.24, -0.06];
+    g.add(leg(-1, st[0]), leg(1, st[1]));
+    g.add(sph(0.17, U, 0, 0.95, 0, 1.15, 0.8, 0.85));                                   // hips
+    const torso = new T.Group(); torso.position.set(0, 0.97, 0); torso.rotation.x = o.walk ? 0.17 : o.aim ? 0.14 : 0.1; g.add(torso);
+    const tb = mk(new T.CylinderGeometry(0.205, 0.165, 0.56, 14), U, 0, 0.3, 0); tb.scale.set(1.05, 1, 0.68); torso.add(tb);
+    torso.add(rbox(0.4, 0.4, 0.14, 0.04, GR, 0, 0.32, 0.1)); torso.add(rbox(0.38, 0.38, 0.1, 0.04, GR, 0, 0.33, -0.11));   // plate carrier
+    for (const x of [-0.13, 0, 0.13]) torso.add(rbox(0.1, 0.13, 0.07, 0.02, GD, x, 0.2, 0.185));   // magazine pouches
+    if (sf) torso.add(rbox(0.28, 0.3, 0.14, 0.05, GD, 0, 0.36, -0.22));                // a small assault pack
+    else { torso.add(rbox(0.34, 0.38, 0.2, 0.06, GD, 0, 0.32, -0.24)); torso.add(rbox(0.32, 0.1, 0.13, 0.04, P.tarp, 0, 0.54, -0.26)); }   // pack and bed roll
+    if (o.radio){ torso.add(rbox(0.14, 0.2, 0.08, 0.02, P.dark, -0.1, 0.36, -0.36)); torso.add(ant(-0.13, 0.42, -0.38, 0.75)); }
+    torso.add(sph(0.215, U, 0, 0.55, 0, 1.15, 0.55, 0.75));                               // shoulders
+    torso.add(cy(0.055, 0.065, 0.1, P.skin, 10, 0, 0.64, 0.01));
+    const head = new T.Group(); head.position.set(0, 0.79, 0.02); head.rotation.x = o.aim ? 0.05 : -0.16; head.scale.setScalar(1.18); torso.add(head);
     head.add(sph(0.105, P.skin, 0, 0, 0.01, 0.9, 1.05, 1));
-    const hel = mk(new T.SphereGeometry(0.135, 18, 12, 0, Math.PI*2, 0, Math.PI*0.56), P.olive, 0, 0.02, -0.005); hel.scale.set(1, 0.95, 1.08); head.add(hel);
-    const rim = mk(new T.TorusGeometry(0.128, 0.012, 6, 24), P.oliveD, 0, 0.0, -0.005); rim.rotation.x = Math.PI/2; rim.scale.set(1, 1.08, 1); head.add(rim);
-    head.add(rbox(0.13, 0.04, 0.05, 0.015, P.dark, 0, 0.07, 0.12));                    // goggles on the helmet
-    head.add(rbox(0.06, 0.05, 0.04, 0.012, P.dark, 0, 0.11, 0.135));                     // NVG mount
-    // the rifle, held across the body at the ready, muzzle low and forward
-    const rf = new T.Group(); rf.position.set(0.02, 0.27, 0.27); rf.rotation.set(0.32, 0.48, 0); torso.add(rf);
-    rf.add(rbox(0.05, 0.08, 0.34, 0.01, P.gun, 0, 0, 0)); rf.add(cyZ(0.013, 0.013, 0.32, P.gun, 0, 0.01, 0.32, 8)); rf.add(rbox(0.055, 0.06, 0.2, 0.012, P.dark, 0, 0.0, 0.25));
-    ad(rf, rbox(0.035, 0.13, 0.06, 0.01, P.gun, 0, -0.09, 0.05)).rotation.x = 0.25; ad(rf, rbox(0.04, 0.16, 0.07, 0.012, P.dark, 0, -0.1, 0.13)).rotation.x = 0.2;   // grip, curved magazine
-    rf.add(cyZ(0.024, 0.024, 0.12, P.dark, 0, 0.075, 0.08, 10)); rf.add(rbox(0.03, 0.03, 0.04, 0.008, P.glass, 0, 0.075, 0.145));   // optic
-    rf.add(rbox(0.012, 0.012, 0.5, 0.004, P.gearD, 0.03, -0.06, 0.02));   // sling rf.add(rbox(0.045, 0.1, 0.18, 0.015, P.dark, 0, -0.02, -0.24)); rf.add(rbox(0.035, 0.045, 0.1, 0.01, P.gun, 0, 0.07, 0.02));
-    // arms: the right hand on the grip, the left on the handguard
-    const arm = (sx, a1, b1, a2) => { const sh = new T.Group(); sh.position.set(sx*0.2, 0.52, 0); torso.add(sh); const up = limb(0.058, 0.05, 0.28, U); sh.add(up); up.rotation.set(a1, 0, b1);
-      const el = new T.Group(); el.position.y = -0.28; up.add(el); const fo = limb(0.05, 0.04, 0.26, U); el.add(fo); fo.rotation.x = a2; fo.add(sph(0.04, P.skin, 0, -0.27, 0)); return sh; };
-    arm(1, 0.35, 0.18, -1.45); arm(-1, 0.85, -0.3, -1.25);
-    g.add(cy(0.0, 0.0, 0.0, U));
-    return {g, ext:1.45, ppm:62, look:0.95}; }
+    const hel = mk(new T.SphereGeometry(0.14, 18, 12, 0, Math.PI*2, 0, Math.PI*0.56), HM, 0, 0.02, -0.005); hel.scale.set(1, 0.95, 1.08); head.add(hel);
+    const rim = mk(new T.TorusGeometry(0.133, 0.013, 6, 24), sf ? P.gearFD : P.gearSD, 0, 0.0, -0.005); rim.rotation.x = Math.PI/2; rim.scale.set(1, 1.08, 1); head.add(rim);
+    head.add(rbox(0.13, 0.04, 0.05, 0.015, P.dark, 0, 0.075, 0.125));                    // goggles on the helmet
+    if (sf) head.add(rbox(0.07, 0.06, 0.05, 0.012, P.dark, 0, 0.12, 0.13));              // night sight mount
+    // the rifle: across the body at the ready, raised to the shoulder when aiming, slung on the back under a launcher
+    const rf = new T.Group(); torso.add(rf);
+    if (o.tube){ rf.position.set(0.05, 0.36, -0.3); rf.rotation.set(0.2, 0, 1.1); }
+    else if (o.aim){ rf.position.set(0.09, 0.5, 0.2); rf.rotation.set(-0.06, 0.03, 0); }
+    else { rf.position.set(0.02, 0.27, 0.28); rf.rotation.set(0.32, 0.48, 0); }
+    rf.add(rbox(0.06, 0.09, 0.36, 0.012, P.gun, 0, 0, 0)); rf.add(cyZ(0.017, 0.017, sf ? 0.42 : 0.34, P.gun, 0, 0.01, sf ? 0.36 : 0.33, 8)); rf.add(rbox(0.065, 0.065, 0.2, 0.012, P.dark, 0, 0.0, 0.26));
+    ad(rf, rbox(0.04, 0.17, 0.07, 0.012, P.dark, 0, -0.11, 0.13)).rotation.x = 0.2; rf.add(rbox(0.05, 0.1, 0.18, 0.015, P.dark, 0, -0.02, -0.25));   // magazine, stock
+    rf.add(cyZ(0.026, 0.026, 0.12, P.dark, 0, 0.08, 0.08, 10));                       // optic
+    // the launcher: a long olive tube on the right shoulder, sight block on its left
+    if (o.tube){ const L = new T.Group(); L.position.set(0.17, 0.6, 0.02); L.rotation.x = -0.06; torso.add(L);
+      L.add(cyZ(0.075, 0.075, 1.15, P.tube, 0, 0, 0.12, 14)); L.add(cyZ(0.085, 0.085, 0.12, P.dark, 0, 0, 0.66, 14)); L.add(cyZ(0.085, 0.08, 0.1, P.dark, 0, 0, -0.44, 14));
+      L.add(rbox(0.06, 0.08, 0.14, 0.015, P.dark, -0.1, 0.05, 0.2)); L.add(rbox(0.035, 0.12, 0.05, 0.01, P.dark, 0, -0.1, 0.24)); }
+    // arms: at the ready (right hand on the grip, left on the handguard), raised to aim, or holding the launcher
+    const arm = (sx, a1, b1, a2) => { const sh = new T.Group(); sh.position.set(sx*0.21, 0.52, 0); torso.add(sh); const up = limb(0.064, 0.055, 0.28, U); sh.add(up); up.rotation.set(a1, 0, b1);
+      const el = new T.Group(); el.position.y = -0.28; up.add(el); const fo = limb(0.055, 0.045, 0.26, U); el.add(fo); fo.rotation.x = a2; fo.add(sph(0.045, sf ? P.gearFD : P.skin, 0, -0.27, 0)); };
+    if (o.tube){ arm(1, 1.9, 0.1, -1.7); arm(-1, 0.95, -0.25, -1.1); }
+    else if (o.aim){ arm(1, 1.3, 0.35, -1.25); arm(-1, 1.45, -0.3, -0.55); }
+    else { arm(1, 0.35, 0.18, -1.45); arm(-1, 0.85, -0.3, -1.25); }
+    return g; }
+  // a soft dark ellipse on the ground at (x, z), w x d metres (a soldier's own contact shade)
+  function footShade(g, x, z, w, d){ const m = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({map:aoTex(), color:0x000000, transparent:true, opacity:0.62, depthWrite:false}));
+    m.rotation.x = -Math.PI/2; m.scale.set(w, d, 1); m.position.set(x, 0.012, z); m.renderOrder = -1; g.add(m); }
+  // kind: 'inf' a rifle squad (three riflemen, one walking, one with the radio), 'at' an anti-tank team (two launchers and a rifleman), 'sf' a
+  // special forces team (dark kit: one aiming, two at the ready)
+  function mSquad(kind){ const g = new T.Group();
+    const S0 = kind === 'at' ? [[-0.45, 0.45, 0.12, {tube:true}], [0.62, 0.02, -0.18, {tube:true}], [-0.15, -0.72, 0.25, {radio:true}]]
+      : kind === 'sf' ? [[0.05, 0.55, 0.05, {kit:'sf', aim:true}], [-0.72, -0.1, -0.3, {kit:'sf'}], [0.7, -0.3, 0.35, {kit:'sf', walk:true}]]
+      : [[0.08, 0.58, 0.08, {walk:true}], [-0.76, -0.1, -0.28, {radio:true}], [0.72, -0.36, 0.3, {}]];
+    for (const [x, z, r, o] of S0){ const s0 = mSoldier(o); s0.position.set(x, 0, z); s0.rotation.y = r; g.add(s0); footShade(g, x, z + 0.04, 0.78, 0.62); }
+    return {g, ext:2.4, ppm:64, look:0.85, shade:false}; }
 
   // a modern main battle tank (~9.8 m with the gun): skirted hull, wedge turret with stowage basket, cupola sight, MG, smoke dischargers
   function mTank(){
@@ -722,246 +746,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     for (const sx of [-3.5, 3.5]) g.add(cyZ(0.1, 0.1, 1.4, P.white, sx, H + 0.48, 0.3, 8));
     gear(g, [[0, 3.0], [-1.2, -0.5], [1.2, -0.5]], H);
     return {g, ext:10.0, ppm:12, air:true}; }
-  const MAPB = {sol:mRifleman, hmv:mHmv, truck:mTruck, tank:mTank, ifv:mIfv, art:mArt, mlrs:mMlrs, sam:mSam, frig:() => mShip('frig'), crui:() => mShip('crui'), sub:mSub, carr:mCarr, jet:() => mJet('jet'), int:() => mJet('int'), heli:mHeli, drone:mDrone};
-
-  // ---------- building models (tools/bake-assets.js bld): one original miniature per building type and level, standing at its city on the map in the same
-  // look as the troop models (the same materials, camouflage, sun and soft sky shadows). Modelled in metres at a small scale (a compound of 9 to 18 m;
-  // vehicles at 0.3 of their size), one view (never turned), each level a bigger and more built-up compound. The construction site of a type is its
-  // first level cut off just above the foundations, inside scaffolding, beside a tower crane; a crane alone stands beside a building raising its level.
-  const B = {
-    conc:pbr(0x9c9686, 0.92, 0.02, {grain:0.2, gs:2.6, dust:0.28, dh:0.5}), concD:pbr(0x75716a, 0.9, 0.02, {grain:0.2, gs:2.6, dust:0.22, dh:0.5}), concL:pbr(0xb3ae9f, 0.88, 0.02, {grain:0.14, gs:2.6, dust:0.18, dh:0.4}),
-    gravel:pbr(0x7b7560, 1.0, 0, {grain:0.38, gs:3.2, dust:0.08}), tarmac:pbr(0x404345, 0.95, 0, {grain:0.26, gs:3, dust:0.08}), paint:pbr(0xe2ddcc, 0.6, 0, {grain:0.04, dust:0}),
-    roof:pbr(0x5a605b, 0.5, 0.5, {grain:0.12, gs:4, dust:0.06}), camo:pbr(0x4a5233, 0.82, 0.1, {camo:[0x2c3420, 0x5a5034, 0x20231a], cs:1.2, k3:0.8, dust:0.1}),
-    camoD:pbr(0x3e452c, 0.86, 0.1, {camo:[0x283020, 0x4a4230, 0x1d2018], cs:1.2, k3:0.6, dust:0.1}), brick:pbr(0x8a5844, 0.9, 0, {grain:0.2, gs:6, dust:0.14}), tile:pbr(0x7b4232, 0.75, 0, {grain:0.16, gs:5, dust:0}),
-    water:pbr(0x2e4e5c, 0.12, 0.45, {grain:0.05, gs:1.3, dust:0}), earth:pbr(0x6f6649, 1.0, 0, {grain:0.32, gs:3, dust:0.15}), grass:pbr(0x56603a, 1.0, 0, {grain:0.4, gs:2.4, dust:0.15}),
-    sand:pbr(0xa18f63, 1.0, 0, {grain:0.34, gs:9, dust:0.1}), metal:pbr(0x6d7372, 0.45, 0.6, {grain:0.1, gs:5, dust:0.08}), rust:pbr(0x7c4d33, 0.8, 0.3, {grain:0.2, gs:5, dust:0.05}),
-    tank:pbr(0xd6d3c8, 0.55, 0.3, {grain:0.06, dust:0.06}), navyB:pbr(0x2c3e5a, 0.8, 0, {grain:0.05, dust:0}), cloth:pbr(0xe6e3da, 0.85, 0, {grain:0, dust:0}), red:pbr(0xa83a2c, 0.7, 0.1, {grain:0.05, dust:0}),
-    // the construction pieces have materials of their own (a site's building is cut at its foundations, they are not)
-    crane:pbr(0xd2a12e, 0.55, 0.3, {grain:0.06, dust:0.04}), craneD:pbr(0x3a3c3a, 0.6, 0.4, {grain:0.05, dust:0}), scaf:pbr(0x9a9c98, 0.5, 0.6, {grain:0.06, dust:0}),
-    plank:pbr(0x8c7350, 0.9, 0, {grain:0.3, gs:9, dust:0}), found:pbr(0xa29d8e, 0.95, 0.02, {grain:0.24, gs:2.6, dust:0.2, dh:0.4}), sitG:pbr(0x7a6f52, 1.0, 0, {grain:0.36, gs:3.4, dust:0.1}),
-    net:pbr(0x52603d, 0.95, 0, {grain:0.1, dust:0})
-  };
-  const grp = () => new T.Group();
-  const put = (o, x = 0, y = 0, z = 0, ry = 0) => { o.position.set(x, y, z); o.rotation.y = ry; return o; };
-  const bgnd = (x0, z0, x1, z1, mat, h = 0.08) => rbox(x1 - x0, h, z1 - z0, Math.min(0.06, h*0.45), mat, (x0 + x1)/2, h/2, (z0 + z1)/2);
-  // a building w (x) by d (z): walls h high, a gable roof rh high along x, window rows on its long sides and a door
-  function gable(w, d, h, rh, wall, roof, o = {}){ const g = grp(); g.add(rbox(w, h, d, 0.05, wall, 0, h/2, 0));
-    g.add(side([[-d/2 - 0.14, h - 0.04], [d/2 + 0.14, h - 0.04], [0, h + rh]], w + 0.26, roof, 0.03));
-    const nw = Math.max(1, Math.floor(w/1.05)); for (const sz of [1, -1]) for (let i = 0; i < nw; i++){ const x = -w/2 + (i + 0.5)*w/nw; if (sz > 0 && o.door && i === (nw >> 1)) { g.add(rbox(0.5, Math.min(0.95, h*0.7), 0.06, 0.02, B.roof, x, Math.min(0.95, h*0.7)/2, d/2 + 0.02)); continue; }
-      g.add(rbox(0.34, Math.min(0.42, h*0.3), 0.05, 0.015, P.glass, x, h*0.58, sz*(d/2 + 0.015))); }
-    return g; }
-  // a flat-roofed block with a parapet and bands of windows (floors of 1.1 m)
-  function bBlock(w, d, h, wall, o = {}){ const g = grp(); g.add(rbox(w, h, d, 0.05, wall, 0, h/2, 0)); g.add(rbox(w + 0.08, 0.14, d + 0.08, 0.03, o.cap || B.concD, 0, h + 0.03, 0));
-    const fl = Math.max(1, Math.floor((h - 0.25)/1.1)); for (let f = 0; f < fl; f++){ const y = 0.62 + f*1.1; if (y > h - 0.3) break;
-      g.add(rbox(w*0.86, 0.34, 0.05, 0.012, P.glass, 0, y, d/2 + 0.012)); g.add(rbox(w*0.86, 0.34, 0.05, 0.012, P.glass, 0, y, -d/2 - 0.012));
-      g.add(rbox(0.05, 0.34, d*0.84, 0.012, P.glass, w/2 + 0.012, y, 0)); g.add(rbox(0.05, 0.34, d*0.84, 0.012, P.glass, -w/2 - 0.012, y, 0)); }
-    if (o.ac) for (const [x, z] of o.ac) g.add(rbox(0.5, 0.3, 0.4, 0.04, B.metal, x, h + 0.25, z));
-    return g; }
-  // an arched hangar len long (x) over span (z), its doors at the +x end
-  function arch(len, span, mat, o = {}){ const g = grp(), r = span/2, ph = o.h || r*0.95, pts = [];
-    for (let i = 0; i <= 16; i++){ const a = Math.PI*i/16; pts.push([Math.cos(a)*r, Math.sin(a)*ph]); }
-    g.add(side(pts, len, mat, 0.04));
-    for (const sx of [1, -1]){ const e = []; for (let i = 0; i <= 16; i++){ const a = Math.PI*i/16; e.push([Math.cos(a)*r*0.97, Math.sin(a)*ph*0.97]); } const end = side(e, 0.08, o.end || B.concD, 0.01); end.position.x = sx*(len/2 - 0.03); g.add(end); }
-    g.add(rbox(0.06, ph*0.62, span*0.62, 0.02, B.roof, len/2 + 0.02, ph*0.31, 0));
-    if (o.ribs) for (let i = 1; i < o.ribs; i++){ const rb = []; for (let k = 0; k <= 16; k++){ const a = Math.PI*k/16; rb.push([Math.cos(a)*(r + 0.04), Math.sin(a)*(ph + 0.04)]); } const q = side(rb.concat(rb.slice().reverse().map(([z, y]) => [z*0.985, y*0.985])), 0.06, B.roof, 0); q.position.x = -len/2 + i*len/o.ribs; g.add(q); }
-    return g; }
-  const post = (x, z, h, mat = P.dark, r = 0.035) => cy(r, r, h, mat, 6, x, h/2, z);
-  // a fence (or, wall: a concrete wall) along the points, closed or not, a gap where gate is the index of a side
-  function fence(pts, o = {}){ const g = grp(), h = o.h || 0.7;
-    for (let i = 0; i < pts.length - (o.open ? 1 : 0); i++){ const [x0, z0] = pts[i], [x1, z1] = pts[(i + 1) % pts.length], L = Math.hypot(x1 - x0, z1 - z0), an = Math.atan2(z1 - z0, x1 - x0);
-      let segs = [[0, 1]]; if (o.gate === i) segs = [[0, 0.5 - 0.9/L], [0.5 + 0.9/L, 1]];
-      for (const [u0, u1] of segs){ const a = [x0 + (x1 - x0)*u0, z0 + (z1 - z0)*u0], b = [x0 + (x1 - x0)*u1, z0 + (z1 - z0)*u1], l = L*(u1 - u0), cx = (a[0] + b[0])/2, cz = (a[1] + b[1])/2;
-        if (o.wall){ const wl = rbox(l + 0.2, h, 0.22, 0.04, o.wall, cx, h/2, cz); wl.rotation.y = -an; g.add(wl); const cp = rbox(l + 0.24, 0.08, 0.3, 0.02, B.concD, cx, h + 0.02, cz); cp.rotation.y = -an; g.add(cp); continue; }
-        const n = Math.max(1, Math.round(l/1.2)); for (let k = 0; k <= n; k++) g.add(post(a[0] + (b[0] - a[0])*k/n, a[1] + (b[1] - a[1])*k/n, h, B.metal, 0.03));
-        for (const y of [h*0.45, h*0.92]){ const r = rbox(l, 0.025, 0.025, 0.008, P.dark, cx, y, cz); r.rotation.y = -an; r.castShadow = false; g.add(r); }
-        const m = rbox(l, h*0.85, 0.01, 0.002, B.net, cx, h*0.47, cz); m.rotation.y = -an; m.material = B.net; g.add(m); } }
-    return g; }
-  function tower(h = 2.4){ const g = grp(), s = 0.55; for (const [x, z] of [[-s, -s], [s, -s], [s, s], [-s, s]]){ const l = cy(0.045, 0.06, h, B.metal, 6, x*0.8, h/2, z*0.8); g.add(l); }
-    for (const y of [h*0.33, h*0.66]) for (const [a, b] of [[[-s, -s], [s, -s]], [[s, -s], [s, s]], [[s, s], [-s, s]], [[-s, s], [-s, -s]]]){ const r = rbox(Math.hypot(b[0] - a[0], b[1] - a[1])*0.8, 0.04, 0.04, 0.01, B.metal, (a[0] + b[0])*0.4, y, (a[1] + b[1])*0.4); r.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); g.add(r); }
-    g.add(rbox(1.3, 0.75, 1.3, 0.05, B.camoD, 0, h + 0.38, 0)); g.add(rbox(1.25, 0.2, 1.25, 0.02, P.glass, 0, h + 0.55, 0)); g.add(plan([[-0.85, -0.85], [0.85, -0.85], [0.85, 0.85], [-0.85, 0.85]], 0.12, B.roof, h + 0.78, 0.03));
-    g.add(cy(0.0, 0.62, 0.35, B.roof, 4, 0, h + 1.05, 0)).rotation.y = Math.PI/4; return g; }
-  function bFlag(h, mat){ const g = grp(); g.add(cy(0.035, 0.045, h, B.metal, 8, 0, h/2, 0)); g.add(sph(0.06, B.crane, 0, h + 0.03, 0)); const c = rbox(0.9, 0.55, 0.03, 0.01, mat, 0.47, h - 0.33, 0); g.add(c); return g; }
-  // a vehicle from the troop models at a miniature scale, turned ry
-  function veh(t, x, z, ry, s = 0.3){ const m = MAPB[t](); m.g.scale.setScalar(s); return put(m.g, x, 0, z, ry); }
-  function bShip(t, x, z, ry, len, wy = 0.06){ const m = MAPB[t](); const bx = new T.Box3().setFromObject(m.g), L = Math.max(bx.max.z - bx.min.z, bx.max.x - bx.min.x), s = len/L; m.g.scale.setScalar(s); return put(m.g, x, wy - WL*s, z, ry); }
-  function tankC(r, h, mat = B.tank){ const g = grp(); g.add(cy(r, r, h, mat, 20, 0, h/2, 0)); const d = mk(new T.SphereGeometry(r, 20, 8, 0, Math.PI*2, 0, Math.PI/2), mat, 0, h, 0); d.scale.y = 0.3; g.add(d);
-    for (let i = 0; i < 3; i++) g.add(cy(r + 0.015, r + 0.015, 0.04, B.metal, 20, 0, h*(0.25 + i*0.25), 0)); return g; }
-  function chimney(h, r = 0.32){ const g = grp(); g.add(cy(r*0.75, r, h, B.brick, 14, 0, h/2, 0)); g.add(cy(r*0.8, r*0.8, 0.3, B.concD, 14, 0, h - 0.15, 0)); g.add(cy(r*0.55, r*0.55, 0.05, P.dark, 12, 0, h + 0.01, 0));
-    for (const y of [h*0.55, h*0.8]) g.add(cy(r*0.86, r*0.9, 0.12, B.red, 14, 0, y, 0)); return g; }
-  // a lattice mast with a dish (radio) or a radar
-  function bMast(h, o = {}){ const g = grp(); for (const [x, z] of [[-0.18, -0.18], [0.18, -0.18], [0, 0.2]]){ const l = cy(0.025, 0.04, h, B.metal, 5, x, h/2, z); l.rotation.set(-z*0.06, 0, x*0.06); g.add(l); }
-    for (let y = 0.4; y < h - 0.2; y += 0.45) g.add(cy(0.18, 0.18, 0.03, B.metal, 3, 0, y, 0));
-    g.add(sph(0.06, B.red, 0, h + 0.04, 0)); if (o.dish){ const d = mk(new T.SphereGeometry(0.42, 16, 8, 0, Math.PI*2, 0, Math.PI*0.42), B.tank, 0.1, h*0.7, 0.3); d.rotation.x = Math.PI*0.62; g.add(d); }
-    if (o.radar){ const rd = rbox(1.3, 0.42, 0.08, 0.03, B.metal, 0, h + 0.3, 0.05); rd.rotation.x = -0.3; g.add(rd); g.add(rbox(0.3, 0.3, 0.3, 0.05, B.concD, 0, h + 0.05, 0)); }
-    return g; }
-  // the tower crane of a construction site (its own materials: never cut with the building)
-  function crane(h = 6.2, jib = 4.6){ const g = grp(), M = B.crane, s = 0.24;
-    g.add(rbox(0.9, 0.25, 0.9, 0.03, B.found, 0, 0.12, 0));
-    for (const [x, z] of [[-s, -s], [s, -s], [s, s], [-s, s]]) g.add(cy(0.035, 0.035, h, M, 5, x, h/2 + 0.2, z));
-    for (let y = 0.5; y < h; y += 0.5) for (const [a, b] of [[[-s, -s], [s, s]], [[s, -s], [-s, s]]]){ const L = Math.hypot(b[0] - a[0], b[1] - a[1]); const d = rbox(L, 0.03, 0.03, 0.005, M, 0, y + 0.2, 0); d.rotation.set(0, -Math.atan2(b[1] - a[1], b[0] - a[0]), (y % 1 ? 0.5 : -0.5)); d.castShadow = false; g.add(d); }
-    const top = h + 0.2; g.add(rbox(0.62, 0.45, 0.62, 0.05, B.craneD, 0.0, top + 0.2, 0)); g.add(rbox(0.36, 0.3, 0.3, 0.04, B.craneD, 0.2, top + 0.15, 0.25));
-    g.add(rbox(jib, 0.2, 0.22, 0.03, M, jib/2 - 0.3, top + 0.55, 0)); g.add(rbox(1.7, 0.2, 0.22, 0.03, M, -1.2, top + 0.55, 0)); g.add(rbox(0.7, 0.5, 0.5, 0.04, B.concD, -1.75, top + 0.3, 0));
-    g.add(cy(0.03, 0.06, 1.1, M, 5, 0, top + 1.05, 0)); for (const x1 of [jib - 0.4, -1.9]){ const y0 = top + 1.6, y1 = top + 0.62, L = Math.hypot(x1, y1 - y0), t = rbox(L, 0.02, 0.02, 0.005, B.craneD, x1/2, (y0 + y1)/2, 0); t.rotation.z = Math.atan2(y1 - y0, x1); t.castShadow = false; g.add(t); }
-    const hx = jib*0.62; g.add(rbox(0.25, 0.12, 0.25, 0.02, B.craneD, hx, top + 0.38, 0)); const cb = cy(0.01, 0.01, 2.2, B.craneD, 4, hx, top - 0.8, 0); cb.castShadow = false; g.add(cb); g.add(rbox(0.5, 0.3, 0.5, 0.03, B.plank, hx, top - 1.95, 0));
-    return g; }
-  // scaffolding round a footprint (w x d), hh high: poles, ledgers and a few planked lifts
-  function scaffold(w, d, hh){ const g = grp(), M = B.scaf, nx = Math.max(2, Math.round(w/1.1)), nz = Math.max(2, Math.round(d/1.1));
-    const ring = []; for (let i = 0; i <= nx; i++){ ring.push([-w/2 + i*w/nx, -d/2]); ring.push([-w/2 + i*w/nx, d/2]); } for (let i = 1; i < nz; i++){ ring.push([-w/2, -d/2 + i*d/nz]); ring.push([w/2, -d/2 + i*d/nz]); }
-    for (const [x, z] of ring) g.add(cy(0.022, 0.022, hh, M, 4, x, hh/2, z));
-    for (let y = 0.6; y <= hh; y += 0.6) for (const [L, x, z, ry] of [[w, 0, -d/2, 0], [w, 0, d/2, 0], [d, -w/2, 0, Math.PI/2], [d, w/2, 0, Math.PI/2]]){ const r = rbox(L, 0.025, 0.025, 0.005, M, x, y, z); r.rotation.y = ry; r.castShadow = false; g.add(r);
-      if (Math.abs(y - 1.2) < 0.01 || Math.abs(y - 0.6) < 0.01){ const pl = rbox(L, 0.04, 0.32, 0.01, B.plank, x + (ry ? 0 : 0), y + 0.02, z); pl.rotation.y = ry; g.add(pl); } }
-    return g; }
-  function pallets(x, z, y = 0){ const g = grp(); g.add(rbox(0.9, 0.35, 0.7, 0.03, B.plank, 0, 0.18, 0)); g.add(rbox(0.8, 0.3, 0.6, 0.03, B.found, 0.05, 0.5, 0.02)); for (let i = 0; i < 4; i++) g.add(cyX(0.07, 1.4, B.metal, 0.3, 0.07 + (i % 2)*0.12, 0.7 + (i >> 1)*0.15, 8)); return put(g, x, y, z); }
-
-  // ---- the types. lv: the level (1..5, Fortifications 1..3); o.site: the construction site's cut (no vehicles, no flags)
-  // Army Base: a fenced compound of barracks, a headquarters hut and a motor pool; then garages, a watchtower, a parade of armour, a maintenance
-  // hangar and helipad, and at level V a concrete wall with towers and a radar mast
-  function bFac(lv, o){ const g = grp(), V = !o.site;
-    const pad = [[-5, -3.8, 4.4, 3.2], [-5, -3.8, 6.2, 3.2], [-6.6, -3.8, 6.2, 5.6], [-6.6, -5.8, 6.8, 5.6], [-7.2, -6.4, 7.4, 6.2]][lv - 1];
-    g.add(bgnd(pad[0], pad[1], pad[2], pad[3], B.gravel));
-    g.add(put(gable(4.6, 2.0, 1.15, 0.6, B.conc, B.camo, {door:1}), -2.4, 0, -2.1));
-    g.add(put(bBlock(2.0, 1.6, 1.4, B.concL, {ac:[[0.4, 0]]}), 2.3, 0, -2.4));
-    if (V){ g.add(put(bFlag(2.2, B.camoD), 0.6, 0, -0.2)); g.add(veh('truck', 2.6, 1.6, 0.9)); }
-    if (lv >= 2){ g.add(put(gable(4.6, 2.0, 1.15, 0.6, B.conc, B.camo, {door:1}), -2.4, 0, 0.6)); const gr = grp(); gr.add(rbox(2.6, 1.3, 2.2, 0.05, B.concD, 0, 0.65, 0)); for (let i = 0; i < 3; i++) gr.add(rbox(0.66, 0.95, 0.05, 0.02, B.roof, -0.85 + i*0.85, 0.5, 1.11)); gr.add(plan([[-1.4, -1.2], [1.4, -1.2], [1.4, 1.2], [-1.4, 1.2]], 0.1, B.camoD, 1.3, 0.03)); g.add(put(gr, 4.8, 0, -1.4));
-      if (V) g.add(veh('tank', 4.8, 1.6, 0.4)); }
-    if (lv >= 3){ g.add(bgnd(-6.2, 3.3, 1.2, 5.3, B.tarmac, 0.1)); for (let i = 0; i < 4; i++) g.add(rbox(0.05, 0.02, 1.6, 0.01, B.paint, -5.4 + i*1.8, 0.11, 4.3));
-      if (V){ g.add(veh('tank', -4.5, 4.3, Math.PI/2 + 0.02)); g.add(veh('tank', -2.7, 4.3, Math.PI/2 - 0.03)); g.add(veh('ifv', -0.9, 4.3, Math.PI/2)); }
-      g.add(put(tower(2.3), -6.1, 0, -3.3)); g.add(put(tankC(0.55, 0.9, B.concL), 5.6, 1.9, 4.2)); for (const [x, z] of [[5.15, 3.75], [6.05, 3.75], [6.05, 4.65], [5.15, 4.65]]) g.add(post(x, z, 1.95, B.metal, 0.05)); }
-    if (lv >= 4){ const h = arch(4.2, 3.0, B.camo, {ribs:4}); g.add(put(h, 2.8, 0, -4.6)); g.add(put(bBlock(1.6, 1.4, 1.1, B.concL), -1.0, 0, -4.8));
-      const hp = cy(1.0, 1.0, 0.06, B.tarmac, 24, 3.4, 0.11, 3.0); g.add(hp); g.add(rbox(0.14, 0.02, 0.9, 0.01, B.paint, 3.15, 0.15, 3.0)); g.add(rbox(0.14, 0.02, 0.9, 0.01, B.paint, 3.65, 0.15, 3.0)); g.add(rbox(0.5, 0.02, 0.14, 0.01, B.paint, 3.4, 0.15, 3.0));
-      if (V) g.add(veh('heli', 3.4, 3.0, 0.5, 0.18)); }
-    if (lv >= 5){ g.add(put(tower(2.6), 6.6, 0, -5.7)); g.add(put(tower(2.6), -6.6, 0, 5.6)); g.add(put(bMast(4.2, {radar:1}), 6.6, 0, 0.4)); g.add(put(gable(3.6, 1.8, 1.0, 0.5, B.conc, B.camo), -4.4, 0, -4.9)); if (V) g.add(veh('sam', 1.2, 1.9, 0.5)); }
-    const fp = [[pad[0] + 0.2, pad[1] + 0.2], [pad[2] - 0.2, pad[1] + 0.2], [pad[2] - 0.2, pad[3] - 0.2], [pad[0] + 0.2, pad[3] - 0.2]];
-    g.add(fence(fp, lv >= 5 ? {wall:B.concL, h:0.75, gate:2} : {gate:2, h:0.62}));
-    return {g, pad}; }
-  // Airbase: a runway with its threshold and centre marks, an apron, hangars; then a control tower, hardened aircraft shelters, a taxiway, fuel
-  // tanks, parked jets and at level V a second runway, a radar dome and a big maintenance hangar
-  function bAir(lv, o){ const g = grp(), V = !o.site, rl = [5.2, 6.4, 7.2, 7.6, 8.0][lv - 1];
-    const rw = (z, L, w) => { g.add(bgnd(-L, z - w/2, L, z + w/2, B.tarmac, 0.07)); for (let x = -L + 1.4; x < L - 1.2; x += 1.1) g.add(rbox(0.5, 0.02, 0.06, 0.01, B.paint, x, 0.075, z));
-      for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) g.add(rbox(0.5, 0.02, 0.1, 0.01, B.paint, sx*(L - 0.45), 0.075, z - w*0.32 + i*w*0.21)); };
-    rw(2.6, rl, 1.5);
-    g.add(bgnd(-3.0, -0.6, 2.4, 1.6, B.concD, 0.06)); g.add(bgnd(-0.6, 1.5, 0.6, 2.0, B.tarmac, 0.065));
-    g.add(put(arch(2.8, 2.4, B.camo, {ribs:3}), -1.4, 0, -1.8, Math.PI/2));
-    if (V){ g.add(put(bFlag(1.4, B.crane), 2.4, 0, 0.9)); g.add(veh('jet', 0.3, 0.4, -0.5, 0.18)); }
-    if (lv >= 2){ const tw = grp(); tw.add(cy(0.38, 0.45, 2.6, B.concL, 14, 0, 1.3, 0)); tw.add(cy(0.75, 0.6, 0.6, P.glass, 8, 0, 2.9, 0)); tw.add(cy(0.82, 0.82, 0.12, B.concD, 8, 0, 3.26, 0)); tw.add(put(bMast(0.8), 0, 3.3, 0)); tw.add(rbox(1.4, 0.9, 1.2, 0.05, B.conc, 0.9, 0.45, 0.2)); g.add(put(tw, 3.6, 0, -1.0)); }
-    if (lv >= 3){ g.add(bgnd(-rl + 0.8, 0.9, rl - 0.8, 1.5, B.tarmac, 0.065)); for (const x of [-5.0, -2.9]){ const s0 = grp(); s0.add(side(Array.from({length:13}, (_, i) => [Math.cos(Math.PI*i/12)*1.15, Math.sin(Math.PI*i/12)*0.95]), 2.0, B.concD, 0.05)); s0.add(rbox(0.06, 0.6, 1.4, 0.02, B.roof, 1.0, 0.3, 0)); g.add(put(s0, x, 0, -1.6, Math.PI/2)); }
-      if (V) g.add(veh('int', -4.0, 0.2, 0.3, 0.17)); }
-    if (lv >= 4){ g.add(put(tankC(0.5, 0.7), 5.9, 0, -0.6)); g.add(put(tankC(0.5, 0.7), 5.9, 0, 0.6)); g.add(put(bBlock(1.4, 1.0, 0.8, B.concL), 1.2, 0, -2.2));
-      g.add(bgnd(2.6, -3.9, 6.2, -2.2, B.concD, 0.06)); if (V) g.add(veh('jet', 4.6, -1.7, -0.4, 0.18)); }
-    if (lv >= 5){ rw(-4.6, 7.0, 1.3); g.add(put(arch(3.4, 2.8, B.roof, {ribs:4, end:B.concL}), -4.6, 0, -2.6)); const dm = grp(); dm.add(cy(0.5, 0.6, 1.0, B.concL, 12, 0, 0.5, 0)); dm.add(sph(0.75, B.tank, 0, 1.3, 0)); g.add(put(dm, 6.4, 0, -3.0)); if (V) g.add(veh('drone', -0.6, -3.0, 0.4, 0.16)); }
-    return {g, pad:[-rl, lv >= 5 ? -5.3 : -3.2, rl, 3.4]}; }
-  // a hall with a saw-tooth roof (north lights) w by d, walls h
-  function sawHall(w, d, h, n, wall){ const g = grp(); g.add(rbox(w, h, d, 0.05, wall, 0, h/2, 0)); const t = d/n;
-    for (let i = 0; i < n; i++){ const z0 = -d/2 + i*t; g.add(side([[z0, h], [z0 + t, h], [z0 + t, h + 0.55]], w, B.roof, 0.02)); g.add(rbox(w*0.96, 0.4, 0.04, 0.01, P.glass, 0, h + 0.3, z0 + t - 0.01)); }
-    for (const sz of [1, -1]) g.add(rbox(w*0.88, 0.36, 0.05, 0.015, P.glass, 0, h*0.62, sz*(d/2 + 0.012)));
-    g.add(rbox(0.9, Math.min(1.1, h*0.7), 0.06, 0.02, B.roof, w*0.25, Math.min(1.1, h*0.7)/2, d/2 + 0.02)); return g; }
-  // Arms Industry: a works yard with its workshop and chimney; then saw-tooth halls, storage tanks, a gantry crane, and at level V a big assembly
-  // hall, a cooling tower and a rail siding with wagons
-  function bArms(lv, o){ const g = grp(), V = !o.site, pad = [[-3.8, -3.2, 3.8, 3.0], [-5.6, -3.2, 3.8, 3.4], [-5.6, -3.6, 5.6, 3.8], [-6.6, -5.2, 5.6, 4.2], [-7.4, -5.6, 7.4, 4.6]][lv - 1];
-    g.add(bgnd(pad[0], pad[1], pad[2], pad[3], B.concD));
-    g.add(put(gable(3.6, 2.6, 1.4, 0.7, B.brick, B.roof, {door:1}), -0.6, 0, -1.0)); g.add(put(chimney(3.6, 0.28), 2.2, 0, -1.9));
-    if (V) g.add(veh('truck', 0.6, 1.5, Math.PI/2 + 0.2));
-    if (lv >= 2) g.add(put(sawHall(3.4, 3.0, 1.5, 3, B.conc), -4.0, 0, 0.2));
-    if (lv >= 3){ g.add(put(tankC(0.55, 1.4), 4.4, 0, -1.6)); g.add(put(tankC(0.55, 1.4), 4.4, 0, -0.3)); g.add(put(chimney(4.2, 0.3), -1.9, 0, -2.6));
-      g.add(bgnd(-1.8, 2.2, 3.2, 3.5, B.tarmac, 0.09)); for (let i = 0; i < 4; i++) g.add(put(rbox(0.8, 0.5, 0.6, 0.03, i % 2 ? B.camoD : B.rust, 0, 0.3, 0), -1.2 + i*1.1, 0.06, 2.85)); }
-    if (lv >= 4){ g.add(put(sawHall(4.6, 3.6, 1.8, 4, B.concL), -3.6, 0, -3.5)); const gc = grp(); for (const sx of [-1, 1]) for (const z of [-1.2, 1.2]) gc.add(post(sx*1.6, z, 1.8, B.crane, 0.06)); for (const sx of [-1, 1]) gc.add(rbox(0.12, 0.16, 2.6, 0.02, B.crane, sx*1.6, 1.85, 0)); gc.add(rbox(3.4, 0.22, 0.24, 0.03, B.crane, 0, 1.95, 0.2)); gc.add(rbox(0.3, 0.2, 0.3, 0.03, B.craneD, 0.4, 1.75, 0.2)); g.add(put(gc, 3.2, 0, 2.9)); }
-    if (lv >= 5){ g.add(put(gable(4.4, 3.2, 2.0, 0.8, B.concL, B.roof, {door:1}), 4.2, 0, -3.6)); const ct = mk(new T.LatheGeometry([0, 0.25, 0.5, 0.75, 1].map(u => new T.Vector2(1.1 - Math.sin(u*Math.PI)*0.38 + u*0.05, u*2.8)), 24), B.concL); ct.position.set(-6.0, 0, 3.0); g.add(ct);
-      g.add(bgnd(-7.2, 3.9, 7.2, 4.5, B.gravel, 0.06)); for (const z of [4.05, 4.35]) g.add(rbox(14.2, 0.05, 0.05, 0.01, B.metal, 0, 0.1, z)); for (let i = 0; i < 3; i++) g.add(put(rbox(1.9, 0.6, 0.55, 0.05, i === 1 ? B.tank : B.rust, 0, 0.42, 0), -2.5 + i*2.1, 0, 4.2)); }
-    return {g, pad}; }
-  // a ridge tent w by d
-  function tent(w, d, mat = P.tarp){ const g = grp(); g.add(side([[-d/2, 0.05], [d/2, 0.05], [d/2*0.82, 0.38], [0, 0.85], [-d/2*0.82, 0.38]], w, mat, 0.03)); return g; }
-  // Recruiting Office: a brick office with its flag and a truck at the door; then tents, a parade ground with flagpoles, a training course and at
-  // level V an academy with a columned portico
-  function bRec(lv, o){ const g = grp(), V = !o.site, pad = [[-3.2, -2.6, 3.2, 2.6], [-4.6, -2.6, 3.6, 3.0], [-4.6, -3.6, 5.2, 3.6], [-6.0, -4.6, 5.6, 4.4], [-6.4, -6.0, 6.2, 4.8]][lv - 1];
-    g.add(bgnd(pad[0], pad[1], pad[2], pad[3], B.gravel)); g.add(bgnd(-2.4, -1.9, 2.4, 0.4, B.concL, 0.1));
-    g.add(put(gable(3.2, 1.9, 1.5, 0.75, B.brick, B.tile, {door:1}), 0, 0, -1.0)); g.add(rbox(0.9, 0.3, 0.05, 0.02, B.navyB, 0, 1.25, -0.03));
-    if (V){ g.add(put(bFlag(2.4, B.navyB), 2.0, 0, 0.9)); g.add(veh('truck', -1.5, 1.6, Math.PI/2, 0.26)); }
-    if (lv >= 2) for (let i = 0; i < 2; i++) g.add(put(tent(1.8, 1.4), -3.6, 0, -1.5 + i*1.9));
-    if (lv >= 3){ g.add(bgnd(1.6, 1.0, 4.8, 3.2, B.tarmac, 0.09)); if (V) for (let i = 0; i < 3; i++) g.add(put(bFlag(1.8, i === 1 ? B.navyB : B.camoD), 2.0 + i*1.2, 0, 1.2)); g.add(put(gable(2.8, 1.5, 1.0, 0.5, B.conc, B.camo), 3.4, 0, -2.6)); }
-    if (lv >= 4){ for (let i = 0; i < 3; i++) g.add(put(tent(1.8, 1.4), -5.0 + i*2.0, 0, 3.4)); const oc = grp(); for (let i = 0; i < 4; i++) oc.add(rbox(0.12, 0.5 + (i % 2)*0.3, 1.0, 0.02, B.plank, i*0.9, 0.3, 0)); oc.add(cyX(0.08, 1.2, B.plank, 3.6, 0.5, 0, 8)); g.add(put(oc, -5.4, 0, -3.6)); }
-    if (lv >= 5){ const ac = grp(); ac.add(bBlock(5.0, 2.4, 2.2, B.concL)); for (let i = 0; i < 6; i++) ac.add(cy(0.11, 0.11, 2.1, B.concL, 10, -1.5 + i*0.6, 1.05, 1.55)); ac.add(rbox(3.9, 0.2, 0.8, 0.03, B.concL, 0, 2.2, 1.45)); ac.add(side([[1.05, 2.3], [1.85, 2.3], [1.45, 2.75]], 3.9, B.concL, 0.02)); g.add(put(ac, 0.6, 0, -4.6)); }
-    g.add(fence([[pad[0] + 0.15, pad[1] + 0.15], [pad[2] - 0.15, pad[1] + 0.15], [pad[2] - 0.15, pad[3] - 0.15], [pad[0] + 0.15, pad[3] - 0.15]], {gate:2, h:0.5}));
-    return {g, pad}; }
-  // a ring of sandbags (radius r, from angle a0 to a1)
-  function sandRing(r, a0, a1, rows = 2){ const g = grp(); for (let k = 0; k < rows; k++){ const n = Math.max(3, Math.round((a1 - a0)*r/0.42)); for (let i = 0; i <= n; i++){ const a = a0 + (a1 - a0)*(i + (k % 2)*0.5)/n; if (a > a1) continue; const s = rbox(0.42, 0.18, 0.26, 0.07, B.sand, Math.cos(a)*r, 0.09 + k*0.17, Math.sin(a)*r); s.rotation.y = -a + Math.PI/2; g.add(s); } } return g; }
-  function pillbox(){ const g = grp(); const b = plan(Array.from({length:6}, (_, i) => [Math.cos(i*Math.PI/3)*0.95, Math.sin(i*Math.PI/3)*0.95]), 0.75, B.concD, 0, 0.08); g.add(b); g.add(rbox(1.0, 0.12, 0.05, 0.02, P.dark, 0, 0.5, 0.83)); g.add(cy(0.6, 0.85, 0.12, B.earth, 6, 0, 0.75, 0)); return g; }
-  function teeth(n, x0, z0, dx, dz){ const g = grp(); for (let i = 0; i < n; i++){ const t = mk(new T.ConeGeometry(0.22, 0.42, 4), B.concL, x0 + dx*i, 0.21, z0 + dz*i); t.rotation.y = Math.PI/4; g.add(t); } return g; }
-  function wire(pts){ const g = grp(); for (let i = 0; i < pts.length - 1; i++){ const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(2, Math.round(L/0.35));
-      for (let k = 0; k < n; k++){ const u = (k + 0.5)/n, t = new T.Mesh(new T.TorusGeometry(0.16, 0.012, 4, 10), P.dark); t.position.set(x0 + (x1 - x0)*u, 0.16, z0 + (z1 - z0)*u); t.rotation.y = -Math.atan2(z1 - z0, x1 - x0) + Math.PI/2; t.castShadow = true; g.add(t); } } return g; }
-  // Fortifications: a dug-in machine-gun nest behind sandbags and a trench; then pillboxes, wire and tank teeth; at level III a star-shaped
-  // concrete fort with earth ramparts, a casemate and a gun
-  function bFort(lv, o){ const g = grp(), V = !o.site;
-    g.add(bgnd(-3.2, -2.8, 3.2, 2.8, B.earth, 0.06));
-    g.add(put(sandRing(1.1, Math.PI*0.05, Math.PI*1.95), -0.6, 0, 0.2)); g.add(put(rbox(1.2, 0.3, 0.9, 0.05, B.camoD, 0, 0.15, 0), -0.6, 0, 0.2));
-    for (const [x0, z0, x1, z1] of [[-2.8, -1.6, 0.6, -1.9], [0.6, -1.9, 2.6, -0.6]]){ const L = Math.hypot(x1 - x0, z1 - z0), tr = rbox(L, 0.04, 0.5, 0.01, P.dark, (x0 + x1)/2, 0.07, (z0 + z1)/2); tr.rotation.y = -Math.atan2(z1 - z0, x1 - x0); g.add(tr);
-      for (const s of [-1, 1]){ const pb = rbox(L, 0.22, 0.28, 0.08, B.sand, (x0 + x1)/2 - s*0.36*Math.sin(Math.atan2(z1 - z0, x1 - x0)), 0.12, (z0 + z1)/2 + s*0.36*Math.cos(Math.atan2(z1 - z0, x1 - x0))); pb.rotation.y = -Math.atan2(z1 - z0, x1 - x0); g.add(pb); } }
-    if (V){ const gun = grp(); gun.add(cyZ(0.04, 0.04, 0.9, P.gun, 0, 0.5, 0.45, 8)); gun.add(rbox(0.16, 0.16, 0.36, 0.03, P.gun, 0, 0.48, 0)); g.add(put(gun, -0.6, 0, 0.3)); g.add(put(bFlag(1.3, B.camoD), 1.6, 0, 1.4)); }
-    if (lv >= 2){ g.add(put(pillbox(), -4.2, 0, 1.6)); g.add(put(pillbox(), 3.9, 0, 1.9)); g.add(wire([[-5.4, 3.4], [-2.0, 3.9], [1.6, 3.9], [5.2, 3.3]])); g.add(teeth(7, -3.0, 4.6, 1.0, 0)); g.add(bgnd(-5.6, 0.4, -3.0, 2.8, B.earth, 0.04)); g.add(bgnd(2.8, 0.7, 5.2, 3.1, B.earth, 0.04)); }
-    if (lv >= 3){ const pts = []; for (let i = 0; i < 10; i++){ const a = -Math.PI/2 + i*Math.PI/5, r = i % 2 ? 4.9 : 7.0; pts.push([Math.cos(a)*r, Math.sin(a)*r*0.86 - 1.0]); }
-      const ins = pts.map(([x, z]) => [x*0.86, (z + 1.0)*0.86 - 1.0]); const sh = new T.Shape(); sh.moveTo(pts[0][0], -pts[0][1]); for (const p of pts) sh.lineTo(p[0], -p[1]); const hole = new T.Path(); hole.moveTo(ins[0][0], -ins[0][1]); for (const p of ins) hole.lineTo(p[0], -p[1]); sh.holes.push(hole);
-      const wg = new T.ExtrudeGeometry(sh, {depth:0.62, bevelEnabled:true, bevelThickness:0.08, bevelSize:0.12, bevelSegments:2}); wg.rotateX(-Math.PI/2); wg.translate(0, 0.08, 0); g.add(mk(wg, B.concL));
-      g.add(mk(new T.ExtrudeGeometry(sh, {depth:0.08, bevelEnabled:false}).rotateX(-Math.PI/2).translate(0, 0.72, 0), B.grass));
-      const cm = grp(); cm.add(rbox(2.6, 0.9, 1.8, 0.1, B.concD, 0, 0.45, 0)); cm.add(rbox(1.6, 0.18, 0.06, 0.02, P.dark, 0, 0.6, 0.91)); cm.add(cy(1.2, 1.5, 0.3, B.grass, 8, 0, 0.98, 0)); g.add(put(cm, 1.6, 0, -2.8));
-      if (V) g.add(veh('art', 2.0, -0.4, 0.3, 0.2)); g.add(put(tower(1.6), -4.6, 0, -2.6)); }
-    return {g, pad:lv >= 3 ? [-7, -7, 7, 5] : lv >= 2 ? [-5.6, -2.8, 5.4, 4.8] : [-3.2, -2.8, 3.2, 2.8]}; }
-  // a missile silo: a round concrete collar with a sliding lid (open: a missile's nose in the shaft)
-  function silo(open){ const g = grp(); g.add(cy(1.05, 1.15, 0.28, B.concD, 24, 0, 0.14, 0)); g.add(cy(0.8, 0.8, 0.04, P.dark, 24, 0, 0.29, 0));
-    if (open){ g.add(rbox(1.7, 0.16, 1.7, 0.05, B.concL, 1.9, 0.36, 0)); for (const z of [-0.9, 0.9]) g.add(rbox(3.2, 0.06, 0.08, 0.02, B.metal, 1.0, 0.3, z)); const ms = grp(); ms.add(cy(0.26, 0.26, 0.6, B.tank, 14, 0, 0.3, 0)); ms.add(mk(new T.ConeGeometry(0.26, 0.55, 14), B.tank, 0, 0.88, 0)); ms.add(cy(0.27, 0.27, 0.08, B.red, 14, 0, 0.5, 0)); g.add(put(ms, 0, 0.05, 0)); }
-    else { g.add(rbox(1.7, 0.18, 1.7, 0.05, B.concD, 0, 0.37, 0)); g.add(rbox(1.2, 0.02, 0.12, 0.01, B.crane, 0, 0.47, 0)); for (const z of [-0.9, 0.9]) g.add(rbox(2.4, 0.06, 0.08, 0.02, B.metal, 0.5, 0.3, z)); }
-    return g; }
-  // Missile Silo: a fenced pad with one silo and its control hut; more silos (one open), a launch-control bunker, a radar, a missile on its erector and
-  // at level V a double fence with towers
-  function bSilo(lv, o){ const g = grp(), V = !o.site, pad = [[-3.4, -3.0, 3.4, 2.6], [-4.8, -3.0, 4.4, 2.6], [-4.8, -4.4, 5.4, 3.2], [-6.0, -4.4, 5.8, 4.4], [-6.6, -5.2, 6.6, 5.0]][lv - 1];
-    g.add(bgnd(pad[0], pad[1], pad[2], pad[3], B.gravel)); g.add(bgnd(-1.6, -1.6, 1.6, 1.4, B.concD, 0.1));
-    g.add(put(silo(false), -0.4, 0.06, -0.2)); g.add(put(bBlock(1.6, 1.2, 0.9, B.concL), 2.3, 0, -1.7)); g.add(put(bMast(2.2, {dish:1}), 2.6, 0, 0.9));
-    if (lv >= 2){ g.add(bgnd(-4.4, -1.8, -1.6, 1.4, B.concD, 0.1)); g.add(put(silo(true), -3.2, 0.06, -0.2)); }
-    if (lv >= 3){ const bk = grp(); const m = sph(1.7, B.grass, 0, 0, 0, 1.1, 0.42, 0.85); bk.add(m); bk.add(rbox(1.2, 0.7, 0.3, 0.05, B.concD, 0, 0.35, 1.3)); bk.add(rbox(0.6, 0.55, 0.05, 0.02, B.roof, 0, 0.3, 1.46)); g.add(put(bk, 3.0, 0, 2.0)); g.add(put(bMast(3.0, {radar:1}), -3.8, 0, -3.6)); }
-    if (lv >= 4){ g.add(bgnd(-1.6, 1.4, 1.4, 3.9, B.concD, 0.1)); g.add(put(silo(false), -0.2, 0.06, 2.7)); if (V){ const te = veh('truck', -4.2, 3.0, 0.1, 0.32); g.add(te); const ms = grp(); ms.add(cy(0.22, 0.22, 2.6, B.tank, 14, 0, 1.3, 0)); ms.add(mk(new T.ConeGeometry(0.22, 0.5, 14), B.tank, 0, 2.85, 0)); ms.add(cy(0.23, 0.23, 0.08, B.red, 14, 0, 2.2, 0)); ms.rotation.x = -1.0; ms.position.set(-4.2, 0.9, 2.2); g.add(ms); } }
-    if (lv >= 5){ g.add(put(silo(false), 4.4, 0.06, -0.4)); g.add(bgnd(3.0, -1.9, 5.8, 1.1, B.concD, 0.09)); g.add(put(tower(2.2), pad[0] + 0.6, 0, pad[1] + 0.6)); g.add(put(tower(2.2), pad[2] - 0.6, 0, pad[3] - 0.6)); g.add(put(bBlock(2.4, 1.4, 1.0, B.concD), -4.6, 0, -3.9)); }
-    const fp = (m) => [[pad[0] + m, pad[1] + m], [pad[2] - m, pad[1] + m], [pad[2] - m, pad[3] - m], [pad[0] + m, pad[3] - m]];
-    g.add(fence(fp(0.15), {gate:2, h:0.62})); if (lv >= 5) g.add(fence(fp(0.65), {gate:2, h:0.5}));
-    return {g, pad}; }
-  // a jib crane on the quay
-  function quayCrane(h = 3.0){ const g = grp(); for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const l = cy(0.05, 0.07, h, B.crane, 6, sx*0.45, h/2, sz*0.45); l.rotation.set(sz*0.08, 0, -sx*0.08); g.add(l); }
-    g.add(rbox(1.0, 0.5, 0.9, 0.05, B.crane, 0, h + 0.2, 0)); g.add(rbox(0.5, 0.35, 0.45, 0.04, P.glass, 0.35, h + 0.15, 0.3)); const j = rbox(0.18, 0.18, 3.6, 0.03, B.crane, 0, h + 0.6, 1.6); j.rotation.x = -0.32; g.add(j); g.add(rbox(0.7, 0.5, 0.6, 0.04, B.concD, 0, h + 0.4, -0.7)); return g; }
-  // Naval Yard: a quay on its own stretch of water with a crane and a shed; then a pier with a patrol ship, a dry dock with a frigate under repair,
-  // a big construction hall, a destroyer, and at level V a gantry crane over the dock and a submarine pen
-  function bYard(lv, o){ const g = grp(), V = !o.site, W0 = [-5.2, -5.6, -6.6, -7.2, -7.8][lv - 1], W1 = [4.0, 5.2, 5.6, 6.6, 7.8][lv - 1];
-    g.add(bgnd(W0, 0.6, W1, 4.6, B.water, 0.06)); g.add(bgnd(W0, -3.2, W1, 0.6, B.concD, 0.32)); g.add(rbox(W1 - W0, 0.06, 0.12, 0.02, P.dark, (W0 + W1)/2, 0.33, 0.55));
-    for (let x = W0 + 0.6; x < W1; x += 1.4) g.add(cy(0.08, 0.1, 0.18, P.dark, 6, x, 0.4, 0.4));
-    g.add(put(quayCrane(), 0.8, 0.32, -0.3)); g.add(put(gable(3.0, 2.0, 1.3, 0.5, B.conc, B.roof, {door:1}), -2.4, 0.32, -1.9));
-    if (V) g.add(bShip('frig', -1.6, 1.8, Math.PI/2, 3.6));
-    if (lv >= 2){ g.add(bgnd(2.4, 0.6, 3.4, 3.9, B.conc, 0.3)); if (V) g.add(bShip('frig', 4.4, 2.6, 0.05, 3.2)); g.add(put(bBlock(1.6, 1.2, 1.0, B.concL), 2.9, 0.32, -2.2)); }
-    if (lv >= 3){ g.add(bgnd(-6.4, -0.2, -3.6, 4.4, B.concD, 0.34)); g.add(bgnd(-6.0, 0.1, -4.0, 4.4, B.water, 0.12)); if (V) g.add(bShip('frig', -5.0, 2.2, 0.0, 3.4, 0.14)); g.add(put(quayCrane(2.6), -6.4, 0.32, -1.0, 0.6)); }
-    if (lv >= 4){ g.add(put(gable(4.0, 2.4, 1.9, 0.7, B.concL, B.roof, {door:1}), 4.8, 0.32, -1.9)); if (V) g.add(bShip('crui', 0.4, 3.4, Math.PI/2, 4.6)); }
-    if (lv >= 5){ const gc = grp(); for (const sx of [-1, 1]){ gc.add(rbox(0.25, 3.2, 0.3, 0.04, B.crane, sx*1.6, 1.6, 0)); gc.add(rbox(0.5, 0.25, 0.6, 0.04, B.craneD, sx*1.6, 0.12, 0)); } gc.add(rbox(3.7, 0.4, 0.45, 0.05, B.crane, 0, 3.3, 0)); gc.add(rbox(0.5, 0.35, 0.5, 0.04, B.craneD, 0.3, 3.0, 0)); g.add(put(gc, -5.0, 0.32, 2.0, Math.PI/2));
-      const pen = grp(); pen.add(rbox(3.2, 1.3, 2.6, 0.08, B.concD, 0, 0.65, 0)); for (const x of [-0.8, 0.8]){ pen.add(rbox(1.2, 0.9, 0.06, 0.04, P.dark, x, 0.45, 1.31)); } pen.add(rbox(3.3, 0.2, 2.7, 0.04, B.concL, 0, 1.35, 0)); g.add(put(pen, 6.0, 0.06, 2.6)); }
-    return {g, pad:[W0, -3.2, W1, 4.6]}; }
-  // the capital's headquarters: a concrete command block with window bands, a helipad on the roof, a radio mast with its dish and a flag mast (the
-  // nation's flag is laid over its cloth on the map), wings, a forecourt and a wall with two guard posts
-  function bHQ(o){ const g = grp(), V = !o.site;
-    g.add(bgnd(-5.0, -4.4, 5.0, 4.0, B.concL)); g.add(bgnd(-1.4, 1.2, 1.4, 4.0, B.tarmac, 0.1));
-    g.add(put(bBlock(5.2, 3.2, 3.4, B.conc, {ac:[[-1.8, -1.0]]}), 0, 0, -1.4));
-    g.add(put(bBlock(2.2, 2.6, 2.2, B.concL), -3.4, 0, -1.2)); g.add(put(bBlock(2.2, 2.6, 2.2, B.concL), 3.4, 0, -1.2));
-    g.add(cy(0.95, 0.95, 0.06, B.tarmac, 24, 0.9, 3.52, -1.5)); for (const [w, d, x] of [[0.12, 0.8, 0.65], [0.12, 0.8, 1.15], [0.5, 0.12, 0.9]]) g.add(rbox(w, 0.02, d, 0.01, B.crane, x, 3.56, -1.5));
-    g.add(rbox(1.8, 0.12, 0.8, 0.03, B.concD, 0, 1.3, 0.55)); for (const x of [-0.7, 0.7]) g.add(post(x, 0.85, 1.3, B.concL, 0.06));
-    g.add(put(bMast(2.2, {dish:1}), -1.8, 3.4, -2.3));
-    g.add(fence([[-4.8, -4.2], [4.8, -4.2], [4.8, 3.8], [-4.8, 3.8]], {wall:B.concL, h:0.6, gate:2}));
-    g.add(put(bBlock(0.8, 0.8, 0.8, B.concD), -1.9, 0, 3.4)); g.add(put(bBlock(0.8, 0.8, 0.8, B.concD), 1.9, 0, 3.4));
-    for (const x of [-3.6, 3.6]) for (const z of [1.6, 2.8]) g.add(sph(0.38, B.grass, x, 0.25, z, 1, 0.8, 1));
-    let cloth = null; if (V){ const fm = grp(); fm.add(cy(0.045, 0.06, 5.2, B.metal, 8, 0, 2.6, 0)); fm.add(sph(0.09, B.crane, 0, 5.24, 0)); g.add(put(fm, 3.6, 0, 1.3));
-      cloth = new T.Mesh(new T.PlaneGeometry(1.6, 1.2/Math.cos(0.82), 1, 1), new T.MeshBasicMaterial({color:0xd8d4c8, side:T.DoubleSide})); cloth.castShadow = true; cloth.userData.flag = true; cloth.position.set(3.6 + 0.84, 5.2 - 0.6/Math.cos(0.82), 1.3); cloth.rotation.y = -BYAW; g.add(cloth); }
-    g.scale.setScalar(1.22);
-    return {g, pad:[-6.1, -5.4, 6.1, 4.9], cloth}; }
-  const BLDB = {fac:bFac, air:bAir, arms:bArms, rec:bRec, fort:bFort, silo:bSilo, yard:bYard};
-  const BLDN = {fac:5, air:5, arms:5, rec:5, fort:3, silo:5, yard:5};
-  // a sheet's models: the levels, then the construction site; the HQ sheet: the HQ, then the crane alone (beside a building raising its level)
-  function bldModels(type){ const out = [];
-    if (type === 'hq'){ out.push(bHQ({})); const c = grp(); c.add(crane(5.6, 4.0)); out.push({g:c, pad:[-0.6, -0.6, 0.6, 0.6], crane:true}); return out; }
-    for (let lv = 1; lv <= BLDN[type]; lv++) out.push(BLDB[type](lv, {}));
-    const s = BLDB[type](1, {site:true}), p = s.pad, cx = (p[0] + p[2])/2, cz = (p[1] + p[3])/2, w = p[2] - p[0], d = p[3] - p[1];
-    s.g.add(put(scaffold(w*0.5, d*0.4, 1.6), cx - w*0.08, 0, cz - d*0.12)); s.g.add(put(crane(5.4, 3.8), p[2] - 0.9, 0, p[1] + 0.9)); if (type === 'yard'){ s.g.add(pallets(1.6, -2.5, 0.32)); s.g.add(pallets(-0.6, -2.6, 0.32)); } else { s.g.add(pallets(cx + w*0.18, p[3] - 1.0)); s.g.add(pallets(cx - w*0.3, p[3] - 0.9)); }
-    s.site = 0.7; out.push(s); return out; }
+  const MAPB = {sol:() => mSquad('inf'), sat:() => mSquad('at'), ssf:() => mSquad('sf'), hmv:mHmv, truck:mTruck, tank:mTank, ifv:mIfv, art:mArt, mlrs:mMlrs, sam:mSam, frig:() => mShip('frig'), crui:() => mShip('crui'), sub:mSub, carr:mCarr, jet:() => mJet('jet'), int:() => mJet('int'), heli:mHeli, drone:mDrone};
 
   // ---------- the map atlases: one cell per direction (16, no animation) in a 4 x 4 grid, north-west sun (its shadow falls south-east like the
   // terrain's hillshade) plus soft sky shadows and a soft contact shade under the hull, rendered at twice the size and filtered down. Two levels are
@@ -1004,7 +789,7 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     // shadow ever reaches a cell's edge (the last few per cent of each cell fade to nothing as well: no shadow ends in a straight line)
     const bx0 = new T.Box3().setFromObject(model.g); let RR = 0; for (const x of [bx0.min.x, bx0.max.x]) for (const z of [bx0.min.z, bx0.max.z]) RR = Math.max(RR, Math.hypot(x, z));
     const half = Math.max(model.ext, RR + (sea ? 0.3 : 0.66*Math.max(0, bx0.max.y) + 0.7)), ppm = Math.min(model.ppm*MHI, MZMAX/(2*half)), Z = Math.ceil(half*ppm)*2;
-    if (!sea) contactShade(model, air);
+    if (!sea && model.shade !== false) contactShade(model, air);
     const mats = new Set(); model.g.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.pbr) mats.add(o.material); });
     for (const m of mats){ m.clippingPlanes = sea ? CLIP : []; m.needsUpdate = true; }
     renderer.localClippingEnabled = true; renderer.setSize(Z*SS, Z*SS); const ex0 = renderer.toneMappingExposure; renderer.toneMappingExposure = MEXP; renderer.shadowMap.needsUpdate = true;
@@ -1031,49 +816,6 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     sharpen(hi, 0.55); sharpen(mid, 0.4); rimify(hi); rimify(mid);
     const bb = bb0.map(q => q[2] > q[0] ? [q[0] - x0, q[1] - y0, q[2] - x0, q[3] - y0] : [0, 0, w, h]);
     return {hi, mid, cols:MCOLS, w, h, ox:+(ox - x0).toFixed(2), oy:+(oy - y0).toFixed(2), ppm:+ppm.toFixed(4), air, sea, bb}; }
-
-  // ---------- the building sheets: one row of cells per type (its levels, then its construction site; the HQ sheet: the HQ, then the crane), each cell
-  // cropped to its model and soft shadow. The same camera (0.82 rad down), sun, sky shadows, contact shade, exposure, sharpening and rim as the troop
-  // models; one view, turned BYAW. Kept: px per metre (ppm, hi level), and per cell its x in the sheet, size, ground origin (ox, oy), the model's tight
-  // box (without its shadow), its footprint radius on the ground (fr, m) and, for the HQ, its flag cloth's box
-  const BYAW = -0.58, BPPM = 11, BSS = 2;
-  function bldCell(M){
-    const model = M.g; model.rotation.y = BYAW; model.updateMatrixWorld(true);
-    const bx0 = new T.Box3().setFromObject(model); let RR = 0; for (const x of [bx0.min.x, bx0.max.x]) for (const z of [bx0.min.z, bx0.max.z]) RR = Math.max(RR, Math.hypot(x, z));
-    const half = RR + 0.66*Math.max(0, bx0.max.y) + 0.9, Z = Math.ceil(half*BPPM)*2;
-    contactShade({g:model}, false);
-    const mats = new Set(); model.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.pbr) mats.add(o.material); });
-    const cut = M.site ? [new T.Plane(new T.Vector3(0, -1, 0), M.site)] : [], keep = new Set([B.crane, B.craneD, B.scaf, B.plank, B.found]);
-    for (const m of mats){ m.clippingPlanes = keep.has(m) ? [] : cut; m.needsUpdate = true; }
-    renderer.localClippingEnabled = cut.length > 0; renderer.setSize(Z*BSS, Z*BSS); const ex0 = renderer.toneMappingExposure; renderer.toneMappingExposure = MEXP; renderer.shadowMap.needsUpdate = true;
-    for (const l of [MSUN, ...MSKY]){ const c = l.shadow.camera; c.left = c.bottom = -half - 2; c.right = c.top = half + 2; c.near = 0.5; c.far = 90; c.updateProjectionMatrix(); }
-    const ox0 = MSUN.position.clone(); MSUN.position.multiplyScalar(1.6);
-    MS.add(model); MGND.visible = true; MGND.material.opacity = 0.5; MGND.scale.setScalar(1.6);
-    MCAM.left = -half; MCAM.right = half; MCAM.top = half; MCAM.bottom = -half; MCAM.updateProjectionMatrix();
-    const dist = 80, el = 0.82, ly = 1.0; MCAM.position.set(0, Math.sin(el)*dist + ly, Math.cos(el)*dist); MCAM.lookAt(0, ly, 0); MCAM.updateMatrixWorld();
-    CU.inv.value.copy(model.matrixWorld).invert(); renderer.render(MS, MCAM);
-    const full = document.createElement('canvas'); full.width = full.height = Z; const fx = full.getContext('2d', {willReadFrequently:true}); fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = 'high';
-    fx.drawImage(renderer.domElement, 0, 0, Z*BSS, Z*BSS, 0, 0, Z, Z);
-    MS.remove(model); MGND.scale.setScalar(1); MSUN.position.copy(ox0); for (const m of mats){ m.clippingPlanes = []; m.needsUpdate = true; } renderer.localClippingEnabled = false; renderer.setSize(SZ, SZ); renderer.toneMappingExposure = ex0;
-    const pr = (x, y, z) => { const v = new T.Vector3(x, y, z).project(MCAM); return [(v.x + 1)/2*Z, (1 - v.y)/2*Z]; };
-    const [ox, oy] = pr(0, 0, 0); let flag = null;
-    if (M.cloth){ M.cloth.updateMatrixWorld(true); const g0 = M.cloth.geometry; g0.computeBoundingBox(); const b = g0.boundingBox, q = [];
-      for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]){ const v = new T.Vector3(x, y, 0).applyMatrix4(M.cloth.matrixWorld); q.push(pr(v.x, v.y, v.z)); }
-      flag = [Math.min(...q.map(p => p[0])), Math.min(...q.map(p => p[1])), Math.max(...q.map(p => p[0])), Math.max(...q.map(p => p[1]))]; }
-    const px = fx.getImageData(0, 0, Z, Z).data; let x0 = Z, y0 = Z, x1 = 0, y1 = 0, a0 = Z, b0 = Z, a1 = -1, b1 = -1;
-    for (let y = 0; y < Z; y++) for (let x = 0; x < Z; x++){ const al = px[(y*Z + x)*4 + 3]; if (al > 6){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } if (al > 170){ if (x < a0) a0 = x; if (x > a1) a1 = x; if (y < b0) b0 = y; if (y > b1) b1 = y; } }
-    x0 = Math.max(0, x0 - 3); y0 = Math.max(0, y0 - 3); x0 -= x0 % 2; y0 -= y0 % 2; const w = Math.min(Z - x0, Math.ceil((x1 - x0 + 4)/2)*2), h = Math.min(Z - y0, Math.ceil((y1 - y0 + 4)/2)*2);
-    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(full, x0, y0, w, h, 0, 0, w, h);
-    { const id = g.getImageData(0, 0, w, h), p = id.data, bw = Math.max(4, Math.round(Math.min(w, h)*0.04)); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){ const i = (y*w + x)*4 + 3; if (!p[i]) continue; const t = Math.min(1, Math.min(x, y, w - 1 - x, h - 1 - y)/bw); p[i] = Math.round(p[i]*t*t*(3 - 2*t)); } g.putImageData(id, 0, 0); }
-    const pad = M.pad || [-1, -1, 1, 1], fr = +(0.5*Math.hypot(pad[2] - pad[0], pad[3] - pad[1])*0.82).toFixed(2);
-    return {c, w, h, ox:+(ox - x0).toFixed(2), oy:+(oy - y0).toFixed(2), bb:a1 > a0 ? [a0 - x0, b0 - y0, a1 + 1 - x0, b1 + 1 - y0] : [0, 0, w, h], fr, flag:flag && flag.map((v, i) => +(v - (i % 2 ? y0 : x0)).toFixed(1))}; }
-  // a type's sheet: the cells side by side (hi), and its half
-  function bldBuild(type){ const cells = bldModels(type).map(bldCell), H = Math.max(...cells.map(q => q.h)); let X = 0; const meta = [];
-    const hi = document.createElement('canvas'); hi.width = cells.reduce((s, q) => s + q.w, 0); hi.height = H; const hx = hi.getContext('2d', {willReadFrequently:true});
-    for (const q of cells){ sharpen(q.c, 0.5); rimify(q.c); hx.drawImage(q.c, X, 0); meta.push([X, q.w, q.h, q.ox, q.oy, ...q.bb, q.fr, ...(q.flag || [])]); X += q.w; }
-    const mid = document.createElement('canvas'); mid.width = hi.width/2; mid.height = Math.ceil(H/2); const mx = mid.getContext('2d'); mx.imageSmoothingEnabled = true; mx.imageSmoothingQuality = 'high'; mx.drawImage(hi, 0, 0, hi.width/2, H/2);
-    return {hi, mid, meta:{ppm:BPPM, c:meta}}; }
-  bldFn = bldBuild;
   mapFn = mapBuild;
   })();
   function mixCol(hex, base, t){ const A = parseInt(hex.slice(1), 16), B = parseInt(base.slice(1), 16); const m = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${m(16)},${m(8)},${m(0)})`; }
@@ -1101,7 +843,11 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     const types = Object.keys(META);
     await Promise.all(types.map(async t => { const [b, m] = await Promise.all([loadImg(dir + t + '.png'), loadImg(dir + t + '_m.png')]); const meta = META[t], sc = SZ/BAKE_SZ;
       const mk = im => { const c = document.createElement('canvas'); c.width = Math.round(im.width*sc); c.height = Math.round(im.height*sc); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height); return c; };
-      cache[t] = {base:mk(b), mask:mk(m), dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea}; }));
+      // the sheets are drawn to canvases only when a sprite is first drawn (the map draws its models from the map atlases, U3D.map): 32 sheet
+      // canvases made up front held some 80 MB of canvas memory that nothing drew (and a lost graphics context blanks them: see gfxReset)
+      const A = {dirs:meta.dirs, frames:meta.frames, air:!!meta.air, sea:!!meta.sea, bc:null, mc:null};
+      Object.defineProperty(A, 'base', {get:() => A.bc || (A.bc = mk(b))}); Object.defineProperty(A, 'mask', {get:() => A.mc || (A.mc = mk(m))});
+      cache[t] = A; }));
     return true;
   }
   const mapAt = {}; let mapDir = 'assets/units/';
@@ -1110,8 +856,6 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     return {m:H, mid:M, hi:hiCv ? Object.assign({cv:hiCv, lvl:1}, H) : null, hiT:0, hiLoad:!!hiCv}; }
   function hiTrim(keep){ const on = Object.keys(mapAt).filter(t => mapAt[t] && mapAt[t].hi).sort((a, b) => mapAt[b].hiT - mapAt[a].hiT);
     for (const t of on.slice(4)) if (t !== keep){ mapAt[t].hi = null; mapAt[t].hiLoad = false; } }
-  const bldAt = {}; let bldDir = 'assets/bld3d/';
-  function bldLevels(m, midCv, hiCv){ return {m, mid:{cv:midCv, lvl:0, ppm:m.ppm/2, c:m.c.map(q => q.map((v, i) => i === 9 ? v : v/2))}, hi:hiCv ? {cv:hiCv, lvl:1, ppm:m.ppm, c:m.c} : null, hiT:0, hiLoad:!!hiCv}; }
   const queue = ['inf', 'tank', 'at', 'art', 'ifv', 'sam', 'jet', 'int', 'frig', 'sub', 'crui', 'heli', 'drone', 'carr', 'mlrs', 'spec'];
   let warm = false;
   function warmup(){ if (warm || !buildFn) return; warm = true; let i = 0; const step = () => { if (i >= queue.length) return; try { if (!cache[queue[i]]) buildFn(queue[i]); i++; } catch (e) { i++; } setTimeout(step, 30); }; setTimeout(step, 50); }
@@ -1134,27 +878,15 @@ float fbm(vec3 p){ return 0.5*n3(p) + 0.28*n3(p*2.07 + 7.1) + 0.14*n3(p*4.13 + 3
     mapTrim(now){ for (const t in mapAt){ const A = mapAt[t]; if (A && A.hi && now - A.hiT > 15000){ A.hi = null; A.hiLoad = false; } } },
     // the map was not drawn for ms (nothing moved): the hi sheets' last use moves on with it, so a still map does not drop them
     mapShift(ms){ for (const t in mapAt){ const A = mapAt[t]; if (A && A.hiT) A.hiT += ms; } },
-    // the building sheet of a type ({cv, ppm, c: cells [x, w, h, ox, oy, bb (4), fr, flag (4)?]}; lvl 1: the hi level), or null while it loads: like
-    // the map models, a baked sheet is fetched the first time it is wanted; with three.js present and nothing baked it is rendered here
-    bld(type, lvl = 0){ let A = bldAt[type];
-      if (A === undefined){ let m = BMETA[type]; bldAt[type] = A = null;
-        /*@TEST*/if (window.__BAKE) m = null;/*@ENDTEST*/
-        if (m){ const im = new Image(); im.decoding = 'async'; im.onload = () => { bldAt[type] = bldLevels(m, im, null); drawn(); }; im.onerror = () => {}; im.src = bldDir + 'b3-' + type + '.webp'; }
-        else if (bldFn) try { const R = bldFn(type); bldAt[type] = A = bldLevels(R.meta, R.mid, R.hi); } catch (e) { console.warn('bld3d', type, e); } }
-      if (!A) return null;
-      if (lvl > 0){ A.hiT = performance.now(); if (A.hi) return A.hi;
-        /*@TEST*/if (window.__BAKE) return null;/*@ENDTEST*/
-        if (!A.hiLoad){ A.hiLoad = true; const im = new Image(); im.decoding = 'async'; im.onload = () => { if (A.hiLoad) A.hi = {cv:im, lvl:1, ppm:A.m.ppm, c:A.m.c}; drawn(); }; im.onerror = () => {}; im.src = bldDir + 'b3-' + type + '-hi.webp'; }
-        return null; }
-      return A.mid; },
-    bldMeta: type => BMETA[type] || (bldAt[type] && bldAt[type].m) || null, bldTypes: () => ['hq', 'fac', 'air', 'arms', 'rec', 'fort', 'silo', 'yard'],
-    bldTrim(now){ for (const t in bldAt){ const A = bldAt[t]; if (A && A.hi && now - A.hiT > 15000){ A.hi = null; A.hiLoad = false; } } },
-    exportBld(type){ if (!bldFn) return null; const R = bldFn(type); return {hi:R.hi.toDataURL('image/webp', 0.88), img:R.mid.toDataURL('image/webp', 0.9), meta:R.meta}; },
-    mapTypes: () => Object.keys(MAPMETA), mapDir(d){ mapDir = d; bldDir = d.replace(/units\/$/, 'bld3d/'); },
+    mapTypes: () => Object.keys(MAPMETA), mapDir(d){ mapDir = d; },
     // a type's baked sheet meta (hi level: ppm, ground origin, per-direction boxes) without loading the sheet
     mapMeta: type => MAPMETA[type] || (mapAt[type] && mapAt[type].m) || null,
     exportMap(type){ if (!mapFn) return null; const A = mapFn(type); return {hi:A.hi.toDataURL('image/webp', 0.88), img:A.mid.toDataURL('image/webp', 0.9), meta:{w:A.w, h:A.h, ox:A.ox, oy:A.oy, ppm:A.ppm, air:A.air, sea:A.sea, bb:A.bb}}; },
     SZ, has: type => !!cache[ALIAS[type] || type], warmup, loadBaked, canRender: () => !!buildFn,
+    // a lost graphics context blanked every canvas: the sheets drawn from the baked pictures are drawn again when next wanted, the tinted and
+    // night copies too; sheets rendered here (no baked pictures) are rendered again
+    gfxReset(){ tinted.clear(); for (const k in shadowSheets) delete shadowSheets[k]; scratch = null;
+      let gone = 0; for (const t in cache){ const a = cache[t]; if ('bc' in a){ a.bc = a.mc = null; } else { delete cache[t]; gone++; } } if (gone && buildFn){ warm = false; warmup(); } },
     exportAtlas(type){ if (!cache[type] && buildFn) buildFn(type); const a = cache[type]; return a ? {base:a.base.toDataURL('image/png'), mask:a.mask.toDataURL('image/png')} : null; },
     // draw a unit sprite centred on (x, y) at on-screen height h; ang in radians (screen space)
     draw(ctx, type, color, x, y, h, ang, frame = 0, night = false){

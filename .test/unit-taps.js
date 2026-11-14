@@ -1,6 +1,6 @@
 // Taps on the unit display (Part 2 repair): zoomed in a tap on a force's PICTURE selects it (not only its flag tag); zoomed out a tap on a
 // counter stacked beside the one that covers it (another side's, HITX sat) acts on that force: yours selects it, a foe's (with one of yours
-// selected) is targeted. node .test/unit-taps.js [W H dpr]   prints JSON {checks, errors} and exits 1 on any failure.
+// selected) is targeted (the attack order: the force pursues it, or with poor odds the plan waits in the panel). node .test/unit-taps.js [W H dpr]   prints JSON {checks, errors} and exits 1 on any failure.
 const pickNation = require('./pick-nation.js');   // (a start-screen card by its nation's name, on either world)
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
@@ -61,7 +61,7 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
       else { const mine = st.hits.map(h => h.ids).flat(); const myId = await p.evaluate(ids => { const a = window.__im.S.armies.find(z => ids.includes(z.id) && z.owner === 0 && !z.air); return a ? a.id : null; }, mine);
         if (myId == null) continue; await clear(); await p.evaluate(id => window.__im.selectArmy(id), myId); await p.waitForTimeout(150);
         const war = await p.evaluate(ids => ids.some(id => { const im = window.__im, a = im.S.armies.find(z => z.id === id); return a && a.owner > 0 && im.S.rel[Math.min(0, a.owner) + ',' + Math.max(0, a.owner)] && im.S.rel[Math.min(0, a.owner) + ',' + Math.max(0, a.owner)].st === 'war'; }), q.ids);
-        await p.evaluate(([x, y]) => window.__im.tap(x, y), [q.cx, q.cy]); await p.waitForTimeout(120); const ch = await p.evaluate(() => window.__im.sel.chase);
+        await p.evaluate(([x, y]) => window.__im.tap(x, y), [q.cx, q.cy]); await p.waitForTimeout(120); const ch = await p.evaluate(id => { const im = window.__im, a = im.S.armies.find(z => z.id === id); return im.sel.chase ?? (a && a.chase) ?? null; }, myId);   // (a tap on a foe is the attack order: the planned chase, or the force's own pursuit once the order is given)
         checks['sat-foe-' + hp + '-' + q.ids[0]] = { ok: war ? q.ids.includes(ch) : true, chase: ch, ids: q.ids }; } }
     // every stacked counter is full size (no 13 px pips): at least 20 css px across
     for (const q of st.sats) if (Math.min(q.w, q.h) < 20) checks['sat-size-' + hp + '-' + q.ids[0]] = { ok: false, w: q.w, h: q.h }; }

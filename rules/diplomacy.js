@@ -54,7 +54,7 @@ function commonEnemy(a, b){ if (!QM) return S.nations.some(c => c.alive && c.id 
 // every pair of nations has its entry in S.rel (a new game makes them all; a packed nations-world save leaves the default ones out until they are
 // first asked for): then rel() creates nothing and atWar has no side effect, so its answers may be read in any order (checked once a tick step)
 let RAC = null;
-function relAll(){ if (RAC !== null && RAC.R === S.rel && RAC.t === tickSess && RAC.K === S.nations.length) return RAC.ok;
+function relAll(){ if (RAC !== null && RAC.R === S.rel && (RAC.ok || RAC.t === tickSess) && RAC.K === S.nations.length) return RAC.ok;   // (once every pair has its entry it keeps it: entries are never removed)
   const K = S.nations.length; let ok = true; for (let a = 0; a < K && ok; a++) for (let b = a + 1; b < K; b++) if (!S.rel[rkeyC(a, b)]){ ok = false; break; }
   RAC = {R:S.rel, t:tickSess, K, ok}; return ok; }
 const opinion = (a, b) => Math.max(-100, Math.min(100, opinionParts(a, b).reduce((s0, x) => s0 + x[1], 0)));
@@ -69,7 +69,7 @@ function setRel(a, b, st, days = null, by = null){
 // a force left standing in land it may not be in (peace, or too small to capture) walks to its nearest own province
 function sendHome(a){ const seen = new Set([a.at]), q = [a.at]; let dest = -1;
   for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === a.owner){ dest = v; break; } q.push(v); }
-  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (pth.length){ a.path = pth; if (a.dest) a.dest = null; a.forced = true; return true; } atMove(a, dest); a.path = []; if (a.pos) a.pos = null; if (a.dest) a.dest = null; delete a.sail; return true; } return false; }
+  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (a.wp) delete a.wp; if (pth.length){ a.path = pth; if (a.dest) a.dest = null; a.forced = true; return true; } atMove(a, dest); a.path = []; if (a.pos) a.pos = null; if (a.dest) a.dest = null; delete a.sail; return true; } return false; }
 function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.path.length || !count(a) || G.P[a.at].sea || shipsN(a)) continue;
     const o = S.owner[a.at]; if (o === a.owner) continue;
     const peaceful = o >= 0 && !atWar(a.owner, o) && !['pass', 'ally'].includes(rel(a.owner, o).st);
@@ -83,7 +83,7 @@ function evict(n, host){
     if (S.owner[a.at] !== host) continue;
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-    if (dest >= 0){ atMove(a, dest); a.to = null; a.t = 0; a.path = []; if (a.pos) a.pos = null; if (a.legFrom) a.legFrom = null; if (a.dest) a.dest = null; delete a.sail; } else for (const t of UT) a.u[t] = 0; }
+    if (dest >= 0){ atMove(a, dest); a.to = null; a.t = 0; a.path = []; if (a.pos) a.pos = null; if (a.legFrom) a.legFrom = null; if (a.dest) a.dest = null; if (a.wp) delete a.wp; delete a.sail; } else for (const t of UT) a.u[t] = 0; }
   removeEmpty();
 }
 // crossing a peaceful border or striking a nation you are not at war with starts the war at once
@@ -101,8 +101,11 @@ function surpriseWar(a, b){ if (a === b || atWar(a, b)) return;
     else if (borders(me, a) || borders(me, b)) tell(me, `${S.nations[a].name} launched a surprise attack on ${S.nations[b].name}.`, '', null); }
   relVer++; }
 // a route that ignores peace borders, and the nations it would violate
+// (ground forces board ships only in a naval port of their own or a friend's, as in pathFor: rules/movement.js embarkWhy)
 function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].sea || S.owner[v] !== SEA) && (!so || G.P[v].sea || (v === to && portOk(a.owner, v)));
-  const pth = findPath(from, to, ok, pathMT(a), a.owner); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
+  const pe = [], emb = so || a.air ? null : u => { let r = pe[u]; if (r === undefined) r = pe[u] = portOk(a.owner, u); return r; };
+  if (emb && G.P[to].sea && !G.P[from].sea && !emb(from)) return {pth:[], viol:[]};
+  const pth = findPath(from, to, ok, pathMT(a), a.owner, emb); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
   return {pth, viol}; }
 function declareWar(a, b){
   if (a === b || atWar(a, b) || S.decl.some(d => d.by === a && d.to === b)) return false;

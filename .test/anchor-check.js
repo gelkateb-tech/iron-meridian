@@ -1,6 +1,6 @@
-// Objective measuring harness for army counters and the forces' pictures (unit display by zoom: zoomed out a diamond on each force's spot, zoomed in
-// the force's pictures with a flag tag pinned above them, cross-faded over one band of zoom; 'plates' below are the counters, the diamond or the
-// tag, whichever leads at that zoom, keyed apart; 'models' are the pictures, or the 3D models standing in for types without one). Read-only: it drives the view through the game's own wheel
+// Objective measuring harness for army counters and the forces' pictures (unit display by zoom: zoomed out a square badge on each force's spot, zoomed in
+// the force's pictures with the same badge pinned above them, cross-faded over one band of zoom; 'plates' below are the counters, the far badge or the
+// pinned one, whichever leads at that zoom, keyed apart; 'models' are the pictures, or the 3D models standing in for types without one). Read-only: it drives the view through the game's own wheel
 // handler and camGo, and reads the file:// hooks (__im.hits, __im.TM.dbg, window.__dbgBoxes); it never edits the game.
 //   node .test/anchor-check.js [W H dpr]      (default 1440 900 1; runs with the Battery saver off, SAVER=on to try it on)
 // prints JSON {metrics..., fails:[...]} and exits 1 when any check fails.
@@ -11,7 +11,7 @@
 //  (1) ANCHOR       every visible (alpha > 0.2) plate's pin and model's foot stays on one world point (> 1 world px, or > 2 css px at
 //                   the zoom it is drawn at, fails)
 //  (P) CONTAINMENT  every plate pin and model foot inside its own province (or on its path while moving; parked air: its base)
-//  (9) PLATES     two counters never cover each other: diamonds measured by their own shape (corner to corner), tags by their boxes
+//  (9) PLATES     two counters never cover each other: far badges measured by their own squares, pinned badges by their boxes
 //  (G) GAP          the gap between a flag tag's bottom and the top of its group stays 4-16 css px at every zoom models show (the diamond
 //                   stands on its group's middle and fades out as the pictures fade in: it is left out of (G) and of covering its own group)
 //  (D) DEPTH        stacks with >= 3 unit classes show >= 3 distinct models at max zoom
@@ -29,7 +29,8 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
 const HPMIN = 6, HPMAX = 240;
 const LIM = { worldPx: 1, scrPx: 2, gap: [4, 16], tankLen: 75, solTall: 40, solMin: 15, tankMin: 27, depart: 3, battleGap: 8, jitter: 0.5, grow: 1,
   plateOv: 0.03, barGap: 2, groupOv: 0.12, coverOv: 0.10, hudA: 0.3, togetherA: 0.06, departOv: 0.25, ownTol: 10 };   // (ownTol: a model is misread only when another counter is clearly nearer: by more than ~a third of a plate)
-const ALLOW = { inf: ['sol', 'hmv'], para: ['sol'], spec: ['sol'], at: ['sol'], jam: ['hmv', 'truck'], ifv: ['ifv'], tank: ['tank'], art: ['art'], mlrs: ['mlrs'], sam: ['sam'],
+const SQUAD = new Set(['sol', 'sat', 'ssf']);   // (the infantry squads: 3D soldiers, measured by their height)
+const ALLOW = { inf: ['sol', 'hmv'], para: ['sol'], spec: ['ssf'], at: ['sat'], jam: ['hmv', 'truck'], ifv: ['ifv'], tank: ['tank'], art: ['art'], mlrs: ['mlrs'], sam: ['sam'],
   frig: ['frig'], sub: ['sub'], crui: ['crui'], carr: ['carr'], jet: ['jet'], bomb: ['jet'], mpa: ['jet'], awacs: ['jet'], int: ['int'], asf: ['int'], heli: ['heli'],
   drone: ['drone'], sdrone: ['drone'], swarm: ['drone'] };
 const r2 = v => Math.round(v*100)/100, r1 = v => Math.round(v*10)/10;
@@ -155,7 +156,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     for (const c of caps){ const grp = {}; for (const m of c.models) if (!m.air) (grp[m.id] = grp[m.id] || []).push(m);
       for (const [id, g] of Object.entries(grp)){ const al = g.map(m => m.a); tn++; if (Math.max(...al) - Math.min(...al) > LIM.togetherA){ tbad++; if (tex.length < 5) tex.push(`${c.mode}@${r1(c.hp)} ${id}: ${g.map(m => m.t + ' ' + r2(m.a)).join(', ')}`); }
         for (const m of g){ if (m.a <= 0.2) continue; const h = m.box[3] - m.box[1], L = m.len || Math.max(m.box[2] - m.box[0], h);   // (a picture: its drawn length)
-          if ((m.t === 'sol' && h < LIM.solMin) || (m.t === 'tank' && L < LIM.tankMin)){ small++; if (sex.length < 4) sex.push(`${c.mode}@${r1(c.hp)} ${m.k} ${r1(m.t === 'sol' ? h : L)} px`); } }
+          if ((SQUAD.has(m.t) && h < LIM.solMin) || (m.t === 'tank' && L < LIM.tankMin)){ small++; if (sex.length < 4) sex.push(`${c.mode}@${r1(c.hp)} ${m.k} ${r1(SQUAD.has(m.t) ? h : L)} px`); } }
         const vis0 = g.filter(m => m.a > 0.2); if (!vis0.length || g.some(m => m.mv || m.cut)) continue;   // (a group partly off screen draws only its pictures on screen: its top is not measured)
         const pl = c.plates.find(q => q.own.includes(+id) && q.a > 0.2 && q.tag); if (!pl || !VIS(pl.r)) continue;   // (the flag tag: the diamond stands on its pictures' middle and fades out as they fade in)
         const top = Math.min(...vis0.map(m => m.box[1])), gap = top - pl.r[3]; n++; gaps.push(gap);
@@ -177,9 +178,9 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
   // (9) PLATES OVER PLATES, (10) OVER YOUR HQ, (11) BATTLE BAR beside its counter
   { let pairs = 0, bad = 0, worst = 0, hqBad = 0, hqN = 0, barN = 0, barBad = 0; const ex = [], hqEx = [], barEx = [];
     for (const c of caps){ const pl = c.plates.filter(q => VIS(q.r) && !q.mv && q.a > 0.2);
-      // (two diamonds overlap by their own shape: how far they reach into each other along both axes, as a share of a diamond's width; their boxes'
-      // corners may meet. A flag tag by its box)
-      const DIA = PHONE ? 32 : 28, dov = (p, q) => { const d = ((p.d || DIA) + (q.d || DIA))/2; return Math.max(0, d - Math.abs(p.c[0] - q.c[0]) - Math.abs(p.c[1] - q.c[1]))/d; };
+      // (two far badges overlap by their own squares (not their boxes with the marks): the area they share as a share of the smaller square.
+      // A badge pinned over its pictures by its box)
+      const SQ = PHONE ? 36 : 32, dov = (p, q) => { const a = p.d || SQ, b = q.d || SQ, h = (a + b)/2, ox = Math.max(0, h - Math.abs(p.c[0] - q.c[0])), oy = Math.max(0, h - Math.abs(p.c[1] - q.c[1])); return Math.min(ox, a, b)*Math.min(oy, a, b)/Math.min(a, b)**2; };
       for (let i = 0; i < pl.length; i++) for (let j = i + 1; j < pl.length; j++){ pairs++; const f = !pl[i].tag && !pl[j].tag ? dov(pl[i], pl[j]) : ov(pl[i].r, pl[j].r)/Math.max(1, Math.min(area(pl[i].r), area(pl[j].r))); if (f > worst) worst = f;
         if (f > LIM.plateOv){ bad++; if (ex.length < 6) ex.push(`${c.mode}@${r1(c.hp)} ${pl[i].k} / ${pl[j].k} ${Math.round(f*100)}%`); } }
       if (c.hq) for (const q of pl){ hqN++; if (ov(q.r, c.hq) > 0){ hqBad++; if (hqEx.length < 6) hqEx.push(`${c.mode}@${r1(c.hp)} ${q.k}`); } }

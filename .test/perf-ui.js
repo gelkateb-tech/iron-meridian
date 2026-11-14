@@ -30,7 +30,7 @@ function aggregate(prof){ const byId = new Map(); prof.nodes.forEach(n => byId.s
   await p.goto('file://' + (path.isAbsolute(PAGE) ? PAGE : path.join(__dirname, PAGE))); await p.waitForTimeout(800);
   if (await p.locator('[data-act="pickscn"][data-k="world64"]').count()) await p.click('[data-act="pickscn"][data-k="world64"]');
   const pk = await p.evaluate(nm => { const L = SCENARIOS.world64.powers, i = L.findIndex(P => P.name === nm); return {i, region:i >= 0 ? L[i].region : null}; }, WHO);
-  await p.click(`[data-act="pickreg"][data-k="${pk.region}"]`); await p.click(`[data-act="pick"][data-p="${pk.i}"]`); await p.click('[data-act="begin"]'); await p.waitForTimeout(1500);
+  await p.click(`[data-act="pick"][data-p="${pk.i}"]`); await p.click('[data-act="begin"]'); await p.waitForTimeout(1500);
   await p.click('[data-act="start"]'); await p.waitForTimeout(2500);
   // rules time in the page: every tickQ timed (the game loop and __im.tick both call the global tickQ, so wrapping it changes nothing but adds a clock)
   // (the page's game loop calls tickQSlice where it exists: an hour may run over several frames; T.s holds each frame's share, T.h whole hours)
