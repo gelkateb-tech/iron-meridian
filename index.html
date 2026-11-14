@@ -172,6 +172,13 @@ main{grid-column:2; grid-row:2; min-height:0; min-width:0; display:grid; grid-te
 #zglobe[aria-pressed="true"]{color:var(--accent); background:rgba(79,208,222,.14)}
 #hint{position:absolute; top:auto; bottom:10px; left:50%; transform:translateX(-50%); max-width:calc(100% - 20px); padding:6px 12px; border-radius:4px; background:rgba(56,61,64,.88); border:1px solid var(--line); font-size:12.5px; color:var(--fg); pointer-events:none; text-align:center}
 #hint:empty{display:none}
+#hint .hb{pointer-events:auto; font:inherit; font-weight:700; margin:0 2px; padding:2px 10px; border-radius:4px; border:1px solid var(--line); background:#2b3c43; color:var(--fg); cursor:pointer; min-height:24px}
+#hint .hb:hover{background:#34494f}
+#hint:has(.hb){pointer-events:none}
+.cs-rl{display:flex; align-items:center; gap:8px; padding:4px 10px 2px; flex-wrap:wrap; font-size:12.5px}
+.cs-rl button{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:3px 12px; border-radius:4px; border:1px solid rgba(143,163,170,.4); background:rgba(43,72,79,.95); color:#f3ead2; font:inherit; font-weight:700; cursor:pointer}
+.cs-rl .cs-rt{display:inline-flex; align-items:center; gap:6px; flex:1 1 auto; min-width:0} .cs-rl .cs-rt svg{color:#e2a23d; flex:none} .cs-rl .cs-rn{opacity:.7}
+.rallyrow{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
 @media (min-width:761px){ #mapwrap:has(#tut:not([hidden])) #hint{left:calc(68px + min(360px, 100% - 70px)); transform:none; max-width:calc(100% - 80px - min(360px, 100% - 70px))} }   /* the tutorial card sits bottom left: the hint moves beside it instead of under it */
 @media (max-width:760px){ #mapwrap:has(#tut:not([hidden])) #hint{top:auto !important; bottom:48px} }   /* phones: the card is at the top, the hint goes low */
 #cmdbar{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:5; display:flex; gap:4px; padding:5px; border-radius:8px; background:linear-gradient(180deg, rgba(63,68,71,.9), rgba(57,62,65,.94)), var(--tex) center / cover, rgba(58,63,66,.94); border:1px solid rgba(255,255,255,.12); box-shadow:0 8px 24px rgba(0,0,0,.45)}
@@ -4798,7 +4805,7 @@ const ovlOn = k => mapOvl[k] && polMode();
 // trade routes show while one of your fleets is selected (so you see what to raid or blockade), and blockaded routes always (red, with the blockade icon)
 const tradeOn = () => sel.army != null && (a => !!a && a.owner === PLAYER && !a.air && shipsN(a) > 0)(armyById(sel.army));
 const sel = {army:null, prov:null, target:null, group:[], foe:null};   // foe: a foreign force you tapped (its read-only army bar)
-let boxSel = null, rallyFor = null, aimMsl = null;
+let boxSel = null, rallyFor = null, rallyPick = null, aimMsl = null;   // rallyFor: the city whose rally point is being set; rallyPick: the spot tapped but not yet confirmed {p}
 let targetPath = null;
 function rgba(hex, a){ const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
 function resize(){
@@ -7957,6 +7964,7 @@ function draw(now){ draw.now = now;
     if (sel.target !== null && targetPath && targetPath.length){ drawPath(sa, targetPath, 'rgba(243,234,210,0.95)', 3, sel.targetPt); if (!sa.air){ riverMarks(sa, targetPath); railMarks(sa, targetPath); } }
     else if (hoverPath && hoverPath.length) drawPath(sa, hoverPath, 'rgba(243,234,210,0.6)', 2.4); };
   wrapEach(() => drawSelPaths(0), 40 + 120/view.s); drawRange(0);
+  try { drawRally(now); } catch (e) { if (!drawRally.err){ drawRally.err = 1; console.warn('rally', e); } }
   BFX.pts.clear();   // this frame's figures in battles (filled as they are drawn)
   try { drawBuildings(hexPx, now, kl, boxes0); } catch (e) { if (!drawBuildings.err){ drawBuildings.err = 1; console.warn('building models', e); } }   // the buildings at their cities, under the troop models, the names and the counters
   ovIn(); try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, HQ, paths and counters drawn below
@@ -8333,7 +8341,7 @@ cv.addEventListener('pointermove', e => {
     zoomAt(pinch.s*(d/pinch.d)/view.s, (a.x + b.x)/2, (a.y + b.y)/2); return; }
   if (boxSel){ boxSel.x1 = x; boxSel.y1 = y; showBox(); return; }
   if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > drag.slop) drag.moved = true; if (drag.moved && drag.unit != null){ closeChooser(); tipHide(); udrag = {id:drag.unit, x, y}; return; } if (drag.moved){ closeChooser(); view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
-  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
+  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; if (rallyFor !== null) redraw(); const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && cmdMode && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
 });
 function endPointer(e){
   const [x, y] = localXY(e);
@@ -8406,6 +8414,7 @@ function tap(x, y, shift = false, long = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   if (tip.classList.contains('dugtip')) tipHide();
   { const dh = dugHitAt(x, y); if (dh && !cmdMode && !aimMsl && dropFor === null && rallyFor === null && (sel.army === null || dh.own)){ closeChooser(); dugTip(x, y, true); return; } }   // a tap (or a long press) on the dug-in shield explains it; the rest of the badge still opens the army bar
+  if (rallyFor !== null){ closeChooser(); rallyTap(x, y); return; }   // setting a rally point: a tap picks the spot (a second tap on it, or Set, confirms)
   closeChooser(); lastClickW = screenToWorld(x, y); const TL = tapList();   // (the counters, the stacked ones beside them and the pictures)
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
   const hs = TL.length !== hits.length && TL.find(h => h.sat && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);   // (a counter stacked beside another stands where it does to be tapped: it wins over a city's point under it)
@@ -8414,7 +8423,13 @@ function tap(x, y, shift = false, long = false){
   const mk = hs || core ? null : cityAt(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
-      const p = provAt(x, y); if (p >= 0 && !(a.to === null && p === a.at && !a.air)){ setTarget(a, p); if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } } return; }
+      const p = provAt(x, y); if (p < 0) return;
+      if (shift && !a.air){ stopTap(a, p, x, y); return; }   // Shift on a desktop, inside Move: one more stop
+      if (a.to === null && p === a.at && !a.air){ if (!G.P[p].sea || shipsOnly(a)) spotMove(a, p, screenToWorld(x, y)); return; }   // (a spot in its own province or sea zone: it walks, or sails, there)
+      setTarget(a, p);
+      if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
+        if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; } }   // (a likely defeat waits for a second look)
+      if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
   if (!cityTap) for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
       if (mk && !h.ids.some(id => { const a = armyById(id); return a && a.at === mk.p; })) break;
@@ -8429,39 +8444,22 @@ function tap(x, y, shift = false, long = false){
         return;
       }
       const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0);
-      // with one of yours selected, a tap on a foe is the order (Conflict of Nations): in range it fires from where it stands (Bombard), else it
-      // marches on it and pursues it (a.chase); a likely defeat or a war to declare waits for a second look in the panel, as a tap on its province
-      if (foe && sel.army !== null){ const a = armyById(sel.army); if (a && !a.air && a.owner === PLAYER){ if (long) return; setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; if (bombardTry(a)) return;
-        const t = sel.target, foes = stationaryAt(t).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
-        if (!(targetPath && targetPath.length) || (foes.length && odds(a, t, foes, undefined, viaOf(a)) < 0.9) || (sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)))){ renderSide(true); return; }
-        sendToTarget(a, true); return; } }
-      if (foe && !h.unk && !cmdMode && sel.army === null && !shift && armyVisible(foe, visibleSet(PLAYER))){ selectFoe(foe.id); return; }   // a foreign force you can see: its read-only army bar
+      // a tap on a foe never gives an order (only Move or Attack does: the command bar): it opens its read-only army bar
+      if (foe && !h.unk && !cmdMode && !shift && armyVisible(foe, visibleSet(PLAYER))){ selectFoe(foe.id); return; }   // a foreign force you can see: its read-only army bar
       break;
     } }
   const p = mk ? mk.p : provAt(x, y);
   if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
-  if (p < 0 || (G.P[p].sea && sel.army === null)){ clearSel(); return; }
+  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (a){
-    if (long) return;   // a long press is no order (a resting finger)
-    if ((shift || wpMode) && !a.air){ stopTap(a, p, x, y); return; }   // the Waypoint button on (or Shift on a desktop): one more stop
-    if (a.to === null && p === a.at && !a.air && (!G.P[p].sea || shipsOnly(a)) && sel.target === null){ const w0 = screenToWorld(x, y), cur = a.sail ? a.sail.nx || a.sail.to : a.pos || [G.P[p].x, G.P[p].y], [cx, cy] = toScreen(cur[0], cur[1]);   // (anywhere in its province or sea zone: it walks, or sails, there)
-      if (Math.hypot(cx - x, cy - y) > 14){ spotMove(a, p, w0); return; } clearSel(); return; }   // (on its own spot or the end of its walk: released)
-    if (a.to === null && p === a.at){ selectProv(p); return; }
-    if (sel.target === p && a.air){ sendToTarget(a); return; }
-    if (sel.target === p){ if (bombardTry(a)) return;   // in range: tapping the target again bombards it (the force stays where it is)
-      const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner)); if (odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: press Attack anyway in the panel if you really mean it.', 'bad', null); return; } sendToTarget(a); return; }
-    if (!a.air && atPlanEnd(a, x, y)){ clearSel(); return; }   // a second tap on the destination it already has: released (the order stands)
-    setTarget(a, p);
-    // Conflict of Nations: the tap IS the order (to that exact point), the force stays selected with its route drawn. A likely defeat waits for a
-    // second look (the plan and its odds in the panel: press Attack anyway); a surprise attack asks first (sendToTarget)
-    if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
-      if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; }
-      sendToTarget(a, true); return; }
-    // tap that is not a valid order target (a land force and a province it can never reach, not merely a diplomatic block, which the plan panel explains) = tap away: deselect
-    if (!a.air && !(targetPath && targetPath.length) && canEnter(PLAYER, p)){ const why = embarkWhy(a, p); if (why){ toast(why, 'bad', null); sel.target = null; targetPath = null; renderSide(true); } else clearSel(); }   // (troops board ships only in a naval port: say so, keep the force selected)
-    return;
+    // a tap is only a selection: it never moves the force (owner's rule). Move or Attack in the command bar (M, K), then a tap, gives the order;
+    // the Waypoint button on makes each tap a stop. Anything else: a city or building tapped opens its panel with the force deselected, empty land deselects
+    if (long) return;   // a long press is no tap (a resting finger)
+    if (wpMode && !a.air){ stopTap(a, p, x, y); return; }
+    if (mk){ selectProv(p); csReveal(p); return; }
+    clearSel(); return;
   }
   selectProv(p); csReveal(p);
 }
@@ -8475,13 +8473,63 @@ function finishBox(){
   if (!ids.length){ clearSel(); return; }
   if (tab !== 'cmd') setTab('cmd'); sel.prov = null; sel.target = null; targetPath = null; sel.army = ids[0]; sel.group = ids.length > 1 ? ids : []; renderSide(true);
 }
+// RALLY POINT (owner's rule): new units stay in their city unless it has a rally point. The city sheet's Rally point button starts the mode (rallyFor):
+// a tap on the map picks a spot (rallyPick) and shows a ghost soldier walking the real route from the city to it (drawRally); a second tap on the same
+// spot, or Set in the hint bar, confirms. A set point shows only a small flag on the map (drawRallyFlags), no animation; Clear removes it
+const rallyOf = city => S.rally && S.rally[city] != null && S.owner[city] === PLAYER ? S.rally[city] : null;
+const rallyName = p => G.P[p].cityName || G.P[p].name;
+function rallyStart(city){ rallyFor = city; rallyPick = null; sel.army = null; sel.group = []; sel.target = null; targetPath = null; sel.prov = city; cmdMode = null; wpMode = false; renderSide(true); redraw(); }
+function rallyCancel(){ rallyFor = null; rallyPick = null; renderSide(true); redraw(); }
+function rallyWhy(city, p){   // why p cannot be this city's rally point ('' when it can)
+  if (p === city) return 'Units already stay in the city. Tap another spot, or press Cancel.';
+  if (G.P[p].sea || !canEnter(PLAYER, p)) return 'Rally points must be on land you can enter.';
+  if (!rallyRoute(city, p).length) return 'No land route from there to that spot.';
+  return ''; }
+function rallyTap(x, y){ const city = rallyFor, m = cityAt(x, y), p = m ? m.p : provAt(x, y); if (p < 0) return;
+  const why = rallyWhy(city, p); if (why){ toast(why, 'bad', null); return; }
+  if (rallyPick && rallyPick.p === p){ setRally(city, p); return; }   // a second tap on the same spot confirms
+  rallyPick = {p}; renderSide(true); redraw(); }
+// the route preview while a spot is tapped (or hovered): the dashed route city -> spot and a ghost soldier walking it again and again
+function drawRally(now){
+  if (S && S.rally && !(typeof GLOBE !== 'undefined' && GLOBE && GLOBE.on())){ for (const k in S.rally){ const city = +k, t = rallyOf(city); if (t == null) continue; if (rallyFor === city) continue;   // (a point being changed shows its new route instead)
+      wrapEach(() => rallyFlag(city, t, now), 30); } }
+  if (rallyFor === null) return; const tgt = rallyPick ? rallyPick.p : (hoverProv >= 0 && lastPT === 'mouse' ? hoverProv : -1); if (tgt < 0 || rallyWhy(rallyFor, tgt)) return;
+  const city = rallyFor, path = rallyRoute(city, tgt); if (!path.length) return;
+  const pts = [[G.P[city].x, G.P[city].y]].concat(path.map(q => [G.P[q].x, G.P[q].y]));
+  wrapEach(() => { const sp = pts.map(q => toScreen(q[0], q[1])); let len = 0; const seg = [0]; for (let i = 1; i < sp.length; i++){ len += Math.hypot(sp[i][0] - sp[i - 1][0], sp[i][1] - sp[i - 1][1]); seg.push(len); } if (len < 2) return;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(sp[0][0], sp[0][1]); for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i][0], sp[i][1]);
+    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.stroke(); ctx.setLineDash([8, 6]); ctx.lineDashOffset = -(now/40 % 14); ctx.lineWidth = 3; ctx.strokeStyle = rallyPick ? 'rgba(226,162,61,.98)' : 'rgba(243,234,210,.75)'; ctx.stroke(); ctx.setLineDash([]);
+    const T = Math.max(2200, Math.min(9000, len*22)), u = (now % (T + 600))/T, k = Math.min(1, u), d = k*len; let i = 1; while (i < seg.length - 1 && seg[i] < d) i++;
+    const f = (d - seg[i - 1])/Math.max(1e-6, seg[i] - seg[i - 1]), gx = sp[i - 1][0] + (sp[i][0] - sp[i - 1][0])*f, gy = sp[i - 1][1] + (sp[i][1] - sp[i - 1][1])*f, ang = Math.atan2(sp[i][1] - sp[i - 1][1], sp[i][0] - sp[i - 1][0]);
+    if (u < 1.0){ ghostSoldier(gx, gy, ang, now, Math.min(1, k*6, (1 - k)*6 + 0.25)); }
+    const e = sp[sp.length - 1]; rallyFlagAt(e[0], e[1], rallyPick ? 1 : 0.6, false); ctx.restore(); }, 40 + 120/view.s);
+  animFast(); }
+// a small translucent soldier (the ghost): a round badge in your colour with a walking figure, bobbing along its heading
+function ghostSoldier(x, y, ang, now, a){ const bob = Math.sin(now/110)*1.6, c = mapCol(PLAYER);
+  ctx.save(); ctx.globalAlpha = 0.82*a; ctx.fillStyle = 'rgba(14,19,21,.8)'; ctx.beginPath(); ctx.arc(x, y - 2, 11.5, 0, Math.PI*2); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = c; ctx.stroke();
+  ctx.translate(x, y - 2 + bob*0.5); ctx.strokeStyle = '#f3ead2'; ctx.fillStyle = '#f3ead2'; ctx.lineWidth = 1.9; ctx.lineCap = 'round';
+  const sw = Math.sin(now/110)*3.2, dir = Math.cos(ang) < 0 ? -1 : 1; ctx.scale(dir, 1);
+  ctx.beginPath(); ctx.arc(0, -6, 2.3, 0, Math.PI*2); ctx.fill();   // head
+  ctx.beginPath(); ctx.moveTo(0, -3.6); ctx.lineTo(0, 2.4); ctx.moveTo(0, -2); ctx.lineTo(3.4 + sw*0.3, 0.6); ctx.moveTo(0, -2); ctx.lineTo(-3 - sw*0.3, 0.8); ctx.moveTo(0, 2.4); ctx.lineTo(sw, 7); ctx.moveTo(0, 2.4); ctx.lineTo(-sw, 7); ctx.stroke();
+  ctx.restore(); }
+// the small flag of a set rally point: a pole and a pennant in your colour on the point (no animation)
+function rallyFlagAt(x, y, a, ring){ ctx.save(); ctx.globalAlpha = a; const c = mapCol(PLAYER);
+  ctx.fillStyle = 'rgba(3,6,8,.55)'; ctx.beginPath(); ctx.ellipse(x, y, 5, 2, 0, 0, Math.PI*2); ctx.fill();
+  ctx.lineWidth = 3.6; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 19); ctx.stroke(); ctx.lineWidth = 1.7; ctx.strokeStyle = '#f3ead2'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y - 19); ctx.lineTo(x + 12, y - 15.5); ctx.lineTo(x, y - 11.5); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke();
+  ctx.restore(); }
+function rallyFlag(city, t, now){ const P = G.P[t]; if (!P) return; const [x, y] = toScreen(P.x, P.y); if (x < -30 || y < -40 || x > cw + 30 || y > ch + 30) return; rallyFlagAt(x, y, 1, false); }
 function setRally(city, p){
-  rallyFor = null; S.rally = S.rally || {};
-  if (p === city){ delete S.rally[city]; toast(`Rally point cleared for ${G.P[city].cityName}.`, 'info', city); }
-  else if (G.P[p].sea || !canEnter(PLAYER, p)) toast('Rally points must be on land you can enter.', 'bad', null);
-  else { S.rally[city] = p; toast(`New units from ${G.P[city].cityName} will march to ${G.P[p].cityName || G.P[p].name}.`, 'info', p); }
-  sel.prov = city; renderSide(true);
-}
+  const why = rallyWhy(city, p); if (why){ toast(why, 'bad', null); return; }
+  S.rally = S.rally || {}; S.rally[city] = p; rallyFor = null; rallyPick = null; sfx('order');
+  toast(`Rally point set: new units from ${G.P[city].cityName} will march to ${rallyName(p)}.`, 'info', null); sel.prov = city; renderSide(true); redraw(); }
+function clearRally(city){ if (S.rally) delete S.rally[city]; rallyFor = null; rallyPick = null; toast(`Rally point cleared for ${G.P[city].cityName}.`, 'info', null); sel.prov = city; renderSide(true); redraw(); }
+// the real route a new unit would walk (a motorized infantry force of yours, as the rules' orderMove sends it); cached by city and spot
+const RALLYR = {k:'', path:[]};
+function rallyRoute(city, p){ const k = city + '>' + p + ':' + (S.hour | 0) + ':' + (S.owner[p] | 0); if (RALLYR.k === k) return RALLYR.path;
+  const fake = {owner:PLAYER, at:city, to:null, path:[], u:{}, w:{}}; for (const t of UT){ fake.u[t] = 0; fake.w[t] = 0; } fake.u.inf = 1;
+  let path = []; try { path = pathFor(fake, city, p) || []; } catch (e) {}
+  RALLYR.k = k; RALLYR.path = path; return path; }
 let lastClickW = null;
 // the exact point a move order goes to in province p, from the tap w (canonical world x, screenToWorld): on dry land in a land province and on
 // water in a sea zone (as the coast is drawn: isWet), else the nearest such point of p within about 200 km; the rules keep it inside p
@@ -8580,7 +8628,7 @@ function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
   if (id !== sel.army) wpMode = false; sel.group = []; sel.foe = null; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 function selectFoe(id){ wpMode = false; if (tab !== 'cmd') setTab('cmd'); sel.group = []; sel.army = null; sel.prov = null; sel.target = null; sel.foe = id; targetPath = null; hoverPath = null; renderSide(true); }
-function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); wpMode = false; sel.group = []; sel.foe = null; CS.det = false; if (rallyFor !== null){ setRally(rallyFor, p); return; }
+function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); wpMode = false; sel.group = []; sel.foe = null; CS.det = false; if (rallyFor !== null){ rallyFor = null; rallyPick = null; }
   if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (G.P[p].city) ftipAsk('city'); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 let sideOpen = false;   // phones: the command panel opened by hand (advisor shield, dispatches), until closed or the selection clears
 function sideSync(){ const phone = innerWidth <= 820, b = document.body; if (!phone){ if (b.classList.contains('side-on')) b.classList.remove('side-on'); return; }
@@ -8595,7 +8643,7 @@ function sideReveal(id){ setTimeout(() => requestAnimationFrame(() => { if (inne
   const sd = $('side'), cb = $('cmdbar'), cr = cv.getBoundingClientRect(); let top = sd.getBoundingClientRect().top - cr.top; if (cb && !cb.hidden) top = Math.min(top, cb.getBoundingClientRect().top - cr.top);
   const [ax, ay] = armyPos(a), [, sy] = toScreen(ax, ay); if (top < 140 || sy < top - 50) return;
   const [cx] = screenToWorld(cw/2, ch/2); camGo(cx, ay + (ch/2 - top*0.45)/view.s, view.s); }), 120); }
-function clearSel(){ wpMode = false; cmdMode = null; sel.group = []; sel.foe = null; rallyFor = null; aimMsl = null; sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
+function clearSel(){ wpMode = false; cmdMode = null; sel.group = []; sel.foe = null; rallyFor = null; rallyPick = null; aimMsl = null; sel.army = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 
 /* ---------------- Tooltip ---------------- */
 const tip = document.getElementById('tip');
@@ -8887,6 +8935,7 @@ function mainChip(p){ const o = cityOut(p); if (!o) return ''; const A = BUILD.a
   return `<span class="cs-main res-${o.k}" title="Main resource: ${MAIN_NAME[o.k]}, ${mainOutTxt(o)} a day.&#10;${A.name}${o.lv ? ' ' + ROMAN[o.lv] + ': +' + Math.round(ARMS_PCT*100*o.lv) + '% of it' : ': +' + Math.round(ARMS_PCT*100) + '% of it per level'}.">${icon(o.k, 12)}<b>${o.k === 'rare' ? 'Rare mat.' : cap1(MAIN_NAME[o.k])}</b></span>`; }
 const csMobIdle = p => UT.some(t => !canMobilize(PLAYER, p, t)) || S.bld[p].rec ? 'Nothing in training' : `No ${BUILD.rec.name}`;
 const CS_ICO = {
+  flag:`<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><g fill="currentColor"><rect x="4" y="2" width="1.8" height="16" rx=".9"/><path d="M5.8 3.2h10l-2.6 3.6 2.6 3.6h-10z"/></g></svg>`,
   bld:`<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><path d="M15 18h7.4v4.2H15zM23.6 18H31v4.2h-7.4zM19.3 23.4h7.4v4.2h-7.4zM15 23.4h3.1v4.2H15zM27.9 23.4H31v4.2h-3.1zM15 28.8h7.4V31H15zM23.6 28.8H31V31h-7.4zM19.3 12.6h7.4v4.2h-7.4z"/>
     <g transform="rotate(-42 11 12)"><rect x="9.4" y="8" width="3.2" height="21" rx="1.2"/><path d="M3 2.4h13.4l2.6 2.4v4.8H3z"/></g></g></svg>`,
   dip:`<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><rect x="5" y="3" width="2.4" height="27" rx="1"/><path d="M7.4 4.4c4.4-2 8.2 2 12.6 0s6-1.4 7.6-.4v12.4c-1.6-1-3.8-1.6-7.6.2s-8.2-2-12.6 0z"/></g></svg>`,
@@ -8938,7 +8987,8 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
   const cards = (P.city ? card('city', lv, {btn:true}) : '') + built.map(k => card(k, S.bld[p][k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
-  return `${acts}<div class="cs-body">${ban}${stat}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
+  const rl = mine && P.city ? (rallyOf(p) != null ? `<div class="cs-rl"><span class="cs-rt" title="New units from ${name} walk to ${rallyName(rallyOf(p))}">${CS_ICO.flag}<span>Rally point: <b>${rallyName(rallyOf(p))}</b></span></span><button data-act="rally" data-id="${p}">Change</button><button data-act="rally-clear" data-id="${p}">Clear</button></div>` : `<div class="cs-rl"><button class="cs-rb" data-act="rally" data-id="${p}" title="New units from ${name} will walk to a spot you pick on the map">${CS_ICO.flag}<span>Rally point</span></button><span class="cs-rn">New units stay in the city</span></div>`) : '';
+  return `${acts}<div class="cs-body">${ban}${stat}${rl}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
 function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWanted(), phone = innerWidth <= 820, on = p >= 0 && !(CS.det && phone);
   document.body.classList.toggle('cs-on', on); document.body.classList.toggle('cs-det', p >= 0 && CS.det && phone);
   if (!on){ CS.p = -1; if (!el.hidden && !el.classList.contains('out')){ el.classList.add('out'); clearTimeout(CS.t); CS.t = setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, afxReduced() ? 0 : 170); } return; }
@@ -9125,10 +9175,10 @@ function renderSide(force){
   let hint = '';
   const a = sel.army !== null ? armyById(sel.army) : null;
   if (aimMsl) hint = `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${mslOf(PLAYER, aimMsl.k).range*KM_HEX} km). Esc to cancel.`;
-  else if (rallyFor !== null) hint = `Tap where units trained in ${G.P[rallyFor].cityName} should gather.`;
-  else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Tap a province inside the blue ring to plan an air mission.';
+  else if (rallyFor !== null) hint = rallyPick ? `Rally point for ${G.P[rallyFor].cityName}: ${rallyName(rallyPick.p)}. Tap it again or press <button class="hb" data-act="rally-set">Set</button> <button class="hb" data-act="rally-cancel">Cancel</button>` : `Tap the map to set the rally point for ${G.P[rallyFor].cityName} · <button class="hb" data-act="rally-cancel">Cancel</button>`;
+  else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Press the mission button, then tap a province inside the blue ring. Tap empty map or press Esc to deselect.';
   else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
-  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Tap the map to move there, an enemy force in the ring to bombard it. Tap the force again or press Esc to deselect.' : 'Tap the map to move there. Tap the force again (or its destination) or press Esc to deselect.';
+  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
   setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
 }
@@ -9169,9 +9219,9 @@ const TUT_STEPS = [
   {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
   {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Recruit', d:() => `Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.`, el:'#csheet:not([hidden]) .cs-mob, #ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
-  {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
-  {t:'Plan an attack', d:() => tutPick() != null ? `Tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its heart. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
-  {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
+  {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them. Tapping only selects: the army bar opens at the bottom.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
+  {t:'Plan an attack', d:() => tutPick() != null ? `Press <b>Move</b> in the army bar, then tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its heart. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null || S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
+  {t:'Send it', d:() => sel.target !== null ? 'The odds read Likely defeat, so the force waits: merge more units first, or press the yellow button in the panel to attack anyway.' : 'When you have a Favourable target, press Move and tap it to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
   {t:'Dug in', d:() => `A small yellow shield with a sandbag line on a force's badge means it is <b>dug in</b>: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage). A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Each unit has its own line: its unlock, then upgrades. Every project opens on its own day; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
@@ -9740,7 +9790,7 @@ function groupHTML(){
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
     <dl class="kv"><dt>Total strength</dt><dd>${Math.round(pw)}</dd><dt>Saved groups</dt><dd>Ctrl+4…9 to save, 4…9 to recall</dd></dl>
     <div class="armylist">${g.map(a => `<button data-act="gsel" data-id="${a.id}" ${a.id === sel.army ? 'style="border-color:var(--accent)"' : ''}><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span><span class="muted">${pluN(count(a), 'unit')} · ${a.air ? 'air wing' : statusText(a).short}</span></button>`).join('')}</div>
-    <p class="small muted" style="margin:0">Tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>`;
+    <p class="small muted" style="margin:0">Press Move, then tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>`;
 }
 // airframe condition of a wing: bar, repair rate where it is parked and the maintenance warning
 function condHTML(a){ const c = wingCond(a), pc = Math.round(c*100), mr = maintRate(a), B = G.P[a.air.base], col = c > 0.6 ? 'var(--ok)' : c >= WEAR_WARN ? 'var(--accent)' : 'var(--danger)';
@@ -9777,7 +9827,7 @@ function wingHTML(a){
     ${unitRows(a)}${stackLine(a)}
     ${condHTML(a)}
     <dl class="kv">${stackHTML(a)}<dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Speed</dt><dd>${fmtK(Math.round(wingSpd(a)*24*KM_HEX/100)*100)} km/day in flight</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
-    <p class="small muted" style="margin:0">Tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol; UAVs watch, AWACS orbit, patrol planes hunt ships; tapping one of your airbases rebases the wing.</p>
+    <p class="small muted" style="margin:0">Press the mission button, then tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol; UAVs watch, AWACS orbit, patrol planes hunt ships; pressing Rebase and tapping one of your airbases rebases the wing.</p>
     <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button></div>`;
 }
 // ---- split panel: every unit row (damaged units apart), a slider and +/- per row for the group being edited, quick plans, several groups at once
@@ -10018,6 +10068,8 @@ function airGuideHTML(){ const L = uavLv(PLAYER);
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="research-open">Research</button></div>`; }
 // the recruit cards, the missile silo and the construction list of one of your provinces: the side panel (provHTML) and the
 // MOBILIZE UNIT / BUILD panels of the city sheet show the same blocks
+function rallyRowHTML(p){ const r = rallyOf(p);
+  return `<div class="row rallyrow">${r != null ? `<span class="rl-t">Rally point: <b>${rallyName(r)}</b></span><button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px">Change</button><button class="btn" data-act="rally-clear" data-id="${p}" style="font-size:12px;padding:4px 8px">Clear</button>` : `<button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px" title="New units from this city will walk to a spot you pick on the map">Rally point</button><span class="rl-t muted">New units stay in the city</span>`}</div>`; }
 function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html = '';
     const card = t => { const U = UNITS[t];
       const why = canMobilize(PLAYER, p, t) || queueWhy(PLAYER, p);
@@ -10028,7 +10080,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
     html += `<div class="eyebrow">Recruit<span class="rec-b"> · ${queueUsed(p)}/${queueMax(PLAYER)} in training</span>${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
     html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city). <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
-    html += `<div class="row"><button class="btn" data-act="rally" data-id="${p}" style="font-size:12px;padding:4px 8px">${S.rally && S.rally[p] != null ? 'Rally: ' + (G.P[S.rally[p]].cityName || G.P[S.rally[p]].name) + ' (change)' : 'Set rally point'}</button></div>`;
+    html += rallyRowHTML(p);
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}> Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
     return html; }
@@ -10099,7 +10151,10 @@ document.addEventListener('click', e => {
     case 'train-agent': if (trainAgent(PLAYER)) log('A new intelligence agent is ready.', 'good', null); if (modalKind === 'intel' && !$('modal').hidden) setHTML($('sheet'), intelHTML()); renderSide(true); break;
     case 'msl-build': if (sel.prov !== null && buildMissile(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
     case 'msl-aim': if (sel.prov !== null){ if (modalKind === 'cbld' && !$('modal').hidden) closeModal(); aimMsl = {from:sel.prov, k:b.dataset.k}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}.`, 'info', null); renderSide(true); } break;
-    case 'rally': rallyFor = +b.dataset.id; toast('Tap the province new units should march to (tap the city itself to clear).', 'info', null); break;
+    case 'rally': rallyStart(+b.dataset.id); break;
+    case 'rally-clear': clearRally(+b.dataset.id); break;
+    case 'rally-set': if (rallyFor !== null && rallyPick) setRally(rallyFor, rallyPick.p); break;
+    case 'rally-cancel': rallyCancel(); break;
     case 'gsel': sel.army = +b.dataset.id; renderSide(true); break;
     case 'hidesteps': (S.tut || (S.tut = {})).hide = true; renderSide(true); break;
     case 'allpow': showAllPowers = true; renderSide(true); break;
@@ -10330,6 +10385,7 @@ document.addEventListener('keydown', e => { INCC.v = -1;
     if (e.ctrlKey || e.metaKey){ e.preventDefault(); const g = groupArmies().map(a => a.id); if (sel.army !== null && g.length){ S.groups[e.key] = g; toast(`Group ${e.key} saved (${g.length} force${g.length > 1 ? 's' : ''}).`, 'info', null); } }
     else { const ids = (S.groups[e.key] || []).filter(id => armyById(id)); if (ids.length){ sel.prov = null; sel.target = null; sel.army = ids[0]; sel.group = ids.length > 1 ? ids : []; const [wx, wy] = armyPos(armyById(ids[0])); camGo(wx, wy); renderSide(true); } } }
   else if (e.key === 'Escape' && $('chooser') && !$('chooser').hidden){ closeChooser(); }
+  else if (e.key === 'Escape' && rallyFor !== null){ rallyCancel(); }
   else if (e.key === 'Escape' && cmdMode){ cmdMode = null; renderSide(true); }
   else if (e.key === 'Escape' && GLOBE && GLOBE.on() && $('modal').hidden){ GLOBE.exit(); }
   else if ((e.key === 'g' || e.key === 'G') && GLOBE && GLOBE.ok() && $('modal').hidden){ GLOBE.toggle(); }
@@ -10468,14 +10524,14 @@ const TIP_ICO = {
 };
 const tipIco = k => `<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TIP_ICO[k]}</svg>`;
 // the three briefing tips (6 words at most each). The win line follows the real rule: land provinces OR starting capitals.
-const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, then a destination'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
+const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, press Move, tap a destination'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
 // keys, for the small Controls link on the briefing (desktop only) and the manual
 const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual.';
 // the full text of the old briefing, kept in the Field Manual ("Getting started")
 const startHTML = () => { const me = S && S.nations ? S.nations[PLAYER] : null; return `<ul class="qs">
   <li><b>Your goal</b>: ${me ? `you command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${!SCENARIOS[SCN].box ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}. ` : ''}Take independent land, out-produce your rivals and hold ${me ? landNeed(PLAYER) : 'a quarter of the world’s'} land provinces or ${WIN_CAPS} starting capitals.</li>
   <li><b>Recruit</b> in your cities and <b>research</b> new arms; every unit costs money and manpower plus, by type, oil, materials, iron (armor, guns, ships), electronics (aircraft, drones, air defence) and rare materials (advanced arms); research costs money, materials and rare materials, and two projects run at the same time.</li>
-  <li><b>Move</b>: tap a force, then a destination (tap again or press Send). Troops cross water by boarding ships in a naval port (a coastal city of yours): about ${EMBARK_H} h to embark, ${LAND_H} h to land on a coast (${LAND_PORT_H} h into your own port). Roads and railways speed them up.</li>
+  <li><b>Move</b>: tap a force to select it (a tap never moves it), press <b>Move</b> in its bar, then tap a destination. Troops cross water by boarding ships in a naval port (a coastal city of yours): about ${EMBARK_H} h to embark, ${LAND_H} h to land on a coast (${LAND_PORT_H} h into your own port). Roads and railways speed them up.</li>
   <li><b>Capture</b>: a province becomes yours the moment your ground troops reach its city (its heart) with no defenders left. Terrain, rivers, supply and morale decide battles.</li>
   <li><b>Air, drones and navy</b>: wings strike or patrol from airbases; UAVs and AWACS find the enemy; fleets guard your trade and raid theirs.</li>
   <li><b>Diplomacy</b>: everyone starts at peace. Trade routes pay both partners; allies form coalitions that share supplies.</li>
