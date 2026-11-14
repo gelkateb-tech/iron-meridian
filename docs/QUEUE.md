@@ -16,7 +16,7 @@ Last updated: 2026-11-14.
 |---|---|---|
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges next) |
 | Capital HQ flag drawn in code on every regional HQ (the 8 flagpole tops in BNMETA); NOT merged until the owner sees Berlin and a captured capital | Opus | branch hq-flags |
-| Explosion video clips from Gemini Omni 1.2 Flash (720p, one try each, about $1.70): nuclear, chemical, conventional (bombers, ballistic), cruise missile; sprite sheets (black keyed out), played on the map; NOT merged until the owner OKs the clips and recording | Opus | branch fx-video |
+| Explosion video clips from Gemini Omni 1.2 Flash (720p, one try each, about $1.70): nuclear, chemical, conventional (bombers, ballistic), cruise missile; sprite sheets (black keyed out), played on the map; NOT merged until the owner OKs the clips and recording; then the crater left behind is ported from explosions-code and that branch is deleted (owner dropped the code-animated explosions: too fake in motion) | Opus | branch fx-video |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
@@ -31,7 +31,6 @@ Last updated: 2026-11-14.
 ## Waiting on me (the owner)
 
 - **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
-- **Explosions (branch explosions-code, NOT merged):** recordings and frame strips sent. OK to merge? Their questions: (1) big and small craters look the same size at close zoom (a 35 px screen cap): lift it for big ones? (2) every combat blast now leaves a short crater (busier battles); (3) fighter and helicopter strikes on cities use the small blast, only bombs are big: make them big? (4) nukes unchanged; (5) smoke at night is lit pale grey to show on the dark map: too bright?
 - **Building pictures (merged v48):** (1) Fortifications levels I-III use pictures 1, 3, 5: OK? (2) Army Base, Silo, Arms Industry still need angled pictures (nothing on the map for them yet); (3) Hamburg's Naval Yard sits on the Elbe bank: OK, or always the sea? (4) ports far from water (Berlin, Oslo, Helsinki) keep the yard in the city cluster: OK? (5) cast shadows kept see-through: keep, or a small contact shadow? (6) mid-zoom pictures are small (about 30-40 px): bigger?
 - **Research banners:** full-width banners with the light blue-grey wash and the new Infantry Corps banner are on branch research-banners (tests pass): OK to merge? (The Dev Build looks darker only because it still has the old black-faded banners.)
 
