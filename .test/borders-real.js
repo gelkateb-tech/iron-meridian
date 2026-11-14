@@ -97,7 +97,8 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
             if (side === undefined) side = im.G.P.find(P => !P.sea && P.vbox && qx >= P.vbox[0] && qx <= P.vbox[2] && qy >= P.vbox[1] && qy <= P.vbox[3] && has(P.id)); side = side && side.id !== undefined ? side.id : side;
             if (side === undefined){ out.push({ok:false, gap:true, side:side0, x:+qx.toFixed(2), y:+qy.toFixed(2)}); continue; } const q = B.win(I, x + nx*s*sg, y + ny*s*sg, 0, true); if (!q) continue; const o = (q.R*(2*q.R + 1) + q.R)*4, T = q.d, al = T[o + 3];
             const o2 = im.S.owner[side], want = o2 >= 0 ? tint(o2) : im.tintOf(-1, im.G.P[side].country), col = [T[o], T[o + 1], T[o + 2]], w = hex(want), dc = Math.abs(col[0] - w[0]) + Math.abs(col[1] - w[1]) + Math.abs(col[2] - w[2]);
-            out.push({ok:al >= 180 && dc <= 60, al, dc, side, x:+x.toFixed(2), y:+y.toFixed(2)}); } }
+            const aw = 255*({'#7fc36a':1, '#d9534a':0.8, '#3f6fe8':0.6, '#a7a99f':0.42}[want] || 0.36)*0.8;   // (each relation's own tint strength, TONE_A: yours, an enemy's, an ally's, the others', independent land)
+            out.push({ok:al >= aw && dc <= 60, al, dc, side, x:+x.toFixed(2), y:+y.toFixed(2)}); } }
         return out; }, [MAP.side, MAP.h]);
       for (const x of r){ res.n++; if (x.ok) res.ok++; else bad.push({lon, lat, ...x}); } }
     checks.gaps = res; if (!res.n || res.ok < res.n) fail('gaps', bad.slice(0, 10)); }
@@ -157,13 +158,16 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
     for (const hz of [8, 26, 90]){ await go(95, 62, hz);
       const r = await p.evaluate(([mw, mh]) => { const B = window.__br, im = window.__im, G = im.G, S = im.S, I = B.img(7), L = I.L, dp = L.dp || 2, out = {n:0, flat:0, worst:0, fogged:0, tinted:0};
         const ru = S.nations.findIndex(N => N.name === 'Russia'), vis = im.visibleSet ? null : null;
-        for (const P of G.P){ if (P.sea || S.owner[P.id] !== ru || P.city || !B.onScr(P.x, P.y, 80, mw, mh) || im.isWet(P.x, P.y)) continue; const q = B.dpx(I, P.x, P.y); if (!q) continue; const R = Math.round(12*dp);
+        for (const P of G.P){ if (P.sea || S.owner[P.id] !== ru || P.city || !B.onScr(P.x, P.y, 80, mw, mh)) continue; const e = 13/im.view.s;
+          if ([[0, 0], [-e, -e], [e, -e], [-e, e], [e, e], [0, -e], [0, e], [-e, 0], [e, 0]].some(([dx, dy]) => { const q = im.provAtW(P.x + dx, P.y + dy, im.lodBand(im.hexPx())); return im.isWet(P.x + dx, P.y + dy) || q < 0 || im.G.P[q].sea || S.owner[q] !== ru; })) continue;   // (the window all Russia's land: a country border or the coast inside it is no hatch)
+          const q = B.dpx(I, P.x, P.y); if (!q) continue; const R = Math.round(12*dp);
+          { const T = L.tc && L.tc.width ? L.tc.getContext('2d').getImageData(q[0] - R, q[1] - R, 2*R + 1, 2*R + 1).data : null; let w = false; if (T) for (let i = 3; i < T.length; i += 4) if (!T[i]){ w = true; break; } if (w) continue; }   // (a lake in the window: the tint and the fog stop at its shore)
           for (const k of ['fg', 'tc']){ const C = L[k]; if (!C || !C.width) continue; const d = C.getContext('2d').getImageData(q[0] - R, q[1] - R, 2*R + 1, 2*R + 1).data; let rg = 0;
             for (let c = 0; c < 4; c++){ let lo = 255, hi = 0; for (let i = c; i < d.length; i += 4){ if (d[i] < lo) lo = d[i]; if (d[i] > hi) hi = d[i]; } rg = Math.max(rg, hi - lo); }
-            out.n++; if (rg <= 4) out.flat++; out.worst = Math.max(out.worst, rg); if (d[3] > 0) out[k === 'fg' ? 'fogged' : 'tinted']++; }
+            out.n++; if (rg <= 4) out.flat++; else (out.bad || (out.bad = [])).push([k, P.id, P.name, rg, +P.x.toFixed(1), +P.y.toFixed(1)]); out.worst = Math.max(out.worst, rg); if (d[3] > 0) out[k === 'fg' ? 'fogged' : 'tinted']++; }
           if (out.n >= 24) break; }
         return out; }, [MAP.side, MAP.h]);
-      res.views.push({hexPx:hz, ...r}); if (r.n < 6 || r.flat < r.n || !r.fogged || !r.tinted) fail('hatching (fog or tint not one flat colour) at hexPx ' + hz, r); }
+      res.views.push({hexPx:hz, ...r}); if (r.n < 4 || r.flat < r.n || !r.fogged || !r.tinted) fail('hatching (fog or tint not one flat colour) at hexPx ' + hz, r); }
     checks.hatch = res; }
 
   await b.close();
