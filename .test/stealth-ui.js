@@ -41,7 +41,8 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   await p.click('#sheet [data-act="resume"]').catch(() => {}); await p.waitForTimeout(150);
   await p.evaluate(c => { const im = window.__im; im.S.bld[c].air = 3; im.selectProv(c); }, cap); await p.waitForTimeout(250);
   await p.click('#csheet [data-act="cs-mob"]'); await p.waitForTimeout(400);
-  c1 = await card(); ck('Mobilize: with Airbase III it can be ordered; the tooltip explains it', c1 && !/blk/.test(c1.cls) && /35% as often/.test(c1.title) && /330/.test(c1.text), c1);
+  // (the card tooltip is now the neutral one-line role plus the upkeep (commit 3550feb); the '35% as often' air-defence detail is no longer on the card)
+  c1 = await card(); ck('Mobilize: with Airbase III it can be ordered; the tooltip gives the role and upkeep', c1 && !/blk/.test(c1.cls) && /hard to detect/.test(c1.title) && /Daily upkeep/.test(c1.title) && /330/.test(c1.text), c1);
   await p.hover('#sheet .unit[data-t="stealth"]'); await p.waitForTimeout(500); await p.screenshot({ path: out('mobilize') });
   await p.click('#sheet .unit[data-t="stealth"]', { force: true }); await p.waitForTimeout(300);
   ck('Mobilize: queued in the capital', await p.evaluate(c => window.__im.S.queue[c].some(j => j.t === 'stealth'), cap));

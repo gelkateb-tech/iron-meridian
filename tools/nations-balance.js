@@ -186,17 +186,20 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
       const dry = ['Mali', 'Chad'].map(nm => ({nm, c:games.map(g => g.cash30[id(nm)]), net:games.map(g => g.net30[id(nm)]), dead:games.filter(g => g.dead[id(nm)] != null && g.dead[id(nm)] <= 30).length}));
       say('Step 3  Mali and Chad solvent', dry.every(x => !x.dead && x.net.every(v => v > 0) && x.c.every(c => c >= 0)), dry.map(x => `${x.nm} on day 30: money a day ${x.net.map(v => (v > 0 ? '+' : '') + v).join(', ')}, treasury ${x.c.join(', ')}` + (x.dead ? ` (eliminated by day 30 in ${x.dead})` : '')).join('; ')); }
     // step 4, Asia (from then on): North Korea, Mongolia and Bangladesh, the three weakest pairings on the map, alive on day 30 in at least 4
-    // seeds of 5; China and India at war with each other or with a tier S or A nation, not only with smaller ones, in at least 3 of 5 on
-    // day 60, as the plan words it (the enemies of the whole second month, days 30 to 60, are printed beside it);
+    // seeds of 5; China and India (the plan wanted them at war with a tier S or A nation on day 60; see the note at their check below: with
+    // AI_STARTS_WARS false they stay at peace and hold their land instead);
     // the sea nations Japan, Indonesia and the Philippines each hold on day 60 a province they did not start with, or have built ships, in at
     // least 3 of 5 (the computer must not be stuck on its islands)
     if (NAT.open.includes('Asia')){ const need = k => Math.min(k, games.length), alive = (nm, d) => games.filter(g => !(g.dead[id(nm)] != null && g.dead[id(nm)] <= d)).length;
       const surv = [['North Korea', 30], ['Mongolia', 30], ['Bangladesh', 30]], low = surv.filter(([nm, d]) => alive(nm, d) < need(4));
       say('Step 4  Asia survives', !low.length, surv.map(([nm, d]) => `${nm} alive on day ${d} in ${alive(nm, d)} of ${games.length}`).join(', '));
-      const big = ['China', 'India'].map(nm => { const n = id(nm), on60 = g => (g.wars[60] || []).filter(w => w.includes(n)).map(w => w[0] === n ? w[1] : w[0]), month = g => (g.foes || [])[n] || [];
-        const peer = m => tiers[m] === 'S' || tiers[m] === 'A', ok = games.filter(g => month(g).some(peer)).length, ok60 = games.filter(g => on60(g).some(peer)).length;
-        return {nm, ok, ok60, l:games.map(g => (month(g).map(m => `${names[m]} ${tiers[m]}`).join('+') || 'peace') + ` [day 60: ${on60(g).map(m => names[m]).join('+') || 'peace'}]`).join('; ')}; });
-      say('Step 4  China and India fight their weight', big.every(b => b.ok60 >= need(3)), big.map(b => `${b.nm} at war with ${b.nm === 'China' ? 'India' : 'China'} or a tier S or A nation on day 60 in ${b.ok60} of ${games.length}, in days 30 to 60 in ${b.ok} (${b.l})`).join('; '));
+      // (changed when AI_STARTS_WARS went false, rules/diplomacy.js: a computer nation never starts a war, so in an all-computer game nobody is at
+      // war and the old check, "China and India at war with a tier S or A nation on day 60 in 3 of 5", can only fail. The new rule: they stay at
+      // peace through days 30 to 60 in every seed (no war starts by itself), and hold at least their start land on day 60 in 3 of 5 seeds)
+      const big = ['China', 'India'].map(nm => { const n = id(nm), foes = g => ((g.foes || [])[n] || []).length + (g.wars[60] || []).filter(w => w.includes(n)).length,
+        quiet = games.filter(g => !foes(g)).length, held = games.filter(g => g.at[60][n] >= g.p0[n]).length;
+        return {nm, quiet, held, l:games.map(g => `${g.p0[n]}>${g.at[60][n]}${foes(g) ? ' WAR' : ''}`).join(' ')}; });
+      say('Step 4  China and India at peace and holding (computer nations start no wars)', big.every(b => b.quiet === games.length && b.held >= need(3)), big.map(b => `${b.nm} at peace in ${b.quiet} of ${games.length} seeds, at least its start land on day 60 in ${b.held} (${b.l})`).join('; '));
       const sea = ['Japan', 'Indonesia', 'Philippines'].map(nm => { const n = id(nm), ok = games.filter(g => g.gain60[n] > 0 || g.navBuilt[n] > 0).length;
         return {nm, ok, l:games.map(g => `${g.gain60[n]} new, ${g.navBuilt[n]} ships`).join('; ')}; });
       say('Step 4  sea nations move', sea.every(x => x.ok >= need(3)), sea.map(x => `${x.nm} took land or built ships in ${x.ok} of ${games.length} (${x.l})`).join('; ')); }
