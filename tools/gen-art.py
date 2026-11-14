@@ -324,12 +324,8 @@ L = R_LOOK
 # a banner: <name>: <scene>; the main subject large, inside the middle band (R_BANNER says how)
 R_BANNERS = {   # rbs-<category>: one wide scene per research category
     'rbs-inf': ("Infantry Corps: a squad of five infantry soldiers, each " + L['soldier'] + ", advancing in a loose line from "
-                "the left toward the right across wide open dry grassland, seen from further back at a slight three-quarter angle. "
-                "EXCEPTION to the large-subject framing (owner, after heads were cut off in the row crop): the soldiers are "
-                "SMALLER in the frame, each whole body from helmet to boots only about one fifth of the picture's height, "
-                "standing on the ground just below the picture's vertical centre, so their heads and helmets sit well inside "
-                "the middle band with clear open sky and distant hills above them and open ground below; nothing of the "
-                "soldiers in the top 40% or the bottom 35% of the picture."),
+                "the left toward the right across a dry grass field, seen from the side at a slight three-quarter angle, close "
+                "enough that the soldiers are tall in the frame (heads to boots inside the middle band)."),
     'rbs-arm': ("Armoured Forces: two main battle tanks, each " + L['tank'] + ", driving from the left toward the right along "
                 "a dusty desert track, close to the camera and large in the frame, seen from the side at a slight three-quarter "
                 "front angle, a thin trail of dust behind their tracks; flat sand desert with low mesas far away."),
@@ -358,7 +354,8 @@ R_BANNERS = {   # rbs-<category>: one wide scene per research category
                 "toward the right along a straight dirt road, close to the camera and large in the frame, the lead truck "
                 "biggest, seen from the side at a slight three-quarter front angle, a little dust behind; open farmland."),
 }
-R_FOCUS = {'rbs-inf': 0.54}   # a banner's vertical centre for its strip crop, as a share of the height (0.5 when not listed)
+R_FOCUS = {'rbs-inf': 0.385}   # a banner's vertical centre for its strip crop, as a share of the height (0.5 when not listed)
+# rbs-inf (owner): the strip starts just above the helmets, so the row crop takes the feet, never the heads
 # R_SHARE: one picture for every node of an upgrade type that appears in several unit lines (owner: reuse one icon per type);
 # the game maps those nodes to ri-t-<type> (index.html rKey). A generation reuses its unit's unlock picture (no picture of its own)
 R_SHARE = {'Firepower': 't-fp', 'Protection': 't-pr', 'Drop Tanks': 't-drop', 'Ceramic Body Armour': 't-armor', 'Naval Gunnery': 't-navgun'}
