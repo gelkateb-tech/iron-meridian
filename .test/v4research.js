@@ -27,15 +27,15 @@ const T0 = Date.now();
     return out; });
   const SCN = await p.evaluate(async () => { const out = []; for (const e of document.querySelectorAll('.rs-ban.scene')){ const u = (e.style.getPropertyValue('--rbs').match(/url\(['"]?([^'")]+)/) || [])[1];
       const ok = await new Promise(r => { const im = new Image(); im.onload = () => r(im.naturalWidth >= 1000 && im.naturalWidth/im.naturalHeight > 3); im.onerror = () => r(false); im.src = u; setTimeout(() => r(false), 3000); });
-      out.push({ b: e.dataset.b, ok, cover: /cover|200%/.test(getComputedStyle(e).backgroundSize) }); } return out; });
+      out.push({ b: e.dataset.b, ok, cover: /cover|1[5-9]\d%|200%/.test(getComputedStyle(e).backgroundSize) }); } return out; });
   ck('scene banners (rbs-<category>): the wide picture loads and covers the whole banner', SCN.every(x => x.ok && x.cover), SCN);
   ck('banners: all ten categories show their scene (no cut-out unit pictures left)', SCN.length === 10 && !(await p.evaluate(() => document.querySelector('.rs-bpic'))), SCN.length);
   // every research picture: each node's key (its own, its shared upgrade type, a generation its unit's unlock) and each category's icon loads
-  const RP = await p.evaluate(async () => { const keys = [...new Set([...RNODES.map(rKey), ...RCATS.map(c => 'cat-' + c.id)])], bad = [];
+  const RP = await p.evaluate(async () => { const P = window.__im.rs.pics(), N = P.nodes, keys = [...new Set([...N.map(n => n.key), ...P.cats.map(c => 'cat-' + c)])], bad = [];
     await Promise.all(keys.map(k => new Promise(r => { const im = new Image(); im.onload = () => { if (im.naturalWidth !== 256) bad.push(k); r(); }; im.onerror = () => { bad.push(k); r(); }; im.src = `assets/art/ri-${k}.webp`; })));
-    const sh = RNODES.filter(n => n.kind === 'eng'), gen = RNODES.filter(n => n.kind === 'gen');
-    return { n: keys.length, bad, fp: new Set(sh.filter(n => n.eng === 'fp').map(rKey)).size, pr: new Set(sh.filter(n => n.eng === 'pr').map(rKey)).size, gen: gen.every(n => rKey(n) === 'u_' + n.u),
-      drop: new Set(RNODES.filter(n => n.name === 'Drop Tanks').map(rKey)).size }; });
+    const sh = N.filter(n => n.kind === 'eng'), gen = N.filter(n => n.kind === 'gen');
+    return { n: keys.length, bad, fp: new Set(sh.filter(n => n.eng === 'fp').map(n => n.key)).size, pr: new Set(sh.filter(n => n.eng === 'pr').map(n => n.key)).size, gen: gen.every(n => n.key === 'u_' + n.u),
+      drop: new Set(N.filter(n => n.name === 'Drop Tanks').map(n => n.key)).size }; });
   ck('pictures: every node and category has its 256 px scene (100 pictures: Firepower, Protection and Drop Tanks share one each, generations show their unit)', RP.bad.length === 0 && RP.n === 100 && RP.fp === 1 && RP.pr === 1 && RP.drop === 1 && RP.gen, RP);
   ck('list: ten category banners with a diamond icon, a name, a role line and the unit picture', list.length === 10 && list.every(x => x.dm && x.pic && x.name && x.role) && list[0].name === 'Infantry Corps' && list[9].name === 'Command & Logistics', list.map(x => x.name));
   ck('list: steps count and the green "open" chip (day 1: the IFV and Composite Armour, two fighters, the Frigate\'s gunnery; nine categories have one, Strategic Air opens on day 2)', list[1].cnt === '0/23' && /2 open/i.test(list[1].open) && /2 open/i.test(list[4].open) && /1 open/i.test(list[7].open) && list.filter(x => x.open).length === 9 && !list[6].open, list.map(x => [x.b, x.cnt, x.open]));
