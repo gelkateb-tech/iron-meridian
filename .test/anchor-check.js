@@ -10,7 +10,8 @@
 // in and out, through the whole range) and of a far camGo jump, keyed by army id with no grouping of any kind:
 //  (1) ANCHOR       every visible (alpha > 0.2) plate's pin and model's foot stays on one world point (> 1 world px, or > 2 css px at
 //                   the zoom it is drawn at, fails)
-//  (P) CONTAINMENT  every plate pin and model foot inside its own province (or on its path while moving; parked air: its base)
+//  (P) CONTAINMENT  every plate pin and model foot inside its own province (or on its path while moving; parked air: its base), by its cell, and
+//                   not across a drawn (real) country border
 //  (9) PLATES     two counters never cover each other: far badges measured by their own squares, pinned badges by their boxes
 //  (G) GAP          the gap between a flag tag's bottom and the top of its group stays 4-16 css px at every zoom models show (the diamond
 //                   stands on its group's middle and fades out as the pictures fade in: it is left out of (G) and of covering its own group)
@@ -76,7 +77,18 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
         const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue; const q = [r.left - cr.left, r.top - cr.top, r.right - cr.left, r.bottom - cr.top, s];
         if (q[2] < 0 || q[3] < 0 || q[0] > cr.width || q[1] > cr.height) continue; o.push(q); }
       return (HUD = o); };
-    const provW = (x, y) => { const v = im.rd ? { x: im.rd.vx, y: im.rd.vy, s: im.rd.vs } : im.view; return im.provAt(x*v.s + v.x, y*v.s + v.y); };
+    // (real borders: the province a point is in, as the rules have it: its cell (im.provAtCell; a page without the real borders: provAt); and
+    //  the province drawn there (provAt): a sample in its own province by the cells but drawn in another holder's land, more than 0.6 world
+    //  units (about a soldier's boots at close zoom) across the drawn country border, stands on the wrong side of it)
+    const provW = (x, y) => { const v = im.rd ? { x: im.rd.vx, y: im.rd.vy, s: im.rd.vs } : im.view; return (im.provAtCell || im.provAt)(x*v.s + v.x, y*v.s + v.y); };
+    const provD = (x, y) => { const v = im.rd ? { x: im.rd.vx, y: im.rd.vy, s: im.rd.vs } : im.view; return im.provAt(x*v.s + v.x, y*v.s + v.y); };
+    // (the layout lends a force the ground of a neighbour of the same holder where its own has no room (tmGround): with the real borders that
+    //  happens where its own cells are drawn across a country border, such as Karlsruhe's west of the Rhine; such a sample counts as its own)
+    const lend = (al, pv) => !!im.provAtCell && pv >= 0 && !G.P[pv].sea && [...al].some(q => q >= 0 && !G.P[q].sea && G.P[q].nbs.includes(pv) && S.owner[q] === S.owner[pv] && S.owner[q] >= 0);
+    const holder = q => S.owner[q] >= 0 ? 'o' + S.owner[q] : 'c' + G.P[q].country;
+    const across = (al, x, y) => { if (!im.provAtCell) return false; const hs = new Set([...al].filter(q => q >= 0 && !G.P[q].sea).map(holder)); if (!hs.size) return false;
+      const ok = (X, Y) => { const d = provD(X, Y); return d < 0 || G.P[d].sea || al.has(d) || hs.has(holder(d)); }; if (ok(x, y)) return false;
+      for (let k = 0; k < 8; k++){ const a = k*Math.PI/4; if (ok(x + 0.6*Math.cos(a), y + 0.6*Math.sin(a))) return false; } return true; };
     // the provinces a force may stand in: standing, its own (parked air: its base); marching, also where it goes
     const allowed = ids => { const s = new Set(); for (const id of ids){ const a = S.armies.find(q => q.id === id); if (!a) continue; if (a.air){ s.add(a.air.base ?? a.at); continue; }
       s.add(a.at); if (a.to != null) s.add(a.to); for (const q of a.path) s.add(q); } return s; };
@@ -85,9 +97,9 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     // is on screen belongs to the view of the last drawn frame, which a zoom step since may have moved on)
     window.__acCap = () => { if (im.rd){ if (im.rd.n === window.__acN) return null; window.__acN = im.rd.n; } const v = im.rd ? { x: im.rd.vx, y: im.rd.vy, s: im.rd.vs } : im.view, D = window.__dbgBoxes || {};
       const plates = im.hits.filter(h => !h.unk && h.w > 0).map(h => { const own = (h.own || h.ids).slice().sort((a, b) => a - b), wx = (h.cx - v.x)/v.s, wy = (h.cy - v.y)/v.s, al = allowed(own), pv = provW(wx, wy);
-        return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], d: h.d, c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: al.has(pv) ? 1 : 0, pv, tag: h.tag ? 1 : 0 }; });
+        return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], d: h.d, c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: (al.has(pv) || lend(al, pv)) && !across(al, wx, wy) ? 1 : 0, pv, tag: h.tag ? 1 : 0 }; });
       const models = im.TM.dbg.map(q => { const a = S.armies.find(z => z.id === q.id), al = allowed(q.ids), pv = provW(q.wx, q.wy);
-        return { k: q.id + ':' + q.t, id: q.id, ids: q.ids, t: q.t, at: a && a.at, cut: q.cut, x: q.x, y: q.y, w: [q.wx, q.wy], box: q.box, len: q.len, a: q.a, tiny: q.tiny, owner: q.owner, mv: q.moving, air: q.air, sea: q.sea, inP: al.has(pv) ? 1 : 0, pv }; });
+        return { k: q.id + ':' + q.t, id: q.id, ids: q.ids, t: q.t, at: a && a.at, cut: q.cut, x: q.x, y: q.y, w: [q.wx, q.wy], box: q.box, len: q.len, a: q.a, tiny: q.tiny, owner: q.owner, mv: q.moving, air: q.air, sea: q.sea, inP: (al.has(pv) || lend(al, pv)) && !across(al, q.wx, q.wy) ? 1 : 0, pv }; });
       return { hp: v.s*12, v: [v.x, v.y, v.s], plates, models, hud: hud(), lab: (D.lab || []).map(l => l.b), pn: (D.pn || []).filter(q => q.b).map(q => q.b), mk: (D.mk || []).map(m => [m[0] - m[2], m[1] - m[2], m[0] + m[2], m[1] + m[2]]), hq: D.tb && (D.tba == null || D.tba > 0.5) ? D.tb : null, bbar: D.bbar || [] }; };
     window.__acUnits = ids => { const u = {}; for (const id of ids){ const a = S.armies.find(q => q.id === id); if (a) for (const t in a.u) if (a.u[t] > 0) u[t] = (u[t] || 0) + a.u[t]; } return u; };
     // a continuous zoom through the game's own wheel handler: one wheel tick every frame (dy css px of wheel delta) until hp1 is reached and
@@ -149,7 +161,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     for (const c of caps){ for (const q of c.plates){ if (q.a <= 0.2 || !VIS(q.r)) continue; n++; if (!q.inP){ bad++; if (!ex.has('p ' + q.k)) ex.set('p ' + q.k, `plate ${q.k} in prov ${q.pv} ${c.mode}@${r1(c.hp)}`); } }
       for (const m of c.models){ if (m.a <= 0.2) continue; n++; if (!m.inP){ bad++; if (!ex.has('m ' + m.k)) ex.set('m ' + m.k, `model ${m.k} (at ${m.at}) foot in prov ${m.pv} ${c.mode}@${r1(c.hp)}`); } } }
     M.containment = { samples: n, bad, keys: ex.size, examples: [...ex.values()].slice(0, 8) };
-    if (bad) fails.push(`(P) ${bad}/${n} plate/model samples stand outside their own province (${ex.size} forces: ${[...ex.values()].slice(0, 3).join('; ')})`); }
+    if (bad) fails.push(`(P) ${bad}/${n} plate/model samples stand outside their own province or across a drawn country border (${ex.size} forces: ${[...ex.values()].slice(0, 3).join('; ')})`); }
 
   // (G) PLATE-TO-GROUP GAP, (T) TOGETHER and size floor at appearance
   { let n = 0, bad = 0, tn = 0, tbad = 0, small = 0; const ex = [], tex = [], sex = []; const gaps = [];

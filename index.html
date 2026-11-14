@@ -3193,15 +3193,30 @@ function tilesAdd(m, f0, TPB, run){ const n0 = f0.length/2; for (let s = 0; s < 
 function tiledPathF(flats, TPB, run){ const m = new Map(); for (const f0 of flats) tilesAdd(m, f0, TPB, run); return {tiles:[...m.values()], k:null, p:null}; }
 function provTB(band, kind){ if (!band || !GEO.bv) return kind === 'c' ? GEO.countryT : GEO.provT; const T = GEO.tB[band] || (GEO.tB[band] = {});
   return T[kind] || (T[kind] = tiledPathF((kind === 'c' ? GEO.countryL : GEO.provL).map(c => chainF(c, band)), band === 2 ? 48 : 128, 48)); }
-// province under a screen point as drawn: the real shape containing it (the shapes near it, from a coarse grid of their boxes), else the cell's
-const BVPICK = {g:null, G:null, cx:null};
-function provAtV(sx, sy){ const [wx0, wy] = screenToWorld(sx, sy), wx = wrapWX(wx0), c = worldToCell(wx, wy), p0 = c >= 0 ? G.prov[c] : -1; if (!GEO || !GEO.bv) return p0;
-  if (BVPICK.G !== GEO){ const g = new Map(), B = 48; for (const P of G.P){ const b = !P.sea && P.vbox; if (!b) continue;
+// province under a screen point as drawn: the real shape containing it at the zoom's band (provAtW), else the cell's
+function provAtV(sx, sy){ const [wx, wy] = screenToWorld(sx, sy); return provAtW(wx, wy, lodBand(view.s*HS0)); }
+// the province drawn at a world point (its real shape at a band: 1 unless asked; the cell's province where the shapes are not in use or none
+// holds the point). A cell whose cells two rings round all belong to its own province is inside that province's shape (the real lines run
+// within a cell of the cells' edges), so only near a border is a shape tested: an even-odd count of the province's arcs crossed by a ray
+// east of the point (arcs whose box misses the ray skipped). Used by the taps (provAt), the hover, and where forces and the HQ are drawn
+// (tmGround, the HQ's plinth) and where a pinpoint move ends (pinPt), so nothing stands on the wrong side of a drawn border
+const BVPICK = {g:null, G:null}, BVI = {G:null, a:null};
+function bvPickGrid(){ if (BVPICK.G !== GEO){ const g = new Map(), B = 48; for (const P of G.P){ const b = !P.sea && P.vbox; if (!b) continue;
       for (const o of [0, -WRAP_W, WRAP_W]){ if (o && !(b[0] + o < WRAP_X0 + WRAP_W && b[2] + o > WRAP_X0)) continue; for (let i = Math.floor((b[0] + o)/B); i <= Math.floor((b[2] + o)/B); i++) for (let j = Math.floor(b[1]/B); j <= Math.floor(b[3]/B); j++){ const k = i + ',' + j; let l = g.get(k); if (!l) g.set(k, l = []); l.push(P.id); } } }
-    BVPICK.g = g; BVPICK.G = GEO; if (!BVPICK.cx){ const cv0 = document.createElement('canvas'); cv0.width = cv0.height = 1; BVPICK.cx = cv0.getContext('2d'); } }
-  const l = BVPICK.g.get(Math.floor(wx/48) + ',' + Math.floor(wy/48)); if (!l) return p0; const band = lodBand(view.s*HS0), cx = BVPICK.cx;
-  if (p0 >= 0 && !G.P[p0].sea && l.includes(p0) && cx.isPointInPath(provFill(p0, band), wx, wy, 'nonzero')) return p0;
-  for (const q of l) if (q !== p0 && cx.isPointInPath(provFill(q, band), wx, wy, 'nonzero')) return q;
+    BVPICK.g = g; BVPICK.G = GEO; }
+  return BVPICK.g; }
+function cellInner(c){ if (BVI.G !== G){ BVI.G = G; BVI.a = new Int8Array(G.prov.length).fill(-1); } const v = BVI.a[c]; if (v >= 0) return v === 1;
+  const p = G.prov[c]; let ok = 1; for (let d = 0; ok && d < 6; d++){ const m = nbr(c, d); if (m < 0 || G.prov[m] !== p){ ok = 0; break; } for (let e = 0; e < 6; e++){ const k = nbr(m, e); if (k < 0 || G.prov[k] !== p){ ok = 0; break; } } }
+  BVI.a[c] = ok; return ok === 1; }
+function inProvV(p, x, y, band){ const list = GEO.byProv[p]; if (!list) return false; let n = 0; const bb = BV.bb;
+  for (const c of list){ if (!c.vec || c.dup || c.a === c.b) continue; const i = 4*c.i; if (y < bb[i + 1] - 0.1 || y > bb[i + 3] + 0.1 || x > bb[i + 2] + 0.1) continue; const f = chainF(c, band);
+    for (let j = 0; j + 3 < f.length; j += 2){ const y0 = f[j + 1], y1 = f[j + 3]; if ((y0 > y) !== (y1 > y) && f[j] + (y - y0)*(f[j + 2] - f[j])/(y1 - y0) > x) n++; } }
+  return (n & 1) === 1; }
+function provAtW(wx0, wy, band = 1){ const wx = wrapWX(wx0), c = worldToCell(wx, wy), p0 = c >= 0 ? G.prov[c] : -1; if (!GEO || !GEO.bv) return p0; if (c >= 0 && cellInner(c)) return p0;
+  const has = q => { const b = G.P[q].vbox; if (!b) return false; for (const o of [0, WRAP_W, -WRAP_W]){ const X = wx + o; if (X >= b[0] && X <= b[2] && wy >= b[1] && wy <= b[3] && inProvV(q, X, wy, band)) return true; } return false; };
+  if (p0 >= 0 && !G.P[p0].sea && has(p0)) return p0;
+  const l = bvPickGrid().get(Math.floor(wx/48) + ',' + Math.floor(wy/48)); if (!l) return p0;
+  for (const q of l) if (q !== p0 && has(q)) return q;
   return p0; }
 // natural line shapes: a smooth, deterministic displacement field (two octaves of value noise per axis). Every line passing a spot moves the
 // same way, so the shared points of province edges, both sides of a border and road/rail corridors stay together while straight runs bend
@@ -5348,8 +5363,12 @@ const TM_ZS = [114, 160, 240], TM_KEEP = 1200;   // (the zooms a spot is checked
 // what standing on a world point costs a force of province p: its own province nothing; another of the same holder a little (a tiny province
 // may lend its neighbours a corner); anywhere else (another country, the sea for troops, land for a fleet) a great deal
 function tmGround(p, cls, wx, wy, w){ const ce = worldToCell(wx, wy), q = ce >= 0 ? G.prov[ce] : -1;
-  if (cls === 'g' || cls === 'a'){ if (isWet(wx, wy)) return w*3200; if (q === p) return 0; if (q < 0) return w*3200; const Q = G.P[q]; if (Q.sea) return w*3200; return S.owner[q] === S.owner[p] && S.owner[p] >= 0 ? w*(1500 + 18*Math.hypot(wx - G.P[p].x, wy - G.P[p].y)) : w*2600; }   // (a neighbour's ground only where its own has no room: the dearer the further out)
+  if (cls === 'g' || cls === 'a'){ if (isWet(wx, wy)) return w*3200; if (q === p) return foreignV(p, wx, wy) ? w*2600 : 0; if (q < 0) return w*3200; const Q = G.P[q]; if (Q.sea) return w*3200; return S.owner[q] === S.owner[p] && S.owner[p] >= 0 && !foreignV(p, wx, wy) ? w*(1500 + 18*Math.hypot(wx - G.P[p].x, wy - G.P[p].y)) : w*2600; }   // (a neighbour's ground only where its own has no room: the dearer the further out)
   if (!isWet(wx, wy)) return w*3200; if (q === p) return 0; return q >= 0 && G.P[q].sea ? w*90 : w*600; }
+// real borders: a point of p's cells (or of a neighbour's of the same holder) that is drawn in another holder's land (a cell past a real
+// country border: the Rhine, a mountain line) costs as that land would, so no force's counter or pictures stand across a drawn country border
+function foreignV(p, wx, wy){ if (!GEO || !GEO.bv) return false; const c = worldToCell(wrapWX(wx), wy); if (c >= 0 && cellInner(c)) return false; const d = provAtW(wx, wy); if (d < 0 || d === p || G.P[d].sea) return false;
+  const o = S.owner[p], od = S.owner[d]; return od !== o || (o < 0 && G.P[d].country !== G.P[p].country); }
 // SHIPS NEVER ON LAND (display): where a port's fleet is moored: the nearest water to the city's point (rings outward, sides checked so a hull fits),
 // as candidate offsets from the city; the layout's own cost then prefers the one in the sea zone next door. Kept per game state.
 const DOCK = new Map(); let DOCK_G = null;
@@ -7863,7 +7882,6 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
     try { if (GEO){ if (GEO.miniC) drop(GEO.miniC); GEO.miniC = null; GEO.terrain = buildTerrain(); gfxWatch(GEO.terrain); bakeLakes(); GEO.seaTex = bakeSeaDepth(); } } catch (e) {}
     for (const k in MAPS){ const g = MAPS[k]; if (g !== G) for (const f of MAP_SHARE) g[f] = G[f]; } }
   SNOWC = {m:-1, S:null, cv:null, bb:null, ice:null}; try { snowCover(true); } catch (e) {}
-  BVPICK.G = null; BVPICK.cx = null;   // (the real borders: the tap test's 1 px canvas made again; their outlines and stroke tiles are paths, not pictures, and survive a reset)
   redraw(600); }
 // the screen boxes the label pass places against (counters, controls, names, trays, pictures: a few hundred a frame, each tested against every
 // box placed before it) are indexed in a coarse grid as they are pushed (bxNear): a test visits only the boxes in the cells a rect touches, in
@@ -8096,7 +8114,7 @@ function draw(now){ draw.now = now;
       const PO = P0.oil && hexPx >= 8 ? [x + 7*kl, cy - 5*kl, x + 13*kl, cy + 4.5*kl] : null, PS = S.bld[cap].silo && hexPx >= 4 ? [x - 13*kl, y0 + 3*kl, x - 5*kl, y0 + 15*kl] : null;
       const area = (q, o) => { const ox = Math.min(q[2], o[2]) - Math.max(q[0], o[0]), oy = Math.min(q[3], o[3]) - Math.max(q[1], o[1]); return ox > 0 && oy > 0 ? ox*oy : 0; };
       const rectsAt = (px, py) => { const ix = Math.round(px - 15*K), iy = Math.round(py - 25*K); return [ix, iy, HQ_PARTS.map(r => [ix + r[0], iy + r[1], ix + r[2], iy + r[3]])]; };   // (px, py): the plinth's centre
-      const provAtS = (px, py) => { const c = worldToCell((px - view.x)/view.s, (py - view.y)/view.s), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea ? -1 : q; };
+      const provAtS = (px, py) => { const q = provAtW((px - view.x)/view.s, (py - view.y)/view.s); return q < 0 || G.P[q].sea ? -1 : q; };
       const gcode = (px, py) => { const q = provAtS(px, py); return q < 0 ? 2600 : q === cap ? 0 : S.owner[q] === PLAYER ? 150 : 900; };
       // on your capital's province, else your own land; the plinth's centre off your land only as a last resort, its corners a little
       const ground = (px, py) => { const g0 = gcode(px, py); let c0 = g0 > 150 ? 1e6 : g0;
@@ -8744,10 +8762,11 @@ let lastClickW = null;
 // the exact point a move order goes to in province p, from the tap w (canonical world x, screenToWorld): on dry land in a land province and on
 // water in a sea zone (as the coast is drawn: isWet), else the nearest such point of p within about 200 km; the rules keep it inside p
 // (rules/movement.js orderMove, ptIn: a zone's cells are water). null for a ship sent to a port (it docks at the quay)
-function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].sea)) return null; const want = !!G.P[p].sea, ok = (x, y) => { const c = worldToCell(x, y); return c >= 0 && G.prov[c] === p && isWet(x, y) === want; };
-  if (ok(w[0], w[1])) return [w[0], w[1]];
-  for (let r = 1; r <= 24; r++) for (let k = 0; k < 16; k++){ const an = (k + (r & 1)*0.5)*Math.PI/8, x = w[0] + Math.cos(an)*r, y = w[1] + Math.sin(an)*r; if (ok(x, y)) return [x, y]; }
-  return [w[0], w[1]]; }
+function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].sea)) return null; const want = !!G.P[p].sea, okC = (x, y) => { const c = worldToCell(x, y); return c >= 0 && G.prov[c] === p && isWet(x, y) === want; };
+  // (land: inside the province's drawn shape too, so the force never stands across its real border; where no spot near is both, the cells' rule alone)
+  const ok = want ? okC : (x, y) => okC(x, y) && provAtW(x, y) === p, near = f => { if (f(w[0], w[1])) return [w[0], w[1]];
+    for (let r = 1; r <= 24; r++) for (let k = 0; k < 16; k++){ const an = (k + (r & 1)*0.5)*Math.PI/8, x = w[0] + Math.cos(an)*r, y = w[1] + Math.sin(an)*r; if (f(x, y)) return [x, y]; } return null; };
+  return near(ok) || (ok !== okC && near(okC)) || [w[0], w[1]]; }
 function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
   if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea){ const [hx, hy] = toScreen(G.P[p].x, G.P[p].y), [tx, ty] = toScreen(sel.targetPt[0], sel.targetPt[1]); if (Math.hypot(tx - hx, ty - hy) < 16) sel.targetPt = [G.P[p].x, G.P[p].y]; }   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
   targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
@@ -11303,7 +11322,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, 
 if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor) => badgeBody(side, t, n, flagCanvas(o, plateDims(n, 1, !!minor, true).fh), !!mixed, false, false, !!minor), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {cp:{get CP(){ return CP; }, plan:(kind, k, ids) => cpPlan(kind, k, ids), buildWhy:(p, k) => buildWhy(p, k), trainWhy:(p, t) => trainWhy(p, t), buildCost:(k, p) => buildCost(PLAYER, k, nextLvl(p, k), p), ucost:t => ucost(PLAYER, t), cities:() => cpCities().map(P => P.id), units:() => UT.slice(), render:() => renderSide(true)}});
-if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BV:{get:() => BV}, GEO:{get:() => GEO}, lodBand:{value:h => lodBand(h)}, provAtV:{value:(x, y) => provAt(x, y)}, provFill:{value:(p, b) => provFill(p, b)}, bvWantHi:{value:() => bvWantHi()}, bvHiWanted:{value:() => !GEO || !GEO.bv || view.s*HS0 < 36 || !!BV.f2}, coastSets:{value:() => ({L:COASTR, B0:COASTR_B0, H1:COASTR_HI1, H2:COASTR_HI, MID:COASTR_MID})}});   // real borders (.test/borders-real.js)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BV:{get:() => BV}, GEO:{get:() => GEO}, lodBand:{value:h => lodBand(h)}, provAtV:{value:(x, y) => provAt(x, y)}, provAtW:{value:(x, y, b) => provAtW(x, y, b)}, provAtCell:{value:(x, y) => { const c = worldToCell(...screenToWorld(x, y)); return c >= 0 ? G.prov[c] : -1; }}, PLAY:{get:() => PLAY}, provFill:{value:(p, b) => provFill(p, b)}, bvWantHi:{value:() => bvWantHi()}, bvHiWanted:{value:() => !GEO || !GEO.bv || view.s*HS0 < 36 || !!BV.f2}, coastSets:{value:() => ({L:COASTR, B0:COASTR_B0, H1:COASTR_HI1, H2:COASTR_HI, MID:COASTR_MID})}});   // real borders (.test/borders-real.js)
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });

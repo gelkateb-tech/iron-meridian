@@ -124,7 +124,12 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
     // the outline's sea-side chains (pushed out to sea, over the province's cells there): their screen pixels with the hover and without it
     const sample = () => p.evaluate(p0 => { const im = window.__im, G = im.G, GEO = im.geo, cv = document.getElementById('map'), g = cv.getContext('2d'), d = cv.width/cv.getBoundingClientRect().width, v = im.view, out = [];
       for (const c of GEO.byProv[p0]){ const o = c.a === p0 ? c.b : c.a; if (o >= 0 && !G.P[o].sea) continue;
-        for (let i = 0; i < c.pts.length; i += 2){ const q = c.pts[i], X = Math.round(d*(q[0]*v.s + v.x)), Y = Math.round(d*(q[1]*v.s + v.y)); if (X < 0 || Y < 0 || X >= cv.width || Y >= cv.height) continue;
+        // (real borders: a coast arc lies on the real coastline itself, so the outline is looked for 3 css px out to sea from it, on the side
+        //  that is water, where the cells' outline used to run)
+        for (let i = 0; i < c.pts.length; i += 2){ let q = c.pts[i];
+          if (c.vec){ const a = c.pts[Math.max(0, i - 1)], b = c.pts[Math.min(c.pts.length - 1, i + 1)], tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.hypot(tx, ty); if (!tl) continue;
+            const e = 3/v.s, A = [q[0] - ty/tl*e, q[1] + tx/tl*e], B = [q[0] + ty/tl*e, q[1] - tx/tl*e], wa = im.isWet(A[0], A[1]), wb = im.isWet(B[0], B[1]); if (wa === wb) continue; q = wa ? A : B; }
+          const X = Math.round(d*(q[0]*v.s + v.x)), Y = Math.round(d*(q[1]*v.s + v.y)); if (X < 0 || Y < 0 || X >= cv.width || Y >= cv.height) continue;
           const px = g.getImageData(X, Y, 1, 1).data; out.push(0.3*px[0] + 0.59*px[1] + 0.11*px[2]); } }
       return out; }, r.p);
     const on = await sample(); await p.mouse.move(MAP.x + 4, MAP.y + 4); await p.waitForTimeout(400); const off = await sample();
