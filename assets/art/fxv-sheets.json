@@ -1,0 +1,53 @@
+{
+ "conventional": {
+  "anchor": [
+   0.5,
+   0.5
+  ],
+  "clip_px": [
+   1280,
+   720
+  ],
+  "cols": 6,
+  "fps": 5.849,
+  "frame": 192,
+  "frames": 30,
+  "rows": 5,
+  "seconds": 5.0,
+  "span_px": 806
+ },
+ "cruise": {
+  "anchor": [
+   0.5,
+   0.5
+  ],
+  "clip_px": [
+   1280,
+   720
+  ],
+  "cols": 5,
+  "fps": 4.639,
+  "frame": 176,
+  "frames": 24,
+  "rows": 5,
+  "seconds": 5.0,
+  "span_px": 806
+ },
+ "nuclear": {
+  "anchor": [
+   0.5,
+   0.5
+  ],
+  "clip_px": [
+   1280,
+   720
+  ],
+  "cols": 6,
+  "fps": 6.359,
+  "frame": 192,
+  "frames": 32,
+  "rows": 6,
+  "seconds": 4.92,
+  "span_px": 806
+ }
+}
