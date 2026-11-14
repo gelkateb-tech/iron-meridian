@@ -15,7 +15,7 @@ Last updated: 2026-11-14.
 | Task | Model | Where it is |
 |---|---|---|
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges next) |
-| Capital HQ flag drawn in code on every regional HQ (the 8 flagpole tops in BNMETA); NOT merged until the owner sees Berlin and a captured capital | Opus | branch hq-flags |
+| Each aircraft type its own 3D shape (fighter, bomber, stealth bomber, AWACS, naval patrol, others) | Opus | branch aircraft-3d |
 | Explosion video clips from Gemini Omni 1.2 Flash (720p, one try each, about $1.70): nuclear, chemical, conventional (bombers, ballistic), cruise missile; sprite sheets (black keyed out), played on the map; NOT merged until the owner OKs the clips and recording; then the crater left behind is ported from explosions-code and that branch is deleted (owner dropped the code-animated explosions: too fake in motion) | Opus | branch fx-video |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
@@ -25,11 +25,11 @@ Last updated: 2026-11-14.
 | # | Task | Model |
 |---|---|---|
 | 1 | Roads: every province linked to a neighbour, real roads first (map job, starts when real borders merge) | Opus |
-| 2 | Each aircraft type its own 3D shape | Opus |
-| 3 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 2 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
 
+- **HQ flags (branch hq-flags, done, NOT merged; screenshots sent: Berlin, Ottawa captured by the US, all 7 styles):** OK to merge? Choices: (1) a captured capital now keeps its HQ and flies the captor's flag (before, the HQ vanished); (2) independent land shows bare poles (or a plain neutral flag?); (3) flags are a third of the pole, about 5 px at the closest zoom: bigger (0.4)? (4) flags fly back-right and overlap a little in each row of 4: OK? (5) a gentle wave (off with battery saver / reduced motion): keep?
 - **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
 - **Building pictures (merged v48):** (1) Fortifications levels I-III use pictures 1, 3, 5: OK? (2) Army Base, Silo, Arms Industry still need angled pictures (nothing on the map for them yet); (3) Hamburg's Naval Yard sits on the Elbe bank: OK, or always the sea? (4) ports far from water (Berlin, Oslo, Helsinki) keep the yard in the city cluster: OK? (5) cast shadows kept see-through: keep, or a small contact shadow? (6) mid-zoom pictures are small (about 30-40 px): bigger?
 
