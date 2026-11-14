@@ -185,10 +185,10 @@ def finish(name, reply, rawp, t0):
 # in one webp; fxv-sheets.json holds frame count, grid, frame size, fps and the anchor.
 # --------------------------------------------------------------------------------------------------------------------------------
 SHEET = {   # frames, frame size (px), key: alpha = ((brightness above black - t0)/(1 - t0))^gamma*gain, webp quality
-    'nuclear': dict(frames=32, size=192, t0=0.035, gamma=1.0, gain=2.4, q=74),
-    'chemical': dict(frames=32, size=192, t0=0.03, gamma=0.9, gain=2.6, q=74),
-    'conventional': dict(frames=30, size=192, t0=0.035, gamma=1.0, gain=2.6, q=74),
-    'cruise': dict(frames=24, size=176, t0=0.035, gamma=1.0, gain=2.6, q=74),
+    'nuclear': dict(frames=32, size=192, t0=0.04, gamma=0.7, gain=2.2, q=74),
+    'chemical': dict(frames=32, size=192, t0=0.035, gamma=0.7, gain=2.2, q=74),
+    'conventional': dict(frames=30, size=192, t0=0.04, gamma=0.6, gain=2.2, q=74),
+    'cruise': dict(frames=24, size=176, t0=0.04, gamma=0.6, gain=2.2, q=74),
 }
 
 def frames_of(path):
@@ -225,9 +225,12 @@ def sheet(name):
     ys, xs = np.nonzero(al[i0] > 0.25); wt = al[i0][ys, xs]
     cx, cy = float((xs * wt).sum() / wt.sum()), float((ys * wt).sum() / wt.sum())     # the anchor: the first flash
     n = cfg['frames']; pick = [round(i0 + (N - 1 - i0) * k / (n - 1)) for k in range(n)]
-    keyed = [key(A[i], black, cfg['t0'], cfg['gamma'], cfg['gain']) for i in pick]
+    gy, gx = np.mgrid[0:h, 0:w]; edge = np.minimum.reduce([gx, gy, w - 1 - gx, h - 1 - gy]).astype(np.float32)
+    efade = np.clip(edge / (0.1 * h), 0, 1)                                              # what reaches the clip's own edge goes soft there
+    keyed = [(c, a * efade) for c, a in (key(A[i], black, cfg['t0'], cfg['gamma'], cfg['gain']) for i in pick)]
     tot = np.max([x[1] for x in keyed], 0); ys, xs = np.nonzero(tot > 0.06)
     half = max(cx - xs.min(), xs.max() + 1 - cx, cy - ys.min(), ys.max() + 1 - cy) * 1.04 + 2
+    half = min(half, 0.56 * h)                                                           # at most a little more than the clip's height (a ring running wider fades out)
     box = (round(cx - half), round(cy - half), round(cx + half), round(cy + half))
     size = cfg['size']; cols = int(np.ceil(np.sqrt(n))); rows = int(np.ceil(n / cols))
     gy, gx = np.mgrid[0:size, 0:size]; r = np.hypot(gx + 0.5 - size / 2, gy + 0.5 - size / 2) / (size / 2)
