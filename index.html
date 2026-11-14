@@ -529,6 +529,7 @@ kbd{font-family:var(--mono); font-size:10px; color:var(--muted); border:1px soli
 .good .gp, .good .gs, .good .go{color:#d5e0e3}
 .stk i{position:absolute; left:0; right:0; bottom:0; height:2px; border-radius:1px; background:linear-gradient(90deg, var(--accent) var(--f), rgba(255,255,255,.1) var(--f))}
 /* settings: label + segmented control rows; amber-filled slider */
+.seth{font:700 11px/1 var(--ui, system-ui); letter-spacing:.12em; text-transform:uppercase; color:var(--muted, #8f9aa3); padding:16px 0 6px; border-top:1px solid var(--sep, rgba(255,255,255,.08))}
 .setgrid{display:grid; gap:0; border-top:1px solid var(--sep, rgba(255,255,255,.08))}
 .srow{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 2px; border-bottom:1px solid var(--sep, rgba(255,255,255,.08))} .srow .sl{font-weight:600; color:#e3ebee; font-size:13px}
 .srow .snote{display:block; margin-top:2px; font-weight:400; font-size:11px; line-height:1.35; color:#93a4aa; letter-spacing:0; text-transform:none}
@@ -2984,7 +2985,7 @@ HOURS_PER_SEC.push(16/15, 50/15, 100/15);
 // Battery saver: on by default on phones and tablets (a coarse pointer or a small screen), off on desktops; saved settings without it get the default
 const SAVER_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches || Math.max(screen.width, screen.height) <= 1024; } catch (e) { return false; } })();
 const FX_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600 ? 'low' : 'high'; } catch (e) { return 'high'; } })();   // Effects: Low on a phone, High elsewhere
-const SET = {vol:0.35, toasts:'all', fx:FX_DEF, shake:true, fxSnd:true, paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, saver:SAVER_DEF, tipsOff:false, tipSeen:{}};
+const SET = {vol:0.35, toasts:'all', fx:FX_DEF, shake:true, fxSnd:true, paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, shipRoutes:false, saver:SAVER_DEF, tipsOff:false, tipSeen:{}};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
 if (!SET.tipSeen || typeof SET.tipSeen !== 'object') SET.tipSeen = {};
 if (!SET.fxPick){ let had = false; try { had = 'fx' in (JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}') || {}); } catch (e) {} if (had) SET.fxPick = true; else SET.fx = FX_DEF; }   // (a stored Effects setting is the player's choice; none stored: the device's default)
@@ -4181,7 +4182,7 @@ function drawConvoys(now, vis){ if (!S.convoys || !S.convoys.length || view.s*HS
     const g = cvGeo(c), sg = tt*g.L, al = Math.min(1, tt/0.06, (1 - tt)/0.06)*trDryFade(g, sg); if (al <= 0.02) continue;
     const [wx, wy, ang] = trAt(g, sg), hexPx = view.s*HS0, Lh = trLen(hexPx)/view.s*0.5, hx = Math.cos(ang)*Lh, hy = Math.sin(ang)*Lh;
     if (!isWet(wx, wy, 96) || !isWet(wx + hx, wy + hy) || !isWet(wx - hx, wy - hy)) continue; const [x, y] = toScreen(wx, wy); if (S.speed && !S.over) animAmb();
-    if (x < -80 || y < -80 || x > cw + 80 || y > ch + 80) continue; tradeShip(x, y, ang, mapCol(c.owner), al, hexPx); } }
+    if (x < -80 || y < -80 || x > cw + 80 || y > ch + 80) continue; if (tradeOn()) tradeShip(x, y, ang, mapCol(c.owner), al, hexPx, trKind(c.t0*7 + c.owner*3 + c.route[0])); } }
 /* ---- drawing: dashed lanes over the sea (along the roads for land routes) and cargo convoys moving on them ---- */
 var TRD = {ver:-1, S:null, sea:null, mine:null, cut:null, land:null, geo:new Map()};
 function trGeo(r){ const D = r.kind === 'sea' && r.bs0 === 'det' ? trDetour(r) : null, dt = D && D.det ? D.track : null;
@@ -4301,18 +4302,29 @@ function contrailImg(){ if (CONTRAIL) return CONTRAIL; const c = document.create
 // a trade cargo ship at screen (x, y) heading ang: the owner's cargo-ship picture (u-cargo-ship, nose up) turned to its heading with a soft shadow, as long as a cruiser close in
 // (0.46 hexPx) and 14 to 30 px at play zoom, faded in over the first zoom steps; the small drawn hull while the picture loads. At most TRSHCAP ships a frame (TRSH.n, counted from
 // drawTrade's start), so a busy sea never clutters. Returns the ship's length in css px (0: not drawn)
-const TRSH = {n:0}, TRSHCAP = 36;
 const trLen = hexPx => Math.max(Math.min(30, Math.max(14, hexPx*1.6)), hexPx*0.46);
-function tradeShip(x, y, ang, col, al, hexPx){ if (TRSH.n >= TRSHCAP) return 0; const L = trLen(hexPx), fa = Math.min(1, (hexPx - 5.5)/3.5)*al; if (fa <= 0.02) return 0; TRSH.n++;
-  ctx.save(); ctx.globalAlpha *= fa; if (!airPic('cargo', x, y, L/1.536, ang, [L*0.05, L*0.09])){ const ic = trShipIcon(col), L2 = L*0.8; ctx.translate(x, y); ctx.rotate(ang + Math.PI/2); ctx.drawImage(ic, -L2*0.2, -L2/2, L2*0.4, L2); }
+// the mix of sizes on the sea: a deterministic kind per ship (its route and slot, so a ship never changes size): 4 in 10 big (the picture at full length), 2 mid (the
+// picture at 0.68), 2 small (the picture at 0.55), then a code-drawn coaster and a tanker
+const TRKIND = [['big', 1], ['big', 1], ['big', 1], ['big', 1], ['mid', 0.68], ['mid', 0.68], ['small', 0.55], ['small', 0.55], ['coaster', 0.6], ['tanker', 0.82]];
+const trKind = n => TRKIND[(Math.imul((n | 0) + 1, 2654435761) >>> 16) % 10];
+const TRSH = {n:0, kinds:{}}, TRSHCAP = 36;
+function tradeShip(x, y, ang, col, al, hexPx, kd){ if (TRSH.n >= TRSHCAP) return 0; kd = kd || TRKIND[0]; const L = trLen(hexPx)*kd[1], fa = Math.min(1, (hexPx - 5.5)/3.5)*al; if (fa <= 0.02) return 0; TRSH.n++; TRSH.kinds[kd[0]] = (TRSH.kinds[kd[0]] || 0) + 1;
+  ctx.save(); ctx.globalAlpha *= fa; const drawn = kd[0] === 'coaster' || kd[0] === 'tanker';
+  if (drawn || !airPic('cargo', x, y, L/1.536, ang, [L*0.05, L*0.09])){ const ic = trShipIcon(col, drawn ? kd[0] : 'cargo'), L2 = L*0.8, w2 = L2*(kd[0] === 'tanker' ? 0.36 : kd[0] === 'coaster' ? 0.44 : 0.4); ctx.translate(x, y); ctx.rotate(ang + Math.PI/2); ctx.drawImage(ic, -w2/2, -L2/2, w2, L2); }
   else { ctx.translate(x, y); ctx.rotate(ang + Math.PI/2); ctx.fillStyle = col; ctx.strokeStyle = 'rgba(8,12,14,.8)'; ctx.lineWidth = 0.8; const w = Math.max(2.4, L*0.07), h = Math.max(1.8, L*0.05); ctx.fillRect(-w/2, L*0.38, w, h); ctx.strokeRect(-w/2, L*0.38, w, h); }
   ctx.restore(); return L; }
-var TRSHIP = new Map();   // small top-down cargo ship icons by colour (cached offscreen, bow up)
-function trShipIcon(col){ let c = TRSHIP.get(col); if (c) return c; c = document.createElement('canvas'); c.width = 16; c.height = 40; const g = c.getContext('2d');
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(8.6, 21, 6, 17, 0, 0, Math.PI*2); g.fill();
-  g.fillStyle = '#5b6062'; g.strokeStyle = '#0d1214'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(8, 2); g.quadraticCurveTo(14, 9, 13.5, 16); g.lineTo(13.5, 35); g.quadraticCurveTo(13, 38, 8, 38.5); g.quadraticCurveTo(3, 38, 2.5, 35); g.lineTo(2.5, 16); g.quadraticCurveTo(2, 9, 8, 2); g.closePath(); g.fill(); g.stroke();
-  const box = ['#9a6b4a', '#6f7f86', '#b39a62', '#7d5a48']; for (let i = 0; i < 4; i++){ g.fillStyle = box[i]; g.fillRect(4.2, 10 + i*5, 7.6, 4); }
-  g.fillStyle = col; g.fillRect(4.5, 30, 7, 3.4); g.fillStyle = '#d9d6cc'; g.fillRect(5, 34.2, 6, 1.6); TRSHIP.set(col, c); return c; }
+var TRSHIP = new Map();   // small top-down ship icons by colour and kind (cached offscreen, bow up, drawn at 3x)
+function trShipIcon(col, kind = 'cargo'){ const key = kind + col; let c = TRSHIP.get(key); if (c) return c; c = document.createElement('canvas'); const K = 3, W = kind === 'tanker' ? 14 : 16, H = 40; c.width = W*K; c.height = H*K; const g = c.getContext('2d'); g.scale(K, K); const cx = W/2;
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx + 0.6, 21, W*0.38, 17, 0, 0, Math.PI*2); g.fill(); g.strokeStyle = '#0d1214'; g.lineWidth = 1.1;
+  if (kind === 'tanker'){ g.fillStyle = '#4a5457'; g.beginPath(); g.moveTo(cx, 1.5); g.quadraticCurveTo(W - 1.5, 7, W - 1.8, 12); g.lineTo(W - 1.8, 35); g.quadraticCurveTo(W - 2.4, 38.5, cx, 38.8); g.quadraticCurveTo(2.4, 38.5, 1.8, 35); g.lineTo(1.8, 12); g.quadraticCurveTo(1.5, 7, cx, 1.5); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#7a3b32'; g.fillRect(3.4, 7, W - 6.8, 21); g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 0.6; for (let i = 0; i < 4; i++) g.strokeRect(3.4, 7 + i*5.25, W - 6.8, 5.25);
+    g.fillStyle = '#9aa0a2'; g.fillRect(cx - 0.5, 6, 1, 23); g.fillStyle = col; g.fillRect(3.8, 30.5, W - 7.6, 3.6); g.fillStyle = '#d9d6cc'; g.fillRect(4.4, 34.4, W - 8.8, 1.8); }
+  else if (kind === 'coaster'){ g.fillStyle = '#586064'; g.beginPath(); g.moveTo(cx, 3); g.quadraticCurveTo(W - 1.5, 9, W - 2, 15); g.lineTo(W - 2, 34); g.quadraticCurveTo(W - 3, 37.5, cx, 38); g.quadraticCurveTo(3, 37.5, 2, 34); g.lineTo(2, 15); g.quadraticCurveTo(1.5, 9, cx, 3); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#c9c6ba'; g.fillRect(4.2, 8, W - 8.4, 7); g.fillStyle = '#6a5b44'; g.fillRect(4.4, 17, W - 8.8, 9); g.fillStyle = '#a98e5a'; g.fillRect(4.4, 27.4, W - 8.8, 3.4); g.fillStyle = col; g.fillRect(4.6, 31.6, W - 9.2, 3); }
+  else { g.fillStyle = '#5b6062'; g.beginPath(); g.moveTo(cx, 2); g.quadraticCurveTo(14, 9, 13.5, 16); g.lineTo(13.5, 35); g.quadraticCurveTo(13, 38, cx, 38.5); g.quadraticCurveTo(3, 38, 2.5, 35); g.lineTo(2.5, 16); g.quadraticCurveTo(2, 9, cx, 2); g.closePath(); g.fill(); g.stroke();
+    const box = ['#9a6b4a', '#6f7f86', '#b39a62', '#7d5a48']; for (let i = 0; i < 4; i++){ g.fillStyle = box[i]; g.fillRect(4.2, 10 + i*5, 7.6, 4); }
+    g.fillStyle = col; g.fillRect(4.5, 30, 7, 3.4); g.fillStyle = '#d9d6cc'; g.fillRect(5, 34.2, 6, 1.6); }
+  TRSHIP.set(key, c); return c; }
 // the blockade icon (screen space): a red disc with a barrier where a blockade cuts a route, orange where convoys sail around it; label above
 function blkIcon(x, y, k, cut, lab){ if (x < -30 || y < -30 || x > cw + 30 || y > ch + 30) return; const R = 9*k; ctx.save();
   ctx.fillStyle = cut ? 'rgba(206,52,44,.95)' : 'rgba(226,128,36,.95)'; ctx.strokeStyle = 'rgba(12,8,6,.85)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
@@ -4338,7 +4350,7 @@ function drawChokes(now){ const hexPx = view.s*HS0; if (hexPx < 8 || !G) return;
 // screen-space convoys: small ship icons at mid zoom, the cargo-ship picture at close zoom, dots at world zoom
 function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; const T = S.trade, hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, t = S.hour + live;
   const vx0 = -view.x/view.s - 40, vy0 = -view.y/view.s - 40, vx1 = (cw - view.x)/view.s + 40, vy1 = (ch - view.y)/view.s + 40;
-  const close = hexPx >= 26, mid = hexPx >= 5.5, k = Math.max(0.8, Math.min(1.6, hexPx/16)), on = tradeOn(), seen = visibleSet(PLAYER), Ls = trLen(hexPx); TRSH.n = 0;
+  const close = hexPx >= 26, mid = hexPx >= 5.5, k = Math.max(0.8, Math.min(1.6, hexPx/16)), on = tradeOn(), seen = visibleSet(PLAYER), Ls = trLen(hexPx); TRSH.n = 0; TRSH.kinds = {};
   for (const r of T.routes){ const g = trGeo(r), b = g.box; if (b[3] < vy0 || b[1] > vy1 || !wrapHit(b[0], b[2], vx0, vx1)) continue;   // (any copy of the route on screen)
     // blockade marker at the blocking zone / port, and a burning wreck where today's convoy was sunk
     if (r.bk >= 0 && r.f0 < 1 && mid && r.why !== 'paused'){ const f = armyById(r.bk), D = f ? trDetour(r) : null; if (f && D && (on || r.f0 === 0)){ const own = f.owner === PLAYER || friendly(PLAYER, f.owner) || armyVisible(f, seen);
@@ -4348,7 +4360,7 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
       if (hexPx >= 12){ ctx.font = `700 ${Math.round(9.5*Math.min(1.3, k))}px ${BODY}`; ctx.fillStyle = 'rgba(255,170,150,.92)'; ctx.textAlign = 'center'; ctx.fillText(r.why === 'contested' ? 'CONTESTED' : 'BLOCKADE', x, y - 15*k); } ctx.restore(); }
     if (r.raidZ >= 0 && S.hour - r.raid < 12 && mid && on){ const P = G.P[r.raidZ], [x, y] = toScreen(P.x, P.y), fl = 0.6 + 0.4*Math.sin(now/120); if (x > -20 && y > -20 && x < cw + 20 && y < ch + 20) animFast();   // (the flickering wreck asks for frames only on screen)
       ctx.save(); ctx.fillStyle = `rgba(255,${120 + 60*fl},60,${0.7*fl})`; ctx.beginPath(); ctx.arc(x, y, 4.5*k, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = 'rgba(40,40,40,.5)'; ctx.beginPath(); ctx.arc(x + 3*k, y - 6*k, 5*k, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
-    if (r.f <= 0 || g.L < 1) continue;   // (cargo ships always: the lanes and markers show only while routes show)
+    if (r.f <= 0 || g.L < 1 || !on) continue;   // (the lanes, dots, trucks and cargo ships only while Shipping routes is on; the blockade markers above always)
     const n = Math.max(1, Math.min(6, Math.round(g.L/260))), per = 2*g.L/TR_SPD, ph = ((t/per) % 1 + (r.id*0.137) % 1) % 1;
     for (let i = 0; i < n*2; i++){ const back = i % 2 === 1, sea = r.kind === 'sea'; let f = (ph + Math.floor(i/2)/n) % 1; if (back) f = 1 - f;
       // sea lanes: ships sail the wet span only (they turn back at the coast, fading in and out there), not the run inland to the port city
@@ -4359,10 +4371,9 @@ function drawTrade(now, vis){ if (!S.trade || !S.trade.routes.length) return; co
         if (!isWet(cx, cy, 96) || !isWet(cx + hx, cy + hy) || !isWet(cx - hx, cy - hy)) continue; }
       if (live && x > -24*k && y > -24*k && x < cw + 24*k && y < ch + 24*k) animAmb();   // (registered only for a convoy that is drawn and reaches the screen: one hidden on a lane's overland stretch, or in the margin just off screen, does not keep the map redrawing)
       const own = back ? r.b : r.a, col = own >= 0 ? mapCol(own) : '#b8b4a6';
-      if (!on && (!mid ? true : r.kind === 'land')) continue;   // (a lane's dots and the land trucks only while routes show; the cargo ships at play zoom always)
       if (!mid){ ctx.fillStyle = r.kind === 'land' ? 'rgba(214,190,120,.8)' : `rgba(220,232,236,${0.75*al})`; ctx.fillRect(x - 1.2, y - 1.2, 2.4, 2.4); continue; }
       if (r.kind === 'land'){ ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = '#5e5a4e'; ctx.strokeStyle = '#0d1214'; ctx.lineWidth = 1; ctx.fillRect(-5*k, -2*k, 10*k, 4*k); ctx.strokeRect(-5*k, -2*k, 10*k, 4*k); ctx.fillStyle = col; ctx.fillRect(2.5*k, -2*k, 2.5*k, 4*k); ctx.restore(); continue; }
-      tradeShip(x, y, ang, col, al, hexPx); } } }
+      tradeShip(x, y, ang, col, al, hexPx, trKind(r.id*7 + i*13 + (back ? 5 : 0))); } } }
 function tradeHTML(){ const T = trS(), me = PLAYER, mine = routesOf(me), tot = tradeIncome(me), ico = k => icon(k, 13);
   const rows = mine.map(r => { const v = trSide(r, me), o = trOther(r, me), [cls, txt] = trStateText(r, me), risk = trRisk(r), mid = r.path[Math.floor(r.path.length/2)];
     const via = r.via && (r.via[0] != null || r.via[1] != null) ? ` <span title="Shipped through a partner's or an independent port">(via ${pName(r.a === me ? r.pa : r.pb)})</span>` : '';
@@ -4800,8 +4811,9 @@ const MODES = [['political', 'Political'], ['terrain', 'Terrain']], OVLS = [['re
 const mapOvl = {rel:false, sup:false};
 const polMode = () => mapMode === 'political';
 const ovlOn = k => mapOvl[k] && polMode();
-// trade routes show while one of your fleets is selected (so you see what to raid or blockade), and blockaded routes always (red, with the blockade icon)
-const tradeOn = () => sel.army != null && (a => !!a && a.owner === PLAYER && !a.air && shipsN(a) > 0)(armyById(sel.army));
+// trade routes (the lanes, their dots, the land trucks) and the cargo ships on them show only with Settings > Map > 'Shipping routes' on (default off); blockaded
+// routes always (red, with the blockade icon). Selecting a fleet no longer shows them.
+const tradeOn = () => SET.shipRoutes === true;
 const sel = {army:null, prov:null, target:null, group:[], foe:null};   // foe: a foreign force you tapped (its read-only army bar)
 let boxSel = null, rallyFor = null, aimMsl = null;
 let targetPath = null;
@@ -5079,11 +5091,11 @@ const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max
    fixed bearing of their own at rest (turning smoothly, never offset per frame); night darkens them like the map. Drawn over the path lines and
    under the names, the HQ and the counters; only what is on screen (and a margin) is drawn, at most 40 groups (24 with low effects) a frame,
    those nearest the middle of the view first. Wings in flight keep their flat icons. Settings: 'Troop models' (off: the counters only). */
-const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['ssf'], at:['sat'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['frig'],
+const TMM = {inf:['sol', 'hmv'], para:['sol'], spec:['ssf'], at:['sat'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['lst'],
   jet:['jet'], bomb:['jet'], stealth:['jet'], mpa:['jet'], awacs:['jet'], int:['int'], asf:['int'], heli:['heli'], drone:['drone'], sdrone:['drone'], swarm:['drone']};
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
 const TMG = {sol:[1.8, 0.42], sat:[1.8, 0.42], ssf:[1.8, 0.42], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
-  frig:[7.4, 1.25], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[17, 0.9], int:[17, 0.9], heli:[17, 0.82], drone:[10.6, 0.66]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter)
+  frig:[7.4, 1.25], lst:[8.0, 1.32], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[17, 0.9], int:[17, 0.9], heli:[17, 0.82], drone:[10.6, 0.66]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter)
 /*@TEST*/const TMDBG = [];/*@ENDTEST*/
 const TMD = new Map(), TMCELL = new Map(), TMLAST = new Map(), TMMIP = new Map(), TMLUT = new Map(), TMH = new Map(), TMSLOT = new Map(), TMEX = new Map(); let TMSH = null, TMSW = 0, TMCB = 0, TMNEW = 0;
 const tmOn = () => SET.models !== false;
@@ -5137,7 +5149,7 @@ function tmDir(id, t, ang, now){ const n = 16, raw = (((ang/(Math.PI*2))*n) % n 
 function tmShadow(){ if (TMSH) return TMSH; const c = document.createElement('canvas'); c.width = 128; c.height = 40; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 2, 64, 64, 62);
   gr.addColorStop(0, 'rgba(0,0,0,.6)'); gr.addColorStop(0.5, 'rgba(0,0,0,.32)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.setTransform(1, 0, 0, 20/64, 0, 0); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (TMSH = c); }
 // the ground glow under a group in its holder's relation tone (a soft plateau with a slightly brighter rim, cached per colour)
-const TM_SIN_EL = Math.sin(0.82), TM_BEAM = {frig:0.15, crui:0.14, sub:0.11, carr:0.24};   // (the map sheets' camera elevation; hull beam per length)
+const TM_SIN_EL = Math.sin(0.82), TM_BEAM = {frig:0.15, lst:0.19, crui:0.14, sub:0.11, carr:0.24};   // (the map sheets' camera elevation; hull beam per length)
 // a ring of white foam (an ellipse's rim, soft on both sides, a little brighter at the bow and the stern) for where a hull meets the water
 let TMFOAM = null; function tmFoam(){ if (TMFOAM) return TMFOAM; const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 63);
   gr.addColorStop(0, 'rgba(240,248,250,0)'); gr.addColorStop(0.7, 'rgba(240,248,250,0)'); gr.addColorStop(0.84, 'rgba(240,248,250,.55)'); gr.addColorStop(0.9, 'rgba(240,248,250,.4)'); gr.addColorStop(1, 'rgba(240,248,250,0)');
@@ -5145,8 +5157,8 @@ let TMFOAM = null; function tmFoam(){ if (TMFOAM) return TMFOAM; const N = 128, 
   return (TMFOAM = c); }
 // a model's class: 'g' ground, 's' naval, 'a' air
 const TM_FOOT = new Set(['sol', 'sat', 'ssf']);   // the squads (on the march: a walking bob)
-const TM_CLS = t => /^(frig|sub|crui|carr)$/.test(t) ? 's' : /^(jet|int|heli|drone)$/.test(t) ? 'a' : 'g';
-const TM_CT = {g:['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'sub', 'crui', 'carr'], a:['jet', 'int', 'heli', 'drone']};
+const TM_CLS = t => /^(frig|lst|sub|crui|carr)$/.test(t) ? 's' : /^(jet|int|heli|drone)$/.test(t) ? 'a' : 'g';
+const TM_CT = {g:['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'lst', 'sub', 'crui', 'carr'], a:['jet', 'int', 'heli', 'drone']};
 // the unit mix of some armies: count per unit type (troops embarked at sea count as their transport, 'lst')
 function tmUnits(list){ const u = {}; for (const q of list){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ u.lst = (u.lst || 0) + count(q); continue; }
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) u[t] = (u[t] || 0) + q.u[t]; } return u; }
@@ -5594,7 +5606,7 @@ function troopModels(clusters, clBox, hexPx, now){
    A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the 4x4 beside motorized
    infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place too. */
 const TMART = {hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
-  frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-strike-fighter', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
+  frig:{frig:'u-corvette'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:{jet:'u-strike-fighter', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs'},
   int:{int:'u-jet', asf:'u-air-superiority'}, heli:'u-attack-heli', drone:{drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'}};
 const TMART_K = {hmv:0.9, jet:0.9, int:0.9, heli:0.9, drone:0.95}, TMART_K0 = 0.9;   // a picture's length as a share of its model's (the squad is wider than one soldier)
 // a picture drawn larger than its footprint in the formation (none today: the infantry squads are 3D models)
@@ -5612,7 +5624,7 @@ function tmArt(m, ut, o){ let n = TMART[m]; if (n && typeof n === 'object') n = 
   if (n === '@bomb') n = heavyBomberArt(artT('bomb', o) === 'bomb2' ? 5 : 1);   // (the second picture once the Supersonic Bomber, generation 2, is researched)
   else if (n === '@drone') n = artT('drone', o) === 'drone4' ? 'u-uav-armed' : 'u-uav-recon';
   const A = ART.ready(n) && !ART.standIn(n) ? tmArtGeom(m, n) : null;
-  return A && ut === 'lst' ? (A.lstv || (A.lstv = {...A, lst:1})) : A; }   // (troops embarked at sea: the cargo ship's picture in olive drab with a bow ramp, drawn by tmArtDraw, so it is not mistaken for a trade ship)
+  return A; }   // (troops embarked at sea are the 3D landing ship model 'lst' (units3d.js mLst), never a picture: the cargo-ship picture is for trade ships only)
 // a picture's measures as model type m (its opaque box from the table tools/prep-art.py measured, so they are known before it loads)
 function tmArtGeom(m, n){ const key = m + '|' + n + '|' + tmRW(); let A = TMARTC.get(key); if (A) return A;
   const im = ART.img(n), pb = PICBOX[n] || (im ? picBox(im) : [0.9, 0.9]), Lw = tmRW()*(TMG[m] || [8, 0.8])[1]*(TMART_K[m] || TMART_K0); A = {n, Lw, hw:Lw*pb[0]/pb[1]/2, k:Lw/pb[1]*(TMART_DRAW[m] || 1)}; TMARTC.set(key, A); return A; }
@@ -5629,13 +5641,11 @@ function artRim(sp, key){ let c = ARTRIM.get(key); if (c) return c; if (ARTRIM.s
   g.globalAlpha = 1; g.globalCompositeOperation = 'destination-out'; g.drawImage(sp, 0, 0); g.globalCompositeOperation = 'source-over'; g.drawImage(sp, 0, 0);
   ARTRIM.set(key, c); return c; }
 function tmArtDraw(q, night){ const A = q.art, D = A.k*view.s, px = figBucket(D*dpr), rot = q.ang + Math.PI/2, bo = px < 80 ? 'brightness(1.32) contrast(1.15)' : '';   // (small on screen: lifted, so a squad's soldiers do not read as dark gravel)
-  let im = ART.sprite(A.n, px, A.lst ? {clean:1, boost:bo, tint:night > 0.02 ? '#121c14' : '#62743f', tintA:+(0.5 + night*0.22).toFixed(2)} : night > 0.02 ? {clean:1, tint:'#0a1622', tintA:+(night*0.42).toFixed(2), boost:bo} : {clean:1, boost:bo}); if (!im) return false;
-  if (px < 80) im = artRim(im, A.n + (A.lst ? 'L' : '') + '|' + px + '|' + night);   // (small: a faint light rim keeps each figure apart from the ground)
+  let im = ART.sprite(A.n, px, night > 0.02 ? {clean:1, tint:'#0a1622', tintA:+(night*0.42).toFixed(2), boost:bo} : {clean:1, boost:bo}); if (!im) return false;
+  if (px < 80) im = artRim(im, A.n + '|' + px + '|' + night);   // (small: a faint light rim keeps each figure apart from the ground)
   const sh = figShadow(A.n, px), ga = ctx.globalAlpha; ctx.save(); ctx.translate(q.x, q.y);
   if (sh){ const o = Math.max(1, D*0.035)*(q.air ? 2.2 : 1), S2 = D*(1 + 2*sh.pad); ctx.globalAlpha = ga*(night > 0.5 ? 0.38 : 0.55); ctx.save(); ctx.translate(o*0.7, o); ctx.rotate(rot); ctx.drawImage(sh, -S2/2, -S2/2, S2, S2); ctx.restore(); ctx.globalAlpha = ga; }
   ctx.rotate(rot); ctx.drawImage(im, -D/2, -D/2, D, D);
-  if (A.lst){ const L = A.Lw*view.s, w = A.hw*view.s*1.15; ctx.beginPath(); ctx.moveTo(-w*0.5, -L/2 + L*0.03); ctx.lineTo(w*0.5, -L/2 + L*0.03); ctx.lineTo(w*0.36, -L/2 - L*0.07); ctx.lineTo(-w*0.36, -L/2 - L*0.07); ctx.closePath();
-    ctx.fillStyle = night > 0.02 ? '#232d19' : '#56673a'; ctx.fill(); ctx.lineWidth = Math.max(1, L*0.012); ctx.strokeStyle = 'rgba(8,12,10,.85)'; ctx.stroke(); }   // the landing ramp at the bow
   ctx.restore(); return true; }
 /* ---------------- Unit art: top-down pictures (assets/art/u-*.webp) ----------------
    UART[type] = [image, faces down, size as a share of a formation figure's height]. The pictures are drawn nose up, except the self-propelled gun,
@@ -7000,11 +7010,11 @@ let HQBOX = null;   // this frame's box of your HQ model on screen (its hover to
    a force with no pictures on screen keeps its badge on its spot. Their still parts are painted once per look into device-pixel canvases and blitted. */
 const UCC = new Map(); let FLAGK = 0;
 // the stack's main unit type (by strength x hit points; troops embarked at sea: their transport) and whether it holds more than one type
-function ucTypes(L){ const wt = {}; for (const q of L){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ wt.lst = (wt.lst || 0) + count(q); continue; }
+function ucTypes(L){ const wt = {}; for (const q of L){
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) wt[t] = (wt[t] || 0) + q.u[t]*UNITS[t].hp; }
   const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); return [ts[0] || 'inf', ts.length > 1]; }
 // the icon for unit type t of owner o (the armed UAV from UAV IV; embarked troops: the transport)
-const ucIcon = (t, o) => t === 'lst' ? 'cargo' : artT(t, o);
+const ucIcon = (t, o) => artT(t, o);
 // the badge's still parts, painted once per look into a device-pixel canvas: a rounded square in the side colour (a dark edge, red in battle; yours
 // with a light rim inside it, so a green badge stands out on your own green land), a soft drop shadow; a second card's edge behind it when the force
 // holds more than one unit type; the flag (from the flag atlas, at its own device-pixel size: crisp) centred at the top, the main type's white
@@ -9247,10 +9257,12 @@ function settingsHTML(){
     ${row('Text size', `<div class="seg2">${[90, 100, 115, 130].map(v => `<button class="sg ${(SET.ui || 100) === v ? 'on' : ''}" aria-pressed="${(SET.ui || 100) === v}" data-act="set-ui" data-v="${v}">${v}%</button>`).join('')}</div>`)}
     ${row('Colours', `<div class="seg2">${opt('cb', false, 'Standard')}${opt('cb', true, 'Colour-blind')}</div>`)}
     ${row('Motion', `<div class="seg2">${opt('motion', 'full', 'Full')}${opt('motion', 'reduced', 'Reduced', 'No shake, fewer particles')}</div>`)}
-    ${row('Troop models', `<div class="seg2">${opt('models', true, 'On')}${opt('models', false, 'Off', 'Close in, only the counters show (no unit models on the map)')}</div>`)}
-    ${row('City lights at night', `<div class="seg2">${opt('cityLights', true, 'On')}${opt('cityLights', false, 'Off', 'Night still darkens the map, without the glow of cities and towns')}</div>`)}
     ${row('First-time tips', `<div class="seg2">${opt('tipsOff', false, 'On')}${opt('tipsOff', true, 'Off', 'Skip all tips')}</div>`)}
     ${row('Daily newspaper', `<div class="seg2">${opt('paper', true, 'Each morning')}${opt('paper', false, 'Dispatches only')}</div>`)}
+    <div class="seth" id="set-map">Map</div>
+    ${row('Shipping routes', `<div class="seg2">${opt('shipRoutes', true, 'On', 'Show the trade routes and the cargo ships sailing on them')}${opt('shipRoutes', false, 'Off', 'No trade routes or cargo ships on the map')}</div>`, 'Trade routes and the cargo ships on them')}
+    ${row('Troop models', `<div class="seg2">${opt('models', true, 'On')}${opt('models', false, 'Off', 'Close in, only the counters show (no unit models on the map)')}</div>`)}
+    ${row('City lights at night', `<div class="seg2">${opt('cityLights', true, 'On')}${opt('cityLights', false, 'Off', 'Night still darkens the map, without the glow of cities and towns')}</div>`)}
     </div>
     <div class="eyebrow">Save slots</div><div class="slots">${[1, 2, 3].map(i => { const m = slotMeta(i); return `<div class="slot"><span><b>Slot ${i}</b> <span class="small muted">${m ? `${m.name} · ${m.date} · ${m.scn}` : 'Empty'}</span></span><button class="btn" data-act="slot-save" data-v="${i}" ${S && S.started && !S.over ? '' : 'disabled'}>Save</button><button class="btn" data-act="slot-load" data-v="${i}" ${m ? '' : 'disabled'}>Load</button></div>`; }).join('')}</div>
     <div class="small muted">Keys: Space pause · 1–3 speed · P production · R research · D diplomacy · T market · A army · S statistics · N newspaper · O settings · V map mode · M sound · H home · ? manual ${itip('Mouse: left-click selects, a second click on the same target sends; right-click with a force selected moves or attacks at once; click an enemy force to pursue it. Keys: M move · K attack · L delay · X halt · Ctrl+4…9 save a group, 4…9 recall it.')}</div>
@@ -10245,7 +10257,7 @@ document.addEventListener('click', e => {
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
     case 'stats-open': openModal(statsHTML(), 'stats'); break;
     case 'settings-open': openModal(settingsHTML(), 'settings'); break;
-    case 'set': { const k = b.dataset.k, v = b.dataset.v === 'true' ? true : b.dataset.v === 'false' ? false : b.dataset.v; SET[k] = v; if (k === 'fx') SET.fxPick = true; saveSet(); if (k === 'cityLights' || k === 'fx') layerKey = ''; openModal(settingsHTML(), 'settings'); break; }
+    case 'set': { const k = b.dataset.k, v = b.dataset.v === 'true' ? true : b.dataset.v === 'false' ? false : b.dataset.v; SET[k] = v; if (k === 'fx') SET.fxPick = true; saveSet(); if (k === 'cityLights' || k === 'fx') layerKey = ''; if (k === 'shipRoutes') redraw(400); openModal(settingsHTML(), 'settings'); break; }
     case 'diff': S.diff = b.dataset.k; openModal(settingsHTML(), 'settings'); break;
     case 'paper-open': showPaper(true); break;
     case 'report': { const R = (S.reports || []).find(r => r.id === +b.dataset.id); if (R) openModal(reportHTML(R), 'report'); break; }
@@ -11046,7 +11058,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   splitOpen:a => splitOpen(a), get SPLIT(){ return SPLIT; }, joinForces:(a, b) => joinForces(a, b), joinHour:() => joinHour(), laneSet:() => laneSet(), isLane:(u, v) => isLane(u, v), legSpeed:(a, u, v) => legSpeed(a, u, v), seaSpeed:a => seaSpeed(a),
   unitKmd:(o, t) => unitKmd(o, t), wearWing:(a, k, d, h) => wearWing(a, k, d, h), maintRate:a => maintRate(a), wingCond:a => wingCond(a), sendToTarget:(a, k) => sendToTarget(a, k), render:() => renderSide(true), clearSel:() => clearSel(), merge:(a, b) => merge(a, b), removeEmpty:() => removeEmpty(),
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
-if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return mapLite() || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
+if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get map(){ return TMM; }, get lite(){ return mapLite() || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stats:() => fxStats(), dev:w => devCfx(w), get VW(){ return VW; }, fire:(w, A, B, o) => cfxFire(w, A, B, o), intercept:(A, B, o) => intercept(A, B, o), get PROJ(){ return PROJ; }, get PART(){ return PART; }, get WARN(){ return FXM.WARN; }, get CQ(){ return FXM.CQ; }};
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, ctryPal:{value:() => ctryPal()}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
@@ -11060,7 +11072,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
-if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagBand(o, plateDims(n, 1, false, true).w, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor, fighting) => badgeBody(side, t, n, flagBand(o, plateDims(n, 1, !!minor, true).w, plateDims(n, 1, !!minor, true).fh), !!mixed, false, !!fighting, !!minor), sandbag:(W, H) => sbmPaint(W, H), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }, get tradeDrawn(){ return TRSH.n; }, tradeOn:() => tradeOn(), tradeCap:TRSHCAP};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
+if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagBand(o, plateDims(n, 1, false, true).w, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor, fighting) => badgeBody(side, t, n, flagBand(o, plateDims(n, 1, !!minor, true).w, plateDims(n, 1, !!minor, true).fh), !!mixed, false, !!fighting, !!minor), sandbag:(W, H) => sbmPaint(W, H), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }, get tradeDrawn(){ return TRSH.n; }, get tradeKinds(){ return TRSH.kinds; }, trKind:n => trKind(n)[0], tradeOn:() => tradeOn(), tradeCap:TRSHCAP};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {cp:{get CP(){ return CP; }, plan:(kind, k, ids) => cpPlan(kind, k, ids), buildWhy:(p, k) => buildWhy(p, k), trainWhy:(p, t) => trainWhy(p, t), buildCost:(k, p) => buildCost(PLAYER, k, nextLvl(p, k), p), ucost:t => ucost(PLAYER, t), cities:() => cpCities().map(P => P.id), units:() => UT.slice(), render:() => renderSide(true)}});
 /*@ENDTEST*/
