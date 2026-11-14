@@ -3023,7 +3023,7 @@ function bvInit(){ if (BV.ok || BV.bad) return BV.ok; const D = window.BORDERS;
       const f0 = bvThin(f, 0.15), pts = new Array(f0.length/2); for (let j = 0; j < pts.length; j++) pts[j] = [f0[2*j], f0[2*j + 1]]; BV.p0[i] = pts;
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (let j = 0; j < f.length; j += 2){ const x = f[j], y = f[j + 1]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
       BV.bb.set([x0, y0, x1, y1], 4*i); }
-    BV.maps = D.maps; BV.ok = true; } catch (err) { BV.bad = true; BV.ok = false; }
+    BV.maps = D.maps; BV.ok = true; D.arcs = null; } catch (err) { BV.bad = true; BV.ok = false; }   // (the encoded text is let go once decoded)
   return BV.ok; }
 // the full detail: borders-hi.js, asked for once when the zoom first nears band 2 (a script tag, like the page's other map data); until it is
 // there band 2 draws band 1
@@ -7100,7 +7100,7 @@ function clampView(){
 }
 let SHIFTING = false;   // a pan strip is being rendered (shiftLayer)
 let layer = null, layerKey = '', geoDirty = false, lastPanT = 0, FLYMARGIN = 0;   // FLYMARGIN: the next full render's margin (the start flight's layer, see draw)
-function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; const v = P.vbox; if (v){ const b = P.box; b[0] = Math.min(b[0], v[0]); b[1] = Math.min(b[1], v[1]); b[2] = Math.max(b[2], v[2]); b[3] = Math.max(b[3], v[3]); } } return P.box; }
+function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; const v = P.vbox; if (v){ const b = P.box; b[0] = Math.min(b[0], v[0]); b[1] = Math.min(b[1], v[1]); b[2] = Math.max(b[2], v[2]); b[3] = Math.max(b[3], v[3]); if (v[0] < WRAP_X0 || v[2] > WRAP_X0 + WRAP_W){ b[0] = Math.min(b[0], WRAP_X0); b[2] = Math.max(b[2], WRAP_X0 + WRAP_W); } } } return P.box; }   // (a real shape across the seam is drawn on both edges of the world: its box spans the world)
 const LM = 0.22;                                        // layer margin, as a share of the viewport on each side
 const ZRES = 0.5;                                       // a layer rendered mid-zoom (drawn scaled, soon replaced) is made at this share of the pixel ratio
 let ZRND = false;                                       // such a render is under way: it leaves out the faint passes (shallow-water bands, ground grain) and new city bakes

@@ -1,8 +1,8 @@
 // Real borders (tools/build-borders.py, borders.js / borders-hi.js): node .test/borders-real.js [W H dpr]   (default 1440 900 2)
 // A nations-world game as the United States, the clock paused, daylight. Exits 1 on any failure; prints JSON {checks, fails, errors}.
 //  (R) REAL     200 points along Natural Earth's admin-0 land borders (10m) in the Middle East, Europe and the US (.test/fixtures/
-//               borders-real-pts.json, made by tools/build-borders.py's sampler: borders inside one game country, such as Cyprus's, left
-//               out): at a close zoom (hexPx 100) the country border drawn on the layer passes within 1.5 css px of every point: the
+//               borders-real-pts.json, made by python3 tools/build-borders.py --sample: borders inside one game country, such as Cyprus's,
+//               left out; across a lake the border is the dashed lake line: its geometry is checked): at a close zoom (hexPx 100) the country border drawn on the layer passes within 1.5 css px of every point: the
 //               geometry stroked (its distance to the point) and the pixels (a layer drawn with and without the border lines: a changed
 //               pixel within 1.5 css px)
 //  (G) GAPS     along shared borders of two provinces of different owners, the tint (its own canvas) covers both sides right up to the
@@ -56,7 +56,9 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
       // points along province borders (land both sides, both owned or independent) in view at the band: [x, y, nx, ny (unit normal, left side), left, right]
       arcPts(kind, n, mw, mh, otherOwner){ const G = im.G, S = im.S, band = im.lodBand(im.hexPx()), list = kind === 'c' ? im.GEO.countryL : im.GEO.provL, out = [];
         for (const c of list){ if (c.dup || c.a < 0 || c.b < 0) continue; if (otherOwner && S.owner[c.a] === S.owner[c.b]) continue; const f = band === 2 && im.BV.f2 ? im.BV.f2[c.i] : im.BV.f1[c.i];
-          for (let j = 2; j + 3 < f.length; j += 10){ const ax = f[j], ay = f[j + 1], bx = f[j + 2], by = f[j + 3], L = Math.hypot(bx - ax, by - ay); if (L*im.view.s < 1) continue; const x = (ax + bx)/2, y = (ay + by)/2;
+          const n = f.length, e0 = [f[0], f[1]], e1 = [f[n - 2], f[n - 1]], s = im.view.s;
+          for (let j = 2; j + 3 < n; j += 10){ const ax = f[j], ay = f[j + 1], bx = f[j + 2], by = f[j + 3], L = Math.hypot(bx - ax, by - ay); if (L*s < 1) continue; const x = (ax + bx)/2, y = (ay + by)/2;
+            if (Math.hypot(x - e0[0], y - e0[1])*s < 8 || Math.hypot(x - e1[0], y - e1[1])*s < 8) continue;   // (not at a junction: a third province is there)
             if (!this.onScr(x, y, 60, mw, mh) || im.isWet(x, y)) continue; out.push([x, y, -(by - ay)/L, (bx - ax)/L, c.a, c.b]); } }
         const st = Math.max(1, Math.floor(out.length/n)); return out.filter((_, i) => i % st === 0).slice(0, n); } }; });
   // (the checks render the layer themselves: wait for the fine borders, not for every town's art)
@@ -80,9 +82,13 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
   // (G) tint up to the line on both sides, each side its owner's colour
   { const res = {n:0, ok:0}, bad = [];
     for (const [lon, lat] of [[37.5, 36.6], [7.5, 49.2], [-79, 43.0], [-106, 31.8], [21, 42.5], [44.5, 33.5]]){ await go(lon, lat, 90);
-      const r = await p.evaluate(([mw, mh]) => { const B = window.__br, im = window.__im, I = B.img(7), dp = I.L.dp || 2, out = [], tint = n => n >= 0 ? im.tintOf(n) : null, hex = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
+      const r = await p.evaluate(([mw, mh]) => { const B = window.__br, im = window.__im, I = B.img(7), dp = I.L.dp || 2, cv = document.createElement('canvas').getContext('2d'), out = [], tint = n => n >= 0 ? im.tintOf(n) : null, hex = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
         for (const [x, y, nx, ny, a, b] of B.arcPts('c', 30, mw, mh, true).concat(B.arcPts('p', 10, mw, mh, false))){ const s = 1.5/im.view.s;
-          for (const [side, sg] of [[a, 1], [b, -1]]){ const q = B.win(I, x + nx*s*sg, y + ny*s*sg, 0, true); if (!q) continue; const o = (q.R*(2*q.R + 1) + q.R)*4, T = q.d, al = T[o + 3];
+          for (const [side0, sg] of [[a, 1], [b, -1]]){ const qx = x + nx*s*sg, qy = y + ny*s*sg; if (im.isWet(qx, qy)) continue;
+            // the province whose drawn shape holds the point (this side's, else whichever: a bend or a narrow neighbour); none: a gap
+            const band = im.lodBand(im.hexPx()), has = q => cv.isPointInPath(im.provFill(q, band), qx, qy); let side = [side0, side0 === a ? b : a].find(has);
+            if (side === undefined) side = im.G.P.find(P => !P.sea && P.vbox && qx >= P.vbox[0] && qx <= P.vbox[2] && qy >= P.vbox[1] && qy <= P.vbox[3] && has(P.id)); side = side && side.id !== undefined ? side.id : side;
+            if (side === undefined){ out.push({ok:false, gap:true, side:side0, x:+qx.toFixed(2), y:+qy.toFixed(2)}); continue; } const q = B.win(I, x + nx*s*sg, y + ny*s*sg, 0, true); if (!q) continue;   // (the tint stops at a lake's shore) const o = (q.R*(2*q.R + 1) + q.R)*4, T = q.d, al = T[o + 3];
             const o2 = im.S.owner[side], want = o2 >= 0 ? tint(o2) : im.tintOf(-1, im.G.P[side].country), col = [T[o], T[o + 1], T[o + 2]], w = hex(want), dc = Math.abs(col[0] - w[0]) + Math.abs(col[1] - w[1]) + Math.abs(col[2] - w[2]);
             out.push({ok:al >= 180 && dc <= 60, al, dc, side, x:+x.toFixed(2), y:+y.toFixed(2)}); } }
         return out; }, [MAP.side, MAP.h]);
@@ -100,9 +106,9 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
   // (T) taps: 2 css px either side of a border picks that side's province; real clicks select it
   { const res = {n:0, ok:0, clicks:0, clickOk:0}, bad = [];
     for (const [lon, lat] of [[36.5, 34], [6.2, 49.6], [-71.5, 41.8], [20.5, 44]]){ await go(lon, lat, 120);
-      const r = await p.evaluate(([mw, mh]) => { const B = window.__br, im = window.__im, v = im.view, out = [];
+      const r = await p.evaluate(([mw, mh]) => { const B = window.__br, im = window.__im, v = im.view, cv = document.createElement('canvas').getContext('2d'), out = [];
         for (const [x, y, nx, ny, a, b] of B.arcPts('p', 20, mw, mh, false).concat(B.arcPts('c', 20, mw, mh, false))) for (const [side, sg] of [[a, 1], [b, -1]]){ const s = 2/v.s, wx = x + nx*s*sg, wy = y + ny*s*sg, sx = wx*v.s + v.x, sy = wy*v.s + v.y;
-          out.push({side, got:im.provAtV(sx, sy), sx, sy}); }
+          if (!cv.isPointInPath(im.provFill(side, im.lodBand(im.hexPx())), wx, wy)) continue; out.push({side, got:im.provAtV(sx, sy), sx, sy}); }
         return out; }, [MAP.side, MAP.h]);
       for (const x of r){ res.n++; if (x.got === x.side) res.ok++; else bad.push({lon, lat, ...x}); }
       // a few real clicks, away from towns and forces

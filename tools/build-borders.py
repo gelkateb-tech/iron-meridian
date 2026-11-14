@@ -2,6 +2,9 @@
 # Real borders for the map: every province of both maps (world.js as it is, and the nations world's split map) drawn from the real shapes of
 # Natural Earth admin-1 states and provinces 1:10m (public domain; the file world.js was built from), not from the cell edges.
 #   python3 tools/build-borders.py <ne_10m_admin_1_states_provinces.geojson>
+#   python3 tools/build-borders.py --sample <ne_10m_admin_0_boundary_lines_land.geojson>   the test points of .test/borders-real.js: 200 points
+#     along the real land borders between countries (admin-0 1:10m) in the Middle East, Europe and the US, borders inside one game country left
+#     out (Cyprus's; the RENAME list), lake stretches flagged by Natural Earth left out -> .test/fixtures/borders-real-pts.json
 #     (https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson; needs node,
 #      Python 3 with numpy and shapely 2)
 # Writes borders.js (window.BORDERS: the shared arcs at the far-zoom level of detail, and which province lies on each side of each arc on
@@ -385,6 +388,27 @@ def write(D, arcs, maps):
   log('arcs %d; points: hi %d, lo %d; borders.js %d KB, borders-hi.js %d KB' % (len(arcs), sum(len(a) for a in hi), sum(len(a) for a in lo),
       os.path.getsize(os.path.join(ROOT, 'borders.js'))//1024, os.path.getsize(os.path.join(ROOT, 'borders-hi.js'))//1024))
 
+def sample(src):
+  import random, collections
+  BOX = {'me': (25, 63, 12, 42), 'eu': (-10, 30, 36, 60), 'us': (-125, -66, 24, 50)}; N = {'me': 70, 'eu': 70, 'us': 60}
+  rnd = random.Random(7); cand = collections.defaultdict(list)
+  for f in json.load(open(src))['features']:
+    pr = f['properties']; cla = pr.get('FEATURECLA') or ''
+    if pr.get('TYPE') == 'Water Indicator' or 'Disputed' in cla or 'control' in cla.lower(): continue
+    if 'Cyprus' in pr['ADM0_LEFT'] + pr['ADM0_RIGHT'] or RENAME.get(pr['ADM0_LEFT'], pr['ADM0_LEFT']) == RENAME.get(pr['ADM0_RIGHT'], pr['ADM0_RIGHT']): continue
+    g = f['geometry']
+    for l in ([g['coordinates']] if g['type'] == 'LineString' else g['coordinates']):
+      for a, b in zip(l, l[1:]):
+        lon, lat = (a[0] + b[0])/2, (a[1] + b[1])/2
+        for k, (x0, x1, y0, y1) in BOX.items():
+          if x0 <= lon <= x1 and y0 <= lat <= y1 and (k != 'us' or 'USA' in (pr['ADM0_A3_L'], pr['ADM0_A3_R'])): cand[k].append((lon, lat, pr['ADM0_LEFT'], pr['ADM0_RIGHT']))
+  pts = []
+  for k in BOX:
+    c = cand[k]; rnd.shuffle(c); pts += [dict(r=k, lon=round(p[0], 6), lat=round(p[1], 6), a=p[2], b=p[3]) for p in c[:N[k]]]
+  out = os.path.join(ROOT, '.test', 'fixtures', 'borders-real-pts.json'); os.makedirs(os.path.dirname(out), exist_ok=True)
+  json.dump(pts, open(out, 'w'), indent=0); log('test points', len(pts), '->', out)
+
 if __name__ == '__main__':
+  if sys.argv[1:2] == ['--sample']: sample(sys.argv[2]); sys.exit(0)
   D, arcs, maps = main()
   write(D, arcs, maps)
