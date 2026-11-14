@@ -3978,7 +3978,7 @@ const FXH = {get AC(){ return AC; },
   get wrapSX(){ return wrapSX; },
   get zx(){ return zx; }};
 const FXM = window.IMFX(FXH);
-// the video explosions (fx.js FXV) or the drawn ones of before, to compare: ?fxv=0 / ?fxv=1 in the address (kept), the dev panel, window.__im.fxv(on)
+// the video explosions (fx.js FXV) or the drawn ones of before, to compare: ?fxv=0 / ?fxv=1 in the address (kept), the dev panel, the test hook fxv(on)
 const FXV_KEY = 'iron-meridian-fxv';
 try { const q = /[?&]fxv=([01])\b/.exec(location.search); if (q) localStorage.setItem(FXV_KEY, q[1]); const v = localStorage.getItem(FXV_KEY); if (v === '0' || v === '1') FXM.FXV.on = v === '1'; } catch (e) {}
 const fxvSet = on => { FXM.FXV.on = !!on; try { localStorage.setItem(FXV_KEY, on ? '1' : '0'); } catch (e) {} };

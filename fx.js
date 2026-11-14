@@ -238,7 +238,7 @@ const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.
    frame-rate independent; Low effects and the Battery saver draw the nearest frame only. Each lives in WFX (its caps, culling, frames
    asked only while one is on screen, the nuclear flash and burning ground), sized in world units (D, the frame's diameter) with a smallest
    drawn size (mp, css px) far out. FXV.on switches them off for the drawn master effects (a developer switch: ?fxv=0, the dev panel,
-   window.__im.fxv(false)); the sheets load after the rest of the art, and until one has arrived its weapon keeps the drawn look. */
+   the test hook fxv(false)); the sheets load after the rest of the art, and until one has arrived its weapon keeps the drawn look. */
 const FXV_META = {nuclear:{frames:32, cols:6, frame:192, fps:6.359}, conventional:{frames:30, cols:6, frame:192, fps:5.849}, cruise:{frames:24, cols:5, frame:176, fps:4.639}};   // (assets/art/fxv-sheets.json)
 // per kind: the sheet, the frame's world diameter, its smallest drawn diameter (css px), playback speed, where in the clip it ends (s) and its fade-out (s)
 const FXV_K = {cm:{n:'cruise', D:9, mp:64, sp:1, end:3.4, fo:1.3}, bb:{n:'conventional', D:5, mp:40, sp:1.15, end:3.4, fo:1.4}, bm:{n:'conventional', D:13, mp:96, sp:1, end:4.9, fo:1.6},
