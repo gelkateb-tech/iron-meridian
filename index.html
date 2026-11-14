@@ -3001,20 +3001,55 @@ function worldLines(G){ const P = G.P, LK = G.LK;
     const toW = (fx, fy) => [OX + HS*SQ3*fx/20, OY + HS*1.5*fy/20];
     const add = (path, arr, polys, delta) => { const pts = []; let fx = 0, fy = 0; for (let i = 1; i < arr.length; i += 2){ if (delta && i > 1){ fx += arr[i]; fy += arr[i + 1]; } else { fx = arr[i]; fy = arr[i + 1]; } const [x, y] = toW(fx, fy); pts.push([x, y]); if (path){ if (i === 1) path.moveTo(x, y); else path.lineTo(x, y); } } polys.push(pts); };
     for (const R of L.rivers){ const k = R[0] <= 2 ? 0 : R[0] <= 4 ? 1 : 2; add(lines.rivers[k], R, rPolys[k]); }
-    for (const R of L.roads) add(null, R, dPolys[L.delta ? Math.max(1, Math.min(3, R[0])) : 2], !!L.delta);
-    for (const R of (L.rails || [])) add(null, R, qPolys, !!L.delta);
-    // gap-fill tracks have no Natural Earth line: drawn centre to centre
-    for (const r of LK.values()) if (r.gap) dPolys[1].push([[P[r.a].x, P[r.a].y], [P[r.b].x, P[r.b].y]]); }
+    if (!netOf(G)) for (const R of L.roads) add(null, R, dPolys[L.delta ? Math.max(1, Math.min(3, R[0])) : 2], !!L.delta);   // (lines.js without the network: its roads as they are)
+    for (const R of (L.rails || [])) add(null, R, qPolys, !!L.delta); }
   { const CW = HS*SQ3, len = q => { let l = 0; for (let i = 1; i < q.length; i++) l += Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]); return l; };
     // rivers meander more and on a shorter wave than roads; railways bend least (long gentle curves)
     lines.riversT = rPolys.map(q => tiledPath(q.map(p => naturalLine(p, CW*0.22, CW*1.5, CW*0.2, 10)), 96, 24));
-    const RD = dPolys.map(q => chainPolys(q).map(p => [naturalLine(p, CW*0.4, CW*2.2, CW*0.22, 20), len(p)])), RL = chainPolys(qPolys).map(p => [naturalLine(p, CW*0.45, CW*3.6, CW*0.24, 30), len(p)]);
+    const ND = netDraw(G), RD = ND ? ND.byCls.map(q => q.map(c => [c.pts, c.len, c.way])) : dPolys.map(q => chainPolys(q).map(p => [naturalLine(p, CW*0.4, CW*2.2, CW*0.22, 20), len(p)])), RL = chainPolys(qPolys).map(p => [naturalLine(p, CW*0.45, CW*3.6, CW*0.24, 30), len(p)]);
     lines.roadsT = RD.map((q, i) => tiledPath(q.map(e => e[0]), 96, 16, i >= 2));   // (the highways' and main roads' runs kept: the lamps along them through a town at night, cityLinesNight)
-    lines.roadsMain = tiledPath(RD[2].filter(e => e[1] >= CW*5).map(e => e[0]), 96, 16, true);   // the longer local roads: shown a little earlier than the rest
+    // the roads shown a little earlier than the rest: those between provinces (on a link's way: every province has one, MAP-3) and the longer local ones
+    lines.roadsMain = tiledPath(RD[2].filter(e => e[2] || e[1] >= CW*5).map(e => e[0]), 96, 16, true);
+    lines.tracksWay = tiledPath(RD[1].filter(e => e[2]).map(e => e[0]), 96, 16);   // the tracks between provinces: shown before the local tracks
     lines.railsT = tiledPath(RL.map(e => e[0]), 96, 16); lines.railsMain = tiledPath(RL.filter(e => e[1] >= CW*6).map(e => e[0]), 96, 16);
-    lines.roadPl = RD.flatMap(q => q.map(e => e[0])); lines.railPl = RL.map(e => e[0]); RNET.road = RNET.rail = null; RROUTE.clear(); RLEG.clear(); rnetSoon(); }   // (the drawn lines, for the forces on the road: roadRoute)
+    lines.roadPl = ND ? null : RD.flatMap(q => q.map(e => e[0])); lines.railPl = RL.map(e => e[0]); RNET.road = RNET.rail = null; RROUTE.clear(); RLEG.clear(); rnetSoon(); }   // (the drawn lines, for the forces on the road: roadRoute)
   loadWorld.lines = lines;
 }
+/* ---------------- The movement network, drawn (MAP-3; the data: rules/map.js netOf) ----------------
+   ROADS: the road graph cut into chains (from fork to fork: a chain also ends at every province centre and where the road's class changes), each
+   chain made natural once (corners rounded, resampled, bent along the same field as every line, the bend fading to nothing at a province centre,
+   so a province's roads meet exactly on its centre point). A road's class on the map: the best of its line and of the links whose way runs on it
+   (a link raised to a road in MAP-3 draws its whole way as a road). A link's way (wayPts) is its chains end to end, so a force on the road is
+   drawn exactly on the drawn road, from centre to centre. LANES: each lane rounded (no bend: open water), lanePts. */
+let NETD = null;
+function netDraw(g = G){ if (NETD && NETD.G === g && NETD.L === LINES) return NETD; const net = netOf(g); if (!net) return (NETD = null);
+  const CW = HS*SQ3, n = net.X.length, A = net.A, ek = (a, b) => a < b ? a*n + b : b*n + a, best = new Map(), onWay = new Set(), centre = new Set();
+  for (const P of g.P) if (!P.sea){ const c = net.cOf(P.id); if (c !== undefined) centre.add(c); }
+  for (const r of g.LK.values()){ if (!r.r0) continue; const w = net.way(r.a, r.b); if (!w) continue; for (let i = 1; i < w.length; i++){ const k = ek(w[i - 1], w[i]); onWay.add(k); if (r.r0 > (best.get(k) || 0)) best.set(k, r.r0); } }
+  const dc = (a, b) => Math.max(net.cls(a, b), best.get(ek(a, b)) || 0), brk = i => A[i].length !== 2 || centre.has(i) || dc(i, A[i][0]) !== dc(i, A[i][1]);
+  // the bend of a point: the field, fading to nothing within 0.7 cell of a province centre (its province's or a neighbour's)
+  const R0 = CW*0.7, fade = (x, y) => { const c = worldToCell(x, y), p = c >= 0 ? g.prov[c] : -1; if (p < 0) return 1; let d = Infinity; const P = g.P[p];
+    for (const q of [p, ...P.nbs]){ const Q = g.P[q]; if (Q.sea) continue; const dd = Math.hypot(Q.x - x, Q.y - y); if (dd < d) d = dd; } const t = Math.min(1, d/R0); return t*t*(3 - 2*t); };
+  const smooth = (pts, bend) => { let q = pts; for (let it = 0; it < 2 && q.length > 2; it++){ const r = [q[0]]; for (let i = 0; i < q.length - 1; i++){ const p0 = q[i], p1 = q[i + 1]; r.push([p0[0]*0.75 + p1[0]*0.25, p0[1]*0.75 + p1[1]*0.25], [p0[0]*0.25 + p1[0]*0.75, p0[1]*0.25 + p1[1]*0.75]); } r.push(q[q.length - 1]); q = r; }
+    const step = CW*0.4, out = [q[0]]; for (let i = 1; i < q.length; i++){ const a = q[i - 1], b = q[i], m = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1])/step)); for (let k = 1; k <= m; k++){ const t = k/m; out.push([a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t]); } }
+    if (!bend) return out; return out.map(p => { const f = fade(p[0], p[1]); if (f <= 0) return p; const d = meander(p[0], p[1], CW*2.2, CW*0.22, 20); return [p[0] + d[0]*f, p[1] + d[1]*f]; }); };
+  const chains = [], ofEdge = new Map(), seen = new Set(), byCls = [[], [], [], []];
+  const take = (i, j) => { const nd = [i, j]; seen.add(ek(i, j)); let prev = i, cur = j; while (!brk(cur) && cur !== i){ const nx = A[cur][0] === prev ? A[cur][1] : A[cur][0]; seen.add(ek(cur, nx)); nd.push(nx); prev = cur; cur = nx; }
+    const raw = nd.map(v => net.nodeW(v)); let len = 0; for (let k = 1; k < raw.length; k++) len += Math.hypot(raw[k][0] - raw[k - 1][0], raw[k][1] - raw[k - 1][1]);
+    const c = {n:nd, pts:smooth(raw, true), cls:Math.max(1, Math.min(3, dc(nd[0], nd[1]))), len, way:onWay.has(ek(nd[0], nd[1]))}; chains.push(c); byCls[c.cls].push(c); for (let k = 1; k < nd.length; k++) ofEdge.set(ek(nd[k - 1], nd[k]), c); };
+  for (let i = 0; i < n; i++) if (brk(i)) for (const j of A[i]) if (!seen.has(ek(i, j))) take(i, j);
+  for (let i = 0; i < n; i++) for (const j of A[i]) if (!seen.has(ek(i, j))) take(i, j);   // (rings with no fork)
+  // a link's way: its chains end to end, from a's centre to b's (world points)
+  const WP = new Map(), wayPts = (a, b) => { const k = a + '>' + b; if (WP.has(k)) return WP.get(k); const w = net.way(a, b); let out = null;
+    if (w && w.length > 1){ out = []; for (let i = 0; i < w.length - 1;){ const c = ofEdge.get(ek(w[i], w[i + 1])); if (!c){ out = null; break; } const fw = c.n[0] === w[i], m = c.n.length - 1, P = fw ? c.pts : c.pts.slice().reverse();
+        for (let t = out.length ? 1 : 0; t < P.length; t++) out.push(P[t]); i += m; } }
+    WP.set(k, out); return out; };
+  const LP = new Map(), lanePts = (u, v) => { const k = u + '>' + v; if (LP.has(k)) return LP.get(k); const L = net.lane(u, v), out = L ? smooth(L, false) : null; LP.set(k, out); return out; };
+  // the lanes shown: between sea zones, and the ways out of the ports (coastal cities; every other coast keeps its way for landings, not shown)
+  let lanesPath = null; const lanesAll = () => { if (lanesPath && lanesPath.S === S) return lanesPath.p; lanesPath = {S, p:new Path2D()};
+    for (const [k] of net.lanes){ const [u, v] = k.split(',').map(Number); if (!g.P[u].sea && !g.P[u].city) continue; const P = lanePts(u, v); if (!P) continue; lanesPath.p.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) lanesPath.p.lineTo(P[i][0], P[i][1]); }
+    return lanesPath.p; };
+  return (NETD = {G:g, L:LINES, net, chains, byCls, wayPts, lanePts, lanesAll}); }
 function applyPalette(){ if (!S || !S.nations) return; for (const N of S.nations){ if (!N.color0) N.color0 = N.color; N.color = SET.cb ? CB_PAL[N.id % CB_PAL.length] : N.color0; } geoDirty = true; layerKey = ''; }
 function applySet(){ const z = (SET.ui || 100)/100; for (const sel0 of ['header', '#dock', '#side', '#modal', '#toasts', '#tut']){ const el = document.querySelector(sel0); if (el) el.style.zoom = z === 1 ? '' : z; } document.documentElement.style.setProperty('--uiz', z);
   document.documentElement.classList.toggle('reduced', SET.motion === 'reduced'); if (typeof hdrSync === 'function') try { hdrSync(true); } catch (e) {} if (typeof S !== 'undefined' && S) applyPalette();
@@ -4313,6 +4348,12 @@ function blkIcon(x, y, k, cut, lab){ if (x < -30 || y < -30 || x > cw + 30 || y 
   if (lab){ ctx.font = `700 ${Math.round(9.5*Math.min(1.3, k))}px ${BODY}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(6,8,10,.8)'; ctx.strokeText(lab, x, y - R - 5); ctx.fillStyle = cut ? 'rgba(255,170,150,.95)' : 'rgba(255,200,140,.95)'; ctx.fillText(lab, x, y - R - 5); }
   ctx.restore(); }
 // the reach of every blockading fleet you can see (world space): a dashed circle, red for a foe's, amber for yours and your allies'
+// the sea lanes (MAP-3, rules/map.js netOf): the network warships sail on, shown faintly while a force with ships, or one at sea, is selected
+// (its route line then runs along them, legGeom); hidden otherwise, so the sea stays clean
+function drawSeaLanes(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.air || a.fly || a.owner !== PLAYER) return;
+  if (!(shipsN(a) > 0 || G.P[a.at].sea || (a.to !== null && G.P[a.to].sea))) return; const ND = netDraw(); if (!ND) return; const px = 1/view.s, hexPx = view.s*HS0;
+  const L = ND.lanesAll(), w = hexPx < 10 ? 1.1 : 1.4; ctx.save(); ctx.strokeStyle = 'rgba(3,10,14,.32)'; ctx.lineWidth = (w + 2)*px; ctx.stroke(L);
+  ctx.strokeStyle = 'rgba(160,222,240,.6)'; ctx.lineWidth = w*px; ctx.setLineDash([6*px, 4*px]); ctx.stroke(L); ctx.setLineDash([]); ctx.restore(); }
 function drawBlockZones(now){ if (!S.armies.some(a => a.blk)) return; const vis = visibleSet(PLAYER), px = 1/view.s;
   for (const a of S.armies){ if (!a.blk || a.to !== null || a.sail || a.air || a.fly || !G.P[a.at].sea || !count(a)) continue; const km = fleetKm(a); if (!km || !(a.owner === PLAYER || friendly(PLAYER, a.owner) || armyVisible(a, vis))) continue;
     const [x, y] = armyXY(a), foe = a.owner !== PLAYER && !friendly(PLAYER, a.owner), R = km*KM_W; ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2);
@@ -5009,13 +5050,20 @@ function roadFind(N, from, to){ const A = G.P[from], B = G.P[to], d = Math.hypot
 function roadRoute(kind, from, to){ const key = kind + from + '>' + to; let r = RROUTE.get(key); if (r !== undefined) return r; if (!RNET[kind]){ rnetSoon(); return null; }
   const rv = RROUTE.get(kind + to + '>' + from); if (rv !== undefined) r = rv && rv.slice().reverse(); else { try { r = roadFind(rnetBuild(kind), from, to); } catch (e) { r = null; } }
   RROUTE.set(key, r); return r; }
+// a leg's drawn way for force a, as legCurve draws it (world points, `from`'s centre to `to`'s; straight where it has none): route lines
+function legGeom(a, from, to){ const A = G.P[from], B = G.P[to]; if (from === to || a.air) return [[A.x, A.y], [B.x, B.y]];
+  const sea = A.sea || B.sea, md = sea ? 'sea' : legMode(a, from, to), kind = md === 'sea' ? 'sea' : md === 'rail' ? 'rail' : md === 'hw' || md === 'road' || md === 'track' ? 'road' : null;
+  return (kind && legWay(kind, from, to)) || [[A.x, A.y], [B.x, B.y]]; }
+// the drawn way of a leg (world points from `from`'s centre to `to`'s): a road leg along its link's way (MAP-3: the drawn road, centre to centre),
+// a sea leg along its sea lane (or a port's way out), a rail leg along the railway (roadRoute); null: none (the gentle curve)
+function legWay(kind, from, to){ const ND = netDraw(); if (kind === 'sea') return ND ? ND.lanePts(from, to) : null; if (kind === 'road' && ND){ const W = ND.wayPts(from, to); if (W) return W; } return roadRoute(kind, from, to); }
 // the drawn point at share t of a leg from p1 to p2 (provinces from, to): along its road or railway where it has one, else the gentle curve. A
 // leg's kind is taken once (a change of weather mid-leg does not switch the drawn way); the line is cut to the leg's own two ends
 function legCurve(a, from, to, p0, p1, p2, p3, t){ let kind = null;
-  if (to != null && from !== to && !G.P[from].sea && !G.P[to].sea && !a.air){ const kk = from + '>' + to; let E = RLKIND.get(a.id);
-    if (!E || E.k !== kk){ const md = legMode(a, from, to); E = {k:kk, kind:md === 'rail' ? 'rail' : md === 'hw' || md === 'road' || md === 'track' ? 'road' : null}; RLKIND.set(a.id, E); if (RLKIND.size > 3000) RLKIND.clear(); }
+  if (to != null && from !== to && !a.air){ const kk = from + '>' + to; let E = RLKIND.get(a.id);
+    if (!E || E.k !== kk){ const sea = G.P[from].sea || G.P[to].sea, md = sea ? 'sea' : legMode(a, from, to); E = {k:kk, kind:md === 'sea' ? 'sea' : md === 'rail' ? 'rail' : md === 'hw' || md === 'road' || md === 'track' ? 'road' : null}; RLKIND.set(a.id, E); if (RLKIND.size > 3000) RLKIND.clear(); }
     kind = E.kind; }
-  const R = kind ? roadRoute(kind, from, to) : null; if (!R) return catmull(p0, p1, p2, p3, t);
+  const R = kind ? legWay(kind, from, to) : null; if (!R) return catmull(p0, p1, p2, p3, t);
   const key = kind + from + '>' + to + '|' + p1[0].toFixed(3) + ',' + p1[1].toFixed(3) + '|' + p2[0].toFixed(3) + ',' + p2[1].toFixed(3); let W = RLEG.get(key);
   if (!W){ const n = R.length, near = (p, i0, i1) => { let bi = i0, bd = Infinity; for (let i = i0; i <= i1; i++){ const q = R[i], dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd){ bd = dd; bi = i; } } return bi; };
     const i0 = near(p1, 0, Math.floor((n - 1)*0.4)), i1 = near(p2, Math.ceil((n - 1)*0.6), n - 1), pts = [p1, ...R.slice(i0 + 1, i1), p2], cum = [0];   // (a pinpoint spot joins the line where it is nearest)
@@ -7107,7 +7155,8 @@ let ZRND = false;                                       // such a render is unde
 // Natural Earth paths plus the links built or upgraded in game (centre to centre, from linkDyn)
 let LDYN = null;
 function linkDyn(vis){ const vk = vis ? vis.key : ''; if (LDYN && LDYN.v === LINKD && LDYN.S === S && LDYN.vk === vk) return LDYN; const D = {v:LINKD, S, vk, hw:new Path2D(), rd:new Path2D(), tr:new Path2D(), rail:new Path2D(), hsr:new Path2D()};
-  for (const k in (S.links || {})){ const r = G.LK.get(k); if (!r) continue; const A = G.P[r.a], B = G.P[r.b], seg = P2 => { P2.moveTo(A.x, A.y); P2.lineTo(B.x, B.y); };
+  const ND = netDraw();
+  for (const k in (S.links || {})){ const r = G.LK.get(k); if (!r) continue; const A = G.P[r.a], B = G.P[r.b], W = ND && ND.wayPts(r.a, r.b), seg = P2 => { if (W){ P2.moveTo(W[0][0], W[0][1]); for (let i = 1; i < W.length; i++) P2.lineTo(W[i][0], W[i][1]); } else { P2.moveTo(A.x, A.y); P2.lineTo(B.x, B.y); } };   // (along the link's way where it has one)
     // links built or upgraded in game show only where you can see them (your own and allied land, or in sight): no intel through the fog
     if (vis && !(vis.has(r.a) || vis.has(r.b) || [S.owner[r.a], S.owner[r.b]].some(o => o === PLAYER || (o >= 0 && friendly(PLAYER, o))))) continue;
     if (r.road > r.r0 || r.rail > r.q0) D.n = (D.n || 0) + 1;
@@ -7126,6 +7175,7 @@ function drawLinksLayer(c, LN, px, hexPx, wx0, wy0, wx1, wy1, vis, lite){ if (!L
     if (hexPx >= 8){ c.strokeStyle = 'rgba(120,206,236,.9)'; c.lineWidth = 1.2*px; c.stroke(D.hsr); }
     return; }
   if (hexPx >= 140){ const z = ramp(140, 180); c.strokeStyle = `rgba(206,190,150,${0.05 + 0.12*z})`; c.lineWidth = (0.5 + 0.2*z)*px; c.stroke(T(LN.roadsT[1])); c.stroke(D.tr); }
+  else if (hexPx >= 100 && LN.tracksWay){ c.strokeStyle = `rgba(206,190,150,${0.04 + 0.05*ramp(100, 140)})`; c.lineWidth = 0.5*px; c.stroke(T(LN.tracksWay)); }   // (the tracks between provinces come in a little before the local ones)
   if (hexPx >= 70){ const z = ramp(70, 130), RD = T(hexPx >= 100 ? LN.roadsT[2] : RM);
     if (hexPx >= 130){ c.strokeStyle = `rgba(20,16,10,${0.24*ramp(130, 170)})`; c.lineWidth = 2.2*px; c.stroke(RD); c.stroke(D.rd); }
     c.strokeStyle = `rgba(206,192,156,${0.05 + 0.16*z})`; c.lineWidth = (0.55 + 0.35*z)*px; c.stroke(RD); c.stroke(D.rd); }
@@ -7803,6 +7853,7 @@ function draw(now){ draw.now = now;
   drawLinkFx(now, vis);
   drawTradeLanes(now);
   drawBlockZones(now);
+  drawSeaLanes();
   if (sel.target !== null){ ctx.save(); landOnly(sel.target); const o = S.owner[sel.target]; if (!G.P[sel.target].sea && o !== PLAYER && (o < 0 || atWar(PLAYER, o))){ ctx.fillStyle = 'rgba(224,87,79,0.2)'; ctx.fill(GEO.fill[sel.target], 'evenodd'); }
     ctx.strokeStyle = '#f3ead2'; ctx.lineWidth = 2.2*px; ctx.setLineDash([5*px, 4*px]); ctx.stroke(GEO.outline[sel.target]); ctx.setLineDash([]); ctx.restore(); }
   if (sel.prov !== null){ const calm = afxReduced(); if (SELFX.p !== sel.prov){ SELFX.p = sel.prov; SELFX.pt = now; }
@@ -7895,12 +7946,20 @@ function draw(now){ draw.now = now;
   // paths (under the troop models, the names and the counters)
   const sa = sel.army !== null ? armyById(sel.army) : null; /*@TEST*/PATHDBG.sel = null; PATHDBG.dots = null; PATHDBG.eta = null;/*@ENDTEST*/
   const antOn = (S.speed && !S.over) || !!sa; if (antOn || RD.antT == null) RD.antT = now; const antT = RD.antT;   // (paused with nothing selected: the dashes rest)
-  const drawPath = (a, path, style, w = 2.2, endPt = null, noEnd = false) => { if (!path || (!path.length && !endPt)) return; const pts = [toScreen(...dispPos(a))]; if (antOn) animAmb();
-    let wp = dispPos(a); if (a.to !== null && path.length && path[0] !== a.to){ pts.push(toScreen(G.P[a.to].x, G.P[a.to].y)); wp = [G.P[a.to].x, G.P[a.to].y]; }
-    let exact = !path.length; if (exact){ pts.push(toScreen(endPt[0], endPt[1])); if (a.sail && a.sail.nx && endPt === a.sail.to) pts.push(toScreen(a.sail.nx[0], a.sail.nx[1])); }   // (a walk inside the province: straight to its point, by the city when it goes there first)
+  const drawPath = (a, path, style, w = 2.2, endPt = null, noEnd = false) => { if (!path || (!path.length && !endPt)) return; const s0 = dispPos(a), W = [s0]; if (antOn) animAmb();
+    // the route as the force will go: along the roads, railways and sea lanes it will use (legGeom), province centre to centre (MAP-3)
+    const near = (G0, q) => { let bi = 0, bd = Infinity; for (let i = 0; i < G0.length; i++){ const d = (G0[i][0] - q[0])**2 + (G0[i][1] - q[1])**2; if (d < bd){ bd = d; bi = i; } } return bi; };
+    const from = (G0, q) => G0.slice(near(G0, q) + 1);   // (the part of a leg after the point nearest q)
+    let wp = s0, u = a.at, first = true;
+    if (a.to !== null && path.length && path[0] !== a.to){ W.push(...from(legGeom(a, a.at, a.to), s0)); wp = [G.P[a.to].x, G.P[a.to].y]; u = a.to; first = false; }
+    let exact = !path.length; if (exact){ W.push(endPt); if (a.sail && a.sail.nx && endPt === a.sail.to) W.push(a.sail.nx); }   // (a walk inside the province: straight to its point, by the city when it goes there first)
     path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; if (e) exact = true;
-      if (e && heartVia(a, p, wp, e)) pts.push(toScreen(G.P[p].x, G.P[p].y));   // (a point beyond the heart of land to capture: the route goes by the city, rules/movement.js sailTo)
-      pts.push(e ? toScreen(e[0], e[1]) : toScreen(G.P[p].x, G.P[p].y)); wp = e || [G.P[p].x, G.P[p].y]; });
+      const G0 = legGeom(a, u, p), G1 = first ? from(G0, s0) : G0.slice(1); first = false;
+      if (e && heartVia(a, p, wp, e)) W.push(...G1, e);   // (a point beyond the heart of land to capture: the route goes by the city, rules/movement.js sailTo)
+      else if (e){ const k = near(G1, e); W.push(...G1.slice(0, k), e); }
+      else W.push(...G1);
+      wp = e || [G.P[p].x, G.P[p].y]; u = p; });
+    const pts = W.filter(Boolean).map(q => toScreen(q[0], q[1]));
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++){ if (i < pts.length - 1){ const mx = (pts[i][0] + pts[i + 1][0])/2, my = (pts[i][1] + pts[i + 1][1])/2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } else ctx.lineTo(pts[i][0], pts[i][1]); }
     const lastPt = pts[pts.length - 1]; /*@TEST*/if (a === sa && style === '#e2a23d') PATHDBG.sel = {id:a.id, pts:pts.map(q => [Math.round(q[0]*10)/10, Math.round(q[1]*10)/10]), exact, noEnd};/*@ENDTEST*/
     ctx.lineWidth = w + 3; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.stroke(); ctx.setLineDash([7, 5]); ctx.lineDashOffset = -(antT/40 % 12); ctx.lineWidth = w; ctx.strokeStyle = style; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
@@ -9170,7 +9229,7 @@ const TUT_STEPS = [
   {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Recruit', d:() => `Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.`, el:'#csheet:not([hidden]) .cs-mob, #ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
   {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
-  {t:'Plan an attack', d:() => tutPick() != null ? `Tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its heart. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
+  {t:'Plan an attack', d:() => tutPick() != null ? `Tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its centre point (the city, or the crossroads where its roads meet). A dashed route along the roads appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null},
   {t:'Send it', d:() => sel.target !== null ? 'Tap the same province again, press the yellow button in the panel, or use Move in the command bar at the bottom (right-click also works on a computer) to march. Avoid attacks marked Likely defeat: merge more units first.' : 'When you have a Favourable target, tap it twice to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
   {t:'Dug in', d:() => `A small yellow shield with a sandbag line on a force's badge means it is <b>dug in</b>: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage). A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
@@ -9709,7 +9768,7 @@ function statusText(a){
     if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${P[dest].name}, about ${etaHours(a)} h`}; }
   if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${P[a.at].name}. Ground units take extra damage at sea.`};
   if (a.to === null && !a.path.length && ground(a) && capturable(a.owner, a.at)){ const nm = P[a.at].cityName || P[a.at].name;   // (rules/movement.js atHeart: capture is at once at the heart)
-    if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${P[a.at].name}: a province becomes yours the moment ground troops reach its heart (${P[a.at].city ? nm : 'its centre'}) with no defenders left. Tap the city to march there.`};
+    if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${P[a.at].name}: a province becomes yours the moment ground troops reach its centre point (${P[a.at].city ? nm : 'the crossroads in its middle'}, where its roads meet) with no defenders left, no timer. Tap the city to march there.`};
     if (S.armies.filter(b => b.owner === a.owner && b.at === a.at && b.to === null).reduce((s0, b) => s0 + groundN(b), 0) < CAP_MIN) return {cls:'cap', short:'too few', long:`At the city, but ${CAP_MIN} ground units are needed to capture ${P[a.at].name}.`}; }
   if (S.owner[a.at] !== a.owner && !ground(a)) return {cls:'', short:'airborne', long:'Air units cannot capture ground. Add ground units.'};
   if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
@@ -10476,7 +10535,7 @@ const startHTML = () => { const me = S && S.nations ? S.nations[PLAYER] : null; 
   <li><b>Your goal</b>: ${me ? `you command <b style="color:${me.color}">${me.name}</b>, one of ${NUMW[S.nations.length] || S.nations.length} powers${!SCENARIOS[SCN].box ? ' in a world at war' : ` in the ${SCENARIOS[SCN].name}`}. ` : ''}Take independent land, out-produce your rivals and hold ${me ? landNeed(PLAYER) : 'a quarter of the world’s'} land provinces or ${WIN_CAPS} starting capitals.</li>
   <li><b>Recruit</b> in your cities and <b>research</b> new arms; every unit costs money and manpower plus, by type, oil, materials, iron (armor, guns, ships), electronics (aircraft, drones, air defence) and rare materials (advanced arms); research costs money, materials and rare materials, and two projects run at the same time.</li>
   <li><b>Move</b>: tap a force, then a destination (tap again or press Send). Troops cross water by boarding ships in a naval port (a coastal city of yours): about ${EMBARK_H} h to embark, ${LAND_H} h to land on a coast (${LAND_PORT_H} h into your own port). Roads and railways speed them up.</li>
-  <li><b>Capture</b>: a province becomes yours the moment your ground troops reach its city (its heart) with no defenders left. Terrain, rivers, supply and morale decide battles.</li>
+  <li><b>Capture</b>: a province becomes yours the moment your ground troops reach its centre point (the city, where its roads meet) with no defenders left: no timer. Terrain, rivers, supply and morale decide battles.</li>
   <li><b>Air, drones and navy</b>: wings strike or patrol from airbases; UAVs and AWACS find the enemy; fleets guard your trade and raid theirs.</li>
   <li><b>Diplomacy</b>: everyone starts at peace. Trade routes pay both partners; allies form coalitions that share supplies.</li>
   <li><b>Finding your way</b>: your land has a bright outline and your capital has a headquarters building flying your flag. Drag to pan, scroll or pinch to zoom, use the minimap to jump. ${KEYS_TXT} Progress saves in this browser each game day.</li>
@@ -10504,7 +10563,7 @@ const HELP_SEC = [
   ['basics', 'Recruit, move, capture', `<ul>
     <li><b>Recruit</b> in your cities: units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
-    <li><b>Capture</b>: a province is yours the moment your ground units reach its heart, the city (or the province centre without a city), with no defenders left; ${CAP_MIN} units are needed. Crossing the border or stopping elsewhere in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
+    <li><b>Capture</b>: a province is yours the moment your ground units reach its centre point, the city (or, without a city, the crossroads in its middle where its roads meet), with no defenders left: there is no capture timer; ${CAP_MIN} units are needed. Every province's roads meet at that point, and a march into a province ends on it. Crossing the border or stopping anywhere else in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more.</li>
     <li><b>Supply</b> reaches about 4,800 km over land from your cities (half across sea). Cut-off troops lose strength daily and get a red dashed outline.</li>
     <li><b>Occupation</b>: conquered land grows unrest unless garrisoned; above 60% partisans may hand it back. Pacify it or keep troops there.</li></ul>`],
@@ -11026,7 +11085,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stat
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, ctryPal:{value:() => ctryPal()}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, wrap:{value:{W:WRAP_W, X0:WRAP_X0, WW:WORLD_W, WH:WORLD_H, minScale:() => minScale(), ks:() => wrapKs(0)}}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
-if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {pathDbg:{get:() => PATHDBG}, clearSel:{value:() => clearSel()}, wpMode:{get:() => wpMode, set:v => { wpMode = !!v; renderSide(true); }}, stopTap:{value:(a, p, x, y) => stopTap(a, p, x, y)}, undoTap:{value:() => undoTap()}, coreAt:{value:(x, y) => coreAt(x, y)}, stopRoutes:{value:a => stopRoutes(a)}, cmdMode:{get:() => cmdMode}, lastPT:{get:() => lastPT}});   // (unit controls and waypoints: .test/controls.js, .test/waypoints.js)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {pathDbg:{get:() => PATHDBG}, netDraw:{value:() => netDraw()}, legGeom:{value:(a, u, v) => legGeom(a, u, v)}, clearSel:{value:() => clearSel()}, wpMode:{get:() => wpMode, set:v => { wpMode = !!v; renderSide(true); }}, stopTap:{value:(a, p, x, y) => stopTap(a, p, x, y)}, undoTap:{value:() => undoTap()}, coreAt:{value:(x, y) => coreAt(x, y)}, stopRoutes:{value:a => stopRoutes(a)}, cmdMode:{get:() => cmdMode}, lastPT:{get:() => lastPT}});   // (unit controls and waypoints: .test/controls.js, .test/waypoints.js)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {pics:() => ({nodes:RNODES.map(n => ({id:n.id, kind:n.kind, name:n.name, u:n.u, eng:n.eng, key:rKey(n)})), cats:RCATS.map(c => c.id)}), can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)

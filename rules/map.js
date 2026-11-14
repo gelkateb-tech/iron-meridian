@@ -39,7 +39,11 @@ function loadWorld(map = null, base0 = null){ const NB = map ? WORLD.provinces.l
   const LK = new Map();
   const mk = (a, b) => { let r = P[a].lk.get(b); if (!r){ r = {a:Math.min(a, b), b:Math.max(a, b), k:Math.min(a, b) + ',' + Math.max(a, b), r0:0, q0:0, road:0, rail:0, dmg:0, bld:null, gap:false}; LK.set(r.k, r); P[a].lk.set(b, r); P[b].lk.set(a, r); } return r; };
   if (LINES){ const T = map ? new Set(map.touch) : null, mine = l => T ? l.filter(q => !T.has(q[0]) && !T.has(q[1])) : l;   // pairs touching a cut province: the split's own
-    const L = map ? {riverPairs:mine(LINES.riverPairs).concat(map.riverPairs), roadPairs:mine(LINES.roadPairs).concat(map.roadPairs), railPairs:mine(LINES.railPairs || []).concat(map.railPairs)} : LINES;
+    // the road pairs of the split: lines.js's own for it when it has them (net.maps[v]: MAP-3's levels, where the split's differ), else the old way
+    const NM = map && LINES.net && LINES.net.maps && LINES.net.maps[map.v], NMok = NM && NM.base === map.base && Array.isArray(NM.pairs);
+    const roadP = !map ? LINES.roadPairs : NMok ? (() => { const T2 = new Set(NM.touch), drop = new Set(NM.drop.map(q => q[0] + ',' + q[1]));
+      return LINES.roadPairs.filter(q => !T2.has(q[0]) && !T2.has(q[1]) && !drop.has(Math.min(q[0], q[1]) + ',' + Math.max(q[0], q[1]))).concat(NM.pairs); })() : mine(LINES.roadPairs).concat(map.roadPairs);
+    const L = map ? {riverPairs:mine(LINES.riverPairs).concat(map.riverPairs), roadPairs:roadP, railPairs:mine(LINES.railPairs || []).concat(map.railPairs)} : LINES;
     for (const [a, b] of L.riverPairs) if (P[a] && P[b] && P[a].nb.has(b)){ P[a].river.add(b); P[b].river.add(a); }
     for (const [a, b, lv, gap] of L.roadPairs) if (P[a] && P[b] && P[a].nb.has(b) && !P[a].sea && !P[b].sea){ const r = mk(a, b); r.r0 = Math.max(r.r0, lv || 2); if (gap) r.gap = true; if (r.r0 >= 2){ P[a].road.add(b); P[b].road.add(a); } }
     for (const [a, b, lv] of (L.railPairs || [])) if (P[a] && P[b] && P[a].nb.has(b) && !P[a].sea && !P[b].sea) mk(a, b).q0 = Math.max(mk(a, b).q0, lv || 1); }
@@ -118,6 +122,53 @@ function useMap(v = 0){ const g = mapOf(v); if (!g) return false; if (G === g) r
   G = g; NEARC.clear(); LANES = null; SZC = {d:-1, S:null, a:null}; SUPF = SUPFA = SUPE = null; SUPV = -1; scnLandCache = null; scnInCache = null; IM.emit('world'); return true; }
 // fn run with map v in place of the one in use, to read it only (the start screen's counts for a world not in play); nothing is switched or kept
 function onMap(v, fn){ const g = mapOf(v), g0 = G; if (!g || g === g0) return fn(); G = g; try { return fn(); } finally { G = g0; } }
+/* ---------------- The movement network (lines.js net, MAP-3) ----------------
+   Every road link between two neighbouring provinces has a drawn WAY from one province's centre point (P.x, P.y: the city, or the cell nearest
+   the middle of a province without one) to the other's, over the points of the roads (Natural Earth's, with junctions added where a way joins
+   them, and the generated ones), so a province's roads meet at its centre, where a force captures it (rules/movement.js atHeart). The sea lanes
+   are the ways warships sail between neighbouring sea zones' centres, and from a coastal province's centre out to a zone. Built by
+   tools/build-lines.js (tools/roadnet.js). The rules do not need the shapes: legs are timed on the neighbour weights as always; the page draws
+   these ways and moves its forces along them. netOf(G): the network of map G (made once, on first use): the road graph, way(a, b) (the node
+   ids from a's centre to b's), node(i) (its world point), lane(u, v) (a lane's world points, u's centre to v's). Pure: no randomness.
+   Ways are stored as the choices made at each fork of the graph (a base-36 digit: which neighbour, in key order), walked from a's centre to b's;
+   a way of both maps walks the graph of both (the shared lines only), a map's own way that map's whole graph. */
+const NETQ = (x, y) => [Math.round((x - OX)/(HS*SQ3)*20), Math.round((y - OY)/(HS*1.5)*20)], NETK = (X, Y) => X*8192 + Y;
+function netOf(g = G, L0 = LINES){ if (g.net !== undefined && g.netL === L0) return g.net; g.netL = L0; g.net = null; const N0 = L0 && L0.net; if (!N0 || N0.v !== 1) return null;
+  const MD = (N0.maps && N0.maps[g.map || 0]) || {roads:[], links:[], ports:[]};
+  const X = [], Y = [], id = new Map(), node = (x, y) => { const k = NETK(x, y); let i = id.get(k); if (i === undefined){ i = X.length; id.set(k, i); X.push(x); Y.push(y); } return i; };
+  const lines = [];   // [{cls, n:[node ids], own}]
+  { const ins = N0.ins || [], byRoad = new Map(); let r = 0; for (let i = 0; i + 3 < ins.length; i += 4){ r += ins[i]; let a = byRoad.get(r); if (!a) byRoad.set(r, a = []); a.push([ins[i + 1], ins[i + 2], ins[i + 3]]); }
+    (L0.roads || []).forEach((R, ri) => { const pts = []; let x = 0, y = 0; for (let i = 1; i + 1 < R.length; i += 2){ if (L0.delta && i > 1){ x += R[i]; y += R[i + 1]; } else { x = R[i]; y = R[i + 1]; } pts.push([x, y]); }
+      const add = byRoad.get(ri), n = []; let j = 0; for (let k = 0; k < pts.length; k++){ n.push(node(pts[k][0], pts[k][1])); while (add && j < add.length && add[j][0] === k){ n.push(node(pts[k][0] + add[j][1], pts[k][1] + add[j][2])); j++; } }
+      lines.push({cls:R[0], n, own:false}); }); }
+  // (a list of new lines: each one's first point an offset from the first point of the line before)
+  const decAll = (list, own) => { let sx = 0, sy = 0; for (const R of list || []){ const n = []; let x = sx + R[1], y = sy + R[2]; sx = x; sy = y; n.push(node(x, y)); for (let i = 3; i + 1 < R.length; i += 2){ x += R[i]; y += R[i + 1]; n.push(node(x, y)); } lines.push({cls:R[0], n, own}); } };
+  decAll(N0.roads, false); decAll(MD.roads, true);
+  // adjacency: the shared lines' graph, and the map's (the shared plus its own); neighbours in key order; an edge's class: the best line on it
+  const nn = X.length, A0 = Array.from({length:nn}, () => []), A1 = Array.from({length:nn}, () => []), cls = new Map(), ek = (a, b) => a < b ? a*nn + b : b*nn + a;
+  const e0 = new Set();
+  for (const Ln of lines){ for (let i = 1; i < Ln.n.length; i++){ const a = Ln.n[i - 1], b = Ln.n[i]; if (a === b) continue; const k = ek(a, b);
+      if (!cls.has(k)){ A1[a].push(b); A1[b].push(a); } if (!Ln.own && !e0.has(k)){ e0.add(k); A0[a].push(b); A0[b].push(a); }
+      cls.set(k, Math.max(cls.get(k) || 0, Ln.cls)); } }
+  const kOf = i => NETK(X[i], Y[i]); for (const A of [A0, A1]) for (const a of A) if (a.length > 1) a.sort((p, q) => kOf(p) - kOf(q));
+  const cOf = p => { const P = g.P[p], q = NETQ(P.x, P.y); return id.get(NETK(q[0], q[1])); };
+  // the ways: walked once, on first use
+  const W = new Map(); for (const [own, list] of [[false, N0.links || []], [true, MD.links || []]]) for (const w of list) W.set(w[0] + ',' + w[1], {s:w[2], own});
+  const walk = (a, b, s, A) => { const s0 = cOf(a), e = cOf(b); if (s0 === undefined || e === undefined) return null; const out = [s0]; let cur = s0, prev = -1, k = 0;
+    for (let guard = 0; cur !== e && guard < 20000; guard++){ const nb = A[cur], opts = prev < 0 ? nb : nb.filter(v => v !== prev); let nx;
+      if (opts.length === 1 && prev >= 0) nx = opts[0]; else { if (k >= s.length) return null; nx = opts[parseInt(s[k++], 36)]; }
+      if (nx === undefined) return null; out.push(nx); prev = cur; cur = nx; }
+    return cur === e ? out : null; };
+  const WC = new Map();
+  const way = (a, b) => { const k = a + ',' + b; if (WC.has(k)) return WC.get(k); let r = null; const w = W.get(a < b ? k : b + ',' + a);
+    if (w){ const lo = Math.min(a, b), hi = Math.max(a, b), f = walk(lo, hi, w.s, w.own ? A1 : A0); r = f && (a === lo ? f : f.slice().reverse()); }
+    WC.set(k, r); return r; };
+  // lanes: [u, v, interior points...] from u's centre to v's (delta from u's centre; v's centre last)
+  const LN = new Map(), addLane = R => { const P = g.P[R[0]], Q = g.P[R[1]]; if (!P || !Q) return; let [x, y] = NETQ(P.x, P.y); const pts = [[x, y]]; for (let i = 2; i + 1 < R.length; i += 2){ x += R[i]; y += R[i + 1]; pts.push([x, y]); } pts.push(NETQ(Q.x, Q.y)); LN.set(R[0] + ',' + R[1], pts); };
+  for (const R of N0.lanes || []) addLane(R); for (const R of N0.ports || []) addLane(R); for (const R of MD.ports || []) addLane(R);
+  const toW = q => [OX + HS*SQ3*q[0]/20, OY + HS*1.5*q[1]/20];
+  const lane = (u, v) => { const f = LN.get(u + ',' + v); if (f) return f.map(toW); const r = LN.get(v + ',' + u); return r ? r.map(toW).reverse() : null; };
+  return (g.net = {X, Y, A:A1, A0, cls:(a, b) => cls.get(ek(a, b)) || 0, lines, way, walk, cOf, nodeW:i => [OX + HS*SQ3*X[i]/20, OY + HS*1.5*Y[i]/20], lane, lanes:LN, ways:W, map:MD}); }
 /* Sea lanes: the sea-zone links along the world's major shipping routes (North Atlantic, Mediterranean–Suez–Indian Ocean–Malacca–East Asia,
    Persian Gulf, trans-Pacific, Panama, the Cape, Australia, South America). Waypoints (lon, lat) snap to the nearest sea zone and are joined by
    the shortest all-water route. Fixed per map; trade lanes and convoy routes can build on the same set. */

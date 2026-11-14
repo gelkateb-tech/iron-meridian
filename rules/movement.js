@@ -381,21 +381,24 @@ function legCross(a, lh){ if (a.path.length || !a.dest || a.dest.p !== a.to || a
   if (Math.hypot(to[0] - s[0], to[1] - s[1])/KM_W < 1 || rem < 1e-6){ a.pos = to; if (heartVia(a, a.at, s, to)) a.hrt = a.at; return true; }
   const D = Math.hypot(to[0] - s[0], to[1] - s[1]); a.pos = s; a.sail = sailTo(a, a.at, s, to, d => d*rem/D); return true; }   // (by the heart when the point lies beyond it: sailTo)
 /* ---------------- Capture at the heart; embarking and landing ----------------
-   CAPTURE: a land province (independent, or of a power at war with you) becomes yours the hour one of your ground forces stands at its HEART, the
-   city point, which is the province centre the rules use (G.P[p].x, y), while no enemy force holds it (rules/tick.js capture step): there is no
-   occupation clock. A force that only crossed the border, or stands at another spot of the province, does not take it; a walk that passes within
-   HEART_KM of the heart does (a.hrt: the province whose heart it reached), and a pinpoint order to a spot beyond the heart walks by it (sailTo).
-   With defenders there the battle comes first; once they are gone, the force at the heart takes it at once. Air units never capture, and CAP_MIN
-   ground units are needed, as before. Everything a capture does (rules/combat.js capture) is unchanged, only immediate.
+   CAPTURE (Conflict of Nations style, MAP-3): a land province (independent, or of a power at war with you) becomes yours the hour one of your
+   ground forces REACHES ITS CENTRE POINT (its HEART: G.P[p].x, y, the city, or the cell nearest the middle of a province without one: the point
+   where the province's roads meet, rules/map.js netOf) while no enemy force holds it (rules/tick.js capture step): there is no occupation clock
+   and no radius. A force that only crossed the border, or stands at any other spot of the province, does not take it; a march into the province
+   ends at the centre (legs run centre to centre, so a force arriving stands on it), a walk that passes through the centre takes it on the way
+   (a.hrt: the province whose centre it reached), and a pinpoint order to a spot beyond the centre walks by it (sailTo). HEART_KM is only the
+   tolerance for "on the point" (a tenth of a km: rounding). With defenders there the battle comes first; once they are gone, the force at the
+   centre takes it at once. Air units never capture, and CAP_MIN ground units are needed, as before. Everything a capture does (rules/combat.js
+   capture) is unchanged, only immediate.
    EMBARKING: ground forces board ships only in a NAVAL PORT, a coastal city of their own or a friend's (portOk: the ports fleets dock in and Naval
    Yards are built in). It takes EMBARK_H hours there (a.emb: hours left, counted while the force could otherwise set off), the force does not move.
    LANDING: troops coming ashore from the sea (on any coast, as before, or into a port) take LAND_H hours, LAND_PORT_H into a port of their own or
    a friend's (a.land: hours left). Meanwhile the force cannot move on, walk or capture, and fights at the landing penalty (rLandF, first day ashore).
    Amphibious Doctrine halves landings; Combat Engineers load ships faster (rCapF); a Siegemaster commander does both 20% faster per rank. */
-const HEART_KM = 25, HEART_R = HEART_KM*KM_W, EMBARK_H = 6, LAND_H = 12, LAND_PORT_H = 6;
+const HEART_KM = 0.1, HEART_R = HEART_KM*KM_W, EMBARK_H = 6, LAND_H = 12, LAND_PORT_H = 6;
 // whether nation n takes land province p by reaching its heart: independent land, or land of a power it is at war with
 const capturable = (n, p) => n >= 0 && !G.P[p].sea && S.owner[p] !== n && atWar(n, S.owner[p]);
-// a force with ground units ashore at the heart of its province (or that walked past it since it came)
+// a force with ground units ashore on the centre point of its province (or that walked through it since it came)
 function atHeart(a){ if (a.to !== null || a.air || a.fly || a.land > 0 || G.P[a.at].sea || !ground(a)) return false; if (a.hrt === a.at) return true;
   const q = a.pos; if (!q) return true; const P = G.P[a.at]; return Math.hypot(q[0] - P.x, q[1] - P.y) <= HEART_R; }
 // a walk in province p from f to the point `to` goes by the heart first when p is one to capture and the point lies beyond the heart (farther from f)
