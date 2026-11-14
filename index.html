@@ -1367,7 +1367,8 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .crow .cn b{font-size:15px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .crow .capst{font-style:normal; color:var(--cn-gold)}
 .crow .cl{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--cn-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .crow .cl > span{overflow:hidden; text-overflow:ellipsis}
-.crow .clv{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 3px; font:700 11px/1 var(--body); font-style:normal; color:#fff; background:#2b3c43; box-shadow:inset 0 0 0 1px var(--cn-edge); border-radius:2px}
+.crow .cbl{display:flex; align-items:center; gap:5px; min-width:0; overflow:hidden; font-size:11.5px; color:var(--cn-fg2)}   /* the city's buildings (no city level: BLD-RULES) */
+.crow .cbk{display:inline-flex; align-items:center; gap:1px; flex:none} .crow .cbk b{font:700 10.5px/1 var(--body); color:var(--cn-fg2)} .crow .cbk.ko{opacity:.5}
 .crow .cbx{display:flex; align-items:center; gap:10px; min-width:0}
 .crow .cbx .cs-bi{width:44px; height:44px} .crow .cbx .cs-bi svg{width:26px; height:26px} .crow .cbx .cs-mi.tr > .ut{--us:44px}
 .crow .ct{display:flex; flex-direction:column; gap:2px; min-width:0}
@@ -1798,7 +1799,6 @@ button.rs-dr.jump{cursor:pointer; text-decoration:underline; text-underline-offs
 .cs-st .cs-on{overflow:hidden; text-overflow:ellipsis; color:#4a6068}
 .cs-rel{flex:none; padding:2px 7px; border-radius:2px; font:700 10.5px/1.2 var(--body); letter-spacing:.05em; text-transform:uppercase; color:#fff; background:var(--rc); text-shadow:0 1px 0 rgba(0,0,0,.35); box-shadow:inset 0 -1px 0 rgba(0,0,0,.2)}
 .cs-main{flex:none; display:inline-flex; align-items:center; gap:4px; padding:2px 7px 2px 5px; border-radius:2px; font:700 10.5px/1.2 var(--body); letter-spacing:.05em; text-transform:uppercase; color:#f3ecd6; background:rgba(12,18,22,.55); box-shadow:inset 0 0 0 1px rgba(233,196,106,.45)} .cs-main svg{flex:none}
-.cs-clv{flex:none; padding:2px 7px; border-radius:2px; font:700 10.5px/1.2 var(--body); letter-spacing:.05em; text-transform:uppercase; color:#e9fbfd; background:linear-gradient(180deg, #4aa7b6, #2a7f8f); text-shadow:0 1px 0 rgba(0,0,0,.35)}
 .cs-i{flex:none; display:grid; place-items:center; width:38px; height:38px; padding:0; border:2px solid #fff; border-radius:50%; color:#fff; cursor:pointer; font:italic 700 21px/1 Georgia, 'Times New Roman', serif;
   background:radial-gradient(circle at 38% 30%, #8be4ee, #2f99a8 62%, #1f6f7b); box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 5px rgba(0,0,0,.4); text-shadow:0 1px 1px rgba(0,0,0,.45); transition:transform .12s var(--ease), filter .15s}
 .cs-i:hover{filter:brightness(1.1)} .cs-i:active{transform:scale(.92)}
@@ -1882,7 +1882,7 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   .cs-body{border-radius:0; box-shadow:0 -4px 16px rgba(0,0,0,.5)}
   .cs-ban{height:58px; gap:10px; padding-right:7px}
   .cs-fl{width:96px} .cs-fl .flg{left:-18px}
-  .cs-nm{font-size:21px} .cs-st{font-size:12px; gap:5px} .cs-rel, .cs-clv, .cs-main{font-size:9.5px; padding:2px 5px}
+  .cs-nm{font-size:21px} .cs-st{font-size:12px; gap:5px} .cs-rel, .cs-main{font-size:9.5px; padding:2px 5px}
   .cs-i{width:32px; height:32px; font-size:18px} .cs-x{width:30px; height:30px}
   .cs-stat{height:34px}
   .cs-mor{flex-basis:30%; min-width:92px; padding:0 8px 0 5px} .cs-mor svg{width:19px; height:19px} .cs-mor b{font-size:14px}
@@ -2160,7 +2160,7 @@ html.reduced .cs-mi.live .cs-mf::after{animation:none}
 .cs-bpic > .cs-bl{position:absolute; right:3px; bottom:2px; z-index:1; font:700 11px/1 var(--body); color:#fff; text-shadow:0 1px 2px #000, 0 0 3px #000}
 @media (max-width: 820px){ .cs-mi.tr > .ut{--us:36px} .cs-mi.tr > svg{width:24px; height:24px} .cs-mi.idle::before{width:12px; height:12px} }
 @media (prefers-reduced-motion: reduce){ .cs-mi.live .cs-mf::after{animation:none} }
-/* a unit the city cannot mobilize yet (no Recruiting Office, Army Base level, research...): greyed, the reason in amber; a tap says why */
+/* a unit the city cannot mobilize yet (no Army Base, its level, research...): greyed, the reason in amber ('Needs Army Base level 1'); a tap says why */
 .unit.blk{cursor:not-allowed}
 .unit.blk > .ut, .unit.blk > .nm, .unit.blk > .st{opacity:.42} .unit.blk > .ut{filter:grayscale(.85)}
 .unit.blk > .cost{color:#ffd27a; font-weight:600; transform-origin:0 50%}
@@ -5779,10 +5779,6 @@ const BGLYPH = {
 // a town's name at night: a wide soft dark halo under its outline, so it keeps its contrast over the warm glow of the lit core
 function labNight(L, lx, ly){ if (!(L.city || L.cap) || !cityLightsOn() || view.s*HS0 < 12) return; const nf = Math.max(0, Math.min(1, (-sunSinEl(L.p) + 0.01)/0.13)); if (nf <= 0) return;
   ctx.globalAlpha = L.a*0.4*nf; ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(12,8,4,.9)'; ctx.strokeText(L.t, lx, ly); ctx.lineWidth = 5; ctx.strokeText(L.t, lx, ly); }
-// the city's own level-up glow and ring (at a city with buildings, from the mid zoom)
-function cityRing(T, now, a0, kl){ const {p} = T; if (!T.city) return; const r = bLevel(p + ':city', cityLevel(p), now); let f = r.t0 ? (now - r.t0)/(TRAY_ANIM*1.4) : -1; if (f >= 1){ r.t0 = 0; f = -1; } if (f >= 0) animFast();
-  if (f >= 0){ const e = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0*0.5*(1 - f); ctx.drawImage(GLOW(), T.x - 16*kl, T.my - 16*kl, 32*kl, 32*kl);
-    ctx.globalAlpha = a0*(1 - f)*(1 - f); ctx.lineWidth = 1.5 + 1.5*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(T.x, T.my, (6 + 20*e)*kl, 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
 /* ---------------- Buildings on the map: the angled building pictures at their city ----------------
    Every building stands at its own city (or province) as a small cut-out of the owner's angled pictures (assets/art/bn-<key>-<level>.webp, cut from
    assets/art-src/ba-*.png by tools/cutout-angled.py: background removed, own cast shadow kept as a soft dark layer, cropped tight; BNMETA holds each
@@ -5932,7 +5928,6 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
   for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y); if (x < -m || y < -m || x > cw + m || y > ch + 2*m) continue;
     let its = BNP.I.get(p); if (!its) BNP.I.set(p, its = bnItems(p)); if (!its.length) continue; const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }
     const cap = nd*2*view.s*1.1;   // (a picture's long side stays under the way to the next city)
-    if (P.city || caps.has(p)) cityRing({p, city:true, x, my:y + CITY_DY*kl}, now, a1, kl);
     for (let i = 0; i < its.length; i++){ const al = i ? a2 : a1; if (al <= 0.003) break; const [dx, dy] = Lo.pos[i], e = its[i];
       list.push({p, e, mir:Lo.mir[i], x:x + dx*view.s, y:y + dy*view.s, wx:P.x + dx, wy:P.y + dy, a:al, L:Math.min(L1*bnF(e.k, e.lv), cap)}); } }
   if (more) animFast();   // (the cities left over are worked out in the next frames)
@@ -5969,6 +5964,16 @@ const ART_PX = 46;   // close zoom: ground patterns on the map
 // (the angled cut-out where the building has one: bnName; the older picture while it fails)
 const bimg = (k, l, px = 22, dim = false) => { if (k !== 'city' && !BART[k]) return ''; const nb = k !== 'city' && BN_ART[k] ? bnName(k, Math.max(1, l)) : null, ba = !!nb && !ART.failed(nb), n = ba ? nb : bartName(k, l); if (ART.failed(n)) return ''; if (!ART.ready(n)) ART.want(n);
   return `<i class="bi${ba ? ' ba' : ''}${dim ? ' dim' : ''}" style="--bi:${ART.ready(n) ? `url(${ART.url(n)})` : 'none'};--bs:${px}px" aria-hidden="true"></i>`; };
+// the capital's headquarters: one building with no levels, in its nation's regional style (bn-hq-<style>, bnHqStyle), the same picture as on the map.
+// (A city has no level of its own: the 'city level' the panels showed until BLD-RULES was a UI-only count of building levels, never a rule.)
+const hqStyleName = st => String(st).split('-').map(cap1).join(' ');
+const hqArt = o => { const n = bnName('hq', bnHqStyle(o)); if (ART.ready(n)) return {u:ART.url(n), art:true, ba:true}; if (!ART.failed(n)) ART.want(n); return {u:'', art:false}; };
+const hqImg = (o, px = 22) => { const A = hqArt(o); return `<i class="bi ba" style="--bi:${A.u ? `url(${A.u})` : 'none'};--bs:${px}px" aria-hidden="true"></i>`; };
+const hqTip = o => `Capital: the headquarters of ${S.nations[o].name}, one building (${hqStyleName(bnHqStyle(o))} style)`;
+// a city's buildings in a row of small pictures with their level (the Cities tab): the capital's headquarters first (no level)
+const cityBldsHTML = (p, px = 20) => { const o = S.owner[p], hq = isCapital(p) && o >= 0 ? `<span class="cbk" title="${hqTip(o)}">${hqImg(o, px)}</span>` : '';
+  const L = BK.filter(k => S.bld[p][k]).map(k => { const l = S.bld[p][k]; return `<span class="cbk${bdis(p, k) ? ' ko' : ''}" title="${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[l] : ''}${bdis(p, k) ? ' · knocked out' : ''}">${bimg(k, l, px)}${BUILD[k].max > 1 ? `<b>${ROMAN[l]}</b>` : ''}</span>`; }).join('');
+  return hq + L ? `<span class="cbl" aria-label="Buildings">${hq}${L}</span>` : '<span class="cbl none">No buildings</span>'; };
 /* ---------------- Cities on the map: urban areas in world coordinates ----------------
    Every city is part of the map itself, not a sticker: an irregular built-up area whose size comes from its population (in km, turned into
    world units), drawn into the cached map layer, so it grows and shrinks exactly with the terrain. Each footprint is procedural and seeded by
@@ -6863,7 +6868,6 @@ function cityLgGlow(p, make){ let c = CLGL.get(p); if (c || !make) return c || n
   g.fillStyle = fall; g.fillRect(0, 0, M, M); g.globalCompositeOperation = 'multiply'; g.drawImage(I.ms, 0, 0, M, M); g.drawImage(I.ms, 0, 0, M, M);   // (opaque, black outside: it is added onto the map)
   cityNightCompact(c, p, I, M, 0, 0);   // (kept to the town's reach, as its lights are)
   CLGL.set(p, c); CLOW_PX += M*M; if (CLGL.size > 64){ CLGL.delete(CLGL.keys().next().value); CLOW_PX -= M*M; } return c; }
-function cityLevel(p){ const B = S.bld[p]; let t = 0; for (const k of BK) t += B[k] || 0; return Math.min(5, Math.min(5, 1 + Math.floor(t/3)) + (isCapital(p) ? 1 : 0)); }
 const bartName = (k, l) => (k === 'city' ? 'b-city-' : 'b-' + BART[k] + '-') + Math.max(1, Math.min(BART_N[k] || 5, l | 0));
 const BART_OK = new Map();   // key -> true once all five levels have loaded, false for good if one failed
 function bartOk(k){ const v = BART_OK.get(k); if (v != null) return v; if (k !== 'city' && !BART[k]) return false;
@@ -8806,12 +8810,12 @@ const GOICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" strok
 function citiesHTML(){ const N = S.nations[PLAYER], cities = cpCities(), QM = queueMax(PLAYER);
   const mine = new Set(cities.map(P => P.id)); for (const p of [...CP.sel]) if (!mine.has(p)) CP.sel.delete(p); if (CP.open && !mine.has(CP.open.p)) CP.open = null;
   const idle = cities.filter(P => !S.queue[P.id].length).length, ticked = cities.filter(P => CP.sel.has(P.id)).map(P => P.id);
-  const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], lv = cityLevel(p), mk = cityMain(p), used = queueUsed(p), q0 = q[0], on = CP.open && CP.open.p === p ? CP.open.kind : '', nm = P.cityName;
+  const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], mk = cityMain(p), used = queueUsed(p), q0 = q[0], on = CP.open && CP.open.p === p ? CP.open.kind : '', nm = P.cityName;
     const bTxt = c ? `<b>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</b><em>${csTime(c.h)} left</em>` : `<b class="idle">No construction</b>${BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? '' : '<em>Fully built</em>'}`;
     const tTxt = q0 ? `<b>${(UNITS[q0.t] || MISSILES[q0.t]).name}</b><em>${csTime(q0.h)} left${q.length > 1 ? ` · +${q.length - 1} waiting` : ''}</em>` : `<b class="idle">${csMobIdle(p)}</b>${used < QM ? '' : '<em>Queue full</em>'}`;
     return `<div class="cw${CP.sel.has(p) ? ' sel' : ''}${on ? ' open' : ''}" data-id="${p}"><div class="crow${q.length || c ? '' : ' idle'}" data-id="${p}">
       <label class="ccb" title="Tick ${nm} to queue in several cities at once"><input type="checkbox" data-act="cp-chk" data-id="${p}" ${CP.sel.has(p) ? 'checked' : ''} aria-label="Select ${nm}"></label>
-      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${nm}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl"><i class="clv">${lv}</i>${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></span>
+      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${nm}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl">${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span>${cityBldsHTML(p)}</span>
       <span class="cbx" title="Construction${c ? '' : ': nothing is being built'}">${csBldIcon(p, c)}<span class="ct">${bTxt}${slotPips(c ? 1 : 0, 1, 'Build')}</span></span>
       <span class="cbx" title="Training${q0 ? '' : ': nothing is being trained'}">${csMobIcon(q0)}<span class="ct">${tTxt}${slotPips(used, QM, 'Train')}</span></span>
       <span class="ca"><button class="btn cbtn${on === 'bld' ? ' on' : ''}" data-act="cp-open" data-kind="bld" data-id="${p}" aria-expanded="${on === 'bld'}" ${on === 'bld' ? 'aria-controls="cpi"' : ''} title="Build in ${nm}: the options open here">Build</button><button class="btn cbtn${on === 'trn' ? ' on' : ''}" data-act="cp-open" data-kind="trn" data-id="${p}" aria-expanded="${on === 'trn'}" ${on === 'trn' ? 'aria-controls="cpi"' : ''} title="Train in ${nm}: the options open here">Train</button><button class="btn cbtn cgo" data-act="goto" data-id="${p}" aria-label="Go to ${nm}" title="Go to ${nm} on the map">${GOICO}</button></span></div>${on ? cpInlineHTML(p, on) : ''}</div>`; }).join('');
@@ -8873,7 +8877,6 @@ const csBldH0 = (p, c) => c.h0 || (c.k && BUILD[c.k] && (buildCost(PLAYER, c.k, 
 const csBldF = (p, c) => c ? Math.max(0, Math.min(1, 1 - c.h/csBldH0(p, c))) : -1;
 const csBPic = c => { const A = csArt(c.k, c.lvl); return `<span class="cs-bp${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>`; };
 const csBldIcon = (p, c) => c ? `<span class="cs-bi cs-mi tr cs-bpic${saverOn() || afxReduced() ? '' : ' live'}" title="${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' level ' + ROMAN[c.lvl] : ''}">${csBPic(c)}${BUILD[c.k].max > 1 ? `<b class="cs-bl">${ROMAN[c.lvl]}</b>` : ''}<i class="cs-mf" style="transform:translateY(${csMobY(csBldF(p, c))})"></i></span>` : `<span class="cs-bi">${CS_ICO.bld}</span>`;
-// what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a Recruiting Office says so
 // a city's main resource in words ("Oil city") and as the chip of the city sheet (with today's output and what the Arms Industry adds)
 // goods none of your cities produce (the city-resource economy: buy them or take a city)
 const noCityOf = k => MKT_K.includes(k) && !G.P.some(P => P.city && S.owner[P.id] === PLAYER && cityMain(P.id) === k);
@@ -8885,7 +8888,8 @@ const mainLabel = p => { const k = cityMain(p); return k ? cap1(MAIN_NAME[k]) + 
 const mainOutTxt = o => o.k === 'cash' ? '$' + Math.round(o.y) + 'M' : fmt(Math.round(o.y)) + ' ' + MAIN_NAME[o.k];
 function mainChip(p){ const o = cityOut(p); if (!o) return ''; const A = BUILD.arms;
   return `<span class="cs-main res-${o.k}" title="Main resource: ${MAIN_NAME[o.k]}, ${mainOutTxt(o)} a day.&#10;${A.name}${o.lv ? ' ' + ROMAN[o.lv] + ': +' + Math.round(ARMS_PCT*100*o.lv) + '% of it' : ': +' + Math.round(ARMS_PCT*100) + '% of it per level'}.">${icon(o.k, 12)}<b>${o.k === 'rare' ? 'Rare mat.' : cap1(MAIN_NAME[o.k])}</b></span>`; }
-const csMobIdle = p => UT.some(t => !canMobilize(PLAYER, p, t)) || S.bld[p].rec ? 'Nothing in training' : `No ${BUILD.rec.name}`;
+// what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a building (no Army Base: infantry's reason, 'Needs Army Base level 1') says so
+const csMobIdle = p => { if (UT.some(t => !canMobilize(PLAYER, p, t))) return 'Nothing in training'; const k = mobBlock(PLAYER, p, 'inf'); return k && k.kind === 'bld' ? k.why : 'Nothing in training'; };
 const CS_ICO = {
   bld:`<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><path d="M15 18h7.4v4.2H15zM23.6 18H31v4.2h-7.4zM19.3 23.4h7.4v4.2h-7.4zM15 23.4h3.1v4.2H15zM27.9 23.4H31v4.2h-3.1zM15 28.8h7.4V31H15zM23.6 28.8H31V31h-7.4zM19.3 12.6h7.4v4.2h-7.4z"/>
     <g transform="rotate(-42 11 12)"><rect x="9.4" y="8" width="3.2" height="21" rx="1.2"/><path d="M3 2.4h13.4l2.6 2.4v4.8H3z"/></g></g></svg>`,
@@ -8912,7 +8916,7 @@ function csWanted(){ const p = sel.prov;
   if (!S || p === null || sel.army !== null || aimMsl || rallyFor !== null || (typeof GLOBE !== 'undefined' && GLOBE && GLOBE.on())) return -1;
   const P = G.P[p]; return P && !P.sea ? p : -1; }
 function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S.nations[PLAYER], name = P.city ? P.cityName : P.name;
-  const fl = flagHTML(o >= 0 ? o : G.countries[P.country].name, 96, 'big'), y = provYield(p), m = Math.round(moraleOf(p)), lv = P.city ? cityLevel(p) : 0;
+  const fl = flagHTML(o >= 0 ? o : G.countries[P.country].name, 96, 'big'), y = provYield(p), m = Math.round(moraleOf(p));
   const r = o >= 0 && !mine ? rel(PLAYER, o) : null, c = mine ? S.cons[p] : null, q = mine ? S.queue[p] : [];
   // MOBILIZE UNIT / BUILD (yours), DIPLOMACY / INTEL (theirs); the sub-line carries the queue, a thin bar its progress
   const big = (act, ico, label, sub, pr, cls = '') => `<button class="cs-big ${cls}" data-act="${act}">${ico.charAt(0) === '<' ? ico : `<span class="cs-bi">${CS_ICO[ico]}</span>`}<span class="cs-bt"><b>${label}</b><small>${sub}</small></span>${pr != null ? `<span class="cs-pb"><i style="width:${Math.round(pr*100)}%"></i></span>` : ''}</button>`;
@@ -8924,7 +8928,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   else if (o >= 0) acts = `<div class="cs-acts">${big('diplo-open', 'dip', 'Diplomacy', `${REL[r.st]} with ${nationName(o)}`, null)}${big('intel', 'intel', 'Intel', `${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}`, null)}</div>`;
   const st = csStatus(p);
   const ban = `<div class="cs-ban"><span class="cs-fl">${fl}</span><span class="cs-tt"><b class="cs-nm">${name}${isCapital(p) ? '<i class="cs-star" title="Capital">★</i>' : ''}</b>
-      <span class="cs-st"><span>${st}</span>${mine ? '' : `<span class="cs-on">· ${placeOwner(p)}</span>`}${o >= 0 && capturedFrom(p) != null ? `<span class="cs-on" title="Captured from ${capturedFrom(p) >= 0 ? S.nations[capturedFrom(p)].name : 'an independent country'} · value $${fmt(provValue(p))}M (territory sales: Diplomacy)">· captured from ${capturedFrom(p) >= 0 ? S.nations[capturedFrom(p)].name : 'Independent'}</span>` : ''}${r ? `<span class="cs-rel" style="--rc:${REL_COLOR[r.st]}">${REL[r.st]}</span>` : ''}${P.city ? `<span class="cs-clv" title="City level ${ROMAN[lv]}">Level ${ROMAN[lv]}</span>${mainChip(p)}` : ''}</span></span>
+      <span class="cs-st"><span>${st}</span>${mine ? '' : `<span class="cs-on">· ${placeOwner(p)}</span>`}${o >= 0 && capturedFrom(p) != null ? `<span class="cs-on" title="Captured from ${capturedFrom(p) >= 0 ? S.nations[capturedFrom(p)].name : 'an independent country'} · value $${fmt(provValue(p))}M (territory sales: Diplomacy)">· captured from ${capturedFrom(p) >= 0 ? S.nations[capturedFrom(p)].name : 'Independent'}</span>` : ''}${r ? `<span class="cs-rel" style="--rc:${REL_COLOR[r.st]}">${REL[r.st]}</span>` : ''}${P.city ? mainChip(p) : ''}</span></span>
       <button class="cs-i" data-act="cs-info" aria-label="Province details" title="Province details">i</button><button class="cs-x" data-act="clear" aria-label="Close" title="Close (Esc)">${rg('x', 16)}</button></div>`;
   const yl = YK.filter(k => k !== 'mp' && y[k] >= yMin(k)).map(k => { const v = k === 'cash' ? Math.round(y[k]) : fmtQ(y[k]), R0 = RES.find(x => x.k === k);
     return `<span class="cs-y res-${k}" title="${k === 'cash' ? '$' + v + 'M ' + R0.name.toLowerCase() : resFull(k, y[k])} a day">${icon(k, 17)}<b>${k === 'cash' ? '$' + v + 'M' : v}</b></span>`; }).join('');
@@ -8932,12 +8936,14 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
       <span class="cs-yl" title="Daily production">${yl || '<span class="cs-none">No production</span>'}</span>
       <span class="cs-pp" title="Population ${popOf(p).toFixed(1)}M · manpower ${Math.round(y.mp || 0)}k a day">${CS_ICO.pop}<b>${popOf(p).toFixed(1)}M</b>${(y.mp || 0) >= 0.5 ? `<span class="cs-mp res-mp">${icon('mp', 15)}<b>${Math.round(y.mp)}k</b></span>` : ''}</span></div>`;
   // building cards: the city first, then what stands here, then (yours) what can still be built
-  const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = k === 'city' ? (isCapital(p) ? 'Capital' : 'City') : BUILD[k].name, tag = o0.btn ? 'button' : 'span';
-    const busy = c && c.k === k, ttl = k === 'city' ? `${name}: city level ${ROMAN[l]}` : `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && k === 'arms' ? '\n' + armsTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
+  // the capital's card: its headquarters (one regional building, no level); a city has no card of its own (no city level)
+  const hqCard = () => { const A = hqArt(o); return `<button class="cs-c cs-hq" data-act="cs-card" data-k="city" title="${hqTip(o)}&#10;Province details"><span class="cs-ci${A.art ? ' ba' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span><span class="cs-cn">Capital</span></button>`; };
+  const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = BUILD[k].name, tag = o0.btn ? 'button' : 'span';
+    const busy = c && c.k === k, ttl = `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && k === 'arms' ? '\n' + armsTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
     return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
-  const cards = (P.city ? card('city', lv, {btn:true}) : '') + built.map(k => card(k, S.bld[p][k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
+  const cards = (isCapital(p) && o >= 0 ? hqCard() : '') + built.map(k => card(k, S.bld[p][k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
   return `${acts}<div class="cs-body">${ban}${stat}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
 function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWanted(), phone = innerWidth <= 820, on = p >= 0 && !(CS.det && phone);
   document.body.classList.toggle('cs-on', on); document.body.classList.toggle('cs-det', p >= 0 && CS.det && phone);
@@ -8973,7 +8979,7 @@ function csCard(k){ const p = sel.prov; if (p === null) return; CMOD_FROM = ''; 
 function cmodHead(p, title){ const N = S.nations[PLAYER], P = G.P[p], inc = income(PLAYER);
   const rk = k => { const R0 = RES.find(x => x.k === k), d = inc.net[k]; return `<div class="chip res-${k}" title="${resChipTip(k, N[k], d)}">${icon(k, 16)}<span class="cv"><span class="vv"><b>${resText(R0, N[k])}</b><span class="d ${d < 0 ? 'neg' : ''}">${resDay(k, d)}</span></span></span></div>`; };
   return `<div class="rs-top"><div class="rs-head"><button class="rs-back" data-act="${CMOD_FROM === 'cities' ? 'cities-back' : 'resume'}" aria-label="Back to the ${CMOD_FROM === 'cities' ? 'Cities list' : 'city'}" title="Back to ${CMOD_FROM === 'cities' ? 'the Cities list' : P.city ? P.cityName : P.name}">${rg('back', 22)}</button>
-      <div class="rs-ttl${title !== 'Build' && recHead(p) ? ' l3' : ''}"><h1>${title}</h1><span class="rs-cnt">${P.city ? P.cityName : P.name} · ${csStatus(p)}${P.city ? ' · level ' + ROMAN[cityLevel(p)] : ''}</span>${title !== 'Build' && recHead(p) ? `<span class="rs-cnt rs-rec">${recHead(p)}</span>` : ''}</div>
+      <div class="rs-ttl${title !== 'Build' && recHead(p) ? ' l3' : ''}"><h1>${title}</h1><span class="rs-cnt">${P.city ? P.cityName : P.name} · ${csStatus(p)}</span>${title !== 'Build' && recHead(p) ? `<span class="rs-cnt rs-rec">${recHead(p)}</span>` : ''}</div>
       <div class="rs-stk">${(title === 'Build' ? ['cash', 'metal', 'iron'] : ['cash', 'metal', 'mp']).map(rk).join('')}</div>
       <span class="rs-emb" aria-hidden="true"><span class="rs-embi">${flagHTML(PLAYER, 46)}</span></span>
       <button class="rs-x" data-act="resume" aria-label="Close" title="Back to the map">${rg('x', 18)}</button></div></div>`; }
@@ -8981,8 +8987,8 @@ function cmodHead(p, title){ const N = S.nations[PLAYER], P = G.P[p], inc = inco
 // recHead: the Mobilize panel's header line ('' without an office)
 const recK = l => '+' + (+recMp(l).toFixed(1)) + 'k';
 const recTip = p => { const l = S.bld[p].rec || 0, M = BUILD.rec.max;
-  return l ? `${BUILD.rec.name} ${ROMAN[l]}: needed to mobilize infantry here. ${recPct(l)}% faster training and ${recK(l)} manpower a day in this city. ${l < M ? `Next level: ${recPct(l + 1)}% faster, ${recK(l + 1)}/day.` : 'Highest level.'}`
-    : `${BUILD.rec.name}: needed to mobilize infantry here (Motorized Infantry, Anti-Tank Infantry, Special Forces and, with an Airbase, Paratroopers). Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
+  return l ? `${BUILD.rec.name} ${ROMAN[l]}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here' : 'unlocks no units (infantry comes from the Army Base)'}. ${recPct(l)}% faster training and ${recK(l)} manpower a day in this city. ${l < M ? `Next level: ${recPct(l + 1)}% faster, ${recK(l + 1)}/day.` : 'Highest level.'}`
+    : `${BUILD.rec.name}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here (Motorized Infantry, Anti-Tank Infantry, Special Forces and, with an Airbase, Paratroopers)' : 'unlocks no units (infantry comes from the Army Base)'}. Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
 const recHead = p => S.bld[p].rec ? `${BUILD.rec.name}: ${recPct(S.bld[p].rec)}% faster training` : '';
 // Army Base and Arms Industry in city p, in words: what the next level does here and what it costs (the city strip's hover text, built or not)
 const bldPrice = (p, k) => { const l = S.bld[p][k] || 0; if (l >= BUILD[k].max) return 'Highest level.'; const c = buildCost(PLAYER, k, l + 1, p); return `Level ${ROMAN[l + 1]} costs ${costTxt(c, ', ')} and takes ${csTime(c.h)}.`; };
@@ -8990,7 +8996,7 @@ const facUnits = l => UT.filter(t => reqsOf(t).some(r => r.b === 'fac' && r.l ==
 const facPct = l => Math.round((1 - facF(l))*100);
 const facTip = p => { const l = S.bld[p].fac || 0, M = BUILD.fac.max, others = facOthers(PLAYER, p, 'fac');
   return (l ? `${BUILD.fac.name} ${ROMAN[l]}: ground units train ${facPct(l)}% faster here, ${1 + l} training lines.${l < M ? ` Level ${ROMAN[l + 1]}: ${facPct(l + 1)}% faster, one more training line${l === 1 ? `, and unlocks ${facUnits(2)}` : ''}.` : ''}`
-    : `${BUILD.fac.name}: needed to mobilize vehicles here. Level I unlocks ${facUnits(1)}; ground units train ${facPct(1)}% faster and a second training line opens. Level II unlocks ${facUnits(2)}. Up to level ${ROMAN[M]} (${facPct(M)}% faster). No income.`)
+    : `${BUILD.fac.name}: needed to mobilize ground units here, infantry included. Level I unlocks ${facUnits(1)}; ground units train ${facPct(1)}% faster and a second training line opens. Level II unlocks ${facUnits(2)}. Up to level ${ROMAN[M]} (${facPct(M)}% faster). No income.`)
     + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each other Army Base you own: ${others} now.)` : ''); };
 const armsTip = p => { const o = cityOut(p); if (!o) return BUILD.arms.desc; const l = S.bld[p].arms || 0, M = BUILD.arms.max, pc = Math.round(ARMS_PCT*100), nm = MAIN_NAME[o.k], others = facOthers(PLAYER, p, 'arms');
   const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), out = y => o.k === 'cash' ? '$' + d1(y) + 'M' : fmt(Math.round(y)) + ' ' + nm, at = lv => out(o.base*(1 + ARMS_PCT*lv)), gain = o.base*ARMS_PCT, c = l < M ? buildCost(PLAYER, 'arms', l + 1, p) : null;
@@ -9153,7 +9159,7 @@ function prodHTML(){
     const rp = S.repeat && S.repeat[p];
     return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted"><span class="res-${cityMain(p)}" title="Main resource: ${MAIN_NAME[cityMain(p)]}">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${BK.filter(k => S.bld[p][k]).map(k => (k === 'fac' ? 'Base' : k === 'arms' ? 'Industry' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '<span class="muted">—</span>'}</td>
-      <td class="qcell"><div class="ub">${btns || `<span class="small muted">${S.bld[p].rec ? 'Needs an Army Base or research' : 'Build a Recruiting Office first'}</span>`}</div></td>
+      <td class="qcell"><div class="ub">${btns || `<span class="small muted">${(k => k && k.kind === 'bld' ? k.why : 'Needs research')(mobBlock(PLAYER, p, 'inf'))}</span>`}</div></td>
       <td class="rcell"><label class="rep" title="Repeat: keep training the last unit queued here while you can afford it"><input type="checkbox" data-act="repeat" data-p="${p}" ${rp ? 'checked' : ''}><i aria-hidden="true"></i><span>${rp ? UNIT_NICK[rp] || UNITS[rp].short : 'Repeat'}</span></label></td></tr>`; }).join('');
   const idle = cities.filter(P => !S.queue[P.id].length).length;
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} cities</div><h1>Production</h1></div>
@@ -10057,7 +10063,7 @@ function provHTML(p){
   let html = `${CS.det && innerWidth <= 820 && !P.sea ? '<button class="btn cs-back" data-act="cs-back">‹ City view</button>' : ''}<div class="eyebrow">${kind} · ${P.sea ? '' : ticon(P.terrain || 'plains', 12) + ' '}${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || linkSummary(p)) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (crossing +30% time, +10% on a bridge; attackers −20%)` : ''}${P.river.size && linkSummary(p) ? ' · ' : ''}${linkSummary(p)}</div>` : ''}
     <div class="sub">${P.city && !sameName(P.cityName, P.name) ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
     <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger-t)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}${(d => d ? `<dt>Deposits</dt><dd>${d}</dd>` : '')([P.oil ? `<span class="res-oil">${icon('oil', 11)}</span> oil field` : '', P.ore ? `<span class="res-metal">${icon('metal', 11)}</span> ore` : '', P.iron ? `<span class="res-iron">${icon('iron', 11)}</span> iron hills` : ''].filter(Boolean).join(' · '))}${P.city && !P.sea ? (o => `<dt>Produces</dt><dd><span class="res-${o.k}">${icon(o.k, 11)}</span> <b>${cap1(MAIN_NAME[o.k])}</b>: ${mainOutTxt(o)} a day${o.lv ? ` (${BUILD.arms.name} ${ROMAN[o.lv]}: +${Math.round(ARMS_PCT*100*o.lv)}%)` : ` · ${BUILD.arms.name}: +${Math.round(ARMS_PCT*100)}% per level`}</dd>`)(cityOut(p)) : ''}<dt>Daily yield</dt><dd class="ycs">${yieldChips(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
-    ${P.city && !P.sea ? (L => `<dt>City</dt><dd>${bimg('city', L, 34)}Level ${ROMAN[L]}${isCapital(p) ? ' · capital' : ''}</dd>`)(cityLevel(p)) : ''}
+    ${isCapital(p) && o >= 0 ? `<dt>Capital</dt><dd title="${hqTip(o)}">${hqImg(o, 34)}Headquarters · ${hqStyleName(bnHqStyle(o))} style</dd>` : ''}
     <dt>Buildings</dt><dd>${BK.filter(k => S.bld[p][k]).map(k => `<span class="bl">${bimg(k, S.bld[p][k], 30)}${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : ''}${bdis(p, k) ? ` <span style="color:var(--danger-t)" title="Knocked out by a precision strike: works again when repaired">knocked out · ${bdisH(p, k)} h</span>` : ''}</span>`).join('') || 'None'}</dd>
     ${!P.sea && o >= 0 ? (f => `${f != null ? `<dt>Captured from</dt><dd>${terrFrom(p)}</dd>` : ''}<dt>Value</dt><dd><b>$${fmt(provValue(p))}M</b>${mine && f != null ? (w => w ? ` <span class="muted">· ${terrLockH(p) ? `bought: resale in ${hrsTxt(terrLockH(p))}` : 'cannot be sold: ' + w}</span>` : ` <span class="muted">· can be sold in Diplomacy (Territory)</span>`)(terrWhyNot(PLAYER, p)) : ''}</dd>`)(capturedFrom(p)) : ''}
     <dt>Capture</dt><dd>At once when ground troops reach ${P.city ? 'the city' : 'its centre'}</dd>
@@ -10491,7 +10497,7 @@ const HELP_SEC = [
     <li><b>Map</b>: two map modes top right, Political and Terrain (<kbd>V</kbd> switches), and two overlays you switch on and off over the Political map: Relations (your land, allies, enemies and everyone else by relation) and Supply (your land in supply green, cut off red). Trade routes show while a fleet of yours is selected, and blockaded ones always; zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
     <li><b>Keys</b>: Space pause · 1, 2, 3 for 1×, 2×, 4× (8× from the bar) · S statistics · N newspaper · Tab next idle force · Esc deselect.</li></ul>`],
   ['res', 'Resources and research', `<ul>
-    <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip beside its level, and the Cities tab). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); level I is half price and pays for itself in about a week, and each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
+    <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip in the city panel, and the Cities tab). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); level I is half price and pays for itself in about a week, and each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
     <li><b>Seven resources</b>, all in the top bar (hover one for today's breakdown, what it is for and where it comes from). Everything but money is capped by storage: 400,000 + 15,000 per province of each good (barrels of oil, tons of materials, iron and rare materials, crates of electronics), 400k + 15k manpower. The top bar shows short figures (40K, 1.2M); hover a resource for the full amount.</li>
     <li><span class="res-cash">${icon('cash', 12)}</span> <b>Money</b>: taxes from your provinces (cities above all; a money city pays 60% more), trade routes. Pays for everything and for your forces' daily upkeep.</li>
     <li><span class="res-oil">${icon('oil', 12)}</span> <b>Oil</b>: oil cities, a little from oil fields in the countryside and your capital. Vehicles, aircraft and ships burn it every day; run dry and they are slowed and weakened.</li>
@@ -10502,7 +10508,7 @@ const HELP_SEC = [
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> A city's chip and the Cities tab show its main resource, and hovering a province shows its yields, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
-    <li><b>Recruit</b> in your cities: units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
+    <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry); units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
     <li><b>Capture</b>: a province is yours the moment your ground units reach its heart, the city (or the province centre without a city), with no defenders left; ${CAP_MIN} units are needed. Crossing the border or stopping elsewhere in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more.</li>
