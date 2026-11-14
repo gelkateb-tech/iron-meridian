@@ -15,7 +15,7 @@ Last updated: 2026-11-14.
 | Task | Model | Where it is |
 |---|---|---|
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges next) |
-| Capital HQ flag drawn in code on every regional HQ (the 8 flagpole tops in BNMETA) | Opus | branch hq-flags |
+| Capital HQ flag drawn in code on every regional HQ (the 8 flagpole tops in BNMETA); NOT merged until the owner sees Berlin and a captured capital | Opus | branch hq-flags |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
