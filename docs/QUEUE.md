@@ -14,7 +14,7 @@ Last updated: 2026-11-14 (playtest notes part 1 and part 2).
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **ART-1** Gemini pictures, batch 1 (the owner asked to start these): Army Base levels 1-5 (a temporary camp with tents and sandbags at level 1 growing to a full permanent base at level 5, same style as the Airbase set) and 3 construction pictures (a building site with a crane; scaffolding; a half-built frame), one try each, logged; 8 pictures, about $0.35, hard stop at $0.60 | Sonnet | art-1 |
+| **BLD-MAP-2** buildings revision: the 3 construction pictures (crane) shown in turn with the progress ring; Army Base 1-5 on the map and in the panel; Kolkata's yard on the Hooghly at the city, river ports on their river, every yard checked; NOT merged until the owner sees it | Opus | bld-map |
 | **FX-2** Explosions: find which two of the four explosion clips don't show and why, fix them; a real gameplay recording on the real map (cruise missile, ballistic missile, chemical strike and nuke fired at cities in a normal game) | Opus | fx-video |
 | **MAP-1b** Real borders, part 2 note #5: country borders bolder, so each country is easy to recognise; screenshots | Sonnet | borders-real |
 
@@ -39,7 +39,7 @@ Owner playtest notes of 2026-11-14: part 1 (#1-#21), the rally point and the Arm
 
 | # | Job | What it covers | Model |
 |---|---|---|---|
-| 1 | **BLD-MAP-2** Buildings on the map, revision (branch bld-map) | P2-1 construction: keep the crane but make it look good: show the new Gemini construction pictures (site with crane, scaffolding, half-built frame) in turn while a building goes up, with the progress ring (replaces the code-drawn stages); the real Army Base pictures 1-5 on the map and in the panel (replacing the placeholder); P2-4 every Naval Yard on the water: Kolkata on the Hooghly river edge at the city (its real port), river ports on their river at the city, others on the nearest coast; check every yard. Screenshots before merging | Opus |
+| (running) | **BLD-MAP-2** Buildings on the map, revision (branch bld-map) | P2-1 construction: keep the crane but make it look good: show the new Gemini construction pictures (site with crane, scaffolding, half-built frame) in turn while a building goes up, with the progress ring (replaces the code-drawn stages); the real Army Base pictures 1-5 on the map and in the panel (replacing the placeholder); P2-4 every Naval Yard on the water: Kolkata on the Hooghly river edge at the city (its real port), river ports on their river at the city, others on the nearest coast; check every yard. Screenshots before merging | Opus |
 | 2 | **UNIT-LOOK-2** Units at sea and shipping routes (branch unit-look-2) | P2-6 a "Shipping routes" toggle in the More tab's settings, next to where the Political/Terrain toggle goes: on = the trade routes and the cargo ships on them, a mix of big and smaller ships; off = none; army units at sea never use the cargo picture: they show as a grey military landing ship (a 3D model in units3d.js like the warships, bow ramp, vehicles on deck) with their badge. Screenshots before merging | Sonnet |
 | 3 | **BLD-RULES** Building rules (rules/data.js BUILD, rules/production.js, rules/state.js, build menu) | **Army Base rule**: infantry only in a city with Army Base level I (Train greyed out: "Needs Army Base level 1"), starting units unchanged, computer nations build Army Bases, old saves load; the Recruiting Office's role (owner to confirm: no longer required, keeps its speed and manpower bonuses); P2-3 at game start only the capital has Fortifications (no other city or border province starts with them; today about 150 are handed out); #16 a new Fortifications cost proposed to the owner first; #17 HQ levels removed (the capital's 'Level X' and city pictures; the HQ is one regional building) | Opus |
 | 4 | **MAP-2** Map look and controls | #3 one consistent map texture at every zoom; #4 the Political/Terrain switch moves into the More tab as a toggle (next to Shipping routes). Map job: after MAP-1 merges; screenshots before merging | Opus |
@@ -50,14 +50,14 @@ Owner playtest notes of 2026-11-14: part 1 (#1-#21), the rally point and the Arm
 
 ## Pictures still missing
 
-Every picture or clip not made yet, with what it is for and its estimated cost at batch prices (about $0.04 a picture, $0.05 a banner, about $0.35 a video clip). Updated after every batch. Owner's Gemini balance: about $2 (owner, 2026-11-14, after the explosion clips). Batch 1 (ART-1, 8 pictures, about $0.35) is being made.
+Every picture or clip not made yet, with what it is for and its estimated cost at batch prices (about $0.04 a picture, $0.05 a banner, about $0.35 a video clip). Updated after every batch. Owner's Gemini balance: about $2 (owner, 2026-11-14, after the explosion clips). Batch 1 (ART-1, 8 pictures) cost about $0.31, so about $1.70 is left.
 
 | Name | What it's for | Est. cost | Status |
 |---|---|---|---|
-| Army Base 1-5 (bn-fac-1..5) | the Army Base on the map and in the city panel, same style as the Airbase set: level 1 a temporary camp with tents and sandbags, level 5 a full permanent base | $0.18-0.22 | **being made (ART-1)** |
+| Army Base 1-5 (bn-fac-1..5) | the Army Base on the map and in the city panel, same style as the Airbase set: level 1 a temporary camp with tents and sandbags, level 5 a full permanent base | $0.21 | **done** (ART-1; levels 4-5 kept their tents and got a wider footprint) |
 | Fortifications 1-5 redo (bn-fort-1..5) | less boxy fortifications (#16) | $0.18 | next batch (ART-2) |
 | Dug-in icon | not needed: UNIT-LOOK drew the new amber shield in code | $0 | done in code |
-| Construction pictures x3 (a site with a crane, scaffolding, a half-built frame) | the construction animation (P2-1) | $0.11-0.13 | **being made (ART-1)** |
+| Construction pictures x3 (a site with a crane, scaffolding, a half-built frame) | the construction animation (P2-1) | $0.10 | **done** (ART-1; the site picture sits on a soil slab) |
 | Missile Silo 1-5 (bn-silo-1..5) | the Missile Silo on the map (nothing shows today) | $0.18 | waiting |
 | Arms Industry 1-5 (bn-arms-1..5) | the Arms Industry on the map (nothing shows today) | $0.18 | waiting |
 | Research art retries x10 | diamond frame drawn inside 7 icons (ri-cat-sup, ri-msl2, ri-t-pr, ri-at_warhead, ATGM, ri-sdrone_hit, ri-sat1), Strategic Weapons banner cut off (rbs-msl), wrong subject on 2 (ri-spec_airlift, ri-sam_seek) | $0.45 | waiting on the owner |
@@ -70,7 +70,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 | Naval Yard 1-5, piers to the upper right | yards on coasts facing up the map (29 yards can't point their piers at the sea) | $0.18 | waiting on the owner |
 | Chemical explosion clip (fxv-chemical) | chemical strikes (the service refused it twice; the owner decides whether to try other wording) | $0.35 | waiting on the owner |
 | Rebel figures | 3D model in units3d.js, no Gemini picture needed | $0 | with REBELS |
-| **Total** | being made about $0.35; next (Fortifications) $0.18; everything else listed about $1.9 | | |
+| **Total** | batch 1 done ($0.31 logged: Army Base 1-5, construction 1-3, merged into master as files, drawn by BLD-MAP-2); next (Fortifications) $0.18; everything else listed about $1.9 | | |
 
 ## Waiting on me (the owner)
 
@@ -108,6 +108,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| ART-1: Army Base 1-5 and 3 construction pictures on Gemini ($0.31), cut out with metadata (files only; drawn by BLD-MAP-2) | Sonnet |
 | Research banners edge to edge with a light blue-grey wash behind the name; Infantry Corps first picture moved up, faces whole and feet cropped (Dev Build v49) | Opus |
 | Nations balance re-check for peaceful computer nations: all balance checks pass (China/India check changed to 'stay at peace and hold their land'), no nation stalls or goes broke; v3c, stealth-ui and x1000 old-save tests brought up to date (tests only) | Sonnet |
 | Angled building pictures on the map and in the city panel: regional HQs on every capital, Airbase, Naval Yard on the coast or river bank (mirrored to face the water), Recruiting Office, Fortifications; fade in by zoom, crane while building, no level badges (Dev Build v48) | Opus |
