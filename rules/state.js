@@ -90,6 +90,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   S = {v:4, scn:SCN, len:DAY_LIMIT, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
        armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], q:0, nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
+  S.ab = 1;   // made under the Army Base rule for infantry (see abMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
   S.rk = RES_K;   // goods counted at the resource scale RES_K (see resKMigrate)
@@ -101,15 +102,16 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, income(n.id).gross.cash)));
     S.bld[n.capital].fac = 1;
-    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // infantry needs a Recruiting Office: the capital and the two biggest other cities start with one
+    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
-    // compact powers (Germany, Japan, Britain...) start with a denser, dug-in home army
-    // medium powers (41 to 55 provinces: France, Turkey, Iran) sit between the two: no forts, but a stronger capital garrison and two weeks before an AI
+    // compact powers (Germany, Japan, Britain...) start with a denser home army (their border guards had level I forts until the start-forts rule)
+    // medium powers (41 to 55 provinces: France, Turkey, Iran) sit between the two: a stronger capital garrison and two weeks before an AI
     // power may attack them (graceFor), so the compact, dug-in powers next door do not pick them off in the second week
     n.mid = !n.small && GS > 1 && np <= 55; if (n.mid) addArmy(n.id, n.capital, {inf:3, art:1});
-    if (n.small){ S.bld[n.capital].fort = 1; addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
-      for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) { addArmy(n.id, P.id, {inf:2}); S.bld[P.id].fort = 1; } }
+    S.bld[n.capital].fort = START_FORT;   // only the capital starts with Fortifications (every power)
+    if (n.small){ addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
+      for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) addArmy(n.id, P.id, {inf:2}); }
   }
   for (const n of S.nations){ n.score0 = score(n.id); n.prov0 = S.owner.filter(o => o === n.id).length; n.prov0In = landHeld(n.id); }
   S.own0 = S.owner.slice();
@@ -121,9 +123,9 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   IM.emit('newGame');
 }
 // ---- the nations world: the start by tier (docs/NATIONS-PLAN.md 3.2 to 3.5; the numbers are tierKit's, rules/data.js)
-// Every nation: its tier's stocks, an Army Base and a Recruiting Office in the capital, more offices in its biggest cities, the capital force,
-// 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest neighbour first (in a level 1 fort for tiers
-// B and C), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards), a level 1 fort in a tier C capital.
+// Every nation: its tier's stocks, an Army Base (infantry trains there from day 1), Fortifications I and a Recruiting Office in the capital, more
+// offices in its biggest cities, the capital force, 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest
+// neighbour first (no forts: only the capital starts with them), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards).
 // Neighbours of the same giant (a land neighbour more than 3 times their strength) start as friends. No dice are used.
 function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L.map(powerStrength), nbs = L.map((_, i) => powerNeighbours(L, i));   // by nation id
   for (const N of S.nations){ const n = N.id, kit = tierKit(N.tier, mode);
@@ -133,7 +135,7 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40*RES_K : 60*RES_K;   // no rare-earth city: a little more in stock for the first weeks
     { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0); after the big-country oil city of cityMains (rules/map.js), so oil is reserved only for a nation of under 8 cities without one
     S.bld[N.capital].fac = 1; for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;
-    if (kit.fortCap) S.bld[N.capital].fort = 1;
+    S.bld[N.capital].fort = START_FORT;   // only the capital starts with Fortifications, in every tier
     addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
     cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
     let guards = kit.guards;
@@ -144,7 +146,7 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     const order = [...face.keys()].sort((a, b) => (b < 0 ? -1 : str[b]) - (a < 0 ? -1 : str[a]) || a - b), used = new Set();
     for (const f of face.values()) f.sort((a, b) => popOf(b) - popOf(a) || a - b);
     for (let g = 0, turn = 0, idle = 0; g < guards && order.length && idle < order.length; turn++){ const p = face.get(order[turn % order.length]).find(q => !used.has(q));
-      if (p == null){ idle++; continue; } idle = 0; used.add(p); addArmy(n, p, {inf:2}); if (kit.fortGuards) S.bld[p].fort = 1; g++; }
+      if (p == null){ idle++; continue; } idle = 0; used.add(p); addArmy(n, p, {inf:2}); g++; }
   }
   // friends of a shared giant
   const giants = S.nations.map(N => nbs[N.id].filter(k => str[k] > 3*str[N.id]));
@@ -162,7 +164,13 @@ function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.own
 // saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
 function mobMigrate(){ if (S.mob) return; S.mob = 1; const got = new Set();
   for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].rec) continue; S.bld[c].rec = 1; got.add(N.id); }
-  for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, text:`New rule: infantry is mobilized only in cities with a Recruiting Office.${got.has(me) ? ' Your capital has been given one' : ' Your capital has one'}; build more in your other cities. Units already in training carry on.`, kind:'info', p:S.nations[me].capital}); } }
+  if (INF_NEEDS.includes('rec')) for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, text:`New rule: infantry is mobilized only in cities with a Recruiting Office.${got.has(me) ? ' Your capital has been given one' : ' Your capital has one'}; build more in your other cities. Units already in training carry on.`, kind:'info', p:S.nations[me].capital}); } }
+// saves from before the Army Base rule (no S.ab): infantry now needs an Army Base of level I in its city (INF_NEEDS). Every living nation's standing
+// capital without one gets level I, so every nation can still train infantry at home; units already queued or in training anywhere carry on (the
+// queue is never checked against the rule, only new orders are). After mobMigrate
+function abMigrate(){ if (S.ab) return; S.ab = 1; const got = new Set();
+  for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].fac) continue; S.bld[c].fac = 1; got.add(N.id); }
+  for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New rule: infantry (Motorized, Anti-Tank, Special Forces, Paratroopers) is mobilized only in cities with an Army Base of level I or more${INF_NEEDS.includes('rec') ? ' and a Recruiting Office' : '; the Recruiting Office no longer unlocks infantry and keeps its training-speed and manpower bonuses'}.${got.has(me) ? ' Your capital has been given an Army Base.' : ''} Units already in training carry on.`}); } }
 // saves from before the city-resource economy (each city one main resource; Arms Factory -> Army Base under the same key; Arms Industry new):
 // Refineries, Foundries and Rare Earth Mines are gone. Every level built is refunded to the province's owner at the un-raised price (money, materials
 // and iron), one under construction is cancelled and refunded, a knocked-out one forgotten. Materials and iron that would not fit in the stores are
@@ -240,6 +248,7 @@ function restore(data){
   for (const me of seats()){ const D = desk(me); if (D.sunOff == null) D.sunOff = sunOffFor(me); }   // older saves: the same display-only daylight offset
   resMigrate();
   mobMigrate();
+  abMigrate();   // after mobMigrate
   ecoMigrate();
   researchMigrate();
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
