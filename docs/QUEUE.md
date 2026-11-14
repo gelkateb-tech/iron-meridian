@@ -15,6 +15,7 @@ Last updated: 2026-11-13 (overnight run).
 | Task | Model | Where it is |
 |---|---|---|
 | Building pictures in the game: angled HQs by region; Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications, Hospital levels; no level badges on the map | Opus | branch buildings-angled |
+| Explosions animated in code (flash, fireball growing and fading, sparks and debris, rising drifting smoke, fading crater) from the fx-explosion/fx-smoke/fx-crater pictures, small for unit hits and big for missiles and bombers; NOT merged until the owner OKs the recording | Opus | branch explosions-code |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges after the building pictures) |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
@@ -30,6 +31,8 @@ Last updated: 2026-11-13 (overnight run).
 | 5 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Research banners:** full-width banners with the light blue-grey wash and the new Infantry Corps banner are on branch research-banners (tests pass): OK to merge? (The Dev Build looks darker only because it still has the old black-faded banners.)
 
 - **Research art retries (one try each, not retried):** a diamond frame drawn inside 7 icons (Artillery & Air Defence category, Ballistic Missiles, Protection (25 nodes), Tandem Warheads, ATGM, strike drone hit, satellite); subject cut off on 2 banners (Strategic Weapons missile, Infantry soldiers); wrong subject on 2 (Special Forces airlift, SAM seeker). Still close to real products: F-15, MQ-9, F-22/F-35, B-2, Nimitz, AH-1, P-3, Abrams pictures. Firepower/Protection show a tank turret on every line incl. aircraft and ships. Retry these 11 (about $0.50)?
 
