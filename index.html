@@ -3272,7 +3272,7 @@ function mapSwitched(){
   for (const k in MAPS){ const g = MAPS[k]; if (g === G) continue; for (const f of MAP_SHARE){ if (G[f] === undefined && g[f] !== undefined) G[f] = g[f]; else if (g[f] === undefined && G[f] !== undefined) g[f] = G[f]; } }
   worldLines(G);
   if (!booted && !CINFO.size) return;   // (the first map of the page: nothing drawn yet)
-  for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, LDEP, STKSLOT, RLKIND]) M.clear();
+  for (const M of [CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CJOB, CCANDS, CWANT, CITY_MISS, CNF, CLGL, LDEP, HQ_NEAR, HQ_DIR, STKSLOT, RLKIND]) M.clear();
   CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; SEAL = null; NAMEC.k = ''; layerKey = ''; geoDirty = true; }
 function bakeLakes(){ if (G.lakesBaked){ if (!G.lakeLab) lakeLabels(); return; } /*@TEST*/if (window.__BAKE) return;/*@ENDTEST*/ const lp = lakePath(); if (!lp || !G.terrain || !G.landMask) return; G.lakesBaked = true;
   const T = G.terrain, k = T.width/WORLD_W, g = T.getContext('2d'); g.save(); g.setTransform(k, 0, 0, k, 0, 0); g.lineJoin = 'round';
@@ -5211,6 +5211,28 @@ function tmRoleAdd(R, a){ if (a.fly || a.pos || a.to !== null || (a.path.length 
 function roleOf(p, e){ if (e.r) return e.r; const u = tmUnits(e.list), naval = Object.keys(u).every(t => t === 'lst' || (UNITS[t] && UNITS[t].cls === 'naval'));
   const cls = e.air ? 'a' : G.P[p].sea || naval ? 's' : 'g'; return (e.r = roleStr(cls, e.owner, u, p)); }
 function rolesAt(R, p){ const M = R.get(p); return M ? [...M.values()].map(e => roleOf(p, e)) : []; }
+// the room beside your capital that your forces keep clear (css px from the capital's point, at its own bearing: where the HQ stood before the
+// angled pictures; the forces' spots round your capital stay as they were), or null
+function hqBoxPx(p){ const N = S.nations[PLAYER]; if (!N || !N.alive || N.capital !== p || S.owner[p] !== PLAYER) return null;
+  const K = 1.6, P0 = G.P[p], R = (8.7 + (P0.pop0 >= 8 ? 2 : P0.pop0 >= 2.5 ? 1 : 0))*2, th = hqBearing(p), ux = Math.cos(th), uy = Math.sin(th);
+  const parts = [[9, 0.5, 23, 12], [7, 11.5, 24, 22], [3.5, 22, 27, 29], [9.5, 29, 21.5, 34]].map(r => r.map(v => v*K));
+  for (let t = 0; t < 90; t++){ const ix = ux*t - 15*K, iy = uy*t - 25*K; if (!parts.some(q => Math.hypot(Math.max(q[0] + ix, 0, -(q[2] + ix)), Math.max(q[1] + iy, 0, -(q[3] + iy))) < R + 0.5)){ const c = t + 2;
+      return [ux*c - 15*K - 3, uy*c - 25*K - 3, ux*c + 15*K + 3, uy*c + 9*K + 3]; } }
+  return null; }
+const HQ_DIR = new Map(), HQ_NEAR = new Map();   // (per map: mapSwitched clears them)
+function hqNear(cap){ let L = HQ_NEAR.get(cap); if (L) return L; const P0 = G.P[cap]; L = [];   // the cities and capitals round your capital (the provinces it must not read as belonging to)
+  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (p !== cap && !P.sea && (P.city || isCapital(p)) && Math.hypot(P.x - P0.x, P.y - P0.y) < 260) L.push(p); }
+  HQ_NEAR.set(cap, L); return L; }
+function hqBearing(cap){ const key = PLAYER + '|' + cap; let best = HQ_DIR.get(key); if (best !== undefined) return best;
+  const P0 = G.P[cap], near = hqNear(cap).map(p => G.P[p]);
+  const ZS = [[0.35, 0.5], [0.5, 0.8], [0.7, 1], [0.9, 1.2], [1.2, 1.3], [1.6, 1.3], [2.2, 1], [3, 0.8], [4, 0.6]]; let bs = -Infinity; best = 0;
+  for (let i = 0; i < 24; i++){ const an = i*Math.PI/12, ux = Math.cos(an), uy = Math.sin(an); let sc = 0, ws = 0;
+    for (const [s0, w] of ZS) for (const dp of [26, 40]){ const wx = P0.x + ux*dp/s0, wy = P0.y + uy*dp/s0, c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1;
+      sc += w*(q < 0 || G.P[q].sea ? 0 : q === cap ? 3 : S.owner[q] === PLAYER ? 2.3 : 0.6); ws += w;
+      for (const P of near){ const d = Math.hypot(P.x - wx, P.y - wy)*s0; if (d < 26) sc -= w*1.6*(1 - d/26); } }
+    sc += ws*(0.45*ux*ux - (uy > 0.4 ? 4*(uy - 0.4) : 0));
+    if (sc > bs + 1e-6){ bs = sc; best = an; } }
+  HQ_DIR.set(key, best); return best; }
 const tmFr = (a, b) => { const ox = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), oy = Math.min(a[3], b[3]) - Math.max(a[1], b[1]); if (ox <= 0 || oy <= 0) return 0;
   return ox*oy/Math.max(1e-6, Math.min((a[2] - a[0])*(a[3] - a[1]), (b[2] - b[0])*(b[3] - b[1]))); };
 const TM_WP = {mk:250, nm:300, pnm:300, hq:500, omk:150, onm:150, nm2:40}, TM_WF = {mk:420, nm:800, pnm:420, hq:60, omk:260, onm:380, nm2:160}, TM_MG = {mk:6, nm:5, pnm:3, hq:6, omk:3, onm:3, nm2:3};   // (nm: a city's name, pnm: a countryside province's)   // (TM_MG: css px the models keep from each)
@@ -5240,6 +5262,7 @@ function layoutCompute(p, roles){
     obs.push({wx:L ? L[0] : Q.x, wy:L ? L[1] : Q.y, b:[-w/2, -7, w/2, 8], k:own ? 'pnm' : 'onm', z0}); };
   if (city) cityObs(p, true); else if (!P.sea) provObs(p, true);
   for (const Q of G.P){ if (Q.id === p || Q.sea || Math.abs(Q.x - P.x) > 60 || Math.abs(Q.y - P.y) > 60) continue; if (Q.city || isCapital(Q.id)) cityObs(Q.id, false); else if (Math.abs(Q.x - P.x) < 40 && Math.abs(Q.y - P.y) < 40) provObs(Q.id, false); }
+  const hq = hqBoxPx(p); if (hq) obs.push({wx:P.x, wy:P.y, b:hq, k:'hq'});
   // the forces of the nearby provinces with a lower id, laid out first (whatever order the frames visit them in, so a fresh load on any screen, or a
   // view that shows other provinces first, gives the same spots); the higher ones keep clear of this one in turn
   const near = []; for (const q of nearDeps(p)){ provLayout(q, rolesAt(LAY_R, q)); const L = PREG.get(q); if (L) near.push(...L); }
@@ -5295,7 +5318,7 @@ function layoutCompute(p, roles){
     /*@TEST*/if (TMDBG.on) (mine.bc || (mine.bc = [])).push([r, Math.round(bc), (best[0] - P.x).toFixed(1), (best[1] - P.y).toFixed(1), near.length, [...new Set(near.map(q => q.p))].join(' ')]);/*@ENDTEST*/
     out.set(r, best); mine.push({p, ax:best[0], ay:best[1], fb, ow, sb:SB}); }
   return {out, items:mine}; }
-const layoutKey = (p, roles) => roleSort(roles).join(',') + '|' + tmRW() + '|' + (S.battles.includes(p) ? 1 : 0) + '|' + TMAS;
+const layoutKey = (p, roles) => roleSort(roles).join(',') + '|' + (hqBoxPx(p) ? 1 : 0) + '|' + tmRW() + '|' + (S.battles.includes(p) ? 1 : 0) + '|' + TMAS;
 // the provinces with forces near p (within 90 world px) with a lower id: p is laid out after them and round them (kept per frame)
 const LDEP = new Map(); let LDEP_R = null, PLAY_V = 0;
 function nearDeps(p){ if (LDEP_R !== LAY_R){ LDEP.clear(); LDEP_R = LAY_R; } let L = LDEP.get(p); if (L) return L; L = []; const P = G.P[p];
