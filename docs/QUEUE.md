@@ -16,6 +16,7 @@ Last updated: 2026-11-14.
 |---|---|---|
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges next) |
 | Capital HQ flag drawn in code on every regional HQ (the 8 flagpole tops in BNMETA); NOT merged until the owner sees Berlin and a captured capital | Opus | branch hq-flags |
+| Explosion video clips from Gemini Omni 1.2 Flash (720p, one try each, about $1.70): nuclear, chemical, conventional (bombers, ballistic), cruise missile; sprite sheets (black keyed out), played on the map; NOT merged until the owner OKs the clips and recording | Opus | branch fx-video |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
