@@ -354,7 +354,8 @@ R_BANNERS = {   # rbs-<category>: one wide scene per research category
                 "toward the right along a straight dirt road, close to the camera and large in the frame, the lead truck "
                 "biggest, seen from the side at a slight three-quarter front angle, a little dust behind; open farmland."),
 }
-R_FOCUS = {}   # a banner's vertical centre for its strip crop, as a share of the height (0.5 when not listed)
+R_FOCUS = {'rbs-inf': 0.385}   # a banner's vertical centre for its strip crop, as a share of the height (0.5 when not listed)
+# rbs-inf (owner): the strip starts just above the helmets, so the row crop takes the feet, never the heads
 # R_SHARE: one picture for every node of an upgrade type that appears in several unit lines (owner: reuse one icon per type);
 # the game maps those nodes to ri-t-<type> (index.html rKey). A generation reuses its unit's unlock picture (no picture of its own)
 R_SHARE = {'Firepower': 't-fp', 'Protection': 't-pr', 'Drop Tanks': 't-drop', 'Ceramic Body Armour': 't-armor', 'Naval Gunnery': 't-navgun'}
