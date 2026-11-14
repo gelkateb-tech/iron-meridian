@@ -8,15 +8,14 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
-Last updated: 2026-11-13 (overnight run).
+Last updated: 2026-11-14.
 
 ## Running
 
 | Task | Model | Where it is |
 |---|---|---|
-| Building pictures in the game: angled HQs by region; Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications, Hospital levels; no level badges on the map | Opus | branch buildings-angled |
-| Explosions animated in code (flash, fireball growing and fading, sparks and debris, rising drifting smoke, fading crater) from the fx-explosion/fx-smoke/fx-crater pictures, small for unit hits and big for missiles and bombers; NOT merged until the owner OKs the recording | Opus | branch explosions-code |
-| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges after the building pictures) |
+| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges next) |
+| Nations balance re-check now that the AI never starts wars (plus the 4 v3c deselect checks, stealth-ui wording, x1000 old-save base) | Sonnet | branch nations-recheck |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
@@ -24,14 +23,15 @@ Last updated: 2026-11-13 (overnight run).
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 2 | Nations balance re-check now that the AI never starts wars | Sonnet |
-| 3 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
-| 4 | Each aircraft type its own 3D shape | Opus |
-| 5 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Roads: every province linked to a neighbour, real roads first (map job, starts when real borders merge) | Opus |
+| 2 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
+| 3 | Each aircraft type its own 3D shape | Opus |
+| 4 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
 
+- **Explosions (branch explosions-code, NOT merged):** recordings and frame strips sent. OK to merge? Their questions: (1) big and small craters look the same size at close zoom (a 35 px screen cap): lift it for big ones? (2) every combat blast now leaves a short crater (busier battles); (3) fighter and helicopter strikes on cities use the small blast, only bombs are big: make them big? (4) nukes unchanged; (5) smoke at night is lit pale grey to show on the dark map: too bright?
+- **Building pictures (merged v48):** (1) Fortifications levels I-III use pictures 1, 3, 5: OK? (2) Army Base, Silo, Arms Industry still need angled pictures (nothing on the map for them yet); (3) Hamburg's Naval Yard sits on the Elbe bank: OK, or always the sea? (4) ports far from water (Berlin, Oslo, Helsinki) keep the yard in the city cluster: OK? (5) cast shadows kept see-through: keep, or a small contact shadow? (6) mid-zoom pictures are small (about 30-40 px): bigger?
 - **Research banners:** full-width banners with the light blue-grey wash and the new Infantry Corps banner are on branch research-banners (tests pass): OK to merge? (The Dev Build looks darker only because it still has the old black-faded banners.)
 
 - **Research art retries (one try each, not retried):** a diamond frame drawn inside 7 icons (Artillery & Air Defence category, Ballistic Missiles, Protection (25 nodes), Tandem Warheads, ATGM, strike drone hit, satellite); subject cut off on 2 banners (Strategic Weapons missile, Infantry soldiers); wrong subject on 2 (Special Forces airlift, SAM seeker). Still close to real products: F-15, MQ-9, F-22/F-35, B-2, Nimitz, AH-1, P-3, Abrams pictures. Firepower/Protection show a tank turret on every line incl. aircraft and ships. Retry these 11 (about $0.50)?
@@ -74,6 +74,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| Angled building pictures on the map and in the city panel: regional HQs on every capital, Airbase, Naval Yard on the coast or river bank (mirrored to face the water), Recruiting Office, Fortifications; fade in by zoom, crane while building, no level badges (Dev Build v48) | Opus |
 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), full amounts with units on hover, market prices per 1,000 units; merged with the fixes, play proven identical (6 games, 30 days), old saves scaled once (Dev Build v30) | Opus |
 | URGENT Dev Build fix A: computer nations never start a war (they fight back fully; allies join only to defend), play test at 1x/4x/8x, merge breakage (v3r1) | Opus |
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
