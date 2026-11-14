@@ -8,12 +8,14 @@ background) out of their background for the map and the city panel.
 Method (per picture, at the full 1024 px):
 - background: a quadratic colour surface fitted to the pixels reached by a flood fill from the picture's border through
   pixels close to the border colour (refitted once against the first fit), so the soft vignette of each render is followed
-- ground = background + cast shadow: a second flood fill from the border through pixels that are either the background
-  colour or a darker, neutral (slightly blue, as the renders' shadows are), smooth copy of it. Everything else is the
+- ground = background + cast shadow + lit ground: a second flood fill from the border through pixels that are either the
+  background colour, a darker, neutral or blue (the renders' shadows are lit by the sky: the deeper the bluer), smooth copy
+  of it, or the flat ground a building lights up a little (warmer, slightly brighter). Everything else is the
   building. Thin dark lines (the HQs' empty flagpoles, fences, antennas: darker than their 9 px median by a margin) always
   count as building, so the flood never eats them
-- pockets: ground-coloured areas the border flood cannot reach (an empty courtyard inside a fence) are background too when
-  they are large, flat and within a few levels of the background colour; paved yards (textured or tinted) stay
+- pockets: ground-coloured areas the border flood cannot reach (an empty courtyard inside a fence, the ground inside a trench
+  line, partly in shadow) are background too when they are flat and hold the background colour; paved yards (textured or
+  tinted) and a building's own shaded walls (shadow-coloured all over, no background in them) stay
 - edges: the building's border pixels get a soft alpha from where they lie between the ground colour behind them and the
   nearest solid building colour (closed-form matting) and are un-mixed from that ground colour, so no grey fringe or halo
   is left on a dark, green or sand map
@@ -35,6 +37,7 @@ SHADOW_MAX = 0.5      # darkest a kept cast shadow gets (alpha of its dark layer
 SHADOW_RGB = np.array([14, 18, 28], np.float32)   # the shadows' colour (the renders' shadows are slightly blue)
 # file name -> (key, level) of the game: keys as in the game's BUILD (air, rec, yard, fort, hq) plus hospital (not a game building yet)
 KEYS = {'airbase':'air', 'recruiting-office':'rec', 'naval-yard':'yard', 'fortifications':'fort', 'hospital':'hospital'}
+BRIDGE = ('hq-', 'hospital-', 'recruiting-office-', 'fortifications-')   # pictures whose cast shadows' sharp edges are crossed (see cut)
 # hand corrections of the ground anchor (fractions of the cut-out), applied after the automatic one: (dx, dy)
 ANCHOR_FIX = {}
 
@@ -70,13 +73,19 @@ def cut(a, name):
     r = a/np.maximum(1, bg)
     blue = r[..., 2] - r[..., 0]; mid = np.abs(r[..., 1] - (r[..., 0] + r[..., 2])/2)
     neutral = (blue > -0.025) & (blue < 0.09) & (mid < 0.03)
+    neutral |= (blue >= 0.09) & (blue < 0.2) & (mid < 0.035) & (k > 0.4) & (k < 0.8)   # (a deep cast shadow, lit by the sky alone, is clearly blue)
     smooth = local_std(k, 5) < 0.03
     thin = (k < ndi.median_filter(k, 9) - 0.07) | (k > ndi.median_filter(k, 9) + 0.07)   # lines (poles, wires, fences): building
     bgish = (d < 7) & ~thin
     shadowish = (k < 0.99) & (k > 0.28) & neutral & smooth & ~thin
     # the ground next to a building is lit a little by it (warmer, a touch brighter): still ground where it is flat
     lit = (k > 0.93) & (k < 1.06) & (blue > -0.09) & (blue < 0.06) & (mid < 0.035) & (local_std(k, 5) < 0.015) & ~thin
-    ground = flood_from_border(bgish | shadowish | lit)
+    # the edge of a cast shadow can be sharp (not smooth): crossed where it is the sky-blue mix of background and shadow (a shaded wall,
+    # lit by the warm ground, is not blue). Not in the Airbase and Naval Yard pictures: their blue-grey hangars and sheds are the
+    # colour of a shadow (their shadows are soft and need no bridge)
+    bridge = (blue >= 0.03) & (blue < 0.2) & (mid < 0.025) & (k > 0.45) & (k < 0.99) & ~thin
+    if not name.startswith(BRIDGE): bridge[:] = False
+    ground = flood_from_border(bgish | shadowish | lit | bridge)
     # pockets: closed areas of the background colour (an empty courtyard): background when large, flat and close to it
     lab, n = ndi.label((bgish | shadowish | lit) & ~ground)
     pocket = np.zeros_like(ground)
