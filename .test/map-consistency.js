@@ -2,7 +2,7 @@
 // A nations-world game as the United States (the 68 nations, the split map), the clock paused. Exits 1 on any failure; prints JSON {checks, fails, errors}.
 //  (T) TINT     several owned provinces (the US round New York and Chicago, Germany, Russia round Moscow) are tinted all over at 3 zooms after a pan:
 //               the layer's pixels at cells inside each province change clearly when the province is handed to another nation (its tint shows)
-//  (C) COLOURS  no two neighbouring countries share a tint (the per-country palette), and the tint is the power's or the country's own
+//  (C) COLOURS  your country's tint green, every other power's grey (an ally's blue, an enemy's red), independent land grey (owner: the old look)
 //  (A) ALLY     an ally's land turns blue (Canada allied: the tint and the layer's pixels round Ottawa)
 //  (B) BORDERS  at every zoom the borders are drawn: on the layer, points on province borders, country borders and national borders in view
 //               stand out from the ground beside them (luminance step), for most points sampled
@@ -40,13 +40,11 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   const G0 = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G; return {W:G.P.length, nn:S.nations.length, us:S.nations.findIndex(N => N.name === 'United States'), de:S.nations.findIndex(N => N.name === 'Germany'), ru:S.nations.findIndex(N => N.name === 'Russia'), ca:S.nations.findIndex(N => N.name === 'Canada'), map:S.map}; });
   checks.game = G0; if (G0.map !== 1 || G0.nn !== 68) fail('game', G0);
 
-  // (C) colours: neighbours apart, every tint the owner's own
-  { const r = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, pal = im.ctryPal(); let clash = 0, pairs = 0; const seen = new Set();
-      for (const P of G.P){ if (P.sea) continue; for (const q of P.nbs){ const Q = G.P[q]; if (Q.sea || Q.country === P.country) continue; const k = Math.min(P.country, Q.country) + ',' + Math.max(P.country, Q.country); if (seen.has(k)) continue; seen.add(k); pairs++; if (pal[P.country] === pal[Q.country]) clash++; } }
-      // neighbouring powers' tints differ (each power takes its home country's colour)
-      let nclash = 0; const tint = S.nations.map((N, n) => im.tintOf(n)); for (const P of G.P){ if (P.sea) continue; const o = S.owner[P.id]; if (o < 0) continue; for (const q of P.nbs){ const o2 = S.owner[q]; if (o2 >= 0 && o2 !== o && tint[o] === tint[o2] && o !== 0 && o2 !== 0) nclash++; } }
-      return {pairs, clash, nclash, own:im.tintOf(0), others:new Set(tint.slice(1)).size}; });
-    checks.colours = r; if (r.clash || r.nclash || r.others < 5) fail('colours', r); }
+  // (C) colours (owner, playtest: the old look): your country green, every other power grey (an ally's blue, an enemy's red), independent land grey
+  { const r = await p.evaluate(() => { const im = window.__im, S = im.S, T = im.SET.cb ? null : {own:'#7fc36a', other:'#a7a99f', neu:'#8f918a', ally:'#3f6fe8', war:'#d9534a'}, tint = S.nations.map((N, n) => im.tintOf(n)), bad = [];
+      for (let n = 1; n < tint.length; n++){ const rl = S.rel[[0, n].sort((a, b) => a - b).join(',')], st = rl && rl.st, want = st === 'war' ? T.war : st === 'ally' ? T.ally : null; if (want ? tint[n] !== want && tint[n] !== T.ally : tint[n] !== T.other && tint[n] !== T.ally) bad.push([S.nations[n].name, tint[n]]); }
+      return {own:tint[0], others:[...new Set(tint.slice(1))], neu:im.tintOf(-1, 0), bad:bad.slice(0, 8)}; });
+    checks.colours = r; if (r.own !== '#7fc36a' || r.neu !== '#8f918a' || r.bad.length || !r.others.includes('#a7a99f')) fail('colours', r); }
 
   // (A) ALLY  an ally's land is blue (owner rule: mine green, allies blue, enemies red): Canada round Ottawa allied, then at peace again
   { const c = await cityXY('Ottawa'); await p.evaluate(() => { window.__im.S.hour = 0; }); await setView(c[0], c[1], 4.5); await settle();   // (daylight over Ontario)

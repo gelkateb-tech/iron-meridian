@@ -9,6 +9,7 @@
 //               line (1.5 css px off it) in each side's own colour: no gap, no sliver of the wrong colour
 //  (P) PROVINCE province borders are on the layer at 3 zooms (hexPx 20, 48, 120): a line pixel within 1.5 css px of points along them
 //  (T) TAPS     a point 2 css px either side of a province border picks the province drawn there (provAtV), and real clicks select it
+//  (H) HATCH    no hatch pattern anywhere: the fog veil and the political tint are one flat colour inside foreign land, at 3 zooms
 //  (W) WRAP     across the map's east-west seam (St Lawrence Island, Alaska, cut by the seam): the tint on both sides, and a tap on each
 //               side picks the island's province, from both copies of the world
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path'), fs = require('fs');
@@ -147,6 +148,23 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
       return out; });
     // (a spot out in the water: a town or an island the cells put just off the real coast, where master drew it too; reported, not a failure)
     const wrong = r.filter(x => x.other >= 0); checks.spots = {outside:r.length, inWater:r.length - wrong.length, wrongSide:wrong.length, wrongList:wrong.slice(0, 20)}; if (wrong.length) fail('spots', wrong.slice(0, 20)); }
+
+  // (H) NO HATCHING (owner: no diagonal lines over any country, at any zoom): the fog's land veil and the political tint are plain fills. The
+  //     old hatch pattern is gone (fogPattern), and on the layer's fog and tint canvases the pixels inside foreign land out of sight (Siberia, for
+  //     the United States) are one flat colour in every 24 css px window round a province's spot, at 3 zooms
+  { const res = {fogPattern:await p.evaluate(() => typeof window.fogPattern + '/' + typeof window.fogPat), views:[]};
+    if (res.fogPattern !== 'undefined/undefined') fail('hatch pattern still defined', res.fogPattern);
+    for (const hz of [8, 26, 90]){ await go(95, 62, hz);
+      const r = await p.evaluate(([mw, mh]) => { const B = window.__br, im = window.__im, G = im.G, S = im.S, I = B.img(7), L = I.L, dp = L.dp || 2, out = {n:0, flat:0, worst:0, fogged:0, tinted:0};
+        const ru = S.nations.findIndex(N => N.name === 'Russia'), vis = im.visibleSet ? null : null;
+        for (const P of G.P){ if (P.sea || S.owner[P.id] !== ru || P.city || !B.onScr(P.x, P.y, 80, mw, mh) || im.isWet(P.x, P.y)) continue; const q = B.dpx(I, P.x, P.y); if (!q) continue; const R = Math.round(12*dp);
+          for (const k of ['fg', 'tc']){ const C = L[k]; if (!C || !C.width) continue; const d = C.getContext('2d').getImageData(q[0] - R, q[1] - R, 2*R + 1, 2*R + 1).data; let rg = 0;
+            for (let c = 0; c < 4; c++){ let lo = 255, hi = 0; for (let i = c; i < d.length; i += 4){ if (d[i] < lo) lo = d[i]; if (d[i] > hi) hi = d[i]; } rg = Math.max(rg, hi - lo); }
+            out.n++; if (rg <= 4) out.flat++; out.worst = Math.max(out.worst, rg); if (d[3] > 0) out[k === 'fg' ? 'fogged' : 'tinted']++; }
+          if (out.n >= 24) break; }
+        return out; }, [MAP.side, MAP.h]);
+      res.views.push({hexPx:hz, ...r}); if (r.n < 6 || r.flat < r.n || !r.fogged || !r.tinted) fail('hatching (fog or tint not one flat colour) at hexPx ' + hz, r); }
+    checks.hatch = res; }
 
   await b.close();
   console.log(JSON.stringify({checks, fails, errors}, null, 1));
