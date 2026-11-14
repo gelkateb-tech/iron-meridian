@@ -8,6 +8,10 @@ Two kinds of picture:
   assets/art-src/<name>.grey.png plus a transparent cut-out <name>.png
 - RES_ICONS: resource icons for the top bar (assets/art-src/icon-<name>.png, raw on light grey: tools/prep-res.py cuts them
   out), drawn in the style of the owner's icon-iron.png and icon-electronics.png, sent as references
+- RESEARCH: the research screen's art (R_BANNERS: one wide scene per category, 21:9 at 2K; R_ICONS: one square scene per
+  category, unit unlock, unique upgrade and shared upgrade type (R_SHARE), 1K), every one with the same R_STYLE paragraph
+  and each unit's R_LOOK; sources saved as webp q92; --prep-research crops and shrinks them into assets/art/ (banners
+  rbs-<category>.webp 2240x560, icons ri-<key>.webp 256x256, with a light grain)
 - GROWS: the next level of a building made from the picture of the level before (ba-<before>.png, shrunk to SHRINK in
   the middle of the frame) with a list of additions, so the levels share their pieces and grow visibly
 
@@ -25,6 +29,7 @@ options: --batch         send the pictures as one batch job (half price, slower;
          --force         overwrite an existing picture (otherwise the new one is saved as ba-<name>.v2.png, .v3 ...)
          --ref <file>    a style reference picture sent with a SUBJECTS prompt (repeatable)
          --print         print the prompts and stop (no API call)
+         --prep-research <name> ...   crop and shrink research pictures from assets/art-src/ into assets/art/ (no API call)
 """
 import sys, os, json, base64, io, time, urllib.request, urllib.error
 
@@ -214,6 +219,305 @@ GROWS = {
         "fuel tank"),
 }
 
+# ---- the research screen: one shared style for every banner and icon (owner: realistic, same style and lighting for all)
+R_STYLE = ("Style: a realistic, cinematic but clean photograph-like render of modern military equipment, like a still from a "
+           "high-quality war film or a strategy game's key art: true-to-life materials and scale, crisp detail on the subject, "
+           "soft atmospheric haze in the distance. Lighting: warm late-afternoon sun, low in the sky on the left, so every "
+           "subject is lit from the left with a gentle golden rim on its left edges and long soft shadows falling to the "
+           "right. Palette: muted military colours (olive drab, khaki, sand, slate and steel grey, dusty blue-grey sky), low "
+           "saturation, no bright or neon colours. Low clutter: one clear subject, few elements, no debris, no explosions, no "
+           "fire, no smoke plumes, no people's faces in close-up. Original designs only: every vehicle, ship, aircraft and "
+           "weapon is a fictional, generic modern design made for this game, NOT a copy of any real-world model, so no one "
+           "can recognise a real product from its silhouette (for example: not an Abrams, Leopard, T-72 or T-90 tank, not an "
+           "F-35, F-22, Su-57 or Rafale jet, not a Nimitz or Ford class carrier, not an Arleigh Burke destroyer, not a "
+           "Paladin, PzH 2000 or M777 gun); blend generic features and keep the proportions plausible. Plain unmarked paint: no text, no letters, no numbers, no hull or tail numbers, no logos, "
+           "no flags, no national insignia, no roundels, no unit badges, no camouflage brand patterns, no watermark.")
+R_BANNER = ("Framing: an ultra-wide cinematic panorama for a long, thin title banner. Only a horizontal strip through the "
+            "vertical middle of the picture is shown (about the middle 40 percent of its height; on a wide screen even less), "
+            "so: the main subject is LARGE and close to the camera, filling most of the height of that middle band (about a "
+            "third of the whole picture's height; the main vehicle, ship or aircraft is the biggest thing), and it sits "
+            "ENTIRELY inside that band, centred on the picture's horizontal centre line, with nothing important "
+            "in the top 30 percent or the bottom 30 percent of the picture (only plain sky above and plain ground or sea "
+            "below). The subject is never small, distant or near the top or bottom edge. It is placed centre-right and "
+            "spans about the right half of the width; the left third of the picture is quiet, empty and darker (open "
+            "ground or sea in shadow, plain sky) because the banner's title sits there. A darker vignette around all "
+            "edges, strongest on the left. Simple, calm sky and simple ground or sea. 21:9 image.")
+R_ICON = ("Framing: a square game icon, shown at about 50 pixels inside a diamond-shaped frame. The main unit or piece of "
+          "equipment is shown close up and is by far the largest thing in the picture: it fills most of the box (about 80 "
+          "percent of the width and most of the height), fully visible and centred, with only its tips or ends allowed "
+          "near the edges and nothing important in the corners (the corners are cut away). Camera: a three-quarter front "
+          "side view, slightly above, like a close product shot of the vehicle: its front (and its gun or nose) points "
+          "toward the right of the picture and we see its front and its left side. The picture is never "
+          "mostly background, sky or ground, and never mostly ammunition or small parts: any secondary items are small "
+          "and beside the main subject. The background is the subject's own setting, visible only around it, filling the "
+          "frame to every edge (no plain or white background, no border, no frame), simple, softly out of focus and a "
+          "little darker toward the edges, so the subject's bold silhouette stands out clearly at a tiny size. Square 1:1 "
+          "image.")
+# the look of each unit, written once and used in its icon and in any banner that shows it, so they agree (an original, generic design)
+R_LOOK = {
+    'soldier': ("a soldier in a plain olive-khaki combat uniform, a plain tan helmet with goggles on it, a tan plate carrier "
+                "vest with pouches and a generic compact assault rifle"),
+    'at': ("a soldier in a plain olive-khaki combat uniform, plain tan helmet and tan plate carrier, carrying a generic "
+           "shoulder-fired anti-tank missile launcher: a thick olive tube with a boxy sight unit on its left side"),
+    'spec': ("a special forces operator in darker ranger-green kit: a bump helmet with a night-vision mount, a face scarf, a "
+             "plate carrier with radio and a generic short carbine with a long suppressor"),
+    'para': ("a paratrooper in a plain olive-khaki combat uniform, plain tan helmet, parachute harness and a rifle strapped "
+             "to the side"),
+    'tank': ("a generic modern main battle tank of an original design: a low, wide, angular welded turret with flat add-on armour "
+             "blocks on its front and sides, a long smoothbore gun with a plain thermal sleeve, six road wheels a side under "
+             "plain side skirts, olive-khaki paint"),
+    'ifv': ("a generic tracked infantry fighting vehicle of an original design: a boxy hull with a steep sloped front, a "
+            "small low turret with a slim 30 mm autocannon and a twin missile box on its side, a rear ramp door, six road "
+            "wheels a side, olive-khaki paint"),
+    'art': ("a generic modern tracked self-propelled howitzer of an original design: a long tank-like tracked hull with six "
+            "road wheels a side, a large flat-sided boxy armoured turret set toward the rear of the hull, and a very long "
+            "155 mm gun barrel with a plain slotted muzzle brake, raised at a low angle and pointing forward over the "
+            "front of the hull; olive-khaki paint"),
+    'mlrs': ("a generic six-wheeled armoured military truck of an original design with a boxy armoured cab and, on its rear "
+             "bed, a big square launcher box of twelve rocket tubes on a turntable; olive-khaki paint"),
+    'sam': ("a generic eight-wheeled military truck of an original design carrying four large square missile canisters on a "
+            "launcher frame at its rear and a flat rectangular radar panel folded behind the cab; olive-khaki paint"),
+    'jam': ("a generic six-wheeled armoured military truck of an original design with a telescopic mast of short flat "
+            "antenna panels and a small dish on its roof; olive-khaki paint"),
+    'heli': ("a generic tandem two-seat attack helicopter of an original design: a narrow angular fuselage with two stepped "
+             "cockpits, short stub wings with missile racks, a chin gun turret, a four-blade main rotor and a tail rotor; "
+             "matte grey-green paint"),
+    'transport': ("a generic four-engine military transport plane of an original design: a fat high-wing fuselage, four "
+                  "turboprop engines, a raised T-tail and a rear cargo ramp; matte grey"),
+    'int': ("a generic single-seat twin-engine interceptor jet of an original design: a long pointed nose, a large delta wing "
+            "with small canards near the cockpit, one single tall tail fin; light grey"),
+    'jet': ("a generic two-seat multirole strike fighter of an original design: a thick fuselage with side air intakes, "
+            "swept wings, two engines and twin vertical tails; grey-green"),
+    'asf': ("a generic large air superiority fighter of an original design: a long flat faceted fuselage, broad wings with "
+            "rounded tips, rectangular intakes under the cockpit and twin outward-canted tails; dark grey"),
+    'drone': ("a generic recon UAV of an original design: a slim pale grey fuselage with a rounded bulbous nose, very long "
+              "straight thin wings, an inverted V-tail, a rear pusher propeller and a sensor ball under the nose"),
+    'swarm': ("small generic loitering drones of an original design, each a small grey tube-shaped body about a metre long "
+              "with X-shaped folding wings and a small rear propeller"),
+    'sdrone': ("a generic one-way strike drone of an original design: a grey delta-wing body with a pointed nose, small "
+               "upright fins at the wingtips and a rear propeller"),
+    'bomb': ("a generic heavy jet bomber of an original design: a long slim fuselage, high swept wings with four jet engines "
+             "in single pods under them, a tall swept single tail; light grey"),
+    'stealth': ("a generic stealth bomber of an original design: a wide, flat, tailless blended wing with a pointed nose, a "
+                "straight swept leading edge and a W-shaped trailing edge, smooth dark grey"),
+    'mpa': ("a generic maritime patrol aircraft of an original design: a long low-wing fuselage with four turboprop engines, "
+            "a radar bulge under the nose and a long thin boom sticking out of the tail; light grey"),
+    'awacs': ("a generic airborne radar plane of an original design: a twin-engine jet airliner-shaped body with a long "
+              "flat rectangular radar beam mounted on a short pylon along the top of its fuselage; light grey"),
+    'frig': ("a generic modern frigate of an original design: a sleek grey hull with smooth angled stealthy sides, one tall "
+             "enclosed pyramid mast, a single gun on the bow and a helicopter deck at the stern"),
+    'crui': ("a generic large guided-missile cruiser of an original design: a long grey hull, a big blocky superstructure "
+             "with flat radar panels on its sides, two gun turrets forward and rows of flush missile hatches on deck"),
+    'carr': ("a generic large aircraft carrier of an original design: a long flat grey flight deck with an angled landing "
+             "strip, one compact block-shaped island on the right side with a single mast, a few plain grey jets parked on "
+             "deck"),
+    'sub': ("a generic attack submarine of an original design: a long dark grey cylindrical hull, a short sail (fin) set "
+            "well forward with small dive planes, a cross-shaped tail"),
+    'cm': ("a generic cruise missile of an original design: a slim grey cylindrical body with a rounded nose, two small "
+           "straight wings at its middle, four small tail fins and a small air intake under its belly"),
+    'bm': ("a generic ballistic missile of an original design: a tall olive-grey cylindrical rocket with a pointed cone nose, "
+           "carried on a big eight-wheeled transporter-erector truck"),
+    'truck': ("a generic six-wheeled military cargo truck of an original design with a flat-front armoured cab and a "
+              "canvas-covered rear bed; olive-khaki paint"),
+}
+L = R_LOOK
+# a banner: <name>: <scene>; the main subject large, inside the middle band (R_BANNER says how)
+R_BANNERS = {   # rbs-<category>: one wide scene per research category
+    'rbs-inf': ("Infantry Corps: a squad of five infantry soldiers, each " + L['soldier'] + ", advancing in a loose line from "
+                "the left toward the right across a dry grass field, seen from the side at a slight three-quarter angle, close "
+                "enough that the soldiers are tall in the frame (heads to boots inside the middle band)."),
+    'rbs-arm': ("Armoured Forces: two main battle tanks, each " + L['tank'] + ", driving from the left toward the right along "
+                "a dusty desert track, close to the camera and large in the frame, seen from the side at a slight three-quarter "
+                "front angle, a thin trail of dust behind their tracks; flat sand desert with low mesas far away."),
+    'rbs-sup': ("Artillery & Air Defence: in the centre-right a self-propelled howitzer, " + L['art'] + ", and just behind it "
+                "on the right a mobile air defence launcher, " + L['sam'] + ", its canisters raised at a steep angle; both close "
+                "and large, seen from the side at a slight three-quarter angle, on dry open steppe."),
+    'rbs-aas': ("Air Assault: two attack helicopters, each " + L['heli'] + ", flying low and fast from the left toward the "
+                "right just above a ridge of dry hills, close to the camera and large in the frame, seen from the side at a slight "
+                "three-quarter front angle."),
+    'rbs-tac': ("Tactical Air: two fighter jets, " + L['jet'] + ", flying side by side in close formation from the left "
+                "toward the right, close to the camera and large in the frame (the nearer jet spans about a third of the width), "
+                "seen from the side at a slight angle, above a soft layer of clouds; a calm, evenly lit sky."),
+    'rbs-uns': ("Unmanned Systems: one recon UAV, " + L['drone'] + ", flying from the left toward the right, close to the "
+                "camera and large in the frame (its long wings span about half the width), seen from slightly below at a "
+                "three-quarter front angle; a hazy evening sky over far desert hills."),
+    'rbs-str': ("Strategic Air: one heavy bomber, " + L['bomb'] + ", flying from the left toward the right high above the "
+                "clouds, close to the camera and large in the frame (its wings span about half the width), seen from the side "
+                "and slightly below at a three-quarter front angle."),
+    'rbs-nav': ("Navy: an aircraft carrier, " + L['carr'] + ", sailing toward the right at sea, close to the camera and large "
+                "in the frame (its hull spans about half the width and its island and deck fill the middle band), seen from "
+                "the side at a slight three-quarter front angle, one small frigate far behind it on the left; calm sea."),
+    'rbs-msl': ("Strategic Weapons: a ballistic missile on its launch truck, " + L['bm'] + ", the missile raised to a steep "
+                "angle, close to the camera and large in the frame, seen from the side at a slight three-quarter angle, at a "
+                "desert launch site at dusk; no flame and no smoke."),
+    'rbs-cmd': ("Command & Logistics: a convoy of three military cargo trucks, each " + L['truck'] + ", driving from the left "
+                "toward the right along a straight dirt road, close to the camera and large in the frame, the lead truck "
+                "biggest, seen from the side at a slight three-quarter front angle, a little dust behind; open farmland."),
+}
+R_FOCUS = {}   # a banner's vertical centre for its strip crop, as a share of the height (0.5 when not listed)
+# R_SHARE: one picture for every node of an upgrade type that appears in several unit lines (owner: reuse one icon per type);
+# the game maps those nodes to ri-t-<type> (index.html rKey). A generation reuses its unit's unlock picture (no picture of its own)
+R_SHARE = {'Firepower': 't-fp', 'Protection': 't-pr', 'Drop Tanks': 't-drop', 'Ceramic Body Armour': 't-armor', 'Naval Gunnery': 't-navgun'}
+R_ICONS = {   # ri-<key>: cat-<category> (the category icon), a unit unlock or a unique upgrade (its node id), or a shared type (t-<type>)
+    'ri-cat-inf': ("Infantry Corps: a modern infantry soldier in full combat gear (helmet, body armour, rifle held ready), "
+                   "advancing in a slight crouch across a dusty field, seen from the front left in three-quarter view, from "
+                   "the knees up; the face is in the shadow of the helmet."),
+    'ri-u_tank': ("Main Battle Tank: one modern main battle tank seen from the front left in three-quarter view, its long main "
+                  "gun pointing slightly to the right, standing on dusty open ground."),
+    'ri-art_shell': ("Extended-Range Shells (an upgrade of the Mobile Artillery, a self-propelled howitzer): the artillery gun "
+                     "itself is the main subject: " + R_LOOK['art'] + ", seen from the front left in a three-quarter front "
+                     "side view (the same angle as a close product shot of a tank), close up and filling most of the box, "
+                     "standing on dusty open ground. Beside its front left track stand only three small, slender artillery "
+                     "shells with pointed noses, upright, plain olive with one plain brass band, each only about as tall as a "
+                     "road wheel, small next to the gun: a small detail, not a subject."),
+    # ---- category icons
+    'ri-cat-arm': "Armoured Forces: " + L['tank'] + ", seen head-on from a low angle, slightly from its left, its gun pointing just past the viewer, kicking up dust.",
+    'ri-cat-sup': "Artillery & Air Defence: " + L['art'] + ", its long barrel raised high at a steep firing angle, seen from a low angle at its front left, on dry steppe.",
+    'ri-cat-aas': "Air Assault: " + L['heli'] + ", flying low toward the viewer over dry hills, banking slightly, seen from its front left.",
+    'ri-cat-tac': "Tactical Air: " + L['jet'] + ", banking in a turn high in the sky, seen from slightly above its front left, filling the box.",
+    'ri-cat-uns': "Unmanned Systems: " + L['drone'] + ", flying toward the viewer, seen head-on from slightly below its front left, the long wings spanning the box.",
+    'ri-cat-str': "Strategic Air: " + L['bomb'] + ", flying above the clouds, seen from below its front left, big and close, filling the box.",
+    'ri-cat-nav': "Navy: the bow and forward superstructure of " + L['frig'] + ", cutting through grey waves toward the viewer, seen from a low angle at its front left.",
+    'ri-cat-msl': "Strategic Weapons: " + L['bm'] + ", the missile raised upright on the truck, seen from its front left at a desert launch site at dusk.",
+    'ri-cat-cmd': ("Command & Logistics: a generic six-wheeled armoured command vehicle of an original design with several tall whip "
+                   "antennas, a small satellite dish on its roof and a folded awning on its side; olive-khaki paint; seen from its front left on a dirt road."),
+    # ---- unit unlocks
+    'ri-u_inf': "Motorized Infantry: two soldiers, each " + L['soldier'] + ", jumping down from the back of " + L['truck'] + ", the truck filling most of the box, seen from its rear left corner.",
+    'ri-u_at': "Anti-Tank Infantry: " + L['at'] + ", kneeling and aiming the launcher on his shoulder toward the right, seen from his front left, from the knees up.",
+    'ri-u_spec': "Special Forces: " + L['spec'] + ", moving in a crouch with the carbine ready through rocky ground at dusk, seen from his front left, from the knees up.",
+    'ri-u_para': "Paratroopers: " + L['para'] + ", hanging under a round olive parachute canopy as he comes down, the canopy and the soldier both in the box, seen from his front left; a hazy landscape far below.",
+    'ri-u_ifv': "Infantry Fighting Vehicle: " + L['ifv'] + ", standing on dusty ground, seen from its front left.",
+    'ri-u_art': ("Mobile Artillery: a battery of three self-propelled howitzers in a row, each " + L['art'] + ", their barrels "
+                 "raised, the nearest one firing with a small, short muzzle flash and a small puff at the muzzle (allowed here), "
+                 "the nearest gun big in the front, the other two behind it, seen from the front left on dry steppe."),
+    'ri-u_mlrs': "Rocket Artillery: " + L['mlrs'] + ", its launcher box raised at a steep angle, seen from its front left on dusty ground.",
+    'ri-u_sam': "Mobile SAM: " + L['sam'] + ", its canisters raised upright and the radar panel unfolded, seen from its front left.",
+    'ri-u_jam': "Mobile Jammer: " + L['jam'] + ", its antenna mast raised, seen from its front left on a dirt track.",
+    'ri-u_heli': "Attack Helicopter: " + L['heli'] + ", hovering low over dry grass, seen from its front left, close.",
+    'ri-u_int': "Interceptor: " + L['int'] + ", climbing steeply in a clear sky, seen from its front left, close.",
+    'ri-u_jet': "Strike Fighter: " + L['jet'] + ", flying level above clouds, seen from its front left, close.",
+    'ri-u_asf': "Air Superiority Fighter: " + L['asf'] + ", flying level high in the sky, seen from its front left, close.",
+    'ri-u_drone': "Recon UAV: " + L['drone'] + ", flying level high over hazy hills, seen from its front left; the long wings may reach the edges.",
+    'ri-u_swarm': "Swarm Drones: a pack of about eight " + L['swarm'] + ", flying together in a loose cluster toward the right, the nearest ones big, seen from their front left.",
+    'ri-u_sdrone': "Strike Drone: " + L['sdrone'] + ", flying low and fast over a desert, seen from its front left, close.",
+    'ri-u_bomb': "Heavy Bomber: " + L['bomb'] + ", flying high above the clouds, seen from its front left, close.",
+    'ri-u_stealth': "Stealth Bomber: " + L['stealth'] + ", flying high in an evening sky, seen from slightly above its front left, close.",
+    'ri-u_mpa': "Maritime Patrol Aircraft: " + L['mpa'] + ", flying low over a grey sea, seen from its front left, close.",
+    'ri-u_awacs': "AWACS: " + L['awacs'] + ", flying high in a clear sky, seen from its front left, close.",
+    'ri-u_frig': "Frigate: " + L['frig'] + ", at sea, seen from its front left, close.",
+    'ri-u_crui': "Cruiser: " + L['crui'] + ", at sea, seen from its front left, close.",
+    'ri-u_carr': "Aircraft Carrier: " + L['carr'] + ", at sea, seen from above its front left, close, the hull filling the box.",
+    'ri-u_sub': "Attack Submarine: " + L['sub'] + ", surfaced and moving through calm sea, seen from its front left, close.",
+    'ri-msl1': "Cruise Missiles: " + L['cm'] + ", flying low over a calm sea, seen from its front left, close and filling the box; no flame.",
+    'ri-msl2': "Ballistic Missiles: " + L['bm'] + ", the missile lying flat on the truck, ready to be raised, seen from the truck's front left.",
+    # ---- shared upgrade types (one picture each, used on every node of that type)
+    'ri-t-fp': ("Firepower (a weapons upgrade for every unit): the turret and long gun barrel of " + L['tank'] + ", seen close "
+                "from its front left, the barrel and its muzzle sharp in front, a small box of guided missiles on the turret side."),
+    'ri-t-pr': ("Protection (an armour upgrade for every unit): the front corner of " + L['tank'] + "'s hull and turret, close "
+                "up, thick new add-on armour blocks bolted on, one block shown cut open at its edge to reveal layered ceramic and steel plates."),
+    'ri-t-drop': ("Drop Tanks: close under the wing of a grey generic fighter jet in flight, two big teardrop-shaped external "
+                  "fuel tanks hanging on pylons, seen from below its front left, the tanks and the wing filling the box."),
+    'ri-t-armor': "Ceramic Body Armour: " + L['soldier'] + ", from the chest up, his thick tan ceramic-plate vest the main thing, seen from his front left.",
+    'ri-t-navgun': "Naval Gunnery: the single gun turret on the bow of " + L['frig'] + ", an angular stealthy turret with a long barrel, close up from its front left.",
+    # ---- unique upgrades (Infantry Corps)
+    'ri-inf_build': "Rapid Mobilisation: soldiers climbing quickly into the back of " + L['truck'] + ", the truck filling the box, seen from its rear left corner.",
+    'ri-inf_terr': "Rough-Ground Drills: " + L['soldier'] + ", climbing a steep rocky forest slope, seen from his front left, from the knees up.",
+    'ri-at_warhead': "Tandem Warheads: " + L['at'] + ", aiming the launcher; a missile with a long thin spike nose shows at the front of the tube; seen from his front left, close.",
+    'ri-at_eye': "Thermal Sights: " + L['at'] + ", aiming at dusk through a big boxy thermal sight on the launcher, seen from his front left, close.",
+    'ri-spec_terr': "Mountain & Arctic Training: " + L['spec'] + " in white-grey snow camouflage, on a snowy mountain ridge, seen from his front left, from the knees up.",
+    'ri-spec_eye': "Night Optics: " + L['spec'] + ", four-tube night-vision goggles lowered over his eyes, in the blue light of dusk, seen from his front left, head and shoulders.",
+    'ri-spec_airlift': "Air-Transportable: special forces operators sitting by the open rear ramp inside " + L['transport'] + ", seen from inside, the ramp and the sky beyond.",
+    # Armoured Forces
+    'ri-ifv_gun': "30 mm Autocannon: the turret of " + L['ifv'] + ", close up from its front left, the slim autocannon barrel the main thing.",
+    'ri-ifv_spd': "Uprated Powerpack: " + L['ifv'] + ", driving fast toward the viewer over a dusty track, a dust cloud behind, seen from its front left.",
+    'ri-ifv_terr': "Amphibious Kit: " + L['ifv'] + ", swimming across a calm brown river with a bow wave, seen from its front left.",
+    'ri-tank_armor': "Composite Armour: the turret front of " + L['tank'] + ", close up from its front left, the thick angular armour blocks the main thing.",
+    'ri-tank_gun': "Smoothbore Main Gun: " + L['tank'] + ", seen from its front left, close, the long gun barrel crossing the box toward the right.",
+    'ri-tank_terr': "Wide Tracks: " + L['tank'] + ", driving through deep mud, seen from a low angle at its front left, its wide tracks prominent.",
+    'ri-tank_eng': "Turbine Engines: " + L['tank'] + ", speeding over dry ground with a cloud of dust and a faint heat shimmer over its rear deck, seen from its front left.",
+    # Artillery & Air Defence
+    'ri-art_radar': ("Counter-Battery Radar: a generic six-wheeled military truck of an original design carrying a big flat "
+                     "rectangular radar panel raised upright on its rear; olive-khaki; seen from its front left."),
+    'ri-art_guided': "Guided Shells: one long, slim guided artillery shell with four small steering fins near its nose and folding tail fins, in flight high in the sky, seen from the side, filling the box.",
+    'ri-mlrs_reload': "Rapid Reload: " + L['mlrs'] + ", a small crane arm lowering a fresh launcher box onto its rear, seen from its front left.",
+    'ri-mlrs_rng': "Extended-Range Rockets: " + L['mlrs'] + ", its launcher box raised very steeply toward the sky, seen from a low angle at its front left.",
+    'ri-sam_seek': "Improved Seekers: the nose of a surface-to-air missile with a glassy seeker dome, sliding out of its square canister on " + L['sam'] + ", close up.",
+    'ri-sam_spd': "Shoot-and-Scoot: " + L['sam'] + ", its launcher lowered, driving fast along a dusty road, seen from its front left.",
+    'ri-jam_band': "Wideband Jamming: " + L['jam'] + ", its mast raised high with many antenna panels, seen from a low angle at its front left.",
+    # Air Assault
+    'ri-heli_rng': "Long-Range Tanks: " + L['heli'] + ", two long external fuel tanks on its stub wings, flying, seen from its front left.",
+    'ri-heli_atgm': "Fire-and-Forget Missiles: the stub wing of " + L['heli'] + ", close up, a rack of four anti-tank missiles under it, the cockpit behind.",
+    'ri-para_airlift': "Long-Range Airlift: " + L['transport'] + ", flying high above the clouds, seen from its front left, close.",
+    # Tactical Air
+    'ri-int_msl': "Radar-Guided Missiles: " + L['int'] + ", long slim missiles under its wings, seen close from below its front left.",
+    'ri-jet_pgm': "Precision Munitions: " + L['jet'] + ", carrying guided bombs with small tail fins under its wings, seen close from below its front left.",
+    'ri-jet_lo': "Stealth Airframes: " + L['jet'] + " reshaped with smooth faceted stealthy surfaces and no weapons under its wings, dark grey, seen from its front left.",
+    'ri-asf_radar': "Look-Down Radar: the nose of " + L['asf'] + ", its radome opened on a ground stand to show a flat round radar array, in a hangar, close up from its front left.",
+    # Unmanned Systems
+    'ri-swarm_rng': "Booster Rockets: one of " + L['swarm'] + ", leaving its launch tube with a small booster rocket under it, a short small flame (allowed here), seen from its front left.",
+    'ri-swarm_pack': "Bigger Salvo: a generic six-wheeled truck with a big box launcher of many small square tubes on its rear, raised, seen from its front left.",
+    'ri-sdrone_rng': "Satellite Link: " + L['sdrone'] + " with a small dome antenna on its back, flying high, seen from above its front left.",
+    'ri-sdrone_hit': "Bunker-Buster Warhead: " + L['sdrone'] + ", diving steeply toward a low grey concrete bunker on the ground below, seen from its front left.",
+    # Strategic Air
+    'ri-bomb_ecm': "Defensive Jammers: " + L['bomb'] + ", with long jamming pods under its wing tips, seen close from below its front left.",
+    'ri-bomb_up': "Strategic Bomber Upgrade: " + L['bomb'] + ", taking fuel from the boom of a grey tanker plane above it (only the boom and the tanker's tail visible), seen from its front left.",
+    'ri-stealth_bay': "Enlarged Bomb Bay: " + L['stealth'] + ", seen from below its front left, its long bomb bay doors open.",
+    'ri-stealth_rng': "Flying-Wing Tanks: " + L['stealth'] + ", flying over a vast open ocean far from land, seen from above its front left.",
+    'ri-mpa_sonar': "Sonobuoy Field: " + L['mpa'] + ", flying low over the sea, a small sonobuoy dropping under a little parachute below it, seen from its front left.",
+    'ri-mpa_torp': "Homing Torpedoes: " + L['mpa'] + ", its bomb bay open with a slim torpedo dropping out, low over the sea, seen from below its front left.",
+    'ri-awacs_radar': "High-Power Radar: the long radar beam on top of " + L['awacs'] + ", close up from above its front left, the fuselage below.",
+    'ri-awacs_link': "Fighter Data Link: " + L['awacs'] + ", with two small grey fighter jets flying close beside it, seen from its front left.",
+    # Navy
+    'ri-frig_sonar': "Towed Sonar: the stern of " + L['frig'] + ", a thick cable running from it into the white wake, seen from above its rear left.",
+    'ri-frig_aa': "Area Air Defence: the foredeck of " + L['frig'] + ", a block of vertical missile launch hatches open, close up from its front left; no flame.",
+    'ri-crui_rng': "Long-Range Bombardment: " + L['crui'] + ", its two forward gun turrets trained to the right with barrels raised high, seen from its front left.",
+    'ri-carr_deck': "Flight-Deck Crews: on the flight deck of " + L['carr'] + ", a plain grey fighter jet on the catapult with deck crew in muted coloured vests around it, seen from its front left.",
+    'ri-carr_spd': "Nuclear Propulsion: " + L['carr'] + ", at high speed with a big white bow wave, seen from a low angle at its front left.",
+    'ri-sub_torp': "Heavy Torpedoes: the bow of " + L['sub'] + ", under water, a torpedo tube door open, seen from its front left in blue-green water.",
+    'ri-sub_quiet': "Quiet Drive: " + L['sub'] + ", gliding silently deep under water in dim blue-green light, its shrouded propeller at the tail, seen from its front left.",
+    # Strategic Weapons
+    'ri-cm_rng': "Cruise Missile Range: " + L['cm'] + ", flying low over the sea toward a distant coast, seen from its front left; no flame.",
+    'ri-cm_spd': "Cruise Missile Speed: " + L['cm'] + ", flying very fast low over a desert with a little motion blur in the ground, seen from its front left; no flame.",
+    'ri-bm_rng': "Ballistic Missile Range: a tall olive-grey ballistic missile climbing high above the clouds, a short bright exhaust under it (allowed here), seen from the side.",
+    'ri-bm_pow': "Heavier Warhead: the cone-shaped nose section of a ballistic missile, close up on a work stand in a hangar, seen from its front left.",
+    'ri-msl3': ("Anti-Missile Shield: a generic missile defence battery of an original design: an eight-wheeled truck with a "
+                "big flat square radar panel, and behind it a launcher truck with large canisters raised upright; seen from its front left."),
+    'ri-sat1': "Reconnaissance Satellites: a generic satellite of an original design with two wide solar panel wings and a camera pod, in orbit above the Earth, seen from its front left.",
+    # Command & Logistics
+    'ri-log1': "Motorized Supply: " + L['truck'] + ", loaded with crates, driving along a dirt road, seen from its front left.",
+    'ri-log2': ("Combat Engineers: a generic tracked armoured engineer vehicle of an original design with a big dozer blade at "
+                "its front and a folded crane arm on top, pushing earth, seen from its front left."),
+    'ri-nav3': "Amphibious Doctrine: a generic landing craft with its bow ramp down at a sandy beach, " + L['ifv'] + " rolling down the ramp, seen from the front left.",
+    'ri-log3': ("Field Hospitals: a generic military ambulance truck of an original design, plain olive with no markings, "
+                "parked beside a large plain olive field tent at dusk, seen from its front left."),
+}
+R_BANNER_OUT, R_ICON_OUT = (2240, 560), 256
+
+def grain(im, sigma, seed):
+    """adds a light, fixed (seeded by the name) monochrome grain of about sigma levels: a dither against colour banding"""
+    import numpy as np, zlib
+    from PIL import Image
+    a = np.asarray(im, dtype=np.float32); rng = np.random.default_rng(zlib.crc32(seed.encode()))
+    a = a + rng.normal(0, sigma, a.shape[:2])[..., None]
+    return Image.fromarray(np.clip(np.rint(a), 0, 255).astype(np.uint8))
+
+def prep_research(names):
+    """crops a research banner to a 4:1 strip around its focus and shrinks it to R_BANNER_OUT; shrinks an icon to
+    R_ICON_OUT square; both saved as webp in assets/art/"""
+    from PIL import Image
+    for n in names:
+        src = os.path.join(OUT, f'{n}.webp')
+        if not os.path.exists(src): src = src[:-5] + '.png'
+        im = Image.open(src).convert('RGB'); w, h = im.size
+        if n in R_BANNERS:
+            sh = round(w / 4); cy = R_FOCUS.get(n, 0.5) * h; y0 = int(max(0, min(h - sh, cy - sh / 2)))
+            im = im.crop((0, y0, w, y0 + sh)).resize(R_BANNER_OUT, Image.LANCZOS); q = 80
+        else:
+            s0 = min(w, h); im = im.crop(((w - s0) // 2, (h - s0) // 2, (w + s0) // 2, (h + s0) // 2)).resize((R_ICON_OUT, R_ICON_OUT), Image.LANCZOS); q = 84
+        im = grain(im, 1.6 if n in R_BANNERS else 1.0, n)   # a light grain so smooth skies do not band in the webp
+        dst = os.path.join(ROOT, 'assets', 'art', f'{n}.webp'); im.save(dst, 'WEBP', quality=q, method=6)
+        print(f'{os.path.relpath(dst, ROOT)}  {im.size[0]}x{im.size[1]}  {os.path.getsize(dst) // 1024} KB')
+
 EDIT = ("Edit the attached picture. Change only this: {}. Keep everything else exactly as it is: every building, pier, "
         "crane, ship and the dry dock, their shapes, positions, sizes and directions, the camera angle, framing, lighting, "
         "shadows, colours and the plain flat light grey background. Do not add or remove anything.")
@@ -244,13 +548,14 @@ def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE)
 
-def stem(name): return name if name in ICONS or name in RES_ICONS else f'ba-{name}'
+def stem(name): return name if name in ICONS or name in RES_ICONS or name in R_BANNERS or name in R_ICONS else f'ba-{name}'
 
 def free_path(name, force):
     p = os.path.join(OUT, f'{stem(name)}.png')
-    if force or not os.path.exists(p): return p
+    taken = lambda q: os.path.exists(q) or os.path.exists(q[:-4] + '.webp')
+    if force or not taken(p): return p
     v = 2
-    while os.path.exists(os.path.join(OUT, f'{stem(name)}.v{v}.png')): v += 1
+    while taken(os.path.join(OUT, f'{stem(name)}.v{v}.png')): v += 1
     return os.path.join(OUT, f'{stem(name)}.v{v}.png')
 
 def shrunk(src):
@@ -304,6 +609,10 @@ def request(name, refs, change=None):
         images = [src]
     elif name in ICONS: text, images = ICONS[name], []
     elif name in RES_ICONS: text, images = RES_ICONS[name] + '\n\n' + RES_STYLE, [os.path.join(OUT, r) for r in RES_REFS]
+    elif name in R_BANNERS or name in R_ICONS:   # the research screen: no reference picture, the shared style
+        ban = name in R_BANNERS
+        return {'contents': [{'parts': [{'text': (R_BANNERS if ban else R_ICONS)[name] + '\n\n' + (R_BANNER if ban else R_ICON) + '\n\n' + R_STYLE}]}],
+                'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': '21:9' if ban else '1:1', 'imageSize': '2K' if ban else '1K'}}}
     else:
         text, images = prompt(name), refs
         if refs and building(name) in STYLES:   # a detail reference only (e.g. a top-down crop of another base)
@@ -337,6 +646,7 @@ def save(name, reply, force, batch):
         from PIL import Image   # saved as a true PNG whatever format the API returns
         p = free_path(name, force); im = Image.open(io.BytesIO(data))
         if name in ICONS: im.save(p[:-4] + '.grey.png'); cutout(im).save(p)
+        elif name in R_BANNERS or name in R_ICONS: p = p[:-4] + '.webp'; im.convert('RGB').save(p, 'WEBP', quality=92, method=6)   # research sources: webp q92, not big PNGs
         else: im.save(p)
     with open(LOG, 'a') as f:
         f.write(json.dumps({'name': name, 'file': p and os.path.relpath(p, ROOT), 'batch': batch, 'usd_est': round(usd, 4),
@@ -374,8 +684,8 @@ def collect(job, force):
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
     if a[0] == '--list':
-        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS):
-            print(('done ' if os.path.exists(os.path.join(OUT, f'{stem(n)}.png')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
+        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS) + list(R_BANNERS) + list(R_ICONS):
+            print(('done ' if any(os.path.exists(os.path.join(OUT, f'{stem(n)}.{x}')) for x in ('png', 'webp')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
         return
     if a[0] == '--cost':
         rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
@@ -389,8 +699,9 @@ def main(a):
         elif a[i] == '--batch': batch = True
         elif a[i] == '--ref': i += 1; refs.append(a[i])
         elif a[i] == '--collect': collect(a[i + 1], force); return
+        elif a[i] == '--prep-research': prep_research(a[i + 1:]); return
         elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
-        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS: names.append(a[i])   # repeat a name for more tries
+        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS or a[i] in R_BANNERS or a[i] in R_ICONS: names.append(a[i])   # repeat a name for more tries
         else: raise SystemExit(f'unknown name or option: {a[i]} (see --list)')
         i += 1
     if batch and any(n in GROWS and GROWS[n][0] in names for n in names):

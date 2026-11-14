@@ -27,9 +27,16 @@ const T0 = Date.now();
     return out; });
   const SCN = await p.evaluate(async () => { const out = []; for (const e of document.querySelectorAll('.rs-ban.scene')){ const u = (e.style.getPropertyValue('--rbs').match(/url\(['"]?([^'")]+)/) || [])[1];
       const ok = await new Promise(r => { const im = new Image(); im.onload = () => r(im.naturalWidth >= 1000 && im.naturalWidth/im.naturalHeight > 3); im.onerror = () => r(false); im.src = u; setTimeout(() => r(false), 3000); });
-      out.push({ b: e.dataset.b, ok, cover: /cover|200%/.test(getComputedStyle(e).backgroundSize) }); } return out; });
+      out.push({ b: e.dataset.b, ok, cover: /cover|1[5-9]\d%|200%/.test(getComputedStyle(e).backgroundSize) }); } return out; });
   ck('scene banners (rbs-<category>): the wide picture loads and covers the whole banner', SCN.every(x => x.ok && x.cover), SCN);
-  ck('banners: each unit picture (rb-<category>) is loaded, whole inside its banner, clear of the name and the count, undimmed; no dusk gradient', pics.length === 10 - SCN.length && pics.every(x => x.ok && x.inside && x.clear && x.h >= 70 && x.filter === 'none' && !x.bg), pics);
+  ck('banners: all ten categories show their scene (no cut-out unit pictures left)', SCN.length === 10 && !(await p.evaluate(() => document.querySelector('.rs-bpic'))), SCN.length);
+  // every research picture: each node's key (its own, its shared upgrade type, a generation its unit's unlock) and each category's icon loads
+  const RP = await p.evaluate(async () => { const P = window.__im.rs.pics(), N = P.nodes, keys = [...new Set([...N.map(n => n.key), ...P.cats.map(c => 'cat-' + c)])], bad = [];
+    await Promise.all(keys.map(k => new Promise(r => { const im = new Image(); im.onload = () => { if (im.naturalWidth !== 256) bad.push(k); r(); }; im.onerror = () => { bad.push(k); r(); }; im.src = `assets/art/ri-${k}.webp`; })));
+    const sh = N.filter(n => n.kind === 'eng'), gen = N.filter(n => n.kind === 'gen');
+    return { n: keys.length, bad, fp: new Set(sh.filter(n => n.eng === 'fp').map(n => n.key)).size, pr: new Set(sh.filter(n => n.eng === 'pr').map(n => n.key)).size, gen: gen.every(n => n.key === 'u_' + n.u),
+      drop: new Set(N.filter(n => n.name === 'Drop Tanks').map(n => n.key)).size }; });
+  ck('pictures: every node and category has its 256 px scene (100 pictures: Firepower, Protection and Drop Tanks share one each, generations show their unit)', RP.bad.length === 0 && RP.n === 100 && RP.fp === 1 && RP.pr === 1 && RP.drop === 1 && RP.gen, RP);
   ck('list: ten category banners with a diamond icon, a name, a role line and the unit picture', list.length === 10 && list.every(x => x.dm && x.pic && x.name && x.role) && list[0].name === 'Infantry Corps' && list[9].name === 'Command & Logistics', list.map(x => x.name));
   ck('list: steps count and the green "open" chip (day 1: the IFV and Composite Armour, two fighters, the Frigate\'s gunnery; nine categories have one, Strategic Air opens on day 2)', list[1].cnt === '0/23' && /2 open/i.test(list[1].open) && /2 open/i.test(list[4].open) && /1 open/i.test(list[7].open) && list.filter(x => x.open).length === 9 && !list[6].open, list.map(x => [x.b, x.cnt, x.open]));
   ck('list: no Unit upgrades banner (Marks are in the tree)', await p.evaluate(() => !document.querySelector('.rs-ban.marks') && !/Marks/.test(document.querySelector('.rs-list').innerText)), null);
@@ -46,7 +53,7 @@ const T0 = Date.now();
   ck('badges: a levelled node shows its number of levels; a generation its numeral', fp.lv === '3' && /II/.test(g2.text), [fp.lv, g2.text]);
   // ---- repair 1: the spine under an open (unresearched) unlock is not lit; each kind of upgrade has its own icon; the side pane suggests
   ck('spine: under the open IFV unlock the spine is not green (only its elbows to open steps may be)', await p.evaluate(() => { const ps = [...document.querySelectorAll('.rs-lines path.sp')]; return ps.length > 0 && ps.every(e => !e.classList.contains('av')); }), null);
-  ck('icons: the IFV and tank upgrades do not share one icon', await p.evaluate(() => { const ic = ['ifv_gun', 'tank_gun', 'tank_armor', 'tank_eng', 'tank_terr', 'ifv_terr'].map(id => document.querySelector(`.rnode[data-id="${id}"] .rface.g svg`).innerHTML); return new Set(ic).size === ic.length; }), null);
+  ck('icons: the IFV and tank upgrades do not share one picture', await p.evaluate(() => { const ic = ['ifv_gun', 'tank_gun', 'tank_armor', 'tank_eng', 'tank_terr', 'ifv_terr'].map(id => document.querySelector(`.rnode[data-id="${id}"] .rface.p i`).style.backgroundImage); return new Set(ic).size === ic.length; }), null);
   ck('side pane: with nothing selected it lists what to research next (open steps of the category)', await p.evaluate(() => { const L = [...document.querySelectorAll('.rs-card.hint .rc-sg')].map(e => e.dataset.id); return L.length >= 2 && L.includes('u_ifv') && L.includes('tank_armor'); }), null);
   ck('labels wrap at spaces only', await p.evaluate(() => [...document.querySelectorAll('.rnode .rn b')].every(e => getComputedStyle(e).overflowWrap !== 'anywhere' && getComputedStyle(e).wordBreak !== 'break-all')), null);
   // ---- detail card and the two slots
@@ -154,7 +161,7 @@ const T0 = Date.now();
   const pb = await r3.evaluate(async () => { const out = []; for (const e of document.querySelectorAll('.rs-ban:not(.scene)')){ const im = e.querySelector('.rs-bpic'); if (!im.complete) await new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 2000); });
     const B = e.getBoundingClientRect(), I = im.getBoundingClientRect(), T = e.querySelector('.rs-bt').getBoundingClientRect(), P = e.querySelector('.rs-bp').getBoundingClientRect();
     out.push({ b: e.dataset.b, inside: I.left >= B.left - 0.5 && I.right <= B.right + 0.5 && I.top >= B.top - 0.5 && I.bottom <= B.bottom + 0.5, clear: I.right <= P.left + 0.5 && I.left >= T.right - 10, w: Math.round(I.width), name: e.querySelector('.rs-bt b').scrollWidth <= e.querySelector('.rs-bt b').clientWidth + 1 }); } return out; });
-  ck('phone 390: every banner picture whole, clear of the name and the count, at least 60 px wide; names not cut', pb.every(x => x.inside && x.clear && x.w >= 60 && x.name), pb);
+  ck('phone 390: every banner is a scene; names not cut', pb.length === 0 && await r3.evaluate(() => [...document.querySelectorAll('.rs-ban')].every(e => e.classList.contains('scene') && e.querySelector('.rs-bt b').scrollWidth <= e.querySelector('.rs-bt b').clientWidth + 1)), pb);
   const lab = [];
   for (const c of ['inf', 'arm', 'sup', 'tac', 'uns', 'nav']){ await r3.evaluate(c => { const x = document.querySelector('[data-act="rback"]'); if (x) x.click(); }, c); await r3.waitForTimeout(120); await r3.click(`[data-act="rbranch"][data-b="${c}"]`); await r3.waitForTimeout(250);
     lab.push(...await r3.evaluate(c => { const d = document.querySelector('.rt-days').getBoundingClientRect(), sc = document.getElementById('rtscroll').getBoundingClientRect(), W = document.documentElement.clientWidth;
