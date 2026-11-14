@@ -6972,7 +6972,7 @@ function flagCanvas(n, fh){ if (n == null) return null;
   else { g.fillStyle = flagColor(n); g.fillRect(1, 1, W, H); }
   const gr = g.createLinearGradient(0, 1, 0, H + 1); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(0.45, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.2)'); g.fillStyle = gr; g.fillRect(1, 1, W, H);
   if (FLAGC.size > 300) FLAGC.clear(); FLAGC.set(key, c); return c; }
-// the flag across the top of a badge: the atlas flag (4:3) cropped to the band w x h css px (the middle of the flag, as wide as the band), at its own device-pixel size so
+// the flag across the top of a badge: the whole atlas flag (4:3) squashed to the band w x h css px (nothing cropped), at its own device-pixel size so
 // it is crisp; null while the atlas loads (try again next frame) or for a force with no flag (the badge shows a plain grey band)
 const FLAGB = new Map();
 function flagBand(n, w, h){ if (n == null) return null;
@@ -6980,8 +6980,8 @@ function flagBand(n, w, h){ if (n == null) return null;
   const im = ART.img('flags'); if (i < 0 && typeof n !== 'number'){ FLAGB.set(key, null); return null; }
   if (i >= 0 && !im && !ART.failed('flags')) return null;
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
-  if (i >= 0 && im){ g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; const cw0 = (im.naturalWidth || im.width)/FLAG_COLS, ch0 = (im.naturalHeight || im.height)/FLAG_ROWS, vh = Math.min(ch0, cw0*H/W);
-    g.drawImage(im, (i % FLAG_COLS)*cw0, Math.floor(i/FLAG_COLS)*ch0 + (ch0 - vh)/2, cw0, vh, 0, 0, W, H); }
+  if (i >= 0 && im){ g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; const cw0 = (im.naturalWidth || im.width)/FLAG_COLS, ch0 = (im.naturalHeight || im.height)/FLAG_ROWS;
+    g.drawImage(im, (i % FLAG_COLS)*cw0, Math.floor(i/FLAG_COLS)*ch0, cw0, ch0, 0, 0, W, H); }   // the whole flag squashed to the band (never cropped: every stripe and emblem shows)
   else { g.fillStyle = flagColor(n); g.fillRect(0, 0, W, H); }
   const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,255,255,.16)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.16)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
   if (FLAGB.size > 300) FLAGB.clear(); FLAGB.set(key, c); return c; }
@@ -7035,7 +7035,7 @@ function badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor){
     const Z = 32*f, iw = Math.max(1, Math.round(Z*dpr)), ic = uiconC(icon, iw, '#ffffff', 1.2), zc = iw/dpr, ix = (W - D.pw*0.3 - (B[2] - B[0])*zc/32)/2 + 0.5 - B[0]*zc/32, iy0 = D.iy + (sh - (B[3] - B[1])*zc/32)/2 - B[1]*zc/32;
     g.drawImage(ic, sn(ix), sn(iy0), zc, zc); }
   // the count: white on a small dark pill in the lower right corner
-  { const pw = D.pw, ph = D.ph, pr = sn(W - ins - 1.2), pb = sn(W - ins - 1.2); roundRect(g, pr - pw, pb - ph, pw, ph, Math.min(3.5, ph/2.6)); g.fillStyle = 'rgba(8,14,10,.88)'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = 'rgba(255,255,255,.28)'; g.stroke();
+  { const pw = D.pw, ph = D.ph, pr = sn(W - ins - 0.5), pb = sn(W - ins - 0.5); roundRect(g, pr - pw, pb - ph, pw, ph, Math.min(3.5, ph/2.6)); g.fillStyle = 'rgba(8,14,10,.88)'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = 'rgba(255,255,255,.28)'; g.stroke();
     g.font = countFont(D.fz); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#ffffff'; g.fillText(String(n), sn(pr - pw/2), sn(pb - (ph - D.fz*0.72)/2)); }
   E = {c, ox:P, oy:P}; UCC.set(key, E); return E; }
 // (the names the tests and older code use: the far badge and the near badge are the same square)
