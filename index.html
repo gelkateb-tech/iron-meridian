@@ -3975,7 +3975,7 @@ const FXH = {get AC(){ return AC; },
   get wrapSX(){ return wrapSX; },
   get zx(){ return zx; }};
 const FXM = window.IMFX(FXH);
-const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx, turnTo, moveFig} = FXM;
+const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx, turnTo, moveFig} = FXM;
 // a city's glow at night: warm amber, never white; peaked at the city's point and fading out well inside its own radius (cityNightR)
 let CGLOWC = null; const CGLOW = () => CGLOWC || (CGLOWC = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,204,138,1)'); gr.addColorStop(0.16, 'rgba(255,186,110,.6)'); gr.addColorStop(0.42, 'rgba(248,158,74,.2)'); gr.addColorStop(0.72, 'rgba(232,128,46,.05)'); gr.addColorStop(1, 'rgba(220,110,30,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })());
@@ -8349,11 +8349,10 @@ function draw(now){ draw.now = now;
   if (dropFor !== null){ const d0 = armyById(dropFor); if (d0){ const [bx, by] = toScreen(G.P[d0.at].x, G.P[d0.at].y), rr = dropRange(d0)*HS0*SQ3*view.s; ctx.save(); ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(226,162,61,.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(226,162,61,.05)'; ctx.fill(); ctx.restore(); } }
   drawFX(now);
   // effects still alive: shells, flashes, booms, impacts growing in, floating numbers, missiles, queued effects; particles, smoke puffs and wrecks
-  // (paused, only drifting smoke is left: gentle ambient motion); scorch marks fade over 20 s
+  // (paused, only drifting smoke is left: gentle ambient motion); the explosions (fx.js XFX) are counted in fxLive, the fading craters ask their own frames
   const fxRun = S.speed && !S.over;
-  if (FXM.fxLive() || MUZZ.length || AFX.boom.length || FX.length || FXM.mslOn() || (FXQ.length && fxRun) || AFX.crater.some(q => now - q.t0 < 300)) animFast();   // (fx.js: only what is on screen)
+  if (FXM.fxLive() || MUZZ.length || FX.length || FXM.mslOn() || (FXQ.length && fxRun) || AFX.crater.some(q => now - q.t0 < 300)) animFast();   // (fx.js: only what is on screen)
   else if (AFX.puff.length || WRECKS.length){ if (fxRun) animFast(); else animAmb(); }
-  else if (SCORCH.length) animAmb();
   if (WFX.flash) drawWFXFlash(now);   // a nuclear flash whitens the whole map, counters too
   ovOut();
   drawMini();

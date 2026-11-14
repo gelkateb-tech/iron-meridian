@@ -61,14 +61,16 @@ function emit(kind, wx, wy, opt = {}){
   q.vx = opt.vx ?? (Math.random() - 0.5)*12; q.vy = opt.vy ?? -(8 + Math.random()*14); q.life = life; q.t = 0; q.s0 = opt.s0 || 6; q.s1 = opt.s1 || 26; q.rot = Math.random()*6; q.spin = (Math.random() - 0.5)*0.6;
   q.v = (Math.random()*4) | 0; q.tn = opt.tn; q.a = opt.a; if (opt.rot != null) q.rot = opt.rot; q.die = null; q.id = 0; PART.push(q);
 }
-/* ---- art combat effects: fx-explosion bursts, fx-smoke puffs and fx-crater ground decals (assets/art) ----
-   Each image is cut once into four cached sizes (mips), so a frame only scales a small canvas. Bursts and puffs are screen-sized like the
-   drawn particles (times kz); craters are world-sized decals that fade over three game days. Without the art the drawn particles and
-   scorch marks are used as before. SET.fx 'low' keeps only the big bursts and fewer craters; reduced motion drops smoke and pops. */
-const AFX = {boom:[], puff:[], crater:[], mips:new Map(), heat:new Map(), tm:new Map(), pop:0, bpn:new Map(), bpa:new Map(), cv:0};   // bpn: live puffs per battle province, bpa: those of its smoke column (both refreshed in drawArtFx); cv: crater edits (deepened, removed) that redo the decal canvas
-const afxSync = () => { if (AFX.S !== S){ AFX.S = S; AFX.crater.length = AFX.puff.length = AFX.boom.length = 0; AFX.heat.clear(); AFX.cv++; } };   // a new or loaded game starts clean
-function afxMips(name, dark){ const key = name + (dark ? ':d' : ''); let m = AFX.mips.get(key); if (m) return m; if (!PG.ART.ready(name)) return null;
-  m = [32, 64, 128, 256].map(px => PG.ART.sprite(name, px, dark ? {tint:'#121418', tintA:0.78} : name === 'fx-smoke' ? {tint:'#4a463f', tintA:0.3} : {})); if (m.some(c => !c)) return null; AFX.mips.set(key, m); return m; }
+/* ---- art combat effects: fx-smoke puffs and fx-crater ground decals (assets/art; the fx-explosion fireball is the explosion's, XFX) ----
+   Each image is cut once into four cached sizes (mips), so a frame only scales a small canvas. Puffs are screen-sized like the drawn
+   particles (times kz); craters are world-sized decals that fade on real time (an explosion's) or over game days (a nuclear one). SET.fx 'low'
+   keeps fewer craters; reduced motion drops the smoke. */
+const AFX = {puff:[], crater:[], mips:new Map(), heat:new Map(), tm:new Map(), bpn:new Map(), bpa:new Map(), cv:0};   // bpn: live puffs per battle province, bpa: those of its smoke column (both refreshed in drawArtFx); cv: crater edits (deepened, removed) that redo the decal canvas
+const afxSync = () => { if (AFX.S !== S){ AFX.S = S; AFX.crater.length = AFX.puff.length = 0; AFX.heat.clear(); AFX.cv++; } };   // a new or loaded game starts clean
+// (v: a tinted copy: true or 'd' dark, 'c' a fireball cooled to dark ember-brown, 's' sooty smoke, 'g' grey smoke, 'n' smoke lit for the night map)
+const AFX_TINT = {d:{tint:'#121418', tintA:0.78}, c:{tint:'#2c1f17', tintA:0.8}, s:{tint:'#24201c', tintA:0.74}, n:{tint:'#8a847a', tintA:0.3}, g:{tint:'#45413b', tintA:0.58}};
+function afxMips(name, v){ const t = v === true ? 'd' : v || '', key = name + (t ? ':' + t : ''); let m = AFX.mips.get(key); if (m) return m; if (!PG.ART.ready(name)) return null;
+  m = [32, 64, 128, 256].map(px => PG.ART.sprite(name, px, t ? AFX_TINT[t] : name === 'fx-smoke' ? {tint:'#4a463f', tintA:0.3} : {})); if (m.some(c => !c)) return null; AFX.mips.set(key, m); return m; }
 const afxPick = (m, px) => m.find(c => c.width >= px*0.85) || m[m.length - 1];
 // a sprite turned to one of ROTN angles (and squashed to sq of its height after turning, for dust lying on the ground), made once: an
 // axis-aligned drawImage of it costs about a third of a rotated one in a software canvas. The effect sprites are all inside their inscribed
@@ -80,14 +82,6 @@ function rotSpr(src, ang, sq = 1){ const i = ((Math.round(ang/(Math.PI*2)*ROTN) 
   c = document.createElement('canvas'); c.width = Math.ceil(src.width*fx); c.height = Math.ceil(src.height*fy); c.fx = c.width/src.width; c.fy = c.height/src.height; const g = c.getContext('2d'), w = src.width/2, h = src.height/2;
   g.translate(c.width/2, c.height/2); g.rotate(a); if (sq !== 1) g.scale(1, sq); g.drawImage(src, -w, -h); C.set(key, c); return c; }
 const afxOff = (wx, wy, pad) => { const [x, y] = PG.toScreen(wx, wy); return x < -pad || y < -pad || x > PG.cw + pad || y > PG.ch + pad; };
-// explosion burst: small = a battle pop (rate-limited, dropped on low effects / reduced motion)
-function afxBoom(wx, wy, big = 1, small = false, wr = 0){   // wr: a world radius (world-sized: the burst grows with the map)
-  if (!PG.booted || !PG.ART.ready('fx-explosion') || !fxLv()) return false; const now = performance.now(), low = PG.SET.fx !== 'high', red = PG.afxReduced();
-  if (small){ if (low || red || now - AFX.pop < 90) return false; AFX.pop = now; }
-  if (afxOff(wx, wy, 240)) return true;
-  const cap = low ? 12 : 44; if (AFX.boom.length >= cap) AFX.boom.splice(0, AFX.boom.length - cap + 1);
-  AFX.boom.push({wx, wy, t0:now, dur:(small ? 460 : 640 + 180*Math.min(2, big))*(red ? 0.75 : 1), s:(small ? 8 + 4*big : 15*Math.min(2.3, big)), wr, rot:(Math.random() - 0.5)*0.8, sp:(Math.random() - 0.5)*0.25, red});
-  return true; }
 // rising, drifting smoke puff (o: s0/s1 screen radius at kz 1, a peak alpha, dur ms, vx/vy px per s, dark)
 function afxPuff(wx, wy, o = {}){
   if (!PG.booted || !PG.ART.ready('fx-smoke') || PG.afxReduced() || !fxLv()) return false; if (afxOff(wx, wy, 200) || Math.random() > FXG.k) return true;
@@ -99,9 +93,10 @@ function afxPuff(wx, wy, o = {}){
   return true; }
 // ground crater (world radius r, at most 2.5, or o.cap: a missile's 3.5) on land; a hit inside a crater adds a new small one elsewhere in the
 // province while it holds fewer than 6, else deepens that crater (never grows it), so a long fight leaves several small craters, not one huge disc
-// scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS); only the tactical nuke's and the ICBM's craters
+// scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS), or o.ms fading over the last o.fade (an
+// explosion's: small 9 s, big 30 s, XFX), down to a world radius o.min (default 1.2); only the tactical nuke's and the ICBM's craters
 // keep their long life in game hours (o.keep), with their burning ground
-const CRATER_MS = 20000, crRT = (q, now) => !q.rl ? 1 : Math.max(0, Math.min(1, (q.rl - (now - q.t0))/6000));
+const CRATER_MS = 20000, crRT = (q, now) => !q.rl ? 1 : Math.max(0, Math.min(1, (q.rl - (now - q.t0))/(q.rf || 6000)));
 function afxCrater(wx, wy, r, o = {}){
   if (!PG.booted || !PG.ART.ready('fx-crater') || !S) return false; afxSync(); const c = worldToCell(wx, wy); if (c < 0 || G.prov[c] < 0 || G.P[G.prov[c]].sea) return true;
   const h = S.hour + (S.speed && !S.over ? PG.acc : 0), life = o.life || 72, land = (x, y) => { const c1 = worldToCell(x, y); return c1 >= 0 && G.prov[c1] >= 0 && !G.P[G.prov[c1]].sea; };
@@ -113,11 +108,11 @@ function afxCrater(wx, wy, r, o = {}){
         const x = cc[0] + (fxh(hh*1e9 + 3) - 0.5)*1.4*HS, y = cc[1] + (fxh(hh*1e9 + 5) - 0.5)*1.2*HS, d = Math.hypot(x - wx, y - wy);
         if (d >= bd || !land(x, y) || worldToCell(x, y) < 0 || G.prov[worldToCell(x, y)] !== pv || AFX.crater.some(q => inQ(q, x, y, 1.6))) continue; best = [x, y]; bd = d; }
       if (best){ wx = best[0]; wy = best[1]; r *= 0.7 + 0.3*fxh(bd*97); }
-      else { hitQ.h = h; hitQ.life = Math.max(hitQ.life, life); hitQ.a = Math.min(0.95, hitQ.a + 0.08); if (hitQ.rl) hitQ.rl = performance.now() - hitQ.t0 + CRATER_MS; if (o.keep) hitQ.rl = 0; AFX.cv++; return true; } } }
-  let ok = false; for (let n = 0; n < 7 && r >= 1.2; n++){ ok = true; for (let j = 0; j < 8 && ok; j++) ok = land(wx + Math.cos(j*0.785)*r*0.75, wy + Math.sin(j*0.785)*r*0.6); if (ok) break; r *= 0.78; }   // keep the decal on land at coasts
+      else { hitQ.h = h; hitQ.life = Math.max(hitQ.life, life); hitQ.a = Math.min(0.95, hitQ.a + 0.08); if (hitQ.rl){ hitQ.rl = Math.max(hitQ.rl, performance.now() - hitQ.t0 + (o.ms || CRATER_MS)); hitQ.rf = Math.max(hitQ.rf || 6000, o.fade || 6000); } if (o.keep) hitQ.rl = 0; AFX.cv++; return true; } } }
+  let ok = false; for (let n = 0; n < 7 && r >= (o.min || 1.2); n++){ ok = true; for (let j = 0; j < 8 && ok; j++) ok = land(wx + Math.cos(j*0.785)*r*0.75, wy + Math.sin(j*0.785)*r*0.6); if (ok) break; r *= 0.78; }   // keep the decal on land at coasts
   if (!ok) return true;   // no room on a tiny island or a sliver of coast: no crater rather than one covering the land
   const cap = PG.SET.fx !== 'high' ? 50 : 120; if (AFX.crater.length >= cap){ AFX.crater.splice(0, AFX.crater.length - cap + 1); AFX.cv++; }
-  AFX.crater.push({wx, wy, r, h, life, p:pv, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85, rl:o.keep ? 0 : CRATER_MS}); return true; }   // (rl: its real-time life, ms; 0: game hours, a nuclear crater)
+  AFX.crater.push({wx, wy, r, h, life, p:pv, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85, rl:o.keep ? 0 : o.ms || CRATER_MS, rf:o.fade || 6000}); return true; }   // (rl: its real-time life, ms, fading over its last rf; 0: game hours, a nuclear crater)
 // a city burns for a while after it is bombarded or captured (smoke drawn by afxAmbient)
 function afxMark(p, hours){ if (!PG.booted || !S || G.P[p].sea) return; afxSync(); const h = S.hour, m = AFX.heat.get(p); if (!m || h + hours > m.h + m.d) AFX.heat.set(p, {h, d:hours}); }
 function afxTimer(key, now, ms){ const t = AFX.tm.get(key) || 0; if (now - t < ms) return false; if (AFX.tm.size > 400) AFX.tm.clear(); AFX.tm.set(key, now); return true; }
@@ -184,31 +179,15 @@ function drawArtFx(now, kz){
       PG.ctx.globalAlpha = fd*q.a*(k < 0.12 ? k/0.12 : Math.pow((1 - k)/0.88, 1.3));
       PG.ctx.drawImage(rotSpr(afxPick(q.dark ? md : m, sz*2*PG.dpr > 64 && k > 0.6 ? sz*1.4*PG.dpr : sz*2*PG.dpr), q.rot), x - sz, y - sz, sz*2, sz*2);   // (a big, spread-out puff: the next smaller mip)
       if (q.dark && k < 0.3 && FXG.k >= 0.7){ PG.ctx.globalCompositeOperation = 'lighter'; PG.ctx.globalAlpha = fd*0.22*(1 - k/0.3); PG.ctx.drawImage(GLOW(), x - sz*0.8, y - sz*0.05, sz*1.6, sz*0.9); PG.ctx.globalCompositeOperation = 'source-over'; } } }
-  if (AFX.boom.length){ const m = afxMips('fx-explosion');
-    if (m) for (let i = AFX.boom.length - 1; i >= 0; i--){ const q = AFX.boom[i], k = (now - q.t0)/q.dur; if (k >= 1){ AFX.boom.splice(i, 1); continue; } if (k < 0) continue;
-      const [x, y] = PG.toScreen(q.wx, q.wy), e = 1 - (1 - k)*(1 - k)*(1 - k), sz = (q.wr ? q.wr*PG.view.s : q.s*kz)*(q.red ? 0.9 : 0.35 + 0.75*e); if (x < -sz || y < -sz || x > PG.cw + sz || y > PG.ch + sz) continue;
-      const im = rotSpr(afxPick(m, sz*2*PG.dpr), q.rot);
-      PG.ctx.globalAlpha = k < 0.08 ? k/0.08 : Math.pow(1 - (k - 0.08)/0.92, 1.6); PG.ctx.drawImage(im, x - sz, y - sz, sz*2, sz*2);
-      if (k < 0.3){ PG.ctx.globalCompositeOperation = 'lighter'; PG.ctx.globalAlpha = 0.32*(1 - k/0.3); PG.ctx.drawImage(im, x - sz*0.5, y - sz*0.5, sz, sz); PG.ctx.globalCompositeOperation = 'source-over'; } } }
   PG.ctx.globalAlpha = 1; PG.ctx.setTransform(PG.dpr, 0, 0, PG.dpr, 0, 0); }
-function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: the flash's scale (a plate's shells, very close in)
-  const art = afxBoom(wx, wy, big, big < 1);   // sprite burst; the drawn fire then only adds sparkle
-  if (!lite) emit('core', wx, wy, {s0:(4 + 3*Math.min(1.5, big))*Math.min(1, 2.6/PKZ), s1:2, life:60});   // a small white core for the first frames of the impact (held in scale very close in)
-  emit('flash', wx, wy, {s0:(art ? 18 : 28)*big*fz, s1:10*fz, life:140});
-  if (lite){ for (let i = 0; i < 2*big; i++) emit('fire', wx, wy, {vx:(Math.random() - 0.5)*60*big, vy:-(10 + Math.random()*40)*big, s0:10*big, s1:3, life:420 + Math.random()*260}); return; }
-  for (let i = 0; i < (art ? 5 : 8); i++) emit('dust', wx, wy, {vx:(Math.random() - 0.5)*140*big, vy:-(2 + Math.random()*6), s0:6, s1:30*big, life:1400});
-  if (PG.booted && !(big >= 1 && !air && afxCrater(wx, wy, 1.4 + 1.5*big)) && !(big < 1 && PG.ART.ready('fx-crater'))){ SCORCH.push({wx, wy, r:6 + 6*big, t0:performance.now()}); if (SCORCH.length > 60) SCORCH.shift(); }
-  for (let i = 0; i < (art ? 2 : 5)*big; i++) emit('fire', wx, wy, {vx:(Math.random() - 0.5)*60*big, vy:-(10 + Math.random()*40)*big, s0:10*big, s1:3, life:420 + Math.random()*260});
-  const sb = Math.min(big, 1.4); let puffs = 0; if (art) for (let i = 0; i < (big >= 1 ? 3 : 1); i++) puffs += afxPuff(wx, wy, {delay:120 + i*160, ox:(Math.random() - 0.5)*12*sb, s0:5*sb, s1:(12 + Math.random()*8)*sb, a:0.4, dur:3000 + Math.random()*1800, vx:(Math.random() - 0.5)*6 + windX(3, 4), vy:-(7 + Math.random()*9) + windY(3, 4)}) ? 1 : 0;
-  if (!puffs) for (let i = 0; i < Math.round(5*big); i++) emit('smoke', wx, wy, {ox:(Math.random() - 0.5)*14*sb, vx:(Math.random() - 0.5)*26, vy:-(6 + Math.random()*16), s0:7*sb, s1:(20 + Math.random()*14)*sb, life:2000 + Math.random()*1600});
-  for (let i = 0; i < 6*big; i++) emit('debris', wx, wy, {vx:(Math.random() - 0.5)*110*big, vy:-(40 + Math.random()*70)*big, s0:1.6, s1:1.2, life:700 + Math.random()*400});
-}
-/* ---- strike and blast effects (WFX), all drawn with code (no video): one look per weapon. cm: cruise missile (a quick, sharp blast: bright
-   orange fireball, sparks, a small dark smoke puff); bm: ballistic missile (white flash, ground shock ring, big fireball, thick smoke column);
-   chem: chemical (a small burst, then a sickly yellow-green gas cloud that spreads slowly and lingers); tac: tactical nuclear (blinding flash,
-   fireball, fast shock ring, small mushroom cloud); icbm: the biggest (a screen-wide flash, huge fireball, large shock ring, tall mushroom
-   cloud, then burning ground for several game hours); and combat blasts by size: exS (infantry, drones), exM (tanks, aircraft), exL (ships,
-   buildings). Every part lives in WORLD units round its world spot: its offset, rise, spread and size, so an effect stays fixed to the map and
+// a shell or missile of the older shots (shoot: a fighter's missiles), a convoy hit: the small explosion (XFX), sized by big; lite: no crater, one puff
+function explode(wx, wy, big = 1, air = false, lite = false){ return xfx(wx, wy, {R:1.5*big, mp:8*big, crater:air || lite ? 0 : 1.2*big, ns:lite ? 1 : undefined, air}); }
+/* ---- strike and blast effects (WFX), all drawn with code (no video): one look per weapon, over the explosion (XFX) where it has one.
+   cm: cruise missile (the big explosion, XFX, alone); bm: ballistic missile (the big explosion with two lobes, over a ground shock ring, a
+   base surge of dust and, on High, the map bent under the shock front); chem: chemical (a small big-explosion burst, then a sickly
+   yellow-green gas cloud that spreads slowly and lingers); tac: tactical nuclear (blinding flash, fireball, fast shock ring, small mushroom
+   cloud); icbm: the biggest (a screen-wide flash, huge fireball, large shock ring, tall mushroom cloud, then burning ground for several game
+   hours); the combat blasts exS (infantry, drones), exM (tanks, aircraft), exL (ships, buildings) are the small explosion (XFX). Every part lives in WORLD units round its world spot: its offset, rise, spread and size, so an effect stays fixed to the map and
    scales with it while zooming and panning (far out a blast keeps a minimum size, drawn bigger about its spot, so it still reads; close in a
    mushroom cloud is drawn smaller about its foot, so it stays on screen). Each part is a pure function of the effect's age (no per-frame
    state), drawn from cached noise sprites: fire over a hot additive core, smoke lit from above (lifted and warmed at night, so it still shows),
@@ -220,8 +199,8 @@ function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: t
    The rules can trigger the warheads they do not have yet with IM.emit('fxWarhead', {kind, p, by}) (kind cm, bm, chem, tac, icbm), and a blast
    with IM.emit('fxBlast', {size:'S'|'M'|'L', p}); the page's own entry points are FXW.cruise / ballistic / chemical / tactical / icbm / blast. */
 const WFX = {list:[], burn:[], flash:null, veil:null, area:0, bud:0, S:null, id:0, ks:1, occ:[], og:null/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};   // occ: last frame's dense fire and smoke (wfxOcc), og: the group being drawn
-const WFX_R = {cm:2.6, bm:4.2, chem:0.9, tac:4.5, icbm:12, exS:1.6, exM:2.4, exL:3.6};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
-const WFX_MP = {cm:18, bm:28, chem:9, tac:20, icbm:26, exS:12, exM:14, exL:16};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
+const WFX_R = {bm:4.2, chem:0.9, tac:4.5, icbm:12};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
+const WFX_MP = {bm:28, chem:9, tac:20, icbm:26};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
 // on a phone-sized map those floors grow (up to 1.5x on a 430 px screen), so a cruise blast or a small combat blast still reads at mid zoom
 const wfxPh = () => { const m = Math.min(PG.cw, PG.ch); return m >= 640 ? 1 : m <= 440 ? 1.5 : 1 + 0.5*(640 - m)/200; };
 const wfxKr = e => Math.max(PG.view.s, WFX_MP[e.k]*wfxPh()/e.R);   // an effect's world-to-screen scale: the map's, or bigger about its spot far out (the floor)
@@ -301,9 +280,6 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
   const ang = () => r()*Math.PI*2, j = s => (r() - 0.5)*2*s;
   const light = (t0, d, r0, r1, a, gr) => E.push({k:gr ? 'G' : 'L', t0, d, r0, r1, a});
   const ring = (kind, t0, d, r1, a) => { if (kind === 'rip' && (L || red || PG.saverOn())) return; E.push({k:'R', kind, t0, d:d*tl, r1, a}); };
-  // fire lobes: born within rr of the spot, flung out up to `spread` and up by `rise`, growing from r0 to r1
-  const fire = (cnt, rr, t0, t1, life, rise, spread, r0, r1, a = 1) => { for (let i = 0; i < n(cnt); i++){ const th = ang(), d0 = rr*Math.sqrt(r()), d1 = spread*(0.4 + 0.6*r());
-    E.push({k:'F', t0:t0 + (t1 - t0)*r(), d:life*(0.75 + 0.5*r())*tl, x:Math.cos(th)*d0, y:Math.sin(th)*d0*0.6, dx:Math.cos(th)*d1, dy:Math.sin(th)*d1*0.6 - rise*(0.6 + 0.8*r()), r0:r0*(0.8 + 0.4*r()), r1:r1*(0.8 + 0.4*r()), a, v:r()*4 | 0}); } };
   // smoke lobes (o: w the share of the wind drift, sq a squash for smoke lying on the ground, p the spread's ease, fi/fo fade in/out, sf the
   // span of its life over which it goes soft, its edges blurring as it spreads; gas lies as a sheet and stays as it is)
   const smoke = (cnt, tone, rr, t0, t1, life, rise, spread, r0, r1, a, o = {}) => { for (let i = 0; i < n(cnt); i++){ const th = ang(), d0 = rr*Math.sqrt(r()), d1 = spread*(o.even ? Math.sqrt(0.08 + 0.92*r()) : 0.3 + 0.7*r());
@@ -312,21 +288,10 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
   // sparks (hot) and debris: thrown out at up to sp world/s, falling at g world/s2
   const sparks = (cnt, sp, g, life, hot = true) => { if (red) return; for (let i = 0; i < n(cnt); i++){ const th = ang(), v = sp*(0.4 + 0.6*r()), up = sp*(0.25 + 0.85*r());
     E.push({k:hot ? 'K' : 'D', t0:40*r(), d:life*(0.6 + 0.6*r())*tl, vx:Math.cos(th)*v, vy:Math.sin(th)*v*0.55 - up, g}); } };
-  const core = (d, r0, r1, rise, a = 1) => E.push({k:'F', t0:0, d:d*tl, x:0, y:0, dx:0, dy:-rise, r0, r1, a, v:r()*4 | 0});   // the fireball's main body
   const mush = (d, H, Rc, nc, ns) => E.push({k:'M', t0:0, d:d*tl, H, Rc, nc:n(nc), ns:n(ns), sd:r()*1e6 | 0});
-  if (k === 'cm'){ light(0, 140, R*0.9, R*2.4, 1); light(0, 800, R*2, R*3.2, 0.5, true); ring('dust', 30, 1000, R*1.7, 0.32);
-    core(560, R*0.5, R*1.0, R*0.3); fire(8, R*0.2, 0, 70, 700, R*0.4, R*0.42, R*0.36, R*0.8);
-    smoke(6, 'dark', R*0.28, 140, 420, 4000, R*1.5, R*0.45, R*0.4, R*0.95, 0.86, {fi:0.06, fo:0.36, sf:[0.06, 0.45]});   // a small dark puff, rising and thinning, soft within a second or two
-    sparks(12, R*7, R*15, 520); sparks(5, R*4.5, R*13, 750, false); }
-  else if (k === 'bm'){ light(0, 220, R*1.1, R*3.2, 1); light(0, 1400, R*2.4, R*4, 0.6, true); ring('rip', 0, 950, R*3.8, 1); ring('shock', 0, 760, R*3.4, 0.28); ring('dust', 80, 3000, R*3.3, 0.6);
-    smoke(7, 'dust', R*0.7, 160, 600, 3400, R*0.25, R*1.5, R*0.4, R*1.05, 0.42, {w:0.4, sq:0.58});
-    core(1100, R*0.55, R*1.05, R*0.5); fire(14, R*0.28, 0, 130, 1300, R*0.65, R*0.48, R*0.4, R*0.9);
-    if (!L) for (let i = 0, N = 16; i < N; i++){ const f = i/(N - 1); E.push({k:'S', tone:f < 0.2 ? 'dust' : 'dark', t0:180 + f*1000 + 80*r(), d:(6800 + 1600*r())*tl, x:j(R*0.18), y:-R*0.15, dx:j(R*0.28)*f, dy:-R*(0.3 + 4.1*f),
-      r0:R*0.42, r1:R*(0.58 + 0.55*f)*(0.9 + 0.2*r()), a:0.78, v:r()*4 | 0, w:0.25 + 1.3*f, sq:1, p:1.35, fi:0.08, fo:0.55, sf:[0.65, 1]}); }   // the smoke column: lobes stacked to 4.4 R, widening up, leaning downwind (going soft late)
-    else smoke(8, 'dark', R*0.3, 150, 500, 3600, R*1.7, R*0.6, R*0.4, R*1.0, 0.64);
-    sparks(16, R*6, R*12, 800); sparks(7, R*4, R*10, 1000, false); }
-  else if (k === 'chem'){ light(0, 130, R, R*2.4, 0.85); light(0, 600, R*1.5, R*2.4, 0.4, true); core(420, R*0.5, R*1.1, R*0.2); fire(4, R*0.2, 0, 50, 460, R*0.3, R*0.3, R*0.3, R*0.72); sparks(8, R*5, R*14, 460);
-    smoke(2, 'dark', R*0.2, 120, 260, 1700, R*1.1, R*0.3, R*0.3, R*0.85, 0.5);
+  if (k === 'bm'){ ring('rip', 0, 950, R*3.8, 1); ring('shock', 0, 760, R*3.4, 0.28); ring('dust', 80, 3000, R*3.3, 0.6);   // (its fire and smoke: the big explosion, XFX)
+    smoke(7, 'dust', R*0.7, 160, 600, 3400, R*0.25, R*1.5, R*0.4, R*1.05, 0.42, {w:0.4, sq:0.58}); }   // the base surge of dust
+  else if (k === 'chem'){   // (its burst: the explosion, XFX)
     const G = 10, life = L ? 15000 : 26000;   // the gas: a low, translucent sheet that spreads over about a province and a half, drifts with the wind and lingers
     smoke(10, 'gas', R*0.3, 40, 400, life*0.55, 0.4, G*0.4, R*1.2, 3, 0.6, {even:true, w:0.35, sq:0.6, p:2.2, fi:0.015, fo:0.45});   // the first cloud, rolling out of the burst
     smoke(30, 'gas', R*0.45, 250, 2600, life, -0.2, G, R*0.8, 5.4, 0.42, {even:true, late:true, w:0.5, sq:0.55, p:1.25, fi:0.1, fo:0.58});   // then spreading over the area,
@@ -335,17 +300,10 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
     smoke(10, 'dust', R*1.1, 250, 900, 5200, R*0.35, R*2.3, R*0.5, R*1.3, 0.48, {w:0.4, sq:0.56}); mush(red ? 6000 : 10500, R*4, R*1.6, 18, 16); sparks(20, R*5, R*8, 1150); }
   else if (k === 'icbm'){ light(0, 520, R*2, R*7, 1); light(0, 5200, R*2.6, R*5.2, 0.9, true); ring('rip', 0, 1950, R*5.6, 1); ring('shock', 0, 1650, R*5, 0.32); ring('shock', 220, 2300, R*6.6, 0.12); ring('dust', 300, 7200, R*3.4, 0.6);
     smoke(14, 'dust', R*1.1, 300, 1300, 8000, R*0.35, R*2.6, R*0.5, R*1.4, 0.5, {w:0.4, sq:0.55}); mush(red ? 8000 : 15500, R*4.2, R*1.75, 22, 18); sparks(26, R*3.5, R*5, 1500); }
-  else { const sz = k[2], big = sz === 'L', med = sz === 'M';   // combat blasts: infantry and drones (S), tanks and aircraft (M), ships and buildings (L)
-    light(0, big ? 150 : 90, R*0.8, R*(big ? 2.2 : 1.8), 0.95); if (!e.sea || big) light(0, big ? 900 : 500, R*1.6, R*2.6, 0.45, true);
-    core(big ? 650 : med ? 480 : 340, R*0.5, R*0.95, R*0.25); fire(big ? 9 : med ? 6 : 4, R*0.2, 0, 50, big ? 850 : med ? 600 : 400, R*0.3, R*0.38, R*0.32, R*0.75);
-    if (big) fire(4, R*0.5, 200, 450, 620, R*0.4, R*0.4, R*0.25, R*0.6, 0.9);   // a secondary blast (magazine, fuel)
-    sparks(big ? 14 : med ? 10 : 7, R*6, R*15, big ? 650 : 480); if (big || med) sparks(big ? 8 : 5, R*4, R*12, 800, false);
-    if (e.sea) smoke(big ? 7 : 4, 'spray', R*0.25, 0, 120, 1500, R*1.7, R*0.45, R*0.3, R*0.8, 0.7, {w:0.2, p:2.2, fo:0.35});   // a white water plume
-    smoke(big ? 5 : med ? 3 : 2, 'dark', R*0.3, 100, 320, big ? 3900 : med ? 2700 : 1900, R*(big ? 1.9 : 1.3), R*0.45, R*0.32, R*(big ? 1.15 : 0.95), big || med ? 0.6 : 0.72, {sf:[0.1, 0.6]}); }
   const rk = {G:0, R:1, S:2, M:3, F:4, K:5, D:5, L:6}; E.forEach((o, i) => { o.i = i; o.rk = o.kind === 'rip' ? -1 : rk[o.k] + (o.k === 'S' && o.sq === 1 ? 1 : 0); });   // (the ripple first: it bends the map only, not the blast's own light)
   E.sort((a, b) => a.rk - b.rk || a.i - b.i);   // ground light, rings, ground smoke and gas, then smoke and the cloud, fire over them, sparks, the flash on top
   let d = 0, ext = R*2, top = R; for (const o of E){ d = Math.max(d, o.t0 + o.d);
-    if (o.k === 'S' || o.k === 'F'){ ext = Math.max(ext, Math.abs(o.x) + Math.abs(o.dx) + o.r1 + R*0.5); top = Math.max(top, -(o.y + o.dy) + o.r1); }
+    if (o.k === 'S'){ ext = Math.max(ext, Math.abs(o.x) + Math.abs(o.dx) + o.r1 + R*0.5); top = Math.max(top, -(o.y + o.dy) + o.r1); }
     else if (o.k === 'R' || o.k === 'L' || o.k === 'G') ext = Math.max(ext, o.r1 || 0, o.r1 || o.r0 || 0);
     else if (o.k === 'M'){ ext = Math.max(ext, o.Rc*1.8); top = Math.max(top, o.H + o.Rc*1.4); }
     else top = Math.max(top, R*4); }
@@ -357,7 +315,9 @@ function wfxTrim(keep){ const L = WFX.list; let over = L.length - 24; if (over <
   for (const q of dying){ if (over <= 0) break; L.splice(L.indexOf(q), 1); over--; }
   for (let i = 0; i < L.length && over > 0; i++) if (!wfxHeavy(L[i].k) && L[i] !== keep){ L.splice(i--, 1); over--; } }
 // ---- starting one: o.sea (a blast at sea: a water plume), o.force (start it even off screen: the developer buttons). Returns the effect or null
-function wfxStart(k, wx, wy, o = {}){ if (!PG.booted || !S || !WFX_R[k] || !fxLv()) return null; wfxSync(); const now = performance.now(), R = WFX_R[k], heavy = wfxHeavy(k);
+// (k cm, bm, chem, exS, exM, exL: the explosion, XFX, first; a cruise missile and a combat blast are only that: it is returned)
+function wfxStart(k, wx, wy, o = {}){ const xb = XFX_K[k] ? xfxK(k, wx, wy, o) : null; if (k === 'cm' || k[0] === 'e') return xb;
+  if (!PG.booted || !S || !WFX_R[k] || !fxLv()) return null; wfxSync(); const now = performance.now(), R = WFX_R[k], heavy = wfxHeavy(k);
   const [sx, sy] = PG.toScreen(wx, wy), mg = Math.max(R*6*PG.view.s, 120); if (!o.force && (sx < -mg || sy < -mg || sx > PG.cw + mg || sy > PG.ch + mg*1.6)) return null;   // off screen: not started
   const live = WFX.list.filter(e => wfxHeavy(e.k) === heavy && e.die == null), cap = wfxCap(heavy);
   for (let i = 0; i <= live.length - cap; i++) live[i].die = now + 350;   // over the cap: the oldest fade out over 0.35 s
@@ -369,7 +329,7 @@ function wfxStart(k, wx, wy, o = {}){ if (!PG.booted || !S || !WFX_R[k] || !fxLv
   PG.redraw(); return e; }
 // a strike: the effect, the crater and the burning city it leaves, the shake and the sound (o.p: the province hit)
 function wfxStrike(k, wx, wy, o = {}){ const e = wfxStart(k, wx, wy, o), p = o.p ?? (() => { const c = worldToCell(wx, wy); return c >= 0 ? G.prov[c] : -1; })(), land = p >= 0 && !G.P[p].sea;
-  if (land && k !== 'chem') afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, {a:0.95, life:k === 'icbm' ? 160 : k === 'tac' ? 120 : 96, cap:3.5, keep:k === 'icbm' || k === 'tac'});
+  if (land && (k === 'tac' || k === 'icbm')) afxCrater(wx, wy, 3.5, {a:0.95, life:k === 'icbm' ? 160 : 120, cap:3.5, keep:true});   // (a missile's crater: its explosion's, XFX)
   if (land && k !== 'chem') afxMark(p, {cm:30, bm:48, tac:72, icbm:120}[k] || 24);
   if (e) bigShake(wx, wy, k); PG.sfx('boom'); return e; }   // (the shake: only for a big blast near the middle of the view, see bigShake)
 const FXW = {cruise:(x, y, o) => wfxStrike('cm', x, y, o), ballistic:(x, y, o) => wfxStrike('bm', x, y, o), chemical:(x, y, o) => wfxStrike('chem', x, y, o),
@@ -386,10 +346,11 @@ function wfxOcc(x, y, rx, ry, a){ const g = WFX.og; if (!g || rx < 2.5 || a < 0.
 // how much of a name centred at (x, y) css px, w wide, last frame's live blasts and clouds hide (0 clear .. 1 hidden), tested at its middle and
 // near both ends: a name under a fireball or a thick smoke cloud fades out with it (and back as it thins), so the fire never reads as a decal
 // under a crisp label. The gas sheet and the flashes hide nothing (the names show through them)
-function wfxCover(x, y, w){ if (!WFX.list.length || !WFX.occ.length) return 0; const s = PG.view.s, wx = (x - PG.view.x)/s, wy = (y - PG.view.y)/s, hw = 0.35*w/s; let hid = 0;
-  for (const px of [wx - hw, wx, wx + hw]){ let clr = 1;
-    for (const g of WFX.occ){ const B = g.b, O = g.o; if (px < B[0] || px > B[2] || wy < B[1] || wy > B[3]) continue;
-      for (let i = 0; i < O.length; i += 5){ const dx = (px - O[i])/O[i + 2], dy = (wy - O[i + 1])/O[i + 3], d = dx*dx + dy*dy; if (d < 1) clr *= 1 - O[i + 4]*wfxSm(1, 0.35, Math.sqrt(d)); } }
+function wfxCov1(g, px, wy, clr){ const B = g.b, O = g.o; if (px < B[0] || px > B[2] || wy < B[1] || wy > B[3]) return clr;
+  for (let i = 0; i < O.length; i += 5){ const dx = (px - O[i])/O[i + 2], dy = (wy - O[i + 1])/O[i + 3], d = dx*dx + dy*dy; if (d < 1) clr *= 1 - O[i + 4]*wfxSm(1, 0.35, Math.sqrt(d)); } return clr; }
+function wfxCover(x, y, w){ const xo = XFX.occ, wo = WFX.list.length ? WFX.occ : null; if (!xo && !(wo && wo.length)) return 0; const s = PG.view.s, wx = (x - PG.view.x)/s, wy = (y - PG.view.y)/s, hw = 0.35*w/s; let hid = 0;
+  for (let k = -1; k <= 1; k++){ const px = wx + k*hw; let clr = 1;
+    if (wo) for (let i = 0; i < wo.length; i++) clr = wfxCov1(wo[i], px, wy, clr); if (xo) clr = wfxCov1(xo, px, wy, clr);   // (the explosions' fireballs: XFX.occ)
     hid = Math.max(hid, 1 - clr); }
   return hid; }
 function wfxDrawOne(e, tau, now){ const ks = PG.view.s, kr = wfxKr(e), [bx, by] = PG.toScreen(e.wx, e.wy), nt = e.night > 0.5, WD = windSync(), fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1;
@@ -406,11 +367,6 @@ function wfxDrawOne(e, tau, now){ const ks = PG.view.s, kr = wfxKr(e), [bx, by] 
         if (sv > 0.01) wfxSpr(wfxSmoke(o.tone, o.v, nt, false, true), wfxSmoke(o.tone, o.v, nt, true, true), x, y, rr, rr*o.sq, (a - c)/Math.max(0.01, 1 - c), 'source-over', true);
         wfxOcc(x, y, rr*0.78, rr*o.sq*0.78, a*(1 - 0.35*sv)); }
       /*@TEST*/if (dk(kk)) dbg.push([e.id + ':' + o.i, x, y, ks, PG.view.x, PG.view.y]);/*@ENDTEST*/ continue; }
-    if (o.k === 'F'){ const m = 1 - Math.pow(1 - u, 2.4), x = sx(o.x + o.dx*m), y = sy(o.y + o.dy*m), rr = (o.r0 + (o.r1 - o.r0)*(1 - Math.pow(1 - u, 3)))*kr, at = fd*o.a*Math.min(1, u/0.06);
-      wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr, rr, at*Math.pow(1 - u, 0.9), 'source-over'); wfxOcc(x, y, rr*0.8, rr*0.8, at*Math.pow(1 - u, 0.9));
-      if (u > 0.18) wfxSpr(wfxSmoke('dark', o.v, nt), wfxSmoke('dark', o.v, nt, true), x, y - rr*0.1, rr*0.98, rr*0.98, at*0.9*Math.pow((u - 0.18)/0.82, 1.1)*Math.pow(1 - u, 0.35), 'source-over');   // cooling into smoke
-      wfxSpr(wfxFire(o.v), wfxFire(o.v, true), x, y, rr*0.62, rr*0.62, at*0.85*Math.pow(1 - u, 2.5), 'lighter');   // the hot core
-      /*@TEST*/if (dk(kr)) dbg.push([e.id + ':' + o.i, x, y, ks, PG.view.x, PG.view.y]);/*@ENDTEST*/ continue; }
     if (o.k === 'K' || o.k === 'D'){ const pt = s => [sx(o.vx*s), sy(o.vy*s + 0.5*o.g*s*s)], [x, y] = pt(ts), [x0, y0] = pt(Math.max(0, ts - 0.035)), l = Math.hypot(x - x0, y - y0) || 1, ml = Math.max(1.5, l);
       PG.ctx.globalAlpha = fd*(1 - u)*(o.k === 'K' ? 1 : 0.85); PG.ctx.globalCompositeOperation = o.k === 'K' ? 'lighter' : 'source-over'; PG.ctx.strokeStyle = o.k === 'K' ? (u < 0.4 ? '#ffe7b0' : '#ff9d4a') : '#1f1c19';
       PG.ctx.lineWidth = o.k === 'K' ? 1 : 1.3; PG.ctx.beginPath(); PG.ctx.moveTo(x - (x - x0)/l*ml, y - (y - y0)/l*ml); PG.ctx.lineTo(x, y); PG.ctx.stroke();
@@ -503,20 +459,148 @@ function drawWFXFlash(now){ const F = WFX.flash; if (!F) return; const k = Math.
   const a = F.a*(k < 0.05 ? 1 : Math.pow(1 - (k - 0.05)/0.95, 2.2));
   PG.ctx.save(); PG.ctx.setTransform(1, 0, 0, 1, 0, 0); PG.ctx.globalCompositeOperation = 'source-over'; PG.ctx.globalAlpha = a; PG.ctx.fillStyle = '#fffaf0'; PG.ctx.fillRect(0, 0, PG.ctx.canvas.width, PG.ctx.canvas.height); PG.ctx.restore();
   PG.animFast(); }
+/* ---- the explosion (XFX): one explosion animated in code from the fireball, smoke and crater pictures (assets/art fx-explosion, fx-smoke,
+   fx-crater) and drawn particles, in two sizes (owner's request: no frame sprites). Small ('s'): unit hits in battle, artillery and other ranged
+   fire, combat blasts (exS exM exL), ship hits, a force destroyed, air bursts. Big ('b'): cruise and ballistic missiles, bombs, the burst under
+   a chemical cloud. Every part is a pure function of the explosion's age in real milliseconds (performance.now: the same at any frame rate):
+     flash    additive white-hot glow over a wider warm one: 70 ms small, 130 ms big (a few frames); the ground under it lit (more at night)
+     fireball the fx-explosion picture growing with an ease-out (small 0.35 -> 1 R in 260 ms, big 0.3 -> 1.15 R in 420 ms) and lifting, a hot
+              additive copy over it while young, cooling (a dark ember-brown copy of itself laid over it) and fading out (small by 620 ms, big
+              by 1150 ms); a big one throws one or two smaller lobes that rise; a combat blast 'L' one secondary lobe
+     sparks   hot streaks thrown out on arcs with gravity, white-yellow cooling to orange (small 10, big 24), 0.3 - 0.75 s
+     debris   dark tumbling chunks on higher, slower arcs that land and lie a moment (small 6, big 16; some glowing embers, more at night);
+              white spray at sea (with the white-water plume, splash)
+     smoke    fx-smoke puffs rising, spreading and drifting with the shared wind (windSync), growing and fading; the first ones sooty (small 2
+              over ~2.5 s, big 7 over ~5 s; a bomb 4)
+     ring     (big, on land) a ground shock ring of dust, 0.9 s
+     crater   the fx-crater decal left on land (afxCrater), fading out on real time: small 9 s (the last 5 fading), big 30 s (the last 14)
+   Size: a world radius R (so it moves and scales with the map like the other effects) and a smallest drawn radius mp in css px (larger on a
+   phone, wfxPh), so far out an explosion still reads. Quality: Low, the Battery saver and reduced motion (fxLv 1) halve the particles and
+   puffs and allow fewer explosions at once; reduced motion also drops the sparks, debris and rising smoke, holds the fireball's size and softens
+   the flash; Effects Off draws none. Performance: the pictures are pre-scaled mips (afxMips) turned to 8 fixed angles once; explosions are a
+   fixed set of reused objects (XE) and the sparks, debris and puffs are typed-array ring buffers with a hard cap (the oldest is overwritten),
+   so a frame allocates nothing; none is started off screen and off-screen ones are not drawn; the smoke shares the frame's smoke budget
+   (fxBudget) and the governor (FXG.k) thins new ones when frames get slow. */
+const XE = [], XE_N = 36, XK_N = 640, XS_N = 200, XFX_CAP = [0, 14, 36], XK_CAP = [0, 240, 640], XS_CAP = [0, 72, 200];
+const XFX = {n:0, vis:0, kTop:0, sTop:0, kh:0, sh:0, gen:0, S:null, kLive:0, sLive:0, occ:null, og:{b:[0, 0, 0, 0], o:[]}};   // occ: this frame's fireballs for the names (wfxCover), og its reused group
+// particles: the explosion's slot and generation, start (ms), life (ms), landing (s), birth offset (R), ground velocity (R/s), upward speed (R/s),
+// gravity (R/s2), size, turn, spin; k: 0 spark, 1 debris, 2 ember, 3 spray
+const XK = {e:new Uint8Array(XK_N), g:new Uint32Array(XK_N), t0:new Float64Array(XK_N), life:new Float32Array(XK_N), tl:new Float32Array(XK_N), x:new Float32Array(XK_N), y:new Float32Array(XK_N),
+  vx:new Float32Array(XK_N), vy:new Float32Array(XK_N), up:new Float32Array(XK_N), gr:new Float32Array(XK_N), sz:new Float32Array(XK_N), rot:new Float32Array(XK_N), spin:new Float32Array(XK_N), k:new Uint8Array(XK_N)};
+// smoke puffs: slot, generation, start (ms), life (ms), birth offset (R), spread and rise (R, eased), radius from r0 to r1 (R), peak alpha, turn (0..7), tone (0 sooty, 1 grey)
+const XS = {e:new Uint8Array(XS_N), g:new Uint32Array(XS_N), t0:new Float64Array(XS_N), life:new Float32Array(XS_N), x:new Float32Array(XS_N), y:new Float32Array(XS_N), dx:new Float32Array(XS_N),
+  rise:new Float32Array(XS_N), r0:new Float32Array(XS_N), r1:new Float32Array(XS_N), a:new Float32Array(XS_N), ri:new Uint8Array(XS_N), tone:new Uint8Array(XS_N)};
+const XT = {s:{fl:70, gr:260, fb:620, c0:150, r0:0.35, r1:1, lift:0.18}, b:{fl:130, gr:420, fb:1150, c0:260, r0:0.3, r1:1.15, lift:0.32}};
+// the kinds: R (world), mp (css px), cr (the crater's world radius; 0 none), lobes, ns (smoke puffs at full quality), ring (big: the dust ring)
+const XFX_K = {exS:{R:1.9, mp:10, cr:1.3}, exM:{R:2.5, mp:12, cr:1.7}, exL:{R:3.2, mp:14, cr:2.2, lobes:1}, small:{R:0.8, mp:6, cr:0}, tank:{R:1.35, mp:8, cr:0.9}, art:{R:2, mp:10, cr:1.3},
+  cm:{big:1, R:3.1, mp:20, cr:3, lobes:1}, bm:{big:1, R:4.4, mp:28, cr:3.5, lobes:2, ring:false}, chem:{big:1, R:1.7, mp:11, cr:0, ns:1, lobes:0}, bomb:{big:1, R:2.3, mp:15, cr:1.8, ns:4, lobes:1}};
+const xfxSync = () => { if (XFX.S !== S){ XFX.S = S; for (const E of XE) E.on = false; XFX.n = XFX.vis = XFX.kTop = XFX.sTop = XFX.kh = XFX.sh = 0; XK.life.fill(0); XS.life.fill(0); } };
+function xPick(m, px){ for (let i = 0; i < m.length; i++) if (m[i].width >= px*0.85) return m[i]; return m[m.length - 1]; }
+function xRot(src, i){ if (!i) return src; const A = src.__ra || (src.__ra = []); return A[i] || (A[i] = rotSpr(src, i*Math.PI/4)); }   // (one of 8 turns, made once)
+// start one. o: big, R, mp, crater (world radius), lobes, ns, ring, sea, air (a burst in the air: no ground parts), force (even off screen)
+function xfx(wx, wy, o){ const lv = fxLv(); if (!lv || !PG.booted || !S) return null; xfxSync();
+  const big = !!o.big, R = o.R, air = !!o.air, sea = !air && (o.sea ?? seaAt(wx, wy)), now = performance.now(), red = PG.afxReduced(), lo = lv < 2;
+  if (o.crater && !sea && !air) afxCrater(wx, wy, o.crater, {ms:big ? 30000 : 9000, fade:big ? 14000 : 5000, min:0.5, a:big ? 0.95 : 0.82, cap:big ? 3.5 : 2.5});
+  const kr = Math.max(PG.view.s, o.mp*wfxPh()/R), sx = PG.wrapSX(wx*PG.view.s + PG.view.x), sy = wy*PG.view.s + PG.view.y, ext = R*kr*3.5 + 30;
+  if (!o.force && (sx < -ext || sx > PG.cw + ext || sy < -ext || sy > PG.ch + ext*1.5)) return null;   // off screen: not started
+  if (sea && !air) splash(wx, wy, Math.min(2.4, R*0.75));   // the white-water plume
+  const cap = Math.min(XE_N, XFX_CAP[lv] - (PG.saverOn() ? 4 : 0)); let slot = -1, old = -1, ot = Infinity;
+  for (let i = 0; i < cap; i++){ const E = XE[i]; if (!E){ XE[i] = {on:false}; slot = i; break; } if (!E.on){ slot = i; break; } if (E.t0 < ot){ ot = E.t0; old = i; } }
+  if (slot < 0) slot = old;   // all in use: the oldest makes way (its last smoke)
+  const E = XE[slot], T = big ? XT.b : XT.s, q = (lo ? 0.5 : 1)*Math.max(0.4, FXG.k), night = fxNight(wx, wy);
+  E.on = true; E.gen = (XFX.gen = (XFX.gen + 1) >>> 0); E.t0 = now; E.wx = wx; E.wy = wy; E.R = R; E.mp = o.mp; E.big = big; E.sea = sea; E.air = air; E.red = red; E.night = night;
+  E.ri = (Math.random()*8) | 0; E.ring = big && !air && !red && o.ring !== false; E.kr = kr; E.sx = sx; E.sy = sy; E.vis = true;
+  E.lob = red || air ? 0 : Math.min(2, o.lobes ?? (big ? 2 : 0)); if (lo && E.lob > 1) E.lob = 1;
+  { const a = Math.random()*Math.PI*2, b = a + Math.PI*(0.6 + 0.8*Math.random());   // the lobes: thrown to two sides, up a little
+    E.lx0 = Math.cos(a)*(0.2 + 0.15*Math.random()); E.ly0 = -0.25 - 0.2*Math.random(); E.ls0 = 0.45 + 0.15*Math.random(); E.ld0 = 50 + 30*Math.random();
+    E.lx1 = Math.cos(b)*(0.2 + 0.15*Math.random()); E.ly1 = -0.2 - 0.2*Math.random(); E.ls1 = 0.4 + 0.15*Math.random(); E.ld1 = 110 + 30*Math.random(); }
+  let dur = T.fb*1.25 + 140;
+  // sparks and debris (none with reduced motion)
+  const kCap = XK_CAP[lv], nK = red ? 0 : Math.round((big ? 24 : 10)*q), nD = red ? 0 : Math.round((air ? 0 : big ? 16 : 6)*q), ember = (big ? 0.25 : 0.12) + 0.35*night;
+  for (let i = 0; i < nK + nD; i++){ const j = XFX.kh; XFX.kh = (j + 1) % kCap; if (j >= XFX.kTop) XFX.kTop = j + 1;
+    const sp = i < nK, th = Math.random()*Math.PI*2, d0 = Math.random()*0.25, v = sp ? (big ? 2.4 : 2.2) + Math.random()*(big ? 3.4 : 2.8) : (big ? 0.8 : 0.7) + Math.random()*(big ? 2 : 1.6);
+    XK.e[j] = slot; XK.g[j] = E.gen; XK.t0[j] = now + (sp ? Math.random()*30 : 70 + Math.random()*70); const dd = sp ? d0 : 0.3 + 0.2*Math.random(); XK.x[j] = Math.cos(th)*dd; XK.y[j] = Math.sin(th)*dd*0.6 - (air ? 0 : 0.1);
+    XK.vx[j] = Math.cos(th)*v; XK.vy[j] = Math.sin(th)*v*0.55; XK.k[j] = sp ? 0 : sea ? 3 : Math.random() < ember ? 2 : 1; XK.sz[j] = 0.6 + 0.8*Math.random(); XK.rot[j] = Math.random()*Math.PI; XK.spin[j] = (Math.random() - 0.5)*18;
+    XK.up[j] = air ? (Math.random() - 0.35)*v : sp ? v*(0.4 + 0.8*Math.random()) : (big ? 2.6 : 2.2) + Math.random()*(big ? 2.8 : 2); XK.gr[j] = air ? 4 : sp ? (big ? 7 : 8) : (big ? 9 : 10);
+    const tl = air ? 9 : 2*XK.up[j]/XK.gr[j]; XK.tl[j] = tl;
+    XK.life[j] = sp ? Math.min((big ? 380 : 300) + Math.random()*(big ? 370 : 300), tl*1000 + 40) : XK.k[j] === 3 ? Math.min(800, tl*1000 + 60) : (big ? 820 : 640) + Math.random()*(big ? 480 : 380);
+    dur = Math.max(dur, XK.t0[j] - now + XK.life[j]); }
+  // smoke puffs (none with reduced motion; one in the air or at sea)
+  const sCap = XS_CAP[lv], nS = red ? 0 : air || sea ? 1 : Math.max(1, Math.round((o.ns ?? (big ? 7 : 2))*q)), soot = big ? 3 : 1;
+  for (let i = 0; i < nS; i++){ const j = XFX.sh; XFX.sh = (j + 1) % sCap; if (j >= XFX.sTop) XFX.sTop = j + 1;
+    XS.e[j] = slot; XS.g[j] = E.gen; XS.t0[j] = now + (big ? 110 + i*95 : 90 + i*140) + Math.random()*60; XS.life[j] = big ? 3400 + Math.random()*1700 : 1800 + Math.random()*700;
+    XS.x[j] = (Math.random() - 0.5)*(big ? 0.9 : 0.5); XS.y[j] = -(big ? 0.15 + 0.25*Math.random() : 0.1); XS.dx[j] = (Math.random() - 0.5)*(big ? 0.9 : 0.5);
+    XS.rise[j] = big ? 1.8 + 1.5*Math.random() : 1 + 0.6*Math.random(); XS.r0[j] = big ? 0.6 : 0.5; XS.r1[j] = big ? 1.6 + 0.6*Math.random() : 1.25 + 0.4*Math.random();
+    XS.a[j] = sea ? 0.4 : big ? 0.8 : 0.72; XS.ri[j] = (Math.random()*8) | 0; XS.tone[j] = i < soot && !sea ? 0 : 1; dur = Math.max(dur, XS.t0[j] - now + XS.life[j]); }
+  E.dur = dur; XFX.n++; PG.animFast(); PG.redraw(); return E; }
+// a kind of XFX_K (k) at (wx, wy): o.sea, o.force, o.air, o.scale (its size)
+function xfxK(k, wx, wy, o = {}){ const P = XFX_K[k], sc = o.scale || 1; if (!P) return null;
+  return xfx(wx, wy, {big:!!P.big, R:P.R*sc, mp:P.mp*Math.sqrt(sc), crater:o.air ? 0 : P.cr*sc, lobes:P.lobes, ns:P.ns, ring:P.ring, sea:o.sea, air:o.air, force:o.force}); }
+// per frame (from drawParticlesUnder: under the counters and the strike effects): ground light and rings, smoke, fireballs and flashes, then
+// sparks and debris over them
+function drawXFX(now){ XFX.vis = 0; XFX.occ = null; if (!XFX.n){ XFX.kLive = XFX.sLive = 0; return; } xfxSync(); const t = /*@TEST*/WFX.fz ||/*@ENDTEST*/ now, g = PG.ctx, s = PG.view.s, ph = wfxPh(), dp = PG.dpr; let vis = 0, live = 0;
+  for (let i = 0; i < XE.length; i++){ const E = XE[i]; if (!E.on) continue; const age = t - E.t0; if (age >= E.dur){ E.on = false; continue; } live++;
+    E.kr = Math.max(s, E.mp*ph/E.R); E.sx = PG.wrapSX(E.wx*s + PG.view.x); E.sy = E.wy*s + PG.view.y; const ext = E.R*E.kr*(E.big ? 4.5 : 3.5) + 24;
+    E.vis = age >= 0 && !(E.sx < -ext || E.sx > PG.cw + ext || E.sy < -ext*1.6 || E.sy > PG.ch + ext); if (E.vis) vis++; }
+  XFX.n = live; XFX.vis = vis; if (!vis){ XFX.kLive = XFX.sLive = 0; return; }
+  const m = afxMips('fx-explosion'), mc = m && afxMips('fx-explosion', 'c'), ms = afxMips('fx-smoke', 's'), mg = ms && afxMips('fx-smoke', 'g'), mn = mg && afxMips('fx-smoke', 'n');   // (a picture not loaded: its part is left out)
+  g.setTransform(dp, 0, 0, dp, 0, 0); g.globalCompositeOperation = 'lighter';
+  // 1) the ground lit by the fire (stronger at night) and, for a big one on land, the dust ring
+  for (let i = 0; i < XE.length; i++){ const E = XE[i]; if (!E.on || !E.vis || E.air) continue; const T = E.big ? XT.b : XT.s, age = t - E.t0, f = E.R*E.kr, gd = T.fb*1.2; if (age >= gd) continue;
+    const a = (0.12 + 0.42*E.night)*Math.pow(1 - age/gd, 1.5)*(E.red ? 0.5 : 1), rr = f*(E.big ? 2.8 : 2.4); g.globalAlpha = a; g.drawImage(GLOW(), E.sx - rr, E.sy - rr*0.42, rr*2, rr*0.84); }
+  g.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < XE.length; i++){ const E = XE[i]; if (!E.on || !E.vis || !E.ring) continue; const age = t - E.t0; if (age >= 900) continue; const u = age/900, rr = E.R*E.kr*3.2*(1 - Math.pow(1 - u, 2.4)); if (rr < 1) continue;
+    g.globalAlpha = (E.sea ? 0.3 : 0.5)*Math.min(1, u/0.08)*Math.pow(1 - u, 1.3)*(1 - 0.4*E.night); g.drawImage(wfxRing(!E.sea), E.sx - rr, E.sy - rr*0.5, rr*2, rr); }
+  // 2) smoke: rising, spreading and drifting downwind, growing and fading
+  if (ms && mg && mn){ const W = windSync(); let sl = 0;
+    for (let j = 0; j < XFX.sTop; j++){ if (!(XS.life[j] > 0)) continue; const E = XE[XS.e[j]]; if (!E || !E.on || E.gen !== XS.g[j]){ XS.life[j] = 0; continue; }
+      const a_ = t - XS.t0[j]; if (a_ >= XS.life[j]){ XS.life[j] = 0; continue; } sl++; if (a_ < 0 || !E.vis) continue;
+      const u = a_/XS.life[j], ts = a_/1000, f = E.R*E.kr, me = 1 - Math.pow(1 - u, 1.6), r = (XS.r0[j] + (XS.r1[j] - XS.r0[j])*(1 - (1 - u)*(1 - u)))*f;
+      const x = E.sx + (XS.x[j] + XS.dx[j]*me + W.wx*0.45*ts)*f, y = E.sy + (XS.y[j] - XS.rise[j]*me + W.wy*0.45*ts)*f;
+      if (x < -r || y < -r || x > PG.cw + r || y > PG.ch + r || !fxBudget(r*r*4, true)) continue;
+      g.globalAlpha = XS.a[j]*(u < 0.12 ? u/0.12 : Math.pow((1 - u)/0.88, 1.3)); g.drawImage(xRot(xPick(XS.tone[j] ? (E.night > 0.45 ? mn : mg) : ms, r*2*dp), XS.ri[j]), x - r, y - r, r*2, r*2); }
+    XFX.sLive = sl; }
+  // 3) the fireball (and its lobes, behind it): growing, lifting, cooling and fading; then the flash over it. The fireballs hide the names under them (wfxOcc)
+  const og = XFX.og, OB = og.b; og.o.length = 0; OB[0] = OB[1] = Infinity; OB[2] = OB[3] = -Infinity; WFX.og = og;
+  for (let i = 0; i < XE.length; i++){ const E = XE[i]; if (!E.on || !E.vis) continue; const T = E.big ? XT.b : XT.s, age = t - E.t0, f = E.R*E.kr;
+    if (mc && age < T.fb*1.25 + 140){ if (E.lob > 1) xfxBall(g, E, T, m, mc, age - E.ld1, E.ls1, E.lx1, E.ly1, 0.7, T.fb*0.85, f, dp); if (E.lob > 0) xfxBall(g, E, T, m, mc, age - E.ld0, E.ls0, E.lx0, E.ly0, 0.7, T.fb*0.85, f, dp);
+      xfxBall(g, E, T, m, mc, age, 1, 0, 0, 0, T.fb, f, dp); }
+    if (age < T.fl){ const k = age/T.fl, a = Math.pow(1 - k, 1.4)*(E.red ? 0.3 : 1), rr = f*(E.big ? 1.5 + 1.3*k : 1.15 + 0.9*k), cy = E.sy - f*T.lift*0.5;
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = a; g.drawImage(WGLOW(), E.sx - rr, cy - rr, rr*2, rr*2); g.globalAlpha = a*0.55; g.drawImage(GLOW(), E.sx - rr*2, cy - rr*1.6, rr*4, rr*3.2); g.globalCompositeOperation = 'source-over'; } }
+  WFX.og = null; if (og.o.length) XFX.occ = og;
+  // 4) sparks and embers (additive streaks), then debris and spray: on arcs, landing where they fall
+  let kl = 0; g.lineCap = 'round';
+  for (let pass = 0; pass < 2; pass++){ g.globalCompositeOperation = pass ? 'source-over' : 'lighter'; let col = '';
+    for (let j = 0; j < XFX.kTop; j++){ if (!(XK.life[j] > 0)) continue; const kk = XK.k[j], hot = kk === 0 || kk === 2; if (hot === !!pass) continue;
+      const E = XE[XK.e[j]]; if (!E || !E.on || E.gen !== XK.g[j]){ XK.life[j] = 0; continue; } const a_ = t - XK.t0[j]; if (a_ >= XK.life[j]){ XK.life[j] = 0; continue; } kl++; if (a_ < 0 || !E.vis) continue;
+      const u = a_/XK.life[j], ts = a_/1000, f = E.R*E.kr, tt = Math.min(ts, XK.tl[j]), x = E.sx + (XK.x[j] + XK.vx[j]*tt)*f, y = E.sy + (XK.y[j] + XK.vy[j]*tt - XK.up[j]*tt + 0.5*XK.gr[j]*tt*tt)*f;
+      if (x < -20 || y < -20 || x > PG.cw + 20 || y > PG.ch + 20) continue;
+      if (kk === 0){ const tp = Math.max(0, tt - 0.06), x0 = E.sx + (XK.x[j] + XK.vx[j]*tp)*f, y0 = E.sy + (XK.y[j] + XK.vy[j]*tp - XK.up[j]*tp + 0.5*XK.gr[j]*tp*tp)*f, c = u < 0.4 ? '#fff0c4' : '#ffa452';
+        if (c !== col){ g.strokeStyle = col = c; } g.lineWidth = Math.max(0.8, Math.min(1.6, 0.035*f)); g.globalAlpha = Math.pow(1 - u, 1.2);
+        g.beginPath(); g.moveTo(x0 === x && y0 === y ? x - 1 : x0, y0); g.lineTo(x, y); g.stroke(); continue; }
+      const L = Math.max(1.3, Math.min(4, 0.1*f))*XK.sz[j], an = XK.rot[j] + XK.spin[j]*tt, dx = Math.cos(an)*L*0.5, dy = Math.sin(an)*L*0.5, c = kk === 2 ? '#ff9346' : kk === 3 ? '#eef5f7' : '#2a231c';
+      if (c !== col){ g.strokeStyle = col = c; } g.lineWidth = Math.max(1.1, L*(kk === 3 ? 0.7 : 0.55)); g.globalAlpha = kk === 2 ? Math.pow(1 - u, 1.1) : u < 0.7 ? 0.95 : 0.95*(1 - u)/0.3;
+      g.beginPath(); g.moveTo(x - dx, y - dy); g.lineTo(x + dx, y + dy); g.stroke(); } }
+  XFX.kLive = kl; g.lineCap = 'butt'; g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; PG.animFast(); }
+// one fireball: age a_ (ms), scale sc, offset (ox, oy) and rise (R), life d (ms), f px per R
+function xfxBall(g, E, T, m, mc, a_, sc, ox, oy, rise, d, f, dp){ if (a_ < 0 || a_ >= d) return;
+  const gw = E.red ? 1 : 1 - Math.pow(1 - Math.min(1, a_/T.gr), 3), r = f*sc*(E.red ? T.r1*0.85 : T.r0 + (T.r1 - T.r0)*gw), x = E.sx + ox*f, y = E.sy + (oy - T.lift*gw - rise*a_/d)*f;
+  if (x < -r || y < -r || x > PG.cw + r || y > PG.ch + r) return;
+  const A = Math.min(1, a_/25)*(1 - wfxSm(d*0.42, d, a_)); wfxOcc(x, y, r*0.6, r*0.6, A);
+  const cool = wfxSm(T.c0, d*0.85, a_), hot = 1 - wfxSm(0, d*0.38, a_), px = r*2*dp;
+  g.globalAlpha = A*(1 - 0.5*cool); g.drawImage(xRot(xPick(m, px), E.ri), x - r, y - r, r*2, r*2);
+  if (cool > 0.02){ g.globalAlpha = A*cool*0.85; g.drawImage(xRot(xPick(mc, px), E.ri), x - r, y - r, r*2, r*2); }
+  if (hot > 0.02 && !E.red){ g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55*hot*A; g.drawImage(xRot(xPick(m, px*0.62), E.ri), x - r*0.62, y - r*0.62, r*1.24, r*1.24); g.globalCompositeOperation = 'source-over'; } }
 let VOLA = 1;   // the fade-in of the figures firing (figVolley: their alpha as they appear), stored on their shots
 function shoot(kind, from, to, opt = {}){ const pr = projGet(); if (!pr) return; Object.assign(pr, {sn:++PRSN, kind, from, to, u:opt.ws ? 1 : kzNow()/PG.view.s, ws:!!opt.ws, hit:opt.hit, t0:performance.now() + (opt.delay || 0), dur:opt.dur || 400, arc:opt.arc || 0, big:opt.big || 1, last:0, lite:!!opt.lite, a:VOLA, fz:opt.fz || 1, dots:!!opt.dots}); }   // (ws: from, to and arc in world px: world-sized, like the figures that fire it)
 let lastPart = 0, PKZ = 1; const PRJEND = []; let PLIVE = 0, PRLIVE = 0;   // (PLIVE, PRLIVE: particles and shots on screen this frame: only they keep the loop running)
-const fxLive = () => (PART.length ? PLIVE : 0) + (PROJ.length ? PRLIVE : 0);
+const fxLive = () => (PART.length ? PLIVE : 0) + (PROJ.length ? PRLIVE : 0) + XFX.vis;   // (XFX.vis: explosions on screen this frame)
 // battle effects in two passes. drawParticlesUnder runs before the counters (scorch, wreck fires, smoke, fire, flashes, rings, dust, the night
 // ground glow and the art bursts and puffs: the plates always sit on top of them); drawParticlesOver runs after them, clipped off every plate
 // (tracers, shells and missiles in flight, muzzle stars, sparks and debris). PART is advanced once per frame, in the first pass.
 function drawParticlesUnder(now){
   const dt = /*@TEST*/WFX.fz ? 0 :/*@ENDTEST*/ Math.min(0.1, (now - (lastPart || now))/1000); lastPart = now;
   const kz = PKZ = Math.max(0.6, Math.min(2, PG.view.s*HS0/12))*PG.zx();
-  // scorch marks on the ground fade over 20 s
-  for (let i = SCORCH.length - 1; i >= 0; i--){ const sc0 = SCORCH[i], age = now - sc0.t0; if (age > 20000){ SCORCH.splice(i, 1); continue; }
-    const [x, y] = PG.toScreen(sc0.wx, sc0.wy), r = sc0.r*kz; PG.ctx.globalAlpha = 0.5*(1 - age/20000); PG.ctx.fillStyle = '#16120e'; PG.ctx.beginPath(); PG.ctx.ellipse(x, y, r, r*0.5, 0, 0, Math.PI*2); PG.ctx.fill(); }
-  PG.ctx.globalAlpha = 1;
   // wrecks: their smoke plume and fire are drawn by drawBattleSmoke (world-anchored, for 26 s)
   for (let i = WRECKS.length - 1; i >= 0; i--) if (now - WRECKS[i].t0 > 26000) WRECKS.splice(i, 1);
   // particles (sparks and debris are drawn by drawParticlesOver)
@@ -547,6 +631,7 @@ function drawParticlesUnder(now){
     for (const [a0, len] of [[0, 1], [0.7, 0.55], [-0.7, 0.55]]){ PG.ctx.beginPath(); PG.ctx.moveTo(0, 0); PG.ctx.lineTo(Math.cos(a0 - 0.12)*L0*len, Math.sin(a0 - 0.12)*L0*len); PG.ctx.lineTo(Math.cos(a0)*L0*len*1.4, Math.sin(a0)*L0*len*1.4); PG.ctx.lineTo(Math.cos(a0 + 0.12)*L0*len, Math.sin(a0 + 0.12)*L0*len); PG.ctx.closePath(); PG.ctx.fill(); }
     PG.ctx.restore(); }
   PG.ctx.globalAlpha = 1;
+  drawXFX(now);   // the explosions (XFX): over the small particles and the art puffs, under the strike effects (WFX) and the counters
 }
 function drawParticlesOver(now){
   const kz = PKZ;
@@ -555,7 +640,7 @@ function drawParticlesOver(now){
   for (let i = PROJ.length - 1; i >= 0; i--){ const pr = PROJ[i], k = (now - pr.t0)/pr.dur; if (k < 0){ if (prOn(pr)) PRLIVE++; continue; }   // (a burst's later rounds wait)
     if (pr.v2){ const kc = pr.cut != null ? Math.min(k, pr.cut) : k; prEvents(pr, Math.min(1, kc)); if (k >= 1 || (pr.cut != null && k >= pr.cut)){ const L = PROJ.length - 1; if (i < L) PROJ[i] = PROJ[L]; PROJ.pop(); ENDQ.push(pr); continue; } if (prDraw(pr, k, now)) PRLIVE++; continue; }
     PRLIVE++; const [fx0, fy0] = PG.toScreen(pr.from[0], pr.from[1]), [tx0, ty0] = PG.toScreen(pr.to[0], pr.to[1]);
-    if (k >= 1){ { const L = PROJ.length - 1; if (i < L) PROJ[i] = PROJ[L]; PROJ.pop(); ENDQ.push(pr); } if (pr.hit === 'kick') kick(pr.to[0], pr.to[1]); else if (pr.hit) bfxHit(pr.to[0], pr.to[1], pr.hit); else if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big, false, pr.lite, pr.fz || 1); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
+    if (k >= 1){ { const L = PROJ.length - 1; if (i < L) PROJ[i] = PROJ[L]; PROJ.pop(); ENDQ.push(pr); } if (pr.hit === 'kick') kick(pr.to[0], pr.to[1]); else if (pr.hit) bfxHit(pr.to[0], pr.to[1], pr.hit); else if (pr.kind === 'shell' || pr.kind === 'missile') explode(pr.to[0], pr.to[1], pr.big, false, pr.lite); else if (pr.kind === 'tracer') emit('spark', pr.to[0], pr.to[1], {s0:2.5, s1:1, life:250}); continue; }
     const ak = pr.arc*kzF(pr, kz), x = fx0 + (tx0 - fx0)*k, y = fy0 + (ty0 - fy0)*k - Math.sin(k*Math.PI)*ak; PG.ctx.globalAlpha = pr.a ?? 1;
     if (pr.kind === 'tracer' && pr.dots){ const an = Math.atan2(ty0 - fy0, tx0 - fx0), x2 = x - Math.cos(an)*Math.max(2.5, 0.45*PG.view.s), y2 = y - Math.sin(an)*Math.max(2.5, 0.45*PG.view.s), r = Math.max(0.8, 0.07*PG.view.s);   // a rifle burst: small tracer dots
       PG.ctx.fillStyle = 'rgba(255,226,150,.95)'; PG.ctx.beginPath(); PG.ctx.arc(x, y, r, 0, Math.PI*2); PG.ctx.arc(x2, y2, r, 0, Math.PI*2); PG.ctx.fill(); }
@@ -608,7 +693,7 @@ function drawTrailDust(){ const kz = Math.max(0.6, Math.min(2, PG.view.s*HS0/12)
     PG.ctx.globalAlpha = Math.min(1, fd*0.42*(q.a || 1)*(k < 0.12 ? k/0.12 : Math.pow(1 - k, 1.4))); PG.ctx.drawImage(rotSpr(PG.dustSprite(q.v, q.tn), q.rot), x - sz, y - sz*0.62, sz*2, sz*2*0.62); }
   PG.ctx.globalAlpha = 1; PG.ctx.setTransform(PG.dpr, 0, 0, PG.dpr, 0, 0); }
 // battle sound for a fighting cluster that is not firing on the map (no figures drawn: counters only), once per volley cycle
-const lastVolley = new Map(), lastDust = new Map(), SCORCH = [], MUZZ = [], CLPOS = new Map();
+const lastVolley = new Map(), lastDust = new Map(), MUZZ = [], CLPOS = new Map();
 function volley(c, main, now, sx){
   const a = c.list[0], seed = a.id % 13, period = 650 + (seed*977 % 600), cyc = Math.floor((now + seed*131)/period);
   if (lastVolley.get(a.id) === cyc) return; lastVolley.set(a.id, cyc);
@@ -670,15 +755,8 @@ function figVolley(c, main, now, F, T){
   else if (k === 'ship'){ unitRock(fid); snd('fire', 'art', f.mx, f.my); for (let i = 0; i < (lo ? 1 : 2); i++) sh2('shell', tgt(), {delay:i*140, dur:Math.max(900, Math.min(2600, 700 + dist*30)), arc:Math.max(2, Math.min(25, dist*0.3)), z:'M', sea:fsea, size:0.8});   /* the gun flash, the ship rocks, shells arc in (white water at sea) */ if (!lo) bsmPuff(f.mx, f.my, {r0:0.3*f.fl, r1:0.9*f.fl, dur:2000, vy:-0.6, tone:'grey', a:0.7}); }
   VOLA = 1; return true; }
 // a world-sized hit where a figure's shot lands (kind: spark from a tracer, small from a cannon or missile, tank, art), world-sized like its figures
-function bfxHit(wx, wy, kind){ const sea = (() => { const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1; return p >= 0 && G.P[p].sea; })(), lo = PG.SET.fx !== 'high' || PG.saverOn();
-  if (kind === 'spark'){ emit('spark', wx, wy, {ws:1, s0:0.12, s1:0.06, life:240, vx:(Math.random() - 0.5)*5, vy:-(1 + Math.random()*3)}); if (!lo && Math.random() < 0.3) bsmPuff(wx, wy, {r0:0.12, r1:0.4, dur:900, vy:-0.3, tone:sea ? 'spray' : 'dust', a:0.6, sq:0.7}); return; }
-  const R = kind === 'art' ? 1.5 : kind === 'tank' ? 1 : 0.55;   // the burst's world radius (a tank is 4.2 world px long)
-  afxBoom(wx, wy, R, false, R); emit('flash', wx, wy, {ws:1, s0:R*1.9, s1:R*0.8, life:140, vx:0, vy:0}); emit('core', wx, wy, {ws:1, s0:R*0.45, s1:R*0.15, life:60, vx:0, vy:0});
-  for (let i = 0; i < (kind === 'small' ? 1 : lo ? 2 : 4); i++) emit('fire', wx, wy, {ws:1, vx:(Math.random() - 0.5)*R*5, vy:-(1 + Math.random()*3)*R, s0:R*0.55, s1:R*0.15, life:380 + Math.random()*260});
-  if (kind !== 'small') for (let i = 0; i < (lo ? 3 : 6); i++) emit('debris', wx, wy, {ws:1, vx:(Math.random() - 0.5)*R*9, vy:-(3 + Math.random()*6)*R, s0:0.1, s1:0.08, life:600 + Math.random()*400, g:18*R});
-  const nS = kind === 'small' ? 1 : lo ? 1 : kind === 'art' ? 3 : 2;
-  for (let i = 0; i < nS; i++) bsmPuff(wx + (Math.random() - 0.5)*R*0.8, wy + (Math.random() - 0.5)*R*0.4, {delay:80 + i*140, r0:R*0.35, r1:R*(1 + 0.4*Math.random()), dur:2600 + Math.random()*1600, vx:(Math.random() - 0.5)*0.5, vy:-(0.5 + Math.random()*0.6), tone:sea ? 'spray' : 'dark', a:0.85});
-  if (!sea && kind !== 'small'){ bsmPuff(wx, wy + R*0.2, {r0:R*0.5, r1:R*1.6, dur:1900, vx:(Math.random() - 0.5)*0.8, vy:-0.1, tone:'dust', a:0.5, sq:0.5}); if (kind === 'art') afxCrater(wx, wy, 1.3 + 0.5*Math.random()); }}
+function bfxHit(wx, wy, kind){ if (kind === 'spark'){ const sea = seaAt(wx, wy), lo = PG.SET.fx !== 'high' || PG.saverOn(); emit('spark', wx, wy, {ws:1, s0:0.12, s1:0.06, life:240, vx:(Math.random() - 0.5)*5, vy:-(1 + Math.random()*3)}); if (!lo && Math.random() < 0.3) bsmPuff(wx, wy, {r0:0.12, r1:0.4, dur:900, vy:-0.3, tone:sea ? 'spray' : 'dust', a:0.6, sq:0.7}); return; }
+  xfxK(kind === 'art' ? 'art' : kind === 'tank' ? 'tank' : 'small', wx, wy); }   // the small explosion (XFX), its size by the weapon (a crater from a tank or a gun)
 /* ---- battle smoke and fire (BSM): world-anchored and world-sized, drawn as vector puffs at the current zoom ----
    Every puff is a cluster of round lobes filled in three crisp layers (its shadow side, a lit layer shifted toward the light from the upper
    left, a small highlight), so it has hard, clean edges and is sharp at every zoom (no scaled bitmaps, no blur). A battle's smoke stands in a
@@ -921,33 +999,31 @@ function prEnd(pr){ const [x, y, h] = prAt(pr, pr.cut != null ? pr.cut : 1);
   const z = pr.z || 'S';
   if (pr.kind === 'cm') return strikeAt('cm', x, y, pr);
   if (pr.kind === 'bm' || pr.kind === 'icbm') return strikeAt(pr.kind, x, y, pr);
-  impact(z, x, y, {sea:pr.sea, kill:pr.kill, bid:pr.bid, art:pr.kind === 'shell' || pr.kind === 'rkt'}); }
+  impact(z, x, y, {sea:pr.sea, kill:pr.kill, bid:pr.bid, art:pr.kind === 'shell' || pr.kind === 'rkt', bomb:pr.kind === 'bomb'}); }
 // the heavy strikes (cruise, ballistic, ICBM): the strike effects (WFX: their own caps, never thinned by the particle cap), the unit hit
 function strikeAt(k, x, y, pr){ const q = fxLv(); if (!q) return; if (pr && pr.bid != null) unitHit(pr.bid, 'L');
   if (fxFar()){ flashAt(x, y, k === 'icbm' ? 4 : 2.4); bigShake(x, y, k); snd('impact', k === 'icbm' ? 'XL' : 'L', x, y); return; }
   wfxStrike(k, x, y, {force:true, sea:pr ? pr.sea : undefined}); snd('impact', k === 'icbm' ? 'XL' : 'L', x, y); }
 // impacts sized by the weapon: S small arms and drones, M tanks, guns, bombs, L missiles, XL ICBM. A hit force flashes red and shakes; a
-// destroyed one gets a bigger blast and a smoke column; a hit at sea throws up white water
+// destroyed one gets a bigger blast and a smoke column; a hit at sea throws up white water (a ship hit: with the small explosion). The
+// explosion (XFX): small for every hit but a bomb's (o.bomb: big) and an ICBM's (its own strike)
 function impact(z, x, y, o = {}){ const lv = fxLv(); if (!lv) return; const sea = o.sea ?? seaAt(x, y);
   if (o.bid != null) unitHit(o.bid, z);
   if (fxFar()){ flashAt(x, y, z === 'S' ? 0.7 : z === 'M' ? 1.1 : z === 'L' ? 2 : 3.5); if (o.kill) flashAt(x, y, 2); return; }
-  if (sea){ splash(x, y, z === 'S' ? 0.5 : z === 'M' ? 1 : 1.8); if (z === 'L' || z === 'XL') FXW.blast('L', x, y, {sea:true}); }
+  if (z === 'XL' && !sea) wfxStrike('icbm', x, y, {force:true});
+  else if (o.bomb) xfxK('bomb', x, y, {sea});
+  else if (sea){ if (z === 'L' || z === 'XL') xfxK('exL', x, y, {sea:true}); else if (o.bid != null) xfxK(z === 'S' ? 'small' : 'tank', x, y, {sea:true}); else splash(x, y, z === 'S' ? 0.5 : 1); }   // (a miss: white water only)
   else if (z === 'S') bfxHit(x, y, 'small');
   else if (z === 'M') bfxHit(x, y, o.art ? 'art' : 'tank');
-  else if (z === 'L') FXW.blast('L', x, y, {sea:false});
-  else wfxStrike('icbm', x, y, {force:true});
+  else xfxK('exL', x, y, {sea:false});
   if (o.kill) destroyed(x, y, sea);
   snd('impact', z, x, y); }
 // a force destroyed: a bigger blast and a smoke column that fades out (drawn with the battle smoke, 26 s)
 function destroyed(x, y, sea){ if (!fxLv()) return; if (fxFar()){ flashAt(x, y, 2.2); return; } FXW.blast(sea ? 'L' : 'M', x, y, {sea}); WRECKS.push({wx:x, wy:y, t0:performance.now()}); if (WRECKS.length > 30) WRECKS.shift(); snd('impact', 'L', x, y); }
 // far out: a plain flash, screen-sized (r: about a province's share)
 function flashAt(x, y, r){ emit('flash', x, y, {s0:6*r, s1:2*r, life:220, vx:0, vy:0}); }
-// an air burst (a missile and its interceptor meet): a flash, a small fireball, sparks and a puff of smoke, world-sized
-function airBurst(x, y, r){ if (!fxLv()) return; if (fxFar()){ flashAt(x, y, 1.2*r); return; }
-  emit('flash', x, y, {ws:1, s0:2.6*r, s1:1*r, life:180, vx:0, vy:0}); emit('core', x, y, {ws:1, s0:0.9*r, s1:0.3*r, life:90, vx:0, vy:0});
-  for (let i = 0; i < (fxLv() < 2 ? 2 : 4); i++) emit('fire', x, y, {ws:1, vx:(Math.random() - 0.5)*5*r, vy:(Math.random() - 0.5)*4*r, s0:0.7*r, s1:0.2*r, life:350 + Math.random()*250});
-  for (let i = 0; i < (fxLv() < 2 ? 3 : 7); i++) emit('spark', x, y, {ws:1, s0:0.12, s1:0.06, life:500, vx:(Math.random() - 0.5)*14*r, vy:(Math.random() - 0.3)*10*r});
-  bsmPuff(x, y, {r0:0.4*r, r1:1.4*r, dur:2400, vx:0.3, vy:-0.2, tone:'grey', a:0.7}); snd('impact', 'S', x, y); }
+// an air burst (a missile and its interceptor meet): the small explosion in the air (XFX: flash, fireball, sparks all round, one puff; no ground parts)
+function airBurst(x, y, r){ if (!fxLv()) return; if (fxFar()){ flashAt(x, y, 1.2*r); return; } xfx(x, y, {R:1.3*r, mp:7*r, air:true}); snd('impact', 'S', x, y); }
 // dust kicked up by small-arms fire (a spark on water)
 function kick(x, y, sea){ if (fxFar()) return; const k = Math.max(1, 3/Math.max(1, PG.view.s/4));   // (k: a little bigger at play zoom, so a kick reads)
   if (sea ?? seaAt(x, y)){ emit('splash', x, y, {ws:1, s0:0.18*k, s1:0.3*k, life:420, vx:0, vy:0}); return; }
@@ -1138,7 +1214,7 @@ function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANI
    WARN, MARKS, the strike effects ...), so the loop stops drawing when nothing is active (Battery saver: no draws when static). Off-screen
    effects are not drawn (their clocks run on). Effects quality: SET.fx 'high' | 'low' | 'off' (fxLv); the default is High on a desktop, Low
    on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
-const fxStats = () => ({part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
+const fxStats = () => ({part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length, xfx:XFX.n, xfxOn:XFX.vis, xfxParts:XFX.kLive, xfxPuffs:XFX.sLive, craters:AFX.crater.length, pool:[PFREE.length, PRFREE.length]});
 
 // a lost graphics context (index.html gfxReset): the canvases' pixels are gone, so the sprites and the crater canvas are made again
 const gfxReset = () => { for (const k in SPR) delete SPR[k]; AFX.mips.clear(); if (CRD.cv) CRD.cv.width = CRD.cv.height = 0; CRD.cv = null; CRD.key = ''; };
@@ -1154,11 +1230,11 @@ return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, m
   get PLATEBOX(){ return PLATEBOX; }, set PLATEBOX(v){ PLATEBOX = v; },
   get PLATECLIP(){ return PLATECLIP; }, set PLATECLIP(v){ PLATECLIP = v; },
   PROJ,
-  SCORCH,
   SPR,
   get VOLA(){ return VOLA; }, set VOLA(v){ VOLA = v; },
   WFX,
   WRECKS,
+  XFX,
   afxAmbient,
   afxCrater,
   afxMark,
@@ -1193,5 +1269,7 @@ return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, m
   wfxScorch,
   wfxSmoke,
   wfxStart,
-  wfxStrike};
+  wfxStrike,
+  xfx,
+  xfxK};
 };
