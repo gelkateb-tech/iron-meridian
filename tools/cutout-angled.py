@@ -160,7 +160,10 @@ def poles(thin, ground, k):
         if out and x - out[-1][3] <= 3 and abs(y0 - out[-1][1]) < 30:
             o = out[-1]; o[0].append(x); o[1] = min(o[1], y0); o[2] = max(o[2], n); o[3] = x
         else: out.append([[x], y0, n, x])
-    return [(float(np.mean(o[0])), float(o[1]), o[2]) for o in out]
+    out = [(float(np.mean(o[0])), float(o[1]), o[2]) for o in out]
+    if out:   # the flagpoles are all one length: a building edge caught as a line is not
+        med = float(np.median([o[2] for o in out])); out = [o for o in out if abs(o[2] - med) <= 0.15*med]
+    return out
 
 def main():
     os.makedirs(OUT, exist_ok=True)
