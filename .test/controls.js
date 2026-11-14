@@ -8,7 +8,7 @@
 //   node .test/controls.js [desk|phone]     (run bash tools/mkpage.sh first; prints PASS/FAIL lines; exit 1 on any failure or page error)
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
-const ONLY = process.argv[2] || '';
+const ONLY = process.argv[2] || '', SHOTS = process.argv[3] || '';   // (a folder as the 2nd argument: screenshots of the select, Move and order steps)
 const RES = [['desk', 1440, 900, 1], ['phone', 390, 844, 2]].filter(r => !ONLY || r[0] === ONLY);
 const checks = {}, log = [], errors = [];
 const ok = (k, v, info) => { checks[k] = !!v; log.push(`${v ? 'PASS' : 'FAIL'}  ${k}${v ? '' : '  ' + JSON.stringify(info ?? null)}`); };
@@ -53,15 +53,16 @@ const ok = (k, v, info) => { checks[k] = !!v; log.push(`${v ? 'PASS' : 'FAIL'}  
     const selectByTap = async () => { await deselect(); await settle(); const h = await hitOf(sc.a); if (!h) return false; await tap(h.x + h.w/2, h.y + h.h/2); return (await st()).sel === sc.a; };
     const resetForce = () => p.evaluate(([id, A, spot]) => { const im = window.__im, a = im.S.armies.find(q => q.id === id); haltArmy(a); if (a.at !== A){ a.at = A; a.from = A; } a.pos = spot.slice(); a.to = null; a.path = []; a.dest = null; delete a.chase; delete a.wp; im.S.armies.forEach(q => { if (q.owner === 0 && q.id !== id && q.at === A) {} }); visCache = null; im.redraw && im.redraw(); }, [sc.a, sc.A, sc.spot]);
 
+    const shot = n => SHOTS ? p.screenshot({ path: `${SHOTS}/unit-${TAG}-${n}.png` }) : null;
     // 1. select by a tap on the badge: the army bar and the command bar open
     await view([(sc.Ac[0] + sc.Bc[0])/2, (sc.Ac[1] + sc.Bc[1])/2], 60);
     ok(`${TAG}: a tap on the force's badge selects it (army bar, command bar)`, await selectByTap() && (await st()).cmdbar && (await st()).abar, await st());
     // 2. a tap on the map with a force selected gives NO order (it deselects); Move, then a tap on the map, orders it to that exact point and it stays selected
     const armMove = () => p.evaluate(() => { const b = document.querySelector('[data-act="cm-move"]'); if (b) b.click(); });
-    let T = await scr(...sc.tgt); await tap(T[0], T[1]); { const s0 = await st(); ok(`${TAG}: a tap on the map with a force selected gives no order and deselects it`, !s0.dest && !s0.path.length && s0.to === null && s0.sel === null, s0); }
+    await shot('1-selected'); let T = await scr(...sc.tgt); await tap(T[0], T[1]); { const s0 = await st(); ok(`${TAG}: a tap on the map with a force selected gives no order and deselects it`, !s0.dest && !s0.path.length && s0.to === null && s0.sel === null, s0); }
     await selectByTap(); ok(`${TAG}: tapping again after the tap-away selects it again, still no order`, (await st()).sel === sc.a && !(await st()).path.length);
     await armMove(); await p.waitForTimeout(150); ok(`${TAG}: Move arms (the hint says tap a destination)`, /Move: tap a destination/.test(await p.evaluate(() => document.getElementById('hint').textContent)));
-    await tap(T[0], T[1]); let s1 = await st();
+    await shot('2-move-armed'); await tap(T[0], T[1]); let s1 = await st(); await shot('3-ordered');
     ok(`${TAG}: Move, then one tap on the map = the order, to the exact point`, s1.dest && s1.dest.p === sc.B && Math.hypot(s1.dest.x - sc.tgt[0], s1.dest.y - sc.tgt[1]) < 0.6 && s1.path.length > 0, s1);
     ok(`${TAG}: the force stays selected after the order`, s1.sel === sc.a, s1.sel);
     await settle(600); const pd = await p.evaluate(() => window.__im.pathDbg); const T2 = await scr(sc.tgt[0], sc.tgt[1]), hA = await hitOf(sc.a);

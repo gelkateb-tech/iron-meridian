@@ -8341,7 +8341,7 @@ cv.addEventListener('pointermove', e => {
     zoomAt(pinch.s*(d/pinch.d)/view.s, (a.x + b.x)/2, (a.y + b.y)/2); return; }
   if (boxSel){ boxSel.x1 = x; boxSel.y1 = y; showBox(); return; }
   if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > drag.slop) drag.moved = true; if (drag.moved && drag.unit != null){ closeChooser(); tipHide(); udrag = {id:drag.unit, x, y}; return; } if (drag.moved){ closeChooser(); view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
-  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; if (rallyFor !== null) redraw(); const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && cmdMode && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } tipShow(x, y); }
+  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; if (rallyFor !== null) redraw(); const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && cmdMode && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } if (rallyFor === null) tipShow(x, y); else tipHide(); }
 });
 function endPointer(e){
   const [x, y] = localXY(e);
@@ -11095,6 +11095,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, 
 if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor) => badgeBody(side, t, n, flagCanvas(o, plateDims(n, 1, !!minor, true).fh), !!mixed, false, false, !!minor), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {cp:{get CP(){ return CP; }, plan:(kind, k, ids) => cpPlan(kind, k, ids), buildWhy:(p, k) => buildWhy(p, k), trainWhy:(p, t) => trainWhy(p, t), buildCost:(k, p) => buildCost(PLAYER, k, nextLvl(p, k), p), ucost:t => ucost(PLAYER, t), cities:() => cpCities().map(P => P.id), units:() => UT.slice(), render:() => renderSide(true)}});
+if (location.protocol === 'file:' && window.__im) window.__im.rally = {route:(c, p) => rallyRoute(c, p), get mode(){ return rallyFor; }, get pick(){ return rallyPick; }, spawn:(n, p, t) => spawn(n, p, t), why:(c, p) => rallyWhy(c, p)};
 /*@ENDTEST*/
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if (S) save(); bgPause(); } else bgResume(); });
 window.addEventListener('pagehide', () => { if (S) save(); bgPause(); });
