@@ -16,6 +16,8 @@ Last updated: 2026-11-14 (playtest notes part 1 and part 2).
 |---|---|---|---|
 | **MAP-3** roads for every province meeting at its centre point, a sea-lane network warships follow, capture the moment a unit reaches the centre; NOT merged until the owner sees it (map job, merges after the others) | Opus | map-3 |
 
+**Merging now (owner, 2026-11-14: "Merge everything except for the explosions"):** real borders, HQ flags, UNIT-CTRL, UNIT-LOOK(+2), BLD-MAP(+2), aircraft 3D, BLD-RULES and the rebels plan doc are being combined on branch integrate (Opus), fully tested, then master and the Dev Build. Built defaults stand: infantry needs Army Base only, Fortifications price unchanged, infantry icon C, parked aircraft keep their pictures. The explosions (fx-video) stay unmerged.
+
 ## Ready, waiting for the owner (done, not merged)
 
 | Job | State | Branch |
