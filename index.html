@@ -5588,8 +5588,9 @@ function troopModels(clusters, clBox, hexPx, now){
    soft contact shadow (its side shows on its badge, not on the ground). Infantry is not a picture: a squad seen from straight above is a ring of
    helmets that reads as blobs at map size, so riflemen and paratroopers (sol), anti-tank teams (sat) and special forces (ssf) stand as small 3D
    soldiers (units3d.js mSquad: two or three men each, lit like the vehicle models, each with his own soft shadow; baked to m-sol, m-sat, m-ssf).
-   A type without a picture of its own yet (the Heavy and Stealth Bombers, whose pictures are code-drawn stand-ins, and the 4x4 beside motorized
-   infantry) shows its baked 3D map model (m-*.webp, tmDraw) in its place too. */
+   A type without a picture of its own (the 4x4 beside motorized infantry), or whose picture is still loading or failed, shows its baked 3D map model
+   (m-*.webp, tmDraw) in its place. Every aircraft type has its own model and picture slot (TMM: jet, int, asf, bomb, stealth, mpa, awacs, heli,
+   drone, sdrone, swarm), so a base with several aircraft types shows each of them. */
 const TMART = {hmv:{jam:'u-anti-drone'}, tank:'u-tank', ifv:'u-light-armor', art:'u-artillery', mlrs:'u-rocket-artillery', sam:'u-anti-air',
   frig:{frig:'u-corvette', lst:'u-cargo-ship'}, crui:'u-destroyer', sub:'u-submarine', carr:'u-carrier', jet:'u-strike-fighter', bomb:'@bomb', stealth:'u-stealth-bomber', mpa:'u-naval-patrol', awacs:'u-awacs',
   int:'u-jet', asf:'u-air-superiority', heli:'u-attack-heli', drone:'@drone', sdrone:'u-strike-drone', swarm:'u-swarm-drone'};
