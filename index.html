@@ -2704,7 +2704,7 @@ const ART = (() => {
     'fx-explosion', 'fx-smoke', 'fx-crater'];
   // the building-level pictures (b-<art>-<level>: city, military-base, naval-port, airfield, missile-silo; L5) are not fetched at startup: each one
   // when it is first needed (want): the city sheet or the build menu shows it, or for the city pictures the map zooms in to where towns are drawn
-  const LATE = ['earth-day', 'earth-night', 'earth-clouds'];   // big globe textures: fetched after everything else
+  const LATE = ['fxv-cruise', 'fxv-conventional', 'fxv-nuclear', 'earth-day', 'earth-night', 'earth-clouds'];   // the video explosions' sheets (fx.js FXV) and the big globe textures: fetched after everything else
   // promised unit pictures that may not exist yet: a code-drawn stand-in (STANDIN) is used from the start. Only the ones listed in ART_SUPPLIED are
   // fetched (once, after the rest), so a missing file never costs a failed request in the console; tools/prep-art.py rewrites that list when it adds one.
   const ART_SUPPLIED = [];
@@ -3978,6 +3978,10 @@ const FXH = {get AC(){ return AC; },
   get wrapSX(){ return wrapSX; },
   get zx(){ return zx; }};
 const FXM = window.IMFX(FXH);
+// the video explosions (fx.js FXV) or the drawn ones of before, to compare: ?fxv=0 / ?fxv=1 in the address (kept), the dev panel, window.__im.fxv(on)
+const FXV_KEY = 'iron-meridian-fxv';
+try { const q = /[?&]fxv=([01])\b/.exec(location.search); if (q) localStorage.setItem(FXV_KEY, q[1]); const v = localStorage.getItem(FXV_KEY); if (v === '0' || v === '1') FXM.FXV.on = v === '1'; } catch (e) {}
+const fxvSet = on => { FXM.FXV.on = !!on; try { localStorage.setItem(FXV_KEY, on ? '1' : '0'); } catch (e) {} };
 const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx, turnTo, moveFig} = FXM;
 // a city's glow at night: warm amber, never white; peaked at the city's point and fading out well inside its own radius (cityNightR)
 let CGLOWC = null; const CGLOW = () => CGLOWC || (CGLOWC = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -10366,7 +10370,7 @@ function devPanelHTML(){ const al = S.nations.filter(N => N.alive), U = UNITS[DE
     <div class="dv-r"><button class="dv-b go" data-dev="pick" aria-pressed="${DEVUI.pick}">${DEVUI.pick ? 'Click provinces to place · Esc stops' : 'Place: click a province'}</button></div>
     <div class="dv-n${DEVUI.note ? DEVUI.ok ? ' ok' : ' bad' : ''}">${DEVUI.note || (U.cls === 'naval' ? 'Ships: a sea zone or a coastal province.' : 'Ground and air: any land province.')}</div></div>
   <div class="dv-s"><div class="dv-l">Effects test</div>${DEV_CFX.map(r => `<div class="dv-r">${r.map(([k, t]) => `<button class="dv-b" data-dev="cfx" data-k="${k}">${t}</button>`).join('')}</div>`).join('')}<div class="dv-r">${[['hit', 'Hit'], ['miss', 'Miss'], ['kill', 'Kill']].map(([k, t]) => `<button class="dv-b" data-dev="cfxv" data-k="${k}" aria-pressed="${(DEVUI.fxv || 'hit') === k}">${t}</button>`).join('')}</div><div class="dv-n">Each button places a real shooter of that type beside the selected province (or the middle of the view) and an enemy target force there (a frigate at sea for the warship), then fires: Hit flashes and shakes the target, Kill destroys it.</div></div>
-  <div class="dv-s"><div class="dv-l">Strike effects</div>${DEV_FX.map(r => `<div class="dv-r">${r.map(([k, t]) => `<button class="dv-b" data-dev="wfx" data-k="${k}">${t}</button>`).join('')}</div>`).join('')}
+  <div class="dv-s"><div class="dv-l">Strike effects</div><div class="dv-r">${[[1, 'Video explosions'], [0, 'Drawn (before)']].map(([v, t]) => `<button class="dv-b" data-dev="fxv" data-k="${v}" aria-pressed="${!!FXM.FXV.on === !!v}">${t}</button>`).join('')}</div>${DEV_FX.map(r => `<div class="dv-r">${r.map(([k, t]) => `<button class="dv-b" data-dev="wfx" data-k="${k}">${t}</button>`).join('')}</div>`).join('')}
     <div class="dv-n">At the selected province, else the map centre.</div></div>`; }
 // the strike-effect test buttons: each fires one effect where the developer looks (the selected province, else the middle of the map)
 const DEV_CFX = [[['tank', 'Tank'], ['art', 'Artillery'], ['mlrs', 'Rockets']], [['inf', 'Infantry'], ['ship', 'Warship'], ['cruise', 'Cruise']], [['ballistic', 'Ballistic'], ['icbm', 'ICBM'], ['fighter', 'Fighter']],
@@ -10393,9 +10397,10 @@ function devCfx(w){ if (!S || !S.started) return; const p = sel.prov != null && 
 // the shooter's unit type for each test weapon (none: a missile or an aircraft from off the map) and when a killed target is taken off (ms)
 const DEV_CFX_T = {tank:'tank', art:'art', mlrs:'mlrs', inf:'inf', ship:'crui', sam:'sam', samd:'sam', samw:'jam'};
 const DEV_CFX_KILL = {tank:900, art:3300, mlrs:3200, inf:1600, ship:3200, cruise:5000, ballistic:7500, icbm:12500, fighter:1500, bomber:2800, drone:1500, swarm:1700};
-const DEV_FX = [[['cm', 'Cruise'], ['bm', 'Ballistic'], ['chem', 'Chemical']], [['tac', 'Tactical nuke'], ['icbm', 'ICBM']], [['exS', 'Blast S'], ['exM', 'Blast M'], ['exL', 'Blast L']]];
+const DEV_FX = [[['cm', 'Cruise'], ['bm', 'Ballistic'], ['chem', 'Chemical']], [['tac', 'Tactical nuke'], ['icbm', 'ICBM'], ['bb', 'Bomb']], [['exS', 'Blast S'], ['exM', 'Blast M'], ['exL', 'Blast L']]];
 function devFx(k){ if (!S || !S.started) return; const p = sel.prov != null && sel.prov >= 0 && G.P[sel.prov] ? sel.prov : -1, [wx, wy] = p >= 0 ? [G.P[p].x, G.P[p].y] : screenToWorld(cw/2, ch/2);
-  if (k[0] === 'e'){ const c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1; wfxStart(k, wx, wy, {force:true, sea:q >= 0 && G.P[q].sea}); } else wfxStrike(k, wx, wy, {force:true, p:p >= 0 ? p : undefined}); }
+  if (k === 'bb') impact('M', wx, wy, {bomb:true});   // a bomber's bomb (the video explosion, or the drawn hit of before)
+  else if (k[0] === 'e'){ const c = worldToCell(wx, wy), q = c >= 0 ? G.prov[c] : -1; wfxStart(k, wx, wy, {force:true, sea:q >= 0 && G.P[q].sea}); } else wfxStrike(k, wx, wy, {force:true, p:p >= 0 ? p : undefined}); }
 function devRender(){ const el = $('devpanel'); if (!el) return; el.hidden = !DEVUI.open; $('devbadge').setAttribute('aria-expanded', String(DEVUI.open)); document.body.classList.toggle('devpick', DEVUI.open && DEVUI.pick);
   if (DEVUI.open && S) el.innerHTML = devPanelHTML(); }
 function devSync(){ for (const i of DEV_SPEEDS){ const b = $('sp' + i); if (b) b.setAttribute('aria-pressed', String(S.speed === i)); }
@@ -10417,6 +10422,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-dev]
     else if (k === 'fill' && S && S.started){ devFill(S.nations[PLAYER]); DEVUI.ok = true; DEVUI.note = 'Stocks filled.'; renderSide(true); devRender(); }
     else if (k === 'pick'){ DEVUI.pick = !DEVUI.pick; DEVUI.note = ''; devRender(); }
     else if (k === 'wfx') devFx(b.dataset.k);
+    else if (k === 'fxv'){ fxvSet(b.dataset.k === '1'); devRender(); }
     else if (k === 'cfx') devCfx(b.dataset.k);
     else if (k === 'cfxv'){ DEVUI.fxv = b.dataset.k; devRender(); }
     return; }
@@ -11020,6 +11026,7 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get lite(){ return mapLite() || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stats:() => fxStats(), dev:w => devCfx(w), get VW(){ return VW; }, fire:(w, A, B, o) => cfxFire(w, A, B, o), intercept:(A, B, o) => intercept(A, B, o), get PROJ(){ return PROJ; }, get PART(){ return PART; }, get WARN(){ return FXM.WARN; }, get CQ(){ return FXM.CQ; }};
+if (location.protocol === 'file:' && window.__im) window.__im.fxv = on => { if (on != null) fxvSet(on); return FXM.FXV.on; };
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, ctryPal:{value:() => ctryPal()}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND)}, wrap:{value:{W:WRAP_W, X0:WRAP_X0, WW:WORLD_W, WH:WORLD_H, minScale:() => minScale(), ks:() => wrapKs(0)}}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots

@@ -99,9 +99,11 @@ function afxPuff(wx, wy, o = {}){
   return true; }
 // ground crater (world radius r, at most 2.5, or o.cap: a missile's 3.5) on land; a hit inside a crater adds a new small one elsewhere in the
 // province while it holds fewer than 6, else deepens that crater (never grows it), so a long fight leaves several small craters, not one huge disc
-// scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS); only the tactical nuke's and the ICBM's craters
+// scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS), or o.ms fading over the last o.fade (a video
+// explosion's, FXV: 30 s, the last 14 fading), down to a world radius o.min (default 1.2); only the tactical nuke's and the ICBM's craters
 // keep their long life in game hours (o.keep), with their burning ground
-const CRATER_MS = 20000, crRT = (q, now) => !q.rl ? 1 : Math.max(0, Math.min(1, (q.rl - (now - q.t0))/6000));
+const crFade = (q, now) => q.rl > 0 && now - q.t0 >= q.rl - (q.rf || 6000);   // (a real-time crater in its fade: gentle frames asked while one is on screen)
+const CRATER_MS = 20000, crRT = (q, now) => !q.rl ? 1 : Math.max(0, Math.min(1, (q.rl - (now - q.t0))/(q.rf || 6000)));
 function afxCrater(wx, wy, r, o = {}){
   if (!PG.booted || !PG.ART.ready('fx-crater') || !S) return false; afxSync(); const c = worldToCell(wx, wy); if (c < 0 || G.prov[c] < 0 || G.P[G.prov[c]].sea) return true;
   const h = S.hour + (S.speed && !S.over ? PG.acc : 0), life = o.life || 72, land = (x, y) => { const c1 = worldToCell(x, y); return c1 >= 0 && G.prov[c1] >= 0 && !G.P[G.prov[c1]].sea; };
@@ -113,11 +115,11 @@ function afxCrater(wx, wy, r, o = {}){
         const x = cc[0] + (fxh(hh*1e9 + 3) - 0.5)*1.4*HS, y = cc[1] + (fxh(hh*1e9 + 5) - 0.5)*1.2*HS, d = Math.hypot(x - wx, y - wy);
         if (d >= bd || !land(x, y) || worldToCell(x, y) < 0 || G.prov[worldToCell(x, y)] !== pv || AFX.crater.some(q => inQ(q, x, y, 1.6))) continue; best = [x, y]; bd = d; }
       if (best){ wx = best[0]; wy = best[1]; r *= 0.7 + 0.3*fxh(bd*97); }
-      else { hitQ.h = h; hitQ.life = Math.max(hitQ.life, life); hitQ.a = Math.min(0.95, hitQ.a + 0.08); if (hitQ.rl) hitQ.rl = performance.now() - hitQ.t0 + CRATER_MS; if (o.keep) hitQ.rl = 0; AFX.cv++; return true; } } }
-  let ok = false; for (let n = 0; n < 7 && r >= 1.2; n++){ ok = true; for (let j = 0; j < 8 && ok; j++) ok = land(wx + Math.cos(j*0.785)*r*0.75, wy + Math.sin(j*0.785)*r*0.6); if (ok) break; r *= 0.78; }   // keep the decal on land at coasts
+      else { hitQ.h = h; hitQ.life = Math.max(hitQ.life, life); hitQ.a = Math.min(0.95, hitQ.a + 0.08); if (hitQ.rl){ hitQ.rl = Math.max(hitQ.rl, performance.now() - hitQ.t0 + (o.ms || CRATER_MS)); hitQ.rf = Math.max(hitQ.rf || 6000, o.fade || 6000); } if (o.keep) hitQ.rl = 0; AFX.cv++; return true; } } }
+  let ok = false; for (let n = 0; n < 7 && r >= (o.min || 1.2); n++){ ok = true; for (let j = 0; j < 8 && ok; j++) ok = land(wx + Math.cos(j*0.785)*r*0.75, wy + Math.sin(j*0.785)*r*0.6); if (ok) break; r *= 0.78; }   // keep the decal on land at coasts
   if (!ok) return true;   // no room on a tiny island or a sliver of coast: no crater rather than one covering the land
   const cap = PG.SET.fx !== 'high' ? 50 : 120; if (AFX.crater.length >= cap){ AFX.crater.splice(0, AFX.crater.length - cap + 1); AFX.cv++; }
-  AFX.crater.push({wx, wy, r, h, life, p:pv, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85, rl:o.keep ? 0 : CRATER_MS}); return true; }   // (rl: its real-time life, ms; 0: game hours, a nuclear crater)
+  AFX.crater.push({wx, wy, r, h, life, p:pv, t0:performance.now(), rot:Math.random()*6.28, sq:0.82 + Math.random()*0.16, a:o.a || 0.85, rl:o.keep ? 0 : o.ms || CRATER_MS, rf:o.fade || 6000}); return true; }   // (rl: its real-time life, ms, fading over its last rf; 0: game hours, a nuclear crater)
 // a city burns for a while after it is bombarded or captured (smoke drawn by afxAmbient)
 function afxMark(p, hours){ if (!PG.booted || !S || G.P[p].sea) return; afxSync(); const h = S.hour, m = AFX.heat.get(p); if (!m || h + hours > m.h + m.d) AFX.heat.set(p, {h, d:hours}); }
 function afxTimer(key, now, ms){ const t = AFX.tm.get(key) || 0; if (now - t < ms) return false; if (AFX.tm.size > 400) AFX.tm.clear(); AFX.tm.set(key, now); return true; }
@@ -153,7 +155,7 @@ function drawCraters(now){
   afxSync(); if (!AFX.crater.length || !S) return; const hexPx = PG.view.s*HS0, m = hexPx >= 6 ? afxMips('fx-crater') : null; if (!m) return;
   const h0 = S.hour + (S.speed && !S.over ? PG.acc : 0), zin = Math.min(1, (hexPx - 6)/5), red = PG.afxReduced(), L = PG.layer;
   let add = false, live = 0, fading = 0; for (let i = AFX.crater.length - 1; i >= 0; i--){ const q = AFX.crater[i], age = h0 - q.h; if (age > q.life || age < -2 || (q.rl && now - q.t0 > q.rl)){ AFX.crater.splice(i, 1); AFX.cv++; continue; }
-    if (q.rl){ live++; fading++; } else if (now - q.t0 < 300) live++; else if (q.dc !== CRD.gen) add = true; }
+    if (q.rl){ live++; if (crFade(q, now) && !afxOff(q.wx, q.wy, 40)) fading++; } else if (now - q.t0 < 300) live++; else if (q.dc !== CRD.gen) add = true; }
   if (!L || L.s*HS0 < 6) return;
   const key = L.full + '|' + (L.strips || 0) + '|' + L.vx + ',' + L.vy + '|' + L.s + '|' + (L.dp || PG.dpr) + '|' + L.width + 'x' + L.height + '|' + AFX.cv + '|' + Math.floor(h0);
   if (key !== CRD.key){ CRD.key = key; crdBuild(m, h0, now, true); } else if (add) crdBuild(m, h0, now, false);
@@ -220,14 +222,43 @@ function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: t
    The rules can trigger the warheads they do not have yet with IM.emit('fxWarhead', {kind, p, by}) (kind cm, bm, chem, tac, icbm), and a blast
    with IM.emit('fxBlast', {size:'S'|'M'|'L', p}); the page's own entry points are FXW.cruise / ballistic / chemical / tactical / icbm / blast. */
 const WFX = {list:[], burn:[], flash:null, veil:null, area:0, bud:0, S:null, id:0, ks:1, occ:[], og:null/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};   // occ: last frame's dense fire and smoke (wfxOcc), og: the group being drawn
-const WFX_R = {cm:2.6, bm:4.2, chem:0.9, tac:4.5, icbm:12, exS:1.6, exM:2.4, exL:3.6};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
-const WFX_MP = {cm:18, bm:28, chem:9, tac:20, icbm:26, exS:12, exM:14, exL:16};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
+const WFX_R = {cm:2.6, bm:4.2, chem:0.9, tac:4.5, icbm:12, exS:1.6, exM:2.4, exL:3.6, bb:1.9};   // (bb: a bomber's bomb, only as a video explosion)   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
+const WFX_MP = {cm:18, bm:28, chem:9, tac:20, icbm:26, exS:12, exM:14, exL:16, bb:14};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
 // on a phone-sized map those floors grow (up to 1.5x on a 430 px screen), so a cruise blast or a small combat blast still reads at mid zoom
 const wfxPh = () => { const m = Math.min(PG.cw, PG.ch); return m >= 640 ? 1 : m <= 440 ? 1.5 : 1 + 0.5*(640 - m)/200; };
 const wfxKr = e => Math.max(PG.view.s, WFX_MP[e.k]*wfxPh()/e.R);   // an effect's world-to-screen scale: the map's, or bigger about its spot far out (the floor)
-const wfxHeavy = k => k[0] !== 'e';
+const wfxHeavy = k => k[0] !== 'e' && k !== 'bb';   // (a bomb line drops several: they count with the light combat blasts)
 const wfxCap = heavy => { const low = PG.SET.fx !== 'high', sv = PG.saverOn(); return heavy ? (low ? 3 : 6) - (sv ? (low ? 1 : 2) : 0) : (low ? 6 : 12) - (sv ? (low ? 2 : 4) : 0); };
 const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.length = 0; WFX.occ = []; WFX.flash = null; wfxVeil(0); } };
+/* ---- video explosions (FXV): the explosion clips made with Gemini Omni (tools/gen-video.py), seen from straight above, as sprite sheets
+   (assets/art/fxv-<name>.webp: black keyed out, frames on a grid, anchored on the blast's middle). They replace the drawn strike effects
+   of the same weapons: nuclear for a tactical nuke and an ICBM, conventional for a ballistic missile and a bomber's bomb, cruise for a
+   cruise missile (no chemical clip yet: a chemical strike keeps its drawn gas). One sheet frame is drawn per frame of the map, cross-faded
+   into the next (two frames mixed on a small canvas at the sheet's own size, then one scaled draw), on the effect's own clock, so it is
+   frame-rate independent; Low effects and the Battery saver draw the nearest frame only. Each lives in WFX (its caps, culling, frames
+   asked only while one is on screen, the nuclear flash and burning ground), sized in world units (D, the frame's diameter) with a smallest
+   drawn size (mp, css px) far out. FXV.on switches them off for the drawn master effects (a developer switch: ?fxv=0, the dev panel,
+   window.__im.fxv(false)); the sheets load after the rest of the art, and until one has arrived its weapon keeps the drawn look. */
+const FXV_META = {nuclear:{frames:32, cols:6, frame:192, fps:6.359}, conventional:{frames:30, cols:6, frame:192, fps:5.849}, cruise:{frames:24, cols:5, frame:176, fps:4.639}};   // (assets/art/fxv-sheets.json)
+// per kind: the sheet, the frame's world diameter, its smallest drawn diameter (css px), playback speed, where in the clip it ends (s) and its fade-out (s)
+const FXV_K = {cm:{n:'cruise', D:9, mp:64, sp:1, end:3.4, fo:1.3}, bb:{n:'conventional', D:5, mp:40, sp:1.15, end:3.4, fo:1.4}, bm:{n:'conventional', D:13, mp:96, sp:1, end:4.9, fo:1.6},
+  tac:{n:'nuclear', D:30, mp:120, sp:0.8, end:4.9, fo:1.5}, icbm:{n:'nuclear', D:70, mp:170, sp:0.6, end:4.9, fo:1.9}};
+const FXV = {on:true, cv:new Map()};   // cv: the mixing canvas per frame size
+const fxvUse = k => FXV.on && !!FXV_K[k] && PG.ART.ready('fxv-' + FXV_K[k].n);
+const fxvK = e => { const V = FXV_K[e.k]; return Math.max(PG.view.s, V.mp*wfxPh()/V.D); };   // world to css px (the floor far out)
+function fxvDraw(e, tau, now){ WFX.og = {b:[Infinity, Infinity, -Infinity, -Infinity], o:[]}; const V = FXV_K[e.k], M = FXV_META[V.n], im = PG.ART.img('fxv-' + V.n); if (!im) return;
+  const ts = tau/1000*V.sp, fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1, a = fd*Math.min(1, tau/50)*Math.max(0, Math.min(1, (V.end - ts)/V.fo)); if (a <= 0.003) return;
+  const sz = V.D*fxvK(e), [x, y] = PG.toScreen(e.wx, e.wy), h = sz/2; if (x + h < 0 || x - h > PG.cw || y + h < 0 || y - h > PG.ch) return;
+  const N = M.frames, F = M.frame, f = Math.min(N - 1, ts*M.fps), i0 = Math.floor(f), fr = f - i0, i1 = Math.min(N - 1, i0 + 1), g = PG.ctx;
+  const sx = i => (i % M.cols)*F, sy = i => Math.floor(i/M.cols)*F; let src = im, ox = sx(i0), oy = sy(i0);
+  if (!e.low && !PG.saverOn() && i1 !== i0 && fr > 0.03){ let c = FXV.cv.get(F); if (!c){ c = document.createElement('canvas'); c.width = c.height = F; FXV.cv.set(F, c); }   // the two frames mixed (premultiplied: 'lighter' adds them exactly)
+    const q = c.getContext('2d'); q.globalCompositeOperation = 'copy'; q.globalAlpha = 1 - fr; q.drawImage(im, ox, oy, F, F, 0, 0, F, F);
+    q.globalCompositeOperation = 'lighter'; q.globalAlpha = fr; q.drawImage(im, sx(i1), sy(i1), F, F, 0, 0, F, F); q.globalCompositeOperation = 'source-over'; q.globalAlpha = 1; src = c; ox = oy = 0; }
+  else if (fr > 0.5 && i1 !== i0){ ox = sx(i1); oy = sy(i1); }
+  /*@TEST*/if (WFX.dbg) WFX.dbg.push(['v' + e.id, x, y, PG.view.s, PG.view.x, PG.view.y]);/*@ENDTEST*/
+  g.globalAlpha = a; g.drawImage(src, ox, oy, F, F, x - h, y - h, sz, sz); g.globalAlpha = 1;
+  if (ts < V.end*0.7) wfxOcc(x, y, h*0.42, h*0.42, a);   // (names under the fireball and the thick of the smoke fade out with it)
+}
 // ---- sprites: noise-textured, baked once per variant at 128 px and 48 px (the small one for small draws: no sparkle from a big texture shrunk)
 function wfxNoise(seed){ const n = PG.makeNoise(mulberry(seed)); return (x, y) => n(x, y)*0.55 + n(x*2.03 + 17.3, y*2.03 + 5.1)*0.3 + n(x*4.1 + 31.7, y*4.1 + 11.9)*0.15; }
 const wfxSm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
@@ -362,14 +393,15 @@ function wfxStart(k, wx, wy, o = {}){ if (!PG.booted || !S || !WFX_R[k] || !fxLv
   const live = WFX.list.filter(e => wfxHeavy(e.k) === heavy && e.die == null), cap = wfxCap(heavy);
   for (let i = 0; i <= live.length - cap; i++) live[i].die = now + 350;   // over the cap: the oldest fade out over 0.35 s
   const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1, e = {k, wx, wy, R, t0:now, id:++WFX.id, seed:(Math.random()*2**31) | 0, low:PG.SET.fx !== 'high', red:PG.afxReduced(), sea:o.sea ?? (p >= 0 && G.P[p].sea), night:fxNight(wx, wy), els:[]};
-  wfxBuild(e); WFX.list.push(e); wfxTrim(e);
+  if (fxvUse(k)){ const V = FXV_K[k]; e.v = 1; e.d = (V.end/V.sp)*1000; e.ext = e.top = V.D*0.5; } else wfxBuild(e); WFX.list.push(e); wfxTrim(e);   // (a video explosion: one sheet, FXV)
   if (k === 'icbm' || k === 'tac'){ const a = (k === 'icbm' ? 1 : 0.42)*(e.red ? 0.3 : 1);   // the flash: the whole map whitens (an ICBM) or a strong white veil (tactical)
     if (!WFX.flash || a > WFX.flash.a*(1 - (now - WFX.flash.t0)/WFX.flash.d)){ WFX.flash = {t0:now, d:k === 'icbm' ? (e.low ? 650 : 950) : 450, a}; wfxVeil(k === 'icbm' ? a*0.85 : 0, WFX.flash.d*0.8); } }
   if (k === 'icbm'){ WFX.burn.push({wx, wy, r:R*1.5, h0:S.hour + (S.speed && !S.over ? PG.acc : 0), life:10, seed:e.seed}); if (WFX.burn.length > 6) WFX.burn.shift(); }   // burning ground: ten game hours
   PG.redraw(); return e; }
 // a strike: the effect, the crater and the burning city it leaves, the shake and the sound (o.p: the province hit)
 function wfxStrike(k, wx, wy, o = {}){ const e = wfxStart(k, wx, wy, o), p = o.p ?? (() => { const c = worldToCell(wx, wy); return c >= 0 ? G.prov[c] : -1; })(), land = p >= 0 && !G.P[p].sea;
-  if (land && k !== 'chem') afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, {a:0.95, life:k === 'icbm' ? 160 : k === 'tac' ? 120 : 96, cap:3.5, keep:k === 'icbm' || k === 'tac'});
+  if (land && k !== 'chem'){ const nuke = k === 'icbm' || k === 'tac';   // the crater left behind: a video explosion's stays 30 s and fades over the last 14 (from explosions-code)
+    afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, e && e.v && !nuke ? {a:0.95, ms:30000, fade:14000, min:0.5, cap:3.5} : {a:0.95, life:k === 'icbm' ? 160 : k === 'tac' ? 120 : 96, cap:3.5, keep:nuke}); }
   if (land && k !== 'chem') afxMark(p, {cm:30, bm:48, tac:72, icbm:120}[k] || 24);
   if (e) bigShake(wx, wy, k); PG.sfx('boom'); return e; }   // (the shake: only for a big blast near the middle of the view, see bigShake)
 const FXW = {cruise:(x, y, o) => wfxStrike('cm', x, y, o), ballistic:(x, y, o) => wfxStrike('bm', x, y, o), chemical:(x, y, o) => wfxStrike('chem', x, y, o),
@@ -392,7 +424,7 @@ function wfxCover(x, y, w){ if (!WFX.list.length || !WFX.occ.length) return 0; c
       for (let i = 0; i < O.length; i += 5){ const dx = (px - O[i])/O[i + 2], dy = (wy - O[i + 1])/O[i + 3], d = dx*dx + dy*dy; if (d < 1) clr *= 1 - O[i + 4]*wfxSm(1, 0.35, Math.sqrt(d)); } }
     hid = Math.max(hid, 1 - clr); }
   return hid; }
-function wfxDrawOne(e, tau, now){ const ks = PG.view.s, kr = wfxKr(e), [bx, by] = PG.toScreen(e.wx, e.wy), nt = e.night > 0.5, WD = windSync(), fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1;
+function wfxDrawOne(e, tau, now){ if (e.v) return fxvDraw(e, tau, now); const ks = PG.view.s, kr = wfxKr(e), [bx, by] = PG.toScreen(e.wx, e.wy), nt = e.night > 0.5, WD = windSync(), fd = e.die != null ? Math.max(0, (e.die - now)/350) : 1;
   // (far out, where the floor kr > ks holds, the whole blast is drawn bigger about its spot: offsets and sizes alike, so its shape stays;
   // from the zoom where kr = ks every part sits on its own world spot. The gas sheet keeps its own, lower floor.)
   const kg = Math.max(ks, 5.5), sx = (s, k = kr) => bx + s*k, sy = (s, k = kr) => by + s*k; /*@TEST*/const dbg = WFX.dbg, dk = k => dbg && k === ks;/*@ENDTEST*/
@@ -491,7 +523,7 @@ function drawWFX(now){ wfxSync(); if (!WFX.list.length && !WFX.burn.length) retu
   WFX.area = 0; WFX.bud = (PG.SET.fx !== 'high' ? 3 : 5)*PG.cw*PG.ch*Math.max(0.5, FXG.k); PG.ctx.save(); PG.ctx.setTransform(PG.dpr, 0, 0, PG.dpr, 0, 0);
   const burn = WFX.burn.length ? wfxDrawBurn() : false, occ = []; let run = false;
   for (let i = 0; i < WFX.list.length; i++){ const e = WFX.list[i], tau = Math.max(0, t0 - e.t0); if (tau >= e.d || (e.die != null && now >= e.die)){ WFX.list.splice(i--, 1); continue; }
-    const [x, y] = PG.toScreen(e.wx, e.wy), kr = wfxKr(e), ex = e.ext*kr, up = e.top*kr; if (x + ex < 0 || x - ex > PG.cw || y + ex*0.6 < 0 || y - up > PG.ch) continue;   // off screen: not drawn (its clock runs on)
+    const [x, y] = PG.toScreen(e.wx, e.wy), kr = e.v ? fxvK(e) : wfxKr(e), ex = e.ext*kr, up = e.top*kr; if (x + ex < 0 || x - ex > PG.cw || y + ex*0.6 < 0 || y - up > PG.ch) continue;   // off screen: not drawn (its clock runs on)
     run = true; wfxDrawOne(e, tau, now); if (WFX.og.o.length) occ.push(WFX.og); }
   WFX.occ = occ; WFX.og = null;   // (what this frame's effects hide: the next frame's names fade under it)
   PG.ctx.restore(); if (run) PG.animFast(); else if (burn && S.speed && !S.over) PG.animAmb(); }
@@ -921,7 +953,7 @@ function prEnd(pr){ const [x, y, h] = prAt(pr, pr.cut != null ? pr.cut : 1);
   const z = pr.z || 'S';
   if (pr.kind === 'cm') return strikeAt('cm', x, y, pr);
   if (pr.kind === 'bm' || pr.kind === 'icbm') return strikeAt(pr.kind, x, y, pr);
-  impact(z, x, y, {sea:pr.sea, kill:pr.kill, bid:pr.bid, art:pr.kind === 'shell' || pr.kind === 'rkt'}); }
+  impact(z, x, y, {sea:pr.sea, kill:pr.kill, bid:pr.bid, art:pr.kind === 'shell' || pr.kind === 'rkt', bomb:pr.kind === 'bomb'}); }
 // the heavy strikes (cruise, ballistic, ICBM): the strike effects (WFX: their own caps, never thinned by the particle cap), the unit hit
 function strikeAt(k, x, y, pr){ const q = fxLv(); if (!q) return; if (pr && pr.bid != null) unitHit(pr.bid, 'L');
   if (fxFar()){ flashAt(x, y, k === 'icbm' ? 4 : 2.4); bigShake(x, y, k); snd('impact', k === 'icbm' ? 'XL' : 'L', x, y); return; }
@@ -933,6 +965,7 @@ function impact(z, x, y, o = {}){ const lv = fxLv(); if (!lv) return; const sea 
   if (fxFar()){ flashAt(x, y, z === 'S' ? 0.7 : z === 'M' ? 1.1 : z === 'L' ? 2 : 3.5); if (o.kill) flashAt(x, y, 2); return; }
   if (sea){ splash(x, y, z === 'S' ? 0.5 : z === 'M' ? 1 : 1.8); if (z === 'L' || z === 'XL') FXW.blast('L', x, y, {sea:true}); }
   else if (z === 'S') bfxHit(x, y, 'small');
+  else if (z === 'M' && o.bomb && fxvUse('bb')){ if (wfxStart('bb', x, y, {force:true, sea:false})) afxCrater(x, y, 1.8, {a:0.95, ms:30000, fade:14000, min:0.5, cap:1.8}); }   // a bomber's bomb: the conventional video explosion and its crater (FXV)
   else if (z === 'M') bfxHit(x, y, o.art ? 'art' : 'tank');
   else if (z === 'L') FXW.blast('L', x, y, {sea:false});
   else wfxStrike('icbm', x, y, {force:true});
@@ -1147,6 +1180,7 @@ return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, m
   BSM,
   CLPOS,
   FXG,
+  FXV,
   FXW,
   GLOW,
   MUZZ,
