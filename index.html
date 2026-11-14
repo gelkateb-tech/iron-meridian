@@ -5788,7 +5788,7 @@ function cityRing(T, now, a0, kl){ const {p} = T; if (!T.city) return; const r =
    map like the troop models between a floor (the mid zoom picture can be seen) and a cap, and never reach a neighbouring city. Construction, shown
    for every nation: a new building is its construction site (the level I picture pale and see-through, a tower crane and a progress ring), a
    building raising its level carries the crane at its side and the ring. A level rise flashes a ring (not with reduced motion or the battery saver).
-   Drawn under the troop models, the counters and the names; only provinces on screen; each picture comes in a few sizes made once (BNC, dropped with
+   Drawn under the troop models, the counters and the names; only provinces on screen; each picture is made once at about its drawn size (BNC, dropped with
    the graphics, gfxReset). A tap on a picture opens its city (never over a unit badge: tap() asks hitAt and coreAt first). Fog: buildings are public. */
 const BN_K = ['silo', 'air', 'yard', 'fac', 'arms', 'rec', 'fort'];   // the buildings in order of importance (after the HQ)
 const BN_ART = {air:5, rec:5, yard:5, fort:3};   // the buildings with angled pictures (game levels); Fortifications levels I-III use pictures 1, 3 and 5
@@ -5810,7 +5810,7 @@ const BN_HQ = new Map(); const BN_REG = {'Europe':'western', 'Americas':'latin-a
 function bnHqStyle(n){ const N = S.nations[n]; if (!N) return 'western'; let st = BN_HQ.get(N.name + '|' + N.country); if (st) return st;
   const L = window.NATIONS && NATIONS.nations || [], e = L.find(q => q.country === N.country) || L.find(q => q.name === N.name);
   st = e && BN_STYLES.includes(e.hq) ? e.hq : e && BN_REG[e.region] || 'western'; BN_HQ.set(N.name + '|' + N.country, st); return st; }
-let BNL = new Map(), BNSH = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
+let BNL = new Map(), BNSH = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0, BNP = null; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
 // a province's buildings that have a picture, the most important first: {k, lv, nm (picture), c (its construction), site (a new one)}
 function bnItems(p){ const B = S.bld[p], o = S.owner[p], c = o >= 0 ? S.cons[p] : null, out = [], N = o >= 0 ? S.nations[o] : null;
   if (N && N.alive && N.capital === p) out.push({k:'hq', lv:1, nm:bnName('hq', bnHqStyle(o)), c:null, site:false});
@@ -5876,17 +5876,22 @@ function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.ma
     if (e.k !== 'yard' || sh.far) first = false;
     const m = e.k === 'yard' && !!sh.mir; placed.push(bx(e, at[0], at[1], m)); pos.push(at); mirs.push(m); }
   L = {sig, pos, mir:mirs, shore:sh}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
-// a picture at about px device px on its long side: the nearest of its made sizes at or above it (halved down from the file, once), plain, pale (a
-// construction site) or darkened for the night (lk: 0..8). null while the file loads
+// a picture px device px on its long side (in steps of 8 px, so it is drawn about 1:1: a plain blit), plain, pale (a construction site) or darkened
+// for the night (lk: 0..8); made from the file by halving steps, a few new ones a frame (BN_MK; meanwhile the last one made for it stands in), kept
+// within BNC_MAX bytes (least recently drawn dropped first). null while the file loads
+const BNC_MAX = 24e6, BNC_LAST = new Map(); let BNC_B = 0, BN_MK = 0;
 function bnPic(nm, px, pale, lk){ const im = ART.img(nm); if (!im){ ART.want(nm); return null; }
-  const W0 = im.naturalWidth || im.width, H0 = im.naturalHeight || im.height, L0 = Math.max(W0, H0); let L = L0; while (L/2 >= px*0.95 && L > 24) L /= 2;
-  const key = nm + '|' + L + '|' + (pale ? 1 : 0) + '|' + lk; let c = BNC.get(key); if (c) return c;
+  const W0 = im.naturalWidth || im.width, H0 = im.naturalHeight || im.height, L0 = Math.max(W0, H0), L = Math.min(L0, Math.max(16, Math.ceil(px/8)*8)), lkey = nm + '|' + (pale ? 1 : 0) + '|' + lk;
+  const key = lkey + '|' + L; let c = BNC.get(key); if (c){ BNC.delete(key); BNC.set(key, c); return c; }
+  if (BN_MK-- <= 0){ const o = BNC_LAST.get(lkey); if (o){ animFast(); return o; } }
   c = L === L0 ? (() => { const o = document.createElement('canvas'); o.width = W0; o.height = H0; o.getContext('2d').drawImage(im, 0, 0); return o; })() : ART.scaled(im, W0*L/L0, H0*L/L0);
   const g = c.getContext('2d');
   if (pale){ g.globalCompositeOperation = 'saturation'; g.fillStyle = '#808080'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(214,206,186,.38)'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'destination-in'; g.drawImage(im, 0, 0, c.width, c.height); }
   if (lk){ g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(8,16,34,${(lk/8*0.55).toFixed(3)})`; g.fillRect(0, 0, c.width, c.height); }
   g.globalCompositeOperation = 'source-over';
-  BNC.set(key, c); if (BNC.size > 220) BNC.delete(BNC.keys().next().value); return c; }
+  BNC.set(key, c); BNC_LAST.set(lkey, c); BNC_B += c.width*c.height*4;
+  for (const [k, v] of BNC){ if (BNC_B <= BNC_MAX) break; BNC.delete(k); BNC_B -= v.width*v.height*4; if (BNC_LAST.get(k.slice(0, k.lastIndexOf('|'))) === v) BNC_LAST.delete(k.slice(0, k.lastIndexOf('|'))); }
+  return c; }
 // a small tower crane (code drawn, original): a yellow lattice mast with its foot at (x, y), H css px tall, the jib reaching toward the side dir
 // (1 right, -1 left) over the building, a counter-jib with its weight, the tie bars and a hook on its cable
 function bnCrane(x, y, H, dir, a){ ctx.save(); ctx.globalAlpha *= a; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -5911,18 +5916,19 @@ function bnRing(x, y, R, pf, a){ ctx.save(); ctx.globalAlpha = a; ctx.beginPath(
 // the power and sea names keep clear) and into BNHIT (taps)
 function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.length = 0; if (window.__bnOff) return;/*@ENDTEST*/
   if (!S) return; const a1 = bnA(hexPx); if (a1 <= 0.003) return;
-  const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], caps = new Set(), day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16;
+  const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], caps = new Set(), day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_MK = 6;
   for (const N of S.nations) if (N.alive && S.owner[N.capital] === N.id) caps.add(N.capital);
-  for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || !bnHas(p, caps)) continue; const [x, y] = toScreen(P.x, P.y); if (x < -m || y < -m || x > cw + m || y > ch + 2*m) continue;
-    const its = bnItems(p); if (!its.length) continue; const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }
+  if (!BNP || BNP.S !== S || BNP.G !== G || now - BNP.t > 400 || now < BNP.t){ const L = []; for (let p = 0; p < G.P.length; p++) if (!G.P[p].sea && bnHas(p, caps)) L.push(p); BNP = {S, G, t:now, L, I:new Map()}; }   // (the provinces with pictures and their buildings, looked at again every 0.4 s)
+  for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y); if (x < -m || y < -m || x > cw + m || y > ch + 2*m) continue;
+    let its = BNP.I.get(p); if (!its) BNP.I.set(p, its = bnItems(p)); if (!its.length) continue; const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }
     const cap = nd*2*view.s*1.1;   // (a picture's long side stays under the way to the next city)
     if (P.city || caps.has(p)) cityRing({p, city:true, x, my:y + CITY_DY*kl}, now, a1, kl);
     for (let i = 0; i < its.length; i++){ const al = i ? a2 : a1; if (al <= 0.003) break; const [dx, dy] = Lo.pos[i], e = its[i];
       list.push({p, e, mir:Lo.mir[i], x:x + dx*view.s, y:y + dy*view.s, wx:P.x + dx, wy:P.y + dy, a:al, L:Math.min(L1*bnF(e.k, e.lv), cap)}); } }
   if (more) animFast();   // (the cities left over are worked out in the next frames)
   list.sort((u, v) => u.y - v.y);   // back to front
-  const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  for (const q of list){ const {e, p} = q, M = BNMETA[e.nm], c = bnPic(e.nm, q.L*dpr*q0, e.site, lk);   // (the battery saver: a smaller size) if (!c || !M) continue;
+  const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'medium';   // (each picture is made at about its drawn size)
+  for (const q of list){ const {e, p} = q, M = BNMETA[e.nm], c = bnPic(e.nm, q.L*dpr*q0, e.site, lk); if (!c || !M) continue;   // (q0: the battery saver's smaller size)
     const Lm = Math.max(M.w, M.h), w = q.L*M.w/Lm, h = q.L*M.h/Lm, ax = q.mir ? 1 - M.ax : M.ax; let X = q.x - ax*w, Y = q.y - M.ay*h;
     if (w*dpr < 96){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
     const b = [X, Y + M.top*h, X + w, Y + h];
@@ -7640,9 +7646,9 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
   const drop = c => { if (c && c.width) c.width = c.height = 0; };   // (frees the memory at once instead of at the next garbage collection)
   try { ART.gfx(); } catch (e) {}
   for (const c of CBAKE.values()) drop(c); for (const E of DT.cache.values()) drop(E.cv);   // (the biggest caches let go at once: Safari counts a canvas against its limit until it is collected)
-  for (const M of [UICONC, UIPC, TRSHIP, fogPat, TMMIP, TMCELL, TMLAST, ARTRIM, FIGSH, SBM, SBR, AIRSH, AIRC, FLAGC, UCC, BNC, CTILE, GTILE, CSCR,
+  for (const M of [UICONC, UIPC, TRSHIP, fogPat, TMMIP, TMCELL, TMLAST, ARTRIM, FIGSH, SBM, SBR, AIRSH, AIRC, FLAGC, UCC, BNC, BNC_LAST, CTILE, GTILE, CSCR,
     CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CLGL, CJOB, CWANT, CITY_MISS, CNF]) M.clear();
-  TMCB = 0; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
+  TMCB = 0; BNC_B = 0; BNP = null; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
   GRAIN = null; GROUND = null; NIGHT = null; CGLOWC = null; CLOUDS = null; CONTRAIL = null; TMSH = null; TMFOAM = null;
   for (const k of ['cv', 'tile', 'pat', 'fp', 'fc', 'foam', 'fpat', 'wc']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = ''; SEAFX.g = -1;
   DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0;
