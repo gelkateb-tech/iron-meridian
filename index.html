@@ -3010,8 +3010,13 @@ function worldLines(G){ const P = G.P, LK = G.LK;
     lines.roadsT = RD.map((q, i) => tiledPath(q.map(e => e[0]), 96, 16, i >= 2));   // (the highways' and main roads' runs kept: the lamps along them through a town at night, cityLinesNight)
     // the roads shown a little earlier than the rest: those between provinces (on a link's way: every province has one, MAP-3) and the longer local ones
     lines.roadsMain = tiledPath(RD[2].filter(e => e[2] || e[1] >= CW*5).map(e => e[0]), 96, 16, true);
-    lines.tracksWay = tiledPath(RD[1].filter(e => e[2]).map(e => e[0]), 96, 16);   // the tracks between provinces: shown before the local tracks
-    if (ND){ lines.overFog = true; lines.hubs = G.P.filter(P => !P.sea && P.lk.size && ND.net.cOf(P.id) !== undefined).map(P => P.id); }   // (the roads go over the fog; the centre points where roads meet)
+    lines.tracksWay = tiledPath(RD[1].filter(e => e[2]).map(e => e[0]), 96, 16);
+    lines.roadsCity = ND ? tiledPath(RD[2].filter(e => e[1] >= CW*5).map(e => e[0]), 96, 16, true) : lines.roadsMain;   // (the towns' streets and night lamps follow the longer roads only, as before MAP-3)   // the tracks between provinces: shown before the local tracks
+    if (ND){ const thin = q => q.map(e => dpLine(e[0], CW*0.16));   // (mid zoom: the same lines with fewer points, a cell is only a few px there)
+      lines.lo = {hw:tiledPath(thin(RD[3]), 96, 32), rd:tiledPath(thin(RD[2].filter(e => e[2] || e[1] >= CW*5)), 96, 32), tw:tiledPath(thin(RD[1].filter(e => e[2])), 96, 32)};
+      const thin2 = q => q.map(e => dpLine(e[0], CW*0.3));   // (play zoom, under 40 px a hex: a cell is about 15 px, coarser still)
+      lines.lo2 = {hw:tiledPath(thin2(RD[3]), 192, 64), rd:tiledPath(thin2(RD[2].filter(e => e[2] || e[1] >= CW*5)), 192, 64)};
+      lines.overFog = true; lines.hubs = G.P.filter(P => !P.sea && P.lk.size && ND.net.cOf(P.id) !== undefined).map(P => P.id); }   // (the roads go over the fog; the centre points where roads meet)
     lines.railsT = tiledPath(RL.map(e => e[0]), 96, 16); lines.railsMain = tiledPath(RL.filter(e => e[1] >= CW*6).map(e => e[0]), 96, 16);
     lines.roadPl = ND ? null : RD.flatMap(q => q.map(e => e[0])); lines.railPl = RL.map(e => e[0]); RNET.road = RNET.rail = null; RROUTE.clear(); RLEG.clear(); rnetSoon(); }   // (the drawn lines, for the forces on the road: roadRoute)
   loadWorld.lines = lines;
@@ -3024,6 +3029,11 @@ function worldLines(G){ const P = G.P, LK = G.LK;
    drawn exactly on the drawn road, from centre to centre. LANES: each lane rounded (no bend: open water), lanePts. */
 let NETD = null;
 // a polyline with the corners at the points listed (indices) rounded off within r of them (a quadratic curve through the corner's neighbourhood)
+// a polyline thinned (Douglas-Peucker, tolerance tol, ends kept)
+function dpLine(P, tol){ const n = P.length; if (n < 3) return P; const keep = new Uint8Array(n), st = [[0, n - 1]]; keep[0] = keep[n - 1] = 1;
+  while (st.length){ const [a, b] = st.pop(); if (b - a < 2) continue; const [ax, ay] = P[a], dx = P[b][0] - ax, dy = P[b][1] - ay, L = Math.hypot(dx, dy) || 1e-9; let md = -1, mi = a + 1;
+    for (let i = a + 1; i < b; i++){ const d = Math.abs((P[i][0] - ax)*dy - (P[i][1] - ay)*dx)/L; if (d > md){ md = d; mi = i; } } if (md > tol){ keep[mi] = 1; st.push([a, mi], [mi, b]); } }
+  return P.filter((_, i) => keep[i]); }
 function roundJoints(P, idx, r){ if (!idx.length) return P; const out = []; let k = 0;
   const at = (i, d, dir) => { let rem = d, j = i; for (;;){ const n = j + dir; if (n < 0 || n >= P.length) return P[j]; const l = Math.hypot(P[n][0] - P[j][0], P[n][1] - P[j][1]); if (l >= rem){ const t = rem/l; return [P[j][0] + (P[n][0] - P[j][0])*t, P[j][1] + (P[n][1] - P[j][1])*t]; } rem -= l; j = n; } };
   const set = new Set(idx); for (let i = 0; i < P.length; i++){ if (!set.has(i)){ if (k <= i) out.push(P[i]); continue; }
@@ -6431,7 +6441,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const K = cityDetailK(I, S), KA 
 // blocks). R: those map paths (world units); p, L: lines of its own (none now: kept for the tree rows of any later ones)
 function cityBlvd(I){ if (I.blvd) return I.blvd; const rr = I.r, L = [], R = [], LN = loadWorld.lines;
   if (LN && Array.isArray(LN.roadsT)){ const g = CFL.getContext('2d'), x0 = I.x - I.E, y0 = I.y - I.E, x1 = I.x + I.E, y1 = I.y + I.E; g.setTransform(1, 0, 0, 1, 0, 0); g.lineWidth = rr*0.9;
-    for (const T of [LN.roadsT[3], LN.roadsMain || LN.roadsT[2]]) if (T && T.tiles) for (const t of T.tiles) if (t.x1 >= x0 && t.x0 <= x1 && t.y1 >= y0 && t.y0 <= y1) R.push(t.p); }   // (every tile of them over the town's square, so a road runs on through the town to its edge, never ending mid-block; the footprint cuts them)
+    for (const T of [LN.roadsT[3], LN.roadsCity || LN.roadsMain || LN.roadsT[2]]) if (T && T.tiles) for (const t of T.tiles) if (t.x1 >= x0 && t.x0 <= x1 && t.y1 >= y0 && t.y0 <= y1) R.push(t.p); }   // (every tile of them over the town's square, so a road runs on through the town to its edge, never ending mid-block; the footprint cuts them)
   // (no drawn ring road or straight avenues of its own: centred on the town's marker they read as a reticle; a town no map road crosses
   // has its street plan's own arterials)
   const p = new Path2D(); for (const q of L) q.forEach(([x, y], i) => i ? p.lineTo(x, y) : p.moveTo(x, y));
@@ -6808,7 +6818,7 @@ function cityLinesNight(g, I, S, X0, Y0, lit){ const LN = loadWorld.lines; if (!
     g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#f2d2a0'; const u = KM_W; g.setLineDash([0.9*u, 0.35*u, 0.4*u, 0.6*u, 1.3*u, 0.45*u]);   // (in broken runs of lamps, like the town's own streets)
     const wd = (w, m) => { const lw = Math.max(m/k, w); g.lineWidth = lw; return w/lw; };   // (a line thinner than the canvas holds drawn wider and dimmer by as much: the same light, so a soft stand-in's roads are as bright as the sharp tier's, not streaks)
     if (hp >= 22){ const f2 = wd((0.7 + 0.5*ramp(22, 90))*cs, 1.2); g.globalAlpha = (0.15 + 0.04*ramp(40, 120))*f2; g.stroke(near(Array.isArray(LN.roadsT) ? LN.roadsT[3] : null)); }
-    if (hp >= 70){ const f2 = wd(0.6*cs, 1); g.globalAlpha = 0.13*ramp(70, 110)*f2; g.stroke(near(LN.roadsMain || LN.roadsT[2])); } g.setLineDash([]); }
+    if (hp >= 70){ const f2 = wd(0.6*cs, 1); g.globalAlpha = 0.13*ramp(70, 110)*f2; g.stroke(near(LN.roadsCity || LN.roadsMain || LN.roadsT[2])); } g.setLineDash([]); }
   else { g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.strokeStyle = '#000';
     const z = Math.max(0.7, Math.min(2.4, hp/32));   // (the overlay's river: RIV_W wide times z CSS px, a dark bank 1.1 px wider; past hexPx 77 the same on screen at every zoom)
     for (let i = 0; i < 3; i++){ if (hp < RIV_W[i][1]) continue; const w = (RIV_W[i][0]*z + 1.1)*cs, lw = Math.max(1.5/k, w); g.lineWidth = lw; g.globalAlpha = Math.min(1, 0.15 + w/lw); each(LN.riversT[i], p => g.stroke(p)); } }   // (as wide as the river and its bank on screen at the zoom the tier is for: the river runs through the lit town as it does by day)
@@ -7177,20 +7187,20 @@ function drawLinksLayer(c, LN, px, hexPx, wx0, wy0, wx1, wy1, vis, lite){ if (!L
   // a map, not a graph: classes come in one after another as you zoom (highways, then main railways, the longer local roads, every railway and
   // road, tracks last); each is a thin, quiet line at the zoom it appears and firms up (casing, ballast) only close in
   const T = (q) => tiledIn(q, wx0, wy0, wx1, wy1), ramp = (h0, h1) => Math.max(0, Math.min(1, (hexPx - h0)/(h1 - h0)));
-  const RM = LN.roadsMain || LN.roadsT[2], LM2 = LN.railsMain || LN.railsT, rs = q => { if (!LN.overFog) c.stroke(q); };   // (with the movement network the roads are drawn over the fog instead: drawWaysOver)
+  const RM = LN.roadsMain || LN.roadsT[2], LM2 = LN.railsMain || LN.railsT, rs = q => { if (q) c.stroke(q); }, TR = q => LN.overFog ? null : T(q);   // (with the movement network the roads are drawn over the fog instead: drawWaysOver)
   // while the view moves (pan or zoom re-renders), one stroke per class; the casing, tracks and ballast come back once it settles
-  if (lite){ if (hexPx >= 40){ c.strokeStyle = `rgba(206,192,156,${0.1 + 0.13*ramp(40, 120)})`; c.lineWidth = 0.8*px; rs(T(hexPx >= 100 ? LN.roadsT[2] : RM)); c.stroke(D.rd); }
-    if (hexPx >= 22){ c.strokeStyle = `rgba(222,204,160,${0.08 + 0.26*ramp(22, 70)})`; c.lineWidth = (0.6 + 0.8*ramp(22, 70))*px; rs(T(LN.roadsT[3])); c.stroke(D.hw); }
+  if (lite){ if (hexPx >= 40){ c.strokeStyle = `rgba(206,192,156,${0.1 + 0.13*ramp(40, 120)})`; c.lineWidth = 0.8*px; rs(TR(hexPx >= 100 ? LN.roadsT[2] : RM)); c.stroke(D.rd); }
+    if (hexPx >= 22){ c.strokeStyle = `rgba(222,204,160,${0.08 + 0.26*ramp(22, 70)})`; c.lineWidth = (0.6 + 0.8*ramp(22, 70))*px; rs(TR(LN.roadsT[3])); c.stroke(D.hw); }
     if (hexPx >= 40){ c.strokeStyle = `rgba(30,26,22,${0.16 + 0.2*ramp(40, 120)})`; c.lineWidth = (0.6 + 0.5*ramp(40, 120))*px; c.stroke(T(hexPx >= 90 ? LN.railsT : LM2)); c.stroke(D.rail); }
     if (hexPx >= 8){ c.strokeStyle = 'rgba(120,206,236,.9)'; c.lineWidth = 1.2*px; c.stroke(D.hsr); }
     return; }
-  if (hexPx >= 140){ const z = ramp(140, 180); c.strokeStyle = `rgba(206,190,150,${0.05 + 0.12*z})`; c.lineWidth = (0.5 + 0.2*z)*px; rs(T(LN.roadsT[1])); c.stroke(D.tr); }
-  else if (hexPx >= 70 && LN.tracksWay){ c.strokeStyle = `rgba(222,206,166,${0.24 + 0.12*ramp(70, 140)})`; c.lineWidth = 0.65*px; rs(T(LN.tracksWay)); }   // (the tracks between provinces come in before the local ones)
+  if (hexPx >= 140){ const z = ramp(140, 180); c.strokeStyle = `rgba(206,190,150,${0.05 + 0.12*z})`; c.lineWidth = (0.5 + 0.2*z)*px; rs(TR(LN.roadsT[1])); c.stroke(D.tr); }
+  else if (hexPx >= 70 && LN.tracksWay){ c.strokeStyle = `rgba(222,206,166,${0.24 + 0.12*ramp(70, 140)})`; c.lineWidth = 0.65*px; rs(TR(LN.tracksWay)); }   // (the tracks between provinces come in before the local ones)
   // roads: those between provinces (every province has one, MAP-3) and the longer local ones from mid zoom, every local road closer in
-  if (hexPx >= 40){ const z = ramp(40, 130), RD = T(hexPx >= 100 ? LN.roadsT[2] : RM);
+  if (hexPx >= 40){ const z = ramp(40, 130), RD = TR(hexPx >= 100 ? LN.roadsT[2] : RM);
     c.strokeStyle = `rgba(20,16,10,${0.2 + 0.1*ramp(130, 170)})`; c.lineWidth = (2 + 0.4*z)*px; rs(RD); c.stroke(D.rd);   // (a dark casing: the road reads over any tint, and under the fog's wash)
     c.strokeStyle = `rgba(232,216,176,${0.45 + 0.2*z})`; c.lineWidth = (0.85 + 0.3*z)*px; rs(RD); c.stroke(D.rd); }
-  if (hexPx >= 22){ const z = ramp(22, 70), HW = T(LN.roadsT[3]);
+  if (hexPx >= 22){ const z = ramp(22, 70), HW = TR(LN.roadsT[3]);
     if (hexPx >= 110){ c.strokeStyle = `rgba(22,15,6,${0.32*ramp(110, 150)})`; c.lineWidth = 3*px; rs(HW); c.stroke(D.hw); }
     c.strokeStyle = `rgba(222,204,160,${0.08 + 0.24*z + 0.12*ramp(90, 150)})`; c.lineWidth = (0.6 + 0.7*z + 0.3*ramp(90, 150))*px; rs(HW); c.stroke(D.hw); }
   if (hexPx >= 40){ const z = ramp(40, 120), zc = ramp(120, 160), RL = T(hexPx >= 90 ? LN.railsT : LM2);
@@ -7200,15 +7210,18 @@ function drawLinksLayer(c, LN, px, hexPx, wx0, wy0, wx1, wy1, vis, lite){ if (!L
   if (hexPx >= 8){ const z = ramp(8, 24); c.strokeStyle = 'rgba(16,14,12,.9)'; c.lineWidth = (1.4 + 0.8*z)*px; c.stroke(D.hsr); c.strokeStyle = 'rgba(120,206,236,.9)'; c.lineWidth = (0.6 + 0.4*z)*px; c.stroke(D.hsr); } }
 // the roads between provinces (on a link's way) and the longer local roads, stroked again over the fog of the layer: quieter than in sight
 function drawWaysOver(c, LN, px, hexPx, wx0, wy0, wx1, wy1, lite){ const ramp = (h0, h1) => Math.max(0, Math.min(1, (hexPx - h0)/(h1 - h0))), a = ramp(22, 30), z = ramp(30, 140);
-  if (a <= 0) return; const T = q => tiledIn(q, wx0, wy0, wx1, wy1); c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+  if (a <= 0) return;
+  // (a quick render while the map moves strokes the buckets in view one by one, with no merged path made for it: nothing to collect afterwards)
+  const T = q => lite ? {q} : tiledIn(q, wx0, wy0, wx1, wy1), SK = p => { if (!p.q) return c.stroke(p); for (const t of p.q.tiles) if (t.x1 >= wx0 && t.x0 <= wx1 && t.y1 >= wy0 && t.y0 <= wy1) c.stroke(t.p); }; c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
   // the roads of the map, light lines with a thin dark casing, readable over any tint, the fog and the night: tracks (thin, no casing), roads,
   // highways (a little wider and brighter). Between provinces (on a link's way) from normal play zoom; every local road and track closer in
-  const TR = hexPx >= 140 ? LN.roadsT[1] : LN.tracksWay, RD = hexPx >= 100 ? LN.roadsT[2] : LN.roadsMain, HW = LN.roadsT[3];
-  if (TR && hexPx >= 45){ const t = T(TR); if (!lite){ c.strokeStyle = `rgba(18,14,8,${0.22*a})`; c.lineWidth = (1.5 + 0.4*z)*px; c.stroke(t); } c.strokeStyle = `rgba(226,212,174,${(0.42 + 0.18*z)*ramp(45, 60)})`; c.lineWidth = (0.6 + 0.3*z)*px; c.stroke(t); }
-  if (RD){ const r = T(RD); if (!lite){ c.strokeStyle = `rgba(18,14,8,${(0.42 + 0.1*z)*a})`; c.lineWidth = (2.3 + 1.1*z)*px; c.stroke(r); } c.strokeStyle = `rgba(238,226,192,${(0.66 + 0.2*z)*a})`; c.lineWidth = (1.0 + 0.7*z)*px; c.stroke(r); }
-  if (HW){ const h = T(HW); if (!lite){ c.strokeStyle = `rgba(16,11,4,${(0.5 + 0.1*z)*a})`; c.lineWidth = (2.9 + 1.5*z)*px; c.stroke(h); } c.strokeStyle = `rgba(250,226,160,${(0.78 + 0.18*z)*a})`; c.lineWidth = (1.3 + 1.0*z)*px; c.stroke(h); }
+  const lo = hexPx < 40 && LN.lo2 ? {...LN.lo, ...LN.lo2} : hexPx < 70 && LN.lo, TR = hexPx >= 140 ? LN.roadsT[1] : lo ? lo.tw : LN.tracksWay, RD = hexPx >= 100 ? LN.roadsT[2] : lo ? lo.rd : LN.roadsMain, HW = lo ? lo.hw : LN.roadsT[3];
+  const moving = lite; lite = lite || hexPx < 34;   // (no casing while the lines are still thin: they read on their own; a quick render while the map moves: roads and highways only, the full one follows)
+  if (TR && hexPx >= 45 && !moving){ const t = T(TR); if (!lite){ c.strokeStyle = `rgba(18,14,8,${0.22*a})`; c.lineWidth = (1.5 + 0.4*z)*px; SK(t); } c.strokeStyle = `rgba(226,212,174,${(0.42 + 0.18*z)*ramp(45, 60)})`; c.lineWidth = (0.6 + 0.3*z)*px; SK(t); }
+  if (RD){ const r = T(RD); if (!lite){ c.strokeStyle = `rgba(18,14,8,${(0.42 + 0.1*z)*a})`; c.lineWidth = (2.3 + 1.1*z)*px; SK(r); } c.strokeStyle = `rgba(238,226,192,${(0.66 + 0.2*z)*a})`; c.lineWidth = (1.0 + 0.7*z)*px; SK(r); }
+  if (HW){ const h = T(HW); if (!lite){ c.strokeStyle = `rgba(16,11,4,${(0.5 + 0.1*z)*a})`; c.lineWidth = (2.9 + 1.5*z)*px; SK(h); } c.strokeStyle = `rgba(250,226,160,${(0.78 + 0.18*z)*a})`; c.lineWidth = (1.3 + 1.0*z)*px; SK(h); }
   // the centre point of every province where its roads meet (where a province is captured), close in: a small light ring with a dark dot
-  if (hexPx >= 50 && LN.hubs){ const k = ramp(50, 75), r0 = (1.6 + 1.2*ramp(75, 200))*px, P2 = new Path2D(); let n = 0;
+  if (hexPx >= 50 && LN.hubs && !moving){ const k = ramp(50, 75), r0 = (1.6 + 1.2*ramp(75, 200))*px, P2 = new Path2D(); let n = 0;
     for (const p of LN.hubs){ const P = G.P[p]; if (P.city || P.x < wx0 || P.x > wx1 || P.y < wy0 || P.y > wy1) continue; P2.moveTo(P.x + r0, P.y); P2.arc(P.x, P.y, r0, 0, Math.PI*2); n++; }
     if (n){ c.fillStyle = `rgba(20,16,10,${0.85*k})`; c.fill(P2); c.strokeStyle = `rgba(244,232,198,${0.95*k})`; c.lineWidth = 1.1*px; c.stroke(P2); } }
   c.restore(); }
@@ -7903,7 +7916,7 @@ function draw(now){ draw.now = now;
       ctx.strokeStyle = 'rgba(240,96,78,0.95)'; ctx.lineWidth = 1.5*z*px; ctx.stroke(F); ctx.restore(); } }
   });
   drawWeather(now);   // storms under the night tint: night darkens them like the land, and the city lights shine over them
-  { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)); if (tN < 1) drawNightWorld(1 - tN); if (tN > 0){ drawNight(tN); const nn = (1 - viewLight().day)*tN; if (nn > 0.05) wrapEach(() => drawRoadsNight(hexPx, nn)); }
+  { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)); if (tN < 1) drawNightWorld(1 - tN); if (tN > 0){ drawNight(tN); const nn = (1 - viewLight().day)*tN; if (nn > 0.05 && !panning && !moved) wrapEach(() => drawRoadsNight(hexPx, nn)); }
     const mph = msPerHour(); if (mph){ animIn(mph/4);   // (lights and glows step every 15 game minutes, the close-zoom tint every 3)
       if (tN > 0) animIn(mph*0.05); if (tN < 1) animIn(Math.max(33, mph*(saverOn() ? 4 : 1)/(15*HS*SQ3*W/360*view.s))); } }   // the wide-zoom terminator (a soft band): each pixel it moves, 4 with the Battery saver
   { const pend = CITY_PEND; CITY_PEND = false; wrapEach(() => drawCityLights(hexPx)); if (CITY_PEND){ if (CWANT.size) animIn(250); else animFast(); } CITY_PEND = pend; }   // city lights over the night tint (lights still to make: asked of the bake pump, which asks for a frame as each lands)
