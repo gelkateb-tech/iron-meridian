@@ -5803,7 +5803,7 @@ function bnReset(){ BNL.clear(); BNSH.clear(); BNND.clear(); BNL_G = G; }
 // the Naval Yard's spots on the shore next to its city: along rays every 7.5 degrees from the city's point, the first water (out to BN_SHORE world px)
 // and the last dry point before it, a step inland; nearest first. mir: the water lies to the left, so the picture is mirrored and its piers (to the
 // lower right in the pictures) point to it. bnLayout takes the nearest spot that leaves the city's point (its HQ or main building) clear
-const BN_SHORE = 40;
+const BN_SHORE = 40, BN_FARYARD = 18;
 function bnShore(p){ if (BNL_G !== G) bnReset(); let E = BNSH.get(p); if (E) return E; const P = G.P[p], wet = (x, y) => isWet(x, y) && isWet(x + 1.5, y) && isWet(x - 1.5, y) && isWet(x, y + 1.5) && isWet(x, y - 1.5);
   E = []; const E2 = [];   // (E2: rays from a city point that is itself on the water's edge)
   for (let i = 0; i < 48; i++){ const a = i/48*Math.PI*2, ux = Math.cos(a), uy = Math.sin(a); let r = 0;
@@ -5839,17 +5839,18 @@ function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.ma
   const sz = e => BN_WPX*bnF(e.k, e.lv), bx = (e, x, y, m) => { const b = bnBox(e.nm, m), s = sz(e); return [x + b[0]*s, y + b[1]*s, x + b[2]*s, y + b[3]*s]; };
   const ov = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0]))*Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
   if (yi >= 0){ const C = bnShore(p), e = its[yi], m0 = its.find(q => q.k !== 'yard'), b0 = m0 ? bx(m0, 0, 0, false) : null, r0 = C.length ? C[0].r : 0;
-    sh = C.find(c => c.r <= r0 + 8 && (!b0 || (() => { const b = bx(e, c.dx, c.dy, c.mir); return ov(b, b0) < 0.12*Math.min((b[2] - b[0])*(b[3] - b[1]), (b0[2] - b0[0])*(b0[3] - b0[1])); })())) || C[0] || {dx:0, dy:BN_WPX*0.5, mir:false}; }
+    sh = C.find(c => c.r <= r0 + 8 && (!b0 || (() => { const b = bx(e, c.dx, c.dy, c.mir); return ov(b, b0) < 0.12*Math.min((b[2] - b[0])*(b[3] - b[1]), (b0[2] - b0[0])*(b0[3] - b0[1])); })())) || C[0] || {dx:0, dy:BN_WPX*0.5, mir:false, far:true};
+    if (sh.r > BN_FARYARD) sh = Object.assign({}, sh, {far:true}); }   // (the water too far off to look like the city's own: the yard joins its cluster, still turned to the water)
   const DIRS = [180, 0, 150, 30, 120, 60, 90, 205, -25].map(d => d*Math.PI/180);
   let first = true, o0 = [0, 0]; const cityish = G.P[p].city || its.some(e => e.k === 'hq');
   for (const e of its){ let at;
-    if (e.k === 'yard') at = [sh.dx, sh.dy];
+    if (e.k === 'yard' && !sh.far) at = [sh.dx, sh.dy];
     else if (first) at = o0 = [0, cityish ? 0 : -BN_WPX*0.5];   // (a province without a town: above its name, which stands on its point)
     else { let bd = Infinity; at = null; const s = sz(e);
       DIRS.forEach((a, j) => { const ux = Math.cos(a), uy = -Math.sin(a)*0.62; for (let d = s*0.25; d < s*4; d += s*0.06){ const x = o0[0] + ux*d, y = o0[1] + uy*d, b = bx(e, x, y, false), A = (b[2] - b[0])*(b[3] - b[1]);
         if (placed.every(q => ov(q, b) < 0.1*Math.min(A, (q[2] - q[0])*(q[3] - q[1])))){ const sc = d + j*s*0.05; if (sc < bd){ bd = sc; at = [x, y]; } break; } } });
       if (!at) at = [o0[0], o0[1] - s*0.5]; }
-    if (e.k !== 'yard') first = false;
+    if (e.k !== 'yard' || sh.far) first = false;
     const m = e.k === 'yard' && !!sh.mir; placed.push(bx(e, at[0], at[1], m)); pos.push(at); mirs.push(m); }
   L = {sig, pos, mir:mirs, shore:sh}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
 // a picture at about px device px on its long side: the nearest of its made sizes at or above it (halved down from the file, once), plain, pale (a

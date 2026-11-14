@@ -110,10 +110,12 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   const yards = await p.evaluate(ports => { const im = window.__im, out = []; for (const q of ports){ const it = im.bn.items(q); const i = it.findIndex(e => e.k === 'yard'); if (i < 0) continue;
       const L = im.bn.layout(q), sh = L.shore, P = im.G.P[q], wx = P.x + L.pos[i][0], wy = P.y + L.pos[i][1];
       let wetNear = false; if (sh.sea) for (let t = 0.5; t <= 4; t += 0.5) if (im.dock.isWet(wx + sh.sea[0]*t, wy + sh.sea[1]*t)) wetNear = true;
-      out.push({p:q, name:P.cityName, sea:sh.sea, riv:!!sh.riv, mir:L.mir[i] ? 1 : 0, dry:!im.dock.isWet(wx, wy), wetNear, d:+Math.hypot(L.pos[i][0], L.pos[i][1]).toFixed(2), r:sh.r}); } return out; }, C.ports);
-  const noSea = yards.filter(y => !y.sea), wrongSide = yards.filter(y => y.sea && y.mir !== (y.sea[0] < -0.05 ? 1 : 0)), offShore = yards.filter(y => y.sea && !y.riv && (!y.dry || !y.wetNear)), riv = yards.filter(y => y.riv);
-  checks.yards = {n:yards.length, mirrored:yards.filter(y => y.mir).length, onRivers:riv.length, rivers:riv.slice(0, 12).map(y => y.name), noSea:noSea.map(y => y.name), wrongSide:wrongSide.length, offShore:offShore.map(y => y.name + ' ' + y.d), maxFromCity:Math.max(...yards.map(y => y.d)),
+      out.push({p:q, name:P.cityName, sea:sh.sea, riv:!!sh.riv, far:!!sh.far, mir:L.mir[i] ? 1 : 0, dry:!im.dock.isWet(wx, wy), wetNear, d:+Math.hypot(L.pos[i][0], L.pos[i][1]).toFixed(2), r:sh.r}); } return out; }, C.ports);
+  const noSea = yards.filter(y => !y.sea), wrongSide = yards.filter(y => y.sea && y.mir !== (y.sea[0] < -0.05 ? 1 : 0)), offShore = yards.filter(y => y.sea && !y.riv && !y.far && (!y.dry || !y.wetNear)), riv = yards.filter(y => y.riv), far = yards.filter(y => y.far);
+  checks.yards = {n:yards.length, mirrored:yards.filter(y => y.mir).length, onRivers:riv.length, inCluster:far.length, farOnes:far.slice(0, 8).map(y => y.name), rivers:riv.slice(0, 12).map(y => y.name), noSea:noSea.map(y => y.name), wrongSide:wrongSide.length, offShore:offShore.map(y => y.name + ' ' + y.d), maxFromCity:Math.max(...yards.filter(y => !y.far).map(y => y.d)),
     hamburg:yards.find(y => y.p === C.ha), examples:yards.filter(y => y.mir).slice(0, 3).map(y => y.name + ' sea ' + y.sea.join(','))};
+  if (yards.some(y => !y.far && y.d > 20)) fails.push('a Naval Yard stands more than 20 world px from its city');
+  if (far.length > yards.length*0.15) fails.push(`${far.length} Naval Yards too far from the water to stand on it`);
   if (yards.length < 20) fails.push(`only ${yards.length} Naval Yards checked`); if (wrongSide.length) fails.push(`${wrongSide.length} Naval Yards with the piers away from the sea`);
   if (offShore.length > yards.length*0.05) fails.push(`${offShore.length} Naval Yards not on the shore: ${offShore.slice(0, 6).map(y => y.name).join(', ')}`);
   if (!yards.some(y => y.mir) || !yards.some(y => !y.mir)) fails.push('the yards are not seen both ways round');
