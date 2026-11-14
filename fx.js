@@ -240,9 +240,10 @@ const wfxSync = () => { if (WFX.S !== S){ WFX.S = S; WFX.list.length = WFX.burn.
    drawn size (mp, css px) far out. FXV.on switches them off for the drawn master effects (a developer switch: ?fxv=0, the dev panel,
    the test hook fxv(false)); the sheets load after the rest of the art, and until one has arrived its weapon keeps the drawn look. */
 const FXV_META = {nuclear:{frames:32, cols:6, frame:192, fps:6.359}, conventional:{frames:30, cols:6, frame:192, fps:5.849}, cruise:{frames:24, cols:5, frame:176, fps:4.639}};   // (assets/art/fxv-sheets.json)
-// per kind: the sheet, the frame's world diameter, its smallest drawn diameter (css px), playback speed, where in the clip it ends (s) and its fade-out (s)
-const FXV_K = {cm:{n:'cruise', D:9, mp:64, sp:1, end:3.4, fo:1.3}, bb:{n:'conventional', D:5, mp:40, sp:1.15, end:3.4, fo:1.4}, bm:{n:'conventional', D:13, mp:96, sp:1, end:4.9, fo:1.6},
-  tac:{n:'nuclear', D:30, mp:120, sp:0.8, end:4.9, fo:1.5}, icbm:{n:'nuclear', D:70, mp:170, sp:0.6, end:4.9, fo:1.9}};
+// per kind: the sheet, the frame's world diameter, its smallest drawn diameter (css px), playback speed, where it ends (s of clip time: past the
+// clip's end its last frame is held, the smoke lingering) and its fade-out (s)
+const FXV_K = {cm:{n:'cruise', D:9, mp:64, sp:1, end:3.4, fo:1.3}, bb:{n:'conventional', D:4, mp:34, sp:1.15, end:3.4, fo:1.4}, bm:{n:'conventional', D:13, mp:96, sp:1, end:5.8, fo:2},
+  tac:{n:'nuclear', D:30, mp:120, sp:0.8, end:7, fo:2.4}, icbm:{n:'nuclear', D:70, mp:170, sp:0.6, end:8, fo:3}};
 const FXV = {on:true, cv:new Map()};   // cv: the mixing canvas per frame size
 const fxvUse = k => FXV.on && !!FXV_K[k] && PG.ART.ready('fxv-' + FXV_K[k].n);
 const fxvK = e => { const V = FXV_K[e.k]; return Math.max(PG.view.s, V.mp*wfxPh()/V.D); };   // world to css px (the floor far out)
@@ -256,7 +257,9 @@ function fxvDraw(e, tau, now){ WFX.og = {b:[Infinity, Infinity, -Infinity, -Infi
     q.globalCompositeOperation = 'lighter'; q.globalAlpha = fr; q.drawImage(im, sx(i1), sy(i1), F, F, 0, 0, F, F); q.globalCompositeOperation = 'source-over'; q.globalAlpha = 1; src = c; ox = oy = 0; }
   else if (fr > 0.5 && i1 !== i0){ ox = sx(i1); oy = sy(i1); }
   /*@TEST*/if (WFX.dbg) WFX.dbg.push(['v' + e.id, x, y, PG.view.s, PG.view.x, PG.view.y]);/*@ENDTEST*/
-  g.globalAlpha = a; g.drawImage(src, ox, oy, F, F, x - h, y - h, sz, sz); g.globalAlpha = 1;
+  g.globalAlpha = a; if (e.rot == null) e.rot = ((e.seed % 628) | 0)/100;   // each one turned its own way (seen from straight above, any turn is right: a bomb line is not six copies)
+  const co = Math.cos(e.rot), si = Math.sin(e.rot); g.setTransform(co*PG.dpr, si*PG.dpr, -si*PG.dpr, co*PG.dpr, x*PG.dpr, y*PG.dpr); g.drawImage(src, ox, oy, F, F, -h, -h, sz, sz);
+  g.setTransform(PG.dpr, 0, 0, PG.dpr, 0, 0); g.globalAlpha = 1;
   if (ts < V.end*0.7) wfxOcc(x, y, h*0.42, h*0.42, a);   // (names under the fireball and the thick of the smoke fade out with it)
 }
 // ---- sprites: noise-textured, baked once per variant at 128 px and 48 px (the small one for small draws: no sparkle from a big texture shrunk)
