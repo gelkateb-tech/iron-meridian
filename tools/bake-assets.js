@@ -3,7 +3,7 @@
 // `node tools/bake-assets.js map [types]` bakes only the troop models standing on the map (assets/units/m-<type>.webp) and writes their
 // crop and ground origin into units3d.js (MAPMETA); everything else is left untouched.
 const { chromium } = require('playwright'); const fs = require('fs'); const path = require('path');
-const MAP_TYPES = ['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam', 'frig', 'sub', 'crui', 'carr', 'jet', 'int', 'heli', 'drone'];
+const MAP_TYPES = ['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam', 'frig', 'lst', 'sub', 'crui', 'carr', 'jet', 'int', 'heli', 'drone'];
 (async () => {
   const root = path.join(__dirname, '..'), out = path.join(root, 'assets'), only = process.argv[2]; fs.mkdirSync(path.join(out, 'units'), { recursive: true });
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] }); const p = await b.newPage({ viewport: { width: 1200, height: 800 } }); const errs = [];

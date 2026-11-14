@@ -11,7 +11,7 @@
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
-const TIP = 'Dug in: +defence. The unit has held position for 12+ hours, or is in a fortified friendly province.';
+const TIP = 'Dug in: +10% defence. The unit has held position for 12+ hours, or is in a fortified friendly province.';
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, hasTouch: PHONE, isMobile: false });
@@ -42,9 +42,9 @@ const TIP = 'Dug in: +defence. The unit has held position for 12+ hours, or is i
     for (const [t, side] of [['inf', 'own'], ['tank', 'war'], ['frig', 'ally'], ['jet', 'other']]){ const E = U.badge(t, side, 14, 0, false, false); if (!E){ out[t] = null; continue; }
       const D = U.dims(14, false), g = E.c.getContext('2d'), px = (x, y, w, h) => g.getImageData(Math.round((E.ox + x)*d), Math.round((E.oy + y)*d), Math.max(1, Math.round(w*d)), Math.max(1, Math.round(h*d))).data;
       const stat = a => { const cols = new Set(); let white = 0, n = 0; for (let i = 0; i < a.length; i += 4){ n++; cols.add((a[i] >> 4) + ',' + (a[i + 1] >> 4) + ',' + (a[i + 2] >> 4)); if (a[i] > 225 && a[i + 1] > 225 && a[i + 2] > 225) white++; } return { cols: cols.size, white: white/n }; };
-      out[t] = { w: E.c.width/d - 2*E.ox, h: E.c.height/d - 2*E.oy, flag: stat(px(D.w/2 - D.fw/2, D.fy, D.fw, D.fh)), icon: stat(px(4, D.iy, D.w - 8, D.ny - D.fz*0.75 - D.iy)), count: stat(px(4, D.ny - D.fz*0.72, D.w - 8, D.fz*0.72)) }; }
+      out[t] = { w: E.c.width/d - 2*E.ox, h: E.c.height/d - 2*E.oy, flag: stat(px(2, 1, D.w - 4, D.fh - 2)), icon: stat(px(3, D.iy, D.w - 6 - D.pw, D.w - D.iy - 3)), count: stat(px(D.w - 1.5 - D.pw, D.w - 1.5 - D.ph, D.pw, D.ph)), pill: { pw: D.pw, ph: D.ph, fh: D.fh, w: D.w } }; }
     return out; });
-  for (const [t, q] of Object.entries(parts)) checks['badge-parts-' + t] = { ok: !!q && Math.abs(q.w - q.h) <= 1 && q.flag.cols >= 3 && q.icon.white > 0.06 && q.count.white > 0.06, ...q };
+  for (const [t, q] of Object.entries(parts)) checks['badge-parts-' + t] = { ok: !!q && Math.abs(q.w - q.h) <= 1 && q.flag.cols >= 3 && q.pill.fh >= 0.38*q.pill.w && q.icon.white > 0.06 && q.count.white > 0.02, ...q };
   // (2) the infantry figures: 3D squads with a soft shadow, not single-colour blobs
   const sheets = await p.evaluate(async () => { const out = {};
     for (const t of ['sol', 'sat', 'ssf']){ const im = new Image(); im.src = 'assets/units/m-' + t + '.webp'; try { await im.decode(); } catch (e) { out[t] = { err: 'load' }; continue; }
@@ -69,7 +69,7 @@ const TIP = 'Dug in: +defence. The unit has held position for 12+ hours, or is i
   await p.evaluate(() => { window.__im.sel.army = null; }); await view(sc.ber, zs[2]); await p.waitForTimeout(1500);
   const dh = await p.evaluate(() => window.__im.uicon.dughit.map(r => ({ x: r.x, y: r.y, w: r.w, h: r.h, own: r.own })));
   const sh = dh.find(r => r.own && r.x > 20 && r.y > 60 && r.x < W - (PHONE ? 60 : 200) && r.y < H - (PHONE ? 160 : 200));
-  checks.shieldBox = { ok: !!sh && sh.w <= 16 && sh.h <= 18 && sh.w >= 9, n: dh.length, box: sh };
+  checks.shieldBox = { ok: !!sh && sh.w <= 19 && sh.h <= 21 && sh.w >= 10, n: dh.length, box: sh };
   if (sh){ const cx = sh.x + sh.w/2, cy = sh.y + sh.h/2;
     if (!PHONE){ await p.mouse.move(off[0] + cx - 4, off[1] + cy - 4); await p.mouse.move(off[0] + cx, off[1] + cy); await p.waitForTimeout(300);
       const t = await p.evaluate(() => { const e = document.getElementById('tip'); return e && !e.hidden ? e.textContent.trim() : null; });
