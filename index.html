@@ -5791,24 +5791,30 @@ function cityRing(T, now, a0, kl){ const {p} = T; if (!T.city) return; const r =
    architectural style (nations.js 'hq', by its country; bnHqStyle), standing exactly on the capital's point. Zoomed out (below BN_IN0) no building
    shows, only the city's name; from the mid zoom one picture per city, its most important building with a picture (HQ, Missile Silo, Airbase, Naval
    Yard, Army Base, Arms Industry, Recruiting Office, Fortifications; Army Base, Missile Silo and Arms Industry have no angled picture yet and show none),
-   standing on the city's point; from BN_ALL0 the rest fade in round it in a tight cluster, behind and beside it (the name stays clear below). The Naval
-   Yard stands on the real shore next to its city (bnShore: the nearest water from the city point), mirrored when the sea lies to the left so its
-   piers (to the lower right in the pictures) face the sea. Every spot is a world point (the city's point plus an offset worked out once from its
+   standing on the city's point; from BN_ALL0 the rest fade in round it in a tight cluster, behind and beside it (the name stays clear below). Every
+   picture stands on land: its footprint (BNFOOT, the solid cells of the picture) is kept off the water at every zoom (bnLayout: the nearest dry spot,
+   smaller on a small island; drawn bigger below BN_HMIN only as far as it stays dry). The Naval Yard stands on the real coast at its city (bnShore:
+   the nearest shore where its sheds stand dry and its piers reach over the water), mirrored when that puts its piers (to the lower right in the
+   pictures) on the water; the others make room for it. Every spot is a world point (the city's point plus an offset worked out once from its
    buildings: bnLayout), drawn through toScreen every frame, so nothing slides as the map zooms or pans, across the wrap seam too. Sizes follow the
    map like the troop models between a floor (the mid zoom picture can be seen) and a cap, and never reach a neighbouring city. Construction, shown
-   for every nation: a new building is its construction site (the level I picture pale and see-through, a tower crane and a progress ring), a
-   building raising its level carries the crane at its side and the ring. A level rise flashes a ring (not with reduced motion or the battery saver).
+   for every nation (bnBuild): a new building goes up in stages (foundations, the building rising inside its scaffolding, the scaffolding coming
+   down) with dust and a progress ring; a level going up gets scaffolding round the existing building with the new level rising inside it. A level
+   rise flashes a ring (not with reduced motion or the battery saver).
    Drawn under the troop models, the counters and the names; only provinces on screen; each picture is made once at about its drawn size (BNC, dropped with
    the graphics, gfxReset). A tap on a picture opens its city (never over a unit badge: tap() asks hitAt and coreAt first). Fog: buildings are public. */
 const BN_K = ['silo', 'air', 'yard', 'fac', 'arms', 'rec', 'fort'];   // the buildings in order of importance (after the HQ)
 const BN_ART = {air:5, rec:5, yard:5, fort:3};   // the buildings with angled pictures (game levels); Fortifications levels I-III use pictures 1, 3 and 5
 const BN_IN0 = 20, BN_IN1 = 26, BN_ALL0 = 50, BN_ALL1 = 62, TRAY_ANIM = 1200;   // hexPx: the main picture fades in over IN0..IN1, the rest over ALL0..ALL1; a level pop (ms)
-const BN_HMIN = 72, BN_HMAX = 176, BN_K0 = 0.62;   // a picture's long side is BN_K0*hexPx css px between hexPx BN_HMIN and BN_HMAX (so it grows with the map), with a soft floor below
+const BN_HMIN = 72, BN_HMAX = 176, BN_K0 = 0.51;   // a picture's long side is BN_K0*hexPx css px between hexPx BN_HMIN and BN_HMAX (so it grows with the map), with a soft floor below (0.51: 18% smaller than the first 0.62, owner's #13)
 const BN_WPX = BN_K0*HS0;   // ... which is BN_WPX world px (times the picture's own factor: bnF) wherever it grows with the map
 const BN_STYLES = ['western', 'eastern-europe', 'middle-east', 'east-asia', 'south-asia', 'africa', 'latin-america'];
 // each picture's size (px), ground anchor and top of the building (fractions), HQ flagpole tops [x, y, pole length] (fractions; the flags are to be drawn on them)
 // and the Naval Yard's pier side: written by tools/cutout-angled.py --embed
 const BNMETA = {"bn-air-1":{"ax":0.5626,"ay":0.6612,"h":158,"top":0.0036,"w":256},"bn-air-2":{"ax":0.5378,"ay":0.6972,"h":161,"top":0.0034,"w":256},"bn-air-3":{"ax":0.5742,"ay":0.7471,"h":183,"top":0.0029,"w":256},"bn-air-4":{"ax":0.5829,"ay":0.7016,"h":192,"top":0.0026,"w":256},"bn-air-5":{"ax":0.5521,"ay":0.6604,"h":175,"top":0.0029,"w":256},"bn-fort-1":{"ax":0.5875,"ay":0.65,"h":165,"top":0.005,"w":256},"bn-fort-2":{"ax":0.5209,"ay":0.612,"h":178,"top":0.0051,"w":256},"bn-fort-3":{"ax":0.5184,"ay":0.6124,"h":171,"top":0.003,"w":256},"bn-fort-4":{"ax":0.5115,"ay":0.6484,"h":172,"top":0.0044,"w":256},"bn-fort-5":{"ax":0.5001,"ay":0.6515,"h":181,"top":0.0028,"w":256},"bn-hospital-1":{"ax":0.4488,"ay":0.665,"h":178,"top":0.0046,"w":256},"bn-hospital-2":{"ax":0.5263,"ay":0.6319,"h":158,"top":0.0048,"w":256},"bn-hospital-3":{"ax":0.5152,"ay":0.6756,"h":248,"top":0.003,"w":256},"bn-hospital-4":{"ax":0.5031,"ay":0.6434,"h":201,"top":0.0037,"w":256},"bn-hospital-5":{"ax":0.4926,"ay":0.7379,"h":204,"top":0.0025,"w":256},"bn-hq-africa":{"ax":0.4631,"ay":0.6541,"flags":[[0.0093,0.5061,0.1816],[0.0357,0.5286,0.1816],[0.0621,0.5531,0.1816],[0.0884,0.5776,0.1796],[0.2668,0.7469,0.1776],[0.2924,0.7714,0.1776],[0.3195,0.7959,0.1755],[0.3459,0.8204,0.1755]],"h":179,"top":0.0061,"w":256},"bn-hq-east-asia":{"ax":0.445,"ay":0.6655,"flags":[[0.009,0.5425,0.1682],[0.0345,0.5633,0.1682],[0.06,0.586,0.1682],[0.0855,0.6087,0.1664],[0.2579,0.7675,0.1645],[0.2828,0.7902,0.1626],[0.3083,0.7996,0.1739],[0.3345,0.8318,0.1645]],"h":187,"top":0.0038,"w":256},"bn-hq-eastern-europe":{"ax":0.4028,"ay":0.7249,"flags":[[0.0086,0.6248,0.138],[0.0329,0.6419,0.138],[0.0573,0.6605,0.138],[0.0817,0.6791,0.1364],[0.2464,0.8078,0.1364],[0.2701,0.8264,0.1349],[0.2951,0.845,0.1333],[0.3195,0.862,0.1349]],"h":218,"top":0.0047,"w":256},"bn-hq-latin-america":{"ax":0.4529,"ay":0.6713,"flags":[[0.0093,0.5527,0.1645],[0.0356,0.5749,0.1627],[0.062,0.5952,0.1645],[0.0883,0.6174,0.1627],[0.2664,0.7708,0.1627],[0.292,0.793,0.1608],[0.3184,0.8152,0.159],[0.3454,0.8355,0.1608]],"h":197,"top":0.0037,"w":256},"bn-hq-middle-east":{"ax":0.4649,"ay":0.6629,"flags":[[0.0093,0.5236,0.1752],[0.0357,0.5453,0.1752],[0.0621,0.5689,0.1752],[0.0884,0.5925,0.1732],[0.2668,0.7559,0.1732],[0.2924,0.7795,0.1713],[0.3188,0.8031,0.1693],[0.3459,0.8248,0.1713]],"h":186,"top":0.0039,"w":256},"bn-hq-south-asia":{"ax":0.4422,"ay":0.6756,"flags":[[0.0089,0.5468,0.1667],[0.0341,0.5674,0.1667],[0.0593,0.5899,0.1667],[0.0846,0.6124,0.1648],[0.2551,0.7678,0.1648],[0.2797,0.7921,0.161],[0.3056,0.8127,0.161],[0.3308,0.8333,0.1629]],"h":186,"top":0.0056,"w":256},"bn-hq-western":{"ax":0.4603,"ay":0.6778,"flags":[[0.0093,0.5527,0.1645],[0.0357,0.573,0.1645],[0.0621,0.5952,0.1645],[0.0884,0.6174,0.1627],[0.2668,0.7708,0.1627],[0.2924,0.7948,0.159],[0.3195,0.817,0.1571],[0.3459,0.8355,0.1608]],"h":198,"top":0.0055,"w":256},"bn-rec-1":{"ax":0.4877,"ay":0.6607,"h":205,"top":0.004,"w":256},"bn-rec-2":{"ax":0.5413,"ay":0.6419,"h":184,"top":0.0028,"w":256},"bn-rec-3":{"ax":0.5052,"ay":0.6287,"h":176,"top":0.003,"w":256},"bn-rec-4":{"ax":0.4761,"ay":0.5894,"h":214,"top":0.0035,"w":256},"bn-rec-5":{"ax":0.4815,"ay":0.6502,"h":196,"top":0.0025,"w":256},"bn-yard-1":{"ax":0.4514,"ay":0.6268,"h":200,"piers":"right","top":0.0026,"w":256},"bn-yard-2":{"ax":0.4718,"ay":0.5902,"h":172,"piers":"right","top":0.0031,"w":256},"bn-yard-3":{"ax":0.4397,"ay":0.5802,"h":174,"piers":"right","top":0.0032,"w":256},"bn-yard-4":{"ax":0.4566,"ay":0.5906,"h":181,"piers":"right","top":0.0017,"w":256},"bn-yard-5":{"ax":0.4629,"ay":0.6494,"h":170,"piers":"right","top":0.0035,"w":256}};
+// each picture's footprint: the solid cells (the building and its ground, not the see-through shadow) of a 16 x 12 grid over it, 4 cells a hex digit, row
+// by row: written by tools/bn-foot.py --embed. The layout keeps them off the water (bnFoot, bnWet)
+const BNFOOT = {"bn-air-1":"00100038007800fc03dc07be0ffe1efe3cfc7838f0102000","bn-air-2":"0020007800f001f803fc07bc0fff1ffc7ff8f7f063e000e0","bn-air-3":"00080038007800d801b8037e06fe0ffe1bfe35fcebf01100","bn-air-4":"0010003400c80130064c0dfe137e67fc1bfe07f803e00000","bn-air-5":"002003d00fbc1efe7dff36fe69feb7fe0ffe1ffc08f00040","bn-fort-1":"001c007e007e007e007e007f01fe37f83fc07f803e000c00","bn-fort-2":"000c003f003f003e0c3f3efe7ff03fc03f807f003e001800","bn-fort-3":"000c00fc01fc7ffe7ef77fff1ffc1f701ee00fe00fc00300","bn-fort-4":"00c007f81cfe7bfffffc7ffc7ff87efc2ffc07fc097c0000","bn-fort-5":"002007f03ffe7dfe7ffe3fff1ffc7ff867f81b300f7003c0","bn-hospital-1":"02000fc01ff03ffc3ffc3ffc3ffc0ff01fe03fc0f3002000","bn-hospital-2":"0020007801fe7ffe7ffe7ffe0ffe0ffe07e00fc01d800800","bn-hospital-3":"00000ff03ffe77fe5fff7ffe7fffffff7ffe7dfc07f001c0","bn-hospital-4":"07803ff8ffff7fff7fffbfffbffffffe7ffc1df803e000c0","bn-hospital-5":"03001ff07ffebffc6ffe5ffc3ffc3ffcfffefffe3ffc1ff8","bn-hq-africa":"08001dc07fe07ff07ff07ff81ffc1ffc07fc00f800e00000","bn-hq-east-asia":"00000f803fc07fe07fe07ff07ffc1ff81ffc07f800e00000","bn-hq-eastern-europe":"000000000e003f007f00ff80ff987ff80ff80ff801e00080","bn-hq-latin-america":"000009001fc07fe07fe07ff07ffc0ffc0ffc02f800e00000","bn-hq-middle-east":"00001f803fe07ff07ff07ff83ffc0ffc07fc00f800e00000","bn-hq-south-asia":"08000b003f807fe07fe0fff87ff81ff80ffc03f000e00000","bn-hq-western":"000009001fc07fe07ff07ff07ffc1ffc0ffc02f800e00000","bn-rec-1":"018007f81ffc1ffc1ffc1ffc1ffc1ff81ff07e00f8007000","bn-rec-2":"018003f80ffe3fff7fffffff7fff1ffe0ffc0ff81cf00060","bn-rec-3":"03000fe01ff07ff8dffeffff7ffe1ffc0ff807f80cf00060","bn-rec-4":"03000ff07ffffffffffefffcfffc3ff81ff007e003c00180","bn-rec-5":"010007f03ffefffffffffffefffcfffc3ff81ff00fe007e0","bn-yard-1":"004007c01f807e1c780e198332e258703e401f000f800300","bn-yard-2":"002000e00f881f3e7c1ff98c29c029e01c201f0007800300","bn-yard-3":"08101ce07f8e3f3f3c3c3d9819c01c605f003f801f000c00","bn-yard-4":"0180039a0fe03f9e3f7e1ebc0cc01e405f807f803e001800","bn-yard-5":"02000f001f883fbe3fff7ff03d901ef83f3c7e1c7c001000"};
 const bnA = h => smooth01((h - BN_IN0)/(BN_IN1 - BN_IN0)), bnB = h => smooth01((h - BN_ALL0)/(BN_ALL1 - BN_ALL0));
 const bnL = h => h >= BN_HMIN ? Math.min(h, BN_HMAX)*BN_K0 : BN_HMIN*BN_K0*Math.pow(h/BN_HMIN, 0.35);   // css px of a picture's long side (factor 1) at hexPx h
 // a building's picture name at a game level (null: no angled picture); the HQ by style
@@ -5820,7 +5826,7 @@ const BN_HQ = new Map(); const BN_REG = {'Europe':'western', 'Americas':'latin-a
 function bnHqStyle(n){ const N = S.nations[n]; if (!N) return 'western'; let st = BN_HQ.get(N.name + '|' + N.country); if (st) return st;
   const L = window.NATIONS && NATIONS.nations || [], e = L.find(q => q.country === N.country) || L.find(q => q.name === N.name);
   st = e && BN_STYLES.includes(e.hq) ? e.hq : e && BN_REG[e.region] || 'western'; BN_HQ.set(N.name + '|' + N.country, st); return st; }
-let BNL = new Map(), BNSH = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0, BNP = null; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
+let BNL = new Map(), BNSH = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0, BN_TL = 0, BNP = null; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
 // a province's buildings that have a picture, the most important first: {k, lv, nm (picture), c (its construction), site (a new one)}
 function bnItems(p){ const B = S.bld[p], o = S.owner[p], c = o >= 0 ? S.cons[p] : null, out = [], N = o >= 0 ? S.nations[o] : null;
   if (N && N.alive && N.capital === p) out.push({k:'hq', lv:1, nm:bnName('hq', bnHqStyle(o)), c:null, site:false});
@@ -5833,61 +5839,102 @@ function bnNear(p, cheap){ if (BNL_G !== G) bnReset(); let d = BNND.get(p); if (
   for (const Q of G.P){ if (Q === P || Q.sea || !Q.city) continue; const dx = Q.x - P.x, dy = Q.y - P.y; if (Math.abs(dx) < d*2 && Math.abs(dy) < d*2) d = Math.min(d, Math.hypot(dx, dy)/2); }
   BNND.set(p, d); return d; }
 function bnReset(){ BNL.clear(); BNSH.clear(); BNND.clear(); BNL_G = G; }
-// the Naval Yard's spots on the shore next to its city: along rays every 7.5 degrees from the city's point, the first water (out to BN_SHORE world px)
-// and the last dry point before it, a step inland; nearest first. mir: the water lies to the left, so the picture is mirrored and its piers (to the
-// lower right in the pictures) point to it. bnLayout takes the nearest spot that leaves the city's point (its HQ or main building) clear
-const BN_SHORE = 40, BN_FARYARD = 18;
-function bnShore(p){ if (BNL_G !== G) bnReset(); let E = BNSH.get(p); if (E) return E; const P = G.P[p], wet = (x, y) => isWet(x, y) && isWet(x + 1.5, y) && isWet(x - 1.5, y) && isWet(x, y + 1.5) && isWet(x, y - 1.5);
-  E = []; const E2 = [];   // (E2: rays from a city point that is itself on the water's edge)
-  for (let i = 0; i < 48; i++){ const a = i/48*Math.PI*2, ux = Math.cos(a), uy = Math.sin(a); let r = 0;
-    for (r = 1; r <= BN_SHORE; r += 0.75) if (wet(P.x + ux*r, P.y + uy*r)) break;
-    if (r > BN_SHORE) continue; let t = r; while (t > 0 && isWet(P.x + ux*t, P.y + uy*t)) t -= 0.25;   // (back to the land's edge)
-    const t0 = Math.max(0, t - 1), c = {dx:ux*t0, dy:uy*t0, mir:ux < -0.05, sea:[+ux.toFixed(3), +uy.toFixed(3)], r:+r.toFixed(2), d:t0};
-    (t <= 0 && isWet(P.x, P.y) ? E2 : E).push(c); }
-  if (!E.length) E.push(...E2); E.sort((a, b) => a.r - b.r || a.d - b.d);
-  // a port on a big river with the sea far off (Hamburg on the Elbe): the yard stands on the river's bank, on the city's side, its piers to the water
-  if (!E.length || E[0].r > BN_RIVFAR){ const R = bnRivers(), cx = Math.floor(P.x/R.C), cy = Math.floor(P.y/R.C), RV = [];
-    for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) for (const [x0, y0, x1, y1] of R.M.get(i + ':' + j) || []){
-      const vx = x1 - x0, vy = y1 - y0, l2 = vx*vx + vy*vy; if (l2 < 1e-4) continue; const u = Math.max(0, Math.min(1, ((P.x - x0)*vx + (P.y - y0)*vy)/l2)), qx = x0 + vx*u, qy = y0 + vy*u, dq = Math.hypot(P.x - qx, P.y - qy);
-      if (dq > BN_RIVFAR) continue; const l = Math.sqrt(l2); let nx = -vy/l, ny = vx/l; if (nx*(P.x - qx) + ny*(P.y - qy) < 0){ nx = -nx; ny = -ny; }   // (the normal toward the city's bank)
-      const ax = qx + nx*BN_BANK, ay = qy + ny*BN_BANK; RV.push({dx:ax - P.x, dy:ay - P.y, mir:-nx < -0.05, sea:[+(-nx).toFixed(3), +(-ny).toFixed(3)], r:+dq.toFixed(2), d:Math.hypot(ax - P.x, ay - P.y), riv:true}); }
-    if (RV.length){ RV.sort((a, b) => a.r - b.r); E.splice(0, E.length, ...RV); } }
-  BNSH.set(p, E); return E; }
+// a picture's footprint (bnFoot): its solid cells' centres [u, v] (fractions of the picture): all of them, and for the Naval Yard the land half
+// (the sheds, cranes and docks: behind the line through its anchor across the piers' direction, to the lower right in the pictures) and the pier
+// half. A picture without a mask (one drawn in code, or not cut yet): an ellipse in its box
+const BNFT = new Map();
+function bnFoot(nm){ let F = BNFT.get(nm); if (F) return F; const h = BNFOOT[nm], M = BNMETA[nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, all = [], land = [], pier = [];
+  for (let i = 0; i < 192; i++){ const u = (i % 16 + 0.5)/16, v = (Math.floor(i/16) + 0.5)/12;
+    if (h ? parseInt(h[i >> 2], 16) & (8 >> (i & 3)) : (u - 0.5)**2/0.25 + (v - 0.55)**2/0.2 <= 1) all.push([u, v]); }
+  for (const q of all) ((q[0] - M.ax)*M.w*0.866 + (q[1] - M.ay)*M.h*0.5 <= 0 ? land : pier).push(q);
+  F = {all, land, pier}; BNFT.set(nm, F); return F; }
+// the share of the cells pts of picture nm that lie on the water, the picture standing at world (x, y) with its long side s world px (mir: mirrored);
+// past the share stop it returns 1 at once
+function bnWet(nm, pts, x, y, s, mir, stop = 1){ const M = BNMETA[nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, lim = stop*pts.length; let n = 0;
+  for (const [u, v] of pts) if (isWet(x + (mir ? M.ax - u : u - M.ax)*w, y + (v - M.ay)*h) && ++n > lim) return 1;
+  return pts.length ? n/pts.length : 0; }
+// the Naval Yard's spot on the real coast at its city (owner's #14): every dry point by the water (water within 2.25 world px) up to BN_YMAX world px
+// from the city's point, on its own country's ground, is tried both ways round (mir: mirrored, the piers to the lower left instead of the lower
+// right), and the nearest whose land half stands dry and whose piers reach over the water wins (a few world px further is worth a dry yard with its
+// piers on the water). An estuary's shore counts (Kolkata's yard on the Hooghly's mouth). No water that near: the bank of the river the city stands
+// on (BN_RIVFAR); else the yard joins its city's cluster (far), turned to the nearest water. Worked out once per province and picture:
+// {dx, dy, mir, sea (the water's direction from the yard), r (world px from the city), lw / pw (wet shares of the land half / the pier half), riv, far}
+const BN_YMAX = 15, BN_RIVFAR = 9, BN_BANK = 1.6, BN_WETTOL = 0.02;
+function bnShore(p, e){ if (BNL_G !== G) bnReset(); if (!e) e = bnItems(p).find(q => q.k === 'yard') || {k:'yard', lv:1, nm:'bn-yard-1'};
+  const key = p + '|' + e.nm; let E = BNSH.get(key); if (E) return E; const P = G.P[p], s = Math.min(BN_WPX*bnF('yard', e.lv), bnNear(p)*2.2), F = bnFoot(e.nm), C = [];
+  const mine = (x, y) => { const c = worldToCell(x, y), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea || q === p || G.P[q].country === P.country; };
+  for (let gy = -BN_YMAX; gy <= BN_YMAX; gy += 0.75) for (let gx = -BN_YMAX; gx <= BN_YMAX; gx += 0.75){ const d = Math.hypot(gx, gy), x = P.x + gx, y = P.y + gy; if (d > BN_YMAX || isWet(x, y)) continue;
+    let w = false; for (let k = 0; k < 8 && !w; k++) w = isWet(x + Math.cos(k*Math.PI/4)*2.25, y + Math.sin(k*Math.PI/4)*2.25); if (w && mine(x, y)) C.push([gx, gy, d]); }
+  C.sort((a, b) => a[2] - b[2]); let B = null;
+  for (const [gx, gy, d] of C){ if (B && d >= B.sc) break;
+    for (const mir of [false, true]){ const lw = Math.max(bnWet(e.nm, F.land, P.x + gx, P.y + gy, s, mir), bnWet(e.nm, F.land, P.x + gx, P.y + gy, s*0.72, mir)); if (B && d + 40*lw >= B.sc) continue;   // (dry zoomed right in too)
+     
+      const pw = bnWet(e.nm, F.pier, P.x + gx, P.y + gy, s, mir), sc = d + 40*lw + 14*Math.max(0, 0.55 - pw); if (!B || sc < B.sc) B = {dx:gx, dy:gy, mir, r:+d.toFixed(2), d, lw:+lw.toFixed(3), pw:+pw.toFixed(3), sc}; } }
+  const seaAt = (x, y) => { let sx = 0, sy = 0; for (let k = 0; k < 24; k++){ const a = k*Math.PI/12, ux = Math.cos(a), uy = Math.sin(a); for (const r of [2, 3.5, 5]) if (isWet(x + ux*r, y + uy*r)){ sx += ux; sy += uy; } }
+    const l = Math.hypot(sx, sy); return l ? [+(sx/l).toFixed(3), +(sy/l).toFixed(3)] : null; };
+  if (B && B.pw >= 0.2 && B.lw <= 0.5) E = Object.assign(B, {sea:seaAt(P.x + B.dx, P.y + B.dy)});
+  else { // a river port with no open water near (the rivers of lines.js are lines, not water on the mask): on the river's bank, on the city's side, the piers to it
+    const R = bnRivers(), cx = Math.floor(P.x/R.C), cy = Math.floor(P.y/R.C);
+    for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) for (const [x0, y0, x1, y1, rk] of R.M.get(i + ':' + j) || []){   // (the nearest river, a big one before a small one: rk is its rank, 1 the biggest)
+      const vx = x1 - x0, vy = y1 - y0, l2 = vx*vx + vy*vy; if (l2 < 1e-4) continue; const u = Math.max(0, Math.min(1, ((P.x - x0)*vx + (P.y - y0)*vy)/l2)), qx = x0 + vx*u, qy = y0 + vy*u, dq = Math.hypot(P.x - qx, P.y - qy), sc = dq + (rk - 1);
+      if (dq > BN_RIVFAR || E && sc >= E.sc) continue; const l = Math.sqrt(l2); let nx = -vy/l, ny = vx/l; if (nx*(P.x - qx) + ny*(P.y - qy) < 0){ nx = -nx; ny = -ny; }   // (the normal toward the city's bank)
+      const ax = qx + nx*BN_BANK, ay = qy + ny*BN_BANK; E = {dx:ax - P.x, dy:ay - P.y, mir:-nx < -0.05, sea:[+(-nx).toFixed(3), +(-ny).toFixed(3)], r:+dq.toFixed(2), d:Math.hypot(ax - P.x, ay - P.y), riv:true, rank:rk, sc}; }
+    if (!E){ const sd = B ? seaAt(P.x + B.dx, P.y + B.dy) || [B.dx, B.dy] : seaAt(P.x, P.y); E = {dx:0, dy:0, mir:!!sd && sd[0] < -0.05, sea:sd, r:B ? B.r : 99, d:0, far:true}; } }
+  BNSH.set(key, E); return E; }
 // the rivers' segments (lines.js: the Natural Earth rivers the map draws) in a coarse grid of world cells, once per map
-const BN_RIVFAR = 9, BN_BANK = 1.6; let BNRIV = null;
+let BNRIV = null;
 function bnRivers(){ if (BNRIV && BNRIV.g === G) return BNRIV; const M = new Map(), C = 16;
   if (typeof LINES !== 'undefined' && LINES && LINES.rivers) for (const R of LINES.rivers){ let px = null, py = 0;
     for (let i = 1; i < R.length; i += 2){ const x = OX + HS*SQ3*R[i]/20, y = OY + HS*1.5*R[i + 1]/20;
-      if (px !== null){ const k = Math.floor((px + x)/2/C) + ':' + Math.floor((py + y)/2/C); let a = M.get(k); if (!a) M.set(k, a = []); a.push([px, py, x, y]); }
+      if (px !== null){ const k = Math.floor((px + x)/2/C) + ':' + Math.floor((py + y)/2/C); let a = M.get(k); if (!a) M.set(k, a = []); a.push([px, py, x, y, R[0]]); }
       px = x; py = y; } }
   return BNRIV = {g:G, M, C}; }
 // a picture's box around its anchor, in units of its long side: [x0, y0, x1, y1]
 function bnBox(nm, mir){ const M = BNMETA[nm]; if (!M) return [-0.5, -0.4, 0.5, 0.25]; const L = Math.max(M.w, M.h), w = M.w/L, h = M.h/L, ax = mir ? 1 - M.ax : M.ax;
   return [-ax*w, -M.ay*h, (1 - ax)*w, (1 - M.ay)*h]; }
-// where each of a province's pictures stands: world px from the province's point, worked out once for its buildings and levels. The first at the point
-// itself (the HQ exactly), the Naval Yard on its shore, each next one at the nearest free spot beside or behind those placed (in front of the point is
-// the name's), boxes overlapping a little (a tight cluster)
-function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.map(e => e.nm + (e.site ? 's' : '')).join(','); let L = BNL.get(p); if (L && L.sig === sig) return L; if (cheap && BN_NEW-- <= 0) return null;
-  const placed = [], pos = [], mirs = [], yi = its.findIndex(e => e.k === 'yard'); let sh = null;
-  const sz = e => BN_WPX*bnF(e.k, e.lv), bx = (e, x, y, m) => { const b = bnBox(e.nm, m), s = sz(e); return [x + b[0]*s, y + b[1]*s, x + b[2]*s, y + b[3]*s]; };
+// where each of a province's pictures stands, on land (owner's #12): world px from the province's point, worked out once for its buildings and levels.
+// The Naval Yard first, on its shore (bnShore; the others make room for it). The first of the others at the point itself (the HQ exactly) when its
+// footprint (bnFoot) stands dry there and clear of the yard, else at the nearest spot where it does; each next one at the nearest free dry spot beside
+// or behind those placed (in front of the point is the name's), boxes overlapping a little (a tight cluster). A building with no dry room at its size
+// within 4 of its sizes is made smaller there (shr, down to half; a small island). Below hexPx BN_HMIN the pictures are drawn bigger than laid out
+// (bnL): each grows only as far as it stays dry (grow, up to the size it is drawn at where it first shows: the first from BN_IN0, the rest from BN_ALL0)
+const BN_DIRS = [180, 0, 150, 30, 120, 60, 90, 205, -25, 235, -55, -90].map(d => d*Math.PI/180);
+const bnGz = h => bnL(h)/(BN_K0*Math.min(h, BN_HMAX)), BN_GROW0 = bnGz(BN_IN0), BN_GROW1 = bnGz(BN_ALL0);   // (how much bigger than laid out a picture is drawn at hexPx h)
+function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.map(e => e.nm + (e.site ? 's' : '')).join(','); let L = BNL.get(p); if (L && L.sig === sig) return L;
+  if (cheap && (BN_NEW-- <= 0 || performance.now() > BN_TL)) return null;
+  const P = G.P[p], n = its.length, pos = [], mirs = its.map(() => false), shr = its.map(() => 1), grow = its.map(() => 1), placed = [], yi = its.findIndex(e => e.k === 'yard'); let sh = null;
+  const cw = bnNear(p)*2.2, sz = e => Math.min(BN_WPX*bnF(e.k, e.lv), cw), bx = (e, x, y, m, s) => { const b = bnBox(e.nm, m); return [x + b[0]*s, y + b[1]*s, x + b[2]*s, y + b[3]*s]; };
   const ov = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0]))*Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
-  if (yi >= 0){ const C = bnShore(p), e = its[yi], m0 = its.find(q => q.k !== 'yard'), b0 = m0 ? bx(m0, 0, 0, false) : null, r0 = C.length ? C[0].r : 0;
-    sh = C.find(c => c.r <= r0 + 8 && (!b0 || (() => { const b = bx(e, c.dx, c.dy, c.mir); return ov(b, b0) < 0.12*Math.min((b[2] - b[0])*(b[3] - b[1]), (b0[2] - b0[0])*(b0[3] - b0[1])); })())) || C[0] || {dx:0, dy:BN_WPX*0.5, mir:false, far:true};
-    if (sh.r > BN_FARYARD) sh = Object.assign({}, sh, {far:true}); }   // (the water too far off to look like the city's own: the yard joins its cluster, still turned to the water)
-  const DIRS = [180, 0, 150, 30, 120, 60, 90, 205, -25].map(d => d*Math.PI/180);
-  let first = true, o0 = [0, 0]; const cityish = G.P[p].city || its.some(e => e.k === 'hq');
-  for (const e of its){ let at;
-    if (e.k === 'yard' && !sh.far) at = [sh.dx, sh.dy];
-    else if (first) at = o0 = [0, cityish ? 0 : -BN_WPX*0.5];   // (a province without a town: above its name, which stands on its point)
-    else { let bd = Infinity; at = null; const s = sz(e);
-      DIRS.forEach((a, j) => { const ux = Math.cos(a), uy = -Math.sin(a)*0.62; for (let d = s*0.25; d < s*4; d += s*0.06){ const x = o0[0] + ux*d, y = o0[1] + uy*d, b = bx(e, x, y, false), A = (b[2] - b[0])*(b[3] - b[1]);
-        if (placed.every(q => ov(q, b) < 0.1*Math.min(A, (q[2] - q[0])*(q[3] - q[1])))){ const sc = d + j*s*0.05; if (sc < bd){ bd = sc; at = [x, y]; } break; } } });
-      if (!at) at = [o0[0], o0[1] - s*0.5]; }
-    if (e.k !== 'yard' || sh.far) first = false;
-    const m = e.k === 'yard' && !!sh.mir; placed.push(bx(e, at[0], at[1], m)); pos.push(at); mirs.push(m); }
-  L = {sig, pos, mir:mirs, shore:sh}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
-// a picture px device px on its long side (in steps of 8 px, so it is drawn about 1:1: a plain blit), plain, pale (a construction site) or darkened
-// for the night (lk: 0..8); made from the file by halving steps, a few new ones a frame (BN_MK; meanwhile the last one made for it stands in), kept
+  const free = b => { const A = (b[2] - b[0])*(b[3] - b[1]); return placed.every(q => ov(q, b) < 0.1*Math.min(A, (q[2] - q[0])*(q[3] - q[1]))); };
+  const pts = e => e.k === 'yard' ? bnFoot(e.nm).land : bnFoot(e.nm).all, wet = (e, x, y, m, s, t) => bnWet(e.nm, pts(e), P.x + x, P.y + y, s, m, t);
+  const dry = (e, x, y, m, s) => wet(e, x, y, m, s, BN_WETTOL) <= BN_WETTOL && wet(e, x, y, m, s*0.72, BN_WETTOL) <= BN_WETTOL;   // (and drawn smaller, zoomed right in)
+  const fits = (e, x, y, m, s) => free(bx(e, x, y, m, s)) && dry(e, x, y, m, s);
+  // the nearest spot from o where e fits, along the directions (in their order of preference), from o itself (at0) or from a quarter of its size out
+  const find = (e, o, m, s, at0, R = sz(e)*(at0 ? 2 : 2.6)) => { if (at0 && fits(e, o[0], o[1], m, s)) return o; let bd = Infinity, at = null;   // (R: within two or so of its full sizes, a tight cluster)
+    BN_DIRS.forEach((a, j) => { const ux = Math.cos(a), uy = -Math.sin(a)*0.62, pen = j*s*0.05;
+      for (let d = at0 ? s*0.06 : s*0.25; d < R && d + pen < bd; d += s*0.06){ const x = o[0] + ux*d, y = o[1] + uy*d; if (fits(e, x, y, m, s)){ bd = d + pen; at = [x, y]; break; } } });
+    return at; };
+  const put = (i, o, at0) => { const e = its[i]; for (const k of [1, 0.8, 0.65, 0.5]){ const at = find(e, o, mirs[i], sz(e)*k, at0); if (at) return [at, k]; }
+    if (at0) for (const k of [0.8, 0.5]){ const at = find(e, o, mirs[i], sz(e)*k, at0, sz(e)*4); if (at) return [at, k]; }   // (a town on the water's edge of a small island: the first a little further out, on the nearest land with room)
+    let at = null, bw = Infinity; const s = sz(e)*0.5;   // (no dry room even at half size, a small island: the free spot with the least on the water, as small)
+    for (const a of BN_DIRS) for (let d = 0; d < s*(at0 ? 4 : 5.2); d += s*0.25){ const x = o[0] + Math.cos(a)*d, y = o[1] - Math.sin(a)*0.62*d; if (!free(bx(e, x, y, mirs[i], s))) continue;
+      const w = wet(e, x, y, mirs[i], s, 1) + d/s*0.01; if (w < bw){ bw = w; at = [x, y]; } }
+    return [at || [o[0], o[1] - s*0.5], 0.5]; };
+  if (yi >= 0){ const e = its[yi]; sh = bnShore(p, e); mirs[yi] = !!sh.mir;
+    if (!sh.far){ let k = 1, bw = Infinity; for (const k1 of [1, 0.8, 0.65, 0.5]){ const w = Math.max(wet(e, sh.dx, sh.dy, mirs[yi], sz(e)*k1, 1), wet(e, sh.dx, sh.dy, mirs[yi], sz(e)*k1*0.72, 1)); if (w < bw - 0.01){ bw = w; k = k1; } if (w <= BN_WETTOL) break; }   // (the yard stays on its shore: smaller where its land half would reach the water)
+      pos[yi] = [sh.dx, sh.dy]; shr[yi] = k; placed.push(bx(e, sh.dx, sh.dy, mirs[yi], sz(e)*k)); } }
+  const cityish = P.city || its.some(e => e.k === 'hq'); let o0 = null;
+  for (let i = 0; i < n; i++){ if (pos[i]) continue; const e = its[i]; let r;
+    if (!o0){ const o = [0, cityish ? 0 : -BN_WPX*0.5]; r = put(i, o, true); o0 = r[0]; }   // (a province without a town: above its name, which stands on its point)
+    else r = put(i, o0, false);
+    pos[i] = r[0]; shr[i] = r[1]; placed.push(bx(e, r[0][0], r[0][1], mirs[i], sz(e)*r[1])); }
+  for (let i = 0; i < n; i++){ if (shr[i] < 1) continue; const e = its[i];
+    for (let g = i ? BN_GROW1 : BN_GROW0; g > 1.001; g = Math.max(1, g/1.12)) if (dry(e, pos[i][0], pos[i][1], mirs[i], sz(e)*g)){ grow[i] = g; break; } }
+  L = {sig, pos, mir:mirs, shr, grow, shore:sh}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
+// a picture's drawn long side (css px) at the current zoom: bnL's size for it, no bigger than its layout lets it grow on land, nor than cap
+const bnDrawL = (e, Lo, i, L1, cap) => Math.min(L1*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*view.s, cap);
+// a picture px device px on its long side (in steps of 8 px, so it is drawn about 1:1: a plain blit), plain, pale (pale 1), its scaffolding (pale 2: the
+// standards and the ledgers, level along each face, with their netting, cut to the building's shape) or darkened for the night (lk: 0..8); made from the file by halving steps, a few new ones a frame (BN_MK; meanwhile the last one made for it stands in), kept
 // within BNC_MAX bytes (least recently drawn dropped first). null while the file loads
 const BNC_MAX = 24e6, BNC_LAST = new Map(); let BNC_B = 0, BN_MK = 0;
 function bnPic(nm, px, pale, lk){ const im = ART.img(nm); if (!im){ ART.want(nm); return null; }
@@ -5896,28 +5943,68 @@ function bnPic(nm, px, pale, lk){ const im = ART.img(nm); if (!im){ ART.want(nm)
   if (BN_MK-- <= 0){ const o = BNC_LAST.get(lkey); if (o){ animFast(); return o; } }
   c = L === L0 ? (() => { const o = document.createElement('canvas'); o.width = W0; o.height = H0; o.getContext('2d').drawImage(im, 0, 0); return o; })() : ART.scaled(im, W0*L/L0, H0*L/L0);
   const g = c.getContext('2d');
-  if (pale){ g.globalCompositeOperation = 'saturation'; g.fillStyle = '#808080'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(214,206,186,.38)'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'destination-in'; g.drawImage(im, 0, 0, c.width, c.height); }
+  if (pale === 2){ const W = c.width, H = c.height, ax = (BNMETA[nm] ? BNMETA[nm].ax : 0.5)*W, sp = Math.max(4, Math.round(Math.max(W, H)/13)), lw = Math.max(1, sp/5);
+    g.clearRect(0, 0, W, H); g.fillStyle = 'rgba(70,84,70,.42)'; g.fillRect(0, 0, W, H); g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const [col, wd] of [['rgba(36,26,12,.8)', lw + 1.2], ['#dcc38c', lw]]){ g.strokeStyle = col; g.lineWidth = wd; g.beginPath();
+      for (let x = ax % sp; x < W; x += sp){ g.moveTo(x, 0); g.lineTo(x, H); }
+      for (let y = 0; y < H + W/2; y += sp*0.8){ g.moveTo(0, y - 0.5*ax); g.lineTo(ax, y); g.lineTo(W, y - 0.5*(W - ax)); } g.stroke(); }
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(im, 0, 0, W, H); }
+  else if (pale){ g.globalCompositeOperation = 'saturation'; g.fillStyle = '#808080'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(214,206,186,.38)'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'destination-in'; g.drawImage(im, 0, 0, c.width, c.height); }
   if (lk){ g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(8,16,34,${(lk/8*0.55).toFixed(3)})`; g.fillRect(0, 0, c.width, c.height); }
   g.globalCompositeOperation = 'source-over';
   BNC.set(key, c); BNC_LAST.set(lkey, c); BNC_B += c.width*c.height*4;
   for (const [k, v] of BNC){ if (BNC_B <= BNC_MAX) break; BNC.delete(k); BNC_B -= v.width*v.height*4; if (BNC_LAST.get(k.slice(0, k.lastIndexOf('|'))) === v) BNC_LAST.delete(k.slice(0, k.lastIndexOf('|'))); }
   return c; }
-// a small tower crane (code drawn, original): a yellow lattice mast with its foot at (x, y), H css px tall, the jib reaching toward the side dir
-// (1 right, -1 left) over the building, a counter-jib with its weight, the tie bars and a hook on its cable
-function bnCrane(x, y, H, dir, a){ ctx.save(); ctx.globalAlpha *= a; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const mw = Math.max(2, H*0.07), T = y - H, J = H*0.62*dir, K = -H*0.22*dir, ap = T - H*0.16, Y = '#e3ad35', D = 'rgba(24,20,10,.8)';
-  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x + mw*0.9, y + mw*0.2, mw*1.6, mw*0.5, 0, 0, Math.PI*2); ctx.fill();   // (its foot's shadow)
-  ctx.strokeStyle = D; ctx.lineWidth = Math.max(1, mw*0.35) + 1.2; ctx.beginPath(); ctx.moveTo(x, ap); ctx.lineTo(x + J, T); ctx.moveTo(x, ap); ctx.lineTo(x + K, T); ctx.stroke();
-  ctx.fillStyle = D; ctx.fillRect(x - mw/2 - 0.7, T - 0.7, mw + 1.4, H + 0.7); ctx.fillRect(Math.min(x + K, x + J) - 0.7, T - mw*0.45 - 0.7, Math.abs(J - K) + 1.4, mw*0.9 + 1.4);
-  ctx.fillStyle = Y; ctx.fillRect(x - mw/2, T, mw, H); ctx.fillRect(Math.min(x + K, x + J), T - mw*0.45, Math.abs(J - K), mw*0.9);
-  ctx.strokeStyle = 'rgba(90,62,10,.85)'; ctx.lineWidth = Math.max(0.6, mw*0.16); ctx.beginPath();   // (the lattice)
-  for (let v = T, k = 0; v < y - mw*0.5; v += mw, k++){ ctx.moveTo(x - mw/2, v); ctx.lineTo(x + mw/2, v + mw); }
-  for (let u = 0; u < Math.abs(J); u += mw){ const px = x + Math.sign(dir)*u; ctx.moveTo(px, T - mw*0.45); ctx.lineTo(px + Math.sign(dir)*mw, T + mw*0.45); } ctx.stroke();
-  ctx.strokeStyle = Y; ctx.lineWidth = Math.max(0.8, mw*0.35); ctx.beginPath(); ctx.moveTo(x, ap); ctx.lineTo(x + J, T); ctx.moveTo(x, ap); ctx.lineTo(x + K, T); ctx.moveTo(x - mw*0.4, T); ctx.lineTo(x, ap); ctx.lineTo(x + mw*0.4, T); ctx.stroke();
-  ctx.fillStyle = '#3b3e3c'; ctx.fillRect(x + K - (dir > 0 ? 0 : mw*1.6) - (dir > 0 ? 0 : 0), T - mw*0.2, mw*1.6, mw*1.3);   // (the counterweight)
-  ctx.fillStyle = '#2f3a40'; ctx.fillRect(x - mw*0.75, T + mw*0.45, mw*1.5, mw*1.1);   // (the cab)
-  const hx = x + J*0.72, hy = T + H*0.42; ctx.strokeStyle = 'rgba(30,30,30,.9)'; ctx.lineWidth = Math.max(0.6, mw*0.14); ctx.beginPath(); ctx.moveTo(hx, T + mw*0.45); ctx.lineTo(hx, hy); ctx.stroke();
-  ctx.fillStyle = '#2b2b2b'; ctx.fillRect(hx - mw*0.35, hy, mw*0.7, mw*0.6); ctx.restore(); }
+// a construction on the map (owner's #15; drawn in code, pictures of the stages may replace parts later), by its progress pf (0..1):
+// a new building: 1 foundations (to BN_ST1: the pad dug, its concrete footings poured one by one, then the slab), 2 the building rising (to BN_ST3:
+// its picture revealed from the ground up, scaffolding with its netting over the floors still to come and round the newest ones), 3 finishing (the
+// scaffolding taken down from the top). A level going up: scaffolding goes up round the existing building, the new level's picture rises inside it,
+// then the same finishing. Dust drifts off the site (by the clock, so at any frame rate; none with reduced motion); the battery saver draws each stage
+// as a still picture (no dust, no frames asked for). The progress ring at the upper left corner. No text
+const BN_ST1 = 0.2, BN_ST3 = 0.88, BN_ST0 = 0.12;   // (BN_ST0: a level going up, the scaffolding up by then)
+let BNDUST = null;
+function bnDustC(){ if (BNDUST) return BNDUST; const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), r = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  r.addColorStop(0, 'rgba(206,188,150,.9)'); r.addColorStop(0.55, 'rgba(190,170,130,.45)'); r.addColorStop(1, 'rgba(180,160,120,0)'); g.fillStyle = r; g.fillRect(0, 0, 32, 32); return BNDUST = c; }
+// a picture canvas c drawn at (X, Y, w, h), mirrored or not, only between the screen lines ya and yb (null: no limit that side)
+function bnBlit(c, X, Y, w, h, mir, ya = null, yb = null){ const cl = ya != null || yb != null, y0 = ya == null ? Y - 1 : Math.max(Y - 1, ya), y1 = yb == null ? Y + h + 1 : Math.min(Y + h + 1, yb);
+  if (cl){ if (y1 <= y0) return; ctx.save(); ctx.beginPath(); ctx.rect(X - 1, y0, w + 2, y1 - y0); ctx.clip(); }
+  if (mir){ ctx.save(); ctx.translate(X + w, Y); ctx.scale(-1, 1); ctx.drawImage(c, 0, 0, w, h); ctx.restore(); } else ctx.drawImage(c, X, Y, w, h);
+  if (cl) ctx.restore(); }
+// the foundations: the dug pad (an iso diamond round the anchor (x, y), half width hw), f of the footings poured, the slab over the last quarter
+function bnPad(x, y, hw, f, a, seed){ const hh = hw*0.5, k = Math.min(1, 0.35 + f*2.6), P = (u, v) => [x + (u + v)*hw/2*k, y + (u - v)*hh/2*k];
+  ctx.save(); ctx.globalAlpha = a; ctx.lineJoin = 'round'; const dia = s => { ctx.beginPath(); ctx.moveTo(...P(s, s)); ctx.lineTo(...P(s, -s)); ctx.lineTo(...P(-s, -s)); ctx.lineTo(...P(-s, s)); ctx.closePath(); };
+  dia(1); ctx.fillStyle = 'rgba(104,82,54,.9)'; ctx.fill(); ctx.lineWidth = Math.max(1, hw*0.05); ctx.strokeStyle = 'rgba(52,38,22,.9)'; ctx.stroke();   // (the pit and its rim)
+  dia(0.86); ctx.fillStyle = 'rgba(78,60,38,.55)'; ctx.fill();
+  if (f > 0.75){ dia(0.9); ctx.fillStyle = `rgba(184,180,170,${((f - 0.75)/0.25*0.85).toFixed(3)})`; ctx.fill(); }   // (the slab)
+  const n = Math.min(16, Math.floor(f/0.72*16)), fs = Math.max(0.9, hw*0.085);
+  for (let i = 0; i < n; i++){ const j = (i*7 + seed) % 16, u = -0.75 + (j % 4)*0.5, v = -0.75 + Math.floor(j/4)*0.5, [px, py] = P(u, v);   // (the footings, poured in a fixed shuffled order)
+    ctx.beginPath(); ctx.moveTo(px - fs, py); ctx.lineTo(px, py - fs*0.5); ctx.lineTo(px + fs, py); ctx.lineTo(px, py + fs*0.5); ctx.closePath(); ctx.fillStyle = '#cfccc3'; ctx.fill(); ctx.lineWidth = Math.max(0.6, fs*0.25); ctx.strokeStyle = 'rgba(40,40,36,.8)'; ctx.stroke(); }
+  ctx.restore(); }
+// dust: n puffs round the site's anchor (x, y) of half width hw, each on its own cycle of the clock
+function bnDust(x, y, hw, n, a, now, seed){ const D = bnDustC(), hh = hw*0.5; ctx.save();
+  for (let i = 0; i < n; i++){ const s = ((seed*9301 + i*49297) % 233280)/233280, t = (now/1700 + s) % 1, th = s*Math.PI*2 + i*2.1, r = hw*(0.22 + 0.32*t);
+    ctx.globalAlpha = a*0.5*Math.sin(Math.PI*t); ctx.drawImage(D, x + Math.cos(th)*hw*0.8 + t*hw*0.18 - r, y + Math.sin(th)*hh*0.8 - t*hh*1.1 - r*0.7, r*2, r*1.4); }
+  ctx.restore(); }
+// one construction: q the drawn item, e its building, c its picture canvas (the existing level's, or level I's for a site) at (X, Y, w, h), M its BNMETA
+function bnBuild(q, e, c, M, X, Y, w, h, lk, q0, now, a){ const still = saverOn(), live = !still && S.speed && !S.over ? acc : 0;
+  const pf = Math.max(0, Math.min(1, 1 - (e.c.h - live)/Math.max(1, e.c.h0))), seed = (q.p*31 + e.k.length*7) % 16, hw = w*0.4, ga = ctx.globalAlpha;
+  let cN = c, XN = X, YN = Y, wN = w, hN = h, MN = M;   // (the picture going up: the new level's for a level going up)
+  if (!e.site){ const nn = bnName(e.k, e.c.lvl || e.lv + 1), M2 = nn && BNMETA[nn], c2 = M2 && nn !== e.nm ? bnPic(nn, q.L*dpr*q0, 0, lk) : null;
+    if (c2){ const L2 = Math.max(M2.w, M2.h); cN = c2; MN = M2; wN = q.L*M2.w/L2; hN = q.L*M2.h/L2; XN = q.x - (q.mir ? 1 - M2.ax : M2.ax)*wN; YN = q.y - M2.ay*hN; } }
+  const scaf = bnPic(MN === M ? e.nm : bnName(e.k, e.c.lvl || e.lv + 1), q.L*dpr*q0, 2, lk), top = YN + MN.top*hN, rise = r => YN + hN - r*(YN + hN - top);   // (the screen line up to which the new picture stands at r)
+  ctx.globalAlpha = ga*a; let dn = 0;
+  const yd = e.k === 'yard', px = q.x + (yd ? (q.mir ? 1 : -1)*hw*0.3 : 0), py = q.y - (yd ? hw*0.17 : 0), ph = yd ? hw*0.7 : hw;   // (a Naval Yard's pad on its land half, not on the water)
+  if (e.site && pf < BN_ST1){ const f = pf/BN_ST1; bnPad(px, py, ph, f, ga*a, seed); dn = 4; }
+  else if (e.site && pf < BN_ST3){ const r = (pf - BN_ST1)/(BN_ST3 - BN_ST1), y0 = rise(r); bnPad(px, py, ph, 1, ga*a, seed);
+    bnBlit(cN, XN, YN, wN, hN, q.mir, y0); if (scaf){ ctx.globalAlpha = ga*a*0.95; bnBlit(scaf, XN, YN, wN, hN, q.mir, null, y0 + hN*0.12); } dn = 3; }   // (the scaffolding over the floors to come and round the newest)
+  else if (!e.site && pf < BN_ST3){ bnBlit(c, X, Y, w, h, q.mir, null);   // a level going up: the scaffolding rises round the existing building, then the new level inside it
+    if (pf < BN_ST0){ if (scaf){ ctx.globalAlpha = ga*a*0.95; bnBlit(scaf, XN, YN, wN, hN, q.mir, rise(pf/BN_ST0)); } }
+    else { const y0 = rise((pf - BN_ST0)/(BN_ST3 - BN_ST0)); bnBlit(cN, XN, YN, wN, hN, q.mir, y0); if (scaf){ ctx.globalAlpha = ga*a*0.95; bnBlit(scaf, XN, YN, wN, hN, q.mir, null, y0 + hN*0.12); } } dn = 2; }
+  else { const f = (pf - BN_ST3)/(1 - BN_ST3); bnBlit(cN, XN, YN, wN, hN, q.mir, null);   // finishing: the scaffolding comes down from the top
+    if (scaf){ ctx.globalAlpha = ga*a*0.95*(1 - f*0.6); bnBlit(scaf, XN, YN, wN, hN, q.mir, rise(1) + f*(YN + hN - rise(1))); } dn = 1; }
+  ctx.globalAlpha = ga;
+  if (dn && !still && !afxReduced()){ bnDust(px, py, ph, dn, ga*a, now, seed); if ((S && S.speed > 0 && !S.over) || now - RD.inp < ambIdle()) animIn(66); }   // (about 15 frames a second while the game runs or a person is at it)
+  return pf; }
 // the small progress ring of a construction (amber arc on a dark disc) at (x, y)
 function bnRing(x, y, R, pf, a){ ctx.save(); ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, R + 1.4, 0, Math.PI*2); ctx.fillStyle = 'rgba(8,12,14,.85)'; ctx.fill();
   ctx.lineWidth = Math.max(1.6, R*0.36); ctx.strokeStyle = 'rgba(241,233,210,.25)'; ctx.beginPath(); ctx.arc(x, y, R - 0.4, 0, Math.PI*2); ctx.stroke();
@@ -5926,7 +6013,7 @@ function bnRing(x, y, R, pf, a){ ctx.save(); ctx.globalAlpha = a; ctx.beginPath(
 // the power and sea names keep clear) and into BNHIT (taps)
 function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.length = 0; if (window.__bnOff) return;/*@ENDTEST*/
   if (!S) return; const a1 = bnA(hexPx); if (a1 <= 0.003) return;
-  const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], caps = new Set(), day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_MK = 6;
+  const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], caps = new Set(), day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_TL = performance.now() + 5; BN_MK = 6;
   for (const N of S.nations) if (N.alive && S.owner[N.capital] === N.id) caps.add(N.capital);
   if (!BNP || BNP.S !== S || BNP.G !== G || now - BNP.t > 400 || now < BNP.t){ const L = []; for (let p = 0; p < G.P.length; p++) if (!G.P[p].sea && bnHas(p, caps)) L.push(p); BNP = {S, G, t:now, L, I:new Map()}; }   // (the provinces with pictures and their buildings, looked at again every 0.4 s)
   for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y); if (x < -m || y < -m || x > cw + m || y > ch + 2*m) continue;
@@ -5934,20 +6021,16 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
     const cap = nd*2*view.s*1.1;   // (a picture's long side stays under the way to the next city)
     if (P.city || caps.has(p)) cityRing({p, city:true, x, my:y + CITY_DY*kl}, now, a1, kl);
     for (let i = 0; i < its.length; i++){ const al = i ? a2 : a1; if (al <= 0.003) break; const [dx, dy] = Lo.pos[i], e = its[i];
-      list.push({p, e, mir:Lo.mir[i], x:x + dx*view.s, y:y + dy*view.s, wx:P.x + dx, wy:P.y + dy, a:al, L:Math.min(L1*bnF(e.k, e.lv), cap)}); } }
+      list.push({p, e, mir:Lo.mir[i], x:x + dx*view.s, y:y + dy*view.s, wx:P.x + dx, wy:P.y + dy, a:al, L:bnDrawL(e, Lo, i, L1, cap)}); } }
   if (more) animFast();   // (the cities left over are worked out in the next frames)
   list.sort((u, v) => u.y - v.y);   // back to front
   const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'medium';   // (each picture is made at about its drawn size)
-  for (const q of list){ const {e, p} = q, M = BNMETA[e.nm], c = bnPic(e.nm, q.L*dpr*q0, e.site, lk); if (!c || !M) continue;   // (q0: the battery saver's smaller size)
+  for (const q of list){ const {e, p} = q, M = BNMETA[e.nm], c = bnPic(e.nm, q.L*dpr*q0, 0, lk); if (!c || !M) continue;   // (q0: the battery saver's smaller size)
     const Lm = Math.max(M.w, M.h), w = q.L*M.w/Lm, h = q.L*M.h/Lm, ax = q.mir ? 1 - M.ax : M.ax; let X = q.x - ax*w, Y = q.y - M.ay*h;
     if (w*dpr < 96){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
     const b = [X, Y + M.top*h, X + w, Y + h];
-    ctx.globalAlpha = ga0*q.a*(e.site ? 0.62 : 1);
-    if (q.mir){ ctx.save(); ctx.translate(X + w, Y); ctx.scale(-1, 1); ctx.drawImage(c, 0, 0, w, h); ctx.restore(); } else ctx.drawImage(c, X, Y, w, h);
-    ctx.globalAlpha = ga0;
-    if (e.c){ const H = Math.max(13, Math.min(52, (b[3] - b[1])*0.72)), cx = e.site ? X + w*0.5 : q.mir ? X + w*0.2 : X + w*0.8;   // the tower crane in front of the building (a level going up) or over its pale site
-      bnCrane(cx, Math.min(b[3] - H*0.08, Y + h*0.8), H, (cx > X + w*0.5 ? -1 : 1), q.a);
-      const pf = Math.max(0, Math.min(1, 1 - e.c.h/Math.max(1, e.c.h0))), R = Math.max(4, Math.min(8, w*0.07)); bnRing(b[0] + R*1.4, b[1] + R*1.4, R, pf, q.a); }   // (its progress ring at the upper left corner)
+    if (e.c){ const pf = bnBuild(q, e, c, M, X, Y, w, h, lk, q0, now, q.a), R = Math.max(4, Math.min(8, w*0.07)); bnRing(b[0] + R*1.4, b[1] + R*1.4, R, pf, q.a); }   // a construction: its stage, its progress ring at the upper left corner
+    else { ctx.globalAlpha = ga0*q.a; bnBlit(c, X, Y, w, h, q.mir); ctx.globalAlpha = ga0; }
     { const lr = bLevel(p + ':bn:' + e.k, e.lv, now); let f = lr.t0 ? (now - lr.t0)/TRAY_ANIM : -1; if (f >= 1){ lr.t0 = 0; f = -1; }
       if (f >= 0 && !saverOn()){ animFast(); const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2, R0 = Math.max(10, w*0.5), E0 = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = q.a*0.7*(1 - f); ctx.drawImage(GLOW(), cx - R0*1.3, cy - R0*1.3, R0*2.6, R0*2.6);
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = q.a*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, R0*(0.5 + 0.8*E0), 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
@@ -11034,6 +11117,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ re
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)
+if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m) => bnWet(nm, pts, x, y, s, m), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), src:() => [drawBuildings, bnRing, bnBuild, bnPad, bnDust, bnBlit, cityRing, bnPic].map(f => f.toString())});   // building layout checks (.test/bldangled.js): a picture's drawn long side in world px at hexPx h, the footprints
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagCanvas(o, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor) => badgeBody(side, t, n, flagCanvas(o, plateDims(n, 1, !!minor, true).fh), !!mixed, false, false, !!minor), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
