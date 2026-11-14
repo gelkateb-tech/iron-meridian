@@ -14,7 +14,6 @@ Last updated: 2026-11-13 (overnight run).
 
 | Task | Model | Where it is |
 |---|---|---|
-| Research tab redo, phase 2 (owner said go): 107 pictures on Gemini (about $4.1): 10 banners, 9 category icons, 26 unit unlocks, 5 shared upgrade types, 57 unique upgrades; generations reuse their unit picture | Opus | branch research-tab |
 | Building pictures in the game: angled HQs by region; Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications, Hospital levels; no level badges on the map | Opus | branch buildings-angled |
 | Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges after the building pictures) |
 
@@ -31,6 +30,8 @@ Last updated: 2026-11-13 (overnight run).
 | 5 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
+
+- **Research art retries (one try each, not retried):** a diamond frame drawn inside 7 icons (Artillery & Air Defence category, Ballistic Missiles, Protection (25 nodes), Tandem Warheads, ATGM, strike drone hit, satellite); subject cut off on 2 banners (Strategic Weapons missile, Infantry soldiers); wrong subject on 2 (Special Forces airlift, SAM seeker). Still close to real products: F-15, MQ-9, F-22/F-35, B-2, Nimitz, AH-1, P-3, Abrams pictures. Firepower/Protection show a tank turret on every line incl. aircraft and ships. Retry these 11 (about $0.50)?
 
 - **Speed options that change play:** quiet nations plan every 8 h instead of hourly (about -20% rules time); shorter attack-target search (-10 ms/day); reuse land routes across hours (-20 to -25 ms/day); phone map drawn at pixel ratio 1.5 instead of 2 (about 44% fewer pixels: the phone is limited by drawing, not rules).
 
