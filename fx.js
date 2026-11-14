@@ -491,13 +491,13 @@ const XK = {e:new Uint8Array(XK_N), g:new Uint32Array(XK_N), t0:new Float64Array
 const XS = {e:new Uint8Array(XS_N), g:new Uint32Array(XS_N), t0:new Float64Array(XS_N), life:new Float32Array(XS_N), x:new Float32Array(XS_N), y:new Float32Array(XS_N), dx:new Float32Array(XS_N),
   rise:new Float32Array(XS_N), r0:new Float32Array(XS_N), r1:new Float32Array(XS_N), a:new Float32Array(XS_N), ri:new Uint8Array(XS_N), tone:new Uint8Array(XS_N)};
 const XT = {s:{fl:70, gr:260, fb:620, c0:150, r0:0.35, r1:1, lift:0.18}, b:{fl:130, gr:420, fb:1150, c0:260, r0:0.3, r1:1.15, lift:0.32}};
-// the kinds: R (world), mp (css px), cr (the crater's world radius; 0 none), lobes, ns (smoke puffs at full quality), ring (big: the dust ring)
+// the kinds: R (world), mp (css px), cr (the crater's world radius; 0 none), lobes, ns (smoke puffs at full quality), ring (big: the dust ring), np
 const XFX_K = {exS:{R:1.9, mp:10, cr:1.3}, exM:{R:2.5, mp:12, cr:1.7}, exL:{R:3.2, mp:14, cr:2.2, lobes:1}, small:{R:0.8, mp:6, cr:0}, tank:{R:1.35, mp:8, cr:0.9}, art:{R:2, mp:10, cr:1.3},
-  cm:{big:1, R:3.1, mp:20, cr:3, lobes:1}, bm:{big:1, R:4.4, mp:28, cr:3.5, lobes:2, ring:false}, chem:{big:1, R:1.7, mp:11, cr:0, ns:1, lobes:0}, bomb:{big:1, R:2.3, mp:15, cr:1.8, ns:4, lobes:1}};
+  cm:{big:1, R:3.1, mp:20, cr:3, lobes:1}, bm:{big:1, R:4.4, mp:28, cr:3.5, lobes:2, ring:false}, chem:{big:1, R:1.7, mp:11, cr:0, ns:1, lobes:0}, bomb:{big:1, R:2.3, mp:15, cr:1.8, ns:4, lobes:1, np:0.55}};   // (np: a share of the sparks and debris: a bomb line drops several at once)
 const xfxSync = () => { if (XFX.S !== S){ XFX.S = S; for (const E of XE) E.on = false; XFX.n = XFX.vis = XFX.kTop = XFX.sTop = XFX.kh = XFX.sh = 0; XK.life.fill(0); XS.life.fill(0); } };
 function xPick(m, px){ for (let i = 0; i < m.length; i++) if (m[i].width >= px*0.85) return m[i]; return m[m.length - 1]; }
 function xRot(src, i){ if (!i) return src; const A = src.__ra || (src.__ra = []); return A[i] || (A[i] = rotSpr(src, i*Math.PI/4)); }   // (one of 8 turns, made once)
-// start one. o: big, R, mp, crater (world radius), lobes, ns, ring, sea, air (a burst in the air: no ground parts), force (even off screen)
+// start one. o: big, R, mp, crater (world radius), lobes, ns, np, ring, sea, air (a burst in the air: no ground parts), force (even off screen)
 function xfx(wx, wy, o){ const lv = fxLv(); if (!lv || !PG.booted || !S) return null; xfxSync();
   const big = !!o.big, R = o.R, air = !!o.air, sea = !air && (o.sea ?? seaAt(wx, wy)), now = performance.now(), red = PG.afxReduced(), lo = lv < 2;
   if (o.crater && !sea && !air) afxCrater(wx, wy, o.crater, {ms:big ? 30000 : 9000, fade:big ? 14000 : 5000, min:0.5, a:big ? 0.95 : 0.82, cap:big ? 3.5 : 2.5});
@@ -516,7 +516,7 @@ function xfx(wx, wy, o){ const lv = fxLv(); if (!lv || !PG.booted || !S) return 
     E.lx1 = Math.cos(b)*(0.2 + 0.15*Math.random()); E.ly1 = -0.2 - 0.2*Math.random(); E.ls1 = 0.4 + 0.15*Math.random(); E.ld1 = 110 + 30*Math.random(); }
   let dur = T.fb*1.25 + 140;
   // sparks and debris (none with reduced motion)
-  const kCap = XK_CAP[lv], nK = red ? 0 : Math.round((big ? 24 : 10)*q), nD = red ? 0 : Math.round((air ? 0 : big ? 16 : 6)*q), ember = (big ? 0.25 : 0.12) + 0.35*night;
+  const kCap = XK_CAP[lv], qp = q*(o.np || 1), nK = red ? 0 : Math.round((big ? 24 : 10)*qp), nD = red ? 0 : Math.round((air ? 0 : big ? 16 : 6)*qp), ember = (big ? 0.25 : 0.12) + 0.35*night;
   for (let i = 0; i < nK + nD; i++){ const j = XFX.kh; XFX.kh = (j + 1) % kCap; if (j >= XFX.kTop) XFX.kTop = j + 1;
     const sp = i < nK, th = Math.random()*Math.PI*2, d0 = Math.random()*0.25, v = sp ? (big ? 2.4 : 2.2) + Math.random()*(big ? 3.4 : 2.8) : (big ? 0.8 : 0.7) + Math.random()*(big ? 2 : 1.6);
     XK.e[j] = slot; XK.g[j] = E.gen; XK.t0[j] = now + (sp ? Math.random()*30 : 70 + Math.random()*70); const dd = sp ? d0 : 0.3 + 0.2*Math.random(); XK.x[j] = Math.cos(th)*dd; XK.y[j] = Math.sin(th)*dd*0.6 - (air ? 0 : 0.1);
@@ -535,7 +535,7 @@ function xfx(wx, wy, o){ const lv = fxLv(); if (!lv || !PG.booted || !S) return 
   E.dur = dur; XFX.n++; PG.animFast(); PG.redraw(); return E; }
 // a kind of XFX_K (k) at (wx, wy): o.sea, o.force, o.air, o.scale (its size)
 function xfxK(k, wx, wy, o = {}){ const P = XFX_K[k], sc = o.scale || 1; if (!P) return null;
-  return xfx(wx, wy, {big:!!P.big, R:P.R*sc, mp:P.mp*Math.sqrt(sc), crater:o.air ? 0 : P.cr*sc, lobes:P.lobes, ns:P.ns, ring:P.ring, sea:o.sea, air:o.air, force:o.force}); }
+  return xfx(wx, wy, {big:!!P.big, R:P.R*sc, mp:P.mp*Math.sqrt(sc), crater:o.air ? 0 : P.cr*sc, lobes:P.lobes, ns:P.ns, np:P.np, ring:P.ring, sea:o.sea, air:o.air, force:o.force}); }
 // per frame (from drawParticlesUnder: under the counters and the strike effects): ground light and rings, smoke, fireballs and flashes, then
 // sparks and debris over them
 function drawXFX(now){ XFX.vis = 0; XFX.occ = null; if (!XFX.n){ XFX.kLive = XFX.sLive = 0; return; } xfxSync(); const t = /*@TEST*/WFX.fz ||/*@ENDTEST*/ now, g = PG.ctx, s = PG.view.s, ph = wfxPh(), dp = PG.dpr; let vis = 0, live = 0;
