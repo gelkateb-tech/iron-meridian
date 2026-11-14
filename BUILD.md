@@ -119,6 +119,7 @@ Every file in `tools/` (none of them is published; the game never loads them):
 | `balance.js` | browser balance runs of the classic world |
 | `nations-balance.js` | the nations world's balance tests (`docs/NATIONS-PLAN.md` 5.2 and every step's checks), plain Node |
 | `eco-check.js` | the city-resource economy's checks (`docs/ECONOMY.md`), in the classic and the nations world, plain Node |
+| `.test/armybase-rule.js` | the Army Base rule (infantry needs Army Base I in its city: `INF_NEEDS` in `rules/data.js`, both settings), every capital starting with an Army Base and Fortifications I and no other province with Fortifications (`START_FORT`), the starting units unchanged, old saves (`abMigrate`: queues kept, a capital without an Army Base gets one) and the computer building Army Bases; plain Node |
 | `.test/resource-rule.js` | the resource balance rule in a new nations-world game (7 to 14 cities, all six goods, at most 2 of a good, 3 only through the cities beyond 12), saves keeping their resources, old saves and the classic world on the map method; plain Node |
 | `export-lab.js` | can a person export: a seat that only keeps a sell offer on the Market |
 | `combat-pace.js` | how long battles last (`BATTLE_PACE`, `docs/COMBAT-PACE.md`) |
