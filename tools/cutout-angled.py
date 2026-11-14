@@ -57,6 +57,10 @@ def unslab(rgba, obj, t):
     rgba = rgba.copy(); rgba[..., 3] *= keep
     return rgba, obj & (keep > 0.5)
 
+# hand corrections of single flagpole tops [x, y, pole length] (fractions), by picture and pole index: where the pole's top meets
+# the building behind it the detector runs on up the building's edge (east-asia pole 7 reached into the stairs)
+FLAG_FIX = {'bn-hq-east-asia':{6:[0.3083, 0.8109, 0.1626]}}
+
 def flood_from_border(m):
     lab, n = ndi.label(m)
     edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
@@ -217,6 +221,8 @@ def main():
         if key == 'hq':
             tops = poles(thin, ~obj, k)
             e['flags'] = [[round((x - x0)/crop.shape[1], 4), round((y - y0)/crop.shape[0], 4), round(hh/crop.shape[0], 4)] for x, y, hh in tops]
+            for i, v in FLAG_FIX.get(out_name, {}).items():
+                if i < len(e['flags']): e['flags'][i] = v
         if key == 'yard': e['piers'] = 'right'   # the renders' piers run to the lower right
         meta[out_name] = e
         print(out_name, W, H, e)
