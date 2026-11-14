@@ -188,6 +188,7 @@ The **DEV** badge sits next to the speed control. Click it, or press `` ` ``, to
 - **Reveal map**: no fog. Every province is in sight and every force is identified, including submerged submarines and special forces.
 - **Game speed**: 16×, 50× and 100×. These buttons also appear in the top bar on wide screens. Press `9` to cycle through them.
 - **Spawn unit**: pick a unit type, an owner (any living nation; you by default) and a count. Press **Place**, then click provinces on the map. Ground and air units can go on land; ships can go at sea or on a coast. Press Esc to stop placing.
+- **Strike effects**: the video explosions or the drawn ones of before (for this browser tab only), and one button per strike effect at the selected province. Outside the panel, a Missile Silo's panel shows a **Preview blast** row (Chemical, Tactical nuke, ICBM): it launches a real Cruise or Ballistic Missile that flies and strikes by the rules as itself; only its blast on the map is the warhead's (`MSLWH` in `index.html`). The rules have no chemical or nuclear warhead yet (`docs/RESEARCH.md` 12.5).
 
 The switches are saved in this browser under the localStorage key `iron-meridian-dev`. When a switch is off, its rule is unchanged.
 

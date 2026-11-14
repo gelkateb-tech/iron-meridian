@@ -3979,10 +3979,13 @@ const FXH = {get AC(){ return AC; },
   get wrapSX(){ return wrapSX; },
   get zx(){ return zx; }};
 const FXM = window.IMFX(FXH);
-// the video explosions (fx.js FXV) or the drawn ones of before, to compare: ?fxv=0 / ?fxv=1 in the address (kept), the dev panel, the test hook fxv(on)
+// the video explosions (fx.js FXV) or the drawn ones of before, to compare: ?fxv=0 / ?fxv=1 in the address, the dev panel, the test hook fxv(on).
+// The choice lasts for this browser tab only (sessionStorage): a comparison never leaves the clips off in later games (it used to be kept
+// for good in localStorage; that old key is dropped)
 const FXV_KEY = 'iron-meridian-fxv';
-try { const q = /[?&]fxv=([01])\b/.exec(location.search); if (q) localStorage.setItem(FXV_KEY, q[1]); const v = localStorage.getItem(FXV_KEY); if (v === '0' || v === '1') FXM.FXV.on = v === '1'; } catch (e) {}
-const fxvSet = on => { FXM.FXV.on = !!on; try { localStorage.setItem(FXV_KEY, on ? '1' : '0'); } catch (e) {} };
+try { localStorage.removeItem(FXV_KEY); } catch (e) {}
+try { const q = /[?&]fxv=([01])\b/.exec(location.search); if (q) sessionStorage.setItem(FXV_KEY, q[1]); const v = sessionStorage.getItem(FXV_KEY); if (v === '0' || v === '1') FXM.FXV.on = v === '1'; } catch (e) {}
+const fxvSet = on => { FXM.FXV.on = !!on; try { sessionStorage.setItem(FXV_KEY, on ? '1' : '0'); } catch (e) {} };
 const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx, turnTo, moveFig} = FXM;
 // a city's glow at night: warm amber, never white; peaked at the city's point and fading out well inside its own radius (cityNightR)
 let CGLOWC = null; const CGLOW = () => CGLOWC || (CGLOWC = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -4803,6 +4806,12 @@ const ovlOn = k => mapOvl[k] && polMode();
 const tradeOn = () => sel.army != null && (a => !!a && a.owner === PLAYER && !a.air && shipsN(a) > 0)(armyById(sel.army));
 const sel = {army:null, prov:null, target:null, group:[], foe:null};   // foe: a foreign force you tapped (its read-only army bar)
 let boxSel = null, rallyFor = null, aimMsl = null;
+// the warhead a missile in flight carries for its blast on the map (fxMissile), by the missile's id: only the developer preview sets one
+// (aimMsl.wh); the rules have no chemical or nuclear warhead yet (docs/RESEARCH.md 12.5), so the missile strikes by the rules as itself
+const MSLWH = new Map();
+function mslLaunch(am, p){ const ok = launchMissile(PLAYER, am.from, p, am.k);
+  /*@DEV*/if (ok && am.wh && S.inflight && S.inflight.length){ MSLWH.set(S.inflight[S.inflight.length - 1].id, {S, wh:am.wh}); if (MSLWH.size > 50) MSLWH.delete(MSLWH.keys().next().value); }/*@ENDDEV*/
+  return ok; }
 let targetPath = null;
 function rgba(hex, a){ const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
 function resize(){
@@ -8443,7 +8452,7 @@ function tap(x, y, shift = false, long = false){
       break;
     } }
   const p = mk ? mk.p : provAt(x, y);
-  if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
+  if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; mslLaunch(am, p); renderSide(true); return; }
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
   if (p < 0 || (G.P[p].sea && sel.army === null)){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
@@ -8585,7 +8594,7 @@ function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (id !== sel.army) wpMode = false; sel.group = []; sel.foe = null; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 function selectFoe(id){ wpMode = false; if (tab !== 'cmd') setTab('cmd'); sel.group = []; sel.army = null; sel.prov = null; sel.target = null; sel.foe = id; targetPath = null; hoverPath = null; renderSide(true); }
 function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); wpMode = false; sel.group = []; sel.foe = null; CS.det = false; if (rallyFor !== null){ setRally(rallyFor, p); return; }
-  if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (G.P[p].city) ftipAsk('city'); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
+  if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && mslLaunch(am, p)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (G.P[p].city) ftipAsk('city'); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 let sideOpen = false;   // phones: the command panel opened by hand (advisor shield, dispatches), until closed or the selection clears
 function sideSync(){ const phone = innerWidth <= 820, b = document.body; if (!phone){ if (b.classList.contains('side-on')) b.classList.remove('side-on'); return; }
   const auto = sel.army !== null || sel.foe !== null || (sel.prov !== null && (CS.det || csWanted() < 0)), on = !!S && S.started && (auto || sideOpen);
@@ -10037,7 +10046,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
     return html; }
 function citySiloHTML(p){ let html = ''; const st = mstock(p);
-    html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.keys(MISSILES).map(k => [k, mslOf(PLAYER, k)]).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${st[k]}</b></span></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + RN[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`;  return html; }
+    html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.keys(MISSILES).map(k => [k, mslOf(PLAYER, k)]).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${st[k]}</b></span></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + RN[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span>${/*@DEV*/devWhRow(k, st[k]) + /*@ENDDEV*/''}</div>`).join('')}</div>`;  return html; }
 // the Arms Industry line of the build menu: what it raises in this city, now and with the next level
 function armsHere(p, lv){ const o = cityOut(p); if (!o) return ''; const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), mainOutTxt = x => x.k === 'cash' ? '$' + d1(x.y) + 'M' : d1(x.y) + ' ' + MAIN_NAME[x.k]; const nx = lv < BUILD.arms.max ? {...o, y:o.base*(1 + ARMS_PCT*(lv + 1))} : null;
   return `<b class="res-${o.k}">${icon(o.k, 11)} +${Math.round(ARMS_PCT*100)}% ${MAIN_NAME[o.k]} here per level</b> (now ${mainOutTxt(o)} a day${nx ? ', ' + mainOutTxt(nx) + ' at level ' + ROMAN[lv + 1] : ''}).`; }
@@ -10102,7 +10111,7 @@ document.addEventListener('click', e => {
     case 'spy': startSpy(PLAYER, +b.dataset.id, b.dataset.k); renderSide(true); break;
     case 'train-agent': if (trainAgent(PLAYER)) log('A new intelligence agent is ready.', 'good', null); if (modalKind === 'intel' && !$('modal').hidden) setHTML($('sheet'), intelHTML()); renderSide(true); break;
     case 'msl-build': if (sel.prov !== null && buildMissile(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
-    case 'msl-aim': if (sel.prov !== null){ if (modalKind === 'cbld' && !$('modal').hidden) closeModal(); aimMsl = {from:sel.prov, k:b.dataset.k}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}.`, 'info', null); renderSide(true); } break;
+    case 'msl-aim': if (sel.prov !== null){ if (modalKind === 'cbld' && !$('modal').hidden) closeModal(); aimMsl = {from:sel.prov, k:b.dataset.k, wh:b.dataset.wh || null}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}${b.dataset.wh ? ` (${b.dataset.wh === 'chem' ? 'chemical' : b.dataset.wh === 'tac' ? 'tactical nuke' : 'ICBM'} blast, preview)` : ''}.`, 'info', null); renderSide(true); } break;
     case 'rally': rallyFor = +b.dataset.id; toast('Tap the province new units should march to (tap the city itself to clear).', 'info', null); break;
     case 'gsel': sel.army = +b.dataset.id; renderSide(true); break;
     case 'hidesteps': (S.tut || (S.tut = {})).hide = true; renderSide(true); break;
@@ -10360,6 +10369,10 @@ document.addEventListener('keydown', e => { INCC.v = -1;
 /*@DEV*/
 // ---- developer panel (test build only; the rules it calls sit next to tick(): devDone, devFill, devResearchAll, devSpawn) ----
 const DEVUI = {open:false, t:'tank', o:PLAYER, k:5, pick:false, note:'', ok:true};
+// the warhead preview in the silo panel: the missile is launched, flies and strikes by the rules as itself (its damage, its interception);
+// only its blast on the map is the warhead's (chemical, tactical nuke, ICBM), so the effects can be seen from a real launch (MSLWH)
+const DEV_WH = {cm:[['chem', 'Chemical'], ['tac', 'Tactical nuke']], bm:[['chem', 'Chemical'], ['tac', 'Tactical nuke'], ['icbm', 'ICBM']]};
+const devWhRow = (k, n) => `<span class="row" style="margin-top:4px;flex-wrap:wrap;gap:4px;align-items:center"><small style="opacity:.7">Preview blast:</small>${(DEV_WH[k] || []).map(([w, t]) => `<button class="btn" data-act="msl-aim" data-k="${k}" data-wh="${w}" ${n ? '' : 'disabled'} title="Developer preview: a ${MISSILES[k].name} launched and striking by the rules as itself; only its blast on the map is the ${t.toLowerCase()} one (the rules have no such warhead yet)" style="padding:3px 8px;font-size:11.5px">${t}…</button>`).join('')}</span>`;
 const DEV_TOG = [['research', 'Instant research', 'Started research completes at once'], ['instant', 'Instant building and production', 'Construction, training, missiles, upgrades'],
   ['res', 'Unlimited resources', 'All seven stocks topped up every hour'], ['reveal', 'Reveal map', 'No fog: every force visible and identified']];
 function devPanelHTML(){ const al = S.nations.filter(N => N.alive), U = UNITS[DEVUI.t];
@@ -11114,10 +11127,11 @@ IM.on('fxAD', E => { if (!booted) return; const vis = visibleSet(PLAYER), P = G.
 IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : E.T === 'stealth' ? 30 : 20); if (isBmb(E.T)){ const P = G.P[E.p]; bigShake(P.x, P.y, E.T); } }   // (fx.js bigShake)
   STRIKEQ.set(E.a.id, {p:E.p, t:performance.now(), dealt:E.dealt, owner:E.owner, bnote:!!E.bnote, T:E.T, ids:E.ids, killed:E.killed}); });
 IM.on('fxMissile', E => { const m = E.m, P = G.P[m.to]; if (!booted || !(m.owner === PLAYER || E.owner === PLAYER || visibleSet(PLAYER).has(m.to))) return;
+  const W = MSLWH.get(m.id), wh = W && W.S === S ? W.wh : null; if (W) MSLWH.delete(m.id);
   if (!E.hit){ const ia = E.by != null ? armyById(E.by) : null, seeI = ia && (ia.owner === PLAYER || armyVisible(ia, visibleSet(PLAYER))), F = G.P[m.from];   // (fx.js: the interceptor's streak meets the missile over its target; both burst)
     intercept(seeI ? dispPos(ia) : [P.x + 4, P.y + 3], [P.x, P.y], {kind:m.k, from:!!seeI, aid:seeI ? ia.id : null, dir:Math.atan2(F.y - P.y, wdx(P.x, F.x))}); return; }
   const dealt = E.dealt, [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*6, P.y + (Math.random() - 0.5)*4, 6);
-  wfxStrike(m.k === 'bm' ? 'bm' : 'cm', ex, ey, {p:m.to});   // the blast, its crater, the burning city, the shake and the boom
+  wfxStrike(wh || (m.k === 'bm' ? 'bm' : 'cm'), ex, ey, {p:m.to});   // the blast (or its warhead's, MSLWH), its crater, the burning city, the shake and the boom
   if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', wx:ex, wy:ey, dy:-20}); });   // (the number over the blast itself; no wreck fire: the burning city's smoke is enough)
 // warheads the rules do not have yet (chemical, tactical nuclear, ICBM) and cruise or ballistic ones by kind: IM.emit('fxWarhead', {kind, p, by})
 // shows the strike at province p (or at E.x, E.y) where the player struck or can see; IM.emit('fxBlast', {size:'S'|'M'|'L', p}) a combat blast
