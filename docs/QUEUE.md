@@ -15,7 +15,8 @@ Last updated: 2026-11-13 (overnight run).
 | Task | Model | Where it is |
 |---|---|---|
 | Research tab redo, phase 2 (owner approved with fixes: bigger banner subjects in the middle band, icons close up, one shared icon per upgrade type): new artillery icon first for the owner, then the rest on Gemini | Opus | branch research-tab |
-| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | paused on branch borders-real; resumes when the speed job is merged (both rewrite map drawing) |
+| Building pictures in the game: angled HQs by region; Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications, Hospital levels; no level badges on the map | Opus | branch buildings-angled |
+| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges after the building pictures) |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
@@ -23,12 +24,11 @@ Last updated: 2026-11-13 (overnight run).
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Building pictures in the game: angled HQs (by region) and Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications levels; no level badges on the map | Opus |
-| 2 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 3 | Nations balance re-check now that the AI never starts wars | Sonnet |
-| 4 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
-| 5 | Each aircraft type its own 3D shape | Opus |
-| 6 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Roads: every province linked to a neighbour, real roads first | Opus |
+| 2 | Nations balance re-check now that the AI never starts wars | Sonnet |
+| 3 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
+| 4 | Each aircraft type its own 3D shape | Opus |
+| 5 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Waiting on me (the owner)
 
