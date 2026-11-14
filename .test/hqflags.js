@@ -2,7 +2,7 @@
 // picture's flagpoles; a capture switches it at once (the captured capital keeps its HQ in its builder's style and flies the captor's flag, the
 // loser's moved capital gets its own HQ with its own flag); independent land leaves the poles bare; the flags show only at close zoom (hidden at
 // the mid zoom); the wave stops with the Battery saver and reduced motion; the flag sprites are cached (no new ones frame after frame); the pole
-// tops in BNMETA are regular (each group of 4 evenly spaced). node .test/hqflags.js [W H dpr]  prints JSON {checks, fails, errors}, exit 1 on a failure.
+// tops in BNMETA are regular (each group of 4 evenly spaced); a save without the starting capitals (cap0) still has every capital's HQ. node .test/hqflags.js [W H dpr]  prints JSON {checks, fails, errors}, exit 1 on a failure.
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1);
@@ -57,6 +57,10 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   for (const [k, F] of Object.entries(meta)){ if (F.length !== 8) irr.push(k + ': ' + F.length + ' poles'); for (const g of [F.slice(0, 4), F.slice(4)]){ const dy = [1, 2, 3].map(i => g[i][1] - g[i - 1][1]), m = (g[3][1] - g[0][1])/3; if (dy.some(d => Math.abs(d - m) > 0.35*m)) irr.push(k + ' steps ' + dy.map(d => d.toFixed(4)).join(','));
     const base = g.map(f => f[1] + f[2]), bd = [1, 2, 3].map(i => base[i] - base[i - 1]); if (bd.some(d => Math.abs(d - (base[3] - base[0])/3) > 0.35*(base[3] - base[0])/3)) irr.push(k + ' feet ' + bd.map(d => d.toFixed(4)).join(',')); } }
   checks.poles = {pictures:Object.keys(meta).length, irregular:irr}; if (Object.keys(meta).length !== 7) fails.push('not 7 HQ pictures with poles'); if (irr.length) fails.push(...irr);
+  // 7) a save from before the starting capitals were kept (no cap0): every living nation's capital still has its HQ
+  const old = await p.evaluate(() => { const im = window.__im, S = im.S, keep = S.nations.map(n => n.cap0); S.nations.forEach(n => { delete n.cap0; });
+    const miss = S.nations.filter(n => n.alive && im.bn.hqAt(n.capital) !== n.id).map(n => n.name); S.nations.forEach((n, i) => { n.cap0 = keep[i]; }); return miss; });
+  checks.noCap0 = {missing:old}; if (old.length) fails.push('without cap0 no HQ at: ' + old.slice(0, 5).join(', '));
   console.log(JSON.stringify({checks, fails, errors}, null, 1));
   await b.close(); process.exit(fails.length || errors.length ? 1 : 0);
 })();
