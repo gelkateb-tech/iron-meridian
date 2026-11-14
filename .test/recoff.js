@@ -31,7 +31,9 @@ const { chromium } = require('playwright');
     Object.assign(B, keep);
     // ---- a level completes: units queued or in training get their remaining time cut by the new ratio at once
     B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500*RES_K; N.iron = 500*RES_K; N.elec = 500*RES_K;
-    recruit(0, cap, 'inf'); recruit(0, cap, 'inf'); recruit(0, cap, 'at'); S.queue[cap].push({t:'cm', h:36, h0:36, msl:true});
+    // (queued as recruit() does it: with no Army Base the Army Base rule refuses new infantry, and this part measures the office alone)
+    const qd = t => { const h = trainH(cap, t, 0); S.queue[cap].push({t, h, h0:h}); };
+    qd('inf'); qd('inf'); qd('at'); S.queue[cap].push({t:'cm', h:36, h0:36, msl:true});
     S.queue[cap][0].h = 15;   // the first one is part trained
     o.q0 = S.queue[cap].map(it => [it.t, it.h, it.h0]);
     const c0 = {cash:N.cash, metal:N.metal};
@@ -41,11 +43,11 @@ const { chromium } = require('playwright');
     // at the floor already: nothing changes
     B.fac = 5; B.rec = 4; S.queue[cap].length = 0; recruit(0, cap, 'tank'); const hF = S.queue[cap][0].h; S.cons[cap] = {k:'rec', lvl:5, h:1, h0:144}; consHour(cap); o.floorKeep = [hF, S.queue[cap][0].h, B.rec];
     // another building finishing does not retime
-    B.fac = 0; B.rec = 2; S.queue[cap].length = 0; recruit(0, cap, 'inf'); const h2 = S.queue[cap][0].h; S.cons[cap] = {k:'fort', lvl:1, h:1, h0:48}; consHour(cap); o.other = [h2, S.queue[cap][0].h];
+    B.fac = 0; B.rec = 2; S.queue[cap].length = 0; qd('inf'); const h2 = S.queue[cap][0].h; S.cons[cap] = {k:'fort', lvl:1, h:1, h0:48}; consHour(cap); o.other = [h2, S.queue[cap][0].h];
     // max level: no sixth
     B.rec = 5; S.cons[cap] = null; o.sixth = build(0, cap, 'rec');
-    // infantry still needs level I
-    B.rec = 0; o.need = canMobilize(0, cap, 'inf'); B.rec = 3; o.need3 = canMobilize(0, cap, 'inf');
+    // the Army Base rule (BLD-RULES): the office unlocks nothing; infantry needs an Army Base I, with or without an office
+    const f0 = B.fac; B.fac = 1; B.rec = 0; o.need = canMobilize(0, cap, 'inf'); B.fac = 0; B.rec = 3; o.need3 = canMobilize(0, cap, 'inf'); B.fac = f0;
     // saves: the level is kept; an office from an old save (level 1) stays level 1
     B.rec = 3; S.queue[cap].length = 0; const js = saveJSON(); o.saveHas = typeof js === 'string';
     Object.assign(B, keep); S.queue[cap].length = 0; S.cons[cap] = null;
@@ -66,10 +68,11 @@ const { chromium } = require('playwright');
     ok('level done: remaining time of the unit in training and the queued ones cut by the new ratio (a missile is not a unit)', r.lvl === 2 && r.consAfter === null && JSON.stringify(r.q1) === JSON.stringify(exp) && r.q1[0][1] < r.q0[0][1] && r.q1[1][1] < r.q0[1][1] && Math.abs(r.q1[1][1] - r.newInf) <= 1, { q0: r.q0, q1: r.q1, exp }); }
   ok('already at the 30% floor: the level changes nothing', r.floorKeep[0] === r.floorKeep[1] && r.floorKeep[2] === 5, r.floorKeep);
   ok('another building finishing leaves the queue alone', r.other[0] === r.other[1], r.other);
-  ok('no level VI; infantry needs level I (any level will do)', r.sixth === false && r.need === 'Build a Recruiting Office first' && r.need3 === '', r);
+  ok('no level VI; infantry needs no office (Army Base I, no office: trainable; office III, no Army Base: "Needs Army Base level 1")', r.sixth === false && r.need === '' && r.need3 === 'Needs Army Base level 1', r);
   // ---- the whole thing through real game hours: queue, upgrade, watch the units come out sooner
   const flow = await p.evaluate(() => { const im = window.__im, N = S.nations[0], cap = N.capital, B = S.bld[cap]; B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500*RES_K;
-    for (let i = 0; i < 3; i++) recruit(0, cap, 'inf'); const before = S.queue[cap].map(it => it.h); build(0, cap, 'rec'); S.cons[cap].h = 3;
+    for (let i = 0; i < 3; i++){ const h = trainH(cap, 'inf', 0); S.queue[cap].push({t:'inf', h, h0:h}); }   // (queued as recruit() does: no Army Base, so one training line; the rule refuses new infantry orders here)
+    const before = S.queue[cap].map(it => it.h); build(0, cap, 'rec'); S.cons[cap].h = 3;
     const seen = []; for (let i = 0; i < 4; i++){ im.tick(); seen.push([B.rec, S.queue[cap].map(it => it.h)]); } S.speed = 0;
     const o = {before, seen}; S.queue[cap].length = 0; return o; });
   { const s = flow.seen, b0 = flow.before[1];   // the second tank waits in the queue (one line): its hours only change when the level lands
@@ -93,15 +96,15 @@ const { chromium } = require('playwright');
   ok('AI: no upgrade at peace or with a short queue or without spare money or at the top level; upgrades when a full queue at war holds it back', ai.peaceIdle === false && (ai.peaceFull === null || ai.peaceFull === false) && ai.war && ai.warFull === true && ai.warPoor === false && ai.warShort === false && ai.warMax === false, ai);
   ok('AI short of manpower: a new office before any upgrade', ai.hasEmpty ? ai.site === 0 : ai.site >= 1, ai);
   // ---- wording: building tooltip, build list, Mobilize panel header, times in the Mobilize list
-  const cap = await p.evaluate(() => { const N = S.nations[0], cap = N.capital; S.bld[cap].rec = 3; S.bld[cap].fac = 0; S.queue[cap].length = 0; S.cons[cap] = null; window.__im.selectProv(cap); return cap; }); await p.waitForTimeout(500);
-  const T3 = 'Recruiting Office III: needed to mobilize infantry here. 30% faster training and +6k manpower a day in this city. Next level: 40% faster, +7.5k/day.';
+  const cap = await p.evaluate(() => { const N = S.nations[0], cap = N.capital; S.bld[cap].rec = 3; S.bld[cap].fac = 1; S.queue[cap].length = 0; S.cons[cap] = null; window.__im.selectProv(cap); return cap; }); await p.waitForTimeout(500);
+  const T3 = 'Recruiting Office III: unlocks no units (infantry comes from the Army Base). 30% faster training and +6k manpower a day in this city. Next level: 40% faster, +7.5k/day.';
   const u1 = await p.evaluate(() => { const c = [...document.querySelectorAll('#csheet .cs-c')].find(e => /Recruiting Office/.test(e.textContent)); return {ttl:c && c.getAttribute('title'), lv:c && c.querySelector('.cs-lvb') && c.querySelector('.cs-lvb').textContent, img:c && c.querySelector('.cs-ci').getAttribute('style')}; });
   ok('city sheet: the building card tooltip says the bonus and the next level', u1.ttl && u1.ttl.includes(T3) && u1.lv === '3', u1);
   await p.click('#csheet [data-act="cs-mob"]'); await p.waitForTimeout(400);
   const u2 = await p.evaluate(() => { const h = document.querySelector('#sheet .rs-rec'), c = document.querySelector('#sheet .unit[data-t="inf"] .st'), r = h && h.getBoundingClientRect(), eb = document.querySelector('#sheet .eyebrow .rec-b');
     return {head:h && h.textContent, vis:!!r && r.width > 20 && r.height > 5 && r.right <= innerWidth + 1, st:c && c.textContent, dup:!!eb && eb.offsetParent !== null, exp:+(trainH(S.nations[0].capital, 'inf', 0)/24).toFixed(1), h:trainH(S.nations[0].capital, 'inf', 0)}; });
   ok('Mobilize panel header: Recruiting Office: 30% faster training', u2.head === 'Recruiting Office: 30% faster training' && u2.vis && !u2.dup, u2);
-  ok('Mobilize list times include the bonus (infantry 17 h = 0.7 d)', u2.h === 17 && u2.st && u2.st.includes(u2.exp + ' d'), u2);
+  ok('Mobilize list times include the bonus (infantry with Army Base I and office III: 24 x 0.8 x 0.7 = 13 h)', u2.h === 13 && u2.st && u2.st.includes(u2.exp + ' d'), u2);
   await p.screenshot({ path: __dirname + '/recoff-mob.png' });
   await p.click('#sheet [data-act="resume"]'); await p.waitForTimeout(250);
   await p.click('#csheet [data-act="cs-bld"]'); await p.waitForTimeout(400);
@@ -112,7 +115,7 @@ const { chromium } = require('playwright');
   // level V and no office, read from the panel itself
   const u5 = await p.evaluate(async () => { const cap = S.nations[0].capital, out = {}, other = G.P.find(P => S.owner[P.id] === 0 && P.id !== cap && !P.sea).id; for (const l of [5, 0, 1]){ S.bld[cap].rec = l; window.__im.selectProv(other); await new Promise(r => setTimeout(r, 120)); window.__im.selectProv(cap); await new Promise(r => setTimeout(r, 250));
       const c = [...document.querySelectorAll('#csheet .cs-c')].find(e => /Recruiting Office/.test(e.textContent)); out[l] = c ? c.getAttribute('title') : null; } return out; });
-  ok('level V says highest level; no office says what level I gives; level I matches', /Recruiting Office V: needed to mobilize infantry here\. 50% faster training and \+9k manpower a day in this city\. Highest level\./.test(u5[5]) && /Level I: every unit trained in this city trains 10% faster and the city gives \+3k manpower a day/.test(u5[0]) && /Recruiting Office I: needed to mobilize infantry here\. 10% faster training and \+3k manpower a day in this city\. Next level: 20% faster, \+4\.5k\/day\./.test(u5[1]), u5);
+  ok('level V says highest level; no office says what level I gives; level I matches', /Recruiting Office V: unlocks no units \(infantry comes from the Army Base\)\. 50% faster training and \+9k manpower a day in this city\. Highest level\./.test(u5[5]) && /Level I: every unit trained in this city trains 10% faster and the city gives \+3k manpower a day/.test(u5[0]) && /Recruiting Office I: unlocks no units \(infantry comes from the Army Base\)\. 10% faster training and \+3k manpower a day in this city\. Next level: 20% faster, \+4\.5k\/day\./.test(u5[1]), u5);
   const failed = checks.filter(c => !c.ok);
   console.log(JSON.stringify({ checks: checks.length, failed, errors }, null, 1));
   await b.close(); process.exit(failed.length || errors.length ? 1 : 0);
