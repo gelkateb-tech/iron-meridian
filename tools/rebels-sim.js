@@ -4,7 +4,7 @@
 //     now     today's rule (unrest above 60%: a daily chance of partisans)
 //     plan    the plan's numbers (rebels for certain below 30% morale in occupied cities, 3 days' grace, 5 days' cooldown) with today's AI
 //     planai  the plan plus a stand-in for the AI's new habit: it pays Pacify ($40M) for an occupied city under 45% morale that has a unit in it
-//     --duel  rebels against a garrison in a captured city (who wins the fight), 12 cities per match-up
+//     --duel  rebels against a garrison in a captured city (who wins the fight), 6 cities per match-up
 // The computer never starts a war (AI_STARTS_WARS false): what it takes here is independent land (the nations world: TIER_FREE).
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.join(__dirname, '..');
@@ -69,11 +69,11 @@ function play(){
 function duel(){
   const R = new Function(SRC)(), api = R.IM.api; api.useScenario('world64'); api.newGame(SEED, 0, []); const S = R.S, G = R.G; S.started = true;
   const cities = G.P.filter(P => P.city && S.owner[P.id] >= 0 && S.nations[S.owner[P.id]].capital !== P.id).map(P => P.id), res = {};
-  for (const [g, r] of [[1, 3], [1, 4], [2, 3], [2, 4], [2, 5], [3, 4], [3, 5], [4, 5], [4, 6]]){ let win = 0, n = 0, left = 0;
-    for (let i = 0; i < 12; i++){ const R2 = new Function(SRC)(), a2 = R2.IM.api; a2.useScenario('world64'); a2.newGame(SEED + i, 0, []); const S2 = R2.S; S2.started = true;
+  for (const [g, r] of [[2, 2], [3, 3], [4, 4], [1, 3], [2, 4], [4, 5], [6, 4]]){ let win = 0, n = 0, left = 0;
+    for (let i = 0; i < 6; i++){ const R2 = new Function(SRC)(), a2 = R2.IM.api; a2.useScenario('world64'); a2.newGame(SEED + i, 0, []); const S2 = R2.S; S2.started = true;
       const p = cities[(i*37) % cities.length], B = S2.owner[p], A = S2.nations.findIndex(N => N.id !== B && N.alive); S2.armies = S2.armies.filter(a => a.at !== p);
       S2.owner[p] = A; S2.occ[p] = S2.hour; const ga = R2.addArmy(A, p, {inf:g}); ga.still = S2.hour - 24; const ra = R2.addArmy(R2.NEUTRAL, p, {inf:r}); ra.rebel = true; ra.hold = 0;
-      for (let h = 0; h < 72 && R2.count(ga) && R2.count(ra); h++) R2.tick();
+      for (let h = 0; h < 200 && R2.count(ga) && R2.count(ra); h++) R2.tick();
       n++; if (R2.count(ga) && !R2.count(ra)){ win++; left += R2.count(ga); } }
     res[`${g} garrison v ${r} rebels`] = `garrison wins ${win}/${n}` + (win ? `, ${(left/win).toFixed(1)} units left` : ''); }
   return res;
