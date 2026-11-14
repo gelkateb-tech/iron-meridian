@@ -80,12 +80,31 @@ def truck(x0=2.5, x1=29.5, bed_y=17.8, cab_w=7.0, wheels=(7.2, 12.8, 25.2), wr=3
 # ---------- the icons ----------
 I = {}
 
-# INFANTRY: a plain helmet
-I['inf'] = helmet(16, 17.2, 1.12).difference(L([(4.6, 17.4), (16, 15.6), (26.6, 16.8)], 1.5, 'flat'))
+# INFANTRY: the helmet. INF_LOOK picks it: 'C' the owner's own side-view helmet (assets/art-src/helmet-icons.png, traced by
+# tools/helmet-trace.py into tools/helmet-c.json), 'old' the plain helmet drawn here (A and B are on the branches research-cards-flathead and research-cards)
+INF_LOOK = 'C'
+def _helmet_c():
+    import json
+    d = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'helmet-c.json')))
+    g = Polygon(d['rings'][0]).buffer(0)
+    minx, miny, maxx, maxy = g.bounds
+    # the rim band: a cut following the bottom edge of the silhouette, so the shape reads as a helmet at 16 px
+    pts = []
+    for x in range(int(minx) + 50, int(maxx) - 40, 12):
+        col = LineString([(x, miny - 5), (x, maxy + 5)]).intersection(g)
+        if not col.is_empty: pts.append((x, col.bounds[3] - 40 + (x - minx) * 0.03))
+    cut = LineString(pts).buffer(5.5, cap_style=1)
+    g = g.difference(cut)
+    return g
+if INF_LOOK == 'C': I['inf'] = _helmet_c()
+else: I['inf'] = helmet(16, 17.2, 1.12).difference(L([(4.6, 17.4), (16, 15.6), (26.6, 16.8)], 1.5, 'flat'))
 
 # MOTORIZED INFANTRY: the helmet riding over a small wheeled vehicle
 def _mot():
-    h = sc(helmet(16, 9.4, 0.72), 1.0)
+    if INF_LOOK == 'C':
+        hc = _helmet_c(); b = hc.bounds; f = 19.5/(b[2] - b[0])
+        h = affinity.translate(affinity.scale(hc, f, f, origin=(b[0], b[1])), 16 - (b[0] + (b[2] - b[0])*f/2), 2.0 - b[1])
+    else: h = sc(helmet(16, 9.4, 0.72), 1.0)
     veh = U(Polygon([(3, 23.6), (3, 18.6), (5, 16.8), (24, 16.8), (29.4, 20.2), (29.4, 23.6)]))
     gap = unary_union([C(x, 24.6, 3.9) for x in (8.6, 23.4)])
     veh = veh.difference(gap)

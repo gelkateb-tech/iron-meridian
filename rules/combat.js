@@ -202,10 +202,11 @@ function index(){ const by = new Array(G.P.length).fill(IDX0); for (const a of S
 const DIG_H = 12;
 const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length && !G.P[a.at].sea && count(a) > 0 &&
   (a.stance === 'defend' || (a.still != null && S.hour - a.still >= DIG_H && (S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && a.owner >= 0 && friendly(a.owner, S.owner[a.at])))));
-// a dug-in force defending where it stands takes DIG_DEF times the damage (0.8: about +25% defence), like home soil and fortifications: in its
+// a dug-in force defending where it stands takes DIG_DEF times the damage (1/1.1: +10% defence IN TOTAL; the owner's rule, replacing the old 0.8 that was +25%; nothing
+// else stacks from being dug in: fortifications, terrain and home soil are separate), like home soil and fortifications: in its
 // battles (tick.js battleStep), under ranged fire (rangedStep), under air strikes (air.js) and in the odds. Only while it defends its own or a
 // friend's province: a force on the move is never dug in (dugIn), and one with the Defend stance in a province held by a foe is attacking
-const DIG_DEF = 0.8;
+const DIG_DEF = 1/1.1;
 const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? DIG_DEF : 1;
 function endBattle(p){
   const B = S.bt && S.bt[p]; if (!B) return; delete S.bt[p];
