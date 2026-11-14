@@ -2376,12 +2376,13 @@ details.more[open] summary.btn{border-color:var(--cn-teal); box-shadow:inset 0 0
    scene is drawn at about 1.5 times the banner's height, just left of the count (its middle two thirds show: the subject, kept in the picture's middle band, whole), and fades into the dark left
    where the name sits and the dark right under the count; on a phone it covers the row. Darker toward the count on the right and along the top and bottom edges. A square scene fills a diamond
    (its corners cut) */
-.rs-ban.scene{--bh:132px; --br:96px;
-  background:linear-gradient(90deg, #0b0d0f 0, #0b0d0f calc(100% - 4*var(--bh) - var(--br) + 2px), rgba(11,13,15,.55) calc(100% - 3.3*var(--bh) - var(--br)), rgba(11,13,15,0) calc(100% - 2.4*var(--bh) - var(--br)),
-      rgba(11,13,15,0) calc(100% - var(--br) - 170px), rgba(11,13,15,.72) calc(100% - var(--br) - 40px), #0b0d0f calc(100% - var(--br) - 2px)),
-    linear-gradient(180deg, rgba(11,13,15,.4) 0, rgba(11,13,15,0) 30%, rgba(11,13,15,0) 64%, rgba(11,13,15,.5) 100%), var(--rbs) right var(--br) center / auto 154% no-repeat, #0b0d0f}
-@media (max-width: 820px){ .rs-ban.scene{background:linear-gradient(90deg, rgba(11,13,15,.9) 0, rgba(11,13,15,.78) 28%, rgba(11,13,15,.4) 52%, rgba(11,13,15,0) 68%, rgba(11,13,15,0) 76%, rgba(11,13,15,.66) 100%),
-  linear-gradient(180deg, rgba(11,13,15,.4) 0, rgba(11,13,15,0) 30%, rgba(11,13,15,0) 64%, rgba(11,13,15,.5) 100%), var(--rbs) center / cover no-repeat, #0b0d0f} }
+/* (owner) the scene fills the whole row edge to edge, never stretched: cover-fit, the top and bottom cropped around the subject (--rfy: the
+   picture's vertical focus, per category); only a light, soft blue-grey wash (the panel's colour) behind the name keeps the text readable */
+.rs-ban.scene{height:var(--rbh, 210px); background:linear-gradient(90deg, rgba(54,75,84,.78) 0, rgba(54,75,84,.62) 20%, rgba(54,75,84,.26) 38%, rgba(54,75,84,0) 54%),
+    var(--rbs) center var(--rfy, 50%) / cover no-repeat, #364b54}
+.rs-ban.scene .rs-bt b, .rs-ban.scene .rs-bt span, .rs-ban.scene .rs-bpt > b{text-shadow:0 1px 2px rgba(0,0,0,.75), 0 0 10px rgba(30,44,50,.6)}
+@media (max-width: 820px){ .rs-ban.scene{height:84px; background:linear-gradient(90deg, rgba(54,75,84,.8) 0, rgba(54,75,84,.6) 34%, rgba(54,75,84,.22) 58%, rgba(54,75,84,0) 74%),
+  var(--rbs) center var(--rfy, 50%) / cover no-repeat, #364b54} }
 .rs-ban.scene::after{display:none}
 .rs-ban.scene:hover{filter:brightness(1.08) saturate(1.05)}
 .rface.p{position:absolute; inset:-21%; display:block; transform:none!important}
@@ -9548,6 +9549,8 @@ function rLayout(cat){ if (RLAY[cat]) return RLAY[cat];
   const cols = lines.map(ln => { const ns = L.filter(n => colOf(n) === ln); return {ln, ns, head:ns.find(n => n.kind === 'unlock') || ns[0], sp:solo ? [] : ns.filter(n => pos[n.id].l === 0).sort((a, b) => pos[a.id].r - pos[b.id].r), r1:Math.max(...ns.map(n => pos[n.id].r))}; });
   return (RLAY[cat] = {L, lines, days, pos, cols, solo}); }
 // a banner's faint colour (its picture is the category's scene, rbs-<category>.webp)
+// each banner's vertical focus for its cover crop (% background-position), so the subject stays whole in the middle of the row
+const RFY = {inf:52, arm:56, sup:40, aas:35, tac:40, uns:44, str:20, nav:40, msl:30, cmd:72};
 const RBT = {inf:'125,144,70', arm:'156,132,88', sup:'166,95,60', aas:'63,151,138', tac:'74,147,184', uns:'138,115,176', str:'93,111,176', nav:'47,111,156', msl:'168,70,74', cmd:'176,138,60'};
 const RROLE = {inf:'Takes ground, holds it', arm:'Breaks the line', sup:'Guns, rockets, air defence', aas:'Gunships, airborne troops', tac:'Fighters and strike jets', uns:'Eyes and cheap strikes',
   str:'Bombers and big sensors', nav:'Sea control, submarines', msl:'Missiles and satellites', cmd:'Every force you field'};   // the role line on a phone
@@ -9587,7 +9590,7 @@ function researchHTML(){
     for (const C of RCATS){ const L = RNODES.filter(nd => nd.cat === C.id && !nd.std), tot = L.reduce((s0, nd) => s0 + nd.lv.length, 0), dn = L.reduce((s0, nd) => s0 + Math.min(nd.lv.length, rLevel(PLAYER, nd.id)), 0);
       const open = opn.filter(nd => nd.cat === C.id).length, inC = X => X && RN[X.id] && RN[X.id].cat === C.id, run = inC(R), qd = inC(R2);
       const names = [...new Set(RNODES.filter(nd => nd.cat === C.id).map(rLineName))].join(', ');
-      h += `<button class="rs-ban scene${dn === tot ? ' full' : ''}" data-act="rbranch" data-b="${C.id}" style="--rt:${RBT[C.id] || '120,130,140'};--rbs:url('assets/art/rbs-${C.id}.webp')" title="${C.name}: ${names}. ${dn} of ${tot} steps researched${open ? `, ${open} open now` : ''}">
+      h += `<button class="rs-ban scene${dn === tot ? ' full' : ''}" data-act="rbranch" data-b="${C.id}" style="--rt:${RBT[C.id] || '120,130,140'};--rbs:url('assets/art/rbs-${C.id}.webp');--rfy:${RFY[C.id] ?? 50}%" title="${C.name}: ${names}. ${dn} of ${tot} steps researched${open ? `, ${open} open now` : ''}">
         <span class="rs-dm"><span class="dmi">${rPic('cat-' + C.id)}</span></span>
         <span class="rs-bt"><b>${C.name}</b><span><span class="rnl">${C.role}</span><span class="rns">${RROLE[C.id] || C.role}</span></span></span>
         <span class="rs-bpw" aria-hidden="true"></span><span class="rs-bp"><span class="rs-bpt">${run ? `<em class="rs-run">Slot #1</em>` : ''}${qd ? `<em class="rs-q">Slot #2</em>` : ''}${open ? `<em class="rs-open">${open} open</em>` : ''}<b>${dn}<small>/${tot}</small></b></span><span class="rs-pb"><i style="width:${Math.round(dn/tot*100)}%"></i></span></span></button>`; }
