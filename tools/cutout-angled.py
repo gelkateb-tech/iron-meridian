@@ -40,6 +40,22 @@ KEYS = {'army-base':'fac', 'construction':'build', 'airbase':'air', 'recruiting-
 BRIDGE = ('hq-', 'hospital-', 'recruiting-office-', 'fortifications-')   # pictures whose cast shadows' sharp edges are crossed (see cut)
 # hand corrections of the ground anchor (fractions of the cut-out), applied after the automatic one: (dx, dy)
 ANCHOR_FIX = {}
+# pictures rendered on a slab of ground with cut sides (a diorama base): the sides' height in source px. The cut-out drops them (and the
+# slab's own cast shadow under them): in each column everything lower than the building's lowest pixel minus that height goes, the new
+# front edge of the ground fading out over SLAB_FADE px, so the site sits flat on the map like a patch of dug earth
+SLAB = {'construction-1': 62}
+SLAB_FADE = 14
+
+def unslab(rgba, obj, t):
+    h, w = obj.shape
+    ys = np.where(obj.any(0), h - 1 - np.argmax(obj[::-1], 0), -1).astype(np.float32)   # each column's lowest building pixel (-1: none)
+    has = ys >= 0
+    low = ndi.median_filter(np.where(has, ys, 0), 15)
+    cutl = np.where(has, low - t, -1)[None, :]
+    yy = np.arange(h, dtype=np.float32)[:, None]
+    keep = np.clip((cutl - yy)/SLAB_FADE, 0, 1)
+    rgba = rgba.copy(); rgba[..., 3] *= keep
+    return rgba, obj & (keep > 0.5)
 
 def flood_from_border(m):
     lab, n = ndi.label(m)
@@ -178,6 +194,7 @@ def main():
             nm, lv = base.rsplit('-', 1); key, lvl = KEYS[nm], int(lv); out_name = f'bn-{key}-{lvl}'
         a = np.asarray(Image.open(f).convert('RGB')).astype(np.float32)
         rgba, obj, thin, k = cut(a, base)
+        if base in SLAB: rgba, obj = unslab(rgba, obj, SLAB[base])
         al = rgba[..., 3]
         ys, xs = np.nonzero(al > 8)
         y0, y1, x0, x1 = max(0, ys.min() - 2), min(al.shape[0], ys.max() + 3), max(0, xs.min() - 2), min(al.shape[1], xs.max() + 3)
