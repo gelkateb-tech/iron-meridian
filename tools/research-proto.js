@@ -123,7 +123,7 @@ const cTxt = c => [c.cash ? `$${c.cash}M` : '', c.metal ? `${c.metal} mat` : '',
 const KIND = {unlock:'Unlock', eng:'Levels', kit:'Upgrade', gen:'Generation'};
 function md(){ let o = '';
   for (const C of CATS){ const ns = NODES.filter(n => n.cat === C.id), lines = [...new Set(ns.map(n => n.line))];
-    o += `\n### ${C.name}\n\n*${C.role}.* Banner picture: \`rb-${C.id}\`, from \`${C.art}\`.\n\n`;
+    o += `\n### ${C.name}\n\n*${C.role}.* Banner picture: \`rbs-${C.id}\` (a wide scene made with tools/gen-art.py).\n\n`;
     // the day grid: one column per line, one row per day that holds a node
     const days = [...new Set(ns.flatMap(n => n.lv.map(l => l.day)))].sort((a, b) => a - b);
     const short = (n, i) => n.kind === 'unlock' ? (n.std ? '(standard)' : 'UNLOCK') : n.kind === 'gen' ? 'GEN ' + n.gen : n.kind === 'eng' ? `${n.name} ${i + 1}` : n.name + (n.lv.length > 1 ? ` ${i + 1}` : '');

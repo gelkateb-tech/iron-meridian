@@ -1,16 +1,19 @@
-// Resource scale (RES_K, rules/data.js) and saves: node .test/x1000-oldsave.js [base commit, default origin/master]   (bash tools/mkpage.sh first)
-// 1. A save made by the base build (master: no S.rk, goods in the old units) loads in this build through the real Continue button with its goods
+// Resource scale (RES_K, rules/data.js) and saves: node .test/x1000-oldsave.js [base commit, default BASE_OLD = 6154c49]   (bash tools/mkpage.sh first)
+// 1. A save made by the base build (the last master commit before the x1000 merge: no S.rk, goods in the old units) loads in this build through the real Continue button with its goods
 //    multiplied by RES_K once: every nation's oil, materials, iron, electronics and rare materials, Market lots and trade-route cargo are exactly
 //    RES_K times the save's, money, manpower and Market prices are as they were, S.rk = RES_K. Restoring the same old save again (in the same page,
 //    after a game) scales it again from the save text only: never twice.
-// 2. That save then plays 5 days in this build exactly as in the base build (compared in the old units: goods / RES_K), for the classic world and
-//    the nations world. A pending computer declaration of war carried by the old save (S.decl) is dropped (rules/diplomacy.js, AI_STARTS_WARS):
+// 2. That save then plays 5 days in this build (the same save twice: the same state) and its world totals of money and goods, in the old units
+//    (goods / RES_K), stay within 40% of the base build's, for the classic world and the nations world (an exact match is no longer possible: the
+//    rules moved on after the base; the x1000 'same game' proof was tools/x1000-check.js at the merge). A pending computer declaration of war carried by the old save (S.decl) is dropped (rules/diplomacy.js, AI_STARTS_WARS):
 //    no war after the first day, in either build.
 // 3. A save made by this build (S.rk = RES_K) loads unchanged: saveJSON after restore is the same, also after a second save and load (S.bt, the
 //    battle panels' history, left out: every load starts it afresh, in the base build too).
 // The base build is unpacked once into .test/basemaster (git archive of the page, worlds, rules and tools/mkpage.sh; assets linked, not copied).
 const { chromium } = require('playwright'); const pickNation = require('./pick-nation.js'); const path = require('path'), fs = require('fs'), cp = require('child_process');
-const ROOT = path.join(__dirname, '..'), BASE = process.argv[2] || 'origin/master', BD = path.join(__dirname, 'basemaster');
+const ROOT = path.join(__dirname, '..'), // The base is the master commit just before the x1000 merge (6154c49, the parent of 75ceb1c on master; it already has AI_STARTS_WARS false). It used to be
+// origin/master, which is wrong now: master has had RES_K since that merge, so its saves carry S.rk and are not old saves.
+  BASE_OLD = '6154c49', BASE = process.argv[2] || BASE_OLD, BD = path.join(__dirname, 'basemaster');
 const rev = cp.execFileSync('git', ['rev-parse', '--short', BASE + '^{commit}'], {cwd:ROOT}).toString().trim();
 if (!fs.existsSync(path.join(BD, '.test', 'page.html')) || (fs.existsSync(path.join(BD, 'REV')) ? fs.readFileSync(path.join(BD, 'REV'), 'utf8').trim() : '') !== rev){
   fs.rmSync(BD, {recursive:true, force:true}); fs.mkdirSync(BD, {recursive:true});
@@ -24,8 +27,9 @@ const NORM = `o => { const K = typeof RES_K === 'number' ? RES_K : 1, G0 = ['oil
     if (o.mkt){ xs(o.mkt.use); xs(o.mkt.dem); } if (o.trade && o.trade.routes) for (const r of o.trade.routes) for (const v of [r.va, r.vb]) if (v && typeof v.q === 'number') v.q /= K;
     for (const D of [o, ...Object.values(o.desks || {})]){ for (const f of (D.offers || [])) if (f && f.deal){ xs(f.deal.give); xs(f.deal.get); } if (D.stats){ xs(D.stats.made); if (typeof D.stats.rareRes === 'number') D.stats.rareRes /= K; } }
     return JSON.stringify(o, (k, v) => typeof v === 'number' ? +v.toPrecision(10) : typeof v === 'string' && k === 'text' ? v.replace(/[\\d][\\d,.]*/g, '#') : v); }`;
-const PLAY = `(sv) => { const ok = restore(JSON.parse(sv)); if (!ok) return {ok}; tick(); for (let i = 0; i < 23; i++) tick(); const wars1 = Object.values(S.rel).filter(r => r.st === 'war').length, decl1 = S.decl.length;
-    for (let i = 0; i < 96; i++) tick(); return {ok, hour:S.hour, scn:S.scn, wars1, decl1, wars:Object.values(S.rel).filter(r => r.st === 'war').length, hash:(${HASH})((${NORM})(JSON.parse(saveJSON())))}; }`;
+const PLAY = `(sv) => { const K = typeof RES_K === 'number' ? RES_K : 1, totals = () => { const t = {cash:0}; for (const k of ['oil', 'metal', 'iron', 'elec', 'rare']) t[k] = 0; for (const N of S.nations) if (N.alive){ t.cash += N.cash; for (const k of ['oil', 'metal', 'iron', 'elec', 'rare']) t[k] += N[k]/K; } return t; };   // (world totals of money and goods, in the old units)
+    const ok = restore(JSON.parse(sv)); if (!ok) return {ok}; tick(); for (let i = 0; i < 23; i++) tick(); const wars1 = Object.values(S.rel).filter(r => r.st === 'war').length, decl1 = S.decl.length;
+    for (let i = 0; i < 96; i++) tick(); return {ok, hour:S.hour, scn:S.scn, wars1, decl1, wars:Object.values(S.rel).filter(r => r.st === 'war').length, tot:totals(), hash:(${HASH})((${NORM})(JSON.parse(saveJSON())))}; }`;
 // the scaled fields of a loaded old save against the save text: {checked, bad: [first differences]}
 const CMP = `(sv) => { const o = JSON.parse(sv), K = RES_K, G0 = ['oil', 'metal', 'iron', 'elec', 'rare'], bad = []; let checked = 0;
     const eq = (at, a, b) => { checked++; if (!(a === b || Math.abs(a - b) <= 1e-9*Math.max(1, Math.abs(a), Math.abs(b)))) bad.push(at + ': ' + a + ' vs ' + b); };
@@ -62,7 +66,12 @@ const CMP = `(sv) => { const o = JSON.parse(sv), K = RES_K, G0 = ['oil', 'metal'
     ck(`${scn}: a save made by this build (S.rk = ${rt.rk}) loads unchanged, twice`, rt.rk === 1000 && rt.same1 && rt.same2, rt);
     // 5 days from the old save: the base build and this build reach the same state in the old units; the pending computer declaration starts no war
     const ro = await o.evaluate(`(${PLAY})(${JSON.stringify(sv)})`), rn = await n.evaluate(`(${PLAY})(${JSON.stringify(sv)})`);
-    ck(`${scn}: 5 days from the base save play the same in both builds (goods / RES_K): ${ro.hash} vs ${rn.hash}`, ro.ok && rn.ok && ro.hash === rn.hash && ro.hour === rn.hour, {old:ro, now:rn});
+    // (Since the x1000 merge master's rules have moved on (combat, movement, dug-in, research cards ...), so the two builds can no longer reach the same
+    // state hash; that equality is tools/x1000-check.js's job against the commit of the merge. What an old save needs from this build: it plays on
+    // (the same save twice gives the same hash), and its goods stay in the old units' ballpark after 5 days: the world totals, divided by RES_K,
+    // within 40% of the base build's (a missed or doubled x1000 would be a factor of 1,000), money likewise.)
+    const rn2 = await n.evaluate(`(${PLAY})(${JSON.stringify(sv)})`), rel = k => Math.abs(rn.tot[k] - ro.tot[k])/Math.max(1, Math.abs(ro.tot[k])), worst = Object.keys(ro.tot).map(k => [k, +rel(k).toFixed(3)]).sort((x, y) => y[1] - x[1])[0];
+    ck(`${scn}: 5 days from the base save: plays on, the same save twice gives the same state (${rn.hash}), world totals in the old units within 40% of the base build's (worst ${worst[0]} ${worst[1]})`, rn.ok && rn2.hash === rn.hash && rn.hour === ro.hour && worst[1] < 0.4, {old:ro.tot, now:rn.tot, hashes:[rn.hash, rn2.hash]});
     ck(`${scn}: the old save's pending computer declaration is dropped: no war after the first day`, rn.decl1 === 0 && rn.wars1 === 0 && rn.wars === 0 && ro.wars1 === 0, {old:[ro.decl1, ro.wars1], now:[rn.decl1, rn.wars1, rn.wars]}); }
   console.log('ERRORS', errs.length ? errs.slice(0, 5) : 'none'); const bad = checks.filter(c => !c.ok).length;
   console.log(bad || errs.length ? `X1000 OLDSAVE FAILED: ${bad} of ${checks.length} checks` : `X1000 OLDSAVE OK: ${checks.length} checks`);

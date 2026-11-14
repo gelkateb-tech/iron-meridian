@@ -96,7 +96,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Infantry Corps
 
-*Takes ground and holds it.* Banner picture: `rb-inf`, from `u-infantry`.
+*Takes ground and holds it.* Banner picture: `rbs-inf` (a wide scene made with tools/gen-art.py).
 
 | Day | Motorized Infantry | Anti-Tank Infantry | Special Forces (elite) |
 |---|---|---|---|
@@ -173,7 +173,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Armoured Forces
 
-*Breaks the line and carries the infantry forward.* Banner picture: `rb-arm`, from `u-tank`.
+*Breaks the line and carries the infantry forward.* Banner picture: `rbs-arm` (a wide scene made with tools/gen-art.py).
 
 | Day | Infantry Fighting Vehicle | Main Battle Tank |
 |---|---|---|
@@ -229,7 +229,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Artillery & Air Defence
 
-*Long reach on the ground, a roof over the army.* Banner picture: `rb-sup`, from `u-artillery`.
+*Long reach on the ground, a roof over the army.* Banner picture: `rbs-sup` (a wide scene made with tools/gen-art.py).
 
 | Day | Mobile Artillery | Rocket Artillery | Mobile SAM | Mobile Jammer |
 |---|---|---|---|---|
@@ -318,7 +318,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Air Assault
 
-*Short reach from the air: gunships and airborne troops.* Banner picture: `rb-aas`, from `u-attack-heli`.
+*Short reach from the air: gunships and airborne troops.* Banner picture: `rbs-aas` (a wide scene made with tools/gen-art.py).
 
 | Day | Attack Helicopter | Paratroopers (elite) |
 |---|---|---|
@@ -372,7 +372,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Tactical Air
 
-*Fighters and strike jets, medium reach.* Banner picture: `rb-tac`, from `u-air-superiority`.
+*Fighters and strike jets, medium reach.* Banner picture: `rbs-tac` (a wide scene made with tools/gen-art.py).
 
 | Day | Interceptor | Strike Fighter | Air Superiority Fighter (elite) |
 |---|---|---|---|
@@ -445,7 +445,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Unmanned Systems
 
-*Cheap eyes and expendable strikes.* Banner picture: `rb-uns`, from `u-strike-drone`.
+*Cheap eyes and expendable strikes.* Banner picture: `rbs-uns` (a wide scene made with tools/gen-art.py).
 
 | Day | Recon UAV | Swarm Drones | Strike Drone |
 |---|---|---|---|
@@ -521,7 +521,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Strategic Air
 
-*Bombers and the big sensors, long reach.* Banner picture: `rb-str`, from `u-awacs`.
+*Bombers and the big sensors, long reach.* Banner picture: `rbs-str` (a wide scene made with tools/gen-art.py).
 
 | Day | Heavy Bomber | Stealth Bomber (elite) | Maritime Patrol Aircraft | AWACS |
 |---|---|---|---|---|
@@ -607,7 +607,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Navy
 
-*Sea control, convoys and the silent service.* Banner picture: `rb-nav`, from `u-carrier`.
+*Sea control, convoys and the silent service.* Banner picture: `rbs-nav` (a wide scene made with tools/gen-art.py).
 
 | Day | Frigate | Cruiser | Aircraft Carrier | Attack Submarine |
 |---|---|---|---|---|
@@ -696,7 +696,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Strategic Weapons
 
-*Missiles, the shield against them, eyes in orbit.* Banner picture: `rb-msl`, from `u-ballistic-missile`.
+*Missiles, the shield against them, eyes in orbit.* Banner picture: `rbs-msl` (a wide scene made with tools/gen-art.py).
 
 | Day | Cruise Missile | Ballistic Missile | Missile Defence | Satellites |
 |---|---|---|---|---|
@@ -749,7 +749,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 
 ### Command & Logistics
 
-*Advantages for every force you field.* Banner picture: `rb-cmd`, from `u-supply-truck`.
+*Advantages for every force you field.* Banner picture: `rbs-cmd` (a wide scene made with tools/gen-art.py).
 
 | Day | Supply | Engineers | Landings | Medical |
 |---|---|---|---|---|

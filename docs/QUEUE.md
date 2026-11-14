@@ -8,15 +8,15 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
-Last updated: 2026-11-13 (overnight run).
+Last updated: 2026-11-14.
 
 ## Running
 
 | Task | Model | Where it is |
 |---|---|---|
-| Research tab redo, phase 2 (owner approved with fixes: bigger banner subjects in the middle band, icons close up, one shared icon per upgrade type): new artillery icon first for the owner, then the rest on Gemini | Opus | branch research-tab |
-| Building pictures in the game: angled HQs by region; Airbase, Naval Yard (on the coast, mirrored), Recruiting Office, Fortifications, Hospital levels; no level badges on the map | Opus | branch buildings-angled |
-| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges after the building pictures) |
+| Real borders from Natural Earth 1:10m, plain solid colours (no hatching), all borders visible | Opus | branch borders-real (resumed; merges next) |
+| Each aircraft type its own 3D shape (fighter, bomber, stealth bomber, AWACS, naval patrol, others) | Opus | branch aircraft-3d |
+| Explosion video clips from Gemini Omni 1.2 Flash (720p, one try each, about $1.70): nuclear, chemical, conventional (bombers, ballistic), cruise missile; sprite sheets (black keyed out), played on the map; NOT merged until the owner OKs the clips and recording; then the crater left behind is ported from explosions-code and that branch is deleted (owner dropped the code-animated explosions: too fake in motion) | Opus | branch fx-video |
 
 **Merge order for the map jobs (owner):** one at a time, black map first (merged v35), night lights (merged v37), map modes (merged v39), then real borders, each merged with master and re-tested before the next.
 
@@ -24,13 +24,16 @@ Last updated: 2026-11-13 (overnight run).
 
 | # | Task | Model |
 |---|---|---|
-| 1 | Roads: every province linked to a neighbour, real roads first | Opus |
-| 2 | Nations balance re-check now that the AI never starts wars | Sonnet |
-| 3 | Capital HQ flag drawn in code on every regional HQ (after the building pictures) | Opus |
-| 4 | Each aircraft type its own 3D shape | Opus |
-| 5 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | Roads: every province linked to a neighbour, real roads first (map job, starts when real borders merge) | Opus |
+| 2 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| later | Capital lost (owner, 'we'll work on that later'): the HQ is destroyed and the morale of all the nation's homeland cities and its occupied cities starts falling until they rebel (build on the existing unrest and partisan revolts in rules/economy.js); owner to give the details before it starts | Opus |
 
 ## Waiting on me (the owner)
+
+- **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
+- **Building pictures (merged v48):** (1) Fortifications levels I-III use pictures 1, 3, 5: OK? (2) Army Base, Silo, Arms Industry still need angled pictures (nothing on the map for them yet); (3) Hamburg's Naval Yard sits on the Elbe bank: OK, or always the sea? (4) ports far from water (Berlin, Oslo, Helsinki) keep the yard in the city cluster: OK? (5) cast shadows kept see-through: keep, or a small contact shadow? (6) mid-zoom pictures are small (about 30-40 px): bigger?
+
+- **Research art retries (one try each, not retried):** a diamond frame drawn inside 7 icons (Artillery & Air Defence category, Ballistic Missiles, Protection (25 nodes), Tandem Warheads, ATGM, strike drone hit, satellite); subject cut off on 2 banners (Strategic Weapons missile, Infantry soldiers); wrong subject on 2 (Special Forces airlift, SAM seeker). Still close to real products: F-15, MQ-9, F-22/F-35, B-2, Nimitz, AH-1, P-3, Abrams pictures. Firepower/Protection show a tank turret on every line incl. aircraft and ships. Retry these 11 (about $0.50)?
 
 - **Speed options that change play:** quiet nations plan every 8 h instead of hourly (about -20% rules time); shorter attack-target search (-10 ms/day); reuse land routes across hours (-20 to -25 ms/day); phone map drawn at pixel ratio 1.5 instead of 2 (about 44% fewer pixels: the phone is limited by drawing, not rules).
 
@@ -70,6 +73,9 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| Research banners edge to edge with a light blue-grey wash behind the name; Infantry Corps first picture moved up, faces whole and feet cropped (Dev Build v49) | Opus |
+| Nations balance re-check for peaceful computer nations: all balance checks pass (China/India check changed to 'stay at peace and hold their land'), no nation stalls or goes broke; v3c, stealth-ui and x1000 old-save tests brought up to date (tests only) | Sonnet |
+| Angled building pictures on the map and in the city panel: regional HQs on every capital, Airbase, Naval Yard on the coast or river bank (mirrored to face the water), Recruiting Office, Fortifications; fade in by zoom, crane while building, no level badges (Dev Build v48) | Opus |
 | Resources x1000 except money (stocks, production, storage, all costs), short forms (40K, 1.2M), full amounts with units on hover, market prices per 1,000 units; merged with the fixes, play proven identical (6 games, 30 days), old saves scaled once (Dev Build v30) | Opus |
 | URGENT Dev Build fix A: computer nations never start a war (they fight back fully; allies join only to defend), play test at 1x/4x/8x, merge breakage (v3r1) | Opus |
 | URGENT Dev Build fix B: speed-ups with identical play (rules per game day 1.19 s → about 0.55 s CPU; longest freeze at 8x 476 → 95 ms). Not fully met: 'well under 0.5 s' and 60 fps while panning; faster options change AI play (owner to decide) | Opus |
