@@ -5788,7 +5788,7 @@ function cityRing(T, now, a0, kl){ const {p} = T; if (!T.city) return; const r =
    assets/art-src/ba-*.png by tools/cutout-angled.py: background removed, own cast shadow kept as a soft dark layer, cropped tight; BNMETA holds each
    picture's size, ground anchor, the HQ flagpole tops and the Naval Yard's pier side). No frame, tile, badge or level number: the level shows only in
    the city panel, on the map it is the picture itself (a bigger, more built-up base per level). A capital carries its headquarters in its nation's
-   architectural style (nations.js 'hq', by its country; bnHqStyle), standing exactly on the capital's point; a captured capital keeps it, flying the captor's flag (bnHqScan, bnFlags). Zoomed out (below BN_IN0) no building
+   architectural style (nations.js 'hq', by its country; bnHqStyle), standing exactly on the capital's point, flying its nation's flags (bnFlags); a captured capital's HQ is destroyed (bnHqScan). Zoomed out (below BN_IN0) no building
    shows, only the city's name; from the mid zoom one picture per city, its most important building with a picture (HQ, Missile Silo, Airbase, Naval
    Yard, Army Base, Arms Industry, Recruiting Office, Fortifications; Army Base, Missile Silo and Arms Industry have no angled picture yet and show none),
    standing on the city's point; from BN_ALL0 the rest fade in round it in a tight cluster, behind and beside it (the name stays clear below). The Naval
@@ -5823,16 +5823,15 @@ function bnHqStyle(n){ const N = S.nations[n]; if (!N) return 'western'; let st 
 let BNL = new Map(), BNSH = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0, BNP = null; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
 // a province's buildings that have a picture, the most important first: {k, lv, nm (picture), c (its construction), site (a new one)}
 function bnItems(p){ const B = S.bld[p], o = S.owner[p], c = o >= 0 ? S.cons[p] : null, out = [], hq = bnHqAt(p);
-  if (hq >= 0) out.push({k:'hq', lv:1, nm:bnName('hq', bnHqStyle(hq)), c:null, site:false});   // (in its builder's style, whoever holds it now: bnFlags flies the holder's flag)
+  if (hq >= 0) out.push({k:'hq', lv:1, nm:bnName('hq', bnHqStyle(hq)), c:null, site:false});
   for (const k of BN_K){ const lv = Math.min(B[k] || 0, BUILD[k].max), cc = c && c.k === k ? c : null; if (lv > 0 && BN_ART[k]) out.push({k, lv, nm:bnName(k, lv), c:cc, site:false}); }
   if (c && BN_ART[c.k] && !(B[c.k] > 0)) out.push({k:c.k, lv:1, nm:bnName(c.k, 1), c, site:true});   // a new building: its construction site, after the finished ones
   return out; }
-// where the headquarters stand: every nation's starting capital (cap0; N.capital in a save from before it), for good, whoever holds it now (a
-// captured capital keeps its HQ and flies its captor's flag), and a living nation's capital moved after it lost its first (an HQ of its own there).
-// Province -> the nation whose HQ it is (its style); worked out every frame (drawBuildings) and for a hook's call, into one Map (no allocation)
+// where the headquarters stand: each living nation's capital while it holds it. A captured capital's HQ is destroyed (gone from the map with its
+// flags); the loser's new capital (rules: checkNation) has its own HQ. Province -> the nation whose HQ it is, worked out every frame
+// (drawBuildings) and for a hook's call, into one Map (no allocation)
 const BNHQ = new Map(); let BNHQ_S = null;
-function bnHqScan(){ BNHQ.clear(); BNHQ_S = S; if (!S) return BNHQ; for (const N of S.nations){ const c0 = N.cap0 ?? N.capital; if (c0 != null && c0 >= 0) BNHQ.set(c0, N.id); }
-  for (const N of S.nations) if (N.alive && S.owner[N.capital] === N.id && !BNHQ.has(N.capital)) BNHQ.set(N.capital, N.id);
+function bnHqScan(){ BNHQ.clear(); BNHQ_S = S; if (!S) return BNHQ; for (const N of S.nations) if (N.alive && S.owner[N.capital] === N.id) BNHQ.set(N.capital, N.id);
   return BNHQ; }
 const bnHqAt = p => { if (BNHQ_S !== S) bnHqScan(); const n = BNHQ.get(p); return n == null ? -1 : n; };
 const bnHas = (p, caps) => { if (caps.has(p)) return true; const B = S.bld[p], c = S.cons[p]; if (c && BN_ART[c.k]) return true; for (const k in BN_ART) if (B[k] > 0) return true; return false; };
@@ -5936,12 +5935,13 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
   if (!S) return; const a1 = bnA(hexPx); if (a1 <= 0.003) return;
   const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_MK = 6;
   const caps = bnHqScan(); BNF_MK = 8; BNF_WAVE = !saverOn() && !afxReduced();
-  if (!BNP || BNP.S !== S || BNP.G !== G || now - BNP.t > 400 || now < BNP.t){ const L = []; for (let p = 0; p < G.P.length; p++) if (!G.P[p].sea && bnHas(p, caps)) L.push(p); BNP = {S, G, t:now, L, I:new Map()}; }   // (the provinces with pictures and their buildings, looked at again every 0.4 s)
+  if (!BNP || BNP.S !== S || BNP.G !== G || BNP.o !== OWNV || now - BNP.t > 400 || now < BNP.t){ const L = []; for (let p = 0; p < G.P.length; p++) if (!G.P[p].sea && bnHas(p, caps)) L.push(p); BNP = {S, G, o:OWNV, t:now, L, I:new Map()}; }   // (the provinces with pictures and their buildings, looked at again every 0.4 s and at once when an owner changes: a captured capital's HQ goes at once)
   for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y); if (x < -m || y < -m || x > cw + m || y > ch + 2*m) continue;
     let its = BNP.I.get(p); if (!its) BNP.I.set(p, its = bnItems(p)); if (!its.length) continue; const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }
     const cap = nd*2*view.s*1.1;   // (a picture's long side stays under the way to the next city)
     if (P.city || caps.has(p)) cityRing({p, city:true, x, my:y + CITY_DY*kl}, now, a1, kl);
     for (let i = 0; i < its.length; i++){ const al = i ? a2 : a1; if (al <= 0.003) break; const [dx, dy] = Lo.pos[i], e = its[i];
+      if (e.k === 'hq' && !caps.has(p)) continue;   // (an HQ whose capital fell this moment: destroyed)
       list.push({p, e, mir:Lo.mir[i], x:x + dx*view.s, y:y + dy*view.s, wx:P.x + dx, wy:P.y + dy, a:al, L:Math.min(L1*bnF(e.k, e.lv), cap)}); } }
   if (more) animFast();   // (the cities left over are worked out in the next frames)
   list.sort((u, v) => u.y - v.y);   // back to front
@@ -5960,47 +5960,57 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
     { const lr = bLevel(p + ':bn:' + e.k, e.lv, now); let f = lr.t0 ? (now - lr.t0)/TRAY_ANIM : -1; if (f >= 1){ lr.t0 = 0; f = -1; }
       if (f >= 0 && !saverOn()){ animFast(); const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2, R0 = Math.max(10, w*0.5), E0 = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = q.a*0.7*(1 - f); ctx.drawImage(GLOW(), cx - R0*1.3, cy - R0*1.3, R0*2.6, R0*2.6);
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = q.a*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, R0*(0.5 + 0.8*E0), 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
-    if (q.a > 0.3){ BNHIT.push({p, b, hq:e.k === 'hq'}); const bx = [b[0], b[1], b[2], b[3]]; bx.unit = true; bx.b3 = true; bx.at = -5; boxes0.push(bx); if (e.k === 'hq' && S.owner[p] === PLAYER && S.nations[PLAYER] && S.nations[PLAYER].capital === p) HQBOX = [b]; }
+    if (q.a > 0.3){ BNHIT.push({p, b, hq:e.k === 'hq'}); const bx = [b[0], b[1], b[2], b[3]]; bx.unit = true; bx.b3 = true; bx.at = -5; boxes0.push(bx); if (e.k === 'hq' && S.owner[p] === PLAYER) HQBOX = [b]; }
     /*@TEST*/BNDBG.push({p, k:e.k, nm:e.nm, lv:e.lv, site:e.site ? 1 : 0, cons:e.c ? 1 : 0, hq:e.k === 'hq' ? 1 : 0, mir:q.mir ? 1 : 0, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:q.wx, wy:q.wy, a:+q.a.toFixed(3), box:b.map(v => +v.toFixed(1)), L:+q.L.toFixed(2), px:c.width, fl:e.k === 'hq' ? BNF_DBG.slice() : null});/*@ENDTEST*/ }
   ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
-/* ---- The HQ's flags: the holder's real flag on each of the HQ picture's 8 flagpoles (BNMETA flags: each pole's top and length), drawn in code
-   from the flag atlas every frame from the province's owner, the one the political map shows (owners are public, fog or not): a capture flies the
-   captor's flag at once; independent land leaves the poles bare. A flag hangs from its pole's top, a third of the pole high, 4:3 like the atlas,
-   with a thin dark edge, and flies along the picture's other ground axis (the poles stand in rows along one axis, so a row's flags lie side by
-   side like a real row of flags, barely overlapping), toward the back right, its front side showing (a mirrored HQ: to the back left, its back
-   side). A gentle wave: the flag in a few upright strips, each shifted and shaded by a sine that grows toward the fly end, on the clock (the same
-   at any frame rate); still with the Battery saver or reduced motion. Only where the flags reach a readable size (BNFL_H0..H1 css px high),
-   fading in with the HQ. Each flag is one small sprite per atlas cell, device height and night tone (BNFC, numeric keys), a few made a frame. */
-const BNFL_K = 0.33, BNFL_H0 = 2.2, BNFL_H1 = 3.2, BNFL_AMP = 0.09, BNFL_W = 0.0042, BNFC = new Map(), BNFS = new Map(), BNFI = [];
+/* ---- The HQ's flags: its nation's real flag on each of the HQ picture's 8 flagpoles (BNMETA flags: each pole's top and length), drawn in code
+   from the flag atlas every frame from the province's owner (the political map's owner). Each flag is cloth: it hangs from its pole's top along
+   its hoist, a third of the pole high and 4:3 like the atlas, and flies along the picture's other ground axis (the poles stand in rows along one
+   axis, so a row's flags lie side by side like a real row of flags), toward the back right, its front side showing (a mirrored HQ: to the back
+   left, its back side). The cloth is drawn in 5 to 12 upright strips, each sheared so its top and bottom edges follow the cloth's curve: soft
+   folds (a sine running along the flag, growing from the hoist), the fly end drooping a little and drawn in a little where it folds; each strip
+   lit or shaded by the slope of its fold. The colours are muted a little toward the map's painted look, with only a faint edge. The folds roll
+   on the clock (the same at any frame rate); with the Battery saver or reduced motion they stand still (the cloth keeps its folds). Only where
+   the flags reach a readable size (BNFL_H0..H1 css px high), fading in with the HQ. Each flag's flat picture is one small sprite per atlas cell,
+   device height and night tone (BNFC, numeric keys), a few made a frame; the strips are drawn from it (no allocation per frame). */
+const BNFL_K = 0.33, BNFL_H0 = 2.2, BNFL_H1 = 3.2, BNFL_W = 0.0036, BNFL_F = 1.15, BNFL_A = 0.11, BNFL_D = 0.12, BNFC = new Map(), BNFS = new Map(), BNFI = [];
 let BNFI_S = null, BNF_MK = 0, BNF_WAVE = true; /*@TEST*/const BNF_DBG = [-2, -2, 0, 0];/*@ENDTEST*/   // (test: the owner, its atlas cell, the flags' alpha, flags drawn)
 // a nation's atlas cell (-1: none, its colour instead), once per game
 function bnFlagIdx(o){ if (BNFI_S !== S){ BNFI.length = 0; BNFI_S = S; } let i = BNFI[o]; if (i === undefined) i = BNFI[o] = flagIdx(o); return i; }
-// the sprite of nation o's flag (atlas cell i) H device px high (plus its 1 px dark edge), darkened for the night (lk 0..8); null while the atlas loads
+// the flat picture of nation o's flag (atlas cell i) H device px high (plus a faint 1 px edge), muted a little, darkened for the night (lk 0..8);
+// null while the atlas loads
 function bnFlagSprite(i, o, H, lk){ const key = ((i >= 0 ? i : 4000 + o)*512 + H)*16 + lk; let c = BNFC.get(key); if (c) return c;
   const im = ART.img('flags'); if (i >= 0 && !im && !ART.failed('flags')){ ART.want('flags'); return null; }
   if (BNF_MK-- <= 0) return null;
   const W = Math.round(H*4/3); c = document.createElement('canvas'); c.width = W + 2; c.height = H + 2; const g = c.getContext('2d');
-  g.fillStyle = 'rgba(16,15,12,.9)'; g.fillRect(0, 0, W + 2, H + 2);
+  g.fillStyle = 'rgba(20,20,16,.3)'; g.fillRect(0, 0, W + 2, H + 2);
   if (i >= 0 && im){ g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; const cw0 = (im.naturalWidth || im.width)/FLAG_COLS, ch0 = (im.naturalHeight || im.height)/FLAG_ROWS; g.drawImage(im, (i % FLAG_COLS)*cw0, Math.floor(i/FLAG_COLS)*ch0, cw0, ch0, 1, 1, W, H); }
   else { g.fillStyle = flagColor(o); g.fillRect(1, 1, W, H); }
-  const gr = g.createLinearGradient(0, 1, 0, H + 1); gr.addColorStop(0, 'rgba(255,255,255,.14)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.16)'); g.fillStyle = gr; g.fillRect(1, 1, W, H);
-  if (lk){ g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(8,16,34,${(lk/8*0.55).toFixed(3)})`; g.fillRect(0, 0, W + 2, H + 2); g.globalCompositeOperation = 'source-over'; }
+  g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(118,110,92,.17)'; g.fillRect(1, 1, W, H);   // (muted toward the map's painted tones)
+  const gr = g.createLinearGradient(0, 1, 0, H + 1); gr.addColorStop(0, 'rgba(255,248,230,.1)'); gr.addColorStop(0.55, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.12)'); g.fillStyle = gr; g.fillRect(1, 1, W, H);
+  if (lk){ g.fillStyle = `rgba(8,16,34,${(lk/8*0.55).toFixed(3)})`; g.fillRect(0, 0, W + 2, H + 2); }
+  g.globalCompositeOperation = 'source-over';
   if (BNFC.size > 400) BNFC.clear(); BNFC.set(key, c); return c; }
+// the cloth's shape along the flag, t 0 (hoist) .. 1 (fly end), for fold phase ph: x and y (css px, flag units fw, fh) and its shade (+ dark, - lit)
+const bnClothX = (t, ph, fw) => fw*(0.955*t + 0.03*t*Math.cos(BNFL_F*6.2832*t - ph)), bnClothY = (t, ph, fh) => fh*(BNFL_D*t*t + BNFL_A*Math.pow(t, 0.85)*Math.sin(BNFL_F*6.2832*t - ph));
+const bnClothS = (t, ph) => Math.pow(t, 0.85)*Math.cos(BNFL_F*6.2832*t - ph);
 // the flags on the HQ picture q drawn at (X, Y) w x h css px (M: its BNMETA entry)
 function bnFlags(q, M, X, Y, w, h, lk, now, ga0){ const o = S.owner[q.p], F = M.flags; /*@TEST*/BNF_DBG[0] = o; BNF_DBG[1] = o >= 0 ? bnFlagIdx(o) : -1; BNF_DBG[2] = 0; BNF_DBG[3] = 0;/*@ENDTEST*/
-  if (o == null || o < 0 || !F.length) return;   // (independent land: bare poles)
+  if (o == null || o < 0 || !F.length) return;
   const fh = BNFL_K*F[0][2]*h, fa = q.a*smooth01((fh - BNFL_H0)/(BNFL_H1 - BNFL_H0)); if (fa <= 0.02) return;
   const i = bnFlagIdx(o), c = bnFlagSprite(i, o, Math.max(3, Math.round(fh*dpr)), lk); if (!c){ animFast(); return; }
   let r = BNFS.get(q.e.nm); if (r === undefined){ const a = F[0], b = F[Math.min(3, F.length - 1)]; r = b[0] !== a[0] ? Math.max(0, Math.min(1, (b[1] - a[1])*M.h/((b[0] - a[0])*M.w))) : 0.5; BNFS.set(q.e.nm, r); }   // (the slope of a row of poles: the other ground axis rises as much)
-  const dir = q.mir ? -1 : 1, fw = fh*c.width/c.height, n = BNF_WAVE ? Math.max(1, Math.min(5, Math.round(c.width/4))) : 1, sw = c.width/n, du = fw/n, A = fh*BNFL_AMP, pw = 0.45*w/M.w;   // (pw: half a pole's width)
-  ctx.save(); ctx.fillStyle = '#000';
-  for (let k = 0; k < F.length; k++){ const f = F[k], px = X + (q.mir ? 1 - f[0] : f[0])*w + dir*pw, py = Y + f[1]*h, ph = now*BNFL_W + k*0.9;
-    ctx.setTransform(dpr*dir, -dpr*r, 0, dpr, dpr*px, dpr*py);   // (u along the flag from its pole, v down)
-    if (n === 1){ ctx.globalAlpha = ga0*fa; ctx.drawImage(c, 0, 0, fw, fh); continue; }
-    for (let j = 0; j < n; j++){ const t = (j + 0.5)/n, sn = Math.sin(ph - t*2.6), v = A*sn*t, sh = Math.cos(ph - t*2.6)*t;
-      ctx.globalAlpha = ga0*fa; ctx.drawImage(c, j*sw, 0, sw, c.height, j*du, v, du + (j < n - 1 ? 0.3 : 0), fh);
-      if (sh > 0.05){ ctx.globalAlpha = ga0*fa*0.2*sh; ctx.fillRect(j*du, v + 0.5/dpr, du, fh - 1/dpr); } } }
-  ctx.restore(); if (n > 1) animAmb();   // (the wave moves on while the map is drawn: ambient motion)
+  const dir = q.mir ? -1 : 1, fw = fh*c.width/c.height, n = Math.max(5, Math.min(12, Math.round(fw*dpr/2))), sw = c.width/n, pw = 0.45*w/M.w, ov = 0.35/dpr, t0w = BNF_WAVE ? now*BNFL_W : 1.3;   // (pw: half a pole's width; ov: the strips' overlap, no seams)
+  const a0 = ga0*fa; ctx.save();
+  for (let k = 0; k < F.length; k++){ const f = F[k], px = X + (q.mir ? 1 - f[0] : f[0])*w + dir*pw, py = Y + f[1]*h, ph = t0w + k*0.9;
+    let xa = 0, ya = 0;
+    for (let j = 0; j < n; j++){ const t1 = (j + 1)/n, xb = bnClothX(t1, ph, fw), yb = bnClothY(t1, ph, fh), ws = xb - xa, sl = (yb - ya)/ws, sh = bnClothS((j + 0.5)/n, ph);
+      ctx.setTransform(dpr*dir, dpr*(sl - r), 0, dpr, dpr*(px + dir*xa), dpr*(py - r*xa + ya));   // (this strip: x along it, its top edge from (xa, ya) to (xb, yb), then the picture's ground axis)
+      ctx.globalAlpha = a0; ctx.drawImage(c, j*sw, 0, sw, c.height, 0, 0, ws + (j < n - 1 ? ov : 0), fh);
+      if (sh > 0.04){ ctx.fillStyle = '#000'; ctx.globalAlpha = a0*0.42*sh; ctx.fillRect(0, 0, ws, fh); }
+      else if (sh < -0.04){ ctx.fillStyle = '#fff6e0'; ctx.globalAlpha = a0*0.26*(-sh); ctx.fillRect(0, 0, ws, fh); }
+      xa = xb; ya = yb; } }
+  ctx.restore(); if (BNF_WAVE) animAmb();   // (the folds roll on while the map is drawn: ambient motion)
   /*@TEST*/BNF_DBG[2] = +fa.toFixed(3); BNF_DBG[3] = F.length;/*@ENDTEST*/ }
 // the building picture at a screen point (the one drawn on top), for taps: {p}
 function bldAt(x, y){ for (let i = BNHIT.length - 1; i >= 0; i--){ const b = BNHIT[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return {p:BNHIT[i].p}; } return null; }

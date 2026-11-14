@@ -1,8 +1,8 @@
-// The HQ flags (bnFlags in index.html): every HQ on the map flies its province owner's real flag (the atlas cell of that nation) on all of its
-// picture's flagpoles; a capture switches it at once (the captured capital keeps its HQ in its builder's style and flies the captor's flag, the
-// loser's moved capital gets its own HQ with its own flag); independent land leaves the poles bare; the flags show only at close zoom (hidden at
-// the mid zoom); the wave stops with the Battery saver and reduced motion; the flag sprites are cached (no new ones frame after frame); the pole
-// tops in BNMETA are regular (each group of 4 evenly spaced); a save without the starting capitals (cap0) still has every capital's HQ. node .test/hqflags.js [W H dpr]  prints JSON {checks, fails, errors}, exit 1 on a failure.
+// The HQ flags (bnFlags in index.html): every HQ on the map flies its nation's real flag (the atlas cell of the province owner) on all of its
+// picture's flagpoles; a capture destroys the captured capital's HQ at once (no HQ picture, no flags there, the next frame) and the loser's moved
+// capital gets its own HQ with its own flag; the flags show only at close zoom (hidden at the mid zoom); the folds roll only without the Battery
+// saver and reduced motion; the flag sprites are cached (no new ones frame after frame); the pole tops in BNMETA are regular (each group of 4
+// evenly spaced); a save without the starting capitals (cap0) still has every capital's HQ. node .test/hqflags.js [W H dpr]  prints JSON {checks, fails, errors}, exit 1 on a failure.
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1);
@@ -37,17 +37,14 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   await look(be, 176); await raf(); await raf(); const n0 = await p.evaluate(() => window.__im.bn.fcache.size);
   for (let i = 0; i < 20; i++){ await p.evaluate(() => window.__im.redraw()); await raf(); }
   const n1 = await p.evaluate(() => window.__im.bn.fcache.size); checks.cache = {before:n0, after:n1}; if (n1 !== n0) fails.push(`flag sprites made again frame after frame (${n0} -> ${n1})`);
-  // 4) capture: Berlin taken by France: the HQ stays (western), France's flag at once (the next frame); Germany's new capital has its HQ with Germany's flag
-  const cap = await p.evaluate(be => { const im = window.__im, S = im.S, fr = S.nations.find(n => n.name === 'France').id; capture(be, fr); im.redraw(); return {fr, fi:im.bn.flagIdx(fr), de:im.bn.flagIdx(0), nc:S.nations[0].capital, alive:S.nations[0].alive}; }, be);
-  await raf(); let e = await hqAt(be);
-  checks.capture = {berlin:e && {nm:e.nm, fl:e.fl}, france:cap.fi, newCapital:cap.nc};
-  if (!e) fails.push('captured Berlin lost its HQ'); else { if (e.nm !== 'bn-hq-western') fails.push('captured Berlin HQ style changed: ' + e.nm); if (e.fl[0] !== cap.fr || e.fl[1] !== cap.fi || e.fl[3] !== 8) fails.push('captured Berlin flies ' + JSON.stringify(e.fl) + ', not France ' + cap.fi); }
-  if (cap.alive && cap.nc !== be){ await look(cap.nc, 176); await raf(); await p.waitForTimeout(500); await raf(); const e2 = await hqAt(cap.nc); checks.capture.moved = e2 && e2.fl;
-    if (!e2 || e2.fl[0] !== 0 || e2.fl[1] !== cap.de || e2.fl[3] !== 8) fails.push('Germany\'s moved capital has no HQ with its flag: ' + JSON.stringify(e2 && e2.fl)); }
-  // back to Germany, then independent: bare poles
-  await look(be, 176); await p.evaluate(be => { const im = window.__im; im.S.owner[be] = 0; im.geoDirty(); im.redraw(); }, be); await raf(); e = await hqAt(be); checks.recaptured = e && e.fl; if (!e || e.fl[0] !== 0 || e.fl[1] !== cap.de) fails.push('Berlin back to Germany: flag not switched back');
-  await p.evaluate(be => { const im = window.__im; im.S.owner[be] = -1; im.geoDirty(); im.redraw(); }, be); await raf(); e = await hqAt(be); checks.independent = e && e.fl; if (!e || e.fl[3] !== 0) fails.push('independent Berlin: flags drawn ' + JSON.stringify(e && e.fl));
-  await p.evaluate(be => { const im = window.__im; im.S.owner[be] = 0; im.geoDirty(); im.redraw(); }, be);
+  // 4) capture: Berlin taken by France: its HQ is destroyed at once (the next frame: no HQ picture, no flags); Germany's new capital has its HQ with Germany's flag
+  await look(be, 176); await raf(); await raf();
+  const cap = await p.evaluate(be => { const im = window.__im, S = im.S, fr = S.nations.find(n => n.name === 'France').id; capture(be, fr); im.redraw(); return {fr, de:im.bn.flagIdx(0), nc:S.nations[0].capital, alive:S.nations[0].alive, hqAt:im.bn.hqAt(be)}; }, be);
+  await raf(); let e = await hqAt(be); const items = await p.evaluate(be => window.__im.bn.items(be).map(q => q.k), be);
+  checks.capture = {berlinHQ:e && {nm:e.nm, fl:e.fl}, hqAt:cap.hqAt, items, newCapital:cap.nc};
+  if (e) fails.push('captured Berlin still shows its HQ: ' + JSON.stringify(e.fl)); if (cap.hqAt !== -1 || items.includes('hq')) fails.push('captured Berlin still has an HQ item');
+  if (!cap.alive || cap.nc === be) fails.push('Germany did not move its capital'); else { await look(cap.nc, 176); await raf(); await p.waitForTimeout(500); await raf(); const e2 = await hqAt(cap.nc); checks.capture.moved = e2 && {nm:e2.nm, fl:e2.fl};
+    if (!e2 || e2.nm !== 'bn-hq-western' || e2.fl[0] !== 0 || e2.fl[1] !== cap.de || e2.fl[3] !== 8) fails.push('Germany\'s moved capital has no HQ with its flag: ' + JSON.stringify(e2 && e2.fl)); }
   // 5) the wave: off with the Battery saver and with reduced motion
   const wv = await p.evaluate(async () => { const im = window.__im, raf = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))), o = {}; im.redraw(); await raf(); o.normal = im.bn.wave;
     im.SET.saver = true; im.redraw(); await raf(); o.saver = im.bn.wave; im.SET.saver = false; const m0 = im.SET.motion; im.SET.motion = 'reduced'; im.redraw(); await raf(); o.reduced = im.bn.wave; im.SET.motion = m0; im.redraw(); await raf(); return o; });
