@@ -3022,6 +3022,14 @@ function worldLines(G){ const P = G.P, LK = G.LK;
    (a link raised to a road in MAP-3 draws its whole way as a road). A link's way (wayPts) is its chains end to end, so a force on the road is
    drawn exactly on the drawn road, from centre to centre. LANES: each lane rounded (no bend: open water), lanePts. */
 let NETD = null;
+// a polyline with the corners at the points listed (indices) rounded off within r of them (a quadratic curve through the corner's neighbourhood)
+function roundJoints(P, idx, r){ if (!idx.length) return P; const out = []; let k = 0;
+  const at = (i, d, dir) => { let rem = d, j = i; for (;;){ const n = j + dir; if (n < 0 || n >= P.length) return P[j]; const l = Math.hypot(P[n][0] - P[j][0], P[n][1] - P[j][1]); if (l >= rem){ const t = rem/l; return [P[j][0] + (P[n][0] - P[j][0])*t, P[j][1] + (P[n][1] - P[j][1])*t]; } rem -= l; j = n; } };
+  const set = new Set(idx); for (let i = 0; i < P.length; i++){ if (!set.has(i)){ if (k <= i) out.push(P[i]); continue; }
+    if (i < k) continue; const a = at(i, r, -1), b = at(i, r, 1), c = P[i]; while (out.length > 1 && Math.hypot(out[out.length - 1][0] - c[0], out[out.length - 1][1] - c[1]) < r) out.pop();
+    out.push(a); for (let s = 1; s < 6; s++){ const t = s/6, u = 1 - t; out.push([u*u*a[0] + 2*u*t*c[0] + t*t*b[0], u*u*a[1] + 2*u*t*c[1] + t*t*b[1]]); } out.push(b);
+    k = i + 1; while (k < P.length - 1 && Math.hypot(P[k][0] - c[0], P[k][1] - c[1]) < r) k++; }
+  const e = P[P.length - 1], l = out[out.length - 1]; if (l[0] !== e[0] || l[1] !== e[1]) out.push(e); return out; }
 function netDraw(g = G){ if (NETD && NETD.G === g && NETD.L === LINES) return NETD; const net = netOf(g); if (!net) return (NETD = null);
   const CW = HS*SQ3, n = net.X.length, A = net.A, ek = (a, b) => a < b ? a*n + b : b*n + a, best = new Map(), onWay = new Set(), centre = new Set();
   for (const P of g.P) if (!P.sea){ const c = net.cOf(P.id); if (c !== undefined) centre.add(c); }
@@ -3041,8 +3049,9 @@ function netDraw(g = G){ if (NETD && NETD.G === g && NETD.L === LINES) return NE
   for (let i = 0; i < n; i++) for (const j of A[i]) if (!seen.has(ek(i, j))) take(i, j);   // (rings with no fork)
   // a link's way: its chains end to end, from a's centre to b's (world points)
   const WP = new Map(), wayPts = (a, b) => { const k = a + '>' + b; if (WP.has(k)) return WP.get(k); const w = net.way(a, b); let out = null;
-    if (w && w.length > 1){ out = []; for (let i = 0; i < w.length - 1;){ const c = ofEdge.get(ek(w[i], w[i + 1])); if (!c){ out = null; break; } const fw = c.n[0] === w[i], m = c.n.length - 1, P = fw ? c.pts : c.pts.slice().reverse();
-        for (let t = out.length ? 1 : 0; t < P.length; t++) out.push(P[t]); i += m; } }
+    if (w && w.length > 1){ out = []; const joints = []; for (let i = 0; i < w.length - 1;){ const c = ofEdge.get(ek(w[i], w[i + 1])); if (!c){ out = null; break; } const fw = c.n[0] === w[i], m = c.n.length - 1, P = fw ? c.pts : c.pts.slice().reverse();
+        if (out.length) joints.push(out.length - 1); for (let t = out.length ? 1 : 0; t < P.length; t++) out.push(P[t]); i += m; }
+      if (out) out = roundJoints(out, joints, CW*0.18); }   // (where two chains meet at a fork the way turns on a small curve, not a corner: a force on it turns smoothly)
     WP.set(k, out); return out; };
   const LP = new Map(), lanePts = (u, v) => { const k = u + '>' + v; if (LP.has(k)) return LP.get(k); const L = net.lane(u, v), out = L ? smooth(L, false) : null; LP.set(k, out); return out; };
   // the lanes shown: between sea zones, and the ways out of the ports (coastal cities; every other coast keeps its way for landings, not shown)
