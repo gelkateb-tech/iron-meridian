@@ -16,13 +16,12 @@ Last updated: 2026-11-14 (playtest notes part 1 and part 2).
 |---|---|---|---|
 | **BLD-MAP-2** buildings revision: the 3 construction pictures (crane) shown in turn with the progress ring; Army Base 1-5 on the map and in the panel; Kolkata's yard on the Hooghly at the city, river ports on their river, every yard checked; NOT merged until the owner sees it | Opus | bld-map |
 | **FX-2** Explosions: find which two of the four explosion clips don't show and why, fix them; a real gameplay recording on the real map (cruise missile, ballistic missile, chemical strike and nuke fired at cities in a normal game) | Opus | fx-video |
-| **MAP-1b** Real borders, part 2 note #5: country borders bolder, so each country is easy to recognise; screenshots | Sonnet | borders-real |
 
 ## Ready, waiting for the owner (done, not merged)
 
 | Job | State | Branch |
 |---|---|---|
-| **MAP-1** Real borders | Natural Earth 1:10m shapes, no hatching anywhere, mine green and every other country grey; getting bolder country borders (MAP-1b) before the owner's OK | borders-real |
+| **MAP-1** Real borders | Natural Earth 1:10m shapes, no hatching anywhere, mine green and every other country grey; country borders now bolder (dark casing 3.4-5.8 px with a light core, own border green and wider; province lines unchanged); screenshots sent; waiting for the owner's OK | borders-real |
 | HQ flags, revision | a captured capital's HQ is destroyed; curved cloth flags, same size | hq-flags |
 | **UNIT-CTRL** | a tap only selects; Move/Attack then tap; rally point button, ghost preview, flag marker, Clear | unit-ctrl |
 | **UNIT-LOOK** | CoN-style badge, infantry icon C, amber dug-in shield and +10% defence, trade cargo ships; to be revised by UNIT-LOOK-2 (part 2 note #6) | unit-look-2 |
