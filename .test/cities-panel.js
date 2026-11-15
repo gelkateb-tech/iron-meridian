@@ -118,7 +118,7 @@ const bad = [], errs = [], ok = (c, m) => { if (!c) bad.push(m); };
       Object.assign(N, keep); return {ok:P.ok.length, res:P.skip.filter(x => x.res).length, n:ids.length, why:(P.skip.find(x => x.res) || {}).why}; });
     ok(lim.ok === 2 && lim.res >= 1 && /Not enough resources/.test(lim.why || ''), dev + ' resource stop ' + JSON.stringify(lim));
     // 6. units in bulk: skipped for research / buildings / full queue with the reason
-    await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(); for (const i of ids) S.cons[i] = null; S.queue[ids[0]].push({t:'inf', h:20, h0:20}, {t:'inf', h:20, h0:20}); });
+    await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(); for (const i of ids) S.cons[i] = null; S.bld[ids[0]].fac = 1; S.queue[ids[0]].push({t:'inf', h:20, h0:20}, {t:'inf', h:20, h0:20}); });   // (the capital has built its Army Base: no city starts with one, START-RULES)
     const un = await p.evaluate(() => { const im = window.__im, cp = im.cp, ids = cp.cities(), t = cp.units().find(k => cp.trainWhy(ids[1], k) === '') || null; const P = t ? cp.plan('trn', t, ids) : null; return t ? {t, ok:P.ok.length, skip:P.skip.map(x => x.why)} : {t:null}; });
     ok(!un.t || (un.ok >= 1 && un.skip.some(w => /queue full/i.test(w))), dev + ' unit plan ' + JSON.stringify(un));
     // infantry in bulk: the cities without an Army Base are skipped with "Needs Army Base level 1"
