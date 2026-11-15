@@ -3603,8 +3603,9 @@ function buildMini(){
 /* ---------------- Close-zoom terrain detail ---------------- */
 // The baked terrain (1.25 texture px per world unit) goes soft past about z3. From z3 to z5 a detail layer fades in over it: world-anchored
 // tiles of DT_N px (plus a small apron) at 2.5, 5, 10 or 20 px per world unit, picked by zoom. Each tile is the baked texture itself, upscaled
-// exactly as the layer draws it, with a procedural modulation laid on with 'hard-light' (mid-grey = no change), so its colours are the
-// texture's own and there is no visible switch: sharp multi-octave ridged relief on mountains and the high plateaus, rolling hills, a canopy
+// exactly as the layer draws it, multiplied by a procedural modulation whose mean is 1 for every kind of ground (MAP-2: the field palettes are
+// mean-neutral and each terrain class's measured mean change, DT_G, is divided out per px), so its colours are the texture's own at every zoom,
+// only sharper, and there is no visible switch: sharp multi-octave ridged relief on mountains and the high plateaus, rolling hills, a canopy
 // of shaded crowns in forests, a farmland patchwork on the temperate plains (scrub and grass elsewhere), dunes and gravel plains in deserts,
 // pools and lichen on the tundra, standing water and channels in marshes, wind streaks on the ice, and a fine grain everywhere. Classes come
 // from the per-cell terrain the texture was baked from (TERRC), warped exactly as the bake warped its colours, with a noisy, patchy hand-over.
@@ -3642,7 +3643,15 @@ const DT_FIELD = [[0.97, 1.05, 0.9], [1.14, 1.09, 0.84], [0.88, 0.8, 0.72], [0.9
 // the parcel tones by season: 0 winter (Dec-Feb: dull winter crop, ploughland, stubble), 1 spring, 2 early summer (the plain set above),
 // 3 harvest (ripe and stubble), 4 autumn (Sep-Nov: stubble and fresh ploughland); a tile is baked for its month's pair (north, south)
 const DT_FP = (() => { const [G, R, P, A, S, D, F] = DT_FIELD, Gw = [0.93, 0.99, 0.88], Pd = [0.85, 0.78, 0.7];
-  return [[Gw, P, Pd, A, S, D, F], [G, P, G, A, F, D, Pd], DT_FIELD, [G, R, R, A, S, S, F], [Gw, S, P, A, Pd, S, F]]; })();
+  const nrm = L => { const m = [0, 1, 2].map(c => L.reduce((a, t) => a + t[c], 0)/L.length); return L.map(t => t.map((v, c) => +(v/m[c]).toFixed(4))); };   // (MAP-2: each set's mean 1 per channel)
+  return [[Gw, P, Pd, A, S, D, F], [G, P, G, A, F, D, Pd], DT_FIELD, [G, R, R, A, S, S, F], [Gw, S, P, A, Pd, S, F]].map(nrm); })();
+// MAP-2: the mean change a tile makes to each kind of ground (r, g, b per class: plains without fields, forest, mountain, desert, tundra, hills,
+// marsh, snow, then plains under fields), per resolution bucket, measured over tiles all round the world (the test hook dtProbe); a px is divided by its
+// class mix's gains, so the detail averages out to the plain texture's colour (the old per-tile curve, dtNorm, left seams: these are smooth)
+const DT_G = [[0.971, 0.978, 0.977, 1, 0.995, 0.998, 0.84, 0.804, 0.709, 1.015, 1.012, 1.009, 0.998, 1.0, 1.005, 0.951, 0.955, 0.937, 0.872, 0.916, 0.983, 1.01, 1.01, 1.009, 0.938, 0.957, 0.941],
+  [0.991, 0.994, 0.993, 0.995, 0.994, 0.994, 0.892, 0.848, 0.743, 1.017, 1.013, 1.009, 0.994, 0.997, 1.002, 0.967, 0.968, 0.952, 0.867, 0.912, 0.981, 1.028, 1.026, 1.019, 0.965, 0.977, 0.966],
+  [0.998, 0.996, 1.003, 0.981, 0.983, 0.983, 0.907, 0.864, 0.756, 1.016, 1.012, 1.008, 0.994, 0.997, 1.002, 0.979, 0.977, 0.963, 0.869, 0.914, 0.982, 1.02, 1.018, 1.012, 0.98, 0.989, 0.988],
+  [1.001, 1.003, 1.007, 0.982, 0.981, 0.981, 0.905, 0.864, 0.752, 1.025, 1.017, 1.006, 0.991, 0.995, 1, 0.986, 0.985, 0.973, 0.869, 0.914, 0.982, 1.04, 1.036, 1.025, 0.995, 0.999, 1.003]];
 const DT_MV = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0];
 const DT_ROT = [0, 0.71, 1.93, 2.62, 4.1, 5.3].map(a => [Math.cos(a), Math.sin(a)]);
 // start a tile: its coarse grid of warped class weights (node (i, j) at tile px (i*cs - 1, j*cs - 1), px centres at +0.5)
@@ -3659,7 +3668,7 @@ const DT_NF = 18;   // node floats: 0-8 class weights, 9 low relief, 10 its shad
 function dtStart(k, tx, ty, mo = 5){ const C = dtCells(); if (!C) return null; const vN = DT_MV[mo % 12], vS = DT_MV[(mo + 6) % 12];
   const r = DT_R[k], n = DT_N + 2*DT_A, cs = r < 4 ? 3 : Math.round(r*0.4), gw = Math.ceil((n + 2)/cs) + 2;
   if (!DT.buf || DT.buf.gw < gw){ DT.buf = {gw, g:new Float32Array(gw*gw*DT_NF)}; }
-  if (!DT.Hb){ DT.Hb = new Float32Array((n + 2)*(n + 2)); DT.Tb = new Float32Array(n*n*3); DT.Lb = new Float32Array(n*n); DT.Bb = new Float32Array(n*n*3); }
+  if (!DT.Hb){ DT.Hb = new Float32Array((n + 2)*(n + 2)); DT.Tb = new Float32Array(n*n*3); DT.Bb = new Float32Array(n*n*3); }
   const g = DT.buf.g; g.fill(0, 0, gw*gw*DT_NF);
   return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq}; }
 function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT_NF, rowStep = 1.5*HS, colStep = HS*SQ3, wq = colStep*1.15, w = new Float32Array(9);
@@ -3777,28 +3786,21 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
       Hb[by*n2 + bx] = h;
       if (px >= 0 && py >= 0 && px < n && py < n){ // a fine grain everywhere (about 2.6 px, and a world-anchored px speckle); the low relief's shading
         const mg = (1 + 0.04*dtPn(x*fmic + 7, wy*fmic + 3) + 0.028*(dtHash(Math.floor(x*r), Math.floor(wy*r), 9) - 0.5))*(1 + (V[o0 + 10] + (V[o1 + 10] - V[o0 + 10])*fx)*(1 - wk)), t = (py*n + px)*3; Tb[t] = tr*mg; Tb[t + 1] = tg*mg; Tb[t + 2] = tb*mg;
-        const lw = 1 - wO, Bb = DT.Bb; DT.Lb[py*n + px] = lw; let b0 = 0, b1 = 0, b2 = 0; if (lw > 0.001){ for (let c = 0; c < 8; c++){ const q = w[c]; if (q > 0){ b0 += q*DT_BC[c*3]; b1 += q*DT_BC[c*3 + 1]; b2 += q*DT_BC[c*3 + 2]; } } b0 /= lw; b1 /= lw; b2 /= lw; }
-        Bb[t] = b0; Bb[t + 1] = b1; Bb[t + 2] = b2; } } }
+        const Gk = DT_G[J.k], Bb = DT.Bb; let b0 = wO, b1 = wO, b2 = wO;   // (sea: no correction, the wash covers it)
+        for (let c = 0; c < 8; c++){ let q = w[c]; if (q <= 0) continue; if (c === 0 && fk > 0){ const f = fk < 1 ? fk*q : q; b0 += f*Gk[24]; b1 += f*Gk[25]; b2 += f*Gk[26]; q -= f; } b0 += q*Gk[c*3]; b1 += q*Gk[c*3 + 1]; b2 += q*Gk[c*3 + 2]; }
+        Bb[t] = 1/b0; Bb[t + 1] = 1/b1; Bb[t + 2] = 1/b2; } } }
   J.y = y1; }
-// the fine relief's shading (light from the north-west) times the tones, as hard-light grey (128 = no change) into the ImageData
-function dtShade(J, y1, D){ const {r, n} = J, Hb = DT.Hb, Tb = DT.Tb, Lb = DT.Lb, Bb = DT.Bb, n2 = n + 2, K = 0.26*r*0.5, E = J.E || (J.E = [0, 0, 0, 0, 0, 0, 0]);
-  for (let y = J.y; y < y1; y++) for (let x = 0; x < n; x++){ const b = (y + 1)*n2 + x + 1, s0 = 1 + K*(Hb[b - 1] - Hb[b + 1] + Hb[b - n2] - Hb[b + n2]), sh = s0 < 0.42 ? 0.42 : s0 > 1.35 ? 1.35 : s0, t = (y*n + x)*3, o = (y*n + x)*4, lw = Lb[y*n + x];
-    for (let c = 0; c < 3; c++){ const m = sh*Tb[t + c], s = m <= 1 ? m*0.5 : 0.5 + (m - 1)*0.3, q = s >= 1 ? 1 : s; D[o + c] = q*255; if (lw > 0){ const bs = Bb[t + c]; E[c] += lw*(q <= 0.5 ? bs*2*q : bs + (2*q - 1)*(1 - bs)); E[c + 3] += lw*bs; } } E[6] += lw; D[o + 3] = 255; }
+// the fine relief's shading (light from the north-west) times the tones, over the class mix's gain, as half the factor (128 = no change) into the
+// ImageData: dtFinish multiplies the texture by it and doubles the result (a plain multiply: the ground's hue and mean stay, light and shade are symmetric)
+function dtShade(J, y1, D){ const {r, n} = J, Hb = DT.Hb, Tb = DT.Tb, Bb = DT.Bb, n2 = n + 2, K = 0.26*r*0.5;
+  for (let y = J.y; y < y1; y++) for (let x = 0; x < n; x++){ const b = (y + 1)*n2 + x + 1, s0 = 1 + K*(Hb[b - 1] - Hb[b + 1] + Hb[b - n2] - Hb[b + n2]), sh = s0 < 0.42 ? 0.42 : s0 > 1.35 ? 1.35 : s0, t = (y*n + x)*3, o = (y*n + x)*4;
+    for (let c = 0; c < 3; c++){ const q = sh*Tb[t + c]*Bb[t + c]*0.5; D[o + c] = q >= 1 ? 255 : q*255; } D[o + 3] = 255; }
   J.y = y1; }
-// the tile's mean change made neutral (no hue or brightness drift when it replaces the plain texture, only detail): over its land, the mean of
-// what the hard-light does to the ground under it (estimated per px from its class mix: DT_BC, each class's mean tone in the texture) is divided
-// out, per channel, and the pixels remapped through a table
-const DT_BC = [0.275, 0.296, 0.201, 0.145, 0.202, 0.139, 0.386, 0.374, 0.338, 0.476, 0.408, 0.273, 0.464, 0.478, 0.461, 0.348, 0.341, 0.255, 0.167, 0.214, 0.205, 0.621, 0.631, 0.633];
-function dtNorm(J, D){ return;   // off: a per-tile curve left straight seams between neighbouring tiles
-  const E = J.E, n = J.n, Lb = DT.Lb; if (!E || E[6] < n*n*0.02) return; const T = [];
-  for (let c = 0; c < 3; c++){ const B = Math.max(0.05, E[c + 3]/E[6]), f = E[c]/Math.max(1e-6, E[c + 3]), k = (1 - B)/B, L = new Float32Array(256); if (Math.abs(f - 1) < 0.002){ for (let v = 0; v < 256; v++) L[v] = v; T.push(L); continue; }
-    for (let v = 0; v < 256; v++){ const q = v/255, e = (q <= 0.5 ? 2*q : 1 + (2*q - 1)*k)/f, q2 = e <= 1 ? e*0.5 : 0.5 + (e - 1)/(2*k); L[v] = Math.min(255, Math.max(0, q2*255)); } T.push(L); }
-  const [R, G2, B] = T; for (let i = 0, o = 0, N = n*n; i < N; i++, o += 4){ const w = Lb[i]; if (w <= 0) continue; const a = D[o], b = D[o + 1], d = D[o + 2]; D[o] = a + (R[a] - a)*w; D[o + 1] = b + (G2[b] - b)*w; D[o + 2] = d + (B[d] - d)*w; } }
 // run a job until the deadline; true once its pixels are done
 function dtStep(J, end){ for (;;){
     if (J.stage === 0){ dtNodes(J, Math.min(J.gw, J.y + 6)); if (J.y >= J.gw){ dtNodeShade(J); J.stage = 1; J.y = 0; } }
     else if (J.stage === 1){ dtRows(J, Math.min(J.n + 2, J.y + 12)); if (J.y >= J.n + 2){ J.stage = 2; J.y = 0; } }
-    else { if (!DT.img) DT.img = new ImageData(J.n, J.n); dtShade(J, Math.min(J.n, J.y + 96), DT.img.data); if (J.y >= J.n){ dtNorm(J, DT.img.data); return true; } }
+    else { if (!DT.img) DT.img = new ImageData(J.n, J.n); dtShade(J, Math.min(J.n, J.y + 96), DT.img.data); if (J.y >= J.n) return true; }
     if (performance.now() >= end) return false; } }
 // the tile resolution for this zoom: within 1.41x of the screen's (device px capped at 1.5 per CSS px, so a high-dpi screen does not need four times the tiles)
 // the game month (the parcel palette) and its tile variant, kept in DT.mv
@@ -3836,7 +3838,8 @@ function dtNext(tv){ const s = tv ? tv.s : view.s, vx = tv ? tv.x : view.x, vy =
     for (let j = Math.max(0, j0); j <= Math.min(n1H - 1, j0 + 2); j++) for (let i = Math.max(0, i0); i <= Math.min(n1W - 1, i0 + 2); i++) want.push({key:k1 + '|' + i + '|' + j, tx:i, ty:j, k:k1}); }
   let next = null; for (const w of want){ const E = DT.cache.get(w.key); if (E) E.used = ++DT.clock; if ((!E || E.mv !== DT.mv) && !next && !DT.pend.has(w.key)) next = w; }   // (the wanted ones stay fresh in the cache)
   return next && [next.k != null ? next.k : k, next.tx, next.ty]; }
-// a finished job: the baked texture upscaled exactly as the layer draws it, the modulation laid on with 'hard-light'; into the cache (least
+// a finished job: the baked texture upscaled exactly as the layer draws it, multiplied by the modulation (stored halved: multiplied in, then the tile
+// added onto itself); into the cache (least
 // recently used out), and its box queued for a redraw if the layer drew it without the tile
 function dtFinish(J, img){ const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
   D.getContext('2d').putImageData(img, 0, 0);
@@ -3844,7 +3847,7 @@ function dtFinish(J, img){ const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = 
   if (!cv){ cv = document.createElement('canvas'); cv.width = cv.height = n; }
   const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.globalAlpha = 1; g.imageSmoothingEnabled = true;
   g.setTransform(J.r, 0, 0, J.r, -J.x0*J.r, -J.y0*J.r); g.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
-  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'hard-light'; g.drawImage(D, 0, 0); g.globalCompositeOperation = 'source-over';
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'multiply'; g.drawImage(D, 0, 0); g.globalCompositeOperation = 'lighter'; g.drawImage(cv, 0, 0); g.globalCompositeOperation = 'source-over';
   DT.cache.set(J.key, {cv, n, r:J.r, x0:J.x0, y0:J.y0, mv:J.mv, used:++DT.clock}); DT.made++;
   if (DT.miss.delete(J.key) && layer){ DT.hold.push([J.tx, J.ty, J.r]); if (!DT.holdT) DT.holdT = performance.now(); } }
 // down to the cap (it is lower past the coarsest tiles), least recently used out; while closer in, the dtK0R() coarsest tiles last used (16-24) are kept
@@ -3913,8 +3916,8 @@ function dtRelease(){ const L = layer, H0 = DT.hold; DT.hold = []; DT.holdT = 0;
 // the tile maker off the main thread: a worker built from these same functions (so its tiles are the same px for px); null where workers are
 // unavailable or blocked, and then the tiles are made here, a few ms a frame
 function dtWorker(){ if (DT.wk !== undefined) return DT.wk; DT.wk = null; const C = dtCells(); if (!C || typeof Worker === 'undefined' || typeof Blob === 'undefined' || !window.URL) return null;
-  try { const J = JSON.stringify, fns = [mulberry, makeNoise, dtPn, dtHash, dtCrown, dtStart, dtNodes, dtNodeShade, dtRows, dtShade, dtNorm, dtStep].map(f => f.toString()).join('\n');
-    const js = `'use strict';const W=${W},H=${H},HS=${HS},SQ3=Math.sqrt(3),OX=${OX},OY=${OY},DT_N=${DT_N},DT_A=${DT_A},DT_R=${J(DT_R)},DT_NF=${DT_NF},DT_SG=${J(DT_SG)},DT_FIELD=${J(DT_FIELD)},DT_FP=${J(DT_FP)},DT_MV=${J(DT_MV)},DT_ROT=${J(DT_ROT)},DT_BC=${J(DT_BC)};
+  try { const J = JSON.stringify, fns = [mulberry, makeNoise, dtPn, dtHash, dtCrown, dtStart, dtNodes, dtNodeShade, dtRows, dtShade, dtStep].map(f => f.toString()).join('\n');
+    const js = `'use strict';const W=${W},H=${H},HS=${HS},SQ3=Math.sqrt(3),OX=${OX},OY=${OY},DT_N=${DT_N},DT_A=${DT_A},DT_R=${J(DT_R)},DT_NF=${DT_NF},DT_SG=${J(DT_SG)},DT_FIELD=${J(DT_FIELD)},DT_FP=${J(DT_FP)},DT_MV=${J(DT_MV)},DT_ROT=${J(DT_ROT)},DT_G=${J(DT_G)};
 const dtSm=${dtSm.toString()};const DTP={P:new Uint8Array(${J(Array.from(DTP.P))}),GX:new Float32Array(${J(Array.from(DTP.GX))}),GY:new Float32Array(${J(Array.from(DTP.GY))})};
 const DT={};let DTC=null,DT_CH=0;function dtCells(){return DTC;}
 ${fns}
@@ -7456,7 +7459,8 @@ const RPX = {};   // the small scratch canvases of a strip or box render (render
 function provBox(P){ if (!P.box){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const c of P.cells){ const [x, y] = cellCenter(c); if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } P.box = [x0 - HS, y0 - HS, x1 + HS, y1 + HS]; const v = P.vbox; if (v){ const b = P.box; b[0] = Math.min(b[0], v[0]); b[1] = Math.min(b[1], v[1]); b[2] = Math.max(b[2], v[2]); b[3] = Math.max(b[3], v[3]); if (v[0] < WRAP_X0 || v[2] > WRAP_X0 + WRAP_W){ b[0] = Math.min(b[0], WRAP_X0); b[2] = Math.max(b[2], WRAP_X0 + WRAP_W); } } } return P.box; }   // (a real shape across the seam is drawn on both edges of the world: its box spans the world)
 const LM = 0.22;                                        // layer margin, as a share of the viewport on each side
 const ZRES = 0.5;                                       // a layer rendered mid-zoom (drawn scaled, soon replaced) is made at this share of the pixel ratio
-let ZRND = false;                                       // such a render is under way: it leaves out the faint passes (shallow-water bands, ground grain) and new city bakes
+let ZRND = false;                                       // such a render is under way: it leaves out new city bakes and the waves' sea mask (MAP-2: the ground, sea and grain as settled)
+const SEA_A = 0.9, GRAIN_A = 0.22;                      // MAP-2: the sea's baked depth and the ground grain, one strength at every zoom
 // roads by class (track faint dashed, road, highway thicker and brighter) and railways (dark line, crossties when close), from the bucketed
 // Natural Earth paths plus the links built or upgraded in game (centre to centre, from linkDyn)
 let LDYN = null;
@@ -7640,23 +7644,24 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   // (full or strip) goes without, and the bake forces one full render, so strips never mix the two
   if (!mapLite() && hexPx >= 24 && COASTR_HI.length && G.terrain && G.terrain.cbl === undefined && !coastBleed.t) coastBleed.t = setTimeout(() => { coastBleed.t = 0; if (!G || !G.terrain) return; coastBleed(); layerKey = ''; }, 60);
   if (CV && !mapLite() && hexPx >= 24 && coastRings(hexPx) !== COASTR && G.terrain && G.terrain.cbl){ c.save(); c.clip(CV, 'evenodd'); c.drawImage(G.terrain.cbl, 0, 0, WORLD_W, WORLD_H); c.restore(); }
-  if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10);
-    // wash the sea with its own colour so the raster texture's soft land edge does not bleed past the real shore, then shallow-water bands
-    // (the baked depth: shallow shelf, slope and abyss; the flat wash only if it could not be baked)
+  if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/4);
+    // the baked depth (shallow shelf, slope and abyss) over the texture's sea, clipped to the real shore, at the one strength of every zoom; then
+    // shallow-water bands (the flat wash only if the depth could not be baked)
     c.save(); c.clip(SEAV, 'evenodd');
-    if (GEO.seaTex){ c.fillStyle = `rgba(6,18,28,${0.55 + 0.35*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(0, -WORLD_H, WORLD_W, WORLD_H); c.fillRect(0, WORLD_H, WORLD_W, WORLD_H);   // (past the world's edge)
-      c.globalAlpha = 0.55 + 0.35*z; c.drawImage(GEO.seaTex.op, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // (0.55 meets the far view's unclipped depth)
+    if (GEO.seaTex){ c.fillStyle = `rgba(6,18,28,${SEA_A})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(0, -WORLD_H, WORLD_W, WORLD_H); c.fillRect(0, WORLD_H, WORLD_W, WORLD_H);   // (past the world's edge)
+      c.globalAlpha = SEA_A; c.drawImage(GEO.seaTex.op, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }
     else { c.fillStyle = `rgba(11,29,39,${0.86*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); }
-    // the shallow band in world units (it widens as you zoom in, not a constant halo round every island)
-    if (!ZRND){ c.lineJoin = 'round'; c.strokeStyle = `rgba(52,118,126,${0.10*z})`; c.lineWidth = Math.max(2.4, 10*px0); c.stroke(CG);
+    // the shallow band in world units (it widens as you zoom in, not a constant halo round every island); faded in over hexPx 7-11 where the clip
+    // starts, and drawn mid-zoom too (MAP-2: the render made while zooming has the same coast as the settled one)
+    { c.lineJoin = 'round'; c.strokeStyle = `rgba(52,118,126,${0.10*z})`; c.lineWidth = Math.max(2.4, 10*px0); c.stroke(CG);
       c.strokeStyle = `rgba(70,136,142,${0.12*z})`; c.lineWidth = Math.max(1, 4*px0); c.stroke(CG);
       c.strokeStyle = `rgba(150,200,210,${0.07*z})`; c.lineWidth = 2.6*px0; c.stroke(coastGlowRings(coastRings(hexPx)) !== coastRings(hexPx) ? CG : CV); }   // (at play zoom the faint bright line too follows the glow's thinned coast: strokes over the fine coast under its own clip are costly)
     c.restore(); }
-  else if (GEO.seaTex){ c.globalAlpha = 0.55; c.drawImage(GEO.seaTex, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // far out (no coast clip): its clear land masks it
+  else if (GEO.seaTex){ c.globalAlpha = SEA_A; c.drawImage(GEO.seaTex, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // far out (no coast clip): its clear land masks it
   const onScreen = P => { const b = provBox(P); return b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1; }, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
     nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
-  if (hexPx >= 12 && !mapLite() && !ZRND){ const z = Math.min(1, (hexPx - 9)/12), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = 0.22*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
+  if (hexPx >= 6 && !mapLite()){ const z = Math.min(1, (hexPx - 6)/6), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = GRAIN_A*z; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);   // (MAP-2: one strength at every zoom, mid-zoom too)
     if (zc > 0 && gp.fine && DTa < 0.98){ c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.34*zc*(1 - DTa); c.fillStyle = gp.fine; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // close up: a second, fine ground grain (fields, scrub) so the land is not a smooth smear
     if (!lite && hexPx > ZOLD && DTa < 0.02 && gp.micro && gp.micro.setTransform){ const zm = Math.min(1, (hexPx - ZOLD)/50), lo = Math.max(0, Math.log2(view.s/(ZOLD*0.9/HS0))), o0 = Math.floor(lo), f = lo - o0;   // past the old max zoom the texture is upscaled: a micro grain in world space keeps it from smearing
       c.globalCompositeOperation = 'source-over'; c.fillStyle = gp.micro;
@@ -7761,19 +7766,21 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     { for (let n = 0; n < S.nations.length; n++){ if (!S.nations[n].alive || !nOnL(n)) continue; t.fillStyle = rgba(tintOf(n), TONE_A[mapTone(n)]); t.fill(NA(n)); }   // (each power's real shapes, one plain colour)
       for (const [ci, a] of NEUC()){ t.fillStyle = rgba(tintOf(NEUTRAL, ci), TONE_A.neu); t.fill(a); } }   // independents: the quiet grey (by country, one path each)
     t.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(CV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over'; t.restore();
-    // world view and play zoom: clear national colours over the relief; close in it eases off a little (tk, then tf past hexPx 80) so the ground and
-    // the city art lead, but every owned province stays clearly tinted at every zoom (owner, fix-map: it used to fade to almost nothing close in)
-    base.save(); base.setTransform(1, 0, 0, 1, 0, 0); const tk = Math.max(0, Math.min(1, (hexPx - 10)/70)), tf = Math.max(0.85, 1 - Math.max(0, hexPx - 80)/320);
-    base.globalCompositeOperation = 'color'; base.globalAlpha = (0.52 - 0.06*tk)*tf; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh);
-    base.globalCompositeOperation = 'source-over'; base.globalAlpha = (0.27 - 0.04*tk)*tf; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
+    // clear national colours over the relief, at one strength from the world view to close up (MAP-2: the same colours at every zoom; owner,
+    // fix-map: every owned province clearly tinted at every zoom)
+    base.save(); base.setTransform(1, 0, 0, 1, 0, 0);
+    base.globalCompositeOperation = 'color'; base.globalAlpha = 0.52; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh);
+    base.globalCompositeOperation = 'source-over'; base.globalAlpha = 0.27; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
+  /*@TEST*/if (window.__groundOnly) anyC = false;/*@ENDTEST*/
   if (anyC){ base.save(); if (CV && hexPx >= 7) base.clip(CV, 'evenodd'); drawCitiesLayer(base, wx0, wy0, wx1, wy1, hexPx, lite ? (ZRND ? 0 : 6) : !R ? 24 : full ? 12 : 3); base.restore(); }   // (bake budget, ms: short in a pan strip or a box redrawn: the bake pump makes what is left over, between the frames)
   // the towns take a light coat of the same tint (their own art and colours still lead), so a big city reads as yours, an ally's or a rival's too
   if (anyC && tc){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.globalCompositeOperation = 'color'; base.globalAlpha = 0.22;
     base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }
-  base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore();
+  let GONLY = false; /*@TEST*/GONLY = !!window.__groundOnly;/*@ENDTEST*/   // (tests: the ground alone, for colour measurements: no overlay sheet, no towns)
+  if (!GONLY){ base.save(); base.setTransform(1, 0, 0, 1, 0, 0); base.drawImage(flc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }
   // crisp shoreline: soft surf glow at sea, then a dark hairline on the coast
   if (CV && hexPx >= 7){ const z = Math.min(1, (hexPx - 7)/10); base.lineJoin = 'round';
     base.strokeStyle = `rgba(8,14,16,${0.55*z})`; base.lineWidth = 0.9*px; base.stroke(CV);
@@ -8179,9 +8186,12 @@ function draw(now){ draw.now = now;
       ctx.strokeStyle = 'rgba(240,96,78,0.95)'; ctx.lineWidth = 1.5*z*px; ctx.stroke(F); ctx.restore(); } }
   });
   drawWeather(now);   // storms under the night tint: night darkens them like the land, and the city lights shine over them
-  { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)); if (tN < 1) drawNightWorld(1 - tN); if (tN > 0) drawNight(tN);
+  // (MAP-2: across the hand-over the close-zoom multiply is strengthened so the two partial passes darken as much as either alone: the world
+  // pass at (1 - tN) keeps 1 - 0.5(1 - tN) of the ground at deep night, the multiply at full strength about 0.54; mid-way the night no longer lightens)
+  { const tN = Math.max(0, Math.min(1, (hexPx - 18)/8)), tA = tN >= 1 ? 1 : Math.max(0, Math.min(1, (1 - 0.54/(1 - 0.5*(1 - tN)))/0.46)); if (tN < 1) drawNightWorld(1 - tN); if (tA > 0) drawNight(tA);
     const mph = msPerHour(); if (mph){ animIn(mph/4);   // (lights and glows step every 15 game minutes, the close-zoom tint every 3)
       if (tN > 0) animIn(mph*0.05); if (tN < 1) animIn(Math.max(33, mph*(saverOn() ? 4 : 1)/(15*HS*SQ3*W/360*view.s))); } }   // the wide-zoom terminator (a soft band): each pixel it moves, 4 with the Battery saver
+  /*@TEST*/if (window.__groundOnly) return;/*@ENDTEST*/   // (tests: the ground and the light alone, for colour measurements)
   { const pend = CITY_PEND; CITY_PEND = false; wrapEach(() => drawCityLights(hexPx)); if (CITY_PEND){ if (CWANT.size) animIn(250); else animFast(); } CITY_PEND = pend; }   // city lights over the night tint (lights still to make: asked of the bake pump, which asks for a frame as each lands)
   drawLightning(now);
 
@@ -11445,6 +11455,18 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {pics:() => ({nodes:RNODES.map(n => ({id:n.id, kind:n.kind, name:n.name, u:n.u, eng:n.eng, key:rKey(n)})), cats:RCATS.map(c => c.id)}), can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
 if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ return GFX.n; }, get lost(){ return GFX.lost; }, reset:() => gfxReset(), mem:() => cityMem(), caches:() => ({cities:G.P.filter(P => P.city && !P.sea).length, CBAKE:CBAKE.size, CLOW:CLOW.size, CLOWN:CLOWN.size, CLGL:CLGL.size, CGEO:CGEO.size, CINFO:CINFO.size, GTILE:GTILE.size, DT:DT.cache.size, FADEP:FADEP.length, FADEPmp:+(FADEP.reduce((a, c) => a + c.width*c.height, 0)/1e6).toFixed(1), UCC:UCC.size, FLAGC:FLAGC.size, BNC:BNC.size, FIGSH:FIGSH.size})};   // a lost graphics context and its recovery (.test/black-map.js)
+if (location.protocol === 'file:' && window.__im) window.__im.zoomRender = () => { const d0 = dpr; dpr = d0*ZRES; ZRND = true; try { renderLayer(visibleSet(PLAYER), true); } finally { dpr = d0; ZRND = false; } };   // a layer as a live zoom renders it (.test/map-zoom-look.js)
+if (location.protocol === 'file:' && window.__im) window.__im.dtProbe = (k, tx, ty) => { const J = dtStart(k, tx, ty, calDate(S.hour).m); if (!J) return null; DT.img = null; dtStep(J, Infinity); const D = DT.img.data, n = J.n, cs = J.cs, gw = J.gw, g = J.g;
+  const B = document.createElement('canvas'); B.width = B.height = n; const bg = B.getContext('2d', {willReadFrequently:true}); bg.imageSmoothingEnabled = true; bg.setTransform(J.r, 0, 0, J.r, -J.x0*J.r, -J.y0*J.r); bg.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
+  const b = bg.getImageData(0, 0, n, n).data, C = document.createElement('canvas'); C.width = C.height = n; const cg = C.getContext('2d', {willReadFrequently:true}); cg.putImageData(new ImageData(new Uint8ClampedArray(b), n, n), 0, 0);
+  const T = document.createElement('canvas'); T.width = T.height = n; T.getContext('2d').putImageData(DT.img, 0, 0); cg.globalCompositeOperation = 'multiply'; cg.drawImage(T, 0, 0); cg.globalCompositeOperation = 'lighter'; cg.drawImage(C, 0, 0); const o = cg.getImageData(0, 0, n, n).data;
+  const acc = {}, add = (key, i, f) => { const A = acc[key] || (acc[key] = {n:0, b:[0, 0, 0], o:[0, 0, 0], m:[0, 0, 0]}); A.n++; for (let c = 0; c < 3; c++){ const m = 2*D[i + c]/255; A.b[c] += b[i + c]; A.o[c] += o[i + c]; A.m[c] += b[i + c]*m; } };
+  const w = new Float32Array(15);
+  for (let py = 0; py < n; py += 2) for (let px = 0; px < n; px += 2){ const gy = (py + 1)/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, gx = (px + 1)/cs, i0 = Math.min(gw - 2, Math.floor(gx)), fx = gx - i0;
+    for (let c = 0; c < 15; c++){ const a = g[(j0*gw + i0)*DT_NF + c], bb = g[(j0*gw + i0 + 1)*DT_NF + c], cc = g[((j0 + 1)*gw + i0)*DT_NF + c], dd = g[((j0 + 1)*gw + i0 + 1)*DT_NF + c]; w[c] = (a + (bb - a)*fx) + ((cc + (dd - cc)*fx) - (a + (bb - a)*fx))*fy; }
+    let best = -1; for (let c = 0; c < 9; c++) if (w[c] > 0.8) best = c; if (best < 0 || best === 8) continue;
+    const key = best === 0 ? (w[14] < 0.15 ? 'p0' : w[14] > 0.6 ? 'pf' : 'pm') : String(best); add(key, (py*n + px)*4); add('all', (py*n + px)*4); }
+  return {k, tx, ty, r:J.r, acc}; };   // (MAP-2: the detail tiles' colour against the ground under them, .test/map-zoom-look.js)
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)
