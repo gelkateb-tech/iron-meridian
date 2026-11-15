@@ -14,13 +14,13 @@ Last updated: 2026-11-15 (Dev Build v50).
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **MAP-3** merge with the new master and re-shoot | every province's roads meeting at its centre point, clearly drawn from play zoom; a sea-lane network warships follow; capture the moment a ground force reaches the centre point; pan speed within about 3-4% of before; NOT merged until the owner sees the combined screenshots | Opus | map-3 |
 | **MAP-2** one consistent map texture and colours at every zoom (no tone jump when the detail tiles fade in, no pop when zooming stops); the Political/Terrain switch moves off the map into Settings > Map (with Relations/Supply) and the More menu; NOT merged until the owner sees it | Opus | map-2 |
 
 ## Ready, waiting for the owner (done, not merged)
 
 | Job | State | Branch |
 |---|---|---|
+| **MAP-3** | every province's roads meeting at its centre point (drawn over the fog, under the borders), sea lanes for warships, capture the moment a ground force reaches the centre (HEART_KM 0.1); merged with current master (golden re-recorded for these two rule changes only); every check passes; pan speed the same within noise; screenshots sent | map-3 |
 | Explosion clips + FX-2 | owner: not merged for now (2026-11-14). Cruise and ballistic clips play in real games; nuclear/chemical have no weapon in the rules | fx-video |
 
 **Merge rules:** map jobs merge one at a time, each merged with master and re-tested before the next; every look change sends the owner screenshots before it merges.
@@ -66,6 +66,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 - **Merged in v50 with the built defaults; still open if you want to change them:** aircraft (parked aircraft keep their pictures, bigger bomber/AWACS/patrol sizes, Stealth Bomber humps, old jet/int sheets still loaded); buildings (dock basins, small rivers count, construction sites 10% bigger?, move ~93 port cities' map points to their real places?); shipping routes (fleet selection no longer shows routes, cut-off convoys hidden when off, coaster/tanker drawn in code); building rules (Army Base only or both; Fortifications price: option 2 recommended; the +40% per extra Army Base; a starting Army Base in the biggest city?).
 - **Explosions (FX-2 ready):** the 'two not showing' were nuclear (the rules have no tactical nuke or ICBM, so it only appeared from test buttons) and chemical (no clip, and no chemical weapon in the rules). Add real chemical / tactical nuke / ICBM weapons to the rules (docs/RESEARCH.md 12.5: research, cost, damage, fallout, diplomacy)? OK to merge the clips?
 - **Unit looks by research level (plan in docs/RESEARCH.md section 14):** 71 new pictures for all 24 unit sets, about $2.84; $1.70 covers 13 units (38 pictures, about $1.52: tank, artillery, SAM, frigate, cruiser, submarine, IFV, strike fighter, interceptor, attack helicopter, Recon UAV, rocket artillery, carrier); sample first: the Main Battle Tank (3 pictures, about $0.12). 6 questions in 14.11 (suggested: yes to all). OK to make the tank sample?
+- **MAP-3 (ready):** OK to merge? Choices: Suez link for ships and trade (changes balance)? capture needs 2 units (CoN uses 1)? sea lanes shown only with a ship selected, or always faint?
 - **Rebels plan:** answer its 9 questions (docs/REBELS-PLAN.md, each has a suggested answer) to start the build; it also fixes a bug where partisans take a province after 1 hour alone, not 24.
 
 - **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
