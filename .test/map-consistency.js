@@ -2,7 +2,7 @@
 // A nations-world game as the United States (the 68 nations, the split map), the clock paused. Exits 1 on any failure; prints JSON {checks, fails, errors}.
 //  (T) TINT     several owned provinces (the US round New York and Chicago, Germany, Russia round Moscow) are tinted all over at 3 zooms after a pan:
 //               the layer's pixels at cells inside each province change clearly when the province is handed to another nation (its tint shows)
-//  (C) COLOURS  no two neighbouring countries share a tint (the per-country palette), and the tint is the power's or the country's own
+//  (C) COLOURS  your country's tint green, every other power's grey (an ally's blue, an enemy's red), independent land grey (owner: the old look)
 //  (A) ALLY     an ally's land turns blue (Canada allied: the tint and the layer's pixels round Ottawa)
 //  (B) BORDERS  at every zoom the borders are drawn: on the layer, points on province borders, country borders and national borders in view
 //               stand out from the ground beside them (luminance step), for most points sampled
@@ -40,13 +40,11 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   const G0 = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G; return {W:G.P.length, nn:S.nations.length, us:S.nations.findIndex(N => N.name === 'United States'), de:S.nations.findIndex(N => N.name === 'Germany'), ru:S.nations.findIndex(N => N.name === 'Russia'), ca:S.nations.findIndex(N => N.name === 'Canada'), map:S.map}; });
   checks.game = G0; if (G0.map !== 1 || G0.nn !== 68) fail('game', G0);
 
-  // (C) colours: neighbours apart, every tint the owner's own
-  { const r = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, pal = im.ctryPal(); let clash = 0, pairs = 0; const seen = new Set();
-      for (const P of G.P){ if (P.sea) continue; for (const q of P.nbs){ const Q = G.P[q]; if (Q.sea || Q.country === P.country) continue; const k = Math.min(P.country, Q.country) + ',' + Math.max(P.country, Q.country); if (seen.has(k)) continue; seen.add(k); pairs++; if (pal[P.country] === pal[Q.country]) clash++; } }
-      // neighbouring powers' tints differ (each power takes its home country's colour)
-      let nclash = 0; const tint = S.nations.map((N, n) => im.tintOf(n)); for (const P of G.P){ if (P.sea) continue; const o = S.owner[P.id]; if (o < 0) continue; for (const q of P.nbs){ const o2 = S.owner[q]; if (o2 >= 0 && o2 !== o && tint[o] === tint[o2] && o !== 0 && o2 !== 0) nclash++; } }
-      return {pairs, clash, nclash, own:im.tintOf(0), others:new Set(tint.slice(1)).size}; });
-    checks.colours = r; if (r.clash || r.nclash || r.others < 5) fail('colours', r); }
+  // (C) colours (owner, playtest: the old look): your country green, every other power grey (an ally's blue, an enemy's red), independent land grey
+  { const r = await p.evaluate(() => { const im = window.__im, S = im.S, T = im.SET.cb ? null : {own:'#7fc36a', other:'#a7a99f', neu:'#8f918a', ally:'#3f6fe8', war:'#d9534a'}, tint = S.nations.map((N, n) => im.tintOf(n)), bad = [];
+      for (let n = 1; n < tint.length; n++){ const rl = S.rel[[0, n].sort((a, b) => a - b).join(',')], st = rl && rl.st, want = st === 'war' ? T.war : st === 'ally' ? T.ally : null; if (want ? tint[n] !== want && tint[n] !== T.ally : tint[n] !== T.other && tint[n] !== T.ally) bad.push([S.nations[n].name, tint[n]]); }
+      return {own:tint[0], others:[...new Set(tint.slice(1))], neu:im.tintOf(-1, 0), bad:bad.slice(0, 8)}; });
+    checks.colours = r; if (r.own !== '#7fc36a' || r.neu !== '#8f918a' || r.bad.length || !r.others.includes('#a7a99f')) fail('colours', r); }
 
   // (A) ALLY  an ally's land is blue (owner rule: mine green, allies blue, enemies red): Canada round Ottawa allied, then at peace again
   { const c = await cityXY('Ottawa'); await p.evaluate(() => { window.__im.S.hour = 0; }); await setView(c[0], c[1], 4.5); await settle();   // (daylight over Ontario)
@@ -85,9 +83,11 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
       // (B) borders: chain points in view: the line differs from the ground just beside it
       const br = await p.evaluate(() => { const im = window.__im, G = im.G, S = im.S, M = window.__mc, I = M.img(), GEO = im.geo, L = I.L, s = L.s, res = {prov:[0, 0], country:[0, 0], nation:[0, 0]};
         const lum = q => q ? 0.3*q[0] + 0.59*q[1] + 0.11*q[2] : null, o = (pt, k) => S.owner[k];
-        for (const c of GEO.chains){ if (c.a < 0 || c.b < 0) continue; const A = G.P[c.a], B = G.P[c.b]; if (A.sea || B.sea || c.pts.length < 6) continue;
+        // (real borders: a chain's points as drawn at the zoom's level of detail)
+        const band = im.lodBand ? im.lodBand(im.hexPx()) : 0, ptsOf = c => { if (!c.vec || !band) return c.pts; const f = band === 2 && im.BV.f2 ? im.BV.f2[c.i] : im.BV.f1[c.i], o = []; for (let j = 0; j < f.length; j += 2) o.push([f[j] + (c.sh || 0), f[j + 1]]); return o; };
+        for (const c of GEO.chains){ if (c.a < 0 || c.b < 0 || c.dup || c.a === c.b) continue; const A = G.P[c.a], B = G.P[c.b]; if (A.sea || B.sea) continue; const pts = ptsOf(c); if (pts.length < 6) continue;
           const kind = A.country !== B.country ? 'country' : S.owner[c.a] !== S.owner[c.b] ? 'nation' : 'prov', R = res[kind]; if (R[1] >= 40) continue;
-          const i = c.pts.length >> 1, q = c.pts[i], q0 = c.pts[i - 2], q1 = c.pts[i + 2]; if (!M.onScr(q[0], q[1], 60) || im.isWet(q[0], q[1])) continue;   // (across a lake a border is dashed)
+          const i = pts.length >> 1, q = pts[i], q0 = pts[i - 2], q1 = pts[i + 2]; if (!M.onScr(q[0], q[1], 60) || im.isWet(q[0], q[1])) continue;   // (across a lake a border is dashed)
           const tx = q1[0] - q0[0], ty = q1[1] - q0[1], tl = Math.hypot(tx, ty) || 1, nx = -ty/tl, ny = tx/tl, d = 5/s;   // 5 css px either side
           const l0 = lum(M.px(I, q[0], q[1])), la = lum(M.px(I, q[0] + nx*d, q[1] + ny*d)), lb = lum(M.px(I, q[0] - nx*d, q[1] - ny*d)); if (l0 == null || la == null || lb == null) continue;
           // the strongest step along the normal (the line has a dark edge and, on country and national borders, a light core)
@@ -122,7 +122,12 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
     // the outline's sea-side chains (pushed out to sea, over the province's cells there): their screen pixels with the hover and without it
     const sample = () => p.evaluate(p0 => { const im = window.__im, G = im.G, GEO = im.geo, cv = document.getElementById('map'), g = cv.getContext('2d'), d = cv.width/cv.getBoundingClientRect().width, v = im.view, out = [];
       for (const c of GEO.byProv[p0]){ const o = c.a === p0 ? c.b : c.a; if (o >= 0 && !G.P[o].sea) continue;
-        for (let i = 0; i < c.pts.length; i += 2){ const q = c.pts[i], X = Math.round(d*(q[0]*v.s + v.x)), Y = Math.round(d*(q[1]*v.s + v.y)); if (X < 0 || Y < 0 || X >= cv.width || Y >= cv.height) continue;
+        // (real borders: a coast arc lies on the real coastline itself, so the outline is looked for 3 css px out to sea from it, on the side
+        //  that is water, where the cells' outline used to run)
+        for (let i = 0; i < c.pts.length; i += 2){ let q = c.pts[i];
+          if (c.vec){ const a = c.pts[Math.max(0, i - 1)], b = c.pts[Math.min(c.pts.length - 1, i + 1)], tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.hypot(tx, ty); if (!tl) continue;
+            const e = 3/v.s, A = [q[0] - ty/tl*e, q[1] + tx/tl*e], B = [q[0] + ty/tl*e, q[1] - tx/tl*e], wa = im.isWet(A[0], A[1]), wb = im.isWet(B[0], B[1]); if (wa === wb) continue; q = wa ? A : B; }
+          const X = Math.round(d*(q[0]*v.s + v.x)), Y = Math.round(d*(q[1]*v.s + v.y)); if (X < 0 || Y < 0 || X >= cv.width || Y >= cv.height) continue;
           const px = g.getImageData(X, Y, 1, 1).data; out.push(0.3*px[0] + 0.59*px[1] + 0.11*px[2]); } }
       return out; }, r.p);
     const on = await sample(); await p.mouse.move(MAP.x + 4, MAP.y + 4); await p.waitForTimeout(400); const off = await sample();

@@ -8,8 +8,8 @@
 //  (b) CENTRED  every town of the region on screen whose glow is a few px wide has one: the brightest spot of its light (smoothed; a coastal town: on all of it or on its land)
 //               within 2 css px of the town's point, and bright enough to see
 //  (c) READABLE with the lights on, the borders between countries and nations in view stand out from the ground beside them (luminance step)
-//               for most points sampled, and the countries' colours stay apart (Egypt, Israel, Syria, Saudi Arabia, ...: neighbours' mean colours
-//               differ at night by at least half as much as by day, and by TINT_ABS)
+//               for most points sampled, and your country's colour stays apart from its neighbours' (Egypt, yours, green against Israel's and Saudi
+//               Arabia's grey: the mean colours differ at night by at least half as much as by day, and by TINT_ABS; other pairs are both grey)
 //  (d) CAP      the brightest light any town adds stays under LIGHT_CAP (no white blobs), and the lit pixels on screen under PIX_CAP
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -98,7 +98,7 @@ const PAIRS = [['Cairo', 'Alexandria'], ['Cairo', 'Tanta'], ['Tanta', 'Mansoura'
     if (r.res.country[1] + r.res.nation[1] < 4 && !(PHONE && tag === 'delta')) fail(`borders ${tag}: too few country borders in view`, r.res);   // (the phone's narrow view of the delta holds none: its province borders are checked)
     const N = Object.keys(r.nat).filter(k => /^[A-Z]/.test(k)), cd = (a, b2) => Math.abs(a[0] - b2[0]) + Math.abs(a[1] - b2[1]) + Math.abs(a[2] - b2[2]), pairs = [];
     for (const [a, b2] of [['Egypt', 'Israel'], ['Israel', 'Syria'], ['Syria', 'Saudi Arabia'], ['Egypt', 'Saudi Arabia'], ['Syria', 'Turkey'], ['Syria', 'Iraq']]) if (r.nat[a] && r.nat[b2]) pairs.push({pair:a + '-' + b2, d:cd(r.nat[a], r.nat[b2]), day:cd(r.nat['day ' + a], r.nat['day ' + b2])});
-    checks.tint.push({tag, nat:r.nat, pairs}); for (const q of pairs) if (q.d < Math.max(TINT_ABS, TINT_KEEP*q.day)) fail(`tint ${tag} ${q.pair}: colours too close at night`, q);
+    checks.tint.push({tag, nat:r.nat, pairs}); for (const q of pairs) if (/^Egypt-/.test(q.pair) && q.d < Math.max(TINT_ABS, TINT_KEEP*q.day)) fail(`tint ${tag} ${q.pair}: colours too close at night`, q);   // (owner, playtest: yours green, every other country grey: only your country's border pairs must stay apart)
     if (N.length >= 2 && !pairs.length) fail(`tint ${tag}: no neighbouring pair in view`, N);
     checks.cap.push({tag, maxAdd:r.mxAdd, at:r.mxAt, maxLitPixel:r.mxPix}); if (r.mxAdd > LIGHT_CAP) fail(`cap ${tag}: a town adds ${r.mxAdd} (${r.mxAt})`, ''); if (r.mxPix > PIX_CAP) fail(`cap ${tag}: lit pixel ${r.mxPix}`, ''); }
   console.log(JSON.stringify({ checks, fails, errors }, null, 1)); await b.close(); process.exit(fails.length || errors.length ? 1 : 0); })();

@@ -66,7 +66,7 @@ const out = n => __dirname + '/v3-controls-' + n + '.png';
     C.joinForces(J, A0); let hrs = 0; while (S.armies.includes(J) && cnt(J) && hrs < 96){ im.tick(); hrs++; }
     ck('join order merges on arrival', !S.armies.includes(J) && cnt(A0) === n0 + 2, {hrs, a0:cnt(A0)});
     // ---- selection after an order (single and group). Unit controls changed (Conflict of Nations): an order no longer deselects. With a force
-    // selected a tap on empty land IS a move order and the force stays selected with its route drawn; it is released by a tap on the force
+    // selected an order (Move, then a tap; here setTarget + sendToTarget) keeps the force selected with its route drawn; a plain tap on empty land gives no order (.test/controls.js); it is released by a tap on the force
     // again, a second tap on its destination, or Esc (checked here by clearSel, which Esc calls, and in the page below by real taps and Esc).
     const T1 = G.P[cap].nbs.find(v => !G.P[v].sea && S.owner[v] === 0);
     im.selectArmy(A0.id); im.setTarget(A0.id, T1); C.sendToTarget(A0); ck('single order keeps the force selected, route given', im.sel.army === A0.id && A0.path.length + (A0.to !== null ? 1 : 0) > 0 && im.sel.lastOrder && im.sel.lastOrder.ids.includes(A0.id), {sel:im.sel.army, path:A0.path.length});

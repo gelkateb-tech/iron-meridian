@@ -5,7 +5,7 @@ function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = 
   return c; }
 // ---------- mobilization rules (no drawing, no UI): what a city needs before it can train a unit.
 // A unit must be researched (units with no tech are known from day one) AND its city must have the unit's building(s) at the needed level, working.
-const reqsOf = t => { const U = UNITS[t]; return U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };
+const reqsOf = t => { const U = UNITS[t]; return U && U.reqs ? U.reqs : U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };   // (U.reqs: infantry, from INF_NEEDS)
 const bldOk = (p, t) => reqsOf(t).every(r => S.bld[p][r.b] >= r.l && !bdis(p, r.b));
 // why nation n cannot mobilize unit t in province p: null when it can, else {kind, why, b}: kind 'own' (not its province), 'city' (not a city),
 // 'tech' (research missing), 'bld' (building missing or too low; b = the building), 'ko' (building knocked out for a while)
@@ -14,7 +14,7 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
   if (!G.P[p].city) return {kind:'city', why:'Units are mobilized in cities'};
   if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
-    if (lv < r.l) return {kind:'bld', b:r.b, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${c.h} h` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
+    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${c.h} h` : r.b === 'fac' ? `Needs ${B.name} level ${r.l}` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
     if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
   return null; }
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words

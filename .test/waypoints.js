@@ -3,7 +3,7 @@
 // order); a save made mid-route loads and goes on to every stop; a plain move order, Halt and a split; a stop in enemy land captures only at the
 // heart; a stop overseas embarks only in a port; the AI never has stops. Part 2, the page (Playwright, 1440x900 and a phone): the Waypoint button
 // in the command bar, each tap adds a stop drawn as a numbered dot on the path line, Undo (and Backspace) removes the last, turning the button
-// off keeps the stops, a plain tap clears them; the force passes the stops in order on the map.
+// off keeps the stops, a plain tap gives no order, Move then a tap clears them; the force passes the stops in order on the map.
 //   node .test/waypoints.js [--rules]     (run bash tools/mkpage.sh first for part 2; exit 1 on any failed check or error)
 const fs = require('fs'), path = require('path'), ROOT = path.join(__dirname, '..');
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
@@ -141,7 +141,8 @@ async function pagePart(){ const pickNation = require('./pick-nation.js'), { chr
     ok(`${TAG} page: on the map the force passes the stops in order 1, 2, 3`, JSON.stringify(seen) === '[0,1,2]', seen);
     // a plain tap (Waypoint off) is a new order: it clears the stops
     { await p.evaluate(id => { const im = window.__im; if (im.sel.army !== id) im.selectArmy(id); }, sc.a); for (const s0 of sc.stops.slice(0, 2)) await p.evaluate(([id, q]) => addStop(window.__im.S.armies.find(x => x.id === id), q.p, q.xy), [sc.a, s0]);
-      const T = await scr(sc.stops[0].xy); await tap(T[0], T[1]); const S1 = await stops(); ok(`${TAG} page: a plain tap after waypoints is a new order (the stops are cleared)`, S1.length === 1 && S1[0].p === sc.stops[0].p, S1); }
+      const T = await scr(sc.stops[0].xy); await tap(T[0], T[1]); const S0 = await stops(); ok(`${TAG} page: a plain tap after waypoints gives no order (the stops stay, the force is deselected)`, S0.length === 2, S0);
+      await p.evaluate(id => { const im = window.__im; im.selectArmy(id); const b = document.querySelector('[data-act="cm-move"]'); if (b) b.click(); }, sc.a); await p.waitForTimeout(150); await tap(T[0], T[1]); const S1 = await stops(); ok(`${TAG} page: Move, then a tap after waypoints is a new order (the stops are cleared)`, S1.length === 1 && S1[0].p === sc.stops[0].p, S1); }
     await ctx.close(); }
   await b.close(); }
 
