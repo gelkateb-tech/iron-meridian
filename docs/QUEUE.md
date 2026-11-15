@@ -17,7 +17,6 @@ Last updated: 2026-11-15 (Dev Build v50).
 | **MAP-3** merge with the new master and re-shoot | every province's roads meeting at its centre point, clearly drawn from play zoom; a sea-lane network warships follow; capture the moment a ground force reaches the centre point; pan speed within about 3-4% of before; NOT merged until the owner sees the combined screenshots | Opus | map-3 |
 | **MAP-2** one consistent map texture and colours at every zoom (no tone jump when the detail tiles fade in, no pop when zooming stops); the Political/Terrain switch moves off the map into Settings > Map (with Relations/Supply) and the More menu; NOT merged until the owner sees it | Opus | map-2 |
 | **START-RULES** (owner 2026-11-15): no city starts with an Army Base (capital-only Fortifications stay); Army Base I cheap and quick enough to build on day 1; the AI builds one in its capital first; First steps start with 'Build an Army Base' | Opus | start-rules |
-| **UNIT-LOOKS plan** (owner 2026-11-15, planned Nov 9): 4 looks per unit by research level (levels 1, 3, 5, 7; level 8 keeps the 7 look) on the map, the army bar and the research diamonds; the plan into docs/RESEARCH.md, picture count and cost for the owner; NO generating until the owner OKs; then one unit's 4 looks first | Opus | unit-looks |
 
 ## Ready, waiting for the owner (done, not merged)
 
@@ -59,6 +58,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 | Recruiting Office 1 without the flag | style says no flags | $0.04 | waiting on the owner |
 | Naval Yard 1-5, piers to the upper right | yards on coasts facing up the map (29 yards can't point their piers at the sea) | $0.18 | waiting on the owner |
 | Chemical explosion clip (fxv-chemical) | chemical strikes (the service refused it twice; the owner decides whether to try other wording) | $0.35 | waiting on the owner |
+| Unit looks 2-4 (71 pictures: 23 units x 3, Recon UAV x 2) | each unit looks more advanced at research levels 3, 5 and 7 (docs/RESEARCH.md 14) | $2.84 | waiting on the owner (tank sample first, $0.12) |
 | Rebel figures | 3D model in units3d.js, no Gemini picture needed | $0 | with REBELS |
 | **Total** | batch 1 done ($0.31 logged: Army Base 1-5, construction 1-3, merged into master as files, drawn by BLD-MAP-2); next (Fortifications) $0.18; everything else listed about $1.9 | | |
 
@@ -66,6 +66,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 - **Merged in v50 with the built defaults; still open if you want to change them:** aircraft (parked aircraft keep their pictures, bigger bomber/AWACS/patrol sizes, Stealth Bomber humps, old jet/int sheets still loaded); buildings (dock basins, small rivers count, construction sites 10% bigger?, move ~93 port cities' map points to their real places?); shipping routes (fleet selection no longer shows routes, cut-off convoys hidden when off, coaster/tanker drawn in code); building rules (Army Base only or both; Fortifications price: option 2 recommended; the +40% per extra Army Base; a starting Army Base in the biggest city?).
 - **Explosions (FX-2 ready):** the 'two not showing' were nuclear (the rules have no tactical nuke or ICBM, so it only appeared from test buttons) and chemical (no clip, and no chemical weapon in the rules). Add real chemical / tactical nuke / ICBM weapons to the rules (docs/RESEARCH.md 12.5: research, cost, damage, fallout, diplomacy)? OK to merge the clips?
+- **Unit looks by research level (plan in docs/RESEARCH.md section 14):** 71 new pictures for all 24 unit sets, about $2.84; $1.70 covers 13 units (38 pictures, about $1.52: tank, artillery, SAM, frigate, cruiser, submarine, IFV, strike fighter, interceptor, attack helicopter, Recon UAV, rocket artillery, carrier); sample first: the Main Battle Tank (3 pictures, about $0.12). 6 questions in 14.11 (suggested: yes to all). OK to make the tank sample?
 - **Rebels plan:** answer its 9 questions (docs/REBELS-PLAN.md, each has a suggested answer) to start the build; it also fixes a bug where partisans take a province after 1 hour alone, not 24.
 
 - **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
