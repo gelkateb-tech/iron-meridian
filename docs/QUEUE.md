@@ -16,6 +16,8 @@ Last updated: 2026-11-15 (Dev Build v50).
 |---|---|---|---|
 | **MAP-3** merge with the new master and re-shoot | every province's roads meeting at its centre point, clearly drawn from play zoom; a sea-lane network warships follow; capture the moment a ground force reaches the centre point; pan speed within about 3-4% of before; NOT merged until the owner sees the combined screenshots | Opus | map-3 |
 | **MAP-2** one consistent map texture and colours at every zoom (no tone jump when the detail tiles fade in, no pop when zooming stops); the Political/Terrain switch moves off the map into Settings > Map (with Relations/Supply) and the More menu; NOT merged until the owner sees it | Opus | map-2 |
+| **START-RULES** (owner 2026-11-15): no city starts with an Army Base (capital-only Fortifications stay); Army Base I cheap and quick enough to build on day 1; the AI builds one in its capital first; First steps start with 'Build an Army Base' | Opus | start-rules |
+| **UNIT-LOOKS plan** (owner 2026-11-15, planned Nov 9): 4 looks per unit by research level (levels 1, 3, 5, 7; level 8 keeps the 7 look) on the map, the army bar and the research diamonds; the plan into docs/RESEARCH.md, picture count and cost for the owner; NO generating until the owner OKs; then one unit's 4 looks first | Opus | unit-looks |
 
 ## Ready, waiting for the owner (done, not merged)
 
