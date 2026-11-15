@@ -15,6 +15,7 @@ Last updated: 2026-11-15 (Dev Build v50).
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **MAP-3** merge with the new master and re-shoot | every province's roads meeting at its centre point, clearly drawn from play zoom; a sea-lane network warships follow; capture the moment a ground force reaches the centre point; pan speed within about 3-4% of before; NOT merged until the owner sees the combined screenshots | Opus | map-3 |
+| **MAP-2** one consistent map texture and colours at every zoom (no tone jump when the detail tiles fade in, no pop when zooming stops); the Political/Terrain switch moves off the map into Settings > Map (with Relations/Supply) and the More menu; NOT merged until the owner sees it | Opus | map-2 |
 
 ## Ready, waiting for the owner (done, not merged)
 
@@ -30,7 +31,7 @@ Owner playtest notes of 2026-11-14: part 1 (#1-#21), the rally point and the Arm
 
 | # | Job | What it covers | Model |
 |---|---|---|---|
-| 1 | **MAP-2** Map look and controls | #3 one consistent map texture at every zoom; #4 the Political/Terrain switch moves into the More tab as a toggle (next to Shipping routes). Map job: after MAP-1 merges; screenshots before merging | Opus |
+| (running) | **MAP-2** Map look and controls | #3 one consistent map texture at every zoom; #4 the Political/Terrain switch moves into the More tab as a toggle (next to Shipping routes). Map job: after MAP-1 merges; screenshots before merging | Opus |
 | 2 | **REBELS** build | after the owner answers the plan's questions | Opus |
 | 3 | **ART-2** more Gemini pictures from "Pictures still missing", count and cost to the owner before each batch | Sonnet |
 | 4 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
