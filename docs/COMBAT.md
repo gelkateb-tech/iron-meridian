@@ -185,7 +185,7 @@ the frigate's guns as far as artillery, a submarine's torpedoes only close by. A
 - Fleets can stand anywhere in their sea zone: tap the zone with the fleet selected to move it there (as forces do in their own province).
 
 **The AI.** It never marches guns into a battle it can shell: a stack ordered to attack leaves its artillery and rockets behind, on a
-firing spot in its own province, when they can reach the target's defenders from there (the rest still has the 2 ground units to take
+firing spot in its own province, when they can reach the target's defenders from there (the rest still has its ground unit to take
 the province); an idle stack on the front turns its guns into a battery on a firing spot when an enemy force they can see is in reach. A
 **battery** (a force of guns only) stands on the spot of its province from which the strongest enemy force it sees is within 90% of its
 range, **as far back as that allows**; with nothing in reach it moves up to an own front province (one held by its own troops first). It
@@ -214,13 +214,16 @@ The rules live in `rules/movement.js` (the block before `canProceed`: `atHeart`,
 capture step of the hour in `rules/tick.js`. Everything a capture does (`capture` in `rules/combat.js`: buildings, morale, cores, unrest,
 territory, victory points, dispatches) is unchanged; only the moment changed.
 
-- **Capture at the heart.** A land province (independent, or of a power you are at war with) becomes yours **the hour one of your ground forces
-  stands at its heart**, the city point, which is the province centre the rules use, while no enemy force holds the province. There is no
-  occupation clock any more (`S.cap` stays empty; an old save's half-done occupations are dropped). A force that only crossed the border, or
-  stands at another spot of the province, does not take it (its status reads *Reach the city to capture*); a walk that passes within 25 km
-  (`HEART_KM`) of the heart takes it on the way (`a.hrt`), and a pinpoint order to a spot beyond the heart walks by the city first (`sailTo`,
-  drawn so on the route line). With defenders the battle comes first; the hour the last one is gone, a force at the heart takes the province.
-  `CAP_MIN` (2) ground units are still needed; air units never capture. A tap on or right by a city (16 px) aims at the city itself.
+- **Capture at the centre point (MAP-3, Conflict of Nations style).** A land province (independent, or of a power you are at war with) becomes
+  yours **the hour one of your ground forces reaches its centre point** (its heart: the city, or the cell nearest the middle of a province
+  without one, `G.P[p].x, y`), while no enemy force holds the province. Every road of the province meets at that point (`rules/map.js netOf`,
+  lines.js `net`), and a march into a province ends on it. There is no occupation clock (`S.cap` stays empty; an old save's half-done
+  occupations are dropped) and no capture radius any more: `HEART_KM` is only the rounding tolerance (0.1 km; it was 25 km). A force that only
+  crossed the border, or stands at any other spot of the province, does not take it (its status reads *Reach the city to capture*); a walk
+  through the centre takes it on the way (`a.hrt`), and a pinpoint order to a spot beyond the centre walks by it first (`sailTo`, drawn so on the
+  route line). With defenders the battle comes first; the hour the last one is gone, a force on the centre takes the province. `CAP_MIN` (1)
+  ground unit is needed (it was 2; Conflict of Nations takes one); air units never capture. A tap on or right by a
+  city (16 px) aims at the city itself.
 - **Embarking only in a naval port.** Ground forces board ships only in a **naval port**: a coastal city of their own or a friend's (`portOk`,
   the same ports fleets dock in and Naval Yards are built in). The route planner (`pathFor`, `surprisePath`) never plans a leg from other land
   onto water: a route overseas marches to a port first, and a move to a sea zone from land without a port is refused with *No naval port here:
