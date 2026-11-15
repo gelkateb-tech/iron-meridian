@@ -2,7 +2,7 @@
 // Env: ONLY=<letters> runs only those sections (U N O B G S P F W M; S the screenshots). OUT=<dir> saves screenshots (the owner's case, the two modes and each overlay); SHOTS=<prefix> names them; SEED=n seeds the random sequence.
 // The map has two modes, Political and Terrain, and two overlays switched on and off over the Political map, Relations and Supply (owner's scope
 // change). A nations-world game; every action goes through the buttons (MAP-2: no switch on the map; the mode through the More menu's 'Map' item,
-// the overlays through Settings > Map, opened from More, then closed again). Exits 1 on any failure; prints JSON.
+// the overlays through Settings > Map, opened with O (section U opens it from More), then closed again). Exits 1 on any failure; prints JSON.
 //  (U) UI       no switch on the map (#modes gone); Settings > Map has exactly two map styles and two overlay switches (no Resources, Stability,
 //               Trade, or Relations / Supply modes), the More menu one Map item naming the style; in Terrain the overlays are hidden (no overlay
 //               canvas) and a switch pressed there brings the Political map back with that overlay; the V key switches the style
@@ -49,12 +49,12 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
   const shot = async name => { if (OUT) await p.screenshot({ path: path.join(OUT, `${TAG}-${name}.png`) }); };
   const state = () => p.evaluate(() => ({mode:window.__im.mapMode, rel:window.__im.ovl.on.rel, sup:window.__im.ovl.on.sup}));
   // the buttons: the map style through the More menu's Map item (it switches Political <-> Terrain), an overlay through Settings > Map (On / Off),
-  // opened from the More menu and closed with its Done button (a modal pauses the clock and closing it gives the speed back)
+  // opened with O and closed with its Done button (a modal pauses the clock and closing it gives the speed back)
   const more = async sel => { await p.click('#morebtn', { timeout: 30000 }); await p.click(`#morepop ${sel}`, { timeout: 30000 }); };
   const press = async (act, k) => { const st = await state();
     if (act === 'mode'){ if (st.mode !== k) await more('#mapsbtn'); return; }
-    await more('#setbtn'); const on = st.mode === 'political' && st[k];
-    await p.click(`#sheet [data-act="ovl"][data-k="${k}"][data-v="${!on}"]`, { timeout: 30000 }); await p.click('#sheet [data-act="resume"]', { timeout: 30000 }); await p.waitForTimeout(250); };   // (the closing sheet's ghost slides out)
+    await p.keyboard.press('o'); const on = st.mode === 'political' && st[k];   // (O opens Settings, as the More menu's Settings item does)
+    await p.click(`#sheet [data-act="ovl"][data-k="${k}"][data-v="${!on}"]`, { timeout: 30000 }); await p.click('#sheet [data-act="resume"]', { timeout: 30000 }); await p.waitForTimeout(120); };   // (the closing sheet's ghost slides out)
   const act = a => a === 'P' ? press('mode', 'political') : a === 'T' ? press('mode', 'terrain') : press('ovl', a === 'R' ? 'rel' : 'sup');
   // zoom toward scale s1 round the middle of the map: wheel steps (desktop) or a pinch (phone, real touch events); fast = big steps, no pause
   const zoom = async (s1, fast) => { const cx = MAP.x + MAP.w*0.5, cy = MAP.y + MAP.h*0.5;
