@@ -1880,6 +1880,13 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
 .cs-bmod .bld .bi{--bs:54px!important} .cs-bmod .bld .bi.gl{background:var(--bi) center / 70% no-repeat, linear-gradient(180deg, #4fb0c0, #2c8596)} .cs-bmod .bld .bi.gl.dim{filter:grayscale(1); opacity:.45}
 .cs-bmod .bld .nm{font-size:14px}
 .cs-bmod .bld.cs-flash{border-color:var(--cn-teal)}
+/* no Army Base in this city yet (START-RULES: no city starts with one): its build row, its city-panel card and the Mobilize note stand out */
+.bld .needt{display:block; color:var(--cn-teal, #4fd0de); font-weight:600; margin-bottom:2px}
+.cs-bmod .bld.need{border-color:var(--cn-teal, #4fd0de); box-shadow:inset 0 0 0 1px rgba(79,208,222,.35), inset 0 1px 0 rgba(255,255,255,.08)}
+.cs-c.add.need{box-shadow:0 0 0 2px var(--cn-teal, #4fd0de), 0 0 10px rgba(79,208,222,.35)}
+.cs-c.add.need .cs-ci{opacity:.75; filter:none}
+.mobneed{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:2px 0 10px; padding:9px 11px; border:1px solid var(--cn-teal, #4fd0de); border-radius:3px; background:rgba(79,208,222,.08); font-size:12.5px; line-height:1.4}
+.mobneed span{flex:1 1 220px} .mobneed .btn{font-size:12px; padding:5px 10px}
 /* phones: full width at the bottom of the map, which takes the side panel's room while the sheet is up */
 @media (max-width: 820px){
   .csheet{left:0; right:0; bottom:0; max-width:none; gap:6px}
@@ -9332,6 +9339,7 @@ const CS_ICO = {
   pop:`<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><g fill="currentColor"><circle cx="8" cy="4.4" r="2.9"/><path d="M2.4 15.2c0-3.7 2.5-6.2 5.6-6.2s5.6 2.5 5.6 6.2z"/></g></svg>`,
   face:m => `<svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true"><circle cx="10" cy="10" r="8.6" fill="#fff" stroke="#16323c" stroke-width="1.3"/><circle cx="7" cy="8" r="1.25" fill="#16323c"/><circle cx="13" cy="8" r="1.25" fill="#16323c"/>
     <path d="${m > 65 ? 'M5.8 11.6Q10 16.2 14.2 11.6' : m > 35 ? 'M6.4 13H13.6' : 'M6 14.6Q10 10.6 14 14.6'}" fill="none" stroke="#16323c" stroke-width="1.5" stroke-linecap="round"/></svg>`};
+const dayTxt = h => h % 24 ? csTime(h) : h === 24 ? '1 day' : h/24 + ' days';   // whole days in words ('1 day'), else as csTime
 const csTime = h => { h = Math.max(0, Math.ceil(h)); return h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`; };
 // status line: Capital, Homeland City, Occupied City, Homeland Province ...
 function csStatus(p){ const P = G.P[p], o = S.owner[p];
@@ -9372,12 +9380,12 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   // building cards: the city first, then what stands here, then (yours) what can still be built
   // the capital's card: its headquarters (one regional building, no level); a city has no card of its own (no city level)
   const hqCard = () => { const A = hqArt(o); return `<button class="cs-c cs-hq" data-act="cs-card" data-k="city" title="${hqTip(o)}&#10;Province details"><span class="cs-ci${A.art ? ' ba' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span><span class="cs-cn">Capital</span></button>`; };
-  const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = BUILD[k].name, tag = o0.btn ? 'button' : 'span';
+  const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = BUILD[k].name, tag = o0.btn ? 'button' : 'span', need = mine && k === 'fac' && !l && P.city;
     const busy = c && c.k === k, ttl = `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && k === 'arms' ? '\n' + armsTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
-    return `<${tag} class="cs-c${l ? '' : ' add'}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
+    return `<${tag} class="cs-c${l ? '' : ' add'}${need ? ' need' : ''}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
-  const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [];
-  const cards = (isCapital(p) && o >= 0 ? hqCard() : '') + built.map(k => card(k, S.bld[p][k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
+  const built = BK.filter(k => S.bld[p][k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [], first = P.city && can[0] === 'fac' ? can.shift() : null;   // (no Army Base yet: its card comes first)
+  const cards = (isCapital(p) && o >= 0 ? hqCard() : '') + (first ? card(first, 0, {btn:true}) : '') + built.map(k => card(k, S.bld[p][k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
   const rl = mine && P.city ? (rallyOf(p) != null ? `<div class="cs-rl"><span class="cs-rt" title="New units from ${name} walk to ${rallyName(rallyOf(p))}">${CS_ICO.flag}<span>Rally point: <b>${rallyName(rallyOf(p))}</b></span></span><button data-act="rally" data-id="${p}">Change</button><button data-act="rally-clear" data-id="${p}">Clear</button></div>` : `<div class="cs-rl"><button class="cs-rb" data-act="rally" data-id="${p}" title="New units from ${name} will walk to a spot you pick on the map">${CS_ICO.flag}<span>Rally point</span></button><span class="cs-rn">New units stay in the city</span></div>`) : '';
   return `${acts}<div class="cs-body">${ban}${stat}${rl}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
 function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWanted(), phone = innerWidth <= 820, on = p >= 0 && !(CS.det && phone);
@@ -9429,10 +9437,10 @@ const recHead = p => S.bld[p].rec ? `${BUILD.rec.name}: ${recPct(S.bld[p].rec)}%
 const bldPrice = (p, k) => { const l = S.bld[p][k] || 0; if (l >= BUILD[k].max) return 'Highest level.'; const c = buildCost(PLAYER, k, l + 1, p); return `Level ${ROMAN[l + 1]} costs ${costTxt(c, ', ')} and takes ${csTime(c.h)}.`; };
 const facUnits = l => UT.filter(t => reqsOf(t).some(r => r.b === 'fac' && r.l === l)).map(t => UNITS[t].name).join(', ');
 const facPct = l => Math.round((1 - facF(l))*100);
-const facTip = p => { const l = S.bld[p].fac || 0, M = BUILD.fac.max, others = facOthers(PLAYER, p, 'fac');
+const facTip = p => { const l = S.bld[p].fac || 0, M = BUILD.fac.max, others = riseCnt(PLAYER, 'fac', p);
   return (l ? `${BUILD.fac.name} ${ROMAN[l]}: ground units train ${facPct(l)}% faster here, ${1 + l} training lines.${l < M ? ` Level ${ROMAN[l + 1]}: ${facPct(l + 1)}% faster, one more training line${l === 1 ? `, and unlocks ${facUnits(2)}` : ''}.` : ''}`
     : `${BUILD.fac.name}: needed to mobilize ground units here, infantry included. Level I unlocks ${facUnits(1)}; ground units train ${facPct(1)}% faster and a second training line opens. Level II unlocks ${facUnits(2)}. Up to level ${ROMAN[M]} (${facPct(M)}% faster). No income.`)
-    + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each other Army Base you own: ${others} now.)` : ''); };
+    + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each Army Base you own beyond the first two elsewhere: ${others} now.)` : !l ? ' Your first two Army Bases cost the base price; each one after that costs 40% more.' : ''); };
 const armsTip = p => { const o = cityOut(p); if (!o) return BUILD.arms.desc; const l = S.bld[p].arms || 0, M = BUILD.arms.max, pc = Math.round(ARMS_PCT*100), nm = MAIN_NAME[o.k], others = facOthers(PLAYER, p, 'arms');
   const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), out = y => o.k === 'cash' ? '$' + d1(y) + 'M' : fmt(Math.round(y)) + ' ' + nm, at = lv => out(o.base*(1 + ARMS_PCT*lv)), gain = o.base*ARMS_PCT, c = l < M ? buildCost(PLAYER, 'arms', l + 1, p) : null;
   const pay = c && gain > 0 ? Math.max(1, Math.round((c.cash + lotCash(c.metal, mkt().p.metal) + lotCash(c.iron, mkt().p.iron) + lotCash(c.elec || 0, mkt().p.elec))/(o.k === 'cash' ? gain : lotCash(gain, mkt().p[o.k])))) : 0;
@@ -9573,6 +9581,8 @@ function renderSide(force){
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
   setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
 }
+// nation n has an Army Base (built, or going up) in one of its cities: the first step of First steps and the tutorial
+const hasBase = n => ownedBy(n).some(p => S.bld[p].fac >= 1 || (S.cons[p] && S.cons[p].k === 'fac'));
 function checklist(){
   const row = (done, txt) => `<div class="${done ? 'done' : ''}"><i>${done ? '✓' : '○'}</i><span>${txt}</span></div>`;
   const T = S.tut || (S.tut = {});
@@ -9582,7 +9592,7 @@ function checklist(){
     if (grown >= 5 && mines && wars) return '';
     return `<div class="eyebrow" style="display:flex;justify-content:space-between">Next objectives <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(grown >= 5, `Grow by 5 provinces (${Math.max(0, grown)}/5)`)}${row(mines, 'Build an Arms Industry: +25% of a city\u2019s main resource per level')}${row(wars, 'Survive a war: end one with a truce or peace')}</div>`;
   }
-  return `<div class="eyebrow" style="display:flex;justify-content:space-between">First steps <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(T.recruit, 'Recruit a unit: tap your capital, then a unit card')}${row(T.capture, 'Merge forces into one stack (up to 10 ground units fight at full strength), then capture a weak independent neighbour (look for a Favourable odds chip)')}${row(T.research, 'Start a research project (R)')}</div>`;
+  return `<div class="eyebrow" style="display:flex;justify-content:space-between">First steps <button class="btn" data-act="hidesteps" style="padding:0 6px;font-size:11px">Hide</button></div><div class="steps">${row(hasBase(PLAYER), 'Build an Army Base in your capital (tap it, then Build): infantry trains only where one stands')}${row(T.recruit, 'Recruit a unit there: Mobilize unit, then a unit card')}${row(T.capture, 'Merge forces into one stack (up to 10 ground units fight at full strength), then capture a weak independent neighbour (look for a Favourable odds chip)')}${row(T.research, 'Start a research project (R)')}</div>`;
 }
 function prodHTML(){
   const N = S.nations[PLAYER], cities = G.P.filter(P => S.owner[P.id] === PLAYER && P.city).sort((a, b) => (b.id === N.capital) - (a.id === N.capital) || a.cityName.localeCompare(b.cityName));
@@ -9607,13 +9617,14 @@ function prodHTML(){
 let TUT = null;
 const TUT_STEPS = [
   {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b>.`, map:() => S.nations[PLAYER].capital, next:true},
-  {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
   {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
-  {t:'Recruit', d:() => `Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.`, el:'#csheet:not([hidden]) .cs-mob, #ctx', done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
+  {t:'Build an Army Base', d:() => { const c = buildCost(PLAYER, 'fac', 1, S.nations[PLAYER].capital); return `Tap <b>BUILD</b> in the city panel, then <b>Build</b> on the Army Base (the first row: $${c.cash}M, ${dayTxt(c.h)}). Infantry and every other ground unit train only in a city with an Army Base, and no city starts with one.`; }, el:'#csheet:not([hidden]) .cs-bldb, #sheet .bld[data-bk="fac"] .btn', map:() => S.nations[PLAYER].capital, done:() => hasBase(PLAYER)},
+  {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run: your Army Base goes up in about a day. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
+  {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
+  {t:'Recruit', d:() => ownedBy(PLAYER).some(p => S.bld[p].fac >= 1) ? `Your Army Base stands. Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.` : 'Your Army Base is still going up (the BUILD square shows the time left). When it stands, tap <b>MOBILIZE UNIT</b> in the city panel, then a unit card (Motorized Infantry is cheap). Tap Next to carry on meanwhile.', el:'#csheet:not([hidden]) .cs-mob, #ctx', next:() => !ownedBy(PLAYER).some(p => S.bld[p].fac >= 1), done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
   {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them. Tapping only selects: the army bar opens at the bottom.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
   {t:'Plan an attack', d:() => tutPick() != null ? `Press <b>Move</b> in the army bar, then tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its heart. A dashed route appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null || S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Send it', d:() => sel.target !== null ? 'The odds read Likely defeat, so the force waits: merge more units first, or press the yellow button in the panel to attack anyway.' : 'When you have a Favourable target, press Move and tap it to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
-  {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
   {t:'Dug in', d:() => `A small amber shield with a wall of sandbags on a force's badge means it is <b>dug in</b>: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage). A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Each unit has its own line: its unlock, then upgrades. Every project opens on its own day; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
   {t:'You are ready', d:() => 'The bar along the bottom opens Diplomacy (war, peace, trade routes), Market, Cities, Research, Army and Production (P); More holds Intelligence, Settings, Sound and “How to play” (or press ?), which explains roads and railways, drones, trade and coalitions. The crate at the left of the resource strip lists your missiles; the shields on the right of the map fly home, open the dispatches and toggle the relations map. Good luck, commander.', el:'#dock', next:true, last:true},
@@ -10470,6 +10481,9 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
       return `<button class="btn unit hasp${why ? ' blk' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)} Shift-click to queue to the limit." ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why || costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
     const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b)));
     const open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), locked = UT.filter(t => blk(t) && !near(blk(t)));
+    { const k0 = mobBlock(PLAYER, p, 'inf'), c0 = S.cons[p];
+      if (k0 && k0.kind === 'bld' && k0.b === 'fac' && canBuildHere(p, 'fac')){ const cc = buildCost(PLAYER, 'fac', 1, p), going = c0 && c0.k === 'fac';
+        html += `<div class="mobneed"><span>${going ? `<b>Army Base going up</b>: ready in ${dayTxt(c0.h)}. Infantry and the other ground units can be trained here once it stands.` : `<b>No Army Base in ${P.cityName} yet.</b> Infantry and every other ground unit train only in a city with an Army Base (level I: $${cc.cash}M, ${dayTxt(cc.h)}).`}</span>${going ? '' : c0 ? `<span class="small muted">Busy building ${BUILD[c0.k].name}</span>` : `<button class="btn primary" data-act="build" data-k="fac" ${hasC(N, cc) ? '' : `disabled title="Needs ${missTxt(N, cc)}"`}>Build Army Base</button>`}</div>`; } }
     html += `<div class="eyebrow">Recruit<span class="rec-b"> · ${queueUsed(p)}/${queueMax(PLAYER)} in training</span>${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div><div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
     html += `<div class="small muted">${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city). <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
@@ -10487,10 +10501,10 @@ function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '
     html += `<div class="eyebrow">Construction</div>`;
     if (c) html += `<div class="queue"><div class="qi"><span>${bimg(c.k, c.lvl, 22)}${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><span class="muted">${c.h} h left</span></div><div class="bar"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></div></div>`;
     html += `<div>${BK.filter(k => canBuildHere(p, k)).map(k => { const B = BUILD[k], lv = S.bld[p][k], nl = lv + 1, cc = buildCost(PLAYER, k, nl, p);
-      const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc);
-      return `<div class="bld" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
+      const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc), need = k === 'fac' && !lv && G.P[p].city;
+      return `<div class="bld${need ? ' need' : ''}" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
         ${maxed ? '<span class="lv">Max</span>' : `<button class="btn" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${!ok && !c && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${Math.round(cc.h/2.4)/10} d</span>${costHTML(cc, N)}</button>`}
-        <span class="ds">${k === 'arms' ? armsHere(p, lv) + ' Level I is half price. Each Arms Industry you already own in another province makes the next one cost 40% more.' : bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
+        <span class="ds">${need ? `<span class="needt">${c && c.k === 'fac' ? `Going up: ready in ${csTime(c.h)}.` : 'Start here: infantry and every other ground unit train only in a city with an Army Base.'}</span>` : ''}${k === 'arms' ? armsHere(p, lv) + ' Level I is half price. Each Arms Industry you already own in another province makes the next one cost 40% more.' : bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
   return html; }
 function provHTML(p){
   const P = G.P[p], o = S.owner[p], N = S.nations[PLAYER], mine = o === PLAYER;
@@ -10951,7 +10965,7 @@ const HELP_SEC = [
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> A city's chip and the Cities tab show its main resource, and hovering a province shows its yields, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
-    <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry); units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
+    <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry). No city starts with one: build level I in your capital first (cheap, ready in a day; your first two Army Bases cost the base price, each later one 40% more); units take a day or more to train; each Army Base level adds a training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
     <li><b>Capture</b>: a province is yours the moment your ground units reach its heart, the city (or the province centre without a city), with no defenders left; ${CAP_MIN} units are needed. Crossing the border or stopping elsewhere in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more.</li>
@@ -11059,7 +11073,7 @@ function showBriefing(first, hasSave){
 // "Got it" retires that tip; "Skip all tips" retires every one (both kept in the settings). A tip never takes clicks on the map and
 // sits clear of what it explains; the step tutorial (Replay the tutorial) teaches the same things, so starting it retires the tips.
 const FTIPS = {
-  city:{t:'Tap MOBILIZE UNIT to recruit here.', pos:'top'},
+  city:{t:() => sel.prov !== null && S.owner[sel.prov] === PLAYER && !S.bld[sel.prov].fac && !(S.cons[sel.prov] && S.cons[sel.prov].k === 'fac') ? 'No Army Base here yet: tap BUILD to build one (a day), then MOBILIZE UNIT to recruit.' : 'Tap MOBILIZE UNIT to recruit here.', pos:'top'},
   move:{t:'Forces march while the clock runs (1×).', pos:'top'},
   battle:{t:'Battle: the blue bar is morale. At zero, a force retreats.', pos:'top'},
   research:{t:'Pick a project. Two run at once.', pos:'sheet'},
@@ -11070,7 +11084,7 @@ function ftipAsk(k){
   if (k !== 'research' && !$('modal').hidden) return;
   FTIP = k; const el = $('ftip'), d = FTIPS[k];
   if (k === 'research'){ if (modalKind === 'research') rRender(); return; }   // the research tip sits in the sheet under the slots, never over the tree
-  el.classList.toggle('bot', d.pos === 'bot'); el.innerHTML = `${tipIco(k)}<span class="tt">${d.t}</span><span class="tb"><button class="btn primary" data-act="tip-ok">Got it</button><button class="tskip" data-act="tip-skip">Skip all tips</button></span>`; el.hidden = false;
+  el.classList.toggle('bot', d.pos === 'bot'); el.innerHTML = `${tipIco(k)}<span class="tt">${typeof d.t === 'function' ? d.t() : d.t}</span><span class="tb"><button class="btn primary" data-act="tip-ok">Got it</button><button class="tskip" data-act="tip-skip">Skip all tips</button></span>`; el.hidden = false;
 }
 function ftipHide(seen){ const k = FTIP; FTIP = null; $('ftip').hidden = true; if (seen && k){ SET.tipSeen[k] = true; saveSet(); } if (k === 'research' && modalKind === 'research' && !$('modal').hidden) rRender(); }
 function ftipTick(){   // every quarter second: battles, and housekeeping

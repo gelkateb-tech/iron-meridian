@@ -285,6 +285,8 @@ Keeping the key means every old save's factories become Army Bases at the same l
 
 - Levels I-V, city only, cost unchanged: $25M, 12 materials, 12 iron at level I; x1.6 per level; levels IV-V also cost
   electronics (as today); +40% for every other province of yours that already has an Army Base (FAC_RISE, own count).
+  (START-RULES, owner 2026-11-15: level I is now $18M, 6 materials, 6 iron and 1 day, BUILD.fac.lv1; levels II-V as above; the
+  first two Army Bases cost the base price, +40% for each one after that, RISE_FREE; no city starts with an Army Base.)
 - Level I unlocks Mobile Artillery, Main Battle Tank, IFV, Mobile Jammer. Level II unlocks Mobile SAM, Rocket Artillery,
   Swarm Drones. (Exactly today's `req:{b:'fac'}` units: no change to UNITS.)
 - Training: one more training line per level (as today), and ground units (every unit whose `req.b` is `fac` or `rec`)

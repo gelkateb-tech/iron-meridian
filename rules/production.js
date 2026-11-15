@@ -48,11 +48,15 @@ const recBefore = p => S.queue[p].map(it => it.msl ? 1 : trainEff(p, it.t, S.own
 function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i] > 0)) return; const r = trainEff(p, it.t, S.owner[p])/f0[i]; if (!(r < 1)) return;
   it.h = Math.max(1, Math.round(it.h*r)); it.h0 = Math.max(it.h, Math.round((it.h0 || it.h)*r)); }); }
 // Army Base and Arms Industry prices rise 40% for every OTHER province of the nation that already has one of the same kind (built, or under construction),
-// cash, materials and iron alike; the two do not raise each other's price
+// cash, materials and iron alike; the two do not raise each other's price. RISE_FREE: that many other provinces raise nothing (the Army Base: the first
+// two cost the base price, the third 40% more, the fourth 96% more...), so every nation opens its first bases cheaply (owner, START-RULES 2026-11-15)
 const FAC_RISE = 1.4;
 const RISE_K = {fac:1, arms:1};
+const RISE_FREE = {fac:1};
 function facOthers(n, p, k = 'fac'){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
-function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = BUILD[k], m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*(RISE_K[k] ? Math.pow(FAC_RISE, facOthers(n, p == null ? -1 : p, k)) : 1), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
+const riseOf = (n, k, p) => RISE_K[k] ? Math.pow(FAC_RISE, Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0))) : 1;
+const riseCnt = (n, k, p) => Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0));   // how many of the others raise the price (the page's words)
+function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
 // training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
 // (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);

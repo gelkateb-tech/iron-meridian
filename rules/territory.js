@@ -26,7 +26,7 @@ const provName = p => G.P[p].cityName || G.P[p].name;
 const origOwner = p => (S.own0 && S.own0[p] != null) ? S.own0[p] : S.home[p];
 const capturedFrom = p => { const o = S.owner[p]; if (o < 0 || G.P[p].sea) return null; const f = origOwner(p); return f !== o ? f : null; };
 // what a building's levels cost to build (money, and goods at base prices), for the value
-function bldWorth(k, l){ const B = BUILD[k], m = Math.pow(1.6, l - 1)*(l === 1 && B.first ? B.first : 1), c = B.lv ? lvCost(k, l) : {cash:B.cost*m, metal:B.metal*m, iron:(B.iron || 0)*m, elec:(B.elec || 0)*m};
+function bldWorth(k, l){ const B = bldLv(k, l), m = Math.pow(1.6, l - 1)*(l === 1 && B.first ? B.first : 1), c = B.lv ? lvCost(k, l) : {cash:B.cost*m, metal:B.metal*m, iron:(B.iron || 0)*m, elec:(B.elec || 0)*m};
   return c.cash + (c.metal || 0)/MKT_LOT*MKT_BASE.metal + (c.iron || 0)/MKT_LOT*MKT_BASE.iron + (c.elec || 0)/MKT_LOT*MKT_BASE.elec; }   // (MKT_BASE: per MKT_LOT units)
 // what the province yields in a normal day (provYield without occupation, blockade, morale, convoy or knocked-out buildings): money and goods
 function terrYield(p){ const P = G.P[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75), b = S.bld[p] || {}, y = {cash:(P.city ? 8.5 : 1.8*G.PF) + ECO.cash*pp, oil:0, metal:0, iron:0, elec:0, rare:0};
