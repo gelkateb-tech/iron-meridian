@@ -32,6 +32,11 @@ function loadWorld(map = null, base0 = null){ const NB = map ? WORLD.provinces.l
     cand.sort((x, y) => x[2] - y[2]); loadWorld.straits = [];
     if (base0) cand.length = 0; for (const [a, b] of base0 ? base0.straits : []){ const w = P[a].nb.get(b) ?? base0.P[a].nb.get(b); P[a].nb.set(b, w); P[b].nb.set(a, w); loadWorld.straits.push([a, b]); }
     for (const [a, b, d] of cand){ if (find(a) === find(b)) continue; par[find(a)] = find(b); const w = Math.max(GS > 1 ? 0.35 : 1, d); P[a].nb.set(b, w); P[b].nb.set(a, w); loadWorld.straits.push([a, b]); } }
+  // canals: a sea link where the grid shows only land (Suez: the Mediterranean and the Red Sea, zone names of world.js). Warships, troops at sea and
+  // convoys all pass; no province's control matters (as at Panama, open water on the grid). Drawn along the real canal (tools/roadnet.js CHANNELS).
+  { const byName = new Map(P.filter(p => p.sea).map(p => [p.name, p.id])); loadWorld.canals = [];
+    for (const [na, nb] of [['Mediterranean Sea VII', 'Red Sea I']]){ const a = byName.get(na), b = byName.get(nb); if (a === undefined || b === undefined || P[a].nb.has(b)) continue;
+      const w = Math.max(GS > 1 ? 0.35 : 1, hexDist(P[a].cc, P[b].cc)); P[a].nb.set(b, w); P[b].nb.set(a, w); loadWorld.canals.push([a, b]); } }
   for (const p of P){ p.nbs = [...p.nb.keys()]; p.coast = !p.sea && p.nbs.some(v => P[v].sea); p.river = new Set(); p.road = new Set(); p.lk = new Map(); }
   // rivers, roads and railways (Natural Earth): river lines between provinces, road and rail links between neighbours, drawable paths by class
   // LK: one record per linked neighbour pair; r0/q0 are the static road (1 track, 2 road, 3 highway) and rail (1 railway, 2 high-speed) levels,
@@ -94,7 +99,7 @@ function loadWorld(map = null, base0 = null){ const NB = map ? WORLD.provinces.l
   cityMains(P, countries);
   // base: the classic world's cities, capitals, city names and main resources as world.js gives them (useWorld switches between it and the nations world)
   const base = {city:P.map(p => p.city), cap:P.map(p => p.capFlag), name:P.map(p => p.cityName), main:P.map(p => p.main)};
-  return {prov, P, D, straits:loadWorld.straits, countries, landCount, PF, LK, base, worldKey:'classic', map:map ? map.v : 0};
+  return {prov, P, D, straits:loadWorld.straits, canals:loadWorld.canals, countries, landCount, PF, LK, base, worldKey:'classic', map:map ? map.v : 0};
 }
 // Which provinces are cities and capitals depends on the world in use. def null: the classic world (the flags of world.js: the 15-power world,
 // the two theatres and every old save). def {cities, caps, names}: the nations world (province ids of every city, of the nations' capitals, and

@@ -419,7 +419,7 @@ const BLOCKADE_KM = {frig:RANGE_KM.frig, crui:RANGE_KM.crui, carr:120, sub:RANGE
 // Chokepoints: the narrow seas the trade lanes squeeze through (one or two blockading warships close them; the open ocean needs a screen of
 // several spread out). p: the passage itself (lon, lat; snapped to the nearest sea cell, where the map labels it and where a fleet blockades it);
 // a, b: open water on either side (rules/trade.js chokeClosed checks the way through between them, within CHOKE_KM of the passage).
-// Suez and Panama are canals: merchant convoys pass Suez (rules/trade.js TR_CANALS; warships do not: fleet movement is unchanged); Panama is open water on the grid.
+// Suez and Panama are canals: Suez is a sea link between the Mediterranean and the Red Sea (rules/map.js loadWorld canals; convoys sail its cells over TR_CANALS) that warships, troops at sea and convoys all use, whoever holds Egypt; Panama is open water on the grid.
 const CHOKEPOINTS = [
   {k:'hormuz', name:'Strait of Hormuz', p:[56.4, 26.4], a:[52.5, 26.8], b:[58.8, 24.6]},
   {k:'malacca', name:'Strait of Malacca', p:[100.8, 2.9], a:[98.6, 4.6], b:[103.6, 1.4]},
@@ -527,7 +527,7 @@ const TIER_DOWN_A = 1.6, TIER_UP = 1.3, TIER_BULLY = 2;
 // step 6: 0.6 before, the United States now needs 345, Russia 431, China 372)
 const TIER_WIN_UP = 0.5;
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
-const CAP_MIN = 2;                    // ground units needed to capture
+const CAP_MIN = 1;                    // ground units needed to capture (one, as in Conflict of Nations; it was 2)
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
 const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 /* ---------------- Resource scale ---------------- */
