@@ -8,44 +8,54 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
-Last updated: 2026-11-15 (Dev Build v50).
+Last updated: 2026-11-15 (Dev Build v52; paused for the owner's usage reset).
 
-## Running
+## PAUSED until the owner's usage reset (Tuesday 11 PM)
 
-| Job | What | Model | Branch |
-|---|---|---|---|
-| **MAP-2** one consistent map texture and colours at every zoom (no tone jump when the detail tiles fade in, no pop when zooming stops); the Political/Terrain switch moves off the map into Settings > Map (with Relations/Supply) and the More menu; NOT merged until the owner sees it | Opus | map-2 |
+Owner, 2026-11-15: "Let the running jobs reach a safe stopping point, commit and push their work to their branches, then pause everything. Don't start any new jobs until the reset on Tuesday at 11 PM. Then pick up from QUEUE.md in order."
+After the reset: Sonnet for small fixes, Opus for new rules and big features. Log every Gemini batch with the running total since the top-up (owner topped up to about $15; the log stood at 199 calls, about $8.10, before it); stop and ask if the new spending passes $12.
 
-| **MAP-3 final step** (owner 2026-11-15: yes to Suez, capture with 1 unit, sea lanes only with a ship selected): a Suez Canal link for ships and trade, CAP_MIN 2 → 1; then merged and published | Sonnet | map-3 |
-
-## Ready, waiting for the owner (done, not merged)
+## Paused mid-way (pushed to its branch)
 
 | Job | State | Branch |
 |---|---|---|
-| **MAP-3** | every province's roads meeting at its centre point (drawn over the fog, under the borders), sea lanes for warships, capture the moment a ground force reaches the centre (HEART_KM 0.1); merged with current master (golden re-recorded for these two rule changes only); every check passes; pan speed the same within noise; screenshots sent | map-3 |
-| Explosion clips + FX-2 | owner: not merged for now (2026-11-14). Cruise and ballistic clips play in real games; nuclear/chemical have no weapon in the rules | fx-video |
+| **MAP-2** one map texture at every zoom (#3); Political/Terrain toggle off the map into Settings > Map next to Shipping routes (#4) | paused at a safe point (head ee66c0f, pushed). Done: switch moved into Settings > Map and the More menu; one look at every zoom (brightness spread across zooms cut from about 5 to about 1, sea from 19 to 4, night 3.2 to 0.3; strips in the scratchpad map2/). Left: re-run map-zoom-look and map-modes (desktop, phone), map-consistency, night-lights, borders-real, black-map, controls, nat-oldsave, smoke 10, perf-ui vs master; then the owner's look and merge. Owner notes: mountains close up are now the texture's pale grey (not the warmer brown the detail added) | map-2 |
 
-**Merge rules:** map jobs merge one at a time, each merged with master and re-tested before the next; every look change sends the owner screenshots before it merges.
+## Ready, waiting for the owner
 
-## Queued (in this order)
+| Job | State | Branch |
+|---|---|---|
+| Explosion clips + FX-2 (#24) | the code-drawn explosions are dropped (deleted branch); cruise and ballistic clips play in real games; the "two not showing" were nuclear and chemical: the rules have no such weapons yet (owner: chemical/nuclear later, #23); real gameplay recording sent 2026-11-14; NOT merged until the owner OKs | fx-video |
 
-Owner playtest notes of 2026-11-14: part 1 (#1-#21), the rally point and the Army Base rule; part 2 (P2-1 to P2-8). Grouped by code area so each job reads its code once. Sonnet for small fixes, Opus for new rules.
+## Queued after the reset (in this order)
+
+Owner's consolidated list of 2026-11-15 (#1-#24). Already merged and live (Dev Build v50-v52): #1, #2, #5, #6, #8, #10, #12, #13, #14, #15, plus Suez and capture by one unit. #9 is half done (the amber shield and +10% are in; the city part is new).
 
 | # | Job | What it covers | Model |
 |---|---|---|---|
-| (running) | **MAP-2** Map look and controls | #3 one consistent map texture at every zoom; #4 the Political/Terrain switch moves into the More tab as a toggle (next to Shipping routes). Map job: after MAP-1 merges; screenshots before merging | Opus |
-| 2 | **REBELS** build | after the owner answers the plan's questions | Opus |
-| 3 | **ART-2** more Gemini pictures from "Pictures still missing", count and cost to the owner before each batch | Sonnet |
-| 4 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | **MAP-2 finish** | see "Paused mid-way" | Opus |
+| 2 | **BADGE-CON** (#7, owner: "Sonnet, now") + dug-in in cities (#9) | match the owner's Conflict of Nations screenshot exactly (reference: the owner's upload, a copy in the scratchpad badgecon/con-ref-1.jpg). Zoomed in: two stacked rectangles of the same width: the owner's real flag on top (atlas flag with emblems, crisp, slight fabric sheen, thin dark edge, soft drop shadow) and a bar in the side colour (mine green, allies blue, enemies red, neutral grey) with the count in big bold italic white, right-aligned; a white rounded-square tag with the unit icon overlapping the bar's left edge, half in, half out. Zoomed out: only a square in the side colour with the white icon tag centred, no flag, no count. Sizes on a ~440 px phone: badge 52 px wide, flag 20 px tall, bar 26 px, count ~19 px, tag 18x18 with a 15 px icon; zoomed-out square 28x28 with the same tag; scale with the map's UI scale on desktop; if the map view is ever tilted, lay the badge flat at that tilt. Icons flat navy on the white tag; infantry EXACTLY the owner's SVG (below), motorized = the same helmet with a small wheel under it; other types their own icons in the same flat navy-on-white style. Dug-in (#9): the amber shield stays; the bonus becomes +10% defence in the open and +25% inside a city (replacing, not adding). Phone screenshots zoomed in and zoomed out next to the CoN screenshot before merging | Sonnet |
+| 3 | **ART-2** art style and rule (#18, #19) + first pictures (#11 tank sample, #20 level 1 of all 8 buildings) | write the new art style into tools/gen-art.py so every batch uses it: the clean polished feel of Conflict of Nations (crisp 3D game models, simplified shapes, clear silhouettes, bright natural colours, soft even lighting) but a little more realistic to match the satellite-style map (real concrete, metal, asphalt, grass, subtle wear, natural colours; not toy-like, not a photo; our own designs, no copies); write the rule into docs (one design per type: make level 1, then each next level by editing the previous picture so it reads as the same building growing); then generate (batch, one try, logged, running total) level 1 of the 8 buildings: Army Base (temporary camp), Airbase (runway along the top, no air-defence launchers), Naval Yard (no coast drawn, piers to the bottom right), Missile Silo, Arms Industry, Recruiting Office, Hospital (green or white cross, never red), Fortifications bunker as a cutaway (a rounded chunk of ground cut open showing the bunker); regional HQs stay as they are. And the Main Battle Tank's looks 2-4 (#11: each made by editing the previous look so the unit keeps its shape; owner said yes to all 6 questions in RESEARCH.md 14.11). Show both to the owner and stop | Sonnet |
+| 4 | **ART-3** buildings levels 2-5 in the new style, each by editing the previous level (after the owner OKs the 8 level-1 pictures); Airbase level 5 with bombers; then wire them in, replacing the old pictures | Sonnet |
+| 5 | **UNIT-LOOKS** the other unit looks (after the owner OKs the tank sample), then wire looks into the map, army bar and research tree (RESEARCH.md 14) | Sonnet (art), Opus (wiring) |
+| 6 | **CITIES** (#16, Opus) | clusters of simple 3D buildings instead of the flat grid, like Conflict of Nations: keep each city's own outline shape; inside it small extruded blocks (lit top, shaded sides, soft shadow), taller in the centre and lower at the edges, streets between them, tinted in the owner's colour; bigger cities more and taller blocks; cities about 25% smaller on the map; drawn once into a cached picture per zoom level; hidden when zoomed far out. Screenshots of Kabul, Damascus and Berlin at 3 zoom levels before merging | Opus |
+| 7 | **BUNKER** (#17, new rule) | Fortifications become the Bunker, hidden from other nations. Level 1: health 20, garrison takes 33% less damage, +5% morale, upkeep 100; level 2: 40, 43%, +10%, 110; level 5: 125, 82%, +50%, 140; levels 3 and 4 smooth between (proposed: 3: 65, 56%, +20%, 120; 4: 95, 69%, +33%, 130). It shields the city's other buildings up to level 1 and protects the population up to level 5. Convert to our economy's scale. Show the owner the protection table (with and without dug-in) before building. 5 levels: the Fortifications price/cost question folds into this | Opus |
+| 8 | **REBELS** (#22, new rule) | the suggested answers in docs/REBELS-PLAN.md, with one change: one level-1 infantry unit left in the captured city until it stabilises beats any rebels; an empty city still flips. Rebels get a crossed-rifles badge and show as 3D soldiers | Opus |
+| 9 | Phone app (PWA) on Netlify | needs the Netlify token | Opus |
+| later | Chemical and nuclear weapons (#23): owner will go through them first | | |
+
+The owner's infantry icon (#7), to use exactly, navy on the white tag:
+`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M12 62 C12 35 31 17 55 17 C78 17 91 35 91 56 L96 66 L80 66 C70 61 32 61 12 62 Z" fill="#1d2c45"/><path d="M20 57 C40 53 64 53 84 59" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M33 64 C33 80 47 87 59 81 L66 66" fill="none" stroke="#1d2c45" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 
 ## Pictures still missing
 
-Every picture or clip not made yet, with what it is for and its estimated cost at batch prices (about $0.04 a picture, $0.05 a banner, about $0.35 a video clip). Updated after every batch. Owner's Gemini balance: about $2 (owner, 2026-11-14, after the explosion clips). Batch 1 (ART-1, 8 pictures) cost about $0.31, so about $1.70 is left.
+Every picture or clip not made yet, with what it is for and its estimated cost at batch prices (about $0.04 a picture, $0.05 a banner, about $0.35 a video clip). Updated after every batch. Owner topped Gemini up to about $15 (2026-11-15). The log stood at 199 calls, about $8.10, before the top-up: report the running total of new spending after every batch and stop and ask if it passes $12.
 
 | Name | What it's for | Est. cost | Status |
 |---|---|---|---|
 | Army Base 1-5 (bn-fac-1..5) | the Army Base on the map and in the city panel, same style as the Airbase set: level 1 a temporary camp with tents and sandbags, level 5 a full permanent base | $0.21 | **done** (ART-1; levels 4-5 kept their tents and got a wider footprint) |
-| Fortifications 1-5 redo (bn-fort-1..5) | less boxy fortifications (#16) | $0.18 | next batch (ART-2) |
+| New-style buildings, level 1 of 8 (Army Base, Airbase, Naval Yard, Missile Silo, Arms Industry, Recruiting Office, Hospital, Fortifications bunker cutaway) | owner #20: everything redone in the new style | $0.32 | queued (ART-2) |
+| New-style buildings, levels 2-5 of the 8 (32 pictures, each edited from the previous level) | owner #20 | $1.30 | after the owner OKs level 1 (ART-3) |
 | Dug-in icon | not needed: UNIT-LOOK drew the new amber shield in code | $0 | done in code |
 | Construction pictures x3 (a site with a crane, scaffolding, a half-built frame) | the construction animation (P2-1) | $0.10 | **done** (ART-1; the site picture sits on a soil slab) |
 | Missile Silo 1-5 (bn-silo-1..5) | the Missile Silo on the map (nothing shows today) | $0.18 | waiting |
