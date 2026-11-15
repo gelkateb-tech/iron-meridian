@@ -61,3 +61,9 @@ Each one needs pictures later, in the same angled style as the other buildings: 
   - Heals slower than a city Hospital.
   - Enemies can capture or destroy it.
   - Needs its own pictures later.
+
+## Final visual polish pass (the last week before launch; don't start earlier)
+Owner, 2026-11-15. Model: Fable 5.2 (the owner's explicit choice for this pass).
+- Scope: the whole game's look and theme, not just the sea: the map (land textures, a sea with lots of moving waves, coasts, borders, cities, lighting, day and night), the UI panels, colours, fonts, icons and animations, so everything feels like one premium, expensive-looking game.
+- Creative freedom: it may redesign anything that makes the game look better, as long as gameplay and rules stay the same (golden fingerprint unchanged) and the game stays fast on phones (battery saver respected, phone frame rate no worse).
+- Before merging: before-and-after screenshots of each area to the owner, and wait for the owner's OK for each.
