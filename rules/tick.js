@@ -98,8 +98,9 @@ function* tickHourG(){
   }
   yield;
   if (S.hour % 24 === 0){ yield* diploDayG(); yield; yield* dailyG(); yield; }
-  // the AI plays every nation that is not a seat (in the nations world a nation far from the fighting plans every other turn: aiAway)
-  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); if (!((S.hour + n) % 8 === 4 && aiAway(n))) aiTurn(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); yield; }
+  // the AI plays every nation that is not a seat (in the nations world a nation far from the fighting plans every other turn: aiAway; on the turn it
+  // skips it still starts an Army Base in a capital that has none, aiCapBase)
+  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); if (!((S.hour + n) % 8 === 4 && aiAway(n))) aiTurn(n); else aiCapBase(n, S.nations[n]); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); yield; }
   IM.emit('hour');
   visCache = null;
 }

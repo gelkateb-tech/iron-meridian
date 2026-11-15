@@ -461,7 +461,11 @@ function mapNbs(){ if (MNB && MNB.G === G) return MNB; const n = G.P.length, o =
 // the turn in progress (AIT: answers that hold for one nation's whole turn, nothing in a turn changes them; see aiPickUnit)
 let AIT = null;
 function aiTurn(n){ const N = S.nations[n]; if (!N.alive) return; const prev = AIT; AIT = {n, foeTr:undefined}; try { aiTurn0(n, N); } finally { AIT = prev; } }
+// no Army Base in the capital (every nation at the start of a game, or a new capital after the old one fell): level I there before anything else
+// (it costs little and takes a day), so no computer nation waits long to train infantry. A capital busy with another building waits for it
+function aiCapBase(n, N){ const c = N.capital; if (S.owner[c] === n && G.P[c].city && !S.bld[c].fac && !S.cons[c] && canBuildHere(c, 'fac')) build(n, c, 'fac'); }
 function aiTurn0(n, N){
+  aiCapBase(n, N);
   aiResearch(n);
   const inc = income(n), provs = ownedBy(n).length;
   const units = aiCountsOf(n).allU + ownedBy(n).reduce((s, p) => s + S.queue[p].length, 0);   // (its forces have not changed yet this turn)
