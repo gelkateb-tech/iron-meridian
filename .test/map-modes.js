@@ -1,9 +1,11 @@
 // Map modes and overlays (map-modes): node .test/map-modes.js [W H dpr] [nation] [quick]   (default 1440 900 2 'United States'; a width <= 820 is a phone)
 // Env: ONLY=<letters> runs only those sections (U N O B G S P F W M; S the screenshots). OUT=<dir> saves screenshots (the owner's case, the two modes and each overlay); SHOTS=<prefix> names them; SEED=n seeds the random sequence.
 // The map has two modes, Political and Terrain, and two overlays switched on and off over the Political map, Relations and Supply (owner's scope
-// change). A nations-world game; every action goes through the buttons (on a phone the folded pill opens first). Exits 1 on any failure; prints JSON.
-//  (U) UI       exactly two mode tabs and two overlay switches (no Resources, Stability, Trade, or Relations / Supply modes); in Terrain the overlays are
-//               hidden (no overlay canvas) and a switch pressed there brings the Political map back with that overlay
+// change). A nations-world game; every action goes through the buttons (MAP-2: no switch on the map; the mode through the More menu's 'Map' item,
+// the overlays through Settings > Map, opened from More, then closed again). Exits 1 on any failure; prints JSON.
+//  (U) UI       no switch on the map (#modes gone); Settings > Map has exactly two map styles and two overlay switches (no Resources, Stability,
+//               Trade, or Relations / Supply modes), the More menu one Map item naming the style; in Terrain the overlays are hidden (no overlay
+//               canvas) and a switch pressed there brings the Political map back with that overlay; the V key switches the style
 //  (N) NO REBUILD  switching an overlay on or off never re-renders the base map (the layer's full-render count and its pixels stay as they were)
 //  (O) OWNER    the owner's case: Political, + Relations, + Supply, Terrain, Political, each followed by a zoom in and a zoom out across the zoom bands
 //               (wheel glide; a pinch on a phone: world view -> play zoom -> close up and back); once it settles the base layer is a fresh full render
@@ -46,9 +48,13 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
   const scale = () => p.evaluate(() => window.__im.view.s);
   const shot = async name => { if (OUT) await p.screenshot({ path: path.join(OUT, `${TAG}-${name}.png`) }); };
   const state = () => p.evaluate(() => ({mode:window.__im.mapMode, rel:window.__im.ovl.on.rel, sup:window.__im.ovl.on.sup}));
-  // the buttons: a mode tab or an overlay switch (on a phone the folded pill opens first)
-  const press = async (act, k) => { if (PHONE && !await p.evaluate(() => document.getElementById('modes').classList.contains('open'))) await p.click('#modes button[data-act="mode"][aria-pressed="true"]');
-    await p.click(`#modes [data-act="${act}"][data-k="${k}"]`, { timeout: 30000 }); };
+  // the buttons: the map style through the More menu's Map item (it switches Political <-> Terrain), an overlay through Settings > Map (On / Off),
+  // opened from the More menu and closed with its Done button (a modal pauses the clock and closing it gives the speed back)
+  const more = async sel => { await p.click('#morebtn', { timeout: 30000 }); await p.click(`#morepop ${sel}`, { timeout: 30000 }); };
+  const press = async (act, k) => { const st = await state();
+    if (act === 'mode'){ if (st.mode !== k) await more('#mapsbtn'); return; }
+    await more('#setbtn'); const on = st.mode === 'political' && st[k];
+    await p.click(`#sheet [data-act="ovl"][data-k="${k}"][data-v="${!on}"]`, { timeout: 30000 }); await p.click('#sheet [data-act="resume"]', { timeout: 30000 }); await p.waitForTimeout(250); };   // (the closing sheet's ghost slides out)
   const act = a => a === 'P' ? press('mode', 'political') : a === 'T' ? press('mode', 'terrain') : press('ovl', a === 'R' ? 'rel' : 'sup');
   // zoom toward scale s1 round the middle of the map: wheel steps (desktop) or a pinch (phone, real touch events); fast = big steps, no pause
   const zoom = async (s1, fast) => { const cx = MAP.x + MAP.w*0.5, cy = MAP.y + MAP.h*0.5;
@@ -101,12 +107,18 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
   const home = G0.cap, Z = [Math.max(G0.min*1.05, PHONE ? 0.5 : 0.7), 2.2, 7];   // world view, play zoom (detail tiles fading in), close up (fine coast, towns)
 
   // (U) the buttons
-  if (on('U')) { const u = await p.evaluate(() => ({modes:[...document.querySelectorAll('#modes [data-act="mode"]')].map(b => b.dataset.k), ovls:[...document.querySelectorAll('#modes [data-act="ovl"]')].map(b => b.dataset.k)}));
-    checks.ui = u; if (u.modes.join() !== 'political,terrain' || u.ovls.join() !== 'rel,sup') fail('ui: buttons', u);
+  if (on('U')) { await more('#setbtn');
+    const u = await p.evaluate(() => ({onMap:!!document.querySelector('#mapwrap .modes, #modes'), modes:[...document.querySelectorAll('#sheet [data-act="mode"]')].map(b => b.dataset.k), ovls:[...new Set([...document.querySelectorAll('#sheet [data-act="ovl"]')].map(b => b.dataset.k))],
+      inMap:!!document.querySelector('#set-map') && [...document.querySelectorAll('#sheet [data-act="mode"], #sheet [data-act="ovl"]')].every(b => b.compareDocumentPosition(document.querySelector('#set-map')) & Node.DOCUMENT_POSITION_PRECEDING),
+      more:[...document.querySelectorAll('#morepop [data-act="mapstyle"]')].map(b => b.textContent.trim())}));
+    await p.click('#sheet [data-act="resume"]'); await p.waitForTimeout(250);
+    checks.ui = u; if (u.onMap || u.modes.join() !== 'political,terrain' || u.ovls.join() !== 'rel,sup' || !u.inMap || u.more.length !== 1 || !/^Map: Political/.test(u.more[0])) fail('ui: buttons', u);
+    { await p.keyboard.press('v'); const a = await state(); await p.keyboard.press('v'); const b2 = await state(); if (a.mode !== 'terrain' || b2.mode !== 'political') fail('ui: the V key switches the map style', [a.mode, b2.mode]); }
     await setView(home[0], home[1], Z[1]); await settle(); await act('T'); await act('R');
     const st = await state(); if (st.mode !== 'political' || !st.rel) fail('ui: an overlay pressed in Terrain brings the Political map back with it', st);
     await act('R'); await act('U'); await act('T'); await settle();
-    const t = await p.evaluate(() => ({cv:window.__im.ovl.cv ? window.__im.ovl.cv.width : 0, pressed:[...document.querySelectorAll('#modes [data-act="ovl"][aria-pressed="true"]')].length, sup:window.__im.ovl.on.sup}));
+    const t = await p.evaluate(() => ({cv:window.__im.ovl.cv ? window.__im.ovl.cv.width : 0, pressed:document.getElementById('zrel').getAttribute('aria-pressed') === 'true' ? 1 : 0, sup:window.__im.ovl.on.sup, more:document.querySelector('#mapsbtn .ln').textContent}));
+    if (t.more !== 'Map: Terrain') fail('ui: the More menu names the style shown', t);
     checks.uiTerrain = t; if (t.cv > 1 || t.pressed || !t.sup) fail('ui: overlays hidden in Terrain (and remembered)', t);
     await act('P'); await act('U'); await settle(); }
   await cmpFull(); await p.evaluate(() => { window.__mmSnap(window.__im.layer, 'N'); window.__mmSnap(window.__im.layer, 'B'); });   // (the test's own copies exist before the baseline)

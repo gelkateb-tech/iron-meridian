@@ -384,14 +384,14 @@ header .vbar{display:none!important}
 .uhp{height:5px; border-radius:3px; background:#5b6063; overflow:hidden} .uhp i{display:block; height:100%}
 .unum{font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .unit .nm{display:flex; align-items:center; gap:6px}
-.tlegend{position:absolute; right:10px; top:46px; z-index:3; padding:6px 9px 7px; border:1px solid var(--line); border-radius:4px; background:rgba(56,61,64,.9); font-size:11.5px; line-height:1.3; pointer-events:none}
+.tlegend{position:absolute; right:10px; top:12px; z-index:3; padding:6px 9px 7px; border:1px solid var(--line); border-radius:4px; background:rgba(56,61,64,.9); font-size:11.5px; line-height:1.3; pointer-events:none}
 .tlegend .lh, .ilegend .lh{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:3px}
-.ilegend{position:absolute; right:10px; top:46px; z-index:3; width:250px; padding:6px 9px 7px; border:1px solid var(--line); border-radius:4px; background:rgba(56,61,64,.9); font-size:11.5px; line-height:1.3; pointer-events:none}
+.ilegend{position:absolute; right:10px; top:12px; z-index:3; width:250px; padding:6px 9px 7px; border:1px solid var(--line); border-radius:4px; background:rgba(56,61,64,.9); font-size:11.5px; line-height:1.3; pointer-events:none}
 .ilegend .ir{display:grid; grid-template-columns:34px auto; align-items:center; gap:6px; margin:3px 0}
 .ilegend .ik{display:block; height:15px; border-radius:3px; font-style:normal; font:800 11px var(--mono, monospace); text-align:center; line-height:13px}
 .ilegend .ik.id{background:rgba(8,12,14,.92); border:1.5px solid #c8323c; box-shadow:inset 5px 0 0 #c8323c}
 .ilegend .ik.un{background:rgba(12,16,18,.84); border:1.4px dashed rgba(205,210,198,.9); color:#ece8da}
-/* top right under the map modes, clear of the toast stack (top left); above the minimap while the terrain legend holds that corner */
+/* top right, clear of the toast stack (top left); above the minimap while the terrain legend holds that corner */
 .tlegend:not([hidden]) ~ .ilegend{top:auto; bottom:146px}
 @media (max-width: 700px){ .ilegend, .tlegend:not([hidden]) ~ .ilegend{right:auto; left:8px; top:8px; bottom:auto; width:200px; font-size:10.5px} }
 .tlegend .lr{display:grid; grid-template-columns:12px 14px 70px auto; align-items:center; gap:5px; margin:2px 0}
@@ -402,34 +402,17 @@ header .vbar{display:none!important}
 .terrbox .small{margin-top:1px}
 .tg{color:var(--ok-t)} .tb{color:var(--danger-t)} .tline{margin:-1px 0 2px}
 @media (max-width: 700px){ .tlegend{top:auto; bottom:84px; right:8px; font-size:10.5px; display:grid; grid-template-columns:auto auto; column-gap:10px; padding:4px 7px} .tlegend[hidden]{display:none} .tlegend .lh{grid-column:1 / -1} .tlegend .lr{grid-template-columns:10px 12px auto; gap:4px; margin:1px 0} .tlegend .lr .muted{display:none} }
-.modes{position:absolute; right:12px; top:12px; display:flex; gap:1px; padding:2px; border-radius:15px; overflow:hidden; background:rgba(57,62,65,.84); box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 6px 18px rgba(0,0,0,.42)}
-.modes button{border:0; border-radius:12px; background:transparent; color:#97a3a0; font-size:11.5px; font-weight:500; padding:5px 10px; transition:background .12s, color .12s}
-.modes button:hover{color:var(--fg); background:rgba(255,255,255,.07)}
-.modes button[aria-pressed="true"]{background:linear-gradient(180deg,#ecb65a,#c98a2a); color:#1c1306; font-weight:600; box-shadow:0 1px 5px rgba(79,208,222,.35), inset 0 1px 0 rgba(255,255,255,.3)}
 #selbox{position:absolute; border:1px dashed var(--accent); background:rgba(79,208,222,.08); pointer-events:none; z-index:3}
-@media (max-width: 700px){ .modes{top:auto; bottom:56px; right:8px; max-width:calc(100% - 16px); overflow-x:auto; scrollbar-width:none} .modes button{padding:4px 7px; font-size:10.5px; flex:none} }
-@media (max-width: 700px) and (min-width: 481px){ .modes{bottom:106px} .tlegend{bottom:142px} }   /* clear of the minimap */
-/* phones (narrow, or landscape with little height): the map modes fold into one small pill (the active mode) in the top-right corner that opens a list
-   on tap, and the map stack becomes a slim column on the right edge with no +/- on touch screens (pinch zooms), so the HUD stops covering the map */
+@media (max-width: 700px) and (min-width: 481px){ .tlegend{bottom:142px} }   /* clear of the minimap */
+/* phones (narrow, or landscape with little height): the map stack becomes a slim column on the right edge with no +/- on touch screens (pinch zooms), so the HUD stops covering the map */
 @media (max-width: 700px), (max-height: 500px){
-  .modes{top:8px; right:8px; bottom:auto; left:auto; max-width:none; overflow:visible; flex-direction:column; align-items:stretch; padding:2px; border-radius:13px; background:rgba(57,62,65,.72); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
-  .modes button{display:none; padding:4px 10px; font-size:11px; text-align:left}
-  .modes button[aria-pressed="true"]{display:flex; align-items:center; gap:6px; background:rgba(79,208,222,.16); color:#f0d9a8; box-shadow:none; font-weight:600}
-  .modes button[aria-pressed="true"]::after{content:""; width:5px; height:5px; border:solid currentColor; border-width:0 1.5px 1.5px 0; transform:rotate(45deg) translate(-1px, -1px); opacity:.8; margin-left:auto}
-  .modes.open{gap:1px; background:rgba(57,62,65,.92)} .modes.open button{display:block} .modes.open button[aria-pressed="true"]{display:flex} .modes.open button[aria-pressed="true"]::after{transform:rotate(-135deg) translate(-1px, -1px)}
   .mapctl{flex-direction:column; left:auto; right:8px; bottom:8px; top:auto; padding:2px; gap:0; border-radius:10px; background:rgba(57,62,65,.66); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
   .mapctl button{width:28px; height:28px} .mapctl button svg{width:15px; height:15px}
   .mapctl #zin + #zout{margin:0 0 3px} .mapctl #zin + #zout::after{left:6px; right:6px; top:auto; bottom:-2px; width:auto; height:1px}
-  .mapctl #zrel{display:none}   /* Relations is in the map-mode pill */
   .tlegend{bottom:8px; right:46px}
-  /* the map controls leave the map: a slim strip under it (part of the frame, like the top bar) holds the map-mode menu on the left and the
-     view buttons on the right, and the map canvas ends above it, so no control floats over names or counters */
+  /* the map controls leave the map: a slim strip under it (part of the frame, like the top bar) holds the view buttons on the right, and the map canvas ends above it, so no control floats over names or counters */
   #map, #mapov{bottom:auto; height:calc(100% - 34px)}
   #mapwrap::after{content:""; position:absolute; left:0; right:0; bottom:0; height:34px; background:linear-gradient(180deg, #43484b, #3c4144); box-shadow:inset 0 1px 0 rgba(255,255,255,.07); pointer-events:none; z-index:3}
-  .modes{top:auto; bottom:4px; left:8px; right:auto; z-index:6; background:transparent; backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:none}
-  .modes.open{background:rgba(57,62,65,.96); box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 -6px 18px rgba(0,0,0,.5)}
-  .modes button[aria-pressed="true"]{order:99}
-  .modes button[aria-pressed="true"]::after{transform:rotate(-135deg) translate(-1px, -1px)} .modes.open button[aria-pressed="true"]::after{transform:rotate(45deg) translate(-1px, -1px)}
   .mapctl{flex-direction:row; right:6px; bottom:3px; z-index:6; background:transparent; backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:none; gap:2px}
   .mapctl #zin + #zout{margin:0 3px 0 0} .mapctl #zin + #zout::after{display:none}
   .tlegend{bottom:42px; right:8px}
@@ -776,8 +759,8 @@ h2{font-size:28px; letter-spacing:.035em; color:var(--hd); text-shadow:0 1px 0 r
 #dock .dk:active{transform:scale(.93)}
 #dock .dk .ni{transition:transform .2s var(--ease)}
 #dock .dk:hover .ni{transform:scale(1.1)}
-.seg button:active, .modes button:active, .mapctl button:active:not(:disabled), .tbi:active{transform:scale(.92)}
-.seg button, .modes button, .mapctl button, .tbi{transition:background .12s, color .12s, transform .12s var(--ease)}
+.seg button:active, .mapctl button:active:not(:disabled), .tbi:active{transform:scale(.92)}
+.seg button, .mapctl button, .tbi{transition:background .12s, color .12s, transform .12s var(--ease)}
 
 /* --- lists: rows on separators, no boxes --- */
 .units{gap:0}
@@ -938,9 +921,9 @@ html.reduced .sheet.ghost, html.reduced .mghost, html.reduced .vign{display:none
   body.hud-intro #dock{animation:hudLeft .3s cubic-bezier(.2,.8,.25,1) .12s both}
   body.hud-intro aside#side{animation:hudRight .34s cubic-bezier(.2,.8,.25,1) .2s both}
   body.hud-intro #mini, body.hud-intro #miniframe{animation:hudFade .4s ease-out .32s both}
-  body.hud-intro .modes, body.hud-intro .mapctl{animation:hudDrop .34s ease-out .38s both}
+  body.hud-intro .mapctl{animation:hudDrop .34s ease-out .38s both}
   @media (max-width: 820px){ body.hud-intro #dock, body.hud-intro aside#side{animation-name:hudUp} }
-  body.hud-intro:not(.hud-go) :is(header, #dock, aside#side, #mini, #miniframe, .modes, .mapctl){animation-play-state:paused}
+  body.hud-intro:not(.hud-go) :is(header, #dock, aside#side, #mini, #miniframe, .mapctl){animation-play-state:paused}
 }
 
 /* --- field manual (help) --- */
@@ -1243,18 +1226,6 @@ header .tbi .badge{top:-7px; right:-7px}
 .mapctl button:hover:not(:disabled){background:linear-gradient(180deg, #567078, #445b62); color:#fff; box-shadow:inset 0 0 0 1px var(--cn-teal), 0 0 6px rgba(79,208,222,.35)}
 .mapctl #zin + #zout{margin-bottom:0} .mapctl #zin + #zout::after{display:none}
 .mapctl #zglobe[aria-pressed="true"]{color:#06232a; background:linear-gradient(180deg, #74e4ef, #2ea4b3)}
-/* map modes pill */
-.modes{border-radius:3px; padding:2px; gap:2px; background:rgba(43,60,67,.92); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 6px 16px rgba(0,0,0,.42)}
-/* the two overlay switches after the two modes: a divider, then a check mark that lights while the overlay shows */
-.modes .msep{display:block; width:1px; margin:3px 3px; background:rgba(255,255,255,.2)}
-.modes button.ovl{display:inline-flex; align-items:center; gap:5px}
-.modes button.ovl::before{content:""; width:8px; height:8px; border-radius:2px; box-shadow:inset 0 0 0 1.5px currentColor; opacity:.75}
-.modes button.ovl[aria-pressed="true"]{background:rgba(79,208,222,.16); color:#bff6fb; box-shadow:inset 0 0 0 1px rgba(79,208,222,.55)}
-.modes button.ovl[aria-pressed="true"]::before{background:#74e4ef; box-shadow:none; opacity:1}
-.modes .ovn{display:none; font-weight:500; opacity:.8}
-.modes button{border-radius:2px; color:var(--cn-fg2); font-weight:600}
-.modes button:hover{color:#fff; background:rgba(255,255,255,.08)}
-.modes button[aria-pressed="true"]{background:linear-gradient(180deg, #74e4ef, #2ea4b3); color:#06232a; box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 0 8px rgba(79,208,222,.4)}
 /* minimap frame */
 #miniframe{border-radius:3px; background:linear-gradient(180deg, #3f565e, #2b3c43); border:1px solid var(--cn-edge); box-shadow:0 0 8px rgba(79,208,222,.25), 0 6px 18px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12)}
 #mini{border-radius:2px; border-color:#1c282e}
@@ -1470,12 +1441,6 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 }
 @media (max-width: 700px), (max-height: 500px){
   #mapwrap::after{background:linear-gradient(180deg, #364b54, #2f434b); box-shadow:inset 0 1px 0 rgba(255,255,255,.1), inset 0 2px 0 rgba(0,0,0,.25)}
-  .modes{background:transparent; box-shadow:none} .modes.open{background:var(--cn-bar); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 -6px 18px rgba(0,0,0,.5)}
-  .modes button[aria-pressed="true"]{background:rgba(79,208,222,.18); color:#bff6fb; box-shadow:inset 0 0 0 1px rgba(79,208,222,.45)}
-  /* the overlay switches: folded, the pill shows only the mode (naming the overlays on); open, the modes, a divider and the two switches */
-  .modes:not(.open) .msep, .modes:not(.open) button.ovl, .modes:not(.open) button.ovl[aria-pressed="true"]{display:none}
-  .modes.open .msep{display:block; width:auto; height:1px; margin:2px 4px} .modes.open button.ovl{display:flex; order:0} .modes button.ovl[aria-pressed="true"]::after{content:none}
-  .modes:not(.open) .ovn{display:inline}
   .mapctl{background:transparent; box-shadow:none; padding:2px}
   .mapctl button{width:28px; height:28px}
   .tlegend, .ilegend{right:8px}
@@ -1900,7 +1865,7 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   .cs-c{width:84px; height:84px} .cs-ci.gl{background-size:54px; background-position:center 5px} .cs-cn{font-size:9px; padding:3px 3px 4px}
   body.cs-on main{grid-template-rows:minmax(0, 1fr) 0}
   body.cs-on aside#side{display:none}
-  body.cs-on .mapctl, body.cs-on #modes{bottom:calc(var(--csh, 0px) + 6px); transition:bottom .25s var(--ease)}
+  body.cs-on .mapctl{bottom:calc(var(--csh, 0px) + 6px); transition:bottom .25s var(--ease)}
   body.cs-on #cmdbar{bottom:calc(var(--csh, 0px) + 44px)}
   .cs-mbody{padding:10px 10px 16px}
   .sheet.rsch.cmod{width:100%; height:100%; max-height:none}
@@ -1991,13 +1956,12 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   .side-x:active{filter:brightness(.9)}
   #railside{display:block}
   /* map controls float on the map's lower corners (and rise with a sheet) */
-  .modes{top:auto; bottom:calc(var(--sideh, 0px) + 8px); left:8px; right:auto; z-index:6; background:rgba(43,60,67,.9); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 4px 12px rgba(0,0,0,.45); border-radius:3px; transition:bottom .26s var(--ease)}
   #mini, #miniframe{display:none}
   #hint{top:6px; bottom:auto}
   .mapctl{flex-direction:row; top:auto; left:auto; bottom:calc(var(--sideh, 0px) + 8px); right:8px; z-index:6; background:rgba(43,60,67,.9); box-shadow:0 0 0 1px rgba(143,163,170,.55), 0 4px 12px rgba(0,0,0,.45); border-radius:3px; padding:2px; transition:bottom .26s var(--ease)}
-  body.cs-on .mapctl, body.cs-on #modes{bottom:calc(var(--csh, 0px) + 8px)}
+  body.cs-on .mapctl{bottom:calc(var(--csh, 0px) + 8px)}
   #cmdbar{bottom:calc(var(--sideh, 0px) + 8px)!important; transition:bottom .26s var(--ease)}
-  #mapwrap:has(#cmdbar:not([hidden])) .modes, #mapwrap:has(#cmdbar:not([hidden])) .mapctl{opacity:0; pointer-events:none}
+  #mapwrap:has(#cmdbar:not([hidden])) .mapctl{opacity:0; pointer-events:none}
   .vbar .vm b small{display:inline!important; font-size:10px}
   body.cs-on #cmdbar{bottom:calc(var(--csh, 0px) + 8px)!important}
   #toasts{bottom:auto}
@@ -2142,7 +2106,7 @@ button.cs-c:hover{box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 0 3px rgba(79,208,22
   .cs-lvb, .cs-plus{width:19px; height:19px} .cs-lvb b{font-size:11.5px}
   .cs-ci.gl{background-size:44px; background-position:center 5px}
   /* the map controls step aside while the city sheet is up: nothing floats between the map and the sheet */
-  body.cs-on .modes:not(.open), body.cs-on .mapctl{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .18s, visibility 0s linear .18s}
+  body.cs-on .mapctl{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .18s, visibility 0s linear .18s}
 }
 @media (max-width: 400px){ .cs-bt b{font-size:13.5px} .cs-nm{font-size:17.5px} .cs-c{width:70px; height:70px} }
 /* the hint never covers the city sheet or the selected city: top centre, under the bars */
@@ -2543,6 +2507,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
       <button class="dk mi" role="menuitem" id="armbtn" data-act="armies-open" data-kind="armies" aria-label="Army"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 15.4h17.6l-1.5 3.6H4.7z" fill="currentColor" fill-opacity=".16"/><path d="M4.8 15.4l1.6-3.2h10.2l2 3.2"/><path d="M8.6 12.2l.8-2.6h5.2l1 2.6"/><path d="M14.4 10.6l7.2-1.4"/><circle cx="7.4" cy="17.2" r=".7" fill="currentColor"/><circle cx="12" cy="17.2" r=".7" fill="currentColor"/><circle cx="16.6" cy="17.2" r=".7" fill="currentColor"/></svg><span class="dl"><b class="ln">Armies</b><b class="sn">Armies</b><kbd>A</kbd></span></button>
       <button class="dk mi" role="menuitem" id="intelbtn" data-act="intel" data-kind="intel" aria-label="Intelligence"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.6 12s3.4-5.6 9.4-5.6 9.4 5.6 9.4 5.6-3.4 5.6-9.4 5.6S2.6 12 2.6 12z"/><circle cx="12" cy="12" r="2.6" fill="currentColor" fill-opacity=".25"/><circle cx="12" cy="12" r=".9" fill="currentColor"/><path d="M12 1.8v2.6M12 19.6v2.6M1.6 4.6V2.2h2.4M22.4 4.6V2.2H20M1.6 19.4v2.4h2.4M22.4 19.4v2.4H20"/></svg><span class="dl"><b class="ln">Intelligence</b><b class="sn">Intel</b></span><span class="dot" id="inteldot" hidden></span></button>
       <button class="dk mi" role="menuitem" id="setbtn" data-act="settings-open" data-kind="settings" aria-label="Settings"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.90 10.31 L21.20 10.61 L21.20 13.39 L18.90 13.69 L18.07 15.68 L19.48 17.52 L17.52 19.48 L15.68 18.07 L13.69 18.90 L13.39 21.20 L10.61 21.20 L10.31 18.90 L8.32 18.07 L6.48 19.48 L4.52 17.52 L5.93 15.68 L5.10 13.69 L2.80 13.39 L2.80 10.61 L5.10 10.31 L5.93 8.32 L4.52 6.48 L6.48 4.52 L8.32 5.93 L10.31 5.10 L10.61 2.80 L13.39 2.80 L13.69 5.10 L15.68 5.93 L17.52 4.52 L19.48 6.48 L18.07 8.32Z"/><circle cx="12" cy="12" r="3.1"/></svg><span class="dl"><b class="ln">Settings</b><b class="sn">Setup</b><kbd>O</kbd></span></button>
+      <button class="dk mi" role="menuitem" id="mapsbtn" data-act="mapstyle" aria-label="Map style: Political (switch to Terrain)"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.2l5.6-2.4 6.8 2.6 5.6-2.4v14l-5.6 2.4-6.8-2.6L3 20.2z" fill="currentColor" fill-opacity=".16"/><path d="M8.6 3.8v14M15.4 6.4v14"/></svg><span class="dl"><b class="ln">Map: Political</b><b class="sn">Map</b><kbd>V</kbd></span></button>
       <button class="dk mi" role="menuitem" id="mutebtn" data-act="mute" aria-label="Sound and music" aria-pressed="false"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.2h3.6L12.5 5v14l-4.9-4.2H4z" fill="currentColor" fill-opacity=".16"/><path d="M16 9a4.2 4.2 0 0 1 0 6M18.7 6.4a8 8 0 0 1 0 11.2"/></svg><span class="dl"><b class="ln">Sound on</b><b class="sn">Sound</b><kbd>M</kbd></span></button>
       <button class="dk mi" role="menuitem" id="helpbtn" data-act="help" data-kind="help" aria-label="How to play"><svg class="ni" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M9.5 9.4a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.2 1-1.2 1.8v.5"/><circle cx="12" cy="17.1" r=".55" fill="currentColor"/></svg><span class="dl"><b class="ln">How to play</b><b class="sn">Help</b></span></button>
     </div>
@@ -2574,7 +2539,6 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
       </div>
       <div id="miniframe" aria-hidden="true"></div>
       <canvas id="mini" aria-label="Minimap"></canvas>
-      <div class="modes" id="modes" role="group" aria-label="Map mode"></div>
       <div class="tlegend" id="tlegend" hidden aria-label="Terrain legend"></div>
       <div class="ilegend" id="ilegend" hidden aria-label="Intelligence legend"><div class="lh">Intelligence</div>
         <div class="ir"><i class="ik id"></i><span><b>Identified</b> · UAV, satellite, radar or ground contact: nation, type, size, level, health</span></div>
@@ -2993,7 +2957,7 @@ HOURS_PER_SEC.push(16/15, 50/15, 100/15);
 // Battery saver: on by default on phones and tablets (a coarse pointer or a small screen), off on desktops; saved settings without it get the default
 const SAVER_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches || Math.max(screen.width, screen.height) <= 1024; } catch (e) { return false; } })();
 const FX_DEF = (() => { try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600 ? 'low' : 'high'; } catch (e) { return 'high'; } })();   // Effects: Low on a phone, High elsewhere
-const SET = {vol:0.35, toasts:'all', fx:FX_DEF, shake:true, fxSnd:true, paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, shipRoutes:false, saver:SAVER_DEF, tipsOff:false, tipSeen:{}};
+const SET = {vol:0.35, toasts:'all', fx:FX_DEF, shake:true, fxSnd:true, paper:true, cb:false, ui:100, motion:'full', music:true, cityLights:true, models:true, shipRoutes:false, mapMode:'political', ovlRel:false, ovlSup:false, saver:SAVER_DEF, tipsOff:false, tipSeen:{}};
 try { Object.assign(SET, JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}')); } catch (e) {}
 if (!SET.tipSeen || typeof SET.tipSeen !== 'object') SET.tipSeen = {};
 if (!SET.fxPick){ let had = false; try { had = 'fx' in (JSON.parse(localStorage.getItem('iron-meridian-settings') || '{}') || {}); } catch (e) {} if (had) SET.fxPick = true; else SET.fx = FX_DEF; }   // (a stored Effects setting is the player's choice; none stored: the device's default)
@@ -4086,7 +4050,7 @@ function musicTick(now){ if (SET.music === false || !AC) return; if (!MUS){ MUS 
   if (war) for (let i = 0; i < 8; i++){ const o = AC.createOscillator(), g = AC.createGain(), tt = t0 + i*0.9; o.type = 'sine'; o.frequency.value = r/2; g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(0.05, tt + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.5); o.connect(g); g.connect(master); o.start(tt); o.stop(tt + 0.6); }
   MUS.step++; MUS.next = t0 + dur - 1.5; }
 function sfxPlay(name){ if (muted || !booted) return; const now = performance.now(); if (lastSfx[name] && now - lastSfx[name] < 400) return; lastSfx[name] = now; try { SFX[name] && SFX[name](); } catch (e) {} }
-document.addEventListener('pointerdown', e => { if (!muted) audio(); if (AC && AC.state === 'suspended') AC.resume(); const md = document.getElementById('modes'); if (md && md.classList.contains('open') && !md.contains(e.target)) md.classList.remove('open'); }, {capture:true});
+document.addEventListener('pointerdown', e => { if (!muted) audio(); if (AC && AC.state === 'suspended') AC.resume(); }, {capture:true});
 const FX = [];
 // ---- the map effects (fx.js): the module gets the page's view (FXH: getters, read-only except the few it sets) and returns its drawing and
 // effect functions; the rules' map events are wired to them in RULES EVENTS ----
@@ -4958,12 +4922,12 @@ function ovOut(){ if (ctx !== OV.g) return; ctx = MCTX; dpr = OV.md; }
 const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
 gfxWatch(cv); gfxWatch(OV.cv); gfxWatch(mini);   // (a lost graphics context: see gfxReset)
 const view = {s:1, x:0, y:0};
-let dpr = 1, cw = 0, ch = 0, hits = [], HITX = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, mapMode = 'political';
+let dpr = 1, cw = 0, ch = 0, hits = [], HITX = [], cityPts = [], cityNames = [], hoverProv = -1, hoverPath = null, mouse = null, mapMode = SET.mapMode === 'terrain' ? 'terrain' : 'political';   // (the map style is saved with the settings)
 // the map has two full modes, Political and Terrain (owner, map-modes: fewer modes, fewer map bugs); Relations and Supply are colour overlays
 // toggled on and off over the Political map (both may be on; in Terrain they are hidden), drawn as their own translucent canvas over the layer
 // from cached province colours (ovlDraw), so toggling one never re-renders the base map
 const MODES = [['political', 'Political'], ['terrain', 'Terrain']], OVLS = [['rel', 'Relations'], ['sup', 'Supply']];
-const mapOvl = {rel:false, sup:false};
+const mapOvl = {rel:SET.ovlRel === true, sup:SET.ovlSup === true};
 const polMode = () => mapMode === 'political';
 const ovlOn = k => mapOvl[k] && polMode();
 // trade routes (the lanes, their dots, the land trucks) and the cargo ships on them show only with Settings > Map > 'Shipping routes' on (default off); blockaded
@@ -7272,7 +7236,7 @@ function railRects(){ const now = performance.now(); if (now - RAILR.t < 400) re
   if (e && !e.hidden && getComputedStyle(e).display !== 'none'){ const cr = cv.getBoundingClientRect(), r = e.getBoundingClientRect(); if (r.width > 2 && r.height > 2) out.push([r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]); }
   return (RAILR = {t:now, r:out}).r; }
 function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) return HUDR.r; const cr = cv.getBoundingClientRect(), out = [], v0 = HUDR.v || 0, k0 = HUDR.k || '';
-  for (const sel0 of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') continue;   // (the phone's command sheet slid away is only hidden)
+  for (const sel0 of ['.mapctl', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(sel0); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') continue;   // (the phone's command sheet slid away is only hidden)
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   const k = out.map(b => b.map(Math.round).join(',')).join(';');   // v: bumped whenever the boxes change, so the names placed against them are placed again (NAMEC)
   return (HUDR = {t:now, r:out, k, v:k === k0 ? v0 : v0 + 1}).r; }
@@ -7922,7 +7886,10 @@ const nAreaOf = n => GEO.nArea[n] || (GEO.nArea[n] = (() => { const a = new Path
 // mid-zoom), filled from a colour per province that is cached until what it shows changes (relations, owners, the supply hour). It is redrawn only
 // when that colour list or the layer's place changes, never the layer itself; with no overlay on it is shrunk to nothing
 const OVL = {cv:null, k:'', g:null, c:{rel:{k:'', col:null}, sup:{k:'', col:null}}};
-function ovlToggle(k){ if (!polMode()){ mapMode = 'political'; mapOvl[k] = true; } else mapOvl[k] = !mapOvl[k]; redraw(); }
+function ovlToggle(k, on = !ovlOn(k)){ if (!polMode()){ if (!on) return; mapMode = 'political'; } mapOvl[k] = on; mapSave(); }
+// the map style (Political / Terrain) and the overlays: Settings > Map, the More menu, the V key and the Relations button; saved with the settings
+function mapModeSet(m){ mapMode = MODES.some(x => x[0] === m) ? m : 'political'; mapSave(); }
+function mapSave(){ SET.mapMode = mapMode; SET.ovlRel = mapOvl.rel; SET.ovlSup = mapOvl.sup; saveSet(); renderSide(true); if (modalKind === 'settings' && !$('modal').hidden) openModal(settingsHTML(), 'settings'); }
 // the colour of every land province (null: none) for overlay k; recomputed only when its key moves
 function ovlCols(k){ const C = OVL.c[k];
   if (k === 'rel'){ const key = [relVer, geoVer, S.decl.length, SET.cb ? 1 : 0, G.P.length].join('|'); if (C.k === key && C.col) return C.col;
@@ -9556,10 +9523,7 @@ function renderSide(force){
   if (modalKind === 'stats' && !$('modal').hidden) setHTML($('sheet'), statsHTML());
   const nOff = S.offers.length + S.decl.filter(d => d.to === PLAYER).length + Object.values(S.unread || {}).reduce((a, b) => a + b, 0); $('dipbadge').hidden = !nOff; $('dipbadge').textContent = nOff;
   $('zrel').setAttribute('aria-pressed', String(ovlOn('rel')));
-  // the two modes, then the two overlays (switches: pressed while shown; in Terrain they are hidden, and a press brings the Political map back with it)
-  { const ovn = OVLS.filter(o => ovlOn(o[0])).map(o => o[1]).join(', ');   // (the folded phone pill names the overlays shown after the mode)
-  setHTML($('modes'), MODES.map(([k, nm]) => `<button data-act="mode" data-k="${k}" aria-pressed="${mapMode === k}">${nm}${mapMode === k && ovn ? ` <span class="ovn">+ ${ovn}</span>` : ''}</button>`).join('') + '<i class="msep" aria-hidden="true"></i>' +
-    OVLS.map(([k, nm]) => `<button class="ovl" data-act="ovl" data-k="${k}" aria-pressed="${ovlOn(k)}" title="${nm} overlay on the Political map">${nm}</button>`).join('')); }
+  { const mb = $('mapsbtn'), ln = mb && mb.querySelector('.ln'), nm = (MODES.find(m => m[0] === mapMode) || MODES[0])[1]; if (ln && ln.textContent !== 'Map: ' + nm){ ln.textContent = 'Map: ' + nm; mb.setAttribute('aria-label', `Map style: ${nm} (switch to ${mapMode === 'terrain' ? 'Political' : 'Terrain'})`); } }
   { const lg = $('tlegend'); if (lg){ const m = mapMode === 'terrain' ? mapMode : ''; lg.hidden = !m;
       if (m && lg.dataset.m !== m){ lg.dataset.m = m; lg.setAttribute('aria-label', 'Terrain legend'); lg.innerHTML = terrLegendHTML(); } } }
   { const mb = $('mutebtn'); mb.setAttribute('aria-pressed', String(!muted)); mb.classList.toggle('off', muted); const ln = mb.querySelector('.ln'); if (ln) ln.textContent = muted ? 'Sound off' : 'Sound on'; }
@@ -9666,6 +9630,8 @@ function settingsHTML(){
     ${row('First-time tips', `<div class="seg2">${opt('tipsOff', false, 'On')}${opt('tipsOff', true, 'Off', 'Skip all tips')}</div>`)}
     ${row('Daily newspaper', `<div class="seg2">${opt('paper', true, 'Each morning')}${opt('paper', false, 'Dispatches only')}</div>`)}
     <div class="seth" id="set-map">Map</div>
+    ${row('Map style', `<div class="seg2">${MODES.map(([k, nm]) => `<button class="sg ${mapMode === k ? 'on' : ''}" aria-pressed="${mapMode === k}" data-act="mode" data-k="${k}" title="${k === 'terrain' ? 'The ground by terrain type, with its legend' : 'Every nation in its colour'}">${nm}</button>`).join('')}</div>`, 'V switches it')}
+    ${OVLS.map(([k, nm]) => row(nm + ' overlay', `<div class="seg2"><button class="sg ${ovlOn(k) ? 'on' : ''}" aria-pressed="${ovlOn(k)}" data-act="ovl" data-k="${k}" data-v="true" title="${k === 'rel' ? 'Your land, allies, enemies and everyone else by relation' : 'Your land in supply green, cut off red'}">On</button><button class="sg ${ovlOn(k) ? '' : 'on'}" aria-pressed="${!ovlOn(k)}" data-act="ovl" data-k="${k}" data-v="false">Off</button></div>`, 'Over the Political map' + (polMode() ? '' : ': On switches to it'))).join('')}
     ${row('Shipping routes', `<div class="seg2">${opt('shipRoutes', true, 'On', 'Show the trade routes and the cargo ships sailing on them')}${opt('shipRoutes', false, 'Off', 'No trade routes or cargo ships on the map')}</div>`, 'Trade routes and the cargo ships on them')}
     ${row('Troop models', `<div class="seg2">${opt('models', true, 'On')}${opt('models', false, 'Off', 'Close in, only the counters show (no unit models on the map)')}</div>`)}
     ${row('City lights at night', `<div class="seg2">${opt('cityLights', true, 'On')}${opt('cityLights', false, 'Off', 'Night still darkens the map, without the glow of cities and towns')}</div>`)}
@@ -10678,11 +10644,10 @@ document.addEventListener('click', e => {
     case 'mute': setMuted(!muted); renderSide(true); break;
     case 'qrec': { const p = +b.dataset.p, t = b.dataset.t; if (e.shiftKey) for (let i = 0; i < 4; i++) recruit(PLAYER, p, t); if (recruit(PLAYER, p, t)){ (S.lastUnit || (S.lastUnit = {}))[p] = t; if (S.repeat && S.repeat[p]) S.repeat[p] = t; } renderSide(true); break; }
     case 'repeat': { const p = +b.dataset.p; S.repeat = S.repeat || {}; if (b.checked) S.repeat[p] = (S.lastUnit && S.lastUnit[p]) || (S.queue[p][0] && S.queue[p][0].t) || 'inf'; else delete S.repeat[p]; renderSide(true); break; }
-    case 'relmode': ovlToggle('rel'); renderSide(true); break;
-    case 'ovl': { const md = $('modes'); if (matchMedia('(max-width: 700px), (max-height: 500px)').matches && !md.classList.contains('open')){ md.classList.add('open'); break; }   // phones: the folded pill opens first
-      md.classList.remove('open'); ovlToggle(b.dataset.k); renderSide(true); break; }
-    case 'mode': { const md = $('modes'); if (matchMedia('(max-width: 700px), (max-height: 500px)').matches && !md.classList.contains('open')){ md.classList.add('open'); break; }   // phones: the folded pill opens first
-      md.classList.remove('open'); mapMode = MODES.some(m => m[0] === b.dataset.k) ? b.dataset.k : 'political'; renderSide(true); redraw(); break; }
+    case 'relmode': ovlToggle('rel'); break;
+    case 'ovl': ovlToggle(b.dataset.k, b.dataset.v == null ? undefined : b.dataset.v === 'true'); break;   // (Settings > Map: On / Off)
+    case 'mode': mapModeSet(b.dataset.k); break;
+    case 'mapstyle': mapModeSet(mapMode === 'terrain' ? 'political' : 'terrain'); break;   // (the More menu: Political <-> Terrain)
     case 'declare': { const m = +b.dataset.id; if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = 'Confirm war?'; setTimeout(() => { if (b.isConnected){ b.dataset.sure = ''; b.textContent = 'Declare war'; } }, 3000); return; } declareWar(PLAYER, m); renderSide(true); break; }
     case 'propose': { const m = +b.dataset.id, k = b.dataset.k, r = acceptOffer(m, PLAYER, k); if (r.ok) applyDeal(PLAYER, m, k); else { log(`${S.nations[m].name} refused: ${r.why}.`, 'info', null); addMem(m, PLAYER, -2); } renderSide(true); break; }
     case 'tribute': { const m = +b.dataset.id, tr = tribute(PLAYER, m); if (S.nations[PLAYER].cash >= tr){ if (tributeOk(PLAYER, m)){ S.nations[PLAYER].cash -= tr; S.nations[m].cash += tr; applyDeal(PLAYER, m, 'peace'); } else log(`${S.nations[m].name} refused your tribute: they think they can take more by force.`, 'info', null); } renderSide(true); break; }
@@ -10786,7 +10751,7 @@ document.addEventListener('keydown', e => { INCC.v = -1;
   else if (e.key === '?' || e.key === 'F1'){ e.preventDefault(); if (modalKind === 'help' && !$('modal').hidden) closeModal(); else if ($('modal').hidden || $('modal').classList.contains('docked')) showHelp(); }
   else if (e.key === 'h' || e.key === 'H') goHomeGlide();
   else if (e.key === 'd' || e.key === 'D'){ if (modalKind === 'diplo') closeModal(); else if ($('modal').hidden) openModal(diploHTML(), 'diplo'); }
-  else if (e.key === 'v' || e.key === 'V'){ const i = MODES.findIndex(m => m[0] === mapMode); mapMode = MODES[(i + 1) % MODES.length][0]; renderSide(true); }
+  else if (e.key === 'v' || e.key === 'V'){ const i = MODES.findIndex(m => m[0] === mapMode); mapModeSet(MODES[(i + 1) % MODES.length][0]); }
   else if (e.key === 's' || e.key === 'S'){ if (modalKind === 'stats') closeModal(); else if ($('modal').hidden) openModal(statsHTML(), 'stats'); }
   else if ((e.key === 'm' || e.key === 'M') && sel.army === null){ setMuted(!muted); renderSide(true); }
   else if (e.key === 't' || e.key === 'T'){ if (modalKind === 'market') closeModal(); else if ($('modal').hidden) openModal(marketHTML(), 'market'); }
@@ -10937,7 +10902,7 @@ const HELP_SEC = [
     <li><b>Top bar</b>: your flag and nation; money, oil, materials, iron, electronics, rare materials and manpower with today's net change (hover a resource for the breakdown); the date, clock and victory progress; pause and 1×–8× speed; Dispatches (the bell) on the right.</li>
     <li><b>Dock</b> (left edge; a bottom bar on phones): Production <kbd>P</kbd>, Market <kbd>T</kbd>, Army <kbd>A</kbd>, Research <kbd>R</kbd>, Diplomacy <kbd>D</kbd>, Intelligence; at the bottom Settings <kbd>O</kbd>, Sound <kbd>M</kbd> and this manual <kbd>?</kbd>. A dot means something waits for you (no research running, idle cities, idle agents); a number counts unread diplomacy.</li>
     <li><b>Right column</b>: Command (the selected province, force or air wing), Powers (every nation ranked) and Dispatches (the war log: click an entry to fly there).</li>
-    <li><b>Map</b>: two map modes top right, Political and Terrain (<kbd>V</kbd> switches), and two overlays you switch on and off over the Political map: Relations (your land, allies, enemies and everyone else by relation) and Supply (your land in supply green, cut off red). Trade routes show while a fleet of yours is selected, and blockaded ones always; zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
+    <li><b>Map</b>: two map styles, Political and Terrain (<kbd>V</kbd> switches; also in More and in Settings &gt; Map), and two overlays you switch on and off over the Political map in Settings &gt; Map: Relations (your land, allies, enemies and everyone else by relation) and Supply (your land in supply green, cut off red). Trade routes show while a fleet of yours is selected, and blockaded ones always; zoom, Whole world, Globe <kbd>G</kbd> and Home <kbd>H</kbd> in the stack at the bottom left of the map; the minimap jumps anywhere. Zoom in for unit pictures and city buildings.</li>
     <li><b>Keys</b>: Space pause · 1, 2, 3 for 1×, 2×, 4× (8× from the bar) · S statistics · N newspaper · Tab next idle force · Esc deselect.</li></ul>`],
   ['res', 'Resources and research', `<ul>
     <li><b>Every city produces one main resource</b>: money, oil, materials, iron, electronics or rare materials (the chip in the city panel, and the Cities tab). No country has a city of every kind, so you trade or fight for what you lack. An <b>Arms Industry</b> raises a city's main resource by 25% per level (up to level V); level I is half price and pays for itself in about a week, and each one you already own elsewhere makes the next cost 40% more. The <b>Army Base</b> mobilizes ground units and gives no income.</li>
@@ -11442,7 +11407,7 @@ function start(data){
   if (!resumed) newGame((Math.random()*2**31) | 0, pickSel, [PLAYER]);
   resize(); applySet(); if (resumed && data.view) Object.assign(view, data.view); else goHome();
   new ResizeObserver(() => resize()).observe(cv);
-  { const HQ = ['#side', '#dock', '#sheet', '#rail', '#mini', '#modes', '.mapctl', '#tlegend', '#ilegend'], ro = new ResizeObserver(() => hudFresh()); for (const q of HQ){ const e = document.querySelector(q); if (e) ro.observe(e); }   // (HUD boxes resized with no input)
+  { const HQ = ['#side', '#dock', '#sheet', '#rail', '#mini', '.mapctl', '#tlegend', '#ilegend'], ro = new ResizeObserver(() => hudFresh()); for (const q of HQ){ const e = document.querySelector(q); if (e) ro.observe(e); }   // (HUD boxes resized with no input)
     const hq = HQ.join(','), slid = e => { if (e.target && e.target.matches && e.target.matches(hq)) hudFresh(); };   // a HUD panel that slid or faded in or out (a move fires no resize: the phone's command sheet leaving after a rotation)
     document.addEventListener('transitionend', slid, true); document.addEventListener('animationend', slid, true); }
   renderSide(true);
