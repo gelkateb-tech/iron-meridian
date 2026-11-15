@@ -8,31 +8,21 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
-Last updated: 2026-11-14 (playtest notes part 1 and part 2).
+Last updated: 2026-11-15 (Dev Build v50).
 
 ## Running
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **MAP-3** roads for every province meeting at its centre point, a sea-lane network warships follow, capture the moment a unit reaches the centre; NOT merged until the owner sees it (map job, merges after the others) | Opus | map-3 |
-
-**Merging now (owner, 2026-11-14: "Merge everything except for the explosions"):** real borders, HQ flags, UNIT-CTRL, UNIT-LOOK(+2), BLD-MAP(+2), aircraft 3D, BLD-RULES and the rebels plan doc are being combined on branch integrate (Opus), fully tested, then master and the Dev Build. Built defaults stand: infantry needs Army Base only, Fortifications price unchanged, infantry icon C, parked aircraft keep their pictures. The explosions (fx-video) stay unmerged.
+| **MAP-3** merge with the new master and re-shoot | every province's roads meeting at its centre point, clearly drawn from play zoom; a sea-lane network warships follow; capture the moment a ground force reaches the centre point; pan speed within about 3-4% of before; NOT merged until the owner sees the combined screenshots | Opus | map-3 |
 
 ## Ready, waiting for the owner (done, not merged)
 
 | Job | State | Branch |
 |---|---|---|
-| **MAP-1** Real borders | Natural Earth 1:10m shapes, no hatching anywhere, mine green and every other country grey; country borders now bolder (dark casing 3.4-5.8 px with a light core, own border green and wider; province lines unchanged); screenshots sent; waiting for the owner's OK | borders-real |
-| HQ flags, revision | a captured capital's HQ is destroyed; curved cloth flags, same size | hq-flags |
-| **UNIT-CTRL** | a tap only selects; Move/Attack then tap; rally point button, ghost preview, flag marker, Clear | unit-ctrl |
-| **UNIT-LOOK + UNIT-LOOK-2** | CoN-style badge, infantry icon C, amber dug-in shield and +10% defence; a Shipping routes setting (Settings > Map, default off: routes plus big, mid, small cargo ships, coasters and tankers); troops at sea as a grey 3D landing ship; screenshots sent | unit-look-2 |
-| **BLD-MAP + BLD-MAP-2** | buildings on land, 18% smaller; construction shows the 3 Gemini pictures (crane) in turn with the progress ring, a small crane beside a building going up; Army Base 1-5 on the map and in the panel; Naval Yards on the water at their city (Kolkata on the Hooghly 19 km, 36 river ports, 284 coast, 29 in the cluster); screenshots sent | bld-map |
-| Aircraft 3D shapes | every aircraft type its own model (4 choices for the owner) | aircraft-3d |
-| Explosion clips + FX-2 | cruise and ballistic clips play in real games; bombs now play the clip at every zoom; cruise smoke longer; chemical = small burst then a bigger drawn gas; nuclear/chemical have no weapon in the rules (test-build 'Preview blast' row only); real gameplay recording sent | fx-video |
-| **BLD-RULES** | infantry needs Army Base I (INF_NEEDS switch; Recruiting Office now speed and manpower only), only capitals start with Fortifications (68 instead of 151), HQ/city levels removed (capital shows its regional HQ), a Fortifications cost proposal (not applied); golden re-recorded; balance passes; screenshots sent | bld-rules |
-| **REBELS** plan | docs/REBELS-PLAN.md; 9 questions with suggested answers | rebels |
+| Explosion clips + FX-2 | owner: not merged for now (2026-11-14). Cruise and ballistic clips play in real games; nuclear/chemical have no weapon in the rules | fx-video |
 
-**Merge rules:** map jobs (MAP-*, BLD-MAP) merge one at a time, each merged with master and re-tested before the next; every look change sends the owner screenshots before it merges.
+**Merge rules:** map jobs merge one at a time, each merged with master and re-tested before the next; every look change sends the owner screenshots before it merges.
 
 ## Queued (in this order)
 
@@ -40,14 +30,10 @@ Owner playtest notes of 2026-11-14: part 1 (#1-#21), the rally point and the Arm
 
 | # | Job | What it covers | Model |
 |---|---|---|---|
-| (running) | **BLD-MAP-2** Buildings on the map, revision (branch bld-map) | P2-1 construction: keep the crane but make it look good: show the new Gemini construction pictures (site with crane, scaffolding, half-built frame) in turn while a building goes up, with the progress ring (replaces the code-drawn stages); the real Army Base pictures 1-5 on the map and in the panel (replacing the placeholder); P2-4 every Naval Yard on the water: Kolkata on the Hooghly river edge at the city (its real port), river ports on their river at the city, others on the nearest coast; check every yard. Screenshots before merging | Opus |
-| (running) | **UNIT-LOOK-2** Units at sea and shipping routes (branch unit-look-2) | P2-6 a "Shipping routes" toggle in the More tab's settings, next to where the Political/Terrain toggle goes: on = the trade routes and the cargo ships on them, a mix of big and smaller ships; off = none; army units at sea never use the cargo picture: they show as a grey military landing ship (a 3D model in units3d.js like the warships, bow ramp, vehicles on deck) with their badge. Screenshots before merging | Sonnet |
-| (running) | **BLD-RULES** Building rules (rules/data.js BUILD, rules/production.js, rules/state.js, build menu) | **Army Base rule**: infantry only in a city with Army Base level I (Train greyed out: "Needs Army Base level 1"), starting units unchanged, computer nations build Army Bases, old saves load; the Recruiting Office's role (owner to confirm: no longer required, keeps its speed and manpower bonuses); P2-3 at game start only the capital has Fortifications (no other city or border province starts with them; today about 150 are handed out); #16 a new Fortifications cost proposed to the owner first; #17 HQ levels removed (the capital's 'Level X' and city pictures; the HQ is one regional building) | Opus |
-| 4 | **MAP-2** Map look and controls | #3 one consistent map texture at every zoom; #4 the Political/Terrain switch moves into the More tab as a toggle (next to Shipping routes). Map job: after MAP-1 merges; screenshots before merging | Opus |
-| (running) | **MAP-3** Movement network and capture | #5 every province gets its roads; #6 warships follow sea lanes; #7 capture at the province centre point where roads meet, no timer. Map job; screenshots before merging | Opus |
-| 6 | **REBELS** build | after the owner answers the plan's questions | Opus |
-| 7 | **ART-2** more Gemini pictures from "Pictures still missing", count and cost to the owner before each batch | Sonnet |
-| 8 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
+| 1 | **MAP-2** Map look and controls | #3 one consistent map texture at every zoom; #4 the Political/Terrain switch moves into the More tab as a toggle (next to Shipping routes). Map job: after MAP-1 merges; screenshots before merging | Opus |
+| 2 | **REBELS** build | after the owner answers the plan's questions | Opus |
+| 3 | **ART-2** more Gemini pictures from "Pictures still missing", count and cost to the owner before each batch | Sonnet |
+| 4 | Phone app (PWA) on Netlify | Opus (needs the Netlify token) |
 
 ## Pictures still missing
 
@@ -75,15 +61,11 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 ## Waiting on me (the owner)
 
-- **Aircraft 3D (branch aircraft-3d, done, not merged):** (1) parked aircraft: keep the 2D pictures (3D only as a stand-in while loading) or always the new 3D shapes? (2) bomber, AWACS and patrol plane drawn bigger now (1.2-1.45 tank lengths instead of 0.9): keep? (3) Stealth Bomber humps a bit rounded: flatten? (4) stop loading the unused old jet/int sheets? OK to merge?
-- **BLD-MAP (revision 2 ready):** (1) dock basins drawn under river yards and under coast yards whose piers would stand on land: keep? (2) small rivers count too (Milan, Sapporo, Cairns, Darwin get river yards): keep, or only big rivers (then Bordeaux, Houston, St Petersburg go back to the coast)? (3) construction sites 10% bigger? (4) about 93 port cities have their map point more than 60 km from the sea (Cape Town, Sydney, Los Angeles, Helsinki...): a map-data job to move each city's point to its real location would bring yards (and the city drawing) to the right spot: queue it? OK to merge?
+- **Merged in v50 with the built defaults; still open if you want to change them:** aircraft (parked aircraft keep their pictures, bigger bomber/AWACS/patrol sizes, Stealth Bomber humps, old jet/int sheets still loaded); buildings (dock basins, small rivers count, construction sites 10% bigger?, move ~93 port cities' map points to their real places?); shipping routes (fleet selection no longer shows routes, cut-off convoys hidden when off, coaster/tanker drawn in code); building rules (Army Base only or both; Fortifications price: option 2 recommended; the +40% per extra Army Base; a starting Army Base in the biggest city?).
 - **Explosions (FX-2 ready):** the 'two not showing' were nuclear (the rules have no tactical nuke or ICBM, so it only appeared from test buttons) and chemical (no clip, and no chemical weapon in the rules). Add real chemical / tactical nuke / ICBM weapons to the rules (docs/RESEARCH.md 12.5: research, cost, damage, fallout, diplomacy)? OK to merge the clips?
-- **Building rules (BLD-RULES ready):** (1) Army Base only (built), or both buildings for infantry? (2) Fortifications price: 1 double ($72M/16K/16K, 3 days), 2 $50M/12K/12K, 3 days, +25% for each fort you already have (recommended), or 3 $60M/12K/12K, x2 per level, 3 days? (3) each extra Army Base costs 40% more (the 6th about $134M): lower it now that infantry needs one? (4) swap a starting Recruiting Office for an Army Base in the biggest city? (5) city level dropped everywhere (buildings list in the Cities tab instead): OK? OK to merge?
-- **Shipping routes (UNIT-LOOK-2 ready):** (1) selecting a fleet no longer shows trade routes (the setting is the only switch): OK or restore? (2) daily supply convoys to cut-off provinces are hidden too when the setting is off: OK? (3) the coaster and tanker are drawn in code: OK, or pictures later? OK to merge?
-- **Playtest jobs, choices before they start:** (a) Army Base rule: the Recruiting Office stops gating infantry and keeps its training-speed and manpower bonuses (or require both buildings?); (b) the infantry icon for the new badge: A flat helmeted head, B plain head, or C your green side-view helmet (default C); (d) REBELS plan sent (docs/REBELS-PLAN.md): answer its 9 questions (each has a suggested answer) and OK the build. It also found a bug in today's rules: partisans take a province after 1 hour alone, not 24; the build fixes it.
+- **Rebels plan:** answer its 9 questions (docs/REBELS-PLAN.md, each has a suggested answer) to start the build; it also fixes a bug where partisans take a province after 1 hour alone, not 24.
 
 - **Economy over time (nations re-check, nothing broken):** with peaceful computer nations, every nation's net income falls about 65-70% by day 60 while its army triples or quadruples, so all end near zero income with a small treasury; the big powers hardly grow (102-104% of their start land) and independent land is almost all taken by day 30. Change anything (cheaper upkeep, an army cap for computer nations, slower expansion)?
-- **Building pictures (merged v48):** (1) Fortifications levels I-III use pictures 1, 3, 5: OK? (2) Army Base, Silo, Arms Industry still need angled pictures (nothing on the map for them yet); (3) Hamburg's Naval Yard sits on the Elbe bank: OK, or always the sea? (4) ports far from water (Berlin, Oslo, Helsinki) keep the yard in the city cluster: OK? (5) cast shadows kept see-through: keep, or a small contact shadow? (6) mid-zoom pictures are small (about 30-40 px): bigger?
 
 - **Speed options that change play:** quiet nations plan every 8 h instead of hourly (about -20% rules time); shorter attack-target search (-10 ms/day); reuse land routes across hours (-20 to -25 ms/day); phone map drawn at pixel ratio 1.5 instead of 2 (about 44% fewer pixels: the phone is limited by drawing, not rules).
 
@@ -112,6 +94,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| **Dev Build v50 (owner: "Merge everything except for the explosions")**: real Natural Earth borders, no hatching, own country green and others grey, bold country borders; HQ flags (curved cloth, a captured capital's HQ destroyed); UNIT-CTRL (a tap only selects, Move then tap, rally point with preview and flag); CoN-style badges (whole flag, icon upright, count in a corner, infantry icon C), amber dug-in shield and +10% defence, Shipping routes setting (Settings > Map, default off), troops at sea as a grey landing ship; buildings on land and 18% smaller, construction pictures with crane, Army Base 1-5 pictures, Naval Yards on the water at their city (Kolkata on the Hooghly); each aircraft type its own 3D model; infantry needs Army Base I (Recruiting Office speed/manpower only), only capitals start with Fortifications, no city levels (capital shows its regional HQ); the rebels plan doc. Combined on branch integrate, every check passed | Opus/Sonnet |
 | ART-1: Army Base 1-5 and 3 construction pictures on Gemini ($0.31), cut out with metadata (files only; drawn by BLD-MAP-2) | Sonnet |
 | Research banners edge to edge with a light blue-grey wash behind the name; Infantry Corps first picture moved up, faces whole and feet cropped (Dev Build v49) | Opus |
 | Nations balance re-check for peaceful computer nations: all balance checks pass (China/India check changed to 'stay at peace and hold their land'), no nation stalls or goes broke; v3c, stealth-ui and x1000 old-save tests brought up to date (tests only) | Sonnet |
