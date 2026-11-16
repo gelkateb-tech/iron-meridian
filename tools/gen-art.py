@@ -585,9 +585,61 @@ LOG = os.path.join(OUT, 'gen-art-log.jsonl')
 # (a 1K picture is about 1,120 tokens, $0.0336), input $0.50 per million; batch jobs half price. The real bill is in Google AI Studio.
 OUT_USD, IN_USD, BATCH = 30e-6, 0.5e-6, 0.5
 
+# ---- NEW ART STYLE (v2): every new building subject (names starting "v2-") uses STYLE_V2. The older STYLE / STYLE_REAL /
+# STYLE_CLEAN stay only as the record of how the old pictures were made.
+# Owner's rule: ONE design per building type. Level 1 is drawn first; every next level (2-5) is then made by EDITING the
+# previous level's picture (passed as the reference image), keeping the same building, angle, colours and lighting and only
+# adding to it, so each level clearly reads as the same building growing. Levels 2-5 come later, after the owner's OK.
+STYLE_V2 = ("Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, "
+            "readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft "
+            "shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with "
+            "subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed angled view from above for "
+            "every picture, about 45 degrees down, three-quarter view, at the same scale. Background: a plain, flat, uniform "
+            "light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped tight "
+            "and centred so the subject fills about 90 percent of the frame, nothing cut off. Square 1:1 image. Original "
+            "generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.")
+V2_SCALE = " One-storey buildings are about the same size across the whole set of pictures."
+SUBJECTS['v2-army-base-1'] = (
+    "A temporary army field camp, level 1 of 5: two short rows of olive-green canvas military tents, low khaki sandbag walls "
+    "around the tents and at the entrance, a light chain-link fence with one gate and a small sandbagged guard post, "
+    "packed earth between the tents, and three olive-green army trucks parked beside the tents." + V2_SCALE)
+SUBJECTS['v2-airbase-1'] = (
+    "A small military airbase, level 1 of 5: one long straight asphalt runway with white dashed centre line running "
+    "horizontally along the top of the picture, a taxiway joining it, and below the runway two grey aircraft hangars with "
+    "curved roofs side by side with their doors facing the taxiway, a small control tower and a small apron with one grey "
+    "fighter jet. Grass strips beside the runway. No air-defence launchers, no missiles." + V2_SCALE)
+SUBJECTS['v2-naval-yard-1'] = (
+    "A small military naval yard, level 1 of 5: three straight parallel concrete piers all pointing toward the bottom right of "
+    "the picture, each pier's long axis running from the upper left down to the lower right, with two grey frigates "
+    "moored alongside; behind the inner ends of the piers (upper left), two long grey warehouses and one small command "
+    "building with a radio mast, and one dockside crane. The pieces stand on the plain grey background, which stands in "
+    "for land and sea: no coast, no beach, no water, no waves." + V2_SCALE)
+SUBJECTS['v2-missile-silo-1'] = (
+    "A missile silo site, level 1 of 5: one round concrete silo with a closed, thick steel blast door cover (two sliding "
+    "half-doors) set in a circular concrete pad, a small low concrete control bunker beside it, a short asphalt access "
+    "road and a low chain-link fence with a gate around the site. No visible missile." + V2_SCALE)
+SUBJECTS['v2-arms-industry-1'] = (
+    "A small arms factory, level 1 of 5: one large industrial hall of pale concrete and corrugated metal with a sawtooth "
+    "roof, a tall slim chimney, a loading dock with two parked grey trucks, a few stacked cargo crates and a small "
+    "office annex." + V2_SCALE)
+SUBJECTS['v2-recruiting-office-1'] = (
+    "A small military recruiting office, level 1 of 5: one single-storey office building of pale concrete with a flat roof "
+    "and a large glass front, a covered entrance, a flagpole without a flag, a short paved path in front with a small "
+    "green lawn strip, and one parked olive-green jeep." + V2_SCALE)
+SUBJECTS['v2-hospital-1'] = (
+    "A small military field hospital, level 1 of 5: one single-storey white building with a flat roof and a large RED "
+    "cross on a white square on the roof (owner's choice, 2026-11-16), a covered ambulance entrance, one white ambulance with a red "
+    "stripe parked in front, and a short paved path." + V2_SCALE)
+SUBJECTS['v2-fortifications-1'] = (
+    "A defensive fortification as a cutaway, level 1 of 5: a rounded chunk of ground lifted out and cut open on its front "
+    "faces to show the underground concrete bunker inside (a corridor, a command room with a table and a small ammunition "
+    "room, reinforced concrete walls), with a layer of soil and rock below, and on top a green grass surface with a few "
+    "trees and a small hatch entrance. The cutaway earth block is the subject itself, floating on the plain grey background, "
+    "with only a soft shadow." + V2_SCALE)
+
 def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
-def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE)
+def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE_V2 if name.startswith('v2-') else STYLE)
 
 def stem(name): return name if name in ICONS or name in RES_ICONS or name in R_BANNERS or name in R_ICONS else f'ba-{name}'
 
