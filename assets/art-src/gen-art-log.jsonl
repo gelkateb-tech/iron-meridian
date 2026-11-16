@@ -162,3 +162,4 @@
 {"name": "v2-recruiting-office-1", "file": "assets/art-src/ba-v2-recruiting-office-1.png", "batch": true, "usd_est": 0.0401, "tokens": {"promptTokenCount": 280, "candidatesTokenCount": 1898, "thoughtsTokenCount": 773}}
 {"name": "v2-hospital-1", "file": "assets/art-src/ba-v2-hospital-1.png", "batch": true, "usd_est": 0.0374, "tokens": {"promptTokenCount": 278, "candidatesTokenCount": 1517, "thoughtsTokenCount": 969}}
 {"name": "v2-fortifications-1", "file": "assets/art-src/ba-v2-fortifications-1.png", "batch": true, "usd_est": 0.0351, "tokens": {"promptTokenCount": 322, "candidatesTokenCount": 1491, "thoughtsTokenCount": 846}}
+{"name": "v2-hospital-1", "file": "assets/art-src/ba-v2-hospital-1.png", "batch": true, "usd_est": 0.0393, "tokens": {"promptTokenCount": 292, "candidatesTokenCount": 1547, "thoughtsTokenCount": 1065}}

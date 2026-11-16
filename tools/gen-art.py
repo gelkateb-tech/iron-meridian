@@ -627,8 +627,8 @@ SUBJECTS['v2-recruiting-office-1'] = (
     "and a large glass front, a covered entrance, a flagpole without a flag, a short paved path in front with a small "
     "green lawn strip, and one parked olive-green jeep." + V2_SCALE)
 SUBJECTS['v2-hospital-1'] = (
-    "A small military field hospital, level 1 of 5: one single-storey white building with a flat roof and a large GREEN "
-    "cross on a white square on the roof (never red), a covered ambulance entrance, one white ambulance with a green "
+    "A small military field hospital, level 1 of 5: one single-storey white building with a flat roof and a large RED "
+    "cross on a white square on the roof (owner's choice, 2026-11-16), a covered ambulance entrance, one white ambulance with a red "
     "stripe parked in front, and a short paved path." + V2_SCALE)
 SUBJECTS['v2-fortifications-1'] = (
     "A defensive fortification as a cutaway, level 1 of 5: a rounded chunk of ground lifted out and cut open on its front "
