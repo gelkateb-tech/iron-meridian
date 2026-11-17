@@ -187,3 +187,11 @@
 {"name": "v2-recruiting-office-4", "file": "assets/art-src/ba-v2-recruiting-office-4.png", "batch": true, "usd_est": 0.0353, "tokens": {"promptTokenCount": 1269, "candidatesTokenCount": 1982, "thoughtsTokenCount": 347}}
 {"name": "v2-hospital-4", "file": "assets/art-src/ba-v2-hospital-4.png", "batch": true, "usd_est": 0.0407, "tokens": {"promptTokenCount": 1266, "candidatesTokenCount": 2304, "thoughtsTokenCount": 387}}
 {"name": "v2-fortifications-4", "file": "assets/art-src/ba-v2-fortifications-4.png", "batch": true, "usd_est": 0.0385, "tokens": {"promptTokenCount": 1281, "candidatesTokenCount": 2193, "thoughtsTokenCount": 354}}
+{"name": "v2-army-base-5", "file": "assets/art-src/ba-v2-army-base-5.png", "batch": true, "usd_est": 0.0479, "tokens": {"promptTokenCount": 1287, "candidatesTokenCount": 2065, "thoughtsTokenCount": 1104}}
+{"name": "v2-airbase-5", "file": "assets/art-src/ba-v2-airbase-5.png", "batch": true, "usd_est": 0.0346, "tokens": {"promptTokenCount": 1295, "candidatesTokenCount": 1973, "thoughtsTokenCount": 309}}
+{"name": "v2-naval-yard-5", "file": "assets/art-src/ba-v2-naval-yard-5.png", "batch": true, "usd_est": 0.0427, "tokens": {"promptTokenCount": 1270, "candidatesTokenCount": 1556, "thoughtsTokenCount": 1272}}
+{"name": "v2-missile-silo-5", "file": "assets/art-src/ba-v2-missile-silo-5.png", "batch": true, "usd_est": 0.048, "tokens": {"promptTokenCount": 1274, "candidatesTokenCount": 2084, "thoughtsTokenCount": 1093}}
+{"name": "v2-arms-industry-5", "file": "assets/art-src/ba-v2-arms-industry-5.png", "batch": true, "usd_est": 0.0372, "tokens": {"promptTokenCount": 1275, "candidatesTokenCount": 1958, "thoughtsTokenCount": 504}}
+{"name": "v2-recruiting-office-5", "file": "assets/art-src/ba-v2-recruiting-office-5.png", "batch": true, "usd_est": 0.0303, "tokens": {"promptTokenCount": 1276, "candidatesTokenCount": 1510, "thoughtsTokenCount": 490}}
+{"name": "v2-hospital-5", "file": "assets/art-src/ba-v2-hospital-5.png", "batch": true, "usd_est": 0.0356, "tokens": {"promptTokenCount": 1281, "candidatesTokenCount": 1979, "thoughtsTokenCount": 376}}
+{"name": "v2-fortifications-5", "file": "assets/art-src/ba-v2-fortifications-5.png", "batch": true, "usd_est": 0.0376, "tokens": {"promptTokenCount": 1285, "candidatesTokenCount": 2326, "thoughtsTokenCount": 157}}
