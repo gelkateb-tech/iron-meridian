@@ -645,6 +645,12 @@ SUBJECTS['v2-fortifications-1'] = (
     "trees and a small hatch entrance. The cutaway earth block is the subject itself, floating on the plain grey background, "
     "with only a soft shadow." + V2_SCALE)
 
+SUBJECTS['v2-fortifications-map-1'] = (
+    "A surface view of a small defensive position, level 1 of 5, seen from above and lying flat on the plain background (no "
+    "floating chunk of ground, no cutaway, no cross-section): a low reinforced-concrete bunker entrance set into a patch of "
+    "green grass, surrounded by a ring of khaki sandbags, with a short earth trench running from it. Materials and colours "
+    "like the attached cutaway bunker. The grass patch has natural irregular edges and fades into the plain background." + V2_SCALE)
+
 def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE_V2 if name.startswith('v2-') else STYLE)

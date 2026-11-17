@@ -36,6 +36,7 @@ Original generic designs. No text, letters, numbers, flags, emblems, logos or wa
   same building growing.
 - Hospital: the cross is RED (owner's choice); the green version stays on file (ba-v2-hospital-1.green.webp).
 - Naval Yard: no coast or water drawn; piers point to the bottom right.
+- Fortifications has two pictures: the cutaway bunker for panels and menus (ba-v2-fortifications-N), and a flat surface view for the map (ba-v2-fortifications-map-N).
 - Fortifications: a cutaway bunker that grows with the level: deeper, more rooms, heavier concrete, more defences on top.
 - Army Base: a temporary camp at level 1 growing into a full permanent base by level 5 (tents give way to barracks, motor
   pool, HQ, perimeter wall).
