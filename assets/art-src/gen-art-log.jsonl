@@ -203,3 +203,5 @@
 {"name": "v2-naval-yard-3", "file": "assets/art-src/ba-v2-naval-yard-3.png", "batch": true, "usd_est": 0.0442, "tokens": {"promptTokenCount": 1294, "candidatesTokenCount": 1822, "thoughtsTokenCount": 1102}}
 {"name": "v2-airbase-4", "file": "assets/art-src/ba-v2-airbase-4.png", "batch": true, "usd_est": 0.0362, "tokens": {"promptTokenCount": 1282, "candidatesTokenCount": 2000, "thoughtsTokenCount": 392}}
 {"name": "v2-naval-yard-4", "file": "assets/art-src/ba-v2-naval-yard-4.png", "batch": true, "usd_est": 0.0353, "tokens": {"promptTokenCount": 1287, "candidatesTokenCount": 1539, "thoughtsTokenCount": 792}}
+{"name": "v2-airbase-5", "file": "assets/art-src/ba-v2-airbase-5.png", "batch": true, "usd_est": 0.0406, "tokens": {"promptTokenCount": 1300, "candidatesTokenCount": 1746, "thoughtsTokenCount": 940}}
+{"name": "v2-naval-yard-5", "file": "assets/art-src/ba-v2-naval-yard-5.png", "batch": true, "usd_est": 0.0423, "tokens": {"promptTokenCount": 1289, "candidatesTokenCount": 1459, "thoughtsTokenCount": 1341}}
