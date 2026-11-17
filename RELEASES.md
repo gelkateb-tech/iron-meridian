@@ -136,3 +136,4 @@ How it works from now on:
 - v3.11 — Arms Factory pricing: first factory $25M, each extra one a nation owns +40%.
 - v3.10 — Test build with developer mode and a public build with all dev/test code stripped at build time.
 - v3.9 — Sleek counters, mixed-stack icon, troop models, nothing moves while zooming.
+- New building pictures (owner): the Army Base, Airbase, Naval Yard, Recruiting Office and Fortifications (map: surface view; panels and build menu: the cutaway bunker) use the new-style art, and the Missile Silo and Arms Industry now show on the map too (levels 1-5; Hospital cut out and kept ready). Sizes, shore placement and rules unchanged (branch bld-v2, not yet merged).
