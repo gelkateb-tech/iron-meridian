@@ -6050,7 +6050,7 @@ function labNight(L, lx, ly){ if (!(L.city || L.cap) || !cityLightsOn() || view.
    Drawn under the troop models, the counters and the names; only provinces on screen; each picture is made once at about its drawn size (BNC, dropped with
    the graphics, gfxReset). A tap on a picture opens its city (never over a unit badge: tap() asks hitAt and coreAt first). Fog: buildings are public. */
 const BN_K = ['silo', 'air', 'fac', 'yard', 'arms', 'rec', 'fort'];   // the buildings in order of importance (after the HQ)
-const BN_ART = {air:5, fac:5, rec:5, yard:5, fort:3};   // the buildings with angled pictures (game levels); Fortifications levels I-III use pictures 1, 3 and 5
+const BN_ART = {air:5, fac:5, rec:5, yard:5, silo:5, arms:5, fort:3};   // the buildings with angled pictures (game levels); Fortifications levels I-III use pictures 1, 3 and 5
 const BN_IN0 = 20, BN_IN1 = 26, BN_ALL0 = 50, BN_ALL1 = 62, TRAY_ANIM = 1200;   // hexPx: the main picture fades in over IN0..IN1, the rest over ALL0..ALL1; a level pop (ms)
 const BN_HMIN = 72, BN_HMAX = 176, BN_K0 = 0.51;   // a picture's long side is BN_K0*hexPx css px between hexPx BN_HMIN and BN_HMAX (so it grows with the map), with a soft floor below (0.51: 18% smaller than the first 0.62, owner's #13)
 const BN_WPX = BN_K0*HS0;   // ... which is BN_WPX world px (times the picture's own factor: bnF) wherever it grows with the map
@@ -6064,7 +6064,7 @@ const BNFOOT = {"bn-air-1":"7ffeffffffffffff7fff7ffe3ffe1ff80ff007e001c00080","b
 const bnA = h => smooth01((h - BN_IN0)/(BN_IN1 - BN_IN0)), bnB = h => smooth01((h - BN_ALL0)/(BN_ALL1 - BN_ALL0));
 const bnL = h => h >= BN_HMIN ? Math.min(h, BN_HMAX)*BN_K0 : BN_HMIN*BN_K0*Math.pow(h/BN_HMIN, 0.35);   // css px of a picture's long side (factor 1) at hexPx h
 // a building's picture name at a game level (null: no angled picture); the HQ by style
-const bnName = (k, lv) => k === 'hq' ? 'bn-hq-' + lv : BN_ART[k] ? `bn-${k}-${k === 'fort' ? [1, 3, 5][Math.max(1, Math.min(3, lv)) - 1] : Math.max(1, Math.min(5, lv))}` : null;
+const bnName = (k, lv, cut) => k === 'hq' ? 'bn-hq-' + lv : BN_ART[k] ? `bn-${cut && k === 'fort' ? 'fortcut' : k}-${k === 'fort' ? [1, 3, 5][Math.max(1, Math.min(3, lv)) - 1] : Math.max(1, Math.min(5, lv))}` : null;
 // a picture's size factor: level I a little smaller than level V, the HQ a bit bigger; a single Recruiting Office building smaller than its compounds;
 // the Army Base grows less from level to level (its camp of tents at I, its walled hexagon of barracks at IV and V fills its picture: no bigger than
 // an Airbase III at V, so it never outweighs the city)
@@ -6408,7 +6408,7 @@ const ART_PX = 46;   // close zoom: ground patterns on the map
 // HTML picture of a building (or the city plate) at a level; '' while the image is not loaded, so the text alone remains
 // (a picture not loaded yet is asked for, and an empty plate of the same size holds its place: no layout jump when it arrives)
 // (the angled cut-out where the building has one: bnName; the older picture while it fails)
-const bimg = (k, l, px = 22, dim = false) => { if (k !== 'city' && !BART[k]) return ''; const nb = k !== 'city' && BN_ART[k] ? bnName(k, Math.max(1, l)) : null, ba = !!nb && !ART.failed(nb), n = ba ? nb : bartName(k, l); if (ART.failed(n)) return ''; if (!ART.ready(n)) ART.want(n);
+const bimg = (k, l, px = 22, dim = false) => { if (k !== 'city' && !BART[k]) return ''; const nb = k !== 'city' && BN_ART[k] ? bnName(k, Math.max(1, l), true) : null, ba = !!nb && !ART.failed(nb), n = ba ? nb : bartName(k, l); if (ART.failed(n)) return ''; if (!ART.ready(n)) ART.want(n);
   return `<i class="bi${ba ? ' ba' : ''}${dim ? ' dim' : ''}" style="--bi:${ART.ready(n) ? `url(${ART.url(n)})` : 'none'};--bs:${px}px" aria-hidden="true"></i>`; };
 // the capital's headquarters: one building with no levels, in its nation's regional style (bn-hq-<style>, bnHqStyle), the same picture as on the map.
 // (A city has no level of its own: the 'city level' the panels showed until BLD-RULES was a UI-only count of building levels, never a rule.)
@@ -9464,7 +9464,7 @@ function csGlyph(k){ if (CS_GL[k]) return CS_GL[k]; let u = '';
   try { const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 5; g.shadowOffsetY = 2;
     g.translate(18, 18); g.scale(2.5, 2.5); g.fillStyle = g.strokeStyle = '#f2fbfc'; if (BGLYPH[k]) BGLYPH[k](g); u = c.toDataURL(); } catch (e) {}
   return CS_GL[k] = u; }
-const csArt = (k, lv) => { if (k !== 'city' && BN_ART[k]){ const n = bnName(k, Math.max(1, lv)); if (ART.ready(n)) return {u:ART.url(n), art:true, ba:true}; if (!ART.failed(n)){ ART.want(n); return {u:csGlyph(k), art:false}; } }   // (the angled cut-out where the building has one)
+const csArt = (k, lv) => { if (k !== 'city' && BN_ART[k]){ const n = bnName(k, Math.max(1, lv), true); if (ART.ready(n)) return {u:ART.url(n), art:true, ba:true}; if (!ART.failed(n)){ ART.want(n); return {u:csGlyph(k), art:false}; } }   // (the angled cut-out where the building has one)
   if (k === 'city' || BART[k]){ const n = bartName(k, Math.max(1, lv)); if (ART.ready(n)) return {u:ART.url(n), art:true}; ART.want(n); } return {u:k === 'city' ? '' : csGlyph(k), art:false}; };   // (the symbol until the picture arrives)
 function csWanted(){ const p = sel.prov;
   if (!S || p === null || sel.army !== null || aimMsl || rallyFor !== null || (typeof GLOBE !== 'undefined' && GLOBE && GLOBE.on())) return -1;
