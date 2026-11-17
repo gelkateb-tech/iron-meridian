@@ -559,6 +559,11 @@ def prep_research(names):
 EDIT = ("Edit the attached picture. Change only this: {}. Keep everything else exactly as it is: every building, pier, "
         "crane, ship and the dry dock, their shapes, positions, sizes and directions, the camera angle, framing, lighting, "
         "shadows, colours and the plain flat light grey background. Do not add or remove anything.")
+EDIT_V2 = ("Edit the attached picture of a building: it is one level of a building that grows from level 1 to level 5. Keep the "
+           "same building and everything already in it exactly as it is (same designs, colours, materials, camera angle, lighting, "
+           "shadow direction, rendering style and plain flat light grey background); you may scale the whole picture down a little "
+           "so the additions fit. Add only this: {}. The result is the same building clearly grown, filling the frame with a small "
+           "margin, nothing cut off, no text, no letters, no flags, no markings, no logos.")
 GROW = ("The attached picture shows a facility drawn small in the middle of the frame, with empty light grey space around it. "
         "Turn it into the next, clearly larger level of the same base: keep every existing piece exactly where it is and at "
         "exactly its current size, and build the additions in the empty space around it so the larger base fills the frame "
@@ -687,7 +692,7 @@ def image_part(r):
 
 def request(name, refs, change=None):
     """the generateContent request body for a name (SUBJECTS or GROWS), or for an --edit (change set)"""
-    if change is not None: text, images = EDIT.format(change), refs
+    if change is not None: text, images = (EDIT_V2 if name.startswith('v2-') else EDIT).format(change), refs
     elif name in GROWS:
         before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
         if not os.path.exists(src): raise SystemExit(f'{name} grows from {os.path.relpath(src, ROOT)}, which is not there yet')
