@@ -559,6 +559,11 @@ def prep_research(names):
 EDIT = ("Edit the attached picture. Change only this: {}. Keep everything else exactly as it is: every building, pier, "
         "crane, ship and the dry dock, their shapes, positions, sizes and directions, the camera angle, framing, lighting, "
         "shadows, colours and the plain flat light grey background. Do not add or remove anything.")
+EDIT_V2 = ("Edit the attached picture of a building: it is one level of a building that grows from level 1 to level 5. Keep the "
+           "same building and everything already in it exactly as it is (same designs, colours, materials, camera angle, lighting, "
+           "shadow direction, rendering style and plain flat light grey background); you may scale the whole picture down a little "
+           "so the additions fit. Add only this: {}. The result is the same building clearly grown, filling the frame with a small "
+           "margin, nothing cut off, no text, no letters, no flags, no markings, no logos.")
 GROW = ("The attached picture shows a facility drawn small in the middle of the frame, with empty light grey space around it. "
         "Turn it into the next, clearly larger level of the same base: keep every existing piece exactly where it is and at "
         "exactly its current size, and build the additions in the empty space around it so the larger base fills the frame "
@@ -604,10 +609,13 @@ SUBJECTS['v2-army-base-1'] = (
     "around the tents and at the entrance, a light chain-link fence with one gate and a small sandbagged guard post, "
     "packed earth between the tents, and three olive-green army trucks parked beside the tents." + V2_SCALE)
 SUBJECTS['v2-airbase-1'] = (
-    "A small military airbase, level 1 of 5: one long straight asphalt runway with white dashed centre line running "
-    "horizontally along the top of the picture, a taxiway joining it, and below the runway two grey aircraft hangars with "
-    "curved roofs side by side with their doors facing the taxiway, a small control tower and a small apron with one grey "
-    "fighter jet. Grass strips beside the runway. No air-defence launchers, no missiles." + V2_SCALE)
+    "A small military airbase, level 1 of 5 (new layout, owner's choice 2026-11-17): one long straight asphalt runway with a "
+    "white dashed centre line running horizontally along the very top of the picture, a parallel asphalt taxiway a little "
+    "below it, joined to the runway by two short angled connector strips; below the taxiway a compact concrete apron with a "
+    "slim control tower at its left end, two grey aircraft hangars with arched roofs of a different shape (one wide and one "
+    "narrower, side by side, doors facing the taxiway) and one grey fighter jet parked on the apron. Grass strips beside the "
+    "runway. Clean, readable, filling the frame, the jet fully inside the frame. No air-defence launchers, no missiles, "
+    "no second runway." + V2_SCALE)
 SUBJECTS['v2-naval-yard-1'] = (
     "A small military naval yard, level 1 of 5: three straight parallel concrete piers all pointing toward the bottom right of "
     "the picture, each pier's long axis running from the upper left down to the lower right, with two grey frigates "
@@ -636,6 +644,12 @@ SUBJECTS['v2-fortifications-1'] = (
     "room, reinforced concrete walls), with a layer of soil and rock below, and on top a green grass surface with a few "
     "trees and a small hatch entrance. The cutaway earth block is the subject itself, floating on the plain grey background, "
     "with only a soft shadow." + V2_SCALE)
+
+SUBJECTS['v2-fortifications-map-1'] = (
+    "A surface view of a small defensive position, level 1 of 5, seen from above and lying flat on the plain background (no "
+    "floating chunk of ground, no cutaway, no cross-section): a low reinforced-concrete bunker entrance set into a patch of "
+    "green grass, surrounded by a ring of khaki sandbags, with a short earth trench running from it. Materials and colours "
+    "like the attached cutaway bunker. The grass patch has natural irregular edges and fades into the plain background." + V2_SCALE)
 
 def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
@@ -687,7 +701,7 @@ def image_part(r):
 
 def request(name, refs, change=None):
     """the generateContent request body for a name (SUBJECTS or GROWS), or for an --edit (change set)"""
-    if change is not None: text, images = EDIT.format(change), refs
+    if change is not None: text, images = (EDIT_V2 if name.startswith('v2-') else EDIT).format(change), refs
     elif name in GROWS:
         before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
         if not os.path.exists(src): raise SystemExit(f'{name} grows from {os.path.relpath(src, ROOT)}, which is not there yet')
