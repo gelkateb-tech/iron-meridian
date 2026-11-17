@@ -56,13 +56,12 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
     if (hp >= bands.all1){ const ks = be.map(e => e.k).sort().join(','); if (ks !== C.berlin) fails.push(`hexPx ${hp}: Berlin shows ${ks}`); }
     const hq = be.find(e => e.k === 'hq'); if (hq && (hq.wx !== C.be[0] || hq.wy !== C.be[1])) fails.push(`hexPx ${hp}: the HQ is not on Berlin's point`);
     if (hq && hq.nm !== 'bn-hq-western') fails.push(`hexPx ${hp}: Berlin's HQ is ${hq.nm}, not the western style`);
-    if (F.L.some(e => /^(silo|arms)$/.test(e.k))) fails.push(`hexPx ${hp}: a building without an angled picture is drawn`);
     const fac = be.find(e => e.k === 'fac'); if (hp >= bands.all1 && (!fac || fac.pic !== 'bn-fac-4')) fails.push(`hexPx ${hp}: Berlin's Army Base IV is not drawn as bn-fac-4 (${fac && fac.pic})`); }
   // sizes (owner's #13): 18% smaller than the first BN_K0 0.62, the HQ the biggest
   const sz = await p.evaluate(() => { const b = window.__im.bn; return {K0:b.K0, hq100:+(b.L(100)*b.F('hq', 1)).toFixed(2), biggestOther:Math.max(...['air', 'fac', 'rec', 'yard', 'fort'].flatMap(k => [1, 2, 3, 4, 5].filter(l => l <= BUILD[k].max).map(l => b.F(k, l))))}; });
   sz.fac = await p.evaluate(() => [1, 2, 3, 4, 5].map(l => window.__im.bn.F('fac', l))); sz.air5 = await p.evaluate(() => window.__im.bn.F('air', 5));
   checks.size = Object.assign(sz, {vsFirst:+(sz.K0/0.62).toFixed(3)}); if (sz.fac[4] > sz.air5 || sz.fac[0] >= sz.fac[4]) fails.push('Army Base sizes: ' + sz.fac.join(' ')); if (sz.K0/0.62 < 0.8 || sz.K0/0.62 > 0.85) fails.push(`pictures ${sz.K0/0.62} of their first size, not 15-20% smaller`); if (sz.biggestOther >= 1.08) fails.push('a building drawn bigger than the HQ');
-  checks.berlin = {buildings:C.berlin, hq:C.hqNm}; if (!/^air,fac,fort,hq,rec(,yard)?$/.test(C.berlin)) fails.push('Berlin items: ' + C.berlin);
+  checks.berlin = {buildings:C.berlin, hq:C.hqNm}; if (!/^air,arms,fac,fort,hq,rec,silo(,yard)?$/.test(C.berlin)) fails.push('Berlin items: ' + C.berlin);
   checks.sweep = {maxDriftPx:+maxD.toFixed(3), pictureOnAnchorPx:+relMax.toFixed(3), models:world.size};
   if (maxD > 1.5) fails.push(`zoom sweep: a model drawn ${maxD.toFixed(2)} px off its anchor`); if (relMax > 2) fails.push(`zoom sweep: a model's picture moved ${relMax.toFixed(2)} px against its anchor`);
   // close in: the construction site at Munich, the crane of a level going up at Frankfurt
