@@ -609,10 +609,13 @@ SUBJECTS['v2-army-base-1'] = (
     "around the tents and at the entrance, a light chain-link fence with one gate and a small sandbagged guard post, "
     "packed earth between the tents, and three olive-green army trucks parked beside the tents." + V2_SCALE)
 SUBJECTS['v2-airbase-1'] = (
-    "A small military airbase, level 1 of 5: one long straight asphalt runway with white dashed centre line running "
-    "horizontally along the top of the picture, a taxiway joining it, and below the runway two grey aircraft hangars with "
-    "curved roofs side by side with their doors facing the taxiway, a small control tower and a small apron with one grey "
-    "fighter jet. Grass strips beside the runway. No air-defence launchers, no missiles." + V2_SCALE)
+    "A small military airbase, level 1 of 5 (new layout, owner's choice 2026-11-17): one long straight asphalt runway with a "
+    "white dashed centre line running horizontally along the very top of the picture, a parallel asphalt taxiway a little "
+    "below it, joined to the runway by two short angled connector strips; below the taxiway a compact concrete apron with a "
+    "slim control tower at its left end, two grey aircraft hangars with arched roofs of a different shape (one wide and one "
+    "narrower, side by side, doors facing the taxiway) and one grey fighter jet parked on the apron. Grass strips beside the "
+    "runway. Clean, readable, filling the frame, the jet fully inside the frame. No air-defence launchers, no missiles, "
+    "no second runway." + V2_SCALE)
 SUBJECTS['v2-naval-yard-1'] = (
     "A small military naval yard, level 1 of 5: three straight parallel concrete piers all pointing toward the bottom right of "
     "the picture, each pier's long axis running from the upper left down to the lower right, with two grey frigates "

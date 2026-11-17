@@ -195,3 +195,5 @@
 {"name": "v2-recruiting-office-5", "file": "assets/art-src/ba-v2-recruiting-office-5.png", "batch": true, "usd_est": 0.0303, "tokens": {"promptTokenCount": 1276, "candidatesTokenCount": 1510, "thoughtsTokenCount": 490}}
 {"name": "v2-hospital-5", "file": "assets/art-src/ba-v2-hospital-5.png", "batch": true, "usd_est": 0.0356, "tokens": {"promptTokenCount": 1281, "candidatesTokenCount": 1979, "thoughtsTokenCount": 376}}
 {"name": "v2-fortifications-5", "file": "assets/art-src/ba-v2-fortifications-5.png", "batch": true, "usd_est": 0.0376, "tokens": {"promptTokenCount": 1285, "candidatesTokenCount": 2326, "thoughtsTokenCount": 157}}
+{"name": "v2-airbase-1", "file": "assets/art-src/ba-v2-airbase-1.png", "batch": true, "usd_est": 0.0464, "tokens": {"promptTokenCount": 3773, "candidatesTokenCount": 2008, "thoughtsTokenCount": 1025}}
+{"name": "v2-naval-yard-1", "file": "assets/art-src/ba-v2-naval-yard-1.png", "batch": true, "usd_est": 0.0465, "tokens": {"promptTokenCount": 1325, "candidatesTokenCount": 1591, "thoughtsTokenCount": 1490}}
