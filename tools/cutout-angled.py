@@ -36,7 +36,7 @@ MAP_PX = 256          # long side of the cut-out (map at 2x screens, city panel 
 SHADOW_MAX = 0.5      # darkest a kept cast shadow gets (alpha of its dark layer)
 SHADOW_RGB = np.array([14, 18, 28], np.float32)   # the shadows' colour (the renders' shadows are slightly blue)
 # file name -> (key, level) of the game: keys as in the game's BUILD (air, rec, yard, fort, hq) plus hospital (not a game building yet)
-KEYS = {'army-base':'fac', 'construction':'build', 'airbase':'air', 'recruiting-office':'rec', 'naval-yard':'yard', 'fortifications':'fort', 'hospital':'hospital'}
+KEYS = {'missile-silo':'silo', 'arms-industry':'arms', 'fortifications-map':'fort', 'army-base':'fac', 'construction':'build', 'airbase':'air', 'recruiting-office':'rec', 'naval-yard':'yard', 'fortifications':'fort', 'hospital':'hospital'}
 BRIDGE = ('hq-', 'hospital-', 'recruiting-office-', 'fortifications-')   # pictures whose cast shadows' sharp edges are crossed (see cut)
 # hand corrections of the ground anchor (fractions of the cut-out), applied after the automatic one: (dx, dy)
 ANCHOR_FIX = {}
@@ -187,15 +187,21 @@ def poles(thin, ground, k):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    files = sorted(glob.glob(os.path.join(SRC, 'ba-*.png')))
-    if ONLY: files = [f for f in files if os.path.basename(f)[:-4] in ONLY]
+    if '--v2' in sys.argv:   # the new-style pictures: ba-v2-<name>-<n>.webp (not *.old/.slab/.green); the bunker's cutaway is bn-fortcut-<n>
+        files = sorted(f for f in glob.glob(os.path.join(SRC, 'ba-v2-*.webp')) if os.path.basename(f).count('.') == 1)
+        if ONLY: files = [f for f in files if os.path.basename(f)[:-5] in ONLY]
+    else:
+        files = sorted(glob.glob(os.path.join(SRC, 'ba-*.png')))
+        if ONLY: files = [f for f in files if os.path.basename(f)[:-4] in ONLY]
     meta_fn = next((a[7:] for a in sys.argv if a.startswith('--meta=')), os.path.join(OUT, 'bn-meta.json'))
     meta = json.load(open(meta_fn)) if os.path.exists(meta_fn) else {}
     for f in files:
-        base = os.path.basename(f)[:-4][3:]   # e.g. airbase-3, hq-western
+        base = os.path.splitext(os.path.basename(f))[0][3:]   # e.g. airbase-3, hq-western (v2: v2-airbase-3)
+        if base.startswith('v2-'): base = base[3:]
         if base.startswith('hq-'): key, lvl, out_name = 'hq', base[3:], 'bn-' + base
         else:
             nm, lv = base.rsplit('-', 1); key, lvl = KEYS[nm], int(lv); out_name = f'bn-{key}-{lvl}'
+            if nm == 'fortifications' and '--v2' in sys.argv: key, out_name = 'fortcut', f'bn-fortcut-{lvl}'
         a = np.asarray(Image.open(f).convert('RGB')).astype(np.float32)
         rgba, obj, thin, k = cut(a, base)
         if base in SLAB: rgba, obj = unslab(rgba, obj, SLAB[base])
