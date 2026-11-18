@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Turret roof elements, including the cupola, hatches, sights, and secondary gun, are horizontally mirrored compared to the master side view.

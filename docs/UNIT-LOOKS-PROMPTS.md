@@ -1,302 +1,716 @@
-# Iron Meridian: World War III - Unit looks: the Main Battle Tank sample (prompts for the owner to approve)
+# Iron Meridian: World War III - Unit looks: the Main Battle Tank sets (three pictures per look)
 
-**Status: nothing has been sent to Gemini. No picture has been made.** These are the exact words that would be sent. They are also in
-`tools/gen-art.py` as the subjects `ul-tank-<group>-<look>`, so what you approve is what runs. Print them any time, free, with
-`python3 -I tools/gen-art.py --dry-run ul-tank-nato-1` (it makes no API call).
+**Status (18 November 2026): the prompts below are the exact words sent to Gemini.** They are also in `tools/gen-art.py` as the subjects
+`ul-tank-<group>-<look>-<kind>` (kind: `side`, `scene`, `top`), so what is written here is what runs. This file is written from the tool
+(print any prompt, free, with `python3 -I tools/gen-art.py --dry-run ul-tank-nato-1-side`; it makes no API call).
 
-Written 18 November 2026 from your decisions of the same day, `docs/ART-BIBLE.md` and the eight anchor buildings
-(`assets/art-src/ba-v2-*-1.webp`).
+Written from the owner's decisions of 18 November 2026 (the three pictures per unit, the removal of the $12 line), `docs/ART-BIBLE.md`
+and the eight anchor buildings (`assets/art-src/ba-v2-*-1.webp`). The family looks, paints and generation text of the 15 tanks are the
+ones the owner approved; only the camera and framing changed, and two new kinds of picture were added.
 
-## 1. What you are approving, in short
+## 1. Three pictures per look, all showing the same vehicle
 
-- **15 pictures**: the Main Battle Tank for each of the 5 groups (US/NATO, Eastern, China, Europe, Export), 3 looks each.
-  Look 1 is for levels 1-3, look 2 for levels 4-6, look 3 for levels 7-8. Each look is a **new tank**, not an edit of the one before.
-- **Same art world as the buildings.** Every prompt ends with the building style block (STYLE_V2): soft studio light from the upper left,
-  crisp polished 3D model render, brushed metal and weathering, plain light grey (#D9D9D9) background. The first look of each group is drawn
-  with two anchor buildings attached (army base 1 and naval yard 1) so the finish matches.
-- **One change to the camera, and why (please read).** The buildings are drawn at 45 degrees from above. The map turns every unit to the
-  way it is heading, and it can only do that with a picture taken **straight down** (nose up), like the unit pictures today. A tank
-  seen at 45 degrees cannot be turned on the map. So the tank prompts use the same style block with only two sentences changed: the
-  camera (straight down instead of 45 degrees) and the framing (the tank's length fills 90 percent of the height). Light, materials,
-  colours, background and the no-text rule are word for word the same. This is what lets one picture serve the research card, the army
-  bar and the map (see `docs/RESEARCH.md` section 14.4). If you prefer the 45-degree look on the research card, the map would need a
-  second set of pictures (cost in `docs/RESEARCH.md` 14.6).
-- **Family look, not a copy.** Each group's tanks carry the general look of that group's tanks. None may copy one real tank. The Art Bible
-  line this rests on is "No real-product look-alikes", and a new line is added to the Art Bible (section "Unit pictures"): *"A unit picture
-  may carry the family look of its group, but never copies one real vehicle, aircraft or ship line for line; if a checker or the owner can
-  name the real model from the silhouette, the picture is flagged."* Every prompt says so, and the check looks for it.
+| Kind | What it is | Made from | Used for | Size |
+|---|---|---|---|---|
+| **Side view** (`-side`) | the master: a front three-quarter side view from slightly above (about 30 degrees down, the angle family of the anchor buildings), tank turned toward the lower right, on the plain #D9D9D9 background, whole tank in frame and centred, about 85% of the width. Cut out (transparent) for the research tree's diamond | a fresh generation; the two anchor buildings attached for style (looks 2 and 3 also get their group's look-1 side view, for paint and family look only) | research tree diamond | 1:1, 1K |
+| **Card scene** (`-scene`) | the same tank in action in its natural setting: driving on a dirt road with some dust, in a believable landscape of its group; fills the whole picture edge to edge, full colour, natural light. No tint, no scanlines: the blue monitor tint and scanlines are drawn in code, on these card scenes only | its own side view, attached as the reference | the card that opens when a node is tapped | 3:2, 1K |
+| **Top-down** (`-top`) | the same tank seen exactly straight down, nose up, length 90% of the height, plain #D9D9D9 background, faint tight shadow (`STYLE_V2_UNIT`). Cut out (transparent) for the map and army bar | its own side view, attached as the reference | map, army bar | 1:1, 1K |
 
-| Group | Family look in the prompts | Paint |
-|---|---|---|
-| US/NATO | flat, angular, slab-sided turret of straight flat plates; wide heavy low hull | matte sand-tan |
-| Eastern | low rounded dome turret on a short low hull; reactive-armour bricks that spread with each generation | dark olive-green |
-| China | its own lines: broad arrowhead-shaped turret, large rectangular rear bustle, smooth boxy hull, seven small wheels | plain mid-green |
-| Europe | long, sleek, smoothly sloped; rounded-faceted turret with a big rear bustle; slender gun; seven wheels | dark grey-green |
-| Export | a mix of widely exported older-pattern designs: plain, rugged, bolt-on kits | faded ochre-sand |
+Every look is still a **new generation** (not an edit of the look before). 5 groups x 3 looks x 3 kinds = **45 pictures**.
+Order: **batch 1** the 5 look-1 side views; **batch 2** the 10 look-2 and look-3 side views (they need look 1); **batch 3** the 30 card
+scenes and top-downs (each needs its own side view). gen-art refuses to put a picture in the same batch as the picture it is made from.
+
+| Group | Family look in the prompts | Paint | Card scene setting |
+|---|---|---|---|
+| US/NATO | flat, angular, slab-sided turret of straight flat plates; wide heavy low hull | matte sand-tan | dry grassland valley, rolling hills, tan dirt road |
+| Eastern | low rounded dome turret on a short low hull; reactive-armour bricks that spread with each generation | dark olive-green | steppe, birch trees, pine forest edge, brown dirt road |
+| China | broad arrowhead-shaped turret, large rectangular rear bustle, smooth boxy hull, seven small wheels | plain mid-green | green farmland hills, terraces, poplars, yellow-brown track |
+| Europe | long, sleek, smoothly sloped; rounded-faceted turret with a big rear bustle; slender gun; seven wheels | dark grey-green | temperate farmland, hedgerows, poplars, gravel farm track |
+| Export | a mix of widely exported older-pattern designs: plain, rugged, bolt-on kits | faded ochre-sand | dry savanna, acacia trees, red-brown dirt road |
 
 The paint colours differ only so the groups read apart at small size. There are no markings of any kind.
 
-## 2. What is attached to each request
+**Family look, not a copy.** None may copy one real tank (Art Bible: "A unit picture may carry the family look of its group, but never copies
+one real vehicle, aircraft or ship line for line; if a checker or the owner can name the real model from the silhouette, the picture is
+flagged."). Every prompt says so, and the check looks for it.
 
-| Pictures | Attached | Why |
-|---|---|---|
-| look 1 of each group (5) | `ba-v2-army-base-1.webp` and `ba-v2-naval-yard-1.webp` | style anchors only: finish, materials, light, background. The prompt says: do not copy their camera or anything in them. Fresh pictures. |
-| looks 2 and 3 of each group (10) | that group's look 1 (`ul-tank-<group>-1`) | camera, size, framing, light, paint and family look only. The prompt says: draw a NEW, clearly newer tank. Fresh pictures (not edits). |
+**Standing rule.** The checks only flag. Gemini never redoes a picture by itself. Before any picture is fixed or redone, the owner is
+shown the problem and asked first.
 
-So there are **two batches**: first the five look-1 pictures, then the ten looks 2 and 3 (they need look 1 to exist). gen-art refuses to put
-a look 2 or 3 in the same batch as its look 1.
+## 2. The 45 prompts, word for word
 
-## 3. The 15 prompts, word for word
+### US/NATO - look 1 (levels 1-3) - Side view (the master) - `ul-tank-nato-1-side`
 
-### US/NATO - look 1 (levels 1-3) - `ul-tank-nato-1`
-
-- **Fresh or edit:** a fresh picture, not an edit. Batch 1.
-- **Attached:** assets/art-src/ba-v2-army-base-1.webp and assets/art-src/ba-v2-naval-yard-1.webp (style anchors)
-- **Saved as:** `assets/art-src/ul-tank-nato-1.png`
+- **Batch 1.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp` (the two anchor buildings: style only)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-nato-1-side.webp`
 
 ```text
-The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy their camera angle or anything in them: no buildings, tents, trucks, ships or ground in the new picture. The picture to draw is described below, seen straight down from above.
+The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy anything in them: no buildings, tents, trucks, ships or ground in the new picture. The buildings are seen at an angle from above, and the new picture uses the same angle family, as described below: a front three-quarter side view from slightly above.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 1 of 3, the oldest, a Cold War era design: a simple blocky, flat-faced turret with a plain commander's cupola and a searchlight box beside the gun, a tall plain hull with bare track guards and five large road wheels per side, a gun with a fume-extractor bulge, a few stowage boxes on the rear deck. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### US/NATO - look 1 (levels 1-3) - Card scene - `ul-tank-nato-1-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-nato-1-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-nato-1-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 1 of 3, the oldest, a Cold War era design: a simple blocky, flat-faced turret with a plain commander's cupola and a searchlight box beside the gun, a tall plain hull with bare track guards and five large road wheels per side, a gun with a fume-extractor bulge, a few stowage boxes on the rear deck. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### US/NATO - look 1 (levels 1-3) - Top-down - `ul-tank-nato-1-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-nato-1-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-nato-1-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 1 of 3, the oldest, a Cold War era design: a simple blocky, flat-faced turret with a plain commander's cupola and a searchlight box beside the gun, a tall plain hull with bare track guards and five large road wheels per side, a gun with a fume-extractor bulge, a few stowage boxes on the rear deck. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### US/NATO - look 2 (levels 4-6) - `ul-tank-nato-2`
+### US/NATO - look 2 (levels 4-6) - Side view (the master) - `ul-tank-nato-2-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-nato-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-nato-2.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-nato-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-nato-2-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 2 of 3, a clearly newer and heavier design: a wide, low, wedge-shaped turret of flat angular armour plates with a flat sloped front, a long rectangular ammunition bustle at the rear of the turret, full side armour skirts over the tracks, a roof-mounted thermal sight box, a gun with a thermal sleeve, a broad exhaust grille across the rear deck. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### US/NATO - look 2 (levels 4-6) - Card scene - `ul-tank-nato-2-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-nato-2-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-nato-2-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 2 of 3, a clearly newer and heavier design: a wide, low, wedge-shaped turret of flat angular armour plates with a flat sloped front, a long rectangular ammunition bustle at the rear of the turret, full side armour skirts over the tracks, a roof-mounted thermal sight box, a gun with a thermal sleeve, a broad exhaust grille across the rear deck. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### US/NATO - look 2 (levels 4-6) - Top-down - `ul-tank-nato-2-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-nato-2-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-nato-2-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 2 of 3, a clearly newer and heavier design: a wide, low, wedge-shaped turret of flat angular armour plates with a flat sloped front, a long rectangular ammunition bustle at the rear of the turret, full side armour skirts over the tracks, a roof-mounted thermal sight box, a gun with a thermal sleeve, a broad exhaust grille across the rear deck. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### US/NATO - look 3 (levels 7-8) - `ul-tank-nato-3`
+### US/NATO - look 3 (levels 7-8) - Side view (the master) - `ul-tank-nato-3-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-nato-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-nato-3.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-nato-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-nato-3-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 3 of 3, the newest, a near-future design: an ultra-flat angular turret covered in sharp faceted add-on armour panels, a remote weapon station on the roof, four small flat active-protection sensor panels at the turret corners, slim sensor masts, an auxiliary power box at the rear of the hull, full-length side skirts, a longer gun. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### US/NATO - look 3 (levels 7-8) - Card scene - `ul-tank-nato-3-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-nato-3-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-nato-3-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 3 of 3, the newest, a near-future design: an ultra-flat angular turret covered in sharp faceted add-on armour panels, a remote weapon station on the roof, four small flat active-protection sensor panels at the turret corners, slim sensor masts, an auxiliary power box at the rear of the hull, full-length side skirts, a longer gun. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### US/NATO - look 3 (levels 7-8) - Top-down - `ul-tank-nato-3-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-nato-3-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-nato-3-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint. Generation 3 of 3, the newest, a near-future design: an ultra-flat angular turret covered in sharp faceted add-on armour panels, a remote weapon station on the roof, four small flat active-protection sensor panels at the turret corners, slim sensor masts, an auxiliary power box at the rear of the hull, full-length side skirts, a longer gun. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Eastern - look 1 (levels 1-3) - `ul-tank-east-1`
+### Eastern - look 1 (levels 1-3) - Side view (the master) - `ul-tank-east-1-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 1.
-- **Attached:** assets/art-src/ba-v2-army-base-1.webp and assets/art-src/ba-v2-naval-yard-1.webp (style anchors)
-- **Saved as:** `assets/art-src/ul-tank-east-1.png`
+- **Batch 1.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp` (the two anchor buildings: style only)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-east-1-side.webp`
 
 ```text
-The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy their camera angle or anything in them: no buildings, tents, trucks, ships or ground in the new picture. The picture to draw is described below, seen straight down from above.
+The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy anything in them: no buildings, tents, trucks, ships or ground in the new picture. The buildings are seen at an angle from above, and the new picture uses the same angle family, as described below: a front three-quarter side view from slightly above.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 1 of 3, the oldest: a small, low, smooth dome turret, a low hull with six small road wheels per side and thin track guards, a smoothbore gun with a bore-evacuator bulge, an infrared searchlight beside the gun, a first small set of reactive bricks on the hull front only. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Eastern - look 1 (levels 1-3) - Card scene - `ul-tank-east-1-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-east-1-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-east-1-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 1 of 3, the oldest: a small, low, smooth dome turret, a low hull with six small road wheels per side and thin track guards, a smoothbore gun with a bore-evacuator bulge, an infrared searchlight beside the gun, a first small set of reactive bricks on the hull front only. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Eastern - look 1 (levels 1-3) - Top-down - `ul-tank-east-1-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-east-1-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-east-1-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 1 of 3, the oldest: a small, low, smooth dome turret, a low hull with six small road wheels per side and thin track guards, a smoothbore gun with a bore-evacuator bulge, an infrared searchlight beside the gun, a first small set of reactive bricks on the hull front only. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Eastern - look 2 (levels 4-6) - `ul-tank-east-2`
+### Eastern - look 2 (levels 4-6) - Side view (the master) - `ul-tank-east-2-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-east-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-east-2.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-east-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-east-2-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 2 of 3, a clearly newer design: a larger, low, rounded turret with rows of reactive bricks across its whole front and sides and across the hull front, thick rubber-and-metal side skirts, a missile-capable gun, smoke launcher tubes on the turret sides, a remote machine gun on the roof. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Eastern - look 2 (levels 4-6) - Card scene - `ul-tank-east-2-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-east-2-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-east-2-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 2 of 3, a clearly newer design: a larger, low, rounded turret with rows of reactive bricks across its whole front and sides and across the hull front, thick rubber-and-metal side skirts, a missile-capable gun, smoke launcher tubes on the turret sides, a remote machine gun on the roof. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Eastern - look 2 (levels 4-6) - Top-down - `ul-tank-east-2-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-east-2-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-east-2-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 2 of 3, a clearly newer design: a larger, low, rounded turret with rows of reactive bricks across its whole front and sides and across the hull front, thick rubber-and-metal side skirts, a missile-capable gun, smoke launcher tubes on the turret sides, a remote machine gun on the roof. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Eastern - look 3 (levels 7-8) - `ul-tank-east-3`
+### Eastern - look 3 (levels 7-8) - Side view (the master) - `ul-tank-east-3-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-east-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-east-3.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-east-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-east-3-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 3 of 3, the newest: a very low, wide, rounded turret fully covered in reactive bricks, a panoramic sight dome and a remote machine-gun station on the roof, active-protection launcher tubes around the turret, bricks and slat armour over the whole hull, armoured fuel tanks at the rear. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Eastern - look 3 (levels 7-8) - Card scene - `ul-tank-east-3-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-east-3-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-east-3-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 3 of 3, the newest: a very low, wide, rounded turret fully covered in reactive bricks, a panoramic sight dome and a remote machine-gun station on the roof, active-protection launcher tubes around the turret, bricks and slat armour over the whole hull, armoured fuel tanks at the rear. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Eastern - look 3 (levels 7-8) - Top-down - `ul-tank-east-3-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-east-3-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-east-3-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint. Generation 3 of 3, the newest: a very low, wide, rounded turret fully covered in reactive bricks, a panoramic sight dome and a remote machine-gun station on the roof, active-protection launcher tubes around the turret, bricks and slat armour over the whole hull, armoured fuel tanks at the rear. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### China - look 1 (levels 1-3) - `ul-tank-china-1`
+### China - look 1 (levels 1-3) - Side view (the master) - `ul-tank-china-1-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 1.
-- **Attached:** assets/art-src/ba-v2-army-base-1.webp and assets/art-src/ba-v2-naval-yard-1.webp (style anchors)
-- **Saved as:** `assets/art-src/ul-tank-china-1.png`
+- **Batch 1.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp` (the two anchor buildings: style only)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-china-1-side.webp`
 
 ```text
-The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy their camera angle or anything in them: no buildings, tents, trucks, ships or ground in the new picture. The picture to draw is described below, seen straight down from above.
+The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy anything in them: no buildings, tents, trucks, ships or ground in the new picture. The buildings are seen at an angle from above, and the new picture uses the same angle family, as described below: a front three-quarter side view from slightly above.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 1 of 3, the oldest: a modest rounded-arrowhead turret with a long, thin smoothbore gun, a simple hull with plain track guards, a snorkel tube and a spare fuel drum on the rear deck, no add-on armour. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### China - look 1 (levels 1-3) - Card scene - `ul-tank-china-1-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-china-1-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-china-1-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 1 of 3, the oldest: a modest rounded-arrowhead turret with a long, thin smoothbore gun, a simple hull with plain track guards, a snorkel tube and a spare fuel drum on the rear deck, no add-on armour. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### China - look 1 (levels 1-3) - Top-down - `ul-tank-china-1-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-china-1-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-china-1-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 1 of 3, the oldest: a modest rounded-arrowhead turret with a long, thin smoothbore gun, a simple hull with plain track guards, a snorkel tube and a spare fuel drum on the rear deck, no add-on armour. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### China - look 2 (levels 4-6) - `ul-tank-china-2`
+### China - look 2 (levels 4-6) - Side view (the master) - `ul-tank-china-2-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-china-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-china-2.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-china-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-china-2-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 2 of 3, a clearly newer design: a bigger, angular arrowhead turret with a wedge of applied composite armour on its front, a large boxy rear bustle, side skirts made of rows of small plates, a gun with a thermal sleeve, a laser-warning pair and a roof machine gun. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### China - look 2 (levels 4-6) - Card scene - `ul-tank-china-2-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-china-2-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-china-2-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 2 of 3, a clearly newer design: a bigger, angular arrowhead turret with a wedge of applied composite armour on its front, a large boxy rear bustle, side skirts made of rows of small plates, a gun with a thermal sleeve, a laser-warning pair and a roof machine gun. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### China - look 2 (levels 4-6) - Top-down - `ul-tank-china-2-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-china-2-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-china-2-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 2 of 3, a clearly newer design: a bigger, angular arrowhead turret with a wedge of applied composite armour on its front, a large boxy rear bustle, side skirts made of rows of small plates, a gun with a thermal sleeve, a laser-warning pair and a roof machine gun. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### China - look 3 (levels 7-8) - `ul-tank-china-3`
+### China - look 3 (levels 7-8) - Side view (the master) - `ul-tank-china-3-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-china-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-china-3.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-china-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-china-3-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 3 of 3, the newest: a very clean, low, smooth-faceted turret with flat integrated sensor panels, a remote weapon station on the roof, active-protection domes at the turret corners, a longer gun, a hull front of smooth sloped composite armour, full side skirts. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### China - look 3 (levels 7-8) - Card scene - `ul-tank-china-3-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-china-3-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-china-3-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 3 of 3, the newest: a very clean, low, smooth-faceted turret with flat integrated sensor panels, a remote weapon station on the roof, active-protection domes at the turret corners, a longer gun, a hull front of smooth sloped composite armour, full side skirts. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### China - look 3 (levels 7-8) - Top-down - `ul-tank-china-3-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-china-3-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-china-3-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; plain mid-green paint. Generation 3 of 3, the newest: a very clean, low, smooth-faceted turret with flat integrated sensor panels, a remote weapon station on the roof, active-protection domes at the turret corners, a longer gun, a hull front of smooth sloped composite armour, full side skirts. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Europe - look 1 (levels 1-3) - `ul-tank-europe-1`
+### Europe - look 1 (levels 1-3) - Side view (the master) - `ul-tank-europe-1-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 1.
-- **Attached:** assets/art-src/ba-v2-army-base-1.webp and assets/art-src/ba-v2-naval-yard-1.webp (style anchors)
-- **Saved as:** `assets/art-src/ul-tank-europe-1.png`
+- **Batch 1.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp` (the two anchor buildings: style only)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-europe-1-side.webp`
 
 ```text
-The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy their camera angle or anything in them: no buildings, tents, trucks, ships or ground in the new picture. The picture to draw is described below, seen straight down from above.
+The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy anything in them: no buildings, tents, trucks, ships or ground in the new picture. The buildings are seen at an angle from above, and the new picture uses the same angle family, as described below: a front three-quarter side view from slightly above.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 1 of 3, the oldest: a light, fast, compact design: a narrow hull, a small egg-shaped rounded cast turret, a long slender gun with a muzzle brake, a plain commander's cupola, almost no add-on armour, bare track guards. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Europe - look 1 (levels 1-3) - Card scene - `ul-tank-europe-1-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-europe-1-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-europe-1-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 1 of 3, the oldest: a light, fast, compact design: a narrow hull, a small egg-shaped rounded cast turret, a long slender gun with a muzzle brake, a plain commander's cupola, almost no add-on armour, bare track guards. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Europe - look 1 (levels 1-3) - Top-down - `ul-tank-europe-1-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-europe-1-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-europe-1-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 1 of 3, the oldest: a light, fast, compact design: a narrow hull, a small egg-shaped rounded cast turret, a long slender gun with a muzzle brake, a plain commander's cupola, almost no add-on armour, bare track guards. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Europe - look 2 (levels 4-6) - `ul-tank-europe-2`
+### Europe - look 2 (levels 4-6) - Side view (the master) - `ul-tank-europe-2-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-europe-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-europe-2.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-europe-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-europe-2-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 2 of 3, a clearly newer design: a bigger, smoothly sloped wedge turret with a long rounded rear bustle, side skirts, a gun with a thermal sleeve, a raised panoramic sight pod, a hull with a sharply sloped front. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Europe - look 2 (levels 4-6) - Card scene - `ul-tank-europe-2-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-europe-2-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-europe-2-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 2 of 3, a clearly newer design: a bigger, smoothly sloped wedge turret with a long rounded rear bustle, side skirts, a gun with a thermal sleeve, a raised panoramic sight pod, a hull with a sharply sloped front. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Europe - look 2 (levels 4-6) - Top-down - `ul-tank-europe-2-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-europe-2-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-europe-2-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 2 of 3, a clearly newer design: a bigger, smoothly sloped wedge turret with a long rounded rear bustle, side skirts, a gun with a thermal sleeve, a raised panoramic sight pod, a hull with a sharply sloped front. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Europe - look 3 (levels 7-8) - `ul-tank-europe-3`
+### Europe - look 3 (levels 7-8) - Side view (the master) - `ul-tank-europe-3-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-europe-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-europe-3.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-europe-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-europe-3-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 3 of 3, the newest: a tall, wide, unmanned turret of smooth faceted panels, a small second weapon mounted beside the main gun, a slim sensor mast, modular armour blocks, active-protection sensors, a long gun, a low sleek hull with full skirts. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Europe - look 3 (levels 7-8) - Card scene - `ul-tank-europe-3-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-europe-3-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-europe-3-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 3 of 3, the newest: a tall, wide, unmanned turret of smooth faceted panels, a small second weapon mounted beside the main gun, a slim sensor mast, modular armour blocks, active-protection sensors, a long gun, a low sleek hull with full skirts. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Europe - look 3 (levels 7-8) - Top-down - `ul-tank-europe-3-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-europe-3-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-europe-3-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint. Generation 3 of 3, the newest: a tall, wide, unmanned turret of smooth faceted panels, a small second weapon mounted beside the main gun, a slim sensor mast, modular armour blocks, active-protection sensors, a long gun, a low sleek hull with full skirts. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Export - look 1 (levels 1-3) - `ul-tank-export-1`
+### Export - look 1 (levels 1-3) - Side view (the master) - `ul-tank-export-1-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 1.
-- **Attached:** assets/art-src/ba-v2-army-base-1.webp and assets/art-src/ba-v2-naval-yard-1.webp (style anchors)
-- **Saved as:** `assets/art-src/ul-tank-export-1.png`
+- **Batch 1.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp` (the two anchor buildings: style only)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-export-1-side.webp`
 
 ```text
-The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy their camera angle or anything in them: no buildings, tents, trucks, ships or ground in the new picture. The picture to draw is described below, seen straight down from above.
+The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy anything in them: no buildings, tents, trucks, ships or ground in the new picture. The buildings are seen at an angle from above, and the new picture uses the same angle family, as described below: a front three-quarter side view from slightly above.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 1 of 3, the oldest, a post-war pattern: a round dome turret with a simple long gun, a small tall hull with four large road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the turret roof. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Export - look 1 (levels 1-3) - Card scene - `ul-tank-export-1-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-export-1-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-export-1-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 1 of 3, the oldest, a post-war pattern: a round dome turret with a simple long gun, a small tall hull with four large road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the turret roof. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Export - look 1 (levels 1-3) - Top-down - `ul-tank-export-1-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-export-1-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-export-1-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 1 of 3, the oldest, a post-war pattern: a round dome turret with a simple long gun, a small tall hull with four large road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the turret roof. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Export - look 2 (levels 4-6) - `ul-tank-export-2`
+### Export - look 2 (levels 4-6) - Side view (the master) - `ul-tank-export-2-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-export-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-export-2.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-export-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-export-2-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 2 of 3, a clearly newer, widely exported 1970s-80s pattern: a flat-topped rounded turret on a longer hull, a rangefinder box on the turret, bolt-on side skirts, a smoke-launcher pack, a few add-on armour plates on the turret front, a snorkel tube. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Export - look 2 (levels 4-6) - Card scene - `ul-tank-export-2-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-export-2-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-export-2-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 2 of 3, a clearly newer, widely exported 1970s-80s pattern: a flat-topped rounded turret on a longer hull, a rangefinder box on the turret, bolt-on side skirts, a smoke-launcher pack, a few add-on armour plates on the turret front, a snorkel tube. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Export - look 2 (levels 4-6) - Top-down - `ul-tank-export-2-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-export-2-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-export-2-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 2 of 3, a clearly newer, widely exported 1970s-80s pattern: a flat-topped rounded turret on a longer hull, a rangefinder box on the turret, bolt-on side skirts, a smoke-launcher pack, a few add-on armour plates on the turret front, a snorkel tube. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-### Export - look 3 (levels 7-8) - `ul-tank-export-3`
+### Export - look 3 (levels 7-8) - Side view (the master) - `ul-tank-export-3-side`
 
-- **Fresh or edit:** a fresh picture, not an edit. Batch 2.
-- **Attached:** ul-tank-export-1 (made in batch 1) (the group's look 1, which is made in batch 1)
-- **Saved as:** `assets/art-src/ul-tank-export-3.png`
+- **Batch 2.** A fresh picture (generation, not an edit).
+- **Attached:** `assets/art-src/ba-v2-army-base-1.webp`, `assets/art-src/ba-v2-naval-yard-1.webp`, `ul-tank-export-1-side (not made yet)` (two anchor buildings for style only, then the group's look-1 side view)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-export-3-side.webp`
 
 ```text
-The attached picture is generation 1 of this group's main battle tank. Use it only as the reference for the camera (exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's main battle tank, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached main battle tank: its shape is replaced by the new design.
+
+A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 3 of 3, the newest, a modern export-grade design: a modular angular turret with bolt-on composite armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, side skirts, a clean but practical look made to be sold to many armies. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Export - look 3 (levels 7-8) - Card scene - `ul-tank-export-3-scene`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-export-3-side (not made yet)` (the master side view of this look)
+- **Size:** 3:2, 1K. **Saved as:** `assets/art-src/ul-tank-export-3-scene.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+
+A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road. Seen from a low front three-quarter angle slightly above ground level, the tank fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 3 of 3, the newest, a modern export-grade design: a modular angular turret with bolt-on composite armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, side skirts, a clean but practical look made to be sold to many armies. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
+
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+### Export - look 3 (levels 7-8) - Top-down - `ul-tank-export-3-top`
+
+- **Batch 3.** A fresh picture made from the side view.
+- **Attached:** `ul-tank-export-3-side (not made yet)` (the master side view of this look)
+- **Size:** 1:1, 1K. **Saved as:** `assets/art-src/ul-tank-export-3-top.webp`
+
+```text
+The attached picture is the master picture of one main battle tank: a three-quarter side view on a plain grey background. Draw the SAME main battle tank, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
 
 A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it. Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the buyer, faded ochre-sand paint with a few patches of darker touch-up paint. Generation 3 of 3, the newest, a modern export-grade design: a modular angular turret with bolt-on composite armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, side skirts, a clean but practical look made to be sold to many armies. Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.
 
 Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
 ```
 
-## 4. The check prompt (sent after every picture when `--review` is used)
+## 3. The checks (flag only, never redo)
 
-A Gemini text model gets the new picture first, then its references, with this text. It answers PASS or FLAG with short reasons. It
-**only flags**: no retry, no redo, no new picture. A FLAG is shown to you with the picture and you decide. The words `<...>` are filled
-in by gen-art: which pictures are attached, the picture's own prompt, and the style block. Model: `gemini-2.5-flash` unless the
-environment sets another (`GEMINI_REVIEW_MODEL`); **I could not confirm the current model id or price from here, so check it before
-the first run.** Estimated cost about $0.002 to $0.003 a check (two or three pictures in, a short answer out); marked as an estimate.
+### 3.1 The single-picture check (`--review`, on every picture)
+
+A Gemini text model gets the new picture first, then its references, with the Art Bible checklist (same unit, style, background, framing,
+no markings, original, no extras). Points 3 (background) and 4 (framing) change with the kind: the side view is checked for the
+three-quarter view and 85% width; the scene for a full outdoor scene (a grey studio background, a frame or a tint fails); the top-down for
+a true straight-down view. PASS or FLAG with reasons goes to the log row and to `<picture>.review.txt`. Print the full text with
+`python3 -I tools/gen-art.py --dry-run --review ul-tank-nato-1-side`.
+
+### 3.2 The three-way check (`--match ul-tank-<group>-<look>`)
+
+The side view, card scene and top-down of one look go to the Gemini text model together, in that order. Exact text:
 
 ```text
-You are the quality checker for the pictures of a strategy game. Picture 1 is the NEW picture to check. <which pictures are attached>
+You are the quality checker for the unit pictures of a strategy game. Three pictures of ONE main battle tank are attached, in this order: picture 1 is the SIDE view (the master: a three-quarter side view on a plain grey background), picture 2 is the CARD SCENE (the same main battle tank in action outdoors), picture 3 is the TOP-DOWN (seen from straight above, nose up, on a plain grey background). All three are meant to show exactly the same vehicle. The scene and the top-down were made from the side view.
 
-What the new picture was asked to show:
-<the picture's prompt>
+Check this checklist, each point on its own:
+1. SAME VEHICLE: the overall shape, hull, turret, gun, wheels and tracks (the number of road wheels), side skirts, bustle, sensors, launchers, stowage and other details are the same in all three, as far as each view can show them.
+2. SAME PAINT: the paint colour and finish are the same in all three (a landscape's light may change them a little).
+3. RIGHT VIEW: picture 1 is a front three-quarter side view from slightly above on plain grey; picture 2 is a full outdoor scene with the tank driving on a dirt road, no grey studio background, no tint; picture 3 is a true straight-down plan view, nose up, on plain grey.
+4. NO MARKINGS: no text, letters, numbers, logos, flags, emblems, stars or insignia in any of the three.
+5. NO EXTRAS: exactly one vehicle in each picture; no second vehicle, no people, no buildings (distant trees and hills are fine).
 
-The art style it must match (the game's STYLE_V2): <STYLE_V2>
-
-Check the new picture against this checklist, each point on its own:
-1. SAME UNIT: it shows the kind of unit that was asked for. With a reference picture of the same unit attached, it keeps that unit's shape family, size in the frame and paint colour; a picture made as a new generation must be clearly a different, newer model, not a copy of the reference.
-2. STYLE: it matches the anchor style: a clean, polished 3D game-model render with crisp edges and soft studio light from the upper left, slightly realistic materials; not a photograph, not toy-like, not a drawing.
-3. BACKGROUND: the background is a plain, flat, uniform light grey with at most a faint soft shadow; no base slab, ground, terrain, horizon or other objects.
-4. FRAMING: the whole unit is inside the frame, nothing cut off, centred, filling about 90 percent of the frame along its length, seen from the same angle and at the same size as the reference or the rest of its set (for units: exactly straight down, nose up).
-5. NO MARKINGS: no text, letters, numbers, logos, flags, emblems, roundels, stars or national insignia anywhere.
-6. ORIGINAL: it is not a line-for-line copy of a real, recognisable product (a real tank, jet, ship or similar); it may only carry the general family look of its group.
-7. NO EXTRAS: exactly the one unit asked for (or the set asked for); no extra, duplicated, partial or background units, no people, no buildings.
-
-Answer with JSON only, in this shape: {"verdict": "PASS" or "FLAG", "reasons": ["short plain reason", "..."]}. Use PASS only if all seven points are fine (reasons may then be empty). Use FLAG if any point fails or you are unsure, and name each failed point by its number and a short plain reason (under 20 words each).
-[model: gemini-2.5-flash]
+Answer with JSON only, in this shape: {"verdict": "MATCH" or "FLAG", "flagged_pictures": ["side" and/or "scene" and/or "top", only the ones that do not match or are wrong], "reasons": ["short plain reason", "..."]}. Use MATCH only if all five points are fine (flagged_pictures empty, reasons may be empty). Use FLAG if any point fails or you are unsure, and name each failed point by its number and the picture it concerns, with a short plain reason (under 25 words each).
 ```
 
-## 5. The plan for the sample
+It answers MATCH or FLAG, names which of the three pictures are wrong, and writes the reasons to the log row `<look> (match)` and to
+`assets/art-src/<look>.match.txt`. Its cost is logged. It only flags.
 
-1. **You approve these prompts** (or change words; they change in `tools/gen-art.py` and here together).
-2. **Batch 1**: the 5 look-1 tanks, with `--batch --review` (half price). About $0.20 plus about $0.015 in checks.
-3. **Batch 2**: the 10 look-2 and look-3 tanks, `--batch --review`. About $0.40 plus about $0.03 in checks.
-   Total for the sample: **about $0.60 plus about $0.05 in checks, about $0.65**. One try each. Any FLAG or any picture you dislike is
-   shown to you first; nothing is redone without your word.
-4. **I cut them out** (no API call) and show you:
-   - the 15 on the **research card** (the tree's diamond and the card with the three looks side by side, one row per group), and
-   - the 15 on the **map** at the close zoom (the forces' figures, turned to different headings, over land, forest and desert), and in
-     the army bar's unit details.
-5. **Only after your OK** the rest (about 350 pictures) in batches of about 30, the check on every picture, the cost logged after each
-   batch, and a stop at your spending line.
+**Model and price.** Model id `gemini-2.5-flash`: verified on 18 November 2026 against Google's model list (`GET /v1beta/models`; it lists
+`generateContent`). I could not reach Google's price page, so the check's price stays an **estimate** (about $0.30 per million tokens in,
+$2.50 per million out, thinking tokens counted as out): about $0.003 a single check and about $0.005 a three-way check.
+
+## 4. The plan
+
+1. Batch 1: the 5 look-1 side views, `--batch --review`. Then batch 2: the 10 look-2 and look-3 side views. Then batch 3: the 30 card scenes
+   and top-downs, each from its own side view. One try per picture; every call in `assets/art-src/gen-art-log.jsonl`.
+2. After each batch: the single checks (inside `--review`), the three-way checks once all three of a look exist, and the running total:
+   `python3 -I tools/gen-art.py --cost` prints new spending since the $40.88 balance, and the estimated balance; a run that could take the
+   estimate below $5 is refused.
+3. Nothing is redone, even when flagged: every flag is listed for the owner.
+4. Cut-outs, no API call: `python3 -I tools/prep-art.py assets/art-src assets/art ul` writes `assets/art/ul-tank-<group>-<look>-side.webp`
+   and `-top.webp` (transparent) and `-scene.webp` (resized, not cut out).
+5. Only after the owner's OK on the tank sets, the other units.

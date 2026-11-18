@@ -624,6 +624,45 @@ for f in HF_BUILD:
     save_patch(hf_matte_patch(a, sum(map(ord, f))*7 + 1), 'b-' + f + '.webp', 320); print('HF building', f, os.path.getsize(os.path.join(OUT, 'b-' + f + '.webp'))//1024, 'KB')
 if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_SEEN})
 
+# ---- UNIT LOOKS (tools/gen-art.py ul-<unit>-<group>-<look>-<side|scene|top>; run: prep-art.py assets/art-src assets/art ul) -- no API call.
+# -side: the three-quarter side view cut out (transparent), trimmed, 512 px long side, for the research tree diamond
+# -top : the straight-down view cut out, kept in its square frame (512 px; nose up) for the map and army bar, its opaque box printed for PICBOX
+# -scene: the card scene resized to 768x512 (3:2), NOT cut out (the blue monitor tint and scanlines are drawn in code)
+# The cut-out: the plain grey floor (a quadratic surface fitted to the border), its lighting gradient and the smooth neutral soft shadow touching it are flooded from
+# the border; whatever is left (the largest parts, holes filled) is the unit; edges feathered a little.
+def ul_cut(im, sd=70, sch=12, grad=9):
+    from scipy import ndimage as ndi
+    a = np.asarray(im.convert('RGB')).astype(np.float32); h, w, _ = a.shape
+    m = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); m[:b] = m[-b:] = True; m[:, :b] = m[:, -b:] = True
+    bg = fit_bg(a, m); d = np.abs(a - bg).max(-1); ch = a.max(-1) - a.min(-1); bch = bg.max(-1) - bg.min(-1)
+    g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
+    cand = (d <= 16) | ((d < sd) & (np.abs(ch - bch) < sch) & (g < grad))
+    lab, n = ndi.label(cand); border = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+    solid = ndi.binary_opening(~np.isin(lab, border[border > 0]), iterations=1)
+    lab, n = ndi.label(solid); sizes = ndi.sum(solid, lab, range(1, n + 1))
+    keep = ndi.binary_fill_holes(np.isin(lab, [i + 1 for i, z in enumerate(sizes) if z > 0.03*sizes.max()]))
+    al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.8)
+    return Image.fromarray(np.dstack([a, al*255]).astype(np.uint8), 'RGBA')
+
+def ul_prep():
+    import glob
+    boxes = {}
+    for f in sorted(glob.glob(os.path.join(SRC, 'ul-*-*-*-*.webp')) + glob.glob(os.path.join(SRC, 'ul-*-*-*-*.png'))):
+        stem, kind = os.path.splitext(os.path.basename(f))[0].rsplit('-', 1)
+        if kind not in ('side', 'scene', 'top') or (len(sys.argv) > 4 and not any(x in stem for x in sys.argv[4:])): continue
+        im = Image.open(f)
+        if kind == 'scene': out = im.convert('RGB').resize((768, 512), Image.LANCZOS); out.save(os.path.join(OUT, stem + '-scene.webp'), 'WEBP', quality=88, method=6)
+        else:
+            c = ul_cut(im)
+            if kind == 'side': c = c.crop(c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()); c.thumbnail((512, 512), Image.LANCZOS)
+            else:
+                c = c.resize((512, 512), Image.LANCZOS); bb = c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()
+                boxes[stem + '-top'] = [round((bb[2] - bb[0])/512, 2), round((bb[3] - bb[1])/512, 2)]
+            c.save(os.path.join(OUT, stem + '-' + kind + '.webp'), 'WEBP', quality=90, method=6)
+        print('unit look', stem, kind)
+    if boxes: print('PICBOX:', boxes)
+if want('ul') and 'ul' in only: ul_prep()
+
 # tell the game which promised V3 pictures now exist (it draws code stand-ins for the rest and never requests a missing file)
 import re
 V3 = ['u-infantry-figure']   # (promised pictures: fetched only once the file exists)

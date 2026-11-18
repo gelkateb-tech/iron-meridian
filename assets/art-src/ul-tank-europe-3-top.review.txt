@@ -1,0 +1,2 @@
+FLAG
+- 1: Turret roof hatches and sensor equipment are rearranged and mismatched compared to the reference tank.
