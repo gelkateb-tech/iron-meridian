@@ -7345,7 +7345,8 @@ const countFont = fz => `italic 800 ${fz}px ${BODY}`;
 // colour with the same tag centred, no flag and no count. Everything scales with the text-size setting (SET.ui). minor = a quiet foreign or independent
 // force (a little smaller). w, h: the body's box (the tag's overhang is ox more on the left); d: the square's side zoomed out; up: the marks above it
 const uiK = () => { try { return (SET && SET.ui ? SET.ui : 100)/100; } catch (e) { return 1; } };
-function plateDims(n, s, minor, tag){ const kk = uiK(), key = (minor ? 'm' : 'b') + n + (tag ? 't' : 'f') + '|' + kk; let D = UCD.get(key); if (D) return D; if (UCD.size > 600) UCD.clear();
+const BADGE_K = 0.86;   // owner, 2026-11-18: every badge at the size the quiet foreign ones had (about 45 px wide on a 440 px phone, not 52); flag, bar, count and tag scale together, the same for everyone
+function plateDims(n, s, minor, tag){ const kk = BADGE_K*uiK(), key = (minor ? 'm' : 'b') + n + (tag ? 't' : 'f') + '|' + kk; let D = UCD.get(key); if (D) return D; if (UCD.size > 600) UCD.clear();
   const R = v => Math.round(v*kk*2)/2, tg = R(18), ti = R(15);
   if (!tag){ const S0 = R(28); D = {tag:false, w:S0, h:S0, d:S0, C:S0/2, fh:0, bh:0, tg, ti, ox:0, fz:0, tw:0, rr:Math.max(2.5, R(5)), up:5, bars:0, k:kk}; UCD.set(key, D); return D; }
   const W = R(52), fh = R(20), bh = R(26), ox = tg/2; let fz = Math.max(10, Math.round(19*kk*2)/2); ctx.font = countFont(fz); let tw = ctx.measureText(String(n)).width;
