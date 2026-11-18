@@ -1141,7 +1141,7 @@ What the build does differently from, or adds to, the plan above.
 
 ## 14. Unit looks by research level
 
-**Status: plan only, nothing built, no picture made yet.** The owner's idea from 9 November, written down on 15 November so it is not lost again: every unit gets a newer, better-equipped look as its research goes up. Four looks per unit, at levels 1, 3, 5 and 7; level 8 keeps the level 7 look. Today's picture is look 1. No picture is generated until the owner says OK (section 14.10).
+**Status: plan only, nothing built, no picture made yet.** The owner's idea from 9 November, rewritten on 18 November 2026 to the owner's decisions of that day: **3 looks per unit, each look a new generation that replaces the old model; every nation group has its own design for every unit; the same pictures everywhere (research card, army bar, map).** Level 8 keeps the level 7 look. No picture is generated until the owner approves the exact prompts and the tank sample (section 14.10 and `docs/UNIT-LOOKS-PROMPTS.md`).
 
 ### 14.1 What a unit's research level is
 
@@ -1157,160 +1157,175 @@ The tree has no single "unit level" today: each unit has a column (its line) wit
 
 Why this rule: it is one sentence, it never goes down, every step a player buys shows on the unit, and it needs no new research, no new price and nothing new in a save (it is worked out from the research a nation already holds). It matches the owner's "as it upgrades through research".
 
-| Unit research level | Look |
-|---|---|
-| 1-2 | look 1 (today's picture) |
-| 3-4 | look 2: the same model, better equipped |
-| 5-6 | look 3: the next-generation model |
-| 7-8 | look 4: the most advanced model |
+| Unit research level | Look | What it is |
+|---|---|---|
+| 1-3 | look 1 | the oldest model of the group's family |
+| 4-6 | look 2 | a new generation |
+| 7-8 | look 3 | the newest generation |
 
-**Level 8 is reachable for every unit.** Every line has at least 7 steps after its unlock (the AWACS exactly 7, so its level 8 needs its whole line). The earliest day for each look assumes money and slots are no limit; a real nation that puts most of its research into one line reaches look 4 in that line around day 15 to 25 (section 6.2: a typical nation does 8 of the 12 tank steps by day 30).
+**Why 1-3, 4-6, 7-8.** The owner's rule is three looks spread across the 8 levels. 3 + 3 + 2 is the only even split of 8 with the shorter span last, and it puts the newest look where it is hardest to reach (level 7 needs six steps in one line). The code gives no reason to split differently, **except the Recon UAV**.
 
-| Unit (unlock day) | Look 1 picture | Steps after unlock | Look 2 from day | Look 3 from day | Look 4 from day |
-|---|---|---|---|---|---|
-| Motorized Infantry (1) | `u-infantry` | 13 | 3 | 5 | 9 |
-| Anti-Tank Infantry (1) | `u-missile-launcher` | 11 | 3 | 5 | 10 |
-| Special Forces (4) | `u-special-forces` | 11 | 7 | 8 | 13 |
-| Paratroopers (3) | `u-infantry` (shared) | 9 | 6 | 12 | 13 |
-| Infantry Fighting Vehicle (1) | `u-light-armor` | 10 | 4 | 8 | 10 |
-| Main Battle Tank (1) | `u-tank` | 12 | 3 | 7 | 10 |
-| Mobile Artillery (1) | `u-artillery` | 10 | 3 | 8 | 11 |
-| Mobile SAM (1) | `u-anti-air` | 10 | 4 | 7 | 10 |
-| Mobile Jammer (3) | `u-anti-drone` | 9 | 6 | 12 | 13 |
-| Rocket Artillery (5) | `u-rocket-artillery` | 9 | 8 | 12 | 15 |
-| Attack Helicopter (1) | `u-attack-heli` | 10 | 4 | 8 | 11 |
-| Interceptor (1) | `u-jet` | 10 | 4 | 7 | 11 |
-| Strike Fighter (1) | `u-strike-fighter` | 11 | 4 | 7 | 10 |
-| Air Superiority Fighter (4) | `u-air-superiority` | 10 | 7 | 10 | 14 |
-| Recon UAV (1) | `u-uav-recon` | 10 | by generation, see 14.2 | | |
-| Swarm Drones (4) | `u-swarm-drone` | 10 | 7 | 9 | 14 |
-| Strike Drone (6) | `u-strike-drone` | 10 | 9 | 12 | 15 |
-| Maritime Patrol Aircraft (2) | `u-naval-patrol` | 10 | 5 | 10 | 12 |
-| AWACS (5) | `u-awacs` | 7 | 9 | 15 | 17 |
-| Heavy Bomber (6) | `u-heavy-bomber` | 9 | 9 | 11 | 16 |
-| Stealth Bomber (14) | `u-stealth-bomber` | 8 | 17 | 21 | 24 |
-| Frigate (1) | `u-corvette` | 10 | 3 | 6 | 10 |
-| Cruiser (1) | `u-destroyer` | 9 | 3 | 10 | 11 |
-| Attack Submarine (1) | `u-submarine` | 11 | 3 | 7 | 10 |
-| Aircraft Carrier (7) | `u-carrier` | 10 | 10 | 13 | 16 |
+**The Recon UAV is the one exception.** Its levels already are its generations (UAV I to V; `uavLv` in `rules/air.js` counts the Generation steps in a row, and the unit has only 5 levels). It carries weapons only from UAV IV, and the game already switches to the armed picture there (`artT` in `index.html`). So its looks follow the generations: **look 1 = UAV I-III (unarmed), look 2 = UAV IV (the first armed one), look 3 = UAV V.** An unarmed UAV never shows weapons.
+
+**Level 8 is reachable for every unit.** Every line has at least 7 steps after its unlock (the AWACS exactly 7, so its level 8 needs its whole line). Look 3 starts at level 7 (six steps after the unlock). The days below assume money and slots are no limit; a real nation that puts most of its research into one line reaches look 3 in that line around day 15 to 25 (section 6.2: a typical nation does 8 of the 12 tank steps by day 30). The day of level 4 (look 2) is not worked out yet: it falls between the days the earlier four-look plan gave for levels 3 and 5, shown here as a range; the build prints the exact day from the tree.
+
+| Unit (unlock day) | Picture today (replaced) | Steps after unlock | Level 4 (look 2) comes between day | Level 7 (look 3) from day |
+|---|---|---|---|---|
+| Motorized Infantry (1) | `u-infantry` | 13 | 3 and 5 | 9 |
+| Anti-Tank Infantry (1) | `u-missile-launcher` | 11 | 3 and 5 | 10 |
+| Special Forces (4) | `u-special-forces` | 11 | 7 and 8 | 13 |
+| Paratroopers (3) | `u-infantry` (shared) | 9 | 6 and 12 | 13 |
+| Infantry Fighting Vehicle (1) | `u-light-armor` | 10 | 4 and 8 | 10 |
+| Main Battle Tank (1) | `u-tank` | 12 | 3 and 7 | 10 |
+| Mobile Artillery (1) | `u-artillery` | 10 | 3 and 8 | 11 |
+| Mobile SAM (1) | `u-anti-air` | 10 | 4 and 7 | 10 |
+| Mobile Jammer (3) | `u-anti-drone` | 9 | 6 and 12 | 13 |
+| Rocket Artillery (5) | `u-rocket-artillery` | 9 | 8 and 12 | 15 |
+| Attack Helicopter (1) | `u-attack-heli` | 10 | 4 and 8 | 11 |
+| Interceptor (1) | `u-jet` | 10 | 4 and 7 | 11 |
+| Strike Fighter (1) | `u-strike-fighter` | 11 | 4 and 7 | 10 |
+| Air Superiority Fighter (4) | `u-air-superiority` | 10 | 7 and 10 | 14 |
+| Recon UAV (1) | `u-uav-recon` | 10 | by generation, see 14.1 | by generation |
+| Swarm Drones (4) | `u-swarm-drone` | 10 | 7 and 9 | 14 |
+| Strike Drone (6) | `u-strike-drone` | 10 | 9 and 12 | 15 |
+| Maritime Patrol Aircraft (2) | `u-naval-patrol` | 10 | 5 and 10 | 12 |
+| AWACS (5) | `u-awacs` | 7 | 9 and 15 | 17 |
+| Heavy Bomber (6) | `u-heavy-bomber` | 9 | 9 and 11 | 16 |
+| Stealth Bomber (14) | `u-stealth-bomber` | 8 | 17 and 21 | 24 |
+| Frigate (1) | `u-corvette` | 10 | 3 and 6 | 10 |
+| Cruiser (1) | `u-destroyer` | 9 | 3 and 10 | 11 |
+| Attack Submarine (1) | `u-submarine` | 11 | 3 and 7 | 10 |
+| Aircraft Carrier (7) | `u-carrier` | 10 | 10 and 13 | 16 |
 
 ### 14.2 Looks and Generations: one system
 
-Generations (section 2.1) were to bring their own pictures, `u-<unit>-<generation>`, none of which exist (the tree shows today's picture with a "II" or "III" tag). Two picture systems would mean two sets of art and two rules for the same unit. **Recommendation: the four looks replace the generation pictures.** A Generation stays a research step with its stats; it counts as one level like any other step (it is usually a line's 5th to 9th step, so it mostly arrives together with look 3 or 4). The planned `u-<unit>-<generation>` files, the Heavy Bomber's separate generation-2 picture (the "Pictures still missing" item in `docs/QUEUE.md`) and its `bomb2` picture key are dropped.
-
-**One exception, the Recon UAV.** Its levels already are its generations (UAV I to V) and its rules depend on them: it carries weapons only from UAV IV, and the game already shows the armed picture from UAV IV. So its looks follow the generations: UAV I look 1 (`u-uav-recon`), UAV II and III look 2 (new), UAV IV look 3 (today's `u-uav-armed`), UAV V look 4 (new). An unarmed UAV never shows weapons.
+Generations (section 2.1) were to bring their own pictures, `u-<unit>-<generation>`, none of which exist (the tree shows today's picture with a "II" or "III" tag). Two picture systems would mean two sets of art and two rules for the same unit. **The three looks replace the generation pictures.** A Generation stays a research step with its stats; it counts as one level like any other step (it is usually a line's 5th to 9th step, so it mostly arrives together with look 2 or 3). The planned `u-<unit>-<generation>` files, the Heavy Bomber's separate generation-2 picture (the "Pictures still missing" item in `docs/QUEUE.md`) and its `bomb2` picture key are dropped. The tree's `ri-u_<unit>` unit scenes (the "Today / Generation II" figures on a generation card) show the unit's look picture instead; no picture cost.
 
 ### 14.3 Which units get looks
 
-All 25 unit types in `rules/data.js UNITS`, in 24 picture sets:
+All 25 unit types in `rules/data.js UNITS`, in **24 picture sets**, each set drawn **5 times** (once for each of the five nation groups, `docs/DOCTRINES.md`) with **3 looks**: 24 x 5 x 3 = **360 pictures**, plus the five unique units of `docs/DOCTRINES.md` section 4, one picture each: **365 pictures**.
 
-- **23 sets of 3 new pictures**: Motorized Infantry, Anti-Tank Infantry, Special Forces, Infantry Fighting Vehicle, Main Battle Tank, Mobile Artillery, Mobile SAM, Mobile Jammer, Rocket Artillery, Attack Helicopter, Interceptor, Strike Fighter, Air Superiority Fighter, Swarm Drones, Strike Drone, Maritime Patrol Aircraft, AWACS, Heavy Bomber, Stealth Bomber, Frigate, Cruiser, Attack Submarine, Aircraft Carrier.
-- **Recon UAV: 2 new pictures** (looks 2 and 4; look 3 exists).
-- **Paratroopers** share the Motorized Infantry's picture today, so they share its four looks too, each picked by the Paratroopers' own level. (Their own set would be 3 more pictures, about $0.12: owner's choice.)
-
-Not units, so no looks: `u-cargo-ship` (trade ships), `u-supply-truck` (the Command & Logistics banner; no buildable truck), `u-transport-heli` (the paradrop transport), `u-drone` (the old quadcopter, a spare picture), and the three missiles `u-cruise-missile`, `u-ballistic-missile`, `u-icbm` (weapons in the silo menu, not forces on the map; looks for them would be 9 pictures, about $0.36, if the owner wants them later).
+- The 24 sets: Motorized Infantry, Anti-Tank Infantry, Special Forces, Infantry Fighting Vehicle, Main Battle Tank, Mobile Artillery, Mobile SAM, Mobile Jammer, Rocket Artillery, Attack Helicopter, Interceptor, Strike Fighter, Air Superiority Fighter, Recon UAV, Swarm Drones, Strike Drone, Maritime Patrol Aircraft, AWACS, Heavy Bomber, Stealth Bomber, Frigate, Cruiser, Attack Submarine, Aircraft Carrier.
+- **Paratroopers** share the Motorized Infantry pictures (owner, 18 November), each look picked by the Paratroopers' own level.
+- **Missiles** (`u-cruise-missile`, `u-ballistic-missile`, `u-icbm`) get names only, no pictures (owner, 18 November).
+- Not units, so no looks: `u-cargo-ship` (trade ships), `u-supply-truck` (the Command & Logistics banner), `u-transport-heli` (the paradrop transport), `u-drone` (the old quadcopter, a spare picture).
 
 ### 14.4 Where the looks show
 
-Every unit shows the look of **its owner's** level: your tanks show your look, an enemy's tanks show the enemy's (the army bar already tells a foe's research, as "II F2 P1").
+Every unit shows the look of **its owner's** level and **its owner's group**: your tanks show your look, an enemy's tanks show the enemy's (the army bar already tells a foe's research, as "II F2 P1"). **The same picture is used everywhere** (section 14.8 shows why that works): a US/NATO level-5 tank is the same tank in research, in the army bar's details and on the map.
 
-- **Map.** From the zoom where forces stand as pictures (the crossover zoom), each vehicle, aircraft and ship picture is its look; aircraft in flight and parked too. Farther out the counters keep their drawn white icon. The four infantry types stand on the map as small 3D soldiers, not pictures, so their looks show in the panels only (newer kit on the 3D soldiers could be drawn in code later, at no picture cost).
-- **Army bar.** The diamonds keep the drawn white silhouettes (at 26 px a picture does not read). Tapping a diamond opens the unit's details: its look picture goes there as the 72 px portrait, with "Look 2 of 4 · level 4". (If the owner prefers the picture in the diamond itself, it is a small change.)
+- **Map.** From the zoom where forces stand as pictures (the crossover zoom), each vehicle, aircraft and ship picture is its look; aircraft in flight and parked too (aircraft in flight show the picture from a much farther zoom, hexPx 14). Farther out the counters keep their drawn white icon. The infantry types (Motorized Infantry, Paratroopers, Anti-Tank, Special Forces) stand on the map as small 3D soldiers, not pictures, so their looks show in the panels only (newer kit on the 3D soldiers could be drawn in code later, at no picture cost).
+- **Army bar.** The diamonds keep the drawn white silhouettes (at 26 px a picture does not read). Tapping a diamond opens the unit's details: its look picture goes there as the 72 px portrait, with "Look 2 of 3 - level 4". (If the owner prefers the picture in the diamond itself, it is a small change.)
 - **Unit cards in the Mobilize list and the air wing header** (the places that show a unit's portrait): the look your units have now; a card for a unit you are about to build shows the look it will have (your current level).
-- **Research tree.** The unit's own diamond at the top of its column and the small picture in the column header show your current look, with the look number in a corner from look 2 on. Look 1 keeps today's diamond picture; looks 2 to 4 show the new picture, nose up, on the diamond's backdrop. Tapping the unit's diamond opens its card with **all four looks side by side**, each with its levels ("levels 3-4"), yours ringed, and "2 more steps in this line for the next look". When the next step in a line would bring a new look (you are at level 2, 4 or 6), every open step in that column carries a small "new look" mark. Generation diamonds keep their picture and "II"/"III" tag.
-- A look whose picture does not exist yet shows the nearest earlier look, so the game works with any part of the art.
+- **Research tree.** The unit's own diamond at the top of its column and the small picture in the column header show your current look, with the look number in a corner from look 2 on. Every look is the new cut-out picture, nose up, on the diamond's backdrop (the `ri-u_*` unit scenes no longer show for units). Tapping the unit's diamond opens its card with **all three looks side by side**, each with its levels ("levels 4-6"), yours ringed, and "2 more steps in this line for the next look". When the next step in a line would bring a new look (you are at level 3 or 6), every open step in that column carries a small "new look" mark. Generation diamonds keep their picture and "II"/"III" tag.
+- A look whose picture does not exist yet shows the nearest earlier look, and a unit with no look-1 picture of its group shows today's picture, so the game works with any part of the art.
 
 The looks change no numbers: attack, defence, health and speed come from the research exactly as today.
 
 ### 14.5 How the pictures are made
 
-- **Tool:** `tools/gen-art.py` on Gemini (Nano Banana 2.1, 1K square), **batch mode** (half price), **one try per picture**, no automatic retry. Every call is logged in `assets/art-src/gen-art-log.jsonl`.
-- **From the level-1 picture as the reference**, the way the Army Base and Recruiting Office levels were made: the unit's own source picture is attached (`assets/art-src/<name>.webp` on black for the 14 older pictures, `assets/art-src/u-<name>.jpg` or `.png` on white for the owner's Higgsfield ones) with "keep the camera (straight down from above, nose up), the framing and size in the frame, the lighting, the rendering style and the plain background exactly as in the attached picture; change only the vehicle as follows". All three new looks of a unit are made from look 1, so they share its framing exactly and can go in one batch; each look's text names what the looks before it added and adds more, so every look is clearly more advanced than the last.
-- **What each look is:** look 2 is the same model better equipped (add-on armour, more sensors and antennas, more weapons, newer camouflage); look 3 is the next-generation model of the same kind and size (a new, cleaner and more angular hull or airframe with the equipment built in); look 4 is the most advanced, near-future model (low-signature faceted shapes, integrated sensors, automation). Every design is **original and generic**: the prompt says it must not resemble any real vehicle, aircraft or ship. (Some look-1 pictures resemble real types; looks 3 and 4 move away from them, look 2 keeps look 1's shape.)
-- **Files:** `assets/art-src/u-<name>-l2.png`, `-l3`, `-l4` (raw), cut out by `tools/prep-art.py` (no API call) into `assets/art/u-<name>-l2.webp`, `-l3`, `-l4` (512 px, about 28 KB each) and `i-<name>-l2.webp` ... (128 px icons), with their measured boxes in `PICBOX`. `<name>` is the look-1 picture's name: `u-tank-l2`, `u-light-armor-l3`, `u-uav-recon-l4`. About 2.5 MB in all for the full set, loaded only when some nation on the map reaches that look.
+- **Tool:** `tools/gen-art.py` on Gemini (Nano Banana 2.1, 1K square), **batch mode** (half price), **one try per picture**, no automatic retry. Every call is logged in `assets/art-src/gen-art-log.jsonl`. `--dry-run` (or `--print`) prints every prompt and its attached pictures and sends nothing.
+- **Each look is drawn fresh, as a new generation, not edited from the look before.** Look 1 of a group is drawn from its prompt with two anchor buildings attached (army base 1, naval yard 1) as style references only. Looks 2 and 3 are drawn from their prompts with the group's look 1 attached, only to keep the camera, size, framing, light, paint and family look; the prompt says to draw a new, clearly newer model. So one batch holds all look 1s, the next all looks 2 and 3.
+- **One camera for every unit picture:** exactly straight down, nose up, the unit's length about 90 percent of the picture's height, on the plain light grey background, in the building style (`STYLE_V2_UNIT` in gen-art: `STYLE_V2` with only the camera and framing sentences changed). Reason in 14.8.
+- **Family look, not a copy:** each group's pictures carry the look of its equipment (`docs/DOCTRINES.md` section 8) but are original designs, never one real vehicle line for line (Art Bible).
+- **The Gemini check on every picture** (`--review`, Art Bible "Making pictures: the Gemini check"): PASS or FLAG with reasons, written to the log and a `.review.txt` file; it only flags, nothing is redone without the owner's word.
+- **Files:** `assets/art-src/ul-<unit>-<group>-<look>.png` (raw; groups `nato`, `east`, `china`, `europe`, `export`), cut out by `tools/prep-art.py` (no API call; the plain grey background is removed) into `assets/art/u-<unit>-<group>-<look>.webp` (512 px) and `i-...` (128 px icons), with their measured boxes in `PICBOX`. Loaded only when some nation on the map needs that look.
 
-| Unit | Look 2 (levels 3-4) | Look 3 (levels 5-6) | Look 4 (levels 7-8) |
-|---|---|---|---|
-| Motorized Infantry (and Paratroopers) | heavier plate carriers, night sights on the helmets, a radio pack | new modular kit: visored helmets, digital camouflage, compact rifles with optics | light powered exoskeleton frames, sealed helmets with built-in displays |
-| Anti-Tank Infantry (missile carrier) | armour plates on the cab, a sensor mast | a new armoured vehicle with an enclosed box launcher holding more missiles | a low, angular stealthy launcher vehicle with more tubes |
-| Special Forces | four-tube night goggles, suppressed rifles | dark digital camouflage, integrated radios and optics | sealed helmets, adaptive-camouflage suits |
-| Infantry Fighting Vehicle | slat armour panels, smoke launchers | a larger new hull with an unmanned turret | an angular low-signature hull with active-protection sensors |
-| Main Battle Tank | reactive armour blocks on the hull front and turret, a remote machine-gun station | a new tank: lower, angular turret, active-protection launchers | an unmanned low turret, the crew in the hull, flat angular armour, built-in sensors |
-| Mobile Artillery | armoured cab, extra ammunition racks | a new self-propelled gun with an automated turret | a fully automated, unmanned turret with a longer barrel on an angular hull |
-| Mobile SAM | a bigger search radar, more launch tubes | a new vehicle with a flat phased-array radar panel | an angular stealthy launcher with radar panels built into its sides |
-| Mobile Jammer | more antennas and a second dish | a new vehicle with a large dish array | flat conformal antenna panels on an angular hull |
-| Rocket Artillery | armoured cab, a second rocket pod | a new vehicle with two enclosed pods | an automated launcher, angular low-signature cab |
-| Attack Helicopter | more missiles on the stub wings, a mast-top sensor dome | a new, angular airframe with weapons carried inside | a compound helicopter with a pusher propeller and a faceted stealthy body |
-| Interceptor | more missiles under the wings, conformal fuel tanks | a new, larger twin-engine airframe | a tailless, faceted near-future fighter |
-| Strike Fighter | more bombs and pods on the pylons | a new airframe with an internal weapons bay | a tailless, faceted strike aircraft |
-| Air Superiority Fighter | extra missiles, a sensor pod | a new airframe with canted tails | a tailless, wide-body near-future fighter |
-| Recon UAV | longer wings, a larger sensor ball (UAV II-III) | today's armed UAV (UAV IV) | a jet-powered flying-wing UAV with internal weapons (UAV V) |
-| Swarm Drones | larger arms, sensor pods | sleek fixed-wing drones | small ducted-fan drones with faceted bodies |
-| Strike Drone | extra hardpoints and fuel tanks | a larger jet-powered drone | a tailless stealthy combat drone |
-| Maritime Patrol Aircraft | an extra radome, sonobuoy launchers, wing pods | a new twin-jet patrol aircraft | a long-winged, low-signature patrol aircraft |
-| AWACS | more antennas, wing-tip sensors | a new airframe with a flat radar beam along its back (no rotating dish) | a flying-wing airframe with radar built into its skin |
-| Heavy Bomber | electronic-warfare pods, defensive sensors | a new swept-wing bomber | a blended-body, low-signature bomber |
-| Stealth Bomber | refined edges, sensor bays | a larger flying wing | a sleeker, saw-tooth flying wing of a new design |
-| Frigate | more missile cells, a bigger radar mast | a new hull with an angular, clean superstructure | a stealth hull with an integrated mast |
-| Cruiser | more launch cells, extra radar panels | a new, larger angular hull | a stealth hull with flat radar faces built into the superstructure |
-| Attack Submarine | an extra sonar fairing, a new sail | a new hull with an X-shaped tail | a longer, smoother hull with a pump-jet |
-| Aircraft Carrier | more aircraft on deck, a new radar mast | a new island and angled deck | a small integrated island, drones on deck |
+Generation arc, per unit (the same arc in every group; each group draws it in its own family look). Look 1 is the plain older model of the family; looks 2 and 3 are:
+
+| Unit | Look 2 (levels 4-6) | Look 3 (levels 7-8) |
+|---|---|---|
+| Motorized Infantry (and Paratroopers) | new modular kit: visored helmets, digital camouflage, compact rifles with optics | light powered exoskeleton frames, sealed helmets with built-in displays |
+| Anti-Tank Infantry (missile carrier) | a new armoured vehicle with an enclosed box launcher holding more missiles | a low, angular stealthy launcher vehicle with more tubes |
+| Special Forces | dark digital camouflage, integrated radios and optics | sealed helmets, adaptive-camouflage suits |
+| Infantry Fighting Vehicle | a larger new hull with an unmanned turret | an angular low-signature hull with active-protection sensors |
+| Main Battle Tank | a new tank: lower, angular turret, active-protection launchers | an unmanned low turret, the crew in the hull, flat angular armour, built-in sensors |
+| Mobile Artillery | a new self-propelled gun with an automated turret | a fully automated, unmanned turret with a longer barrel on an angular hull |
+| Mobile SAM | a new vehicle with a flat phased-array radar panel | an angular stealthy launcher with radar panels built into its sides |
+| Mobile Jammer | a new vehicle with a large dish array | flat conformal antenna panels on an angular hull |
+| Rocket Artillery | a new vehicle with two enclosed pods | an automated launcher, angular low-signature cab |
+| Attack Helicopter | a new, angular airframe with weapons carried inside | a compound helicopter with a pusher propeller and a faceted stealthy body |
+| Interceptor | a new, larger twin-engine airframe | a tailless, faceted near-future fighter |
+| Strike Fighter | a new airframe with an internal weapons bay | a tailless, faceted strike aircraft |
+| Air Superiority Fighter | a new airframe with canted tails | a tailless, wide-body near-future fighter |
+| Recon UAV | today's armed UAV (UAV IV) | a jet-powered flying-wing UAV with internal weapons (UAV V) |
+| Swarm Drones | sleek fixed-wing drones | small ducted-fan drones with faceted bodies |
+| Strike Drone | a larger jet-powered drone | a tailless stealthy combat drone |
+| Maritime Patrol Aircraft | a new twin-jet patrol aircraft | a long-winged, low-signature patrol aircraft |
+| AWACS | a new airframe with a flat radar beam along its back (no rotating dish) | a flying-wing airframe with radar built into its skin |
+| Heavy Bomber | a new swept-wing bomber | a blended-body, low-signature bomber |
+| Stealth Bomber | a larger flying wing | a sleeker, saw-tooth flying wing of a new design |
+| Frigate | a new hull with an angular, clean superstructure | a stealth hull with an integrated mast |
+| Cruiser | a new, larger angular hull | a stealth hull with flat radar faces built into the superstructure |
+| Attack Submarine | a new hull with an X-shaped tail | a longer, smoother hull with a pump-jet |
+| Aircraft Carrier | a new island and angled deck | a small integrated island, drones on deck |
+
+The Main Battle Tank's five-group version of this table, word for word, is in `docs/UNIT-LOOKS-PROMPTS.md`.
 
 ### 14.6 Count and cost
 
 | | Pictures |
 |---|---|
-| 23 units x 3 new looks | 69 |
-| Recon UAV (looks 2 and 4) | 2 |
-| **Total** | **71** |
+| 24 sets x 5 groups x 3 looks | 360 |
+| 5 unique units | 5 |
+| **Total** | **365** |
 
-Price: batch mode, 1K pictures. Measured in our own log: the 27 batch pictures made from an attached reference picture averaged **$0.036** (cheapest $0.024, dearest $0.061); all 153 batch pictures averaged $0.042. Planned at **$0.04 a picture**: **71 pictures, about $2.84** (at the measured extremes $1.70 to $4.33). Optional extras: Paratroopers' own looks (3, about $0.12), missiles (9, about $0.36).
+Price: batch mode, 1K. Measured in our own log: the 209 batch pictures averaged **$0.041** (cheapest $0.024, dearest $0.062); the 27 made from a reference averaged $0.036. Planned at **$0.04 a picture**: **365 pictures, $14.60**, plus the Gemini check on each (about $0.003, an estimate, about **$1.10**): **about $15.70**. Against the balance of about $15.3 that is about $0.40 over at the planned price (it fits at the measured reference price, $14.20); against the owner's $12 stop-and-ask line (about $2.17 spent, $9.83 left) about **228 pictures** fit and about 137 (about $5.90) wait for the owner to raise the line. Full discussion and the optional savings (60 pictures, about $2.58) in `docs/DOCTRINES.md` section 8.
 
-### 14.7 Budget: what fits in about $1.70
+### 14.7 Today's pictures
 
-**Not all of it.** The owner has about $1.70 left on Gemini; the full set needs about $2.84. About 40 pictures fit. Suggested order, units most seen on the map first (standard issue, then the early unlocks), keeping a little in reserve for a miss:
+None is kept as a look: they come from mixed sources (14 on black, 15 Higgsfield on white, the research scenes), are dark photographs in another style and framing, and several look like one real product. They stay as the fall-back for a look not made yet, and go when the set is complete (`docs/DOCTRINES.md` section 8).
 
-| # | Unit | Pictures | Running total |
-|---|---|---|---|
-| 1 | Main Battle Tank (the sample) | 3 | $0.12 |
-| 2 | Mobile Artillery | 3 | $0.24 |
-| 3 | Mobile SAM | 3 | $0.36 |
-| 4 | Frigate | 3 | $0.48 |
-| 5 | Cruiser | 3 | $0.60 |
-| 6 | Attack Submarine | 3 | $0.72 |
-| 7 | Infantry Fighting Vehicle | 3 | $0.84 |
-| 8 | Strike Fighter | 3 | $0.96 |
-| 9 | Interceptor | 3 | $1.08 |
-| 10 | Attack Helicopter | 3 | $1.20 |
-| 11 | Recon UAV | 2 | $1.28 |
-| 12 | Rocket Artillery | 3 | $1.40 |
-| 13 | Aircraft Carrier | 3 | $1.52 |
+### 14.8 Map figures: the same pictures, drawn straight down
 
-That is **13 units, 38 pictures, about $1.52**, leaving about $0.18 (one or two misses, or the Fortifications redo already queued in `docs/QUEUE.md` for $0.18: the owner chooses). After a top-up, the other 11 units, 33 pictures, about $1.32: Motorized Infantry and Paratroopers, Anti-Tank Infantry, Special Forces, Air Superiority Fighter, Strike Drone, Swarm Drones, Mobile Jammer, Maritime Patrol Aircraft, AWACS, Heavy Bomber, Stealth Bomber. Until then those units keep look 1 at every level.
+What the code draws today (`index.html`, `TMART`, `tmArt`, `tmArtDraw`, `airPic`):
 
-### 14.8 Sample first
+| Place | Zoom | What is drawn |
+|---|---|---|
+| Vehicles, aircraft and ships standing in a force's formation | from the crossover (`TM_F0` 122 to `TM_F1` 136 hexPx) | the unit's picture `assets/art/u-*.webp` (map type to picture: tank `u-tank`, IFV `u-light-armor`, artillery `u-artillery`, rocket artillery `u-rocket-artillery`, SAM `u-anti-air`, jammer `u-anti-drone`, frigate `u-corvette`, cruiser `u-destroyer`, submarine, carrier, strike fighter, interceptor `u-jet`, ASF, helicopter, UAV `u-uav-recon` or `u-uav-armed`, strike drone, swarm, bombers, patrol aircraft, AWACS), cut out, **turned to the force's heading**, with a soft shadow made from its own silhouette and a faint light rim when small |
+| Aircraft in flight | from hexPx 14 | the same picture (`airPic`), nose along the heading |
+| Everything, farther out | below the crossover | the drawn white icon in the counter's diamond (no picture) |
+| Infantry (Motorized, Paratroopers, Anti-Tank, Special Forces) | the crossover | small baked 3D soldiers (`m-sol`, `m-sat`, `m-ssf`), **not pictures** |
+| A type with no picture, or one still loading | the crossover | its baked 3D model (`m-*.webp`) |
 
-Before anything else: the **Main Battle Tank's** three new looks in one batch (about $0.12), cut out, and shown to the owner as **one picture of its four looks side by side** (look 1 to 4, on the map's dark backdrop, the same size). The tank is the clearest case: standard issue, on the map from day one, its line is long (12 steps, two Generations), and a tank's progress (armour blocks, a new turret, an unmanned turret) reads at a glance. The rest waits for the owner's OK on that sample; if the owner wants the prompts changed, they change before the next batch.
+**Answer: yes, the research-card pictures can be used directly for the map figures, with the same design, because they are straight down.** The map needs a picture seen **from straight above, nose up**: it turns the picture to the heading and makes its own shadow, and the research card's portrait and the army bar's details turn the same picture too (`unitPic`). That is how today's pictures are drawn. A picture drawn at 45 degrees like the buildings cannot be turned to a heading (the tank would show its side and slide sideways). So the new unit pictures are drawn **straight down, nose up** (`STYLE_V2_UNIT`), in the building style for everything else, and **no second set is needed: 0 extra pictures, $0**.
 
-### 14.9 Old saves
+What is different on the map, all code, no pictures: the cut-out (the plain grey is made transparent, `tools/prep-art.py`), the shadow (drawn in code from the silhouette; the pictures carry only a faint tight shadow), and sizes: a tank is about 39 css px long where pictures start, so the prompts keep the silhouette bold and the detail large.
 
-Nothing to convert. The level is worked out from the research a nation already holds (`N.tech`), so any save, from any version, shows the right looks the moment it loads: Marks converted to Firepower and Protection levels count as steps, as do projects converted from the old tree. Nothing new is stored and the save version does not change.
+**If the owner prefers the 45-degree look** on the research card (to match the buildings more closely), the map would need its own straight-down set on top of it: **365 more pictures, about $14.60 plus about $1.10 of checks** (the same count and price again), unless the map uses only a reduced set. Not suggested, and **not made without the owner's permission.** Infantry on the map would need new 3D models in code, not pictures, whichever way the owner decides.
 
-### 14.10 Build plan
+### 14.9 Sample first
 
-1. **Owner's OK on this plan and the cost.** No API call before it.
-2. **gen-art:** a `UNIT_LOOKS` table (picture name, its look-1 source, the look text of 14.5) and the look prompt; `--print` shows every prompt for free first.
-3. **Sample:** the tank's 3 looks in one batch, one try each; `tools/prep-art.py` cuts them out; the four looks side by side to the owner. **Stop and wait for the OK.**
-4. **The rest**, in the order of 14.7, as far as the budget goes, in one or two batches, one try each; the cost logged and the "Pictures still missing" table in `docs/QUEUE.md` updated.
-5. **Rules** (`rules/research.js`, no drawing): `rUnitLv(n, t)` (1 + the steps in the line, up to 8) and `rLook(n, t)` (levels 1-2, 3-4, 5-6, 7-8 to looks 1-4; the Recon UAV by generation).
-6. **Screen** (`index.html`): the picture lookup takes the owner's look (map pictures, `unitPic` portraits, the army bar's unit details, the research column header, unit diamond, card and "new look" marks), with the fall-back to the nearest earlier look; the unused generation-picture stand-ins and the Heavy Bomber's `bomb2` key go.
-7. **Tests:** a new `.test/unit-looks.js` (levels from steps, the cap at 8, the four looks at levels 1/3/5/7, level 8 keeps look 4, the UAV by generation, a foe's look by its own research, a missing picture falls back); the existing research, save and screen tests still pass. A line in `RELEASES.md`; the dev build only until the owner moves it to public.
+Before anything else: the **Main Battle Tank** for all five groups, 3 looks each (**15 pictures, about $0.60 plus about $0.05 of checks**), after the owner has approved the exact prompts in `docs/UNIT-LOOKS-PROMPTS.md`. Two batches (look 1 of each group, then looks 2 and 3 from it), the check on every picture. Cut out and shown to the owner **on the research card** (three looks side by side, one row per group) **and on the map** (the figures at the close zoom, turned to different headings, over land, forest and desert). The rest waits for the owner's OK on that sample; if the owner wants the prompts changed, they change before the next batch. The tank is the clearest case: standard issue, on the map from day one, its line is long (12 steps, two Generations), and a tank's progress reads at a glance.
 
-### 14.11 For the owner to decide
+### 14.10 Old saves
 
-1. The rule of 14.1 (every step in the unit's line counts one level). Suggested: yes.
-2. Looks replace the generation pictures (14.2). Suggested: yes.
-3. Paratroopers share the infantry looks (14.3). Suggested: yes; their own set later if wanted.
-4. Missiles get no looks for now (14.3). Suggested: yes.
-5. Army bar: picture in the unit's details, silhouettes stay in the diamonds (14.4). Suggested: yes.
-6. Budget: the 13 units of 14.7 now, the other 11 after a top-up. Suggested: yes, starting with the tank sample.
+Nothing to convert. The level is worked out from the research a nation already holds (`N.tech`), so any save, from any version, shows the right looks the moment it loads: Marks converted to Firepower and Protection levels count as steps, as do projects converted from the old tree. The group comes from the nation (`docs/DOCTRINES.md`). Nothing new is stored and the save version does not change.
+
+### 14.11 Build plan
+
+1. **Owner's OK on the prompts** (`docs/UNIT-LOOKS-PROMPTS.md`). No API call before it.
+2. **gen-art:** done for the tank sample (`ul-tank-<group>-<look>`, `--dry-run`, `--review`); the other 23 sets and 5 uniques are added the same way, one set at a time, and shown to the owner before they are sent.
+3. **Sample:** the 15 tanks, two batches, the check on each; `tools/prep-art.py` cuts them out; shown on the research card and on the map. **Stop and wait for the OK.**
+4. **The rest**, in batches of about 30, one try each, the check on every picture, the cost logged after each batch, a stop at the owner's spending line; the "Pictures still missing" table in `docs/QUEUE.md` updated.
+5. **Rules** (`rules/research.js`, no drawing): `rUnitLv(n, t)` (1 + the steps in the line, up to 8) and `rLook(n, t)` (levels 1-3, 4-6 and 7-8 to looks 1-3; the Recon UAV by generation: I-III, IV, V).
+6. **Screen** (`index.html`): the picture lookup takes the owner's look and group (map pictures, `unitPic` portraits, the army bar's unit details, the research column header, unit diamond, card and "new look" marks), with the fall-back to the nearest earlier look and to today's picture; the unused generation-picture stand-ins and the Heavy Bomber's `bomb2` key go.
+7. **Tests:** a new `.test/unit-looks.js` (levels from steps, the cap at 8, the three looks at levels 1/4/7, level 8 keeps look 3, the UAV by generation, a foe's look by its own research and group, a missing picture falls back); the existing research, save and screen tests still pass. A line in `RELEASES.md`; the dev build only until the owner moves it to public.
+
+### 14.12 Owner's answers (18 November 2026)
+
+The questions of the earlier version, with the owner's decisions:
+
+1. The rule of 14.1 (every step in the unit's line counts one level). **Yes.**
+2. Looks replace the generation pictures (14.2). **Yes.**
+3. Paratroopers share the infantry looks (14.3). **Yes.**
+4. Missiles get no pictures, names only (14.3). **Yes.**
+5. Army bar: picture in the unit's details, silhouettes stay in the diamonds (14.4). **Yes.**
+6. Budget and number of looks: **changed.** 3 looks per unit (not 4), each a new generation replacing the old model; every nation group has its own pictures for every unit (Export too); 365 pictures, about $14.60 plus checks (14.6). The tank sample for all five groups first, with the Gemini check, shown on the research card and the map; the rest only after the owner's OK.
+7. The same designs are used everywhere (research card, army bar, map). If the map needs its own pictures, tell the owner why and the cost and ask first: **not needed** (14.8).
+
+### 14.13 Still for the owner to decide
+
+- Approve the exact tank prompts (`docs/UNIT-LOOKS-PROMPTS.md`), including the one camera change (straight down for units).
+- Whether to raise the $12 line, or to take some of the savings in `docs/DOCTRINES.md` section 8.
+- Whether to keep the teal research-card filter (`docs/DOCTRINES.md` section 7).
