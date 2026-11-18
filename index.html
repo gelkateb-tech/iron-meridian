@@ -2971,7 +2971,7 @@ if (!SET.fxPick){ let had = false; try { had = 'fx' in (JSON.parse(localStorage.
 // the map's own detail (terrain detail, coast, sea, weather, the figures' budget) is lightened only by an Effects setting chosen by hand: a phone's
 // default Low thins the effects, not the map
 const mapLite = () => SET.fx !== 'high' && !!SET.fxPick;   // (Effects never chosen by hand: the device's default, also over settings saved before there was one)   // first-time tips: which ones were shown (old settings: none yet)
-const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET.fxPick ? SET : {...SET, fx:undefined})); } catch (e) {} applySet(); };   // (Effects kept only once chosen: the device default is not stored)
+const storeSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET.fxPick ? SET : {...SET, fx:undefined})); } catch (e) {} }, saveSet = () => { storeSet(); applySet(); };   // (Effects kept only once chosen: the device default is not stored)
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
 // the drawable half of the world: river, road and railway paths by class (the rules half, the links between provinces, is loadWorld in rules/map.js)
@@ -8000,7 +8000,8 @@ const OVL = {cv:null, k:'', g:null, c:{rel:{k:'', col:null}, sup:{k:'', col:null
 function ovlToggle(k, on = !ovlOn(k)){ if (!polMode()){ if (!on) return; mapMode = 'political'; } mapOvl[k] = on; mapSave(); }
 // the map style (Political / Terrain) and the overlays: Settings > Map, the More menu, the V key and the Relations button; saved with the settings
 function mapModeSet(m){ mapMode = MODES.some(x => x[0] === m) ? m : 'political'; mapSave(); }
-function mapSave(){ SET.mapMode = mapMode; SET.ovlRel = mapOvl.rel; SET.ovlSup = mapOvl.sup; saveSet(); renderSide(true); if (modalKind === 'settings' && !$('modal').hidden) openModal(settingsHTML(), 'settings'); }
+function mapSave(){ SET.mapMode = mapMode; SET.ovlRel = mapOvl.rel; SET.ovlSup = mapOvl.sup; storeSet(); redraw(); renderSide(true);   // (stored only: applySet would re-render the base map, and an overlay is drawn over it)
+  if (modalKind === 'settings' && !$('modal').hidden) openModal(settingsHTML(), 'settings'); }
 // the colour of every land province (null: none) for overlay k; recomputed only when its key moves
 function ovlCols(k){ const C = OVL.c[k];
   if (k === 'rel'){ const key = [relVer, geoVer, S.decl.length, SET.cb ? 1 : 0, G.P.length].join('|'); if (C.k === key && C.col) return C.col;
