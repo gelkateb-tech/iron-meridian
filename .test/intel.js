@@ -39,7 +39,12 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), PHONE = W <
     clean(); const jt = addArmy(me, P.id, {jet:2}); jt.air = {base:P.id, cd:0}; jt.fly = {tgt:P.id, kind:'patrol', ph:'patrol', t:1, hrs:0}; out.jet = [seen(foe), kn(foe)];
     // a UAV on station: identified; the 12 h after it leaves (S.intel): still identified; after that: not
     clean(); const uv = addArmy(me, P.id, {drone:1}); uv.air = {base:P.id, cd:0}; uv.fly = {tgt:P.id, kind:'recon', ph:'over', t:0, hrs:12, h0:12};
-    out.uav = [seen(foe), kn(foe)]; const L = uavOf(me); intelNote(me, visProvsAt(P.x, P.y, L.vis), S.hour + L.loiter + 12);
+    out.uav = [seen(foe), kn(foe)];
+    // Wide-Area Sensors (master's upgrade follow-up): the UAV identifies 15% / 30% farther; a foe 290 km out (UAV I: 250 km) only with Sensors 2
+    { const fp = foe.pos, T0 = S.nations[me].tech || (S.nations[me].tech = {}), s0 = T0.drone_sens; foe.pos = [P.x + 290*KM_W, P.y]; delete T0.drone_sens;
+      out.uavFar = [uavOf(me).vis, seen(foe), kn(foe)]; T0.drone_sens = 2; out.uavFar2 = [uavOf(me).vis, seen(foe), kn(foe)];
+      if (s0 === undefined) delete T0.drone_sens; else T0.drone_sens = s0; foe.pos = fp; }
+    const L = uavOf(me); intelNote(me, visProvsAt(P.x, P.y, L.vis), S.hour + L.loiter + 12);
     clean(); const inf2 = addArmy(me, P.id, {inf:1}); inf2.pos = [P.x + 20*KM_W, P.y]; out.uavAfter = [seen(foe), kn(foe)];
     const h0 = S.hour; S.hour = h0 + L.loiter + 13; out.uavLater = [seen(foe), kn(foe)]; S.hour = h0;
     // a battle with you in its province: identified
@@ -62,6 +67,8 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), PHONE = W <
   ok('rules.drone in flight identifies', R.drone[0] && R.drone[1], R.drone);
   ok('rules.manned jet spots only', R.jet[0] === true && R.jet[1] === false, R.jet);
   ok('rules.UAV on station identifies', R.uav[0] && R.uav[1], R.uav);
+  ok('rules.UAV sensors: 290 km out not seen without them', R.uavFar[0] === 250 && !R.uavFar[1] && !R.uavFar[2], R.uavFar);
+  ok('rules.UAV sensors 2: 290 km out identified', R.uavFar2[0] === 325 && R.uavFar2[1] && R.uavFar2[2], R.uavFar2);
   ok('rules.UAV reveal lasts after it leaves', R.uavAfter[0] && R.uavAfter[1], R.uavAfter);
   ok('rules.UAV reveal ends (loiter + 12 h)', R.uavLater[0] === true && R.uavLater[1] === false, R.uavLater);
   ok('rules.battle identifies', R.battle[0] && R.battle[1], R.battle);

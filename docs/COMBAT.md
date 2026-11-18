@@ -382,7 +382,7 @@ and the diplomacy intel (`haveIntelOn`).
 | what | reveals | how long |
 |---|---|---|
 | your own forces, an **ally's** forces | always | always |
-| **Recon UAV on station** (UAV I-V) | everything inside its range (250-500 km) | while it loiters, then the provinces under it **12 h** more (`S.intel`, its loiter + 12 h from arrival, the same span as its reveal) |
+| **Recon UAV on station** (UAV I-V) | everything inside its range (250-500 km; Wide-Area Sensors 1 and 2: 15% and 30% farther, so up to 650 km) | while it loiters, then the provinces under it **12 h** more (`S.intel`, its loiter + 12 h from arrival, the same span as its reveal) |
 | any **drone wing in flight** (Recon UAV, Strike Drones, Swarm Drones) | everything inside its sight (200 km) | while it is there |
 | **reconnaissance satellite** | its strip (150 km each side of this hour's track) | while it passes |
 | **Phased-Array AWACS** (AWACS II) | within half its radar range (250 km) | while it orbits (a plain AWACS only locates: '?') |

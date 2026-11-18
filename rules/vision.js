@@ -129,7 +129,7 @@ function armySeen(a, vis){ const me = vis.n;
   return false; }
 /* Identified or only spotted (owner's rule, 2026-11-18, as in Conflict of Nations): seeing a foreign force (armyVisible) only tells that something
    is there. Its nation, size, unit types and name are known only once it is identified (armyKnown), by proper recon or by fighting it:
-   - a UAV on station (everything inside its range: UAV_LV vis), and the provinces under it for its loiter plus 12 h after it arrives (S.intel,
+   - a UAV on station (everything inside its range: uavOf vis, UAV_LV with Wide-Area Sensors +15% / +30%), and the provinces under it for its loiter plus 12 h after it arrives (S.intel,
      intelNote), the same span as its reveal; an agent's reconnaissance: the target and its neighbours for 3 days
    - a drone wing in flight (Recon UAV, Strike Drones, Swarm Drones): inside its own sight
    - a reconnaissance satellite: its strip this hour; the Phased-Array AWACS: within half its radar range (a plain AWACS only locates: '?')

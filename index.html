@@ -5121,11 +5121,16 @@ function unkHTML(a){ const spotted = armyVisible(a, visibleSet(PLAYER));
 const knowA = (a, vis = visibleSet(PLAYER)) => !!a && (a.owner === PLAYER || armyKnown(a, vis));
 const foeLabel = a => knowA(a) ? armyLabel(a, PLAYER) : 'an unidentified army';
 function unkPlate(x, y, s, now = performance.now()){ const r = BADGE/2*0.86, X = snapD(x), Y = snapD(y), CT = SIDE_T.other, rc = 3;   // an unidentified radar contact: a grey badge with a dashed edge and a '?' (no flag, type or count)
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1.4; roundRect(ctx, X - r, Y - r, 2*r, 2*r, rc); ctx.fillStyle = CT[2]; ctx.fill(); ctx.restore();
-  const gr = ctx.createLinearGradient(0, Y - r, 0, Y + r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(ctx, X - r + 1, Y - r + 1, 2*r - 2, 2*r - 2, rc - 0.5); ctx.fillStyle = gr; ctx.fill();
-  ctx.save(); ctx.setLineDash([3, 2]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.9)'; roundRect(ctx, X - r - 0.5, Y - r - 0.5, 2*r + 1, 2*r + 1, rc + 0.5); ctx.stroke(); ctx.restore();
-  ctx.font = `italic 800 ${Math.round(r*1.05)}px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.4; ctx.strokeStyle = 'rgba(8,12,10,.8)'; ctx.strokeText('?', X, Y + 1); ctx.fillStyle = '#ffffff'; ctx.fillText('?', X, Y + 1);
-  const bx = X + r - 1, by = Y - r + 1; ctx.beginPath(); ctx.arc(bx, by, 2.2, 0, Math.PI*2); ctx.fillStyle = '#9fd8ff'; ctx.fill(); ctx.beginPath(); ctx.arc(bx, by, 4.4, -Math.PI*0.8, -Math.PI*0.2); ctx.strokeStyle = 'rgba(159,216,255,.7)'; ctx.lineWidth = 1.1; ctx.stroke();
+  const P = 8, key = 'unk|' + r + '|' + dpr + '|' + (SET.cb ? 'c' : '');   // (painted once into a device-pixel canvas, as the badges are: UCC, cleared with them)
+  let E = UCC.get(key); if (!E){ if (UCC.size > 500) UCC.clear(); const c = document.createElement('canvas'); c.width = Math.ceil((2*r + 2*P)*dpr); c.height = Math.ceil((2*r + 2*P)*dpr);
+    const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(P + r, P + r);
+    g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 3; g.shadowOffsetY = 1.4; roundRect(g, -r, -r, 2*r, 2*r, rc); g.fillStyle = CT[2]; g.fill(); g.restore();
+    const gr = g.createLinearGradient(0, -r, 0, r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(g, -r + 1, -r + 1, 2*r - 2, 2*r - 2, rc - 0.5); g.fillStyle = gr; g.fill();
+    g.save(); g.setLineDash([3, 2]); g.lineWidth = 1.2; g.strokeStyle = 'rgba(205,210,198,.9)'; roundRect(g, -r - 0.5, -r - 0.5, 2*r + 1, 2*r + 1, rc + 0.5); g.stroke(); g.restore();
+    g.font = `italic 800 ${Math.round(r*1.05)}px ${BODY}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 2.4; g.strokeStyle = 'rgba(8,12,10,.8)'; g.strokeText('?', 0, 1); g.fillStyle = '#ffffff'; g.fillText('?', 0, 1);
+    const bx = r - 1, by = -r + 1; g.beginPath(); g.arc(bx, by, 2.2, 0, Math.PI*2); g.fillStyle = '#9fd8ff'; g.fill(); g.beginPath(); g.arc(bx, by, 4.4, -Math.PI*0.8, -Math.PI*0.2); g.strokeStyle = 'rgba(159,216,255,.7)'; g.lineWidth = 1.1; g.stroke();
+    E = {c, w:c.width/dpr, h:c.height/dpr, o:P + r}; UCC.set(key, E); }
+  ctx.drawImage(E.c, X - E.o, Y - E.o, E.w, E.h);
   return {x:X - r - 2, y:Y - r - 2, w:2*r + 4, h:2*r + 4}; }
 const GO = new Map();
 function armyPos(a){
