@@ -30,7 +30,7 @@ const TIP = 'Dug in: +10% defence in the open, +25% inside a city. The unit has 
     return { ber: [ber.x, ber.y], mun: [mun.x, mun.y], inf: inf.id, sq: sq.id }; });
   const view = (xy, hp) => p.evaluate(([x, y, hp, W, H]) => { const v = window.__im.view, s = hp/12; v.s = s; v.x = W/2 - x*s; v.y = H/2 - y*s; }, [xy[0], xy[1], hp, W, H]);
   const off = await p.evaluate(() => { const r = document.getElementById('map').getBoundingClientRect(); return [r.left, r.top]; });
-  // (1) the badge (owner's Conflict of Nations badge): zoomed in 52 x 46 (flag 20 + bar 26, tag 18 with a 15 px icon), zoomed out a 28 px square; quiet foreign forces 0.86 times that
+  // (1) the badge (owner's Conflict of Nations badge): zoomed in 52 x 46 (flag 20 + bar 26, tag 18 with a 15 px icon), zoomed out a 28 px square; quiet foreign forces the same size (owner, 2026-11-18)
   const zs = PHONE ? [28, 70, 170] : [40, 100, 170];
   const dimsNear = await p.evaluate(() => { const D = window.__im.uicon.dims(14, false, false); return { w: D.w, h: D.h, fh: D.fh, bh: D.bh, tg: D.tg, ti: D.ti, fz: D.fz, ox: D.ox }; });
   const dimsFar = await p.evaluate(() => { const D = window.__im.uicon.dims(14, false, true); return { w: D.w, h: D.h, tg: D.tg, ti: D.ti }; });
