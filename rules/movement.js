@@ -414,8 +414,16 @@ function sailTo(a, p, f, to, hOf){ if (heartVia(a, p, f, to)){ const H = [G.P[p]
   return {f, to, t:0, h:Math.max(1e-6, hOf(Math.hypot(to[0] - f[0], to[1] - f[1])))}; }
 const cmdEmbF = a => Math.max(0.4, 1 - 0.2*cmdF(a, 'siege'));
 // hours to embark in the port, and to land in province p from the sea (into a port of your own or a friend's: the short landing)
-const embarkH = a => Math.max(1, Math.round(EMBARK_H*rCapF(a.owner)*cmdEmbF(a)));
-const landH = (a, p) => Math.max(1, Math.round((portOk(a.owner, p) ? LAND_PORT_H : LAND_H)*(rLevel(a.owner, 'nav3') > 0 ? 0.5 : 1)*cmdEmbF(a)));
+const embarkF = a => EMBARK_H*rCapF(a.owner)*cmdEmbF(a), landF = (a, p) => (portOk(a.owner, p) ? LAND_PORT_H : LAND_H)*(rLevel(a.owner, 'nav3') > 0 ? 0.5 : 1)*cmdEmbF(a);   // (before rounding)
+const embarkH = a => Math.max(1, Math.round(embarkF(a)));
+const landH = (a, p) => Math.max(1, Math.round(landF(a, p)));
+// a command upgrade that changes the time of a landing or of boarding (Amphibious Doctrine, Combat Engineers: rGrant, rules/research.js) reaches the ones already
+// under way at once (owner 2026-11-18): the hours still to go (a.land, a.emb) shrink by the ratio of the new time to the old, so the share done is kept.
+// landBefore: nation n's forces landing or boarding, with the unrounded time of each before the step
+const landBefore = n => armiesOf(n).filter(a => (a.land > 0 || a.emb != null) && count(a)).map(a => [a, a.land > 0 ? landF(a, a.at) : 0, a.emb != null ? embarkF(a) : 0]);
+function landRetime(w0){ for (const [a, l0, e0] of w0){
+    if (l0 > 0 && a.land > 0){ const r = landF(a, a.at)/l0; if (Math.abs(r - 1) > 1e-9) a.land = Math.max(1, Math.round(a.land*r)); }
+    if (e0 > 0 && a.emb != null){ const r = embarkF(a)/e0; if (Math.abs(r - 1) > 1e-9) a.emb = Math.max(1, Math.round(a.emb*r)); } } }
 // the next leg of an idle force with a route takes its ground units from land onto water: they embark first
 const embLeg = a => a.to === null && a.path.length > 0 && !G.P[a.at].sea && G.P[a.path[0]].sea && ground(a);
 // the embarking count in the port (rules/tick.js movement, once canProceed lets the force set off): true while it must still wait

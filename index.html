@@ -9225,8 +9225,8 @@ const yieldChips = y => YK.filter(k => y[k] >= yMin(k)).map(k => { const v = k =
 const comp = a => UT.filter(t => a.u[t]).map(t => `<span class="tag" title="${a.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}<b>×${a.u[t]}</b></span>`).join('');   // picture and count; the name in the tooltip
 // an identified foreign force: type, count, level (Mark) and health of each unit type
 // a nation's research on a unit type, in a few characters: its generation (II, III ...) and its Firepower / Protection levels (F2 P1)
-const uTag = (n, t) => { const g = rGenOf(n, t), f = rLevel(n, t + '_fp'), d = rLevel(n, t + '_pr'); return [g > 1 ? ROMAN[g] : '', f ? 'F' + f : '', d ? 'P' + d : ''].filter(Boolean).join(' '); };
-const uTagT = (n, t) => { const g = rGenOf(n, t), f = rLevel(n, t + '_fp'), d = rLevel(n, t + '_pr'); return [g > 1 ? 'generation ' + ROMAN[g] : '', f ? 'Firepower ' + f : '', d ? 'Protection ' + d : ''].filter(Boolean).join(', '); };
+const uTag = (n, t) => { const g = rGenOf(n, t), f = rMarkLv(n, t, 'fp'), d = rMarkLv(n, t, 'pr'); return [g > 1 ? ROMAN[g] : '', f ? 'F' + f : '', d ? 'P' + d : ''].filter(Boolean).join(' '); };
+const uTagT = (n, t) => { const g = rGenOf(n, t), f = rMarkLv(n, t, 'fp'), d = rMarkLv(n, t, 'pr'); return [g > 1 ? 'generation ' + ROMAN[g] : '', f ? 'Firepower ' + f : '', d ? 'Protection ' + d : ''].filter(Boolean).join(', '); };
 const compFoe = a => UT.filter(t => a.u[t]).map(t => { const up = uTag(a.owner, t), hp = Math.round(100*Math.max(0, 1 - a.w[t]/(a.u[t]*UNITS[t].hp))); return `<span class="tag" title="${a.u[t]} × ${UNITS[t].name}${up ? ` (${uTagT(a.owner, t)})` : ''}, ${hp}% health">${unitPic(t, 'sm')}<b>×${a.u[t]}</b>${up ? `<span class="mk2">${up}</span>` : ''}<span class="hp2" style="--h:${hp}%"></span></span>`; }).join('');
 const clockStr = h => { const c = calDate(h); return `${c.d} ${MONTHS[c.m]} · ${String(h % 24).padStart(2, '0')}:00`; };
 const localClock = (h, st = S) => clockStr(h + localOff(st));   // display only: capital local time (the day counter and the day limit stay on S.hour)
@@ -9968,7 +9968,7 @@ const RSN = {'Ceramic Body Armour':'Body Armour', 'Infantry Kit':'Kit', 'Rough-G
   'Sonobuoy Field':'Sonobuoys', 'Homing Torpedoes':'Torpedoes', 'High-Power Radar':'Radar', 'Fighter Data Link':'Data Link', 'Naval Gunnery':'Gunnery', 'Towed Sonar':'Sonar', 'Area Air Defence':'Air Defence',
   'Long-Range Bombardment':'Bombard', 'Close-In Defence':'CIWS', 'Nuclear Propulsion':'Nuclear', 'Heavy Torpedoes':'Torpedoes', 'Quiet Drive':'Quiet', 'Cruise Missile Range':'Range',
   'Cruise Missile Speed':'Speed', 'Ballistic Missile Range':'Range', 'Heavier Warhead':'Warhead', 'Anti-Missile Shield':'Shield', 'Reconnaissance Satellites':'Satellites', 'Motorized Supply':'Supply',
-  'Combat Engineers':'Engineers', 'Amphibious Doctrine':'Landings', 'Field Hospitals':'Hospitals',
+  'Combat Engineers':'Engineers', 'Wide-Area Sensors':'Sensors', 'Amphibious Doctrine':'Landings', 'Field Hospitals':'Hospitals',
   'Mechanized Infantry':'Mechanized', 'Guided Missile Teams':'ATGM Teams', 'Tier-One Operators':'Tier One', 'Third-Generation MBT':'3rd-Gen MBT', 'Next-Generation MBT':'Next-Gen MBT',
   'Long-Barrel Howitzer':'Long Barrel', 'Guided Rocket System':'Guided Rockets', 'Counter-UAV Laser':'Laser', 'Heavy Gunship':'Gunship', 'Air Assault Brigade':'Air Assault',
   'Fourth-Generation Interceptor':'4th-Gen', 'Multirole Strike Fighter':'Multirole', 'Fifth-Generation Fighter':'5th-Gen', 'Networked Swarm':'Networked', 'Low-Observable Strike Drone':'Low-Observable',
@@ -9990,7 +9990,7 @@ function rLayout(cat){ if (RLAY[cat]) return RLAY[cat];
   lines.forEach((ln, c) => { const ns = L.filter(n => colOf(n) === ln).sort((a, b) => a.lv[0].day - b.lv[0].day || a.i - b.i), hasSp = ns.some(spine), used = {}; let flip = 1;
     ns.forEach((n, i) => { const r = days.indexOf(n.lv[0].day); let l = 0;
       if (solo) l = -1;
-      else if (!(hasSp ? spine(n) : i === 0)){ const out = RNODES.find(m => m.line !== n.line && m.req.includes(n.id)), want = out && out.cat === cat ? (lines.indexOf(colOf(out)) > c ? 1 : -1) : n.kind === 'eng' ? (n.eng === 'fp' ? -1 : 1) : flip;
+      else if (!(hasSp ? spine(n) : i === 0)){ const out = RNODES.find(m => m.line !== n.line && m.req.includes(n.id)), want = out && out.cat === cat ? (lines.indexOf(colOf(out)) > c ? 1 : -1) : n.kind === 'eng' ? (n.eng === 'fp' ? -1 : 1) : n.id === 'drone_sens' ? -1 : flip;
         l = used[r + ':' + want] ? -want : want; if (n.kind !== 'eng') flip = -l; used[r + ':' + l] = 1; }
       pos[n.id] = {c, l, r}; });
     // a spine node and a side node on one row (a day-1 upgrade beside its unlock): both names keep to their own lane, in two short lines, and the
@@ -10408,7 +10408,7 @@ function speedHTML(a){ const L = Math.round(landSpeed(a)*KM_HEX/10)*10, Wt = Mat
     : `<span title="Land: open plains without roads (roads, rail and terrain change it). Water: as embarked troops on transports${shipsN(a) ? ', escorted +15%' : ''}; +${Math.round((LANE_F - 1)*100)}% on sea lanes.">land ${kmd(L)} · water ${kmd(Wt)}</span>`; }
 // ---- the army bar (CoN): a tapped force's name and flag, ONE health bar with numbers, a stats row (morale, speed, strength, the swords while it fights),
 // a diamond per unit type with its count and Mark badge (tap: that unit's details), and the i button (Army Info: the Strength table) ----
-const unitMark = (o, t) => o < 0 ? 1 : 1 + Math.min(3, Math.max(rLevel(o, t + '_fp'), rLevel(o, t + '_pr')));   // the rank badge: Mark I-IV from the unit's Firepower / Protection levels
+const unitMark = (o, t) => o < 0 ? 1 : 1 + Math.min(3, Math.max(rMarkLv(o, t, 'fp'), rMarkLv(o, t, 'pr')));   // the rank badge: Mark I-IV from the unit's Firepower / Protection levels
 let abUnit = null;   // {id, t}: the unit type whose details are open under the diamonds
 const abSpd = a => Math.round((shipsOnly(a) ? seaSpeed(a) : landSpeed(a))*KM_HEX/10)*10;
 // game time to the next battle step (every 15 game minutes), as real seconds at the running speed, or game minutes when paused
