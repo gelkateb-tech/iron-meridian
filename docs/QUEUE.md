@@ -8,7 +8,7 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
-Last updated: 2026-11-18 (Dev Build v56: badges 86%).
+Last updated: 2026-11-18 (Dev Build v57: upgrade follow-ups).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
@@ -20,9 +20,16 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **UNIT-ART: the tank sets** | owner 2026-11-18: 3 pictures per look, all the same vehicle: side view cut-out (research diamonds, made first), card scene in action (tap card; blue monitor tint and scanlines drawn in code), top-down (map and army bar), the scene and top-down made from the side view; a 3-way Gemini check that flags only; tank for all 5 groups (45 pictures, about $1.80 + checks), then show the owner before the rest. No $12 line; balance $40.88 at the start (log 255 calls, about $10.27); report the running total each batch; stop if the balance runs low | Sonnet | unit-art |
-| **UPGRADES-2** | owner 2026-11-18: Recon UAV Firepower 1-2 (days 3, 10) become sight/range steps; landings, boarding and cruise missiles under way switch to new timing at once; 8-drone old saves stay as they are | Sonnet | upgrades-2 |
 | **MAP-2 feedback** | owner 2026-11-18: (1) country borders thin and soft zoomed out, bolder only zoomed in; (2) province lines hidden zoomed out, fading in closer; (3) foreign armies (not yours or an ally's) show only an unknown badge: no count, type or 3D models, a tap says only "Unidentified army"; exact units only through proper recon (recon units, drones, radar) like CoN. Screenshots before merging: Europe/Africa zoomed out; Afghanistan/Pakistan with a Pakistani army tapped | Opus | map-2 |
+| **MAP-FIX** (owner 2026-11-18, urgent bugs) | (1) pinpoint moves: units and ships go to and stop at the exact tapped spot (pinpoint.js already fails on master: find the regression); (2) a small position dot under every army, movement lines start from it; (4) building pictures scale and move exactly with the map, no pulse or snapping; (5) 2-3 clearer dug-in marker options (show only) plus a "Dug in" label in the unit panel; screenshots or a short test of each before merging | Opus | map-fix |
 | **BUNKER** (#17) | owner 2026-11-18: go, with dug-in +10% open / +25% city; 5 levels, hidden from other nations, old saves convert; the updated protection table to the owner before merging | Opus | bunker |
+
+## Next free slots (in this order)
+
+1. **CITIES follow-up** (Opus, cities-3d): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights; screenshots before merging.
+2. **NATION PICKER** (Sonnet): owner 2026-11-18: "Go back to the old layout: a wide panel with 3 columns of cards, big flags, and each card showing provinces, cities and difficulty. Keep from the new version: the search bar, the 68 nations, the AI difficulty buttons, and the command-room background. On a phone, use 2 columns. Sort the biggest powers first. Show me a screenshot on desktop and on a 440px phone before merging." (the old layout is the public build v3.12, commit 5b47dd8)
+3. **RESEARCH-CON** (Opus): the research tree rebuild with the owner's CoN references.
+4. **BUNKER ART options** (Sonnet): owner 2026-11-18: "The bunker picture looks flat and cartoonish next to the new buildings, and the green patch under it breaks my art rule: no ground patch, only a soft shadow. Show me 2-3 options that match the art bible, with no patch, before changing anything."
 
 ## Ready, waiting for the owner
 
@@ -147,6 +154,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| UPGRADES-2 (Dev Build v57, owner 2026-11-18): Recon UAV Firepower 1-2 became Wide-Area Sensors 1-2 (+15% / +30% view; Firepower 3 kept for UAV IV); landings, boarding and cruise missiles under way switch to new timing at once; old saves convert; 1349-check test | Sonnet |
 | Badge size (Dev Build v56, owner OK 2026-11-18): every badge 86% of the first version, about 45 px wide on a phone, the same size for everyone | Opus |
 | UPGRADES fix (Dev Build v55, owner 2026-11-18): the suggested answers (Infantry Kit, Thermobaric Warheads, Close-In Defence replace the 3 do-nothing upgrades; +15% training on each line's final level) and all 6 gaps: aircraft speed upgrades work (+10% / +33%), swarm cards 6 drones everywhere, queued training and moves under way speed up when an upgrade lands, the AI counts swarms right, a 1271-check test (.test/upgrades-live.js); old saves convert; golden re-recorded | Opus |
 | BADGE-CON (Dev Build v54, owner OK 2026-11-18): Conflict of Nations unit badge (flag over a side-colour bar with the bold italic count, white tag with the owner's helmet; Motorized Infantry the helmet with a wheel; every badge full size, quiet foreign forces too; zoomed out the coloured square with the tag); dug-in +10% in the open, +25% in a city | Sonnet |
