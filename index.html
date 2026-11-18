@@ -6651,6 +6651,7 @@ function cityRGB(hex, fp){ let r = parseInt(hex.slice(1, 3), 16), g = parseInt(h
   return [r*fp[3], g*fp[3], b*fp[3]]; }   // brightness
 // a town's side as you see it (the tint of its 3D blocks): its owner's, grey for independent land and before a game
 const cityTint = p => { const o = S && S.owner ? S.owner[p] : NEUTRAL; return o >= 0 ? sideOf(o) : 'other'; };
+const CB_TINT = 0;   // how far the roofs lean toward the owner's side colour (the walls 0.7 of it): visible, not a paint job
 // the roofs of the five bands of height (two tones each: houses in tile and slate, then concrete, pale render, glass), by ground
 const CB_ROOF = {w:[['#a0705a', '#958b7d'], ['#b2aca0', '#a1998b'], ['#bbb7ae', '#a8a59e'], ['#c6c4bf', '#b0b4b6'], ['#c9ced3', '#9eb0bf']],
   d:[['#c2a27e', '#b39a80'], ['#cdbd9e', '#bfae8e'], ['#d3c6aa', '#c4b597'], ['#dcd2bc', '#c9bfa7'], ['#d5d6d2', '#a9b6bd']],
@@ -6663,9 +6664,9 @@ function cityPal(I, gain){ const sd = cityTint(I.p), key = sd + (SET.cb ? 'c' : 
     if (I.pale){ const l = 0.3*r + 0.59*g + 0.11*b, ds = I.dry ? 0.25 : 0.55, A = 0.3, [mr, mg, mb] = I.dry ? [154, 142, 121] : [140, 140, 142]; r += (l - r)*ds; g += (l - g)*ds; b += (l - b)*ds; r *= 1 - A + A*mr/255; g *= 1 - A + A*mg/255; b *= 1 - A + A*mb/255; }
     r += (tr - r)*tA; g += (tg - g)*tA; b += (tb - b)*tA; const q = v => Math.max(0, Math.min(255, Math.round(v*f*gain))); return `rgb(${q(r)},${q(g)},${q(b)})`; };
   const R = CB_ROOF[I.dry ? 'd' : I.cold ? 'c' : 'w'], su = P ? P.shu : 0.8, sv = P ? P.shv : 0.45;
-  return (I.pals[key] = {gnd:out(I.dry ? '#7a6e5a' : I.cold ? '#666665' : '#605d57', 0.05), pad:out(I.dry ? '#958870' : I.cold ? '#7c7c7a' : '#75716a', 0.08),
-    park:out(I.dry ? '#717150' : '#4e6a3b', 0), tree:out(I.dry ? '#525a3a' : '#2e4726', 0), rim:out('#f1ebdf', 0.08),
-    roof:R.map(t => [out(t[0], 0.2), out(t[1], 0.2)]), fu:R.map(t => out(t[1], 0.15, 0.92*su)), fv:R.map(t => out(t[1], 0.15, 0.92*sv)), cap:R.map(t => out(t[0], 0.12, 1.1))}); }
+  return (I.pals[key] = {gnd:out(I.dry ? '#7a6e5a' : I.cold ? '#666665' : '#605d57', 0.03), pad:out(I.dry ? '#958870' : I.cold ? '#7c7c7a' : '#75716a', 0.05),
+    park:out(I.dry ? '#717150' : '#4e6a3b', 0), tree:out(I.dry ? '#525a3a' : '#2e4726', 0), rim:out('#f1ebdf', 0.05),
+    roof:R.map(t => [out(t[0], CB_TINT), out(t[1], CB_TINT)]), fu:R.map(t => out(t[1], 0.7*CB_TINT, 0.92*su)), fv:R.map(t => out(t[1], 0.7*CB_TINT, 0.92*sv)), cap:R.map(t => out(t[0], 0.6*CB_TINT, 1.1))}); }
 // the legibility lift of a town small on screen, laid on live over its bake (the layer pass, by its size on screen now): the screen of the
 // concrete tone (on pale ground a multiply by the grey) over its footprint, and its dense middle a touch darker. lg: cityLegK of the size
 // on screen. The bake carries the lift's base (lg 0); this adds the rest, so the two together are the old baked lift of that size.
@@ -6685,6 +6686,7 @@ const cityDpr = () => ZRND ? dpr/ZRES : dpr;
 // bucket one path per kind (pads, parks, trees, shadows) and per band of height its walls, roofs and roof boxes: few, cheap fills per bake.
 // CB_BIN: the bands (km of rise on screen); CB_EX: a roof's lean to the right per km of rise; CB_SX, CB_SY: the shadow per km of rise
 const CP_NB = 8, CB_BIN = [1.1, 2.2, 3.6, 5.4], CB_EX = 0.3, CB_SX = 0.6, CB_SY = 0.45, CB_MG = 15;
+const CB_WSC = pk => Math.max(1, Math.min(4, pk/2.5));   // the windows' scale: a row of them about 0.8 km apart once a km is a few px (a window a px or more on screen, never a sub-px speckle)
 const CB_LAMP = [0.5, 0.35, 0.3, 0.6, 0.8, 0.4];   // night: the lamps along the streets come in broken runs (km)
 function* cityPlanWait(I){ while (!I.plan){ if (!I.aM) return null; if (!I.planIt) I.planIt = cityPlanGen(I); const r = I.planIt.next(); if (r.done){ I.planIt = null; break; } yield; } return I.plan; }
 function cityPlan(I){ const it = cityPlanWait(I); let r; while (!(r = it.next()).done); return r.value; }   // (at once: the test hook)
@@ -6695,7 +6697,7 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null; let
     return ((A[q]*(1 - fx) + A[q + 1]*fx)*(1 - fy) + (A[q + M]*(1 - fx) + A[q + M + 1]*fx)*fy)/255; };
   const bkOf = (X, Y) => Math.max(0, Math.min(NB - 1, Math.floor((X/Ek + 1)/2*NB))) + NB*Math.max(0, Math.min(NB - 1, Math.floor((Y/Ek + 1)/2*NB)));
   // the town's size: a big city's middle stands taller (a capital a little more) and holds more towers
-  const P0 = G.P[I.p], big = Math.max(0, Math.min(1, (rk - 26)/46)), hTop = 2.2 + 4.2*big + (P0 && P0.capFlag ? 0.6 : 0);
+  const P0 = G.P[I.p], big = Math.max(0, Math.min(1, (rk - 26)/46)), hTop = 2.1 + 3.3*big + (P0 && P0.capFlag ? 0.5 : 0);
   // the grid: the town's street angle brought within 22.5 degrees of square to the screen (the blocks read as blocks, never as diamonds)
   const rt = 0.5*((((I.rot % Q4) + Q4) % Q4) - Q4/2), ca = Math.cos(rt), sa = Math.sin(rt), toX = (u, v) => u*ca - v*sa, toY = (u, v) => u*sa + v*ca;
   const ou = CB_EX*ca - sa, ov = -CB_EX*sa - ca, su = CB_SX*ca + CB_SY*sa, sv = -CB_SX*sa + CB_SY*ca;   // the rise and the shadow per km, in the grid's axes
@@ -6727,7 +6729,7 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null; let
     if (Math.abs(X) > Ek - 3 || Math.abs(Y) > Ek - 3) continue;
     const d = sm(I.aM, X, Y); if (d < 0.3) continue;
     const Bq = bk(X, Y), cw = sm(I.aC, X, Y), dn = Math.hypot(X, Y)/rk, bw = u1 - u0, bh = v1 - v0, r0 = rnd(), r1 = rnd();
-    const hB = 0.7 + (hTop - 0.7)*Math.max(Math.pow(1 - sstep(0, 1.1, dn), 1.2), 0.9*cw), hh = () => Math.min(10, hB*(0.7 + 0.6*rnd())), tt = () => rnd() < 0.5 ? 0 : 1;
+    const hB = 0.7 + (hTop - 0.7)*Math.max(Math.pow(1 - sstep(0, 1.1, dn), 1.2), 0.9*cw), hh = () => Math.min(7, hB*(0.7 + 0.6*rnd())), tt = () => rnd() < 0.5 ? 0 : 1;
     const put = (x0, y0, x1, y1, h) => { if (ok(x0, y0, x1, y1)) box(Bq, x0, y0, x1, y1, h, tt()); };
     if (cw < 0.4 && dn > 0.25 && r0 < 0.055 && ok(u0, v0, u1, v1)){ Bq.park.rect(u0, v0, bw, bh); const n = 3 + ((rnd()*4) | 0);   // a park, a few trees in it
       for (let k = 0; k < n; k++){ const r = 0.35 + 0.3*rnd(), x = u0 + r + rnd()*(bw - 2*r), y = v0 + r + rnd()*(bh - 2*r); Bq.tree.moveTo(x + r, y); Bq.tree.arc(x, y, r, 0, Math.PI*2); nt++; } continue; }
@@ -6735,7 +6737,7 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null; let
       for (let k = 0; k < n; k++){ const a = q[k] & 1, b = q[k] >> 1, w = bw/2*(0.45 + 0.4*rnd()), l = bh/2*(0.45 + 0.4*rnd()), x = u0 + bw/2*a + (bw/2 - w)*rnd(), y = v0 + bh/2*b + (bh/2 - l)*rnd();
         put(x, y, x + w, y + l, 0.5 + 0.45*rnd()); } continue; }
     Bq.pad.rect(u0, v0, bw, bh); Bq.lamp.rect(U[i][0], V[j][0], U[i + 1][0] - U[i][0], V[j + 1][0] - V[j][0]); const m = 0.3, g2 = 0.45, a0 = u0 + m, a1 = u1 - m, b0 = v0 + m, b1 = v1 - m, lgU = bw >= bh;
-    if (cw > 0.4 && r1 < 0.12 + 0.3*big){ const f = 0.5 + 0.15*rnd(), w = (a1 - a0)*f, l = (b1 - b0)*f, x = a0 + (a1 - a0 - w)*rnd(), y = b0 + (b1 - b0 - l)*rnd(); put(x, y, x + w, y + l, Math.min(11, hB*(1.5 + 0.8*rnd()))); continue; }   // a tower
+    if (cw > 0.4 && r1 < 0.12 + 0.3*big){ const f = 0.5 + 0.15*rnd(), w = (a1 - a0)*f, l = (b1 - b0)*f, x = a0 + (a1 - a0 - w)*rnd(), y = b0 + (b1 - b0 - l)*rnd(); put(x, y, x + w, y + l, Math.min(8, hB*(1.4 + 0.6*rnd()))); continue; }   // a tower
     const n = cw > 0.5 ? (r1 < 0.55 ? 1 : 2) : r1 < 0.25 ? 2 : r1 < 0.6 ? 3 : 4, f = 0.4 + 0.2*rnd();
     if (n === 1) put(a0, b0, a1, b1, hh());
     else if (n === 2 || n === 3){ const c = (lgU ? a0 + (a1 - a0)*f : b0 + (b1 - b0)*f);   // two buildings along the block's long side; or one, and the other half split across
@@ -6748,12 +6750,12 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null; let
 // the 3D town drawn into a bake (g: the bake's canvas, or one chunk's, whose corner is (X0, Y0) in the bake's px). mode 0: the ground (paving,
 // pads, parks), before the footprint's edge cuts the bake; 1: the buildings, after it (so a roof may stand over the edge), their colours scaled
 // by the tier's gain; 2: night (the lamps round the blocks, the walls dark with lit windows, the roofs dark)
-let CB_WIN = null;   // the windows, 16 px square (a bake's px, so every chunk of a tier has them in step): [lit at night, dark glass by day]
-function cityWinPat(g, X0, Y0, n){ if (!CB_WIN){ CB_WIN = [0, 1].map(k => { const c = document.createElement('canvas'); c.width = c.height = 16; const x = c.getContext('2d'), d = x.createImageData(16, 16); let s = 0x9e3779b9;
+let CB_WIN = null;   // the windows, 16 px square (in a bake's px times sc, from its corner, so every chunk of a tier has them in step): [lit at night, dark glass by day]
+function cityWinPat(g, X0, Y0, n, sc = 1){ if (!CB_WIN){ CB_WIN = [0, 1].map(k => { const c = document.createElement('canvas'); c.width = c.height = 16; const x = c.getContext('2d'), d = x.createImageData(16, 16); let s = 0x9e3779b9;
       const rn = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0)/4294967296);
       for (let y = 1; y < 16; y += 3) for (let i = 0; i < 16; i += 2){ const on = rn(), w = 0.75 + 0.25*rn(), q = (y*16 + i)*4; if (k === 0 && on < 0.5){ d.data[q] = 255*w; d.data[q + 1] = 212*w; d.data[q + 2] = 148*w; d.data[q + 3] = 255; } else if (k === 1){ d.data[q] = 24; d.data[q + 1] = 30; d.data[q + 2] = 38; d.data[q + 3] = 255; } }
       x.putImageData(d, 0, 0); return c; }); }
-  const P = g.createPattern(CB_WIN[n ? 0 : 1], 'repeat'); if (P.setTransform) P.setTransform(g.getTransform().invertSelf().translate(-X0, -Y0)); return P; }
+  const P = g.createPattern(CB_WIN[n ? 0 : 1], 'repeat'); if (P.setTransform) P.setTransform(g.getTransform().invertSelf().translate(-X0, -Y0).scale(sc)); return P; }
 function* cityPlanDraw(g, I, S, X0, Y0, mode, gain = 1){ const K = cityDetailK(I, S); if (K <= 0) return; const P = yield* cityPlanWait(I); if (!P) return;
   const pk = S/(2*I.E)*KM_W, m = S/2, W = g.canvas.width, H = g.canvas.height, Ek = I.E/KM_W, NB = CP_NB, bw = 2*Ek/NB, mg = CB_MG, C = cityPal(I, gain), px = v => v/pk;   // pk: bake px per km
   const x0 = (X0 - m)/pk, y0 = (Y0 - m)/pk, x1 = (X0 + W - m)/pk, y1 = (Y0 + H - m)/pk, L = [];   // the canvas in town km; the buckets that reach into it
@@ -6767,16 +6769,16 @@ function* cityPlanDraw(g, I, S, X0, Y0, mode, gain = 1){ const K = cityDetailK(I
     g.restore(); return; }
   if (mode === 2){ g.fillStyle = '#000'; g.globalAlpha = K; for (const Bq of L){ g.fill(Bq.park); g.fill(Bq.tree); }   // parks unlit
     g.globalCompositeOperation = 'screen'; g.setLineDash(CB_LAMP);   // the streets round every block: a soft glow along each (the inner streets, shared by two blocks, brighter than the town's edge), the lamps on it
-    for (const Bq of L){ if (!(++yc & 7)) yield; g.setLineDash([]); g.strokeStyle = '#8c7556'; g.globalAlpha = 0.24*K; g.lineWidth = Math.max(px(2.6), 0.9); g.stroke(Bq.lamp); g.setLineDash(CB_LAMP); g.strokeStyle = '#ffe6c0'; g.globalAlpha = 0.45*K; g.lineWidth = Math.max(px(0.9), 0.2); g.stroke(Bq.lamp); }
-    g.setLineDash([]); const wn = cityWinPat(g, X0, Y0, true);
+    for (const Bq of L){ if (!(++yc & 7)) yield; g.setLineDash([]); g.strokeStyle = '#8c7556'; g.globalAlpha = 0.24*K; g.lineWidth = Math.max(px(2.6), 0.9); g.stroke(Bq.lamp); g.setLineDash(CB_LAMP); g.strokeStyle = '#ffe6c0'; g.globalAlpha = 0.55*K; g.lineWidth = Math.max(px(0.9), 0.2); g.stroke(Bq.lamp); }
+    g.setLineDash([]); const wn = cityWinPat(g, X0, Y0, true, CB_WSC(pk));
     yield* bands((R, b) => { g.globalCompositeOperation = 'source-over'; g.globalAlpha = K; g.fillStyle = '#0d0a07'; g.fill(R.fu); g.fill(R.fv);   // the walls dark, their windows lit
-      g.globalCompositeOperation = 'screen'; g.globalAlpha = 0.8*K; g.fillStyle = wn; g.fill(R.fu); g.fill(R.fv);
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = K; g.fillStyle = wn; g.fill(R.fu); g.fill(R.fv);
       g.globalCompositeOperation = 'source-over'; g.globalAlpha = K; g.fillStyle = '#070605'; g.fill(R.roof[0]); g.fill(R.roof[1]); });
     g.restore(); return; }
   // the buildings: the soft shadows (the whole length, and a darker short one with the contact edge round the foot), then band by band from the
   // lowest: the walls (close in their rows of windows and a dark line on their edges), then the roofs (a lit rim on their upper left edges first)
   g.fillStyle = '#0e0c09'; g.globalAlpha = 0.26*K; for (const Bq of L){ if (!(++yc & 7)) yield; g.fill(Bq.sh1); } g.globalAlpha = 0.28*K; for (const Bq of L) g.fill(Bq.sh2);
-  const wl = rp(2.2, 4), ln = rp(1.4, 2.4), rim = rp(1.1, 1.9), rw = Math.max(0.6, 0.12*pk), wd = wl > 0 ? cityWinPat(g, X0, Y0, false) : null;
+  const wl = rp(2.2, 4), ln = rp(1.4, 2.4), rim = rp(1.1, 1.9), rw = Math.max(0.6, 0.12*pk), wd = wl > 0 ? cityWinPat(g, X0, Y0, false, CB_WSC(pk)) : null;
   for (let b = 0; b <= CB_BIN.length; b++){ yield;
     for (const Bq of L){ const R = Bq.bins[b]; if (!R) continue; g.globalAlpha = K; g.fillStyle = C.fu[b]; g.fill(R.fu); g.fillStyle = C.fv[b]; g.fill(R.fv);
       if (wd){ g.globalAlpha = 0.28*K*wl; g.fillStyle = wd; g.fill(R.fu); g.fill(R.fv); }
@@ -6892,7 +6894,7 @@ function* cityPaint(c, I, S, X0, Y0, o){ for (const l of [I.tb, I.tc, I.td]) if 
   if (K >= 0.5 && S > 2.5*I.M && I.aM){ yield; cityEdge(g, I, S, X0, Y0, W, H); }   // close in: the footprint's edge worked out at the bake's own px (a mask texel would be a wide blur)
   else { B(); g.globalCompositeOperation = 'destination-in'; g.drawImage(K >= 0.5 && I.maskH ? I.maskH : I.mask, 0, 0, S, S); }
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-  if (K > 0){ yield; yield* cityPlanDraw(g, I, S, X0, Y0, 1, gain); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  if (K > 0 && !o){ yield; yield* cityPlanDraw(g, I, S, X0, Y0, 1); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }   // (not scaled by the gain, nor in its samples: the gain matches the ground of every tier, the blocks keep their own light)
   return c; }
 // the footprint as a crisp edge for a bake much bigger than the masks (W x H px whose corner is (X0, Y0) of the bake at S): the density read
 // smoothly at every px and cut at one level (where the drawn footprint is half opaque, so the town keeps its shape), anti-aliased over about a px (no half-faded buildings over the ground at the rim and round
