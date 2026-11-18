@@ -58,7 +58,7 @@ Owner's consolidated list of 2026-11-15 (#1-#24). Already merged and live (Dev B
 - Card scene, with two small dark tags at its top left, matched exactly: the model name with a small white unit icon ("T-80 [icon]"), and "Level 1" under it.
 - A short description under the picture.
 - Footer: each cost as an icon with its amount, a stopwatch icon with the research time ("1d"), and a big green START button."
-Also (owner): "Research tree: attached are my Conflict of Nations research tree screenshot (Helicopters, with the red banner and Slot #1 / #2), their Ka-25 unit card, and my mockup. Match the tree screenshot's layout and the card's layout." (The three pictures did not reach the session on 2026-11-18: asked again.)
+Also (owner): "Research tree: attached are my Conflict of Nations research tree screenshot (Helicopters, with the red banner and Slot #1 / #2), their Ka-25 unit card, and my mockup. Match the tree screenshot's layout and the card's layout." Reference pictures (owner's CoN screenshots, received 2026-11-18, kept in the scratchpad research-ref/): con-tree-helicopters.webp (the tree: red RESEARCH banner with the group emblem, SLOT #1 / #2 boxes, HELICOPTERS header, day column with a calendar icon, today line at day 4 with the tinted band above it, diamonds, alternating column shading, + marks), con-card-ka25.webp, con-card-ka50.webp, con-card-mi8.webp (the card; the group stripe shows the emblems of every group that fields the unit). The owner's mockup has not arrived.
 
 ### RESEARCH-CON spec (owner, 2026-11-15, verbatim points)
 
@@ -110,9 +110,9 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 ## Waiting on me (the owner)
 
 - **Conflict of Nations numbers:** constacks.com can't be read (security checkpoint; its robots.txt asks AI crawlers to stay out); taken off the allowed sites 2026-11-18. Paste the figures or send screenshots if you want them matched.
-- **Research tree rebuild:** the three pictures (CoN Helicopters tree with the red banner and Slot #1/#2, the Ka-25 card, the owner's mockup) did not reach the session; please upload them again.
-- **CITIES:** screenshots sent 2026-11-18; OK to merge? (MAP-2 is back in work with the owner's feedback.)
-- **Icon fix (icon-fix):** OK to merge? Note: the game's basic infantry IS Motorized Infantry, so it shows the helmet with the wheel; say if it should show the plain helmet instead.
+- **Research tree rebuild:** the CoN tree and card screenshots arrived (2026-11-18); the owner's own mockup did not. Starts when a job slot frees.
+- **CITIES (not approved yet, owner 2026-11-18):** send screenshots first of buildings on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, and a building under construction. Keep the night lights ("way better"). Follow-up job queued for the next free slot.
+- **Icon fix (icon-fix):** done the owner's way (no wheel; plain helmet for every infantry type), screenshot sent 2026-11-18; OK to merge?
 
 - **Merged in v50 with the built defaults; still open if you want to change them:** aircraft (parked aircraft keep their pictures, bigger bomber/AWACS/patrol sizes, Stealth Bomber humps, old jet/int sheets still loaded); buildings (dock basins, small rivers count, construction sites 10% bigger?, move ~93 port cities' map points to their real places?); shipping routes (fleet selection no longer shows routes, cut-off convoys hidden when off, coaster/tanker drawn in code); building rules (Army Base only or both; Fortifications price: option 2 recommended; the +40% per extra Army Base; a starting Army Base in the biggest city?).
 - **Explosions (FX-2 ready):** the 'two not showing' were nuclear (the rules have no tactical nuke or ICBM, so it only appeared from test buttons) and chemical (no clip, and no chemical weapon in the rules). Add real chemical / tactical nuke / ICBM weapons to the rules (docs/RESEARCH.md 12.5: research, cost, damage, fallout, diplomacy)? OK to merge the clips?
