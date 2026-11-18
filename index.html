@@ -2888,8 +2888,8 @@ const UICON_D = {
   truck:'M8.54 17.06L8.83 17.24L9.33 17.66L9.83 17.24L10.13 17.06L14.76 17.06L15.06 17.24L15.59 17.69L16.04 18.22L16.4 18.82L16.67 19.46L16.85 20.39L21.81 20.39L22 19.46L22.26 18.82L22.63 18.22L23.08 17.69L23.61 17.24L24.2 16.87L24.85 16.61L25.53 16.44L26.22 16.39L26.92 16.44L27.6 16.61L28.24 16.87L28.83 17.24L29.36 17.69L29.82 18.22L30.18 18.82L30.45 19.46L30.63 20.39L31 20.39L31 12.61L27.67 8.61L24.33 8.61L23.22 9.72L23.22 16.83L21.78 16.83L21.78 7.72L1.11 7.72L1.11 16.83L1 16.83L1 20.39L1.81 20.39L2 19.46L2.26 18.82L2.63 18.22L3.08 17.69L3.61 17.24L3.91 17.06ZM25 13.5L25 10.39L27.22 10.39L29.67 13.5ZM2.67 9.5L20.22 9.5L20.22 10.72L2.67 10.72ZM26.76 17.43L26.22 17.39L25.68 17.43L25.16 17.56L24.66 17.76L24.2 18.05L23.79 18.4L23.44 18.81L23.15 19.27L22.95 19.77L22.82 20.29L22.78 20.83L22.82 21.37L22.95 21.9L23.15 22.4L23.44 22.86L23.79 23.27L24.2 23.62L24.66 23.9L25.16 24.11L25.68 24.24L26.22 24.28L26.76 24.24L27.29 24.11L27.79 23.9L28.25 23.62L28.66 23.27L29.01 22.86L29.29 22.4L29.5 21.9L29.62 21.37L29.67 20.83L29.62 20.29L29.5 19.77L29.29 19.27L29.01 18.81L28.66 18.4L28.25 18.05L27.79 17.76L27.29 17.56ZM27.2 21.81L26.65 22.14L26.22 22.21L25.8 22.14L25.25 21.81L24.91 21.26L24.84 20.83L24.91 20.41L25.25 19.86L25.6 19.61L26.22 19.46L26.85 19.61L27.2 19.86L27.53 20.41L27.6 20.83L27.53 21.26ZM6.22 17.39L5.68 17.43L5.16 17.56L4.66 17.76L4.2 18.05L3.79 18.4L3.44 18.81L3.15 19.27L2.95 19.77L2.82 20.29L2.78 20.83L2.82 21.37L2.95 21.9L3.15 22.4L3.44 22.86L3.79 23.27L4.2 23.62L4.66 23.9L5.16 24.11L5.68 24.24L6.22 24.28L6.76 24.24L7.29 24.11L7.79 23.9L8.25 23.62L8.66 23.27L9.01 22.86L9.33 22.3L9.66 22.86L10.01 23.27L10.42 23.62L10.88 23.9L11.38 24.11L11.91 24.24L12.44 24.28L12.98 24.24L13.51 24.11L14.01 23.9L14.47 23.62L14.88 23.27L15.23 22.86L15.51 22.4L15.72 21.9L15.85 21.37L15.89 20.83L15.85 20.29L15.72 19.77L15.51 19.27L15.23 18.81L14.88 18.4L14.47 18.05L14.01 17.76L13.51 17.56L12.98 17.43L12.44 17.39L11.91 17.43L11.38 17.56L10.88 17.76L10.42 18.05L10.01 18.4L9.66 18.81L9.33 19.37L9.01 18.81L8.66 18.4L8.25 18.05L7.79 17.76L7.29 17.56L6.76 17.43ZM13.42 21.81L12.87 22.14L12.44 22.21L12.02 22.14L11.47 21.81L11.13 21.26L11.07 20.83L11.22 20.21L11.47 19.86L11.82 19.61L12.44 19.46L13.07 19.61L13.42 19.86L13.75 20.41L13.82 20.83L13.75 21.26ZM7.03 21.95L6.44 22.19L6.01 22.19L5.6 22.06L5.11 21.64L4.91 21.26L4.86 20.62L4.99 20.21L5.41 19.72L6.01 19.47L6.44 19.47L7.03 19.72L7.34 20.02L7.53 20.41L7.58 21.05L7.34 21.64Z',
 };
 // @UICON-END
-// which icon a type uses ('inf' is named Motorized Infantry in the game: 'mot', the helmet with a wheel; Paratroopers the plain helmet: owner, 2026-11-18, no parachute icon anywhere)
-const UICON_INF = 'mot';   // owner, 2026-11-18: Motorized Infantry shows the helmet with the small wheel ('inf' would be the plain helmet)
+// which icon a type uses ('inf' is named Motorized Infantry in the game; it and the Paratroopers show the plain helmet: owner, 2026-11-18, no wheel and no parachute icon anywhere)
+const UICON_INF = 'inf';   // owner, 2026-11-18 (final): no wheel; every infantry type shows the owner's plain helmet
 const UICON_OF = {inf:UICON_INF, para:'inf', convoy:'cargo', cargo:'cargo', bomb2:'bomb', drone4:'drone4'};
 const uiconKey = t => UICON_OF[t] || (UICON_D[t] ? t : 'stack');
 const UICONP = new Map();
@@ -2909,17 +2909,15 @@ function uiconC(t, W, col, sh = 0){ const key = uiconKey(t) + '|' + W + '|' + co
   if (sh){ g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = sh*W/32; g.shadowOffsetY = sh*0.4*W/32; g.fillStyle = col; g.fill(uiconPath(t)); g.restore(); }
   g.fillStyle = col; g.fill(uiconPath(t)); UICONC.set(key, c); return c; }
 // the badge tag's icon: flat navy on the white tag, a W x W device-pixel canvas. Infantry is exactly the owner's helmet (100 x 100 drawing: navy helmet,
-// a white band and a navy chin strap); Motorized Infantry the same helmet with a small wheel at its lower right; Paratroopers the plain helmet; every other type its own silhouette in navy, fitted to the square
+// a white band and a navy chin strap), also for Motorized Infantry, Paratroopers, Special Forces and Anti-Tank Infantry (BADGE_INF); every other type its own silhouette in navy, fitted to the square
 const NAVY = '#1d2c45', UICONN = new Map();
-function uiconNavy(t, W){ const k = uiconKey(t), key = k + '|' + W; let c = UICONN.get(key); if (c) return c; if (UICONN.size > 300) UICONN.clear();
+const BADGE_INF = new Set(['inf', 'para', 'spec', 'at']);   // owner, 2026-11-18: on the map badge every infantry type is the same plain helmet (the exact type shows on a tap and in the 3D soldiers)
+function uiconNavy(t, W){ const k = BADGE_INF.has(t) ? 'inf' : uiconKey(t), key = k + '|' + W; let c = UICONN.get(key); if (c) return c; if (UICONN.size > 300) UICONN.clear();
   c = document.createElement('canvas'); c.width = c.height = Math.max(1, W); const g = c.getContext('2d');
   const helmet = () => { g.fillStyle = NAVY; g.fill(new Path2D('M12 62 C12 35 31 17 55 17 C78 17 91 35 91 56 L96 66 L80 66 C70 61 32 61 12 62 Z'));
     g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(new Path2D('M20 57 C40 53 64 53 84 59'));
     g.strokeStyle = NAVY; g.lineWidth = 6; g.stroke(new Path2D('M33 64 C33 80 47 87 59 81 L66 66')); };
   if (k === 'inf'){ g.scale(W/100, W/100); helmet(); }
-  else if (k === 'mot'){ g.scale(W/100, W/100); g.save(); g.translate(-4, -6); g.scale(0.9, 0.9); helmet(); g.restore();   // the whole helmet, and a small wheel at its lower right corner
-    // (owner, 2026-11-18: the wheel used to hang under a shrunken helmet on the chin strap, which read as a parachute and its load at badge size)
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(79, 79, 21, 0, Math.PI*2); g.fill(); g.fillStyle = NAVY; g.beginPath(); g.arc(79, 79, 16, 0, Math.PI*2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(79, 79, 5.5, 0, Math.PI*2); g.fill(); }
   else { const B = uiconBox(t), bw = Math.max(1, B[2] - B[0]), bh = Math.max(1, B[3] - B[1]), f = W/Math.max(bw, bh); g.scale(f, f); g.translate(-B[0] + (Math.max(bw, bh) - bw)/2, -B[1] + (Math.max(bw, bh) - bh)/2); g.fillStyle = NAVY; g.fill(uiconPath(t)); }
   UICONN.set(key, c); return c; }
 // the icon tile for the HTML UI: the same dark square as a picture tile (.ut, size classes xs..lg), the white silhouette on it
