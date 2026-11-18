@@ -5,38 +5,35 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 
 **Rules for running jobs (owner, 2026-11-11 and 2026-11-13):**
 - **Models:** Opus for big features and design, Sonnet for routine work, no new Fable tasks unless the owner says so.
-- **Limits:** at most 2 to 3 jobs at once (urgent fixes may exceed it). Small tasks get one pass; big ones one review and at most one repair.
+- **Limits (owner, 2026-11-18):** at most 5 jobs at once, and only jobs that don't touch the same files or systems run together (for example map and cities wait for each other); overlapping jobs wait in the queue. (Was 2 to 3.) Small tasks get one pass; big ones one review and at most one repair.
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 
-Last updated: 2026-11-18 (Dev Build v57: upgrade follow-ups).
+Last updated: 2026-11-18 (Dev Build v59: research tree, bunker, nation picker).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
-"Pace it so the week lasts: at most 2–3 jobs at once, Sonnet for anything routine, and Opus only for the big ones (MAP-2, the doctrines plan, the upgrades review, the research rebuild, cities, bunker and rebels). Anything that needs my decision goes under 'Waiting on me', and carry on with other jobs meanwhile."
+"Pace it so the week lasts: at most 2–3 jobs at once [raised to 5 non-overlapping jobs on 2026-11-18], Sonnet for anything routine, and Opus only for the big ones (MAP-2, the doctrines plan, the upgrades review, the research rebuild, cities, bunker and rebels). Anything that needs my decision goes under 'Waiting on me', and carry on with other jobs meanwhile."
 Gemini: log every batch with the running total since the top-up; stop and ask if new spending passes $12. Art: follow docs/ART-BIBLE.md (standing rule: before fixing or redoing any picture, show the owner the problem and ask permission first).
 
 ## Running
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **UNIT-ART: the tank sets** | owner 2026-11-18: 3 pictures per look, all the same vehicle: side view cut-out (research diamonds, made first), card scene in action (tap card; blue monitor tint and scanlines drawn in code), top-down (map and army bar), the scene and top-down made from the side view; a 3-way Gemini check that flags only; tank for all 5 groups (45 pictures, about $1.80 + checks), then show the owner before the rest. No $12 line; balance $40.88 at the start (log 255 calls, about $10.27); report the running total each batch; stop if the balance runs low | Sonnet | unit-art |
 | **MAP-2 feedback** | owner 2026-11-18: (1) country borders thin and soft zoomed out, bolder only zoomed in; (2) province lines hidden zoomed out, fading in closer; (3) foreign armies (not yours or an ally's) show only an unknown badge: no count, type or 3D models, a tap says only "Unidentified army"; exact units only through proper recon (recon units, drones, radar) like CoN. Screenshots before merging: Europe/Africa zoomed out; Afghanistan/Pakistan with a Pakistani army tapped | Opus | map-2 |
-| **MAP-FIX** (owner 2026-11-18, urgent bugs) | (1) pinpoint moves: units and ships go to and stop at the exact tapped spot (pinpoint.js already fails on master: find the regression); (2) a small position dot under every army, movement lines start from it; (4) building pictures scale and move exactly with the map, no pulse or snapping; (5) 2-3 clearer dug-in marker options (show only) plus a "Dug in" label in the unit panel; screenshots or a short test of each before merging | Opus | map-fix |
-| **BUNKER** (#17) | owner 2026-11-18: go, with dug-in +10% open / +25% city; 5 levels, hidden from other nations, old saves convert; the updated protection table to the owner before merging | Opus | bunker |
 
 ## Next free slots (in this order)
 
-1. **CITIES follow-up** (Opus, cities-3d): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights; screenshots before merging.
-2. **NATION PICKER** (Sonnet): owner 2026-11-18: "Go back to the old layout: a wide panel with 3 columns of cards, big flags, and each card showing provinces, cities and difficulty. Keep from the new version: the search bar, the 68 nations, the AI difficulty buttons, and the command-room background. On a phone, use 2 columns. Sort the biggest powers first. Show me a screenshot on desktop and on a 440px phone before merging." (the old layout is the public build v3.12, commit 5b47dd8)
-3. **RESEARCH-CON** (Opus): the research tree rebuild with the owner's CoN references.
-4. **BUNKER ART options** (Sonnet): owner 2026-11-18: "The bunker picture looks flat and cartoonish next to the new buildings, and the green patch under it breaks my art rule: no ground patch, only a soft shadow. Show me 2-3 options that match the art bible, with no patch, before changing anything."
+0. **MAP-FIX** (Opus, map-fix; work in progress saved as 1d1079e after the restart): pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options and the "Dug in" label. Waits for MAP-2 (both change the map).
+1. **CITIES follow-up** (Opus, cities-3d; waits for MAP-2 and MAP-FIX, which touch the map and buildings): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights; screenshots before merging.
+2. **WEATHER fixes** (Sonnet; waits for MAP-2 and MAP-FIX, which change the map drawing; the weather is on master: cloudTex / drawWeather in index.html): owner 2026-11-18: "I like the clouds and weather, it's a good addition, just fix these: 1. The clouds keep changing colour on screen, shifting through rainbow-like tints. Find out why and fix it. They should stay natural white/grey and change only slowly and subtly with day/night. 2. The snow animation shows as white dots in a ring around the edges of the clouds. Make it look like real falling snow, only under the clouds and over the right areas. 3. The rain looks unrealistic too: it drops from everywhere around the clouds. Make it fall only from under each cloud, as soft streaks seen from above, thicker in the middle and fading at the edges. Show me a short clip or screenshots before merging." (their screenshot of the Norwegian Sea did not reach the session)
 
 ## Ready, waiting for the owner
 
 | Job | State | Branch |
 |---|---|---|
+| **BUNKER ART options** | done 2026-11-18 (bunker-art): A concrete command bunker with earth berm, B bunker half sunk into a grassy hillock (recommended), C pillbox with trench on its own earth block (slab-like, not recommended); level 1 and 5 each, no ground patch; about $0.20; sheets and map previews sent; nothing in the game changed | bunker-art |
+| **UNIT-ART tank sets** | done 2026-11-18 (unit-art): 45 pictures, 5 groups x 3 looks x (side / scene / top-down), $1.83 with checks (log 365 calls, about $12.10; estimated balance $39.05); 7 single-check flags and 8 three-way flags (mostly mirrored roof details on the top-downs); nothing redone; full set 1,095 pictures, about $44.49 (about $42.67 left, a top-up of about $8.6 needed to keep the $5 floor); sheets sent; NOT merged | unit-art |
 | **CITIES** | done 2026-11-18 (7129852): block clusters, a quarter smaller, owner colour from the town coat, towers lower, hidden at hexPx 26 and below, brighter night windows; checks pass; faster than master except desktop day close-zoom panning +4.7% per frame (probably noise); screenshots sent | cities-3d |
-| **ICON-FIX** (owner bug 2026-11-18) | the 'parachute' badges in Afghanistan were the Motorized Infantry icon (a shrunken helmet with a wheel hanging under it on the chin strap); now the whole helmet with a small wheel at its lower right; Paratroopers show the plain helmet, no parachute icon anywhere; badge test and golden pass; before/after of the same spot sent | icon-fix |
 | Explosion clips + FX-2 (#24) | NOT merged until the owner OKs | fx-video |
 
 ## Queued (in this order)
@@ -118,8 +115,10 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 - **Conflict of Nations numbers:** constacks.com can't be read (security checkpoint; its robots.txt asks AI crawlers to stay out); taken off the allowed sites 2026-11-18. Paste the figures or send screenshots if you want them matched.
 - **Research tree rebuild:** the CoN tree and card screenshots arrived (2026-11-18); the owner's own mockup did not. Starts when a job slot frees.
+- **Bunker picture:** the owner picked C without its box (2026-11-18); version 1 (code, sides removed, a flat diamond earth top remains) and version 2 (Gemini redraw, an irregular earth mound, about $0.10) sent; which one, and then levels 2-4 as edits?
+- **Gemini log:** each art branch has its own copy of assets/art-src/gen-art-log.jsonl (unit-art +110 calls $1.83, bunker-art +15 calls about $0.20); merge them by joining the lines. Estimated balance about $38.85.
+- **Tank sets (unit-art):** OK the look, or what to change? Open points: several look close to real tanks (US/NATO like an M1, Eastern like a T-72, Europe looks 2-3 like a Leopard 2, Export look 1 like a T-55) against the family-look rule; looks 1-3 of a group read as one tank upgraded, not new generations; the top-downs often mirror roof details (8 three-way flags); a grey shadow plate shows under the tanks on the map; scenes are photo-real; check model is gemini-3.8-flash (2.5 closed to new users). Redo any of the 15 flagged pictures? (standing rule: nothing redone without the owner)
 - **CITIES (not approved yet, owner 2026-11-18):** send screenshots first of buildings on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, and a building under construction. Keep the night lights ("way better"). Follow-up job queued for the next free slot.
-- **Icon fix (icon-fix):** done the owner's way (no wheel; plain helmet for every infantry type), screenshot sent 2026-11-18; OK to merge?
 
 - **Merged in v50 with the built defaults; still open if you want to change them:** aircraft (parked aircraft keep their pictures, bigger bomber/AWACS/patrol sizes, Stealth Bomber humps, old jet/int sheets still loaded); buildings (dock basins, small rivers count, construction sites 10% bigger?, move ~93 port cities' map points to their real places?); shipping routes (fleet selection no longer shows routes, cut-off convoys hidden when off, coaster/tanker drawn in code); building rules (Army Base only or both; Fortifications price: option 2 recommended; the +40% per extra Army Base; a starting Army Base in the biggest city?).
 - **Explosions (FX-2 ready):** the 'two not showing' were nuclear (the rules have no tactical nuke or ICBM, so it only appeared from test buttons) and chemical (no clip, and no chemical weapon in the rules). Add real chemical / tactical nuke / ICBM weapons to the rules (docs/RESEARCH.md 12.5: research, cost, damage, fallout, diplomacy)? OK to merge the clips?
@@ -154,6 +153,8 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| Research tree rebuilt like Conflict of Nations; the Bunker (5 levels, hidden); the nation picker in the old card layout (Dev Build v59, owner OK 2026-11-18) | Opus / Sonnet |
+| ICON-FIX (Dev Build v58, owner OK 2026-11-18): every infantry type (Motorized, Paratroopers, Special Forces, Anti-Tank) shows the owner's plain helmet badge; no wheel or parachute icon anywhere | Opus |
 | UPGRADES-2 (Dev Build v57, owner 2026-11-18): Recon UAV Firepower 1-2 became Wide-Area Sensors 1-2 (+15% / +30% view; Firepower 3 kept for UAV IV); landings, boarding and cruise missiles under way switch to new timing at once; old saves convert; 1349-check test | Sonnet |
 | Badge size (Dev Build v56, owner OK 2026-11-18): every badge 86% of the first version, about 45 px wide on a phone, the same size for everyone | Opus |
 | UPGRADES fix (Dev Build v55, owner 2026-11-18): the suggested answers (Infantry Kit, Thermobaric Warheads, Close-In Defence replace the 3 do-nothing upgrades; +15% training on each line's final level) and all 6 gaps: aircraft speed upgrades work (+10% / +33%), swarm cards 6 drones everywhere, queued training and moves under way speed up when an upgrade lands, the AI counts swarms right, a 1271-check test (.test/upgrades-live.js); old saves convert; golden re-recorded | Opus |

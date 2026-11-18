@@ -73,7 +73,7 @@ const ok = (c, msg, extra) => { if (!c) fails.push(msg + (extra !== undefined ? 
   await p.click('#resbtn'); await p.waitForTimeout(300);
   const bans = await p.evaluate(() => [...document.querySelectorAll('#sheet [data-act="rbranch"]')].map(e => e.dataset.b));
   ok(bans.length >= 10, 'research list banners', bans);
-  ok(await vis('.rs-slots'), 'research slot boxes visible');
+  ok(await vis('.rk-slots'), 'research slot boxes visible');
   await shot('4-research-list');
   const plan = await p.evaluate(() => { const im = window.__im, S = im.S, N = S.nations[0]; return { cash: N.cash, metal: N.metal, rare: N.rare, research: N.research }; });
   notes.push('resources ' + JSON.stringify(plan));
@@ -111,7 +111,7 @@ const ok = (c, msg, extra) => { if (!c) fails.push(msg + (extra !== undefined ? 
   let rq = await p.evaluate(() => { const R = window.__im.S.nations[0].research2; return R && R.id; });
   if (rq !== qid) { await p.evaluate(() => { const N = window.__im.S.nations[0]; N.cash += 2000; N.metal += 200; N.rare += 200; }); const qb = `#sheet [data-act="research"][data-id="${qid}"]`; if (await p.$(qb)) { await p.click(qb); await p.waitForTimeout(200); } rq = await p.evaluate(() => { const R = window.__im.S.nations[0].research2; return R && R.id; }); }
   ok(rq === qid, 'second research running in slot #2', { rq, qid });
-  ok(await p.evaluate(() => document.querySelectorAll('.rs-slots .rs-slot.full').length === 2 && /SLOT #2/i.test(document.querySelector('.rs-slots').innerText)), 'both slot boxes show a running project');
+  ok(await p.evaluate(() => document.querySelectorAll('.rk-slots .rs-slot.full').length === 2 && /SLOT #2/i.test(document.querySelector('.rk-slots').innerText)), 'both slot boxes show a running project');
   await shot('7-research-two');
   await closeM();
   // run time: both slots advance together and each finishes at its own time

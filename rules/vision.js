@@ -173,6 +173,15 @@ function visTouch(vis, p){ if (!vis.ids) return []; if (!vis.touch){ const T = v
     for (const s of vis.ids){ if (s[5] === VK.sea) continue; const r = s[4], x0 = Math.min(s[0], s[2]) - r, x1 = Math.max(s[0], s[2]) + r, y0 = Math.min(s[1], s[3]) - r, y1 = Math.max(s[1], s[3]) + r;
       visEach(s, q => { const b = g.bb[q]; if (G.P[q].sea || b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1) return; let l = T.get(q); if (!l) T.set(q, l = []); l.push(s); }, g.ext + 1); } }
   return vis.touch.get(p) || []; }
+// The Bunker (BUILD.fort) is hidden: buildings are public (every nation sees every other's, on the map and in the city panels), the Bunker is not.
+// Nation n sees the bunker in p (that it exists, its level, one going up) only when it holds p itself (a captured bunker is the captor's: it
+// learns it then), or p is revealed (S.reveal: a spy's Reconnaissance, a UAV over it; as everything in a revealed province), or in developer
+// reveal mode. Allies, partners and enemies alike see nothing else of it. bldSeen / consSeen give a province's buildings and its construction as
+// n sees them (the page draws and lists those); the rules themselves always use the real ones, and the computer reads them, as every building
+function bunkerSeen(p, n){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
+  return S.owner[p] === n || (!!S.reveal && S.reveal[p] > S.hour); }
+function bldSeen(p, n){ const B = S.bld[p]; return !B || !(B.fort > 0) || bunkerSeen(p, n) ? B : {...B, fort:0}; }
+function consSeen(p, n){ const c = S.cons[p]; return c && c.k === 'fort' && !bunkerSeen(p, n) ? null : c; }
 // low-observable aircraft in flight (a wing of Stealth Bombers): radar, satellites, UAVs and other aircraft do not show them to a foreign nation.
 // Nation n sees such a wing over province p0 only from a Mobile SAM or jammer of its own standing in p0 or next to it (loSpotted); an early-warning
 // orbit of its own or of an ally gives a location-only contact within half the radar's range (measured from the orbit's point to the wing at x, y;

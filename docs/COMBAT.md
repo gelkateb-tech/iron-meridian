@@ -172,7 +172,7 @@ the frigate's guns as far as artillery, a submarine's torpedoes only close by. A
   1.06 on the same force one province away; 3 MLRS 0.97 vs 0.94; 5 games each). `BATTLE_PACE` does not apply.
 - Damage per hour of a unit type: `n × attack × K × RANGED_F (0.28) × morale and supply × Artillerist commander (guns) × stack
   efficiency × roll (0.8-1.2) × cover`, cover = the target province's `terrain.art` (at most 1; none at sea), then the holder's
-  fortifications (×0.8 a level). Each type's damage is shared by the forces of the target group it reaches, by their health; the damage
+  Bunker (section 7). Each type's damage is shared by the forces of the target group it reaches, by their health; the damage
   classes (`multO`) decide what it does to each unit (a submarine does nothing to troops). War damage to the province: 1.2 a game hour.
 - **Target**: by default the province holding the strongest visible enemy power in range, all forces there that each type reaches (as the
   old rule chose a province). The player's **Bombard** order picks a target instead (`a.tgt`: one force `{id}` or the forces of one
@@ -238,7 +238,129 @@ territory, victory points, dispatches) is unchanged; only the moment changed.
   the road) walks to the city. Tests: `node .test/capture-landing.js`.
 
 
-## 7. Intelligence: spotted or identified (owner's MAP-2 feedback, 2026-11-18)
+## 7. The Bunker (owner #17)
+
+Fortifications became the **Bunker**: five levels, hidden from other nations. Save key `fort` (unchanged); the rules are `BUNKER_LV`,
+`BUNKER_HIT`, `BUNKER_SHIELD_LV`, `BUNKER_FIX` in `rules/data.js`, the block after the dug-in rule in `rules/combat.js` (`bunkerLv`,
+`bunkerRed`, `bunkerF`, `bunkerShield`, `moraleEff`, `bunkerHit`, `bldHit`, `bunkerNews`, `bunkerHour`, `bunkerTable`), `bunkerSeen` /
+`bldSeen` / `consSeen` in `rules/vision.js`, `bunkerMigrate` in `rules/state.js`, `aiBunkerWant` in `rules/ai.js`. The page only reads them.
+
+### 7.1 The protection table
+
+Worked out by the rules themselves: `node tools/bunker-table.js` prints it from `bunkerTable()` (BUNKER_LV, DIG_DEF, DIG_CITY, buildCost)
+and also plays every level through the damage step a battle uses (`hurt` with `bunkerF` and `digF`, a real garrison in a real capital
+and in an open province); `--check` fails if the two disagree. "Takes less damage" is against the same force with no bunker and not dug in.
+Dug in is +10% defence in the open (DIG_DEF = 1/1.1) and +25% in a city (DIG_CITY = 1/1.25); the two multiply with the bunker.
+
+| level | garrison takes less damage | with dug-in, open | with dug-in, city | health | morale | other buildings | upkeep a day | price | build time |
+|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
+| 1 | 33% | 39.1% | 46.4% | 20 | +5% | 33% less damage | $1.0M | $36M, 8k materials, 8k iron | 2 days |
+| 2 | 43% | 48.2% | 54.4% | 40 | +10% | 33% less damage | $1.1M | $58M, 13k materials, 13k iron | 2 days |
+| 3 | 56% | 60.0% | 64.8% | 65 | +20% | 33% less damage | $1.2M | $92M, 20k materials, 20k iron | 2 days |
+| 4 | 69% | 71.8% | 75.2% | 95 | +33% | 33% less damage | $1.3M | $130M, 28k materials, 28k iron, 5k electronics | 2.5 days |
+| 5 | 82% | 83.6% | 85.6% | 125 | +50% | 33% less damage | $1.4M | $180M, 38k materials, 38k iron, 8k electronics | 3 days |
+
+(no bunker: 0% / 9.1% dug in, open / 20.0% dug in, city. All five levels: $496M. Measured through the rules' damage step: 1: 33.0% / 39.1% / 46.4%; 2: 43.0% / 48.2% / 54.4%; 3: 56.0% / 60.0% / 64.8%; 4: 69.0% / 71.8% / 75.2%; 5: 82.0% / 83.6% / 85.6%; same as the table.)
+
+The owner's earlier table (33/43/56/69/82; 39/48/60/72/84; 46/54/65/75/86) agrees with the code to the whole percent. Home soil (×1/1.25),
+terrain and Field Hospitals multiply on top, as before; the table leaves them out. The build panel (BUILD, the Bunker's row) shows the same
+table, from the same function, with the city's own level marked.
+
+### 7.2 What each number does
+
+- **Garrison damage** (`red`): the province holder's own forces standing there take `1 − red` of the damage from everything that strikes them
+  there: battles (`rules/tick.js`), ranged fire, air strikes, armed-UAV missiles, cruise and ballistic missiles (the old Fortifications counted
+  in battles, ranged fire and air strikes only). Foreign forces in the province, allies included, get nothing (as before). It replaces the old
+  ×0.8 a level.
+- **Morale** (`mrl`): the garrison's morale counts that much higher, at most 100% (`moraleEff`): a level 5 garrison at 60% fights as 90%. It is
+  used for its fighting strength (`moraleF`, so also `power`) and for the point where it breaks and retreats. The morale itself is not raised,
+  so it falls and recovers as before. Reading: "morale" is the garrison's, not the province's (the province's morale is shown to every nation and
+  drives its output; a bonus there would give the bunker away).
+- **Health** (`hp`): our buildings are damaged in whole levels (a bomber wrecks 0.75 of a level, a ballistic missile or sabotage one, a strike
+  drone sometimes one). Converted: one such hit takes `BUNKER_HIT` = 20 health from a bunker, so level 1 (20) falls to one hit as every other
+  building level does. The levels are steps of one pool: a level 5 bunker (125) is level 4 below 95... level 1 below 40, and gone at 0: seven hits
+  from level 5. It repairs `BUNKER_FIX` = 2.5 health an hour (a full level 5 in two days); a lost level is built again. A precision strike can
+  also knock it out (12 h): it then protects nothing until it works again, but costs its upkeep.
+- **The other buildings, "up to level 1"**: reading: the shield the other buildings get is level 1's protection whatever the bunker's level; only
+  the garrison and the people get the higher levels' protection. In our damage model a building takes damage as a level lost or a knock-out, so
+  33% less damage means: every hit on another building is averted with a 33% chance (bombers' hits, a ballistic missile, a precision strike's lost
+  level, sabotage), and a knock-out lasts 33% fewer hours (12 h → 8 h). Measured (3,000 raids of two Heavy Bombers on a city with four other buildings at level V):
+  1.50 levels of the other buildings wrecked a raid with no bunker, 0.99 with a level 1 bunker (34% fewer), 0.93 with level 3, 0.88 with level 5
+  (a bunker also draws hits onto itself, on its own health).
+- **The people, "up to level 5"**: war damage costs the province `red` less of its population (`warDamage`: 0.12% of the people a point of war
+  damage, times `1 − red`). The war damage itself (the province's morale and output) is not changed.
+- **Upkeep** (`upk`): $1.0M to $1.4M a day (`income0`), the only building with an upkeep. A knocked-out bunker costs it too.
+- **Capture**: a captured bunker loses a level (as Fortifications did) and stands at full health; the captor now sees it.
+- **Combat Engineers** halve its price; **Defence in Depth** (doctrine) builds it twice as fast; a friend's forces still dig in in a province
+  with a working bunker.
+
+### 7.3 Converting to our economy's scale
+
+Conflict of Nations' own figures could not be read (docs/RESEARCH-UPGRADES.md: constacks.com is behind a browser check), so the conversion uses
+our economy only:
+
+- **Upkeep**: the owner's 100-140 divided by 100: **$1.0M to $1.4M a day**. $1M a day is what one Motorized Infantry costs to keep, the smallest
+  standing cost in the game; a nation earns about $210-270M a day at the start, so a level 5 bunker is about 0.6% of it. The owner's ratios
+  between levels are kept exactly.
+- **Health**: the owner's numbers as they are, with a hit worth 20 (see 7.2), so level 1 is as tough as any building level today.
+- **Price and time**: levels 1-3 cost what Fortifications I-III cost (the old 1.6×-a-level rule from $36M, 8,000 materials and 8,000 iron,
+  2 days each), so a game's first bunkers cost what they did. Levels 4 and 5 go on at about ×1.4 a level ($130M, $180M) with a little electronics
+  (5,000, 8,000), and take 2.5 and 3 days (the game's +25% a level from level IV). The standard ×1.6 would put level 5 at $236M and 24,000
+  electronics, about a tier B nation's whole starting electronics, for a building that also has an upkeep now. All five levels: $496M. This is the
+  Fortifications price question (BLD-RULES): it is settled here by the five-level table, not by the earlier options.
+
+### 7.4 Hidden from other nations
+
+Buildings are public in this game (every nation sees every other nation's, on the map and in the city panels). The Bunker is not:
+
+- Nation n sees the bunker in p (that one exists, its level, one going up) only when it holds p (`bunkerSeen`), or p is **revealed**
+  (`S.reveal`: a spy's Reconnaissance, a UAV on station over it, as everything in a revealed province is), or in developer reveal mode. Capture is a
+  reveal by holding. A spy's Sabotage that hits it says so (spies already reveal). Allies, partners and enemies see nothing else of it.
+- The page draws and lists the buildings as `bldSeen(p, PLAYER)` gives them and the construction as `consSeen`: the map (`bnItems`, `bnHas`),
+  the city sheet's cards, the province detail, the hover card, the Cities tab, the territory editor. A foreign bunker, built or going up, is never
+  drawn.
+- The odds a person's nation is shown (`oddsParts` for a seat) leave out an unseen bunker's protection and its garrison's morale bonus; an ally's
+  Strength table (`armyStrength(a, false, viewer)`) leaves it out. A bombing, precision-strike or missile report names only the levels actually
+  wrecked; what the bunker took or shielded is told to its owner alone (`bunkerNews`). A territory sale's value leaves the bunker out (it goes with
+  the land).
+- **The computer** reads it: it plays on the full state and already reads every foreign building (strike targets by building value, spy
+  targets, the old Fortifications in its defence estimates). That is kept: `defPower`, `aiDroneTarget`, `aiBombTarget`, `bestBld` and the computer's own odds
+  count a foreign bunker. Making the computer blind to bunkers only would be a new rule of its own.
+- What can still be inferred: a friend's force that digs in in your province (the dug-in rule's "fortified friendly province") shows its owner a
+  dug-in shield, and a raid that wrecks less than expected may be a bunker's doing. Neither names the bunker or its level.
+
+### 7.5 The computer
+
+`aiBunkerWant`: its capital at level 3 once enemy forces stand next to it (level 5 for an empire of over 150 provinces, 4 with over $500M; the
+old Fortifications II and III), level 1 whenever it is at war (2 with over $350M); another city with something to shield (a Missile Silo,
+Airbase II, Naval Yard II or Army Base III) level 1 when enemies stand next to it and it has over $250M (one chance in four a turn). At peace
+it keeps the starting level 1 and pays no more upkeep. Computer nations start no wars among themselves, so this mostly answers a person's war.
+`.test/bunker.js`: a computer capital with an enemy army next to it went 1 1 1 2 2 3 3 4 over eight days.
+
+### 7.6 Old saves
+
+A save without `S.bk` (made before the Bunker): Fortifications I, II, III become levels **1, 3, 5** (`BUNKER_OLD`): the old top is the new top
+and the old middle the new middle, and no province is weaker than it was (old I/II/III: 20/36/49% less damage; new 1/3/5: 33/56/82%). A
+Fortifications level under construction carries on as the matching level with its hours (its price was paid), a knocked-out one stays knocked
+out, each seat is told once. `.test/bunker.js` loads `.test/fixtures/bunker-oldsave.json` (made by master cbe8d87: Fortifications I, II and III
+in two nations and a level II going up).
+
+### 7.7 Balance
+
+Computer nations do not go to war with each other, so in all-computer games the bunker changes little: every capital keeps its level 1, which
+now costs $1M a day and protects more (33% instead of 20%). Measured before (master cbe8d87) and after:
+
+- nations world, `node tools/nations-balance.js` (5 seeds, 60 days): **ALL PASS** before and after; tier land on day 60 S 102-104% / A 119-121% /
+  B 126-128% / C 131-135% before, S 102-103% / A 115-120% / B 126-128% / C 131-136% after; T7 speed 731 ms a game day on the plan's scale (budget 1250).
+- classic world, `node tools/headless.js --days 30` (seeds 12345 / 7 / 99): nations' units 1659 / 1578 / 1564 before, 1629 / 1561 / 1581 after;
+  provinces captured 1185 / 1129 / 1146 before, 1146 / 1157 / 1240 after; 15 nations alive in all; within the seed-to-seed spread.
+- `tools/golden-12345.txt` was recorded again: the fingerprint differs from day 1 (the bunker's upkeep changes every nation's money from the first
+  hour, and the save carries `S.bk`); `node tools/headless.js --check` is deterministic.
+
+Against a person's nation the bunker is the owner's rule as given: a level 5 capital with a dug-in garrison takes 14.4% of the damage (before:
+Fortifications III, 51% × 0.8 = 41%), so a capital the computer has built up needs about three times the force it needed before.
+
+## 8. Intelligence: spotted or identified (owner's MAP-2 feedback, 2026-11-18)
 
 Like Conflict of Nations: **seeing a foreign force only tells you that something is there.** Its nation, size, unit types, name and health are
 known only once it is **identified**, by proper recon or by fighting it. Rules: `armyKnown`, `armyIdent`, `armyView`, `intelNote` in
