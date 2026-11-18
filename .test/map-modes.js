@@ -50,11 +50,16 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
   const state = () => p.evaluate(() => ({mode:window.__im.mapMode, rel:window.__im.ovl.on.rel, sup:window.__im.ovl.on.sup}));
   // the buttons: the map style through the More menu's Map item (it switches Political <-> Terrain), an overlay through Settings > Map (On / Off),
   // opened with O and closed with its Done button (a modal pauses the clock and closing it gives the speed back)
-  const more = async sel => { await p.click('#morebtn', { timeout: 30000 }); await p.click(`#morepop ${sel}`, { timeout: 30000 }); };
+  // (a button in a sliding sheet or menu: its box read twice 150 ms apart until it holds still, then a real click on it; Playwright's own
+  //  stability check counts animation frames, and a heavy map frame on a slow machine can keep it waiting past any timeout)
+  const tap = async sel => { await p.waitForSelector(sel, { state: 'visible', timeout: 30000 }); let a = null;
+    for (let i = 0; i < 60; i++){ const b = await p.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round).join(); }, sel); if (b === a) break; a = b; await p.waitForTimeout(150); }
+    await p.click(sel, { force: true, timeout: 30000 }); };
+  const more = async sel => { await tap('#morebtn'); await tap(`#morepop ${sel}`); };
   const press = async (act, k) => { const st = await state();
     if (act === 'mode'){ if (st.mode !== k) await more('#mapsbtn'); return; }
     await p.keyboard.press('o'); const on = st.mode === 'political' && st[k];   // (O opens Settings, as the More menu's Settings item does)
-    await p.click(`#sheet [data-act="ovl"][data-k="${k}"][data-v="${!on}"]`, { timeout: 30000 }); await p.click('#sheet [data-act="resume"]', { timeout: 30000 }); await p.waitForTimeout(120); };   // (the closing sheet's ghost slides out)
+    await tap(`#sheet [data-act="ovl"][data-k="${k}"][data-v="${!on}"]`); await tap('#sheet [data-act="resume"]'); await p.waitForTimeout(120); };   // (the closing sheet's ghost slides out)
   const act = a => a === 'P' ? press('mode', 'political') : a === 'T' ? press('mode', 'terrain') : press('ovl', a === 'R' ? 'rel' : 'sup');
   // zoom toward scale s1 round the middle of the map: wheel steps (desktop) or a pinch (phone, real touch events); fast = big steps, no pause
   const zoom = async (s1, fast) => { const cx = MAP.x + MAP.w*0.5, cy = MAP.y + MAP.h*0.5;
@@ -111,7 +116,7 @@ let seed = +(process.env.SEED || 7); const rnd = () => (seed = (seed*16807) % 21
     const u = await p.evaluate(() => ({onMap:!!document.querySelector('#mapwrap .modes, #modes'), modes:[...document.querySelectorAll('#sheet [data-act="mode"]')].map(b => b.dataset.k), ovls:[...new Set([...document.querySelectorAll('#sheet [data-act="ovl"]')].map(b => b.dataset.k))],
       inMap:!!document.querySelector('#set-map') && [...document.querySelectorAll('#sheet [data-act="mode"], #sheet [data-act="ovl"]')].every(b => b.compareDocumentPosition(document.querySelector('#set-map')) & Node.DOCUMENT_POSITION_PRECEDING),
       more:[...document.querySelectorAll('#morepop [data-act="mapstyle"]')].map(b => b.textContent.trim())}));
-    await p.click('#sheet [data-act="resume"]'); await p.waitForTimeout(250);
+    await tap('#sheet [data-act="resume"]'); await p.waitForTimeout(250);
     checks.ui = u; if (u.onMap || u.modes.join() !== 'political,terrain' || u.ovls.join() !== 'rel,sup' || !u.inMap || u.more.length !== 1 || !/^Map: Political/.test(u.more[0])) fail('ui: buttons', u);
     { await p.keyboard.press('v'); const a = await state(); await p.keyboard.press('v'); const b2 = await state(); if (a.mode !== 'terrain' || b2.mode !== 'political') fail('ui: the V key switches the map style', [a.mode, b2.mode]); }
     await setView(home[0], home[1], Z[1]); await settle(); await act('T'); await act('R');
