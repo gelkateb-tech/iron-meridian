@@ -2889,7 +2889,7 @@ const UICON_D = {
 };
 // @UICON-END
 // which icon a type uses ('inf' is named Motorized Infantry in the game: the plain helmet by default, or 'mot', the helmet over a wheeled vehicle)
-const UICON_INF = 'inf';
+const UICON_INF = 'mot';   // owner, 2026-11-18: Motorized Infantry shows the helmet with the small wheel ('inf' would be the plain helmet)
 const UICON_OF = {inf:UICON_INF, convoy:'cargo', cargo:'cargo', bomb2:'bomb', drone4:'drone4'};
 const uiconKey = t => UICON_OF[t] || (UICON_D[t] ? t : 'stack');
 const UICONP = new Map();
@@ -2908,6 +2908,19 @@ function uiconC(t, W, col, sh = 0){ const key = uiconKey(t) + '|' + W + '|' + co
   c = document.createElement('canvas'); c.width = c.height = Math.max(1, W); const g = c.getContext('2d'); g.scale(W/32, W/32);
   if (sh){ g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = sh*W/32; g.shadowOffsetY = sh*0.4*W/32; g.fillStyle = col; g.fill(uiconPath(t)); g.restore(); }
   g.fillStyle = col; g.fill(uiconPath(t)); UICONC.set(key, c); return c; }
+// the badge tag's icon: flat navy on the white tag, a W x W device-pixel canvas. Infantry is exactly the owner's helmet (100 x 100 drawing: navy helmet,
+// a white band and a navy chin strap); Motorized Infantry the same helmet smaller with a wheel under it; every other type its own silhouette in navy, fitted to the square
+const NAVY = '#1d2c45', UICONN = new Map();
+function uiconNavy(t, W){ const k = uiconKey(t), key = k + '|' + W; let c = UICONN.get(key); if (c) return c; if (UICONN.size > 300) UICONN.clear();
+  c = document.createElement('canvas'); c.width = c.height = Math.max(1, W); const g = c.getContext('2d');
+  const helmet = () => { g.fillStyle = NAVY; g.fill(new Path2D('M12 62 C12 35 31 17 55 17 C78 17 91 35 91 56 L96 66 L80 66 C70 61 32 61 12 62 Z'));
+    g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(new Path2D('M20 57 C40 53 64 53 84 59'));
+    g.strokeStyle = NAVY; g.lineWidth = 6; g.stroke(new Path2D('M33 64 C33 80 47 87 59 81 L66 66')); };
+  if (k === 'inf'){ g.scale(W/100, W/100); helmet(); }
+  else if (k === 'mot'){ g.scale(W/100, W/100); g.save(); g.translate(8, -3); g.scale(0.78, 0.78); helmet(); g.restore();
+    g.fillStyle = NAVY; g.beginPath(); g.arc(52, 79, 18, 0, Math.PI*2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(52, 79, 6.5, 0, Math.PI*2); g.fill(); }
+  else { const B = uiconBox(t), bw = Math.max(1, B[2] - B[0]), bh = Math.max(1, B[3] - B[1]), f = W/Math.max(bw, bh); g.scale(f, f); g.translate(-B[0] + (Math.max(bw, bh) - bw)/2, -B[1] + (Math.max(bw, bh) - bh)/2); g.fillStyle = NAVY; g.fill(uiconPath(t)); }
+  UICONN.set(key, c); return c; }
 // the icon tile for the HTML UI: the same dark square as a picture tile (.ut, size classes xs..lg), the white silhouette on it
 const uIcon = (t, sz = '') => `<i class="ut uic ${sz}" aria-hidden="true">${uiconSVG(t, UIPX[sz] || 28)}</i>`;
 // the UAV's picture follows its level: unarmed recon airframe for UAV I-III, the armed one from UAV IV (per owner)
@@ -5442,7 +5455,7 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW() + '|' + TMAS; let E
 let LAY_R = null;   // this frame's roles (draw)
 /*@TEST*/const LAYEV = new Map();/*@ENDTEST*/
 const PLAY = new Map(), PLAYH = new Map(), PLAG = new Map(), PREG = new Map(), LASTSLOT = new Map(), WGM = new Map(), OFS = new Map(); let PLAY_SW = 0; /*@TEST*/let PLAY_MS = 0, PLAY_N = 0;/*@ENDTEST*/
-const PLATE_GAP = 6, TM_PLATE = [-25, -50 - PLATE_GAP, 27, 1 - PLATE_GAP], TM_PLATE_C = -21 - PLATE_GAP;   // a badge's box round its anchor (css px, the touch size with its marks): pinned just above the spot its troops stand on
+const PLATE_GAP = 6, TM_PLATE = [-36, -52 - PLATE_GAP, 28, 1 - PLATE_GAP], TM_PLATE_C = -26 - PLATE_GAP;   // a badge's box round its anchor (css px, the touch size with its marks): pinned just above the spot its troops stand on
 const roleOwner = r => +r.slice(1, r.indexOf(':'));
 // a role: kind, holder and the model types it shows (as a set: a spot changes only when a type comes or goes, not with the counts)
 // how many models a force shows: up to four, fewer in a small province (two forces and a battle's gap must fit inside it) or with low effects
@@ -5659,8 +5672,8 @@ function satPlace(shown, near, now){ const placed = [];
     const used = new Set(), mem = q => STKSLOT.get(lid + '|' + q.key + (tagM ? 't' : 'd'));
     const quietOf = q => { const a = q.list.reduce((b, z) => count(z) > count(b) ? z : b, q.list[0]); return a.owner !== PLAYER && !q.cl.some(pbFight) && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)); };
     const at = (q, i) => { const mq = q.mq ?? (q.mq = quietOf(q)); if (!tagM){ const u = plateDims(L.n + (L.mn || 0), 1, clQuiet(L), false).w/2 + plateDims(q.n, 1, mq, false).w/2 + 4, [a, b] = STK_R1[i]; return [L.x + a*u, L.y + b*u, mq]; }
-      const D0 = plateDims(L.n + (L.mn || 0), 1, clQuiet(L), true), D1 = plateDims(q.n, 1, mq, true), step = D1.w + 8, j = i >> 1, sd = i & 1 ? 1 : -1;   // (a row: left, right, further left...)
-      return [L.x + sd*(D0.w/2 + 6 + D1.w/2 + j*step), L.y, mq]; };
+      const D0 = plateDims(L.n + (L.mn || 0), 1, clQuiet(L), true), D1 = plateDims(q.n, 1, mq, true), step = D1.w + D1.ox + 8, j = i >> 1, sd = i & 1 ? 1 : -1;   // (a row: left, right, further left...)
+      return [L.x + sd*((D0.w + D0.ox)/2 + 6 + (D1.w + D1.ox)/2 + j*step), L.y, mq]; };
     const boxOf = (x, y, n, mq) => { const r = plateRect(x, y, n, 1, mq, tagM); return [r.x, r.y, r.x + r.w, r.y + r.h]; };
     const blocked = (b, self) => { let f = 0; const A = Math.max(1, (b[2] - b[0])*(b[3] - b[1])); for (const z of near(b)){ if (z.c === self) continue; const q = z.b, ox = Math.min(b[2], q[2]) - Math.max(b[0], q[0]), oy = Math.min(b[3], q[3]) - Math.max(b[1], q[1]); if (ox > 0 && oy > 0) f = Math.max(f, ox*oy/A); }
       for (const q of placed){ const ox = Math.min(b[2], q[2]) - Math.max(b[0], q[0]), oy = Math.min(b[3], q[3]) - Math.max(b[1], q[1]); if (ox > 0 && oy > 0) f = Math.max(f, ox*oy/A); } return f; };
@@ -7330,7 +7343,7 @@ const easeOut = t => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
 function wrenchMark(x, y, ps){ const r = 4.6*ps; ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = 'rgba(20,16,10,.9)'; ctx.fill(); ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 1*ps; ctx.stroke();
   ctx.translate(x, y); ctx.rotate(-Math.PI/4); ctx.fillStyle = '#e8b33c'; ctx.fillRect(-0.8*ps, -0.6*ps, 1.6*ps, 3.4*ps); ctx.beginPath(); ctx.arc(0, -1.6*ps, 1.9*ps, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = 'rgba(20,16,10,.95)'; ctx.fillRect(-0.55*ps, -3.6*ps, 1.1*ps, 2*ps); ctx.restore(); }
-// flat counter plate: size of a plate for a strength n at counter scale s (minor = quiet foreign/neutral mini plate). The plate keeps one size on
+// flat counter plate: size of a plate for a strength n at counter scale s (minor = a quiet foreign/neutral force: full size since 2026-11-18, only its shadow is lighter). The plate keeps one size on
 // screen at every zoom (the owner's rule: plate, flag and number never grow or shrink with the map)
 const PLATE_TW = new Map();
 // the count's face: a bold italic condensed sans (Barlow Condensed when it has loaded, else the body face); the plate caches are dropped when fonts arrive
@@ -7351,26 +7364,30 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   const k = out.map(b => b.map(Math.round).join(',')).join(';');   // v: bumped whenever the boxes change, so the names placed against them are placed again (NAMEC)
   return (HUDR = {t:now, r:out, k, v:k === k0 ? v0 : v0 + 1}).r; }
-// counter size (css px, one size at every zoom; on a touch screen a little larger): BADGE the square badge's side (a quiet foreign or independent
+// counter size (css px; the badge itself is sized in plateDims, 52 wide zoomed in and 28 square zoomed out): BADGE only sizes the unidentified-contact badge (a quiet foreign or independent
 // force's badge is a little smaller)
 const UC_TOUCH = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })(), BADGE = UC_TOUCH ? 36 : 32;
 const UCD = new Map();
-// the count's face on the badge: a bold upright sans (never under 9.5 px: readable at 1x on every side colour)
-const countFont = fz => `700 ${fz}px ${BODY}`;
-// a badge's measures for strength n (the same square zoomed out on the force's spot and zoomed in over its pictures; tag kept for the callers);
-// minor = a quiet foreign or independent force (a little smaller). w = h = d: the square's side; from the top: the flag fh high at fy, the type
-// icon ic square at iy, the count's baseline at ny in a fz px face; rr: the corner radius; up: the marks above it; bars: nothing under it
-function plateDims(n, s, minor, tag){ const key = (minor ? 'm' : 'b') + n; let D = UCD.get(key); if (D) return D; if (UCD.size > 600) UCD.clear();
-  const S0 = minor ? Math.round(BADGE*0.86) : BADGE, k = S0/32, fh = Math.round(0.4*S0), iy = fh + Math.round(1.5*k*2)/2;   // (the flag band: the full width, 40% of the height)
-  let fz = Math.max(9.5, Math.round(9.5*k*2)/2); ctx.font = countFont(fz); let tw = ctx.measureText(String(n)).width;
-  while (tw > S0*0.62 && fz > 8){ fz -= 0.5; ctx.font = countFont(fz); tw = ctx.measureText(String(n)).width; }   // (a long number: a smaller face, never past the pill)
-  const pw = Math.round(tw + 4*k), ph = Math.round(fz + 1.5*k);   // the count's pill in the lower right corner
-  D = {tag, w:S0, h:S0, d:S0, C:S0/2, tab:S0/2, sk:0, ps:1, fz, tw, fh, fw:S0, fy:0, ic:Math.round(11*k), iy, pw, ph, ny:S0 - Math.round(1.6*k*2)/2 - Math.round((ph - fz*0.72)/2*2)/2, rr:Math.max(2.5, Math.round(S0*0.11*2)/2), up:4, bars:0};
+// the count's face on the badge: a big bold italic sans, white
+const countFont = fz => `italic 800 ${fz}px ${BODY}`;
+// a badge's measures for strength n (owner's Conflict of Nations badge). Zoomed IN (tag true): two stacked rectangles of one width, the flag fh high on
+// top and the count's bar bh high under it (52 x 20 + 26 css px at the owner's phone, 440 px wide), and a white rounded-square tag tg x tg (18 px)
+// over the bar's left edge, half in and half out: ox = how far it pokes out to the left. Zoomed OUT (tag false): one square d x d (28 px) in the side
+// colour with the same tag centred, no flag and no count. Everything scales with the text-size setting (SET.ui). minor = a quiet foreign or independent
+// force (a little smaller). w, h: the body's box (the tag's overhang is ox more on the left); d: the square's side zoomed out; up: the marks above it
+const uiK = () => { try { return (SET && SET.ui ? SET.ui : 100)/100; } catch (e) { return 1; } };
+function plateDims(n, s, minor, tag){ const kk = uiK(), key = (minor ? 'm' : 'b') + n + (tag ? 't' : 'f') + '|' + kk; let D = UCD.get(key); if (D) return D; if (UCD.size > 600) UCD.clear();
+  const R = v => Math.round(v*kk*2)/2, tg = R(18), ti = R(15);
+  if (!tag){ const S0 = R(28); D = {tag:false, w:S0, h:S0, d:S0, C:S0/2, fh:0, bh:0, tg, ti, ox:0, fz:0, tw:0, rr:Math.max(2.5, R(5)), up:5, bars:0, k:kk}; UCD.set(key, D); return D; }
+  const W = R(52), fh = R(20), bh = R(26), ox = tg/2; let fz = Math.max(10, Math.round(19*kk*2)/2); ctx.font = countFont(fz); let tw = ctx.measureText(String(n)).width;
+  const room = W - ox - R(3) - R(4);   // (the count is right-aligned: the tag's inner half and a gap on its left, a small margin on its right)
+  while (tw > room && fz > 9){ fz -= 0.5; ctx.font = countFont(fz); tw = ctx.measureText(String(n)).width; }
+  D = {tag:true, w:W, h:fh + bh, d:fh + bh, C:W/2, fh, bh, tg, ti, ox, fz, tw, rr:Math.max(2, R(3)), up:5, bars:0, k:kk};
   UCD.set(key, D); return D; }
 const snapD = v => Math.round(v*dpr)/dpr;   // to whole device pixels
 // the screen box of a badge centred at (x, y), its marks included (the stacked card of a mixed force pokes 3 px out at the upper right), without drawing it
 function plateRect(x, y, n, s, minor, tag){ const D = plateDims(n, s, minor, tag);
-  return {x:x - D.w/2 - 2, y:y - D.h/2 - D.up, w:D.w + 5, h:D.h + D.up + 3}; }
+  return {x:x - (D.w + D.ox)/2 - 2, y:y - D.h/2 - D.up, w:D.w + D.ox + 5, h:D.h + D.up + 7}; }   // (the tag's overhang on the left; the dug-in shield hangs 7 px under the bar)
 /* The owner's unit pictures (assets/art/i-*.webp, u-*.webp): portraits in the menus and panels, and close in the forces themselves on the map (troopModels). */
 // opaque extent of each supplied picture as a share of its square (width, height): unitPic trims and centres them with this
 const PICBOX = {'u-infantry':[0.84, 0.94], 'u-special-forces':[0.95, 0.77], 'i-infantry':[0.88, 0.52], 'i-special-forces':[0.93, 0.6], 'u-tank':[0.44, 0.94], 'u-light-armor':[0.47, 0.94], 'u-artillery':[0.42, 0.95], 'u-rocket-artillery':[0.43, 0.94],
@@ -7423,15 +7440,20 @@ function flagBand(n, w, h){ if (n == null) return null;
   if (i >= 0 && im){ g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; const cw0 = (im.naturalWidth || im.width)/FLAG_COLS, ch0 = (im.naturalHeight || im.height)/FLAG_ROWS;
     g.drawImage(im, (i % FLAG_COLS)*cw0, Math.floor(i/FLAG_COLS)*ch0, cw0, ch0, 0, 0, W, H); }   // the whole flag squashed to the band (never cropped: every stripe and emblem shows)
   else { g.fillStyle = flagColor(n); g.fillRect(0, 0, W, H); }
-  const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,255,255,.16)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.16)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  // a slight fabric sheen: a soft diagonal light sweep and a gentle shade along the bottom, with a few faint folds across it
+  let gr = g.createLinearGradient(0, 0, W, H*1.6); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(0.35, 'rgba(255,255,255,.04)'); gr.addColorStop(0.6, 'rgba(0,0,0,.0)'); gr.addColorStop(1, 'rgba(0,0,0,.14)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, 'rgba(255,255,255,.1)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(0,0,0,.16)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  gr = g.createLinearGradient(0, 0, W, 0); for (let i = 0; i <= 6; i++) gr.addColorStop(i/6, i & 1 ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
   if (FLAGB.size > 300) FLAGB.clear(); FLAGB.set(key, c); return c; }
 // whose flag a force flies: its power, else (independents) the country it stands in
 function plateFlagOf(a){ if (!a) return PLAYER; if (a.owner >= 0) return a.owner; const P0 = G.P[a.at]; return P0 && !P0.sea && G.countries[P0.country] ? G.countries[P0.country].name : null; }
 let HQBOX = null;   // this frame's box of your HQ model on screen (its hover tooltip): drawBuildings
 /* ---------------- Unit badges by zoom (Conflict of Nations manner, original art) ----------------
-   Every force shows one small SQUARE BADGE of one pixel size at every zoom (a little larger on a touch screen, a little smaller for quiet foreign
-   and independent forces), in its side's colour (sideOf: yours green, allies blue, at war red, everyone else grey), with a thin dark edge and a
-   soft shadow: its flag on top, the upright white icon of its main unit type (the UICON set) in the middle and its unit count below; a stack of
+   Every force shows the owner's Conflict of Nations badge. ZOOMED IN: two stacked rectangles of one width (52 x 20 flag + 26 bar css px at a 440 px phone, scaled by
+   the text-size setting): the owner's real flag on top (atlas flag, crisp, a slight fabric sheen, thin dark edge, soft shadow), a bar in the side colour under it (yours
+   green, allies blue, at war red, everyone else grey) with the unit count in big bold italic white, right-aligned, and a white rounded-square tag (18 px, the type's flat
+   navy icon 15 px) over the bar's left edge, half in and half out. ZOOMED OUT: only a 28 px square in the side colour with the same tag centred (no flag, no count). The map
+   is top-down (no tilt), so the badge is drawn flat on the screen. Quiet foreign and independent forces are 0.86 times as large. A stack of
    more than one unit type shows a second card's edge behind it. Marks: the dug-in shield (with the commander's star beside it) pinned to its
    upper left corner, out of supply at its upper right, a red breathing edge and a crossed-bars badge in battle, a heading chevron on the march
    (zoomed out), a gold ring when selected. ZOOMED OUT the badge stands on its force's world spot (provLayout: from the game state only, never
@@ -7450,36 +7472,40 @@ const ucIcon = (t, o) => artT(t, o);
 // holds more than one unit type; the flag (from the flag atlas, at its own device-pixel size: crisp) centred at the top, the main type's white
 // icon in the middle (whatever icon the UICON set has for the type: a new icon drops in with no change here) and the count below it in white
 // with a dark outline. Cached per side, type, count, flag and state
-function badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor){
+function badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor, far){
   if (fc && !fc.__k) fc.__k = ++FLAGK;
-  const key = 'b' + tk + '|' + icon + '|' + n + '|' + (fc ? fc.__k : 0) + '|' + (mixed ? 1 : 0) + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + '|' + dpr + (SET.cb ? 'c' : '');
+  const key = 'b' + tk + '|' + icon + '|' + (far ? 0 : n) + '|' + (fc ? fc.__k : 0) + '|' + (mixed ? 1 : 0) + (selected ? 1 : 0) + (fighting ? 1 : 0) + (minor ? 1 : 0) + (far ? 'f' : 't') + '|' + dpr + '|' + uiK() + (SET.cb ? 'c' : '');
   let E = UCC.get(key); if (E) return E; if (UCC.size > 500) UCC.clear();
-  const D = plateDims(n, 1, minor, true), CT = sideT(tk), W = D.w, P = 7, px = 1/dpr, sn = v => Math.round(v*dpr)/dpr, rr = D.rr;
-  const c = document.createElement('canvas'); c.width = Math.ceil((W + 2*P)*dpr); c.height = Math.ceil((W + 2*P)*dpr); const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(P, P);
-  const lw = Math.max(1, Math.round(0.9*dpr))*px;
-  if (mixed){ g.save(); g.translate(3, -3); g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 2*dpr; roundRect(g, -lw, -lw, W + 2*lw, W + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();   // a second card's edge behind: more than one unit type
-    g.save(); g.translate(3, -3); roundRect(g, 0, 0, W, W, rr); g.fillStyle = CT[1]; g.fill(); g.restore(); }
-  g.save(); g.shadowColor = minor ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.55)'; g.shadowBlur = (minor ? 2.2 : 3.2)*dpr; g.shadowOffsetY = (minor ? 1 : 1.6)*dpr; roundRect(g, -lw, -lw, W + 2*lw, W + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();   // soft drop shadow
-  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; roundRect(g, -2.4, -2.4, W + 4.8, W + 4.8, rr + 2); g.lineWidth = 2; g.strokeStyle = '#f2b843'; g.stroke(); g.restore(); }
-  roundRect(g, -lw, -lw, W + 2*lw, W + 2*lw, rr); g.fillStyle = fighting ? '#ff5a4c' : CT[2]; g.fill();   // the edge (red in battle, with an inner dark line)
-  const ins = fighting ? 1 : 0; if (fighting){ roundRect(g, 0, 0, W, W, rr); g.fillStyle = '#3a0c08'; g.fill(); }
-  let gr = g.createLinearGradient(0, 0, 0, W); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(g, ins, ins, W - 2*ins, W - 2*ins, rr - ins); g.fillStyle = gr; g.fill();
-  gr = g.createLinearGradient(0, 0, 0, W*0.5); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); roundRect(g, ins, ins, W - 2*ins, W*0.5, rr - ins); g.fillStyle = gr; g.fill();
-  // the flag band: the full width of the square, 40% of its height (the flag's own device-pixel canvas, cropped to the band); no flag (rebels, independents with no country): a plain grey band
-  g.save(); roundRect(g, ins, ins, W - 2*ins, W - 2*ins, rr - ins); g.clip();
-  if (fc) g.drawImage(fc, ins, ins, W - 2*ins, D.fh - ins); else { const gb = g.createLinearGradient(0, 0, 0, D.fh); gb.addColorStop(0, '#a3aaad'); gb.addColorStop(1, '#7b8386'); g.fillStyle = gb; g.fillRect(ins, ins, W - 2*ins, D.fh - ins); }
-  g.fillStyle = 'rgba(6,10,8,.8)'; g.fillRect(ins, sn(D.fh) - px, W - 2*ins, Math.max(1, Math.round(dpr))*px); g.restore();   // a dark line under the flag
-  if (tk === 'own'){ roundRect(g, ins + 0.7, ins + 0.7, W - 2*ins - 1.4, W - 2*ins - 1.4, Math.max(1, rr - ins - 0.7)); g.lineWidth = 1.2; g.strokeStyle = 'rgba(240,252,232,.85)'; g.stroke(); }
-  // the type icon, upright (it never turns with the force's heading or the map): its drawn part as large as the lower part of the square allows (the count's pill sits over its lower right corner)
-  { const B = uiconBox(icon), y1 = W - 2.2, sw = W - 5 - D.pw*0.3, sh = Math.max(6, y1 - D.iy - 0.5), f = Math.min(sw/Math.max(1, B[2] - B[0]), sh/Math.max(1, B[3] - B[1]), 1.6);
-    const Z = 32*f, iw = Math.max(1, Math.round(Z*dpr)), ic = uiconC(icon, iw, '#ffffff', 1.2), zc = iw/dpr, ix = (W - D.pw*0.3 - (B[2] - B[0])*zc/32)/2 + 0.5 - B[0]*zc/32, iy0 = D.iy + (sh - (B[3] - B[1])*zc/32)/2 - B[1]*zc/32;
-    g.drawImage(ic, sn(ix), sn(iy0), zc, zc); }
-  // the count: white on a small dark pill in the lower right corner
-  { const pw = D.pw, ph = D.ph, pr = sn(W - ins - 0.5), pb = sn(W - ins - 0.5); roundRect(g, pr - pw, pb - ph, pw, ph, Math.min(3.5, ph/2.6)); g.fillStyle = 'rgba(8,14,10,.88)'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = 'rgba(255,255,255,.28)'; g.stroke();
-    g.font = countFont(D.fz); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#ffffff'; g.fillText(String(n), sn(pr - pw/2), sn(pb - (ph - D.fz*0.72)/2)); }
-  E = {c, ox:P, oy:P}; UCC.set(key, E); return E; }
+  const D = plateDims(n, 1, minor, !far), CT = sideT(tk), W = D.w, H = D.h, P = 8, px = 1/dpr, sn = v => Math.round(v*dpr)/dpr, rr = D.rr, ox = D.ox;
+  const c = document.createElement('canvas'); c.width = Math.ceil((W + ox + 2*P)*dpr); c.height = Math.ceil((H + 2*P + 4)*dpr); const g = c.getContext('2d'); g.scale(dpr, dpr); g.translate(P + ox, P);
+  const lw = Math.max(1, Math.round(0.9*dpr))*px, edge = fighting ? '#ff5a4c' : CT[2];
+  if (mixed){ g.save(); g.translate(3, -3); g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 2*dpr; roundRect(g, -lw, -lw, W + 2*lw, H + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();   // a second card's edge behind: more than one unit type
+    g.save(); g.translate(3, -3); roundRect(g, 0, 0, W, H, rr); g.fillStyle = CT[1]; g.fill(); g.restore(); }
+  g.save(); g.shadowColor = minor ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.55)'; g.shadowBlur = (minor ? 2.4 : 3.6)*dpr; g.shadowOffsetY = (minor ? 1 : 1.8)*dpr; roundRect(g, -lw, -lw, W + 2*lw, H + 2*lw, rr); g.fillStyle = CT[2]; g.fill(); g.restore();   // soft drop shadow
+  if (selected){ g.save(); g.shadowColor = 'rgba(240,180,64,.9)'; g.shadowBlur = 4*dpr; roundRect(g, -2.4, -2.4, W + 4.8, H + 4.8, rr + 2); g.lineWidth = 2; g.strokeStyle = '#f2b843'; g.stroke(); g.restore(); }
+  roundRect(g, -lw, -lw, W + 2*lw, H + 2*lw, rr); g.fillStyle = edge; g.fill();   // the thin dark edge (red in battle)
+  const ins = fighting ? 1 : 0; if (fighting){ roundRect(g, 0, 0, W, H, rr); g.fillStyle = '#3a0c08'; g.fill(); }
+  const fh = D.fh, bh = D.bh;
+  g.save(); roundRect(g, ins, ins, W - 2*ins, H - 2*ins, Math.max(1, rr - ins)); g.clip();
+  if (far){ const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    const gl = g.createLinearGradient(0, 0, 0, H*0.5); gl.addColorStop(0, 'rgba(255,255,255,.22)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, W, H*0.5); }
+  else {   // the flag on top (no flag: a plain grey flag area), the bar in the side colour under it, a thin dark line between them
+    if (fc) g.drawImage(fc, 0, 0, W, fh); else { const gb = g.createLinearGradient(0, 0, 0, fh); gb.addColorStop(0, '#a3aaad'); gb.addColorStop(1, '#7b8386'); g.fillStyle = gb; g.fillRect(0, 0, W, fh); }
+    const gr = g.createLinearGradient(0, fh, 0, H); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); g.fillStyle = gr; g.fillRect(0, fh, W, bh);
+    const gl = g.createLinearGradient(0, fh, 0, fh + bh*0.5); gl.addColorStop(0, 'rgba(255,255,255,.2)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, fh, W, bh*0.5);
+    g.fillStyle = 'rgba(6,10,8,.8)'; g.fillRect(0, sn(fh) - px, W, Math.max(1, Math.round(dpr))*px); }
+  g.restore();
+  // the white rounded-square tag with the type icon (flat navy): zoomed in over the bar's left edge, half in and half out; zoomed out centred on the square
+  { const tg = D.tg, tcx = far ? W/2 : 0, tcy = far ? H/2 : fh + bh/2, tr = Math.max(2.5, tg*0.24);
+    g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 2.4*dpr; g.shadowOffsetY = 1*dpr; roundRect(g, sn(tcx - tg/2), sn(tcy - tg/2), tg, tg, tr); g.fillStyle = '#ffffff'; g.fill(); g.restore();
+    g.lineWidth = px*Math.max(1, Math.round(dpr)); g.strokeStyle = 'rgba(8,16,30,.55)'; roundRect(g, sn(tcx - tg/2), sn(tcy - tg/2), tg, tg, tr); g.stroke();
+    const iw = Math.max(1, Math.round(D.ti*dpr)), ic = uiconNavy(icon, iw), zc = iw/dpr; g.drawImage(ic, sn(tcx - zc/2), sn(tcy - zc/2), zc, zc); }
+  // the count: big bold italic white, right-aligned in the bar (never zoomed out)
+  if (!far){ g.save(); g.font = countFont(D.fz); g.textAlign = 'right'; g.textBaseline = 'alphabetic'; g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 1.4*dpr; g.shadowOffsetY = 0.8*dpr; g.fillStyle = '#ffffff';
+    g.fillText(String(n), sn(W - 4*D.k), sn(fh + bh/2 + D.fz*0.36)); g.restore(); }
+  E = {c, ox:P + ox, oy:P}; UCC.set(key, E); return E; }
 // (the names the tests and older code use: the far badge and the near badge are the same square)
-const diaBody = (tk, icon, n, mixed, selected, fighting, minor, fc = null) => badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor);
+const diaBody = (tk, icon, n, mixed, selected, fighting, minor, fc = null) => badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor, true);
 const tagBody = (tk, icon, n, fc, selected, fighting, minor) => badgeBody(tk, icon, n, fc, false, selected, fighting, minor);
 // over the stack limit: a small red badge with three stacked bars centred at (x, y)
 function stackMark(x, y){ ctx.save(); roundRect(ctx, x - 5, y - 5, 10, 10, 2.5); ctx.fillStyle = '#d8473a'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.stroke();
@@ -7493,21 +7519,22 @@ function supplyMark(x, y){ const q = 5; ctx.beginPath(); ctx.moveTo(x, y - q); c
 // commander's star beside it), out of supply at its upper right, over the stack limit at its lower left, a worn air wing's wrench at its lower
 // right, the crossed-bars battle badge at its right and a red breathing edge in battle
 function badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now, far){
-  const D = plateDims(n, 1, minor, true), W = D.w, X = moving ? x : snapD(x), Y = moving ? y : snapD(y), fc = flagBand(plateFlagOf(a), D.w, D.fh), E = badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor), x0 = X - W/2, y0 = Y - W/2, ang = counter.ang;
+  const D = plateDims(n, 1, minor, !far), W = D.w, H = D.h, X = moving ? x : snapD(x), Y = moving ? y : snapD(y), fc = far ? null : flagBand(plateFlagOf(a), D.w, D.fh), E = badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor, far), x0 = X - W/2 + D.ox/2, y0 = Y - H/2, ang = counter.ang;
   if (far && moving && !minor && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = (W/2 + 5)/Math.max(0.7, Math.max(Math.abs(ca), Math.abs(sa))), cx = X + ca*t, cy = Y + sa*t, q = 4.6;   // heading chevron: just off the badge's edge, drawn under it
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(q, 0); ctx.lineTo(-q*0.8, -q*0.9); ctx.lineTo(-q*0.35, 0); ctx.lineTo(-q*0.8, q*0.9); ctx.closePath();
     ctx.lineJoin = 'round'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(5,8,10,.85)'; ctx.stroke(); ctx.fillStyle = sideHi(tk); ctx.fill(); ctx.restore(); }
   ctx.drawImage(E.c, x0 - E.ox, y0 - E.oy, E.c.width/dpr, E.c.height/dpr);
-  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, W + 4, W + 4, D.rr + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
+  if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, W + 4, H + 4, D.rr + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
   let bg = null;
   if (!minor){ const cmd = L.some(cmdOf), dug = counter.dug && !moving;
-    if (dug){ const r = sandbagMark(x0 + 1.5, y0 + W - 2, 0.9); if (ctx.globalAlpha > 0.35 && DUGHIT.length < 400){ r.own = !!a && a.owner === PLAYER; DUGHIT.push(r); } }   // dug in: its own small hit box (hover or tap: what it means)
-    if (cmd){ const sx = x0 - 1.5, sy = y0 - 1.5; ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', sx, sy); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', sx, sy); }
-    if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + W + 1.5, y0 - 1.5);   // out of supply
-    if (overStack(L)) stackMark(x0 - 2.5, y0 + W*0.48);   // over the stack limit
-    if (a && wornWing(a) && a.owner === PLAYER) wrenchMark(x0 + W + 6, y0 + W + 4, 1);   // (no health strips on the map: the army bar shows the health)
-    if (fighting){ const R0 = 5.6, bx = x0 + W + R0 + 2, by = Y; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
-  const rc = plateRect(X, Y, n, 1, minor, true); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; rc.d = W; return rc; }
+    if (dug){ const r = sandbagMark(far ? x0 + 3 : x0 + 8, y0 + H + 2.5, 0.9);   // (hangs under the bar's lower left: clear of the flag, the count and the tag)
+      if (ctx.globalAlpha > 0.35 && DUGHIT.length < 400){ r.own = !!a && a.owner === PLAYER; DUGHIT.push(r); } }   // dug in: its own small hit box (hover or tap: what it means)
+    if (cmd){ const sx = far ? x0 - 1.5 : x0 - 4.5, sy = far ? y0 - 1.5 : y0 + 4; ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', sx, sy); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', sx, sy); }
+    if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + W + (far ? 1.5 : 3.5), y0 - (far ? 1.5 : 2.5));   // out of supply
+    if (overStack(L)){ if (far) stackMark(x0 - 2.5, y0 + H*0.48); else stackMark(x0 + W - 5, y0 + H + 3); }   // over the stack limit
+    if (a && wornWing(a) && a.owner === PLAYER) wrenchMark(x0 + W + (far ? 6 : 9), y0 + H + 4, 1);   // (no health strips on the map: the army bar shows the health)
+    if (fighting){ const R0 = 5.6, bx = x0 + W + R0 + 2, by = far ? Y : y0 + D.fh*0.55; battleBadge(bx, by, R0); bg = {x:bx - R0 - 1, y:by - R0 - 1, w:2*R0 + 2, h:2*R0 + 2}; } }
+  const rc = plateRect(X, Y, n, 1, minor, !far); if (bg) rc.w = Math.max(rc.w, bg.x + bg.w - rc.x); rc.bg = bg; rc.d = far ? W : H; return rc; }
 // (the far badge on the force's spot and the near one pinned over its pictures: the same square)
 const diaDraw = (x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now) => badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now, true);
 const tagDraw = (x, y, a, L, n, tk, icon, selected, moving, fighting, minor, now, mixed = false) => badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now, false);
@@ -9056,9 +9083,10 @@ function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null;
 const tgtEnd = t => sel.targetPt && t === sel.target ? {p:t, x:sel.targetPt[0], y:sel.targetPt[1]} : null;
 const groupArmies = () => (sel.group.length ? sel.group : [sel.army]).map(armyById).filter(Boolean);
 // one-line tooltips written from what the rules do (rules/combat.js: dugIn and stanceHour)
-const digPct = () => Math.round((1/DIG_DEF - 1)*100);   // the dug-in defence bonus in per cent (rules/combat.js DIG_DEF: damage taken x1/1.1, +10% defence in total)
-const DIG_TIP = `Dug in: +${digPct()}% defence. The unit has held position for 12+ hours, or is in a fortified friendly province.`;   // (the owner's words: the mark's tooltip)
-const STANCES = {hold:['Hold', `Stays put and takes no standing orders; digs in after 12 h on your own ground (dug in: +${digPct()}% defence).`], defend:['Defend', `Dug in at once: +${digPct()}% defence where it stands on your or a friend's ground; sorties against weaker enemies within 3 provinces of your land, then returns.`], retreat:['Preserve', 'Falls back to your nearest city to recover when health drops below 40%.']};
+const digPct = city => Math.round((1/(city ? DIG_CITY : DIG_DEF) - 1)*100);   // the dug-in defence bonus in per cent (rules/combat.js: DIG_DEF +10% in the open, DIG_CITY +25% inside a city; one replaces the other)
+const DIG_HEAD = `Dug in: +${digPct()}% defence in the open, +${digPct(true)}% inside a city.`;
+const DIG_TIP = `${DIG_HEAD} The unit has held position for 12+ hours, or is in a fortified friendly province.`;   // (the owner's words: the mark's tooltip)
+const STANCES = {hold:['Hold', `Stays put and takes no standing orders; digs in after 12 h on your own ground (dug in: +${digPct()}% defence in the open, +${digPct(true)}% in a city).`], defend:['Defend', `Dug in at once: +${digPct()}% defence where it stands (+${digPct(true)}% in a city) on your or a friend's ground; sorties against weaker enemies within 3 provinces of your land, then returns.`], retreat:['Preserve', 'Falls back to your nearest city to recover when health drops below 40%.']};
 function idleArmies(){ return S.armies.filter(a => a.owner === PLAYER && !a.fly && count(a) && a.to === null && !a.path.length && !S.battles.includes(a.at) && (!a.stance || a.stance === 'hold') && !(a.air && a.air.cd > 0)); }
 function nextIdle(){ const L = idleArmies(); if (!L.length){ toast('Every force has orders.', 'info', null); return; }
   const i = (L.findIndex(a => a.id === sel.army) + 1) % L.length, a = L[i], P = G.P[a.at]; camGo(P.x, P.y, Math.max(zoomGoal(), 1.6)); selectArmy(a.id); }
@@ -9158,7 +9186,7 @@ const tip = document.getElementById('tip');
 function tipHide(){ tip.hidden = true; tip.classList.remove('dugtip'); }
 // the dug-in shield's tooltip (the owner's words, DIG_TIP), at (x, y) on the map; a tap shows it for a few seconds
 let DUGTIP = 0;
-function dugTip(x, y, tapped){ tip.innerHTML = `<span class="dtt">Dug in: +${digPct()}% defence.</span> ${DIG_TIP.replace(/^Dug in: [^.]*\. /, '')}`; tip.classList.add('dugtip'); tip.hidden = false;
+function dugTip(x, y, tapped){ tip.innerHTML = `<span class="dtt">${DIG_HEAD}</span> ${DIG_TIP.slice(DIG_HEAD.length + 1)}`; tip.classList.add('dugtip'); tip.hidden = false;
   const tw = Math.min(230, tip.offsetWidth || 230), th = tip.offsetHeight; let tx = x + 14, ty = y + 14; if (tx + tw > cw - 6) tx = x - tw - 14; if (ty + th > ch - 6) ty = y - th - 14; tip.style.left = Math.max(6, tx) + 'px'; tip.style.top = Math.max(6, ty) + 'px';
   clearTimeout(DUGTIP); DUGTIP = tapped ? setTimeout(() => { if (tip.classList.contains('dugtip')) tipHide(); }, 4000) : 0; }
 // a province and its city often share a name: show it once (case- and accent-insensitive compare)
@@ -9737,7 +9765,7 @@ const TUT_STEPS = [
   {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them. Tapping only selects: the army bar opens at the bottom.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
   {t:'Plan an attack', d:() => tutPick() != null ? `Press <b>Move</b> in the army bar, then tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its centre point (the city, or the crossroads where its roads meet); one ground unit is enough. A dashed route along the roads appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null || S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Send it', d:() => sel.target !== null ? 'The odds read Likely defeat, so the force waits: merge more units first, or press the yellow button in the panel to attack anyway.' : 'When you have a Favourable target, press Move and tap it to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
-  {t:'Dug in', d:() => `A small amber shield with a wall of sandbags on a force's badge means it is <b>dug in</b>: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage). A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
+  {t:'Dug in', d:() => `A small amber shield with a wall of sandbags on a force's badge means it is <b>dug in</b>: +${digPct()}% defence in the open and +${digPct(true)}% inside a city (a province with a city), not added together. A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Each unit has its own line: its unlock, then upgrades. Every project opens on its own day; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
   {t:'You are ready', d:() => 'The bar along the bottom opens Diplomacy (war, peace, trade routes), Market, Cities, Research, Army and Production (P); More holds Intelligence, Settings, Sound and “How to play” (or press ?), which explains roads and railways, drones, trade and coalitions. The crate at the left of the resource strip lists your missiles; the shields on the right of the map fly home, open the dispatches and toggle the relations map. Good luck, commander.', el:'#dock', next:true, last:true},
 ];
@@ -10278,9 +10306,9 @@ function statusText(a){
     if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${P[a.at].name}: a province becomes yours the moment ground troops reach its centre point (${P[a.at].city ? nm : 'the crossroads in its middle'}, where its roads meet) with no defenders left, no timer. Tap the city to march there.`};
     if (S.armies.filter(b => b.owner === a.owner && b.at === a.at && b.to === null).reduce((s0, b) => s0 + groundN(b), 0) < CAP_MIN) return {cls:'cap', short:'too few', long:`At the city, but ${CAP_MIN === 1 ? 'a ground unit is' : CAP_MIN + ' ground units are'} needed to capture ${P[a.at].name}.`}; }
   if (S.owner[a.at] !== a.owner && !ground(a)) return {cls:'', short:'airborne', long:'Air units cannot capture ground. Add ground units.'};
-  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct()}% defence (it takes ${Math.round((1 - DIG_DEF)*100)}% less damage) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
+  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct(P[a.at].city)}% defence (it takes ${Math.round((1 - digP(a.at))*100)}% less damage${P[a.at].city ? ', the city bonus' : ', in the open'}) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
   { const own = S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && friendly(a.owner, S.owner[a.at])), h = a.still != null ? S.hour - a.still : 0;
-    if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${P[a.at].name}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct()}% defence; the Defend stance digs in at once)`}; }
+    if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${P[a.at].name}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
   return {cls:'', short:'holding', long:`Holding ${P[a.at].name}`};
 }
 function oddsHTML(a, t, foes){
@@ -10461,7 +10489,7 @@ function armyInfoHTML(a){
   const where = `${C.terrain}${P.sea ? '' : `, ${C.home ? 'on its own ground' : C.attacking ? 'attacking' : 'holding'}`}`;
   return `<div class="eyebrow">Army Info</div><h1 class="si-h">${a.owner >= 0 ? flagHTML(a.owner, 20) : ''} ${mine ? armyName(a) : armyLabel(a, PLAYER)}</h1>
     <p class="small muted" style="margin:0 0 8px">${pluN(count(a), 'unit')} · ${where}${C.blind ? '' : ` · morale ${C.morale}%${C.supplied ? '' : ' · out of supply'}`}</p>
-    ${a.air || shipsOnly(a) || P.sea ? '' : `<p class="small si-dug${C.dug ? ' on' : ''}" style="margin:0 0 8px">${digShieldHTML()}<span><b>${C.dug ? 'Dug in' : 'Not dug in'}</b>: a dug-in force takes ${Math.round((1 - DIG_DEF)*100)}% less damage (+${digPct()}% defence) while it defends where it stands. It digs in by holding position for 12+ hours on its own ground or in a fortified friendly province, or at once with the Defend stance; moving cancels it. The amber sandbag shield on its badge shows it.</span></p>`}
+    ${a.air || shipsOnly(a) || P.sea ? '' : `<p class="small si-dug${C.dug ? ' on' : ''}" style="margin:0 0 8px">${digShieldHTML()}<span><b>${C.dug ? 'Dug in' : 'Not dug in'}</b>: a dug-in force takes ${Math.round((1 - digP(a.at))*100)}% less damage (+${digPct(P.city)}% defence here: +${digPct()}% in the open, +${digPct(true)}% inside a city) while it defends where it stands. It digs in by holding position for 12+ hours on its own ground or in a fortified friendly province, or at once with the Defend stance; moving cancels it. The amber sandbag shield on its badge shows it.</span></p>`}
     ${(rr => rr.length ? `<p class="small si-rng" style="margin:0 0 8px"><b>Attack range</b> · ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km (${RANGE_HIT_W[RANGE_HIT[t]]})`).join(' · ')}. It fires at enemy forces ${mine ? 'you' : 'its side'} can see within range, from where it stands, without moving in.</p>` : '')(rangeRows(a, !mine))}
     <div class="eyebrow">Strength</div>
     <table class="sitab"><thead><tr><th>Against</th><th>Attack</th><th>Defence</th></tr></thead><tbody>${X.rows.map(r => `<tr><th scope="row">${siIcon(r.k)}<span>${r.name}</span></th>${siCell(r.atk, C.blind)}${siCell(r.def, C.blind)}</tr>`).join('')}</tbody></table>
@@ -11612,7 +11640,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () =>
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m, sea) => bnWet(nm, pts, x, y, s, m, 1, sea ? bnSea : isWet), lake:(x, y) => bnSmallLake(x, y), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), riv:(p, e) => { const P = G.P[p], d = bnRivDist(P.x, P.y, 20), R = bnRivers(); return {d, rivers:R.sea.length, toSea:R.sea.filter(Boolean).length}; }, rivDist:(x, y, l) => bnRivDist(x, y, l), stages:BN_STG, pierWater:p => { const its = bnItems(p), i = its.findIndex(e => e.k === 'yard'); if (i < 0) return null; const e = its[i], Lo = bnLayout(p, its), P = G.P[p], M = BNMETA[e.nm], F = bnFoot(e.nm), s = window.__im.bn.wsize(p, i, 100), Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, mir = !!Lo.mir[i], x = P.x + Lo.pos[i][0], y = P.y + Lo.pos[i][1], riv = !!(Lo.shore && Lo.shore.riv), Q = Lo.shore && Lo.shore.bas ? bnBasinGeo(e.nm) : null;
     let sea = 0, rv = 0, bs = 0; for (const [u, v] of F.pier){ const X = x + (mir ? M.ax - u : u - M.ax)*w, Y = y + (v - M.ay)*h; if (bnSea(X, Y)) sea++; else if (riv && bnRivDist(X, Y, 0.4) < 0.4) rv++; else if (Q && Q.in(u, v)) bs++; } const n = Math.max(1, F.pier.length); return {sea:sea/n, river:rv/n, basin:bs/n, water:(sea + rv + bs)/n}; }});   // building layout checks (.test/bldangled.js): a picture's drawn long side in world px at hexPx h, the footprints
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
-if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagBand(o, plateDims(n, 1, false, true).w, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor, fighting) => badgeBody(side, t, n, flagBand(o, plateDims(n, 1, !!minor, true).w, plateDims(n, 1, !!minor, true).fh), !!mixed, false, !!fighting, !!minor), sandbag:(W, H) => sbmPaint(W, H), dims:(n, minor) => plateDims(n, 1, !!minor, true), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }, get tradeDrawn(){ return TRSH.n; }, get tradeKinds(){ return TRSH.kinds; }, trKind:n => trKind(n)[0], tradeOn:() => tradeOn(), tradeCap:TRSHCAP};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
+if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagBand(o, plateDims(n, 1, false, true).w, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor, fighting) => badgeBody(side, t, n, flagBand(o, plateDims(n, 1, !!minor, true).w, plateDims(n, 1, !!minor, true).fh), !!mixed, false, !!fighting, !!minor), sandbag:(W, H) => sbmPaint(W, H), dims:(n, minor, far) => plateDims(n, 1, !!minor, !far), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }, get tradeDrawn(){ return TRSH.n; }, get tradeKinds(){ return TRSH.kinds; }, trKind:n => trKind(n)[0], tradeOn:() => tradeOn(), tradeCap:TRSHCAP};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {cp:{get CP(){ return CP; }, plan:(kind, k, ids) => cpPlan(kind, k, ids), buildWhy:(p, k) => buildWhy(p, k), trainWhy:(p, t) => trainWhy(p, t), buildCost:(k, p) => buildCost(PLAYER, k, nextLvl(p, k), p), ucost:t => ucost(PLAYER, t), cities:() => cpCities().map(P => P.id), units:() => UT.slice(), render:() => renderSide(true)}});
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BV:{get:() => BV}, GEO:{get:() => GEO}, lodBand:{value:h => lodBand(h)}, provAtV:{value:(x, y) => provAt(x, y)}, provAtW:{value:(x, y, b) => provAtW(x, y, b)}, provAtCell:{value:(x, y) => { const c = worldToCell(...screenToWorld(x, y)); return c >= 0 ? G.prov[c] : -1; }}, PLAY:{get:() => PLAY}, provFill:{value:(p, b) => provFill(p, b)}, bvWantHi:{value:() => bvWantHi()}, bvHiWanted:{value:() => !GEO || !GEO.bv || view.s*HS0 < 36 || !!BV.f2}, coastSets:{value:() => ({L:COASTR, B0:COASTR_B0, H1:COASTR_HI1, H2:COASTR_HI, MID:COASTR_MID})}});   // real borders (.test/borders-real.js)
