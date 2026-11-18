@@ -655,6 +655,50 @@ SUBJECTS['v2-fortifications-map-1'] = (
     "green grass, surrounded by a ring of khaki sandbags, with a short earth trench running from it. Materials and colours "
     "like the attached cutaway bunker. The grass patch has natural irregular edges and fades into the plain background." + V2_SCALE)
 
+# ---- BUNKER MAP-VIEW OPTIONS (owner 2026-11-18: "flat and cartoonish next to the new buildings"; the green patch breaks the rule "no
+# ground patch, only a soft shadow"). OPTIONS ONLY: nothing here replaces assets/art/bn-fort-*. Level 1 of each option is a new picture
+# drawn with two anchor buildings attached as style references (BUNKER_REFS); level 5 is an EDIT of that option's level 1 (EDIT_V2).
+# Names v2-bunker-<a|b|c>-<level> -> assets/art-src/ba-v2-bunker-<a|b|c>-<level>.png
+BUNKER_REFS = ['ba-v2-recruiting-office-1.webp', 'ba-v2-hospital-1.webp']
+BUNKER_NOGROUND = (" The bunker is a solid 3D object standing alone on the plain grey background with only a soft shadow: no green "
+                   "grass patch, no ground patch, no base slab, no tile, no dirt pad, no ring of ground around it; any earth or grass "
+                   "belongs to the object itself and ends in its own clean silhouette.")
+SUBJECTS['v2-bunker-a-1'] = (
+    "A low reinforced-concrete command bunker, level 1 of 5, drawn as one compact solid object: weathered pale concrete walls "
+    "that slope outward at the base, banked with a neat earth berm up the lower walls and a thin earth-covered flat roof, one "
+    "heavy steel blast door in the front face with a small concrete entrance porch, two short concrete ventilation stacks "
+    "with mushroom caps on the roof, a short sandbag wall by the door and one small radio antenna mast on the roof."
+    + BUNKER_NOGROUND + V2_SCALE)
+SUBJECTS['v2-bunker-b-1'] = (
+    "A hardened bunker built half sunk into a small grassy hillock, level 1 of 5, drawn as one compact solid object: a rounded "
+    "mound of earth and grass with its own irregular rocky sides, the pale concrete front of the bunker emerging from the "
+    "mound's lower front with a heavy steel blast door and a slanted concrete visor above it, one concrete ventilation "
+    "stack and a small camouflaged observation slit on top. The mound is the object itself and ends in its own rounded "
+    "silhouette with a soft contact shadow." + BUNKER_NOGROUND + V2_SCALE)
+SUBJECTS['v2-bunker-c-1'] = (
+    "A concrete pillbox with a short trench, level 1 of 5, drawn as one compact solid object: one low round reinforced-concrete "
+    "pillbox with a domed roof and a wide firing slit, a ring of khaki sandbags round its front, and a short zig-zag trench "
+    "cut into the object's own small raised block of earth, which has clean steep sides and a flat top and is the "
+    "object's own base. No ground beyond that block." + BUNKER_NOGROUND + V2_SCALE)
+# level 5: the change added to level 1 by an edit (EDIT_V2), same bunker clearly grown
+BUNKER_EDITS = {
+    'v2-bunker-a-5': ('v2-bunker-a-1', "make it level 5, a much larger and heavier version of the same command bunker: the same "
+        "sloped, earth-bermed concrete block extended into a long two-wing complex with thicker walls, three heavy blast doors, "
+        "six ventilation stacks, a taller lattice radar mast with a small rotating radar dish and a satellite dish on the roof, "
+        "two small sandbagged gun positions on the roof, and more sandbag walls at the doors. Still one solid object with no "
+        "ground patch, slab or tile, only a soft shadow."),
+    'v2-bunker-b-5': ('v2-bunker-b-1', "make it level 5, a much larger hardened complex in the same hillock, which grows wider "
+        "with a second and third mound joined to it: three heavy blast doors with concrete visors, several ventilation stacks, "
+        "two concrete machine-gun turret cupolas, a radar mast and a small radar dish on top, and sandbag positions at the "
+        "doors. The mounds stay part of the object with their own rocky rounded silhouette; no ground patch, slab or tile, "
+        "only a soft shadow."),
+    'v2-bunker-c-5': ('v2-bunker-c-1', "make it level 5, a much larger version: a ring of four concrete pillboxes (two with "
+        "domed roofs and firing slits, two with small gun turrets) linked by deeper zig-zag trenches cut into a larger raised "
+        "block of earth with clean steep sides, a central concrete command blockhouse with a short antenna mast, more "
+        "sandbags and steel anti-tank hedgehogs on the block's edge. The earth block is the object's own base; no ground "
+        "patch beyond it, only a soft shadow."),
+}
+
 # ---- UNIT LOOKS (owner's decisions 2026-11-18, docs/UNIT-LOOKS-PROMPTS.md): every unit has its own pictures for each of the 5
 # doctrine groups (nato, east, china, europe, export), 3 looks each; every look is a NEW generation, not an edit of the one before.
 # Names: ul-<unit>-<group>-<look>, saved as assets/art-src/ul-<unit>-<group>-<look>.png. These pictures are for every place that
@@ -775,7 +819,7 @@ def unit_request_text(name):
 
 # ---- THE CHECK (--review): a Gemini text model looks at each new picture against the Art Bible and says PASS or FLAG.
 # It never redoes anything: a FLAG is shown to the owner, who decides (Art Bible standing rule).
-REVIEW_MODEL = os.environ.get('GEMINI_REVIEW_MODEL') or 'gemini-2.5-flash'   # a Flash-class text model; confirm the id before the first use
+REVIEW_MODEL = os.environ.get('GEMINI_REVIEW_MODEL') or 'gemini-3.8-flash'   # a Flash-class text model (2.5-flash is closed to new users, 2026-11-18)
 # ESTIMATE ONLY, not verified (the price page could not be reached): about $0.30 per million tokens in (text and images) and
 # $2.50 per million out (thinking included), the published Flash-class price; a check is about 3,000 tokens in and 400 out
 REV_IN_USD, REV_OUT_USD = 0.30e-6, 2.50e-6
@@ -806,6 +850,7 @@ REVIEW_PROMPT = (
 def review_what(name):
     if name in UNIT_LOOKS: return UNIT_LOOKS[name]['subject']
     if name in SUBJECTS: return SUBJECTS[name]
+    if name in BUNKER_EDITS: return 'an edit of the same bunker at level 1, grown to level 5: ' + BUNKER_EDITS[name][1]
     if name in GROWS: return 'a building level: ' + GROWS[name][1]
     return name
 
@@ -893,6 +938,8 @@ def image_part(r):
 
 def request(name, refs, change=None):
     """the generateContent request body for a name (SUBJECTS or GROWS), or for an --edit (change set)"""
+    if change is not None:
+        REF_USED[name] = [os.path.relpath(x, ROOT) for x in refs if isinstance(x, str)]
     if change is not None: text, images = (EDIT_V2 if name.startswith('v2-') else EDIT).format(change), refs
     elif name in GROWS:
         before, add = GROWS[name]; src = os.path.join(OUT, f'ba-{before}.png')
@@ -1014,6 +1061,7 @@ def main(a):
         elif a[i] == '--collect': collect(a[i + 1], force); return
         elif a[i] == '--prep-research': prep_research(a[i + 1:]); return
         elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
+        elif a[i] in BUNKER_EDITS: edits.append((a[i], [os.path.join(OUT, f'ba-{BUNKER_EDITS[a[i]][0]}.png')], BUNKER_EDITS[a[i]][1]))
         elif a[i] in SUBJECTS or a[i] in UNIT_LOOKS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS or a[i] in R_BANNERS or a[i] in R_ICONS: names.append(a[i])   # repeat a name for more tries
         else: raise SystemExit(f'unknown name or option: {a[i]} (see --list)')
         i += 1
