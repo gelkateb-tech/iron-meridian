@@ -8,7 +8,7 @@ const UAV_LV = [null, {vis:250, loiter:12, range:18, stealth:1.0, salvos:0}, {vi
   {vis:400, loiter:20, range:22, stealth:0.6, salvos:1}, {vis:500, loiter:24, range:27, stealth:0.45, salvos:2}];
 const UAV_TECH = ['u_drone', 'drone_g2', 'drone_g3', 'drone_g4', 'drone_g5'];   // UAV I is the Recon UAV's unlock; II to V are its generations
 function uavLv(n){ if (n < 0 || !S || !S.nations[n]) return 1; let l = 0; for (const id of UAV_TECH){ if (has(n, id)) l++; else break; } return Math.max(1, l); }
-const uavOf = n => UAV_LV[uavLv(n)];
+const uavOf = n => { const L = UAV_LV[uavLv(n)], k = rUavSightK(n); return k === 1 ? L : {...L, vis:Math.round(L.vis*k)}; };   // Wide-Area Sensors: the view on station
 const BOMB2_RANGE = 4;   // Strategic Bomber Upgrade: the Heavy Bomber reaches this many hexes farther (the node's own rng bonus)
 // mission radius in hexes: the type's own, plus what research adds (Drop Tanks, Long-Range Tanks, Satellite Link ...: the rng bonus of st())
 const airRangeT = (n, t) => t === 'drone' ? uavOf(n).range : (AIR_RANGE[t] || 12) + (n >= 0 ? st(n, t, 'rng') : 0);
@@ -303,6 +303,10 @@ function interceptChance(m){
 function interceptorOf(m){ const near = [m.to, ...G.P[m.to].nbs]; let best = null, bv = 0;
   for (const a of S.armies){ if (a.to !== null || a.fly || !near.includes(a.at) || !atWar(a.owner, m.owner)) continue; const v = ((a.u.sam || 0) + 0.6*(a.u.frig || 0))*(a.at === m.to ? 1 : 0.5); if (v > bv){ bv = v; best = a; } }
   return best ? best.id : null; }
+// a Cruise Missile Speed step (rGrant, rules/research.js) reaches the missiles already in flight at once (owner 2026-11-18): m.t, the share of the way
+// flown, is kept and the rest takes the time of the new speed (m.dt, the share flown an hour). missileBefore: nation n's missiles in flight and their speed
+const missileBefore = n => (S.inflight || []).filter(m => m.owner === n).map(m => [m, mslOf(n, m.k).speed]);
+function missileRetime(w0){ for (const [m, v] of w0){ const v1 = mslOf(m.owner, m.k).speed; if (v > 0 && v1 > 0 && v1 !== v) m.dt *= v1/v; } }
 function missileTick(){
   if (!S.inflight || !S.inflight.length) return;
   for (let i = S.inflight.length - 1; i >= 0; i--){ const m = S.inflight[i]; m.t += m.dt; if (m.t < 1) continue; S.inflight.splice(i, 1); missileImpact(m); }

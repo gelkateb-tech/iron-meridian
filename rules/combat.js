@@ -137,11 +137,11 @@ function unitStrength(n, t, T){
   const N = n >= 0 && S.nations[n] ? S.nations[n] : null, U = UNITS[t], dc = N ? DOCTRINES[N.doc] : null; T = T || (N && N.tech) || {};
   const lv = id => T[id] != null ? +T[id] || 0 : RN[id] && RN[id].std ? 1 : 0, hasT = id => lv(id) > 0, air = U.cls === 'air';
   const stat = k => { let v = U[k] || 0; for (const nd of RNODES_U[t] || []){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++){ const x = nd.lv[i].fx[k]; if (x) v += x; } }
-    if (k === 'atk' || k === 'def'){ v *= MARK_F[Math.min(3, +T[t + (k === 'atk' ? '_fp' : '_pr')] || 0) + 1]; if (dc) v *= dc[k] || 1; } return v; };   // (as st(), without shortages)
+    if (k === 'atk' || k === 'def'){ v *= MARK_F[rMarkT(T, t, k === 'atk' ? 'fp' : 'pr') + 1]; if (dc) v *= dc[k] || 1; } return v; };   // (as st(), without shortages)
   const mo = k => { const r = R_VS[t] && R_VS[t][k]; return r && lv(r[0]) >= (r[2] || 1) ? r[1] : mult(t, k); }, mU = u => U.vsU && U.vsU[u] != null ? U.vsU[u] : mo(UNITS[u].cls);
   const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
-  const atk = stat('atk'), def = stat('def');
-  const vis = uav ? uav.vis : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
+  const atk = stat('atk'), def = stat('def'), uavK = [1, 1.15, 1.3][lv('drone_sens')] || 1;
+  const vis = uav ? Math.round(uav.vis*uavK) : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
     : U.vis*((t === 'at' && hasT('at_eye')) || (t === 'spec' && hasT('spec_eye')) ? 1.5 : 1);
   const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
   const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*(U.spd ? stat('spd')/U.spd : 1)*24 : stat('spd'))*KM_HEX/10)*10;   // (aircraft: flight speed with the research speed bonus, rAirSpdF)

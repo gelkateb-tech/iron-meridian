@@ -13,6 +13,11 @@
 // 5. an old save (.test/fixtures/upgrades-oldsave.json, made by master 76c89ca before the review: Rapid Mobilisation 2, Bigger Salvo, Flight-Deck
 //    Crews 1 with level 2 running, a fielded wing of two eight-drone cards, a queue) loads, gets the replacements level for level, is told once,
 //    plays on two days, finishes the running project as Close-In Defence 2, and saves and loads again unchanged
+// 6. the Recon UAV (owner 2026-11-18): Firepower 1 and 2 (days 3 and 10) became Wide-Area Sensors 1 and 2 (the view on station +15% / +30%), same days and
+//    prices; Firepower stays as one day-16 step (+40%). An old save's drone_fp 1-3 becomes Sensors 1-2 (and the day-16 Firepower at 3), a running project
+//    carries on as the new step, the seat is told once, a second load changes nothing, a running Mark upgrade ends with the converted levels
+// 7. Amphibious Doctrine and Combat Engineers change a landing or boarding already under way, Cruise Missile Speed a missile already in flight: the hours
+//    left shrink by the ratio, the share done is kept; Cruise Missile Range and other nations' forces and missiles are untouched
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
@@ -21,7 +26,7 @@ const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/
 const NAMES = ['IM', 'UNITS', 'UT', 'RN', 'RNODES_U', 'R_FINAL', 'R_PRICE', 'R_RENAMED', 'R_VS', 'CLASSES', 'AIR_SPEED', 'AIR_SPF', 'st', 'multO', 'rLevel', 'rGrant', 'rTrainF', 'rPack', 'rAirSpdF',
   'rSightF', 'rRangeKm', 'rSamNear', 'rJamF', 'rKoHours', 'rAdF', 'rBombF', 'rMpaR', 'rMpaH', 'rAewR', 'rAewF', 'rSpecTerr', 'rDrilled', 'dropOnly', 'dropRange', 'uavLv', 'has', 'rDeckRate',
   'maintRate', 'addArmy', 'power', 'walkSpeed', 'wingSpd', 'wingRange', 'airCheck', 'airTick', 'unitStrength', 'stackSizes', 'spawn', 'trainH', 'recruit', 'prodHour', 'researchSlotHour',
-  'RES_K', 'orderSpot', 'sailHour', 'sailHours', 'legH', 'desk', 'ownedBy', 'hexDist', 'armiesOf', 'count'];
+  'RES_K', 'uavOf', 'rUavSightK', 'rMarkLv', 'rMarkT', 'R_FP_SPLIT', 'embarkH', 'landH', 'mslOf', 'launchMissile', 'missileCheck', 'missileTick', 'mstock', 'prodHour', 'orderSpot', 'sailHour', 'sailHours', 'legH', 'desk', 'ownedBy', 'hexDist', 'armiesOf', 'count'];
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + `\nreturn {${NAMES.join(', ')}, get S(){ return S; }, get G(){ return G; }};`;
 const load = () => new Function(SRC)();
 let bad = 0, n = 0; const ok = (c, msg, info) => { n++; if (!c){ bad++; console.log('FAIL  ' + msg + (info !== undefined ? '  ' + JSON.stringify(info).slice(0, 400) : '')); } };
@@ -93,7 +98,7 @@ function CLASSESv(R, o, t){ const v = {}; for (const k of R.CLASSES) v[k] = R.mu
   function fp(o, t, a){ const v = {}; for (const k of ['atk', 'def', 'spd', 'hp', 'rng']) v['st.' + k] = R.st(o, t, k); for (const k of R.CLASSES) v['vs.' + k] = R.multO(o, t, k);
     Object.assign(v, {sight:R.rSightF(o, t), range:R.rRangeKm(o, t), train:R.rTrainF(o, t), flight:R.rAirSpdF(o, t), pack:R.rPack(o, t), power:R.power(a)});
     if (a.air) Object.assign(v, {wingSpd:R.wingSpd(a), wingRange:R.wingRange(a)}); else v.walk = R.walkSpeed(a, a.at);
-    if (t === 'drone') v.uav = R.uavLv(o); if (t === 'sam') v.samNear = R.rSamNear(o); if (t === 'jam') v.jam = R.rJamF(o); if (t === 'sdrone'){ v.ko = R.rKoHours(o); v.ad = R.rAdF(o, t); }
+    if (t === 'drone'){ v.uav = R.uavLv(o); v.uavVis = R.uavOf(o).vis; } if (t === 'sam') v.samNear = R.rSamNear(o); if (t === 'jam') v.jam = R.rJamF(o); if (t === 'sdrone'){ v.ko = R.rKoHours(o); v.ad = R.rAdF(o, t); }
     if (t === 'bomb' || t === 'stealth') v.bombs = R.rBombF(o, t); if (t === 'mpa'){ v.mpaR = R.rMpaR(o); v.mpaH = R.rMpaH(o); } if (t === 'awacs'){ v.aewR = R.rAewR(o); v.aewF = R.rAewF(o); }
     if (t === 'spec'){ v.terr = R.rSpecTerr(o, 1.4); v.drop = R.dropOnly(a); } if (t === 'para') v.dropR = R.dropRange(a);
     if (t === 'inf' || t === 'tank'){ v.forest = R.rDrilled(a, 'forest'); v.mountain = R.rDrilled(a, 'mountain'); }
@@ -116,7 +121,7 @@ function CLASSESv(R, o, t){ const v = {}; for (const k of R.CLASSES) v[k] = R.mu
         if (!idle) F.forEach(([where, a], i) => ok(fp(o, t, a) !== before[i], `${o === SEAT ? 'person' : 'computer'} nation: ${R.RN[nd.id].name}${nd.lv.length > 1 ? ' ' + l : ''} (${nd.id}) changes a ${t} force ${where} at once`)); }
       if (t === 'drone'){ const base = R.UNITS.drone.atk + 3 + 2; ok(near(R.st(o, 'drone', 'atk'), base*1.4), `nation ${o}: the armed UAV's attack carries Firepower 3 (x1.4) once it has missiles`, R.st(o, 'drone', 'atk')); } } }
   ok(steps === 2*249, 'every one of the 249 unit-line steps was checked for both nations', steps);
-  ok([...unarmed].join() === 'drone Firepower 1,drone Firepower 2,drone Firepower 3', 'only the Recon UAV\'s Firepower meets a unit with no attack (in tree order; by day, levels 1 and 2 come before UAV IV)', [...unarmed]);
+  ok([...unarmed].join() === 'drone Firepower 1', 'only the Recon UAV\'s Firepower (now one step, day 16, before UAV IV in tree order) meets a unit with no attack', [...unarmed]);
 }
 
 // ---- 4. the gaps
@@ -207,5 +212,83 @@ function CLASSESv(R, o, t){ const v = {}; for (const k of R.CLASSES) v[k] = R.mu
   ok(JSON.stringify(R2.S.nations[0].tech) === JSON.stringify(S.nations[0].tech) && !(R2.desk(0).log || []).filter(e => /Research update/.test(e.text)).slice(1).length, 'a second load changes nothing and says nothing more');
 }
 
+// ---- 6. the Recon UAV: Firepower 1 and 2 (days 3 and 10) became Wide-Area Sensors 1 and 2 (owner 2026-11-18)
+{ const {R, S, cap} = game(), nd = R.RN.drone_sens, fp3 = R.RN.drone_fp3, U = R.UNITS.drone;
+  ok(!R.RN.drone_fp && nd && nd.kind === 'kit' && nd.name === 'Wide-Area Sensors' && nd.lv.length === 2, 'the Recon UAV has Wide-Area Sensors (two levels) and no Firepower 1-3 node', nd && nd.lv.length);
+  ok(JSON.stringify(nd.lv.map(L => L.day)) === '[3,10]', 'Wide-Area Sensors: the old Firepower 1 and 2 days (3 and 10)', nd.lv.map(L => L.day));
+  ok(nd.lv.every((L, i) => JSON.stringify(L.c) === JSON.stringify(R.RN.drone_pr.lv[i].c)) && JSON.stringify(fp3.lv[0].c) === JSON.stringify(R.RN.drone_pr.lv[2].c) && nd.lv[0].c.cash === 42 && nd.lv[1].c.cash === 62 && nd.lv[0].c.days === 2, 'Wide-Area Sensors: the old Firepower 1 and 2 prices', nd.lv.map(L => L.c));
+  ok(nd.req.join() === 'u_drone' && !nd.lv[1].rq && R.RN.drone_pr.req.join() === 'u_drone', 'Wide-Area Sensors needs only the UAV unlock, at both levels, as Firepower did', [nd.req, nd.lv[1].rq]);
+  ok(fp3 && fp3.lv.length === 1 && fp3.lv[0].day === 16 && fp3.req.join() === 'u_drone,drone_g2' && /\+40%/.test(fp3.lv[0].txt), 'Firepower stays as one step on day 16 (+40%, needs UAV II)', fp3 && [fp3.lv, fp3.req]);
+  for (const o of [SEAT, AI]){ const N = S.nations[o]; R.rGrant(N, 'u_drone', 1); const v0 = R.uavOf(o).vis;
+    ok(v0 === 250 && R.rUavSightK(o) === 1, `nation ${o}: UAV I sees 250 km on station`, v0);
+    R.rGrant(N, 'drone_sens', 1); ok(R.uavOf(o).vis === 288 && R.rUavSightK(o) === 1.15, `nation ${o}: Wide-Area Sensors 1: the view on station 250 -> 288 km (+15%)`, R.uavOf(o).vis);
+    R.rGrant(N, 'drone_sens', 2); ok(R.uavOf(o).vis === 325 && near(R.rUavSightK(o), 1.3), `nation ${o}: Wide-Area Sensors 2: 325 km (+30%)`, R.uavOf(o).vis);
+    R.rGrant(N, 'drone_g2', 1); ok(R.uavOf(o).vis === 390, `nation ${o}: it stacks with UAV II (300 km): 390 km`, R.uavOf(o).vis);
+    ok(R.unitStrength(o, 'drone').vis === 390, `nation ${o}: the stats card shows the farther view`, R.unitStrength(o, 'drone').vis);
+    ok(R.st(o, 'drone', 'atk') === 0, `nation ${o}: the UAV still has no attack for Firepower to multiply`);
+    ok(R.rMarkLv(o, 'drone', 'fp') === 0, `nation ${o}: no Firepower level yet`); }
+  // the unarmed UAV gained something real from the step: the sight is what the wing's recon mission reads (rules/vision.js, rules/air.js use uavOf)
+  const src = ['vision.js', 'air.js'].map(f => fs.readFileSync(path.join(ROOT, 'rules', f), 'utf8')).join('\n'); ok((src.match(/uavOf\(/g) || []).length >= 4, 'the recon mission reads the view from uavOf (vision and reveal)');
+  for (const o of [SEAT, AI]){ const N = S.nations[o]; R.rGrant(N, 'drone_g4', 1); const a0 = R.st(o, 'drone', 'atk'); R.rGrant(N, 'drone_fp3', 1);
+    ok(near(R.st(o, 'drone', 'atk'), a0*1.4) && R.rMarkLv(o, 'drone', 'fp') === 3, `nation ${o}: Firepower (day 16) is +40% attack once UAV IV gives it missiles`, [a0, R.st(o, 'drone', 'atk')]); }
+}
+// the old save: a game made with the old Firepower ids (drone_fp 1-3) is converted level for level, a running project carries on, nothing says it twice
+{ const g = game(), N0 = g.S.nations[0], N1 = g.S.nations[1], N2 = g.S.nations[2];
+  N0.tech.drone_fp = 2; N1.tech.drone_fp = 3; N2.tech.drone_fp = 1; N0.tech.drone_pr = 1; g.S.nations[3].tech.drone_fp = 3; delete g.S.nations[3].tech.drone_sens;
+  N0.research = {id:'drone_fp', lv:3, h:40, h0:72}; N1.research2 = {id:'drone_fp', lv:3, h:30, h0:72}; N2.research = {id:'drone_fp', lv:2, h:20, h0:48}; N1.rPick = {id:'drone_fp', until:9999};
+  const json = g.api.saveJSON(), R = load(); R.IM.api.useScenario('world'); const S0 = R.IM.api.restore(JSON.parse(json)), S = R.S; ok(S0, 'the old UAV save loads', R.IM.api.restore.why);
+  if (!S) { console.log('restore failed', R.IM.api.restore.why); process.exit(1); } const T = i => S.nations[i].tech;
+  ok(!('drone_fp' in T(0)) && !('drone_fp' in T(1)) && !('drone_fp' in T(2)) && !('drone_fp' in T(3)), 'no old drone_fp is left');
+  ok(T(0).drone_sens === 2 && !T(0).drone_fp3 && T(0).drone_pr === 1, 'old Firepower 2 -> Wide-Area Sensors 2, no Firepower', T(0));
+  ok(T(1).drone_sens === 2 && T(1).drone_fp3 === 1, 'old Firepower 3 -> Wide-Area Sensors 2 and the day-16 Firepower (nothing lost)', T(1));
+  ok(T(2).drone_sens === 1 && !T(2).drone_fp3, 'old Firepower 1 -> Wide-Area Sensors 1', T(2));
+  ok(S.nations[0].research.id === 'drone_fp3' && S.nations[0].research.lv === 1 && S.nations[0].research.h === 40, 'a running Firepower 3 carries on as the day-16 Firepower with its 40 h left', S.nations[0].research);
+  ok(S.nations[1].research2.id === 'drone_fp3' && S.nations[1].research2.lv === 1 && S.nations[1].research2.h === 30, 'a computer nation\'s too', S.nations[1].research2);
+  ok(S.nations[2].research.id === 'drone_sens' && S.nations[2].research.lv === 2 && S.nations[2].research.h === 20, 'a running Firepower 2 carries on as Wide-Area Sensors 2 with its 20 h left', S.nations[2].research);
+  ok(S.nations[1].rPick.id === 'drone_sens', 'a computer nation\'s saved pick follows', S.nations[1].rPick);
+  const msg = (R.desk(0).log || []).find(e => /Research update/.test(e.text)); ok(msg && /Recon UAV Firepower 2 is now Wide-Area Sensors 2/.test(msg.text) && /carries on as Firepower/.test(msg.text) && !/trains that unit 15% faster/.test(msg.text), 'the seat is told once, in plain words', msg && msg.text);
+  ok(R.uavOf(0).vis === 325 && R.uavOf(1).vis === 325, 'the converted steps work (325 km)');
+  const R2 = load(); R2.IM.api.useScenario('world'); ok(R2.IM.api.restore(JSON.parse(R.IM.api.saveJSON())), 'saved and loaded again'); ok(JSON.stringify(R2.S.nations.map(n => n.tech)) === JSON.stringify(S.nations.map(n => n.tech)) && (R2.desk(0).log || []).filter(e => /Research update/.test(e.text)).length === (R.desk(0).log || []).filter(e => /Research update/.test(e.text)).length, 'a second load changes nothing and says nothing more');
+  // an old Mark upgrade still running (N.eng) gives the converted levels when it ends
+  const g2 = game(); g2.S.nations[0].eng = {t:'drone', m:4, h:1}; const R3 = load(); R3.IM.api.useScenario('world'); R3.IM.api.restore(JSON.parse(g2.api.saveJSON()));
+  for (let k = 0; k < R3.IM.api.BATTLE_Q; k++) R3.IM.api.tickQ(); const T3 = R3.S.nations[0].tech;
+  ok(!R3.S.nations[0].eng && T3.drone_sens === 2 && T3.drone_fp3 === 1 && !('drone_fp' in T3), 'a running Mark IV upgrade of the UAV from an even older save ends as Sensors 2 and the day-16 Firepower', T3);
+}
+// ---- 7. command and missile upgrades reach what is already under way (owner 2026-11-18): landings, boarding, cruise missiles in flight
+{ const {R, S, G, cap, sea} = game();
+  for (const o of [SEAT, AI]){ const N = S.nations[o], p = cap(o), z = sea(o);
+    // a landing: troops that came ashore from the sea with the hours still to go
+    const a = R.addArmy(o, p, {inf:3}), h0 = R.landH(a, p); ok(h0 === 6 || h0 === 12, `nation ${o}: a landing takes ${h0} h`, h0); a.land = h0; for (let i = 0; i < 2; i++) a.land--;   // two hours ashore already
+    const left = a.land, lf = R.landH(a, p);
+    R.rGrant(N, 'nav3', 1); const h1 = R.landH(a, p);
+    ok(h1 === Math.max(1, Math.round(h0/2)) && a.land === Math.max(1, Math.round(left/2)), `nation ${o}: Amphibious Doctrine halves a landing under way at once (${left} h left -> ${a.land}, the full time ${lf} -> ${h1})`, [h0, left, a.land, h1]);
+    const done0 = (h0 - left)/h0; ok(a.land < left && (h1 - a.land)/h1 >= done0 - 1/h1 - 1e-9, `nation ${o}: the share of the landing already done is kept (within an hour's rounding)`, [done0, (h1 - a.land)/h1]);
+    const b = R.addArmy(o, p, {inf:3}); b.land = 5; R.rGrant(N, 'nav3', 2); ok(b.land === 5, `nation ${o}: the second level (first-day strength only) leaves a landing alone`, b.land);
+    // another nation's landing is not touched
+    const other = R.addArmy(o === SEAT ? AI : SEAT, cap(o === SEAT ? AI : SEAT), {inf:3}); other.land = 12; const e0 = R.embarkH(a);
+    // boarding: hours left in the port
+    const c = R.addArmy(o, p, {inf:3}); c.emb = 5; const bf = R.embarkH(c); R.rGrant(N, 'log2', 1); const bf1 = R.embarkH(c);
+    ok(bf1 < bf && c.emb === Math.max(1, Math.round(5*bf1/bf)) && c.emb < 5, `nation ${o}: Combat Engineers cut the hours left to board (5 -> ${c.emb}; a full boarding ${bf} -> ${bf1} h)`, [bf, bf1, c.emb]);
+    ok(other.land === 12, `nation ${o}: another nation's landing is not touched`, other.land);
+    const d = R.addArmy(o, p, {inf:3}); d.emb = 1; R.rGrant(N, 'log2', 2); ok(d.emb >= 1, `nation ${o}: a boarding on its last hour does not drop below 1 h`, d.emb);
+    const f = R.addArmy(o, p, {inf:3}); ok(f.land === undefined && f.emb === undefined, `nation ${o}: a force not landing or boarding gets no timer`);
+    // a cruise missile in flight
+    R.rGrant(N, 'u_inf', 1); R.rGrant(N, 'msl1', 1);
+    const tgt = G.P.find(P => !P.sea && S.owner[P.id] >= 0 && S.owner[P.id] !== o && R.hexDist(G.P[p].cc, P.cc) <= 24 && R.hexDist(G.P[p].cc, P.cc) >= 14), from = p;
+    if (!tgt){ ok(false, `nation ${o}: found a target in cruise missile range`); continue; }
+    const m = {id:S.nid++, owner:o, k:'cm', from, to:tgt.id, t:0, dt:1/Math.max(2, Math.ceil(R.hexDist(G.P[from].cc, tgt.cc)/R.mslOf(o, 'cm').speed))}; (S.inflight || (S.inflight = [])).push(m);
+    const hours0 = Math.round(1/m.dt); for (let i = 0; i < 2; i++) m.t += m.dt; const t0 = m.t, dt0 = m.dt, sp0 = R.mslOf(o, 'cm').speed;
+    const oth = {id:S.nid++, owner:o === SEAT ? AI : SEAT, k:'cm', from, to:tgt.id, t:0.2, dt:0.1}; S.inflight.push(oth);
+    R.rGrant(N, 'cm_rng', 1); ok(m.dt === dt0 && m.t === t0, `nation ${o}: Cruise Missile Range does not change the flight time`);
+    R.rGrant(N, 'cm_spd', 1); const sp1 = R.mslOf(o, 'cm').speed;
+    ok(sp1 === sp0 + 2 && near(m.dt, dt0*sp1/sp0, 1e-12) && m.t === t0, `nation ${o}: Cruise Missile Speed 1: a missile in flight keeps its progress (${Math.round(t0*100)}%) and flies on at speed ${sp0} -> ${sp1}`, [dt0, m.dt, m.t]);
+    const rest0 = (1 - t0)/dt0, rest1 = (1 - m.t)/m.dt; ok(near(rest1, rest0*sp0/sp1, 1e-9) && rest1 < rest0, `nation ${o}: the hours left drop by the ratio (${rest0.toFixed(1)} -> ${rest1.toFixed(1)})`);
+    ok(oth.dt === 0.1 && oth.t === 0.2, `nation ${o}: another nation's missile is not touched`);
+    R.rGrant(N, 'cm_spd', 2); ok(near(m.dt, dt0*(sp0 + 4)/sp0, 1e-12), `nation ${o}: Cruise Missile Speed 2: again`, [m.dt]);
+    // it still arrives on time by the new speed
+    S.inflight = [m]; let hrs = 0; while (S.inflight.length && hrs < 100){ R.missileTick(); hrs++; } ok(hrs === Math.ceil((1 - t0)/m.dt - 1e-9), `nation ${o}: the missile lands after the shortened time (${hrs} h)`, [hrs, (1 - t0)/m.dt]);
+    // a missile launched afterwards reads the new speed too
+    ok(R.mslOf(o, 'cm').speed === sp0 + 4, `nation ${o}: new missiles fly at the new speed`); }
+}
 console.log(`${n - bad}/${n} checks passed`);
 process.exit(bad ? 1 : 0);
