@@ -1351,6 +1351,33 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .pickq input:focus{border-color:var(--accent); box-shadow:0 0 0 2px rgba(79,208,222,.25)}
 .pickno{margin:6px 2px; color:var(--muted)}
 @media (max-width:600px){ .pickq{top:-18px} }
+/* the nation picker, in the old card style: a wide panel, 3 columns of cards (2 on a phone), a big flag and name, provinces, cities and difficulty on each */
+#modal.menu .sheet.mid{width:min(1040px, calc(100vw - 64px))}
+@media (max-width:1060px){ #modal.menu .sheet.mid{width:min(1040px, 100%)} }
+.picks{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px}
+.pick{display:flex; flex-direction:row; align-items:center; gap:12px; text-align:left; padding:9px 12px; min-height:80px; min-width:0}
+.pick .pt{display:flex; flex-direction:column; align-items:flex-start; gap:2px; flex:1; min-width:0}
+.pick .pt > b{max-width:100%; font-size:15px}
+.pick .pt > span{font-variant-numeric:tabular-nums; font-size:12px; color:var(--muted); line-height:1.25}
+.pick .pt > span.pnc{display:flex; flex-wrap:wrap; column-gap:0}
+.pick .pnc .pn, .pick .pnc .pc{white-space:nowrap}
+.pick .pnc .pn + .pc::before{content:"\00b7"; margin:0 5px}
+#modal.menu .sheet.mid .pickintro{max-width:none}
+.diff{display:inline-flex; align-items:center; gap:5px; font:700 9.5px var(--body); letter-spacing:.14em; text-transform:uppercase; padding:0; background:none; color:#c5d2d6; margin-top:1px} .diff::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
+.pick .pt > span.diff{font:700 9.5px var(--body)} .diff.d-easy{color:#8fcf86} .diff.d-normal{color:#e2b45a} .diff.d-hard{color:#ee8a7d}
+.pick:hover:not(:disabled){box-shadow:inset 0 0 0 1px rgba(255,255,255,.28); transform:translateY(-1px)}
+.pick:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.pick[aria-pressed="true"]{background:linear-gradient(180deg, rgba(79,208,222,.22), rgba(79,208,222,.07)); box-shadow:inset 0 0 0 2px var(--accent), 0 0 18px rgba(79,208,222,.2)}
+@media (max-width:600px){
+  .pickq{margin:0; padding:10px 0 8px}
+  #modal.menu .sheet.mid > .row:last-child{margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px; margin-bottom:-18px; bottom:-18px}   /* the footer bar reaches the panel edge (the panel pads 16px here, not 26px) */
+  .picks{grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px}
+  .pick{padding:8px 8px; gap:8px}
+  .pick .pt{gap:1px} .pick .pt > b{font-size:14px}
+  .pick .pt > span.pnc{flex-direction:column} .pick .pnc .pn + .pc::before{content:none}
+  .pick .pt > span{font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){ .pick:hover:not(:disabled){transform:none} }
 
 .ptab th{color:var(--cn-fg2); border-bottom-color:rgba(143,163,170,.4)}
 .chart{background:rgba(0,0,0,.18)}
@@ -11179,15 +11206,24 @@ const pickNorm = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 const PICK_ALT = {'United States':'usa us u.s. america american united states of america', 'United Kingdom':'uk u.k. britain british great britain england', 'Russia':'russian federation ussr soviet', 'DR Congo':'drc congo democratic republic of the congo kinshasa', 'South Korea':'korea republic of korea rok', 'North Korea':'korea dprk', 'Myanmar':'burma', 'Turkey':'turkiye', 'Iran':'persia', 'Syria':'syrian arab republic', 'Vietnam':'viet nam', 'Saudi Arabia':'ksa arabia', 'South Africa':'rsa', 'Belarus':'byelorussia white russia', 'Germany':'deutschland', 'China':'prc', 'Egypt':'misr', 'Philippines':'filipinas', 'Czechia':'czech republic'};
 const pickMatch = (hay, q) => { q = pickNorm(q); return !q || (' ' + hay).includes(' ' + q); };   // (a word of the name, or of an alternative name, starts with the typed text)
 let pickQ = '';
+// the difficulty of playing a nation (the old table named only eight classic powers and called the
+// rest Hard, which is no use for 68 nations): Easy from 60 provinces, Normal from 20, else Hard; the classic world keeps the old table
+const provCities = P0 => onMap(P0.tier ? MAP_NEW : 0, () => provsOf(P0).filter(id => G.P[id].city).length);
+const PICK_DIFF_OLD = {Brazil:'Easy', China:'Easy', Australia:'Easy', Canada:'Easy', Russia:'Easy', 'United States':'Normal', India:'Normal', 'South Africa':'Normal'};   // (the old picker's table)
+const pickDiffOf = (name, n) => SCENARIOS[pickScn].tiers ? (n >= 60 ? 'Easy' : n >= 20 ? 'Normal' : 'Hard') : (PICK_DIFF_OLD[name] || 'Hard');
 function pickFilter(){ const q = pickQ; let n = 0, one = null; document.querySelectorAll('#sheet .pick').forEach(el => { const m = pickMatch(el.dataset.n, q); el.hidden = !m; if (m){ n++; one = el; } }); const no = $('pickno'); if (no) no.hidden = n > 0; return n === 1 ? one : null; }
 function showPicker(){
   if (!G) useMap(0);
   if (!SCENARIOS[pickScn]) pickScn = 'world';
   const SC = SCENARIOS[pickScn], L = SC.powers, nat = !!SC.tiers; if (pickSel >= L.length) pickSel = 0;
   if ($('modal').hidden || openModal.kind !== 'picker') pickQ = '';   // (a fresh visit to the picker starts with an empty search)
-  // one A-Z list of every nation (by name, accents ignored); the search box filters it in place (pickFilter), so typing never rebuilds the sheet
-  const cards = L.map((P0, i) => ({i, P0, k:pickNorm(P0.name)})).sort((x, y) => PICK_COLL.compare(x.k, y.k) || x.i - y.i)
-    .map(({i, P0, k}) => `<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" data-n="${(k + ' ' + (PICK_ALT[P0.name] || '')).trim()}" aria-pressed="${i === pickSel}"${pickMatch(k + ' ' + (PICK_ALT[P0.name] || ''), pickQ) ? '' : ' hidden'}>${flagHTML(P0.name, 28, 'big')}<span class="pt"><b>${P0.name}</b></span>${nat && TIER_NAME[P0.tier] ? `<span class="tier t-${P0.tier}">${TIER_NAME[P0.tier]}</span>` : ''}</button>`).join('');
+  // one list of every nation as cards in the old picker's style (flag, name, provinces, cities, difficulty), the biggest powers first: by provinces
+  // (the old picker's measure), then cities, then name; the numbers are what the nation holds when a campaign starts (its country's provinces on the
+  // nations world's map; its list of starting cities). The search box filters the cards in place (pickFilter), so typing never rebuilds the sheet
+  const cards = L.map((P0, i) => ({i, P0, k:pickNorm(P0.name), n:provsOf(P0).length, c:nat ? P0.cities.length : provCities(P0)}))
+    .sort((x, y) => y.n - x.n || y.c - x.c || PICK_COLL.compare(x.k, y.k) || x.i - y.i)
+    .map(({i, P0, k, n, c}) => { const df = pickDiffOf(P0.name, n), hay = (k + ' ' + (PICK_ALT[P0.name] || '')).trim();
+      return `<button class="btn pick" style="--c:${P0.color}" data-act="pick" data-p="${i}" data-n="${hay}" aria-pressed="${i === pickSel}"${pickMatch(hay, pickQ) ? '' : ' hidden'}>${flagHTML(P0.name, 40, 'big')}<span class="pt"><b>${P0.name}</b><span class="pnc"><span class="pn">${n} provinces</span><span class="pc">${c} cities</span></span><span class="diff d-${df.toLowerCase()}">${df}</span></span></button>`; }).join('');
   const caps = nat ? winCapsFor(L.length) : SC.caps, share = nat ? winShareFor(L.length) : WIN_SHARE, shareW = share === 0.25 ? 'a quarter' : share === 0.2 ? 'a fifth' : share === 0.1 ? 'a tenth' : Math.round(share*100) + '%';
   const nW = NUMW[L.length] || String(L.length), capW = NUMW[caps] || String(caps);
   openModal(`${LOGO}<div class="eyebrow pickeb" style="margin-top:4px">New campaign</div><h1>Choose your nation</h1>
