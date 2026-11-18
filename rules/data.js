@@ -203,7 +203,7 @@ const R_PRICE = {
 const R_LINES = [
   {u:'inf', cat:'inf', day:1, std:1, k:[
     ['armor', 'Ceramic Body Armour', 'armor', [[1, {def:1}, 'defense +1']]],
-    ['build', 'Rapid Mobilisation', 'build', [[5, {}, 'trains 15% faster'], [14, {}, 'trains 30% faster']]],
+    ['kit', 'Infantry Kit', 'vest', [[5, {hp:2}, 'health +2'], [14, {}, 'light anti-tank and anti-air missiles: damage to armor 0.5x to 0.7x, to aircraft 0.2x to 0.35x']]],
     ['terr', 'Rough-Ground Drills', 'terr', [[6, {}, 'half the speed penalty in forest and hills'], [12, {}, 'and in mountains and jungle']]]],
    g:[[2, 9, 'Mechanized Infantry', {atk:2, spd:1, hp:2}, 'attack +2, speed +1, health +2'], [3, 17, 'Assault Infantry', {atk:1, def:1, hp:2}, 'attack +1, defense +1, health +2']]},
   {u:'at', cat:'inf', day:1, std:1, k:[
@@ -257,7 +257,7 @@ const R_LINES = [
   {u:'int', cat:'tac', day:1, ud:4, k:[
     ['msl', 'Radar-Guided Missiles', 'rocket', [[5, {atk:2}, 'attack +2']]],
     ['rng', 'Drop Tanks', 'fuel', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]]],
-   g:[[2, 12, 'Fourth-Generation Interceptor', {atk:1, def:1, hp:2, spd:2}, 'attack +1, defense +1, health +2, speed +2']]},
+   g:[[2, 12, 'Fourth-Generation Interceptor', {atk:1, def:1, hp:2, spd:2}, 'attack +1, defense +1, health +2, speed +2 (flies 10% faster)']]},
   {u:'jet', cat:'tac', day:1, ud:4, k:[
     ['pgm', 'Precision Munitions', 'bomb', [[5, {atk:2}, 'attack +2']]],
     ['rng', 'Drop Tanks', 'fuel', [[7, {rng:1}, 'range +1 hex'], [13, {rng:1}, 'range +1 more']]],
@@ -273,7 +273,7 @@ const R_LINES = [
       [4, 13, 'UAV IV · Armed UAV', {atk:3}, 'light missiles: one salvo per sortie'], [5, 18, 'UAV V · Hunter-Killer', {atk:2, def:2}, 'two salvos, heavier missiles, longer range and loiter']]},
   {u:'swarm', cat:'uns', day:4, ud:4, k:[
     ['rng', 'Booster Rockets', 'booster', [[8, {rng:1}, 'range +1 hex'], [14, {rng:1}, 'range +1 more']]],
-    ['pack', 'Bigger Salvo', 'msl', [[9, {}, 'eight drones per card (was six), same price']]]],
+    ['tb', 'Thermobaric Warheads', 'warhead', [[9, {atk:0.2, hp:0.4}, 'attack +0.2, health +0.4']]]],
    g:[[2, 15, 'Networked Swarm', {atk:0.6, hp:1}, 'attack +0.6, health +1, damage to armor 0.35x to 0.6x']]},
   {u:'sdrone', cat:'uns', day:6, ud:4, fam:'drone', k:[
     ['rng', 'Satellite Link', 'sat', [[10, {rng:2}, 'range +2 hexes'], [15, {rng:2}, 'range +2 more']]],
@@ -283,7 +283,7 @@ const R_LINES = [
   {u:'bomb', cat:'str', day:6, ud:6, k:[
     ['ecm', 'Defensive Jammers', 'jam', [[9, {def:2}, 'defense +2']]],
     ['up', 'Strategic Bomber Upgrade', 'rng', [[11, {atk:1, rng:4}, 'range +4 hexes (+720 km), attack +1; with Stealth Airframes it opens the Stealth Bomber']]]],
-   g:[[2, 17, 'Supersonic Bomber', {atk:2, hp:3, spd:3}, 'attack +2, health +3, speed +3']]},
+   g:[[2, 17, 'Supersonic Bomber', {atk:2, hp:3, spd:3}, 'attack +2, health +3, speed +3 (flies 33% faster)']]},
   {u:'stealth', cat:'str', day:14, ud:9, elite:1, req:['bomb_up', 'jet_lo'], k:[
     ['bay', 'Enlarged Bomb Bay', 'msl', [[19, {}, 'bomb load 60% to 75% of a Heavy Bomber’s']]],
     ['rng', 'Flying-Wing Tanks', 'fuel', [[21, {rng:4}, 'range +4 hexes']]]],
@@ -307,7 +307,7 @@ const R_LINES = [
     ['rng', 'Long-Range Bombardment', 'shell', [[11, {}, 'coastal bombardment 30% stronger']]]],
    g:[[2, 15, 'Missile Cruiser', {atk:2, hp:4}, 'attack +2, health +4']]},
   {u:'carr', cat:'nav', day:7, ud:6, fam:'crui', k:[
-    ['deck', 'Flight-Deck Crews', 'deck', [[11, {}, 'wings aboard repair 25% a day (was 20%)'], [16, {}, '30% a day']]],
+    ['ciws', 'Close-In Defence', 'flak', [[11, {def:1}, 'defense +1'], [16, {}, 'damage to aircraft 1.4x to 1.8x']]],
     ['spd', 'Nuclear Propulsion', 'engine', [[13, {spd:0.8}, 'speed +0.8']]]],
    g:[[2, 18, 'Supercarrier', {def:2, hp:6}, 'defense +2, health +6']]},
   {u:'sub', cat:'nav', day:1, std:1, k:[
@@ -358,6 +358,12 @@ const RNODES = [], RN = {};
 }
 const RNODES_U = {};   // the nodes of each unit's line (what st() sums)
 for (const n of RNODES) if (n.u) (RNODES_U[n.u] || (RNODES_U[n.u] = [])).push(n);
+// the final level of every unit line (docs/RESEARCH-UPGRADES.md section 3, owner 2026-11-18): the line's last research step by day, a generation
+// when two share the last day. On top of its own upgrade it makes that unit type train R_FINAL_F of the time (15% faster): rTrainF reads it
+const R_FINAL_F = 0.85, R_FINAL = {};
+for (const u in RNODES_U){ let b = null;
+  for (const nd of RNODES_U[u]) if (nd.kind !== 'unlock') nd.lv.forEach((L, i) => { if (!b || L.day > b.day || (L.day === b.day && nd.kind === 'gen' && b.nd.kind !== 'gen')) b = {nd, lv:i + 1, day:L.day}; });
+  if (b){ R_FINAL[u] = {id:b.nd.id, lv:b.lv}; const L = b.nd.lv[b.lv - 1]; L.train = R_FINAL_F; L.txt += ', and trains 15% faster'; } }
 const R_STEPS = RNODES.reduce((s, n) => s + (n.std ? 0 : n.lv.length), 0);   // research steps in the whole tree (standard-issue unlocks are not steps)
 const rLineName = n => n.u ? UNITS[n.u].name : n.line;
 // a node's name for one level: "Firepower 2 · Main Battle Tank", "Cruise Missile Range 1", "Heavy IFV"
@@ -375,6 +381,10 @@ const R_LEGACY = {
   drone1:['u_drone'], uav2:['drone_g2'], uav3:['drone_g3'], uav4:['drone_g4'], uav5:['drone_g5'],
   jam1:['u_jam'], swarm1:['u_swarm'], sdrone1:['u_sdrone'], heli1:['u_heli'], para1:['u_para'],
 };
+// upgrades replaced after the upgrades review (owner 2026-11-18): an old save's level of the old node becomes the same level of its replacement
+// (same days, prices and place in the tree), a project of it still running carries on as the replacement (rRenameMigrate)
+const R_RENAMED = {inf_build:'inf_kit', swarm_pack:'swarm_tb', carr_deck:'carr_ciws'};
+const R_RENAMED_NAME = {inf_build:'Rapid Mobilisation', swarm_pack:'Bigger Salvo', carr_deck:'Flight-Deck Crews'};
 const R_LEGACY_NAME = {inf1:'Ceramic Body Armor', inf2:'Mechanized Infantry', inf3:'Special Forces', tank1:'Composite Armor', tank2:'Smoothbore Main Gun', tank3:'Turbine Engines',
   art1:'Counter-Battery Radar', art2:'Rocket Artillery', art3:'Guided Shells', air1:'Jet Engines', air2:'Precision Munitions', air3:'Stealth Airframes', nav1:'Naval Gunnery', nav2:'Carrier Aviation',
   asf1:'Air Superiority Fighters', awacs1:'Airborne Early Warning', mpa1:'Maritime Patrol', bomb1:'Strategic Bombers', bomb2:'Strategic Bomber Upgrade', bomb3:'Stealth Bombers',

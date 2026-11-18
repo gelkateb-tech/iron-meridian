@@ -251,6 +251,7 @@ function restore(data){
   abMigrate();   // after mobMigrate
   ecoMigrate();
   researchMigrate();
+  rRenameMigrate();   // the upgrades review's replacements (any save that holds one of the old nodes)
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
   IM.emit('restored');
   return true;
