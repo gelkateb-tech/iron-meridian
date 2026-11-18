@@ -21,13 +21,13 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 |---|---|---|---|
 | **UNIT-ART: the tank sets** | owner 2026-11-18: 3 pictures per look, all the same vehicle: side view cut-out (research diamonds, made first), card scene in action (tap card; blue monitor tint and scanlines drawn in code), top-down (map and army bar), the scene and top-down made from the side view; a 3-way Gemini check that flags only; tank for all 5 groups (45 pictures, about $1.80 + checks), then show the owner before the rest. No $12 line; balance $40.88 at the start (log 255 calls, about $10.27); report the running total each batch; stop if the balance runs low | Sonnet | unit-art |
 | **UPGRADES-2** | owner 2026-11-18: Recon UAV Firepower 1-2 (days 3, 10) become sight/range steps; landings, boarding and cruise missiles under way switch to new timing at once; 8-drone old saves stay as they are | Sonnet | upgrades-2 |
+| **MAP-2 feedback** | owner 2026-11-18: (1) country borders thin and soft zoomed out, bolder only zoomed in; (2) province lines hidden zoomed out, fading in closer; (3) foreign armies (not yours or an ally's) show only an unknown badge: no count, type or 3D models, a tap says only "Unidentified army"; exact units only through proper recon (recon units, drones, radar) like CoN. Screenshots before merging: Europe/Africa zoomed out; Afghanistan/Pakistan with a Pakistani army tapped | Opus | map-2 |
 | **BUNKER** (#17) | owner 2026-11-18: go, with dug-in +10% open / +25% city; 5 levels, hidden from other nations, old saves convert; the updated protection table to the owner before merging | Opus | bunker |
 
 ## Ready, waiting for the owner
 
 | Job | State | Branch |
 |---|---|---|
-| **MAP-2** | done 2026-11-18 (3fc30d9): one map texture at every zoom; Political/Terrain in Settings > Map; the map-modes failure fixed at its cause (any settings save rebuilt the base map); all checks pass (night-lights fails the same way on master); phone zoom about 5% slower, panning 3-5% slower (ground grain from closer out, by design); screenshots sent | map-2 |
 | **CITIES** | done 2026-11-18 (7129852): block clusters, a quarter smaller, owner colour from the town coat, towers lower, hidden at hexPx 26 and below, brighter night windows; checks pass; faster than master except desktop day close-zoom panning +4.7% per frame (probably noise); screenshots sent | cities-3d |
 | **ICON-FIX** (owner bug 2026-11-18) | the 'parachute' badges in Afghanistan were the Motorized Infantry icon (a shrunken helmet with a wheel hanging under it on the chin strap); now the whole helmet with a small wheel at its lower right; Paratroopers show the plain helmet, no parachute icon anywhere; badge test and golden pass; before/after of the same spot sent | icon-fix |
 | Explosion clips + FX-2 (#24) | NOT merged until the owner OKs | fx-video |
@@ -111,7 +111,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 - **Conflict of Nations numbers:** constacks.com can't be read (security checkpoint; its robots.txt asks AI crawlers to stay out); taken off the allowed sites 2026-11-18. Paste the figures or send screenshots if you want them matched.
 - **Research tree rebuild:** the three pictures (CoN Helicopters tree with the red banner and Slot #1/#2, the Ka-25 card, the owner's mockup) did not reach the session; please upload them again.
-- **MAP-2 and CITIES:** screenshots sent 2026-11-18; OK to merge (one at a time)?
+- **CITIES:** screenshots sent 2026-11-18; OK to merge? (MAP-2 is back in work with the owner's feedback.)
 - **Icon fix (icon-fix):** OK to merge? Note: the game's basic infantry IS Motorized Infantry, so it shows the helmet with the wheel; say if it should show the plain helmet instead.
 
 - **Merged in v50 with the built defaults; still open if you want to change them:** aircraft (parked aircraft keep their pictures, bigger bomber/AWACS/patrol sizes, Stealth Bomber humps, old jet/int sheets still loaded); buildings (dock basins, small rivers count, construction sites 10% bigger?, move ~93 port cities' map points to their real places?); shipping routes (fleet selection no longer shows routes, cut-off convoys hidden when off, coaster/tanker drawn in code); building rules (Army Base only or both; Fortifications price: option 2 recommended; the +40% per extra Army Base; a starting Army Base in the biggest city?).
