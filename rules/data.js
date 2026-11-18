@@ -79,7 +79,7 @@ const RES = [
   {k:'cash',  name:'Money',    ab:'Money', unit:'M', pre:'$', use:'pays for everything: units, buildings, research, roads, and every unit’s daily upkeep', src:'taxes from your provinces (cities most; money cities 60% more, and +25% per Arms Industry level there), trade routes', map:'money cities and populous land'},
   {k:'oil',   name:'Oil',      ab:'Oil',   unit:'',  pre:'', use:'fuel: vehicles, aircraft and ships burn it daily and need some to build; a shortage slows and weakens them', src:'oil cities (+25% per Arms Industry level), a little from oil fields in the countryside, your capital, trade', map:'oil cities, oil fields'},
   {k:'metal', name:'Materials', ab:'Mat.', unit:'', pre:'', use:'nearly every unit, building, road and research project', src:'materials cities (+25% per Arms Industry level), a little from ore deposits, your capital, trade', map:'materials cities, ore deposits'},
-  {k:'iron',  name:'Iron',     ab:'Iron',  unit:'',  pre:'', use:'armor, artillery, warships, Army Bases, forts and railways; those units also use 4% of their iron a day in maintenance (a shortage weakens them)', src:'iron cities (+25% per Arms Industry level), a little from ore deposits and iron hills, your capital, trade', map:'iron cities, ore deposits, iron hills'},
+  {k:'iron',  name:'Iron',     ab:'Iron',  unit:'',  pre:'', use:'armor, artillery, warships, Army Bases, bunkers and railways; those units also use 4% of their iron a day in maintenance (a shortage weakens them)', src:'iron cities (+25% per Arms Industry level), a little from ore deposits and iron hills, your capital, trade', map:'iron cities, ore deposits, iron hills'},
   {k:'elec',  name:'Electronics', ab:'Elec.', unit:'', pre:'', use:'aircraft, drones, air defence, missiles, satellites and high-speed rail; those units also use 2% of their electronics a day in maintenance (a shortage weakens them)', src:'electronics cities (+25% per Arms Industry level), your capital, trade', map:'electronics cities'},
   {k:'rare',  name:'Rare Materials', ab:'Rare Mat.', unit:'', pre:'', use:'research: every technology costs it (more each tier); also advanced aircraft, carriers and missiles', src:'rare-earth cities (only one or two per country, many countries have none; +25% per Arms Industry level), your capital, trade', map:'rare-earth cities'},
   {k:'mp',    name:'Manpower', ab:'Manp.', unit:'k', pre:'', use:'crews for every unit', src:'population, Recruiting Offices (+3k to +9k a day by level), Mobilisation', map:'populous countryside'},
@@ -144,12 +144,26 @@ const KM_HEX = 180;                   // one map hex is roughly 180 km
 // Recruiting Office, levels I-V: what it costs to reach each level (money $M, materials, iron, electronics) and how many days it takes.
 // A building with such a table (BUILD[k].lv) is priced from it, not from the 1.6x-per-level rule (buildCost in rules/production.js)
 const REC_LV = [null, {cash:40, days:2}, {cash:75, metal:10, days:3}, {cash:130, metal:20, iron:10, days:4}, {cash:220, metal:35, iron:20, days:5}, {cash:360, metal:55, iron:30, elec:15, days:6}];
+// The Bunker (save key 'fort': it was Fortifications I-III; owner #17, 2026-11-18), levels 1-5, one row a level (docs/COMBAT.md section 7):
+//   hp: its health (a hit that wrecks a building level does BUNKER_HIT of it); red: how much less damage its garrison takes (the owner's 33-82%; the
+//   people of the province are spared the same share of their war losses, the other buildings BUNKER_SHIELD_LV's share); mrl: the garrison's morale
+//   counts that much higher (+5% to +50%, at most 100); upk: money a day (the owner's 100-140 at our scale, a hundredth: $1.0M-1.4M);
+//   cash, metal, iron, elec, days: the price of the level (levels 1-3 are Fortifications I-III's prices of today, 4-5 continue at about x1.4)
+const BUNKER_LV = [null,
+  {hp:20,  red:0.33, mrl:0.05, upk:1.0, cash:36,  metal:8,  iron:8,  days:2},
+  {hp:40,  red:0.43, mrl:0.10, upk:1.1, cash:58,  metal:13, iron:13, days:2},
+  {hp:65,  red:0.56, mrl:0.20, upk:1.2, cash:92,  metal:20, iron:20, days:2},
+  {hp:95,  red:0.69, mrl:0.33, upk:1.3, cash:130, metal:28, iron:28, elec:5, days:2.5},
+  {hp:125, red:0.82, mrl:0.50, upk:1.4, cash:180, metal:38, iron:38, elec:8, days:3}];
+const BUNKER_HIT = 20;        // the health one building hit takes from a bunker (a bomber's wrecked level, a ballistic missile, a precision hit, sabotage): level 1 falls to one hit, as every building level does
+const BUNKER_SHIELD_LV = 1;   // the other buildings of the province are shielded with this level's protection, whatever the bunker's level ("up to level 1")
+const BUNKER_FIX = 2.5;       // health a bunker repairs an hour (a lost level is not repaired: it is built again)
 const BUILD = {
   fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, lv1:{cost:18, metal:6, iron:6, days:1}, where:'city', desc:'Unlocks and trains ground units. Level I (cheap, one day): infantry (Motorized, Anti-Tank, Special Forces; Paratroopers also need an Airbase), mobile artillery, main battle tanks, IFVs and jammers; level II: mobile SAMs, rocket artillery and swarm drones. Each level adds a training line; ground units train 20% faster per level up to III, then 5% per level. No income. Your first two Army Bases cost the base price; from the third on, each one you already own in another province makes the next cost 40% more.'},
   air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:'Needed for strike fighters and interceptors (with Jet Engines research). Levels II\u2013V: aircraft build 10% faster and wings based here reach 1 hex farther per level above I.'},
   arms: {name:'Arms Industry',     max:5, cost:40, metal:12, iron:6, days:3, first:0.5, where:'city', desc:'Raises this city\u2019s main resource (money, oil, materials, iron, electronics or rare materials) by 25% per level. Level I is half price and pays for itself in about a week. Each Arms Industry you already own in another province makes the next one cost 40% more.'},   // first: level I at half price (levels II-V as before)
   rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
-  fort: {name:'Fortifications',    max:3, cost:36, metal:8, iron:8, days:2, where:'any',  desc:'Defenders here take 20% less damage per level.'},
+  fort: {name:'Bunker',            max:5, cost:36, metal:8, iron:8, days:2, where:'any',  lv:BUNKER_LV, desc:`Hidden from other nations. Your garrison here takes ${Math.round(BUNKER_LV[1].red*100)}% less damage at level I, up to ${Math.round(BUNKER_LV[5].red*100)}% at level V, and its morale counts ${Math.round(BUNKER_LV[1].mrl*100)}% to ${Math.round(BUNKER_LV[5].mrl*100)}% higher; the people here lose that much less to war, and the other buildings here take ${Math.round(BUNKER_LV[BUNKER_SHIELD_LV].red*100)}% less damage. Upkeep $${BUNKER_LV[1].upk.toFixed(1)}M to $${BUNKER_LV[5].upk.toFixed(1)}M a day.`},
   silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores cruise and ballistic missiles (needs Strategic research). Levels II\u2013V: missiles build 10% faster per level above I.'},
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
 };
@@ -331,7 +345,7 @@ const R_SPECIAL = [
     {id:'sat1', name:'Reconnaissance Satellites', kind:'kit', ic:'sat', req:['msl1'], lv:[[5, 'launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day', {cash:120, metal:35, rare:61, days:6}], [11, 'up to 4 satellites', {cash:150, metal:50, rare:48, days:5}], [17, 'up to 5, each with a wider swath', {cash:200, metal:70, rare:64, days:6}]]}]},
   // Command & Logistics: four doctrines, each with a second level (its rule reads the level: rMoveF, rCapF, rRoadF, rLandF, rHospF in rules/research.js)
   {cat:'cmd', line:'Supply', pic:'truck', nodes:[{id:'log1', name:'Motorized Supply', kind:'kit', ic:'truck', lv:[[1, 'all forces move 20% faster; opens high-speed rail', {cash:66, metal:20, rare:27, days:4}], [10, 'all forces move 30% faster', {cash:110, metal:30, rare:30, days:5}]]}]},
-  {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'wrench', lv:[[2, 'troops embark at ports 30% faster; forts cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}], [11, 'troops embark 40% faster; roads and railways 35% cheaper and faster to build', {cash:120, metal:30, rare:32, days:5}]]}]},
+  {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'wrench', lv:[[2, 'troops embark at ports 30% faster; bunkers cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}], [11, 'troops embark 40% faster; roads and railways 35% cheaper and faster to build', {cash:120, metal:30, rare:32, days:5}]]}]},
   {cat:'cmd', line:'Landings', pic:'anchor', nodes:[{id:'nav3', name:'Amphibious Doctrine', kind:'kit', ic:'anchor', lv:[[3, 'landings from the sea take half the time, and the troops fight at 90% instead of 67% on their first day ashore', {cash:114, metal:20, rare:34, days:7}], [12, 'they fight at full strength on their first day', {cash:140, metal:30, rare:36, days:6}]]}]},
   {cat:'cmd', line:'Medical', pic:'cross', nodes:[{id:'log3', name:'Field Hospitals', kind:'kit', ic:'cross', lv:[[4, 'your forces take 15% less damage', {cash:102, metal:20, rare:32, days:7}], [13, '20% less damage', {cash:150, metal:30, rare:40, days:7}]]}]},
 ];
@@ -394,7 +408,7 @@ const R_LEGACY_NAME = {inf1:'Ceramic Body Armor', inf2:'Mechanized Infantry', in
 const DOCTRINES = {
   precision:{name:'Precision', tag:'Fewer, better forces', desc:'Units attack 10% harder and research runs 15% faster, but every unit costs 15% more.', atk:1.10, def:1, cost:1.15, build:1, res:0.85},
   mass:{name:'Mass', tag:'Numbers win wars', desc:'Units cost 15% less and train 25% faster, but attack 5% weaker.', atk:0.95, def:1, cost:0.85, build:0.75, res:1},
-  bastion:{name:'Defence in Depth', tag:'Hold every inch', desc:'Forces defending your own provinces take 15% less damage, fortifications build twice as fast, and upkeep is 10% lower.', atk:1, def:1, cost:1, build:1, res:1, home:0.85, fort:0.5, upk:0.9},
+  bastion:{name:'Defence in Depth', tag:'Hold every inch', desc:'Forces defending your own provinces take 15% less damage, bunkers build twice as fast, and upkeep is 10% lower.', atk:1, def:1, cost:1, build:1, res:1, home:0.85, fort:0.5, upk:0.9},
 };
 const docOf = n => n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] || null : null;
 // Firepower and Protection levels 1 to 3 multiply attack and defense by MARK_F[level + 1] (they were the unit Marks II to IV before the research redesign)
@@ -468,7 +482,7 @@ const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 
 //   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; inf/tank/art: the capital's force;
 //   cityTanks: that many of the biggest other cities get a tank; guards: border guards (2 infantry each); recs: Recruiting Offices outside the capital
 const TIER_RANK = {S:0, A:1, B:2, C:3};
-// Fortifications at the start (owner, 2026-11-14): every nation's capital starts with Fortifications of this level, and no other province has any
+// The Bunker at the start (owner, 2026-11-14, as Fortifications): every nation's capital starts with a Bunker of this level, and no other province has any
 // (before, a tier C capital and the border guards' provinces of tiers B and C had level I, and the classic world's small powers their capital and borders: about 150 forts)
 const START_FORT = 1;
 const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
@@ -548,7 +562,7 @@ const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 { const seen = new Set(), xK = o => { if (!o || seen.has(o)) return; seen.add(o); for (const k of GOODS) if (typeof o[k] === 'number') o[k] *= RES_K; };
   for (const t in UNITS){ xK(UNITS[t]); UNITS[t].fuel *= RES_K; MAINT[t].iron *= RES_K; MAINT[t].elec *= RES_K; }
   for (const k in MISSILES) xK(MISSILES[k]);
-  for (const k in BUILD){ xK(BUILD[k]); xK(BUILD[k].lv1); } for (const L of REC_LV) xK(L);
+  for (const k in BUILD){ xK(BUILD[k]); xK(BUILD[k].lv1); } for (const L of REC_LV) xK(L); for (const L of BUNKER_LV) xK(L);
   for (const k in ECO_OLD) xK(ECO_OLD[k]);
   for (const nd of RNODES) for (const l of nd.lv) xK(l.c);
   xK(ECO_Y); xK(ECO_CAPITAL); for (const k in ECO_RUR) ECO_RUR[k] *= RES_K; }
