@@ -1,0 +1,3 @@
+FLAG (flagged: scene)
+- Point 1 (scene): The gun barrel bore evacuator is positioned near the turret base instead of near the muzzle.
+- Point 1 (scene): The chassis shows six road wheels per side instead of five.

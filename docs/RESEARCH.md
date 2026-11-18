@@ -1265,13 +1265,15 @@ The Main Battle Tank's five-group version of this table, word for word, is in `d
 
 ### 14.6 Count and cost
 
-| | Pictures |
-|---|---|
-| 24 sets x 5 groups x 3 looks | 360 |
-| 5 unique units | 5 |
-| **Total** | **365** |
+**Changed 18 November 2026: three pictures per look, and the owner removed the $12 line.** Every look has a side view (cut out, for the tree's diamond), a card scene (full picture, for the card; the blue tint and scanlines are drawn in code) and a top-down (cut out, for the map and army bar), all of the same vehicle (14.14).
 
-Price: batch mode, 1K. Measured in our own log: the 209 batch pictures averaged **$0.041** (cheapest $0.024, dearest $0.062); the 27 made from a reference averaged $0.036. Planned at **$0.04 a picture**: **365 pictures, $14.60**, plus the Gemini check on each (about $0.003, an estimate, about **$1.10**): **about $15.70**. Against the balance of about $15.3 that is about $0.40 over at the planned price (it fits at the measured reference price, $14.20); against the owner's $12 stop-and-ask line (about $2.17 spent, $9.83 left) about **228 pictures** fit and about 137 (about $5.90) wait for the owner to raise the line. Full discussion and the optional savings (60 pictures, about $2.58) in `docs/DOCTRINES.md` section 8.
+| | Looks | Pictures |
+|---|---|---|
+| 24 sets x 5 groups x 3 looks | 360 | 1,080 |
+| 5 unique units | 5 | 15 |
+| **Total** | **365** | **1,095** (365 x 3) |
+
+Price, measured on the 45 tank pictures (batch mode, 1K): **$0.0346 a picture** (side $0.0365, scene $0.0326, top-down $0.0348); the single check **$0.0033**; the three-way check **$0.0082** a look (estimate: Google's price page could not be reached). A look costs about **$0.122**. **Whole job: 1,095 pictures $37.89 + 1,095 single checks $3.61 + 365 three-way checks $2.99 = about $44.49.** Spent so far (the 15 tank looks): about **$1.83**; **still to do: 350 looks, 1,050 pictures, about $42.67.** The owner removed the $12 line; the Gemini balance was $40.88 at 255 calls and $10.27 in the log, so about $39.05 is left (estimate), and about $8.6 must be topped up for the rest (gen-art refuses a run that could take the estimate below $5). Full discussion and the optional savings (none applied) in `docs/DOCTRINES.md` section 8.
 
 ### 14.7 Today's pictures
 
@@ -1297,7 +1299,7 @@ What is different on the map, all code, no pictures: the cut-out (the plain grey
 
 ### 14.9 Sample first
 
-Before anything else: the **Main Battle Tank** for all five groups, 3 looks each (**15 pictures, about $0.60 plus about $0.05 of checks**), after the owner has approved the exact prompts in `docs/UNIT-LOOKS-PROMPTS.md`. Two batches (look 1 of each group, then looks 2 and 3 from it), the check on every picture. Cut out and shown to the owner **on the research card** (three looks side by side, one row per group) **and on the map** (the figures at the close zoom, turned to different headings, over land, forest and desert). The rest waits for the owner's OK on that sample; if the owner wants the prompts changed, they change before the next batch. The tank is the clearest case: standard issue, on the map from day one, its line is long (12 steps, two Generations), and a tank's progress reads at a glance.
+(Updated 18 November 2026: the sample is now 45 pictures, three per look, see 14.14; the paragraph below is the first plan.) Before anything else: the **Main Battle Tank** for all five groups, 3 looks each (**15 pictures, about $0.60 plus about $0.05 of checks**), after the owner has approved the exact prompts in `docs/UNIT-LOOKS-PROMPTS.md`. Two batches (look 1 of each group, then looks 2 and 3 from it), the check on every picture. Cut out and shown to the owner **on the research card** (three looks side by side, one row per group) **and on the map** (the figures at the close zoom, turned to different headings, over land, forest and desert). The rest waits for the owner's OK on that sample; if the owner wants the prompts changed, they change before the next batch. The tank is the clearest case: standard issue, on the map from day one, its line is long (12 steps, two Generations), and a tank's progress reads at a glance.
 
 ### 14.10 Old saves
 
@@ -1330,3 +1332,12 @@ The questions of the earlier version, with the owner's decisions:
 - Approve the exact tank prompts (`docs/UNIT-LOOKS-PROMPTS.md`), including the one camera change (straight down for units).
 - Whether to raise the $12 line, or to take some of the savings in `docs/DOCTRINES.md` section 8.
 - Whether to keep the teal research-card filter (`docs/DOCTRINES.md` section 7).
+
+### 14.14 Three pictures per look (owner's decision, 18 November 2026, second set)
+
+- **Side view** (`ul-<unit>-<group>-<look>-side`): the master. A front three-quarter side view from slightly above on the plain #D9D9D9 background, made fresh (the two anchor buildings attached; looks 2 and 3 also get their group's look-1 side view). Cut out for the research tree's diamond.
+- **Card scene** (`-scene`): made from the side view (attached), the same unit in action in its natural setting (a tank on a dirt road with dust), 3:2, filling the whole card picture. Full colour; the **blue monitor tint and scanlines are drawn in code, on these card scenes only**.
+- **Top-down** (`-top`): made from the side view (attached), straight down, nose up, `STYLE_V2_UNIT` framing. Cut out for the map and army bar.
+- Files: sources `assets/art-src/ul-<unit>-<group>-<look>-<kind>.webp`; game files `assets/art/ul-...-side.webp` and `-top.webp` (transparent) and `-scene.webp` (768 x 512), made by `python3 -I tools/prep-art.py assets/art-src assets/art ul` (no API call).
+- Checks, flag only: the single check on every picture, and the three-way check (`--match`) that compares the side view, scene and top-down of a look. Gemini never redoes a picture; the owner decides.
+- Tank sets (all 5 groups x 3 looks) made and on branch `unit-art`, with the map wired for the tank only on that branch (own units show their group's look for the unit's level, an enemy's the enemy's). Exact prompts: `docs/UNIT-LOOKS-PROMPTS.md` (45).

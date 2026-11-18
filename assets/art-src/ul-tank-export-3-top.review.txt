@@ -1,0 +1,2 @@
+FLAG
+- 2. Lighting comes from the upper right instead of the upper left.
