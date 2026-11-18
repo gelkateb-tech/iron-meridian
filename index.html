@@ -7364,7 +7364,7 @@ function hudRects(){ const now = performance.now(); if (now - HUDR.t < 400) retu
     const b = [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; if (b[2] < 0 || b[3] < 0 || b[0] > cr.width || b[1] > cr.height) continue; out.push(b); }
   const k = out.map(b => b.map(Math.round).join(',')).join(';');   // v: bumped whenever the boxes change, so the names placed against them are placed again (NAMEC)
   return (HUDR = {t:now, r:out, k, v:k === k0 ? v0 : v0 + 1}).r; }
-// counter size (css px, one size at every zoom; on a touch screen a little larger): BADGE the square badge's side (a quiet foreign or independent
+// counter size (css px; the badge itself is sized in plateDims, 52 wide zoomed in and 28 square zoomed out): BADGE only sizes the unidentified-contact badge (a quiet foreign or independent
 // force's badge is a little smaller)
 const UC_TOUCH = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })(), BADGE = UC_TOUCH ? 36 : 32;
 const UCD = new Map();
@@ -7449,9 +7449,11 @@ function flagBand(n, w, h){ if (n == null) return null;
 function plateFlagOf(a){ if (!a) return PLAYER; if (a.owner >= 0) return a.owner; const P0 = G.P[a.at]; return P0 && !P0.sea && G.countries[P0.country] ? G.countries[P0.country].name : null; }
 let HQBOX = null;   // this frame's box of your HQ model on screen (its hover tooltip): drawBuildings
 /* ---------------- Unit badges by zoom (Conflict of Nations manner, original art) ----------------
-   Every force shows one small SQUARE BADGE of one pixel size at every zoom (a little larger on a touch screen, a little smaller for quiet foreign
-   and independent forces), in its side's colour (sideOf: yours green, allies blue, at war red, everyone else grey), with a thin dark edge and a
-   soft shadow: its flag on top, the upright white icon of its main unit type (the UICON set) in the middle and its unit count below; a stack of
+   Every force shows the owner's Conflict of Nations badge. ZOOMED IN: two stacked rectangles of one width (52 x 20 flag + 26 bar css px at a 440 px phone, scaled by
+   the text-size setting): the owner's real flag on top (atlas flag, crisp, a slight fabric sheen, thin dark edge, soft shadow), a bar in the side colour under it (yours
+   green, allies blue, at war red, everyone else grey) with the unit count in big bold italic white, right-aligned, and a white rounded-square tag (18 px, the type's flat
+   navy icon 15 px) over the bar's left edge, half in and half out. ZOOMED OUT: only a 28 px square in the side colour with the same tag centred (no flag, no count). The map
+   is top-down (no tilt), so the badge is drawn flat on the screen. Quiet foreign and independent forces are 0.86 times as large. A stack of
    more than one unit type shows a second card's edge behind it. Marks: the dug-in shield (with the commander's star beside it) pinned to its
    upper left corner, out of supply at its upper right, a red breathing edge and a crossed-bars badge in battle, a heading chevron on the march
    (zoomed out), a gold ring when selected. ZOOMED OUT the badge stands on its force's world spot (provLayout: from the game state only, never
