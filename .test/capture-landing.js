@@ -50,11 +50,11 @@ run('heart', () => { const R = game([0]), S = R.S, n = 0, pr = warPair(R, n); ok
   ok('not captured on crossing the border', R3.S.owner[q.B.id] === q.o);
   let tk = -1; for (let i = 0; i < 200 && c.sail; i++){ R3.tick(); if (tk < 0 && R3.S.owner[q.B.id] === n) tk = i; }
   ok('captured at the city on the way, then on to the point', tk >= 0 && d(R3.armyXY(c), q.far) < 1e-9, {tk, xy:R3.armyXY(c)});
-  // independent land follows the same rule; one ground unit (below CAP_MIN) does not capture; air units never do
+  // independent land follows the same rule; one ground unit is enough (CAP_MIN 1); air units never capture
   const R4 = game([0]), S4 = R4.S; let A4 = null, B4 = null;
   for (const P of R4.G.P){ if (P.sea || S4.owner[P.id] !== n) continue; const v = P.nbs.find(x => !R4.G.P[x].sea && S4.owner[x] === R4.NEUTRAL); if (v != null){ A4 = P; B4 = R4.G.P[v]; break; } }
-  if (B4){ S4.armies = S4.armies.filter(x => x.at !== B4.id); const one = R4.addArmy(n, B4.id, {inf:1}); R4.tick(); ok('one ground unit at the heart of independent land: no capture (CAP_MIN)', S4.owner[B4.id] === R4.NEUTRAL && R4.CAP_MIN > 1);
-    one.u.inf = 2; R4.tick(); ok('two at the heart: independent land captured at once', S4.owner[B4.id] === n); } });
+  if (B4){ S4.armies = S4.armies.filter(x => x.at !== B4.id); const one = R4.addArmy(n, B4.id, {inf:1}); R4.tick(); ok('one ground unit at the heart of independent land: captured at once (CAP_MIN 1)', S4.owner[B4.id] === n && R4.CAP_MIN === 1);
+    } });
 
 // 2. defenders: the battle comes first, then reaching the heart takes the province at once
 run('defenders', () => { const R = game([0]), S = R.S, n = 0, pr = warPair(R, n); if (!pr) return; const { A, B, o, near } = pr;

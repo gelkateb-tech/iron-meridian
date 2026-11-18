@@ -63,8 +63,7 @@ function seaComp(){ if (SEACMP.G === G) return SEACMP.c; const c = new Int32Arra
 const seaNb = (p, toward) => { let best = -1, bd = 1e18; const T = G.P[toward]; for (const v of G.P[p].nbs){ if (!G.P[v].sea) continue; const d = Math.hypot(G.P[v].x - T.x, G.P[v].y - T.y); if (d < bd){ bd = d; best = v; } } return best; };
 /* ---- the sea grid: convoys sail the map's sea cells (CELL_KM, 60 km), so blockades and raids work in km around a fleet's actual spot ----
    A sea route's track (trBase): the cells from the water off its first port to the water off the last, through its sea zones (the corridor),
-   and over the bridges where the grid closes a strait (rules/map.js loadWorld.straits) or a canal (TR_CANALS: Suez, open to merchant convoys
-   only; Panama is open water on the grid). Fleets ordered to Blockade (a.blk) close a circle of their reach (BLOCKADE_KM) around where they stand. A convoy of
+   and over the bridges where the grid closes a strait (rules/map.js loadWorld.straits) or a canal (TR_CANALS: Suez, also a sea link in the zone graph, rules/map.js canals; Panama is open water on the grid). Fleets ordered to Blockade (a.blk) close a circle of their reach (BLOCKADE_KM) around where they stand. A convoy of
    a power they are at war with sails around it: trDetour, an A* over the open cells (a step out of the corridor costs TR_OFFC), at most
    TR_DET_MAX times the track. No way round within that (a closed chokepoint, a port's approach, a screen of ships across a narrow sea): the
    route is cut. A detour is slower, so the route pays the track's share of it (TR_DET_MAX = 2: at least half; lengths are the cell paths

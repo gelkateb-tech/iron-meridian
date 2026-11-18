@@ -145,7 +145,7 @@ const KM_HEX = 180;                   // one map hex is roughly 180 km
 // A building with such a table (BUILD[k].lv) is priced from it, not from the 1.6x-per-level rule (buildCost in rules/production.js)
 const REC_LV = [null, {cash:40, days:2}, {cash:75, metal:10, days:3}, {cash:130, metal:20, iron:10, days:4}, {cash:220, metal:35, iron:20, days:5}, {cash:360, metal:55, iron:30, elec:15, days:6}];
 const BUILD = {
-  fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, where:'city', desc:'Unlocks and trains ground units. Level I: infantry (Motorized, Anti-Tank, Special Forces; Paratroopers also need an Airbase), mobile artillery, main battle tanks, IFVs and jammers; level II: mobile SAMs, rocket artillery and swarm drones. Each level adds a training line; ground units train 20% faster per level up to III, then 5% per level. No income. Each Army Base you already own in another province makes the next one cost 40% more.'},
+  fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, lv1:{cost:18, metal:6, iron:6, days:1}, where:'city', desc:'Unlocks and trains ground units. Level I (cheap, one day): infantry (Motorized, Anti-Tank, Special Forces; Paratroopers also need an Airbase), mobile artillery, main battle tanks, IFVs and jammers; level II: mobile SAMs, rocket artillery and swarm drones. Each level adds a training line; ground units train 20% faster per level up to III, then 5% per level. No income. Your first two Army Bases cost the base price; from the third on, each one you already own in another province makes the next cost 40% more.'},
   air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:'Needed for strike fighters and interceptors (with Jet Engines research). Levels II\u2013V: aircraft build 10% faster and wings based here reach 1 hex farther per level above I.'},
   arms: {name:'Arms Industry',     max:5, cost:40, metal:12, iron:6, days:3, first:0.5, where:'city', desc:'Raises this city\u2019s main resource (money, oil, materials, iron, electronics or rare materials) by 25% per level. Level I is half price and pays for itself in about a week. Each Arms Industry you already own in another province makes the next one cost 40% more.'},   // first: level I at half price (levels II-V as before)
   rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
@@ -154,6 +154,9 @@ const BUILD = {
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
 };
 const BK = Object.keys(BUILD);
+// a building's price table for level l: level I of a building with lv1 (the Army Base: cheap and quick, so every nation can open one on day 1) has its own
+// money, materials, iron and days; every other level comes from the building's line (cost, metal, iron, elec, days; x1.6 a level, see buildCost)
+const bldLv = (k, l) => l === 1 && BUILD[k].lv1 ? BUILD[k].lv1 : BUILD[k];
 // ---- economy: every city produces ONE main resource (P.main, set from the map in rules/map.js cityMains; a city without one is a money city)
 const ECO_Y = {cash:1.6, oil:9.4, metal:8.2, iron:7.6, elec:3.3, rare:4.7};   // a city's main resource a day: money is a factor on the city's money, the rest are units (times the city-size factor)
 const ECO_RUR = {oil:2.4, metal:0.8, ironOre:0.5, iron:0.6};                  // the countryside trickle: an oil field, an ore deposit (materials and iron), iron hills
@@ -416,7 +419,7 @@ const BLOCKADE_KM = {frig:RANGE_KM.frig, crui:RANGE_KM.crui, carr:120, sub:RANGE
 // Chokepoints: the narrow seas the trade lanes squeeze through (one or two blockading warships close them; the open ocean needs a screen of
 // several spread out). p: the passage itself (lon, lat; snapped to the nearest sea cell, where the map labels it and where a fleet blockades it);
 // a, b: open water on either side (rules/trade.js chokeClosed checks the way through between them, within CHOKE_KM of the passage).
-// Suez and Panama are canals: merchant convoys pass Suez (rules/trade.js TR_CANALS; warships do not: fleet movement is unchanged); Panama is open water on the grid.
+// Suez and Panama are canals: Suez is a sea link between the Mediterranean and the Red Sea (rules/map.js loadWorld canals; convoys sail its cells over TR_CANALS) that warships, troops at sea and convoys all use, whoever holds Egypt; Panama is open water on the grid.
 const CHOKEPOINTS = [
   {k:'hormuz', name:'Strait of Hormuz', p:[56.4, 26.4], a:[52.5, 26.8], b:[58.8, 24.6]},
   {k:'malacca', name:'Strait of Malacca', p:[100.8, 2.9], a:[98.6, 4.6], b:[103.6, 1.4]},
@@ -524,7 +527,7 @@ const TIER_DOWN_A = 1.6, TIER_UP = 1.3, TIER_BULLY = 2;
 // step 6: 0.6 before, the United States now needs 345, Russia 431, China 372)
 const TIER_WIN_UP = 0.5;
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
-const CAP_MIN = 2;                    // ground units needed to capture
+const CAP_MIN = 1;                    // ground units needed to capture (one, as in Conflict of Nations; it was 2)
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
 const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 /* ---------------- Resource scale ---------------- */
@@ -535,7 +538,7 @@ const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 { const seen = new Set(), xK = o => { if (!o || seen.has(o)) return; seen.add(o); for (const k of GOODS) if (typeof o[k] === 'number') o[k] *= RES_K; };
   for (const t in UNITS){ xK(UNITS[t]); UNITS[t].fuel *= RES_K; MAINT[t].iron *= RES_K; MAINT[t].elec *= RES_K; }
   for (const k in MISSILES) xK(MISSILES[k]);
-  for (const k in BUILD) xK(BUILD[k]); for (const L of REC_LV) xK(L);
+  for (const k in BUILD){ xK(BUILD[k]); xK(BUILD[k].lv1); } for (const L of REC_LV) xK(L);
   for (const k in ECO_OLD) xK(ECO_OLD[k]);
   for (const nd of RNODES) for (const l of nd.lv) xK(l.c);
   xK(ECO_Y); xK(ECO_CAPITAL); for (const k in ECO_RUR) ECO_RUR[k] *= RES_K; }
