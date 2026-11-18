@@ -2462,6 +2462,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 .abs.fight{flex-direction:row; gap:5px; background:rgba(224,87,79,.14); box-shadow:inset 0 0 0 1px rgba(224,87,79,.55)}
 .abs.fight canvas{width:24px; height:24px; flex:none}
 .ab-emb{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(111,176,232,.12); border-left:3px solid #6fb0e8; color:#cfe4f5} .ab-emb b{color:#fff}
+.ab-dug{display:flex; align-items:center; gap:6px; font-size:11.5px; padding:3px 8px; border-radius:4px; background:rgba(226,162,61,.12); border-left:3px solid #e2a23d; color:#f1dfb8} .ab-dug b{color:#ffd77a} .ab-dug .digsh{flex:none} .ab-dug-c{color:#bfae8c}
 .ab-stk{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(224,87,79,.12); border-left:3px solid var(--danger, #e0574f); color:var(--danger-t, #ff9a90)}
 .ab-dias{display:flex; flex-wrap:wrap; gap:0 4px}
 .dia{position:relative; flex:none; width:58px; height:64px; padding:0; background:none; border:0; border-radius:6px; cursor:pointer; color:#fff}
@@ -5199,7 +5200,7 @@ function drawSats(now){ if (!S.sats || !S.sats.length) return; ctx.save(); ctx.s
 let ILEG = '';
 function drawIntelLegend(vis, nUnk){ const el = document.getElementById('ilegend'); if (!el) return; const k = (vis.locs.length && nUnk) || vis.uav.size ? 'on' : ''; if (k === ILEG) return; ILEG = k; el.hidden = !k; }
 // unidentified contact: the flat plate with a '?' in a neutral cell and a small radar mark in the tab (no type, size or nation colour); static
-function unkPlate(x, y, s, now = performance.now()){ const r = BADGE/2*0.86, X = snapD(x), Y = snapD(y), CT = SIDE_T.other, rc = 3;   // an unidentified radar contact: a grey badge with a dashed edge and a '?' (no flag, type or count)
+function unkPlate(x, y, s, now = performance.now()){ const r = BADGE/2*0.86, X = snapD(x), Y = snapD(y - r - dotR() - 2), CT = SIDE_T.other, rc = 3; dotDraw(x, y, 'other', 1);   // (its position dot on the spot, the plate just above it)   // an unidentified radar contact: a grey badge with a dashed edge and a '?' (no flag, type or count)
   ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1.4; roundRect(ctx, X - r, Y - r, 2*r, 2*r, rc); ctx.fillStyle = CT[2]; ctx.fill(); ctx.restore();
   const gr = ctx.createLinearGradient(0, Y - r, 0, Y + r); gr.addColorStop(0, CT[0]); gr.addColorStop(1, CT[1]); roundRect(ctx, X - r + 1, Y - r + 1, 2*r - 2, 2*r - 2, rc - 0.5); ctx.fillStyle = gr; ctx.fill();
   ctx.save(); ctx.setLineDash([3, 2]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(205,210,198,.9)'; roundRect(ctx, X - r - 0.5, Y - r - 0.5, 2*r + 1, 2*r + 1, rc + 0.5); ctx.stroke(); ctx.restore();
@@ -5958,6 +5959,36 @@ function sandbagMark(x, y, ps){ const W = Math.max(10, Math.ceil(11*ps*1.05*dpr 
   if (!c){ c = sbmPaint(W, H); if (SBM.size > 12) SBM.clear(); SBM.set(key, c); }
   const pd = c.pad, X = Math.round((x - W/2/dpr)*dpr)/dpr - pd/dpr, Y = Math.round((y - H/2/dpr)*dpr)/dpr - pd/dpr; ctx.drawImage(c, X, Y, c.width/dpr, c.height/dpr);
   return {x:X - 1, y:Y - 1, w:c.width/dpr + 2, h:c.height/dpr + 2}; }
+/*@TEST*/
+// DUG-IN OPTIONS for the owner (2026-11-18, item 5: "show me 2-3 clearer options ... don't change it without my OK"): drawn in code in the badge's
+// own style (a white rounded tag with a flat navy symbol, like the unit-type tag), each in place of today's amber shield when a test page sets
+// window.__dugOpt (1, 2 or 3; .test/dug-options.js). The badge itself is unchanged: nothing here is in the public build.
+//  1 SANDBAGS: a white tag with a navy wall of sandbags (three below, two above), hung at the badge's lower left like today's mark
+//  2 TRENCH: a white tag with a navy trench line (a crenellated line, the map sign of a dug-in line, with its parapet)
+//  3 SANDBAG ARC: navy sandbags (white edged) round the lower half of the badge itself (zoomed in: a sagging row under its bar), no extra tag
+const DOPT = new Map();
+function dugOptPaint(k, W){ const H = W, pd = 2, c = document.createElement('canvas'); c.width = W + 2*pd; c.height = H + 2*pd; c.pad = pd; const g = c.getContext('2d'); g.translate(pd, pd);
+  const u = W/12, rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+  g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 1.6*u; g.shadowOffsetY = 0.6*u; rr(0, 0, W, H, 2.6*u); g.fillStyle = '#ffffff'; g.fill(); g.restore();
+  rr(0.5, 0.5, W - 1, H - 1, 2.4*u); g.lineWidth = 1; g.strokeStyle = 'rgba(8,16,30,.6)'; g.stroke(); g.fillStyle = NAVY;
+  if (k === 1){ const bw = 3.3*u, bh = 2.3*u, gap = 0.35*u, row = (n, y) => { const x0 = (W - (n*bw + (n - 1)*gap))/2; for (let i = 0; i < n; i++){ rr(x0 + i*(bw + gap), y, bw, bh, bh/2); g.fill(); } };
+    row(3, H - 2.2*u - bh); row(2, H - 2.2*u - 2*bh - gap); row(1, H - 2.2*u - 3*bh - 2*gap); }
+  else { const y0 = 4.4*u, y1 = 7.6*u, xs = [1.7, 3.6, 5.5, 7.4, 9.3, 10.3].map(v => v*u); g.beginPath(); g.moveTo(xs[0], y1);   // the trench: a crenellated line, the map sign of a dug-in line
+    for (let i = 0; i < 5; i++){ const yA = i % 2 ? y1 : y0; g.lineTo(xs[i], yA); g.lineTo(Math.min(xs[i + 1], W - 1.7*u), yA); if (i < 4) g.lineTo(xs[i + 1], i % 2 ? y0 : y1); }
+    g.strokeStyle = NAVY; g.lineWidth = 1.7*u; g.lineJoin = 'miter'; g.lineCap = 'butt'; g.stroke(); g.fillRect(1.7*u, 9.4*u, W - 3.4*u, 1*u); }   // (and the parapet along it)
+  return c; }
+function dugOptMark(k, X, Y, W, H, far){ const ga = ctx.globalAlpha;
+  if (k === 3){ const cx = X + W/2, cy = Y + H*0.5, rx = W/2 + 3.2, ry = H/2 + 3.2, n = far ? 8 : 5, bw = far ? 5.2 : 6.4, bh = 3.4;   // bags round the lower half of the badge
+    for (let i = 0; i < n; i++){ const an = Math.PI*(0.08 + 0.84*i/(n - 1)); if (far && Math.abs(an - Math.PI/2) < 0.2) continue;   // (zoomed out: a gap at the bottom, where the position dot is)
+      const x = far ? cx - Math.cos(an)*rx : X + 6 + (W - 12)*i/(n - 1), y = far ? cy + Math.sin(an)*ry : Y + H + 3 + Math.sin(Math.PI*i/(n - 1))*2.2;   // (zoomed in: a sagging row under the bar, clear of the tag and the count)
+      if (!far){ ctx.save(); ctx.translate(x, y); ctx.rotate(Math.cos(Math.PI*i/(n - 1))*0.25); } else
+      { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI/2 - an); } ctx.beginPath(); ctx.ellipse(0, 0, bw/2 + 0.9, bh/2 + 0.9, 0, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 0, bw/2, bh/2, 0, 0, Math.PI*2); ctx.fillStyle = NAVY; ctx.fill(); ctx.restore(); }
+    return far ? {x:X - 6, y:Y + H/2, w:W + 12, h:H/2 + 8} : {x:X, y:Y + H, w:W, h:9}; }
+  const S0 = Math.round(13*dpr), key = k + '|' + S0; let c = DOPT.get(key); if (!c){ c = dugOptPaint(k, S0); DOPT.set(key, c); }
+  const s = 13, x = far ? X - 4 : X + 1, y = far ? Y + H - 6 : Y + H - 4, pd = c.pad/dpr; ctx.drawImage(c, x - pd, y - pd, c.width/dpr, c.height/dpr); ctx.globalAlpha = ga;
+  return {x:x - 1, y:y - 1, w:s + 2, h:s + 2}; }
+/*@ENDTEST*/
 // the same mark as a small picture for the panels (Army Info)
 const digShieldHTML = (px = 14) => { const W = Math.round(px*(window.devicePixelRatio || 1)), H = Math.round(W*1.14); let u = '', cw0 = 0;
   try { const c = sbmPaint(W, H); u = c.toDataURL(); cw0 = c.width; } catch (e) {} return u ? `<img class="digsh" src="${u}" width="${cw0/(window.devicePixelRatio || 1)}" alt="" aria-hidden="true">` : ''; };
@@ -6075,7 +6106,10 @@ const BNMETA = {"bn-air-1":{"ax":0.5008,"ay":0.5538,"h":154,"top":0.0053,"w":256
 // by row: written by tools/bn-foot.py --embed. The layout keeps them off the water (bnFoot, bnWet)
 const BNFOOT = {"bn-air-1":"7ffeffffffffffff7fff7ffe3ffe1ff80ff007e001c00080","bn-air-2":"7ffeffffffffffff7fff7ffe3ffe1ffe0ffe07fc01f80090","bn-air-3":"7ffeffffffffffff7fff7ffe3ffe1ffe0ffe07fc01f80090","bn-air-4":"39fefffeffffffff7fff3fff1ffe0ffe03fc01f001e00040","bn-air-5":"3bfefffeffffffff7fffffff7ffe3ffe0ffc03f801e00040","bn-arms-1":"00000000010007f01ff01ff83ffc7ffefffc3ff80fe00380","bn-arms-2":"0000000001f807fc1ffe1ffe3ffc7ffefffc3ff80fe00380","bn-arms-3":"010003000f083ff8ffffffff7fff7fff7fff3fff0ffe01cc","bn-arms-4":"000003001fc87ffeffffffff7fffffff7ffe0ffc03f800fa","bn-arms-5":"000000260ffe7ffefffe0ffe1ffcffdf7fff3fff02fe0004","bn-build-1":"0010006001000000018007e01ffc7ffe7ffe1ff807e00180","bn-build-2":"0000003406101f107fd07fd0fff0fff0fff07ff01ff00f80","bn-build-3":"0000007002200e203fe03fe07fe07ff07fe0ffe03ff00480","bn-crane":"000000480040004000400040004000400040004000600040","bn-fac-1":"008003c007f00ff83ffc7fff7fff3ffe1ff80ff003e000c0","bn-fac-2":"03c007f01ff83ffe7fff7fff7fff7fff7fff7fff3ffe10cc","bn-fac-3":"03c007f01ff83ffe7fff7fff7fff7fff7fff7fff3ffe10cc","bn-fac-4":"000003c00ff01ffc7ffe7fff7fff7fff7fff7fff7ffe11cc","bn-fac-5":"004007e00ff87ffe7fff7fff7fffffff7fff3ffc0ff003e0","bn-fort-1":"01800fe01ff83ffe7ffefffe7ffe3fff3fff0ffe07fc0030","bn-fort-2":"1f803fe07ff87ffc7ffc7ffc7ffe3fff0fff027e003c0018","bn-fort-3":"0d981ffc3ffe7ffe7ffc7ffe3ffe1fff07ff03fe003c0018","bn-fort-4":"018007e007f01ffe3ffe7ffe3ffe1ffe3fff3ffe1ffc0700","bn-fort-5":"000007c007f80ffe3ffe7ffe7ffefffe7fff3ffe1ffc0380","bn-fortcut-1":"004000c003fe1ffe1fff1fff1fff1ffe0ffe07f803f00000","bn-fortcut-2":"004001c007fe1fff1fff1fff1fff1ffe0ffc07f801f00040","bn-fortcut-3":"00f807fe1fff1fff1fff1fff1ffe1ffe1ffe0ffc03f000e0","bn-fortcut-4":"000c07fc3ffc7fff7fff7fff7ffe7ffe3ffc0ff803e001c0","bn-fortcut-5":"000007f83ffc7fff7fff7fff7ffe7ffe3ffc0ff807e001c0","bn-hospital-1":"030006c009f00fc80f981ff83ffc7ff87ff01fe00f800300","bn-hospital-2":"08003f007cc07dd87f98fff87ffc7ff81fe007c003e00060","bn-hospital-3":"01801ce03fe83fd87ff87ff83ffc7ffe7ffe1fc401f00060","bn-hospital-4":"01b80cfe7feeffdfffffffff7ffffffeffffffff1fff0070","bn-hospital-5":"030003f03ffc7fff7fffffffffffffffffffffff1ffe0070","bn-hq-africa":"08001dc07fe07ff07ff07ff81ffc1ffc07fc00f800e00000","bn-hq-east-asia":"00000f803fc07fe07fe07ff07ffc1ff81ffc07f800e00000","bn-hq-eastern-europe":"000000000e003f007f00ff80ff987ff80ff80ff801e00080","bn-hq-latin-america":"000009001fc07fe07fe07ff07ffc0ffc0ffc02f800e00000","bn-hq-middle-east":"00001f803fe07ff07ff07ff83ffc0ffc07fc00f800e00000","bn-hq-south-asia":"08000b003f807fe07fe0fff87ff81ff80ffc03f000e00000","bn-hq-western":"000009001fc07fe07ff07ff07ffc1ffc0ffc02f800e00000","bn-rec-1":"030007c00ff01ff81ff81ff81ff83ffc0ffe0ffc1e181800","bn-rec-2":"010007c00ff01ff83ff87ff83ff81ffc7ffe7ffc1ff80c00","bn-rec-3":"03000fe03ffc3ffe3ffe3ffe7ffe3ffc7ffc7ffc1ff81c00","bn-rec-4":"1fc03fc03ff83ffe3ffe7ffe3fff7fff3fff1ffc03f80060","bn-rec-5":"00c007f00ffc3ffffffffff8fffeff3e3fff1ffe01f80060","bn-silo-1":"0100038007e01ff03ffc7ffefffe7ffc3ff83ff00fe00180","bn-silo-2":"010003c017e01ff83ffc7fffffff7ffe3ffc1ff807e001c0","bn-silo-3":"010003800fe01ff03ffcfffefffefffe7ff81ff00fe00380","bn-silo-4":"000001183fbc1ffe1ffcffffffffffff7ffc3ffc37ec00c0","bn-silo-5":"00000018193c3ffe3ffefffefffffffffffcfffc3ffc0e80","bn-yard-1":"030007fc3ffafbfeee7e7cee239f0f7f00ff00fe00fc0010","bn-yard-2":"030007fc3ffafbfece7e7cfe239f0f7f00ff00fe00f80010","bn-yard-3":"03003ffc7ffafbfece7e7cee23df0f7f00ff00fe00fc0018","bn-yard-4":"06001fdafffefffe6fff7ffe7fdf0f7f18ff60fe00fc0018","bn-yard-5":"06001fdafffefffeefff7ffe7fdf7f7f3eff7ffe1ff80300"};
 const bnA = h => smooth01((h - BN_IN0)/(BN_IN1 - BN_IN0)), bnB = h => smooth01((h - BN_ALL0)/(BN_ALL1 - BN_ALL0));
-const bnL = h => h >= BN_HMIN ? Math.min(h, BN_HMAX)*BN_K0 : BN_HMIN*BN_K0*Math.pow(h/BN_HMIN, 0.35);   // css px of a picture's long side (factor 1) at hexPx h
+// css px of a picture's long side (factor 1) at hexPx h: BN_K0*h at every zoom, so a picture is a fixed size on the map (BN_WPX world px) and scales
+// and moves exactly with it (owner 2026-11-18, item 4). Until then it grew with the map only between hexPx BN_HMIN and BN_HMAX (72-176): below,
+// a soft floor (h^0.35) kept it bigger, above it stopped growing, so in a zoom it swelled and shrank against the map, a picture stuck on top
+const bnL = h => h*BN_K0;
 // a building's picture name at a game level (null: no angled picture); the HQ by style
 const bnName = (k, lv, cut) => k === 'hq' ? 'bn-hq-' + lv : BN_ART[k] ? `bn-${cut && k === 'fort' ? 'fortcut' : k}-${k === 'fort' ? [1, 3, 5][Math.max(1, Math.min(3, lv)) - 1] : Math.max(1, Math.min(5, lv))}` : null;
 // a picture's size factor: level I a little smaller than level V, the HQ a bit bigger; a single Recruiting Office building smaller than its compounds;
@@ -6268,14 +6302,18 @@ function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.ma
   L = {sig, pos, mir:mirs, shr, grow, shore:sh}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
 // a picture's drawn long side (css px) at the current zoom: bnL's size for it, no bigger than its layout lets it grow on land, nor than cap
 const bnDrawL = (e, Lo, i, L1, cap) => Math.min(L1*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*view.s, cap);
-// a picture px device px on its long side (in steps of 8 px, so it is drawn about 1:1: a plain blit), plain or darkened for the night (lk: 0..8);
+// a picture px device px on its long side (bnTier: made a little bigger than drawn, so it stays sharp), plain or darkened for the night (lk: 0..8);
 // made from the file by halving steps, a few new ones a frame (BN_MK; meanwhile the last one made for it stands in), kept within BNC_MAX bytes
 // (least recently drawn dropped first). null while the file loads
 const BNC_MAX = 24e6, BNC_LAST = new Map(); let BNC_B = 0, BN_MK = 0;
+// the size a picture is made at for px device px: the next of a few sizes about 12% apart (16, 24, 32 ... in steps of 8), so a zoom passes through
+// few of them and the one it ends on is already made (no sharpen step when it stops); drawn at most 12% smaller than made: as sharp as a plain blit
+const bnTier = px => { let L = 16; while (L < px) L = Math.ceil(L*1.12/8)*8; return L; };
 function bnPic(nm, px, lk){ const im = ART.img(nm); if (!im){ ART.want(nm); return null; }
-  const W0 = im.naturalWidth || im.width, H0 = im.naturalHeight || im.height, L0 = Math.max(W0, H0), L = Math.min(L0, Math.max(16, Math.ceil(px/8)*8)), lkey = nm + '|' + lk;
+  const W0 = im.naturalWidth || im.width, H0 = im.naturalHeight || im.height, L0 = Math.max(W0, H0), L = Math.min(L0, bnTier(px)), lkey = nm + '|' + lk;
   const key = lkey + '|' + L; let c = BNC.get(key); if (c){ BNC.delete(key); BNC.set(key, c); return c; }
-  if (BN_MK-- <= 0){ const o = BNC_LAST.get(lkey); if (o){ animFast(); return o; } }
+  if (BN_MK-- <= 0){ for (let t = L, j = 0; j < 2 && t < L0; j++){ t = Math.min(L0, bnTier(t + 1)); const o = BNC.get(lkey + '|' + t); if (o){ animFast(); return o; } }   // (none made this frame: a bigger one already made stands in, sharp)
+    const o = BNC_LAST.get(lkey); if (o){ animFast(); return o; } }
   c = L === L0 ? (() => { const o = document.createElement('canvas'); o.width = W0; o.height = H0; o.getContext('2d').drawImage(im, 0, 0); return o; })() : ART.scaled(im, W0*L/L0, H0*L/L0);
   const g = c.getContext('2d');
   if (lk){ g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(8,16,34,${(lk/8*0.55).toFixed(3)})`; g.fillRect(0, 0, c.width, c.height); }
@@ -6347,7 +6385,6 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
     if (e.site){ const r = bnSite(q, e, lk, q0, now, ga0); if (!r) continue; ({pf, b, c, M} = r); w = b[2] - b[0]; q.pic = r.nm; }   // a new building: its construction picture
     else { M = BNMETA[e.nm]; c = bnPic(e.nm, q.L*dpr*q0, lk); if (!c || !M) continue;   // (q0: the battery saver's smaller size)
       const Lm = Math.max(M.w, M.h), h = q.L*M.h/Lm, ax = q.mir ? 1 - M.ax : M.ax; w = q.L*M.w/Lm; let X = q.x - ax*w, Y = q.y - M.ay*h;
-      if (w*dpr < 96){ X = Math.round(X*dpr)/dpr; Y = Math.round(Y*dpr)/dpr; }
       b = [X, Y + M.top*h, X + w, Y + h];
       if (e.c){ bnCrane(q, e, w, h, lk, q0, now, ga0); pf = bnProg(e); }   // a level going up: the crane behind it
       ctx.globalAlpha = ga0*q.a; bnBlit(c, X, Y, w, h, q.mir); ctx.globalAlpha = ga0;
@@ -7528,7 +7565,8 @@ function badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, m
   if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, W + 4, H + 4, D.rr + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
   let bg = null;
   if (!minor){ const cmd = L.some(cmdOf), dug = counter.dug && !moving;
-    if (dug){ const r = sandbagMark(far ? x0 + 3 : x0 + 8, y0 + H + 2.5, 0.9);   // (hangs under the bar's lower left: clear of the flag, the count and the tag)
+    if (dug){ let r = null; /*@TEST*/if (window.__dugOpt) r = dugOptMark(window.__dugOpt, x0, y0, W, H, far);/*@ENDTEST*/   // (test pages: the owner's options, dugOptMark)
+      if (!r) r = sandbagMark(far ? x0 + 3 : x0 + 8, y0 + H + 2.5, 0.9);   // (hangs under the bar's lower left: clear of the flag, the count and the tag)
       if (ctx.globalAlpha > 0.35 && DUGHIT.length < 400){ r.own = !!a && a.owner === PLAYER; DUGHIT.push(r); } }   // dug in: its own small hit box (hover or tap: what it means)
     if (cmd){ const sx = far ? x0 - 1.5 : x0 - 4.5, sy = far ? y0 - 1.5 : y0 + 4; ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', sx, sy); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', sx, sy); }
     if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + W + (far ? 1.5 : 3.5), y0 - (far ? 1.5 : 2.5));   // out of supply
@@ -7544,6 +7582,22 @@ function clQuiet(c){ if (c.pq != null) return c.pq; const a = c.list.reduce((b, 
   return (c.pq = a.owner !== PLAYER && !fighting && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner))); }   // (not what is selected: the layout must not change when you tap)
 // a force's counter: the diamond at (c.dx, c.dy) and the flag tag at (c.tx, c.ty): the diamond fades out (c.da) as the pictures come in, then the tag in (c.ta).
 // Returns the box of the one that leads at this zoom (c.tag)
+/* ---------------- Position dot (owner 2026-11-18, as in Conflict of Nations) ----------------
+   A small dot in the side colour with a dark outline marks every force's spot on the map: yours, allies', foreign and unidentified contacts
+   ('?', unkPlate). It is the force's world point (the spot the player tapped for a pinpoint move, its spot on the march; a force standing in its
+   province's layout: its slot there), the same point its pictures stand round and its badge was centred on: zoomed out the badge now stands just
+   above it (dotLift), zoomed in the tag stays pinned over the pictures. Routes and the drag line start from it (dotPos). It shows nothing the
+   badge does not: one dot per drawn counter (a foreign counter that hands its strength to the one covering it adds no dot), at its spot. */
+const DOTW = new Map();   // this frame: each drawn force's dot (world point)
+const dotR = () => 2.3*uiK();   // the fill's radius, css px (about 6 px across with its outline at the phone's 100% text size)
+const dotLift = (n, minor) => plateDims(n, 1, minor, false).h/2 + dotR() + 2;   // a far badge's centre above its dot (its lower edge just clear of the dot)
+const dotPos = a => DOTW.get(a.id) || dispPos(a);
+function dotDraw(x, y, tk, al){ if (al < 0.01) return; const r = dotR(), ga = ctx.globalAlpha; ctx.globalAlpha = ga*al;
+  ctx.beginPath(); ctx.arc(x, y, r + 1.1, 0, Math.PI*2); ctx.fillStyle = 'rgba(4,7,9,.92)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = sideHi(tk); ctx.fill(); ctx.globalAlpha = ga; }
+function posDots(clusters){ const sat = new Set(); for (const c of clusters) if (c.pv && c.sats) for (const q of c.sats) for (const z of q.cl) sat.add(z);
+  for (const c of clusters){ if (c.px == null || c.px < -20 || c.py < -20 || c.px > cw + 20 || c.py > ch + 20) continue;
+    const al = (c.pv ? c.pa ?? 1 : c.owner === PLAYER || sat.has(c) ? 1 : 0)*(c.hud ? PF_HUD : 1); dotDraw(c.px, c.py, forceSide(c.list[0]), al); } }
 function counter(c, a, L, n, selected, fighting, now){
   const quiet = a && a.owner !== PLAYER && !fighting && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)), o = a ? a.owner : PLAYER;
   const [t0, mixed] = ucTypes(L), icon = ucIcon(t0, o), tk = forceSide(a), mv = c.moving && !quiet, sl = selected, fi = quiet ? false : fighting, ang = counter.ang;
@@ -8402,9 +8456,10 @@ function draw(now){ draw.now = now;
   tmPlan(clusters, hexPx, now);   // the pictures' places, from the crossover zoom (the names, the HQ and the power names keep clear of them too)
   // the counter: zoomed out the diamond on the force's spot (the middle of where its pictures stand), zoomed in the flag tag pinned PLATE_GAP px above
   // the top of its pictures (world points: no screen-space shuffling, nothing moves against the map); c.art: the crossover (0 diamond .. 1 tag)
-  const UZ = tmOn() ? tmFade(hexPx) : 0, UU = tmOn() ? tmU(hexPx) : 0;
+  const UZ = tmOn() ? tmFade(hexPx) : 0, UU = tmOn() ? tmU(hexPx) : 0; DOTW.clear();
   for (const c of clusters){ c.pq = null; const q = plateQuiet(c), [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), dT = plateDims(c.n, k, q, true), [dx, dy] = toScreen(c.wx, c.wy + (c.form ? c.form.mid : 0));
-    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); c.dx = dx; c.dy = dy; c.x = c.tag ? c.tx : dx; c.y = c.tag ? c.ty : dy; c.bdy = 0; }
+    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); c.dx = dx; c.dy = dy - dotLift(c.n, q); c.x = c.tag ? c.tx : dx; c.y = c.tag ? c.ty : c.dy; c.bdy = 0;
+    c.px = dx; c.py = dy; const dw = [c.wx, c.wy + (c.form ? c.form.mid : 0)]; for (const q0 of c.list) DOTW.set(q0.id, dw); }   // the position dot (posDot): the force's spot; zoomed out its badge stands just above it
   plateFade(clusters, k, now);   /*@TEST*/if (window.__uclOn) window.__ucl = clusters.map(c => ({ids:c.list.map(a => a.id), own:c.owner, at:c.at, x:Math.round(c.x), y:Math.round(c.y), pv:c.pv, mv:c.moving, ml:(c.mlist || []).map(a => a.id), sats:(c.sats || []).map(q => ({key:q.key, ids:q.list.map(a => a.id), cl:q.cl.map(z => [Math.round(z.x), Math.round(z.y), z.at])}))}));/*@ENDTEST*/   // out where counters would touch: the lesser ones fade out in place (a power's own hand theirs to the one that covers them, another side's stand beside it: satPlace)
   clusters.sort((a, b) => ((b.moving ? 1 : 0) - (a.moving ? 1 : 0)) || ((a.owner === PLAYER) - (b.owner === PLAYER)) || ((a.air ? 0 : 1) - (b.air ? 0 : 1)));   // (marching ones under the standing: one setting off slides out from under the counter it leaves)
   // the screen box a counter claims: the whole drawn counter (marks above it: commander, dug-in, supply; the bars below) and its core (the plate
@@ -8422,7 +8477,7 @@ function draw(now){ draw.now = now;
   // paths (under the troop models, the names and the counters)
   const sa = sel.army !== null ? armyById(sel.army) : null; /*@TEST*/PATHDBG.sel = null; PATHDBG.dots = null; PATHDBG.eta = null;/*@ENDTEST*/
   const antOn = (S.speed && !S.over) || !!sa; if (antOn || RD.antT == null) RD.antT = now; const antT = RD.antT;   // (paused with nothing selected: the dashes rest)
-  const drawPath = (a, path, style, w = 2.2, endPt = null, noEnd = false) => { if (!path || (!path.length && !endPt)) return; const s0 = dispPos(a), W = [s0]; if (antOn) animAmb();
+  const drawPath = (a, path, style, w = 2.2, endPt = null, noEnd = false) => { if (!path || (!path.length && !endPt)) return; const s0 = dotPos(a), W = [s0]; if (antOn) animAmb();   // (from the force's position dot)
     // the route as the force will go: along the roads, railways and sea lanes it will use (legGeom), province centre to centre (MAP-3)
     const near = (G0, q) => { let bi = 0, bd = Infinity; for (let i = 0; i < G0.length; i++){ const d = (G0[i][0] - q[0])**2 + (G0[i][1] - q[1])**2; if (d < bd){ bd = d; bi = i; } } return bi; };
     const from = (G0, q) => G0.slice(near(G0, q) + 1);   // (the part of a leg after the point nearest q)
@@ -8659,6 +8714,7 @@ function draw(now){ draw.now = now;
   const VOLT = {para:'inf', spec:'inf', jam:'inf', mlrs:'art'}, volType = c => {   // each volley one of the stack's ground or naval types, weighted by count times hp (display only)
     let tot = 0; const w = []; for (const a of c.list) for (const t in a.u){ const n = a.u[t], U = UNITS[t]; if (!n || !U || U.cls === 'air') continue; const v = n*U.hp; w.push([VOLT[t] || t, v]); tot += v; }
     let r0 = Math.random()*tot; for (const [t, v] of w) if ((r0 -= v) <= 0) return t; return c.mt; };
+  posDots(clusters);   // every force's position dot, under the counters (over the pictures and the routes)
   /*@TEST*/PGHOST.length = 0;/*@ENDTEST*/
   try { for (const c of clusters){ if (c.x < -100 || c.y < -100 || c.x > cw + 100 || c.y > ch + 100) continue; const pa = (c.pa ?? 1)*(c.hud ? PF_HUD : 1); if (pa < 0.01) continue;
     const {lead, dir, fighting} = clSetup(c);
@@ -8677,7 +8733,7 @@ function draw(now){ draw.now = now;
     const r = counter(c, lead, L, c.n + (c.mn || 0), L.some(a => a.id === sel.army || sel.group.includes(a.id)), fighting, now);
     if (uo) ctx.restore(); if (ua && ua.red > 0.02) unitHitMark(r.x, r.y, r.w, r.h, ua.red*fa0*pa);
     ctx.globalAlpha = 1;
-    const hb = {...r, ids:L.map(a => a.id), own:c.list.map(a => a.id), cx:c.tag ? c.sx : c.dx, cy:c.tag ? c.sy : c.dy, spread:L.some(a => a.at !== c.at), a:+(fa0*pa*(c.tag ? c.ta : c.da)).toFixed(3), tag:c.tag ? 1 : 0};   // (cx, cy: its world point on screen, the diamond's centre or the tag's pin; a: as drawn, the cross-fade included; tag: the flag tag over its pictures, else the diamond)
+    const hb = {...r, ids:L.map(a => a.id), own:c.list.map(a => a.id), cx:c.tag ? c.sx : c.px, cy:c.tag ? c.sy : c.py, px:c.px, py:c.py, spread:L.some(a => a.at !== c.at), a:+(fa0*pa*(c.tag ? c.ta : c.da)).toFixed(3), tag:c.tag ? 1 : 0};   // (cx, cy: its world point on screen, its position dot (the diamond stands just above it) or the tag's pin; px, py: the dot; a: as drawn, the cross-fade included; tag: the flag tag over its pictures, else the diamond)
     if (c.pv){ hits.push(hb); if (c.fm && c.art >= 0.5) HITX.push({x:c.fm.box[0], y:c.fm.box[1], w:c.fm.box[2] - c.fm.box[0], h:c.fm.box[3] - c.fm.box[1], ids:hb.ids, own:hb.own, cx:c.sx, cy:c.sy, spread:hb.spread, art:1}); }   // close in its pictures are tapped as it too
     /*@TEST*/else if (TMDBG.on) PGHOST.push(hb);/*@ENDTEST*/   // (a counter fading out is no tap target)
     if (volFx && fighting && c.mt && (volN.get(c.at) || 0) < 2){ const F = bfxOwn(c), T = F && bfxFoes(c); if (F && T && figVolley(c, volType(c), now, F, T)) volN.set(c.at, (volN.get(c.at) || 0) + 1); }
@@ -8910,7 +8966,7 @@ function dragMove(a, x, y){ const p = provAt(x, y), w = screenToWorld(x, y); if 
   if (a.to === null && p === a.at){ if (G.P[p].sea && !shipsOnly(a)) return; spotMove(a, p, w); return; }
   if (sel.army !== a.id && !sel.group.includes(a.id)) selectArmy(a.id);
   lastClickW = w; setTarget(a, p); if (targetPath && targetPath.length) sendToTarget(a); else { sel.target = null; targetPath = null; toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } }
-function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) return; const [ax, ay] = toScreen(...dispPos(a)), h = hitAt(udrag.x, udrag.y);
+function drawUDrag(){ if (!udrag) return; const a = armyById(udrag.id); if (!a) return; const [ax, ay] = toScreen(...dotPos(a)), h = hitAt(udrag.x, udrag.y);
   const b = h && !h.unk ? h.ids.map(armyById).find(q => q && q !== a && q.owner === PLAYER && !q.air && !q.fly && count(q)) : null;
   ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = b ? 'rgba(116,194,122,.95)' : 'rgba(243,234,210,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(udrag.x, udrag.y); ctx.stroke(); ctx.setLineDash([]);
   if (b){ ctx.strokeStyle = '#74c27a'; ctx.lineWidth = 2.5; roundRect(ctx, h.x - 3, h.y - 3, h.w + 6, h.h + 6, 5); ctx.stroke(); }
@@ -9074,8 +9130,15 @@ function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].se
   const ok = want ? okC : (x, y) => okC(x, y) && provAtW(x, y) === p, near = f => { if (f(w[0], w[1])) return [w[0], w[1]];
     for (let r = 1; r <= 24; r++) for (let k = 0; k < 16; k++){ const an = (k + (r & 1)*0.5)*Math.PI/8, x = w[0] + Math.cos(an)*r, y = w[1] + Math.sin(an)*r; if (f(x, y)) return [x, y]; } return null; };
   return near(ok) || (ok !== okC && near(okC)) || [w[0], w[1]]; }
+// whether the tapped point w is "on or by the city" of land province p, so the order goes to the city itself (its heart, where a province is
+// captured): within 16 css px of it on screen AND within PIN_CITY world units (about 26 km) on the map. The 16 px alone (10bbce7) took in the
+// whole of a small province zoomed out: at the phone's opening zoom (about 20 px a hex) a tap on the edge of Thuringia went to Erfurt, the
+// province centre, instead of the tapped spot (owner 2026-11-18: "not snap to province centres")
+const PIN_CITY = 3;
+function byCity(p, w){ const P = G.P[p]; if (!P || P.sea || !w) return false; const [hx, hy] = toScreen(P.x, P.y), [tx, ty] = toScreen(w[0], w[1]);
+  return Math.hypot(tx - hx, ty - hy) < 16 && Math.hypot(wdx(P.x, w[0]), w[1] - P.y) <= PIN_CITY; }
 function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
-  if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea){ const [hx, hy] = toScreen(G.P[p].x, G.P[p].y), [tx, ty] = toScreen(sel.targetPt[0], sel.targetPt[1]); if (Math.hypot(tx - hx, ty - hy) < 16) sel.targetPt = [G.P[p].x, G.P[p].y]; }   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
+  if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea && byCity(p, sel.targetPt)) sel.targetPt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
   targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
@@ -9147,7 +9210,7 @@ function sendToTarget(a, keep = false){
 // goes there after its last stop. A group: each force adds its own stop round the point (as sendToTarget spreads a group's points)
 function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '';
   g.forEach((q, i) => { let pt = pinPt(q, p, i ? [w[0] + Math.cos(i*2.4)*6, w[1] + Math.sin(i*2.4)*5] : w);
-    if (pt && ground(q) && !G.P[p].sea){ const [hx, hy] = toScreen(G.P[p].x, G.P[p].y); if (Math.hypot(hx - x, hy - y) < 16) pt = [G.P[p].x, G.P[p].y]; }   // (a tap on or by the city: its heart, where a province is captured)
+    if (pt && ground(q) && !G.P[p].sea && byCity(p, w)) pt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city: its heart, where a province is captured)
     if (pt && addStop(q, p, pt)){ ok++; delete q.join; return; }
     if (!why) why = !pt || (shipsOnly(q) && !G.P[p].sea) ? 'A fleet\'s stops are on water.' : !canEnter(PLAYER, p) ? `${placeOwner(p)} is not open to you: tap with Waypoint off to plan an attack.` : embarkWhy(q, p) || 'No route there from the last stop.'; });
   if (ok){ sfx('order'); visCache = null; sel.target = null; targetPath = null; hoverPath = null; sel.lastOrder = {ids:g.map(q => q.id), t:performance.now()}; ftipAsk('move'); }
@@ -10462,11 +10525,16 @@ function armyBarHTML(a, ro = false){
     <div class="ab-hp" role="img" aria-label="Health ${hp.cur} of ${hp.max}" title="Health of the whole force: ${hp.cur} of ${hp.max} health points"><i style="width:${Math.round(hf*100)}%;background:${col}"></i><b>${ro ? Math.round(hf*100) + '%' : hp.cur + '/' + hp.max}</b></div>
     ${hl[0] ? `<div class="ab-heal ${hl[1]}">${hl[0]}</div>` : ''}
     ${a.land > 0 && a.to === null ? `<div class="ab-emb" title="Troops coming ashore from the sea: they cannot move on or capture until they have landed, and fight at ${Math.round(rLandF(o)*100)}% on their first day ashore">⚓ <b>Landing</b> · ${a.land} h left</div>` : a.emb != null && a.to === null && a.path.length ? `<div class="ab-emb" title="Ground forces board ships only in a naval port. The force stays in the port until it is aboard, then sails.">⚓ <b>Embarking</b> · ${a.emb} h left</div>` : ''}
+    ${abDugHTML(a)}
     <div class="ab-stats">${knownMorale ? cell('Morale', mor + '%', 'Morale: it drops in a fight and recovers when supplied. Broken forces retreat.', mor < 30 ? 'warn' : '') : ''}${cell('Speed', abSpd(a) + '<small> km/d</small>', ro ? 'Marching speed on open ground' : 'Marching speed on open ground without roads (km a day). ' + speedHTML(a).replace(/<[^>]+>/g, ''))}${cell('Strength', (ro ? '≈ ' : '') + Math.round(power(a)), 'Total strength: attack and defence of every unit, health and morale included')}${(rr => rr.length ? cell('Range', Math.max(...rr.map(e => e[1])) + '<small> km</small>', `Attack range: ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km`).join(', ')}. Fires at enemy forces its side can see within range, without moving in.`, 'arng') : '')(rangeRows(a, ro))}${sw}</div>
     <div class="ab-dias">${types.map(t => diaHTML(a, t, ro)).join('')}</div>
     ${!ro && a.owner === PLAYER && shipsOnly(a) && !a.air && !a.fly ? fleetOrdersHTML(a) : ''}
     ${sp.over ? `<div class="ab-stk" title="${stackText(sp)}. Split it into stacks of ${sp.limit} or fewer.">⚠ ${sp.size} / ${sp.limit} ${STACK_W[sp.dom]}: −${Math.round((1 - sp.dmg)*100)}% damage, −${Math.round((1 - sp.spd)*100)}% speed</div>` : ''}
     ${abUnit && abUnit.id === a.id && a.u[abUnit.t] > 0 ? unitDetailHTML(a, abUnit.t, ro) : ''}</div>`; }
+// a dug-in force's label in its bar (owner 2026-11-18, item 5: the badge's mark alone does not say what it means, and a phone cannot hover it):
+// "Dug in: +10% defence" where it stands in the open (and what a city gives), "+25% in a city" inside one (rules/combat.js DIG_DEF, DIG_CITY: digPct)
+const abDugHTML = a => { if (!dugIn(a) || G.P[a.at].sea) return ''; const city = !!G.P[a.at].city;
+  return `<div class="ab-dug" title="${DIG_TIP}">${digShieldHTML(13)}<span><b>Dug in</b>: +${digPct(city)}% defence${city ? ' in a city' : ` <span class="ab-dug-c">(+${digPct(true)}% in a city)</span>`}</span></div>`; };
 const abHP = a => { const max = Math.round(armyHP(a)), cur = Math.round(effHP(a)); return {cur, max, f:max ? Math.min(1, cur/max) : 0}; };
 // a foreign force you can see: the same bar, read-only and with only what you know (its health as a share, its unit types and counts; no morale, research or orders)
 function foeHTML(a){ const P = G.P[a.to !== null ? a.to : a.at], st0 = statusText(a);
