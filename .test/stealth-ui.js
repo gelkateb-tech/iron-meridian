@@ -54,7 +54,7 @@ const out = n => __dirname + '/stealth-' + n + '.png';
     const tg = G.P.filter(P => S.owner[P.id] === E && P.city && !P.sea).sort((x, y) => Math.hypot(x.x - G.P[c].x, x.y - G.P[c].y) - Math.hypot(y.x - G.P[c].x, y.y - G.P[c].y))[0].id;
     im.selectArmy ? im.selectArmy(w.id) : null; return { id: w.id, E, tg, name: armyName(w), range: wingRange(w), kind: airCheck(w, tg, [E]) }; }, cap);
   ck('wing: named, 36 hexes from an Airbase III, plans a strike', /Stealth Bomber Wing/.test(R.name) && R.range === 36 && (R.kind.kind === 'strike' || /range/i.test(R.kind.why || '')), R);
-  // ---- fog on the map (the page records what each frame did with every wing in flight: window.__airSeen[id] = drawn / hidden / contact)
+  // ---- fog on the map (the page records what each frame did with every wing in flight: window.__airSeen[id] = drawn / unk (spotted, a ? plate) / hidden / contact)
   await p.keyboard.press('Escape'); await p.waitForTimeout(150);
   const F = await p.evaluate(({ c, E }) => { const im = window.__im, S = im.S, G = im.G;
     const own = G.P.filter(P => S.owner[P.id] === 0 && !P.sea && P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea).length >= 2); const orbit = Q => { const o = new Set(); for (let k = 0; k < 24; k++){ const t = k/24*Math.PI*2, c1 = worldToCell(Q.x + Math.cos(t)*16, Q.y + Math.sin(t)*16*0.55); o.add(c1 >= 0 ? G.prov[c1] : -1); } return o; };   // the wing orbits its target on a 16 x 8.8 ellipse (index.html wingVis), so it passes over every province that ellipse touches: the SAM must be in or next to all of them
@@ -74,7 +74,8 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   const fog = { bomber: await seenAs('bomb', F.E), stealth: await seenAs('stealth', F.E), sam: await seenAs('stealth', F.E, 'sam'), jam: await seenAs('stealth', F.E, 'jam'),
     awacs: await seenAs('stealth', F.E, 'awacs'), awacsFar: await seenAs('stealth', F.E, 'awacs-far'), bomberAwacsFar: await seenAs('bomb', F.E, 'awacs-far'), own: await seenAs('stealth', 0) };
   await p.screenshot({ path: out('map-own-wing') });
-  ck('map: an enemy Heavy Bomber over your land is drawn', fog.bomber === 'drawn', fog);
+  ck('map: an enemy Heavy Bomber over your land is spotted: a ? plate (MAP-2 intel rule: only recon or a SAM radar identifies it)', fog.bomber === 'unk', fog);
+  ck('map: a Heavy Bomber far from your AWACS: spotted over your land, a ? plate', fog.bomberAwacsFar === 'unk', fog);
   ck('map: an enemy stealth wing over your land is not drawn (no SAM or jammer near)', fog.stealth === 'hidden', fog);
   ck('map: a SAM of yours in the next province shows it', fog.sam === 'drawn', fog);
   ck('map: a jammer of yours in the province shows it', fog.jam === 'drawn', fog);

@@ -260,7 +260,7 @@ function airTick(){
           if (isSeat(a.owner) && cv) tell(a.owner, `${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
         else if (f.kind === 'recon'){ const L = uavOf(a.owner), seen = visProvsAt(G.P[f.tgt].x, G.P[f.tgt].y, L.vis); S.reveal = S.reveal || {};
-          for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + L.loiter + 12); visCache = null; f.ph = 'over'; f.hrs = f.h0 = L.loiter; f.t = 0; f.salvo = L.salvos;
+          for (const q of seen) S.reveal[q] = Math.max(S.reveal[q] || 0, S.hour + L.loiter + 12); intelNote(a.owner, seen, S.hour + L.loiter + 12); visCache = null; f.ph = 'over'; f.hrs = f.h0 = L.loiter; f.t = 0; f.salvo = L.salvos;
           if (isSeat(a.owner)){ const foes = seen.reduce((s0, q) => s0 + stationaryAt(q).filter(b => b.owner >= 0 && b.owner !== a.owner).reduce((s1, b) => s1 + count(b), 0), 0); tell(a.owner, `UAV ${ROMAN[uavLv(a.owner)]} over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: identifying everything in ${seen.length} provinces for ${L.loiter} h, ${foes} foreign units spotted.`, 'info', f.tgt); }
           if (f.salvo > 0){ f.salvo--; uavSalvo(a, f.tgt); } }
         else if (f.kind === 'orbit'){ f.ph = 'over'; f.hrs = 16; f.t = 0; visCache = null; if (isSeat(a.owner)) tell(a.owner, `Early warning orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: enemy forces within ${Math.round(visAewKm(a.owner)/10)*10} km show as unidentified contacts for 16 h.`, 'info', f.tgt); }
