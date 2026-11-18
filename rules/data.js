@@ -197,8 +197,8 @@ const R_PRICE = {
   gen:(U, g) => ({cash:Math.round((60 + 2.2*U.cost)*R_GEN_C[g - 2]), metal:g === 2 ? 50 : 80, iron:2*(U.iron || 0), elec:2*(U.elec || 0), rare:Math.round((30 + U.cost/4)*R_GEN_F[g - 2]), days:g === 2 ? 6 : g === 3 ? 8 : g === 4 ? 8 : 9}),
 };
 // the unit lines, one column each. u: unit, cat, day: the day the unlock opens, ud: days to research the unlock, std: known from day one,
-// elite: star-and-wings badge, fam: the related unit it came out of (a dashed family line on the screen, no requirement), noFp: no Firepower node
-// k: upgrades [id, name, icon, [[day, fx, text], ...levels]]; g: generations [[generation, day, name, fx, text]]
+// elite: star-and-wings badge, fam: the related unit it came out of (a dashed family line on the screen, no requirement), noFp: no Firepower node, fpLate: no Firepower 1 and 2 but a one-level Firepower at the third step's day (the Recon UAV)
+// k: upgrades [id, name, icon, [[day, fx, text], ...levels], price table (default 'kit'; 'eng' = priced and required like a Firepower step)]; g: generations [[generation, day, name, fx, text]]
 // fx: flat changes to the unit's own stats (atk, def, hp, spd) and rng (mission radius in hexes); the text says the rest (rules read the level)
 const R_LINES = [
   {u:'inf', cat:'inf', day:1, std:1, k:[
@@ -268,7 +268,8 @@ const R_LINES = [
     ['radar', 'Look-Down Radar', 'radar', [[10, {atk:1}, 'attack +1']]]],
    g:[[2, 17, 'Fifth-Generation Fighter', {atk:2, def:2, hp:2}, 'attack +2, defense +2, health +2']]},
 
-  {u:'drone', cat:'uns', day:1, ud:3, k:[],
+  {u:'drone', cat:'uns', day:1, ud:3, noFp:1, fpLate:1, k:[
+    ['sens', 'Wide-Area Sensors', 'radar', [[3, {}, 'on station it sees 15% farther'], [10, {}, '30% farther']], 'eng']],
    g:[[2, 5, 'UAV II · Long-Endurance Optics', {def:1}, 'sees farther, loiters 16 h, reaches farther, harder to shoot down'], [3, 9, 'UAV III · Low-Observable Airframe', {def:1}, 'loiters 20 h, wider view, air defences hit 40% less'],
       [4, 13, 'UAV IV · Armed UAV', {atk:3}, 'light missiles: one salvo per sortie'], [5, 18, 'UAV V · Hunter-Killer', {atk:2, def:2}, 'two salvos, heavier missiles, longer range and loiter']]},
   {u:'swarm', cat:'uns', day:4, ud:4, k:[
@@ -347,9 +348,10 @@ const RNODES = [], RN = {};
     for (const [k, nm, ic, off] of [['fp', 'Firepower', 'dmg', 0], ['pr', 'Protection', 'hp', 1]]){ if (k === 'fp' && L.noFp) continue;
       add({id:u + '_' + k, cat:L.cat, line:u, u, kind:'eng', eng:k, name:nm, ic, req:['u_' + u], req3:g2 ? u + '_g2' : null,
         lv:[1, 2, 3].map(l => ({day:eDay[l - 1] + off, c:R_PRICE.eng(U, l), fx:{}, txt:`${k === 'fp' ? 'attack' : 'defense'} +${R_PCT[l - 1]}% in all`}))}); }
-    for (const [k, nm, ic, lv] of L.k)
+    if (L.fpLate) add({id:u + '_fp3', cat:L.cat, line:u, u, kind:'eng', eng:'fp', name:'Firepower', ic:'dmg', req:['u_' + u, ...(g2 ? [u + '_g2'] : [])], lv:[{day:eDay[2], c:R_PRICE.eng(U, 3), fx:{}, txt:`attack +${R_PCT[2]}% in all`}]});   // (the Recon UAV has no attack before UAV IV)
+    for (const [k, nm, ic, lv, pf] of L.k)
       add({id:u + '_' + k, cat:L.cat, line:u, u, kind:'kit', name:nm, ic, req:[lv[0][0] > (g2 || 99) ? u + '_g2' : 'u_' + u],
-        lv:lv.map(([day, fx, txt], i) => ({day, c:R_PRICE.kit(U, i + 1), fx, txt, ...(i && g2 && day > g2 && lv[0][0] <= g2 ? {rq:[u + '_g2']} : {})}))});   // rq: a later level dated after generation 2 needs it
+        lv:lv.map(([day, fx, txt], i) => ({day, c:R_PRICE[pf || 'kit'](U, i + 1), fx, txt, ...(i && g2 && day > g2 && lv[0][0] <= g2 && !pf ? {rq:[u + '_g2']} : {})}))});   // rq: a later level dated after generation 2 needs it
     for (const [g, day, nm, fx, txt] of L.g)
       add({id:u + '_g' + g, cat:L.cat, line:u, u, kind:'gen', gen:g, name:nm, ic:'unit', pic:u, req:[g === 2 ? 'u_' + u : `${u}_g${g - 1}`], lv:[{day, c:R_PRICE.gen(U, g), fx, txt}]}); }
   for (const Sx of R_SPECIAL) for (const n of Sx.nodes)
@@ -384,7 +386,10 @@ const R_LEGACY = {
 // upgrades replaced after the upgrades review (owner 2026-11-18): an old save's level of the old node becomes the same level of its replacement
 // (same days, prices and place in the tree), a project of it still running carries on as the replacement (rRenameMigrate)
 const R_RENAMED = {inf_build:'inf_kit', swarm_pack:'swarm_tb', carr_deck:'carr_ciws'};
-const R_RENAMED_NAME = {inf_build:'Rapid Mobilisation', swarm_pack:'Bigger Salvo', carr_deck:'Flight-Deck Crews'};
+const R_RENAMED_NAME = {inf_build:'Rapid Mobilisation', swarm_pack:'Bigger Salvo', carr_deck:'Flight-Deck Crews', drone_fp:'Recon UAV Firepower'};
+// the Recon UAV's Firepower 1 and 2 (days 3 and 10) became Wide-Area Sensors 1 and 2 (owner 2026-11-18: it has no attack until UAV IV); Firepower 3 (day 16)
+// is its own node now. An old level l of drone_fp becomes Sensors min(l, 2), and Firepower when l is 3; a running project of it carries on as the same step
+const R_FP_SPLIT = {drone_fp:{sens:'drone_sens', fp:'drone_fp3'}};
 const R_LEGACY_NAME = {inf1:'Ceramic Body Armor', inf2:'Mechanized Infantry', inf3:'Special Forces', tank1:'Composite Armor', tank2:'Smoothbore Main Gun', tank3:'Turbine Engines',
   art1:'Counter-Battery Radar', art2:'Rocket Artillery', art3:'Guided Shells', air1:'Jet Engines', air2:'Precision Munitions', air3:'Stealth Airframes', nav1:'Naval Gunnery', nav2:'Carrier Aviation',
   asf1:'Air Superiority Fighters', awacs1:'Airborne Early Warning', mpa1:'Maritime Patrol', bomb1:'Strategic Bombers', bomb2:'Strategic Bomber Upgrade', bomb3:'Stealth Bombers',
@@ -399,6 +404,8 @@ const DOCTRINES = {
 const docOf = n => n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] || null : null;
 // Firepower and Protection levels 1 to 3 multiply attack and defense by MARK_F[level + 1] (they were the unit Marks II to IV before the research redesign)
 const MARK_F = [1, 1, 1.12, 1.25, 1.4];
+// the Firepower or Protection level (0 to 3) in a tech table T: the Recon UAV's only Firepower step is its day-16 one, worth level 3 (+40%)
+const rMarkT = (T, t, e) => e === 'fp' && t === 'drone' ? (+T.drone_fp3 ? 3 : 0) : Math.min(3, +T[t + '_' + e] || 0);
 const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 const cap1 = w => w[0].toUpperCase() + w.slice(1);
 const NEUTRAL = -1, SEA = -2;

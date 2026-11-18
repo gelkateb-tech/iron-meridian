@@ -329,7 +329,7 @@ function stRows(o){
         if (sh.oil && UNITS[u].fuel){ if (kk === 'atk') v *= 0.7; if (kk === 'spd') v *= 0.6; }
         if (sh.iron && MAINT[u].iron >= 0.05*RES_K){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.85; }   // no spare parts: armor, guns and warships fight worse
         if (sh.elec && MAINT[u].elec >= 0.05*RES_K){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.9; }   // no avionics or radar spares: aircraft, drones, air defence and warships
-        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[Math.min(3, +T[u + (kk === 'atk' ? '_fp' : '_pr')] || 0) + 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }   // Firepower / Protection, then the doctrine
+        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[rMarkT(T, u, kk === 'atk' ? 'fp' : 'pr') + 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }   // Firepower / Protection, then the doctrine
         r[kk] = v; } c.v[u] = r; } }
   return c.v;
 }

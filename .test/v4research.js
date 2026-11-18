@@ -16,7 +16,7 @@ const T0 = Date.now();
   const card = () => p.evaluate(() => { const c = document.querySelector('.rs-card'); return c ? { cls: c.className, text: c.innerText.replace(/\s+/g, ' ').trim(), btn: (c.querySelector('.rs-db .btn') || {}).innerText || '', dis: !!(c.querySelector('.rs-db .btn') || {}).disabled } : null; });
   // ---- the tree as data
   const T = await p.evaluate(() => { const im = window.__im, L = im.rs.TECH(); return { n: L.length, steps: im.rs.steps(), day1: L.filter(t => t.kind === 'unlock' && t.day === 1).map(t => t.id), cats: [...new Set(L.map(t => t.cat))], lv3: L.filter(t => t.levels === 3).length, done0: im.rs.done(0) }; });
-  ck('the tree: 162 researchable nodes, 289 steps, ten categories', T.n === 162 && T.steps === 289 && T.cats.length === 10 && T.done0 === 0, T);
+  ck('the tree: 163 researchable nodes, 289 steps, ten categories', T.n === 163 && T.steps === 289 && T.cats.length === 10 && T.done0 === 0, T);
   // ---- category list
   await p.click('[data-act="research-open"]'); await p.waitForTimeout(350);
   const list = await p.evaluate(() => [...document.querySelectorAll('.rs-ban')].map(e => ({ b: e.dataset.b, name: e.querySelector('.rs-bt b').textContent, role: e.querySelector('.rs-bt span').textContent, dm: !!e.querySelector('.rs-dm svg, .rs-dm .rface.p i'), pic: e.classList.contains('scene') ? e.style.getPropertyValue('--rbs').includes(`assets/art/rbs-${e.dataset.b}.webp`) : (e.querySelector('.rs-bpic') || {}).getAttribute && e.querySelector('.rs-bpic').getAttribute('src') === `assets/art/rb-${e.dataset.b}.webp` && !e.querySelector('.rs-bph, .rs-bimg'), cnt: e.querySelector('.rs-bpt > b').textContent, open: (e.querySelector('.rs-open') || {}).textContent || '' })));
@@ -36,7 +36,7 @@ const T0 = Date.now();
     const sh = N.filter(n => n.kind === 'eng'), gen = N.filter(n => n.kind === 'gen');
     return { n: keys.length, bad, fp: new Set(sh.filter(n => n.eng === 'fp').map(n => n.key)).size, pr: new Set(sh.filter(n => n.eng === 'pr').map(n => n.key)).size, gen: gen.every(n => n.key === 'u_' + n.u),
       drop: new Set(N.filter(n => n.name === 'Drop Tanks').map(n => n.key)).size }; });
-  ck('pictures: every node and category has its 256 px scene (100 pictures: Firepower, Protection and Drop Tanks share one each, generations show their unit)', RP.bad.length === 0 && RP.n === 100 && RP.fp === 1 && RP.pr === 1 && RP.drop === 1 && RP.gen, RP);
+  ck('pictures: every node and category has its 256 px scene (101 pictures: Firepower, Protection and Drop Tanks share one each, generations show their unit)', RP.bad.length === 0 && RP.n === 101 && RP.fp === 1 && RP.pr === 1 && RP.drop === 1 && RP.gen, RP);
   ck('list: ten category banners with a diamond icon, a name, a role line and the unit picture', list.length === 10 && list.every(x => x.dm && x.pic && x.name && x.role) && list[0].name === 'Infantry Corps' && list[9].name === 'Command & Logistics', list.map(x => x.name));
   ck('list: steps count and the green "open" chip (day 1: the IFV and Composite Armour, two fighters, the Frigate\'s gunnery; nine categories have one, Strategic Air opens on day 2)', list[1].cnt === '0/23' && /2 open/i.test(list[1].open) && /2 open/i.test(list[4].open) && /1 open/i.test(list[7].open) && list.filter(x => x.open).length === 9 && !list[6].open, list.map(x => [x.b, x.cnt, x.open]));
   ck('list: no Unit upgrades banner (Marks are in the tree)', await p.evaluate(() => !document.querySelector('.rs-ban.marks') && !/Marks/.test(document.querySelector('.rs-list').innerText)), null);

@@ -44,11 +44,14 @@ function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = 
 // give a nation a level of a node outright (research finished, a stolen design, an old save converted); never lowers a level
 // A raised level reaches what is already under way at once (docs/RESEARCH-UPGRADES.md gaps G3, G4): units in training of a type that now trains
 // faster have their remaining hours cut by the ratio (trainResRetime, rules/production.js), and a force walking or sailing inside its province
-// goes on at its new speed (sailRetime, rules/movement.js); legs between provinces, air missions and battles read the stats every hour anyway
+// goes on at its new speed (sailRetime, rules/movement.js), a landing or boarding under way takes the new time (landRetime), a missile in flight the new speed (missileRetime); legs between provinces, air missions and battles read the stats every hour anyway
 function rGrant(N, id, lv){ const nd = RN[id]; if (!nd) return; const T = N.tech || (N.tech = {}), l0 = +T[id] || 0, l1 = Math.max(l0, Math.min(nd.lv.length, lv || 1));
-  const live = l1 > l0 && S && Array.isArray(S.queue) && Array.isArray(S.armies) && N.id >= 0, q0 = live ? trainResBefore(N.id) : null, w0 = live ? sailBefore(N.id) : null;
+  const live = l1 > l0 && S && Array.isArray(S.queue) && Array.isArray(S.armies) && N.id >= 0, q0 = live ? trainResBefore(N.id) : null, w0 = live ? sailBefore(N.id) : null, d0 = live ? landBefore(N.id) : null, m0 = live ? missileBefore(N.id) : null;
   T[id] = l1; N.tv = (N.tv || 0) + 1;
-  if (live){ trainResRetime(N.id, q0); sailRetime(w0); } }
+  if (live){ trainResRetime(N.id, q0); sailRetime(w0); landRetime(d0); missileRetime(m0); } }
+// level l of a unit's Firepower or Protection (a Mark of an old save): the Recon UAV has Wide-Area Sensors 1-2 and a day-16 Firepower instead of Firepower 1-3
+function rGrantEng(N, t, e, l){ const sp = R_FP_SPLIT[t + '_' + e]; if (!sp) return rGrant(N, t + '_' + e, l);
+  rGrant(N, sp.sens, Math.min(l, RN[sp.sens].lv.length)); if (l > RN[sp.sens].lv.length) rGrant(N, sp.fp, 1); }
 // a project of the old tree: its nodes (R_LEGACY: 'node' = level 1, 'node@' = one level more)
 function rGrantLegacy(N, old){ for (const s of R_LEGACY[old] || []){ const add = s.endsWith('@'), id = add ? s.slice(0, -1) : s; rGrant(N, id, add ? (+(N.tech && N.tech[id]) || 0) + 1 : 1); } }
 // what a spy of nation n could steal from nation o: the nodes o holds at a higher level (one level is taken at a time; days do not matter)
@@ -77,6 +80,8 @@ const rKoHours = n => has(n, 'sdrone_hit') ? 36 : 24;                           
 const rAdF = (n, t) => t === 'sdrone' && has(n, 'sdrone_g2') ? 0.7 : 1;                               // Low-Observable Strike Drone: air defences hit 30% less
 const rBombF = (n, t) => t === 'stealth' && has(n, 'stealth_bay') ? 0.75 : UNITS[t].bmb || 0;         // Enlarged Bomb Bay
 const rMpaK = n => [1, 1.2, 1.4][rLevel(n, 'mpa_sonar')] || 1, rMpaR = n => MPA_R*rMpaK(n), rMpaH = n => has(n, 'mpa_g2') ? 18 : 12;   // Sonobuoy Field; Long-Endurance Patrol Aircraft
+const rUavSightK = n => [1, 1.15, 1.3][rLevel(n, 'drone_sens')] || 1;   // Wide-Area Sensors (Recon UAV): the view on station, 15% / 30% farther
+const rMarkLv = (n, t, e) => n >= 0 && S && S.nations[n] ? rMarkT(S.nations[n].tech || {}, t, e) : 0;   // Firepower / Protection level 0 to 3
 const rAewK = n => [1, 1.15, 1.3][rLevel(n, 'awacs_radar')] || 1, rAewR = n => AEW_R*rAewK(n), rAewF = n => has(n, 'awacs_link') ? 1.35 : 1.25;   // High-Power Radar; Fighter Data Link
 const rDeckRate = n => 0.2;                                                                           // repairs aboard a carrier, per day (Flight-Deck Crews is gone: the base rate)
 // flight speed: an aircraft type's research speed bonus (the fx spd of its line: Fourth-Generation Interceptor +2 of 20, Supersonic Bomber +3 of 9) as
@@ -118,11 +123,16 @@ function rqueueMigrate(){ for (const N of S.nations){ const q = N.rqueue; delete
 // Warheads and Close-In Defence (R_RENAMED). A level held becomes the same level of the replacement (nobody loses a step), a project of the old
 // node still running carries on as the replacement with the hours it has left, and a person's nation is told once. Safe to run on any save
 function rRenameMigrate(){ for (const N of S.nations){ const T = N.tech || (N.tech = {}), got = [];
-    for (const old in R_RENAMED){ const nw = R_RENAMED[old];
+    for (const old in R_FP_SPLIT){ const sp = R_FP_SPLIT[old], l = +T[old] || 0;   // the Recon UAV's Firepower 1-2 became Sensors 1-2 (Firepower 3 its own node)
+      if (T[old] != null){ delete T[old]; if (l > 0){ rGrantEng(N, old.split('_')[0], 'fp', l); got.push(`${R_RENAMED_NAME[old]} ${Math.min(l, 3)} is now ${l > 2 ? RN[sp.sens].name + ' 2 and ' + RN[sp.fp].name : rName(RN[sp.sens], l)}`); } else N.tv = (N.tv || 0) + 1; }
+      for (const k of R_SLOTS){ const R = N[k]; if (R && R.id === old){ const hi = R.lv >= RN[sp.sens].lv.length + 1; R.id = hi ? sp.fp : sp.sens; if (hi) R.lv = 1; got.push(`your ${R_RENAMED_NAME[old]} research carries on as ${RN[R.id].name}`); } }
+      if (N.rPick && N.rPick.id === old) N.rPick.id = sp.sens; if (N.rqueue === old) N.rqueue = sp.sens; }
+    const got0 = got.length;
+    for (const old in R_RENAMED){ const nw = R_RENAMED[old]; if (R_FP_SPLIT[old]) continue;
       if (T[old] != null){ const l = Math.max(1, Math.min(RN[nw].lv.length, +T[old] || 1)); delete T[old]; T[nw] = Math.max(+T[nw] || 0, l); N.tv = (N.tv || 0) + 1; got.push(`${R_RENAMED_NAME[old]} is now ${rName(RN[nw], l)}`); }
       for (const k of R_SLOTS){ const R = N[k]; if (R && R.id === old){ R.id = nw; got.push(`your ${R_RENAMED_NAME[old]} research carries on as ${RN[nw].name}`); } }
       if (N.rPick && N.rPick.id === old) N.rPick.id = nw; if (N.rqueue === old) N.rqueue = nw; }
-    if (got.length && isSeat(N.id)){ const D = desk(N.id); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:`Research update: ${got.join('; ')}. Every unit line's final level now also trains that unit 15% faster.`}); } } }
+    if (got.length && isSeat(N.id)){ const D = desk(N.id); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:`Research update: ${got.join('; ')}.${got.length > got0 ? " Every unit line's final level now also trains that unit 15% faster." : ''}`}); } } }
 // saves from before the research redesign (S.rsv unset): every researched project becomes the nodes that give the same bonus or more (R_LEGACY),
 // every unit Mark II to IV becomes levels 1 to 3 of that unit's Firepower and Protection. Nothing is lost: converted levels stay whatever the
 // new days and prerequisites say. A project still running keeps running under its old id and converts when it finishes (researchSlotHour);
@@ -130,11 +140,11 @@ function rRenameMigrate(){ for (const N of S.nations){ const T = N.tech || (N.te
 function researchMigrate(){ if (S.rsv >= 2) return; S.rsv = 2;
   for (const N of S.nations){ const T = N.tech || (N.tech = {}); let k = 0, m = 0;
     for (const old of Object.keys(R_LEGACY)) if (T[old]){ delete T[old]; rGrantLegacy(N, old); k++; }
-    if (N.mk){ for (const t in N.mk){ const l = Math.min(3, (+N.mk[t] || 1) - 1); if (l > 0 && UNITS[t]){ m++; for (const e of ['fp', 'pr']) rGrant(N, t + '_' + e, l); } } delete N.mk; }
+    if (N.mk){ for (const t in N.mk){ const l = Math.min(3, (+N.mk[t] || 1) - 1); if (l > 0 && UNITS[t]){ m++; for (const e of ['fp', 'pr']) rGrantEng(N, t, e, l); } } delete N.mk; }
     N.rPick = null; N.tv = (N.tv || 0) + 1;
     if (isSeat(N.id)){ const D = desk(N.id); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:'New research tree: research is now organised by unit, with a day for every project, levels and newer generations.'
       + (k ? ` Your ${k} researched project${k > 1 ? 's' : ''} became the matching upgrades: every bonus is the same or better.` : '') + (m ? ` Unit Marks are now Firepower and Protection levels in the tree (${m} unit type${m > 1 ? 's' : ''} converted).` : '')
       + (N.eng ? ' The Mark upgrade in progress will finish and count.' : '')}); } } }
 // a Mark upgrade that was running when an old save was converted (N.eng = {t, m, h}): when it ends it gives level m - 1 of Firepower and Protection
-function engHour(N){ if (--N.eng.h <= 0){ const {t, m} = N.eng; N.eng = null; if (!UNITS[t]) return; for (const e of ['fp', 'pr']) rGrant(N, t + '_' + e, Math.min(3, m - 1));
+function engHour(N){ if (--N.eng.h <= 0){ const {t, m} = N.eng; N.eng = null; if (!UNITS[t]) return; for (const e of ['fp', 'pr']) rGrantEng(N, t, e, Math.min(3, m - 1));
     if (isSeat(N.id)){ tell(N.id, `${UNITS[t].name}: Firepower and Protection level ${Math.min(3, m - 1)} (the Mark ${ROMAN[m]} upgrade from your earlier game): +${Math.round((MARK_F[m] - 1)*100)}% attack and defense.`, 'good'); cue(N.id, 'research'); } } }
