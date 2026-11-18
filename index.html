@@ -2984,7 +2984,7 @@ if (!SET.fxPick){ let had = false; try { had = 'fx' in (JSON.parse(localStorage.
 // the map's own detail (terrain detail, coast, sea, weather, the figures' budget) is lightened only by an Effects setting chosen by hand: a phone's
 // default Low thins the effects, not the map
 const mapLite = () => SET.fx !== 'high' && !!SET.fxPick;   // (Effects never chosen by hand: the device's default, also over settings saved before there was one)   // first-time tips: which ones were shown (old settings: none yet)
-const storeSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET.fxPick ? SET : {...SET, fx:undefined})); } catch (e) {} }, saveSet = () => { storeSet(); applySet(); };   // (Effects kept only once chosen: the device default is not stored)
+const saveSet = () => { try { localStorage.setItem('iron-meridian-settings', JSON.stringify(SET.fxPick ? SET : {...SET, fx:undefined})); } catch (e) {} applySet(); };   // (Effects kept only once chosen: the device default is not stored)
 // colour-blind safe nation palette (distinct under protanopia, deuteranopia and tritanopia as far as 15 colours allow)
 const CB_PAL = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#B8B8B8', '#882255', '#44AA99', '#117733', '#AA4499', '#DDCC77', '#6650C8', '#88CCEE'];
 // the drawable half of the world: river, road and railway paths by class (the rules half, the links between provinces, is loadWorld in rules/map.js)
@@ -3063,7 +3063,9 @@ function netDraw(g = G){ if (NETD && NETD.G === g && NETD.L === LINES) return NE
     for (const [k] of net.lanes){ const [u, v] = k.split(',').map(Number); if (!g.P[u].sea && !g.P[u].city) continue; const P = lanePts(u, v); if (!P) continue; lanesPath.p.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) lanesPath.p.lineTo(P[i][0], P[i][1]); }
     return lanesPath.p; };
   return (NETD = {G:g, L:LINES, net, chains, byCls, wayPts, lanePts, lanesAll}); }
-function applyPalette(){ if (!S || !S.nations) return; for (const N of S.nations){ if (!N.color0) N.color0 = N.color; N.color = SET.cb ? CB_PAL[N.id % CB_PAL.length] : N.color0; } geoDirty = true; layerKey = ''; }
+// (the map's geometry and base layer are rebuilt only when a nation's colour really changed: any other setting saved, a map style or an overlay
+//  switched, a tip marked seen, the volume moved, leaves the base map as it is; MAP-2, map-modes N)
+function applyPalette(){ if (!S || !S.nations) return; let ch = false; for (const N of S.nations){ if (!N.color0) N.color0 = N.color; const c = SET.cb ? CB_PAL[N.id % CB_PAL.length] : N.color0; if (N.color !== c){ N.color = c; ch = true; } } if (ch){ geoDirty = true; layerKey = ''; } }
 function applySet(){ const z = (SET.ui || 100)/100; for (const sel0 of ['header', '#dock', '#side', '#modal', '#toasts', '#tut']){ const el = document.querySelector(sel0); if (el) el.style.zoom = z === 1 ? '' : z; } document.documentElement.style.setProperty('--uiz', z);
   document.documentElement.classList.toggle('reduced', SET.motion === 'reduced'); if (typeof hdrSync === 'function') try { hdrSync(true); } catch (e) {} if (typeof S !== 'undefined' && S) applyPalette();
   try { const d0 = window.devicePixelRatio || 1; if (booted && RD.ov !== undefined && (Math.min(d0, saverOn() ? 2 : 3) > mapDpr() + 0.05) !== RD.ov) resize(); } catch (e) {} redraw(); }   // a setting changed: draw it (the Battery saver drops the 3x overlay)
@@ -8027,7 +8029,7 @@ const OVL = {cv:null, k:'', g:null, c:{rel:{k:'', col:null}, sup:{k:'', col:null
 function ovlToggle(k, on = !ovlOn(k)){ if (!polMode()){ if (!on) return; mapMode = 'political'; } mapOvl[k] = on; mapSave(); }
 // the map style (Political / Terrain) and the overlays: Settings > Map, the More menu, the V key and the Relations button; saved with the settings
 function mapModeSet(m){ mapMode = MODES.some(x => x[0] === m) ? m : 'political'; mapSave(); }
-function mapSave(){ SET.mapMode = mapMode; SET.ovlRel = mapOvl.rel; SET.ovlSup = mapOvl.sup; storeSet(); redraw(); renderSide(true);   // (stored only: applySet would re-render the base map, and an overlay is drawn over it)
+function mapSave(){ SET.mapMode = mapMode; SET.ovlRel = mapOvl.rel; SET.ovlSup = mapOvl.sup; saveSet(); renderSide(true);   // (the base map is not re-rendered: an overlay is its own canvas, and a style change is in the layer's key)
   if (modalKind === 'settings' && !$('modal').hidden) openModal(settingsHTML(), 'settings'); }
 // the colour of every land province (null: none) for overlay k; recomputed only when its key moves
 function ovlCols(k){ const C = OVL.c[k];
@@ -10800,7 +10802,7 @@ document.addEventListener('click', e => {
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
     case 'stats-open': openModal(statsHTML(), 'stats'); break;
     case 'settings-open': openModal(settingsHTML(), 'settings'); break;
-    case 'set': { const k = b.dataset.k, v = b.dataset.v === 'true' ? true : b.dataset.v === 'false' ? false : b.dataset.v; SET[k] = v; if (k === 'fx') SET.fxPick = true; saveSet(); if (k === 'cityLights' || k === 'fx') layerKey = ''; if (k === 'shipRoutes') redraw(400); openModal(settingsHTML(), 'settings'); break; }
+    case 'set': { const k = b.dataset.k, v = b.dataset.v === 'true' ? true : b.dataset.v === 'false' ? false : b.dataset.v; SET[k] = v; if (k === 'fx') SET.fxPick = true; saveSet(); if (k === 'cityLights' || k === 'fx' || k === 'saver') layerKey = ''; if (k === 'shipRoutes') redraw(400); openModal(settingsHTML(), 'settings'); break; }
     case 'diff': S.diff = b.dataset.k; openModal(settingsHTML(), 'settings'); break;
     case 'paper-open': showPaper(true); break;
     case 'report': { const R = (S.reports || []).find(r => r.id === +b.dataset.id); if (R) openModal(reportHTML(R), 'report'); break; }
