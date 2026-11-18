@@ -671,22 +671,71 @@ _CROP_NEW = ("Cropped and centred so the unit's full length (nose to tail, inclu
 assert _CAM_OLD in STYLE_V2 and _CROP_OLD in STYLE_V2
 STYLE_V2_UNIT = STYLE_V2.replace(_CAM_OLD, _CAM_NEW).replace(_CROP_OLD, _CROP_NEW)
 UNIT_ANCHORS = ['ba-v2-army-base-1.webp', 'ba-v2-naval-yard-1.webp']   # style references for a group's first look
-UNIT_PREFIX_NEW = ("The attached pictures are two buildings from the same game. They are style references only: copy their "
-                   "rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and "
-                   "their plain flat light grey background. Do NOT copy their camera angle or anything in them: no buildings, "
-                   "tents, trucks, ships or ground in the new picture. The picture to draw is described below, seen straight "
-                   "down from above.")
-UNIT_PREFIX_FAMILY = ("The attached picture is generation 1 of this group's {unit}. Use it only as the reference for the camera "
-                      "(exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the "
-                      "plain grey background and the group's family look. Draw a NEW, clearly different and newer model as "
-                      "described below. Do not copy the attached {unit}: its shape is replaced by the new design.")
+# ---- THREE PICTURES PER LOOK (owner's decisions 2026-11-18, second set): every look has
+#   side  : the MASTER, a front three-quarter side view from slightly above, on the plain #D9D9D9 background (cut out later for the
+#           research tree's diamond); made fresh, with the two anchor buildings attached (looks 2 and 3 also get their group's look-1 side view)
+#   scene : made FROM the side view (attached): the same tank in action in its natural setting, filling a 3:2 landscape picture (the card)
+#   top   : made FROM the side view (attached): the same tank seen exactly straight down, nose up, STYLE_V2_UNIT framing (map, army bar)
+# The family-look and generation text of each look is the approved text; only the camera and framing change per kind.
+_CAM_SIDE = ("Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees "
+             "down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned "
+             "toward the lower right of the picture, at the same scale. ")
+_CROP_SIDE = ("Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the "
+              "picture's width, nothing cut off. ")
+STYLE_V2_SIDE = STYLE_V2.replace(_CAM_OLD, _CAM_SIDE).replace(_CROP_OLD, _CROP_SIDE)
+UNIT_PREFIX_SIDE_NEW = ("The attached pictures are two buildings from the same game. They are style references only: copy their "
+                        "rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and "
+                        "their plain flat light grey background. Do NOT copy anything in them: no buildings, tents, trucks, ships or "
+                        "ground in the new picture. The buildings are seen at an angle from above, and the new picture uses the same "
+                        "angle family, as described below: a front three-quarter side view from slightly above.")
+UNIT_PREFIX_SIDE_FAMILY = ("The first two attached pictures are two buildings from the same game. They are style references only: copy "
+                           "their rendering style, materials, colours, soft studio light from the upper left, level of detail and "
+                           "finish, and their plain flat light grey background; do NOT copy anything in them. The third attached "
+                           "picture is generation 1 of this group's {unit}, seen from the same three-quarter side view. Use it only as "
+                           "the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint "
+                           "colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer "
+                           "model as described below. Do not copy the attached {unit}: its shape is replaced by the new design.")
+UNIT_PREFIX_SCENE = ("The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. "
+                     "Draw the SAME {unit}, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint "
+                     "colour and every same detail (stowage, armour, sensors, launchers, skirts), seen in action in its natural "
+                     "setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new "
+                     "picture is a full outdoor scene.")
+UNIT_PREFIX_TOP = ("The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. "
+                   "Draw the SAME {unit}, exactly: the same shape, the same turret, gun, tracks and road wheels, the same paint "
+                   "colour and every same detail (stowage, armour, sensors, launchers, skirts), but now seen exactly straight down "
+                   "from above, as described below. Do not redesign, simplify or add to it. Do not copy the attached picture's "
+                   "camera angle: draw a true top-down plan view.")
+TANK_FRAME_SIDE = ("A single main battle tank, seen from a front three-quarter side view from slightly above (about 30 degrees down), "
+                   "its front and gun turned toward the lower right of the picture so that the viewer sees its front and one long "
+                   "side, the turret facing the same way as the hull. The whole tank is centred left to right and top to bottom, and "
+                   "its full length from the tip of the gun barrel to the rear of the hull spans about 85 percent of the picture's "
+                   "width; the entire tank, gun barrel and tracks included, is inside the frame with a margin all round. Only the "
+                   "tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it.")
 TANK_FRAME = ("A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front "
               "pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and "
               "top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent "
               "of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight "
               "soft shadow right under it.")
+TANK_SCENE = {   # group: the natural setting of its card scene
+    'nato': "a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt",
+    'east': "a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road",
+    'china': "green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track",
+    'europe': "gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track",
+    'export': "a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road"}
+def tank_scene(g):
+    return ("A single main battle tank driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. "
+            f"The setting: {TANK_SCENE[g]}. Seen from a low front three-quarter angle slightly above ground level, the tank fills "
+            "about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few "
+            "soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only "
+            "this one tank: no crew visible, no other vehicle, no people, no buildings, no signs. The tank is described in words as: ")
 TANK_TAIL = (" Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family "
              "look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.")
+STYLE_V2_SCENE = ("Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes "
+                  "and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and "
+                  "weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene "
+                  "fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour "
+                  "tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, "
+                  "no emblems, no logos, no watermark.")
 UNIT_GROUPS = ['nato', 'east', 'china', 'europe', 'export']
 UNIT_TANK = {   # group: (family look and paint, [generation 1, 2, 3])
     'nato': ("Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a "
@@ -751,13 +800,25 @@ UNIT_TANK = {   # group: (family look and paint, [generation 1, 2, 3])
                 "armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, "
                 "side skirts, a clean but practical look made to be sold to many armies."]),
 }
-UNIT_LOOKS = {}   # name: {unit, subject, refs (names in assets/art-src), fresh}
+UNIT_KINDS = ('side', 'scene', 'top')
+UNIT_LOOKS = {}   # name: {unit, kind, group, look, subject, refs (names in assets/art-src), prefix, style, aspect, fresh (a side view made without a look-1 reference)}
 for _g in UNIT_GROUPS:
     for _n in (1, 2, 3):
-        UNIT_LOOKS[f'ul-tank-{_g}-{_n}'] = {
-            'unit': 'main battle tank', 'fresh': _n == 1, 'group': _g, 'look': _n,
-            'subject': TANK_FRAME + ' ' + UNIT_TANK[_g][0] + ' ' + UNIT_TANK[_g][1][_n - 1] + TANK_TAIL,
-            'refs': UNIT_ANCHORS if _n == 1 else [f'ul-tank-{_g}-1']}
+        _desc = UNIT_TANK[_g][0] + ' ' + UNIT_TANK[_g][1][_n - 1] + TANK_TAIL
+        _side = f'ul-tank-{_g}-{_n}-side'
+        UNIT_LOOKS[_side] = {
+            'unit': 'main battle tank', 'kind': 'side', 'group': _g, 'look': _n, 'fresh': _n == 1, 'aspect': '1:1',
+            'prefix': UNIT_PREFIX_SIDE_NEW if _n == 1 else UNIT_PREFIX_SIDE_FAMILY.format(unit='main battle tank'),
+            'subject': TANK_FRAME_SIDE + ' ' + _desc, 'style': STYLE_V2_SIDE,
+            'refs': UNIT_ANCHORS if _n == 1 else UNIT_ANCHORS + [f'ul-tank-{_g}-1-side']}
+        UNIT_LOOKS[f'ul-tank-{_g}-{_n}-scene'] = {
+            'unit': 'main battle tank', 'kind': 'scene', 'group': _g, 'look': _n, 'fresh': False, 'aspect': '3:2',
+            'prefix': UNIT_PREFIX_SCENE.format(unit='main battle tank'),
+            'subject': tank_scene(_g) + _desc, 'style': STYLE_V2_SCENE, 'refs': [_side]}
+        UNIT_LOOKS[f'ul-tank-{_g}-{_n}-top'] = {
+            'unit': 'main battle tank', 'kind': 'top', 'group': _g, 'look': _n, 'fresh': False, 'aspect': '1:1',
+            'prefix': UNIT_PREFIX_TOP.format(unit='main battle tank'),
+            'subject': TANK_FRAME + ' ' + _desc, 'style': STYLE_V2_UNIT, 'refs': [_side]}
 
 PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
 REVIEW = False       # --review: the Gemini check after each picture
@@ -771,7 +832,7 @@ def ul_path(r):
 
 def unit_request_text(name):
     u = UNIT_LOOKS[name]
-    return (UNIT_PREFIX_NEW if u['fresh'] else UNIT_PREFIX_FAMILY.format(unit=u['unit'])) + '\n\n' + u['subject'] + '\n\n' + STYLE_V2_UNIT
+    return u['prefix'] + '\n\n' + u['subject'] + '\n\n' + u['style']
 
 # ---- THE CHECK (--review): a Gemini text model looks at each new picture against the Art Bible and says PASS or FLAG.
 # It never redoes anything: a FLAG is shown to the owner, who decides (Art Bible standing rule).
@@ -787,13 +848,11 @@ REVIEW_PROMPT = (
     "1. SAME UNIT: it shows the kind of unit that was asked for. With a reference picture of the same unit attached, it keeps that "
     "unit's shape family, size in the frame and paint colour; a picture made as a new generation must be clearly a different, newer "
     "model, not a copy of the reference.\n"
-    "2. STYLE: it matches the anchor style: a clean, polished 3D game-model render with crisp edges and soft studio light from the "
-    "upper left, slightly realistic materials; not a photograph, not toy-like, not a drawing.\n"
-    "3. BACKGROUND: the background is a plain, flat, uniform light grey with at most a faint soft shadow; no base slab, ground, "
-    "terrain, horizon or other objects.\n"
-    "4. FRAMING: the whole unit is inside the frame, nothing cut off, centred, filling about 90 percent of the frame along its "
-    "length, seen from the same angle and at the same size as the reference or the rest of its set (for units: exactly straight down, "
-    "nose up).\n"
+    "2. STYLE: it matches the anchor style: a clean, polished 3D game-model render with crisp edges and soft light from the "
+    "upper left (studio light on grey backgrounds, natural daylight in outdoor scenes), slightly realistic materials; not a "
+    "photograph, not toy-like, not a drawing.\n"
+    "3. BACKGROUND: {p3}\n"
+    "4. FRAMING: {p4}\n"
     "5. NO MARKINGS: no text, letters, numbers, logos, flags, emblems, roundels, stars or national insignia anywhere.\n"
     "6. ORIGINAL: it is not a line-for-line copy of a real, recognisable product (a real tank, jet, ship or similar); it may only "
     "carry the general family look of its group.\n"
@@ -803,8 +862,22 @@ REVIEW_PROMPT = (
     "Use PASS only if all seven points are fine (reasons may then be empty). Use FLAG if any point fails or you are unsure, and "
     "name each failed point by its number and a short plain reason (under 20 words each).")
 
+REVIEW_P3 = "the background is a plain, flat, uniform light grey with at most a faint soft shadow; no base slab, ground, terrain, horizon or other objects."
+REVIEW_P4 = ("the whole unit is inside the frame, nothing cut off, centred, filling about 90 percent of the frame along its length, "
+             "seen from the same angle and at the same size as the reference or the rest of its set (for units: exactly straight down, nose up).")
+REVIEW_KIND = {   # unit pictures: points 3 and 4 and the reference sentence, by kind
+    'side': (REVIEW_P3, "the whole tank is inside the frame with a margin, nothing cut off, centred, filling about 85 percent of the frame's "
+             "width, seen in a front three-quarter side view from slightly above (not straight down, not a flat side-on profile)."),
+    'scene': ("this picture is meant to be a full outdoor scene: a natural landscape and a dirt road filling the whole picture edge to edge. "
+              "FAIL this point if there is a plain grey studio background, a frame, a border, or a blue or coloured tint or scanlines. The "
+              "ground should be a believable landscape; some dust behind the tank is wanted.",
+              "the one tank is whole and in action (driving on the dirt road), clearly visible and not cut off, about half the picture's "
+              "width, in a landscape-shaped picture."),
+    'top': (REVIEW_P3, "the whole tank is inside the frame, nothing cut off, centred, its length filling about 90 percent of the "
+            "picture's height, seen exactly straight down (a true plan view, no side or front visible), gun and front pointing to the top.")}
+
 def review_what(name):
-    if name in UNIT_LOOKS: return UNIT_LOOKS[name]['subject']
+    if name in UNIT_LOOKS: return UNIT_LOOKS[name]['prefix'] + ' ' + UNIT_LOOKS[name]['subject']
     if name in SUBJECTS: return SUBJECTS[name]
     if name in GROWS: return 'a building level: ' + GROWS[name][1]
     return name
@@ -820,10 +893,12 @@ def review(name, path):
     """the check: returns (verdict, reasons); logs its own cost row; writes <picture>.review.txt. Never raises, never retries."""
     refs = review_refs(name)
     if not refs: rtxt = 'There is no reference picture.'
-    elif name in UNIT_LOOKS and not UNIT_LOOKS[name]['fresh']: rtxt = 'Picture 2 is the reference it was made from (generation 1 of the same unit and group).'
-    elif name in UNIT_LOOKS: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only, not the subject or the camera.'
+    elif name in UNIT_LOOKS and UNIT_LOOKS[name]['kind'] != 'side': rtxt = 'Picture 2 is the reference it was made from: the master side view of the very same tank. It must be the same tank: same shape, turret, gun, wheels or tracks, paint and details.'
+    elif name in UNIT_LOOKS and UNIT_LOOKS[name]['fresh']: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only, not the subject or the camera.'
+    elif name in UNIT_LOOKS: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only. Picture 4 is generation 1 of the same unit and group: the new one must keep the paint and family look but be a clearly different, newer model.'
     else: rtxt = 'The other attached picture(s) are the reference(s) it was made from.'
-    text = REVIEW_PROMPT.format(refs=rtxt, what=review_what(name), style=STYLE_V2_UNIT if name in UNIT_LOOKS else STYLE_V2)
+    p3, p4 = REVIEW_KIND[UNIT_LOOKS[name]['kind']] if name in UNIT_LOOKS else (REVIEW_P3, REVIEW_P4)
+    text = REVIEW_PROMPT.format(refs=rtxt, what=review_what(name), p3=p3, p4=p4, style=UNIT_LOOKS[name]['style'] if name in UNIT_LOOKS else STYLE_V2)
     parts = [{'text': text}, image_part(path)] + [image_part(os.path.join(ROOT, r)) for r in refs]
     body = {'contents': [{'parts': parts}], 'generationConfig': {'responseMimeType': 'application/json'}}
     verdict, reasons, usd, tok = 'FLAG', ['the check could not run or its answer was unreadable: look at the picture yourself'], 0.0, {}
@@ -842,6 +917,70 @@ def review(name, path):
     with open(LOG, 'a') as f:
         f.write(json.dumps({'name': name + ' (check)', 'file': os.path.relpath(rf, ROOT), 'batch': False, 'usd_est': round(usd, 4), 'review': verdict, 'tokens': tok}) + '\n')
     return verdict, reasons
+
+
+# ---- THE THREE-WAY CHECK (--match ul-tank-<group>-<look>): the side view, card scene and top-down of one look go to the Gemini text
+# model together. MATCH or FLAG with reasons, to the log row "<look> (match)" and to assets/art-src/<look>.match.txt. It only flags.
+MATCH_PROMPT = (
+    "You are the quality checker for the unit pictures of a strategy game. Three pictures of ONE {unit} are attached, in this order: "
+    "picture 1 is the SIDE view (the master: a three-quarter side view on a plain grey background), picture 2 is the CARD SCENE (the "
+    "same {unit} in action outdoors), picture 3 is the TOP-DOWN (seen from straight above, nose up, on a plain grey background). "
+    "All three are meant to show exactly the same vehicle. The scene and the top-down were made from the side view.\n\n"
+    "Check this checklist, each point on its own:\n"
+    "1. SAME VEHICLE: the overall shape, hull, turret, gun, wheels and tracks (the number of road wheels), side skirts, bustle, "
+    "sensors, launchers, stowage and other details are the same in all three, as far as each view can show them.\n"
+    "2. SAME PAINT: the paint colour and finish are the same in all three (a landscape's light may change them a little).\n"
+    "3. RIGHT VIEW: picture 1 is a front three-quarter side view from slightly above on plain grey; picture 2 is a full outdoor scene "
+    "with the tank driving on a dirt road, no grey studio background, no tint; picture 3 is a true straight-down plan view, nose up, "
+    "on plain grey.\n"
+    "4. NO MARKINGS: no text, letters, numbers, logos, flags, emblems, stars or insignia in any of the three.\n"
+    "5. NO EXTRAS: exactly one vehicle in each picture; no second vehicle, no people, no buildings (distant trees and hills are fine).\n\n"
+    'Answer with JSON only, in this shape: {{"verdict": "MATCH" or "FLAG", "flagged_pictures": ["side" and/or "scene" and/or "top", only the ones that do not match or are wrong], '
+    '"reasons": ["short plain reason", "..."]}}. Use MATCH only if all five points are fine (flagged_pictures empty, reasons may be empty). '
+    "Use FLAG if any point fails or you are unsure, and name each failed point by its number and the picture it concerns, with a short "
+    "plain reason (under 25 words each).")
+
+def match(look):
+    """look: 'ul-tank-nato-1'. Returns (verdict, reasons) or None when a picture is missing. Logs its own cost row; never raises, never redoes anything."""
+    paths = [ul_path(f'{look}-{k}') for k in UNIT_KINDS]
+    if not all(paths):
+        print(f'{look}: skipped, missing {[f"{look}-{k}" for k, q in zip(UNIT_KINDS, paths) if not q]}'); return None
+    text = MATCH_PROMPT.format(unit=UNIT_LOOKS[f'{look}-side']['unit'])
+    body = {'contents': [{'parts': [{'text': text}] + [image_part(q) for q in paths]}], 'generationConfig': {'responseMimeType': 'application/json'}}
+    verdict, reasons, flagged, usd, tok = 'FLAG', ['the check could not run or its answer was unreadable: look at the three pictures yourself'], [], 0.0, {}
+    try:
+        r = call('POST', f'models/{REVIEW_MODEL}:generateContent', body); u = r.get('usageMetadata', {})
+        usd = ((u.get('candidatesTokenCount', 0) + u.get('thoughtsTokenCount', 0)) * REV_OUT_USD + u.get('promptTokenCount', 0) * REV_IN_USD)
+        tok = {k: u.get(k) for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount')}
+        raw = ''.join(p.get('text', '') for c in r.get('candidates', []) for p in c.get('content', {}).get('parts', []) if not p.get('thought'))
+        j = json.loads(raw.strip().strip('`').removeprefix('json').strip())
+        flagged = [str(x) for x in j.get('flagged_pictures', [])]
+        if j.get('verdict') == 'MATCH': verdict, reasons = 'MATCH', [str(x) for x in j.get('reasons', [])]
+        else: verdict, reasons = 'FLAG', [str(x) for x in j.get('reasons', [])] or ['flagged without a reason: look at the three pictures yourself']
+    except SystemExit as e: reasons = [f'the check failed ({e}): look at the three pictures yourself']
+    except Exception as e: reasons = [f'the check answer could not be read ({type(e).__name__}): look at the three pictures yourself']
+    rf = os.path.join(OUT, look + '.match.txt')
+    with open(rf, 'w') as f: f.write(verdict + (' (flagged: ' + ', '.join(flagged) + ')' if flagged else '') + '\n' + ''.join(f'- {x}\n' for x in reasons))
+    with open(LOG, 'a') as f:
+        f.write(json.dumps({'name': look + ' (match)', 'file': os.path.relpath(rf, ROOT), 'batch': False, 'usd_est': round(usd, 4), 'match': verdict, 'flagged_pictures': flagged, 'match_reasons': reasons, 'tokens': tok}) + '\n')
+    print(f'{look}: {verdict}' + (f' (flagged: {", ".join(flagged)})' if flagged else '') + ''.join(f'\n    - {x}' for x in reasons) + ('\n  (flag only: nothing is redone; show the owner and ask)' if verdict == 'FLAG' else ''))
+    return verdict, reasons
+
+# ---- SPENDING (owner's decisions 2026-11-18): the log stood at 255 calls, $10.27 when the Gemini balance was $40.88. The $12 line is
+# removed. After every run the new spending since then, the running total and the estimated balance are printed; a run that could take
+# the estimated balance below $5 is refused. (Add the owner's top-ups to BALANCE_TOPUPS_USD when he says so.)
+BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, 0.0, 5.0
+def spend_totals():
+    rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
+    return sum(r.get('calls', 1) for r in rows), sum(r.get('usd_est', 0) for r in rows)
+def cost_line():
+    calls, usd = spend_totals(); new = usd - BASELINE_USD
+    return (f'{calls} calls, about ${usd:.2f} in the log (estimate; the real bill is in Google AI Studio). New spending since the $40.88 balance: '
+            f'{calls - BASELINE_CALLS} calls, about ${new:.2f}; estimated balance left about ${BASELINE_BALANCE + BALANCE_TOPUPS_USD - new:.2f} (stop below ${BALANCE_FLOOR:.0f}).')
+def balance_guard(planned_usd):
+    calls, usd = spend_totals(); left = BASELINE_BALANCE + BALANCE_TOPUPS_USD - (usd - BASELINE_USD)
+    if left - planned_usd < BALANCE_FLOOR:
+        raise SystemExit(f'stopped: the estimated balance is about ${left:.2f} and this run may cost about ${planned_usd:.2f}, which would take it below ${BALANCE_FLOOR:.0f}. Tell the owner.')
 
 def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
@@ -904,11 +1043,11 @@ def request(name, refs, change=None):
         text, images = REDRAW.format(desc), [src]
     elif name in UNIT_LOOKS:   # a unit look: a new picture drawn from its text, with its reference pictures attached
         u = UNIT_LOOKS[name]; paths = [ul_path(r) for r in u['refs']]
-        if not PRINT_ONLY and not all(paths): raise SystemExit(f'{name} needs {[r for r, p in zip(u["refs"], paths) if not p]} first: make the group\'s look 1 before looks 2 and 3 (one batch after the other)')
+        if not PRINT_ONLY and not all(paths): raise SystemExit(f'{name} needs {[r for r, p in zip(u["refs"], paths) if not p]} first: make the side view before the pictures made from it (one batch after the other)')
         text, images = unit_request_text(name), [p for p in paths if p]
         REF_USED[name] = [os.path.relpath(p, ROOT) if p else r + ' (not made yet)' for r, p in zip(u['refs'], paths)]
         return {'contents': [{'parts': [{'text': text}] + [image_part(p) for p in images]}],
-                'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': '1:1', 'imageSize': '1K'}}}
+                'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': u['aspect'], 'imageSize': '1K'}}}
     elif name in ICON_EDITS:
         before, text = ICON_EDITS[name]; src = os.path.join(OUT, f'{before}.grey.png')
         if not os.path.exists(src): raise SystemExit(f'{name} is made from {os.path.relpath(src, ROOT)}, which is not there yet')
@@ -951,8 +1090,9 @@ def save(name, reply, force, batch):
     if data:
         from PIL import Image   # saved as a true PNG whatever format the API returns
         p = free_path(name, force); im = Image.open(io.BytesIO(data))
+        print(f'  {name}: reply picture {im.size[0]}x{im.size[1]}')
         if name in ICONS: im.save(p[:-4] + '.grey.png'); cutout(im).save(p)
-        elif name in R_BANNERS or name in R_ICONS: p = p[:-4] + '.webp'; im.convert('RGB').save(p, 'WEBP', quality=92, method=6)   # research sources: webp q92, not big PNGs
+        elif name in R_BANNERS or name in R_ICONS or name in UNIT_LOOKS: p = p[:-4] + '.webp'; im.convert('RGB').save(p, 'WEBP', quality=95 if name in UNIT_LOOKS else 92, method=6)   # research sources: webp q92, not big PNGs
         else: im.save(p)
     verdict, reasons = (review(name, p) if REVIEW and p else (None, []))   # the check only flags; nothing is redone
     with open(LOG, 'a') as f:
@@ -998,9 +1138,7 @@ def main(a):
             print(('done ' if any(os.path.exists(os.path.join(OUT, f'{stem(n)}.{x}')) for x in ('png', 'webp')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
         return
     if a[0] == '--cost':
-        rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
-        calls = sum(r.get('calls', 1) for r in rows); usd = sum(r.get('usd_est', 0) for r in rows)
-        print(f'{calls} calls, about ${usd:.2f} (estimate; the real bill is in Google AI Studio)'); return
+        print(cost_line()); return
     global PRINT_ONLY, REVIEW
     PRINT_ONLY = '--print' in a or '--dry-run' in a; REVIEW = '--review' in a   # (before the requests are built)
     force = show = batch = False; refs, names, edits = [], [], []
@@ -1011,7 +1149,20 @@ def main(a):
         elif a[i] == '--review': pass   # (set above)
         elif a[i] == '--batch': batch = True
         elif a[i] == '--ref': i += 1; refs.append(a[i])
-        elif a[i] == '--collect': collect(a[i + 1], force); return
+        elif a[i] == '--collect': collect(a[i + 1], force); print(cost_line()); return
+        elif a[i] == '--match':   # the three-way check of looks (ul-tank-<group>-<look> ...): side, scene and top-down together
+            for look in a[i + 1:]:
+                if f'{look}-side' not in UNIT_LOOKS: raise SystemExit(f'unknown look: {look}')
+            balance_guard(0.01 * len(a[i + 1:]))
+            for look in a[i + 1:]: match(look)
+            print(cost_line()); return
+        elif a[i] == '--review-only':   # the single-picture check of pictures already made (names of unit pictures)
+            for n in a[i + 1:]:
+                q = ul_path(n)
+                if n not in UNIT_LOOKS or not q: raise SystemExit(f'{n}: not a unit picture, or not made yet')
+                request(n, [])   # (sets REF_USED)
+                v, rs = review(n, q); print(f'{n}: {v}' + ''.join(f'\n    - {x}' for x in rs))
+            print(cost_line()); return
         elif a[i] == '--prep-research': prep_research(a[i + 1:]); return
         elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
         elif a[i] in SUBJECTS or a[i] in UNIT_LOOKS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS or a[i] in R_BANNERS or a[i] in R_ICONS: names.append(a[i])   # repeat a name for more tries
@@ -1019,19 +1170,21 @@ def main(a):
         i += 1
     if batch and any(n in GROWS and GROWS[n][0] in names for n in names):
         raise SystemExit('a level that grows from another level in the same batch has to wait for it: send them one after the other')
-    if batch and not PRINT_ONLY and any(n in UNIT_LOOKS and not UNIT_LOOKS[n]['fresh'] and UNIT_LOOKS[n]['refs'][0] in names for n in names):
-        raise SystemExit('looks 2 and 3 take their group\'s look 1 as the reference: send look 1 first, then looks 2 and 3 in the next batch')
+    if batch and not PRINT_ONLY and any(n in UNIT_LOOKS and r in names for n in names for r in UNIT_LOOKS[n]['refs']):
+        raise SystemExit('a picture made from another picture (looks 2 and 3 from look 1, scenes and top-downs from their side view) cannot be in the same batch as it: send the master first, then the rest in the next batch')
     jobs = [(n, request(n, refs)) for n in names] + [(n, request(n, r, c)) for n, r, c in edits]
     if show:
         for n, r in jobs:
             print(f'--- {n}')
-            if n in UNIT_LOOKS: print(f'[{"fresh picture" if UNIT_LOOKS[n]["fresh"] else "new picture, group look 1 attached"}; attached: {", ".join(REF_USED[n])}]')
+            if n in UNIT_LOOKS: print(f'[{UNIT_LOOKS[n]["kind"]} view, {UNIT_LOOKS[n]["aspect"]}; attached: {", ".join(REF_USED[n])}]')
             print(f'{r["contents"][0]["parts"][0]["text"]}\n')
-        if REVIEW: print('--- THE CHECK (sent after each picture, with the new picture first and its references after it)\n' + REVIEW_PROMPT.format(refs='<which pictures are attached>', what='<the picture\'s prompt>', style='<STYLE_V2>') + f'\n[model: {REVIEW_MODEL}]')
+        if REVIEW: print('--- THE CHECK (sent after each picture, with the new picture first and its references after it)\n' + REVIEW_PROMPT.format(refs='<which pictures are attached>', what='<the picture\'s prompt>', p3='<by kind>', p4='<by kind>', style='<its style block>') + f'\n[model: {REVIEW_MODEL}]')
         return
     os.makedirs(OUT, exist_ok=True)
+    balance_guard(len(jobs) * (0.045 if batch else 0.09) + (len(jobs) * 0.01 if REVIEW else 0))   # (a generous estimate, not the price)
     if batch: batch_run(jobs, force)
     else:
         for n, r in jobs: save(n, call('POST', f'models/{MODEL}:generateContent', r), force, False)
+    print(cost_line())
 
-main(sys.argv[1:])
+if __name__ == '__main__': main(sys.argv[1:])
