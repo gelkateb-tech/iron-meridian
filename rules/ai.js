@@ -391,7 +391,7 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
     bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15};   // stealth bombers: only late, at war with a power that fields SAM stacks
   // what the nation fields: units in service and in training, and their money value (the old Mark rule: count x unit price)
   const cnt = {}; let val = 0; for (const a of armiesOf(n)) for (const t of UT) if (a.u[t]) cnt[t] = (cnt[t] || 0) + a.u[t];
-  for (const p of ownedBy(n)) for (const it of S.queue[p]) if (!it.msl && UNITS[it.t]) cnt[it.t] = (cnt[it.t] || 0) + (UNITS[it.t].pack || 1);
+  for (const p of ownedBy(n)) for (const it of S.queue[p]) if (!it.msl && UNITS[it.t]) cnt[it.t] = (cnt[it.t] || 0) + rPack(n, it.t);   // (a card is as many units as spawn makes of it)
   for (const t in cnt) val += cnt[t]*UNITS[t].cost;
   const share = u => val > 0 ? (cnt[u] || 0)*UNITS[u].cost/val : 0;
   // a line whose unit needs a kind of building the nation has none of (no airbase at all, no naval yard): little point in its unlock, none in the rest

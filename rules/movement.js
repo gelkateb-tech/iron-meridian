@@ -357,6 +357,11 @@ function orderSpot(a, x, y){ if (!a || a.air || a.fly || a.to !== null) return f
   const [x0, y0] = armyXY(a), km = Math.hypot(x - x0, y - y0)/KM_W; a.path = []; a.dest = null; delete a.tgt;
   if (km < 1){ delete a.sail; a.pos = [x, y]; return true; }
   const ws = walkSpeed(a, a.at); a.sail = sailTo(a, a.at, [x0, y0], [x, y], d => Math.max(1, Math.round(d/KM_W*24/(ws*KM_HEX)))); a.pos = [x0, y0]; return true; }
+// a research step that changes a force's speed (rGrant, rules/research.js) reaches a walk or sail already under way at once (gap G4): the part
+// still to go takes the hours of the new speed; the part done is kept. sailBefore: nation n's forces under way and their speed before the step
+const sailBefore = n => armiesOf(n).filter(a => a.sail && count(a)).map(a => [a, walkSpeed(a, a.at)]);
+function sailRetime(w0){ for (const [a, v] of w0){ const s = a.sail; if (!s) continue; const v1 = walkSpeed(a, a.at); if (!(v > 0 && v1 > 0) || Math.abs(v1 - v) < 1e-9) continue;
+    const r = v/v1; s.h = Math.max(1e-6, s.h*r); if (s.h2) s.h2 *= r; } }
 // hours left for a force walking or sailing inside its province
 const sailHours = a => a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h + (a.sail.h2 || 0) - 1e-9)) : 0;   // (h2: the part after the heart, sailTo)
 // the hourly step of a force walking or sailing inside its province (rules/tick.js movement)

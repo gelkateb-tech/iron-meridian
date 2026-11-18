@@ -138,13 +138,13 @@ function unitStrength(n, t, T){
   const lv = id => T[id] != null ? +T[id] || 0 : RN[id] && RN[id].std ? 1 : 0, hasT = id => lv(id) > 0, air = U.cls === 'air';
   const stat = k => { let v = U[k] || 0; for (const nd of RNODES_U[t] || []){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++){ const x = nd.lv[i].fx[k]; if (x) v += x; } }
     if (k === 'atk' || k === 'def'){ v *= MARK_F[Math.min(3, +T[t + (k === 'atk' ? '_fp' : '_pr')] || 0) + 1]; if (dc) v *= dc[k] || 1; } return v; };   // (as st(), without shortages)
-  const mo = k => { const r = R_VS[t] && R_VS[t][k]; return r && hasT(r[0]) ? r[1] : mult(t, k); }, mU = u => U.vsU && U.vsU[u] != null ? U.vsU[u] : mo(UNITS[u].cls);
+  const mo = k => { const r = R_VS[t] && R_VS[t][k]; return r && lv(r[0]) >= (r[2] || 1) ? r[1] : mult(t, k); }, mU = u => U.vsU && U.vsU[u] != null ? U.vsU[u] : mo(UNITS[u].cls);
   const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
   const atk = stat('atk'), def = stat('def');
   const vis = uav ? uav.vis : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
     : U.vis*((t === 'at' && hasT('at_eye')) || (t === 'spec' && hasT('spec_eye')) ? 1.5 : 1);
   const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
-  const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*24 : stat('spd'))*KM_HEX/10)*10;
+  const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*(U.spd ? stat('spd')/U.spd : 1)*24 : stat('spd'))*KM_HEX/10)*10;   // (aircraft: flight speed with the research speed bonus, rAirSpdF)
   const rows = STR_ROWS.filter(R => R.k !== 'pop').map(R => { const r = {k:R.k, name:R.name, atk:null, def:null, immune:false, unit:''};
     if (R.t){ if (atk > 0) r.atk = atk*mU(R.t); const Md = multU(R.t, t); if (Md > 0.001) r.def = def/Md; else r.immune = true; }
     else if (R.k === 'msl'){ const w = t === 'sam' ? 1 : t === 'frig' ? 0.6 : 0; if (w){ r.atk = 100*(1 - Math.pow(1 - 0.12, w*([1, 2, 2.5, 3][lv('msl3')] || 1))); r.unit = '%'; } r.def = def/MSL_VS[U.cls]; }
