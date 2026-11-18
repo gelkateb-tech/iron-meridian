@@ -7058,14 +7058,14 @@ function cityNightBase(g, I, S, X0, Y0, W, H, day, K, glow, ms, part){
 // the core of a lit town, warmed last (after the brightness matching, which can push a dense core to clipped white): a multiply by a soft amber
 // that takes the blue and a little of the green out downtown and fades to nothing at the town's edge, so the core stays brightest but reads as warm
 // lamplight, not a white blob
-// how far a town's lights reach at night (world units): by its population (a big city a little wider than a small town, with a firm cap; a quarter
-// smaller with the town, CITY_SC), and
+// how far a town's lights reach at night (world units): by its population (a big city a little wider than a small town, with a firm cap; kept as
+// it was when the towns were drawn a quarter smaller, CITY_SC: the footprint cuts the lights anyway, and the point glows stay as bright), and
 // never past 0.42 of the way to the nearest other town, so the lights of two towns never meet: each is a small separate glow on its own point,
 // with dark country between (the urban footprint, drawn two to three times its real size, would run the towns of a crowded region together)
 let CNR = {P:null, r:null, d:null};
 function cityNightR(p){ if (CNR.P !== G.P || !CNR.r){ const L = G.P.filter(P => P.city && !P.sea), r = new Float32Array(G.P.length), d = new Float32Array(G.P.length), hw = WORLD_W/2;
     for (const A of L){ let dn = Infinity; for (const B of L){ if (B === A) continue; let dx = Math.abs(B.x - A.x); if (dx > hw) dx = WORLD_W - dx; const dy = Math.abs(B.y - A.y); if (dx < dn && dy < dn) dn = Math.min(dn, Math.hypot(dx, dy)); }
-      d[A.id] = Math.max(KM_W*5, 0.42*dn); r[A.id] = Math.min(d[A.id], CITY_SC*KM_W*Math.min(40, 14 + 4.5*Math.sqrt(Math.max(0.05, A.pop0 || 0.3)))); }
+      d[A.id] = Math.max(KM_W*5, 0.42*dn); r[A.id] = Math.min(d[A.id], KM_W*Math.min(40, 14 + 4.5*Math.sqrt(Math.max(0.05, A.pop0 || 0.3)))); }
     CNR = {P:G.P, r, d}; }
   return CNR.r[p] || KM_W*14; }
 // the glow on a town's point: its reach, but at least a few px on screen (so a town far out still shows as a point of light), never past the reach's cap
