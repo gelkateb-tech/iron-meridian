@@ -6,6 +6,9 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$ROOT/.test"
 { echo '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>'; cat "$ROOT/index.html"; echo '</body></html>'; } > "$ROOT/.test/page.html"
+# the unit look pictures that exist (assets/art/ul-*.webp) go into the page's list (UL_FILES in index.html; tools/build.js does the same for the builds)
+UL=$(cd "$ROOT/assets/art" 2>/dev/null && ls ul-*.webp 2>/dev/null | sed 's/\.webp$//' | tr '\n' ' ' | sed 's/ $//' || true)
+sed -i "s#'/\*ul-files\*/'#'$UL'#" "$ROOT/.test/page.html"
 for f in "$ROOT"/*.js; do [ -e "$f" ] && cp "$f" "$ROOT/.test/"; done
 # the rules files (rules/*.js), at the same relative path the page loads them from
 rm -rf "$ROOT/.test/rules" && cp -r "$ROOT/rules" "$ROOT/.test/rules"
