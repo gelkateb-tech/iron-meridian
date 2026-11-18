@@ -3,7 +3,7 @@
 // main thread's busy time per frame from the CDP sampling profiler, with the cities' own share):
 //   pan70 / pan150   a steady pan at hexPx 70 and 150 (the towns' blocks in view, bakes taken from the cache)
 //   zoom             a pinch-like zoom in and out between hexPx 40 and 160 (a frame a step: new tiers asked for and baked between frames)
-// and the city cache: the time the map takes to settle after the first view (bakes made), the bake time per tier (CBT: count, total, worst ms;
+// and the city cache: the time until Berlin's own tier is made at the first views (settle, ms; the bakes of the towns round it go on after), the bake time per tier (CBT: count, total, worst ms;
 // the longest slice), the memory the city canvases hold (MB), and one town made from nothing at hexPx 150 (cityDbg.time: masks, day, night ms).
 //   node .test/city3d-perf.js [--phone] [--night] [--page page.html] [--json out.json]
 //   (--phone: 390x844, dpr 3, touch, the CPU throttled x4 during the measured windows)
@@ -31,9 +31,9 @@ function aggregate(prof){ const byId = new Map(); prof.nodes.forEach(n => byId.s
     const P = im.G.P.find(q => q.cityName === 'Berlin'), h0 = Math.floor(S.hour/24)*24; let bh = h0, be = night ? 9 : -9;
     for (let h = h0; h < h0 + 24; h++){ S.hour = h; const e = im.sunSinEl(P.id); if (night ? e < be : e > be){ be = e; bh = h; } } S.hour = bh; }, NIGHT);
   const go = hx => p.evaluate(hx => { const im = window.__im, v = im.view, P = im.G.P.find(q => q.cityName === 'Berlin'), s = hx/12, R = document.getElementById('map').getBoundingClientRect(); v.s = s; v.x = R.width/2 - P.x*s; v.y = R.height/2 - P.y*s; im.redraw(); }, hx);
-  async function quiet(max = 120000){ const t0 = Date.now(); let ok = 0; while (Date.now() - t0 < max && ok < 4){ await p.waitForTimeout(250); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; } return Date.now() - t0; }
+  async function quiet(max = 20000){ const t0 = Date.now(); let ok = 0; while (Date.now() - t0 < max && ok < 4){ await p.waitForTimeout(250); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; } return Date.now() - t0; }
   // the city cache: settle at the first views (every tier the windows below use made once), its bake times and memory
-  const settle = {}; for (const hx of [70, 150]){ await go(hx); settle[hx] = await quiet(); }
+  const settle = {}; for (const hx of [70, 150]){ await go(hx); const t0 = Date.now(); while (Date.now() - t0 < 60000 && !(await p.evaluate(() => { const im = window.__im; im.redraw(); return im.cityDbg.has(im.G.P.find(q => q.cityName === 'Berlin').id).exact; }))) await p.waitForTimeout(100); settle[hx] = Date.now() - t0; await quiet(); }
   const cache = await p.evaluate(() => { const im = window.__im, st = im.cityDbg.stats(), T = {}; let n = 0, ms = 0; for (const [k, v] of Object.entries(st)){ if (k === 'slice') continue; T[k] = [v[0], +v[1].toFixed(1), +v[2].toFixed(1)]; n += v[0]; ms += v[1]; }
     return {bakes:n, bakeMs:+ms.toFixed(0), slice:[st.slice[0], +st.slice[1].toFixed(0), +st.slice[2].toFixed(1)], tiers:T, mem:im.cityDbg.mem()}; });
   if (PHONE) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
