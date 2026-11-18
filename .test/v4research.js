@@ -166,7 +166,7 @@ const T0 = Date.now();
   for (const c of ['inf', 'arm', 'sup', 'tac', 'uns', 'nav']){ await r3.evaluate(c => { const x = document.querySelector('[data-act="rback"]'); if (x) x.click(); }, c); await r3.waitForTimeout(120); await r3.click(`[data-act="rbranch"][data-b="${c}"]`); await r3.waitForTimeout(250);
     lab.push(...await r3.evaluate(c => { const d = document.querySelector('.rt-days').getBoundingClientRect(), sc = document.getElementById('rtscroll').getBoundingClientRect(), W = document.documentElement.clientWidth;
       return [...document.querySelectorAll('.rnode')].filter(n => +getComputedStyle(n).getPropertyValue('--c') === 0 || n.classList.contains('eR')).flatMap(n => [...n.querySelectorAll('.rn b')].filter(b => b.offsetWidth).map(b => { const r = b.getBoundingClientRect(); return { c, id: n.dataset.id, l: Math.round(r.left - d.right), rOut: n.classList.contains('eR') && sc.width >= document.getElementById('rtscroll').scrollWidth - 1 ? Math.round(r.right - Math.min(W, sc.right)) : -1 }; })); }, c)); }
-  ck('phone 390: no project name in the first column starts under the day column (Rapid Mobilisation reads in full), none runs off the right edge', lab.length > 10 && lab.every(x => x.l >= 0 && x.rOut <= 0), lab.filter(x => x.l < 0 || x.rOut > 0));
+  ck('phone 390: no project name in the first column starts under the day column (Infantry Kit reads in full), none runs off the right edge', lab.length > 10 && lab.every(x => x.l >= 0 && x.rOut <= 0), lab.filter(x => x.l < 0 || x.rOut > 0));
   await r3.close();
   await q.close();
   const bad = checks.filter(c => !c.ok);

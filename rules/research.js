@@ -42,17 +42,25 @@ function startResearch(n, id){ if (!canResearch(n, id)) return false; const N = 
   const h = rHours(n, nd, lv); N[k] = {id, lv, h, h0:h};
   if (isSeat(n)){ const D = desk(n); (D.tut || (D.tut = {})).research = true; bump(n, 'rareRes', c.rare || 0); } return true; }
 // give a nation a level of a node outright (research finished, a stolen design, an old save converted); never lowers a level
-function rGrant(N, id, lv){ const nd = RN[id]; if (!nd) return; const T = N.tech || (N.tech = {}); T[id] = Math.max(+T[id] || 0, Math.min(nd.lv.length, lv || 1)); N.tv = (N.tv || 0) + 1; }
+// A raised level reaches what is already under way at once (docs/RESEARCH-UPGRADES.md gaps G3, G4): units in training of a type that now trains
+// faster have their remaining hours cut by the ratio (trainResRetime, rules/production.js), and a force walking or sailing inside its province
+// goes on at its new speed (sailRetime, rules/movement.js); legs between provinces, air missions and battles read the stats every hour anyway
+function rGrant(N, id, lv){ const nd = RN[id]; if (!nd) return; const T = N.tech || (N.tech = {}), l0 = +T[id] || 0, l1 = Math.max(l0, Math.min(nd.lv.length, lv || 1));
+  const live = l1 > l0 && S && Array.isArray(S.queue) && Array.isArray(S.armies) && N.id >= 0, q0 = live ? trainResBefore(N.id) : null, w0 = live ? sailBefore(N.id) : null;
+  T[id] = l1; N.tv = (N.tv || 0) + 1;
+  if (live){ trainResRetime(N.id, q0); sailRetime(w0); } }
 // a project of the old tree: its nodes (R_LEGACY: 'node' = level 1, 'node@' = one level more)
 function rGrantLegacy(N, old){ for (const s of R_LEGACY[old] || []){ const add = s.endsWith('@'), id = add ? s.slice(0, -1) : s; rGrant(N, id, add ? (+(N.tech && N.tech[id]) || 0) + 1 : 1); } }
 // what a spy of nation n could steal from nation o: the nodes o holds at a higher level (one level is taken at a time; days do not matter)
 const rStealable = (n, o) => Object.keys(S.nations[o].tech || {}).filter(t => RN[t] && rLevel(o, t) > rLevel(n, t));
 // ---------- upgrades worded rather than a flat stat (docs/RESEARCH.md phase 4): each is one small rule read from the nation's level
 // class multipliers a generation or an upgrade changes: unit -> class -> [node, new value]
-const R_VS = {at:{armored:['at_g2', 4]}, mlrs:{armored:['mlrs_g2', 1.2]}, jet:{armored:['jet_g2', 1.8]}, swarm:{armored:['swarm_g2', 0.6]}, frig:{air:['frig_aa', 2.1]}};
-const multO = (o, t, k) => { const r = R_VS[t] && R_VS[t][k]; return r && o >= 0 && has(o, r[0]) ? r[1] : mult(t, k); };
+// ([node, new value, level of the node it needs (1 when absent)]: Infantry Kit and Close-In Defence change them at their second level)
+const R_VS = {at:{armored:['at_g2', 4]}, mlrs:{armored:['mlrs_g2', 1.2]}, jet:{armored:['jet_g2', 1.8]}, swarm:{armored:['swarm_g2', 0.6]}, frig:{air:['frig_aa', 2.1]},
+  inf:{armored:['inf_kit', 0.7, 2], air:['inf_kit', 0.35, 2]}, carr:{air:['carr_ciws', 1.8, 2]}};
+const multO = (o, t, k) => { const r = R_VS[t] && R_VS[t][k]; return r && o >= 0 && rLevel(o, r[0]) >= (r[2] || 1) ? r[1] : mult(t, k); };
 const multUO = (o, t, u) => (UNITS[t].vsU && UNITS[t].vsU[u] != null) ? UNITS[t].vsU[u] : multO(o, t, UNITS[u].cls);
-const rTrainF = (n, t) => t === 'inf' ? [1, 0.85, 0.7][rLevel(n, 'inf_build')] || 1 : 1;                 // Rapid Mobilisation: Motorized Infantry trains 15% / 30% faster
+const rTrainF = (n, t) => { const f = R_FINAL[t]; return f && n >= 0 && rLevel(n, f.id) >= f.lv ? RN[f.id].lv[f.lv - 1].train : 1; };   // a unit line's final level: that type trains 15% faster (R_FINAL)
 // rough-ground training: a force made up only of trained types loses half the terrain's speed penalty (Rough-Ground Drills: forest and hills, then
 // mountains and jungle too; Wide Tracks: any rough ground). Special Forces already cross rough ground at full speed
 const R_DRILL = [null, {forest:1, hills:1}, {forest:1, hills:1, mountain:1, jungle:1}];
@@ -64,13 +72,18 @@ const rSightF = (n, t) => n >= 0 && ((t === 'at' && has(n, 'at_eye')) || (t === 
 const rRangeKm = (n, t) => (RANGE_KM[t] || 0) + (t === 'mlrs' && n >= 0 && has(n, 'mlrs_rng') ? RANGE_ER : 0);   // attack range in km (RANGE_KM); Extended-Range Rockets: Rocket Artillery +50 km
 const rSamNear = n => has(n, 'sam_g2') ? 1 : 0.35;                                                    // Long-Range SAM: neighbouring provinces at full strength
 const rJamF = n => [1, 1.2, 1.4][rLevel(n, 'jam_band')] || 1;                                         // Wideband Jamming
-const rPack = (n, t) => (UNITS[t].pack || 1) + (t === 'swarm' && has(n, 'swarm_pack') ? 2 : 0);       // Bigger Salvo: eight swarm drones per card
+const rPack = (n, t) => UNITS[t].pack || 1;                                                          // units per card: six swarm drones, the same for every card, new or fielded (Bigger Salvo is gone)
 const rKoHours = n => has(n, 'sdrone_hit') ? 36 : 24;                                                 // Bunker-Buster Warhead
 const rAdF = (n, t) => t === 'sdrone' && has(n, 'sdrone_g2') ? 0.7 : 1;                               // Low-Observable Strike Drone: air defences hit 30% less
 const rBombF = (n, t) => t === 'stealth' && has(n, 'stealth_bay') ? 0.75 : UNITS[t].bmb || 0;         // Enlarged Bomb Bay
 const rMpaK = n => [1, 1.2, 1.4][rLevel(n, 'mpa_sonar')] || 1, rMpaR = n => MPA_R*rMpaK(n), rMpaH = n => has(n, 'mpa_g2') ? 18 : 12;   // Sonobuoy Field; Long-Endurance Patrol Aircraft
 const rAewK = n => [1, 1.15, 1.3][rLevel(n, 'awacs_radar')] || 1, rAewR = n => AEW_R*rAewK(n), rAewF = n => has(n, 'awacs_link') ? 1.35 : 1.25;   // High-Power Radar; Fighter Data Link
-const rDeckRate = n => [0.2, 0.25, 0.3][rLevel(n, 'carr_deck')] || 0.2;                               // Flight-Deck Crews: repairs aboard a carrier, per day
+const rDeckRate = n => 0.2;                                                                           // repairs aboard a carrier, per day (Flight-Deck Crews is gone: the base rate)
+// flight speed: an aircraft type's research speed bonus (the fx spd of its line: Fourth-Generation Interceptor +2 of 20, Supersonic Bomber +3 of 9) as
+// a factor on its flight speed (wingSpd, rules/air.js): +10% and +33%. Shortages do not slow aircraft (st() would: a ground rule)
+function rAirSpdF(n, t){ const b = UNITS[t].spd; if (n < 0 || !b || !S || !S.nations[n]) return 1; const T = S.nations[n].tech || {}; let v = 0;
+  for (const nd of RNODES_U[t] || []){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++) v += nd.lv[i].fx.spd || 0; }
+  return 1 + v/b; }
 // Command & Logistics, by level: Motorized Supply (speed), Combat Engineers (embarking time, road and rail price), Amphibious Doctrine (first day ashore; landings
 // take half the time from level I: rules/movement.js landH), Field Hospitals (damage taken)
 const rMoveF = n => [1, 1.2, 1.3][rLevel(n, 'log1')] || 1, rCapF = n => [1, 0.7, 0.6][rLevel(n, 'log2')] || 1, rRoadF = n => [1, 0.75, 0.65][rLevel(n, 'log2')] || 1;
@@ -101,6 +114,15 @@ function rqueueMigrate(){ for (const N of S.nations){ const q = N.rqueue; delete
     const go = ids.find(id => canResearch(N.id, id)); if (go){ startResearch(N.id, go); continue; }
     if (isSeat(N.id) && ids.length){ const D = desk(N.id), nm = R_LEGACY_NAME[q] || (RN[q] ? RN[q].name : q);
       if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:`Your queued research ${nm} did not start: in the new tree it is ${ids.map(id => RN[id].name).join(' and ')} (${researchWhy(N.id, ids[0]).replace(/^./, c => c.toLowerCase())}). Choose it again in Research when it opens.`}); } } }
+// saves from before the upgrades review (owner 2026-11-18): Rapid Mobilisation, Bigger Salvo and Flight-Deck Crews became Infantry Kit, Thermobaric
+// Warheads and Close-In Defence (R_RENAMED). A level held becomes the same level of the replacement (nobody loses a step), a project of the old
+// node still running carries on as the replacement with the hours it has left, and a person's nation is told once. Safe to run on any save
+function rRenameMigrate(){ for (const N of S.nations){ const T = N.tech || (N.tech = {}), got = [];
+    for (const old in R_RENAMED){ const nw = R_RENAMED[old];
+      if (T[old] != null){ const l = Math.max(1, Math.min(RN[nw].lv.length, +T[old] || 1)); delete T[old]; T[nw] = Math.max(+T[nw] || 0, l); N.tv = (N.tv || 0) + 1; got.push(`${R_RENAMED_NAME[old]} is now ${rName(RN[nw], l)}`); }
+      for (const k of R_SLOTS){ const R = N[k]; if (R && R.id === old){ R.id = nw; got.push(`your ${R_RENAMED_NAME[old]} research carries on as ${RN[nw].name}`); } }
+      if (N.rPick && N.rPick.id === old) N.rPick.id = nw; if (N.rqueue === old) N.rqueue = nw; }
+    if (got.length && isSeat(N.id)){ const D = desk(N.id); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:`Research update: ${got.join('; ')}. Every unit line's final level now also trains that unit 15% faster.`}); } } }
 // saves from before the research redesign (S.rsv unset): every researched project becomes the nodes that give the same bonus or more (R_LEGACY),
 // every unit Mark II to IV becomes levels 1 to 3 of that unit's Firepower and Protection. Nothing is lost: converted levels stay whatever the
 // new days and prerequisites say. A project still running keeps running under its old id and converts when it finishes (researchSlotHour);

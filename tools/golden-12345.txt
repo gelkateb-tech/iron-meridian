@@ -2,9 +2,9 @@ day  1  39b89be1d707bd5c  rs 252219020  forces 864  log 1
 day  2  4a4a77ff89344a53  rs 822529584  forces 868  log 1
 day  3  e68bbb7f342dedd9  rs 745851878  forces 877  log 1
 day  4  35805f54ac0f9a0f  rs -1618471026  forces 900  log 1
-day  5  183b36fa440da72c  rs 1699481597  forces 914  log 1
-day  6  61526f7304cfa702  rs 2082800752  forces 930  log 1
-day  7  9c82249f8bdb0495  rs -666998746  forces 946  log 1
-day  8  5a4f4135eefe0734  rs 1672437819  forces 962  log 1
-day  9  d042f2b648476dde  rs 1017545222  forces 974  log 1
-day 10  9c12e0489eccbee6  rs 1566628271  forces 985  log 1
+day  5  4b04f2a2d07773d2  rs 1699481597  forces 914  log 1
+day  6  3510086bdf25f1d0  rs 2082800752  forces 930  log 1
+day  7  e2813ef7aa1b9b4f  rs -666998746  forces 946  log 1
+day  8  566bec8398c6482a  rs -1246128343  forces 962  log 1
+day  9  badd3c0e63e00446  rs -1540102658  forces 970  log 1
+day 10  14e06984c7558032  rs 201134234  forces 974  log 1

@@ -45,8 +45,12 @@ const trainEff = (p, t, n) => Math.max(TRAIN_MIN, trainF(p, t)*(docOf(n) ? docOf
 // a Recruiting Office level is finished in p: every unit queued or in training there has its REMAINING time cut by the new ratio at once
 // (f0: each queued item's training factor before the level, from recBefore)
 const recBefore = p => S.queue[p].map(it => it.msl ? 1 : trainEff(p, it.t, S.owner[p]));
-function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i] > 0)) return; const r = trainEff(p, it.t, S.owner[p])/f0[i]; if (!(r < 1)) return;
-  it.h = Math.max(1, Math.round(it.h*r)); it.h0 = Math.max(it.h, Math.round((it.h0 || it.h)*r)); }); }
+const retimeIt = (it, r) => { it.h = Math.max(1, Math.round(it.h*r)); it.h0 = Math.max(it.h, Math.round((it.h0 || it.h)*r)); };   // (the share already trained is kept)
+function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i] > 0)) return; const r = trainEff(p, it.t, S.owner[p])/f0[i]; if (!(r < 1)) return; retimeIt(it, r); }); }
+// the same for research (rGrant, rules/research.js): a step that makes a unit type train faster (a line's final level, rTrainF) cuts the REMAINING
+// time of that type in every queue of the nation at once (gap G3, owner 2026-11-18). trainResBefore: each queued item's research factor before the step
+const trainResBefore = n => ownedBy(n).filter(p => S.queue[p] && S.queue[p].length).map(p => [p, S.queue[p].map(it => it.msl || !UNITS[it.t] ? 1 : rTrainF(n, it.t))]);
+function trainResRetime(n, f0){ for (const [p, f] of f0) S.queue[p].forEach((it, i) => { if (it.msl || !UNITS[it.t] || !(f[i] > 0)) return; const r = rTrainF(n, it.t)/f[i]; if (r < 1) retimeIt(it, r); }); }
 // Army Base and Arms Industry prices rise 40% for every OTHER province of the nation that already has one of the same kind (built, or under construction),
 // cash, materials and iron alike; the two do not raise each other's price. RISE_FREE: that many other provinces raise nothing (the Army Base: the first
 // two cost the base price, the third 40% more, the fourth 96% more...), so every nation opens its first bases cheaply (owner, START-RULES 2026-11-15)
@@ -84,7 +88,7 @@ function spawn(n, p, t){
   const air = UNITS[t].cls === 'air';
   const RL = isSeat(n) ? desk(n).rally : null;   // a seat's rally points: new ground units march there on their own
   if (!air && RL && RL[p] != null && RL[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, RL[p]); if (!na.path.length) delete RL[p]; return; }
-  const k = rPack(n, t);   // (a card of swarm drones holds six, eight with the Bigger Salvo upgrade)
+  const k = rPack(n, t);   // (a card of swarm drones holds six)
   // new units join an idle force of the same kind here that has room under its stack limit (STACK_LIM), otherwise they form a new force
   const dm = DOM_T[t], room = x => stackSizes(x)[dm] + (dm === 'air' ? 1 + Object.values((x.air && x.air.pend) || {}).reduce((s0, v) => s0 + Math.ceil(v/k), 0) : k) <= STACK_LIM[dm];
   if (air){ const w = armiesOf(n).find(x => x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u]) && room(x)); if (w && !armiesOf(n).some(x => x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }

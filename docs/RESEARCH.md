@@ -103,7 +103,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 1 | (standard); Ceramic Body Armour | (standard); Ceramic Body Armour |  |
 | 3 | Firepower 1 | Firepower 1 |  |
 | 4 | Protection 1 | Protection 1 | UNLOCK |
-| 5 | Rapid Mobilisation 1 | Tandem Warheads 1 |  |
+| 5 | Infantry Kit 1 | Tandem Warheads 1 |  |
 | 6 | Rough-Ground Drills 1 |  | Firepower 1 |
 | 7 |  |  | Protection 1; Mountain & Arctic Training 1 |
 | 8 |  | Thermal Sights | Night Optics |
@@ -112,7 +112,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 11 | Protection 2 | Protection 2; Tandem Warheads 2 |  |
 | 12 | Rough-Ground Drills 2 | GEN 2 |  |
 | 13 |  |  | Firepower 2; Mountain & Arctic Training 2 |
-| 14 | Rapid Mobilisation 2 |  | Protection 2 |
+| 14 | Infantry Kit 2 |  | Protection 2 |
 | 16 | Firepower 3 | Firepower 3 | GEN 2 |
 | 17 | Protection 3; GEN 3 | Protection 3 |  |
 | 19 |  |  | Firepower 3 |
@@ -126,13 +126,13 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 1 | Ceramic Body Armour (`inf_armor`) | Upgrade | defense +1 | $40M, 20 mat, 13 rare | 3 |
 | 3 | Firepower 1/3 (`inf_fp`) | Levels | attack +12% in all | $40M, 12 mat, 3 rare | 2 |
 | 4 | Protection 1/3 (`inf_pr`) | Levels | defense +12% in all | $40M, 12 mat, 3 rare | 2 |
-| 5 | Rapid Mobilisation 1/2 (`inf_build`) | Upgrade | trains 15% faster | $40M, 20 mat, 13 rare | 3 |
+| 5 | Infantry Kit 1/2 (`inf_kit`) | Upgrade | health +2 | $40M, 20 mat, 13 rare | 3 |
 | 6 | Rough-Ground Drills 1/2 (`inf_terr`) | Upgrade | half the speed penalty in forest and hills | $40M, 20 mat, 13 rare | 3 |
 | 9 | Mechanized Infantry (`inf_g2`), picture `u-inf-2` | Generation | attack +2, speed +1, health +2 | $115M, 50 mat, 36 rare | 6 |
 | 10 | Firepower 2/3 (`inf_fp`) | Levels | attack +25% in all | $60M, 18 mat, 5 rare | 2 |
 | 11 | Protection 2/3 (`inf_pr`) | Levels | defense +25% in all | $60M, 18 mat, 5 rare | 2 |
 | 12 | Rough-Ground Drills 2/2 (`inf_terr`) | Upgrade | and in mountains and jungle. Needs generation 2 | $55M, 30 mat, 19 rare | 4 |
-| 14 | Rapid Mobilisation 2/2 (`inf_build`) | Upgrade | trains 30% faster. Needs generation 2 | $55M, 30 mat, 19 rare | 4 |
+| 14 | Infantry Kit 2/2 (`inf_kit`) | Upgrade | light anti-tank and anti-air missiles: damage to armor 0.5x to 0.7x, to aircraft 0.2x to 0.35x. Needs generation 2 | $55M, 30 mat, 19 rare | 4 |
 | 16 | Firepower 3/3 (`inf_fp`) | Levels | attack +40% in all. Needs generation 2 | $80M, 24 mat, 8 rare | 3 |
 | 17 | Protection 3/3 (`inf_pr`) | Levels | defense +40% in all. Needs generation 2 | $80M, 24 mat, 8 rare | 3 |
 | 17 | Assault Infantry (`inf_g3`), picture `u-inf-3` | Generation | attack +1, defense +1, health +2. Needs Mechanized Infantry | $173M, 80 mat, 62 rare | 8 |
@@ -456,7 +456,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 6 |  | Firepower 1 | UNLOCK |
 | 7 |  | Protection 1 |  |
 | 8 |  | Booster Rockets 1 | Firepower 1 |
-| 9 | GEN 3 | Bigger Salvo | Protection 1 |
+| 9 | GEN 3 | Thermobaric Warheads | Protection 1 |
 | 10 | Firepower 2 |  | Satellite Link 1 |
 | 11 | Protection 2 |  |  |
 | 12 |  |  | Bunker-Buster Warhead |
@@ -495,7 +495,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 6 | Firepower 1/3 (`swarm_fp`) | Levels | attack +12% in all. Needs Swarm Drones | $64M, 16 mat, 4 elec, 3 rare | 2 |
 | 7 | Protection 1/3 (`swarm_pr`) | Levels | defense +12% in all. Needs Swarm Drones | $64M, 16 mat, 4 elec, 3 rare | 2 |
 | 8 | Booster Rockets 1/2 (`swarm_rng`) | Upgrade | range +1 hex. Needs Swarm Drones | $49M, 20 mat, 14 rare | 3 |
-| 9 | Bigger Salvo (`swarm_pack`) | Upgrade | eight drones per card (was six), same price. Needs Swarm Drones | $49M, 20 mat, 14 rare | 3 |
+| 9 | Thermobaric Warheads (`swarm_tb`) | Upgrade | attack +0.2, health +0.4. Needs Swarm Drones | $49M, 20 mat, 14 rare | 3 |
 | 13 | Firepower 2/3 (`swarm_fp`) | Levels | attack +25% in all | $96M, 24 mat, 6 elec, 5 rare | 2 |
 | 14 | Protection 2/3 (`swarm_pr`) | Levels | defense +25% in all | $96M, 24 mat, 6 elec, 5 rare | 2 |
 | 14 | Booster Rockets 2/2 (`swarm_rng`) | Upgrade | range +1 more | $73M, 30 mat, 20 rare | 4 |
@@ -619,11 +619,11 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 7 |  |  | UNLOCK | Quiet Drive 1 |
 | 9 | Area Air Defence |  | Firepower 1 |  |
 | 10 | Firepower 2 | Firepower 2 | Protection 1 | Firepower 2; Heavy Torpedoes 2 |
-| 11 | Protection 2 | Protection 2; Long-Range Bombardment | Flight-Deck Crews 1 | Protection 2 |
+| 11 | Protection 2 | Protection 2; Long-Range Bombardment | Close-In Defence 1 | Protection 2 |
 | 13 |  |  | Nuclear Propulsion | Quiet Drive 2 |
 | 14 | GEN 2 |  |  | GEN 2 |
 | 15 |  | GEN 2 |  |  |
-| 16 |  |  | Firepower 2; Flight-Deck Crews 2 |  |
+| 16 |  |  | Firepower 2; Close-In Defence 2 |  |
 | 17 | Firepower 3 |  | Protection 2 | Firepower 3 |
 | 18 | Protection 3 | Firepower 3 | GEN 2 | Protection 3 |
 | 19 |  | Protection 3 |  |  |
@@ -668,10 +668,10 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 7 | Aircraft Carrier (`u_carr`) | Unlock | unlocks the Aircraft Carrier | $142M, 20 mat, 43 rare | 6 |
 | 9 | Firepower 1/3 (`carr_fp`) | Levels | attack +12% in all. Needs Aircraft Carrier | $198M, 27 mat, 32 iron, 8 elec, 3 rare | 2 |
 | 10 | Protection 1/3 (`carr_pr`) | Levels | defense +12% in all. Needs Aircraft Carrier | $198M, 27 mat, 32 iron, 8 elec, 3 rare | 2 |
-| 11 | Flight-Deck Crews 1/2 (`carr_deck`) | Upgrade | wings aboard repair 25% a day (was 20%). Needs Aircraft Carrier | $99M, 20 mat, 18 rare | 3 |
+| 11 | Close-In Defence 1/2 (`carr_ciws`) | Upgrade | defense +1. Needs Aircraft Carrier | $99M, 20 mat, 18 rare | 3 |
 | 13 | Nuclear Propulsion (`carr_spd`) | Upgrade | speed +0.8. Needs Aircraft Carrier | $99M, 20 mat, 18 rare | 3 |
 | 16 | Firepower 2/3 (`carr_fp`) | Levels | attack +25% in all | $298M, 41 mat, 48 iron, 12 elec, 5 rare | 2 |
-| 16 | Flight-Deck Crews 2/2 (`carr_deck`) | Upgrade | 30% a day | $174M, 30 mat, 24 rare | 4 |
+| 16 | Close-In Defence 2/2 (`carr_ciws`) | Upgrade | damage to aircraft 1.4x to 1.8x | $174M, 30 mat, 24 rare | 4 |
 | 17 | Protection 2/3 (`carr_pr`) | Levels | defense +25% in all | $298M, 41 mat, 48 iron, 12 elec, 5 rare | 2 |
 | 18 | Supercarrier (`carr_g2`), picture `u-carr-2` | Generation | defense +2, health +6. Needs Aircraft Carrier | $333M, 50 mat, 64 iron, 20 elec, 61 rare | 6 |
 | 22 | Firepower 3/3 (`carr_fp`) | Levels | attack +40% in all. Needs generation 2 | $397M, 54 mat, 64 iron, 16 elec, 8 rare | 3 |
@@ -1053,7 +1053,7 @@ Save format: `N.tech` values become levels; `N.mk` and `N.eng` go; the save vers
 - **Seasons** (seasonal special units): no system to hang it on. Not planned.
 - **Loadout** (temporary boosts, ammunition types with levels): no system today. It would be a new mechanic (a force carries one ammunition type, bought per battle or per day). Not planned.
 - **Chemical and nuclear protection** upgrades: the icon is reserved; the upgrade only makes sense once those warheads exist (section 12).
-- **Carrier-capable** as an upgrade: today every air wing may land on a carrier. Making it something to research would take away what players can do now, so the tree has "Flight-Deck Crews" on the carrier's own line instead. If the owner wants carriers limited to naval aircraft, that is a rule change to approve first.
+- **Carrier-capable** as an upgrade: today every air wing may land on a carrier. Making it something to research would take away what players can do now, so the tree had "Flight-Deck Crews" on the carrier's own line instead (replaced by Close-In Defence after the upgrades review, docs/RESEARCH-UPGRADES.md). If the owner wants carriers limited to naval aircraft, that is a rule change to approve first.
 
 ## 12. NEEDS OWNER APPROVAL
 
