@@ -22,6 +22,7 @@ function* tickHourG(){
   airTick();
   missileTick();
   spyHour();
+  bunkerHour();   // (damaged bunkers mend)
   rebelHour();
   yield;
   // movement
@@ -162,7 +163,7 @@ function battleStep(hourly){
     }
     for (const o of owners){
       let f = 1;
-      if (o === S.owner[p]){ f /= 1.25; f *= Math.pow(0.8, S.bld[p].fort); const dd = docOf(o); if (dd && dd.home && S.home[p] === o) f *= dd.home; }
+      if (o === S.owner[p]){ f /= 1.25; f *= 1 - bunkerRed(bunkerLv(p)); const dd = docOf(o); if (dd && dd.home && S.home[p] === o) f *= dd.home; }
       if (!G.P[p].sea && (o === S.owner[p] || (S.owner[p] < 0 && o < 0))) f /= terr(p).def;
       f *= rHospF(o);
       const d = dmg.get(o), tot = hp.get(o);

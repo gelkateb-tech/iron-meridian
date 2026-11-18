@@ -60,7 +60,8 @@ const RISE_FREE = {fac:1};
 function facOthers(n, p, k = 'fac'){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
 const riseOf = (n, k, p) => RISE_K[k] ? Math.pow(FAC_RISE, Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0))) : 1;
 const riseCnt = (n, k, p) => Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0));   // how many of the others raise the price (the page's words)
-function buildCost(n, k, lvl, p){ if (BUILD[k].lv) return lvCost(k, lvl); const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
+function buildCost(n, k, lvl, p){ if (BUILD[k].lv){ const c = lvCost(k, lvl); if (k === 'fort' && has(n, 'log2')){ c.cash = Math.round(c.cash/2); c.metal = kRound(c.metal/2); c.iron = kRound(c.iron/2); c.elec = kRound(c.elec/2); } return c; }   // (a table's price; Combat Engineers: a Bunker at half price)
+  const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
 // training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
 // (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
@@ -114,7 +115,7 @@ function prodHour(p){ const q = S.queue[p];
         if (RP && RP[p] && !q.length && !recruit(o, p, RP[p])){ const why = canMobilize(o, p, RP[p]); tell(o, `Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[RP[p]].name}.`, 'info', p); } } } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
-    if (--c.h <= 0){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0);
+    if (--c.h <= 0){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);
       if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.${f0 && f0.length ? ' Units in training there will be ready sooner.' : ''}`, 'good', p); } }
 /*@DEV*/
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
