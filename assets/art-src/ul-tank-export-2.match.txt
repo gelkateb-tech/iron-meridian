@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 in top: Machine gun and commander cupola with searchlight are swapped between the left and right turret hatches compared to the side view.

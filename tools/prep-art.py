@@ -628,15 +628,15 @@ if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_S
 # -side: the three-quarter side view cut out (transparent), trimmed, 512 px long side, for the research tree diamond
 # -top : the straight-down view cut out, kept in its square frame (512 px; nose up) for the map and army bar, its opaque box printed for PICBOX
 # -scene: the card scene resized to 768x512 (3:2), NOT cut out (the blue monitor tint and scanlines are drawn in code)
-# The cut-out: the plain grey floor (a quadratic surface fitted to the border) and the smooth neutral soft shadow touching it are flooded from
+# The cut-out: the plain grey floor (a quadratic surface fitted to the border), its lighting gradient and the smooth neutral soft shadow touching it are flooded from
 # the border; whatever is left (the largest parts, holes filled) is the unit; edges feathered a little.
-def ul_cut(im, sd=48, sch=16, grad=3.5):
+def ul_cut(im, sd=70, sch=12, grad=9):
     from scipy import ndimage as ndi
     a = np.asarray(im.convert('RGB')).astype(np.float32); h, w, _ = a.shape
     m = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); m[:b] = m[-b:] = True; m[:, :b] = m[:, -b:] = True
     bg = fit_bg(a, m); d = np.abs(a - bg).max(-1); ch = a.max(-1) - a.min(-1); bch = bg.max(-1) - bg.min(-1)
     g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
-    cand = (d <= 16) | ((d < sd) & (np.abs(ch - bch) < sch) & (a.mean(-1) < bg.mean(-1) + 3) & (g < grad))
+    cand = (d <= 16) | ((d < sd) & (np.abs(ch - bch) < sch) & (g < grad))
     lab, n = ndi.label(cand); border = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
     solid = ndi.binary_opening(~np.isin(lab, border[border > 0]), iterations=1)
     lab, n = ndi.label(solid); sizes = ndi.sum(solid, lab, range(1, n + 1))
@@ -657,7 +657,7 @@ def ul_prep():
             if kind == 'side': c = c.crop(c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()); c.thumbnail((512, 512), Image.LANCZOS)
             else:
                 c = c.resize((512, 512), Image.LANCZOS); bb = c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()
-                boxes['u-' + stem + '-top'] = [round((bb[2] - bb[0])/512, 2), round((bb[3] - bb[1])/512, 2)]
+                boxes[stem + '-top'] = [round((bb[2] - bb[0])/512, 2), round((bb[3] - bb[1])/512, 2)]
             c.save(os.path.join(OUT, stem + '-' + kind + '.webp'), 'WEBP', quality=90, method=6)
         print('unit look', stem, kind)
     if boxes: print('PICBOX:', boxes)
