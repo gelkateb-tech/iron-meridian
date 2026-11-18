@@ -699,6 +699,20 @@ BUNKER_EDITS = {
         "patch beyond it, only a soft shadow."),
 }
 
+# ---- BUNKER C WITHOUT THE BOX (owner 2026-11-18: "bunker c is the best but i dont like how its on a box ... take that box out").
+# OPTIONS ONLY. Edits of option C's pictures (EDIT_V2): the raised square earth block goes, the trench and sandbags become low
+# earthworks of the object itself. Names v2-bunker-cn-<1|5> -> assets/art-src/ba-v2-bunker-cn-<1|5>.png
+_CN_COMMON = ("nothing new, and the picture is not grown or enlarged; the only change is a removal. Keep the same pillbox(es), "
+    "sandbags, zig-zag trench and all other details, the same camera angle, light and scale. Remove the raised square block of "
+    "earth completely, with no brown earth sides and no square or diamond-shaped earth top left under it. The trench and the "
+    "sandbags now belong to the object itself: low, irregular earthworks hugging {what}, with a natural, uneven, organic outline "
+    "(no straight edges, no square corners) that ends in its own clean silhouette, a little grass and bare earth only on those "
+    "earthworks, and the trench still cut into them.{extra} The object stands alone on the plain flat light grey background with "
+    "only a soft contact shadow: no ground patch, no slab, no tile, no earth pad, no base of any kind")
+BUNKER_EDITS['v2-bunker-cn-1'] = ('v2-bunker-c-1', _CN_COMMON.format(what="the round concrete pillbox", extra=""))
+BUNKER_EDITS['v2-bunker-cn-5'] = ('v2-bunker-c-5', _CN_COMMON.format(what="the four pillboxes and the central blockhouse, joining "
+    "them into one irregular cluster", extra=" Keep the central blockhouse, the antenna and the steel hedgehogs."))
+
 # ---- UNIT LOOKS (owner's decisions 2026-11-18, docs/UNIT-LOOKS-PROMPTS.md): every unit has its own pictures for each of the 5
 # doctrine groups (nato, east, china, europe, export), 3 looks each; every look is a NEW generation, not an edit of the one before.
 # Names: ul-<unit>-<group>-<look>, saved as assets/art-src/ul-<unit>-<group>-<look>.png. These pictures are for every place that
