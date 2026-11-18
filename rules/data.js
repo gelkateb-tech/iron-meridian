@@ -406,6 +406,62 @@ const docOf = n => n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] || null 
 const MARK_F = [1, 1, 1.12, 1.25, 1.4];
 // the Firepower or Protection level (0 to 3) in a tech table T: the Recon UAV's only Firepower step is its day-16 one, worth level 3 (+40%)
 const rMarkT = (T, t, e) => e === 'fp' && t === 'drone' ? (+T.drone_fp3 ? 3 : 0) : Math.min(3, +T[t + '_' + e] || 0);
+// ---------- nation groups (docs/DOCTRINES.md, plan approved 18 November 2026): who is in which group, its colour and emblem, and every unit's
+// model name per group and look. Data only: the doctrine rules (strengths, weaknesses, version trades, unique units) are NOT built, so nothing here
+// changes a number. The research screen reads it (banner colour, emblem stripe, model names); the doctrine build reuses it (N.doc from ngroupOf).
+// NGROUPS: key, name, identity, colour (section 1), emblem (section 5: drawn in code by the page). Every nation of nations.js and of the classic
+// worlds is listed once (section 2); a name not listed is Export.
+const NGROUPS = [
+  {k:'nato',   name:'US/NATO', idn:'Quality',    col:'#3f7fe0', emb:'chevron'},
+  {k:'east',   name:'Eastern', idn:'Mass',       col:'#a3283f', emb:'shield'},
+  {k:'china',  name:'China',   idn:'Production', col:'#e8b23a', emb:'triangle'},
+  {k:'europe', name:'Europe',  idn:'Technology', col:'#36a8b4', emb:'ring'},
+  {k:'export', name:'Export',  idn:'Home Guard', col:'#b89a62', emb:'globe'},
+];
+const NGROUP_BY = Object.fromEntries(NGROUPS.map(g => [g.k, g]));
+const NGROUP_OF = {};
+for (const [g, s] of Object.entries({
+  nato:'United States|Canada|Turkey|Japan|Australia|Poland|Egypt|Saudi Arabia|South Korea|Philippines|Romania|Israel|Morocco|New Zealand',
+  europe:'United Kingdom|France|Germany|Brazil|Italy|Spain|Ukraine|Sweden|Norway|Finland|Greece|Chile',
+  east:'Russia|India|Iran|Kazakhstan|Algeria|Vietnam|Ethiopia|Belarus|Uzbekistan|Mongolia|Syria|North Korea|Angola|Venezuela|Cuba',
+  china:'China|Pakistan|Myanmar|Tanzania|Sudan|Bangladesh',
+  export:'Nigeria|Indonesia|Mexico|Iraq|DR Congo|South Africa|Thailand|Afghanistan|Argentina|Colombia|Peru|Yemen|Libya|Kenya|Mali|Chad|Mozambique|Cameroon|Malaysia|Ecuador|Bolivia'})) for (const nm of s.split('|')) NGROUP_OF[nm] = g;
+const ngroupOf = name => NGROUP_OF[name] || 'export';
+// model names (section 3, the build's checks done: the dagger and double-dagger marks dropped): unit -> group -> [look 1, look 2, look 3].
+// Paratroopers share the Motorized Infantry names (UNIT_NAME_OF); cm and bm are the Cruise and Ballistic Missile lines of Strategic Weapons (names
+// only). null: no name found yet (Europe's newest jammer); the screen shows the unit type instead
+const UNIT_NAMES = {
+  inf:{nato:['M16A1', 'M4A1', 'M7'], east:['AKM', 'AK-74M', 'AK-12'], china:['Type 56', 'QBZ-95', 'QBZ-191'], europe:['G3A3', 'G36A2', 'G95A1'], export:['AKM', 'AK-103', 'M4']},
+  at:{nato:['M47', 'FGM-148', 'FGM-148F'], east:['9K111', '9K115-2', '9K135'], china:['HJ-73', 'HJ-9', 'HJ-12'], europe:['LRAC F1', 'NLAW', 'MMP'], export:['9M14', 'HJ-8E', '9K135']},
+  spec:{nato:['XM177E2', 'Mk 18 Mod 1', 'M7'], east:['AKMS', 'AK-105', 'AK-12K'], china:['Type 56-1', 'QBZ-95-1', 'QBZ-192'], europe:['MP5', 'G36KA4', 'G95K'], export:['AKMS', 'M4', 'AK-104']},
+  ifv:{nato:['M2A1', 'M2A3', 'XM30'], east:['BMP-1', 'BMP-3', 'T-15'], china:['Type 86', 'ZBL-08', 'ZBD-04A'], europe:['AMX-10P', 'Strf 9040C', 'VBCI-2'], export:['BMP-1', 'M2A2', 'BMP-3M']},
+  tank:{nato:['M60A3', 'M1', 'M1A2 SEPv3'], east:['T-72', 'T-90', 'T-14'], china:['Type 79', 'Type 96A', 'Type 99A'], europe:['AMX-30B2', 'AMX-56', 'KF51'], export:['T-55', 'T-72M1', 'VT-4']},
+  art:{nato:['M109A2', 'M109A6', 'M109A7'], east:['2S1', '2S19', '2S35'], china:['Type 83', 'PLZ-05', 'PCL-181'], europe:['AuF1', 'PzH 2000', 'RCH 155'], export:['2S1', '2S19', 'SH-15']},
+  mlrs:{nato:['M270', 'M142', 'M270A2'], east:['BM-21', 'BM-30', '9K515'], china:['Type 81', 'PHL-03', 'PHL-16'], europe:['LARS 2', 'MARS II', 'M270A2'], export:['Type 63', 'BM-27', 'SR5']},
+  sam:{nato:['MIM-23B', 'MIM-104F', 'MIM-104F MSE'], east:['9K37', 'S-400', 'S-500'], china:['HQ-7', 'HQ-9', 'HQ-9B'], europe:['Roland 2', 'SAMP/T', 'SAMP/T NG'], export:['S-125', '9K37M1', 'FD-2000']},
+  jam:{nato:['AN/MLQ-34', 'AN/VLQ-12', 'TLS-BCT'], east:['SPN-2', '1L269', 'RB-109A'], china:['Type 95', 'PGL-625', 'LW-30'], europe:['Hummel', 'Fuchs EloKa', null], export:['SPN-2', 'Type 95', '1L269']},
+  heli:{nato:['AH-1F', 'AH-64D', 'AH-64E'], east:['Mi-24V', 'Ka-52', 'Mi-28NM'], china:['Z-9W', 'Z-10', 'Z-10ME'], europe:['PAH-1', 'EC665', 'AW249'], export:['Mi-24D', 'Mi-35M', 'Z-10ME']},
+  int:{nato:['F-4E', 'F-14D', 'F-15EX'], east:['MiG-23', 'MiG-31', 'MiG-31BM'], china:['J-7', 'J-10A', 'J-10C'], europe:['F-104G', 'JAS 39C', 'JAS 39E'], export:['MiG-21bis', 'MiG-29', 'JF-17 Block III']},
+  jet:{nato:['F-16A', 'F/A-18E', 'F-35A'], east:['MiG-27', 'Su-34', 'Su-34M'], china:['Q-5', 'J-16', 'J-35A'], europe:['PA-200', 'EF-2000 T3', 'F-35A'], export:['Su-22M4', 'Su-30MK2', 'J-10CE']},
+  asf:{nato:['F-15A', 'F-22A', 'F-47'], east:['Su-27', 'Su-35S', 'Su-57'], china:['J-11', 'J-20', 'J-36'], europe:['F-4F', 'EF-2000 T1', 'EF-2000 T4'], export:['MiG-23MF', 'Su-27SK', 'Su-35SE']},
+  drone:{nato:['RQ-2A', 'MQ-9A', 'RQ-170'], east:['Pchela-1T', 'Forpost-R', 'S-70'], china:['ASN-206', 'GJ-2', 'WZ-7'], europe:['CL-289', 'MQ-9A', 'nEUROn'], export:['Searcher II', 'TB2', 'CH-7']},
+  swarm:{nato:['Perdix', 'LASSO-300', 'LASSO-600'], east:['KUB-BLA', 'Lancet-3', 'Izdeliye 53'], china:['ASN-301', 'FH-901', 'FH-97A'], europe:['DAR', 'Warmate', 'HX-2'], export:['Harpy', 'KUB-BLA', 'Lancet-3']},
+  sdrone:{nato:['MQ-1C', 'XQ-58A', 'YFQ-42A'], east:['Geran-2', 'Grom', 'S-70B'], china:['CH-4B', 'CH-7', 'GJ-11'], europe:['MQ-9A', 'nEUROn', 'Taranis'], export:['Shahed-136', 'GJ-2', 'TB3']},
+  mpa:{nato:['P-3A', 'P-8A', 'MQ-4C'], east:['Be-12', 'Tu-142M3', 'Il-38N'], china:['SH-5', 'KQ-200', 'Y-9Q'], europe:['Br 1150', 'ATL2', 'P-8A'], export:['Be-12', 'Il-38', 'C-295MPA']},
+  awacs:{nato:['E-2C', 'E-3G', 'E-7A'], east:['Tu-126', 'A-50U', 'A-100'], china:['KJ-200', 'KJ-500', 'KJ-500A'], europe:['E-2C', 'E-3F', 'E-7A'], export:['Ka-31', 'EMB-145 AEW', 'A-50EI']},
+  bomb:{nato:['B-52G', 'B-1B', 'B-52J'], east:['Tu-16', 'Tu-22M3', 'Tu-160M'], china:['H-5', 'H-6K', 'H-6N'], europe:['B-52G', 'B-1B', 'B-52J'], export:['Tu-16', 'Tu-22M3', 'H-6K']},
+  stealth:{nato:['B-2A Block 10', 'B-2A Block 30', 'B-21A'], east:['Tu-160', 'Tu-160M2', 'PAK DA'], china:['H-6N', 'H-20', 'H-20A'], europe:['B-2A Block 10', 'B-2A Block 30', 'B-21A'], export:['Tu-160', 'Tu-160M2', 'PAK DA']},
+  frig:{nato:['FF-1052', 'LCS-2', 'FFG-62'], east:['Project 1135', 'Project 22350', 'Project 22350M'], china:['Type 053H', 'Type 054A', 'Type 054B'], europe:['Type 122', 'FREMM', 'Type 26'], export:['Project 1159', 'F-22P', 'Type 054A/P']},
+  crui:{nato:['CG-26', 'DDG-51 Flight III', 'DDG-1000'], east:['Project 956', 'Project 1144', 'Project 1144M'], china:['Type 051', 'Type 052D', 'Type 055'], europe:['Type 42', 'Horizon', 'Type 45'], export:['Project 61', 'Type 051C', 'Type 052D']},
+  sub:{nato:['SSN-637', 'SSN-21', 'SSN-774 Block V'], east:['Project 641', 'Project 971', 'Project 885M'], china:['Type 033', 'Type 039A', 'Type 093B'], europe:['Type 209', 'Astute', 'Suffren'], export:['Project 633', 'Project 636', 'S26T']},
+  carr:{nato:['CV-41', 'CVN-68', 'CVN-78'], east:['Project 1143', 'Project 1143.5', 'Project 23000E'], china:['Type 001', 'Type 003', 'Type 004'], europe:['Clemenceau', 'Charles de Gaulle', 'Queen Elizabeth'], export:['Colossus', 'Project 1143.4', 'Type 002']},
+  cm:{nato:['AGM-86B', 'AGM-158A', 'AGM-158B'], east:['Kh-55', 'Kh-101', '3M22'], china:['CJ-10', 'CJ-100', 'YJ-21'], europe:['AS-30L', 'KEPD 350', 'FC/ASW'], export:['P-15M', '3M-14E', 'CJ-10']},
+  bm:{nato:['MGM-31A', 'MGM-140B', 'LRHW'], east:['R-17', '9K720', 'Kh-47M2'], china:['DF-11', 'DF-16', 'DF-17'], europe:['Pluton', 'MGM-140B', 'LRHW'], export:['R-17E', '9K720E', 'DF-11A']}};
+const UNIT_NAME_OF = {para:'inf'};
+// a unit's research level (docs/RESEARCH.md 14.1): 1 + every step done in its own line, up to 8; its look: 1 at levels 1-3, 2 at 4-6, 3 at 7-8
+const UL_MAX = 8, ulLook = lv => lv >= 7 ? 3 : lv >= 4 ? 2 : 1;
+// the model name of unit (or missile line) key u for group g at look k (1-3), or null
+const unitModel = (u, g, k) => { const T = UNIT_NAMES[UNIT_NAME_OF[u] || u]; return T && T[g] ? T[g][Math.max(1, Math.min(3, k)) - 1] || null : null; };
 const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 const cap1 = w => w[0].toUpperCase() + w.slice(1);
 const NEUTRAL = -1, SEA = -2;
