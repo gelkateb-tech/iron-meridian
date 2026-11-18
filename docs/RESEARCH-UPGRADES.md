@@ -1,10 +1,12 @@
 # Research upgrades: review
 
-**Status: review only. Nothing in the game has changed.** Written 18 November 2026 from the owner's brief (three points: upgrades apply at once to every unit, the upgrade list compared with Conflict of Nations, faster mobilization only on each line's final level). Waiting for the owner's answers in section 5.
+**Status: decided and built.** Written 18 November 2026 from the owner's brief (three points: upgrades apply at once to every unit, the upgrade list compared with Conflict of Nations, faster mobilization only on each line's final level). The owner accepted every suggested answer the same day and asked for all six gaps to be fixed; it is built on branch `upgrades-fix` (section 6). Sections 1 to 5 are the review as it was written, with the decisions marked.
 
 Compatible with `docs/DOCTRINES.md` (nation groups with their own unit names and looks): this review is about what each upgrade *does*, not what it is called, so a group's unit name changes nothing here. The doctrines' training speed bonuses (China 25% faster, Eastern 15% faster) multiply with the final-level bonus of section 3.
 
-**About the Conflict of Nations data.** constacks.com (and the CoN wiki, conflictofnations.wiki.gg) could not be reached from this session: the network does not allow those sites. Every CoN statement below comes from general knowledge of the game and is marked *unverified*. It describes what CoN's levels improve, not their exact numbers. To check the numbers, allow constacks.com in the session's network settings and ask for a second pass.
+**About the Conflict of Nations data.** constacks.com (and the CoN wiki, conflictofnations.wiki.gg) could not be reached from the review session: the network did not allow those sites. Every CoN statement below comes from general knowledge of the game and is marked *unverified*. It describes what CoN's levels improve, not their exact numbers.
+
+**Second pass (build session, 18 November 2026): still not verified.** The owner allowed constacks.com and www.constacks.com. The site answers, but not with its pages: `https://constacks.com/`, `/units` and `/sitemap.xml` (www. redirects to the bare name) each returned HTTP 429 with a "Vercel Security Checkpoint" page, a browser check that needs JavaScript to run before the site shows anything. Only `robots.txt` came back (HTTP 200); it allows search and reference use in general but disallows Anthropic's crawlers by name. The checkpoint was not worked around, and no other source was tried. So **no CoN figure in this review is verified**, nothing was found that disagrees with an approved suggestion, and no rule was changed because of CoN. To check the numbers, the owner can paste the figures (or a CoN unit page saved from a browser) into a session, or name another source the session may read.
 
 ---
 
@@ -26,7 +28,7 @@ A unit's stats are not stored on the unit. Every rule asks for them by the owner
 
 **Quick headless check** (classic world, seed 12345, after two days of play, computer nation 0): its fielded tank force went from attack 6, defence 4, health 14 to attack 8.75, defence 5, health 18 the moment Firepower 2, Third-Generation MBT and Turbine Engines were granted; an Anti-Tank Infantry force's sight went from 50 km to 75 km with Thermal Sights.
 
-### 1.2 Gaps found (not fixed: review only)
+### 1.2 Gaps found (all six fixed on branch `upgrades-fix`: section 6.2)
 
 | # | Gap | Where | Effect |
 |---|---|---|---|
@@ -73,7 +75,7 @@ Base: attack 3, defence 3, health 10, speed 4. Unlock: standard issue (day 1). F
 
 *CoN (unverified):* CoN Motorized Infantry: every level raises hit points and attack vs unarmoured and light-armoured targets together; no level speeds up training.
 
-**Suggested replacement.** Replace Rapid Mobilisation with **Infantry Kit** (`inf_kit`), same days, prices and icon slot:
+**Suggested replacement (owner: yes; done).** Replace Rapid Mobilisation with **Infantry Kit** (`inf_kit`), same days, prices and icon slot:
 
 - level 1 (day 5): **health +2** (10 to 12)
 - level 2 (day 14): **light anti-tank and anti-air missiles**: damage to armour 0.5x to 0.7x, damage to aircraft 0.2x to 0.35x (still far below Anti-Tank Infantry 3.5x and a SAM 3x)
@@ -305,7 +307,7 @@ Base: attack 1.6, defence 0.5, health 2. Unlock: day 4. Final level: **Protectio
 
 *CoN (unverified):* No direct CoN equivalent.
 
-**Suggested replacement.** Replace Bigger Salvo with **Thermobaric Warheads** (`swarm_tb`), same day and price:
+**Suggested replacement (owner: yes; done).** Replace Bigger Salvo with **Thermobaric Warheads** (`swarm_tb`), same day and price:
 
 - one level (day 9): **attack +0.2, health +0.4** (1.6 to 1.8, 2 to 2.4). A card stays six drones. Fighting value per card about +31%, the same as the old +33% from eight drones
 
@@ -424,7 +426,7 @@ Base: attack 3, defence 6, health 26, speed 5. Unlock: day 7. Final level: **Pro
 
 *CoN (unverified):* CoN Aircraft Carrier: levels raise hit points and defence (and how many aircraft it carries).
 
-**Suggested replacement.** Replace Flight-Deck Crews with **Close-In Defence** (`carr_ciws`), same days and prices:
+**Suggested replacement (owner: yes; done).** Replace Flight-Deck Crews with **Close-In Defence** (`carr_ciws`), same days and prices:
 
 - level 1 (day 11): **defence +1** (6 to 7)
 - level 2 (day 16): **damage to aircraft 1.4x to 1.8x** (point-defence guns and missiles)
@@ -463,13 +465,13 @@ These are nation-wide, not one unit type's upgrades. Listed for completeness.
 | 3 / 12 | Amphibious Doctrine (`nav3`) | 2 | landings take half the time; first day ashore at 90% / 100% strength (was 67%) | ✓ attack and defence on landing (the landing time is logistics) |
 | 4 / 13 | Field Hospitals (`log3`) | 2 | all forces take 15% / 20% less damage | ✓ health (every unit, as less damage) |
 
-**Combat Engineers: suggested answer, keep it.** It is the logistics doctrine of the tree, not a unit line, and the brief was about unit lines. If the owner wants it replaced anyway: level 1 "ground forces dig in after 6 hours instead of 12", level 2 "and also in provinces they do not own" (the dug-in bonus itself, +10% defence, stays the owner's rule).
+**Combat Engineers: suggested answer, keep it (owner: keep).** It is the logistics doctrine of the tree, not a unit line, and the brief was about unit lines. If the owner wants it replaced anyway: level 1 "ground forces dig in after 6 hours instead of 12", level 2 "and also in provinces they do not own" (the dug-in bonus itself, +10% defence, stays the owner's rule).
 
 ---
 
 ## 3. Faster mobilization: only on each line's final level
 
-**Rule (suggested):** there is no research node for faster training any more. The **final level of every unit line** gives, on top of its own stat upgrade, **"trains 15% faster"** for that unit type (training time x0.85), in every building that trains it, for every nation, players and computers alike. The final level is the line's last research step by day; when two steps share the last day, the generation.
+**Rule (owner: yes; done):** there is no research node for faster training any more. The **final level of every unit line** gives, on top of its own stat upgrade, **"trains 15% faster"** for that unit type (training time x0.85), in every building that trains it, for every nation, players and computers alike. The final level is the line's last research step by day; when two steps share the last day, the generation.
 
 It applies the way upgrades do (section 1): units already in a queue have their remaining hours cut by 15% the moment the research ends (gap G3 must be fixed for this), and every later order uses the shorter time.
 
@@ -523,6 +525,8 @@ Overall: the tree keeps its size (249 unit-line steps, same days and prices). Th
 
 ## 5. Questions for the owner (with suggested answers)
 
+**Owner's answer, 18 November 2026 (verbatim): "Upgrades review: go with the suggestions, and fix all 6 gaps, including making the aircraft speed upgrades work."** and "Yes, ask to add constacks.com so you can check the Conflict of Nations numbers." Every suggested answer below is the decision.
+
 1. **How much faster on the final level: 15% or 20%?** Suggested: **15%** for every line (the old Rapid Mobilisation level 1). If ships and heavy aircraft (96 h or more to train) should feel it more, 20% for those only.
 2. **Which step is the "final level" when two share the last day?** Only Motorized Infantry has a tie (Protection 3 and Assault Infantry, day 17). Suggested: **the last step by day, a generation on a tie** (so Main Battle Tank's is Next-Generation MBT and Recon UAV's is UAV V). Alternative: always Protection 3, for one simple rule.
 3. **Units already in a queue when the final level finishes: shorten them too?** Suggested: **yes**, their remaining hours drop by 15% at once, like every other upgrade.
@@ -531,3 +535,54 @@ Overall: the tree keeps its size (249 unit-line steps, same days and prices). Th
 6. **Combat Engineers** (nation-wide logistics, not a unit line): keep or replace? Suggested: **keep**.
 7. **Aircraft speed (gap G1):** make the speed parts of Fourth-Generation Interceptor and Supersonic Bomber work, or reword the cards? Suggested: **make them work** (+10% and +33% flight speed).
 8. **Conflict of Nations numbers:** allow constacks.com in the session's network settings so the comparison can be checked level by level? Suggested: **yes, before the build**, if you want exact CoN numbers; the proposal above does not depend on them.
+
+---
+
+## 6. The owner's decisions and what was built (18 November 2026)
+
+### 6.1 Decisions
+
+Owner, 18 November 2026: "Upgrades review: go with the suggestions, and fix all 6 gaps, including making the aircraft speed upgrades work." Every suggested answer of section 5 is the decision:
+
+| Question | Decision |
+|---|---|
+| 1. How much faster on the final level | **15%** for every line |
+| 2. Which step is the final level | **the last step by day, a generation on a tie** (the table in section 3) |
+| 3. Units already in a queue | **shortened too**: their remaining hours drop 15% the moment the final level is done |
+| 4. The three replacements | **Infantry Kit, Thermobaric Warheads, Close-In Defence** as written in section 2 |
+| 5. Carrier repairs | **20% a day** for every nation |
+| 6. Combat Engineers | **kept** |
+| 7. Aircraft speed | **made to work**: Fourth-Generation Interceptor +10% flight speed, Supersonic Bomber +33% |
+| 8. Conflict of Nations numbers | constacks.com allowed; the site still could not be read (see "About the Conflict of Nations data" at the top) |
+
+### 6.2 What was built (branch `upgrades-fix`)
+
+Rules (`rules/*.js`), kept apart from the page:
+
+- **The three replacements** (`R_LINES` in `rules/data.js`), each in the place of the node it replaces, with its days, prices and number of levels:
+  - Infantry Kit (`inf_kit`, was `inf_build`): level 1, day 5: health +2; level 2, day 14 (needs Mechanized Infantry, as before): damage to armour 0.5x to 0.7x, to aircraft 0.2x to 0.35x.
+  - Thermobaric Warheads (`swarm_tb`, was `swarm_pack`): day 9: attack +0.2, health +0.4; a card stays six drones.
+  - Close-In Defence (`carr_ciws`, was `carr_deck`): level 1, day 11: defence +1; level 2, day 16: damage to aircraft 1.4x to 1.8x. Wings aboard a carrier repair 20% a day (`rDeckRate`).
+  - The counters read the level they need: `R_VS` entries take a third value, the level (`multO` in `rules/research.js`, and the stats card's copy in `unitStrength`, `rules/combat.js`).
+- **Final level, 15% faster training**: `R_FINAL` in `rules/data.js` finds each line's final level by the rule of question 2 (it gives exactly the table of section 3) and marks it (`train: 0.85`; the card text gets ", and trains 15% faster"). `rTrainF` reads it, so `trainH` (every order, the Mobilize list) and the queue use it; doctrine and building factors still multiply. Rapid Mobilisation's own 15% / 30% for infantry is gone.
+- **G1, aircraft speed**: `rAirSpdF(n, t)` turns a type's research speed bonus (the flat `spd` of its line) into a flight-speed factor: base speed 20 + 2 = +10% for the Interceptor, 9 + 3 = +33% for the Heavy Bomber, 1 for every other aircraft. `wingSpd` (`rules/air.js`) uses it for every wing; it is read every hour, so it reaches a wing already in flight (out and back, every mission kind, rebasing, patrols), the mission hours shown before an order (`airCheck`, which the computer's orders go through too), the wing panel's speed and the page's drawing of a flight. The stats card shows the new flight speed. A shortage of oil does not slow aircraft (as before: aircraft never read the speed stat).
+- **G2, swarm size**: with Bigger Salvo gone, a card is six drones for everyone, new or fielded (`rPack`), in `spawn`, stack sizes, a returning wing's reinforcements and the computer's count.
+- **G3, queued training**: `rGrant` (every way a level arrives: a research slot finishing, a stolen design, the developer panel, an old save) now passes the change to what is under way. `trainResRetime` (`rules/production.js`) cuts the remaining hours of every queued unit of a type that now trains faster by the ratio, and its total by the same ratio, so the share already trained is kept (the same rule the Recruiting Office uses). Example: an infantry order with 20 of 24 hours left becomes 17 of 20 when Assault Infantry is done.
+- **G4, moves inside a province**: `sailRetime` (`rules/movement.js`) gives a walk or sail under way inside a province the hours of its new speed for the part still to go, the moment a step changes the force's speed. Legs between provinces already read the speed every hour.
+- **G5**: the computer counts a queued card as `rPack` units, what `spawn` makes of it (`rules/ai.js`).
+- **Old saves** (`rRenameMigrate`, `rules/research.js`, run by `restore`): a level of Rapid Mobilisation, Bigger Salvo or Flight-Deck Crews becomes the same level of its replacement (`R_RENAMED` in `rules/data.js`); a project of an old node still running carries on as its replacement with the hours it had left; a computer's saved pick follows. A person's nation is told once ("Research update: Rapid Mobilisation is now Infantry Kit 2; ..."). Running it again changes nothing.
+
+The page (`index.html`) takes names, card texts and numbers from the rules; it changed only in the phone's short labels (`RSN`: Kit, Thermobaric, CIWS). The three new upgrades have no picture made for them yet, so each node's picture (`assets/art/ri-<id>.webp`) is for now a copy of the closest one: Infantry Kit the Tandem Warheads soldier with a launcher, Thermobaric Warheads the Bigger Salvo launcher truck, Close-In Defence the Area Air Defence warship (`tools/gen-art.py` has no prompt for them yet; a new picture just replaces the file). The old pictures `ri-inf_build`, `ri-swarm_pack` and `ri-carr_deck` are no longer shown and were left in place.
+
+**G6, the test**: `.test/upgrades-live.js` (plain Node, a few seconds) checks the three replacements (days, prices, stats, the old ids gone, the stats card, carrier repairs), the final level of all 25 lines and that no other step speeds up training, that **every one of the 249 unit-line steps changes its unit at once** for a person's nation and a computer nation on a force on land, troops embarked at sea, a fleet, a wing at its airbase, a wing aboard a carrier and a wing in flight, then G1 to G5 one by one, and an old save made by master 76c89ca before this change (`.test/fixtures/upgrades-oldsave.json`) that loads, converts, plays two days, finishes its running project as Close-In Defence 2, and loads again unchanged.
+
+**Golden fingerprint**: `tools/golden-12345.txt` was re-recorded. Days 1 to 4 are the same. On day 5 computer nations start the step that is now Infantry Kit, so the saved project's id changes (`inf_kit` for `inf_build`; the dice are still the same that day); from day 8, when it finishes, their infantry gets health +2 instead of training 15% faster, and the game takes a different course on purpose.
+
+**Checks run on the build**: `node tools/split-lint.js` (OK), `bash tools/mkpage.sh`, `node tools/split-golden.js 10 12345` (same as the re-recorded fingerprint), `node tools/headless.js --check` (deterministic), `node tools/nations-balance.js` (all pass), `.test/upgrades-live.js` (1271 of 1271), and the tests that touch research, units, air, movement, production or the computer: v4research (52), v4research-oldsave (22), v3air, v3r2, navy, waypoints (54), rally, recoff, stealth-ui, ai-wars, armybase-rule (54), ai-nowar, battle-tick, stacks, ships-land, stealth, vision and capture-landing (43) pass. Four fail exactly as on master 76c89ca, before this change: v3c (1 of 44: split forces' counters), v3r1 (the computer saving for a SAM), pinpoint (9 tap-to-point checks) and seats ("seat 5 recruits in its capital", the Army Base rule).
+
+### 6.3 Found while building: for the owner
+
+1. **Recon UAV Firepower 1 and 2 do nothing for a while.** The Recon UAV has no attack until UAV IV (day 13), and Firepower multiplies attack, so Firepower 1 (day 3) and 2 (day 10) raise nothing until then (they count from UAV IV on: the test checks it). Not changed. Options: leave it; date the UAV's Firepower after UAV IV; or give the line a different early upgrade. Suggested: leave it for the research rebuild.
+2. **Old saves with Bigger Salvo**: every drone already fielded is kept, but a card of eight now counts as one and a third cards toward the air stack limit (a wing of five old cards, 40 drones, counts as seven and is over the limit until it is split). Swarm cards already queued come out as six drones. In return the save gets Thermobaric Warheads (about the same fighting value per card as the two extra drones).
+3. **Timers outside the unit lines still fixed when they start**: landing hours (Amphibious Doctrine), embarking hours (Combat Engineers) and a cruise missile already in flight (Cruise Missile Speed). These are doctrines and missiles, not unit upgrades, so they were left as they are. Say if they should also apply at once.
+4. **Conflict of Nations figures**: still unverified (see the top of this document). Nothing found disagrees with an approved suggestion, because nothing could be read.

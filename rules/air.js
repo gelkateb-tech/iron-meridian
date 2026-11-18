@@ -22,7 +22,10 @@ const swarmPad = (a, p) => a.u.swarm > 0 && UT.every(t => t === 'swarm' || !a.u[
 const AIR_T = UT.filter(t => UNITS[t].cls === 'air');
 // a wing's aircraft type (wings hold one type; mixed old wings report the most numerous)
 const wingT = a => { let b = null; for (const t of AIR_T) if (a.u[t] && (!b || a.u[t] > a.u[b])) b = t; return b || 'jet'; };
-const wingSpd = a => AIR_SPEED*Math.min(1, ...AIR_T.filter(t => a.u[t]).map(t => AIR_SPF[t] || 1))*stackSpd(a);   // (a wing over its stack limit flies slower)
+// a wing's flight speed (hexes an hour): the slowest of its types, each AIR_SPEED times its share (AIR_SPF) times its research speed bonus (rAirSpdF:
+// Fourth-Generation Interceptor +10%, Supersonic Bomber +33%), read every hour, so a wing in flight speeds up the hour the step is done
+const airSpdT = (n, t) => AIR_SPEED*(AIR_SPF[t] || 1)*rAirSpdF(n, t);
+const wingSpd = a => { let v = Infinity; for (const t of AIR_T) if (a.u[t]){ const x = airSpdT(a.owner, t); if (x < v) v = x; } return (v < Infinity ? v : AIR_SPEED)*stackSpd(a); };   // (a wing over its stack limit flies slower)
 const isFighterWing = b => b.u.int > 0 || b.u.asf > 0;
 /* Strike wear and maintenance: every mission wears a wing's airframes, even unopposed: 3–6% per strike (more the farther it flies), patrols,
    orbits and loitering add 0.15% per hour aloft, rebasing 1%. Wear (a.air.wear, 0..WEAR_MAX) is repaired only on the ground at your own airbase

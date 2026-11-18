@@ -17,7 +17,7 @@ The 25% damage floor is reached at 38 ground units (19 ships or aircraft); witho
 
 - **land**: its ground units (infantry, armour, artillery, SAMs, jammers ...). Troops embarked on transports at sea are still land.
 - **sea**: its warships. A fleet carrying troops counts its ships against 5 and its troops against 10, each domain on its own.
-- **air**: an air wing's aircraft, counted in **cards**: a card of swarm drones (6, or 8 with Bigger Salvo) counts once.
+- **air**: an air wing's aircraft, counted in **cards**: a card of swarm drones (6) counts once (Bigger Salvo, eight a card, was replaced by Thermobaric Warheads: docs/RESEARCH-UPGRADES.md).
 
 Each unit's damage is scaled by its own domain's efficiency. The force's headline penalty (panels, warnings) is the domain furthest
 over its limit; the slowest domain's speed factor sets the force's pace (land and sea speed, air wings' flight speed).

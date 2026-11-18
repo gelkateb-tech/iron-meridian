@@ -28,7 +28,11 @@ options: --batch         send the pictures as one batch job (half price, slower;
          --collect <job> save the pictures of a batch job sent earlier (batches/...)
          --force         overwrite an existing picture (otherwise the new one is saved as ba-<name>.v2.png, .v3 ...)
          --ref <file>    a style reference picture sent with a SUBJECTS prompt (repeatable)
-         --print         print the prompts and stop (no API call)
+         --print         print the prompts (and the pictures attached to each) and stop: NO API call. --dry-run is the same.
+         --review        after each picture is made, send it (and the reference it was made from) to a Gemini text model
+                         with the Art Bible checklist; it writes PASS or FLAG with short reasons to the log row and to
+                         <picture>.review.txt. It ONLY flags: nothing is redone automatically (standing rule: show the
+                         owner the problem and ask first). Its cost is logged, so --cost includes it.
          --prep-research <name> ...   crop and shrink research pictures from assets/art-src/ into assets/art/ (no API call)
 """
 import sys, os, json, base64, io, time, urllib.request, urllib.error
@@ -651,11 +655,199 @@ SUBJECTS['v2-fortifications-map-1'] = (
     "green grass, surrounded by a ring of khaki sandbags, with a short earth trench running from it. Materials and colours "
     "like the attached cutaway bunker. The grass patch has natural irregular edges and fades into the plain background." + V2_SCALE)
 
+# ---- UNIT LOOKS (owner's decisions 2026-11-18, docs/UNIT-LOOKS-PROMPTS.md): every unit has its own pictures for each of the 5
+# doctrine groups (nato, east, china, europe, export), 3 looks each; every look is a NEW generation, not an edit of the one before.
+# Names: ul-<unit>-<group>-<look>, saved as assets/art-src/ul-<unit>-<group>-<look>.png. These pictures are for every place that
+# shows a unit (research card, army bar details, the map figures), so they are drawn STRAIGHT DOWN, nose up (the map turns each
+# figure to its heading, which a tilted view cannot do). STYLE_V2_UNIT is STYLE_V2 with only its camera and framing sentences
+# changed; everything else (light, materials, colours, background, no-text rule) is word for word the same.
+_CAM_OLD = ("Camera: the same fixed angled view from above for every picture, about 45 degrees down, three-quarter view, "
+            "at the same scale. ")
+_CAM_NEW = ("Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view "
+            "with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. ")
+_CROP_OLD = "Cropped tight and centred so the subject fills about 90 percent of the frame, nothing cut off. "
+_CROP_NEW = ("Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent "
+             "of the picture's height, nothing cut off. ")
+assert _CAM_OLD in STYLE_V2 and _CROP_OLD in STYLE_V2
+STYLE_V2_UNIT = STYLE_V2.replace(_CAM_OLD, _CAM_NEW).replace(_CROP_OLD, _CROP_NEW)
+UNIT_ANCHORS = ['ba-v2-army-base-1.webp', 'ba-v2-naval-yard-1.webp']   # style references for a group's first look
+UNIT_PREFIX_NEW = ("The attached pictures are two buildings from the same game. They are style references only: copy their "
+                   "rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and "
+                   "their plain flat light grey background. Do NOT copy their camera angle or anything in them: no buildings, "
+                   "tents, trucks, ships or ground in the new picture. The picture to draw is described below, seen straight "
+                   "down from above.")
+UNIT_PREFIX_FAMILY = ("The attached picture is generation 1 of this group's {unit}. Use it only as the reference for the camera "
+                      "(exactly straight down), the size and framing, the lighting, the rendering style, the paint colour, the "
+                      "plain grey background and the group's family look. Draw a NEW, clearly different and newer model as "
+                      "described below. Do not copy the attached {unit}: its shape is replaced by the new design.")
+TANK_FRAME = ("A single main battle tank, seen exactly straight down from above (a true top-down plan view), its gun and front "
+              "pointing to the top of the picture, the turret facing straight ahead. The whole tank is centred left to right and "
+              "top to bottom, and its full length from the tip of the gun barrel to the rear of the hull fills about 90 percent "
+              "of the picture's height. Only the tank: no crew, no other vehicle, no ground, no track marks, only a faint, tight "
+              "soft shadow right under it.")
+TANK_TAIL = (" Original generic design made for this game: it must not be a line-for-line copy of any real tank; only the family "
+             "look described here. Plain unmarked paint, no text, numbers, flags, stars or markings of any kind.")
+UNIT_GROUPS = ['nato', 'east', 'china', 'europe', 'export']
+UNIT_TANK = {   # group: (family look and paint, [generation 1, 2, 3])
+    'nato': ("Family look (US/NATO): flat, angular, slab-sided turret built from straight flat armour plates with sharp edges; a "
+             "wide, heavy, low-slung hull with a long flat deck and rubber-padded tracks; matte sand-tan paint.",
+             ["Generation 1 of 3, the oldest, a Cold War era design: a simple blocky, flat-faced turret with a plain commander's "
+              "cupola and a searchlight box beside the gun, a tall plain hull with bare track guards and five large road wheels "
+              "per side, a gun with a fume-extractor bulge, a few stowage boxes on the rear deck.",
+              "Generation 2 of 3, a clearly newer and heavier design: a wide, low, wedge-shaped turret of flat angular armour "
+              "plates with a flat sloped front, a long rectangular ammunition bustle at the rear of the turret, full side armour "
+              "skirts over the tracks, a roof-mounted thermal sight box, a gun with a thermal sleeve, a broad exhaust grille "
+              "across the rear deck.",
+              "Generation 3 of 3, the newest, a near-future design: an ultra-flat angular turret covered in sharp faceted "
+              "add-on armour panels, a remote weapon station on the roof, four small flat active-protection sensor panels at the "
+              "turret corners, slim sensor masts, an auxiliary power box at the rear of the hull, full-length side skirts, a "
+              "longer gun."]),
+    'east': ("Family look (Eastern): a low, rounded, dome-like turret set slightly forward on a low, compact, short hull; "
+             "reactive-armour bricks (rows of small square blocks) that cover more of the tank in every generation; smoke-grenade "
+             "launcher tubes along the turret sides; a log and fuel drums on the rear deck; dark olive-green paint.",
+             ["Generation 1 of 3, the oldest: a small, low, smooth dome turret, a low hull with six small road wheels per side "
+              "and thin track guards, a smoothbore gun with a bore-evacuator bulge, an infrared searchlight beside the gun, a "
+              "first small set of reactive bricks on the hull front only.",
+              "Generation 2 of 3, a clearly newer design: a larger, low, rounded turret with rows of reactive bricks across its "
+              "whole front and sides and across the hull front, thick rubber-and-metal side skirts, a missile-capable gun, "
+              "smoke launcher tubes on the turret sides, a remote machine gun on the roof.",
+              "Generation 3 of 3, the newest: a very low, wide, rounded turret fully covered in reactive bricks, a panoramic "
+              "sight dome and a remote machine-gun station on the roof, active-protection launcher tubes around the turret, "
+              "bricks and slat armour over the whole hull, armoured fuel tanks at the rear."]),
+    'china': ("Family look (China, its own lines): a broad, low turret shaped like a flat arrowhead, with a long sloped front and "
+              "a large rectangular ammunition bustle box at the rear; a clean, smooth, boxy hull with a long, sharply sloped "
+              "front plate and seven small, evenly spaced road wheels; a pair of laser-warning sensors on the turret front; "
+              "plain mid-green paint.",
+              ["Generation 1 of 3, the oldest: a modest rounded-arrowhead turret with a long, thin smoothbore gun, a simple hull "
+               "with plain track guards, a snorkel tube and a spare fuel drum on the rear deck, no add-on armour.",
+               "Generation 2 of 3, a clearly newer design: a bigger, angular arrowhead turret with a wedge of applied composite "
+               "armour on its front, a large boxy rear bustle, side skirts made of rows of small plates, a gun with a thermal "
+               "sleeve, a laser-warning pair and a roof machine gun.",
+               "Generation 3 of 3, the newest: a very clean, low, smooth-faceted turret with flat integrated sensor panels, a "
+               "remote weapon station on the roof, active-protection domes at the turret corners, a longer gun, a hull front "
+               "of smooth sloped composite armour, full side skirts."]),
+    'europe': ("Family look (Europe): a long, sleek, low and smoothly sloped design: a long hull with seven road wheels, a turret "
+               "of sloping, rounded-faceted shapes with a large rear bustle that holds an automatic loader, a long slender gun, "
+               "a small raised pod for the commander's panoramic sight, a clean low silhouette; dark grey-green paint.",
+               ["Generation 1 of 3, the oldest: a light, fast, compact design: a narrow hull, a small egg-shaped rounded cast "
+                "turret, a long slender gun with a muzzle brake, a plain commander's cupola, almost no add-on armour, bare track "
+                "guards.",
+                "Generation 2 of 3, a clearly newer design: a bigger, smoothly sloped wedge turret with a long rounded rear "
+                "bustle, side skirts, a gun with a thermal sleeve, a raised panoramic sight pod, a hull with a sharply sloped "
+                "front.",
+                "Generation 3 of 3, the newest: a tall, wide, unmanned turret of smooth faceted panels, a small second weapon "
+                "mounted beside the main gun, a slim sensor mast, modular armour blocks, active-protection sensors, a long "
+                "gun, a low sleek hull with full skirts."]),
+    'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round "
+               "or flat-topped turret on a boxy hull, bolt-on kits and add-on parts that look like they were fitted by the "
+               "buyer, faded ochre-sand paint with a few patches of darker touch-up paint.",
+               ["Generation 1 of 3, the oldest, a post-war pattern: a round dome turret with a simple long gun, a small tall "
+                "hull with four large road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a "
+                "machine gun on the turret roof.",
+                "Generation 2 of 3, a clearly newer, widely exported 1970s-80s pattern: a flat-topped rounded turret on a longer "
+                "hull, a rangefinder box on the turret, bolt-on side skirts, a smoke-launcher pack, a few add-on armour plates "
+                "on the turret front, a snorkel tube.",
+                "Generation 3 of 3, the newest, a modern export-grade design: a modular angular turret with bolt-on composite "
+                "armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, "
+                "side skirts, a clean but practical look made to be sold to many armies."]),
+}
+UNIT_LOOKS = {}   # name: {unit, subject, refs (names in assets/art-src), fresh}
+for _g in UNIT_GROUPS:
+    for _n in (1, 2, 3):
+        UNIT_LOOKS[f'ul-tank-{_g}-{_n}'] = {
+            'unit': 'main battle tank', 'fresh': _n == 1, 'group': _g, 'look': _n,
+            'subject': TANK_FRAME + ' ' + UNIT_TANK[_g][0] + ' ' + UNIT_TANK[_g][1][_n - 1] + TANK_TAIL,
+            'refs': UNIT_ANCHORS if _n == 1 else [f'ul-tank-{_g}-1']}
+
+PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
+REVIEW = False       # --review: the Gemini check after each picture
+REF_USED = {}        # name: the reference picture files its request attached (for the check)
+
+def ul_path(r):
+    """a reference picture's file in assets/art-src (a full file name, or a stem: .png then .webp), or None"""
+    for q in (r, r + '.png', r + '.webp'):
+        if os.path.exists(os.path.join(OUT, q)): return os.path.join(OUT, q)
+    return None
+
+def unit_request_text(name):
+    u = UNIT_LOOKS[name]
+    return (UNIT_PREFIX_NEW if u['fresh'] else UNIT_PREFIX_FAMILY.format(unit=u['unit'])) + '\n\n' + u['subject'] + '\n\n' + STYLE_V2_UNIT
+
+# ---- THE CHECK (--review): a Gemini text model looks at each new picture against the Art Bible and says PASS or FLAG.
+# It never redoes anything: a FLAG is shown to the owner, who decides (Art Bible standing rule).
+REVIEW_MODEL = os.environ.get('GEMINI_REVIEW_MODEL') or 'gemini-2.5-flash'   # a Flash-class text model; confirm the id before the first use
+# ESTIMATE ONLY, not verified (the price page could not be reached): about $0.30 per million tokens in (text and images) and
+# $2.50 per million out (thinking included), the published Flash-class price; a check is about 3,000 tokens in and 400 out
+REV_IN_USD, REV_OUT_USD = 0.30e-6, 2.50e-6
+REVIEW_PROMPT = (
+    "You are the quality checker for the pictures of a strategy game. Picture 1 is the NEW picture to check. {refs}\n\n"
+    "What the new picture was asked to show:\n{what}\n\n"
+    "The art style it must match (the game's STYLE_V2): {style}\n\n"
+    "Check the new picture against this checklist, each point on its own:\n"
+    "1. SAME UNIT: it shows the kind of unit that was asked for. With a reference picture of the same unit attached, it keeps that "
+    "unit's shape family, size in the frame and paint colour; a picture made as a new generation must be clearly a different, newer "
+    "model, not a copy of the reference.\n"
+    "2. STYLE: it matches the anchor style: a clean, polished 3D game-model render with crisp edges and soft studio light from the "
+    "upper left, slightly realistic materials; not a photograph, not toy-like, not a drawing.\n"
+    "3. BACKGROUND: the background is a plain, flat, uniform light grey with at most a faint soft shadow; no base slab, ground, "
+    "terrain, horizon or other objects.\n"
+    "4. FRAMING: the whole unit is inside the frame, nothing cut off, centred, filling about 90 percent of the frame along its "
+    "length, seen from the same angle and at the same size as the reference or the rest of its set (for units: exactly straight down, "
+    "nose up).\n"
+    "5. NO MARKINGS: no text, letters, numbers, logos, flags, emblems, roundels, stars or national insignia anywhere.\n"
+    "6. ORIGINAL: it is not a line-for-line copy of a real, recognisable product (a real tank, jet, ship or similar); it may only "
+    "carry the general family look of its group.\n"
+    "7. NO EXTRAS: exactly the one unit asked for (or the set asked for); no extra, duplicated, partial or background units, no "
+    "people, no buildings.\n\n"
+    'Answer with JSON only, in this shape: {{"verdict": "PASS" or "FLAG", "reasons": ["short plain reason", "..."]}}. '
+    "Use PASS only if all seven points are fine (reasons may then be empty). Use FLAG if any point fails or you are unsure, and "
+    "name each failed point by its number and a short plain reason (under 20 words each).")
+
+def review_what(name):
+    if name in UNIT_LOOKS: return UNIT_LOOKS[name]['subject']
+    if name in SUBJECTS: return SUBJECTS[name]
+    if name in GROWS: return 'a building level: ' + GROWS[name][1]
+    return name
+
+def review_refs(name):
+    if name in REF_USED: return REF_USED[name]
+    if name in UNIT_LOOKS: return [os.path.relpath(p, ROOT) for p in (ul_path(r) for r in UNIT_LOOKS[name]['refs']) if p]
+    if name in GROWS:
+        q = os.path.join(OUT, f'ba-{GROWS[name][0]}.png'); return [os.path.relpath(q, ROOT)] if os.path.exists(q) else []
+    return []
+
+def review(name, path):
+    """the check: returns (verdict, reasons); logs its own cost row; writes <picture>.review.txt. Never raises, never retries."""
+    refs = review_refs(name)
+    if not refs: rtxt = 'There is no reference picture.'
+    elif name in UNIT_LOOKS and not UNIT_LOOKS[name]['fresh']: rtxt = 'Picture 2 is the reference it was made from (generation 1 of the same unit and group).'
+    elif name in UNIT_LOOKS: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only, not the subject or the camera.'
+    else: rtxt = 'The other attached picture(s) are the reference(s) it was made from.'
+    text = REVIEW_PROMPT.format(refs=rtxt, what=review_what(name), style=STYLE_V2_UNIT if name in UNIT_LOOKS else STYLE_V2)
+    parts = [{'text': text}, image_part(path)] + [image_part(os.path.join(ROOT, r)) for r in refs]
+    body = {'contents': [{'parts': parts}], 'generationConfig': {'responseMimeType': 'application/json'}}
+    verdict, reasons, usd, tok = 'FLAG', ['the check could not run or its answer was unreadable: look at the picture yourself'], 0.0, {}
+    try:
+        r = call('POST', f'models/{REVIEW_MODEL}:generateContent', body); u = r.get('usageMetadata', {})
+        usd = ((u.get('candidatesTokenCount', 0) + u.get('thoughtsTokenCount', 0)) * REV_OUT_USD + u.get('promptTokenCount', 0) * REV_IN_USD)
+        tok = {k: u.get(k) for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount')}
+        raw = ''.join(p.get('text', '') for c in r.get('candidates', []) for p in c.get('content', {}).get('parts', []) if not p.get('thought'))
+        j = json.loads(raw.strip().strip('`').removeprefix('json').strip())
+        if j.get('verdict') == 'PASS': verdict, reasons = 'PASS', [str(x) for x in j.get('reasons', [])]
+        else: verdict, reasons = 'FLAG', [str(x) for x in j.get('reasons', [])] or ['flagged without a reason: look at the picture yourself']
+    except SystemExit as e: reasons = [f'the check failed ({e}): look at the picture yourself']
+    except Exception as e: reasons = [f'the check answer could not be read ({type(e).__name__}): look at the picture yourself']
+    rf = os.path.splitext(path)[0] + '.review.txt'
+    with open(rf, 'w') as f: f.write(verdict + '\n' + ''.join(f'- {x}\n' for x in reasons))
+    with open(LOG, 'a') as f:
+        f.write(json.dumps({'name': name + ' (check)', 'file': os.path.relpath(rf, ROOT), 'batch': False, 'usd_est': round(usd, 4), 'review': verdict, 'tokens': tok}) + '\n')
+    return verdict, reasons
+
 def building(name): return name.rsplit('-', 1)[0]   # naval-yard-3 -> naval-yard
 
 def prompt(name): return SUBJECTS[name] + '\n\n' + STYLES.get(building(name), STYLE_V2 if name.startswith('v2-') else STYLE)
 
-def stem(name): return name if name in ICONS or name in RES_ICONS or name in R_BANNERS or name in R_ICONS else f'ba-{name}'
+def stem(name): return name if name in ICONS or name in RES_ICONS or name in R_BANNERS or name in R_ICONS or name in UNIT_LOOKS else f'ba-{name}'
 
 def free_path(name, force):
     p = os.path.join(OUT, f'{stem(name)}.png')
@@ -710,6 +902,13 @@ def request(name, refs, change=None):
         src, desc = REDRAWS[name]; src = os.path.join(OUT, src)
         if not os.path.exists(src): raise SystemExit(f'{name} is redrawn from {os.path.relpath(src, ROOT)}, which is not there')
         text, images = REDRAW.format(desc), [src]
+    elif name in UNIT_LOOKS:   # a unit look: a new picture drawn from its text, with its reference pictures attached
+        u = UNIT_LOOKS[name]; paths = [ul_path(r) for r in u['refs']]
+        if not PRINT_ONLY and not all(paths): raise SystemExit(f'{name} needs {[r for r, p in zip(u["refs"], paths) if not p]} first: make the group\'s look 1 before looks 2 and 3 (one batch after the other)')
+        text, images = unit_request_text(name), [p for p in paths if p]
+        REF_USED[name] = [os.path.relpath(p, ROOT) if p else r + ' (not made yet)' for r, p in zip(u['refs'], paths)]
+        return {'contents': [{'parts': [{'text': text}] + [image_part(p) for p in images]}],
+                'generationConfig': {'responseModalities': ['IMAGE'], 'imageConfig': {'aspectRatio': '1:1', 'imageSize': '1K'}}}
     elif name in ICON_EDITS:
         before, text = ICON_EDITS[name]; src = os.path.join(OUT, f'{before}.grey.png')
         if not os.path.exists(src): raise SystemExit(f'{name} is made from {os.path.relpath(src, ROOT)}, which is not there yet')
@@ -755,11 +954,15 @@ def save(name, reply, force, batch):
         if name in ICONS: im.save(p[:-4] + '.grey.png'); cutout(im).save(p)
         elif name in R_BANNERS or name in R_ICONS: p = p[:-4] + '.webp'; im.convert('RGB').save(p, 'WEBP', quality=92, method=6)   # research sources: webp q92, not big PNGs
         else: im.save(p)
+    verdict, reasons = (review(name, p) if REVIEW and p else (None, []))   # the check only flags; nothing is redone
     with open(LOG, 'a') as f:
-        f.write(json.dumps({'name': name, 'file': p and os.path.relpath(p, ROOT), 'batch': batch, 'usd_est': round(usd, 4),
-                            'tokens': {k: u.get(k) for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount')}}) + '\n')
+        row = {'name': name, 'file': p and os.path.relpath(p, ROOT), 'batch': batch, 'usd_est': round(usd, 4),
+               'tokens': {k: u.get(k) for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount')}}
+        if verdict: row['review'], row['review_reasons'] = verdict, reasons
+        f.write(json.dumps(row) + '\n')
     if p: print(f'{os.path.relpath(p, ROOT)}  (~${usd:.4f})')
-    else: print(f'{name}: no picture in the reply, finish {[c.get("finishReason") for c in reply.get("candidates", [])]} '
+    if verdict: print(f'  check: {verdict}' + ''.join(f'\n    - {x}' for x in reasons) + ('\n  (flag only: nothing is redone; show the owner and ask)' if verdict == 'FLAG' else ''))
+    if not p: print(f'{name}: no picture in the reply, finish {[c.get("finishReason") for c in reply.get("candidates", [])]} '
                 f'{reply.get("promptFeedback", "")}  (~${usd:.4f})')
     return p
 
@@ -791,31 +994,40 @@ def collect(job, force):
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
     if a[0] == '--list':
-        for n in list(SUBJECTS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS) + list(R_BANNERS) + list(R_ICONS):
+        for n in list(SUBJECTS) + list(UNIT_LOOKS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS) + list(R_BANNERS) + list(R_ICONS):
             print(('done ' if any(os.path.exists(os.path.join(OUT, f'{stem(n)}.{x}')) for x in ('png', 'webp')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))
         return
     if a[0] == '--cost':
         rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
         calls = sum(r.get('calls', 1) for r in rows); usd = sum(r.get('usd_est', 0) for r in rows)
         print(f'{calls} calls, about ${usd:.2f} (estimate; the real bill is in Google AI Studio)'); return
+    global PRINT_ONLY, REVIEW
+    PRINT_ONLY = '--print' in a or '--dry-run' in a; REVIEW = '--review' in a   # (before the requests are built)
     force = show = batch = False; refs, names, edits = [], [], []
     i = 0
     while i < len(a):
         if a[i] == '--force': force = True
-        elif a[i] == '--print': show = True
+        elif a[i] in ('--print', '--dry-run'): show = True
+        elif a[i] == '--review': pass   # (set above)
         elif a[i] == '--batch': batch = True
         elif a[i] == '--ref': i += 1; refs.append(a[i])
         elif a[i] == '--collect': collect(a[i + 1], force); return
         elif a[i] == '--prep-research': prep_research(a[i + 1:]); return
         elif a[i] == '--edit': edits.append((a[i + 2], [a[i + 1]], a[i + 3])); i += 3
-        elif a[i] in SUBJECTS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS or a[i] in R_BANNERS or a[i] in R_ICONS: names.append(a[i])   # repeat a name for more tries
+        elif a[i] in SUBJECTS or a[i] in UNIT_LOOKS or a[i] in GROWS or a[i] in ICONS or a[i] in REDRAWS or a[i] in RES_ICONS or a[i] in R_BANNERS or a[i] in R_ICONS: names.append(a[i])   # repeat a name for more tries
         else: raise SystemExit(f'unknown name or option: {a[i]} (see --list)')
         i += 1
     if batch and any(n in GROWS and GROWS[n][0] in names for n in names):
         raise SystemExit('a level that grows from another level in the same batch has to wait for it: send them one after the other')
+    if batch and not PRINT_ONLY and any(n in UNIT_LOOKS and not UNIT_LOOKS[n]['fresh'] and UNIT_LOOKS[n]['refs'][0] in names for n in names):
+        raise SystemExit('looks 2 and 3 take their group\'s look 1 as the reference: send look 1 first, then looks 2 and 3 in the next batch')
     jobs = [(n, request(n, refs)) for n in names] + [(n, request(n, r, c)) for n, r, c in edits]
     if show:
-        for n, r in jobs: print(f'--- {n}\n{r["contents"][0]["parts"][0]["text"]}\n')
+        for n, r in jobs:
+            print(f'--- {n}')
+            if n in UNIT_LOOKS: print(f'[{"fresh picture" if UNIT_LOOKS[n]["fresh"] else "new picture, group look 1 attached"}; attached: {", ".join(REF_USED[n])}]')
+            print(f'{r["contents"][0]["parts"][0]["text"]}\n')
+        if REVIEW: print('--- THE CHECK (sent after each picture, with the new picture first and its references after it)\n' + REVIEW_PROMPT.format(refs='<which pictures are attached>', what='<the picture\'s prompt>', style='<STYLE_V2>') + f'\n[model: {REVIEW_MODEL}]')
         return
     os.makedirs(OUT, exist_ok=True)
     if batch: batch_run(jobs, force)
