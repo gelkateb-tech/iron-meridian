@@ -11,7 +11,7 @@
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
-const TIP = 'Dug in: +10% defence. The unit has held position for 12+ hours, or is in a fortified friendly province.';
+const TIP = 'Dug in: +10% defence in the open, +25% inside a city. The unit has held position for 12+ hours, or is in a fortified friendly province.';
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, hasTouch: PHONE, isMobile: false });

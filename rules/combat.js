@@ -202,12 +202,14 @@ function index(){ const by = new Array(G.P.length).fill(IDX0); for (const a of S
 const DIG_H = 12;
 const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length && !G.P[a.at].sea && count(a) > 0 &&
   (a.stance === 'defend' || (a.still != null && S.hour - a.still >= DIG_H && (S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && a.owner >= 0 && friendly(a.owner, S.owner[a.at])))));
-// a dug-in force defending where it stands takes DIG_DEF times the damage (1/1.1: +10% defence IN TOTAL; the owner's rule, replacing the old 0.8 that was +25%; nothing
+// a dug-in force defending where it stands takes DIG_DEF times the damage in the open (1/1.1: +10% defence IN TOTAL) and DIG_CITY times inside a city
+// (a province with a city: 1/1.25, +25% defence); the owner's rule, replacing the old flat +10% (the city figure REPLACES the open one, it is not added on top; nothing
 // else stacks from being dug in: fortifications, terrain and home soil are separate), like home soil and fortifications: in its
 // battles (tick.js battleStep), under ranged fire (rangedStep), under air strikes (air.js) and in the odds. Only while it defends its own or a
 // friend's province: a force on the move is never dug in (dugIn), and one with the Defend stance in a province held by a foe is attacking
-const DIG_DEF = 1/1.1;
-const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? DIG_DEF : 1;
+const DIG_DEF = 1/1.1, DIG_CITY = 1/1.25;
+const digP = p => G.P[p] && G.P[p].city ? DIG_CITY : DIG_DEF;   // (the dug-in damage factor of a province: DIG_CITY in a city, DIG_DEF in the open)
+const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? digP(a.at) : 1;
 function endBattle(p){
   const B = S.bt && S.bt[p]; if (!B) return; delete S.bt[p];
   const os = Object.keys(B.s).map(Number);
