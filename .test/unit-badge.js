@@ -1,8 +1,7 @@
 // The unit look (owner's requests): the square badge, the infantry figures and the dug-in shield. node .test/unit-badge.js [W H dpr]
 // prints JSON {checks, fails, errors} and exits 1 on any failure.
-//  badge   every force's badge is a square (w == h within 1 px) of one size at 3 zooms (far on its spot, pinned over its pictures), at least
-//          28 css px (desktop) with a count face of at least 9.5 px; its canvas shows a flag (several colours at the top), a white icon in the
-//          middle and a white count below
+//  badge   the owner's Conflict of Nations badge: zoomed in 52 x 46 px (flag 20 + bar 26, count about 19 px, white tag 18 with a 15 px navy icon over the
+//          bar's left edge), zoomed out a 28 px square with the same tag, no flag, no count; the canvases show a flag, a white count, the tag
 //  figures the infantry, anti-tank and special forces squads (m-sol, m-sat, m-ssf) are 3D soldiers, not pictures: each sheet has a soft shadow
 //          (semi-transparent dark pixels round the figures) and is not a single-colour blob (the figures' colours vary); close in the map draws
 //          them as models (TM debug: no picture for a squad), and a squad on the march still bobs (its drawn spot moves up and down)
@@ -11,7 +10,7 @@
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 1), PHONE = W <= 820;
-const TIP = 'Dug in: +10% defence. The unit has held position for 12+ hours, or is in a fortified friendly province.';
+const TIP = 'Dug in: +10% defence in the open, +25% inside a city. The unit has held position for 12+ hours, or is in a fortified friendly province.';
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, hasTouch: PHONE, isMobile: false });
@@ -31,20 +30,24 @@ const TIP = 'Dug in: +10% defence. The unit has held position for 12+ hours, or 
     return { ber: [ber.x, ber.y], mun: [mun.x, mun.y], inf: inf.id, sq: sq.id }; });
   const view = (xy, hp) => p.evaluate(([x, y, hp, W, H]) => { const v = window.__im.view, s = hp/12; v.s = s; v.x = W/2 - x*s; v.y = H/2 - y*s; }, [xy[0], xy[1], hp, W, H]);
   const off = await p.evaluate(() => { const r = document.getElementById('map').getBoundingClientRect(); return [r.left, r.top]; });
-  // (1) the badge: square, one size at 3 zooms, readable
+  // (1) the badge (owner's Conflict of Nations badge): zoomed in 52 x 46 (flag 20 + bar 26, tag 18 with a 15 px icon), zoomed out a 28 px square; quiet foreign forces the same size (owner, 2026-11-18)
   const zs = PHONE ? [28, 70, 170] : [40, 100, 170];
+  const dimsNear = await p.evaluate(() => { const D = window.__im.uicon.dims(14, false, false); return { w: D.w, h: D.h, fh: D.fh, bh: D.bh, tg: D.tg, ti: D.ti, fz: D.fz, ox: D.ox }; });
+  const dimsFar = await p.evaluate(() => { const D = window.__im.uicon.dims(14, false, true); return { w: D.w, h: D.h, tg: D.tg, ti: D.ti }; });
+  checks.dims = { ok: dimsNear.w === 52 && dimsNear.fh === 20 && dimsNear.bh === 26 && dimsNear.h === 46 && dimsNear.tg === 18 && dimsNear.ti === 15 && dimsNear.fz >= 17 && dimsNear.ox === 9 && dimsFar.w === 28 && dimsFar.h === 28 && dimsFar.tg === 18 && dimsFar.ti === 15, near: dimsNear, far: dimsFar };
+  const okD = new Set([46, 28, Math.round(46*0.86*2)/2, Math.round(28*0.86*2)/2, 39.5, 24, 24.5]);
   for (const hp of zs){ await view(sc.ber, hp); await p.waitForTimeout(1500);
     const r = await p.evaluate(() => window.__im.hits.filter(h => !h.unk && h.a > 0.5).map(h => ({ d: h.d, tag: h.tag, ids: h.ids })));
-    const ds = r.map(h => h.d).filter(d => d != null), dims = await p.evaluate(() => { const D = window.__im.uicon.dims(14, false); return { w: D.w, h: D.h, fz: D.fz }; });
-    checks['badge-' + hp] = { ok: r.length > 0 && ds.length === r.length && Math.abs(dims.w - dims.h) <= 1 && Math.min(...ds) >= (PHONE ? 30 : 27) && dims.fz >= 9.5 && new Set(ds.map(Math.round)).size <= 2, n: r.length, sides: [...new Set(ds)], dims }; }
-  // the badge canvas: a flag at the top, a white icon in the middle, a white count below
+    checks['badge-' + hp] = { ok: r.length > 0 && r.every(h => okD.has(h.d) && (h.tag ? h.d >= 39 : h.d <= 28)), n: r.length, sides: [...new Set(r.map(h => h.d + (h.tag ? 't' : 'f')))] }; }
+  // the badge canvases: near = a flag on top (several colours), the bar in the side colour with a white count at its right, a white tag with navy icon over its left edge; far = a side-colour square with a white tag and a navy icon
   const parts = await p.evaluate(() => { const U = window.__im.uicon, d = U.dpr, out = {};
-    for (const [t, side] of [['inf', 'own'], ['tank', 'war'], ['frig', 'ally'], ['jet', 'other']]){ const E = U.badge(t, side, 14, 0, false, false); if (!E){ out[t] = null; continue; }
-      const D = U.dims(14, false), g = E.c.getContext('2d'), px = (x, y, w, h) => g.getImageData(Math.round((E.ox + x)*d), Math.round((E.oy + y)*d), Math.max(1, Math.round(w*d)), Math.max(1, Math.round(h*d))).data;
-      const stat = a => { const cols = new Set(); let white = 0, n = 0; for (let i = 0; i < a.length; i += 4){ n++; cols.add((a[i] >> 4) + ',' + (a[i + 1] >> 4) + ',' + (a[i + 2] >> 4)); if (a[i] > 225 && a[i + 1] > 225 && a[i + 2] > 225) white++; } return { cols: cols.size, white: white/n }; };
-      out[t] = { w: E.c.width/d - 2*E.ox, h: E.c.height/d - 2*E.oy, flag: stat(px(2, 1, D.w - 4, D.fh - 2)), icon: stat(px(3, D.iy, D.w - 6 - D.pw, D.w - D.iy - 3)), count: stat(px(D.w - 1.5 - D.pw, D.w - 1.5 - D.ph, D.pw, D.ph)), pill: { pw: D.pw, ph: D.ph, fh: D.fh, w: D.w } }; }
+    const stat = (g, E, x, y, w, h) => { const a = g.getImageData(Math.round((E.ox + x)*d), Math.round((E.oy + y)*d), Math.max(1, Math.round(w*d)), Math.max(1, Math.round(h*d))).data; const cols = new Set(); let white = 0, navy = 0, n = 0;
+      for (let i = 0; i < a.length; i += 4){ n++; cols.add((a[i] >> 4) + ',' + (a[i + 1] >> 4) + ',' + (a[i + 2] >> 4)); if (a[i] > 225 && a[i + 1] > 225 && a[i + 2] > 225) white++; if (a[i] < 70 && a[i + 1] < 80 && a[i + 2] > 40 && a[i + 2] < 110 && a[i + 3] > 200) navy++; } return { cols: cols.size, white: white/n, navy: navy/n }; };
+    for (const [t, side] of [['inf', 'own'], ['mot', 'own'], ['tank', 'war'], ['frig', 'ally'], ['jet', 'other']]){ const D = U.dims(14, false, false), F = U.dims(14, false, true), E = U.badge(t, side, 14, 0, false, false), g = E.c.getContext('2d'), Ef = U.dia(t, side, 14, false), gf = Ef.c.getContext('2d'), cy = D.fh + D.bh/2;
+      out[t] = { w: E.c.width/d - 2*(E.ox - D.ox) - D.ox, flag: stat(g, E, 2, 1, D.w - 4, D.fh - 2), count: stat(g, E, D.w - 5 - D.tw, D.fh + 3, D.tw + 1, D.bh - 6), tag: stat(g, E, -D.tg/2 + 3, cy - D.tg/2 + 3, D.tg - 6, D.tg - 6), bar: stat(g, E, D.w - 4, D.fh + 3, 3, D.bh - 6),
+        far: stat(gf, Ef, F.w/2 - F.tg/2 + 3, F.h/2 - F.tg/2 + 3, F.tg - 6, F.tg - 6), farEdge: stat(gf, Ef, 2, 2, 5, 5) }; }
     return out; });
-  for (const [t, q] of Object.entries(parts)) checks['badge-parts-' + t] = { ok: !!q && Math.abs(q.w - q.h) <= 1 && q.flag.cols >= 3 && q.pill.fh >= 0.38*q.pill.w && q.icon.white > 0.06 && q.count.white > 0.02, ...q };
+  for (const [t, q] of Object.entries(parts)) checks['badge-parts-' + t] = { ok: !!q && q.flag.cols >= 3 && q.count.white > 0.04 && q.tag.white > 0.3 && q.tag.navy > 0.03 && q.far.white > 0.3 && q.far.navy > 0.03 && q.farEdge.white < 0.2 && q.bar.white < 0.05, ...q };
   // (2) the infantry figures: 3D squads with a soft shadow, not single-colour blobs
   const sheets = await p.evaluate(async () => { const out = {};
     for (const t of ['sol', 'sat', 'ssf']){ const im = new Image(); im.src = 'assets/units/m-' + t + '.webp'; try { await im.decode(); } catch (e) { out[t] = { err: 'load' }; continue; }
