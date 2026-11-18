@@ -836,7 +836,7 @@ def unit_request_text(name):
 
 # ---- THE CHECK (--review): a Gemini text model looks at each new picture against the Art Bible and says PASS or FLAG.
 # It never redoes anything: a FLAG is shown to the owner, who decides (Art Bible standing rule).
-REVIEW_MODEL = os.environ.get('GEMINI_REVIEW_MODEL') or 'gemini-2.5-flash'   # a Flash-class text model; confirm the id before the first use
+REVIEW_MODEL = os.environ.get('GEMINI_REVIEW_MODEL') or 'gemini-3.8-flash'   # a Flash-class text model; gemini-2.5-flash answers 404 (closed to new users, 18 Nov 2026)
 # ESTIMATE ONLY, not verified (the price page could not be reached): about $0.30 per million tokens in (text and images) and
 # $2.50 per million out (thinking included), the published Flash-class price; a check is about 3,000 tokens in and 400 out
 REV_IN_USD, REV_OUT_USD = 0.30e-6, 2.50e-6
