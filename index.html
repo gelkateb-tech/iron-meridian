@@ -2363,6 +2363,7 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 .abs.fight{flex-direction:row; gap:5px; background:rgba(224,87,79,.14); box-shadow:inset 0 0 0 1px rgba(224,87,79,.55)}
 .abs.fight canvas{width:24px; height:24px; flex:none}
 .ab-emb{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(111,176,232,.12); border-left:3px solid #6fb0e8; color:#cfe4f5} .ab-emb b{color:#fff}
+.abs.dug em{display:flex; align-items:center; gap:3px; color:#ffd77a} .abs.dug b{color:#ffd77a} .castle{flex:none; display:inline-block; vertical-align:-1px}
 .ab-dug{display:flex; align-items:center; gap:6px; font-size:11.5px; padding:3px 8px; border-radius:4px; background:rgba(226,162,61,.12); border-left:3px solid #e2a23d; color:#f1dfb8} .ab-dug b{color:#ffd77a} .ab-dug .digsh{flex:none} .ab-dug-c{color:#bfae8c}
 .ab-stk{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(224,87,79,.12); border-left:3px solid var(--danger, #e0574f); color:var(--danger-t, #ff9a90)}
 .ab-dias{display:flex; flex-wrap:wrap; gap:0 4px}
@@ -5882,50 +5883,23 @@ function dustSprite(i, tn){ const key = 'dust' + i + tn; if (SPR[key]) return SP
 // dark seams), a light cream edge and a dark halo outside that, so it stands out on green land, on a green badge and at night. 5% bigger than the
 // first one (10.4 css px wide at ps 0.9), drawn as whole device-pixel blocks so it stays crisp at 1x, 2x and 3x (cached per device size). Returns
 // its box on screen (css px): a hover or a tap on it explains it (DIG_TIP)
+// the dug-in mark's garrison castle (owner 2026-11-19: "match this garrison look and keep the yellow"): a flat crenellated tower with three
+// battlements and an arched gate, as Conflict of Nations' garrison sign; 64 x 74 units (badge shield, the army bar's stats and its label)
+const CASTLE_D = 'M0 0 H15 V10 H24.5 V0 H39.5 V10 H49 V0 H64 V26 L55 32 V74 H40 V58 C40 47 24 47 24 58 V74 H9 V32 L0 26 Z';
+let CASTLEP = null; const castlePath = () => CASTLEP || (CASTLEP = new Path2D(CASTLE_D));
+const castleSVG = (px = 12, col = '#e2a23d') => `<svg class="castle" viewBox="0 0 64 74" width="${px}" height="${Math.round(px*74/64)}" aria-hidden="true"><path fill="${col}" fill-rule="evenodd" d="${CASTLE_D}"/></svg>`;
 const SBM = new Map(); let DUGHIT = [];   // DUGHIT: this frame's marks on screen (their own small hit boxes)
 function sbmPaint(W, H){ const u = W/10, pd = Math.ceil(1.3*u) + 1, c = document.createElement('canvas'); c.width = W + 2*pd; c.height = H + 2*pd; c.pad = pd; const g = c.getContext('2d');
   g.translate(pd, pd); const path = () => { g.beginPath(); g.moveTo(0.3*u, 0.5*u); g.lineTo(W - 0.3*u, 0.5*u); g.lineTo(W - 0.3*u, H*0.5); g.quadraticCurveTo(W - 0.5*u, H*0.86, W/2, H - 0.2*u); g.quadraticCurveTo(0.5*u, H*0.86, 0.3*u, H*0.5); g.closePath(); };
   path(); g.lineJoin = 'round'; g.lineWidth = Math.max(2, 2.7*u); g.strokeStyle = 'rgba(10,12,8,.9)'; g.stroke();   // the dark halo
   path(); const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#ffd56a'); gr.addColorStop(1, '#e19a2c'); g.fillStyle = gr; g.fill();   // the amber face
-  g.save(); path(); g.clip(); g.fillStyle = '#4a3009';   // the sandbag seams: rows at a third and two thirds, the bags offset row by row
-  const sw = Math.max(1, Math.round(0.8*u)), r1 = Math.round(H*0.36), r2 = Math.round(H*0.66), bx = (x, y0, y1) => g.fillRect(Math.round(x) - (sw >> 1), y0, sw, y1 - y0);
-  g.fillRect(0, r1 - (sw >> 1), W, sw); g.fillRect(0, r2 - (sw >> 1), W, sw); bx(W/2, 0, r1); bx(W*0.3, r1, r2); bx(W*0.7, r1, r2); bx(W/2, r2, H); g.restore();
+  g.save(); path(); g.clip(); const k = 0.66*W/64; g.translate(W/2 - 32*k, H*0.43 - 37*k); g.scale(k, k); g.fillStyle = '#3d2606'; g.fill(castlePath(), 'evenodd'); g.restore();   // the garrison castle (owner 2026-11-19, as in Conflict of Nations)
   path(); g.lineWidth = Math.max(1, 1.15*u); g.strokeStyle = '#fff3cf'; g.stroke();   // the light edge
   return c; }
 function sandbagMark(x, y, ps){ const W = Math.max(10, Math.ceil(11*ps*1.05*dpr - 0.01)), H = Math.round(W*1.14), key = W; let c = SBM.get(key);
   if (!c){ c = sbmPaint(W, H); if (SBM.size > 12) SBM.clear(); SBM.set(key, c); }
   const pd = c.pad, X = Math.round((x - W/2/dpr)*dpr)/dpr - pd/dpr, Y = Math.round((y - H/2/dpr)*dpr)/dpr - pd/dpr; ctx.drawImage(c, X, Y, c.width/dpr, c.height/dpr);
   return {x:X - 1, y:Y - 1, w:c.width/dpr + 2, h:c.height/dpr + 2}; }
-/*@TEST*/
-// DUG-IN OPTIONS for the owner (2026-11-18, item 5: "show me 2-3 clearer options ... don't change it without my OK"): drawn in code in the badge's
-// own style (a white rounded tag with a flat navy symbol, like the unit-type tag), each in place of today's amber shield when a test page sets
-// window.__dugOpt (1, 2 or 3; .test/dug-options.js). The badge itself is unchanged: nothing here is in the public build.
-//  1 SANDBAGS: a white tag with a navy wall of sandbags (three below, two above), hung at the badge's lower left like today's mark
-//  2 TRENCH: a white tag with a navy trench line (a crenellated line, the map sign of a dug-in line, with its parapet)
-//  3 SANDBAG ARC: navy sandbags (white edged) round the lower half of the badge itself (zoomed in: a sagging row under its bar), no extra tag
-const DOPT = new Map();
-function dugOptPaint(k, W){ const H = W, pd = 2, c = document.createElement('canvas'); c.width = W + 2*pd; c.height = H + 2*pd; c.pad = pd; const g = c.getContext('2d'); g.translate(pd, pd);
-  const u = W/12, rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
-  g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 1.6*u; g.shadowOffsetY = 0.6*u; rr(0, 0, W, H, 2.6*u); g.fillStyle = '#ffffff'; g.fill(); g.restore();
-  rr(0.5, 0.5, W - 1, H - 1, 2.4*u); g.lineWidth = 1; g.strokeStyle = 'rgba(8,16,30,.6)'; g.stroke(); g.fillStyle = NAVY;
-  if (k === 1){ const bw = 3.3*u, bh = 2.3*u, gap = 0.35*u, row = (n, y) => { const x0 = (W - (n*bw + (n - 1)*gap))/2; for (let i = 0; i < n; i++){ rr(x0 + i*(bw + gap), y, bw, bh, bh/2); g.fill(); } };
-    row(3, H - 2.2*u - bh); row(2, H - 2.2*u - 2*bh - gap); row(1, H - 2.2*u - 3*bh - 2*gap); }
-  else { const y0 = 4.4*u, y1 = 7.6*u, xs = [1.7, 3.6, 5.5, 7.4, 9.3, 10.3].map(v => v*u); g.beginPath(); g.moveTo(xs[0], y1);   // the trench: a crenellated line, the map sign of a dug-in line
-    for (let i = 0; i < 5; i++){ const yA = i % 2 ? y1 : y0; g.lineTo(xs[i], yA); g.lineTo(Math.min(xs[i + 1], W - 1.7*u), yA); if (i < 4) g.lineTo(xs[i + 1], i % 2 ? y0 : y1); }
-    g.strokeStyle = NAVY; g.lineWidth = 1.7*u; g.lineJoin = 'miter'; g.lineCap = 'butt'; g.stroke(); g.fillRect(1.7*u, 9.4*u, W - 3.4*u, 1*u); }   // (and the parapet along it)
-  return c; }
-function dugOptMark(k, X, Y, W, H, far){ const ga = ctx.globalAlpha;
-  if (k === 3){ const cx = X + W/2, cy = Y + H*0.5, rx = W/2 + 3.2, ry = H/2 + 3.2, n = far ? 8 : 5, bw = far ? 5.2 : 6.4, bh = 3.4;   // bags round the lower half of the badge
-    for (let i = 0; i < n; i++){ const an = Math.PI*(0.08 + 0.84*i/(n - 1)); if (far && Math.abs(an - Math.PI/2) < 0.2) continue;   // (zoomed out: a gap at the bottom, where the position dot is)
-      const x = far ? cx - Math.cos(an)*rx : X + 6 + (W - 12)*i/(n - 1), y = far ? cy + Math.sin(an)*ry : Y + H + 3 + Math.sin(Math.PI*i/(n - 1))*2.2;   // (zoomed in: a sagging row under the bar, clear of the tag and the count)
-      if (!far){ ctx.save(); ctx.translate(x, y); ctx.rotate(Math.cos(Math.PI*i/(n - 1))*0.25); } else
-      { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI/2 - an); } ctx.beginPath(); ctx.ellipse(0, 0, bw/2 + 0.9, bh/2 + 0.9, 0, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
-      ctx.beginPath(); ctx.ellipse(0, 0, bw/2, bh/2, 0, 0, Math.PI*2); ctx.fillStyle = NAVY; ctx.fill(); ctx.restore(); }
-    return far ? {x:X - 6, y:Y + H/2, w:W + 12, h:H/2 + 8} : {x:X, y:Y + H, w:W, h:9}; }
-  const S0 = Math.round(13*dpr), key = k + '|' + S0; let c = DOPT.get(key); if (!c){ c = dugOptPaint(k, S0); DOPT.set(key, c); }
-  const s = 13, x = far ? X - 4 : X + 1, y = far ? Y + H - 6 : Y + H - 4, pd = c.pad/dpr; ctx.drawImage(c, x - pd, y - pd, c.width/dpr, c.height/dpr); ctx.globalAlpha = ga;
-  return {x:x - 1, y:y - 1, w:s + 2, h:s + 2}; }
-/*@ENDTEST*/
 // the same mark as a small picture for the panels (Army Info)
 const digShieldHTML = (px = 14) => { const W = Math.round(px*(window.devicePixelRatio || 1)), H = Math.round(W*1.14); let u = '', cw0 = 0;
   try { const c = sbmPaint(W, H); u = c.toDataURL(); cw0 = c.width; } catch (e) {} return u ? `<img class="digsh" src="${u}" width="${cw0/(window.devicePixelRatio || 1)}" alt="" aria-hidden="true">` : ''; };
@@ -7504,8 +7478,7 @@ function badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, m
   if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, W + 4, H + 4, D.rr + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
   let bg = null;
   if (!minor){ const cmd = L.some(cmdOf), dug = counter.dug && !moving;
-    if (dug){ let r = null; /*@TEST*/if (window.__dugOpt) r = dugOptMark(window.__dugOpt, x0, y0, W, H, far);/*@ENDTEST*/   // (test pages: the owner's options, dugOptMark)
-      if (!r) r = sandbagMark(far ? x0 + 3 : x0 + 8, y0 + H + 2.5, 0.9);   // (hangs under the bar's lower left: clear of the flag, the count and the tag)
+    if (dug){ const r = sandbagMark(far ? x0 + 3 : x0 + 8, y0 + H + 2.5, 0.9);   // (hangs under the bar's lower left: clear of the flag, the count and the tag)
       if (ctx.globalAlpha > 0.35 && DUGHIT.length < 400){ r.own = !!a && a.owner === PLAYER; DUGHIT.push(r); } }   // dug in: its own small hit box (hover or tap: what it means)
     if (cmd){ const sx = far ? x0 - 1.5 : x0 - 4.5, sy = far ? y0 - 1.5 : y0 + 4; ctx.font = `700 10px ${BODY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(3,6,8,.9)'; ctx.strokeText('★', sx, sy); ctx.fillStyle = '#e2a23d'; ctx.fillText('★', sx, sy); }
     if (a && a.owner === PLAYER && !supplied(a)) supplyMark(x0 + W + (far ? 1.5 : 3.5), y0 - (far ? 1.5 : 2.5));   // out of supply
@@ -9797,7 +9770,7 @@ const TUT_STEPS = [
   {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them. Tapping only selects: the army bar opens at the bottom.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
   {t:'Plan an attack', d:() => tutPick() != null ? `Press <b>Move</b> in the army bar, then tap the city (or the centre) of the ringed grey (independent) province, <b>${G.P[tutPick()].name}</b>: a province is captured the moment your troops reach its centre point (the city, or the crossroads where its roads meet); one ground unit is enough. A dashed route along the roads appears with an odds chip: green Favourable means you should win.` : 'No independent province nearby is weak enough to win yet. Tap Next: recruit a few more units first and attack once the odds chip reads Favourable.', map:() => tutPick(), next:() => tutPick() == null, done:() => sel.target !== null || S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
   {t:'Send it', d:() => sel.target !== null ? 'The odds read Likely defeat, so the force waits: merge more units first, or press the yellow button in the panel to attack anyway.' : 'When you have a Favourable target, press Move and tap it to march. Tap Next to continue.', el:'#ctx', next:() => sel.target === null, done:() => S.armies.some(a => a.owner === PLAYER && (a.path.length || a.to !== null))},
-  {t:'Dug in', d:() => `A small amber shield with a wall of sandbags on a force's badge means it is <b>dug in</b>: +${digPct()}% defence in the open and +${digPct(true)}% inside a city (a province with a city), not added together. A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
+  {t:'Dug in', d:() => `A small amber shield with a castle (the garrison sign) on a force's badge means it is <b>dug in</b>: +${digPct()}% defence in the open and +${digPct(true)}% inside a city (a province with a city), not added together. A force digs in after holding position for 12+ hours on your own ground or in a fortified friendly province, or at once with the <b>Defend</b> stance; moving cancels it. Hover or tap the shield to see this again.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Research', d:() => 'Open Research (the Research tab in the bar along the bottom, or R) and start a project; two projects run at once, one in each slot. Each unit has its own line: its unlock, then upgrades. Every project opens on its own day; money and resources are boosted by city buildings (Arms Industry), not research.', el:'#resbtn', done:() => { const N = S.nations[PLAYER]; return !!(N.research || N.research2); }},
   {t:'You are ready', d:() => 'The bar along the bottom opens Diplomacy (war, peace, trade routes), Market, Cities, Research, Army and Production (P); More holds Intelligence, Settings, Sound and “How to play” (or press ?), which explains roads and railways, drones, trade and coalitions. The crate at the left of the resource strip lists your missiles; the shields on the right of the map fly home, open the dispatches and toggle the relations map. Good luck, commander.', el:'#dock', next:true, last:true},
 ];
@@ -10583,7 +10556,7 @@ function armyBarHTML(a, ro = false){
     ${hl[0] ? `<div class="ab-heal ${hl[1]}">${hl[0]}</div>` : ''}
     ${a.land > 0 && a.to === null ? `<div class="ab-emb" title="Troops coming ashore from the sea: they cannot move on or capture until they have landed, and fight at ${Math.round(rLandF(o)*100)}% on their first day ashore">⚓ <b>Landing</b> · ${a.land} h left</div>` : a.emb != null && a.to === null && a.path.length ? `<div class="ab-emb" title="Ground forces board ships only in a naval port. The force stays in the port until it is aboard, then sails.">⚓ <b>Embarking</b> · ${a.emb} h left</div>` : ''}
     ${abDugHTML(a)}
-    <div class="ab-stats">${knownMorale ? cell('Morale', mor + '%', 'Morale: it drops in a fight and recovers when supplied. Broken forces retreat.', mor < 30 ? 'warn' : '') : ''}${cell('Speed', abSpd(a) + '<small> km/d</small>', ro ? 'Marching speed on open ground' : 'Marching speed on open ground without roads (km a day). ' + speedHTML(a).replace(/<[^>]+>/g, ''))}${cell('Strength', (ro ? '≈ ' : '') + Math.round(power(a)), 'Total strength: attack and defence of every unit, health and morale included')}${(rr => rr.length ? cell('Range', Math.max(...rr.map(e => e[1])) + '<small> km</small>', `Attack range: ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km`).join(', ')}. Fires at enemy forces its side can see within range, without moving in.`, 'arng') : '')(rangeRows(a, ro))}${sw}</div>
+    <div class="ab-stats">${abDugCell(a, cell)}${knownMorale ? cell('Morale', mor + '%', 'Morale: it drops in a fight and recovers when supplied. Broken forces retreat.', mor < 30 ? 'warn' : '') : ''}${cell('Speed', abSpd(a) + '<small> km/d</small>', ro ? 'Marching speed on open ground' : 'Marching speed on open ground without roads (km a day). ' + speedHTML(a).replace(/<[^>]+>/g, ''))}${cell('Strength', (ro ? '≈ ' : '') + Math.round(power(a)), 'Total strength: attack and defence of every unit, health and morale included')}${(rr => rr.length ? cell('Range', Math.max(...rr.map(e => e[1])) + '<small> km</small>', `Attack range: ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km`).join(', ')}. Fires at enemy forces its side can see within range, without moving in.`, 'arng') : '')(rangeRows(a, ro))}${sw}</div>
     <div class="ab-dias">${types.map(t => diaHTML(a, t, ro)).join('')}</div>
     ${!ro && a.owner === PLAYER && shipsOnly(a) && !a.air && !a.fly ? fleetOrdersHTML(a) : ''}
     ${sp.over ? `<div class="ab-stk" title="${stackText(sp)}. Split it into stacks of ${sp.limit} or fewer.">⚠ ${sp.size} / ${sp.limit} ${STACK_W[sp.dom]}: −${Math.round((1 - sp.dmg)*100)}% damage, −${Math.round((1 - sp.spd)*100)}% speed</div>` : ''}
@@ -10592,6 +10565,8 @@ function armyBarHTML(a, ro = false){
 // "Dug in: +10% defence" where it stands in the open (and what a city gives), "+25% in a city" inside one (rules/combat.js DIG_DEF, DIG_CITY: digPct)
 const abDugHTML = a => { if (!dugIn(a) || G.P[a.at].sea) return ''; const city = !!G.P[a.at].city;
   return `<div class="ab-dug" title="${DIG_TIP}">${digShieldHTML(13)}<span><b>Dug in</b>: +${digPct(city)}% defence${city ? ' in a city' : ` <span class="ab-dug-c">(+${digPct(true)}% in a city)</span>`}</span></div>`; };
+// the dug-in bonus in the stats row, as Conflict of Nations' garrison sign: the amber castle and +10% (in the open) or +25% (in a city); only while dug in
+const abDugCell = (a, cell) => !dugIn(a) || G.P[a.at].sea ? '' : cell(castleSVG(11) + ' Dug in', '+' + digPct(!!G.P[a.at].city) + '%', DIG_TIP, 'dug');
 const abHP = a => { const max = Math.round(armyHP(a)), cur = Math.round(effHP(a)); return {cur, max, f:max ? Math.min(1, cur/max) : 0}; };
 // a foreign force you can see: the same bar, read-only and with only what you know (its health as a share, its unit types and counts; no morale, research or orders)
 function foeHTML(a){ const P = G.P[a.to !== null ? a.to : a.at], st0 = statusText(a);
@@ -11238,7 +11213,7 @@ const HELP_SEC = [
     <li><b>Split…</b> picks exactly which units leave, per unit type with damaged units listed apart, into one or several new groups. Presets: in half, evenly into 2–6, one group per type, or a single unit. <b>Split in half</b> does it in one click.</li>
     <li><b>Merge</b>: drag one of your counters onto another, or use Merge in the command bar.</li>
     <li><b>Stack limit</b>: up to 10 ground units, 5 ships or 5 aircraft (a card of swarm drones counts once) fight at full strength in one force. A bigger stack deals 1 − 0.56 × ln(size ÷ limit) of its damage (20 ground units 61%, 30 38%, never below 25%) and moves slower (20: 90%, 50: 76%, never below 50%). Forces arriving in the same province merge only while they stay within the limit; merging past it warns you, and the counter gets a red stack mark. Attack with several stacks from several provinces: the front widens too.</li>
-    <li><b>Moving or holding</b>: marching forces raise dust and show their heading; a force that has held its own ground for 12 h, or is on Defend stance, is dug in and gets a sandbag marker.</li></ul>`],
+    <li><b>Moving or holding</b>: marching forces raise dust and show their heading; a force that has held its own ground for 12 h, or is on Defend stance, is dug in and gets an amber castle marker.</li></ul>`],
   ['terrain', 'Terrain', `<ul>
     <li><b>Defence</b>: mountains +30%, cities +25%, hills +20%, forest and marsh +15%. Open plains and desert give no cover.</li>
     <li><b>Who fits where</b>: infantry and special forces fight better in cover; tanks and guns want open ground (armor −30% in mountains). Aircraft ignore terrain.</li>
