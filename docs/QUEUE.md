@@ -21,7 +21,6 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **CITIES 3D restyle** | the owner's CoN reference look, readable from play zoom, cities keep their size and detail; before/after sheets | Opus | cities-3d-2 |
-| **NAVAL CITIES** (defaults approved; results before merging) | anchor icon at every coastal city, boarding and landing only there, assault landings into enemy naval cities, Marines (mar) land anywhere; golden re-recorded with proof | Opus | naval-cities |
 | **MAP SURFACE** (started 2026-11-19 night) | texture fix (bring back the public build's rich detail, visible at every zoom incl. fully zoomed out; keep MAP-2 borders, toggles, roads), then jungle options A/B/C and sea options A/B/C on top of it; critique, repair, final sheets (old / dev / fix; zoomed in and out) and sea clips; NOTHING merged until the owner picks | Opus | map-texture, map-jungle, map-sea |
 
 ## Next free slots (in this order)
@@ -116,6 +115,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 | **Total** | batch 1 done ($0.31 logged: Army Base 1-5, construction 1-3, merged into master as files, drawn by BLD-MAP-2); next (Fortifications) $0.18; everything else listed about $1.9 | | |
 
 ## Waiting on me (the owner)
+- **NAVAL CITIES (done, branch naval-cities a4ac3a5, not merged; sheets sent 2026-11-19).** Anchor at 349 coastal cities; board only at own/friend naval cities; land only at naval cities (enemy/independent = assault landing, 45 min, first-day penalty); Marines (new unit, any coast when the stack is all Marines; research day 3). All checks pass; golden re-recorded with proof. Waiting on the owner: OK to merge (after cities-2, map jobs one at a time); inland cities with anchors (Hyderabad PK, Ahmedabad, Hubballi): keep or require the city point near the sea; AI hardly builds Marines (raise?); long detours for ordinary troops near plain beaches.
 - **UNIT-ART-3 (stopped at the $5 floor, 5 of 12 sets made, branch unit-art-3 dca8cdb, not merged).** Made: Special Forces, Paratroopers, Jammer, Heavy Bomber, Maritime Patrol (225 pictures, about $8.93; log total about $54.24; estimated balance about $6.61). Not made: AWACS, Stealth Bomber, Marines, the 5 uniques (about $3.6 more). Sheets sent 2026-11-19. Waiting on the owner: OK for 12 free flips/cut-out fixes; 7 must-have redraws (about $0.35); bomber redesign (copies B-52/B-1B/Tu-160/H-6, $0.7–1.8); paratroopers show no parachute gear; jammer NATO look 1 copies the M113; MPA look-alikes; top-up for the rest.
 
 - **Weather (clips sent 2026-11-19 night):** pick rain/snow option A (classic), B (long and windy) or C (fine and dense); branches weather-opt-a/b/c. The cloud colour fix is merged on master (d4d0bb5).
