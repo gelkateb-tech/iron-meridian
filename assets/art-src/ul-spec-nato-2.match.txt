@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- point 1 (top): weapon grip is reversed to left-handed instead of right-handed
+- point 1 (top): radio antenna is positioned on the soldier's right side instead of the left

@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 1 (scene, top): The backpack is plain solid olive green instead of having the camouflage pattern shown in the side view.
+- Point 1 (scene): The chest-mounted radio and antenna from the side view are missing.

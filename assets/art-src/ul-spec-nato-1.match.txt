@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 in top: weapon is aimed to the operator's left instead of right, radio antenna points backward, and a backpack has been added.

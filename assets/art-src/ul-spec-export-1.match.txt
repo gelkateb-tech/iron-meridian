@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): weapon handling is mirrored, held left-handed with stock at left shoulder instead of right-handed as in side view.

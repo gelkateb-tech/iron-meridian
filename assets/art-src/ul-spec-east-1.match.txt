@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): operator's cap has a camouflage pattern instead of solid olive green, and weapon grip is mirrored/swapped compared to side view.

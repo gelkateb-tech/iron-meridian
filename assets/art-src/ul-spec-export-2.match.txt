@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. SAME UNIT (top): radio is on the wrong side of the chest and weapon design does not match the side view.

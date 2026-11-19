@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- point 1 (top): radio is placed on the right shoulder instead of the left shoulder
+- point 1 (top): weapon handedness is reversed compared to side view
