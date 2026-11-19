@@ -28,7 +28,9 @@ function* tickHourG(){
   // movement
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
-    if (a.land > 0 && --a.land <= 0) delete a.land;   // a landing from the sea: the hours left before the force is ashore (rules/movement.js legArrive)
+    // the part of this hour the force has to move in (hr): all of it, or what is left once a landing from the sea ends within the hour (rules/movement.js
+    // landStep: a 45-minute landing leaves 15 minutes to walk, march on or capture); a boarding in a port takes its share below (embStep)
+    let hr = landStep(a);
     if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (isSeat(a.owner)) tell(a.owner, `Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; if (a.wp) delete a.wp; }
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
@@ -39,13 +41,15 @@ function* tickHourG(){
       if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} halted at ${G.P[a.at].cityName || G.P[a.at].name}: no naval port there to embark. March to a port first.`, 'info', a.at); } }
     if (a.emb != null && !embLeg(a)) delete a.emb;   // (no longer about to board: the embarking starts again next time)
     if (a.wp && a.to === null && !a.path.length && !a.sail) stopNext(a);   // waypoints: a force at its stop sets off for the next one (rules/movement.js)
-    if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)
-    if (a.to === null && a.path.length && canProceed(a) && !embWait(a)){ a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;
-      if (a.carry && a.carryH === S.hour - 1 && legMode(a, a.at, a.to) === 'rail') a.t = a.carry/legH(a); a.carry = 0; }   // trains run through: no stop at every station
+    if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a, hr); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)
+    let e = -1;
+    if (a.to === null && a.path.length && canProceed(a) && (e = embStep(a, hr)) >= 0){ hr = e; a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;   // (boarding ships: what is left of the hour once aboard)
+      if (a.carry && a.carryH === S.hour - 1 && (legMode(a, a.at, a.to) === 'rail' || seaCarry(a))) a.t = a.carry/legH(a); a.carry = 0; }   // trains run through: no stop at every station (and troops at sea: rules/movement.js seaCarry)
     if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
-    if (a.to !== null){ const lh = legH(a); a.t += 1/lh;   // (a leg takes time in proportion to its real length: rules/movement.js legRatio)
-      if (a.t >= 1){ if (a.path.length && ground(a) && legMode(a, a.at, a.to) === 'rail'){ a.carry = Math.min(1, (a.t - 1)*lh); a.carryH = S.hour; } else a.carry = 0;
-        legArrive(a); }
+    if (a.to !== null){ const lh = legH(a); a.t += hr/lh;   // (a leg takes time in proportion to its real length: rules/movement.js legRatio)
+      if (a.t >= 1){ const ov = Math.max(0, (a.t - 1)*lh), sea = ground(a) && (G.P[a.at].sea || G.P[a.to].sea);   // ov: the time over this hour once the leg ended
+        if (a.path.length && ground(a) && (sea || legMode(a, a.at, a.to) === 'rail')){ a.carry = Math.min(1, ov); a.carryH = S.hour; } else a.carry = 0;
+        legArrive(a); if (a.land > 0) landOver(a, ov); }   // (troops coming ashore: the time over goes into the landing)
       else if (!(shipsOnly(a) && !G.P[a.to].sea)) legCross(a, lh); }   // a pinpoint move's last leg: the hour it crosses into its province it arrives there and walks on to the point
   }
   // head-on clash: hostile columns marching in opposite directions on the same road meet and fight at the nearer province
