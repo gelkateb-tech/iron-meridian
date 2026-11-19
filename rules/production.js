@@ -6,13 +6,14 @@ function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = 
 // ---------- mobilization rules (no drawing, no UI): what a city needs before it can train a unit.
 // A unit must be researched (units with no tech are known from day one) AND its city must have the unit's building(s) at the needed level, working.
 const reqsOf = t => { const U = UNITS[t]; return U && U.reqs ? U.reqs : U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };   // (U.reqs: infantry, from INF_NEEDS)
-const bldOk = (p, t) => reqsOf(t).every(r => S.bld[p][r.b] >= r.l && !bdis(p, r.b));
+const bldOk = (p, t) => (!UNITS[t].coastal || navalCity(p)) && reqsOf(t).every(r => S.bld[p][r.b] >= r.l && !bdis(p, r.b));   // (Marines: a coastal city)
 // why nation n cannot mobilize unit t in province p: null when it can, else {kind, why, b}: kind 'own' (not its province), 'city' (not a city),
 // 'tech' (research missing), 'bld' (building missing or too low; b = the building), 'ko' (building knocked out for a while)
 function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why:'Unknown unit'};
   if (S.owner[p] !== n) return {kind:'own', why:'Not your city'};
   if (!G.P[p].city) return {kind:'city', why:'Units are mobilized in cities'};
   if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
+  if (U.coastal && !navalCity(p)) return {kind:'coast', why:`${U.name} train only in a coastal city (a naval city)`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
     if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${c.h} h` : r.b === 'fac' ? `Needs ${B.name} level ${r.l}` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
     if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
@@ -69,7 +70,7 @@ const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
 function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
 const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)*(n >= 0 ? rTrainF(n, t) : 1)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
-function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && P.city && P.coast)); }
+function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && navalCity(p))); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
 const canRecruit = (n, p, t) => !canMobilize(n, p, t) && !queueFull(n, p) && canAfford(n, t);
 function recruit(n, p, t){
