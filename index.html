@@ -5992,10 +5992,10 @@ function labNight(L, lx, ly){ if (!(L.city || L.cap) || !cityLightsOn() || view.
    shows, only the city's name; from the mid zoom one picture per city, its most important building with a picture (HQ, Missile Silo, Airbase, Army
    Base, Naval Yard, Arms Industry, Recruiting Office, Bunker; Missile Silo and Arms Industry have no angled picture yet and show none),
    standing on the city's point; from BN_ALL0 the rest fade in round it in a tight cluster, behind and beside it (the name stays clear below). Every
-   picture stands on land: its footprint (BNFOOT, the solid cells of the picture) is kept off the water at every zoom (bnLayout: the nearest dry spot,
-   smaller on a small island; drawn bigger below BN_HMIN only as far as it stays dry). The Naval Yard stands on the water at its city (bnShore: a
-   port on a big river that reaches the sea on that river's bank at the city, its piers in a harbour basin on the river; else the nearest sea
-   shore where its sheds stand dry and its piers reach over the water), mirrored when that puts its piers (to the lower right in the pictures) on
+   picture stands on land: its footprint (BNFOOT, the solid cells of the picture) is kept off the water the map draws (bnWater) at every zoom
+   (bnLayout: the nearest dry spot, smaller on a small island, none at all where no room is dry). The Naval Yard stands on the water at its city (bnShore: the
+   shore of the sea, an estuary or a big lake by the city; else a port on a big river that reaches the sea on that river's bank at the city, its piers in a harbour basin on the river; else its province's shore
+   further out; its sheds stand dry and its piers reach over the water), mirrored when that puts its piers (to the lower right in the pictures) on
    the water; the others make room for it. Every spot is a world point (the city's point plus an offset worked out once from its
    buildings: bnLayout), drawn through toScreen every frame, so nothing slides as the map zooms or pans, across the wrap seam too. Sizes follow the
    map like the troop models between a floor (the mid zoom picture can be seen) and a cap, and never reach a neighbouring city. Construction, shown
@@ -6008,7 +6008,7 @@ function labNight(L, lx, ly){ if (!(L.city || L.cap) || !cityLightsOn() || view.
 const BN_K = ['silo', 'air', 'fac', 'yard', 'arms', 'rec', 'fort'];   // the buildings in order of importance (after the HQ)
 const BN_ART = {air:5, fac:5, rec:5, yard:5, silo:5, arms:5, fort:5};   // the buildings with angled pictures (game levels); the Bunker (fort) levels 1-5 use pictures 1-5: bn-fort-N on the map (its surface view), bn-fortcut-N in the panels (the cutaway)
 const BN_IN0 = 20, BN_IN1 = 26, BN_ALL0 = 50, BN_ALL1 = 62, TRAY_ANIM = 1200;   // hexPx: the main picture fades in over IN0..IN1, the rest over ALL0..ALL1; a level pop (ms)
-const BN_HMIN = 72, BN_HMAX = 176, BN_K0 = 0.51;   // a picture's long side is BN_K0*hexPx css px between hexPx BN_HMIN and BN_HMAX (so it grows with the map), with a soft floor below (0.51: 18% smaller than the first 0.62, owner's #13)
+const BN_HMIN = 72, BN_HMAX = 176, BN_K0 = 0.51*0.83;   // a picture's long side is BN_K0*hexPx css px (bnL; 0.51 was 18% smaller than the first 0.62, owner's #13; times 0.83, 17% smaller again: owner 2026-11-18, "15-20% smaller")
 const BN_WPX = BN_K0*HS0;   // ... which is BN_WPX world px (times the picture's own factor: bnF) wherever it grows with the map
 const BN_STYLES = ['western', 'eastern-europe', 'middle-east', 'east-asia', 'south-asia', 'africa', 'latin-america'];
 // each picture's size (px), ground anchor and top of the building (fractions), HQ flagpole tops [x, y, pole length] (fractions; the flags are to be drawn on them)
@@ -6064,21 +6064,22 @@ function bnFoot(nm){ let F = BNFT.get(nm); if (F) return F; const h = BNFOOT[nm]
   F = {all, land, pier}; BNFT.set(nm, F); return F; }
 // the share of the cells pts of picture nm that lie on the water, the picture standing at world (x, y) with its long side s world px (mir: mirrored);
 // past the share stop it returns 1 at once
-function bnWet(nm, pts, x, y, s, mir, stop = 1, wet = isWet){ const M = BNMETA[nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, lim = stop*pts.length; let n = 0;
+function bnWet(nm, pts, x, y, s, mir, stop = 1, wet = bnWater){ const M = BNMETA[nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, lim = stop*pts.length; let n = 0;
   for (const [u, v] of pts) if (wet(x + (mir ? M.ax - u : u - M.ax)*w, y + (v - M.ay)*h) && ++n > lim) return 1;
   return pts.length ? n/pts.length : 0; }
-// the Naval Yard's spot on the water at its city (owner's #14 and playtest 2, #4). A port on a big river that reaches the sea (Kolkata on the Hooghly,
-// Hamburg on the Elbe, Bordeaux on the Garonne, Houston on its ship channel, Basra on the Shatt al-Arab, Rosario on the Parana) has its yard on that
-// river's bank at the city, its piers over the river in a harbour basin (bnRivPort, bnBasinDraw), unless the sea's shore is right at the city (within
-// BN_SEANEAR world px: Istanbul, Mumbai, Shanghai) or the river is no nearer than the sea. Otherwise the sea's shore: every dry point by the water (water
-// within 2.25 world px) up to BN_YMAX world px from the city's point, on its own country's ground, is tried both ways round (mir: mirrored, the piers to
-// the lower left instead of the lower right), and the nearest whose land half stands dry and whose piers reach over the water wins (a few world px
-// further is worth a dry yard with its piers on the water, and a yard a size or two smaller (k) is worth one far off; on a coast facing up the map,
-// where the pictures' piers cannot point, the waterfront when it is near). No sea near: the bank of any river the city stands on (BN_RIVFAR); else the yard joins its city's cluster (far), turned to the nearest
-// water. Worked out once per province and picture: {dx, dy, mir, sea (the water's direction from the yard), r (world px from the city), lw / pw (wet
-// shares of the land half / the pier half), riv (on a river: rank, rl the land half's share on the river, fb its sheds on the far bank), far, bas (a
-// harbour basin under its piers: on a river, or by a coast where the piers stand mostly on land, BN_BASPW)}
-const BN_YMAX = 15, BN_RIVFAR = 9, BN_WETTOL = 0.02, BN_LAKE = 30, BN_RIVAT = 7.5, BN_SEANEAR = 3.5, BN_RIVPREF = 1.5, BN_RIVSEA = 8, BN_RIVW = 0.6, BN_BASPW = 0.5;
+// the Naval Yard's spot on the water at its city (owner's #14, playtest 2 #4, and 2026-11-18: "the Naval Yard on the real coast at Kolkata"), on the
+// water as the map draws it (bnWater). First the shore of the sea, an estuary or a big lake: every dry point by the water (water within 2.25 world px)
+// up to BN_YMAX world px from the city's point, on its own country's ground, is tried both ways round (mir: mirrored, the piers to the lower left
+// instead of the lower right), and the nearest whose land half stands dry and whose piers reach over the water wins (a few world px further is worth
+// a dry yard with its piers on the water, and a yard a size or two smaller (k) is worth one far off; on a coast facing up the map, where the pictures'
+// piers cannot point, the waterfront when it is near). Kolkata's yard so stands where the map draws the Hooghly as water, its estuary, not on its
+// thin river line in the town. No such shore near: a big river that reaches the sea at the city (Hamburg on the Elbe, Rosario on the Parana) has the
+// yard on its bank, its piers over the river in a harbour basin (bnRivPort, bnBasinDraw); else the shore of its own province up to BN_YFAR world px out
+// (a port whose map point stands inland: Oslo, Recife, Murmansk); else the bank of any river the city stands on (BN_RIVFAR); else the yard joins its
+// city's cluster (far), turned to the nearest water. Worked out once per province and picture: {dx, dy, mir, sea (the water's direction from the
+// yard), r (world px from the city), lw / pw (wet shares of the land half / the pier half), riv (on a river: rank, rl the land half's share on the
+// river, fb its sheds on the far bank), far, bas (a harbour basin under its piers: on a river, or by a coast where the piers stand mostly on land, BN_BASPW)}
+const BN_YMAX = 15, BN_YFAR = 32, BN_RIVFAR = 9, BN_WETTOL = 0, BN_LAKE = 30, BN_RIVAT = 7.5, BN_RIVSEA = 8, BN_RIVW = 0.6, BN_BASPW = 0.5;
 // the water a Naval Yard may face: the sea and the big lakes (BN_LAKE world px across or more: the Great Lakes, Victoria, Baikal), not a small lake
 // (Ladoga by St Petersburg). The small lakes' rings in a coarse grid, once per map
 let BNLK = null;
@@ -6090,24 +6091,56 @@ function bnSmallLake(x, y){ if (!BNLK || BNLK.g !== G){ const M = new Map(), C =
     for (let a = 0, c = R.length - 2; a < R.length; c = a, a += 2) if ((R[a + 1] > y) !== (R[c + 1] > y) && x < (R[c] - R[a])*(y - R[a + 1])/(R[c + 1] - R[a + 1]) + R[a]) inn = !inn;
     if (inn) return true; }
   return false; }
-const bnSea = (x, y) => isWet(x, y) && !bnSmallLake(x, y);
+// the water as the map draws it at the zooms the pictures show (owner 2026-11-18: "buildings on land"): isWet's mask is the 1:50m coast at 1.5
+// world px a texel, but from hexPx BV_B1 the coast is drawn from the provinces' own outline (borders.js; the 1:10m coast without the real borders:
+// coastRings), so a picture laid out against the mask could stand on drawn sea by an estuary, a fjord or a narrow bay. bnWater reads those rings
+// (and the lakes) themselves: a point is wet off every land ring or inside a lake (even-odd), found by the rings' crossings of its row (rows
+// BNW_K world px apart, worked out when first asked and kept: BNW_ROWS), the rings' segments bucketed in bands BNW_B world px high, once per ring set
+const BNW_K = 0.1, BNW_B = 2, BNW_ROWS = 24000; let BNW = null, BNWL = null;
+const bnwRings = () => BV.coast ? COASTR_HI1 : COASTR_HI.length ? COASTR_HI : COASTR;
+function bnwBands(rings, flat){ const M = new Map(); let n = 0; for (const R of rings){ const r = flat ? R : R.r; n += r.length/2; }
+  const X0 = new Float64Array(n), Y0 = new Float64Array(n), X1 = new Float64Array(n), Y1 = new Float64Array(n); let j = 0;
+  for (const R of rings){ const r = flat ? R : R.r, m = r.length; for (let i = 0; i < m; i += 2){ const k = (i + 2) % m, ya = r[i + 1], yb = r[k + 1]; if (ya === yb) continue;
+      X0[j] = r[i]; Y0[j] = ya; X1[j] = r[k]; Y1[j] = yb;
+      for (let b = Math.floor(Math.min(ya, yb)/BNW_B), b1 = Math.floor(Math.max(ya, yb)/BNW_B); b <= b1; b++){ let a = M.get(b); if (!a) M.set(b, a = []); a.push(j); } j++; } }
+  return {M, X0, Y0, X1, Y1, rows:new Map()}; }
+// the x of every crossing of the rings with the row r (sorted)
+function bnwRow(T, r){ let c = T.rows.get(r); if (c) return c; const y = r*BNW_K, L = T.M.get(Math.floor(y/BNW_B)) || [], o = [];
+  for (const j of L){ const ya = T.Y0[j], yb = T.Y1[j]; if ((ya <= y) !== (yb <= y)) o.push(T.X0[j] + (y - ya)*(T.X1[j] - T.X0[j])/(yb - ya)); }
+  c = Float64Array.from(o).sort(); if (T.rows.size > BNW_ROWS) T.rows.clear(); T.rows.set(r, c); return c; }
+const bnwIn = (T, x, y) => { const c = bnwRow(T, Math.round(y/BNW_K)); let lo = 0, hi = c.length; while (lo < hi){ const m = (lo + hi) >> 1; if (c[m] < x) lo = m + 1; else hi = m; } return (lo & 1) === 1; };
+function bnWater(x, y){ const R = bnwRings(); if (!R.length) return isWet(x, y);
+  if (!BNW || BNW.R !== R || BNW.n !== R.length){ BNW = Object.assign(bnwBands(R, false), {R, n:R.length}); BNL.clear(); BNSH.clear(); }   // (a new ring set: the layouts are worked out again)
+  if (!bnwIn(BNW, x, y)) return true;
+  if (!BNWL || BNWL.g !== G){ lakePath(); BNWL = Object.assign(bnwBands(G.lakeRing || [], true), {g:G}); }
+  return bnwIn(BNWL, x, y); }
+const bnSea = (x, y) => bnWater(x, y) && !bnSmallLake(x, y);
 function bnShore(p, e){ if (BNL_G !== G) bnReset(); if (!e) e = bnItems(p).find(q => q.k === 'yard') || {k:'yard', lv:1, nm:'bn-yard-1'};
-  const key = p + '|' + e.nm; let E = BNSH.get(key); if (E) return E; const P = G.P[p], s = Math.min(BN_WPX*bnF('yard', e.lv), bnNear(p)*2.2), F = bnFoot(e.nm), C = [];
+  const key = p + '|' + e.nm; let E = BNSH.get(key); if (E) return E; const P = G.P[p], s = Math.min(BN_WPX*bnF('yard', e.lv), bnNear(p)*2.2), F = bnFoot(e.nm);
   const mine = (x, y) => { const c = worldToCell(x, y), q = c >= 0 ? G.prov[c] : -1; return q < 0 || G.P[q].sea || q === p || G.P[q].country === P.country; };
-  for (let gy = -BN_YMAX; gy <= BN_YMAX; gy += 0.75) for (let gx = -BN_YMAX; gx <= BN_YMAX; gx += 0.75){ const d = Math.hypot(gx, gy), x = P.x + gx, y = P.y + gy; if (d > BN_YMAX || isWet(x, y)) continue;
-    let w = false; for (let k = 0; k < 8 && !w; k++) w = bnSea(x + Math.cos(k*Math.PI/4)*2.25, y + Math.sin(k*Math.PI/4)*2.25); if (w && mine(x, y)) C.push([gx, gy, d]); }
-  C.sort((a, b) => a[2] - b[2]); let B = null;
-  for (const [gx, gy, d] of C){ if (B && d >= B.sc) break;
-    for (const mir of [false, true]) for (const k of [1, 0.8, 0.65]){ const pk = 6*(1 - k), lw = Math.max(bnWet(e.nm, F.land, P.x + gx, P.y + gy, s*k, mir), bnWet(e.nm, F.land, P.x + gx, P.y + gy, s*k*0.72, mir)); if (B && d + pk + 100*lw >= B.sc) continue;   // (dry zoomed right in too; a little smaller where the shore is tight)
-      const pw = bnWet(e.nm, F.pier, P.x + gx, P.y + gy, s*k, mir, 1, bnSea), sc = d + pk + 100*lw + 20*Math.max(0, 0.6 - pw); if (!B || sc < B.sc) B = {dx:gx, dy:gy, mir, r:+d.toFixed(2), d, k, lw:+lw.toFixed(3), pw:+pw.toFixed(3), sc}; if (lw <= BN_WETTOL) break; } }
+  const own = (x, y) => { const c = worldToCell(x, y); return c >= 0 && G.prov[c] === p; };
+  const nb = bnNameBox(p), nA = nb ? (nb[2] - nb[0])*(nb[3] - nb[1]) : 0, onName = (gx, gy, sk, mir) => { if (!nb) return 0; const q = bnBox(e.nm, mir);   // (a yard over the city's name: only where no other shore spot is near)
+    return Math.max(0, Math.min(gx + q[2]*sk, nb[2]) - Math.max(gx + q[0]*sk, nb[0]))*Math.max(0, Math.min(gy + q[3]*sk, nb[3]) - Math.max(gy + q[1]*sk, nb[1])) > 0.15*nA ? 60 : 0; };
+  // the best spot on the shore within R world px of the city on ground ok() allows, tried every st world px (null: none)
+  const shore = (R, ok, st = 0.75) => { const C = []; for (let gy = -R; gy <= R; gy += st) for (let gx = -R; gx <= R; gx += st){ const d = Math.hypot(gx, gy), x = P.x + gx, y = P.y + gy; if (d > R || bnWater(x, y)) continue;
+      let w = false; for (let k = 0; k < 8 && !w; k++) w = bnSea(x + Math.cos(k*Math.PI/4)*2.25, y + Math.sin(k*Math.PI/4)*2.25); if (w && ok(x, y)) C.push([gx, gy, d]); }
+    C.sort((a, b) => a[2] - b[2]); let B = null; const wp = lw => lw > BN_WETTOL ? 30 + 100*lw : 0;   // (a land half not quite dry only where no dry one is near)
+    for (const [gx, gy, d] of C){ if (B && d >= B.sc) break;
+      for (const mir of [false, true]) for (const k of [1, 0.8, 0.65]){ const pk = 6*(1 - k) + onName(gx, gy, s*k, mir), lw = Math.max(bnWet(e.nm, F.land, P.x + gx, P.y + gy, s*k, mir), bnWet(e.nm, F.land, P.x + gx, P.y + gy, s*k*0.72, mir)); if (B && d + pk + wp(lw) >= B.sc) continue;   // (dry zoomed right in too; a little smaller where the shore is tight)
+        const pw = bnWet(e.nm, F.pier, P.x + gx, P.y + gy, s*k, mir, 1, bnSea), sc = d + pk + wp(lw) + 20*Math.max(0, 0.6 - pw); if (!B || sc < B.sc) B = {dx:gx, dy:gy, mir, r:+d.toFixed(2), d, k, lw:+lw.toFixed(3), pw:+pw.toFixed(3), sc}; if (lw <= BN_WETTOL) break; } }
+    return B && B.lw <= BN_WETTOL ? B : null; };   // (its sheds dry; on a coast facing up the map, where no picture's piers point, on the waterfront all the same, a dock basin under its piers)
   const seaAt = (x, y) => { let sx = 0, sy = 0; for (let k = 0; k < 24; k++){ const a = k*Math.PI/12, ux = Math.cos(a), uy = Math.sin(a); for (const r of [2, 3.5, 5]) if (bnSea(x + ux*r, y + uy*r)){ sx += ux; sy += uy; } }
     const l = Math.hypot(sx, sy); return l ? [+(sx/l).toFixed(3), +(sy/l).toFixed(3)] : null; };
-  const coast = B && (B.pw >= 0.2 || B.r <= 6 && B.lw <= BN_WETTOL) && B.lw <= 0.5;   // (a coast facing up the map, the sea where no picture's piers point: the yard on the waterfront all the same when it is that near)
-  const RV = bnRivPort(p, e, s, F, mine, true, BN_RIVAT);   // (a big river to the sea at the city)
-  if (RV && (!coast || B.d > BN_SEANEAR && RV.d + BN_RIVPREF < B.d)) E = RV;
-  else if (coast) E = Object.assign(B, {sea:seaAt(P.x + B.dx, P.y + B.dy), bas:B.pw < BN_BASPW});   // (piers mostly on land, by a coast facing up the map: a dock basin under them)
-  else { E = bnRivPort(p, e, s, F, mine, false, BN_RIVFAR);   // no sea near: the bank of the river the city stands on
-    if (!E){ const sd = B ? seaAt(P.x + B.dx, P.y + B.dy) || [B.dx, B.dy] : seaAt(P.x, P.y); E = {dx:0, dy:0, mir:!!sd && sd[0] < -0.05, sea:sd, r:B ? B.r : 99, d:0, far:true}; } }
+  const onShore = B => Object.assign(B, {sea:seaAt(P.x + B.dx, P.y + B.dy), bas:B.pw < BN_BASPW});   // (piers mostly on land, by a coast facing up the map: a dock basin under them)
+  // the water the map draws first (owner 2026-11-18, "the Naval Yard on the real coast at Kolkata": a yard on a river drawn as a thin line looked
+  // inland): the sea, an estuary or a big lake within BN_YMAX; else a big river to the sea at the city (BN_RIVAT); else its own province's shore
+  // further out (BN_YFAR: a port city whose point stands inland, Oslo, Recife, Murmansk); else the bank of the river the city stands on
+  let B = shore(BN_YMAX, mine);
+  if (B) E = onShore(B);
+  else if ((E = bnRivPort(p, e, s, F, mine, true, BN_RIVAT))) {}
+  else if ((B = shore(BN_YFAR, own, 1.5))) E = onShore(B);   // (a coarser grid that far out)
+  else { E = bnRivPort(p, e, s, F, mine, false, BN_RIVFAR);
+    if (!E){ const sd = seaAt(P.x, P.y); E = {dx:0, dy:0, mir:!!sd && sd[0] < -0.05, sea:sd, r:99, d:0, far:true}; } }
   BNSH.set(key, E); return E; }
 // a Naval Yard on a river's bank (bnShore): along the river's stretch nearest the city (big rivers, rank up to 6 of lines.js; with toSea only those that
 // reach the sea), the yard both ways round with its pier half's middle on the river line, so the river runs through its piers; the one whose anchor
@@ -6122,12 +6155,14 @@ function bnRivPort(p, e, s, F, mine, toSea, at){ const R = bnRivers(), P = G.P[p
   const mid = pts => { let u = 0, v = 0; for (const c of pts){ u += c[0]; v += c[1]; } const n = Math.max(1, pts.length); return [u/n, v/n]; }, pc = mid(F.pier), lc = mid(F.land);
   const off = (c, mir) => [(mir ? M.ax - c[0] : c[0] - M.ax)*w, (c[1] - M.ay)*h];
   const onRiv = (x, y) => bnRivDist(x, y, BN_RIVW) < BN_RIVW;
+  const nb = bnNameBox(p), nA = nb ? (nb[2] - nb[0])*(nb[3] - nb[1]) : 0, onName = (ax, ay, mir) => { if (!nb) return 0; const q = bnBox(e.nm, mir), gx = ax - P.x, gy = ay - P.y;   // (over the city's name: only where no other bank is near)
+    return Math.max(0, Math.min(gx + q[2]*s, nb[2]) - Math.max(gx + q[0]*s, nb[0]))*Math.max(0, Math.min(gy + q[3]*s, nb[3]) - Math.max(gy + q[1]*s, nb[1])) > 0.15*nA ? 60 : 0; };
   for (const [g, dq] of segs){ if (dq > d0 + 2.5) continue; const vx = g[2] - g[0], vy = g[3] - g[1];
     for (const t of [0, 0.25, 0.5, 0.75, 1]){ const qx = g[0] + vx*t, qy = g[1] + vy*t, side = Math.sign(vx*(P.y - qy) - vy*(P.x - qx)), dQ = Math.hypot(qx - P.x, qy - P.y); if (B && 0.5*dQ >= B.sc) continue;
       for (const mir of [false, true]){ const o = off(pc, mir), ax = qx - o[0], ay = qy - o[1], d = Math.hypot(ax - P.x, ay - P.y); if (B && 0.5*dQ + d >= B.sc) continue; if (!mine(ax, ay)) continue;
         const lw = Math.max(bnWet(e.nm, F.land, ax, ay, s, mir), bnWet(e.nm, F.land, ax, ay, s*0.72, mir)); if (lw > 0.5) continue;
         const rl = bnWet(e.nm, F.land, ax, ay, s, mir, 1, onRiv), l = off(lc, mir), far = side && Math.sign(vx*(ay + l[1] - qy) - vy*(ax + l[0] - qx)) !== side ? 1 : 0;
-        const sc = 0.5*dQ + d + 100*lw + 25*rl + 1.5*far; if (!B || sc < B.sc){ const sl = Math.hypot(qx - ax - l[0], qy - ay - l[1]) || 1;
+        const sc = 0.5*dQ + d + 100*lw + 25*rl + 1.5*far + onName(ax, ay, mir); if (!B || sc < B.sc){ const sl = Math.hypot(qx - ax - l[0], qy - ay - l[1]) || 1;
           B = {dx:ax - P.x, dy:ay - P.y, mir, bas:true, sea:[+((qx - ax - l[0])/sl).toFixed(3), +((qy - ay - l[1])/sl).toFixed(3)], r:+d.toFixed(2), d, riv:true, rank:g[4], toSea:!!R.sea[g[5]], lw:+lw.toFixed(3), rl:+rl.toFixed(3), fb:far, sc}; } } } }
   return B; }
 // world px from (x, y) to the nearest river line (as drawn), up to lim (lim when none is nearer)
@@ -6176,9 +6211,13 @@ function bnBox(nm, mir){ const M = BNMETA[nm]; if (!M) return [-0.5, -0.4, 0.5, 
 // The Naval Yard first, on its shore (bnShore; the others make room for it). The first of the others at the point itself (the HQ exactly) when its
 // footprint (bnFoot) stands dry there and clear of the yard, else at the nearest spot where it does; each next one at the nearest free dry spot beside
 // or behind those placed (in front of the point is the name's), boxes overlapping a little (a tight cluster). A building with no dry room at its size
-// within 4 of its sizes is made smaller there (shr, down to half; a small island). Below hexPx BN_HMIN the pictures are drawn bigger than laid out
-// (bnL): each grows only as far as it stays dry (grow, up to the size it is drawn at where it first shows: the first from BN_IN0, the rest from BN_ALL0)
-const BN_DIRS = [180, 0, 150, 30, 120, 60, 90, 205, -25, 235, -55, -90].map(d => d*Math.PI/180);
+// within 4 of its sizes is made smaller there (shr, down to 0.3; a small island); with no dry room even so it is not drawn (shr 0): no footprint
+// cell ever stands on the water the map draws (bnWater; .test/bld-land.js checks every city). grow: kept from when pictures were drawn bigger below
+// hexPx BN_HMIN (bnL now scales exactly with the map, so it stays 1)
+// the box of a city's name (world px from its point) as the map draws it at hexPx BN_NAMEH (labs: 21 to 37 css px below the point, the name's
+// width), which the pictures keep clear of; null where no name is drawn
+const bnNameBox = p => { const P = G.P[p]; if (!P.city && bnHqAt(p) < 0) return null; const k = HS0/BN_NAMEH, hw = ((P.cityName || P.name || '').length*6.2 + 6)/2*k; return [-hw, 21*k, hw, 37*k]; };
+const BN_NAMEH = 100, BN_DIRS = [180, 0, 150, 30, 120, 60, 90, 205, -25, 235, -55, -90].map(d => d*Math.PI/180);
 const bnGz = h => bnL(h)/(BN_K0*Math.min(h, BN_HMAX)), BN_GROW0 = bnGz(BN_IN0), BN_GROW1 = bnGz(BN_ALL0);   // (how much bigger than laid out a picture is drawn at hexPx h)
 function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.map(e => e.nm + (e.site ? 's' : '')).join(','); let L = BNL.get(p); if (L && L.sig === sig) return L;
   if (cheap && (BN_NEW-- <= 0 || performance.now() > BN_TL)) return null;
@@ -6196,22 +6235,20 @@ function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.ma
       for (let d = at0 ? s*0.06 : s*0.25; d < R && d + pen < bd; d += s*0.06){ const x = o[0] + ux*d, y = o[1] + uy*d; if (fits(e, x, y, m, s)){ bd = d + pen; at = [x, y]; break; } } });
     return at; };
   const put = (i, o, at0) => { const e = its[i]; for (const k of [1, 0.8, 0.65, 0.5]){ const at = find(e, o, mirs[i], sz(e)*k, at0); if (at) return [at, k]; }
-    if (at0) for (const k of [0.8, 0.5]){ const at = find(e, o, mirs[i], sz(e)*k, at0, sz(e)*4); if (at) return [at, k]; }   // (a town on the water's edge of a small island: the first a little further out, on the nearest land with room)
-    let at = null, bw = Infinity; const s = sz(e)*0.5;   // (no dry room even at half size, a small island: the free spot with the least on the water, as small)
-    for (const a of BN_DIRS) for (let d = 0; d < s*(at0 ? 4 : 5.2); d += s*0.25){ const x = o[0] + Math.cos(a)*d, y = o[1] - Math.sin(a)*0.62*d; if (!free(bx(e, x, y, mirs[i], s))) continue;
-      const w = wet(e, x, y, mirs[i], s, 1) + d/s*0.01; if (w < bw){ bw = w; at = [x, y]; } }
-    return [at || [o[0], o[1] - s*0.5], 0.5]; };
+    for (const k of at0 ? [0.8, 0.5, 0.4, 0.3] : [0.4, 0.3]){ const at = find(e, o, mirs[i], sz(e)*k, at0, sz(e)*4); if (at) return [at, k]; }   // (a town on the water's edge of a small island: a little further out, on the nearest land with room, smaller)
+    return [[o[0], o[1]], 0]; };   // (no dry room for it at all, a tiny island: not drawn (shr 0); a picture never stands on the water)
   if (yi >= 0){ const e = its[yi]; sh = bnShore(p, e); mirs[yi] = !!sh.mir;
-    if (!sh.far){ let k = 1, bw = Infinity; for (const k1 of [1, 0.8, 0.65, 0.5]){ const w = Math.max(wet(e, sh.dx, sh.dy, mirs[yi], sz(e)*k1, 1), wet(e, sh.dx, sh.dy, mirs[yi], sz(e)*k1*0.72, 1)); if (w < bw - 0.01){ bw = w; k = k1; } if (w <= BN_WETTOL) break; }   // (the yard stays on its shore: smaller where its land half would reach the water)
+    if (!sh.far){ let k = 1, bw = Infinity; for (const k1 of [1, 0.8, 0.65, 0.5].filter(v => v <= (sh.k || 1))){ const w = Math.max(wet(e, sh.dx, sh.dy, mirs[yi], sz(e)*k1, 1), wet(e, sh.dx, sh.dy, mirs[yi], sz(e)*k1*0.72, 1)); if (w < bw - 0.01){ bw = w; k = k1; } if (w <= BN_WETTOL) break; }   // (the yard stays on its shore: smaller where its land half would reach the water)
       pos[yi] = [sh.dx, sh.dy]; shr[yi] = k; placed.push(bx(e, sh.dx, sh.dy, mirs[yi], sz(e)*k)); } }
   const cityish = P.city || its.some(e => e.k === 'hq'); let o0 = null;
+  { const nb = bnNameBox(p); if (nb) placed.push(nb); }   // (the city's name below its point: no picture over it)
   for (let i = 0; i < n; i++){ if (pos[i]) continue; const e = its[i]; let r;
     if (!o0){ const o = [0, cityish ? 0 : -BN_WPX*0.5]; r = put(i, o, true); o0 = r[0]; }   // (a province without a town: above its name, which stands on its point)
     else r = put(i, o0, false);
-    pos[i] = r[0]; shr[i] = r[1]; placed.push(bx(e, r[0][0], r[0][1], mirs[i], sz(e)*r[1])); }
+    pos[i] = r[0]; shr[i] = r[1]; if (r[1]) placed.push(bx(e, r[0][0], r[0][1], mirs[i], sz(e)*r[1])); }
   for (let i = 0; i < n; i++){ if (shr[i] < 1) continue; const e = its[i];
     for (let g = i ? BN_GROW1 : BN_GROW0; g > 1.001; g = Math.max(1, g/1.12)) if (dry(e, pos[i][0], pos[i][1], mirs[i], sz(e)*g)){ grow[i] = g; break; } }
-  L = {sig, pos, mir:mirs, shr, grow, shore:sh}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
+  L = {sig, pos, mir:mirs, shr, grow, shore:sh, ext:Math.max(0, ...pos.map(q => Math.hypot(q[0], q[1])))}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
 // a picture's drawn long side (css px) at the current zoom: bnL's size for it, no bigger than its layout lets it grow on land, nor than cap
 const bnDrawL = (e, Lo, i, L1, cap) => Math.min(L1*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*view.s, cap);
 // a picture px device px on its long side (bnTier: made a little bigger than drawn, so it stays sharp), plain or darkened for the night (lk: 0..8);
@@ -6283,11 +6320,13 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
   const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_TL = performance.now() + 2.5; BN_MK = 6;   // (new layouts: up to 2.5 ms a frame, the first always)
   const caps = bnHqScan(); BNF_MK = 8; BNF_WAVE = !saverOn() && !afxReduced();
   if (!BNP || BNP.S !== S || BNP.G !== G || BNP.o !== OWNV || now - BNP.t > 400 || now < BNP.t){ const L = []; for (let p = 0; p < G.P.length; p++) if (!G.P[p].sea && bnHas(p, caps)) L.push(p); BNP = {S, G, o:OWNV, t:now, L, I:new Map()}; }   // (the provinces with pictures and their buildings, looked at again every 0.4 s and at once when an owner changes: a captured capital's HQ goes at once)
-  for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y); if (x < -m || y < -m || x > cw + m || y > ch + 2*m) continue;
-    let its = BNP.I.get(p); if (!its) BNP.I.set(p, its = bnItems(p)); if (!its.length) continue; const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }
+  for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y), mf = m + BN_YFAR*view.s; if (x < -mf || y < -mf || x > cw + mf || y > ch + m + mf) continue;
+    let its = BNP.I.get(p); if (!its) BNP.I.set(p, its = bnItems(p)); if (!its.length) continue;
+    { const L0 = BNL.get(p), me = m + (L0 ? L0.ext : its.some(e => e.k === 'yard') ? BN_YFAR : 0)*view.s; if (x < -me || y < -me || x > cw + me || y > ch + m + me) continue; }   // (a Naval Yard may stand out on its province's shore: BN_YFAR)
+    const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }
     const cap = nd*2*view.s*1.1;   // (a picture's long side stays under the way to the next city)
     for (let i = 0; i < its.length; i++){ const al = i ? a2 : a1; if (al <= 0.003) break; const [dx, dy] = Lo.pos[i], e = its[i];
-      if (e.k === 'hq' && !caps.has(p)) continue;   // (an HQ whose capital fell this moment: destroyed)
+      if (e.k === 'hq' && !caps.has(p) || !Lo.shr[i]) continue;   // (an HQ whose capital fell this moment: destroyed; a picture with no dry room: none)
       list.push({p, e, mir:Lo.mir[i], x:x + dx*view.s, y:y + dy*view.s, wx:P.x + dx, wy:P.y + dy, a:al, L:bnDrawL(e, Lo, i, L1, cap), basin:e.k === 'yard' && Lo.shore && Lo.shore.bas}); } }
   if (more) animFast();   // (the cities left over are worked out in the next frames)
   list.sort((u, v) => u.y - v.y);   // back to front
@@ -6301,7 +6340,7 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
       if (e.c){ bnCrane(q, e, w, h, lk, q0, now, ga0); pf = bnProg(e); }   // a level going up: the crane behind it
       ctx.globalAlpha = ga0*q.a; bnBlit(c, X, Y, w, h, q.mir); ctx.globalAlpha = ga0;
       if (e.k === 'hq' && M.flags){ bnFlags(q, M, X, Y, w, h, lk, now, ga0); ctx.globalAlpha = ga0; } }   // the holder's flags on its flagpoles
-    if (e.c){ const R = Math.max(4, Math.min(8, w*0.07)); bnRing(b[0] + R*1.4, b[1] + R*1.4, R, pf, q.a); }   // its progress ring at the upper left corner
+    if (e.c){ const R = Math.max(5, Math.min(9, w*0.09)); bnRing(b[0] + R*1.4, b[1] + R*1.4, R, pf, q.a); }   // its progress ring at the upper left corner (a little bigger against the picture since the pictures are 17% smaller: owner 2026-11-18, "a building under construction" must show)
     { const lr = bLevel(p + ':bn:' + e.k, e.lv, now); let f = lr.t0 ? (now - lr.t0)/TRAY_ANIM : -1; if (f >= 1){ lr.t0 = 0; f = -1; }
       if (f >= 0 && !saverOn()){ animFast(); const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2, R0 = Math.max(10, w*0.5), E0 = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = q.a*0.7*(1 - f); ctx.drawImage(GLOW(), cx - R0*1.3, cy - R0*1.3, R0*2.6, R0*2.6);
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = q.a*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, R0*(0.5 + 0.8*E0), 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
@@ -11756,7 +11795,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.dtProbe = (k, tx, 
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)
-if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m, sea) => bnWet(nm, pts, x, y, s, m, 1, sea ? bnSea : isWet), lake:(x, y) => bnSmallLake(x, y), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), riv:(p, e) => { const P = G.P[p], d = bnRivDist(P.x, P.y, 20), R = bnRivers(); return {d, rivers:R.sea.length, toSea:R.sea.filter(Boolean).length}; }, rivDist:(x, y, l) => bnRivDist(x, y, l), stages:BN_STG, pierWater:p => { const its = bnItems(p), i = its.findIndex(e => e.k === 'yard'); if (i < 0) return null; const e = its[i], Lo = bnLayout(p, its), P = G.P[p], M = BNMETA[e.nm], F = bnFoot(e.nm), s = window.__im.bn.wsize(p, i, 100), Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, mir = !!Lo.mir[i], x = P.x + Lo.pos[i][0], y = P.y + Lo.pos[i][1], riv = !!(Lo.shore && Lo.shore.riv), Q = Lo.shore && Lo.shore.bas ? bnBasinGeo(e.nm) : null;
+if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m, sea) => bnWet(nm, pts, x, y, s, m, 1, sea ? bnSea : bnWater), water:(x, y) => bnWater(x, y), isWet:(x, y) => isWet(x, y), box:(nm, mir) => bnBox(nm, mir), NAMEH:BN_NAMEH, lake:(x, y) => bnSmallLake(x, y), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), riv:(p, e) => { const P = G.P[p], d = bnRivDist(P.x, P.y, 20), R = bnRivers(); return {d, rivers:R.sea.length, toSea:R.sea.filter(Boolean).length}; }, rivDist:(x, y, l) => bnRivDist(x, y, l), stages:BN_STG, pierWater:p => { const its = bnItems(p), i = its.findIndex(e => e.k === 'yard'); if (i < 0) return null; const e = its[i], Lo = bnLayout(p, its), P = G.P[p], M = BNMETA[e.nm], F = bnFoot(e.nm), s = window.__im.bn.wsize(p, i, 100), Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, mir = !!Lo.mir[i], x = P.x + Lo.pos[i][0], y = P.y + Lo.pos[i][1], riv = !!(Lo.shore && Lo.shore.riv), Q = Lo.shore && Lo.shore.bas ? bnBasinGeo(e.nm) : null;
     let sea = 0, rv = 0, bs = 0; for (const [u, v] of F.pier){ const X = x + (mir ? M.ax - u : u - M.ax)*w, Y = y + (v - M.ay)*h; if (bnSea(X, Y)) sea++; else if (riv && bnRivDist(X, Y, 0.4) < 0.4) rv++; else if (Q && Q.in(u, v)) bs++; } const n = Math.max(1, F.pier.length); return {sea:sea/n, river:rv/n, basin:bs/n, water:(sea + rv + bs)/n}; }});   // building layout checks (.test/bldangled.js): a picture's drawn long side in world px at hexPx h, the footprints
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
 if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagBand(o, plateDims(n, 1, false, true).w, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor, fighting) => badgeBody(side, t, n, flagBand(o, plateDims(n, 1, !!minor, true).w, plateDims(n, 1, !!minor, true).fh), !!mixed, false, !!fighting, !!minor), sandbag:(W, H) => sbmPaint(W, H), dims:(n, minor, far) => plateDims(n, 1, !!minor, !far), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }, get tradeDrawn(){ return TRSH.n; }, get tradeKinds(){ return TRSH.kinds; }, trKind:n => trKind(n)[0], tradeOn:() => tradeOn(), tradeCap:TRSHCAP};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)

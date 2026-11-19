@@ -5,8 +5,8 @@
 // zoom sweep, a pan, a whole turn of the wrap and at the seam itself), the HQ exactly on the capital in its nation's style; the Army Base drawn with its
 // own pictures (bn-fac-1..5) on the map and in the city panel; a new building shows the construction picture of its third (bn-build-1..3) and a level
 // going up the crane; every Naval Yard on the water at its city with its sheds dry and its piers on the water (a river port on its river's bank in a
-// harbour basin: Kolkata on the Hooghly, Hamburg on the Elbe), the yards over 60 km from their city listed; every picture of every city on land at 5
-// zooms (small islands listed apart); 15-20% smaller than the first size, the HQ the biggest; the building drawing writes no text (no level numbers
+// harbour basin; Kolkata and Hamburg on the Hooghly and the Elbe where the map draws them as water), the yards over 60 km from their city listed; every picture of every city on land at 5
+// zooms (small islands listed apart); 15-20% smaller than before the owner's 2026-11-18 ask (0.83), the HQ the biggest; the building drawing writes no text (no level numbers
 // or badges on the map); a tap on a picture opens its city. node .test/bldangled.js [W H dpr]  prints JSON {checks, fails, errors}, exit 1 on a failure.
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
@@ -60,7 +60,7 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   // sizes (owner's #13): 18% smaller than the first BN_K0 0.62, the HQ the biggest
   const sz = await p.evaluate(() => { const b = window.__im.bn; return {K0:b.K0, hq100:+(b.L(100)*b.F('hq', 1)).toFixed(2), biggestOther:Math.max(...['air', 'fac', 'rec', 'yard', 'fort'].flatMap(k => [1, 2, 3, 4, 5].filter(l => l <= BUILD[k].max).map(l => b.F(k, l))))}; });
   sz.fac = await p.evaluate(() => [1, 2, 3, 4, 5].map(l => window.__im.bn.F('fac', l))); sz.air5 = await p.evaluate(() => window.__im.bn.F('air', 5));
-  checks.size = Object.assign(sz, {vsFirst:+(sz.K0/0.62).toFixed(3)}); if (sz.fac[4] > sz.air5 || sz.fac[0] >= sz.fac[4]) fails.push('Army Base sizes: ' + sz.fac.join(' ')); if (sz.K0/0.62 < 0.8 || sz.K0/0.62 > 0.85) fails.push(`pictures ${sz.K0/0.62} of their first size, not 15-20% smaller`); if (sz.biggestOther >= 1.08) fails.push('a building drawn bigger than the HQ');
+  checks.size = Object.assign(sz, {vsFirst:+(sz.K0/0.62).toFixed(3), vsBefore:+(sz.K0/0.51).toFixed(3)}); if (sz.fac[4] > sz.air5 || sz.fac[0] >= sz.fac[4]) fails.push('Army Base sizes: ' + sz.fac.join(' ')); if (sz.K0/0.51 < 0.8 || sz.K0/0.51 > 0.85) fails.push(`pictures ${sz.K0/0.51} of the size before the owner's 2026-11-18 ask, not 15-20% smaller`); if (sz.biggestOther >= 1.08) fails.push('a building drawn bigger than the HQ');
   checks.berlin = {buildings:C.berlin, hq:C.hqNm}; if (!/^air,arms,fac,fort,hq,rec,silo(,yard)?$/.test(C.berlin)) fails.push('Berlin items: ' + C.berlin);
   checks.sweep = {maxDriftPx:+maxD.toFixed(3), pictureOnAnchorPx:+relMax.toFixed(3), models:world.size};
   if (maxD > 1.5) fails.push(`zoom sweep: a model drawn ${maxD.toFixed(2)} px off its anchor`); if (relMax > 2) fails.push(`zoom sweep: a model's picture moved ${relMax.toFixed(2)} px against its anchor`);
@@ -141,16 +141,18 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   checks.yards = {n:yards.length, coast:coast.length, onRivers:riv.length, inCluster:far.length, medianFromCity:ds[ds.length >> 1], maxFromCity:ds[ds.length - 1], mirrored:yards.filter(y => y.mir).length,
     over60km:yards.filter(y => y.d*8.7 > 60).length, basins:yards.filter(y => y.basin).length, landHalfOnWater:wetLand.map(y => y.name + ' ' + y.lw), piersNotOnWater:piersOff.length, piersNotOnWaterList:piersOff.map(y => y.name), rivers:riv.map(y => y.name), clusters:far.map(y => y.name), named};
   if (yards.length < 300) fails.push(`only ${yards.length} Naval Yards checked`);
-  if (coast.concat(riv).some(y => y.d > 15.5)) fails.push('a Naval Yard stands more than 15 world px from its city');
-  if (riv.length < 15) fails.push(`only ${riv.length} river ports`);
+  if (coast.concat(riv).some(y => y.d > 32.5)) fails.push('a Naval Yard stands more than 32 world px from its city (its province shore: BN_YFAR)');
+  if (riv.length < 2) fails.push(`only ${riv.length} river ports`);
   if (wetLand.length > 2) fails.push(`${wetLand.length} Naval Yards with their sheds on the water: ${wetLand.slice(0, 6).map(y => y.name).join(', ')}`);
   if (piersOff.length > coast.length*0.12) fails.push(`${piersOff.length} Naval Yards on the coast with their piers off the water`);
   if (far.length > yards.length*0.15) fails.push(`${far.length} Naval Yards too far from the water to stand on it`);
   if (!yards.some(y => y.mir) || !yards.some(y => !y.mir)) fails.push('the yards are not seen both ways round');
-  { const k = yards.find(y => y.name === 'Kolkata'); if (!k || k.kind !== 'river' || k.d > 3.5 || k.water < 0.6 || !k.basin) fails.push('Kolkata: its Naval Yard is not on the Hooghly at the city: ' + JSON.stringify(k)); }
-  // (the map's Hamburg stands 53 km south of the Elbe's line: its yard on the Elbe's north bank, about 60 km off)
-  { const k = yards.find(y => y.name === 'Hamburg'); if (!k || k.kind !== 'river' || k.d*8.7 > 65 || k.water < 0.6) fails.push('Hamburg: its Naval Yard is not on the Elbe at the city: ' + JSON.stringify(k)); }
-  for (const n of ['Mumbai', 'Istanbul']){ const k = yards.find(y => y.name === n); if (!k || k.kind !== 'coast' || k.d*8.7 > 30) fails.push(`${n}: its Naval Yard is not on the sea at the city`); }
+  // (owner 2026-11-18: Kolkata's yard where the map draws the Hooghly as water, its estuary, not on its thin river line in the town)
+  { const k = yards.find(y => y.name === 'Kolkata'); if (!k || k.kind !== 'coast' || k.d > 10 || k.water < 0.5) fails.push('Kolkata: its Naval Yard is not on the Hooghly where the map draws it as water: ' + JSON.stringify(k)); }
+  // (the map's Hamburg stands 53 km south of the Elbe's line: its yard on the Elbe's estuary as the map draws it, 60 to 95 km off)
+  { const k = yards.find(y => y.name === 'Hamburg'); if (!k || k.kind === 'cluster' || k.d*8.7 > 95 || k.water < 0.5) fails.push('Hamburg: its Naval Yard is not on the Elbe: ' + JSON.stringify(k)); }
+  for (const n of ['Mumbai', 'Istanbul']){ const k = yards.find(y => y.name === n); if (!k || k.kind !== 'coast' || k.d*8.7 > 45)   // (45 km: the yard keeps clear of the city's name)
+    fails.push(`${n}: its Naval Yard is not on the sea at the city`); }
   // every building on land (owner's #12): every city with buildings (an Airbase, a Recruiting Office and Fortifications everywhere, the yards above),
   // each picture's footprint at 5 zooms (the first from the mid zoom, the rest from BN_ALL0); small islands (under 40% land within 8 world px) listed apart
   const land = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G, out = {n:0, items:0, wet:[], island:[]};
