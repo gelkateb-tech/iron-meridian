@@ -7940,9 +7940,10 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     // starts, and drawn mid-zoom too (MAP-2: the render made while zooming has the same coast as the settled one)
     const SO = seaO();
     if (SO.gl){ c.lineJoin = 'round'; c.lineCap = 'round'; for (const [col, a, wd] of SO.gl){ c.strokeStyle = `rgba(${col.join(',')},${a*z})`; c.lineWidth = Math.max(wd*0.24, wd*px0); c.stroke(CG); }
-      // MAP-SEA: soft foam at the shore, the foam sheet anchored to the world (about 60 screen px a tile), a narrow brighter line and a wider faint
-      // one; from hexPx 8 (half of each stroke lies on land, clipped away)
-      const zf = Math.min(1, Math.max(0, (hexPx - 8)/8)), fp = SEAFX.fsp || (SEAFX.fsp = c.createPattern(foamTile(), 'repeat'));
+      // MAP-SEA: soft foam at the shore, the foam sheet anchored to the world (about 60 screen px a tile) stroked along the coast, then the
+      // foam's soft even line; from hexPx 12, where it starts to show (half of each stroke lies on land, clipped away; further out the strokes over the whole
+      // coastline would cost more than they show)
+      const zf = Math.min(1, Math.max(0, (hexPx - 12)/8)), fp = SEAFX.fsp || (SEAFX.fsp = c.createPattern(foamTile(), 'repeat'));
       if (zf > 0 && fp && fp.setTransform){ const ts = 60*px0/128, wz = Math.max(0.8, Math.min(2, Math.sqrt(hexPx/30)));   // (wz: wider close in) fp.setTransform(new DOMMatrix([ts, 0, 0, ts, 0, 0])); c.strokeStyle = fp;
         for (const [a, wd] of SO.fo){ c.globalAlpha = Math.min(1, a*zf); c.lineWidth = wd*wz*px0; c.stroke(CG); } c.globalAlpha = 1;
         for (const [col, a, wd] of SO.fl){ c.strokeStyle = `rgba(${col.join(',')},${a*zf})`; c.lineWidth = wd*wz*px0; c.stroke(CG); } } }   // (and the foam's even edge at the waterline)
