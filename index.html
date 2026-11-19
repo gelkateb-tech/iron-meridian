@@ -4179,18 +4179,15 @@ function stormPos(w, cx, cy, now = FXQ.gt){   // the slow sway runs on the game 
 const stormOffs = (x, R) => wrapOffs(x - R, x + R, -view.x/view.s - 60/view.s, (cw - view.x)/view.s + 60/view.s);   // a storm's copies on screen (the map wraps: a turn apart)
 const stormVis = (cx, cy, R) => !((cx + R)*view.s + view.x < -50 || (cx - R)*view.s + view.x > cw + 50 || (cy + R)*view.s + view.y < -50 || (cy - R)*view.s + view.y > ch + 50);
 /* storms: drawn under the night tint (night darkens them like the land and city lights shine over them), tops cross-faded to a darker
-   grey night deck by the local light (no warm rims, no tint: the clouds stay white-grey); under a rain cloud the ground a touch darker (wet); then
-   the rain and snow (drawPrecip) on the game clock (paused with the game) */
-function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1, run = S.speed && !S.over, wet = hexPx >= 10 && !mapLite();
+   grey night deck by the local light (no warm rims, no tint: the clouds stay white-grey); then the rain and snow (drawPrecip) on the game clock
+   (paused with the game) */
+function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1, run = S.speed && !S.over;
   ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), R = w.r*1.7, storm = w.kind === 'storm'; let lt = null;
     for (const off of stormOffs(x0, R)){ const cx = x0 + off; if (!stormVis(cx, y0, R)) continue; if (run) animAmb();   // (a storm on screen drifts and sways while the clock runs)
       const { L } = lt || (lt = stormLight(x0, y0)), Pp = stormPos(w, cx, y0);
       if (L < 0.98){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.18*fade*(1 - L);   // soft ground shadow (gone at night)
         for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex.sh, px - sz*1.1 + 10, py - sz*0.7 + 14, sz*2.2, sz*1.4); }
-        ctx.globalCompositeOperation = 'source-over'; }
-      if (storm && wet){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.15*fade*(1 - 0.6*L);   // the sea or land under the rain a touch darker (wet), under the cloud
-        for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex.sh, px - sz*0.8, py - sz*0.5, sz*1.6, sz*1.0); }
         ctx.globalCompositeOperation = 'source-over'; }
       if (storm){ ctx.globalAlpha = 0.4*za*fade; for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[3 + i % 3], px - sz, py - sz*0.5, sz*2, sz*1.2); } }   // dark rain-laden base
       const ta = (storm ? 0.5 : w.kind === 'blizzard' ? 0.42 : 0.34)*za*fade*(1 + 0.45*L);   // at night the tops go darker grey (and thicker, so the night tint does not swallow them)
@@ -4201,31 +4198,58 @@ function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex 
   if (hexPx < 10 || afxReduced() || mapLite()) return;
   drawPrecip(live); }
 /* rain and snow as fine, dense particles, seen as if at a slight angle with a little wind over the top-down map (the map and the clouds stay
-   top-down). They fall only under the cloud mass (the thick middle of each cloud lobe) and inside the storm's own ellipse of the rules (stormAt),
-   denser in the middle and thinning out to the edges; rain only for 'storm', snow only for 'blizzard'.
-   Rain: many hair-thin, faint, short streaks slanted 25 degrees down-wind, fast. Snow: a fine speckle of tiny flakes (1-2 px) drifting down-wind at
-   a gentle angle with a light swirl, about ten times slower. Sizes and speeds are in screen pixels, the same at every zoom. The particles sit on a
-   grid anchored to the storm in world units; two grid levels cross-fade with the zoom so the density on screen stays the same with nothing
-   popping. Each particle lives one cycle on the effect clock (FXQ.gt: runs with the game, stands still while paused, real time at every game
-   speed, so 100x is still weather) and grows in from nothing and shrinks away to nothing. The count is capped by the screen area and the
-   Effects setting; storms off screen are skipped. Nothing is baked: one path per layer */
+   top-down). They fall only where the cloud picture itself is (the cloud tops as drawn, with their sway, not a rough outline) and inside the
+   storm's own ellipse of the rules (stormAt), denser where the cloud is thick and thinning out to its edges; rain only for 'storm', snow only for
+   'blizzard'. Rain: many hair-thin streaks (11-26 px) slanted 25 degrees down-wind and falling fast, pale and tapered: brightest at the leading
+   end, fading along the tail (a falling drop's blur), with a faint grey edge along one side so they show on the white cloud too (a little more
+   rain at play zoom). Snow: a fine speckle of tiny round flakes (1-2 px) drifting down-wind at a gentle 16 degrees with a light swirl, about
+   ten times slower. Sizes and speeds are in screen pixels, the same at every zoom. The particles sit on a grid anchored
+   to the storm in world units; two grid levels cross-fade with the zoom so the density on screen stays the same with nothing popping. Each
+   particle lives one cycle on the effect clock (FXQ.gt: runs with the game, stands still while paused, real time at every game speed, so 100x is
+   still weather), at a new random spot each cycle, and fades in and out (a streak keeps its length and fades; a flake grows in and shrinks away).
+   At night the pale colour is warmed against the cool night multiply, so it stays neutral grey-white. The count is capped by the screen area and
+   the Effects setting; storms off screen are skipped. Nothing big is baked: a 64x64 alpha table of each cloud picture, a coarse grid of the cloud
+   over each storm on screen (made each frame, 6-14 px), and a few buffers that grow when needed */
 const PCP = {C:48,   // C: the grid's cell (px on screen, at the coarser of the two levels)
-  rain:Object.assign([{m:13, per:300, T:44, len:11, w:1, a:0.58}, {m:15, per:380, T:30, len:7, w:0.75, a:0.36}], {m:28, mg:37}),   // near and far: m = particles a cell, per = one cycle (ms), T = path (px), len = streak (px), w = line (px); mg: the most a particle reaches from its spot
-  snow:Object.assign([{m:20, per:5200, T:62, r:1, a:0.95, sw:2.6}, {m:34, per:7000, T:40, r:0.7, a:0.6, sw:1.8}], {m:54, mg:35}),   // r = half the flake (px), sw = swirl (px)
-  B:[0, 1, 2, 3].map(() => new Float32Array(16384)), n:new Int32Array(4), lob:new Float32Array(45), li:new Int32Array(9), sin25:Math.sin(25*Math.PI/180), cos25:Math.cos(25*Math.PI/180), sin16:Math.sin(16*Math.PI/180), cos16:Math.cos(16*Math.PI/180)};
+  rain:Object.assign([{m:8, per:320, T:60, len:22, w:1, a:0.6}, {m:10, per:410, T:44, len:14, w:0.8, a:0.38}], {m:18, mg:58}),   // near and far: m = particles a cell, per = one cycle (ms), T = path (px), len = streak (px), w = line (px); mg: the most a particle reaches from its spot
+  snow:Object.assign([{m:20, per:3200, T:60, r:1.05, a:0.95, sw:2.6}, {m:28, per:4200, T:40, r:0.75, a:0.66, sw:1.8}], {m:48, mg:36}),   // r = half the flake (px), sw = swirl (px)
+  B:[0, 1, 2, 3, 4, 5].map(() => new Float32Array(12288)), n:new Int32Array(6), lob:new Float32Array(72), al:null,
+  sin25:Math.sin(25*Math.PI/180), cos25:Math.cos(25*Math.PI/180), sin16:Math.sin(16*Math.PI/180), cos16:Math.cos(16*Math.PI/180), seg:[[0, 0.4, 0.3], [0.4, 0.75, 0.62], [0.75, 1, 1]]};   // seg: a streak's tail, middle and head (from, to, alpha)
+const pcpGrow = i => { const o = PCP.B[i], b = new Float32Array(o.length*2); b.set(o); return (PCP.B[i] = b); };   // (a buffer grows when a big storm fills the screen: nothing is dropped)
 const pch = a => { a |= 0; a = Math.imul(a ^ a >>> 16, 0x45d9f3b); a = Math.imul(a ^ a >>> 16, 0x45d9f3b); return (a ^ a >>> 16) >>> 0; };
-// how far under the cloud mass a screen point is (0 outside .. 1 in the thick middle of a lobe), also inside the rules' ellipse
-function pcpMask(x, y, sx, sy, er, nl){ const ex = x - sx, ey = (y - sy)*1.6, q = (ex*ex + ey*ey)*er; if (q >= 1) return 0; const L = PCP.lob, LI = PCP.li; let m = 0;   // (only the lobes near the particle's cell: PCP.li)
-  for (let k = 0; k < nl; k++){ const i = LI[k], dx = x - L[i], dy = y - L[i + 1], d = dx*dx*L[i + 2] + dy*dy*L[i + 3]; if (d < 1 && 1 - d > m) m = 1 - d; }
-  return Math.min(m, (1 - q)*5); }
-function drawPrecip(live){ const t = FXQ.gt, vs = view.s, L5 = PCP.lob, LI = PCP.li, B = PCP.B, N = PCP.n, C = PCP.C, q = SET.fx === 'high' ? 1 : 0.6;
+// the cloud pictures' alpha, 64x64 each (0..~1), read once from the baked tops (the night tops and dark bases share their shape)
+function pcpAlpha(){ if (PCP.al) return PCP.al; const tex = cloudTex(), al = new Float32Array(3*4096);
+  for (let k = 0; k < 3; k++){ const d = tex[k].getContext('2d').getImageData(0, 0, 128, 128).data;
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++){ const o = (y*2*128 + x*2)*4; al[k*4096 + y*64 + x] = Math.min(1, (d[o + 3] + d[o + 7] + d[o + 515] + d[o + 519])/(4*235))*0.86; } }
+  return (PCP.al = al); }
+// how much cloud is over the screen, on a grid of PG.s px over the part of one storm on screen (0 none .. ~1 thick: the lobes' pictures laid over
+// each other), and 0 outside the rules' ellipse; built once a frame for each storm on screen, then read per particle (pcpMask)
+const PG = {a:new Float32Array(16384), m:new Float32Array(1024), x:0, y:0, w:0, h:0, i:1, s:8, sx:0, sy:0, er:0, bw:0, bh:0};   // m: the most in each block of 4x4 nodes
+function pcpGrid(x0, y0, x1, y1, sx, sy, er, gs){ const w = Math.ceil((x1 - x0)/gs) + 2, h = Math.ceil((y1 - y0)/gs) + 2, n = w*h, L = PCP.lob, A = PCP.al;
+  if (PG.a.length < n) PG.a = new Float32Array(n + (n >> 1)); const G = PG.a; G.fill(1, 0, n); Object.assign(PG, {x:x0, y:y0, w, h, i:1/gs, s:gs, sx, sy, er});
+  for (let i = 0; i < 72; i += 8){ const kx = L[i + 2], ky = L[i + 3], ko = L[i + 4];   // each lobe over the nodes its picture covers (bilinear in its 64x64 alpha)
+    const i0 = Math.max(0, Math.ceil((L[i] - x0)/gs)), i1 = Math.min(w - 1, Math.floor((L[i + 5] - x0)/gs)), j0 = Math.max(0, Math.ceil((L[i + 1] - y0)/gs)), j1 = Math.min(h - 1, Math.floor((L[i + 6] - y0)/gs));
+    for (let j = j0; j <= j1; j++){ const v = (y0 + j*gs - L[i + 1])*ky; if (v <= 0 || v >= 63) continue; const iv = v | 0, fv = v - iv, r = ko + iv*64, gr = j*w;
+      for (let k = i0; k <= i1; k++){ const u = (x0 + k*gs - L[i])*kx; if (u <= 0 || u >= 63) continue; const iu = u | 0, fu = u - iu, o = r + iu, a0 = A[o] + (A[o + 1] - A[o])*fu, a1 = A[o + 64] + (A[o + 65] - A[o + 64])*fu; G[gr + k] *= 1 - a0 - (a1 - a0)*fv; } } }
+  for (let j = 0; j < h; j++){ const ey = (y0 + j*gs - sy)*1.6, e2 = ey*ey, gr = j*w; for (let k = 0; k < w; k++){ const ex = x0 + k*gs - sx, q = (ex*ex + e2)*er; G[gr + k] = q >= 1 ? 0 : Math.min(1 - G[gr + k], (1 - q)*5); } }   // (thinning out to the rules' ellipse)
+  const bw = (w + 3) >> 2, bh = (h + 3) >> 2; if (PG.m.length < bw*bh) PG.m = new Float32Array(bw*bh*2); const M = PG.m; M.fill(0, 0, bw*bh); PG.bw = bw; PG.bh = bh;
+  for (let j = 0; j < h; j++){ const br = (j >> 2)*bw, gr = j*w; for (let k = 0; k < w; k++){ const v = G[gr + k], o = br + (k >> 2); if (v > M[o]) M[o] = v; } } }
+// the most cloud anywhere in a screen box (from the blocks, one node wider: a point reads the nodes either side): a cell whose particles can reach no cloud is skipped
+function pcpMax(x0, y0, x1, y1){ x0 -= PG.s; y0 -= PG.s; x1 += PG.s; y1 += PG.s; const f = PG.i/4, b0 = Math.max(0, Math.floor((x0 - PG.x)*f)), b1 = Math.min(PG.bw - 1, Math.floor((x1 - PG.x)*f)), c0 = Math.max(0, Math.floor((y0 - PG.y)*f)), c1 = Math.min(PG.bh - 1, Math.floor((y1 - PG.y)*f)), M = PG.m; let m = 0;
+  for (let c = c0; c <= c1; c++) for (let b = b0; b <= b1; b++) if (M[c*PG.bw + b] > m) m = M[c*PG.bw + b];
+  return m; }
+function pcpMask(x, y){ const ex = x - PG.sx, ey = (y - PG.sy)*1.6; if ((ex*ex + ey*ey)*PG.er >= 1) return 0;   // (exactly inside the ellipse)
+  const u = (x - PG.x)*PG.i, v = (y - PG.y)*PG.i, w = PG.w; if (u < 0 || v < 0 || u >= w - 1 || v >= PG.h - 1) return 0;
+  const G = PG.a, iu = u | 0, iv = v | 0, fu = u - iu, o = iv*w + iu, a0 = G[o] + (G[o + 1] - G[o])*fu, a1 = G[o + w] + (G[o + w + 1] - G[o + w])*fu; return a0 + (a1 - a0)*(v - iv); }
+function drawPrecip(live){ const t = FXQ.gt, vs = view.s, CW = cw, CH = ch, L8 = PCP.lob, B = PCP.B, N = PCP.n, C = PCP.C, q = SET.fx === 'high' ? 1 : 0.6; pcpAlpha();
   const lf = Math.log2(32*vs/C), l0 = Math.floor(lf), ph = lf - l0, nrm = Math.pow(4, ph)/(1 + 3*ph);
-  // the cap: about one rain streak per 70 px2 / one flake per 25 px2 of screen at the most (less on Low effects), shared by the storms on screen
+  // the cap: about one rain streak per 110 px2 / one flake per 25 px2 of screen at the most (less on Low effects), shared by the storms on screen
   let estR = 0, estS = 0; const area = cw*ch;
   for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, hx = w.r*vs, hy = hx/1.6;
     for (const off of stormOffs(x0, w.r*1.7)){ const sx = (x0 + off)*vs + view.x, sy = y0*vs + view.y, ox = Math.min(cw, sx + hx) - Math.max(0, sx - hx), oy = Math.min(ch, sy + hy) - Math.max(0, sy - hy);
       if (ox > 0 && oy > 0){ if (w.kind === 'blizzard') estS += ox*oy*0.45; else if (w.kind === 'storm') estR += ox*oy*0.45; } } }
-  const dR = Math.min(1, q*area/70/Math.max(1, estR*PCP.rain.m/(C*C))), dS = Math.min(1, q*area/25/Math.max(1, estS*PCP.snow.m/(C*C)));
+  const zb = 1 + 0.5*Math.max(0, Math.min(1, (45 - vs*HS0)/20));   // (a little more rain at play zoom, where a cloud is small on screen)
+  const dR = zb*Math.min(1, q*area/110/Math.max(1, zb*estR*PCP.rain.m/(C*C))), dS = Math.min(1, q*area/25/Math.max(1, estS*PCP.snow.m/(C*C)));
   ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineCap = 'butt';
   for (const w of S.storms){ const snow = w.kind === 'blizzard'; if (!snow && w.kind !== 'storm') continue;
     const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), sk = Math.round(w.seed*1000)*977, sg = (w.vx || 0) < 0 ? -1 : 1, dens = snow ? dS : dR;
@@ -4234,9 +4258,12 @@ function drawPrecip(live){ const t = FXQ.gt, vs = view.s, L5 = PCP.lob, LI = PCP
     for (const off of stormOffs(x0, w.r*1.7)){ const cx = x0 + off, sx = cx*vs + view.x, sy = y0*vs + view.y, hx = w.r*vs*0.95, hy = hx/1.6;
       if (sx + hx + mg < 0 || sx - hx - mg > cw || sy + hy + mg < 0 || sy - hy - mg > ch) continue;   // off screen
       if (Lt < 0) Lt = stormLight(x0, y0).L;
-      const Pp = stormPos(w, cx, y0);   // the cloud lobes as drawn (with their sway), on screen: where it rains or snows
-      for (let i = 0; i < 9; i++){ const sz = Pp[i*3 + 2]*vs, ax = sz*(snow ? 0.66 : 0.62), ay = sz*0.4; L5[i*5] = Pp[i*3]*vs + view.x; L5[i*5 + 1] = Pp[i*3 + 1]*vs + view.y - (snow ? 0.02 : 0.06)*sz; L5[i*5 + 2] = 1/(ax*ax); L5[i*5 + 3] = 1/(ay*ay); }
+      const Pp = stormPos(w, cx, y0);   // the cloud tops as drawn (with their sway, the same picture and place as drawWeather), on screen: where it rains or snows
+      for (let i = 0; i < 9; i++){ const sz = Pp[i*3 + 2]*vs, dw = sz*(snow ? 2 : 1.56), dh = sz*(snow ? 1.2 : 0.94), gx = Pp[i*3]*vs + view.x - dw/2, gy = Pp[i*3 + 1]*vs + view.y - sz*(snow ? 0.6 : 0.63), o = i*8;
+        L8[o] = gx; L8[o + 1] = gy; L8[o + 2] = 63/dw; L8[o + 3] = 63/dh; L8[o + 4] = (snow ? i % 3 : (i + 1) % 3)*4096; L8[o + 5] = gx + dw; L8[o + 6] = gy + dh; }
       const er = 1/(hx*hx);
+      let tw = 0; for (let i = 0; i < 72; i += 8) tw += L8[i + 5] - L8[i];   // the grid: about 20 nodes across a lobe's picture, 6-14 px (the cloud is soft: no finer is needed)
+      pcpGrid(Math.max(sx - hx, -30), Math.max(sy - hy, -30), Math.min(sx + hx, cw + 30), Math.min(sy + hy, ch + 30), sx, sy, er, Math.max(6, Math.min(14, tw/9/20)));
       // the storm-local world box on screen (with the margin a particle travels)
       const ux0 = Math.max(-hx, -sx - mg)/vs, ux1 = Math.min(hx, cw - sx + mg)/vs, uy0 = Math.max(-hy, -sy - mg)/vs, uy1 = Math.min(hy, ch - sy + mg)/vs;
       if (ux0 >= ux1 || uy0 >= uy1) continue;
@@ -4246,31 +4273,31 @@ function drawPrecip(live){ const t = FXQ.gt, vs = view.s, L5 = PCP.lob, LI = PCP
         const gx0 = Math.floor(ux0/cs), gx1 = Math.floor(ux1/cs), gy0 = Math.floor(uy0/cs), gy1 = Math.floor(uy1/cs);
         for (let gy = gy0; gy <= gy1; gy++){ const py = sy + (gy + 0.5)*cp;
           for (let gx = gx0; gx <= gx1; gx++){ const px = sx + (gx + 0.5)*cp;
-            let ub = 0, nl = 0; for (let i = 0; i < 45; i += 5){ const ex = Math.max(0, Math.abs(px - L5[i]) - rr), ey = Math.max(0, Math.abs(py - L5[i + 1]) - rr), d = ex*ex*L5[i + 2] + ey*ey*L5[i + 3]; if (d < 1){ LI[nl++] = i; if (1 - d > ub) ub = 1 - d; } }
-            if (ub <= 0.1) continue;   // no cloud lobe within reach of this cell: nothing falls here (ub: the most cloud any of its particles can be under)
-            for (let ly = 0; ly < nL; ly++){ const P = Lys[ly], wl = wb*P.m, jn = Math.ceil(wl), kc = kl + ly*40503 + gx*92821 + gy*68917, b0 = B[ly*2], b1 = B[ly*2 + 1];
+            const cm = pcpMax(px - rr, py - rr, px + rr, py + rr) + 0.02; if (cm <= 0.12) continue;   // no cloud within reach of this cell: nothing falls here (cm: the most cloud any of its particles can be under)
+            for (let ly = 0; ly < nL; ly++){ const P = Lys[ly], wl = wb*P.m, jn = Math.ceil(wl), kc = kl + ly*40503 + gx*92821 + gy*68917;
               for (let j = 0; j < jn; j++){ const K = (kc + j*131)*4, h = pch(K), h0 = (h & 4095)/4096, cyf = h0 + t/(P.per*(0.8 + 0.4*((h >>> 12) & 1023)/1024)), cyc = Math.floor(cyf), f = cyf - cyc;
-                const hc = pch(K + 1 + cyc*977), thr = 0.1 + 0.6*((hc >>> 16) & 255)/256; if (thr >= ub) continue;   // (a particle shows where the cloud is thicker than its own threshold: dense in the middle, thinning out to the edges)
-                const env = Math.min(1, wl - j)*Math.min(1, f*6, (1 - f)*6); if (env < 0.03) continue;
+                const hc = pch(K + 1 + cyc*977), thr = 0.12 + 0.72*((hc >>> 16) & 255)/256; if (thr >= cm) continue;   // (a new spot each cycle; it shows where the cloud is thicker than its own threshold: dense where the cloud is thick, thinning out to the edges)
+                const e6 = f < 0.5 ? f*6 : (1 - f)*6, env = (e6 < 1 ? e6 : 1)*(wl - j < 1 ? wl - j : 1); if (env < 0.03) continue;
                 const h6 = (hc >>> 24)/256, ax = sx + (gx + (hc & 255)/256)*cp, ay = sy + (gy + ((hc >>> 8) & 255)/256)*cp, s = (f - 0.5)*P.T;
                 if (snow){ const sw = Math.sin(t/(1700 + 1500*h0) + h0*40)*P.sw, x = ax + dx*s + dy*sw, y = ay + dy*s - dx*sw;
-                  if (x < -3 || x > cw + 3 || y < -3 || y > ch + 3) continue;
-                  const m = pcpMask(x, y, sx, sy, er, nl); if (m <= thr) continue;
-                  const r = P.r*(0.8 + 0.4*h6)*Math.sqrt(env)*(0.55 + 0.45*Math.min(1, (m - thr)*4)); if (r < 0.12) continue;   // (it grows in and shrinks away; a little smaller at the edge of the snow)
-                  const o = N[ly*2]; if (o + 3 > b0.length) continue; b0[o] = x; b0[o + 1] = y; b0[o + 2] = r; N[ly*2] = o + 3; }
-                else { const hxp = ax + dx*s, hyp = ay + dy*s; if (hxp < -12 || hxp > cw + 12 || hyp < -12 || hyp > ch + 12) continue;
-                  const L0 = P.len*(0.8 + 0.4*h6); let m = pcpMask(hxp, hyp, sx, sy, er, nl); if (m <= thr) continue; m = Math.min(m, pcpMask(hxp - dx*L0, hyp - dy*L0, sx, sy, er, nl)); if (m <= thr) continue;   // (head and tail both under the cloud)
-                  const len = L0*env*Math.min(1, (m - thr)*4); if (len < 0.5) continue;   // (it grows in and shrinks away; shorter at the edge of the rain)
-                  const o = N[ly*2], o1 = N[ly*2 + 1]; if (o + 4 > b0.length || o1 + 4 > b1.length) continue; const hf = len*(0.45 + 0.25*Lt), mx = hxp - dx*hf, my = hyp - dy*hf;   // (the head: longer at night, when the dark tail hardly shows)
-                  b0[o] = mx; b0[o + 1] = my; b0[o + 2] = hxp; b0[o + 3] = hyp; N[ly*2] = o + 4;   // the head, brighter
-                  b1[o1] = hxp - dx*len; b1[o1 + 1] = hyp - dy*len; b1[o1 + 2] = mx; b1[o1 + 3] = my; N[ly*2 + 1] = o1 + 4; } } } } } }   // and the fainter tail
+                  if (x < -3 || x > CW + 3 || y < -3 || y > CH + 3) continue;
+                  const m = pcpMask(x, y); if (m <= thr) continue;
+                  const r = P.r*(0.8 + 0.4*h6)*Math.sqrt(env)*(0.55 + 0.45*Math.min(1, (m - thr)*4)); if (r < 0.15) continue;   // (it grows in and shrinks away; a little smaller at the edge of the snow)
+                  const o = N[ly], b = o + 3 > B[ly].length ? pcpGrow(ly) : B[ly]; b[o] = x; b[o + 1] = y; b[o + 2] = r; N[ly] = o + 3; }
+                else { const hxp = ax + dx*s, hyp = ay + dy*s, len = P.len*(0.8 + 0.4*h6); if (hxp < -len || hxp > CW + len || hyp < -2 || hyp > CH + len) continue;
+                  let m = pcpMask(hxp, hyp); if (m <= thr) continue; m = Math.min(m, pcpMask(hxp - dx*len, hyp - dy*len)); if (m <= thr) continue;   // (its leading end and its tail both under the cloud)
+                  const e = env*Math.min(1, (m - thr)*4); if (e < 0.1) continue; const bi = ly*3 + (e > 0.7 ? 2 : e > 0.4 ? 1 : 0), o = N[bi], b = o + 3 > B[bi].length ? pcpGrow(bi) : B[bi];   // (it keeps its length and fades in and out, fainter at the edge of the rain: three steps)
+                  b[o] = hxp; b[o + 1] = hyp; b[o + 2] = len; N[bi] = o + 3; } } } } } }
+      const cr = 236 + 14*Lt | 0, cg = 242 - 8*Lt | 0, cb = 255 - 51*Lt | 0;   // pale; warmed at night against the cool night multiply, so it stays neutral, not lavender
       for (let ly = nL - 1; ly >= 0; ly--){ const P = Lys[ly];   // far layer first
-        if (snow){ const n = N[ly*2], b = B[ly*2]; if (!n) continue; ctx.fillStyle = `rgba(246,250,255,${(Math.min(1, P.a*(1 + 0.2*Lt))*fade).toFixed(3)})`; ctx.beginPath();
-          for (let o = 0; o < n; o += 3){ const r = b[o + 2]; ctx.rect(b[o] - r, b[o + 1] - r, 2*r, 2*r); } ctx.fill(); }
-        else { const d = 1 - 0.25*Lt, na = 1 + 0.5*Lt; ctx.lineWidth = P.w;   // (at night a little darker and stronger, so the night tint does not swallow it)
-          for (let qd = 1; qd >= 0; qd--){ const n = N[ly*2 + qd], b = B[ly*2 + qd]; if (!n) continue;   // the head pale, the tail a cool grey: one or the other shows on dark sea and on white cloud
-            ctx.strokeStyle = qd ? `rgba(${118*d | 0},${132*d | 0},${152*d | 0},${(Math.min(1, P.a*0.6*na)*fade).toFixed(3)})` : `rgba(232,240,255,${(Math.min(1, P.a*na)*fade).toFixed(3)})`; ctx.beginPath();
-            for (let o = 0; o < n; o += 4){ ctx.moveTo(b[o], b[o + 1]); ctx.lineTo(b[o + 2], b[o + 3]); } ctx.stroke(); } } } } }
+        if (snow){ const n = N[ly], b = B[ly]; if (!n) continue; ctx.fillStyle = `rgba(${cr + 10 > 255 ? 255 : cr + 10},${cg + 8 > 255 ? 255 : cg + 8},${cb},${(P.a*fade).toFixed(3)})`; ctx.beginPath();
+          for (let o = 0; o < n; o += 3){ const x = b[o], y = b[o + 1], r = b[o + 2]; if (r*dpr < 0.8) ctx.rect(x - r, y - r, 2*r, 2*r); else { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 6.2832); } } ctx.fill(); }   // (round flakes; one under ~1.6 device px is a soft dot either way)
+        else { ctx.lineWidth = P.w;
+          for (let bk = 0; bk < 3; bk++){ const n = N[ly*3 + bk], b = B[ly*3 + bk]; if (!n) continue; const ba = P.a*(bk + 1)/3*fade, ox = dy*P.w, oy = -dx*P.w;
+            ctx.strokeStyle = `rgba(62,74,92,${(ba*0.5*(1 - 0.5*Lt)).toFixed(3)})`; ctx.beginPath();   // a faint grey edge along one side: the pale streak shows on dark sea, this edge on the white cloud
+            for (let o = 0; o < n; o += 3){ const x = b[o] + ox, y = b[o + 1] + oy, l = b[o + 2]*0.7; ctx.moveTo(x - dx*l, y - dy*l); ctx.lineTo(x, y); } ctx.stroke();
+            for (const [f0, f1, sa] of PCP.seg){ ctx.strokeStyle = `rgba(${cr},${cg},${cb},${(ba*sa).toFixed(3)})`; ctx.beginPath();   // tail faint, head bright: a tapered streak, not a dot
+              for (let o = 0; o < n; o += 3){ const x = b[o], y = b[o + 1], l = b[o + 2], a0 = l*(1 - f0), a1 = l*(1 - f1); ctx.moveTo(x - dx*a0, y - dy*a0); ctx.lineTo(x - dx*a1, y - dy*a1); } ctx.stroke(); } } } } } }
   ctx.restore(); }
 /* lightning in storm cells, drawn over the night tint: every 2.5-7 s of game-clock time one lobe flashes for 80 ms; close in, a jagged bolt
    drops from its base with a glow where it strikes. Off with reduced motion */
