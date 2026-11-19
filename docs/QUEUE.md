@@ -20,7 +20,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **MAP-FIX** (done 2026-11-19, map-fix 5e9bd37, waiting for the owner's OK; has MAP-2 and the castle dug-in mark; all checks pass but the master waypoints one) | pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options (show only) and the "Dug in" label; screenshots or tests before merging | Opus | map-fix |
-| **WEATHER fixes** (started 2026-11-19; only the weather drawing) | clouds keep their white/grey colour, snow falls only under snow clouds, rain as soft streaks only under rain clouds; builder, two reviewers (look, regressions/cost), fixer; sheets and clips before merging | Sonnet build, Opus reviews | weather-fix |
+| **WEATHER fixes** (done 2026-11-19, waiting for the owner's OK; 3817fe2) | clouds stay white/grey (no orange or blue tint), snow and rain only under their clouds and thickest in the middle, smooth falling motion; public build OK, golden same, speed equal to master; sheets and clips sent | Sonnet build, Opus reviews | weather-fix |
 
 ## Next free slots (in this order)
 
