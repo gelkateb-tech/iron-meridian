@@ -1,7 +1,7 @@
 // NAVAL CITIES on the page (owner 2026-11-19, with a Conflict of Nations screenshot of Karachi and Hyderabad): the anchor in a small square frame
 // beside every naval city's name (index.html ncPlace / ncMark), never over the name, a counter, its position dot or another name; none beside a
 // city that is not a naval city; shown with the city names, not zoomed far out; its tooltip and the city sheet's line; boarding refused away from a
-// naval city with the reason shown; an assault landing into an enemy naval city; Marines landing on an open coast; the Marines card in the research
+// naval city with the reason shown; an assault landing into an enemy naval city (planned, then under way); Marines landing on an open coast; the Marines card in the research
 // tree. A Pakistan game in the nations world, desktop 1440x900.
 //   node .test/naval-cities-page.js [out-dir]   (bash tools/mkpage.sh first; with out-dir: the owner's sheets there, deviceScaleFactor 2, JPG 88)
 // Prints JSON {checks, fails, errors}; exit 1 on a failure.
@@ -90,16 +90,25 @@ const OUT = process.argv[2] || null, W = 1440, H = 900;
     return { a: a.id, z, sea: best, xy: [P.x, P.y] }; }, T.p);
   await look((B.xy[0] + B.sea[0])/2, (B.xy[1] + B.sea[1])/2, 56); await settle(); await clear();
   await p.evaluate(id => window.__im.selectArmy(id), B.a); await p.waitForTimeout(300); await p.click('#cmdbar [data-act="cm-move"]'); await p.waitForTimeout(200);
-  { const s = await p.evaluate(xy => window.__im.toScreen(xy[0], xy[1]), B.sea); await p.mouse.click(MR.x + s[0], MR.y + s[1]); await p.waitForTimeout(400);
+  { const s = await p.evaluate(xy => window.__im.toScreen(xy[0], xy[1]), B.sea); await p.mouse.click(MR.x + s[0], MR.y + s[1]); await p.waitForTimeout(300);
     const t = await p.evaluate(() => [...document.querySelectorAll('.toast')].map(e => e.innerText).join(' | '));
+    await shot('4-boarding-refused-reason', FULL);   // (at once: the refusal's toast is up for 4.5 s)
+    { const sb = await p.evaluate(() => { const b = document.querySelector('#side [data-act="send"]'); return b ? {dis:b.disabled, op:getComputedStyle(b).opacity} : null; });
+      ok('the panel\'s Send button is off for the refused route', !sb || sb.dis, sb); }
     const a = await p.evaluate(id => { const a = window.__im.S.armies.find(x => x.id === id); return { path: a.path, to: a.to }; }, B.a);
-    ok('boarding refused away from a naval city, the reason shown', /No naval city here: troops board ships only at a naval city/.test(t) && !a.path.length && a.to === null, { t, a });
-    await shot('4-boarding-refused-reason', FULL); }   // (the refusal's toast and the panel's planned route give the reason)
+    ok('boarding refused away from a naval city, the reason shown', /No naval city here: troops board ships only at a naval city/.test(t) && !a.path.length && a.to === null, { t, a }); }
   if (await p.evaluate(() => window.__im.cmdMode === 'move')) await p.click('#cmdbar [data-act="cm-move"]'); await side(false); await clear();
 
   // 5. an assault landing into an enemy naval city (Mumbai, India at war)
   const A = await p.evaluate(mu => { const im = window.__im, S = im.S, G = im.G, ind = S.nations.findIndex(N => N.name === 'India'); setRel(0, ind, 'war');
-    const z = G.P[mu].nbs.find(v => G.P[v].sea), a = im.addArmy(0, z, { inf: 6, at: 2 }); a.m = 90; im.orderMove(a, mu); return { a: a.id, z, path: a.path.slice(), ind }; }, C.mu);
+    const z = G.P[mu].nbs.find(v => G.P[v].sea), a = im.addArmy(0, z, { inf: 6, at: 2 }); a.m = 90; return { a: a.id, z, zxy: [G.P[z].x, G.P[z].y], ind }; }, C.mu);
+  // planning it: the panel's route says "assault landing"
+  await look((C.muxy[0] + A.zxy[0])/2, (C.muxy[1] + A.zxy[1])/2 + 6, 64); await p.evaluate(id => window.__im.selectArmy(id), A.a); await p.waitForTimeout(200);
+  await p.evaluate(([id, mu]) => { window.__im.setTarget(id, mu); window.dispatchEvent(new Event("im-bart")); }, [A.a, C.mu]); await settle(); await clear();
+  { const t = await p.evaluate(() => document.querySelector('#side').innerText);
+    ok('planning it: the route says "lands at Mumbai (assault landing) (45 min)"', /lands at Mumbai \(assault landing\) \(45 min\)/.test(t), t.slice(0, 500)); }
+  await shot('5-assault-landing-enemy-naval-city', FULL);
+  A.path = await p.evaluate(([id, mu]) => { const a = window.__im.S.armies.find(x => x.id === id); window.__im.orderMove(a, mu); return a.path.slice(); }, [A.a, C.mu]);
   ok('the assault landing: straight into Mumbai', A.path.length === 1 && A.path[0] === C.mu, A.path);
   { let L = null; for (let i = 0; i < 400; i++){ L = await p.evaluate(id => { const a = window.__im.S.armies.find(x => x.id === id); window.__im.tick(); return a ? { at: a.at, land: a.land || 0, to: a.to } : null; }, A.a); if (!L || L.at === C.mu) break; }
     ok('the force arrived at Mumbai from the sea', L && L.at === C.mu, L);
@@ -107,7 +116,7 @@ const OUT = process.argv[2] || null, W = 1440, H = 900;
     await look(C.muxy[0], C.muxy[1] + 6, 80); await p.evaluate(id => window.__im.selectArmy(id), A.a); await settle(); await clear();
     const t = await p.evaluate(() => document.querySelector('#side').innerText);
     ok('the army bar counts the landing down', /Landing/.test(t), t.slice(0, 300)); }
-  await shot('5-assault-landing-enemy-naval-city', FULL);
+  await shot('5b-assault-landing-under-way', FULL);
   await side(false); await clear();
 
   // 6. Marines landing on an open coast (an Indian beach that is not a naval city), next to infantry that must go by a naval city
@@ -135,6 +144,14 @@ const OUT = process.argv[2] || null, W = 1440, H = 900;
     ok('the Marines card: name, what it does, its costs, START', c && /marines/i.test(c.t) && /any coast/.test(c.t) && /START/i.test(c.t), c && c.t.slice(0, 400));
     ok('until the Marines pictures exist the card shows the infantry\'s (no missing picture)', c && c.im.some(s => /ul-inf-|ri-u_inf/.test(s)) && !c.im.some(s => /ri-u_mar|ul-mar-/.test(s) && !/ul-mar-/.test(s)), c && c.im); }
   await shot('7-research-marines-card', FULL);
+  // the Marines' own pictures as they arrive from unit-art-3: a group that has some shows its own, every other group the infantry's; a look or a
+  // kind of picture missing in a group that has some falls back to the infantry's; never a missing file (index.html ulUnits, ulArt)
+  { const r = await p.evaluate(() => { const rs = window.__im.rs, S = window.__im.S, F = rs.ulFiles(), g0 = rs.group(0), o = S.nations.findIndex((N, i) => i > 0 && rs.group(i) !== g0);
+      const fake = `ul-mar-${g0}-1-side`, had = F.has(fake); F.add(fake); const A = rs.look('mar', 0, 1), B = rs.look('mar', o, 1), A3 = rs.look('mar', 0, 8); if (!had) F.delete(fake);
+      const C = rs.look('mar', 0, 1), real = s => { const k = s && s.replace(/^assets\/art\//, '').replace(/\.webp$/, ''); return !s || /ri-u_/.test(s) || F.has(k) || k === fake; };
+      return { g0, A, B, A3, C, ok: [A, B, A3, C].every(x => real(x.side) && real(x.scene) && !/ri-u_mar/.test(x.scene)) }; });
+    ok('Marines pictures: a group with its own shows them, another group the infantry\'s, a missing kind the infantry\'s, never a missing file',
+      r.ok && /ul-mar-/.test(r.A.side) && /ul-inf-|ri-u_inf/.test(r.A.scene || '') && /ul-inf-/.test(r.B.side || '') && /ul-mar-/.test(r.A3.side) && !/ul-mar-/.test(r.C.side || ''), r); }
   await b.close();
   console.log(JSON.stringify({ checks, fails, errors }, null, 1));
   console.log(fails.length || errors.length ? `FAILED ${fails.length} checks, ${errors.length} errors` : `OK ${Object.keys(checks).length} checks`);

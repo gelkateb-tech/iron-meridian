@@ -95,6 +95,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
   S.rk = RES_K;   // goods counted at the resource scale RES_K (see resKMigrate)
   S.bk = 1;   // made under the Bunker rule (levels 1-5; see bunkerMigrate)
+  if (NAVAL_CITIES) S.nc = 1;   // made under the naval-cities rule (see restore: a save without it keeps routes given before the rule)
   if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
   if (T) tierStart(mode);
@@ -268,10 +269,15 @@ function restore(data){
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
   // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
   for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
-  // saves from before NAVAL CITIES: troops at sea whose route comes ashore away from a naval city still land there (a.oldLand: rules/tick.js; it goes
-  // with the landing, or with a new order)
-  if (NAVAL_CITIES) for (const a of S.armies){ if (a.air || !ground(a) || amphib(a)) continue; const r = [a.at, ...(a.to !== null ? [a.to] : []), ...a.path];
-    for (let i = 1; i < r.length; i++) if (G.P[r[i - 1]] && G.P[r[i]] && G.P[r[i - 1]].sea && !G.P[r[i]].sea && !navalCity(r[i])){ a.oldLand = 1; break; } }
+  // saves from before NAVAL CITIES (S.nc unset): troops already at sea (or sailing out) whose route comes ashore away from a naval city still land
+  // there (a.oldLand: rules/tick.js; it goes with the landing, or with a new order). A force still on land with such a route is planned again now
+  // through a naval city (keeping its old route only when there is none: the hourly check then stops it at sea, with a message). A save of this
+  // build (S.nc) is left as it was: a load changes nothing that playing on would not
+  if (NAVAL_CITIES && !S.nc) for (const a of S.armies){ if (a.air || !ground(a) || amphib(a)) continue; const r = [a.at, ...(a.to !== null ? [a.to] : []), ...a.path];
+    let off = false; for (let i = 1; i < r.length; i++) if (G.P[r[i - 1]] && G.P[r[i]] && G.P[r[i - 1]].sea && !G.P[r[i]].sea && !navalCity(r[i])){ off = true; break; }
+    if (!off) continue; if (G.P[a.at].sea || (a.to !== null && G.P[a.to].sea)){ a.oldLand = 1; continue; }
+    const q = pathFor(a, a.to ?? a.at, a.path[a.path.length - 1]); if (q.length) a.path = q; }
+  if (NAVAL_CITIES) S.nc = 1;
   IM.emit('restored');
   return true;
 }

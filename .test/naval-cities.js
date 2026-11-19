@@ -93,11 +93,23 @@ run('marines', () => { const R = game([0], {nations:true}), S = R.S, G = R.G, U 
 run('oldsave', () => { const R = game([0]), S = R.S, G = R.G, n = 0;
   const C0 = G.P.find(P => !P.sea && P.coast && !P.city && S.owner[P.id] === n && zoneBy(R, P.id) != null), z = zoneBy(R, C0.id);
   const a = R.addArmy(n, z, {inf:3}), b = R.addArmy(n, z, {inf:3}); a.path = [C0.id]; b.path = [C0.id]; a.forced = b.forced = true;
-  const o = JSON.parse(R.saveJSON()); for (const x of o.armies) delete x.oldLand;   // (the save as a build before naval cities wrote it)
+  const o = JSON.parse(R.saveJSON()); delete o.nc; for (const x of o.armies) delete x.oldLand;   // (the save as a build before naval cities wrote it)
   const R2 = new Function(SRC)(); ok('a save with troops at sea headed for a plain coast loads', R2.restore(o) !== false);
   const a2 = R2.S.armies.find(x => x.id === a.id); ok('their route is kept from before the rule (oldLand)', a2 && a2.oldLand === 1 && a2.path[0] === C0.id, a2 && {old:a2.oldLand, path:a2.path});
   for (let i = 0; i < 400 && a2.at !== C0.id; i++) R2.tick();
   ok('and they land where they were going', a2.at === C0.id && !a2.oldLand, {at:a2.at});
+  // a save of this build (S.nc) is loaded as it was: no flag, so the hourly check plans such a route again just as playing on would
+  { const o5 = JSON.parse(R.saveJSON()), R5 = new Function(SRC)(); ok('a save of this build carries the naval-cities mark (S.nc)', o5.nc === 1, o5.nc);
+    R5.restore(o5); const a5 = R5.S.armies.find(x => x.id === a.id); ok('loading it flags nothing (a load changes nothing playing on would not)', a5 && !a5.oldLand && a5.path[0] === C0.id, a5 && {old:a5.oldLand, path:a5.path}); }
+  // a force still on land in that save, with a planned sail to a plain coast: not flagged (only troops already at sea keep such a route), planned
+  // again on load through a naval city
+  { let pick = null; for (const P of G.P){ if (P.sea || !R.navalCity(P.id) || S.owner[P.id] !== n) continue;
+      for (const zz of P.nbs.filter(v => G.P[v].sea)){ const B = G.P[zz].nbs.find(v => !G.P[v].sea && !R.navalCity(v) && v !== P.id && S.owner[v] === n); if (B != null){ pick = {p:P.id, z:zz, B}; break; } } if (pick) break; }
+    ok('a naval city and a plain coast on one sea zone', !!pick);
+    if (pick){ const c = R.addArmy(n, pick.p, {inf:2}); c.path = [pick.z, pick.B]; const o2 = JSON.parse(R.saveJSON()); delete o2.nc; for (const x of o2.armies) delete x.oldLand;
+      const R4 = new Function(SRC)(); R4.restore(o2); const c2 = R4.S.armies.find(x => x.id === c.id), fl2 = firstLand(R4, c2.at, c2.path);
+      ok('an old-save force still on land is not flagged; its route is planned again (lands only at a naval city)', c2 && !c2.oldLand && c2.path[c2.path.length - 1] === pick.B && (fl2 < 0 || R4.navalCity(fl2)), c2 && {old:c2.oldLand, path:c2.path, fl2});
+      for (let i = 0; i < 600 && c2.at !== pick.B; i++) R4.tick(); ok('and it gets there', c2.at === pick.B, {at:c2.at}); R.S.armies.splice(R.S.armies.indexOf(c), 1); } }
   // the same route in a game of this build (no flag): planned again through a naval city
   for (let i = 0; i < 3; i++) R.tick(); const fl = firstLand(R, b.to !== null ? b.at : z, b.to !== null ? [b.to, ...b.path] : b.path);
   ok('the same route given in this build is planned again through a naval city', b.at !== C0.id && (fl < 0 || R.navalCity(fl)), {at:b.at, to:b.to, path:b.path});

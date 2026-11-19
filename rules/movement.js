@@ -404,12 +404,13 @@ function legCross(a, lh){ if (a.path.length || !a.dest || a.dest.p !== a.to || a
    tolerance for "on the point" (a tenth of a km: rounding). With defenders there the battle comes first; once they are gone, the force at the
    centre takes it at once. Air units never capture, and CAP_MIN ground units are needed, as before. Everything a capture does (rules/combat.js
    capture) is unchanged, only immediate.
-   EMBARKING: ground forces board ships only in a NAVAL PORT, a coastal city of their own or a friend's (portOk: the ports fleets dock in and Naval
+   EMBARKING: ground forces board ships only in a NAVAL PORT, a naval (coastal) city of their own or a friend's (portOk: the ports fleets dock in and Naval
    Yards are built in). It takes EMBARK_H, 45 minutes, there (a.emb: the time left in hours, fractional, counted while the force could otherwise set
    off); the force does not move meanwhile.
-   LANDING: troops coming ashore from the sea (on any coast, as before, or into a port) take LAND_H, 45 minutes, and LAND_PORT_H, also 45 minutes for
-   now, into a port of their own or a friend's (owner 2026-11-19; the two stay apart for the naval-cities rule to come) (a.land: the time left in
-   hours, fractional). Meanwhile the force cannot move on, walk or capture; it fights at the landing penalty of its first day ashore (rLandF).
+   LANDING: troops come ashore from the sea only at a NAVAL CITY (landOk, above: their own, a friend's, or an enemy's or independent one they
+   assault), a force of Marines alone on any coast (NAVAL_CITIES off: any coast, as before). It takes LAND_H, 45 minutes, and LAND_PORT_H, also 45 minutes for now, into a port of their
+   own or a friend's (owner 2026-11-19) (a.land: the time left in hours, fractional). Meanwhile the force cannot move on, walk or capture; it
+   fights at the landing penalty of its first day ashore (rLandF).
    EXACT TIME: movement runs once an hour, but these times are not rounded to whole hours: the hour's travel is shared out (rules/tick.js). A force
    that finishes boarding 45 minutes into the hour sails the last 15 minutes of it (embStep); one that finishes landing 45 minutes in walks, marches
    on or captures in the last 15 (landStep). Troops at sea keep what is left of an hour when a sea leg ends (a.carry, as trains do): it goes into

@@ -5808,9 +5808,9 @@ function ulTankArt(o){ if (o < 0 || typeof S === 'undefined' || !S || !S.nations
 // the straight-down picture of unit type ut for nation o (tools/gen-art.py ul-<unit>-<group>-<look>-top): the owner's group, the look of the unit's level (1 + every
 // step done in its line, up to 8; the Recon UAV by generation), or the nearest earlier look that exists; fetched when first wanted, null until it has arrived
 function ulTopName(ut, o){ if (!ut || typeof o !== 'number' || o < 0 || typeof S === 'undefined' || !S || !S.nations || !S.nations[o]) return null;
-  const g = ulGroup(o), u = ulUnit(ut); let lv = 1; for (const nd of RNODES_U[ut] || []) if (nd.kind !== 'unlock') lv += Math.min(nd.lv.length, rLevel(o, nd.id));
+  const g = ulGroup(o); let lv = 1; for (const nd of RNODES_U[ut] || []) if (nd.kind !== 'unlock') lv += Math.min(nd.lv.length, rLevel(o, nd.id));
   const k = ulLookT(ut, Math.min(UL_MAX, lv), uavLv(o)); let first = null;
-  for (let j = k; j >= 1; j--){ const n = `ul-${u}-${g}-${j}-top`; if (!UL_FILES.has(n)) continue; if (ART.ready(n)) return n; if (!first){ first = n; ART.want(n); } }
+  for (const u of ulUnits(ut, g)) for (let j = k; j >= 1; j--){ const n = `ul-${u}-${g}-${j}-top`; if (!UL_FILES.has(n)) continue; if (ART.ready(n)) return n; if (!first){ first = n; ART.want(n); } }
   return null; }
 // a picture's measures as model type m (its opaque box from the table tools/prep-art.py measured, so they are known before it loads)
 function tmArtGeom(m, n){ const key = m + '|' + n + '|' + tmRW(); let A = TMARTC.get(key); if (A) return A;
@@ -8837,7 +8837,7 @@ const durTxt = h => h < 1 - 1e-9 ? `${Math.max(1, Math.round(h*120)/2)} min` : `
 function routeNotes(a, t, path, pt){ if (!a || a.air || !ground(a) || !path.length) return []; const out = []; let u = a.to ?? a.at, emb = false, land = false;
   for (let i = 0; i < path.length; i++){ const v = path[i];
     if (!emb && !G.P[u].sea && G.P[v].sea){ emb = true; out.push(`⚓ embarks at ${G.P[u].cityName || G.P[u].name} (${durTxt(i === 0 && a.to === null && a.emb != null ? a.emb : embarkH(a))})`); }
-    else if (!land && G.P[u].sea && !G.P[v].sea){ land = true; const ass = navalCity(v) && !portOk(a.owner, v); out.push(`lands ${navalCity(v) ? 'at ' + (G.P[v].cityName || G.P[v].name) + (ass ? ' (assault landing)' : '') : 'in ' + G.P[v].name + ' (Marines)'} (${durTxt(landH(a, v))})`); }
+    else if (!land && G.P[u].sea && !G.P[v].sea){ land = true; const ass = navalCity(v) && !portOk(a.owner, v); out.push(`lands ${navalCity(v) ? 'at ' + (G.P[v].cityName || G.P[v].name) + (ass ? ' (assault landing)' : '') : 'in ' + G.P[v].name + (amphib(a) ? ' (Marines)' : a.oldLand ? ' (ordered before naval cities)' : '')} (${durTxt(landH(a, v))})`); }
     u = v; }
   if (pt && capturable(a.owner, t) && Math.hypot(pt[0] - G.P[t].x, pt[1] - G.P[t].y) > HEART_R){ const q = path.length > 1 ? path[path.length - 2] : a.to ?? null, f = q != null ? [G.P[q].x, G.P[q].y] : dispPos(a);
     out.push(heartVia(a, t, f, pt) ? 'via the city: captures it' : '⚠ stops short of the city: no capture'); }
@@ -10107,14 +10107,18 @@ function rkLayout(cat){ if (RKLAY[cat]) return RKLAY[cat];
 // earlier look and then to today's pictures (the unit's research scene, ri-u_<type>: side null means "fill the diamond with that scene").
 const UL_FILES = new Set('/*ul-files*/'.split(' ').filter(f => /^ul-[a-z0-9]+-[a-z]+-[1-3]-(side|scene|top)$/.test(f)));
 // the picture set of a unit type (Paratroopers share the infantry's). UL_FALLBACK: a unit whose own set is still being drawn (the Marines, 'mar': the
-// unit-art-3 pictures, assets/art/ul-mar-*) shows the infantry's until its first picture is in UL_FILES, then its own (no code change)
-const UL_FALLBACK = {mar:'inf'}, UL_HAS = new Set([...UL_FILES].map(f => f.split('-')[1]));
-const ulUnit = t => UL_FALLBACK[t] && !UL_HAS.has(t) ? UL_FALLBACK[t] : UNIT_NAME_OF[t] || t;
-const riUnit = t => UL_FALLBACK[t] && !UL_HAS.has(t) ? UL_FALLBACK[t] : t;   // (the research scene, ri-u_<type>: the same fallback)
+// unit-art-3 pictures, assets/art/ul-mar-*) shows the infantry's for each nation group that has none of its own yet, and its own wherever they
+// exist (no code change); a look still missing in a group that has some falls back to that group's nearest earlier look, then to the infantry's.
+// Its research scene (ri-u_mar) is not drawn: the infantry's (riUnit)
+const UL_FALLBACK = {mar:'inf'}; let UL_HAS = null, UL_HASN = -1;   // ('mar-china': a unit and group with pictures; made again if UL_FILES grows)
+const ulHas = k => { if (UL_HASN !== UL_FILES.size){ UL_HAS = new Set([...UL_FILES].map(f => f.split('-').slice(1, 3).join('-'))); UL_HASN = UL_FILES.size; } return UL_HAS.has(k); };
+const ulUnit = (t, g) => UL_FALLBACK[t] && !ulHas(t + '-' + g) ? UL_FALLBACK[t] : UNIT_NAME_OF[t] || t;
+const ulUnits = (t, g) => { const u = ulUnit(t, g); return UL_FALLBACK[t] && u !== UL_FALLBACK[t] ? [u, UL_FALLBACK[t]] : [u]; };   // (own pictures first, then the stand-in's)
+const riUnit = t => UL_FALLBACK[t] || t;   // (the research scene, ri-u_<type>)
 const ulGroup = n => n >= 0 && S && S.nations[n] ? ngroupOf(S.nations[n].name) : 'export';      // a nation's group (docs/DOCTRINES.md section 2)
 // a unit's look at research level lv; the Recon UAV's looks follow its generations instead (UAV I-III, IV, V: docs/RESEARCH.md 14.1), g its generation
 const ulLookT = (t, lv, g) => t === 'drone' ? (g >= 5 ? 3 : g >= 4 ? 2 : 1) : ulLook(lv);
-function ulArt(t, g, k){ const u = ulUnit(t), f = w => { for (let j = k; j >= 1; j--){ const n = `ul-${u}-${g}-${j}-${w}`; if (UL_FILES.has(n)) return `assets/art/${n}.webp`; } return null; };
+function ulArt(t, g, k){ const f = w => { for (const u of ulUnits(t, g)) for (let j = k; j >= 1; j--){ const n = `ul-${u}-${g}-${j}-${w}`; if (UL_FILES.has(n)) return `assets/art/${n}.webp`; } return null; };
   return {side:f('side'), scene:f('scene') || `assets/art/ri-u_${riUnit(t)}.webp`, own:!!f('scene')}; }
 // the same for nation n's own unit of type t at research level lv (its level now when lv is left out): {side, scene, look, group, name}
 function unitLookArt(t, n, lv){ const g = ulGroup(n), L = lv || Math.min(UL_MAX, 1 + RNODES.filter(m => m.u === t && m.kind !== 'unlock').reduce((s0, m) => s0 + Math.min(m.lv.length, rLevel(n, m.id)), 0));
