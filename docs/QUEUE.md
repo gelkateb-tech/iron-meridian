@@ -20,7 +20,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **MAP-FIX** (done 2026-11-19, map-fix 5e9bd37, waiting for the owner's OK; has MAP-2 and the castle dug-in mark; all checks pass but the master waypoints one) | pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options (show only) and the "Dug in" label; screenshots or tests before merging | Opus | map-fix |
-| **WEATHER fixes** (done 2026-11-19, waiting for the owner's OK; 3817fe2) | clouds stay white/grey (no orange or blue tint), snow and rain only under their clouds and thickest in the middle, smooth falling motion; public build OK, golden same, speed equal to master; sheets and clips sent | Sonnet build, Opus reviews | weather-fix |
+| **WEATHER fixes** (2026-11-19: owner said the fix looks WORSE; NOT merged, branch weather-fix 3817fe2 kept for reference; the clips sent were mostly menu screens; waiting for the owner to say what looks worse before a new try) | clouds keep white/grey, snow and rain only under clouds | - | weather-fix |
 
 ## Next free slots (in this order)
 
@@ -31,7 +31,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | State | Branch |
 |---|---|---|
-| **UNIT-ART-2** | done 2026-11-19 (unit-art-2, ba0ed31): 17 more units x 45 pictures = 765 (IFV, artillery, SAM, MLRS, motorized infantry, anti-tank, frigate, cruiser, submarine, carrier, strike fighter, interceptor, ASF, helicopter, recon UAV, strike drone, swarm); about $32.8; estimated balance about $5.94 (the $5 floor stopped it); flags only, nothing redone: most top-downs mirrored against the side view, some side views facing lower-left, side cut-outs keep a faint pale plate; sheets sent | unit-art-2 |
+| **UNIT-ART-2** | owner OK 2026-11-19; free fixes running (flip wrong-way pictures, remove pale plate, merge master, review), then merge; done 2026-11-19 (unit-art-2, ba0ed31): 17 more units x 45 pictures = 765 (IFV, artillery, SAM, MLRS, motorized infantry, anti-tank, frigate, cruiser, submarine, carrier, strike fighter, interceptor, ASF, helicopter, recon UAV, strike drone, swarm); about $32.8; estimated balance about $5.94 (the $5 floor stopped it); flags only, nothing redone: most top-downs mirrored against the side view, some side views facing lower-left, side cut-outs keep a faint pale plate; sheets sent | unit-art-2 |
 | **BUNKER ART options** | done 2026-11-18 (bunker-art): A concrete command bunker with earth berm, B bunker half sunk into a grassy hillock (recommended), C pillbox with trench on its own earth block (slab-like, not recommended); level 1 and 5 each, no ground patch; about $0.20; sheets and map previews sent; nothing in the game changed | bunker-art |
 | **UNIT-ART tank sets** | done 2026-11-18 (unit-art): 45 pictures, 5 groups x 3 looks x (side / scene / top-down), $1.83 with checks (log 365 calls, about $12.10; estimated balance $39.05); 7 single-check flags and 8 three-way flags (mostly mirrored roof details on the top-downs); nothing redone; full set 1,095 pictures, about $44.49 (about $42.67 left, a top-up of about $8.6 needed to keep the $5 floor); sheets sent; NOT merged | unit-art |
 | **CITIES** | done 2026-11-18 (7129852): block clusters, a quarter smaller, owner colour from the town coat, towers lower, hidden at hexPx 26 and below, brighter night windows; checks pass; faster than master except desktop day close-zoom panning +4.7% per frame (probably noise); screenshots sent | cities-3d |
