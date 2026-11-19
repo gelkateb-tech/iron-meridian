@@ -95,6 +95,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
   S.rk = RES_K;   // goods counted at the resource scale RES_K (see resKMigrate)
   S.bk = 1;   // made under the Bunker rule (levels 1-5; see bunkerMigrate)
+  S.rb = 1;   // made under the rebels rule (see rbMigrate)
   if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
   if (T) tierStart(mode);
@@ -266,6 +267,7 @@ function restore(data){
   researchMigrate();
   rRenameMigrate();   // the upgrades review's replacements (any save that holds one of the old nodes)
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
+  rbMigrate();
   // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
   for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
   IM.emit('restored');
@@ -284,6 +286,16 @@ function resKMigrate(){ const f = RES_K/(S.rk > 0 ? S.rk : 1); S.rk = RES_K; if 
   if (S.trade && Array.isArray(S.trade.routes)) for (const r of S.trade.routes) for (const v of [r.va, r.vb]) if (v && typeof v.q === 'number') v.q *= f;
   for (const D of [S, ...Object.values(S.desks || {})]){ for (const o of Array.isArray(D.offers) ? D.offers : []) if (o && o.deal){ xs(o.deal.give); xs(o.deal.get); }
     const st0 = D.stats; if (st0){ xs(st0.made); if (typeof st0.rareRes === 'number') st0.rareRes *= f; } } }
+// saves from before the rebels rule (no S.rb; docs/REBELS-PLAN.md 8): partisans already on the map are rebels now (their 24-hour count starts
+// again: the old count was never set, which let them take a province within the hour), integrated cities stay integrated, an occupied city
+// below 30% morale gets the 3 days' grace a fresh capture has (so a load sets off no burst of uprisings), and occupied countryside, which no
+// longer falls below 50% morale through occupation, has its unrest cut to 50. Each seat is told once
+function rbMigrate(){ if (S.rb) return; S.rb = 1; const rc = S.rcool || (S.rcool = {});
+  for (const a of S.armies) if (a.rebel){ a.hold = 0; a.lw = 0; }
+  for (let p = 0; p < G.P.length; p++){ if (!occupied(p) || integrated(p)) continue;
+    if (G.P[p].city){ if (moraleOf(p) < RB.below) rc[p] = Math.max(rc[p] || 0, S.hour + RB.grace); }
+    else if (unrestOf(p) > RB.ruralCap) S.unrest[p] = RB.ruralCap; }
+  for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New rule: rebels. A city you captured loses morale every day (6% while the country you took it from still exists, 4% otherwise) and each of your ground units there gives back 3%, up to 4 units. Below 30% morale rebels rise. One infantry unit in the city crushes them; a city left without your troops for 24 hours goes over to them. After 10 days with your troops there and morale at 50% or more the city is integrated and never rebels. Pacify ($40M) needs a unit in the city, once every 3 days. Your own cities and the countryside never rebel.`}); } }
 // saves from before iron, electronics and rare materials (and with food): food is dropped everywhere, the new goods start at the new-game stocks
 function resMigrate(){
   for (const N of S.nations){ delete N.food; if (N.short) delete N.short.food; for (const [k, v] of [['iron', 50], ['elec', 30], ['rare', 40]]) if (typeof N[k] !== 'number' || !isFinite(N[k])) N[k] = v*RES_K; }
@@ -323,7 +335,7 @@ function armyAdded(a){ const A = S.armies;
 // nation n holds research node id (at any level); also true for the kept bonuses of the removed Economy branch (eco1-3)
 const has = (n, id) => rLevel(n, id) > 0;
 const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'UAV Squadron', swarm:'Drone Swarm Group', sdrone:'Strike Drone Squadron', bomb:'Bomber Wing', stealth:'Stealth Bomber Wing', mpa:'Maritime Patrol Squadron', awacs:'Early Warning Squadron', asf:'Fighter Wing', jam:'Electronic Warfare Battalion', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
-function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
+function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Rebels' : 'Garrison';
   let k = a.air ? (['heli', 'drone', 'swarm', 'sdrone', 'bomb', 'stealth', 'mpa', 'awacs', 'asf'].find(t => a.u[t]) || 'air') : shipsOnly(a) ? (a.u.carr ? 'carr' : a.u.sub === count(a) ? 'sub' : 'sea') : null;
   if (!k){ let best = 'inf', bv = -1; for (const t of ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para', 'mlrs', 'spec', 'jam']){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;

@@ -173,11 +173,12 @@ run('saves', () => { const R = game([0]), S = R.S, n = 0, P0 = ports(R, n)[0], C
 // 6. the AI follows the same rules: it boards ships only in ports, waits the embarking and landing times, and still takes independent land
 run('ai', () => { const R = game([], false), S = R.S, G = R.G; let legs = 0, badLegs = [], embSeen = 0, landSeen = 0, caps = 0, offHeart = 0, quick = []; const seen = new Set();
   R.IM.on('fxCapture', () => caps++);
-  for (let h = 0; h < 24*20; h++){ R.tick();
-    for (const a of S.armies){ if (a.owner < 0 || a.air || !R.count(a)) continue; if (a.emb != null) embSeen++; if (a.land > 0) landSeen++;
+  const embWas = new Map();   // (boarding left at the end of the hour before: a boarding begun inside an hour, after a landing ended in it, finishes the next hour and sails the rest of it)
+  for (let h = 0; h < 24*20; h++){ const was = new Map(embWas); embWas.clear(); R.tick();
+    for (const a of S.armies){ if (a.owner < 0 || a.air || !R.count(a)) continue; if (a.emb != null){ embSeen++; embWas.set(a.id, +a.emb); } if (a.land > 0) landSeen++;
       if (a.to !== null && !G.P[a.at].sea && G.P[a.to].sea && a.u && Object.keys(a.u).some(t => a.u[t] > 0 && ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'mlrs', 'spec', 'para', 'jam'].includes(t))){ const k = a.id + ':' + a.at + '>' + a.to;
         if (!seen.has(k)){ seen.add(k); legs++; if (!R.portOk(a.owner, a.at)) badLegs.push(k);
-          const sailed = a.t*R.legH(a); if (sailed <= 1 - R.embarkH(a) + 1e-6) embSeen++; else quick.push([k, sailed, R.embarkH(a)]); } } }
+          const sailed = a.t*R.legH(a), left = was.has(a.id) ? was.get(a.id) : R.embarkH(a); if (sailed <= 1 - left + 1e-6) embSeen++; else quick.push([k, sailed, left]); } } }
     if (h % 24 === 23) for (const a of S.armies) if (a.owner >= 0 && !a.air && a.to === null && !a.path.length && !a.sail && R.capturable(a.owner, a.at) && !R.atHeart(a) && R.count(a) >= R.CAP_MIN && !S.battles.includes(a.at) && !(a.land > 0)) offHeart++; }
   console.log('AI, 20 days of the classic world:', JSON.stringify({legsOntoWater:legs, embarkingHours:embSeen, landingHours:landSeen, captures:caps, offHeart}));
   ok('the AI boards ships only in ports', badLegs.length === 0, {legs, badLegs:badLegs.slice(0, 5)});

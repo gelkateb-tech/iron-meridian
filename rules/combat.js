@@ -397,11 +397,12 @@ function capture(p, O){
   for (const a of S.armies) if (a.hrt === p) delete a.hrt;   // (the heart reached: done with, rules/movement.js atHeart)
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
+  occReset(p, O);   // (its occupation starts afresh: rules/economy.js)
   S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = S.home[p] === O ? 0 : Math.max(unrestOf(p), G.P[p].city ? 30 : 15);
   geoChanged();
   const nm = G.P[p].name;
   if (isSeat(O)){ const D = desk(O); (D.tut || (D.tut = {})).capture = true; bump(O, 'taken'); cue(O, 'capture'); }
-  for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p); if (nb >= 0 && nb !== p){ w.air.base = nb; atMove(w, nb); w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${G.P[p].cityName || G.P[p].name} to ${G.P[nb].cityName || G.P[nb].name}.`, 'info', nb); } else { for (const t of UT) w.u[t] = 0; if (isSeat(w.owner)) tell(w.owner, `Your air wing was destroyed on the ground at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p); } }
+  wingsFlee(p, O);   // (air wings based here escape: rules/economy.js)
   if (isSeat(prev)){ bump(prev, 'lost'); cue(prev, 'lose'); }
   tellAll(me => O === me ? `You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.` : prev === me ? `${nationName(O)} captured ${nm}.` : wasCap ? `${nationName(O)} took ${nm}, capital of ${nationName(prev)}.` : null, me => O === me ? 'good' : prev === me ? 'bad' : '', p);
   if (prev >= 0) checkNation(prev, O);

@@ -52,6 +52,7 @@ function* tickHourG(){
         legArrive(a); if (a.land > 0) landOver(a, ov); }   // (troops coming ashore: the time over goes into the landing)
       else if (!(shipsOnly(a) && !G.P[a.to].sea)) legCross(a, lh); }   // a pinpoint move's last leg: the hour it crosses into its province it arrives there and walks on to the point
   }
+  rebelCrush();   // (infantry that has just marched into a city with rebels crushes them before any battle: rules/economy.js)
   // head-on clash: hostile columns marching in opposite directions on the same road meet and fight at the nearer province
   { const edge = new Map(), ek = (u, v) => (u | 0) === u && (v | 0) === v && u >= 0 && v >= 0 && u < 1048576 && v < 1048576 ? u*1048576 + v : u + '>' + v;   // (a number for the road from u to v)
     for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)){ const k = ek(a.at, a.to), l = edge.get(k); if (l) l.push(a); else edge.set(k, [a]); }

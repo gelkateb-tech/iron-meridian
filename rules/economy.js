@@ -194,37 +194,95 @@ function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.n
   if (type === 'sell'){ qty = Math.min(qty, kFloor(N[k])); if (qty <= 0) return 0; N[k] -= qty; }
   else { qty = Math.min(qty, lotsFor(N.cash, price)); if (qty <= 0) return 0; N.cash -= lotCash(qty, price); }
   (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, q0:qty, price:+price.toFixed(2), exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return qty; }
-/* ---------------- Occupation unrest ---------------- */
+/* ---------------- Occupation, morale and rebels (docs/REBELS-PLAN.md; owner rules 18-19 and list item 22) ----------------
+   A province you captured is occupied (its home, S.home, is another country's or independent). Once a day its unrest moves (morale = 100 - unrest
+   - war damage): a city +6 while the country it was taken from still exists, +4 when that country is gone or the city was independent, the
+   countryside +2; each of your ground units standing there takes 3 off, counting at most 4 (so 2 hold a city steady and 4 raise its morale). The
+   countryside's unrest stops at 50 and it never rebels. A day with at least 1 of your units there and morale at 50% or more counts toward
+   integration, a bad day takes one off; at 10 the province is integrated (S.integ, by province and holder): unrest falls 4 a day as on your own land
+   and it never rebels while you hold it. An occupied city that is not integrated and is below 30% morale has rebels for certain at the daily
+   update: not in the first 3 days after its capture, not within 5 days of its last uprising (S.rcool), not while rebels are there. They are 3, 4,
+   5 or 6 infantry by its people (a town under 1.5 million, a city, a large city from 5 million, a metropolis from 20 million) and their rising
+   lowers its unrest by 15. Owner, list item 22: ONE infantry unit of the holder (any infantry type) standing in the city beats any rebels: they are
+   crushed the moment they rise or the moment the infantry is there; only a city with no infantry fights them (other ground units, by the battle
+   rules) and only a city with no ground unit of its holder for 24 hours in a row goes over to them: back to the country it was taken from if it
+   still exists (the rebels become its troops, at least 2 infantry), otherwise independent (they stay as its garrison). Pacify: $40M, unrest -25,
+   needs a unit of yours in the province, once every 3 days per province (S.pcool). */
+const RB = {city:6, cityFree:4, rural:2, perUnit:3, maxUnits:4, ruralCap:50, below:30, warn:40, grace:72, cool:120, integDays:10, integMor:50, integUp:4, rise:15, hold:24, pacCost:40, pacDrop:25, pacCool:72};
 const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
+const placeNm = p => G.P[p].cityName || G.P[p].name;
+// rebels for a city of popOf(p) million people
+const rebelSize = p => { const pp = popOf(p); return pp >= 20 ? 6 : pp >= 5 ? 5 : pp >= 1.5 ? 4 : 3; };
+// nation o's ground units standing in province p (not marching, not in the air)
+function garrisonOf(p, o){ let s = 0; for (const a of byAt(p) || S.armies) if (a.owner === o && a.at === p && a.to === null && !a.fly && !a.air && !a.rebel) s += groundN(a); return s; }
+// an infantry unit of nation o standing in province p: it beats any rebels there (owner, list item 22)
+function rebelGuard(p, o){ if (!(o >= 0)) return false; for (const a of byAt(p) || S.armies) if (a.owner === o && a.at === p && a.to === null && !a.fly && !a.air && INF_T.some(t => a.u[t] > 0)) return true; return false; }
+// occupied: held by a nation that is not its home; integrated: the holder's count reached RB.integDays
+const occupied = p => { const o = S.owner[p]; return o >= 0 && !G.P[p].sea && S.home[p] !== o; };
+const integDays = p => (S.integ && S.integ[p + ':' + S.owner[p]]) || 0;
+const integrated = p => integDays(p) >= RB.integDays;
+const rebelsAt = p => { for (const a of byAt(p) || S.armies) if (a.rebel && a.at === p && count(a) > 0) return a; return null; };
+// the daily change of an occupied province's unrest (positive: morale falls) with g of its holder's ground units there
+const unrestRate = (p, g) => { const P = G.P[p], home = S.home[p]; return (P.city ? (home >= 0 && S.nations[home] && S.nations[home].alive ? RB.city : RB.cityFree) : RB.rural) - RB.perUnit*Math.min(RB.maxUnits, g); };
+// a captured province starts its occupation afresh: a holder that took it before counts its integration again
+function occReset(p, O){ if (S.integ) delete S.integ[p + ':' + O]; }
 function unrestDay(){
   S.unrest = S.unrest || G.P.map(() => 0);
-  // mobilisation strains the home front; long garrisons integrate conquests
+  // mobilisation strains the home front
   for (const N of S.nations){ if (!N.alive || !N.mob) continue; for (const p of ownedBy(N.id)) if (S.home[p] === N.id) S.unrest[p] = Math.max(unrestOf(p) - 4, Math.min(15*N.mob, unrestOf(p) + 3*N.mob)); }
-  S.integ = S.integ || {};
-  for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const o = S.owner[p], home = S.home[p];
+  S.integ = S.integ || {}; S.rcool = S.rcool || {};
+  for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const o = S.owner[p], home = S.home[p], P = G.P[p];
     if (o < 0 || home === o){ if (!(o >= 0 && S.nations[o].mob)) S.unrest[p] = Math.max(0, unrestOf(p) - 4); continue; }
-    const garrison = S.armies.reduce((s0, a) => s0 + (a.owner === o && a.at === p && a.to === null && !a.fly ? groundN(a) : 0), 0);
-    const ik = p + ':' + o; S.integ[ik] = garrison >= 2 ? (S.integ[ik] || 0) + 1 : Math.max(0, (S.integ[ik] || 0) - 1);
-    if (S.integ[ik] >= 10){ S.unrest[p] = Math.min(unrestOf(p), 30); if (S.integ[ik] === 10) tell(o, `${G.P[p].cityName || G.P[p].name} is integrated: unrest there stays below 30%.`, 'good', p); continue; }
-    const homeAlive = home >= 0 && S.nations[home].alive, d = (homeAlive ? 5 : 3) + (G.P[p].city ? 2 : 0) - Math.min(9, garrison*1.5);
-    const before = unrestOf(p); S.unrest[p] = Math.max(0, Math.min(100, before + d));
-    if (isSeat(o) && before <= 50 && S.unrest[p] > 50) tell(o, `${G.P[p].cityName || G.P[p].name} is close to revolt (${Math.round(S.unrest[p])}% unrest): garrison 2+ units there or pacify it.`, 'bad', p);
-    if (S.unrest[p] > 60 && rng() < (S.unrest[p] - 60)/160 && !S.armies.some(a => a.rebel && a.at === p)){
-      const r = addArmy(NEUTRAL, p, {inf:2 + Math.floor(rng()*3) + (G.P[p].city ? 2 : 0)}); r.rebel = true; S.unrest[p] -= 20;
-      if (isSeat(o)) tell(o, `Partisans rose up in ${G.P[p].cityName || G.P[p].name}! Garrison or pacify occupied land to prevent revolts.`, 'bad', p);
-    } }
+    const ik = p + ':' + o; if ((S.integ[ik] || 0) >= RB.integDays){ S.unrest[p] = Math.max(0, unrestOf(p) - RB.integUp); continue; }
+    const g = garrisonOf(p, o);
+    S.integ[ik] = g >= 1 && moraleOf(p) >= RB.integMor ? (S.integ[ik] || 0) + 1 : Math.max(0, (S.integ[ik] || 0) - 1);
+    if (S.integ[ik] >= RB.integDays){ S.unrest[p] = Math.max(0, unrestOf(p) - RB.integUp); tell(o, `${placeNm(p)} is integrated: its people accept your rule. It will not rebel again while you hold it.`, 'good', p); continue; }
+    const d = unrestRate(p, g), m0 = moraleOf(p);
+    S.unrest[p] = Math.max(0, Math.min(P.city ? 100 : RB.ruralCap, unrestOf(p) + d));
+    if (!P.city) continue;
+    const m1 = moraleOf(p), here = rebelsAt(p);
+    if (m0 >= RB.warn && m1 < RB.warn && d > 0 && !here) tell(o, `Morale in ${placeNm(p)} is ${Math.round(m1)}% and falling ${d}% a day. Rebels will rise below ${RB.below}%${m1 >= RB.below ? ` (in about ${Math.max(1, Math.ceil((m1 - RB.below + 0.01)/d))} day${Math.ceil((m1 - RB.below + 0.01)/d) > 1 ? 's' : ''})` : ''}. Station troops there or Pacify it.`, 'bad', p);
+    if (m1 < RB.below && !here && !(S.occ && S.occ[p] != null && S.hour - S.occ[p] < RB.grace) && !(S.rcool[p] > S.hour)) rebelRise(p, o, g); }
 }
+// rebels rise in occupied city p of nation o (g: its ground units there)
+function rebelRise(p, o, g){ const n = rebelSize(p), nm = placeNm(p);
+  S.unrest[p] = Math.max(0, unrestOf(p) - RB.rise); S.rcool[p] = S.hour + RB.cool;
+  if (rebelGuard(p, o)){ tell(o, `Rebels rose up in ${nm} (${n} units), and your infantry there crushed them at once. Morale is still ${Math.round(moraleOf(p))}%: keep the infantry there until the city is integrated.`, 'info', p); return null; }
+  const r = addArmy(NEUTRAL, p, {inf:n}); r.rebel = true; r.hold = 0;
+  if (!g){ r.lw = 1; tell(o, `Rebels rose up in ${nm} (${n} units)! The city has no troops: it will be lost in 24 h unless troops arrive. One infantry unit is enough to crush them.`, 'bad', p); }
+  else tell(o, `Rebels rose up in ${nm} (${n} units)! Your garrison of ${g} is fighting them. One infantry unit there would crush them at once.`, 'bad', p);
+  if (S.home[p] >= 0 && S.home[p] !== o) tell(S.home[p], `Rebels rose up against ${nationName(o)} in ${nm}, a city of yours it holds.`, 'info', p);
+  return r; }
+// rebels meeting an infantry unit of the city's holder are crushed (each hour, and again once the forces have moved: rules/tick.js)
+function rebelCrush(){ let any = false;
+  for (const a of S.armies){ if (!a.rebel || a.to !== null || !count(a)) continue; const p = a.at, o = S.owner[p];
+    if (!rebelGuard(p, o)) continue;
+    for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } any = true;
+    tell(o, `Your infantry crushed the rebels in ${placeNm(p)}.`, 'good', p); }
+  if (any) removeEmpty(); }
+// air wings based in a province that changed hands escape to their nation's nearest airbase, or are destroyed on the ground (capture, a revolt)
+function wingsFlee(p, O){ for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p); if (nb >= 0 && nb !== p){ w.air.base = nb; atMove(w, nb); w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${placeNm(p)} to ${placeNm(nb)}.`, 'info', nb); } else { for (const t of UT) w.u[t] = 0; if (isSeat(w.owner)) tell(w.owner, `Your air wing was destroyed on the ground at ${placeNm(p)}.`, 'bad', p); } } }
 function rebelHour(){
-  // partisans holding a province alone for a day hand it back to its original nation (or independence)
-  for (const a of S.armies){ if (!a.rebel || !count(a) || a.to !== null) continue; const p = a.at;
-    if (S.armies.some(b => b !== a && b.at === p && b.to === null && !b.fly && b.owner === S.owner[p] && count(b))){ a.hold = 0; continue; }
-    if (++a.hold < 24) continue;
-    const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
-    S.owner[p] = to; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoChanged(); for (const t of UT) a.u[t] = 0;
-    if (to >= 0) addArmy(to, p, {inf:2});
-    if (isSeat(prev)) tell(prev, `${G.P[p].cityName || G.P[p].name} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}.`, 'bad', p);
-    if (isSeat(to)) tell(to, `Partisans liberated ${G.P[p].cityName || G.P[p].name} for you!`, 'good', p);
+  rebelCrush();
+  // rebels holding a province with none of its holder's ground units for 24 hours in a row hand it back to its original nation (or independence)
+  for (const a of S.armies){ if (!a.rebel || !count(a) || a.to !== null) continue; const p = a.at, o = S.owner[p];
+    if (o < 0){ delete a.rebel; delete a.hold; delete a.lw; continue; }   // (the province is independent already: they are its garrison)
+    if (garrisonOf(p, o) > 0){ a.hold = 0; a.lw = 0; continue; }
+    a.hold = (+a.hold || 0) + 1;   // (an unset count starts at 0: the first hour alone is hour 1 of 24)
+    if (!a.lw){ a.lw = 1; tell(o, `Your last troops in ${placeNm(p)} are gone: the rebels will take it in 24 h unless troops arrive.`, 'bad', p); }
+    if (a.hold < RB.hold) continue;
+    const prev = o, home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL, n = count(a);
+    S.owner[p] = to; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, (S.bld[p].fort || 0) - 1); bunkerFull(p);
+    if (S.occ) S.occ[p] = null; S.unrest[p] = 10; geoChanged(); wingsFlee(p, to);
+    if (to >= 0){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } addArmy(to, p, {inf:Math.max(2, n)}); } else { delete a.rebel; delete a.hold; delete a.lw; }
+    if (isSeat(prev)){ bump(prev, 'lost'); tell(prev, `${placeNm(p)} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}. Retake it with an ordinary attack.`, 'bad', p); }
+    tell(to, `Rebels liberated ${placeNm(p)}: it is yours again.`, 'good', p);
     if (prev >= 0) checkNation(prev);
   }
   removeEmpty();
 }
+// Pacify (the page's button and the computer, one checked order): why nation n may not pacify province p now ('' when it may)
+function pacifyWhy(n, p){ const P = G.P[p]; if (!P || P.sea || S.owner[p] !== n) return 'not yours'; if (unrestOf(p) < 1) return 'no unrest';
+  if (garrisonOf(p, n) < 1) return 'needs a unit in the province'; const c = (S.pcool || {})[p]; if (c > S.hour){ const d = Math.ceil((c - S.hour)/24); return `again in ${d} day${d > 1 ? 's' : ''}`; }
+  if (S.nations[n].cash < RB.pacCost) return `needs $${RB.pacCost}M`; return ''; }
+function pacify(n, p){ if (pacifyWhy(n, p)) return false; S.nations[n].cash -= RB.pacCost; S.unrest[p] = Math.max(0, unrestOf(p) - RB.pacDrop); (S.pcool || (S.pcool = {}))[p] = S.hour + RB.pacCool; return true; }

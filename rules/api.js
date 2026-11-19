@@ -24,5 +24,7 @@ IM.api = {
   // a seat's dealings with an AI nation (first argument: the seat)
   say, aiReply, dealOK, dealValueFor, applyTrade, sendGift, tribute, tributeOk,
   // territory sales (rules/territory.js): a nation offers or answers; the value, the floor and what may be sold
-  terrOffer, terrAnswer, provValue, terrMin, terrFloor, terrWhyNot, capturedFrom
+  terrOffer, terrAnswer, provValue, terrMin, terrFloor, terrWhyNot, capturedFrom,
+  // occupation and rebels (rules/economy.js): Pacify a province (the nation, the province) and why it may not now ('' when it may)
+  pacify, pacifyWhy
 };
