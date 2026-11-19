@@ -20,7 +20,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **MAP-FIX** (done 2026-11-19, map-fix 5e9bd37, waiting for the owner's OK; has MAP-2 and the castle dug-in mark; all checks pass but the master waypoints one) | pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options (show only) and the "Dug in" label; screenshots or tests before merging | Opus | map-fix |
-| **WEATHER fixes** (2026-11-19: owner said the fix looks WORSE; NOT merged, branch weather-fix 3817fe2 kept for reference; the clips sent were mostly menu screens; waiting for the owner to say what looks worse before a new try) | clouds keep white/grey, snow and rain only under clouds | - | weather-fix |
+| **WEATHER options** (started 2026-11-19; owner: the weather-fix rain/snow looked worse, never merged; master keeps today's rain and snow) | weather-clouds = cloud colour fix only (rain/snow exactly as today); then 3 rain/snow options on weather-opt-a/b/c: rain as slanted streaks with a bit of wind, snow drifting at a gentle angle and slower, only under clouds, map stays top-down; 16 s clips that start on the map zoomed in, no menus; nothing merged until the owner picks | Opus | weather-clouds, weather-opt-a/b/c |
 
 ## Next free slots (in this order)
 
