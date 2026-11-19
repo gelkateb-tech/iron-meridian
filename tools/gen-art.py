@@ -1720,7 +1720,7 @@ def match(look):
 # ---- SPENDING (owner's decisions 2026-11-18): the log stood at 255 calls, $10.27 when the Gemini balance was $40.88. The $12 line is
 # removed. After every run the new spending since then, the running total and the estimated balance are printed; a run that could take
 # the estimated balance below $5 is refused. (Add the owner's top-ups to BALANCE_TOPUPS_USD when he says so.)
-BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, -0.30, 5.0   # -0.30: the owner's figure when this job started (2026-11-19) was about $38.75, not $39.05; add top-ups here
+BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, 9.70, 5.0   # was -0.30 (the owner's figure on 2026-11-19 was about $38.75, not $39.05); owner top-up $10, 2026-11-19 night -> 9.70
 def spend_totals():
     rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
     return sum(r.get('calls', 1) for r in rows), sum(r.get('usd_est', 0) for r in rows)
