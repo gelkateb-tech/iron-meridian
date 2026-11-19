@@ -6581,13 +6581,15 @@ function cbakeDrop(k0, c0){ CBAKE.delete(k0); CBAKE_PX -= c0.width*c0.height; co
 // the screen than the canvas just made, the farthest first; if that is not room enough, the canvas just made is not kept, and it and anything
 // farther is not made again in this view (CFULL: those parts keep their stand-in). Before, the oldest of what the view showed went, the
 // middle town's chunks too, and the pump made them again: the view never settled and the middle of the screen kept going soft.
+// A canvas just made counts as one the view draws (_e) until the next full render: the pump makes several before the layer takes them up,
+// and each new one used to drop the last ones as stand-ins (they had not been drawn yet), so the same chunks were made over and over.
 const CFULL = new Set(); let CFULL_V = null;
 const cbKeyD2 = k => { const a = k.slice(1).split('|'), I = CGEO.get(+a[0]); if (!I) return 0; const cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s; let x = I.x, y = I.y;
   if (a.length > 3 && I.E){ const u = 2*I.E/+a[1]*CCH; x = I.x - I.E + (+a[2] + 0.5)*u; y = I.y - I.E + (+a[3] + 0.5)*u; } return (wrapNear(x, cx) - cx)**2 + (y - cy)**2; };
 function cfullOn(key){ if (!CFULL.size) return false; const V = CFULL_V, cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s;   // (a zoom, or a pan of a quarter of the screen, and all of it is asked for again)
   if (!V || V.s !== view.s || Math.hypot(wrapNear(cx, V.cx) - V.cx, cy - V.cy) > 0.25*cw/view.s){ CFULL.clear(); CFULL_V = null; return false; }
   return CFULL.has(key) || V.d <= cbKeyD2(key); }
-function cbakePut(key, c){ c._g = CITY_GEN; if (CBAKE.has(key)) cbakeDrop(key, CBAKE.get(key)); CBAKE.set(key, c); CBAKE_PX += c.width*c.height; { const t = cbTier(key); if (t) CBTN.set(t, (CBTN.get(t) || 0) + 1); }
+function cbakePut(key, c){ c._g = c._e = CITY_GEN; if (CBAKE.has(key)) cbakeDrop(key, CBAKE.get(key)); CBAKE.set(key, c); CBAKE_PX += c.width*c.height; { const t = cbTier(key); if (t) CBTN.set(t, (CBTN.get(t) || 0) + 1); }
   const mx = cbakeMax(); if (CBAKE_PX <= mx) return;
   for (const pass of [0, 1]) for (const [k0, c0] of CBAKE){ if (CBAKE_PX <= mx) return; if (k0 === key || (pass === 0 && c0._g === CITY_GEN) || (pass === 1 && c0._e === CITY_GEN)) continue; cbakeDrop(k0, c0); }
   const dn = cbKeyD2(key), far = []; for (const [k0, c0] of CBAKE){ if (k0 === key) continue; const d = cbKeyD2(k0); if (d > dn) far.push([k0, c0, d]); }
