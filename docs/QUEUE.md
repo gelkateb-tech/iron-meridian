@@ -20,8 +20,8 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | What | Model | Branch |
 |---|---|---|---|
+| **MAP SURFACE** (started 2026-11-19 night) | texture fix (bring back the public build's rich detail, visible at every zoom incl. fully zoomed out; keep MAP-2 borders, toggles, roads), then jungle options A/B/C and sea options A/B/C on top of it; critique, repair, final sheets (old / dev / fix; zoomed in and out) and sea clips; NOTHING merged until the owner picks | Opus | map-texture, map-jungle, map-sea |
 | **CITIES-2 buildings follow-up** (started 2026-11-19 after the audit; never started before because it waited for MAP-FIX, which changes the same building code; now built on top of map-fix) | building pictures on land and 15-20% smaller, Naval Yards on the real water (Kolkata on the Hooghly; every yard checked), a building under construction, night lights unchanged; zoomed-in screenshots before merging; merges only after MAP-FIX | Opus build/review, Sonnet repair | cities-2 |
-| **MAP LOOK compare** (owner 2026-11-19, read-only: 'Don't change anything yet') | side-by-side screenshots public build (v3.12) vs dev build: Siberia snow, Europe, Afghanistan, zoomed out/mid/in, plus night; exact list of what changed (textures, colours, snow, lighting, borders), numbered so the owner can pick what to bring back | Opus | none |
 | **UNIT-ART-2 fixes** (owner OK 2026-11-19) | flip wrong-way pictures, remove the pale plate, merge master, review; then merge | Sonnet / Opus review | unit-art-2 |
 | **WEATHER options** (started 2026-11-19; owner: the weather-fix rain/snow looked worse, never merged; master keeps today's rain and snow) | weather-clouds = cloud colour fix only (rain/snow exactly as today); then 3 rain/snow options on weather-opt-a/b/c: rain as slanted streaks with a bit of wind, snow drifting at a gentle angle and slower, only under clouds, map stays top-down; 16 s clips that start on the map zoomed in, no menus; nothing merged until the owner picks | Opus | weather-clouds, weather-opt-a/b/c |
 
@@ -123,6 +123,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 ## Waiting on me (the owner)
 
+- **Map look, old vs new (sheets sent 2026-11-19):** pick which of the 15 numbered changes to bring back (scratchpad mapcompare/answer.md; most likely causes of 'old looked nicer': 7 fog veil, 4 tint never eases off, 1 close-up richness (being restored by MAP SURFACE), 11 and 13 bold borders and road web, 8 smoothed snow, 6 darker sea). Guess 1 partly right; guess 2 mostly no (the fog veil dulls the snow, not the tint colours).
 - **Conflict of Nations numbers:** constacks.com can't be read (security checkpoint; its robots.txt asks AI crawlers to stay out); taken off the allowed sites 2026-11-18. Paste the figures or send screenshots if you want them matched.
 - **Research tree rebuild:** the CoN tree and card screenshots arrived (2026-11-18); the owner's own mockup did not. Starts when a job slot frees.
 - **Gemini log:** each art branch has its own copy of assets/art-src/gen-art-log.jsonl (unit-art +110 calls $1.83, bunker-art +15 calls about $0.20); merge them by joining the lines. Estimated balance about $38.85.
