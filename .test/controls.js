@@ -1,8 +1,8 @@
 // Unit controls like Conflict of Nations (owner items 1 and 3), played like a player with real mouse events (1440x900) and real touch events
 // (390x844, touch through the Chrome DevTools protocol: taps, drags, a two-finger pinch, a long press):
 //   select a force by tapping its badge (and, zoomed in, its pictures); a tap on the map never orders it (it deselects); Move (or Attack), then a tap
-//   orders it to that exact point and it stays selected; the path line runs from the force to the tapped point with the ETA chip; the force ends on the tapped point and its badge is
-//   drawn there (land, at three zooms, and a fleet at sea); a second tap on its destination, a tap on the force, or Esc deselects; a pan, a
+//   orders it to that exact point and it stays selected; the path line runs from the force's position dot to the tapped point with the ETA chip; the force ends on the tapped point, its dot
+//   drawn there and its badge just above (land, at three zooms, and a fleet at sea); a second tap on its destination, a tap on the force, or Esc deselects; a pan, a
 //   pinch and a long press never give an order, a small jitter is still a tap; right-click moves; the Move button still works; a tap on
 //   another force of yours selects it, on an enemy force orders the attack; a force pinned on a city is tapped by its badge.
 //   node .test/controls.js [desk|phone]     (run bash tools/mkpage.sh first; prints PASS/FAIL lines; exit 1 on any failure or page error)
@@ -41,7 +41,9 @@ const ok = (k, v, info) => { checks[k] = !!v; log.push(`${v ? 'PASS' : 'FAIL'}  
     const settle = (ms = 900) => p.waitForTimeout(ms);
     const scr = (x, y) => p.evaluate(([x, y]) => window.__im.toScreen(x, y), [x, y]);
     const st = () => p.evaluate(id => { const im = window.__im, a = im.S.armies.find(q => q.id === id); return { sel: im.sel.army, dest: a && a.dest, path: a ? a.path.slice() : [], to: a ? a.to : null, pos: a && a.pos, at: a && a.at, sail: !!(a && a.sail), chase: a && a.chase, wp: a && a.wp, vs: im.view.s, vx: im.view.x, vy: im.view.y, cmdbar: !document.getElementById('cmdbar').hidden, abar: !!document.querySelector('.abar') }; }, sc.a);
-    const hitOf = id => p.evaluate(id => { const L = window.__im.hits.concat(window.__im.hitx.filter(h => h.sat)), h = L.find(h => h.own && h.own.includes(id) && h.ids.length === 1) || L.find(h => h.ids.includes(id)); return h ? { x: h.x, y: h.y, w: h.w, h: h.h, cx: h.cx, cy: h.cy, tag: h.tag } : null; }, id);
+    const hitOf = id => p.evaluate(id => { const L = window.__im.hits.concat(window.__im.hitx.filter(h => h.sat)), h = L.find(h => h.own && h.own.includes(id) && h.ids.length === 1) || L.find(h => h.ids.includes(id)); return h ? { x: h.x, y: h.y, w: h.w, h: h.h, cx: h.cx, cy: h.cy, px: h.px, py: h.py, tag: h.tag } : null; }, id);
+    // its position dot (index.html posDots, owner 2026-11-18): on the force's point, the badge standing just above it
+    const onDot = (h, P) => !!h && h.px != null && Math.hypot(h.px - P[0], h.py - P[1]) <= 3 && Math.abs(h.x + h.w/2 - h.px) <= 3 && h.y + h.h/2 < h.py - 8;
     // input, in canvas coordinates
     const tap = async (x, y) => { if (PHONE){ await touch('touchStart', [[x, y]]); await p.waitForTimeout(60); await touch('touchEnd', []); } else await p.mouse.click(R.x + x, R.y + y); await p.waitForTimeout(250); };
     const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], i) => ({ x: R.x + x, y: R.y + y, id: i, radiusX: 4, radiusY: 4, force: 1 })) });
@@ -66,7 +68,7 @@ const ok = (k, v, info) => { checks[k] = !!v; log.push(`${v ? 'PASS' : 'FAIL'}  
     ok(`${TAG}: Move, then one tap on the map = the order, to the exact point`, s1.dest && s1.dest.p === sc.B && Math.hypot(s1.dest.x - sc.tgt[0], s1.dest.y - sc.tgt[1]) < 0.6 && s1.path.length > 0, s1);
     ok(`${TAG}: the force stays selected after the order`, s1.sel === sc.a, s1.sel);
     await settle(600); const pd = await p.evaluate(() => window.__im.pathDbg); const T2 = await scr(sc.tgt[0], sc.tgt[1]), hA = await hitOf(sc.a);
-    ok(`${TAG}: the path line runs from the force to the tapped point (exact end marker)`, pd.sel && pd.sel.id === sc.a && pd.sel.exact && Math.hypot(pd.sel.pts[pd.sel.pts.length - 1][0] - T2[0], pd.sel.pts[pd.sel.pts.length - 1][1] - T2[1]) < 2 && hA && Math.hypot(pd.sel.pts[0][0] - hA.cx, pd.sel.pts[0][1] - hA.cy) < 4, { pd: pd.sel, T2, hA });
+    ok(`${TAG}: the path line runs from the force's position dot to the tapped point (exact end marker)`, pd.sel && pd.sel.id === sc.a && pd.sel.exact && Math.hypot(pd.sel.pts[pd.sel.pts.length - 1][0] - T2[0], pd.sel.pts[pd.sel.pts.length - 1][1] - T2[1]) < 2 && hA && Math.hypot(pd.sel.pts[0][0] - hA.px, pd.sel.pts[0][1] - hA.py) < 4, { pd: pd.sel, T2, hA });   // (from its position dot)
     ok(`${TAG}: the ETA chip shows over the destination`, pd.eta && /^\d+ h/.test(pd.eta.txt) && Math.abs(pd.eta.x - T2[0]) < 2, pd.eta);
     if (TAG === 'desk') await p.screenshot({ path: __dirname + '/controls-desk-path.png' });
     // 3. a second tap on its destination releases it (the order stands); a tap on the force (or Esc) releases it too
@@ -87,7 +89,7 @@ const ok = (k, v, info) => { checks[k] = !!v; log.push(`${v ? 'PASS' : 'FAIL'}  
     ok(`${TAG}: it ends at the tapped point, in the province holding it`, s5.at === sc.B && s5.pos && Math.hypot(s5.pos[0] - sc.tgt[0], s5.pos[1] - sc.tgt[1]) < 1.6 && Math.hypot(s5.pos[0] - s1.dest.x, s5.pos[1] - s1.dest.y) < 1e-9, { s5, dest: s1.dest, tgt: sc.tgt, Bc: sc.Bc });
     await deselect();
     for (const hp of [30, 60, 110]){ await view(s5.pos, hp); await settle(1600); const h = await hitOf(sc.a), P = await scr(...s5.pos);
-      ok(`${TAG}: zoom ${hp} px a hex: its badge is drawn on the point (within 3 px)`, h && !h.tag && Math.hypot(h.cx - P[0], h.cy - P[1]) <= 3, { h, P }); }
+      ok(`${TAG}: zoom ${hp} px a hex: its position dot is drawn on the point (within 3 px), its badge just above`, h && !h.tag && onDot(h, P), { h, P }); }
     { await view(s5.pos, 190); await settle(2000); const art = await p.evaluate(id => (window.__im.hitx.find(h => h.art && h.ids.includes(id)) || null), sc.a), P = await scr(...s5.pos);
       ok(`${TAG}: zoomed in, its pictures stand round the point`, !art || (P[0] > art.x && P[0] < art.x + art.w && P[1] > art.y - 4 && P[1] < art.y + art.h + 4), { art, P }); }
     // 6. a force pinned on a city: a tap on its badge selects it (the badge wins over the city's point under it)
@@ -114,7 +116,7 @@ const ok = (k, v, info) => { checks[k] = !!v; log.push(`${v ? 'PASS' : 'FAIL'}  
       const fd = await p.evaluate(id => window.__im.S.armies.find(q => q.id === id).dest, fl.id); ok(`${TAG}: a fleet: Move, then one tap orders it to the exact water point`, fd && Math.hypot(fd.x - fl.w[0], fd.y - fl.w[1]) < 0.6, { fd, w: fl.w, hfl });
       await p.evaluate(() => { window.__im.S.speed = 4; }); for (let i = 0; i < 300; i++){ const d = await p.evaluate(id => { const a = window.__im.S.armies.find(q => q.id === id); return a.to === null && !a.path.length && !a.sail; }, fl.id); if (d) break; await p.waitForTimeout(100); }
       await p.evaluate(() => { window.__im.S.speed = 0; }); await deselect(); const fp = await p.evaluate(id => window.__im.S.armies.find(q => q.id === id).pos, fl.id); await view(fp, 60); await settle(1600); const hf2 = await hitOf(fl.id), F2 = await scr(...fp);
-      ok(`${TAG}: the fleet ends on that point at sea, its badge drawn there`, fp && Math.hypot(fp[0] - fl.w[0], fp[1] - fl.w[1]) < 0.6 && hf2 && Math.hypot(hf2.cx - F2[0], hf2.cy - F2[1]) <= 3, { fp, w: fl.w, hf2, F2 });
+      ok(`${TAG}: the fleet ends on that point at sea, its dot drawn there, its badge above`, fp && Math.hypot(fp[0] - fl.w[0], fp[1] - fl.w[1]) < 0.6 && onDot(hf2, F2), { fp, w: fl.w, hf2, F2 });
     }
     } catch (e){ errors.push(TAG + ' test: ' + (e.message || e).toString().split('\n')[0]); }
     await ctx.close();
