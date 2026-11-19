@@ -4150,16 +4150,16 @@ const sunHr = h => h + (S && S.sunOff || 0);
 function localOff(st = S){ const lon = capLon(st), so = st && st.sunOff != null ? st.sunOff : sunOffFor(0, st); return lon == null ? 10 : (((so + Math.round(lon/15)) % 24) + 24) % 24; }
 function sunLon(){ return ((12 - (sunHr(S.hour) % 24)) * 15 + 540) % 360 - 180; }
 let CLOUDS = null;
-/* cloud sprites: [0..2] sunlit tops, [3..5] dark rain-laden bases, [6..8] night tops (slate blue-grey), [9..11] warm rims (sunset side, drawn 'lighter');
-   .sh: the soft ground shadow (a radial dab, no hard corner). All baked once */
+/* cloud sprites: [0..2] day tops (neutral white-grey), [3..5] dark rain-laden bases, [6..8] night tops (the same grey, darker: no hue of its own, the
+   night tint of the map does the rest). Clouds never take a colour from the sun: no warm rims, no slate-blue. .sh: the soft ground shadow. All baked once */
 function cloudTex(){ if (CLOUDS) return CLOUDS; const out = []; for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), n = makeNoise(mulberry(900 + k)), id = g.createImageData(128, 128);
     for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++){ const dx = (x - 64)/64, dy = (y - 64)/64, r = Math.sqrt(dx*dx + dy*dy), v = n(x*0.05, y*0.05)*0.6 + n(x*0.13, y*0.13)*0.4, a = Math.max(0, Math.min(1, (1 - r*1.15)*1.6 + (v - 0.55)*1.8));
       const o = (y*128 + x)*4, sh = Math.min(255, 168 + v*95 - dy*22); id.data[o] = sh; id.data[o + 1] = sh; id.data[o + 2] = Math.min(255, sh + 8); id.data[o + 3] = a*235; }
     g.putImageData(id, 0, 0); out.push(c); }
   for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0.6)'; g.drawImage(out[k], 0, 0); out.push(c); }
   const tint = (k, col, al) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.drawImage(out[k], 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = al; g.fillStyle = col; g.fillRect(0, 0, 128, 128); return c; };
-  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(52,60,78)', 0.4));
-  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(255,150,90)', 1));
+  for (let k = 0; k < 3; k++){ const c = tint(k, 'rgb(44,46,50)', 0.38), g = c.getContext('2d'), id = g.getImageData(0, 0, 128, 128), d = id.data;   // (a faint warm cast cancels the cool cast of the night multiply, so the night clouds stay neutral grey, not slate blue)
+    for (let o = 0; o < d.length; o += 4){ d[o + 1] *= 0.92; d[o + 2] *= 0.74; } g.putImageData(id, 0, 0); out.push(c); }
   out.sh = softSprite('cshade', 'rgba(0,0,0,1)', 'rgba(0,0,0,.5)', 'rgba(0,0,0,0)');
   return (CLOUDS = out); }
 /* a storm's lobe layout, from its seed only (no per-frame randomness): 9 lobes in 2-3 clusters along a band rotated to the drift
@@ -4178,24 +4178,21 @@ function stormPos(w, cx, cy, now = FXQ.gt){   // the slow sway runs on the game 
   const lob = stormLay(w).lob; for (let i = 0; i < 9; i++){ WPOS[i*3] = cx + lob[i*3]*w.r + Math.sin(now/9000 + i)*3; WPOS[i*3 + 1] = cy + lob[i*3 + 1]*w.r; WPOS[i*3 + 2] = lob[i*3 + 2]*w.r; } return WPOS; }
 const stormOffs = (x, R) => wrapOffs(x - R, x + R, -view.x/view.s - 60/view.s, (cw - view.x)/view.s + 60/view.s);   // a storm's copies on screen (the map wraps: a turn apart)
 const stormVis = (cx, cy, R) => !((cx + R)*view.s + view.x < -50 || (cx - R)*view.s + view.x > cw + 50 || (cy + R)*view.s + view.y < -50 || (cy - R)*view.s + view.y > ch + 50);
-/* storms: drawn under the night tint (night darkens them like the land and city lights shine over them), tops cross-faded to a slate
-   night deck by the local light, warm rims on the sun side at dusk, rain streaks / snow dots on the game clock (paused with the game) */
+/* storms: drawn under the night tint (night darkens them like the land and city lights shine over them), tops cross-faded to a darker
+   grey night deck by the local light (no warm rims, no tint: the clouds stay white-grey), rain streaks / snow dots on the game clock (paused with the game) */
 function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1, run = S.speed && !S.over;
   ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), R = w.r*1.7, storm = w.kind === 'storm'; let lt = null;
     for (const off of stormOffs(x0, R)){ const cx = x0 + off; if (!stormVis(cx, y0, R)) continue; if (run) animAmb();   // (a storm on screen drifts and sways while the clock runs)
-      const { L, tw, sg } = lt || (lt = stormLight(x0, y0)), Pp = stormPos(w, cx, y0);
+      const { L } = lt || (lt = stormLight(x0, y0)), Pp = stormPos(w, cx, y0);
       if (L < 0.98){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.18*fade*(1 - L);   // soft ground shadow (gone at night)
         for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex.sh, px - sz*1.1 + 10, py - sz*0.7 + 14, sz*2.2, sz*1.4); }
         ctx.globalCompositeOperation = 'source-over'; }
       if (storm){ ctx.globalAlpha = 0.4*za*fade; for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[3 + i % 3], px - sz, py - sz*0.5, sz*2, sz*1.2); } }   // dark rain-laden base
-      const ta = (storm ? 0.5 : w.kind === 'blizzard' ? 0.42 : 0.34)*za*fade*(1 + 0.45*L);   // at night the tops go slate (and thicker, so the night tint does not swallow them)
+      const ta = (storm ? 0.5 : w.kind === 'blizzard' ? 0.42 : 0.34)*za*fade*(1 + 0.45*L);   // at night the tops go darker grey (and thicker, so the night tint does not swallow them)
       for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2], k = storm ? (i + 1) % 3 : i % 3, dw = storm ? sz*1.56 : sz*2, dh = storm ? sz*0.94 : sz*1.2, gx = px - dw/2, gy = storm ? py - sz*0.63 : py - sz*0.6;
         if (L < 0.99){ ctx.globalAlpha = ta*(1 - L); ctx.drawImage(tex[k], gx, gy, dw, dh); }
-        if (L > 0.01){ ctx.globalAlpha = ta*L; ctx.drawImage(tex[6 + k], gx, gy, dw, dh); } }
-      if (tw > 0.15){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(0.36, 0.5*tw)*fade;   // dusk / dawn: warm light on the sun-facing flanks
-        for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[9 + (i + 1) % 3], px - sz*0.78 + sg*sz*0.32, py - sz*0.7, sz*1.56, sz*0.94); }
-        ctx.globalCompositeOperation = 'source-over'; } } }
+        if (L > 0.01){ ctx.globalAlpha = ta*L; ctx.drawImage(tex[6 + k], gx, gy, dw, dh); } } } }
   ctx.restore();
   if (hexPx < 10 || afxReduced() || mapLite()) return;
   const t = FXQ.gt; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
@@ -11686,6 +11683,10 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get map(){ return TMM; }, get lite(){ return mapLite() || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stats:() => fxStats(), dev:w => devCfx(w), get VW(){ return VW; }, fire:(w, A, B, o) => cfxFire(w, A, B, o), intercept:(A, B, o) => intercept(A, B, o), get PROJ(){ return PROJ; }, get PART(){ return PART; }, get WARN(){ return FXM.WARN; }, get CQ(){ return FXM.CQ; }};
+if (location.protocol === 'file:' && window.__im) window.__im.wx = {   // test only: put weather over a chosen spot: wx.put('blizzard' | 'storm', lon, lat, r) drops one still storm there (and clears the others), wx.clear() removes them
+  at:(lon, lat) => { let row = 0, bd = 1e9; for (let r = 0; r < H; r++){ const d = Math.abs(cellLat(r*W) - lat); if (d < bd){ bd = d; row = r; } } return [OX + ((((lon - WORLD.lon0) % 360 + 360) % 360)/360*W - 0.5)*HS*SQ3, OY + row*HS*1.5]; },
+  put:(kind, lon, lat, r = 70, seed = 321.5) => { const [x, y] = window.__im.wx.at(lon, lat); S.storms = [{id:S.nid++, x, y, r, vx:0, vy:0, life:9999, kind, seed}]; return [x, y]; },
+  clear:() => { S.storms = []; } };
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND || SNOWT)}, wrap:{value:{W:WRAP_W, X0:WRAP_X0, WW:WORLD_W, WH:WORLD_H, minScale:() => minScale(), ks:() => wrapKs(0)}}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
