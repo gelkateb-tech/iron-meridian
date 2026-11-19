@@ -1,0 +1,4 @@
+FLAG (flagged: top)
+- 1 (top): Missile launcher is stowed flat instead of elevated as in picture 1.
+- 1 (top): Roof sensor and midsection details are mirrored to the opposite side compared to picture 1.
+- 1 (top): Antennas present on the cab and radar mast in picture 1 are missing.

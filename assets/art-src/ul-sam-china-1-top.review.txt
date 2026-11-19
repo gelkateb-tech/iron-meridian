@@ -1,0 +1,3 @@
+FLAG
+- 1. Launcher canisters are arranged 1x4 side-by-side instead of the reference 2x2 stack.
+- 3. Background features cast shadow around the vehicle.

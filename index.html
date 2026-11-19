@@ -5803,6 +5803,7 @@ const tmArtDef = m => { if (!tmOn()) return null; let n = TMART[m]; if (n && typ
 // it is drawn in, world px)}; null where that type has no picture of its own yet (its 3D model stands in)
 function tmArt(m, ut, o){ let n = TMART[m]; if (n && typeof n === 'object') n = n[ut]; if (!n) return null;
   if (m === 'tank' && n === 'u-tank') n = ulTankArt(o) || n;   // the owner's group look for the tank line's level (an enemy's force shows the enemy's)
+  else if (typeof n === 'string' && n[0] === 'u' && n[1] === '-' && ut) n = ulTopName(ut, o) || n;   // every other unit with new looks: its group's straight-down picture for the unit's level, once it is loaded
   if (n === '@bomb') n = heavyBomberArt(artT('bomb', o) === 'bomb2' ? 5 : 1);   // (the second picture once the Supersonic Bomber, generation 2, is researched)
   else if (n === '@drone') n = artT('drone', o) === 'drone4' ? 'u-uav-armed' : 'u-uav-recon';
   const A = ART.ready(n) && !ART.standIn(n) ? tmArtGeom(m, n) : null;
@@ -5811,6 +5812,13 @@ function tmArt(m, ut, o){ let n = TMART[m]; if (n && typeof n === 'object') n = 
 function ulTankArt(o){ if (o < 0 || typeof S === 'undefined' || !S || !S.nations || !S.nations[o]) return null; const g = UL_G[S.nations[o].name]; if (!g) return null;
   let lv = 1; for (const nd of RNODES_U.tank || []) if (nd.kind !== 'unlock') lv += Math.min(nd.lv.length, rLevel(o, nd.id));
   lv = Math.min(8, lv); return 'ul-tank-' + g + '-' + (lv >= 7 ? 3 : lv >= 4 ? 2 : 1) + '-top'; }
+// the straight-down picture of unit type ut for nation o (tools/gen-art.py ul-<unit>-<group>-<look>-top): the owner's group, the look of the unit's level (1 + every
+// step done in its line, up to 8; the Recon UAV by generation), or the nearest earlier look that exists; fetched when first wanted, null until it has arrived
+function ulTopName(ut, o){ if (!ut || typeof o !== 'number' || o < 0 || typeof S === 'undefined' || !S || !S.nations || !S.nations[o]) return null;
+  const g = ulGroup(o), u = ulUnit(ut); let lv = 1; for (const nd of RNODES_U[ut] || []) if (nd.kind !== 'unlock') lv += Math.min(nd.lv.length, rLevel(o, nd.id));
+  const k = ulLookT(ut, Math.min(UL_MAX, lv), uavLv(o)); let first = null;
+  for (let j = k; j >= 1; j--){ const n = `ul-${u}-${g}-${j}-top`; if (!UL_FILES.has(n)) continue; if (ART.ready(n)) return n; if (!first){ first = n; ART.want(n); } }
+  return null; }
 // a picture's measures as model type m (its opaque box from the table tools/prep-art.py measured, so they are known before it loads)
 function tmArtGeom(m, n){ const key = m + '|' + n + '|' + tmRW(); let A = TMARTC.get(key); if (A) return A;
   const im = ART.img(n), pb = PICBOX[n] || (im ? picBox(im) : [0.9, 0.9]), Lw = tmRW()*(TMG[m] || [8, 0.8])[1]*(TMART_K[m] || TMART_K0); A = {n, Lw, hw:Lw*pb[0]/pb[1]/2, k:Lw/pb[1]*(TMART_DRAW[m] || 1)}; TMARTC.set(key, A); return A; }
@@ -7341,7 +7349,7 @@ const PICBOX = {'u-infantry':[0.84, 0.94], 'u-special-forces':[0.95, 0.77], 'i-i
   'u-transport-heli':[0.64, 0.94], 'u-drone':[0.94, 0.86], 'u-corvette':[0.22, 0.94], 'u-destroyer':[0.17, 0.94], 'u-submarine':[0.19, 0.94], 'u-carrier':[0.36, 0.95],
   'u-naval-patrol':[0.94, 0.94], 'u-awacs':[0.95, 0.94], 'u-air-superiority':[0.78, 0.94], 'u-uav-recon':[0.99, 0.81], 'u-uav-armed':[0.99, 0.82], 'u-swarm-drone':[0.95, 0.86], 'u-strike-drone':[0.85, 0.95],
   'u-anti-drone':[0.48, 0.94], 'u-cargo-ship':[0.26, 0.96], 'u-cruise-missile':[0.52, 0.95], 'u-ballistic-missile':[0.28, 0.97], 'u-icbm':[0.12, 0.97]};   // (measured by tools/prep-art.py: HF section)
-Object.assign(PICBOX, {'ul-tank-china-1-top': [0.41, 0.86], 'ul-tank-china-2-top': [0.36, 0.84], 'ul-tank-china-3-top': [0.4, 0.88], 'ul-tank-east-1-top': [0.39, 0.89], 'ul-tank-east-2-top': [0.44, 0.9], 'ul-tank-east-3-top': [0.43, 0.9], 'ul-tank-europe-1-top': [0.34, 0.82], 'ul-tank-europe-2-top': [0.34, 0.85], 'ul-tank-europe-3-top': [0.39, 0.9], 'ul-tank-export-1-top': [0.41, 0.87], 'ul-tank-export-2-top': [0.41, 0.87], 'ul-tank-export-3-top': [0.41, 0.88], 'ul-tank-nato-1-top': [0.37, 0.85], 'ul-tank-nato-2-top': [0.42, 0.89], 'ul-tank-nato-3-top': [0.39, 0.92]});   // the 15 tank looks (tools/prep-art.py ul)
+Object.assign(PICBOX, {'ul-ifv-china-1-top': [0.38, 0.8], 'ul-ifv-china-2-top': [0.4, 0.76], 'ul-ifv-china-3-top': [0.46, 0.83], 'ul-ifv-east-1-top': [0.43, 0.81], 'ul-ifv-east-2-top': [0.41, 0.79], 'ul-ifv-east-3-top': [0.43, 0.85], 'ul-ifv-europe-1-top': [0.4, 0.76], 'ul-ifv-europe-2-top': [0.41, 0.82], 'ul-ifv-europe-3-top': [0.42, 0.87], 'ul-ifv-export-1-top': [0.39, 0.77], 'ul-ifv-export-2-top': [0.47, 0.81], 'ul-ifv-export-3-top': [0.44, 0.79], 'ul-ifv-nato-1-top': [0.43, 0.81], 'ul-ifv-nato-2-top': [0.46, 0.87], 'ul-ifv-nato-3-top': [0.45, 0.84], 'ul-tank-china-1-top': [0.41, 0.86], 'ul-tank-china-2-top': [0.36, 0.84], 'ul-tank-china-3-top': [0.4, 0.88], 'ul-tank-east-1-top': [0.39, 0.89], 'ul-tank-east-2-top': [0.44, 0.9], 'ul-tank-east-3-top': [0.43, 0.9], 'ul-tank-europe-1-top': [0.34, 0.82], 'ul-tank-europe-2-top': [0.34, 0.85], 'ul-tank-europe-3-top': [0.39, 0.9], 'ul-tank-export-1-top': [0.41, 0.87], 'ul-tank-export-2-top': [0.41, 0.87], 'ul-tank-export-3-top': [0.41, 0.88], 'ul-tank-nato-1-top': [0.37, 0.85], 'ul-tank-nato-2-top': [0.42, 0.89], 'ul-tank-nato-3-top': [0.39, 0.92]});   // the 15 tank looks (tools/prep-art.py ul)
 const PICBB = new WeakMap();
 // [w, h, cx, cy] of a picture's opaque part (shares of its size): the table for the supplied files, measured once for a code-drawn stand-in
 function picBox(src){ let b = PICBB.get(src); if (b) return b;

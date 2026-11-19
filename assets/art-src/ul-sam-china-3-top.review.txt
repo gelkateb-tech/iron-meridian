@@ -1,0 +1,3 @@
+FLAG
+- 1. Launcher details and layout differ significantly from the reference unit.
+- 3. Cast shadow visible on the background around the vehicle.

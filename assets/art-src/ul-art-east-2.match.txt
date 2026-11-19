@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 in scene: the tall optic sight box with the blue lens on the turret roof is missing.
+- 1 in top: the unditching log mounted on the hull side in the side view is relocated onto the top deck.

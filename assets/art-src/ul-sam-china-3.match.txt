@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): missile launcher is 4 canisters wide with different casing structure, differing from the 3-wide launcher in the side view.

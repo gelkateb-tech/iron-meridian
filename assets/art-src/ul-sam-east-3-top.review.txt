@@ -1,0 +1,2 @@
+FLAG
+- 1. Dropped details: missing cab-roof sensor, spare wheel behind cab, antennas, and launcher rack is flattened rather than raised.

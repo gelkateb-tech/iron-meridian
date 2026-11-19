@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. top: missile launcher has five canisters (three on bottom, two on top) instead of four (2x2), and two spare tires behind cab.
