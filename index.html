@@ -4158,7 +4158,8 @@ function cloudTex(){ if (CLOUDS) return CLOUDS; const out = []; for (let k = 0; 
     g.putImageData(id, 0, 0); out.push(c); }
   for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0.6)'; g.drawImage(out[k], 0, 0); out.push(c); }
   const tint = (k, col, al) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.drawImage(out[k], 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = al; g.fillStyle = col; g.fillRect(0, 0, 128, 128); return c; };
-  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(44,46,50)', 0.38));
+  for (let k = 0; k < 3; k++){ const c = tint(k, 'rgb(44,46,50)', 0.38), g = c.getContext('2d'), id = g.getImageData(0, 0, 128, 128), d = id.data;   // (a faint warm cast cancels the cool cast of the night multiply, so the night clouds stay neutral grey, not slate blue)
+    for (let o = 0; o < d.length; o += 4){ d[o + 1] *= 0.92; d[o + 2] *= 0.74; } g.putImageData(id, 0, 0); out.push(c); }
   out.sh = softSprite('cshade', 'rgba(0,0,0,1)', 'rgba(0,0,0,.5)', 'rgba(0,0,0,0)');
   return (CLOUDS = out); }
 /* a storm's lobe layout, from its seed only (no per-frame randomness): 9 lobes in 2-3 clusters along a band rotated to the drift
@@ -4177,37 +4178,53 @@ function stormPos(w, cx, cy, now = FXQ.gt){   // the slow sway runs on the game 
   const lob = stormLay(w).lob; for (let i = 0; i < 9; i++){ WPOS[i*3] = cx + lob[i*3]*w.r + Math.sin(now/9000 + i)*3; WPOS[i*3 + 1] = cy + lob[i*3 + 1]*w.r; WPOS[i*3 + 2] = lob[i*3 + 2]*w.r; } return WPOS; }
 const stormOffs = (x, R) => wrapOffs(x - R, x + R, -view.x/view.s - 60/view.s, (cw - view.x)/view.s + 60/view.s);   // a storm's copies on screen (the map wraps: a turn apart)
 const stormVis = (cx, cy, R) => !((cx + R)*view.s + view.x < -50 || (cx - R)*view.s + view.x > cw + 50 || (cy + R)*view.s + view.y < -50 || (cy - R)*view.s + view.y > ch + 50);
-/* rain and snow, drawn in the storm's own layer (world transform) after the cloud tops, one soft patch per cloud lobe. A patch is a baked picture of the
-   fall already cut by a soft oval mask (full in the middle of the lobe, nothing at its edge), in WXN frames of a seamless loop; each lobe draws the frame
-   the game clock is at (two frames cross-faded: paused with the game), so the fall is thickest under the middle of each cloud and never drawn outside the
-   clouds (the old dots filled a wider ellipse than the clouds and showed as a ring round their pale rims). A lobe whose centre lies outside the area the rules
-   use (stormAt: the r x r/1.6 ellipse) draws nothing, and one near that border fades out. Rain: soft slanted streaks; snow: soft flakes swaying down.
-   Two drawImage calls per lobe, no per-flake work, nothing drawn off a canvas that is changed every frame */
-const WXN = 10, WXW = 256, WXH = 132;
-let WXS = null;
-function wxSprites(){ if (WXS) return WXS; const rnd = mulberry(4242), sheets = {};
-  const sheet = (kind, dir, v) => { const c = document.createElement('canvas'); c.width = WXW*WXN; c.height = WXH; const g = c.getContext('2d'), snow = kind === 's', cnt = snow ? 70 : 46, F = [];
-    for (let i = 0; i < cnt; i++){ const q = rnd(); F.push({x:rnd()*WXW, y:rnd()*WXH, r:snow ? 1.1 + 2.5*q*q : 0, len:12 + 11*q, a:0.5 + 0.4*rnd(), m:rnd() < 0.7 ? 1 : 2, ph:rnd()*6.283}); }
-    const mask = (() => { const m = document.createElement('canvas'); m.width = WXW; m.height = WXH; const q = m.getContext('2d'); q.translate(WXW/2, WXH/2); q.scale(WXW/2, WXH/2); const rg = q.createRadialGradient(0, 0, 0, 0, 0, 1);
-      for (let k = 0; k <= 8; k++){ const u = k/8; rg.addColorStop(u, `rgba(255,255,255,${Math.pow(1 - u*u, 0.9).toFixed(3)})`); } q.fillStyle = rg; q.fillRect(-1, -1, 2, 2); return m; })();
-    for (let f = 0; f < WXN; f++){ const fr = document.createElement('canvas'); fr.width = WXW; fr.height = WXH; const q = fr.getContext('2d');
-      for (const o of F){ const u = f/WXN; let x = o.x + (snow ? Math.sin(u*6.283 + o.ph)*4 : dir*0.35*o.m*u*WXH), y = (o.y + o.m*u*WXH) % WXH;
-        for (let j = -1; j <= 1; j++){ const Y = y + j*WXH; if (snow){ const R = o.r*2.2; if (Y < -R || Y > WXH + R) continue; const gr = q.createRadialGradient(x, Y, 0, x, Y, R);
-            gr.addColorStop(0, `rgba(255,255,255,${o.a})`); gr.addColorStop(0.3, `rgba(250,252,255,${o.a*0.6})`); gr.addColorStop(0.55, `rgba(120,135,160,${o.a*0.22})`); gr.addColorStop(1, 'rgba(120,135,160,0)'); q.fillStyle = gr; q.fillRect(x - R, Y - R, 2*R, 2*R); }
-          else { const dx = dir*0.35*o.len; if (Y < -o.len || Y > WXH + o.len) continue; const lg = q.createLinearGradient(x - dx/2, Y - o.len/2, x + dx/2, Y + o.len/2); lg.addColorStop(0, 'rgba(128,138,156,0)'); lg.addColorStop(0.5, `rgba(128,138,156,${o.a})`); lg.addColorStop(1, 'rgba(128,138,156,0)');
-            q.strokeStyle = lg; q.lineCap = 'round'; q.lineWidth = 2.6; q.globalAlpha = 0.45; q.beginPath(); q.moveTo(x - dx/2, Y - o.len/2); q.lineTo(x + dx/2, Y + o.len/2); q.stroke(); q.lineWidth = 1.3; q.globalAlpha = 1; q.stroke(); } } }
-      q.globalAlpha = 1; q.globalCompositeOperation = 'destination-in'; q.drawImage(mask, 0, 0); g.drawImage(fr, f*WXW, 0); }
-    return c; };
-  for (let v = 0; v < 3; v++){ sheets['s' + v] = sheet('s', 1, v); sheets['r-' + v] = sheet('r', -1, v); sheets['r+' + v] = sheet('r', 1, v); }
-  return (WXS = sheets); }
-function wxPrecip(w, Pp, cx, cy, fade, L, t){ const snow = w.kind === 'blizzard', X = wxSprites(), cs = (snow ? 0.95 : 1)*fade*(1 - 0.25*L), dir = (w.vx || 0) < 0 ? '-' : '+', W2 = w.r*w.r, sk = Math.round(w.seed*1000)*977, u0 = t/(snow ? 9000 : 1100);
-  for (let i = 0; i < 9; i++){ const px = Pp[i*3], sz = Pp[i*3 + 2]; if (sz < 0.45*w.r) continue;   // (the small lobes, under the big ones' fall, draw none: less to paint)
+/* rain and snow, drawn in the storm's own layer (world transform) after the cloud tops, one soft patch per big cloud lobe. Each patch is built in a small
+   scratch picture: one seamless tile of flakes / streaks slid down by the game clock (a continuous scroll, so the fall moves smoothly and stops
+   with the game), then cut by a soft oval mask (full in the middle of the lobe, nothing at its edge) and drawn once on the map. So the fall is thickest under
+   the middle of each cloud and never drawn outside the clouds. Tiles are baked on first use only (about 130 KB each); close in, the picture is rendered at up to twice the tile's size, so the flakes stay small. A lobe whose centre lies outside the area the rules use (stormAt: the r x r/1.6 ellipse) draws nothing, and one
+   near that border fades out. Rain: soft slanted streaks over a faint grey shaft; snow: soft flakes swaying down. Small lobes (under 0.52 r) draw none */
+const WXW = 256, WXH = 132, WXS = {};
+let WXG = null;
+function wxTile(kind, dir, layer){ const key = kind + dir + layer; if (WXS[key]) return WXS[key];
+  const snow = kind === 's', rnd = mulberry(4242 + layer*131 + (snow ? 7 : 0)), cnt = snow ? 64 : 84, sc = 1.3, c = document.createElement('canvas'); c.width = WXW; c.height = WXH; const q = c.getContext('2d');
+  if (!snow){ q.fillStyle = 'rgba(104,116,140,0.26)'; q.fillRect(0, 0, WXW, WXH); }   // rain: the faint grey shaft it falls in
+  for (let n = 0; n < cnt; n++){ const u = rnd(), x = rnd()*WXW, y = rnd()*WXH, a = 0.7 + 0.3*rnd();
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++){ const X = x + i*WXW, Y = y + j*WXH;
+      if (snow){ const R = (1.5 + 2.8*u*u)*sc*2.2; if (X < -R || X > WXW + R || Y < -R || Y > WXH + R) continue; const gr = q.createRadialGradient(X, Y, 0, X, Y, R);
+        gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(0.3, `rgba(250,252,255,${a*0.6})`); gr.addColorStop(0.55, `rgba(120,135,160,${a*0.22})`); gr.addColorStop(1, 'rgba(120,135,160,0)'); q.fillStyle = gr; q.fillRect(X - R, Y - R, 2*R, 2*R); }
+      else { const len = (12 + 11*u)*sc, dx = dir*0.35*len; if (X < -len || X > WXW + len || Y < -len || Y > WXH + len) continue;
+        const lg = q.createLinearGradient(X - dx/2, Y - len/2, X + dx/2, Y + len/2); lg.addColorStop(0, 'rgba(120,132,152,0)'); lg.addColorStop(0.5, `rgba(120,132,152,${a})`); lg.addColorStop(1, 'rgba(120,132,152,0)');
+        q.strokeStyle = lg; q.lineCap = 'round'; q.lineWidth = 3.4*sc; q.globalAlpha = 0.55; q.beginPath(); q.moveTo(X - dx/2, Y - len/2); q.lineTo(X + dx/2, Y + len/2); q.stroke(); q.lineWidth = 1.9*sc; q.globalAlpha = 1; q.stroke(); } } }
+  if (!WXG) WXG = document.createElement('canvas').getContext('2d');
+  return (WXS[key] = {c, p:WXG.createPattern(c, 'repeat')}); }
+function wxMask(){ if (WXS.mask) return WXS.mask; const m = document.createElement('canvas'); m.width = WXW; m.height = WXH; const q = m.getContext('2d'); q.translate(WXW/2, WXH/2); q.scale(WXW/2, WXH/2); const rg = q.createRadialGradient(0, 0, 0, 0, 0, 1);
+  for (let k = 0; k <= 8; k++){ const u = k/8; rg.addColorStop(u, `rgba(255,255,255,${Math.pow(1 - u*u, 0.9).toFixed(3)})`); } q.fillStyle = rg; q.fillRect(-1, -1, 2, 2); return (WXS.mask = m); }
+const WXC = new Map(), WXN = 32;
+/* the fall as a baked loop: WXN masked frames side by side (the tile slid down one whole period over the loop, seamless), cached per kind and slant, baked on
+   first use (about 4 MB each: snow and rain; rain slanting the other way is drawn mirrored) */
+function wxSheet(kind, dir){ const key = 'sh' + kind + dir; if (WXS[key]) return WXS[key]; const snow = kind === 's', T = wxTile(kind, dir, 0), c = document.createElement('canvas'), fr = document.createElement('canvas'), mk = wxMask(); c.width = WXW*WXN; c.height = fr.height = WXH; fr.width = WXW; const g = c.getContext('2d'), q = fr.getContext('2d');
+  for (let f = 0; f < WXN; f++){ const oy = f/WXN*WXH, ox = ((snow ? Math.sin(f/WXN*6.2832)*4 : dir*0.35*oy) % WXW + WXW) % WXW;   // (each frame is cut by the mask on its own canvas: destination-in would wipe the whole sheet)
+    q.setTransform(1, 0, 0, 1, ox, oy); q.globalCompositeOperation = 'source-over'; q.clearRect(-ox, -oy, WXW + 1, WXH + 1); q.fillStyle = T.p; q.fillRect(-ox, -oy, WXW + 1, WXH + 1);
+    q.setTransform(1, 0, 0, 1, 0, 0); q.globalCompositeOperation = 'destination-in'; q.drawImage(mk, 0, 0); g.drawImage(fr, f*WXW, 0); }
+  return (WXS[key] = c); }
+function wxPrecip(w, Pp, cx, cy, fade, L, t){ const snow = w.kind === 'blizzard', cs = (snow ? 0.95 : 1)*fade*(1 - 0.25*L), dir = (w.vx || 0) < 0 ? -1 : 1, W2 = w.r*w.r, sk = Math.round(w.seed*1000)*977, sc = view.s*dpr, tq = Math.floor(t/(snow ? 150 : 66)), per = snow ? 8500 : 800;
+  for (let i = 0; i < 9; i++){ const px = Pp[i*3], sz = Pp[i*3 + 2]; if (sz < 0.52*w.r) continue;   // (the small lobes, under the big ones' fall, draw none: less to paint)
     const dw = snow ? sz*2 : sz*1.56, dh = snow ? sz*1.2 : sz*0.94, py = snow ? Pp[i*3 + 1] : Pp[i*3 + 1] - sz*0.16, Rx = 0.4*dw, Ry = 0.34*dh;
     const dx = px - cx, dy = (py - cy)*1.6, m = 1 - (dx*dx + dy*dy)/W2; if (m <= 0.02) continue;   // inside the rules' storm ellipse
-    const img = X[snow ? 's' + i % 3 : 'r' + dir + i % 3], u = (u0 + fxh(sk + i*3))*WXN, f0 = Math.floor(u), k = u - f0, a0 = Math.min(1, cs*Math.min(1, m*3)), fa = f0 % WXN, fb = (f0 + 1) % WXN;
-    if (snow){ ctx.globalAlpha = a0*(1 - k*0.5); ctx.drawImage(img, fa*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry);   // snow drifts slowly: two frames cross-faded
-      ctx.globalAlpha = a0*k*0.9; ctx.drawImage(img, fb*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry); }
-    else { ctx.globalAlpha = Math.min(1, a0*1.5); ctx.drawImage(img, (k < 0.5 ? fa : fb)*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry); } } }   // rain flickers: one frame, stepped
+    const Wd = 2*Rx*sc, a0 = Math.min(1, cs*Math.min(1, m*3))*(snow ? 1 : 1.3);
+    if (Wd < 1000){   // normal zoom: two neighbouring frames of the baked loop, cross-faded by the clock's fraction, so the fall moves smoothly
+      const S = wxSheet(snow ? 's' : 'r', 1), u = (t/per + fxh(sk + i*3))*WXN, f0 = Math.floor(u), k0 = u - f0, k = k0 < 0.25 ? 0 : k0 > 0.75 ? 1 : (k0 - 0.25)*2, fa = f0 % WXN, fb = (f0 + 1) % WXN, mir = !snow && dir < 0;   // (the cross-fade only near the step: a still picture shows one flake, not two)
+      if (mir){ ctx.save(); ctx.translate(2*px, 0); ctx.scale(-1, 1); }
+      ctx.globalAlpha = Math.min(1, a0*(1 - k*k)); ctx.drawImage(S, fa*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry);
+      ctx.globalAlpha = Math.min(1, a0*(1 - (1 - k)*(1 - k))); ctx.drawImage(S, fb*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry); if (mir) ctx.restore(); continue; }
+    // close in (a big patch: the baked frame would blow the flakes up into blobs): painted afresh at up to 512 px, the flakes stay small; repainted 7 / 15 times a second
+    const Sw = Math.min(512, Math.round(Wd/2)), Sh = Math.max(24, Math.round(Sw*Ry/Rx)), key = sk + i*3 + (snow ? 1 : dir > 0 ? 2 : 0);
+    let E = WXC.get(key); if (!E || E.W !== Sw || E.H !== Sh){ if (WXC.size > 12) WXC.clear(); const c = document.createElement('canvas'); c.width = Sw; c.height = Sh; WXC.set(key, E = {c, g:c.getContext('2d'), W:Sw, H:Sh, tq:-1}); }
+    if (E.tq !== tq){ E.tq = tq; const q = E.g, h1 = fxh(sk + i*3), h2 = fxh(sk + i*3 + 1), T = wxTile(snow ? 's' : 'r', dir, 0), oy = ((t/per)*Sh + h1*WXH) % WXH, ox = snow ? ((Math.sin(t/1800 + h2*6.283)*4 + h2*WXW) % WXW + WXW) % WXW : ((dir*0.35*oy + h2*WXW) % WXW + WXW) % WXW;
+      q.setTransform(1, 0, 0, 1, 0, 0); q.globalCompositeOperation = 'source-over'; q.globalAlpha = 1; q.clearRect(0, 0, Sw, Sh);
+      q.setTransform(1, 0, 0, 1, ox, oy); q.fillStyle = T.p; q.fillRect(-ox, -oy, Sw + 1, Sh + 1);
+      q.setTransform(1, 0, 0, 1, 0, 0); q.globalCompositeOperation = 'destination-in'; q.drawImage(wxMask(), 0, 0, WXW, WXH, 0, 0, Sw, Sh); q.globalCompositeOperation = 'source-over'; }
+    ctx.globalAlpha = Math.min(1, a0); ctx.drawImage(E.c, px - Rx, py - Ry, 2*Rx, 2*Ry); } }
 /* storms: drawn under the night tint (night darkens them like the land and city lights shine over them), tops cross-faded to a slate
    night deck by the local light, warm rims on the sun side at dusk, rain streaks / snow dots on the game clock (paused with the game) */
 function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1, run = S.speed && !S.over, wxOn = hexPx >= 10 && !afxReduced() && !mapLite(), t = FXQ.gt;
@@ -11698,10 +11715,10 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get map(){ return TMM; }, get lite(){ return mapLite() || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stats:() => fxStats(), dev:w => devCfx(w), get VW(){ return VW; }, fire:(w, A, B, o) => cfxFire(w, A, B, o), intercept:(A, B, o) => intercept(A, B, o), get PROJ(){ return PROJ; }, get PART(){ return PART; }, get WARN(){ return FXM.WARN; }, get CQ(){ return FXM.CQ; }};
-/*@TEST*/if (location.protocol === 'file:' && window.__im) window.__im.wx = {   // test only: put weather over a chosen spot: wx.put('blizzard' | 'storm', lon, lat, r) drops one still storm there (and clears the others), wx.clear() removes them
+if (location.protocol === 'file:' && window.__im) window.__im.wx = {   // test only: put weather over a chosen spot: wx.put('blizzard' | 'storm', lon, lat, r) drops one still storm there (and clears the others), wx.clear() removes them
   at:(lon, lat) => { let row = 0, bd = 1e9; for (let r = 0; r < H; r++){ const d = Math.abs(cellLat(r*W) - lat); if (d < bd){ bd = d; row = r; } } return [OX + ((((lon - WORLD.lon0) % 360 + 360) % 360)/360*W - 0.5)*HS*SQ3, OY + row*HS*1.5]; },
   put:(kind, lon, lat, r = 70, seed = 321.5) => { const [x, y] = window.__im.wx.at(lon, lat); S.storms = [{id:S.nid++, x, y, r, vx:0, vy:0, life:9999, kind, seed}]; return [x, y]; },
-  clear:() => { S.storms = []; } };/*@ENDTEST*/
+  clear:() => { S.storms = []; } };
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND || SNOWT)}, wrap:{value:{W:WRAP_W, X0:WRAP_X0, WW:WORLD_W, WH:WORLD_H, minScale:() => minScale(), ks:() => wrapKs(0)}}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
