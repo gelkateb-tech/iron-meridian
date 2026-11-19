@@ -79,7 +79,7 @@ const RES = [
   {k:'cash',  name:'Money',    ab:'Money', unit:'M', pre:'$', use:'pays for everything: units, buildings, research, roads, and every unit’s daily upkeep', src:'taxes from your provinces (cities most; money cities 60% more, and +25% per Arms Industry level there), trade routes', map:'money cities and populous land'},
   {k:'oil',   name:'Oil',      ab:'Oil',   unit:'',  pre:'', use:'fuel: vehicles, aircraft and ships burn it daily and need some to build; a shortage slows and weakens them', src:'oil cities (+25% per Arms Industry level), a little from oil fields in the countryside, your capital, trade', map:'oil cities, oil fields'},
   {k:'metal', name:'Materials', ab:'Mat.', unit:'', pre:'', use:'nearly every unit, building, road and research project', src:'materials cities (+25% per Arms Industry level), a little from ore deposits, your capital, trade', map:'materials cities, ore deposits'},
-  {k:'iron',  name:'Iron',     ab:'Iron',  unit:'',  pre:'', use:'armor, artillery, warships, Army Bases, forts and railways; those units also use 4% of their iron a day in maintenance (a shortage weakens them)', src:'iron cities (+25% per Arms Industry level), a little from ore deposits and iron hills, your capital, trade', map:'iron cities, ore deposits, iron hills'},
+  {k:'iron',  name:'Iron',     ab:'Iron',  unit:'',  pre:'', use:'armor, artillery, warships, Army Bases, bunkers and railways; those units also use 4% of their iron a day in maintenance (a shortage weakens them)', src:'iron cities (+25% per Arms Industry level), a little from ore deposits and iron hills, your capital, trade', map:'iron cities, ore deposits, iron hills'},
   {k:'elec',  name:'Electronics', ab:'Elec.', unit:'', pre:'', use:'aircraft, drones, air defence, missiles, satellites and high-speed rail; those units also use 2% of their electronics a day in maintenance (a shortage weakens them)', src:'electronics cities (+25% per Arms Industry level), your capital, trade', map:'electronics cities'},
   {k:'rare',  name:'Rare Materials', ab:'Rare Mat.', unit:'', pre:'', use:'research: every technology costs it (more each tier); also advanced aircraft, carriers and missiles', src:'rare-earth cities (only one or two per country, many countries have none; +25% per Arms Industry level), your capital, trade', map:'rare-earth cities'},
   {k:'mp',    name:'Manpower', ab:'Manp.', unit:'k', pre:'', use:'crews for every unit', src:'population, Recruiting Offices (+3k to +9k a day by level), Mobilisation', map:'populous countryside'},
@@ -144,12 +144,26 @@ const KM_HEX = 180;                   // one map hex is roughly 180 km
 // Recruiting Office, levels I-V: what it costs to reach each level (money $M, materials, iron, electronics) and how many days it takes.
 // A building with such a table (BUILD[k].lv) is priced from it, not from the 1.6x-per-level rule (buildCost in rules/production.js)
 const REC_LV = [null, {cash:40, days:2}, {cash:75, metal:10, days:3}, {cash:130, metal:20, iron:10, days:4}, {cash:220, metal:35, iron:20, days:5}, {cash:360, metal:55, iron:30, elec:15, days:6}];
+// The Bunker (save key 'fort': it was Fortifications I-III; owner #17, 2026-11-18), levels 1-5, one row a level (docs/COMBAT.md section 7):
+//   hp: its health (a hit that wrecks a building level does BUNKER_HIT of it); red: how much less damage its garrison takes (the owner's 33-82%; the
+//   people of the province are spared the same share of their war losses, the other buildings BUNKER_SHIELD_LV's share); mrl: the garrison's morale
+//   counts that much higher (+5% to +50%, at most 100); upk: money a day (the owner's 100-140 at our scale, a hundredth: $1.0M-1.4M);
+//   cash, metal, iron, elec, days: the price of the level (levels 1-3 are Fortifications I-III's prices of today, 4-5 continue at about x1.4)
+const BUNKER_LV = [null,
+  {hp:20,  red:0.33, mrl:0.05, upk:1.0, cash:36,  metal:8,  iron:8,  days:2},
+  {hp:40,  red:0.43, mrl:0.10, upk:1.1, cash:58,  metal:13, iron:13, days:2},
+  {hp:65,  red:0.56, mrl:0.20, upk:1.2, cash:92,  metal:20, iron:20, days:2},
+  {hp:95,  red:0.69, mrl:0.33, upk:1.3, cash:130, metal:28, iron:28, elec:5, days:2.5},
+  {hp:125, red:0.82, mrl:0.50, upk:1.4, cash:180, metal:38, iron:38, elec:8, days:3}];
+const BUNKER_HIT = 20;        // the health one building hit takes from a bunker (a bomber's wrecked level, a ballistic missile, a precision hit, sabotage): level 1 falls to one hit, as every building level does
+const BUNKER_SHIELD_LV = 1;   // the other buildings of the province are shielded with this level's protection, whatever the bunker's level ("up to level 1")
+const BUNKER_FIX = 2.5;       // health a bunker repairs an hour (a lost level is not repaired: it is built again)
 const BUILD = {
   fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, lv1:{cost:18, metal:6, iron:6, days:1}, where:'city', desc:'Unlocks and trains ground units. Level I (cheap, one day): infantry (Motorized, Anti-Tank, Special Forces; Paratroopers also need an Airbase), mobile artillery, main battle tanks, IFVs and jammers; level II: mobile SAMs, rocket artillery and swarm drones. Each level adds a training line; ground units train 20% faster per level up to III, then 5% per level. No income. Your first two Army Bases cost the base price; from the third on, each one you already own in another province makes the next cost 40% more.'},
   air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:'Needed for strike fighters and interceptors (with Jet Engines research). Levels II\u2013V: aircraft build 10% faster and wings based here reach 1 hex farther per level above I.'},
   arms: {name:'Arms Industry',     max:5, cost:40, metal:12, iron:6, days:3, first:0.5, where:'city', desc:'Raises this city\u2019s main resource (money, oil, materials, iron, electronics or rare materials) by 25% per level. Level I is half price and pays for itself in about a week. Each Arms Industry you already own in another province makes the next one cost 40% more.'},   // first: level I at half price (levels II-V as before)
   rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
-  fort: {name:'Fortifications',    max:3, cost:36, metal:8, iron:8, days:2, where:'any',  desc:'Defenders here take 20% less damage per level.'},
+  fort: {name:'Bunker',            max:5, cost:36, metal:8, iron:8, days:2, where:'any',  lv:BUNKER_LV, desc:`Hidden from other nations. Your garrison here takes ${Math.round(BUNKER_LV[1].red*100)}% less damage at level I, up to ${Math.round(BUNKER_LV[5].red*100)}% at level V, and its morale counts ${Math.round(BUNKER_LV[1].mrl*100)}% to ${Math.round(BUNKER_LV[5].mrl*100)}% higher; the people here lose that much less to war, and the other buildings here take ${Math.round(BUNKER_LV[BUNKER_SHIELD_LV].red*100)}% less damage. Upkeep $${BUNKER_LV[1].upk.toFixed(1)}M to $${BUNKER_LV[5].upk.toFixed(1)}M a day.`},
   silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores cruise and ballistic missiles (needs Strategic research). Levels II\u2013V: missiles build 10% faster per level above I.'},
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
 };
@@ -332,7 +346,7 @@ const R_SPECIAL = [
     {id:'sat1', name:'Reconnaissance Satellites', kind:'kit', ic:'sat', req:['msl1'], lv:[[5, 'launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day', {cash:120, metal:35, rare:61, days:6}], [11, 'up to 4 satellites', {cash:150, metal:50, rare:48, days:5}], [17, 'up to 5, each with a wider swath', {cash:200, metal:70, rare:64, days:6}]]}]},
   // Command & Logistics: four doctrines, each with a second level (its rule reads the level: rMoveF, rCapF, rRoadF, rLandF, rHospF in rules/research.js)
   {cat:'cmd', line:'Supply', pic:'truck', nodes:[{id:'log1', name:'Motorized Supply', kind:'kit', ic:'truck', lv:[[1, 'all forces move 20% faster; opens high-speed rail', {cash:66, metal:20, rare:27, days:4}], [10, 'all forces move 30% faster', {cash:110, metal:30, rare:30, days:5}]]}]},
-  {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'wrench', lv:[[2, 'troops embark at ports 30% faster; forts cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}], [11, 'troops embark 40% faster; roads and railways 35% cheaper and faster to build', {cash:120, metal:30, rare:32, days:5}]]}]},
+  {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'wrench', lv:[[2, 'troops embark at ports 30% faster; bunkers cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}], [11, 'troops embark 40% faster; roads and railways 35% cheaper and faster to build', {cash:120, metal:30, rare:32, days:5}]]}]},
   {cat:'cmd', line:'Landings', pic:'anchor', nodes:[{id:'nav3', name:'Amphibious Doctrine', kind:'kit', ic:'anchor', lv:[[3, 'landings from the sea take half the time, and the troops fight at 90% instead of 67% on their first day ashore', {cash:114, metal:20, rare:34, days:7}], [12, 'they fight at full strength on their first day', {cash:140, metal:30, rare:36, days:6}]]}]},
   {cat:'cmd', line:'Medical', pic:'cross', nodes:[{id:'log3', name:'Field Hospitals', kind:'kit', ic:'cross', lv:[[4, 'your forces take 15% less damage', {cash:102, metal:20, rare:32, days:7}], [13, '20% less damage', {cash:150, metal:30, rare:40, days:7}]]}]},
 ];
@@ -399,13 +413,69 @@ const R_LEGACY_NAME = {inf1:'Ceramic Body Armor', inf2:'Mechanized Infantry', in
 const DOCTRINES = {
   precision:{name:'Precision', tag:'Fewer, better forces', desc:'Units attack 10% harder and research runs 15% faster, but every unit costs 15% more.', atk:1.10, def:1, cost:1.15, build:1, res:0.85},
   mass:{name:'Mass', tag:'Numbers win wars', desc:'Units cost 15% less and train 25% faster, but attack 5% weaker.', atk:0.95, def:1, cost:0.85, build:0.75, res:1},
-  bastion:{name:'Defence in Depth', tag:'Hold every inch', desc:'Forces defending your own provinces take 15% less damage, fortifications build twice as fast, and upkeep is 10% lower.', atk:1, def:1, cost:1, build:1, res:1, home:0.85, fort:0.5, upk:0.9},
+  bastion:{name:'Defence in Depth', tag:'Hold every inch', desc:'Forces defending your own provinces take 15% less damage, bunkers build twice as fast, and upkeep is 10% lower.', atk:1, def:1, cost:1, build:1, res:1, home:0.85, fort:0.5, upk:0.9},
 };
 const docOf = n => n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] || null : null;
 // Firepower and Protection levels 1 to 3 multiply attack and defense by MARK_F[level + 1] (they were the unit Marks II to IV before the research redesign)
 const MARK_F = [1, 1, 1.12, 1.25, 1.4];
 // the Firepower or Protection level (0 to 3) in a tech table T: the Recon UAV's only Firepower step is its day-16 one, worth level 3 (+40%)
 const rMarkT = (T, t, e) => e === 'fp' && t === 'drone' ? (+T.drone_fp3 ? 3 : 0) : Math.min(3, +T[t + '_' + e] || 0);
+// ---------- nation groups (docs/DOCTRINES.md, plan approved 18 November 2026): who is in which group, its colour and emblem, and every unit's
+// model name per group and look. Data only: the doctrine rules (strengths, weaknesses, version trades, unique units) are NOT built, so nothing here
+// changes a number. The research screen reads it (banner colour, emblem stripe, model names); the doctrine build reuses it (N.doc from ngroupOf).
+// NGROUPS: key, name, identity, colour (section 1), emblem (section 5: drawn in code by the page). Every nation of nations.js and of the classic
+// worlds is listed once (section 2); a name not listed is Export.
+const NGROUPS = [
+  {k:'nato',   name:'US/NATO', idn:'Quality',    col:'#3f7fe0', emb:'chevron'},
+  {k:'east',   name:'Eastern', idn:'Mass',       col:'#a3283f', emb:'shield'},
+  {k:'china',  name:'China',   idn:'Production', col:'#e8b23a', emb:'triangle'},
+  {k:'europe', name:'Europe',  idn:'Technology', col:'#36a8b4', emb:'ring'},
+  {k:'export', name:'Export',  idn:'Home Guard', col:'#b89a62', emb:'globe'},
+];
+const NGROUP_BY = Object.fromEntries(NGROUPS.map(g => [g.k, g]));
+const NGROUP_OF = {};
+for (const [g, s] of Object.entries({
+  nato:'United States|Canada|Turkey|Japan|Australia|Poland|Egypt|Saudi Arabia|South Korea|Philippines|Romania|Israel|Morocco|New Zealand',
+  europe:'United Kingdom|France|Germany|Brazil|Italy|Spain|Ukraine|Sweden|Norway|Finland|Greece|Chile',
+  east:'Russia|India|Iran|Kazakhstan|Algeria|Vietnam|Ethiopia|Belarus|Uzbekistan|Mongolia|Syria|North Korea|Angola|Venezuela|Cuba',
+  china:'China|Pakistan|Myanmar|Tanzania|Sudan|Bangladesh',
+  export:'Nigeria|Indonesia|Mexico|Iraq|DR Congo|South Africa|Thailand|Afghanistan|Argentina|Colombia|Peru|Yemen|Libya|Kenya|Mali|Chad|Mozambique|Cameroon|Malaysia|Ecuador|Bolivia'})) for (const nm of s.split('|')) NGROUP_OF[nm] = g;
+const ngroupOf = name => NGROUP_OF[name] || 'export';
+// model names (section 3, the build's checks done: the dagger and double-dagger marks dropped): unit -> group -> [look 1, look 2, look 3].
+// Paratroopers share the Motorized Infantry names (UNIT_NAME_OF); cm and bm are the Cruise and Ballistic Missile lines of Strategic Weapons (names
+// only). null: no name found yet (Europe's newest jammer); the screen shows the unit type instead
+const UNIT_NAMES = {
+  inf:{nato:['M16A1', 'M4A1', 'M7'], east:['AKM', 'AK-74M', 'AK-12'], china:['Type 56', 'QBZ-95', 'QBZ-191'], europe:['G3A3', 'G36A2', 'G95A1'], export:['AKM', 'AK-103', 'M4']},
+  at:{nato:['M47', 'FGM-148', 'FGM-148F'], east:['9K111', '9K115-2', '9K135'], china:['HJ-73', 'HJ-9', 'HJ-12'], europe:['LRAC F1', 'NLAW', 'MMP'], export:['9M14', 'HJ-8E', '9K135']},
+  spec:{nato:['XM177E2', 'Mk 18 Mod 1', 'M7'], east:['AKMS', 'AK-105', 'AK-12K'], china:['Type 56-1', 'QBZ-95-1', 'QBZ-192'], europe:['MP5', 'G36KA4', 'G95K'], export:['AKMS', 'M4', 'AK-104']},
+  ifv:{nato:['M2A1', 'M2A3', 'XM30'], east:['BMP-1', 'BMP-3', 'T-15'], china:['Type 86', 'ZBL-08', 'ZBD-04A'], europe:['AMX-10P', 'Strf 9040C', 'VBCI-2'], export:['BMP-1', 'M2A2', 'BMP-3M']},
+  tank:{nato:['M60A3', 'M1', 'M1A2 SEPv3'], east:['T-72', 'T-90', 'T-14'], china:['Type 79', 'Type 96A', 'Type 99A'], europe:['AMX-30B2', 'AMX-56', 'KF51'], export:['T-55', 'T-72M1', 'VT-4']},
+  art:{nato:['M109A2', 'M109A6', 'M109A7'], east:['2S1', '2S19', '2S35'], china:['Type 83', 'PLZ-05', 'PCL-181'], europe:['AuF1', 'PzH 2000', 'RCH 155'], export:['2S1', '2S19', 'SH-15']},
+  mlrs:{nato:['M270', 'M142', 'M270A2'], east:['BM-21', 'BM-30', '9K515'], china:['Type 81', 'PHL-03', 'PHL-16'], europe:['LARS 2', 'MARS II', 'M270A2'], export:['Type 63', 'BM-27', 'SR5']},
+  sam:{nato:['MIM-23B', 'MIM-104F', 'MIM-104F MSE'], east:['9K37', 'S-400', 'S-500'], china:['HQ-7', 'HQ-9', 'HQ-9B'], europe:['Roland 2', 'SAMP/T', 'SAMP/T NG'], export:['S-125', '9K37M1', 'FD-2000']},
+  jam:{nato:['AN/MLQ-34', 'AN/VLQ-12', 'TLS-BCT'], east:['SPN-2', '1L269', 'RB-109A'], china:['Type 95', 'PGL-625', 'LW-30'], europe:['Hummel', 'Fuchs EloKa', null], export:['SPN-2', 'Type 95', '1L269']},
+  heli:{nato:['AH-1F', 'AH-64D', 'AH-64E'], east:['Mi-24V', 'Ka-52', 'Mi-28NM'], china:['Z-9W', 'Z-10', 'Z-10ME'], europe:['PAH-1', 'EC665', 'AW249'], export:['Mi-24D', 'Mi-35M', 'Z-10ME']},
+  int:{nato:['F-4E', 'F-14D', 'F-15EX'], east:['MiG-23', 'MiG-31', 'MiG-31BM'], china:['J-7', 'J-10A', 'J-10C'], europe:['F-104G', 'JAS 39C', 'JAS 39E'], export:['MiG-21bis', 'MiG-29', 'JF-17 Block III']},
+  jet:{nato:['F-16A', 'F/A-18E', 'F-35A'], east:['MiG-27', 'Su-34', 'Su-34M'], china:['Q-5', 'J-16', 'J-35A'], europe:['PA-200', 'EF-2000 T3', 'F-35A'], export:['Su-22M4', 'Su-30MK2', 'J-10CE']},
+  asf:{nato:['F-15A', 'F-22A', 'F-47'], east:['Su-27', 'Su-35S', 'Su-57'], china:['J-11', 'J-20', 'J-36'], europe:['F-4F', 'EF-2000 T1', 'EF-2000 T4'], export:['MiG-23MF', 'Su-27SK', 'Su-35SE']},
+  drone:{nato:['RQ-2A', 'MQ-9A', 'RQ-170'], east:['Pchela-1T', 'Forpost-R', 'S-70'], china:['ASN-206', 'GJ-2', 'WZ-7'], europe:['CL-289', 'MQ-9A', 'nEUROn'], export:['Searcher II', 'TB2', 'CH-7']},
+  swarm:{nato:['Perdix', 'LASSO-300', 'LASSO-600'], east:['KUB-BLA', 'Lancet-3', 'Izdeliye 53'], china:['ASN-301', 'FH-901', 'FH-97A'], europe:['DAR', 'Warmate', 'HX-2'], export:['Harpy', 'KUB-BLA', 'Lancet-3']},
+  sdrone:{nato:['MQ-1C', 'XQ-58A', 'YFQ-42A'], east:['Geran-2', 'Grom', 'S-70B'], china:['CH-4B', 'CH-7', 'GJ-11'], europe:['MQ-9A', 'nEUROn', 'Taranis'], export:['Shahed-136', 'GJ-2', 'TB3']},
+  mpa:{nato:['P-3A', 'P-8A', 'MQ-4C'], east:['Be-12', 'Tu-142M3', 'Il-38N'], china:['SH-5', 'KQ-200', 'Y-9Q'], europe:['Br 1150', 'ATL2', 'P-8A'], export:['Be-12', 'Il-38', 'C-295MPA']},
+  awacs:{nato:['E-2C', 'E-3G', 'E-7A'], east:['Tu-126', 'A-50U', 'A-100'], china:['KJ-200', 'KJ-500', 'KJ-500A'], europe:['E-2C', 'E-3F', 'E-7A'], export:['Ka-31', 'EMB-145 AEW', 'A-50EI']},
+  bomb:{nato:['B-52G', 'B-1B', 'B-52J'], east:['Tu-16', 'Tu-22M3', 'Tu-160M'], china:['H-5', 'H-6K', 'H-6N'], europe:['B-52G', 'B-1B', 'B-52J'], export:['Tu-16', 'Tu-22M3', 'H-6K']},
+  stealth:{nato:['B-2A Block 10', 'B-2A Block 30', 'B-21A'], east:['Tu-160', 'Tu-160M2', 'PAK DA'], china:['H-6N', 'H-20', 'H-20A'], europe:['B-2A Block 10', 'B-2A Block 30', 'B-21A'], export:['Tu-160', 'Tu-160M2', 'PAK DA']},
+  frig:{nato:['FF-1052', 'LCS-2', 'FFG-62'], east:['Project 1135', 'Project 22350', 'Project 22350M'], china:['Type 053H', 'Type 054A', 'Type 054B'], europe:['Type 122', 'FREMM', 'Type 26'], export:['Project 1159', 'F-22P', 'Type 054A/P']},
+  crui:{nato:['CG-26', 'DDG-51 Flight III', 'DDG-1000'], east:['Project 956', 'Project 1144', 'Project 1144M'], china:['Type 051', 'Type 052D', 'Type 055'], europe:['Type 42', 'Horizon', 'Type 45'], export:['Project 61', 'Type 051C', 'Type 052D']},
+  sub:{nato:['SSN-637', 'SSN-21', 'SSN-774 Block V'], east:['Project 641', 'Project 971', 'Project 885M'], china:['Type 033', 'Type 039A', 'Type 093B'], europe:['Type 209', 'Astute', 'Suffren'], export:['Project 633', 'Project 636', 'S26T']},
+  carr:{nato:['CV-41', 'CVN-68', 'CVN-78'], east:['Project 1143', 'Project 1143.5', 'Project 23000E'], china:['Type 001', 'Type 003', 'Type 004'], europe:['Clemenceau', 'Charles de Gaulle', 'Queen Elizabeth'], export:['Colossus', 'Project 1143.4', 'Type 002']},
+  cm:{nato:['AGM-86B', 'AGM-158A', 'AGM-158B'], east:['Kh-55', 'Kh-101', '3M22'], china:['CJ-10', 'CJ-100', 'YJ-21'], europe:['AS-30L', 'KEPD 350', 'FC/ASW'], export:['P-15M', '3M-14E', 'CJ-10']},
+  bm:{nato:['MGM-31A', 'MGM-140B', 'LRHW'], east:['R-17', '9K720', 'Kh-47M2'], china:['DF-11', 'DF-16', 'DF-17'], europe:['Pluton', 'MGM-140B', 'LRHW'], export:['R-17E', '9K720E', 'DF-11A']}};
+const UNIT_NAME_OF = {para:'inf'};
+// a unit's research level (docs/RESEARCH.md 14.1): 1 + every step done in its own line, up to 8; its look: 1 at levels 1-3, 2 at 4-6, 3 at 7-8
+const UL_MAX = 8, ulLook = lv => lv >= 7 ? 3 : lv >= 4 ? 2 : 1;
+// the model name of unit (or missile line) key u for group g at look k (1-3), or null
+const unitModel = (u, g, k) => { const T = UNIT_NAMES[UNIT_NAME_OF[u] || u]; return T && T[g] ? T[g][Math.max(1, Math.min(3, k)) - 1] || null : null; };
 const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 const cap1 = w => w[0].toUpperCase() + w.slice(1);
 const NEUTRAL = -1, SEA = -2;
@@ -475,7 +545,7 @@ const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 
 //   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; inf/tank/art: the capital's force;
 //   cityTanks: that many of the biggest other cities get a tank; guards: border guards (2 infantry each); recs: Recruiting Offices outside the capital
 const TIER_RANK = {S:0, A:1, B:2, C:3};
-// Fortifications at the start (owner, 2026-11-14): every nation's capital starts with Fortifications of this level, and no other province has any
+// The Bunker at the start (owner, 2026-11-14, as Fortifications): every nation's capital starts with a Bunker of this level, and no other province has any
 // (before, a tier C capital and the border guards' provinces of tiers B and C had level I, and the classic world's small powers their capital and borders: about 150 forts)
 const START_FORT = 1;
 const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
@@ -555,7 +625,7 @@ const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 { const seen = new Set(), xK = o => { if (!o || seen.has(o)) return; seen.add(o); for (const k of GOODS) if (typeof o[k] === 'number') o[k] *= RES_K; };
   for (const t in UNITS){ xK(UNITS[t]); UNITS[t].fuel *= RES_K; MAINT[t].iron *= RES_K; MAINT[t].elec *= RES_K; }
   for (const k in MISSILES) xK(MISSILES[k]);
-  for (const k in BUILD){ xK(BUILD[k]); xK(BUILD[k].lv1); } for (const L of REC_LV) xK(L);
+  for (const k in BUILD){ xK(BUILD[k]); xK(BUILD[k].lv1); } for (const L of REC_LV) xK(L); for (const L of BUNKER_LV) xK(L);
   for (const k in ECO_OLD) xK(ECO_OLD[k]);
   for (const nd of RNODES) for (const l of nd.lv) xK(l.c);
   xK(ECO_Y); xK(ECO_CAPITAL); for (const k in ECO_RUR) ECO_RUR[k] *= RES_K; }

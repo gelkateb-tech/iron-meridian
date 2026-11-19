@@ -151,16 +151,22 @@ function dogfight(a, cap, p, scale){ const o = a.owner, mine = effHP(a), theirs 
 // what air raids did to each nation lately (drives the AI's counter-buys): S.airHit[n] = {drone, bomb, air}, decays daily
 function noteHit(n, t, p = -1){ if (n < 0) return; const H = (S.airHit || (S.airHit = {}))[n] || (S.airHit[n] = {drone:0, bomb:0, air:0}); H[UNITS[t] && UNITS[t].dr ? 'drone' : isBmb(t) ? 'bomb' : 'air'] += 1;
   if (isBmb(t) && p >= 0) (H.bp || (H.bp = {}))[p] = S.hour; }   // H.bp: where bombers struck lately (fighter patrols go there)
-const BLD_VAL = {silo:5, air:4, fac:4, yard:3, arms:2.5, rec:1.2, fort:1.5};
+const BLD_VAL = {silo:5, air:4, fac:4, yard:3, arms:2.5, rec:1.2, fort:1.5};   // (fort: the Bunker)
 const bestBld = p => BK.filter(k => S.bld[p][k] > 0 && !bdis(p, k)).sort((x, y) => BLD_VAL[y]*(1 + 0.2*S.bld[p][y]) - BLD_VAL[x]*(1 + 0.2*S.bld[p][x]))[0] || null;
-// precision hit: the most valuable building is knocked out for hrs (and with probability pLevel loses a level)
+// precision hit: the most valuable building is knocked out for hrs (and with probability pLevel loses a level). A Bunker there shields the other
+// buildings (bldHit; a knock-out is cut by its shield); a hit on the bunker itself is told to its owner only (the text returned is for everyone)
 function preciseHit(p, pLevel, hrs){ const k = bestBld(p); if (!k) return '';
-  if (rng() < pLevel){ S.bld[p][k]--; return `${BUILD[k].name} lost a level`; } knockOut(p, k, hrs); return `${BUILD[k].name} knocked out for ${hrs} h`; }
+  if (rng() < pLevel){ const r = bldHit(p, k); bunkerNews(p, [r], 'Precision strike'); return r.bunker || r.shielded ? '' : `${BUILD[k].name} lost a level`; }
+  if (k === 'fort'){ knockOut(p, k, hrs); if (isSeat(S.owner[p])) tell(S.owner[p], `Precision strike at ${G.P[p].cityName || G.P[p].name}: your Bunker is knocked out for ${hrs} h.`, 'bad', p); return ''; }
+  const h = Math.max(1, Math.round(hrs*(1 - bunkerShield(p)))); knockOut(p, k, h); return `${BUILD[k].name} knocked out for ${h} h`; }
 // bombers wreck building levels (and any construction) in proportion to the bombers over the target and their bomb load (f: 1 Heavy Bomber, 0.6 Stealth Bomber)
-function bombBuildings(p, n, f = 1){ let lv = Math.min(4, Math.floor(n*0.75*f + rng())); const hit = [];
-  if (S.cons[p] && rng() < 0.5){ S.cons[p] = null; hit.push('construction'); }
+// (each hit goes through bldHit: a Bunker takes its own on its health and shields the others; the text returned, for the attacker and the defender,
+// names only the levels wrecked, never the bunker: its owner hears of it on its own, bunkerNews)
+function bombBuildings(p, n, f = 1){ let lv = Math.min(4, Math.floor(n*0.75*f + rng())); const hit = [], rs = [];
+  if (S.cons[p] && rng() < 0.5){ if (S.cons[p].k === 'fort' && isSeat(S.owner[p])) tell(S.owner[p], `Bombers wrecked the Bunker going up at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p); else hit.push('construction'); S.cons[p] = null; }
   while (lv-- > 0){ const ks = BK.filter(k => S.bld[p][k] > 0); if (!ks.length) break; const w = ks.map(k => BLD_VAL[k]*S.bld[p][k]), tot = w.reduce((x, y) => x + y, 0); let r = rng()*tot, k = ks[0]; for (let i = 0; i < ks.length; i++){ r -= w[i]; if (r <= 0){ k = ks[i]; break; } }
-    S.bld[p][k]--; hit.push(BUILD[k].name); }
+    const h = bldHit(p, k); rs.push(h); if (h.lost && !h.bunker) hit.push(BUILD[k].name); }
+  bunkerNews(p, rs, 'Bombing raid');
   return hit.length ? `wrecked ${hit.join(', ')}` : ''; }
 // how much harder a bomber hits the troops sheltering in a city: +50% for the Heavy Bomber, +25% for the Stealth Bomber
 const bombCityF = t => t === 'stealth' ? 1.25 : 1.5;
@@ -173,7 +179,7 @@ function uavSalvo(a, p){ const o = a.owner, n0 = count(a), r = droneAD(a, p, 0.5
   if (S.owner[p] >= 0 && S.owner[p] !== o && atWar(o, S.owner[p]) && rng() < (uavLv(o) >= 5 ? 0.35 : 0.2)) bn = preciseHit(p, 0, 12);
   if (!defs.length && !bn) return; let dealt = 0, killed = 0;
   if (defs.length){ const h0 = defs.reduce((s0, b) => s0 + effHP(b), 0), u0 = defs.reduce((s0, b) => s0 + count(b), 0), av = avScale(sideAV([a], o, STRIKE*0.6*(0.8 + rng()*0.4)), 1/(1 + 0.3*r.jam)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
-    for (const b of defs) hurt(b, av, 1/tot); dealt = Math.round(h0 - defs.reduce((s0, b) => s0 + effHP(b), 0)); killed = u0 - defs.reduce((s0, b) => s0 + count(b), 0); noteHit(defs[0].owner, 'drone'); }
+    for (const b of defs) hurt(b, av, bunkerF(b, p)/tot); dealt = Math.round(h0 - defs.reduce((s0, b) => s0 + effHP(b), 0)); killed = u0 - defs.reduce((s0, b) => s0 + count(b), 0); noteHit(defs[0].owner, 'drone'); }
   fxAt('strike', p, {}, o); if (dealt > 0) fxAt('dmg', p, {text:`−${dealt}`, color:'#ffb27a', dy:-40}, o);
   if (isSeat(o)){ tell(o, `UAV missiles over ${where}: ${dealt} damage${killed ? `, ${killed} unit${killed > 1 ? 's' : ''} destroyed` : ''}${bn ? ', ' + bn : ''}${r.lost ? `; ${r.lost} UAV lost to air defence` : ''}.`, dealt || bn ? 'good' : 'info', p); bump(o, 'unitsKilled', killed); }
   for (const me of seatsBut(o)) if (defs.some(b => b.owner === me) || (bn && S.owner[p] === me)) tell(me, `${nationName(o)} armed UAV fired on ${where}: ${dealt} damage${bn ? ', ' + bn : ''}.`, 'bad', p);
@@ -236,7 +242,7 @@ function resolveStrike(a, p){
   const hpBefore = defs.map(effHP), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), myBefore = count(a) + adLost + preLost;
   // bombers over a city hit the troops sheltering there 50% harder (a Stealth Bomber 25%: bombCityF)
   const av = avScale(sideAV([a], o, STRIKE*(0.8 + rng()*0.4)), jamF*(BF && city ? bombCityF(T) : 1)), tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1;
-  for (const b of defs){ let f = 1/tot; if (b.owner === S.owner[p]) f *= Math.pow(0.8, S.bld[p].fort); hurt(b, av, f*digF(b)); }
+  for (const b of defs){ const f = bunkerF(b, p)/tot; hurt(b, av, f*digF(b)); }
   noteHit(defs[0].owner, T, p);
   // air defence fires back at manned aircraft (drones already ran the gauntlet)
   if (!UNITS[T].dr) aaFire(a, defs, BF ? 1.2 : 2);
@@ -321,9 +327,9 @@ function missileImpact(m){
   warDamage(m.to, m.k === 'bm' ? 22 : 12); if (S.owner[m.to] !== m.owner) damageLinks(m.to, LINK_DMG[m.k] || 48);
   const M0 = mslOf(m.owner, m.k), defs = stationaryAt(m.to).filter(b => atWar(m.owner, b.owner) && count(b) > 0), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), hpBefore = defs.reduce((s0, b) => s0 + effHP(b), 0);
   if (defs.length){ const tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1, f0 = K*M0.power*(0.85 + rng()*0.3)*12;
-    const av = {soft:f0*MSL_VS.soft, armored:f0*MSL_VS.armored, air:f0*MSL_VS.air, naval:f0*MSL_VS.naval}; for (const b of defs){ hurt(b, av, 1/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }
+    const av = {soft:f0*MSL_VS.soft, armored:f0*MSL_VS.armored, air:f0*MSL_VS.air, naval:f0*MSL_VS.naval}; for (const b of defs){ hurt(b, av, bunkerF(b, m.to)/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }   // (the garrison's Bunker)
   let wrecked = '';
-  if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)]; S.bld[m.to][k]--; wrecked = BUILD[k].name; } }
+  if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)], h = bldHit(m.to, k); bunkerNews(m.to, [h], 'Ballistic missile'); if (h.lost && !h.bunker) wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
   IM.emit('fxMissile', {m, hit:true, dealt, owner:S.owner[m.to]});
   const where = P.cityName || P.name;

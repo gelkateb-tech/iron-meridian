@@ -47,12 +47,12 @@ Original generic designs. No text, letters, numbers, flags, emblems, logos or wa
 
 ## Unit pictures (owner's decisions 2026-11-18; prompts in docs/UNIT-LOOKS-PROMPTS.md)
 
-- One set of pictures for every place a unit shows: the research card, the army bar's unit details and the map figures. A US/NATO
-  level-5 tank is the same picture in all three.
+- One set of pictures per look, each kind for its place: the side view in the research tree's diamond, the card scene on the card, the top-down on the map and in the army bar's unit details. All three show the same vehicle.
 - Each of the 5 nation groups (US/NATO, Eastern, China, Europe, Export) has its own design for every unit. Each unit has 3 looks:
   look 1 = levels 1-3, look 2 = levels 4-6, look 3 = levels 7-8. Each look is a NEW generation, drawn fresh, not an edit of the one
   before; it replaces the old model. (Paratroopers share the infantry pictures. Missiles have names only.)
-- Camera for units: exactly straight down, nose up, the whole unit centred, its length about 90 percent of the picture's height.
+- **Three pictures per look (owner, 18 November 2026, second set), all of the same vehicle.** (1) The side view: a front three-quarter side view from slightly above (the angle family of the anchor buildings) on the plain #D9D9D9 background, fully in frame, centred, cut out for the research tree's diamond; it is the master, made fresh (STYLE_V2_SIDE). (2) The card scene: made from the side view, the same unit in action in its natural setting (a tank on a dirt road, a helicopter over the sea, a jet in the sky), filling the whole card picture edge to edge, 3:2, full colour, no text or markings, no close faces; the blue monitor tint and scanlines are drawn in code on these scenes only, never in the picture. (3) The top-down: made from the side view, the camera below. Gemini checks that the three match (`--match`); it only flags.
+- Camera for the top-down (map, army bar): exactly straight down, nose up, the whole unit centred, its length about 90 percent of the picture's height.
   The map turns each figure to its heading, which a tilted view cannot do. Everything else in STYLE_V2 stays: soft studio light
   from the upper left, the same materials and finish, the plain light grey background (#D9D9D9). In gen-art this is STYLE_V2_UNIT,
   which is STYLE_V2 with only the camera and framing sentences changed.

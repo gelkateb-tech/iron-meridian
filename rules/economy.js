@@ -19,7 +19,8 @@ function blockNews(me, by){ if (!S.started) return; const D = desk(me), was = ne
 const popOf = p => (S.pop && S.pop[p] != null) ? S.pop[p] : G.P[p].pop0;
 const dmgOf = p => (S.dmg && S.dmg[p]) || 0;
 const moraleOf = p => Math.max(0, Math.min(100, 100 - unrestOf(p) - dmgOf(p)));
-function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012)); }
+// (war damage v: the province's morale falls by v, and its people by 0.12% a point; a Bunker spares the people its level's share, bunkerRed)
+function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012*(1 - bunkerRed(bunkerLv(p))))); }
 function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(0.45 + 0.55*moraleOf(p)/100)*(CONVOY_LOST.has(p) ? 0 : 1), b = bdisH(p) ? (o => { for (const k in S.bdis[p]) if (S.bdis[p][k] > S.hour) o[k] = 0; return o; })({...S.bld[p]}) : S.bld[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75);
   // a city yields money, manpower and its ONE main resource (P.main; 'cash' when it has none): a money city 60% more money, the others ECO_Y units a day
   // times the city-size factor (0.8 for a town, 1.2 from about 16 million people); the Arms Industry adds 25% of it per level. The countryside keeps a
@@ -76,6 +77,7 @@ function income0(n){
   if (S.rel){ const tired = warsOf(n).filter(m => S.hour - rel(n, m).since > 240).length; g.cash *= 1 - Math.min(0.2, 0.05*tired); }
   const trade = tradeIncome(n); for (const k of DEAL_K) g[k] += trade[k];   // trade routes (after the administration and difficulty factors)
   for (const a of armiesOf(n)) for (const t of UT){ const q = a.u[t]; if (!q) continue; u.cash += q*UNITS[t].upk; u.oil += q*UNITS[t].fuel; u.iron += q*MAINT[t].iron; u.elec += q*MAINT[t].elec; }
+  for (const p of ownedBy(n)){ const l = S.bld[p].fort; if (l > 0) u.cash += BUNKER_LV[Math.min(BUNKER_LV.length - 1, l)].upk; }   // the Bunker's upkeep (money a day; the only building with one)
   { const dd = n >= 0 && S.nations[n] ? DOCTRINES[S.nations[n].doc] : null; if (dd && dd.upk) u.cash *= dd.upk; }
   const net = {}; for (const k in g) net[k] = g[k] - u[k];
   return {gross:g, upkeep:u, net, eff, cash:g.cash, upk:u.cash, trade};
