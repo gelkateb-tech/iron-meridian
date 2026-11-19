@@ -1,0 +1,2 @@
+FLAG
+- 1. Rifle magazine is incorrectly positioned protruding horizontally from the side rather than underneath as in the reference.

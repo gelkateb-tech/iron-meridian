@@ -1,0 +1,2 @@
+FLAG
+- 1. Cab geometry and hatch placements do not match reference; extra exhaust cylinder added on opposite fender.

@@ -1,0 +1,2 @@
+FLAG
+- Point 7: Includes extra units (parked aircraft on deck) when only the carrier was requested.

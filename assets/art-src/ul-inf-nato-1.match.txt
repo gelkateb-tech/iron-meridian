@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Rifle grip is reversed (right hand forward, left hand rear), and chest loops and canteens are mirrored or rearranged compared to side view.

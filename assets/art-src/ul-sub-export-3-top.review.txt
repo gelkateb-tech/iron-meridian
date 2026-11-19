@@ -1,0 +1,2 @@
+FLAG
+- 1. SAME UNIT: Stern rudder configuration changed from the reference's X-tail to a cruciform fin layout.

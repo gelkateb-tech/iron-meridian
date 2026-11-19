@@ -1,0 +1,3 @@
+FLAG
+- 1: Canteens and pouches are symmetrically rearranged instead of matching the reference layout.
+- 1: Weapon receiver, stock, and trigger grip are missing or obscured with distorted hands holding the barrel.

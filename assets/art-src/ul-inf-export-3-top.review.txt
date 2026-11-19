@@ -1,0 +1,2 @@
+FLAG
+- 1: The rifle is malformed, missing its receiver, magazine, and pistol grip, with hands placed incorrectly.

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): weapon handling is reversed with right hand forward instead of left, and magazine erroneously extends sideways.
