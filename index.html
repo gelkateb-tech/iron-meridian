@@ -7538,9 +7538,11 @@ const DOTW = new Map();   // this frame: each drawn force's dot (world point)
 const dotR = () => 2*uiK();   // the fill's radius, css px (6 px across with its 1 px dark outline at the phone's 100% text size)
 const dotLift = (n, minor) => plateDims(n, 1, minor, false).h/2 + dotR() + 2;   // a far badge's centre above its dot (its lower edge just clear of the dot)
 const dotPos = a => DOTW.get(a.id) || dispPos(a);
-function dotDraw(x, y, tk, al){ if (al < 0.01) return; const r = dotR(), ga = ctx.globalAlpha; ctx.globalAlpha = ga*al;
-  ctx.beginPath(); ctx.arc(x, y, r + 1, 0, Math.PI*2); ctx.fillStyle = 'rgba(4,7,9,.92)'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = sideHi(tk); ctx.fill(); ctx.globalAlpha = ga; }
+const DOTC = new Map();   // the dot painted once per side colour, size and pixel ratio (a plain blit a frame, as the badges are)
+function dotDraw(x, y, tk, al){ if (al < 0.01) return; const r = dotR(), col = sideHi(tk), key = col + '|' + r + '|' + dpr; let c = DOTC.get(key);
+  if (!c){ if (DOTC.size > 40) DOTC.clear(); const R = r + 1, n = Math.ceil((2*R + 2)*dpr); c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.scale(dpr, dpr);
+    g.beginPath(); g.arc(n/dpr/2, n/dpr/2, R, 0, Math.PI*2); g.fillStyle = 'rgba(4,7,9,.92)'; g.fill(); g.beginPath(); g.arc(n/dpr/2, n/dpr/2, r, 0, Math.PI*2); g.fillStyle = col; g.fill(); DOTC.set(key, c); }
+  const ga = ctx.globalAlpha, w = c.width/dpr; ctx.globalAlpha = ga*al; ctx.drawImage(c, x - w/2, y - w/2, w, w); ctx.globalAlpha = ga; }
 function posDots(clusters){ const sat = new Set(); for (const c of clusters) if (c.pv && c.sats) for (const q of c.sats) for (const z of q.cl) sat.add(z);
   for (const c of clusters){ if (c.px == null || c.px < -20 || c.py < -20 || c.px > cw + 20 || c.py > ch + 20) continue;
     const al = (c.pv ? c.pa ?? 1 : c.owner === PLAYER || sat.has(c) ? 1 : 0)*(c.hud ? PF_HUD : 1); dotDraw(c.px, c.py, forceSide(c.list[0]), al); } }
@@ -8182,7 +8184,7 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
   const drop = c => { if (c && c.width) c.width = c.height = 0; };   // (frees the memory at once instead of at the next garbage collection)
   try { ART.gfx(); } catch (e) {}
   for (const c of CBAKE.values()) drop(c); for (const E of DT.cache.values()) drop(E.cv);   // (the biggest caches let go at once: Safari counts a canvas against its limit until it is collected)
-  for (const M of [UICONC, UIPC, TRSHIP, TMMIP, TMCELL, TMLAST, ARTRIM, FIGSH, SBM, SBR, AIRSH, AIRC, FLAGC, UCC, BNC, BNC_LAST, BNFC, CTILE, GTILE, CSCR,
+  for (const M of [UICONC, UIPC, TRSHIP, TMMIP, TMCELL, TMLAST, ARTRIM, FIGSH, SBM, SBR, AIRSH, AIRC, FLAGC, UCC, DOTC, BNC, BNC_LAST, BNFC, CTILE, GTILE, CSCR,
     CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CLGL, CJOB, CWANT, CITY_MISS, CNF]) M.clear();
   TMCB = 0; BNC_B = 0; BNP = null; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
   GRAIN = null; GROUND = null; NIGHT = null; CGLOWC = null; CLOUDS = null; CONTRAIL = null; TMSH = null; TMFOAM = null;
