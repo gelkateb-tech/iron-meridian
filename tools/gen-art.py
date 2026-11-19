@@ -820,6 +820,279 @@ for _g in UNIT_GROUPS:
             'prefix': UNIT_PREFIX_TOP.format(unit='main battle tank'),
             'subject': TANK_FRAME + ' ' + _desc, 'style': STYLE_V2_UNIT, 'refs': [_side]}
 
+# ---- THE OTHER UNITS (owner's decisions 2026-11-18, third set: "make the rest, with the Gemini check on every picture"). One entry per unit in UD
+# (see unit_def below); the pictures are built from the same pieces as the tank's: a side view (the master), a card scene and a top-down made from it.
+# What the tank sets taught, now in every prompt: the top-down keeps exactly the same layout of hatches, turrets, sensors, stowage and weapons as the
+# side view, on the same side, not mirrored, nothing added or dropped; light from the upper left in every kind; the top-down has no shadow on the grey
+# (the map draws its own); the card scenes stay photo-real (the owner liked them).
+UL_CLS = {
+    'gnd': dict(
+        detail="the same hull, turret or weapon mount, gun or launcher, wheels or tracks, the same paint colour and every same detail (stowage, armour, skirts, sensors, antennas, hatches)",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the "
+              "picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length "
+              "(any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame "
+              "with a margin all round. Only the {u}: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is "
+             "centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only "
+             "the {u}: no crew, no other vehicle, no ground, no track marks, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the "
+                     "frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene "
+                     "fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs."),
+        scene_look="the one vehicle is whole and in action, clearly visible and not cut off, about half the picture's width, in a landscape-shaped picture",
+        match_parts="hull, turret or weapon mount, gun or launcher, wheels or tracks (their number), skirts, sensors, antennas, stowage and other details"),
+    'air': dict(
+        detail="the same fuselage, wings, tails, engines, canopy, weapons, sensors and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model "
+              "(landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole "
+              "aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the "
+              "picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the {u}: no pilot visible, no other "
+              "aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both "
+             "sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) "
+             "fills about 90 percent of the picture. Only the {u}: no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length or full wingspan, whichever is larger, fills about 90 percent of the picture, nothing cut off. ",
+        scene_frame=("Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the "
+                     "middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: "
+                     "no pilot visible, no other aircraft, no people, no buildings, no signs, no markings."),
+        scene_look="the one aircraft is whole and in flight, clearly visible and not cut off, about 60 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="fuselage, wings (their shape and sweep), tails, engines and intakes, canopy, weapons, sensors, antennas and other details"),
+    'heli': dict(
+        detail="the same fuselage, rotor(s), tail, wings or stub wings, landing gear, canopy, weapons, sensors and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), shown as a studio model standing on its landing gear, "
+              "the rotor blades still and drawn sharp (not blurred), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long "
+              "side. The whole helicopter is centred left to right and top to bottom, and its full length including the rotor disc spans about 85 percent of the picture's "
+              "width; everything, rotor tips and tail included, is inside the frame with a margin all round. Only the {u}: no pilot visible, no other aircraft, no ground, "
+              "only a faint, tight soft shadow under it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, the rotor blades still and drawn "
+             "sharp (not blurred). The whole helicopter is centred left to right and top to bottom, and the larger of its length (nose to tail, rotor included) and its "
+             "rotor span fills about 90 percent of the picture. Only the {u}: no pilot visible, no other aircraft, no ground, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length or full rotor span, whichever is larger, fills about 90 percent of the picture, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle, slightly above the ground, the helicopter fills about 55 percent of the picture's width, in the middle of the "
+                     "frame, its rotor turning with a natural light motion blur on the blades only, natural daylight with the sun from the upper left. The scene fills the whole "
+                     "picture edge to edge. Only this one helicopter: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings."),
+        scene_look="the one helicopter is whole and in flight, clearly visible and not cut off, about 55 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="fuselage, rotor(s), tail, wings or stub wings, landing gear, canopy, weapons, sensors and other details"),
+    'ship': dict(
+        detail="the same hull, superstructure, masts, radars, guns, missile launchers, helicopter deck or flight deck and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so "
+              "that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull down to the waterline "
+              "visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's "
+              "width; everything, masts and bow included, is inside the frame with a margin all round. Only the {u}: no crew visible, no other ship, no aircraft, no ground, "
+              "only a faint, tight soft shadow under the hull."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull down to the waterline "
+             "visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's "
+             "height. Only the {u}: no crew visible, no other ship, no aircraft, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length (bow to stern) fills about 90 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle just above the water, the ship fills about 70 percent of the picture's width, in the middle of the frame, the "
+                     "horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only "
+                     "this one ship: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings."),
+        scene_look="the one ship is whole and under way at sea, clearly visible and not cut off, about 70 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="hull, superstructure, masts, radars, guns, launchers, flight deck or helicopter deck and other details"),
+    'sub': dict(
+        detail="the same hull, sail (conning tower), tail fins, propulsion, deck details and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so "
+              "that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull visible: no water, no waves, "
+              "no wake. The whole submarine is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's width; everything is "
+              "inside the frame with a margin all round. Only the {u}: no crew visible, no other ship, no ground, only a faint, tight soft shadow under it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull visible: no water, no "
+             "waves, no wake. The whole submarine is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's height. Only the "
+             "{u}: no crew visible, no other ship, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length (bow to stern) fills about 90 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle just above the water, the submarine runs on the surface and fills about 70 percent of the picture's width, in "
+                     "the middle of the frame, the horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole "
+                     "picture edge to edge. Only this one submarine: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings."),
+        scene_look="the one submarine is whole and running on the surface at sea, clearly visible and not cut off, about 70 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="hull, sail (conning tower), tail fins, deck details and other details"),
+    'man': dict(
+        detail="the same soldier: the same helmet, uniform, camouflage, body armour, pack, rifle or weapon, equipment and every same detail",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), standing in a ready pose with the weapon held ready, "
+              "turned toward the lower right of the picture so that the viewer sees the front and one side. The whole soldier, from the boots to the top of the helmet and "
+              "the weapon, is centred left to right and top to bottom and fills about 85 percent of the picture's height; the entire figure is inside the frame with a "
+              "margin all round. Only this one {u}: no other person, no vehicle, no ground, only a faint, tight soft shadow under the boots."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), facing the top of the picture, the weapon held ready in front. The whole "
+             "soldier (head, shoulders, arms, pack and weapon) is centred left to right and top to bottom and fills about 85 percent of the picture's height. Only this one "
+             "{u}: no other person, no vehicle, no ground, no shadow on the background."),
+        crop="Cropped and centred so the unit fills about 85 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle at about eye height, the soldier fills about half the picture's height and stands in the middle of the frame, "
+                     "the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole "
+                     "picture edge to edge. Only this one soldier: no other person, no vehicle, no buildings, no signs, no markings."),
+        scene_look="the one soldier is whole and in action, clearly visible and not cut off, about half the picture's height, in a landscape-shaped picture",
+        match_parts="helmet, uniform and camouflage pattern, body armour, pack, rifle or weapon, equipment and other details"),
+}
+UL_PAINT = {
+    'gnd': {'nato': "matte sand-tan", 'east': "dark olive-green", 'china': "plain mid-green", 'europe': "dark grey-green",
+            'export': "faded ochre-sand with a few patches of darker touch-up paint"},
+    'air': {'nato': "pale ghost-grey", 'east': "pale grey with a darker grey-green upper surface", 'china': "pale blue-grey", 'europe': "medium blue-grey",
+            'export': "sand and olive-green camouflage"},
+    'heli': {'nato': "matte olive-drab grey", 'east': "dark green with darker green blotches", 'china': "plain dark grey-green", 'europe': "dark green-grey",
+             'export': "faded olive-green and tan"},
+    'ship': {'nato': "haze grey", 'east': "mid grey with a darker grey deck", 'china': "light blue-grey", 'europe': "medium blue-grey",
+             'export': "pale grey with a few rust-streaked patches"},
+    'sub': {'nato': "matte black", 'east': "dark grey-black", 'china': "dark blue-black", 'europe': "dark slate grey", 'export': "dull dark grey-green"},
+    'man': {'nato': "a tan-and-brown multi-terrain camouflage", 'east': "olive-green and brown blotch camouflage", 'china': "green-and-brown digital camouflage",
+            'europe': "a grey-green and brown splinter camouflage", 'export': "a faded khaki and olive desert camouflage"}}
+UL_LAND = TANK_SCENE   # the settings of the ground units' card scenes (they include a dirt road)
+UL_SEA = {
+    'nato': "open blue ocean under a clear sky with a few high clouds, a long gentle swell",
+    'east': "a cold grey-green northern sea under a low, overcast sky, a long swell and a distant misty horizon",
+    'china': "a hazy blue-green coastal sea with a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky",
+    'europe': "a deep blue-green Atlantic sea with white-capped waves and tall cumulus clouds in a bright sky",
+    'export': "a calm turquoise tropical sea with a low distant island on the horizon and a few small white clouds in a hot clear sky"}
+UL_SKY = {
+    'nato': "a deep clear blue sky above a sunlit sea of white cloud far below",
+    'east': "a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest",
+    'china': "a hazy pale-blue sky with soft white clouds above distant green mountains far below",
+    'europe': "a bright sky with scattered cumulus clouds above distant green fields and a river far below",
+    'export': "a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below"}
+UL_LOW = {
+    'nato': "low over a dry grassland valley with rolling hills and scattered scrub bushes",
+    'east': "low over an open golden steppe with a line of birch trees and a dark pine forest on the horizon",
+    'china': "low over a hazy blue-green sea close to a rocky green coastline",
+    'europe': "low over gentle farmland with hedgerows, fields and a wooded ridge in the distance",
+    'export': "low over a dry savanna with scattered flat-topped acacia trees and red-brown earth"}
+UL_SETTING = {'gnd': UL_LAND, 'air': UL_SKY, 'heli': UL_LOW, 'ship': UL_SEA, 'sub': UL_SEA, 'man': UL_LAND}
+UL_UNIT_TAIL = (" Original generic design made for this game: it must not be a line-for-line copy of any real {kind}; only the family look described here. Plain "
+                "unmarked paint, no text, numbers, flags, stars, roundels or markings of any kind.")
+UL_PREFIX_SCENE = ("The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. Draw the SAME {unit}, exactly: {detail}, "
+                   "seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture "
+                   "is a full outdoor scene.")
+UL_PREFIX_TOP = ("The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. Draw the SAME {unit}, exactly: {detail}, "
+                 "but now seen exactly straight down from above, as described below. Keep exactly the same layout of hatches, turrets, sensors, antennas, stowage, "
+                 "weapons and every other part as the attached side view, on the same side of the unit: the long side that faces the viewer in the side view (the unit's "
+                 "right side, the one nearest the camera) is the right side of the top-down picture. Do not mirror it, do not rearrange it, do not add or drop any part. "
+                 "Light from the upper left. Do not redesign or simplify it. Do not copy the attached picture's camera angle: draw a true top-down plan view.")
+STYLE_UL_TOP = STYLE_V2_UNIT.replace("with a soft shadow under each object", "with no cast shadow on the background").replace("with only a soft shadow;", "with no shadow at all;")
+STYLE_UL_SCENE = STYLE_V2_SCENE   # photo-real scenes: kept (owner)
+assert "no cast shadow" in STYLE_UL_TOP and "no shadow at all" in STYLE_UL_TOP
+UD = {}   # key -> dict(label, cls, kind (the word for "real {kind}"), groups {g: (family, [g1, g2, g3])}, action, paint, setting, note, gens)
+
+def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None):
+    """label: the unit's name in the prompts; action: what it does in its card scene (a phrase after "A single {label}"); groups: {group: (family look, [3 generations])};
+    paint/setting: per-group overrides; frame_note: an extra sentence for the side and top frames; gens: the 'Generation n of 3' lead-ins [oldest, newer, newest]"""
+    UD[key] = dict(label=label, cls=cls, kind=kind, action=action, groups=groups, paint=paint or UL_PAINT[cls], setting=setting or UL_SETTING[cls], note=frame_note,
+                   gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "])
+    d, C = UD[key], UL_CLS[cls]; u = label
+    for g in UNIT_GROUPS:
+        fam, gl = groups[g]
+        for n in (1, 2, 3):
+            desc = f"{fam} Paint: {d['paint'][g]}. {d['gens'][n - 1]}{gl[n - 1]}" + UL_UNIT_TAIL.format(kind=kind)
+            nm = f'ul-{key}-{g}-{n}'
+            UNIT_LOOKS[nm + '-side'] = {
+                'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'side', 'group': g, 'look': n, 'fresh': n == 1, 'aspect': '1:1',
+                'prefix': UNIT_PREFIX_SIDE_NEW if n == 1 else UNIT_PREFIX_SIDE_FAMILY.format(unit=u),
+                'subject': C['side'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc, 'style': STYLE_V2_SIDE,
+                'refs': UNIT_ANCHORS if n == 1 else UNIT_ANCHORS + [f'ul-{key}-{g}-1-side']}
+            UNIT_LOOKS[nm + '-scene'] = {
+                'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'scene', 'group': g, 'look': n, 'fresh': False, 'aspect': '3:2',
+                'prefix': UL_PREFIX_SCENE.format(unit=u, detail=C['detail']),
+                'subject': f"A single {u} {action}. The setting: {d['setting'][g]}. {C['scene_frame']} The {u} is described in words as: {desc}",
+                'style': STYLE_UL_SCENE, 'refs': [nm + '-side']}
+            UNIT_LOOKS[nm + '-top'] = {
+                'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'top', 'group': g, 'look': n, 'fresh': False, 'aspect': '1:1',
+                'prefix': UL_PREFIX_TOP.format(unit=u, detail=C['detail']),
+                'subject': C['top'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc,
+                'style': STYLE_UL_TOP.replace(_CROP_NEW, C['crop']), 'refs': [nm + '-side']}
+
+
+# ---- Infantry Fighting Vehicle (key ifv)
+unit_def('ifv', 'infantry fighting vehicle', 'gnd', 'armoured vehicle',
+    "driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks", {
+    'nato': ("Family look (US/NATO): a tall, boxy, slab-sided tracked hull of flat armour plates, a flat angular two-man turret in the middle of the hull carrying an autocannon and an armoured missile-launcher box on its side, a wide rear troop ramp, heavy bolt-on armour.",
+             ["a Cold War era design: a simple boxy hull with a small flat-sided turret, a short autocannon, a twin missile tube pod on the turret side, six road wheels per side with bare track guards, small round firing ports along the hull side, a few stowage boxes on the rear deck.",
+              "a larger, heavier hull with spaced armour plates and full side skirts, a bigger angular turret with a long stabilised autocannon and an armoured missile box, a roof-mounted thermal sight box, a commander's hatch with a remote machine gun, seven road wheels per side.",
+              "a low, wide, angular hull with an unmanned turret carrying a large-calibre autocannon, smooth faceted add-on armour, four flat active-protection sensor panels at the corners, a slim sensor mast, a remote weapon station on the roof, full-length side skirts."]),
+    'east': ("Family look (Eastern): a low, compact, sloped tracked hull with a small rounded turret set well forward, smoke-grenade launcher tubes along the turret sides, reactive-armour bricks (rows of small square blocks) that cover more of the vehicle in every generation, a log and fuel drums on the rear deck.",
+             ["a low, boxy hull with a tiny one-man turret carrying a short smoothbore gun and a missile rail above it, six small road wheels per side, thin track guards, a few small roof hatches, a first small set of reactive bricks on the hull front only.",
+              "a larger, taller rounded turret carrying a short gun, a coaxial autocannon and a missile rail, rows of reactive bricks across the turret front and the hull front, thick side skirts, a remote machine gun on the roof, seven road wheels per side.",
+              "a very low, wide hull with an unmanned rounded turret in the centre, slat armour and reactive bricks over most of the hull, active-protection launcher tubes around the turret, a panoramic sight dome, armoured fuel tanks at the rear."]),
+    'china': ("Family look (China, its own lines): a clean, smooth, boxy tracked hull with a long, sharply sloped front plate and small, evenly spaced road wheels, a modest rounded-arrowhead turret with a thin autocannon and a missile launcher on top, a pair of laser-warning sensors on the turret front.",
+              ["a modest, low rounded turret with a short gun and a single missile rail, a simple hull with plain track guards and six small road wheels per side, a snorkel tube and a spare fuel drum on the rear deck, no add-on armour.",
+               "a bigger, angular turret with an autocannon and a twin missile launcher box on its side, a wedge of applied armour on the turret front, side skirts made of rows of small plates, a roof machine gun, seven small road wheels per side.",
+               "a clean, low turret of smooth facets with flat integrated sensor panels, an unmanned remote weapon station, active-protection domes at the turret corners, a hull front of smooth sloped composite armour, full side skirts, a longer autocannon."]),
+    'europe': ("Family look (Europe): a long, sleek, low and smoothly sloped tracked hull, a turret of sloping, rounded-faceted shapes with a slender autocannon, a small raised pod for the commander's panoramic sight, a clean low silhouette.",
+               ["a light, fast, compact design: a narrow hull with five road wheels per side, a small egg-shaped rounded turret with a thin autocannon, a plain commander's cupola, almost no add-on armour, bare track guards, a rear ramp.",
+                "a bigger, smoothly sloped turret with a stabilised autocannon and a missile launcher box on one side, side skirts, a raised panoramic sight pod, a hull with a sharply sloped front, six road wheels per side.",
+                "a tall, wide, unmanned turret of smooth faceted panels with a large autocannon and a small second weapon beside it, a slim sensor mast, modular armour blocks, active-protection sensors, full side skirts, a low sleek hull."]),
+    'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a small round or flat-topped turret on a boxy tracked hull, bolt-on kits and add-on parts that look like they were fitted by the buyer.",
+               ["a post-war pattern: a small round one-man turret with a short gun, a low boxy hull with six road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the roof.",
+                "a widely exported 1970s-80s pattern: a larger two-man turret with an autocannon, a missile rail and a rangefinder box, bolt-on side skirts, a smoke-launcher pack, a few add-on armour plates on the turret front, a snorkel tube.",
+                "a modern export-grade design: a modular angular turret with an autocannon, bolt-on composite armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, side skirts, a clean but practical look made to be sold to many armies."])})
+
+# ---- Mobile Artillery (key art)
+unit_def('art', 'self-propelled howitzer', 'gnd', 'self-propelled gun',
+    "standing in a firing position beside a dirt road, its gun raised at a high angle, a puff of smoke and dust at the muzzle brake",
+    {'nato': ("Family look (US/NATO): a tall, heavy, boxy, slab-sided armoured turret of flat plates on a wide tracked hull, a long barrel with a large muzzle brake, a hinged rear spade.",
+              ["a Cold War era design: a simple boxy turret with a medium-length barrel, a large perforated muzzle brake and a fume extractor, a machine-gun ring on the turret roof, seven road wheels per side with bare track guards, stowage boxes on the rear.",
+               "a clearly newer, heavier design: a larger, wider angular turret with a long barrel, a rear bustle that holds ammunition, side skirts, a remote machine gun on the roof, a rear ammunition-loading door, a folded rear spade.",
+               "a near-future design: a low, angular, unmanned turret with a very long barrel with a thermal sleeve, an automatic loader bustle, flat faceted armour panels, flat sensor panels, an auxiliary power unit at the rear, full-length side skirts."]),
+     'east': ("Family look (Eastern): a low, wide, rounded turret on a low tracked hull, a long barrel with a muzzle brake and a bulge-shaped fume extractor, a log and fuel drums on the rear deck, reactive-armour bricks that cover more in every generation.",
+              ["a small, low, round turret with a medium barrel and a muzzle brake, a low hull with six small road wheels per side, bare track guards, a rear spade, stacks of shell boxes and a log on the rear deck.",
+               "a larger, low rounded turret with a long barrel, a muzzle brake and a fume extractor, a thick turret front with rows of reactive bricks, side skirts, a remote machine gun on the roof, a rear spade, extra fuel drums.",
+               "a fully automated, very low, unmanned rounded turret with a long barrel and a thick armoured mantlet, reactive bricks along the hull front, slat armour, a sensor dome on the roof, a hinged rear spade."]),
+     'china': ("Family look (China, its own lines): a broad, flat arrowhead-shaped turret on a smooth boxy tracked hull with a sharply sloped front plate and seven small road wheels, a long barrel with a double-baffle muzzle brake, a pair of laser-warning sensors.",
+               ["a modest arrowhead turret with a medium barrel and a muzzle brake, a plain hull with bare track guards, a rear spade, a spare fuel drum on the rear deck, no add-on armour.",
+                "a bigger angular turret with a long barrel, a boxy rear bustle, side skirts made of rows of small plates, a roof machine gun, a folded rear spade.",
+                "a low, smooth-faceted automated turret with a very long barrel, flat integrated sensor panels, a remote weapon station, an automatic loader bustle, full side skirts."]),
+     'europe': ("Family look (Europe): a sleek, smoothly sloped turret on a long, low tracked hull, a long slender barrel with a muzzle brake, a clean low silhouette, a hinged rear spade.",
+                ["a light, compact design: a small rounded turret, a medium slender barrel with a muzzle brake, a narrow hull with six road wheels per side, bare track guards, a small stowage rack at the rear.",
+                 "a large, smoothly sloped turret with a very long slender barrel, a long rounded rear bustle, side skirts, a raised thermal sight pod, seven road wheels per side.",
+                 "an unmanned turret of smooth faceted panels with a very long barrel, a slim sensor mast, a small remote machine gun, modular armour blocks, a low sleek hull with full skirts."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or boxy turret on a boxy tracked hull, bolt-on kits and add-on parts that look fitted by the buyer.",
+                ["a post-war pattern: a small round turret with a short barrel and a big muzzle brake, a low boxy hull with four large road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the roof.",
+                 "a widely exported 1970s-80s pattern: a larger boxy turret with a long barrel and a muzzle brake, bolt-on side skirts, a smoke-launcher pack, a rear spade, a few add-on armour plates on the turret front.",
+                 "a modern export-grade design: a modular angular turret with a long barrel, a remote machine-gun station, a thermal sight box, bolt-on armour packages, an auxiliary power pack at the rear, side skirts, a practical look made to be sold to many armies."])})
+
+# ---- Mobile SAM (key sam)
+unit_def('sam', 'mobile surface-to-air missile launcher vehicle', 'gnd', 'missile vehicle',
+    "parked beside a dirt road with its launcher raised, the missile canisters pointing up at the sky and its radar antenna turning",
+    {'nato': ("Family look (US/NATO): a wide, heavy tracked carrier of flat armour plates, flat-sided angular box canisters on a pivoting launcher platform, a flat angular radar housing, matte finish.",
+              ["a Cold War era design: a boxy tracked carrier with a pivoting rack of three box canisters, a small boxy radar antenna on a short mast beside the cab, bare track guards, a few stowage boxes.",
+               "a clearly newer, heavier design: a tracked carrier with a rack of four armoured canisters on a pivoting platform and a flat phased-array radar panel at the back of the platform, a roof sensor box, side skirts.",
+               "a near-future design: an angular, faceted launcher housing with eight canisters in two flat rows, radar panels built into its sides, a slim sensor mast, a low hull with full skirts."]),
+     'east': ("Family look (Eastern): a big eight-wheeled heavy truck chassis with a boxy cab, tall cylindrical missile canisters on a tilting rack, a round dish or flat panel radar on a raised mast, outrigger jacks at the corners.",
+              ["a Cold War era design: four tall missile tubes on a tilting rail launcher on the truck bed, a round dish radar on a short mast behind the cab, outrigger jacks, a plain boxy cab.",
+               "a clearly newer design: four large cylindrical canisters in a tilted rack, a flat phased-array radar panel on a folding mast behind the cab, a larger cab with a sloped front, outrigger jacks, a small antenna on the roof.",
+               "a near-future design: two rows of four canisters in a long sloped launch rack, an angular faceted cab, flat radar panels on a mast and on the cab sides, slim antennas, a clean low-signature look."]),
+     'china': ("Family look (China, its own lines): a six-wheeled heavy truck chassis with a sharply angular, boxy cab, a broad flat launcher box with sloped panels, a flat rectangular phased-array radar, outrigger jacks.",
+               ["a modest design: a launcher box with four rectangular missile canisters on a tilting rail, a small round radar dish on a short mast, outrigger jacks, a plain boxy cab.",
+                "a clearly newer design: a larger launcher with six large canisters in two rows, a flat phased-array radar panel on a raised mast behind the cab, a sloped angular cab, outrigger jacks.",
+                "a near-future design: a smooth faceted launcher box with eight canisters under flat covers, flat radar panels built into its sides, slim antennas, a smooth low cab, full side panels."]),
+     'europe': ("Family look (Europe): a sleek, wheeled eight-by-eight chassis with a low, smoothly sloped cab, a compact launcher with round-topped canisters, a slim raised radar on a mast, a clean low silhouette.",
+                ["a light, compact design: a small wheeled carrier with two box canisters on a swivelling mount, a small round radar dish on top of the cab, a plain cab, short outrigger jacks.",
+                 "a clearly newer design: a larger wheeled carrier with a vertical launcher of four tall canisters, a rotating flat radar panel on a mast, a sloped cab, outrigger jacks.",
+                 "a near-future design: a long carrier with a vertical launcher block of eight canisters, a smooth faceted radar mast with flat panels, a low sleek cab, a small sensor pod on the roof."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, an older box-frame launcher on a plain truck or trailer chassis, bolt-on kits that look fitted by the buyer.",
+                ["a post-war pattern: a rail launcher with two big missiles on a plain truck bed, a small dish radar on a short mast, a plain boxy cab, outrigger jacks, spare wheels on the side.",
+                 "a widely exported 1970s-80s pattern: a rack of four boxy canisters on a tilting launcher, a round dish radar on a mast, bolt-on side boxes, a smoke-launcher pack on the cab, a plain truck cab.",
+                 "a modern export-grade design: a modular launcher with six canisters, a flat panel radar on a short mast, a new sloped cab with bolt-on armour, an auxiliary power pack at the rear, a practical look made to be sold to many armies."])})
+
+# ---- Rocket Artillery (key mlrs)
+unit_def('mlrs', 'multiple rocket launcher vehicle', 'gnd', 'rocket launcher vehicle',
+    "standing in a firing position beside a dirt road, rockets leaving its launcher in a bright plume of smoke and fire, dust blown from the ground",
+    {'nato': ("Family look (US/NATO): a tracked carrier of flat armour plates with a large boxy armoured cab at the front and a rear launcher box holding a block of rockets in square pods, matte finish.",
+              ["a Cold War era design: a tracked carrier with a small flat cab, a rear launcher box with six rocket tubes in two rows of three, bare track guards, six road wheels per side, stowage boxes on the sides.",
+               "a clearly newer, heavier design: a bigger angular cab with a flat armoured windscreen shield, a launcher box with two enclosed square rocket pods, a roof sight box, side skirts, seven road wheels per side.",
+               "a near-future design: a low, angular, stealthy cab with flat panels, an automated launcher with two enclosed pods of more rockets under flat faceted covers, flat sensor panels, full skirts."]),
+     'east': ("Family look (Eastern): a big heavy wheeled truck chassis with a boxy cab with armoured shutters, a rear launcher frame with a block of long open tubes, outrigger jacks at the rear, a spare wheel under the frame.",
+              ["a Cold War era design: a six-wheeled truck with a launcher frame of forty short tubes in four rows, a plain cab, rear outrigger jacks, a spare wheel, a stowage box on the side.",
+               "a clearly newer design: an eight-wheeled truck with a launcher frame of twelve large tubes in three rows, an armoured cab with shutters, rear outrigger jacks, a roof machine gun.",
+               "a near-future design: an eight-wheeled truck with an automated launcher of sixteen tubes in an enclosed, faceted frame, an angular low-signature cab, a small sensor on the roof, outrigger jacks."]),
+     'china': ("Family look (China, its own lines): a wheeled heavy truck chassis with a sharply angular, boxy cab, a broad rear launcher with a large rectangular block of tubes in a sloped box, outrigger jacks, smooth panels.",
+               ["a modest design: a six-wheeled truck with a launcher block of twenty small tubes in two rows, a plain boxy cab, outrigger jacks at the rear.",
+                "a clearly newer design: an eight-wheeled truck with two large enclosed square pods of tubes, a sloped angular cab with armoured shutters, a laser-warning pair on the roof, outrigger jacks.",
+                "a near-future design: an eight-wheeled truck with a smooth faceted launcher with two enclosed pods, a low angular cab with flat panels, a sensor dome on the roof, full side panels."]),
+     'europe': ("Family look (Europe): a sleek tracked carrier with a low, smoothly sloped armoured cab, a rear launcher pod block of rounded-square pods, a clean low silhouette.",
+                ["a light, compact design: a narrow tracked carrier with a small cab and a rear launcher box of twelve tubes in two rows, bare track guards, six road wheels per side.",
+                 "a clearly newer design: a larger carrier with a smoothly sloped cab and two enclosed rounded-square pods on a rear launcher, side skirts, a roof sight pod.",
+                 "a near-future design: a long, low carrier with a faceted cab and an automated launcher with two enclosed pods, a slim sensor mast, modular armour blocks, full skirts."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a plain truck chassis with a bolt-on launcher frame, additional boxes and kits that look fitted by the buyer.",
+                ["a post-war pattern: a six-wheeled truck with a launcher frame of sixteen short tubes in four rows, a plain open-top cab with a canvas roof, rear outrigger jacks, a spare wheel.",
+                 "a widely exported 1970s-80s pattern: a six-wheeled truck with a launcher frame of forty tubes in four rows, an armoured cab with shutters, bolt-on side boxes, rear outrigger jacks.",
+                 "a modern export-grade design: an eight-wheeled truck with a modular launcher of two enclosed pods, a new sloped cab with bolt-on armour, an auxiliary power pack, a practical look made to be sold to many armies."])})
+
+# ---- END OF THE UNIT DEFINITIONS (new units are added above this line)
+
 PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
 REVIEW = False       # --review: the Gemini check after each picture
 REF_USED = {}        # name: the reference picture files its request attached (for the check)
@@ -876,6 +1149,17 @@ REVIEW_KIND = {   # unit pictures: points 3 and 4 and the reference sentence, by
     'top': (REVIEW_P3, "the whole tank is inside the frame, nothing cut off, centred, its length filling about 90 percent of the "
             "picture's height, seen exactly straight down (a true plan view, no side or front visible), gun and front pointing to the top.")}
 
+def review_kind(name):
+    """points 3 and 4 of the check for a unit picture: the tank's own texts, or the texts built from the other unit's class"""
+    u = UNIT_LOOKS[name]
+    if 'cls' not in u: return REVIEW_KIND[u['kind']]
+    C, w, k = UL_CLS[u['cls']], u['unit'], u['kind']; dim = 'height' if u['cls'] == 'man' else 'width'
+    if k == 'side': return (REVIEW_P3, f"the whole {w} is inside the frame with a margin, nothing cut off, centred, filling about 85 percent of the frame's {dim}, seen in a front three-quarter side view from slightly above (not straight down, not a flat side-on profile).")
+    if k == 'scene': return ("this picture is meant to be a full outdoor scene filling the whole picture edge to edge. FAIL this point if there is a plain grey studio background, a frame, a border, or a blue or coloured tint or scanlines. The surroundings should be a believable natural setting for this kind of unit.",
+                             C['scene_look'][0].upper() + C['scene_look'][1:] + '.')
+    return ("the background is a plain, flat, uniform light grey with NO shadow, shadow plate or ground patch under or beside the unit; no base slab, ground, terrain or horizon.",
+            f"the whole {w} is inside the frame, nothing cut off, centred, filling about 90 percent of the picture (85 percent for a soldier), seen exactly straight down (a true plan view, no side or front visible), its front or nose pointing to the top.")
+
 def review_what(name):
     if name in UNIT_LOOKS: return UNIT_LOOKS[name]['prefix'] + ' ' + UNIT_LOOKS[name]['subject']
     if name in SUBJECTS: return SUBJECTS[name]
@@ -893,11 +1177,11 @@ def review(name, path):
     """the check: returns (verdict, reasons); logs its own cost row; writes <picture>.review.txt. Never raises, never retries."""
     refs = review_refs(name)
     if not refs: rtxt = 'There is no reference picture.'
-    elif name in UNIT_LOOKS and UNIT_LOOKS[name]['kind'] != 'side': rtxt = 'Picture 2 is the reference it was made from: the master side view of the very same tank. It must be the same tank: same shape, turret, gun, wheels or tracks, paint and details.'
+    elif name in UNIT_LOOKS and UNIT_LOOKS[name]['kind'] != 'side': rtxt = ('Picture 2 is the reference it was made from: the master side view of the very same ' + ('tank' if 'cls' not in UNIT_LOOKS[name] else UNIT_LOOKS[name]['unit']) + '. It must be the same ' + ('tank' if 'cls' not in UNIT_LOOKS[name] else 'unit') + ': same shape, parts, details and paint' + (' (a top-down must keep the same layout of hatches, turrets, sensors, stowage and weapons as the side view, on the same side, not mirrored, with no part added or dropped).' if UNIT_LOOKS[name]['kind'] == 'top' else '.'))
     elif name in UNIT_LOOKS and UNIT_LOOKS[name]['fresh']: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only, not the subject or the camera.'
     elif name in UNIT_LOOKS: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only. Picture 4 is generation 1 of the same unit and group: the new one must keep the paint and family look but be a clearly different, newer model.'
     else: rtxt = 'The other attached picture(s) are the reference(s) it was made from.'
-    p3, p4 = REVIEW_KIND[UNIT_LOOKS[name]['kind']] if name in UNIT_LOOKS else (REVIEW_P3, REVIEW_P4)
+    p3, p4 = (review_kind(name) if name in UNIT_LOOKS else (REVIEW_P3, REVIEW_P4))
     text = REVIEW_PROMPT.format(refs=rtxt, what=review_what(name), p3=p3, p4=p4, style=UNIT_LOOKS[name]['style'] if name in UNIT_LOOKS else STYLE_V2)
     parts = [{'text': text}, image_part(path)] + [image_part(os.path.join(ROOT, r)) for r in refs]
     body = {'contents': [{'parts': parts}], 'generationConfig': {'responseMimeType': 'application/json'}}
@@ -940,12 +1224,31 @@ MATCH_PROMPT = (
     "Use FLAG if any point fails or you are unsure, and name each failed point by its number and the picture it concerns, with a short "
     "plain reason (under 25 words each).")
 
+MATCH_PROMPT2 = (
+    "You are the quality checker for the unit pictures of a strategy game. Three pictures of ONE {unit} are attached, in this order: "
+    "picture 1 is the SIDE view (the master: a three-quarter side view on a plain grey background), picture 2 is the CARD SCENE (the "
+    "same {unit} in action in its natural setting), picture 3 is the TOP-DOWN (seen from straight above, front or nose up, on a plain grey background). "
+    "All three are meant to show exactly the same unit. The scene and the top-down were made from the side view.\n\n"
+    "Check this checklist, each point on its own:\n"
+    "1. SAME UNIT: the overall shape and every part ({parts}) are the same in all three, as far as each view can show them. For the top-down in particular, "
+    "the layout of hatches, turrets, sensors, antennas, stowage and weapons must be the same as in the side view, on the same side (not mirrored, not rearranged), with no part added or dropped.\n"
+    "2. SAME PAINT: the paint colour and finish are the same in all three (a landscape's or the sky's light may change them a little).\n"
+    "3. RIGHT VIEW: picture 1 is a front three-quarter side view from slightly above on plain grey; picture 2 is a full outdoor scene "
+    "with no grey studio background and no tint; picture 3 is a true straight-down plan view, front up, on plain grey with no shadow plate.\n"
+    "4. NO MARKINGS: no text, letters, numbers, logos, flags, emblems, stars, roundels or insignia in any of the three.\n"
+    "5. NO EXTRAS: exactly one unit in each picture; no second vehicle, aircraft, ship or person, no buildings (distant trees, hills, sea and clouds are fine).\n\n"
+    'Answer with JSON only, in this shape: {{"verdict": "MATCH" or "FLAG", "flagged_pictures": ["side" and/or "scene" and/or "top", only the ones that do not match or are wrong], '
+    '"reasons": ["short plain reason", "..."]}}. Use MATCH only if all five points are fine (flagged_pictures empty, reasons may be empty). '
+    "Use FLAG if any point fails or you are unsure, and name each failed point by its number and the picture it concerns, with a short "
+    "plain reason (under 25 words each).")
+
 def match(look):
     """look: 'ul-tank-nato-1'. Returns (verdict, reasons) or None when a picture is missing. Logs its own cost row; never raises, never redoes anything."""
     paths = [ul_path(f'{look}-{k}') for k in UNIT_KINDS]
     if not all(paths):
         print(f'{look}: skipped, missing {[f"{look}-{k}" for k, q in zip(UNIT_KINDS, paths) if not q]}'); return None
-    text = MATCH_PROMPT.format(unit=UNIT_LOOKS[f'{look}-side']['unit'])
+    U0 = UNIT_LOOKS[f'{look}-side']
+    text = MATCH_PROMPT.format(unit=U0['unit']) if 'cls' not in U0 else MATCH_PROMPT2.format(unit=U0['unit'], parts=UL_CLS[U0['cls']]['match_parts'])
     body = {'contents': [{'parts': [{'text': text}] + [image_part(q) for q in paths]}], 'generationConfig': {'responseMimeType': 'application/json'}}
     verdict, reasons, flagged, usd, tok = 'FLAG', ['the check could not run or its answer was unreadable: look at the three pictures yourself'], [], 0.0, {}
     try:
@@ -969,7 +1272,7 @@ def match(look):
 # ---- SPENDING (owner's decisions 2026-11-18): the log stood at 255 calls, $10.27 when the Gemini balance was $40.88. The $12 line is
 # removed. After every run the new spending since then, the running total and the estimated balance are printed; a run that could take
 # the estimated balance below $5 is refused. (Add the owner's top-ups to BALANCE_TOPUPS_USD when he says so.)
-BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, 0.0, 5.0
+BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, -0.30, 5.0   # -0.30: the owner's figure when this job started (2026-11-19) was about $38.75, not $39.05; add top-ups here
 def spend_totals():
     rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
     return sum(r.get('calls', 1) for r in rows), sum(r.get('usd_est', 0) for r in rows)
@@ -1131,8 +1434,42 @@ def collect(job, force):
         if 'error' in it: print(f'{name}: error {it["error"].get("message", it["error"])}'); continue
         save(name, it.get('response', {}), force, True)
 
+def doc_unit(key):
+    """the markdown section of docs/UNIT-LOOKS-PROMPTS.md for one unit (printed; paste or append it): the unit-specific words of all 15 looks, and how the 45 prompts are put together"""
+    d = UD[key]; C = UL_CLS[d['cls']]; u = d['label']; GN = {'nato': 'US/NATO', 'east': 'Eastern', 'china': 'China', 'europe': 'Europe', 'export': 'Export'}
+    o = [f"### {u[0].upper() + u[1:]} (`{key}`): 45 prompts, built from these words", '',
+         f"Class of picture: `{d['cls']}`. Files: `assets/art-src/ul-{key}-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).", '',
+         f"Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section \"The other units\" above; what is unit-specific is below.", '',
+         f"- **Side frame:** {C['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+         f"- **Top-down frame:** {C['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+         f"- **Card scene:** \"A single {u} {d['action']}. The setting: <the group's setting>. {C['scene_frame']} The {u} is described in words as: <the look's words>\"", '']
+    for g in UNIT_GROUPS:
+        fam, gl = d['groups'][g]
+        o += [f"#### {GN[g]}", '', f"- **Setting of the card scene:** {d['setting'][g]}.", f"- **Family look:** {fam} Paint: {d['paint'][g]}."]
+        for n in (1, 2, 3): o.append(f"- **Look {n} (levels {['1-3', '4-6', '7-8'][n - 1]}):** {d['gens'][n - 1]}{gl[n - 1]}")
+        o.append('')
+    print('\n'.join(o))
+
+def doc_shared():
+    """the shared blocks of the other units' prompts, as the section header of docs/UNIT-LOOKS-PROMPTS.md part 5"""
+    q = lambda t: '```text\n' + t + '\n```\n'
+    o = ['## 5. The other units (owner: "make the rest, with the Gemini check on every picture", 2026-11-19)', '',
+         "The tank's pattern for every other unit with looks: 5 groups x 3 looks x 3 kinds = 45 pictures a unit, no shared designs. The unit-specific words (frames, scene action, family look, paint, setting and the three generations of each group) are written per unit below; the blocks every unit shares are here. `python3 -I tools/gen-art.py --dry-run ul-<unit>-<group>-<look>-<kind>` prints any complete prompt (free).", '',
+         '**What the tank sets taught, now in every prompt.** The top-down keeps exactly the same layout of hatches, turrets, sensors, stowage and weapons as the side view, on the same side, not mirrored, nothing added or dropped (the three-way check flagged 8 of the 15 tank looks for this). Light from the upper left in every kind. The top-down has no shadow on the grey (the map draws its own); `prep-art.py` also removes any shadow left. The card scenes stay photo-real. Nothing flagged is redone: the owner decides.', '',
+         '**Side view, look 1 (prefix):**', q(UNIT_PREFIX_SIDE_NEW), '**Side view, looks 2 and 3 (prefix; the group\'s look-1 side view is attached as the third picture):**', q(UNIT_PREFIX_SIDE_FAMILY),
+         '**Side view style:**', q(STYLE_V2_SIDE), '**Card scene prefix** (`{detail}` is the class\'s list of parts):', q(UL_PREFIX_SCENE), '**Card scene style:**', q(STYLE_UL_SCENE),
+         '**Top-down prefix:**', q(UL_PREFIX_TOP), '**Top-down style** (the crop sentence is the class\'s):', q(STYLE_UL_TOP), '**Tail of every unit description:**', q(UL_UNIT_TAIL), '']
+    for c, C in UL_CLS.items():
+        o += [f"**Class `{c}`: parts to keep the same:** {C['detail']}", f"- crop sentence of the top-down: {C['crop']}", f"- paint by group: " + '; '.join(f"{g}: {UL_PAINT[c][g]}" for g in UNIT_GROUPS), '']
+    o += ['**Card scene settings by class and group**', '']
+    for nm, T in (('ground units', UL_LAND), ('aircraft', UL_SKY), ('helicopters', UL_LOW), ('ships and submarines', UL_SEA)):
+        o += [f"- {nm}: " + '; '.join(f"{g}: {T[g]}" for g in UNIT_GROUPS)]
+    print('\n'.join(o) + '\n')
+
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
+    if a[0] == '--doc-shared': doc_shared(); return
+    if a[0] == '--doc': doc_unit(a[1]); return
     if a[0] == '--list':
         for n in list(SUBJECTS) + list(UNIT_LOOKS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS) + list(R_BANNERS) + list(R_ICONS):
             print(('done ' if any(os.path.exists(os.path.join(OUT, f'{stem(n)}.{x}')) for x in ('png', 'webp')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))

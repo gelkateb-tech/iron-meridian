@@ -714,3 +714,282 @@ $2.50 per million out, thinking tokens counted as out): about $0.003 a single ch
 4. Cut-outs, no API call: `python3 -I tools/prep-art.py assets/art-src assets/art ul` writes `assets/art/ul-tank-<group>-<look>-side.webp`
    and `-top.webp` (transparent) and `-scene.webp` (resized, not cut out).
 5. Only after the owner's OK on the tank sets, the other units.
+
+## 5. The other units (owner: "make the rest, with the Gemini check on every picture", 2026-11-19)
+
+The tank's pattern for every other unit with looks: 5 groups x 3 looks x 3 kinds = 45 pictures a unit, no shared designs. The unit-specific words (frames, scene action, family look, paint, setting and the three generations of each group) are written per unit below; the blocks every unit shares are here. `python3 -I tools/gen-art.py --dry-run ul-<unit>-<group>-<look>-<kind>` prints any complete prompt (free).
+
+**What the tank sets taught, now in every prompt.** The top-down keeps exactly the same layout of hatches, turrets, sensors, stowage and weapons as the side view, on the same side, not mirrored, nothing added or dropped (the three-way check flagged 8 of the 15 tank looks for this). Light from the upper left in every kind. The top-down has no shadow on the grey (the map draws its own); `prep-art.py` also removes any shadow left. The card scenes stay photo-real. Nothing flagged is redone: the owner decides.
+
+**Side view, look 1 (prefix):**
+```text
+The attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background. Do NOT copy anything in them: no buildings, tents, trucks, ships or ground in the new picture. The buildings are seen at an angle from above, and the new picture uses the same angle family, as described below: a front three-quarter side view from slightly above.
+```
+
+**Side view, looks 2 and 3 (prefix; the group's look-1 side view is attached as the third picture):**
+```text
+The first two attached pictures are two buildings from the same game. They are style references only: copy their rendering style, materials, colours, soft studio light from the upper left, level of detail and finish, and their plain flat light grey background; do NOT copy anything in them. The third attached picture is generation 1 of this group's {unit}, seen from the same three-quarter side view. Use it only as the reference for the camera angle, the size and framing, the lighting, the rendering style, the paint colour, the plain grey background and the group's family look. Draw a NEW, clearly different and newer model as described below. Do not copy the attached {unit}: its shape is replaced by the new design.
+```
+
+**Side view style:**
+```text
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with a soft shadow under each object. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: a front three-quarter side view from slightly above (about 30 degrees down, the classic strategy-game model angle, the same angle family as the attached buildings), the unit's front turned toward the lower right of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with only a soft shadow; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the whole unit (nose to tail, including any gun barrel) fills about 85 percent of the picture's width, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+**Card scene prefix** (`{detail}` is the class's list of parts):
+```text
+The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. Draw the SAME {unit}, exactly: {detail}, seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture is a full outdoor scene.
+```
+
+**Card scene style:**
+```text
+Style: the same clean, polished 3D strategy-game render as the attached picture, with crisp edges, simplified shapes and clear silhouettes, bright but natural colours and slightly realistic materials with subtle wear, dust and weathering; not toy-like, not a photograph. Natural daylight and soft shadows. Landscape 3:2 image: the scene fills the whole picture edge to edge, with no grey studio background, no border, no frame, no vignette, no colour tint, no filter and no overlay of any kind. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+**Top-down prefix:**
+```text
+The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. Draw the SAME {unit}, exactly: {detail}, but now seen exactly straight down from above, as described below. Keep exactly the same layout of hatches, turrets, sensors, antennas, stowage, weapons and every other part as the attached side view, on the same side of the unit: the long side that faces the viewer in the side view (the unit's right side, the one nearest the camera) is the right side of the top-down picture. Do not mirror it, do not rearrange it, do not add or drop any part. Light from the upper left. Do not redesign or simplify it. Do not copy the attached picture's camera angle: draw a true top-down plan view.
+```
+
+**Top-down style** (the crop sentence is the class's):
+```text
+Style: a clean, polished 3D strategy-game model render with crisp edges, simplified shapes and clear silhouettes, readable when shown small. Bright but natural colours, soft even studio lighting from the upper left with no cast shadow on the background. Slightly realistic materials: real concrete, brushed metal, asphalt and grass with subtle wear and weathering; not toy-like, not a photograph. Camera: the same fixed view for every picture: exactly straight down from above, a true top-down plan view with no perspective tilt, the unit's front pointing to the top of the picture, at the same scale. Background: a plain, flat, uniform light grey (#D9D9D9) with no shadow at all; no base slab, no ground tile, no terrain, no horizon. Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. Square 1:1 image. Original generic design. No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.
+```
+
+**Tail of every unit description:**
+```text
+ Original generic design made for this game: it must not be a line-for-line copy of any real {kind}; only the family look described here. Plain unmarked paint, no text, numbers, flags, stars, roundels or markings of any kind.
+```
+
+
+**Class `gnd`: parts to keep the same:** the same hull, turret or weapon mount, gun or launcher, wheels or tracks, the same paint colour and every same detail (stowage, armour, skirts, sensors, antennas, hatches)
+- crop sentence of the top-down: Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. 
+- paint by group: nato: matte sand-tan; east: dark olive-green; china: plain mid-green; europe: dark grey-green; export: faded ochre-sand with a few patches of darker touch-up paint
+
+**Class `air`: parts to keep the same:** the same fuselage, wings, tails, engines, canopy, weapons, sensors and every same detail, the same paint colour
+- crop sentence of the top-down: Cropped and centred so the unit's full length or full wingspan, whichever is larger, fills about 90 percent of the picture, nothing cut off. 
+- paint by group: nato: pale ghost-grey; east: pale grey with a darker grey-green upper surface; china: pale blue-grey; europe: medium blue-grey; export: sand and olive-green camouflage
+
+**Class `heli`: parts to keep the same:** the same fuselage, rotor(s), tail, wings or stub wings, landing gear, canopy, weapons, sensors and every same detail, the same paint colour
+- crop sentence of the top-down: Cropped and centred so the unit's full length or full rotor span, whichever is larger, fills about 90 percent of the picture, nothing cut off. 
+- paint by group: nato: matte olive-drab grey; east: dark green with darker green blotches; china: plain dark grey-green; europe: dark green-grey; export: faded olive-green and tan
+
+**Class `ship`: parts to keep the same:** the same hull, superstructure, masts, radars, guns, missile launchers, helicopter deck or flight deck and every same detail, the same paint colour
+- crop sentence of the top-down: Cropped and centred so the unit's full length (bow to stern) fills about 90 percent of the picture's height, nothing cut off. 
+- paint by group: nato: haze grey; east: mid grey with a darker grey deck; china: light blue-grey; europe: medium blue-grey; export: pale grey with a few rust-streaked patches
+
+**Class `sub`: parts to keep the same:** the same hull, sail (conning tower), tail fins, propulsion, deck details and every same detail, the same paint colour
+- crop sentence of the top-down: Cropped and centred so the unit's full length (bow to stern) fills about 90 percent of the picture's height, nothing cut off. 
+- paint by group: nato: matte black; east: dark grey-black; china: dark blue-black; europe: dark slate grey; export: dull dark grey-green
+
+**Class `man`: parts to keep the same:** the same soldier: the same helmet, uniform, camouflage, body armour, pack, rifle or weapon, equipment and every same detail
+- crop sentence of the top-down: Cropped and centred so the unit fills about 85 percent of the picture's height, nothing cut off. 
+- paint by group: nato: a tan-and-brown multi-terrain camouflage; east: olive-green and brown blotch camouflage; china: green-and-brown digital camouflage; europe: a grey-green and brown splinter camouflage; export: a faded khaki and olive desert camouflage
+
+**Card scene settings by class and group**
+
+- ground units: nato: a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt; east: a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road; china: green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track; europe: gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track; export: a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road
+- aircraft: nato: a deep clear blue sky above a sunlit sea of white cloud far below; east: a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest; china: a hazy pale-blue sky with soft white clouds above distant green mountains far below; europe: a bright sky with scattered cumulus clouds above distant green fields and a river far below; export: a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below
+- helicopters: nato: low over a dry grassland valley with rolling hills and scattered scrub bushes; east: low over an open golden steppe with a line of birch trees and a dark pine forest on the horizon; china: low over a hazy blue-green sea close to a rocky green coastline; europe: low over gentle farmland with hedgerows, fields and a wooded ridge in the distance; export: low over a dry savanna with scattered flat-topped acacia trees and red-brown earth
+- ships and submarines: nato: open blue ocean under a clear sky with a few high clouds, a long gentle swell; east: a cold grey-green northern sea under a low, overcast sky, a long swell and a distant misty horizon; china: a hazy blue-green coastal sea with a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky; europe: a deep blue-green Atlantic sea with white-capped waves and tall cumulus clouds in a bright sky; export: a calm turquoise tropical sea with a low distant island on the horizon and a few small white clouds in a hot clear sky
+
+### Infantry fighting vehicle (`ifv`): 45 prompts, built from these words
+
+Class of picture: `gnd`. Files: `assets/art-src/ul-ifv-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-ifv-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single infantry fighting vehicle, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame with a margin all round. Only the infantry fighting vehicle: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it.
+- **Top-down frame:** A single infantry fighting vehicle, seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only the infantry fighting vehicle: no crew, no other vehicle, no ground, no track marks, no shadow on the background.
+- **Card scene:** "A single infantry fighting vehicle driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks. The setting: <the group's setting>. Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs. The infantry fighting vehicle is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a tall, boxy, slab-sided tracked hull of flat armour plates, a flat angular two-man turret in the middle of the hull carrying an autocannon and an armoured missile-launcher box on its side, a wide rear troop ramp, heavy bolt-on armour. Paint: matte sand-tan.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a simple boxy hull with a small flat-sided turret, a short autocannon, a twin missile tube pod on the turret side, six road wheels per side with bare track guards, small round firing ports along the hull side, a few stowage boxes on the rear deck.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a larger, heavier hull with spaced armour plates and full side skirts, a bigger angular turret with a long stabilised autocannon and an armoured missile box, a roof-mounted thermal sight box, a commander's hatch with a remote machine gun, seven road wheels per side.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a low, wide, angular hull with an unmanned turret carrying a large-calibre autocannon, smooth faceted add-on armour, four flat active-protection sensor panels at the corners, a slim sensor mast, a remote weapon station on the roof, full-length side skirts.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a low, compact, sloped tracked hull with a small rounded turret set well forward, smoke-grenade launcher tubes along the turret sides, reactive-armour bricks (rows of small square blocks) that cover more of the vehicle in every generation, a log and fuel drums on the rear deck. Paint: dark olive-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a low, boxy hull with a tiny one-man turret carrying a short smoothbore gun and a missile rail above it, six small road wheels per side, thin track guards, a few small roof hatches, a first small set of reactive bricks on the hull front only.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a larger, taller rounded turret carrying a short gun, a coaxial autocannon and a missile rail, rows of reactive bricks across the turret front and the hull front, thick side skirts, a remote machine gun on the roof, seven road wheels per side.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a very low, wide hull with an unmanned rounded turret in the centre, slat armour and reactive bricks over most of the hull, active-protection launcher tubes around the turret, a panoramic sight dome, armoured fuel tanks at the rear.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a clean, smooth, boxy tracked hull with a long, sharply sloped front plate and small, evenly spaced road wheels, a modest rounded-arrowhead turret with a thin autocannon and a missile launcher on top, a pair of laser-warning sensors on the turret front. Paint: plain mid-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest, low rounded turret with a short gun and a single missile rail, a simple hull with plain track guards and six small road wheels per side, a snorkel tube and a spare fuel drum on the rear deck, no add-on armour.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a bigger, angular turret with an autocannon and a twin missile launcher box on its side, a wedge of applied armour on the turret front, side skirts made of rows of small plates, a roof machine gun, seven small road wheels per side.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a clean, low turret of smooth facets with flat integrated sensor panels, an unmanned remote weapon station, active-protection domes at the turret corners, a hull front of smooth sloped composite armour, full side skirts, a longer autocannon.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a long, sleek, low and smoothly sloped tracked hull, a turret of sloping, rounded-faceted shapes with a slender autocannon, a small raised pod for the commander's panoramic sight, a clean low silhouette. Paint: dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a light, fast, compact design: a narrow hull with five road wheels per side, a small egg-shaped rounded turret with a thin autocannon, a plain commander's cupola, almost no add-on armour, bare track guards, a rear ramp.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a bigger, smoothly sloped turret with a stabilised autocannon and a missile launcher box on one side, side skirts, a raised panoramic sight pod, a hull with a sharply sloped front, six road wheels per side.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a tall, wide, unmanned turret of smooth faceted panels with a large autocannon and a small second weapon beside it, a slim sensor mast, modular armour blocks, active-protection sensors, full side skirts, a low sleek hull.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a small round or flat-topped turret on a boxy tracked hull, bolt-on kits and add-on parts that look like they were fitted by the buyer. Paint: faded ochre-sand with a few patches of darker touch-up paint.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a small round one-man turret with a short gun, a low boxy hull with six road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the roof.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1970s-80s pattern: a larger two-man turret with an autocannon, a missile rail and a rangefinder box, bolt-on side skirts, a smoke-launcher pack, a few add-on armour plates on the turret front, a snorkel tube.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a modern export-grade design: a modular angular turret with an autocannon, bolt-on composite armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, side skirts, a clean but practical look made to be sold to many armies.
+
+### Self-propelled howitzer (`art`): 45 prompts, built from these words
+
+Class of picture: `gnd`. Files: `assets/art-src/ul-art-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-art-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single self-propelled howitzer, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame with a margin all round. Only the self-propelled howitzer: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it.
+- **Top-down frame:** A single self-propelled howitzer, seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only the self-propelled howitzer: no crew, no other vehicle, no ground, no track marks, no shadow on the background.
+- **Card scene:** "A single self-propelled howitzer standing in a firing position beside a dirt road, its gun raised at a high angle, a puff of smoke and dust at the muzzle brake. The setting: <the group's setting>. Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs. The self-propelled howitzer is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a tall, heavy, boxy, slab-sided armoured turret of flat plates on a wide tracked hull, a long barrel with a large muzzle brake, a hinged rear spade. Paint: matte sand-tan.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a simple boxy turret with a medium-length barrel, a large perforated muzzle brake and a fume extractor, a machine-gun ring on the turret roof, seven road wheels per side with bare track guards, stowage boxes on the rear.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer, heavier design: a larger, wider angular turret with a long barrel, a rear bustle that holds ammunition, side skirts, a remote machine gun on the roof, a rear ammunition-loading door, a folded rear spade.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: a low, angular, unmanned turret with a very long barrel with a thermal sleeve, an automatic loader bustle, flat faceted armour panels, flat sensor panels, an auxiliary power unit at the rear, full-length side skirts.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a low, wide, rounded turret on a low tracked hull, a long barrel with a muzzle brake and a bulge-shaped fume extractor, a log and fuel drums on the rear deck, reactive-armour bricks that cover more in every generation. Paint: dark olive-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a small, low, round turret with a medium barrel and a muzzle brake, a low hull with six small road wheels per side, bare track guards, a rear spade, stacks of shell boxes and a log on the rear deck.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a larger, low rounded turret with a long barrel, a muzzle brake and a fume extractor, a thick turret front with rows of reactive bricks, side skirts, a remote machine gun on the roof, a rear spade, extra fuel drums.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a fully automated, very low, unmanned rounded turret with a long barrel and a thick armoured mantlet, reactive bricks along the hull front, slat armour, a sensor dome on the roof, a hinged rear spade.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a broad, flat arrowhead-shaped turret on a smooth boxy tracked hull with a sharply sloped front plate and seven small road wheels, a long barrel with a double-baffle muzzle brake, a pair of laser-warning sensors. Paint: plain mid-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest arrowhead turret with a medium barrel and a muzzle brake, a plain hull with bare track guards, a rear spade, a spare fuel drum on the rear deck, no add-on armour.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a bigger angular turret with a long barrel, a boxy rear bustle, side skirts made of rows of small plates, a roof machine gun, a folded rear spade.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a low, smooth-faceted automated turret with a very long barrel, flat integrated sensor panels, a remote weapon station, an automatic loader bustle, full side skirts.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a sleek, smoothly sloped turret on a long, low tracked hull, a long slender barrel with a muzzle brake, a clean low silhouette, a hinged rear spade. Paint: dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a light, compact design: a small rounded turret, a medium slender barrel with a muzzle brake, a narrow hull with six road wheels per side, bare track guards, a small stowage rack at the rear.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a large, smoothly sloped turret with a very long slender barrel, a long rounded rear bustle, side skirts, a raised thermal sight pod, seven road wheels per side.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: an unmanned turret of smooth faceted panels with a very long barrel, a slim sensor mast, a small remote machine gun, modular armour blocks, a low sleek hull with full skirts.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or boxy turret on a boxy tracked hull, bolt-on kits and add-on parts that look fitted by the buyer. Paint: faded ochre-sand with a few patches of darker touch-up paint.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a small round turret with a short barrel and a big muzzle brake, a low boxy hull with four large road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the roof.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1970s-80s pattern: a larger boxy turret with a long barrel and a muzzle brake, bolt-on side skirts, a smoke-launcher pack, a rear spade, a few add-on armour plates on the turret front.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a modern export-grade design: a modular angular turret with a long barrel, a remote machine-gun station, a thermal sight box, bolt-on armour packages, an auxiliary power pack at the rear, side skirts, a practical look made to be sold to many armies.
+
+### Mobile surface-to-air missile launcher vehicle (`sam`): 45 prompts, built from these words
+
+Class of picture: `gnd`. Files: `assets/art-src/ul-sam-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-sam-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single mobile surface-to-air missile launcher vehicle, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame with a margin all round. Only the mobile surface-to-air missile launcher vehicle: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it.
+- **Top-down frame:** A single mobile surface-to-air missile launcher vehicle, seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only the mobile surface-to-air missile launcher vehicle: no crew, no other vehicle, no ground, no track marks, no shadow on the background.
+- **Card scene:** "A single mobile surface-to-air missile launcher vehicle parked beside a dirt road with its launcher raised, the missile canisters pointing up at the sky and its radar antenna turning. The setting: <the group's setting>. Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs. The mobile surface-to-air missile launcher vehicle is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a wide, heavy tracked carrier of flat armour plates, flat-sided angular box canisters on a pivoting launcher platform, a flat angular radar housing, matte finish. Paint: matte sand-tan.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a boxy tracked carrier with a pivoting rack of three box canisters, a small boxy radar antenna on a short mast beside the cab, bare track guards, a few stowage boxes.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer, heavier design: a tracked carrier with a rack of four armoured canisters on a pivoting platform and a flat phased-array radar panel at the back of the platform, a roof sensor box, side skirts.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: an angular, faceted launcher housing with eight canisters in two flat rows, radar panels built into its sides, a slim sensor mast, a low hull with full skirts.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a big eight-wheeled heavy truck chassis with a boxy cab, tall cylindrical missile canisters on a tilting rack, a round dish or flat panel radar on a raised mast, outrigger jacks at the corners. Paint: dark olive-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: four tall missile tubes on a tilting rail launcher on the truck bed, a round dish radar on a short mast behind the cab, outrigger jacks, a plain boxy cab.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer design: four large cylindrical canisters in a tilted rack, a flat phased-array radar panel on a folding mast behind the cab, a larger cab with a sloped front, outrigger jacks, a small antenna on the roof.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: two rows of four canisters in a long sloped launch rack, an angular faceted cab, flat radar panels on a mast and on the cab sides, slim antennas, a clean low-signature look.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a six-wheeled heavy truck chassis with a sharply angular, boxy cab, a broad flat launcher box with sloped panels, a flat rectangular phased-array radar, outrigger jacks. Paint: plain mid-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a launcher box with four rectangular missile canisters on a tilting rail, a small round radar dish on a short mast, outrigger jacks, a plain boxy cab.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer design: a larger launcher with six large canisters in two rows, a flat phased-array radar panel on a raised mast behind the cab, a sloped angular cab, outrigger jacks.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: a smooth faceted launcher box with eight canisters under flat covers, flat radar panels built into its sides, slim antennas, a smooth low cab, full side panels.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a sleek, wheeled eight-by-eight chassis with a low, smoothly sloped cab, a compact launcher with round-topped canisters, a slim raised radar on a mast, a clean low silhouette. Paint: dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a light, compact design: a small wheeled carrier with two box canisters on a swivelling mount, a small round radar dish on top of the cab, a plain cab, short outrigger jacks.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer design: a larger wheeled carrier with a vertical launcher of four tall canisters, a rotating flat radar panel on a mast, a sloped cab, outrigger jacks.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: a long carrier with a vertical launcher block of eight canisters, a smooth faceted radar mast with flat panels, a low sleek cab, a small sensor pod on the roof.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, an older box-frame launcher on a plain truck or trailer chassis, bolt-on kits that look fitted by the buyer. Paint: faded ochre-sand with a few patches of darker touch-up paint.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a rail launcher with two big missiles on a plain truck bed, a small dish radar on a short mast, a plain boxy cab, outrigger jacks, spare wheels on the side.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1970s-80s pattern: a rack of four boxy canisters on a tilting launcher, a round dish radar on a mast, bolt-on side boxes, a smoke-launcher pack on the cab, a plain truck cab.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a modern export-grade design: a modular launcher with six canisters, a flat panel radar on a short mast, a new sloped cab with bolt-on armour, an auxiliary power pack at the rear, a practical look made to be sold to many armies.
+
+### Multiple rocket launcher vehicle (`mlrs`): 45 prompts, built from these words
+
+Class of picture: `gnd`. Files: `assets/art-src/ul-mlrs-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-mlrs-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single multiple rocket launcher vehicle, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame with a margin all round. Only the multiple rocket launcher vehicle: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it.
+- **Top-down frame:** A single multiple rocket launcher vehicle, seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only the multiple rocket launcher vehicle: no crew, no other vehicle, no ground, no track marks, no shadow on the background.
+- **Card scene:** "A single multiple rocket launcher vehicle standing in a firing position beside a dirt road, rockets leaving its launcher in a bright plume of smoke and fire, dust blown from the ground. The setting: <the group's setting>. Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs. The multiple rocket launcher vehicle is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a tracked carrier of flat armour plates with a large boxy armoured cab at the front and a rear launcher box holding a block of rockets in square pods, matte finish. Paint: matte sand-tan.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a tracked carrier with a small flat cab, a rear launcher box with six rocket tubes in two rows of three, bare track guards, six road wheels per side, stowage boxes on the sides.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer, heavier design: a bigger angular cab with a flat armoured windscreen shield, a launcher box with two enclosed square rocket pods, a roof sight box, side skirts, seven road wheels per side.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: a low, angular, stealthy cab with flat panels, an automated launcher with two enclosed pods of more rockets under flat faceted covers, flat sensor panels, full skirts.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a big heavy wheeled truck chassis with a boxy cab with armoured shutters, a rear launcher frame with a block of long open tubes, outrigger jacks at the rear, a spare wheel under the frame. Paint: dark olive-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a six-wheeled truck with a launcher frame of forty short tubes in four rows, a plain cab, rear outrigger jacks, a spare wheel, a stowage box on the side.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer design: an eight-wheeled truck with a launcher frame of twelve large tubes in three rows, an armoured cab with shutters, rear outrigger jacks, a roof machine gun.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: an eight-wheeled truck with an automated launcher of sixteen tubes in an enclosed, faceted frame, an angular low-signature cab, a small sensor on the roof, outrigger jacks.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a wheeled heavy truck chassis with a sharply angular, boxy cab, a broad rear launcher with a large rectangular block of tubes in a sloped box, outrigger jacks, smooth panels. Paint: plain mid-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a six-wheeled truck with a launcher block of twenty small tubes in two rows, a plain boxy cab, outrigger jacks at the rear.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer design: an eight-wheeled truck with two large enclosed square pods of tubes, a sloped angular cab with armoured shutters, a laser-warning pair on the roof, outrigger jacks.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: an eight-wheeled truck with a smooth faceted launcher with two enclosed pods, a low angular cab with flat panels, a sensor dome on the roof, full side panels.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a sleek tracked carrier with a low, smoothly sloped armoured cab, a rear launcher pod block of rounded-square pods, a clean low silhouette. Paint: dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a light, compact design: a narrow tracked carrier with a small cab and a rear launcher box of twelve tubes in two rows, bare track guards, six road wheels per side.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a clearly newer design: a larger carrier with a smoothly sloped cab and two enclosed rounded-square pods on a rear launcher, side skirts, a roof sight pod.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a near-future design: a long, low carrier with a faceted cab and an automated launcher with two enclosed pods, a slim sensor mast, modular armour blocks, full skirts.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a plain truck chassis with a bolt-on launcher frame, additional boxes and kits that look fitted by the buyer. Paint: faded ochre-sand with a few patches of darker touch-up paint.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a six-wheeled truck with a launcher frame of sixteen short tubes in four rows, a plain open-top cab with a canvas roof, rear outrigger jacks, a spare wheel.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1970s-80s pattern: a six-wheeled truck with a launcher frame of forty tubes in four rows, an armoured cab with shutters, bolt-on side boxes, rear outrigger jacks.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a modern export-grade design: an eight-wheeled truck with a modular launcher of two enclosed pods, a new sloped cab with bolt-on armour, an auxiliary power pack, a practical look made to be sold to many armies.
+
