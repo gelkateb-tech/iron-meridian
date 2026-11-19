@@ -1,19 +1,22 @@
 // Cities in 3D, second pass (CITIES-2): shots of towns at given zooms for the owner's before | after sheets, cropped round each town (not
 // shrunk). A nations-world game as NATION (default Afghanistan), the clock stopped, the side panel closed and no toasts, by day (or by night
-// over the town: NIGHT=1). node .test/city3d-sheet.js <outdir> <tag> City:hexPx[:crop] ...   (PAGE=page-before.html for the old page; PHONE=1:
-// 440 x 900 at dpr 2, touch). Prints per shot the time until the map settled and the tier, and at the end the city canvases' memory.
+// over the town: NIGHT=1), with no clouds (the storms cleared: a town is shown, not the weather). node .test/city3d-sheet.js <outdir> <tag> City:hexPx[:crop] ...   (PAGE=page-before.html for the old page; PHONE=1:
+// 440 x 900 at dpr 2, touch). Math.random seeded, so both pages start the same game with the same weather (a cloud over a town in one shot only
+// looked like a missing bake). Prints per shot the time until the map settled and the tier, and at the end the city canvases' memory.
 const { chromium } = require('playwright'); const path = require('path'); const pickNation = require('./pick-nation.js');
 (async () => { const out = process.argv[2], tag = process.argv[3], shots = process.argv.slice(4).map(a => a.split(':')), PHONE = !!process.env.PHONE, NIGHT = !!process.env.NIGHT, errs = [];
   const vp = PHONE ? {width:440, height:900} : {width:1440, height:900};
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
-  const p = await b.newPage({ viewport: vp, deviceScaleFactor: 2, isMobile: PHONE, hasTouch: PHONE });
+  const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: 2, isMobile: PHONE, hasTouch: PHONE });
+  await ctx.addInitScript(() => { let a = 12345; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0)/4294967296; }; });   // (one game, one weather for the before and after pages)
+  const p = await ctx.newPage();
   p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await p.goto('file://' + path.join(__dirname, process.env.PAGE || 'page.html')); await p.waitForTimeout(900);
   const tap = sel => PHONE ? p.tap(sel) : p.click(sel);
   await tap('[data-act="pickscn"][data-k="world64"]'); await p.waitForTimeout(300); await pickNation(p, process.env.NATION || 'Afghanistan');
   await p.evaluate(() => document.querySelector('[data-act="begin"]').scrollIntoView()); await tap('[data-act="begin"]'); await p.waitForTimeout(1300);
   if (await p.locator('[data-act="start"]').count()) await tap('[data-act="start"]'); await p.waitForTimeout(3000);
-  await p.evaluate(() => { const im = window.__im; im.S.speed = 0; im.SET.tipsOff = true; im.SET.cityLights = true; im.SET.saver = false; document.querySelectorAll('.toast').forEach(t => t.remove());
+  await p.evaluate(() => { const im = window.__im; im.S.speed = 0; im.S.storms = []; im.SET.tipsOff = true; im.SET.cityLights = true; im.SET.saver = false; document.querySelectorAll('.toast').forEach(t => t.remove());
     const x = document.querySelector('[data-act="side-x"]'); if (x && x.offsetParent) x.click(); });
   const res = [];
   for (const [nm, hx0, cr0] of shots){ const hx = +hx0, crop = +(cr0 || (PHONE ? 420 : 640));
