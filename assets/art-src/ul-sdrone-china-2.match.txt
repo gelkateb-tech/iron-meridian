@@ -1,0 +1,2 @@
+FLAG (flagged: side)
+- Point 3 (side): Picture 1 is a rear three-quarter view showing the exhaust and trailing edges, not a front three-quarter view.

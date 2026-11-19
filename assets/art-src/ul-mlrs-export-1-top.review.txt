@@ -1,0 +1,3 @@
+FLAG
+- Point 1: Launcher tubes and stowage layout do not accurately match the reference details.
+- Point 3: A cast shadow is visible on the grey background beneath the vehicle.

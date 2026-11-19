@@ -1,0 +1,2 @@
+FLAG
+- 1. Launcher position rearranged from forward-facing over the cab to rotated inside the bed; antenna missing.

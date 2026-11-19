@@ -1,0 +1,2 @@
+FLAG
+- 1. Turret weapons and sensor sights are mirrored or swapped compared to the reference layout.

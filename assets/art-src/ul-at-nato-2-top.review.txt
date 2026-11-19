@@ -1,0 +1,2 @@
+FLAG
+- 1: Stowage tools (shovel and axe) from the reference's right side were moved to the vehicle's left side.

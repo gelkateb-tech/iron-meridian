@@ -1,0 +1,3 @@
+FLAG
+- 1. Weapon is held left-handed (mirrored posture), conflicting with the right-handed stance in the reference.
+- 2. Render style has distinct inked outlines and 2D illustrative shading rather than a clean 3D model render.

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 in picture 3: stowage (shovel and jerrycans) and roof vent are mirrored to the opposite side compared to picture 1.

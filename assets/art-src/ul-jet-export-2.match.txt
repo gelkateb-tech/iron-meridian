@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene)
+- Point 3 (side): Picture 1 shows a rear three-quarter view rather than a front three-quarter view.
+- Point 1 (scene): The refueling probe on the nose is placed on the port (left) side instead of the starboard (right) side.

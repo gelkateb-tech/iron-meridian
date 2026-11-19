@@ -1,0 +1,2 @@
+FLAG
+- 4. FRAMING: The unit fills roughly 70 percent of the frame instead of the requested 90 percent.

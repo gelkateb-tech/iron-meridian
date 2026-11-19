@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): The cab roof antenna is on the left rear, whereas in the side view it is on the right rear.

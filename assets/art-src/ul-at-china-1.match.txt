@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): missile launcher is rotated 180 degrees facing rearward instead of forward as in side view

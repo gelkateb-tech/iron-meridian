@@ -36,13 +36,13 @@ const { chromium } = require('playwright');
   ck('slots: two boxes, each a diamond emblem and a SLOT #n ribbon in the banner colour; no "+" and no "Choose a project"', D.slots.length === 2 && D.slots.every((s, i) => s.t === `SLOT #${i + 1}` && s.dm && /178, 29, 49/.test(s.rib)), D.slots);
   // the lookup and the model names
   const LK = await p.evaluate(() => { const rs = window.__im.rs, N = window.__im.S.nations[0], o = {}; o.l1 = rs.look('tank', 0); for (const id of ['tank_armor', 'tank_fp']) rs.grant(0, id, 1); rs.grant(0, 'tank_pr', 1); o.l4 = rs.look('tank', 0);
-    o.l7 = rs.look('tank', 0, 7); o.heli = rs.look('heli', 0); o.para = rs.look('para', 0, 1); o.uav = rs.look('drone', 0); o.us = rs.look('tank', 1); o.us0 = window.__im.S.nations[1].name;
+    o.l7 = rs.look('tank', 0, 7); o.heli = rs.look('bomb', 0); o.para = rs.look('para', 0, 1); o.uav = rs.look('drone', 0); o.us = rs.look('tank', 1); o.us0 = window.__im.S.nations[1].name;
     o.m = [rs.model('tank', 'east', 1), rs.model('tank', 'east', 2), rs.model('tank', 'east', 3), rs.model('para', 'nato', 2), rs.model('cm', 'china', 1), rs.model('jam', 'europe', 3)];
     for (const id of ['tank_armor', 'tank_fp', 'tank_pr']) delete N.tech[id]; N.tv++; return o; });
   const side = (g, k) => HAVE.has(`ul-tank-${g}-${k}-side`) ? `assets/art/ul-tank-${g}-${k}-side.webp` : null;
   ck('names: the Eastern tank is T-72, T-90, T-14 by look; Paratroopers share the infantry names; missiles have names; a name not found yet is null', LK.m.join('|') === 'T-72|T-90|T-14|M4A1|CJ-10|' && LK.l1.name === 'T-72' && LK.l4.name === 'T-90' && LK.l7.name === 'T-14', [LK.m, LK.l1.name, LK.l4.name]);
   ck('lookup: unit + nation + level -> the group\'s look (level 1-3 look 1, 4-6 look 2, 7-8 look 3), each from the files that exist', LK.l1.look === 1 && LK.l4.look === 2 && LK.l7.look === 3 && LK.l1.side === side('east', 1) && LK.l4.side === (side('east', 2) || side('east', 1)) && LK.l1.group === 'east', [LK.l1, LK.l4]);
-  ck('lookup: a unit with no new pictures falls back to today\'s picture (Attack Helicopter: no side cut-out, the scene ri-u_heli)', LK.heli.side === null && LK.heli.scene === 'assets/art/ri-u_heli.webp' && LK.para.scene === 'assets/art/ri-u_para.webp', LK.heli);
+  ck('lookup: a unit with no new pictures falls back to today\'s picture (Strategic Bomber: no side cut-out, the scene ri-u_bomb)', LK.heli.side === null && LK.heli.scene === 'assets/art/ri-u_bomb.webp', LK.heli);
   ck('lookup: the Recon UAV\'s look follows its generations', LK.uav.look === 1, LK.uav);
   // a missing look falls back to the nearest earlier look of the group (the list is the page's: take look 2 out for a moment)
   const FB = await p.evaluate(() => { const F = window.__im.rs.ulFiles(), had = [...F]; F.add('ul-tank-east-1-side'); F.add('ul-tank-east-1-scene'); F.delete('ul-tank-east-2-side'); F.delete('ul-tank-east-2-scene');

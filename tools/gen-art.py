@@ -891,6 +891,655 @@ for _g in UNIT_GROUPS:
             'prefix': UNIT_PREFIX_TOP.format(unit='main battle tank'),
             'subject': TANK_FRAME + ' ' + _desc, 'style': STYLE_V2_UNIT, 'refs': [_side]}
 
+# ---- THE OTHER UNITS (owner's decisions 2026-11-18, third set: "make the rest, with the Gemini check on every picture"). One entry per unit in UD
+# (see unit_def below); the pictures are built from the same pieces as the tank's: a side view (the master), a card scene and a top-down made from it.
+# What the tank sets taught, now in every prompt: the top-down keeps exactly the same layout of hatches, turrets, sensors, stowage and weapons as the
+# side view, on the same side, not mirrored, nothing added or dropped; light from the upper left in every kind; the top-down has no shadow on the grey
+# (the map draws its own); the card scenes stay photo-real (the owner liked them).
+UL_CLS = {
+    'gnd': dict(
+        detail="the same hull, turret or weapon mount, gun or launcher, wheels or tracks, the same paint colour and every same detail (stowage, armour, skirts, sensors, antennas, hatches)",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the "
+              "picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length "
+              "(any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame "
+              "with a margin all round. Only the {u}: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is "
+             "centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only "
+             "the {u}: no crew, no other vehicle, no ground, no track marks, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length (nose to tail, including any gun barrel) fills about 90 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the "
+                     "frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene "
+                     "fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs."),
+        scene_look="the one vehicle is whole and in action, clearly visible and not cut off, about half the picture's width, in a landscape-shaped picture",
+        match_parts="hull, turret or weapon mount, gun or launcher, wheels or tracks (their number), skirts, sensors, antennas, stowage and other details"),
+    'air': dict(
+        detail="the same fuselage, wings, tails, engines, canopy, weapons, sensors and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model "
+              "(landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole "
+              "aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the "
+              "picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the {u}: no pilot visible, no other "
+              "aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both "
+             "sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) "
+             "fills about 90 percent of the picture. Only the {u}: no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length or full wingspan, whichever is larger, fills about 90 percent of the picture, nothing cut off. ",
+        scene_frame=("Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the "
+                     "middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: "
+                     "no pilot visible, no other aircraft, no people, no buildings, no signs, no markings."),
+        scene_look="the one aircraft is whole and in flight, clearly visible and not cut off, about 60 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="fuselage, wings (their shape and sweep), tails, engines and intakes, canopy, weapons, sensors, antennas and other details"),
+    'heli': dict(
+        detail="the same fuselage, rotor(s), tail, wings or stub wings, landing gear, canopy, weapons, sensors and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), shown as a studio model standing on its landing gear, "
+              "the rotor blades still and drawn sharp (not blurred), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long "
+              "side. The whole helicopter is centred left to right and top to bottom, and its full length including the rotor disc spans about 85 percent of the picture's "
+              "width; everything, rotor tips and tail included, is inside the frame with a margin all round. Only the {u}: no pilot visible, no other aircraft, no ground, "
+              "only a faint, tight soft shadow under it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, the rotor blades still and drawn "
+             "sharp (not blurred). The whole helicopter is centred left to right and top to bottom, and the larger of its length (nose to tail, rotor included) and its "
+             "rotor span fills about 90 percent of the picture. Only the {u}: no pilot visible, no other aircraft, no ground, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length or full rotor span, whichever is larger, fills about 90 percent of the picture, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle, slightly above the ground, the helicopter fills about 55 percent of the picture's width, in the middle of the "
+                     "frame, its rotor turning with a natural light motion blur on the blades only, natural daylight with the sun from the upper left. The scene fills the whole "
+                     "picture edge to edge. Only this one helicopter: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings."),
+        scene_look="the one helicopter is whole and in flight, clearly visible and not cut off, about 55 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="fuselage, rotor(s), tail, wings or stub wings, landing gear, canopy, weapons, sensors and other details"),
+    'ship': dict(
+        detail="the same hull, superstructure, masts, radars, guns, missile launchers, helicopter deck or flight deck and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so "
+              "that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull down to the waterline "
+              "visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's "
+              "width; everything, masts and bow included, is inside the frame with a margin all round. Only the {u}: no crew visible, no other ship, no aircraft, no ground, "
+              "only a faint, tight soft shadow under the hull."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull down to the waterline "
+             "visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's "
+             "height. Only the {u}: no crew visible, no other ship, no aircraft, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length (bow to stern) fills about 90 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle just above the water, the ship fills about 70 percent of the picture's width, in the middle of the frame, the "
+                     "horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only "
+                     "this one ship: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings."),
+        scene_look="the one ship is whole and under way at sea, clearly visible and not cut off, about 70 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="hull, superstructure, masts, radars, guns, launchers, flight deck or helicopter deck and other details"),
+    'sub': dict(
+        detail="the same hull, sail (conning tower), tail fins, propulsion, deck details and every same detail, the same paint colour",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so "
+              "that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull visible: no water, no waves, "
+              "no wake. The whole submarine is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's width; everything is "
+              "inside the frame with a margin all round. Only the {u}: no crew visible, no other ship, no ground, only a faint, tight soft shadow under it."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull visible: no water, no "
+             "waves, no wake. The whole submarine is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's height. Only the "
+             "{u}: no crew visible, no other ship, no shadow on the background."),
+        crop="Cropped and centred so the unit's full length (bow to stern) fills about 90 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle just above the water, the submarine runs on the surface and fills about 70 percent of the picture's width, in "
+                     "the middle of the frame, the horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole "
+                     "picture edge to edge. Only this one submarine: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings."),
+        scene_look="the one submarine is whole and running on the surface at sea, clearly visible and not cut off, about 70 percent of the picture's width, in a landscape-shaped picture",
+        match_parts="hull, sail (conning tower), tail fins, deck details and other details"),
+    'man': dict(
+        detail="the same soldier: the same helmet, uniform, camouflage, body armour, pack, rifle or weapon, equipment and every same detail",
+        side=("A single {u}, seen from a front three-quarter side view from slightly above (about 30 degrees down), standing in a ready pose with the weapon held ready, "
+              "turned toward the lower right of the picture so that the viewer sees the front and one side. The whole soldier, from the boots to the top of the helmet and "
+              "the weapon, is centred left to right and top to bottom and fills about 85 percent of the picture's height; the entire figure is inside the frame with a "
+              "margin all round. Only this one {u}: no other person, no vehicle, no ground, only a faint, tight soft shadow under the boots."),
+        top=("A single {u}, seen exactly straight down from above (a true top-down plan view), facing the top of the picture, the weapon held ready in front. The whole "
+             "soldier (head, shoulders, arms, pack and weapon) is centred left to right and top to bottom and fills about 85 percent of the picture's height. Only this one "
+             "{u}: no other person, no vehicle, no ground, no shadow on the background."),
+        crop="Cropped and centred so the unit fills about 85 percent of the picture's height, nothing cut off. ",
+        scene_frame=("Seen from a low front three-quarter angle at about eye height, the soldier fills about half the picture's height and stands in the middle of the frame, "
+                     "the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole "
+                     "picture edge to edge. Only this one soldier: no other person, no vehicle, no buildings, no signs, no markings."),
+        scene_look="the one soldier is whole and in action, clearly visible and not cut off, about half the picture's height, in a landscape-shaped picture",
+        match_parts="helmet, uniform and camouflage pattern, body armour, pack, rifle or weapon, equipment and other details"),
+}
+UL_PAINT = {
+    'gnd': {'nato': "matte sand-tan", 'east': "dark olive-green", 'china': "plain mid-green", 'europe': "dark grey-green",
+            'export': "faded ochre-sand with a few patches of darker touch-up paint"},
+    'air': {'nato': "pale ghost-grey", 'east': "pale grey with a darker grey-green upper surface", 'china': "pale blue-grey", 'europe': "medium blue-grey",
+            'export': "sand and olive-green camouflage"},
+    'heli': {'nato': "matte olive-drab grey", 'east': "dark green with darker green blotches", 'china': "plain dark grey-green", 'europe': "dark green-grey",
+             'export': "faded olive-green and tan"},
+    'ship': {'nato': "haze grey", 'east': "mid grey with a darker grey deck", 'china': "light blue-grey", 'europe': "medium blue-grey",
+             'export': "pale grey with a few rust-streaked patches"},
+    'sub': {'nato': "matte black", 'east': "dark grey-black", 'china': "dark blue-black", 'europe': "dark slate grey", 'export': "dull dark grey-green"},
+    'man': {'nato': "a tan-and-brown multi-terrain camouflage", 'east': "olive-green and brown blotch camouflage", 'china': "green-and-brown digital camouflage",
+            'europe': "a grey-green and brown splinter camouflage", 'export': "a faded khaki and olive desert camouflage"}}
+UL_LAND = TANK_SCENE   # the settings of the ground units' card scenes (they include a dirt road)
+UL_SEA = {
+    'nato': "open blue ocean under a clear sky with a few high clouds, a long gentle swell",
+    'east': "a cold grey-green northern sea under a low, overcast sky, a long swell and a distant misty horizon",
+    'china': "a hazy blue-green coastal sea with a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky",
+    'europe': "a deep blue-green Atlantic sea with white-capped waves and tall cumulus clouds in a bright sky",
+    'export': "a calm turquoise tropical sea with a low distant island on the horizon and a few small white clouds in a hot clear sky"}
+UL_SKY = {
+    'nato': "a deep clear blue sky above a sunlit sea of white cloud far below",
+    'east': "a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest",
+    'china': "a hazy pale-blue sky with soft white clouds above distant green mountains far below",
+    'europe': "a bright sky with scattered cumulus clouds above distant green fields and a river far below",
+    'export': "a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below"}
+UL_LOW = {
+    'nato': "low over a dry grassland valley with rolling hills and scattered scrub bushes",
+    'east': "low over an open golden steppe with a line of birch trees and a dark pine forest on the horizon",
+    'china': "low over a hazy blue-green sea close to a rocky green coastline",
+    'europe': "low over gentle farmland with hedgerows, fields and a wooded ridge in the distance",
+    'export': "low over a dry savanna with scattered flat-topped acacia trees and red-brown earth"}
+UL_SETTING = {'gnd': UL_LAND, 'air': UL_SKY, 'heli': UL_LOW, 'ship': UL_SEA, 'sub': UL_SEA, 'man': UL_LAND}
+UL_UNIT_TAIL = (" Original generic design made for this game: it must not be a line-for-line copy of any real {kind}; only the family look described here. Plain "
+                "unmarked paint, no text, numbers, flags, stars, roundels or markings of any kind.")
+UL_PREFIX_SCENE = ("The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. Draw the SAME {unit}, exactly: {detail}, "
+                   "seen in action in its natural setting as described below. Do not redesign, simplify or add to it. Do not copy the grey background: the new picture "
+                   "is a full outdoor scene.")
+UL_PREFIX_TOP = ("The attached picture is the master picture of one {unit}: a three-quarter side view on a plain grey background. Draw the SAME {unit}, exactly: {detail}, "
+                 "but now seen exactly straight down from above, as described below. Keep exactly the same layout of hatches, turrets, sensors, antennas, stowage, "
+                 "weapons and every other part as the attached side view, on the same side of the unit: the long side that faces the viewer in the side view (the unit's "
+                 "right side, the one nearest the camera) is the right side of the top-down picture. Do not mirror it, do not rearrange it, do not add or drop any part. "
+                 "Light from the upper left. Do not redesign or simplify it. Do not copy the attached picture's camera angle: draw a true top-down plan view.")
+STYLE_UL_TOP = STYLE_V2_UNIT.replace("with a soft shadow under each object", "with no cast shadow on the background").replace("with only a soft shadow;", "with no shadow at all;")
+STYLE_UL_SCENE = STYLE_V2_SCENE   # photo-real scenes: kept (owner)
+assert "no cast shadow" in STYLE_UL_TOP and "no shadow at all" in STYLE_UL_TOP
+UD = {}   # key -> dict(label, cls, kind (the word for "real {kind}"), groups {g: (family, [g1, g2, g3])}, action, paint, setting, note, gens)
+
+def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None):
+    """label: the unit's name in the prompts; action: what it does in its card scene (a phrase after "A single {label}"); groups: {group: (family look, [3 generations])};
+    paint/setting: per-group overrides; frame_note: an extra sentence for the side and top frames; gens: the 'Generation n of 3' lead-ins [oldest, newer, newest]"""
+    UD[key] = dict(label=label, cls=cls, kind=kind, action=action, groups=groups, paint=paint or UL_PAINT[cls], setting=setting or UL_SETTING[cls], note=frame_note,
+                   gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "])
+    d, C = UD[key], UL_CLS[cls]; u = label
+    for g in UNIT_GROUPS:
+        fam, gl = groups[g]
+        for n in (1, 2, 3):
+            desc = f"{fam} Paint: {d['paint'][g]}. {d['gens'][n - 1]}{gl[n - 1]}" + UL_UNIT_TAIL.format(kind=kind)
+            nm = f'ul-{key}-{g}-{n}'
+            UNIT_LOOKS[nm + '-side'] = {
+                'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'side', 'group': g, 'look': n, 'fresh': n == 1, 'aspect': '1:1',
+                'prefix': UNIT_PREFIX_SIDE_NEW if n == 1 else UNIT_PREFIX_SIDE_FAMILY.format(unit=u),
+                'subject': C['side'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc, 'style': STYLE_V2_SIDE,
+                'refs': UNIT_ANCHORS if n == 1 else UNIT_ANCHORS + [f'ul-{key}-{g}-1-side']}
+            UNIT_LOOKS[nm + '-scene'] = {
+                'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'scene', 'group': g, 'look': n, 'fresh': False, 'aspect': '3:2',
+                'prefix': UL_PREFIX_SCENE.format(unit=u, detail=C['detail']),
+                'subject': f"A single {u} {action}. The setting: {d['setting'][g]}. {C['scene_frame']} The {u} is described in words as: {desc}",
+                'style': STYLE_UL_SCENE, 'refs': [nm + '-side']}
+            UNIT_LOOKS[nm + '-top'] = {
+                'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'top', 'group': g, 'look': n, 'fresh': False, 'aspect': '1:1',
+                'prefix': UL_PREFIX_TOP.format(unit=u, detail=C['detail']),
+                'subject': C['top'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc,
+                'style': STYLE_UL_TOP.replace(_CROP_NEW, C['crop']), 'refs': [nm + '-side']}
+
+
+# ---- Infantry Fighting Vehicle (key ifv)
+unit_def('ifv', 'infantry fighting vehicle', 'gnd', 'armoured vehicle',
+    "driving at moderate speed along a dirt road, kicking up a modest trail of dust behind its tracks", {
+    'nato': ("Family look (US/NATO): a tall, boxy, slab-sided tracked hull of flat armour plates, a flat angular two-man turret in the middle of the hull carrying an autocannon and an armoured missile-launcher box on its side, a wide rear troop ramp, heavy bolt-on armour.",
+             ["a Cold War era design: a simple boxy hull with a small flat-sided turret, a short autocannon, a twin missile tube pod on the turret side, six road wheels per side with bare track guards, small round firing ports along the hull side, a few stowage boxes on the rear deck.",
+              "a larger, heavier hull with spaced armour plates and full side skirts, a bigger angular turret with a long stabilised autocannon and an armoured missile box, a roof-mounted thermal sight box, a commander's hatch with a remote machine gun, seven road wheels per side.",
+              "a low, wide, angular hull with an unmanned turret carrying a large-calibre autocannon, smooth faceted add-on armour, four flat active-protection sensor panels at the corners, a slim sensor mast, a remote weapon station on the roof, full-length side skirts."]),
+    'east': ("Family look (Eastern): a low, compact, sloped tracked hull with a small rounded turret set well forward, smoke-grenade launcher tubes along the turret sides, reactive-armour bricks (rows of small square blocks) that cover more of the vehicle in every generation, a log and fuel drums on the rear deck.",
+             ["a low, boxy hull with a tiny one-man turret carrying a short smoothbore gun and a missile rail above it, six small road wheels per side, thin track guards, a few small roof hatches, a first small set of reactive bricks on the hull front only.",
+              "a larger, taller rounded turret carrying a short gun, a coaxial autocannon and a missile rail, rows of reactive bricks across the turret front and the hull front, thick side skirts, a remote machine gun on the roof, seven road wheels per side.",
+              "a very low, wide hull with an unmanned rounded turret in the centre, slat armour and reactive bricks over most of the hull, active-protection launcher tubes around the turret, a panoramic sight dome, armoured fuel tanks at the rear."]),
+    'china': ("Family look (China, its own lines): a clean, smooth, boxy tracked hull with a long, sharply sloped front plate and small, evenly spaced road wheels, a modest rounded-arrowhead turret with a thin autocannon and a missile launcher on top, a pair of laser-warning sensors on the turret front.",
+              ["a modest, low rounded turret with a short gun and a single missile rail, a simple hull with plain track guards and six small road wheels per side, a snorkel tube and a spare fuel drum on the rear deck, no add-on armour.",
+               "a bigger, angular turret with an autocannon and a twin missile launcher box on its side, a wedge of applied armour on the turret front, side skirts made of rows of small plates, a roof machine gun, seven small road wheels per side.",
+               "a clean, low turret of smooth facets with flat integrated sensor panels, an unmanned remote weapon station, active-protection domes at the turret corners, a hull front of smooth sloped composite armour, full side skirts, a longer autocannon."]),
+    'europe': ("Family look (Europe): a long, sleek, low and smoothly sloped tracked hull, a turret of sloping, rounded-faceted shapes with a slender autocannon, a small raised pod for the commander's panoramic sight, a clean low silhouette.",
+               ["a light, fast, compact design: a narrow hull with five road wheels per side, a small egg-shaped rounded turret with a thin autocannon, a plain commander's cupola, almost no add-on armour, bare track guards, a rear ramp.",
+                "a bigger, smoothly sloped turret with a stabilised autocannon and a missile launcher box on one side, side skirts, a raised panoramic sight pod, a hull with a sharply sloped front, six road wheels per side.",
+                "a tall, wide, unmanned turret of smooth faceted panels with a large autocannon and a small second weapon beside it, a slim sensor mast, modular armour blocks, active-protection sensors, full side skirts, a low sleek hull."]),
+    'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a small round or flat-topped turret on a boxy tracked hull, bolt-on kits and add-on parts that look like they were fitted by the buyer.",
+               ["a post-war pattern: a small round one-man turret with a short gun, a low boxy hull with six road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the roof.",
+                "a widely exported 1970s-80s pattern: a larger two-man turret with an autocannon, a missile rail and a rangefinder box, bolt-on side skirts, a smoke-launcher pack, a few add-on armour plates on the turret front, a snorkel tube.",
+                "a modern export-grade design: a modular angular turret with an autocannon, bolt-on composite armour packages, a remote machine-gun station, a thermal sight box, an auxiliary power pack at the rear, side skirts, a clean but practical look made to be sold to many armies."])})
+
+# ---- Mobile Artillery (key art)
+unit_def('art', 'self-propelled howitzer', 'gnd', 'self-propelled gun',
+    "standing in a firing position beside a dirt road, its gun raised at a high angle, a puff of smoke and dust at the muzzle brake",
+    {'nato': ("Family look (US/NATO): a tall, heavy, boxy, slab-sided armoured turret of flat plates on a wide tracked hull, a long barrel with a large muzzle brake, a hinged rear spade.",
+              ["a Cold War era design: a simple boxy turret with a medium-length barrel, a large perforated muzzle brake and a fume extractor, a machine-gun ring on the turret roof, seven road wheels per side with bare track guards, stowage boxes on the rear.",
+               "a clearly newer, heavier design: a larger, wider angular turret with a long barrel, a rear bustle that holds ammunition, side skirts, a remote machine gun on the roof, a rear ammunition-loading door, a folded rear spade.",
+               "a near-future design: a low, angular, unmanned turret with a very long barrel with a thermal sleeve, an automatic loader bustle, flat faceted armour panels, flat sensor panels, an auxiliary power unit at the rear, full-length side skirts."]),
+     'east': ("Family look (Eastern): a low, wide, rounded turret on a low tracked hull, a long barrel with a muzzle brake and a bulge-shaped fume extractor, a log and fuel drums on the rear deck, reactive-armour bricks that cover more in every generation.",
+              ["a small, low, round turret with a medium barrel and a muzzle brake, a low hull with six small road wheels per side, bare track guards, a rear spade, stacks of shell boxes and a log on the rear deck.",
+               "a larger, low rounded turret with a long barrel, a muzzle brake and a fume extractor, a thick turret front with rows of reactive bricks, side skirts, a remote machine gun on the roof, a rear spade, extra fuel drums.",
+               "a fully automated, very low, unmanned rounded turret with a long barrel and a thick armoured mantlet, reactive bricks along the hull front, slat armour, a sensor dome on the roof, a hinged rear spade."]),
+     'china': ("Family look (China, its own lines): a broad, flat arrowhead-shaped turret on a smooth boxy tracked hull with a sharply sloped front plate and seven small road wheels, a long barrel with a double-baffle muzzle brake, a pair of laser-warning sensors.",
+               ["a modest arrowhead turret with a medium barrel and a muzzle brake, a plain hull with bare track guards, a rear spade, a spare fuel drum on the rear deck, no add-on armour.",
+                "a bigger angular turret with a long barrel, a boxy rear bustle, side skirts made of rows of small plates, a roof machine gun, a folded rear spade.",
+                "a low, smooth-faceted automated turret with a very long barrel, flat integrated sensor panels, a remote weapon station, an automatic loader bustle, full side skirts."]),
+     'europe': ("Family look (Europe): a sleek, smoothly sloped turret on a long, low tracked hull, a long slender barrel with a muzzle brake, a clean low silhouette, a hinged rear spade.",
+                ["a light, compact design: a small rounded turret, a medium slender barrel with a muzzle brake, a narrow hull with six road wheels per side, bare track guards, a small stowage rack at the rear.",
+                 "a large, smoothly sloped turret with a very long slender barrel, a long rounded rear bustle, side skirts, a raised thermal sight pod, seven road wheels per side.",
+                 "an unmanned turret of smooth faceted panels with a very long barrel, a slim sensor mast, a small remote machine gun, modular armour blocks, a low sleek hull with full skirts."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a round or boxy turret on a boxy tracked hull, bolt-on kits and add-on parts that look fitted by the buyer.",
+                ["a post-war pattern: a small round turret with a short barrel and a big muzzle brake, a low boxy hull with four large road wheels per side, an unditching beam across the rear deck, an open-top searchlight, a machine gun on the roof.",
+                 "a widely exported 1970s-80s pattern: a larger boxy turret with a long barrel and a muzzle brake, bolt-on side skirts, a smoke-launcher pack, a rear spade, a few add-on armour plates on the turret front.",
+                 "a modern export-grade design: a modular angular turret with a long barrel, a remote machine-gun station, a thermal sight box, bolt-on armour packages, an auxiliary power pack at the rear, side skirts, a practical look made to be sold to many armies."])})
+
+# ---- Mobile SAM (key sam)
+unit_def('sam', 'mobile surface-to-air missile launcher vehicle', 'gnd', 'missile vehicle',
+    "parked beside a dirt road with its launcher raised, the missile canisters pointing up at the sky and its radar antenna turning",
+    {'nato': ("Family look (US/NATO): a wide, heavy tracked carrier of flat armour plates, flat-sided angular box canisters on a pivoting launcher platform, a flat angular radar housing, matte finish.",
+              ["a Cold War era design: a boxy tracked carrier with a pivoting rack of three box canisters, a small boxy radar antenna on a short mast beside the cab, bare track guards, a few stowage boxes.",
+               "a clearly newer, heavier design: a tracked carrier with a rack of four armoured canisters on a pivoting platform and a flat phased-array radar panel at the back of the platform, a roof sensor box, side skirts.",
+               "a near-future design: an angular, faceted launcher housing with eight canisters in two flat rows, radar panels built into its sides, a slim sensor mast, a low hull with full skirts."]),
+     'east': ("Family look (Eastern): a big eight-wheeled heavy truck chassis with a boxy cab, tall cylindrical missile canisters on a tilting rack, a round dish or flat panel radar on a raised mast, outrigger jacks at the corners.",
+              ["a Cold War era design: four tall missile tubes on a tilting rail launcher on the truck bed, a round dish radar on a short mast behind the cab, outrigger jacks, a plain boxy cab.",
+               "a clearly newer design: four large cylindrical canisters in a tilted rack, a flat phased-array radar panel on a folding mast behind the cab, a larger cab with a sloped front, outrigger jacks, a small antenna on the roof.",
+               "a near-future design: two rows of four canisters in a long sloped launch rack, an angular faceted cab, flat radar panels on a mast and on the cab sides, slim antennas, a clean low-signature look."]),
+     'china': ("Family look (China, its own lines): a six-wheeled heavy truck chassis with a sharply angular, boxy cab, a broad flat launcher box with sloped panels, a flat rectangular phased-array radar, outrigger jacks.",
+               ["a modest design: a launcher box with four rectangular missile canisters on a tilting rail, a small round radar dish on a short mast, outrigger jacks, a plain boxy cab.",
+                "a clearly newer design: a larger launcher with six large canisters in two rows, a flat phased-array radar panel on a raised mast behind the cab, a sloped angular cab, outrigger jacks.",
+                "a near-future design: a smooth faceted launcher box with eight canisters under flat covers, flat radar panels built into its sides, slim antennas, a smooth low cab, full side panels."]),
+     'europe': ("Family look (Europe): a sleek, wheeled eight-by-eight chassis with a low, smoothly sloped cab, a compact launcher with round-topped canisters, a slim raised radar on a mast, a clean low silhouette.",
+                ["a light, compact design: a small wheeled carrier with two box canisters on a swivelling mount, a small round radar dish on top of the cab, a plain cab, short outrigger jacks.",
+                 "a clearly newer design: a larger wheeled carrier with a vertical launcher of four tall canisters, a rotating flat radar panel on a mast, a sloped cab, outrigger jacks.",
+                 "a near-future design: a long carrier with a vertical launcher block of eight canisters, a smooth faceted radar mast with flat panels, a low sleek cab, a small sensor pod on the roof."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, an older box-frame launcher on a plain truck or trailer chassis, bolt-on kits that look fitted by the buyer.",
+                ["a post-war pattern: a rail launcher with two big missiles on a plain truck bed, a small dish radar on a short mast, a plain boxy cab, outrigger jacks, spare wheels on the side.",
+                 "a widely exported 1970s-80s pattern: a rack of four boxy canisters on a tilting launcher, a round dish radar on a mast, bolt-on side boxes, a smoke-launcher pack on the cab, a plain truck cab.",
+                 "a modern export-grade design: a modular launcher with six canisters, a flat panel radar on a short mast, a new sloped cab with bolt-on armour, an auxiliary power pack at the rear, a practical look made to be sold to many armies."])})
+
+# ---- Rocket Artillery (key mlrs)
+unit_def('mlrs', 'multiple rocket launcher vehicle', 'gnd', 'rocket launcher vehicle',
+    "standing in a firing position beside a dirt road, rockets leaving its launcher in a bright plume of smoke and fire, dust blown from the ground",
+    {'nato': ("Family look (US/NATO): a tracked carrier of flat armour plates with a large boxy armoured cab at the front and a rear launcher box holding a block of rockets in square pods, matte finish.",
+              ["a Cold War era design: a tracked carrier with a small flat cab, a rear launcher box with six rocket tubes in two rows of three, bare track guards, six road wheels per side, stowage boxes on the sides.",
+               "a clearly newer, heavier design: a bigger angular cab with a flat armoured windscreen shield, a launcher box with two enclosed square rocket pods, a roof sight box, side skirts, seven road wheels per side.",
+               "a near-future design: a low, angular, stealthy cab with flat panels, an automated launcher with two enclosed pods of more rockets under flat faceted covers, flat sensor panels, full skirts."]),
+     'east': ("Family look (Eastern): a big heavy wheeled truck chassis with a boxy cab with armoured shutters, a rear launcher frame with a block of long open tubes, outrigger jacks at the rear, a spare wheel under the frame.",
+              ["a Cold War era design: a six-wheeled truck with a launcher frame of forty short tubes in four rows, a plain cab, rear outrigger jacks, a spare wheel, a stowage box on the side.",
+               "a clearly newer design: an eight-wheeled truck with a launcher frame of twelve large tubes in three rows, an armoured cab with shutters, rear outrigger jacks, a roof machine gun.",
+               "a near-future design: an eight-wheeled truck with an automated launcher of sixteen tubes in an enclosed, faceted frame, an angular low-signature cab, a small sensor on the roof, outrigger jacks."]),
+     'china': ("Family look (China, its own lines): a wheeled heavy truck chassis with a sharply angular, boxy cab, a broad rear launcher with a large rectangular block of tubes in a sloped box, outrigger jacks, smooth panels.",
+               ["a modest design: a six-wheeled truck with a launcher block of twenty small tubes in two rows, a plain boxy cab, outrigger jacks at the rear.",
+                "a clearly newer design: an eight-wheeled truck with two large enclosed square pods of tubes, a sloped angular cab with armoured shutters, a laser-warning pair on the roof, outrigger jacks.",
+                "a near-future design: an eight-wheeled truck with a smooth faceted launcher with two enclosed pods, a low angular cab with flat panels, a sensor dome on the roof, full side panels."]),
+     'europe': ("Family look (Europe): a sleek tracked carrier with a low, smoothly sloped armoured cab, a rear launcher pod block of rounded-square pods, a clean low silhouette.",
+                ["a light, compact design: a narrow tracked carrier with a small cab and a rear launcher box of twelve tubes in two rows, bare track guards, six road wheels per side.",
+                 "a clearly newer design: a larger carrier with a smoothly sloped cab and two enclosed rounded-square pods on a rear launcher, side skirts, a roof sight pod.",
+                 "a near-future design: a long, low carrier with a faceted cab and an automated launcher with two enclosed pods, a slim sensor mast, modular armour blocks, full skirts."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a plain truck chassis with a bolt-on launcher frame, additional boxes and kits that look fitted by the buyer.",
+                ["a post-war pattern: a six-wheeled truck with a launcher frame of sixteen short tubes in four rows, a plain open-top cab with a canvas roof, rear outrigger jacks, a spare wheel.",
+                 "a widely exported 1970s-80s pattern: a six-wheeled truck with a launcher frame of forty tubes in four rows, an armoured cab with shutters, bolt-on side boxes, rear outrigger jacks.",
+                 "a modern export-grade design: an eight-wheeled truck with a modular launcher of two enclosed pods, a new sloped cab with bolt-on armour, an auxiliary power pack, a practical look made to be sold to many armies."])})
+
+# ---- Motorized Infantry (key inf; the Paratroopers share it)
+unit_def('inf', 'motorized infantry rifleman', 'man', 'soldier',
+    "walking along a dirt road with his rifle held ready, a light trail of dust at his boots",
+    {'nato': ("Family look (US/NATO): a stocky, heavily equipped rifleman in a rounded combat helmet and a tactical plate-carrier vest covered in pouches, knee pads, a big pack, a rifle with a short barrel and a sling.",
+              ["Cold War era kit: a rounded steel-style helmet with a cloth cover, a simple webbing harness with ammunition pouches and two canteens, a plain long rifle with a straight stock, a canvas backpack, plain boots.",
+               "new modular kit: a visored helmet with a night-vision mount, a plate-carrier vest with modular pouches, a compact rifle with a sight and a short barrel, knee and elbow pads, a modern pack.",
+               "light powered exoskeleton frames strapped to the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back."]),
+     'east': ("Family look (Eastern): a lean rifleman in a rounded helmet with a cloth cover, a chest rig of flat ammunition pouches, a long coat-like smock, a rifle with a curved magazine, a rolled blanket across the shoulder.",
+              ["Cold War era kit: a rounded steel helmet with a cloth cover, a leather-look belt harness with ammunition pouches, a long rifle with a curved magazine and a folding stock, a small canvas pack, tall boots.",
+               "new modular kit: a helmet with a clear visor and a rail mount, a chest rig with modular pouches, body armour plates, a compact rifle with a sight and a suppressor, knee pads, a modern pack.",
+               "light powered exoskeleton frames on the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back."]),
+     'china': ("Family look (China, its own lines): a slim, upright rifleman in a clean tidy uniform, a rounded helmet with a net cover, a neat chest rig with squared pouches, a rifle with a short barrel, a compact backpack.",
+               ["Cold War era kit: a plain rounded helmet, a simple canvas belt with squared pouches, a long rifle with a curved magazine, a small green canvas bag, soft canvas boots.",
+                "new modular kit: a helmet with a visor and a camera mount, a neat chest rig with squared pouches, light body armour, a compact rifle with a sight, knee pads, a compact pack.",
+                "light powered exoskeleton frames on the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back."]),
+     'europe': ("Family look (Europe): a practical, slim rifleman with a rounded modern helmet, a plate-carrier vest with tidy pouches, a compact rifle held close, ear protection, a medium pack.",
+                ["Cold War era kit: a rounded steel-style helmet, a simple webbing harness with ammunition pouches, a plain rifle with a plastic-look stock and a bipod, a canvas pack, boots with gaiters.",
+                 "new modular kit: a helmet with a visor and ear defenders, a plate-carrier vest with tidy modular pouches, a compact rifle with a sight, knee and elbow pads, a medium pack.",
+                 "light powered exoskeleton frames on the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, practical rifleman with mixed, worn kit, a rounded helmet, a simple vest, an older rifle, a scarf at the neck, a faded canvas pack.",
+                ["post-war kit: a rounded steel helmet with a cloth cover, a canvas belt with pouches, a plain long rifle with a wooden-look stock, a faded canvas pack, worn boots.",
+                 "widely exported 1980s kit: a helmet with a net cover, a chest rig of flat pouches, a rifle with a curved magazine and a folding stock, a water bottle and a bigger pack, a scarf.",
+                 "modern export kit: a helmet with a rail and a visor, a plate-carrier vest with bolt-on pouches, a compact rifle with a sight, knee pads, a practical, mixed look made to be sold to many armies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer kit: ", "Generation 3 of 3, the newest, a near-future kit: "])
+
+# ---- Frigate (key frig)
+unit_def('frig', 'frigate (a small warship)', 'ship', 'warship',
+    "steaming at moderate speed, a white bow wave at its stem and a long white wake behind it",
+    {'nato': ("Family look (US/NATO): a clean, flat-sided hull with a sharply raked bow, a boxy angular superstructure with flat plates, a single main gun forward, a helicopter deck at the stern.",
+              ["a Cold War era design: a long, low hull with a tall boxy superstructure, a single gun turret on the bow, a tall lattice mast with a rotating radar dish, a box missile launcher on the deck behind the gun, one tall funnel, a small helicopter pad at the stern.",
+               "a clearly newer design: a more angular hull with a flush deck, a smooth boxy superstructure with flat panel radars, a vertical launch block forward, a medium gun on the bow, a hangar with a helicopter deck at the stern, a funnel faired into the superstructure.",
+               "a near-future design: a stealthy angular hull, a smooth faceted superstructure with an integrated mast, a vertical launch block, a small gun in a faceted turret, a large helicopter hangar, no funnel, small unmanned boats on the stern."]),
+     'east': ("Family look (Eastern): a robust hull with a high flared bow, a tall, heavily armed superstructure with many launchers and guns packed on deck, a tall mast, a big helicopter deck at the stern.",
+              ["a Cold War era design: a long hull with a high bow, a tall block superstructure with two funnels, two twin gun turrets, a rocket launcher on the foredeck, a mast with a round radar, a helicopter pad at the stern.",
+               "a clearly newer design: a smooth angular hull with a long forecastle, an armoured box superstructure with a mast, vertical launch cells at the bow, a single gun on the bow, a hangar with a deck at the stern, fewer exposed fittings.",
+               "a near-future design: a stealthy angular hull, a tall integrated mast tower with flat radar panels, vertical launch cells, a small faceted gun turret, a large hangar, no funnel."]),
+     'china': ("Family look (China, its own lines): a long, low hull with a sharply raked clipper bow, a sleek, angular superstructure with neat rounded edges and flat radar panels, a large hangar and a flat helicopter deck.",
+               ["a modest design: a long hull with a tall boxy superstructure, a twin gun turret forward and another aft, a tall mast with a round radar, two small funnels, a helicopter pad.",
+                "a clearly newer design: a smooth hull with a clean angular superstructure, flat phased-array radar panels, a vertical launch block forward, a single gun, a large hangar with a deck at the stern, a funnel faired in.",
+                "a near-future design: a stealth hull with a smooth faceted superstructure, a tall integrated mast with flat panels, vertical launch cells, a faceted gun turret, a large hangar, no funnel."]),
+     'europe': ("Family look (Europe): a sleek, graceful hull with a clean rounded superstructure of sloping sides, a single tall integrated mast, a rounded gun turret, a large helicopter hangar at the stern.",
+                ["a Cold War era design: a long, narrow hull with a tall superstructure, a single rounded gun turret on the bow, a tall mast with a radar dish, one funnel, a small helicopter pad at the stern.",
+                 "a clearly newer design: a smooth hull with a sloped superstructure with flat radar panels, a vertical launch block, a rounded gun on the bow, a hangar with a deck at the stern, a funnel faired in.",
+                 "a near-future design: a stealth hull with a smooth superstructure with an integrated mast, a vertical launch block, a small faceted gun, a large hangar and mission bay at the stern, no funnel."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a simpler superstructure with bolt-on launchers and guns that look fitted by the buyer.",
+                ["a post-war pattern: a long, low hull with a plain superstructure, two gun turrets, a small mast with a radar dish, one funnel, a depth-charge rack at the stern.",
+                 "a widely exported 1970s-80s pattern: a hull with a taller superstructure, a medium gun on the bow, a box missile launcher, a radar mast, a small helicopter pad, bolt-on boxes.",
+                 "a modern export-grade design: a clean modular hull with a plain angular superstructure, a vertical launch block, a medium gun, a hangar with a helicopter deck, a practical look made to be sold to many navies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design with a new hull and a clean, angular superstructure: ", "Generation 3 of 3, the newest, a stealth hull with an integrated mast: "])
+
+# ---- Cruiser (key crui)
+unit_def('crui', 'cruiser (a large warship)', 'ship', 'warship',
+    "steaming at moderate speed, a white bow wave at its stem and a long white wake behind it",
+    {'nato': ("Family look (US/NATO): a big, long, flat-sided hull with a high bow, a massive boxy angular superstructure of flat plates, two main guns, many missile cells, a helicopter deck at the stern.",
+              ["a Cold War era design: a long hull with a tall boxy superstructure, a gun turret on the bow and another aft, a double-arm missile launcher forward, two tall funnels, a tall lattice mast with a big rotating radar, a helicopter pad.",
+               "a clearly newer, larger design: a long angular hull, a broad superstructure with flat radar panels on all four sides, vertical launch blocks forward and aft, a gun on the bow, two small funnels, a helicopter deck and hangars.",
+               "a near-future design: a big angular wave-piercing hull, a large smooth faceted deckhouse with integrated flat radar panels and mast, two large gun turrets in faceted housings, vertical launch cells along both sides, no funnels."]),
+     'east': ("Family look (Eastern): a large, heavily armed hull with a high flared bow, a tall superstructure crowded with launchers, guns and radars, a tall mast and a big helicopter deck.",
+              ["a Cold War era design: a long hull with a high bow, a tall block superstructure with two funnels, two twin gun turrets, missile launcher tubes along the deck sides, a tall mast with several radars, a helicopter pad.",
+               "a clearly newer, larger design: a huge hull with a long forecastle, a tall superstructure with a mast, big missile launch tubes in rows along the deck, a gun on the bow, two small funnels, a helicopter hangar.",
+               "a near-future design: a stealthy angular hull, a tall integrated mast tower with flat radar panels, vertical launch cells packed along the deck, a faceted gun turret, a large hangar, no funnels."]),
+     'china': ("Family look (China, its own lines): a long, sleek, large hull with a raked clipper bow, a smooth angular superstructure with neat edges and flat radar panels, a large hangar and helicopter deck.",
+               ["a modest design: a long hull with a tall boxy superstructure, twin gun turrets forward and aft, missile launcher boxes on the deck, a tall mast with a round radar, two funnels, a helicopter pad.",
+                "a clearly newer, larger design: a smooth hull with a large angular superstructure with flat radar panels, vertical launch blocks forward and aft, a single gun on the bow, a hangar and a helicopter deck, a funnel faired in.",
+                "a near-future design: a big stealth hull with a large smooth faceted superstructure, flat radar faces built into it, vertical launch cells forward and aft, a faceted gun turret, a large hangar, no funnels."]),
+     'europe': ("Family look (Europe): a sleek, graceful, large hull with clean sloped sides, a rounded superstructure, a single tall integrated mast with a big radar, a rounded gun turret, a large hangar.",
+                ["a Cold War era design: a long hull with a tall superstructure, a twin missile launcher forward, a rounded gun turret, two funnels, a lattice mast with a big radar dish, a helicopter pad.",
+                 "a clearly newer, larger design: a smooth hull with a sloped superstructure and flat panel radars, vertical launch blocks forward, a rounded gun on the bow, a funnel faired in, a hangar and helicopter deck.",
+                 "a near-future design: a stealth hull with a smooth sloped superstructure and a large integrated mast with flat radar panels, vertical launch cells, a small faceted gun, a large hangar, no funnel."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a large hull with a simpler superstructure and bolt-on launchers and guns that look fitted by the buyer.",
+                ["a post-war pattern: a long hull with a plain tall superstructure, two twin gun turrets, torpedo tubes amidships, two funnels, a small mast with a radar dish.",
+                 "a widely exported 1970s-80s pattern: a hull with a taller superstructure, a twin gun on the bow, box missile launchers, a radar mast, a helicopter pad, bolt-on boxes.",
+                 "a modern export-grade design: a large modular hull with a plain angular superstructure, vertical launch blocks, a medium gun, a hangar with a helicopter deck, a practical look made to be sold to many navies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer, larger design with an angular hull: ", "Generation 3 of 3, the newest, a stealth hull with flat radar faces built into the superstructure: "])
+
+# ---- Attack Submarine (key sub)
+unit_def('sub', 'attack submarine', 'sub', 'submarine',
+    "running on the surface at moderate speed, a white bow wave at its bow and a churned white wake behind it, the sail rising from the middle of the hull",
+    {'nato': ("Family look (US/NATO): a big, smooth, black teardrop hull with a rounded bow, a tall rectangular sail with flat plane fins on its sides, a cruciform tail with a single large propeller.",
+              ["a Cold War era design: a rounded cigar-shaped hull, a medium sail with diving planes on its sides, a cruciform tail, a flat deck casing with small hatches.",
+               "a clearly newer design: a larger hull with an X-shaped tail, a taller sail with a flat top, a bow dome, a smooth rubber-coated look, a flush deck.",
+               "a near-future design: a longer, smoother hull with a streamlined faired sail, an X-shaped tail, a shrouded pump-jet at the stern, a flush deck with a small mast fairing."]),
+     'east': ("Family look (Eastern): a thick, blunt, very rounded hull with a large rounded sail and a long deck casing, a tall fin on the back of the sail, a cruciform tail, a heavy built look.",
+              ["a Cold War era design: a stubby rounded hull with a tall blocky sail with the diving planes on the sail, a long raised deck casing along the back, a cruciform tail.",
+               "a clearly newer design: a longer, thicker hull with an X-shaped tail, a bigger rounded sail with a tall fin, a rounded bow, a smooth coated look, a flush deck.",
+               "a near-future design: a long, smooth hull with a streamlined sail, an X-shaped tail, a shrouded pump-jet, a few small hatches in the deck, a flush look."]),
+     'china': ("Family look (China, its own lines): a long, slender, smooth hull with a pointed rounded bow, a low rounded sail, a clean uncluttered deck, a cruciform tail.",
+               ["a modest design: a slim cigar-shaped hull with a small low sail, diving planes on the bow, a cruciform tail, a flat deck casing with a few hatches.",
+                "a clearly newer design: a longer hull with an X-shaped tail, a streamlined sail with rounded top, a smooth coated look, a small bow dome.",
+                "a near-future design: a longer, smoother hull with a faired sail, an X-shaped tail, a shrouded pump-jet, a flush deck with no visible hatches."]),
+     'europe': ("Family look (Europe): a sleek, rounded hull with a small streamlined sail, an X-shaped or cruciform tail, a clean flush deck, a polished modern look.",
+                ["a Cold War era design: a short, rounded hull with a small sail with planes, a cruciform tail, a simple flat deck casing.",
+                 "a clearly newer design: a longer hull with an X-shaped tail, a streamlined sail, a flush deck, a smooth coated look, a bow dome.",
+                 "a near-future design: a long, smooth hull with a small faired sail, an X-shaped tail, a shrouded pump-jet, a flush deck with a small mast fairing."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, an older teardrop hull, a simple sail, visible deck hatches and bolt-on fittings.",
+                ["a post-war pattern: a slim cigar hull with a tall plain sail, diving planes on the sail, a raised deck casing, a cruciform tail, small hatches and a deck gun mount without a gun.",
+                 "a widely exported 1980s pattern: a rounder hull with a medium sail, a cruciform tail, flush deck hatches, a bow dome, a plain finish.",
+                 "a modern export-grade design: a modular hull with an X-shaped tail, a faired sail, a flush deck, a practical look made to be sold to many navies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design with a new hull and an X-shaped tail: ", "Generation 3 of 3, the newest, a longer, smoother hull with a pump-jet: "])
+
+# ---- Aircraft Carrier (key carr)
+unit_def('carr', 'aircraft carrier', 'ship', 'warship',
+    "steaming at moderate speed, a big white bow wave and a long white wake behind it, a few small parked aircraft on the flight deck",
+    {'nato': ("Family look (US/NATO): a huge, flat-topped hull with a long angled flight deck, a small tower-like island on the right side of the deck, big elevators at the edges, a clean flat deck with parked aircraft in neat rows.",
+              ["a Cold War era design: a large flat-top hull with an angled flight deck, a tall blocky island with a big radar antenna and a funnel on the right side, deck-edge elevators, parked aircraft in rows.",
+               "a clearly newer, larger design: a bigger hull with a long angled flight deck, a new smaller island set farther back, a clean deck with deck-edge elevators, catapults at the bow, parked aircraft in rows.",
+               "a near-future design: a smooth hull with a small integrated island set far back on the deck, a long clean angled flight deck, flat electromagnetic catapult tracks, small unmanned drones parked on the deck."]),
+     'east': ("Family look (Eastern): a heavy, thick hull with a ski-jump ramp at the bow, a tall island on the right side crowded with radars, large launcher tubes under the angled deck edge, parked aircraft near the island.",
+              ["a Cold War era design: a hull with a ski-jump ramp at the bow, a short angled deck, a tall boxy island with a huge radar array and two funnels, missile launcher tubes on the forward deck, parked aircraft.",
+               "a clearly newer, larger design: a longer hull with a ski-jump bow, a long angled deck, a new compact island with flat panel radars, deck-edge elevators, rows of parked aircraft.",
+               "a near-future design: a smooth hull with a small streamlined island, a long clean angled flight deck, catapult tracks, small unmanned drones parked on the deck, no funnel."]),
+     'china': ("Family look (China, its own lines): a long, clean hull with a rising ski-jump ramp at the bow, a modest island on the right side with flat radar panels, an angled deck, neat rows of parked aircraft.",
+               ["a modest design: a hull with a ski-jump ramp, a short angled deck, a boxy island with a round radar and a funnel, parked aircraft in a row.",
+                "a clearly newer design: a larger hull with a long angled flight deck, a new compact island with flat phased-array radar panels, deck-edge elevators, catapult tracks, parked aircraft in rows.",
+                "a near-future design: a smooth hull with a small integrated island, a long clean angled flight deck with flat catapult tracks, small unmanned drones parked on the deck."]),
+     'europe': ("Family look (Europe): a sleek, rounded, graceful flat-top hull, a compact island with a single tall mast on the right side, an angled deck, a clean deck with a few parked aircraft.",
+                ["a Cold War era design: a smaller flat-top hull with an angled deck, a tall boxy island with a radar dish and a funnel, one elevator, a few parked aircraft.",
+                 "a clearly newer design: a bigger hull with a long angled flight deck, a compact island with flat radar panels, two elevators, catapults at the bow, parked aircraft in rows.",
+                 "a near-future design: a smooth hull with a two-part island with an integrated mast, a long clean angled flight deck, a ski-jump-free flat bow, small unmanned drones parked on the deck."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a smaller flat-top hull with a simple island and a modest deck with a few parked aircraft.",
+                ["a post-war pattern: a small, simple flat-top hull with a straight flight deck, a plain boxy island on the right side, one elevator, a few parked aircraft.",
+                 "a widely exported 1970s-80s pattern: a mid-sized hull with a short angled deck, a ski-jump bow, a taller island with a radar mast and a funnel, a few parked aircraft.",
+                 "a modern export-grade design: a modular hull with an angled deck, a compact island with flat radar panels, two elevators, a few parked aircraft, a practical look made to be sold to many navies."])},
+    frame_note="The ship is a full-size aircraft carrier: the flight deck, its angled landing runway markings left blank (no painted lines or numbers) and the island are all visible.",
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design with a new island and an angled deck: ", "Generation 3 of 3, the newest, a small integrated island and drones on deck: "])
+
+# ---- Strike Fighter (key jet)
+unit_def('jet', 'strike fighter (a combat jet for ground attack)', 'air', 'combat aircraft',
+    "flying fast in a gentle bank with a faint vapour trail at its wingtips, bombs and missiles carried on its wing pylons where the design carries them",
+    {'nato': ("Family look (US/NATO): a sleek, compact fighter with a blended wing and body, intakes under or beside the body, a bubble canopy, tall or canted tail fins, weapons on wing pylons.",
+              ["a Cold War era design: a compact single-engine jet with a bubble canopy, a chin intake under the nose, one tall tail fin, swept wings with six underwing pylons carrying bombs and a fuel tank, a plain round exhaust.",
+               "a new airframe with an internal weapons bay: a larger twin-engine jet with two engines side by side and square intakes on the sides, twin canted tail fins, a wide wing with long leading-edge extensions, closed weapon-bay doors on the belly, a sensor pod on the nose.",
+               "a tailless, faceted strike aircraft: a smooth sharply faceted airframe with no tail fins, no external weapons, a single engine with a faceted exhaust, small internal bays, a sensor blister under the nose."]),
+     'east': ("Family look (Eastern): a big, rugged, wide-bodied jet with two widely spaced engines, a long nose, square intakes, twin tall tail fins and many weapon pylons.",
+              ["a Cold War era design: a stubby, rugged attack jet with a drooped nose, a single engine, one tall tail fin, swept wings with six pylons carrying rocket pods and bombs, a plain cockpit bubble.",
+               "a new airframe with an internal weapons bay: a large twin-engine strike jet with a wide, flat-fronted cockpit, a long tail stinger, twin tall tail fins, large square intakes, closed weapon-bay doors under the fuselage, wing pylons with missiles.",
+               "a tailless, faceted strike aircraft: a wide, smoothly faceted airframe with no tail fins, two widely spaced engines with faceted exhausts, internal bays, a smooth nose."]),
+     'china': ("Family look (China, its own lines): a clean, sharply swept design with a long pointed nose, big rectangular side intakes, canted twin tail fins, neat flush weapon pylons.",
+               ["a modest design: a simple single-engine attack jet with a pointed nose, a nose intake with a centre cone, swept wings, one tail fin, four underwing pylons.",
+                "a new airframe with an internal weapons bay: a larger twin-engine jet with big rectangular intakes on the sides, canted twin tails, a clean wide body, closed weapon-bay doors on the belly, a sensor pod, wing pylons.",
+                "a tailless, faceted strike aircraft: a smooth sharply faceted airframe with a diamond-shaped intake, no tail fins, internal bays, a single engine with a serrated exhaust, a sensor blister under the nose."]),
+     'europe': ("Family look (Europe): a sleek delta-wing or swept design with small canard foreplanes, a compact graceful body, a single or twin engines, an elegant clean finish.",
+                ["a Cold War era design: a compact single-engine strike jet with a pointed nose, small stubby straight wings, one tail fin, a long thin body, two wingtip fuel tanks and a few pylons.",
+                 "a new airframe with an internal weapons bay: a twin-engine delta-wing jet with small canard foreplanes, a long clean body, closed weapon-bay doors on the belly, a single tail fin, a few wing pylons.",
+                 "a tailless, faceted strike aircraft: a smooth, faceted airframe with no tail fins, two small internal bays, a single engine, a clean sensor blister under the nose."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older jet shapes with bolt-on kits and add-on parts that look fitted by the buyer.",
+                ["a post-war pattern: a plain single-engine jet with swept wings that can fold, a nose intake, one tall tail fin, four pylons with bombs and a drop tank, a plain bubble cockpit.",
+                 "a new airframe with a larger wing: a twin-engine jet with a sloped cockpit, twin tail fins, canard foreplanes, six wing pylons with missiles, a refuelling probe, a clean practical look.",
+                 "a modern export-grade design: a single-engine faceted jet with side intakes, a small internal bay, a modular nose with a radar, tail fins, a practical look made to be sold to many air forces."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- Interceptor (key int)
+unit_def('int', 'interceptor (a fast high-altitude fighter)', 'air', 'combat aircraft',
+    "climbing fast in a steep bank, a faint vapour trail at its wingtips, long-range air-to-air missiles under its wings where the design carries them",
+    {'nato': ("Family look (US/NATO): a big, powerful, long-bodied fighter with two large engines, big square or wedge intakes on the sides of the body, a bubble canopy, twin tall tail fins and long-range missiles carried under the body.",
+              ["a Cold War era design: a heavy twin-engine jet with a long nose with a big radar, a bubble canopy, two side intakes with sharp edges, swept wings with downturned tips, one or two tail fins, four missiles under the fuselage.",
+               "a new, larger twin-engine airframe: a long body with a swing-out wing, a large radar nose, twin tall tail fins, wedge intakes, long-range missiles under the belly, a clean finish.",
+               "a tailless, faceted near-future fighter: a smooth faceted wide body with no tail fins, internal bays, two engines with faceted exhausts, a diamond-shaped intake."]),
+     'east': ("Family look (Eastern): a big, rugged, high-flying jet with two widely spaced engines, huge square intakes, twin tall tail fins, a long nose and heavy long-range missiles under the body.",
+              ["a Cold War era design: a stout twin-engine jet with a swept wing, large square side intakes, a single tall tail fin, a long nose, a bubble canopy, two long missiles under the body.",
+               "a new, larger twin-engine airframe: a big wide jet with two widely spaced engines, huge rectangular intakes, twin canted tail fins, a long radome nose, four large missiles on the belly, a long tail boom.",
+               "a tailless, faceted near-future fighter: a smooth faceted wide body, no tail fins, two widely spaced engines with faceted exhausts, internal bays, a smooth nose."]),
+     'china': ("Family look (China, its own lines): a slim, clean, high-flying jet with a long pointed nose, a delta or swept wing, rectangular side intakes, canted twin tails and neat flush pylons.",
+               ["a Cold War era design: a slim single-engine jet with a small delta wing, a nose intake with a centre cone, a single tall tail fin, two small missiles under the wings, a bubble canopy.",
+                "a new, larger airframe: a big delta wing with small canard foreplanes, a long clean body, a single engine with a big ventral intake, a single tail fin, six pylons with long missiles.",
+                "a tailless, faceted near-future fighter: a smooth faceted body with a diamond-shaped intake, no tail fins, internal bays, a single engine with a faceted exhaust."]),
+     'europe': ("Family look (Europe): a sleek, narrow, high-flying jet with a delta wing, small canard foreplanes, a compact graceful body and a clean finish.",
+                ["a Cold War era design: a very slim jet with tiny, thin straight wings, a long needle-like body, a single tail fin, two small missiles on the wingtips, a plain round exhaust.",
+                 "a new, larger airframe: a compact delta-wing jet with canard foreplanes, a single engine, a sleek body, a bubble canopy, a single tall tail fin, four long missiles under the body.",
+                 "a tailless, faceted near-future fighter: a smooth faceted delta-shaped body with no tail fins, internal bays, a single engine with a faceted exhaust."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older jet shapes with bolt-on kits that look fitted by the buyer.",
+                ["a post-war pattern: a small delta-wing jet with a nose intake with a centre cone, a single tall tail fin, two small missiles under the wings, a plain bubble canopy.",
+                 "a widely exported 1980s pattern: a twin-engine jet with swept wings, two tail fins, intakes under the wings, a rear-facing sensor on the tail, four missiles under the body.",
+                 "a modern export-grade design: a single-engine faceted jet with side intakes, a small internal bay, a modular radar nose, a practical look made to be sold to many air forces."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- Air Superiority Fighter (key asf)
+unit_def('asf', 'air superiority fighter (a stealthy twin-engine fighter)', 'air', 'combat aircraft',
+    "flying fast in a banking turn, a faint vapour trail at its wingtips, weapons carried inside its body so that its lines are clean",
+    {'nato': ("Family look (US/NATO): a large, agile, twin-engine fighter with big wedge intakes beside the cockpit, twin tall tail fins, a wide flat body, a bubble canopy.",
+              ["a Cold War era design: a big twin-engine jet with a high wing, large squared intakes with a moving ramp, twin tall tail fins, a bubble canopy, four long missiles under the body and a cannon at the wing root.",
+               "a new airframe with canted tails: a sharp, stealthy twin-engine fighter with canted twin tail fins, faceted edges, flat engine exhausts, closed internal weapon bays, a wide flat body.",
+               "a tailless, wide-body near-future fighter: a smooth, wide faceted body with no tail fins, internal bays, two engines with faceted exhausts, a smooth diamond-shaped nose."]),
+     'east': ("Family look (Eastern): a big, powerful twin-engine fighter with two widely spaced engines, a long tail boom between them, twin tall tail fins, a long nose and large wing extensions.",
+              ["a Cold War era design: a large twin-engine jet with two widely spaced engines, twin tall tail fins, a long nose with a pointed radome, a bubble canopy, six long missiles under the wings and body.",
+               "a new airframe with canted tails: a big, agile twin-engine jet with canted twin tail fins, a large thrust-vectoring-looking nozzle pair, a long tail boom, a wide body, closed weapon bays and a few wing missiles.",
+               "a tailless, wide-body near-future fighter: a wide, smooth, faceted body with no tail fins, two widely spaced engines with faceted exhausts, internal bays, a smooth nose."]),
+     'china': ("Family look (China, its own lines): a long, sharp, clean twin-engine fighter with a long pointed nose, big rectangular side intakes, canted twin tail fins and a delta wing with canard foreplanes.",
+               ["a Cold War era design: a large twin-engine jet with a swept wing, rectangular side intakes, twin tall tail fins, a bubble canopy, four missiles under the wings.",
+                "a new airframe with canted tails: a sleek stealthy twin-engine fighter with canard foreplanes, a long faceted body, canted twin tail fins, flat exhausts, closed internal weapon bays.",
+                "a tailless, wide-body near-future fighter: a wide faceted body with no tail fins, a smooth diamond-shaped nose, two engines with faceted exhausts, internal bays."]),
+     'europe': ("Family look (Europe): a sleek, agile twin-engine fighter with a delta wing, small canard foreplanes, a chin intake under the nose, a single tall tail fin, a clean polished finish.",
+                ["a Cold War era design: a large twin-engine jet with swept wings, two plain tail fins, big side intakes, a bubble canopy, four missiles under the body.",
+                 "a new airframe: a twin-engine delta-wing fighter with canard foreplanes, a chin intake, a single tall tail fin, a clean sleek body, weapons under the wings and body.",
+                 "a tailless, wide-body near-future fighter: a smooth faceted delta-shaped body with no tail fins, internal bays, two engines with faceted exhausts, a smooth nose."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older jet shapes with bolt-on kits that look fitted by the buyer.",
+                ["a post-war pattern: a swing-wing jet with a nose intake, a single tall tail fin, two small missiles under the wings, a plain bubble canopy.",
+                 "a widely exported 1980s pattern: a large twin-engine jet with two widely spaced engines, twin tail fins, a long nose, six missiles under the wings and body, a plain finish.",
+                 "a modern export-grade design: a twin-engine jet with canard foreplanes, canted tail fins, a modular radar nose, bolt-on pylons, a practical look made to be sold to many air forces."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- Attack Helicopter (key heli)
+unit_def('heli', 'attack helicopter', 'heli', 'helicopter',
+    "flying fast and low, nose slightly down, its rotor turning, rocket pods and missiles on its stub wings where the design carries them, a faint dust haze under it",
+    {'nato': ("Family look (US/NATO): a slim, narrow-bodied attack helicopter with two seats in tandem, a tall nose sensor turret, short stub wings carrying rocket pods and missiles, a four-bladed main rotor and a tail rotor.",
+              ["a Cold War era design: a slim, narrow, low helicopter with two seats in tandem under separate bubble canopies, a two-bladed main rotor, a chin turret gun, short stub wings with rocket pods and missile tubes, a tall tail with a small tail rotor.",
+               "a new, angular airframe with weapons carried inside: a sleek angular body with faceted panels, a four-bladed main rotor, a nose sensor turret, small stub wings, closed internal weapon bays on the belly, a tall tail fin.",
+               "a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a twin rotor mast with coaxial blades, a pusher propeller at the tail, small stub wings, closed internal bays."]),
+     'east': ("Family look (Eastern): a big, rugged, armoured helicopter with a heavy body, stub wings with many weapon pylons, a five-bladed main rotor, a thick armoured cockpit with flat glass panels.",
+              ["a Cold War era design: a big, heavy helicopter with a hump-backed body, two bulged cockpit canopies side by side in tandem, a five-bladed main rotor, big stub wings with rocket pods and missile rails, a chin gun, wheels retracted.",
+               "a new, angular airframe with weapons carried inside: a coaxial twin-rotor body (two rotors one above the other) with a short wide fuselage, side-by-side seats, wing pylons with a few missiles, a nose sensor turret.",
+               "a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a coaxial main rotor, a pusher propeller at the tail, small stub wings, closed internal bays."]),
+     'china': ("Family look (China, its own lines): a slim, clean, narrow helicopter with a sharply angular nose, a four-bladed main rotor, tandem cockpits under flat glass, short stub wings and neat missile rails.",
+               ["a modest design: a small slim helicopter with a plain rounded body, a two-bladed main rotor, a chin turret, short stub wings with rocket pods and missile rails.",
+                "a new, angular airframe with weapons carried inside: a narrow faceted body with flat armoured panels, a five-bladed main rotor, a nose sensor turret, stub wings with a few missiles, a tall fin.",
+                "a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a coaxial main rotor, a pusher propeller at the tail, small stub wings, closed internal bays."]),
+     'europe': ("Family look (Europe): a sleek, graceful, narrow-bodied helicopter with tandem cockpits under rounded canopies, a four-bladed main rotor, a mast-mounted sight, a clean low silhouette.",
+                ["a Cold War era design: a light, slim helicopter with tandem cockpits under bubble canopies, a two-bladed main rotor, a chin turret gun, short stub wings with missile tubes and rocket pods.",
+                 "a new, angular airframe with weapons carried inside: a sleek faceted body with a four-bladed main rotor, a mast-mounted sight, a nose sensor turret, stub wings with missiles, a tall fin.",
+                 "a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a coaxial main rotor, a pusher propeller at the tail, small stub wings, closed internal bays."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older helicopter shapes with bolt-on kits that look fitted by the buyer.",
+                ["a post-war pattern: a bulky helicopter with a bulged cockpit, a five-bladed main rotor, wheels, short stub wings with rocket pods and missile rails, a plain tail rotor.",
+                 "a widely exported 1980s pattern: a bigger helicopter with a bubble canopy for two seats in tandem, a five-bladed rotor, a chin gun turret, larger stub wings with missile rails and pods, bolt-on armour plates.",
+                 "a modern export-grade design: an angular helicopter with a modular nose with a sensor ball, a four-bladed rotor, stub wings with missiles, a practical look made to be sold to many armies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- Recon UAV (key drone; its looks follow the generations: look 1 = UAV I-III, unarmed; look 2 = UAV IV, the first armed one; look 3 = UAV V)
+unit_def('drone', 'reconnaissance drone (a medium unmanned aircraft)', 'air', 'drone',
+    "flying slowly and steadily in a gentle turn, its camera turret under the nose looking down at the ground far below",
+    {'nato': ("Family look (US/NATO): a slim unmanned aircraft with a bulbous nose, a pusher propeller at the tail, long thin straight wings and an inverted-V tail, a camera turret under the nose.",
+              ["unarmed: a small, slim propeller drone with long thin straight wings, a rounded nose with a camera dome, a pusher propeller, an inverted-V tail, no weapons of any kind under the wings.",
+               "armed, the first one: a larger propeller drone with long thin wings, a bulbous nose, a camera turret under the nose, a pusher propeller, an inverted-V tail and two small missiles on pylons under each wing.",
+               "a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons, a camera blister under the nose."]),
+     'east': ("Family look (Eastern): a twin-boom unmanned aircraft with a stubby body, a pusher propeller between the booms, a high straight wing and a camera ball under the nose.",
+              ["unarmed: a small twin-boom drone with a stubby rounded body, a high straight wing, a pusher propeller, a camera dome under the nose, no weapons of any kind.",
+               "armed, the first one: a larger twin-boom drone with a long straight wing, a pusher propeller, a camera ball under the nose and two missiles on pylons under each wing.",
+               "a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons."]),
+     'china': ("Family look (China, its own lines): a slim, clean unmanned aircraft with high straight wings, a V-tail or twin tails, a pusher propeller, a neat camera turret under a rounded nose.",
+               ["unarmed: a small, slim propeller drone with long high straight wings, a V-tail, a rounded nose with a camera dome, no weapons of any kind.",
+                "armed, the first one: a larger propeller drone with long straight wings, a V-tail, a pusher propeller, a camera turret under the nose and two missiles on pylons under each wing.",
+                "a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons."]),
+     'europe': ("Family look (Europe): a sleek, clean unmanned aircraft with a smooth rounded body, small swept wings and tail fins, an elegant polished look, a camera pod under the body.",
+                ["unarmed: a slim, torpedo-shaped, jet-powered drone with small stubby straight wings, a small tail with fins, a camera pod under the body, no weapons of any kind.",
+                 "armed, the first one: a larger propeller drone with long thin wings, a bulbous nose, a camera turret under the nose, a pusher propeller, an inverted-V tail and two missiles on pylons under each wing.",
+                 "a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless diamond-shaped flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a simple unmanned aircraft with bolt-on kits that look fitted by the buyer.",
+                ["unarmed: a small, simple propeller drone with a plain boxy body, straight wings, twin tail booms, a camera dome under the nose, no weapons of any kind.",
+                 "armed, the first one: a mid-sized twin-boom drone with a pusher propeller, straight wings, a camera ball under the nose and two small missiles on pylons under each wing.",
+                 "a jet-powered flying-wing drone with internal weapons: a modular, faceted, tailless flying wing with a dorsal air intake, closed internal bays, no external weapons, a practical look."])},
+    gens=["Look 1 of 3 (generations I to III), the oldest, ", "Look 2 of 3 (generation IV), a clearly newer design: ", "Look 3 of 3 (generation V), the newest, "])
+
+# ---- Strike Drone (key sdrone)
+unit_def('sdrone', 'strike drone (an armed unmanned aircraft)', 'air', 'drone',
+    "flying fast in a gentle bank, the weapons it carries clearly visible under its wings or body",
+    {'nato': ("Family look (US/NATO): a lean, smooth unmanned aircraft with a swept wing, a V-tail or no tail, a dorsal engine intake, clean lines, weapons on pylons or in internal bays.",
+              ["a medium propeller-driven strike drone: a slim body with long straight wings, a V-tail, a pusher propeller, a camera ball under the nose, four small missiles on pylons under the wings.",
+               "a larger jet-powered drone: a smooth, flattened body with small swept wings, a V-tail, a dorsal jet intake, a flat exhaust, weapon pylons under the wings and an internal bay.",
+               "a tailless, stealthy combat drone: a smooth, sharply faceted flying wing with no tail, a diamond-shaped intake, closed internal weapon bays, no external weapons."]),
+     'east': ("Family look (Eastern): a rugged, simple unmanned aircraft, a thin body with a delta or straight wing, cheap and mass-produced in look, weapons on pylons or in an internal bay.",
+              ["a cheap delta-winged propeller drone: a long, thin body, a small swept delta wing, a pusher propeller at the tail, a small warhead nose, no tail, a rugged simple look.",
+               "a larger jet-powered drone: a thicker body with swept wings, twin tail fins, a dorsal jet intake, a flat exhaust, a few weapon pylons under the wings.",
+               "a tailless, stealthy combat drone: a smooth, wide, faceted flying wing with no tail, a dorsal intake, closed internal bays, a smooth nose."]),
+     'china': ("Family look (China, its own lines): a clean, slim unmanned aircraft with long straight or swept wings, a V-tail or no tail, neat flush pylons, a smooth faceted look in the newest.",
+               ["a medium propeller-driven strike drone: a slim body with long straight wings, a V-tail, a pusher propeller, a camera ball under the nose, four small missiles on pylons under the wings.",
+                "a larger jet-powered drone: a smooth body with swept wings, a V-tail, a dorsal jet intake, a flat exhaust, weapon pylons under the wings and a small internal bay.",
+                "a tailless, stealthy combat drone: a smooth, sharply faceted flying wing with no tail, a diamond-shaped intake, closed internal weapon bays, no external weapons."]),
+     'europe': ("Family look (Europe): a sleek, elegant unmanned aircraft with a clean smooth body, a delta or swept wing, a refined polished look, weapons on pylons or in internal bays.",
+                ["a medium propeller-driven strike drone: a slim body with long straight wings, a V-tail, a pusher propeller, a camera ball under the nose, four small missiles on pylons under the wings.",
+                 "a larger jet-powered drone: a smooth tailless body with a sharp delta wing, a dorsal intake, a flat exhaust, closed internal weapon bays and two wing pylons.",
+                 "a tailless, stealthy combat drone: a smooth, wide, sharply faceted flying wing with a saw-tooth trailing edge, no tail, a diamond-shaped intake, closed internal bays."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a simple unmanned aircraft with bolt-on kits that look fitted by the buyer.",
+                ["a cheap delta-winged propeller drone: a long, thin body, a small delta wing, a pusher propeller at the tail, a small warhead nose, no tail, a rugged simple look.",
+                 "a mid-sized twin-boom drone with a pusher propeller, straight wings, a camera ball under the nose, four weapon pylons, bolt-on boxes, a practical look.",
+                 "a modern export-grade stealthy combat drone: a modular, faceted flying wing with a dorsal intake, closed internal bays, a practical look made to be sold to many air forces."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- Swarm Drones (key swarm; one drone of the swarm is drawn)
+unit_def('swarm', 'small swarm drone (one drone of a swarm)', 'air', 'drone',
+    "flying fast and low in a gentle bank, its small size obvious against the wide landscape far below it, no other drone in view",
+    {'nato': ("Family look (US/NATO): a small, clean, smooth, light drone with a rounded body, tiny wings and a quiet, sensor-packed look.",
+              ["a small quadrotor-style drone: a flat central body with four short arms and four small rotors, a camera ball under the body, a neat light look.",
+               "a sleek fixed-wing drone: a slim torpedo body with small swept wings, a small pusher propeller, a small camera dome under the nose.",
+               "a small ducted-fan drone with a faceted body: a compact, sharply faceted body with two small ducted fans and short stubby fins, a flat sensor panel under the nose."]),
+     'east': ("Family look (Eastern): a small, rugged, cheap-looking drone with a simple body, a pusher propeller or plain rotors, a small warhead nose, cross-shaped wings.",
+              ["a small quadrotor-style drone: a flat boxy central body with four short arms and four small rotors, a small warhead on the underside, a rugged look.",
+               "a sleek fixed-wing drone: a slim body with small X-shaped wings and X-shaped tails, a pusher propeller, a small warhead nose.",
+               "a small ducted-fan drone with a faceted body: a compact angular body with two small ducted fans, short stubby fins, a small warhead nose."]),
+     'china': ("Family look (China, its own lines): a small, tidy, smooth drone with a clean rounded body, neat wings, a pale finish.",
+               ["a small quadrotor-style drone: a flat rounded central body with four neat arms and four small rotors, a small camera ball under the body.",
+                "a sleek fixed-wing drone: a slim body with small swept delta wings, a pusher propeller, a rounded camera nose.",
+                "a small ducted-fan drone with a faceted body: a compact, smooth, sharply faceted body with two ducted fans, short stubby fins, a flat sensor panel under the nose."]),
+     'europe': ("Family look (Europe): a small, elegant, polished drone with a smooth body, thin wings and a compact camera pod, a refined clean look.",
+                ["a small quadrotor-style drone: a smooth slim central body with four thin arms and four small rotors, a camera pod under the body.",
+                 "a sleek fixed-wing drone: a slim body with long thin straight wings, a small pusher propeller, a rounded nose with a small camera.",
+                 "a small ducted-fan drone with a faceted body: a compact, sharply faceted body with two ducted fans, short stubby fins, a small sensor dome under the nose."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a small cheap drone with bolt-on parts and simple wiring.",
+                ["a small quadrotor-style drone: a plain boxy central body with four short arms and four small rotors, a taped-on camera, a simple rugged look.",
+                 "a sleek fixed-wing drone: a slim plain body with small straight wings, a small pusher propeller, a small warhead nose, a rugged practical look.",
+                 "a small ducted-fan drone with a faceted body: a compact, modular, faceted body with two ducted fans, short stubby fins, a practical look made to be sold to many armies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- Anti-Tank Infantry (key at; the picture is the missile carrier, as docs/RESEARCH.md 14.5 says)
+unit_def('at', 'anti-tank missile carrier', 'gnd', 'missile vehicle',
+    "stopped beside a dirt road with its missile launcher raised and aimed along the road, a faint puff of dust under it",
+    {'nato': ("Family look (US/NATO): a compact armoured carrier of flat plates with a tall, flat-sided box launcher on a mast or a turret, wide tyres or short tracks, flat angular armour, matte finish.",
+              ["a Cold War era design: a small, light four-wheeled utility vehicle with open sides, a tripod-mounted two-tube missile launcher on the rear bed, a roll bar, a spare wheel and a few stowage boxes.",
+               "a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a flat angular body, a rotating box launcher with four missile tubes on top, a roof sensor, side armour plates.",
+               "a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels, a flat box launcher with eight tubes under flat covers, flat sensor panels, a remote machine gun."]),
+     'east': ("Family look (Eastern): a low, compact, rounded armoured carrier with a small launcher arm on the roof, small wheels or short tracks, reactive bricks on the front, a log and fuel drums on the rear.",
+              ["a Cold War era design: a small, low amphibious-looking four-wheeled vehicle with a rail launcher for a single wire-guided missile raised over the cab, a canvas roof, a few stowage boxes.",
+               "a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a rounded turret with a box launcher with four missile tubes, reactive bricks on the front, side skirts.",
+               "a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels, a flat box launcher with eight tubes, slat armour and bricks on the hull, a remote machine gun."]),
+     'china': ("Family look (China, its own lines): a clean, boxy armoured carrier with sloped plates, a neat rectangular box launcher, evenly spaced small wheels or short tracks.",
+               ["a modest design: a small four-wheeled light vehicle with an open back, a single tubular missile launcher on a pedestal over the cab, a plain boxy body.",
+                "a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a sloped body, a rotating rectangular box launcher with four missile tubes, a laser-warning pair on the roof.",
+                "a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels with smooth sloped panels, a flat box launcher with eight tubes, flat sensor panels."]),
+     'europe': ("Family look (Europe): a sleek, low, smoothly sloped armoured carrier with a neat rounded launcher pod, a small mast sensor, wheels or tracks of a clean modern look.",
+                ["a Cold War era design: a light four-wheeled utility vehicle with an open back, a swivel-mounted missile launcher with two tubes behind the cab, a simple roll bar.",
+                 "a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled sloped armoured carrier, a rounded box launcher with four missile tubes, a mast sensor, side skirts.",
+                 "a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels, a flat box launcher with eight tubes, a slim sensor mast, modular armour blocks."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a pickup-like or older armoured carrier with a bolt-on launcher that looks fitted by the buyer.",
+                ["a post-war pattern: a plain open four-wheeled jeep-like vehicle with a rail launcher for two wire-guided missiles on the back, a canvas roof, spare wheel.",
+                 "a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a bolt-on box launcher with four missile tubes, bolt-on armour plates, a roof machine gun.",
+                 "a modern export-grade design: a modular six-wheeled carrier with a flat box launcher with six tubes, a thermal sight box, bolt-on armour, a practical look made to be sold to many armies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- Special Forces (key spec)
+unit_def('spec', 'special forces operator', 'man', 'soldier',
+    "moving low and quietly along the edge of a dirt road with his weapon held ready, not looking at the viewer",
+    {'nato': ("Family look (US/NATO): a lean, well-equipped operator in a ballistic helmet with night-vision mounts, a plate-carrier vest with many pouches, a suppressed carbine, a radio on the shoulder, gloves and knee pads.",
+              ["Cold War era kit: a soft boonie hat, a plain lightweight vest with a few pouches, a short carbine with a long suppressor, a radio handset, camouflage face paint, light boots.",
+               "dark digital camouflage with integrated radios and optics: a ballistic helmet with night-vision goggles and a headset, a dark vest with modular pouches, a suppressed carbine with a sight, a radio on the chest.",
+               "sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit with a patchwork finish, a slim armoured vest, a compact weapon with an integrated sight."]),
+     'east': ("Family look (Eastern): a lean operator in a rounded helmet with a face wrap, a chest rig with flat pouches, a suppressed rifle with a short barrel, a small pack and knee pads.",
+              ["Cold War era kit: a soft cap with a face scarf, a plain belt harness with pouches, a rifle with a folding stock and a suppressor, a small pack, soft boots.",
+               "dark digital camouflage with integrated radios and optics: a helmet with a headset and goggles, a dark chest rig with modular pouches, a compact suppressed rifle with a sight, a radio on the chest.",
+               "sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit, a slim armoured vest, a compact weapon with an integrated sight."]),
+     'china': ("Family look (China, its own lines): a slim, tidy operator in a rounded helmet with a face cover, a neat chest rig with squared pouches, a compact rifle, a slim pack.",
+               ["Cold War era kit: a soft cap, a plain canvas belt with squared pouches, a short rifle with a folding stock and a suppressor, a small bag, soft boots.",
+                "dark digital camouflage with integrated radios and optics: a helmet with a headset and goggles, a neat dark chest rig, a compact rifle with a sight and a suppressor, a radio on the chest.",
+                "sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit, a slim armoured vest, a compact weapon with an integrated sight."]),
+     'europe': ("Family look (Europe): a lean, practical operator in a rounded modern helmet with ear defenders, a plate-carrier vest with tidy pouches, a compact rifle, a medium pack.",
+                ["Cold War era kit: a soft beret-like cap, a plain lightweight vest with a few pouches, a compact submachine gun with a suppressor, a radio handset, soft boots.",
+                 "dark digital camouflage with integrated radios and optics: a helmet with a headset, ear defenders and goggles, a dark vest with tidy modular pouches, a compact rifle with a sight and a suppressor.",
+                 "sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit, a slim armoured vest, a compact weapon with an integrated sight."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, practical operator with mixed, worn kit, a scarf at the neck, a simple vest, an older rifle, a faded pack.",
+                ["post-war kit: a soft hat with a scarf, a canvas belt with pouches, an older rifle with a wooden-look stock, a faded canvas pack, worn boots.",
+                 "dark camouflage with radios and optics: a helmet with a headset, a chest rig with flat pouches, a rifle with a curved magazine and a sight, a radio on the chest, a scarf.",
+                 "modern export kit: a helmet with a rail and a visor, a plate-carrier vest with bolt-on pouches, a compact weapon with a sight, knee pads, a practical, mixed look made to be sold to many armies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer kit: ", "Generation 3 of 3, the newest, a near-future kit: "])
+
+# ---- Mobile Jammer (key jam)
+unit_def('jam', 'mobile jammer vehicle (an electronic-warfare vehicle)', 'gnd', 'electronic-warfare vehicle',
+    "parked beside a dirt road with its antennas raised and angled up at the sky, a faint shimmer in the air above them",
+    {'nato': ("Family look (US/NATO): a heavy, boxy, slab-sided armoured truck or tracked carrier with a flat-sided equipment shelter, tall slim antenna masts and flat antenna panels, matte finish.",
+              ["a Cold War era design: a boxy tracked carrier with a flat equipment box, four tall whip antennas on the roof, a small dish on a short mast, stowage boxes.",
+               "a new vehicle with a large dish array: a heavy six-wheeled truck with a large boxy shelter, a big rotating dish array on top, two tall folding masts, outrigger jacks.",
+               "flat conformal antenna panels on an angular hull: a low angular armoured carrier with flat panels along the sides and roof, a slim retractable mast, no visible dishes, full skirts."]),
+     'east': ("Family look (Eastern): a big eight-wheeled heavy truck with a tall boxy shelter, many tall antennas and a round or folding dish array, outrigger jacks, spare wheels.",
+              ["a Cold War era design: a six-wheeled truck with a tall boxy shelter, three tall folding antenna masts, a small round dish, outrigger jacks.",
+               "a new vehicle with a large dish array: an eight-wheeled truck with a large shelter, a large array of dishes on a raised arm, a tall mast, outrigger jacks, a roof machine gun.",
+               "flat conformal antenna panels on an angular hull: a low, angular armoured eight-wheeled body with flat panels along the sides and roof, a slim mast, a clean low-signature look."]),
+     'china': ("Family look (China, its own lines): a clean, boxy wheeled truck with a sloped angular shelter, neat rectangular antenna panels and a folding dish, outrigger jacks.",
+               ["a modest design: a six-wheeled truck with a small boxy shelter, two tall whip antennas, a small dish on a mast, outrigger jacks.",
+                "a new vehicle with a large dish array: an eight-wheeled truck with a large sloped shelter, a large array of rectangular antenna panels and dishes on a raised arm.",
+                "flat conformal antenna panels on an angular hull: a low, angular wheeled body with flat panels built into its sides and roof, a slim mast, a smooth clean look."]),
+     'europe': ("Family look (Europe): a sleek, low, smoothly sloped wheeled or tracked carrier with a rounded shelter, a slim telescopic mast and neat flat antennas, a clean polished look.",
+                ["a Cold War era design: a light four-wheeled utility truck with a small boxy shelter, three whip antennas, a small dish on a short mast.",
+                 "a new vehicle with a large dish array: a six-wheeled sloped carrier with a rounded shelter, a large dish array on a raised arm, a telescopic mast, outrigger jacks.",
+                 "flat conformal antenna panels on an angular hull: a low faceted wheeled carrier with flat panels along the sides and roof, a slim telescopic mast, full skirts."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a plain truck with a bolt-on equipment box and mixed antennas that look fitted by the buyer.",
+                ["a post-war pattern: a plain six-wheeled truck with a canvas-covered box, two whip antennas, a small dish on a pole, spare wheels.",
+                 "a widely exported 1980s pattern: a six-wheeled truck with a tall boxy shelter, a round dish on an arm, three tall folding masts, outrigger jacks.",
+                 "a modern export-grade design: a modular eight-wheeled truck with a boxy shelter, flat antenna panels, a slim mast, bolt-on armour, a practical look made to be sold to many armies."])},
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+
+# ---- END OF THE UNIT DEFINITIONS (new units are added above this line)
+
 PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
 REVIEW = False       # --review: the Gemini check after each picture
 REF_USED = {}        # name: the reference picture files its request attached (for the check)
@@ -947,6 +1596,17 @@ REVIEW_KIND = {   # unit pictures: points 3 and 4 and the reference sentence, by
     'top': (REVIEW_P3, "the whole tank is inside the frame, nothing cut off, centred, its length filling about 90 percent of the "
             "picture's height, seen exactly straight down (a true plan view, no side or front visible), gun and front pointing to the top.")}
 
+def review_kind(name):
+    """points 3 and 4 of the check for a unit picture: the tank's own texts, or the texts built from the other unit's class"""
+    u = UNIT_LOOKS[name]
+    if 'cls' not in u: return REVIEW_KIND[u['kind']]
+    C, w, k = UL_CLS[u['cls']], u['unit'], u['kind']; dim = 'height' if u['cls'] == 'man' else 'width'
+    if k == 'side': return (REVIEW_P3, f"the whole {w} is inside the frame with a margin, nothing cut off, centred, filling about 85 percent of the frame's {dim}, seen in a front three-quarter side view from slightly above (not straight down, not a flat side-on profile).")
+    if k == 'scene': return ("this picture is meant to be a full outdoor scene filling the whole picture edge to edge. FAIL this point if there is a plain grey studio background, a frame, a border, or a blue or coloured tint or scanlines. The surroundings should be a believable natural setting for this kind of unit.",
+                             C['scene_look'][0].upper() + C['scene_look'][1:] + '.')
+    return ("the background is a plain, flat, uniform light grey with NO shadow, shadow plate or ground patch under or beside the unit; no base slab, ground, terrain or horizon.",
+            f"the whole {w} is inside the frame, nothing cut off, centred, filling about 90 percent of the picture (85 percent for a soldier), seen exactly straight down (a true plan view, no side or front visible), its front or nose pointing to the top.")
+
 def review_what(name):
     if name in UNIT_LOOKS: return UNIT_LOOKS[name]['prefix'] + ' ' + UNIT_LOOKS[name]['subject']
     if name in SUBJECTS: return SUBJECTS[name]
@@ -965,11 +1625,11 @@ def review(name, path):
     """the check: returns (verdict, reasons); logs its own cost row; writes <picture>.review.txt. Never raises, never retries."""
     refs = review_refs(name)
     if not refs: rtxt = 'There is no reference picture.'
-    elif name in UNIT_LOOKS and UNIT_LOOKS[name]['kind'] != 'side': rtxt = 'Picture 2 is the reference it was made from: the master side view of the very same tank. It must be the same tank: same shape, turret, gun, wheels or tracks, paint and details.'
+    elif name in UNIT_LOOKS and UNIT_LOOKS[name]['kind'] != 'side': rtxt = ('Picture 2 is the reference it was made from: the master side view of the very same ' + ('tank' if 'cls' not in UNIT_LOOKS[name] else UNIT_LOOKS[name]['unit']) + '. It must be the same ' + ('tank' if 'cls' not in UNIT_LOOKS[name] else 'unit') + ': same shape, parts, details and paint' + (' (a top-down must keep the same layout of hatches, turrets, sensors, stowage and weapons as the side view, on the same side, not mirrored, with no part added or dropped).' if UNIT_LOOKS[name]['kind'] == 'top' else '.'))
     elif name in UNIT_LOOKS and UNIT_LOOKS[name]['fresh']: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only, not the subject or the camera.'
     elif name in UNIT_LOOKS: rtxt = 'Pictures 2 and 3 are the style anchors (buildings): compare style only. Picture 4 is generation 1 of the same unit and group: the new one must keep the paint and family look but be a clearly different, newer model.'
     else: rtxt = 'The other attached picture(s) are the reference(s) it was made from.'
-    p3, p4 = REVIEW_KIND[UNIT_LOOKS[name]['kind']] if name in UNIT_LOOKS else (REVIEW_P3, REVIEW_P4)
+    p3, p4 = (review_kind(name) if name in UNIT_LOOKS else (REVIEW_P3, REVIEW_P4))
     text = REVIEW_PROMPT.format(refs=rtxt, what=review_what(name), p3=p3, p4=p4, style=UNIT_LOOKS[name]['style'] if name in UNIT_LOOKS else STYLE_V2)
     parts = [{'text': text}, image_part(path)] + [image_part(os.path.join(ROOT, r)) for r in refs]
     body = {'contents': [{'parts': parts}], 'generationConfig': {'responseMimeType': 'application/json'}}
@@ -1012,12 +1672,31 @@ MATCH_PROMPT = (
     "Use FLAG if any point fails or you are unsure, and name each failed point by its number and the picture it concerns, with a short "
     "plain reason (under 25 words each).")
 
+MATCH_PROMPT2 = (
+    "You are the quality checker for the unit pictures of a strategy game. Three pictures of ONE {unit} are attached, in this order: "
+    "picture 1 is the SIDE view (the master: a three-quarter side view on a plain grey background), picture 2 is the CARD SCENE (the "
+    "same {unit} in action in its natural setting), picture 3 is the TOP-DOWN (seen from straight above, front or nose up, on a plain grey background). "
+    "All three are meant to show exactly the same unit. The scene and the top-down were made from the side view.\n\n"
+    "Check this checklist, each point on its own:\n"
+    "1. SAME UNIT: the overall shape and every part ({parts}) are the same in all three, as far as each view can show them. For the top-down in particular, "
+    "the layout of hatches, turrets, sensors, antennas, stowage and weapons must be the same as in the side view, on the same side (not mirrored, not rearranged), with no part added or dropped.\n"
+    "2. SAME PAINT: the paint colour and finish are the same in all three (a landscape's or the sky's light may change them a little).\n"
+    "3. RIGHT VIEW: picture 1 is a front three-quarter side view from slightly above on plain grey; picture 2 is a full outdoor scene "
+    "with no grey studio background and no tint; picture 3 is a true straight-down plan view, front up, on plain grey with no shadow plate.\n"
+    "4. NO MARKINGS: no text, letters, numbers, logos, flags, emblems, stars, roundels or insignia in any of the three.\n"
+    "5. NO EXTRAS: exactly one unit in each picture; no second vehicle, aircraft, ship or person, no buildings (distant trees, hills, sea and clouds are fine).\n\n"
+    'Answer with JSON only, in this shape: {{"verdict": "MATCH" or "FLAG", "flagged_pictures": ["side" and/or "scene" and/or "top", only the ones that do not match or are wrong], '
+    '"reasons": ["short plain reason", "..."]}}. Use MATCH only if all five points are fine (flagged_pictures empty, reasons may be empty). '
+    "Use FLAG if any point fails or you are unsure, and name each failed point by its number and the picture it concerns, with a short "
+    "plain reason (under 25 words each).")
+
 def match(look):
     """look: 'ul-tank-nato-1'. Returns (verdict, reasons) or None when a picture is missing. Logs its own cost row; never raises, never redoes anything."""
     paths = [ul_path(f'{look}-{k}') for k in UNIT_KINDS]
     if not all(paths):
         print(f'{look}: skipped, missing {[f"{look}-{k}" for k, q in zip(UNIT_KINDS, paths) if not q]}'); return None
-    text = MATCH_PROMPT.format(unit=UNIT_LOOKS[f'{look}-side']['unit'])
+    U0 = UNIT_LOOKS[f'{look}-side']
+    text = MATCH_PROMPT.format(unit=U0['unit']) if 'cls' not in U0 else MATCH_PROMPT2.format(unit=U0['unit'], parts=UL_CLS[U0['cls']]['match_parts'])
     body = {'contents': [{'parts': [{'text': text}] + [image_part(q) for q in paths]}], 'generationConfig': {'responseMimeType': 'application/json'}}
     verdict, reasons, flagged, usd, tok = 'FLAG', ['the check could not run or its answer was unreadable: look at the three pictures yourself'], [], 0.0, {}
     try:
@@ -1041,7 +1720,7 @@ def match(look):
 # ---- SPENDING (owner's decisions 2026-11-18): the log stood at 255 calls, $10.27 when the Gemini balance was $40.88. The $12 line is
 # removed. After every run the new spending since then, the running total and the estimated balance are printed; a run that could take
 # the estimated balance below $5 is refused. (Add the owner's top-ups to BALANCE_TOPUPS_USD when he says so.)
-BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, 0.0, 5.0
+BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, -0.30, 5.0   # -0.30: the owner's figure when this job started (2026-11-19) was about $38.75, not $39.05; add top-ups here
 def spend_totals():
     rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
     return sum(r.get('calls', 1) for r in rows), sum(r.get('usd_est', 0) for r in rows)
@@ -1205,8 +1884,42 @@ def collect(job, force):
         if 'error' in it: print(f'{name}: error {it["error"].get("message", it["error"])}'); continue
         save(name, it.get('response', {}), force, True)
 
+def doc_unit(key):
+    """the markdown section of docs/UNIT-LOOKS-PROMPTS.md for one unit (printed; paste or append it): the unit-specific words of all 15 looks, and how the 45 prompts are put together"""
+    d = UD[key]; C = UL_CLS[d['cls']]; u = d['label']; GN = {'nato': 'US/NATO', 'east': 'Eastern', 'china': 'China', 'europe': 'Europe', 'export': 'Export'}
+    o = [f"### {u[0].upper() + u[1:]} (`{key}`): 45 prompts, built from these words", '',
+         f"Class of picture: `{d['cls']}`. Files: `assets/art-src/ul-{key}-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).", '',
+         f"Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section \"The other units\" above; what is unit-specific is below.", '',
+         f"- **Side frame:** {C['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+         f"- **Top-down frame:** {C['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+         f"- **Card scene:** \"A single {u} {d['action']}. The setting: <the group's setting>. {C['scene_frame']} The {u} is described in words as: <the look's words>\"", '']
+    for g in UNIT_GROUPS:
+        fam, gl = d['groups'][g]
+        o += [f"#### {GN[g]}", '', f"- **Setting of the card scene:** {d['setting'][g]}.", f"- **Family look:** {fam} Paint: {d['paint'][g]}."]
+        for n in (1, 2, 3): o.append(f"- **Look {n} (levels {['1-3', '4-6', '7-8'][n - 1]}):** {d['gens'][n - 1]}{gl[n - 1]}")
+        o.append('')
+    print('\n'.join(o))
+
+def doc_shared():
+    """the shared blocks of the other units' prompts, as the section header of docs/UNIT-LOOKS-PROMPTS.md part 5"""
+    q = lambda t: '```text\n' + t + '\n```\n'
+    o = ['## 5. The other units (owner: "make the rest, with the Gemini check on every picture", 2026-11-19)', '',
+         "The tank's pattern for every other unit with looks: 5 groups x 3 looks x 3 kinds = 45 pictures a unit, no shared designs. The unit-specific words (frames, scene action, family look, paint, setting and the three generations of each group) are written per unit below; the blocks every unit shares are here. `python3 -I tools/gen-art.py --dry-run ul-<unit>-<group>-<look>-<kind>` prints any complete prompt (free).", '',
+         '**What the tank sets taught, now in every prompt.** The top-down keeps exactly the same layout of hatches, turrets, sensors, stowage and weapons as the side view, on the same side, not mirrored, nothing added or dropped (the three-way check flagged 8 of the 15 tank looks for this). Light from the upper left in every kind. The top-down has no shadow on the grey (the map draws its own); `prep-art.py` also removes any shadow left. The card scenes stay photo-real. Nothing flagged is redone: the owner decides.', '',
+         '**Side view, look 1 (prefix):**', q(UNIT_PREFIX_SIDE_NEW), '**Side view, looks 2 and 3 (prefix; the group\'s look-1 side view is attached as the third picture):**', q(UNIT_PREFIX_SIDE_FAMILY),
+         '**Side view style:**', q(STYLE_V2_SIDE), '**Card scene prefix** (`{detail}` is the class\'s list of parts):', q(UL_PREFIX_SCENE), '**Card scene style:**', q(STYLE_UL_SCENE),
+         '**Top-down prefix:**', q(UL_PREFIX_TOP), '**Top-down style** (the crop sentence is the class\'s):', q(STYLE_UL_TOP), '**Tail of every unit description:**', q(UL_UNIT_TAIL), '']
+    for c, C in UL_CLS.items():
+        o += [f"**Class `{c}`: parts to keep the same:** {C['detail']}", f"- crop sentence of the top-down: {C['crop']}", f"- paint by group: " + '; '.join(f"{g}: {UL_PAINT[c][g]}" for g in UNIT_GROUPS), '']
+    o += ['**Card scene settings by class and group**', '']
+    for nm, T in (('ground units', UL_LAND), ('aircraft', UL_SKY), ('helicopters', UL_LOW), ('ships and submarines', UL_SEA)):
+        o += [f"- {nm}: " + '; '.join(f"{g}: {T[g]}" for g in UNIT_GROUPS)]
+    print('\n'.join(o) + '\n')
+
 def main(a):
     if not a or a[0] in ('-h', '--help'): print(__doc__); return
+    if a[0] == '--doc-shared': doc_shared(); return
+    if a[0] == '--doc': doc_unit(a[1]); return
     if a[0] == '--list':
         for n in list(SUBJECTS) + list(UNIT_LOOKS) + list(GROWS) + list(ICONS) + list(REDRAWS) + list(RES_ICONS) + list(R_BANNERS) + list(R_ICONS):
             print(('done ' if any(os.path.exists(os.path.join(OUT, f'{stem(n)}.{x}')) for x in ('png', 'webp')) else '     ') + n + (f'  (grows from {GROWS[n][0]})' if n in GROWS else ''))

@@ -1,0 +1,3 @@
+FLAG
+- 1. Engine configuration changed from a single exhaust in the reference to twin exhausts.
+- 3. Noticeable cast shadow appears on the background to the left of the aircraft.

@@ -1,0 +1,2 @@
+FLAG
+- 1. Hatch and missile launcher layout rearranged: they are on the same side in reference, opposite in new image.

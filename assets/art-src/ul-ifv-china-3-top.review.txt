@@ -1,0 +1,2 @@
+FLAG
+- 1. Missile launcher and driver's hatch are placed on the wrong sides compared to the reference layout.

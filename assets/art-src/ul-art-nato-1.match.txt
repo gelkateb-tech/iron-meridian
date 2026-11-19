@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 4 (scene): numbers and letters ('01 D') appear on the front hull plate.
+- Point 1 (top): rear stabilizer spade is deployed extended instead of folded against the hull as in the side view.

@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): weapon pylons, rocket pod, and missiles were added under the wings, not present in picture 1.
+- 1 (top): missing the second coaxial rotor, showing only four rotor blades instead of eight.

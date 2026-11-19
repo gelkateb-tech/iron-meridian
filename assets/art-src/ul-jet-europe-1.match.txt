@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): aircraft has twin engine exhaust nozzles, whereas side and scene have a single engine exhaust.

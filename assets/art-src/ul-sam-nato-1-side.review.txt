@@ -1,0 +1,2 @@
+FLAG
+- 2. Features cartoonish black outlines and cel-shading, not matching the realistic 3D game-model render style of the anchors.

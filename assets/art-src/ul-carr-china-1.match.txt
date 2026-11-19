@@ -1,0 +1,4 @@
+FLAG (flagged: side, scene, top)
+- 5. side: multiple parked aircraft on the flight deck violate the no extras rule.
+- 5. scene: multiple parked aircraft on the flight deck violate the no extras rule.
+- 5. top: multiple parked aircraft on the flight deck violate the no extras rule.

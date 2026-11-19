@@ -1,0 +1,2 @@
+FLAG
+- 1. Stowage boxes from the reference's right side are mirrored and placed on the vehicle's left side.

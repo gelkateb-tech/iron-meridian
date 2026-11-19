@@ -1,0 +1,2 @@
+FLAG
+- 2. Studio lighting comes from the upper right instead of the required upper left.

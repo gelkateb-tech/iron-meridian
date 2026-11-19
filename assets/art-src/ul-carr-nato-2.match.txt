@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 1 in scene and top: the island, catapults, and deck layout are mirrored compared to the master side view.
+- Point 5 in side, scene, and top: multiple extra aircraft and ground vehicles are present on the flight deck.

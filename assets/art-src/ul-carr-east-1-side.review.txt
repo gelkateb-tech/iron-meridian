@@ -1,0 +1,3 @@
+FLAG
+- 4: Unit is oriented toward the lower left instead of the required lower right.
+- 7: Several aircraft are parked on the deck, violating the single unit requirement.

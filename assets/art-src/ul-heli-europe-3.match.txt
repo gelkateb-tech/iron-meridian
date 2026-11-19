@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- point 1 (scene): missile rack and rocket pod added under the stub wings, absent in side view.
+- point 1 (top): only four main rotor blades shown instead of the eight coaxial blades from the side view.

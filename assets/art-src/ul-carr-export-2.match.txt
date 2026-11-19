@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- 5 (side, scene, top): multiple aircraft on the flight deck violate the rule against second vehicles or aircraft.
+- 1 (top): the prominent black aft mast is missing and extra port-side bow turrets and sponsons are added.

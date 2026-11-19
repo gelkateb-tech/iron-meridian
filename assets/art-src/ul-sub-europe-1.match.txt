@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1. SAME UNIT: picture 2 sail lacks the raised aft section seen on the conning tower in picture 1.
+- 1. SAME UNIT: picture 3 sail does not show the raised aft conning tower structure present in picture 1.

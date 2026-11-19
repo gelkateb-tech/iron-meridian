@@ -1,0 +1,2 @@
+FLAG
+- 4. Soldier occupies roughly three-quarters of frame height rather than requested half, and remains in a static pose.

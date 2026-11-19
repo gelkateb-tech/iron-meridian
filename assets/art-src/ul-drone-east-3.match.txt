@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 1 (scene): Drone has an added ventral panel or fin protruding beneath the fuselage, absent in the side view master.

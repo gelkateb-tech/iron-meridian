@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 1 (top): The top-down view is mirrored, placing the island and angled flight deck on opposite sides compared to the side view.
+- Point 5 (side, scene, top): All three pictures contain multiple aircraft parked on the flight deck.

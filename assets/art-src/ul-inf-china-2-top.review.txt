@@ -1,0 +1,3 @@
+FLAG
+- 3. BACKGROUND: Soft drop shadow is visible on the background underneath the unit.
+- 4. FRAMING: Unit fills only around 65 percent of image height instead of requested 85 percent.

@@ -1,0 +1,2 @@
+FLAG
+- 1. Turntable and launcher mount rearranged; cab roof sensors and details do not match the reference layout.

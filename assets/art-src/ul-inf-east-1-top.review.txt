@@ -1,0 +1,4 @@
+FLAG
+- 1. Weapon handling is mirrored, showing a left-handed grip unlike the right-handed reference.
+- 2. Render style resembles a 2D line drawing with visible inked contours rather than a 3D model.
+- 4. The soldier occupies roughly 70 percent of vertical frame space rather than the required 85 percent.

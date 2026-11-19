@@ -1,0 +1,2 @@
+FLAG
+- 1. Equipment layout and weapon grip are mirrored compared to the reference master.

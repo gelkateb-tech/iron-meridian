@@ -1,0 +1,3 @@
+FLAG
+- 3. Faint cast shadow is visible on the background underneath and around the vehicle.
+- 4. The vehicle fills only about 72 percent of the image height instead of the requested 90 percent.

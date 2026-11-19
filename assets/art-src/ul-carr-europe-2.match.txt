@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- 5 (side, scene, top): multiple parked aircraft appear on the flight deck, violating the rule prohibiting additional vehicles or aircraft.
+- 1 (top): the quantity and placement of aircraft on the flight deck do not match the side view.

@@ -1,0 +1,2 @@
+FLAG
+- 1. SAME UNIT: Aft superstructure differs from reference, showing two side-by-side exhaust funnels instead of a single centerline stack.

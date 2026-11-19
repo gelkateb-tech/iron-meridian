@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): missile launcher is stowed horizontally rather than elevated as in side view
+- 1 (top): rear exhaust pipe is placed on the right side instead of the left side

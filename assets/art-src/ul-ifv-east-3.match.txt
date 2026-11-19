@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): turret and gun are turned forward instead of facing rearward as shown in the side view master
+- 1 (top): rear side slat armor cages are missing their horizontal bars
