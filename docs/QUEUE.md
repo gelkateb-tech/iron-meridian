@@ -9,7 +9,7 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 - **New messages never cancel running jobs (owner, 2026-11-19):** a new message from the owner never cancels or replaces a running job unless the owner says "cancel" or "stop" with the job's name. Each new block is extra work added to the queue. If a message seems to change a running job, ask the owner before stopping it. Every job brief quotes the owner's request it comes from, so a worker never mistakes a newer, unrelated message for its own task.
 
-Last updated: 2026-11-19 (Dev Build v63: map fixes).
+Last updated: 2026-11-19 (Dev Build v64: unit pictures set 2 and the cloud fix, unit pictures packed into atlases).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
@@ -20,9 +20,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **UNIT-ATLAS** (started 2026-11-19 night) | the Dev Build artifact holds at most 511 files and set 2 adds 765 pictures: pack the unit pictures into atlases, pixel-identical, then publish v64 | Sonnet / Opus review | unit-atlas |
 | **CITIES 3D restyle** | the owner's CoN reference look, readable from play zoom, cities keep their size and detail; before/after sheets | Opus | cities-3d-2 |
-| **NAVAL CITIES** (defaults approved; results before merging) | anchor icon at every coastal city, boarding and landing only there, assault landings into enemy naval cities, Marines (mar) land anywhere; golden re-recorded with proof | Opus | naval-cities |
 | **MAP SURFACE** (started 2026-11-19 night) | texture fix (bring back the public build's rich detail, visible at every zoom incl. fully zoomed out; keep MAP-2 borders, toggles, roads), then jungle options A/B/C and sea options A/B/C on top of it; critique, repair, final sheets (old / dev / fix; zoomed in and out) and sea clips; NOTHING merged until the owner picks | Opus | map-texture, map-jungle, map-sea |
 
 ## Next free slots (in this order)
@@ -117,6 +115,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 | **Total** | batch 1 done ($0.31 logged: Army Base 1-5, construction 1-3, merged into master as files, drawn by BLD-MAP-2); next (Fortifications) $0.18; everything else listed about $1.9 | | |
 
 ## Waiting on me (the owner)
+- **NAVAL CITIES (done, branch naval-cities a4ac3a5, not merged; sheets sent 2026-11-19).** Anchor at 349 coastal cities; board only at own/friend naval cities; land only at naval cities (enemy/independent = assault landing, 45 min, first-day penalty); Marines (new unit, any coast when the stack is all Marines; research day 3). All checks pass; golden re-recorded with proof. Waiting on the owner: OK to merge (after cities-2, map jobs one at a time); inland cities with anchors (Hyderabad PK, Ahmedabad, Hubballi): keep or require the city point near the sea; AI hardly builds Marines (raise?); long detours for ordinary troops near plain beaches.
 - **UNIT-ART-3 (stopped at the $5 floor, 5 of 12 sets made, branch unit-art-3 dca8cdb, not merged).** Made: Special Forces, Paratroopers, Jammer, Heavy Bomber, Maritime Patrol (225 pictures, about $8.93; log total about $54.24; estimated balance about $6.61). Not made: AWACS, Stealth Bomber, Marines, the 5 uniques (about $3.6 more). Sheets sent 2026-11-19. Waiting on the owner: OK for 12 free flips/cut-out fixes; 7 must-have redraws (about $0.35); bomber redesign (copies B-52/B-1B/Tu-160/H-6, $0.7–1.8); paratroopers show no parachute gear; jammer NATO look 1 copies the M113; MPA look-alikes; top-up for the rest.
 
 - **Weather (clips sent 2026-11-19 night):** pick rain/snow option A (classic), B (long and windy) or C (fine and dense); branches weather-opt-a/b/c. The cloud colour fix is merged on master (d4d0bb5).
@@ -164,7 +163,7 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
-| Unit pictures set 2 (merged on master 2026-11-19 night; publishing waits for UNIT-ATLAS): 17 units x 45 pictures, wrong-way pictures flipped, pale plate removed; the cloud colour fix (clouds stay white and grey) | Sonnet / Opus |
+| Unit pictures set 2 (Dev Build v64, packed two files a unit by UNIT-ATLAS so the build stays under 511 files): 17 units x 45 pictures, wrong-way pictures flipped, pale plate removed; the cloud colour fix (clouds stay white and grey) | Sonnet / Opus |
 | MAP-FIX (owner OK 2026-11-19 night): pinpoint moves to the exact tapped spot, a position dot under every force (the '?' dot dark-outlined, owner's pick), buildings scale exactly with the map, the castle dug-in mark in the amber shield (Dev Build v63) | Opus |
 | EMBARK-45 (owner 2026-11-19): boarding and landing take 45 minutes each, exact to the minute; route arrival times now match for sea crossings; Amphibious Doctrine 22.5 min, floor 15 min; old saves capped (Dev Build v62) | Opus / Sonnet |
 | MAP-2 (one map look, soft borders, province lines fade in, foreign armies '?' until recon) and the Bunker pictures, option C version 1 at levels 1-5 (Dev Build v61, owner OK 2026-11-19) | Opus / Sonnet |
