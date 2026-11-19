@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 in picture 3: The roof layout is altered; the cylinder antenna and truss structure are rearranged on the wrong side and details are missing.

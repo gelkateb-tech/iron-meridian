@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1, picture 3: the jerrycan on the rear bed is placed on the left side instead of the right side.

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): antenna layout is rearranged; the forward/midway antenna is moved to the rear-left corner.

@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 1 in picture 2: large vertical antenna mast and guy wires are added to the roof, which are not present in picture 1 or 3

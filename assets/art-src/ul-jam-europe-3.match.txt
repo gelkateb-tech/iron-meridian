@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): Vehicle has 5 wheels visible along the side instead of 4 as shown in picture 1.
+- 1 (top): Antenna mast is mounted centrally and folded flat over the rear instead of upright and offset to the left.

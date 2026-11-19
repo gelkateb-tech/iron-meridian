@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. In the top-down view, the spare tire and exterior side box are placed on the right side instead of the left (mirrored layout).

@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- point 1 (scene): two long whip antennas added to the turret roof that are not present in side view
+- point 1 (top): the prominent tall sensor/jammer mast and its top head are missing

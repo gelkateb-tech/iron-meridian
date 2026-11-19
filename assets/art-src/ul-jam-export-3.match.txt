@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): the right side shows an extra/misplaced wheel between the cab and rear axles, not matching the 8x8 layout in picture 1.

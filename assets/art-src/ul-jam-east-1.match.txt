@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. Top view: The front antenna mast present in the side view is missing, altering the antenna layout.

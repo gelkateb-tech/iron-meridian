@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 3: Picture 3 is an isometric side view instead of a true straight-down top-down plan view.
