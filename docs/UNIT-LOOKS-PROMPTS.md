@@ -711,7 +711,7 @@ $2.50 per million out, thinking tokens counted as out): about $0.003 a single ch
    `python3 -I tools/gen-art.py --cost` prints new spending since the $40.88 balance, and the estimated balance; a run that could take the
    estimate below $5 is refused.
 3. Nothing is redone, even when flagged: every flag is listed for the owner.
-4. Cut-outs, no API call: `python3 -I tools/prep-art.py assets/art-src assets/art ul` writes `assets/art/ul-tank-<group>-<look>-side.webp`
+4. Cut-outs, no API call: `python3 -I tools/prep-art.py assets/art-src assets/art ul` writes the unit's atlases `assets/art/ula-tank-pic.webp` and `ula-tank-scene.webp` (the 45 pictures of `ul-tank-<group>-<look>-<side|scene|top>`, see `tools/ulatlas.py`)
    and `-top.webp` (transparent) and `-scene.webp` (resized, not cut out).
 5. Only after the owner's OK on the tank sets, the other units.
 
