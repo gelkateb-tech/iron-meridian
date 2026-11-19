@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 3, top: rifle is rendered in side profile rather than a true straight-down top view.

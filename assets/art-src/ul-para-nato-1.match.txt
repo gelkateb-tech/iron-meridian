@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): parachute canopy and suspension lines are added equipment not present on the master unit.
+- 1 (top): soldier is posed sitting with legs raised forward instead of standing as shown in the master view.

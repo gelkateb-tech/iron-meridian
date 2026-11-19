@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): The rifle's magazine is incorrectly mounted sticking out from the left side rather than underneath as in the side view.

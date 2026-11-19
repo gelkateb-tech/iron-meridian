@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): weapon handling is mirrored/reversed, held against the left shoulder instead of the right shoulder as in the side view

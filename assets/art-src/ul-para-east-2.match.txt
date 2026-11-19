@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- Point 1 (top): backpack has a camouflage pattern instead of the solid olive drab color seen in the side view.
+- Point 3 (top): not a true straight-down plan view; the camera angle is tilted forward, showing the face and chest.

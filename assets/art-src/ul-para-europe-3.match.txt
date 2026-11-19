@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. Top view: The rifle is mirrored/reversed, pointing to the soldier's right instead of front-left, with hand positions swapped.
