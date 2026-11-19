@@ -654,7 +654,17 @@ def ul_net_cut(f):
     im = Image.open(f).convert('RGB'); n = im.size[0]; m = net_mask_img(im, n)
     keep = m > 0.5; lab, k = ndi.label(keep)
     if k == 0: return None
-    sizes = ndi.sum(keep, lab, range(1, k + 1)); keep = ndi.binary_fill_holes(np.isin(lab, [i + 1 for i, z in enumerate(sizes) if z > 0.02*sizes.max()]))
+    sizes = ndi.sum(keep, lab, range(1, k + 1)); keep0 = np.isin(lab, [i + 1 for i, z in enumerate(sizes) if z > 0.02*sizes.max()]); keep = ndi.binary_fill_holes(keep0)
+    # the floor seen through the unit (between booms and tails, inside rotor discs, under wings) is not the unit: filling the holes left a faint pale plate there.
+    # Holes whose pixels match the fitted floor (colour and smoothness) stay transparent; glass, dark gaps and everything else in a hole is still filled.
+    a = np.asarray(im).astype(np.float32); h, w, _ = a.shape; holes = keep & ~keep0
+    if holes.any():
+        bm = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); bm[:b] = bm[-b:] = True; bm[:, :b] = bm[:, -b:] = True
+        d = np.abs(a - fit_bg(a, bm)).max(-1); g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
+        fl = ndi.binary_opening(holes & (d <= 18) & (g < 4.5), iterations=1); lb, kk = ndi.label(fl)
+        if kk: fl = np.isin(lb, [i + 1 for i, z in enumerate(ndi.sum(fl, lb, range(1, kk + 1))) if z >= 40])
+        for _ in range(3): fl = fl | (ndi.binary_dilation(fl) & holes & (d <= 34))   # the blended rim of the hole goes with it (no halo)
+        keep = keep & ~fl
     al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.9)
     return Image.fromarray(np.dstack([np.asarray(im), al*255]).astype(np.uint8), 'RGBA')
 
