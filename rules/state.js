@@ -266,6 +266,8 @@ function restore(data){
   researchMigrate();
   rRenameMigrate();   // the upgrades review's replacements (any save that holds one of the old nodes)
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
+  // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
+  for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
   IM.emit('restored');
   return true;
 }
