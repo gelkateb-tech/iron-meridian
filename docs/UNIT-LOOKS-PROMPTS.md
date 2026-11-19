@@ -1744,6 +1744,165 @@ Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly
 - **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a modular eight-wheeled truck with a boxy shelter, flat antenna panels, a slim mast, bolt-on armour, a practical look made to be sold to many armies.
 
 
+### Paratrooper (an airborne infantry soldier) (`para`): 45 prompts, built from these words
+
+Class of picture: `man`. Files: `assets/art-src/ul-para-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-para-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single paratrooper (an airborne infantry soldier), seen from a front three-quarter side view from slightly above (about 30 degrees down), standing in a ready pose with the weapon held ready, turned toward the lower right of the picture so that the viewer sees the front and one side. The whole soldier, from the boots to the top of the helmet and the weapon, is centred left to right and top to bottom and fills about 85 percent of the picture's height; the entire figure is inside the frame with a margin all round. Only this one paratrooper (an airborne infantry soldier): no other person, no vehicle, no ground, only a faint, tight soft shadow under the boots.
+- **Top-down frame:** A single paratrooper (an airborne infantry soldier), seen exactly straight down from above (a true top-down plan view), facing the top of the picture, the weapon held ready in front. The whole soldier (head, shoulders, arms, pack and weapon) is centred left to right and top to bottom and fills about 85 percent of the picture's height. Only this one paratrooper (an airborne infantry soldier): no other person, no vehicle, no ground, no shadow on the background.
+- **Card scene:** "A single paratrooper (an airborne infantry soldier) just landed in an open field after a parachute drop, a collapsed parachute canopy spread on the grass behind him, moving forward with his weapon held ready, not looking at the viewer. The setting: <the group's setting>. Seen from a low front three-quarter angle at about eye height, the soldier fills about half the picture's height and stands in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one soldier: no other person, no vehicle, no buildings, no signs, no markings. The paratrooper (an airborne infantry soldier) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): an airborne soldier in a rounded paratrooper helmet with a chinstrap, a webbing harness with a strapped-on reserve parachute pack on the chest, a large rucksack, a folding-stock carbine, jump boots. Paint: a tan-and-brown multi-terrain camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded steel-look helmet with a cover net, a canvas webbing harness with a small square reserve pack on the chest, a bedroll on the back, a carbine with a folding stock, high laced boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: modern kit: a lightweight round helmet with a headset and goggles, a harness with pouches and a reserve pack on the chest, a rucksack, a short rifle with a sight, knee pads.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sleek light helmet with a built-in visor and radio, a slim harness with modular pouches, a flat low-profile pack, a compact rifle with an integrated sight, light armoured knee guards.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): an airborne soldier in a rounded helmet with a chinstrap, a chest rig, a short rucksack with side pouches, a folding-stock rifle, a strapped-on reserve parachute pack on the chest, tall boots. Paint: olive-green and brown blotch camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded helmet with a cover net, a canvas harness with a small square reserve pack, a small round rucksack, a rifle with a folding stock, tall laced boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: modern kit: a rounded helmet with a headset, a harness with flat pouches and a reserve pack, a medium rucksack, a short rifle with a sight, knee pads.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sleek light helmet with a built-in visor, a slim harness with modular pouches, a flat low pack, a compact rifle with an integrated sight, light knee guards.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a tidy airborne soldier in a rounded helmet with a chinstrap, a neat harness with squared pouches and a reserve pack on the chest, a slim rucksack, a short rifle, soft boots. Paint: green-and-brown digital camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a soft rounded helmet with a net, a canvas harness with a small square reserve pack, a small rucksack, a short rifle with a folding stock, canvas boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: modern kit: a rounded helmet with a headset, a neat harness with squared pouches and a reserve pack, a slim rucksack, a compact rifle with a sight, knee pads.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sleek light helmet with a built-in visor, a slim harness with modular pouches, a flat low pack, a compact rifle with an integrated sight, light knee guards.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a lean airborne soldier in a rounded modern helmet with a chinstrap, a harness with tidy pouches and a reserve parachute pack on the chest, a medium rucksack, a compact rifle. Paint: a grey-green and brown splinter camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded helmet with a cover net, a canvas harness with a small reserve pack, a bedroll and small rucksack, a short rifle with a folding stock, laced boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: modern kit: a light round helmet with a headset and goggles, a harness with tidy pouches and a reserve pack, a medium rucksack, a compact rifle with a sight.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sleek light helmet with a built-in visor, a slim harness with modular pouches, a flat low pack, a compact rifle with an integrated sight, light knee guards.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain airborne soldier with mixed, worn kit, an old rounded helmet with a chinstrap, a canvas harness with a reserve pack on the chest, a faded rucksack, an older rifle. Paint: a faded khaki and olive desert camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, post-war kit: an old rounded helmet with a net, a canvas harness with a square reserve pack, a faded canvas rucksack, a rifle with a wooden-look stock, worn boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: modern kit: a rounded helmet with a headset, a harness with flat pouches and a reserve pack, a rucksack, a rifle with a curved magazine and a sight, a scarf.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, modern export kit: a light helmet with a rail and a visor, a harness with bolt-on pouches and a reserve pack, a compact weapon with a sight, knee pads, a practical, mixed look made to be sold to many armies.
+
+
+### Heavy bomber (a large long-range strategic bomber) (`bomb`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-bomb-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-bomb-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single heavy bomber (a large long-range strategic bomber), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the heavy bomber (a large long-range strategic bomber): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single heavy bomber (a large long-range strategic bomber), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the heavy bomber (a large long-range strategic bomber): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single heavy bomber (a large long-range strategic bomber) cruising high and level with its bomb bay doors closed, a faint vapour trail behind its engines. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The heavy bomber (a large long-range strategic bomber) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a huge, long-winged bomber with a long slim fuselage, many engines in pods or blended into the wing roots, a tall tail fin, a glazed nose, a clean grey finish. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a huge high-winged bomber with long straight wings, eight engines in four paired pods under the wings, a tall tail fin, a long slim fuselage, a tail gun turret.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a swing-wing design: a long, lean bomber with swept-back wings blended into the body, four engines in two blended pairs at the rear, a small tail fin, a long pointed nose.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modernised near-future design: a huge long-winged bomber with eight sleek faired engine pods, a tall tail fin, a smooth glass-free nose, clean smooth skin, an internal weapons bay.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a big, heavy, swept-wing bomber with a long fuselage, two large engines blended into the rear body, a tall tail fin, a long pointed nose with a refuelling probe. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a swept-wing twin-engine bomber with its engines buried in the wing roots, a tall tail fin, a glazed nose, a tail gun turret, a long fuselage.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a swing-wing design: a big supersonic-looking bomber with variable-sweep wings, two huge engines in the rear body with large side intakes, a tall tail fin, a long pointed nose.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modernised near-future design: a huge swing-wing bomber with a smooth blended body, four large engines under the rear wings, a white-and-grey smooth finish, an internal weapons bay.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a medium-large swept-wing bomber with two engines at the wing roots, a tall tail fin, a rounded glazed nose, a clean tidy finish. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a straight-winged twin-engine bomber with engines in nacelles under the wings, a rounded glazed nose, a single tall tail fin, a tail turret.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a modernised swept-wing design: a bomber with two large engines blended into the wing roots with side intakes, a tall tail fin, a refuelling probe, pylons under the wings.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a swept-wing bomber with a smooth faired body, large engines with faired intakes, a refuelling probe, a smooth glass-free nose, an internal bay and wing pylons.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a large, smooth, long-winged bomber with a rounded body, engines in pods or blended into the wings, a single tall tail fin, a polished finish. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a huge high-winged bomber with long straight wings, eight engines in four paired pods, a tall tail fin, a long slim fuselage.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a swing-wing design: a long, lean bomber with swept-back wings blended into the body, four engines at the rear, a small tail fin, a long pointed nose.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modernised near-future design: a huge long-winged bomber with eight sleek faired engine pods, a tall tail fin, clean smooth skin, an internal weapons bay.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical swept-wing bomber, an older shape with bolt-on kits that look fitted by the buyer. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a twin-engine swept-wing bomber with engines at the wing roots, a glazed nose, a single tail fin, a tail gun turret, a plain finish.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1980s pattern: a swing-wing bomber with two huge rear engines, large side intakes, a single tall tail fin, a long nose, a plain finish.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a swept-wing twin-engine bomber with new faired engines, a refuelling probe, pylons under the wings, a smooth nose, a practical look made to be sold to many air forces.
+
+
+### Maritime patrol aircraft (a large aircraft that searches the sea) (`mpa`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-mpa-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-mpa-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single maritime patrol aircraft (a large aircraft that searches the sea), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the maritime patrol aircraft (a large aircraft that searches the sea): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single maritime patrol aircraft (a large aircraft that searches the sea), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the maritime patrol aircraft (a large aircraft that searches the sea): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single maritime patrol aircraft (a large aircraft that searches the sea) flying low over the sea with its radar searching, a small sonar buoy falling from its belly toward the waves. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The maritime patrol aircraft (a large aircraft that searches the sea) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a medium four-engine propeller or twin-jet patrol aircraft with a long round fuselage, a long rear tail boom with a magnetic detector sting, a belly radome and weapons under the wings. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a four-engine turboprop aircraft with a long round fuselage, a long tail boom sting, a chin radome, a weapons bay and pylons under the wings, a tall tail fin.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a modern twin-jet design: a medium twin-jet airliner-based aircraft with swept wings, a belly radome, a weapons bay, pylons under the wings, a small raised wingtip.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a large unmanned long-wing patrol aircraft with a bulbous nose radome, very long thin wings, a V-shaped tail, no cockpit windows, a single engine at the rear.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a big rugged patrol aircraft with a long fuselage, a large belly radome, a tail sting, a weapons bay, many antennas and a tall tail fin. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a big gull-winged flying boat with two engines on top of the wings, a tall tail fin, a rounded hull, a nose gun position, sea-going and rugged.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a heavy design: a four-engine turboprop with large contra-rotating propellers, a long fuselage, a tail sting, a belly radome, a weapons bay, a tall tail fin.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern design: a four-engine turboprop patrol aircraft with new faired nacelles, a large belly radome, a tail sting, a smooth fuselage, a weapons bay.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a tidy medium patrol aircraft with a long fuselage, turboprop engines, a belly radome, a tail boom sting and a clean finish. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a large flying boat with four propeller engines on a high wing, a rounded hull, a tall tail fin, a gun position in the nose.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a modern design: a four-engine turboprop patrol aircraft with a chin radome, a tail sting, a belly radome, a weapons bay, a tall tail fin.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a large twin-turboprop patrol aircraft with a chin radome, a long tail sting, a smooth faired fuselage, a weapons bay, a clean finish.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a sleek medium twin-engine patrol aircraft with a rounded fuselage, a belly radome, a tail sting, weapons pylons and a clean polished finish. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a twin-engine turboprop patrol aircraft with a long rounded fuselage, a belly radome, a tail fin, pylons under the wings, a bubble observation window.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a modern design: a twin-engine turboprop patrol aircraft with large propellers, a long fuselage, a chin radome, a tail sting, pylons under the wings.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a twin-jet patrol aircraft with swept wings, a belly radome, a weapons bay, pylons under the wings, a small raised wingtip.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical patrol aircraft, a transport-aircraft shape with bolt-on radar and sensors that look fitted by the buyer. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a twin-engine flying boat with engines on a high wing, a rounded hull, a nose gun position, a plain finish.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1980s pattern: a four-engine turboprop with a long fuselage, a belly radome, a tail sting, pylons under the wings, a plain finish.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a twin-turboprop transport aircraft converted to patrol work, a belly radome, a chin sensor ball, a bolt-on weapons pylon, a practical look made to be sold to many air forces.
+
+
+### Made so far, set 3 (19 November 2026, branch `unit-art-3`)
+
+Special Forces, Paratroopers, Mobile Jammer, Heavy Bomber, Maritime Patrol Aircraft: 5 sets, 225 pictures, each look checked three ways (flags only, nothing redone).
+Stopped at the $5 floor before AWACS. Not made: AWACS, Stealth Bomber, Marines, the 5 unique units (prompts not yet written). The cut-outs were made with the
+current `tools/prep-art.py` into a scratch folder for the owner's sheets and are not committed: they get re-packed after the atlas job merges.
+
 ### Made so far (19 November 2026, branch `unit-art-2`)
 
 Infantry Fighting Vehicle, Mobile Artillery, Mobile SAM, Rocket Artillery, Motorized Infantry, Frigate, Cruiser, Attack Submarine, Aircraft Carrier,
