@@ -3574,7 +3574,7 @@ function seaDetail(c, s, x0, y0, x1, y1, k){ const O = seaO(); if (!O.st) return
   if (!P || !P.setTransform) return; const hz = Math.max(0, Math.min(1, (s*HS0 - 4)/26)), Q = O.st.Q*(0.35 + 0.65*hz), Tb = 4096, L = Math.log2(s*Tb/Q), o0 = Math.floor(L), f = L - o0;   // (zoomed out the waves are finer on screen and a little fainter)
   k *= 0.65 + 0.35*hz;
   c.save(); c.globalCompositeOperation = 'source-over'; c.fillStyle = P;
-  const fs = Math.max(0, Math.min(1, (f - 0.4)/0.2)), f2 = fs*fs*(3 - 2*fs);   // (the cross-fade over the middle of each octave only: one fill at most zooms, two in the fade)
+  const fs = Math.max(0, Math.min(1, (f - 0.45)/0.1)), f2 = fs*fs*(3 - 2*fs);   // (the cross-fade over the middle tenth of each octave only: one fill at nine zooms in ten, two in the fade)
   for (const [o, w] of [[o0, 1 - f2], [o0 + 1, f2]]){ const a = O.st.a*w*k; if (a < 0.03) continue; const lt = seaLattice(Tb/Math.pow(2, o), 0.35 + 0.61*o), sc = lt.t/T.width;
     P.setTransform(new DOMMatrix().rotate(lt.a*180/Math.PI).scale(sc).translate(((o*197) % 512 + 512) % 512, ((o*331) % 512 + 512) % 512)); c.globalAlpha = a; c.fillRect(x0, y0, x1 - x0, y1 - y0); }
   c.restore(); }
@@ -7951,7 +7951,9 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
       c.strokeStyle = `rgba(70,136,142,${0.12*z})`; c.lineWidth = Math.max(1, 4*px0); c.stroke(CG);
       c.strokeStyle = `rgba(150,200,210,${0.07*z})`; c.lineWidth = 2.6*px0; c.stroke(coastGlowRings(coastRings(hexPx)) !== coastRings(hexPx) ? CG : CV); }   // (at play zoom the faint bright line too follows the glow's thinned coast: strokes over the fine coast under its own clip are costly)
     c.restore(); }
-  else if (GEO.seaTex){ c.globalAlpha = SEA_A; c.drawImage(mapLite() ? GEO.seaTex : seaFarTex(), 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // far out (no coast clip): its clear land masks it (MAP-SEA: with the wave sheet in it)
+  else if (GEO.seaTex){ const F = mapLite() ? GEO.seaTex : seaFarTex(), q0 = c.imageSmoothingQuality; c.globalAlpha = SEA_A;
+    if (view.s*dpr*WORLD_W/F.width < 1) c.imageSmoothingQuality = 'high';   // (drawn smaller than its texels, as a live zoom's half-resolution layer does: filtered, so its fine waves average to the same colour)
+    c.drawImage(F, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; c.imageSmoothingQuality = q0; }   // far out (no coast clip): its clear land masks it (MAP-SEA: with the wave sheet in it)
   const onScreen = P => { const b = provBox(P); return b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1; }, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
     nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
