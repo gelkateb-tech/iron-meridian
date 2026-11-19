@@ -22,6 +22,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     const t0 = Date.now();
     await p.evaluate(([nm, hx]) => { document.querySelectorAll('.toast,.modal').forEach(t => t.remove()); const im = window.__im, v = im.view, P = im.G.P.find(q => q.cityName === nm), s = hx/12, R = document.getElementById('map').getBoundingClientRect();
       v.s = s; v.x = R.width/2 - P.x*s; v.y = R.height/2 - P.y*s; im.redraw(); }, [nm, hx]);
+    for (let k = 0; k < 600; k++){ await p.waitForTimeout(200); if (await p.evaluate(([nm, n]) => { const im = window.__im; im.redraw(); const h = im.cityDbg.has(im.G.P.find(q => q.cityName === nm).id); return h && (n ? h.exactN !== false && h.exact : h.exact); }, [nm, NIGHT])) break; }   // (the town's own tier made: up to 2 minutes on a busy machine)
     for (let k = 0, ok = 0; k < 150 && ok < 4; k++){ await p.waitForTimeout(250); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; }
     const ms = Date.now() - t0; await p.waitForTimeout(400); await p.evaluate(() => document.querySelectorAll('.toast').forEach(t => t.remove()));
     const R = await p.evaluate(() => { const r = document.getElementById('map').getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
