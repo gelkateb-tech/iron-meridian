@@ -20,7 +20,12 @@ const lotCash = (q, price) => q/MKT_LOT*price, lotsFor = (cash, price) => Math.f
 // mobilized only in a city with an Army Base of level I or more. INF_NEEDS lists the buildings infantry needs at level I: ['fac'] the Army Base alone
 // (the Recruiting Office unlocks nothing and keeps its training-speed and manpower bonuses), ['fac', 'rec'] both. The one switch between the two.
 const INF_NEEDS = ['fac'];
-const INF_T = ['inf', 'at', 'spec', 'para'];   // the infantry units (their req and req2 are set from INF_NEEDS below the table)
+/* NAVAL CITIES (owner 2026-11-19): every coastal city is a NAVAL CITY (navalCity, rules/state.js): the only place a Naval Yard can be built, the only
+   place ground forces board ships (one of their own or a friend's) and the only place they come ashore (their own, a friend's, or an enemy's or an
+   independent one taken by an assault landing), unless every ground unit of the force is a Marine ('mar', amphibious infantry: boards and lands on
+   any coast). NAVAL_CITIES is the one switch: false gives the game exactly as it was before (no Marines, landings on any coast). */
+const NAVAL_CITIES = true;
+const INF_T = ['inf', 'at', 'spec', 'para', ...(NAVAL_CITIES ? ['mar'] : [])];   // the infantry units (their req and req2 are set from INF_NEEDS below the table)
 const UNITS = {
   inf:  {name:'Motorized Infantry',short:'INF', cls:'soft',    cost:25, oil:0, metal:0, iron:0, elec:0, rare:0, mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, fuel:0,   req:{b:'fac', l:1},          tech:null,  role:'Line infantry that holds ground and captures provinces.'},
   at:   {name:'Anti-Tank Infantry',short:'ATI', cls:'soft',    cost:32, oil:0, metal:3, iron:3, elec:0, rare:0, mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{armored:3.5}, role:'Infantry armed with anti-tank missiles.'},
@@ -51,10 +56,13 @@ const UNITS = {
   // (ad: Mobile SAMs, frigates and cruisers; air: fighters and other aircraft), each measured against what the same shooter does to a Heavy Bomber
   stealth:{name:'Stealth Bomber', short:'STB', cls:'air', bmb:0.6, lo:{ad:0.35, air:0.4}, cost:330, oil:26, metal:34, iron:6, elec:40, rare:8, mp:8, atk:8, def:4, hp:12, spd:10, build:168, upk:14, fuel:3.5, req:{b:'air', l:3}, tech:'bomb3', vs:{soft:1.0, armored:0.7, naval:0.6, air:0.2}, role:'Long-range bomber that is hard to detect.'},
 };
+// Marines (NAVAL CITIES): amphibious infantry, a little stronger and dearer than Motorized Infantry; trained at an Army Base in a coastal city
+// (coastal: mobBlock, rules/production.js); a force of Marines alone boards and lands on any coast (amphib, rules/movement.js)
+if (NAVAL_CITIES) UNITS.mar = {name:'Marines', short:'MAR', cls:'soft', cost:34, oil:0, metal:3, iron:2, elec:0, rare:0, mp:10, atk:4, def:3, hp:10, spd:4, build:36, upk:1.5, fuel:0, req:{b:'fac', l:1}, tech:null, coastal:1, amph:1, role:'Amphibious infantry: boards ships and lands on any coast, not only at naval cities. Trained at an Army Base in a coastal city.'};
 // infantry's buildings from INF_NEEDS: reqs lists every building the unit needs at its level (the Paratroopers' Airbase last); reqsOf reads it
 for (const t of INF_T){ const U = UNITS[t], air = U.req2 && U.req2.b === 'air' ? [U.req2] : [];
   U.reqs = [...INF_NEEDS.map(b => ({b, l:1})), ...air]; U.req = U.reqs[0]; if (U.reqs[1]) U.req2 = U.reqs[1]; else delete U.req2; }
-const UNIT_NICK = {inf:'Infantry', at:'Anti-tank', art:'Artillery', sam:'SAM', ifv:'IFV', tank:'Tank', jet:'Strike', int:'Interceptor', frig:'Frigate', sub:'Submarine', crui:'Cruiser', mlrs:'MLRS', spec:'SOF', carr:'Carrier', heli:'Helicopter', drone:'UAV', para:'Paras', swarm:'Swarm', sdrone:'Strike drone', jam:'Jammer', bomb:'Bomber', mpa:'MPA', awacs:'AWACS', asf:'ASF', stealth:'Stealth bomber'};
+const UNIT_NICK = {inf:'Infantry', at:'Anti-tank', art:'Artillery', sam:'SAM', ifv:'IFV', tank:'Tank', jet:'Strike', int:'Interceptor', frig:'Frigate', sub:'Submarine', crui:'Cruiser', mlrs:'MLRS', spec:'SOF', mar:'Marines', carr:'Carrier', heli:'Helicopter', drone:'UAV', para:'Paras', swarm:'Swarm', sdrone:'Strike drone', jam:'Jammer', bomb:'Bomber', mpa:'MPA', awacs:'AWACS', asf:'ASF', stealth:'Stealth bomber'};
 const MISSILES = {
   cm: {name:'Cruise Missile',    short:'CM', cost:60,  oil:10, metal:10, iron:4, elec:8, rare:3, build:36, range:28, speed:9,  power:7,  tech:'msl1', desc:'Flies low and fast. Devastates the forces in one province.'},
   bm: {name:'Ballistic Missile', short:'BM', cost:140, oil:20, metal:24, iron:10, elec:16, rare:8, build:72, range:90, speed:22, power:16, tech:'msl2', desc:'Climbs into space and falls on its target: massive damage, wrecks a building, shakes morale.'},
@@ -120,7 +128,7 @@ const terr = p => TERRAIN[G.P[p].terrain] || TERRAIN.plains;
 const RIVER_X = 1.3, RIVER_XB = 1.1, RIVER_ATK = 0.8;
 const riverX = (from, to) => G.P[from].river.has(to) && !G.P[to].sea && !G.P[from].sea;
 // per-unit-type terrain combat factor: [atk 0/1][cold 0/1] -> {type: factor}; aircraft and ships ignore terrain
-const FOOT_U = {inf:1, para:1, at:1}, GUN_U = {art:1, mlrs:1}, TUF = {};
+const FOOT_U = {inf:1, para:1, at:1, mar:1}, GUN_U = {art:1, mlrs:1}, TUF = {};
 function tuf(k, atk, cold){ const key = k + (atk ? 1 : 0) + (cold ? 1 : 0); let r = TUF[key]; if (r) return r; const T = TERRAIN[k] || TERRAIN.plains; r = TUF[key] = {};
   for (const t of Object.keys(UNITS)){ const c = UNITS[t].cls; let f = 1;
     if (c !== 'air' && c !== 'naval'){ f = t === 'spec' ? T.spec : FOOT_U[t] ? T.foot : GUN_U[t] ? T.art : 1; if (c === 'armored' && atk) f *= T.armor; if (cold) f *= T.cold || 1; }
@@ -230,6 +238,11 @@ const R_LINES = [
     ['eye', 'Night Optics', 'scope', [[8, {}, 'sees 50% farther']]],
     ['airlift', 'Air-Transportable', 'airlift', [[10, {}, 'can be air-dropped from an airbase province, up to 6 hexes']]]],
    g:[[2, 16, 'Tier-One Operators', {atk:2, def:1, hp:2}, 'attack +2, defense +1, health +2']]},
+  // Marines (NAVAL CITIES): the infantry corps' amphibious line, out of Motorized Infantry (the dashed family line)
+  ...(NAVAL_CITIES ? [{u:'mar', cat:'inf', day:3, ud:3, fam:'inf', k:[
+    ['armor', 'Ceramic Body Armour', 'armor', [[4, {def:1}, 'defense +1']]],
+    ['kit', 'Assault Kit', 'vest', [[8, {atk:1}, 'attack +1'], [13, {hp:2}, 'health +2']]]],
+   g:[[2, 12, 'Amphibious Assault Battalion', {atk:1, def:1, hp:2}, 'attack +1, defense +1, health +2']]}] : []),
 
   {u:'ifv', cat:'arm', day:1, ud:3, k:[
     ['gun', '30 mm Autocannon', 'autocannon', [[5, {atk:2}, 'attack +2']]],
@@ -448,6 +461,7 @@ const UNIT_NAMES = {
   inf:{nato:['M16A1', 'M4A1', 'M7'], east:['AKM', 'AK-74M', 'AK-12'], china:['Type 56', 'QBZ-95', 'QBZ-191'], europe:['G3A3', 'G36A2', 'G95A1'], export:['AKM', 'AK-103', 'M4']},
   at:{nato:['M47', 'FGM-148', 'FGM-148F'], east:['9K111', '9K115-2', '9K135'], china:['HJ-73', 'HJ-9', 'HJ-12'], europe:['LRAC F1', 'NLAW', 'MMP'], export:['9M14', 'HJ-8E', '9K135']},
   spec:{nato:['XM177E2', 'Mk 18 Mod 1', 'M7'], east:['AKMS', 'AK-105', 'AK-12K'], china:['Type 56-1', 'QBZ-95-1', 'QBZ-192'], europe:['MP5', 'G36KA4', 'G95K'], export:['AKMS', 'M4', 'AK-104']},
+  mar:{nato:['M16A2', 'M27 IAR', 'M27'], east:['AK-74', 'AK-74M', 'AK-12'], china:['Type 81', 'QBZ-95-1', 'QBZ-191'], europe:['FAMAS F1', 'HK416F', 'G95A1'], export:['AKM', 'M4', 'AK-103']},
   ifv:{nato:['M2A1', 'M2A3', 'XM30'], east:['BMP-1', 'BMP-3', 'T-15'], china:['Type 86', 'ZBL-08', 'ZBD-04A'], europe:['AMX-10P', 'Strf 9040C', 'VBCI-2'], export:['BMP-1', 'M2A2', 'BMP-3M']},
   tank:{nato:['M60A3', 'M1', 'M1A2 SEPv3'], east:['T-72', 'T-90', 'T-14'], china:['Type 79', 'Type 96A', 'Type 99A'], europe:['AMX-30B2', 'AMX-56', 'KF51'], export:['T-55', 'T-72M1', 'VT-4']},
   art:{nato:['M109A2', 'M109A6', 'M109A7'], east:['2S1', '2S19', '2S35'], china:['Type 83', 'PLZ-05', 'PCL-181'], europe:['AuF1', 'PzH 2000', 'RCH 155'], export:['2S1', '2S19', 'SH-15']},

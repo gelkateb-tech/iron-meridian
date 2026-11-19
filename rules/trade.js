@@ -25,7 +25,7 @@ const trOther = (r, n) => r.a === n ? r.b : r.a;
 const trName = (r, n) => r.b === NEUTRAL ? G.countries[r.nc].name : S.nations[trOther(r, n)].name;
 const routesOf = n => S.trade ? S.trade.routes.filter(r => trMine(r, n)) : [];
 const routeById = id => S.trade ? S.trade.routes.find(r => r.id === id) || null : null;
-const isPort = P => !!P && !P.sea && P.city && P.nbs.some(v => G.P[v].sea);
+const isPort = P => !!P && navalCity(P.id);   // (a naval city: rules/state.js)
 const unitPw = (o, t) => (st(o, t, 'atk') + st(o, t, 'def'))*st(o, t, 'hp')/10;
 const pName = p => G.P[p].cityName || G.P[p].name;
 // whose ships threaten / protect a route: at war with either partner, or one of the partners and their allies

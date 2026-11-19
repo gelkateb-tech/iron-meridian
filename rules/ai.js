@@ -215,6 +215,7 @@ function aiPickUnit(n, p){
     for (const k of ['iron', 'elec']){ const d = -inc.net[k]; if (!((N.short && N.short[k]) || (d > 0 && N[k] < 14*d))) continue; for (const t in w) if (MAINT[t]) w[t] *= MAINT[t][k] >= (k === 'iron' ? 0.24 : 0.12)*RES_K ? 0.3 : MAINT[t][k] > 0 ? 0.65 : 1.15; } }   // the heavy users: 6 or more of it in the price
   { const N = S.nations[n], av = {}; for (const k of AI_SCARCE) av[k] = N[k] - aiKeepRes(n, k);   // what is left above the maintenance reserve
     for (const t in w){ const U = UNITS[t]; if (!U) continue; for (const k of AI_SCARCE){ const q = U[k] || 0; if (q && av[k] < q*3) w[t] *= av[k] < q ? 0.15 : 0.5; } } }
+  if (NAVAL_CITIES) w.mar = warsOf(n).length ? 0.6 : 0.15;   // Marines (coastal cities only: bldOk) for landings away from the naval cities
   const opts = UT.filter(t => bldOk(p, t) && unlocked(n, t));
   let tot = opts.reduce((s, t) => s + (w[t] || 0), 0), r = rng()*tot;
   for (const t of opts){ r -= w[t] || 0; if (r <= 0 && w[t]) return t; }
@@ -394,7 +395,7 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   // the weights the projects had before the redesign, carried over to the nodes they became
   const NW = {u_jet:3, u_int:3, jet_pgm:pgm, int_msl:pgm, u_drone:2.5, drone_g2:2, drone_g3:1.5, drone_g4:2, drone_g5:1.5, u_swarm:3, u_sdrone:2.5, u_jam:jamW, jam_band:jamW,
     u_asf:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + awv, u_mpa:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), u_awacs:wr ? 2.2 : 1.5, u_bomb:wr ? (ab2 ? 11 : 8) : 3,
-    bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15};   // stealth bombers: only late, at war with a power that fields SAM stacks
+    bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15, ...(NAVAL_CITIES ? {u_mar:ownedBy(n).some(navalCity) ? (wr ? 1.2 : 0.6) : 0.05} : {})};   // (Marines: for a nation with a coast)   // stealth bombers: only late, at war with a power that fields SAM stacks
   // what the nation fields: units in service and in training, and their money value (the old Mark rule: count x unit price)
   const cnt = {}; let val = 0; for (const a of armiesOf(n)) for (const t of UT) if (a.u[t]) cnt[t] = (cnt[t] || 0) + a.u[t];
   for (const p of ownedBy(n)) for (const it of S.queue[p]) if (!it.msl && UNITS[it.t]) cnt[it.t] = (cnt[it.t] || 0) + rPack(n, it.t);   // (a card is as many units as spawn makes of it)
@@ -443,11 +444,15 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   if (alt) startResearch(n, alt.nd.id); }
 // the target of an offensive from province p0 (aiTurn): the best-scoring province within maxD steps (sea steps count 2) that the stacks there, of
 // strength pw, can take; -1 when none (a function of its own, so the engine optimizes it apart from the long aiTurn)
-function aiTarget(n, p0, maxD, pw, targeted, sated, freeLeft, fitAt, foc){
+// NAVAL CITIES: the search crosses the sea only as the forces can: on board at a naval city of the nation's own or a friend's (portOk), ashore only
+// at a naval city (am: the group is Marines alone, which board and land on any coast), so the target picked is one pathFor can reach
+function aiTarget(n, p0, maxD, pw, targeted, sated, freeLeft, fitAt, foc, am = false){
+  const nc = NAVAL_CITIES && !am;
   const DG = aiBfs(), gen = DG.gen, dg = DG.g, dd = DG.d, C = mapNbs(), o0 = C.o, nb = C.v, sea = C.sea, q = DG.q; let qn = 0; q[qn++] = p0; dg[p0] = gen; dd[p0] = 0;   // (dg/dd: the search's distances, a typed array marked by search)
   let best = -1, bestScore = 0;
   for (let h = 0; h < qn; h++){ const u = q[h], du = dd[u]; if (du >= maxD) continue;
-    for (let j = o0[u], j1 = o0[u + 1]; j < j1; j++){ const v = nb[j]; if (dg[v] === gen) continue; const step = sea[v] ? 2 : 1; dg[v] = gen; dd[v] = du + step; q[qn++] = v;
+    for (let j = o0[u], j1 = o0[u + 1]; j < j1; j++){ const v = nb[j]; if (dg[v] === gen) continue; if (nc && sea[u] !== sea[v] && (sea[u] ? !navalCity(v) : !portOk(n, u))) continue;
+      const step = sea[v] ? 2 : 1; dg[v] = gen; dd[v] = du + step; q[qn++] = v;
       if (sea[v] || S.owner[v] === n || targeted.has(v)) continue;
       if (S.owner[v] >= 0 && !atWar(n, S.owner[v])) continue;
       if (S.owner[v] >= 0 && pw < 30 && S.home[v] !== n) continue;
@@ -617,6 +622,12 @@ function aiTurn0(n, N){
   if (sated) for (const a of armiesOf(n)) if (a.path.length && !a.air && !a.forced && !G.P[a.at].sea){ const last = a.path[a.path.length - 1];
     if (S.owner[last] !== n && S.home[last] !== n){ a.path = []; a.dest = null; targeted.delete(last); } }
   const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !gunsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
+  // NAVAL CITIES: ground forces left idle at sea (a landing refused on the way, a route planned again to none: rules/tick.js) are in no own province,
+  // so the stacks above never hold them: they head for the nearest own province over the water, coming ashore at a naval city (landOk)
+  if (NAVAL_CITIES) for (const a of armiesOf(n)){ if (a.air || a.to !== null || a.path.length || a.sail || !G.P[a.at].sea || !ground(a) || !count(a)) continue;
+    const seen = new Set([a.at]), q = [a.at]; let dest = -1;
+    for (let h = 0; h < q.length && dest < 0 && h < 4000; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v) || !canEnter(n, v) || (G.P[q[h]].sea && !G.P[v].sea && !landOk(a, v))) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
+    if (dest >= 0) a.path = pathFor(a, a.at, dest); }
   const ready = [];   // stacks free for an offensive of their own
   for (const a of idleAll()){
     if (planned.has(a) || enemiesAt(a.at, n) || a.air) continue;
@@ -624,7 +635,7 @@ function aiTurn0(n, N){
     if (G.P[a.at].sea || (S.owner[a.at] !== n && !atWar(n, S.owner[a.at]))){
       // stranded at sea or in land it may not fight in: head to the nearest own province
       const seen = new Set([a.at]), q = [a.at]; let dest = -1;
-      for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v) || !canEnter(n, v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
+      for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v) || !canEnter(n, v) || (G.P[q[h]].sea && !G.P[v].sea && !landOk(a, v))) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }   // (ashore only at a naval city: landOk)
       if (dest >= 0) a.path = pathFor(a, a.at, dest);
       continue;
     }
@@ -644,7 +655,7 @@ function aiTurn0(n, N){
       const lead = left.reduce((x, y) => power(y) > power(x) ? y : x, left[0]);
       const maxD = warsOf(n).length ? 10 : 7, fw = fitW(lead), cold = !arctic(n), fc = {}, foc = focusOf(n);
       const fitAt = v => { const k = G.P[v].terrain || 'plains'; return fc[k] ?? (fc[k] = fitOf(fw, k, true, cold)); };
-      const best = aiTarget(n, p0, maxD, pw, targeted, sated, freeLeft, fitAt, foc);
+      const best = aiTarget(n, p0, maxD, pw, targeted, sated, freeLeft, fitAt, foc, left.every(amphib));
       if (best < 0) break;
       // the capital keeps a garrison when the force there marches out: two infantry in peace (at war the garrison was set apart above)
       if (p0 === N.capital && !warsOf(n).length && round === 0){ const g0 = left.find(a => (a.u.inf || 0) >= 4); if (g0){ addArmy(n, p0, {inf:2}); g0.u.inf -= 2; } }
