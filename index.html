@@ -2652,19 +2652,18 @@ const ART = (() => {
       if (im.decode) im.decode().then(ok, ok); else ok(); };
     im.onerror = () => {};   // not supplied yet: keep the stand-in, no retry
     im.src = BASE + name + '.webp'; }
-  // a unit look picture for the canvases (the map's top-downs): its atlas is fetched once, and when it has arrived every top-down of it is cut out as a canvas of its own size
-  // (pixel for pixel, no scaling; the canvases are what the single files were: pictures with naturalWidth and naturalHeight), then the atlas itself is let go
+  // a unit look picture for the canvases (the map's top-downs): its atlas is fetched once and kept only while pictures are being asked for (it is let go 20 s after the last
+  // one; a later ask fetches it again from the browser cache); the asked picture alone is cut out as a canvas of its own size (pixel for pixel, no scaling; a picture with
+  // naturalWidth and naturalHeight, as the single file was), so the canvases held are only those the map really uses
   const ulWait = new Map();
-  function ulLoad(name){ const c = UL_CELL.get(name); let p = ulWait.get(c.f);
-    if (!p){ p = new Promise((res, rej) => { const im = new Image(); im.decoding = 'async';
-        im.onload = () => { const ok = () => { if (!im.naturalWidth) return rej(); const out = new Map();
-            for (const n of UL_AT.get(c.f)){ if (!/-top$/.test(n)) continue; const d = UL_CELL.get(n), cv = document.createElement('canvas'); cv.width = d.w; cv.height = d.h;
-              cv.getContext('2d').drawImage(im, d.x, d.y, d.w, d.h, 0, 0, d.w, d.h); cv.naturalWidth = d.w; cv.naturalHeight = d.h; out.set(n, cv); }
-            res(out); };
-          if (im.decode) im.decode().then(ok, ok); else ok(); };
-        im.onerror = () => rej(); im.src = BASE + c.f + '.webp'; });
-      ulWait.set(c.f, p); }
-    return p.then(m => m.get(name) || null); }
+  function ulLoad(name){ const c = UL_CELL.get(name); let e = ulWait.get(c.f);
+    if (!e){ e = {t: 0, p: new Promise((res, rej) => { const im = new Image(); im.decoding = 'async';
+        im.onload = () => { const ok = () => im.naturalWidth ? res(im) : rej(); if (im.decode) im.decode().then(ok, ok); else ok(); };
+        im.onerror = () => rej(); im.src = BASE + c.f + '.webp'; })};
+      ulWait.set(c.f, e); e.p.catch(() => { if (ulWait.get(c.f) === e) ulWait.delete(c.f); }); }
+    clearTimeout(e.t); e.t = setTimeout(() => { if (ulWait.get(c.f) === e) ulWait.delete(c.f); }, 20000);
+    return e.p.then(im => { const cv = document.createElement('canvas'); cv.width = c.w; cv.height = c.h;
+      cv.getContext('2d').drawImage(im, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h); cv.naturalWidth = c.w; cv.naturalHeight = c.h; return cv; }); }
   function load(name){
     if (waits.has(name)) return waits.get(name);
     const pr = new Promise(res => {
@@ -2737,7 +2736,7 @@ const ART = (() => {
   // the canvases' pixels were dropped (a lost graphics context, see gfxReset): the sized sprites and cleaned copies are made again from the pictures
   // (decoded pictures are kept by the browser), and the code-drawn stand-ins are drawn again
   function gfx(){ cache.clear(); cleanC.clear(); for (const n of [...stand]){ stand.delete(n); imgs.delete(n); standIn(n); }
-    const ul = [...imgs.keys()].filter(n => UL_CELL.has(n)); for (const n of ul){ imgs.delete(n); waits.delete(n); } ulWait.clear(); ul.forEach(load); }   // (the unit look canvases are cut out of their atlases again)
+    const ul = [...imgs.keys()].filter(n => UL_CELL.has(n)); for (const n of ul){ imgs.delete(n); waits.delete(n); } ulWait.forEach(e => clearTimeout(e.t)); ulWait.clear(); ul.forEach(load); }   // (the unit look canvases are cut out of their atlases again)
   return {img:name => imgs.get(rn(name)) || null, ready:name => imgs.has(name), failed:name => failed.has(name), standIn:name => stand.has(rn(name)), load, want, sprite, scaled, first, rest, url, OPT, L5, gfx};
 })();
 // coalition emblems: every coalition (bloc) carries one of four crests, stable by its id (b1 eagle, b2 bear, b3 lion, b4 star, b5 eagle...)
