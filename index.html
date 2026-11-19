@@ -8750,8 +8750,8 @@ function railMarks(a, path){ if (a.air || !ground(a)) return; let u = a.to ?? a.
   ctx.restore(); }
 // what a planned route does at ports and at the province's heart (rules/movement.js: embarking only in a naval port, landing time, capture at the heart):
 // short notes for the route chip and the plan panel. pt: the order's exact point (none: the province centre, which is its heart)
-// durTxt: a boarding or landing time (hours, fractional) as the page shows it: minutes under an hour ("45 min"), else hours
-const durTxt = h => h < 1 - 1e-9 ? `${Math.max(1, Math.round(h*60))} min` : `${Math.round(h*10)/10} h`;
+// durTxt: a boarding or landing time (hours, fractional) as the page shows it: minutes to the half minute under an hour ("45 min", "22.5 min"), else hours
+const durTxt = h => h < 1 - 1e-9 ? `${Math.max(1, Math.round(h*120)/2)} min` : `${Math.round(h*10)/10} h`;
 function routeNotes(a, t, path, pt){ if (!a || a.air || !ground(a) || !path.length) return []; const out = []; let u = a.to ?? a.at, emb = false, land = false;
   for (let i = 0; i < path.length; i++){ const v = path[i];
     if (!emb && !G.P[u].sea && G.P[v].sea){ emb = true; out.push(`⚓ embarks at ${G.P[u].cityName || G.P[u].name} (${durTxt(i === 0 && a.to === null && a.emb != null ? a.emb : embarkH(a))})`); }

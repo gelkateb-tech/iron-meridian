@@ -93,11 +93,11 @@ run('embark', () => { const R = game([0]), S = R.S, G = R.G, n = 0, P0 = ports(R
   // the forecast counts the embarking (45 minutes, rounded up with the rest of the route at the end)
   const c = R.addArmy(n, P0.id, {inf:3}), e0 = R.etaHours(c, [z0]), lh0 = R.legH(Object.assign({}, c, {to:z0, path:[]}));
   ok('etaHours counts the embarking', e0 === Math.ceil(0.75 + lh0 - 1e-9), {e0, lh0});
-  // Halt cancels the embarking
-  R.orderMove(c, z0); R.haltArmy(c); R.tick(); ok('Halt cancels the embarking', c.emb == null && c.to === null && !c.path.length);
-  // a port lost before the force sets off: the route is planned again through a port, or the force stops
-  const d0 = R.addArmy(n, P0.id, {inf:2}); R.orderMove(d0, z0); S.owner[P0.id] = 1; R.tick(); S.owner[P0.id] = n;
-  ok('no port any more: it does not board there', d0.to === null && (!d0.path.length || !G.P[d0.path[0]].sea), d0.path); });
+  // Halt cancels a boarding under way (a 45-minute boarding ends within its first hour, so the half hour still to go is set by hand)
+  R.orderMove(c, z0); c.emb = 0.5; R.haltArmy(c); R.tick(); ok('Halt cancels the embarking', c.emb == null && c.to === null && !c.path.length && c.at === P0.id, {emb:c.emb, to:c.to});
+  // a port lost while the force is boarding: it does not sail from there (the route is planned again through a port, or the force stops)
+  const d0 = R.addArmy(n, P0.id, {inf:2}); R.orderMove(d0, z0); d0.emb = 0.5; S.owner[P0.id] = 1; R.tick(); S.owner[P0.id] = n;
+  ok('no port any more: it does not board there', d0.to === null && d0.at === P0.id && (!d0.path.length || !G.P[d0.path[0]].sea) && (d0.emb == null || !d0.path.length), {path:d0.path, emb:d0.emb}); });
 
 // 4. landing takes LAND_H (45 min) on a coast, LAND_PORT_H into an own port; Amphibious Doctrine halves it; 15 minutes at least; no capture before it is ashore
 run('landing', () => { const R = game([0]), S = R.S, G = R.G, n = 0, C0 = plainCoasts(R, n)[0], P0 = ports(R, n)[0]; if (!C0 || !P0) return;
@@ -128,14 +128,23 @@ run('landing', () => { const R = game([0]), S = R.S, G = R.G, n = 0, C0 = plainC
   if (E){ const o = S.owner[E.id]; R.setRel(n, o, 'war'); const b = R.addArmy(n, zoneBy(R, E.id), {inf:4}); R.orderMove(b, E.id); let arr = -1, cap = -1, l0 = 0;
     for (let i = 0; i < 300 && cap < 0; i++){ R.tick(); if (S.armies.some(x => x.owner === o && x.at === E.id && x !== b)) break; if (arr < 0 && b.at === E.id){ arr = i; l0 = b.land || 0; } if (S.owner[E.id] === n) cap = i; }
     ok('an enemy coast: captured the hour the landing ends, not before', arr >= 0 && cap === arr + (l0 > 0 ? 1 : 0), {arr, cap, l0}); }
-  // a port-to-beach crossing arrives ashore the hour etaHours forecast (boarding, the sea legs and the landing, each to the minute)
-  { const R2 = game([0]), S2 = R2.S, G2 = R2.G; let best = null;
-    for (const P of ports(R2, n)) for (const C of plainCoasts(R2, n)){ const pth = R2.pathFor({owner:n, u:{inf:1}, w:{}, air:null}, P.id, C.id);
-      if (pth.length >= 2 && pth.slice(0, -1).every(v => G2.P[v].sea) && !G2.P[C.id].sea){ best = {P, C, len:pth.length}; break; } if (best) break; }
-    ok('found a port-to-beach crossing', !!best); if (!best) return;
-    const a = R2.addArmy(n, best.P.id, {inf:3}); R2.orderMove(a, best.C.id); const eta = R2.etaHours(a); let k = -1;
-    for (let i = 1; i <= 400; i++){ R2.tick(); if (a.at === best.C.id && a.to === null && !a.path.length && !(a.land > 0)){ k = i; break; } }
-    ok(`etaHours matches the real arrival for a port-to-beach crossing (${best.len} legs: ${eta} h)`, k === eta, {eta, k}); } });
+  // port-to-beach crossings arrive ashore the hour etaHours forecast (boarding, the sea legs and the landing, each to the minute): three crossings,
+  // each with no upgrades, with Amphibious Doctrine and Combat Engineers II, and with those and a Siegemaster of rank 1 (a fresh game each time)
+  { const R0 = game([0]), G0 = R0.G, xs = [];
+    for (const P of ports(R0, n)){ for (const C of plainCoasts(R0, n)){ const pth = R0.pathFor({owner:n, u:{inf:1}, w:{}, air:null}, P.id, C.id);
+        if (pth.length >= 2 && pth.slice(0, -1).every(v => G0.P[v].sea) && R0.etaHours(R0.addArmy(n, P.id, {inf:3}), pth) <= 300 && !xs.some(x => x.P === P.id)){ xs.push({P:P.id, C:C.id, len:pth.length}); break; } }
+      if (xs.length >= 3) break; }
+    ok('found three port-to-beach crossings', xs.length === 3, xs);
+    const res = [];
+    for (const x of xs) for (const up of [{}, {nav3:1, log2:2}, {nav3:1, log2:2, siege:1}]){ const R2 = game([0]), S2 = R2.S, t = S2.nations[n].tech = S2.nations[n].tech || {};
+      if (up.nav3) t.nav3 = up.nav3; if (up.log2) t.log2 = up.log2; const a = R2.addArmy(n, x.P, {inf:3});
+      if (up.siege){ const cm = {id:S2.nid++, owner:n, name:'Test', trait:'siege', rank:up.siege, xp:0, alive:true, army:a.id}; (S2.cmds || (S2.cmds = [])).push(cm); a.cmd = cm.id; }
+      R2.orderMove(a, x.C); const eta = R2.etaHours(a), eh = R2.embarkH(a), lh = R2.landH(a, x.C); let k = -1;
+      for (let i = 1; i <= 400; i++){ R2.tick(); if (a.at === x.C && a.to === null && !a.path.length && !(a.land > 0)){ k = i; break; } }
+      res.push({...x, up:Object.keys(up).join('+') || 'none', eh, lh, eta, k}); }
+    const off = res.filter(r => r.k !== r.eta);
+    ok(`etaHours matches the real arrival for port-to-beach crossings (${res.length} runs, ${res.map(r => r.eta).join('/')} h)`, res.length === 9 && !off.length, off);
+    ok('those runs had shorter boardings and landings with the upgrades', res.filter(r => r.up !== 'none').every(r => r.eh < 0.75 - 1e-9 && r.lh < 0.75 - 1e-9), res.map(r => [r.up, r.eh, r.lh])); } });
 
 // 5. saves: the embarking and landing countdowns are kept; a save from before (no fields, an occupation clock in S.cap) loads and plays on
 run('saves', () => { const R = game([0]), S = R.S, n = 0, P0 = ports(R, n)[0], C0 = plainCoasts(R, n)[0]; if (!P0 || !C0) return;

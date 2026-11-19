@@ -35,7 +35,7 @@ function* tickHourG(){
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
-    // ground forces embark only in a naval port (rules/movement.js embWait): a route that would board ships here, where there is no port of the
+    // ground forces embark only in a naval port (rules/movement.js embStep): a route that would board ships here, where there is no port of the
     // force's own or a friend's (the port was lost, or an old save's route), is planned again through a port, or the force stops
     if (embLeg(a) && !portOk(a.owner, a.at)){ const dest = a.path[a.path.length - 1]; a.path = pathFor(a, a.at, dest); delete a.emb;
       if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} halted at ${G.P[a.at].cityName || G.P[a.at].name}: no naval port there to embark. March to a port first.`, 'info', a.at); } }
