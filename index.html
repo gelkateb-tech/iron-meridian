@@ -3494,16 +3494,16 @@ function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
 // C stylised (strong turquoise shallows, painterly wave strokes). 'm' is the sea as it was before (the comparison sheets' "today").
 // Each: the depth bake's colours and masks (dep: [blur r, at 1/q size, gain, noise] per step, col its colour; ab the abyss, rd the open-ocean
 // ridges), how much the named shallow seas count (sh), the noise's colour variation (nv); the static wave sheet (st: its tile kind, size on
-// screen Q in CSS px, hard-light strength a); the shore strokes (gl: a shallow-glow stroke [colour, alpha, width px], fo: foam [alpha, width
+// screen Q in CSS px, strength a); the shore strokes (gl: a shallow-glow stroke [colour, alpha, width px], fo: foam [alpha, width
 // px], fl: the foam's even line [colour, alpha, width px]; three strokes, as many as the old look); the live layer (lv: tile kind, alpha by day [night, day], update ms), the live foam's strength (lf).
 const SEAO = {
   m:{ab:[6, 18, 28], rd:[13, 36, 50], dep:[[14, 2, 3, 0.9, [13, 36, 50]], [6, 1, 2.1, 0.9, [22, 60, 74]], [1.6, 1, 1.6, 0.8, [44, 104, 112]]], sh:0, nv:0.22},
   a:{ab:[6, 22, 52], rd:[10, 34, 72], dep:[[14, 2, 3.2, 0.8, [13, 46, 92]], [6, 1, 2.6, 0.6, [22, 86, 128]], [1.7, 1, 2.1, 0.55, [44, 144, 162]], [0.7, 1, 1.5, 0.45, [72, 172, 178]]], sh:1, nv:0.16,
-    st:{k:'a', Q:300, a:0.5}, gl:[[[80, 176, 186], 0.2, 4.5]], fl:[[[236, 246, 242], 0.4, 1.2]], fo:[[0.85, 3.2]], lv:{k:'a', a:[0.03, 0.13], ms:66}, lf:1.15},
+    st:{k:'a', Q:300, a:0.5}, gl:[[[80, 176, 186], 0.2, 4.5]], fl:[[[236, 246, 242], 0.4, 1.2]], fo:[[0.85, 3.2]], lv:{k:'a', a:[0.05, 0.24], ms:66}, lf:1.15},
   b:{ab:[8, 26, 52], rd:[12, 38, 70], dep:[[16, 2, 2.6, 1.0, [16, 48, 84]], [7, 1, 2.0, 1.0, [26, 76, 104]], [2.2, 1, 1.5, 0.9, [52, 114, 124]], [0.9, 1, 1.2, 0.8, [74, 134, 136]]], sh:0.85, nv:0.34,
-    st:{k:'b', Q:440, a:0.45}, gl:[[[70, 132, 136], 0.14, 9]], fl:[[[220, 236, 234], 0.16, 2.6]], fo:[[0.4, 6]], lv:{k:'b', a:[0.02, 0.1], ms:80}, lf:0.8},
+    st:{k:'b', Q:440, a:0.45}, gl:[[[70, 132, 136], 0.14, 9]], fl:[[[220, 236, 234], 0.16, 2.6]], fo:[[0.4, 6]], lv:{k:'b', a:[0.04, 0.2], ms:80}, lf:0.8},
   c:{ab:[10, 38, 86], rd:[14, 50, 104], dep:[[14, 2, 3.2, 0.6, [20, 68, 128]], [6, 1, 3.0, 0.5, [30, 120, 168]], [2.2, 1, 2.4, 0.45, [64, 186, 196]], [0.9, 1, 1.8, 0.4, [104, 208, 206]]], sh:1, nv:0.12,
-    st:{k:'c', Q:250, a:0.6}, gl:[[[120, 206, 208], 0.24, 5.5]], fl:[[[245, 252, 250], 0.48, 1.6]], fo:[[0.95, 3.8]], lv:{k:'c', a:[0.03, 0.12], ms:80}, lf:1.3}};
+    st:{k:'c', Q:250, a:0.6}, gl:[[[120, 206, 208], 0.24, 5.5]], fl:[[[245, 252, 250], 0.48, 1.6]], fo:[[0.95, 3.8]], lv:{k:'c', a:[0.05, 0.2], ms:80}, lf:1.3}};
 let SEA_OPT = 'a';
 const seaO = () => SEAO[SEA_OPT] || SEAO.a;
 // shallow seas the nearness to land alone does not find (continental shelves under about 200 m), as [lon, lat, half-width, half-height in
@@ -3531,7 +3531,7 @@ function seaField(kind){ const N = 512, h = new Float32Array(N*N), m = new Float
     h[o] = v; m[o] = Math.max(0.15, 0.25 + 1.1*(0.65*mA(x, y) + 0.35*mB(x, y)) - 0.2); }
   let mx = 0; for (let i = 0; i < h.length; i++) mx = Math.max(mx, Math.abs(h[i])); for (let i = 0; i < h.length; i++) h[i] /= mx || 1;
   return {N, h, m}; }
-// the static wave sheet (laid on the sea with 'hard-light': grey 128 changes nothing, lighter lifts toward white, darker deepens): A the light on
+// the static wave sheet (grey 128 changes nothing, lighter lifts toward white, darker deepens: hard-light, stored as white and black): A the light on
 // small wave faces with a faint crest sparkle, B long soft swell lines and slow light patches, C a faint relief under painterly crest strokes
 function seaTileStatic(kind){ const F = seaField(kind === 'b' ? 'b' : 'a'), N = F.N, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data;
   const gain = kind === 'b' ? 16 : kind === 'c' ? 10 : 22, lo = tileNoise(N, 2, 433), fl = tileNoise(N, 96, 457);
@@ -3548,18 +3548,21 @@ function seaTileStatic(kind){ const F = seaField(kind === 'b' ? 'b' : 'a'), N = 
     for (let i = 0; i < 230; i++){ const x = r()*N, y = r()*N, o = (Math.floor(y)%N)*N + Math.floor(x)%N; if (F.h[o] < 0.05 && r() < 0.7) continue;
       const L = 14 + r()*30, ang = -0.42 + (r() - 0.5)*0.7, w = 2 + r()*3.4, a = 0.35 + 0.5*r()*F.m[o];
       dab(x + 1.5, y + 2.5, L*1.05, ang, w*1.2, `rgba(70,70,70,${(a*0.55).toFixed(3)})`); dab(x, y, L, ang, w, `rgba(255,255,255,${a.toFixed(3)})`); } g.filter = 'none'; }
+  // laid with plain 'source-over' (the fast path) instead of 'hard-light': grey v over 128 becomes white at alpha (v - 128)/127, under 128 black at
+  // (128 - v)/128, which gives exactly hard-light's screen and multiply halves (and a layer alpha scales both as before)
+  { const im2 = g.getImageData(0, 0, N, N), q = im2.data; for (let i = 0; i < q.length; i += 4){ const v = q[i], up = v >= 128; q[i] = q[i + 1] = q[i + 2] = up ? 255 : 0; q[i + 3] = Math.round(up ? (v - 128)/127*255 : (128 - v)/128*255); } g.putImageData(im2, 0, 0); }
   return c; }
 // the live layer's sheet (white on clear, laid with 'screen' and drifting): A sun glints on the crests, B soft broad light on the swell, C a few
 // white wave dabs
 function seaTileLive(kind){ const F = seaField(kind === 'b' ? 'b' : 'a'), N = F.N, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d');
-  if (kind === 'c'){ const r = mulberry(677); for (let i = 0; i < 110; i++){ const x = r()*N, y = r()*N, L = 8 + r()*16, ang = -0.42 + (r() - 0.5)*0.8, w = 1.4 + r()*2;
+  if (kind === 'c'){ const r = mulberry(677); for (let i = 0; i < 240; i++){ const x = r()*N, y = r()*N, L = 8 + r()*16, ang = -0.42 + (r() - 0.5)*0.8, w = 1.4 + r()*2;
       for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]){ g.save(); g.translate(x + ox, y + oy); g.rotate(ang); g.beginPath(); g.moveTo(-L/2, 0); g.quadraticCurveTo(0, -L*0.25, L/2, 0); g.quadraticCurveTo(0, -L*0.25 + w, -L/2, 0);
         g.fillStyle = `rgba(240,250,252,${(0.5 + 0.5*r()).toFixed(3)})`; g.fill(); g.restore(); } }
     return c; }
   const im = g.createImageData(N, N), d = im.data, fl = tileNoise(N, 128, 691), fm = tileNoise(N, 9, 701);
-  for (let i = 0, o = 0; o < N*N; o++, i += 4){ const x = o % N, y = (o/N) | 0, cr = Math.max(0, (F.h[o] - 0.35)/0.65); let v;
-    if (kind === 'b') v = 0.55*cr*cr*F.m[o]*Math.max(0, fm(x, y) - 0.2);
-    else { const s = fl(x, y); v = Math.pow(cr, 4)*(s > 0.62 ? 1.4*(s - 0.62)/0.38 + 0.25 : 0.06)*F.m[o]*1.6; }
+  for (let i = 0, o = 0; o < N*N; o++, i += 4){ const x = o % N, y = (o/N) | 0, cr = Math.max(0, (F.h[o] - 0.1)/0.9); let v;
+    if (kind === 'b') v = 0.7*cr*cr*F.m[o]*Math.max(0.2, fm(x, y));   // (broad soft light along the swell)
+    else { const s = fl(x, y); v = (0.42*Math.pow(cr, 1.6) + (s > 0.68 ? 1.6*(s - 0.68)/0.32*cr : 0))*F.m[o]; }   // (a soft light on every crest, and glints on some)
     d[i] = 232; d[i + 1] = 246; d[i + 2] = 250; d[i + 3] = Math.round(Math.min(1, v)*235); }
   g.putImageData(im, 0, 0); return c; }
 // a pattern tile laid in world space so that it repeats exactly once round the world (the map wraps east-west: no seam at the date line): the
@@ -3570,8 +3573,8 @@ function seaLattice(t, a){ const K = WRAP_W/t, m = Math.round(K*Math.cos(a)), n 
 function seaDetail(c, s, x0, y0, x1, y1, k){ const O = seaO(); if (!O.st) return; const T = SEAFX.st || (SEAFX.st = seaTileStatic(O.st.k)), P = SEAFX.stp || (SEAFX.stp = c.createPattern(T, 'repeat'));
   if (!P || !P.setTransform) return; const hz = Math.max(0, Math.min(1, (s*HS0 - 4)/26)), Q = O.st.Q*(0.35 + 0.65*hz), Tb = 4096, L = Math.log2(s*Tb/Q), o0 = Math.floor(L), f = L - o0;   // (zoomed out the waves are finer on screen and a little fainter)
   k *= 0.65 + 0.35*hz;
-  c.save(); c.globalCompositeOperation = 'hard-light'; c.fillStyle = P;
-  const fs = Math.max(0, Math.min(1, (f - 0.35)/0.3)), f2 = fs*fs*(3 - 2*fs);   // (the cross-fade over the middle of each octave only: one fill at most zooms, two in the fade)
+  c.save(); c.globalCompositeOperation = 'source-over'; c.fillStyle = P;
+  const fs = Math.max(0, Math.min(1, (f - 0.4)/0.2)), f2 = fs*fs*(3 - 2*fs);   // (the cross-fade over the middle of each octave only: one fill at most zooms, two in the fade)
   for (const [o, w] of [[o0, 1 - f2], [o0 + 1, f2]]){ const a = O.st.a*w*k; if (a < 0.03) continue; const lt = seaLattice(Tb/Math.pow(2, o), 0.35 + 0.61*o), sc = lt.t/T.width;
     P.setTransform(new DOMMatrix().rotate(lt.a*180/Math.PI).scale(sc).translate(((o*197) % 512 + 512) % 512, ((o*331) % 512 + 512) % 512)); c.globalAlpha = a; c.fillRect(x0, y0, x1 - x0, y1 - y0); }
   c.restore(); }
