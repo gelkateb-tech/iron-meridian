@@ -1743,3 +1743,11 @@ Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly
 - **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1980s pattern: a six-wheeled truck with a tall boxy shelter, a round dish on an arm, three tall folding masts, outrigger jacks.
 - **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a modular eight-wheeled truck with a boxy shelter, flat antenna panels, a slim mast, bolt-on armour, a practical look made to be sold to many armies.
 
+
+### Made so far (19 November 2026, branch `unit-art-2`)
+
+Infantry Fighting Vehicle, Mobile Artillery, Mobile SAM, Rocket Artillery, Motorized Infantry, Frigate, Cruiser, Attack Submarine, Aircraft Carrier,
+Strike Fighter, Interceptor, Air Superiority Fighter, Attack Helicopter, Recon UAV, Strike Drone, Swarm Drones, Anti-Tank (missile carrier): 17 sets, 765 pictures,
+plus the 15 tank looks. Not made (balance reached the $5 floor): Special Forces, Mobile Jammer (prompts written above), Maritime Patrol Aircraft, AWACS,
+Heavy Bomber, Stealth Bomber and the 5 unique units (prompts not yet written). Cut-outs: `tools/prep-art.py` cuts aircraft and ships with the
+segmentation model (pale grey on a pale floor defeats the colour test) and removes the shadow of every top-down.
