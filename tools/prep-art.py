@@ -646,6 +646,8 @@ def ul_cut(im, sd=70, sch=12, grad=9, noshadow=False, dark=0):
     al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.8)
     return Image.fromarray(np.dstack([a, al*255]).astype(np.uint8), 'RGBA')
 
+# pictures whose holes in the mask are the unit's own pale surface (a wing panel, a fuselage join), checked by eye: the plate removal is skipped
+PLATE_KEEP = {'ul-int-nato-1-top', 'ul-asf-export-3-side', 'ul-sdrone-east-3-side', 'ul-jet-east-2-side'}
 def ul_net_cut(f):
     """aircraft and ships (pale grey on the pale grey floor, which the colour test cannot tell apart): the IS-Net segmentation model's mask, tightened, holes filled, the
     largest parts kept; the cast shadow is not part of it. None when the model is not there."""
@@ -658,12 +660,19 @@ def ul_net_cut(f):
     # the floor seen through the unit (between booms and tails, inside rotor discs, under wings) is not the unit: filling the holes left a faint pale plate there.
     # Holes whose pixels match the fitted floor (colour and smoothness) stay transparent; glass, dark gaps and everything else in a hole is still filled.
     a = np.asarray(im).astype(np.float32); h, w, _ = a.shape; holes = keep & ~keep0
-    if holes.any():
+    if holes.any() and os.path.splitext(os.path.basename(f))[0] not in PLATE_KEEP:
         bm = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); bm[:b] = bm[-b:] = True; bm[:, :b] = bm[:, -b:] = True
         d = np.abs(a - fit_bg(a, bm)).max(-1); g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
         fl = ndi.binary_opening(holes & (d <= 18) & (g < 4.5), iterations=1); lb, kk = ndi.label(fl)
         if kk: fl = np.isin(lb, [i + 1 for i, z in enumerate(ndi.sum(fl, lb, range(1, kk + 1))) if z >= 40])
-        for _ in range(3): fl = fl | (ndi.binary_dilation(fl) & holes & (d <= 34))   # the blended rim of the hole goes with it (no halo)
+        # only holes that are mostly bare floor count (a hole that is mostly something else, such as a canopy or a pale wing panel, keeps all its pixels), and the rim grows only inside such a hole
+        hl, hk = ndi.label(holes); ok = np.zeros((h, w), bool)
+        for i in range(1, hk + 1):
+            c = hl == i
+            fr = (fl & c).sum()/c.sum()
+            if fr >= 0.5 or (fr >= 0.3 and c.sum() >= 2000): ok |= c
+        fl = fl & ok
+        for _ in range(3): fl = fl | (ndi.binary_dilation(fl) & ok & (d <= 34))   # the blended rim of the hole goes with it (no halo)
         keep = keep & ~fl
     al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.9)
     return Image.fromarray(np.dstack([np.asarray(im), al*255]).astype(np.uint8), 'RGBA')
