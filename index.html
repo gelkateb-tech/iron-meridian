@@ -6757,8 +6757,8 @@ function* cityPlanDraw(g, I, S, X0, Y0, mode, gain = 1){ const K = mode === 2 ? 
     g.restore(); return; }
   if (mode === 2){ g.fillStyle = '#000'; g.globalAlpha = K; for (const Bq of L){ g.fill(Bq.park); g.fill(Bq.tree); }   // parks and trees unlit
     g.globalCompositeOperation = 'screen'; g.setLineDash(CB_LAMP);   // the streets round every block: a soft glow along each (the inner streets, shared by two blocks, brighter than the town's edge), the lamps on it
-    for (const Bq of L){ if (!(++yc & 7)) yield; g.setLineDash([]); g.strokeStyle = '#8c7556'; g.globalAlpha = 0.34*K; g.lineWidth = Math.max(px(2.6), 0.9); g.stroke(Bq.lamp); g.setLineDash(CB_LAMP); g.strokeStyle = '#ffe6c0'; g.globalAlpha = 0.8*K; g.lineWidth = Math.max(px(0.9), 0.2); g.stroke(Bq.lamp); }
-    g.setLineDash([]); const wn = cityWinPat(g, X0, Y0, true, CB_WSC(pk));
+    for (const Bq of L){ if (!(++yc & 7)) yield; g.setLineDash([]); g.strokeStyle = '#8c7556'; g.globalAlpha = 0.34*K; g.lineWidth = Math.max(px(2.6/f), 0.9); g.stroke(Bq.lamp); g.setLineDash(CB_LAMP); g.strokeStyle = '#ffe6c0'; g.globalAlpha = 0.8*K; g.lineWidth = Math.max(px(0.9/f), 0.2); g.stroke(Bq.lamp); }   // (the lamps and windows by the km, whatever the level: a coarser level's are no bigger or brighter)
+    g.setLineDash([]); const wn = cityWinPat(g, X0, Y0, true, CB_WSC(pk/f));
     yield* bands((R, b) => { g.globalCompositeOperation = 'source-over'; g.globalAlpha = K; g.fillStyle = '#0d0a07'; g.fill(R.fu); g.fill(R.fv);   // the walls dark, their windows lit
       g.globalCompositeOperation = 'lighter'; g.globalAlpha = K; g.fillStyle = wn; g.fill(R.fu); g.fill(R.fv);
       g.globalCompositeOperation = 'source-over'; g.globalAlpha = K; g.fillStyle = '#070605'; g.fill(R.roof[0]); g.fill(R.roof[1]); });
@@ -6768,7 +6768,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, mode, gain = 1){ const K = mode === 2 ? 
   // upper left edges first)
   g.fillStyle = '#0e0c09'; g.globalAlpha = 0.48*K; for (const Bq of L){ if (!(++yc & 7)) yield; g.fill(Bq.sh1); } g.globalAlpha = 0.34*K; for (const Bq of L) g.fill(Bq.sh2);
   g.globalAlpha = K; for (const Bq of L){ g.fillStyle = C.tree; g.fill(Bq.tree); g.fillStyle = C.treeL; g.fill(Bq.tl); }
-  const wl = rp(2.2, 4), ln = rp(1.4, 2.4), rim = rp(1.1, 1.9), rw = Math.max(0.6, 0.12*pk), wd = wl > 0 ? cityWinPat(g, X0, Y0, false, CB_WSC(pk)) : null;
+  const wl = rp(2.2, 4), ln = rp(1.4, 2.4), rim = rp(1.1, 1.9), rw = Math.max(0.6, 0.12*pk), wd = wl > 0 ? cityWinPat(g, X0, Y0, false, CB_WSC(pk/f)) : null;
   for (let b = 0; b <= CB_BIN.length; b++){ yield;
     for (const Bq of L){ const R = Bq.bins[b]; if (!R) continue; g.globalAlpha = K; g.fillStyle = C.fu[b]; g.fill(R.fu); g.fillStyle = C.fv[b]; g.fill(R.fv);
       if (wd){ g.globalAlpha = 0.28*K*wl; g.fillStyle = wd; g.fill(R.fu); g.fill(R.fv); }
