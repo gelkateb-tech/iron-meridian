@@ -334,6 +334,8 @@ and their lines in provYield and the AI. Refunds: section 9.
 ### 5.4 Unchanged
 
 Recruiting Office (not touched: its rework is with the owner), Fortifications, Airbase, Naval Yard, Missile Silo.
+(Later, 2026-11-18: Fortifications became the Bunker, five levels, the only building with an upkeep, $1.0M-1.4M a day; prices, upkeep and the
+conversion to this economy's scale: docs/COMBAT.md section 7.)
 Mobilisation rules unchanged: infantry from a Recruiting Office, vehicles from an Army Base, aircraft from an Airbase, ships
 from a Naval Yard.
 
@@ -535,7 +537,7 @@ Every building left in the game has its pictures:
 | Army Base I-V | b-military-base-1..5 | have (kept from the Arms Factory) |
 | Arms Industry I-V | b-arms-industry-1..5 | have, already registered |
 | Airbase, Naval Yard, Missile Silo I-V | b-airfield, b-naval-port, b-missile-silo 1..5 | have |
-| Fortifications I-III | b-fortifications-1..3 | have |
+| Fortifications I-III (now the Bunker 1-5: the angled bn-fort-1..5 on the map, bn-fortcut-1..5 in panels) | b-fortifications-1..3 | have |
 | Recruiting Office | b-recruiting-office-1 | have for its single level; levels II-V would be needed only if the 5-level rework is approved |
 
 Still to draw (not buildings): a small badge per main resource for the city panel and the Resources map

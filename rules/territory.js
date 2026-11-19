@@ -37,7 +37,7 @@ function terrYield(p){ const P = G.P[p], pp = Math.pow(Math.max(0, popOf(p)), 0.
 function provValue(p){ const P = G.P[p]; if (!P || P.sea) return 0; const pp = Math.pow(Math.max(0, popOf(p)), 0.75), y = terrYield(p), b = S.bld[p] || {};
   let v = TERR.vLand + P.cells.length*2/(GS*GS) + (P.city ? TERR.vCity : 0) + TERR.vPop*pp + (P.oil ? TERR.vOil : 0);
   v += TERR.vDays*(y.cash + MKT_K.reduce((s0, k) => s0 + y[k]/MKT_LOT*MKT_BASE[k], 0));
-  for (const k of BK) for (let l = 1; l <= (b[k] || 0); l++) v += TERR.vBld*bldWorth(k, l);
+  for (const k of BK) if (k !== 'fort') for (let l = 1; l <= (b[k] || 0); l++) v += TERR.vBld*bldWorth(k, l);   // (not the Bunker: hidden, nobody but its owner knows it is there; it goes with the land)
   return Math.max(10, Math.round(v/5)*5); }
 // since when nations a and b have been in the same coalition (linked by alliances), from the hour each alliance was signed (S.rel since):
 // the chain of alliances between them whose newest link is oldest. null when they are not in one coalition

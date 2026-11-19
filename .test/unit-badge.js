@@ -43,10 +43,13 @@ const TIP = 'Dug in: +10% defence in the open, +25% inside a city. The unit has 
   const parts = await p.evaluate(() => { const U = window.__im.uicon, d = U.dpr, out = {};
     const stat = (g, E, x, y, w, h) => { const a = g.getImageData(Math.round((E.ox + x)*d), Math.round((E.oy + y)*d), Math.max(1, Math.round(w*d)), Math.max(1, Math.round(h*d))).data; const cols = new Set(); let white = 0, navy = 0, n = 0;
       for (let i = 0; i < a.length; i += 4){ n++; cols.add((a[i] >> 4) + ',' + (a[i + 1] >> 4) + ',' + (a[i + 2] >> 4)); if (a[i] > 225 && a[i + 1] > 225 && a[i + 2] > 225) white++; if (a[i] < 70 && a[i + 1] < 80 && a[i + 2] > 40 && a[i + 2] < 110 && a[i + 3] > 200) navy++; } return { cols: cols.size, white: white/n, navy: navy/n }; };
-    for (const [t, side] of [['inf', 'own'], ['mot', 'own'], ['tank', 'war'], ['frig', 'ally'], ['jet', 'other']]){ const D = U.dims(14, false, false), F = U.dims(14, false, true), E = U.badge(t, side, 14, 0, false, false), g = E.c.getContext('2d'), Ef = U.dia(t, side, 14, false), gf = Ef.c.getContext('2d'), cy = D.fh + D.bh/2;
+    for (const [t, side] of [['inf', 'own'], ['para', 'own'], ['tank', 'war'], ['frig', 'ally'], ['jet', 'other']]){ const D = U.dims(14, false, false), F = U.dims(14, false, true), E = U.badge(t, side, 14, 0, false, false), g = E.c.getContext('2d'), Ef = U.dia(t, side, 14, false), gf = Ef.c.getContext('2d'), cy = D.fh + D.bh/2;
       out[t] = { w: E.c.width/d - 2*(E.ox - D.ox) - D.ox, flag: stat(g, E, 2, 1, D.w - 4, D.fh - 2), count: stat(g, E, D.w - 5 - D.tw, D.fh + 3, D.tw + 1, D.bh - 6), tag: stat(g, E, -D.tg/2 + 3, cy - D.tg/2 + 3, D.tg - 6, D.tg - 6), bar: stat(g, E, D.w - 4, D.fh + 3, 3, D.bh - 6),
         far: stat(gf, Ef, F.w/2 - F.tg/2 + 3, F.h/2 - F.tg/2 + 3, F.tg - 6, F.tg - 6), farEdge: stat(gf, Ef, 2, 2, 5, 5) }; }
     return out; });
+  // every infantry type shows the same plain helmet on its badge (owner, 2026-11-18)
+  checks['infantry-one-helmet'] = await p.evaluate(() => { const U = window.__im.uicon, px = t => { const E = U.badge(t, 'own', 14, 0, false, false); return Array.from(E.c.getContext('2d').getImageData(0, 0, E.c.width, E.c.height).data).join(','); }, a = px('inf');
+    const same = ['para', 'spec', 'at'].map(t => px(t) === a); return { ok: same.every(Boolean), same }; });
   for (const [t, q] of Object.entries(parts)) checks['badge-parts-' + t] = { ok: !!q && q.flag.cols >= 3 && q.count.white > 0.04 && q.tag.white > 0.2 && q.tag.navy > 0.03 && q.far.white > 0.2 && q.far.navy > 0.03 && q.farEdge.white < 0.2 && q.bar.white < 0.05, ...q };
   // (2) the infantry figures: 3D squads with a soft shadow, not single-colour blobs
   const sheets = await p.evaluate(async () => { const out = {};
