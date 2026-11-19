@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): Picture 3 shows a two-blade propeller instead of the three-blade propeller present in picture 1.

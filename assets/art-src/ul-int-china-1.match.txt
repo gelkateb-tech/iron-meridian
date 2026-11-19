@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Nose pitot probe is mounted centrally on the intake shock cone instead of offset on the intake lip as seen in picture 1.

@@ -630,7 +630,7 @@ if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_S
 # -scene: the card scene resized to 768x512 (3:2), NOT cut out (the blue monitor tint and scanlines are drawn in code)
 # The cut-out: the plain grey floor (a quadratic surface fitted to the border), its lighting gradient and the smooth neutral soft shadow touching it are flooded from
 # the border; whatever is left (the largest parts, holes filled) is the unit; edges feathered a little.
-def ul_cut(im, sd=70, sch=12, grad=9, noshadow=False):
+def ul_cut(im, sd=70, sch=12, grad=9, noshadow=False, dark=0):
     from scipy import ndimage as ndi
     a = np.asarray(im.convert('RGB')).astype(np.float32); h, w, _ = a.shape
     m = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); m[:b] = m[-b:] = True; m[:, :b] = m[:, -b:] = True
@@ -638,7 +638,7 @@ def ul_cut(im, sd=70, sch=12, grad=9, noshadow=False):
     g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
     cand = (d <= 16) | ((d < sd) & (np.abs(ch - bch) < sch) & (g < grad))
     if noshadow:   # top-downs: the drop shadow too (the map draws its own). It is smooth and bluer than the floor (the paint of no unit is blue)
-        cand |= ((a[..., 2] - a[..., 0] - (bg[..., 2] - bg[..., 0])) > 13) & (g < grad + 3) & (a.mean(-1) < bg.mean(-1) + 4)
+        cand |= ((a[..., 2] - a[..., 0] - (bg[..., 2] - bg[..., 0])) > 13) & (g < grad + 3) & (a.mean(-1) < bg.mean(-1) + 4 - dark)
     lab, n = ndi.label(cand); border = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
     solid = ndi.binary_opening(~np.isin(lab, border[border > 0]), iterations=1)
     lab, n = ndi.label(solid); sizes = ndi.sum(solid, lab, range(1, n + 1))
@@ -646,6 +646,27 @@ def ul_cut(im, sd=70, sch=12, grad=9, noshadow=False):
     al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.8)
     return Image.fromarray(np.dstack([a, al*255]).astype(np.uint8), 'RGBA')
 
+def ul_net_cut(f):
+    """aircraft and ships (pale grey on the pale grey floor, which the colour test cannot tell apart): the IS-Net segmentation model's mask, tightened, holes filled, the
+    largest parts kept; the cast shadow is not part of it. None when the model is not there."""
+    if not ISNET or not os.path.exists(ISNET): return None
+    from scipy import ndimage as ndi
+    im = Image.open(f).convert('RGB'); n = im.size[0]; m = net_mask_img(im, n)
+    keep = m > 0.5; lab, k = ndi.label(keep)
+    if k == 0: return None
+    sizes = ndi.sum(keep, lab, range(1, k + 1)); keep = ndi.binary_fill_holes(np.isin(lab, [i + 1 for i, z in enumerate(sizes) if z > 0.02*sizes.max()]))
+    al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.9)
+    return Image.fromarray(np.dstack([np.asarray(im), al*255]).astype(np.uint8), 'RGBA')
+
+def net_mask_img(im, size):
+    if not _NET:
+        import onnxruntime as ort; _NET.append(ort.InferenceSession(ISNET, providers=['CPUExecutionProvider']))
+    s = _NET[0]; x = (np.asarray(im.resize((1024, 1024), Image.LANCZOS), np.float32)/255 - 0.5).transpose(2, 0, 1)[None]
+    o = s.run(None, {s.get_inputs()[0].name: x})[0][0, 0].astype(np.float32); o = (o - o.min())/max(float(o.max() - o.min()), 1e-6)
+    return np.clip(np.asarray(Image.fromarray(o, 'F').resize((size, size), Image.BICUBIC)), 0, 1)
+
+PALE_UNITS = {'jet', 'int', 'asf', 'heli', 'drone', 'sdrone', 'swarm', 'mpa', 'awacs', 'bomb', 'stealth', 'frig', 'crui', 'sub', 'carr'}
+def ul_net_cut_ok(f): return bool(ISNET) and os.path.exists(ISNET)
 def ul_prep():
     import glob
     boxes = {}
@@ -655,7 +676,17 @@ def ul_prep():
         im = Image.open(f)
         if kind == 'scene': out = im.convert('RGB').resize((768, 512), Image.LANCZOS); out.save(os.path.join(OUT, stem + '-scene.webp'), 'WEBP', quality=88, method=6)
         else:
-            c = ul_cut(im, noshadow=(kind == 'top'))
+            pale = stem.split('-')[1] in PALE_UNITS   # aircraft and ships are pale grey and smooth: the floor test must be strict or it eats them
+            kw = dict(sd=34, sch=8, grad=4, dark=45) if pale else {}
+            c = ul_net_cut(f) if pale else None
+            if c is not None: pass
+            else: c = ul_cut(im, noshadow=(kind == 'top'), **kw)
+            if kind == 'top' and not (pale and ul_net_cut_ok(f)):   # a grey, smooth hull or deck can look like shadow: if the shadow-free cut lost much of the plain cut's area, keep the plain cut
+                c0 = ul_cut(im, **{k: v for k, v in kw.items() if k != 'dark'}); a1, a0 = np.asarray(c.getchannel('A')).astype(float).sum(), np.asarray(c0.getchannel('A')).astype(float).sum()
+                if a1 < 0.72*a0: c = c0; print('  (shadow kept: the shadow-free cut ate the unit)', stem)
+                if a0 < 0.12*255*im.width*im.height:   # even the plain cut lost most of a pale grey deck: cut by the floor's colour only (the shadow stays)
+                    c2 = ul_cut(im, sd=26, sch=8, grad=3)
+                    if np.asarray(c2.getchannel('A')).astype(float).sum() > 1.5*a0: c = c2; print('  (strict cut: a pale grey unit on a grey floor)', stem)
             if kind == 'side': c = c.crop(c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()); c.thumbnail((512, 512), Image.LANCZOS)
             else:
                 c = c.resize((512, 512), Image.LANCZOS); bb = c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()

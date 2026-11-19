@@ -1,0 +1,2 @@
+FLAG
+- 1. SAME UNIT: Missing the lower rotor disc from the reference's coaxial rotor system.

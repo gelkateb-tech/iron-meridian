@@ -1,0 +1,2 @@
+FLAG
+- 1. Missile pylons are incorrectly placed inboard of the booms, and wingtip winglets curve downward instead of upward.

@@ -1,0 +1,2 @@
+FLAG
+- 1. Rotor blade count changed from five to four, and nose sensor turret from reference is missing.

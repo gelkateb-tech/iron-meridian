@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 5, all pictures: multiple aircraft are present on the flight deck.
+- Point 1, picture 3: flight deck outline and island placement do not match picture 1.

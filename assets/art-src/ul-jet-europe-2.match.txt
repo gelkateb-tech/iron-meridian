@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- point 1 (top): top-down shows twin engine exhausts instead of the single engine seen in the side view
+- point 1 (scene): added a large olive-drab bomb under the wing that is not present on the master model

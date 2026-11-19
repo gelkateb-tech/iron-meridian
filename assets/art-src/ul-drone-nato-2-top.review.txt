@@ -1,0 +1,2 @@
+FLAG
+- 1. Tail surfaces do not match the shape or inverted-V configuration of the reference.

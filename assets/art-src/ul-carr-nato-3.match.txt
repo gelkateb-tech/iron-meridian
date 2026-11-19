@@ -1,0 +1,2 @@
+FLAG (flagged: side, scene, top)
+- Point 5 (side, scene, top): multiple parked aircraft are present on the flight deck, violating the no second vehicle or aircraft rule.

@@ -1,0 +1,3 @@
+FLAG
+- Point 3: Visible cast shadow appears on the background to the left and rear of the aircraft.
+- Point 6: Model is a direct, recognizable replica of an actual MiG-29 fighter rather than an original design.

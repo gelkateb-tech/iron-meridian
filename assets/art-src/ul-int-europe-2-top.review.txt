@@ -1,0 +1,2 @@
+FLAG
+- 1. SAME UNIT: Missing an underwing missile pylon on each side compared to the reference layout.
