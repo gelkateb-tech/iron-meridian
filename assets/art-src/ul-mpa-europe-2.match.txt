@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): propellers have only two blades instead of six curved blades as shown in picture 1.

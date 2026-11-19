@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 2 (top): the port wingtip float is painted white on top instead of matching the dark grey upper camouflage seen on the other float and views.

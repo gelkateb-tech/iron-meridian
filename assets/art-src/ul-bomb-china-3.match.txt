@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 1 (scene): the nose probe is mirrored onto the port (left) side, whereas pictures 1 and 3 have it on the starboard side.

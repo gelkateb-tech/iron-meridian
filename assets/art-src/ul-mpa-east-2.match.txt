@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): propeller blade count and shape do not match the eight-bladed contra-rotating propellers seen in the side view.

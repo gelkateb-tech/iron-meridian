@@ -1,0 +1,2 @@
+FLAG (flagged: scene, top)
+- 1 (scene, top): fuselage pod and cheek guns are present on the port side in scene, but missing on that side in top-down.

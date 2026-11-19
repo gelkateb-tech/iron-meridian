@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): propeller has only two blades instead of six as seen in the side view, and underwing weapons protrude past leading edge.

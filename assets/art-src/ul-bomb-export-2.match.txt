@@ -1,0 +1,3 @@
+FLAG (flagged: side, top)
+- Point 3 (side): Picture 1 is a rear three-quarter view rather than a front three-quarter view.
+- Point 1 (top): Picture 3 has twin engine exhausts instead of the single exhaust shown in the side view.

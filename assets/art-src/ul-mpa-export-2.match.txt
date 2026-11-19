@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 1 (top): Engine and underwing pod layout does not match the side view, with pods rearranged and added between engines.
+- Point 1 (scene): Features a falling munition/torpedo detached beneath the aircraft, which is not present in the master view.

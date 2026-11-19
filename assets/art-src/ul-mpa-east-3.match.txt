@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): An external pod or munition is attached to the port side behind the wing, which is absent in picture 1.

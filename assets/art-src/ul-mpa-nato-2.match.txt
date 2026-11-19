@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 1 (scene): the starboard (right) wing is entirely missing behind the engine.

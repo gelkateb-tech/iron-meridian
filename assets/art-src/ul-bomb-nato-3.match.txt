@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- Point 1 (top): Tail has a single central vertical stabilizer instead of the twin vertical stabilizers seen in side and scene views.
+- Point 1 (top): Engine pods are modeled as single-engine nacelles rather than the wide twin-engine pods shown in the side view.

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): wing sweep angle does not match the swept-back position shown in the side view and scene.

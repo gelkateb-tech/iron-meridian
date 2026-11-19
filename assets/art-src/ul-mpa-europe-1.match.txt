@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. SAME UNIT (top): Engines have two-bladed propellers instead of the four-bladed propellers shown in picture 1.
