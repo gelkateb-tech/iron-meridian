@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 1 (scene): underwing pylons and missiles have been added, which are not present on the master side view.

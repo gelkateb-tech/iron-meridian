@@ -1,0 +1,4 @@
+FLAG
+- 1: The second forward gun turret is missing its gun barrels shown in the reference.
+- 3: Visible cast shadow below the stern on the background.
+- 5: Text or serial markings are visible on the stern transom.

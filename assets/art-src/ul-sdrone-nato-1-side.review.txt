@@ -1,0 +1,2 @@
+FLAG
+- 4. The drone is oriented facing toward the lower left instead of the required lower right.

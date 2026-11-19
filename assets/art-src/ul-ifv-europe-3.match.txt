@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1, top: turret and hull components (cupola, sight, coaxial gun, driver hatch, and engine grille) are mirrored left-to-right compared to the side view.

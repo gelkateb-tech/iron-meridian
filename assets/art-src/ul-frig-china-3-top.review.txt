@@ -1,0 +1,2 @@
+FLAG
+- 3. Visible cast shadow on the plain background along the hull and beneath the stern.

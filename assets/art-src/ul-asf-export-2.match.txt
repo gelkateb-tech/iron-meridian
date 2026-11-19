@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 1 in scene: vertical tail fins are canted outward in a V-shape, unlike the upright parallel vertical tails in the side view.

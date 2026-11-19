@@ -1,0 +1,2 @@
+FLAG
+- 1. Dropped the forward funnel; reference has two funnels, but new picture only shows one.

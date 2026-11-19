@@ -1,0 +1,2 @@
+FLAG
+- 2. Render features heavy black cartoon outlines and cel-shading, deviating from the anchor 3D style.

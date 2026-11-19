@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- 5 (side, scene, top): multiple parked aircraft present on the flight deck violate the single-unit rule.
+- 1 (top): the layout, count, and orientation of parked aircraft on the deck do not match the side view.

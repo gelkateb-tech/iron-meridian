@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. top: funnels are arranged side-by-side instead of in-line (fore-and-aft) as seen in the side view.

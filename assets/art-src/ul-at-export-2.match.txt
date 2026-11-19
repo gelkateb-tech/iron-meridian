@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): Cab roof layout is mirrored; the round machine gun cupola and rectangular hatch are swapped left-to-right compared to picture 1.

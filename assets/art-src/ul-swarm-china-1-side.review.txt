@@ -1,0 +1,2 @@
+FLAG
+- 2. STYLE: Key lighting comes from the upper right instead of the requested upper left, casting shadows to the left.

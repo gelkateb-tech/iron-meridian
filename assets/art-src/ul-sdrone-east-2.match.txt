@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- point 1 (scene): the weapons and pylons under the starboard (far) wing are missing.

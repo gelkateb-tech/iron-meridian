@@ -1,0 +1,2 @@
+FLAG
+- 4. Soldier is too large in the frame, filling nearly the entire picture height instead of about half.

@@ -1,0 +1,2 @@
+FLAG
+- 1. Tail configuration differs: reference features a ducted fenestron tail fan, but the new image depicts an open external rotor.

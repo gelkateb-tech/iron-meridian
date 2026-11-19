@@ -1,0 +1,3 @@
+FLAG
+- 1. SAME UNIT: roof machine gun orientation is reversed and rear antennas are missing compared to reference.
+- 3. BACKGROUND: visible cast shadow on the background to the right of the vehicle.

@@ -1,0 +1,2 @@
+FLAG
+- 1. Failed to depict a Generation 3 design; it directly copied the reference instead of updating to drones and catapults.

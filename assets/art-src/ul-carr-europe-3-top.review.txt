@@ -1,0 +1,3 @@
+FLAG
+- 3. BACKGROUND: Visible cast shadow is present on the plain grey background around the hull.
+- 7. NO EXTRAS: Multiple aircraft are present on the flight deck and elevator.

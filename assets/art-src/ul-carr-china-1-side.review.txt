@@ -1,0 +1,2 @@
+FLAG
+- 5. Flight deck features painted runway line markings despite requirement for blank, unmarked surfaces.

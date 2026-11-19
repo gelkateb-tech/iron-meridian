@@ -1,0 +1,3 @@
+FLAG
+- 1: Model is merely the reference vehicle with minor additions rather than a clearly different, newer generation.
+- 6: Design closely copies the real-world Soviet BMP-1 rather than presenting an original generic vehicle.

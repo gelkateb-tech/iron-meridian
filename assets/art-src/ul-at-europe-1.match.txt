@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 4 (scene): An emblem or logo is visible on the front grille.
+- Point 1 (top): Launcher is mounted too far back in the bed rather than forward over the roll bar, and the antenna is missing.

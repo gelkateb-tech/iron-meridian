@@ -1,0 +1,2 @@
+FLAG
+- 4. FRAMING: Unit fills only around 55 percent of image height instead of the requested 85 percent.

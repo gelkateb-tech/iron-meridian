@@ -1,0 +1,3 @@
+FLAG
+- 1. Launcher differs from reference: three box sections instead of two separate four-tube pods.
+- 3. Faint cast shadow visible on the grey background below the vehicle.

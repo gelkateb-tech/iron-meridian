@@ -1,0 +1,2 @@
+FLAG
+- 1. Roof layout altered: driver cupola moved to the left side instead of matching the reference's right-side placement.

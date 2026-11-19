@@ -1,0 +1,3 @@
+FLAG
+- 1. Spare tire placement and launcher structure do not match the reference layout.
+- 3. Noticeable shadow cast onto the background to the left of the vehicle.

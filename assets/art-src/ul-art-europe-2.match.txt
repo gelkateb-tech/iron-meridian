@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- point 1 (scene): circular hatch added to the front-right hull deck where the master has an engine vent grille.
+- point 1 (top): turret roof sight is centered laterally instead of positioned on the right side behind the cupola.

@@ -1,0 +1,2 @@
+FLAG
+- 1. Cab roof details, hatches, and sensor mast placement differ significantly from the reference unit.

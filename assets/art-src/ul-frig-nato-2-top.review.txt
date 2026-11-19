@@ -1,0 +1,3 @@
+FLAG
+- 2. Lighting originates from the right side instead of the requested upper left.
+- 3. Background features a visible cast shadow to the left of the hull.

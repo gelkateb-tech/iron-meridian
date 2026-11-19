@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): rear roof hatches, exhaust muffler, and side stowage do not match the side view layout.

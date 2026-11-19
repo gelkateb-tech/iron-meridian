@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 3 (top): unit is not oriented front up, facing towards the upper-right instead of 12 o'clock.

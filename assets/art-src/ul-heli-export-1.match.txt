@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 1 (scene): nose sensor boom with vanes is on the port side instead of starboard, and tail rotor is mounted on the wrong side

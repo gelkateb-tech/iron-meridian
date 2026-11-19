@@ -1,0 +1,2 @@
+FLAG
+- 6: Model is an exact copy of a real-world MiG-21 rather than an original generic design.

@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- Point 1 (top): VLS layout is arranged as a 4x4 grid instead of the 2x8 layout seen in the side view.
+- Point 1 (top): Helipad deck markings and mast spire do not match the side view.

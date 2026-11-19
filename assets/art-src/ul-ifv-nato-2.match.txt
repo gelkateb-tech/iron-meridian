@@ -1,0 +1,4 @@
+FLAG (flagged: top)
+- 1 in top: missile launcher has side-by-side tubes instead of a vertically stacked box
+- 1 in top: muzzle brake is missing from the main gun barrel
+- 1 in top: smoke discharger layout and count do not match the side view

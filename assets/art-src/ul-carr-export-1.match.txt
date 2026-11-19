@@ -1,0 +1,4 @@
+FLAG (flagged: side, scene, top)
+- Point 5 (side, scene, top): extra aircraft are present on the flight deck instead of exactly one unit.
+- Point 1 (scene): aircraft count and layout on the aft flight deck do not match picture 1.
+- Point 1 (top): aircraft arrangement on the aft flight deck is rearranged compared to picture 1.

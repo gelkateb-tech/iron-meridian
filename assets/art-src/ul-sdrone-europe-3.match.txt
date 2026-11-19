@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 1 (scene): underwing pylons and external weapons are added, which are not present on the side view master

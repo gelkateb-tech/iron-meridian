@@ -1,0 +1,2 @@
+FLAG (flagged: side, scene)
+- 4 in side and scene: circular roundel or insignia visible on the fuselage side below the engine intake.

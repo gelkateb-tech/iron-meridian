@@ -1,0 +1,2 @@
+FLAG
+- 4. Soldier is too small in the frame, filling only about 60 percent of the height instead of 85.

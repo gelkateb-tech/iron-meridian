@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 1, scene: the T-tail horizontal stabilizer is misshapen, droops sharply, and is missing its starboard half compared to picture 1.

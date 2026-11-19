@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 1 (scene): Underwing pylons and weapons are mounted, which are absent in the side view master.
