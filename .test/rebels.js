@@ -104,7 +104,7 @@ function daysToRise(T, p, max){ const {R, S} = T, mor = []; for (let d = 1; d <=
 // ---- 4. Pacify, and the computer's habits
 { const T = game(), {R, S, G, A, B, cities} = T, N = S.nations[A];
   const p = occupy(T, cities[0], 0); S.unrest[p] = 60; N.cash = 100;
-  ok(R.pacifyWhy(A, p) === 'needs a unit in the province' && !R.pacify(A, p), `Pacify needs a unit of yours in the city ("${R.pacifyWhy(A, p)}")`);
+  ok(R.pacifyWhy(A, p) === 'needs a unit of yours in the city' && !R.pacify(A, p), `Pacify needs a unit of yours in the city ("${R.pacifyWhy(A, p)}")`);
   R.addArmy(A, p, {tank:1}); ok(R.pacify(A, p) && R.unrestOf(p) === 35 && N.cash === 60, `Pacify: $40M, unrest -25 (unrest ${R.unrestOf(p)}, cash ${N.cash})`);
   ok(/^again in 3 days$/.test(R.pacifyWhy(A, p)) && !R.pacify(A, p), `... once every 3 days ("${R.pacifyWhy(A, p)}")`);
   S.hour += 72; ok(R.pacifyWhy(A, p) === '' && R.pacify(A, p), '... and again after 3 days');

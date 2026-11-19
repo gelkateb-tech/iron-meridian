@@ -2,7 +2,8 @@
 // Checks: a rebel force shows on the map at play zoom with the crossed-rifles badge (grey band, the rifles on the tag) and as the rebel squad's
 // 3D soldiers at close zoom (model 'reb'); the city sheet of a captured city shows its occupation row (morale, its daily fall, the troops, the
 // integration count) and the "Rebels likely" warning; rebels in an empty city show "Rebels!" with the hours left, the city flips after 24 hours
-// with a dispatch; the same city held by one infantry unit crushes the next uprising at once (dispatch) and stays yours. The owner's pictures
+// with a dispatch; the same city held by one infantry unit crushes the next uprising at once (dispatch) and stays yours; another nation's city
+// shows its rebels only once identified, never the holder's garrison or clock. The owner's pictures
 // (JPG, quality 88, at most 2400 px wide) go to OUT.
 // node .test/rebels-ui.js [out dir]   (run bash tools/mkpage.sh first)
 const fs = require('fs'), path = require('path'), pickNation = require('./pick-nation.js'), { chromium } = require('playwright');
@@ -55,7 +56,7 @@ const OUT = process.argv[2] || path.join(__dirname, 'rebels-ui'); fs.mkdirSync(O
   await p.evaluate(q => { const S = window.__im.S; S.unrest[q] = 54; unrestDay(); unrestDay(); }, p2);   // (two daily updates: 60 → 66 unrest, morale 34%)
   await view(60, C.xy[1], 330); await p.evaluate(q => window.__im.selectProv(q), p2); await p.waitForTimeout(900);
   const t2 = await sheet();
-  ok('the sheet of a captured city: "Occupied · morale 34% −6%/day · 0 troops · 2 hold it, 4 raise it · integrating 0/10"', t2 && /Occupied · morale 34% −6%\/day · 0 troops · 2 hold it, 4 raise it · integrating 0\/10/.test(t2), t2);
+  ok('the sheet of a captured city: "Occupied · morale 34% −6%/day · 0 troops · 2 hold it, 3 raise it · integrating 0/10"', t2 && /Occupied · morale 34% −6%\/day · 0 troops · 2 hold it, 3 raise it · integrating 0\/10/.test(t2), t2);
   ok('... and the warning: "Rebels likely", rebels rise below 30% (in about 1 day)', t2 && /Rebels likely/.test(t2) && /Rebels will rise when morale is below 30% \(in about 1 day\)/.test(t2), t2);
   ok('the seat was told when morale fell under 40%', await logHas(/^Morale in .* is 3\d% and falling 6% a day\. Rebels will rise below 30%/));
   await shot('3-sheet-falling-morale', SHEETC);
@@ -87,6 +88,18 @@ const OUT = process.argv[2] || path.join(__dirname, 'rebels-ui'); fs.mkdirSync(O
   ok('close zoom: your infantry squad stands in the city, no rebel squad', m4.includes('sol') && !m4.includes('reb'), m4);
   await shot('6-held-by-one-infantry', SHEETC);
   await close();
+  // 5. another nation's city (a Russian city Germany took, far from France): its rebels, garrison and clock stay hidden from France unless France
+  // has identified the rebels there, and then only the rebels show, never "your" troops (review: the sheet leaked the holder's state)
+  const F = await p.evaluate(ger => { const im = window.__im, S = im.S, G = im.G, rus = S.nations.find(N => N.name === 'Russia').id;
+    const q = G.P.filter(P => P.city && S.owner[P.id] === rus && P.id !== S.nations[rus].capital).sort((x, y) => x.x - y.x)[0].id;
+    S.armies = S.armies.filter(a => a.at !== q); capture(q, ger); S.occ[q] = S.hour - 100; S.unrest[q] = 75; unrestDay();
+    const reb = S.armies.find(a => a.rebel && a.at === q), vis = visibleSet(seats()[0]);
+    return {q, reb:!!reb, seen:vis.has(q), known:reb ? armyKnown(reb, vis) : null, prov:im.provHTML(q).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')}; }, C.ger);
+  await p.evaluate(q => window.__im.selectProv(q), F.q); await p.waitForTimeout(900); F.sheet = await sheet(); await close();
+  await p.evaluate(q => { const S = window.__im.S, reb = S.armies.find(a => a.rebel && a.at === q), k0 = window.armyKnown; window.__k0 = k0; window.armyKnown = (a, v) => a === reb || k0(a, v); }, F.q);   // (as if France had identified them: recon over the city)
+  await p.evaluate(q => window.__im.selectProv(q), F.q); await p.waitForTimeout(900); F.sheetK = await sheet(); await close(); await p.evaluate(() => { window.armyKnown = window.__k0; });
+  ok('another nation\'s city with rebels France has not identified: no occupation row, no rebels in its details', F.reb && !F.known && F.sheet === null && !/rebels/i.test(F.prov), F);
+  ok('... once France has identified them: only "Rebels! · 5 rebel units hold out against Germany", none of the holder\'s troops, count or clock', !!F.sheetK && /Rebels!/.test(F.sheetK) && /rebel units? hold out against Germany here/.test(F.sheetK) && !/your|troop|integrating|lost in| h /i.test(F.sheetK), F.sheetK);
   // the badge art enlarged, as a small extra picture
   { const f = path.join(OUT, '7-badge-art.png'); fs.writeFileSync(f, Buffer.from(art.url.split(',')[1], 'base64')); shots.push(f); }
   ok('no page errors', !errors.length, errors.slice(0, 3));

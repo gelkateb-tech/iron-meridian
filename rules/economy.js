@@ -223,6 +223,10 @@ const integDays = p => (S.integ && S.integ[p + ':' + S.owner[p]]) || 0;
 const integrated = p => integDays(p) >= RB.integDays;
 const rebelsAt = p => { for (const a of byAt(p) || S.armies) if (a.rebel && a.at === p && count(a) > 0) return a; return null; };
 // the daily change of an occupied province's unrest (positive: morale falls) with g of its holder's ground units there
+// days until morale m, falling d a day, is under RB.below (0: not falling, or under it already); hold: ground units of the holder that stop
+// its fall (ceil of the rate with none over RB.perUnit; up to RB.maxUnits count), and whether that many hold it level or raise it
+const rebelDays = (m, d) => d > 0 && m >= RB.below ? Math.max(1, Math.ceil((m - RB.below + 0.01)/d)) : 0;
+const occHold = p => { const r0 = unrestRate(p, 0), k = Math.ceil(r0/RB.perUnit); return {k, level:r0 - k*RB.perUnit === 0}; };
 const unrestRate = (p, g) => { const P = G.P[p], home = S.home[p]; return (P.city ? (home >= 0 && S.nations[home] && S.nations[home].alive ? RB.city : RB.cityFree) : RB.rural) - RB.perUnit*Math.min(RB.maxUnits, g); };
 // a captured province starts its occupation afresh: a holder that took it before counts its integration again
 function occReset(p, O){ if (S.integ) delete S.integ[p + ':' + O]; }
@@ -241,7 +245,7 @@ function unrestDay(){
     S.unrest[p] = Math.max(0, Math.min(P.city ? 100 : RB.ruralCap, unrestOf(p) + d));
     if (!P.city) continue;
     const m1 = moraleOf(p), here = rebelsAt(p);
-    if (m0 >= RB.warn && m1 < RB.warn && d > 0 && !here) tell(o, `Morale in ${placeNm(p)} is ${Math.round(m1)}% and falling ${d}% a day. Rebels will rise below ${RB.below}%${m1 >= RB.below ? ` (in about ${Math.max(1, Math.ceil((m1 - RB.below + 0.01)/d))} day${Math.ceil((m1 - RB.below + 0.01)/d) > 1 ? 's' : ''})` : ''}. Station troops there or Pacify it.`, 'bad', p);
+    if (m0 >= RB.warn && m1 < RB.warn && d > 0 && !here) tell(o, `Morale in ${placeNm(p)} is ${Math.round(m1)}% and falling ${d}% a day. Rebels will rise below ${RB.below}%${m1 >= RB.below ? ` (in about ${rebelDays(m1, d)} day${rebelDays(m1, d) > 1 ? 's' : ''})` : ''}. Station troops there or Pacify it.`, 'bad', p);
     if (m1 < RB.below && !here && !(S.occ && S.occ[p] != null && S.hour - S.occ[p] < RB.grace) && !(S.rcool[p] > S.hour)) rebelRise(p, o, g); }
 }
 // rebels rise in occupied city p of nation o (g: its ground units there)
@@ -283,6 +287,6 @@ function rebelHour(){
 }
 // Pacify (the page's button and the computer, one checked order): why nation n may not pacify province p now ('' when it may)
 function pacifyWhy(n, p){ const P = G.P[p]; if (!P || P.sea || S.owner[p] !== n) return 'not yours'; if (unrestOf(p) < 1) return 'no unrest';
-  if (garrisonOf(p, n) < 1) return 'needs a unit in the province'; const c = (S.pcool || {})[p]; if (c > S.hour){ const d = Math.ceil((c - S.hour)/24); return `again in ${d} day${d > 1 ? 's' : ''}`; }
+  if (garrisonOf(p, n) < 1) return `needs a unit of yours in the ${P.city ? 'city' : 'province'}`; const c = (S.pcool || {})[p]; if (c > S.hour){ const d = Math.ceil((c - S.hour)/24); return `again in ${d} day${d > 1 ? 's' : ''}`; }
   if (S.nations[n].cash < RB.pacCost) return `needs $${RB.pacCost}M`; return ''; }
 function pacify(n, p){ if (pacifyWhy(n, p)) return false; S.nations[n].cash -= RB.pacCost; S.unrest[p] = Math.max(0, unrestOf(p) - RB.pacDrop); (S.pcool || (S.pcool = {}))[p] = S.hour + RB.pacCool; return true; }
