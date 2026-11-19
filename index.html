@@ -4150,16 +4150,15 @@ const sunHr = h => h + (S && S.sunOff || 0);
 function localOff(st = S){ const lon = capLon(st), so = st && st.sunOff != null ? st.sunOff : sunOffFor(0, st); return lon == null ? 10 : (((so + Math.round(lon/15)) % 24) + 24) % 24; }
 function sunLon(){ return ((12 - (sunHr(S.hour) % 24)) * 15 + 540) % 360 - 180; }
 let CLOUDS = null;
-/* cloud sprites: [0..2] sunlit tops, [3..5] dark rain-laden bases, [6..8] night tops (slate blue-grey), [9..11] warm rims (sunset side, drawn 'lighter');
-   .sh: the soft ground shadow (a radial dab, no hard corner). All baked once */
+/* cloud sprites: [0..2] day tops (neutral white-grey), [3..5] dark rain-laden bases, [6..8] night tops (the same grey, darker: no hue of its own, the
+   night tint of the map does the rest). Clouds never take a colour from the sun: no warm rims, no slate-blue. .sh: the soft ground shadow. All baked once */
 function cloudTex(){ if (CLOUDS) return CLOUDS; const out = []; for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), n = makeNoise(mulberry(900 + k)), id = g.createImageData(128, 128);
     for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++){ const dx = (x - 64)/64, dy = (y - 64)/64, r = Math.sqrt(dx*dx + dy*dy), v = n(x*0.05, y*0.05)*0.6 + n(x*0.13, y*0.13)*0.4, a = Math.max(0, Math.min(1, (1 - r*1.15)*1.6 + (v - 0.55)*1.8));
       const o = (y*128 + x)*4, sh = Math.min(255, 168 + v*95 - dy*22); id.data[o] = sh; id.data[o + 1] = sh; id.data[o + 2] = Math.min(255, sh + 8); id.data[o + 3] = a*235; }
     g.putImageData(id, 0, 0); out.push(c); }
   for (let k = 0; k < 3; k++){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'brightness(0.6)'; g.drawImage(out[k], 0, 0); out.push(c); }
   const tint = (k, col, al) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.drawImage(out[k], 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = al; g.fillStyle = col; g.fillRect(0, 0, 128, 128); return c; };
-  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(52,60,78)', 0.4));
-  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(255,150,90)', 1));
+  for (let k = 0; k < 3; k++) out.push(tint(k, 'rgb(44,46,50)', 0.38));
   out.sh = softSprite('cshade', 'rgba(0,0,0,1)', 'rgba(0,0,0,.5)', 'rgba(0,0,0,0)');
   return (CLOUDS = out); }
 /* a storm's lobe layout, from its seed only (no per-frame randomness): 9 lobes in 2-3 clusters along a band rotated to the drift
@@ -4178,38 +4177,53 @@ function stormPos(w, cx, cy, now = FXQ.gt){   // the slow sway runs on the game 
   const lob = stormLay(w).lob; for (let i = 0; i < 9; i++){ WPOS[i*3] = cx + lob[i*3]*w.r + Math.sin(now/9000 + i)*3; WPOS[i*3 + 1] = cy + lob[i*3 + 1]*w.r; WPOS[i*3 + 2] = lob[i*3 + 2]*w.r; } return WPOS; }
 const stormOffs = (x, R) => wrapOffs(x - R, x + R, -view.x/view.s - 60/view.s, (cw - view.x)/view.s + 60/view.s);   // a storm's copies on screen (the map wraps: a turn apart)
 const stormVis = (cx, cy, R) => !((cx + R)*view.s + view.x < -50 || (cx - R)*view.s + view.x > cw + 50 || (cy + R)*view.s + view.y < -50 || (cy - R)*view.s + view.y > ch + 50);
+/* rain and snow, drawn in the storm's own layer (world transform) after the cloud tops, one soft patch per cloud lobe. A patch is a baked picture of the
+   fall already cut by a soft oval mask (full in the middle of the lobe, nothing at its edge), in WXN frames of a seamless loop; each lobe draws the frame
+   the game clock is at (two frames cross-faded: paused with the game), so the fall is thickest under the middle of each cloud and never drawn outside the
+   clouds (the old dots filled a wider ellipse than the clouds and showed as a ring round their pale rims). A lobe whose centre lies outside the area the rules
+   use (stormAt: the r x r/1.6 ellipse) draws nothing, and one near that border fades out. Rain: soft slanted streaks; snow: soft flakes swaying down.
+   Two drawImage calls per lobe, no per-flake work, nothing drawn off a canvas that is changed every frame */
+const WXN = 10, WXW = 256, WXH = 132;
+let WXS = null;
+function wxSprites(){ if (WXS) return WXS; const rnd = mulberry(4242), sheets = {};
+  const sheet = (kind, dir, v) => { const c = document.createElement('canvas'); c.width = WXW*WXN; c.height = WXH; const g = c.getContext('2d'), snow = kind === 's', cnt = snow ? 70 : 46, F = [];
+    for (let i = 0; i < cnt; i++){ const q = rnd(); F.push({x:rnd()*WXW, y:rnd()*WXH, r:snow ? 1.1 + 2.5*q*q : 0, len:12 + 11*q, a:0.5 + 0.4*rnd(), m:rnd() < 0.7 ? 1 : 2, ph:rnd()*6.283}); }
+    const mask = (() => { const m = document.createElement('canvas'); m.width = WXW; m.height = WXH; const q = m.getContext('2d'); q.translate(WXW/2, WXH/2); q.scale(WXW/2, WXH/2); const rg = q.createRadialGradient(0, 0, 0, 0, 0, 1);
+      for (let k = 0; k <= 8; k++){ const u = k/8; rg.addColorStop(u, `rgba(255,255,255,${Math.pow(1 - u*u, 0.9).toFixed(3)})`); } q.fillStyle = rg; q.fillRect(-1, -1, 2, 2); return m; })();
+    for (let f = 0; f < WXN; f++){ const fr = document.createElement('canvas'); fr.width = WXW; fr.height = WXH; const q = fr.getContext('2d');
+      for (const o of F){ const u = f/WXN; let x = o.x + (snow ? Math.sin(u*6.283 + o.ph)*4 : dir*0.35*o.m*u*WXH), y = (o.y + o.m*u*WXH) % WXH;
+        for (let j = -1; j <= 1; j++){ const Y = y + j*WXH; if (snow){ const R = o.r*2.2; if (Y < -R || Y > WXH + R) continue; const gr = q.createRadialGradient(x, Y, 0, x, Y, R);
+            gr.addColorStop(0, `rgba(255,255,255,${o.a})`); gr.addColorStop(0.3, `rgba(250,252,255,${o.a*0.6})`); gr.addColorStop(0.55, `rgba(120,135,160,${o.a*0.22})`); gr.addColorStop(1, 'rgba(120,135,160,0)'); q.fillStyle = gr; q.fillRect(x - R, Y - R, 2*R, 2*R); }
+          else { const dx = dir*0.35*o.len; if (Y < -o.len || Y > WXH + o.len) continue; const lg = q.createLinearGradient(x - dx/2, Y - o.len/2, x + dx/2, Y + o.len/2); lg.addColorStop(0, 'rgba(128,138,156,0)'); lg.addColorStop(0.5, `rgba(128,138,156,${o.a})`); lg.addColorStop(1, 'rgba(128,138,156,0)');
+            q.strokeStyle = lg; q.lineCap = 'round'; q.lineWidth = 2.6; q.globalAlpha = 0.45; q.beginPath(); q.moveTo(x - dx/2, Y - o.len/2); q.lineTo(x + dx/2, Y + o.len/2); q.stroke(); q.lineWidth = 1.3; q.globalAlpha = 1; q.stroke(); } } }
+      q.globalAlpha = 1; q.globalCompositeOperation = 'destination-in'; q.drawImage(mask, 0, 0); g.drawImage(fr, f*WXW, 0); }
+    return c; };
+  for (let v = 0; v < 3; v++){ sheets['s' + v] = sheet('s', 1, v); sheets['r-' + v] = sheet('r', -1, v); sheets['r+' + v] = sheet('r', 1, v); }
+  return (WXS = sheets); }
+function wxPrecip(w, Pp, cx, cy, fade, L, t){ const snow = w.kind === 'blizzard', X = wxSprites(), cs = (snow ? 0.95 : 1)*fade*(1 - 0.25*L), dir = (w.vx || 0) < 0 ? '-' : '+', W2 = w.r*w.r, sk = Math.round(w.seed*1000)*977, u0 = t/(snow ? 9000 : 1100);
+  for (let i = 0; i < 9; i++){ const px = Pp[i*3], sz = Pp[i*3 + 2]; if (sz < 0.45*w.r) continue;   // (the small lobes, under the big ones' fall, draw none: less to paint)
+    const dw = snow ? sz*2 : sz*1.56, dh = snow ? sz*1.2 : sz*0.94, py = snow ? Pp[i*3 + 1] : Pp[i*3 + 1] - sz*0.16, Rx = 0.4*dw, Ry = 0.34*dh;
+    const dx = px - cx, dy = (py - cy)*1.6, m = 1 - (dx*dx + dy*dy)/W2; if (m <= 0.02) continue;   // inside the rules' storm ellipse
+    const img = X[snow ? 's' + i % 3 : 'r' + dir + i % 3], u = (u0 + fxh(sk + i*3))*WXN, f0 = Math.floor(u), k = u - f0, a0 = Math.min(1, cs*Math.min(1, m*3)), fa = f0 % WXN, fb = (f0 + 1) % WXN;
+    if (snow){ ctx.globalAlpha = a0*(1 - k*0.5); ctx.drawImage(img, fa*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry);   // snow drifts slowly: two frames cross-faded
+      ctx.globalAlpha = a0*k*0.9; ctx.drawImage(img, fb*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry); }
+    else { ctx.globalAlpha = Math.min(1, a0*1.5); ctx.drawImage(img, (k < 0.5 ? fa : fb)*WXW, 0, WXW, WXH, px - Rx, py - Ry, 2*Rx, 2*Ry); } } }   // rain flickers: one frame, stepped
 /* storms: drawn under the night tint (night darkens them like the land and city lights shine over them), tops cross-faded to a slate
    night deck by the local light, warm rims on the sun side at dusk, rain streaks / snow dots on the game clock (paused with the game) */
-function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1, run = S.speed && !S.over;
+function drawWeather(now){ if (!S.storms || !S.storms.length) return; const tex = cloudTex(), hexPx = view.s*HS0, live = S.speed && !S.over ? acc : 0, za = hexPx > 30 ? 0.55 : 1, run = S.speed && !S.over, wxOn = hexPx >= 10 && !afxReduced() && !mapLite(), t = FXQ.gt;
   ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
   for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), R = w.r*1.7, storm = w.kind === 'storm'; let lt = null;
     for (const off of stormOffs(x0, R)){ const cx = x0 + off; if (!stormVis(cx, y0, R)) continue; if (run) animAmb();   // (a storm on screen drifts and sways while the clock runs)
-      const { L, tw, sg } = lt || (lt = stormLight(x0, y0)), Pp = stormPos(w, cx, y0);
+      const { L } = lt || (lt = stormLight(x0, y0)), Pp = stormPos(w, cx, y0);
       if (L < 0.98){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.18*fade*(1 - L);   // soft ground shadow (gone at night)
         for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex.sh, px - sz*1.1 + 10, py - sz*0.7 + 14, sz*2.2, sz*1.4); }
         ctx.globalCompositeOperation = 'source-over'; }
       if (storm){ ctx.globalAlpha = 0.4*za*fade; for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[3 + i % 3], px - sz, py - sz*0.5, sz*2, sz*1.2); } }   // dark rain-laden base
-      const ta = (storm ? 0.5 : w.kind === 'blizzard' ? 0.42 : 0.34)*za*fade*(1 + 0.45*L);   // at night the tops go slate (and thicker, so the night tint does not swallow them)
+      const ta = (storm ? 0.5 : w.kind === 'blizzard' ? 0.42 : 0.34)*za*fade*(1 + 0.45*L);   // at night the tops go darker grey (and thicker, so the night tint does not swallow them)
       for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2], k = storm ? (i + 1) % 3 : i % 3, dw = storm ? sz*1.56 : sz*2, dh = storm ? sz*0.94 : sz*1.2, gx = px - dw/2, gy = storm ? py - sz*0.63 : py - sz*0.6;
         if (L < 0.99){ ctx.globalAlpha = ta*(1 - L); ctx.drawImage(tex[k], gx, gy, dw, dh); }
         if (L > 0.01){ ctx.globalAlpha = ta*L; ctx.drawImage(tex[6 + k], gx, gy, dw, dh); } }
-      if (tw > 0.15){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(0.36, 0.5*tw)*fade;   // dusk / dawn: warm light on the sun-facing flanks
-        for (let i = 0; i < 9; i++){ const px = Pp[i*3], py = Pp[i*3 + 1], sz = Pp[i*3 + 2]; ctx.drawImage(tex[9 + (i + 1) % 3], px - sz*0.78 + sg*sz*0.32, py - sz*0.7, sz*1.56, sz*0.94); }
-        ctx.globalCompositeOperation = 'source-over'; } } }
-  ctx.restore();
-  if (hexPx < 10 || afxReduced() || mapLite()) return;
-  const t = FXQ.gt; ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineWidth = 1;
-  for (const w of S.storms){ const x0 = w.x + w.vx*live, y0 = w.y + w.vy*live, fade = Math.min(1, w.life/12), snow = w.kind === 'blizzard', Ly = stormLay(w), c = Ly.c, sn = Ly.s;
-    const A = w.r*view.s*1.25, B = w.r*view.s*0.5, Rx = Math.sqrt(A*A*c*c + B*B*sn*sn), Ry = Math.sqrt(A*A*sn*sn + B*B*c*c), n = Math.min(120, Math.round(Rx*0.5)), sk = Math.round(w.seed*1000)*977; let L = -1;
-    for (const off of stormOffs(x0, w.r*1.7)){ const sx = (x0 + off)*view.s + view.x, sy = y0*view.s + view.y; if (sx + Rx < 0 || sx - Rx > cw || sy + Ry < 0 || sy - Ry > ch) continue;
-      if (L < 0) L = stormLight(x0, y0).L; const d = 1 - 0.5*L, sl = Math.max(-6, Math.min(6, (w.vx || 0)*1.6));
-      if (snow){ const v = 240*(1 - 0.35*L) | 0; ctx.fillStyle = `rgba(${v},${v + 4 > 255 ? 255 : v + 4},${Math.min(255, v + 10)},${(0.8*fade).toFixed(3)})`; }
-      else ctx.strokeStyle = `rgba(${185*d | 0},${205*d | 0},${225*d | 0},${((0.25 + 0.1*Math.min(1, (hexPx - 10)/20))*fade).toFixed(3)})`;
-      ctx.beginPath();
-      for (let i = 0; i < n; i++){ const r1 = fxh(sk + i*2), r2 = fxh(sk + i*2 + 1), sp = snow ? 0.04 : 0.6, fy = (r2 + t*sp/1000) % 1;
-        const x = sx + (r1 - 0.5)*2*Rx + (snow ? Math.sin(t/600 + i)*6 : 0), y = sy - Ry + fy*2*Ry, dx = x - sx, dy = y - sy, u = dx*c + dy*sn, v = dy*c - dx*sn; if ((u/A)**2 + (v/B)**2 > 1) continue;
-        if (snow){ ctx.moveTo(x + 1.4, y); ctx.arc(x, y, 1.4, 0, Math.PI*2); } else { ctx.moveTo(x, y); ctx.lineTo(x + sl, y + 11); } }
-      if (snow) ctx.fill(); else ctx.stroke(); } }
+      if (wxOn) wxPrecip(w, Pp, cx, y0, fade, L, t); } }   // rain / snow: inside the cloud lobes only
   ctx.restore(); }
 /* lightning in storm cells, drawn over the night tint: every 2.5-7 s of game-clock time one lobe flashes for 80 ms; close in, a jagged bolt
    drops from its base with a glow where it strikes. Off with reduced motion */
@@ -11684,6 +11698,10 @@ if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {v3
   armyUpkeep:() => armyUpkeep(new Set()), cmdNew:n => newCommander(n), hits:() => hits.map(h => ({x:h.x, y:h.y, w:h.w, h:h.h, ids:h.ids.slice(), spread:!!h.spread, bb:h.bb ? h.bb.slice() : null, cx:h.cx, cy:h.cy})), get udrag(){ return udrag; }, centerOn:(x, y, s) => centerOn(x, y, s), airCheck:(a, p) => airCheck(a, p, sel.surprise)}});
 if (location.protocol === 'file:' && window.__im){ TMDBG.on = true; window.__im.TM = {get map(){ return TMM; }, get lite(){ return mapLite() || FXG.k < 0.3; }, get dbg(){ return TMDBG; }, get count(){ return TMDBG.length; }, get cache(){ return TMCELL.size; }, get cellBytes(){ return TMCB; }, get plans(){ return [...TMSLOT].map(([k, E]) => [k, E.sl]); }, get layouts(){ return [...PLAY].map(([p, L]) => [p, L.key, [...L.out], L.dbg, L.dbc]); }, get lastSlot(){ return LASTSLOT; }, get glide(){ return PLAG; }, get layoutMs(){ return [PLAY_N, +PLAY_MS.toFixed(1)]; }, get ghost(){ return PGHOST; }, get preg(){ return [...PREG].map(([p, L]) => [p, L.map(q => [q.p, +q.ax.toFixed(2), +q.ay.toFixed(2), q.fb.map(v => +v.toFixed(2)), q.ow])]); }, scale:(t, h) => tmScale(t, h), form:sl => tmForm(sl), layEv:(p, r, dx, dy) => { const f = LAYEV.get(p + '|' + r); return f ? f(dx, dy) : null; }, ground:(p, c, x, y) => tmGround(p, c, x, y, 1)}; }
 if (location.protocol === 'file:' && window.__im) window.__im.cfx = {M:FXM, stats:() => fxStats(), dev:w => devCfx(w), get VW(){ return VW; }, fire:(w, A, B, o) => cfxFire(w, A, B, o), intercept:(A, B, o) => intercept(A, B, o), get PROJ(){ return PROJ; }, get PART(){ return PART; }, get WARN(){ return FXM.WARN; }, get CQ(){ return FXM.CQ; }};
+/*@TEST*/if (location.protocol === 'file:' && window.__im) window.__im.wx = {   // test only: put weather over a chosen spot: wx.put('blizzard' | 'storm', lon, lat, r) drops one still storm there (and clears the others), wx.clear() removes them
+  at:(lon, lat) => { let row = 0, bd = 1e9; for (let r = 0; r < H; r++){ const d = Math.abs(cellLat(r*W) - lat); if (d < bd){ bd = d; row = r; } } return [OX + ((((lon - WORLD.lon0) % 360 + 360) % 360)/360*W - 0.5)*HS*SQ3, OY + row*HS*1.5]; },
+  put:(kind, lon, lat, r = 70, seed = 321.5) => { const [x, y] = window.__im.wx.at(lon, lat); S.storms = [{id:S.nid++, x, y, r, vx:0, vy:0, life:9999, kind, seed}]; return [x, y]; },
+  clear:() => { S.storms = []; } };/*@ENDTEST*/
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND || SNOWT)}, wrap:{value:{W:WRAP_W, X0:WRAP_X0, WW:WORLD_W, WH:WORLD_H, minScale:() => minScale(), ks:() => wrapKs(0)}}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
