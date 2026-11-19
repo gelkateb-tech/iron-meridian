@@ -993,3 +993,753 @@ Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly
 - **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1970s-80s pattern: a six-wheeled truck with a launcher frame of forty tubes in four rows, an armoured cab with shutters, bolt-on side boxes, rear outrigger jacks.
 - **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future design: a modern export-grade design: an eight-wheeled truck with a modular launcher of two enclosed pods, a new sloped cab with bolt-on armour, an auxiliary power pack, a practical look made to be sold to many armies.
 
+### Motorized infantry rifleman (`inf`): 45 prompts, built from these words
+
+Class of picture: `man`. Files: `assets/art-src/ul-inf-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-inf-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single motorized infantry rifleman, seen from a front three-quarter side view from slightly above (about 30 degrees down), standing in a ready pose with the weapon held ready, turned toward the lower right of the picture so that the viewer sees the front and one side. The whole soldier, from the boots to the top of the helmet and the weapon, is centred left to right and top to bottom and fills about 85 percent of the picture's height; the entire figure is inside the frame with a margin all round. Only this one motorized infantry rifleman: no other person, no vehicle, no ground, only a faint, tight soft shadow under the boots.
+- **Top-down frame:** A single motorized infantry rifleman, seen exactly straight down from above (a true top-down plan view), facing the top of the picture, the weapon held ready in front. The whole soldier (head, shoulders, arms, pack and weapon) is centred left to right and top to bottom and fills about 85 percent of the picture's height. Only this one motorized infantry rifleman: no other person, no vehicle, no ground, no shadow on the background.
+- **Card scene:** "A single motorized infantry rifleman walking along a dirt road with his rifle held ready, a light trail of dust at his boots. The setting: <the group's setting>. Seen from a low front three-quarter angle at about eye height, the soldier fills about half the picture's height and stands in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one soldier: no other person, no vehicle, no buildings, no signs, no markings. The motorized infantry rifleman is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a stocky, heavily equipped rifleman in a rounded combat helmet and a tactical plate-carrier vest covered in pouches, knee pads, a big pack, a rifle with a short barrel and a sling. Paint: a tan-and-brown multi-terrain camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded steel-style helmet with a cloth cover, a simple webbing harness with ammunition pouches and two canteens, a plain long rifle with a straight stock, a canvas backpack, plain boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: new modular kit: a visored helmet with a night-vision mount, a plate-carrier vest with modular pouches, a compact rifle with a sight and a short barrel, knee and elbow pads, a modern pack.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: light powered exoskeleton frames strapped to the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a lean rifleman in a rounded helmet with a cloth cover, a chest rig of flat ammunition pouches, a long coat-like smock, a rifle with a curved magazine, a rolled blanket across the shoulder. Paint: olive-green and brown blotch camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded steel helmet with a cloth cover, a leather-look belt harness with ammunition pouches, a long rifle with a curved magazine and a folding stock, a small canvas pack, tall boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: new modular kit: a helmet with a clear visor and a rail mount, a chest rig with modular pouches, body armour plates, a compact rifle with a sight and a suppressor, knee pads, a modern pack.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: light powered exoskeleton frames on the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a slim, upright rifleman in a clean tidy uniform, a rounded helmet with a net cover, a neat chest rig with squared pouches, a rifle with a short barrel, a compact backpack. Paint: green-and-brown digital camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a plain rounded helmet, a simple canvas belt with squared pouches, a long rifle with a curved magazine, a small green canvas bag, soft canvas boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: new modular kit: a helmet with a visor and a camera mount, a neat chest rig with squared pouches, light body armour, a compact rifle with a sight, knee pads, a compact pack.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: light powered exoskeleton frames on the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a practical, slim rifleman with a rounded modern helmet, a plate-carrier vest with tidy pouches, a compact rifle held close, ear protection, a medium pack. Paint: a grey-green and brown splinter camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded steel-style helmet, a simple webbing harness with ammunition pouches, a plain rifle with a plastic-look stock and a bipod, a canvas pack, boots with gaiters.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: new modular kit: a helmet with a visor and ear defenders, a plate-carrier vest with tidy modular pouches, a compact rifle with a sight, knee and elbow pads, a medium pack.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: light powered exoskeleton frames on the legs and back, a sealed helmet with a built-in display visor, a smooth faceted armour vest, a compact rifle with an integrated sight, a small power pack on the back.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, practical rifleman with mixed, worn kit, a rounded helmet, a simple vest, an older rifle, a scarf at the neck, a faded canvas pack. Paint: a faded khaki and olive desert camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, post-war kit: a rounded steel helmet with a cloth cover, a canvas belt with pouches, a plain long rifle with a wooden-look stock, a faded canvas pack, worn boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: widely exported 1980s kit: a helmet with a net cover, a chest rig of flat pouches, a rifle with a curved magazine and a folding stock, a water bottle and a bigger pack, a scarf.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: modern export kit: a helmet with a rail and a visor, a plate-carrier vest with bolt-on pouches, a compact rifle with a sight, knee pads, a practical, mixed look made to be sold to many armies.
+
+### Frigate (a small warship) (`frig`): 45 prompts, built from these words
+
+Class of picture: `ship`. Files: `assets/art-src/ul-frig-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-frig-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single frigate (a small warship), seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull down to the waterline visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's width; everything, masts and bow included, is inside the frame with a margin all round. Only the frigate (a small warship): no crew visible, no other ship, no aircraft, no ground, only a faint, tight soft shadow under the hull.
+- **Top-down frame:** A single frigate (a small warship), seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull down to the waterline visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's height. Only the frigate (a small warship): no crew visible, no other ship, no aircraft, no shadow on the background.
+- **Card scene:** "A single frigate (a small warship) steaming at moderate speed, a white bow wave at its stem and a long white wake behind it. The setting: <the group's setting>. Seen from a low front three-quarter angle just above the water, the ship fills about 70 percent of the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one ship: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings. The frigate (a small warship) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** open blue ocean under a clear sky with a few high clouds, a long gentle swell.
+- **Family look:** Family look (US/NATO): a clean, flat-sided hull with a sharply raked bow, a boxy angular superstructure with flat plates, a single main gun forward, a helicopter deck at the stern. Paint: haze grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a long, low hull with a tall boxy superstructure, a single gun turret on the bow, a tall lattice mast with a rotating radar dish, a box missile launcher on the deck behind the gun, one tall funnel, a small helicopter pad at the stern.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and a clean, angular superstructure: a clearly newer design: a more angular hull with a flush deck, a smooth boxy superstructure with flat panel radars, a vertical launch block forward, a medium gun on the bow, a hangar with a helicopter deck at the stern, a funnel faired into the superstructure.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with an integrated mast: a near-future design: a stealthy angular hull, a smooth faceted superstructure with an integrated mast, a vertical launch block, a small gun in a faceted turret, a large helicopter hangar, no funnel, small unmanned boats on the stern.
+
+#### Eastern
+
+- **Setting of the card scene:** a cold grey-green northern sea under a low, overcast sky, a long swell and a distant misty horizon.
+- **Family look:** Family look (Eastern): a robust hull with a high flared bow, a tall, heavily armed superstructure with many launchers and guns packed on deck, a tall mast, a big helicopter deck at the stern. Paint: mid grey with a darker grey deck.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a long hull with a high bow, a tall block superstructure with two funnels, two twin gun turrets, a rocket launcher on the foredeck, a mast with a round radar, a helicopter pad at the stern.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and a clean, angular superstructure: a clearly newer design: a smooth angular hull with a long forecastle, an armoured box superstructure with a mast, vertical launch cells at the bow, a single gun on the bow, a hangar with a deck at the stern, fewer exposed fittings.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with an integrated mast: a near-future design: a stealthy angular hull, a tall integrated mast tower with flat radar panels, vertical launch cells, a small faceted gun turret, a large hangar, no funnel.
+
+#### China
+
+- **Setting of the card scene:** a hazy blue-green coastal sea with a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky.
+- **Family look:** Family look (China, its own lines): a long, low hull with a sharply raked clipper bow, a sleek, angular superstructure with neat rounded edges and flat radar panels, a large hangar and a flat helicopter deck. Paint: light blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a long hull with a tall boxy superstructure, a twin gun turret forward and another aft, a tall mast with a round radar, two small funnels, a helicopter pad.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and a clean, angular superstructure: a clearly newer design: a smooth hull with a clean angular superstructure, flat phased-array radar panels, a vertical launch block forward, a single gun, a large hangar with a deck at the stern, a funnel faired in.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with an integrated mast: a near-future design: a stealth hull with a smooth faceted superstructure, a tall integrated mast with flat panels, vertical launch cells, a faceted gun turret, a large hangar, no funnel.
+
+#### Europe
+
+- **Setting of the card scene:** a deep blue-green Atlantic sea with white-capped waves and tall cumulus clouds in a bright sky.
+- **Family look:** Family look (Europe): a sleek, graceful hull with a clean rounded superstructure of sloping sides, a single tall integrated mast, a rounded gun turret, a large helicopter hangar at the stern. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a long, narrow hull with a tall superstructure, a single rounded gun turret on the bow, a tall mast with a radar dish, one funnel, a small helicopter pad at the stern.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and a clean, angular superstructure: a clearly newer design: a smooth hull with a sloped superstructure with flat radar panels, a vertical launch block, a rounded gun on the bow, a hangar with a deck at the stern, a funnel faired in.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with an integrated mast: a near-future design: a stealth hull with a smooth superstructure with an integrated mast, a vertical launch block, a small faceted gun, a large hangar and mission bay at the stern, no funnel.
+
+#### Export
+
+- **Setting of the card scene:** a calm turquoise tropical sea with a low distant island on the horizon and a few small white clouds in a hot clear sky.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a simpler superstructure with bolt-on launchers and guns that look fitted by the buyer. Paint: pale grey with a few rust-streaked patches.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a long, low hull with a plain superstructure, two gun turrets, a small mast with a radar dish, one funnel, a depth-charge rack at the stern.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and a clean, angular superstructure: a widely exported 1970s-80s pattern: a hull with a taller superstructure, a medium gun on the bow, a box missile launcher, a radar mast, a small helicopter pad, bolt-on boxes.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with an integrated mast: a modern export-grade design: a clean modular hull with a plain angular superstructure, a vertical launch block, a medium gun, a hangar with a helicopter deck, a practical look made to be sold to many navies.
+
+### Cruiser (a large warship) (`crui`): 45 prompts, built from these words
+
+Class of picture: `ship`. Files: `assets/art-src/ul-crui-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-crui-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single cruiser (a large warship), seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull down to the waterline visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's width; everything, masts and bow included, is inside the frame with a margin all round. Only the cruiser (a large warship): no crew visible, no other ship, no aircraft, no ground, only a faint, tight soft shadow under the hull.
+- **Top-down frame:** A single cruiser (a large warship), seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull down to the waterline visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's height. Only the cruiser (a large warship): no crew visible, no other ship, no aircraft, no shadow on the background.
+- **Card scene:** "A single cruiser (a large warship) steaming at moderate speed, a white bow wave at its stem and a long white wake behind it. The setting: <the group's setting>. Seen from a low front three-quarter angle just above the water, the ship fills about 70 percent of the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one ship: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings. The cruiser (a large warship) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** open blue ocean under a clear sky with a few high clouds, a long gentle swell.
+- **Family look:** Family look (US/NATO): a big, long, flat-sided hull with a high bow, a massive boxy angular superstructure of flat plates, two main guns, many missile cells, a helicopter deck at the stern. Paint: haze grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a long hull with a tall boxy superstructure, a gun turret on the bow and another aft, a double-arm missile launcher forward, two tall funnels, a tall lattice mast with a big rotating radar, a helicopter pad.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, larger design with an angular hull: a clearly newer, larger design: a long angular hull, a broad superstructure with flat radar panels on all four sides, vertical launch blocks forward and aft, a gun on the bow, two small funnels, a helicopter deck and hangars.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with flat radar faces built into the superstructure: a near-future design: a big angular wave-piercing hull, a large smooth faceted deckhouse with integrated flat radar panels and mast, two large gun turrets in faceted housings, vertical launch cells along both sides, no funnels.
+
+#### Eastern
+
+- **Setting of the card scene:** a cold grey-green northern sea under a low, overcast sky, a long swell and a distant misty horizon.
+- **Family look:** Family look (Eastern): a large, heavily armed hull with a high flared bow, a tall superstructure crowded with launchers, guns and radars, a tall mast and a big helicopter deck. Paint: mid grey with a darker grey deck.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a long hull with a high bow, a tall block superstructure with two funnels, two twin gun turrets, missile launcher tubes along the deck sides, a tall mast with several radars, a helicopter pad.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, larger design with an angular hull: a clearly newer, larger design: a huge hull with a long forecastle, a tall superstructure with a mast, big missile launch tubes in rows along the deck, a gun on the bow, two small funnels, a helicopter hangar.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with flat radar faces built into the superstructure: a near-future design: a stealthy angular hull, a tall integrated mast tower with flat radar panels, vertical launch cells packed along the deck, a faceted gun turret, a large hangar, no funnels.
+
+#### China
+
+- **Setting of the card scene:** a hazy blue-green coastal sea with a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky.
+- **Family look:** Family look (China, its own lines): a long, sleek, large hull with a raked clipper bow, a smooth angular superstructure with neat edges and flat radar panels, a large hangar and helicopter deck. Paint: light blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a long hull with a tall boxy superstructure, twin gun turrets forward and aft, missile launcher boxes on the deck, a tall mast with a round radar, two funnels, a helicopter pad.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, larger design with an angular hull: a clearly newer, larger design: a smooth hull with a large angular superstructure with flat radar panels, vertical launch blocks forward and aft, a single gun on the bow, a hangar and a helicopter deck, a funnel faired in.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with flat radar faces built into the superstructure: a near-future design: a big stealth hull with a large smooth faceted superstructure, flat radar faces built into it, vertical launch cells forward and aft, a faceted gun turret, a large hangar, no funnels.
+
+#### Europe
+
+- **Setting of the card scene:** a deep blue-green Atlantic sea with white-capped waves and tall cumulus clouds in a bright sky.
+- **Family look:** Family look (Europe): a sleek, graceful, large hull with clean sloped sides, a rounded superstructure, a single tall integrated mast with a big radar, a rounded gun turret, a large hangar. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a long hull with a tall superstructure, a twin missile launcher forward, a rounded gun turret, two funnels, a lattice mast with a big radar dish, a helicopter pad.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, larger design with an angular hull: a clearly newer, larger design: a smooth hull with a sloped superstructure and flat panel radars, vertical launch blocks forward, a rounded gun on the bow, a funnel faired in, a hangar and helicopter deck.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with flat radar faces built into the superstructure: a near-future design: a stealth hull with a smooth sloped superstructure and a large integrated mast with flat radar panels, vertical launch cells, a small faceted gun, a large hangar, no funnel.
+
+#### Export
+
+- **Setting of the card scene:** a calm turquoise tropical sea with a low distant island on the horizon and a few small white clouds in a hot clear sky.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a large hull with a simpler superstructure and bolt-on launchers and guns that look fitted by the buyer. Paint: pale grey with a few rust-streaked patches.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a long hull with a plain tall superstructure, two twin gun turrets, torpedo tubes amidships, two funnels, a small mast with a radar dish.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, larger design with an angular hull: a widely exported 1970s-80s pattern: a hull with a taller superstructure, a twin gun on the bow, box missile launchers, a radar mast, a helicopter pad, bolt-on boxes.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a stealth hull with flat radar faces built into the superstructure: a modern export-grade design: a large modular hull with a plain angular superstructure, vertical launch blocks, a medium gun, a hangar with a helicopter deck, a practical look made to be sold to many navies.
+
+### Attack submarine (`sub`): 45 prompts, built from these words
+
+Class of picture: `sub`. Files: `assets/art-src/ul-sub-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-sub-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single attack submarine, seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull visible: no water, no waves, no wake. The whole submarine is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's width; everything is inside the frame with a margin all round. Only the attack submarine: no crew visible, no other ship, no ground, only a faint, tight soft shadow under it.
+- **Top-down frame:** A single attack submarine, seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull visible: no water, no waves, no wake. The whole submarine is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's height. Only the attack submarine: no crew visible, no other ship, no shadow on the background.
+- **Card scene:** "A single attack submarine running on the surface at moderate speed, a white bow wave at its bow and a churned white wake behind it, the sail rising from the middle of the hull. The setting: <the group's setting>. Seen from a low front three-quarter angle just above the water, the submarine runs on the surface and fills about 70 percent of the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one submarine: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings. The attack submarine is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** open blue ocean under a clear sky with a few high clouds, a long gentle swell.
+- **Family look:** Family look (US/NATO): a big, smooth, black teardrop hull with a rounded bow, a tall rectangular sail with flat plane fins on its sides, a cruciform tail with a single large propeller. Paint: matte black.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a rounded cigar-shaped hull, a medium sail with diving planes on its sides, a cruciform tail, a flat deck casing with small hatches.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and an X-shaped tail: a clearly newer design: a larger hull with an X-shaped tail, a taller sail with a flat top, a bow dome, a smooth rubber-coated look, a flush deck.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a longer, smoother hull with a pump-jet: a near-future design: a longer, smoother hull with a streamlined faired sail, an X-shaped tail, a shrouded pump-jet at the stern, a flush deck with a small mast fairing.
+
+#### Eastern
+
+- **Setting of the card scene:** a cold grey-green northern sea under a low, overcast sky, a long swell and a distant misty horizon.
+- **Family look:** Family look (Eastern): a thick, blunt, very rounded hull with a large rounded sail and a long deck casing, a tall fin on the back of the sail, a cruciform tail, a heavy built look. Paint: dark grey-black.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a stubby rounded hull with a tall blocky sail with the diving planes on the sail, a long raised deck casing along the back, a cruciform tail.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and an X-shaped tail: a clearly newer design: a longer, thicker hull with an X-shaped tail, a bigger rounded sail with a tall fin, a rounded bow, a smooth coated look, a flush deck.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a longer, smoother hull with a pump-jet: a near-future design: a long, smooth hull with a streamlined sail, an X-shaped tail, a shrouded pump-jet, a few small hatches in the deck, a flush look.
+
+#### China
+
+- **Setting of the card scene:** a hazy blue-green coastal sea with a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky.
+- **Family look:** Family look (China, its own lines): a long, slender, smooth hull with a pointed rounded bow, a low rounded sail, a clean uncluttered deck, a cruciform tail. Paint: dark blue-black.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a slim cigar-shaped hull with a small low sail, diving planes on the bow, a cruciform tail, a flat deck casing with a few hatches.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and an X-shaped tail: a clearly newer design: a longer hull with an X-shaped tail, a streamlined sail with rounded top, a smooth coated look, a small bow dome.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a longer, smoother hull with a pump-jet: a near-future design: a longer, smoother hull with a faired sail, an X-shaped tail, a shrouded pump-jet, a flush deck with no visible hatches.
+
+#### Europe
+
+- **Setting of the card scene:** a deep blue-green Atlantic sea with white-capped waves and tall cumulus clouds in a bright sky.
+- **Family look:** Family look (Europe): a sleek, rounded hull with a small streamlined sail, an X-shaped or cruciform tail, a clean flush deck, a polished modern look. Paint: dark slate grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a short, rounded hull with a small sail with planes, a cruciform tail, a simple flat deck casing.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and an X-shaped tail: a clearly newer design: a longer hull with an X-shaped tail, a streamlined sail, a flush deck, a smooth coated look, a bow dome.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a longer, smoother hull with a pump-jet: a near-future design: a long, smooth hull with a small faired sail, an X-shaped tail, a shrouded pump-jet, a flush deck with a small mast fairing.
+
+#### Export
+
+- **Setting of the card scene:** a calm turquoise tropical sea with a low distant island on the horizon and a few small white clouds in a hot clear sky.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, an older teardrop hull, a simple sail, visible deck hatches and bolt-on fittings. Paint: dull dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a slim cigar hull with a tall plain sail, diving planes on the sail, a raised deck casing, a cruciform tail, small hatches and a deck gun mount without a gun.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new hull and an X-shaped tail: a widely exported 1980s pattern: a rounder hull with a medium sail, a cruciform tail, flush deck hatches, a bow dome, a plain finish.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a longer, smoother hull with a pump-jet: a modern export-grade design: a modular hull with an X-shaped tail, a faired sail, a flush deck, a practical look made to be sold to many navies.
+
+### Aircraft carrier (`carr`): 45 prompts, built from these words
+
+Class of picture: `ship`. Files: `assets/art-src/ul-carr-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-carr-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single aircraft carrier, seen from a front three-quarter side view from slightly above (about 30 degrees down), its bow turned toward the lower right of the picture so that the viewer sees its bow and one long side, drawn as a studio model sitting on the plain grey background with its whole hull down to the waterline visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length spans about 85 percent of the picture's width; everything, masts and bow included, is inside the frame with a margin all round. Only the aircraft carrier: no crew visible, no other ship, no aircraft, no ground, only a faint, tight soft shadow under the hull. The ship is a full-size aircraft carrier: the flight deck, its angled landing runway markings left blank (no painted lines or numbers) and the island are all visible.
+- **Top-down frame:** A single aircraft carrier, seen exactly straight down from above (a true top-down plan view), its bow pointing to the top of the picture, the whole hull down to the waterline visible: no water, no waves, no wake. The whole ship is centred left to right and top to bottom, and its full length fills about 90 percent of the picture's height. Only the aircraft carrier: no crew visible, no other ship, no aircraft, no shadow on the background. The ship is a full-size aircraft carrier: the flight deck, its angled landing runway markings left blank (no painted lines or numbers) and the island are all visible.
+- **Card scene:** "A single aircraft carrier steaming at moderate speed, a big white bow wave and a long white wake behind it, a few small parked aircraft on the flight deck. The setting: <the group's setting>. Seen from a low front three-quarter angle just above the water, the ship fills about 70 percent of the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one ship: no crew visible, no other ship, no aircraft, no land close by, no signs, no markings. The aircraft carrier is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** open blue ocean under a clear sky with a few high clouds, a long gentle swell.
+- **Family look:** Family look (US/NATO): a huge, flat-topped hull with a long angled flight deck, a small tower-like island on the right side of the deck, big elevators at the edges, a clean flat deck with parked aircraft in neat rows. Paint: haze grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a large flat-top hull with an angled flight deck, a tall blocky island with a big radar antenna and a funnel on the right side, deck-edge elevators, parked aircraft in rows.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new island and an angled deck: a clearly newer, larger design: a bigger hull with a long angled flight deck, a new smaller island set farther back, a clean deck with deck-edge elevators, catapults at the bow, parked aircraft in rows.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small integrated island and drones on deck: a near-future design: a smooth hull with a small integrated island set far back on the deck, a long clean angled flight deck, flat electromagnetic catapult tracks, small unmanned drones parked on the deck.
+
+#### Eastern
+
+- **Setting of the card scene:** a cold grey-green northern sea under a low, overcast sky, a long swell and a distant misty horizon.
+- **Family look:** Family look (Eastern): a heavy, thick hull with a ski-jump ramp at the bow, a tall island on the right side crowded with radars, large launcher tubes under the angled deck edge, parked aircraft near the island. Paint: mid grey with a darker grey deck.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a hull with a ski-jump ramp at the bow, a short angled deck, a tall boxy island with a huge radar array and two funnels, missile launcher tubes on the forward deck, parked aircraft.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new island and an angled deck: a clearly newer, larger design: a longer hull with a ski-jump bow, a long angled deck, a new compact island with flat panel radars, deck-edge elevators, rows of parked aircraft.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small integrated island and drones on deck: a near-future design: a smooth hull with a small streamlined island, a long clean angled flight deck, catapult tracks, small unmanned drones parked on the deck, no funnel.
+
+#### China
+
+- **Setting of the card scene:** a hazy blue-green coastal sea with a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky.
+- **Family look:** Family look (China, its own lines): a long, clean hull with a rising ski-jump ramp at the bow, a modest island on the right side with flat radar panels, an angled deck, neat rows of parked aircraft. Paint: light blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a hull with a ski-jump ramp, a short angled deck, a boxy island with a round radar and a funnel, parked aircraft in a row.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new island and an angled deck: a clearly newer design: a larger hull with a long angled flight deck, a new compact island with flat phased-array radar panels, deck-edge elevators, catapult tracks, parked aircraft in rows.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small integrated island and drones on deck: a near-future design: a smooth hull with a small integrated island, a long clean angled flight deck with flat catapult tracks, small unmanned drones parked on the deck.
+
+#### Europe
+
+- **Setting of the card scene:** a deep blue-green Atlantic sea with white-capped waves and tall cumulus clouds in a bright sky.
+- **Family look:** Family look (Europe): a sleek, rounded, graceful flat-top hull, a compact island with a single tall mast on the right side, an angled deck, a clean deck with a few parked aircraft. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a smaller flat-top hull with an angled deck, a tall boxy island with a radar dish and a funnel, one elevator, a few parked aircraft.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new island and an angled deck: a clearly newer design: a bigger hull with a long angled flight deck, a compact island with flat radar panels, two elevators, catapults at the bow, parked aircraft in rows.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small integrated island and drones on deck: a near-future design: a smooth hull with a two-part island with an integrated mast, a long clean angled flight deck, a ski-jump-free flat bow, small unmanned drones parked on the deck.
+
+#### Export
+
+- **Setting of the card scene:** a calm turquoise tropical sea with a low distant island on the horizon and a few small white clouds in a hot clear sky.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a smaller flat-top hull with a simple island and a modest deck with a few parked aircraft. Paint: pale grey with a few rust-streaked patches.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a small, simple flat-top hull with a straight flight deck, a plain boxy island on the right side, one elevator, a few parked aircraft.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design with a new island and an angled deck: a widely exported 1970s-80s pattern: a mid-sized hull with a short angled deck, a ski-jump bow, a taller island with a radar mast and a funnel, a few parked aircraft.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small integrated island and drones on deck: a modern export-grade design: a modular hull with an angled deck, a compact island with flat radar panels, two elevators, a few parked aircraft, a practical look made to be sold to many navies.
+
+### Strike fighter (a combat jet for ground attack) (`jet`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-jet-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-jet-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single strike fighter (a combat jet for ground attack), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the strike fighter (a combat jet for ground attack): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single strike fighter (a combat jet for ground attack), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the strike fighter (a combat jet for ground attack): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single strike fighter (a combat jet for ground attack) flying fast in a gentle bank with a faint vapour trail at its wingtips, bombs and missiles carried on its wing pylons where the design carries them. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The strike fighter (a combat jet for ground attack) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a sleek, compact fighter with a blended wing and body, intakes under or beside the body, a bubble canopy, tall or canted tail fins, weapons on wing pylons. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a compact single-engine jet with a bubble canopy, a chin intake under the nose, one tall tail fin, swept wings with six underwing pylons carrying bombs and a fuel tank, a plain round exhaust.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with an internal weapons bay: a larger twin-engine jet with two engines side by side and square intakes on the sides, twin canted tail fins, a wide wing with long leading-edge extensions, closed weapon-bay doors on the belly, a sensor pod on the nose.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted strike aircraft: a smooth sharply faceted airframe with no tail fins, no external weapons, a single engine with a faceted exhaust, small internal bays, a sensor blister under the nose.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a big, rugged, wide-bodied jet with two widely spaced engines, a long nose, square intakes, twin tall tail fins and many weapon pylons. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a stubby, rugged attack jet with a drooped nose, a single engine, one tall tail fin, swept wings with six pylons carrying rocket pods and bombs, a plain cockpit bubble.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with an internal weapons bay: a large twin-engine strike jet with a wide, flat-fronted cockpit, a long tail stinger, twin tall tail fins, large square intakes, closed weapon-bay doors under the fuselage, wing pylons with missiles.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted strike aircraft: a wide, smoothly faceted airframe with no tail fins, two widely spaced engines with faceted exhausts, internal bays, a smooth nose.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a clean, sharply swept design with a long pointed nose, big rectangular side intakes, canted twin tail fins, neat flush weapon pylons. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a simple single-engine attack jet with a pointed nose, a nose intake with a centre cone, swept wings, one tail fin, four underwing pylons.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with an internal weapons bay: a larger twin-engine jet with big rectangular intakes on the sides, canted twin tails, a clean wide body, closed weapon-bay doors on the belly, a sensor pod, wing pylons.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted strike aircraft: a smooth sharply faceted airframe with a diamond-shaped intake, no tail fins, internal bays, a single engine with a serrated exhaust, a sensor blister under the nose.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a sleek delta-wing or swept design with small canard foreplanes, a compact graceful body, a single or twin engines, an elegant clean finish. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a compact single-engine strike jet with a pointed nose, small stubby straight wings, one tail fin, a long thin body, two wingtip fuel tanks and a few pylons.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with an internal weapons bay: a twin-engine delta-wing jet with small canard foreplanes, a long clean body, closed weapon-bay doors on the belly, a single tail fin, a few wing pylons.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted strike aircraft: a smooth, faceted airframe with no tail fins, two small internal bays, a single engine, a clean sensor blister under the nose.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older jet shapes with bolt-on kits and add-on parts that look fitted by the buyer. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a plain single-engine jet with swept wings that can fold, a nose intake, one tall tail fin, four pylons with bombs and a drop tank, a plain bubble cockpit.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with a larger wing: a twin-engine jet with a sloped cockpit, twin tail fins, canard foreplanes, six wing pylons with missiles, a refuelling probe, a clean practical look.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a single-engine faceted jet with side intakes, a small internal bay, a modular nose with a radar, tail fins, a practical look made to be sold to many air forces.
+
+### Interceptor (a fast high-altitude fighter) (`int`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-int-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-int-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single interceptor (a fast high-altitude fighter), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the interceptor (a fast high-altitude fighter): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single interceptor (a fast high-altitude fighter), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the interceptor (a fast high-altitude fighter): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single interceptor (a fast high-altitude fighter) climbing fast in a steep bank, a faint vapour trail at its wingtips, long-range air-to-air missiles under its wings where the design carries them. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The interceptor (a fast high-altitude fighter) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a big, powerful, long-bodied fighter with two large engines, big square or wedge intakes on the sides of the body, a bubble canopy, twin tall tail fins and long-range missiles carried under the body. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a heavy twin-engine jet with a long nose with a big radar, a bubble canopy, two side intakes with sharp edges, swept wings with downturned tips, one or two tail fins, four missiles under the fuselage.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, larger twin-engine airframe: a long body with a swing-out wing, a large radar nose, twin tall tail fins, wedge intakes, long-range missiles under the belly, a clean finish.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted near-future fighter: a smooth faceted wide body with no tail fins, internal bays, two engines with faceted exhausts, a diamond-shaped intake.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a big, rugged, high-flying jet with two widely spaced engines, huge square intakes, twin tall tail fins, a long nose and heavy long-range missiles under the body. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a stout twin-engine jet with a swept wing, large square side intakes, a single tall tail fin, a long nose, a bubble canopy, two long missiles under the body.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, larger twin-engine airframe: a big wide jet with two widely spaced engines, huge rectangular intakes, twin canted tail fins, a long radome nose, four large missiles on the belly, a long tail boom.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted near-future fighter: a smooth faceted wide body, no tail fins, two widely spaced engines with faceted exhausts, internal bays, a smooth nose.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a slim, clean, high-flying jet with a long pointed nose, a delta or swept wing, rectangular side intakes, canted twin tails and neat flush pylons. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a slim single-engine jet with a small delta wing, a nose intake with a centre cone, a single tall tail fin, two small missiles under the wings, a bubble canopy.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, larger airframe: a big delta wing with small canard foreplanes, a long clean body, a single engine with a big ventral intake, a single tail fin, six pylons with long missiles.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted near-future fighter: a smooth faceted body with a diamond-shaped intake, no tail fins, internal bays, a single engine with a faceted exhaust.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a sleek, narrow, high-flying jet with a delta wing, small canard foreplanes, a compact graceful body and a clean finish. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a very slim jet with tiny, thin straight wings, a long needle-like body, a single tail fin, two small missiles on the wingtips, a plain round exhaust.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, larger airframe: a compact delta-wing jet with canard foreplanes, a single engine, a sleek body, a bubble canopy, a single tall tail fin, four long missiles under the body.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, faceted near-future fighter: a smooth faceted delta-shaped body with no tail fins, internal bays, a single engine with a faceted exhaust.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older jet shapes with bolt-on kits that look fitted by the buyer. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a small delta-wing jet with a nose intake with a centre cone, a single tall tail fin, two small missiles under the wings, a plain bubble canopy.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1980s pattern: a twin-engine jet with swept wings, two tail fins, intakes under the wings, a rear-facing sensor on the tail, four missiles under the body.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a single-engine faceted jet with side intakes, a small internal bay, a modular radar nose, a practical look made to be sold to many air forces.
+
+### Air superiority fighter (a stealthy twin-engine fighter) (`asf`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-asf-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-asf-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single air superiority fighter (a stealthy twin-engine fighter), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the air superiority fighter (a stealthy twin-engine fighter): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single air superiority fighter (a stealthy twin-engine fighter), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the air superiority fighter (a stealthy twin-engine fighter): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single air superiority fighter (a stealthy twin-engine fighter) flying fast in a banking turn, a faint vapour trail at its wingtips, weapons carried inside its body so that its lines are clean. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The air superiority fighter (a stealthy twin-engine fighter) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a large, agile, twin-engine fighter with big wedge intakes beside the cockpit, twin tall tail fins, a wide flat body, a bubble canopy. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a big twin-engine jet with a high wing, large squared intakes with a moving ramp, twin tall tail fins, a bubble canopy, four long missiles under the body and a cannon at the wing root.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with canted tails: a sharp, stealthy twin-engine fighter with canted twin tail fins, faceted edges, flat engine exhausts, closed internal weapon bays, a wide flat body.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, wide-body near-future fighter: a smooth, wide faceted body with no tail fins, internal bays, two engines with faceted exhausts, a smooth diamond-shaped nose.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a big, powerful twin-engine fighter with two widely spaced engines, a long tail boom between them, twin tall tail fins, a long nose and large wing extensions. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a large twin-engine jet with two widely spaced engines, twin tall tail fins, a long nose with a pointed radome, a bubble canopy, six long missiles under the wings and body.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with canted tails: a big, agile twin-engine jet with canted twin tail fins, a large thrust-vectoring-looking nozzle pair, a long tail boom, a wide body, closed weapon bays and a few wing missiles.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, wide-body near-future fighter: a wide, smooth, faceted body with no tail fins, two widely spaced engines with faceted exhausts, internal bays, a smooth nose.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a long, sharp, clean twin-engine fighter with a long pointed nose, big rectangular side intakes, canted twin tail fins and a delta wing with canard foreplanes. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a large twin-engine jet with a swept wing, rectangular side intakes, twin tall tail fins, a bubble canopy, four missiles under the wings.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe with canted tails: a sleek stealthy twin-engine fighter with canard foreplanes, a long faceted body, canted twin tail fins, flat exhausts, closed internal weapon bays.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, wide-body near-future fighter: a wide faceted body with no tail fins, a smooth diamond-shaped nose, two engines with faceted exhausts, internal bays.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a sleek, agile twin-engine fighter with a delta wing, small canard foreplanes, a chin intake under the nose, a single tall tail fin, a clean polished finish. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a large twin-engine jet with swept wings, two plain tail fins, big side intakes, a bubble canopy, four missiles under the body.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new airframe: a twin-engine delta-wing fighter with canard foreplanes, a chin intake, a single tall tail fin, a clean sleek body, weapons under the wings and body.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, wide-body near-future fighter: a smooth faceted delta-shaped body with no tail fins, internal bays, two engines with faceted exhausts, a smooth nose.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older jet shapes with bolt-on kits that look fitted by the buyer. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a swing-wing jet with a nose intake, a single tall tail fin, two small missiles under the wings, a plain bubble canopy.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1980s pattern: a large twin-engine jet with two widely spaced engines, twin tail fins, a long nose, six missiles under the wings and body, a plain finish.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a twin-engine jet with canard foreplanes, canted tail fins, a modular radar nose, bolt-on pylons, a practical look made to be sold to many air forces.
+
+### Attack helicopter (`heli`): 45 prompts, built from these words
+
+Class of picture: `heli`. Files: `assets/art-src/ul-heli-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-heli-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single attack helicopter, seen from a front three-quarter side view from slightly above (about 30 degrees down), shown as a studio model standing on its landing gear, the rotor blades still and drawn sharp (not blurred), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole helicopter is centred left to right and top to bottom, and its full length including the rotor disc spans about 85 percent of the picture's width; everything, rotor tips and tail included, is inside the frame with a margin all round. Only the attack helicopter: no pilot visible, no other aircraft, no ground, only a faint, tight soft shadow under it.
+- **Top-down frame:** A single attack helicopter, seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, the rotor blades still and drawn sharp (not blurred). The whole helicopter is centred left to right and top to bottom, and the larger of its length (nose to tail, rotor included) and its rotor span fills about 90 percent of the picture. Only the attack helicopter: no pilot visible, no other aircraft, no ground, no shadow on the background.
+- **Card scene:** "A single attack helicopter flying fast and low, nose slightly down, its rotor turning, rocket pods and missiles on its stub wings where the design carries them, a faint dust haze under it. The setting: <the group's setting>. Seen from a low front three-quarter angle, slightly above the ground, the helicopter fills about 55 percent of the picture's width, in the middle of the frame, its rotor turning with a natural light motion blur on the blades only, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one helicopter: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The attack helicopter is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** low over a dry grassland valley with rolling hills and scattered scrub bushes.
+- **Family look:** Family look (US/NATO): a slim, narrow-bodied attack helicopter with two seats in tandem, a tall nose sensor turret, short stub wings carrying rocket pods and missiles, a four-bladed main rotor and a tail rotor. Paint: matte olive-drab grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a slim, narrow, low helicopter with two seats in tandem under separate bubble canopies, a two-bladed main rotor, a chin turret gun, short stub wings with rocket pods and missile tubes, a tall tail with a small tail rotor.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, angular airframe with weapons carried inside: a sleek angular body with faceted panels, a four-bladed main rotor, a nose sensor turret, small stub wings, closed internal weapon bays on the belly, a tall tail fin.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a twin rotor mast with coaxial blades, a pusher propeller at the tail, small stub wings, closed internal bays.
+
+#### Eastern
+
+- **Setting of the card scene:** low over an open golden steppe with a line of birch trees and a dark pine forest on the horizon.
+- **Family look:** Family look (Eastern): a big, rugged, armoured helicopter with a heavy body, stub wings with many weapon pylons, a five-bladed main rotor, a thick armoured cockpit with flat glass panels. Paint: dark green with darker green blotches.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a big, heavy helicopter with a hump-backed body, two bulged cockpit canopies side by side in tandem, a five-bladed main rotor, big stub wings with rocket pods and missile rails, a chin gun, wheels retracted.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, angular airframe with weapons carried inside: a coaxial twin-rotor body (two rotors one above the other) with a short wide fuselage, side-by-side seats, wing pylons with a few missiles, a nose sensor turret.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a coaxial main rotor, a pusher propeller at the tail, small stub wings, closed internal bays.
+
+#### China
+
+- **Setting of the card scene:** low over a hazy blue-green sea close to a rocky green coastline.
+- **Family look:** Family look (China, its own lines): a slim, clean, narrow helicopter with a sharply angular nose, a four-bladed main rotor, tandem cockpits under flat glass, short stub wings and neat missile rails. Paint: plain dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a small slim helicopter with a plain rounded body, a two-bladed main rotor, a chin turret, short stub wings with rocket pods and missile rails.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, angular airframe with weapons carried inside: a narrow faceted body with flat armoured panels, a five-bladed main rotor, a nose sensor turret, stub wings with a few missiles, a tall fin.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a coaxial main rotor, a pusher propeller at the tail, small stub wings, closed internal bays.
+
+#### Europe
+
+- **Setting of the card scene:** low over gentle farmland with hedgerows, fields and a wooded ridge in the distance.
+- **Family look:** Family look (Europe): a sleek, graceful, narrow-bodied helicopter with tandem cockpits under rounded canopies, a four-bladed main rotor, a mast-mounted sight, a clean low silhouette. Paint: dark green-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a light, slim helicopter with tandem cockpits under bubble canopies, a two-bladed main rotor, a chin turret gun, short stub wings with missile tubes and rocket pods.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new, angular airframe with weapons carried inside: a sleek faceted body with a four-bladed main rotor, a mast-mounted sight, a nose sensor turret, stub wings with missiles, a tall fin.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a compound helicopter with a pusher propeller and a faceted stealthy body: a smooth faceted body, a coaxial main rotor, a pusher propeller at the tail, small stub wings, closed internal bays.
+
+#### Export
+
+- **Setting of the card scene:** low over a dry savanna with scattered flat-topped acacia trees and red-brown earth.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, older helicopter shapes with bolt-on kits that look fitted by the buyer. Paint: faded olive-green and tan.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a bulky helicopter with a bulged cockpit, a five-bladed main rotor, wheels, short stub wings with rocket pods and missile rails, a plain tail rotor.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1980s pattern: a bigger helicopter with a bubble canopy for two seats in tandem, a five-bladed rotor, a chin gun turret, larger stub wings with missile rails and pods, bolt-on armour plates.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: an angular helicopter with a modular nose with a sensor ball, a four-bladed rotor, stub wings with missiles, a practical look made to be sold to many armies.
+
+### Reconnaissance drone (a medium unmanned aircraft) (`drone`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-drone-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-drone-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single reconnaissance drone (a medium unmanned aircraft), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the reconnaissance drone (a medium unmanned aircraft): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single reconnaissance drone (a medium unmanned aircraft), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the reconnaissance drone (a medium unmanned aircraft): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single reconnaissance drone (a medium unmanned aircraft) flying slowly and steadily in a gentle turn, its camera turret under the nose looking down at the ground far below. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The reconnaissance drone (a medium unmanned aircraft) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a slim unmanned aircraft with a bulbous nose, a pusher propeller at the tail, long thin straight wings and an inverted-V tail, a camera turret under the nose. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Look 1 of 3 (generations I to III), the oldest, unarmed: a small, slim propeller drone with long thin straight wings, a rounded nose with a camera dome, a pusher propeller, an inverted-V tail, no weapons of any kind under the wings.
+- **Look 2 (levels 4-6):** Look 2 of 3 (generation IV), a clearly newer design: armed, the first one: a larger propeller drone with long thin wings, a bulbous nose, a camera turret under the nose, a pusher propeller, an inverted-V tail and two small missiles on pylons under each wing.
+- **Look 3 (levels 7-8):** Look 3 of 3 (generation V), the newest, a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons, a camera blister under the nose.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a twin-boom unmanned aircraft with a stubby body, a pusher propeller between the booms, a high straight wing and a camera ball under the nose. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Look 1 of 3 (generations I to III), the oldest, unarmed: a small twin-boom drone with a stubby rounded body, a high straight wing, a pusher propeller, a camera dome under the nose, no weapons of any kind.
+- **Look 2 (levels 4-6):** Look 2 of 3 (generation IV), a clearly newer design: armed, the first one: a larger twin-boom drone with a long straight wing, a pusher propeller, a camera ball under the nose and two missiles on pylons under each wing.
+- **Look 3 (levels 7-8):** Look 3 of 3 (generation V), the newest, a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a slim, clean unmanned aircraft with high straight wings, a V-tail or twin tails, a pusher propeller, a neat camera turret under a rounded nose. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Look 1 of 3 (generations I to III), the oldest, unarmed: a small, slim propeller drone with long high straight wings, a V-tail, a rounded nose with a camera dome, no weapons of any kind.
+- **Look 2 (levels 4-6):** Look 2 of 3 (generation IV), a clearly newer design: armed, the first one: a larger propeller drone with long straight wings, a V-tail, a pusher propeller, a camera turret under the nose and two missiles on pylons under each wing.
+- **Look 3 (levels 7-8):** Look 3 of 3 (generation V), the newest, a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a sleek, clean unmanned aircraft with a smooth rounded body, small swept wings and tail fins, an elegant polished look, a camera pod under the body. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Look 1 of 3 (generations I to III), the oldest, unarmed: a slim, torpedo-shaped, jet-powered drone with small stubby straight wings, a small tail with fins, a camera pod under the body, no weapons of any kind.
+- **Look 2 (levels 4-6):** Look 2 of 3 (generation IV), a clearly newer design: armed, the first one: a larger propeller drone with long thin wings, a bulbous nose, a camera turret under the nose, a pusher propeller, an inverted-V tail and two missiles on pylons under each wing.
+- **Look 3 (levels 7-8):** Look 3 of 3 (generation V), the newest, a jet-powered flying-wing drone with internal weapons: a smooth, faceted, tailless diamond-shaped flying wing with a dorsal air intake, a flat exhaust, closed internal bays, no external weapons.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a simple unmanned aircraft with bolt-on kits that look fitted by the buyer. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Look 1 of 3 (generations I to III), the oldest, unarmed: a small, simple propeller drone with a plain boxy body, straight wings, twin tail booms, a camera dome under the nose, no weapons of any kind.
+- **Look 2 (levels 4-6):** Look 2 of 3 (generation IV), a clearly newer design: armed, the first one: a mid-sized twin-boom drone with a pusher propeller, straight wings, a camera ball under the nose and two small missiles on pylons under each wing.
+- **Look 3 (levels 7-8):** Look 3 of 3 (generation V), the newest, a jet-powered flying-wing drone with internal weapons: a modular, faceted, tailless flying wing with a dorsal air intake, closed internal bays, no external weapons, a practical look.
+
+### Strike drone (an armed unmanned aircraft) (`sdrone`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-sdrone-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-sdrone-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single strike drone (an armed unmanned aircraft), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the strike drone (an armed unmanned aircraft): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single strike drone (an armed unmanned aircraft), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the strike drone (an armed unmanned aircraft): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single strike drone (an armed unmanned aircraft) flying fast in a gentle bank, the weapons it carries clearly visible under its wings or body. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The strike drone (an armed unmanned aircraft) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a lean, smooth unmanned aircraft with a swept wing, a V-tail or no tail, a dorsal engine intake, clean lines, weapons on pylons or in internal bays. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a medium propeller-driven strike drone: a slim body with long straight wings, a V-tail, a pusher propeller, a camera ball under the nose, four small missiles on pylons under the wings.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a larger jet-powered drone: a smooth, flattened body with small swept wings, a V-tail, a dorsal jet intake, a flat exhaust, weapon pylons under the wings and an internal bay.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, stealthy combat drone: a smooth, sharply faceted flying wing with no tail, a diamond-shaped intake, closed internal weapon bays, no external weapons.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a rugged, simple unmanned aircraft, a thin body with a delta or straight wing, cheap and mass-produced in look, weapons on pylons or in an internal bay. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a cheap delta-winged propeller drone: a long, thin body, a small swept delta wing, a pusher propeller at the tail, a small warhead nose, no tail, a rugged simple look.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a larger jet-powered drone: a thicker body with swept wings, twin tail fins, a dorsal jet intake, a flat exhaust, a few weapon pylons under the wings.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, stealthy combat drone: a smooth, wide, faceted flying wing with no tail, a dorsal intake, closed internal bays, a smooth nose.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a clean, slim unmanned aircraft with long straight or swept wings, a V-tail or no tail, neat flush pylons, a smooth faceted look in the newest. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a medium propeller-driven strike drone: a slim body with long straight wings, a V-tail, a pusher propeller, a camera ball under the nose, four small missiles on pylons under the wings.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a larger jet-powered drone: a smooth body with swept wings, a V-tail, a dorsal jet intake, a flat exhaust, weapon pylons under the wings and a small internal bay.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, stealthy combat drone: a smooth, sharply faceted flying wing with no tail, a diamond-shaped intake, closed internal weapon bays, no external weapons.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a sleek, elegant unmanned aircraft with a clean smooth body, a delta or swept wing, a refined polished look, weapons on pylons or in internal bays. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a medium propeller-driven strike drone: a slim body with long straight wings, a V-tail, a pusher propeller, a camera ball under the nose, four small missiles on pylons under the wings.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a larger jet-powered drone: a smooth tailless body with a sharp delta wing, a dorsal intake, a flat exhaust, closed internal weapon bays and two wing pylons.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a tailless, stealthy combat drone: a smooth, wide, sharply faceted flying wing with a saw-tooth trailing edge, no tail, a diamond-shaped intake, closed internal bays.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a simple unmanned aircraft with bolt-on kits that look fitted by the buyer. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a cheap delta-winged propeller drone: a long, thin body, a small delta wing, a pusher propeller at the tail, a small warhead nose, no tail, a rugged simple look.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a mid-sized twin-boom drone with a pusher propeller, straight wings, a camera ball under the nose, four weapon pylons, bolt-on boxes, a practical look.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade stealthy combat drone: a modular, faceted flying wing with a dorsal intake, closed internal bays, a practical look made to be sold to many air forces.
+
+### Small swarm drone (one drone of a swarm) (`swarm`): 45 prompts, built from these words
+
+Class of picture: `air`. Files: `assets/art-src/ul-swarm-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-swarm-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single small swarm drone (one drone of a swarm), seen from a front three-quarter side view from slightly above (about 30 degrees down), shown in level flight attitude as a studio model (landing gear up, no stand), its nose turned toward the lower right of the picture so that the viewer sees its nose and one long side. The whole aircraft is centred left to right and top to bottom, and its full length or its full wingspan, whichever is larger, spans about 85 percent of the picture's width; the entire aircraft, wingtips and tail included, is inside the frame with a margin all round. Only the small swarm drone (one drone of a swarm): no pilot visible, no other aircraft, no ground, no clouds, no contrail, only a faint, tight soft shadow below it.
+- **Top-down frame:** A single small swarm drone (one drone of a swarm), seen exactly straight down from above (a true top-down plan view), its nose pointing to the top of the picture, wings spread out to both sides. The whole aircraft is centred left to right and top to bottom, and the larger of its length (nose to tail) and its wingspan (wingtip to wingtip) fills about 90 percent of the picture. Only the small swarm drone (one drone of a swarm): no pilot visible, no other aircraft, no ground, no clouds, no shadow on the background.
+- **Card scene:** "A single small swarm drone (one drone of a swarm) flying fast and low in a gentle bank, its small size obvious against the wide landscape far below it, no other drone in view. The setting: <the group's setting>. Seen from a low three-quarter angle slightly below and beside it, banking gently, the aircraft fills about 60 percent of the picture's width, in the middle of the frame, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one aircraft: no pilot visible, no other aircraft, no people, no buildings, no signs, no markings. The small swarm drone (one drone of a swarm) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a deep clear blue sky above a sunlit sea of white cloud far below.
+- **Family look:** Family look (US/NATO): a small, clean, smooth, light drone with a rounded body, tiny wings and a quiet, sensor-packed look. Paint: pale ghost-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a small quadrotor-style drone: a flat central body with four short arms and four small rotors, a camera ball under the body, a neat light look.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a sleek fixed-wing drone: a slim torpedo body with small swept wings, a small pusher propeller, a small camera dome under the nose.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small ducted-fan drone with a faceted body: a compact, sharply faceted body with two small ducted fans and short stubby fins, a flat sensor panel under the nose.
+
+#### Eastern
+
+- **Setting of the card scene:** a pale blue sky with high thin cirrus streaks above a far-below patchwork of golden steppe and dark pine forest.
+- **Family look:** Family look (Eastern): a small, rugged, cheap-looking drone with a simple body, a pusher propeller or plain rotors, a small warhead nose, cross-shaped wings. Paint: pale grey with a darker grey-green upper surface.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a small quadrotor-style drone: a flat boxy central body with four short arms and four small rotors, a small warhead on the underside, a rugged look.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a sleek fixed-wing drone: a slim body with small X-shaped wings and X-shaped tails, a pusher propeller, a small warhead nose.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small ducted-fan drone with a faceted body: a compact angular body with two small ducted fans, short stubby fins, a small warhead nose.
+
+#### China
+
+- **Setting of the card scene:** a hazy pale-blue sky with soft white clouds above distant green mountains far below.
+- **Family look:** Family look (China, its own lines): a small, tidy, smooth drone with a clean rounded body, neat wings, a pale finish. Paint: pale blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a small quadrotor-style drone: a flat rounded central body with four neat arms and four small rotors, a small camera ball under the body.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a sleek fixed-wing drone: a slim body with small swept delta wings, a pusher propeller, a rounded camera nose.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small ducted-fan drone with a faceted body: a compact, smooth, sharply faceted body with two ducted fans, short stubby fins, a flat sensor panel under the nose.
+
+#### Europe
+
+- **Setting of the card scene:** a bright sky with scattered cumulus clouds above distant green fields and a river far below.
+- **Family look:** Family look (Europe): a small, elegant, polished drone with a smooth body, thin wings and a compact camera pod, a refined clean look. Paint: medium blue-grey.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a small quadrotor-style drone: a smooth slim central body with four thin arms and four small rotors, a camera pod under the body.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a sleek fixed-wing drone: a slim body with long thin straight wings, a small pusher propeller, a rounded nose with a small camera.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small ducted-fan drone with a faceted body: a compact, sharply faceted body with two ducted fans, short stubby fins, a small sensor dome under the nose.
+
+#### Export
+
+- **Setting of the card scene:** a hot clear blue sky with a few small clouds above distant dry brown hills and a red-brown plain far below.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a small cheap drone with bolt-on parts and simple wiring. Paint: sand and olive-green camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a small quadrotor-style drone: a plain boxy central body with four short arms and four small rotors, a taped-on camera, a simple rugged look.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a sleek fixed-wing drone: a slim plain body with small straight wings, a small pusher propeller, a small warhead nose, a rugged practical look.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a small ducted-fan drone with a faceted body: a compact, modular, faceted body with two ducted fans, short stubby fins, a practical look made to be sold to many armies.
+
+### Anti-tank missile carrier (`at`): 45 prompts, built from these words
+
+Class of picture: `gnd`. Files: `assets/art-src/ul-at-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-at-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single anti-tank missile carrier, seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame with a margin all round. Only the anti-tank missile carrier: no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it.
+- **Top-down frame:** A single anti-tank missile carrier, seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only the anti-tank missile carrier: no crew, no other vehicle, no ground, no track marks, no shadow on the background.
+- **Card scene:** "A single anti-tank missile carrier stopped beside a dirt road with its missile launcher raised and aimed along the road, a faint puff of dust under it. The setting: <the group's setting>. Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs. The anti-tank missile carrier is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a compact armoured carrier of flat plates with a tall, flat-sided box launcher on a mast or a turret, wide tyres or short tracks, flat angular armour, matte finish. Paint: matte sand-tan.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a small, light four-wheeled utility vehicle with open sides, a tripod-mounted two-tube missile launcher on the rear bed, a roll bar, a spare wheel and a few stowage boxes.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a flat angular body, a rotating box launcher with four missile tubes on top, a roof sensor, side armour plates.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels, a flat box launcher with eight tubes under flat covers, flat sensor panels, a remote machine gun.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a low, compact, rounded armoured carrier with a small launcher arm on the roof, small wheels or short tracks, reactive bricks on the front, a log and fuel drums on the rear. Paint: dark olive-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a small, low amphibious-looking four-wheeled vehicle with a rail launcher for a single wire-guided missile raised over the cab, a canvas roof, a few stowage boxes.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a rounded turret with a box launcher with four missile tubes, reactive bricks on the front, side skirts.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels, a flat box launcher with eight tubes, slat armour and bricks on the hull, a remote machine gun.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a clean, boxy armoured carrier with sloped plates, a neat rectangular box launcher, evenly spaced small wheels or short tracks. Paint: plain mid-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a small four-wheeled light vehicle with an open back, a single tubular missile launcher on a pedestal over the cab, a plain boxy body.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a sloped body, a rotating rectangular box launcher with four missile tubes, a laser-warning pair on the roof.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels with smooth sloped panels, a flat box launcher with eight tubes, flat sensor panels.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a sleek, low, smoothly sloped armoured carrier with a neat rounded launcher pod, a small mast sensor, wheels or tracks of a clean modern look. Paint: dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a light four-wheeled utility vehicle with an open back, a swivel-mounted missile launcher with two tubes behind the cab, a simple roll bar.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled sloped armoured carrier, a rounded box launcher with four missile tubes, a mast sensor, side skirts.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a low, angular, stealthy launcher vehicle with more tubes: a low faceted armoured body on six wheels, a flat box launcher with eight tubes, a slim sensor mast, modular armour blocks.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a pickup-like or older armoured carrier with a bolt-on launcher that looks fitted by the buyer. Paint: faded ochre-sand with a few patches of darker touch-up paint.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a plain open four-wheeled jeep-like vehicle with a rail launcher for two wire-guided missiles on the back, a canvas roof, spare wheel.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new armoured vehicle with an enclosed box launcher holding more missiles: a six-wheeled armoured carrier with a bolt-on box launcher with four missile tubes, bolt-on armour plates, a roof machine gun.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a modular six-wheeled carrier with a flat box launcher with six tubes, a thermal sight box, bolt-on armour, a practical look made to be sold to many armies.
+
+### Special forces operator (`spec`): 45 prompts, built from these words
+
+Class of picture: `man`. Files: `assets/art-src/ul-spec-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-spec-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single special forces operator, seen from a front three-quarter side view from slightly above (about 30 degrees down), standing in a ready pose with the weapon held ready, turned toward the lower right of the picture so that the viewer sees the front and one side. The whole soldier, from the boots to the top of the helmet and the weapon, is centred left to right and top to bottom and fills about 85 percent of the picture's height; the entire figure is inside the frame with a margin all round. Only this one special forces operator: no other person, no vehicle, no ground, only a faint, tight soft shadow under the boots.
+- **Top-down frame:** A single special forces operator, seen exactly straight down from above (a true top-down plan view), facing the top of the picture, the weapon held ready in front. The whole soldier (head, shoulders, arms, pack and weapon) is centred left to right and top to bottom and fills about 85 percent of the picture's height. Only this one special forces operator: no other person, no vehicle, no ground, no shadow on the background.
+- **Card scene:** "A single special forces operator moving low and quietly along the edge of a dirt road with his weapon held ready, not looking at the viewer. The setting: <the group's setting>. Seen from a low front three-quarter angle at about eye height, the soldier fills about half the picture's height and stands in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one soldier: no other person, no vehicle, no buildings, no signs, no markings. The special forces operator is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a lean, well-equipped operator in a ballistic helmet with night-vision mounts, a plate-carrier vest with many pouches, a suppressed carbine, a radio on the shoulder, gloves and knee pads. Paint: a tan-and-brown multi-terrain camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a soft boonie hat, a plain lightweight vest with a few pouches, a short carbine with a long suppressor, a radio handset, camouflage face paint, light boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: dark digital camouflage with integrated radios and optics: a ballistic helmet with night-vision goggles and a headset, a dark vest with modular pouches, a suppressed carbine with a sight, a radio on the chest.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit with a patchwork finish, a slim armoured vest, a compact weapon with an integrated sight.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a lean operator in a rounded helmet with a face wrap, a chest rig with flat pouches, a suppressed rifle with a short barrel, a small pack and knee pads. Paint: olive-green and brown blotch camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a soft cap with a face scarf, a plain belt harness with pouches, a rifle with a folding stock and a suppressor, a small pack, soft boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: dark digital camouflage with integrated radios and optics: a helmet with a headset and goggles, a dark chest rig with modular pouches, a compact suppressed rifle with a sight, a radio on the chest.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit, a slim armoured vest, a compact weapon with an integrated sight.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a slim, tidy operator in a rounded helmet with a face cover, a neat chest rig with squared pouches, a compact rifle, a slim pack. Paint: green-and-brown digital camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a soft cap, a plain canvas belt with squared pouches, a short rifle with a folding stock and a suppressor, a small bag, soft boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: dark digital camouflage with integrated radios and optics: a helmet with a headset and goggles, a neat dark chest rig, a compact rifle with a sight and a suppressor, a radio on the chest.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit, a slim armoured vest, a compact weapon with an integrated sight.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a lean, practical operator in a rounded modern helmet with ear defenders, a plate-carrier vest with tidy pouches, a compact rifle, a medium pack. Paint: a grey-green and brown splinter camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a soft beret-like cap, a plain lightweight vest with a few pouches, a compact submachine gun with a suppressor, a radio handset, soft boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: dark digital camouflage with integrated radios and optics: a helmet with a headset, ear defenders and goggles, a dark vest with tidy modular pouches, a compact rifle with a sight and a suppressor.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: sealed helmets and adaptive-camouflage suits: a sealed smooth helmet with a built-in display visor, an adaptive-camouflage suit, a slim armoured vest, a compact weapon with an integrated sight.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, practical operator with mixed, worn kit, a scarf at the neck, a simple vest, an older rifle, a faded pack. Paint: a faded khaki and olive desert camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, post-war kit: a soft hat with a scarf, a canvas belt with pouches, an older rifle with a wooden-look stock, a faded canvas pack, worn boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer kit: dark camouflage with radios and optics: a helmet with a headset, a chest rig with flat pouches, a rifle with a curved magazine and a sight, a radio on the chest, a scarf.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a near-future kit: modern export kit: a helmet with a rail and a visor, a plate-carrier vest with bolt-on pouches, a compact weapon with a sight, knee pads, a practical, mixed look made to be sold to many armies.
+
+### Mobile jammer vehicle (an electronic-warfare vehicle) (`jam`): 45 prompts, built from these words
+
+Class of picture: `gnd`. Files: `assets/art-src/ul-jam-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-jam-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+- **Side frame:** A single mobile jammer vehicle (an electronic-warfare vehicle), seen from a front three-quarter side view from slightly above (about 30 degrees down), its front turned toward the lower right of the picture so that the viewer sees its front and one long side. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) spans about 85 percent of the picture's width; the entire vehicle, wheels or tracks included, is inside the frame with a margin all round. Only the mobile jammer vehicle (an electronic-warfare vehicle): no crew, no other vehicle, no ground, no track marks, only a faint, tight soft shadow right under it.
+- **Top-down frame:** A single mobile jammer vehicle (an electronic-warfare vehicle), seen exactly straight down from above (a true top-down plan view), its front pointing to the top of the picture. The whole vehicle is centred left to right and top to bottom, and its full length (any gun barrel or boom included) fills about 90 percent of the picture's height. Only the mobile jammer vehicle (an electronic-warfare vehicle): no crew, no other vehicle, no ground, no track marks, no shadow on the background.
+- **Card scene:** "A single mobile jammer vehicle (an electronic-warfare vehicle) parked beside a dirt road with its antennas raised and angled up at the sky, a faint shimmer in the air above them. The setting: <the group's setting>. Seen from a low front three-quarter angle slightly above ground level, the vehicle fills about half the picture's width, in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one vehicle: no crew visible, no other vehicle, no people, no buildings, no signs. The mobile jammer vehicle (an electronic-warfare vehicle) is described in words as: <the look's words>"
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide dry grassland valley with low rolling hills, a few sparse trees and scrub bushes, and a broad road of pale tan packed dirt.
+- **Family look:** Family look (US/NATO): a heavy, boxy, slab-sided armoured truck or tracked carrier with a flat-sided equipment shelter, tall slim antenna masts and flat antenna panels, matte finish. Paint: matte sand-tan.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a boxy tracked carrier with a flat equipment box, four tall whip antennas on the roof, a small dish on a short mast, stowage boxes.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new vehicle with a large dish array: a heavy six-wheeled truck with a large boxy shelter, a big rotating dish array on top, two tall folding masts, outrigger jacks.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, flat conformal antenna panels on an angular hull: a low angular armoured carrier with flat panels along the sides and roof, a slim retractable mast, no visible dishes, full skirts.
+
+#### Eastern
+
+- **Setting of the card scene:** a wide open steppe of pale green and golden grass with a line of birch trees and the edge of a dark pine forest in the distance, on a rutted brown dirt road.
+- **Family look:** Family look (Eastern): a big eight-wheeled heavy truck with a tall boxy shelter, many tall antennas and a round or folding dish array, outrigger jacks, spare wheels. Paint: dark olive-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a six-wheeled truck with a tall boxy shelter, three tall folding antenna masts, a small round dish, outrigger jacks.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new vehicle with a large dish array: an eight-wheeled truck with a large shelter, a large array of dishes on a raised arm, a tall mast, outrigger jacks, a roof machine gun.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, flat conformal antenna panels on an angular hull: a low, angular armoured eight-wheeled body with flat panels along the sides and roof, a slim mast, a clean low-signature look.
+
+#### China
+
+- **Setting of the card scene:** green farmland hills with terraced fields and a few tall poplars under a slightly hazy sky, on a rough yellow-brown dirt track.
+- **Family look:** Family look (China, its own lines): a clean, boxy wheeled truck with a sloped angular shelter, neat rectangular antenna panels and a folding dish, outrigger jacks. Paint: plain mid-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a modest design: a six-wheeled truck with a small boxy shelter, two tall whip antennas, a small dish on a mast, outrigger jacks.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new vehicle with a large dish array: an eight-wheeled truck with a large sloped shelter, a large array of rectangular antenna panels and dishes on a raised arm.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, flat conformal antenna panels on an angular hull: a low, angular wheeled body with flat panels built into its sides and roof, a slim mast, a smooth clean look.
+
+#### Europe
+
+- **Setting of the card scene:** gentle temperate farmland with hedgerows, fields and a few tall poplar trees, a distant wooded ridge, on a gravel-and-earth farm track.
+- **Family look:** Family look (Europe): a sleek, low, smoothly sloped wheeled or tracked carrier with a rounded shelter, a slim telescopic mast and neat flat antennas, a clean polished look. Paint: dark grey-green.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a Cold War era design: a light four-wheeled utility truck with a small boxy shelter, three whip antennas, a small dish on a short mast.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a new vehicle with a large dish array: a six-wheeled sloped carrier with a rounded shelter, a large dish array on a raised arm, a telescopic mast, outrigger jacks.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, flat conformal antenna panels on an angular hull: a low faceted wheeled carrier with flat panels along the sides and roof, a slim telescopic mast, full skirts.
+
+#### Export
+
+- **Setting of the card scene:** a dry savanna with scattered flat-topped acacia trees, red-brown earth and tufts of dry grass, on a red-brown dirt road.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical look, a plain truck with a bolt-on equipment box and mixed antennas that look fitted by the buyer. Paint: faded ochre-sand with a few patches of darker touch-up paint.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, a post-war pattern: a plain six-wheeled truck with a canvas-covered box, two whip antennas, a small dish on a pole, spare wheels.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer design: a widely exported 1980s pattern: a six-wheeled truck with a tall boxy shelter, a round dish on an arm, three tall folding masts, outrigger jacks.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a modular eight-wheeled truck with a boxy shelter, flat antenna panels, a slim mast, bolt-on armour, a practical look made to be sold to many armies.
+
