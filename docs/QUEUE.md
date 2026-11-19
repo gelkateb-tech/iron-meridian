@@ -19,7 +19,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **MAP-FIX** (finished 2026-11-19, now merging the new master with MAP-2 and re-shooting the dots) | pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options (show only) and the "Dug in" label; screenshots or tests before merging | Opus | map-fix |
+| **MAP-FIX** (finished 2026-11-19, now merging the new master with MAP-2, re-shooting the dots, and building the owner's dug-in pick: the amber tag with a Conflict of Nations style castle tower, plus castle +10%/+25% in the unit panel's stats row) | pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options (show only) and the "Dug in" label; screenshots or tests before merging | Opus | map-fix |
 | **UNIT-ART-2** (owner: "Tanks pictures are good") | the rest of the unit pictures, 3 per look, 5 groups x 3 looks, with the Gemini checks; most-seen units first; stops at the $5 floor and reports the top-up needed (estimated balance about $38.75 at the start, full rest about $42.7) | Sonnet | unit-art-2 |
 
 ## Next free slots (in this order)
