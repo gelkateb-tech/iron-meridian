@@ -5126,8 +5126,8 @@ function unkHTML(a){ const spotted = armyVisible(a, visibleSet(PLAYER));
 // Everything that would tell its nation, size, types, name or health asks this first; a force only spotted is the '?' badge and 'Unidentified army'
 const knowA = (a, vis = visibleSet(PLAYER)) => !!a && (a.owner === PLAYER || armyKnown(a, vis));
 const foeLabel = a => knowA(a) ? armyLabel(a, PLAYER) : 'an unidentified army';
-// the '?' plate's dot: grey with a dark outline; a test page may try a light outline for the owner (window.__unkDotOl, test build only)
-const UNK_DOT_OL = () => { /*@TEST*/if (window.__unkDotOl) return window.__unkDotOl;/*@ENDTEST*/ return 'rgba(4,7,9,.92)'; };
+// the '?' plate's dot: grey with a dark outline (owner's pick, 2026-11-19)
+const UNK_DOT_OL = () => 'rgba(4,7,9,.92)';
 function unkPlate(x, y, s, now = performance.now()){ const r = BADGE/2*0.86, X = snapD(x), Y = snapD(y - r - dotR() - 2), CT = SIDE_T.other, rc = 3; dotDraw(x, y, 'other', 1, UNK_DOT_OL());   // (its position dot on the spot, the plate just above it)   // an unidentified radar contact: a grey badge with a dashed edge and a '?' (no flag, type or count)
   const P = 8, key = 'unk|' + r + '|' + dpr + '|' + (SET.cb ? 'c' : '');   // (painted once into a device-pixel canvas, as the badges are: UCC, cleared with them)
   let E = UCC.get(key); if (!E){ if (UCC.size > 500) UCC.clear(); const c = document.createElement('canvas'); c.width = Math.ceil((2*r + 2*P)*dpr); c.height = Math.ceil((2*r + 2*P)*dpr);
