@@ -699,6 +699,19 @@ BUNKER_EDITS = {
         "patch beyond it, only a soft shadow."),
 }
 
+# levels 2-4 of option C (owner's choice 2026-11-18, version 1 for every level): edits of level 1 (the version WITH the box), so the five
+# levels match; the box is removed afterwards in code (docs/bunker-options/c-nobox/deslab3.py, T 125).
+BUNKER_EDITS['v2-bunker-c-2'] = ('v2-bunker-c-1', "make it level 2, a little larger: keep the first pillbox and its sandbags and "
+    "trench, extend the same raised earth block a little, and add a second, smaller concrete firing position (a low round "
+    "concrete emplacement with one firing slit and a few sandbags) joined to the first by a short extra stretch of trench")
+BUNKER_EDITS['v2-bunker-c-3'] = ('v2-bunker-c-1', "make it level 3, clearly larger: the same raised earth block extended, with two "
+    "concrete pillboxes with domed roofs and firing slits and sandbags round their fronts, joined by a longer zig-zag trench "
+    "cut into the block, and a few small sandbag positions along the trench")
+BUNKER_EDITS['v2-bunker-c-4'] = ('v2-bunker-c-1', "make it level 4, much larger: the same raised earth block extended further, with "
+    "three concrete pillboxes (domed roofs, firing slits, sandbags) joined by a long zig-zag trench with side branches cut "
+    "into the block, and a small concrete blockhouse with a flat roof and a short antenna mast, a few steel anti-tank "
+    "hedgehogs at the block's edge")
+
 # ---- BUNKER C WITHOUT THE BOX (owner 2026-11-18: "bunker c is the best but i dont like how its on a box ... take that box out").
 # OPTIONS ONLY. Edits of option C's pictures (EDIT_V2): the raised square earth block goes, the trench and sandbags become low
 # earthworks of the object itself. Names v2-bunker-cn-<1|5> -> assets/art-src/ba-v2-bunker-cn-<1|5>.png
