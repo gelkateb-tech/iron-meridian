@@ -630,13 +630,15 @@ if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_S
 # -scene: the card scene resized to 768x512 (3:2), NOT cut out (the blue monitor tint and scanlines are drawn in code)
 # The cut-out: the plain grey floor (a quadratic surface fitted to the border), its lighting gradient and the smooth neutral soft shadow touching it are flooded from
 # the border; whatever is left (the largest parts, holes filled) is the unit; edges feathered a little.
-def ul_cut(im, sd=70, sch=12, grad=9):
+def ul_cut(im, sd=70, sch=12, grad=9, noshadow=False):
     from scipy import ndimage as ndi
     a = np.asarray(im.convert('RGB')).astype(np.float32); h, w, _ = a.shape
     m = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); m[:b] = m[-b:] = True; m[:, :b] = m[:, -b:] = True
     bg = fit_bg(a, m); d = np.abs(a - bg).max(-1); ch = a.max(-1) - a.min(-1); bch = bg.max(-1) - bg.min(-1)
     g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
     cand = (d <= 16) | ((d < sd) & (np.abs(ch - bch) < sch) & (g < grad))
+    if noshadow:   # top-downs: the drop shadow too (the map draws its own). It is smooth and bluer than the floor (the paint of no unit is blue)
+        cand |= ((a[..., 2] - a[..., 0] - (bg[..., 2] - bg[..., 0])) > 13) & (g < grad + 3) & (a.mean(-1) < bg.mean(-1) + 4)
     lab, n = ndi.label(cand); border = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
     solid = ndi.binary_opening(~np.isin(lab, border[border > 0]), iterations=1)
     lab, n = ndi.label(solid); sizes = ndi.sum(solid, lab, range(1, n + 1))
@@ -653,14 +655,24 @@ def ul_prep():
         im = Image.open(f)
         if kind == 'scene': out = im.convert('RGB').resize((768, 512), Image.LANCZOS); out.save(os.path.join(OUT, stem + '-scene.webp'), 'WEBP', quality=88, method=6)
         else:
-            c = ul_cut(im)
+            c = ul_cut(im, noshadow=(kind == 'top'))
             if kind == 'side': c = c.crop(c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()); c.thumbnail((512, 512), Image.LANCZOS)
             else:
                 c = c.resize((512, 512), Image.LANCZOS); bb = c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()
                 boxes[stem + '-top'] = [round((bb[2] - bb[0])/512, 2), round((bb[3] - bb[1])/512, 2)]
             c.save(os.path.join(OUT, stem + '-' + kind + '.webp'), 'WEBP', quality=90, method=6)
         print('unit look', stem, kind)
-    if boxes: print('PICBOX:', boxes)
+    if boxes:
+        print('PICBOX:', boxes)
+        idx = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT))), 'index.html')   # the opaque boxes of the top-downs go into the page's PICBOX line (merged with the ones already there)
+        if os.path.exists(idx):
+            import re, json
+            t = open(idx, encoding='utf-8').read(); m = re.search(r"^Object\.assign\(PICBOX, \{('ul-[^\n]*)\}\);", t, re.M)
+            old = {k: v for k, v in re.findall(r"'(ul-[a-z0-9-]+)': (\[[0-9., ]+\])", m.group(1))} if m else {}
+            old = {k: json.loads(v) for k, v in old.items()}; old.update(boxes)
+            line = 'Object.assign(PICBOX, {' + ', '.join(f"'{k}': [{v[0]}, {v[1]}]" for k, v in sorted(old.items())) + '});'
+            t = t.replace(m.group(0), line) if m else t
+            if m: open(idx, 'w', encoding='utf-8').write(t); print('index.html: PICBOX line updated,', len(old), 'tops')
 if want('ul') and 'ul' in only: ul_prep()
 
 # tell the game which promised V3 pictures now exist (it draws code stand-ins for the rest and never requests a missing file)
