@@ -257,20 +257,21 @@ function CLASSESv(R, o, t){ const v = {}; for (const k of R.CLASSES) v[k] = R.mu
 // ---- 7. command and missile upgrades reach what is already under way (owner 2026-11-18): landings, boarding, cruise missiles in flight
 { const {R, S, G, cap, sea} = game();
   for (const o of [SEAT, AI]){ const N = S.nations[o], p = cap(o), z = sea(o);
-    // a landing: troops that came ashore from the sea with the hours still to go
-    const a = R.addArmy(o, p, {inf:3}), h0 = R.landH(a, p); ok(h0 === 6 || h0 === 12, `nation ${o}: a landing takes ${h0} h`, h0); a.land = h0; for (let i = 0; i < 2; i++) a.land--;   // two hours ashore already
+    // a landing: troops that came ashore from the sea with the time still to go (fractional hours: 45 minutes in all)
+    const near = (x, y) => Math.abs(x - y) < 1e-9;
+    const a = R.addArmy(o, p, {inf:3}), h0 = R.landH(a, p); ok(near(h0, 0.75), `nation ${o}: a landing takes ${h0*60} min`, h0); a.land = h0 - 0.25;   // a quarter of an hour of it done already
     const left = a.land, lf = R.landH(a, p);
     R.rGrant(N, 'nav3', 1); const h1 = R.landH(a, p);
-    ok(h1 === Math.max(1, Math.round(h0/2)) && a.land === Math.max(1, Math.round(left/2)), `nation ${o}: Amphibious Doctrine halves a landing under way at once (${left} h left -> ${a.land}, the full time ${lf} -> ${h1})`, [h0, left, a.land, h1]);
-    const done0 = (h0 - left)/h0; ok(a.land < left && (h1 - a.land)/h1 >= done0 - 1/h1 - 1e-9, `nation ${o}: the share of the landing already done is kept (within an hour's rounding)`, [done0, (h1 - a.land)/h1]);
-    const b = R.addArmy(o, p, {inf:3}); b.land = 5; R.rGrant(N, 'nav3', 2); ok(b.land === 5, `nation ${o}: the second level (first-day strength only) leaves a landing alone`, b.land);
+    ok(near(h1, h0/2) && near(a.land, left/2), `nation ${o}: Amphibious Doctrine halves a landing under way at once (${left*60} min left -> ${a.land*60}, the full time ${lf*60} -> ${h1*60} min)`, [h0, left, a.land, h1]);
+    const done0 = (h0 - left)/h0; ok(a.land < left && near((h1 - a.land)/h1, done0), `nation ${o}: the share of the landing already done is kept exactly`, [done0, (h1 - a.land)/h1]);
+    const b = R.addArmy(o, p, {inf:3}); b.land = 0.5; R.rGrant(N, 'nav3', 2); ok(b.land === 0.5, `nation ${o}: the second level (first-day strength only) leaves a landing alone`, b.land);
     // another nation's landing is not touched
-    const other = R.addArmy(o === SEAT ? AI : SEAT, cap(o === SEAT ? AI : SEAT), {inf:3}); other.land = 12; const e0 = R.embarkH(a);
-    // boarding: hours left in the port
-    const c = R.addArmy(o, p, {inf:3}); c.emb = 5; const bf = R.embarkH(c); R.rGrant(N, 'log2', 1); const bf1 = R.embarkH(c);
-    ok(bf1 < bf && c.emb === Math.max(1, Math.round(5*bf1/bf)) && c.emb < 5, `nation ${o}: Combat Engineers cut the hours left to board (5 -> ${c.emb}; a full boarding ${bf} -> ${bf1} h)`, [bf, bf1, c.emb]);
-    ok(other.land === 12, `nation ${o}: another nation's landing is not touched`, other.land);
-    const d = R.addArmy(o, p, {inf:3}); d.emb = 1; R.rGrant(N, 'log2', 2); ok(d.emb >= 1, `nation ${o}: a boarding on its last hour does not drop below 1 h`, d.emb);
+    const other = R.addArmy(o === SEAT ? AI : SEAT, cap(o === SEAT ? AI : SEAT), {inf:3}); other.land = 0.75; const e0 = R.embarkH(a);
+    // boarding: the time left in the port
+    const c = R.addArmy(o, p, {inf:3}); c.emb = 0.5; const bf = R.embarkH(c); R.rGrant(N, 'log2', 1); const bf1 = R.embarkH(c);
+    ok(near(bf, 0.75) && near(bf1, 0.75*0.7) && near(c.emb, 0.5*bf1/bf), `nation ${o}: Combat Engineers cut the time left to board (30 -> ${c.emb*60} min; a full boarding ${bf*60} -> ${bf1*60} min)`, [bf, bf1, c.emb]);
+    ok(other.land === 0.75, `nation ${o}: another nation's landing is not touched`, other.land);
+    const d = R.addArmy(o, p, {inf:3}); d.emb = 0.25; R.rGrant(N, 'log2', 2); ok(d.emb === 0.25, `nation ${o}: a boarding with its last 15 minutes left does not drop below 15 minutes`, d.emb);
     const f = R.addArmy(o, p, {inf:3}); ok(f.land === undefined && f.emb === undefined, `nation ${o}: a force not landing or boarding gets no timer`);
     // a cruise missile in flight
     R.rGrant(N, 'u_inf', 1); R.rGrant(N, 'msl1', 1);
