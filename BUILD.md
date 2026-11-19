@@ -108,7 +108,7 @@ Every file in `tools/` (none of them is published; the game never loads them):
 | File | What it does |
 |---|---|
 | `build.js` | the two builds, `dist/test` and `dist/public` (this page) |
-| `mkpage.sh` | the test page `.test/page.html` and a copy of `rules/` for the browser tests; like `build.js` it writes the unit look pictures present in `assets/art` (`ul-*.webp`) into the page's list `UL_FILES`, so the research screen asks only for pictures that exist |
+| `mkpage.sh` | the test page `.test/page.html` and a copy of `rules/` for the browser tests; like `build.js` it writes the table of the unit look atlases present in `assets/art` (`ula-<unit>-pic.webp`, `ula-<unit>-scene.webp`; the table is `assets/art-src/ul-atlas/<unit>.json`, made by `tools/ulatlas.py` from `tools/prep-art.py ... ul`) into the page (`UL_MAN`), so the page asks only for atlases that exist; two files a unit instead of 45 keep the build under the host's 511 files |
 | `snapshot.sh` | freezes the committed game (git HEAD) into a standalone test folder |
 | `headless.js` | the rules in plain Node: an all-computer game and its summary; `--check` (same seed twice, same state), `--nations` (the nations world) |
 | `perf.js` | the rules' speed in plain Node, both worlds: ms per game day, the state hash, CPU time by function; `--sliced` (every hour a step at a time, see "Rules speed") |

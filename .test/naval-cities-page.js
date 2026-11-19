@@ -140,14 +140,15 @@ const OUT = process.argv[2] || null, W = 1440, H = 900;
   await p.click('[data-act="rbranch"][data-b="inf"]'); await p.waitForTimeout(300);
   ok('the Infantry Corps tree has the Marines column', await p.locator('.rnode[data-id="u_mar"]').count() === 1 && await p.locator('.rnode[data-id="mar_g2"]').count() === 1);
   await p.evaluate(() => document.querySelector('.rnode[data-id="u_mar"]').click()); await p.waitForTimeout(500);
-  { const c = await p.evaluate(() => { const c = document.querySelector('.rs-card'); if (!c) return null; const im = [...c.querySelectorAll('img, i')].map(e => e.src || e.style.backgroundImage || '').filter(Boolean); return { t: c.innerText, im }; });
+  { const c = await p.evaluate(() => { const c = document.querySelector('.rs-card'); if (!c) return null; const im = [...c.querySelectorAll('img, i')].map(e => (e.dataset && e.dataset.ul) || e.src || e.style.backgroundImage || '').filter(Boolean); return { t: c.innerText, im }; });
     ok('the Marines card: name, what it does, its costs, START', c && /marines/i.test(c.t) && /any coast/.test(c.t) && /START/i.test(c.t), c && c.t.slice(0, 400));
     ok('until the Marines pictures exist the card shows the infantry\'s (no missing picture)', c && c.im.some(s => /ul-inf-|ri-u_inf/.test(s)) && !c.im.some(s => /ri-u_mar|ul-mar-/.test(s) && !/ul-mar-/.test(s)), c && c.im); }
   await shot('7-research-marines-card', FULL);
   // the Marines' own pictures as they arrive from unit-art-3: a group that has some shows its own, every other group the infantry's; a look or a
   // kind of picture missing in a group that has some falls back to the infantry's; never a missing file (index.html ulUnits, ulArt)
   { const r = await p.evaluate(() => { const rs = window.__im.rs, S = window.__im.S, F = rs.ulFiles(), g0 = rs.group(0), o = S.nations.findIndex((N, i) => i > 0 && rs.group(i) !== g0);
-      const fake = `ul-mar-${g0}-1-side`, had = F.has(fake); F.add(fake); const A = rs.look('mar', 0, 1), B = rs.look('mar', o, 1), A3 = rs.look('mar', 0, 8); if (!had) F.delete(fake);
+      const fake = `ul-mar-${g0}-1-side`, had = F.has(fake); F.set(fake, F.get(`ul-inf-${g0}-1-side`));   // (UL_CELL: the atlas table, a picture name -> its cell)
+      const A = rs.look('mar', 0, 1), B = rs.look('mar', o, 1), A3 = rs.look('mar', 0, 8); if (!had) F.delete(fake);
       const C = rs.look('mar', 0, 1), real = s => { const k = s && s.replace(/^assets\/art\//, '').replace(/\.webp$/, ''); return !s || /ri-u_/.test(s) || F.has(k) || k === fake; };
       return { g0, A, B, A3, C, ok: [A, B, A3, C].every(x => real(x.side) && real(x.scene) && !/ri-u_mar/.test(x.scene)) }; });
     ok('Marines pictures: a group with its own shows them, another group the infantry\'s, a missing kind the infantry\'s, never a missing file',
