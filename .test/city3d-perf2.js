@@ -1,5 +1,5 @@
 // Cities in 3D, second pass (CITIES-2): the map's speed over Berlin at the zooms a player uses, for a before | after comparison on one machine.
-// A nations-world game as Germany, the clock stopped, by day. For each hexPx (26, 40, 90, 150): the time until the map settles at that view and
+// A nations-world game as Germany, the clock stopped, by day. For each hexPx (26, 40, 90, 150): the time until the map settles (busy read before the nudge redraw) at that view and
 // the city bakes made for it (count, total and worst ms, from the bake log), then a steady pan of 4 s (fps, p95 frame, main thread busy and the
 // cities' share per frame, CDP sampling profiler); then a zoom sweep 26 -> 150 -> 26 three times, the city canvases' memory after each.
 //   node .test/city3d-perf2.js [--phone] [--page page.html] [--json out.json]
@@ -26,7 +26,7 @@ function aggregate(prof){ const byId = new Map(); prof.nodes.forEach(n => byId.s
   await p.evaluate(() => { const im = window.__im, S = im.S; S.speed = 0; im.SET.tipsOff = true; im.SET.cityLights = true; im.SET.saver = false; document.querySelectorAll('.toast,.modal').forEach(t => t.remove());
     const P = im.G.P.find(q => q.cityName === 'Berlin'), h0 = Math.floor(S.hour/24)*24; let bh = h0, be = -9; for (let h = h0; h < h0 + 24; h++){ S.hour = h; const e = im.sunSinEl(P.id); if (e > be){ be = e; bh = h; } } S.hour = bh; });
   const go = hx => p.evaluate(hx => { const im = window.__im, v = im.view, P = im.G.P.find(q => q.cityName === 'Berlin'), s = hx/12, R = document.getElementById('map').getBoundingClientRect(); v.s = s; v.x = R.width/2 - P.x*s; v.y = R.height/2 - P.y*s; im.redraw(); }, hx);
-  async function quiet(max = 90000){ const t0 = Date.now(); let ok = 0; while (Date.now() - t0 < max && ok < 4){ await p.waitForTimeout(200); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; } return Date.now() - t0; }
+  async function quiet(max = 90000){ const t0 = Date.now(); let ok = 0; while (Date.now() - t0 < max && ok < 4){ await p.waitForTimeout(200); ok = await p.evaluate(() => { const b = window.__im.mapBusy(); window.__im.redraw(); return !b; }) ? ok + 1 : 0; } return Date.now() - t0; }
   const cbt = () => p.evaluate(() => { const st = window.__im.cityDbg.stats(); let n = 0, ms = 0, w = 0; for (const [k, v] of Object.entries(st)){ if (k === 'slice') continue; n += v[0]; ms += v[1]; w = Math.max(w, v[2]); } return {n, ms, w}; });
   await go(12); await quiet(30000);
   if (PHONE) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
