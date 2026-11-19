@@ -7,7 +7,7 @@
 //               pixel within 1.5 css px)
 //  (G) GAPS     along shared borders of two provinces of different owners, the tint (its own canvas) covers both sides right up to the
 //               line (1.5 css px off it) in each side's own colour: no gap, no sliver of the wrong colour
-//  (P) PROVINCE province borders are on the layer at 3 zooms (hexPx 20, 48, 120): a line pixel within 1.5 css px of points along them
+//  (P) PROVINCE province borders are on the layer at 3 zooms (hexPx 30, 48, 120): a line pixel within 1.5 css px of points along them; none at hexPx 8 (hidden zoomed out)
 //  (T) TAPS     a point 2 css px either side of a province border picks the province drawn there (provAtV), and real clicks select it
 //  (H) HATCH    no hatch pattern anywhere: the fog veil and the political tint are one flat colour inside foreign land, at 3 zooms
 //  (W) WRAP     across the map's east-west seam (St Lawrence Island, Alaska, cut by the seam): the tint on both sides, and a tap on each
@@ -105,10 +105,11 @@ const PTS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'borders
 
   // (P) province borders at 3 zooms
   { const res = {};
-    for (const hz of [20, 48, 120]){ await go(9, 48.5, hz);
+    // (MAP-2 feedback: province lines are hidden zoomed out and fade in from hexPx 12 to full at 30: none at hexPx 8, all from 30 on)
+    for (const hz of [8, 30, 48, 120]){ await go(9, 48.5, hz);
       const r = await p.evaluate(([mw, mh]) => { const B = window.__br, pts = B.arcPts('p', 60, mw, mh, false), m = B.diffPts(pts, 7, 0, 1.5); let ok = 0;
         for (const v of m) if (v >= 40) ok++; return {n:pts.length, ok}; }, [MAP.side, MAP.h]);
-      res['hexPx' + hz] = r; if (r.n < 10 || r.ok < 0.95*r.n) fail('province borders hexPx ' + hz, r); }
+      res['hexPx' + hz] = r; if (hz < 12 ? r.n < 10 || r.ok > 0.05*r.n : r.n < 10 || r.ok < 0.95*r.n) fail('province borders hexPx ' + hz, r); }
     checks.province = res; }
 
   // (T) taps: 2 css px either side of a border picks that side's province; real clicks select it

@@ -1,0 +1,2 @@
+FLAG
+- 3. Unit sits on a raised terrain base slab rather than cleanly on the plain grey background.

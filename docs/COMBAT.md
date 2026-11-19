@@ -359,3 +359,51 @@ now costs $1M a day and protects more (33% instead of 20%). Measured before (mas
 
 Against a person's nation the bunker is the owner's rule as given: a level 5 capital with a dug-in garrison takes 14.4% of the damage (before:
 Fortifications III, 51% × 0.8 = 41%), so a capital the computer has built up needs about three times the force it needed before.
+
+## 8. Intelligence: spotted or identified (owner's MAP-2 feedback, 2026-11-18)
+
+Like Conflict of Nations: **seeing a foreign force only tells you that something is there.** Its nation, size, unit types, name and health are
+known only once it is **identified**, by proper recon or by fighting it. Rules: `armyKnown`, `armyIdent`, `armyView`, `intelNote` in
+`rules/vision.js` (sight itself is unchanged: `visibleSet`, `armyVisible`); the page asks `knowA` (index.html) before it shows anything about a
+foreign force.
+
+**Spotted (only the '?' badge).** Anything in sight that nothing identifies: ordinary sight of any force (infantry, tanks, ships: 50 km), cities
+(80 km) and airbases (100 km), your own and allied land, a province you are marching to, a province revealed by someone else's UAV, manned
+aircraft in flight (150 km, patrols 200 km), and a plain AWACS (location only, as before). The map draws one grey '?' badge with a dashed edge
+where the force stands (one per province, a marching force its own): no flag, no count, no unit type icon, no 3D models or figures. Hover
+text and tap say **Unidentified army** (Spotted, or Detected by AWACS) and how to identify it, nothing more. The same holds for the province's
+hover text and sheet (Garrison: ? Unidentified army), the battle box (? Unidentified army instead of a side's nation and units), the route
+chip and the planned route (no odds against it: *an unidentified army is there: its strength is not in these odds*), Army Info (refused),
+the chase and bombard labels (*an unidentified army*), the blockade rings and trade detours of its fleets, the war warning's threat figures
+and the diplomacy intel (`haveIntelOn`).
+
+**Identified (everything: nation, units, health, name, 3D models).**
+
+| what | reveals | how long |
+|---|---|---|
+| your own forces, an **ally's** forces | always | always |
+| **Recon UAV on station** (UAV I-V) | everything inside its range (250-500 km; Wide-Area Sensors 1 and 2: 15% and 30% farther, so up to 650 km) | while it loiters, then the provinces under it **12 h** more (`S.intel`, its loiter + 12 h from arrival, the same span as its reveal) |
+| any **drone wing in flight** (Recon UAV, Strike Drones, Swarm Drones) | everything inside its sight (200 km) | while it is there |
+| **reconnaissance satellite** | its strip (150 km each side of this hour's track) | while it passes |
+| **Phased-Array AWACS** (AWACS II) | within half its radar range (250 km) | while it orbits (a plain AWACS only locates: '?') |
+| **maritime patrol** on a hunt, warships' **sonar** | ships at sea in its range / their own sea zone and the next ones | while there |
+| **Mobile SAM or jammer** (radar) | aircraft in flight over its province or the next ones | while in flight there |
+| **Special Forces** (the recon unit on the ground) | everything inside their own sight (100 km, 150 with Night Optics) | while in range |
+| **battle**: a force of yours (or an ally's) fighting in the same province, at war | the forces you fight there | while the battle lasts |
+| an agent's **reconnaissance** (Intelligence) | the target province and its neighbours | 3 days |
+
+Nothing else is remembered: once the recon has gone (and the UAV's or the agent's span is over) the force is a '?' again.
+
+**Side colour.** None: the '?' badge is the same grey for an enemy, a neutral and an independent, following the owner's words (*only an
+unknown badge*). Conflict of Nations shows the nation colour; the owner asked for less. Whether you are at war with the land it stands on is
+still shown by the borders and the province's owner.
+
+**The AI.** It does not use the fog (as before): it plays on the full state, so it knows exact enemy units it could not see; its recon UAVs pick
+targets by `S.reveal`. This is unchanged (it would change its play and its balance) and listed for the owner. Ranged fire (`rangedTargets`) and
+the AI's guns need only a spotted target, as before. The rules never ask `armyKnown`, so the golden is unchanged. Only seats keep `S.intel`
+(the AI does not need it), so an AI-only game saves the same state as before; an old save without it loads and plays.
+
+**S.reveal** (a UAV's or an agent's reveal) is shared by every nation, as before: a province another nation's UAV revealed is in your sight
+too, but that only spots: identification is your own (and your allies') recon.
+
+Tests: `node .test/intel.js` (and `node .test/intel.js 440 900` on a phone).
