@@ -20,6 +20,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **MAP-FIX** (finished 2026-11-19, now merging the new master with MAP-2, re-shooting the dots, and building the owner's dug-in pick: the amber tag with a Conflict of Nations style castle tower, plus castle +10%/+25% in the unit panel's stats row) | pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options (show only) and the "Dug in" label; screenshots or tests before merging | Opus | map-fix |
+| **EMBARK-45** (started 2026-11-19) | owner: "disembarking and embarking should take 45 minutes each": boarding and landing 45 game minutes (were 6 h boarding, 6 h into a port, 12 h on a beach), exact to the minute with the leftover of the hour used to sail or walk; Amphibious Doctrine, Combat Engineers and Siegemaster still shorten it (floor 15 min); old saves capped; one builder, three independent reviewers, one fixer | Opus build, Sonnet reviews | embark-45 |
 | **UNIT-ART-2** (owner: "Tanks pictures are good") | the rest of the unit pictures, 3 per look, 5 groups x 3 looks, with the Gemini checks; most-seen units first; stops at the $5 floor and reports the top-up needed (estimated balance about $38.75 at the start, full rest about $42.7) | Sonnet | unit-art-2 |
 
 ## Next free slots (in this order)
