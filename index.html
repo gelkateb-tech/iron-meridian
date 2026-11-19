@@ -3709,9 +3709,9 @@ const DT_ROT = [0, 0.71, 1.93, 2.62, 4.1, 5.3].map(a => [Math.cos(a), Math.sin(a
 // every pattern is world-anchored noise or a position hash. The far texture gets the same tones (its mean shift taken out of its detail gain).
 let DT_JV = 'a';
 const DT_JP = {
-  a:{base:[0.52, 0.68, 0.8], pl:[0.14, 0.1, 0.08], hu:0.08, cl:0.08, sec:0, clr:0, cf:[0.25, 0.6, 1.3], ca:[0.45, 0.4, 0.3], ct:0, cw:0.32, hc:1.0, cL:0.16, sp:[0.62, 0.27], rr:0.3, cv:0.26, hk:0.55, gap:0.3, soft:0, dr:[0.35, 0.2], drw:0.16, drk:0.12, drh:0.35, rvT:[1.3, 1.36, 0.84], rvS:0.6, rvW:1.3, kc:[[1.059, 1.068, 1.063], [1.103, 1.103, 1.072], [1.170, 1.151, 1.085], [1.208, 1.192, 1.129]]},
-  b:{base:[0.6, 0.75, 0.74], pl:[0.18, 0.13, 0.1], hu:0.12, cl:0.08, sec:0.9, secT:0.25, clr:0.6, cf:[0.22, 0.5, 1.1], ca:[0.5, 0.4, 0.25], ct:0.1, cw:0.3, hc:0.9, cL:0.12, sp:[0.7, 0.3], rr:0.34, cv:0.28, hk:0.5, gap:0.26, soft:0, dr:[0.3, 0.15], drw:0.14, drk:0.1, drh:0.3, rvT:[1.45, 1.5, 0.82], rvS:0.8, rvW:1.6, kc:[[1.130, 1.072, 1.081], [1.151, 1.091, 1.087], [1.178, 1.117, 1.092], [1.190, 1.143, 1.107]]},
-  c:{base:[0.5, 0.63, 0.88], pl:[0.12, 0.09, 0.06], hu:0.03, cl:0.1, sec:0, clr:0, cf:[0.28, 0.65, 1.4], ca:[0.45, 0.4, 0.3], ct:-0.05, cw:0.45, hc:0.8, cL:0.08, sp:[0.56, 0.25], rr:0.3, cv:0.12, hk:0.4, gap:0.2, soft:1, dr:[0.6, 0.3], drw:0.28, drk:0.14, drh:0.6, rvT:[1.14, 1.2, 1.06], rvS:0.4, rvW:1.2, kc:[[1.016, 1.031, 1.021], [1.035, 1.048, 0.996], [1.088, 1.095, 0.993], [1.124, 1.127, 1.019]]}};
+  a:{base:[0.52, 0.68, 0.8], pl:[0.14, 0.1, 0.08], hu:0.08, cl:0.08, sec:0, clr:0, cf:[0.25, 0.6, 1.3], ca:[0.45, 0.4, 0.3], ct:0, cw:0.32, hc:1.0, cL:0.16, sp:[0.62, 0.27], rr:0.3, cv:0.26, hk:0.55, gap:0.3, soft:0, dr:[0.35, 0.2], drw:0.16, drk:0.12, drh:0.35, rvT:[1.3, 1.36, 0.84], rvS:0.6, rvW:1.3, kc:[[1.056,  1.068,  1.049],  [1.063,  1.064,  1.007],  [1.152,  1.119,  1.025],  [1.197,  1.157,  1.046]]},
+  b:{base:[0.6, 0.75, 0.74], pl:[0.18, 0.13, 0.1], hu:0.12, cl:0.08, sec:0.9, secT:0.25, clr:0.6, cf:[0.22, 0.5, 1.1], ca:[0.5, 0.4, 0.25], ct:0.1, cw:0.3, hc:0.9, cL:0.12, sp:[0.7, 0.3], rr:0.34, cv:0.28, hk:0.5, gap:0.26, soft:0, dr:[0.3, 0.15], drw:0.14, drk:0.1, drh:0.3, rvT:[1.45, 1.5, 0.82], rvS:0.8, rvW:1.6, kc:[[1.088,  1.069,  1.052],  [1.081,  1.053,  1.029],  [1.11,  1.092,  1.049],  [1.134,  1.121,  1.073]]},
+  c:{base:[0.5, 0.63, 0.88], pl:[0.12, 0.09, 0.06], hu:0.03, cl:0.1, sec:0, clr:0, cf:[0.28, 0.65, 1.4], ca:[0.45, 0.4, 0.3], ct:-0.05, cw:0.45, hc:0.8, cL:0.08, sp:[0.56, 0.25], rr:0.3, cv:0.12, hk:0.4, gap:0.2, soft:1, dr:[0.6, 0.3], drw:0.28, drk:0.14, drh:0.6, rvT:[1.14, 1.2, 1.06], rvS:0.4, rvW:1.2, kc:[[1.021,  1.036,  1.035],  [1.02,  1.037,  1.003],  [1.086,  1.094,  1.017],  [1.116,  1.119,  1.02]]}};
 // the tropics' share of a forest at latitude la (degrees from the equator)
 const dtTrop = la => 1 - dtSm((la - 17)/9);
 // a crown of the jungle canopy on a jittered grid of spacing sp: like dtCrown, with a wider spread of sizes and positions (no lattice)
@@ -3733,13 +3733,13 @@ function dtCrown(x, y, sp, seed){ const cx = x/sp, cy = y/sp, ix = Math.floor(cx
 // a tile job: a coarse grid of nodes every cs px (node (i, j) at tile px (i*cs - 1, j*cs - 1), px centres at +0.5) holding everything that varies
 // slowly (warped and patch-sharpened class weights, the low relief's shading, low-frequency tones, field and dune strength, the dunes' warp),
 // interpolated per px under the fine relief, crowns, parcels, ripples, pools and grain
-const DT_NF = 24;   // node floats: 0-8 class weights, 9 low relief, 10 its shading, 11-13 tone, 14 farmland, 15 dune sea, 16-17 dune warp, 18 jungle, 19-20 its warp, 21 crown clusters, 22 secondary forest, 23 the clumps' coarsest octave
+const DT_NF = 31;   // node floats: 0-8 class weights, 9 low relief, 10 its shading, 11-13 tone, 14 farmland, 15 dune sea, 16-17 dune warp, 18 jungle, 19-20 its warp, 21 crown clusters, 22 secondary forest, 23 and 26 the clumps' two coarser octaves, 24-25 the drainage noise, 27-29 the jungle's tones, 30 its floodplains
 function dtStart(k, tx, ty, mo = 5, jv = DT_JV){ const C = dtCells(); if (!C) return null; const vN = DT_MV[mo % 12], vS = DT_MV[(mo + 6) % 12];
   const r = k < 0 ? DT_RF : DT_R[k], n = DT_N + 2*DT_A, cs = r < 4 ? 3 : Math.round(r*0.4), gw = Math.ceil((n + 2)/cs) + 2;
   if (!DT.buf || DT.buf.gw < gw){ DT.buf = {gw, g:new Float32Array(gw*gw*DT_NF)}; }
   if (!DT.Hb){ DT.Hb = new Float32Array((n + 2)*(n + 2)); DT.Tb = new Float32Array(n*n*3); }
   const g = DT.buf.g; g.fill(0, 0, gw*gw*DT_NF);
-  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq, gn:k < 0 ? DT_FG : 1, jv, JP:DT_JP[jv] || null}; }   // (k -1: a far texture tile, k*DT_N texels; jv, JP: the jungle's look)
+  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq, gn:k < 0 ? DT_FG : 1, jv, JP:DT_JP[jv] || null, half:k >= 0 && cs/r < 0.6}; }   // (k -1: a far texture tile, k*DT_N texels; jv, JP: the jungle's look)
 function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT_NF, rowStep = 1.5*HS, colStep = HS*SQ3, wq = colStep*1.15, w = new Float32Array(9);
   const b0 = Math.max(0, Math.min(1, (r/3 - 0.45)/(r/6))), bh0 = Math.max(0, Math.min(1, (r/3 - 0.22)/(r/6))), bh1 = Math.max(0, Math.min(1, (r/3 - 0.46)/(r/6)));
   for (let j = J.y; j < j1; j++){ const wy = y0 + (j*cs - 0.5)/r, la = C.lat[Math.min(H - 1, Math.max(0, Math.round((wy - OY)/rowStep)))], latF = dtSm((la - 27)/9)*(1 - dtSm((la - 54)/6));
@@ -3778,10 +3778,14 @@ function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT
       // JUNGLE: the tropical canopy's slow parts at the nodes (its share 18, the crowns' warp 19-20, the crown clusters 21, secondary forest 22) and
       // its tones: the base green, patches at three sizes, a warmer or cooler cast, lighter clusters; 'b' its secondary forest and clearings.
       // Finer than the node grid (nb) is left out here: the far texture (k -1) takes the finer patches per texel in dtRows instead
-      const wJ = wF*tJ; g[o + 18] = wJ;
-      if (wJ > 0.005){ const JP = J.JP, nq = r/cs, nb = f => Math.max(0, Math.min(1, (0.32*nq - f)/(0.12*nq)));
+      g[o + 11] = tr; g[o + 12] = tg; g[o + 13] = tb;
+      const wJ = wF*tJ; g[o + 18] = wJ; if (J.JP){ g[o + 27] = g[o + 28] = g[o + 29] = 1; }
+      if (wJ > 0.005){ const JP = J.JP, nq = r/(cs*(J.half ? 2 : 1)), nb = f => Math.max(0, Math.min(1, (0.32*nq - f)/(0.12*nq)));
         g[o + 19] = 0.75*dtPn(wx*0.45 + 3.1, wy*0.45 + 7.7); g[o + 20] = 0.75*dtPn(wx*0.45 + 9.4, wy*0.45 + 1.3);
-        { const qx = wx + g[o + 19], qy = wy + g[o + 20], R = DT_ROT[1], f = JP.cf[0]; g[o + 23] = dtPn((qx*R[0] - qy*R[1])*f + 5.3, (qx*R[1] + qy*R[0])*f + 9.1); }   // (the clumps' coarsest octave: smooth enough for the nodes)
+        if (J.k >= 0){ const qx = wx + g[o + 19], qy = wy + g[o + 20], R = DT_ROT[1], f = JP.cf[0], R2 = DT_ROT[2], f2 = JP.cf[1];   // (the slow noises of dtRows' canopy, signed, at the nodes: smooth at the
+          if (!(J.half && (i & 1 || j & 1))) g[o + 23] = dtPn((qx*R[0] - qy*R[1])*f + 5.3, (qx*R[1] + qy*R[0])*f + 9.1); g[o + 26] = dtPn((qx*R2[0] - qy*R2[1])*f2 + 18.3, (qx*R2[1] + qy*R2[0])*f2 + 2.1);   // close tiles' node spacing,
+          g[o + 24] = dtPn(qx*0.16 + 17.1, qy*0.16 + 3.3); g[o + 25] = dtPn(qx*0.42 + 48.1, qy*0.42 - 13.7); g[o + 30] = dtRvAt(wx, wy); }   // the creases' kink taken per px; the far texture's nodes are too coarse: there per texel)
+        if (J.half && (i & 1 || j & 1)){ g[o + 27] = -1; continue; }   // (fine node grids: the slow tones at every other node only, the rest filled in by dtNodeShade)
         const bc = nb(0.26), cl = bc > 0 ? bc*(dtPn(wx*0.26 + 51.7, wy*0.26 + 12.9) + 0.5*nb(0.62)*dtPn(wx*0.62 + 8.8, wy*0.62 + 44.4))*1.4 : 0; g[o + 21] = cl;
         const p1 = dtPn(wx*0.045 + 61.3, wy*0.045 + 27.1), p2 = dtPn(wx*0.12 + 14.2, wy*0.12 + 88.6), b3 = nb(0.3), p3 = b3 > 0 ? b3*dtPn(wx*0.3 + 70.4, wy*0.3 + 5.5) : 0, hu = 1.4*dtPn(wx*0.07 + 39.9, wy*0.07 + 71.3);
         const lj = 1 + 1.4*(JP.pl[0]*p1 + JP.pl[1]*p2 + JP.pl[2]*p3) + JP.cl*cl;
@@ -3790,11 +3794,16 @@ function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT
           g[o + 22] = sf; jr *= 1 + JP.sec*sf*0.16; jg *= 1 + JP.sec*sf*0.22; jb *= 1 + JP.sec*sf*0.05;
           if (cf > 0){ jr += (1.34 - jr)*cf; jg += (1.16 - jg)*cf; jb += (1.1 - jb)*cf; } }   // (clearings: bare tan earth and grass, not lime under a green tint)
         if (J.k < 0){ const gn = J.gn, gb = 1 + (gn - 1)*0.3; jr = 1 + (jr - 1)/(jr < 1 ? gn : gb); jg = 1 + (jg - 1)/(jg < 1 ? gn : gb); jb = 1 + (jb - 1)/(jb < 1 ? gn : gb); }   // (the far texture's gain is for its detail, not this shift)
-        tr *= 1 + (jr - 1)*wJ; tg *= 1 + (jg - 1)*wJ; tb *= 1 + (jb - 1)*wJ; }
-      g[o + 11] = tr; g[o + 12] = tg; g[o + 13] = tb; } }
+        g[o + 27] = 1 + (jr - 1)*wJ; g[o + 28] = 1 + (jg - 1)*wJ; g[o + 29] = 1 + (jb - 1)*wJ; } } }   // (laid into the tones by dtNodeShade)
   J.y = j1; }
 // the low relief's shading at the nodes (central differences), then the per-row latitude
 function dtNodeShade(J){ const {r, cs, gw, g, has} = J, NF = DT_NF, K = 0.26, d = cs/r;
+  if (J.JP){ const SL = [21, 22, 23, 27, 28, 29];   // JUNGLE: the slow tones of the nodes skipped (J.half) from the even nodes around them, then into the tones
+    if (J.half) for (let j = 0; j < gw; j++) for (let i = 0; i < gw; i++){ const o = (j*gw + i)*NF; if (g[o + 27] !== -1) continue;
+      const i0 = i & ~1, j0 = j & ~1, i1 = i0 + 2 < gw ? i0 + 2 : i0, j1 = j0 + 2 < gw ? j0 + 2 : j0, fx = i1 > i0 ? (i - i0)/2 : 0, fy = j1 > j0 ? (j - j0)/2 : 0;
+      const a = (j0*gw + i0)*NF, b = (j0*gw + i1)*NF, c = (j1*gw + i0)*NF, e = (j1*gw + i1)*NF;
+      for (const q of SL){ const t = g[a + q] + (g[b + q] - g[a + q])*fx; g[o + q] = t + (g[c + q] + (g[e + q] - g[c + q])*fx - t)*fy; } }
+    for (let i = 0, o = 0; i < gw*gw; i++, o += NF){ g[o + 11] *= g[o + 27]; g[o + 12] *= g[o + 28]; g[o + 13] *= g[o + 29]; } }
   for (let j = 0; j < gw; j++) for (let i = 0; i < gw; i++){ const o = (j*gw + i)*NF, il = i > 0 ? o - NF : o, ir = i < gw - 1 ? o + NF : o, ju = j > 0 ? o - gw*NF : o, jd = j < gw - 1 ? o + gw*NF : o;
     const gx = (g[ir + 9] - g[il + 9])/(d*((i > 0) + (i < gw - 1))), gy = (g[jd + 9] - g[ju + 9])/(d*((j > 0) + (j < gw - 1))); g[o + 10] = -K*(gx + gy); }
   J.pres = []; for (let c = 0; c < 9; c++) if (has[c]) J.pres.push(c);
@@ -3804,7 +3813,13 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
   const band = f => { const fm = r/3; return Math.max(0, Math.min(1, (fm - f)/(0.5*fm))); }, fmic = r/2.6, lw = Math.max(0.05, 0.9/r), ri = 1/r;
   const bR = []; for (let o = 0, f = 0.45; o < 6; o++, f *= 2) bR.push(band(f)); const spA = r < 4 ? 1.7 : 0.8, bCA = r < 4 ? 0.7 : Math.max(0, Math.min(1, (0.8*r - 2.5)/2)), bCB = Math.max(0, Math.min(1, (0.36*r - 2.5)/2)), bH2 = band(0.97), bH3 = band(2.04), dper = 1.1, bDn = Math.max(0, Math.min(1, (1.1*r - 3)/3)), bSt = band(2.6), bRk = band(1.7);
   let rci = 1e9, rcj = 1e9; const SX = new Float64Array(9), SY = new Float64Array(9), SI = new Int32Array(9); let rid = -1, rca = 1, rsa = 0, rsz = 1, rasp = 1, pci = 1e9, pcj = 1e9, qci = 1e9, qcj = 1e9; const PX = new Float64Array(9), PY = new Float64Array(9), QX = new Float64Array(9), QY = new Float64Array(9), QI = new Int32Array(9);
-  const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat(J.JP ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23] : [9, 10, 11, 12, 13, 14, 15, 16, 17]), NQ = QS.length, FC = J.k < 0 ? DT_FC : null, JP = J.JP;
+  const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat(J.JP ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 30] : [9, 10, 11, 12, 13, 14, 15, 16, 17]), NQ = QS.length, FC = J.k < 0 ? DT_FC : null, JP = J.JP, far = J.k < 0;
+  // JUNGLE: the look's numbers as locals for the px loop; its octaves and crown layers by resolution (a crown layer once its crowns are 3.6 px
+  // and more, the finest clumps from 8 px a world unit: no work on detail that hardly shows)
+  const JQ = JP || DT_JP.a, bD0 = band(0.16), bD1 = band(0.42), cF0 = JQ.cf[0], cF1 = JQ.cf[1], cF2 = JQ.cf[2], cA0 = JQ.ca[0]*band(cF0), cA1 = JQ.ca[1]*band(cF1), cA2 = r >= 8 ? JQ.ca[2]*band(cF2) : 0, cb = cA0 + cA1 + cA2, cbk = Math.min(1, cb*2);
+  const jD0 = JQ.dr[0]*bD0, jD1 = JQ.dr[1]*bD1, jDw = JQ.drw, jDh = JQ.drh, jDk = JQ.drk, jS0 = JQ.sp[0], jS1 = JQ.sp[1], bK0 = Math.max(0, Math.min(1, (jS0*r - 3.6)/2)), bK1 = Math.max(0, Math.min(1, (jS1*r - 3.6)/2));
+  const jRr = JQ.rr, jCv = JQ.cv, jHk = JQ.hk, jGap = JQ.gap, jSoft = JQ.soft, jCt = JQ.ct, jCw = JQ.cw, jHc = JQ.hc, jCL = JQ.cL, jRvS = JQ.rvS, jRvW = JQ.rvW, jRt0 = JQ.rvT[0] - 1, jRt1 = JQ.rvT[1] - 1, jRt2 = JQ.rvT[2] - 1, jP3 = 1.4*JQ.pl[2], jCl = JQ.cl;
+  const KC = far ? [1, 1, 1] : JQ.kc[J.k], jK0 = KC[0] - 1, jK1 = KC[1] - 1, jK2 = KC[2] - 1, fGn = J.gn, fGb = 1 + (J.gn - 1)*0.3, R1 = DT_ROT[1], R2 = DT_ROT[2], R3 = DT_ROT[3], R4 = DT_ROT[4];
   for (let by = J.y; by < y1; by++){ const py = by - 1, wy = y0 + (py + 0.5)*ri, gy = by/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, la = lat[by], FP = wy < J.eq ? J.fN : J.fS;
     for (let i = 0, a = j0*gw*NF, b = a + gw*NF; i < gw; i++, a += NF, b += NF) for (let q = 0; q < NQ; q++){ const c = QS[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; }   // the node rows above and below, blended for this px row
     for (let bx = 0; bx < n2; bx++){ const px = bx - 1, x = x0 + (px + 0.5)*ri, gx = bx/cs, i0 = Math.min(gw - 2, Math.floor(gx)), fx = gx - i0, o0 = i0*NF, o1 = o0 + NF;
@@ -3835,27 +3850,31 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
       // JUNGLE: the tropical canopy (see DT_JP): drainage creases, crowns at up to three sizes on warped, rotated grids (the big ones thinned
       // between the clusters and on the floodplains), shade in the gaps, the floodplains' greens; the far texture takes the finer patches here
       if (wJ > 0.005){ const qx = x + V[o0 + 19] + (V[o1 + 19] - V[o0 + 19])*fx, qy = wy + V[o0 + 20] + (V[o1 + 20] - V[o0 + 20])*fx, sf = V[o0 + 22] + (V[o1 + 22] - V[o0 + 22])*fx;
-        let cl = V[o0 + 21] + (V[o1 + 21] - V[o0 + 21])*fx, rv = dtRvAt(x, wy), jr = 1, jg = 1, jb = 1, lr = 1, lg = 1, lb = 1;   // (jr..: detail; lr..: tones)
-        if (J.k < 0){ cl = 1.4*(dtPn(x*0.26 + 51.7, wy*0.26 + 12.9) + 0.5*dtPn(x*0.62 + 8.8, wy*0.62 + 44.4)); lr = lg = lb = 1 + (1.4*JP.pl[2]*dtPn(x*0.3 + 70.4, wy*0.3 + 5.5) + JP.cl*cl)*wJ; }   // (far: the 3 and 4 world unit patches per texel)
-        rv *= JP.rvW; if (rv > 1) rv = 1;
+        let cl = V[o0 + 21] + (V[o1 + 21] - V[o0 + 21])*fx, rv, jr = 1, jg = 1, jb = 1, lr = 1, lg = 1, lb = 1;   // (jr..: detail; lr..: tones)
+        if (far){ rv = dtRvAt(x, wy); cl = 1.4*(dtPn(x*0.26 + 51.7, wy*0.26 + 12.9) + 0.5*dtPn(x*0.62 + 8.8, wy*0.62 + 44.4)); lr = lg = lb = 1 + (jP3*dtPn(x*0.3 + 70.4, wy*0.3 + 5.5) + jCl*cl)*wJ; }   // (far: the 3 and 4 world unit patches per texel)
+        else rv = V[o0 + 30] + (V[o1 + 30] - V[o0 + 30])*fx;
+        rv *= jRvW; if (rv > 1) rv = 1;
         // drainage: the valleys of a ridged noise as creases (lower, shaded, darker)
-        let dv = 0; for (let o = 0; o < 2; o++){ const f = o ? 0.42 : 0.16, bw = band(f); if (bw <= 0) continue; const e = Math.abs(dtPn(qx*f + 17.1 + 31*o, qy*f + 3.3 - 17*o)); if (e < JP.drw) dv += JP.dr[o]*bw*(1 - e/JP.drw)*(1 - e/JP.drw); }
-        if (dv > 0){ h -= wJ*JP.drh*dv; const dk = 1 - JP.drk*dv*wJ; jr *= dk; jg *= dk; jb *= dk; }
+        let dv = 0; if (bD0 > 0){ const e = Math.abs(far ? dtPn(qx*0.16 + 17.1, qy*0.16 + 3.3) : V[o0 + 24] + (V[o1 + 24] - V[o0 + 24])*fx); if (e < jDw){ const q = 1 - e/jDw; dv += jD0*q*q; } }
+        if (bD1 > 0){ const e = Math.abs(far ? dtPn(qx*0.42 + 48.1, qy*0.42 - 13.7) : V[o0 + 25] + (V[o1 + 25] - V[o0 + 25])*fx); if (e < jDw){ const q = 1 - e/jDw; dv += jD1*q*q; } }
+        if (dv > 0){ h -= wJ*jDh*dv; const dk = 1 - jDk*dv*wJ; jr *= dk; jg *= dk; jb *= dk; }
         // crown clusters: blobs of a three-octave noise on the warped ground (about 4, 1.7 and 0.8 world units; each octave shown once the
         // resolution holds it), raised and lit, dark gaps between them; fewer and lower on the floodplains and in secondary forest; then the
         // crowns themselves on them, two sizes, each layer on its own rotated jittered grid, every crown its own size and light
-        const big = Math.max(0, 1 - JP.rvS*rv - 0.5*sf); let cn = 0, cb = 0;
-        for (let o = 0; o < 3; o++){ const f = JP.cf[o], bw = band(f); if (bw <= 0) continue; const R = DT_ROT[o + 1]; cn += JP.ca[o]*bw*(o || J.k < 0 ? dtPn((qx*R[0] - qy*R[1])*f + 5.3 + 13*o, (qx*R[1] + qy*R[0])*f + 9.1 - 7*o) : V[o0 + 23] + (V[o1 + 23] - V[o0 + 23])*fx); cb += JP.ca[o]*bw; }   // (the coarsest from the nodes, but in the far texture)
-        if (cb > 0){ const hc = dtSm((1.4*cn/cb + cl*0.25 - JP.ct)/JP.cw + 0.5)*big + (1 - big)*0.5, sh = JP.soft ? hc*hc*(3 - 2*hc) : hc;
-          h += wJ*JP.hc*Math.min(1, cb*2)*sh; const tv = 1 + JP.cL*(hc - 0.5)*2*wJ*Math.min(1, cb*2); jr *= tv; jg *= tv; jb *= tv*(1 + 0.04*(0.5 - hc));
-          for (let L = 0; L < 2; L++){ const sp = JP.sp[L], bw = Math.max(0, Math.min(1, (sp*r - 2.2)/2)); if (bw <= 0) continue; const R = DT_ROT[L + 3], u = qx*R[0] - qy*R[1], v = qx*R[1] + qy*R[0];
-            const d = dtCrownJ(u, v, sp, 61 + 10*L, JP.rr), bh = DT_CH, a = bw*wJ*(0.35 + 0.65*hc);
-            if (d > 0){ const pr = JP.soft ? Math.sqrt(d) : d; h += JP.hk*sp*pr*a; const t2 = 1 + (bh - 0.5)*JP.cv*a; jr *= t2*(1 + 0.05*(bh - 0.5)*a); jg *= t2; jb *= t2*(1 - 0.06*(bh - 0.5)*a); }
-            else { const gk = JP.gap*a*(L ? 0.6 : 1); jr *= 1 - gk; jg *= 1 - 0.85*gk; jb *= 1 - 0.8*gk; } } }
+        if (cb > 0){ let cn = 0;   // (the two coarser octaves from the nodes, but in the far texture)
+          if (cA0 > 0) cn += cA0*(far ? dtPn((qx*R1[0] - qy*R1[1])*cF0 + 5.3, (qx*R1[1] + qy*R1[0])*cF0 + 9.1) : V[o0 + 23] + (V[o1 + 23] - V[o0 + 23])*fx);
+          if (cA1 > 0) cn += cA1*(far ? dtPn((qx*R2[0] - qy*R2[1])*cF1 + 18.3, (qx*R2[1] + qy*R2[0])*cF1 + 2.1) : V[o0 + 26] + (V[o1 + 26] - V[o0 + 26])*fx);
+          if (cA2 > 0) cn += cA2*dtPn((qx*R3[0] - qy*R3[1])*cF2 + 31.3, (qx*R3[1] + qy*R3[0])*cF2 - 4.9);
+          const big = Math.max(0, 1 - jRvS*rv - 0.5*sf), hc = dtSm((1.4*cn/cb + cl*0.25 - jCt)/jCw + 0.5)*big + (1 - big)*0.5, sh = jSoft ? hc*hc*(3 - 2*hc) : hc;
+          h += wJ*jHc*cbk*sh; const tv = 1 + jCL*(hc - 0.5)*2*wJ*cbk; jr *= tv; jg *= tv; jb *= tv*(1 + 0.04*(0.5 - hc));
+          for (let L = 0; L < 2; L++){ const bw = L ? bK1 : bK0; if (bw <= 0) continue; const sp = L ? jS1 : jS0, R = L ? R4 : R3, u = qx*R[0] - qy*R[1], v = qx*R[1] + qy*R[0];
+            const d = dtCrownJ(u, v, sp, 61 + 10*L, jRr), bh = DT_CH, a = bw*wJ*(0.35 + 0.65*hc);
+            if (d > 0){ const pr = jSoft ? Math.sqrt(d) : d, b5 = bh - 0.5; h += jHk*sp*pr*a; const t2 = 1 + b5*jCv*a; jr *= t2*(1 + 0.05*b5*a); jg *= t2; jb *= t2*(1 - 0.06*b5*a); }
+            else { const gk = jGap*a*(L ? 0.6 : 1); jr *= 1 - gk; jg *= 1 - 0.85*gk; jb *= 1 - 0.8*gk; } } }
         // the floodplains' greens
-        if (rv > 0.01){ const k = rv*wJ; lr *= 1 + (JP.rvT[0] - 1)*k; lg *= 1 + (JP.rvT[1] - 1)*k; lb *= 1 + (JP.rvT[2] - 1)*k; }
-        if (J.k < 0){ const gn = J.gn, gb = 1 + (gn - 1)*0.3; lr = 1 + (lr - 1)/(lr < 1 ? gn : gb); lg = 1 + (lg - 1)/(lg < 1 ? gn : gb); lb = 1 + (lb - 1)/(lb < 1 ? gn : gb); }   // (as at the nodes: the far texture's gain is for detail, not tones)
-        if (J.k >= 0){ const kc = JP.kc[J.k]; lr *= 1 + (kc[0] - 1)*wJ; lg *= 1 + (kc[1] - 1)*wJ; lb *= 1 + (kc[2] - 1)*wJ; }   // (the close tiles' detail darkens a little on the whole (gaps, creases, shade): measured per resolution with .test/map-zoom-look.js's dtProbe, so they meet the far texture's colour)
+        if (rv > 0.01){ const k = rv*wJ; lr *= 1 + jRt0*k; lg *= 1 + jRt1*k; lb *= 1 + jRt2*k; }
+        if (far){ lr = 1 + (lr - 1)/(lr < 1 ? fGn : fGb); lg = 1 + (lg - 1)/(lg < 1 ? fGn : fGb); lb = 1 + (lb - 1)/(lb < 1 ? fGn : fGb); }   // (as at the nodes: the far texture's gain is for detail, not tones)
+        else { lr *= 1 + jK0*wJ; lg *= 1 + jK1*wJ; lb *= 1 + jK2*wJ; }   // (the close tiles' detail darkens a little on the whole (gaps, creases, shade): measured per resolution with .test/map-zoom-look.js's dtProbe, so they meet the far texture's colour)
         tr *= jr*lr; tg *= jg*lg; tb *= jb*lb; }
       // farmland: Voronoi field systems (RS world units), each with its own angle and parcel size; parcels in staggered rows, hedgerows between
       const fk = (V[o0 + 14] + (V[o1 + 14] - V[o0 + 14])*fx);
