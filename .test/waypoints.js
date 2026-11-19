@@ -9,7 +9,7 @@ const fs = require('fs'), path = require('path'), ROOT = path.join(__dirname, '.
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + `\nreturn {IM, get S(){ return S; }, get G(){ return G; }, addArmy, setRel, tick, restore, saveJSON,
-  orderMove, haltArmy, addStop, undoStop, stopsOf, stopsEta, splitArmy, armyXY, provOfPt, cellCenter, portOk, pathFor, resetVis(){ visCache = null; }};`;
+  orderMove, haltArmy, addStop, undoStop, stopsOf, stopsEta, splitArmy, armyXY, provOfPt, cellCenter, portOk, pathFor, legH, embarkH, resetVis(){ visCache = null; }};`;
 const errors = [], checks = {}, log = [], ok = (k, v, i) => { checks[k] = v ? 'PASS' : 'FAIL ' + JSON.stringify(i ?? null); log.push(`${v ? 'PASS' : 'FAIL'}  ${k}${v ? '' : '  ' + JSON.stringify(i ?? null)}`); };
 const run = (k, f) => { try { f(); } catch (e){ errors.push(k + ': ' + e.stack.split('\n').slice(0, 3).join(' | ')); } };
 function game(seats = [0]){ const R = new Function(SRC)(); R.IM.api.newGame(77, 0, seats); R.S.started = true; R.S.armies.length = 0; R.resetVis(); return R; }
@@ -81,11 +81,11 @@ run('sea', () => { const R = game([0]), S = R.S, G = R.G, n = 0;
   R.addStop(f, zone, w1); R.addStop(f, zone, w2); R.addStop(f, z2, w3); ok('a fleet takes three stops on water', R.stopsOf(f).length === 3, R.stopsOf(f));
   const seen = []; for (let h = 0; h < 400 && !(idle(f) && !f.wp); h++){ R.tick(); for (const [k, w] of [[0, w1], [1, w2], [2, w3]]) if (!seen.includes(k) && f.pos && d(f.pos, w) < 1e-6) seen.push(k); }
   ok('the fleet passes them in order', JSON.stringify(seen) === '[0,1,2]', seen); ok('on water at the last one', G.P[R.provOfPt(f.pos[0], f.pos[1])].sea && d(f.pos, w3) < 1e-9);
-  // ground troops: a stop at sea from a province with no port is refused; from the port they embark there (EMBARK_H) before sailing
+  // ground troops: a stop at sea from a province with no port is refused; from the port they embark there (EMBARK_H, 45 minutes) before sailing
   const inland = G.P.find(P => !P.sea && S.owner[P.id] === n && P.nb.has(port.id) && ![...P.nb.keys()].some(v => G.P[v].sea));
   if (inland){ const g = R.addArmy(n, inland.id, {inf:2}); R.addStop(g, port.id, [port.x, port.y]); const okStop = R.addStop(g, zone, w1);
     ok('troops: a stop at sea after a stop in a port is accepted (they embark in the port)', okStop && g.wp && g.wp.length === 1);
-    let embarked = false; for (let h = 0; h < 200 && !(idle(g) && !g.wp); h++){ R.tick(); if (g.emb != null && g.at === port.id) embarked = true; }
+    let embarked = false; for (let h = 0; h < 200 && !(idle(g) && !g.wp); h++){ const was = g.to; R.tick(); if (was === null && g.at === port.id && g.to === zone && g.t*R.legH(g) <= 1 - R.embarkH(g) + 1e-6) embarked = true; }   // (the hour it sets off from the port: boarding took its share)
     ok('they embarked in the port, then reached the stop at sea', embarked && g.at === zone, {embarked, at:g.at}); } });
 
 // 7. the AI never gives stops: a 3-day all-AI game leaves no a.wp anywhere
