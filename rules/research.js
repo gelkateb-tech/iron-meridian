@@ -90,7 +90,7 @@ function rAirSpdF(n, t){ const b = UNITS[t].spd; if (n < 0 || !b || !S || !S.nat
   for (const nd of RNODES_U[t] || []){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++) v += nd.lv[i].fx.spd || 0; }
   return 1 + v/b; }
 // Command & Logistics, by level: Motorized Supply (speed), Combat Engineers (embarking time, road and rail price), Amphibious Doctrine (first day ashore; landings
-// take half the time from level I: rules/movement.js landH), Field Hospitals (damage taken)
+// take half the time from level I: rules/movement.js landH; the times are 45 minutes before the upgrades), Field Hospitals (damage taken)
 const rMoveF = n => [1, 1.2, 1.3][rLevel(n, 'log1')] || 1, rCapF = n => [1, 0.7, 0.6][rLevel(n, 'log2')] || 1, rRoadF = n => [1, 0.75, 0.65][rLevel(n, 'log2')] || 1;
 const rLandF = n => [0.67, 0.9, 1][rLevel(n, 'nav3')] || 0.67, rHospF = n => [1, 0.85, 0.8][rLevel(n, 'log3')] || 1;
 // missiles: range, speed and power by research (Cruise Missile Range / Speed, Ballistic Missile Range, Heavier Warhead)
