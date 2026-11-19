@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 in top: rifle is rearranged and pointed sideways to the left instead of forward as in the side view.

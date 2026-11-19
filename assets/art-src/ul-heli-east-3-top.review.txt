@@ -1,0 +1,2 @@
+FLAG
+- 1. Rotor blade count and arrangement do not match the reference unit's coaxial design.

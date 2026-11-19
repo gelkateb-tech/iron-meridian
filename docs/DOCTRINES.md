@@ -483,35 +483,34 @@ The group shows through the emblem stripe and the name, not the tint, so all gro
 
 **The decision.** Every one of the five groups (US/NATO, Eastern, China, Europe, Export) has its **own design for every unit**: no shared Western or Eastern family, and Export no longer borrows. Each unit has **3 looks** (levels 1-3, 4-6, 7-8), and each look is **a new generation that replaces the old model**, drawn fresh, spread across the 8 levels. The same pictures are used on the research card, in the army bar's unit details and for the map figures (`docs/RESEARCH.md` 14.4 and 14.8). Paratroopers share the infantry pictures. Missiles have names only.
 
-**Count.**
+**Count (changed 18 November 2026, second decision: three pictures per look).** Every look now has **three pictures of the same vehicle**: a side view (3/4 view, cut out, for the research tree's diamond), a card scene (the unit in action in its natural setting, for the card that opens when a node is tapped; the blue monitor tint and scanlines are drawn in code) and a top-down (for the map and army bar). Side view first; the scene and the top-down are made from it, so all three show the same shape, paint and details.
 
-| Part | Pictures |
-|---|---|
-| 24 picture sets (the 25 unit types, Paratroopers sharing the Motorized Infantry set) x 5 groups x 3 looks | 360 |
-| Five unique units, one picture each | 5 |
-| **Total** | **365** |
-
-(The 24 sets: Motorized Infantry with Paratroopers, Anti-Tank Infantry, Special Forces, Infantry Fighting Vehicle, Main Battle Tank, Mobile Artillery, Mobile SAM, Mobile Jammer, Rocket Artillery, Attack Helicopter, Interceptor, Strike Fighter, Air Superiority Fighter, Recon UAV, Swarm Drones, Strike Drone, Maritime Patrol Aircraft, AWACS, Heavy Bomber, Stealth Bomber, Frigate, Cruiser, Attack Submarine, Aircraft Carrier. The owner's rough figure of 24 x 5 x 3 + 5 = 365 is exact.)
-
-**Cost.** Batch mode, 1K, about **$0.04 a picture** planned (our own log: all 209 batch pictures averaged $0.041, the 27 made from a reference averaged $0.036, range $0.024 to $0.062).
-
-| | Pictures | Cost |
+| Part | Looks | Pictures |
 |---|---|---|
-| 365 pictures at $0.04 | 365 | **$14.60** (at $0.036: $13.14; at $0.041: $15.11) |
-| The Gemini check on every picture (estimate, see below) | 365 | about **$1.10** (about $0.003 each) |
-| **Total** | | **about $15.70** |
+| 24 picture sets (the 25 unit types, Paratroopers sharing the Motorized Infantry set) x 5 groups x 3 looks | 360 | 1,080 |
+| Five unique units, one look each | 5 | 15 |
+| **Total** | **365 looks** | **1,095 pictures** (365 x 3) |
 
-**The check's price is an estimate.** The check sends one or two pictures and a short checklist to a Gemini Flash-class text model and gets a short answer back: about 3,000 tokens in and 400 out. At the published Flash-class price I know of (about $0.30 per million in, $2.50 per million out) that is about $0.002 to $0.003. I could not reach the price page from the build session, so this is an estimate to confirm in Google AI Studio before the first run.
+(The 24 sets: Motorized Infantry with Paratroopers, Anti-Tank Infantry, Special Forces, Infantry Fighting Vehicle, Main Battle Tank, Mobile Artillery, Mobile SAM, Mobile Jammer, Rocket Artillery, Attack Helicopter, Interceptor, Strike Fighter, Air Superiority Fighter, Recon UAV, Swarm Drones, Strike Drone, Maritime Patrol Aircraft, AWACS, Heavy Bomber, Stealth Bomber, Frigate, Cruiser, Attack Submarine, Aircraft Carrier.) **Made so far: the Main Battle Tank, all 5 groups x 3 looks = 15 looks, 45 pictures (branch `unit-art`).**
 
-**Does it fit?**
+**Cost, measured on the 45 tank pictures** (batch mode, 1K; log `assets/art-src/gen-art-log.jsonl`): a picture averaged **$0.0346** (side $0.0365, scene $0.0326, top-down $0.0348); the single check on a picture averaged **$0.0033**; the three-way check on a look averaged **$0.0082**. So a look costs 3 x ($0.0346 + $0.0033) + $0.0082 = **about $0.122**.
 
-- **The balance (about $15.3):** just, or not quite. At the planned price the whole job needs about $15.70, which is about $0.40 over. At the measured reference-picture price ($0.036) it needs about $14.20 and fits with about $1.10 to spare. Either way there is no room for redone pictures.
-- **The owner's stop-and-ask line ($12 of new spending):** **no.** About $2.17 is spent since the top-up, so $9.83 is left under the line. At about $0.043 a picture with its check, that buys about **228 pictures** (the 15-tank sample and about 213 more). **About 137 pictures (about $5.90) lie beyond the line** and wait for the owner to raise it. The whole job would bring new spending to about $17.87.
-- **Order if the line stays:** the sample first, then the units seen most on the map (tank, infantry fighting vehicle, artillery, SAM, frigate, cruiser, submarine, strike fighter, interceptor, helicopter), all five groups of each unit, and the rest after the owner's decision.
+| | Count | Cost |
+|---|---|---|
+| 1,095 pictures at $0.0346 | 1,095 | about **$37.89** |
+| The single check on every picture (about $0.0033) | 1,095 | about **$3.61** |
+| The three-way check on every look (about $0.0082) | 365 | about **$2.99** |
+| **Whole job** | | **about $44.49** |
+| Already spent (the 15 tank looks: 45 pictures, 45 single checks, 15 three-way checks, plus 5 failed single checks that cost nothing and 5 repeated checks) | | about $1.83 |
+| **Still to do: 350 looks, 1,050 pictures** | | **about $42.67** |
+
+**The owner removed the $12 line** (18 November 2026, "no $12 limit, I want it perfect"). The old numbers (365 pictures, $14.60 plus $1.10 of checks, about $15.70, the 228-picture limit under the $12 line) are replaced by the table above. **Money:** the Gemini balance was $40.88 when the log stood at 255 calls and about $10.27; at the log's estimate about **$39.05** is left after the tank sets. The rest of the job needs about $42.67 plus the $5 floor gen-art keeps (it refuses a run that could take the estimated balance below $5), so about **$8.6 more** must be topped up before the last batches. The price of the check is an estimate (Google's price page could not be reached; the check model id `gemini-3.8-flash` was confirmed in Google's model list; the earlier `gemini-2.5-flash` answers 404, closed to new users).
+
+**Order:** the tank sets first (done, shown to the owner), then the units seen most on the map (tank, infantry fighting vehicle, artillery, SAM, frigate, cruiser, submarine, strike fighter, interceptor, helicopter), all five groups of each unit, then the rest, in batches of about 30 pictures, the running total and the estimated balance reported after every batch.
 
 **Today's pictures: none is kept as a look.** The owner wants one consistent set of quality ("so nothing has to be redone"), and today's pictures come from mixed sources: 14 older ones on black, 15 Higgsfield ones on white, and the research tree's separate `ri-u_*` scenes in a third, photographic style. They are dark, weathered photographs from above, they differ in size and framing, none is in the building style (`docs/ART-BIBLE.md`), and several look like one real product (the strike fighter, the heavy and stealth bombers, the AWACS, the tank and the SAM truck), which the family-look rule forbids. Mixing even one into the set would show on the research card and the map. They stay in the game only as the fall-back for a look not yet made, and go when the new set is complete. The research card's `ri-u_*` unit scenes are replaced by the new cut-outs (a code change, no picture cost).
 
-**Optional savings, for the owner to decide (none is applied).** Each saving gives up the owner's rule "every group has its own pictures" for that unit. Picture counts are 3 looks times the groups that no longer have their own; dollars include the check at about $0.043 a picture.
+**Optional savings, for the owner to decide (none is applied; the owner's answer of 18 November is "no shared designs").** Each saving gives up the owner's rule "every group has its own pictures" for that unit. The counts and dollars in this table are the earlier ones, one picture per look; multiply by three for three pictures per look.
 
 | Option | Pictures saved | Saved |
 |---|---|---|
@@ -522,7 +521,7 @@ The group shows through the emblem stripe and the name, not the tint, so all gro
 | Export shares the Eastern Stealth Bomber (section 3: the same names) | 3 | about $0.13 |
 | **All of the above** | **60** | **about $2.58**, leaving 305 pictures, about $13.10 |
 
-Even with every saving the job stays above the $12 line; it fits the balance with about $2 to spare.
+Each saved look is now three pictures: the 60 looks above are 180 pictures, about $7.3 (at about $0.122 a look). None of them is applied; with the $12 line gone they are only a way to spend less.
 
 **Picture rule for real models.** The Art Bible says "no real-product look-alikes". With real names, a picture carries the **family look** of its group (US/NATO tank: flat, angular turret; Eastern tank: low, rounded turret and reactive armour bricks; China: its own broad arrowhead turret; Europe: long, sleek, smoothly sloped; Export: a mix of widely exported older-pattern designs; a Western jet: intakes under the body; an Eastern jet: wide-spaced engines and twin tails) without copying any one real vehicle line for line. Owner's answer 18 November: yes. The Art Bible now carries the line (section "Unit pictures") and the Gemini check looks for it on every picture.
 

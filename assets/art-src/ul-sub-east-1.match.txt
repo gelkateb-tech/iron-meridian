@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): sail has a pointed tapering rear instead of a blunt vertical trailing edge, and extended masts are missing.

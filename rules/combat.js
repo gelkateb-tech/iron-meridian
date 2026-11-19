@@ -65,7 +65,7 @@ const MSL_VS = {soft:1.2, armored:1, air:0.4, naval:0.9};
 /* ---------------- Army Info: the Strength table ----------------
    For each kind of target (the owner's ten rows) the average attack, and the average defence against an attacker of that kind, of one unit of the force as it is NOW
    (current, after every modifier the rules apply in a fight in the force's province: terrain, morale and supply, stack efficiency, commander, landing, season, river,
-   shortages of fuel, iron and electronics, home soil, fortifications) and as it would be with none of them (base: the unit's research-boosted stat times the damage class table).
+   shortages of fuel, iron and electronics, home soil, the bunker) and as it would be with none of them (base: the unit's research-boosted stat times the damage class table).
    It reads the same numbers battleStep reads; it is a pure function (armyStrength(a) -> {rows, ctx}). Class mapping (what the rules have for each row):
      infantry -> class soft (an Infantry unit as the target)      armour -> class armored (a Tank)       jets -> class air (a Strike Jet)    helicopters -> class air (an Attack Helicopter)
      drones -> class air (a Strike Drone)       ships -> class naval (a Frigate)      submarines -> class naval (a Submarine; patrol planes hit them hardest)
@@ -80,18 +80,18 @@ function shortFx(o, t, k){ if (o < 0 || !S.nations[o]) return 1; const sh = S.na
   if (sh.iron && MAINT[t].iron >= 0.05*RES_K){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.85; }
   if (sh.elec && MAINT[t].elec >= 0.05*RES_K){ if (k === 'atk') f *= 0.8; if (k === 'def') f *= 0.9; }
   return f; }
-function armyStrength(a, blind = false){   // blind: a force that is not yours: the base stats of its unit types only (its research, morale and condition are not known to you)
+function armyStrength(a, blind = false, viewer = null){   // blind: a force that is not yours: the base stats of its unit types only (its research, morale and condition are not known to you); viewer: who looks (a Bunker it cannot see is left out)
   const o = a.owner, p = a.at, P = G.P[p], sea = !!P.sea, holder = S.owner[p], atkr = o !== holder, mine = o >= 0 && holder === o, N = o >= 0 ? S.nations[o] : null;
   const stv = (t, k) => blind ? UNITS[t][k] : st(o, t, k), shF = (t, k) => blind ? 1 : shortFx(o, t, k), types = UT.filter(t => a.u[t] > 0), n = types.reduce((s0, t) => s0 + a.u[t], 0);
-  const TFo = sea ? null : tuf(P.terrain || 'plains', atkr, !arctic(o)), se = stackEffs(a), mrl = a.owner < 0 ? 1 : 0.5 + 0.5*(a.m ?? 80)/100, sup = a.owner < 0 || supplied(a) ? 1 : 0.85, wear = a.air && a.air.wear ? 1 - 0.45*a.air.wear : 1;
+  const TFo = sea ? null : tuf(P.terrain || 'plains', atkr, !arctic(o)), se = stackEffs(a), mrl = a.owner < 0 ? 1 : 0.5 + 0.5*(viewer == null || bunkerSeen(p, viewer) ? moraleEff(a) : a.m ?? 80)/100, sup = a.owner < 0 || supplied(a) ? 1 : 0.85, wear = a.air && a.air.wear ? 1 - 0.45*a.air.wear : 1;
   const cB = atkr ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner'), land = a.landed != null && S.hour - a.landed < 24 ? rLandF(o) : 1, szn = atkr && season(p) ? SEASON_FX[season(p)].atk : 1;
   const riv = atkr && a.from != null && !sea && P.river.has(a.from) ? RIVER_ATK : 1;
   // factors on the attack of one unit of type t: name -> factor
   const aF = t => blind ? {} : ({morale:mrl*wear, supply:sup, terrain:TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1, stack:se[DOM_T[t]], commander:cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1),
     landing:land, season:szn, river:t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv, shortage:shortFx(o, t, 'atk')});
   // the damage taken is scaled by dF (the product of these): the defence is its inverse
-  const fort = mine ? S.bld[p].fort || 0 : 0, dd = docOf(o), sea1 = sea && ground(a) ? (shipsN(a) > 0 ? 0.75 : 1.5) : 1;
-  const dTake = t => blind ? {} : ({'home soil':mine ? 1/1.25 : 1, fortifications:mine ? Math.pow(0.8, fort) : 1, doctrine:mine && dd && dd.home && S.home[p] === o ? dd.home : 1, terrain:!sea && (mine || (holder < 0 && o < 0)) ? 1/terr(p).def : 1,
+  const bk = mine && a.to === null && !a.air && !a.fly && (viewer == null || bunkerSeen(p, viewer)) ? bunkerLv(p) : 0, dd = docOf(o), sea1 = sea && ground(a) ? (shipsN(a) > 0 ? 0.75 : 1.5) : 1;
+  const dTake = t => blind ? {} : ({'home soil':mine ? 1/1.25 : 1, bunker:1 - bunkerRed(bk), doctrine:mine && dd && dd.home && S.home[p] === o ? dd.home : 1, terrain:!sea && (mine || (holder < 0 && o < 0)) ? 1/terr(p).def : 1,
     'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1, 'dug in':digF(a)});
   const out = [];
   for (const R of STR_ROWS){
@@ -123,7 +123,7 @@ function armyStrength(a, blind = false){   // blind: a force that is not yours: 
     const fin = (W, why) => { for (const k in W){ const [sw, w] = W[k], f = w > 0 ? sw/w : 1; if (Math.abs(f - 1) > 0.004) why.push([k, f]); } };
     fin(wa, row.atk.why); fin(wd, row.def.why);
     out.push(row); }
-  return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, dug:!blind && digF(a) < 1, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), supplied:sup === 1}};
+  return {rows:out, units:n, ctx:{blind, attacking:atkr, home:mine, dug:!blind && digF(a) < 1, terrain:sea ? 'Open sea' : terr(p).name, stack:stackPenalty(a), morale:Math.round(a.m ?? 80), moraleEff:Math.round(blind || !bk ? a.m ?? 80 : moraleEff(a)), bunker:blind ? 0 : bk, supplied:sup === 1}};
 }
 /* ---------------- Unit stats by research (the research card's i button) ----------------
    unitStrength(n, t, T): the full stats of ONE unit of type t for nation n with the research levels T ({node id: level}; omitted: the nation's own),
@@ -137,11 +137,11 @@ function unitStrength(n, t, T){
   const N = n >= 0 && S.nations[n] ? S.nations[n] : null, U = UNITS[t], dc = N ? DOCTRINES[N.doc] : null; T = T || (N && N.tech) || {};
   const lv = id => T[id] != null ? +T[id] || 0 : RN[id] && RN[id].std ? 1 : 0, hasT = id => lv(id) > 0, air = U.cls === 'air';
   const stat = k => { let v = U[k] || 0; for (const nd of RNODES_U[t] || []){ const l = +T[nd.id] || 0; for (let i = 0; i < l && i < nd.lv.length; i++){ const x = nd.lv[i].fx[k]; if (x) v += x; } }
-    if (k === 'atk' || k === 'def'){ v *= MARK_F[Math.min(3, +T[t + (k === 'atk' ? '_fp' : '_pr')] || 0) + 1]; if (dc) v *= dc[k] || 1; } return v; };   // (as st(), without shortages)
+    if (k === 'atk' || k === 'def'){ v *= MARK_F[rMarkT(T, t, k === 'atk' ? 'fp' : 'pr') + 1]; if (dc) v *= dc[k] || 1; } return v; };   // (as st(), without shortages)
   const mo = k => { const r = R_VS[t] && R_VS[t][k]; return r && lv(r[0]) >= (r[2] || 1) ? r[1] : mult(t, k); }, mU = u => U.vsU && U.vsU[u] != null ? U.vsU[u] : mo(UNITS[u].cls);
   const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
-  const atk = stat('atk'), def = stat('def');
-  const vis = uav ? uav.vis : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
+  const atk = stat('atk'), def = stat('def'), uavK = [1, 1.15, 1.3][lv('drone_sens')] || 1;
+  const vis = uav ? Math.round(uav.vis*uavK) : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
     : U.vis*((t === 'at' && hasT('at_eye')) || (t === 'spec' && hasT('spec_eye')) ? 1.5 : 1);
   const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
   const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*(U.spd ? stat('spd')/U.spd : 1)*24 : stat('spd'))*KM_HEX/10)*10;   // (aircraft: flight speed with the research speed bonus, rAirSpdF)
@@ -198,10 +198,10 @@ function enemiesAt(p, owner){ const l = byAt(p); return (l || S.armies).some(a =
 // (provinces with no such force share one empty, frozen list: the callers only read the lists)
 const IDX0 = Object.freeze([]);
 function index(){ const by = new Array(G.P.length).fill(IDX0); for (const a of S.armies) if (a.to === null && !a.fly && !a.air){ const l = by[a.at]; if (l === IDX0) by[a.at] = [a]; else l.push(a); } return by; }
-// a force is dug in when it has stood 12 game hours or more on its own ground (or in a friendly fortified province), or holds the Defend stance
+// a force is dug in when it has stood 12 game hours or more on its own ground (or in a friendly province with a working Bunker), or holds the Defend stance
 const DIG_H = 12;
 const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length && !G.P[a.at].sea && count(a) > 0 &&
-  (a.stance === 'defend' || (a.still != null && S.hour - a.still >= DIG_H && (S.owner[a.at] === a.owner || (S.bld[a.at].fort > 0 && S.owner[a.at] >= 0 && a.owner >= 0 && friendly(a.owner, S.owner[a.at])))));
+  (a.stance === 'defend' || (a.still != null && S.hour - a.still >= DIG_H && (S.owner[a.at] === a.owner || (bunkerLv(a.at) > 0 && S.owner[a.at] >= 0 && a.owner >= 0 && friendly(a.owner, S.owner[a.at])))));
 // a dug-in force defending where it stands takes DIG_DEF times the damage in the open (1/1.1: +10% defence IN TOTAL) and DIG_CITY times inside a city
 // (a province with a city: 1/1.25, +25% defence); the owner's rule, replacing the old flat +10% (the city figure REPLACES the open one, it is not added on top; nothing
 // else stacks from being dug in: fortifications, terrain and home soil are separate), like home soil and fortifications: in its
@@ -210,6 +210,53 @@ const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length &&
 const DIG_DEF = 1/1.1, DIG_CITY = 1/1.25;
 const digP = p => G.P[p] && G.P[p].city ? DIG_CITY : DIG_DEF;   // (the dug-in damage factor of a province: DIG_CITY in a city, DIG_DEF in the open)
 const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? digP(a.at) : 1;
+/* ---------------- The Bunker (BUILD.fort, levels 1-5; owner #17; the table: BUNKER_LV in rules/data.js, docs/COMBAT.md section 7) ----------------
+   - the garrison (the province holder's own forces standing there) takes red less damage from everything that strikes it there: battles, ranged
+     fire, air strikes, UAV missiles, cruise and ballistic missiles (bunkerF). It multiplies with being dug in, home soil and terrain, as the old
+     Fortifications did: a level 5 bunker in a city with a dug-in garrison takes 0.18/1.25 = 14.4% of the damage
+   - the garrison's morale counts mrl higher, at most 100 (moraleEff: its fighting strength, moraleF, and the point where it breaks)
+   - the people: war damage costs the province red less of its population (warDamage, rules/economy.js)
+   - the other buildings of the province: "up to level 1": every hit on another building (a level wrecked by bombers, a ballistic missile, a precision
+     strike or sabotage; a knock-out) is averted, or cut short, as level 1's protection says (BUNKER_SHIELD_LV: 33%), whatever the bunker's level
+   - its own health (hp): a hit on the bunker takes BUNKER_HIT; it loses a level when its health falls to the level below's (a level 5 bunker,
+     125, is down to 4 at 95 and gone at 0: seven hits). It repairs BUNKER_FIX an hour; a lost level is built again. S.bhp[p] holds a damaged
+     bunker's health (none: full)
+   - knocked out (a precision strike), it protects nothing until it works again; it costs its upkeep (income0) all the same
+   - hidden from other nations: what they see of it is rules/vision.js bunkerSeen. The computer reads it, as it reads every building */
+const bunkerLv = p => { const B = S.bld[p], l = B ? B.fort || 0 : 0; return l > 0 && !bdis(p, 'fort') ? Math.min(BUNKER_LV.length - 1, l) : 0; };   // the working level
+const bunkerRed = l => l > 0 ? BUNKER_LV[Math.min(BUNKER_LV.length - 1, l)].red : 0;
+const bunkerF = (b, p) => b.owner >= 0 && b.owner === S.owner[p] ? 1 - bunkerRed(bunkerLv(p)) : 1;   // the damage factor of force b standing in p
+const bunkerShield = p => bunkerRed(Math.min(BUNKER_SHIELD_LV, bunkerLv(p)));   // the share of a hit on another building that it averts
+// the garrison's morale: a force of the holder standing in its bunker's province counts its morale mrl higher (at most 100)
+const bunkerMrl = a => { if (a.air || a.fly || a.to !== null || a.owner < 0 || S.owner[a.at] !== a.owner || !(S.bld[a.at].fort > 0)) return 0; const l = bunkerLv(a.at); return l ? BUNKER_LV[l].mrl : 0; };
+const moraleEff = a => { const m = a.m ?? 80, b = a.owner >= 0 && S.bld ? bunkerMrl(a) : 0; return b ? Math.min(100, m*(1 + b)) : m; };
+const bunkerHpMax = l => l > 0 ? BUNKER_LV[Math.min(BUNKER_LV.length - 1, l)].hp : 0;
+const bunkerHp = p => { const l = S.bld[p].fort || 0; if (!l) return 0; const h = S.bhp && S.bhp[p]; return h != null ? Math.min(h, bunkerHpMax(l)) : bunkerHpMax(l); };
+const bunkerFull = p => { if (S.bhp) delete S.bhp[p]; };   // (a level built or lost: the bunker stands at its level's full health)
+// a hit of `dmg` health on the bunker in p: the levels it loses ({lost, hp, lv})
+function bunkerHit(p, dmg){ const B = S.bld[p], l0 = B.fort || 0; if (!l0) return {lost:0, hp:0, lv:0};
+  let h = Math.max(0, bunkerHp(p) - dmg), l = l0; while (l > 0 && h <= bunkerHpMax(l - 1)) l--;
+  B.fort = l; if (!l || h >= bunkerHpMax(l)) bunkerFull(p); else (S.bhp || (S.bhp = {}))[p] = h;
+  return {lost:l0 - l, hp:l ? h : 0, lv:l}; }
+// one hit on building k of province p (bombs, a ballistic missile, a precision strike's lost level, sabotage): the bunker takes it on its health;
+// another building loses a level unless the bunker's shield averts it (a roll, only while a bunker works there). The result says what happened
+function bldHit(p, k){ if (k === 'fort'){ const r = bunkerHit(p, BUNKER_HIT); return {k, bunker:true, lost:r.lost, hp:r.hp, lv:r.lv}; }
+  const sh = bunkerShield(p); if (sh > 0 && rng() < sh) return {k, shielded:true, lost:0};
+  S.bld[p][k]--; return {k, lost:1}; }
+// the owner's private word on what its bunker took or saved in a strike (the attacker is told only what it wrecked: the bunker stays hidden)
+function bunkerNews(p, hits, by){ const o = S.owner[p]; if (!isSeat(o) || !hits.length) return;
+  const bk = hits.filter(h => h.bunker), sh = hits.filter(h => h.shielded).length, nm = G.P[p].cityName || G.P[p].name, l = S.bld[p].fort || 0;
+  const t = [bk.length ? (bk.some(h => h.lost) ? (l ? `your Bunker was damaged to level ${ROMAN[l]} (health ${Math.round(bunkerHp(p))}/${bunkerHpMax(l)})` : 'your Bunker was destroyed') : `your Bunker took ${bk.length} hit${bk.length > 1 ? 's' : ''} (health ${Math.round(bunkerHp(p))}/${bunkerHpMax(l)})`) : '',
+    sh ? `it shielded ${sh} other building${sh > 1 ? 's' : ''}` : ''].filter(Boolean);
+  if (t.length) tell(o, `${by ? by + ' at ' : 'At '}${nm}: ${t.join('; ')}.`, bk.some(h => h.lost) ? 'bad' : 'info', p); }
+// repairs: every damaged bunker mends BUNKER_FIX health an hour (rules/tick.js)
+function bunkerHour(){ if (!S.bhp) return; for (const k in S.bhp){ const p = +k, l = S.bld[p] ? S.bld[p].fort || 0 : 0; if (!l){ delete S.bhp[k]; continue; } S.bhp[k] += BUNKER_FIX; if (S.bhp[k] >= bunkerHpMax(l)) delete S.bhp[k]; } }
+// the garrison's protection at each level, worked out from the rules' own numbers (BUNKER_LV, DIG_DEF, DIG_CITY, buildCost): the build panel's
+// table and docs/COMBAT.md (tools/bunker-table.js). n: whose price (Combat Engineers halve it; -1: the base price)
+function bunkerTable(n = -1){ const out = [];
+  for (let l = 1; l < BUNKER_LV.length; l++){ const L = BUNKER_LV[l], f = 1 - L.red, c = buildCost(n, 'fort', l, -1);
+    out.push({lv:l, hp:L.hp, take:f, less:L.red, lessOpen:1 - f*DIG_DEF, lessCity:1 - f*DIG_CITY, mrl:L.mrl, upk:L.upk, shield:bunkerRed(Math.min(BUNKER_SHIELD_LV, l)), cost:c, days:c.h/24}); }
+  return out; }
 function endBattle(p){
   const B = S.bt && S.bt[p]; if (!B) return; delete S.bt[p];
   const os = Object.keys(B.s).map(Number);
@@ -236,7 +283,7 @@ function battleReport(p, B, os, me){ const D = desk(me);
    It runs in every 15-minute battle step (rules/tick.js), each step a quarter (1/BATTLE_Q) of the hourly damage; BATTLE_PACE does not apply.
    Damage per hour of a unit type: n × attack × K × RANGED_F (the old artillery shelling factor), × morale and supply, × the Artillerist commander
    (guns), × the force's stack efficiency, × a ±20% roll, × the target province's cover for shells (terrain .art, at most 1; none at sea), and the
-   holder's fortifications; Long-Range Bombardment (crui_rng) +30% for cruisers against the coast. Each unit type's damage is shared by the forces
+   holder's bunker (bunkerF); Long-Range Bombardment (crui_rng) +30% for cruisers against the coast. Each unit type's damage is shared by the forces
    of the fired-at group that it reaches, by their health, as in a battle.
    Target: the player's Bombard order (a.tgt: {id} one force, {p} the forces in one province; orderBombard) while it is in range and seen; else
    the province holding the strongest visible enemy power in range (as the old rule chose a province). */
@@ -298,7 +345,7 @@ function rangedStep(hourly){ let grid = null, gone = false, IW = null;
       for (const e of hit){ let d = av.get(e); if (!d) av.set(e, d = {soft:0, armored:0, air:0, naval:0}); for (const k of CLASSES) d[k] += b0*multO(a.owner, t, k)/tot; } }
     if (!base) continue;
     for (const [e, d] of av){ const b = e.b, h0 = effHP(b), u0 = count(b);
-      hurt(b, d, (land && b.owner === S.owner[best] ? Math.pow(0.8, S.bld[best].fort || 0) : 1)*digF(b));
+      hurt(b, d, (land ? bunkerF(b, best) : 1)*digF(b));
       const lost = Math.max(0, h0 - effHP(b)), k = a.id + ':' + b.id, R = RANGED_SHOWN.get(k); if (R) R.lost += lost; else RANGED_SHOWN.set(k, {a, b, p:b.at, lost, x:e.x, y:e.y});
       if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); if (!count(b)) gone = true; } }
     cmdXP(a, base*0.4); if (land) warDamage(best, 1.2/BATTLE_Q);
@@ -346,7 +393,7 @@ function hurt(a, d, f){
 function capture(p, O){
   const prev = S.owner[p], wasCap = isCapital(p);
   IM.emit('fxCapture', p, O, prev);   // before the owner changes: the client marks the capture on the map
-  S.owner[p] = O; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1);
+  S.owner[p] = O; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1); bunkerFull(p);   // (a captured bunker loses a level; the new holder now knows it)
   for (const a of S.armies) if (a.hrt === p) delete a.hrt;   // (the heart reached: done with, rules/movement.js atHeart)
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
@@ -378,14 +425,17 @@ function stanceHour(){
       else if (a.home !== a.at && !S.armies.some(b => b !== a && atWar(me, b.owner) && b.at === a.at)){ const pth = pathFor(a, a.at, a.home); if (pth.length){ a.path = pth; } else a.home = a.at; } }
   }
 }
+// (the bunker in t as the attacker knows it: a person's nation sees a foreign bunker only as rules/vision.js bunkerSeen allows, so its odds leave out an
+// unseen bunker's protection and its garrison's morale bonus; the computer reads it, as it reads every building)
 function oddsParts(a, t, foes, dirs, via = null){ if (dirs === undefined) dirs = plannedDirs(a, t, via);
-  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b)*stackDmg(b)/digF(b), 0);   // (a dug-in defender: DIG_DEF)   // (stack efficiency per force)
-  const defOwn = foes.some(b => b.owner === S.owner[t]), ownBonus = (G.P[t].sea ? 1 : terr(t).def)*1.25/Math.pow(0.8, S.bld[t].fort || 0);
+  const bkR = bunkerLv(t), bk = bkR && isSeat(a.owner) && !bunkerSeen(t, a.owner) ? 0 : bkR, hid = bk !== bkR ? b => { const m = b.m ?? 80, e = moraleEff(b); return e === m ? 1 : (0.5 + 0.5*e/100)/(0.5 + 0.5*m/100); } : () => 1;
+  const F = frontage(t), fn = foes.reduce((s, b) => s + count(b), 0), raw = foes.reduce((s, b) => s + power(b)*stackDmg(b)/digF(b)/hid(b), 0);   // (a dug-in defender: DIG_DEF)   // (stack efficiency per force)
+  const defOwn = foes.some(b => b.owner === S.owner[t]), ownBonus = (G.P[t].sea ? 1 : terr(t).def)*1.25/(1 - bunkerRed(bk));
   let d = raw*frontScale(fn, F)*(defOwn ? ownBonus : 1);
   const pv = via != null ? via : (a.to ?? a.at), river = !G.P[t].sea && G.P[t].river.has(pv) && S.owner[t] !== a.owner;
-  const fitA = terrFit(a, t, S.owner[t] !== a.owner), fitD = foes.length ? foes.reduce((s, b) => s + power(b)*stackDmg(b)*terrFit(b, t, S.owner[t] !== b.owner), 0)/Math.max(1e-6, raw) : 1; d *= fitD;
+  const fitA = terrFit(a, t, S.owner[t] !== a.owner), fitD = foes.length ? foes.reduce((s, b) => s + power(b)*stackDmg(b)/hid(b)*terrFit(b, t, S.owner[t] !== b.owner), 0)/Math.max(1e-6, raw) : 1; d *= fitD;
   const sk = stackPenalty(a);
-  return {stack:sk, mine:power(a)*stackDmg(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs)*(river ? RIVER_ATK : 1)*(S.owner[t] === a.owner ? ownBonus : 1)*fitA, theirs:d, raw, river, dirs, defOwn, fitA, fitD};
+  return {stack:sk, mine:power(a)*stackDmg(a)*frontScale(count(a), sideFront(t, dirs))*flankF(dirs)*(river ? RIVER_ATK : 1)*(S.owner[t] === a.owner ? ownBonus : 1)*fitA, theirs:d, raw, river, dirs, defOwn, fitA, fitD, bunker:bk};
 }
 function odds(a, t, foes, dirs, via){
   if (!foes.length) return Infinity;

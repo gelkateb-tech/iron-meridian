@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): muzzle brake is missing from the barrel tip, and two rear external fuel drums were added.

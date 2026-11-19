@@ -1,0 +1,2 @@
+FLAG
+- 1. Stowage on rear deck (log and fuel drum) is mirrored compared to the reference.

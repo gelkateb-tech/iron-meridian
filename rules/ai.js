@@ -140,9 +140,15 @@ let PPC = {v:-1, m:null};
 function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S || !keep()){ if (PPC.v === tickVer && PPC.S === S) return PPC.m; const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a), 1/digF(a)]); } if (!keep()) return m; PPC = {v:tickVer, S, m}; } return PPC.m; }
 function defPower(p, n){
   let d = 0; for (const [o, pw, dg] of (provPowers().get(p) || [])) if (o !== n) d += pw*(dg || 1);   // (dg: 1/DIG_DEF for a dug-in defender)
-  if (S.owner[p] !== n){ d *= 1.25/Math.pow(0.8, S.bld[p].fort)*(G.P[p].sea ? 1 : terr(p).def); }   // the AI reads terrain: dug in on a mountain counts for more
+  if (S.owner[p] !== n){ d *= 1.25/(1 - bunkerRed(bunkerLv(p)))*(G.P[p].sea ? 1 : terr(p).def); }   // (the computer reads a foreign Bunker, as it reads every building)   // the AI reads terrain: dug in on a mountain counts for more
   return d;
 }
+// the Bunker level the computer wants in its city p (levels 1-5): its capital, once enemy forces stand next to it, level 3 (5 for an empire
+// of over 150 provinces, 4 with money to spare; the old Fortifications II and III), and level 1 whenever it is at war (2 with money to spare); another city with
+// buildings worth shielding (a Missile Silo, Airbase II, Naval Yard II, Army Base III) level 1 when enemies stand next to it and money allows
+function aiBunkerWant(n, p, N, provs){ const thr = threatNear(p, n);
+  if (p === N.capital) return thr ? (provs > 150 ? 5 : N.cash > 500 ? 4 : 3) : warsOf(n).length ? (N.cash > 350 ? 2 : N.cash > 90 ? 1 : 0) : 0;
+  const B = S.bld[p]; return thr && N.cash > 250 && (B.silo > 0 || B.air >= 2 || B.yard >= 2 || B.fac >= 3) ? 1 : 0; }
 function threatNear(p, n){ return G.P[p].nbs.some(v => (byAt(v) || S.armies).some(a => a.at === v && a.owner >= 0 && atWar(n, a.owner) && count(a) > 0)); }
 const EMC = {};
 function enemyMix(n){
@@ -553,7 +559,7 @@ function aiTurn0(n, N){
   for (const p of ownedBy(n)){
     if (!G.P[p].city) continue;
     if (!S.cons[p]){
-      if (p === N.capital && (threatNear(p, n) ? S.bld[p].fort < (provs > 150 ? 3 : 2) : warsOf(n).length && S.bld[p].fort < 1 && N.cash > 90)) build(n, p, 'fort');
+      if (S.bld[p].fort < aiBunkerWant(n, p, N, provs) && (p === N.capital || rng() < 0.25)) build(n, p, 'fort');
       else if (INF_NEEDS.includes('rec') && !S.bld[p].rec && N.cash > (p === N.capital ? 40 : 80) && (p === N.capital || rng() < 0.3)) build(n, p, 'rec');   // (INF_NEEDS with 'rec': infantry also needs a Recruiting Office)
       else if (!S.bld[p].fac && (p === N.capital ? N.cash > 40 : N.cash > 110 && (S.bld[p].rec || rng() < 0.15) && aiBases(n) < Math.max(2, Math.ceil(ownedBy(n).filter(p => G.P[p].city).length*AI_BASE_Q)))) build(n, p, 'fac');   // infantry and every ground unit come from an Army Base: the capital first (a capital moved after a loss gets one at once), then about one city in three (they pay nothing), Recruiting Office cities first
       else if ((has(n, 'u_jet') || has(n, 'u_int')) && !S.bld[p].air && N.cash > 140 && ownedBy(n).filter(p => S.bld[p].air).length < 2) build(n, p, 'air');

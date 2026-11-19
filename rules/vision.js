@@ -80,30 +80,33 @@ const visProvsAt = (x, y, km) => { const a = visProvsIn([x, y, x, y, km*KM_W]), 
 function visibleSet(n){
   const C = keep() ? visCache || (visCache = new Map()) : new Map(), v0 = (visCache || C).get(n); if (v0) return v0;   // (keep: rules/core.js)
   const v = new Set(); v.n = n; C.set(n, v);
-  const al = new Set([n, ...alliesOf(n)]), whole = new Set(), ids = [], locs = [], uav = new Set(), loc = new Set(), sonar = new Set();
-  const circ = (x, y, km, k = VK.id) => { if (km > 0) ids.push([x, y, x, y, km*KM_W, k]); };
+  const al = new Set([n, ...alliesOf(n)]), whole = new Set(), ids = [], locs = [], uav = new Set(), loc = new Set(), sonar = new Set(), idn = [];
+  const circ = (x, y, km, k = VK.id, rc = false) => { if (km > 0){ const s = [x, y, x, y, km*KM_W, k]; ids.push(s); if (rc) idn.push(s); } };   // (rc: a recon range: it also identifies)
   // a nation's land (and its allies') shows itself; cities and airbases see around their point
   for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])){ whole.add(p); const P = G.P[p], ab = S.bld[p] && S.bld[p].air; if (P.city || ab) circ(P.x, P.y, Math.max(P.city ? VIS_KM.city : 0, ab ? VIS_KM.airbase : 0)); }
   if (S.reveal) for (const k in S.reveal) if (S.reveal[k] > S.hour) whole.add(+k);
   for (const a of S.armies){ if (!al.has(a.owner)) continue; const f = a.fly;
     if (f && f.ph === 'over'){ const T = G.P[f.tgt];
-      if (f.kind === 'recon' && a.u.drone) circ(T.x, T.y, uavOf(a.owner).vis, VK.uav);   // UAV: identifies everything around its target
-      else if (f.kind === 'hunt') circ(T.x, T.y, visMpaKm(a.owner), VK.sea);   // maritime patrol: ships and submerged subs
-      else if (f.kind === 'orbit'){ locs.push([T.x, T.y, T.x, T.y, visAewKm(a.owner)*KM_W]); if (a.u.awacs && has(a.owner, 'awacs_g2')) circ(T.x, T.y, visAewKm(a.owner)/2); } }   // AWACS radar: location only
+      if (f.kind === 'recon' && a.u.drone) circ(T.x, T.y, uavOf(a.owner).vis, VK.uav, true);   // UAV: identifies everything around its target
+      else if (f.kind === 'hunt') circ(T.x, T.y, visMpaKm(a.owner), VK.sea, true);   // maritime patrol: ships and submerged subs
+      else if (f.kind === 'orbit'){ locs.push([T.x, T.y, T.x, T.y, visAewKm(a.owner)*KM_W]); if (a.u.awacs && has(a.owner, 'awacs_g2')) circ(T.x, T.y, visAewKm(a.owner)/2, VK.id, true); } }   // AWACS radar: location only
     if (!a.air && !a.fly && G.P[a.at].sea && shipsN(a)){ sonar.add(a.at); const far = a.u.frig && has(a.owner, 'frig_sonar'); for (const q of G.P[a.at].nbs) if (G.P[q].sea){ sonar.add(q); if (far) for (const w of G.P[q].nbs) if (G.P[w].sea) sonar.add(w); } }   // warships hear submarines close by
     if (f && a.u.awacs && a.u.awacs === count(a)) continue;   // early warning radar locates, it never identifies
     if (f){ const [x, y] = flightPos(a); let km = a.air ? 0 : VIS_KM.air;   // aircraft see around them as they fly (an air drop: its transports)
       if (a.air) for (const t of AIR_T) if (a.u[t] > 0) km = Math.max(km, UNITS[t].vis);
-      if (f.ph === 'patrol' || f.kind === 'recon') km = Math.max(km, VIS_KM.patrol); circ(x, y, km); continue; }
+      if (f.ph === 'patrol' || f.kind === 'recon') km = Math.max(km, VIS_KM.patrol);
+      const dr = a.air && VIS_DRONE.some(t => a.u[t] > 0); circ(x, y, km, VK.id, dr); continue; }   // (a drone in flight is recon: it identifies what it sees)
     if (a.air) continue;
-    const [x, y] = armyXY(a); circ(x, y, armyVisKm(a), VK.gf); if (a.to !== null) whole.add(a.to); }   // a force: around its spot, and the province it is moving to
-  for (const st of (S.sats || [])) if (al.has(st.owner)) ids.push([...satStrip(st), VK.id]);
+    const [x, y] = armyXY(a); circ(x, y, armyVisKm(a), VK.gf); if (a.to !== null) whole.add(a.to);   // a force: around its spot, and the province it is moving to
+    if (a.u.spec > 0) idn.push([x, y, x, y, UNITS.spec.vis*rSightF(a.owner, 'spec')*KM_W, VK.gf]); }   // Special Forces (the recon unit) identify within their own sight
+  for (const st of (S.sats || [])) if (al.has(st.owner)){ const s = [...satStrip(st), VK.id]; ids.push(s); idn.push(s); }   // (a reconnaissance satellite identifies along its strip)
+  const idp = new Set(); if (S.intel) for (const m of al){ const I = S.intel[m]; if (I) for (const k in I) if (I[k] > S.hour) idp.add(+k); }   // recon reveals still running (intelNote)
   /*@DEV*/if (DEV.reveal) for (let p = 0; p < G.P.length; p++) whole.add(p);/*@ENDDEV*/   // (in sight = identified; armyVisible shows hidden subs and special forces too)
   for (const p of whole) v.add(p);
   for (const s of ids){ const k = s[5], put = p => { if (k === VK.sea && !G.P[p].sea) return; v.add(p); if (k === VK.uav) uav.add(p); if (k === VK.sea) sonar.add(p); };
     visEach(s, put); const c = worldToCell(s[0], s[1]); if (c >= 0 && G.prov[c] >= 0) put(G.prov[c]); }   // (and the province the sensor stands in)
   for (const s of locs) visEach(s, p => loc.add(p));
-  for (const q of v) loc.delete(q); v.uav = uav; v.loc = loc; v.sonar = sonar; v.whole = whole; v.ids = ids; v.locs = locs; v.seen = new Map();
+  for (const q of v) loc.delete(q); v.uav = uav; v.loc = loc; v.sonar = sonar; v.whole = whole; v.ids = ids; v.locs = locs; v.seen = new Map(); v.idn = idn; v.idp = idp; v.known = new Map();
   let h = v.size; for (const p of v) h = (h*31 + p) | 0; for (const s of ids) h = (h*31 + Math.round(s[0]*4) + 7*Math.round(s[1]*4) + 13*Math.round(s[2]*4) + 17*Math.round(s[4]*4)) | 0; v.key = h;
   return v;
 }
@@ -124,6 +127,41 @@ function armySeen(a, vis){ const me = vis.n;
   else if (W0.has(a.at) || (a.to !== null && W0.has(a.to))) return true;   // on own or allied land, revealed, or where a force of yours is going
   for (const s of ids) if ((s[5] !== VK.sea || sea) && visIn(s, x, y)) return true;
   return false; }
+/* Identified or only spotted (owner's rule, 2026-11-18, as in Conflict of Nations): seeing a foreign force (armyVisible) only tells that something
+   is there. Its nation, size, unit types and name are known only once it is identified (armyKnown), by proper recon or by fighting it:
+   - a UAV on station (everything inside its range: uavOf vis, UAV_LV with Wide-Area Sensors +15% / +30%), and the provinces under it for its loiter plus 12 h after it arrives (S.intel,
+     intelNote), the same span as its reveal; an agent's reconnaissance: the target and its neighbours for 3 days
+   - a drone wing in flight (Recon UAV, Strike Drones, Swarm Drones): inside its own sight
+   - a reconnaissance satellite: its strip this hour; the Phased-Array AWACS: within half its radar range (a plain AWACS only locates: '?')
+   - a maritime patrol on a hunt (its range, ships at sea) and warships' sonar (their own sea zone and the ones next to it): ships at sea
+   - a Mobile SAM or jammer (radar): aircraft in flight over its province or the ones next to it
+   - Special Forces: inside their own sight (100 km, 150 with Night Optics)
+   - battle: a force in a province where a force of yours (or an ally's) is fighting, for as long as the battle lasts
+   Ordinary sight (any other unit, infantry included, cities, airbases, own land, a revealed province, aircraft, a plain AWACS) only spots.
+   Own and allied forces are always known. Nothing is remembered once the recon has gone, except the UAV's and the agent's span.
+   The rules themselves never ask (the AI plays on the full state; ranged fire needs only a spotted target): this is what a seat's screen shows. */
+const isAlly = (me, o) => o >= 0 && me >= 0 && friendly(me, o) && rel(me, o).st === 'ally';
+function armyKnown(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
+  if (a.owner === vis.n || isAlly(vis.n, a.owner)) return true;
+  if (!armyVisible(a, vis)) return false;
+  const M = vis.known, c = M && M.get(a); if (c !== undefined) return c;
+  const r = armyIdent(a, vis); if (M) M.set(a, r); return r; }
+function armyIdent(a, vis){ const me = vis.n, [x, y] = armyXY(a), sea = !a.air && !a.fly && G.P[a.at].sea;
+  const p0 = a.fly ? (c => c >= 0 ? G.prov[c] : -1)(worldToCell(x, y)) : a.at;
+  if (vis.idp && p0 >= 0 && (vis.idp.has(p0) || (!a.fly && a.to !== null && vis.idp.has(a.to)))) return true;   // a recon reveal still running
+  if (!a.fly && !a.air && a.to === null && S.battles.includes(a.at) && atWar(me, a.owner) && stationaryAt(a.at).some(b => count(b) > 0 && (b.owner === me || isAlly(me, b.owner)))) return true;   // fighting it
+  if (sea && vis.sonar && (vis.sonar.has(a.at) || (a.to !== null && vis.sonar.has(a.to)))) return true;   // ships at sea: sonar, maritime patrol
+  if (a.fly && p0 >= 0 && (loSpotted(me, p0) || alliesOf(me).some(m => loSpotted(m, p0)))) return true;   // aircraft over a Mobile SAM's or jammer's radar
+  for (const s of vis.idn || []) if ((s[5] !== VK.sea || sea) && visIn(s, x, y)) return true;
+  return false; }
+// what nation vis.n may be told about force a: null when not seen; only where it is when it is not identified ({unk:true}: no nation, size, types,
+// name or health); the whole force once identified (a host that sends a seat its view, a later server, sends this and nothing more)
+function armyView(a, vis){ if (!armyVisible(a, vis)) return null; const [x, y] = armyXY(a), base = {id:a.id, at:a.at, to:a.to, x, y, air:!!a.air, fly:!!a.fly};
+  if (!armyKnown(a, vis)) return {...base, unk:true};
+  const u = {}; for (const t of UT) if (a.u[t]) u[t] = a.u[t]; return {...base, unk:false, owner:a.owner, n:count(a), u, name:armyName(a)}; }
+// a seat's recon reveal: provinces ps identified for nation n until hour h (the AI plays on the full state, so only seats keep one; pruned as it goes)
+function intelNote(n, ps, h){ if (!isSeat(n)) return; const I = (S.intel || (S.intel = {}))[n] || (S.intel[n] = {});
+  for (const k in I) if (I[k] <= S.hour) delete I[k]; for (const q of ps) I[q] = Math.max(I[q] || 0, h); visCache = null; }
 // is point (x, y) under an AWACS orbit of the set's nation or its allies (location only)
 const visLocAt = (vis, x, y) => !!vis.locs && vis.locs.some(s => visIn(s, x, y));
 // AWACS contact: a foreign force inside an early-warning orbit that nothing identifies (not special forces, not a submerged sub)
@@ -135,6 +173,15 @@ function visTouch(vis, p){ if (!vis.ids) return []; if (!vis.touch){ const T = v
     for (const s of vis.ids){ if (s[5] === VK.sea) continue; const r = s[4], x0 = Math.min(s[0], s[2]) - r, x1 = Math.max(s[0], s[2]) + r, y0 = Math.min(s[1], s[3]) - r, y1 = Math.max(s[1], s[3]) + r;
       visEach(s, q => { const b = g.bb[q]; if (G.P[q].sea || b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1) return; let l = T.get(q); if (!l) T.set(q, l = []); l.push(s); }, g.ext + 1); } }
   return vis.touch.get(p) || []; }
+// The Bunker (BUILD.fort) is hidden: buildings are public (every nation sees every other's, on the map and in the city panels), the Bunker is not.
+// Nation n sees the bunker in p (that it exists, its level, one going up) only when it holds p itself (a captured bunker is the captor's: it
+// learns it then), or p is revealed (S.reveal: a spy's Reconnaissance, a UAV over it; as everything in a revealed province), or in developer
+// reveal mode. Allies, partners and enemies alike see nothing else of it. bldSeen / consSeen give a province's buildings and its construction as
+// n sees them (the page draws and lists those); the rules themselves always use the real ones, and the computer reads them, as every building
+function bunkerSeen(p, n){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
+  return S.owner[p] === n || (!!S.reveal && S.reveal[p] > S.hour); }
+function bldSeen(p, n){ const B = S.bld[p]; return !B || !(B.fort > 0) || bunkerSeen(p, n) ? B : {...B, fort:0}; }
+function consSeen(p, n){ const c = S.cons[p]; return c && c.k === 'fort' && !bunkerSeen(p, n) ? null : c; }
 // low-observable aircraft in flight (a wing of Stealth Bombers): radar, satellites, UAVs and other aircraft do not show them to a foreign nation.
 // Nation n sees such a wing over province p0 only from a Mobile SAM or jammer of its own standing in p0 or next to it (loSpotted); an early-warning
 // orbit of its own or of an ally gives a location-only contact within half the radar's range (measured from the orbit's point to the wing at x, y;

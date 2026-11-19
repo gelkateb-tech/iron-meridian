@@ -1,0 +1,2 @@
+FLAG
+- Point 4: Soldier fills about 80% of the frame height instead of approximately half.

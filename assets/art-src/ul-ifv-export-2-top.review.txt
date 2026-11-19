@@ -1,0 +1,2 @@
+FLAG
+- 3. Background is not completely uniform and shows a visible cast shadow along the left side.

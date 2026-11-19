@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): Port side features a lifeboat on davits that is completely absent on the port side in the top-down view.
+- 1 (top): Aft superstructure roof has a round dome added and lacks the corner launchers seen in the side view.

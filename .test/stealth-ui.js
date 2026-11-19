@@ -15,18 +15,18 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   const node = id => p.evaluate(id => { const e = document.querySelector(`.rnode[data-id="${id}"]`); return e ? { cls: e.className, title: e.title, text: e.innerText.replace(/\s+/g, ' ').trim(), row: getComputedStyle(e).getPropertyValue('--r').trim() } : null; }, id);
   let n2 = await node('bomb_up'), n3 = await node('u_stealth');
   ck('tree: Strategic Bomber Upgrade is open after the Heavy Bomber', n2 && /st-open/.test(n2.cls), n2);
-  ck('tree: the Stealth Bomber is locked and names both prerequisites', n3 && /st-lock/.test(n3.cls) && /Needs Strategic Bomber Upgrade and Stealth Airframes/.test(n3.title) && /Stealth Airframes \(Tactical Air\)/.test(n3.text), n3);
+  ck('tree: the Stealth Bomber is locked and names both prerequisites (no label on the node: in its tooltip)', n3 && /st-lock/.test(n3.cls) && /Needs Strategic Bomber Upgrade and Stealth Airframes/.test(n3.title) && !n3.text, n3);
   ck('tree: the Stealth Bomber sits below the Strategic Bomber Upgrade', n3 && n2 && +n3.row > +n2.row, [n2 && n2.row, n3 && n3.row]);
-  ck('tree: a solid line joins the upgrade to the Stealth Bomber', await p.evaluate(() => document.querySelectorAll('.rs-lines path.xr').length) === 1);
+  ck('tree: no connector lines across columns (one straight line per column)', await p.evaluate(() => !document.querySelector('.rs-lines') && document.querySelectorAll('.rk-vl').length === 4));
   await p.click('.rnode[data-id="u_stealth"]'); await p.waitForTimeout(250);
   const det = await p.evaluate(() => ({ req: [...document.querySelectorAll('.rs-card .rc-need .rs-dr')].map(e => e.innerText.trim()).filter(t => /^Needs/.test(t)), btn: (document.querySelector('.rs-card .rs-db') || {}).innerText }));
   ck('detail: two "Needs" lines and a disabled button that says why', det.req.length === 2 && /Strategic Bomber Upgrade/.test(det.req[0]) && /Stealth Airframes/.test(det.req[1]) && /needs/i.test(det.btn || ''), det);
   await p.screenshot({ path: out('tree-locked') });
   await p.evaluate(() => { const N = window.__im.S.nations[0]; N.tech.bomb_up = 1; N.tech.jet_lo = 1; N.tv++; });
-  await p.click('.rnode[data-id="bomb_up"]'); await p.waitForTimeout(150); await p.click('.rnode[data-id="u_stealth"]'); await p.waitForTimeout(250);
+  await p.click('.rs-card [data-act="rcard-x"]'); await p.waitForTimeout(150); await p.click('.rnode[data-id="bomb_up"]'); await p.waitForTimeout(150); await p.click('.rs-card [data-act="rcard-x"]'); await p.waitForTimeout(150); await p.click('.rnode[data-id="u_stealth"]'); await p.waitForTimeout(250);
   n3 = await node('u_stealth'); ck('tree: with both researched the Stealth Bomber opens', n3 && /st-open/.test(n3.cls), n3);
   const btn = await p.evaluate(() => { const e = document.querySelector('.rs-card [data-act="research"]'); return e ? { dis: e.disabled, text: e.innerText.replace(/\s+/g, ' '), time: (document.querySelector('.rs-card .rc-pay .td') || {}).innerText } : null; });
-  ck('detail: the Research button is live (9 days)', btn && !btn.dis && /9 d/.test(btn.time), btn);
+  ck('detail: the Research button is live (9 days)', btn && !btn.dis && /^9d$/.test((btn.time || '').trim()), btn);
   await p.screenshot({ path: out('tree-open') });
   await p.click('.rs-card [data-act="research"]'); await p.waitForTimeout(250);
   ck('research starts in a slot', await p.evaluate(() => { const N = window.__im.S.nations[0]; return [N.research, N.research2].some(r => r && r.id === 'u_stealth'); }));
@@ -54,7 +54,7 @@ const out = n => __dirname + '/stealth-' + n + '.png';
     const tg = G.P.filter(P => S.owner[P.id] === E && P.city && !P.sea).sort((x, y) => Math.hypot(x.x - G.P[c].x, x.y - G.P[c].y) - Math.hypot(y.x - G.P[c].x, y.y - G.P[c].y))[0].id;
     im.selectArmy ? im.selectArmy(w.id) : null; return { id: w.id, E, tg, name: armyName(w), range: wingRange(w), kind: airCheck(w, tg, [E]) }; }, cap);
   ck('wing: named, 36 hexes from an Airbase III, plans a strike', /Stealth Bomber Wing/.test(R.name) && R.range === 36 && (R.kind.kind === 'strike' || /range/i.test(R.kind.why || '')), R);
-  // ---- fog on the map (the page records what each frame did with every wing in flight: window.__airSeen[id] = drawn / hidden / contact)
+  // ---- fog on the map (the page records what each frame did with every wing in flight: window.__airSeen[id] = drawn / unk (spotted, a ? plate) / hidden / contact)
   await p.keyboard.press('Escape'); await p.waitForTimeout(150);
   const F = await p.evaluate(({ c, E }) => { const im = window.__im, S = im.S, G = im.G;
     const own = G.P.filter(P => S.owner[P.id] === 0 && !P.sea && P.nbs.filter(v => S.owner[v] === 0 && !G.P[v].sea).length >= 2); const orbit = Q => { const o = new Set(); for (let k = 0; k < 24; k++){ const t = k/24*Math.PI*2, c1 = worldToCell(Q.x + Math.cos(t)*16, Q.y + Math.sin(t)*16*0.55); o.add(c1 >= 0 ? G.prov[c1] : -1); } return o; };   // the wing orbits its target on a 16 x 8.8 ellipse (index.html wingVis), so it passes over every province that ellipse touches: the SAM must be in or next to all of them
@@ -74,7 +74,8 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   const fog = { bomber: await seenAs('bomb', F.E), stealth: await seenAs('stealth', F.E), sam: await seenAs('stealth', F.E, 'sam'), jam: await seenAs('stealth', F.E, 'jam'),
     awacs: await seenAs('stealth', F.E, 'awacs'), awacsFar: await seenAs('stealth', F.E, 'awacs-far'), bomberAwacsFar: await seenAs('bomb', F.E, 'awacs-far'), own: await seenAs('stealth', 0) };
   await p.screenshot({ path: out('map-own-wing') });
-  ck('map: an enemy Heavy Bomber over your land is drawn', fog.bomber === 'drawn', fog);
+  ck('map: an enemy Heavy Bomber over your land is spotted: a ? plate (MAP-2 intel rule: only recon or a SAM radar identifies it)', fog.bomber === 'unk', fog);
+  ck('map: a Heavy Bomber far from your AWACS: spotted over your land, a ? plate', fog.bomberAwacsFar === 'unk', fog);
   ck('map: an enemy stealth wing over your land is not drawn (no SAM or jammer near)', fog.stealth === 'hidden', fog);
   ck('map: a SAM of yours in the next province shows it', fog.sam === 'drawn', fog);
   ck('map: a jammer of yours in the province shows it', fog.jam === 'drawn', fog);

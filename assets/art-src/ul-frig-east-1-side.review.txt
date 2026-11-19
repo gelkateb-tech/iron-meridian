@@ -1,0 +1,2 @@
+FLAG
+- Point 2: The primary lighting comes from the lower right instead of the requested upper left.

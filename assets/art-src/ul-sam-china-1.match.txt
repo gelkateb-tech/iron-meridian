@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Missile canisters are arranged four abreast in a row instead of a 2x2 grid as in the side view.

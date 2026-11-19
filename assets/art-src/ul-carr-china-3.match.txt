@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 5 (all): Multiple secondary aircraft are present on the carrier deck in violation of the single-unit rule.
+- Point 1 (all): The number, arrangement, and positions of the aircraft and deck markings are inconsistent across all three views.

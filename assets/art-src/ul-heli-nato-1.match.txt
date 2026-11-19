@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): Tail rotor is placed on the starboard side instead of port, and horizontal stabilizers are on both sides instead of only port.

@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1. In picture 2 and picture 3, the roof optic pod and hood scoop are mirrored to the vehicle's left side instead of the right.
+- 1. In picture 3, the missile launcher appears as three solid box sections rather than two separate pods with an open gap.

@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- point 1 (top): tail configuration differs from side view by adding a prominent central vertical fin between the twin endplate fins
+- point 3 (top): rotor mast and hubs are rendered from an oblique side perspective rather than a true straight-down plan view

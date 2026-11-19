@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): cab roof has an added hatch and rocket pods feature mismatched side arms and top indentations not seen in side view

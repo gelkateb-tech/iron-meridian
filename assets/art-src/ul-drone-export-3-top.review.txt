@@ -1,0 +1,2 @@
+FLAG
+- 1. Forward dorsal intake scoop from reference model is missing on the upper fuselage.

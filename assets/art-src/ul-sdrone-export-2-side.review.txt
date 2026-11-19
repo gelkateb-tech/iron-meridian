@@ -1,0 +1,2 @@
+FLAG
+- 4. FRAMING: Drone is facing toward the lower left instead of the required lower right orientation.

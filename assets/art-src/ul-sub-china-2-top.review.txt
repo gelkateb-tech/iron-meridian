@@ -1,0 +1,2 @@
+FLAG
+- 1. Tail configuration changed from the reference's X-tail to a cruciform horizontal-vertical tail layout.

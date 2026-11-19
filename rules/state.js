@@ -94,6 +94,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
   S.rk = RES_K;   // goods counted at the resource scale RES_K (see resKMigrate)
+  S.bk = 1;   // made under the Bunker rule (levels 1-5; see bunkerMigrate)
   if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
   if (T) tierStart(mode);
@@ -190,6 +191,17 @@ function ecoMigrate(){ if (S.eco) return; S.eco = 1; const got = {};
     if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:'New economy: every city now produces one main resource (money, oil, materials, iron, electronics or rare materials); build an Arms Industry in a city to raise what it produces by 25% per level. Arms Factories are now Army Bases: they mobilize ground units and give no income.'
       + (r ? ` Refineries, Foundries and Rare Earth Mines are gone: ${r.lv} level${r.lv > 1 ? 's' : ''} refunded ($${fmt(r.paid)}M${r.metal ? ', ' + fmt(r.metal) + ' materials' : ''}${r.iron ? ', ' + fmt(r.iron) + ' iron' : ''}).` : '')
       + (kept.length ? ` The Economy research branch moved into buildings; you keep the bonus of ${kept.join(', ')}.` : '')}); } }
+// saves from before the Bunker (no S.bk): Fortifications I, II and III (save key fort, three levels) become a Bunker of level 1, 3 and 5 (BUNKER_OLD):
+// the old top level is the new top level and the old middle the new middle, so no province is weaker than it was (old III took 49% less damage,
+// level 5 82%; old II 36%, level 3 56%; old I 20%, level 1 33%). A Fortifications level under construction carries on as the matching level, with
+// its hours left (its price was paid); a knocked-out one stays knocked out. Each seat is told once
+const BUNKER_OLD = [0, 1, 3, 5];
+function bunkerMigrate(){ if (S.bk) return; S.bk = 1; let mine = new Map();
+  for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p]; if (!b) continue; const l = b.fort || 0; if (l > 0) b.fort = BUNKER_OLD[Math.min(3, l)];
+    const c = S.cons[p]; if (c && c.k === 'fort') c.lvl = BUNKER_OLD[Math.max(1, Math.min(3, c.lvl || 1))];
+    const o = S.owner[p]; if (l > 0 && isSeat(o)) mine.set(o, (mine.get(o) || 0) + 1); }
+  delete S.bhp;
+  for (const me of seats()){ const D = desk(me), k = mine.get(me) || 0; if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New rule: Fortifications are now the Bunker, with five levels, hidden from other nations. Fortifications I, II and III became Bunker levels 1, 3 and 5${k ? ` (${k} of yours)` : ''}. A bunker protects its garrison (33% to 82% less damage), its morale, the people and the other buildings of its province, and costs $1.0M to $1.4M a day.`}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
 // the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded.
@@ -246,6 +258,7 @@ function restore(data){
   for (const N of S.nations) if (N.ai === undefined) N.ai = N.id !== 0;   // (every save so far carries the flag: nation 0 is the seat of a one-player game)
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.research2 === undefined) N.research2 = null; G.P[N.capital].city = true; }
   for (const me of seats()){ const D = desk(me); if (D.sunOff == null) D.sunOff = sunOffFor(me); }   // older saves: the same display-only daylight offset
+  bunkerMigrate();   // (first of the rule migrations: the older ones' dispatches stay on top of the seat's log)
   resMigrate();
   mobMigrate();
   abMigrate();   // after mobMigrate
@@ -253,6 +266,8 @@ function restore(data){
   researchMigrate();
   rRenameMigrate();   // the upgrades review's replacements (any save that holds one of the old nodes)
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
+  // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
+  for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
   IM.emit('restored');
   return true;
 }
@@ -329,7 +344,7 @@ function stRows(o){
         if (sh.oil && UNITS[u].fuel){ if (kk === 'atk') v *= 0.7; if (kk === 'spd') v *= 0.6; }
         if (sh.iron && MAINT[u].iron >= 0.05*RES_K){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.85; }   // no spare parts: armor, guns and warships fight worse
         if (sh.elec && MAINT[u].elec >= 0.05*RES_K){ if (kk === 'atk') v *= 0.8; if (kk === 'def') v *= 0.9; }   // no avionics or radar spares: aircraft, drones, air defence and warships
-        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[Math.min(3, +T[u + (kk === 'atk' ? '_fp' : '_pr')] || 0) + 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }   // Firepower / Protection, then the doctrine
+        if (kk === 'atk' || kk === 'def'){ v *= MARK_F[rMarkT(T, u, kk === 'atk' ? 'fp' : 'pr') + 1]; const d = DOCTRINES[N.doc]; if (d) v *= d[kk] || 1; }   // Firepower / Protection, then the doctrine
         r[kk] = v; } c.v[u] = r; } }
   return c.v;
 }

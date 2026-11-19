@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 4 (side, scene): Fuselage displays visible markings, numbers, and an emblem behind the canopy.
+- Point 1 (top): Main landing gear is positioned too far forward along the cockpit compared to the side view.

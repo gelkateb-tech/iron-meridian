@@ -1,0 +1,2 @@
+FLAG
+- 5: Faint emblem or squadron crest visible on the fuselage below the cockpit canopy.

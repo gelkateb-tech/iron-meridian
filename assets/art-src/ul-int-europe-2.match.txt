@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): missing one underwing missile and pylon on each wing compared to side view

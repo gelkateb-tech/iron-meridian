@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. top: gun barrel tip lacks the baffled side vents of the muzzle brake present in the side view

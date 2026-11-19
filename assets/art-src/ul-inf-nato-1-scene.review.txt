@@ -1,0 +1,2 @@
+FLAG
+- 4. Soldier occupies nearly three-quarters of the frame height instead of approximately half.

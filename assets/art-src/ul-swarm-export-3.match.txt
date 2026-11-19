@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): The upper tail fins visible in the side view's X-tail configuration are missing in the top-down view.

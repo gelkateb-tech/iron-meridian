@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): central spine with protruding tail boom added between engines, unlike side and scene views
+- 1 (top): three missiles under each wing instead of two as shown in side view

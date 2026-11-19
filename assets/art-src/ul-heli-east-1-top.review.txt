@@ -1,0 +1,2 @@
+FLAG
+- 1. Rotor has six blades instead of five seen on the master reference model.

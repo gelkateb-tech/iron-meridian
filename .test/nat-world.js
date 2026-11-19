@@ -9,9 +9,9 @@ const { chromium } = require('playwright'); const path = require('path');
   const def = await p.evaluate(() => ({cards:document.querySelectorAll('.pick').length, world:document.querySelector('.wsel [aria-pressed="true"]').dataset.k}));
   if (def.cards !== 15 || def.world !== 'world') bad.push('the start screen does not open on the classic 15 powers');
   await p.click('[data-act="pickscn"][data-k="world64"]');
-  const tab = await p.evaluate(() => ({cards:[...document.querySelectorAll('.pick b')].map(e => e.textContent), want:NATIONS.nations.map(n => n.name), tabs:document.querySelectorAll('[data-act="pickreg"]').length}));
-  const az = tab.cards.slice().sort((x, y) => x.localeCompare(y));
-  if (tab.tabs || tab.cards.join() !== az.join() || tab.cards.slice().sort().join() !== tab.want.slice().sort().join() || tab.cards[0] !== 'Afghanistan') bad.push('A-Z list: ' + tab.cards);   // (every nation of nations.js in one list, A to Z, no region tabs)
+  const tab = await p.evaluate(() => ({cards:[...document.querySelectorAll('.pick')].map(e => ({n:e.querySelector('b').textContent, prov:+(e.querySelector('.pn').textContent.match(/^(\d+) provinces$/) || [])[1], cit:+(e.querySelector('.pc').textContent.match(/^(\d+) cities$/) || [])[1], diff:(e.querySelector('.diff') || {}).textContent})), want:NATIONS.nations.map(n => n.name), tabs:document.querySelectorAll('[data-act="pickreg"]').length}));
+  const names = tab.cards.map(c => c.n), sorted = tab.cards.every((c, i) => !i || c.prov < tab.cards[i - 1].prov || (c.prov === tab.cards[i - 1].prov && c.cit <= tab.cards[i - 1].cit));
+  if (tab.tabs || !sorted || names.slice().sort().join() !== tab.want.slice().sort().join() || names[0] !== 'Russia' || tab.cards.some(c => !(c.prov > 0) || !(c.cit > 0) || !/^(Easy|Normal|Hard)$/.test(c.diff))) bad.push('card list: ' + names);   // (every nation of nations.js as a card, biggest first by provinces then cities, each with provinces, cities and difficulty, no region tabs)
   const vis = async () => p.$$eval('.pick:not([hidden]) b', a => a.map(e => e.textContent));
   await p.fill('#pickq', 'GER'); if ((await vis()).join() !== 'Germany') bad.push('search ger: ' + await vis());
   await p.fill('#pickq', 'turkiye'); if ((await vis()).join() !== 'Turkey') bad.push('search turkiye (accent/alias): ' + await vis());

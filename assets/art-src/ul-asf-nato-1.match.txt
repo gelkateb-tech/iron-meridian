@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 1, scene: the vertical stabilizers are canted outward at an angle, whereas they are strictly vertical in the side view.

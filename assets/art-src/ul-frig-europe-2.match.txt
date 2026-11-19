@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Aft superstructure equipment does not match the side view; a large spherical radome was added on the port side and sensors differ.

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. Top-down: Stern fins are configured in a cruciform (+) layout instead of the X-tail configuration shown in the side view.

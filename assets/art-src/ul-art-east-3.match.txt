@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): Gun barrel features a bore evacuator not present in the master side view.
+- 1 (top): Turret roof layout differs; the sensor dome is at the rear center rather than on the right cupola.

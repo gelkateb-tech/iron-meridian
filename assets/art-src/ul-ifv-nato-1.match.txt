@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- point 1 (scene): the turret lacks the raised commander's cupola from picture 1, while the driver's hatch on the hull is incorrectly rendered as a raised cupola
+- point 1 (top): the turret lacks the prominent raised commander's cupola with perimeter vision blocks seen in picture 1

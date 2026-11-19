@@ -1,0 +1,2 @@
+FLAG
+- 1. The tail rotor is mounted on the opposite (starboard) side compared to the reference image.
