@@ -36,11 +36,11 @@ async function run(b){ const ctx = await b.newContext({ viewport: { width: 1440,
             const ov = Math.max(0, Math.min(bb[2], nb[2]) - Math.max(bb[0], nb[0]))*Math.max(0, Math.min(bb[3], nb[3]) - Math.max(bb[1], nb[1])); if (ov > 0.15*(nb[2] - nb[0])*(nb[3] - nb[1])){ out.name.push(`${P.cityName || P.name} ${e.k}`); break; } } }
         if (w > 0) out.wet.push({city:P.cityName || P.name, p:P.id, k:e.k, site:e.site ? 1 : 0, cells:+(w*100).toFixed(1)});
         if (e.k === 'yard'){ const sh = L.shore || {}, F = bn.foot(e.nm), s = bn.wsize(P.id, i, 140), pw = bn.wet(e.nm, F.pier, wx, wy, s, mir, true), pwr = bn.pierWater(P.id);
-          out.yards.push({city:P.cityName || P.name, p:P.id, kind:sh.riv ? 'river' : sh.far ? 'cluster' : 'coast', d:+Math.hypot(L.pos[i][0], L.pos[i][1]).toFixed(2), pier:+pw.toFixed(3), water:pwr ? +pwr.water.toFixed(3) : 0, basin:sh.bas ? 1 : 0, mir:mir ? 1 : 0}); } }); }
+          out.yards.push({city:P.cityName || P.name, p:P.id, kind:sh.riv ? 'river' : sh.far ? 'cluster' : 'coast', d:+Math.hypot(L.pos[i][0], L.pos[i][1]).toFixed(2), pier:+pw.toFixed(3), water:pwr ? +pwr.water.toFixed(3) : 0, real:pwr ? +(pwr.sea + pwr.river).toFixed(3) : 0, touch:(() => { for (const r of [0, 1.5, 3, 4.5]) for (let k = 0; k < 16; k++) if (bn.water(wx + Math.cos(k*Math.PI/8)*r, wy + Math.sin(k*Math.PI/8)*r)) return 1; return 0; })(), basin:sh.bas ? 1 : 0, mir:mir ? 1 : 0}); } }); }
     // the rings' water against the 1:50m mask the layouts used before (how far apart they are, round the cities)
     let dis = 0, n = 0; for (const P of G.P){ if (P.sea || !P.city) continue; for (let k = 0; k < 40; k++){ const a = k*2.4, r = 1 + (k % 8); const x = P.x + Math.cos(a)*r, y = P.y + Math.sin(a)*r; n++; if (bn.water(x, y) !== bn.isWet(x, y)) dis++; } }
     out.maskDiff = +(dis/n*100).toFixed(2); return out; });
-  const cl = R.yards.filter(y => y.kind === 'cluster'), REAL = ['Oslo', 'Helsinki', 'Murmansk', 'Recife', 'Fortaleza', 'Oran', 'Tobruk', 'Port Hedland', 'Bremen', 'Nuuk', 'Kolkata', 'Mumbai', 'Hamburg'], onW = R.yards.filter(y => y.kind !== 'cluster'), off = onW.filter(y => y.water < 0.3);
+  const cl = R.yards.filter(y => y.kind === 'cluster'), REAL = ['Oslo', 'Helsinki', 'Murmansk', 'Recife', 'Fortaleza', 'Oran', 'Port Hedland', 'Bremen', 'Nuuk', 'Kolkata', 'Mumbai', 'Hamburg'], onW = R.yards.filter(y => y.kind !== 'cluster'), off = onW.filter(y => y.water < 0.3);
   checks.cities = R.cities; checks.pictures = R.pictures; checks.onWater = R.wet.length; checks.onWaterList = R.wet.slice(0, 40).map(w => `${w.city} ${w.k}${w.site ? ' (site)' : ''} ${w.cells}%`);
   checks.maskDiffPct = R.maskDiff; checks.hidden = R.hidden; checks.overName = R.name;
   if (R.name.length) fails.push(`${R.name.length} pictures over their city's name: ${R.name.slice(0, 8).join(', ')}`);
@@ -52,6 +52,12 @@ async function run(b){ const ctx = await b.newContext({ viewport: { width: 1440,
   { const c = cl.filter(y => REAL.includes(y.city)); if (c.length) fails.push('real ports with their Naval Yard inland: ' + c.map(y => y.city).join(', ')); }
   if (cl.length > 25) fails.push(`${cl.length} Naval Yards not on the water`);
   if (R.yards.length < 300) fails.push(`only ${R.yards.length} Naval Yards`);
+  // (owner 2026-11-19 review: a yard on land with only its painted dock basin as "water" counted as on the water: the real water under the piers, or the water at the yard's edge, is what counts)
+  { const coastY = R.yards.filter(y => y.kind === 'coast'), bare = coastY.filter(y => !y.basin && y.real < 0.12), bas = coastY.filter(y => y.basin), far = bas.filter(y => !y.touch);
+    checks.piersNoRealWater = bare.map(y => y.city); checks.basinYards = bas.length; checks.basinNotTouching = far.map(y => y.city);
+    if (bare.length) fails.push(`${bare.length} Naval Yards on a coast with no water under their piers and no dock basin: ${bare.slice(0, 8).map(y => y.city).join(', ')}`);
+    if (far.length) fails.push(`${far.length} Naval Yards on a dock basin that does not reach the water: ${far.slice(0, 8).map(y => y.city).join(', ')}`);
+    if (bas.length > coastY.length*0.4) fails.push(`${bas.length} of ${coastY.length} coast Naval Yards stand on a dock basin only`); }
   if (off.length > onW.length*0.12) fails.push(`${off.length} Naval Yards with their piers off the water`);
   if (onW.some(y => y.d > 32.5)) fails.push('a Naval Yard more than 32 world px from its city');
   // (Kolkata: where the map draws the Hooghly as water, its estuary, about 70 km down from the city's point; on its thin river line in the town it looked inland)
