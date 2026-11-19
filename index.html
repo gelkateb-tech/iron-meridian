@@ -3488,6 +3488,103 @@ function rebuildOwnerGeo(){
   buildMini();
 }
 function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
+// ---- the sea's look (owner, MAP-SEA, 19 November 2026: deeper blues out at sea, turquoise shallows near the coasts, lots of gentle waves and
+// subtle movement, soft foam, no repeating pattern, detail at every zoom). Three looks to choose from, one build: A a clean premium game look
+// (clear depth bands, a crisp soft foam line, gentle sparkle), B more photographic (subtle colour variation, long swell lines, softer foam),
+// C stylised (strong turquoise shallows, painterly wave strokes). 'm' is the sea as it was before (the comparison sheets' "today").
+// Each: the depth bake's colours and masks (dep: [blur r, at 1/q size, gain, noise] per step, col its colour; ab the abyss, rd the open-ocean
+// ridges), how much the named shallow seas count (sh), the noise's colour variation (nv); the static wave sheet (st: its tile kind, size on
+// screen Q in CSS px, hard-light strength a); the shore strokes (gl: a shallow-glow stroke [colour, alpha, width px], fo: foam [alpha, width
+// px], fl: the foam's even line [colour, alpha, width px]; three strokes, as many as the old look); the live layer (lv: tile kind, alpha by day [night, day], update ms), the live foam's strength (lf).
+const SEAO = {
+  m:{ab:[6, 18, 28], rd:[13, 36, 50], dep:[[14, 2, 3, 0.9, [13, 36, 50]], [6, 1, 2.1, 0.9, [22, 60, 74]], [1.6, 1, 1.6, 0.8, [44, 104, 112]]], sh:0, nv:0.22},
+  a:{ab:[6, 22, 52], rd:[10, 34, 72], dep:[[14, 2, 3.2, 0.8, [13, 46, 92]], [6, 1, 2.6, 0.6, [22, 86, 128]], [1.7, 1, 2.1, 0.55, [44, 144, 162]], [0.7, 1, 1.5, 0.45, [72, 172, 178]]], sh:1, nv:0.16,
+    st:{k:'a', Q:300, a:0.5}, gl:[[[80, 176, 186], 0.2, 4.5]], fl:[[[236, 246, 242], 0.4, 1.2]], fo:[[0.85, 3.2]], lv:{k:'a', a:[0.03, 0.13], ms:66}, lf:1.15},
+  b:{ab:[8, 26, 52], rd:[12, 38, 70], dep:[[16, 2, 2.6, 1.0, [16, 48, 84]], [7, 1, 2.0, 1.0, [26, 76, 104]], [2.2, 1, 1.5, 0.9, [52, 114, 124]], [0.9, 1, 1.2, 0.8, [74, 134, 136]]], sh:0.85, nv:0.34,
+    st:{k:'b', Q:440, a:0.45}, gl:[[[70, 132, 136], 0.14, 9]], fl:[[[220, 236, 234], 0.16, 2.6]], fo:[[0.4, 6]], lv:{k:'b', a:[0.02, 0.1], ms:80}, lf:0.8},
+  c:{ab:[10, 38, 86], rd:[14, 50, 104], dep:[[14, 2, 3.2, 0.6, [20, 68, 128]], [6, 1, 3.0, 0.5, [30, 120, 168]], [2.2, 1, 2.4, 0.45, [64, 186, 196]], [0.9, 1, 1.8, 0.4, [104, 208, 206]]], sh:1, nv:0.12,
+    st:{k:'c', Q:250, a:0.6}, gl:[[[120, 206, 208], 0.24, 5.5]], fl:[[[245, 252, 250], 0.48, 1.6]], fo:[[0.95, 3.8]], lv:{k:'c', a:[0.03, 0.12], ms:80}, lf:1.3}};
+let SEA_OPT = 'a';
+const seaO = () => SEAO[SEA_OPT] || SEAO.a;
+// shallow seas the nearness to land alone does not find (continental shelves under about 200 m), as [lon, lat, half-width, half-height in
+// degrees, turn in degrees, strength]: painted soft into the shelf step of the depth bake, so they read shallow and lighter than the open ocean
+const SEA_SHELF = [[3, 55.5, 5.5, 4, 0, 1], [-3, 50.5, 4, 1.6, 0, 0.8], [19.5, 57.5, 5.5, 3.5, 30, 0.9], [20.5, 62.5, 2.5, 3.2, 0, 0.8], [51.5, 27, 5, 1.9, -35, 1],
+  [109, -5, 8, 2.6, 0, 1], [101.5, 9, 3, 3.8, 0, 1], [107, 4.5, 5.5, 4.5, 20, 0.9], [122.5, 34, 4.5, 6.5, 0, 0.9], [-170, 62, 9, 4, -15, 0.9], [134, -10, 8, 2.8, 0, 0.9],
+  [139.5, -14.5, 3, 3, 0, 1], [-63, -47, 5, 7, 20, 0.8], [-52, 46, 4, 2.4, 0, 0.7], [-77.5, 24.5, 2.4, 2.2, -30, 0.9], [-90, 21.8, 2.4, 1.6, 0, 0.8], [-84, 27, 1.8, 3.2, 0, 0.7],
+  [-91, 28.6, 5.5, 1.1, 0, 0.6], [115, 75.5, 32, 3.8, 0, 0.85], [68, 74, 11, 3, 0, 0.75], [-85, 59.5, 8, 5.5, 0, 0.75], [13.5, 44.6, 2.2, 1.4, -40, 0.8], [31.5, 45.6, 2.6, 1.4, 0, 0.7],
+  [50.5, 45.3, 3, 1.4, 0, 0.9], [68.5, 21.5, 3, 1.8, 0, 0.6], [90, 21, 3.5, 1.2, 0, 0.7], [58, 7, 1.2, 1.2, 0, 0], [-80.5, 8.5, 1.6, 1, 0, 0.5], [146, -16, 1.8, 7, 25, 0.6]];
+// world point of a longitude and latitude (the map's projection, as the cells are laid)
+const lonLatW = (lon, lat) => { const la = Math.max(WORLD.latS, Math.min(WORLD.latN, lat)), row = (YMAX - miller(la))/(YMAX - YMIN)*(H - 1);
+  return [OX + HS*SQ3*((((lon - WORLD.lon0) % 360) + 360) % 360/360*W - 0.5), OY + HS*1.5*row]; };
+// a tileable value noise on an N px tile with P cells across (seeded): f(x, y) in 0..1, repeats every N px
+function tileNoise(N, P, seed){ const r = mulberry(seed), t = new Float32Array(P*P); for (let i = 0; i < t.length; i++) t[i] = r(); const sm = q => q*q*(3 - 2*q);
+  return (x, y) => { const fx = x/N*P, fy = y/N*P, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = sm(fx - x0), ty = sm(fy - y0), at = (u, v) => t[((v % P + P) % P)*P + ((u % P + P) % P)];
+    const a = at(x0, y0), b = at(x0 + 1, y0), c = at(x0, y0 + 1), d = at(x0 + 1, y0 + 1); return a + (b - a)*tx + (c - a)*ty + (a - b - c + d)*tx*ty; }; }
+// a look's wave field on a 512 px tile: a sum of swells from a few directions (whole wave numbers, so the tile repeats seamlessly), each bent by
+// its own noise so no crest runs straight, its height scaled by a slow noise (calm and rougher patches). h: height, m: the patch scale
+function seaField(kind){ const N = 512, h = new Float32Array(N*N), m = new Float32Array(N*N);
+  const W5 = kind === 'b' ? [[5, 2, 1, 1.4], [2, 5, 0.3, 1.3], [9, -4, 0.24, 1.7], [-6, 11, 0.17, 1.6], [15, 8, 0.16, 1.4], [21, -11, 0.13, 1.2], [28, 13, 0.1, 1.2], [-17, 30, 0.08, 1.1]]
+    : [[4, 2, 0.45, 2.2], [12, 5, 1, 2.2], [-7, 13, 0.85, 2.4], [18, -10, 0.6, 2], [5, 20, 0.5, 2], [27, 15, 0.35, 1.8], [-22, 24, 0.28, 1.6], [33, -19, 0.18, 1.4]];
+  const nw = W5.map((w, i) => tileNoise(N, 5 + i, 211 + i*17)), mA = tileNoise(N, 3, 401), mB = tileNoise(N, 7, 409);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ let v = 0; const o = y*N + x;
+    for (let i = 0; i < W5.length; i++){ const [kx, ky, a, wa] = W5[i]; v += a*Math.sin(2*Math.PI*(kx*x + ky*y)/N + wa*2*Math.PI*(nw[i](x, y) - 0.5)); }
+    h[o] = v; m[o] = Math.max(0.15, 0.25 + 1.1*(0.65*mA(x, y) + 0.35*mB(x, y)) - 0.2); }
+  let mx = 0; for (let i = 0; i < h.length; i++) mx = Math.max(mx, Math.abs(h[i])); for (let i = 0; i < h.length; i++) h[i] /= mx || 1;
+  return {N, h, m}; }
+// the static wave sheet (laid on the sea with 'hard-light': grey 128 changes nothing, lighter lifts toward white, darker deepens): A the light on
+// small wave faces with a faint crest sparkle, B long soft swell lines and slow light patches, C a faint relief under painterly crest strokes
+function seaTileStatic(kind){ const F = seaField(kind === 'b' ? 'b' : 'a'), N = F.N, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data;
+  const gain = kind === 'b' ? 16 : kind === 'c' ? 10 : 22, lo = tileNoise(N, 2, 433), fl = tileNoise(N, 96, 457);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ const o = y*N + x, hx = F.h[y*N + (x + 1) % N] - F.h[y*N + (x + N - 1) % N], hy = F.h[((y + 1) % N)*N + x] - F.h[((y + N - 1) % N)*N + x];
+    let v = 128 + gain*N/60*(-0.75*hx - 0.65*hy)*F.m[o]; const cr = Math.max(0, (F.h[o] - 0.5)/0.5);
+    if (kind === 'a') v += 70*Math.pow(cr, 3)*F.m[o]*(fl(x, y) > 0.55 ? 1 : 0.35);
+    if (kind === 'b') v += 18*cr*cr*F.m[o] + 10*(lo(x, y) - 0.5);
+    d[o*4] = d[o*4 + 1] = d[o*4 + 2] = Math.max(0, Math.min(255, Math.round(v))); d[o*4 + 3] = 255; }
+  g.putImageData(im, 0, 0);
+  if (kind === 'c'){ const r = mulberry(613);   // painterly crest strokes: short curved tapering dabs, mostly along one swell, each over a darker trough
+    const dab = (x, y, L, ang, w, col) => { for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]){ const X = x + ox, Y = y + oy; if (X < -L || X > N + L || Y < -L || Y > N + L) continue;
+        g.save(); g.translate(X, Y); g.rotate(ang); g.beginPath(); g.moveTo(-L/2, 0); g.quadraticCurveTo(0, -L*0.22, L/2, 0); g.quadraticCurveTo(0, -L*0.22 + w, -L/2, 0); g.fillStyle = col; g.fill(); g.restore(); } };
+    g.filter = 'blur(0.7px)';   // (soft-edged, a brush's not a pen's)
+    for (let i = 0; i < 230; i++){ const x = r()*N, y = r()*N, o = (Math.floor(y)%N)*N + Math.floor(x)%N; if (F.h[o] < 0.05 && r() < 0.7) continue;
+      const L = 14 + r()*30, ang = -0.42 + (r() - 0.5)*0.7, w = 2 + r()*3.4, a = 0.35 + 0.5*r()*F.m[o];
+      dab(x + 1.5, y + 2.5, L*1.05, ang, w*1.2, `rgba(70,70,70,${(a*0.55).toFixed(3)})`); dab(x, y, L, ang, w, `rgba(255,255,255,${a.toFixed(3)})`); } g.filter = 'none'; }
+  return c; }
+// the live layer's sheet (white on clear, laid with 'screen' and drifting): A sun glints on the crests, B soft broad light on the swell, C a few
+// white wave dabs
+function seaTileLive(kind){ const F = seaField(kind === 'b' ? 'b' : 'a'), N = F.N, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d');
+  if (kind === 'c'){ const r = mulberry(677); for (let i = 0; i < 110; i++){ const x = r()*N, y = r()*N, L = 8 + r()*16, ang = -0.42 + (r() - 0.5)*0.8, w = 1.4 + r()*2;
+      for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]){ g.save(); g.translate(x + ox, y + oy); g.rotate(ang); g.beginPath(); g.moveTo(-L/2, 0); g.quadraticCurveTo(0, -L*0.25, L/2, 0); g.quadraticCurveTo(0, -L*0.25 + w, -L/2, 0);
+        g.fillStyle = `rgba(240,250,252,${(0.5 + 0.5*r()).toFixed(3)})`; g.fill(); g.restore(); } }
+    return c; }
+  const im = g.createImageData(N, N), d = im.data, fl = tileNoise(N, 128, 691), fm = tileNoise(N, 9, 701);
+  for (let i = 0, o = 0; o < N*N; o++, i += 4){ const x = o % N, y = (o/N) | 0, cr = Math.max(0, (F.h[o] - 0.35)/0.65); let v;
+    if (kind === 'b') v = 0.55*cr*cr*F.m[o]*Math.max(0, fm(x, y) - 0.2);
+    else { const s = fl(x, y); v = Math.pow(cr, 4)*(s > 0.62 ? 1.4*(s - 0.62)/0.38 + 0.25 : 0.06)*F.m[o]*1.6; }
+    d[i] = 232; d[i + 1] = 246; d[i + 2] = 250; d[i + 3] = Math.round(Math.min(1, v)*235); }
+  g.putImageData(im, 0, 0); return c; }
+// a pattern tile laid in world space so that it repeats exactly once round the world (the map wraps east-west: no seam at the date line): the
+// tile edge t world units at about angle a, made whole by turning it so WRAP_W is a whole number of tiles along both of its axes
+function seaLattice(t, a){ const K = WRAP_W/t, m = Math.round(K*Math.cos(a)), n = Math.round(K*Math.sin(a)) || 1, L = Math.hypot(m, n); return {t:WRAP_W/L, a:Math.atan2(n, m)}; }
+// the static wave sheet over the rect (world space, under the caller's sea clip): two octaves of the tile cross-faded by zoom, so the waves keep
+// about the same size on screen at every zoom, each octave turned and shifted its own way (no grid the eye can follow)
+function seaDetail(c, s, x0, y0, x1, y1, k){ const O = seaO(); if (!O.st) return; const T = SEAFX.st || (SEAFX.st = seaTileStatic(O.st.k)), P = SEAFX.stp || (SEAFX.stp = c.createPattern(T, 'repeat'));
+  if (!P || !P.setTransform) return; const hz = Math.max(0, Math.min(1, (s*HS0 - 4)/26)), Q = O.st.Q*(0.35 + 0.65*hz), Tb = 4096, L = Math.log2(s*Tb/Q), o0 = Math.floor(L), f = L - o0;   // (zoomed out the waves are finer on screen and a little fainter)
+  k *= 0.65 + 0.35*hz;
+  c.save(); c.globalCompositeOperation = 'hard-light'; c.fillStyle = P;
+  const fs = Math.max(0, Math.min(1, (f - 0.35)/0.3)), f2 = fs*fs*(3 - 2*fs);   // (the cross-fade over the middle of each octave only: one fill at most zooms, two in the fade)
+  for (const [o, w] of [[o0, 1 - f2], [o0 + 1, f2]]){ const a = O.st.a*w*k; if (a < 0.03) continue; const lt = seaLattice(Tb/Math.pow(2, o), 0.35 + 0.61*o), sc = lt.t/T.width;
+    P.setTransform(new DOMMatrix().rotate(lt.a*180/Math.PI).scale(sc).translate(((o*197) % 512 + 512) % 512, ((o*331) % 512 + 512) % 512)); c.globalAlpha = a; c.fillRect(x0, y0, x1 - x0, y1 - y0); }
+  c.restore(); }
+// the live layer's patches: a 256 px tileable noise (alpha 0.3 to 1), a tile about 700 world units, laid in the layer's sea mask
+function seaPatch(g){ if (SEAFX.mp) return SEAFX.mp; const N = 256, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), im = x.createImageData(N, N), d = im.data, a = tileNoise(N, 4, 811), b = tileNoise(N, 9, 823);
+  for (let i = 0, o = 0; o < N*N; o++, i += 4){ const v = 0.62*a(o % N, (o/N) | 0) + 0.38*b(o % N, (o/N) | 0); d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = Math.round(255*Math.max(0.3, Math.min(1, 0.3 + 1.2*(v - 0.25)))); }
+  x.putImageData(im, 0, 0); const P = g.createPattern(c, 'repeat'), lt = seaLattice(700, 0.2); if (P && P.setTransform) P.setTransform(new DOMMatrix().rotate(lt.a*180/Math.PI).scale(lt.t/N)); return (SEAFX.mp = P); }
+// the far view's sea (below hexPx 7, where the sea is not clipped to the coast): the depth at the land mask's size with the wave sheet laid in
+// at the far view's scale, the land cleared. Made once per look; the plain depth for the old look
+function seaFarTex(){ const O = seaO(), D = GEO.seaTex; if (!O.st || !D || !G.landMask) return D; if (SEAFX.far && SEAFX.far.D === D) return SEAFX.far;
+  try { const M = G.landMask, w = M.width, h = M.height, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = true;
+    g.drawImage(D.op, 0, 0, w, h); g.setTransform(w/WORLD_W, 0, 0, h/WORLD_H, 0, 0); seaDetail(g, minScale()*1.2, 0, 0, WORLD_W, WORLD_H, 1); g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'destination-out'; g.drawImage(M, 0, 0, w, h); c.D = D; SEAFX.far = c; return c; } catch (e) { return D; } }
 // the sea's depth, baked once from the land mask at half its size: nearness to the shore read off three blurs of the mask (shelf ~3 mask px,
 // slope ~10, abyss ~40 at quarter size), coloured shallow turquoise > shelf > slope > abyss, with a faint low-frequency noise for ridges and trenches.
 // All canvas compositing (no pixel reads: the mask comes from an image, which a file:// page may not read back); the depth masks are grey (white = land
@@ -3510,16 +3607,21 @@ function bakeSeaDepth(){
     const depth = (r, q, gain, nk) => { const ww = Math.ceil(w/q), hh = Math.ceil(h/q), c = mk(ww, hh), g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, ww, hh); g.filter = 'blur(' + r + 'px)'; g.drawImage(Mw, 0, 0, ww, hh); g.filter = 'none';
       const o = mk(w, h), og = o.getContext('2d'); og.imageSmoothingEnabled = true; og.filter = 'brightness(' + gain + ')'; og.drawImage(c, 0, 0, w, h); og.filter = 'none';
       og.globalCompositeOperation = 'soft-light'; og.globalAlpha = nk; og.drawImage(Nc, 0, 0, w, h); og.globalAlpha = 1; og.globalCompositeOperation = 'source-over'; return o; };
-    const out = mk(w, h), g = out.getContext('2d'), T = mk(w, h), t = T.getContext('2d'), I = mk(w, h), ig = I.getContext('2d');
-    fill(g, 'rgb(6,18,28)');   // abyss
+    const out = mk(w, h), g = out.getContext('2d'), T = mk(w, h), t = T.getContext('2d'), I = mk(w, h), ig = I.getContext('2d'), O = seaO(), rgb = a => `rgb(${a.join(',')})`;
+    fill(g, rgb(O.ab));   // abyss
     const step = (S, col) => { fill(ig, '#fff'); ig.globalCompositeOperation = 'difference'; ig.drawImage(S, 0, 0); ig.globalCompositeOperation = 'source-over';   // 1 - s
       g.globalCompositeOperation = 'multiply'; g.drawImage(I, 0, 0); fill(t, col); t.globalCompositeOperation = 'multiply'; t.drawImage(S, 0, 0); t.globalCompositeOperation = 'source-over';
       g.globalCompositeOperation = 'lighter'; g.drawImage(T, 0, 0); g.globalCompositeOperation = 'source-over'; };
-    { const Rd = mk(w, h), rg = Rd.getContext('2d'); rg.imageSmoothingEnabled = true; rg.filter = 'contrast(1.4) brightness(0.34)'; rg.drawImage(Nc, 0, 0, w, h); rg.filter = 'none'; step(Rd, 'rgb(13,36,50)'); }   // open-ocean ridges and basins
-    step(depth(14, 2, 3, 0.9), 'rgb(13,36,50)');   // slope
-    step(depth(6, 1, 2.1, 0.9), 'rgb(22,60,74)');    // shelf
-    step(depth(1.6, 1, 1.6, 0.8), 'rgb(44,104,112)');   // shallows (noise breaks the band up, so it is no even halo)
-    g.globalCompositeOperation = 'soft-light'; g.globalAlpha = 0.22; g.drawImage(Nc, 0, 0, w, h); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';   // +-6 % light
+    { const Rd = mk(w, h), rg = Rd.getContext('2d'); rg.imageSmoothingEnabled = true; rg.filter = 'contrast(1.4) brightness(0.34)'; rg.drawImage(Nc, 0, 0, w, h); rg.filter = 'none'; step(Rd, rgb(O.rd)); }   // open-ocean ridges and basins
+    // the named shallow seas (SEA_SHELF), soft white ellipses (a turn away too), blurred: laid into the shelf step with 'lighten'
+    let SH = null; if (O.sh){ SH = mk(w, h); const sg = SH.getContext('2d'), ky = h/WORLD_H, dg = WRAP_W/360; sg.fillStyle = '#000'; sg.fillRect(0, 0, w, h); sg.filter = 'blur(' + Math.max(2, 1.2*dg*kx).toFixed(1) + 'px)';
+      for (const [lon, lat, rx, ry, tr, a] of SEA_SHELF){ if (!a) continue; const [x, y] = lonLatW(lon, lat), y2 = lonLatW(lon, lat + ry)[1], RX = rx*dg*kx, RY = Math.abs(y - y2)*ky, v = Math.round(255*Math.min(1, a*O.sh));
+        for (const o of [-P, 0, P]){ sg.save(); sg.translate(E + x*kx + o, y*ky); sg.rotate(tr*Math.PI/180); sg.scale(1, RY/RX); const gr = sg.createRadialGradient(0, 0, 0, 0, 0, RX);
+          gr.addColorStop(0, `rgb(${v},${v},${v})`); gr.addColorStop(0.6, `rgb(${v},${v},${v})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); sg.fillStyle = gr; sg.beginPath(); sg.arc(0, 0, RX, 0, Math.PI*2); sg.fill(); sg.restore(); } }
+      sg.filter = 'none'; sg.globalCompositeOperation = 'soft-light'; sg.globalAlpha = 0.9; sg.drawImage(Nc, 0, 0, w, h); sg.globalAlpha = 1; sg.globalCompositeOperation = 'source-over'; }   // (its edge broken by the noise too)
+    // slope, shelf, shallows (the noise breaks the bands up, so none is an even halo) and, in the new looks, the turquoise wash at the shore
+    O.dep.forEach(([r, q, gain, nk, col], i) => { const D = depth(r, q, gain, nk); if (i === 1 && SH){ const dg = D.getContext('2d'); dg.globalCompositeOperation = 'lighten'; dg.drawImage(SH, 0, 0); dg.globalCompositeOperation = 'source-over'; } step(D, rgb(col)); });
+    g.globalCompositeOperation = 'soft-light'; g.globalAlpha = O.nv; g.drawImage(Nc, 0, 0, w, h); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';   // +-6 % light (more in B)
     // back to the world's own width: across the band before the date line the depth fades into the depth a turn on (what lies just past the line)
     const fin = mk(w0, h), fg = fin.getContext('2d'); fg.drawImage(out, -E, 0); const x1 = WRAP_X0*kx + P, B = mk(E, h), bg = B.getContext('2d');
     bg.drawImage(out, -(x1 - P), 0); bg.globalCompositeOperation = 'destination-in'; const gr = bg.createLinearGradient(0, 0, E, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, '#000'); bg.fillStyle = gr; bg.fillRect(0, 0, E, h);
@@ -7828,15 +7930,24 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     // shallow-water bands (the flat wash only if the depth could not be baked)
     c.save(); c.clip(SEAV, 'evenodd');
     if (GEO.seaTex){ c.fillStyle = `rgba(6,18,28,${SEA_A})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(WORLD_W, -WORLD_H, WORLD_W, WORLD_H*3); c.fillRect(0, -WORLD_H, WORLD_W, WORLD_H); c.fillRect(0, WORLD_H, WORLD_W, WORLD_H);   // (past the world's edge)
-      c.globalAlpha = SEA_A; c.drawImage(GEO.seaTex.op, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }
+      c.globalAlpha = SEA_A; c.drawImage(GEO.seaTex.op, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1;
+      if (!mapLite()) seaDetail(c, view.s, vx0, vy0, vx1, vy1, 1); }   // MAP-SEA: the wave sheet over the depth (the old look: none)
     else { c.fillStyle = `rgba(11,29,39,${0.86*z})`; c.fillRect(-WORLD_W, -WORLD_H, WORLD_W*3, WORLD_H*3); }
     // the shallow band in world units (it widens as you zoom in, not a constant halo round every island); faded in over hexPx 7-11 where the clip
     // starts, and drawn mid-zoom too (MAP-2: the render made while zooming has the same coast as the settled one)
-    { c.lineJoin = 'round'; c.strokeStyle = `rgba(52,118,126,${0.10*z})`; c.lineWidth = Math.max(2.4, 10*px0); c.stroke(CG);
+    const SO = seaO();
+    if (SO.gl){ c.lineJoin = 'round'; c.lineCap = 'round'; for (const [col, a, wd] of SO.gl){ c.strokeStyle = `rgba(${col.join(',')},${a*z})`; c.lineWidth = Math.max(wd*0.24, wd*px0); c.stroke(CG); }
+      // MAP-SEA: soft foam at the shore, the foam sheet anchored to the world (about 60 screen px a tile), a narrow brighter line and a wider faint
+      // one; from hexPx 8 (half of each stroke lies on land, clipped away)
+      const zf = Math.min(1, Math.max(0, (hexPx - 8)/8)), fp = SEAFX.fsp || (SEAFX.fsp = c.createPattern(foamTile(), 'repeat'));
+      if (zf > 0 && fp && fp.setTransform){ const ts = 60*px0/128, wz = Math.max(0.8, Math.min(2, Math.sqrt(hexPx/30)));   // (wz: wider close in) fp.setTransform(new DOMMatrix([ts, 0, 0, ts, 0, 0])); c.strokeStyle = fp;
+        for (const [a, wd] of SO.fo){ c.globalAlpha = Math.min(1, a*zf); c.lineWidth = wd*wz*px0; c.stroke(CG); } c.globalAlpha = 1;
+        for (const [col, a, wd] of SO.fl){ c.strokeStyle = `rgba(${col.join(',')},${a*zf})`; c.lineWidth = wd*wz*px0; c.stroke(CG); } } }   // (and the foam's even edge at the waterline)
+    else { c.lineJoin = 'round'; c.strokeStyle = `rgba(52,118,126,${0.10*z})`; c.lineWidth = Math.max(2.4, 10*px0); c.stroke(CG);
       c.strokeStyle = `rgba(70,136,142,${0.12*z})`; c.lineWidth = Math.max(1, 4*px0); c.stroke(CG);
       c.strokeStyle = `rgba(150,200,210,${0.07*z})`; c.lineWidth = 2.6*px0; c.stroke(coastGlowRings(coastRings(hexPx)) !== coastRings(hexPx) ? CG : CV); }   // (at play zoom the faint bright line too follows the glow's thinned coast: strokes over the fine coast under its own clip are costly)
     c.restore(); }
-  else if (GEO.seaTex){ c.globalAlpha = SEA_A; c.drawImage(GEO.seaTex, 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // far out (no coast clip): its clear land masks it
+  else if (GEO.seaTex){ c.globalAlpha = SEA_A; c.drawImage(mapLite() ? GEO.seaTex : seaFarTex(), 0, 0, WORLD_W, WORLD_H); c.globalAlpha = 1; }   // far out (no coast clip): its clear land masks it (MAP-SEA: with the wave sheet in it)
   const onScreen = P => { const b = provBox(P); return b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1; }, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
     nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
@@ -7979,7 +8090,8 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     if (SM.width !== w2 || SM.height !== h2){ SM.width = w2; SM.height = h2; layer.seaOK = false; }
     if (!R || full || layer.seaOK){ const m = SM.getContext('2d'), hx0 = Math.floor(dx0/2), hy0 = Math.floor(dy0/2), hw = Math.ceil(dx1/2) - hx0, hh = Math.ceil(dy1/2) - hy0;
       m.save(); m.setTransform(1, 0, 0, 1, 0, 0); m.globalCompositeOperation = 'source-over'; m.globalAlpha = 1; if (R){ m.beginPath(); m.rect(hx0, hy0, hw, hh); m.clip(); }
-      m.fillStyle = '#fff'; m.fillRect(hx0, hy0, hw, hh); m.setTransform(dpr*view.s/2, 0, 0, dpr*view.s/2, dpr*ox/2, dpr*oy/2);
+      const MP = seaO().lv ? seaPatch(m) : null; m.fillStyle = '#fff'; if (MP) m.clearRect(hx0, hy0, hw, hh); else m.fillRect(hx0, hy0, hw, hh); m.setTransform(dpr*view.s/2, 0, 0, dpr*view.s/2, dpr*ox/2, dpr*oy/2);
+      if (MP){ m.fillStyle = MP; m.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // MAP-SEA: calmer and livelier patches of water (the mask's alpha 0.3 to 1, in world space)
       m.globalCompositeOperation = 'destination-out'; m.fillStyle = '#000'; m.fill(CV, 'evenodd'); m.restore(); if (!R || full){ layer.seaOK = true; layer.seaE = layer.seaEy = 0; } } }
   else if (!R || full) layer.seaOK = false;
 }
@@ -8133,7 +8245,7 @@ function ovlPaint(g, L, cols, x0, y0, x1, y1){ if (x1 <= x0 || y1 <= y0) return;
 // a small white core for an impact's first frames (the particles' 'core')
 const BCORE = () => softSprite('bcore', 'rgba(255,255,250,1)', 'rgba(255,238,200,.62)', 'rgba(255,214,150,0)');
 // the live sea surface: a 256 px tile of thin bright crest arcs (three rotated sine bands bent by tileable noise, broken into arcs), baked once
-const SEAFX = {t:-1e9, g:-1, k:'', cv:null, tile:null, pat:null, fk:'', fp:null, fc:null, foam:null, fpat:null};
+const SEAFX = {t:-1e9, g:-1, k:'', cv:null, tile:null, pat:null, fk:'', fp:null, fc:null, foam:null, fpat:null, ct:0, gl:0, st:null, stp:null, fsp:null, far:null, mp:null};   // (ct, gl: the sea's clock; st, stp: the static wave sheet and its pattern, fsp the shore foam's; far: the far view's sea; mp: the live layer's patch mask)
 // shore foam: a 128 px tileable sheet of soft white blobs and streaks (alpha 0 to about 0.8), baked once; stroked along the coast it breaks the
 // surf line up irregularly instead of into regular dashes
 function foamTile(){ if (SEAFX.foam) return SEAFX.foam; const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), r = mulberry(977);
@@ -8168,14 +8280,17 @@ function drawSeaSurface(now, moving){
   if (Wc.width !== w2 || Wc.height !== h2){ Wc.width = w2; Wc.height = h2; SEAFX.k = ''; }
   const lx = Math.round((view.x - layer.vx - layer.mx)*dpr), ly = Math.round((view.y - layer.vy - layer.my)*dpr), key = view.x + ',' + view.y + ',' + view.s + ',' + lx + ',' + ly + ',' + layer.full + ',' + (layer.strips || 0);
   if (key !== SEAFX.wk){ SEAFX.wk = key; SEAFX.wet = seaOnScreen(lx, ly, w2, h2); }   // (is any of the layer's sea on screen: checked once per view)
-  if (S.speed && !S.over && SEAFX.wet) animAmb();   // waves and foam move only where water shows (a coast ring whose box reaches the screen may still show no water)
-  if (key !== SEAFX.k || (now - SEAFX.t >= 50 && FXQ.gt !== SEAFX.g)){ SEAFX.k = key; SEAFX.t = now; SEAFX.g = FXQ.gt; const g = Wc.getContext('2d'); if (!SEAFX.pat) SEAFX.pat = g.createPattern(waveTile(), 'repeat');
-    const pat = SEAFX.pat, ks = dpr/2, Tw = Math.max(160, Math.min(360, 40*view.s))/view.s, t = FXQ.gt/1000;   // the tile's size in world units (a sensible size on screen at every zoom)
+  // MAP-SEA: the sea's own clock (it runs with the game's ambient clock, and stands still with the Battery saver: the waves then hold still, no
+  // frames asked); the sheet is redrawn at the look's low rate (66-80 ms), and only those frames are asked for (animIn), not every display frame
+  const O = seaO(), SV = saverOn(), iv = O.lv ? O.lv.ms : 50; if (!SV) SEAFX.ct += Math.max(0, Math.min(250, FXQ.gt - SEAFX.gl)); SEAFX.gl = FXQ.gt;
+  if (S.speed && !S.over && SEAFX.wet && !SV) animIn(Math.max(0, iv - (now - SEAFX.t)));   // waves and foam move only where water shows (a coast ring whose box reaches the screen may still show no water)
+  if (key !== SEAFX.k || (now - SEAFX.t >= iv - 4 && SEAFX.ct !== SEAFX.g)){ SEAFX.k = key; SEAFX.t = now; SEAFX.g = SEAFX.ct; const g = Wc.getContext('2d'); if (!SEAFX.pat) SEAFX.pat = g.createPattern(O.lv ? seaTileLive(O.lv.k) : waveTile(), 'repeat');
+    const pat = SEAFX.pat, ks = dpr/2, Tw = Math.max(160, Math.min(360, 40*view.s))/view.s*(O.lv ? 1.6 : 1), t = SEAFX.ct/1000;   // the tile's size in world units (a sensible size on screen at every zoom; the new looks' tiles are twice as big)
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, w2, h2); g.fillStyle = pat;
     for (const [ang, sc, vx, vy, a] of [[0.35, 1, 0.9, 0.35, 1], [0.85, 0.63, 0.55, 0.8, 0.7]]){ const T = Tw*sc, m = T*view.s*ks/256, co = Math.cos(ang)*m, si = Math.sin(ang)*m, wx = vx*t*T/28, wy = vy*t*T/28;
       pat.setTransform(new DOMMatrix([co, si, -si, co, (wx*view.s + view.x)*ks, (wy*view.s + view.y)*ks])); g.globalAlpha = a; g.fillRect(0, 0, w2, h2); }
     g.globalAlpha = 1; g.globalCompositeOperation = 'destination-in'; g.drawImage(layer.seaM, lx/2 - (layer.seaE || 0), ly/2 - (layer.seaEy || 0)); g.globalCompositeOperation = 'source-over'; }
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.015 + 0.05*day; ctx.drawImage(Wc, 0, 0, w2*2, h2*2); ctx.restore();
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = O.lv ? O.lv.a[0] + (O.lv.a[1] - O.lv.a[0])*day : 0.015 + 0.05*day; ctx.drawImage(Wc, 0, 0, w2*2, h2*2); ctx.restore();
   // shore foam: the coast rings that reach the screen, cut to it (kept until the view changes), dashes creeping along them on the water side
   if (hexPx >= 30 && GEO.coast0 && COASTR.length){ const px = 1/view.s, m0 = 12*px, X0 = -view.x/view.s - m0, Y0 = -view.y/view.s - m0, X1 = (cw - view.x)/view.s + m0, Y1 = (ch - view.y)/view.s + m0, RS = coastRings(hexPx), fk = [X0, Y0, view.s, cw, ch, coastRingsId(RS)].join(',');
     if (fk !== SEAFX.fk){ SEAFX.fk = fk; const fp = new Path2D(), fc = new Path2D(); fc.rect(X0, Y0, X1 - X0, Y1 - Y0); let n = 0;
@@ -8186,9 +8301,9 @@ function drawSeaSurface(now, moving){
     if (SEAFX.fp){ ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.clip(SEAFX.fc, 'evenodd'); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       // the foam sheet, anchored to the world (about 60 screen px a tile) and drifting slowly: a narrow bright line, then a wider fainter one drifting
       // the other way, so the surf breaks up irregularly (half of each stroke lies on land, clipped away)
-      const fp = SEAFX.fpat || (SEAFX.fpat = ctx.createPattern(foamTile(), 'repeat')), d = FXQ.gt/350*px, ts = 60*px/128;
-      if (fp.setTransform){ fp.setTransform(new DOMMatrix([ts, 0, 0, ts, d, 0.4*d])); ctx.strokeStyle = fp; ctx.globalAlpha = Math.min(1, (0.13 + 0.13*day)*2.2); ctx.lineWidth = 2.6*px; ctx.stroke(SEAFX.fp);
-        fp.setTransform(new DOMMatrix([0, ts*1.4, -ts*1.4, 0, 37*px - 0.7*d, 23*px + 0.3*d])); ctx.globalAlpha = Math.min(1, (0.06 + 0.07*day)*2.2); ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); }
+      const fp = SEAFX.fpat || (SEAFX.fpat = ctx.createPattern(foamTile(), 'repeat')), d = SEAFX.ct/350*px, ts = 60*px/128, lf = O.lf || 1;
+      if (fp.setTransform){ fp.setTransform(new DOMMatrix([ts, 0, 0, ts, d, 0.4*d])); ctx.strokeStyle = fp; ctx.globalAlpha = Math.min(1, (0.13 + 0.13*day)*2.2*lf); ctx.lineWidth = 2.6*px; ctx.stroke(SEAFX.fp);
+        fp.setTransform(new DOMMatrix([0, ts*1.4, -ts*1.4, 0, 37*px - 0.7*d, 23*px + 0.3*d])); ctx.globalAlpha = Math.min(1, (0.06 + 0.07*day)*2.2*lf); ctx.lineWidth = 5*px; ctx.stroke(SEAFX.fp); }
       ctx.restore(); } } }
 /* A lost graphics context. The browser keeps every canvas's pixels on the GPU; when the GPU process is reset (a driver reset, a laptop switching
    GPUs, the GPU running out of memory) every canvas loses them at once: 'contextlost', then 'contextrestored' with the canvases blank. The map
@@ -8216,7 +8331,7 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
     CINFO, CGEO, CBAKE, CBTN, CLOW, CLOWN, CLGL, CJOB, CWANT, CITY_MISS, CNF]) M.clear();
   TMCB = 0; BNC_B = 0; BNP = null; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
   GRAIN = null; GROUND = null; NIGHT = null; CGLOWC = null; CLOUDS = null; CONTRAIL = null; TMSH = null; TMFOAM = null;
-  for (const k of ['cv', 'tile', 'pat', 'fp', 'fc', 'foam', 'fpat', 'wc']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = ''; SEAFX.g = -1;
+  for (const k of ['cv', 'tile', 'pat', 'fp', 'fc', 'foam', 'fpat', 'wc', 'st', 'stp', 'fsp', 'far', 'mp']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = ''; SEAFX.g = -1;
   DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; dtFarDrop(); DT.fl = null;
   for (const c of FADEP) drop(c); FADEP.length = 0; FADE.length = 0;
   drop(OVL.cv); OVL.k = ''; OVL.g = null; OVL.c.rel.k = OVL.c.sup.k = '';   // (the Relations / Supply overlay canvas: rebuilt whole on the next frame it shows)
@@ -11806,6 +11921,9 @@ if (location.protocol === 'file:' && window.__im) window.__im.dtProbe = (k, tx, 
   return {k, tx, ty, r:J.r, acc}; };   // (the detail tiles' colour against the ground under them, b, and the far texture over the same box, f: .test/map-zoom-look.js)
 if (location.protocol === 'file:' && window.__im) window.__im.dtFar = () => { const FL = dtFarLand(), F = DT.far && DT.far.T === GEO.terrain ? DT.far : null;
   return {on:dtFarOn(), total:FL ? FL.L.length : 0, done:F && FL ? FL.L.filter(([tx, ty]) => F.mv[ty*FL.nW + tx] === DT.mv + 1).length : 0, used:dtFarTex() !== GEO.terrain, ms:DT.ms}; };   // the far texture's progress (MAP-TEXTURE)
+if (location.protocol === 'file:' && window.__im) Object.defineProperty(window.__im, 'sea', {get: () => SEA_OPT, set: v => { if (!SEAO[v] || v === SEA_OPT) return; SEA_OPT = v;   // MAP-SEA: the sea's look for the comparison sheets ('a', 'b', 'c'; 'm' the look before)
+  for (const k in MAPS) MAPS[k].seaTex = undefined; if (G) G.seaTex = undefined; for (const k of ['st', 'stp', 'fsp', 'far', 'mp', 'pat']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = '';
+  if (GEO){ GEO.seaTex = bakeSeaDepth(); } layerKey = ''; geoDirty = true; redraw(); }});
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)
