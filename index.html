@@ -3884,7 +3884,7 @@ function dtFarLand(){ const C = dtCells(), T = GEO.terrain; if (!C || !T) return
   for (let i = 0; i < W*H; i++){ if (C.cls[i] === 8) continue; const [x, y] = cellCenter(i);
     for (let ty = Math.max(0, Math.floor((y - m)*k)); ty <= Math.min(nH - 1, Math.floor((y + m)*k)); ty++) for (let tx = Math.max(0, Math.floor((x - m)*k)); tx <= Math.min(nW - 1, Math.floor((x + m)*k)); tx++) has[ty*nW + tx] = 1; }
   for (let ty = 0; ty < nH; ty++) for (let tx = 0; tx < nW; tx++) if (has[ty*nW + tx]) L.push([tx, ty]);
-  return (DT.fl = {C, T, L, nW, nH}); }
+  return (DT.fl = {C, T, L, nW, nH, has}); }
 const dtFarOn = () => !mapLite() && !DT.fail && !!GEO && !!GEO.terrain && Math.abs(GEO.terrain.width/WORLD_W - DT_RF) < 0.01 && !!dtCells();
 // the next far tile to make: this month's not made yet, nearest the middle of the screen first (across the date line too)
 function dtFarNext(){ const FL = dtFarLand(); if (!FL) return null; const F = DT.far && DT.far.T === GEO.terrain ? DT.far : null, s = view.s, k = DT_RF/DT_N, nWr = WRAP_W*k;
@@ -4001,7 +4001,12 @@ postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0
 // most one finished tile is composited a frame, so the camera lands on cached detail
 // the boxes held are released (redrawn, each with a cross-fade, see FADE) as soon as the tile under the middle of the screen is among them,
 // else in batches every 150 ms, or once nothing on screen is missing: the detail dissolves in from the middle out
-function dtHoldRel(){ if (!DT.hold.length) return; const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, cx = Math.floor(wrapWX((cw/2 - view.x)/s)/T), cy = Math.floor((ch/2 - view.y)/s/T);
+// (far tiles only: their boxes are held until every far tile on screen is in, or 2.5 s pass, then redrawn together: the far texture comes in
+// once, not as a redraw for each tile, which on a phone kept the main thread busy for the whole bake)
+function dtFarScreenPending(){ const FL = dtFarLand(); if (!FL) return false; const F = DT.far && DT.far.T === GEO.terrain ? DT.far : null, k = DT_RF/DT_N, s = view.s, ty0 = Math.max(0, Math.floor(-view.y/s*k)), ty1 = Math.min(FL.nH - 1, Math.floor((ch - view.y)/s*k)); let pend = false;
+  wrapSpans(-view.x/s, (cw - view.x)/s, (x0, x1) => { for (let ty = ty0; ty <= ty1 && !pend; ty++) for (let tx = Math.max(0, Math.floor(x0*k)); tx <= Math.min(FL.nW - 1, Math.floor(x1*k)); tx++){ if (!FL.has[ty*FL.nW + tx]) continue; if (!F || F.mv[ty*FL.nW + tx] !== DT.mv + 1){ pend = true; break; } } });
+  return pend; }
+function dtHoldRel(){ if (!DT.hold.length) return; if (DT.hold.every(h => h[2] === DT_RF)){ if (performance.now() - DT.holdT > 2500 || !dtFarScreenPending()) dtRelease(); return; } const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, cx = Math.floor(wrapWX((cw/2 - view.x)/s)/T), cy = Math.floor((ch/2 - view.y)/s/T);
   if (performance.now() - DT.holdT > 150 || DT.hold.some(h => h[0] === cx && h[1] === cy && h[2] === r) || !dtScreenMissing()) dtRelease(); }
 // tiles that came back after the view zoomed out past the detail: kept in the cache (a zoom back in finds them; at most the few that were in
 // flight, so a few ms) and the boxes held for the layer dropped (no detail at this zoom): nothing is left waiting for a frame that would never use it
