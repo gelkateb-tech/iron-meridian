@@ -625,6 +625,7 @@ for f in HF_BUILD:
 if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_SEEN})
 
 # ---- UNIT LOOKS (tools/gen-art.py ul-<unit>-<group>-<look>-<side|scene|top>; run: prep-art.py assets/art-src assets/art ul) -- no API call.
+# The pictures are not written one by one: tools/ulatlas.py packs a unit's 45 pictures into two atlas files (assets/art/ula-<unit>-pic.webp, -scene.webp) and its table (assets/art-src/ul-atlas/<unit>.json).
 # -side: the three-quarter side view cut out (transparent), trimmed, 512 px long side, for the research tree diamond
 # -top : the straight-down view cut out, kept in its square frame (512 px; nose up) for the map and army bar, its opaque box printed for PICBOX
 # -scene: the card scene resized to 768x512 (3:2), NOT cut out (the blue monitor tint and scanlines are drawn in code)
@@ -687,13 +688,19 @@ def net_mask_img(im, size):
 PALE_UNITS = {'jet', 'int', 'asf', 'heli', 'drone', 'sdrone', 'swarm', 'mpa', 'awacs', 'bomb', 'stealth', 'frig', 'crui', 'sub', 'carr'}
 def ul_net_cut_ok(f): return bool(ISNET) and os.path.exists(ISNET)
 def ul_prep():
-    import glob
-    boxes = {}
+    import glob, importlib.util
+    spec = importlib.util.spec_from_file_location('ulatlas', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ulatlas.py')); UA = importlib.util.module_from_spec(spec); spec.loader.exec_module(UA)
+    boxes = {}; units = {}
     for f in sorted(glob.glob(os.path.join(SRC, 'ul-*-*-*-*.webp')) + glob.glob(os.path.join(SRC, 'ul-*-*-*-*.png'))):
         stem, kind = os.path.splitext(os.path.basename(f))[0].rsplit('-', 1)
-        if kind not in ('side', 'scene', 'top') or (len(sys.argv) > 4 and not any(x in stem for x in sys.argv[4:])): continue
+        if kind in ('side', 'scene', 'top') and UA.STEM.match(stem + '-' + kind): units.setdefault(stem.split('-')[1], []).append((f, stem, kind))
+    # the pictures are packed per unit (tools/ulatlas.py): a name on the command line (ul <part of a name> ...) picks the units whose pictures it matches, and every picture of such a unit is made again
+    want_u = [u for u, L in units.items() if len(sys.argv) <= 4 or any(x in s for _, s, _ in L for x in sys.argv[4:])]
+    for unit in sorted(want_u):
+      pics = {}
+      for f, stem, kind in units[unit]:
         im = Image.open(f)
-        if kind == 'scene': out = im.convert('RGB').resize((768, 512), Image.LANCZOS); out.save(os.path.join(OUT, stem + '-scene.webp'), 'WEBP', quality=88, method=6)
+        if kind == 'scene': out = im.convert('RGB').resize((768, 512), Image.LANCZOS); pics[stem + '-scene'] = out
         else:
             pale = stem.split('-')[1] in PALE_UNITS   # aircraft and ships are pale grey and smooth: the floor test must be strict or it eats them
             kw = dict(sd=34, sch=8, grad=4, dark=45) if pale else {}
@@ -710,8 +717,9 @@ def ul_prep():
             else:
                 c = c.resize((512, 512), Image.LANCZOS); bb = c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()
                 boxes[stem + '-top'] = [round((bb[2] - bb[0])/512, 2), round((bb[3] - bb[1])/512, 2)]
-            c.save(os.path.join(OUT, stem + '-' + kind + '.webp'), 'WEBP', quality=90, method=6)
+            pics[stem + '-' + kind] = c
         print('unit look', stem, kind)
+      UA.pack_unit(unit, pics, OUT, os.path.join(SRC, 'ul-atlas'))   # ula-<unit>-pic.webp, ula-<unit>-scene.webp and the unit's table (the encoders: quality 90 for the cut-outs, 88 for the scenes, method 6)
     if boxes:
         print('PICBOX:', boxes)
         idx = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT))), 'index.html')   # the opaque boxes of the top-downs go into the page's PICBOX line (merged with the ones already there)
