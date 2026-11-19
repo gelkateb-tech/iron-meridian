@@ -210,7 +210,7 @@ time a game day.
 
 ## 6. Capture, embarking and landing
 
-The rules live in `rules/movement.js` (the block before `canProceed`: `atHeart`, `heartVia`, `sailTo`, `embWait`, `embarkWhy`, `landH`) and the
+The rules live in `rules/movement.js` (the block before `canProceed`: `atHeart`, `heartVia`, `sailTo`, `embStep`, `embarkWhy`, `landH`, `landStep`) and the
 capture step of the hour in `rules/tick.js`. Everything a capture does (`capture` in `rules/combat.js`: buildings, morale, cores, unrest,
 territory, victory points, dispatches) is unchanged; only the moment changed.
 
@@ -227,13 +227,26 @@ territory, victory points, dispatches) is unchanged; only the moment changed.
 - **Embarking only in a naval port.** Ground forces board ships only in a **naval port**: a coastal city of their own or a friend's (`portOk`,
   the same ports fleets dock in and Naval Yards are built in). The route planner (`pathFor`, `surprisePath`) never plans a leg from other land
   onto water: a route overseas marches to a port first, and a move to a sea zone from land without a port is refused with *No naval port here:
-  march to a port to embark*. Embarking takes **`EMBARK_H` = 6 h** in the port (`a.emb`, hours left, counted while the force could otherwise set
-  off: a battle in the port pauses it); Halt cancels it. A route whose port was lost is planned again or stops.
-- **Landing.** Troops come ashore on any coast, as before, or into a port. A landing takes **`LAND_H` = 12 h**, **`LAND_PORT_H` = 6 h** into a
-  port held by you or a friend (`a.land`, hours left). Meanwhile the force cannot move on, walk or capture, and fights at the landing penalty of
-  its first day ashore (`rLandF`: 67%, 90% with Amphibious Doctrine I, full with II). Stacks they join wait for them.
-- **Research and commanders.** Amphibious Doctrine (any level) halves landings; Combat Engineers cut embarking by 30% / 40% (their old
-  capture-speed effect, `rCapF`); a Siegemaster commander embarks and lands 20% faster per rank (floor 40%).
+  march to a port to embark*. Embarking takes **`EMBARK_H` = 45 minutes** (0.75 h) in the port (`a.emb`, the time left in fractional hours,
+  counted while the force could otherwise set off: a battle in the port pauses it); Halt cancels it. A route whose port was lost is planned
+  again or stops.
+- **Landing.** Troops come ashore on any coast, as before, or into a port. A landing takes **`LAND_H` = 45 minutes** on a coast and
+  **`LAND_PORT_H` = 45 minutes** into a port held by you or a friend (owner, 19 November 2026: both the same for now; the two names stay apart
+  for the naval-cities rule to come). `a.land` is the time left in fractional hours. Meanwhile the force cannot move on, walk or capture; the
+  landing penalty of its first day ashore is unchanged (`rLandF`: 67%, 90% with Amphibious Doctrine I, full with II). Stacks they join wait.
+- **Exact to the minute.** Movement still runs once an hour, but boarding and landing are not rounded up to whole hours. The hour's travel
+  time is shared out (`rules/tick.js`, `landStep` and `embStep` in `rules/movement.js`): a force that finishes boarding 45 minutes into the
+  hour sails the last 15 minutes of it; a force that finishes landing 45 minutes into the hour walks, sets off on its next leg or captures the
+  province's heart in the last 15. Troops at sea also keep the time left over when a sea leg ends within an hour (`a.carry`, as trains do on
+  rail): it goes into their next sea leg, or into the landing, so a landing can end in the very hour the ships reach the coast. A route over
+  the sea therefore takes exactly the sum of its parts, and `etaHours` (which adds the parts and rounds up once at the end) gives the hour
+  the force is ashore.
+- **Research and commanders.** Multipliers on those times: Amphibious Doctrine (any level) halves landings (22.5 minutes); Combat Engineers
+  cut embarking by 30% / 40% (their old capture-speed effect, `rCapF`); a Siegemaster commander embarks and lands 20% faster per rank (floor
+  40%). No boarding or landing ever takes under **15 minutes** (`LAND_MIN`, one battle step). An upgrade arriving while a landing or boarding
+  is under way cuts the time left by the same ratio (`landRetime`), never below 15 minutes unless less was left.
+- **Old saves.** A save made when these times were whole hours (6 h, 12 h) has each force's time left cut to its new full time
+  (`Math.min`, in `restore`, `rules/state.js`).
 - **AI.** The computer plays by the same rules (one planner); a computer force that stands off the heart of land it is taking (after a clash on
   the road) walks to the city. Tests: `node .test/capture-landing.js`.
 
