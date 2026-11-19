@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. top: hull geometry and roof layout differ from side view, including stepped front glacis, rearranged air vents, and altered rear hatches.

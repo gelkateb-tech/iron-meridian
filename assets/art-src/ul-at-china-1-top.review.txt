@@ -1,0 +1,2 @@
+FLAG
+- 1. Missile launcher is facing backward over the cargo bed instead of forward as in the reference.

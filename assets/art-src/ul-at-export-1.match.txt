@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- point 1 (top): missile rails are misaligned and not parallel, launcher does not extend over cab roof as in side view
+- point 1 (top): headlights are incorrectly mounted on top of the front fenders instead of integrated into the front fascia

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. top: roof layout is incorrect; the round hatch is placed on the left instead of the right, and the machine gun position is altered.
