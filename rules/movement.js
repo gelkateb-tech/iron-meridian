@@ -364,15 +364,16 @@ function sailRetime(w0){ for (const [a, v] of w0){ const s = a.sail; if (!s) con
     const r = v/v1; s.h = Math.max(1e-6, s.h*r); if (s.h2) s.h2 *= r; } }
 // hours left for a force walking or sailing inside its province
 const sailHours = a => a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h + (a.sail.h2 || 0) - 1e-9)) : 0;   // (h2: the part after the heart, sailTo)
-// the hourly step of a force walking or sailing inside its province (rules/tick.js movement)
-function sailHour(a){ const s = a.sail; if (!s) return; if (a.to !== null || a.path.length || (shipsOnly(a) && !G.P[a.at].sea)){ delete a.sail; return; }
+// the hourly step of a force walking or sailing inside its province (rules/tick.js movement); hr: the part of the hour it has (less than 1 in the
+// hour a landing ends: landStep)
+function sailHour(a, hr = 1){ const s = a.sail; if (!s) return; if (a.to !== null || a.path.length || (shipsOnly(a) && !G.P[a.at].sea)){ delete a.sail; return; }
   if (!G.P[a.at].sea && S.battles.includes(a.at)) return;   // (a ground force fighting where it stands stops walking until the battle ends)
   if (a.land > 0) return;   // (troops still landing walk on once ashore)
-  const q0 = a.pos || sailXY(a); s.t = Math.min(1, s.t + 1/s.h); a.pos = sailXY(a);
+  const q0 = a.pos || sailXY(a); s.t = Math.min(1, s.t + hr/s.h); a.pos = sailXY(a);
   { const P = G.P[a.at]; if (!P.sea && a.hrt !== a.at && segD(q0[0], q0[1], a.pos[0], a.pos[1], P.x, P.y) <= HEART_R && ground(a) && capturable(a.owner, a.at)) a.hrt = a.at; }   // the walk passed the heart: it takes the province (rules/tick.js)
   if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; if (s.nx) a.sail = {f:a.pos, to:s.nx, t:0, h:Math.max(1e-6, s.h2)}; else delete a.sail; } }   // (sailTo: on from the heart to the point)
 // the end of a leg (rules/tick.js movement): the force reaches the province it was heading for and stands at its exact point on the final leg
-// (troops coming ashore from the sea start their landing here: a.land, the hours before they can move on or capture)
+// (troops coming ashore from the sea start their landing here: a.land, the time in hours, 0.75 = 45 minutes, before they can move on or capture)
 function legArrive(a, cross = false){ const f0 = legEnds(a)[0]; if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); if (ground(a)) a.land = landH(a, a.to); }
   a.from = a.at; a.froms = [a.at]; atMove(a, a.to); a.to = null; a.t = 0; a.legFrom = null; delete a.hrt;
   if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null;
@@ -396,11 +397,19 @@ function legCross(a, lh){ if (a.path.length || !a.dest || a.dest.p !== a.to || a
    centre takes it at once. Air units never capture, and CAP_MIN ground units are needed, as before. Everything a capture does (rules/combat.js
    capture) is unchanged, only immediate.
    EMBARKING: ground forces board ships only in a NAVAL PORT, a coastal city of their own or a friend's (portOk: the ports fleets dock in and Naval
-   Yards are built in). It takes EMBARK_H hours there (a.emb: hours left, counted while the force could otherwise set off), the force does not move.
-   LANDING: troops coming ashore from the sea (on any coast, as before, or into a port) take LAND_H hours, LAND_PORT_H into a port of their own or
-   a friend's (a.land: hours left). Meanwhile the force cannot move on, walk or capture, and fights at the landing penalty (rLandF, first day ashore).
-   Amphibious Doctrine halves landings; Combat Engineers load ships faster (rCapF); a Siegemaster commander does both 20% faster per rank. */
-const HEART_KM = 0.1, HEART_R = HEART_KM*KM_W, EMBARK_H = 6, LAND_H = 12, LAND_PORT_H = 6;
+   Yards are built in). It takes EMBARK_H, 45 minutes, there (a.emb: the time left in hours, fractional, counted while the force could otherwise set
+   off); the force does not move meanwhile.
+   LANDING: troops coming ashore from the sea (on any coast, as before, or into a port) take LAND_H, 45 minutes, and LAND_PORT_H, also 45 minutes for
+   now, into a port of their own or a friend's (owner 2026-11-19; the two stay apart for the naval-cities rule to come) (a.land: the time left in
+   hours, fractional). Meanwhile the force cannot move on, walk or capture; it fights at the landing penalty of its first day ashore (rLandF).
+   EXACT TIME: movement runs once an hour, but these times are not rounded to whole hours: the hour's travel is shared out (rules/tick.js). A force
+   that finishes boarding 45 minutes into the hour sails the last 15 minutes of it (embStep); one that finishes landing 45 minutes in walks, marches
+   on or captures in the last 15 (landStep). Troops at sea keep what is left of an hour when a sea leg ends (a.carry, as trains do): it goes into
+   their next leg, or into the landing (landOver). So a route over the sea takes the sum of its parts, and etaHours, which adds them and rounds up
+   once, is the hour the force is ashore.
+   Amphibious Doctrine halves landings; Combat Engineers load ships faster (rCapF); a Siegemaster commander does both 20% faster per rank. These are
+   multipliers on the times; none goes under LAND_MIN, 15 minutes (one battle step). */
+const HEART_KM = 0.1, HEART_R = HEART_KM*KM_W, EMBARK_H = 0.75, LAND_H = 0.75, LAND_PORT_H = 0.75, LAND_MIN = 0.25;
 // whether nation n takes land province p by reaching its heart: independent land, or land of a power it is at war with
 const capturable = (n, p) => n >= 0 && !G.P[p].sea && S.owner[p] !== n && atWar(n, S.owner[p]);
 // a force with ground units ashore on the centre point of its province (or that walked through it since it came)
@@ -413,23 +422,35 @@ const heartVia = (a, p, f, to) => { const P = G.P[p]; if (!ground(a) || !captura
 function sailTo(a, p, f, to, hOf){ if (heartVia(a, p, f, to)){ const H = [G.P[p].x, G.P[p].y]; return {f, to:H, t:0, h:Math.max(1e-6, hOf(Math.hypot(H[0] - f[0], H[1] - f[1]))), nx:to, h2:hOf(Math.hypot(to[0] - H[0], to[1] - H[1]))}; }
   return {f, to, t:0, h:Math.max(1e-6, hOf(Math.hypot(to[0] - f[0], to[1] - f[1])))}; }
 const cmdEmbF = a => Math.max(0.4, 1 - 0.2*cmdF(a, 'siege'));
-// hours to embark in the port, and to land in province p from the sea (into a port of your own or a friend's: the short landing)
-const embarkF = a => EMBARK_H*rCapF(a.owner)*cmdEmbF(a), landF = (a, p) => (portOk(a.owner, p) ? LAND_PORT_H : LAND_H)*(rLevel(a.owner, 'nav3') > 0 ? 0.5 : 1)*cmdEmbF(a);   // (before rounding)
-const embarkH = a => Math.max(1, Math.round(embarkF(a)));
-const landH = (a, p) => Math.max(1, Math.round(landF(a, p)));
+// the time to embark in the port, and to land in province p from the sea (into a port of your own or a friend's: LAND_PORT_H), in hours, exact
+// (0.75: 45 minutes; not rounded to whole hours); the upgrades multiply it, and it is never under LAND_MIN (15 minutes)
+const embarkH = a => Math.max(LAND_MIN, EMBARK_H*rCapF(a.owner)*cmdEmbF(a));
+const landH = (a, p) => Math.max(LAND_MIN, (portOk(a.owner, p) ? LAND_PORT_H : LAND_H)*(rLevel(a.owner, 'nav3') > 0 ? 0.5 : 1)*cmdEmbF(a));
 // a command upgrade that changes the time of a landing or of boarding (Amphibious Doctrine, Combat Engineers: rGrant, rules/research.js) reaches the ones already
-// under way at once (owner 2026-11-18): the hours still to go (a.land, a.emb) shrink by the ratio of the new time to the old, so the share done is kept.
-// landBefore: nation n's forces landing or boarding, with the unrounded time of each before the step
-const landBefore = n => armiesOf(n).filter(a => (a.land > 0 || a.emb != null) && count(a)).map(a => [a, a.land > 0 ? landF(a, a.at) : 0, a.emb != null ? embarkF(a) : 0]);
+// under way at once (owner 2026-11-18): the time still to go (a.land, a.emb) shrinks by the ratio of the new time to the old, so the share done is
+// kept (exactly: fractional hours; never under LAND_MIN, unless less than that was left). landBefore: nation n's forces landing or boarding, with the
+// time of each before the step
+const landBefore = n => armiesOf(n).filter(a => (a.land > 0 || a.emb != null) && count(a)).map(a => [a, a.land > 0 ? landH(a, a.at) : 0, a.emb != null ? embarkH(a) : 0]);
+const landShrink = (left, r) => Math.max(Math.min(left, LAND_MIN), left*r);
 function landRetime(w0){ for (const [a, l0, e0] of w0){
-    if (l0 > 0 && a.land > 0){ const r = landF(a, a.at)/l0; if (Math.abs(r - 1) > 1e-9) a.land = Math.max(1, Math.round(a.land*r)); }
-    if (e0 > 0 && a.emb != null){ const r = embarkF(a)/e0; if (Math.abs(r - 1) > 1e-9) a.emb = Math.max(1, Math.round(a.emb*r)); } } }
+    if (l0 > 0 && a.land > 0){ const r = landH(a, a.at)/l0; if (Math.abs(r - 1) > 1e-9) a.land = landShrink(a.land, r); }
+    if (e0 > 0 && a.emb != null){ const r = embarkH(a)/e0; if (Math.abs(r - 1) > 1e-9) a.emb = landShrink(a.emb, r); } } }
 // the next leg of an idle force with a route takes its ground units from land onto water: they embark first
 const embLeg = a => a.to === null && a.path.length > 0 && !G.P[a.at].sea && G.P[a.path[0]].sea && ground(a);
-// the embarking count in the port (rules/tick.js movement, once canProceed lets the force set off): true while it must still wait
-function embWait(a){ if (!embLeg(a)) return false;
-  if (a.emb == null){ a.emb = embarkH(a); return true; }
-  if (--a.emb > 0) return true; delete a.emb; return false; }
+// the boarding in the port (rules/tick.js movement, once canProceed lets the force set off), out of hr, the part of this hour the force has:
+// the part of the hour left to sail once it is aboard, or -1 while it must still wait (a.emb: the time left, fractional hours)
+function embStep(a, hr = 1){ if (!embLeg(a)) return hr;
+  if (a.emb == null) a.emb = embarkH(a);
+  const u = Math.min(hr, a.emb); a.emb -= u; if (a.emb > 1e-9) return -1; delete a.emb; return hr - u; }
+// the landing (rules/tick.js movement, at the start of the hour): the part of this hour the force has left to walk, march on or capture once it is
+// ashore (0 while it is still landing, 1 with no landing)
+function landStep(a){ if (!(a.land > 0)) return 1; const u = Math.min(1, a.land); a.land -= u; if (a.land > 1e-9) return 0; delete a.land; return 1 - u; }
+// a landing that starts with time over from the sea leg that just ended within the hour (ov hours, rules/tick.js movement): the time goes into the
+// landing, and a landing done within that same hour leaves what is still over to the force's next leg (a.carry, as trains do)
+function landOver(a, ov){ a.carry = 0; if (!(ov > 0) || !(a.land > 0)) return; if (ov < a.land - 1e-9){ a.land -= ov; return; }
+  const left = ov - a.land; delete a.land; if (left > 1e-9 && a.path.length){ a.carry = Math.min(1, left); a.carryH = S.hour; } }
+// troops at sea, or just ashore from it: the time left over when their last leg ended goes into the next (rules/tick.js movement)
+const seaCarry = a => ground(a) && (G.P[a.at].sea || (a.from != null && !!G.P[a.from] && G.P[a.from].sea));
 // why a ground force cannot be sent to province `to` because of the port rule ('' when that is not the reason): the refusal the page shows
 function embarkWhy(a, to){ if (!a || a.air || !G.P[to] || shipsOnly(a) || !ground(a)) return ''; const from = a.to ?? a.at;
   if (G.P[to].sea && !G.P[from].sea && !portOk(a.owner, from)) return 'No naval port here: march to a port to embark.';
@@ -443,16 +464,16 @@ function canProceed(a){
   return true;
 }
 // hours to the end of a route (path: a.path, or a route the player is weighing; end: its exact point, else the province centre)
-// (embarking in a port and landing from the sea count: embarkH, landH)
+// (embarking in a port and landing from the sea count, to the minute: embarkH, landH; the sum is rounded up once, at the end)
 function etaHours(a, path = a.path, end = path === a.path ? a.dest : null){
   const lw = a.land > 0 && a.to === null ? a.land : 0, gr = ground(a);
-  if (a.to === null && !path.length) return sailHours(a) + lw;
+  if (a.to === null && !path.length) return a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h + (a.sail.h2 || 0) + lw - 1e-9)) : Math.ceil(lw - 1e-9);
   let h = lw, from = a.at, p1 = a.sail ? sailXY(a) : a.pos || [G.P[a.at].x, G.P[a.at].y];
   if (a.to !== null){ h += (1 - a.t)*legH(a); if (gr && G.P[a.at].sea && !G.P[a.to].sea) h += landH(a, a.to); from = a.to; p1 = [G.P[a.to].x, G.P[a.to].y]; }
   for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 && end && end.p === p ? [end.x, end.y] : [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2);
     if (gr && !G.P[from].sea && G.P[p].sea) h += i === 0 && a.to === null && a.emb != null ? a.emb : embarkH(a); else if (gr && G.P[from].sea && !G.P[p].sea) h += landH(a, p);
     from = p; p1 = p2; }
-  return Math.ceil(h);
+  return Math.ceil(h - 1e-9);
 }
 /* ---------------- Supply & morale ---------------- */
 const SUPPLY_RANGE = 8, LEG = GS > 1 ? 3.33 : 1;   // LEG: a supply step is one province of the old map (~3.3 hexes, ~600 km)

@@ -27,7 +27,7 @@ const OUT = process.argv[2] || __dirname;
   await p.waitForTimeout(900); await p.screenshot({ path: `${OUT}/hide-desk-2-fleet-selected.png` });
   // no Trade map mode any more (owner, map-modes: two modes, Political and Terrain): routes show only with a fleet selected, and blockaded ones always
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
-  const md = await p.evaluate(() => [...document.querySelectorAll('[data-act="mode"]')].map(b => b.dataset.k).join());
+  await p.keyboard.press('o'); await p.waitForTimeout(200); const md = await p.evaluate(() => [...document.querySelectorAll('#sheet [data-act="mode"]')].map(b => b.dataset.k).join()); await p.keyboard.press('o'); await p.waitForTimeout(300);   // (MAP-2: in Settings > Map)
   ok('the map modes are Political and Terrain (no Trade mode)', md === 'political,terrain', md);
   // a blockaded route shows in Political mode with nothing selected
   const bl = await p.evaluate(() => { const im = window.__im, S = im.S, T = im.trade, de = S.nations.findIndex(N => N.name === 'Germany'); S.rel[[0, de].sort((x, y) => x - y).join(',')] = {st:'war', since:S.hour, until:null};

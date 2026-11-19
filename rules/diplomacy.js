@@ -405,7 +405,7 @@ function spyHour(){
       if (isSeat(n)) tell(n, `Your agent was caught in ${where}${o >= 0 ? ` by ${S.nations[o].name} (relations −20)` : ''}.`, 'bad', p);
       if (o !== n && isSeat(o)) tell(o, `Counter-intelligence caught ${artA(S.nations[n].name)} agent in ${where}.`, 'good', p); continue; }
     let res = '';
-    if (k === 'recon'){ S.reveal = S.reveal || {}; for (const v of [p, ...G.P[p].nbs]) S.reveal[v] = S.hour + 72; visCache = null; res = 'the area is revealed for 3 days'; }
+    if (k === 'recon'){ S.reveal = S.reveal || {}; for (const v of [p, ...G.P[p].nbs]) S.reveal[v] = S.hour + 72; intelNote(n, [p, ...G.P[p].nbs], S.hour + 72); visCache = null; res = 'the area is revealed for 3 days'; }
     else if (k === 'sabotage'){ if (S.cons[p]){ S.cons[p] = null; res = 'construction destroyed'; } else { const ks = BK.filter(b => S.bld[p][b]); const b = ks[Math.floor(rng()*ks.length)]; if (b){ const h = bldHit(p, b); res = h.shielded ? `the ${BUILD.fort.name} here shielded the ${BUILD[b].name}` : h.bunker ? `${BUILD.fort.name} damaged${h.lost ? '' : ' (still standing)'}` : `${BUILD[b].name} damaged`; } } }
     else if (k === 'incite'){ S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = Math.min(100, unrestOf(p) + 35); res = `unrest now ${Math.round(S.unrest[p])}%`; }
     else if (k === 'steal' && o >= 0){ const ts = rStealable(n, o).filter(t => rReqsOk(n, RN[t], rLevel(n, t) + 1)); const t = ts[Math.floor(rng()*ts.length)]; if (t){ const lv = rLevel(n, t) + 1; rGrant(S.nations[n], t, lv); res = `${rName(RN[t], lv)} acquired`; } else res = 'nothing usable found'; }

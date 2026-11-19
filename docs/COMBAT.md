@@ -210,7 +210,7 @@ time a game day.
 
 ## 6. Capture, embarking and landing
 
-The rules live in `rules/movement.js` (the block before `canProceed`: `atHeart`, `heartVia`, `sailTo`, `embWait`, `embarkWhy`, `landH`) and the
+The rules live in `rules/movement.js` (the block before `canProceed`: `atHeart`, `heartVia`, `sailTo`, `embStep`, `embarkWhy`, `landH`, `landStep`) and the
 capture step of the hour in `rules/tick.js`. Everything a capture does (`capture` in `rules/combat.js`: buildings, morale, cores, unrest,
 territory, victory points, dispatches) is unchanged; only the moment changed.
 
@@ -227,13 +227,26 @@ territory, victory points, dispatches) is unchanged; only the moment changed.
 - **Embarking only in a naval port.** Ground forces board ships only in a **naval port**: a coastal city of their own or a friend's (`portOk`,
   the same ports fleets dock in and Naval Yards are built in). The route planner (`pathFor`, `surprisePath`) never plans a leg from other land
   onto water: a route overseas marches to a port first, and a move to a sea zone from land without a port is refused with *No naval port here:
-  march to a port to embark*. Embarking takes **`EMBARK_H` = 6 h** in the port (`a.emb`, hours left, counted while the force could otherwise set
-  off: a battle in the port pauses it); Halt cancels it. A route whose port was lost is planned again or stops.
-- **Landing.** Troops come ashore on any coast, as before, or into a port. A landing takes **`LAND_H` = 12 h**, **`LAND_PORT_H` = 6 h** into a
-  port held by you or a friend (`a.land`, hours left). Meanwhile the force cannot move on, walk or capture, and fights at the landing penalty of
-  its first day ashore (`rLandF`: 67%, 90% with Amphibious Doctrine I, full with II). Stacks they join wait for them.
-- **Research and commanders.** Amphibious Doctrine (any level) halves landings; Combat Engineers cut embarking by 30% / 40% (their old
-  capture-speed effect, `rCapF`); a Siegemaster commander embarks and lands 20% faster per rank (floor 40%).
+  march to a port to embark*. Embarking takes **`EMBARK_H` = 45 minutes** (0.75 h) in the port (`a.emb`, the time left in fractional hours,
+  counted while the force could otherwise set off: a battle in the port pauses it); Halt cancels it. A route whose port was lost is planned
+  again or stops.
+- **Landing.** Troops come ashore on any coast, as before, or into a port. A landing takes **`LAND_H` = 45 minutes** on a coast and
+  **`LAND_PORT_H` = 45 minutes** into a port held by you or a friend (owner, 19 November 2026: both the same for now; the two names stay apart
+  for the naval-cities rule to come). `a.land` is the time left in fractional hours. Meanwhile the force cannot move on, walk or capture; the
+  landing penalty of its first day ashore is unchanged (`rLandF`: 67%, 90% with Amphibious Doctrine I, full with II). Stacks they join wait.
+- **Exact to the minute.** Movement still runs once an hour, but boarding and landing are not rounded up to whole hours. The hour's travel
+  time is shared out (`rules/tick.js`, `landStep` and `embStep` in `rules/movement.js`): a force that finishes boarding 45 minutes into the
+  hour sails the last 15 minutes of it; a force that finishes landing 45 minutes into the hour walks, sets off on its next leg or captures the
+  province's heart in the last 15. Troops at sea also keep the time left over when a sea leg ends within an hour (`a.carry`, as trains do on
+  rail): it goes into their next sea leg, or into the landing, so a landing can end in the very hour the ships reach the coast. A route over
+  the sea therefore takes exactly the sum of its parts, and `etaHours` (which adds the parts and rounds up once at the end) gives the hour
+  the force is ashore.
+- **Research and commanders.** Multipliers on those times: Amphibious Doctrine (any level) halves landings (22.5 minutes); Combat Engineers
+  cut embarking by 30% / 40% (their old capture-speed effect, `rCapF`); a Siegemaster commander embarks and lands 20% faster per rank (floor
+  40%). No boarding or landing ever takes under **15 minutes** (`LAND_MIN`, one battle step). An upgrade arriving while a landing or boarding
+  is under way cuts the time left by the same ratio (`landRetime`), never below 15 minutes unless less was left.
+- **Old saves.** A save made when these times were whole hours (6 h, 12 h) has each force's time left cut to its new full time
+  (`Math.min`, in `restore`, `rules/state.js`).
 - **AI.** The computer plays by the same rules (one planner); a computer force that stands off the heart of land it is taking (after a clash on
   the road) walks to the city. Tests: `node .test/capture-landing.js`.
 
@@ -359,3 +372,51 @@ now costs $1M a day and protects more (33% instead of 20%). Measured before (mas
 
 Against a person's nation the bunker is the owner's rule as given: a level 5 capital with a dug-in garrison takes 14.4% of the damage (before:
 Fortifications III, 51% × 0.8 = 41%), so a capital the computer has built up needs about three times the force it needed before.
+
+## 8. Intelligence: spotted or identified (owner's MAP-2 feedback, 2026-11-18)
+
+Like Conflict of Nations: **seeing a foreign force only tells you that something is there.** Its nation, size, unit types, name and health are
+known only once it is **identified**, by proper recon or by fighting it. Rules: `armyKnown`, `armyIdent`, `armyView`, `intelNote` in
+`rules/vision.js` (sight itself is unchanged: `visibleSet`, `armyVisible`); the page asks `knowA` (index.html) before it shows anything about a
+foreign force.
+
+**Spotted (only the '?' badge).** Anything in sight that nothing identifies: ordinary sight of any force (infantry, tanks, ships: 50 km), cities
+(80 km) and airbases (100 km), your own and allied land, a province you are marching to, a province revealed by someone else's UAV, manned
+aircraft in flight (150 km, patrols 200 km), and a plain AWACS (location only, as before). The map draws one grey '?' badge with a dashed edge
+where the force stands (one per province, a marching force its own): no flag, no count, no unit type icon, no 3D models or figures. Hover
+text and tap say **Unidentified army** (Spotted, or Detected by AWACS) and how to identify it, nothing more. The same holds for the province's
+hover text and sheet (Garrison: ? Unidentified army), the battle box (? Unidentified army instead of a side's nation and units), the route
+chip and the planned route (no odds against it: *an unidentified army is there: its strength is not in these odds*), Army Info (refused),
+the chase and bombard labels (*an unidentified army*), the blockade rings and trade detours of its fleets, the war warning's threat figures
+and the diplomacy intel (`haveIntelOn`).
+
+**Identified (everything: nation, units, health, name, 3D models).**
+
+| what | reveals | how long |
+|---|---|---|
+| your own forces, an **ally's** forces | always | always |
+| **Recon UAV on station** (UAV I-V) | everything inside its range (250-500 km; Wide-Area Sensors 1 and 2: 15% and 30% farther, so up to 650 km) | while it loiters, then the provinces under it **12 h** more (`S.intel`, its loiter + 12 h from arrival, the same span as its reveal) |
+| any **drone wing in flight** (Recon UAV, Strike Drones, Swarm Drones) | everything inside its sight (200 km) | while it is there |
+| **reconnaissance satellite** | its strip (150 km each side of this hour's track) | while it passes |
+| **Phased-Array AWACS** (AWACS II) | within half its radar range (250 km) | while it orbits (a plain AWACS only locates: '?') |
+| **maritime patrol** on a hunt, warships' **sonar** | ships at sea in its range / their own sea zone and the next ones | while there |
+| **Mobile SAM or jammer** (radar) | aircraft in flight over its province or the next ones | while in flight there |
+| **Special Forces** (the recon unit on the ground) | everything inside their own sight (100 km, 150 with Night Optics) | while in range |
+| **battle**: a force of yours (or an ally's) fighting in the same province, at war | the forces you fight there | while the battle lasts |
+| an agent's **reconnaissance** (Intelligence) | the target province and its neighbours | 3 days |
+
+Nothing else is remembered: once the recon has gone (and the UAV's or the agent's span is over) the force is a '?' again.
+
+**Side colour.** None: the '?' badge is the same grey for an enemy, a neutral and an independent, following the owner's words (*only an
+unknown badge*). Conflict of Nations shows the nation colour; the owner asked for less. Whether you are at war with the land it stands on is
+still shown by the borders and the province's owner.
+
+**The AI.** It does not use the fog (as before): it plays on the full state, so it knows exact enemy units it could not see; its recon UAVs pick
+targets by `S.reveal`. This is unchanged (it would change its play and its balance) and listed for the owner. Ranged fire (`rangedTargets`) and
+the AI's guns need only a spotted target, as before. The rules never ask `armyKnown`, so the golden is unchanged. Only seats keep `S.intel`
+(the AI does not need it), so an AI-only game saves the same state as before; an old save without it loads and plays.
+
+**S.reveal** (a UAV's or an agent's reveal) is shared by every nation, as before: a province another nation's UAV revealed is in your sight
+too, but that only spots: identification is your own (and your allies') recon.
+
+Tests: `node .test/intel.js` (and `node .test/intel.js 440 900` on a phone).

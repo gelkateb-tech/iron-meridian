@@ -73,7 +73,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     const cvR = () => document.getElementById('map').getBoundingClientRect();
     let HUD = null, hudT = 0;
     const hud = () => { const t = performance.now(); if (HUD && t - hudT < 300) return HUD; hudT = t; const cr = cvR(), o = [];
-      for (const s of ['.mapctl', '#modes', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(s); if (!e || e.hidden || getComputedStyle(e).display === 'none' || getComputedStyle(e).visibility === 'hidden') continue;
+      for (const s of ['.mapctl', '#mini', '#tlegend', '#ilegend', '#side', '#dock', '#sheet', '#rail']){ const e = document.querySelector(s); if (!e || e.hidden || getComputedStyle(e).display === 'none' || getComputedStyle(e).visibility === 'hidden') continue;
         const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue; const q = [r.left - cr.left, r.top - cr.top, r.right - cr.left, r.bottom - cr.top, s];
         if (q[2] < 0 || q[3] < 0 || q[0] > cr.width || q[1] > cr.height) continue; o.push(q); }
       return (HUD = o); };

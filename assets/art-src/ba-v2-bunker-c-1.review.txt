@@ -1,0 +1,2 @@
+FLAG
+- 4. FRAMING: Subject does not fill 90 percent of the frame, leaving excessive empty background space.

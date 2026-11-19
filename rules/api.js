@@ -14,7 +14,7 @@ IM.api = {
   mapOf, useMap, get mapNew(){ return MAP_NEW; },
   get S(){ return S; }, get G(){ return G; }, get BATTLE_Q(){ return BATTLE_Q; },
   // seats and what a seat sees
-  seats, isSeat, desk, visibleSet, armyVisible,
+  seats, isSeat, desk, visibleSet, armyVisible, armyKnown, armyView,
   // orders (first argument: the nation, or its force)
   recruit, build, buildMissile, startResearch, buildLink,
   orderMove, haltArmy, splitArmy, splitPlan, merge, addStop, undoStop, stopsOf, stopsEta,
