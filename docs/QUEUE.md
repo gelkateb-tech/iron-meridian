@@ -20,7 +20,6 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | Job | What | Model | Branch |
 |---|---|---|---|
 | **MAP-FIX** (resumed 2026-11-19) | pinpoint moves, the position dot, buildings scaling exactly with the map, dug-in marker options (show only) and the "Dug in" label; screenshots or tests before merging | Opus | map-fix |
-| **BUNKER ART** (owner picked C version 1) | levels 2-4 as edits of C, box removed in code like 1 and 5; then bn-fort-1..5 replaced in the game on the branch; screenshots before merging | Sonnet | bunker-art |
 | **UNIT-ART-2** (owner: "Tanks pictures are good") | the rest of the unit pictures, 3 per look, 5 groups x 3 looks, with the Gemini checks; most-seen units first; stops at the $5 floor and reports the top-up needed (estimated balance about $38.75 at the start, full rest about $42.7) | Sonnet | unit-art-2 |
 
 ## Next free slots (in this order)
@@ -32,6 +31,7 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | State | Branch |
 |---|---|---|
+| **BUNKER ART** | done 2026-11-19 (bunker-art, 42f45b3): C version 1 at levels 1-5 (2-4 as Gemini edits of C, box removed in code like 1 and 5; about $0.11, checks PASS), bn-fort-1..5 replaced, old pictures kept as .old; checks pass; level 2's step is small, level 4's small blockhouse lost its lower part (floats); sheets sent | bunker-art |
 | **MAP-2 + feedback** | done 2026-11-19 (map-2, 99047b6): one map texture, Political/Terrain in Settings; borders thin and soft zoomed out, province lines fade in; foreign armies only a grey '?' and "Unidentified army" until recon identifies them (UAV on station plus 12 h, drone wings, satellites, Phased-Array AWACS, sonar, SAM/jammer for aircraft, Special Forces, battles, spies for 3 days); the AI still plays on full information; all checks pass; performance level with master; sheets sent | map-2 |
 | **BUNKER ART options** | done 2026-11-18 (bunker-art): A concrete command bunker with earth berm, B bunker half sunk into a grassy hillock (recommended), C pillbox with trench on its own earth block (slab-like, not recommended); level 1 and 5 each, no ground patch; about $0.20; sheets and map previews sent; nothing in the game changed | bunker-art |
 | **UNIT-ART tank sets** | done 2026-11-18 (unit-art): 45 pictures, 5 groups x 3 looks x (side / scene / top-down), $1.83 with checks (log 365 calls, about $12.10; estimated balance $39.05); 7 single-check flags and 8 three-way flags (mostly mirrored roof details on the top-downs); nothing redone; full set 1,095 pictures, about $44.49 (about $42.67 left, a top-up of about $8.6 needed to keep the $5 floor); sheets sent; NOT merged | unit-art |
@@ -118,6 +118,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 - **Conflict of Nations numbers:** constacks.com can't be read (security checkpoint; its robots.txt asks AI crawlers to stay out); taken off the allowed sites 2026-11-18. Paste the figures or send screenshots if you want them matched.
 - **Research tree rebuild:** the CoN tree and card screenshots arrived (2026-11-18); the owner's own mockup did not. Starts when a job slot frees.
 - **Gemini log:** each art branch has its own copy of assets/art-src/gen-art-log.jsonl (unit-art +110 calls $1.83, bunker-art +15 calls about $0.20); merge them by joining the lines. Estimated balance about $38.85.
+- **Bunker pictures (bunker-art):** OK to merge? Level 4's small blockhouse floats (lost its lower part with the box): fix it (one Gemini edit of level 4, then the same box removal, about $0.04) or leave it?
 - **MAP-2:** OK to merge? (merged before MAP-FIX finishes)
 - **CITIES (not approved yet, owner 2026-11-18):** send screenshots first of buildings on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, and a building under construction. Keep the night lights ("way better"). Follow-up job queued for the next free slot.
 
