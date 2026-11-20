@@ -1,0 +1,4 @@
+FLAG (flagged: top)
+- 1 (top): Roof hatch and machine gun are centered instead of offset to the right side as in side view.
+- 1 (top): Rocket launcher has 4 tubes across the top row instead of 6.
+- 1 (top): Spare tire behind cab is oriented transversely instead of longitudinally.

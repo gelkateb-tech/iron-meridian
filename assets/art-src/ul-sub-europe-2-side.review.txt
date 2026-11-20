@@ -1,0 +1,2 @@
+FLAG
+- 1: Not a clearly new model; it is largely an identical copy of the generation 1 reference.

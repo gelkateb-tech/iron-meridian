@@ -1,0 +1,4 @@
+FLAG
+- 1. Not a clearly different, newer generation; it is nearly identical to the reference model mirrored.
+- 4. Main rotor blades are cut off at the left and right edges of the frame.
+- 6. Design is an almost direct copy of a real Mi-24 Hind helicopter rather than generic.

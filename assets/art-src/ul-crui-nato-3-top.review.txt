@@ -1,0 +1,2 @@
+FLAG
+- 3. BACKGROUND: Visible cast shadow appears on the background beneath the stern of the ship.

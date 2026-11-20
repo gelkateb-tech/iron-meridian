@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 5 (side, scene, top): extra aircraft are present on the flight deck of all three pictures.
+- Point 1 (side, scene, top): aircraft count and positions on the flight deck are inconsistent across the three views.

@@ -1,0 +1,3 @@
+FLAG
+- 1. Launcher tube count and spare tire configuration do not match the reference unit.
+- 3. Noticeable drop shadow cast onto the grey background.

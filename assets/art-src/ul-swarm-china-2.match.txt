@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Antenna layout differs; side view shows two tandem dorsal antennas along the centerline, while top view shows twin antennas side-by-side.

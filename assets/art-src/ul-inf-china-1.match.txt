@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): the rifle magazine is incorrectly attached sideways, protruding horizontally from the right side of the receiver instead of underneath.

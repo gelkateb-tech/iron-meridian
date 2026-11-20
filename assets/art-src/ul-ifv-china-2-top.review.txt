@@ -1,0 +1,3 @@
+FLAG
+- 1. SAME UNIT: Hull layout is mirrored; driver hatch and engine grilles are on the wrong sides.
+- 3. BACKGROUND: Visible cast shadow on the background beneath the rear of the vehicle.

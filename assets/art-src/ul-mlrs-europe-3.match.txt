@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): cabin roof layout differs from side view, featuring an asymmetrical raised section, offset sensor, and rearranged, mismatched hatches.

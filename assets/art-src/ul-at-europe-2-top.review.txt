@@ -1,0 +1,2 @@
+FLAG
+- 1. Roof layout is mirrored left-to-right: hatch, grille, and sensor are on the wrong sides.

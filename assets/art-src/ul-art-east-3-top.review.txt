@@ -1,0 +1,2 @@
+FLAG
+- 1: Gun barrel is missing the prominent mid-barrel fume extractor present on the reference model.

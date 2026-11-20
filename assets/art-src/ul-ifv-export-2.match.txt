@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 1 in scene: engine louvers, side exhaust pipe, and rear vertical pipe are incorrectly located on the vehicle's left side instead of the right.

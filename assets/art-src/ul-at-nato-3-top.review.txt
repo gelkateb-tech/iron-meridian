@@ -1,0 +1,2 @@
+FLAG
+- 1: Roof layout (cupola, machine gun, vent grille, and hatch) is mirrored left-to-right relative to reference.

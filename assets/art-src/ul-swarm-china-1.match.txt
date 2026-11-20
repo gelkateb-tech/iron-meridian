@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): top-down drone has three antennas and extra paneling at the rear instead of two antennas seen in the side view.

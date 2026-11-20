@@ -2,7 +2,7 @@
 // row per game day, the nation group's banner colour and emblems, the model names (docs/DOCTRINES.md) and the one picture lookup (unit + nation +
 // level -> side and scene picture, falling back to today's pictures), on a 440 px phone.
 //   node .test/research-con.js   (bash tools/mkpage.sh first; exits 1 on a failed check or a page error)
-// The tank pictures (assets/art/ul-tank-*) may or may not be in assets/art: the checks read the page's own list (UL_FILES) and expect the lookup
+// The tank pictures (the tank's atlases, assets/art/ula-tank-*) may or may not be in assets/art: the checks read the page's own table (UL_CELL: the atlas cell of every picture) and expect the lookup
 // to follow it either way.
 const pickNation = require('./pick-nation.js');
 const { chromium } = require('playwright');
@@ -19,9 +19,9 @@ const { chromium } = require('playwright');
   const tap = async (p, id) => { await p.evaluate(() => { const x = document.querySelector('.rs-card [data-act="rcard-x"]'); if (x) x.click(); }); await p.waitForTimeout(80); await p.evaluate(id => document.querySelector(`.rnode[data-id="${id}"]`).click(), id); await p.waitForTimeout(250); };
   const cardOf = p => p.evaluate(() => { const c = document.querySelector('.rs-card'); if (!c) return null; const q = s => c.querySelector(s), t = s => (q(s) || {}).innerText || '';
     return { head: t('.rk-ch h2'), icon: !!q('.rk-ch > svg'), close: !!q('.rk-ch [data-act="rcard-x"]') && /229, 80, 74|179, 36, 31/.test(getComputedStyle(q('.rk-ch .rk-x')).backgroundImage),
-      sdm: !!q('.rk-cs .rk-sdm .dm'), sdmPic: (q('.rk-cs .rk-sdm img') || {}).src || (q('.rk-cs .rk-sdm .rk-scn') || { style: {} }).style.backgroundImage || '', sdmRank: !!q('.rk-cs .rk-sdm .rk-rank'), note: t('.rk-note'),
+      sdm: !!q('.rk-cs .rk-sdm .dm'), sdmPic: (q('.rk-cs .rk-sdm img') || {}).dataset?.ul || (q('.rk-cs .rk-sdm img') || {}).src || (q('.rk-cs .rk-sdm .rk-scn') || { style: {} }).style.backgroundImage || '', sdmRank: !!q('.rk-cs .rk-sdm .rk-rank'), note: t('.rk-note'),
       unl: t('.rk-unl'), unlLock: !!q('.rk-unl svg'), notch: getComputedStyle(q('.rk-cp'), '::before').borderTopWidth, box: t('.rk-ub b'), rank: c.querySelectorAll('.rk-ub .rk-rank path').length,
-      emb: [...c.querySelectorAll('.rk-gs .rk-gi')].map(e => e.title), scene: (q('.rk-scene img') || {}).src || '', tint: !!q('.rk-scene .rk-tint') && getComputedStyle(q('.rk-scene .rk-tint')).mixBlendMode === 'color',
+      emb: [...c.querySelectorAll('.rk-gs .rk-gi')].map(e => e.title), scene: (q('.rk-scene img') || {}).dataset?.ul || (q('.rk-scene img') || {}).src || '', tint: !!q('.rk-scene .rk-tint') && getComputedStyle(q('.rk-scene .rk-tint')).mixBlendMode === 'color',
       scan: /repeating-linear-gradient/.test(getComputedStyle(q('.rk-scene .rk-scan')).backgroundImage), imgGrey: /grayscale/.test(getComputedStyle(q('.rk-scene img')).filter),
       tags: [...c.querySelectorAll('.rk-scene .rk-tag')].map(e => ({ t: e.innerText.trim(), svg: !!e.querySelector('svg'), dark: /rgba\((3[0-9]|4[0-9]), (4[0-9]|5[0-9])/.test(getComputedStyle(e).backgroundColor), left: Math.round(e.getBoundingClientRect().left - q('.rk-scene').getBoundingClientRect().left) })),
       desc: t('.rk-desc p'), costs: [...c.querySelectorAll('.rk-cf .rk-c')].map(e => ({ img: !!e.querySelector('img'), amt: e.innerText.trim() })), watch: !!q('.rk-cf .rk-time svg'), time: t('.rk-cf .rk-time b'),
@@ -29,25 +29,25 @@ const { chromium } = require('playwright');
       inView: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight; })() }; });
   // ================= Russia (Eastern group) =================
   const p = await boot('Russia');
-  const D = await p.evaluate(() => { const rs = window.__im.rs; return { g: rs.group(0), files: [...rs.ulFiles()], ban: getComputedStyle(document.querySelector('.rk-top')).getPropertyValue('--g1').trim(), emb: !!document.querySelector('.rk-ban .rk-bemb svg.rk-emb'), h1: document.querySelector('.rk-ban h1').innerText, sub: !!document.querySelector('.rs-cnt'),
+  const D = await p.evaluate(() => { const rs = window.__im.rs; return { g: rs.group(0), files: [...rs.ulFiles().keys()], ban: getComputedStyle(document.querySelector('.rk-top')).getPropertyValue('--g1').trim(), emb: !!document.querySelector('.rk-ban .rk-bemb svg.rk-emb'), h1: document.querySelector('.rk-ban h1').innerText, sub: !!document.querySelector('.rs-cnt'),
     back: !!document.querySelector('.rk-ban .rk-back'), x: !!document.querySelector('.rk-ban .rk-x'), slots: [...document.querySelectorAll('.rk-slots .rs-slot')].map(e => ({ t: e.innerText.trim(), dm: !!e.querySelector('.rk-sem'), rib: getComputedStyle(e.querySelector('.rk-rib')).backgroundImage })) }; });
   const HAVE = new Set(D.files);
   ck('banner: RESEARCH in the Eastern group\'s red, back and close buttons, the group emblem in a white diamond, no subtitle', D.g === 'east' && D.ban === '#b21d31' && D.emb && /^research$/i.test(D.h1) && !D.sub && D.back && D.x, D);
   ck('slots: two boxes, each a diamond emblem and a SLOT #n ribbon in the banner colour; no "+" and no "Choose a project"', D.slots.length === 2 && D.slots.every((s, i) => s.t === `SLOT #${i + 1}` && s.dm && /178, 29, 49/.test(s.rib)), D.slots);
   // the lookup and the model names
   const LK = await p.evaluate(() => { const rs = window.__im.rs, N = window.__im.S.nations[0], o = {}; o.l1 = rs.look('tank', 0); for (const id of ['tank_armor', 'tank_fp']) rs.grant(0, id, 1); rs.grant(0, 'tank_pr', 1); o.l4 = rs.look('tank', 0);
-    o.l7 = rs.look('tank', 0, 7); o.heli = rs.look('heli', 0); o.para = rs.look('para', 0, 1); o.uav = rs.look('drone', 0); o.us = rs.look('tank', 1); o.us0 = window.__im.S.nations[1].name;
+    o.l7 = rs.look('tank', 0, 7); o.heli = rs.look('bomb', 0); o.para = rs.look('para', 0, 1); o.uav = rs.look('drone', 0); o.us = rs.look('tank', 1); o.us0 = window.__im.S.nations[1].name;
     o.m = [rs.model('tank', 'east', 1), rs.model('tank', 'east', 2), rs.model('tank', 'east', 3), rs.model('para', 'nato', 2), rs.model('cm', 'china', 1), rs.model('jam', 'europe', 3)];
     for (const id of ['tank_armor', 'tank_fp', 'tank_pr']) delete N.tech[id]; N.tv++; return o; });
-  const side = (g, k) => HAVE.has(`ul-tank-${g}-${k}-side`) ? `assets/art/ul-tank-${g}-${k}-side.webp` : null;
+  const side = (g, k) => HAVE.has(`ul-tank-${g}-${k}-side`) ? `ul-tank-${g}-${k}-side` : null;
   ck('names: the Eastern tank is T-72, T-90, T-14 by look; Paratroopers share the infantry names; missiles have names; a name not found yet is null', LK.m.join('|') === 'T-72|T-90|T-14|M4A1|CJ-10|' && LK.l1.name === 'T-72' && LK.l4.name === 'T-90' && LK.l7.name === 'T-14', [LK.m, LK.l1.name, LK.l4.name]);
   ck('lookup: unit + nation + level -> the group\'s look (level 1-3 look 1, 4-6 look 2, 7-8 look 3), each from the files that exist', LK.l1.look === 1 && LK.l4.look === 2 && LK.l7.look === 3 && LK.l1.side === side('east', 1) && LK.l4.side === (side('east', 2) || side('east', 1)) && LK.l1.group === 'east', [LK.l1, LK.l4]);
-  ck('lookup: a unit with no new pictures falls back to today\'s picture (Attack Helicopter: no side cut-out, the scene ri-u_heli)', LK.heli.side === null && LK.heli.scene === 'assets/art/ri-u_heli.webp' && LK.para.scene === 'assets/art/ri-u_para.webp', LK.heli);
+  ck('lookup: a unit with no new pictures falls back to today\'s picture (Strategic Bomber: no side cut-out, the scene ri-u_bomb)', LK.heli.side === null && LK.heli.scene === 'assets/art/ri-u_bomb.webp', LK.heli);
   ck('lookup: the Recon UAV\'s look follows its generations', LK.uav.look === 1, LK.uav);
   // a missing look falls back to the nearest earlier look of the group (the list is the page's: take look 2 out for a moment)
-  const FB = await p.evaluate(() => { const F = window.__im.rs.ulFiles(), had = [...F]; F.add('ul-tank-east-1-side'); F.add('ul-tank-east-1-scene'); F.delete('ul-tank-east-2-side'); F.delete('ul-tank-east-2-scene');
-    const r = window.__im.rs.look('tank', 0, 5); F.clear(); for (const f of had) F.add(f); return r; });
-  ck('lookup: a look not made yet shows the group\'s nearest earlier look', FB.look === 2 && FB.side === 'assets/art/ul-tank-east-1-side.webp' && FB.scene === 'assets/art/ul-tank-east-1-scene.webp', FB);
+  const FB = await p.evaluate(() => { const F = window.__im.rs.ulFiles(), had = new Map(F), c = F.get('ul-tank-east-1-side') || {}; F.set('ul-tank-east-1-side', c); F.set('ul-tank-east-1-scene', c); F.delete('ul-tank-east-2-side'); F.delete('ul-tank-east-2-scene');
+    const r = window.__im.rs.look('tank', 0, 5); F.clear(); for (const [k, v] of had) F.set(k, v); return r; });
+  ck('lookup: a look not made yet shows the group\'s nearest earlier look', FB.look === 2 && FB.side === 'ul-tank-east-1-side' && FB.scene === 'ul-tank-east-1-scene', FB);
   // the tree: Air Assault on day 4 (rows 1 3 4 5 6 7 8 14 ...)
   await cat(p, 'aas');
   const T4 = await p.evaluate(() => { const t = document.querySelector('.rk-tree'), cs = getComputedStyle(t), now = document.querySelector('.rk-now').getBoundingClientRect(), g = document.querySelector('.rk-grid').getBoundingClientRect(), rh = parseFloat(cs.getPropertyValue('--rh'));
@@ -77,10 +77,10 @@ const { chromium } = require('playwright');
   await cat(p, 'arm'); await tap(p, 'u_tank');
   let C = await cardOf(p);
   ck('card header: the research icon, "T-72 LVL. 1" in bold, the red close button', C && C.icon && /^T-72 LVL\. 1$/i.test(C.head) && C.close, C && C.head);
-  ck('card: the small diamond with the tank\'s side picture and the rank chevron, the note "Starting level military unit or technology."', C.sdm && C.sdmRank && (HAVE.has('ul-tank-east-1-side') ? /ul-tank-east-1-side\.webp$/.test(C.sdmPic) : /ri-u_tank/.test(C.sdmPic)) && C.note === 'Starting level military unit or technology.', [C.sdmPic, C.note]);
+  ck('card: the small diamond with the tank\'s side picture and the rank chevron, the note "Starting level military unit or technology."', C.sdm && C.sdmRank && (HAVE.has('ul-tank-east-1-side') ? /ul-tank-east-1-side$/.test(C.sdmPic) : /ri-u_tank/.test(C.sdmPic)) && C.note === 'Starting level military unit or technology.', [C.sdmPic, C.note]);
   ck('card: the UNLOCKS bar with a lock, pointing down to the unit box "MAIN BATTLE TANK" with one rank chevron', /^unlocks$/i.test(C.unl) && C.unlLock && parseFloat(C.notch) > 10 && /^main battle tank$/i.test(C.box) && C.rank === 1, [C.unl, C.notch, C.box, C.rank]);
   ck('card: the emblem stripe shows the groups that field the T-72 (Eastern only)', C.emb.join('|') === 'Eastern', C.emb);
-  ck('card scene: the group\'s tank scene, grey with a blue monitor tint and scanlines drawn in code, two dark tags "T-72 [icon]" and "Level 1" at the top left', (HAVE.has('ul-tank-east-1-scene') ? /ul-tank-east-1-scene\.webp$/.test(C.scene) : /ri-u_tank\.webp$/.test(C.scene)) && C.tint && C.scan && C.imgGrey
+  ck('card scene: the group\'s tank scene, grey with a blue monitor tint and scanlines drawn in code, two dark tags "T-72 [icon]" and "Level 1" at the top left', (HAVE.has('ul-tank-east-1-scene') ? /ul-tank-east-1-scene$/.test(C.scene) : /ri-u_tank\.webp$/.test(C.scene)) && C.tint && C.scan && C.imgGrey
     && C.tags.length === 2 && C.tags[0].t === 'T-72' && C.tags[0].svg && C.tags[1].t === 'Level 1' && C.tags.every(t => t.dark && t.left < 20), [C.scene, C.tags]);
   ck('card: a short description; standard issue says so instead of START', /armoured tracked main battle tank/i.test(C.desc) && !C.start && C.inView, [C.desc, C.start]);
   await tap(p, 'tank_armor'); C = await cardOf(p);

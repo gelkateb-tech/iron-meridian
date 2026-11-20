@@ -1,0 +1,2 @@
+FLAG
+- Point 4: Soldier is angled toward the upper right instead of facing directly up, underfilling the vertical frame.

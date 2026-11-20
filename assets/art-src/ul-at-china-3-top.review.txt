@@ -1,0 +1,3 @@
+FLAG
+- 1. Turret position and missile launcher orientation do not match the reference layout.
+- 3. Noticeable cast shadow on the background to the left of the vehicle.

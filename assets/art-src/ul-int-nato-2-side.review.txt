@@ -1,0 +1,2 @@
+FLAG
+- 1: Model is nearly identical to generation 1 reference instead of being a clearly different, newer design with swing wings.

@@ -1,0 +1,3 @@
+FLAG
+- Point 2: Light comes from the upper right instead of the upper left.
+- Point 4: The vehicle faces toward the lower left instead of the required lower right.

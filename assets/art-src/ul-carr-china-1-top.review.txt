@@ -1,0 +1,3 @@
+FLAG
+- Point 3: Visible cast shadow under the stern on the background.
+- Point 7: Multiple extra aircraft models are present on the flight deck.

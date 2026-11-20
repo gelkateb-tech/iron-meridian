@@ -1,0 +1,2 @@
+FLAG (flagged: side, scene, top)
+- 5. side, scene, top: multiple aircraft and helicopters are present on the flight deck, violating the rule of exactly one unit per picture.

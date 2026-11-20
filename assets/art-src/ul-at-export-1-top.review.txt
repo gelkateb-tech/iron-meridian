@@ -1,0 +1,2 @@
+FLAG
+- 1. Hood shape, front fenders, and missile launcher mount position differ significantly from the reference vehicle.

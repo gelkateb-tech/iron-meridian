@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): extra tubular frame/bar added in front of the cab not present in the side view, and wipers are top-mounted instead of bottom-mounted.

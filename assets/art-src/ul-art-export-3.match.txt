@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): Turret roof layout differs from master view, showing an extra hatch, centered machine gun mount, and modified sights.
+- 1 (top): Fuel drums are mounted externally off the rear hull plate instead of resting on the engine deck.

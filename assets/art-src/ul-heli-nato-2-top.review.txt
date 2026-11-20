@@ -1,0 +1,2 @@
+FLAG
+- 1. Tail rotor is mounted on the port (left) side instead of the starboard (right) side from reference.

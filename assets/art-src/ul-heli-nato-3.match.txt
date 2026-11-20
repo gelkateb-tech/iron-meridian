@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): rotor has only 4 blades instead of an 8-blade coaxial system, and the dorsal tail fin is missing.
