@@ -3525,7 +3525,7 @@ function mix(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v)*t)); }
 const SEAO = {
   m:{ab:[6, 18, 28], rd:[13, 36, 50], dep:[[14, 2, 3, 0.9, [13, 36, 50]], [6, 1, 2.1, 0.9, [22, 60, 74]], [1.6, 1, 1.6, 0.8, [44, 104, 112]]], sh:0, nv:0.22},
   a:{ab:[6, 22, 52], rd:[10, 34, 72], dep:[[14, 2, 3.2, 0.8, [13, 46, 92]], [6, 1, 2.6, 0.6, [22, 86, 128]], [1.7, 1, 2.1, 0.55, [42, 138, 158], 1], [0.7, 1, 1.5, 0.45, [64, 160, 170], 1]], sh:1, nv:0.16,
-    lk:[8, 36, 64, 0.86], st:{k:'a', Q:300, a:0.5}, ss:0.12, gl:[[[80, 176, 186], 0.16, 3.6]], fl:[[[236, 246, 242], 0.34, 1.2]], fo:[[0.85, 3.2]], lv:{k:'a', a:[0.03, 0.24], ms:66}, lf:1.15, nt:[0.42, 0.36, 0.3]},
+    lk:[8, 36, 64, 0.86], st:{k:'a', Q:300, a:0.5}, ss:0.12, gl:[[[64, 168, 186], 0.15, 3.6]], fl:[[[236, 246, 242], 0.26, 1.2]], fo:[[0.6, 3.2]], lv:{k:'a', a:[0.03, 0.24], ms:66}, lf:1.15, nt:[0.42, 0.36, 0.3]},
   b:{ab:[8, 26, 52], rd:[12, 38, 70], dep:[[16, 2, 2.6, 1.0, [16, 48, 84]], [7, 1, 2.0, 1.0, [26, 76, 104]], [2.2, 1, 1.5, 0.9, [52, 114, 124], 1], [0.9, 1, 1.2, 0.8, [72, 130, 134], 1]], sh:0.85, nv:0.3,
     lk:[12, 38, 54, 0.84], st:{k:'b', Q:400, a:0.42}, ss:0.1, gl:[[[70, 132, 136], 0.13, 4.2]], fl:[[[220, 236, 234], 0.2, 2]], fo:[[0.5, 4.2]], lv:{k:'b', a:[0.03, 0.2], ms:80}, lf:0.8, nt:[0.42, 0.38, 0.32]},
   c:{ab:[8, 30, 70], rd:[12, 40, 86], dep:[[14, 2, 3, 0.6, [16, 56, 108]], [6, 1, 2.4, 0.5, [24, 92, 140]], [1.8, 1, 2.1, 0.45, [52, 160, 182], 1], [0.7, 1, 1.6, 0.4, [92, 196, 200], 1]], sh:0.9, nv:0.12,
@@ -3588,13 +3588,17 @@ function seaDabs(g, F, n, seed, len, wid, col, sh){ const N = F.N, r = mulberry(
 // the static wave sheet (grey 128 changes nothing, lighter lifts toward white, darker deepens: hard-light, stored as white and black): A the light on
 // small wave faces with a faint crest sparkle, B swell light and chop, C a faint relief under painterly crest strokes
 function* seaTileStatic(kind){ const F = yield* seaField(kind === 'b' ? 'b' : 'a'), N = F.N, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data;
-  const gain = kind === 'b' ? 13 : kind === 'c' ? 10 : 20, fl = tileNoise(N, 96, 457);
+  const gain = kind === 'b' ? 13 : kind === 'c' ? 10 : 20, fl = tileNoise(N, 96, 457), V = new Float32Array(N*N); let sum = 0;
   for (let y = 0; y < N; y++){ for (let x = 0; x < N; x++){ const o = y*N + x;
-      let v = 128 + gain*N/60*(-0.75*F.dx[o] - 0.65*F.dy[o])*F.m[o]; const cr = Math.max(0, (F.h[o] - 0.5)/0.5);
+      let v = gain*N/60*(-0.75*F.dx[o] - 0.65*F.dy[o])*F.m[o]; const cr = Math.max(0, (F.h[o] - 0.5)/0.5);
       if (kind === 'a') v += 48*Math.pow(cr, 3)*F.m[o]*(0.35 + 0.65*Math.max(0, Math.min(1, (fl(x, y) - 0.45)/0.25)));
       if (kind === 'b') v += 16*cr*cr*F.m[o];
-      v = Math.max(0, Math.min(255, Math.round(v))); const up = v >= 128, i = o*4; d[i] = d[i + 1] = d[i + 2] = up ? 255 : 0; d[i + 3] = Math.round(up ? (v - 128)/127*255 : (128 - v)/128*255); }
+      V[o] = v; sum += v; }
     if ((y & 31) === 31) yield; }
+  // (the sheet averages to no change: the crest light is paid for by slightly deeper troughs, so the sea keeps one colour at every zoom, MAP-2)
+  // (the lit faces toward a pale sky blue, not white: the sky's reflection, and the sea's red stays where the far view has it)
+  const mean = sum/(N*N); for (let o = 0; o < N*N; o++){ const v = Math.max(0, Math.min(255, Math.round(128 + V[o] - mean))), up = v >= 128, i = o*4; d[i] = up ? 178 : 0; d[i + 1] = up ? 220 : 0; d[i + 2] = up ? 242 : 0; d[i + 3] = Math.round(up ? (v - 128)/127*255 : (128 - v)/128*255); }
+  yield;
   // laid with plain 'source-over' (the fast path) instead of 'hard-light': grey v over 128 is stored as white at alpha (v - 128)/127, under 128 as
   // black at (128 - v)/128, which gives exactly hard-light's screen and multiply halves (and a layer alpha scales both as before)
   g.putImageData(im, 0, 0);
@@ -3639,8 +3643,12 @@ function seaPatch(g){ if (SEAFX.mp) return SEAFX.mp; const N = 256, c = document
 // at the far view's scale, the land cleared. Made once per look (the plain depth until the wave sheet is made); the plain depth for the old look
 function seaFarTex(){ const O = seaO(), D = GEO.seaTex; if (!O.st || !D || !G.landMask) return D; if (SEAFX.far && SEAFX.far.D === D) return SEAFX.far; const T = seaGet('s' + O.st.k); if (!T || T.kind !== O.st.k) return D;
   try { const M = G.landMask, w = M.width, h = M.height, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = true;
-    g.drawImage(D.op, 0, 0, w, h); g.setTransform(w/WORLD_W, 0, 0, h/WORLD_H, 0, 0); seaDetail(g, minScale()*1.2, 0, 0, WORLD_W, WORLD_H, 1); g.setTransform(1, 0, 0, 1, 0, 0);
-    g.globalCompositeOperation = 'destination-out'; g.drawImage(M, 0, 0, w, h); c.D = D; SEAFX.far = c; return c; } catch (e) { return D; } }
+    g.drawImage(D.op, 0, 0, w, h); g.setTransform(w/WORLD_W, 0, 0, h/WORLD_H, 0, 0); seaDetail(g, minScale()*1.2, 0, 0, WORLD_W, WORLD_H, 2); g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgb(2,2,1)'; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over';   // (two levels up: the far view's coastal water as the close view's averages, which has the shore glow and foam; MAP-2 one look)   // (at full strength: the far view's waves are finer than its texels, and averaged they keep the sea's colour as the close view has it)
+    // (the land cut out at its alpha squared: the coast's half-land texels keep more of the sea, so the terrain's dark baked sea does not show
+    // through the cut's soft edge and darken the far view's coastal water)
+    const E = document.createElement('canvas'); E.width = w; E.height = h; const eg = E.getContext('2d'); eg.drawImage(M, 0, 0, w, h); eg.globalCompositeOperation = 'destination-in'; eg.drawImage(M, 0, 0, w, h);
+    g.globalCompositeOperation = 'destination-out'; g.drawImage(E, 0, 0); c.D = D; SEAFX.far = c; return c; } catch (e) { return D; } }
 // the night over the sea: the land white, the open sea the look's night colour (nt), made once from the depth's sea; laid with 'multiply' after
 // the live waves at the night's strength (close in: the view's one light; further out: by the terminator, the day side lifted back to white
 // with the day texture), so the night sea goes as dark as the land beside it or darker, not a lit blue. The coast's edge is pulled a little out
@@ -3664,7 +3672,11 @@ function drawSeaNight(){ const hexPx = view.s*HS0, L = viewLight(); if (L.day > 
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.imageSmoothingEnabled = true;
     const ks = w/cw; wrapEach(() => { g.setTransform(ks*view.s, 0, 0, ks*view.s, ks*view.x, ks*view.y); g.drawImage(T, 0, 0, WORLD_W, WORLD_H); });
     g.setTransform(ks*view.s, 0, 0, ks*view.s, ks*view.x, ks*view.y); const vx0 = -view.x/view.s, vx1 = (cw - view.x)/view.s;
-    if (!tex.dayW && tex.dayTex){ const d = document.createElement('canvas'); d.width = tex.dayTex.width; d.height = tex.dayTex.height; const dg = d.getContext('2d'); dg.drawImage(tex.dayTex, 0, 0); dg.globalCompositeOperation = 'source-in'; dg.fillStyle = '#fff'; dg.fillRect(0, 0, d.width, d.height); tex.dayW = d; }
+    if (!tex.dayW){ const d = document.createElement('canvas'); d.width = 360; d.height = H; const dg = d.getContext('2d'), im = dg.createImageData(360, H), day = tex.day || 0;   // (white at 1 - the night's own depth, as nightTexture works it out: the sea darkens exactly where the land does)
+      const doy = (day + 318) % 365, dec = -23.44*Math.cos(2*Math.PI*(doy + 10)/365)*Math.PI/180;
+      for (let r = 0; r < H; r++){ const lat = cellLat(r*W)*Math.PI/180; for (let i = 0; i < 360; i++){ const ha = (i/360)*Math.PI*2, dd = Math.cos(lat)*Math.cos(dec)*Math.cos(ha) + Math.sin(lat)*Math.sin(dec), a = Math.max(0, Math.min(1, (-dd + 0.1)/0.4)), o = (r*360 + i)*4;
+        im.data[o] = im.data[o + 1] = im.data[o + 2] = 255; im.data[o + 3] = Math.round(255*(1 - a)); } }
+      dg.putImageData(im, 0, 0); tex.dayW = d; }
     const DW = tex.dayW; if (DW) for (let k2 = Math.floor((vx0 - start)/span), k1 = Math.floor((vx1 - start)/span); k2 <= k1; k2++){ const x = start + k2*span;   // (day: back to white; the polar margins as the night draws them)
       g.drawImage(DW, x, y0, span, y1 - y0); g.drawImage(DW, 0, 0, 360, 1, x, -WORLD_H, span, y0 + WORLD_H); g.drawImage(DW, 0, H - 1, 360, 1, x, y1, span, 2*WORLD_H - y1); }
     }
