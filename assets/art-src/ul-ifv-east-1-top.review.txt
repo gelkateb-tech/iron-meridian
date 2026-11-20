@@ -1,0 +1,3 @@
+FLAG
+- Point 1: Layout is mirrored; hatches, grilles, and missile mount are on opposite sides from reference.
+- Point 3: Background has a noticeable cast shadow under and to the right of the vehicle.

@@ -1,4 +1,4 @@
-// Capture at the heart, embarking only in naval ports, embarking and landing times (owner request): a province is taken the hour a ground force
+// Capture at the heart, embarking only in naval ports (naval cities), landing only at naval cities unless Marines alone (NAVAL CITIES), embarking and landing times (owner request): a province is taken the hour a ground force
 // reaches its heart (the city point, the province centre the rules use), not on crossing the border nor at another spot in it; with defenders the
 // battle comes first, then reaching the heart takes it at once; ground forces board ships only in a naval port (an own or friendly coastal city),
 // which takes EMBARK_H (45 minutes, then the force sails the rest of that hour); a landing takes LAND_H (45 minutes on any coast, LAND_PORT_H into
@@ -10,7 +10,7 @@ globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(pa
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + `\nreturn {IM, get S(){ return S; }, get G(){ return G; }, addArmy, setRel, count, tick, restore, saveJSON,
   orderMove, orderSpot, haltArmy, armyXY, pathFor, portOk, embarkWhy, atHeart, capturable, embarkH, landH, etaHours, provOfPt, cellCenter, index, splitArmy, legH, rGrant, LAND_MIN,
-  EMBARK_H, LAND_H, LAND_PORT_H, HEART_R, CAP_MIN, NEUTRAL, resetVis(){ visCache = null; }};`;
+  EMBARK_H, LAND_H, LAND_PORT_H, HEART_R, CAP_MIN, NEUTRAL, navalCity, amphib, landOk, NC_BOARD, NC_LAND, resetVis(){ visCache = null; }};`;
 const errors = [], checks = {}, ok = (k, v, i) => { checks[k] = v ? 'PASS' : 'FAIL ' + JSON.stringify(i ?? null); };
 const run = (k, f) => { try { f(); } catch (e){ errors.push(k + ': ' + e.stack.split('\n').slice(0, 3).join(' | ')); } };
 function game(seats = [0], clear = true){ const R = new Function(SRC)(); R.IM.api.newGame(77, 0, seats); R.S.started = true; if (clear) R.S.armies.length = 0; R.resetVis(); return R; }
@@ -78,7 +78,7 @@ run('embark', () => { const R = game([0]), S = R.S, G = R.G, n = 0, P0 = ports(R
   ok('a port is an own or friendly coastal city (portOk)', R.portOk(n, P0.id) && !R.portOk(n, C0.id));
   const a = R.addArmy(n, C0.id, {inf:3}), z = zoneBy(R, C0.id); R.orderMove(a, z);
   ok('to sea from a coast without a port: refused', !a.path.length && a.to === null, a.path);
-  ok('the reason the page shows', R.embarkWhy(a, z) === 'No naval port here: march to a port to embark.', R.embarkWhy(a, z));
+  ok('the reason the page shows', R.embarkWhy(a, z) === R.NC_BOARD && /naval city/.test(R.NC_BOARD), R.embarkWhy(a, z));
   // a route from there to land overseas: it marches to a port first and boards only there
   const far = G.P.find(P => !P.sea && S.owner[P.id] === n && P.id !== C0.id && R.pathFor({owner:n, u:{inf:1}, w:{}, air:null}, C0.id, P.id).some(v => G.P[v].sea));
   let okR = true, any = false; for (const P of G.P){ if (P.sea || P.id === C0.id) continue; const pth = R.pathFor(a, C0.id, P.id); let u = C0.id;
@@ -99,18 +99,18 @@ run('embark', () => { const R = game([0]), S = R.S, G = R.G, n = 0, P0 = ports(R
   const d0 = R.addArmy(n, P0.id, {inf:2}); R.orderMove(d0, z0); d0.emb = 0.5; S.owner[P0.id] = 1; R.tick(); S.owner[P0.id] = n;
   ok('no port any more: it does not board there', d0.to === null && d0.at === P0.id && (!d0.path.length || !G.P[d0.path[0]].sea) && (d0.emb == null || !d0.path.length), {path:d0.path, emb:d0.emb}); });
 
-// 4. landing takes LAND_H (45 min) on a coast, LAND_PORT_H into an own port; Amphibious Doctrine halves it; 15 minutes at least; no capture before it is ashore
+// 4. landing takes LAND_H (45 min) on a coast (Marines: NAVAL CITIES), LAND_PORT_H into an own port; Amphibious Doctrine halves it; 15 minutes at least; no capture before it is ashore
 run('landing', () => { const R = game([0]), S = R.S, G = R.G, n = 0, C0 = plainCoasts(R, n)[0], P0 = ports(R, n)[0]; if (!C0 || !P0) return;
-  // a real landing from the sea: the arrival hour, what was left of the landing then, and the hour it is ashore
-  const land = to => { const z = zoneBy(R, to), a = R.addArmy(n, z, {inf:3}); R.orderMove(a, to); let arr = -1, free = -1, l0 = 0;
+  // a real landing from the sea: the arrival hour, what was left of the landing then, and the hour it is ashore (Marines on the open coast)
+  const land = (to, u = {inf:3}) => { const z = zoneBy(R, to), a = R.addArmy(n, z, u); R.orderMove(a, to); ok('the route lands straight there (' + Object.keys(u) + ')', a.path.length === 1 && a.path[0] === to, a.path); let arr = -1, free = -1, l0 = 0;
     for (let i = 0; i < 400 && free < 0; i++){ R.tick(); if (arr < 0 && a.at === to){ arr = i; l0 = a.land || 0; } if (arr >= 0 && !(a.land > 0)) free = i; }
     S.armies.splice(S.armies.indexOf(a), 1); return {arr, free, l0, h:R.landH(a, to)}; };
-  const lc = land(C0.id), lp = land(P0.id);
+  const lc = land(C0.id, {mar:3}), lp = land(P0.id);
   ok(`an open coast: 45 minutes (LAND_H ${R.LAND_H})`, R.LAND_H === 0.75 && Math.abs(lc.h - 0.75) < 1e-9 && lc.l0 <= 0.75 + 1e-9 && lc.free - lc.arr === (lc.l0 > 0 ? 1 : 0), lc);
   ok(`into an own port: 45 minutes (LAND_PORT_H ${R.LAND_PORT_H})`, R.LAND_PORT_H === 0.75 && Math.abs(lp.h - 0.75) < 1e-9 && lp.free - lp.arr === (lp.l0 > 0 ? 1 : 0), lp);
   // the landing exactly: a force that has just come ashore (no time left over from the sea leg) lands in 45 minutes and walks the last 15
   const inl = C0.nbs.find(v => !G.P[v].sea && S.owner[v] === n);
-  if (inl != null){ const a = R.addArmy(n, C0.id, {inf:3}); a.land = R.landH(a, C0.id); R.orderMove(a, inl); R.tick(); const w = a.to !== null ? a.t*R.legH(a) : -1;
+  if (inl != null){ const a = R.addArmy(n, C0.id, {mar:3}); a.land = R.landH(a, C0.id); R.orderMove(a, inl); R.tick(); const w = a.to !== null ? a.t*R.legH(a) : -1;
     ok('landing takes 45 minutes, then the force marches on for the last 15 minutes of that hour', !(a.land > 0) && a.to === inl && Math.abs(w - 0.25) < 1e-6, {land:a.land, to:a.to, w}); S.armies.splice(S.armies.indexOf(a), 1); }
   S.nations[n].tech = S.nations[n].tech || {}; S.nations[n].tech.nav3 = 1;
   { const a = R.addArmy(n, C0.id, {inf:1}); ok('Amphibious Doctrine halves both: 22.5 minutes', Math.abs(R.landH(a, C0.id) - 0.375) < 1e-9 && Math.abs(R.landH(a, P0.id) - 0.375) < 1e-9, [R.landH(a, C0.id), R.landH(a, P0.id)]);
@@ -120,30 +120,41 @@ run('landing', () => { const R = game([0]), S = R.S, G = R.G, n = 0, C0 = plainC
     S.cmds.splice(S.cmds.indexOf(cm), 1); delete S.nations[n].tech.log2; S.armies.splice(S.armies.indexOf(a), 1); }
   delete S.nations[n].tech.nav3;
   // a force that came ashore cannot move on until it has landed; then it does, within the hour after it arrived
-  { const z = zoneBy(R, C0.id), a = R.addArmy(n, z, {inf:3}); R.orderMove(a, C0.id); tickTill(R, () => a.at === C0.id, 200);
+  { const z = zoneBy(R, C0.id), a = R.addArmy(n, z, {mar:3}); R.orderMove(a, C0.id); tickTill(R, () => a.at === C0.id, 200);
     if (inl != null){ const l0 = a.land || 0; R.orderMove(a, inl); let moved = -1; for (let i = 1; i <= 30 && moved < 0; i++){ R.tick(); if (a.to !== null || a.at !== C0.id) moved = i; }
       ok('a landing force moves on once ashore, in the next hour', moved === 1, {moved, l0}); } }
-  // landing on an enemy coast with no defenders: captured only once ashore, at the heart
-  let E = null; for (const P of G.P){ if (P.sea || !P.coast || S.owner[P.id] < 0 || S.owner[P.id] === n) continue; if (zoneBy(R, P.id) != null && !S.armies.some(x => x.at === P.id)){ E = P; break; } }
-  if (E){ const o = S.owner[E.id]; R.setRel(n, o, 'war'); const b = R.addArmy(n, zoneBy(R, E.id), {inf:4}); R.orderMove(b, E.id); let arr = -1, cap = -1, l0 = 0;
-    for (let i = 0; i < 300 && cap < 0; i++){ R.tick(); if (S.armies.some(x => x.owner === o && x.at === E.id && x !== b)) break; if (arr < 0 && b.at === E.id){ arr = i; l0 = b.land || 0; } if (S.owner[E.id] === n) cap = i; }
-    ok('an enemy coast: captured the hour the landing ends, not before', arr >= 0 && cap === arr + (l0 > 0 ? 1 : 0), {arr, cap, l0}); }
+  // an assault landing into an enemy naval city with no defenders: 45 minutes (LAND_H), captured only once ashore, at the heart (every nation a seat:
+  // no computer garrison turns up meanwhile); ordinary troops sent to an enemy coast that is not a naval city land at one and march on
+  { const Re = game(R.S.nations.map((N, i) => i)), Se = Re.S, Ge = Re.G; let E = null;
+    for (const P of Ge.P){ if (P.sea || !P.coast || !P.city || Se.owner[P.id] < 0 || Se.owner[P.id] === n) continue; if (zoneBy(Re, P.id) != null){ E = P; break; } }
+    ok('found an enemy naval city', !!E);
+    if (E){ const o = Se.owner[E.id]; Re.setRel(n, o, 'war'); const b = Re.addArmy(n, zoneBy(Re, E.id), {inf:4}), lhE = Re.landH(b, E.id); Re.orderMove(b, E.id); let arr = -1, cap = -1, l0 = 0;
+      ok('an assault landing: the route goes straight in', b.path.length === 1 && b.path[0] === E.id && Re.embarkWhy(b, E.id) === '', b.path);
+      for (let i = 0; i < 300 && cap < 0; i++){ Re.tick(); if (arr < 0 && b.at === E.id){ arr = i; l0 = b.land || 0; } if (Se.owner[E.id] === n) cap = i; }
+      ok('an enemy naval city: captured the hour the landing ends, not before', arr >= 0 && cap === arr + (l0 > 0 ? 1 : 0), {arr, cap, l0});
+      ok('an assault landing takes LAND_H (45 minutes) and fights at the first-day penalty', Math.abs(lhE - Re.LAND_H) < 1e-9 && b.landed != null, {lhE, landed:b.landed}); }
+    let Q = null; for (const P of Ge.P){ if (P.sea || !P.coast || P.city || Se.owner[P.id] < 0 || Se.owner[P.id] === n) continue; if (zoneBy(Re, P.id) != null){ Q = P; break; } }
+    if (Q){ Re.setRel(n, Se.owner[Q.id], 'war'); const z = zoneBy(Re, Q.id), c = Re.addArmy(n, z, {inf:4}), m = Re.addArmy(n, z, {mar:4}); Re.orderMove(c, Q.id); Re.orderMove(m, Q.id);
+      let u = z, fl = -1; for (const v of c.path){ if (Ge.P[u].sea && !Ge.P[v].sea){ fl = v; break; } u = v; }
+      ok('ordinary troops sent to an enemy beach come ashore at a naval city first', !c.path.length ? Re.embarkWhy(c, Q.id) !== '' : fl >= 0 && Re.navalCity(fl), {path:c.path, why:Re.embarkWhy(c, Q.id)});
+      ok('Marines go straight onto that beach', m.path.length === 1 && m.path[0] === Q.id, m.path); } }
   // port-to-beach crossings arrive ashore the hour etaHours forecast (boarding, the sea legs and the landing, each to the minute): three crossings,
   // each with no upgrades, with Amphibious Doctrine and Combat Engineers II, and with those and a Siegemaster of rank 1 (a fresh game each time)
   { const R0 = game([0]), G0 = R0.G, xs = [];
-    for (const P of ports(R0, n)){ for (const C of plainCoasts(R0, n)){ const pth = R0.pathFor({owner:n, u:{inf:1}, w:{}, air:null}, P.id, C.id);
-        if (pth.length >= 2 && pth.slice(0, -1).every(v => G0.P[v].sea) && R0.etaHours(R0.addArmy(n, P.id, {inf:3}), pth) <= 300 && !xs.some(x => x.P === P.id)){ xs.push({P:P.id, C:C.id, len:pth.length}); break; } }
-      if (xs.length >= 3) break; }
-    ok('found three port-to-beach crossings', xs.length === 3, xs);
+    // two Marine crossings from a naval city to an open beach, one of infantry from a naval city to an independent one (NAVAL CITIES)
+    for (const [u, ends, k] of [[{mar:1}, plainCoasts(R0, n), 2], [{inf:1}, G0.P.filter(P => R0.navalCity(P.id) && R0.S.owner[P.id] === R0.NEUTRAL && zoneBy(R0, P.id) != null), 3]]) for (const P of ports(R0, n)){ for (const C of ends){ if (C.id === P.id) continue; const pth = R0.pathFor({owner:n, u, w:{}, air:null}, P.id, C.id);
+        if (pth.length >= 2 && pth.slice(0, -1).every(v => G0.P[v].sea) && R0.etaHours(R0.addArmy(n, P.id, {[Object.keys(u)[0]]:3}), pth) <= 300 && !xs.some(x => x.P === P.id)){ xs.push({P:P.id, C:C.id, len:pth.length, t:Object.keys(u)[0]}); break; } }
+      if (xs.length >= k) break; }
+    ok('found three crossings (two Marine beach landings, one infantry port to an independent naval city)', xs.length === 3 && xs.filter(x => x.t === 'mar').length === 2, xs);
     const res = [];
     for (const x of xs) for (const up of [{}, {nav3:1, log2:2}, {nav3:1, log2:2, siege:1}]){ const R2 = game([0]), S2 = R2.S, t = S2.nations[n].tech = S2.nations[n].tech || {};
-      if (up.nav3) t.nav3 = up.nav3; if (up.log2) t.log2 = up.log2; const a = R2.addArmy(n, x.P, {inf:3});
+      if (up.nav3) t.nav3 = up.nav3; if (up.log2) t.log2 = up.log2; const a = R2.addArmy(n, x.P, {[x.t]:3});
       if (up.siege){ const cm = {id:S2.nid++, owner:n, name:'Test', trait:'siege', rank:up.siege, xp:0, alive:true, army:a.id}; (S2.cmds || (S2.cmds = [])).push(cm); a.cmd = cm.id; }
       R2.orderMove(a, x.C); const eta = R2.etaHours(a), eh = R2.embarkH(a), lh = R2.landH(a, x.C); let k = -1;
       for (let i = 1; i <= 400; i++){ R2.tick(); if (a.at === x.C && a.to === null && !a.path.length && !(a.land > 0)){ k = i; break; } }
       res.push({...x, up:Object.keys(up).join('+') || 'none', eh, lh, eta, k}); }
     const off = res.filter(r => r.k !== r.eta);
-    ok(`etaHours matches the real arrival for port-to-beach crossings (${res.length} runs, ${res.map(r => r.eta).join('/')} h)`, res.length === 9 && !off.length, off);
+    ok(`etaHours matches the real arrival for the crossings (${res.length} runs, ${res.map(r => r.eta).join('/')} h)`, res.length === 9 && !off.length, off);
     ok('those runs had shorter boardings and landings with the upgrades', res.filter(r => r.up !== 'none').every(r => r.eh < 0.75 - 1e-9 && r.lh < 0.75 - 1e-9), res.map(r => [r.up, r.eh, r.lh])); } });
 
 // 5. saves: the embarking and landing countdowns are kept; a save from before (no fields, an occupation clock in S.cap) loads and plays on
@@ -171,16 +182,19 @@ run('saves', () => { const R = game([0]), S = R.S, n = 0, P0 = ports(R, n)[0], C
   ok('the old fixture save (eco v1) loads', R5.restore(fx) !== false); let err = ''; try { for (let i = 0; i < 30; i++) R5.tick(); } catch (e){ err = e.message; } ok('and plays on', !err, err); });
 
 // 6. the AI follows the same rules: it boards ships only in ports, waits the embarking and landing times, and still takes independent land
-run('ai', () => { const R = game([], false), S = R.S, G = R.G; let legs = 0, badLegs = [], embSeen = 0, landSeen = 0, caps = 0, offHeart = 0, quick = []; const seen = new Set();
+run('ai', () => { const R = game([], false), S = R.S, G = R.G; let legs = 0, badLegs = [], embSeen = 0, landSeen = 0, caps = 0, offHeart = 0, quick = [], lands = 0, badLand = []; const seen = new Set();
   R.IM.on('fxCapture', () => caps++);
   for (let h = 0; h < 24*20; h++){ R.tick();
     for (const a of S.armies){ if (a.owner < 0 || a.air || !R.count(a)) continue; if (a.emb != null) embSeen++; if (a.land > 0) landSeen++;
+      if (a.to !== null && G.P[a.at].sea && !G.P[a.to].sea && Object.keys(a.u).some(t => a.u[t] > 0 && ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'mlrs', 'spec', 'para', 'jam', 'mar'].includes(t))){ const k = 'L' + a.id + ':' + a.at + '>' + a.to;
+        if (!seen.has(k)){ seen.add(k); lands++; if (!R.landOk(a, a.to)) badLand.push(k); } }
       if (a.to !== null && !G.P[a.at].sea && G.P[a.to].sea && a.u && Object.keys(a.u).some(t => a.u[t] > 0 && ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'mlrs', 'spec', 'para', 'jam'].includes(t))){ const k = a.id + ':' + a.at + '>' + a.to;
         if (!seen.has(k)){ seen.add(k); legs++; if (!R.portOk(a.owner, a.at)) badLegs.push(k);
           const sailed = a.t*R.legH(a); if (sailed <= 1 - R.embarkH(a) + 1e-6) embSeen++; else quick.push([k, sailed, R.embarkH(a)]); } } }
     if (h % 24 === 23) for (const a of S.armies) if (a.owner >= 0 && !a.air && a.to === null && !a.path.length && !a.sail && R.capturable(a.owner, a.at) && !R.atHeart(a) && R.count(a) >= R.CAP_MIN && !S.battles.includes(a.at) && !(a.land > 0)) offHeart++; }
-  console.log('AI, 20 days of the classic world:', JSON.stringify({legsOntoWater:legs, embarkingHours:embSeen, landingHours:landSeen, captures:caps, offHeart}));
+  console.log('AI, 20 days of the classic world:', JSON.stringify({legsOntoWater:legs, embarkingHours:embSeen, landingHours:landSeen, landings:lands, captures:caps, offHeart}));
   ok('the AI boards ships only in ports', badLegs.length === 0, {legs, badLegs:badLegs.slice(0, 5)});
+  ok('the AI comes ashore only at naval cities (or with Marines alone)', lands > 0 && badLand.length === 0, {lands, badLand:badLand.slice(0, 5)});
   ok('the AI boards before it sails (each leg onto water sailed no more than the hour less the boarding, its first hour)', legs === 0 || (embSeen > 0 && !quick.length), {legs, embSeen, landSeen, quick:quick.slice(0, 5)});
   ok('the AI still takes independent land', caps > 50, caps);
   ok('no AI force idles off the heart of land it is taking (daily look)', offHeart <= 2, offHeart); });

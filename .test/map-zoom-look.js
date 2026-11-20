@@ -1,15 +1,17 @@
 // One map look at every zoom (MAP-2, owner playtest #3; MAP-TEXTURE: the detailed texture at every zoom): node .test/map-zoom-look.js [W H dpr]   (default 1440 900 2; bash tools/mkpage.sh first)
 // A nations-world game, the clock paused, noon in July over each place, fog off (DEV.reveal), no forces. Exits 1 on any failure; prints JSON.
 //  (Z) ZOOM    at Berry (farmland), the Sahara edge, Siberia, the Brittany coast and Tibet, the ground alone (window.__groundOnly: the layer without its
-//              overlay sheet and towns) over one world box at hexPx 5, 10, 16, 22, 30, 50, 100, 150: the land's mean colour stays within 5% (or 3
-//              levels) of the world view's, each channel (9% from hexPx 60: MAP-TEXTURE, v3.12's lighter close look), the sea's within 6% (or 4 levels: far out the depth is laid without the coast clip)
+//              overlay sheet and towns) over one world box at hexPx 5, 10, 16, 22, 30, 50, 100, 150: the land's mean colour stays within 4% (or 3
+//              levels) of the world view's, each channel, up to hexPx 16 (the far texture: the map's colours with texture added); from hexPx 22,
+//              where the close tiles fade in with the old build's close look (MAP-TEXTURE: v3.12's olive fields, lit crowns and warm rock), within
+//              10%, and no step to the next zoom moves it more than 6% (no jump); the sea's within 6% (or 4 levels: far out the depth is laid without the coast clip)
 //  (M) MOVING  a layer rendered as a live zoom renders it (__im.zoomRender: ZRES, ZRND, light) has the settled layer's colours (land and sea mean
 //              within 4 levels): the zoom ends with sharper detail, not new colours (MAP-SEA: the sea's mean over open sea, 2 half-resolution px
 //              clear of the shore, where there is enough of it: the coarser layer's shore pixels are resolution, not colour)
-//  (T) TILES   detail tiles made all round the world (__im.dtProbe, 12 per resolution bucket): for every terrain class the composite's mean
-//              over the far texture's (MAP-TEXTURE: the detail baked into the texture for the far view, __im.dtFar) over the same box stays
-//              within TOL_T, each channel: the close detail keeps the colours the map shows from further out (the far texture is made first;
-//              the two finest buckets may be up to 9% lighter, the lit crowns and pale parcels of v3.12's close look)
+//  (T) TILES   detail tiles made all round the world (__im.dtProbe, 12 per resolution bucket). The far texture (MAP-TEXTURE: the detail baked
+//              into the texture for the far view, __im.dtFar; made in full first) over the plain texture, per terrain class, each channel: within
+//              4% on the coarsest bucket's grid, and all land within 3% on every bucket (it adds texture, not new colours). The close tiles over
+//              the far texture: v3.12's close look (lighter crowns, warm brown rock, olive fields), each class within 35% and all land within 10%
 //  (E) ERRORS  no console error or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -26,7 +28,6 @@ const LOCS = { europe:[47.05, 1.75], sahara:[17.0, -1.5], siberia:[67.0, 97.0], 
   // the far texture made in full first (it is made while the view is still and shows less than the close tiles: the world view)
   await p.evaluate(() => { const im = window.__im; im.view.s = im.wrap.minScale(); im.clampView(); im.redraw(); });
   await p.waitForFunction(() => { const f = window.__im.dtFar(); return !f.on || (f.total > 0 && f.done >= f.total); }, null, { timeout: 240000, polling: 500 });
-  const TOL_T = [0.06, 0.06, 0.09, 0.09];   // (MAP-TEXTURE: the two finest buckets, close in, are a little lighter, as in v3.12: their lit crowns and pale parcels)
   const fail = (k, v) => { fails.push(k + ': ' + (typeof v === 'string' ? v : JSON.stringify(v))); };
   const settle = async () => { for (let i = 0, ok = 0; i < 160 && ok < 3; i++){ await p.waitForTimeout(150); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; } await p.waitForTimeout(150); };
   // the layer's land and sea mean colour over a world box (ww x wh) round (x, y): land and sea by isWet on a 96 x 60 grid
@@ -49,7 +50,8 @@ const LOCS = { europe:[47.05, 1.75], sahara:[17.0, -1.5], siberia:[67.0, 97.0], 
         [wp[0], wp[1], 0.7*Math.min(MAP.w, 560)/12.5, 0.7*Math.min(MAP.h, 360)/12.5]);
       rows.push({z, land:r.a.land, sea:r.a.sea, movLand:r.m.land, movSea:r.m.sea, seaIn:r.a.seaIn, movSeaIn:r.m.seaIn}); }
     const r0 = rows[0], off = (a, b, lv) => a && b ? Math.max(...a.map((v, c) => Math.abs(v - b[c]) <= lv ? 0 : Math.abs(v/b[c] - 1))) : 0;
-    for (const r of rows){ if (off(r.land, r0.land, 3) > (r.z >= 60 ? 0.09 : 0.05)) fail(`zoom: ${ln} land at hexPx ${r.z} off the world view's colour`, {z:r.z, land:r.land, world:r0.land});
+    rows.forEach((r, i) => { if (i && off(r.land, rows[i - 1].land, 3) > 0.06) fail(`zoom: ${ln} land jumps from hexPx ${rows[i - 1].z} to ${r.z}`, {land:r.land, before:rows[i - 1].land}); });
+    for (const r of rows){ if (off(r.land, r0.land, 3) > (r.z <= 16 ? 0.04 : 0.1)) fail(`zoom: ${ln} land at hexPx ${r.z} off the world view's colour`, {z:r.z, land:r.land, world:r0.land});
       if (off(r.sea, r0.sea, 4) > 0.06) fail(`zoom: ${ln} sea at hexPx ${r.z} off the world view's colour`, {z:r.z, sea:r.sea, world:r0.sea});
       for (const k of ['land', 'sea']){ const io = k === 'sea' && r.seaIn && r.movSeaIn, a = io ? r.seaIn : r[k], m = io ? r.movSeaIn : r[k === 'land' ? 'movLand' : 'movSea']; if (a && m){ const d = Math.max(...a.map((v, c) => Math.abs(v - m[c]))); checks.moving.push(+d.toFixed(1)); if (d > 4) fail(`moving: ${ln} ${k} at hexPx ${r.z} while zooming differs from settled`, {settled:a, moving:m}); } } } }
   // (T) the detail tiles against the plain texture, per class
@@ -59,7 +61,8 @@ const LOCS = { europe:[47.05, 1.75], sahara:[17.0, -1.5], siberia:[67.0, 97.0], 
       const land = await p.evaluate(([tx, ty, T]) => { let n = 0; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) if (!window.__im.isWet((tx + 0.2 + 0.3*i)*T, (ty + 0.2 + 0.3*j)*T)) n++; return n; }, [tx, ty, T]); if (land < 6) continue;
       const r = await p.evaluate(([k, tx, ty]) => window.__im.dtProbe(k, tx, ty), [k, tx, ty]); if (!r) continue; got++;
       for (const [key, A] of Object.entries(r.acc)){ const B = acc[key] || (acc[key] = {n:0, b:[0, 0, 0], o:[0, 0, 0], f:[0, 0, 0]}); B.n += A.n; for (let c = 0; c < 3; c++){ B.b[c] += A.b[c]; B.o[c] += A.o[c]; B.f[c] += A.f[c]; } } }
-    checks.tiles[k] = {}; for (const [key, B] of Object.entries(acc)){ if (B.n < 4000 || key === 'pm') continue; const g = B.o.map((v, c) => +(v/B.f[c]).toFixed(3)); checks.tiles[k][key] = g;
-      if (g.some(v => Math.abs(v - 1) > TOL_T[k])) fail(`tiles: bucket ${k} class ${key} off the far texture's colour`, g); } }
+    checks.tiles[k] = {}; for (const [key, B] of Object.entries(acc)){ if (B.n < 4000 || key === 'pm') continue; const g = B.o.map((v, c) => +(v/B.f[c]).toFixed(3)), fb = B.f.map((v, c) => +(v/B.b[c]).toFixed(3)); checks.tiles[k][key] = {close:g, far:fb};
+      if ((k === 0 || key === 'all') && fb.some(v => Math.abs(v - 1) > (key === 'all' ? 0.03 : 0.04))) fail(`tiles: the far texture moves class ${key}'s colour (bucket ${k} grid)`, fb);
+      if (g.some(v => Math.abs(v - 1) > (key === 'all' ? 0.1 : 0.35))) fail(`tiles: bucket ${k} class ${key} far off the far texture's colour`, g); } }
   if (errors.length) fail('errors', errors.slice(0, 5));
   console.log(JSON.stringify({ checks, fails, errors }, null, 1)); await b.close(); process.exit(fails.length ? 1 : 0); })().catch(e => { console.error(e); process.exit(1); });

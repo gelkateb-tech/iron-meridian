@@ -1,0 +1,2 @@
+FLAG
+- 1. Equipment layout and rifle handedness are mirrored compared to the reference side view.

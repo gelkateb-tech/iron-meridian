@@ -1,0 +1,2 @@
+FLAG
+- 3. BACKGROUND: Cast shadow visible on the background to the right and below the aircraft.

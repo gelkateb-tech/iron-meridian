@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 5 (all pictures): multiple aircraft are present on the flight deck, violating the rule against extra vehicles/aircraft.
+- Point 1 (scene): flight deck layout and elevator placement do not match the side view.

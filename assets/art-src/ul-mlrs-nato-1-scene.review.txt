@@ -1,0 +1,2 @@
+FLAG
+- Point 1: Launcher configuration changed from six rocket tubes in reference to four tubes.

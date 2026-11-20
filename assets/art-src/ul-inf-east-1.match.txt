@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1. SAME UNIT (top): hands holding the rifle are swapped compared to side view (right hand on forend, left hand on grip).
+- 1. SAME UNIT (top): gear roll across torso is positioned on the right shoulder instead of the left shoulder.

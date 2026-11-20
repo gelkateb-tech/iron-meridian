@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): added raised structures flanking the cockpit and extra rear underwing missile pylons not present in the side view.

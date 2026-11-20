@@ -1,0 +1,3 @@
+FLAG
+- 1: Tail configuration differs from reference, showing cruciform fins instead of an X-tail.
+- 3: Visible cast shadow appears on the background along the left side and stern.

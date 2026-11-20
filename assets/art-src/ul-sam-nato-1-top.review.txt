@@ -1,0 +1,3 @@
+FLAG
+- 1: Radar antenna on mast behind cab is missing from the vehicle layout.
+- 1: Missile launcher canisters are reversed and lack matching end-cap details from the reference.

@@ -1,0 +1,3 @@
+FLAG
+- 1. Missing whip antennas on the rear deck and fan blade count changed from the reference.
+- 4. The drone fills roughly 73 percent of the frame instead of the requested 90 percent.

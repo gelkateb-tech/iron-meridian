@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 in top: Spare tire is mounted transversely behind the cab instead of facing outward to the side.
+- 1 in top: Launcher rack features prominent diagonal braces on top that are not present in the master view.

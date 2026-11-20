@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Tail fins are cruciform instead of an X-rudder configuration as seen in pictures 1 and 2.

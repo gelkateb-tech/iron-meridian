@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): muzzle brake lacks the baffles/ports of the master, and the raised commander's cupola with vision blocks is missing from the turret.

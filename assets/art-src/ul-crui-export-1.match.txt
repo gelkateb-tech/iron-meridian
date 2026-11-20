@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1. Picture 2 shows canister launchers on the port side, but top-down picture 3 only has them on starboard.
+- 1. Picture 3 is missing the aft mast and crossyard present in pictures 1 and 2.

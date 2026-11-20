@@ -1,0 +1,3 @@
+FLAG
+- 2. STYLE: lighting is cast from the upper right instead of the requested upper left.
+- 3. BACKGROUND: visible cast shadow appears on the background along the left side of the hull.

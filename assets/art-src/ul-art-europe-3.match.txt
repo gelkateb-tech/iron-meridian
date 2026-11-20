@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): two whip antennas have been added to the turret rear, which are absent in the side view.
+- 1 (top): the prominent tall sensor mast on the turret roof is missing.

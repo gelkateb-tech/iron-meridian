@@ -1,0 +1,2 @@
+FLAG
+- 1. Shows only four missile canisters instead of eight, remaining too identical to the generation 1 reference.

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): tall sensor mast on turret rear left is missing, and rear hull tools differ from side view

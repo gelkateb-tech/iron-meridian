@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): flight deck has side safety nets deployed horizontally outward, unlike the upright railings in pictures 1 and 2.

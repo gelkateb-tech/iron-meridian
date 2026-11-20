@@ -1,0 +1,2 @@
+FLAG
+- 4. Bow faces toward the lower left instead of the required lower right orientation.

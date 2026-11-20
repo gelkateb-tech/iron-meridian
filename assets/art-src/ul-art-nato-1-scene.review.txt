@@ -1,0 +1,3 @@
+FLAG
+- 1. SAME UNIT: Missing barrel travel lock mechanism on front deck and road wheel count differs.
+- 2. STYLE: Environment and rendering appear photorealistic rather than matching the game's stylized 3D render.

@@ -1,0 +1,3 @@
+FLAG
+- 1: Model is nearly identical to generation 1 reference rather than a clearly newer, redesigned vessel.
+- 7: Includes extra units (aircraft and helicopters) on the deck.

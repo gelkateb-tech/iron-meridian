@@ -230,7 +230,24 @@ territory, victory points, dispatches) is unchanged; only the moment changed.
   march to a port to embark*. Embarking takes **`EMBARK_H` = 45 minutes** (0.75 h) in the port (`a.emb`, the time left in fractional hours,
   counted while the force could otherwise set off: a battle in the port pauses it); Halt cancels it. A route whose port was lost is planned
   again or stops.
-- **Landing.** Troops come ashore on any coast, as before, or into a port. A landing takes **`LAND_H` = 45 minutes** on a coast and
+- **Naval cities** (owner, 19 November 2026; `NAVAL_CITIES` in `rules/data.js`, `navalCity` in `rules/state.js`). Every coastal city is a
+  **naval city** (349 on the nations map), marked on the map with an anchor in a small square frame beside its name (from hexPx 8; its tooltip
+  and the city sheet: *Naval city: Naval Yard can be built here; troops board and land here*). The Naval Yard's `where:'port'` is exactly
+  `navalCity`. Ground forces **board** ships only at a naval city of their own or a friend's (`portOk`, as before) and **come ashore only at a
+  naval city** (`landOk`): their own, a friend's, or an enemy's or an independent one taken by an **assault landing** (the normal 45 minutes and
+  the first-day penalty). The route planner (`pathFor`, `findPath`'s `lnd`, `surprisePath`) never plans a leg from water onto other land: a route
+  to other land over the sea lands at a naval city and marches on; with none in reach the order is refused (*Not a naval city: troops come
+  ashore only at a naval city (the anchor). Marines land on any coast.*). Each hour a force at sea whose next leg would land elsewhere (a stack
+  that is no longer Marines alone) is planned again through a naval city, or stays at sea. "A friend" is `friendly()`, as for boarding before:
+  an ally, or a nation that gives you right of passage. A stack counts as Marines only when all its ground units are Marines (ships with them
+  split off at sea).
+- **Marines** (`mar`, amphibious infantry). A force whose ground units are all Marines (`amphib`) boards and lands on **any** coast. Attack 4,
+  defense 3, health 10, speed 4 (foot), $34M, 3 materials, 2 iron, 10k manpower, 36 h; upkeep 1.5. Trained at an Army Base (level I) in a
+  coastal city only (`mobBlock` 'coast'). Unlocked by the Infantry Corps' Marines step (`u_mar`, day 3, 3 days, $61M, 20 materials, 21 rare materials;
+  a column out of Motorized Infantry with Firepower, Protection, Ceramic Body Armour, Assault Kit and the Amphibious Assault Battalion).
+  Pictures: `ul-mar-*` for each nation group that has some, the infantry's for the others and for any look or kind still missing there
+  (`UL_FALLBACK`, `ulUnits` in the page); the research scene stays the infantry's (`ri-u_inf`).
+- **Landing.** Troops come ashore at a naval city (Marines alone on any coast). A landing takes **`LAND_H` = 45 minutes** on a coast and
   **`LAND_PORT_H` = 45 minutes** into a port held by you or a friend (owner, 19 November 2026: both the same for now; the two names stay apart
   for the naval-cities rule to come). `a.land` is the time left in fractional hours. Meanwhile the force cannot move on, walk or capture; the
   landing penalty of its first day ashore is unchanged (`rLandF`: 67%, 90% with Amphibious Doctrine I, full with II). Stacks they join wait.
@@ -246,9 +263,16 @@ territory, victory points, dispatches) is unchanged; only the moment changed.
   40%). No boarding or landing ever takes under **15 minutes** (`LAND_MIN`, one battle step). An upgrade arriving while a landing or boarding
   is under way cuts the time left by the same ratio (`landRetime`), never below 15 minutes unless less was left.
 - **Old saves.** A save made when these times were whole hours (6 h, 12 h) has each force's time left cut to its new full time
-  (`Math.min`, in `restore`, `rules/state.js`).
+  (`Math.min`, in `restore`, `rules/state.js`). A save from before naval cities (no `S.nc` mark; saves of this build carry it and load unchanged): troops at sea whose route comes ashore away from a naval city
+  keep that route and land where they were going (`a.oldLand`, set in `restore`, dropped with the landing or a new order); a force still on
+  land with such a route is planned again on load through a naval city.
 - **AI.** The computer plays by the same rules (one planner); a computer force that stands off the heart of land it is taking (after a clash on
-  the road) walks to the city. Tests: `node .test/capture-landing.js`.
+  the road) walks to the city. Its offensive search (`aiTarget`) crosses the sea only as
+  the forces can (on board at its own or a friend's naval city, ashore at a naval city, or anywhere for a group of Marines alone); ground forces
+  left idle at sea head for the nearest own province through a naval city (they were never in any own province's stacks, so before this they
+  could idle at sea for good: 277 forces over two days in 20 days of the nations world, seed 5, against 0 now); it researches Marines in coastal
+  nations and trains a few in coastal cities. Tests: `node .test/capture-landing.js`, `node .test/naval-cities.js`,
+  `node .test/naval-cities-page.js [sheets dir]`.
 
 
 ## 7. The Bunker (owner #17)

@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): missing the forward funnel seen between the bridge and main mast in the side view
+- 1 (top): missile launcher shows three tubes instead of four

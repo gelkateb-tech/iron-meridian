@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): Rifle grip and handling are reversed/mirrored compared to side view, and rifle stock shape does not match.

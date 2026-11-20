@@ -83,10 +83,9 @@ const SKELETON = ['<!doctype html><html><head><meta charset="utf-8"><meta name="
 const kb = n => (n/1024).toFixed(1) + ' KB';
 const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// the unit look pictures that exist (assets/art/ul-*.webp) are written into the page's list (UL_FILES in index.html): the page asks only for those,
-// so new pictures need no code change and a missing one is never requested (tools/mkpage.sh does the same for the test page)
-const ulFiles = src => { const d = path.join(ROOT, 'assets', 'art'), L = fs.existsSync(d) ? fs.readdirSync(d).filter(f => /^ul-[a-z0-9-]+\.webp$/.test(f)).map(f => f.slice(0, -5)).sort() : [];
-  return src.replace("'/*ul-files*/'", `'${L.join(' ')}'`); };
+// the unit look atlases that exist (assets/art/ula-*.webp) are described in the page's table (UL_MAN in index.html, from assets/art-src/ul-atlas): the page asks only for those,
+// so new pictures need no code change and a missing atlas is never requested (tools/mkpage.sh does the same for the test page)
+const ulFiles = src => require('./ul-manifest').inject(src, ROOT);
 
 function main(){
   const src = ulFiles(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));

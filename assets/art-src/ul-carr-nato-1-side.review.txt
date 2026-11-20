@@ -1,0 +1,2 @@
+FLAG
+- 7: Several aircraft are visible on the deck despite instructions specifying no aircraft or extra units.

@@ -625,18 +625,21 @@ for f in HF_BUILD:
 if HF_SEEN: print('PICBOX:', {'u-' + n: hf_box('u-' + n + '.webp') for n in HF_SEEN})
 
 # ---- UNIT LOOKS (tools/gen-art.py ul-<unit>-<group>-<look>-<side|scene|top>; run: prep-art.py assets/art-src assets/art ul) -- no API call.
+# The pictures are not written one by one: tools/ulatlas.py packs a unit's 45 pictures into two atlas files (assets/art/ula-<unit>-pic.webp, -scene.webp) and its table (assets/art-src/ul-atlas/<unit>.json).
 # -side: the three-quarter side view cut out (transparent), trimmed, 512 px long side, for the research tree diamond
 # -top : the straight-down view cut out, kept in its square frame (512 px; nose up) for the map and army bar, its opaque box printed for PICBOX
 # -scene: the card scene resized to 768x512 (3:2), NOT cut out (the blue monitor tint and scanlines are drawn in code)
 # The cut-out: the plain grey floor (a quadratic surface fitted to the border), its lighting gradient and the smooth neutral soft shadow touching it are flooded from
 # the border; whatever is left (the largest parts, holes filled) is the unit; edges feathered a little.
-def ul_cut(im, sd=70, sch=12, grad=9):
+def ul_cut(im, sd=70, sch=12, grad=9, noshadow=False, dark=0):
     from scipy import ndimage as ndi
     a = np.asarray(im.convert('RGB')).astype(np.float32); h, w, _ = a.shape
     m = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); m[:b] = m[-b:] = True; m[:, :b] = m[:, -b:] = True
     bg = fit_bg(a, m); d = np.abs(a - bg).max(-1); ch = a.max(-1) - a.min(-1); bch = bg.max(-1) - bg.min(-1)
     g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
     cand = (d <= 16) | ((d < sd) & (np.abs(ch - bch) < sch) & (g < grad))
+    if noshadow:   # top-downs: the drop shadow too (the map draws its own). It is smooth and bluer than the floor (the paint of no unit is blue)
+        cand |= ((a[..., 2] - a[..., 0] - (bg[..., 2] - bg[..., 0])) > 13) & (g < grad + 3) & (a.mean(-1) < bg.mean(-1) + 4 - dark)
     lab, n = ndi.label(cand); border = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
     solid = ndi.binary_opening(~np.isin(lab, border[border > 0]), iterations=1)
     lab, n = ndi.label(solid); sizes = ndi.sum(solid, lab, range(1, n + 1))
@@ -644,23 +647,90 @@ def ul_cut(im, sd=70, sch=12, grad=9):
     al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.8)
     return Image.fromarray(np.dstack([a, al*255]).astype(np.uint8), 'RGBA')
 
+# pictures whose holes in the mask are the unit's own pale surface (a wing panel, a fuselage join), checked by eye: the plate removal is skipped
+PLATE_KEEP = {'ul-int-nato-1-top', 'ul-asf-export-3-side', 'ul-sdrone-east-3-side', 'ul-jet-east-2-side'}
+def ul_net_cut(f):
+    """aircraft and ships (pale grey on the pale grey floor, which the colour test cannot tell apart): the IS-Net segmentation model's mask, tightened, holes filled, the
+    largest parts kept; the cast shadow is not part of it. None when the model is not there."""
+    if not ISNET or not os.path.exists(ISNET): return None
+    from scipy import ndimage as ndi
+    im = Image.open(f).convert('RGB'); n = im.size[0]; m = net_mask_img(im, n)
+    keep = m > 0.5; lab, k = ndi.label(keep)
+    if k == 0: return None
+    sizes = ndi.sum(keep, lab, range(1, k + 1)); keep0 = np.isin(lab, [i + 1 for i, z in enumerate(sizes) if z > 0.02*sizes.max()]); keep = ndi.binary_fill_holes(keep0)
+    # the floor seen through the unit (between booms and tails, inside rotor discs, under wings) is not the unit: filling the holes left a faint pale plate there.
+    # Holes whose pixels match the fitted floor (colour and smoothness) stay transparent; glass, dark gaps and everything else in a hole is still filled.
+    a = np.asarray(im).astype(np.float32); h, w, _ = a.shape; holes = keep & ~keep0
+    if holes.any() and os.path.splitext(os.path.basename(f))[0] not in PLATE_KEEP:
+        bm = np.zeros((h, w), bool); b = max(6, int(0.03*min(h, w))); bm[:b] = bm[-b:] = True; bm[:, :b] = bm[:, -b:] = True
+        d = np.abs(a - fit_bg(a, bm)).max(-1); g = ndi.gaussian_gradient_magnitude(a.mean(-1), 1.2)
+        fl = ndi.binary_opening(holes & (d <= 18) & (g < 4.5), iterations=1); lb, kk = ndi.label(fl)
+        if kk: fl = np.isin(lb, [i + 1 for i, z in enumerate(ndi.sum(fl, lb, range(1, kk + 1))) if z >= 40])
+        # only holes that are mostly bare floor count (a hole that is mostly something else, such as a canopy or a pale wing panel, keeps all its pixels), and the rim grows only inside such a hole
+        hl, hk = ndi.label(holes); ok = np.zeros((h, w), bool)
+        for i in range(1, hk + 1):
+            c = hl == i
+            fr = (fl & c).sum()/c.sum()
+            if fr >= 0.5 or (fr >= 0.3 and c.sum() >= 2000): ok |= c
+        fl = fl & ok
+        for _ in range(3): fl = fl | (ndi.binary_dilation(fl) & ok & (d <= 34))   # the blended rim of the hole goes with it (no halo)
+        keep = keep & ~fl
+    al = ndi.gaussian_filter(ndi.binary_erosion(keep, iterations=1).astype(np.float32), 0.9)
+    return Image.fromarray(np.dstack([np.asarray(im), al*255]).astype(np.uint8), 'RGBA')
+
+def net_mask_img(im, size):
+    if not _NET:
+        import onnxruntime as ort; _NET.append(ort.InferenceSession(ISNET, providers=['CPUExecutionProvider']))
+    s = _NET[0]; x = (np.asarray(im.resize((1024, 1024), Image.LANCZOS), np.float32)/255 - 0.5).transpose(2, 0, 1)[None]
+    o = s.run(None, {s.get_inputs()[0].name: x})[0][0, 0].astype(np.float32); o = (o - o.min())/max(float(o.max() - o.min()), 1e-6)
+    return np.clip(np.asarray(Image.fromarray(o, 'F').resize((size, size), Image.BICUBIC)), 0, 1)
+
+PALE_UNITS = {'jet', 'int', 'asf', 'heli', 'drone', 'sdrone', 'swarm', 'mpa', 'awacs', 'bomb', 'stealth', 'frig', 'crui', 'sub', 'carr'}
+def ul_net_cut_ok(f): return bool(ISNET) and os.path.exists(ISNET)
 def ul_prep():
-    import glob
-    boxes = {}
+    import glob, importlib.util
+    spec = importlib.util.spec_from_file_location('ulatlas', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ulatlas.py')); UA = importlib.util.module_from_spec(spec); spec.loader.exec_module(UA)
+    boxes = {}; units = {}
     for f in sorted(glob.glob(os.path.join(SRC, 'ul-*-*-*-*.webp')) + glob.glob(os.path.join(SRC, 'ul-*-*-*-*.png'))):
         stem, kind = os.path.splitext(os.path.basename(f))[0].rsplit('-', 1)
-        if kind not in ('side', 'scene', 'top') or (len(sys.argv) > 4 and not any(x in stem for x in sys.argv[4:])): continue
+        if kind in ('side', 'scene', 'top') and UA.STEM.match(stem + '-' + kind): units.setdefault(stem.split('-')[1], []).append((f, stem, kind))
+    # the pictures are packed per unit (tools/ulatlas.py): a name on the command line (ul <part of a name> ...) picks the units whose pictures it matches, and every picture of such a unit is made again
+    want_u = [u for u, L in units.items() if len(sys.argv) <= 4 or any(x in s for _, s, _ in L for x in sys.argv[4:])]
+    for unit in sorted(want_u):
+      pics = {}
+      for f, stem, kind in units[unit]:
         im = Image.open(f)
-        if kind == 'scene': out = im.convert('RGB').resize((768, 512), Image.LANCZOS); out.save(os.path.join(OUT, stem + '-scene.webp'), 'WEBP', quality=88, method=6)
+        if kind == 'scene': out = im.convert('RGB').resize((768, 512), Image.LANCZOS); pics[stem + '-scene'] = out
         else:
-            c = ul_cut(im)
+            pale = stem.split('-')[1] in PALE_UNITS   # aircraft and ships are pale grey and smooth: the floor test must be strict or it eats them
+            kw = dict(sd=34, sch=8, grad=4, dark=45) if pale else {}
+            c = ul_net_cut(f) if pale else None
+            if c is not None: pass
+            else: c = ul_cut(im, noshadow=(kind == 'top'), **kw)
+            if kind == 'top' and not (pale and ul_net_cut_ok(f)):   # a grey, smooth hull or deck can look like shadow: if the shadow-free cut lost much of the plain cut's area, keep the plain cut
+                c0 = ul_cut(im, **{k: v for k, v in kw.items() if k != 'dark'}); a1, a0 = np.asarray(c.getchannel('A')).astype(float).sum(), np.asarray(c0.getchannel('A')).astype(float).sum()
+                if a1 < 0.72*a0: c = c0; print('  (shadow kept: the shadow-free cut ate the unit)', stem)
+                if a0 < 0.12*255*im.width*im.height:   # even the plain cut lost most of a pale grey deck: cut by the floor's colour only (the shadow stays)
+                    c2 = ul_cut(im, sd=26, sch=8, grad=3)
+                    if np.asarray(c2.getchannel('A')).astype(float).sum() > 1.5*a0: c = c2; print('  (strict cut: a pale grey unit on a grey floor)', stem)
             if kind == 'side': c = c.crop(c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()); c.thumbnail((512, 512), Image.LANCZOS)
             else:
                 c = c.resize((512, 512), Image.LANCZOS); bb = c.getchannel('A').point(lambda v: 255 if v > 20 else 0).getbbox()
                 boxes[stem + '-top'] = [round((bb[2] - bb[0])/512, 2), round((bb[3] - bb[1])/512, 2)]
-            c.save(os.path.join(OUT, stem + '-' + kind + '.webp'), 'WEBP', quality=90, method=6)
+            pics[stem + '-' + kind] = c
         print('unit look', stem, kind)
-    if boxes: print('PICBOX:', boxes)
+      UA.pack_unit(unit, pics, OUT, os.path.join(SRC, 'ul-atlas'))   # ula-<unit>-pic.webp, ula-<unit>-scene.webp and the unit's table (the encoders: quality 90 for the cut-outs, 88 for the scenes, method 6)
+    if boxes:
+        print('PICBOX:', boxes)
+        idx = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(OUT))), 'index.html')   # the opaque boxes of the top-downs go into the page's PICBOX line (merged with the ones already there)
+        if os.path.exists(idx):
+            import re, json
+            t = open(idx, encoding='utf-8').read(); m = re.search(r"^Object\.assign\(PICBOX, \{('ul-[^\n]*)\}\);", t, re.M)
+            old = {k: v for k, v in re.findall(r"'(ul-[a-z0-9-]+)': (\[[0-9., ]+\])", m.group(1))} if m else {}
+            old = {k: json.loads(v) for k, v in old.items()}; old.update(boxes)
+            line = 'Object.assign(PICBOX, {' + ', '.join(f"'{k}': [{v[0]}, {v[1]}]" for k, v in sorted(old.items())) + '});'
+            t = t.replace(m.group(0), line) if m else t
+            if m: open(idx, 'w', encoding='utf-8').write(t); print('index.html: PICBOX line updated,', len(old), 'tops')
 if want('ul') and 'ul' in only: ul_prep()
 
 # tell the game which promised V3 pictures now exist (it draws code stand-ins for the rest and never requests a missing file)

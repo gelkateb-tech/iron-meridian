@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): roof spotlight and stowage box are incorrectly placed on the vehicle's left side instead of the right.

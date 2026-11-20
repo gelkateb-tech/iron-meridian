@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): the forward intake opening on the upper nose seen in the side view is missing and shown as a solid faceted surface.

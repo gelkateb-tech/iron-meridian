@@ -1,0 +1,2 @@
+FLAG
+- 3. Faint cast shadow is visible on the background around the vehicle.

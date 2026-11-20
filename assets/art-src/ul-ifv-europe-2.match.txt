@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): Hull deck layout is mirrored; the front hatch and engine grill are swapped left-to-right compared to the side view.

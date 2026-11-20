@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): wing upper surfaces feature an extra inner fence on each wing not present in the side view

@@ -1,0 +1,2 @@
+FLAG
+- 1. Launcher has five tubes across instead of four, not matching the reference unit's twelve-tube configuration.

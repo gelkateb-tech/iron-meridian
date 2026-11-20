@@ -1,0 +1,3 @@
+FLAG (flagged: side, scene, top)
+- Point 5 (side, scene, top): multiple extra aircraft and a helicopter are present on the flight deck.
+- Point 1 (top): aircraft placement alongside the island differs from the side view position forward of the island.
