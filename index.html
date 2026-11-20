@@ -6742,7 +6742,7 @@ const cityDpr = () => ZRND ? dpr/ZRES : dpr;
 const CP_NB = 8, CB_BIN = [1.1, 2.2, 3.6, 5.4], CB_EX = -0.32, CB_SX = 0.6, CB_SY = 0.45, CB_MG = 15;
 const CB_WSC = pk => Math.max(1, Math.min(4, pk/2.5));   // the windows' scale: a row of them about 0.8 units apart once a unit is a few px (a window a px or more on screen, never a sub-px speckle)
 const CB_LAMP = [0.5, 0.35, 0.3, 0.6, 0.8, 0.4];   // night: the lamps along the streets come in broken runs (units)
-const CB_PAVE = [[0.35, 0.45], [0.4, 0.55], [0.5, 0.7], [0.58, 0.8], [0.62, 0.85]], CB_HL = [1, 1.15, 1.35, 1.55, 1.75];   // by level: the paving's and the pads' strength; the buildings' height in the level's units (a finer level's a little taller for their size: a level's buildings are half the size of the next coarser's on screen, their walls only a third less tall, so a zoom past a level keeps the town's mass and its 3D look)
+const CB_PAVE = [[0.35, 0.75], [0.4, 0.72], [0.5, 0.7], [0.58, 0.8], [0.62, 0.85]], CB_HL = [1, 1.15, 1.35, 1.55, 1.75];   // by level: the paving's and the pads' strength; the buildings' height in the level's units (a finer level's a little taller for their size: a level's buildings are half the size of the next coarser's on screen, their walls only a third less tall, so a zoom past a level keeps the town's mass and its 3D look)
 function* cityPlanWait(I, lev = 2){ const G0 = CGEO.get(I.p), L = I.plans || (I.plans = []), J = I.planIt || (I.planIt = []);
   if (!L[lev] && !lev && G0 && G0.pl0 && G0.pl0.E === I.E) L[0] = G0.pl0;   // (level 0 is kept with the town's outline: a stand-in and the right tier have the same blocks)
   while (!L[lev]){ if (!I.aM) return null; if (!J[lev]) J[lev] = cityPlanGen(I, lev); const r = J[lev].next(); if (r.done){ J[lev] = null; L[lev] = r.value; break; } yield; }
@@ -7370,7 +7370,9 @@ function drawCitiesIn(c, x0, y0, x1, y1, fa){
   for (const p of on) if (!CLOW.has(p)) cityBake(p, CLOW_S, true);   // first a quick low tier for any city without one (what every stand-in falls back on), then the right tiers
   for (const p of on){ const I = cityGeo(p); if (!I){ CITY_MISS.set(p, 22); CITY_SCR = true; continue; }   // (no pump job for this one: the layer tries again once the view is still)
     if (I.r*view.s < 0.8) continue;
-    const S0 = cityTier(I); c.globalAlpha = fa; if (cityDraw(c, p, I, S0, x0, y0, x1, y1, false, true)){ const G0 = CGEO.get(p); cityLift(c, G0, cityLegK(1.3*2*I.E*view.s*cityDpr()*cityOver()), fa*(1 - CITY_LIFTB*cityDetailK(I, S0))); cityCoat(c, p, G0, fa, cityDetailK(I, S0)); } }   // (1.3: about the tier a town of that size had, rounded up)
+    const S0 = cityTier(I), kd = cityDetailK(I, S0), Gd = CGEO.get(p);
+    if (kd > 0 && Gd && Gd.dk && polMode() && CLOW.has(p)){ const e = Gd.E*CITY_RIM; c.globalAlpha = fa*0.4*kd; c.drawImage(Gd.dk, Gd.x - e + 0.012*Gd.E, Gd.y - e + 0.018*Gd.E, 2*e, 2*e); }   // the town's outline: a soft dark rim round its footprint (the town drawn over it), so it stands apart from the land, in your colour on yours too
+    c.globalAlpha = fa; if (cityDraw(c, p, I, S0, x0, y0, x1, y1, false, true)){ const G0 = CGEO.get(p); cityLift(c, G0, cityLegK(1.3*2*I.E*view.s*cityDpr()*cityOver()), fa*(1 - CITY_LIFTB*cityDetailK(I, S0))); cityCoat(c, p, G0, fa, cityDetailK(I, S0)); } }   // (1.3: about the tier a town of that size had, rounded up)
   c.restore(); }
 // the owner's colour on a town (owner, CITIES-2: the buildings in the owner's shades, lit tops lighter, walls darker): a 'color' coat of its
 // relation's tint (as the political tint's) over its footprint, its lights and shades kept; where the 3D blocks are drawn (kd, cityDetailK) the
@@ -7378,7 +7380,7 @@ function drawCitiesIn(c, x0, y0, x1, y1, fa){
 // owner's colour, the darker streets and shadows between them stay dark and only a little tinted, so a town in your colour still stands apart
 // from your colour on the land round it. A small canvas per town and kind, made when first drawn or its tint changes. CITY_LIFTB: how much of
 // the legibility lift the blocks take over (their lit roofs and dark gaps read without it)
-const CITY_COAT = {own:0.42, war:0.4, ally:0.4, other:0.28, neu:0.24}, CITY_COATM = {own:0.46, war:0.44, ally:0.44, other:0.25, neu:0.2}, CITY_LIFTB = 0.4, CTNORM = new Map();
+const CITY_RIM = 1.055, CITY_COAT = {own:0.42, war:0.4, ally:0.4, other:0.28, neu:0.24}, CITY_COATM = {own:0.46, war:0.44, ally:0.44, other:0.25, neu:0.2}, CITY_LIFTB = 0.4, CTNORM = new Map();
 const cityTintN = col => { let v = CTNORM.get(col); if (v) return v; const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.fillStyle = col; g.fillRect(0, 0, 1, 1); const d = g.getImageData(0, 0, 1, 1).data, m = Math.max(1, d[0], d[1], d[2]);
   v = `rgb(${Math.round(d[0]*255/m)},${Math.round(d[1]*255/m)},${Math.round(d[2]*255/m)})`; CTNORM.set(col, v); return v; };
 function cityCoatCv(G0, k, col, fill){ const o = G0[k]; if (o && o.k === col) return o.c; const t = o ? o.c : document.createElement('canvas'), n = 64; if (!o){ t.width = t.height = n; G0.px = (G0.px || 0) + n*n; CGEO_PX += n*n; }
