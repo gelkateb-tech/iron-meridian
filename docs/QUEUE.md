@@ -20,7 +20,6 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **CITIES 3D restyle** | the owner's CoN reference look, readable from play zoom, cities keep their size and detail; before/after sheets | Opus | cities-3d-2 |
 | **MAP SURFACE** (started 2026-11-19 night) | texture fix (bring back the public build's rich detail, visible at every zoom incl. fully zoomed out; keep MAP-2 borders, toggles, roads), then jungle options A/B/C and sea options A/B/C on top of it; critique, repair, final sheets (old / dev / fix; zoomed in and out) and sea clips; NOTHING merged until the owner picks | Opus | map-texture, map-jungle, map-sea |
 
 ## Next free slots (in this order)
@@ -120,7 +119,7 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 - **Weather (clips sent 2026-11-19 night):** pick rain/snow option A (classic), B (long and windy) or C (fine and dense); branches weather-opt-a/b/c. The cloud colour fix is merged on master (d4d0bb5).
 - **Rebels (sheets sent):** OK to merge (branch rebels 419f514)? Open choice: should an ally's troops count for holding a captured city (now only the holder's own)?
-- **3D cities (zoomed-in sheets sent 2026-11-19 night):** the blocks only read from about 3.5x closer than normal play zoom (hexPx 90; clear from 130 to the 240 maximum), invisible at play zoom. The CITIES 3D restyle (owner's CoN reference) should also make them show from play zoom: confirm?
+- **3D CITIES restyle (done, branch cities-3d-2 90c54b8, not merged; 9 before/after sheets sent 2026-11-20):** 3D blocks in the owner's colour from closer than play zoom, cities keep size and detail; fixes master's blurry patches close in; desktop speed level with master, phone memory flat. Weak points: at play zoom (hexPx 28) your own cities are pale green blocks on green land, little different from now; night is unchanged (no lit windows close in, same as master). Waiting on the owner: merge? stronger contrast at play zoom? lit windows at night?
 - **Map look, old vs new (sheets sent 2026-11-19):** pick which of the 15 numbered changes to bring back (scratchpad mapcompare/answer.md; most likely causes of 'old looked nicer': 7 fog veil, 4 tint never eases off, 1 close-up richness (being restored by MAP SURFACE), 11 and 13 bold borders and road web, 8 smoothed snow, 6 darker sea). Guess 1 partly right; guess 2 mostly no (the fog veil dulls the snow, not the tint colours).
 - **Conflict of Nations numbers:** constacks.com can't be read (security checkpoint; its robots.txt asks AI crawlers to stay out); taken off the allowed sites 2026-11-18. Paste the figures or send screenshots if you want them matched.
 - **Research tree rebuild:** the CoN tree and card screenshots arrived (2026-11-18); the owner's own mockup did not. Starts when a job slot frees.
