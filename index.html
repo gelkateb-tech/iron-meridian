@@ -3892,7 +3892,7 @@ function dtNext(tv){ const s = tv ? tv.s : view.s, vx = tv ? tv.x : view.x, vy =
   return next && [next.k != null ? next.k : k, next.tx, next.ty]; }
 // a finished job: the baked texture upscaled exactly as the layer draws it, the modulation laid on with 'hard-light'; into the cache (least
 // recently used out), and its box queued for a redraw if the layer drew it without the tile
-function dtFinish(J, img){ const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
+function dtFinish(J, img){ DT.pend.delete(J.key); const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
   D.getContext('2d').putImageData(img, 0, 0);
   const old = DT.cache.get(J.key); let cv = old ? old.cv : null; if (!old) cv = dtEvict(DT.ck != null ? DT.ck : dtBucket()) || cv;
   if (!cv){ cv = document.createElement('canvas'); cv.width = cv.height = n; }
@@ -3917,7 +3917,7 @@ function dtFarNext(){ const FL = dtFarLand(); if (!FL) return null; const F = DT
   return best; }
 // a finished far tile: its texels of the plain texture copied in again, the modulation laid on with 'hard-light' (the apron left out: the tiles
 // meet exactly); the far texture itself is made with the first one (a copy of the plain texture: the plain one stays, under the close tiles)
-function dtFarFinish(J, img){ const T = GEO.terrain; if (!T || !dtFarOn()) return; let F = DT.far;
+function dtFarFinish(J, img){ DT.pend.delete(J.key); const T = GEO.terrain; if (!T || !dtFarOn()) return; let F = DT.far;
   if (!F || F.T !== T){ dtFarDrop(); const cv = document.createElement('canvas'); cv.width = T.width; cv.height = T.height; cv.getContext('2d').drawImage(T, 0, 0);
     F = DT.far = {T, cv, mip:null, mipV:-1, v:0, mv:new Uint8Array(Math.ceil(T.width/DT_N)*Math.ceil(T.height/DT_N))}; }
   const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
@@ -4013,7 +4013,7 @@ postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0
     const url = URL.createObjectURL(new Blob([js], {type:'text/javascript'})), nw = (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1, WS = [];
     const fail = ev => { if (ev && ev.preventDefault) ev.preventDefault(); for (const x of WS) try { x.terminate(); } catch (e) {} DT.wk = null; DT.wks = []; DT.busy = 0; DT.pend.clear(); };   // blocked or broken: made here instead
     for (let i = 0; i < nw; i++){ const w = new Worker(url); w.busy = 0;
-      w.onmessage = e => { const m = e.data; w.busy = Math.max(0, w.busy - 1); DT.busy = Math.max(0, DT.busy - 1); DT.pend.delete(m.key); DT.ms += m.ms; DT.ready.push(m); redraw(); };   // (a detail tile is ready: a frame lays it)
+      w.onmessage = e => { const m = e.data; w.busy = Math.max(0, w.busy - 1); DT.busy = Math.max(0, DT.busy - 1); DT.ms += m.ms; DT.ready.push(m); redraw(); };   // (a detail tile is ready: a frame lays it; its key stays pending until it is laid or dropped, so a tile waiting in DT.ready is not asked for again)
       w.onerror = fail; w.postMessage({init:{cls:C.cls, lat:C.lat, eq:C.eq}}); WS.push(w); }
     DT.wks = WS; DT.wk = WS[0];
   } catch (e) { DT.wk = null; }
@@ -4045,7 +4045,7 @@ function dtWork(idle, tv){ if (!idle || !layer) return; const s = tv ? tv.s : vi
   const t0 = performance.now(), end = t0 + 8, k = dtBucket(s), wk = dtWorker(), mo = dtMonth(); let nf = tv ? 1 : 1e9; DT.ck = k;
   const keepF = []; while (DT.ready.length && nf > 0 && performance.now() < end){ const m = DT.ready.shift();
     if (m.k < 0){ if (still) dtFarFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); else keepF.push(m); continue; }   // (far tiles only laid while the view is still)
-    if (Math.abs(m.k - k) <= 1){ dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); nf--; } }
+    if (Math.abs(m.k - k) <= 1){ dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); nf--; } else DT.pend.delete(m.key); }
   if (keepF.length) DT.ready = keepF.concat(DT.ready);
   if (!tv) dtHoldRel();
   DT.fms = (DT.fms || 0) + performance.now() - t0;
