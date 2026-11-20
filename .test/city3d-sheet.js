@@ -15,7 +15,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const tap = sel => PHONE ? p.tap(sel) : p.click(sel);
   await tap('[data-act="pickscn"][data-k="world64"]'); await p.waitForTimeout(300); await pickNation(p, process.env.NATION || 'Afghanistan');
   await p.evaluate(() => document.querySelector('[data-act="begin"]').scrollIntoView()); await tap('[data-act="begin"]'); await p.waitForTimeout(1300);
-  if (await p.locator('[data-act="start"]').count()) await tap('[data-act="start"]'); await p.waitForTimeout(3000);
+  if (await p.locator('[data-act="start"]').count()) await tap('[data-act="start"]');
+  for (let k = 0; k < 60; k++){ if (await p.evaluate(() => { const im = window.__im; if (!im || !im.S || !im.S.owner) return false; im.S.speed = 0; return true; })) break; await p.waitForTimeout(50); }   // (the clock stopped at once: both pages show the same game, no AI move made in the seconds a page takes to start)
+  await p.waitForTimeout(3000);
   await p.evaluate(() => { const im = window.__im; im.S.speed = 0; im.S.storms = []; im.SET.tipsOff = true; im.SET.cityLights = true; im.SET.saver = false; document.querySelectorAll('.toast').forEach(t => t.remove());
     const x = document.querySelector('[data-act="side-x"]'); if (x && x.offsetParent) x.click(); });
   const res = [];
