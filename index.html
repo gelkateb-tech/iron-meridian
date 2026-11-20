@@ -6671,8 +6671,9 @@ const cityOver = () => saverOn() ? 1 : 1.5, cityLegK = S => Math.max(0, Math.min
    edges (low houses in gardens out there, and the blocks the footprint's edge cuts kept as their quarters that lie inside it, so the town
    keeps its outline); a bigger town has more blocks (its footprint is bigger), a taller middle and a few towers in it. The colours are the
    town's own grade of concrete and roofs; the owner's colour (yours green, an ally's blue, an enemy's red, the rest grey) is laid on live over
-   each town in the layer (cityCoat: on the blocks mostly a multiply by the tint, so the lit roofs and walls are in the owner's shades and the
-   streets between stay dark), so the bakes are the same whoever holds the town and a capture makes none again.
+   each town in the layer (cityCoat: on the blocks mostly a multiply by the tint, so the lit roofs and walls are in the owner's shades, the
+   shadows between them dark, and the town's ground stays a light concrete; with a soft dark rim round its footprint, CITY_RIM, so a town in
+   your colour keeps its outline on your land), so the bakes are the same whoever holds the town and a capture makes none again.
    Levels (owner, CITIES-2: the blocks must read at play zoom, and get richer as you zoom in; the towns stay as big and as detailed as they
    were): the plan is laid out at five scales, in units of CB_F km (8, 4, 2, 1 and 0.5), nested (each finer level keeps the coarser level's
    streets, as its wider avenues, and adds one between each two), and a bake draws the coarsest level whose street pitch on screen is at most
