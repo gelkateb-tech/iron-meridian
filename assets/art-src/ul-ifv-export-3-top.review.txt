@@ -1,0 +1,2 @@
+FLAG
+- 1. Turret layout is mirrored; machine gun is mounted on the left hatch instead of the right.

@@ -1,0 +1,4 @@
+FLAG (flagged: scene, top)
+- 1 (scene): shovel mounted on the right hull deck in picture 1 is missing
+- 1 (top): front hull hatch is on the left instead of the right side
+- 1 (top): rear cylindrical fuel drum is centered instead of offset to the vehicle's left

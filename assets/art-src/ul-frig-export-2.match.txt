@@ -1,0 +1,4 @@
+FLAG (flagged: scene, top)
+- 1 (scene): Flight deck is missing the white helicopter landing markings present in the side view.
+- 1 (top): Anti-ship missile launchers and decoy launchers between main mast and funnel are missing.
+- 1 (top): Aft radar and radome order behind the funnel is reversed compared to the side view.

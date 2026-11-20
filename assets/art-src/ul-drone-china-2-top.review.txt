@@ -1,0 +1,2 @@
+FLAG
+- 1. Winglet shape and propeller blade count do not match the reference unit.

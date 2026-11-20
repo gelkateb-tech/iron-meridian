@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): dorsal intake scoop from side view is closed off/missing, side intake is absent, and wing leading edge has a different strake sweep.

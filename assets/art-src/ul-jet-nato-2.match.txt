@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 1 in scene: external wing pylons and ordnance (bombs and missiles) are added, which are not present on the master side view.

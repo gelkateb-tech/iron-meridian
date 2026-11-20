@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): Radar dish ahead of the mast is placed on the port side instead of the starboard side as in picture 1.
+- 1 (top): Flight deck lacks the circular landing marking shown in picture 1, and liferaft canister count differs.

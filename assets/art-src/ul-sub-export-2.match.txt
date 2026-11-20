@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): tail fins are arranged in a cruciform (+) layout rather than the X-stern layout shown in the side view.

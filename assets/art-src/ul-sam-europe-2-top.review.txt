@@ -1,0 +1,2 @@
+FLAG
+- 1. Missile launcher canisters are malformed and reversed compared to the reference vehicle.

@@ -1,0 +1,2 @@
+FLAG
+- 1. Antenna count, hatch details, and motor orientation differ from the reference model.

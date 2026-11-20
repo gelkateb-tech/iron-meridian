@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1. top: Glacis hatch is placed on the left side instead of the right.
+- 1. top: Rear spade is split into two separate feet instead of a continuous blade.

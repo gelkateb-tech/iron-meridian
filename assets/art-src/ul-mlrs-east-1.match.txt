@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): The rocket launcher has 6 tubes across instead of 7 as shown in the side view.
+- 1 (top): The spare wheel behind the cab is oriented transversely rather than longitudinally.

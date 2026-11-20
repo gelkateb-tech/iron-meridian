@@ -1,0 +1,2 @@
+FLAG
+- Point 7: Multiple parked aircraft units are present on the flight deck contrary to the single-unit requirement.

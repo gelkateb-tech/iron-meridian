@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1, picture 3: The wing layout is asymmetrical, adds extra wing surfaces, and does not match the configuration seen in the side view.

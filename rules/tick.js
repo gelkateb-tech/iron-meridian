@@ -37,8 +37,13 @@ function* tickHourG(){
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
     // ground forces embark only in a naval port (rules/movement.js embStep): a route that would board ships here, where there is no port of the
     // force's own or a friend's (the port was lost, or an old save's route), is planned again through a port, or the force stops
-    if (embLeg(a) && !portOk(a.owner, a.at)){ const dest = a.path[a.path.length - 1]; a.path = pathFor(a, a.at, dest); delete a.emb;
+    if (embLeg(a) && !portOk(a.owner, a.at) && !amphib(a)){ const dest = a.path[a.path.length - 1]; a.path = pathFor(a, a.at, dest); delete a.emb;
       if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} halted at ${G.P[a.at].cityName || G.P[a.at].name}: no naval port there to embark. March to a port first.`, 'info', a.at); } }
+    // NAVAL CITIES: troops come ashore only at a naval city, Marines alone on any coast (rules/movement.js landOk): a route whose next leg lands
+    // elsewhere (a stack that is no longer Marines alone) is planned again through a naval city, or the force stays at sea. A route given before the
+    // rule (an old save: a.oldLand, rules/state.js restore) still lands where it was going
+    if (NAVAL_CITIES && a.to === null && a.path.length && G.P[a.at].sea && !G.P[a.path[0]].sea && !a.oldLand && ground(a) && !landOk(a, a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = pathFor(a, a.at, dest);
+      if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} stays at sea: ${G.P[dest].cityName || G.P[dest].name} has no naval city to land at on the way. Troops come ashore only at a naval city; Marines land on any coast.`, 'info', a.at); } }
     if (a.emb != null && !embLeg(a)) delete a.emb;   // (no longer about to board: the embarking starts again next time)
     if (a.wp && a.to === null && !a.path.length && !a.sail) stopNext(a);   // waypoints: a force at its stop sets off for the next one (rules/movement.js)
     if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a, hr); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)

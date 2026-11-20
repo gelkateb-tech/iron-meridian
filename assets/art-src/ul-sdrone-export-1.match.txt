@@ -1,0 +1,2 @@
+FLAG (flagged: scene, top)
+- 1. SAME UNIT in scene and top: picture 2 adds a fuselage conduit on the port side, while picture 3 places it on the starboard side.

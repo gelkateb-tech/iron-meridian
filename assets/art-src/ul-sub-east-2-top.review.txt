@@ -1,0 +1,2 @@
+FLAG
+- 1. Tail configuration changed to cruciform instead of the reference's X-shaped stern fins.

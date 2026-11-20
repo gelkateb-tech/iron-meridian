@@ -1,0 +1,2 @@
+FLAG
+- 3. BACKGROUND: Cast shadows are visible on the background beside the fins and hull.

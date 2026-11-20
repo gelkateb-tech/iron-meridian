@@ -1,0 +1,2 @@
+FLAG
+- 4. FRAMING: The vehicle's front points toward the bottom of the frame instead of the top.

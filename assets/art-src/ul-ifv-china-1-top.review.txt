@@ -1,0 +1,3 @@
+FLAG
+- 1. Rear snorkel and fuel drum positions are swapped compared to the reference.
+- 1. Missile launcher placement altered from turret roof to turret side.

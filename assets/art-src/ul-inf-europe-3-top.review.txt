@@ -1,0 +1,3 @@
+FLAG
+- 1. Backpack design and rifle components differ significantly from the reference unit.
+- 4. Weapon is rendered in side profile rather than a true top-down plan view.

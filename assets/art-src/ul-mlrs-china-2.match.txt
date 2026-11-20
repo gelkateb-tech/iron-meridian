@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): launcher pods fire large missiles instead of matching the 15-tube rocket configuration shown in picture 1
+- 1 (top): turntable base is missing, elevation pistons are misplaced, and cab roof optics are shifted to the rear

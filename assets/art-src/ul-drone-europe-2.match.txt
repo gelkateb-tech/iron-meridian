@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): Tail configuration differs from master (features twin vertical fins on horizontal stabilizers instead of an inverted V-tail).
+- 1 (top): Propeller has only two blades instead of five as shown in the master.

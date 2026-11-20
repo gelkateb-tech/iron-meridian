@@ -1,0 +1,2 @@
+FLAG
+- 1. Deck layout (hatch, grille, tools) is mirrored left-to-right compared to the reference view.

@@ -1,0 +1,2 @@
+FLAG
+- 1: Hull and turret details are mirrored left-to-right compared to reference; sensor mast is missing.

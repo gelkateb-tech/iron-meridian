@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1, picture 3: stern fins have a cruciform layout instead of the X-stern configuration seen in pictures 1 and 2

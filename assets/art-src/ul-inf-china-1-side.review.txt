@@ -1,0 +1,2 @@
+FLAG
+- Point 4: Camera angle is nearly eye-level rather than the required 30-degree downward angle.

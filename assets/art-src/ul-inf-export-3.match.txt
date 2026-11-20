@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. top: weapon grip is reversed, holding the rifle left-handed instead of right-handed as in the side view.

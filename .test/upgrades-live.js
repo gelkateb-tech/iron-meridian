@@ -74,10 +74,10 @@ function CLASSESv(R, o, t){ const v = {}; for (const k of R.CLASSES) v[k] = R.mu
 
 // ---- 2. the final level of every line: 15% faster training
 { const {R, S, cap} = game();
-  const WANT = {inf:'inf_g3', at:'at_pr', spec:'spec_pr', ifv:'ifv_pr', tank:'tank_g3', art:'art_pr', mlrs:'mlrs_pr', sam:'sam_pr', jam:'jam_pr', heli:'heli_pr', para:'para_pr', int:'int_pr', jet:'jet_pr',
+  const WANT = {inf:'inf_g3', at:'at_pr', spec:'spec_pr', mar:'mar_pr', ifv:'ifv_pr', tank:'tank_g3', art:'art_pr', mlrs:'mlrs_pr', sam:'sam_pr', jam:'jam_pr', heli:'heli_pr', para:'para_pr', int:'int_pr', jet:'jet_pr',
     asf:'asf_pr', drone:'drone_g5', swarm:'swarm_pr', sdrone:'sdrone_pr', bomb:'bomb_pr', stealth:'stealth_pr', mpa:'mpa_pr', awacs:'awacs_pr', frig:'frig_pr', crui:'crui_pr', carr:'carr_pr', sub:'sub_pr'};
-  ok(Object.keys(R.R_FINAL).length === 25 && Object.keys(WANT).every(t => R.R_FINAL[t] && R.R_FINAL[t].id === WANT[t] && R.R_FINAL[t].lv === (/_pr$/.test(WANT[t]) ? 3 : 1)),
-    'the final level of each of the 25 lines is the review\'s (section 3 table)', R.R_FINAL);
+  ok(Object.keys(R.R_FINAL).length === 26 && Object.keys(WANT).every(t => R.R_FINAL[t] && R.R_FINAL[t].id === WANT[t] && R.R_FINAL[t].lv === (/_pr$/.test(WANT[t]) ? 3 : 1)),
+    'the final level of each of the 26 lines is the review\'s (section 3 table; the Marines line, NAVAL CITIES: its Protection 3)', R.R_FINAL);
   for (const t in R.R_FINAL){ const f = R.R_FINAL[t], L = R.RN[f.id].lv[f.lv - 1];
     ok(/and trains 15% faster$/.test(L.txt) && L.train === 0.85, `${t}: the final level's card says "and trains 15% faster"`, L.txt);
     const others = line(R, t).flatMap(nd => nd.lv.map((x, i) => ({nd, i}))).filter(x => !(x.nd.id === f.id && x.i === f.lv - 1));
@@ -120,7 +120,7 @@ function CLASSESv(R, o, t){ const v = {}; for (const k of R.CLASSES) v[k] = R.mu
         const before = F.map(([, a]) => fp(o, t, a)); R.rGrant(N, nd.id, l); steps++;
         if (!idle) F.forEach(([where, a], i) => ok(fp(o, t, a) !== before[i], `${o === SEAT ? 'person' : 'computer'} nation: ${R.RN[nd.id].name}${nd.lv.length > 1 ? ' ' + l : ''} (${nd.id}) changes a ${t} force ${where} at once`)); }
       if (t === 'drone'){ const base = R.UNITS.drone.atk + 3 + 2; ok(near(R.st(o, 'drone', 'atk'), base*1.4), `nation ${o}: the armed UAV's attack carries Firepower 3 (x1.4) once it has missiles`, R.st(o, 'drone', 'atk')); } } }
-  ok(steps === 2*249, 'every one of the 249 unit-line steps was checked for both nations', steps);
+  ok(steps === 2*259, 'every one of the 259 unit-line steps (249, and the Marines line\u2019s 10: NAVAL CITIES) was checked for both nations', steps);
   ok([...unarmed].join() === 'drone Firepower 1', 'only the Recon UAV\'s Firepower (now one step, day 16, before UAV IV in tree order) meets a unit with no attack', [...unarmed]);
 }
 

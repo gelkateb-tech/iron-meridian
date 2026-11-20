@@ -1,0 +1,3 @@
+FLAG
+- 1. Weapon orientation and handedness are reversed compared to the reference soldier.
+- 7. Errant extra boot visible directly under the helmet and chest area.

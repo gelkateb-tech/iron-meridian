@@ -1,0 +1,2 @@
+FLAG (flagged: scene, top)
+- 1. SAME UNIT (scene, top): outer wing hardpoints carry exposed missiles on rails instead of the rectangular box launcher seen in picture 1.

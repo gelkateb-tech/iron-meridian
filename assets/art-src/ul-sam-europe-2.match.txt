@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 (scene): Mid-chassis outrigger between the second and third axles is missing.
+- 1 (top): Radar mast is folded flat rather than extended vertically as in picture 1.

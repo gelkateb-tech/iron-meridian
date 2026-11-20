@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): equipment module has added rear grates, and rear deck has extra panels not present in the side view.

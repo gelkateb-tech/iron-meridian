@@ -1,0 +1,2 @@
+FLAG
+- 4. FRAMING: Drone fills only about 65% of the frame width instead of the required 85%.

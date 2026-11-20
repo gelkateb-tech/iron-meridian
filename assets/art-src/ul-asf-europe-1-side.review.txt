@@ -1,0 +1,3 @@
+FLAG
+- 4. Aircraft is placed too high in the frame, failing the vertical centering requirement.
+- 6. Design is a recognizable, direct copy of a real-world Sukhoi Su-27/Su-30 Flanker.

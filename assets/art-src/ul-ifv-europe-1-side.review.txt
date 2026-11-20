@@ -1,0 +1,2 @@
+FLAG
+- 2. Lighting originates from the front-right rather than the required upper-left direction.

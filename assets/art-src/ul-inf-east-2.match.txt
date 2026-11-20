@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): radio is mirrored to the right chest, hands on the rifle are reversed, and backpack is camouflaged instead of plain olive.

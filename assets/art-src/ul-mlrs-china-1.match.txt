@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 1, scene: rocket pod has 6 tubes (2x3) instead of 14 tubes (2x7) shown in side view.
+- Point 1, top: the entire rocket launcher box is missing from the vehicle mount.

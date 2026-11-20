@@ -1,0 +1,2 @@
+FLAG
+- 1. Upper tail fins from reference are missing, fan blade count changed, and fan position shifted rearward.
