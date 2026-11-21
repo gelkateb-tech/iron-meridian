@@ -118,8 +118,15 @@ function prodHour(p){ const q = S.queue[p];
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
     if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
-      const o = S.owner[p]; if (isSeat(o)){ const RP = desk(o).repeat; fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
-        if (RP && RP[p] && !q.length && !recruit(o, p, RP[p])){ const why = canMobilize(o, p, RP[p]); tell(o, `Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[RP[p]].name}.`, 'info', p); } } } }
+      const o = S.owner[p]; if (isSeat(o)){ fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p); } } }   // (Repeat production: repeatHour)
+// Repeat production (a seat's per-city order, desk(n).repeat: city -> unit type): every hour, after the production step, a ticked city of n with an
+// empty queue starts the next unit itself: right after one finishes, when it was ticked on an idle city, and again once a pause for resources is
+// over. A pause is told once (desk(n).repP marks it) and the restart is told too
+function repeatHour(n){ const D = desk(n), RP = D.repeat; if (!RP) return; const PS = D.repP || (D.repP = {});
+  for (const k in RP){ const p = +k, t = RP[k]; if (S.owner[p] !== n || S.queue[p].length || !UNITS[t]) continue; const nm = G.P[p].cityName || G.P[p].name;
+    if (recruit(n, p, t)){ if (PS[p]){ delete PS[p]; tell(n, `Repeat production resumed in ${nm}: ${UNITS[t].name}.`, 'info', p); } }
+    else if (!PS[p]){ PS[p] = 1; const why = canMobilize(n, p, t); tell(n, `Repeat production paused in ${nm}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[t].name}. It starts again by itself.`, 'info', p); } }
+  for (const k in PS) if (!RP[k]) delete PS[k]; }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
     if (--c.h <= 0){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);

@@ -12,6 +12,7 @@ function* tickHourG(){
   /*@DEV*/if (DEV.instant || DEV.research || DEV.res) for (const me of seats()) devHour(me);/*@ENDDEV*/
   // production
   for (let p = 0; p < G.P.length; p++) if (S.queue[p].length) prodHour(p);
+  for (const me of seats()) repeatHour(me);   // (a seat's Repeat production: rules/production.js)
   // construction
   for (let p = 0; p < G.P.length; p++) if (S.cons[p]) consHour(p);
   // a Mark upgrade left running by a save from before the research redesign (it ends as Firepower and Protection levels)
