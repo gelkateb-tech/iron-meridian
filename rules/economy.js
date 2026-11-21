@@ -221,6 +221,8 @@ function unrestDay(){
 function rebelHour(){
   // partisans holding a province alone for a day hand it back to its original nation (or independence)
   for (const a of S.armies){ if (!a.rebel || !count(a) || a.to !== null) continue; const p = a.at;
+    // home land of its holder again (sold or given back, ceded at peace, annexed): the partisans stand down, as unrestDay raises none there
+    if (S.owner[p] >= 0 && S.owner[p] === S.home[p]){ for (const t of UT) a.u[t] = 0; a.hold = 0; if (isSeat(S.owner[p])) tell(S.owner[p], `The partisans in ${G.P[p].cityName || G.P[p].name} lay down their arms: it is home land again.`, 'info', p); continue; }
     if (S.armies.some(b => b !== a && b.at === p && b.to === null && !b.fly && b.owner === S.owner[p] && count(b))){ a.hold = 0; continue; }
     a.hold = (a.hold || 0) + 1; if (a.hold < 24) continue;   // (|| 0: older saves carry no count, or NaN saved as null)
     const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
