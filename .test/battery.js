@@ -61,9 +61,10 @@ async function measure(b, name, saver){
     for (const [id, d] of out){ const P = G.P[id]; if (pick.every(([j]) => Math.hypot(G.P[j].x - P.x, G.P[j].y - P.y) > 120)) pick.push([id, d]); if (pick.length >= 14) break; } return pick; });
   const goQ = (id, s) => p.evaluate(([id, s]) => { const im = window.__im, P = im.G.P[id], v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; im.S.speed = 1; return P.name; }, [id, s]);
   const tally = ms => p.evaluate(ms => new Promise(r => { const RD = window.__im.rd; if (!RD) return r({}); RD.dbg = {}; setTimeout(() => { const d = RD.dbg; RD.dbg = null; r(d); }, ms); }), ms);
-  // the ambient sea waves (drawSeaSurface: animAmb() right after the SEAFX.wet test) are a wanted, battery-aware ambient layer, not stray motion: they run while the
-  // clock runs on any view with sea on screen (10 fps with the saver), so they are told apart by the scheduler's key (a + the line of that call in the page).
-  const waveKey = (() => { try { const ls = fs.readFileSync(path.join(DIR, PAGE), 'utf8').split('\n'), i = ls.findIndex(l => /SEAFX\.wet\) animAmb\(\)/.test(l)); return i >= 0 ? 'a' + (i + 1) : null; } catch (e) { return null; } })();
+  // the ambient sea waves (drawSeaSurface: animIn() right after the SEAFX.wet test) are a wanted, battery-aware ambient layer, not stray motion: they run while the
+  // clock runs on any view with sea on screen, at their own low rate (66-80 ms a frame; MAP-SEA), and stand still with the saver, so they are told apart by the
+  // scheduler's key (i + the line of that call in the page; a + the line for the older animAmb() call)
+  const waveKey = (() => { try { const ls = fs.readFileSync(path.join(DIR, PAGE), 'utf8').split('\n'), i = ls.findIndex(l => /SEAFX\.wet( && !SV)?\) anim(Amb|In)\(/.test(l)); return i >= 0 ? (/SEAFX\.wet\) animAmb/.test(ls[i]) ? 'a' : 'i') + (i + 1) : null; } catch (e) { return null; } })();
   const moving = why => Object.keys(why).filter(k => (k[0] === 'a' || k[0] === 'f') && k !== waveKey), waves = why => waveKey && why[waveKey] ? 1 : 0;
   // the timed window keeps the tally on (a few stack captures a second at the sim-tick rate: no measurable cost); a storm that drifts onto the
   // screen or a convoy that comes into view during the window makes it a window where something moved: the next quiet view is measured instead
@@ -115,7 +116,8 @@ async function measure(b, name, saver){
   for (const c of ['Lisbon', 'Sydney', 'Cape Town', 'Rio de Janeiro', 'Tokyo', 'Mumbai', 'Oslo', 'Athens', 'Istanbul', 'Shanghai']){
     const ok = await p.evaluate(c => { const im = window.__im, P = im.G.P.find(q => q.cityName === c); if (!P) return false; const s = 4, v = im.view; v.s = s; v.x = innerWidth/2 - P.x*s; v.y = innerHeight/2 - P.y*s; return true; }, c);
     if (!ok) continue; await p.waitForTimeout(1500); const why = await tally(1000), ks = Object.keys(why);
-    if (!ks.some(k => k[0] === 'a') || ks.some(k => k[0] === 'f')) continue;
+    if (saver && waveKey && why[waveKey]) errs.push(c + ' saver on: the sea waves asked for frames (they stand still with the Battery saver)');
+    if (!ks.some(k => k[0] === 'a' || k === waveKey) || ks.some(k => k[0] === 'f')) continue;
     await tallyOn(); const w = await window_(P, 3000), why2 = await tallyOff();
     if (Object.keys(why2).some(k => k[0] === 'f')) continue;
     out.ambient = { ...w, view: c, asked: Object.keys(why2).join(' ') }; break; }

@@ -6,7 +6,8 @@
 //              where the close tiles fade in with the old build's close look (MAP-TEXTURE: v3.12's olive fields, lit crowns and warm rock), within
 //              10%, and no step to the next zoom moves it more than 6% (no jump); the sea's within 6% (or 4 levels: far out the depth is laid without the coast clip)
 //  (M) MOVING  a layer rendered as a live zoom renders it (__im.zoomRender: ZRES, ZRND, light) has the settled layer's colours (land and sea mean
-//              within 4 levels): the zoom ends with sharper detail, not new colours
+//              within 4 levels): the zoom ends with sharper detail, not new colours (MAP-SEA: the sea's mean over open sea, 2 half-resolution px
+//              clear of the shore, where there is enough of it: the coarser layer's shore pixels are resolution, not colour)
 //  (T) TILES   detail tiles made all round the world (__im.dtProbe, 12 per resolution bucket). The far texture (MAP-TEXTURE: the detail baked
 //              into the texture for the far view, __im.dtFar; made in full first) over the plain texture, per terrain class, each channel: within
 //              4% on the coarsest bucket's grid, and all land within 3% on every bucket (it adds texture, not new colours). The close tiles over
@@ -36,20 +37,26 @@ const LOCS = { europe:[47.05, 1.75], sahara:[17.0, -1.5], siberia:[67.0, 97.0], 
   await p.evaluate(() => { window.__zl = (x, y, ww, wh) => { const im = window.__im, L = im.layer, s = L.s, dp = L.dp || 2, ox = L.vx + L.mx, oy = L.vy + L.my;
     const X0 = Math.round(dp*((x - ww/2)*s + ox)), Y0 = Math.round(dp*((y - wh/2)*s + oy)), w = Math.round(dp*ww*s), h = Math.round(dp*wh*s), d = L.getContext('2d').getImageData(X0, Y0, w, h).data, N = 96, M = 60, out = {};
     const wet = []; for (let j = 0; j < M; j++) for (let i = 0; i < N; i++) wet.push(im.isWet(x - ww/2 + (i + 0.5)*ww/N, y - wh/2 + (j + 0.5)*wh/M) ? 1 : 0);
-    for (const sea of [0, 1]){ let n = 0; const c = [0, 0, 0]; for (let yy = 0; yy < h; yy++){ const j = Math.min(M - 1, (yy*M/h) | 0); for (let xx = 0; xx < w; xx++){ if (wet[j*N + Math.min(N - 1, (xx*N/w) | 0)] !== sea) continue; const o = (yy*w + xx)*4; c[0] += d[o]; c[1] += d[o + 1]; c[2] += d[o + 2]; n++; } }
-      out[sea ? 'sea' : 'land'] = n > 50 ? c.map(v => +(v/n).toFixed(1)) : null; } return out; }; });
+    // open sea (2): wet cells with no dry cell within 2 px of a live zoom's half-resolution layer (MAP-SEA: there a coarser layer's shore pixels mix
+    // land into the sea's mean, more so the more the sea's colour differs from the land's; that is resolution, not a new colour)
+    const mw = 2/(s*devicePixelRatio*0.5), ki = Math.ceil(mw/(ww/N)), kj = Math.ceil(mw/(wh/M));
+    for (let j = 0; j < M; j++) for (let i = 0; i < N; i++){ if (!wet[j*N + i]) continue; let open = true;
+      for (let v = Math.max(0, j - kj); open && v <= Math.min(M - 1, j + kj); v++) for (let u = Math.max(0, i - ki); u <= Math.min(N - 1, i + ki); u++) if (!wet[v*N + u]){ open = false; break; }
+      if (open) wet[j*N + i] = 2; }
+    for (const sea of [0, 1, 2]){ let n = 0; const c = [0, 0, 0]; for (let yy = 0; yy < h; yy++){ const j = Math.min(M - 1, (yy*M/h) | 0); for (let xx = 0; xx < w; xx++){ const wv = wet[j*N + Math.min(N - 1, (xx*N/w) | 0)]; if (sea === 1 ? !wv : wv !== sea) continue; const o = (yy*w + xx)*4; c[0] += d[o]; c[1] += d[o + 1]; c[2] += d[o + 2]; n++; } }
+      out[['land', 'sea', 'seaIn'][sea]] = n > (sea === 2 ? 12 : 50) ? c.map(v => +(v/n).toFixed(1)) : null; } return out; }; });
   for (const [ln, [lat, lon]] of Object.entries(LOCS)){ const wp = await p.evaluate(([lat, lon]) => { const S = window.__im.S; S.hour = 227*24 + Math.round(((12 - lon/15) + 48) % 24);
       return [OX + ((lon - WORLD.lon0)/360*W - 0.5)*HS*SQ3, OY + (YMAX - miller(lat))/(YMAX - YMIN)*(H - 1)*HS*1.5]; }, [lat, lon]);
     const rows = checks.zoom[ln] = [];
     for (const z of ZOOMS){ await p.evaluate(([x, y, s, mw, mh]) => { const v = window.__im.view; v.s = s; v.x = mw/2 - x*s; v.y = mh/2 - y*s; window.__im.redraw(); }, [wp[0], wp[1], z/12, MAP.w, MAP.h]); await settle();
       const r = await p.evaluate(([x, y, ww, wh]) => { const im = window.__im; window.__groundOnly = true; try { im.renderLayer(); const a = window.__zl(x, y, ww, wh); im.zoomRender(); const m = window.__zl(x, y, ww, wh); return {a, m}; } finally { window.__groundOnly = false; im.renderLayer(); } },
         [wp[0], wp[1], 0.7*Math.min(MAP.w, 560)/12.5, 0.7*Math.min(MAP.h, 360)/12.5]);
-      rows.push({z, land:r.a.land, sea:r.a.sea, movLand:r.m.land, movSea:r.m.sea}); }
+      rows.push({z, land:r.a.land, sea:r.a.sea, movLand:r.m.land, movSea:r.m.sea, seaIn:r.a.seaIn, movSeaIn:r.m.seaIn}); }
     const r0 = rows[0], off = (a, b, lv) => a && b ? Math.max(...a.map((v, c) => Math.abs(v - b[c]) <= lv ? 0 : Math.abs(v/b[c] - 1))) : 0;
     rows.forEach((r, i) => { if (i && off(r.land, rows[i - 1].land, 3) > 0.06) fail(`zoom: ${ln} land jumps from hexPx ${rows[i - 1].z} to ${r.z}`, {land:r.land, before:rows[i - 1].land}); });
     for (const r of rows){ if (off(r.land, r0.land, 3) > (r.z <= 16 ? 0.04 : 0.1)) fail(`zoom: ${ln} land at hexPx ${r.z} off the world view's colour`, {z:r.z, land:r.land, world:r0.land});
       if (off(r.sea, r0.sea, 4) > 0.06) fail(`zoom: ${ln} sea at hexPx ${r.z} off the world view's colour`, {z:r.z, sea:r.sea, world:r0.sea});
-      for (const k of ['land', 'sea']){ const a = r[k], m = r[k === 'land' ? 'movLand' : 'movSea']; if (a && m){ const d = Math.max(...a.map((v, c) => Math.abs(v - m[c]))); checks.moving.push(+d.toFixed(1)); if (d > 4) fail(`moving: ${ln} ${k} at hexPx ${r.z} while zooming differs from settled`, {settled:a, moving:m}); } } } }
+      for (const k of ['land', 'sea']){ const io = k === 'sea' && r.seaIn && r.movSeaIn, a = io ? r.seaIn : r[k], m = io ? r.movSeaIn : r[k === 'land' ? 'movLand' : 'movSea']; if (a && m){ const d = Math.max(...a.map((v, c) => Math.abs(v - m[c]))); checks.moving.push(+d.toFixed(1)); if (d > 4) fail(`moving: ${ln} ${k} at hexPx ${r.z} while zooming differs from settled`, {settled:a, moving:m}); } } } }
   // (T) the detail tiles against the plain texture, per class
   const R = [2.5, 5, 10, 20], WW = await p.evaluate(() => [window.__im.wrap.WW, window.__im.wrap.WH]); let seed = 29; const rnd = () => (seed = (seed*16807) % 2147483647)/2147483647;
   for (let k = 0; k < 4; k++){ const T = 512/R[k], acc = {}; let got = 0, tries = 0;
