@@ -350,7 +350,7 @@ const giftRoom = (n, k) => k === 'cash' ? 1e9 : k === 'mp' ? Math.max(0, Math.fl
 // nation `me` gives stocks and provinces (g) to its coalition partner n
 function sendGift(me, n, g){ const M0 = S.nations[me], N = S.nations[n]; if (!g || !sameBloc(me, n)) return false; const parts = [];
   for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, isGood(k) ? kFloor(M0[k]) : Math.floor(M0[k]), giftRoom(n, k))); if (!q) continue; M0[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${fmt(q)} ${rlbl(k)}`); }
-  for (const p of g.provs){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
+  for (const p of g.provs || []){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
   if (!parts.length) return false; addMem(n, me, Math.min(15, 2 + parts.length*2));
   if (isSeat(me)){ say(me, n, me, `Sending you ${parts.join(', ')}.`); say(me, n, n, 'Received with thanks. The coalition stands together.'); const D = desk(me); if (D.unread) D.unread[n] = 0; }
   tell(me, `You sent ${parts.join(', ')} to your coalition partner ${N.name}.`, 'good', null); checkEnd(); return true; }

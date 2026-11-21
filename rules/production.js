@@ -80,6 +80,7 @@ function recruit(n, p, t){
   const h = trainH(p, t, n); S.queue[p].push({t, h, h0:h}); return true;
 }
 function build(n, p, k){
+  if (!BUILD[k]) return false;   // (no such building)
   const B = BUILD[k], N = S.nations[n], lvl = nextLvl(p, k), c = buildCost(n, k, lvl, p);
   if (S.owner[p] !== n || S.cons[p] || lvl > B.max || !canBuildHere(p, k)) return false;
   if (!isSeat(n) && !hasC(N, c)) aiBuyFor(n, c, 1.3, 40);   // an AI short of materials, iron or electronics for it buys them (a materials-poor power can still fortify)
