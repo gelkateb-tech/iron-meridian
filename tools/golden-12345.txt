@@ -5,6 +5,6 @@ day  4  85ab5e7255a916a4  rs 388851072  forces 894  log 1
 day  5  83a6385d351611d4  rs 407921148  forces 911  log 1
 day  6  38ea960f22e65592  rs -1545193492  forces 922  log 1
 day  7  5e370274ea7eec8c  rs 503012876  forces 933  log 1
-day  8  0458720338cb055d  rs -2119818934  forces 943  log 1
-day  9  95ae92ed9616ea23  rs 18388328  forces 946  log 1
-day 10  f0cc9a2e44c0664d  rs -630757381  forces 945  log 1
+day  8  183ac0775675d22c  rs -2119818934  forces 943  log 1
+day  9  8579761fc8324b61  rs 18388328  forces 946  log 1
+day 10  75203e0babce43fa  rs -630757381  forces 945  log 1
