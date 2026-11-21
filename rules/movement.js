@@ -148,6 +148,10 @@ function splitPlan(a, plan, spot = null){
   if (pk){ const all = [a, ...out]; for (const x of all) x.peak = h0 > 0 ? pk*effHP(x)/h0 : pk/all.length; }
   // the commander stays with the largest group
   const c = cmdOf(a); if (c){ const big = [a, ...out].reduce((x, y) => effHP(y) > effHP(x) + 1e-6 ? y : x, a); if (big !== a){ big.cmd = a.cmd; a.cmd = null; c.army = big.id; } }
+  // ships never go on land (MOV-4): a group of ships alone that got the troops' route, a leg or a next leg from land to land, stays where it is
+  // and plans its own route over the water (or none: it stays in port)
+  for (const x of [a, ...out]) if (shipsOnly(x) && !G.P[x.at].sea && (x.to !== null ? !G.P[x.to].sea : x.path.length > 0 && !G.P[x.path[0]].sea)){
+    const dest = x.path.length ? x.path[x.path.length - 1] : x.to; x.to = null; x.t = 0; x.legFrom = null; x.path = dest !== x.at ? pathFor(x, x.at, dest) : []; if (!x.path.length){ x.dest = null; if (x.wp) delete x.wp; } }
   return out; }
 // the classic halving (also used by the AI): half of every unit type leaves, HP in proportion; one unit if nothing would move
 function halfPlan(a){ const g = {}; for (const r of splitRows(a)){ const k = Math.floor(r.n/2); if (k) g[r.k] = k; }
