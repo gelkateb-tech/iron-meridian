@@ -335,6 +335,7 @@ function dealValueFor(me, ai, D){ // value of the deal to the AI: what it receiv
   for (const k of new Set([...D.give.treaty, ...D.get.treaty])) v += k === 'pass' ? (D.get.treaty.includes(k) ? tv(k, true) : 0) + (D.give.treaty.includes(k) ? tv(k, false) : 0) : tv(k, true);
   return v + opinion(ai, me)*1.2; }
 function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
+  for (const side of [D.give, D.get]) for (const k of DEAL_K){ const v = side[k]; if (v != null && v !== 0 && !(Number.isFinite(v) && v >= 0)) return 'amounts must be zero or more'; }   // (IM.api: the page's inputs never give a negative or a non-number)
   for (const k of DEAL_K){ const e = 0.01*(isGood(k) ? RES_K : 1); if ((D.give[k] || 0) > N[k] + e) return `you do not have ${k === 'cash' ? '$' + fmt(D.give[k]) + 'M' : resFull(k, D.give[k])}`; if ((D.get[k] || 0) > A[k] + e) return `they do not have ${k === 'cash' ? '$' + fmt(D.get[k]) + 'M' : resFull(k, D.get[k])}`; }
   if (D.give.provs.some(p => S.owner[p] !== me) || D.get.provs.some(p => S.owner[p] !== ai)) return 'a province changed hands';
   if (D.give.provs.some(p => isCapital(p)) ) return 'you cannot hand over your capital';
@@ -343,6 +344,7 @@ function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
   if (D.give.treaty.includes('peace') && !atWar(ai, me)) return 'you are not at war';
   return null; }
 function applyTrade(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
+  { const why = dealOK(me, ai, D); if (why){ refuse(me, `Not possible: ${why}.`); return false; } }   // (every caller asks dealOK first; IM.api callers may not)
   for (const k of DEAL_K){ const d = (D.get[k] || 0) - (D.give[k] || 0); N[k] += d; A[k] -= d; }
   const cedeTo = (p, to) => { const prev = S.owner[p]; S.owner[p] = to; ownChanged(); S.home[p] = to; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = 0; evict(prev, to); geoChanged(); if (prev >= 0) checkNation(prev, to); };
   if (D.give.treaty.includes('peace') || D.get.treaty.includes('peace')) if (atWar(ai, me)) setRel(ai, me, 'truce', 10);
