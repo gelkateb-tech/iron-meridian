@@ -62,6 +62,9 @@ function* tickHourG(){
     if (a.to === null && a.path.length && canProceed(a) && (e = embStep(a, hr)) >= 0){ hr = e; a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;   // (boarding ships: what is left of the hour once aboard)
       if (a.carry && a.carryH === S.hour - 1 && (legMode(a, a.at, a.to) === 'rail' || seaCarry(a))) a.t = a.carry/legH(a); a.carry = 0; }   // trains run through: no stop at every station (and troops at sea: rules/movement.js seaCarry)
     if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
+    // a fleet sailing into a port that is no longer one of its own or a friend's (taken while it sailed): it stops on the water it set out from (MOV-4)
+    if (a.to !== null && !G.P[a.to].sea && shipsOnly(a) && !portOk(a.owner, a.to)){ const lost = a.to; a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; a.dest = null; if (a.wp) delete a.wp;
+      if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${G.P[lost].cityName || G.P[lost].name} is no longer a port of yours.`, 'info', a.at); }
     if (a.to !== null){ const lh = legH(a); a.t += hr/lh;   // (a leg takes time in proportion to its real length: rules/movement.js legRatio)
       if (a.t >= 1){ const ov = Math.max(0, (a.t - 1)*lh), sea = ground(a) && (G.P[a.at].sea || G.P[a.to].sea);   // ov: the time over this hour once the leg ended
         if (a.path.length && ground(a) && (sea || legMode(a, a.at, a.to) === 'rail')){ a.carry = Math.min(1, ov); a.carryH = S.hour; } else a.carry = 0;
