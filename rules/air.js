@@ -102,7 +102,7 @@ function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:f
 function orderDrop(a, p){ const c = canDrop(a, p); if (!c.ok){ refuse(a.owner, c.why); return false; } a.fly = {kind:'drop', from:a.at, tgt:p, t:0, dt:AIR_SPEED/Math.max(1, c.d)}; a.path = []; cue(a.owner, 'order'); return true; }
 function dropTick(){ for (const a of S.armies){ const f = a.fly; if (!f || f.kind !== 'drop') continue; f.t += f.dt; if (f.t < 1) continue;
     const p = f.tgt, sams = stationaryAt(p).filter(b => atWar(a.owner, b.owner)).reduce((s0, b) => s0 + (b.u.sam || 0), 0), lossF = Math.min(0.6, sams*0.15);
-    if (lossF > 0) for (const t of UT) if (a.u[t]){ const k = Math.round(a.u[t]*lossF); a.u[t] -= k; }
+    if (lossF > 0) for (const t of UT) if (a.u[t]){ const k = Math.round(a.u[t]*lossF); a.u[t] -= k; if (!a.u[t]) a.w[t] = 0; else a.w[t] = Math.min(a.w[t], a.u[t]*UNITS[t].hp*0.9); }   // (the wounds go with the units lost, as on every other loss)
     a.fly = null; a.from = f.from; a.froms = [f.from]; atMove(a, p); a.to = null; a.m = Math.max(0, (a.m ?? 80) - 10); a.lastAt = null;
     IM.emit('fxDrop', a, p);
     if (isSeat(a.owner)) tell(a.owner, `Paratroopers landed at ${G.P[p].cityName || G.P[p].name}${lossF > 0 ? `, losing ${Math.round(lossF*100)}% to air defences` : ''}.`, lossF > 0.3 ? 'bad' : 'good', p); }
