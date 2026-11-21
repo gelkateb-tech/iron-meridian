@@ -190,11 +190,14 @@ function fillOffer(n, id, q){ const o = (S.book || []).find(x => x.id === id), N
   o.qty -= q; addMem(o.seller, n, 1); if (o.qty <= 0) S.book = S.book.filter(x => x !== o); return q; }
 const buyOffer = fillOffer;
 // nation n posts an offer on the order book; returns the quantity listed (what it holds or can pay for), 0 when nothing was
+// (the price is rounded to whole cents first and the money held at that price, so the listing, its fills and its refund all use one price; below BOOK_MIN_PRICE nothing is listed)
+const BOOK_MIN_PRICE = 0.01;   // the lowest price per lot an offer can carry ($M per MKT_LOT units)
 function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0) || !MKT_BASE[k]) return 0;   // (market goods only)
+  const pr = Math.round(price*100)/100; if (!(pr >= BOOK_MIN_PRICE)) return 0;
   qty = kFloor(qty);   // whole lots of MKT_LOT units, priced per lot
   if (type === 'sell'){ qty = Math.min(qty, kFloor(N[k])); if (qty <= 0) return 0; N[k] -= qty; }
-  else { qty = Math.min(qty, lotsFor(N.cash, price)); if (qty <= 0) return 0; N.cash -= lotCash(qty, price); }
-  (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, q0:qty, price:+price.toFixed(2), exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return qty; }
+  else { qty = Math.min(qty, lotsFor(N.cash, pr)); if (qty <= 0) return 0; N.cash -= lotCash(qty, pr); }
+  (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, q0:qty, price:pr, exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return qty; }
 /* ---------------- Occupation unrest ---------------- */
 const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
 function unrestDay(){
