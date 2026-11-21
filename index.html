@@ -3729,14 +3729,16 @@ function bakeSeaDepth(){
     for (let y = 0, i = 0; y < nh; y++) for (let x = 0; x < nw; x++, i += 4){ const v = 0.62*nz(x/19, y/19) + 0.38*nz(x/6 + 17, y/6 + 31); im.data[i] = im.data[i + 1] = im.data[i + 2] = Math.round(v*255); im.data[i + 3] = 255; }
     ng.putImageData(im, 0, 0);
     // a grey depth mask: the land blurred by r (at 1/q size), the noise laid in with soft-light (bends the bands into ridges and trenches), then gained
-    const depth = (r, q, gain, nk, src = Mw) => { const ww = Math.ceil(w/q), hh = Math.ceil(h/q), c = mk(ww, hh), g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, ww, hh); g.filter = 'blur(' + r + 'px)'; g.drawImage(src, 0, 0, ww, hh); g.filter = 'none';
-      const o = mk(w, h), og = o.getContext('2d'); og.imageSmoothingEnabled = true; og.filter = 'brightness(' + gain + ')'; og.drawImage(c, 0, 0, w, h); og.filter = 'none';
-      og.globalCompositeOperation = 'soft-light'; og.globalAlpha = nk; og.drawImage(Nc, 0, 0, w, h); og.globalAlpha = 1; og.globalCompositeOperation = 'source-over'; return o; };
-    const out = mk(w, h), g = out.getContext('2d'), T = mk(w, h), t = T.getContext('2d'), I = mk(w, h), ig = I.getContext('2d'), O = seaO(), rgb = a => `rgb(${a.join(',')})`;
+    const depth = (r, q, gain, nk, src = Mw, s = 1) => { const ww = Math.ceil(w/q), hh = Math.ceil(h/q), c = mk(ww, hh), g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, ww, hh); g.filter = 'blur(' + r + 'px)'; g.drawImage(src, 0, 0, ww, hh); g.filter = 'none';
+      const o = mk(Math.ceil(w/s), Math.ceil(h/s)), og = o.getContext('2d'), ow = o.width, oh = o.height; og.imageSmoothingEnabled = true; og.filter = 'brightness(' + gain + ')'; og.drawImage(c, 0, 0, ow, oh); og.filter = 'none';
+      og.globalCompositeOperation = 'soft-light'; og.globalAlpha = nk; og.drawImage(Nc, 0, 0, ow, oh); og.globalAlpha = 1; og.globalCompositeOperation = 'source-over'; return o; };   // (s: made at 1/s of the bake's size)
+    const out = mk(w, h), g = out.getContext('2d'), T = mk(w, h), I = mk(w, h), O = seaO(), rgb = a => `rgb(${a.join(',')})`;
     fill(g, rgb(O.ab));   // abyss
-    const step = (S, col, gg = g) => { fill(ig, '#fff'); ig.globalCompositeOperation = 'difference'; ig.drawImage(S, 0, 0); ig.globalCompositeOperation = 'source-over';   // 1 - s
-      gg.globalCompositeOperation = 'multiply'; gg.drawImage(I, 0, 0); if (typeof col === 'string') fill(t, col); else { t.globalCompositeOperation = 'source-over'; t.drawImage(col, 0, 0); } t.globalCompositeOperation = 'multiply'; t.drawImage(S, 0, 0); t.globalCompositeOperation = 'source-over';
-      gg.globalCompositeOperation = 'lighter'; gg.drawImage(T, 0, 0); gg.globalCompositeOperation = 'source-over'; };   // (col: a colour, or a sheet laid in through the mask)
+    let SC1 = null; const step = (S, col, gg = g) => { const sw = gg.canvas.width, sh = gg.canvas.height, X = sw === w ? [I, T] : SC1 && SC1[0].width === sw ? SC1 : (SC1 = [mk(sw, sh), mk(sw, sh)]), ii = X[0].getContext('2d'), tt = X[1].getContext('2d');
+      const fl = (c, v) => { c.globalCompositeOperation = 'source-over'; c.fillStyle = v; c.fillRect(0, 0, sw, sh); };   // (gg's own size: the bake's, or the original colour's sheet at half of it)
+      fl(ii, '#fff'); ii.globalCompositeOperation = 'difference'; ii.drawImage(S, 0, 0, sw, sh); ii.globalCompositeOperation = 'source-over';   // 1 - s
+      gg.globalCompositeOperation = 'multiply'; gg.drawImage(X[0], 0, 0); if (typeof col === 'string') fl(tt, col); else tt.drawImage(col, 0, 0, sw, sh); tt.globalCompositeOperation = 'multiply'; tt.drawImage(S, 0, 0, sw, sh); tt.globalCompositeOperation = 'source-over';
+      gg.globalCompositeOperation = 'lighter'; gg.drawImage(X[1], 0, 0); gg.globalCompositeOperation = 'source-over'; };   // (col: a colour, or a sheet laid in through the mask)
     const Rd = mk(w, h); { const rg = Rd.getContext('2d'); rg.imageSmoothingEnabled = true; rg.filter = 'contrast(1.4) brightness(0.34)'; rg.drawImage(Nc, 0, 0, w, h); rg.filter = 'none'; step(Rd, rgb(O.rd)); }   // open-ocean ridges and basins
     // the named shallow seas (SEA_SHELF), soft white ellipses (a turn away too), blurred: laid into the shelf step with 'lighten'
     let SH = null; if (O.sh){ SH = mk(w, h); const sg = SH.getContext('2d'), ky = h/WORLD_H, dg = WRAP_W/360; sg.fillStyle = '#000'; sg.fillRect(0, 0, w, h);
@@ -3764,7 +3766,7 @@ function bakeSeaDepth(){
             im.data[o] = im.data[o + 1] = im.data[o + 2] = v; im.data[o + 3] = 255; } }
         cg.putImageData(im, 0, 0); kg.drawImage(C, 0, 0, w, h); } }
       kg.globalCompositeOperation = 'multiply'; kg.fillStyle = rgb(Array(3).fill(Math.round(255*SEA_MIX_K))); kg.fillRect(0, 0, w, h); kg.globalCompositeOperation = 'source-over';
-      const Om = mk(w, h), om = Om.getContext('2d'); fill(om, rgb(OM.ab)); step(Rd, rgb(OM.rd), om); OM.dep.forEach(([r, q, gain, nk, col]) => step(depth(r, q, gain, nk), rgb(col), om));
+      const Om = mk(Math.ceil(w/2), Math.ceil(h/2)), om = Om.getContext('2d'); fill(om, rgb(OM.ab)); step(Rd, rgb(OM.rd), om); OM.dep.forEach(([r, q, gain, nk, col]) => step(depth(r, q, gain, nk, Mw, 2), rgb(col), om));   // (at half size: a smooth colour, the look's own texture lies over it; a third of the time)
       step(K, Om); }
     g.globalCompositeOperation = 'soft-light'; g.globalAlpha = O.nv; g.drawImage(Nc, 0, 0, w, h); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';   // +-6 % light (more in B)
     if (O.ss){ const SP = g.createPattern(seaStateTile(), 'repeat'); if (SP && SP.setTransform){ const lt = seaLattice(660, 0.52); SP.setTransform(new DOMMatrix().rotate(lt.a*180/Math.PI).scale(lt.t/256));   // MAP-SEA: the sea state (seaStateTile)
