@@ -625,7 +625,7 @@ function aiTurn0(n, N){
   // instead of standing there until the peace: forced, like sendHome, but only along a route, never a jump)
   // (a route it already has, to its own land after the clearing above, is made forced; an idle force gets one to its nearest own province)
   if (sated) for (const a of armiesOf(n)){ if (a.air || a.fly || a.to !== null || a.sail || a.forced || !count(a) || !ground(a) || shipsN(a) || G.P[a.at].sea) continue;
-    const o = S.owner[a.at]; if (o === n || o < 0 || S.home[a.at] === n || !atWar(n, o) || S.battles.includes(a.at)) continue;
+    const o = S.owner[a.at]; if (o === n || S.home[a.at] === n || !atWar(n, o) || S.battles.includes(a.at)) continue;   // (independent land too: atWar(n, -1))
     if (a.path.length){ a.forced = true; continue; }
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
