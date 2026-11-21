@@ -289,6 +289,7 @@ function airTick(){
   removeEmpty();
 }
 function missileCheck(n, from, to, k){
+  if (!G.P[from] || S.owner[from] !== n) return {ok:false, why:'Not your silo: missiles fire only from your own provinces.'};
   const M0 = mslOf(S.owner[from], k), d = hexDist(G.P[from].cc, G.P[to].cc), o = S.owner[to];
   if (!mstock(from)[k]) return {ok:false, why:`No ${M0.name}s stored here.`};
   if (bdis(from, 'silo')) return {ok:false, why:`The silo was knocked out by a strike: ${bdisH(from, 'silo')} h.`};
