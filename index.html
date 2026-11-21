@@ -2922,6 +2922,12 @@ function terrUnitsText(k){ const T = TERRAIN[k] || TERRAIN.plains, strong = [], 
 function terrMoveText(k){ const T = TERRAIN[k] || TERRAIN.plains, m = mt => Math.round(T.spd*((TERR_F[mt] && TERR_F[mt][k]) || 1)*100); return `foot ${m('foot')}% · wheels ${m('wheel')}% · tracks ${m('track')}%`; }
 let tab = 'cmd', seenLog = 0, showAllPowers = false, lockedOpen = false, seenHour = -1;
 document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('locked')) lockedOpen = e.target.open; }, true);
+// a More menu (the Diplomacy rows' actions) opens under its button, right-aligned; on a narrow screen, where the row wraps and the button sits at
+// the left, that runs off the left edge: it is shifted back inside the screen (and the other way at the right edge), then scrolled into view
+document.addEventListener('toggle', e => { const d = e.target; if (!d.open || !d.classList || !d.classList.contains('more')) return; const box = d.querySelector('.morebox'); if (!box) return;
+  box.style.right = ''; const vw = document.documentElement.clientWidth, R = [box, ...box.children].map(x => x.getBoundingClientRect()), l = Math.min(...R.map(q => q.left)), r = Math.max(...R.map(q => q.right));
+  let dx = 0; if (r > vw - 4) dx = vw - 4 - r; if (l + dx < 4) dx = 4 - l; if (dx) box.style.right = `${-dx}px`;
+  box.scrollIntoView({block:'nearest'}); }, true);
 // a panel that comes into view slides in (transform/opacity only, skipped with reduced motion)
 /* reduced motion: the in-game setting or the OS preference (prefers-reduced-motion) */
 const AFX_RM = (() => { try { return window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null; } catch (e) { return null; } })();
