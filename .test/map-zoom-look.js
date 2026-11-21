@@ -11,6 +11,9 @@
 //              into the texture for the far view, __im.dtFar; made in full first) over the plain texture, per terrain class, each channel: within
 //              4% on the coarsest bucket's grid, and all land within 3% on every bucket (it adds texture, not new colours). The close tiles over
 //              the far texture: v3.12's close look (lighter crowns, warm brown rock, olive fields), each class within 35% and all land within 10%
+//              JUNGLE: the tropical forest ('j', the forest within about 26 degrees of the equator) is meant to be a deeper, darker green at every
+//              zoom (owner, 2026-11-19): its far texture is held to darker than the plain texture (no channel over 2% lighter, green at least 60%),
+//              not to its colour; its close tiles to the far texture within 12% (the canopy fades in at play zoom without a change of colour)
 //  (E) ERRORS  no console error or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -55,7 +58,8 @@ const LOCS = { europe:[47.05, 1.75], sahara:[17.0, -1.5], siberia:[67.0, 97.0], 
       const r = await p.evaluate(([k, tx, ty]) => window.__im.dtProbe(k, tx, ty), [k, tx, ty]); if (!r) continue; got++;
       for (const [key, A] of Object.entries(r.acc)){ const B = acc[key] || (acc[key] = {n:0, b:[0, 0, 0], o:[0, 0, 0], f:[0, 0, 0]}); B.n += A.n; for (let c = 0; c < 3; c++){ B.b[c] += A.b[c]; B.o[c] += A.o[c]; B.f[c] += A.f[c]; } } }
     checks.tiles[k] = {}; for (const [key, B] of Object.entries(acc)){ if (B.n < 4000 || key === 'pm') continue; const g = B.o.map((v, c) => +(v/B.f[c]).toFixed(3)), fb = B.f.map((v, c) => +(v/B.b[c]).toFixed(3)); checks.tiles[k][key] = {close:g, far:fb};
-      if ((k === 0 || key === 'all') && fb.some(v => Math.abs(v - 1) > (key === 'all' ? 0.03 : 0.04))) fail(`tiles: the far texture moves class ${key}'s colour (bucket ${k} grid)`, fb);
-      if (g.some(v => Math.abs(v - 1) > (key === 'all' ? 0.1 : 0.35))) fail(`tiles: bucket ${k} class ${key} far off the far texture's colour`, g); } }
+      if ((k === 0 || key === 'all') && key !== 'j' && fb.some(v => Math.abs(v - 1) > (key === 'all' ? 0.03 : 0.04))) fail(`tiles: the far texture moves class ${key}'s colour (bucket ${k} grid)`, fb);
+      if (g.some(v => Math.abs(v - 1) > (key === 'all' ? 0.1 : key === 'j' ? 0.12 : 0.35))) fail(`tiles: bucket ${k} class ${key} far off the far texture's colour`, g);
+      if (key === 'j' && (fb.some(v => v > 1.02) || fb[1] < 0.6)) fail(`tiles: the tropical forest's far texture not a deeper green than the plain texture (bucket ${k} grid)`, fb); } }
   if (errors.length) fail('errors', errors.slice(0, 5));
   console.log(JSON.stringify({ checks, fails, errors }, null, 1)); await b.close(); process.exit(fails.length ? 1 : 0); })().catch(e => { console.error(e); process.exit(1); });
