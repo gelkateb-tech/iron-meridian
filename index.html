@@ -3533,12 +3533,13 @@ const SEAO = {
 let SEA_OPT = 'b';   // (owner, 21 November 2026: B, the photographic look)
 const seaO = () => SEAO[SEA_OPT] || SEAO.b;
 // MAP-SEA-MIX: the original sea colour ('m', the sea before MAP-SEA) laid into the look's base water colour in places (owner, 21 November 2026),
-// so the ocean is not one even blue: 'patch' large irregular areas (a few hundred to 2,000 km across, about 38% of the open sea), 'region' the
+// so the ocean is not one even blue: 'patch' large irregular areas (a few hundred to 2,000 km across, about a third of the open sea), 'region' the
 // cold and enclosed seas (Arctic, North Atlantic north of about 50N, Baltic, Hudson Bay, Black Sea, Caspian, Bering, Okhotsk, Southern Ocean), 'depth' the
-// deep open ocean (the shelves, slopes and coasts keep the look's blues); 'none' the look alone. Only the base colour is mixed, in the depth bake
-// (no cost a frame); the look's noise, sea state, waves, swell light, foam, shallows glow, motion, lakes and night lie over it as everywhere.
-// SEA_MIX_K: how much of the original colour where a mix applies. The world-anchored masks are made on the sphere (seamless over the date line)
-let SEA_MIX = 'none'; const SEA_MIX_K = 0.8;
+// mid-ocean basins (there is no sea-floor data: the land blurred wide, so it is distance from land; a rim of several hundred km round every coast
+// and the named shallow seas keep the look's blues); 'none' the look alone. Only the base colour is mixed, in the depth bake (no cost a frame); the look's noise, sea state, waves, swell light, foam, shallows glow, motion, lakes and night lie over it as everywhere.
+// SEA_MIX_K: how much of the original colour where a mix applies (1: the original colour itself, so on screen those places read as the sea did
+// before, under B's own wave light). The world-anchored masks are made on the sphere (seamless over the date line)
+let SEA_MIX = 'none'; const SEA_MIX_K = 1;
 // a seeded 3D gradient noise (about -1..1): sampled on the globe's surface, so the sea's patches have no seam, no grid and no repeat
 function noise3(seed){ const r = mulberry(seed), p = new Uint8Array(512); for (let i = 0; i < 256; i++) p[i] = i; for (let i = 255; i > 0; i--){ const j = Math.floor(r()*(i + 1)), t = p[i]; p[i] = p[j]; p[j] = t; } for (let i = 0; i < 256; i++) p[i + 256] = p[i];
   const GR = [1,1,0, -1,1,0, 1,-1,0, -1,-1,0, 1,0,1, -1,0,1, 1,0,-1, -1,0,-1, 0,1,1, 0,-1,1, 0,1,-1, 0,-1,-1], f = t => t*t*t*(t*(t*6 - 15) + 10), L = (a, b, t) => a + (b - a)*t, d = (h, x, y, z) => { const k = (h % 12)*3; return GR[k]*x + GR[k + 1]*y + GR[k + 2]*z; };
@@ -3548,10 +3549,9 @@ function noise3(seed){ const r = mulberry(seed), p = new Uint8Array(512); for (l
 function seaMixFn(kind){ const n1 = noise3(4211), n2 = noise3(4223), n3 = noise3(4231), R = Math.PI/180, sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
   const xyz = (lon, lat) => [Math.cos(lat*R)*Math.cos(lon*R), Math.cos(lat*R)*Math.sin(lon*R), Math.sin(lat*R)], dl = (a, b) => (((a - b) % 360) + 540) % 360 - 180;
   if (kind === 'patch'){ const fb = (lon, lat) => { const [x, y, z] = xyz(lon, lat); return 0.62*n1(3.1*x + 11, 3.1*y + 23, 3.1*z + 5) + 0.28*n2(7*x, 7*y, 7*z) + 0.1*n3(15*x, 15*y, 15*z); };
-    // the threshold that gives about 38% of the open sea (the sea cells of the world, every 17th), so the share holds whatever the seed
-    const v = []; for (let i = 0; i < G.prov.length; i += 17){ const p = G.prov[i]; if (p >= 0 && !G.P[p].sea) continue; v.push(fb(WORLD.lon0 + ((i % W) + 0.5)/W*360, cellLat(i))); }
-    v.sort((a, b) => a - b); const t = v.length ? v[Math.floor(v.length*0.62)] : 0.1;
-    return (lon, lat) => sm(t - 0.13, t + 0.13, fb(lon, lat)); }
+    // (t: the threshold that leaves about a third of the open sea in patches, measured once over the sea cells of the world: a constant, so the
+    // patches are the same whichever map bakes the shared sheet first, and nothing to count at start-up)
+    const t = 0.071; return (lon, lat) => sm(t - 0.13, t + 0.13, fb(lon, lat)); }
   if (kind === 'region'){ // [lon from, lon to, the latitude north of which the sea is cold]: elsewhere the Arctic from 64N (eased over 8 degrees of longitude)
     const N = [[-65, 40, 50], [-96, -65, 53], [40, 75, 62], [160, 202, 54], [135, 160, 46]], E = [[34.5, 43.4, 8.4, 3.6], [51, 42, 5.2, 6.4]];   // (the Black Sea and the Caspian: centre, half-width and half-height in degrees)
     return (lon, lat) => { const [x, y, z] = xyz(lon, lat), j = 4*n1(4*x + 3, 4*y + 7, 4*z + 1) + 1.5*n2(9*x, 9*y, 9*z), la = lat + j; let th = 64;
@@ -3696,7 +3696,7 @@ function drawSeaNight(){ const hexPx = view.s*HS0, L = viewLight(); if (L.day > 
     const K = SEAFX.nk || (SEAFX.nk = document.createElement('canvas')), w = Math.ceil(cw*dpr/4), h = Math.ceil(ch*dpr/4); if (K.width !== w || K.height !== h){ K.width = w; K.height = h; }
     const g = K.getContext('2d'), tex = nightTexture(), live = S.speed && !S.over ? acc : 0, sl = ((12 - (sunHr(S.hour + live) % 24))*15 + 540) % 360 - 180;
     const x0w = OX - HS*SQ3*0.5, wpd = HS*SQ3*W/360, span = 360*wpd, start = x0w + (((sl + 180 - WORLD.lon0) % 360) + 360) % 360*wpd - 180*wpd, y0 = OY - HS*0.75, y1 = y0 + HS*1.5*H;
-    const kk = [view.x, view.y, view.s, w, h, Math.round(sl*8), tex.day, SEA_OPT].join(','); if (K.k !== kk){ K.k = kk;
+    const kk = [view.x, view.y, view.s, w, h, Math.round(sl*8), tex.day, SEA_OPT, SEA_MIX].join(','); if (K.k !== kk){ K.k = kk;
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.imageSmoothingEnabled = true;
     const ks = w/cw; wrapEach(() => { g.setTransform(ks*view.s, 0, 0, ks*view.s, ks*view.x, ks*view.y); g.drawImage(T, 0, 0, WORLD_W, WORLD_H); });
     g.setTransform(ks*view.s, 0, 0, ks*view.s, ks*view.x, ks*view.y); const vx0 = -view.x/view.s, vx1 = (cw - view.x)/view.s;
@@ -3729,16 +3729,16 @@ function bakeSeaDepth(){
     for (let y = 0, i = 0; y < nh; y++) for (let x = 0; x < nw; x++, i += 4){ const v = 0.62*nz(x/19, y/19) + 0.38*nz(x/6 + 17, y/6 + 31); im.data[i] = im.data[i + 1] = im.data[i + 2] = Math.round(v*255); im.data[i + 3] = 255; }
     ng.putImageData(im, 0, 0);
     // a grey depth mask: the land blurred by r (at 1/q size), the noise laid in with soft-light (bends the bands into ridges and trenches), then gained
-    const depth = (r, q, gain, nk, src = Mw, s = 1) => { const ww = Math.ceil(w/q), hh = Math.ceil(h/q), c = mk(ww, hh), g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, ww, hh); g.filter = 'blur(' + r + 'px)'; g.drawImage(src, 0, 0, ww, hh); g.filter = 'none';
+    const depth = (r, q, gain, nk, src = Mw, s = 1) => { const qq = Math.max(q, s), ww = Math.ceil(w/qq), hh = Math.ceil(h/qq), c = mk(ww, hh), g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, ww, hh); g.filter = 'blur(' + r*q/qq + 'px)'; g.drawImage(src, 0, 0, ww, hh); g.filter = 'none';
       const o = mk(Math.ceil(w/s), Math.ceil(h/s)), og = o.getContext('2d'), ow = o.width, oh = o.height; og.imageSmoothingEnabled = true; og.filter = 'brightness(' + gain + ')'; og.drawImage(c, 0, 0, ow, oh); og.filter = 'none';
-      og.globalCompositeOperation = 'soft-light'; og.globalAlpha = nk; og.drawImage(Nc, 0, 0, ow, oh); og.globalAlpha = 1; og.globalCompositeOperation = 'source-over'; return o; };   // (s: made at 1/s of the bake's size)
+      og.globalCompositeOperation = 'soft-light'; og.globalAlpha = nk; og.drawImage(Nc, 0, 0, ow, oh); og.globalAlpha = 1; og.globalCompositeOperation = 'source-over'; return o; };   // (s: made at 1/s of the bake's size, and blurred at that size when it is the smaller)
     const out = mk(w, h), g = out.getContext('2d'), T = mk(w, h), I = mk(w, h), O = seaO(), rgb = a => `rgb(${a.join(',')})`;
     fill(g, rgb(O.ab));   // abyss
     let SC1 = null; const step = (S, col, gg = g) => { const sw = gg.canvas.width, sh = gg.canvas.height, X = sw === w ? [I, T] : SC1 && SC1[0].width === sw ? SC1 : (SC1 = [mk(sw, sh), mk(sw, sh)]), ii = X[0].getContext('2d'), tt = X[1].getContext('2d');
       const fl = (c, v) => { c.globalCompositeOperation = 'source-over'; c.fillStyle = v; c.fillRect(0, 0, sw, sh); };   // (gg's own size: the bake's, or the original colour's sheet at half of it)
       fl(ii, '#fff'); ii.globalCompositeOperation = 'difference'; ii.drawImage(S, 0, 0, sw, sh); ii.globalCompositeOperation = 'source-over';   // 1 - s
-      gg.globalCompositeOperation = 'multiply'; gg.drawImage(X[0], 0, 0); if (typeof col === 'string') fl(tt, col); else tt.drawImage(col, 0, 0, sw, sh); tt.globalCompositeOperation = 'multiply'; tt.drawImage(S, 0, 0, sw, sh); tt.globalCompositeOperation = 'source-over';
-      gg.globalCompositeOperation = 'lighter'; gg.drawImage(X[1], 0, 0); gg.globalCompositeOperation = 'source-over'; };   // (col: a colour, or a sheet laid in through the mask)
+      gg.globalCompositeOperation = 'multiply'; gg.drawImage(X[0], 0, 0); fl(tt, col); tt.globalCompositeOperation = 'multiply'; tt.drawImage(S, 0, 0, sw, sh); tt.globalCompositeOperation = 'source-over';
+      gg.globalCompositeOperation = 'lighter'; gg.drawImage(X[1], 0, 0); gg.globalCompositeOperation = 'source-over'; };
     const Rd = mk(w, h); { const rg = Rd.getContext('2d'); rg.imageSmoothingEnabled = true; rg.filter = 'contrast(1.4) brightness(0.34)'; rg.drawImage(Nc, 0, 0, w, h); rg.filter = 'none'; step(Rd, rgb(O.rd)); }   // open-ocean ridges and basins
     // the named shallow seas (SEA_SHELF), soft white ellipses (a turn away too), blurred: laid into the shelf step with 'lighten'
     let SH = null; if (O.sh){ SH = mk(w, h); const sg = SH.getContext('2d'), ky = h/WORLD_H, dg = WRAP_W/360; sg.fillStyle = '#000'; sg.fillRect(0, 0, w, h);
@@ -3755,19 +3755,22 @@ function bakeSeaDepth(){
     O.dep.forEach(([r, q, gain, nk, col, op], i) => { const D = depth(r, q, gain, nk, op && Mo ? Mo : Mw); if (i === 1 && SH){ const dg = D.getContext('2d'); dg.globalCompositeOperation = 'lighten'; dg.drawImage(SH, 0, 0); dg.globalCompositeOperation = 'source-over'; } step(D, rgb(col)); });
     // MAP-SEA-MIX: the original colour by depth (SEAO.m's abyss, ridges and steps, as its own bake makes them) on a sheet of its own, laid into
     // the base colour through the mix's mask at SEA_MIX_K (before the noise and the sea state, which lie over both)
-    const OM = SEAO.m; if (SEA_MIX !== 'none' && O !== OM){ const K = mk(w, h), kg = K.getContext('2d'); kg.fillStyle = '#000'; kg.fillRect(0, 0, w, h); kg.imageSmoothingEnabled = true;
-      if (SEA_MIX === 'depth'){ // the deep open ocean: the land blurred wide (a few hundred km), the named shallow seas lightened in, inverted
-        const D = depth(10, 4, 2.1, 0.7); if (SH){ const dg = D.getContext('2d'); dg.globalCompositeOperation = 'lighten'; dg.filter = 'brightness(1.6)'; dg.drawImage(SH, 0, 0); dg.filter = 'none'; dg.globalCompositeOperation = 'source-over'; }   // (the shelf seas at full: they keep B)
-        kg.fillStyle = '#fff'; kg.fillRect(0, 0, w, h); kg.globalCompositeOperation = 'difference'; kg.drawImage(D, 0, 0); kg.globalCompositeOperation = 'source-over'; }
-      else { const fn = seaMixFn(SEA_MIX); if (fn){ // the world-anchored mask at about 1.5 degrees a texel (its own changes span 5 degrees and more), smoothed up to the bake's size
-        const ky = h/WORLD_H, gw = Math.ceil(w/6), gh = Math.ceil(h/6), C = mk(gw, gh), cg = C.getContext('2d'), im = cg.createImageData(gw, gh), sx = HS*SQ3, rows = (YMAX - YMIN)/(H - 1);
+    const OM = SEAO.m; if (SEA_MIX !== 'none' && O !== OM){ let A = null;   // A: the mask as alpha (white; alpha the original colour's share), small, smoothed up where it is laid
+      if (SEA_MIX === 'depth'){ // the open ocean away from the coasts: the land blurred wide, the named shallow seas lightened in, inverted (at a quarter of the bake's
+        // size: it changes over 40 texels and more). B keeps a wide rim round every coast (several hundred km), so only the mid-ocean basins take the original
+        A = depth(24, 4, 3, 0.7, Mw, 4); const ag = A.getContext('2d'), aw = A.width, ah = A.height; if (SH){ ag.globalCompositeOperation = 'lighten'; ag.filter = 'brightness(1.6)'; ag.drawImage(SH, 0, 0, aw, ah); ag.filter = 'none'; ag.globalCompositeOperation = 'source-over'; }   // (the shelf seas at full: they keep B)
+        const im = ag.getImageData(0, 0, aw, ah), d = im.data; for (let o = 0; o < d.length; o += 4){ d[o + 3] = Math.round((255 - d[o])*SEA_MIX_K); d[o] = d[o + 1] = d[o + 2] = 255; } ag.putImageData(im, 0, 0); }
+      else { const fn = seaMixFn(SEA_MIX); if (fn){ // the world-anchored mask at about 2 degrees a texel (its own changes span 5 degrees and more)
+        const ky = h/WORLD_H, gw = Math.ceil(w/8), gh = Math.ceil(h/8), cg = (A = mk(gw, gh)).getContext('2d'), im = cg.createImageData(gw, gh), sx = HS*SQ3, rows = (YMAX - YMIN)/(H - 1);
         for (let j = 0, o = 0; j < gh; j++){ const wy = (j + 0.5)/gh*h/ky, lat = invMiller(YMAX - (wy - OY)/(HS*1.5)*rows);
-          for (let i = 0; i < gw; i++, o += 4){ const wx = ((i + 0.5)/gw*w - E)/kx, lon = WORLD.lon0 + ((wx - OX)/sx + 0.5)/W*360, v = Math.round(255*fn(((lon + 180) % 360 + 360) % 360 - 180, lat));
-            im.data[o] = im.data[o + 1] = im.data[o + 2] = v; im.data[o + 3] = 255; } }
-        cg.putImageData(im, 0, 0); kg.drawImage(C, 0, 0, w, h); } }
-      kg.globalCompositeOperation = 'multiply'; kg.fillStyle = rgb(Array(3).fill(Math.round(255*SEA_MIX_K))); kg.fillRect(0, 0, w, h); kg.globalCompositeOperation = 'source-over';
-      const Om = mk(Math.ceil(w/2), Math.ceil(h/2)), om = Om.getContext('2d'); fill(om, rgb(OM.ab)); step(Rd, rgb(OM.rd), om); OM.dep.forEach(([r, q, gain, nk, col]) => step(depth(r, q, gain, nk, Mw, 2), rgb(col), om));   // (at half size: a smooth colour, the look's own texture lies over it; a third of the time)
-      step(K, Om); }
+          for (let i = 0; i < gw; i++, o += 4){ const wx = ((i + 0.5)/gw*w - E)/kx, lon = WORLD.lon0 + ((wx - OX)/sx + 0.5)/W*360;
+            im.data[o] = im.data[o + 1] = im.data[o + 2] = 255; im.data[o + 3] = Math.round(255*SEA_MIX_K*fn(((lon + 180) % 360 + 360) % 360 - 180, lat)); } }
+        cg.putImageData(im, 0, 0); } }
+      if (A){ // the original colour (SEAO.m's abyss, ridges and steps, as its own bake makes them) at half size, its blurs at that size too: a smooth colour, the look's own texture lies over it
+        const Om = mk(Math.ceil(w/2), Math.ceil(h/2)), om = Om.getContext('2d'); om.fillStyle = rgb(OM.ab); om.fillRect(0, 0, Om.width, Om.height); step(Rd, rgb(OM.rd), om); OM.dep.forEach(([r, q, gain, nk, col]) => step(depth(r, q, gain, nk, Mw, 2), rgb(col), om));
+        const t = T.getContext('2d'); t.globalCompositeOperation = 'source-over'; t.imageSmoothingEnabled = true; t.drawImage(Om, 0, 0, w, h); t.globalCompositeOperation = 'destination-in'; t.drawImage(A, 0, 0, w, h);
+        if (O.lk && lakePath()){ t.save(); t.setTransform(kx, 0, 0, h/WORLD_H, E, 0); t.globalCompositeOperation = 'destination-out'; t.fill(lakePath()); t.restore(); }   // (the big lakes keep their own tone exactly)
+        t.globalCompositeOperation = 'source-over'; g.drawImage(T, 0, 0); } }   // (laid over the look's base colour through the mask: one draw)
     g.globalCompositeOperation = 'soft-light'; g.globalAlpha = O.nv; g.drawImage(Nc, 0, 0, w, h); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';   // +-6 % light (more in B)
     if (O.ss){ const SP = g.createPattern(seaStateTile(), 'repeat'); if (SP && SP.setTransform){ const lt = seaLattice(660, 0.52); SP.setTransform(new DOMMatrix().rotate(lt.a*180/Math.PI).scale(lt.t/256));   // MAP-SEA: the sea state (seaStateTile)
       g.save(); g.setTransform(kx, 0, 0, h/WORLD_H, E, 0); g.fillStyle = SP; g.globalAlpha = O.ss; g.fillRect(-E/kx, 0, WORLD_W + 2*E/kx, WORLD_H); g.restore(); } }
