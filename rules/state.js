@@ -417,8 +417,9 @@ function checkNation(n, by = NEUTRAL){
   if (!cities.length){
     N.alive = false; relChanged();
     const annex = by >= 0 && S.nations[by].alive && !isSated(by);   // (the nations world: a computer nation that has grown enough for now leaves the rest independent)
+    // (the annexer's own home land among it comes back unoccupied, as on a capture)
     for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
-      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; ownChanged(); addArmy(NEUTRAL, p, {inf:2}); } }
+      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.home[p] === by ? null : S.hour; if (S.unrest && S.home[p] === by) S.unrest[p] = 0; } else { S.owner[p] = NEUTRAL; ownChanged(); addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
     removeEmpty(); geoChanged();
     tellAll(me => n === me ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, me => n === me ? 'bad' : by === me ? 'good' : 'info');
