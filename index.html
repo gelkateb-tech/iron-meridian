@@ -5514,6 +5514,9 @@ function layoutCompute(p, roles){
     let ux = 0, uy = 0; if (bat && cls === 'g' && BU){ const sg = ow === S.owner[p] ? -1 : 1; ux = BU[0]*sg; uy = BU[1]*sg; }
     for (let dy = -24; dy <= 12; dy += 2) for (let dx = -22; dx <= 22; dx += 2) cand.push([dx, dy, 0]);
     if (cls === 's' && !P.sea) for (const q of dockCands(p)) cand.push(q);   // a fleet docked in a port: on the water off the city's shore (the grid above rarely reaches it)
+    // a force's counter is anchored in its own holder's land whenever any spot there is left (a small province: the counters overlap inside the
+    // country rather than one standing over the border in a neighbour's land, or at sea; whatever the overlaps would cost)
+    if (cls === 'g' || cls === 'a'){ const home = cand.filter(([dx, dy]) => tmGround(p, cls, P.x + dx, P.y + dy, 1) < 2600); if (home.length && home.length < cand.length) cand.splice(0, cand.length, ...home); }
     if (pg) cand.unshift([pg.tx - P.x, pg.ty - P.y, -TM_KEEP]);   // where it stands now (its glide's end), while that is still a fair spot: a force coming or going leaves the others in place
     // a spot's cost (B: an optional breakdown, for the tests)
     const ev = (dx, dy, bonus, bc, B) => { let c = 0; const add = B ? (k, v) => { c += v; B[k] = Math.round((B[k] || 0) + v); } : (k, v) => { c += v; };
