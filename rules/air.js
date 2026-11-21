@@ -269,7 +269,10 @@ function airTick(){
     if (f.ph === 'out' && f.kind === 'strike' && stormAt(f.tgt)){ f.ph = 'back'; f.t = Math.max(0, 1 - f.t); if (isSeat(a.owner)) tell(a.owner, `Strike on ${G.P[f.tgt].cityName || G.P[f.tgt].name} aborted: a storm closed in over the target.`, 'info', f.tgt); continue; }
     if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
         wearWing(a, f.kind, dist, f.kind === 'patrol' || f.kind === 'hunt' ? 12 : f.kind === 'orbit' ? 16 : f.kind === 'recon' ? uavOf(a.owner).loiter : 0);
-        if (f.kind === 'rebase'){ const cv = G.P[f.tgt].sea ? carrierAt(a.owner, f.tgt) : null; if (G.P[f.tgt].sea && !cv){ f.ph = 'back'; f.t = 0; continue; } a.air.base = f.tgt; atMove(a, f.tgt); a.air.car = cv ? cv.id : null; a.fly = null; a.air.cd = 2;
+        if (f.kind === 'rebase'){ const cv = G.P[f.tgt].sea ? carrierAt(a.owner, f.tgt) : null; if (G.P[f.tgt].sea && !cv){ f.ph = 'back'; f.t = 0; continue; }
+          // the airbase fell while the wing flew: it turns back to the base it left (the 'back' leg diverts if that one is lost too)
+          if (!G.P[f.tgt].sea){ const o = S.owner[f.tgt]; if (o !== a.owner && !(o >= 0 && friendly(a.owner, o))){ f.ph = 'back'; f.t = 0; if (isSeat(a.owner)){ const nm = G.P[f.tgt].cityName || G.P[f.tgt].name; tell(a.owner, `Rebase to ${nm} called off: ${nm} fell to ${o >= 0 ? nationName(o) : 'independent forces'}. ${armyName(a)} turns back.`, 'bad', f.tgt); } continue; } }
+          a.air.base = f.tgt; atMove(a, f.tgt); a.air.car = cv ? cv.id : null; a.fly = null; a.air.cd = 2;
           if (isSeat(a.owner) && cv) tell(a.owner, `${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
         else if (f.kind === 'recon'){ const L = uavOf(a.owner), seen = visProvsAt(G.P[f.tgt].x, G.P[f.tgt].y, L.vis); S.reveal = S.reveal || {};
