@@ -8969,6 +8969,7 @@ function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) ret
   joinForces(a, b); }
 // a into b: at once when both stand in the same province, otherwise a marches to b and merges on arrival
 function joinForces(a, b){ if (!a || !b || a === b) return false;
+  if (a.fly || b.fly){ toast('Paratroopers in the air: orders once they land.', 'bad', null); return false; }   // (a drop in flight takes no one aboard and joins no one)
   const sp = stackPenaltyIf(b, a), warn = sp.over ? ` ${stackWarn(sp)}` : '';   // over the stack limit: say what it costs
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];

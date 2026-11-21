@@ -82,11 +82,11 @@ function* tickHourG(){
       for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
   // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets), as long as
   // the joined force stays within its stack limit (STACK_LIM); a join order (dragged onto the counter) merges anyway, with the stack-limit warning
-  for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || a.land > 0 || !count(a)) continue;   // (troops still landing join once ashore)
+  for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.fly || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || a.land > 0 || !count(a)) continue;   // (troops still landing join once ashore)
     if (a.lastAt === a.at) continue; a.lastAt = a.at;
     if (S.owner[a.at] !== me && !(S.owner[a.at] >= 0 && rel(me, S.owner[a.at]).st === 'ally')) continue;
     const jt = a.join != null ? armyById(a.join) : null, pin = a.sail ? a.sail.to : a.pos;   // a join order picks its partner; a force sent to an exact point joins only a force standing at (or by) that point
-    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over && (!pin || Math.hypot(pin[0] - (b.pos ? b.pos[0] : G.P[b.at].x), pin[1] - (b.pos ? b.pos[1] : G.P[b.at].y)) < JOIN_R));
+    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && !b.fly && b.at === a.at && b.to === null && !b.path.length && count(b) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over && (!pin || Math.hypot(pin[0] - (b.pos ? b.pos[0] : G.P[b.at].x), pin[1] - (b.pos ? b.pos[1] : G.P[b.at].y)) < JOIN_R));
     if (into) delete a.join;
     if (into){ merge(into, a); IM.emit('merged', a.id, into.id, true); const sp = stackPenalty(into); if (sp.over) tell(me, `${armyName(into)} at ${G.P[into.at].cityName || G.P[into.at].name}: ${stackText(sp)} (${sp.size} ${sp.dom} units, limit ${sp.limit}). Split it to fight at full strength.`, 'bad', into.at); }
   }
