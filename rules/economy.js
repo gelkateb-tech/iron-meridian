@@ -172,11 +172,12 @@ function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty >
       const q = Math.min(ask.qty, 50*RES_K, lotsFor(N.cash - (dry ? 80 : 160), ask.price), kFloor(stockCap(N.id) - N[ask.res])); if (q < 5*RES_K) continue;
       N.cash -= lotCash(q, ask.price); N[ask.res] += q; S.nations[ask.seller].cash += lotCash(q, ask.price); ask.qty -= q;
       if (seat) tell(ask.seller, `${N.name} bought ${fmt(q)} ${rlbl(ask.res)} from your offer for $${fmt(lotCash(q, ask.price))}M.`, 'good', null); } }
-  // AI nations sell into a seat's buy offer when the price suits them (a seat's sell offer is taken above, like any other listing)
+  // AI nations sell into a seat's buy offer when the price suits them (a seat's sell offer is taken above, like any other listing), never more than
+  // the buyer's storage holds (the rest would be cut at the next daily step)
   for (const o of S.book){ const me = o.seller; if (!isSeat(me)) continue;   // a seat's offers: the AI nations may take them
     for (const N of S.nations){ if (!N.alive || isSeat(N.id) || atWar(N.id, me) || embargoed(N.id, me) || o.qty <= 0 || !canSee(o, N.id) || rng() > 0.5) continue;
       if (!isBid(o)) continue;
-      { if (N[o.res] < 120*RES_K || o.price < M.p[o.res]*0.95) continue; const q = Math.min(o.qty, 40*RES_K, kFloor(N[o.res] - 80*RES_K)); if (q < 5*RES_K) continue; N[o.res] -= q; N.cash += lotCash(q, o.price); S.nations[me][o.res] += q; o.qty -= q; tell(me, `${N.name} sold you ${fmt(q)} ${rlbl(o.res)} through your buy offer for $${fmt(lotCash(q, o.price))}M.`, 'good', null); } } }
+      { if (N[o.res] < 120*RES_K || o.price < M.p[o.res]*0.95) continue; const q = Math.min(o.qty, 40*RES_K, kFloor(N[o.res] - 80*RES_K), kFloor(stockCap(me) - S.nations[me][o.res])); if (q < 5*RES_K) continue; N[o.res] -= q; N.cash += lotCash(q, o.price); S.nations[me][o.res] += q; o.qty -= q; tell(me, `${N.name} sold you ${fmt(q)} ${rlbl(o.res)} through your buy offer for $${fmt(lotCash(q, o.price))}M.`, 'good', null); } } }
   S.book = S.book.filter(o => o.qty > 0); }
 // the stock below which an AI takes a sell listing: oil about 25 days of fuel for a big consumer, twice the usual line when the listing is cheap
 function aiBookNeed(N, ask){ return (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70*RES_K)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1); }
