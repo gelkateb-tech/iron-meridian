@@ -402,6 +402,7 @@ function spyHour(){
   for (const ag of (S.spies || [])){ if (!ag.op || --ag.op.h > 0) continue;
     const {k, p} = ag.op, n = ag.owner, o = S.owner[p], where = G.P[p].cityName || G.P[p].name; ag.op = null;
     if (!S.nations[n].alive){ continue; }
+    if (o === n){ if (isSeat(n)) tell(n, `${SPY_OPS[k].name} in ${where} called off: it is your own province now.`, 'info', p); continue; }   // (taken while the agent worked: spyCheck refuses own provinces at the start)
     if (rng() > spyChance(n, p, k)){ S.spies = S.spies.filter(x => x !== ag); if (o >= 0) addMem(o, n, -20);
       if (isSeat(n)) tell(n, `Your agent was caught in ${where}${o >= 0 ? ` by ${S.nations[o].name} (relations −20)` : ''}.`, 'bad', p);
       if (o !== n && isSeat(o)) tell(o, `Counter-intelligence caught ${artA(S.nations[n].name)} agent in ${where}.`, 'good', p); continue; }
