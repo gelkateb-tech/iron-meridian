@@ -8956,6 +8956,7 @@ cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag =
 let udrag = null;   // a counter being dragged: {id, x, y} (screen)
 function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) return;
   const h = hitAt(x, y), b = h && !h.unk ? h.ids.map(armyById).filter(q => q && q !== a && q.owner === PLAYER && !q.air && !q.fly && count(q)).sort((p0, q0) => count(q0) - count(p0))[0] : null;
+  if (lastPT !== 'mouse' && h && h.ids.includes(a.id)) return;   // (a finger that slid a little on the force's own counter, as in a long press to group: no order, no merge)
   if (!b){ dragMove(a, x, y); return; }   // onto the map: move there
   joinForces(a, b); }
 // a into b: at once when both stand in the same province, otherwise a marches to b and merges on arrival
@@ -9018,7 +9019,9 @@ function tap(x, y, shift = false, long = false){
   const cityTap = plain && !hs && !core && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
   const mk = hs || core ? null : cityAt(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null && long) return;   // (a resting finger is no order: Move stays armed)
-  if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
+  if (cmdMode && sel.army !== null){ let a = armyById(sel.army); const mode = cmdMode; cmdMode = null;
+    if (a && sel.group.length > 1 && !a.air && a.to === null){ const p0 = provAt(x, y), o = p0 === a.at ? groupArmies().find(q => q.owner === PLAYER && !q.air && (q.to !== null || q.at !== p0)) : null; if (o){ sel.army = o.id; a = o; } }   // (a group sent to the province its lead stands in: another of its forces leads, so the group gathers there instead of the lead taking a step)
+    if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
       const p = provAt(x, y); if (p < 0) return;
       if (shift && !a.air){ stopTap(a, p, x, y); return; }   // Shift on a desktop, inside Move: one more stop
@@ -9033,6 +9036,7 @@ function tap(x, y, shift = false, long = false){
       if (h.spread){ zoomAt(2.4, h.cx, h.cy); return; }
       const own = h.ids.map(armyById).filter(a => a && a.owner === PLAYER);
       if (own.length){
+        if (long && lastPT !== 'mouse'){ groupToggle(own.filter(a => count(a)).map(a => a.id)); return; }   // a long press by touch (a phone has no Shift): add these forces to the selection, or take them out (a mouse's long press stays a click)
         if (shift && sel.army !== null){ selectArmy(own[0].id, true); return; }
         if (own.some(a => a.id === sel.army)){ tapCombat(armyById(sel.army));   // (fx.js: in combat, its range ring and target again)
           if (own.length > 1){ const i2 = own.findIndex(a => a.id === sel.army); if (i2 === own.length - 1) clearSel(); else selectArmy(own[i2 + 1].id); }   // (a stack of several of yours: each in turn, then released)
@@ -9236,6 +9240,19 @@ function coreAt(x, y){ for (let i = hits.length - 1; i >= 0; i--){ const h = hit
 function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
   if (id !== sel.army) wpMode = false; sel.group = []; sel.foe = null; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
+// a long press by touch on a counter of yours (tap above): all your forces on it join the selection as a group, or leave it when all of them are in it
+// already. With nothing selected it selects them (several: as a group); a long press on the one selected force changes nothing. A group of one is no group
+function groupToggle(ids){ if (!ids.length) return; if (tab !== 'cmd') setTab('cmd');
+  const a0 = sel.army !== null ? armyById(sel.army) : null, cur = a0 && a0.owner === PLAYER ? (sel.group.length ? sel.group.filter(id => armyById(id)) : [sel.army]) : [];
+  const g = new Set(cur), allIn = ids.every(id => g.has(id));
+  if (allIn && g.size <= ids.length && cur.length === 1) return;   // (the one selected force: nothing to add or take out)
+  if (allIn){ for (const id of ids) g.delete(id); } else for (const id of ids) g.add(id);
+  if (!g.size){ clearSel(); toast('Group cleared.', 'info', null); return; }
+  wpMode = false; sel.foe = null; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; cmdMode = null;
+  sel.army = g.has(sel.army) ? sel.army : allIn ? [...g][0] : ids[0]; sel.group = g.size > 1 ? [...g] : [];
+  try { if (navigator.vibrate && SET.motion !== 'reduced') navigator.vibrate(12); } catch (e) {}
+  toast(g.size > 1 ? `Group: ${g.size} forces · long-press more to add · Move to send all` : `${armyName(armyById(sel.army))} selected · long-press another force to add it`, 'info', null);
+  renderSide(true); }
 function selectFoe(id){ wpMode = false; if (tab !== 'cmd') setTab('cmd'); sel.group = []; sel.army = null; sel.prov = null; sel.target = null; sel.foe = id; targetPath = null; hoverPath = null; renderSide(true); }
 function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); wpMode = false; sel.group = []; sel.foe = null; CS.det = false; if (rallyFor !== null){ rallyFor = null; rallyPick = null; }
   if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (G.P[p].city) ftipAsk('city'); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
@@ -9822,6 +9839,7 @@ function renderSide(force){
   else if (rallyFor !== null) hint = rallyPick ? `Rally point for ${G.P[rallyFor].cityName}: ${rallyName(rallyPick.p)}. Tap it again or press <button class="hb" data-act="rally-set">Set</button> <button class="hb" data-act="rally-cancel">Cancel</button>` : `Tap the map to set the rally point for ${G.P[rallyFor].cityName} · <button class="hb" data-act="rally-cancel">Cancel</button>`;
   else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Press the mission button, then tap a province inside the blue ring. Tap empty map or press Esc to deselect.';
   else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
+  else if (a && UC_TOUCH && sel.group.length > 1 && sel.target === null) hint = `Group of ${sel.group.length}: press Move, then tap a destination. Long-press a force to add or remove it.`;   // (a phone: no keys named)
   else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
   setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
@@ -10538,10 +10556,12 @@ function groupHTML(){
   if (sel.target !== null){ const eta = Math.max(...g.map(a => a.air ? (airCheck(a, sel.target, sel.surprise).hours || 0) : etaHours(a, pathFor(a, a.to !== null ? a.to : a.at, sel.target), tgtEnd(sel.target)))), reach = g.filter(a => a.air ? airCheck(a, sel.target, sel.surprise).ok : pathFor(a, a.to !== null ? a.to : a.at, sel.target).length).length;
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Group order</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br><span class="small">${reach} of ${g.length} forces can get there · slowest arrives in about ${eta} h</span></div>
       <div class="row"><button class="btn primary" data-act="send" ${reach ? '' : 'disabled'}>Send all</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
+  const idle = g.every(a => !a.air && !a.fly && a.to === null && !a.path.length && a.at === g[0].at && count(a));   // (the whole group standing in one province: it can merge)
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
-    <dl class="kv"><dt>Total strength</dt><dd>${Math.round(pw)}</dd><dt>Saved groups</dt><dd>Ctrl+4…9 to save, 4…9 to recall</dd></dl>
+    <dl class="kv"><dt>Total strength</dt><dd>${Math.round(pw)}</dd>${UC_TOUCH ? '' : '<dt>Saved groups</dt><dd>Ctrl+4…9 to save, 4…9 to recall</dd>'}</dl>
+    ${idle ? `<div class="row"><button class="btn" data-act="gmerge" title="Combine the ${g.length} forces of this group into one (other forces here stay apart).${(sp => sp.over ? ` ${stackText(sp)}.` : '')(stackPenalty({owner:PLAYER, u:Object.fromEntries(UT.map(t => [t, g.reduce((s0, b) => s0 + (b.u[t] || 0), 0)]))}))}">Merge forces here (${g.length})</button></div>` : ''}
     <div class="armylist">${g.map(a => `<button data-act="gsel" data-id="${a.id}" ${a.id === sel.army ? 'style="border-color:var(--accent)"' : ''}><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span><span class="muted">${pluN(count(a), 'unit')} · ${a.air ? 'air wing' : statusText(a).short}</span></button>`).join('')}</div>
-    <p class="small muted" style="margin:0">Press Move, then tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.</p>`;
+    <p class="small muted" style="margin:0">${UC_TOUCH ? 'Long-press other forces to add or remove them. Press Move, then tap a destination to send the whole group.' : 'Press Move, then tap a destination to order the whole group. Shift-click forces to add or remove them, or shift-drag a box on the map.'}</p>`;
 }
 // airframe condition of a wing: bar, repair rate where it is parked and the maintenance warning
 function condHTML(a){ const c = wingCond(a), pc = Math.round(c*100), mr = maintRate(a), B = G.P[a.air.base], col = c > 0.6 ? 'var(--ok)' : c >= WEAR_WARN ? 'var(--accent)' : 'var(--danger)';
@@ -10745,7 +10765,8 @@ function armyHTML(a){
       <button class="btn" data-act="merge" ${here.length < 2 ? `disabled title="${a.to !== null ? 'This force is on the move: merge once it arrives.' : 'No other idle force of yours is in this province.'}"` : `title="Combine all ${here.length} idle forces here into one.${(sp => sp.over ? ` ${stackText(sp)}.` : '')(stackPenalty({owner:PLAYER, u:Object.fromEntries(UT.map(t => [t, here.reduce((s0, b) => s0 + (b.u[t] || 0), 0)]))}))}"`}>Merge forces here${here.length > 1 ? ` (${here.length})` : ''}</button>
       <button class="btn" data-act="stop" ${!a.path.length && a.to === null && !a.sail ? 'disabled' : ''} title="Stop right now, where the force stands">Halt</button>
     </div>
-    ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}`;
+    ${here.length > 1 ? `<div class="armylist">${here.map(b => `<button data-act="army" data-id="${b.id}" ${b.id === a.id ? 'aria-pressed="true" style="border-color:var(--accent)"' : ''}><span class="an"><b>${armyName(b)}</b><span class="muted">${pluN(count(b), 'unit')}</span></span><span class="minis">${UT.filter(t => b.u[t]).map(t => `<span title="${b.u[t]} × ${UNITS[t].name}">${unitPic(t, 'sm')}${b.u[t]}</span>`).join('')}</span></button>`).join('')}</div>` : ''}
+    ${UC_TOUCH && a.owner === PLAYER && S.armies.some(b => b !== a && b.owner === PLAYER && count(b)) ? '<p class="small muted" style="margin:0">Long-press another force to select both.</p>' : ''}`;
 }
 function terrBoxHTML(p){ const P = G.P[p], k = P.terrain || 'plains', T = TERRAIN[k] || TERRAIN.plains, [sg, wk] = terrUnitsText(k);
   return `<div class="terrbox"><div class="th">${ticon(k, 16)}<b>${T.name}</b><span class="muted">${T.def > 1 ? `defence +${Math.round((T.def - 1)*100)}%` : 'open ground, no cover'}${FRONT_T[k] ? ` · front ${frontage(p)}` : ''}</span></div>
@@ -10940,6 +10961,9 @@ document.addEventListener('click', e => {
     case 'sp-tab': if (SPLIT){ SPLIT.g = Math.max(0, Math.min(SPLIT.plan.length - 1, +b.dataset.g)); renderSide(true); } break;
     case 'sp-inc': case 'sp-dec': if (a && SPLIT){ const k = b.dataset.k; spSet(a, k, (SPLIT.plan[SPLIT.g][k] || 0) + (act === 'sp-inc' ? 1 : -1)); renderSide(true); } break;
     case 'sp-go': if (a && SPLIT){ const n0 = count(a), out = splitPlan(a, SPLIT.plan, counterSpot(a)); SPLIT = null; if (out.length){ sfx('order'); toast(`Split ${n0} units into ${out.length + 1} forces: ${[a, ...out].map(count).join(' · ')}.`, 'info', null); selectArmy(out[0].id); } else renderSide(true); } break;
+    case 'gmerge': { const g = groupArmies().filter(q => q.owner === PLAYER && !q.air && !q.fly && q.to === null && !q.path.length && count(q)), into = g.slice().sort((p0, q0) => count(q0) - count(p0))[0];   // the group's forces only, into the largest
+      if (!into || g.length < 2 || g.some(q => q.at !== into.at)) break; for (const q of g) if (q !== into) merge(into, q); removeEmpty(); SPLIT = null; sel.army = into.id; sel.group = [];
+      { const sp = stackPenalty(into); toast(`Merged into ${armyName(into)}: ${pluN(count(into), 'unit')}.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); } renderSide(true); } break;
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty();
         { const sp = stackPenalty(a); toast(`Merged into ${armyName(a)}: ${pluN(count(a), 'unit')}.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); } renderSide(true); } break;
     case 'stop': if (a){ haltArmy(a); redraw(); renderSide(true); } break;
@@ -11929,7 +11953,7 @@ IM.on('fxRaid', R => { if (booted && visibleSet(PLAYER).has(R.z)){ const P = G.P
 // a new game or a loaded one starts: drop what the page remembers about the last one
 // combat (rules/combat.js): the battle effects
 // two forces became one: the selection follows. joined (the hourly arrival merge in rules/tick.js) keeps the place in a selected group
-IM.on('merged', (from, into, joined) => { if (sel.army === from) sel.army = into; if (!joined) sel.group = sel.group.filter(id => id !== from); else if (sel.group) sel.group = sel.group.map(id => id === from ? into : id); });
+IM.on('merged', (from, into, joined) => { if (sel.army === from) sel.army = into; if (!joined) sel.group = sel.group.filter(id => id !== from); else if (sel.group) sel.group = [...new Set(sel.group.map(id => id === from ? into : id))]; if (sel.group.length < 2) sel.group = []; });   // (a group whose forces joined one another: each force once; one left is no group)
 IM.on('achieve', (me, key) => { if (me === PLAYER) unlock(key); });
 IM.on('fxRanged', (a, b, best, lost, pt, info) => { if (!booted) return;
   if (b){ if (a.owner === PLAYER || b.owner === PLAYER || visibleSet(PLAYER).has(best)) fx('dmg', best, {owner:b.owner, val:lost, text:`−${Math.round(lost)}`, color:b.owner === PLAYER ? '#ff8f86' : shade(colorOf(b.owner), 0.35)}); }
