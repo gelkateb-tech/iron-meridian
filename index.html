@@ -11281,7 +11281,8 @@ const TIP_ICO = {
 };
 const tipIco = k => `<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TIP_ICO[k]}</svg>`;
 // the three briefing tips (6 words at most each). The win line follows the real rule: land provinces OR starting capitals.
-const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, press Move, tap a destination'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
+// (win false: the Continue panel, shown before the save is loaded, when WIN_CAPS and landNeed still describe this build's default game, not the save's)
+const briefTips = (win = true) => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, press Move, tap a destination'], ...(win ? [['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]] : [])];
 // keys, for the small Controls link on the briefing (desktop only) and the manual
 const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual.';
 // the full text of the old briefing, kept in the Field Manual ("Getting started")
@@ -11423,7 +11424,7 @@ function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
   openModal(`${LOGO}
     <p class="bline">${flagHTML(me.name, 28, 'big')}<span>You command <b style="color:${me.color}">${me.name}</b>. Win the war.</span></p>
-    <ul class="btips">${briefTips().map(([k, t]) => `<li>${tipIco(k)}<span>${t}</span></li>`).join('')}</ul>
+    <ul class="btips">${briefTips(!sv).map(([k, t]) => `<li>${tipIco(k)}<span>${t}</span></li>`).join('')}</ul>
     <div class="bbtns">${first
       ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start">Start campaign</button>`)
       : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign</button>`}</div>
