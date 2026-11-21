@@ -107,7 +107,8 @@ function routeMix(a, path){ const m = {rail:0, road:0, track:0, off:0, sea:0}; l
   if (tot) for (const k in m) m[k] /= tot; return m; }
 const mixText = m => [m.rail >= 0.05 ? `rail ${Math.round(m.rail*100)}%` : '', m.road >= 0.05 ? `road ${Math.round(m.road*100)}%` : ''].filter(Boolean).join(' · ');
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
-function merge(into, from){   // (display: a column absorbed on arrival hands no drawn motion to the stack, which stays put; its models glide into the stack's group)
+function merge(into, from){ if ((into.fly && !into.air) || (from.fly && !from.air)) return false;   // (paratroopers in the air merge with no one: FLY_WHY)
+  // (display: a column absorbed on arrival hands no drawn motion to the stack, which stays put; its models glide into the stack's group)
   if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if ((from.land || 0) > (into.land || 0)) into.land = from.land; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; }
   if (!shipsOnly(into)){ delete into.blk; delete into.raid; } }   // (a force that is no longer a fleet alone blockades and raids no more: rules/trade.js)
 /* ---------------- Flexible splitting ----------------
@@ -285,7 +286,8 @@ const nextLegH = a => { const [p1, p2] = nextLegEnds(a); return legHours(a, a.at
 const legSpot = a => { const [p1, p2] = legEnds(a); return lerpPt(p1, p2, Math.max(0, Math.min(1, a.t))); };
 // pt: the exact point to go to ([x, y], or omitted for the province centre). A ship's point is water (in a sea zone); a ship sent to a port docks
 // at the quay. A point in the force's own province is a walk inside it (orderSpot).
-function orderMove(a, target, pt = null){ delete a.tgt; if (a.wp) delete a.wp; if (a.oldLand) delete a.oldLand;   // (a move ends a Bombard order, rules/combat.js orderBombard, and drops planned stops: waypoints below)
+const FLY_WHY = 'Paratroopers in the air: orders once they land.';   // (a drop in flight, a.fly: rules/air.js dropTick puts it down)
+function orderMove(a, target, pt = null){ if (a.fly && !a.air){ refuse(a.owner, FLY_WHY); return; } delete a.tgt; if (a.wp) delete a.wp; if (a.oldLand) delete a.oldLand;   // (a move ends a Bombard order, rules/combat.js orderBombard, and drops planned stops: waypoints below)
   const q = pt && !a.air && G.P[target] && !(shipsOnly(a) && !G.P[target].sea) ? ptIn(target, pt[0], pt[1]) : null;
   if (q && a.to === null && target === a.at){ a.dest = null; orderSpot(a, q[0], q[1]); IM.emit('ordered', a); return; }
   if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // (a force walking or sailing inside its province sets off from where it is now)
@@ -304,6 +306,7 @@ function orderMove(a, target, pt = null){ delete a.tgt; if (a.wp) delete a.wp; i
 // (it holds its zone or its dock). Also cancels queued legs and chase/join/escort.
 function haltArmy(a){
   if (a.air){ if (a.fly) return false; a.path = []; return true; }
+  if (a.fly){ refuse(a.owner, FLY_WHY); return false; }
   if (a.to !== null){
     const A = G.P[a.at], B = G.P[a.to], t = Math.max(0, Math.min(1, a.t)), spot = legSpot(a), same = !!B.sea === !!A.sea, inP = provOfPt(spot[0], spot[1]);
     const near = !same ? a.at : inP === a.at || inP === a.to ? inP : t >= 0.5 ? a.to : a.at;

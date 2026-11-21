@@ -28,6 +28,7 @@ function* tickHourG(){
   // movement
   for (const a of S.armies){
     if (a.air){ a.path = []; continue; }
+    if (a.fly) continue;   // (paratroopers in the air: rules/air.js dropTick moves them)
     // the part of this hour the force has to move in (hr): all of it, or what is left once a landing from the sea ends within the hour (rules/movement.js
     // landStep: a 45-minute landing leaves 15 minutes to walk, march on or capture); a boarding in a port takes its share below (embStep)
     let hr = landStep(a);
