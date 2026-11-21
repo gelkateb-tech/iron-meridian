@@ -6677,14 +6677,14 @@ function cityLon(P){ return ((WORLD.lon0 + (((P.x - OX)/(HS*SQ3) + 0.5)/W)*360) 
 // old core, o outside), lam the bend's wave (cells), gap the share of lanes left out, rotJ how far a grid turns off north (rad; 9: any angle),
 // tw the share of towers in the dense core, hg the height scale, ct courtyard blocks, sl slabs, pt pitched roofs, bv a boulevard every bv lines
 const C3_STY = {
-  na:    {s:22, c:0.02, o:0.02, lam:6, gap:0.05, rotJ:0.05, tw:0.55, hg:1.05, ct:0.02, sl:0.12, pt:0.55, bv:6},
-  latin: {s:21, c:0.06, o:0.3, lam:5, gap:0.12, rotJ:9, tw:0.3, hg:0.9, ct:0.25, sl:0.15, pt:0.2, bv:5},
-  euro:  {s:21, c:0.6, o:0.16, lam:4, gap:0.2, rotJ:9, tw:0.1, hg:0.8, ct:0.4, sl:0.18, pt:0.5, bv:5},
-  soviet:{s:22, c:0.3, o:0.08, lam:5, gap:0.12, rotJ:9, tw:0.12, hg:0.95, ct:0.12, sl:0.55, pt:0.15, bv:4},
-  asia:  {s:23, c:0.12, o:0.06, lam:5, gap:0.08, rotJ:0.08, tw:0.5, hg:1.1, ct:0.05, sl:0.4, pt:0.25, bv:5},
-  old:   {s:19, c:0.62, o:0.5, lam:3.4, gap:0.3, rotJ:9, tw:0.1, hg:0.72, ct:0.18, sl:0.06, pt:0, bv:0},
-  africa:{s:20, c:0.42, o:0.34, lam:4, gap:0.24, rotJ:9, tw:0.14, hg:0.75, ct:0.05, sl:0.08, pt:0.35, bv:0},
-  tropic:{s:20, c:0.3, o:0.24, lam:4, gap:0.2, rotJ:9, tw:0.32, hg:0.9, ct:0.05, sl:0.2, pt:0.35, bv:5}};
+  na:    {s:27, c:0.02, o:0.02, lam:6, gap:0.05, rotJ:0.05, tw:0.55, hg:1.05, ct:0.02, sl:0.12, pt:0.55, bv:6},
+  latin: {s:25, c:0.06, o:0.3, lam:5, gap:0.12, rotJ:9, tw:0.3, hg:0.9, ct:0.25, sl:0.15, pt:0.2, bv:5},
+  euro:  {s:25, c:0.6, o:0.16, lam:4, gap:0.2, rotJ:9, tw:0.1, hg:0.8, ct:0.4, sl:0.18, pt:0.5, bv:5},
+  soviet:{s:27, c:0.3, o:0.08, lam:5, gap:0.12, rotJ:9, tw:0.12, hg:0.95, ct:0.12, sl:0.55, pt:0.15, bv:4},
+  asia:  {s:27, c:0.12, o:0.06, lam:5, gap:0.08, rotJ:0.08, tw:0.5, hg:1.1, ct:0.05, sl:0.4, pt:0.25, bv:5},
+  old:   {s:23, c:0.62, o:0.5, lam:3.4, gap:0.3, rotJ:9, tw:0.1, hg:0.72, ct:0.18, sl:0.06, pt:0, bv:0},
+  africa:{s:24, c:0.42, o:0.34, lam:4, gap:0.24, rotJ:9, tw:0.14, hg:0.75, ct:0.05, sl:0.08, pt:0.35, bv:0},
+  tropic:{s:24, c:0.3, o:0.24, lam:4, gap:0.2, rotJ:9, tw:0.32, hg:0.9, ct:0.05, sl:0.2, pt:0.35, bv:5}};
 function cityStyle(P){ const lat = P.lat || 0, lon = cityLon(P);
   if (lon < -30) return lat > 24 && lon < -52 ? 'na' : 'latin';
   if (lon > 110 && lat < -8) return 'na';   // (Australia and New Zealand: planned grids)
@@ -6700,7 +6700,7 @@ const C3_ROOF = {   // f: flat roofs (concrete, render, tar, gravel), p: pitched
   euro:  {f:['#b8b1a4', '#8e8a84', '#c6bba7', '#a8a29a', '#9b958c', '#c0b8aa'], p:['#a26f5c', '#94604f', '#8a8178', '#b07a62', '#7d756d', '#a0806a']},
   soviet:{f:['#a7a59e', '#8c8a85', '#bab6ac', '#99968e', '#a99f90', '#b2afa6'], p:['#7c8074', '#8a6f60', '#6f7470', '#94877a', '#7a7f7c', '#8c8378']},
   asia:  {f:['#a9abaa', '#8e9395', '#c2c1ba', '#7d8385', '#b4aa98', '#9a9f9c'], p:['#6f7577', '#7d8486', '#8a7f72', '#5e6466', '#9a8f80', '#6c7a80']},
-  old:   {f:['#d2c5a9', '#c1b091', '#dccfb6', '#ab9b7e', '#e2dac8', '#bda98a'], p:['#c9b593', '#b8a07e', '#d4c4a4', '#a58f72', '#cbbd9f', '#b49a78']},
+  old:   {f:['#c3b496', '#b19f80', '#cec0a4', '#9c8c70', '#d4cab5', '#ad9a7b'], p:['#b9a583', '#a8906f', '#c4b494', '#968064', '#bbad8f', '#a48a69']},
   africa:{f:['#c8bda6', '#a9a59b', '#b0aaa0', '#bfb39e', '#a8a397', '#c4b9a3'], p:['#b89e80', '#8f7f6c', '#a4846a', '#9a9c98', '#a66e52', '#8a8d8c']},
   tropic:{f:['#c6bba4', '#a8a49a', '#bdb3a2', '#9da09b', '#b7ad9b', '#cfc7b5'], p:['#b49a7e', '#a5715a', '#8f8a80', '#9b6a55', '#a89c8a', '#7f8584']}};
 const C3_GLASS = ['#8696a0', '#6f7f8a', '#9aa6ab'];
@@ -6719,7 +6719,7 @@ function cityRGB(hex, fp){ let r = parseInt(hex.slice(1, 3), 16), g = parseInt(h
 // 8 shades by the direction they face (k = 0..7, the outward normal's angle in eighths from east, clockwise)
 function cityPal(I){ if (I.pal3) return I.pal3; const st = I.sty || cityStyle(G.P[I.p]), fp = [I.fp[0]*0.5, I.fp[1]*0.5, 1 + (I.fp[2] - 1)*0.4, 1 + (I.fp[3] - 1)*0.5];
   const f = v => Math.max(0, Math.min(255, Math.round(v))), rgb = (c, k) => `rgb(${f(c[0]*k)},${f(c[1]*k)},${f(c[2]*k)})`;
-  const wall = c => { const o = []; for (let k = 0; k < 8; k++){ const a = k*Math.PI/4, d = Math.cos(a)*C3_LIGHT[0] + Math.sin(a)*C3_LIGHT[1]; o.push(rgb(c, 0.44 + 0.38*Math.max(0, d))); } return o; };
+  const wall = c => { const o = []; for (let k = 0; k < 8; k++){ const a = k*Math.PI/4, d = Math.cos(a)*C3_LIGHT[0] + Math.sin(a)*C3_LIGHT[1]; o.push(rgb(c, 0.4 + 0.4*Math.max(0, d))); } return o; };
   const mk = h => { const c = cityRGB(h, fp); return {r:rgb(c, 1), rd:rgb(c, 0.86), hi:rgb(c, 1.16), w:wall(c), win:rgb(c, 0.42)}; };
   const gr = cityGreens(I);
   return (I.pal3 = {roof:C3_ROOF[st].f.map(mk), pitch:C3_ROOF[st].p.map(mk), glass:C3_GLASS.map(mk), grass:gr[0], tree:gr[1], treeHi:gr[2], st:'#5b5955', av:'#66645e', kerb:'#46443f', pond:'#4c6672', court:'#8a8478', plaza:'#a39d90'}); }
@@ -6811,13 +6811,13 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null;
   let nL = 0, kk = 0;
   for (const C of cells){ if (!(++kk % 40)) yield; if (C.park) continue; const d = C.d, w = C.w, r0 = hsh(C.i, C.j, 4), r1 = hsh(C.i, C.j, 5), r2 = hsh(C.i, C.j, 6), r3 = hsh(C.i, C.j, 7);
     const pB = sstep(0.12, 0.32, d); if (r0 > pB) continue;
-    const c = (r3*6) | 0, hb = (4 + 9*sstep(0.2, 0.9, d) + 16*Math.pow(w, 1.6)*r1)*Y.hg, add = (q, z0, h, t, cc = c) => { if (!qFree(q, 0.06)) return false; stamp(q, 0.35); bld(q, z0, h, cc, t, 0, 0); return true; };
-    const grp = L => { if (!L.every(e => qFree(e[0], 0.06))) return false; for (const e of L) stamp(e[0], 0.35); for (const e of L) bld(e[0], 0, e[1], e[3] == null ? c : e[3], e[2], 0, 0); return true; };   // parts of one building: all or none
+    const c = (r3*6) | 0, hb = (4 + 9*sstep(0.2, 0.9, d) + 16*Math.pow(w, 1.6)*r1)*Y.hg, add = (q, z0, h, t, cc = c) => { if (!qFree(q, 0.06)) return false; stamp(q, 0.35); bld(q, z0, h, cc, t, 0, 0); C.l0 = true; return true; };
+    const grp = L => { if (!L.every(e => qFree(e[0], 0.06))) return false; for (const e of L) stamp(e[0], 0.35); for (const e of L) bld(e[0], 0, e[1], e[3] == null ? c : e[3], e[2], 0, 0); C.l0 = true; return true; };   // parts of one building: all or none
     // a landmark in a big town: a stadium, a domed hall or cathedral on its square
-    if (big && nL < (pop > 10 ? 3 : 2) && C.dn > 0.15 && C.dn < 0.9 && d > 0.45 && r2 < 0.05){ nL++; const q = cq(C, 0.08, 0.08, 0.92, 0.92); if (qFree(q, 0.1)){ stamp(q, 0.4); bld(q, 0, (r1 < 0.5 ? 3.2 : 5)*Y.hg, (c + 2) % 6, r1 < 0.5 ? 5 : 4, 0, 0); continue; } }
+    if (big && nL < (pop > 10 ? 3 : 2) && C.dn > 0.15 && C.dn < 0.9 && d > 0.45 && r2 < 0.05){ nL++; const q = cq(C, 0.08, 0.08, 0.92, 0.92); if (qFree(q, 0.1)){ stamp(q, 0.4); C.l0 = true; bld(q, 0, (r1 < 0.5 ? 3.2 : 5)*Y.hg, (c + 2) % 6, r1 < 0.5 ? 5 : 4, 0, 0); continue; } }
     // a tower in the dense core (on a podium now and then)
     if (w > 0.45 && r1 < Y.tw*(0.4 + w)){ const f = 0.36 + 0.22*r2, a0 = (1 - f)*(0.2 + 0.6*r3), b0 = (1 - f)*(0.2 + 0.6*hsh(C.i, C.j, 8)), h = (22 + 36*Math.pow(w, 1.3)*(0.5 + 0.7*r2))*Y.hg, gl = hsh(C.i, C.j, 9) < 0.6;
-      if (r2 < 0.4){ const qp = cq(C, 0.04, 0.04, 0.96, 0.96); if (qFree(qp, 0.06)){ stamp(qp, 0.35); const pod = bld(qp, 0, 4.5*Y.hg, c, 0, 0, 0); bld(cq(C, a0, b0, a0 + f, b0 + f), 4.5*Y.hg, h, gl ? (r3*3) | 0 : c, gl ? 2 : 0, 0, 0).on = pod; continue; } }
+      if (r2 < 0.4){ const qp = cq(C, 0.04, 0.04, 0.96, 0.96); if (qFree(qp, 0.06)){ stamp(qp, 0.35); C.l0 = true; const pod = bld(qp, 0, 4.5*Y.hg, c, 0, 0, 0); bld(cq(C, a0, b0, a0 + f, b0 + f), 4.5*Y.hg, h, gl ? (r3*3) | 0 : c, gl ? 2 : 0, 0, 0).on = pod; continue; } }
       if (add(cq(C, a0, b0, a0 + f, b0 + f), 0, h, gl ? 2 : 0, gl ? (r3*3) | 0 : c)) continue; }
     // the shapes of the rest: a block, slabs, an L, a courtyard block, a shed out at the edge
     const sh = r1 < Y.ct*sstep(0.3, 0.8, d) ? 'ct' : r1 < Y.ct + Y.sl ? 'sl' : r1 < Y.ct + Y.sl + 0.15 ? 'L' : C.dn > 0.6 && d < 0.45 && r2 < 0.3 ? 'shed' : 'bk';
@@ -6834,10 +6834,10 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null;
   yield;
   // level 1: smaller buildings in the quarters of the cells the big ones leave free; level 2: houses in the lots left after that, with trees
   kk = 0; for (const C of cells){ if (!(++kk % 30)) yield; if (C.park) continue; const d = C.d, w = C.w;
-    const p1 = sstep(0.06, 0.45, d);
+    const p1 = sstep(0.04, 0.3, d);
     for (let qa = 0; qa < 2; qa++) for (let qb = 0; qb < 2; qb++){ const r = hsh(C.i*2 + qa, C.j*2 + qb, 14); if (r > p1) continue; const r1 = hsh(C.i*2 + qa, C.j*2 + qb, 15), r2 = hsh(C.i*2 + qa, C.j*2 + qb, 16);
-      const fa = 0.55 + 0.35*r1, fb = 0.55 + 0.35*r2, a0 = qa*0.5 + 0.03 + (0.44 - 0.44*fa)*r2, b0 = qb*0.5 + 0.03 + (0.44 - 0.44*fb)*r1, q = cq(C, a0, b0, a0 + 0.44*fa, b0 + 0.44*fb);
-      if (!qFree(q, 0.05)) continue; stamp(q, 0.3); const h = (2.6 + 5*sstep(0.2, 0.9, d) + 6*w*r1)*Y.hg; bld(q, 0, h, (((r*977) | 0) % 6), hsh(C.i*2 + qa, C.j*2 + qb, 17) < Y.pt*(1 - w) + 0.15 ? 1 : 0, 1, d > 0.45 ? 0 : 1.15 + 0.55*r2); }
+      const fa = 0.7 + 0.26*r1, fb = 0.7 + 0.26*r2, a0 = qa*0.5 + 0.03 + (0.44 - 0.44*fa)*r2, b0 = qb*0.5 + 0.03 + (0.44 - 0.44*fb)*r1, q = cq(C, a0, b0, a0 + 0.44*fa, b0 + 0.44*fb);
+      if (!qFree(q, 0.05)) continue; stamp(q, 0.3); const h = (2.6 + 5*sstep(0.2, 0.9, d) + 6*w*r1)*Y.hg; bld(q, 0, h, (((r*977) | 0) % 6), hsh(C.i*2 + qa, C.j*2 + qb, 17) < Y.pt*(1 - w) + 0.15 ? 1 : 0, 1, d > 0.2 ? 0 : 1.15 + 0.55*r2); }
     const p2 = sstep(0.04, 0.3, d)*(1 - 0.5*w);
     for (let qa = 0; qa < 4; qa++) for (let qb = 0; qb < 4; qb++){ const r = hsh(C.i*4 + qa, C.j*4 + qb, 18), r1 = hsh(C.i*4 + qa, C.j*4 + qb, 19), r2 = hsh(C.i*4 + qa, C.j*4 + qb, 20);
       if (r > p2){ if (r1 < 0.35*d + 0.12){ const [x, y] = cqP(C, (qa + 0.25 + 0.5*r2)/4, (qb + 0.25 + 0.5*r1)/4); tree(x, y, 0.9 + 0.7*r2, 2, 2.2 + 0.8*r1); } continue; }
@@ -6845,8 +6845,8 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null;
       if (!qFree(q, 0.04)){ if (r2 < 0.3){ const [x, y] = cqP(C, (qa + 0.5)/4, (qb + 0.5)/4); tree(x, y, 0.8 + 0.6*r1, 2, 2.4 + 0.8*r2); } continue; }
       stamp(q, 0.2); const hs = d < 0.55 && (Y.pt > 0.1 || r2 < 0.2); bld(q, 0, (hs ? 1.5 + 1.6*r1 : 2.5 + 3*r1*d)*Y.hg, (((r*613) | 0) % 6), hs ? 1 : 0, 2, 2.3 + 0.9*r2); } }
   yield;
-  // tree clumps out in the sprawl and at the edge (level 0: they read from the play zoom), and the yards' trees
-  for (const C of cells){ if (C.park || C.d > 0.55) continue; const r = hsh(C.i, C.j, 21); if (r > 0.3 + 0.4*(1 - C.d)) continue; const n = 2 + ((hsh(C.i, C.j, 22)*4) | 0);
+  // tree clumps out in the sprawl and at the edge, and in the lots of the body the big buildings left empty (level 0: they read from the play zoom)
+  for (const C of cells){ if (C.park || (C.d > 0.55 && C.l0)) continue; const r = hsh(C.i, C.j, 21); if (r > 0.3 + 0.4*(1 - C.d)) continue; const n = 2 + ((hsh(C.i, C.j, 22)*4) | 0);
     for (let k = 0; k < n; k++){ const [x, y] = cqP(C, 0.2 + 0.6*hsh(C.i, C.j, 23 + k), 0.2 + 0.6*hsh(C.i, C.j, 33 + k)); tree(x, y, 1.9 + 1.4*hsh(C.i, C.j, 43 + k), 0, 0); } }
   // the streets: each lattice line's stretches between built-up cells, as runs (bent along the warp); lanes left out here and there
   const urban = new Set(); for (const C of cells) if (C.d > 0.12) urban.add(C.i*4096 + C.j);
@@ -6863,6 +6863,7 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null;
     for (let t = (i/2*0.37) % 1*step; t < L; t += step) for (const sg of [1, -1]){ const x = ax + (bx - ax)*t/L + nx*off*sg, y = ay + (by - ay)*t/L + ny*off*sg; if (sm(I.aM, x, y) > 0.12) tree(x, y, 0.95, lv, th); } } };
   for (const A of av) if (A.tr) rows(A.pts, A.w + 1.0, 2.6, 1, 1.2);
   for (const q of ST[3]) rows(q, HW[3] + 0.85, 2.6, 1, 1.4);
+  if (Y.bv) for (const q of ST[2]) rows(q, HW[2] + 0.75, 3.4, 2, 2.4);
   // depth: what lies further south (and west) is nearer the eye, drawn later; bounds of each (with its height and shadow) for the chunks
   for (const b of B){ const q = b.q, H0 = b.z0 + b.h; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (let k = 0; k < 4; k++){ x0 = Math.min(x0, q[2*k]); x1 = Math.max(x1, q[2*k]); y0 = Math.min(y0, q[2*k + 1]); y1 = Math.max(y1, q[2*k + 1]); }
     b.bb = [x0, y0 - H0, x1 + Math.max(C3_LEAN, C3_SUN)*H0, y1 + C3_SUN*H0]; b.k = b.on ? b.on.k + 1e-4 : (y0 + y1)/2 - C3_LEAN*(x0 + x1)/2; }
@@ -6913,10 +6914,10 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
       for (let k = 0; k < 4; k++){ const ax = q[2*k], ay = q[2*k + 1], bx = q[(2*k + 2) % 8], by0 = q[(2*k + 3) % 8], n = c3Wall(bx - ax, by0 - ay, o); if (n[1] - C3_LEAN*n[0] <= 0.02) continue;
         const L = Math.hypot(bx - ax, by0 - ay), nb = Math.max(1, Math.min(20, Math.floor(L/by)));
         g.setTransform(pk*(bx - ax), pk*(by0 - ay), pk*C3_LEAN*ez, -pk*ez, (ax + lx + Ek)*pk - X0, (ay + ly + Ek)*pk - Y0);   // the wall: x along its foot, y up its height (0 at the foot, -1 at the top)
-        g.beginPath(); let any = false;
+        const ww = Math.max(0.44/nb, 1.1/Math.max(1, L*pk)), wh = Math.max(0.4/nf, 1.1/Math.max(1, ez*pk)); g.beginPath(); let any = false;
         for (let f = 0; f < nf; f++) for (let c = 0; c < nb; c++){ const hv = ((Math.imul(b.k*977 | 0, 31) + Math.imul(f + 1, 2654435761) + Math.imul(c + 7*k + 1, 40503)) >>> 0)/4294967296; if (hv > lit) continue;
-          g.rect((c + 0.28)/nb, (f + 0.3)/nf, 0.44/nb, 0.4/nf); any = true; }
-        if (any){ g.fillStyle = cool && (b.k*13 | 0) % 3 === 0 ? '#d9e6ff' : '#ffd497'; g.globalAlpha = 0.95; g.fill(); } }
+          g.rect((c + 0.5)/nb - ww/2, (f + 0.5)/nf - wh/2, ww, wh); any = true; }
+        if (any){ g.fillStyle = cool && (b.k*13 | 0) % 3 === 0 ? '#e2ecff' : '#ffdca6'; g.globalAlpha = 1; g.fill(); } }
       T0(); }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.restore(); return; }
   // parks and ponds (under everything)
@@ -6935,7 +6936,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
     for (const b of Bv){ const q = b.q, H0 = b.z0 + b.h, dx = C3_SUN*H0, dy = C3_SUN*H0, pts = []; for (let k = 0; k < 4; k++) pts.push([q[2*k], q[2*k + 1]], [q[2*k] + dx, q[2*k + 1] + dy]);
       for (const [Pa, f] of [[SH, 1], [SH2, 1.35]]){ const hl = f === 1 ? c3Hull(pts) : c3Hull(pts.map((p, i) => i & 1 ? [p[0] + dx*(f - 1), p[1] + dy*(f - 1)] : p)); hl.forEach((p, i) => i ? Pa.lineTo(p[0], p[1]) : Pa.moveTo(p[0], p[1])); Pa.closePath(); } }
     for (const t of Tv){ const r = t[2], o = r*0.9; SH.moveTo(t[0] + o + r, t[1] + o); SH.arc(t[0] + o, t[1] + o, r, 0, Math.PI*2); }
-    g.fillStyle = 'rgb(14,16,10)'; g.globalAlpha = 0.18; g.fill(SH2); g.globalAlpha = 0.36; g.fill(SH); }
+    { const k = Math.max(0, Math.min(1, (1.3 - pkc)/0.5)); g.fillStyle = 'rgb(14,16,10)'; g.globalAlpha = 0.18 + 0.06*k; g.fill(SH2); g.globalAlpha = 0.36 + 0.12*k; g.fill(SH); } }
   yield;
   // trees: a dark crown and its lit side to the north-west
   if (Tv.length){ const TR = new Path2D(), TH = new Path2D(); for (const t of Tv){ const [x, y, r] = t; TR.moveTo(x + r, y); TR.arc(x, y, r, 0, Math.PI*2); const r2 = r*0.62, hx = x - r*0.28, hy = y - r*0.3; TH.moveTo(hx + r2, hy); TH.arc(hx, hy, r2, 0, Math.PI*2); }
@@ -6944,8 +6945,10 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
   // with a ridge, glass towers in their own grey-blue, a dome round), close in a light rim on the roof's north-west edges and the windows
   const kR = Math.max(0, Math.min(1, (pkc - 1.1)/0.6)), kW = Math.max(0, Math.min(1, (pkc - 1.6)/0.8));
   g.globalAlpha = 1; g.lineJoin = 'miter';
+  const kO = Math.max(0, Math.min(1, (1.3 - pkc)/0.5)), OL = kO > 0 ? new Path2D() : null;   // small on screen: a fine dark outline round each building (a crisp silhouette)
   for (const b of Bv){ if (!(++yc & 127)) yield; const q = b.q, o = c3O(q), z0 = b.z0, H0 = z0 + b.h, pal = b.t === 2 ? C.glass[b.c % 3] : b.t === 1 ? C.pitch[b.c % 6] : C.roof[b.c % 6];
     const bx = C3_LEAN*z0, byy = -z0, tx = C3_LEAN*H0, ty = -H0;
+    if (OL && !b.on){ const hl = c3Hull([0, 1, 2, 3].flatMap(k => [[q[2*k], q[2*k + 1]], [q[2*k] + tx, q[2*k + 1] + ty]])); hl.forEach((p, i) => i ? OL.lineTo(p[0], p[1]) : OL.moveTo(p[0], p[1])); OL.closePath(); }
     if (b.t === 5){ // a stadium: its oval stands round a green pitch
       const cx = (q[0] + q[2] + q[4] + q[6])/4, cy = (q[1] + q[3] + q[5] + q[7])/4, rx = Math.hypot(q[2] - q[0], q[3] - q[1])*0.5, ry = Math.hypot(q[6] - q[0], q[7] - q[1])*0.5, an = Math.atan2(q[3] - q[1], q[2] - q[0]);
       g.fillStyle = pal.w[2]; g.beginPath(); g.ellipse(cx, cy, rx, ry, an, 0, Math.PI*2); g.fill(); g.fillStyle = pal.r; g.beginPath(); g.ellipse(cx + tx, cy + ty, rx, ry, an, 0, Math.PI*2); g.fill();
@@ -6955,7 +6958,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
       g.beginPath(); g.moveTo(ax + bx, ay + byy); g.lineTo(cx + bx, cy + byy); g.lineTo(cx + tx, cy + ty); g.lineTo(ax + tx, ay + ty); g.fill();
       if (kW > 0 && b.h >= 2.2 && b.t !== 3){ const L = Math.hypot(cx - ax, cy - ay), nf = Math.max(1, Math.min(22, Math.floor(b.h/1.7))), nb = Math.max(1, Math.min(18, Math.floor(L/1.5)));   // the windows: dark glass in rows
         g.save(); g.transform(cx - ax, cy - ay, C3_LEAN*b.h, -b.h, ax + bx, ay + byy); g.beginPath(); if (b.t === 2) for (let f = 0; f < nf; f++) g.rect(0.04, (f + 0.25)/nf, 0.92, 0.45/nf); else for (let f = 0; f < nf; f++) for (let c = 0; c < nb; c++) g.rect((c + 0.3)/nb, (f + 0.3)/nf, 0.4/nb, 0.42/nf);
-        g.fillStyle = pal.win; g.globalAlpha = 0.45*kW; g.fill(); g.restore(); g.globalAlpha = 1; } }
+        g.fillStyle = pal.win; g.globalAlpha = 0.6*kW; g.fill(); g.restore(); g.globalAlpha = 1; } }
     // the roof
     const rq = [q[0] + tx, q[1] + ty, q[2] + tx, q[3] + ty, q[4] + tx, q[5] + ty, q[6] + tx, q[7] + ty];
     if (b.t === 4){ const cx = (rq[0] + rq[4])/2, cy = (rq[1] + rq[5])/2, r = Math.min(Math.hypot(q[2] - q[0], q[3] - q[1]), Math.hypot(q[6] - q[0], q[7] - q[1]))*0.34;   // a domed hall: a flat roof and a dome on a drum
@@ -6974,6 +6977,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
       for (let k = 0; k < 4; k++){ const ax = rq[2*k], ay = rq[2*k + 1], cx = rq[(2*k + 2) % 8], cy = rq[(2*k + 3) % 8], n = c3Wall(cx - ax, cy - ay, o); if (n[0]*C3_LIGHT[0] + n[1]*C3_LIGHT[1] > 0.2){ g.moveTo(ax, ay); g.lineTo(cx, cy); } }
       g.stroke(); g.globalAlpha = 1;
       if (b.t !== 2 && b.h > 3 && pkc > 1.8){ const cx = (rq[0] + rq[4])/2, cy = (rq[1] + rq[5])/2, r = Math.min(Math.hypot(q[2] - q[0], q[3] - q[1]), Math.hypot(q[6] - q[0], q[7] - q[1]))*0.12; if (r > 0.25){ g.fillStyle = pal.w[2]; g.fillRect(cx - r, cy - r*0.4, 2*r, r*1.2); g.fillStyle = pal.hi; g.fillRect(cx - r + C3_LEAN*r*0.8, cy - r*1.2, 2*r, r*1.2); } } } }   // a plant room on a flat roof
+  if (OL){ g.strokeStyle = 'rgb(24,22,18)'; g.globalAlpha = 0.42*kO; g.lineWidth = px(0.7); g.stroke(OL); g.globalAlpha = 1; }
   g.restore(); }
 const c3O = q => { let a = 0; for (let k = 0; k < 4; k++){ const ax = q[2*k], ay = q[2*k + 1], bx = q[(2*k + 2) % 8], by = q[(2*k + 3) % 8]; a += ax*by - bx*ay; } return a > 0 ? 1 : -1; };   // a quad's winding, as c3Wall wants it (outward normals)
 // paint the bake of city p at S px (its square of 2E world units) into canvas c, which holds the part of it whose corner is (X0, Y0): the whole
