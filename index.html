@@ -3651,19 +3651,25 @@ function buildMini(){
 /* ---------------- Close-zoom terrain detail ---------------- */
 // The baked terrain (1.25 texture px per world unit) goes soft past about z3. From z3 to z5 a detail layer fades in over it: world-anchored
 // tiles of DT_N px (plus a small apron) at 2.5, 5, 10 or 20 px per world unit, picked by zoom. Each tile is the baked texture itself, upscaled
-// exactly as the layer draws it, multiplied by a procedural modulation whose mean is 1 for every kind of ground (MAP-2: the field palettes are
-// mean-neutral and each terrain class's measured mean change, DT_G, is divided out per px), so its colours are the texture's own at every zoom,
-// only sharper, and there is no visible switch: sharp multi-octave ridged relief on mountains and the high plateaus, rolling hills, a canopy
+// exactly as the layer draws it, with a procedural modulation laid on with 'hard-light' (mid-grey = no change: the look of the public build v3.12,
+// with its colour: lit tree crowns, a green-brown field patchwork, warm rock), so there is no visible switch: sharp multi-octave ridged relief on
+// mountains and the high plateaus, rolling hills, a canopy
 // of shaded crowns in forests, a farmland patchwork on the temperate plains (scrub and grass elsewhere), dunes and gravel plains in deserts,
 // pools and lichen on the tundra, standing water and channels in marshes, wind streaks on the ice, and a fine grain everywhere. Classes come
 // from the per-cell terrain the texture was baked from (TERRC), warped exactly as the bake warped its colours, with a noisy, patchy hand-over.
 // Tiles are made only while the view is still (a few ms a frame): the ones on screen first, then the layer's margin and a ring past it.
 // A layer render that lacks a tile draws a cached coarser or finer one in its place, and the tile's box is redrawn when it arrives.
+// MAP-TEXTURE (owner, 2026-11-19: "keep the rich, detailed terrain texture at every zoom ... especially fully zoomed out"): further out the same
+// detail is baked into a copy of the texture itself (the far texture, DT.far): the same procedure run at the texture's own resolution (DT_RF),
+// which leaves out what is finer than a texel (each octave fades in by resolution), its strength raised a little (DT_FG) so the grain that is
+// left still reads on screen, laid on with the same 'hard-light', one DT_N px tile at a time while the view is still (the land on screen first,
+// then the rest of the world). The layer draws the far texture in place of the plain one (a half-size copy, its mip, when a texel is less than
+// 0.62 device px, so the far view does not shimmer), and the close tiles fade in over it as before. Its colours are the plain texture's (DT_FC): it adds texture, not a new look.
 // Rivers, roads, coasts, borders and towns stay vector on top. Low effects: the plain texture.
 // per-cell terrain classes (the cells the texture was baked from: plains, forest, mountain, desert, tundra, hills, marsh, snow), run-length coded in a
 // 64-letter alphabet: one letter = class*8 + run - 1 (runs of 1..7), or class*8 + 7 followed by two letters for run - 8
 const TERRC = 'HBS4C8HAH6B7HAI/AHGj/BIgHAy4A9E6HB35HDp4A9HAE6HAA4A4HAC7A/AEHAFg4k/BBgAhCgHAs4C7E8HFl4E8HAA4HAG8D5D6B4A/ABHAFhDg/BBiHAx+E5A4HB88HDY9HAJ5HAP4E/ABHANk/BEiHAv8HAB4HBm4HAM9C4HDV9HAZ5HAD/AIA4HADj/BFmHAw4A4HB64HAB+A4HDV7A6B5G4HAM9D6A/ABA/AAHAEi/BEgAgHA25HBJ8HAu/ACHDT7B5HAE5F5E5A5C/ACA/AAA/AAHAJg4j5j/A4gHBH4HA78HAq4C/ABA/AAA4HDH9B4B6G6HAA4A5A7D4C5A6HAG5HAKiAgAiAgAh/A3jHCA4C+HAn5D/AOHDI4A4A5B4A/AAD6B4D5A+HAA6HAL4HALgHACj/A3gHB+/ACHAl9B/ARgHAg6C5HCc5A/ABD9D4A+E4D8HAA8HAdh/A2hHB6/ACHAm/AbgHAc4B8A9HCe/AJHAC6B4A6C8B5A/ACHAdg/A1hHB5/AAHAYgHAE/AfgHAf/AFHCa/AAA/ADB4G6C7B/AOHAbh/AyiAgAgHB1+HAl/AiHAf/AFC9HCb/ACHAJ8B/ANHAdg/AxgAhHB49HAkgA/AiHAh+A5F9HCV+HAS5C8A/AAA8HAeg/AxjHB39HAjgAh/AgHDI7HAE6HBUg/AwgAgAhHA34HA08HAjgCh/AeB5gHDD/AEHBci/AugAiHB27HAoh/AcD4HAm4HCX/AFHAU5E/AAHAyg/ApnAAHB19HApg/AbB5HAh4HCd/AHHAG6G+B/AAD8C6A6A4HAdh/Alh4gBgAjHB09HAgnABAg/AZD8CiHAEwHAT7HCS/AHA4HAF6F4A8B/AAD8B8A9HAdg/AkgAg4iAhHB47HANiHAHnAE/AYC+AnAAHAA0AxHAOjHCQ/AFA7HAC6A4HAA6B4B+C8B4A9A9HAai/AjgAiAiHB38HAPgAgDgHABnAF/AinACAgE3ABgHCo/ADB/ACB4C7D6A9B9E7B/ABA4D4HAcg/AjgBgBhAgHB09HAOkDgFgBnAhAnAW2AwHALgHCU/ACA/AEA6A8E/ABB6G8A/ABC8HAah/AkkAiHB18HAOlDgChDnBC1HAMnAAHCM/ACC/ACA8A8F/AAB5G9B+A/ABHAYg/AqhAgHB18HAO4lDgCjDnBEAwHAJnABAhAiHCG/ABB/AJB7HAA9C4G9A/AAA5B+HAWg4i4h/AlhHB09HAO4lChAhBjCnBEHALnACAlHCI9B/AQHAB7B6G9A/AJB4HAWhBhAg/Ahh5gAgHBy+HAO4kBiBnABAgAnBEEgHAEnAAAlHCJ6F5A/AMHAB5D7E/ATA6HAUgBgAg/AhgAh4iHB17HAM5kBjCnBPDiBjAnANHAo7HAcRHAu4HAA/AOHAG9HAA6A/AQHAVgBh/AhgBg5gHBHgHAn7HAJ7lAmAmAnAvvAEnAAohCnAaHAl9HAVQBSAQBRHAx/AQHAE9F/AUD4HAXg/Ach5hBg5gHBFhAgAiHAg9HAI7mAnAGAnAkvARkrhAnAbBnABHAZ4HAbXAFHAy4A4D/AJHAD+E/AbHAPjBg/AbgAiDjHBBgAiAgAgAiHA04A6lCnAEAgAnAXvAeiqQonAqHA3XAQHAZgHAMhDnAJHAAnAAHABnAVHAQgBk/AbiBhHBHjAnABHAmgHAFnABBnAHAnAOvAohpSpnApHA3XAZHALiBhHAInATHAAmHAGjBiAnAJHAOiBgAg/Adi4jHA9oBpTnABHAphHAEnABBnASshogvArgpUonAoHAGgCqHAgXAcHAHiAlBhBiGnAQBgDhCkHAEkBiEnAFHAPg5hAh/AhiHA+qWnAGHAlkFnACBnASrkvArgpUonApEhEiBpRtgHAaXAgFhAjAnAAAgBkGnAOAgEjAgBkHABmGgAnAHHANiCg/AhgHA/oBVqgonAEAgHAQhHAJnAACgAnAABnARqlvArhoVnA3DpUtgHAUXAjDnAVHAAnACDlClClBgGlCgEnAFHAUg/AghHA8gAgAoVpgrnADAkHAMiHAKnAADmBgDnAMpnAAvApioVnArAnAFCpVtHARXAoogAiAnAWBnAACiHAAgBlAgAkAiElHAAgBnAEHATh/AcjHA9hBVqgsnAKHAKhFgGiBmphClCiBnAKpnAAvAqioVnADQnAfAnAFAhqXAAqhHANXAnpnAeAgCgCjAhHAFgDkAjCkAgHADgAnACHAShAg/AVh4jHBBhVripnANHABiHABhAhBmAnAArgBnAAAkAnAJqnAAvApioVnADSnAvrXAAqhHANXAjionAeHADgBiHADjBnACCgAkHACiCnABHAUg/AVgAhHBBhCVqnAVHAAjGnAPpRogAnAABnAPqlvAqjWnADSpnAurWqiHAMXAenAlHAAgCnABHABhAnAEBnAAHABiAhAnACBgHAMgCg/ATiHBHVqnAYGjDnASoSonABCnARvAwkVnADoTojsnAmqXAApkHAMXAZnBIBnAECnAAGjDnAGHAJl/ATgHBJVqnAaEhDnAUpRonABCkBnAKvAnjskVnAEoTphunAmqWplHAKXAVrnA0AnAZAnACGhFnAGHAIgAhAg/ATgHBIVqnAcDhEnAToSonAACnASvAmmrkVnAEoTrTrnAlrUpmHAORkXABvACnA3BnAdAjHAHnAIBgHAFh4h/ATgHBIVqnAcFhCnASpSonAADnAQvAnnAIVnAFoTrUrnAlrTplBgAgHAJnADshunBjHAHnAMHAFg/AQh6hHBIVpnARBnACFnAXoRqjAgAgCnASvAmnAJVnAFoUqVrnAlvAAmAkHABjDnAosnA/ChHAInAEAgAlHAFg/AQgAjHAMhHABhHAngVpnAREmChAnATohpQpnADAnATvAmnAJWonAEoVpWqnAmtnAHEnAxvACnA8BgHAInAEBgAiAgHAGg4h/ANiHANhAhAgAgAlHAmVpnAUHADnAVtRonAhvAmnAIoWonAEpWpVpnArAnAHDnAVFnAMXAAuLHABnAnAjAiAgHAIPABEjHAIhAg/AKjHAQiBiAlHAkgUPADDKnAGHABgCnASrTonACHAAMDnADDvAknALWonAFpXAApTpLEkHAQiFKGPAAFnAUEnAKXAHsIHABnApAhBgAgHADhFPABDhHALh/AIiHAWnAFHAjgUoPABFLiIBkHABjBnARpUpnAEGMDnADCvAlnAKXAAonAGqWpSpLEkEsHAFjFKGMHACnAMBlCnAGQiXAKrHACnAsAkHABhGOGgHALg/AIgAgHAWnAGHAjUohPAAFJiKBlCgEnAUIpUonAFHAAJFnADDvAjnAMXACnAFrVpSpKEnABuDnAFEKGLHADmBnACDnALXATpHACnArAmHAFhCMHAUj/AFhHATgBk+hHAiVjOELhKClBjCnACAnABLCIpTpnABAkHAHnADDvAMivAMnAMXAEgrmsTqQpLEnABpSpCnAGEIHACJHAKgAnADDjvAAnABXASpHACnApCmHAGgCKFgHAOhBg/AFgHAXj+gHAjVkODLiKBlCgAnAGFPAAEpRpnABCjHAHnADDvALjvAMnAOXAH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BuIRHAARAMXADPACqHABLHApvAQXAEpHAArHACoXADrGoWrWpHABoToCIHCRoKXAIpHAVnAiBVHBuRIHAARNWISPABAqHABpJHApvAITrXAFqDpSqGoXADpHABoWtVoHABoToHCXICXAIqHAUnAhAWHBuIQIHACPAATKUOAqGqJHATIHANvAIVrXAEqCoWpFoXADoHABoWpAIqUoHABoToHCXRJSrXABpHAUnAhWHBwQJDXABPAEUNCqEqJHAqvAIWuXABpBoXABqDpXABoHABoWoEpUpGoTHCZIQAISIrXACqHARnAgAWHAMJHBMJHAFRAXAEPADWNHABqJHArvAKXABsXABpAoXADpDrSqAeAoXAApDpUpFoTEJHCSRISIsXAEoHARnAfAWHAMJHBNJHAAKRAXAB4SPADXAAMHABqIHAecHACoHAIrVtXABqXAEoGoQrfABAXABpDpSqFoTFJHCTUJsXAEoHAQnAdBXAAHBkJFLQAXAB5SPADXABMHAVwHAMeHASpArRpBoAoXADqXACqErfADAXAAoFpQrEpTFIAIHCSITItXADrHAHLConAJAhGloApWHBmJoDNXAB5IQPAEXABMHAWxHADJEfABEdHAFoQvABEoXAErWsDpfAEAXAApFsFoUHCcUJtXAGoHAHLConAFHAHirVHBpPADTKR4KSLpMXABMHAFsAsEwHADKEfACqfAAHABrSoQsEoXAHqUsDofAGXAApDKqJEoUHCcQIRJtXAHpBrHAALCqnAAAgHAKqWoHBooPACTPAAAJSJsJXABpIxHAAIAIBvAEHAIOAfACseHAAoXABoHABoXAIvACfAMXAAoDPADAqToHCdTKtXAIuGMHAAkPAMoXABoHBpvACTBoQpEoAUtTtBwGJDUuHAFKsKfACpQpfAAHAAWqHACpXAItfAOoWoCPAFqTHCdUJtXAJpSpGNGPAQoXABoHBqvACTpSqDXABvAEHACIGUtHAEJuJfADqQpfAAEXADuEqXAGpfASVpDPAEpUHCfQIRKtXAJpSpFOGPAJqJoXACoHBpvACAoSoCoSoDXACvADHALVvAAGJuJfAEqRpeFSqWoRuSrXAApfASoUoEPAEpUHCeRIRJAtXAJpRpFPABEPAJrIpXAAIHBrvAACqEqRoCoXABoQvABHALXAAsHAAJuIfAGqReHAAvAA4XA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';
-const DT_N = 512, DT_A = 2, DT_R = [2.5, 5, 10, 20], DT_CAP = 36;
+const DT_N = 512, DT_A = 2, DT_R = [2.5, 5, 10, 20], DT_CAP = 36, DT_RF = 1.25, DT_FG = 1.8, DT_FCL = 0.3;   // DT_RF, DT_FG: the far texture's resolution and detail gain; DT_FCL: its share of the clearings in the temperate woods (close: 0.75), so from far out the woods stay a dark green mass
 const DT = {cache:new Map(), mv:12, clock:0, miss:new Set(), job:null, fail:false, made:0, ms:0, wk:undefined, busy:0, pend:new Set(), ready:[], hold:[], holdT:0};
 let DTC = null;
 function dtCells(){ if (DTC && DTC.G === G) return DTC; if (DT.fail || typeof TERRC !== 'string') return null;
@@ -3691,15 +3697,12 @@ const DT_FIELD = [[0.97, 1.05, 0.9], [1.14, 1.09, 0.84], [0.88, 0.8, 0.72], [0.9
 // the parcel tones by season: 0 winter (Dec-Feb: dull winter crop, ploughland, stubble), 1 spring, 2 early summer (the plain set above),
 // 3 harvest (ripe and stubble), 4 autumn (Sep-Nov: stubble and fresh ploughland); a tile is baked for its month's pair (north, south)
 const DT_FP = (() => { const [G, R, P, A, S, D, F] = DT_FIELD, Gw = [0.93, 0.99, 0.88], Pd = [0.85, 0.78, 0.7];
-  const nrm = L => { const m = [0, 1, 2].map(c => L.reduce((a, t) => a + t[c], 0)/L.length); return L.map(t => t.map((v, c) => +(v/m[c]).toFixed(4))); };   // (MAP-2: each set's mean 1 per channel)
-  return [[Gw, P, Pd, A, S, D, F], [G, P, G, A, F, D, Pd], DT_FIELD, [G, R, R, A, S, S, F], [Gw, S, P, A, Pd, S, F]].map(nrm); })();
-// MAP-2: the mean change a tile makes to each kind of ground (r, g, b per class: plains without fields, forest, mountain, desert, tundra, hills,
-// marsh, snow, then plains under fields), per resolution bucket, measured over tiles all round the world (the test hook dtProbe); a px is divided by its
-// class mix's gains, so the detail averages out to the plain texture's colour (the old per-tile curve, dtNorm, left seams: these are smooth)
-const DT_G = [[0.971, 0.978, 0.977, 1, 0.995, 0.998, 0.84, 0.804, 0.709, 1.015, 1.012, 1.009, 0.998, 1.0, 1.005, 0.951, 0.955, 0.937, 0.872, 0.916, 0.983, 1.01, 1.01, 1.009, 0.938, 0.957, 0.941],
-  [0.991, 0.994, 0.993, 0.995, 0.994, 0.994, 0.892, 0.848, 0.743, 1.017, 1.013, 1.009, 0.994, 0.997, 1.002, 0.967, 0.968, 0.952, 0.867, 0.912, 0.981, 1.028, 1.026, 1.019, 0.965, 0.977, 0.966],
-  [0.998, 0.996, 1.003, 0.981, 0.983, 0.983, 0.907, 0.864, 0.756, 1.016, 1.012, 1.008, 0.994, 0.997, 1.002, 0.979, 0.977, 0.963, 0.869, 0.914, 0.982, 1.02, 1.018, 1.012, 0.98, 0.989, 0.988],
-  [1.001, 1.003, 1.007, 0.982, 0.981, 0.981, 0.905, 0.864, 0.752, 1.025, 1.017, 1.006, 0.991, 0.995, 1, 0.986, 0.985, 0.973, 0.869, 0.914, 0.982, 1.04, 1.036, 1.025, 0.995, 0.999, 1.003]];
+  return [[Gw, P, Pd, A, S, D, F], [G, P, G, A, F, D, Pd], DT_FIELD, [G, R, R, A, S, S, F], [Gw, S, P, A, Pd, S, F]]; })();
+// MAP-TEXTURE: the far texture's tone per kind of ground (r, g, b: plains without fields, forest, mountain, desert, tundra, hills, marsh, snow, then
+// plains under fields), so its mean colour over each kind of ground is the plain texture's (within 1%, measured with the test hook dtProbe,
+// .test/map-zoom-look.js): from the world view to play zoom the map keeps the old build's colours (dark green forest, silver-grey ranges) and
+// gains only texture; the close tiles fade in over it with v3.12's close look (lit crowns, olive fields, warm rock), as the old build did
+const DT_FC = [1.061, 1.052, 1.052, 0.994, 1.004, 0.998, 1.079, 1.079, 1.139, 0.999, 0.998, 0.997, 1.018, 1.014, 1.006, 1.075, 1.062, 1.087, 1.095, 1.078, 1.021, 1.006, 1.006, 1.005, 1.108, 1.086, 1.243];
 const DT_MV = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0];
 const DT_ROT = [0, 0.71, 1.93, 2.62, 4.1, 5.3].map(a => [Math.cos(a), Math.sin(a)]);
 // start a tile: its coarse grid of warped class weights (node (i, j) at tile px (i*cs - 1, j*cs - 1), px centres at +0.5)
@@ -3714,12 +3717,13 @@ function dtCrown(x, y, sp, seed){ const cx = x/sp, cy = y/sp, ix = Math.floor(cx
 // interpolated per px under the fine relief, crowns, parcels, ripples, pools and grain
 const DT_NF = 18;   // node floats: 0-8 class weights, 9 low relief, 10 its shading, 11-13 tone, 14 farmland, 15 dune sea, 16-17 dune warp
 function dtStart(k, tx, ty, mo = 5){ const C = dtCells(); if (!C) return null; const vN = DT_MV[mo % 12], vS = DT_MV[(mo + 6) % 12];
-  const r = DT_R[k], n = DT_N + 2*DT_A, cs = r < 4 ? 3 : Math.round(r*0.4), gw = Math.ceil((n + 2)/cs) + 2;
+  const r = k < 0 ? DT_RF : DT_R[k], n = DT_N + 2*DT_A, cs = r < 4 ? 3 : Math.round(r*0.4), gw = Math.ceil((n + 2)/cs) + 2;
   if (!DT.buf || DT.buf.gw < gw){ DT.buf = {gw, g:new Float32Array(gw*gw*DT_NF)}; }
-  if (!DT.Hb){ DT.Hb = new Float32Array((n + 2)*(n + 2)); DT.Tb = new Float32Array(n*n*3); DT.Bb = new Float32Array(n*n*3); }
+  if (!DT.Hb){ DT.Hb = new Float32Array((n + 2)*(n + 2)); DT.Tb = new Float32Array(n*n*3); }
   const g = DT.buf.g; g.fill(0, 0, gw*gw*DT_NF);
-  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq}; }
+  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq, gn:k < 0 ? DT_FG : 1}; }   // (k -1: a far texture tile, k*DT_N texels)
 function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT_NF, rowStep = 1.5*HS, colStep = HS*SQ3, wq = colStep*1.15, w = new Float32Array(9);
+  const MC = cs/r < 0.5 && DT_N % (2*cs) === 0 ? J.mc || (J.mc = new Float32Array(gw*2)) : null;   // (MAP-TEXTURE: the mottle's slow noises, see below)
   const b0 = Math.max(0, Math.min(1, (r/3 - 0.45)/(r/6))), bh0 = Math.max(0, Math.min(1, (r/3 - 0.22)/(r/6))), bh1 = Math.max(0, Math.min(1, (r/3 - 0.46)/(r/6)));
   for (let j = J.y; j < j1; j++){ const wy = y0 + (j*cs - 0.5)/r, la = C.lat[Math.min(H - 1, Math.max(0, Math.round((wy - OY)/rowStep)))], latF = dtSm((la - 27)/9)*(1 - dtSm((la - 54)/6));
     for (let i = 0; i < gw; i++){ const wx = x0 + (i*cs - 0.5)/r, nB = C.n2(wx*0.055, wy*0.055), nC = C.n3(wx*0.16, wy*0.16), o = (j*gw + i)*NF;
@@ -3728,11 +3732,11 @@ function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT
       for (let q = 0; q < 2; q++){ const rr = Math.min(H - 1, Math.max(0, r0 + q)), cx = (qx - OX)/colStep - 0.5*(rr & 1), c0 = Math.floor(cx), fx = cx - c0, wk = q ? fy : 1 - fy;
         const a = C.cls[rr*W + Math.min(W - 1, Math.max(0, c0))], b = C.cls[rr*W + Math.min(W - 1, Math.max(0, c0 + 1))]; w[a] += (1 - fx)*wk; w[b] += fx*wk; }
       // the hand-over: weights squared and pushed up or down by a noise (opposite signs for classes that meet), so they meet in patches
-      const nt = dtPn(wx*0.42 + 11.3, wy*0.42 + 5.1)*1.3 + dtPn(wx*1.1 + 3.7, wy*1.1 + 9.2)*0.5; let ws = 0;
+      const p42 = dtPn(wx*0.42 + 11.3, wy*0.42 + 5.1), nt = p42*1.3 + dtPn(wx*1.1 + 3.7, wy*1.1 + 9.2)*0.5; let ws = 0;
       for (let c = 0; c < 9; c++){ let v = w[c]; if (v > 0.001){ v = v*v*Math.max(0.04, 1 + DT_SG[c]*nt); has[c] = 1; } else v = 0; w[c] = v; ws += v; }
       for (let c = 0; c < 9; c++) w[c] /= ws; let clr = 0;
       if (w[1] > 0.02 && la > 38 && la < 62){ const lo = 1 - dtSm((w[2] + w[7] + 0.6*w[5] - 0.1)/0.35);   // temperate lowland forest: clearings with field systems between the woods
-        if (lo > 0){ const cut = dtSm((dtPn(wx*0.05 + 31, wy*0.05 + 17) + 0.25)*3)*0.75*lo*dtSm((la - 38)/4)*(1 - dtSm((la - 58)/4)), mv = w[1]*cut; if (mv > 0.001){ w[1] -= mv; w[0] += mv; has[0] = 1; clr = mv; } } }   // (the sum stays 1)
+        if (lo > 0){ const cut = dtSm((dtPn(wx*0.05 + 31, wy*0.05 + 17) + 0.25)*3)*(r < 2 ? DT_FCL : 0.75)*lo*dtSm((la - 38)/4)*(1 - dtSm((la - 58)/4)), mv = w[1]*cut; if (mv > 0.001){ w[1] -= mv; w[0] += mv; has[0] = 1; clr = mv; } } }   // (the sum stays 1)
       for (let c = 0; c < 9; c++) g[o + c] = w[c];
       const wP = w[0], wF = w[1], wM = w[2], wD = w[3], wT = w[4], wHi = w[5], wS = w[7], wO = w[8];
       // low relief: the first ridged octave and two rolling ones
@@ -3743,9 +3747,15 @@ function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT
       // low tones: forest clumps and clearings, scrub and grass, gravel plains, lichen
       let tr = 1, tg = 1, tb = 1;
       if (clr > 0){ tr *= 1 + 0.4*clr; tg *= 1 + 0.32*clr; tb *= 1 + 0.08*clr; }   // the clearings: open ground, lighter and warmer than the canopy's dark texture under them
-      if (wM + wHi > 0.02){ const rk = wM + 0.12*wHi; tr *= 1 - 0.15*rk; tg *= 1 - 0.2*rk; tb *= 1 - 0.28*rk; }   // bare rock warm grey-brown (the texture's pale grey read as snow under the relief's light)
+      if (wM + wHi > 0.02){ const rk = (wM + 0.12*wHi)*(r < 2 ? 0.35 : 1); tr *= 1 - 0.15*rk; tg *= 1 - 0.2*rk; tb *= 1 - 0.28*rk; }   // bare rock warm grey-brown (the texture's pale grey read as snow under the relief's light)
       if (wF > 0.02){ const fc = dtPn(wx*0.62 + 5, wy*0.62 + 81) + 0.35*dtPn(wx*1.2 + 2, wy*1.2 + 7), cl = dtSm((fc - 0.44)/0.08)*wF; tr *= (1 + wF*0.14*fc)*(1 + 0.12*cl); tg *= (1 + wF*0.13*fc)*(1 + 0.1*cl); tb *= (1 + wF*0.1*fc)*(1 + 0.03*cl); }
       const fk = (wP + 0.45*wHi)*latF*dtSm((dtPn(wx*0.045 + 20, wy*0.045 + 60) + 0.32)*4); g[o + 14] = fk;
+      // (the mottle's noises: two of its own, made at every other node each way where the nodes are under half a world unit apart, on the
+      // world-aligned node lattice so neighbouring tiles agree; its hue, warmth and fine octave borrow the node's warp and hand-over noises)
+      let m0 = 0, m2 = 0; if (MC && ((i | j) & 1)){ const q = (i & ~1)*2; m0 = MC[q]; m2 = MC[q + 1]; }
+      else if (MC || wO < 0.95){ m0 = dtPn(wx*0.23 + 17.7, wy*0.23 + 61.1); m2 = dtPn(wx*0.13 + 71, wy*0.13 + 13); if (MC){ MC[i*2] = m0; MC[i*2 + 1] = m2; } }
+      { const lw = 1 - wO; if (lw > 0.05){ const mt = 0.6*m0 + 0.4*p42, hu = (nC - 0.5)*1.2, k = lw*(1 - 0.5*wS); tr *= 1 + k*(0.1*mt + 0.03*hu); tg *= 1 + k*0.1*mt; tb *= 1 + k*(0.1*mt - 0.04*hu); } }   // MAP-TEXTURE: a mottle of lighter and darker, warmer and cooler ground (about 2-6 world units) on all land: what still reads from the world view
+      { const op = wP*(1 - 0.6*fk) + wHi + wD + 0.6*wT; if (op > 0.05){ const lt = op*(0.07*m2 - 0.04*p42), wm = op*0.06*(nB - 0.5); tr *= (1 + lt)*(1 + wm); tg *= 1 + lt; tb *= (1 + lt)*(1 - wm); } }   // MAP-TEXTURE: broad patches (about 8 and 3 world units) of lighter and darker, warmer and cooler open ground, so it reads textured from the world view in
       if (wP + wHi > 0.05){ const sc = (wP + wHi)*(1 - fk)*0.08*dtPn(wx*0.9 + 3, wy*0.9 + 8); tr *= 1 + sc; tg *= 1 + sc*1.1; tb *= 1 + sc*0.8; }
       if (wD > 0.02 || hM > 0.02){ g[o + 16] = dtPn(wx*0.11, wy*0.11 + 50)*3.4; g[o + 17] = dtPn(wx*0.11 + 50, wy*0.11)*3.4; }   // a slow warp: bends the dune crests and the ridges
       if (wD > 0.02){ const erg = dtSm((dtPn(wx*0.03 + 3, wy*0.03 + 7) + 0.0)*3.2), gv = wD*(1 - erg)*(dtPn(wx*0.55 + 9, wy*0.55 + 4) + 0.5*dtPn(wx*1.1 + 2, wy*1.1 + 5));
@@ -3764,7 +3774,7 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
   const band = f => { const fm = r/3; return Math.max(0, Math.min(1, (fm - f)/(0.5*fm))); }, fmic = r/2.6, lw = Math.max(0.05, 0.9/r), ri = 1/r;
   const bR = []; for (let o = 0, f = 0.45; o < 6; o++, f *= 2) bR.push(band(f)); const spA = r < 4 ? 1.7 : 0.8, bCA = r < 4 ? 0.7 : Math.max(0, Math.min(1, (0.8*r - 2.5)/2)), bCB = Math.max(0, Math.min(1, (0.36*r - 2.5)/2)), bH2 = band(0.97), bH3 = band(2.04), dper = 1.1, bDn = Math.max(0, Math.min(1, (1.1*r - 3)/3)), bSt = band(2.6), bRk = band(1.7);
   let rci = 1e9, rcj = 1e9; const SX = new Float64Array(9), SY = new Float64Array(9), SI = new Int32Array(9); let rid = -1, rca = 1, rsa = 0, rsz = 1, rasp = 1, pci = 1e9, pcj = 1e9, qci = 1e9, qcj = 1e9; const PX = new Float64Array(9), PY = new Float64Array(9), QX = new Float64Array(9), QY = new Float64Array(9), QI = new Int32Array(9);
-  const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat([9, 10, 11, 12, 13, 14, 15, 16, 17]), NQ = QS.length;
+  const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat([9, 10, 11, 12, 13, 14, 15, 16, 17]), NQ = QS.length, FC = J.k < 0 ? DT_FC : null;
   for (let by = J.y; by < y1; by++){ const py = by - 1, wy = y0 + (py + 0.5)*ri, gy = by/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, la = lat[by], FP = wy < J.eq ? J.fN : J.fS;
     for (let i = 0, a = j0*gw*NF, b = a + gw*NF; i < gw; i++, a += NF, b += NF) for (let q = 0; q < NQ; q++){ const c = QS[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; }   // the node rows above and below, blended for this px row
     for (let bx = 0; bx < n2; bx++){ const px = bx - 1, x = x0 + (px + 0.5)*ri, gx = bx/cs, i0 = Math.min(gw - 2, Math.floor(gx)), fx = gx - i0, o0 = i0*NF, o1 = o0 + NF;
@@ -3776,10 +3786,10 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
       if (hM > 0.02){ const mx = x + 0.3*(V[o0 + 16] + (V[o1 + 16] - V[o0 + 16])*fx), my = wy + 0.3*(V[o0 + 17] + (V[o1 + 17] - V[o0 + 17])*fx); let a = 0.4, f = 0.9;
         for (let o = 1; o < 6; o++, f *= 2, a *= 0.42){ const bw = bR[o]; if (bw <= 0) break; const R = DT_ROT[o], u = (mx*R[0] - my*R[1])*f + o*37.1, v = (mx*R[1] + my*R[0])*f + o*11.7;
           let e = 1 - Math.abs(dtPn(u, v))*1.55; if (e < 0) e = 0; h += hM*a*bw*e*e; }
-        const al = ((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx) + h)/Math.max(0.08, hM), ta = Math.max(-0.5, Math.min(0.5, al - 0.5))*0.26*hM, r0 = tr*1.12, g0 = tg*1.12, b0 = tb*1.12;
+        const al = ((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx) + h)/Math.max(0.08, hM), ta = r < 2 ? 0 : Math.max(-0.5, Math.min(0.5, al - 0.5))*0.26*hM, r0 = tr*1.12, g0 = tg*1.12, b0 = tb*1.12;
         if (ta > 0){ tr *= 1 + ta; tg *= 1 + ta*0.92; tb *= 1 + ta*0.7; } else { tr *= 1 + ta; tg *= 1 + ta*0.82; tb *= 1 + ta*1.12; }   // darker valleys, warm grey-brown rock on the ridges (not pale blue-white)
         if (tr > r0) tr = r0; if (tg > g0) tg = g0; if (tb > b0) tb = b0;
-        wood = wM*dtSm((la - 24)/6)*(1 - dtSm((la - 55)/6))*(1 - dtSm(((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx)/Math.max(0.08, hM) - 0.12)/0.3)); if (wood > 0){ tr *= 1 - 0.2*wood; tg *= 1 - 0.03*wood; tb *= 1 - 0.26*wood; }   // temperate ranges: woods on the lower slopes
+        wood = wM*dtSm((la - 24)/6)*(1 - dtSm((la - 55)/6))*(r < 2 ? 0.15 : 1 - dtSm(((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx)/Math.max(0.08, hM) - 0.12)/0.3)); if (wood > 0){ tr *= 1 - 0.2*wood; tg *= 1 - 0.03*wood; tb *= 1 - 0.26*wood; }   // temperate ranges: woods on the lower slopes (the far texture, r < 2, has no relief to put them on: a light even share, so its ranges keep the texture's bright ridges; its rock tone a third)
         if (bRk > 0){ const rg = hM*0.07*bRk*dtPn(x*1.7 + 61, wy*1.7 + 23); tr *= 1 + rg; tg *= 1 + rg*0.92; tb *= 1 + rg*0.7; } }
       // fine rolling ground
       const hR = 0.12*wP + 0.6*wHi + 0.2*wT + 0.1*wD + 0.22*wF + 0.12*wO + 0.25*wM;
@@ -3834,15 +3844,14 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
       Hb[by*n2 + bx] = h;
       if (px >= 0 && py >= 0 && px < n && py < n){ // a fine grain everywhere (about 2.6 px, and a world-anchored px speckle); the low relief's shading
         const mg = (1 + 0.04*dtPn(x*fmic + 7, wy*fmic + 3) + 0.028*(dtHash(Math.floor(x*r), Math.floor(wy*r), 9) - 0.5))*(1 + (V[o0 + 10] + (V[o1 + 10] - V[o0 + 10])*fx)*(1 - wk)), t = (py*n + px)*3; Tb[t] = tr*mg; Tb[t + 1] = tg*mg; Tb[t + 2] = tb*mg;
-        const Gk = DT_G[J.k], Bb = DT.Bb; let b0 = wO, b1 = wO, b2 = wO;   // (sea: no correction, the wash covers it)
-        for (let c = 0; c < 8; c++){ let q = w[c]; if (q <= 0) continue; if (c === 0 && fk > 0){ const f = fk < 1 ? fk*q : q; b0 += f*Gk[24]; b1 += f*Gk[25]; b2 += f*Gk[26]; q -= f; } b0 += q*Gk[c*3]; b1 += q*Gk[c*3 + 1]; b2 += q*Gk[c*3 + 2]; }
-        Bb[t] = 1/b0; Bb[t + 1] = 1/b1; Bb[t + 2] = 1/b2; } } }
+        if (FC){ let f0 = wO, f1 = wO, f2 = wO; for (let c = 0; c < 8; c++){ let q = w[c]; if (q <= 0) continue; if (c === 0 && fk > 0){ const f = fk < 1 ? fk*q : q; f0 += f*FC[24]; f1 += f*FC[25]; f2 += f*FC[26]; q -= f; } f0 += q*FC[c*3]; f1 += q*FC[c*3 + 1]; f2 += q*FC[c*3 + 2]; }
+          Tb[t] *= f0; Tb[t + 1] *= f1; Tb[t + 2] *= f2; } } } }
   J.y = y1; }
-// the fine relief's shading (light from the north-west) times the tones, over the class mix's gain, as half the factor (128 = no change) into the
-// ImageData: dtFinish multiplies the texture by it and doubles the result (a plain multiply: the ground's hue and mean stay, light and shade are symmetric)
-function dtShade(J, y1, D){ const {r, n} = J, Hb = DT.Hb, Tb = DT.Tb, Bb = DT.Bb, n2 = n + 2, K = 0.26*r*0.5;
+// the fine relief's shading (light from the north-west) times the tones, as hard-light grey (128 = no change) into the ImageData (a far tile's
+// change raised by its gain, gn, the lighter side by less, gb: lit crowns and pale fields stay soft, not a bright speckle)
+function dtShade(J, y1, D){ const {r, n, gn} = J, gb = 1 + (gn - 1)*0.3, Hb = DT.Hb, Tb = DT.Tb, n2 = n + 2, K = 0.26*r*0.5;
   for (let y = J.y; y < y1; y++) for (let x = 0; x < n; x++){ const b = (y + 1)*n2 + x + 1, s0 = 1 + K*(Hb[b - 1] - Hb[b + 1] + Hb[b - n2] - Hb[b + n2]), sh = s0 < 0.42 ? 0.42 : s0 > 1.35 ? 1.35 : s0, t = (y*n + x)*3, o = (y*n + x)*4;
-    for (let c = 0; c < 3; c++){ const q = sh*Tb[t + c]*Bb[t + c]*0.5; D[o + c] = q >= 1 ? 255 : q*255; } D[o + 3] = 255; }
+    for (let c = 0; c < 3; c++){ const v = sh*Tb[t + c] - 1, m = 1 + v*(v < 0 ? gn : gb), q = m <= 1 ? (m > 0 ? m*0.5 : 0) : 0.5 + (m - 1)*0.3; D[o + c] = q >= 1 ? 255 : q*255; } D[o + 3] = 255; }
   J.y = y1; }
 // run a job until the deadline; true once its pixels are done
 function dtStep(J, end){ for (;;){
@@ -3854,7 +3863,7 @@ function dtStep(J, end){ for (;;){
 // the game month (the parcel palette) and its tile variant, kept in DT.mv
 function dtMonth(){ const m = S ? calDate(S.hour).m : 5; DT.mv = DT_MV[m]*5 + DT_MV[(m + 6) % 12]; return m; }
 function dtBucket(s = view.s){ const t = s*Math.min(dpr, 1.5); let k = 0; while (k < 3 && DT_R[k]*1.41 < t) k++; return k; }
-function dtAlpha(s = view.s){ return mapLite() || DT.fail ? 0 : dtSm((s - 1.35)/1.15); }   // fades in from z1.35 to z2.5 (the start view and normal play); nothing below (the far view is untouched)
+function dtAlpha(s = view.s){ return mapLite() || DT.fail ? 0 : dtSm((s - 1.35)/1.15); }   // fades in from z1.35 to z2.5 (the start view and normal play); below, the far texture (dtFarTex)
 const dtCap = (k = dtBucket()) => k === 0 ? (dpr > 1 ? 64 : 48) : dpr > 1 ? 56 : 36;   // (the coarsest tiles serve the widest views, z1.35-3.5: more of them on screen and in the margin)
 // the tiles under the layer's painted rect, each clipped to its own whole-device-px box (the boxes meet exactly, so no seam and no double blend);
 // a tile not made yet is noted (its box is redrawn when it arrives) and a cached coarser or finer one stands in
@@ -3886,18 +3895,51 @@ function dtNext(tv){ const s = tv ? tv.s : view.s, vx = tv ? tv.x : view.x, vy =
     for (let j = Math.max(0, j0); j <= Math.min(n1H - 1, j0 + 2); j++) for (let i = Math.max(0, i0); i <= Math.min(n1W - 1, i0 + 2); i++) want.push({key:k1 + '|' + i + '|' + j, tx:i, ty:j, k:k1}); }
   let next = null; for (const w of want){ const E = DT.cache.get(w.key); if (E) E.used = ++DT.clock; if ((!E || E.mv !== DT.mv) && !next && !DT.pend.has(w.key)) next = w; }   // (the wanted ones stay fresh in the cache)
   return next && [next.k != null ? next.k : k, next.tx, next.ty]; }
-// a finished job: the baked texture upscaled exactly as the layer draws it, multiplied by the modulation (stored halved: multiplied in, then the tile
-// added onto itself); into the cache (least
+// a finished job: the baked texture upscaled exactly as the layer draws it, the modulation laid on with 'hard-light'; into the cache (least
 // recently used out), and its box queued for a redraw if the layer drew it without the tile
-function dtFinish(J, img){ const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
+function dtFinish(J, img){ DT.pend.delete(J.key); const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
   D.getContext('2d').putImageData(img, 0, 0);
   const old = DT.cache.get(J.key); let cv = old ? old.cv : null; if (!old) cv = dtEvict(DT.ck != null ? DT.ck : dtBucket()) || cv;
   if (!cv){ cv = document.createElement('canvas'); cv.width = cv.height = n; }
   const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.globalAlpha = 1; g.imageSmoothingEnabled = true;
   g.setTransform(J.r, 0, 0, J.r, -J.x0*J.r, -J.y0*J.r); g.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
-  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'multiply'; g.drawImage(D, 0, 0); g.globalCompositeOperation = 'lighter'; g.drawImage(cv, 0, 0); g.globalCompositeOperation = 'source-over';
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'hard-light'; g.drawImage(D, 0, 0); g.globalCompositeOperation = 'source-over';
   DT.cache.set(J.key, {cv, n, r:J.r, x0:J.x0, y0:J.y0, mv:J.mv, used:++DT.clock}); DT.made++;
   if (DT.miss.delete(J.key) && layer){ DT.hold.push([J.tx, J.ty, J.r]); if (!DT.holdT) DT.holdT = performance.now(); } }
+// the far texture (MAP-TEXTURE): the land's tiles at DT_RF (DT_N texels each, the texture's own grid), any tile with a land cell within 3 hexes
+function dtFarLand(){ const C = dtCells(), T = GEO.terrain; if (!C || !T) return null; if (DT.fl && DT.fl.C === C && DT.fl.T === T) return DT.fl;
+  const nW = Math.ceil(T.width/DT_N), nH = Math.ceil(T.height/DT_N), k = DT_RF/DT_N, m = 3*HS, has = new Uint8Array(nW*nH), L = [];
+  for (let i = 0; i < W*H; i++){ if (C.cls[i] === 8) continue; const [x, y] = cellCenter(i);
+    for (let ty = Math.max(0, Math.floor((y - m)*k)); ty <= Math.min(nH - 1, Math.floor((y + m)*k)); ty++) for (let tx = Math.max(0, Math.floor((x - m)*k)); tx <= Math.min(nW - 1, Math.floor((x + m)*k)); tx++) has[ty*nW + tx] = 1; }
+  for (let ty = 0; ty < nH; ty++) for (let tx = 0; tx < nW; tx++) if (has[ty*nW + tx]) L.push([tx, ty]);
+  return (DT.fl = {C, T, L, nW, nH, has}); }
+const dtFarOn = () => !mapLite() && !DT.fail && !!GEO && !!GEO.terrain && Math.abs(GEO.terrain.width/WORLD_W - DT_RF) < 0.01 && !!dtCells();
+// the next far tile to make: this month's not made yet, nearest the middle of the screen first (across the date line too)
+function dtFarNext(){ const FL = dtFarLand(); if (!FL) return null; const F = DT.far && DT.far.T === GEO.terrain ? DT.far : null, s = view.s, k = DT_RF/DT_N, nWr = WRAP_W*k;
+  const cx = wrapWX((cw/2 - view.x)/s)*k, cy = (ch/2 - view.y)/s*k; let best = null, bd = Infinity;
+  for (const [tx, ty] of FL.L){ if ((F && F.mv[ty*FL.nW + tx] === DT.mv + 1) || DT.pend.has('-1|' + tx + '|' + ty)) continue;
+    let dx = Math.abs(tx + 0.5 - cx); dx = Math.min(dx, Math.abs(nWr - dx)); const d = dx*dx + (ty + 0.5 - cy)**2; if (d < bd){ bd = d; best = [-1, tx, ty]; } }
+  return best; }
+// a finished far tile: its texels of the plain texture copied in again, the modulation laid on with 'hard-light' (the apron left out: the tiles
+// meet exactly); the far texture itself is made with the first one (a copy of the plain texture: the plain one stays, under the close tiles)
+function dtFarFinish(J, img){ DT.pend.delete(J.key); const T = GEO.terrain; if (!T || !dtFarOn()) return; let F = DT.far;
+  if (!F || F.T !== T){ dtFarDrop(); const cv = document.createElement('canvas'); cv.width = T.width; cv.height = T.height; cv.getContext('2d').drawImage(T, 0, 0);
+    F = DT.far = {T, cv, mip:null, mipV:-1, v:0, mv:new Uint8Array(Math.ceil(T.width/DT_N)*Math.ceil(T.height/DT_N))}; }
+  const n = J.n; let D = DT.scr; if (!D){ D = DT.scr = document.createElement('canvas'); } if (D.width !== n || D.height !== n){ D.width = n; D.height = n; }
+  D.getContext('2d').putImageData(img, 0, 0);
+  const X = J.tx*DT_N, Y = J.ty*DT_N, w = Math.min(DT_N, T.width - X), h = Math.min(DT_N, T.height - Y); if (w <= 0 || h <= 0) return;
+  const g = F.cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.clearRect(X, Y, w, h); g.drawImage(T, X, Y, w, h, X, Y, w, h); g.globalCompositeOperation = 'hard-light'; g.drawImage(D, DT_A, DT_A, w, h, X, Y, w, h); g.globalCompositeOperation = 'source-over';
+  F.mv[J.ty*Math.ceil(T.width/DT_N) + J.tx] = J.mv + 1; F.v++; DT.made++;
+  if (layer && layer.s === view.s){ DT.hold.push([J.tx, J.ty, DT_RF]); if (!DT.holdT) DT.holdT = performance.now(); } }
+function dtFarDrop(){ const F = DT.far; DT.far = null; if (F){ F.cv.width = F.cv.height = 0; if (F.mip) F.mip.width = F.mip.height = 0; } }
+// the texture the layer draws: the far texture (its half-size mip once a texel is under 0.62 device px), else the plain one
+function dtFarTex(s = view.s){ const T = GEO.terrain, F = DT.far; if (!F || F.T !== T || !dtFarOn()) return T;
+  /*@TEST*/if (window.__plainFar) return T;/*@ENDTEST*/
+  if (dpr*s >= 0.62*DT_RF) return F.cv;
+  if (F.mipV !== F.v){ const M = F.mip || (F.mip = document.createElement('canvas')), w = Math.ceil(F.cv.width/2), h = Math.ceil(F.cv.height/2); if (M.width !== w || M.height !== h){ M.width = w; M.height = h; }
+    const g = M.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(F.cv, 0, 0, w, h); g.globalCompositeOperation = 'source-over'; F.mipV = F.v; }
+  return F.mip; }
 // down to the cap (it is lower past the coarsest tiles), least recently used out; while closer in, the dtK0R() coarsest tiles last used (16-24) are kept
 // on top of it (they are what a jump back out lands on, and what a missing finer tile borrows): returns a freed canvas
 const dtK0R = () => dpr > 1 ? 16 : 24;
@@ -3965,7 +4007,7 @@ function dtRelease(){ const L = layer, H0 = DT.hold; DT.hold = []; DT.holdT = 0;
 // unavailable or blocked, and then the tiles are made here, a few ms a frame
 function dtWorker(){ if (DT.wk !== undefined) return DT.wk; DT.wk = null; const C = dtCells(); if (!C || typeof Worker === 'undefined' || typeof Blob === 'undefined' || !window.URL) return null;
   try { const J = JSON.stringify, fns = [mulberry, makeNoise, dtPn, dtHash, dtCrown, dtStart, dtNodes, dtNodeShade, dtRows, dtShade, dtStep].map(f => f.toString()).join('\n');
-    const js = `'use strict';const W=${W},H=${H},HS=${HS},SQ3=Math.sqrt(3),OX=${OX},OY=${OY},DT_N=${DT_N},DT_A=${DT_A},DT_R=${J(DT_R)},DT_NF=${DT_NF},DT_SG=${J(DT_SG)},DT_FIELD=${J(DT_FIELD)},DT_FP=${J(DT_FP)},DT_MV=${J(DT_MV)},DT_ROT=${J(DT_ROT)},DT_G=${J(DT_G)};
+    const js = `'use strict';const W=${W},H=${H},HS=${HS},SQ3=Math.sqrt(3),OX=${OX},OY=${OY},DT_N=${DT_N},DT_A=${DT_A},DT_R=${J(DT_R)},DT_NF=${DT_NF},DT_SG=${J(DT_SG)},DT_FIELD=${J(DT_FIELD)},DT_FP=${J(DT_FP)},DT_MV=${J(DT_MV)},DT_ROT=${J(DT_ROT)},DT_RF=${DT_RF},DT_FG=${DT_FG},DT_FCL=${DT_FCL},DT_FC=${J(DT_FC)};
 const dtSm=${dtSm.toString()};const DTP={P:new Uint8Array(${J(Array.from(DTP.P))}),GX:new Float32Array(${J(Array.from(DTP.GX))}),GY:new Float32Array(${J(Array.from(DTP.GY))})};
 const DT={};let DTC=null,DT_CH=0;function dtCells(){return DTC;}
 ${fns}
@@ -3976,7 +4018,7 @@ postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0
     const url = URL.createObjectURL(new Blob([js], {type:'text/javascript'})), nw = (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1, WS = [];
     const fail = ev => { if (ev && ev.preventDefault) ev.preventDefault(); for (const x of WS) try { x.terminate(); } catch (e) {} DT.wk = null; DT.wks = []; DT.busy = 0; DT.pend.clear(); };   // blocked or broken: made here instead
     for (let i = 0; i < nw; i++){ const w = new Worker(url); w.busy = 0;
-      w.onmessage = e => { const m = e.data; w.busy = Math.max(0, w.busy - 1); DT.busy = Math.max(0, DT.busy - 1); DT.pend.delete(m.key); DT.ms += m.ms; DT.ready.push(m); redraw(); };   // (a detail tile is ready: a frame lays it)
+      w.onmessage = e => { const m = e.data; w.busy = Math.max(0, w.busy - 1); DT.busy = Math.max(0, DT.busy - 1); DT.ms += m.ms; DT.ready.push(m); redraw(); };   // (a detail tile is ready: a frame lays it; its key stays pending until it is laid or dropped, so a tile waiting in DT.ready is not asked for again)
       w.onerror = fail; w.postMessage({init:{cls:C.cls, lat:C.lat, eq:C.eq}}); WS.push(w); }
     DT.wks = WS; DT.wk = WS[0];
   } catch (e) { DT.wk = null; }
@@ -3987,29 +4029,40 @@ postMessage({key:Jb.key,mv:Jb.mv,k:Jb.k,tx:Jb.tx,ty:Jb.ty,n:Jb.n,r:Jb.r,x0:Jb.x0
 // most one finished tile is composited a frame, so the camera lands on cached detail
 // the boxes held are released (redrawn, each with a cross-fade, see FADE) as soon as the tile under the middle of the screen is among them,
 // else in batches every 150 ms, or once nothing on screen is missing: the detail dissolves in from the middle out
-function dtHoldRel(){ if (!DT.hold.length) return; const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, cx = Math.floor(wrapWX((cw/2 - view.x)/s)/T), cy = Math.floor((ch/2 - view.y)/s/T);
+// (far tiles only: their boxes are held until every far tile on screen is in, or 2.5 s pass, then redrawn together: the far texture comes in
+// once, not as a redraw for each tile, which on a phone kept the main thread busy for the whole bake)
+function dtFarScreenPending(){ const FL = dtFarLand(); if (!FL) return false; const F = DT.far && DT.far.T === GEO.terrain ? DT.far : null, k = DT_RF/DT_N, s = view.s, ty0 = Math.max(0, Math.floor(-view.y/s*k)), ty1 = Math.min(FL.nH - 1, Math.floor((ch - view.y)/s*k)); let pend = false;
+  wrapSpans(-view.x/s, (cw - view.x)/s, (x0, x1) => { for (let ty = ty0; ty <= ty1 && !pend; ty++) for (let tx = Math.max(0, Math.floor(x0*k)); tx <= Math.min(FL.nW - 1, Math.floor(x1*k)); tx++){ if (!FL.has[ty*FL.nW + tx]) continue; if (!F || F.mv[ty*FL.nW + tx] !== DT.mv + 1){ pend = true; break; } } });
+  return pend; }
+function dtHoldRel(){ if (!DT.hold.length) return; if (DT.hold.every(h => h[2] === DT_RF)){ if (performance.now() - DT.holdT > 2500 || !dtFarScreenPending()) dtRelease(); return; } const k = dtBucket(), r = DT_R[k], T = DT_N/r, s = view.s, cx = Math.floor(wrapWX((cw/2 - view.x)/s)/T), cy = Math.floor((ch/2 - view.y)/s/T);
   if (performance.now() - DT.holdT > 150 || DT.hold.some(h => h[0] === cx && h[1] === cy && h[2] === r) || !dtScreenMissing()) dtRelease(); }
 // tiles that came back after the view zoomed out past the detail: kept in the cache (a zoom back in finds them; at most the few that were in
 // flight, so a few ms) and the boxes held for the layer dropped (no detail at this zoom): nothing is left waiting for a frame that would never use it
 function dtPark(){ if (!DT.ready.length && !DT.hold.length && !DT.job) return; const end = performance.now() + 8;
-  while (DT.ready.length && performance.now() < end){ const m = DT.ready.shift(); dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); }
-  DT.hold = []; DT.holdT = 0; DT.job = null; }
+  const keep = []; while (DT.ready.length){ const m = DT.ready.shift(); if (m.k < 0 || performance.now() >= end) keep.push(m); else dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); }
+  DT.ready = keep; DT.hold = DT.hold.filter(h => h[2] === DT_RF); if (!DT.hold.length) DT.holdT = 0; if (DT.job && DT.job.k >= 0) DT.job = null; }   // (far tiles and their boxes kept)
 // detail work that a frame can do now: the tiles back from the workers, the boxes held, a tile being made here (redraw scheduling: a frame is
 // asked for only while one of them can be laid, see draw)
-const dtLive = tv => tv ? dtAlpha(tv.s) >= 0.02 : !!layer && layer.s === view.s && dtAlpha() >= 0.02;
-function dtWork(idle, tv){ if (!idle || !layer) return; const s = tv ? tv.s : view.s; if (tv ? dtAlpha(s) < 0.02 : layer.s !== view.s || dtAlpha() < 0.02){ if (!tv && dtAlpha() < 0.02) dtPark(); return; }
+const dtLive = tv => tv ? dtAlpha(tv.s) >= 0.02 : !!layer && layer.s === view.s && (dtAlpha() >= 0.02 || (dtFarOn() && (DT.hold.length > 0 || (!!DT.job && DT.job.k < 0) || DT.ready.some(m => m.k < 0))));   // (far: only while a far tile waits)
+function dtWork(idle, tv){ if (!idle || !layer) return; const s = tv ? tv.s : view.s, still = !tv && layer.s === view.s, near = tv ? dtAlpha(s) >= 0.02 : still && dtAlpha() >= 0.02, far = still && dtAlpha() < 0.98 && dtFarOn();
+  if (!near && !far){ if (!tv && dtAlpha() < 0.02) dtPark(); return; }
+  if (!near) dtPark();   // (far only: close tiles back from the workers kept for a zoom in, their boxes dropped)
   const t0 = performance.now(), end = t0 + 8, k = dtBucket(s), wk = dtWorker(), mo = dtMonth(); let nf = tv ? 1 : 1e9; DT.ck = k;
-  while (DT.ready.length && nf > 0 && performance.now() < end){ const m = DT.ready.shift(); if (Math.abs(m.k - k) <= 1){ dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); nf--; } }
+  const keepF = []; while (DT.ready.length && nf > 0 && performance.now() < end){ const m = DT.ready.shift();
+    if (m.k < 0){ if (still) dtFarFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); else keepF.push(m); continue; }   // (far tiles only laid while the view is still)
+    if (Math.abs(m.k - k) <= 1){ dtFinish(m, new ImageData(new Uint8ClampedArray(m.buf), m.n, m.n)); nf--; } else DT.pend.delete(m.key); }
+  if (keepF.length) DT.ready = keepF.concat(DT.ready);
   if (!tv) dtHoldRel();
   DT.fms = (DT.fms || 0) + performance.now() - t0;
+  const next = () => (near && dtNext(tv)) || (far && dtFarNext()) || null;   // (the close tiles first, then the far texture)
   if (wk){ const WS = DT.wks && DT.wks.length && DT.wks[0] === wk ? DT.wks : [wk];
     for (;;){ if (tv && !tv.pre && DT.busy >= 1) break;   // (in a flight or a glide one job at a time: the motion stays smooth on a machine with few cores)
       let w = null; for (const x of WS) if ((x.busy || 0) < 2 && (!w || (x.busy || 0) < (w.busy || 0))) w = x; if (!w) break;   // (two in flight a worker, to the idlest)
-      const nx = dtNext(tv); if (!nx) break; DT.pend.add(nx.join('|')); DT.busy++; w.busy = (w.busy || 0) + 1; w.postMessage({k:nx[0], tx:nx[1], ty:nx[2], mo}); } return; }
+      const nx = next(); if (!nx) break; DT.pend.add(nx.join('|')); DT.busy++; w.busy = (w.busy || 0) + 1; w.postMessage({k:nx[0], tx:nx[1], ty:nx[2], mo}); } return; }
   if (tv) return;
-  let J = DT.job; if (J && (Math.abs(J.k - k) > 1 || J.mv !== DT.mv)) J = DT.job = null;   // the zoom moved to another resolution
-  while (performance.now() < end){ if (!J){ const nx = dtNext(); if (!nx) break; J = DT.job = dtStart(nx[0], nx[1], nx[2], mo); if (!J) break; }
-    if (dtStep(J, end)){ dtFinish(J, DT.img); DT.job = J = null; } }
+  let J = DT.job; if (J && ((J.k >= 0 ? !near || Math.abs(J.k - k) > 1 : !far) || J.mv !== DT.mv)) J = DT.job = null;   // the zoom moved to another resolution
+  while (performance.now() < end){ if (!J){ const nx = next(); if (!nx) break; J = DT.job = dtStart(nx[0], nx[1], nx[2], mo); if (!J) break; }
+    if (dtStep(J, end)){ if (J.k < 0) dtFarFinish(J, DT.img); else dtFinish(J, DT.img); DT.job = J = null; } }
   dtHoldRel();
   DT.ms += performance.now() - t0; }
 
@@ -4810,7 +4863,7 @@ function snowBuild(m){
   // the relief under the snow: a high-passed grey copy of the terrain texture (its light minus a blurred copy, so ridges, valleys and the edges of the
   // woods read, not the woods' overall darkness) laid into the sheet's own colour (source-atop keeps the sheet's alpha); baked here once a month
   if (GEO && GEO.terrain){ const t = mkc(BW, BH), tg = t.getContext('2d'), u = mkc(BW, BH), ug = u.getContext('2d'); tg.imageSmoothingEnabled = ug.imageSmoothingEnabled = true;
-    tg.filter = 'grayscale(1) blur(2.5px)'; tg.drawImage(GEO.terrain, 0, 0, BW, BH); ug.filter = 'grayscale(1) blur(5px) invert(1)'; ug.drawImage(GEO.terrain, 0, 0, BW, BH); tg.filter = ug.filter = 'none';
+    tg.filter = 'grayscale(1) blur(2.5px)'; /*@TEST*/if (window.__snowV312) tg.filter = 'grayscale(1)';/*@ENDTEST*/ tg.drawImage(GEO.terrain, 0, 0, BW, BH); ug.filter = 'grayscale(1) blur(5px) invert(1)'; ug.drawImage(GEO.terrain, 0, 0, BW, BH); tg.filter = ug.filter = 'none';
     tg.globalAlpha = 0.5; tg.drawImage(u, 0, 0); tg.globalAlpha = 1;   // 0.5 + (light - blurred light)/2
     g.globalCompositeOperation = 'source-atop'; g.filter = 'contrast(3.2) brightness(1.75)'; g.globalAlpha = 0.7; g.drawImage(t, 0, 0); g.globalAlpha = 1; g.filter = 'none'; g.globalCompositeOperation = 'source-over'; }   // (the mean lands near white; shadows stay)
   // frozen lakes: each big lake inside the snow gets an ice skin, its alpha the sheet's weight sampled over the lake
@@ -7813,7 +7866,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   c.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox, dpr*oy);
   const px0 = 1/view.s;
   const vx0 = (dx0/dpr - ox)/view.s, vy0 = (dy0/dpr - oy)/view.s, vx1 = (dx1/dpr - ox)/view.s, vy1 = (dy1/dpr - oy)/view.s;   // the painted rect in world space
-  c.imageSmoothingEnabled = true; c.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
+  c.imageSmoothingEnabled = true; c.drawImage(dtFarTex(), 0, 0, WORLD_W, WORLD_H);   // (MAP-TEXTURE: the far texture, its detail baked in, once made)
   const DTa = dtAlpha(); if (DTa >= 0.02) try { dtDraw(c, vx0, vy0, vx1, vy1, ox, oy, DTa); } catch (e) { DT.fail = true; }   // close zoom: the sharp detail tiles over the texture (any failure: the plain texture, as on low effects)
   // culling bounds: the painted rect plus a margin wider than any stroke and than a shore chain pushed out to sea past its province's box
   const wm = Math.max(40*px, 3*HS), wx0 = vx0 - wm, wy0 = vy0 - wm, wx1 = vx1 + wm, wy1 = vy1 + wm;
@@ -7860,7 +7913,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
   const onScreen = P => { const b = provBox(P); return b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1; }, nOn = n => { const b = GEO.nBox && GEO.nBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); },
     nOnL = n => { const b = GEO.nLBox && GEO.nLBox[n]; return !b || (b[2] >= wx0 && b[0] <= wx1 && b[3] >= wy0 && b[1] <= wy1); };   // land borders / any land of nation n near the layer
   // fine land grain in world space: one soft-light pass over the whole layer, clipped to the coast
-  if (hexPx >= 6 && !mapLite()){ const z = Math.min(1, (hexPx - 6)/6), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = GRAIN_A*z; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);   // (MAP-2: one strength at every zoom, mid-zoom too)
+  if (hexPx >= 6 && !mapLite()){ const z = Math.min(1, (hexPx - 6)/6), zc = Math.max(0, Math.min(1, (hexPx - 26)/30)); c.save(); if (CV) c.clip(CV, 'evenodd'); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = GRAIN_A*z + 0.14*zc; const gp = grainPattern(c); c.fillStyle = gp; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);   // (MAP-2: one strength from mid zoom; MAP-TEXTURE: stronger close in again, as in v3.12)
     if (zc > 0 && gp.fine && DTa < 0.98){ c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.34*zc*(1 - DTa); c.fillStyle = gp.fine; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }   // close up: a second, fine ground grain (fields, scrub) so the land is not a smooth smear
     if (!lite && hexPx > ZOLD && DTa < 0.02 && gp.micro && gp.micro.setTransform){ const zm = Math.min(1, (hexPx - ZOLD)/50), lo = Math.max(0, Math.log2(view.s/(ZOLD*0.9/HS0))), o0 = Math.floor(lo), f = lo - o0;   // past the old max zoom the texture is upscaled: a micro grain in world space keeps it from smearing
       c.globalCompositeOperation = 'source-over'; c.fillStyle = gp.micro;
@@ -7904,6 +7957,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     // a coloured band just inside the border (clipped to the nation's own land), in its map colour: green on yours, blue on an ally's, red on an
     // enemy's, every other power's own colour; one css width at every zoom, so ownership reads close in too, over forest and towns
     const tn = mapTone(n), area = NA(n), tc0 = tintOf(n), ka = tn === 'own' ? 1 : tn === 'other' ? 0.75 : 0.9;
+    /*@TEST*/if (window.__bandV312){ if (tn === 'other' && hexPx < 6) continue; const kb = tn === 'own' ? 1 : tn === 'war' ? 0.75 : 0.3, bv = Math.min(4.5, 1.6 + hexPx*0.08); c.save(); c.clip(area); c.strokeStyle = rgba(tc0, 0.24*kb); c.lineWidth = bv*2*px; c.stroke(NB(n)); c.strokeStyle = rgba(tc0, 0.27*kb); c.lineWidth = bv*0.8*px; c.stroke(NB(n)); c.restore(); continue; }/*@ENDTEST*/   // (tests: v3.12's thin band, for side-by-side sheets)
     c.save(); c.clip(area); const bw = Math.min(6, 2.6 + hexPx*0.03);
     c.strokeStyle = rgba(tc0, 0.3*ka); c.lineWidth = bw*2.4*px; c.stroke(NB(n)); c.strokeStyle = rgba(tc0, 0.5*ka); c.lineWidth = bw*0.9*px; c.stroke(NB(n)); c.restore(); }
   const clipLand = () => { c.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ c.fillStyle = '#000'; c.fill(CV, 'evenodd'); } else c.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); c.globalCompositeOperation = 'source-over'; };
@@ -7921,11 +7975,12 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     const cut = sea => { if (vis.ids) for (const s of vis.ids){ if ((s[5] === VK.sea) !== sea) continue; const r = s[4]*1.07, xa = Math.min(s[0], s[2]) - r, xb = Math.max(s[0], s[2]) + r, ya = Math.min(s[1], s[3]) - r, yb = Math.max(s[1], s[3]) + r;
         if (yb < wy0 || ya > wy1) continue; const H = fogHole(s);
         for (const o of [-WRAP_W, 0, WRAP_W]){ if (xb + o < wx0 || xa + o > wx1) continue; g.save(); if (o) g.translate(o, 0); for (const [q, a] of H){ g.globalAlpha = a; g.fill(q); } g.restore(); } } };   // (a sight range across the seam: its part on the other side too, a turn away)
-    g.fillStyle = 'rgba(34,46,56,0.24)';   // sea: lighter, no hatching
+    let fogS = 'rgba(34,46,56,0.24)', fogL = FOG_LAND; /*@TEST*/if (window.__fogV312){ fogS = 'rgba(0,0,0,0)'; fogL = 'rgba(6,10,14,0.15)'; }/*@ENDTEST*/   // (tests: v3.12's light land-only veil, for side-by-side sheets)
+    g.fillStyle = fogS;   // sea: lighter, no hatching
     if (CV && hexPx >= 7 && SEAV) g.fill(SEAV, 'evenodd'); else { g.fillRect(-WORLD_W, -WORLD_H, 3*WORLD_W, 3*WORLD_H); g.save(); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox - ax, dpr*oy - ay); g.globalCompositeOperation = 'destination-out'; g.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); g.restore(); }
     g.globalCompositeOperation = 'destination-out'; cut(true); g.globalAlpha = 1;
     // land out of sight: one plain veil (owner: no hatching over anyone's land), every such province's real shape in one fill (no seams between them)
-    g.globalCompositeOperation = 'source-over'; { const FA = new Path2D(); for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; FA.addPath(FILL(p)); } g.fillStyle = FOG_LAND; g.fill(FA); }
+    g.globalCompositeOperation = 'source-over'; { const FA = new Path2D(); for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (P.sea || vis.whole.has(p) || !onScreen(P)) continue; FA.addPath(FILL(p)); } g.fillStyle = fogL; g.fill(FA); }
     g.globalCompositeOperation = 'destination-out'; cut(false); g.restore();
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(fgc, dx0 - ax, dy0 - ay, dw, dh, dx0 - ax, dy0 - ay, dw, dh); c.restore(); }
   // the roads between provinces once more over the fog (MAP-3), quieter: every province's roads read in land you cannot see too, as its borders do
@@ -7973,9 +8028,10 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
     t.globalCompositeOperation = 'destination-in'; if (CV && hexPx >= 7){ t.fillStyle = '#000'; t.fill(CV, 'evenodd'); } else t.drawImage(G.landMask, 0, 0, WORLD_W, WORLD_H); t.globalCompositeOperation = 'source-over'; t.restore();
     // clear national colours over the relief, at one strength from the world view to close up (MAP-2: the same colours at every zoom; owner,
     // fix-map: every owned province clearly tinted at every zoom)
-    base.save(); base.setTransform(1, 0, 0, 1, 0, 0);
-    base.globalCompositeOperation = 'color'; base.globalAlpha = 0.52; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh);
-    base.globalCompositeOperation = 'source-over'; base.globalAlpha = 0.27; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
+    base.save(); base.setTransform(1, 0, 0, 1, 0, 0); let tA = 0.52, tB = 0.27;
+    /*@TEST*/if (window.__tintV312){ const tk = Math.max(0, Math.min(1, (hexPx - 10)/70)), tf = Math.max(0.35, 1 - Math.max(0, hexPx - 80)/160); tA = (0.42 - 0.2*tk)*tf; tB = (0.22 - 0.11*tk)*tf; }/*@ENDTEST*/   // (tests: v3.12's tint strength, easing off close in, for side-by-side sheets)
+    base.globalCompositeOperation = 'color'; base.globalAlpha = tA; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh);
+    base.globalCompositeOperation = 'source-over'; base.globalAlpha = tB; base.drawImage(tc, dx0 - ax, dy0 - ay, dw, dh, dx0, dy0, dw, dh); base.restore(); }   // (a plain thin coat, not soft-light: dark colours gave a brown cast)
   // cities: part of the ground, clipped to the coast once; laid after the political tint so concrete keeps its own colour, under the fog,
   // snow, roads, rivers and borders of the overlay
   let anyC = false; if (cityFade(hexPx) > 0) cityEach(wx0, wy0, wx1, wy1, () => { anyC = true; });   // (no coast clip to build for a rect with no town)
@@ -8235,7 +8291,7 @@ function gfxReset(){ GFX.lost = false; GFX.n++; GFX.t = performance.now();
   TMCB = 0; BNC_B = 0; BNP = null; GTILE_PX = 0; CBAKE_PX = 0; CLOW_PX = 0; CGEO_PX = 0; CWARM = null; CITY_PEND = true; CITY_ALL = true; CITYV++;
   GRAIN = null; GROUND = null; NIGHT = null; CGLOWC = null; CLOUDS = null; CONTRAIL = null; TMSH = null; TMFOAM = null;
   for (const k of ['cv', 'tile', 'pat', 'fp', 'fc', 'foam', 'fpat', 'wc']) SEAFX[k] = null; SEAFX.k = SEAFX.fk = ''; SEAFX.g = -1;
-  DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0;
+  DT.cache.clear(); DT.miss.clear(); DT.hold = []; DT.holdT = 0; dtFarDrop(); DT.fl = null;
   for (const c of FADEP) drop(c); FADEP.length = 0; FADE.length = 0;
   drop(OVL.cv); OVL.k = ''; OVL.g = null; OVL.c.rel.k = OVL.c.sup.k = '';   // (the Relations / Supply overlay canvas: rebuilt whole on the next frame it shows)
   if (layer){ for (const c of [layer.fl, layer.tc, layer.fg, layer.seaM, layer.alt && layer.alt.seaM, layer.alt, layer]) drop(c); } layer = null; layerKey = '';
@@ -11863,14 +11919,17 @@ if (location.protocol === 'file:' && window.__im) window.__im.zoomRender = () =>
 if (location.protocol === 'file:' && window.__im) window.__im.dtProbe = (k, tx, ty) => { const J = dtStart(k, tx, ty, calDate(S.hour).m); if (!J) return null; DT.img = null; dtStep(J, Infinity); const D = DT.img.data, n = J.n, cs = J.cs, gw = J.gw, g = J.g;
   const B = document.createElement('canvas'); B.width = B.height = n; const bg = B.getContext('2d', {willReadFrequently:true}); bg.imageSmoothingEnabled = true; bg.setTransform(J.r, 0, 0, J.r, -J.x0*J.r, -J.y0*J.r); bg.drawImage(GEO.terrain, 0, 0, WORLD_W, WORLD_H);
   const b = bg.getImageData(0, 0, n, n).data, C = document.createElement('canvas'); C.width = C.height = n; const cg = C.getContext('2d', {willReadFrequently:true}); cg.putImageData(new ImageData(new Uint8ClampedArray(b), n, n), 0, 0);
-  const T = document.createElement('canvas'); T.width = T.height = n; T.getContext('2d').putImageData(DT.img, 0, 0); cg.globalCompositeOperation = 'multiply'; cg.drawImage(T, 0, 0); cg.globalCompositeOperation = 'lighter'; cg.drawImage(C, 0, 0); const o = cg.getImageData(0, 0, n, n).data;
-  const acc = {}, add = (key, i, f) => { const A = acc[key] || (acc[key] = {n:0, b:[0, 0, 0], o:[0, 0, 0], m:[0, 0, 0]}); A.n++; for (let c = 0; c < 3; c++){ const m = 2*D[i + c]/255; A.b[c] += b[i + c]; A.o[c] += o[i + c]; A.m[c] += b[i + c]*m; } };
+  const T = document.createElement('canvas'); T.width = T.height = n; T.getContext('2d').putImageData(DT.img, 0, 0); cg.globalCompositeOperation = 'hard-light'; cg.drawImage(T, 0, 0); const o = cg.getImageData(0, 0, n, n).data;
+  const FC = document.createElement('canvas'); FC.width = FC.height = n; const fg = FC.getContext('2d', {willReadFrequently:true}); fg.imageSmoothingEnabled = true; fg.setTransform(J.r, 0, 0, J.r, -J.x0*J.r, -J.y0*J.r); fg.drawImage(DT.far && DT.far.T === GEO.terrain ? DT.far.cv : GEO.terrain, 0, 0, WORLD_W, WORLD_H); const fd = fg.getImageData(0, 0, n, n).data;
+  const acc = {}, add = (key, i, f) => { const A = acc[key] || (acc[key] = {n:0, b:[0, 0, 0], o:[0, 0, 0], f:[0, 0, 0]}); A.n++; for (let c = 0; c < 3; c++){ A.b[c] += b[i + c]; A.o[c] += o[i + c]; A.f[c] += fd[i + c]; } };
   const w = new Float32Array(15);
   for (let py = 0; py < n; py += 2) for (let px = 0; px < n; px += 2){ const gy = (py + 1)/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, gx = (px + 1)/cs, i0 = Math.min(gw - 2, Math.floor(gx)), fx = gx - i0;
     for (let c = 0; c < 15; c++){ const a = g[(j0*gw + i0)*DT_NF + c], bb = g[(j0*gw + i0 + 1)*DT_NF + c], cc = g[((j0 + 1)*gw + i0)*DT_NF + c], dd = g[((j0 + 1)*gw + i0 + 1)*DT_NF + c]; w[c] = (a + (bb - a)*fx) + ((cc + (dd - cc)*fx) - (a + (bb - a)*fx))*fy; }
     let best = -1; for (let c = 0; c < 9; c++) if (w[c] > 0.8) best = c; if (best < 0 || best === 8) continue;
     const key = best === 0 ? (w[14] < 0.15 ? 'p0' : w[14] > 0.6 ? 'pf' : 'pm') : String(best); add(key, (py*n + px)*4); add('all', (py*n + px)*4); }
-  return {k, tx, ty, r:J.r, acc}; };   // (MAP-2: the detail tiles' colour against the ground under them, .test/map-zoom-look.js)
+  return {k, tx, ty, r:J.r, acc}; };   // (the detail tiles' colour against the ground under them, b, and the far texture over the same box, f: .test/map-zoom-look.js)
+if (location.protocol === 'file:' && window.__im) window.__im.dtFar = () => { const FL = dtFarLand(), F = DT.far && DT.far.T === GEO.terrain ? DT.far : null;
+  return {on:dtFarOn(), total:FL ? FL.L.length : 0, done:F && FL ? FL.L.filter(([tx, ty]) => F.mv[ty*FL.nW + tx] === DT.mv + 1).length : 0, used:dtFarTex() !== GEO.terrain, ms:DT.ms}; };   // the far texture's progress (MAP-TEXTURE)
 if (location.protocol === 'file:' && window.__im) window.__im.nightR = p => ({r:cityNightR(p), cap:CNR.d[p], glow:cityGlowR(p)});   // a town's reach at night (world units: its lights, their cap, its glow) (.test/night-lights.js)
 if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d', {willReadFrequently:true}); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
   const c0 = ctx; ctx = g; try { wrapEach(() => drawCityLights(view.s*HS0)); } finally { ctx = c0; } return {w:c.width, h:c.height, d:g.getImageData(0, 0, c.width, c.height).data}; };   // the city lights of the view as they are now, alone on black (the light they add, nothing drawn over it)
