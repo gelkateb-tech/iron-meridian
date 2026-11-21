@@ -3908,8 +3908,8 @@ function dtNodeShade(J){ const {r, cs, gw, g, has} = J, NF = DT_NF, K = 0.26, d 
               g[o + 18] = a + (g[o + 33] > 0.002 && wPt > 0.02 && g[o + 31] > J.eO ? Math.min(1 - a, wPt) : 0); } } } } }
     // (close tiles: the clusters' two coarser octaves and the tones' clusters made one value, as dtRows takes them: two fewer to carry per px)
     const bd = f => Math.max(0, Math.min(1, (r/3 - f)/(r/6))), cA0 = JP.ca[0]*bd(JP.cf[0]), cA1 = JP.ca[1]*bd(JP.cf[1]), cb = cA0 + cA1 + (r >= 8 ? JP.ca[2]*bd(JP.cf[2]) : 0), k0 = cb > 0 ? 1.4*cA0/cb : 0, k1 = cb > 0 ? 1.4*cA1/cb : 0;
-    for (let i = 0, o = 0, V2 = !!JP.v2; i < gw*gw; i++, o += NF){ if (V2){ const a = g[o + 32]; g[o + 11] *= 1 + g[o + 27]*a; g[o + 12] *= 1 + g[o + 28]*a; g[o + 13] *= 1 + g[o + 29]*a; } else { g[o + 11] *= g[o + 27]; g[o + 12] *= g[o + 28]; g[o + 13] *= g[o + 29]; }
-      if (J.k >= 0) g[o + 21] = k0*g[o + 23] + k1*g[o + 26] + 0.25*g[o + 21]; } }   // ('c2': the change laid on the forest's own share here; dtRows moves it with the mosaic)
+    for (let i = 0, o = 0, V2 = !!JP.v2; i < gw*gw; i++, o += NF){ if (V2){ const a = g[o + 32]; if (a !== 0){ g[o + 11] *= 1 + g[o + 27]*a; g[o + 12] *= 1 + g[o + 28]*a; g[o + 13] *= 1 + g[o + 29]*a; } } else { g[o + 11] *= g[o + 27]; g[o + 12] *= g[o + 28]; g[o + 13] *= g[o + 29]; }
+      if (J.k >= 0 && (g[o + 21] !== 0 || g[o + 23] !== 0 || g[o + 26] !== 0)) g[o + 21] = k0*g[o + 23] + k1*g[o + 26] + 0.25*g[o + 21]; } }   // (a node with none of it: nothing to change)   // ('c2': the change laid on the forest's own share here; dtRows moves it with the mosaic)
   for (let j = 0; j < gw; j++) for (let i = 0; i < gw; i++){ const o = (j*gw + i)*NF, il = i > 0 ? o - NF : o, ir = i < gw - 1 ? o + NF : o, ju = j > 0 ? o - gw*NF : o, jd = j < gw - 1 ? o + gw*NF : o;
     const gx = (g[ir + 9] - g[il + 9])/(d*((i > 0) + (i < gw - 1))), gy = (g[jd + 9] - g[ju + 9])/(d*((j > 0) + (j < gw - 1))); g[o + 10] = -K*(gx + gy); }
   J.pres = []; for (let c = 0; c < 9; c++) if (has[c]) J.pres.push(c);
@@ -3927,6 +3927,8 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
   // (the jungle's node fields blended per px row: its warp only where crowns or the finest clumps take it; 'c2': its tones' change, 27-29,
   // is taken from the nodes only where the edge's mosaic moves it)
   const QJ = !JP ? [] : [].concat(far ? [18, 19, 20, 30] : bK0 > 0 || bK1 > 0 || cA2 > 0 || !JP.v2 ? [18, 19, 20, 21, 24, 25, 30] : [18, 21, 24, 25, 30], JP.sec > 0 || JP.v2 ? [22] : [], JP.v2 ? [31, 32, 33] : []), NJ = QJ.length;
+  // (which nodes have none of those fields (1) or some (2), found once each; which columns of V hold all zeros for them now)
+  const jz = NJ ? J.jz || (J.jz = new Uint8Array(gw*gw)) : null, vz = NJ ? J.vz || (J.vz = new Uint8Array(gw)) : null, jzS = p => { let z = 1; for (let q = 0, o = p*NF; q < NJ; q++) if (g[o + QJ[q]] !== 0){ z = 2; break; } return (jz[p] = z); };
   const jRr = JQ.rr, jCv = JQ.cv, jHk = JQ.hk, jGap = JQ.gap, jSoft = JQ.soft, jCt = JQ.ct, jCw = JQ.cw, jHc = JQ.hc, jCL = JQ.cL, jRvS = JQ.rvS, jRvW = JQ.rvW, jRt0 = JQ.rvT[0] - 1, jRt1 = JQ.rvT[1] - 1, jRt2 = JQ.rvT[2] - 1, jP3 = 1.4*JQ.pl[2], jCl = JQ.cl;
   const KC = far ? [1, 1, 1] : JQ.kc[J.k], jK0 = KC[0] - 1, jK1 = KC[1] - 1, jK2 = KC[2] - 1, fGn = J.gn, fGb = 1 + (J.gn - 1)*0.3, CK0 = new Float64Array(19).fill(NaN), CK1 = new Float64Array(19).fill(NaN), R1 = DT_ROT[1], R2 = DT_ROT[2], R3 = DT_ROT[3], R4 = DT_ROT[4];   // (CK0, CK1: the crown layers' caches, see dtCrownJ)
   // ('c2': the edge's mosaic: the cut's half width (wider in the far texture, a texel a world unit), the finer noises' strengths (the second
@@ -3940,7 +3942,9 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
   for (let by = J.y; by < y1; by++){ const py = by - 1, wy = y0 + (py + 0.5)*ri, gy = by/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, la = lat[by], FP = wy < J.eq ? J.fN : J.fS;
     const rj = NJ > 0 && (jrow[j0] || jrow[j0 + 1]);   // (JUNGLE: its fields only where a node row above or below has any of it)
     for (let i = 0, a = j0*gw*NF, b = a + gw*NF; i < gw; i++, a += NF, b += NF){ for (let q = 0; q < NQ; q++){ const c = QS[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; }   // the node rows above and below, blended for this px row
-      if (rj) for (let q = 0; q < NJ; q++){ const c = QJ[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; } else if (NJ) V[i*NF + 18] = 0; }
+      if (rj){ const pa = j0*gw + i;   // (a node column with none of the jungle's fields above and below: its blend is all zeros, set once)
+        if ((jz[pa] || jzS(pa)) === 1 && (jz[pa + gw] || jzS(pa + gw)) === 1){ if (!vz[i]){ for (let q = 0; q < NJ; q++) V[i*NF + QJ[q]] = 0; vz[i] = 1; } }
+        else { vz[i] = 0; for (let q = 0; q < NJ; q++){ const c = QJ[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; } } } else if (NJ){ V[i*NF + 18] = 0; vz[i] = 0; } }
     for (let bx = 0; bx < n2; bx++){ const px = bx - 1, x = x0 + (px + 0.5)*ri, gx = bx/cs, i0 = Math.min(gw - 2, Math.floor(gx)), fx = gx - i0, o0 = i0*NF, o1 = o0 + NF;
       w[0] = w[1] = w[2] = w[3] = w[4] = w[5] = w[6] = w[7] = w[8] = 0; for (let q = 0; q < NP; q++){ const c = pres[q]; w[c] = (V[o0 + c] + (V[o1 + c] - V[o0 + c])*fx); }
       const wP = w[0], wF = w[1], wM = w[2], wD = w[3], wT = w[4], wHi = w[5], wW = w[6], wS = w[7], wO = w[8];
