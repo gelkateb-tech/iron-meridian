@@ -113,9 +113,9 @@ function makeWatch(R, opts = {}){
   W.flag = flag;
   // what the hour before looked like
   const prevAt = new Map(), prevTo = new Map(), prevOwn = new Map(), sig = new Map(), landT = new Map(), seaIdle = new Map(), flySeen = new WeakSet(), qHead = new Map(), consPrev = new Map(), resPrev = new Map(), escH = new Map(),
-    embT = new Map(), cdT = new Map(), closedT = new Map(), flyPrev = new Set(); let lastH = null;
+    embT = new Map(), cdT = new Map(), closedT = new Map(), flyPrev = new Set(), oldLandPrev = new Set(); let lastH = null;
   function remember(){ const S = S_();
-    prevAt.clear(); prevTo.clear(); prevOwn.clear(); flyPrev.clear(); for (const a of S.armies){ prevAt.set(a.id, a.at); prevTo.set(a.id, a.to); prevOwn.set(a.id, S.owner[a.at]); if (a.fly) flyPrev.add(a.id); }
+    prevAt.clear(); prevTo.clear(); prevOwn.clear(); flyPrev.clear(); oldLandPrev.clear(); for (const a of S.armies){ prevAt.set(a.id, a.at); prevTo.set(a.id, a.to); prevOwn.set(a.id, S.owner[a.at]); if (a.fly) flyPrev.add(a.id); if (a.oldLand) oldLandPrev.add(a.id); }
     const q0 = new Map(qHead); qHead.clear(); for (let p = 0; p < S.queue.length; p++){ const q = S.queue[p]; if (q && q.length){ const pr = q0.get(p); qHead.set(p, {it:q[0], h:q[0].h, o:S.owner[p], since:pr && pr.it === q[0] && pr.h === q[0].h ? pr.since : S.hour}); } } }
 
   // ---- the cheap pass, every game hour
@@ -157,7 +157,7 @@ function makeWatch(R, opts = {}){
         if (a.to !== null && pt === null && !P.sea && G.P[a.to] && G.P[a.to].sea && !(X.navalCity(a.at) && (ow === o || S.owner[a.at] === o || friendlyRO(S, o, ow))) && !X.amphib(a))
           flag('embark-without-port', o, [id], () => `force ${id} sets sail from ${P.name}, not a naval port of ${nm(o)} or a friend's`);
         if (pa != null && pa !== a.at && G.P[pa] && !G.P[pa].sea && P.sea && !G.P[pa].nb.has(a.at)) flag('teleported-to-sea', o, [id], () => `force ${id} moved from land ${G.P[pa].name} to sea ${P.name}, not a neighbour`);
-        if (pa != null && pa !== a.at && G.P[pa] && G.P[pa].sea && !P.sea && !X.navalCity(a.at) && !X.amphib(a) && !a.oldLand) flag('landed-off-port', o, [id], () => `force ${id} came ashore at ${P.name}, not a naval city`);
+        if (pa != null && pa !== a.at && G.P[pa] && G.P[pa].sea && !P.sea && !X.navalCity(a.at) && !X.amphib(a) && !a.oldLand && !oldLandPrev.has(id)) flag('landed-off-port', o, [id], () => `force ${id} came ashore at ${P.name}, not a naval city`);
         if (P.sea && a.land > 0) flag('landing-at-sea', o, [id], `force ${id} at sea in ${P.name} with a landing timer ${a.land}`);
         if (P.sea && a.emb != null) flag('embark-timer-at-sea', o, [id], `force ${id} at sea with a boarding timer ${a.emb}`);
         if (P.sea && a.to === null && !a.path.length && !a.sail){ const h0 = seaIdle.get(id) ?? S.hour; seaIdle.set(id, h0); if (S.hour - h0 >= 72) flag('troops-idle-at-sea', o, [id], () => `force ${id} (${X.groundN(a)} ground units) idle at sea in ${P.name} since hour ${h0}`); } else seaIdle.delete(id); }
