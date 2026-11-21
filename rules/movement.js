@@ -382,7 +382,7 @@ function sailHour(a, hr = 1){ const s = a.sail; if (!s) return; if (a.to !== nul
   if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; if (s.nx) a.sail = {f:a.pos, to:s.nx, t:0, h:Math.max(1e-6, s.h2)}; else delete a.sail; } }   // (sailTo: on from the heart to the point)
 // the end of a leg (rules/tick.js movement): the force reaches the province it was heading for and stands at its exact point on the final leg
 // (troops coming ashore from the sea start their landing here: a.land, the time in hours, 0.75 = 45 minutes, before they can move on or capture)
-function legArrive(a, cross = false){ const f0 = legEnds(a)[0]; if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); if (ground(a)) a.land = landH(a, a.to); if (a.oldLand) delete a.oldLand; }
+function legArrive(a, cross = false){ const f0 = legEnds(a)[0]; if (G.P[a.at].sea && !G.P[a.to].sea){ if (ground(a)){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); a.land = landH(a, a.to); } if (a.oldLand) delete a.oldLand; }   // (only troops come ashore: a fleet docking in a port takes no landing stamp, EMB-4)
   a.from = a.at; a.froms = [a.at]; atMove(a, a.to); a.to = null; a.t = 0; a.legFrom = null; delete a.hrt;
   if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null;
     if (!cross && a.pos && heartVia(a, a.at, f0, a.pos)) a.hrt = a.at; }   // (a leg done within the hour went by the heart on its way to the point beyond it; cross: legCross walks on)
