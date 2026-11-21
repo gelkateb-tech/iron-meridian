@@ -141,22 +141,28 @@ function armySeen(a, vis){ const me = vis.n;
    Own and allied forces are always known. Nothing is remembered once the recon has gone, except the UAV's and the agent's span.
    The rules themselves never ask (the AI plays on the full state; ranged fire needs only a spotted target): this is what a seat's screen shows. */
 const isAlly = (me, o) => o >= 0 && me >= 0 && friendly(me, o) && rel(me, o).st === 'ally';
+// a foreign force standing in a battle against vis.n's own (or an ally's) force: seen and identified for as long as the battle lasts, however far
+// apart the two stand in the province (VIS-2, UNI-9). For the screen only (armyShown, armyKnown, armyView): the rules never ask, and armyVisible,
+// which ranged fire and the AI read, is left as it is
+const fightsMe = (a, vis) => a.to === null && !a.air && !a.fly && a.owner !== vis.n && S.battles.includes(a.at) && atWar(vis.n, a.owner) && stationaryAt(a.at).some(b => count(b) > 0 && (b.owner === vis.n || isAlly(vis.n, b.owner)));
+// what a seat's screen shows at all: what it sees (armyVisible), and the forces its own are fighting
+const armyShown = (a, vis) => armyVisible(a, vis) || fightsMe(a, vis);
 function armyKnown(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
   if (a.owner === vis.n || isAlly(vis.n, a.owner)) return true;
-  if (!armyVisible(a, vis)) return false;
+  if (!armyShown(a, vis)) return false;
   const M = vis.known, c = M && M.get(a); if (c !== undefined) return c;
   const r = armyIdent(a, vis); if (M) M.set(a, r); return r; }
 function armyIdent(a, vis){ const me = vis.n, [x, y] = armyXY(a), sea = !a.air && !a.fly && G.P[a.at].sea;
   const p0 = a.fly ? (c => c >= 0 ? G.prov[c] : -1)(worldToCell(x, y)) : a.at;
   if (vis.idp && p0 >= 0 && (vis.idp.has(p0) || (!a.fly && a.to !== null && vis.idp.has(a.to)))) return true;   // a recon reveal still running
-  if (!a.fly && !a.air && a.to === null && S.battles.includes(a.at) && atWar(me, a.owner) && stationaryAt(a.at).some(b => count(b) > 0 && (b.owner === me || isAlly(me, b.owner)))) return true;   // fighting it
+  if (fightsMe(a, vis)) return true;   // fighting it
   if (sea && vis.sonar && (vis.sonar.has(a.at) || (a.to !== null && vis.sonar.has(a.to)))) return true;   // ships at sea: sonar, maritime patrol
   if (a.fly && p0 >= 0 && (loSpotted(me, p0) || alliesOf(me).some(m => loSpotted(m, p0)))) return true;   // aircraft over a Mobile SAM's or jammer's radar
   for (const s of vis.idn || []) if ((s[5] !== VK.sea || sea) && visIn(s, x, y)) return true;
   return false; }
 // what nation vis.n may be told about force a: null when not seen; only where it is when it is not identified ({unk:true}: no nation, size, types,
 // name or health); the whole force once identified (a host that sends a seat its view, a later server, sends this and nothing more)
-function armyView(a, vis){ if (!armyVisible(a, vis)) return null; const [x, y] = armyXY(a), base = {id:a.id, at:a.at, to:a.to, x, y, air:!!a.air, fly:!!a.fly};
+function armyView(a, vis){ if (!armyShown(a, vis)) return null; const [x, y] = armyXY(a), base = {id:a.id, at:a.at, to:a.to, x, y, air:!!a.air, fly:!!a.fly};
   if (!armyKnown(a, vis)) return {...base, unk:true};
   const u = {}; for (const t of UT) if (a.u[t]) u[t] = a.u[t]; return {...base, unk:false, owner:a.owner, n:count(a), u, name:armyName(a)}; }
 // a seat's recon reveal: provinces ps identified for nation n until hour h (the AI plays on the full state, so only seats keep one; pruned as it goes)
