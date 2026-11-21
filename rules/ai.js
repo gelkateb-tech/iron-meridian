@@ -633,10 +633,16 @@ function aiTurn0(n, N){
   const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !gunsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   // NAVAL CITIES: ground forces left idle at sea (a landing refused on the way, a route planned again to none: rules/tick.js) are in no own province,
   // so the stacks above never hold them: they head for the nearest own province over the water, coming ashore at a naval city (landOk)
-  if (NAVAL_CITIES) for (const a of armiesOf(n)){ if (a.air || a.to !== null || a.path.length || a.sail || !G.P[a.at].sea || !ground(a) || !count(a)) continue;
+  // (a force with no way home at all, the nation holding no naval city it can reach, through friends' land included, waits 72 h at sea, a.seaIdle,
+  // in case one opens, then disbands: it would otherwise sit at sea for good, paying upkeep)
+  if (NAVAL_CITIES) for (const a of armiesOf(n)){ if (a.air || !ground(a) || !count(a)) continue;
+    if (a.to !== null || a.path.length || a.sail || !G.P[a.at].sea){ if (a.seaIdle != null) delete a.seaIdle; continue; }
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0 && h < 4000; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v) || !canEnter(n, v) || (G.P[q[h]].sea && !G.P[v].sea && !landOk(a, v))) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-    if (dest >= 0) a.path = pathFor(a, a.at, dest); }
+    if (dest >= 0) a.path = pathFor(a, a.at, dest);
+    if (a.path.length){ if (a.seaIdle != null) delete a.seaIdle; }
+    else if (a.seaIdle == null) a.seaIdle = S.hour;
+    else if (S.hour - a.seaIdle >= 72){ for (const t of UT) if (UNITS[t].cls !== 'naval'){ a.u[t] = 0; a.w[t] = 0; } delete a.seaIdle; } }
   const ready = [];   // stacks free for an offensive of their own
   for (const a of idleAll()){
     if (planned.has(a) || enemiesAt(a.at, n) || a.air) continue;
