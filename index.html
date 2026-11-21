@@ -2419,10 +2419,10 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
         <div class="hbox clock" id="clock"></div>
         <div class="seg" id="speed" role="group" aria-label="Game speed">
           <button id="sp0" data-speed="0" aria-pressed="true" aria-label="Pause" title="Pause (Space)"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><rect x="2.2" y="1.6" width="2.6" height="8.8" rx=".6" fill="currentColor"/><rect x="7.2" y="1.6" width="2.6" height="8.8" rx=".6" fill="currentColor"/></svg></button>
-          <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)&#10;1 real minute = 4 game minutes, a game day every 6 minutes">1×</button>
-          <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)&#10;1 real minute = 8 game minutes">2×</button>
-          <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3)&#10;1 real minute = 16 game minutes">4×</button>
-          <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest&#10;1 real minute = 32 game minutes">8×</button>
+          <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)&#10;1 real minute = 4 game hours, a game day every 6 minutes">1×</button>
+          <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)&#10;1 real minute = 8 game hours">2×</button>
+          <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3)&#10;1 real minute = 16 game hours">4×</button>
+          <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest&#10;1 real minute = 32 game hours">8×</button>
 <!--@DEV-->
           <button id="sp5" class="devsp" data-speed="5" aria-pressed="false" title="Developer 16× (9 cycles the developer speeds)">16×</button>
           <button id="sp6" class="devsp" data-speed="6" aria-pressed="false" title="Developer 50× (9 cycles the developer speeds)">50×</button>
@@ -2929,7 +2929,7 @@ const afxReduced = () => SET.motion === 'reduced' || !!(AFX_RM && AFX_RM.matches
 function slideIn(el, dx = 16, dy = 0, ms = 220){ if (!el || !el.animate || afxReduced()) return; try { el.animate([{opacity:0, transform:`translate(${dx}px,${dy}px)`}, {opacity:1, transform:'none'}], {duration:ms, easing:'cubic-bezier(.2,.8,.25,1)'}); } catch (e) {} }
 function setTab(t){ const was = tab; tab = t; document.querySelectorAll('[data-pane]').forEach(el => { el.hidden = el.dataset.pane !== t; if (!el.hidden && was !== t) slideIn(el, 0, 8, 200); }); document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); if (t === 'log' && S) seenHour = S.hour; const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
 function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16); const ch2 = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${ch2(16)},${ch2(8)},${ch2(0)})`; }
-const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game minutes (a game hour every 15 s)
+const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game hours (a game hour every 15 s)
 /*@DEV*/
 // Developer mode (test build only: tools/build.js strips every @DEV block from the public build). The switches live in this browser
 // (localStorage 'iron-meridian-dev'); every override is off unless its switch is on. Speeds 5-7 = 16x / 50x / 100x.
