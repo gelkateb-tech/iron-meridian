@@ -555,8 +555,8 @@ function armyUpkeep(prevBattles){
         for (const v of G.P[u].nbs){ if (seen.has(v) || !canEnter(a.owner, v)) continue; seen.add(v);
           if (S.owner[v] === a.owner && SUP[a.owner] && SUP[a.owner][v] && !S.battles.includes(v)){ const pth = pathFor(a, a.at, v); if (pth.length){ dest = v; rp = pth; break; } } q.push([v, du + 1]); } }
       if (dest >= 0){ a.path = rp; if (a.dest) a.dest = null; if (a.wp) delete a.wp; a.forced = true; a.retreating = true;
-        if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} broke at ${G.P[a.at].name} and is retreating to ${G.P[dest].cityName || G.P[dest].name}.`, 'bad', a.at); }
-      else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (isSeat(a.owner)) tell(a.owner, `Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
+        if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} broke at ${G.P[a.at].cityName || G.P[a.at].name} and is retreating to ${G.P[dest].cityName || G.P[dest].name}.`, 'bad', a.at); }
+      else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (isSeat(a.owner)) tell(a.owner, `Your encircled force at ${G.P[a.at].cityName || G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
     }
     if (!inBattle && a.retreating && a.m >= 40) a.retreating = false;
   }

@@ -399,13 +399,13 @@ function capture(p, O){
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
   S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = S.home[p] === O ? 0 : Math.max(unrestOf(p), G.P[p].city ? 30 : 15);
   geoChanged();
-  const nm = G.P[p].name;
+  const nm = G.P[p].cityName || G.P[p].name;
   if (isSeat(O)){ const D = desk(O); (D.tut || (D.tut = {})).capture = true; bump(O, 'taken'); cue(O, 'capture'); }
   for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p); if (nb >= 0 && nb !== p){ w.air.base = nb; atMove(w, nb); w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${G.P[p].cityName || G.P[p].name} to ${G.P[nb].cityName || G.P[nb].name}.`, 'info', nb); } else { for (const t of UT) w.u[t] = 0; if (isSeat(w.owner)) tell(w.owner, `Your air wing was destroyed on the ground at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p); } }
   // ground forces of nations at peace with the new holder (neither at war with it nor its friend) may not stand in its land: they go home now, as
   // strandedHour would send them in a few hours (rules/diplomacy.js sendHome: along a route, or a jump when there is none). MOV-6
   for (const w of S.armies){ const m = w.owner; if (w.at !== p || w.air || w.fly || w.to !== null || m < 0 || m === O || shipsN(w) || !count(w) || atWar(m, O) || friendly(m, O)) continue;
-    if (sendHome(w) && isSeat(m)) tell(m, `${armyName(w)} leaves ${G.P[p].cityName || nm}: ${nationName(O)} took it, and you are not at war with them.`, 'info', w.at); }
+    if (sendHome(w) && isSeat(m)) tell(m, `${armyName(w)} leaves ${nm}: ${nationName(O)} took it, and you are not at war with them.`, 'info', w.at); }
   if (isSeat(prev)){ bump(prev, 'lost'); cue(prev, 'lose'); }
   tellAll(me => O === me ? `You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.` : prev === me ? `${nationName(O)} captured ${nm}.` : wasCap ? `${nationName(O)} took ${nm}, capital of ${nationName(prev)}.` : null, me => O === me ? 'good' : prev === me ? 'bad' : '', p);
   if (prev >= 0) checkNation(prev, O);

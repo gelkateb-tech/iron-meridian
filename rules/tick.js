@@ -166,7 +166,7 @@ function battleStep(hourly){
     if (!prevBattles.has(p)) for (const me of owners) if (isSeat(me)){
       const foes = owners.filter(o => o !== me).map(nationName).join(', ');
       if (S.owner[p] === me){ tell(me, `${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(me); }
-      else tell(me, `Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
+      else tell(me, `Battle at ${G.P[p].cityName || G.P[p].name} against ${foes}.`, 'bad', p);
       cue(me, 'battle');
     }
     const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
@@ -207,7 +207,7 @@ function battleStep(hourly){
     for (const a of list) if (count(a) === 0) IM.emit('fxWreck', p, owners, a);   // the client draws the wreck where its seat fought or can see
     for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
     for (const a of list) if (count(a) === 0) for (const me of here){
-      if (a.owner === me) tell(me, `${armyName(a)} was destroyed at ${G.P[p].name}.`, 'bad', p);
+      if (a.owner === me) tell(me, `${armyName(a)} was destroyed at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p);
       else tell(me, `${armyLabel(a, me)} destroyed at ${G.P[p].name}.`, 'good', p);
     }
   }
