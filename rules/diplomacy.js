@@ -89,14 +89,14 @@ function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || 
     const tooSmall = !isSeat(a.owner) && groundN(a) < CAP_MIN && !S.battles.includes(a.at) && !S.armies.some(b => b !== a && b.owner === a.owner && b.at === a.at);
     if (peaceful || tooSmall) sendHome(a); } }
 function evict(n, host){
-  // forces of n standing in host's land go to their nearest own province
+  // forces of n standing in host's land go to their nearest own province (jumpDest: a fleet to the sea, troops ashore only at a naval city when
+  // the way home crosses water; jumpTo drops any landing or boarding under way)
   for (let p = 0; p < G.P.length; p++) if (S.cap[p] && S.cap[p].by === n && S.owner[p] === host) S.cap[p] = null;
   for (const a of armiesOf(n)){
     if (a.to !== null){ if (S.owner[a.to] === host){ a.to = null; a.t = 0; if (a.legFrom) a.legFrom = null; if (a.pos) a.pos = null; } else if (S.owner[a.at] !== host) continue; }
     if (S.owner[a.at] !== host) continue;
-    const seen = new Set([a.at]), q = [a.at]; let dest = -1;
-    for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-    if (dest >= 0){ atMove(a, dest); a.to = null; a.t = 0; a.path = []; if (a.pos) a.pos = null; if (a.legFrom) a.legFrom = null; if (a.dest) a.dest = null; if (a.wp) delete a.wp; delete a.sail; } else for (const t of UT) a.u[t] = 0; }
+    const dest = jumpDest(a, n);
+    if (dest >= 0) jumpTo(a, dest); else for (const t of UT) a.u[t] = 0; }
   removeEmpty();
 }
 // crossing a peaceful border or striking a nation you are not at war with starts the war at once
